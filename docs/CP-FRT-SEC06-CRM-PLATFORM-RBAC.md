@@ -46,6 +46,22 @@ Independent current database read-only inventory found:
 - Existing `hr` remains a WatchdogWorkspace role; it defaults to CRM Supervisor for presentation and does not overwrite existing TimeTracker HR role.
 - All current module assignments are only in `time-tracker`, `fueltrack-plus`, `tradelink` and limited `toolbox-issues`; default employee and HR assignments remain compatible when no override is applied.
 
+## Executed disposable PostgreSQL integration evidence
+
+On October 30, 2026, GitHub Actions [run #41066448701](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41066448701) executed the feature branch against an isolated `postgres:17` service container:
+
+- Both additive SQL migrations successfully installed against the independent disposable fixture.
+- Original unassigned employee board ownership and FRT `FINANCE_MANAGER` access remained usable.
+- Explicit CRM `viewer` denied FRT finance role, module access and board edit/manage, but allowed board view.
+- An explicit `supervisor` allowed appropriately ranked `FINANCE_MANAGER` and board edits without board manage.
+- Removing the override restored original board ownership and FRT role access without deleting records.
+- Rejected nonbootstrap self-assignment, protected bootstrap target, cross-workspace updates, out-of-workspace targets, and stale expected revisions.
+- Verified all three successful platform-role changes created matching applied audit events and that original user, module and board record counts were preserved.
+- Verified no direct `anon` or `authenticated` DML grants on the new role table and no anonymous execution of the setter.
+- All existing frontend Node test, syntax, source validation and targeted RBAC regression checks passed; live-pages deployment was intentionally skipped.
+
+**Scope limit:** the disposable fixture is a minimal contract-focused schema, not a full copy of the production Supabase project. These results validate PostgreSQL migration syntax and the tested authorization logic, not every existing trigger, extension, RLS policy or native application integration.
+
 ## Deployment order (not executed)
 
 1. Independently validate new SQL against a disposable/nonproduction database with the original current schema, full RPC signatures, and RLS.
@@ -62,8 +78,8 @@ Independent current database read-only inventory found:
 | Existing SEC03 bootstrap read-only signed result (7/7) | VERIFIED from user-submitted browser result |
 | Existing SEC03 nonbootstrap read-only signed result (5/5) | VERIFIED from user-submitted browser result |
 | Existing backend source, constraints and role inventories | VERIFIED via connected PostgreSQL read-only queries |
-| New CRM platform-role SQL/backend role ceilings | IMPLEMENTED-UNVERIFIED until disposable DB migration and real signed tests |
-| New CRM frontend User Role Management + Role Configuration | IMPLEMENTED-UNVERIFIED until CI and browser exercise |
+| New CRM platform-role SQL/backend role ceilings | VERIFIED in disposable PostgreSQL 17; live Supabase integration PENDING |
+| New CRM frontend User Role Management + Role Configuration | VERIFIED by frontend CI; real signed browser acceptance PENDING |
 | Current production role modifications | NOT APPLICABLE — deliberately none |
 | Work Management canonical local native host | BLOCKED — cannot access user's local 5173 process |
 | Cross-workspace signed denial | BLOCKED — one workspace currently has active members |
