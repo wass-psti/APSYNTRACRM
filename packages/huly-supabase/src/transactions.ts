@@ -3,9 +3,9 @@ import { Denied, ServiceUnavailable, isUuid, validDocumentId, type BoardPermissi
   type Principal, type Scope, type SignedTokenVerifier } from './sb02.js';
 
 export type HulyMutation = Readonly<{
-  action: 'create' | 'update';
+  action: 'create' | 'update' | 'remove';
   documentId: string;
-  payload: unknown;
+  payload?: unknown;
   expectedRevision?: number | null;
 }>;
 export type HulyReceipt = Readonly<{ id: string; boardId: string; workspaceId: string; revision: number }>;
@@ -26,10 +26,11 @@ export class HulyTransactionGateway {
     const seen = new Set<string>();
     for (const op of operations) {
       if (!op || !validDocumentId(op.documentId) || seen.has(op.documentId)
-        || !['create','update'].includes(op.action) || op.payload == null) throw new Denied();
+        || !['create','update','remove'].includes(op.action)
+        || (op.action==='remove'?op.payload!==undefined:op.payload==null)) throw new Denied();
       seen.add(op.documentId);
       if (op.action === 'create' && op.expectedRevision != null) throw new Denied();
-      if (op.action === 'update' && (!Number.isSafeInteger(op.expectedRevision) || Number(op.expectedRevision) < 1)) throw new Denied();
+      if ((op.action === 'update' || op.action === 'remove') && (!Number.isSafeInteger(op.expectedRevision) || Number(op.expectedRevision) < 1)) throw new Denied();
     }
     // JSON-compatible, bounded payloads; catches BigInt/circular objects.
     let serialized: string;

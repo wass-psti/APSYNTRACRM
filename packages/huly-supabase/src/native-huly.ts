@@ -6,9 +6,11 @@
 import { Denied, ServiceUnavailable, type HulySupabaseGateway, type SignedTokenVerifier } from './sb02.js';
 import { type HulyMutation, type HulyReceipt, HulyTransactionGateway } from './transactions.js';
 import { documentToIssue, issueDocumentId, issueToDocument, type HulyIssueSnapshot } from './huly-issue.js';
+import { applyIssueOperations } from './native-operators.js';
 
 export const HULY_TX_CREATE = 'core:class:TxCreateDoc';
 export const HULY_TX_UPDATE = 'core:class:TxUpdateDoc';
+export const HULY_TX_REMOVE = 'core:class:TxRemoveDoc';
 export const HULY_ISSUE = 'tracker:class:Issue';
 export type NativeTx = Readonly<Record<string, unknown>>;
 export type NativeTxResult = Readonly<{ receipts: readonly HulyReceipt[]; applied: number }>;
@@ -28,13 +30,14 @@ function boundedClone<T>(value: T): T {
   return JSON.parse(data) as T;
 }
 function assertTx(tx: NativeTx): asserts tx is NativeTx & { _class: string; objectClass: string; objectSpace: string; objectId: string; modifiedBy: string } {
-  if (!record(tx) || (tx._class !== HULY_TX_CREATE && tx._class !== HULY_TX_UPDATE)
+  if (!record(tx) || (tx._class !== HULY_TX_CREATE && tx._class !== HULY_TX_UPDATE && tx._class !== HULY_TX_REMOVE)
     || tx.objectClass !== HULY_ISSUE || !str(tx.objectId) || !str(tx.objectSpace)
     || !str(tx.modifiedBy) || !str(tx._id) || !str(tx.space)
     || !Number.isSafeInteger(tx.modifiedOn) || (tx.modifiedOn as number) < 0
     || (tx.createdBy !== undefined && !str(tx.createdBy))
     || (tx.createdOn !== undefined && (!Number.isSafeInteger(tx.createdOn) || (tx.createdOn as number)<0))
-    || tx.attachedTo !== undefined || tx.attachedToClass !== undefined || tx.collection !== undefined
+    || ((tx.attachedTo !== undefined || tx.attachedToClass !== undefined || tx.collection !== undefined)
+        && !(tx._class === HULY_TX_CREATE && str(tx.attachedTo) && tx.attachedToClass === HULY_ISSUE && tx.collection === 'subIssues'))
     || (tx.retrieve !== undefined && tx.retrieve !== false)) throw new Denied();
   issueDocumentId(tx.objectId);
 }
@@ -42,13 +45,10 @@ function assertFieldMap(value: unknown): asserts value is Record<string, unknown
   if (!record(value) || Object.keys(value).length === 0) throw new Denied();
   for (const key of Object.keys(value)) if (!safeKey(key) || SERVER_FIELDS.has(key)) throw new Denied();
 }
-function updateIssue(snapshot: HulyIssueSnapshot, ops: unknown, actorId: string, timestamp: number): HulyIssueSnapshot {
-  assertFieldMap(ops);
-  const doc = boundedClone(snapshot) as unknown as Record<string, unknown>;
-  for (const [key, value] of Object.entries(ops)) doc[key] = boundedClone(value);
-  doc.modifiedBy = actorId;
-  doc.modifiedOn = timestamp;
-  return doc as HulyIssueSnapshot;
+function updateIssue(snapshot:HulyIssueSnapshot,ops:unknown,actorId:string,timestamp:number):HulyIssueSnapshot{
+ const result=applyIssueOperations(snapshot as Record<string,unknown>,ops);
+ result.modifiedBy=actorId;result.modifiedOn=timestamp;
+ return result as HulyIssueSnapshot;
 }
 
 /** RLS-read/materialize, then one atomic CAS Supabase RPC. Unsupported Tx classes,
@@ -70,8 +70,14 @@ export class NativeHulyIssueGateway {
       if (seen.has(id)) throw new Denied();
       seen.add(id);
       if (tx.modifiedBy !== principal.id || (tx.createdBy !== undefined && tx.createdBy !== principal.id)) throw new Denied();
-      const input = tx._class === HULY_TX_UPDATE ? await this.documents.read(token, workspaceId, boardId, id) : null;
-      if (tx._class === HULY_TX_UPDATE && !input) throw new Denied();
+      const input = tx._class !== HULY_TX_CREATE ? await this.documents.read(token, workspaceId, boardId, id) : null;
+      if(tx._class !== HULY_TX_CREATE && !input)throw new Denied();
+      if(tx._class === HULY_TX_REMOVE){
+        const prev=documentToIssue(input!);
+        if(prev.space!==tx.objectSpace || prev._class!==HULY_ISSUE)throw new Denied();
+        mutations.push({action:'remove',documentId:id,expectedRevision:input!.revision});
+        continue;
+      }
       let snapshot: HulyIssueSnapshot;
       if (tx._class === HULY_TX_CREATE) {
         assertFieldMap(tx.attributes);
@@ -80,7 +86,8 @@ export class NativeHulyIssueGateway {
           ...(fields as Record<string, unknown>),
           _id: tx.objectId, _class: HULY_ISSUE, space: tx.objectSpace,
           modifiedBy: tx.modifiedBy, modifiedOn: tx.modifiedOn,
-          createdBy: tx.modifiedBy, createdOn: tx.modifiedOn
+          createdBy: tx.modifiedBy, createdOn: tx.modifiedOn,
+          ...(tx.attachedTo !== undefined ? {attachedTo:tx.attachedTo,attachedToClass:tx.attachedToClass} : {})
         } as unknown as HulyIssueSnapshot;
       } else {
         const prior = documentToIssue(input!);

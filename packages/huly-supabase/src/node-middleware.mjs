@@ -5,7 +5,7 @@
  */
 import { Readable } from 'node:stream';
 import { createHulyRequestHandler } from '../dist/src/http-handler.js';
-import { createLiveHulyGateway, createLiveHulyTransactions, createLiveNativeHulyIssues } from '../dist/src/supabase-live.js';
+import { createLiveHulyGateway, createLiveHulyTransactions, createLiveSb06NativeIssues } from '../dist/src/supabase-live.js';
 
 const PREFIX = /^\/api\/v1\/huly(?:\/|$)/;
 const NO_CACHE_HEADERS = {
@@ -63,7 +63,7 @@ export function createHulyHostMiddleware({ supabaseUrl, publishableKey, fetchImp
   if (!supabaseUrl || !publishableKey) throw new Error('Supabase URL and publishable key are required');
   const gateway = createLiveHulyGateway(supabaseUrl, publishableKey, fetchImpl);
   const transactions = createLiveHulyTransactions(supabaseUrl, publishableKey, fetchImpl);
-  const native = createLiveNativeHulyIssues(supabaseUrl, publishableKey, fetchImpl);
+  const native = createLiveSb06NativeIssues(supabaseUrl, publishableKey, fetchImpl);
   return createHulyConnectMiddleware(createHulyRequestHandler(gateway, transactions, native));
 }
 

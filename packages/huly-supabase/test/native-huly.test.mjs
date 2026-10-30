@@ -25,22 +25,21 @@ test('native update performs RLS read and optimistic revision',async()=>{
   assert.equal(seen.reads,1);assert.equal(seen.ops[0].expectedRevision,3);
   assert.equal(seen.ops[0].payload.snapshot.title,'Updated');
 });
-test('unsupported remove and mixin fail closed',async()=>{
-  const {native,seen}=setup();
-  for(const name of ['core:class:TxRemoveDoc','core:class:TxMixin'])
-    await assert.rejects(()=>native.commit('signed',W,B,[{...create,_class:name}]),Denied);
-  assert.equal(seen.writes,0);
+test('remove creates CAS tombstone while mixin remains unsupported',async()=>{
+ const {native,seen}=setup();
+ await native.commit('signed',W,B,[{...create,_class:'core:class:TxRemoveDoc'}]);
+ assert.equal(seen.ops[0].action,'remove');assert.equal(seen.ops[0].expectedRevision,3);
+ await assert.rejects(()=>native.commit('signed',W,B,[{...create,_class:'core:class:TxMixin'}]),Denied);
 });
 test('actor mismatch and attached collections cannot be used',async()=>{
   const {native}=setup();
   await assert.rejects(()=>native.commit('signed',W,B,[{...create,modifiedBy:W}]),Denied);
   await assert.rejects(()=>native.commit('signed',W,B,[{...create,collection:'subIssues'}]),Denied);
 });
-test('unsupported update operators and metadata edits rejected',async()=>{
-  const {native,seen}=setup();
-  await assert.rejects(()=>native.commit('signed',W,B,[{...update,operations:{$inc:{priority:1}}}]),Denied);
-  await assert.rejects(()=>native.commit('signed',W,B,[{...update,operations:{_id:'other'}}]),Denied);
-  assert.equal(seen.writes,0);
+test('valid $inc and immutable metadata mutation rejection',async()=>{
+ const {native}=setup();
+ await native.commit('signed',W,B,[{...update,operations:{$inc:{priority:1}}}]);
+ await assert.rejects(()=>native.commit('signed',W,B,[{...update,operations:{_id:'other'}}]),Denied);
 });
 test('duplicate documents fail before RPC',async()=>{
   const {native,seen}=setup();await assert.rejects(()=>native.commit('signed',W,B,[create,create]),Denied);

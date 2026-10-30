@@ -149,3 +149,20 @@ export function createLiveNativeHulyIssues(url:string,publishableKey:string,requ
     new HulySupabaseGateway(identity,permissions,new SupabaseDocumentRepository(http)),
     new HulyTransactionGateway(identity,permissions,new SupabaseAtomicBoardStore(http)));
 }
+
+/** SB06: atomic transaction RPC with reversible tombstones and event ledger. */
+export class SupabaseSb06AtomicStore implements AtomicBoardStore {
+ constructor(private readonly http:SupabaseHttp){}
+ async commit(token:string,scope:Scope,operations:readonly HulyMutation[]):Promise<readonly HulyReceipt[]>{
+  return receiptRows(await this.http.json('/rest/v1/rpc/huly_sb06_transact',token,{
+   method:'POST',body:{p_board_id:scope.boardId,p_workspace_id:scope.workspaceId,p_operations:operations}
+  }));
+ }
+}
+export function createLiveSb06NativeIssues(url:string,publishableKey:string,request?:FetchLike):NativeHulyIssueGateway{
+ const http=new SupabaseHttp(url,publishableKey,request);
+ const identity=new SupabaseAuthVerifier(http),permissions=new WatchdogBoardPermissions(http);
+ return new NativeHulyIssueGateway(identity,
+  new HulySupabaseGateway(identity,permissions,new SupabaseDocumentRepository(http)),
+  new HulyTransactionGateway(identity,permissions,new SupabaseSb06AtomicStore(http)));
+}
