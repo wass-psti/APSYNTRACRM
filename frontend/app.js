@@ -17,7 +17,7 @@ import {runDeniedQaWrite} from './board-negative-write.js';
 import {runFRTSec03SignedAcceptance} from './frt-sec03-signed-acceptance.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
-import {UserRoleManagementClient,renderUserRoleManagement,MODULE_ROLE_OPTIONS} from './user-role-management.js';
+import {UserRoleManagementClient,renderUserRoleManagement,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
@@ -260,6 +260,19 @@ async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expecte
  toast('Authoritative user role updated and audited.');
  render();
 }
+async function applyCrmPlatformRole({userId,role,expectedUpdatedAt}){
+ if(state.roleVerified!==true||!(await roleConfig.bootstrapVerified()))
+   throw new ApiError('Bootstrap privilege required.',403);
+ const identity=await auth.getVerifiedUser(),ctx=await db.context();
+ if(identity?.id!==ctx.user_id||ctx.user_id!==state.context?.user_id||
+    ctx.workspace_id!==state.context?.workspace_id)
+   throw new ApiError('Signed identity or workspace changed.',403);
+ await userRoleManager.setCrmPlatformRole({
+   workspaceId:ctx.workspace_id,userId,role,expectedUpdatedAt});
+ await loadUserRoleManagement();
+ toast('APSYNTRA CRM platform role updated and audited.');
+ render();
+}
 async function loadRoleConfiguration(){
  if(state.roleVerified!==true)throw new ApiError('Bootstrap verification required.',403);
  const context=await db.context();
@@ -394,6 +407,38 @@ async function action(name,button){
    state.userRoleBusy=true;render();
    try{await loadUserRoleManagement();}catch(err){state.userRoleError=errorMessage(err);notice(err);}
    finally{state.userRoleBusy=false;render();}
+   break;
+ }
+ case 'user-role-edit-crm-platform':
+ case 'user-role-revert-crm-platform':{
+   if(!state.roleVerified||state.userRoleBusy||!state.userRoleData)return;
+   const userId=button.dataset.userId;
+   const user=state.userRoleData.users.find(u=>u.id===userId&&
+     !u.protected&&u.platformRole!=='admin_general_manager');
+   if(!user||userId!==state.userRoleSelected)
+     throw new ApiError('Protected or stale CRM platform role target.',403);
+   const record=state.userRoleData.crmPlatformRoles?.find(r=>r.userId===userId);
+   if(!record)throw new ApiError('Authoritative CRM role snapshot missing.',403);
+   const reverting=name==='user-role-revert-crm-platform';
+   if(reverting&&!record.assignedRole)throw new ApiError('No CRM override to revoke.',409);
+   const fields='<div class="note">APSYNTRA CRM platform role for '+e(user.name||user.email)+
+    '. CRM tiers cap module and board permissions without changing WatchdogWorkspace identity. '+
+    'Changes are audited and enforced by the central backend.</div>'+
+    (reverting?'':select('CRM platform role','role',
+      APSYNTRA_CRM_PLATFORM_ROLES.map(x=>[x,x[0].toUpperCase()+x.slice(1)]),
+      record.assignedRole||record.effectiveRole))+
+    input('Type APPLY CRM ROLE','ack');
+   openModal(reverting?'Revert CRM platform role':'Assign APSYNTRA CRM platform role',fields,async fd=>{
+     if(String(fd.get('ack')||'')!=='APPLY CRM ROLE')
+       throw new ApiError('Confirm by typing APPLY CRM ROLE exactly.');
+     const role=reverting?null:String(fd.get('role'));
+     if(role!==null&&!APSYNTRA_CRM_PLATFORM_ROLES.includes(role))
+       throw new ApiError('Invalid CRM platform role.',400);
+     state.userRoleBusy=true;
+     try{await applyCrmPlatformRole({userId,role,
+       expectedUpdatedAt:record.updatedAt||null});}
+     finally{state.userRoleBusy=false;render();}
+   });
    break;
  }
  case 'user-role-edit-module':
