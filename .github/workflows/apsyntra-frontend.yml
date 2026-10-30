@@ -34,3 +34,21 @@ jobs:
           grep -q 'frontend/app.js' index.html
       - name: Test authentication and existing backend contracts
         run: node --test frontend/tests/*.test.mjs
+
+  live-pages:
+    needs: frontend
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify live GitHub Pages assets match this main commit
+        env:
+          EXPECTED_DEPLOY_SHA: ${{ github.sha }}
+        run: node scripts/pages-smoke.mjs
