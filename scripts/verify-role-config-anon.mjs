@@ -17,6 +17,12 @@ const WORKSPACE='00000000-0000-4000-8000-000000000001';
 const probes=[
  ['Bootstrap eligibility', '/rest/v1/rpc/apsyntra_role_is_bootstrap',{}],
  ['Bootstrap-scoped data snapshot','/rest/v1/rpc/apsyntra_role_configuration_snapshot',{p_workspace_id:WORKSPACE}],
+ ['User-role management snapshot','/rest/v1/rpc/apsyntra_role_user_management_snapshot',
+  {p_workspace_id:WORKSPACE}],
+ ['Direct effective role mutation','/rest/v1/rpc/apsyntra_role_manage_user_access',
+  {p_workspace_id:WORKSPACE,p_target_user_id:'11111111-1111-4111-8111-111111111111',
+   p_scope:'module',p_resource_id:'time-tracker',p_role:'Employee',p_enabled:true,
+   p_expected_updated_at:null}],
  ['Direct proposal RPC', '/rest/v1/rpc/apsyntra_role_configuration_propose',
   {p_workspace_id:WORKSPACE,p_operation:'role.create',p_payload:{roleKey:'anon_must_never_write'}}]
 ];
@@ -39,4 +45,4 @@ const table=await fetch(safeHost+'/rest/v1/apsyntra_role_templates?select=id&lim
 assert.ok([401,403].includes(table.status),
  'Anonymous direct table read must be denied, received HTTP '+table.status);
 console.log('PASS: anonymous direct role catalog read denied HTTP '+table.status);
-console.log('CP-RC01.1 REAL UNSIGNED API DENIAL: PASS (4/4) — no authentication impersonation or writes');
+console.log('CP-RC02 REAL UNSIGNED API DENIAL: PASS (6/6) — no authentication impersonation or writes');
