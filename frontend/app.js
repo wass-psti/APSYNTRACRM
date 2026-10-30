@@ -6,13 +6,17 @@ import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.j
 import {renderPagesAcceptance} from './pages-acceptance-ui.js';
 import {runNativeQa} from './native-qa.js';
 import {NativeIssueClient} from './native-client.js';
+import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
+import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
+import {renderFoundation} from './board-foundation-ui.js';
+import {boardGrid} from './board-grid.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const nativeIssues=new NativeIssueClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -64,6 +68,7 @@ function sidebar(){
    <nav class="nav-list" aria-label="Primary">
      <a class="nav-link ${state.view==='overview'?'active':''}" href="#/overview"><span class="nav-ico">◫</span><span class="nav-label">Overview</span></a>
      <a class="nav-link ${state.view==='boards'?'active':''}" href="#/boards"><span class="nav-ico">▤</span><span class="nav-label">My boards</span><span class="nav-count">${state.boards.length}</span></a>
+     <a class="nav-link ${state.view==='foundation'?'active':''}" href="#/foundation"><span class="nav-ico">◇</span><span class="nav-label">12-board foundation</span></a>
      <a class="nav-link ${state.view==='settings'?'active':''}" href="#/settings"><span class="nav-ico">⚙</span><span class="nav-label">Settings</span></a>
      <a class="nav-link ${state.view==='acceptance'?'active':''}" href="#/acceptance"><span class="nav-ico">✓</span><span class="nav-label">Pages acceptance</span></a>
    </nav>
@@ -74,7 +79,7 @@ function sidebar(){
    <button class="sign-out" data-action="logout">⇥ <span>Sign out of workspace</span></button></div></aside>`;
 }
 function shell(body){
- const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':'Settings';
+ const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':'Settings';
  root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
@@ -157,9 +162,9 @@ function boardPage(){
  <div class="toolbar"><div class="search-wrap"><input class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
  ${groups.length?groups.map(g=>`<div class="group-heading"><h3>${e(g.title||'Group')}</h3><small>${items.filter(i=>i.group_id===g.id).length} items</small></div>
- ${groupRows(items.filter(i=>i.group_id===g.id),state.edit)}`).join(''):
+ ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id}):groupRows(items.filter(i=>i.group_id===g.id),state.edit)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit)}`:''}`}`;
+ ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit)}`:''}`}`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -197,6 +202,11 @@ function render(){
  if(!state.context){renderLogin();return;}
  if(state.view==='board')shell(boardPage());
  else if(state.view==='acceptance')shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy,nativeResult:state.nativeAcceptance,nativeRunning:state.nativeBusy}));
+ else if(state.view==='foundation')shell(renderFoundation({
+   rows:state.foundationRows,loading:state.foundationBusy,provisioning:state.provisionBusy,
+   log:state.foundationLog,error:state.foundationError,
+   canProvision:state.context?.profile?.platform_role==='admin_general_manager'
+ }));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -205,6 +215,14 @@ async function refreshWorkspace(){
  state.context=await db.context();
  state.boards=await db.boards('active');
  state.user=auth.session?.user;
+}
+async function refreshFoundation(){
+ const context=await db.context();
+ if(context.user_id!==state.context?.user_id||context.workspace_id!==state.context?.workspace_id)
+   throw new ApiError('Workspace context changed; reload and sign in again.',403);
+ state.boards=await db.boards('active');
+ state.foundationRows=await inspectFoundation(db,{context,boards:state.boards});
+ state.foundationError='';
 }
 async function loadBoard(boardId,tab){
  const seq=++routeSerial;
@@ -232,8 +250,13 @@ async function onRoute(){
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='boards'&&validUuid(parts[1])){await loadBoard(parts[1],parts[2]==='issues'?'issues':'items');return;}
- routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':'overview';
+ routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':'overview';
  if(state.view==='boards'&&state.showArchived&&!state.archived.length){try{state.archived=await db.boards('archived');}catch(err){notice(err);}}
+ if(state.view==='foundation'){
+   state.foundationBusy=true;render();
+   try{await refreshFoundation();}catch(err){state.foundationError=errorMessage(err);}
+   finally{state.foundationBusy=false;}
+ }
  render();
 }
 async function login(form){
@@ -281,6 +304,36 @@ async function action(name,button){
  case 'logout':{await auth.signOut();state.context=null;state.boards=[];state.board=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
+ case 'foundation-refresh':{
+   if(state.foundationBusy||state.provisionBusy)return;
+   state.foundationBusy=true;state.foundationError='';render();
+   try{await refreshFoundation();}catch(err){state.foundationError=errorMessage(err);notice(err);}
+   finally{state.foundationBusy=false;render();}
+   break;
+ }
+ case 'foundation-provision':{
+   if(state.provisionBusy||state.context?.profile?.platform_role!=='admin_general_manager')return;
+   openModal('Provision twelve dedicated boards',
+     input('Type PROVISION 12 BOARDS to confirm','ack')+
+     '<div class="note security-note">This creates empty domain-specific boards with owner-only membership through existing signed RPCs. Archived boards and operational records are not changed. Application acceptance is not included.</div>',
+     async fd=>{
+       if(String(fd.get('ack')||'')!=='PROVISION 12 BOARDS')
+         throw new ApiError('Enter PROVISION 12 BOARDS exactly.');
+       state.provisionBusy=true;state.foundationError='';state.foundationLog=[];render();
+       try{
+         await provisionMissingBoards(db,{context:state.context,confirm:true,onProgress:entry=>{
+           state.foundationLog.push(entry.key+': '+entry.action);render();
+         }});
+         await refreshWorkspace();await refreshFoundation();
+         toast('Dedicated board provisioning completed; inspect live readiness.');
+       }catch(err){
+         state.foundationError=errorMessage(err);notice(err);
+         try{await refreshWorkspace();await refreshFoundation();}catch{/* preserve original error */}
+         throw err;
+       }finally{state.provisionBusy=false;render();}
+     });
+   break;
+ }
  case 'new-board':{
    openModal('Create a board',input('Board name','name')+input('Description (optional)','description','','text',false),async fd=>{
      const title=String(fd.get('name')||'').trim();if(!title)throw new ApiError('Board name is required.');

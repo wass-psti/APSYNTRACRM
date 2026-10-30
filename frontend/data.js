@@ -31,6 +31,13 @@ export class DomainApi {
  async createBoard(name,description=''){
    return this.rpc('wm_create_board',{p_name:name.trim(),p_description:description.trim()});
  }
+ async createConfiguredBoard(name,description,columns){
+   if(typeof name!=='string'||!name.trim()||!Array.isArray(columns)||columns.length>30)
+     throw new ApiError('Invalid configured board request.');
+   return this.rpc('wm_create_board_configured',{
+     p_name:name.trim(),p_description:String(description||''),p_columns:columns
+   });
+ }
  async addGroup(boardId,title){return this.rpc('wm_add_board_group',{p_board_id:requireUuid(boardId),p_title:title.trim()});}
  async addItem(boardId,groupId,title){return this.rpc('wm_add_board_item',{
    p_board_id:requireUuid(boardId),p_group_id:requireUuid(groupId),p_title:title.trim()
