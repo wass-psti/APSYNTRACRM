@@ -24,3 +24,11 @@ test('default role catalogue remains protected reference-only',()=>{
   roles:[{roleKey:'admin',displayName:'Admin',kind:'system_reference',state:'reference'}],proposals:[],audit:[]}});
  assert.match(html,/Protected default role/);assert.doesNotMatch(html,/data-role-key="admin"/);
 });
+
+test('apostrophes in central role names are escaped without corrupting text',()=>{
+ const html=renderRoleConfiguration({verified:true,tab:'roles',data:{users:[],boards:[],
+  roles:[{roleKey:'finance_operations',displayName:"Finance's Operations",kind:'custom',state:'proposal'}],
+  proposals:[],audit:[]}});
+ assert.match(html,/Finance&#39;s Operations/);
+ assert.doesNotMatch(html,/Financeundefineds|Finance's Operations/);
+});
