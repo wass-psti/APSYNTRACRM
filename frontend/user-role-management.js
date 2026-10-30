@@ -4,6 +4,7 @@
 import {ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const APSYNTRA_CRM_PLATFORM_ROLES=Object.freeze(['admin','supervisor','employee','viewer']);
 export const MODULE_ROLE_OPTIONS=Object.freeze({
  'time-tracker':['Employee','OJT','Supervisor','HR','Finance','System Admin','IT Administrator'],
  'fueltrack-plus':['User','Pump Attendant','Admin'],
@@ -23,11 +24,18 @@ export class UserRoleManagementClient {
  constructor(api){this.api=api;}
  async snapshot(workspaceId){
   if(!UUID.test(workspaceId||''))throw Error('Invalid workspace');
-  const d=await this.api.rpc('apsyntra_role_user_management_snapshot',{p_workspace_id:workspaceId});
+  const [d,crm]=await Promise.all([
+   this.api.rpc('apsyntra_role_user_management_snapshot',{p_workspace_id:workspaceId}),
+   this.api.rpc('apsyntra_crm_platform_role_snapshot',{p_workspace_id:workspaceId})
+  ]);
   if(d?.bootstrapVerified!==true||d.workspaceId!==workspaceId||
-   !['users','modules','moduleAssignments','boards','boardAssignments'].every(x=>Array.isArray(d[x])))
+   !['users','modules','moduleAssignments','boards','boardAssignments'].every(x=>Array.isArray(d[x]))||
+   crm?.bootstrapVerified!==true||crm.workspaceId!==workspaceId||!Array.isArray(crm.roles)||
+   !crm.roles.every(r=>UUID.test(r.userId||'')&&
+     APSYNTRA_CRM_PLATFORM_ROLES.includes(r.effectiveRole)&&
+     (r.assignedRole===null||APSYNTRA_CRM_PLATFORM_ROLES.includes(r.assignedRole))))
    throw Error('Invalid server-authorized role management result');
-  return d;
+  return {...d,crmPlatformRoles:crm.roles};
  }
  async mutate({workspaceId,userId,scope,resourceId,role,enabled,expectedUpdatedAt=null}){
   if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
@@ -45,6 +53,22 @@ export class UserRoleManagementClient {
     r.scope!==scope||r.resourceId!==resourceId)throw Error('Backend role change acknowledgement invalid');
   return r;
  }
+ async setCrmPlatformRole({workspaceId,userId,role,expectedUpdatedAt=null}){
+  if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
+    (role!==null&&!APSYNTRA_CRM_PLATFORM_ROLES.includes(role))||
+    (expectedUpdatedAt!==null&&
+     (typeof expectedUpdatedAt!=='string'||!Number.isFinite(Date.parse(expectedUpdatedAt)))))
+   throw Error('Invalid CRM platform role request');
+  const r=await this.api.rpc('apsyntra_crm_platform_role_set',{
+   p_workspace_id:workspaceId,p_target_user_id:userId,p_role:role,
+   p_expected_updated_at:expectedUpdatedAt
+  });
+  if(r?.effective!==true||r.workspaceId!==workspaceId||
+   r.targetUserId!==userId||r.scope!=='crm-platform'||
+   !APSYNTRA_CRM_PLATFORM_ROLES.includes(r.effectiveRole))
+   throw Error('Backend CRM platform role acknowledgement invalid');
+  return r;
+ }
 }
 function selected(data,id){
  return data?.users?.find(u=>u.id===id)||null;
@@ -52,7 +76,7 @@ function selected(data,id){
 export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,busy=false,error=''}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
  let html='<div class="page-head"><div><span class="label-top">Administration / Bootstrap authority</span>'+
- '<h1>User Role Management</h1><p>Manage actual application and board roles through the central authorized backend.</p></div>'+
+ '<h1>User Role Management</h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
  '<button class="secondary" data-action="user-role-refresh" '+(busy?'disabled':'')+'>Refresh assignments</button></div>'+
  '<div class="note security-note">Only the two verified bootstrap administrators can apply changes. The backend rejects self-promotion, protected administrators, stale updates, and cross-workspace targets. Changes are audited and visible to subsequent signed sessions.</div>';
  if(error)html+='<div class="error-banner" role="alert">'+esc(error)+'</div>';
@@ -73,6 +97,18 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  '<div class="note">Select a module or board below to update this user’s actual role. The next dialog requires explicit confirmation.</div>')+
  '</div></div>';
  const locked=!!u.protected||u.platformRole==='admin_general_manager'||busy;
+ const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
+ html+='<div class="section-header"><strong>APSYNTRA CRM Platform Role</strong></div>'+
+ '<div class="note security-note">This is the CRM-wide authorization ceiling, separate from WatchdogWorkspace identity, application assignments and board membership. Changes cannot grant module roles or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
+ '<div class="panel"><div class="panel-body"><div class="settings-detail"><label>Inherited WatchdogWorkspace role</label><strong>'+
+ esc(u.platformRole)+'</strong></div><div class="settings-detail"><label>CRM platform role</label><strong>'+
+ esc(crm?.effectiveRole||'Unverified')+(crm?.assignedRole?' (explicit)':' (inherited)')+
+ '</strong></div>'+
+ '<button class="secondary" data-action="user-role-edit-crm-platform" data-user-id="'+esc(u.id)+'" '+
+ (locked||!crm?'disabled':'')+'>Assign / change CRM role</button> '+
+ (crm?.assignedRole?'<button class="secondary" data-action="user-role-revert-crm-platform" data-user-id="'+esc(u.id)+'" '+
+ (locked?'disabled':'')+'>Revert to inherited role</button>':'')+
+ '</div></div>';
  html+='<div class="section-header"><strong>Application-specific assignments</strong></div>'+
  '<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr><th>Application</th><th>Effective stored role</th><th>Enforcement</th><th>Action</th></tr></thead><tbody>';
  for(const [id,name] of ROLE_MODULE_OPTIONS){
