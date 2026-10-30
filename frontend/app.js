@@ -274,6 +274,7 @@ async function login(form){
  try{
    await auth.signIn(email,password);
    await refreshWorkspace();
+   state.securityResult=null;state.securityProgress=[];
    location.hash=routeHome;await onRoute();
    toast('Successfully signed in.');
  }catch(err){await auth.signOut();state.context=null;renderLogin(errorMessage(err));}
@@ -307,7 +308,7 @@ async function writeGuard(){if(!state.boardId||!await db.allowed(state.boardId,'
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
- case 'logout':{await auth.signOut();state.context=null;state.boards=[];state.board=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'logout':{await auth.signOut();state.context=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'security-run-negative':{
