@@ -45,7 +45,7 @@ export class DomainApi {
      board_id:'eq.'+requireUuid(boardId),workspace_id:'eq.'+requireUuid(workspaceId),
      document_id:'like.huly.issue.*',order:'updated_at.desc',limit:'100'});
    const rows=await this.auth.authorized('/rest/v1/huly_sb02_documents?'+params);
-   if(!Array.isArray(rows))throw new ApiError('Unexpected Huly issue response.');
+   if(!Array.isArray(rows))throw new ApiError('Unexpected APSYNTRA Issue response.');
    return rows.filter(row=>row.payload?.kind==='huly.tracker.Issue'&&row.payload?.format===1);
  }
  async issueEvents(boardId,workspaceId,documentId){
