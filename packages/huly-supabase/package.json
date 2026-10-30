@@ -1,1 +1,17 @@
-{"name":"@apsyntra/huly-supabase-boundary","version":"0.4.0","private":true,"type":"module","scripts":{"build":"tsc -p tsconfig.json","test":"npm run build && node --test test/*.test.mjs"},"engines":{"node":">=22"},"devDependencies":{"typescript":"5.8.3"}}
+{
+  "name": "@apsyntra/huly-supabase-boundary",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --check scripts/sb07-signed-acceptance.mjs && node --test test/*.test.mjs",
+    "test:live:sb07": "node scripts/sb07-signed-acceptance.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}
