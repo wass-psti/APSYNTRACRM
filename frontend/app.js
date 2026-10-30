@@ -1,12 +1,13 @@
 import {AuthClient,ApiError} from './session.js';
 import {DomainApi,validUuid} from './data.js';
 import {APP_NAME} from './config.js';
+import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -170,6 +171,17 @@ function settingsPage(){
  <button class="secondary" data-action="copy-token">⎘ Copy short-lived access token</button>
  <button class="secondary" data-action="logout">⇥ Sign out</button></div>
  <div class="note security-note"><b>Access token:</b> Copy only when necessary for local acceptance testing. Anyone holding it may act as your account until it expires. Never share it in chat or commit it.</div>
+ <div style="border-top:1px solid #eceefa;margin-top:23px;padding-top:20px">
+  <h3 style="font-size:14px;margin:0 0 7px">Signed backend verification</h3>
+  <p class="muted" style="font-size:12px;margin:0 0 15px">Run read-only checks against the actual authenticated Supabase session, central board permissions, and Issue view. No token copying or database write required.</p>
+  <button class="primary" data-action="verify-backend" ${state.acceptanceBusy?'disabled':''}>${state.acceptanceBusy?'Verifying…':'✓ Verify backend connection'}</button>
+  ${state.acceptance ? `<div style="margin-top:17px"><div style="font-size:12px;font-weight:750;margin-bottom:8px">
+  ${summarizeAcceptance(state.acceptance).passed} of ${summarizeAcceptance(state.acceptance).total} read-only checks passed</div>
+  ${state.acceptance.map(check=>`<div style="border-top:1px solid #eef0f7;padding:10px 0;font-size:12px">
+  <div style="display:flex;gap:9px;align-items:center"><span aria-hidden="true" style="color:${check.status==='pass'?'#24a17d':check.status==='fail'?'#d95067':'#8790a3'}">${check.status==='pass'?'✓':check.status==='fail'?'✕':'○'}</span><strong>${e(check.title)}</strong></div>
+  <div style="margin:3px 0 0 22px;color:#8790a3">${e(check.detail)}</div></div>`).join('')}
+  <p class="muted" style="font-size:11px;margin:12px 0 0">These checks do not certify the local 5173 host or native transaction writes.</p></div>` : ''}
+ </div>
  </div></section></div>`;
 }
 function render(){
@@ -303,6 +315,18 @@ async function action(name,button){
    await writeGuard();const row=state.issues.find(x=>x.document_id===button.dataset.id);
    if(!row||!confirm('Remove this issue? It will be retained as a reversible tombstone.'))return;
    try{await db.removeIssue(state.boardId,state.context.workspace_id,row);await loadIssues();toast('Issue removed.');}catch(err){notice(err);}
+   break;
+ }
+ case 'verify-backend':{
+   if(state.acceptanceBusy)return;
+   state.acceptanceBusy=true;state.acceptance=null;render();
+   try{
+     state.acceptance=await runReadOnlyAcceptance(auth,db);
+     const summary=summarizeAcceptance(state.acceptance);
+     toast(summary.failed?'Backend verification found '+summary.failed+' failed check(s).':
+        summary.passed+' authenticated checks passed.',summary.failed>0);
+   }catch(err){notice(err);}
+   finally{state.acceptanceBusy=false;render();}
    break;
  }
  case 'copy-token':{
