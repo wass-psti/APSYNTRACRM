@@ -1,7 +1,7 @@
 # CP-A12 — APSYNTRA CRM 12-Board Operational Foundation Baseline
 
 **Baseline date:** October 30, 2026 (Asia/Manila)
-**Status:** 12/12 STRUCTURALLY VERIFIED IN LIVE POSTGRESQL; SIGNED OPERATIONAL ACCEPTANCE PENDING
+**Status:** 12/12 STRUCTURALLY VERIFIED; SIGNED CRUD/CAS/AUDIT OPERATIONAL ACCEPTANCE PASSED; NEGATIVE RBAC/CROSS-WORKSPACE EVIDENCE PENDING
 **Existing primary UI:** https://wass-psti.github.io/APSYNTRACRM/#/foundation
 **Supabase project:** `jtlusodorfnyzgyuewkz`
 **Repository:** `wass-psti/APSYNTRACRM`, `main`
@@ -10,7 +10,7 @@
 
 | Phase | What is accepted | Current classification |
 | --- | --- | --- |
-| **A — 12-board infrastructure** | Twelve dedicated, authorized boards; typed columns; signed operational item/column CRUD; read-back and audit; validated projection contracts | **12/12 structural boards VERIFIED; final signed CRUD/CAS/denial acceptance PENDING** |
+| **A — 12-board infrastructure** | Twelve dedicated, authorized boards; typed columns; signed operational item/column CRUD; read-back and audit; validated projection contracts | **12/12 signed board CRUD/CAS/audit ACCEPTED; negative nonadministrator/cross-workspace tests PENDING** |
 | **B — embedded application-module integration** | Specialized application modules developed **inside APSYNTRA CRM**, reusing the business rules of the twelve existing applications and the existing shared TypeScript contracts; authoritative domain data flowing into board projections | NOT STARTED under this checkpoint |
 | **C — end-to-end application acceptance** | Real clock-in/out, fuel transfers, procurement, approvals and other domain-specific workflows; authorized sync, revisions and lineage | NOT STARTED |
 | **D — production readiness** | Consolidated security and role-revocation testing, real multi-workspace isolation, deployment/security, regression, acceptance decision | NOT STARTED |
@@ -141,3 +141,11 @@ The next unblocked operation is **Run 12-board operational checks** on the exist
 **Frontend compatibility:** the signed acceptance runner now requires HTTP 409 **and** backend code `PT409` for an expected stale-write denial. A 504 is never treated as a passing conflict, and cleanup remains limited to the unique QA item from this run. No client-side timeout extension, SQL permission bypass, additional account, or new backend was introduced.
 
 **Verification boundary:** SQL deployment and static code/security verification are complete, but this remediation is **not yet certified end-to-end** until the authorized signed user runs the 12-board acceptance and observes the explicit stale conflict successfully. The 12/12 structural provisioning acceptance remains valid. Do not equate a successful schema inspection or test mock with a real signed HTTP 409.
+
+## 11. October 30, 2026 — CP-A12.1 successful 12-board signed acceptance (authoritative latest status)
+
+**This section supersedes earlier pending statements in sections 5–10 about signed board CRUD/CAS acceptance.** The user executed the corrected 12-board runner after the database HTTP 409 remediation and reported **PASS 12/12 (5/5 per board, cleanup confirmed)**. Independent live read-only SQL confirmed 12 distinct live boards, zero remaining QA items, and 14 complete four-event single-actor lifecycle histories (three FuelTrans from the recovery sequence and one per remaining module). Independent request gateway logs for the successful run showed **24 successful HTTP 204 CAS writes** and **12 expected HTTP 409 stale conflicts**, no 504. This is an externally corroborated real acceptance of **positive signed board operations and stale-write denial**, not a simulation.
+
+**Signed operational gate is now 12/12 = 100% ACCEPTED.** The complete Phase A security/isolation certification remains **PENDING** until actual nonadmin and cross-workspace negative tests have independently verifiable evidence. In the separate existing nonproduction workspace there are currently no boards; do not invent a nonexistent target or silently alter workspace membership. Source identity uniqueness and actual domain-source projection remain Phase B engineering work. The twelve applications themselves remain NOT ACCEPTED.
+
+Detailed evidence: [CP-A12-SIGNED-OPERATIONAL-ACCEPTANCE.md](CP-A12-SIGNED-OPERATIONAL-ACCEPTANCE.md) and [SQL verifier](../sql/phase-a12-signed-operational-evidence.sql). There is no reason to repeat the accepted 12-board CRUD test.
