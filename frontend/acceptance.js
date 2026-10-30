@@ -9,7 +9,7 @@ const definitions=[
   ['boards','Authorized board listing'],
   ['board-detail','Board details under central RBAC'],
   ['board-permission','Authoritative board view permission'],
-  ['huly-view','Huly Issue RLS view connectivity']
+  ['huly-view','APSYNTRA Issue data connectivity']
 ];
 function errorDetail(err){
  if(err?.status===401)return 'Session rejected or expired (HTTP 401)';
@@ -66,7 +66,7 @@ export async function runReadOnlyAcceptance(auth,api){
  })){pending();return checks;}
  await check('huly-view',async()=>{
   const rows=await api.issues(selected.id,ctx.workspace_id);
-  if(!Array.isArray(rows))throw Error('Malformed Huly view');
+  if(!Array.isArray(rows))throw Error('Malformed Issue data view');
   return 'RLS-protected Issue view returned '+rows.length+' row(s)';
  });
  pending();
