@@ -1,0 +1,31 @@
+name: FRT Central Bootstrap Governance
+on:
+  push:
+    branches:
+      - security/frt-central-role-governance
+    paths:
+      - "sql/cp-frt-sec01-bootstrap-role-governance.sql"
+      - "frontend/tests/frt-central-authority.test.mjs"
+      - "docs/CP-FRT-SEC01-TEST-USER-RETIREMENT.md"
+      - ".github/workflows/frt-governance-security.yml"
+  workflow_dispatch:
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate centralized FRT bootstrap permission contracts
+        run: node --test frontend/tests/frt-central-authority.test.mjs
+      - name: Validate existing frontend and RBAC regressions
+        run: |
+          node scripts/verify-pages-source.mjs
+          node --test frontend/tests/*.test.mjs
+      - name: Check existing anonymous API restrictions
+        run: node scripts/verify-role-config-anon.mjs
