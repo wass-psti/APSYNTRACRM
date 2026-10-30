@@ -4,6 +4,10 @@ on:
     branches: [main]
     paths:
       - "index.html"
+      - ".nojekyll"
+      - "scripts/verify-pages-source.mjs"
+      - "scripts/pages-smoke.mjs"
+      - "docs/PAGES-OPERATIONS.md"
       - "frontend/**"
       - ".github/workflows/apsyntra-frontend.yml"
   workflow_dispatch:
@@ -17,6 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Verify GitHub Pages-only runtime and public credentials
+        run: node scripts/verify-pages-source.mjs
       - name: Check shipped JavaScript syntax
         run: |
           for source in frontend/*.js; do node --check "$source"; done
