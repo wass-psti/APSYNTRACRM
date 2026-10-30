@@ -38,6 +38,11 @@ async function check(){
  const response=await fetch(backend,{headers:{apikey:key},redirect:'error',signal:AbortSignal.timeout(15000)});
  assert.equal(response.status,200,'Supabase Auth health HTTP '+response.status);
  console.log('PASS: approved HTTPS Supabase Auth endpoint is reachable');
+ const edge=new URL('https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-native-issues');
+ const denied=await fetch(edge,{method:'GET',headers:{apikey:key},redirect:'error',signal:AbortSignal.timeout(15000)});
+ assert.ok([401,403].includes(denied.status),
+  'Hosted native Issue endpoint must reject unsigned requests (HTTP '+denied.status+')');
+ console.log('PASS: hosted native Issue endpoint rejects requests without a signed bearer');
 }
 let last;
 for(let attempt=1;attempt<=10;attempt++){
