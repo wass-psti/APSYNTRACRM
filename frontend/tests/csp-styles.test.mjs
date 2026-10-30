@@ -16,7 +16,7 @@ test('frontend generated markup never uses blocked inline styles or CSSOM inject
   assert.doesNotMatch(source,/\bstyle\s*=\s*(?:["']|\x60)/,'blocked inline style in '+file);
   assert.doesNotMatch(source,/\.style\s*\.|\.style\s*=|\.cssText\s*=|setAttribute\s*\(\s*["']style["']/,'runtime style injection in '+file);
   for(const m of source.matchAll(/\bcsp-u\d{3}\b/g)){
-   assert.ok(css.includes('.'+m[0]+'{'),'missing same-origin CSS for '+m[0]+' in '+file);
+   assert.ok(css.includes('#app .'+m[0]+'{'),'missing scoped same-origin CSS for '+m[0]+' in '+file);
   }
  }
 });
@@ -24,6 +24,6 @@ test('dynamic acceptance check status uses named CSS classes',()=>{
  const code=readFileSync('frontend/app.js','utf8');
  for(const name of ['csp-check-pass','csp-check-fail','csp-check-pending']){
   assert.match(code,new RegExp(name));
-  assert.match(css,new RegExp('\\.'+name+'\\{'));
+  assert.match(css,new RegExp('#app \\.'+name+'\\{'));
  }
 });
