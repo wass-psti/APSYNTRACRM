@@ -1,0 +1,30 @@
+name: Strict CSP Frontend Regression (unmerged branches)
+on:
+  push:
+    branches:
+      - fix/csp-inline-style-violations
+      - feature/cp-role-configuration-bootstrap
+    paths:
+      - "frontend/**"
+      - "index.html"
+      - ".github/workflows/csp-frontend-regression.yml"
+  workflow_dispatch:
+jobs:
+  strict-csp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify source graph and exact CSP
+        run: node scripts/verify-pages-source.mjs
+      - name: Verify browser module syntax
+        run: |
+          for src in frontend/*.js; do node --check "$src"; done
+      - name: Run full frontend regression suite including strict CSP guard
+        run: node --test frontend/tests/*.test.mjs

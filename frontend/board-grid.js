@@ -29,8 +29,8 @@ export function boardGrid(detail,{groupId=null}={}){
   }
   html+='</tr>';
  }
- html+=displayed.length?'':'<tr><td colspan="'+(cols.length+2)+'" style="text-align:center;color:#929bac;padding:26px">No persisted records in this board group</td></tr>';
+ html+=displayed.length?'':'<tr><td class="csp-u058" colspan="'+(cols.length+2)+'" >No persisted records in this board group</td></tr>';
  html+='</tbody></table></div></div>';
- if(module)html+='<p class="muted" style="font-size:11px;margin-top:9px">Operational records will appear here only when the corresponding APSYNTRA domain module writes and reconciles them through the authorized backend. Restricted fields are not displayed.</p>';
+ if(module)html+='<p class="muted csp-u023" >Operational records will appear here only when the corresponding APSYNTRA domain module writes and reconciles them through the authorized backend. Restricted fields are not displayed.</p>';
  return html;
 }
