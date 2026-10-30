@@ -288,7 +288,15 @@ async function onRoute(){
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='boards'&&validUuid(parts[1])){await loadBoard(parts[1],parts[2]==='issues'?'issues':'items');return;}
  routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':'overview';
- if(state.view==='role-configuration'&&!state.roleVerified){location.hash=routeHome;return onRoute();}
+ if(state.view==='role-configuration'){
+   // Recheck current server authority on EVERY entry, including direct URL visits.
+   try{state.roleVerified=await roleConfig.bootstrapVerified();}
+   catch{state.roleVerified=false;}
+   if(!state.roleVerified){
+     state.roleData=null;state.roleError='';
+     location.hash=routeHome;return onRoute();
+   }
+ }
  if(state.view==='role-configuration'){
    state.roleBusy=true;render();
    try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);}
