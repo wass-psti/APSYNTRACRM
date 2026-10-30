@@ -58,6 +58,23 @@ export class DomainApi {
    if(!Array.isArray(rows))throw new ApiError('Unexpected event ledger response.');
    return rows;
  }
+ /**
+  * Native Issue transaction service hosted by the existing Supabase project.
+  * The server revalidates signed identity, board scope, document state, operators and CAS.
+  */
+ async nativeTransactions(boardId,workspaceId,txes){
+   if(!Array.isArray(txes)||txes.length<1||txes.length>25)
+     throw new ApiError('Invalid native transaction batch.');
+   const response=await this.auth.authorized('/functions/v1/apsyntra-native-issues',{
+     method:'POST',
+     body:{boardId:requireUuid(boardId),workspaceId:requireUuid(workspaceId),txes}
+   });
+   if(!response||response.applied!==txes.length||!Array.isArray(response.receipts)
+      ||response.receipts.length!==txes.length
+      ||response.receipts.some(r=>r.boardId!==boardId||r.workspaceId!==workspaceId||!Number.isSafeInteger(r.revision)||r.revision<1))
+     throw new ApiError('Native transaction receipt verification failed.');
+   return response;
+ }
  async commit(boardId,workspaceId,operations){
    if(!Array.isArray(operations)||operations.length<1||operations.length>25)throw new ApiError('Invalid transaction batch.');
    return this.rpc('huly_sb06_transact',{p_board_id:requireUuid(boardId),
