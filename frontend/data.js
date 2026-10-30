@@ -48,6 +48,16 @@ export class DomainApi {
    if(!Array.isArray(rows))throw new ApiError('Unexpected Huly issue response.');
    return rows.filter(row=>row.payload?.kind==='huly.tracker.Issue'&&row.payload?.format===1);
  }
+ async issueEvents(boardId,workspaceId,documentId){
+   if(typeof documentId!=='string'||!/^huly\.issue\.[A-Za-z0-9_.:-]{1,191}$/.test(documentId))
+     throw new ApiError('Invalid Issue document identifier.');
+   const params=encodeQuery({select:'document_id,event_type,revision,actor_id,event_id',
+     board_id:'eq.'+requireUuid(boardId),workspace_id:'eq.'+requireUuid(workspaceId),
+     document_id:'eq.'+documentId,order:'event_id.asc',limit:'25'});
+   const rows=await this.auth.authorized('/rest/v1/huly_sb06_events?'+params);
+   if(!Array.isArray(rows))throw new ApiError('Unexpected event ledger response.');
+   return rows;
+ }
  async commit(boardId,workspaceId,operations){
    if(!Array.isArray(operations)||operations.length<1||operations.length>25)throw new ApiError('Invalid transaction batch.');
    return this.rpc('huly_sb06_transact',{p_board_id:requireUuid(boardId),
