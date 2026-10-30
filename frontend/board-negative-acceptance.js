@@ -3,7 +3,7 @@
  * service-role credentials, write operations or membership changes.
  */
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const checksPerBoard=6;
 const denyCode=403;
 export function identifySecurityScenario(context){
