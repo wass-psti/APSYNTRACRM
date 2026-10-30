@@ -37,7 +37,7 @@ export function renderPagesAcceptance({qaBoard,result,running=false,nativeResult
   }
   if(result.error)view+='<div class="error-banner" role="alert">'+escapeText(result.error)+
    (result.cleanupConfirmed?' QA test issue tombstoned.':' QA test issue may remain for review.')+'</div>';
-  if(result.status==='pass')view+='<div class="note">Signed Issue persistence, CAS denial, tombstones and audit records passed on this QA board. Node-only native TxProcessor, other application boards and role-revocation scenarios remain separate acceptance requirements.</div>';
+  if(result.status==='pass')view+='<div class="note">Signed Issue persistence, CAS denial, tombstones and audit records passed on this QA board. The full upstream transaction processor, other application boards and role-revocation scenarios remain separate acceptance requirements.</div>';
   view+='</div>';
  }
  view+='</div></div>';
