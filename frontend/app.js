@@ -143,7 +143,7 @@ function issuesPage(){
  if(state.loadingIssues)return '<div class="panel">'+empty('Loading issues','Checking permitted Issue records…')+'</div>';
  const rows=state.issues;
  const canEdit=state.edit;
- return `<div class="toolbar"><div class="search-wrap"><input class="search-input" aria-label="Search issues" placeholder="Search issues…" /></div>
+ return `<div class="toolbar"><div class="search-wrap"><input id="search-issues" class="search-input" aria-label="Search issues" placeholder="Search issues…" /></div>
  ${canEdit?'<button class="primary" data-action="new-issue">＋ New issue</button> <button class="secondary" data-action="native-new-issue">＋ Native issue</button>':''}</div>
  ${rows.length?`<div class="issue-cards">${rows.map(row=>{const s=row.payload?.snapshot||{};
  const priority=Number(s.priority??0);return `<article class="issue-row" data-searchable="${e((s.title||'').toLowerCase())}">
@@ -170,7 +170,7 @@ function boardPage(){
  <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}">▤ Board items <span class="csp-u060" >(${items.length})</span></a>
  <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span class="csp-u060" >(${state.issues.length})</span></a></div>
  ${state.tab==='issues'?issuesPage():`
- <div class="toolbar"><div class="search-wrap"><input class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
+ <div class="toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
  ${groups.length?groups.map(g=>`<div class="group-heading"><h3>${e(g.title||'Group')}</h3><small>${items.filter(i=>i.group_id===g.id).length} items</small></div>
  ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id}):groupRows(items.filter(i=>i.group_id===g.id),state.edit)}`).join(''):
