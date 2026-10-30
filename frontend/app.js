@@ -14,6 +14,7 @@ import {runTwelveBoardQa} from './board-operational-qa.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
 import {runDeniedQaWrite} from './board-negative-write.js';
+import {runFRTSec03SignedAcceptance} from './frt-sec03-signed-acceptance.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 import {UserRoleManagementClient,renderUserRoleManagement,MODULE_ROLE_OPTIONS} from './user-role-management.js';
@@ -25,7 +26,7 @@ const nativeIssues=new NativeIssueClient(db);
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -219,7 +220,7 @@ function render(){
    log:state.foundationLog,error:state.foundationError,
    canProvision:state.context?.profile?.platform_role==='admin_general_manager'
  }));
- else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy}));
+ else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy}));
  else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.roleVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
  else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.roleVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,busy:state.userRoleBusy,error:state.userRoleError}));
  else if(state.view==='boards')shell(boardsPage());
@@ -231,6 +232,7 @@ async function refreshWorkspace(){
  state.context=await db.context();
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
    state.roleData=null;state.userRoleData=null;state.userRoleSelected=null;
+   state.frtSecurityResult=null;
  }
  state.boards=await db.boards('active');
  state.user=auth.session?.user;
@@ -350,7 +352,7 @@ async function login(form){
  try{
    await auth.signIn(email,password);
    await refreshWorkspace();
-   state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;
+   state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.frtSecurityResult=null;
    location.hash=routeHome;await onRoute();
    toast('Successfully signed in.');
  }catch(err){await auth.signOut();state.context=null;renderLogin(errorMessage(err));}
@@ -384,7 +386,7 @@ async function writeGuard(){if(!state.boardId||!await db.allowed(state.boardId,'
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
- case 'logout':{await auth.signOut();state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'logout':{await auth.signOut();state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.frtSecurityResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'user-role-refresh':{
@@ -508,6 +510,33 @@ async function action(name,button){
       select('Requested restriction','enabled',[['false','Suspend workspace access'],['true','Restore existing access']]),
       async fd=>stageRoleProposal('workspace.configure',
          {userId:String(fd.get('userId')),enabled:fd.get('enabled')==='true'}));break;
+ }
+ case 'security-frt-readonly':{
+   if(state.frtSecurityBusy||!state.context)return;
+   state.frtSecurityBusy=true;state.frtSecurityResult=null;render();
+   try{
+     state.frtSecurityResult=await runFRTSec03SignedAcceptance({auth,api:db});
+     const result=state.frtSecurityResult;
+     toast(result.status==='PASS'?'FRT signed read-only checks passed.':
+       result.status==='BLOCKED'?'Signed FRT acceptance blocked. Review the result.':
+       'FRT authorization check failed. Review the result.',result.status!=='PASS');
+   }catch{
+     // Never display or export raw server errors: they may contain identity data.
+     state.frtSecurityResult={checkpoint:'CP-FRT-SEC03',status:'BLOCKED',
+       scenario:'UNVERIFIED',checks:[],writesAttempted:0,
+       reason:'Authenticated read-only request did not complete'};
+   }finally{state.frtSecurityBusy=false;render();}
+   break;
+ }
+ case 'security-frt-copy':{
+   if(!state.frtSecurityResult)return;
+   const {checkpoint,status,scenario,checks,writesAttempted,reason}=state.frtSecurityResult;
+   try{
+     await navigator.clipboard.writeText(JSON.stringify(
+       {checkpoint,status,scenario,checks,writesAttempted,reason},null,2));
+     toast('Nonsecret FRT acceptance report copied.');
+   }catch{toast('Clipboard unavailable. Use the displayed result.',true);}
+   break;
  }
  case 'security-run-negative':{
    if(state.securityBusy)return;
@@ -753,7 +782,7 @@ root.addEventListener('input',event=>{
 });
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
 window.addEventListener('keydown',event=>{if(event.key==='Escape')hideModal();});
-auth.onExpired=()=>{state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{state.context=null;state.frtSecurityResult=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  try{
   if(await auth.restore()){
