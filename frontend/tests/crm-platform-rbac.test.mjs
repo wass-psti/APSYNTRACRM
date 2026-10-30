@@ -98,7 +98,7 @@ test('authoritative backend reuses Auth bootstrap guard, role audit and workspac
   'public.apsyntra_role_bootstrap_identities',
   'public.apsyntra_role_change_requests',
   'public.apsyntra_role_change_audit',
-  "p_role IN ('admin','supervisor','employee','viewer')",
+  "p_role NOT IN ('admin','supervisor','employee','viewer')",
   'Stale CRM platform role assignment',
   'public.work_board_access','public.has_module_access','public.module_role_for']){
   assert.ok(migration.includes(required),'missing contract: '+required);
