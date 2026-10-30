@@ -202,6 +202,10 @@ BEGIN
  ELSIF p_operation LIKE 'assignment.%' THEN
   RAISE EXCEPTION 'Assignment requires an actual userId' USING ERRCODE='22023';
  END IF;
+ IF coalesce(p_payload->>'role','') IN
+  ('bootstrap','bootstrap_admin','admin_general_manager','service_role','platform_superuser') OR
+  coalesce(p_payload->>'roleKey','') IN ('bootstrap','bootstrap_admin','service_role')
+ THEN RAISE EXCEPTION 'Protected authority cannot be proposed' USING ERRCODE='42501'; END IF;
  IF p_payload ? 'moduleId' AND (p_payload->>'moduleId') NOT IN
   ('fueltrans','tool-traceability','toolbox-issues','fund-released-tracker',
    'fueltrack-plus','tradelink','time-tracker','order-intake','employee-eval',
