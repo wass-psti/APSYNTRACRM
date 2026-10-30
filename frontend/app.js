@@ -227,7 +227,11 @@ function render(){
  else shell(overview());
 }
 async function refreshWorkspace(){
+ const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
  state.context=await db.context();
+ if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
+   state.roleData=null;state.userRoleData=null;state.userRoleSelected=null;
+ }
  state.boards=await db.boards('active');
  state.user=auth.session?.user;
  // Verified server RPC is the ONLY entry gate. A profile role or email is never sufficient.
