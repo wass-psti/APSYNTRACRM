@@ -14,7 +14,7 @@ const paths=['index.html','frontend/app.js','frontend/config.js','frontend/sessi
  'frontend/board-manifest.js','frontend/board-foundation.js','frontend/board-foundation-ui.js',
  'frontend/board-grid.js','frontend/board-operational-qa.js',
  'frontend/board-security-targets.js','frontend/board-negative-acceptance.js','frontend/board-security-ui.js','frontend/board-negative-write.js',
- 'frontend/role-configuration-ui.js','frontend/role-configuration-client.js','frontend/styles.css'];
+ 'frontend/role-configuration-ui.js','frontend/role-configuration-client.js','frontend/user-role-management.js','frontend/styles.css'];
 const digest=x=>createHash('sha256').update(x).digest('hex');
 function url(path){
  const remote=new URL(path==='index.html'?'./':path,origin);
