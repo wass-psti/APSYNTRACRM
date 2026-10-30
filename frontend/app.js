@@ -328,6 +328,20 @@ async function action(name,button){
    finally{state.securityBusy=false;render();}
    break;
  }
+ case 'security-deny-write':{
+   if(state.securityWriteBusy||state.securityResult?.status!=='pass')return;
+   openModal('Confirm isolated QA denial',input('Type VERIFY DENIAL','ack')+
+    '<div class="note security-note">This submits one expected-to-fail create attempt to the isolated APSYNTRA QA board only. It must return HTTP 403. If unexpectedly authorized, the test attempts to delete only its unique QA item.</div>',
+    async fd=>{
+      if(String(fd.get('ack')||'')!=='VERIFY DENIAL')throw new ApiError('Enter VERIFY DENIAL exactly.');
+      state.securityWriteBusy=true;state.securityWriteResult=null;render();
+      try{
+        state.securityWriteResult=await runDeniedQaWrite(auth,db,{verifiedReadOnlyResult:state.securityResult});
+        toast(state.securityWriteResult.status==='pass'?'Signed QA write rejected correctly.':'QA write rejection was not verified.',state.securityWriteResult.status!=='pass');
+      }finally{state.securityWriteBusy=false;render();}
+    });
+   break;
+ }
  case 'security-copy-report':{
    if(!state.securityResult)return;
    try{
