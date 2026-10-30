@@ -7,6 +7,7 @@ on:
       - "sql/cp-frt-sec01-bootstrap-role-governance.sql"
       - "sql/cp-frt-sec01b-revoke-legacy-role-rpc.sql"
       - "sql/cp-frt-sec02-retire-qa-membership-config.sql"
+      - "scripts/verify-frt-role-denials.mjs"
       - "frontend/tests/frt-central-authority.test.mjs"
       - "docs/CP-FRT-SEC01-TEST-USER-RETIREMENT.md"
       - ".github/workflows/frt-governance-security.yml"
@@ -31,3 +32,5 @@ jobs:
           node --test frontend/tests/*.test.mjs
       - name: Check existing anonymous API restrictions
         run: node scripts/verify-role-config-anon.mjs
+      - name: Deny direct legacy FRT role administration over live HTTPS
+        run: node scripts/verify-frt-role-denials.mjs
