@@ -14,13 +14,16 @@ import {runTwelveBoardQa} from './board-operational-qa.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
 import {runDeniedQaWrite} from './board-negative-write.js';
+import {RoleConfigurationClient} from './role-configuration-client.js';
+import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const nativeIssues=new NativeIssueClient(db);
+const roleConfig=new RoleConfigurationClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -74,6 +77,7 @@ function sidebar(){
      <a class="nav-link ${state.view==='boards'?'active':''}" href="#/boards"><span class="nav-ico">▤</span><span class="nav-label">My boards</span><span class="nav-count">${state.boards.length}</span></a>
      <a class="nav-link ${state.view==='foundation'?'active':''}" href="#/foundation"><span class="nav-ico">◇</span><span class="nav-label">12-board foundation</span></a>
      <a class="nav-link ${state.view==='security'?'active':''}" href="#/security"><span class="nav-ico">◈</span><span class="nav-label">Access acceptance</span></a>
+     ${state.roleVerified===true?`<div class="side-section">Administration</div><a class="nav-link ${state.view==='role-configuration'?'active':''}" href="#/role-configuration"><span class="nav-ico">⚿</span><span class="nav-label">Role Configuration</span></a>`:''}
      <a class="nav-link ${state.view==='settings'?'active':''}" href="#/settings"><span class="nav-ico">⚙</span><span class="nav-label">Settings</span></a>
      <a class="nav-link ${state.view==='acceptance'?'active':''}" href="#/acceptance"><span class="nav-ico">✓</span><span class="nav-label">Pages acceptance</span></a>
    </nav>
@@ -84,7 +88,7 @@ function sidebar(){
    <button class="sign-out" data-action="logout">⇥ <span>Sign out of workspace</span></button></div></aside>`;
 }
 function shell(body){
- const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':'Settings';
+ const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':'Settings';
  root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
@@ -214,6 +218,7 @@ function render(){
    canProvision:state.context?.profile?.platform_role==='admin_general_manager'
  }));
  else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy}));
+ else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.roleVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -222,6 +227,10 @@ async function refreshWorkspace(){
  state.context=await db.context();
  state.boards=await db.boards('active');
  state.user=auth.session?.user;
+ // Verified server RPC is the ONLY entry gate. A profile role or email is never sufficient.
+ try{state.roleVerified=await roleConfig.bootstrapVerified();}
+ catch{state.roleVerified=false;}
+ if(!state.roleVerified){state.roleData=null;state.roleError='';}
 }
 async function refreshFoundation(){
  const context=await db.context();
@@ -257,7 +266,13 @@ async function onRoute(){
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='boards'&&validUuid(parts[1])){await loadBoard(parts[1],parts[2]==='issues'?'issues':'items');return;}
- routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':'overview';
+ routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':'overview';
+ if(state.view==='role-configuration'&&!state.roleVerified){location.hash=routeHome;return onRoute();}
+ if(state.view==='role-configuration'){
+   state.roleBusy=true;render();
+   try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);}
+   finally{state.roleBusy=false;}
+ }
  if(state.view==='boards'&&state.showArchived&&!state.archived.length){try{state.archived=await db.boards('archived');}catch(err){notice(err);}}
  if(state.view==='foundation'){
    state.foundationBusy=true;render();
