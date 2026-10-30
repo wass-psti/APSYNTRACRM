@@ -304,7 +304,7 @@ BEGIN
  IF board_ws IS NULL THEN RETURN false; END IF;
  ws:=public.current_workspace_id(caller);
  IF ws IS NULL OR ws<>board_ws THEN RETURN false; END IF;
- IF p_required NOT IN ('view','edit','manage') THEN RETURN false; END IF;
+ IF p_required IS NULL OR p_required NOT IN ('view','edit','manage') THEN RETURN false; END IF;
  cap:=public.apsyntra_crm_explicit_role(caller,ws);
  IF cap='viewer' AND p_required IN ('edit','manage') THEN RETURN false; END IF;
  IF cap IN ('employee','supervisor') AND p_required='manage' THEN RETURN false; END IF;
