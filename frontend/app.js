@@ -310,6 +310,30 @@ async function action(name,button){
  case 'logout':{await auth.signOut();state.context=null;state.boards=[];state.board=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
+ case 'security-run-negative':{
+   if(state.securityBusy)return;
+   state.securityBusy=true;state.securityResult=null;state.securityProgress=[];
+   render();
+   try{
+     state.securityResult=await runSignedNegativeBoardAcceptance(auth,db,{
+       onBoard:entry=>{state.securityProgress.push(entry);render();}
+     });
+     const report=state.securityResult;
+     if(report.status==='pass')toast('Signed read-only authorization checks passed on twelve boards.');
+     else if(report.status==='fail')toast('Unexpected authorization result. Review the failed board.',true);
+     else toast('This account cannot establish the selected negative-access scenario.',true);
+   }catch(err){notice(err);}
+   finally{state.securityBusy=false;render();}
+   break;
+ }
+ case 'security-copy-report':{
+   if(!state.securityResult)return;
+   try{
+     await navigator.clipboard.writeText(sanitizeNegativeReport(state.securityResult));
+     toast('Nonsecret acceptance report copied.');
+   }catch{toast('Clipboard unavailable. Use the displayed result.',true);}
+   break;
+ }
  case 'foundation-refresh':{
    if(state.foundationBusy||state.provisionBusy)return;
    state.foundationBusy=true;state.foundationError='';render();
