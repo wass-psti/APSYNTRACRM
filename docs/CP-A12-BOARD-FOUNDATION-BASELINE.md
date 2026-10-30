@@ -1,7 +1,7 @@
 # CP-A12 — APSYNTRA CRM 12-Board Operational Foundation Baseline
 
 **Baseline date:** October 30, 2026 (Asia/Manila)
-**Status:** IMPLEMENTED FOR SIGNED PROVISIONING; LIVE 12-BOARD ACCEPTANCE PENDING
+**Status:** 12/12 STRUCTURALLY VERIFIED IN LIVE POSTGRESQL; SIGNED OPERATIONAL ACCEPTANCE PENDING
 **Existing primary UI:** https://wass-psti.github.io/APSYNTRACRM/#/foundation
 **Supabase project:** `jtlusodorfnyzgyuewkz`
 **Repository:** `wass-psti/APSYNTRACRM`, `main`
@@ -10,7 +10,7 @@
 
 | Phase | What is accepted | Current classification |
 | --- | --- | --- |
-| **A — 12-board infrastructure** | Twelve dedicated, authorized boards; typed columns; signed operational item/column CRUD; read-back and audit; validated projection contracts | **NOT YET ACCEPTED** (no live dedicated boards) |
+| **A — 12-board infrastructure** | Twelve dedicated, authorized boards; typed columns; signed operational item/column CRUD; read-back and audit; validated projection contracts | **12/12 structural boards VERIFIED; final signed CRUD/CAS/denial acceptance PENDING** |
 | **B — embedded application-module integration** | Specialized application modules developed **inside APSYNTRA CRM**, reusing the business rules of the twelve existing applications and the existing shared TypeScript contracts; authoritative domain data flowing into board projections | NOT STARTED under this checkpoint |
 | **C — end-to-end application acceptance** | Real clock-in/out, fuel transfers, procurement, approvals and other domain-specific workflows; authorized sync, revisions and lineage | NOT STARTED |
 | **D — production readiness** | Consolidated security and role-revocation testing, real multi-workspace isolation, deployment/security, regression, acceptance decision | NOT STARTED |
@@ -19,7 +19,7 @@ The approved architecture is **12 domain application modules → 12 dedicated bo
 
 The Phase A board is a **derived operational view**, never the domain-specific system of record. Empty board provisioning does not constitute an application's integration.
 
-## 2. Verified independent live inventory before provisioning
+## 2. Verified independent live inventories — before and after provisioning
 
 A read-only PostgreSQL query returned:
 
@@ -31,7 +31,7 @@ A read-only PostgreSQL query returned:
 - Existing `wm_create_board_configured` creates a board, owner membership, initial group and validated typed columns in one PostgreSQL transaction. `wm_get_board` returns live board/groups/items/columns/cells. `wm_set_board_cell_if_current` is the existing compare-and-set write path (SQLSTATE `40001` for a stale expected value), with authorized audit events. These actual source contracts were inspected.
 - Work Management board tables have RLS enabled; they are implemented with existing `SECURITY DEFINER` RPC authorizations, not the same FORCE RLS pattern as the separately accepted native Issue document ledger. Do **not** equate or confuse these boundaries.
 
-**No 12-board production records were created or modified by this inventory or source-development work.** Board readiness remains **0/12 verified** until the authenticated UI provisions and verifies the intended boards.
+**October 30 post-provision independent SQL inspection:** exactly **12 active dedicated application boards** in the intended workspace, each with a unique UUID, correct versioned module-description marker, **eight typed columns**, **one group**, and **one owner membership**. All **twelve boards contained zero active items**. Existing active non-module boards remained APSYNTRA QA, Contacts and I.T. Daily Activities (15 active total); 59 historical boards remained archived. The signed frontend independently reported **12/12 READY**, 0 missing and 0 mismatched. This corroborates provisioning and structure, **not** the pending twelve-board transactional acceptance.
 
 ## 3. Application-to-board mapping (configuration, not synchronized data)
 
@@ -80,9 +80,9 @@ Important: the current generic board `wm_get_board` returns all permitted column
 
 After the new release is available, an **existing `admin_general_manager` account** can open `#/foundation`.
 
-1. Select **Check live readiness**. Initially expect `0/12` and `missing` for all twelve, based on the independent DB inventory.
-2. Select **Provision missing dedicated boards**, type `PROVISION 12 BOARDS`. The app uses the existing signed `wm_create_board_configured` RPC and verifies the inserted board immediately after each operation. It does not import application data or alter archived boards. A second run skips visible existing boards, but **server-side uniqueness for concurrent provisioners is not yet guaranteed**; do not provision simultaneously from multiple sessions.
-3. Run **Check live readiness** again: require `12/12 READY`, correct workspace, typed domain columns and server-authorized view/edit per board. Any name collision, mismatch or denied board fails closed.
+1. Select **Check live readiness**. This is now independently verified as **12/12 READY** (the initial 0/12 inventory was before provisioning).
+2. **Already completed:** the existing signed administrator provisioned the twelve dedicated boards via `wm_create_board_configured`. Do not provision again unless a genuine schema/registry defect requires correction. No archived board was modified. Server-side uniqueness across concurrent administrators remains a future hardening requirement.
+3. **Completed:** signed readiness returned `12/12 READY`, and independent SQL corroborated exact names, module markers, schema shape and workspace. A name collision, mismatch or denied board must still fail closed on subsequent checks.
 4. Confirm all twelve boards are still **empty isolated nonproduction boards**. Select **Run 12-board operational checks**, type `RUN 12 BOARD CHECKS`. Each board receives one uniquely labeled QA item that is read back, updated via a typed cell compare-and-set operation, challenged with a stale write (expected SQLSTATE `40001`), then permanently deleted. The test independently reads the board event ledger for the authenticated actor and stops on first failure. QA source names are acceptance-only, not simulated application records.
 5. Only after a user-reported **12/12 PASS** and independent SQL inspection of the twelve board records, schema, membership and QA audit can Phase A be certified. No system/application-level certification follows automatically.
 
@@ -92,23 +92,23 @@ A failed test may leave a single QA item pending cleanup, which is explicitly re
 
 | Check | Current evidence | Current Phase A result |
 | --- | --- | --- |
-| Twelve uniquely mapped dedicated boards | Live DB has 0/12 | **BLOCKED — provision** |
-| Signed, correctly scoped per-board view/edit | Shared RPCs inspected; no dedicated boards to call | PENDING |
-| PostgreSQL-backed board/group/column create | Existing configured creation RPC verified by source; 12-run pending | PENDING |
-| Signed board-item create/read/update/delete | Existing RPC implementation, automated contract tests | PENDING live 12 boards |
-| Stale writes and audit | Existing CAS `40001` and event RPC verified by source | PENDING live 12 boards |
+| Twelve uniquely mapped dedicated boards | 12/12 verified by live SQL + signed frontend | **VERIFIED** |
+| Signed, correctly scoped per-board view/edit | User-reported 12/12 signed readiness; `wm_get_board` and `work_board_access` executed in the UI | **VERIFIED for current signed admin**; role matrix pending |
+| PostgreSQL-backed board/group/column create | 12 boards × 8 columns, 1 group, 1 membership independently observed | **VERIFIED** |
+| Signed board-item create/read/update/delete | One FuelTrans QA item lifecycle with 4 positive ledger events, no residual item | **PARTIAL LIVE** (remaining 11 boards pending; FuelTrans stale negative pending) |
+| Stale writes and audit | Existing SQL CAS `40001` contract verified; FuelTrans 1 create, 2 updates, 1 delete events recorded | **POSITIVE AUDIT PARTIAL**; live stale negative pending |
 | Anonymous access | Four core RPC grants allow authenticated, deny anon | SHARED CONTROL VERIFIED |
 | Cross-workspace access negative test | Two workspaces exist; no genuine second-workspace signed denial executed | **PENDING** |
-| Domain-specific shape and frontend rendering | 12 typed manifests and dynamic no-mock renderer implemented | IMPLEMENTED, live 12-view pending |
+| Domain-specific shape and frontend rendering | 12 typed manifests and live SQL schema verification; signed UI returned READY | **VERIFIED structural rendering**, application data still absent |
 | Identity, lineage and duplicate protection | TypeScript envelope and revision classifier; no atomic per-source integration yet | CONTRACT READY, sync pending Phase B |
-| Independent nonproduction acceptance evidence | Initial SQL inventory collected; QA audit not yet performed | PENDING |
+| Independent nonproduction acceptance evidence | Live post-provision inventory and targeted FuelTrans event reconciliation; SQL evidence query committed | **PARTIAL**; 12 signed transaction reports pending |
 
-**Overall Phase A board-specific live acceptance: 0 of 12 = 0%.** This is not a regression of previously accepted SB07/SB08 Issue transactions; those remain independently accepted and untouched.
+**Overall Phase A completion:** 12/12 structural foundation boards verified (**100% infrastructure provisioning**). Full **signed operational acceptance remains 0/12 certified**, because only one positive FuelTrans CRUD audit cycle has been independently observed and its stale-write denial is not confirmed. These percentages represent distinct gates; they are not overall APSYNTRA CRM production completion. Previously accepted SB07/SB08 Issue transactions remain unaffected.
 
 ## 7. Unresolved blockers and defects
 
-1. **Blocking:** no dedicated boards have yet been provisioned with a real administrator bearer.
-2. **Blocking:** 12-board real signed CRUD, CAS, audit and UI acceptance has not executed; mock/unit tests cannot substitute.
+1. **RESOLVED:** twelve dedicated boards have been provisioned through the existing signed user account and independently verified; no additional board creation is needed.
+2. **Blocking:** twelve-board signed CRUD/CAS/audit acceptance has not completed. FuelTrans already has one partial signed QA item history; its positive create/two updates/delete audit was independently observed, but no valid evidence of stale-write rejection or a complete in-app PASS was supplied. The remaining eleven boards have no QA runs.
 3. **Blocking for multi-workspace certification:** actual cross-workspace negative test with a genuine authorized session/second workspace boundary is pending. A nonexistent UUID is not sufficient independent evidence.
 4. **Phase B:** no live domain events, authoritative TimeTracker records, GPS checks, attachment integration, source-to-board idempotent atomic upsert or production reconciliation have been implemented.
 5. **Privacy:** field-level authorization of GPS, precise attendance and HR/financial details is not provided by the generic board RPC; exclude those from general-purpose board columns until a secure backend view exists.
@@ -116,6 +116,16 @@ A failed test may leave a single QA item pending cleanup, which is explicitly re
 
 ## 8. Next checkpoint
 
-**CP-A12.1 — Signed 12-board provisioning and acceptance evidence.** Required: 12/12 exact board mappings created by the real administrator, all `READY` through signed RPCs, one isolated QA create/read/cell CAS/stale denial/delete/audit cycle per board, independent database reconciliation, and documented RBAC/negative-case scope.
+**CP-A12.1 — Complete signed 12-board operational acceptance evidence.** Provisioning, configuration and signed readiness are **completed**. Remaining: one confirmed full QA create/read/cell CAS/stale denial/delete/audit cycle per board, independently reconciled against `sql/phase-a12-board-readonly-evidence.sql`, plus clearly scoped negative RBAC and multi-workspace tests. Do not repeat successful provisioning or copy a user's JWT into chat.
 
 **Then** CP-A12.2 can harden unique source identity/lineage persistence within the same database for future embedded application modules, without creating a separate backend. Phase B, C and D remain explicitly separate.
+
+## 9. October 30, 2026 — independent post-provision evidence and operational QA boundary
+
+The application UI and separate PostgreSQL query agree: each of the 12 exact dedicated module boards is unique and active, has its appropriate `[APSYNTRA:MODULE:*:v1]` marker, a common workspace ID, eight approved typed columns, one initial group and one owner membership. All 12 were empty when inspected. PostgreSQL RLS is enabled on Work Management tables, and direct `SELECT` is not granted to `anon` or `authenticated`; access is mediated by the established authorized Work Management RPCs. This is **structural and signed administrator authorization evidence**, not a complete role-denial matrix.
+
+The independent query `sql/phase-a12-board-readonly-evidence.sql` also found exactly **one** FuelTrans QA run. Its event sequence is `item.created`, `item.cell_updated`, `item.cell_updated`, `item.deleted`, with one consistent actor and no remaining QA item. **A rejected stale write cannot be inferred from successful ledger events.** Its final signed acceptance status remains **PENDING** without the browser report. The other 11 boards had no acceptance QA attempts at that inspection.
+
+The live UI acceptance runner now displays **per-board pass/fail/not-run, each completed gate, any error and whether its own QA item was removed**. The report is truthful only within the current in-browser session; independent database reconciliation is still mandatory.
+
+The next unblocked operation is **Run 12-board operational checks** on the existing empty nonproduction boards using the original signed administrator. The action must not be executed via SQL editor impersonation, invented user tokens, or a separate local host. An earlier partial run should be diagnosed from the per-board report before repeated testing. A complete 12/12 PASS plus external audit evidence closes the operational CRUD checkpoint, while cross-workspace/role-denial cases remain separately pending until genuinely exercised.
