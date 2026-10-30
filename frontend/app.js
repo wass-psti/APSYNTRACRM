@@ -2,12 +2,14 @@ import {AuthClient,ApiError} from './session.js';
 import {DomainApi,validUuid} from './data.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
+import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
+import {renderPagesAcceptance} from './pages-acceptance-ui.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -60,6 +62,7 @@ function sidebar(){
      <a class="nav-link ${state.view==='overview'?'active':''}" href="#/overview"><span class="nav-ico">◫</span><span class="nav-label">Overview</span></a>
      <a class="nav-link ${state.view==='boards'?'active':''}" href="#/boards"><span class="nav-ico">▤</span><span class="nav-label">My boards</span><span class="nav-count">${state.boards.length}</span></a>
      <a class="nav-link ${state.view==='settings'?'active':''}" href="#/settings"><span class="nav-ico">⚙</span><span class="nav-label">Settings</span></a>
+     <a class="nav-link ${state.view==='acceptance'?'active':''}" href="#/acceptance"><span class="nav-ico">✓</span><span class="nav-label">Pages acceptance</span></a>
    </nav>
    <div class="side-section">Recent boards</div>
    <nav class="nav-list" aria-label="Recent boards">${state.boards.slice(0,6).map((b,i)=>`<a class="nav-link ${currentBoard===b.id?'active':''}" href="#/boards/${e(b.id)}"><span class="nav-ico" style="color:#6d71da">▦</span><span class="nav-label">${e(b.name)}</span></a>`).join('')||'<div class="muted" style="padding:12px;font-size:11px">No boards yet</div>'}</nav>
@@ -68,7 +71,7 @@ function sidebar(){
    <button class="sign-out" data-action="logout">⇥ <span>Sign out of workspace</span></button></div></aside>`;
 }
 function shell(body){
- const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':'Settings';
+ const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':'Settings';
  root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
@@ -171,6 +174,7 @@ function settingsPage(){
  <button class="secondary" data-action="copy-token">⎘ Copy short-lived access token</button>
  <button class="secondary" data-action="logout">⇥ Sign out</button></div>
  <div class="note security-note"><b>Access token:</b> Copy only when necessary for local acceptance testing. Anyone holding it may act as your account until it expires. Never share it in chat or commit it.</div>
+ <p style="margin-top:15px"><a class="secondary" href="#/acceptance">✓ GitHub Pages persistence acceptance</a></p>
  <div style="border-top:1px solid #eceefa;margin-top:23px;padding-top:20px">
   <h3 style="font-size:14px;margin:0 0 7px">Signed backend verification</h3>
   <p class="muted" style="font-size:12px;margin:0 0 15px">Run read-only checks against the actual authenticated Supabase session, central board permissions, and Issue view. No token copying or database write required.</p>
@@ -187,6 +191,7 @@ function settingsPage(){
 function render(){
  if(!state.context){renderLogin();return;}
  if(state.view==='board')shell(boardPage());
+ else if(state.view==='acceptance')shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy}));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -222,7 +227,7 @@ async function onRoute(){
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='boards'&&validUuid(parts[1])){await loadBoard(parts[1],parts[2]==='issues'?'issues':'items');return;}
- routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':'overview';
+ routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':'overview';
  if(state.view==='boards'&&state.showArchived&&!state.archived.length){try{state.archived=await db.boards('archived');}catch(err){notice(err);}}
  render();
 }
@@ -327,6 +332,23 @@ async function action(name,button){
         summary.passed+' authenticated checks passed.',summary.failed>0);
    }catch(err){notice(err);}
    finally{state.acceptanceBusy=false;render();}
+   break;
+ }
+ case 'run-pages-acceptance':{
+   if(state.pagesBusy)return;
+   const qa=state.boards.find(b=>b.name===QA_BOARD_NAME);
+   if(!qa){toast('Create an isolated APSYNTRA QA board first.',true);return;}
+   const fields=input('Type APSYNTRA QA to confirm','ack','')+
+     '<div class="note security-note">Confirm this is an isolated nonproduction QA board. This test performs real INSERT, UPDATE and removal operations; tombstones and audit events remain in PostgreSQL.</div>';
+   openModal('Approve isolated QA write acceptance',fields,async fd=>{
+     if(String(fd.get('ack')||'').trim()!==QA_BOARD_NAME)throw new ApiError('Type APSYNTRA QA exactly.');
+     state.pagesBusy=true;state.pagesAcceptance=null;render();
+     try{
+       state.pagesAcceptance=await runPagesPersistenceAcceptance(db,{board:qa,context:state.context});
+       if(state.pagesAcceptance.status==='fail')toast('Persistence acceptance failed; inspect the report.',true);
+       else toast('Signed Pages persistence and audit acceptance passed.');
+     }finally{state.pagesBusy=false;render();}
+   });
    break;
  }
  case 'copy-token':{
