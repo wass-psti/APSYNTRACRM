@@ -25,7 +25,7 @@ function sectionTable(headers,body){
 function roles(d){
  const records=d.roles||[];
  let rows=records.map(r=>'<tr data-searchable="'+x((r.roleKey+' '+r.displayName).toLowerCase())+'">'+
- '<td><strong>'+x(r.displayName)+'</strong><div class="muted" style="font-size:11px">'+x(r.roleKey)+'</div></td>'+
+ '<td><strong>'+x(r.displayName)+'</strong><div class="muted csp-u020" >'+x(r.roleKey)+'</div></td>'+
  '<td>'+x(r.kind)+'</td><td><span class="status '+(r.state==='reference'?'done':'todo')+'">'+x(r.state)+'</span></td>'+
  '<td>v'+Number(r.revision||1)+'</td><td>'+
  (r.kind==='system_reference'?'Protected default role':
@@ -33,9 +33,9 @@ function roles(d){
  '</td></tr>').join('');
  return '<div class="section-header"><strong>Central role catalog</strong><button class="primary" data-action="role-propose-create">＋ New role proposal</button></div>'+
  '<div class="note">Default role hierarchy: <strong>Admin → Supervisor → Employee → Viewer</strong>. These are immutable reference definitions. New roles and revisions are staged only; live backend permissions are unchanged.</div>'+
- '<input class="search-input" placeholder="Search roles" aria-label="Search roles" style="margin:14px 0">'+
+ '<input class="search-input csp-u057" placeholder="Search roles" aria-label="Search roles" >'+
  sectionTable(['Role','Kind','State','Revision','Actions'],rows||'<tr><td colspan="5">No role definitions</td></tr>')+
- '<div style="margin-top:14px"><button class="secondary" data-action="role-propose-activation">Propose activation / deactivation</button></div>';
+ '<div class="csp-u046" ><button class="secondary" data-action="role-propose-activation">Propose activation / deactivation</button></div>';
 }
 function assignments(d){
  const users=d.users||[],assignments=d.assignments||[];
@@ -45,7 +45,7 @@ function assignments(d){
   const roles=byUser.get(u.id)||[];
   const protectedAccount=!!u.bootstrapProtected;
   return '<tr data-searchable="'+x((u.displayName+' '+u.email+' '+u.platformRole).toLowerCase())+'"><td><strong>'+
-   x(u.displayName||'User')+'</strong><div class="muted" style="font-size:11px">'+x(u.email)+'</div></td>'+
+   x(u.displayName||'User')+'</strong><div class="muted csp-u020" >'+x(u.email)+'</div></td>'+
    '<td>'+x(u.platformRole)+'</td><td>'+
     roles.map(r=>'<span class="status '+(r.enabled?'done':'todo')+'">'+x(r.moduleId)+': '+x(r.role)+'</span>').join(' ')||
     '<span class="muted">No existing module assignment</span>'+
@@ -54,7 +54,7 @@ function assignments(d){
    '</td></tr>';
  }).join('');
  return '<div class="section-header"><strong>Existing platform and module assignments</strong><span class="muted">Server-sourced, read-only</span></div>'+
- '<input class="search-input" placeholder="Search workspace members" aria-label="Search workspace members" style="margin:14px 0">'+
+ '<input class="search-input csp-u057" placeholder="Search workspace members" aria-label="Search workspace members" >'+
  sectionTable(['Account','Platform role','Actual module assignments','Proposal'],rows||'<tr><td colspan="4">No members</td></tr>')+
  '<div class="note">Effective access is still decided by the existing central backend, active workspace and module-specific guards. These records show authoritative stored assignments; pending proposals do not grant access.</div>';
 }
@@ -67,9 +67,9 @@ function matrix(d){
  }
  return '<div class="section-header"><strong>Module permission matrix</strong><span class="muted">12 modules × 7 capabilities</span></div>'+
  '<div class="note">All matrix entries are proposal controls, <strong>not effective grants</strong>. Module-specific roles remain mapped to the existing authorization system. Approval and activation are disabled until separately authorized.</div>'+
- '<input class="search-input" placeholder="Filter application modules" aria-label="Filter application modules" style="margin:14px 0">'+
+ '<input class="search-input csp-u057" placeholder="Filter application modules" aria-label="Filter application modules" >'+
  sectionTable(['Module',...actions],rows)+
- '<p class="muted" style="font-size:12px">Available role keys: '+x(roleNames.join(', '))+'</p>';
+ '<p class="muted csp-u027" >Available role keys: '+x(roleNames.join(', '))+'</p>';
 }
 function workspaces(d){
  const boardCount=(d.boards||[]).length;
@@ -89,9 +89,9 @@ function audit(d){
  const history=events.map(a=>'<tr><td>'+x(a.event)+'</td><td>'+x(a.detail?.operation)+'</td><td>'+x(a.recordedAt)+'</td></tr>').join('');
  return '<div class="section-header"><strong>Immutable change history</strong><span class="muted">Last 150 entries</span></div>'+
  '<div class="note">Every staged proposal produces a server-side append-only event. Updates and deletes to audit rows are blocked; audit records are not proof of approval or effective enforcement.</div>'+
- '<input class="search-input" placeholder="Search proposals" aria-label="Search proposals" style="margin:12px 0">'+
+ '<input class="search-input csp-u056" placeholder="Search proposals" aria-label="Search proposals" >'+
  sectionTable(['Requested operation','Status','Created','Request ID'],requests||'<tr><td colspan="4">No changes requested</td></tr>')+
- '<div class="section-header" style="margin-top:20px"><strong>Audit events</strong></div>'+
+ '<div class="section-header csp-u050" ><strong>Audit events</strong></div>'+
  sectionTable(['Event','Operation','Recorded'],history||'<tr><td colspan="3">No events recorded</td></tr>');
 }
 export function renderRoleConfiguration({verified=false,loading=false,data=null,tab='roles',error=''}={}){
@@ -104,7 +104,7 @@ export function renderRoleConfiguration({verified=false,loading=false,data=null,
  if(loading)html+='<p class="muted">Loading verified workspace configuration…</p>';
  if(!data)return html;
  html+=summaryCards(data);
- html+='<nav class="row" aria-label="Role configuration sections" style="display:flex;gap:8px;flex-wrap:wrap;margin:18px 0">'+
+ html+='<nav class="row csp-u016" aria-label="Role configuration sections" >'+
   tabs.map(([key,label])=>'<button class="'+(tab===key?'primary':'secondary')+'" data-action="role-tab" data-tab="'+key+'">'+x(label)+'</button>').join('')+'</nav>';
  html+=tab==='roles'?roles(data):tab==='users'?assignments(data):
  tab==='matrix'?matrix(data):tab==='workspace'?workspaces(data):audit(data);
