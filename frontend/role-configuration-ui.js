@@ -33,7 +33,7 @@ function roles(d){
  '</td></tr>').join('');
  return '<div class="section-header"><strong>Central role catalog</strong><button class="primary" data-action="role-propose-create">＋ New role proposal</button></div>'+
  '<div class="note">Default role hierarchy: <strong>Admin → Supervisor → Employee → Viewer</strong>. These are immutable reference definitions. New roles and revisions are staged only; live backend permissions are unchanged.</div>'+
- '<input class="search-input csp-u057" placeholder="Search roles" aria-label="Search roles" >'+
+ '<input id="search-system-roles" class="search-input csp-u057" placeholder="Search roles" aria-label="Search roles" >'+
  sectionTable(['Role','Kind','State','Revision','Actions'],rows||'<tr><td colspan="5">No role definitions</td></tr>')+
  '<div class="csp-u046" ><button class="secondary" data-action="role-propose-activation">Propose activation / deactivation</button></div>';
 }
@@ -54,7 +54,7 @@ function assignments(d){
    '</td></tr>';
  }).join('');
  return '<div class="section-header"><strong>Existing platform and module assignments</strong><span class="muted">Server-sourced, read-only</span></div>'+
- '<input class="search-input csp-u057" placeholder="Search workspace members" aria-label="Search workspace members" >'+
+ '<input id="search-workspace-members" class="search-input csp-u057" placeholder="Search workspace members" aria-label="Search workspace members" >'+
  sectionTable(['Account','Platform role','Actual module assignments','Proposal'],rows||'<tr><td colspan="4">No members</td></tr>')+
  '<div class="note">Effective access is still decided by the existing central backend, active workspace and module-specific guards. These records show authoritative stored assignments; pending proposals do not grant access.</div>';
 }
@@ -67,7 +67,7 @@ function matrix(d){
  }
  return '<div class="section-header"><strong>Module permission matrix</strong><span class="muted">12 modules × 7 capabilities</span></div>'+
  '<div class="note">All matrix entries are proposal controls, <strong>not effective grants</strong>. Module-specific roles remain mapped to the existing authorization system. Approval and activation are disabled until separately authorized.</div>'+
- '<input class="search-input csp-u057" placeholder="Filter application modules" aria-label="Filter application modules" >'+
+ '<input id="filter-role-permission-modules" class="search-input csp-u057" placeholder="Filter application modules" aria-label="Filter application modules" >'+
  sectionTable(['Module',...actions],rows)+
  '<p class="muted csp-u027" >Available role keys: '+x(roleNames.join(', '))+'</p>';
 }
@@ -89,7 +89,7 @@ function audit(d){
  const history=events.map(a=>'<tr><td>'+x(a.event)+'</td><td>'+x(a.detail?.operation)+'</td><td>'+x(a.recordedAt)+'</td></tr>').join('');
  return '<div class="section-header"><strong>Immutable change history</strong><span class="muted">Last 150 entries</span></div>'+
  '<div class="note">Every staged proposal produces a server-side append-only event. Updates and deletes to audit rows are blocked; audit records are not proof of approval or effective enforcement.</div>'+
- '<input class="search-input csp-u056" placeholder="Search proposals" aria-label="Search proposals" >'+
+ '<input id="search-role-proposals" class="search-input csp-u056" placeholder="Search proposals" aria-label="Search proposals" >'+
  sectionTable(['Requested operation','Status','Created','Request ID'],requests||'<tr><td colspan="4">No changes requested</td></tr>')+
  '<div class="section-header csp-u050" ><strong>Audit events</strong></div>'+
  sectionTable(['Event','Operation','Recorded'],history||'<tr><td colspan="3">No events recorded</td></tr>');
