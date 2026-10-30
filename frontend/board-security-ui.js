@@ -32,6 +32,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
      (value?escape(Object.entries(value.checks).map(([name,data])=>name+': '+(data.ok?'PASS':'FAIL')).join(' · ')):'Pending a real signed account')+'</td></tr>';
   }
   html+='</tbody></table></div>';
+  if(report.status==='pass')html+='<div style="margin-top:18px"><h3>Optional nonproduction write denial</h3><p class="muted">After passing twelve read-only checks, you may explicitly attempt an unauthorized create only on the separate APSYNTRA QA board. The expected result is HTTP 403 with no item created.</p><button class="secondary" data-action="security-deny-write" '+(writeBusy?'disabled':'')+'>'+(writeBusy?'Verifying…':'Verify denied QA write')+'</button></div>';
+  if(writeResult)html+='<p class="muted"><b>QA write-denial: '+escape(writeResult.status.toUpperCase())+'</b> — '+escape(writeResult.detail)+'</p>';
   if(report.results?.length)html+='<button class="secondary" data-action="security-copy-report" style="margin-top:15px">Copy nonsecret result summary</button>';
   html+='</div>';
  }
