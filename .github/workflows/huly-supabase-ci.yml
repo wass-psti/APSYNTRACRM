@@ -4,6 +4,7 @@ on:
     branches: ["main"]
     paths:
       - "packages/huly-supabase/**"
+      - "bin/apsyntra-sb07-accept.sh"
       - ".github/workflows/huly-supabase-ci.yml"
   pull_request:
     paths:
@@ -22,4 +23,6 @@ jobs:
         with:
           node-version: "22"
       - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Validate the macOS launcher syntax
+        run: bash -n ../../bin/apsyntra-sb07-accept.sh
       - run: npm test

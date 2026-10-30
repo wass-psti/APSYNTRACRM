@@ -14,7 +14,7 @@ The canonical host remains http://127.0.0.1:5173/#/ . Mount `src/node-middleware
 
 ## Limitations
 
-Huly source monorepo, full TxProcessor, notifications, attachment storage, relationship graph, live collaboration and 12-board functional acceptance are not migrated yet. No merge to main before authenticated regression and architecture acceptance.
+Huly source monorepo, full TxProcessor, notifications, attachment storage, relationship graph, live collaboration and 12-board functional acceptance are not migrated yet. Source is developed on `main` under the user's standing authorization; final production acceptance requires separate signed-user runtime verification.
 
 ## CP-HULY-SB05 — Native Issue transactions
 
@@ -33,3 +33,7 @@ Huly source monorepo, full TxProcessor, notifications, attachment storage, relat
 - Genuine acceptance runner: `npm run test:live:sb07` (must run from the machine hosting `127.0.0.1:5173`, using an existing `SUPABASE_ACCESS_TOKEN`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `HULY_BOARD_ID`, and `HULY_WORKSPACE_ID` supplied privately via environment). Default is **read-only**; use both `SB07_WRITE_APPROVED=yes` and `SB07_NONPRODUCTION_BOARD=yes` exclusively for an isolated nonproduction board. Test tombstones and audit evidence are retained by design. Never commit access tokens.
 - Acceptance status: real signed-user host reads/writes remain **BLOCKED** until executed in the existing authenticated 5173 environment. No new test user or local PostgreSQL/Docker database is required.
 - **Audit integrity hardening deployed:** `cp_huly_sb07_event_integrity_hardening` removes direct authenticated INSERT privileges on the event ledger and restricts event writes to a private document AFTER trigger (security definer, empty search_path, actor/workspace/board checks, no direct function EXECUTE grant). Verified live: direct INSERT as `authenticated` rejected with SQLSTATE `42501`; no-session read reveals 0 rows; security advisory has no new Huly findings. The actual event-trigger write path **still requires a genuine signed-user integration test** and is not production-certified.
+
+## SB07 terminal cwd remediation and in-app verification
+
+`npm run test:live:sb07` must run in `packages/huly-supabase`; running it in the home directory fails with `ENOENT` before executing any authentication checks. Use `bin/apsyntra-sb07-accept.sh` at the repository root instead. It discovers the actual authorized board and workspace from a genuine Supabase session and refuses write mode without an explicitly approved nonproduction scope. The `--supabase-only` flag runs signed read-only direct Supabase checks; `--full` adds the original 5173 host assertions. The frontend's Settings page also has a read-only verified-session check that does not require token export.
