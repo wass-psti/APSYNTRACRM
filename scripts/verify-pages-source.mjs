@@ -16,7 +16,7 @@ for(const asset of assets){
    'Frontend must never depend on a private localhost backend or privileged key: '+asset);
 }
 for(const file of ['app.js','acceptance.js','pages-acceptance-ui.js','data.js']){
- assert.doesNotMatch(read('frontend/'+file),/\\bHuly\\b/,
+ assert.doesNotMatch(read('frontend/'+file),/\bHuly\b/,
   'Legacy product branding must not appear in the visible application or its errors: '+file);
 }
 for(const file of readdirSync('frontend').filter(f=>f.endsWith('.js'))){
