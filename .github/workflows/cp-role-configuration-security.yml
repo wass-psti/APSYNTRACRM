@@ -2,9 +2,11 @@ name: CP-RC01.1 Bootstrap Role Configuration Security (nonproduction branch)
 on:
   workflow_dispatch:
   push:
-    branches: [feature/cp-role-configuration-bootstrap]
+    branches: [feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management]
     paths:
       - "sql/cp-role-configuration-bootstrap.sql"
+      - "sql/cp-rc02-effective-user-management.sql"
+      - "frontend/user-role-management.js"
       - "frontend/role-configuration-*.js"
       - "frontend/tests/role-configuration*.mjs"
       - "scripts/verify-role-config-anon.mjs"

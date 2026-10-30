@@ -1,7 +1,7 @@
 name: Huly Supabase Backend Unit Tests
 on:
   push:
-    branches: ["main", "feature/cp-role-configuration-bootstrap"]
+    branches: ["main", "feature/cp-role-configuration-bootstrap", "feature/cp-rc02-live-user-role-management"]
     paths:
       - "packages/huly-supabase/**"
       - "bin/apsyntra-sb07-accept.sh"
