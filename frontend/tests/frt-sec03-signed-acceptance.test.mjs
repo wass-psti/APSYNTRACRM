@@ -30,6 +30,10 @@ function fixture(bootstrap,{leakLegacy=false}={}){
     return {bootstrapVerified:true,workspaceId:WORKSPACE,
      users:[],modules:[],moduleAssignments:[],boards:[],boardAssignments:[]};
    }
+   if(name==='apsyntra_crm_platform_role_snapshot'){
+    if(!bootstrap||args.p_workspace_id!==WORKSPACE)throw denied();
+    return {bootstrapVerified:true,workspaceId:WORKSPACE,roles:[]};
+   }
    if(name==='frt_bootstrap'&&bootstrap)
     return {membership:{user_id:USER,role:'GENERAL_MANAGER'},companies:[]};
    throw Error('Unexpected RPC: '+name);
