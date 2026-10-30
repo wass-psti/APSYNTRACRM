@@ -11,7 +11,8 @@ const PREFIX = /^\/api\/v1\/huly(?:\/|$)/;
 const NO_CACHE_HEADERS = {
   'content-type': 'application/json',
   'cache-control': 'no-store',
-  'x-content-type-options': 'nosniff'
+  'x-content-type-options': 'nosniff',
+  'x-apsyntra-huly': 'board-api-v1'
 };
 
 function fail(res, status, message) {
@@ -50,6 +51,7 @@ export function createHulyConnectMiddleware(handler, { origin = 'http://127.0.0.
       const outgoing = Object.fromEntries(response.headers);
       outgoing['cache-control'] = 'no-store';
       outgoing['x-content-type-options'] = 'nosniff';
+      outgoing['x-apsyntra-huly'] = 'board-api-v1';
       res.writeHead(response.status, outgoing);
       res.end(Buffer.from(await response.arrayBuffer()));
     } catch {
