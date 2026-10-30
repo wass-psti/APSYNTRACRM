@@ -49,11 +49,14 @@ export async function runPagesPersistenceAcceptance(api,{board,context,onStep=()
   pass('Reversible removal','Deleted document is hidden from the active Issue view');
   const events=await api.issueEvents(boardId,workspaceId,documentId);
   assert(Array.isArray(events),'Event ledger response was malformed.');
-  const types=new Set(events.map(x=>x.event_type));
-  assert(['create','update','remove'].every(x=>types.has(x)),
-   'Expected create, update and remove events are missing.');
-  assert(events.every(x=>x.actor_id===actor),'Unexpected actor in transaction audit events.');
-  pass('Append-only event evidence','Independent invoker view confirms create/update/remove by signed user');
+  // The invoker view sorts by event_id. Require the EXACT committed sequence,
+  // not merely a set of event names; stale or fabricated audit rows must fail.
+  const expected=[['create',1],['update',2],['remove',3]];
+  assert(events.length===expected.length && events.every((event,index)=>
+    event.document_id===documentId && event.actor_id===actor &&
+    event.event_type===expected[index][0] && event.revision===expected[index][1]),
+   'Event provenance, document scope or revision sequence did not match the committed transactions.');
+  pass('Append-only event evidence','Independent invoker view confirms exact 1→2→3 audit sequence by signed user');
   return{passed:steps.length,total:6,status:'pass',steps,boardName:board.name};
  }catch(error){
   // Best effort cleanup only for our own newly created QA document.

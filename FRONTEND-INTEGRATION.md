@@ -54,3 +54,7 @@ The legacy `--full` mode is now an **optional developer check for the unported N
 ## GitHub Pages-first workflow
 
 See [docs/PAGES-OPERATIONS.md](docs/PAGES-OPERATIONS.md). Changes committed to `main` trigger frontend CI and the existing GitHub Pages deployment. A separate post-deployment workflow verifies the exact deployed asset hashes and Supabase Auth endpoint without credentials. Within the app, Settings → Verify backend connection provides six genuine signed read-only checks. For write/persistence acceptance, manually establish an **isolated** `APSYNTRA QA` board and navigate to `#/acceptance`. Only a clearly confirmed QA board can receive the optional create/update/CAS/removal/audit test. There is no continuously running local host requirement for these supported features.
+
+## October 30, 2026 — QA persistence acceptance
+
+The `APSYNTRA QA` user-driven acceptance was reported **6/6 PASS** on the GitHub Pages application. Independent read-only PostgreSQL queries confirmed one tombstoned QA document at revision 3 and an exact, single-actor create/update/remove ledger sequence at revisions 1/2/3. This **closes the Pages-backed signed Issue persistence gate**, not the separate full Huly/12-application parity gate. See [docs/PAGES-OPERATIONS.md](docs/PAGES-OPERATIONS.md) for evidence and operating scope. No continuous local Vite host is needed for the accepted Pages workflows.

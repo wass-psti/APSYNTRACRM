@@ -24,7 +24,7 @@ The frontend already uses the approved Supabase URL and publishable key; no loca
 1. Commit frontend, documentation and validation changes directly to `main`, honoring the standing development authorization.
 2. `APSYNTRA CRM Frontend Validation` checks ES-module syntax, authentication/contract tests, source security boundary and acceptance-test safeguards.
 3. GitHub's existing `pages build and deployment` workflow publishes the repository's static frontend; `.nojekyll` avoids unnecessary Jekyll preprocessing.
-4. `APSYNTRA Pages Post-Deployment Acceptance` runs after a successful Pages workflow, fetches live HTML/JS/CSS from the public GitHub Pages URL, compares their hashes to the exact deployed commit, and checks the approved Supabase Auth health endpoint. It has **no access tokens, cookies, service keys or write requests**.
+4. The `live-pages` job of `APSYNTRA CRM Frontend Validation` validates public CDN HTML/JS/CSS against the exact checked-out commit with bounded deployment-propagation retries and checks the approved Supabase Auth health endpoint. It uses **no access tokens, cookies, service keys or write requests**.
 5. Inside the deployed application, Settings → **Verify backend connection** runs six signed read-only checks under the genuine user session. This path has already been user-verified (6/6) and CLI-verified (4/4 direct backend checks).
 6. For actual persistence acceptance, create an **isolated, authorized, nonproduction board exactly named `APSYNTRA QA`** using the application's existing board creation control. Only after confirming it is isolated, go to **Pages acceptance**, type `APSYNTRA QA`, and explicitly initiate the signed write test. This tests one uniquely named Issue: create/read, update/read, stale CAS denial, tombstone/view exclusion, and audit actor/event evidence. It creates no accounts. Audit rows and tombstones remain by design. No normal board is eligible for automatic test writes.
 
@@ -40,6 +40,14 @@ Browser-accessible checks cannot certify the unhosted Node native transaction ad
 ## Acceptance classification
 
 - **Verified:** prior actual Pages login and 6/6 real signed browser reads; 4/4 independent signed direct-Supabase checks; authoritative RPCs, force-RLS and grants; GitHub CI and Pages deployment after relevant commits.
-- **Deployment smoke:** independently verified only when `APSYNTRA Pages Post-Deployment Acceptance` reports success against the latest commit.
-- **Signed persistence:** unverified until the user performs the explicit isolated `APSYNTRA QA` write acceptance. An empty Issue view is not proof of create/update/tombstone.
+- **Deployment smoke:** independently verified on the Pages-first implementation by the successful `live-pages` job of `APSYNTRA CRM Frontend Validation`. Revalidate against each subsequent source change.
+- **Signed persistence (ACCEPTED October 30, 2026):** the user executed the explicit isolated `APSYNTRA QA` write acceptance on the deployed application and reported **6/6 PASS**. A separate read-only Supabase SQL inspection independently confirmed exactly one retained QA document at revision 3, its tombstone, exactly three ordered events (`create → update → remove`) with revisions `1 → 2 → 3`, one consistent actor, and forced RLS/security-invoker views. The stale-revision HTTP 409 is evidenced by the browser acceptance report, not independently reproduced with SQL. No additional test write was performed for this review.
 - **Native Huly + 12 application parity:** not yet migrated to an approved hosted service, so full local-host retirement and production certification remain **PENDING**.
+
+## Accepted evidence and exact scope
+
+- **GitHub Pages UI signed-user behavior:** authentication, active workspace, permissioned board view and Huly RLS read checks were previously reported PASS (6/6 browser, 4/4 independent CLI).
+- **Signed write test:** PASS 6/6 reported by the real user using the explicitly isolated `APSYNTRA QA` board via `#/acceptance`. Existing Postgres state corroborates the transaction and audit sequence.
+- **Database read-only independent verification:** one QA document, `revision=3`, `deleted_at IS NOT NULL`, exactly three events across one document and one actor, and event revisions `[1,2,3]`.
+- **Fail-closed controls:** anonymous `huly_sb06_transact` unavailable, authenticated execution available; RLS forced on both Huly tables; both public views are `security_invoker`; authenticated direct audit INSERT privilege denied.
+- **Certification boundary:** the **Pages-served, Supabase-backed CRM Issue CRUD and signed persistence path is accepted**. This is not independent acceptance of full Node Huly TxProcessor, cross-workspace role revocation, all standalone application boards, realtime, storage attachments, or original Huly middleware. The local 5173 host is unnecessary for these Pages-supported workflows but cannot be declared retired for unported services.

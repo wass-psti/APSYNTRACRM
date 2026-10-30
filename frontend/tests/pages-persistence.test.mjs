@@ -4,7 +4,7 @@ import {runPagesPersistenceAcceptance,AcceptanceError,QA_BOARD_NAME} from '../pa
 const U='11111111-1111-4111-8111-111111111111',W='22222222-2222-4222-8222-222222222222',B='33333333-3333-4333-8333-333333333333';
 const ctx={user_id:U,workspace_id:W,profile:{status:'active'}};
 const qa={id:B,name:QA_BOARD_NAME};
-function fake({editable=true,conflict=true,ledger=true}={}){
+function fake({editable=true,conflict=true,ledger=true,badRevision=false}={}){
  const rows=new Map(),events=new Map(),calls=[];
  const api={auth:{userId:U},calls,
   async allowed(b,mode){calls.push('edit');assert.equal(b,B);assert.equal(mode,'edit');return editable},
@@ -12,17 +12,17 @@ function fake({editable=true,conflict=true,ledger=true}={}){
    calls.push('create');assert.equal(actor,U);
    const id='qa-'+crypto.randomUUID(),doc='huly.issue.'+id;
    rows.set(doc,{document_id:doc,revision:1,payload:{snapshot:{title:data.title}}});
-   events.set(doc,[{event_type:'create',actor_id:U}]);return id;
+   events.set(doc,[{document_id:doc,event_type:'create',revision:1,actor_id:U}]);return id;
   },
   async issues(){calls.push('read');return [...rows.values()].map(x=>structuredClone(x))},
   async updateIssue(b,w,row,changes){
    calls.push('update');rows.set(row.document_id,{...row,revision:2,
     payload:{snapshot:{...row.payload.snapshot,...changes}}});
-   events.get(row.document_id).push({event_type:'update',actor_id:U});
+   events.get(row.document_id).push({document_id:row.document_id,event_type:'update',revision:badRevision?1:2,actor_id:U});
   },
   async commit(){calls.push('cas');if(conflict)throw Object.assign(new Error('conflict'),{status:409})},
   async removeIssue(b,w,row){calls.push('remove');rows.delete(row.document_id);
-   events.get(row.document_id).push({event_type:'remove',actor_id:U});},
+   events.get(row.document_id).push({document_id:row.document_id,event_type:'remove',revision:3,actor_id:U});},
   async issueEvents(b,w,id){calls.push('events');return ledger?events.get(id):[]}
  };return api;
 }
@@ -57,4 +57,12 @@ test('missing audit rows fails closed without fabricating success',async()=>{
  const api=fake({ledger:false});
  const result=await runPagesPersistenceAcceptance(api,{board:qa,context:ctx});
  assert.equal(result.status,'fail');assert.equal(result.passed,5);
+});
+
+test('ledger revision mismatch is rejected even with all three event types present',async()=>{
+ const api=fake({badRevision:true});
+ const result=await runPagesPersistenceAcceptance(api,{board:qa,context:ctx});
+ assert.equal(result.status,'fail');
+ assert.equal(result.passed,5);
+ assert.match(result.error,/Event provenance|revision sequence/);
 });
