@@ -89,3 +89,5 @@ Only after the role module is separately approved for deployment:
 - Supabase advisor continues to report general SECURITY DEFINER function warnings across the broader database; the *new* authorized entry points are intentionally available to signed users but restrict every call server-side, with no role/board authorization changes.
 
 **Current milestone:** backend additive installation and real unsigned denial **VERIFIED**; genuine signed account authorization and frontend interaction **PENDING**. **Feature branch and draft PR remain unmerged.** Do not claim that the role UI has been deployed to GitHub Pages.
+
+**Additional live denial:** PostgreSQL calls with no signed Auth identity to both `apsyntra_role_configuration_snapshot(primary_workspace)` and `apsyntra_role_configuration_propose(primary_workspace,...)` were independently rejected with SQLSTATE `42501` by `apsyntra_role_require_scope`. These checks caused no role or audit writes and are **not** substitutes for signed nonbootstrap-account acceptance.
