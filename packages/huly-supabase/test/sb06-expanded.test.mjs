@@ -9,7 +9,7 @@ const snap={_id:'Issue.1',_class:HULY_ISSUE,space:'tracker:space:Project',title:
 test('numeric $inc does not mutate source',()=>{assert.equal(applyIssueOperations(snap,{$inc:{estimation:4}}).estimation,7);assert.equal(snap.estimation,3)});
 test('$push with position and $pull with $in',()=>{const v=applyIssueOperations(snap,{$push:{tags:{$each:['z'],$position:1}}});assert.deepEqual(v.tags,['a','z','b']);assert.deepEqual(applyIssueOperations(v,{$pull:{tags:{$in:['a','z']}}}).tags,['b'])});
 test('$unset removes an optional field',()=>{assert.equal('tags' in applyIssueOperations(snap,{$unset:{tags:true}}),false)});
-test('rejects unsafe, unsupported or overflowing updates',()=>{for(const op of [{$unset:{_id:true}},{$inc:{estimation:Number.MAX_SAFE_INTEGER}},{$rename:{title:'x'}},{$inc:{estimation:1},$unset:{estimation:true}},{$pull:{tags:{$in:'x'}}}])assert.throws(()=>applyIssueOperations(snap,op),Denied)});
+test('rejects unsafe, unsupported or overflowing updates',()=>{for(const op of [{$unset:{_id:true}},{$inc:{estimation:Number.MAX_SAFE_INTEGER}},{$rename:{title:'status'}},{$inc:{estimation:1},$unset:{estimation:true}},{$pull:{tags:{$in:'x'}}}])assert.throws(()=>applyIssueOperations(snap,op),Denied)});
 test('native remove emits CAS-only tombstone mutation',async()=>{
  const writes=[];const existing={id:'huly.issue.Issue.1',boardId:B,workspaceId:W,payload:{kind:'huly.tracker.Issue',format:1,snapshot:snap},revision:4};
  const native=new NativeHulyIssueGateway({async verify(){return{id:U}}},{async read(){return existing}},{async commit(_t,_w,_b,ops){writes.push(...ops);return[{id:existing.id,boardId:B,workspaceId:W,revision:5}]}});
