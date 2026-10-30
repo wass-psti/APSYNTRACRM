@@ -23,5 +23,4 @@ begin
      and r.payload->>'resourceId'=excluded.module_id
   );
 end;
-$function$
-
+$function$;
