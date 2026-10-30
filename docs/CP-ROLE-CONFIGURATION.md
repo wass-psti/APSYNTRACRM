@@ -4,12 +4,12 @@
 **Repository:** `wass-psti/APSYNTRACRM`  
 **Feature branch:** `feature/cp-role-configuration-bootstrap`  
 **Base branch:** `main` (NOT MERGED)  
-**Overall disposition:** **IMPLEMENTED ON FEATURE BRANCH; SERVER DEPLOYMENT AND SIGNED ACCEPTANCE PENDING**  
+**Overall disposition:** **BACKEND SCHEMA INSTALLED; UNSIGNED LIVE DENIAL VERIFIED; SIGNED USER AND FRONTEND ACCEPTANCE PENDING**  
 **Approved live runtime:** GitHub Pages frontend + existing Supabase Auth/Work Management API/PostgreSQL/Storage. No local host or second backend.
 
 ## 1. Why the module is not yet visible in the deployed GitHub Pages application
 
-The user's explicit instruction is **not to merge into `main` without final security acceptance and separate merge approval**. GitHub Pages deploys `main`, so this security-sensitive module remains in a reviewable feature branch. The role SQL patch has been validated on the real database inside a transaction ending with `ROLLBACK`; **it has not been installed in the production schema**. Accordingly, the live `#/role-configuration` URL must not be represented as deployed or as accepted.
+The user's explicit instruction is **not to merge into `main` without final security acceptance and separate merge approval**. GitHub Pages deploys `main`, so this security-sensitive module remains in a reviewable feature branch. The role SQL patch was first validated inside a transaction ending with `ROLLBACK` and has now been **installed in the existing production Supabase project** as an additive, staged-only schema. The frontend remains on its feature branch. Accordingly, the live `#/role-configuration` URL must not be represented as deployed or as accepted.
 
 ## 2. Existing authoritative architecture reused
 
@@ -63,7 +63,7 @@ All new `SECURITY DEFINER` entry points have explicit `search_path`, revoked `PU
 | Merge to `main` | **BLOCKED** until explicit final user approval | No merge executed |
 | Phase A negative access acceptance | **PENDING** | CP-A12.2 is paused until Role Configuration acceptance is resolved |
 
-## 6. Required activation gate
+## 6. Required signed acceptance and final release gate
 
 Only after the role module is separately approved for deployment:
 1. Review the migration's exact SQL and bootstrap identity mapping.
@@ -75,3 +75,17 @@ Only after the role module is separately approved for deployment:
 7. Complete security and app compatibility regression, then request explicit user approval **before merging into `main`**.
 
 **Next checkpoint:** CP-RC01.1 — Signed bootstrap-only backend verification and isolated deployment acceptance. CP-A12.2 negative-role/workspace acceptance remains paused.
+
+## CP-RC01.1 production backend installation — 2026-10-30
+
+**This addendum supersedes the earlier section that said the role schema had not been installed.**
+
+- The exact additive role schema in \`sql/cp-role-configuration-bootstrap.sql\` was installed in the existing Supabase project through an applied database migration \`cp_rc011_install_bootstrap_role_configuration\`. Feature-source SQL had already passed a rollback-only dry run.
+- Exactly **two immutable Auth UUID bootstrap records** were verified; both original accounts have active \`admin_general_manager\` profiles, valid active primary-workspace memberships, and primary authoritative workspace.
+- All **four newly installed tables** have **RLS enabled and forced**. Neither \`anon\` nor \`authenticated\` has direct \`SELECT\`/\`INSERT\`/\`UPDATE\` access. Stored \`SECURITY DEFINER\` RPCs have explicit paths; three public-facing entry points (\`is_bootstrap\`, \`snapshot\`, \`propose\`) are granted to \`authenticated\` but require Auth identity and appropriate server-side scope. Internal helper and audit functions have no anonymous or authenticated EXECUTE grants.
+- **Real unsigned HTTPS API negative tests passed 4/4:** \`is_bootstrap\` RPC, scoped snapshot RPC, proposal RPC, and direct role catalog read each returned **HTTP 401**. Source: \`scripts/verify-role-config-anon.mjs\`, [successful Action](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41017991980).
+- Live database integrity after installation: 12 application boards, 0 active dedicated board items, 121 preexisting module-role assignments unchanged, four protected system-role references, 0 new proposals and 0 new audit records before signed test execution. No live role or permission was changed.
+- **Still pending:** signed \`lmsenagan\` and \`asenagan\` bootstrap read/write-proposal acceptance, genuine nonbootstrap-admin direct API denial, server workspace mismatch denial, independently reconciled user-signed proposal/audit, and deployed frontend UI acceptance. A console-based, token-safe signed procedure is available in [CP-RC01.1-SIGNED-ACCEPTANCE.md](CP-RC01.1-SIGNED-ACCEPTANCE.md) and independent after-test SQL in \`sql/cp-rc011-acceptance-evidence.sql\`.
+- Supabase advisor continues to report general SECURITY DEFINER function warnings across the broader database; the *new* authorized entry points are intentionally available to signed users but restrict every call server-side, with no role/board authorization changes.
+
+**Current milestone:** backend additive installation and real unsigned denial **VERIFIED**; genuine signed account authorization and frontend interaction **PENDING**. **Feature branch and draft PR remain unmerged.** Do not claim that the role UI has been deployed to GitHub Pages.
