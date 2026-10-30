@@ -348,6 +348,88 @@ async function action(name,button){
  case 'logout':{await auth.signOut();state.context=null;state.roleVerified=false;state.roleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
+ case 'role-tab':{
+   if(!state.roleVerified)return;
+   const tab=button.dataset.tab;
+   if(['roles','users','matrix','workspace','audit'].includes(tab)){state.roleTab=tab;render();}
+   break;
+ }
+ case 'role-refresh':{
+   if(!state.roleVerified||state.roleBusy)return;
+   state.roleBusy=true;render();
+   try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);notice(err);}
+   finally{state.roleBusy=false;render();}
+   break;
+ }
+ case 'role-propose-create':{
+   if(!state.roleVerified)return;
+   openModal('Stage a new role definition',
+      input('Role key','roleKey','custom_role')+
+      input('Display name','displayName','Custom Role')+
+      input('Description','description','', 'text',false),
+      async fd=>stageRoleProposal('role.create',{
+        roleKey:String(fd.get('roleKey')||'').trim(),
+        displayName:String(fd.get('displayName')||'').trim(),
+        description:String(fd.get('description')||'').trim()
+      }));break;
+ }
+ case 'role-propose-edit':{
+   if(!state.roleVerified)return;
+   const key=button.dataset.roleKey;
+   const role=state.roleData?.roles?.find(r=>r.roleKey===key&&r.kind==='custom_draft');
+   if(!role)throw new ApiError('Only draft custom roles may be edited.');
+   openModal('Stage role revision',
+      input('Role key','roleKey',key,'text',true)+
+      input('Display name','displayName',role.displayName)+
+      input('Description','description','', 'text',false),
+      async fd=>stageRoleProposal('role.edit',{
+       roleKey:key,displayName:String(fd.get('displayName')||'').trim(),
+       description:String(fd.get('description')||'').trim()
+      }));break;
+ }
+ case 'role-propose-activation':{
+   if(!state.roleVerified)return;
+   const roles=state.roleData?.roles?.filter(r=>r.kind==='custom_draft')||[];
+   if(!roles.length){toast('No custom roles are available for staging.',true);return;}
+   openModal('Stage activation or deactivation',
+      select('Custom role','roleKey',roles.map(r=>[r.roleKey,r.displayName]))+
+      select('Proposed change','operation',[['role.activate','Activate'],['role.deactivate','Deactivate']]),
+      async fd=>stageRoleProposal(String(fd.get('operation')),{roleKey:String(fd.get('roleKey'))}));break;
+ }
+ case 'role-propose-assign':{
+   if(!state.roleVerified)return;
+   const id=button.dataset.userId;
+   const user=state.roleData?.users?.find(u=>u.id===id&&!u.bootstrapProtected);
+   if(!user)throw new ApiError('Protected or missing user cannot be assigned.',403);
+   openModal('Stage an application role change',
+      select('Application module','moduleId',ROLE_MODULE_OPTIONS)+
+      select('Proposed change','operation',[['assignment.assign','Assign'],['assignment.revoke','Revoke']])+
+      input('Existing application role','role','Employee'),
+      async fd=>stageRoleProposal(String(fd.get('operation')),
+        {userId:id,moduleId:String(fd.get('moduleId')),role:String(fd.get('role')).trim()}));break;
+ }
+ case 'role-propose-permission':{
+   if(!state.roleVerified)return;
+   const moduleId=button.dataset.moduleId,capability=button.dataset.capability;
+   if(!ROLE_MODULE_OPTIONS.some(x=>x[0]===moduleId)||
+      !['view','create','edit','delete','approve','export','administer'].includes(capability))
+     throw new ApiError('Unknown permission scope.');
+   openModal('Stage module capability',
+     input('Role key','roleKey','employee')+
+     select('Proposed access','enabled',[['false','Deny'],['true','Allow']]),
+     async fd=>stageRoleProposal('permission.configure',
+       {moduleId,capability,roleKey:String(fd.get('roleKey')).trim(),enabled:fd.get('enabled')==='true'}));break;
+ }
+ case 'role-propose-workspace':{
+   if(!state.roleVerified)return;
+   const users=state.roleData?.users?.filter(u=>!u.bootstrapProtected)||[];
+   if(!users.length){toast('No eligible workspace members.',true);return;}
+   openModal('Stage workspace access restriction',
+      select('Member','userId',users.map(u=>[u.id,u.displayName||u.email||'Member']))+
+      select('Requested restriction','enabled',[['false','Suspend workspace access'],['true','Restore existing access']]),
+      async fd=>stageRoleProposal('workspace.configure',
+         {userId:String(fd.get('userId')),enabled:fd.get('enabled')==='true'}));break;
+ }
  case 'security-run-negative':{
    if(state.securityBusy)return;
    state.securityBusy=true;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;
