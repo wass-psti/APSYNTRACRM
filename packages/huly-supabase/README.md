@@ -37,3 +37,9 @@ Huly source monorepo, full TxProcessor, notifications, attachment storage, relat
 ## SB07 terminal cwd remediation and in-app verification
 
 `npm run test:live:sb07` must run in `packages/huly-supabase`; running it in the home directory fails with `ENOENT` before executing any authentication checks. Use `bin/apsyntra-sb07-accept.sh` at the repository root instead. It discovers the actual authorized board and workspace from a genuine Supabase session and refuses write mode without an explicitly approved nonproduction scope. The `--supabase-only` flag runs signed read-only direct Supabase checks; `--full` adds the original 5173 host assertions. The frontend's Settings page also has a read-only verified-session check that does not require token export.
+
+## SB07 canonical host preflight
+
+The fully authenticated browser and signed direct-Supabase checks have passed (6/6 and 4/4 reported on October 30, 2026). The local host check returned `fetch failed`, **not** an authentication rejection. The improved `--full` launcher now performs a **token-free** preflight against the canonical `127.0.0.1:5173` origin before requesting another token. Results distinguish `CONNECTION_REFUSED`, `CONNECTION_TIMEOUT`, `SPA_FALLBACK`, `ROUTE_NOT_FOUND`, and `AUTH_GUARD_ONLY`. Huly Connect responses include `x-apsyntra-huly: board-api-v1` for positive route-mount evidence. No listener or database is started by the probe.
+
+If the local host is stopped, use the already-approved `~/WatchdogWorkspace/scripts/cp1612h-start-board-host.mjs` launcher to start the existing host; do not create a second port or substitute an independent server. The Huly middleware still needs to be mounted in that host's Vite/Connect pipeline, after established authorization guards and before the SPA fallback. Direct access to the local host source is not available through the APSYNTRACRM repository, so **mount and signed host acceptance remain pending until verified on the Mac**.

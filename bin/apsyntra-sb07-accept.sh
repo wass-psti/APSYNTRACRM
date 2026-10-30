@@ -24,6 +24,12 @@ case "$MODE" in
   *) echo "Usage: bash <repo>/bin/apsyntra-sb07-accept.sh [--full|--supabase-only]" >&2; exit 2 ;;
 esac
 
+# Verify local host before asking for a short-lived token. Avoid repeated login when
+# the canonical host is stopped or Huly is not mounted.
+if [[ "$MODE" == "--full" ]]; then
+  node "$PKG/scripts/sb07-host-preflight.mjs"
+fi
+
 CONFIG="$(node "$HELPER" --config)"
 if [[ "$CONFIG" != *$'\n'* ]]; then echo "BLOCKED: Public client configuration missing." >&2; exit 2; fi
 export SUPABASE_URL="${CONFIG%%$'\n'*}"
