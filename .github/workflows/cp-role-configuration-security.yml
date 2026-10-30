@@ -1,0 +1,29 @@
+name: CP-RC01.1 Bootstrap Role Configuration Security (nonproduction branch)
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/cp-role-configuration-bootstrap]
+    paths:
+      - "sql/cp-role-configuration-bootstrap.sql"
+      - "frontend/role-configuration-*.js"
+      - "frontend/tests/role-configuration*.mjs"
+      - "scripts/verify-role-config-anon.mjs"
+      - ".github/workflows/cp-role-configuration-security.yml"
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify source security gates and session-independent tests
+        run: |
+          node --test frontend/tests/role-configuration*.mjs frontend/tests/role-configuration-gate.test.mjs
+          node --test frontend/tests/role-config-anon-source.test.mjs
+      - name: Verify production Supabase RPC and table denial without any JWT
+        run: node scripts/verify-role-config-anon.mjs

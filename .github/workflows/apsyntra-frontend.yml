@@ -1,7 +1,7 @@
 name: APSYNTRA CRM Frontend Validation
 on:
   push:
-    branches: [main]
+    branches: [main, feature/cp-role-configuration-bootstrap]
     paths:
       - "index.html"
       - ".nojekyll"
@@ -9,6 +9,8 @@ on:
       - "scripts/pages-smoke.mjs"
       - "docs/PAGES-OPERATIONS.md"
       - "frontend/**"
+      - "sql/cp-role-configuration-bootstrap.sql"
+      - "docs/CP-ROLE-CONFIGURATION.md"
       - ".github/workflows/apsyntra-frontend.yml"
   workflow_dispatch:
 jobs:

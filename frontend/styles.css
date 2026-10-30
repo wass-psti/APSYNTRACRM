@@ -39,57 +39,62 @@
 #app .csp-u013{color:#9da5b6}
 #app .csp-u014{color:#c5c9ff}
 #app .csp-u015{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 15px}
-#app .csp-u016{display:flex;gap:9px;align-items:center}
-#app .csp-u017{flex:1}
-#app .csp-u018{font-family:ui-monospace,monospace;font-size:11px}
-#app .csp-u019{font-size:11px;color:#929bad;font-weight:400;margin-top:6px}
-#app .csp-u020{font-size:11px;margin-left:12px}
-#app .csp-u021{font-size:11px;margin-top:12px}
-#app .csp-u022{font-size:11px;margin-top:5px}
-#app .csp-u023{font-size:11px;margin-top:9px}
-#app .csp-u024{font-size:11px;margin:12px 0 0}
-#app .csp-u025{font-size:12px}
-#app .csp-u026{font-size:12px;font-weight:750;margin-bottom:8px}
-#app .csp-u027{font-size:12px;margin-top:12px}
-#app .csp-u028{font-size:12px;margin-top:15px}
-#app .csp-u029{font-size:12px;margin:0 0 15px}
-#app .csp-u030{font-size:12px;margin:0 0 19px}
-#app .csp-u031{font-size:12px;margin:15px 0}
-#app .csp-u032{font-size:12px;margin:16px 0}
-#app .csp-u033{font-size:12px;margin:3px 0}
-#app .csp-u034{font-size:13px;margin:18px 0}
-#app .csp-u035{font-size:14px}
-#app .csp-u036{font-size:14px;font-weight:800;margin:2px 0 15px}
-#app .csp-u037{font-size:14px;margin:0 0 7px}
-#app .csp-u038{font-size:15px}
-#app .csp-u039{font-size:18px;margin-top:23px;text-transform:capitalize}
-#app .csp-u040{font-size:20px;margin-top:21px}
-#app .csp-u041{font-weight:500}
-#app .csp-u042{height:53px;width:53px;font-size:17px}
-#app .csp-u043{margin-top:12px}
-#app .csp-u044{margin-top:15px}
-#app .csp-u045{margin-top:17px}
-#app .csp-u046{margin-top:18px}
-#app .csp-u047{margin-top:20px}
-#app .csp-u048{margin-top:20px;border-top:1px solid #e8ebf2;padding-top:20px}
-#app .csp-u049{margin-top:21px}
-#app .csp-u050{margin-top:22px}
-#app .csp-u051{margin-top:27px;border-top:1px solid #eef0f7;padding-top:20px}
-#app .csp-u052{margin-top:6px}
-#app .csp-u053{margin:3px 0 0 22px;color:#8790a3}
-#app .csp-u054{margin:auto}
-#app .csp-u055{opacity:.5}
-#app .csp-u056{padding:12px;font-size:11px}
-#app .csp-u057{padding:9px 0;border-top:1px solid #eef0f7}
-#app .csp-u058{text-align:center;color:#929bac;padding:26px}
-#app .csp-u059{text-align:center;color:#a0a5b6;font-size:12px;margin:27px 0 0}
-#app .csp-u060{text-align:center;color:#a4aabc;padding:24px}
-#app .csp-u061{width:13px;height:13px;border-radius:4px;background:#a6a0f4}
-#app .csp-u062{width:13px;height:13px;border-radius:4px;background:#b1d9f4}
-#app .csp-u063{width:13px;height:13px;border-radius:4px;background:#f1bc95}
-#app .csp-u064{width:35%}
-#app .csp-u065{width:51%;margin-bottom:3px}
-#app .csp-u066{width:79%}
+#app .csp-u016{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+#app .csp-u017{display:flex;gap:9px;align-items:center}
+#app .csp-u018{flex:1}
+#app .csp-u019{font-family:ui-monospace,monospace;font-size:11px}
+#app .csp-u020{font-size:11px}
+#app .csp-u021{font-size:11px;color:#929bad;font-weight:400;margin-top:6px}
+#app .csp-u022{font-size:11px;margin-left:12px}
+#app .csp-u023{font-size:11px;margin-top:12px}
+#app .csp-u024{font-size:11px;margin-top:5px}
+#app .csp-u025{font-size:11px;margin-top:9px}
+#app .csp-u026{font-size:11px;margin:12px 0 0}
+#app .csp-u027{font-size:12px}
+#app .csp-u028{font-size:12px;font-weight:750;margin-bottom:8px}
+#app .csp-u029{font-size:12px;margin-top:12px}
+#app .csp-u030{font-size:12px;margin-top:15px}
+#app .csp-u031{font-size:12px;margin:0 0 15px}
+#app .csp-u032{font-size:12px;margin:0 0 19px}
+#app .csp-u033{font-size:12px;margin:15px 0}
+#app .csp-u034{font-size:12px;margin:16px 0}
+#app .csp-u035{font-size:12px;margin:3px 0}
+#app .csp-u036{font-size:13px;margin:18px 0}
+#app .csp-u037{font-size:14px}
+#app .csp-u038{font-size:14px;font-weight:800;margin:2px 0 15px}
+#app .csp-u039{font-size:14px;margin:0 0 7px}
+#app .csp-u040{font-size:15px}
+#app .csp-u041{font-size:18px;margin-top:23px;text-transform:capitalize}
+#app .csp-u042{font-size:20px;margin-top:21px}
+#app .csp-u043{font-weight:500}
+#app .csp-u044{height:53px;width:53px;font-size:17px}
+#app .csp-u045{margin-top:12px}
+#app .csp-u046{margin-top:14px}
+#app .csp-u047{margin-top:15px}
+#app .csp-u048{margin-top:17px}
+#app .csp-u049{margin-top:18px}
+#app .csp-u050{margin-top:20px}
+#app .csp-u051{margin-top:20px;border-top:1px solid #e8ebf2;padding-top:20px}
+#app .csp-u052{margin-top:21px}
+#app .csp-u053{margin-top:22px}
+#app .csp-u054{margin-top:27px;border-top:1px solid #eef0f7;padding-top:20px}
+#app .csp-u055{margin-top:6px}
+#app .csp-u056{margin:12px 0}
+#app .csp-u057{margin:14px 0}
+#app .csp-u058{margin:3px 0 0 22px;color:#8790a3}
+#app .csp-u059{margin:auto}
+#app .csp-u060{opacity:.5}
+#app .csp-u061{padding:12px;font-size:11px}
+#app .csp-u062{padding:9px 0;border-top:1px solid #eef0f7}
+#app .csp-u063{text-align:center;color:#929bac;padding:26px}
+#app .csp-u064{text-align:center;color:#a0a5b6;font-size:12px;margin:27px 0 0}
+#app .csp-u065{text-align:center;color:#a4aabc;padding:24px}
+#app .csp-u066{width:13px;height:13px;border-radius:4px;background:#a6a0f4}
+#app .csp-u067{width:13px;height:13px;border-radius:4px;background:#b1d9f4}
+#app .csp-u068{width:13px;height:13px;border-radius:4px;background:#f1bc95}
+#app .csp-u069{width:35%}
+#app .csp-u070{width:51%;margin-bottom:3px}
+#app .csp-u071{width:79%}
 #app .csp-check-pass{color:#24a17d}
 #app .csp-check-fail{color:#d95067}
 #app .csp-check-pending{color:#8790a3}

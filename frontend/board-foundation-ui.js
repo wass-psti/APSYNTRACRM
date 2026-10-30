@@ -17,46 +17,46 @@ export function renderFoundation({rows=[],loading=false,provisioning=false,testi
   '<div class="stat-card"><div class="stat-label">Contract version</div><div class="stat-value">v'+BOARD_CONTRACT_VERSION+'</div><div class="stat-footer">Per-module typed schemas</div></div></div>';
  html+='<div class="panel"><div class="panel-header"><h3>Provisioning and acceptance boundary</h3></div><div class="panel-body">'+
   '<div class="note">Phase A provisions empty, distinct boards using existing signed Work Management RPCs. It does not import source records, simulate attendance, invent GPS coordinates or certify the twelve application workflows. Only the authenticated platform administrator can request provisioning.</div>'+
-  '<p class="muted csp-u032" >Names and typed columns are checked against live PostgreSQL responses. Existing archived or unrelated boards are never renamed or modified. Source identity/revision columns are contract placeholders until Phase B integration implements deduplicated projection.</p>'+
+  '<p class="muted csp-u034" >Names and typed columns are checked against live PostgreSQL responses. Existing archived or unrelated boards are never renamed or modified. Source identity/revision columns are contract placeholders until Phase B integration implements deduplicated projection.</p>'+
   '<button class="primary" data-action="foundation-provision" '+(!canProvision||loading||provisioning?'disabled':'')+'>'+
   (provisioning?'Creating and verifying boards…':'＋ Provision missing dedicated boards')+'</button>'+
-  (!canProvision?'<p class="muted csp-u025" >Provisioning requires the existing platform administrator role.</p>':'')+
+  (!canProvision?'<p class="muted csp-u027" >Provisioning requires the existing platform administrator role.</p>':'')+
   (summary.ready===12?
-   '<div class="csp-u048" >'+
-   '<h3 class="csp-u035" >Signed nonproduction operational acceptance</h3>'+
-   '<p class="muted csp-u025" >Creates and removes one unique QA item in each EMPTY dedicated board; verifies persisted cells, conditional updates, stale-write denial and authenticated audit events. No existing records are modified. This is not application acceptance.</p>'+
+   '<div class="csp-u051" >'+
+   '<h3 class="csp-u037" >Signed nonproduction operational acceptance</h3>'+
+   '<p class="muted csp-u027" >Creates and removes one unique QA item in each EMPTY dedicated board; verifies persisted cells, conditional updates, stale-write denial and authenticated audit events. No existing records are modified. This is not application acceptance.</p>'+
    '<button class="secondary" data-action="foundation-operational-test" '+
    (!canProvision||testing||provisioning?'disabled':'')+'>'+
    (testing?'Running controlled checks…':'Run 12-board operational checks')+'</button></div>':'' )+
   (testResult?renderOperationalResult(testResult):'')+
-  (error?'<div class="error-banner csp-u043" role="alert" >'+esc(error)+'</div>':'')+
-  (log.length?'<p class="muted csp-u028" >Current operation: '+esc(log.at(-1))+'</p>':'')+
+  (error?'<div class="error-banner csp-u045" role="alert" >'+esc(error)+'</div>':'')+
+  (log.length?'<p class="muted csp-u030" >Current operation: '+esc(log.at(-1))+'</p>':'')+
   '</div></div>';
- html+='<div class="section-header"><span class="section-title">Module-to-board readiness</span><span class="muted csp-u025" >'+(loading?'Checking live backend…':'No application data created')+'</span></div>'+
+ html+='<div class="section-header"><span class="section-title">Module-to-board readiness</span><span class="muted csp-u027" >'+(loading?'Checking live backend…':'No application data created')+'</span></div>'+
  '<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr>'+
  '<th>Domain module</th><th>Expected fields</th><th>Board contract</th><th>Record source</th></tr></thead><tbody>';
  for(const module of BOARD_MODULES){
   const row=found.get(module.key);
   const status=row?.status??'pending';
   const colour=status==='ready'?'done':status==='missing'?'todo':'blocked';
-  html+='<tr><td><strong>'+esc(module.name)+'</strong><div class="csp-u019" >'+esc(module.recordType)+'</div></td>'+
+  html+='<tr><td><strong>'+esc(module.name)+'</strong><div class="csp-u021" >'+esc(module.recordType)+'</div></td>'+
   '<td>'+boardColumns(module).length+' typed columns<div class="csp-u012" >'+module.restricted.length+' protected source fields deferred</div></td>'+
-  '<td><span class="status '+colour+'">'+esc(status.toUpperCase())+'</span><div class="muted csp-u022" >'+esc(row?.note||'Awaiting live inspection')+'</div></td>'+
+  '<td><span class="status '+colour+'">'+esc(status.toUpperCase())+'</span><div class="muted csp-u024" >'+esc(row?.note||'Awaiting live inspection')+'</div></td>'+
   '<td>'+(row?.status==='ready'?'<a class="inline-link" href="#/boards/'+esc(row.boardId)+'">Open verified board</a>':
   '<span class="csp-u013" >No certified source projection</span>')+'</td></tr>';
  }
  html+='</tbody></table></div></div>';
- html+='<div class="note security-note csp-u049" >TimeTracker and other restricted domains: do not expose employee identifiers, exact attendance times, GPS coordinates, finance, medical or performance fields through general board columns until backend-enforced field-level authorization and approved retention controls are implemented. No signed live CRUD or cross-workspace test is claimed by this page until separately executed.</div>';
+ html+='<div class="note security-note csp-u052" >TimeTracker and other restricted domains: do not expose employee identifiers, exact attendance times, GPS coordinates, finance, medical or performance fields through general board columns until backend-enforced field-level authorization and approved retention controls are implemented. No signed live CRUD or cross-workspace test is claimed by this page until separately executed.</div>';
  return html;
 }
 
 /** Distinct, persistent-to-the-current-tab check report. Never mark an unrun board PASS. */
 export function renderOperationalResult(report){
  const completed=new Map((report?.results??[]).map(r=>[r.module,r]));
- let html='<section class="csp-u046" aria-label="12-board operational acceptance report" >'+
-  '<h3 class="csp-u035" >Signed operational acceptance: '+esc(String(report?.status??'pending').toUpperCase())+
+ let html='<section class="csp-u049" aria-label="12-board operational acceptance report" >'+
+  '<h3 class="csp-u037" >Signed operational acceptance: '+esc(String(report?.status??'pending').toUpperCase())+
   ' — '+Number(report?.passed??0)+'/12 boards passed</h3>'+
-  '<p class="muted csp-u025" >A ready board is not automatically an accepted board. Each PASS must contain five signed CRUD/CAS/audit steps and confirmed QA cleanup.</p>'+
+  '<p class="muted csp-u027" >A ready board is not automatically an accepted board. Each PASS must contain five signed CRUD/CAS/audit steps and confirmed QA cleanup.</p>'+
   '<div class="table-scroll"><table class="board-table"><thead><tr><th>Dedicated board</th><th>Operational status</th><th>Verified steps</th><th>QA cleanup</th></tr></thead><tbody>';
  for(const m of BOARD_MODULES){
   const result=completed.get(m.key);
@@ -65,13 +65,13 @@ export function renderOperationalResult(report){
   html+='<tr><td><strong>'+esc(m.name)+'</strong></td><td><span class="status '+(passed?'done':failed?'blocked':'todo')+'">'+
    (passed?'PASS':failed?'FAILED':'NOT RUN')+'</span></td>'+
    '<td>'+esc(result?.steps?.length??0)+'/5'+
-   (result?.steps?.length?'<div class="muted csp-u022" >'+
+   (result?.steps?.length?'<div class="muted csp-u024" >'+
      result.steps.map(x=>esc(x)).join(' · ')+'</div>':'')+
-   (result?.error?'<div class="error-banner csp-u052" role="alert" >'+esc(result.error)+'</div>':'')+
+   (result?.error?'<div class="error-banner csp-u055" role="alert" >'+esc(result.error)+'</div>':'')+
    '</td><td>'+(!result?'Not attempted':result.cleaned?'Confirmed removed':
       'Not confirmed — inspect QA item before retry')+'</td></tr>';
  }
  html+='</tbody></table></div>'+
- '<p class="muted csp-u021" >This signed UI report is not independent SQL evidence. A 12/12 PASS still requires database-side event reconciliation and separate negative authorization evidence.</p></section>';
+ '<p class="muted csp-u023" >This signed UI report is not independent SQL evidence. A 12/12 PASS still requires database-side event reconciliation and separate negative authorization evidence.</p></section>';
  return html;
 }

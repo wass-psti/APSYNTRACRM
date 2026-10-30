@@ -14,13 +14,16 @@ import {runTwelveBoardQa} from './board-operational-qa.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
 import {runDeniedQaWrite} from './board-negative-write.js';
+import {RoleConfigurationClient} from './role-configuration-client.js';
+import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const nativeIssues=new NativeIssueClient(db);
+const roleConfig=new RoleConfigurationClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -44,7 +47,7 @@ function errorMessage(err){if(err instanceof ApiError&&err.status===403)return '
 function notice(err){toast(errorMessage(err),true);}
 function renderLogin(message=''){
  root.innerHTML=`<div class="auth-layout">
- <div class="auth-left"><a href="#/login" class="brand"><span class="brand-mark">A</span><span>APSYNTRA <span class="csp-u041" >CRM</span></span></a>
+ <div class="auth-left"><a href="#/login" class="brand"><span class="brand-mark">A</span><span>APSYNTRA <span class="csp-u043" >CRM</span></span></a>
  <section class="auth-panel"><span class="eyebrow">Your connected workspace</span>
  <h1>Welcome back<span class="csp-u010" >.</span></h1>
  <p class="muted">Sign in with your existing WatchdogWorkspace account to manage boards, collaborate, and stay on top of every detail.</p>
@@ -52,21 +55,21 @@ function renderLogin(message=''){
  <form id="login-form"><div class="field"><label for="email">Work email</label><input id="email" name="email" type="email" placeholder="you@company.com" autocomplete="username" required autofocus/></div>
  <div class="field"><label for="password">Password</label><div class="password-wrap"><input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required minlength="1"/><button type="button" class="eye-btn" data-action="toggle-password">Show</button></div></div>
  <button class="primary wide" type="submit" id="login-submit">Sign in to workspace <span aria-hidden="true">→</span></button></form>
- <p class="csp-u059" >Access is managed by your organization. No new account is created.</p></section>
+ <p class="csp-u064" >Access is managed by your organization. No new account is created.</p></section>
  <div class="auth-bottom">© ${new Date().getFullYear()} APSYNTRA CRM · Secured by Supabase Authentication</div></div>
  <div class="auth-right"><section class="auth-pitch"><span class="eyebrow csp-u014" >Built for better work</span>
  <h2>One workspace.<br/>Every possibility.</h2><p>Bring work, tasks, and conversations together in a single, beautifully organized platform.</p>
- <div class="preview"><div class="preview-top"><span class="dot csp-u003" ></span><span class="dot csp-u004" ></span><span class="dot csp-u001" ></span><strong class="csp-u020" >Your team workspace</strong></div>
- <div class="preview-body"><div class="csp-u036" >Project overview</div>
- <div class="preview-row"><span class="csp-u061" ></span><b class="csp-u017" >Plan upcoming activities</b><span class="preview-status">Done</span></div>
- <div class="preview-row"><span class="csp-u063" ></span><b class="csp-u017" >Review team assignments</b><span class="preview-status csp-u005" >In progress</span></div>
- <div class="preview-row"><span class="csp-u062" ></span><b class="csp-u017" >Monitor active requests</b><span class="preview-status csp-u002" >Planned</span></div>
- <div class="preview-line csp-u066" ></div><div class="preview-line csp-u065" ></div></div></div></section></div></div>`;
+ <div class="preview"><div class="preview-top"><span class="dot csp-u003" ></span><span class="dot csp-u004" ></span><span class="dot csp-u001" ></span><strong class="csp-u022" >Your team workspace</strong></div>
+ <div class="preview-body"><div class="csp-u038" >Project overview</div>
+ <div class="preview-row"><span class="csp-u066" ></span><b class="csp-u018" >Plan upcoming activities</b><span class="preview-status">Done</span></div>
+ <div class="preview-row"><span class="csp-u068" ></span><b class="csp-u018" >Review team assignments</b><span class="preview-status csp-u005" >In progress</span></div>
+ <div class="preview-row"><span class="csp-u067" ></span><b class="csp-u018" >Monitor active requests</b><span class="preview-status csp-u002" >Planned</span></div>
+ <div class="preview-line csp-u071" ></div><div class="preview-line csp-u070" ></div></div></div></section></div></div>`;
 }
 function sidebar(){
  const currentBoard=state.boardId;
  return `<aside class="sidebar">
-   <a href="#/overview" class="brand"><span class="brand-mark">A</span><span class="brand-text">APSYNTRA <span class="csp-u041" >CRM</span></span></a>
+   <a href="#/overview" class="brand"><span class="brand-mark">A</span><span class="brand-text">APSYNTRA <span class="csp-u043" >CRM</span></span></a>
    <div class="workspace-switcher"><div class="workspace-icon">W</div><div><div class="workspace-name">${e(workspaceName())}</div><div class="workspace-sub">Connected workspace</div></div></div>
    <div class="side-section">Workspace</div>
    <nav class="nav-list" aria-label="Primary">
@@ -74,17 +77,18 @@ function sidebar(){
      <a class="nav-link ${state.view==='boards'?'active':''}" href="#/boards"><span class="nav-ico">▤</span><span class="nav-label">My boards</span><span class="nav-count">${state.boards.length}</span></a>
      <a class="nav-link ${state.view==='foundation'?'active':''}" href="#/foundation"><span class="nav-ico">◇</span><span class="nav-label">12-board foundation</span></a>
      <a class="nav-link ${state.view==='security'?'active':''}" href="#/security"><span class="nav-ico">◈</span><span class="nav-label">Access acceptance</span></a>
+     ${state.roleVerified===true?`<div class="side-section">Administration</div><a class="nav-link ${state.view==='role-configuration'?'active':''}" href="#/role-configuration"><span class="nav-ico">⚿</span><span class="nav-label">Role Configuration</span></a>`:''}
      <a class="nav-link ${state.view==='settings'?'active':''}" href="#/settings"><span class="nav-ico">⚙</span><span class="nav-label">Settings</span></a>
      <a class="nav-link ${state.view==='acceptance'?'active':''}" href="#/acceptance"><span class="nav-ico">✓</span><span class="nav-label">Pages acceptance</span></a>
    </nav>
    <div class="side-section">Recent boards</div>
-   <nav class="nav-list" aria-label="Recent boards">${state.boards.slice(0,6).map((b,i)=>`<a class="nav-link ${currentBoard===b.id?'active':''}" href="#/boards/${e(b.id)}"><span class="nav-ico csp-u011" >▦</span><span class="nav-label">${e(b.name)}</span></a>`).join('')||'<div class="muted csp-u056" >No boards yet</div>'}</nav>
+   <nav class="nav-list" aria-label="Recent boards">${state.boards.slice(0,6).map((b,i)=>`<a class="nav-link ${currentBoard===b.id?'active':''}" href="#/boards/${e(b.id)}"><span class="nav-ico csp-u011" >▦</span><span class="nav-label">${e(b.name)}</span></a>`).join('')||'<div class="muted csp-u061" >No boards yet</div>'}</nav>
    <div class="side-bottom"><div class="profile"><span class="avatar">${e(initials(name()))}</span>
    <div><div class="name">${e(name())}</div><div class="role">${e(state.context?.profile?.platform_role||'Team member')}</div></div></div>
    <button class="sign-out" data-action="logout">⇥ <span>Sign out of workspace</span></button></div></aside>`;
 }
 function shell(body){
- const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':'Settings';
+ const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':'Settings';
  root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
@@ -107,8 +111,8 @@ function overview(){
  <section class="stat-grid" aria-label="Workspace statistics">
  <div class="stat-card"><span class="stat-icon">▦</span><div class="stat-label">Active boards</div><div class="stat-value">${state.boards.length}</div><div class="stat-footer">Available to your account</div></div>
  <div class="stat-card"><span class="stat-icon green">☷</span><div class="stat-label">Board items</div><div class="stat-value">${total}</div><div class="stat-footer">Across your active boards</div></div>
- <div class="stat-card"><span class="stat-icon orange">◷</span><div class="stat-label">Workspace status</div><div class="stat-value csp-u040" >Active</div><div class="stat-footer">Access context verified</div></div>
- <div class="stat-card"><span class="stat-icon pink">♢</span><div class="stat-label">Your access</div><div class="stat-value csp-u039" >${e(state.context?.profile?.platform_role||'Member')}</div><div class="stat-footer">Authoritative account role</div></div></section>
+ <div class="stat-card"><span class="stat-icon orange">◷</span><div class="stat-label">Workspace status</div><div class="stat-value csp-u042" >Active</div><div class="stat-footer">Access context verified</div></div>
+ <div class="stat-card"><span class="stat-icon pink">♢</span><div class="stat-label">Your access</div><div class="stat-value csp-u041" >${e(state.context?.profile?.platform_role||'Member')}</div><div class="stat-footer">Authoritative account role</div></div></section>
  <div class="section-header"><span class="section-title">Your boards</span><a class="inline-link" href="#/boards">View all boards →</a></div>
  ${recent.length?`<div class="card-grid">${recent.map(boardCard).join('')}</div>`:
  `<div class="panel">${empty('Start with your first board','Create a board to organize tasks and updates.','<button class="primary" data-action="new-board">＋ Create board</button>')}</div>`}
@@ -127,11 +131,11 @@ function boardsPage(){
  `<div class="panel">${empty(state.showArchived?'No archived boards':'No boards available',state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
 }
 function groupRows(items,allowEdit){
- return `<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr><th class="csp-u064" >Item name</th><th>Status</th><th>Owner</th><th>Due date</th><th></th></tr></thead>
+ return `<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr><th class="csp-u069" >Item name</th><th>Status</th><th>Owner</th><th>Due date</th><th></th></tr></thead>
  <tbody>${items.map(item=>`<tr data-searchable="${e((item.title||'').toLowerCase())}">
  <td>▥ &nbsp; ${e(item.title||'Untitled')}</td><td><span class="status ${statusClass(item.status)}">${e(item.status||'Planned')}</span></td>
  <td>${item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned'}</td><td>${e(displayDate(item.due_date))}</td>
- <td>${allowEdit?`<button class="icon-button" data-action="edit-item" data-id="${e(item.id)}" title="Edit item">✎ Edit</button>`:''}</td></tr>`).join('')||'<tr><td class="csp-u060" colspan="5" >No items in this group yet</td></tr>'}</tbody></table></div></div>`;
+ <td>${allowEdit?`<button class="icon-button" data-action="edit-item" data-id="${e(item.id)}" title="Edit item">✎ Edit</button>`:''}</td></tr>`).join('')||'<tr><td class="csp-u065" colspan="5" >No items in this group yet</td></tr>'}</tbody></table></div></div>`;
 }
 function issuesPage(){
  if(state.loadingIssues)return '<div class="panel">'+empty('Loading issues','Checking permitted Issue records…')+'</div>';
@@ -161,8 +165,8 @@ function boardPage(){
  <div class="head-actions"><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
- <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}">▤ Board items <span class="csp-u055" >(${items.length})</span></a>
- <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span class="csp-u055" >(${state.issues.length})</span></a></div>
+ <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}">▤ Board items <span class="csp-u060" >(${items.length})</span></a>
+ <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span class="csp-u060" >(${state.issues.length})</span></a></div>
  ${state.tab==='issues'?issuesPage():`
  <div class="toolbar"><div class="search-wrap"><input class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
@@ -175,31 +179,31 @@ function settingsPage(){
  const p=state.context.profile;
  return `<div class="page-head"><div><span class="label-top">Workspace / Account</span><h1>Account & security</h1><p>Your verified user identity and session preferences.</p></div></div>
  <div class="settings-grid"><section class="panel"><div class="panel-header"><h3>Profile information</h3><span>Supabase Auth</span></div>
- <div class="panel-body"><div class="profile"><span class="avatar csp-u042" >${e(initials(name()))}</span>
- <div><div class="name csp-u038" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
+ <div class="panel-body"><div class="profile"><span class="avatar csp-u044" >${e(initials(name()))}</span>
+ <div><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
  <div class="settings-detail"><label>Work email</label><strong>${e(p.email||state.user?.email||'Not available')}</strong></div>
  <div class="settings-detail"><label>Account status</label><strong><span class="status done">${e(p.status)}</span></strong></div>
  <div class="settings-detail"><label>Workspace</label><strong>${e(workspaceName())}</strong></div>
- <div class="settings-detail"><label>User identifier</label><strong class="csp-u018" >${e(state.context.user_id)}</strong></div></div></section>
+ <div class="settings-detail"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div></section>
  <section class="panel"><div class="panel-header"><h3>Session security</h3><span class="online-dot"></span></div>
- <div class="panel-body"><p class="muted csp-u030" >Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p>
+ <div class="panel-body"><p class="muted csp-u032" >Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p>
  <div class="note">The application never requires a database password or privileged backend key. Permissions are enforced by the existing workspace RPCs and row-level security.</div>
  <div class="settings-detail"><label>Authentication</label><strong>Signed in and verified</strong></div>
  <div class="csp-u015" >
  <button class="secondary" data-action="copy-token">⎘ Copy short-lived access token</button>
  <button class="secondary" data-action="logout">⇥ Sign out</button></div>
  <div class="note security-note"><b>Access token:</b> Copy only when necessary for local acceptance testing. Anyone holding it may act as your account until it expires. Never share it in chat or commit it.</div>
- <p class="csp-u044" ><a class="secondary" href="#/acceptance">✓ GitHub Pages persistence acceptance</a></p>
+ <p class="csp-u047" ><a class="secondary" href="#/acceptance">✓ GitHub Pages persistence acceptance</a></p>
  <div class="csp-u006" >
-  <h3 class="csp-u037" >Signed backend verification</h3>
-  <p class="muted csp-u029" >Run read-only checks against the actual authenticated Supabase session, central board permissions, and Issue view. No token copying or database write required.</p>
+  <h3 class="csp-u039" >Signed backend verification</h3>
+  <p class="muted csp-u031" >Run read-only checks against the actual authenticated Supabase session, central board permissions, and Issue view. No token copying or database write required.</p>
   <button class="primary" data-action="verify-backend" ${state.acceptanceBusy?'disabled':''}>${state.acceptanceBusy?'Verifying…':'✓ Verify backend connection'}</button>
-  ${state.acceptance ? `<div class="csp-u045" ><div class="csp-u026" >
+  ${state.acceptance ? `<div class="csp-u048" ><div class="csp-u028" >
   ${summarizeAcceptance(state.acceptance).passed} of ${summarizeAcceptance(state.acceptance).total} read-only checks passed</div>
   ${state.acceptance.map(check=>`<div class="csp-u008" >
-  <div class="csp-u016" ><span aria-hidden="true" class="${check.status==='pass'?'csp-check-pass':check.status==='fail'?'csp-check-fail':'csp-check-pending'}">${check.status==='pass'?'✓':check.status==='fail'?'✕':'○'}</span><strong>${e(check.title)}</strong></div>
-  <div class="csp-u053" >${e(check.detail)}</div></div>`).join('')}
-  <p class="muted csp-u024" >These checks do not certify the local 5173 host or native transaction writes.</p></div>` : ''}
+  <div class="csp-u017" ><span aria-hidden="true" class="${check.status==='pass'?'csp-check-pass':check.status==='fail'?'csp-check-fail':'csp-check-pending'}">${check.status==='pass'?'✓':check.status==='fail'?'✕':'○'}</span><strong>${e(check.title)}</strong></div>
+  <div class="csp-u058" >${e(check.detail)}</div></div>`).join('')}
+  <p class="muted csp-u026" >These checks do not certify the local 5173 host or native transaction writes.</p></div>` : ''}
  </div>
  </div></section></div>`;
 }
@@ -214,6 +218,7 @@ function render(){
    canProvision:state.context?.profile?.platform_role==='admin_general_manager'
  }));
  else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy}));
+ else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.roleVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -222,6 +227,31 @@ async function refreshWorkspace(){
  state.context=await db.context();
  state.boards=await db.boards('active');
  state.user=auth.session?.user;
+ // Verified server RPC is the ONLY entry gate. A profile role or email is never sufficient.
+ try{state.roleVerified=await roleConfig.bootstrapVerified();}
+ catch{state.roleVerified=false;}
+ if(!state.roleVerified){state.roleData=null;state.roleError='';}
+}
+async function loadRoleConfiguration(){
+ if(state.roleVerified!==true)throw new ApiError('Bootstrap verification required.',403);
+ const context=await db.context();
+ if(context.user_id!==state.context?.user_id||context.workspace_id!==state.context?.workspace_id)
+  throw new ApiError('Identity or active workspace changed.',403);
+ const data=await roleConfig.snapshot(context.workspace_id);
+ state.roleData=data;state.roleError='';
+}
+async function stageRoleProposal(operation,payload){
+ if(state.roleVerified!==true)throw new ApiError('Role configuration access denied.',403);
+ const identity=await auth.getVerifiedUser();
+ const context=await db.context();
+ if(identity?.id!==context.user_id||context.user_id!==state.context?.user_id||
+    context.workspace_id!==state.context?.workspace_id||
+    !(await roleConfig.bootstrapVerified()))
+  throw new ApiError('Bootstrap identity or active workspace changed.',403);
+ await roleConfig.propose(context.workspace_id,operation,payload);
+ await loadRoleConfiguration();
+ toast('Change proposal recorded. No production access has changed.');
+ render();
 }
 async function refreshFoundation(){
  const context=await db.context();
@@ -257,7 +287,21 @@ async function onRoute(){
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='boards'&&validUuid(parts[1])){await loadBoard(parts[1],parts[2]==='issues'?'issues':'items');return;}
- routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':'overview';
+ routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':'overview';
+ if(state.view==='role-configuration'){
+   // Recheck current server authority on EVERY entry, including direct URL visits.
+   try{state.roleVerified=await roleConfig.bootstrapVerified();}
+   catch{state.roleVerified=false;}
+   if(!state.roleVerified){
+     state.roleData=null;state.roleError='';
+     location.hash=routeHome;return onRoute();
+   }
+ }
+ if(state.view==='role-configuration'){
+   state.roleBusy=true;render();
+   try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);}
+   finally{state.roleBusy=false;}
+ }
  if(state.view==='boards'&&state.showArchived&&!state.archived.length){try{state.archived=await db.boards('archived');}catch(err){notice(err);}}
  if(state.view==='foundation'){
    state.foundationBusy=true;render();
@@ -309,9 +353,91 @@ async function writeGuard(){if(!state.boardId||!await db.allowed(state.boardId,'
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
- case 'logout':{await auth.signOut();state.context=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'logout':{await auth.signOut();state.context=null;state.roleVerified=false;state.roleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
+ case 'role-tab':{
+   if(!state.roleVerified)return;
+   const tab=button.dataset.tab;
+   if(['roles','users','matrix','workspace','audit'].includes(tab)){state.roleTab=tab;render();}
+   break;
+ }
+ case 'role-refresh':{
+   if(!state.roleVerified||state.roleBusy)return;
+   state.roleBusy=true;render();
+   try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);notice(err);}
+   finally{state.roleBusy=false;render();}
+   break;
+ }
+ case 'role-propose-create':{
+   if(!state.roleVerified)return;
+   openModal('Stage a new role definition',
+      input('Role key','roleKey','custom_role')+
+      input('Display name','displayName','Custom Role')+
+      input('Description','description','', 'text',false),
+      async fd=>stageRoleProposal('role.create',{
+        roleKey:String(fd.get('roleKey')||'').trim(),
+        displayName:String(fd.get('displayName')||'').trim(),
+        description:String(fd.get('description')||'').trim()
+      }));break;
+ }
+ case 'role-propose-edit':{
+   if(!state.roleVerified)return;
+   const key=button.dataset.roleKey;
+   const role=state.roleData?.roles?.find(r=>r.roleKey===key&&r.kind==='custom_draft');
+   if(!role)throw new ApiError('Only draft custom roles may be edited.');
+   openModal('Stage role revision',
+      input('Role key','roleKey',key,'text',true)+
+      input('Display name','displayName',role.displayName)+
+      input('Description','description','', 'text',false),
+      async fd=>stageRoleProposal('role.edit',{
+       roleKey:key,displayName:String(fd.get('displayName')||'').trim(),
+       description:String(fd.get('description')||'').trim()
+      }));break;
+ }
+ case 'role-propose-activation':{
+   if(!state.roleVerified)return;
+   const roles=state.roleData?.roles?.filter(r=>r.kind==='custom_draft')||[];
+   if(!roles.length){toast('No custom roles are available for staging.',true);return;}
+   openModal('Stage activation or deactivation',
+      select('Custom role','roleKey',roles.map(r=>[r.roleKey,r.displayName]))+
+      select('Proposed change','operation',[['role.activate','Activate'],['role.deactivate','Deactivate']]),
+      async fd=>stageRoleProposal(String(fd.get('operation')),{roleKey:String(fd.get('roleKey'))}));break;
+ }
+ case 'role-propose-assign':{
+   if(!state.roleVerified)return;
+   const id=button.dataset.userId;
+   const user=state.roleData?.users?.find(u=>u.id===id&&!u.bootstrapProtected);
+   if(!user)throw new ApiError('Protected or missing user cannot be assigned.',403);
+   openModal('Stage an application role change',
+      select('Application module','moduleId',ROLE_MODULE_OPTIONS)+
+      select('Proposed change','operation',[['assignment.assign','Assign'],['assignment.revoke','Revoke']])+
+      input('Existing application role','role','Employee'),
+      async fd=>stageRoleProposal(String(fd.get('operation')),
+        {userId:id,moduleId:String(fd.get('moduleId')),role:String(fd.get('role')).trim()}));break;
+ }
+ case 'role-propose-permission':{
+   if(!state.roleVerified)return;
+   const moduleId=button.dataset.moduleId,capability=button.dataset.capability;
+   if(!ROLE_MODULE_OPTIONS.some(x=>x[0]===moduleId)||
+      !['view','create','edit','delete','approve','export','administer'].includes(capability))
+     throw new ApiError('Unknown permission scope.');
+   openModal('Stage module capability',
+     input('Role key','roleKey','employee')+
+     select('Proposed access','enabled',[['false','Deny'],['true','Allow']]),
+     async fd=>stageRoleProposal('permission.configure',
+       {moduleId,capability,roleKey:String(fd.get('roleKey')).trim(),enabled:fd.get('enabled')==='true'}));break;
+ }
+ case 'role-propose-workspace':{
+   if(!state.roleVerified)return;
+   const users=state.roleData?.users?.filter(u=>!u.bootstrapProtected)||[];
+   if(!users.length){toast('No eligible workspace members.',true);return;}
+   openModal('Stage workspace access restriction',
+      select('Member','userId',users.map(u=>[u.id,u.displayName||u.email||'Member']))+
+      select('Requested restriction','enabled',[['false','Suspend workspace access'],['true','Restore existing access']]),
+      async fd=>stageRoleProposal('workspace.configure',
+         {userId:String(fd.get('userId')),enabled:fd.get('enabled')==='true'}));break;
+ }
  case 'security-run-negative':{
    if(state.securityBusy)return;
    state.securityBusy=true;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;
@@ -548,14 +674,14 @@ root.addEventListener('input',event=>{
 });
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
 window.addEventListener('keydown',event=>{if(event.key==='Escape')hideModal();});
-auth.onExpired=()=>{state.context=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{state.context=null;state.roleVerified=false;state.roleData=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  try{
   if(await auth.restore()){
     state.user=auth.session.user;
     try{await refreshWorkspace();await onRoute();}catch(err){
       if(err instanceof ApiError&&err.status===403){
-        root.innerHTML=`<div class="access-denied"><div class="denied-panel"><span class="brand-mark csp-u054" >A</span><h1>Workspace access unavailable</h1>
+        root.innerHTML=`<div class="access-denied"><div class="denied-panel"><span class="brand-mark csp-u059" >A</span><h1>Workspace access unavailable</h1>
         <p>${e(errorMessage(err))} Contact your administrator to activate your existing profile or workspace membership.</p>
         <button class="secondary" data-action="logout">Sign out</button></div></div>`;
       }else{await auth.signOut();renderLogin('Your session could not be restored. Please sign in again.');}
