@@ -12,7 +12,8 @@ const paths=['index.html','frontend/app.js','frontend/config.js','frontend/sessi
  'frontend/data.js','frontend/acceptance.js','frontend/pages-persistence.js',
  'frontend/pages-acceptance-ui.js','frontend/native-client.js','frontend/native-qa.js',
  'frontend/board-manifest.js','frontend/board-foundation.js','frontend/board-foundation-ui.js',
- 'frontend/board-grid.js','frontend/board-operational-qa.js','frontend/styles.css'];
+ 'frontend/board-grid.js','frontend/board-operational-qa.js',
+ 'frontend/board-security-targets.js','frontend/board-negative-acceptance.js','frontend/board-security-ui.js','frontend/styles.css'];
 const digest=x=>createHash('sha256').update(x).digest('hex');
 function url(path){
  const remote=new URL(path==='index.html'?'./':path,origin);
