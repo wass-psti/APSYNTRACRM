@@ -232,6 +232,27 @@ async function refreshWorkspace(){
  catch{state.roleVerified=false;}
  if(!state.roleVerified){state.roleData=null;state.roleError='';}
 }
+async function loadRoleConfiguration(){
+ if(state.roleVerified!==true)throw new ApiError('Bootstrap verification required.',403);
+ const context=await db.context();
+ if(context.user_id!==state.context?.user_id||context.workspace_id!==state.context?.workspace_id)
+  throw new ApiError('Identity or active workspace changed.',403);
+ const data=await roleConfig.snapshot(context.workspace_id);
+ state.roleData=data;state.roleError='';
+}
+async function stageRoleProposal(operation,payload){
+ if(state.roleVerified!==true)throw new ApiError('Role configuration access denied.',403);
+ const identity=await auth.getVerifiedUser();
+ const context=await db.context();
+ if(identity?.id!==context.user_id||context.user_id!==state.context?.user_id||
+    context.workspace_id!==state.context?.workspace_id||
+    !(await roleConfig.bootstrapVerified()))
+  throw new ApiError('Bootstrap identity or active workspace changed.',403);
+ await roleConfig.propose(context.workspace_id,operation,payload);
+ await loadRoleConfiguration();
+ toast('Change proposal recorded. No production access has changed.');
+ render();
+}
 async function refreshFoundation(){
  const context=await db.context();
  if(context.user_id!==state.context?.user_id||context.workspace_id!==state.context?.workspace_id)
@@ -324,7 +345,7 @@ async function writeGuard(){if(!state.boardId||!await db.allowed(state.boardId,'
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
- case 'logout':{await auth.signOut();state.context=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'logout':{await auth.signOut();state.context=null;state.roleVerified=false;state.roleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'security-run-negative':{
@@ -563,7 +584,7 @@ root.addEventListener('input',event=>{
 });
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
 window.addEventListener('keydown',event=>{if(event.key==='Escape')hideModal();});
-auth.onExpired=()=>{state.context=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{state.context=null;state.roleVerified=false;state.roleData=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  try{
   if(await auth.restore()){
