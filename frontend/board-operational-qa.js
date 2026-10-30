@@ -42,8 +42,11 @@ async function one(api,context,module,boardId){
    'Conditional update did not persist');
   let staleDenied=false;
   try{await api.setBoardCellCas(itemId,refCol.id,sourceId+'.stale',sourceId);}
-  catch(err){staleDenied=err?.code==='40001';if(!staleDenied)throw err;}
-  verify(staleDenied,'Stale conditional update was not rejected with SQLSTATE 40001');
+  catch(err){
+   staleDenied=err?.status===409 && err?.code==='PT409';
+   if(!staleDenied)throw err;
+  }
+  verify(staleDenied,'Stale conditional update was not rejected with HTTP 409 / PT409');
   pass('Conditional update and stale-write denial');
   await api.deleteBoardItem(itemId);
   result.cleaned=true;
@@ -56,7 +59,9 @@ async function one(api,context,module,boardId){
   pass('Delete and independently verified audit');
   result.status='pass';
  }catch(err){
-  result.error=err?.message||'Operational acceptance failed';
+  result.error=err?.status===504?
+   'Board API timed out (HTTP 504) during acceptance; audit/cleanup must be reconciled before retrying':
+   err?.message||'Operational acceptance failed';
  }finally{
   // Only delete the exact record created during THIS acceptance run.
   if(itemId&&!result.cleaned){

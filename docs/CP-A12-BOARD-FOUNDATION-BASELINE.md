@@ -129,3 +129,15 @@ The independent query `sql/phase-a12-board-readonly-evidence.sql` also found exa
 The live UI acceptance runner now displays **per-board pass/fail/not-run, each completed gate, any error and whether its own QA item was removed**. The report is truthful only within the current in-browser session; independent database reconciliation is still mandatory.
 
 The next unblocked operation is **Run 12-board operational checks** on the existing empty nonproduction boards using the original signed administrator. The action must not be executed via SQL editor impersonation, invented user tokens, or a separate local host. An earlier partial run should be diagnosed from the per-board report before repeated testing. A complete 12/12 PASS plus external audit evidence closes the operational CRUD checkpoint, while cross-workspace/role-denial cases remain separately pending until genuinely exercised.
+
+## 10. October 30, 2026 — CP-A12.1 HTTP 504 stale-CAS remediation
+
+**Actual failure:** the user ran signed operational QA. FuelTrans reported FAIL at 3/5: signed item create/read and typed source cell persistence passed; a subsequent compare-and-set attempt returned HTTP 504, while cleanup succeeded. The remaining 11 boards were not touched.
+
+**Independent audit:** the second FuelTrans QA record persisted exactly one create, two cell updates, and one delete event. The HTTP request log identified `POST /rest/v1/rpc/wm_set_board_cell_if_current`, response **504**, with gateway origin time approximately **125167 ms**. No other live board was modified by this attempted run.
+
+**Root-cause remediation:** the authoritative PostgreSQL function previously used SQLSTATE `40001` (a *transaction serialization failure*) for a plain stale-cell expected-value mismatch. The PostgREST official custom SQLSTATE `PT409` maps to HTTP **409 Conflict**. We changed only that exception's error code in the existing `wm_set_board_cell_if_current` function. Its `FOR UPDATE` item lock, `work_board_access(...,'edit')`, nested cell validation/write RPC, owner, existing grants, and security-definer search path were preserved. The production function definition was independently inspected after deployment: `PT409=true`, `40001=false`, `FOR UPDATE=true`, `edit authorization=true`, signed EXECUTE=true, anonymous EXECUTE=false. Source SQL: `sql/phase-a12-cas-http409-remediation.sql`.
+
+**Frontend compatibility:** the signed acceptance runner now requires HTTP 409 **and** backend code `PT409` for an expected stale-write denial. A 504 is never treated as a passing conflict, and cleanup remains limited to the unique QA item from this run. No client-side timeout extension, SQL permission bypass, additional account, or new backend was introduced.
+
+**Verification boundary:** SQL deployment and static code/security verification are complete, but this remediation is **not yet certified end-to-end** until the authorized signed user runs the 12-board acceptance and observes the explicit stale conflict successfully. The 12/12 structural provisioning acceptance remains valid. Do not equate a successful schema inspection or test mock with a real signed HTTP 409.
