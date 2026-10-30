@@ -9,7 +9,7 @@ test('backend manages only existing central module and board role storage',()=>{
  assert.match(sql,/public\.wm_admin_set_application_role/);
  assert.match(sql,/public\.apsyntra_role_require_scope/);
  assert.match(sql,/public\.apsyntra_role_bootstrap_identities/);
- assert.match(sql,/public\.current_workspace_id/);
+ assert.match(sql,/p_workspace_id=p_workspace_id|wm\.workspace_id=p_workspace_id/);
 });
 test('bootstrap scope and identity changes cannot be bypassed in frontend',()=>{
  assert.match(app,/roleConfig\.bootstrapVerified\(\)/);
@@ -25,7 +25,7 @@ test('server protections fail closed for protected, concurrent and cross-workspa
  assert.match(sql,/Stale board membership/);
  assert.match(sql,/Board outside active workspace/);
  assert.match(sql,/Protected board owner/);
- assert.match(sql,/INSERT INTO public\\.apsyntra_role_change_audit/); // append-only audit remains protected
+ assert.match(sql,/INSERT INTO public\.apsyntra_role_change_audit/); // append-only audit remains protected
 });
 test('audit records are part of same transaction and no direct client DML used',()=>{
  assert.match(sql,/INSERT INTO public\.apsyntra_role_change_audit/);
