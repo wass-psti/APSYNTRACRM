@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -36,6 +36,23 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
   if(writeResult)html+='<p class="muted"><b>QA write-denial: '+escape(writeResult.status.toUpperCase())+'</b> — '+escape(writeResult.detail)+'</p>';
   if(report.results?.length)html+='<button class="secondary csp-u047" data-action="security-copy-report" >Copy nonsecret result summary</button>';
   html+='</div>';
+ }
+ html+='</div></div>';
+ html+='<div class="panel"><div class="panel-header"><h3>FRT centralized role and signed-session acceptance</h3></div>'+
+ '<div class="panel-body"><p class="muted">CP-FRT-SEC03 verifies the currently signed account and read-only role governance. This does not create users, assign permissions or modify financial records.</p>'+
+ '<button class="primary" data-action="security-frt-readonly" '+(frtBusy?'disabled':'')+'>'+
+ (frtBusy?'Verifying current signed session…':'Run FRT read-only signed acceptance')+'</button>';
+ if(frtResult){
+  const passed=(frtResult.checks||[]).filter(c=>c.status==='PASS').length;
+  html+='<div class="csp-u053"><strong>FRT result: '+escape(frtResult.status||'BLOCKED')+
+   ' ('+passed+' / '+(frtResult.checks||[]).length+' checks)</strong>'+
+   '<p class="muted">Session category: '+escape(frtResult.scenario||'UNVERIFIED')+'</p>';
+  if(frtResult.reason)html+='<p class="muted">'+escape(frtResult.reason)+'</p>';
+  html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Check</th><th>Status</th></tr></thead><tbody>'+
+   (frtResult.checks||[]).map(c=>'<tr><td>'+escape(c.name)+'</td><td>'+
+    escape(c.status)+'</td></tr>').join('')+'</tbody></table></div>';
+  html+='<p class="muted">Changes attempted: 0. Results do not certify fresh-session role changes, cross-workspace writes or local 5173 board-host operations.</p>'+
+  '<button class="secondary" data-action="security-frt-copy">Copy nonsecret FRT result</button></div>';
  }
  html+='</div></div>';
  html+='<div class="note security-note csp-u050" >The real target board UUIDs were confirmed through PostgreSQL inventory. A different workspace UUID is not a fabricated board. A successful negative result cannot substitute for application-level acceptance, membership revocation testing or field-level security. Reports are temporary in this browser tab and contain no names, emails, access tokens or location data.</div>';
