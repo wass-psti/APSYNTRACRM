@@ -78,6 +78,14 @@ BEGIN
    pg_catalog.hashtextextended(p_target_user_id::text||':'||p_scope||':'||p_resource_id,0));
 
  IF p_scope='module' THEN
+   -- Legacy module_role_assignments is keyed by (user_id,module_id) without a
+   -- workspace ID. Reject multi-workspace users to avoid an accidental cross-
+   -- workspace role grant until the original backend supports scoped roles.
+   IF (SELECT count(*) FROM public.workspace_members wm
+       WHERE wm.user_id=p_target_user_id AND wm.active)<>1 THEN
+     RAISE EXCEPTION 'Ambiguous multi-workspace application role target'
+       USING ERRCODE='42501';
+   END IF;
    IF p_resource_id NOT IN (
      'time-tracker','fueltrack-plus','tradelink','toolbox-issues',
      'fund-released-tracker','fueltrans','order-intake','tool-traceability',
@@ -87,6 +95,8 @@ BEGIN
       FROM public.module_role_assignments WHERE user_id=p_target_user_id AND module_id=p_resource_id FOR UPDATE;
    IF v_existing_at IS DISTINCT FROM p_expected_updated_at THEN
      RAISE EXCEPTION 'Stale module role assignment' USING ERRCODE='PT409'; END IF;
+   IF NOT p_enabled AND v_existing_at IS NULL THEN
+     RAISE EXCEPTION 'No application role exists to revoke' USING ERRCODE='PT409'; END IF;
    v_previous:=CASE WHEN v_existing_at IS NULL THEN NULL ELSE
      jsonb_build_object('role',v_existing_role,'enabled',
        (SELECT enabled FROM public.module_role_assignments
@@ -95,9 +105,26 @@ BEGIN
    -- Domain-specific backends that are already delegated by this RPC remain delegated.
    -- Other modules still use the same authoritative module_role_assignments table,
    -- but application-specific workflow enforcement must be independently certified.
-   IF p_resource_id IN ('time-tracker','fueltrack-plus','tradelink','fund-released-tracker') THEN
+   IF p_resource_id IN ('time-tracker','fueltrack-plus','tradelink','fund-released-tracker',
+     'tool-traceability','material-request-hub') THEN
      v_result:=public.wm_admin_set_application_role(p_target_user_id,p_resource_id,p_role,p_enabled);
    ELSE
+     IF p_resource_id='toolbox-issues' AND NOT p_enabled THEN
+       -- Preserve the actual Toolbox membership backend as a mandatory gate;
+       -- a disabled central row alone would not revoke source access.
+       UPDATE public.toolbox_issues_memberships m
+       SET enabled=false,assigned_by=v_actor,updated_at=clock_timestamp()
+       WHERE m.workspace_id=p_workspace_id AND m.user_id=p_target_user_id AND m.enabled;
+       IF NOT FOUND THEN
+         RAISE EXCEPTION 'No active Toolbox source membership available to revoke'
+           USING ERRCODE='42501';
+       END IF;
+       INSERT INTO public.toolbox_issues_activity(
+         workspace_id,entity_type,entity_id,actor_user_id,event_type,detail)
+       VALUES(p_workspace_id,'membership',p_target_user_id::text,
+         v_actor,'role_revoked',
+         jsonb_build_object('role',p_role,'enabled',false,'authority','APSYNTRA'));
+     END IF;
      IF p_resource_id='toolbox-issues' AND p_enabled THEN
        -- Source Toolbox membership is a separate operational prerequisite.
        RAISE EXCEPTION 'Toolbox source membership must be reconciled before enabling this role'
@@ -127,6 +154,8 @@ BEGIN
    THEN RAISE EXCEPTION 'Protected board owner or unsupported board role' USING ERRCODE='42501'; END IF;
    IF v_existing_at IS DISTINCT FROM p_expected_updated_at THEN
      RAISE EXCEPTION 'Stale board membership' USING ERRCODE='PT409'; END IF;
+   IF NOT p_enabled AND v_existing_at IS NULL THEN
+     RAISE EXCEPTION 'No board membership exists to revoke' USING ERRCODE='PT409'; END IF;
    v_previous:=CASE WHEN v_existing_at IS NULL THEN NULL ELSE
       jsonb_build_object('role',v_existing_role,'enabled',true) END;
    IF p_enabled THEN

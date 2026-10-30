@@ -4,6 +4,7 @@ on:
     branches:
       - fix/csp-inline-style-violations
       - feature/cp-role-configuration-bootstrap
+      - feature/cp-rc02-live-user-role-management
       - fix/form-field-identifiers
     paths:
       - "frontend/**"
