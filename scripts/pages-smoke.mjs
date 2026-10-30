@@ -10,7 +10,9 @@ const origin='https://wass-psti.github.io/APSYNTRACRM/';
 const sha=process.env.EXPECTED_DEPLOY_SHA || process.env.GITHUB_SHA || 'main';
 const paths=['index.html','frontend/app.js','frontend/config.js','frontend/session.js',
  'frontend/data.js','frontend/acceptance.js','frontend/pages-persistence.js',
- 'frontend/pages-acceptance-ui.js','frontend/native-client.js','frontend/native-qa.js','frontend/styles.css'];
+ 'frontend/pages-acceptance-ui.js','frontend/native-client.js','frontend/native-qa.js',
+ 'frontend/board-manifest.js','frontend/board-foundation.js','frontend/board-foundation-ui.js',
+ 'frontend/board-grid.js','frontend/board-operational-qa.js','frontend/styles.css'];
 const digest=x=>createHash('sha256').update(x).digest('hex');
 function url(path){
  const remote=new URL(path==='index.html'?'./':path,origin);
