@@ -78,6 +78,14 @@ BEGIN
    pg_catalog.hashtextextended(p_target_user_id::text||':'||p_scope||':'||p_resource_id,0));
 
  IF p_scope='module' THEN
+   -- Legacy module_role_assignments is keyed by (user_id,module_id) without a
+   -- workspace ID. Reject multi-workspace users to avoid an accidental cross-
+   -- workspace role grant until the original backend supports scoped roles.
+   IF (SELECT count(*) FROM public.workspace_members wm
+       WHERE wm.user_id=p_target_user_id AND wm.active)<>1 THEN
+     RAISE EXCEPTION 'Ambiguous multi-workspace application role target'
+       USING ERRCODE='42501';
+   END IF;
    IF p_resource_id NOT IN (
      'time-tracker','fueltrack-plus','tradelink','toolbox-issues',
      'fund-released-tracker','fueltrans','order-intake','tool-traceability',
@@ -87,6 +95,8 @@ BEGIN
       FROM public.module_role_assignments WHERE user_id=p_target_user_id AND module_id=p_resource_id FOR UPDATE;
    IF v_existing_at IS DISTINCT FROM p_expected_updated_at THEN
      RAISE EXCEPTION 'Stale module role assignment' USING ERRCODE='PT409'; END IF;
+   IF NOT p_enabled AND v_existing_at IS NULL THEN
+     RAISE EXCEPTION 'No application role exists to revoke' USING ERRCODE='PT409'; END IF;
    v_previous:=CASE WHEN v_existing_at IS NULL THEN NULL ELSE
      jsonb_build_object('role',v_existing_role,'enabled',
        (SELECT enabled FROM public.module_role_assignments
@@ -127,6 +137,8 @@ BEGIN
    THEN RAISE EXCEPTION 'Protected board owner or unsupported board role' USING ERRCODE='42501'; END IF;
    IF v_existing_at IS DISTINCT FROM p_expected_updated_at THEN
      RAISE EXCEPTION 'Stale board membership' USING ERRCODE='PT409'; END IF;
+   IF NOT p_enabled AND v_existing_at IS NULL THEN
+     RAISE EXCEPTION 'No board membership exists to revoke' USING ERRCODE='PT409'; END IF;
    v_previous:=CASE WHEN v_existing_at IS NULL THEN NULL ELSE
       jsonb_build_object('role',v_existing_role,'enabled',true) END;
    IF p_enabled THEN
