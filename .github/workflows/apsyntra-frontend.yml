@@ -1,0 +1,30 @@
+name: APSYNTRA CRM Frontend Validation
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "frontend/**"
+      - ".github/workflows/apsyntra-frontend.yml"
+  workflow_dispatch:
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check shipped JavaScript syntax
+        run: |
+          for source in frontend/*.js; do node --check "$source"; done
+      - name: Check main HTML entry point
+        run: |
+          test -f index.html
+          test -f frontend/app.js
+          test -f frontend/styles.css
+          grep -q 'frontend/app.js' index.html
+      - name: Test authentication and existing backend contracts
+        run: node --test frontend/tests/*.test.mjs
