@@ -1,0 +1,25 @@
+name: Huly Supabase Backend Unit Tests
+on:
+  push:
+    branches: ["development/cp-huly-supabase"]
+    paths:
+      - "packages/huly-supabase/**"
+      - ".github/workflows/huly-supabase-ci.yml"
+  pull_request:
+    paths:
+      - "packages/huly-supabase/**"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: packages/huly-supabase
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm test
