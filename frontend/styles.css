@@ -21,3 +21,75 @@
 @media(max-width:810px){.shell{grid-template-columns:69px minmax(0,1fr)}.sidebar .brand{padding:20px 15px}.sidebar .brand .brand-text,.workspace-switcher,.side-section,.nav-label,.nav-count,.profile .name,.profile .role,.sign-out span{display:none}.sidebar .nav-list{padding:0 8px}.sidebar .nav-link{justify-content:center;padding:14px 0}.sidebar .nav-link .nav-ico{width:auto;font-size:19px}.sidebar .side-bottom{padding:15px}.sidebar .profile{justify-content:center}.main-content{padding:29px 24px 65px}.topbar{padding:0 24px}.auth-layout{grid-template-columns:1fr}.auth-right{display:none}.auth-left{min-height:100vh;padding:29px 26px}.auth-panel{padding:30px 0}}
 @media(max-width:570px){.card-grid,.stat-grid,.settings-grid{grid-template-columns:1fr}.top-pill{display:none}.page-head{align-items:flex-start;flex-direction:column;gap:14px}.main-content{padding:24px 15px 60px}.topbar{padding:0 15px;height:65px}.page-head h1{font-size:26px}.issue-row{grid-template-columns:1fr auto;gap:9px}.issue-row .issues-actions{grid-column:1/-1}.panel-header{padding:18px}.panel-body{padding:16px}.toolbar-right{width:100%;justify-content:space-between}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* CSP-compliant presentation utilities. These preserve the prior UI declarations
+   without style attributes, script-created CSS or a weakened style-src policy. */
+#app .csp-u001{background:#96e4bb}
+#app .csp-u002{background:#ebedff;color:#7470e0}
+#app .csp-u003{background:#ff999e}
+#app .csp-u004{background:#ffd78f}
+#app .csp-u005{background:#fff0dd;color:#e4a451}
+#app .csp-u006{border-top:1px solid #eceefa;margin-top:23px;padding-top:20px}
+#app .csp-u007{border-top:1px solid #eef0f7;padding:10px 0}
+#app .csp-u008{border-top:1px solid #eef0f7;padding:10px 0;font-size:12px}
+#app .csp-u009{color:#259c76}
+#app .csp-u010{color:#6868e9}
+#app .csp-u011{color:#6d71da}
+#app .csp-u012{color:#929bad;font-size:11px;margin-top:4px}
+#app .csp-u013{color:#9da5b6}
+#app .csp-u014{color:#c5c9ff}
+#app .csp-u015{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 15px}
+#app .csp-u016{display:flex;gap:9px;align-items:center}
+#app .csp-u017{flex:1}
+#app .csp-u018{font-family:ui-monospace,monospace;font-size:11px}
+#app .csp-u019{font-size:11px;color:#929bad;font-weight:400;margin-top:6px}
+#app .csp-u020{font-size:11px;margin-left:12px}
+#app .csp-u021{font-size:11px;margin-top:12px}
+#app .csp-u022{font-size:11px;margin-top:5px}
+#app .csp-u023{font-size:11px;margin-top:9px}
+#app .csp-u024{font-size:11px;margin:12px 0 0}
+#app .csp-u025{font-size:12px}
+#app .csp-u026{font-size:12px;font-weight:750;margin-bottom:8px}
+#app .csp-u027{font-size:12px;margin-top:12px}
+#app .csp-u028{font-size:12px;margin-top:15px}
+#app .csp-u029{font-size:12px;margin:0 0 15px}
+#app .csp-u030{font-size:12px;margin:0 0 19px}
+#app .csp-u031{font-size:12px;margin:15px 0}
+#app .csp-u032{font-size:12px;margin:16px 0}
+#app .csp-u033{font-size:12px;margin:3px 0}
+#app .csp-u034{font-size:13px;margin:18px 0}
+#app .csp-u035{font-size:14px}
+#app .csp-u036{font-size:14px;font-weight:800;margin:2px 0 15px}
+#app .csp-u037{font-size:14px;margin:0 0 7px}
+#app .csp-u038{font-size:15px}
+#app .csp-u039{font-size:18px;margin-top:23px;text-transform:capitalize}
+#app .csp-u040{font-size:20px;margin-top:21px}
+#app .csp-u041{font-weight:500}
+#app .csp-u042{height:53px;width:53px;font-size:17px}
+#app .csp-u043{margin-top:12px}
+#app .csp-u044{margin-top:15px}
+#app .csp-u045{margin-top:17px}
+#app .csp-u046{margin-top:18px}
+#app .csp-u047{margin-top:20px}
+#app .csp-u048{margin-top:20px;border-top:1px solid #e8ebf2;padding-top:20px}
+#app .csp-u049{margin-top:21px}
+#app .csp-u050{margin-top:22px}
+#app .csp-u051{margin-top:27px;border-top:1px solid #eef0f7;padding-top:20px}
+#app .csp-u052{margin-top:6px}
+#app .csp-u053{margin:3px 0 0 22px;color:#8790a3}
+#app .csp-u054{margin:auto}
+#app .csp-u055{opacity:.5}
+#app .csp-u056{padding:12px;font-size:11px}
+#app .csp-u057{padding:9px 0;border-top:1px solid #eef0f7}
+#app .csp-u058{text-align:center;color:#929bac;padding:26px}
+#app .csp-u059{text-align:center;color:#a0a5b6;font-size:12px;margin:27px 0 0}
+#app .csp-u060{text-align:center;color:#a4aabc;padding:24px}
+#app .csp-u061{width:13px;height:13px;border-radius:4px;background:#a6a0f4}
+#app .csp-u062{width:13px;height:13px;border-radius:4px;background:#b1d9f4}
+#app .csp-u063{width:13px;height:13px;border-radius:4px;background:#f1bc95}
+#app .csp-u064{width:35%}
+#app .csp-u065{width:51%;margin-bottom:3px}
+#app .csp-u066{width:79%}
+#app .csp-check-pass{color:#24a17d}
+#app .csp-check-fail{color:#d95067}
+#app .csp-check-pending{color:#8790a3}

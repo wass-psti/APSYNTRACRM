@@ -44,29 +44,29 @@ function errorMessage(err){if(err instanceof ApiError&&err.status===403)return '
 function notice(err){toast(errorMessage(err),true);}
 function renderLogin(message=''){
  root.innerHTML=`<div class="auth-layout">
- <div class="auth-left"><a href="#/login" class="brand"><span class="brand-mark">A</span><span>APSYNTRA <span style="font-weight:500">CRM</span></span></a>
+ <div class="auth-left"><a href="#/login" class="brand"><span class="brand-mark">A</span><span>APSYNTRA <span class="csp-u041" >CRM</span></span></a>
  <section class="auth-panel"><span class="eyebrow">Your connected workspace</span>
- <h1>Welcome back<span style="color:#6868e9">.</span></h1>
+ <h1>Welcome back<span class="csp-u010" >.</span></h1>
  <p class="muted">Sign in with your existing WatchdogWorkspace account to manage boards, collaborate, and stay on top of every detail.</p>
  ${message?`<div class="login-error" role="alert">${e(message)}</div>`:''}
  <form id="login-form"><div class="field"><label for="email">Work email</label><input id="email" name="email" type="email" placeholder="you@company.com" autocomplete="username" required autofocus/></div>
  <div class="field"><label for="password">Password</label><div class="password-wrap"><input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required minlength="1"/><button type="button" class="eye-btn" data-action="toggle-password">Show</button></div></div>
  <button class="primary wide" type="submit" id="login-submit">Sign in to workspace <span aria-hidden="true">→</span></button></form>
- <p style="text-align:center;color:#a0a5b6;font-size:12px;margin:27px 0 0">Access is managed by your organization. No new account is created.</p></section>
+ <p class="csp-u059" >Access is managed by your organization. No new account is created.</p></section>
  <div class="auth-bottom">© ${new Date().getFullYear()} APSYNTRA CRM · Secured by Supabase Authentication</div></div>
- <div class="auth-right"><section class="auth-pitch"><span class="eyebrow" style="color:#c5c9ff">Built for better work</span>
+ <div class="auth-right"><section class="auth-pitch"><span class="eyebrow csp-u014" >Built for better work</span>
  <h2>One workspace.<br/>Every possibility.</h2><p>Bring work, tasks, and conversations together in a single, beautifully organized platform.</p>
- <div class="preview"><div class="preview-top"><span class="dot" style="background:#ff999e"></span><span class="dot" style="background:#ffd78f"></span><span class="dot" style="background:#96e4bb"></span><strong style="font-size:11px;margin-left:12px">Your team workspace</strong></div>
- <div class="preview-body"><div style="font-size:14px;font-weight:800;margin:2px 0 15px">Project overview</div>
- <div class="preview-row"><span style="width:13px;height:13px;border-radius:4px;background:#a6a0f4"></span><b style="flex:1">Plan upcoming activities</b><span class="preview-status">Done</span></div>
- <div class="preview-row"><span style="width:13px;height:13px;border-radius:4px;background:#f1bc95"></span><b style="flex:1">Review team assignments</b><span class="preview-status" style="background:#fff0dd;color:#e4a451">In progress</span></div>
- <div class="preview-row"><span style="width:13px;height:13px;border-radius:4px;background:#b1d9f4"></span><b style="flex:1">Monitor active requests</b><span class="preview-status" style="background:#ebedff;color:#7470e0">Planned</span></div>
- <div class="preview-line" style="width:79%"></div><div class="preview-line" style="width:51%;margin-bottom:3px"></div></div></div></section></div></div>`;
+ <div class="preview"><div class="preview-top"><span class="dot csp-u003" ></span><span class="dot csp-u004" ></span><span class="dot csp-u001" ></span><strong class="csp-u020" >Your team workspace</strong></div>
+ <div class="preview-body"><div class="csp-u036" >Project overview</div>
+ <div class="preview-row"><span class="csp-u061" ></span><b class="csp-u017" >Plan upcoming activities</b><span class="preview-status">Done</span></div>
+ <div class="preview-row"><span class="csp-u063" ></span><b class="csp-u017" >Review team assignments</b><span class="preview-status csp-u005" >In progress</span></div>
+ <div class="preview-row"><span class="csp-u062" ></span><b class="csp-u017" >Monitor active requests</b><span class="preview-status csp-u002" >Planned</span></div>
+ <div class="preview-line csp-u066" ></div><div class="preview-line csp-u065" ></div></div></div></section></div></div>`;
 }
 function sidebar(){
  const currentBoard=state.boardId;
  return `<aside class="sidebar">
-   <a href="#/overview" class="brand"><span class="brand-mark">A</span><span class="brand-text">APSYNTRA <span style="font-weight:500">CRM</span></span></a>
+   <a href="#/overview" class="brand"><span class="brand-mark">A</span><span class="brand-text">APSYNTRA <span class="csp-u041" >CRM</span></span></a>
    <div class="workspace-switcher"><div class="workspace-icon">W</div><div><div class="workspace-name">${e(workspaceName())}</div><div class="workspace-sub">Connected workspace</div></div></div>
    <div class="side-section">Workspace</div>
    <nav class="nav-list" aria-label="Primary">
@@ -78,7 +78,7 @@ function sidebar(){
      <a class="nav-link ${state.view==='acceptance'?'active':''}" href="#/acceptance"><span class="nav-ico">✓</span><span class="nav-label">Pages acceptance</span></a>
    </nav>
    <div class="side-section">Recent boards</div>
-   <nav class="nav-list" aria-label="Recent boards">${state.boards.slice(0,6).map((b,i)=>`<a class="nav-link ${currentBoard===b.id?'active':''}" href="#/boards/${e(b.id)}"><span class="nav-ico" style="color:#6d71da">▦</span><span class="nav-label">${e(b.name)}</span></a>`).join('')||'<div class="muted" style="padding:12px;font-size:11px">No boards yet</div>'}</nav>
+   <nav class="nav-list" aria-label="Recent boards">${state.boards.slice(0,6).map((b,i)=>`<a class="nav-link ${currentBoard===b.id?'active':''}" href="#/boards/${e(b.id)}"><span class="nav-ico csp-u011" >▦</span><span class="nav-label">${e(b.name)}</span></a>`).join('')||'<div class="muted csp-u056" >No boards yet</div>'}</nav>
    <div class="side-bottom"><div class="profile"><span class="avatar">${e(initials(name()))}</span>
    <div><div class="name">${e(name())}</div><div class="role">${e(state.context?.profile?.platform_role||'Team member')}</div></div></div>
    <button class="sign-out" data-action="logout">⇥ <span>Sign out of workspace</span></button></div></aside>`;
@@ -107,8 +107,8 @@ function overview(){
  <section class="stat-grid" aria-label="Workspace statistics">
  <div class="stat-card"><span class="stat-icon">▦</span><div class="stat-label">Active boards</div><div class="stat-value">${state.boards.length}</div><div class="stat-footer">Available to your account</div></div>
  <div class="stat-card"><span class="stat-icon green">☷</span><div class="stat-label">Board items</div><div class="stat-value">${total}</div><div class="stat-footer">Across your active boards</div></div>
- <div class="stat-card"><span class="stat-icon orange">◷</span><div class="stat-label">Workspace status</div><div class="stat-value" style="font-size:20px;margin-top:21px">Active</div><div class="stat-footer">Access context verified</div></div>
- <div class="stat-card"><span class="stat-icon pink">♢</span><div class="stat-label">Your access</div><div class="stat-value" style="font-size:18px;margin-top:23px;text-transform:capitalize">${e(state.context?.profile?.platform_role||'Member')}</div><div class="stat-footer">Authoritative account role</div></div></section>
+ <div class="stat-card"><span class="stat-icon orange">◷</span><div class="stat-label">Workspace status</div><div class="stat-value csp-u040" >Active</div><div class="stat-footer">Access context verified</div></div>
+ <div class="stat-card"><span class="stat-icon pink">♢</span><div class="stat-label">Your access</div><div class="stat-value csp-u039" >${e(state.context?.profile?.platform_role||'Member')}</div><div class="stat-footer">Authoritative account role</div></div></section>
  <div class="section-header"><span class="section-title">Your boards</span><a class="inline-link" href="#/boards">View all boards →</a></div>
  ${recent.length?`<div class="card-grid">${recent.map(boardCard).join('')}</div>`:
  `<div class="panel">${empty('Start with your first board','Create a board to organize tasks and updates.','<button class="primary" data-action="new-board">＋ Create board</button>')}</div>`}
@@ -127,11 +127,11 @@ function boardsPage(){
  `<div class="panel">${empty(state.showArchived?'No archived boards':'No boards available',state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
 }
 function groupRows(items,allowEdit){
- return `<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr><th style="width:35%">Item name</th><th>Status</th><th>Owner</th><th>Due date</th><th></th></tr></thead>
+ return `<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr><th class="csp-u064" >Item name</th><th>Status</th><th>Owner</th><th>Due date</th><th></th></tr></thead>
  <tbody>${items.map(item=>`<tr data-searchable="${e((item.title||'').toLowerCase())}">
  <td>▥ &nbsp; ${e(item.title||'Untitled')}</td><td><span class="status ${statusClass(item.status)}">${e(item.status||'Planned')}</span></td>
  <td>${item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned'}</td><td>${e(displayDate(item.due_date))}</td>
- <td>${allowEdit?`<button class="icon-button" data-action="edit-item" data-id="${e(item.id)}" title="Edit item">✎ Edit</button>`:''}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:#a4aabc;padding:24px">No items in this group yet</td></tr>'}</tbody></table></div></div>`;
+ <td>${allowEdit?`<button class="icon-button" data-action="edit-item" data-id="${e(item.id)}" title="Edit item">✎ Edit</button>`:''}</td></tr>`).join('')||'<tr><td class="csp-u060" colspan="5" >No items in this group yet</td></tr>'}</tbody></table></div></div>`;
 }
 function issuesPage(){
  if(state.loadingIssues)return '<div class="panel">'+empty('Loading issues','Checking permitted Issue records…')+'</div>';
@@ -161,8 +161,8 @@ function boardPage(){
  <div class="head-actions"><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
- <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}">▤ Board items <span style="opacity:.5">(${items.length})</span></a>
- <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span style="opacity:.5">(${state.issues.length})</span></a></div>
+ <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}">▤ Board items <span class="csp-u055" >(${items.length})</span></a>
+ <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span class="csp-u055" >(${state.issues.length})</span></a></div>
  ${state.tab==='issues'?issuesPage():`
  <div class="toolbar"><div class="search-wrap"><input class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
@@ -175,31 +175,31 @@ function settingsPage(){
  const p=state.context.profile;
  return `<div class="page-head"><div><span class="label-top">Workspace / Account</span><h1>Account & security</h1><p>Your verified user identity and session preferences.</p></div></div>
  <div class="settings-grid"><section class="panel"><div class="panel-header"><h3>Profile information</h3><span>Supabase Auth</span></div>
- <div class="panel-body"><div class="profile"><span class="avatar" style="height:53px;width:53px;font-size:17px">${e(initials(name()))}</span>
- <div><div class="name" style="font-size:15px">${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
+ <div class="panel-body"><div class="profile"><span class="avatar csp-u042" >${e(initials(name()))}</span>
+ <div><div class="name csp-u038" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
  <div class="settings-detail"><label>Work email</label><strong>${e(p.email||state.user?.email||'Not available')}</strong></div>
  <div class="settings-detail"><label>Account status</label><strong><span class="status done">${e(p.status)}</span></strong></div>
  <div class="settings-detail"><label>Workspace</label><strong>${e(workspaceName())}</strong></div>
- <div class="settings-detail"><label>User identifier</label><strong style="font-family:ui-monospace,monospace;font-size:11px">${e(state.context.user_id)}</strong></div></div></section>
+ <div class="settings-detail"><label>User identifier</label><strong class="csp-u018" >${e(state.context.user_id)}</strong></div></div></section>
  <section class="panel"><div class="panel-header"><h3>Session security</h3><span class="online-dot"></span></div>
- <div class="panel-body"><p class="muted" style="font-size:12px;margin:0 0 19px">Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p>
+ <div class="panel-body"><p class="muted csp-u030" >Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p>
  <div class="note">The application never requires a database password or privileged backend key. Permissions are enforced by the existing workspace RPCs and row-level security.</div>
  <div class="settings-detail"><label>Authentication</label><strong>Signed in and verified</strong></div>
- <div style="display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 15px">
+ <div class="csp-u015" >
  <button class="secondary" data-action="copy-token">⎘ Copy short-lived access token</button>
  <button class="secondary" data-action="logout">⇥ Sign out</button></div>
  <div class="note security-note"><b>Access token:</b> Copy only when necessary for local acceptance testing. Anyone holding it may act as your account until it expires. Never share it in chat or commit it.</div>
- <p style="margin-top:15px"><a class="secondary" href="#/acceptance">✓ GitHub Pages persistence acceptance</a></p>
- <div style="border-top:1px solid #eceefa;margin-top:23px;padding-top:20px">
-  <h3 style="font-size:14px;margin:0 0 7px">Signed backend verification</h3>
-  <p class="muted" style="font-size:12px;margin:0 0 15px">Run read-only checks against the actual authenticated Supabase session, central board permissions, and Issue view. No token copying or database write required.</p>
+ <p class="csp-u044" ><a class="secondary" href="#/acceptance">✓ GitHub Pages persistence acceptance</a></p>
+ <div class="csp-u006" >
+  <h3 class="csp-u037" >Signed backend verification</h3>
+  <p class="muted csp-u029" >Run read-only checks against the actual authenticated Supabase session, central board permissions, and Issue view. No token copying or database write required.</p>
   <button class="primary" data-action="verify-backend" ${state.acceptanceBusy?'disabled':''}>${state.acceptanceBusy?'Verifying…':'✓ Verify backend connection'}</button>
-  ${state.acceptance ? `<div style="margin-top:17px"><div style="font-size:12px;font-weight:750;margin-bottom:8px">
+  ${state.acceptance ? `<div class="csp-u045" ><div class="csp-u026" >
   ${summarizeAcceptance(state.acceptance).passed} of ${summarizeAcceptance(state.acceptance).total} read-only checks passed</div>
-  ${state.acceptance.map(check=>`<div style="border-top:1px solid #eef0f7;padding:10px 0;font-size:12px">
-  <div style="display:flex;gap:9px;align-items:center"><span aria-hidden="true" style="color:${check.status==='pass'?'#24a17d':check.status==='fail'?'#d95067':'#8790a3'}">${check.status==='pass'?'✓':check.status==='fail'?'✕':'○'}</span><strong>${e(check.title)}</strong></div>
-  <div style="margin:3px 0 0 22px;color:#8790a3">${e(check.detail)}</div></div>`).join('')}
-  <p class="muted" style="font-size:11px;margin:12px 0 0">These checks do not certify the local 5173 host or native transaction writes.</p></div>` : ''}
+  ${state.acceptance.map(check=>`<div class="csp-u008" >
+  <div class="csp-u016" ><span aria-hidden="true" class="${check.status==='pass'?'csp-check-pass':check.status==='fail'?'csp-check-fail':'csp-check-pending'}">${check.status==='pass'?'✓':check.status==='fail'?'✕':'○'}</span><strong>${e(check.title)}</strong></div>
+  <div class="csp-u053" >${e(check.detail)}</div></div>`).join('')}
+  <p class="muted csp-u024" >These checks do not certify the local 5173 host or native transaction writes.</p></div>` : ''}
  </div>
  </div></section></div>`;
 }
@@ -555,7 +555,7 @@ async function boot(){
     state.user=auth.session.user;
     try{await refreshWorkspace();await onRoute();}catch(err){
       if(err instanceof ApiError&&err.status===403){
-        root.innerHTML=`<div class="access-denied"><div class="denied-panel"><span class="brand-mark" style="margin:auto">A</span><h1>Workspace access unavailable</h1>
+        root.innerHTML=`<div class="access-denied"><div class="denied-panel"><span class="brand-mark csp-u054" >A</span><h1>Workspace access unavailable</h1>
         <p>${e(errorMessage(err))} Contact your administrator to activate your existing profile or workspace membership.</p>
         <button class="secondary" data-action="logout">Sign out</button></div></div>`;
       }else{await auth.signOut();renderLogin('Your session could not be restored. Please sign in again.');}
