@@ -1,7 +1,7 @@
 name: Huly Supabase Backend Unit Tests
 on:
   push:
-    branches: ["development/cp-huly-supabase"]
+    branches: ["main"]
     paths:
       - "packages/huly-supabase/**"
       - ".github/workflows/huly-supabase-ci.yml"
