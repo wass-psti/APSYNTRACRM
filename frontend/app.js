@@ -14,13 +14,16 @@ import {runTwelveBoardQa} from './board-operational-qa.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
 import {runDeniedQaWrite} from './board-negative-write.js';
+import {RoleConfigurationClient} from './role-configuration-client.js';
+import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const nativeIssues=new NativeIssueClient(db);
+const roleConfig=new RoleConfigurationClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -74,6 +77,7 @@ function sidebar(){
      <a class="nav-link ${state.view==='boards'?'active':''}" href="#/boards"><span class="nav-ico">▤</span><span class="nav-label">My boards</span><span class="nav-count">${state.boards.length}</span></a>
      <a class="nav-link ${state.view==='foundation'?'active':''}" href="#/foundation"><span class="nav-ico">◇</span><span class="nav-label">12-board foundation</span></a>
      <a class="nav-link ${state.view==='security'?'active':''}" href="#/security"><span class="nav-ico">◈</span><span class="nav-label">Access acceptance</span></a>
+     ${state.roleVerified===true?`<div class="side-section">Administration</div><a class="nav-link ${state.view==='role-configuration'?'active':''}" href="#/role-configuration"><span class="nav-ico">⚿</span><span class="nav-label">Role Configuration</span></a>`:''}
      <a class="nav-link ${state.view==='settings'?'active':''}" href="#/settings"><span class="nav-ico">⚙</span><span class="nav-label">Settings</span></a>
      <a class="nav-link ${state.view==='acceptance'?'active':''}" href="#/acceptance"><span class="nav-ico">✓</span><span class="nav-label">Pages acceptance</span></a>
    </nav>
@@ -84,7 +88,7 @@ function sidebar(){
    <button class="sign-out" data-action="logout">⇥ <span>Sign out of workspace</span></button></div></aside>`;
 }
 function shell(body){
- const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':'Settings';
+ const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':'Settings';
  root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
@@ -214,6 +218,7 @@ function render(){
    canProvision:state.context?.profile?.platform_role==='admin_general_manager'
  }));
  else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy}));
+ else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.roleVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -222,6 +227,31 @@ async function refreshWorkspace(){
  state.context=await db.context();
  state.boards=await db.boards('active');
  state.user=auth.session?.user;
+ // Verified server RPC is the ONLY entry gate. A profile role or email is never sufficient.
+ try{state.roleVerified=await roleConfig.bootstrapVerified();}
+ catch{state.roleVerified=false;}
+ if(!state.roleVerified){state.roleData=null;state.roleError='';}
+}
+async function loadRoleConfiguration(){
+ if(state.roleVerified!==true)throw new ApiError('Bootstrap verification required.',403);
+ const context=await db.context();
+ if(context.user_id!==state.context?.user_id||context.workspace_id!==state.context?.workspace_id)
+  throw new ApiError('Identity or active workspace changed.',403);
+ const data=await roleConfig.snapshot(context.workspace_id);
+ state.roleData=data;state.roleError='';
+}
+async function stageRoleProposal(operation,payload){
+ if(state.roleVerified!==true)throw new ApiError('Role configuration access denied.',403);
+ const identity=await auth.getVerifiedUser();
+ const context=await db.context();
+ if(identity?.id!==context.user_id||context.user_id!==state.context?.user_id||
+    context.workspace_id!==state.context?.workspace_id||
+    !(await roleConfig.bootstrapVerified()))
+  throw new ApiError('Bootstrap identity or active workspace changed.',403);
+ await roleConfig.propose(context.workspace_id,operation,payload);
+ await loadRoleConfiguration();
+ toast('Change proposal recorded. No production access has changed.');
+ render();
 }
 async function refreshFoundation(){
  const context=await db.context();
@@ -257,7 +287,21 @@ async function onRoute(){
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='boards'&&validUuid(parts[1])){await loadBoard(parts[1],parts[2]==='issues'?'issues':'items');return;}
- routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':'overview';
+ routeSerial++;state.boardId=null;state.board=null;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':'overview';
+ if(state.view==='role-configuration'){
+   // Recheck current server authority on EVERY entry, including direct URL visits.
+   try{state.roleVerified=await roleConfig.bootstrapVerified();}
+   catch{state.roleVerified=false;}
+   if(!state.roleVerified){
+     state.roleData=null;state.roleError='';
+     location.hash=routeHome;return onRoute();
+   }
+ }
+ if(state.view==='role-configuration'){
+   state.roleBusy=true;render();
+   try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);}
+   finally{state.roleBusy=false;}
+ }
  if(state.view==='boards'&&state.showArchived&&!state.archived.length){try{state.archived=await db.boards('archived');}catch(err){notice(err);}}
  if(state.view==='foundation'){
    state.foundationBusy=true;render();
@@ -309,9 +353,91 @@ async function writeGuard(){if(!state.boardId||!await db.allowed(state.boardId,'
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
- case 'logout':{await auth.signOut();state.context=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'logout':{await auth.signOut();state.context=null;state.roleVerified=false;state.roleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
+ case 'role-tab':{
+   if(!state.roleVerified)return;
+   const tab=button.dataset.tab;
+   if(['roles','users','matrix','workspace','audit'].includes(tab)){state.roleTab=tab;render();}
+   break;
+ }
+ case 'role-refresh':{
+   if(!state.roleVerified||state.roleBusy)return;
+   state.roleBusy=true;render();
+   try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);notice(err);}
+   finally{state.roleBusy=false;render();}
+   break;
+ }
+ case 'role-propose-create':{
+   if(!state.roleVerified)return;
+   openModal('Stage a new role definition',
+      input('Role key','roleKey','custom_role')+
+      input('Display name','displayName','Custom Role')+
+      input('Description','description','', 'text',false),
+      async fd=>stageRoleProposal('role.create',{
+        roleKey:String(fd.get('roleKey')||'').trim(),
+        displayName:String(fd.get('displayName')||'').trim(),
+        description:String(fd.get('description')||'').trim()
+      }));break;
+ }
+ case 'role-propose-edit':{
+   if(!state.roleVerified)return;
+   const key=button.dataset.roleKey;
+   const role=state.roleData?.roles?.find(r=>r.roleKey===key&&r.kind==='custom_draft');
+   if(!role)throw new ApiError('Only draft custom roles may be edited.');
+   openModal('Stage role revision',
+      input('Role key','roleKey',key,'text',true)+
+      input('Display name','displayName',role.displayName)+
+      input('Description','description','', 'text',false),
+      async fd=>stageRoleProposal('role.edit',{
+       roleKey:key,displayName:String(fd.get('displayName')||'').trim(),
+       description:String(fd.get('description')||'').trim()
+      }));break;
+ }
+ case 'role-propose-activation':{
+   if(!state.roleVerified)return;
+   const roles=state.roleData?.roles?.filter(r=>r.kind==='custom_draft')||[];
+   if(!roles.length){toast('No custom roles are available for staging.',true);return;}
+   openModal('Stage activation or deactivation',
+      select('Custom role','roleKey',roles.map(r=>[r.roleKey,r.displayName]))+
+      select('Proposed change','operation',[['role.activate','Activate'],['role.deactivate','Deactivate']]),
+      async fd=>stageRoleProposal(String(fd.get('operation')),{roleKey:String(fd.get('roleKey'))}));break;
+ }
+ case 'role-propose-assign':{
+   if(!state.roleVerified)return;
+   const id=button.dataset.userId;
+   const user=state.roleData?.users?.find(u=>u.id===id&&!u.bootstrapProtected);
+   if(!user)throw new ApiError('Protected or missing user cannot be assigned.',403);
+   openModal('Stage an application role change',
+      select('Application module','moduleId',ROLE_MODULE_OPTIONS)+
+      select('Proposed change','operation',[['assignment.assign','Assign'],['assignment.revoke','Revoke']])+
+      input('Existing application role','role','Employee'),
+      async fd=>stageRoleProposal(String(fd.get('operation')),
+        {userId:id,moduleId:String(fd.get('moduleId')),role:String(fd.get('role')).trim()}));break;
+ }
+ case 'role-propose-permission':{
+   if(!state.roleVerified)return;
+   const moduleId=button.dataset.moduleId,capability=button.dataset.capability;
+   if(!ROLE_MODULE_OPTIONS.some(x=>x[0]===moduleId)||
+      !['view','create','edit','delete','approve','export','administer'].includes(capability))
+     throw new ApiError('Unknown permission scope.');
+   openModal('Stage module capability',
+     input('Role key','roleKey','employee')+
+     select('Proposed access','enabled',[['false','Deny'],['true','Allow']]),
+     async fd=>stageRoleProposal('permission.configure',
+       {moduleId,capability,roleKey:String(fd.get('roleKey')).trim(),enabled:fd.get('enabled')==='true'}));break;
+ }
+ case 'role-propose-workspace':{
+   if(!state.roleVerified)return;
+   const users=state.roleData?.users?.filter(u=>!u.bootstrapProtected)||[];
+   if(!users.length){toast('No eligible workspace members.',true);return;}
+   openModal('Stage workspace access restriction',
+      select('Member','userId',users.map(u=>[u.id,u.displayName||u.email||'Member']))+
+      select('Requested restriction','enabled',[['false','Suspend workspace access'],['true','Restore existing access']]),
+      async fd=>stageRoleProposal('workspace.configure',
+         {userId:String(fd.get('userId')),enabled:fd.get('enabled')==='true'}));break;
+ }
  case 'security-run-negative':{
    if(state.securityBusy)return;
    state.securityBusy=true;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;
@@ -548,7 +674,7 @@ root.addEventListener('input',event=>{
 });
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
 window.addEventListener('keydown',event=>{if(event.key==='Escape')hideModal();});
-auth.onExpired=()=>{state.context=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{state.context=null;state.roleVerified=false;state.roleData=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  try{
   if(await auth.restore()){
