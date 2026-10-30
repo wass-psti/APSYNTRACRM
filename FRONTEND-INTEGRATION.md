@@ -4,7 +4,7 @@ The first user-facing frontend lives in `index.html` and `frontend/`, on `main`.
 
 ## Login and navigation
 
-Open the repository's published GitHub Pages site (when Pages is configured to publish from the repository root), or serve the same static files from your existing authoritative local host at `http://127.0.0.1:5173/#/`. The static assets must be exposed at `/frontend/...` relative to `index.html`. Do not start a second listener or replace existing backend API routes.
+**Production and primary acceptance URL:** https://wass-psti.github.io/APSYNTRACRM/#/overview . GitHub Pages serves the static frontend; **the existing WatchdogWorkspace Supabase HTTPS endpoint** serves Auth, board RPCs, RLS-backed Issue reads/writes and event reads. Port `127.0.0.1:5173` is no longer a frontend deployment prerequisite. Use that existing local host only for optional debugging or legacy Node-only native Huly adapters that have not yet been assigned approved HTTPS hosting. Do not start a second listener or replace existing backend APIs.
 
 Sign in with an **existing** WatchdogWorkspace Supabase Auth email/password account. No account creation is implemented. The frontend requests an actual access/refresh token from `/auth/v1/token?grant_type=password`, verifies it with `/auth/v1/user`, stores the session in tab-scoped `sessionStorage`, and refreshes tokens when near expiration. Sign-out calls Supabase Auth and clears the session. No password is persisted.
 
@@ -16,11 +16,11 @@ Upon sign-in, authorization is checked server-side with existing `wm_auth_access
 
 ## Navigation
 
-The hash-based routes are `#/overview`, `#/boards`, `#/boards/<uuid>`, `#/boards/<uuid>/issues`, and `#/settings`. The app is static and hash-based, so it works on GitHub Pages and can be embedded as a frontend bundle in the approved port-5173 host. The root route of the existing host remains canonical; changing that host's SPA fallback requires access to its source repository, which is not provided in this repository.
+The hash-based routes are `#/overview`, `#/boards`, `#/boards/<uuid>`, `#/boards/<uuid>/issues`, and `#/settings`. The app is static and hash-based, making GitHub Pages the authoritative frontend. The optional local Vite host may serve the same assets for debugging, but is no longer canonical for Pages-supported features. The live hosted URL and release controls are documented in `docs/PAGES-OPERATIONS.md`.
 
 ## Scope and limitations
 
-This is a **working frontend for the existing Supabase workspace/board and Huly Issue contracts**, not a fabricated full port of all 12 standalone applications or Huly's entire frontend monorepo. Existing board RPCs enforce RBAC; unavailable modules are not shown as working. End-to-end signed browser acceptance and the existing Mac host asset integration remain pending until actually executed.
+This is a **working frontend for the existing Supabase workspace/board and Huly Issue contracts**, not a fabricated full port of all 12 standalone applications or Huly's entire frontend monorepo. Existing board RPCs enforce RBAC; unavailable modules are not shown as working. The user previously verified genuine signed browser read acceptance (6/6) and CLI direct-Supabase acceptance (4/4). Signed persistence is still pending until the explicit `APSYNTRA QA` acceptance test succeeds; Node-only native host operations and full 12-board parity remain pending separate hosted integration.
 
 ## Checks
 
@@ -49,4 +49,8 @@ For the existing Mac 5173 host's middleware and signed read-only host gate, run:
 bash "$HOME/APSYNTRACRM-SB07/bin/apsyntra-sb07-accept.sh" --full
 ```
 
-The `--full` mode requires the same-origin Huly API to be mounted on the existing `http://127.0.0.1:5173` host; it fails explicitly if unavailable. **Write acceptance is disabled** unless both original `SB07_WRITE_APPROVED=yes` and `SB07_NONPRODUCTION_BOARD=yes` are set AND an explicitly selected, approved isolated nonproduction board/workspace is supplied. The launcher will never auto-select a production board for writes. Genuine signed host and native transaction acceptance is still pending until executed successfully.
+The legacy `--full` mode is now an **optional developer check for the unported Node native API only**, not a GitHub Pages production acceptance requirement; it requires the same-origin Huly API to be mounted on the existing `http://127.0.0.1:5173` host and fails explicitly if unavailable. **Write acceptance is disabled** unless both original `SB07_WRITE_APPROVED=yes` and `SB07_NONPRODUCTION_BOARD=yes` are set AND an explicitly selected, approved isolated nonproduction board/workspace is supplied. The launcher will never auto-select a production board for writes. Genuine signed host and native transaction acceptance is still pending until executed successfully.
+
+## GitHub Pages-first workflow
+
+See [docs/PAGES-OPERATIONS.md](docs/PAGES-OPERATIONS.md). Changes committed to `main` trigger frontend CI and the existing GitHub Pages deployment. A separate post-deployment workflow verifies the exact deployed asset hashes and Supabase Auth endpoint without credentials. Within the app, Settings → Verify backend connection provides six genuine signed read-only checks. For write/persistence acceptance, manually establish an **isolated** `APSYNTRA QA` board and navigate to `#/acceptance`. Only a clearly confirmed QA board can receive the optional create/update/CAS/removal/audit test. There is no continuously running local host requirement for these supported features.
