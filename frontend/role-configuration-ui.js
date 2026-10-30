@@ -3,7 +3,7 @@
  */
 import {BOARD_MODULES} from './board-manifest.js';
 const actions=['view','create','edit','delete','approve','export','administer'];
-const x=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;'}[c]));
+const x=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const PERMISSION_ACTIONS=Object.freeze(actions);
 const summaryCards=(d)=>{
  const roles=d.roles||[],users=d.users||[],proposals=d.proposals||[],boards=d.boards||[];
