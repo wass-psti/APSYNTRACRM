@@ -38,6 +38,20 @@ export class DomainApi {
      p_name:name.trim(),p_description:String(description||''),p_columns:columns
    });
  }
+ async setBoardCellCas(itemId,columnId,value,expectedValue){
+   return this.rpc('wm_set_board_cell_if_current',{
+     p_item_id:requireUuid(itemId),
+     p_column_id:columnId===null?null:requireUuid(columnId),
+     p_value:value,
+     p_expected_value:expectedValue
+   });
+ }
+ async deleteBoardItem(itemId){return this.rpc('wm_delete_board_item',{p_item_id:requireUuid(itemId)});}
+ async boardEvents(boardId,limit=200){
+   const rows=await this.rpc('wm_list_board_events',{p_board_id:requireUuid(boardId),p_limit:Math.min(limit,200)});
+   if(!Array.isArray(rows))throw new ApiError('Unexpected authoritative board-event response.');
+   return rows;
+ }
  async addGroup(boardId,title){return this.rpc('wm_add_board_group',{p_board_id:requireUuid(boardId),p_title:title.trim()});}
  async addItem(boardId,groupId,title){return this.rpc('wm_add_board_item',{
    p_board_id:requireUuid(boardId),p_group_id:requireUuid(groupId),p_title:title.trim()

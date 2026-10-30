@@ -4,7 +4,7 @@
 import {BOARD_MODULES,boardColumns,BOARD_CONTRACT_VERSION} from './board-manifest.js';
 import {summarizeFoundation} from './board-foundation.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function renderFoundation({rows=[],loading=false,provisioning=false,log=[],error='',canProvision=false}={}){
+export function renderFoundation({rows=[],loading=false,provisioning=false,testing=false,testResult=null,log=[],error='',canProvision=false}={}){
  const summary=summarizeFoundation(rows);
  const found=new Map(rows.map(r=>[r.module.key,r]));
  let html='<div class="page-head"><div><span class="label-top">Workspace / Integration foundation</span>'+
@@ -21,6 +21,17 @@ export function renderFoundation({rows=[],loading=false,provisioning=false,log=[
   '<button class="primary" data-action="foundation-provision" '+(!canProvision||loading||provisioning?'disabled':'')+'>'+
   (provisioning?'Creating and verifying boards…':'＋ Provision missing dedicated boards')+'</button>'+
   (!canProvision?'<p class="muted" style="font-size:12px">Provisioning requires the existing platform administrator role.</p>':'')+
+  (summary.ready===12?
+   '<div style="margin-top:20px;border-top:1px solid #e8ebf2;padding-top:20px">'+
+   '<h3 style="font-size:14px">Signed nonproduction operational acceptance</h3>'+
+   '<p class="muted" style="font-size:12px">Creates and removes one unique QA item in each EMPTY dedicated board; verifies persisted cells, conditional updates, stale-write denial and authenticated audit events. No existing records are modified. This is not application acceptance.</p>'+
+   '<button class="secondary" data-action="foundation-operational-test" '+
+   (!canProvision||testing||provisioning?'disabled':'')+'>'+
+   (testing?'Running controlled checks…':'Run 12-board operational checks')+'</button></div>':'' )+
+  (testResult?'<p style="font-size:12px;margin-top:12px"><strong>Signed QA:</strong> '+
+    esc(testResult.status.toUpperCase())+' — '+testResult.passed+'/12 boards passed'+
+    (testResult.results.at(-1)?.error?'. Last error: '+esc(testResult.results.at(-1).error):'')+
+    '</p>':'')+
   (error?'<div class="error-banner" role="alert" style="margin-top:12px">'+esc(error)+'</div>':'')+
   (log.length?'<p class="muted" style="font-size:12px;margin-top:15px">Current operation: '+esc(log.at(-1))+'</p>':'')+
   '</div></div>';

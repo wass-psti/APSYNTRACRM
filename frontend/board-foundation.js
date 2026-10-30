@@ -29,7 +29,8 @@ export async function inspectFoundation(api,{boards,context}={}){
    const missing=expected.filter(x=>!columns.some(c=>c.name===x.name&&c.data_type===x.data_type));
    const marker=String(detail.board.description||'').startsWith('[APSYNTRA:MODULE:'+module.key+':v1]');
    const allowed=await api.allowed(b.id,'view');
-   assert(allowed,'Server denied board view');
+   const editable=await api.allowed(b.id,'edit');
+   assert(allowed&&editable,'Server denied board management access');
    const problems=[...(marker?[]:['Registry marker absent']),...(missing.length?[missing.length+' expected typed columns missing']:[])];
    out.push({module,boardId:b.id,status:problems.length?'mismatch':'ready',note:problems.join('; ')||'Live details and typed columns verified',
      columns:columns.length,items:Array.isArray(detail.items)?detail.items.length:0});

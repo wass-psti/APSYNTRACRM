@@ -10,13 +10,14 @@ import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {boardGrid} from './board-grid.js';
+import {runTwelveBoardQa} from './board-operational-qa.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const nativeIssues=new NativeIssueClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:''};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -204,6 +205,7 @@ function render(){
  else if(state.view==='acceptance')shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy,nativeResult:state.nativeAcceptance,nativeRunning:state.nativeBusy}));
  else if(state.view==='foundation')shell(renderFoundation({
    rows:state.foundationRows,loading:state.foundationBusy,provisioning:state.provisionBusy,
+   testing:state.foundationTesting,testResult:state.foundationTestResult,
    log:state.foundationLog,error:state.foundationError,
    canProvision:state.context?.profile?.platform_role==='admin_general_manager'
  }));
@@ -331,6 +333,27 @@ async function action(name,button){
          try{await refreshWorkspace();await refreshFoundation();}catch{/* preserve original error */}
          throw err;
        }finally{state.provisionBusy=false;render();}
+     });
+   break;
+ }
+ case 'foundation-operational-test':{
+   if(state.foundationTesting||state.context?.profile?.platform_role!=='admin_general_manager')return;
+   openModal('Verify all twelve dedicated boards',
+     input('Type RUN 12 BOARD CHECKS','ack')+
+     '<div class="note security-note">This executes real signed QA create, conditional update, stale-write denial, delete and audit checks only on the twelve EMPTY dedicated boards. Changes leave event records. Do not run if any board contains production records.</div>',
+     async fd=>{
+       if(String(fd.get('ack')||'')!=='RUN 12 BOARD CHECKS')
+         throw new ApiError('Type RUN 12 BOARD CHECKS exactly.');
+       state.foundationTesting=true;state.foundationTestResult=null;state.foundationLog=[];render();
+       try{
+         state.foundationTestResult=await runTwelveBoardQa(db,{
+          context:state.context,onProgress:entry=>{
+           state.foundationLog.push(entry.boardName+': '+entry.status);render();
+          }});
+         const r=state.foundationTestResult;
+         toast(r.status==='pass'?'Signed 12-board foundation acceptance passed.':
+           'Foundation acceptance stopped on a failed board. Review evidence.',r.status!=='pass');
+       }finally{state.foundationTesting=false;render();}
      });
    break;
  }
