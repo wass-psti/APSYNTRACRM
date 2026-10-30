@@ -105,9 +105,26 @@ BEGIN
    -- Domain-specific backends that are already delegated by this RPC remain delegated.
    -- Other modules still use the same authoritative module_role_assignments table,
    -- but application-specific workflow enforcement must be independently certified.
-   IF p_resource_id IN ('time-tracker','fueltrack-plus','tradelink','fund-released-tracker') THEN
+   IF p_resource_id IN ('time-tracker','fueltrack-plus','tradelink','fund-released-tracker',
+     'tool-traceability','material-request-hub') THEN
      v_result:=public.wm_admin_set_application_role(p_target_user_id,p_resource_id,p_role,p_enabled);
    ELSE
+     IF p_resource_id='toolbox-issues' AND NOT p_enabled THEN
+       -- Preserve the actual Toolbox membership backend as a mandatory gate;
+       -- a disabled central row alone would not revoke source access.
+       UPDATE public.toolbox_issues_memberships m
+       SET enabled=false,assigned_by=v_actor,updated_at=clock_timestamp()
+       WHERE m.workspace_id=p_workspace_id AND m.user_id=p_target_user_id AND m.enabled;
+       IF NOT FOUND THEN
+         RAISE EXCEPTION 'No active Toolbox source membership available to revoke'
+           USING ERRCODE='42501';
+       END IF;
+       INSERT INTO public.toolbox_issues_activity(
+         workspace_id,entity_type,entity_id,actor_user_id,event_type,detail)
+       VALUES(p_workspace_id,'membership',p_target_user_id::text,
+         v_actor,'role_revoked',
+         jsonb_build_object('role',p_role,'enabled',false,'authority','APSYNTRA'));
+     END IF;
      IF p_resource_id='toolbox-issues' AND p_enabled THEN
        -- Source Toolbox membership is a separate operational prerequisite.
        RAISE EXCEPTION 'Toolbox source membership must be reconciled before enabling this role'

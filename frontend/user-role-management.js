@@ -18,7 +18,7 @@ export const MODULE_ROLE_OPTIONS=Object.freeze({
  'employee-eval':['admin','supervisor','employee'],
  'charter-navigator':['Admin','Supervisor','Employee','Viewer']
 });
-const delegatedModules=new Set(['time-tracker','fueltrack-plus','tradelink','fund-released-tracker']);
+const delegatedModules=new Set(['time-tracker','fueltrack-plus','tradelink','fund-released-tracker','tool-traceability','material-request-hub']);
 export class UserRoleManagementClient {
  constructor(api){this.api=api;}
  async snapshot(workspaceId){
