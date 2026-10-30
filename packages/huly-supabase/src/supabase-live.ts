@@ -138,3 +138,14 @@ export function createLiveHulyTransactions(url:string,publishableKey:string,requ
   const http=new SupabaseHttp(url,publishableKey,request);
   return new HulyTransactionGateway(new SupabaseAuthVerifier(http),new WatchdogBoardPermissions(http),new SupabaseAtomicBoardStore(http));
 }
+
+/** CP-HULY-SB05: native Issue CUD subset using existing Supabase gateway and RPC. */
+import { NativeHulyIssueGateway } from './native-huly.js';
+export function createLiveNativeHulyIssues(url:string,publishableKey:string,request?:FetchLike): NativeHulyIssueGateway {
+  const http=new SupabaseHttp(url,publishableKey,request);
+  const identity=new SupabaseAuthVerifier(http);
+  const permissions=new WatchdogBoardPermissions(http);
+  return new NativeHulyIssueGateway(identity,
+    new HulySupabaseGateway(identity,permissions,new SupabaseDocumentRepository(http)),
+    new HulyTransactionGateway(identity,permissions,new SupabaseAtomicBoardStore(http)));
+}

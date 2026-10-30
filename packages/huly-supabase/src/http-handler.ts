@@ -3,9 +3,11 @@
  */
 import { Denied, HulySupabaseGateway, ServiceUnavailable, VersionConflict, validDocumentId, isUuid } from './sb02.js';
 import { HulyTransactionGateway, type HulyMutation } from './transactions.js';
+import { type NativeTx, NativeHulyIssueGateway } from './native-huly.js';
 
 const PATH = /^\/api\/v1\/huly\/boards\/([^/]+)\/documents\/([^/]+)$/;
 const TX_PATH = /^\/api\/v1\/huly\/boards\/([^/]+)\/transactions$/;
+const NATIVE_PATH = /^\/api\/v1\/huly\/boards\/([^/]+)\/native-transactions$/;
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 const MAX_BODY_BYTES = 262144;
 
@@ -39,19 +41,27 @@ async function parseBody(request: Request): Promise<{payload:unknown;expectedRev
   return {payload:o.payload,expectedRevision:o.expectedRevision as number|null};
 }
 
-export function createHulyRequestHandler(gateway:HulySupabaseGateway, transactions?:HulyTransactionGateway) {
+export function createHulyRequestHandler(gateway:HulySupabaseGateway, transactions?:HulyTransactionGateway, native?:NativeHulyIssueGateway) {
   return async (request:Request):Promise<Response> => {
     const url=new URL(request.url);
     const match=PATH.exec(url.pathname);
     const txMatch=TX_PATH.exec(url.pathname);
-    if(!match && !txMatch)return respond(404,{error:'Not found'});
-    if(txMatch ? request.method!=='POST' : (request.method!=='GET' && request.method!=='PUT'))return respond(405,{error:'Method not allowed'});
-    const boardId=(match??txMatch)?.[1]??'', documentId=match?.[2]??'', workspaceId=url.searchParams.get('workspace_id')??'';
+    const nativeMatch=NATIVE_PATH.exec(url.pathname);
+    if(!match && !txMatch && !nativeMatch)return respond(404,{error:'Not found'});
+    if((txMatch || nativeMatch) ? request.method!=='POST' : (request.method!=='GET' && request.method!=='PUT'))return respond(405,{error:'Method not allowed'});
+    const boardId=(match??txMatch??nativeMatch)?.[1]??'', documentId=match?.[2]??'', workspaceId=url.searchParams.get('workspace_id')??'';
     if(!isUuid(boardId) || !isUuid(workspaceId) || (match && !validDocumentId(documentId)))return respond(400,{error:'Invalid scope'});
     const auth=request.headers.get('authorization')??'';
     const token=auth.startsWith('Bearer ') ? auth.slice(7) : '';
     if(!token)return respond(401,{error:'Authentication required'});
     try{
+      if(nativeMatch){
+        if(!native)return respond(503,{error:'Native transaction backend unavailable'});
+        if(!(request.headers.get('content-type')??'').startsWith('application/json'))return respond(415,{error:'JSON required'});
+        const input=await jsonBody(request);
+        if(!Array.isArray(input.txes))return respond(400,{error:'Invalid native transactions'});
+        return respond(200,await native.commit(token,workspaceId,boardId,input.txes as NativeTx[]));
+      }
       if(txMatch){
         if(!transactions)return respond(503,{error:'Transaction backend unavailable'});
         if(!(request.headers.get('content-type')??'').startsWith('application/json'))return respond(415,{error:'JSON required'});

@@ -15,3 +15,12 @@ The canonical host remains http://127.0.0.1:5173/#/ . Mount `src/node-middleware
 ## Limitations
 
 Huly source monorepo, full TxProcessor, notifications, attachment storage, relationship graph, live collaboration and 12-board functional acceptance are not migrated yet. No merge to main before authenticated regression and architecture acceptance.
+
+## CP-HULY-SB05 — Native Issue transactions
+
+- Endpoint: `POST /api/v1/huly/boards/:boardId/native-transactions?workspace_id=:workspaceId`, authenticated Bearer token and JSON `{ "txes": [...] }`.
+- Only `core:class:TxCreateDoc` and `core:class:TxUpdateDoc` of `tracker:class:Issue` are currently supported.
+- Rejects unsupported TxRemoveDoc, TxMixin, `$`-operators, dotted field paths, attached collections, duplicate object IDs and claimed actors other than the Supabase Auth identity.
+- Performs RLS-protected Issue reads, projects lossless JSON snapshots, and applies one existing SB04 atomic compare-and-swap RPC (25 operations maximum).
+- Native transactions are only partially compatible: Huly uses PersonId identifiers and richer TxProcessor/domain middleware than the current Supabase Auth UUID mapping. No live signed-user or complete original Huly integration has yet been verified. Do not treat the implementation as production-ready.
+- No new database migration or local Docker/database is needed for this slice. Host integration must still be verified on the existing `127.0.0.1:5173` runtime.
