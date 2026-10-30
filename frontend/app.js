@@ -135,8 +135,10 @@ function issuesPage(){
  <span class="status ${statusClass(String(s.status||'').split(':').pop())}">${e(String(s.status||'Todo').split(':').pop())}</span>
  <span class="priority ${priority>=4?'urgent':priority>=3?'high':''}">◆ ${['None','Low','Medium','High','Urgent'][Math.max(0,Math.min(4,priority))]}</span>
  ${canEdit?`<div class="issues-actions"><button class="icon-button" data-action="edit-issue" data-id="${e(row.document_id)}">✎ Edit</button>
- <button class="icon-button danger" data-action="remove-issue" data-id="${e(row.document_id)}">Remove</button></div>`:''}</article>`}).join('')}</div>`:
- `<div class="panel">${empty('No native issues yet','The authenticated APSYNTRA document view returned no issues for this board.',canEdit?'<button class="primary" data-action="new-issue">＋ Create first issue</button>':'')}</div>`}`;
+ <button class="icon-button danger" data-action="remove-issue" data-id="${e(row.document_id)}">Remove</button>
+ <button class="icon-button" data-action="native-edit-issue" data-id="${e(row.document_id)}">Native edit</button>
+ <button class="icon-button danger" data-action="native-remove-issue" data-id="${e(row.document_id)}">Native remove</button></div>`:''}</article>`}).join('')}</div>`:
+ `<div class="panel">${empty('No issues yet','No active APSYNTRA Issues were found for this board.',canEdit?'<button class="primary" data-action="new-issue">＋ Create first issue</button>':'')}</div>`}`;
 }
 function boardPage(){
  if(state.loading)return `<div class="page-head"><div><span class="label-top">Workspace / Board</span><h1>Loading board…</h1></div></div><div class="panel">${empty('Loading board','Retrieving authorized board details…')}</div>`;
@@ -318,10 +320,31 @@ async function action(name,button){
  }
  case 'new-issue':{
    await writeGuard();
-   openModal('Create a APSYNTRA issue',input('Issue title','title')+select('Status','status',statuses,statuses[0][0])+select('Priority','priority',priorities,'2'),
+   openModal('Create an APSYNTRA issue',input('Issue title','title')+select('Status','status',statuses,statuses[0][0])+select('Priority','priority',priorities,'2'),
     async fd=>{await writeGuard();await db.createIssue(state.boardId,state.context.workspace_id,
      {title:String(fd.get('title')||''),status:String(fd.get('status')),priority:Number(fd.get('priority'))},state.context.user_id);
      await loadIssues();});break;
+ }
+ case 'native-edit-issue':{
+   await writeGuard();
+   const row=state.issues.find(x=>x.document_id===button.dataset.id);
+   if(!row)return;
+   const issue=row.payload.snapshot;
+   openModal('Edit APSYNTRA native issue',input('Title','title',issue.title)+
+    select('Status','status',statuses,issue.status)+select('Priority','priority',priorities,String(issue.priority)),
+    async fd=>{
+      await writeGuard();
+      await nativeIssues.update(state.boardId,state.context.workspace_id,state.context.user_id,row,{
+        title:String(fd.get('title')||''),status:String(fd.get('status')),priority:Number(fd.get('priority'))});
+      await loadIssues();
+    });break;
+ }
+ case 'native-remove-issue':{
+   await writeGuard();
+   const row=state.issues.find(x=>x.document_id===button.dataset.id);
+   if(!row||!confirm('Remove this APSYNTRA native issue? Its audit trail remains intact.'))return;
+   await nativeIssues.remove(state.boardId,state.context.workspace_id,state.context.user_id,row);
+   await loadIssues();toast('Native Issue removed.');break;
  }
  case 'edit-issue':{
    await writeGuard();const row=state.issues.find(x=>x.document_id===button.dataset.id);if(!row)return;
