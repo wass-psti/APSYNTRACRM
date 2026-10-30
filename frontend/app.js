@@ -4,12 +4,15 @@ import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
 import {renderPagesAcceptance} from './pages-acceptance-ui.js';
+import {runNativeQa} from './native-qa.js';
+import {NativeIssueClient} from './native-client.js';
 
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
+const nativeIssues=new NativeIssueClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -125,7 +128,7 @@ function issuesPage(){
  const rows=state.issues;
  const canEdit=state.edit;
  return `<div class="toolbar"><div class="search-wrap"><input class="search-input" aria-label="Search issues" placeholder="Search issues…" /></div>
- ${canEdit?'<button class="primary" data-action="new-issue">＋ New issue</button>':''}</div>
+ ${canEdit?'<button class="primary" data-action="new-issue">＋ New issue</button> <button class="secondary" data-action="native-new-issue">＋ Native issue</button>':''}</div>
  ${rows.length?`<div class="issue-cards">${rows.map(row=>{const s=row.payload?.snapshot||{};
  const priority=Number(s.priority??0);return `<article class="issue-row" data-searchable="${e((s.title||'').toLowerCase())}">
  <div><h3>${e(s.title||'Untitled issue')}</h3><small>Revision ${e(row.revision)} · ${e(displayDate(row.updated_at))}</small></div>
@@ -133,7 +136,7 @@ function issuesPage(){
  <span class="priority ${priority>=4?'urgent':priority>=3?'high':''}">◆ ${['None','Low','Medium','High','Urgent'][Math.max(0,Math.min(4,priority))]}</span>
  ${canEdit?`<div class="issues-actions"><button class="icon-button" data-action="edit-issue" data-id="${e(row.document_id)}">✎ Edit</button>
  <button class="icon-button danger" data-action="remove-issue" data-id="${e(row.document_id)}">Remove</button></div>`:''}</article>`}).join('')}</div>`:
- `<div class="panel">${empty('No native issues yet','The authenticated Huly document view returned no issues for this board.',canEdit?'<button class="primary" data-action="new-issue">＋ Create first issue</button>':'')}</div>`}`;
+ `<div class="panel">${empty('No native issues yet','The authenticated APSYNTRA document view returned no issues for this board.',canEdit?'<button class="primary" data-action="new-issue">＋ Create first issue</button>':'')}</div>`}`;
 }
 function boardPage(){
  if(state.loading)return `<div class="page-head"><div><span class="label-top">Workspace / Board</span><h1>Loading board…</h1></div></div><div class="panel">${empty('Loading board','Retrieving authorized board details…')}</div>`;
@@ -147,7 +150,7 @@ function boardPage(){
  ${state.edit&&state.tab==='items'?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
  <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}">▤ Board items <span style="opacity:.5">(${items.length})</span></a>
- <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ Huly Issues <span style="opacity:.5">(${state.issues.length})</span></a></div>
+ <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span style="opacity:.5">(${state.issues.length})</span></a></div>
  ${state.tab==='issues'?issuesPage():`
  <div class="toolbar"><div class="search-wrap"><input class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
@@ -191,7 +194,7 @@ function settingsPage(){
 function render(){
  if(!state.context){renderLogin();return;}
  if(state.view==='board')shell(boardPage());
- else if(state.view==='acceptance')shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy}));
+ else if(state.view==='acceptance')shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy,nativeResult:state.nativeAcceptance,nativeRunning:state.nativeBusy}));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -302,9 +305,20 @@ async function action(name,button){
     `<div class="field"><label for="modal-notes">Notes</label><textarea id="modal-notes" name="notes" maxlength="4000">${e(item.notes||'')}</textarea></div>`,
     async fd=>{await writeGuard();await db.updateItem({...item,title:String(fd.get('title')||''),status:String(fd.get('status')||''),notes:String(fd.get('notes')||'')});await loadBoard(state.boardId,'items');});break;
  }
+ case 'native-new-issue':{
+   await writeGuard();
+   openModal('Create APSYNTRA native issue',input('Issue title','title')+
+    select('Status','status',statuses,statuses[0][0])+select('Priority','priority',priorities,'2'),
+    async fd=>{
+      await writeGuard();
+      await nativeIssues.create(state.boardId,state.context.workspace_id,state.context.user_id,{
+        title:String(fd.get('title')||''),status:String(fd.get('status')),priority:Number(fd.get('priority'))});
+      await loadIssues();
+    });break;
+ }
  case 'new-issue':{
    await writeGuard();
-   openModal('Create a Huly issue',input('Issue title','title')+select('Status','status',statuses,statuses[0][0])+select('Priority','priority',priorities,'2'),
+   openModal('Create a APSYNTRA issue',input('Issue title','title')+select('Status','status',statuses,statuses[0][0])+select('Priority','priority',priorities,'2'),
     async fd=>{await writeGuard();await db.createIssue(state.boardId,state.context.workspace_id,
      {title:String(fd.get('title')||''),status:String(fd.get('status')),priority:Number(fd.get('priority'))},state.context.user_id);
      await loadIssues();});break;
@@ -312,7 +326,7 @@ async function action(name,button){
  case 'edit-issue':{
    await writeGuard();const row=state.issues.find(x=>x.document_id===button.dataset.id);if(!row)return;
    const issue=row.payload.snapshot;
-   openModal('Edit Huly issue',input('Title','title',issue.title)+select('Status','status',statuses,issue.status)+select('Priority','priority',priorities,String(issue.priority)),
+   openModal('Edit APSYNTRA issue',input('Title','title',issue.title)+select('Status','status',statuses,issue.status)+select('Priority','priority',priorities,String(issue.priority)),
    async fd=>{await writeGuard();await db.updateIssue(state.boardId,state.context.workspace_id,row,{
      title:String(fd.get('title')||''),status:String(fd.get('status')),priority:Number(fd.get('priority'))},state.context.user_id);await loadIssues();});break;
  }
@@ -348,6 +362,23 @@ async function action(name,button){
        if(state.pagesAcceptance.status==='fail')toast('Persistence acceptance failed; inspect the report.',true);
        else toast('Signed Pages persistence and audit acceptance passed.');
      }finally{state.pagesBusy=false;render();}
+   });
+   break;
+ }
+ case 'run-native-acceptance':{
+   if(state.nativeBusy)return;
+   const qa=state.boards.find(b=>b.name===QA_BOARD_NAME);
+   if(!qa){toast('An isolated APSYNTRA QA board is required.',true);return;}
+   const fields=input('Type APSYNTRA QA to confirm','ack','')+
+    '<div class="note security-note">This verifies real native Issue transactions on an isolated nonproduction QA board. Successful runs retain audit records and a tombstone.</div>';
+   openModal('Confirm native QA acceptance',fields,async fd=>{
+     if(String(fd.get('ack')||'').trim()!==QA_BOARD_NAME)throw new ApiError('Type APSYNTRA QA exactly.');
+     state.nativeBusy=true;state.nativeAcceptance=null;render();
+     try{
+       state.nativeAcceptance=await runNativeQa(db,{board:qa,context:state.context});
+       toast(state.nativeAcceptance.status==='pass'?'Hosted native acceptance passed.':'Hosted native acceptance failed — inspect the result.',
+        state.nativeAcceptance.status!=='pass');
+     }finally{state.nativeBusy=false;render();}
    });
    break;
  }
