@@ -43,7 +43,8 @@ Browser-accessible checks cannot certify the unhosted Node native transaction ad
 - **Verified:** prior actual Pages login and 6/6 real signed browser reads; 4/4 independent signed direct-Supabase checks; authoritative RPCs, force-RLS and grants; GitHub CI and Pages deployment after relevant commits.
 - **Deployment smoke:** independently verified on the Pages-first implementation by the successful `live-pages` job of `APSYNTRA CRM Frontend Validation`. Revalidate against each subsequent source change.
 - **Signed persistence (ACCEPTED October 30, 2026):** the user executed the explicit isolated `APSYNTRA QA` write acceptance on the deployed application and reported **6/6 PASS**. A separate read-only Supabase SQL inspection independently confirmed exactly one retained QA document at revision 3, its tombstone, exactly three ordered events (`create → update → remove`) with revisions `1 → 2 → 3`, one consistent actor, and forced RLS/security-invoker views. The stale-revision HTTP 409 is evidenced by the browser acceptance report, not independently reproduced with SQL. No additional test write was performed for this review.
-- **Native Huly + 12 application parity:** not yet migrated to an approved hosted service, so full local-host retirement and production certification remain **PENDING**.
+- **Hosted native Issue subset (ACCEPTED October 30, 2026):** user-run signed native acceptance reported **6/6 PASS**; a separate read-only PostgreSQL inspection independently confirmed the QA native Issue revision/tombstone and three ordered, same-actor audit events. The verified Supabase Edge Function `apsyntra-native-issues` is ACTIVE with `verify_jwt=true`. This does **not** certify the full upstream transaction processor or all application services.
+- **12-application operational acceptance:** explicitly **DEFERRED by user direction**; no application-wide certification or local-host retirement for unported Node-only capabilities is asserted.
 
 ## Accepted evidence and exact scope
 
@@ -59,7 +60,7 @@ Browser-accessible checks cannot certify the unhosted Node native transaction ad
 - The gateway runs the established `TxCreateDoc`, `TxUpdateDoc` and `TxRemoveDoc` validations for Issue records and their supported operators; unsupported native classes fail closed. The published browser client uses the Supabase publishable key plus the actual user's bearer, while the server independently validates user identity and Work Management board edit privileges.
 - UI branding is **APSYNTRA CRM**, **APSYNTRA Issues**, and **Native transactions**. Underlying `huly.*` document identities, JSON kinds, SQL/RPC names, and vendor snapshots are **compatibility identifiers**, not user-visible product branding. Renaming them would disrupt existing database records, audit trails, signed transaction contracts, or source attribution.
 - Existing stable direct-RPC Issue CRUD is preserved. Native Issue creation, editing, and removal are explicitly selectable; the separate Pages acceptance screen provides an opt-in isolated QA test for server-native create, update `$inc`, identity spoof rejection, workspace isolation, tombstone and audit sequence.
-- Do not claim live native transaction acceptance until that **new QA test** returns PASS from the GitHub Pages app. Prior SB07 Pages persistence PASS remains valid without repetition. **12-board operational acceptance is deferred by user decision.**
+- **Live signed native transaction acceptance is now PASS 6/6**, corroborated by independent PostgreSQL persistence and event-order queries. The prior SB07 Pages persistence PASS remains valid without repetition. **12-board operational acceptance remains deferred by user decision.**
 - The full upstream Huly TxProcessor, attachments, websocket collaboration, and separate Node-only application services are not provided by this Edge Issue subset. Do not mark all legacy host dependencies retired.
 
 ### Native acceptance procedure
@@ -69,3 +70,15 @@ Browser-accessible checks cannot certify the unhosted Node native transaction ad
 3. Select **Verify hosted native transactions**, type `APSYNTRA QA` in the confirmation, and run the signed test once.
 4. Expect six checks: authorized scope, create persistence, server operator update, forged-actor denial, cross-workspace denial, removal plus independent audit evidence.
 5. If it passes, inspect the additional tombstone and three ledger rows independently in Supabase. If it fails, inspect the displayed failure before retrying; the report distinguishes whether cleanup succeeded.
+
+### October 30, 2026 — Independent SB08 acceptance record
+
+**Certification:** `CP-HULY-SB08: ACCEPTED` for the **APSYNTRA native Issue transaction subset on GitHub Pages + Supabase Edge Function**, not for the entire upstream platform.
+
+**Genuine user session (user-reported):** 6/6 native acceptance gates passed: board edit scope, native create and persisted read, direct update and `$inc` with persisted revision increment, forged actor rejection, cross-workspace rejection, and native removal with audited tombstone. The user separately reported 6/6 passed for the already accepted Pages direct-RPC persistence path.
+
+**Independent read-only database evidence (October 30, 2026):** exactly three QA documents were observed, all tombstoned at revision 3, each with exactly three event rows in the correct `create → update → remove` order at revisions `[1,2,3]` and one consistent authenticated actor. One document had the `APSYNTRA-NATIVE-QA-` title prefix, distinguishing the hosted native acceptance from the earlier direct-RPC QA tests. The database inspection did not itself reproduce forged-actor or cross-workspace denial requests; those checks are supported by the user-run signed acceptance report. No additional database writes or repeat acceptance tests were performed for this review.
+
+**Deployment evidence:** Edge Function `apsyntra-native-issues` is ACTIVE, version 1, and JWT verification is enabled. GitHub `main` at `8eba820dab9fefbec89d4f862e36bc87372d62c9` had passing frontend validation and GitHub Pages deployment. No continuously running local development host is required for the accepted native Issue subset.
+
+**Remaining boundary:** Full upstream transaction-processing parity, attachments/realtime, role-revocation scenarios, and the 12 standalone application boards are outside this certification. In particular, **12-board operational acceptance is deferred until separately directed**. Keep internal storage and RPC compatibility identifiers unchanged even while visible branding is APSYNTRA CRM.
