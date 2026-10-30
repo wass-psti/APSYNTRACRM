@@ -34,6 +34,19 @@ try {
  verify(context.status===200&&context.data.user_id===actor&&context.data.workspace_id===workspace&&context.data.profile?.status==='active','Authoritative workspace scope');
  const access=await call(supabase+'/rest/v1/rpc/work_board_access',{direct:true,method:'POST',body:{p_board_id:board,p_required:'view'}});
  verify(access.status===200&&access.data===true,'Authoritative board view permission');
+ const hulyView=new URL('/rest/v1/huly_sb02_documents',supabase);
+ hulyView.searchParams.set('select','document_id,revision');
+ hulyView.searchParams.set('board_id','eq.'+board);
+ hulyView.searchParams.set('workspace_id','eq.'+workspace);
+ hulyView.searchParams.set('limit','1');
+ const read=await call(hulyView.href,{direct:true});
+ verify(read.status===200&&Array.isArray(read.data),'RLS-protected Huly view reachable as signed user');
+ if(e.SB07_TARGET==='supabase'){
+  console.log('SIGNED DIRECT BACKEND PASS: '+checks+' checks. Local 5173 host and native writes remain PENDING.');
+  process.exit(0);
+ }
+ if(e.SB07_TARGET&&e.SB07_TARGET!=='host')throw Error('Invalid SB07_TARGET mode');
+
  const absentId='sb07.missing.'+randomUUID();
  verify((await call(docs(absentId),{auth:false})).status===401,'Anonymous host rejection');
  verify((await call(docs(absentId))).status===404,'Signed host read and RLS');
