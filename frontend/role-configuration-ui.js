@@ -31,7 +31,16 @@ function roles(d){
  (r.kind==='system_reference'?'Protected default role':
  '<button class="secondary" data-action="role-propose-edit" data-role-key="'+x(r.roleKey)+'">Propose edit</button>')+
  '</td></tr>').join('');
- return '<div class="section-header"><strong>Central role catalog</strong><button class="primary" data-action="role-propose-create">＋ New role proposal</button></div>'+
+ const crmCatalog='<div class="section-header"><strong>APSYNTRA CRM platform authorization</strong></div>'+
+ '<div class="note">The CRM role tier is separate from WatchdogWorkspace identity and from the twelve application and board assignments. An explicitly assigned CRM tier sets the maximum effective permission level, but never grants an application membership, board ownership or bootstrap administration.</div>'+
+ sectionTable(['CRM role','Ceiling','Central administration'],[
+ ['Admin','Maximum CRM operational tier; existing module and board grants remain required','Bootstrap-only role management'],
+ ['Supervisor','Supervisory/module scope; no board manage through a CRM override','Not delegated by default'],
+ ['Employee','Normal operational/module scope; no board manage through a CRM override','Not delegated'],
+ ['Viewer','View-only where the domain defines a read role; blocks edit/manage','Not delegated']
+ ].map(([role,ceiling,admin])=>'<tr><td><strong>'+x(role)+'</strong></td><td>'+
+ x(ceiling)+'</td><td>'+x(admin)+'</td></tr>').join(''));
+ return crmCatalog+'<div class="section-header"><strong>Central role catalog</strong><button class="primary" data-action="role-propose-create">＋ New role proposal</button></div>'+
  '<div class="note">Default role hierarchy: <strong>Admin → Supervisor → Employee → Viewer</strong>. These are immutable reference definitions. New roles and revisions are staged only; live backend permissions are unchanged.</div>'+
  '<input id="search-system-roles" class="search-input csp-u057" placeholder="Search roles" aria-label="Search roles" >'+
  sectionTable(['Role','Kind','State','Revision','Actions'],rows||'<tr><td colspan="5">No role definitions</td></tr>')+
