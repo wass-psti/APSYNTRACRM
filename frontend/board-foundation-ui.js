@@ -28,10 +28,7 @@ export function renderFoundation({rows=[],loading=false,provisioning=false,testi
    '<button class="secondary" data-action="foundation-operational-test" '+
    (!canProvision||testing||provisioning?'disabled':'')+'>'+
    (testing?'Running controlled checks…':'Run 12-board operational checks')+'</button></div>':'' )+
-  (testResult?'<p style="font-size:12px;margin-top:12px"><strong>Signed QA:</strong> '+
-    esc(testResult.status.toUpperCase())+' — '+testResult.passed+'/12 boards passed'+
-    (testResult.results.at(-1)?.error?'. Last error: '+esc(testResult.results.at(-1).error):'')+
-    '</p>':'')+
+  (testResult?renderOperationalResult(testResult):'')+
   (error?'<div class="error-banner" role="alert" style="margin-top:12px">'+esc(error)+'</div>':'')+
   (log.length?'<p class="muted" style="font-size:12px;margin-top:15px">Current operation: '+esc(log.at(-1))+'</p>':'')+
   '</div></div>';
@@ -50,5 +47,31 @@ export function renderFoundation({rows=[],loading=false,provisioning=false,testi
  }
  html+='</tbody></table></div></div>';
  html+='<div class="note security-note" style="margin-top:21px">TimeTracker and other restricted domains: do not expose employee identifiers, exact attendance times, GPS coordinates, finance, medical or performance fields through general board columns until backend-enforced field-level authorization and approved retention controls are implemented. No signed live CRUD or cross-workspace test is claimed by this page until separately executed.</div>';
+ return html;
+}
+
+/** Distinct, persistent-to-the-current-tab check report. Never mark an unrun board PASS. */
+export function renderOperationalResult(report){
+ const completed=new Map((report?.results??[]).map(r=>[r.module,r]));
+ let html='<section aria-label="12-board operational acceptance report" style="margin-top:18px">'+
+  '<h3 style="font-size:14px">Signed operational acceptance: '+esc(String(report?.status??'pending').toUpperCase())+
+  ' — '+Number(report?.passed??0)+'/12 boards passed</h3>'+
+  '<p class="muted" style="font-size:12px">A ready board is not automatically an accepted board. Each PASS must contain five signed CRUD/CAS/audit steps and confirmed QA cleanup.</p>'+
+  '<div class="table-scroll"><table class="board-table"><thead><tr><th>Dedicated board</th><th>Operational status</th><th>Verified steps</th><th>QA cleanup</th></tr></thead><tbody>';
+ for(const m of BOARD_MODULES){
+  const result=completed.get(m.key);
+  const passed=result?.status==='pass'&&result?.steps?.length===5&&result?.cleaned===true;
+  const failed=!!result&&!passed;
+  html+='<tr><td><strong>'+esc(m.name)+'</strong></td><td><span class="status '+(passed?'done':failed?'blocked':'todo')+'">'+
+   (passed?'PASS':failed?'FAILED':'NOT RUN')+'</span></td>'+
+   '<td>'+esc(result?.steps?.length??0)+'/5'+
+   (result?.steps?.length?'<div class="muted" style="font-size:11px;margin-top:5px">'+
+     result.steps.map(x=>esc(x)).join(' · ')+'</div>':'')+
+   (result?.error?'<div class="error-banner" role="alert" style="margin-top:6px">'+esc(result.error)+'</div>':'')+
+   '</td><td>'+(!result?'Not attempted':result.cleaned?'Confirmed removed':
+      'Not confirmed — inspect QA item before retry')+'</td></tr>';
+ }
+ html+='</tbody></table></div>'+
+ '<p class="muted" style="font-size:11px;margin-top:12px">This signed UI report is not independent SQL evidence. A 12/12 PASS still requires database-side event reconciliation and separate negative authorization evidence.</p></section>';
  return html;
 }
