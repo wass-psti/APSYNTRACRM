@@ -150,10 +150,16 @@ begin
 end $function$;
 
 REVOKE ALL ON FUNCTION public.frt_admin_set_role(uuid,uuid,text) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.frt_admin_set_role(uuid,uuid,text) TO authenticated;
+-- Internal SECURITY DEFINER functions remain callable by the central
+-- bootstrap-guarded apsyntra_role_manage_user_access RPC as object owner.
+-- No direct signed-user EXECUTE grant for frt_admin_set_role(uuid,uuid,text).
 REVOKE ALL ON FUNCTION public.frt_admin_users(uuid) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.frt_admin_users(uuid) TO authenticated;
+-- Internal SECURITY DEFINER functions remain callable by the central
+-- bootstrap-guarded apsyntra_role_manage_user_access RPC as object owner.
+-- No direct signed-user EXECUTE grant for frt_admin_users(uuid).
 REVOKE ALL ON FUNCTION public.wm_admin_set_application_role(uuid,text,text,boolean) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.wm_admin_set_application_role(uuid,text,text,boolean) TO authenticated;
+-- Internal SECURITY DEFINER functions remain callable by the central
+-- bootstrap-guarded apsyntra_role_manage_user_access RPC as object owner.
+-- No direct signed-user EXECUTE grant for wm_admin_set_application_role(uuid,text,text,boolean).
 NOTIFY pgrst, 'reload schema';
 COMMIT;
