@@ -12,6 +12,7 @@
 | Issue reads | Existing `public.huly_sb02_documents` security-invoker RLS view | Supabase PostgREST |
 | Issue create/update/tombstone | Existing `public.huly_sb06_transact` security-invoker RPC | Supabase PostgREST with real bearer |
 | Immutable Huly event ledger | Existing `public.huly_sb06_events` security-invoker view and restricted trigger | Supabase PostgREST, read-only to browser |
+| APSYNTRA native Issue transaction subset | **Supabase Edge Function `apsyntra-native-issues`** | Signed HTTPS `/functions/v1/apsyntra-native-issues`, existing RBAC/RLS and atomic RPC; live signed native acceptance pending |
 | Full native Huly TxProcessor and Node-only application services | **Not hosted by GitHub Pages** | Requires separate approved HTTPS server runtime; **NOT PRODUCTION ACCEPTED** |
 | Database and storage | Existing WatchdogWorkspace Supabase PostgreSQL and Storage | Only via authorized HTTPS APIs and RLS |
 
@@ -51,3 +52,20 @@ Browser-accessible checks cannot certify the unhosted Node native transaction ad
 - **Database read-only independent verification:** one QA document, `revision=3`, `deleted_at IS NOT NULL`, exactly three events across one document and one actor, and event revisions `[1,2,3]`.
 - **Fail-closed controls:** anonymous `huly_sb06_transact` unavailable, authenticated execution available; RLS forced on both Huly tables; both public views are `security_invoker`; authenticated direct audit INSERT privilege denied.
 - **Certification boundary:** the **Pages-served, Supabase-backed CRM Issue CRUD and signed persistence path is accepted**. This is not independent acceptance of full Node Huly TxProcessor, cross-workspace role revocation, all standalone application boards, realtime, storage attachments, or original Huly middleware. The local 5173 host is unnecessary for these Pages-supported workflows but cannot be declared retired for unported services.
+
+## CP-HULY-SB08 — Hosted APSYNTRA native Issue subset
+
+- The **native Issue subset** is now deployed as an ACTIVE JWT-protected Supabase Edge Function (`apsyntra-native-issues`) in the existing project. This reuses the validated server-side native gateway from `packages/huly-supabase/src` and calls the established `huly_sb06_transact` database RPC, without a privileged key, new user directory, database schema, or Mac listener.
+- The gateway runs the established `TxCreateDoc`, `TxUpdateDoc` and `TxRemoveDoc` validations for Issue records and their supported operators; unsupported native classes fail closed. The published browser client uses the Supabase publishable key plus the actual user's bearer, while the server independently validates user identity and Work Management board edit privileges.
+- UI branding is **APSYNTRA CRM**, **APSYNTRA Issues**, and **Native transactions**. Underlying `huly.*` document identities, JSON kinds, SQL/RPC names, and vendor snapshots are **compatibility identifiers**, not user-visible product branding. Renaming them would disrupt existing database records, audit trails, signed transaction contracts, or source attribution.
+- Existing stable direct-RPC Issue CRUD is preserved. Native Issue creation, editing, and removal are explicitly selectable; the separate Pages acceptance screen provides an opt-in isolated QA test for server-native create, update `$inc`, identity spoof rejection, workspace isolation, tombstone and audit sequence.
+- Do not claim live native transaction acceptance until that **new QA test** returns PASS from the GitHub Pages app. Prior SB07 Pages persistence PASS remains valid without repetition. **12-board operational acceptance is deferred by user decision.**
+- The full upstream Huly TxProcessor, attachments, websocket collaboration, and separate Node-only application services are not provided by this Edge Issue subset. Do not mark all legacy host dependencies retired.
+
+### Native acceptance procedure
+
+1. Sign into `https://wass-psti.github.io/APSYNTRACRM/#/acceptance` with your existing account.
+2. Confirm an isolated nonproduction board exactly named `APSYNTRA QA` is available and authorized; do not run this against any production board.
+3. Select **Verify hosted native transactions**, type `APSYNTRA QA` in the confirmation, and run the signed test once.
+4. Expect six checks: authorized scope, create persistence, server operator update, forged-actor denial, cross-workspace denial, removal plus independent audit evidence.
+5. If it passes, inspect the additional tombstone and three ledger rows independently in Supabase. If it fails, inspect the displayed failure before retrying; the report distinguishes whether cleanup succeeded.
