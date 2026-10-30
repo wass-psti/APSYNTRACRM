@@ -1,7 +1,7 @@
 # CP-RC02 — Effective User Role Management (implementation baseline)
 
 **Date:** October 30, 2026 · **Branch:** `feature/cp-rc02-live-user-role-management`
-**Approval boundary:** Feature code is not merged to `main`. No production user's role,
+**Approval boundary:** Feature code is not merged to `main`. Two guarded additive migrations have been installed in the existing central PostgreSQL backend. No production user's role,
 workspace membership, board membership or application permission has been modified.
 
 ## Actual architecture and implementation
@@ -72,3 +72,26 @@ cross-workspace calls fail, protected bootstrap targets fail, and stale revision
 
 No normal-user changes or full application integration tests were performed by
 publishing this feature branch.
+
+## Independently verified deployment evidence
+
+- `cp_rc02_bootstrap_user_role_management`: the two new role-management RPCs are installed, with explicit `search_path`, no anonymous EXECUTE grants, and execution restricted server-side to the existing bootstrap identity and active workspace.
+- `cp_rc02_preserve_explicit_user_role_assignments`: existing `sync_module_roles` retains all default role mappings, but does not overwrite an individually applied, audited module assignment after subsequent platform-role synchronization.
+- SQL transaction-level installation and unsigned access-negative checks passed before application. Subsequent read-only inspection verified the active central function definitions and constraints.
+- Actual pre/post records: **121** `module_role_assignments`, **75** `work_board_members`, **12** dedicated boards, **0** applied role changes, **0** new role audit events.
+- The real public HTTPS API anonymous-denial suite passed **6/6**, including the new snapshot and effective role mutation endpoints. This establishes only anonymous denial, not authenticated nonbootstrap denial.
+- Frontend validation, strict-CSP regression, and TypeScript backend unit tests passed on the isolated feature branch.
+- [Draft PR #5](https://github.com/wass-psti/APSYNTRACRM/pull/5) is **unmerged**. The live Pages frontend still does not include `#/user-role-management` until separately approved deployment.
+- No actual signed bootstrap operator has performed an approved QA user assignment or revocation during this checkpoint. A passing unit test or unauthenticated denial is **not** authorization/persistence acceptance.
+
+## Required genuine signed test before certification
+
+Use only an existing explicitly authorized nonproduction user and existing QA board; do not change production employee roles. With the real `lmsenagan` / `asenagan` signed session, confirm:
+1. `#/user-role-management` is visible only to verified bootstrap administrators; nonbootstrap regular administrators receive server denial even when calling the RPC directly.
+2. A specific user's existing module role is read from `module_role_assignments`, updated through the UI, and read back through a fresh signed session. The relevant domain server must honor the change.
+3. A real board viewer/editor role is granted or revoked on the isolated QA board; `work_board_access` must reflect the change immediately for the actual affected user's session, including negative read/edit checks.
+4. Cross-workspace targets, bootstrap target IDs, platform administrator targets, self-modification, board owner changes and stale revisions fail closed.
+5. Independent SQL confirms immutable audit pairs, actor ID, before/after data, target, workspace and timestamp, with no unrelated changes.
+6. Toolbox enable remains intentionally blocked until source-membership reconciliation; per-application approval/export/deletion actions require independent Phase B guard integration, not inferred from general board roles.
+
+**Current decision:** effective assignment implementation and controlled backend installation VERIFIED. **Full UI and genuine signed role-change acceptance PENDING**, as are the remaining domain-specific permission mappings. Do not claim project-wide role management certification or merge readiness from the schema installation alone.
