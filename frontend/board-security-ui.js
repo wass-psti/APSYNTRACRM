@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false,effectiveAccessResult=null,effectiveAccessBusy=false}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -91,15 +91,46 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
    '<button class="secondary" data-action="security-sec09-copy">Copy nonsecret SEC09 result</button></div>';
  }
  html+='</div></div>';
+ html+='<div class="panel"><div class="panel-header"><h3>Signed effective-permissions inspection · CP-FRT-SEC11</h3></div>'+
+ '<div class="panel-body"><p class="muted">For every active signed account, including bootstrap administrators and HR members. Reads authoritative platform, application and board permissions for this account only. Does not grant board access or change roles. This is separate from controlled Viewer/Supervisor/Restored acceptance.</p>'+
+ '<button class="primary" data-action="security-effective-access" '+(effectiveAccessBusy?'disabled':'')+'>'+
+ (effectiveAccessBusy?'Checking signed effective permissions…':'Check signed role ceilings — read-only')+'</button>';
+ if(effectiveAccessResult){
+  const x=effectiveAccessResult;
+  html+='<div class="csp-u053"><strong>Effective permissions: '+escape(x.status||'BLOCKED')+'</strong>';
+  if(x.reason)html+='<p class="muted">Reason: '+escape(x.reason)+'</p>';
+  if(x.status==='PASS'){
+   html+='<p class="muted">Signed category: '+escape(x.scenario)+' · Host role: '+escape(x.platformRole)+
+     ' · Effective CRM platform role: '+escape(x.effectivePlatformRole)+
+     ' · Explicit CRM override: '+escape(x.explicitPlatformRole||'none')+'</p>';
+   html+='<h4>Application permissions</h4><div class="table-scroll"><table class="board-table"><thead><tr><th>Module</th><th>Effective module role</th><th>Access</th></tr></thead><tbody>'+
+    (x.modules||[]).map(m=>'<tr><td>'+escape(m.moduleId)+'</td><td>'+
+      escape(m.role||'Not assigned')+'</td><td>'+(m.allowed?'Allowed':'Denied')+'</td></tr>').join('')+
+    '</tbody></table></div><h4>Accessible boards</h4>';
+   if(x.boardsEmpty){
+    html+='<div class="note">No boards are currently authorized for this signed account in its active workspace. Contact an authorized bootstrap administrator for legitimate access if needed. No permissions were changed.</div>';
+   }else{
+    html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Board</th><th>Membership</th><th>View</th><th>Edit</th><th>Manage</th></tr></thead><tbody>'+
+     (x.boards||[]).map(b=>'<tr><td>'+escape(b.name)+'</td><td>'+escape(b.memberRole||'Platform authority only')+
+     '</td><td>'+(b.view?'Allowed':'Denied')+'</td><td>'+(b.edit?'Allowed':'Denied')+
+     '</td><td>'+(b.manage?'Allowed':'Denied')+'</td></tr>').join('')+'</tbody></table></div>';
+   }
+  }
+  html+='<p class="muted">Read-only: 0 role changes or writes attempted. This does not certify fresh session issuance, actual finance transactions or role mutation.</p>'+
+   '<button class="secondary" data-action="security-effective-access-copy">Copy sanitized permission summary</button></div>';
+ }
+ html+='</div></div>';
  html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC10 · Controlled transition read-only probe</h3></div>'+
  '<div class="panel-body"><p class="muted">Use only with an independently approved isolated nonproduction role transition. The signed nonbootstrap user must already own the selected board and have an FRT module assignment before the transition. Sign out and sign in separately after each change. This probe never modifies a role and cannot independently prove a newly issued Auth session or original ownership.</p>'+
- '<label for="sec10-board">Existing accessible board</label><select id="sec10-board" class="search-input">'+
+ '<label for="sec10-board">Existing accessible board</label><select id="sec10-board" class="search-input" '+(!(sec10Boards||[]).length?'disabled':'')+'>'+
  (sec10Boards||[]).filter(b=>typeof b?.id==='string').map(b=>'<option value="'+escape(b.id)+'">'+escape(b.name||'Board')+'</option>').join('')+
- '</select><label for="sec10-stage">Independently verified backend stage</label><select id="sec10-stage" class="search-input">'+
+ '</select>'+
+ (!(sec10Boards||[]).length?'<div class="note">No authorized active boards are available for this account. The controlled transition probe requires an existing authorized board; the general signed effective-permissions inspection above remains available without one.</div>':'')+
+ '<label for="sec10-stage">Independently verified backend stage</label><select id="sec10-stage" class="search-input">'+
  '<option value="VIEWER">Explicit Viewer cap</option><option value="SUPERVISOR">Explicit Supervisor cap</option>'+
  '<option value="RESTORED">Override revoked — inherited original role</option></select>'+
  '<button class="primary" data-action="security-sec10-readonly" '+(sec10Busy||!(sec10Boards||[]).length||sec10IsBootstrap?'disabled':'')+'>'+
- (sec10Busy?'Checking signed permission ceilings…':'Check signed role ceilings — read-only')+'</button>';
+ (sec10Busy?'Checking controlled transition permissions…':'Run controlled transition capability check')+'</button>';
  if(sec10IsBootstrap)
   html+='<div class="note security-note">This session is a verified bootstrap administrator. SEC10 capability probes require an existing nonbootstrap account in an approved isolated nonproduction environment. Sign out before testing. Do not alter legitimate production permissions.</div>';
  if(sec10Result){
