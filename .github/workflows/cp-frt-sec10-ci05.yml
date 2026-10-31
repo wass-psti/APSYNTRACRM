@@ -50,7 +50,7 @@ jobs:
           import re
           config=Path("supabase/config.toml")
           content=config.read_text()
-          content,count=re.subn(r"(?m)^jwt_expiry\\s*=\\s*3600\\s*$","jwt_expiry = 90",content)
+          content,count=re.subn(r"(?m)^jwt_expiry\s*=\s*3600\s*$","jwt_expiry = 90",content)
           if count!=1:
               raise RuntimeError("CI05 native auth.jwt_expiry configuration missing")
           config.write_text(content)
