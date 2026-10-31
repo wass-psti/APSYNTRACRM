@@ -1,7 +1,7 @@
 name: APSYNTRA CRM Frontend Validation
 on:
   push:
-    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac, fix/cp-frt-sec06-rpc-rollout-compatibility]
+    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac, fix/cp-frt-sec06-rpc-rollout-compatibility, feature/cp-frt-sec07-signed-activation-gate]
     paths:
       - "index.html"
       - ".nojekyll"
@@ -11,6 +11,8 @@ on:
       - "frontend/**"
       - "sql/cp-frt-sec06-*.sql"
       - "sql/tests/cp-frt-sec06-*.sql"
+      - "sql/tests/cp-frt-sec07-*.sql"
+      - "docs/CP-FRT-SEC07-CONTROLLED-ACTIVATION.md"
       - "docs/CP-FRT-SEC06-CRM-PLATFORM-RBAC.md"
       - "sql/cp-role-configuration-bootstrap.sql"
       - "docs/CP-ROLE-CONFIGURATION.md"
