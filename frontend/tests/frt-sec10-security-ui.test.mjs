@@ -76,7 +76,7 @@ test('staged transition failures explain that a selected label is not a role ass
   phase:'RESTORED',scenario:'NONBOOTSTRAP',status:'BLOCKED',
   reason:'ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING',checks:[],writesAttempted:0
  }});
- assert.match(restored,/board-owner or FRT-module prerequisite/);
+ assert.match(restored,/pre-existing FRT module access/);
 });
 test('SEC10 app action uses read-only signed runner with context invalidation',()=>{
  const s=readFileSync('frontend/app.js','utf8');
