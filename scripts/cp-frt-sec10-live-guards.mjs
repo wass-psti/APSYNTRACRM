@@ -50,8 +50,8 @@ export function sanitizedResult(r){
  return JSON.stringify({checkpoint:'CP-FRT-SEC10',status:r.status,
   reason:r.reason||null,steps:r.steps||[],transitionCount:r.transitionCount||0,
   verifiedSessionCount:r.verifiedSessionCount||0,
-  writesAttempted:r.transitionCount||0,
-  roleChangesAttempted:r.transitionCount||0,
+  writesAttempted:r.mutationAttempts||0,
+  roleChangesAttempted:r.mutationAttempts||0,
   independentAuditVerified:false,
   productionEnvironment:false,tokenExposed:false},null,2);
 }
