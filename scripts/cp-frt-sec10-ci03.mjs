@@ -89,7 +89,7 @@ function action(client,id,name,payload={}){
  return client.rpc('frt_request_action',{p_workspace_id:w,p_request_id:id,
   p_action:name,p_payload:payload});
 }
-async function acceptance({config:c,db,fetcher,actorIds}){
+async function acceptance({config:c,db,fetcher,actorIds},afterFinance=null){
  // The disposable fixture is installed first by CI02; it contains no finance rows.
  const source=readFileSync('sql/tests/cp-frt-sec10-ci03-native-finance.sql','utf8');
  insist(source.startsWith('-- CP-FRT-SEC10-CI03: source-aligned finance fixture'),
@@ -176,6 +176,10 @@ async function acceptance({config:c,db,fetcher,actorIds}){
    final.closed===1&&final.liquidationTotals===1&&
    final.crmOverrides===0&&final.crmAudits===initial.crmAudits+2&&
    final.signedDirectWrites===0,'FINAL_FINANCE_LEDGER_MISMATCH');
+  if(afterFinance!==null){
+   insist(typeof afterFinance==='function','INVALID_FINANCE_EXTENSION');
+   await afterFinance({config:c,db,fetcher,actorIds,requestId,financeBaseline:final});
+  }
   return {checkpoint:'CP-FRT-SEC10-CI03',status:'PASS',
    signedFinanceDenials:denials,allowedFinanceOperations:6,
    financeAuditRecords:final.audits,verifiedRoleCaps:roleTransitions,
@@ -184,12 +188,12 @@ async function acceptance({config:c,db,fetcher,actorIds}){
    originalPermissionsRestored:true,productionTouched:false};
  }finally{await Promise.allSettled([admin.endSession(),member.endSession(),outsider.endSession()]);}
 }
-export async function executeCI03(source,env=process.env,fetcher=globalThis.fetch){
+export async function executeCI03(source,env=process.env,fetcher=globalThis.fetch,afterFinance=null){
  if(env.CI!=='true'||env.GITHUB_ACTIONS!=='true'||env.SEC10_CI03!=='EPHEMERAL_ONLY')
   throw Error('CI03_ENVIRONMENT_DENIED');
  let result=null;
  const ci02=await executeCI02(source,{...env,SEC10_CI02:'EPHEMERAL_ONLY'},
-  fetcher,async ctx=>{result=await acceptance(ctx);});
+  fetcher,async ctx=>{result=await acceptance(ctx,afterFinance);});
  insist(ci02.status==='PASS'&&result?.status==='PASS','CI02_REUSE_OR_CI03_FAILED');
  return {...result,ci02Prerequisite:'PASS'};
 }
