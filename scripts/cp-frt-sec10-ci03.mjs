@@ -122,9 +122,6 @@ async function acceptance({config:c,db,fetcher,actorIds}){
    body:{title:'unauthorized financial insert'}}),'DIRECT_INSERT');denials++;
   await deny(()=>outsider.rpc('frt_create_request',{p_workspace_id:w,
    p_payload:requestPayload}),'CROSS_WORKSPACE_CREATE');denials++;
-  await deny(()=>member.rpc('frt_update_request',{p_workspace_id:w,
-   p_request_id:requestId,p_payload:{title:'Should not change'} ,
-   }).then(()=>{throw Error('UNEXPECTED_ALLOWED_UPDATE')}),'UNSUPPORTED_PROBE').catch(()=>{});
   // Viewer is an explicit cap: genuine new session must lose all FRT domain writes.
   const assigned=await role(admin,actorIds.member,'viewer',null);
   insist(typeof assigned.currentRevision==='string','VIEWER_REVISION_MISSING');
