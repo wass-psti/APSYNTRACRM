@@ -1,3 +1,5 @@
+import {inspectMySignedEffectiveAccess} from './signed-effective-access.js';
+
 /** CP-FRT-SEC10 read-only signed capabilities after an independently authorized
  * nonproduction transition. This function DOES NOT change roles, make a new
  * Auth session, establish prior board ownership or certify token issuance.
@@ -37,6 +39,29 @@ export async function runFRTSec10SignedCeilingProbe({auth,api,boardId,stage}={})
   const boards=await api.boards('active');
   if(!Array.isArray(boards)||!boards.some(b=>b?.id===boardId))
    return {...report,reason:'EXISTING_ACCESSIBLE_BOARD_REQUIRED'};
+
+  // CP11 is the existing authoritative, caller-only effective access RPC.
+  // Never certify the operator's SELECTED stage merely because board/member
+  // permissions happen to match the expected Viewer/Supervisor/Restored shape.
+  const self=await inspectMySignedEffectiveAccess({auth,api});
+  if(self.status!=='PASS'||self.scenario!=='NONBOOTSTRAP')
+   return {...report,reason:'SIGNED_SELF_ACCESS_PRECONDITION_FAILED'};
+  const inspectedBoard=self.boards.find(b=>b.id===boardId);
+  if(!inspectedBoard)
+   return {...report,reason:'BOARD_NOT_IN_SELF_ACCESS_SNAPSHOT'};
+  const explicit=self.explicitPlatformRole;
+  const stageMatches=stage==='VIEWER'
+   ? explicit==='viewer'&&self.effectivePlatformRole==='viewer'
+   : stage==='SUPERVISOR'
+    ? explicit==='supervisor'&&self.effectivePlatformRole==='supervisor'
+    : explicit===null;
+  if(!stageMatches)
+   return {...report,reason:'STAGE_NOT_CONFIRMED_BY_BACKEND'};
+  if(stage==='RESTORED'&&(
+     inspectedBoard.memberRole!=='owner'||
+     self.modules.find(m=>m.moduleId==='fund-released-tracker')?.allowed!==true))
+   return {...report,reason:'ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING'};
+  check(report,'authoritative-stage-confirmed',true);
 
   const views=await api.allowed(boardId,'view');
   const edits=await api.allowed(boardId,'edit');
