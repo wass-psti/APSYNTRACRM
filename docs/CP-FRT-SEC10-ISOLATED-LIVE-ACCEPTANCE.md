@@ -190,3 +190,25 @@ CI output includes no real user IDs, passwords, sessions or secrets. A dedicated
 ### CI05 source merge and regression follow-up
 
 [PR #27](https://github.com/wass-psti/APSYNTRACRM/pull/27) was merged into `main` at commit `3730d6cee46daa028f6c696b009db18f3b20d65e`. Its first merged frontend-validation workflow exposed a stale **test-source string assertion**: the JWT expiry implementation used bounded multi-probe polling, while one test still looked for the earlier single-delay syntax. The application-facing code and candidate SQL were unchanged by that correction; the isolated signed runtime had already passed on the source branch. The stale test expectation was corrected on `main` in commit `fe53a5f278cab11a955c64c13b59f83e1a85d302`. **Post-merge integration verified:** [CI05 signed session and genuine expiry run #41196595390](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41196595390) completed **SUCCESS** (3/3 focused tests and real CI02–CI05 chain) at fixed source commit `fe53a5f278cab11a955c64c13b59f83e1a85d302`. [Frontend and disposable PostgreSQL validation #41196629966](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41196629966) and [GitHub Pages deployment #41196629292](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41196629292) both completed **SUCCESS** on baseline commit `4de348bbcf3a88ed8ef6d2a026a4558f68d75b53`. The production database's independent read-only post-merge snapshot remains **0** CRM role overrides, **2** role-audit rows, **76** board memberships, **121** module assignments, **0** FRT requests, **0** FRT finance audit rows and **0** FRT liquidations. The production `private.frt_current_role` still does **not** contain the new session check; only the isolated candidate was tested. Source, CI and Pages integration are **VERIFIED**, while actual production security deployment and final operational certification are **PENDING**.
+
+
+## CP-FRT-SEC10-CI06 — read-only production rollout preflight (2026-10-31)
+
+**Production-readonly preflight: VERIFIED.** The preflight was executed through the connected authoritative Supabase project, using the exact SQL committed in `sql/tests/cp-frt-sec10-ci06-production-readonly-preflight.sql`. Result: `READY_FOR_AUTHORIZED_ROLLOUT_REVIEW`. The query was strictly read-only; it did not create users, change permissions, apply the candidate, alter JWT settings, or touch financial records.
+
+**Preflight SQL source commit:** `ddd32b6c8c1ec2314ea81d57ed3732cdaad5a890` on `main`.
+
+| Read-only production gate | Observed evidence |
+| --- | --- |
+| FRT base tables with RLS enabled | 10/10 |
+| FRT SELECT policies | 9 (voucher counter intentionally has no direct SELECT policy) |
+| Direct anonymous/authenticated table data grants | 0 across the 10 FRT tables |
+| Existing role resolver hash | `2b518f7be033ea25a6c103184c283a7d` — matches audited CP06 source |
+| `private.frt_signed_session_active()` deployed | NO — outstanding session revocation gap remains in hosted backend |
+| Legacy `frt_admin_set_role` callable by authenticated role | NO |
+| Required `auth.sessions` lookup columns | Both present |
+| CRM role override / audit / board / module / FRT request inventory | 0 / 2 / 76 / 121 / 0; no mutations |
+
+**Classification:** CI05 isolation and merged CI acceptance = VERIFIED; CI06 production preflight = VERIFIED; hosted session-guard activation, authenticated legitimate-user postrollout regression, immediate revoked-session finance denial, independent finance transaction acceptance and full SEC10 production sign-off = **PENDING/BLOCKED**. CI05's tested SQL remains a disposable candidate only. The preflight is a change-control readiness check, not a production activation or authorization to perform one.
+
+**Next dependency:** Before production DDL that changes the FRT financial authorization boundary, obtain separate approval for the specific live rollout and a safe recovery window. Retain the existing role resolver and grants as the rollback baseline; repeat the read-only preflight immediately before deployment to detect drift, then perform controlled signed legitimate-user and revoked-session testing without using or modifying real financial data for negative probes. Do not conflate GitHub Pages deployment with backend session-guard activation.
