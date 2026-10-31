@@ -84,7 +84,10 @@ async function inspect({config:c,db,fetcher,actorIds,requestId,financeBaseline})
  process.stderr.write('CI04 request metadata: '+JSON.stringify({
   type:typeof requestId,length:typeof requestId==='string'?requestId.length:null,
   requestPresent:requestId!==undefined,memberPresent:actorIds?.member!==undefined,
-  bootstrapPresent:actorIds?.bootstrap!==undefined
+  bootstrapPresent:actorIds?.bootstrap!==undefined,
+  groupSizes:typeof requestId==='string'?requestId.split('-').map(v=>v.length):[],
+  version:typeof requestId==='string'?requestId[14]:null,
+  variant:typeof requestId==='string'?requestId[19]:null
  })+String.fromCharCode(10));
  check(uuid.test(requestId),'CI04_REQUEST_ID_INVALID');
  check(uuid.test(actorIds.member),'CI04_MEMBER_ID_INVALID');
