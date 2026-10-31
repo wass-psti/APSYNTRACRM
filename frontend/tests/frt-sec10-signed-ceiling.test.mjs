@@ -75,13 +75,35 @@ test('malformed permission responses never count as successful denial',async()=>
 test('signed bootstrap, expired token and switched identity are not accepted',async()=>{
  let r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER',{bootstrap:true}),boardId:board,stage:'VIEWER'});
  assert.equal(r.status,'BLOCKED');
- assert.equal(r.reason,'NONBOOTSTRAP_SESSION_REQUIRED');
+ assert.equal(r.reason,'BOOTSTRAP_SESSION_INELIGIBLE');
+ assert.equal(r.scenario,'BOOTSTRAP');
  r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER',{expired:true}),boardId:board,stage:'VIEWER'});
  assert.equal(r.status,'BLOCKED');
  assert.equal(r.reason,'SIGNED_SESSION_EXPIRED');
  r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER',{drift:true}),boardId:board,stage:'VIEWER'});
  assert.equal(r.status,'FAIL');
  assert.ok(r.checks.some(x=>x.name==='signed-workspace-identity-stable'&&x.status==='FAIL'));
+});
+test('nonboolean authoritative bootstrap decision blocks before reading permissions',async()=>{
+ const e=fixture('VIEWER',{bootstrap:'UNKNOWN'});
+ const r=await runFRTSec10SignedCeilingProbe({...e,boardId:board,stage:'VIEWER'});
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.scenario,'UNVERIFIED');
+ assert.equal(r.reason,'INVALID_BOOTSTRAP_DECISION');
+ assert.ok(!e.calls.includes('boards'));
+ assert.equal(r.checks.length,0);
+});
+test('export preserves accurate signed classification for ineligible bootstrap and unknown decision',async()=>{
+ const r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER',{bootstrap:true}),boardId:board,stage:'VIEWER'});
+ const safe=JSON.parse(sanitizeFRTSec10Report(r));
+ assert.equal(safe.scenario,'BOOTSTRAP');
+ assert.equal(safe.reason,'BOOTSTRAP_SESSION_INELIGIBLE');
+ assert.equal(safe.writesAttempted,0);
+ assert.equal(safe.freshSessionIssued,'NOT_VERIFIED');
+ const untrusted=JSON.parse(sanitizeFRTSec10Report({scenario:'admin@private.example',status:'BLOCKED',phase:'VIEWER',
+  reason:'INVALID_BOOTSTRAP_DECISION',checks:[],writesAttempted:0,roleChangesAttempted:0}));
+ assert.equal(untrusted.scenario,'UNVERIFIED');
+ assert.doesNotMatch(JSON.stringify(untrusted),/@|private\.example/);
 });
 test('actual backend capabilities, not the selected UI label, determine PASS',async()=>{
  const r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER'),boardId:board,stage:'SUPERVISOR'});
