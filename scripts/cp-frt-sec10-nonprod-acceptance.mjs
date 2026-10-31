@@ -80,11 +80,12 @@ export async function runIsolatedSEC10(env,fetcher=globalThis.fetch){
   insist(target!==adminAuth.id,'PROTECTED_ADMIN_TARGET');
   await member.context();
   const initial=await member.self();
-  insist(initial.bootstrap===false&&initial.explicitPlatformRole===null,
-    'EXISTING_OVERRIDE_OR_BOOTSTRAP_TARGET');
+  insist(initial.bootstrap===false&&initial.platformRole!=='admin_general_manager'&&
+   initial.explicitPlatformRole===null,'EXISTING_OVERRIDE_OR_BOOTSTRAP_TARGET');
   const board=initial.boards.find(b=>b.id===config.boardId);
+  const frtGrant=initial.modules.find(m=>m.moduleId==='fund-released-tracker');
   insist(board?.memberRole==='owner'&&board.manage===true&&
-   initial.modules.find(m=>m.moduleId==='fund-released-tracker')?.allowed===true,
+   frtGrant?.allowed===true&&typeof frtGrant?.role==='string'&&frtGrant.role.length>0,
    'ORIGINAL_BOARD_OWNER_AND_FRT_GRANT_REQUIRED');
   const before=roleRow(await admin.rpc('apsyntra_crm_platform_role_snapshot',{
     p_workspace_id:config.workspaceId}),target,config.workspaceId);
