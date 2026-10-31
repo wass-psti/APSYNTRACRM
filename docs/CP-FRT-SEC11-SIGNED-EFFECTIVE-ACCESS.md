@@ -43,10 +43,14 @@
 | Root cause: HR group has no boards under existing membership scope | VERIFIED by production aggregate database query |
 | New backend self-scoped inspection contract, no stored permission changes | IMPLEMENTED-UNVERIFIED for production |
 | Frontend signed inspection, admin enablement and empty-state UI | IMPLEMENTED-UNVERIFIED for production |
-| Isolated SQL and frontend regressions | VERIFIED when final branch CI passes |
+| Isolated SQL and frontend regressions | VERIFIED: frontend plus disposable PostgreSQL 17 PASS in [GitHub Actions run #41169961544](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41169961544) |
 | Live SQL migration and safe RPC grants | PENDING controlled security-reviewed release |
 | Genuine signed administrator account inspection | PENDING |
 | Genuine signed HR account inspection and zero-board confirmation | PENDING |
 | Final integrated production acceptance | PENDING |
 
 **No production role, board membership or financial records are to be modified as a condition of the read-only inspection fix.**
+
+## Final isolated integration evidence
+
+GitHub Actions [run #41169961544](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41169961544) completed successfully on the committed frontend and SQL code. Both the **frontend** and **disposable-postgres** jobs passed. The SQL tests exercised the actual proposed new function plus existing central-role and board-role resolvers on isolated PostgreSQL 17 fixtures. These are not production signed-user runs. A separate targeted read-only production query matched one active administrator profile and one active HR profile, confirmed both were active workspace members, and measured **13** active direct board memberships for the administrator and **0** for HR; **0** FRT grants for HR. No personal identifiers were exported into the repository.
