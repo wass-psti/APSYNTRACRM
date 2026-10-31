@@ -62,7 +62,7 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
       !validDate(item?.date_needed)||item?.company_code!==selected)
     return denied('FRT_REQUEST_ROW_CONTRACT_INVALID');
    if(requests.length<100)requests.push({
-    voucher:item.voucher_no||'—',title:item.title,status:item.status,
+    requestId:item.id,voucher:item.voucher_no||'—',title:item.title,status:item.status,
     dateNeeded:item.date_needed||'—'
    });
   }
