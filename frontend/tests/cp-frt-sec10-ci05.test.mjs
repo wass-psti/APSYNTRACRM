@@ -32,7 +32,8 @@ test('candidate keeps existing FRT module and CRM ceilings while checking sessio
 test('real JWT natural expiry is based on GoTrue exp without a fake or edited bearer',()=>{
  assert.ok(source.includes('const expireAt=member.sessionProof.expiresAt*1000'));
  assert.ok(source.includes('const lastProbe=expireAt+100000'));
- assert.ok(source.includes('setTimeout(resolve,delay)'));
+ assert.ok(source.includes('setTimeout(resolve,firstProbe-Date.now())'));
+ assert.ok(source.includes('setTimeout(resolve,Math.min(10000,lastProbe-Date.now()))'));
  assert.ok(source.includes('member.accessToken'));
  assert.ok(source.includes('NATURALLY_EXPIRED_GOTRUE_JWT_STILL_AUTHORIZED'));
  assert.ok(source.includes('TOKEN_SESSION_REMOVED_BEFORE_NATURAL_EXPIRY'));
