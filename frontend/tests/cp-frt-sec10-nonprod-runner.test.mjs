@@ -108,7 +108,7 @@ test('genuine-login orchestration contract performs viewer -> supervisor -> rest
  assert.ok(r.steps.every(x=>x.status==='PASS'));
  assert.equal(r.steps.length,5);
  const output=sanitizedResult(r);
- assert.doesNotMatch(output,/password|token|@|33333333|44444444|abcdefghijklmnopqrst/);
+ assert.doesNotMatch(output,/not-real-|sb_publishable_mock|header\.|signature|@|33333333|44444444|abcdefghijklmnopqrst/);
  assert.equal(JSON.parse(output).independentAuditVerified,false);
 });
 test('no staged mutations when original owner or FRT grants are absent',async()=>{
