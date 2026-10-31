@@ -57,9 +57,17 @@ export async function runFRTSec10SignedCeilingProbe({auth,api,boardId,stage}={})
     : explicit===null;
   if(!stageMatches)
    return {...report,reason:'STAGE_NOT_CONFIRMED_BY_BACKEND'};
-  if(stage==='RESTORED'&&(
-     inspectedBoard.memberRole!=='owner'||
-     self.modules.find(m=>m.moduleId==='fund-released-tracker')?.allowed!==true))
+  // This probe tests a *controlled transition* of a pre-existing board
+  // owner. A CRM Supervisor cap cannot turn a Viewer board grant into Editor.
+  // Reject ineligible accounts as BLOCKED rather than reporting a fabricated
+  // authorization regression, and never grant roles to satisfy a test.
+  if(inspectedBoard.memberRole!=='owner')
+   return {...report,reason:'PREEXISTING_BOARD_OWNER_REQUIRED'};
+  // The Viewer cap intentionally suppresses FRT access, so an earlier module
+  // grant cannot be independently proved from a Viewer-stage snapshot.
+  // For Supervisor/Restored, however, the original FRT grant must be live.
+  if(stage!=='VIEWER'&&
+     self.modules.find(m=>m.moduleId==='fund-released-tracker')?.allowed!==true)
    return {...report,reason:'ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING'};
   check(report,'authoritative-stage-confirmed',true);
 
