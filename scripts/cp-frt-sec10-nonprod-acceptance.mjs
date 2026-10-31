@@ -80,7 +80,8 @@ export async function runIsolatedSEC10(env,fetcher=globalThis.fetch){
   insist(target!==adminAuth.id,'PROTECTED_ADMIN_TARGET');
   await member.context();
   const initial=await member.self();
-  insist(initial.bootstrap===false&&initial.platformRole!=='admin_general_manager'&&
+  insist(initial.bootstrap===false&&typeof initial.platformRole==='string'&&
+   initial.platformRole.length>0&&initial.platformRole!=='admin_general_manager'&&
    initial.explicitPlatformRole===null,'EXISTING_OVERRIDE_OR_BOOTSTRAP_TARGET');
   const board=initial.boards.find(b=>b.id===config.boardId);
   const frtGrant=initial.modules.find(m=>m.moduleId==='fund-released-tracker');
