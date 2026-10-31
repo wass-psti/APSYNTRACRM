@@ -75,4 +75,5 @@ $function$
 ;
 REVOKE ALL ON FUNCTION public.frt_bootstrap(uuid) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.frt_bootstrap(uuid) TO authenticated;
+NOTIFY pgrst,'reload schema';
 COMMIT;
