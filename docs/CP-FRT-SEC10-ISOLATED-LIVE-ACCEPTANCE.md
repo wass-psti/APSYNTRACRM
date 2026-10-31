@@ -162,3 +162,27 @@ CI output includes no real user IDs, passwords, sessions or secrets. A dedicated
 ### CI04 merge and post-merge verification — 2026-10-31
 
 [PR #26](https://github.com/wass-psti/APSYNTRACRM/pull/26) merged on `main` as commit `0811f4114dc2d9ca4862160760092e600b26c4bd`. Post-merge checks all completed **SUCCESS** on that exact commit: [CI04 native signed security run #41194453425](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41194453425), [frontend/disposable PostgreSQL/live Pages checks #41194453430](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41194453430), and [GitHub Pages deployment #41194453030](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41194453030). CI04's main-run output matches the branch evidence: **10/10** RLS tables/policies and cross-workspace denial, current-role restriction and restoration, logout refresh revocation, removed session record, invalid JWT rejection, and diagnostic privilege cleanup, with **old access JWT still accepted after logout** and **no actual expired Auth JWT test**. The post-merge production read-only snapshot remains **0** explicit CRM overrides, **2** central role-audit records, **76** board memberships, **121** module assignments and **0** FRT request/audit/liquidation rows. No production role or finance mutations performed. Final immediate-access-revocation and genuine JWT-expiry acceptance remain **PENDING**; do not assert completion beyond the verified CI04 scope.
+
+## CP-FRT-SEC10-CI05 — session-aware FRT finance gate and genuine JWT expiration (2026-10-31)
+
+**Verified branch execution:** [GitHub Actions run #41196184155](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41196184155) — completed **SUCCESS**, commit `a131b0827c141058a48f47afe817630952cbf501`. All **3/3** targeted Node security tests passed and the existing CI02/CI03/CI04 genuine native GoTrue, signed role-transition, FRT finance and 10-table RLS acceptance chains passed before CI05.
+
+**Design and constraints:** `sql/tests/cp-frt-sec10-ci05-session-guard-candidate.sql` is an **isolated CI-only hardening candidate**, not a production migration. It preserves the authoritative `private.frt_current_role` workspace, host identity, module-assignment and CRM platform-role ceilings while adding a private, fail-closed `private.frt_signed_session_active()` precondition. The latter verifies the **server-provided signed JWT** `auth.uid()`, well-formed `auth.jwt().session_id`, unexpired `exp` claim and matching `auth.sessions.id` + `user_id` record. It runs as a narrowly scoped `SECURITY DEFINER` function with `search_path=''`, and direct `PUBLIC`/`anon`/`authenticated` execution is revoked. Only the existing role resolver may use it; no parallel login, role framework or user-editable JWT permission claim is introduced.
+
+**Evidence:**
+
+| CI05 security/operational gate | Genuine signed result |
+| --- | --- |
+| Before installing the candidate, PostgREST admits the still-unexpired JWT whose local GoTrue session has been logged out | VERIFIED baseline — confirms the CI04 risk |
+| After installing the candidate, the same revoked JWT cannot execute `frt_create_request`, `frt_update_request`, `frt_request_action` or `frt_submit_liquidation` | **4 of 4 DENIED** |
+| Rejected calls do not change FRT request, voucher, liquidation or finance audit counts | VERIFIED |
+| New actual GoTrue session for the existing isolated Finance Manager account can create a permitted finance request | VERIFIED; corresponding finance audit retained |
+| Signed user from another workspace cannot access the protected FRT finance scope | VERIFIED |
+| Real Auth session `session_id` correlated with `auth.sessions`, with production role authority unchanged | VERIFIED |
+| Truly expired, **unaltered Auth-issued** JWT is refused by PostgREST, even while its Auth session row remains present | VERIFIED |
+| Expiry test accounts for bounded PostgREST clock allowance using read-only RPC polling, never repeated finance mutations | VERIFIED |
+| Production hosted Supabase/project, users, roles, finance transactions or hosted JWT expiry affected | **NO** |
+
+**Expiration-test detail:** For this disposable native CI runtime **only**, the generated `supabase/config.toml` sets `auth.jwt_expiry=90` seconds so a genuine GoTrue-issued JWT can expire naturally during CI. This is explicitly **not** an operational setting recommended for the live hosted system (Supabase recommends ordinary Auth JWT lifetimes of at least 5 minutes). The expiry probe performs a read-only RPC until PostgREST actually rejects the token, allowing only a bounded clock-skew interval. It does **not** forge JWTs, change signing keys, modify `exp`, alter system clocks, or claim a logout alone invalidates JWT cryptographic signatures.
+
+**Acceptance decision:** CP-FRT-SEC10-CI05 **VERIFIED within isolated signed-session and finance-boundary acceptance**. The earlier CI04 refresh-token-only revocation gap is demonstrably closed for role-resolver-delegating FRT finance operations **under the CI-only candidate**. It is **not closed in the production database**, which still runs the prior role resolver. Production security change review, migration and rollback planning, deployment, existing-user regression, and real production operational acceptance are **PENDING**. Applying this candidate directly to production would change authorization behavior and requires separate rollout controls. No production modification was performed.
