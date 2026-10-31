@@ -16,7 +16,7 @@ WITH frt_tables AS (
  FROM frt_tables
 ), g AS (
  SELECT p.prosecdef AS definer,
-  (p.proconfig @> ARRAY['search_path=']) AS blank_search_path,
+  (p.proconfig @> ARRAY['search_path=""']) AS blank_search_path,
   pg_get_userbyid(p.proowner) AS owner,
   pg_get_functiondef(p.oid) LIKE '%auth.sessions AS sess%' AS checks_server_session,
   pg_get_functiondef(p.oid) LIKE '%sess.user_id=v_actor%' AS checks_session_owner,
