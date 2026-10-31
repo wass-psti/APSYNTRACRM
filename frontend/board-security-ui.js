@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -53,6 +53,23 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
     escape(c.status)+'</td></tr>').join('')+'</tbody></table></div>';
   html+='<p class="muted">Changes attempted: 0. Results do not certify fresh-session role changes, cross-workspace writes or local 5173 board-host operations.</p>'+
   '<button class="secondary" data-action="security-frt-copy">Copy nonsecret FRT result</button></div>';
+ }
+ html+='</div></div>';
+ html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC07 · CRM platform-role activation</h3></div>'+
+ '<div class="panel-body"><p class="muted">Run a signed, read-only test of the CRM platform-role backend and administrator isolation. A missing backend migration is BLOCKED, not PASS. No account, role, finance or board data is modified.</p>'+
+ '<button class="primary" data-action="security-sec07-readonly" '+(sec07Busy?'disabled':'')+'>'+
+ (sec07Busy?'Checking signed CRM backend…':'Verify signed CRM platform-role backend')+'</button>';
+ if(sec07Result){
+  const count=(sec07Result.checks||[]).filter(x=>x.status==='PASS').length;
+  html+='<div class="csp-u053"><strong>SEC07 result: '+escape(sec07Result.status||'BLOCKED')+
+   ' ('+count+' / '+(sec07Result.checks||[]).length+' checks)</strong>'+
+   '<p class="muted">Signed scenario: '+escape(sec07Result.scenario||'UNVERIFIED')+'</p>';
+  if(sec07Result.reason)html+='<p class="muted">Reason: '+escape(sec07Result.reason)+'</p>';
+  html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>'+
+   (sec07Result.checks||[]).map(x=>'<tr><td>'+escape(x.name)+'</td><td>'+
+    escape(x.status)+'</td></tr>').join('')+'</tbody></table></div>';
+  html+='<p class="muted">Writes attempted: 0. This read-only result cannot certify role mutation, fresh post-change sessions, FRT finance writes or the native 5173 board host.</p>'+
+   '<button class="secondary" data-action="security-sec07-copy">Copy nonsecret SEC07 result</button></div>';
  }
  html+='</div></div>';
  html+='<div class="note security-note csp-u050" >The real target board UUIDs were confirmed through PostgreSQL inventory. A different workspace UUID is not a fabricated board. A successful negative result cannot substitute for application-level acceptance, membership revocation testing or field-level security. Reports are temporary in this browser tab and contain no names, emails, access tokens or location data.</div>';
