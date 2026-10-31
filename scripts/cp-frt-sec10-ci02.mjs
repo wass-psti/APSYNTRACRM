@@ -123,7 +123,7 @@ async function verifyOtherWorkspace(c,fetcher){
   insist(denied,'CROSS_WORKSPACE_ADMIN_LEAK');
  }finally{await user.endSession();}
 }
-export async function executeCI02(source,env=process.env,fetcher=globalThis.fetch){
+export async function executeCI02(source,env=process.env,fetcher=globalThis.fetch,afterAcceptance=null){
  if(env.CI!=='true'||env.GITHUB_ACTIONS!=='true'||env.SEC10_CI02!=='EPHEMERAL_ONLY')
   throw Error('CI02_ENVIRONMENT_DENIED');
  const guardEnv={...env,SEC10_CI_AUTH_SMOKE:'EPHEMERAL_ONLY'};
@@ -170,6 +170,10 @@ export async function executeCI02(source,env=process.env,fetcher=globalThis.fetc
    after.overrideCount===0&&after.moduleCount===before.moduleCount&&
    after.boardCount===before.boardCount&&after.bootstrapCount===before.bootstrapCount&&
    after.userCount===before.userCount,'CI02_LEDGER_OR_RESTORE_FAILED');
+  if(afterAcceptance!==null){
+   insist(typeof afterAcceptance==='function','INVALID_CI_EXTENSION');
+   await afterAcceptance({config:c,db,fetcher,env,baseline:after,actorIds:{bootstrap:admin.id,member:member.id,outsider:outsider.id}});
+  }
   return {checkpoint:'CP-FRT-SEC10-CI02',status:'PASS',
    realMemberSessionsVerified:outcome.verifiedSessionCount,
    appliedRoleTransitions:outcome.transitionCount,
