@@ -360,7 +360,8 @@ async function loadFRTFinanceDetail(requestId,seq=routeSerial){
  state.frtFinanceDetailBusy=true;render();
  try{
   const response=await loadFRTRequestDetailReadOnly({
-   auth,api:db,requestId,companyCode,allowedRequestIds:ids,workspaceId:workspace
+   auth,api:db,requestId,companyCode,allowedRequestIds:ids,workspaceId:workspace,
+   expectedRole:state.frtFinance.role
   });
   if(revision===state.frtFinanceDetailRevision&&seq===routeSerial&&
      auth.isSignedIn&&state.context?.user_id===identity&&
