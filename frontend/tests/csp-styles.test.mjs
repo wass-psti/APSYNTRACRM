@@ -18,12 +18,13 @@ test('temporary annotation-only CSS exception preserves other CSP protections',(
  assert.deepEqual(directives['script-src'],["'self'"]);
  assert.deepEqual(directives['default-src'],["'self'"]);
  assert.deepEqual(directives['object-src'],["'none'"]);
+ assert.deepEqual(directives['img-src'],["'self'",'data:']);
  assert.deepEqual(directives['frame-src'],["'none'"]);
  assert.deepEqual(directives['base-uri'],["'self'"]);
  assert.deepEqual(directives['form-action'],["'self'"]);
  assert.deepEqual(directives['connect-src'],["'self'",'https://jtlusodorfnyzgyuewkz.supabase.co']);
  assert.equal((meta[1].match(/'unsafe-inline'/g)||[]).length,1,'only style-src may allow inline styling');
- assert.doesNotMatch(meta[1],/unsafe-eval|unsafe-hashes|data:\s*;|\*/);
+ assert.doesNotMatch(meta[1],/unsafe-eval|unsafe-hashes|\*/);
 });
 test('frontend generated markup never uses blocked inline styles or CSSOM injection',()=>{
  for(const file of readdirSync('frontend').filter(x=>x.endsWith('.js'))){
