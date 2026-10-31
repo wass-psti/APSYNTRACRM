@@ -259,3 +259,23 @@ CI output includes no real user IDs, passwords, sessions or secrets. A dedicated
 **Implementation evidence:** committed directly to `main` with new targeted unit/UI tests and security-state invalidation on logout, Auth expiration and workspace change. Prior unrelated security regression assumptions about cleanup source order were preserved; no production database, account, permission, board membership or finance mutation was part of this remediation.
 
 **CI07 checkpoint accounting:** production backend activation, grants and read-only postchecks remain VERIFIED (5 of 8 originally defined acceptance gates, **62.5%**). This user-supplied signed central-role diagnostic and new UI implementation do **not** raise CI07 to 6/8 until a successful genuine signed `frt_bootstrap` production report has been independently reconciled. The report is not the missing revoked-session test. Overall CP-FRT-SEC10 final acceptance remains PENDING.
+
+
+## CP-FRT-SEC10-CI07 — operator-directed acceptance waiver and administrative closure (2026-10-31)
+
+**Operator decision:** Explicit instruction to skip the three remaining CI07 runtime/financial acceptance gates and continue to the next implementation milestone. This is an **acceptance waiver**, not a test result, finance authorization certification, security-bypass implementation, permission grant, or rollback of the deployed production session guard. No existing production role, user, membership, Auth session, or financial record is changed by this administrative decision.
+
+| Original CI07 gate | Evidence-based technical status | Administrative disposition |
+| --- | --- | --- |
+| Authoritative schema and role preflight | VERIFIED | CLOSED |
+| Original resolver rollback captured | VERIFIED | CLOSED |
+| Production session guard deployed and in ledger | VERIFIED | CLOSED |
+| Production RLS/grants/function postcheck | VERIFIED | CLOSED |
+| Production integrity and unsigned SQL denial | VERIFIED | CLOSED |
+| Genuine signed production FRT RPC | PENDING — NOT VERIFIED | WAIVED BY OPERATOR |
+| Same unexpired JWT denied after session revocation | PENDING — NOT VERIFIED | WAIVED BY OPERATOR |
+| Authorized financial operation and nonbootstrap negative boundary | BLOCKED — NOT VERIFIED | WAIVED BY OPERATOR |
+
+**Administrative progress: 8/8 gates dispositioned = 100%. Evidence-backed technical verification: 5/8 gates = 62.5%.** Do not overwrite this distinction, reinterpret the waived gates as PASS, assert independent financial authorization acceptance, or imply complete production certification. User-directed waiver does not weaken live server authorization or introduce a bypass route. The risk remains in the development baseline for future security reviews.
+
+**Next milestone:** CP-FRT-SEC12 — FRT Financial Domain Read-Only Integration, using existing centralized Auth and Supabase RPCs. Implement safe financial-domain data access and focused contract tests without altering finance data or roles. Independent production finance write acceptance is outside this next milestone.
