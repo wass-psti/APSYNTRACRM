@@ -1,7 +1,7 @@
 name: APSYNTRA CRM Frontend Validation
 on:
   push:
-    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac, fix/cp-frt-sec06-rpc-rollout-compatibility, feature/cp-frt-sec07-signed-activation-gate, feature/cp-frt-sec09-signed-authorization-acceptance]
+    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac, fix/cp-frt-sec06-rpc-rollout-compatibility, feature/cp-frt-sec07-signed-activation-gate, feature/cp-frt-sec09-signed-authorization-acceptance, feature/cp-frt-sec10-transition-revocation-acceptance]
     paths:
       - "index.html"
       - ".nojekyll"
@@ -12,6 +12,8 @@ on:
       - "sql/cp-frt-sec06-*.sql"
       - "sql/tests/cp-frt-sec06-*.sql"
       - "sql/tests/cp-frt-sec07-*.sql"
+      - "sql/tests/cp-frt-sec10-*.sql"
+      - "docs/CP-FRT-SEC10-CONTROLLED-TRANSITIONS.md"
       - "docs/CP-FRT-SEC07-CONTROLLED-ACTIVATION.md"
       - "docs/CP-FRT-SEC09-SIGNED-AUTHORIZATION-ACCEPTANCE.md"
       - "docs/CP-FRT-SEC06-CRM-PLATFORM-RBAC.md"
@@ -80,7 +82,8 @@ jobs:
             -f sql/tests/cp-frt-sec06-disposable-setup.sql \
             -f sql/cp-frt-sec06-crm-platform-role-cap.sql \
             -f sql/cp-frt-sec06-domain-role-ceiling.sql \
-            -f sql/tests/cp-frt-sec06-disposable-acceptance.sql
+            -f sql/tests/cp-frt-sec06-disposable-acceptance.sql \
+            -f sql/tests/cp-frt-sec10-disposable-session-transitions.sql
   live-pages:
     needs: frontend
     if: github.ref == 'refs/heads/main'
