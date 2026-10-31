@@ -121,7 +121,7 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
  }
  html+='</div></div>';
  html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC10 · Controlled transition read-only probe</h3></div>'+
- '<div class="panel-body"><p class="muted">Use only with an independently approved isolated nonproduction role transition. The signed nonbootstrap user must already own the selected board and have an FRT module assignment before the transition. Sign out and sign in separately after each change. This probe never modifies a role and cannot independently prove a newly issued Auth session or original ownership.</p>'+
+ '<div class="panel-body"><p class="muted">Use only with an independently approved isolated nonproduction role transition. The signed nonbootstrap user must already own the selected board and have an FRT module assignment before the transition. Sign out and sign in separately after each change. This probe first checks that the selected transition stage is active in the central backend; choosing a stage does not assign any role. It never modifies a role and cannot independently prove a newly issued Auth session or original ownership.</p>'+
  '<label class="sec10-label" for="sec10-board">Existing accessible board</label><select id="sec10-board" class="search-input sec10-select" '+(!(sec10Boards||[]).length?'disabled':'')+'>'+
  (sec10Boards||[]).filter(b=>typeof b?.id==='string').map(b=>'<option value="'+escape(b.id)+'">'+escape(b.name||'Board')+'</option>').join('')+
  '</select>'+
@@ -142,7 +142,11 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
    const explanation={
     BOOTSTRAP_SESSION_INELIGIBLE:'This is a bootstrap administrator session. Sign out and authenticate as an existing eligible nonbootstrap user; a Viewer/Supervisor/Restored selection does not change account roles.',
     INVALID_BOOTSTRAP_DECISION:'The signed server returned an invalid administrator-classification result. Access cannot be accepted; check the backend session and RPC.',
-    NONBOOTSTRAP_SESSION_REQUIRED:'The required signed nonbootstrap session was not verified. Sign out of any bootstrap account before testing.'
+    NONBOOTSTRAP_SESSION_REQUIRED:'The required signed nonbootstrap session was not verified. Sign out of any bootstrap account before testing.',
+    STAGE_NOT_CONFIRMED_BY_BACKEND:'The selected stage is not the current server-confirmed CRM role transition. Changing this dropdown does not assign Viewer/Supervisor or revoke a role. Use the separate signed effective-permissions inspection to see real permissions.',
+    ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING:'The current signed account lacks the board-owner or FRT-module prerequisite required for the Restored transition acceptance. Do not grant production access solely for testing.',
+    SIGNED_SELF_ACCESS_PRECONDITION_FAILED:'The server-authoritative self-permission snapshot could not be verified for this signed session. Run the separate signed effective-permissions inspection first.',
+    BOARD_NOT_IN_SELF_ACCESS_SNAPSHOT:'The selected board is not in the signed caller-only authorized board snapshot. No transition acceptance can be claimed.'
    }[sec10Result.reason];
    html+='<p class="muted">Reason: '+escape(sec10Result.reason)+'</p>';
    if(explanation)html+='<p class="note security-note">'+escape(explanation)+'</p>';
