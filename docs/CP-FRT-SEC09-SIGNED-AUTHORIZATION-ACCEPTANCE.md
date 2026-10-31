@@ -43,6 +43,34 @@ Use the deployed APSYNTRA CRM `https://wass-psti.github.io/APSYNTRACRM/#/securit
 - Paste **only** the copied nonsecret JSON to the acceptance conversation. Never share access tokens, passwords, refresh tokens, account IDs or internal finance records.
 - If either report is FAIL or BLOCKED, do not certify. Investigate the error under the existing backend and rerun only the affected case after a corrective change. A missing RPC / HTTP 404 cannot be counted as a successful denial.
 
+## Post-deployment signed-user results — bootstrap scenario
+
+**Observed:** October 31, 2026, after PR #14 was merged and deployed to GitHub Pages.  
+**Evidence type:** Sanitized output submitted by the operator from the existing signed-user browser acceptance runner. This output was not independently replayed through the connected browser.
+
+| Result | Evidence |
+| --- | --- |
+| CP-FRT-SEC09 scenario | `BOOTSTRAP` |
+| Combined result | `PASS` — 5/5 |
+| Signed identity and workspace stability | PASS |
+| Consistent server-side bootstrap classification | PASS |
+| CP-FRT-SEC03 governance baseline | PASS — 7/7 underlying checks |
+| CP-FRT-SEC07 platform-role backend | PASS — 5/5 underlying checks |
+| Cross-workspace CRM snapshot denied | PASS as checked by CP07 runner |
+| Role modifications attempted | **0** |
+| Database writes attempted | **0** |
+| CP-FRT-SEC09 nonbootstrap scenario | **PENDING** — not inferred from historical SEC03 result |
+
+The five combined check names were: `same-signed-identity-and-workspace`, `consistent-bootstrap-classification`, `sec03-governance-baseline`, `sec07-crm-platform-rbac`, and `read-only-no-role-mutations`.
+
+The underlying SEC03 suite passed `verified-signed-identity`, `frt-operational-role-vocabulary`, `legacy-frt-admin-list-unavailable`, `bootstrap-role-configuration-snapshot`, `bootstrap-user-management-snapshot`, `other-workspace-role-snapshot-denied`, and `existing-frt-operational-context`.
+
+The underlying SEC07 suite passed `signed-identity-and-active-workspace`, `authoritative-bootstrap-decision`, `crm-platform-snapshot-active-and-complete`, `other-workspace-crm-snapshot-denied`, and `frt-operational-context-maintained`.
+
+**Independent connected PostgreSQL read-only corroboration:** Two SEC08 migrations are still installed; the CRM snapshot/setter functions exist; explicit CRM role overrides remain **0**; module-role assignments **121**, board memberships **75**, FRT memberships **3**, bootstrap identities **2**, role-change audit rows **0**. No user identifiers, JWTs, private email addresses, or finance records were copied into this evidence file.
+
+**Scope:** This accepted bootstrap report demonstrates a stable signed bootstrap session, protected central snapshot access, expected cross-workspace snapshot rejection, and preserved FRT operational read context. It does **not** certify setter mutations, post-change session invalidation, or complete 12-domain operational enforcement.
+
 ## Strict evidence classification
 
 | Gate | Classification |
@@ -50,12 +78,12 @@ Use the deployed APSYNTRA CRM `https://wass-psti.github.io/APSYNTRACRM/#/securit
 | CP-FRT-SEC08 live production migrations, role table and function guards | VERIFIED via connected PostgreSQL read-only checks |
 | Historical CP-FRT-SEC03 signed checks (7/7 bootstrap, 5/5 nonbootstrap) | VERIFIED from earlier operator-submitted results; **predate** SEC08 backend activation |
 | CP-FRT-SEC09 source implementation and mocked positive/negative contracts | VERIFIED in successful frontend CI and disposable PostgreSQL 17 checks; no genuine signed-user acceptance implied |
-| CP-FRT-SEC09 live signed bootstrap test | PENDING operator-provided browser evidence |
+| CP-FRT-SEC09 live signed bootstrap test | VERIFIED based on operator-submitted signed browser result: 5/5 combined, SEC03 7/7, SEC07 5/5, zero writes; independent DB invariants unchanged |
 | CP-FRT-SEC09 live signed nonbootstrap test | PENDING operator-provided browser evidence |
 | Bootstrap setter mutation / revision / correlated audit | PENDING scoped nonproduction approval and genuine signed role transaction |
 | Role ceiling after a new signed session, revocation and FRT domain write guards | PENDING real controlled runtime |
 | Cross-workspace signed isolation on two legitimate workspaces | BLOCKED: only one workspace currently has active members |
-| Canonical local native board-host `http://127.0.0.1:5173/#/` and `/api/v1/boards` | BLOCKED: host not accessible from current connected environment |
+| Genuine native `/api/v1/boards` host contracts and 12-board operational persistence | BLOCKED: not established by GitHub Pages frontend deployment; local runtime is not the primary testing host |
 | Production-wide certification / native 12-app integration | PENDING |
 
 ## Acceptance and release boundary
@@ -63,5 +91,5 @@ Use the deployed APSYNTRA CRM `https://wass-psti.github.io/APSYNTRACRM/#/securit
 - Preserve all 39 active workspace members, current roles, sessions, module/board assignments and FRT records.
 - No test users, fake workspace memberships, second Auth systems, or production role modifications are authorized for this read-only acceptance.
 - Passing a **mocked CI test** demonstrates correct test harness behavior, not a real signed-user acceptance.
-- The currently connected browser cannot be accessed through the connector from this chat; therefore signed-user acceptance cannot be claimed until genuine results are submitted.
-- Merge and deployment require independent approval where mandated by repository rules. Do not auto-merge this branch or change production RBAC policies.
+- The signed bootstrap result has been submitted by the operator. This chat does not independently control the signed browser; the distinct nonbootstrap CP09 result is still required.
+- PR #14 was already merged and GitHub Pages deployed before this evidence update. No production RBAC assignment, policy, or authenticated session was changed to record the result.
