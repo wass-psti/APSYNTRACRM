@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false,effectiveAccessResult=null,effectiveAccessBusy=false,sec10BoardsError=''}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,ci07Result=null,ci07Busy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false,effectiveAccessResult=null,effectiveAccessBusy=false,sec10BoardsError=''}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -53,6 +53,23 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
     escape(c.status)+'</td></tr>').join('')+'</tbody></table></div>';
   html+='<p class="muted">Changes attempted: 0. Results do not certify fresh-session role changes, cross-workspace writes or local 5173 board-host operations.</p>'+
   '<button class="secondary" data-action="security-frt-copy">Copy nonsecret FRT result</button></div>';
+ }
+ html+='</div></div>';
+ html+='<div class="panel"><div class="panel-header"><h3>CI07 · Production signed FRT session check</h3></div>'+
+ '<div class="panel-body"><p class="muted">Use the existing signed account. This read-only test calls the actual FRT bootstrap RPC through the deployed session-aware role resolver. It checks genuine FRT authorization without changing roles, revoking sessions or writing financial data. It does not certify token revocation or financial transactions.</p>'+
+ '<button class="primary" data-action="security-ci07-readonly" '+(ci07Busy?'disabled':'')+'>'+
+ (ci07Busy?'Verifying signed FRT role…':'Verify live FRT session guard — read-only')+'</button>';
+ if(ci07Result){
+  const count=(ci07Result.checks||[]).filter(x=>x.status==='PASS').length;
+  html+='<div class="csp-u053"><strong>CI07 signed FRT result: '+escape(ci07Result.status||'BLOCKED')+
+   ' ('+count+'/'+(ci07Result.checks||[]).length+')</strong>'+
+   '<p class="muted">Verified FRT domain role: '+escape(ci07Result.role||'UNVERIFIED')+'</p>';
+  if(ci07Result.reason)html+='<p class="muted">Reason: '+escape(ci07Result.reason)+'</p>';
+  html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Check</th><th>Status</th></tr></thead><tbody>'+
+   (ci07Result.checks||[]).map(c=>'<tr><td>'+escape(c.name)+'</td><td>'+
+    escape(c.status)+'</td></tr>').join('')+'</tbody></table></div>'+
+   '<p class="muted">Writes: 0 · Session revocation: NOT VERIFIED · Finance transactions: NOT VERIFIED. This is a positive, current-session FRT read test only.</p>'+
+   '<button class="secondary" data-action="security-ci07-copy">Copy nonsecret CI07 result</button></div>';
  }
  html+='</div></div>';
  html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC07 · CRM platform-role activation</h3></div>'+
