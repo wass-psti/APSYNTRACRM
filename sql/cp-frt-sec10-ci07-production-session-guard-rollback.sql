@@ -14,9 +14,11 @@ BEGIN
 END;
 $preflight$;
 CREATE OR REPLACE FUNCTION private.frt_current_role(p_workspace_id uuid)
-RETURNS text LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'public','pg_temp'
-AS $$
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
  SELECT role_source.role
  FROM (
    SELECT CASE WHEN p.platform_role='admin_general_manager' THEN 'GENERAL_MANAGER'
@@ -36,7 +38,8 @@ AS $$
          'fund-released-tracker',role_source.role)
        <= public.apsyntra_crm_role_rank(
          public.apsyntra_crm_effective_role(auth.uid(),p_workspace_id));
-$$;
+$function$
+
 -- RESTRICT refuses to cascade into other live dependencies.
 DROP FUNCTION private.frt_signed_session_active() RESTRICT;
 DO $postflight$
