@@ -98,3 +98,7 @@
 #app .csp-check-pass{color:#24a17d}
 #app .csp-check-fail{color:#d95067}
 #app .csp-check-pending{color:#8790a3}
+
+/* CP-FRT-SEC11: readable board and stage selection without overlapping labels. */
+.sec10-label{display:block;margin:15px 0 7px;font-size:13px;font-weight:650}
+.sec10-select{display:block;box-sizing:border-box;margin-bottom:14px;min-height:44px}
