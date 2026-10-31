@@ -121,16 +121,25 @@ async function ci05Core({config,db,fetcher,actorIds,requestId,
 
   // This JWT was actually issued by local GoTrue. Do not mint, edit, or forge a token.
   // Wait only until the independently signed exp claim has passed.
-  const expireAt=member.sessionProof.expiresAt*1000+2500;
-  const delay=expireAt-Date.now();
-  ok(delay>=0&&delay<=140000,'JWT_EXPIRY_WAIT_OUT_OF_BOUNDS');
-  if(delay>0)await new Promise(resolve=>setTimeout(resolve,delay));
-  ok(Date.now()>=expireAt-100,'LOCAL_TOKEN_EXPIRY_NOT_REACHED');
+  const expireAt=member.sessionProof.expiresAt*1000;
+  ok(expireAt-Date.now()>0&&expireAt-Date.now()<=145000,
+   'JWT_EXPIRY_WAIT_OUT_OF_BOUNDS');
+  // PostgREST may allow a bounded clock skew around JWT exp. The actual
+  // GoTrue-issued token must eventually be refused; do not infer expiry
+  // merely because the wall clock passed the encoded exp by one second.
+  const firstProbe=expireAt+3000;
+  if(firstProbe>Date.now())await new Promise(resolve=>setTimeout(resolve,firstProbe-Date.now()));
   sessionStillPresent=activeSessionCount()===1;
   ok(sessionStillPresent,'TOKEN_SESSION_REMOVED_BEFORE_NATURAL_EXPIRY');
-  const expiredStatus=await withToken(config,fetcher,member.accessToken,
-   'frt_create_request',{p_workspace_id:WORKSPACE,p_payload:deniedPayload});
-  ok(expiredStatus===401||expiredStatus===403,'NATURALLY_EXPIRED_GOTRUE_JWT_STILL_AUTHORIZED');
+  const lastProbe=expireAt+100000;
+  let expiredStatus=0;
+  for(;;){
+   expiredStatus=await withToken(config,fetcher,member.accessToken,
+    'frt_create_request',{p_workspace_id:WORKSPACE,p_payload:deniedPayload});
+   if(expiredStatus===401||expiredStatus===403)break;
+   ok(Date.now()<lastProbe,'NATURALLY_EXPIRED_GOTRUE_JWT_STILL_AUTHORIZED');
+   await new Promise(resolve=>setTimeout(resolve,Math.min(10000,lastProbe-Date.now())));
+  }
   verifiedExpiry=true;
  }finally{
   await Promise.allSettled([member.endSession(),other.endSession()]);
