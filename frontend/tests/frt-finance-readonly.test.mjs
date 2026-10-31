@@ -53,7 +53,7 @@ test('authorized FRT board integration reads only signed domain RPCs and removes
  const out=JSON.stringify(report);
  assert.doesNotMatch(out,/secret@example|requestor|total_amount|100000|999999|amount|attachments/i);
  assert.deepEqual(report.requests[0],{
-  voucher:'FRT-01',title:'Operational request',status:'PENDING_APPROVAL',
+  requestId:record,voucher:'FRT-01',title:'Operational request',status:'PENDING_APPROVAL',
   dateNeeded:'2026-11-02'
  });
 });
