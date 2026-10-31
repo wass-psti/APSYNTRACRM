@@ -223,7 +223,7 @@ function render(){
    log:state.foundationLog,error:state.foundationError,
    canProvision:state.context?.profile?.platform_role==='admin_general_manager'
  }));
- else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards}));
+ else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards,sec10IsBootstrap:state.roleVerified===true}));
  else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.roleVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
  else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.roleVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,busy:state.userRoleBusy,error:state.userRoleError}));
  else if(state.view==='boards')shell(boardsPage());
@@ -561,6 +561,8 @@ async function action(name,button){
  }
  case 'security-sec10-readonly':{
    if(state.sec10Busy||!state.context||!auth.isSignedIn)return;
+   if(state.roleVerified===true)
+     return toast('SEC10 requires a signed nonbootstrap user in an approved isolated nonproduction environment. Sign out of the bootstrap administrator account.',true);
    const stage=root.querySelector('#sec10-stage')?.value||'';
    const boardId=root.querySelector('#sec10-board')?.value||'';
    if(!state.boards.some(b=>b.id===boardId)||!['VIEWER','SUPERVISOR','RESTORED'].includes(stage))

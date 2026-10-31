@@ -10,7 +10,7 @@ const stages={
 };
 const check=(r,name,ok)=>r.checks.push({name,status:ok?'PASS':'FAIL'});
 export async function runFRTSec10SignedCeilingProbe({auth,api,boardId,stage}={}){
- const report={checkpoint:'CP-FRT-SEC10',status:'BLOCKED',scenario:'NONBOOTSTRAP',
+ const report={checkpoint:'CP-FRT-SEC10',status:'BLOCKED',scenario:'UNVERIFIED',
   phase:Object.hasOwn(stages,stage)?stage:'INVALID',checks:[],
   writesAttempted:0,roleChangesAttempted:0,
   freshSessionIssued:'NOT_VERIFIED',prerequisiteOwnershipVerified:'NOT_VERIFIED'};
@@ -27,7 +27,13 @@ export async function runFRTSec10SignedCeilingProbe({auth,api,boardId,stage}={})
   // No platform role/permission is inferred from a JWT, UI label or
   // the chosen phase. Only authoritative server RPC decisions are evaluated.
   const bootstrap=await api.rpc('apsyntra_role_is_bootstrap',{});
-  if(bootstrap!==false)return {...report,reason:'NONBOOTSTRAP_SESSION_REQUIRED'};
+  if(bootstrap===true){
+   report.scenario='BOOTSTRAP';
+   return {...report,reason:'BOOTSTRAP_SESSION_INELIGIBLE'};
+  }
+  if(bootstrap!==false)
+   return {...report,reason:'INVALID_BOOTSTRAP_DECISION'};
+  report.scenario='NONBOOTSTRAP';
   const boards=await api.boards('active');
   if(!Array.isArray(boards)||!boards.some(b=>b?.id===boardId))
    return {...report,reason:'EXISTING_ACCESSIBLE_BOARD_REQUIRED'};
@@ -79,7 +85,7 @@ export function sanitizeFRTSec10Report(result){
  const clean={
   checkpoint:'CP-FRT-SEC10',
   status:valid.has(result?.status)?result.status:'BLOCKED',
-  scenario:'NONBOOTSTRAP',
+  scenario:['BOOTSTRAP','NONBOOTSTRAP'].includes(result?.scenario)?result.scenario:'UNVERIFIED',
   phase:Object.hasOwn(stages,result?.phase)?result.phase:'INVALID',
   checks:Array.isArray(result?.checks)?result.checks.map(c=>({
    name:/^[a-z0-9-]{1,70}$/.test(c?.name||'')?c.name:'invalid-check-name',

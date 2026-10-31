@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[]}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -98,14 +98,24 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
  '</select><label for="sec10-stage">Independently verified backend stage</label><select id="sec10-stage" class="search-input">'+
  '<option value="VIEWER">Explicit Viewer cap</option><option value="SUPERVISOR">Explicit Supervisor cap</option>'+
  '<option value="RESTORED">Override revoked — inherited original role</option></select>'+
- '<button class="primary" data-action="security-sec10-readonly" '+(sec10Busy||!(sec10Boards||[]).length?'disabled':'')+'>'+
+ '<button class="primary" data-action="security-sec10-readonly" '+(sec10Busy||!(sec10Boards||[]).length||sec10IsBootstrap?'disabled':'')+'>'+
  (sec10Busy?'Checking signed permission ceilings…':'Check signed role ceilings — read-only')+'</button>';
+ if(sec10IsBootstrap)
+  html+='<div class="note security-note">This session is a verified bootstrap administrator. SEC10 capability probes require an existing nonbootstrap account in an approved isolated nonproduction environment. Sign out before testing. Do not alter legitimate production permissions.</div>';
  if(sec10Result){
   const passed=(sec10Result.checks||[]).filter(c=>c.status==='PASS').length;
   html+='<div class="csp-u053"><strong>SEC10 signed capability result: '+escape(sec10Result.status||'BLOCKED')+
-   ' ('+passed+'/'+(sec10Result.checks||[]).length+')</strong><p class="muted">Tested stage: '+
+   ' ('+passed+'/'+(sec10Result.checks||[]).length+')</strong><p class="muted">Signed scenario: '+escape(sec10Result.scenario||'UNVERIFIED')+'</p><p class="muted">Tested stage: '+
    escape(sec10Result.phase||'UNKNOWN')+'</p>';
-  if(sec10Result.reason)html+='<p class="muted">Reason: '+escape(sec10Result.reason)+'</p>';
+  if(sec10Result.reason){
+   const explanation={
+    BOOTSTRAP_SESSION_INELIGIBLE:'This is a bootstrap administrator session. Sign out and authenticate as an existing eligible nonbootstrap user; a Viewer/Supervisor/Restored selection does not change account roles.',
+    INVALID_BOOTSTRAP_DECISION:'The signed server returned an invalid administrator-classification result. Access cannot be accepted; check the backend session and RPC.',
+    NONBOOTSTRAP_SESSION_REQUIRED:'The required signed nonbootstrap session was not verified. Sign out of any bootstrap account before testing.'
+   }[sec10Result.reason];
+   html+='<p class="muted">Reason: '+escape(sec10Result.reason)+'</p>';
+   if(explanation)html+='<p class="note security-note">'+escape(explanation)+'</p>';
+  }
   html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>'+
    (sec10Result.checks||[]).map(c=>'<tr><td>'+escape(c.name)+'</td><td>'+escape(c.status)+'</td></tr>').join('')+
    '</tbody></table></div><p class="muted">Writes: 0 · Fresh Auth session independently verified: NO · Prior ownership independently verified: NO. Do not treat this report alone as final mutation/revocation acceptance.</p>'+
