@@ -21,6 +21,7 @@ import {runFRTSec10SignedCeilingProbe,sanitizeFRTSec10Report} from './frt-sec10-
 import {runFRTCI07SignedRoleProbe,sanitizeFRTCI07Report} from './frt-sec10-ci07-signed-runtime.js';
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
+import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
@@ -33,7 +34,7 @@ const nativeIssues=new NativeIssueClient(db);
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -178,7 +179,7 @@ function boardPage(){
  <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}">▤ Board items <span class="csp-u060" >(${items.length})</span></a>
  <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span class="csp-u060" >(${state.issues.length})</span></a>
  ${moduleByBoardName(b.name)?.key==='frt'?`<a class="tab ${state.tab==='finance'?'active':''}" href="#/boards/${e(b.id)}/finance">▣ FRT finance (read-only)</a>`:''}</div>
- ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy}):state.tab==='issues'?issuesPage():`
+ ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='issues'?issuesPage():`
  <div class="toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
  ${groups.length?groups.map(g=>`<div class="group-heading"><h3>${e(g.title||'Group')}</h3><small>${items.filter(i=>i.group_id===g.id).length} items</small></div>
@@ -241,7 +242,7 @@ async function refreshWorkspace(){
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
    state.roleData=null;state.userRoleData=null;state.userRoleSelected=null;
    state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
-   state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtFinance=null;state.frtFinanceBusy=false;
+   state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  }
  state.boards=await db.boards('active');
  state.user=auth.session?.user;
@@ -313,7 +314,7 @@ async function refreshFoundation(){
 }
 async function loadBoard(boardId,tab){
  const seq=++routeSerial;
- state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.error=null;state.issues=[];state.frtFinance=null;state.frtFinanceBusy=false;
+ state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.error=null;state.issues=[];state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
    const detail=await db.board(boardId);
@@ -338,19 +339,50 @@ async function loadFRTFinance(companyCode=null,seq=routeSerial){
     moduleByBoardName(state.board?.board?.name)?.key!=='frt'||state.frtFinanceBusy)return;
  const identity=state.context?.user_id;
  const workspace=state.context?.workspace_id;
- state.frtFinanceBusy=true;state.frtFinance=null;render();
+ state.frtFinanceBusy=true;state.frtFinance=null;state.frtFinanceDetail=null;state.frtFinanceDetailId=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailRevision++;render();
  try{
   const result=await loadFRTFinanceReadOnly({auth,api:db,companyCode});
   if(seq===routeSerial&&auth.isSignedIn&&state.context?.user_id===identity&&
      state.context?.workspace_id===workspace)state.frtFinance=result;
  }finally{if(seq===routeSerial){state.frtFinanceBusy=false;render();}}
 }
+async function loadFRTFinanceDetail(requestId,seq=routeSerial){
+ if(state.view!=='board'||state.tab!=='finance'||!auth.isSignedIn||
+    state.frtFinanceBusy||state.frtFinanceDetailBusy||
+    state.frtFinance?.status!=='PASS'||state.frtFinance?.companyCode===null||
+    moduleByBoardName(state.board?.board?.name)?.key!=='frt')return;
+ const ids=(state.frtFinance.requests||[]).map(r=>r.requestId);
+ if(!ids.includes(requestId))return;
+ const revision=++state.frtFinanceDetailRevision;
+ const identity=state.context?.user_id,workspace=state.context?.workspace_id;
+ const companyCode=state.frtFinance.companyCode;
+ state.frtFinanceDetail=null;state.frtFinanceDetailId=requestId;
+ state.frtFinanceDetailBusy=true;render();
+ try{
+  const response=await loadFRTRequestDetailReadOnly({
+   auth,api:db,requestId,companyCode,allowedRequestIds:ids,workspaceId:workspace
+  });
+  if(revision===state.frtFinanceDetailRevision&&seq===routeSerial&&
+     auth.isSignedIn&&state.context?.user_id===identity&&
+     state.context?.workspace_id===workspace&&
+     state.frtFinance?.companyCode===companyCode&&
+     state.frtFinance?.requests?.some(r=>r.requestId===requestId))
+   state.frtFinanceDetail=response;
+ }catch{
+  if(revision===state.frtFinanceDetailRevision&&seq===routeSerial)
+   state.frtFinanceDetail={status:'BLOCKED',reason:'FRT_DETAIL_READ_INCOMPLETE'};
+ }finally{
+  if(revision===state.frtFinanceDetailRevision&&seq===routeSerial){
+   state.frtFinanceDetailBusy=false;render();
+  }
+ }
+}
 async function onRoute(){
  if(!state.context)return;
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='boards'&&validUuid(parts[1])){await loadBoard(parts[1],parts[2]==='issues'?'issues':parts[2]==='finance'?'finance':'items');return;}
- routeSerial++;state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
+ routeSerial++;state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
  if(state.view==='role-configuration'||state.view==='user-role-management'){
    // Recheck current server authority on EVERY entry, including direct URL visits.
    try{state.roleVerified=await roleConfig.bootstrapVerified();}
@@ -392,7 +424,7 @@ async function login(form){
  try{
    await auth.signIn(email,password);
    await refreshWorkspace();
-   state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
+   state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
    location.hash=routeHome;await onRoute();
    toast('Successfully signed in.');
  }catch(err){await auth.signOut();state.context=null;renderLogin(errorMessage(err));}
@@ -426,7 +458,7 @@ async function writeGuard(){if(!state.boardId||!await db.allowed(state.boardId,'
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
- case 'logout':{await auth.signOut();state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'logout':{await auth.signOut();state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'user-role-refresh':{
@@ -695,6 +727,18 @@ async function action(name,button){
      toast('Nonsecret SEC07 result copied.');
    }catch{toast('Clipboard unavailable. Use the displayed result.',true);}
    break;
+ }
+ case 'frt-finance-detail':{
+   if(state.frtFinanceBusy||state.frtFinanceDetailBusy||
+      state.tab!=='finance'||!auth.isSignedIn)return;
+   const requestId=String(button?.dataset?.requestId||'');
+   if(!state.frtFinance?.requests?.some(r=>r.requestId===requestId))return;
+   await loadFRTFinanceDetail(requestId);
+   break;
+ }
+ case 'frt-finance-detail-close':{
+   state.frtFinanceDetailRevision++;state.frtFinanceDetailBusy=false;
+   state.frtFinanceDetail=null;state.frtFinanceDetailId=null;render();break;
  }
  case 'frt-finance-refresh':{
    if(state.frtFinanceBusy||state.tab!=='finance'||!auth.isSignedIn)return;
@@ -1008,7 +1052,7 @@ root.addEventListener('input',event=>{
 });
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
 window.addEventListener('keydown',event=>{if(event.key==='Escape')hideModal();});
-auth.onExpired=()=>{state.context=null;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{state.context=null;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  try{
   if(await auth.restore()){
