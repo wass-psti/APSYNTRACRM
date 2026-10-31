@@ -100,3 +100,34 @@ CI output includes no real user IDs, passwords, sessions or secrets. A dedicated
 **Verification boundaries:** The fixture intentionally contains the authoritative CP06 CRM role/FRT capability functions and CP11 inspection contract, *not* the full production finance data model. The workflow does **not** prove live production changes, financial transactions, approval workflows, field-level FRT record authorization, token invalidation after logout, production-specific RLS policy parity, or final twelve-board application operations. Such requirements remain PENDING separately. CI02 cannot itself authorize weakening central RBAC or real production role edits.
 
 **Disposition:** CP-FRT-SEC10-CI02 genuine isolated signed RBAC transition and linked audit acceptance **VERIFIED**. The defined CI02 milestone is complete; broader CP-FRT-SEC10 production-operational/final acceptance remains **PENDING**.
+
+## CP-FRT-SEC10-CI03 — genuine signed native FRT finance and RLS acceptance (2026-10-31)
+
+**Verified branch run:** [GitHub Actions #41182640369](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41182640369), **COMPLETED / SUCCESS** on commit `14c4e80c92745533411e977554d651162588319e`. The native Supabase CI02 fixture and genuinely signed role-transition/audit sequence are prerequisites and are rerun inside the same isolated CI project.
+
+**Authoritative source contract:** `sql/tests/cp-frt-sec10-ci03-native-finance.sql` contains only **metadata-derived DDL** and unchanged production definitions captured on October 31, 2026 for `frt_create_request`, `frt_request_action`, `frt_submit_liquidation`, `frt_update_request`, `private.frt_has_membership`, and `private.frt_has_role`. It recreates seven actual FRT finance table structures, foreign keys, checks, read policies, and no direct authenticated table grants. It imports **no production finance rows, credentials, user accounts, or financial records**. The existing signed role ceiling and workspace checks remain authoritative.
+
+| Isolated signed finance-domain check | Result |
+| --- | --- |
+| Existing CI02 role transitions, new signed Auth sessions, and independent audit correlation | PASS prerequisite |
+| Real request creation by FRT Finance Manager | PASS |
+| Approval by General Manager | PASS |
+| General Manager transfer verification | PASS |
+| Finance Manager liquidation submission | PASS |
+| General Manager liquidation approval | PASS |
+| Finance Manager close after approved liquidation | PASS |
+| Unauthorized requests across role, workspace, direct-table and finance separation boundaries | **11 correctly denied** |
+| Denied finance operations preserve request, item, voucher, liquidation, and finance audit counts | PASS |
+| Finance audit events retained after permitted operations | **6** |
+| CRM Viewer ceiling applied and revoked without losing original FRT role | PASS |
+| FRT finance tables with RLS enabled | **7 of 7** |
+| Matching FRT membership-based SELECT policies | **7 of 7** |
+| Direct client table INSERT/UPDATE/DELETE privileges | **0** |
+| Original authorization restored; no explicit CRM override left | PASS |
+| Production DB, production roles, and hosted project touched | **NO** |
+
+**Failure recovery and verification integrity:** An initial CI SQL fixture setup failed because dependent foreign keys were created before the referenced primary keys. The fixture was corrected to create all primary/unique keys before foreign keys, without changing any production DDL. Earlier test syntax and diagnostic shortcomings were also corrected. Only run #41182640369 is cited as successful CI03 acceptance. GitHub Actions destroys the ephemeral native stack after completion.
+
+**Scope limitation:** CI03 checks actual finance RPC implementations and matching metadata-derived table constraints inside **disposable native Supabase Auth/PostgREST/PostgreSQL**. It does not establish production financial transaction success, production credential/token revocation behavior, production data migration, or complete native application/12-board deployment acceptance. Existing live production FRT grants, assignments, and financial rows were not changed. Additional financial workflows and production-specific policies beyond the seven tested tables remain outside this milestone. Do not claim full CP-FRT-SEC10 final certification from this CI milestone alone.
+
+**Disposition:** CI03 **VERIFIED** within its isolated signed finance-domain scope, pending main-branch merge and post-merge checks. Broader operational certification remains PENDING.
