@@ -1,7 +1,7 @@
 name: APSYNTRA CRM Frontend Validation
 on:
   push:
-    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance]
+    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac]
     paths:
       - "index.html"
       - ".nojekyll"
@@ -9,6 +9,9 @@ on:
       - "scripts/pages-smoke.mjs"
       - "docs/PAGES-OPERATIONS.md"
       - "frontend/**"
+      - "sql/cp-frt-sec06-*.sql"
+      - "sql/tests/cp-frt-sec06-*.sql"
+      - "docs/CP-FRT-SEC06-CRM-PLATFORM-RBAC.md"
       - "sql/cp-role-configuration-bootstrap.sql"
       - "docs/CP-ROLE-CONFIGURATION.md"
       - ".github/workflows/apsyntra-frontend.yml"
@@ -37,6 +40,44 @@ jobs:
       - name: Test authentication and existing backend contracts
         run: node --test frontend/tests/*.test.mjs
 
+
+  disposable-postgres:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify isolated PostgreSQL 17 migrations and effective role boundaries
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-frt-sec06-disposable-setup.sql \
+            -f sql/cp-frt-sec06-crm-platform-role-cap.sql \
+            -f sql/cp-frt-sec06-domain-role-ceiling.sql \
+            -f sql/tests/cp-frt-sec06-disposable-acceptance.sql
   live-pages:
     needs: frontend
     if: github.ref == 'refs/heads/main'
