@@ -144,7 +144,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
     INVALID_BOOTSTRAP_DECISION:'The signed server returned an invalid administrator-classification result. Access cannot be accepted; check the backend session and RPC.',
     NONBOOTSTRAP_SESSION_REQUIRED:'The required signed nonbootstrap session was not verified. Sign out of any bootstrap account before testing.',
     STAGE_NOT_CONFIRMED_BY_BACKEND:'The selected stage is not the current server-confirmed CRM role transition. Changing this dropdown does not assign Viewer/Supervisor or revoke a role. Use the separate signed effective-permissions inspection to see real permissions.',
-    ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING:'The current signed account lacks the board-owner or FRT-module prerequisite required for the Restored transition acceptance. Do not grant production access solely for testing.',
+    PREEXISTING_BOARD_OWNER_REQUIRED:'The selected board is not owned by this account. CRM Supervisor does not override board Viewer permissions; edit requires a separate Editor or Owner membership. This controlled-transition test requires pre-existing ownership, not temporary role grants.',
+    ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING:'The signed account lacks the pre-existing FRT module access required for Supervisor/Restored transition acceptance. Do not grant production access solely for testing.',
     SIGNED_SELF_ACCESS_PRECONDITION_FAILED:'The server-authoritative self-permission snapshot could not be verified for this signed session. Run the separate signed effective-permissions inspection first.',
     BOARD_NOT_IN_SELF_ACCESS_SNAPSHOT:'The selected board is not in the signed caller-only authorized board snapshot. No transition acceptance can be claimed.'
    }[sec10Result.reason];
