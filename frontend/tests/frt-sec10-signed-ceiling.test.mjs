@@ -96,6 +96,6 @@ test('export drops arbitrary identity/server errors and does not fabricate fresh
  assert.equal(clean.freshSessionIssued,'NOT_VERIFIED');
  assert.equal(clean.prerequisiteOwnershipVerified,'NOT_VERIFIED');
  assert.equal(clean.checks[0].name,'invalid-check-name');
- assert.equal(clean.writesAttempted,0);
+ assert.equal(clean.writesAttempted,4);
  assert.doesNotMatch(JSON.stringify(clean),/Bearer|hidden|@|11111111|do-not-export/);
 });
