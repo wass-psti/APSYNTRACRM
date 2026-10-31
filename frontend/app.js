@@ -237,7 +237,8 @@ async function refreshWorkspace(){
  state.context=await db.context();
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
    state.roleData=null;state.userRoleData=null;state.userRoleSelected=null;
-   state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
+   state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
+   state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;
  }
  state.boards=await db.boards('active');
  state.user=auth.session?.user;
