@@ -22,6 +22,25 @@ test('known accessible board is displayed as a safe escaped option',()=>{
  assert.match(html,/value="SUPERVISOR"/);
  assert.match(html,/value="RESTORED"/);
 });
+test('verified bootstrap administrator sees SEC10 unavailable and explicit signout guidance',()=>{
+ const html=renderSecurityAcceptance({context,sec10IsBootstrap:true,sec10Boards:[{id:board,name:'QA'}]});
+ assert.match(html,/data-action="security-sec10-readonly" disabled/);
+ assert.match(html,/This session is a verified bootstrap administrator/);
+ assert.match(html,/Sign out before testing/);
+ assert.match(html,/approved isolated nonproduction environment/);
+});
+test('blocked results distinguish bootstrap session from malformed signed decision',()=>{
+ const html=renderSecurityAcceptance({context,sec10IsBootstrap:true,sec10Boards:[{id:board,name:'QA'}],
+  sec10Result:{scenario:'BOOTSTRAP',phase:'VIEWER',status:'BLOCKED',
+   reason:'BOOTSTRAP_SESSION_INELIGIBLE',checks:[]}});
+ assert.match(html,/Signed scenario: BOOTSTRAP/);
+ assert.match(html,/BOOTSTRAP_SESSION_INELIGIBLE/);
+ assert.match(html,/selection does not change account roles/);
+ const other=renderSecurityAcceptance({context,sec10Boards:[{id:board,name:'QA'}],
+  sec10Result:{scenario:'UNVERIFIED',phase:'VIEWER',status:'BLOCKED',
+   reason:'INVALID_BOOTSTRAP_DECISION',checks:[]}});
+ assert.match(other,/invalid administrator-classification result/);
+});
 test('result remains labeled read-only with no proof of new Auth issuance',()=>{
  const html=renderSecurityAcceptance({context,sec10Boards:[{id:board,name:'FRT'}],sec10Result:{
   phase:'VIEWER',status:'PASS',checks:[{name:'<img onerror=alert(1)>',status:'FAIL'}],
@@ -40,6 +59,8 @@ test('SEC10 app action uses read-only signed runner with context invalidation',(
  assert.match(s,/sanitizeFRTSec10Report\(state\.sec10Result\)/);
  assert.match(s,/case 'security-sec10-readonly'/);
  assert.match(s,/case 'security-sec10-copy'/);
+ assert.match(s,/sec10IsBootstrap:state\.roleVerified===true/);
+ assert.match(s,/if\(state\.roleVerified===true\)/);
  assert.match(s,/revision!==state\.sec10RunId\|\|!auth\.isSignedIn/);
  assert.match(s,/state\.sec10Result=null;state\.sec10RunId\+\+;/);
  const action=s.split("case 'security-sec10-readonly':{")[1].split("case 'security-sec10-copy':{")[0];
