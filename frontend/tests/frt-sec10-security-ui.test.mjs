@@ -91,3 +91,26 @@ test('SEC10 app action uses read-only signed runner with context invalidation',(
  const action=s.split("case 'security-sec10-readonly':{")[1].split("case 'security-sec10-copy':{")[0];
  assert.doesNotMatch(action,/setCrmPlatformRole|apsyntra_crm_platform_role_set|\.mutate\(|\.insert\(|\.update\(|\.delete\(/);
 });
+
+
+test('CI07 signed FRT read-only probe is available and never implies revocation certification',()=>{
+ const html=renderSecurityAcceptance({context,ci07Result:{checkpoint:'CP-FRT-SEC10-CI07',
+  status:'PASS',role:'FINANCE_APPROVER',checks:[
+   {name:'signed-frt-bootstrap-role-resolved',status:'PASS'}],
+  writesAttempted:0,revocationVerified:'NOT_VERIFIED'}});
+ assert.match(html,/data-action="security-ci07-readonly"/);
+ assert.match(html,/CI07 signed FRT result: PASS/);
+ assert.match(html,/FINANCE_APPROVER/);
+ assert.match(html,/Session revocation: NOT VERIFIED/);
+ assert.match(html,/Finance transactions: NOT VERIFIED/);
+ assert.match(html,/data-action="security-ci07-copy"/);
+});
+test('CI07 signed FRT result escapes untrusted server details and blocks duplicate runs',()=>{
+ const html=renderSecurityAcceptance({context,ci07Busy:true,ci07Result:{
+  status:'BLOCKED',role:'<svg onload=alert(1)>',reason:'<img onerror=alert(1)>',
+  checks:[{name:'<script>alert(1)</script>',status:'BLOCKED'}]}});
+ assert.match(html,/data-action="security-ci07-readonly" disabled/);
+ assert.doesNotMatch(html,/<svg onload|<img onerror|<script>alert/i);
+ assert.match(html,/&lt;svg onload/);
+ assert.match(html,/&lt;img onerror/);
+});
