@@ -1,14 +1,29 @@
-/** Strict CSP regression: no inline style attributes or CSSOM style injections.
- * Keep style-src 'self' and ensure same-origin stylesheet has each utility class.
+/** Temporary Annotate compatibility CSP regression.
+ * Permit inline stylesheet rules only; continue blocking inline script execution,
+ * inline style attributes, and application CSSOM style injection.
+ * Remove the temporary exception once the desktop annotation overlay is fixed.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 const css=readFileSync('frontend/styles.css','utf8');
 const html=readFileSync('index.html','utf8');
-test('strict style-src self is preserved without unsafe-inline or unsafe-hashes',()=>{
- assert.match(html,/style-src 'self'/);
- assert.doesNotMatch(html,/unsafe-inline|unsafe-hashes/);
+test('temporary annotation-only CSS exception preserves other CSP protections',()=>{
+ const meta=html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"\/>/);
+ assert.ok(meta,'CSP must remain present in the main HTML document');
+ const directives=Object.fromEntries(meta[1].split(';').map(d=>d.trim()).filter(Boolean)
+  .map(d=>{const [name,...values]=d.split(/\s+/);return [name,values]}));
+ assert.deepEqual(directives['style-src'],["'self'","'unsafe-inline'"]);
+ assert.deepEqual(directives['style-src-attr'],["'none'"]);
+ assert.deepEqual(directives['script-src'],["'self'"]);
+ assert.deepEqual(directives['default-src'],["'self'"]);
+ assert.deepEqual(directives['object-src'],["'none'"]);
+ assert.deepEqual(directives['frame-src'],["'none'"]);
+ assert.deepEqual(directives['base-uri'],["'self'"]);
+ assert.deepEqual(directives['form-action'],["'self'"]);
+ assert.deepEqual(directives['connect-src'],["'self'",'https://jtlusodorfnyzgyuewkz.supabase.co']);
+ assert.equal((meta[1].match(/'unsafe-inline'/g)||[]).length,1,'only style-src may allow inline styling');
+ assert.doesNotMatch(meta[1],/unsafe-eval|unsafe-hashes|data:\s*;|\*/);
 });
 test('frontend generated markup never uses blocked inline styles or CSSOM injection',()=>{
  for(const file of readdirSync('frontend').filter(x=>x.endsWith('.js'))){
