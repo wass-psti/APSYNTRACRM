@@ -212,3 +212,35 @@ CI output includes no real user IDs, passwords, sessions or secrets. A dedicated
 **Classification:** CI05 isolation and merged CI acceptance = VERIFIED; CI06 production preflight = VERIFIED; hosted session-guard activation, authenticated legitimate-user postrollout regression, immediate revoked-session finance denial, independent finance transaction acceptance and full SEC10 production sign-off = **PENDING/BLOCKED**. CI05's tested SQL remains a disposable candidate only. The preflight is a change-control readiness check, not a production activation or authorization to perform one.
 
 **Next dependency:** Before production DDL that changes the FRT financial authorization boundary, obtain separate approval for the specific live rollout and a safe recovery window. Retain the existing role resolver and grants as the rollback baseline; repeat the read-only preflight immediately before deployment to detect drift, then perform controlled signed legitimate-user and revoked-session testing without using or modifying real financial data for negative probes. Do not conflate GitHub Pages deployment with backend session-guard activation.
+
+
+## CP-FRT-SEC10-CI07 — controlled production session-guard activation (2026-10-31)
+
+**Authorizing instruction:** the operator explicitly requested controlled production FRT session-guard activation followed by signed-session and financial authorization verification. Existing Supabase project `jtlusodorfnyzgyuewkz` (project display name WatchdogWorkspace) remains the single APSYNTRA CRM backend.
+
+**Deployed migration:** `cp_frt_sec10_ci07_production_session_guard_activation`, confirmed in the authoritative Supabase migration ledger. The SQL is committed at `sql/cp-frt-sec10-ci07-production-session-guard-activation.sql`. Production deployment was a single preflight-fenced migration: it first required the exact previous `private.frt_current_role(uuid)` function MD5 `2b518f7be033ea25a6c103184c283a7d`, existing ten-table FRT RLS posture, no direct anon/authenticated table grants, the revoked legacy FRT admin setter, and `auth.sessions` schema compatibility. Source installs the **verbatim isolated-CI05-tested candidate** `private.frt_signed_session_active()` and adds it as a fail-closed precondition in the existing FRT role resolver, without a parallel auth framework.
+
+**Emergency resolver-only rollback:** `sql/cp-frt-sec10-ci07-production-session-guard-rollback.sql`, captured from the exact original live `pg_get_functiondef`; includes original MD5 proof, drift precondition, non-cascading removal of the session helper and schema reload. **Rollback has not been executed** because production deployment passed. Rolling back would restore the previously documented immediate-revocation gap.
+
+**Read-only post-deployment verification:** `sql/tests/cp-frt-sec10-ci07-production-readonly-postcheck.sql` returned **`PRODUCTION_SCHEMA_ACTIVATION_VERIFIED`** after a correction solely to the test's PostgreSQL `proconfig` empty-search-path representation; the deployed SQL itself was not altered. Explicitly checked: 10/10 RLS-enabled FRT tables, 0 direct API table grants, `postgres`-owned private `SECURITY DEFINER` helper with empty `search_path`, signed-subject ownership matched to `auth.sessions`, explicit JWT expiration check, original CRM platform ceiling still used, session-guard delegation in FRT resolver, no direct anonymous or authenticated access to helper, and legacy `frt_admin_set_role` still non-callable. The production migration ledger includes exactly one CI07 activation entry.
+
+**Additional live SQL regression (no authenticated client session):** Calls without a signed JWT context returned false/NULL for `private.frt_signed_session_active`, `private.frt_current_role`, `private.frt_has_membership`, and `private.frt_has_role`. The SQL session's `auth.uid()` was NULL; these results are **not** genuine remote unsigned PostgREST calls or signed-user acceptance.
+
+**Production integrity inventory after deployment:** 10 Auth session records; 0 FRT requests, finance audit rows, liquidations or voucher counters; 0 explicit CRM role overrides, 2 existing CRM role audits, 76 board memberships, 121 module assignments. These match the captured pre-deployment counts; no production Auth settings, credentials, user records, role assignments, board memberships or financial data were modified.
+
+**Signed acceptance limitations:** There is no authorized production bearer token/interactive signed session available to the agent for independent positive or immediate post-logout remote RPC acceptance. The live role-assignment inspection found zero active direct FRT module assignees, so a real nonbootstrap Finance Manager write test cannot be run without changing production permission assignments. Do not create or promote production users or create financial test rows solely to force a passing result. The existing isolated CI05 workflow previously verified post-logout denial by all four financial RPCs, fresh GoTrue signed finance access, cross-workspace signed denial, and natural expiry. These isolated results validate candidate behavior, **not** new production-signed execution.
+
+| CI07 acceptance gate | Classification |
+| --- | --- |
+| Authoritative current-schema and role preflight | VERIFIED |
+| Exact previous resolver rollback captured in repository | VERIFIED (not executed) |
+| Production session-guard migration installed and ledger reconciled | VERIFIED |
+| Independent deployed SQL/RLS/grant postcheck | VERIFIED |
+| Live data integrity and unsigned SQL deny regressions | VERIFIED |
+| Genuine production signed-user positive FRT RPC | PENDING |
+| Same unexpired production access JWT denied immediately after session revocation | PENDING |
+| Production authorized financial operation and nonbootstrap boundary | BLOCKED — no direct active FRT role assignee/sign-in available |
+
+**Evidence-based progress for this defined eight-gate CI07 checkpoint:** **5/8 VERIFIED (62.5%)**, with runtime acceptance remaining outstanding. This is not a percentage of the whole APSYNTRA CRM project. Final CP-FRT-SEC10/CI07 signed-user acceptance and operational certification are **not complete**.
+
+**Required next step:** Use an existing legitimate signed FRT-capable user (preferably a bootstrap administrator for permitted read-only `frt_bootstrap`) to run the existing GitHub Pages security acceptance, and independently validate the same unexpired bearer after a confirmed server-side logout against a read-only FRT RPC; report sanitized status only, never the token. Keep authorized finance write checks restricted to approved operational transactions or an isolated nonproduction environment. The production schema may be considered ACTIVATED/VERIFIED, but full signed runtime and finance acceptance remain PENDING.
