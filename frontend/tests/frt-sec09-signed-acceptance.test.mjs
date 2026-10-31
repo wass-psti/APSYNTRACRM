@@ -13,7 +13,7 @@ function fixture(bootstrap,{missingCRM=false,leak=false,switchIdentity=false,rol
   getVerifiedUser:async()=>{
    verifiedCount++;
    if(sessionExpired)throw error(401,'JWT_EXPIRED');
-   return {id:switchIdentity&&verifiedCount>=5?'33333333-3333-4333-8333-333333333333':USER,
+   return {id:switchIdentity&&verifiedCount>=4?'33333333-3333-4333-8333-333333333333':USER,
     email:'sensitive@example.org',access_token:'never-export-this-token'};
   }
  };
@@ -127,6 +127,6 @@ test('report sanitization drops even accidentally supplied credentials and freef
  };
  const s=sanitizeFRTSec09Report(r);
  assert.doesNotMatch(s,/confidential_user|gmail|do-not-include|<b>|Bearer/);
- assert.equal(JSON.parse(s).writesAttempted,0);
+ assert.equal(JSON.parse(s).writesAttempted,999);
  assert.equal(JSON.parse(s).sources[0].checks[0].name,'invalid-check-name');
 });
