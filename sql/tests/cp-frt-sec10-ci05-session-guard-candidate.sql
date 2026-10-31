@@ -52,28 +52,4 @@ AS $$
        <= public.apsyntra_crm_role_rank(
          public.apsyntra_crm_effective_role(auth.uid(),p_workspace_id));
 $$;
--- Preserve the existing FRT bootstrap read contract in this disposable fixture.
-CREATE OR REPLACE FUNCTION public.frt_bootstrap(p_workspace_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'private', 'pg_temp'
-AS $function$
-DECLARE v_role text;
-BEGIN
- v_role := private.frt_current_role(p_workspace_id);
- IF v_role IS NULL THEN RAISE EXCEPTION 'WatchdogWorkspace access required' USING errcode='42501'; END IF;
- RETURN jsonb_build_object('membership',jsonb_build_object(
-   'workspace_id',p_workspace_id,'user_id',auth.uid(), 'role',v_role,
-   'enabled',true,'status','active',
-   'email',(SELECT p.email FROM public.profiles p WHERE p.id=auth.uid()),
-   'display_name',(SELECT p.display_name FROM public.profiles p WHERE p.id=auth.uid())),
-   'companies',(SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.display_order),'[]'::jsonb)
-       FROM public.frt_companies c WHERE c.workspace_id=p_workspace_id));
-END;
-$function$
-;
-REVOKE ALL ON FUNCTION public.frt_bootstrap(uuid) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.frt_bootstrap(uuid) TO authenticated;
-NOTIFY pgrst,'reload schema';
 COMMIT;
