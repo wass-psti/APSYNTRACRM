@@ -122,11 +122,11 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
  html+='</div></div>';
  html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC10 · Controlled transition read-only probe</h3></div>'+
  '<div class="panel-body"><p class="muted">Use only with an independently approved isolated nonproduction role transition. The signed nonbootstrap user must already own the selected board and have an FRT module assignment before the transition. Sign out and sign in separately after each change. This probe never modifies a role and cannot independently prove a newly issued Auth session or original ownership.</p>'+
- '<label for="sec10-board">Existing accessible board</label><select id="sec10-board" class="search-input" '+(!(sec10Boards||[]).length?'disabled':'')+'>'+
+ '<label class="sec10-label" for="sec10-board">Existing accessible board</label><select id="sec10-board" class="search-input sec10-select" '+(!(sec10Boards||[]).length?'disabled':'')+'>'+
  (sec10Boards||[]).filter(b=>typeof b?.id==='string').map(b=>'<option value="'+escape(b.id)+'">'+escape(b.name||'Board')+'</option>').join('')+
  '</select>'+
  (!(sec10Boards||[]).length?'<div class="note">No authorized active boards are available for this account. The controlled transition probe requires an existing authorized board; the general signed effective-permissions inspection above remains available without one.</div>':'')+
- '<label for="sec10-stage">Independently verified backend stage</label><select id="sec10-stage" class="search-input">'+
+ '<label class="sec10-label" for="sec10-stage">Independently verified backend stage</label><select id="sec10-stage" class="search-input sec10-select">'+
  '<option value="VIEWER">Explicit Viewer cap</option><option value="SUPERVISOR">Explicit Supervisor cap</option>'+
  '<option value="RESTORED">Override revoked — inherited original role</option></select>'+
  '<button class="primary" data-action="security-sec10-readonly" '+(sec10Busy||!(sec10Boards||[]).length||sec10IsBootstrap?'disabled':'')+'>'+
