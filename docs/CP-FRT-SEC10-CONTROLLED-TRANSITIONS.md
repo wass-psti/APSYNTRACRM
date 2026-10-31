@@ -69,3 +69,19 @@ All live mutations require specific separately approved **isolated nonproduction
 | Full CP-FRT-SEC10 final acceptance / production certification | PENDING |
 
 **Next development gate:** Run branch CI. If passed, preserve the isolated tests and add real signed evidence only after an approved nonproduction environment and actor/target are available. Do not advance the 100% completion claim solely from disposable SQL or mocked tests.
+
+
+## CP-FRT-SEC10 production UI observation — three blocked stage attempts
+
+The operator supplied three sanitized browser results from the deployed `#/security` screen, individually marked `VIEWER`, `SUPERVISOR`, and `RESTORED`. Each returned `BLOCKED` with `NONBOOTSTRAP_SESSION_REQUIRED`, **zero checks**, **zero writes**, `roleChangesAttempted: 0`, `freshSessionIssued: NOT_VERIFIED` and `prerequisiteOwnershipVerified: NOT_VERIFIED`. These are **precondition stops**, not three failed role permissions. Selecting a stage does not assign that role.
+
+The original SEC10 runner used the same reason whenever `apsyntra_role_is_bootstrap` returned anything other than literal `false` and always labeled reports `NONBOOTSTRAP`, including reports blocked before validating that classification.
+
+The corrective patch:
+- Classifies literal `true` as `BOOTSTRAP` and reports `BOOTSTRAP_SESSION_INELIGIBLE`.
+- Distinguishes nonboolean RPC results as `UNVERIFIED` / `INVALID_BOOTSTRAP_DECISION`, preserving the fail-closed guard.
+- Only assigns `NONBOOTSTRAP` after the signed server returns literal `false`.
+- Exposes an informative disabled control when the existing session is already verified as a bootstrap admin, and explains blocked reasons.
+- Retains the server role setter, Supabase authorization rules, read-only probe, actual role counters, and production data unchanged.
+
+No real Viewer/Supervisor/Restored transition has been verified from those three reports. Running the probe requires an eligible pre-existing nonbootstrap account, independently documented FRT grant and board owner membership, isolated authorized nonproduction role transitions, and genuine separate sign-ins for each phase. Do not turn a production employee into a test account.
