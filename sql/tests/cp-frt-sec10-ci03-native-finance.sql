@@ -88,44 +88,44 @@ CREATE TABLE public.frt_liquidation_items (
   amount numeric(14,2) NOT NULL,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
-ALTER TABLE public.frt_audit_logs ADD CONSTRAINT frt_audit_logs_fund_request_id_fkey FOREIGN KEY (fund_request_id) REFERENCES frt_requests(id) ON DELETE CASCADE;
-ALTER TABLE public.frt_audit_logs ADD CONSTRAINT frt_audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
-ALTER TABLE public.frt_audit_logs ADD CONSTRAINT frt_audit_logs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 ALTER TABLE public.frt_audit_logs ADD CONSTRAINT frt_audit_logs_pkey PRIMARY KEY (id);
 ALTER TABLE public.frt_companies ADD CONSTRAINT frt_companies_code_check CHECK ((code = ANY (ARRAY['WAO'::text, 'WASS'::text, 'PSTI'::text])));
-ALTER TABLE public.frt_companies ADD CONSTRAINT frt_companies_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 ALTER TABLE public.frt_companies ADD CONSTRAINT frt_companies_pkey PRIMARY KEY (id);
 ALTER TABLE public.frt_companies ADD CONSTRAINT frt_companies_workspace_id_code_key UNIQUE (workspace_id, code);
 ALTER TABLE public.frt_companies ADD CONSTRAINT frt_companies_workspace_id_display_order_key UNIQUE (workspace_id, display_order);
 ALTER TABLE public.frt_liquidation_items ADD CONSTRAINT frt_liquidation_items_amount_check CHECK ((amount >= (0)::numeric));
-ALTER TABLE public.frt_liquidation_items ADD CONSTRAINT frt_liquidation_items_liquidation_id_fkey FOREIGN KEY (liquidation_id) REFERENCES frt_liquidations(id) ON DELETE CASCADE;
-ALTER TABLE public.frt_liquidation_items ADD CONSTRAINT frt_liquidation_items_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 ALTER TABLE public.frt_liquidation_items ADD CONSTRAINT frt_liquidation_items_pkey PRIMARY KEY (id);
-ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_fund_request_id_fkey FOREIGN KEY (fund_request_id) REFERENCES frt_requests(id) ON DELETE CASCADE;
-ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id);
-ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES auth.users(id);
-ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_pkey PRIMARY KEY (id);
 ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_workspace_id_fund_request_id_key UNIQUE (workspace_id, fund_request_id);
 ALTER TABLE public.frt_request_items ADD CONSTRAINT frt_request_items_amount_check CHECK ((amount >= (0)::numeric));
-ALTER TABLE public.frt_request_items ADD CONSTRAINT frt_request_items_fund_request_id_fkey FOREIGN KEY (fund_request_id) REFERENCES frt_requests(id) ON DELETE CASCADE;
-ALTER TABLE public.frt_request_items ADD CONSTRAINT frt_request_items_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 ALTER TABLE public.frt_request_items ADD CONSTRAINT frt_request_items_pkey PRIMARY KEY (id);
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_liquidation_status_check CHECK ((liquidation_status = ANY (ARRAY['NOT_SUBMITTED'::text, 'SUBMITTED'::text, 'UNDER_REVIEW'::text, 'APPROVED'::text, 'RETURNED'::text])));
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_status_check CHECK ((status = ANY (ARRAY['PENDING_APPROVAL'::text, 'IN_PROGRESS'::text, 'DONE'::text, 'BLOCKED'::text, 'CLOSED'::text, 'REJECTED'::text])));
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_total_amount_check CHECK ((total_amount >= (0)::numeric));
+ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_pkey PRIMARY KEY (id);
+ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_workspace_id_company_id_voucher_no_key UNIQUE (workspace_id, company_id, voucher_no);
+ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_last_number_check CHECK ((last_number >= 0));
+ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_pkey PRIMARY KEY (workspace_id, company_id, voucher_year);
+ALTER TABLE public.frt_audit_logs ADD CONSTRAINT frt_audit_logs_fund_request_id_fkey FOREIGN KEY (fund_request_id) REFERENCES frt_requests(id) ON DELETE CASCADE;
+ALTER TABLE public.frt_audit_logs ADD CONSTRAINT frt_audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
+ALTER TABLE public.frt_audit_logs ADD CONSTRAINT frt_audit_logs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+ALTER TABLE public.frt_companies ADD CONSTRAINT frt_companies_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+ALTER TABLE public.frt_liquidation_items ADD CONSTRAINT frt_liquidation_items_liquidation_id_fkey FOREIGN KEY (liquidation_id) REFERENCES frt_liquidations(id) ON DELETE CASCADE;
+ALTER TABLE public.frt_liquidation_items ADD CONSTRAINT frt_liquidation_items_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_fund_request_id_fkey FOREIGN KEY (fund_request_id) REFERENCES frt_requests(id) ON DELETE CASCADE;
+ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id);
+ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES auth.users(id);
+ALTER TABLE public.frt_liquidations ADD CONSTRAINT frt_liquidations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+ALTER TABLE public.frt_request_items ADD CONSTRAINT frt_request_items_fund_request_id_fkey FOREIGN KEY (fund_request_id) REFERENCES frt_requests(id) ON DELETE CASCADE;
+ALTER TABLE public.frt_request_items ADD CONSTRAINT frt_request_items_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_closed_by_fkey FOREIGN KEY (closed_by) REFERENCES auth.users(id);
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_company_id_fkey FOREIGN KEY (company_id) REFERENCES frt_companies(id);
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_finance_approved_by_fkey FOREIGN KEY (finance_approved_by) REFERENCES auth.users(id);
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_requestor_id_fkey FOREIGN KEY (requestor_id) REFERENCES auth.users(id);
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_transfer_confirmed_by_fkey FOREIGN KEY (transfer_confirmed_by) REFERENCES auth.users(id);
 ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_pkey PRIMARY KEY (id);
-ALTER TABLE public.frt_requests ADD CONSTRAINT frt_requests_workspace_id_company_id_voucher_no_key UNIQUE (workspace_id, company_id, voucher_no);
-ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_last_number_check CHECK ((last_number >= 0));
 ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_company_id_fkey FOREIGN KEY (company_id) REFERENCES frt_companies(id) ON DELETE CASCADE;
 ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_pkey PRIMARY KEY (workspace_id, company_id, voucher_year);
 
 -- Existing domain RPC implementations: these remain SECURITY DEFINER and
 -- enforce private.frt_current_role / private.frt_has_role at server runtime.
