@@ -18,9 +18,18 @@ const requestPayload={company:'WAO',title:'CI03 Isolated Expense Request',
  dateNeeded:'2026-11-15',items:[{category:'CI expense',amount}]};
 const liquidationPayload={notes:'CI-only liquidation',
  items:[{description:'Ephemeral receipt',amount:85,vendor:'CI fixture'}]};
+function safeSqlError(e){
+ const stderr=String(e?.stderr||'');
+ const line=stderr.split('\\n').find(x=>x.includes('ERROR:'))||'no SQL error detail';
+ const cleaned=line.replace(/https?:\\/\\/[^\\s]+/g,'[endpoint]')
+  .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi,'[id]').slice(0,190);
+ process.stderr.write('CI03 isolated finance SQL: '+cleaned+'\\n');
+ throw Error('ISOLATED_FINANCE_SQL_FAILED');
+}
 function sql(db,source){
- return execFileSync('psql',['-X','-v','ON_ERROR_STOP=1','-A','-t','-d',db,'-c',source],
-  {encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:45000}).trim();
+ try{return execFileSync('psql',['-X','-v','ON_ERROR_STOP=1','-A','-t','-d',db,'-c',source],
+  {encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:45000}).trim();}
+ catch(e){safeSqlError(e);}
 }
 function financeState(db){
  const q=String.raw`
@@ -89,8 +98,9 @@ async function acceptance({config:c,db,fetcher,actorIds}){
  const dir=mkdtempSync(join(tmpdir(),'sec10-finance-'));
  try{
   const file=join(dir,'finance.sql');writeFileSync(file,source,{mode:0o600});
-  execFileSync('psql',['-X','-q','-v','ON_ERROR_STOP=1','-d',db,'-f',file],
-   {encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:45000});
+  try{execFileSync('psql',['-X','-q','-v','ON_ERROR_STOP=1','-d',db,'-f',file],
+   {encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:45000});}
+  catch(e){safeSqlError(e);}
  }finally{rmSync(dir,{recursive:true,force:true});}
  sql(db,"INSERT INTO public.frt_companies(workspace_id,code,name,display_order) VALUES ('"+w+"','WAO','CI-only company',1);");
  const initial=financeState(db);
