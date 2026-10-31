@@ -8,7 +8,7 @@ test('general signed inspector works for HR even when there are no authorized bo
  assert.match(html,/data-action="security-effective-access"/);
  assert.doesNotMatch(html,/data-action="security-effective-access" disabled/);
  assert.match(html,/No authorized active boards are available/);
- assert.match(html,/id="sec10-board" class="search-input" disabled/);
+ assert.match(html,/id="sec10-board" class="search-input sec10-select" disabled/);
  assert.match(html,/data-action="security-sec10-readonly" disabled/);
 });
 test('bootstrap can inspect own effective permissions, but controlled transition is not permitted',()=>{
