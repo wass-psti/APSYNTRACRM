@@ -50,7 +50,7 @@ function simulatedSupabase({owner=true,frt=true,bootstrap=true,dropViewerAck=fal
   if(rpc==='apsyntra_role_is_bootstrap')return okay(actor===admin&&bootstrap);
   if(rpc==='apsyntra_crm_my_effective_access'&&actor===member)
    return okay({schemaVersion:1,workspaceId:ws,bootstrap:false,
-    effectivePlatformRole:role||'employee',explicitPlatformRole:role,
+    platformRole:'employee',effectivePlatformRole:role||'employee',explicitPlatformRole:role,
     boards:[{id:board,memberRole:owner?'owner':'viewer',
       view:true,edit:role!=='viewer'&&owner,manage:role===null&&owner}],
     modules:[{moduleId:'fund-released-tracker',allowed:frt&&role!=='viewer',role:frt?'FINANCE_MANAGER':null}]});
