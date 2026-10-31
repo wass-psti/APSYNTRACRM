@@ -30,7 +30,8 @@ test('candidate keeps existing FRT module and CRM ceilings while checking sessio
  assert.doesNotMatch(candidate,/INSERT INTO auth\.sessions|DELETE FROM auth\.sessions/);
 });
 test('real JWT natural expiry is based on GoTrue exp without a fake or edited bearer',()=>{
- assert.ok(source.includes('member.sessionProof.expiresAt*1000+2500'));
+ assert.ok(source.includes('const expireAt=member.sessionProof.expiresAt*1000'));
+ assert.ok(source.includes('const lastProbe=expireAt+100000'));
  assert.ok(source.includes('setTimeout(resolve,delay)'));
  assert.ok(source.includes('member.accessToken'));
  assert.ok(source.includes('NATURALLY_EXPIRED_GOTRUE_JWT_STILL_AUTHORIZED'));
