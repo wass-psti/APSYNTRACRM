@@ -134,8 +134,11 @@ async function ci05Core({config,db,fetcher,actorIds,requestId,
   const lastProbe=expireAt+100000;
   let expiredStatus=0;
   for(;;){
+   // Expiry is checked through a read-only RPC so allowed clock-skew
+   // requests cannot accidentally create financial rows during polling.
    expiredStatus=await withToken(config,fetcher,member.accessToken,
-    'frt_create_request',{p_workspace_id:WORKSPACE,p_payload:deniedPayload});
+    'has_module_access',{p_module_id:'fund-released-tracker',
+     p_user_id:actorIds.member});
    if(expiredStatus===401||expiredStatus===403)break;
    ok(Date.now()<lastProbe,'NATURALLY_EXPIRED_GOTRUE_JWT_STILL_AUTHORIZED');
    await new Promise(resolve=>setTimeout(resolve,Math.min(10000,lastProbe-Date.now())));
