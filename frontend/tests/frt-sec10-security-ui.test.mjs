@@ -41,6 +41,17 @@ test('blocked results distinguish bootstrap session from malformed signed decisi
    reason:'INVALID_BOOTSTRAP_DECISION',checks:[]}});
  assert.match(other,/invalid administrator-classification result/);
 });
+test('Supervisor on Viewer-only board reports unmet ownership rather than failed privilege',()=>{
+ const html=renderSecurityAcceptance({context,sec10Boards:[{id:board,name:'Operations'}],
+  sec10Result:{phase:'SUPERVISOR',scenario:'NONBOOTSTRAP',status:'BLOCKED',
+   reason:'PREEXISTING_BOARD_OWNER_REQUIRED',checks:[],
+   writesAttempted:0,roleChangesAttempted:0}});
+ assert.match(html,/PREEXISTING_BOARD_OWNER_REQUIRED/);
+ assert.match(html,/CRM Supervisor does not override board Viewer permissions/);
+ assert.match(html,/pre-existing ownership/);
+ assert.match(html,/Writes: 0/);
+ assert.doesNotMatch(html,/SEC10 signed capability result: PASS/);
+});
 test('result remains labeled read-only with no proof of new Auth issuance',()=>{
  const html=renderSecurityAcceptance({context,sec10Boards:[{id:board,name:'FRT'}],sec10Result:{
   phase:'VIEWER',status:'PASS',checks:[{name:'<img onerror=alert(1)>',status:'FAIL'}],
