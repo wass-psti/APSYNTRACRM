@@ -11,7 +11,7 @@ The production platform role override table remains empty. The signed HR member'
 
 ## Current environment blocker
 
-The connected Supabase organization exposes **one project**, the production WatchdogWorkspace/APSYNTRA backend (`jtlusodorfnyzgyuewkz`). **There is currently no independent connected nonproduction Supabase project available** for genuine live role mutation tests. Creating a new project or branch may incur costs and must have separate operational approval. No production role changes are permitted for SEC10 certification.
+The connected Supabase organization exposes **one hosted project**, the production WatchdogWorkspace/APSYNTRA backend (`jtlusodorfnyzgyuewkz`). A separate hosted project remains unavailable; no cost-bearing infrastructure was created. **This is no longer a blocker for isolated CI role-transition acceptance:** CP-FRT-SEC10-CI02 now runs real Supabase Auth/PostgREST/PostgreSQL services in a disposable GitHub-hosted native runtime, never against the connected production project. Independent acceptance of production financial workflows and real production role mutations remains outside this CI evidence.
 
 ## Implemented isolated runner
 
@@ -73,3 +73,30 @@ A safe dry run with missing configuration performs **zero network calls** and re
 **Next engineering gate:** Integrate the already-tested CP06/SEC10 *database authorization fixture* with the native CI Postgres/PostgREST/Auth runtime so the genuine signed sessions execute central CRM role and FRT access RPCs. Only then may the full Viewer → Supervisor → Restored runner be exercised against the disposable CI workspace. Independently verify the correlated role audit ledger, CAS semantics, restored memberships and FRT-domain constraints. Do **not** infer production acceptance or perform live production role changes from this isolated Auth smoke PASS.
 
 **Status:** CI Auth runtime and fresh signed-session proof VERIFIED; CI signed RBAC transitions and independent FRT operational acceptance PENDING. Existing SEC10 overall operational acceptance remains separate and is not automatically increased to full completion.
+
+## CP-FRT-SEC10-CI02 — real signed transitions and independent CI audit
+
+**Date:** October 31, 2026. **Latest verified run:** [GitHub Actions #41181421406](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41181421406) — **SUCCESS** on commit `7da9ccfa80c32d1c7d39b6a05e317b9fb826c91f`. Earlier first-pass failure was a double-escaped loopback-port regex in the new CI adapter; fixed and covered by a regression test. Both the earlier corrected workflow and the final regression workflow passed.
+
+**Execution design:** The CI02 workflow uses `supabase/setup-cli@v1` pinned to Supabase CLI 2.121.0 and runs the experimental native stack only on the GitHub-hosted Ubuntu runner. It reads local `API_URL`/`DB_URL` from the CLI status output and refuses any non-loopback endpoint, production domain, or execution outside GitHub Actions. Three CI-only GoTrue users are created by the local Auth API, and their *actual Auth-issued IDs* are mapped into the established CP06 disposable authorization fixture. The adapter deliberately removes the mock `auth.users` and `auth.uid()` declarations instead of overwriting the native GoTrue schema. It loads the existing CRM role-cap and FRT domain-ceiling SQL, minimal CI-only signed-context/bootstrap helpers, and the CP11 self-access inspector. It does not modify or clone the hosted production database.
+
+**Acceptance evidence (actual signed HTTP/RPC requests):**
+
+| Check | Result |
+| --- | --- |
+| Three distinct genuinely issued nonbootstrap Supabase Auth sessions | **PASS** |
+| Admin identity and bootstrap-only role setter authorization | **PASS** |
+| Viewer stored CRM override, board read-only, FRT denial | **PASS** |
+| Stale CAS transition rejected without changing the assigned revision | **PASS** |
+| Supervisor stored CRM override, board edit allowed/manage denied, FRT allowed | **PASS** |
+| Revocation of the explicit override and inherited original permissions restored | **PASS** |
+| Other-workspace board read and admin snapshot both denied | **PASS** |
+| Independent PostgreSQL ledger after running the live signed requests | **3 requests + 3 correlated applied audits** |
+| Expected application assignments, owner membership, bootstrap roster, user count and no CRM override at end | **UNCHANGED / RESTORED** |
+| Production Supabase touched or modified | **NO** |
+
+CI output includes no real user IDs, passwords, sessions or secrets. A dedicated regression test checks cloud-URL rejection and ensures the real native Auth schema is preserved when adapting fixture data. The workflow unconditionally destroys its native stack and transient connection files.
+
+**Verification boundaries:** The fixture intentionally contains the authoritative CP06 CRM role/FRT capability functions and CP11 inspection contract, *not* the full production finance data model. The workflow does **not** prove live production changes, financial transactions, approval workflows, field-level FRT record authorization, token invalidation after logout, production-specific RLS policy parity, or final twelve-board application operations. Such requirements remain PENDING separately. CI02 cannot itself authorize weakening central RBAC or real production role edits.
+
+**Disposition:** CP-FRT-SEC10-CI02 genuine isolated signed RBAC transition and linked audit acceptance **VERIFIED**. The defined CI02 milestone is complete; broader CP-FRT-SEC10 production-operational/final acceptance remains **PENDING**.

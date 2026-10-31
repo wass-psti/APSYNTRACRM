@@ -62,12 +62,28 @@ async function signedPhase(config,fetcher,target,phase,seenSessions,steps){
 /** Only an explicitly designated nonproduction project may mutate roles.
  * Outcomes are never final acceptance until independently correlated DB audit.
  */
-export async function runIsolatedSEC10(env,fetcher=globalThis.fetch){
+export async function runIsolatedSEC10(env,fetcher=globalThis.fetch,ciConfig=null){
  const result={status:'BLOCKED',reason:'NOT_EXECUTED',steps:[],
   transitionCount:0,mutationAttempts:0,verifiedSessionCount:0};
  let config;
- try{config=liveConfig(env);}
- catch{result.reason='NONPRODUCTION_CONFIG_NOT_VERIFIED';return result;}
+ try{
+  if(ciConfig!==null){
+   if(env.CI!=='true'||env.GITHUB_ACTIONS!=='true'||env.SEC10_CI02!=='EPHEMERAL_ONLY')
+    throw Error('CI_ONLY');
+   const url=new URL(ciConfig.url);
+   if(url.protocol!=='http:'||!['127.0.0.1','localhost'].includes(url.hostname)||
+      !/^\d+$/.test(url.port)||url.pathname!=='/'||
+      url.username||url.password||url.search||url.hash)
+    throw Error('CI_LOOPBACK_REQUIRED');
+   if(!ciConfig.publishableKey||!ciConfig.bootstrapEmail||!ciConfig.bootstrapPassword||
+      !ciConfig.memberEmail||!ciConfig.memberPassword||
+      ciConfig.bootstrapEmail===ciConfig.memberEmail)
+    throw Error('CI_AUTH_CONFIG_INCOMPLETE');
+   requireUuid(ciConfig.workspaceId,'WORKSPACE');
+   requireUuid(ciConfig.boardId,'BOARD');
+   config=ciConfig;
+  }else config=liveConfig(env);
+ }catch{result.reason='NONPRODUCTION_CONFIG_NOT_VERIFIED';return result;}
  const admin=new IsolatedSignedClient(config,fetcher);
  const member=new IsolatedSignedClient(config,fetcher);
  let target=null,latestRevision=null,activeRole=null,initialRole=null,mutated=false,pendingReceipt=false;
