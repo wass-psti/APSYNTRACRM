@@ -14,9 +14,11 @@ const matrix={
  SUPERVISOR:{view:true,edit:true,manage:false,frt:true},
  RESTORED:{view:true,edit:true,manage:true,frt:true}
 };
-function fixture(stage,{leak=false,otherBoard=false,expired=false,drift=false,badBoolean=false,bootstrap=false,unconfirmed=false,missingPrereqs=false,missingSelf=false}={}){
+function fixture(stage,{leak=false,otherBoard=false,expired=false,drift=false,badBoolean=false,bootstrap=false,unconfirmed=false,missingPrereqs=false,missingSelf=false,viewerBoard=false}={}){
  let verified=0;
  const calls=[];
+ const rights={...matrix[stage],edit:viewerBoard?false:matrix[stage].edit,
+  manage:viewerBoard?false:matrix[stage].manage};
  const auth={userId:u,getVerifiedUser:async()=>{
   verified++;
   if(expired)throw deny(401,'JWT_EXPIRED');
@@ -39,8 +41,8 @@ function fixture(stage,{leak=false,otherBoard=false,expired=false,drift=false,ba
      modules:moduleIds.map(moduleId=>({moduleId,role:null,
       allowed:moduleId==='fund-released-tracker'?
        (missingPrereqs?false:matrix[stage].frt):false})),
-     boards:[{id:board,name:'FRT',memberRole:missingPrereqs?'viewer':'owner',
-      view:matrix[stage].view,edit:matrix[stage].edit,manage:matrix[stage].manage}]};
+     boards:[{id:board,name:'FRT',memberRole:viewerBoard?'viewer':'owner',
+      view:rights.view,edit:rights.edit,manage:rights.manage}]};
    }
    if(name==='has_module_access')return badBoolean?'false':matrix[stage].frt;
    if(name==='apsyntra_crm_platform_role_snapshot'){
@@ -50,7 +52,7 @@ function fixture(stage,{leak=false,otherBoard=false,expired=false,drift=false,ba
    throw Error('Unexpected '+name);
   },
   async boards(){calls.push('boards');return [{id:otherBoard?'55555555-5555-4555-8555-555555555555':board}]},
-  async allowed(id,permission){calls.push('allowed:'+permission);return matrix[stage][permission]}
+  async allowed(id,permission){calls.push('allowed:'+permission);return rights[permission]}
  };
  return {auth,api,calls};
 }
@@ -140,6 +142,25 @@ test('restored stage needs current owner and FRT grant in authoritative self-onl
   boardId:board,stage:'RESTORED'});
  assert.equal(r.status,'BLOCKED');
  assert.equal(r.reason,'ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING');
+});
+test('a genuine Supervisor with only Viewer board membership is BLOCKED, not an edit regression',async()=>{
+ const x=fixture('SUPERVISOR',{viewerBoard:true});
+ const r=await runFRTSec10SignedCeilingProbe({...x,boardId:board,stage:'SUPERVISOR'});
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.scenario,'NONBOOTSTRAP');
+ assert.equal(r.reason,'PREEXISTING_BOARD_OWNER_REQUIRED');
+ assert.deepEqual(r.checks,[]);
+ assert.equal(r.writesAttempted,0);
+ assert.equal(r.roleChangesAttempted,0);
+ assert.ok(!x.calls.some(x=>x.startsWith('allowed:')));
+ assert.equal(JSON.parse(sanitizeFRTSec10Report(r)).reason,'PREEXISTING_BOARD_OWNER_REQUIRED');
+});
+test('Viewer cap is not accepted as a controlled transition without original board ownership',async()=>{
+ const x=fixture('VIEWER',{viewerBoard:true});
+ const r=await runFRTSec10SignedCeilingProbe({...x,boardId:board,stage:'VIEWER'});
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.reason,'PREEXISTING_BOARD_OWNER_REQUIRED');
+ assert.deepEqual(r.checks,[]);
 });
 test('missing CP11 backend or failed signed self-inspection cannot be a valid stage',async()=>{
  const r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER',{missingSelf:true}),
