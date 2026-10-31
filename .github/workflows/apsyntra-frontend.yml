@@ -1,7 +1,7 @@
 name: APSYNTRA CRM Frontend Validation
 on:
   push:
-    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac, fix/cp-frt-sec06-rpc-rollout-compatibility, feature/cp-frt-sec07-signed-activation-gate, feature/cp-frt-sec09-signed-authorization-acceptance, feature/cp-frt-sec10-transition-revocation-acceptance, fix/cp-frt-sec10-session-eligibility-feedback, fix/cp-frt-sec11-signed-effective-permissions, fix/cp-frt-sec11-board-refresh-reconcile]
+    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac, fix/cp-frt-sec06-rpc-rollout-compatibility, feature/cp-frt-sec07-signed-activation-gate, feature/cp-frt-sec09-signed-authorization-acceptance, feature/cp-frt-sec10-transition-revocation-acceptance, fix/cp-frt-sec10-session-eligibility-feedback, fix/cp-frt-sec11-signed-effective-permissions, fix/cp-frt-sec11-board-refresh-reconcile, fix/annotate-temporary-csp-styles]
     paths:
       - "index.html"
       - ".nojekyll"
