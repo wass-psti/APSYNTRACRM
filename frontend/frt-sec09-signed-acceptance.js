@@ -24,7 +24,7 @@ function safeChild(source){
    name:typeof x?.name==='string'&&/^[a-z0-9-]{1,70}$/.test(x.name)?x.name:'invalid-check-name',
    status:legalStatus.has(x?.status)?x.status:'BLOCKED'
   })):[],
-  writesAttempted:source?.writesAttempted===0?0:1
+  writesAttempted:Number.isSafeInteger(source?.writesAttempted)&&source.writesAttempted>=0?source.writesAttempted:-1
  };
 }
 export async function runFRTSec09SignedAcceptance({auth,api}={}){
@@ -89,8 +89,8 @@ export function sanitizeFRTSec09Report(report){
    status:legalStatus.has(c?.status)?c.status:'BLOCKED'
   })):[],
   sources:Array.isArray(report?.sources)?report.sources.map(safeChild):[],
-  writesAttempted:0,
-  roleChangesAttempted:0
+  writesAttempted:Number.isSafeInteger(report?.writesAttempted)?report.writesAttempted:-1,
+  roleChangesAttempted:Number.isSafeInteger(report?.roleChangesAttempted)?report.roleChangesAttempted:-1
  };
  if(typeof report?.reason==='string'&&/^[A-Z0-9_]{1,60}$/.test(report.reason))
   clean.reason=report.reason;
