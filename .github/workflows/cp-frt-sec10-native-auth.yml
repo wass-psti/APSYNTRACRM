@@ -1,0 +1,57 @@
+name: CP-FRT-SEC10 Disposable Native Auth
+on:
+  push:
+    branches: [feature/cp-frt-sec10-ci-native-auth]
+    paths:
+      - ".github/workflows/cp-frt-sec10-native-auth.yml"
+      - "scripts/cp-frt-sec10-ci-auth-smoke.mjs"
+      - "frontend/tests/cp-frt-sec10-ci-auth.test.mjs"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-auth-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate fail-closed CI Auth smoke
+        run: node --test frontend/tests/cp-frt-sec10-ci-auth.test.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - name: Boot native disposable Supabase stack
+        env:
+          SUPABASE_EXPERIMENTAL_STACK: "1"
+          SUPABASE_HOME: ${{ runner.temp }}/sec10-stack-home
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/sec10-stack"
+          cd "$RUNNER_TEMP/sec10-stack"
+          supabase init --yes >/dev/null
+          supabase start --runtime native --preparation on-demand --output-format json > "$RUNNER_TEMP/sec10-start.json"
+          supabase status --env --output-format text > "$RUNNER_TEMP/sec10-stack.env"
+          test -s "$RUNNER_TEMP/sec10-stack.env"
+      - name: Verify genuine isolated GoTrue sessions
+        env:
+          CI: "true"
+          SEC10_CI_AUTH_SMOKE: EPHEMERAL_ONLY
+        run: |
+          set -eu
+          node scripts/cp-frt-sec10-ci-auth-smoke.mjs --env-file "$RUNNER_TEMP/sec10-stack.env"
+      - name: Destroy only ephemeral CI stack
+        if: always()
+        env:
+          SUPABASE_EXPERIMENTAL_STACK: "1"
+          SUPABASE_HOME: ${{ runner.temp }}/sec10-stack-home
+        run: |
+          if [ -d "$RUNNER_TEMP/sec10-stack" ]; then
+            cd "$RUNNER_TEMP/sec10-stack"
+            supabase stack destroy --yes >/dev/null 2>&1 || true
+          fi
+          rm -f "$RUNNER_TEMP/sec10-stack.env" "$RUNNER_TEMP/sec10-start.json"
