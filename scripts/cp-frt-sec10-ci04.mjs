@@ -81,6 +81,11 @@ async function raw(url,key,fetcher,path,opts={}){
  return result;
 }
 async function inspect({config:c,db,fetcher,actorIds,requestId,financeBaseline}){
+ process.stderr.write('CI04 request metadata: '+JSON.stringify({
+  type:typeof requestId,length:typeof requestId==='string'?requestId.length:null,
+  requestPresent:requestId!==undefined,memberPresent:actorIds?.member!==undefined,
+  bootstrapPresent:actorIds?.bootstrap!==undefined
+ })+String.fromCharCode(10));
  check(uuid.test(requestId),'CI04_REQUEST_ID_INVALID');
  check(uuid.test(actorIds.member),'CI04_MEMBER_ID_INVALID');
  check(uuid.test(actorIds.bootstrap),'CI04_BOOTSTRAP_ID_INVALID');
