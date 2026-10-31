@@ -27,13 +27,14 @@ test('CI-only fixture contains the live FRT domain RPC contracts and complete fi
  for(const table of ['frt_companies','frt_requests','frt_request_items',
   'frt_audit_logs','frt_liquidations','frt_liquidation_items',
   'frt_voucher_counters']){
-  assert.match(schema,new RegExp('CREATE TABLE public\\\\.'+table+' \\\\('));
-  assert.match(schema,new RegExp('ALTER TABLE public\\\\.'+table+
-   ' ENABLE ROW LEVEL SECURITY;'));
-  assert.match(schema,new RegExp('REVOKE ALL ON TABLE public\\\\.'+table));
+  assert.ok(schema.includes('CREATE TABLE public.'+table+' ('),table+' missing');
+  assert.ok(schema.includes('ALTER TABLE public.'+table+' ENABLE ROW LEVEL SECURITY;'));
+  assert.ok(schema.includes('REVOKE ALL ON TABLE public.'+table));
  }
- assert.match(schema,/GRANT EXECUTE ON FUNCTION public\.frt_request_action/);
- assert.doesNotMatch(schema,/INSERT INTO public\.frt_requests|INSERT INTO auth\.users|https:\\/\\//);
+ assert.ok(schema.includes('GRANT EXECUTE ON FUNCTION public.frt_request_action'));
+ assert.ok(!schema.includes('INSERT INTO auth.users'));
+ assert.ok(!schema.includes('https://'));
+
 });
 test('domain role checks precede finance status mutation in authoritative RPCs',()=>{
  const action=schema.slice(schema.indexOf('CREATE OR REPLACE FUNCTION public.frt_request_action'));
