@@ -29,7 +29,7 @@
 
 ## Controlled production activation
 
-**Production activation completed on October 31, 2026.** The reviewed `sql/cp-frt-sec11-signed-effective-access.sql` was applied as `cp_frt_sec11_signed_effective_access_activation` following the explicit CP-FRT-SEC11 Backend Activation request. Its signed read-only `SECURITY DEFINER` RPC requires an active `auth.uid()` and active workspace membership, accepts no caller user/workspace parameters, and delegates actual module and board permissions to existing central authorization functions. Independent SQL checks confirmed: zero anonymous/PUBLIC EXECUTE, authenticated EXECUTE enabled, forced RLS unchanged, no direct authenticated role-table reads/writes, and unchanged role/module/board membership and audit counts. The security advisor now flags the authenticated SECURITY DEFINER entry point (lint 0029) by design; it remains restricted by the in-function signed identity and workspace guards. **Actual signed-browser response is still pending** for both existing administrator and HR accounts. No live role or finance data was changed.
+**Production activation completed on October 31, 2026.** The reviewed `sql/cp-frt-sec11-signed-effective-access.sql` was applied as `cp_frt_sec11_signed_effective_access_activation` following the explicit CP-FRT-SEC11 Backend Activation request. Its signed read-only `SECURITY DEFINER` RPC requires an active `auth.uid()` and active workspace membership, accepts no caller user/workspace parameters, and delegates actual module and board permissions to existing central authorization functions. Independent SQL checks confirmed: zero anonymous/PUBLIC EXECUTE, authenticated EXECUTE enabled, forced RLS unchanged, no direct authenticated role-table reads/writes, and unchanged role/module/board membership and audit counts. The security advisor now flags the authenticated SECURITY DEFINER entry point (lint 0029) by design; it remains restricted by the in-function signed identity and workspace guards. **As of the October 31, 2026 operator-submitted reports, both signed-browser read-only scenarios have passed the five-check inspection.** No live role or finance data was changed.
 
 - The new frontend action must report `SELF_AUTHORIZATION_BACKEND_NOT_INSTALLED` if it is released before the new backend RPC.
 - No HR board may be granted implicitly. HR with no authorized boards must see a **successful empty-state report**, not a fabricated board.
@@ -41,13 +41,13 @@
 | --- | --- |
 | Root cause: bootstrap-only control mistaken for general inspection | VERIFIED by deployed source |
 | Root cause: HR group has no boards under existing membership scope | VERIFIED by production aggregate database query |
-| New backend self-scoped inspection contract, no stored permission changes | VERIFIED installed with signed self-only source contract and preserved role/membership counts; real signed browser response PENDING |
+| New backend self-scoped inspection contract, no stored permission changes | VERIFIED: installed; authorized signed self-inspection reported successful for two independent account types; current DB records independently corroborated |
 | Frontend signed inspection, admin enablement and empty-state UI | IMPLEMENTED-UNVERIFIED for production |
 | Isolated SQL and frontend regressions | VERIFIED: frontend plus disposable PostgreSQL 17 PASS in [GitHub Actions run #41169961544](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41169961544) |
 | Live SQL migration and safe RPC grants | VERIFIED: production migration `cp_frt_sec11_signed_effective_access_activation` applied; authenticated EXECUTE only, anonymous/PUBLIC denied; read-only independent checks passed |
-| Genuine signed administrator account inspection | PENDING |
-| Genuine signed HR account inspection and zero-board confirmation | PENDING |
-| Final integrated production acceptance | PENDING |
+| Operator-reported signed administrator account inspection | VERIFIED: 5/5 checks, 12/12 modules allowed, 15 boards view/edit/manage; 0 writes or role changes attempted |
+| Operator-reported signed HR account inspection and current board membership | VERIFIED: 5/5 checks, 3 authorized modules, 1 Viewer board; 0 writes or role changes attempted |
+| Final CP-FRT-SEC11 signed read-only inspection acceptance | VERIFIED based on user-submitted signed reports plus independent read-only DB corroboration; does not certify native transactions, role changes, or SEC10 |
 
 **No production role, board membership or financial records are to be modified as a condition of the read-only inspection fix.**
 
@@ -65,6 +65,21 @@ GitHub Actions [run #41169961544](https://github.com/wass-psti/APSYNTRACRM/actio
 - Before/after unchanged: **0** explicit CRM overrides; **121** module assignments; **75** board memberships; **3** FRT memberships; **2** bootstrap identities; **0** role-change audit events.
 - Existing `apsyntra_crm_effective_role`, `apsyntra_crm_explicit_role`, `module_role_for`, `has_module_access`, `work_board_access`, and `apsyntra_role_is_bootstrap` remain authoritative; no role grants, board memberships, or finance records modified.
 - Supabase security advisor flags `authenticated_security_definer_function_executable` for this RPC ([lint 0029](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)). This is a known, sensitive authenticated self-inspection entry point, not a direct table grant; its `auth.uid()` and active-workspace guard and same-workspace view-only board filter were reviewed and isolated-test verified.
-- **Genuine signed runtime acceptance pending:** existing bootstrap administrator's effective platform/module/board report; existing HR member's permitted modules and zero-board empty state. Do not invent results or substitute SQL role impersonation for real signed Supabase Auth evidence. User-provided reports must be sanitized; never store account IDs, JWTs or email addresses in public evidence.
+- **Signed runtime inspection reports received:** operator-submitted bootstrap and nonbootstrap results each show 5/5 PASS, stable signed context, and zero writes. Latest HR board entitlement is one Viewer membership, not the earlier zero-board state. SQL corroborates current account-role and membership records without independently observing the browser login. No account IDs, JWTs, emails or board identifiers are stored as evidence.
 
-**Acceptance boundary:** backend installation and grants VERIFIED; genuine signed browser acceptance PENDING; CP-FRT-SEC10 role-transition and new-session acceptance remains separate.
+**Acceptance boundary:** CP-FRT-SEC11 backend installation and grants VERIFIED; two operator-submitted signed-browser read-only inspections PASS and independently reconciled against current DB inventory. This completes the defined SEC11 inspection acceptance gates only; CP-FRT-SEC10 controlled role transitions, fresh-session issuance, independent finance operations and full deployment certification remain separate.
+
+## CP-FRT-SEC11 two-account signed acceptance — October 31, 2026
+
+**Classification:** VERIFIED for operator-reported, read-only signed-session inspections with independent production database corroboration. No agent-controlled browser access was available; tests that require independent operator session observation or native financial writes are outside this acceptance.
+
+| Signed actor category | Scenario | Current host/effective CRM role | Checks | Central modules | Active authorized boards | Read-only probe activity |
+| --- | --- | --- | --- | --- | --- | --- |
+| Protected administrator | BOOTSTRAP | `admin_general_manager` / `admin` | 5/5 PASS | 12 allowed | 15; view/edit/manage | 0 writes, 0 role changes attempted |
+| Existing HR member | NONBOOTSTRAP | `hr` / `supervisor` | 5/5 PASS | 3 allowed, 9 denied | 1; view only | 0 writes, 0 role changes attempted |
+
+**Backend reconciliation (read-only):** The administrator is an active workspace member with 13 direct owner board memberships and 15 active boards in that workspace; existing platform-administrator authority accounts for the full authorized 15-board set. The HR member is an active workspace member with a current Viewer board membership and three enabled module assignments: `fueltrack-plus:User`, `time-tracker:HR`, and `tradelink:User`. No FRT module assignment or explicit CRM override was found for that HR account. The current data differs from the *historical* earlier zero-board HR observation; that prior observation remains an accurate record of its earlier time and must not be treated as the current state. No new permissions or memberships were assigned in this inspection.
+
+**System-wide inventory at reconciliation:** 0 explicit CRM overrides, 121 module assignments, 76 board memberships, 2 role-change audit records. Membership count and audit records have changed since activation; their provenance remains unreconciled. This inspection does not attribute those changes to any particular person or test. Preserve them for a separate read-only audit review before conducting any controlled transition acceptance.
+
+**Acceptance decision:** CP-FRT-SEC11 defined signed effective-permissions inspection is **10/10 gates — 100% accepted within its read-only scope**: production RPC activation, frontend deployment, isolated contract checks, preserved security boundaries, and both operator-reported signed account inspections. This does **not** establish fresh-session issuance after a role mutation, prove financial-domain operations, independently confirm all RLS denials through user-driven writes, or complete CP-FRT-SEC10.
