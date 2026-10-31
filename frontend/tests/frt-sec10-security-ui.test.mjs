@@ -53,6 +53,20 @@ test('result remains labeled read-only with no proof of new Auth issuance',()=>{
  assert.doesNotMatch(html,/<img onerror/);
  assert.match(html,/data-action="security-sec10-copy"/);
 });
+test('staged transition failures explain that a selected label is not a role assignment',()=>{
+ const html=renderSecurityAcceptance({context,sec10Boards:[{id:board,name:'FRT'}],sec10Result:{
+  phase:'VIEWER',scenario:'NONBOOTSTRAP',status:'BLOCKED',
+  reason:'STAGE_NOT_CONFIRMED_BY_BACKEND',checks:[],writesAttempted:0
+ }});
+ assert.match(html,/STAGE_NOT_CONFIRMED_BY_BACKEND/);
+ assert.match(html,/dropdown does not assign Viewer\/Supervisor/);
+ assert.match(html,/signed effective-permissions inspection/);
+ const restored=renderSecurityAcceptance({context,sec10Boards:[{id:board,name:'FRT'}],sec10Result:{
+  phase:'RESTORED',scenario:'NONBOOTSTRAP',status:'BLOCKED',
+  reason:'ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING',checks:[],writesAttempted:0
+ }});
+ assert.match(restored,/board-owner or FRT-module prerequisite/);
+});
 test('SEC10 app action uses read-only signed runner with context invalidation',()=>{
  const s=readFileSync('frontend/app.js','utf8');
  assert.match(s,/runFRTSec10SignedCeilingProbe\(\{auth,api:db,boardId,stage\}\)/);

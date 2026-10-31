@@ -6,25 +6,42 @@ const u='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const board='33333333-3333-4333-8333-333333333333';
 const deny=(status=403,code='42501')=>Object.assign(Error('private error'),{status,code});
+const moduleIds=['aps-aims','charter-navigator','employee-eval','fueltrack-plus',
+ 'fueltrans','fund-released-tracker','material-request-hub','order-intake',
+ 'time-tracker','tool-traceability','toolbox-issues','tradelink'];
 const matrix={
  VIEWER:{view:true,edit:false,manage:false,frt:false},
  SUPERVISOR:{view:true,edit:true,manage:false,frt:true},
  RESTORED:{view:true,edit:true,manage:true,frt:true}
 };
-function fixture(stage,{leak=false,otherBoard=false,expired=false,drift=false,badBoolean=false,bootstrap=false}={}){
+function fixture(stage,{leak=false,otherBoard=false,expired=false,drift=false,badBoolean=false,bootstrap=false,unconfirmed=false,missingPrereqs=false,missingSelf=false}={}){
  let verified=0;
  const calls=[];
  const auth={userId:u,getVerifiedUser:async()=>{
   verified++;
   if(expired)throw deny(401,'JWT_EXPIRED');
-  return {id:drift&&verified===2?'44444444-4444-4444-8444-444444444444':u,
+  return {id:drift&&verified===3?'44444444-4444-4444-8444-444444444444':u,
     access_token:'do-not-export-this',email:'hidden@example.org'};
  }};
  const api={
-  async context(){calls.push('context');return {user_id:u,workspace_id:ws,profile:{status:'active'}}},
+  async context(){calls.push('context');return {user_id:u,workspace_id:ws,profile:{status:'active',platform_role:'hr'}}},
   async rpc(name,args={}){
    calls.push(name);
    if(name==='apsyntra_role_is_bootstrap')return bootstrap;
+   if(name==='apsyntra_crm_my_effective_access'){
+    if(missingSelf)throw Object.assign(Error('missing RPC'),{status:404,code:'PGRST202'});
+    const assigned=stage==='VIEWER'?'viewer':stage==='SUPERVISOR'?'supervisor':null;
+    const effective=stage==='VIEWER'?'viewer':'supervisor';
+    const explicit=unconfirmed?(stage==='RESTORED'?'viewer':null):assigned;
+    const role=unconfirmed?'supervisor':effective;
+    return {schemaVersion:1,workspaceId:ws,platformRole:'hr',
+     effectivePlatformRole:role,explicitPlatformRole:explicit,bootstrap:false,
+     modules:moduleIds.map(moduleId=>({moduleId,role:null,
+      allowed:moduleId==='fund-released-tracker'?
+       (missingPrereqs?false:matrix[stage].frt):false})),
+     boards:[{id:board,name:'FRT',memberRole:missingPrereqs?'viewer':'owner',
+      view:matrix[stage].view,edit:matrix[stage].edit,manage:matrix[stage].manage}]};
+   }
    if(name==='has_module_access')return badBoolean?'false':matrix[stage].frt;
    if(name==='apsyntra_crm_platform_role_snapshot'){
     if(leak)return {bootstrapVerified:true,roles:[]};
@@ -43,7 +60,7 @@ for(const stage of ['VIEWER','SUPERVISOR','RESTORED']){
   const r=await runFRTSec10SignedCeilingProbe({...x,boardId:board,stage});
   assert.equal(r.status,'PASS');
   assert.equal(r.phase,stage);
-  assert.equal(r.checks.length,6);
+  assert.equal(r.checks.length,7);
   assert.ok(r.checks.every(c=>c.status==='PASS'));
   assert.equal(r.writesAttempted,0);
   assert.equal(r.freshSessionIssued,'NOT_VERIFIED');
@@ -81,8 +98,8 @@ test('signed bootstrap, expired token and switched identity are not accepted',as
  assert.equal(r.status,'BLOCKED');
  assert.equal(r.reason,'SIGNED_SESSION_EXPIRED');
  r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER',{drift:true}),boardId:board,stage:'VIEWER'});
- assert.equal(r.status,'FAIL');
- assert.ok(r.checks.some(x=>x.name==='signed-workspace-identity-stable'&&x.status==='FAIL'));
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.reason,'SIGNED_SELF_ACCESS_PRECONDITION_FAILED');
 });
 test('nonboolean authoritative bootstrap decision blocks before reading permissions',async()=>{
  const e=fixture('VIEWER',{bootstrap:'UNKNOWN'});
@@ -105,10 +122,30 @@ test('export preserves accurate signed classification for ineligible bootstrap a
  assert.equal(untrusted.scenario,'UNVERIFIED');
  assert.doesNotMatch(JSON.stringify(untrusted),/@|private\.example/);
 });
-test('actual backend capabilities, not the selected UI label, determine PASS',async()=>{
+test('a selected phase that disagrees with the actual backend cannot PASS',async()=>{
  const r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER'),boardId:board,stage:'SUPERVISOR'});
- assert.equal(r.status,'FAIL');
- assert.ok(r.checks.some(x=>x.status==='FAIL'));
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.reason,'STAGE_NOT_CONFIRMED_BY_BACKEND');
+ assert.equal(r.checks.length,0);
+});
+test('viewer-like board permissions do not prove an explicit Viewer role assignment',async()=>{
+ const x=fixture('VIEWER',{unconfirmed:true});
+ const r=await runFRTSec10SignedCeilingProbe({...x,boardId:board,stage:'VIEWER'});
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.reason,'STAGE_NOT_CONFIRMED_BY_BACKEND');
+ assert.ok(!x.calls.includes('allowed:view'));
+});
+test('restored stage needs current owner and FRT grant in authoritative self-only snapshot',async()=>{
+ const r=await runFRTSec10SignedCeilingProbe({...fixture('RESTORED',{missingPrereqs:true}),
+  boardId:board,stage:'RESTORED'});
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.reason,'ORIGINAL_OPERATIONAL_PREREQUISITES_MISSING');
+});
+test('missing CP11 backend or failed signed self-inspection cannot be a valid stage',async()=>{
+ const r=await runFRTSec10SignedCeilingProbe({...fixture('VIEWER',{missingSelf:true}),
+  boardId:board,stage:'VIEWER'});
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.reason,'SIGNED_SELF_ACCESS_PRECONDITION_FAILED');
 });
 test('export drops arbitrary identity/server errors and does not fabricate fresh auth issuance',()=>{
  const data={status:'PASS',phase:'VIEWER',reason:'Bearer hidden@example.org',writesAttempted:4,
