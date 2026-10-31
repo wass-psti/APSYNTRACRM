@@ -34,9 +34,10 @@ const short=(s,max)=>typeof s==='string'&&s.length<=max;
 const timeOrNull=x=>x===null||(typeof x==='string'&&x.length<80&&!Number.isNaN(Date.parse(x)));
 const fail=reason=>({status:'BLOCKED',reason,detail:null,writesAttempted:0});
 
-export function projectFRTRequestDetail(raw,{requestId,companyCode,role}={}){
+export function projectFRTRequestDetail(raw,{requestId,companyCode,workspaceId,role}={}){
  if(!raw||typeof raw!=='object'||Array.isArray(raw)||
     !uuid.test(requestId||'')||raw.id!==requestId||
+    !uuid.test(workspaceId||'')||raw.workspace_id!==workspaceId||
     typeof companyCode!=='string'||raw.company_code!==companyCode||
     !short(raw.voucher_no,100)||!short(raw.title,250)||
     !date.test(raw.date_needed||'')||
@@ -95,7 +96,7 @@ export async function loadFRTRequestDetailReadOnly({
    p_workspace_id:workspaceId,p_request_id:requestId
   });
   const projected=projectFRTRequestDetail(raw,{
-   requestId,companyCode,role:m.role
+   requestId,companyCode,workspaceId,role:m.role
   });
   if(projected.status!=='PASS')return projected;
   const again=await auth.getVerifiedUser();
