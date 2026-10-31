@@ -59,3 +59,17 @@ A safe dry run with missing configuration performs **zero network calls** and re
 5. If the script reports `MANUAL_ISOLATED_ROLE_RECOVERY_REQUIRED`, do not rerun blindly. Resolve the isolated override and audit state with an authorized administrator and preserve evidence.
 
 **Status:** Source implementation and regression fixtures staged. Live role-transition acceptance **BLOCKED** until an isolated project, genuine existing identities, baseline entitlements, credentials, and independent audit verification are available. Production records are not to be modified to satisfy this checkpoint.
+
+## CP-FRT-SEC10-CI-AUTH — disposable native GoTrue acceptance (2026-10-31)
+
+**New evidence:** [GitHub Actions run #41180302048](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41180302048) completed successfully on `feature/cp-frt-sec10-ci-native-auth`; all steps passed, including native runtime start, signed user checks and ephemeral stack destruction.
+
+- GitHub-hosted Ubuntu runner uses Supabase CLI **v2.121.0** and `SUPABASE_EXPERIMENTAL_STACK=1`, explicitly selecting `--runtime native`. The local stack runs on the CI worker and is destroyed after the job; no user machine installation, Docker requirement or hosted Supabase project.
+- `scripts/cp-frt-sec10-ci-auth-smoke.mjs` rejects any non-CI invocation or non-loopback API URL **before network access**. It reads only ephemeral CLI status output, not production keys or cloud URLs.
+- Temporary isolated Auth users are created through the local GoTrue administrative API. Real sign-in, verification via `/auth/v1/user`, logout, and distinct JWT session IDs are checked.
+- CI result: `CP-FRT-SEC10-CI-AUTH: PASS`. **2** actual local Auth users; **4** verified GoTrue sessions; **3 distinct nonbootstrap sign-ins**; zero CRM role transitions, zero financial operations, zero production access.
+- Separate mock-based unit tests verify the loopback guard, remote endpoint rejection, expected Auth HTTP protocol, and sanitized report fields. No identities or session tokens were committed or uploaded as artifacts.
+
+**Next engineering gate:** Integrate the already-tested CP06/SEC10 *database authorization fixture* with the native CI Postgres/PostgREST/Auth runtime so the genuine signed sessions execute central CRM role and FRT access RPCs. Only then may the full Viewer → Supervisor → Restored runner be exercised against the disposable CI workspace. Independently verify the correlated role audit ledger, CAS semantics, restored memberships and FRT-domain constraints. Do **not** infer production acceptance or perform live production role changes from this isolated Auth smoke PASS.
+
+**Status:** CI Auth runtime and fresh signed-session proof VERIFIED; CI signed RBAC transitions and independent FRT operational acceptance PENDING. Existing SEC10 overall operational acceptance remains separate and is not automatically increased to full completion.
