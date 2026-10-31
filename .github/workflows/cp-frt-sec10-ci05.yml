@@ -1,0 +1,84 @@
+name: CP-FRT-SEC10 CI05 Live Session and Natural JWT Expiration
+on:
+  push:
+    branches: [main, feature/cp-frt-sec10-ci05-session-hardening]
+    paths:
+      - ".github/workflows/cp-frt-sec10-ci05.yml"
+      - "scripts/cp-frt-sec10-ci05.mjs"
+      - "sql/tests/cp-frt-sec10-ci05-session-guard-candidate.sql"
+      - "scripts/cp-frt-sec10-ci04.mjs"
+      - "sql/tests/cp-frt-sec10-ci04-remaining-rls.sql"
+      - "scripts/cp-frt-sec10-ci03.mjs"
+      - "sql/tests/cp-frt-sec10-ci03-native-finance.sql"
+      - "scripts/cp-frt-sec10-ci02.mjs"
+      - "scripts/cp-frt-sec10-nonprod-acceptance.mjs"
+      - "scripts/cp-frt-sec10-live-client.mjs"
+      - "scripts/cp-frt-sec10-ci-auth-smoke.mjs"
+      - "frontend/tests/cp-frt-sec10-ci05.test.mjs"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-session-expiry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate FRT session guard and genuine JWT expiry evidence boundaries
+        run: node --test frontend/tests/cp-frt-sec10-ci04.test.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - name: Start a disposable native Supabase project only on this CI runner
+        env:
+          SUPABASE_EXPERIMENTAL_STACK: "1"
+          SUPABASE_HOME: ${{ runner.temp }}/sec10-ci02-stack-home
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/sec10-ci02-stack"
+          cd "$RUNNER_TEMP/sec10-ci02-stack"
+          supabase init --yes >/dev/null
+          # Disposable CI-only short expiry to observe a naturally expired JWT.
+          # Never change the hosted production Auth token lifetime.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          config=Path("supabase/config.toml")
+          content=config.read_text()
+          content,count=re.subn(r"(?m)^jwt_expiry\s*=\s*3600\s*$","jwt_expiry = 90",content)
+          if count!=1:
+              raise RuntimeError("CI05 native auth.jwt_expiry configuration missing")
+          config.write_text(content)
+          PY
+          supabase start --runtime native --preparation on-demand --output-format json > "$RUNNER_TEMP/sec10-ci02-start.json"
+          supabase status --env --output-format text > "$RUNNER_TEMP/sec10-ci02-stack.env"
+          test -s "$RUNNER_TEMP/sec10-ci02-stack.env"
+      - name: Install isolated PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+      - name: Verify CI02-CI04 and CI05 revoked session denial plus real Auth JWT expiry
+        env:
+          CI: "true"
+          SEC10_CI05: EPHEMERAL_ONLY
+        run: |
+          set -eu
+          node scripts/cp-frt-sec10-ci05.mjs --env-file "$RUNNER_TEMP/sec10-ci02-stack.env"
+      - name: Destroy CI-only stack and transient connection material
+        if: always()
+        env:
+          SUPABASE_EXPERIMENTAL_STACK: "1"
+          SUPABASE_HOME: ${{ runner.temp }}/sec10-ci02-stack-home
+        run: |
+          if [ -d "$RUNNER_TEMP/sec10-ci02-stack" ]; then
+            cd "$RUNNER_TEMP/sec10-ci02-stack"
+            supabase stack destroy --yes >/dev/null 2>&1 || true
+          fi
+          rm -f "$RUNNER_TEMP/sec10-ci02-stack.env" "$RUNNER_TEMP/sec10-ci02-start.json"
