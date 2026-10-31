@@ -81,17 +81,11 @@ async function raw(url,key,fetcher,path,opts={}){
  return result;
 }
 async function inspect({config:c,db,fetcher,actorIds,requestId,financeBaseline}){
- process.stderr.write('CI04 request metadata: '+JSON.stringify({
-  type:typeof requestId,length:typeof requestId==='string'?requestId.length:null,
-  requestPresent:requestId!==undefined,memberPresent:actorIds?.member!==undefined,
-  bootstrapPresent:actorIds?.bootstrap!==undefined,
-  groupSizes:typeof requestId==='string'?requestId.split('-').map(v=>v.length):[],
-  version:typeof requestId==='string'?requestId[14]:null,
-  variant:typeof requestId==='string'?requestId[19]:null
- })+String.fromCharCode(10));
- check(uuid.test(requestId),'CI04_REQUEST_ID_INVALID');
- check(uuid.test(actorIds.member),'CI04_MEMBER_ID_INVALID');
- check(uuid.test(actorIds.bootstrap),'CI04_BOOTSTRAP_ID_INVALID');
+ const safeUUID=v=>typeof v==='string'&&v.length===36&&
+   /^[0-9a-f-]+$/i.test(v)&&v.split('-').map(part=>part.length).join(',')==='8,4,4,4,12';
+ check(safeUUID(requestId),'CI04_REQUEST_ID_INVALID');
+ check(safeUUID(actorIds.member),'CI04_MEMBER_ID_INVALID');
+ check(safeUUID(actorIds.bootstrap),'CI04_BOOTSTRAP_ID_INVALID');
  const fixture=readFileSync('sql/tests/cp-frt-sec10-ci04-remaining-rls.sql','utf8');
  check(fixture.includes('DISPOSABLE CI ONLY')&&fixture.includes('frt_membership_self_or_gm_select'),
   'RLS_FIXTURE_UNEXPECTED');
