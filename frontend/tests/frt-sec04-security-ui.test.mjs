@@ -37,7 +37,7 @@ test('existing app triggers only read-only SEC03 helper and clears displayed res
  assert.match(app,/runFRTSec03SignedAcceptance\(\{auth,api:db\}\)/);
  assert.match(app,/case 'security-frt-readonly'/);
  assert.match(app,/case 'security-frt-copy'/);
- assert.match(app,/state\.frtSecurityResult=null;state\.sec07Result=null;state\.sec09Result=null;state\.sec09RunId\+\+;state\.sec10Result=null;state\.sec10RunId\+\+;location\.hash='#\/login'/);
+ assert.match(app,/state\.frtSecurityResult=null;state\.sec07Result=null;state\.sec09Result=null;state\.sec09RunId\+\+;state\.sec10Result=null;state\.sec10RunId\+\+;state\.effectiveAccessResult=null;state\.effectiveAccessRunId\+\+;location\.hash='#\/login'/);
  const action=app.split("case 'security-frt-readonly':{")[1].split("case 'security-frt-copy':{")[0];
  assert.doesNotMatch(action,/apsyntra_role_manage_user_access|frt_admin_set_role|\.mutate\(/);
 
