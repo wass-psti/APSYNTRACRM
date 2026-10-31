@@ -68,7 +68,7 @@ export function projectFRTRequestDetail(raw,{requestId,companyCode,workspaceId,r
 }
 
 export async function loadFRTRequestDetailReadOnly({
- auth,api,requestId,companyCode,allowedRequestIds,workspaceId
+ auth,api,requestId,companyCode,allowedRequestIds,workspaceId,expectedRole
 }={}){
  if(!auth||!api||!uuid.test(requestId||'')||!uuid.test(workspaceId||'')||
     !Array.isArray(allowedRequestIds)||!allowedRequestIds.includes(requestId)||
@@ -87,6 +87,8 @@ export async function loadFRTRequestDetailReadOnly({
   const m=boot?.membership;
   if(m?.user_id!==user.id||m?.workspace_id!==workspaceId||
      m?.status!=='active'||m?.enabled!==true||
+     !['GENERAL_MANAGER','FINANCE_MANAGER','FINANCE_APPROVER','REQUESTOR'].includes(expectedRole)||
+     m?.role!==expectedRole||
      !Array.isArray(boot?.companies)||
      !boot.companies.some(c=>c?.code===companyCode))
    return fail('FRT_DETAIL_MEMBERSHIP_DENIED');
