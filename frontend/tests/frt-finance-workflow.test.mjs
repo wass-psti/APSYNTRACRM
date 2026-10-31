@@ -47,7 +47,7 @@ function fixture({raw=base,role='FINANCE_APPROVER',stale=false,denied=false,
  return {auth,api,calls};
 }
 const load=f=>loadFRTRequestDetailReadOnly({...f,workspaceId:ws,
- companyCode,requestId:id,allowedRequestIds:[id]});
+ companyCode,requestId:id,allowedRequestIds:[id],expectedRole:'FINANCE_APPROVER'});
 test('SEC13 reads existing signed RPC and returns only whitelisted non-financial request details',async()=>{
  const f=fixture();
  const report=await load(f);
@@ -69,7 +69,7 @@ test('SEC13 reads existing signed RPC and returns only whitelisted non-financial
 test('requests absent from current signed list are denied before RPC execution',async()=>{
  const f=fixture();
  const report=await loadFRTRequestDetailReadOnly({...f,requestId:id,
-  companyCode,workspaceId:ws,allowedRequestIds:[]});
+  companyCode,workspaceId:ws,allowedRequestIds:[],expectedRole:'FINANCE_APPROVER'});
  assert.equal(report.status,'BLOCKED');
  assert.equal(report.reason,'FRT_REQUEST_NOT_IN_SIGNED_LIST');
  assert.equal(f.calls.length,0);
@@ -79,6 +79,13 @@ test('workspace and company mismatch from authoritative backend response fail cl
  assert.equal(wrongWs.reason,'FRT_REQUEST_DETAIL_CONTRACT_INVALID');
  const wrongCo=await load(fixture({raw:{...base,company_code:'WASS'}}));
  assert.equal(wrongCo.reason,'FRT_REQUEST_DETAIL_CONTRACT_INVALID');
+});
+test('a role transition after the signed list prevents reuse of the old workflow snapshot',async()=>{
+ const f=fixture({role:'REQUESTOR'});
+ const result=await load(f);
+ assert.equal(result.status,'BLOCKED');
+ assert.equal(result.reason,'FRT_DETAIL_MEMBERSHIP_DENIED');
+ assert.ok(!f.calls.some(x=>x.name==='frt_get_request'));
 });
 test('FRT member mismatch and no company access block before request-detail RPC',async()=>{
  for(const arg of [{memberMismatch:true},{companyMismatch:true}]){
