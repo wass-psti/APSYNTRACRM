@@ -11,6 +11,12 @@ test('general signed inspector works for HR even when there are no authorized bo
  assert.match(html,/id="sec10-board" class="search-input sec10-select" disabled/);
  assert.match(html,/data-action="security-sec10-readonly" disabled/);
 });
+test('backend board discovery failure is not presented as an empty permission grant set',()=>{
+ const html=renderSecurityAcceptance({context,sec10Boards:[],sec10BoardsError:'SIGNED_BOARD_LIST_REFRESH_FAILED'});
+ assert.match(html,/Authorized board list could not be refreshed/);
+ assert.doesNotMatch(html,/No authorized active boards are available/);
+ assert.match(html,/data-action="security-effective-access"/);
+});
 test('bootstrap can inspect own effective permissions, but controlled transition is not permitted',()=>{
  const html=renderSecurityAcceptance({context:{...context,profile:{platform_role:'admin_general_manager',status:'active'}},
   sec10IsBootstrap:true,sec10Boards:[{id:'33333333-3333-4333-8333-333333333333',name:'FRT'}]});
@@ -47,6 +53,7 @@ test('controller uses signed inspector RPC and invalidates report on identity ch
  assert.match(s,/inspectMySignedEffectiveAccess\(\{auth,api:db\}\)/);
  assert.match(s,/sanitizeEffectiveAccessReport\(state\.effectiveAccessResult\)/);
  assert.match(s,/case 'security-effective-access'/);
+ assert.match(s,/state\.securityBoardsError='SIGNED_BOARD_LIST_REFRESH_FAILED'/);
  assert.match(s,/state\.effectiveAccessResult=null;state\.effectiveAccessRunId\+\+/);
  const action=s.split("case 'security-effective-access':{")[1].split("case 'security-effective-access-copy':{")[0];
  assert.doesNotMatch(action,/setCrmPlatformRole|role_manage|role_set|\.mutate\(|\.insert\(|\.delete\(/);

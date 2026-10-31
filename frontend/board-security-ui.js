@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false,effectiveAccessResult=null,effectiveAccessBusy=false}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false,effectiveAccessResult=null,effectiveAccessBusy=false,sec10BoardsError=''}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -125,7 +125,7 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
  '<label class="sec10-label" for="sec10-board">Existing accessible board</label><select id="sec10-board" class="search-input sec10-select" '+(!(sec10Boards||[]).length?'disabled':'')+'>'+
  (sec10Boards||[]).filter(b=>typeof b?.id==='string').map(b=>'<option value="'+escape(b.id)+'">'+escape(b.name||'Board')+'</option>').join('')+
  '</select>'+
- (!(sec10Boards||[]).length?'<div class="note">No authorized active boards are available for this account. The controlled transition probe requires an existing authorized board; the general signed effective-permissions inspection above remains available without one.</div>':'')+
+ (sec10BoardsError?'<div class="note security-note">Authorized board list could not be refreshed from the signed backend. No absence-of-access conclusion is being made.</div>':(!(sec10Boards||[]).length?'<div class="note">No authorized active boards are available for this account. The controlled transition probe requires an existing authorized board; the general signed effective-permissions inspection above remains available without one.</div>':''))+
  '<label class="sec10-label" for="sec10-stage">Independently verified backend stage</label><select id="sec10-stage" class="search-input sec10-select">'+
  '<option value="VIEWER">Explicit Viewer cap</option><option value="SUPERVISOR">Explicit Supervisor cap</option>'+
  '<option value="RESTORED">Override revoked — inherited original role</option></select>'+
