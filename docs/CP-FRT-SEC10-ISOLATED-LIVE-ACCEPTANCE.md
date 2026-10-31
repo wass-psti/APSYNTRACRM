@@ -131,3 +131,30 @@ CI output includes no real user IDs, passwords, sessions or secrets. A dedicated
 **Scope limitation:** CI03 checks actual finance RPC implementations and matching metadata-derived table constraints inside **disposable native Supabase Auth/PostgREST/PostgreSQL**. It does not establish production financial transaction success, production credential/token revocation behavior, production data migration, or complete native application/12-board deployment acceptance. Existing live production FRT grants, assignments, and financial rows were not changed. Additional financial workflows and production-specific policies beyond the seven tested tables remain outside this milestone. Do not claim full CP-FRT-SEC10 final certification from this CI milestone alone.
 
 **Disposition:** CI03 **VERIFIED** within its isolated signed finance-domain scope. [PR #24](https://github.com/wass-psti/APSYNTRACRM/pull/24) merged into `main` at `9b98c8727fd2e610e253024ca173a129d9f09fae`. All four workflows completed successfully on the exact merge commit: [CI03 signed finance](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41182748821), [CI02 signed role transitions](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41182748874), [frontend/disposable PostgreSQL/live-pages](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41182748939), and [GitHub Pages deployment](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41182748615). A post-merge **read-only** production check confirmed **0** CRM overrides, **2** existing central role-audit records, **76** board memberships, **121** module-role assignments and **0** FRT request/audit/liquidation records, consistent with the pre-milestone baseline. Broader operational certification remains PENDING.
+
+## CP-FRT-SEC10-CI04 — session revocation, extended RLS and signed authorization regression (2026-10-31)
+
+**Verified branch run:** [GitHub Actions #41194273939](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41194273939), **SUCCESS**. All three CI04 targeted unit tests passed, followed by the genuine native Supabase CI02/CI03 prerequisites and CI04 signed-domain tests. The integrated sanitized machine result is `CP-FRT-SEC10-CI04: PASS`, with separately reported session limitations.
+
+**Scope:** Disposable GitHub-hosted native Supabase Auth, PostgREST and PostgreSQL only. No second hosted project, production account, permission change, finance record, service key, or local database installation. All created test users and test rows are ephemeral. The workflow always destroys the native stack.
+
+**Production source alignment:** `sql/tests/cp-frt-sec10-ci04-remaining-rls.sql` reconstructs the three remaining `frt_attachments`, `frt_comments`, and `frt_memberships` table schemas, constraints, and canonical RLS SELECT policies from production read-only metadata. Combined with CI03's seven finance tables, CI04 verifies **10 of 10 RLS-enabled FRT tables and 10 of 10 SELECT policies**. To test actual policy filtering rather than the absence of SQL grants, the CI-only runner temporarily GRANTs SELECT to `authenticated`, verifies positive same-workspace results, outsider zero-row results for all ten tables, member-only membership visibility, GM roster visibility, and CRM Viewer masking on the **same still-issued JWT**, then **REVOKEs every temporary grant** and independently verifies original no-direct-client-grant posture. Production role grants are untouched.
+
+**Session results and remaining gap:**
+
+| Control | Evidence | Status |
+| --- | --- | --- |
+| Same issued JWT sees central Viewer role downgrade immediately | All ten FRT SELECT policies returned zero rows; FRT module and finance creation denied | VERIFIED |
+| Same JWT sees permissions restored after CAS revocation | Ten FRT table reads recover; zero CRM role overrides remain | VERIFIED |
+| New real local GoTrue session persisted in `auth.sessions` | Signed access JWT `session_id` had one matching database session | VERIFIED |
+| Scoped local logout revokes refresh token | Refresh grant denied; `auth.sessions` record removed | VERIFIED |
+| Invalid bearer JWT rejected | Signed RPC denied | VERIFIED |
+| **Immediate invalidation of pre-logout access JWT** | **Old access JWT remained accepted by PostgREST after logout** | **NOT VERIFIED / EXISTING SECURITY GAP** |
+| Genuine GoTrue-issued access token expired and rejected after `exp` | Not exercised; no fake or modified tokens substituted as evidence | PENDING |
+| Cross-workspace table reads | 10 of 10 filtered to zero for outsider | VERIFIED |
+| Source-derived membership SELECT ceiling | Member can see only own legacy membership row, GM can see both | VERIFIED |
+| Diagnostic table grants and finance data integrity | All diagnostic grants removed; no direct table writes; original finance request/audit counts preserved | VERIFIED |
+
+**Security interpretation:** Supabase's official Auth documentation states that logout invalidates refresh tokens and removes affected sessions, but previously minted JWT access tokens generally remain accepted until their `exp` time. The current production `private.frt_current_role` helper does not independently check the signed JWT's `session_id` against `auth.sessions`; do not claim immediate revocation for FRT RPCs under the existing deployed schema. A proposed follow-up security hardening would check an active signed session for **sensitive finance actions** (or adopt an equivalent short-lived token and explicit revocation policy), then verify both legitimate operation and immediate post-logout denial with safe rollout controls. This would alter production authorization behavior and must be separately validated before deployment.
+
+**Disposition:** **CI04 isolated verification PASS** for actual RLS filtering, current-role authorization decisions, refresh-token revocation, and invalid-token refusal. **Overall CI04 strict immediate JWT revocation and genuine expiration acceptance remain PENDING.** Broader CP-FRT-SEC10 final production operational certification remains PENDING; no status is upgraded by interpreting an unexpired old JWT as revoked.
