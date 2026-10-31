@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: "22"
       - name: Validate session-revocation boundaries and complete FRT RLS policies
-        run: node --test frontend/tests/cp-frt-sec10-ci03.test.mjs
+        run: node --test frontend/tests/cp-frt-sec10-ci04.test.mjs
       - uses: supabase/setup-cli@v1
         with:
           version: 2.121.0
