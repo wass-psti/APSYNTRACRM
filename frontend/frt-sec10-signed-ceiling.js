@@ -85,7 +85,8 @@ export function sanitizeFRTSec10Report(result){
    name:/^[a-z0-9-]{1,70}$/.test(c?.name||'')?c.name:'invalid-check-name',
    status:valid.has(c?.status)?c.status:'BLOCKED'
   })):[],
-  writesAttempted:0,roleChangesAttempted:0,
+  writesAttempted:Number.isSafeInteger(result?.writesAttempted)&&result.writesAttempted>=0?result.writesAttempted:-1,
+  roleChangesAttempted:Number.isSafeInteger(result?.roleChangesAttempted)&&result.roleChangesAttempted>=0?result.roleChangesAttempted:-1,
   freshSessionIssued:'NOT_VERIFIED',
   prerequisiteOwnershipVerified:'NOT_VERIFIED'
  };
