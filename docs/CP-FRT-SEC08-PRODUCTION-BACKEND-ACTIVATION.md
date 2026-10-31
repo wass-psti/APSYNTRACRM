@@ -14,7 +14,7 @@
 
 The first migration applies the exact repo file `sql/cp-frt-sec06-crm-platform-role-cap.sql`; the second applies `sql/cp-frt-sec06-domain-role-ceiling.sql`, both from the verified merged `main` SHA. The SQL files passed the prior isolated PostgreSQL 17 integration tests. No role-assignment seed, financial mutation, login change, or destructive table modification was included.
 
-**Safety baseline captured before deployment:** the exact live `pg_get_functiondef` source for the four replaced authorization resolvers (`private.frt_current_role`, `public.has_module_access`, `public.module_role_for`, `public.work_board_access`) was committed as `sql/cp-frt-sec08-rollback-original-resolvers.sql` before either migration ran. That rollback SQL has **not** been executed; use it only with separate change-control authorization if recovery is required.
+**Safety baseline captured before deployment:** the exact live `pg_get_functiondef` source for the four replaced authorization resolvers (`private.frt_current_role`, `public.has_module_access`, `public.module_role_for`, `public.work_board_access`) was committed as `sql/cp-frt-sec08-rollback-original-resolvers.sql` before either migration ran. That rollback SQL has **not** been executed; it now aborts automatically if any explicit CRM role override exists, preventing accidental removal of active permission ceilings. Use it only with separate change-control authorization if recovery is required.
 
 ## Verified production read-only database acceptance
 
