@@ -97,7 +97,6 @@ DO $postflight$
 BEGIN
  IF has_function_privilege('anon','private.frt_signed_session_active()','EXECUTE')
   OR has_function_privilege('authenticated','private.frt_signed_session_active()','EXECUTE')
-  OR has_function_privilege('PUBLIC','private.frt_signed_session_active()','EXECUTE')
  THEN RAISE EXCEPTION 'CI07_SESSION_GUARD_EXPOSED'; END IF;
  IF position('private.frt_signed_session_active()'
              in pg_get_functiondef('private.frt_current_role(uuid)'::regprocedure))=0
