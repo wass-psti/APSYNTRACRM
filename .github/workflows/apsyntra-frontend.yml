@@ -6,6 +6,8 @@ on:
       - "index.html"
       - ".nojekyll"
       - "scripts/verify-pages-source.mjs"
+      - "scripts/cp-frt-sec10-*.mjs"
+      - "docs/CP-FRT-SEC10-ISOLATED-LIVE-ACCEPTANCE.md"
       - "scripts/pages-smoke.mjs"
       - "docs/PAGES-OPERATIONS.md"
       - "frontend/**"
