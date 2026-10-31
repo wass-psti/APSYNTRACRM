@@ -64,13 +64,13 @@ async function signedPhase(config,fetcher,target,phase,seenSessions,steps){
  */
 export async function runIsolatedSEC10(env,fetcher=globalThis.fetch){
  const result={status:'BLOCKED',reason:'NOT_EXECUTED',steps:[],
-  transitionCount:0,verifiedSessionCount:0};
+  transitionCount:0,mutationAttempts:0,verifiedSessionCount:0};
  let config;
  try{config=liveConfig(env);}
  catch{result.reason='NONPRODUCTION_CONFIG_NOT_VERIFIED';return result;}
  const admin=new IsolatedSignedClient(config,fetcher);
  const member=new IsolatedSignedClient(config,fetcher);
- let target=null,latestRevision=null,activeRole=null,initialRole=null,mutated=false;
+ let target=null,latestRevision=null,activeRole=null,initialRole=null,mutated=false,pendingReceipt=false;
  try{
   const adminAuth=await admin.signIn(config.bootstrapEmail,config.bootstrapPassword);
   await admin.context();
@@ -94,25 +94,30 @@ export async function runIsolatedSEC10(env,fetcher=globalThis.fetch){
   result.steps.push({name:'existing-owner-and-frt-prerequisites',status:'PASS'});
   const seen=new Set([signed.sessionId]);
   await member.endSession();
+  result.mutationAttempts++;pendingReceipt=true;
   const viewer=await setRole(admin,config,target,'viewer',null);
-  mutated=true;activeRole='viewer';latestRevision=viewer.currentRevision;result.transitionCount++;
+  pendingReceipt=false;mutated=true;activeRole='viewer';latestRevision=viewer.currentRevision;result.transitionCount++;
   await signedPhase(config,fetcher,target,'VIEWER',seen,result.steps);
   result.verifiedSessionCount++;
   let rejected=false;
+  result.mutationAttempts++;pendingReceipt=true;
   try{await setRole(admin,config,target,'supervisor','2000-01-01T00:00:00.000Z');}
   catch(e){rejected=e instanceof HttpStatusError&&e.status===409;}
+  if(rejected)pendingReceipt=false;
   insist(rejected,'STALE_REVISION_NOT_REJECTED');
   const afterStale=roleRow(await admin.rpc('apsyntra_crm_platform_role_snapshot',{
     p_workspace_id:config.workspaceId}),target,config.workspaceId);
   insist(afterStale.assignedRole==='viewer'&&afterStale.updatedAt===latestRevision,
    'STALE_REVISION_CHANGED_ROLE');
   result.steps.push({name:'stale-cas-rejected-without-role-change',status:'PASS'});
+  result.mutationAttempts++;pendingReceipt=true;
   const supervisor=await setRole(admin,config,target,'supervisor',latestRevision);
-  activeRole='supervisor';latestRevision=supervisor.currentRevision;result.transitionCount++;
+  pendingReceipt=false;activeRole='supervisor';latestRevision=supervisor.currentRevision;result.transitionCount++;
   await signedPhase(config,fetcher,target,'SUPERVISOR',seen,result.steps);
   result.verifiedSessionCount++;
+  result.mutationAttempts++;pendingReceipt=true;
   const revoked=await setRole(admin,config,target,null,latestRevision);
-  activeRole=null;latestRevision=null;result.transitionCount++;
+  pendingReceipt=false;activeRole=null;latestRevision=null;result.transitionCount++;
   insist(revoked.effectiveRole===initialRole,'INHERITED_ROLE_NOT_RESTORED');
   await signedPhase(config,fetcher,target,'RESTORED',seen,result.steps);
   result.verifiedSessionCount++;
@@ -127,12 +132,15 @@ export async function runIsolatedSEC10(env,fetcher=globalThis.fetch){
  }finally{
   // Only revoke our own last acknowledged override. Never overwrite a concurrent
   // external mutation or delete an unknown role revision on network uncertainty.
-  if(mutated&&activeRole!==null&&target&&latestRevision){
+  if(pendingReceipt){
+   result.status='BLOCKED';result.reason='MANUAL_ISOLATED_ROLE_RECOVERY_REQUIRED';
+  }else if(mutated&&activeRole!==null&&target&&latestRevision){
    try{
     const row=roleRow(await admin.rpc('apsyntra_crm_platform_role_snapshot',{
      p_workspace_id:config.workspaceId}),target,config.workspaceId);
     if(row.assignedRole!==activeRole||row.updatedAt!==latestRevision)
      throw Error('UNSAFE_CONCURRENT_ROLE_CHANGE');
+    result.mutationAttempts++;
     await setRole(admin,config,target,null,latestRevision);
     result.transitionCount++;
     result.steps.push({name:'failure-path-override-revoked',status:'PASS'});
