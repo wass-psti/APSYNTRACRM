@@ -80,7 +80,7 @@ async function raw(url,key,fetcher,path,opts={}){
  if(response.ok&&response.status!==204)result.data=await response.json();
  return result;
 }
-async function inspect({config:c,db,fetcher,actorIds,requestId,financeBaseline}){
+async function inspect({config:c,db,fetcher,actorIds,requestId,financeBaseline},afterLogout=null){
  const safeUUID=v=>typeof v==='string'&&v.length===36&&
    /^[0-9a-f-]+$/i.test(v)&&v.split('-').map(part=>part.length).join(',')==='8,4,4,4,12';
  check(safeUUID(requestId),'CI04_REQUEST_ID_INVALID');
@@ -186,6 +186,12 @@ async function inspect({config:c,db,fetcher,actorIds,requestId,financeBaseline})
  check(final.overrides===0&&final.requests===beforeLogout.requests&&
   final.financeAudits===beforeLogout.financeAudits&&final.reads===0&&final.writes===0,
   'POST_LOGOUT_FINANCE_DATA_INTEGRITY_FAILED');
+ if(afterLogout!==null){
+  check(typeof afterLogout==='function','CI05_EXTENSION_INVALID');
+  await afterLogout({config:c,db,fetcher,actorIds,requestId,
+   oldAccessToken:token,oldJwtAcceptedByBasicRPC:jwtStillValid,
+   oldJwtExpiresAt:proof.expiresAt});
+ }
  return {checkpoint:'CP-FRT-SEC10-CI04',status:'PASS',
   rlsTablesVerified:10,rlsReadPoliciesVerified:10,
   outsiderReadPoliciesDenied:10,memberSelfOnly:true,
@@ -195,11 +201,11 @@ async function inspect({config:c,db,fetcher,actorIds,requestId,financeBaseline})
   immediateAccessJwtRevocationVerified:!jwtStillValid,
   temporarySelectGrantsRevoked:true,productionTouched:false};
 }
-export async function executeCI04(source,env=process.env,fetcher=globalThis.fetch){
+export async function executeCI04(source,env=process.env,fetcher=globalThis.fetch,afterLogout=null){
  requireCI04(env);
  let outcome;
  const prior=await executeCI03(source,{...env,SEC10_CI03:'EPHEMERAL_ONLY'},
-  fetcher,async ctx=>{outcome=await inspect(ctx);});
+  fetcher,async ctx=>{outcome=await inspect(ctx,afterLogout);});
  check(prior.status==='PASS'&&outcome?.status==='PASS','CI04_PREREQUISITE_FAILED');
  return {...outcome,ci03Prerequisite:'PASS'};
 }
