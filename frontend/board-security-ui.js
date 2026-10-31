@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[]}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -89,6 +89,27 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
      ')</td><td>'+escape(c.status)+'</td></tr>').join('')+
    '</tbody></table></div><p class="muted">Writes attempted: 0. No role changes or fresh-session permission transitions tested. Copy the nonsecret result for acceptance review.</p>'+
    '<button class="secondary" data-action="security-sec09-copy">Copy nonsecret SEC09 result</button></div>';
+ }
+ html+='</div></div>';
+ html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC10 · Controlled transition read-only probe</h3></div>'+
+ '<div class="panel-body"><p class="muted">Use only with an independently approved isolated nonproduction role transition. The signed nonbootstrap user must already own the selected board and have an FRT module assignment before the transition. Sign out and sign in separately after each change. This probe never modifies a role and cannot independently prove a newly issued Auth session or original ownership.</p>'+
+ '<label for="sec10-board">Existing accessible board</label><select id="sec10-board" class="search-input">'+
+ (sec10Boards||[]).filter(b=>typeof b?.id==='string').map(b=>'<option value="'+escape(b.id)+'">'+escape(b.name||'Board')+'</option>').join('')+
+ '</select><label for="sec10-stage">Independently verified backend stage</label><select id="sec10-stage" class="search-input">'+
+ '<option value="VIEWER">Explicit Viewer cap</option><option value="SUPERVISOR">Explicit Supervisor cap</option>'+
+ '<option value="RESTORED">Override revoked — inherited original role</option></select>'+
+ '<button class="primary" data-action="security-sec10-readonly" '+(sec10Busy||!(sec10Boards||[]).length?'disabled':'')+'>'+
+ (sec10Busy?'Checking signed permission ceilings…':'Check signed role ceilings — read-only')+'</button>';
+ if(sec10Result){
+  const passed=(sec10Result.checks||[]).filter(c=>c.status==='PASS').length;
+  html+='<div class="csp-u053"><strong>SEC10 signed capability result: '+escape(sec10Result.status||'BLOCKED')+
+   ' ('+passed+'/'+(sec10Result.checks||[]).length+')</strong><p class="muted">Tested stage: '+
+   escape(sec10Result.phase||'UNKNOWN')+'</p>';
+  if(sec10Result.reason)html+='<p class="muted">Reason: '+escape(sec10Result.reason)+'</p>';
+  html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>'+
+   (sec10Result.checks||[]).map(c=>'<tr><td>'+escape(c.name)+'</td><td>'+escape(c.status)+'</td></tr>').join('')+
+   '</tbody></table></div><p class="muted">Writes: 0 · Fresh Auth session independently verified: NO · Prior ownership independently verified: NO. Do not treat this report alone as final mutation/revocation acceptance.</p>'+
+   '<button class="secondary" data-action="security-sec10-copy">Copy nonsecret SEC10 result</button></div>';
  }
  html+='</div></div>';
  html+='<div class="note security-note csp-u050" >The real target board UUIDs were confirmed through PostgreSQL inventory. A different workspace UUID is not a fabricated board. A successful negative result cannot substitute for application-level acceptance, membership revocation testing or field-level security. Reports are temporary in this browser tab and contain no names, emails, access tokens or location data.</div>';
