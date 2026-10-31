@@ -14,7 +14,9 @@ const paths=['index.html','frontend/app.js','frontend/config.js','frontend/sessi
  'frontend/board-manifest.js','frontend/board-foundation.js','frontend/board-foundation-ui.js',
  'frontend/board-grid.js','frontend/board-operational-qa.js',
  'frontend/board-security-targets.js','frontend/board-negative-acceptance.js','frontend/board-security-ui.js','frontend/board-negative-write.js',
- 'frontend/role-configuration-ui.js','frontend/role-configuration-client.js','frontend/user-role-management.js','frontend/styles.css'];
+ 'frontend/role-configuration-ui.js','frontend/role-configuration-client.js','frontend/user-role-management.js',
+ 'frontend/frt-finance-readonly.js','frontend/frt-finance-ui.js','frontend/frt-finance-workflow.js',
+ 'frontend/styles.css'];
 const digest=x=>createHash('sha256').update(x).digest('hex');
 function url(path){
  const remote=new URL(path==='index.html'?'./':path,origin);
@@ -49,10 +51,10 @@ async function check(){
  console.log('PASS: hosted native Issue endpoint rejects requests without a signed bearer');
 }
 let last;
-for(let attempt=1;attempt<=10;attempt++){
+for(let attempt=1;attempt<=25;attempt++){
  try{await check();console.log('LIVE PAGES SMOKE: PASS for '+sha);process.exit(0);}
  catch(error){last=error;console.error('Deployment propagation attempt '+attempt+': '+error.message);
-   if(attempt<10)await sleep(4000);}
+   if(attempt<25)await sleep(4000);}
 }
 console.error('LIVE PAGES SMOKE: FAIL — '+last?.message);
 process.exitCode=1;
