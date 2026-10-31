@@ -81,8 +81,11 @@ async function raw(url,key,fetcher,path,opts={}){
  return result;
 }
 async function inspect({config:c,db,fetcher,actorIds,requestId,financeBaseline}){
- check(uuid.test(requestId)&&uuid.test(actorIds.member)&&uuid.test(actorIds.bootstrap),
-  'AUTHENTICATED_IDS_REQUIRED');
+ const safeUUID=v=>typeof v==='string'&&v.length===36&&
+   /^[0-9a-f-]+$/i.test(v)&&v.split('-').map(part=>part.length).join(',')==='8,4,4,4,12';
+ check(safeUUID(requestId),'CI04_REQUEST_ID_INVALID');
+ check(safeUUID(actorIds.member),'CI04_MEMBER_ID_INVALID');
+ check(safeUUID(actorIds.bootstrap),'CI04_BOOTSTRAP_ID_INVALID');
  const fixture=readFileSync('sql/tests/cp-frt-sec10-ci04-remaining-rls.sql','utf8');
  check(fixture.includes('DISPOSABLE CI ONLY')&&fixture.includes('frt_membership_self_or_gm_select'),
   'RLS_FIXTURE_UNEXPECTED');
