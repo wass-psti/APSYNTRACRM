@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dbUrlFromStatus,adaptDisposableFixture,executeCI02}
  from '../../scripts/cp-frt-sec10-ci02.mjs';
+import {runIsolatedSEC10} from '../../scripts/cp-frt-sec10-nonprod-acceptance.mjs';
 const env={CI:'true',GITHUB_ACTIONS:'true',SEC10_CI_AUTH_SMOKE:'EPHEMERAL_ONLY',
  SEC10_CI02:'EPHEMERAL_ONLY'};
 const status='API_URL="http://127.0.0.1:54321"\n'+
@@ -57,4 +58,23 @@ test('untrusted execution context stops before HTTP or SQL calls',async()=>{
  await assert.rejects(executeCI02(status,{...env,SEC10_CI02:'NO'},forbidden),
   /CI02_ENVIRONMENT_DENIED/);
  assert.equal(count,0);
+});
+
+test('CI02 guarded transition accepts validated loopback port and rejects cloud',async()=>{
+ const config={url:'http://127.0.0.1:54321',publishableKey:'local-only-key',
+  workspaceId:'00000000-0000-4000-8000-000000000001',
+  boardId:'00000000-0000-4000-8000-00000000000d',
+  bootstrapEmail:'bootstrap@example.invalid',bootstrapPassword:'fixture',
+  memberEmail:'member@example.invalid',memberPassword:'fixture'};
+ let networkCalls=0;
+ const fake=async()=>{networkCalls++;return {ok:false,status:401,
+  json:async()=>({message:'deliberately blocked'})}};
+ const result=await runIsolatedSEC10(env,fake,config);
+ assert.equal(networkCalls,1,'verified loopback must reach disposable Auth API');
+ assert.equal(result.status,'BLOCKED');
+ const oldCount=networkCalls;
+ const blocked=await runIsolatedSEC10(env,fake,{...config,
+  url:'https://jtlusodorfnyzgyuewkz.supabase.co'});
+ assert.equal(blocked.reason,'NONPRODUCTION_CONFIG_NOT_VERIFIED');
+ assert.equal(networkCalls,oldCount,'cloud host must not be contacted');
 });
