@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -70,6 +70,25 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
     escape(x.status)+'</td></tr>').join('')+'</tbody></table></div>';
   html+='<p class="muted">Writes attempted: 0. This read-only result cannot certify role mutation, fresh post-change sessions, FRT finance writes or the native 5173 board host.</p>'+
    '<button class="secondary" data-action="security-sec07-copy">Copy nonsecret SEC07 result</button></div>';
+ }
+ html+='</div></div>';
+ html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC09 · Signed platform-role acceptance</h3></div>'+
+ '<div class="panel-body"><p class="muted">Run the existing FRT governance and CRM backend acceptance checks together under this signed session. This requires both results to agree and attempts no role, membership, board or finance writes. A PASS does not certify role assignment/revocation or a new post-change session.</p>'+
+ '<button class="primary" data-action="security-sec09-readonly" '+(sec09Busy?'disabled':'')+'>'+
+ (sec09Busy?'Verifying paired signed acceptance…':'Run CP-FRT-SEC09 signed acceptance')+'</button>';
+ if(sec09Result){
+  const count=(sec09Result.checks||[]).filter(x=>x.status==='PASS').length;
+  html+='<div class="csp-u053"><strong>SEC09 result: '+escape(sec09Result.status||'BLOCKED')+
+   ' ('+count+' / '+(sec09Result.checks||[]).length+' checks)</strong>'+
+   '<p class="muted">Signed scenario: '+escape(sec09Result.scenario||'UNVERIFIED')+'</p>';
+  if(sec09Result.reason)html+='<p class="muted">Reason: '+escape(sec09Result.reason)+'</p>';
+  html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Check</th><th>Status</th></tr></thead><tbody>'+
+   (sec09Result.checks||[]).map(c=>'<tr><td>'+escape(c.name)+'</td><td>'+escape(c.status)+'</td></tr>').join('')+
+   (sec09Result.sources||[]).map(c=>'<tr><td>'+escape(c.checkpoint)+' · previous runner ('+
+     (c.checks||[]).filter(x=>x.status==='PASS').length+'/'+(c.checks||[]).length+
+     ')</td><td>'+escape(c.status)+'</td></tr>').join('')+
+   '</tbody></table></div><p class="muted">Writes attempted: 0. No role changes or fresh-session permission transitions tested. Copy the nonsecret result for acceptance review.</p>'+
+   '<button class="secondary" data-action="security-sec09-copy">Copy nonsecret SEC09 result</button></div>';
  }
  html+='</div></div>';
  html+='<div class="note security-note csp-u050" >The real target board UUIDs were confirmed through PostgreSQL inventory. A different workspace UUID is not a fabricated board. A successful negative result cannot substitute for application-level acceptance, membership revocation testing or field-level security. Reports are temporary in this browser tab and contain no names, emails, access tokens or location data.</div>';
