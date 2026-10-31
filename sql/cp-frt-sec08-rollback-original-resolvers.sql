@@ -2,6 +2,17 @@
 -- Emergency permission-semantics rollback only. Leaves user, role and finance data intact.
 -- Review separately before restoring original functions.
 BEGIN;
+-- Prevent dropping any effective role ceiling while an explicit assignment
+-- exists, because reverting the resolver could otherwise broaden access.
+DO $guard$
+BEGIN
+ IF to_regclass('public.apsyntra_crm_platform_roles') IS NOT NULL AND
+   EXISTS(SELECT 1 FROM public.apsyntra_crm_platform_roles)
+ THEN
+  RAISE EXCEPTION 'Rollback blocked: explicit CRM platform roles require coordinated recovery';
+ END IF;
+END;
+$guard$;
 CREATE OR REPLACE FUNCTION private.frt_current_role(p_workspace_id uuid)
  RETURNS text
  LANGUAGE sql
