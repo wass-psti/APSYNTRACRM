@@ -52,7 +52,7 @@ async function withToken(config,fetcher,token,rpc,body){
 }
 async function expectAccessDenied(config,fetcher,token,rpc,body){
  const status=await withToken(config,fetcher,token,rpc,body);
- ok(status===401||status===403||status===400,'REVOKED_SESSION_FINANCE_RPC_ACCEPTED');
+ ok(status===401||status===403||status===400,'REVOKED_SESSION_ACCEPTED_'+rpc.toUpperCase()+'_'+status);
  return status;
 }
 async function ci05Core({config,db,fetcher,actorIds,requestId,
