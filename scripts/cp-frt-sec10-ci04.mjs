@@ -55,8 +55,9 @@ function snapshot(db){
  return JSON.parse(sql(db,q));
 }
 function grant(db,allow){
- apply(db,tables.map(t=>(allow?'GRANT SELECT ON TABLE public.':
-  'REVOKE SELECT ON TABLE public.')+t+' TO authenticated;').join('\n')+
+ apply(db,tables.map(t=>allow?
+  'GRANT SELECT ON TABLE public.'+t+' TO authenticated;':
+  'REVOKE SELECT ON TABLE public.'+t+' FROM authenticated;').join('\n')+
   "\nNOTIFY pgrst,'reload schema';");
 }
 async function counts(client){
