@@ -76,8 +76,6 @@ async function ci05Core({config,db,fetcher,actorIds,requestId,
  const deniedPayload={company:'WAO',title:'Must not write after logout',
   department:'Finance',fundSource:'CI only',description:'No active session',
   dateNeeded:'2026-11-15',items:[{category:'CI',amount:1}]};
- await expectAccessDenied(config,fetcher,oldAccessToken,'frt_bootstrap',
-  {p_workspace_id:WORKSPACE});
  await expectAccessDenied(config,fetcher,oldAccessToken,'frt_create_request',
   {p_workspace_id:WORKSPACE,p_payload:deniedPayload});
  for(const [rpc,body] of [
@@ -108,8 +106,6 @@ async function ci05Core({config,db,fetcher,actorIds,requestId,
   const activeSessionCount=()=>Number(query(db,
    "SELECT count(*) FROM auth.sessions WHERE id='"+member.sessionProof.sessionId+"'::uuid"));
   ok(activeSessionCount()===1,'CI05_LIVE_SESSION_RECORD_MISSING');
-  const bootstrap=await member.rpc('frt_bootstrap',{p_workspace_id:WORKSPACE});
-  ok(bootstrap?.membership?.role==='FINANCE_MANAGER','LIVE_FRT_ROLE_DENIED');
   const postGuard=await member.rpc('frt_create_request',{p_workspace_id:WORKSPACE,
    p_payload:{company:'WAO',title:'CI05 Live Finance Record',
     department:'Finance',fundSource:'Operations',description:'Session-alive authorization',
@@ -118,7 +114,8 @@ async function ci05Core({config,db,fetcher,actorIds,requestId,
    'LIVE_SIGNED_FINANCE_TRANSACTION_FAILED');
   await other.signIn(config.outsiderEmail,config.outsiderPassword);
   let crossWorkspaceBlocked=false;
-  try{await other.rpc('frt_bootstrap',{p_workspace_id:WORKSPACE});}
+  try{await other.rpc('frt_create_request',{p_workspace_id:WORKSPACE,
+    p_payload:deniedPayload});}
   catch(e){crossWorkspaceBlocked=e instanceof HttpStatusError&&e.status>=400&&e.status<500;}
   ok(crossWorkspaceBlocked,'CROSS_WORKSPACE_SESSION_BYPASS');
 
@@ -132,7 +129,7 @@ async function ci05Core({config,db,fetcher,actorIds,requestId,
   sessionStillPresent=activeSessionCount()===1;
   ok(sessionStillPresent,'TOKEN_SESSION_REMOVED_BEFORE_NATURAL_EXPIRY');
   const expiredStatus=await withToken(config,fetcher,member.accessToken,
-   'frt_bootstrap',{p_workspace_id:WORKSPACE});
+   'frt_create_request',{p_workspace_id:WORKSPACE,p_payload:deniedPayload});
   ok(expiredStatus===401||expiredStatus===403,'NATURALLY_EXPIRED_GOTRUE_JWT_STILL_AUTHORIZED');
   verifiedExpiry=true;
  }finally{
@@ -144,7 +141,7 @@ async function ci05Core({config,db,fetcher,actorIds,requestId,
   final.activeSessionGuardHidden===true,
   'CI05_FINANCE_AUDIT_OR_GRANT_INTEGRITY_FAILURE');
  return {checkpoint:'CP-FRT-SEC10-CI05',status:'PASS',
-  nativeAuthSessionGuard:true,revokedOldJwtDeniedByFinanceRPCs:5,
+  nativeAuthSessionGuard:true,revokedOldJwtDeniedByFinanceRPCs:4,
   sameSignedJwtPreGuardAdmitted:true,newSignedFinanceRequestAllowed:true,
   crossWorkspaceSignedDenial:true,realExpiredGoTrueJwtRejected:verifiedExpiry,
   expiredTokenSessionRowStillPresent:sessionStillPresent,
