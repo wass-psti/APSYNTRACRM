@@ -20,10 +20,9 @@ const liquidationPayload={notes:'CI-only liquidation',
  items:[{description:'Ephemeral receipt',amount:85,vendor:'CI fixture'}]};
 function safeSqlError(e){
  const stderr=String(e?.stderr||'');
- const line=stderr.split('\\n').find(x=>x.includes('ERROR:'))||'no SQL error detail';
- const cleaned=line.replace(/https?:\\/\\/[^\\s]+/g,'[endpoint]')
-  .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi,'[id]').slice(0,190);
- process.stderr.write('CI03 isolated finance SQL: '+cleaned+'\\n');
+ const line=stderr.split(String.fromCharCode(10)).find(x=>x.includes('ERROR:'))||'unknown isolated SQL failure';
+ const cleaned=line.replaceAll('postgresql://','[db-url]').replaceAll('https://','[url]').slice(0,160);
+ process.stderr.write('CI03 isolated finance SQL: '+cleaned+String.fromCharCode(10));
  throw Error('ISOLATED_FINANCE_SQL_FAILED');
 }
 function sql(db,source){
