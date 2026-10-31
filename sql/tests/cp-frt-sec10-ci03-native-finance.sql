@@ -127,29 +127,6 @@ ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_comp
 ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 ALTER TABLE public.frt_voucher_counters ADD CONSTRAINT frt_voucher_counters_pkey PRIMARY KEY (workspace_id, company_id, voucher_year);
 
--- Retain canonical FRT read policies, but NO direct authenticated table grants.
-ALTER TABLE public.frt_companies ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.frt_companies FROM PUBLIC,anon,authenticated;
-CREATE POLICY frt_member_select ON public.frt_companies FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
-ALTER TABLE public.frt_requests ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.frt_requests FROM PUBLIC,anon,authenticated;
-CREATE POLICY frt_member_select ON public.frt_requests FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
-ALTER TABLE public.frt_request_items ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.frt_request_items FROM PUBLIC,anon,authenticated;
-CREATE POLICY frt_member_select ON public.frt_request_items FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
-ALTER TABLE public.frt_voucher_counters ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.frt_voucher_counters FROM PUBLIC,anon,authenticated;
-CREATE POLICY frt_member_select ON public.frt_voucher_counters FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
-ALTER TABLE public.frt_audit_logs ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.frt_audit_logs FROM PUBLIC,anon,authenticated;
-CREATE POLICY frt_member_select ON public.frt_audit_logs FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
-ALTER TABLE public.frt_liquidations ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.frt_liquidations FROM PUBLIC,anon,authenticated;
-CREATE POLICY frt_member_select ON public.frt_liquidations FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
-ALTER TABLE public.frt_liquidation_items ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.frt_liquidation_items FROM PUBLIC,anon,authenticated;
-CREATE POLICY frt_member_select ON public.frt_liquidation_items FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
-
 -- Existing domain RPC implementations: these remain SECURITY DEFINER and
 -- enforce private.frt_current_role / private.frt_has_role at server runtime.
 CREATE OR REPLACE FUNCTION private.frt_has_membership(p_workspace_id uuid)
@@ -304,4 +281,27 @@ REVOKE ALL ON FUNCTION public.frt_submit_liquidation(uuid,uuid,jsonb) FROM PUBLI
 GRANT EXECUTE ON FUNCTION public.frt_submit_liquidation(uuid,uuid,jsonb) TO authenticated;
 REVOKE ALL ON FUNCTION public.frt_update_request(uuid,uuid,jsonb) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.frt_update_request(uuid,uuid,jsonb) TO authenticated;
+-- Retain canonical FRT read policies, but NO direct authenticated table grants.
+ALTER TABLE public.frt_companies ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.frt_companies FROM PUBLIC,anon,authenticated;
+CREATE POLICY frt_member_select ON public.frt_companies FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
+ALTER TABLE public.frt_requests ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.frt_requests FROM PUBLIC,anon,authenticated;
+CREATE POLICY frt_member_select ON public.frt_requests FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
+ALTER TABLE public.frt_request_items ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.frt_request_items FROM PUBLIC,anon,authenticated;
+CREATE POLICY frt_member_select ON public.frt_request_items FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
+ALTER TABLE public.frt_voucher_counters ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.frt_voucher_counters FROM PUBLIC,anon,authenticated;
+CREATE POLICY frt_member_select ON public.frt_voucher_counters FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
+ALTER TABLE public.frt_audit_logs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.frt_audit_logs FROM PUBLIC,anon,authenticated;
+CREATE POLICY frt_member_select ON public.frt_audit_logs FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
+ALTER TABLE public.frt_liquidations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.frt_liquidations FROM PUBLIC,anon,authenticated;
+CREATE POLICY frt_member_select ON public.frt_liquidations FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
+ALTER TABLE public.frt_liquidation_items ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.frt_liquidation_items FROM PUBLIC,anon,authenticated;
+CREATE POLICY frt_member_select ON public.frt_liquidation_items FOR SELECT TO authenticated USING (private.frt_has_membership(workspace_id));
+
 NOTIFY pgrst,'reload schema';
