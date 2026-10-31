@@ -72,7 +72,7 @@ export async function runIsolatedSEC10(env,fetcher=globalThis.fetch,ciConfig=nul
     throw Error('CI_ONLY');
    const url=new URL(ciConfig.url);
    if(url.protocol!=='http:'||!['127.0.0.1','localhost'].includes(url.hostname)||
-      !/^\\d+$/.test(url.port)||url.pathname!=='/'||
+      !/^\d+$/.test(url.port)||url.pathname!=='/'||
       url.username||url.password||url.search||url.hash)
     throw Error('CI_LOOPBACK_REQUIRED');
    if(!ciConfig.publishableKey||!ciConfig.bootstrapEmail||!ciConfig.bootstrapPassword||
