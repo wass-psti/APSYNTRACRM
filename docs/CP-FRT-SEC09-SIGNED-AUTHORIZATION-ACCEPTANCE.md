@@ -30,6 +30,10 @@ The production Supabase project `jtlusodorfnyzgyuewkz` reports:
 
 **Important:** This is the joined **read-only signed-user baseline**. It does not verify that platform Viewer can edit nothing after an actual role change, or that a cached JWT becomes ineffective after an administrator revokes roles. Those tests require explicitly authorized nonproduction role changes and actual operational requests. It also does not establish 12-board native-host acceptance.
 
+## Verified source integration
+
+GitHub Actions [run #41155639842](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41155639842) passed the full frontend regression suite, including the paired SEC09 positive/negative acceptance fixtures, malicious response sanitization, logout invalidation and identity drift checks. The independent disposable PostgreSQL 17 authorization test job also passed. This CI tested source contracts and isolated SQL behavior; it **did not access either real signed user session** or modify production.
+
 ## Genuine signed-user procedure
 
 Use the deployed APSYNTRA CRM `https://wass-psti.github.io/APSYNTRACRM/#/security` after this frontend is merged and Pages deployment succeeds.
@@ -45,7 +49,7 @@ Use the deployed APSYNTRA CRM `https://wass-psti.github.io/APSYNTRACRM/#/securit
 | --- | --- |
 | CP-FRT-SEC08 live production migrations, role table and function guards | VERIFIED via connected PostgreSQL read-only checks |
 | Historical CP-FRT-SEC03 signed checks (7/7 bootstrap, 5/5 nonbootstrap) | VERIFIED from earlier operator-submitted results; **predate** SEC08 backend activation |
-| CP-FRT-SEC09 source implementation and mocked positive/negative contracts | IMPLEMENTED-UNVERIFIED until branch CI passes |
+| CP-FRT-SEC09 source implementation and mocked positive/negative contracts | VERIFIED in successful frontend CI and disposable PostgreSQL 17 checks; no genuine signed-user acceptance implied |
 | CP-FRT-SEC09 live signed bootstrap test | PENDING operator-provided browser evidence |
 | CP-FRT-SEC09 live signed nonbootstrap test | PENDING operator-provided browser evidence |
 | Bootstrap setter mutation / revision / correlated audit | PENDING scoped nonproduction approval and genuine signed role transaction |
