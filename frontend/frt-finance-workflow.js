@@ -54,11 +54,22 @@ export function projectFRTRequestDetail(raw,{requestId,companyCode,workspaceId,r
   transferConfirmed:isTime(raw.transfer_confirmed_at),
   archived:isTime(raw.archived_at)
  };
- const workflow=entries.map(x=>({
-  code:x.code,label:x.label,
-  candidate:x.roles.has(role)&&x.eligible(state),
-  authority:'NOT_VERIFIED_FOR_EXECUTION'
- }));
+ const serverWorkflow=raw.workflow;
+ if(!Array.isArray(serverWorkflow)||serverWorkflow.length!==entries.length)
+  return fail('FRT_SERVER_WORKFLOW_CONTRACT_INVALID');
+ const workflow=[];
+ for(let i=0;i<entries.length;i++){
+  const entry=entries[i],item=serverWorkflow[i];
+  if(!item||item.code!==entry.code||typeof item.eligible!=='boolean'||
+     item.authority!=='SERVER_ROLE_AND_LIFECYCLE_PREVIEW_ONLY')
+   return fail('FRT_SERVER_WORKFLOW_CONTRACT_INVALID');
+  // Fail closed if the server unexpectedly claims more eligibility than
+  // this independently restricted informational role/lifecycle envelope.
+  if(item.eligible&&!(entry.roles.has(role)&&entry.eligible(state)))
+   return fail('FRT_SERVER_WORKFLOW_DIVERGENCE');
+  workflow.push({code:entry.code,label:entry.label,
+   candidate:item.eligible,authority:'NOT_VERIFIED_FOR_EXECUTION'});
+ }
  return {status:'PASS',reason:null,writesAttempted:0,
   detail:{voucher:raw.voucher_no,title:raw.title,dateNeeded:raw.date_needed,
    status:state.status,liquidationStatus:state.liquidationStatus,
@@ -93,8 +104,8 @@ export async function loadFRTRequestDetailReadOnly({
      !boot.companies.some(c=>c?.code===companyCode))
    return fail('FRT_DETAIL_MEMBERSHIP_DENIED');
 
-  // No use of frt_request_action, even when its state preview is a candidate.
-  const raw=await api.rpc('frt_get_request',{
+  // Only a restricted backend projection, never legacy broad detail or frt_request_action.
+  const raw=await api.rpc('frt_restricted_request_detail',{
    p_workspace_id:workspaceId,p_request_id:requestId
   });
   const projected=projectFRTRequestDetail(raw,{
