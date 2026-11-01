@@ -42,10 +42,11 @@ BEGIN
     NOT has_function_privilege('authenticated',
     'public.frt_board_list_safe(uuid,text,text)','EXECUTE') OR
     NOT has_function_privilege('authenticated',
-    'public.frt_board_detail_safe(uuid,uuid,text)','EXECUTE') OR
+    'public.frt_restricted_request_detail(uuid,uuid)','EXECUTE') OR
     has_function_privilege('anon','public.frt_board_list_safe(uuid,text,text)','EXECUTE') OR
     has_function_privilege('anon','public.frt_board_dashboard_safe(uuid,text)','EXECUTE') OR
-    has_function_privilege('anon','public.frt_board_detail_safe(uuid,uuid,text)','EXECUTE') OR
+    has_function_privilege('anon','public.frt_restricted_request_detail(uuid,uuid)','EXECUTE') OR
+    has_function_privilege('authenticated','public.frt_get_request(uuid,uuid)','EXECUTE') OR
     has_table_privilege('authenticated','public.frt_requests','SELECT') THEN
    RAISE EXCEPTION 'SEC14 routine or table grants incorrect';
  END IF;
@@ -84,39 +85,35 @@ BEGIN
     j::text LIKE '%84215%' OR j::text LIKE '%amount%' THEN
   RAISE EXCEPTION 'SEC14 dashboard leaked amounts or bad counts';
  END IF;
- detail := public.frt_board_detail_safe(w,r1,'WAO');
+ detail := public.frt_restricted_request_detail(w,r1);
  IF detail->>'id' IS DISTINCT FROM r1::text OR
     detail->>'company_code' IS DISTINCT FROM 'WAO' OR
     detail->'workflow'->0->>'code' IS DISTINCT FROM 'approve' OR
-    (detail->'workflow'->0->>'candidate')::boolean IS DISTINCT FROM false OR
-    (detail->'workflow'->6->>'candidate')::boolean IS DISTINCT FROM false OR
+    (detail->'workflow'->0->>'eligible')::boolean IS DISTINCT FROM false OR
+    (detail->'workflow'->6->>'eligible')::boolean IS DISTINCT FROM false OR
     detail::text LIKE '%SECRET%' OR detail::text LIKE '%84215%' OR
     detail::text LIKE '%amount%' OR detail::text LIKE '%recipient%' OR
     (SELECT count(*) FROM jsonb_object_keys(detail))<>13 THEN
    RAISE EXCEPTION 'SEC14 safe request detail leaked data or widened role';
  END IF;
- detail := public.frt_board_detail_safe(w,r2,'WASS');
- IF (detail->'workflow'->5->>'candidate')::boolean IS DISTINCT FROM true OR
-    (detail->'workflow'->0->>'candidate')::boolean IS DISTINCT FROM false THEN
+ detail := public.frt_restricted_request_detail(w,r2);
+ IF (detail->'workflow'->5->>'eligible')::boolean IS DISTINCT FROM true OR
+    (detail->'workflow'->0->>'eligible')::boolean IS DISTINCT FROM false THEN
    RAISE EXCEPTION 'SEC14 finance manager state matrix incorrect';
  END IF;
- -- Company mismatch cannot request the same UUID under an alternate company.
- blocked:=false;
- BEGIN
-  PERFORM public.frt_board_detail_safe(w,r1,'WASS');
- EXCEPTION WHEN SQLSTATE 'P0002' THEN blocked:=true;
- END;
- IF NOT blocked THEN RAISE EXCEPTION 'SEC14 company isolation failed'; END IF;
- IF jsonb_array_length(public.frt_board_list_safe(w,'NOT_FOUND',''))<>0 THEN
-  RAISE EXCEPTION 'SEC14 company list isolation failed';
+ -- Company scope is enforced on lists. Canonical restricted detail RPC
+ -- authorizes the request by workspace; the board client checks company_code.
+ IF jsonb_array_length(public.frt_board_list_safe(w,'WASS',''))<>1 OR
+    jsonb_array_length(public.frt_board_list_safe(w,'NOT_FOUND',''))<>0 THEN
+  RAISE EXCEPTION 'SEC14 company-filtered list isolation failed';
  END IF;
  -- Bootstrap/GM role may see candidate approval; still not executable.
  PERFORM set_config('request.jwt.claim.sub',
   '00000000-0000-4000-8000-00000000000a',true);
- detail := public.frt_board_detail_safe(w,r1,'WAO');
- IF (detail->'workflow'->0->>'candidate')::boolean IS DISTINCT FROM true OR
-    detail->'workflow'->0->>'authority' <> 'NOT_VERIFIED_FOR_EXECUTION' OR
-    (detail->'workflow'->6->>'candidate')::boolean IS DISTINCT FROM true THEN
+ detail := public.frt_restricted_request_detail(w,r1);
+ IF (detail->'workflow'->0->>'eligible')::boolean IS DISTINCT FROM true OR
+    detail->'workflow'->0->>'authority' <> 'SERVER_ROLE_AND_LIFECYCLE_PREVIEW_ONLY' OR
+    (detail->'workflow'->6->>'eligible')::boolean IS DISTINCT FROM true THEN
   RAISE EXCEPTION 'SEC14 GM candidate preview incorrect';
  END IF;
  -- Other-workspace user, missing active FRT module grant, invalid signed subject.
@@ -130,7 +127,7 @@ BEGIN
  IF NOT blocked THEN RAISE EXCEPTION 'SEC14 cross-workspace list denial failed'; END IF;
  blocked:=false;
  BEGIN
-  PERFORM public.frt_board_detail_safe(w,r1,'WAO');
+  PERFORM public.frt_restricted_request_detail(w,r1);
  EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
  END;
  IF NOT blocked THEN RAISE EXCEPTION 'SEC14 cross-workspace detail denial failed'; END IF;
