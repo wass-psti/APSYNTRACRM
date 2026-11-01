@@ -38,10 +38,13 @@ COMMIT;
 DO $privileges$
 BEGIN
  IF NOT has_function_privilege('authenticated',
+    'public.frt_board_dashboard_safe(uuid,text)','EXECUTE') OR
+    NOT has_function_privilege('authenticated',
     'public.frt_board_list_safe(uuid,text,text)','EXECUTE') OR
     NOT has_function_privilege('authenticated',
     'public.frt_board_detail_safe(uuid,uuid,text)','EXECUTE') OR
     has_function_privilege('anon','public.frt_board_list_safe(uuid,text,text)','EXECUTE') OR
+    has_function_privilege('anon','public.frt_board_dashboard_safe(uuid,text)','EXECUTE') OR
     has_function_privilege('anon','public.frt_board_detail_safe(uuid,uuid,text)','EXECUTE') OR
     has_table_privilege('authenticated','public.frt_requests','SELECT') THEN
    RAISE EXCEPTION 'SEC14 routine or table grants incorrect';
@@ -72,6 +75,14 @@ BEGIN
     j::text LIKE '%department%' OR
     (SELECT count(*) FROM jsonb_object_keys(j->0))<>8 THEN
     RAISE EXCEPTION 'SEC14 safe request list leaked restricted data';
+ END IF;
+ j := public.frt_board_dashboard_safe(w,'WAO');
+ IF jsonb_typeof(j)<>'object' OR
+    (SELECT count(*) FROM jsonb_object_keys(j))<>5 OR
+    (j->>'total_requests')::integer<>1 OR
+    (j->>'pending')::integer<>1 OR
+    j::text LIKE '%84215%' OR j::text LIKE '%amount%' THEN
+  RAISE EXCEPTION 'SEC14 dashboard leaked amounts or bad counts';
  END IF;
  detail := public.frt_board_detail_safe(w,r1,'WAO');
  IF detail->>'id' IS DISTINCT FROM r1::text OR
@@ -123,6 +134,12 @@ BEGIN
  EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
  END;
  IF NOT blocked THEN RAISE EXCEPTION 'SEC14 cross-workspace detail denial failed'; END IF;
+ blocked:=false;
+ BEGIN
+  PERFORM public.frt_board_dashboard_safe(w,'WAO');
+ EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
+ END;
+ IF NOT blocked THEN RAISE EXCEPTION 'SEC14 cross-workspace dashboard denial failed'; END IF;
  PERFORM set_config('request.jwt.claim.sub','',true);
  blocked:=false;
  BEGIN
