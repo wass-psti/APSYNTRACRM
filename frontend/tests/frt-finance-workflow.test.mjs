@@ -9,7 +9,14 @@ const user='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const id='33333333-3333-4333-8333-333333333333';
 const companyCode='PSTI';
+const workflowCodes=['approve','approve/revoke','reject','transfer','transfer/revoke',
+ 'close','archive','liquidation/approve'];
+function serverWorkflow(candidates=[]){
+ return workflowCodes.map(code=>({code,eligible:candidates.includes(code),
+  authority:'SERVER_ROLE_AND_LIFECYCLE_PREVIEW_ONLY'}));
+}
 const base={id,workspace_id:ws,company_code:companyCode,
+ workflow:serverWorkflow(['approve','reject']),
  voucher_no:'FR-001',title:'Funding for supplies',
  status:'PENDING_APPROVAL',liquidation_status:'NOT_SUBMITTED',
  date_needed:'2026-11-03',finance_approved_at:null,transfer_confirmed_at:null,
@@ -37,7 +44,7 @@ function fixture({raw=base,role='FINANCE_APPROVER',stale=false,denied=false,
      role,enabled:true,status:'active'},
     companies:[{code:companyMismatch?'WASS':companyCode,name:'Process Solutions'}]
    };
-   if(name==='frt_get_request'){
+   if(name==='frt_restricted_request_detail'){
     if(denied)throw Object.assign(Error('Sensitive backend error'),{status:403});
     return raw;
    }
@@ -56,8 +63,8 @@ test('SEC13 reads existing signed RPC and returns only whitelisted non-financial
  assert.equal(report.detail.status,'PENDING_APPROVAL');
  assert.equal(report.detail.workflow.length,8);
  assert.ok(report.detail.workflow.every(x=>x.authority==='NOT_VERIFIED_FOR_EXECUTION'));
- assert.deepEqual(f.calls.filter(x=>typeof x==='object').map(x=>x.name),['frt_bootstrap','frt_get_request']);
- assert.deepEqual(f.calls.find(x=>x.name==='frt_get_request').args,{
+ assert.deepEqual(f.calls.filter(x=>typeof x==='object').map(x=>x.name),['frt_bootstrap','frt_restricted_request_detail']);
+ assert.deepEqual(f.calls.find(x=>x.name==='frt_restricted_request_detail').args,{
   p_workspace_id:ws,p_request_id:id
  });
  const text=JSON.stringify(report);
@@ -85,7 +92,7 @@ test('a role transition after the signed list prevents reuse of the old workflow
  const result=await load(f);
  assert.equal(result.status,'BLOCKED');
  assert.equal(result.reason,'FRT_DETAIL_MEMBERSHIP_DENIED');
- assert.ok(!f.calls.some(x=>x.name==='frt_get_request'));
+ assert.ok(!f.calls.some(x=>x.name==='frt_restricted_request_detail'));
 });
 test('FRT member mismatch and no company access block before request-detail RPC',async()=>{
  for(const arg of [{memberMismatch:true},{companyMismatch:true}]){
@@ -93,7 +100,7 @@ test('FRT member mismatch and no company access block before request-detail RPC'
   const result=await load(f);
   assert.equal(result.status,'BLOCKED');
   assert.equal(result.reason,'FRT_DETAIL_MEMBERSHIP_DENIED');
-  assert.ok(!f.calls.some(x=>x.name==='frt_get_request'));
+  assert.ok(!f.calls.some(x=>x.name==='frt_restricted_request_detail'));
  }
 });
 test('expired or switched signed session and forbidden backend response are blocked',async()=>{
@@ -128,15 +135,18 @@ test('workflow candidates mirror server role/state constraints but never authori
  assert.deepEqual(codes,['approve','reject']);
  r=projectFRTRequestDetail({...base,status:'DONE',
   finance_approved_at:'2026-11-01T00:00:00Z',
-  transfer_confirmed_at:null,liquidation_status:'APPROVED'},ctx);
+  transfer_confirmed_at:null,liquidation_status:'APPROVED',
+  workflow:serverWorkflow(['close'])},ctx);
  assert.deepEqual(r.detail.workflow.filter(x=>x.candidate).map(x=>x.code),['close']);
  r=projectFRTRequestDetail({...base,status:'DONE',
   finance_approved_at:'2026-11-01T00:00:00Z',
-  liquidation_status:'SUBMITTED'},ctx);
+  liquidation_status:'SUBMITTED',
+  workflow:serverWorkflow(['liquidation/approve'])},ctx);
  assert.deepEqual(r.detail.workflow.filter(x=>x.candidate).map(x=>x.code),['liquidation/approve']);
  const gm={...ctx,role:'GENERAL_MANAGER'};
  r=projectFRTRequestDetail({...base,status:'DONE',
-  finance_approved_at:'2026-11-01T00:00:00Z'},gm);
+  finance_approved_at:'2026-11-01T00:00:00Z',
+  workflow:serverWorkflow(['transfer','archive'])},gm);
  assert.ok(r.detail.workflow.find(x=>x.code==='transfer').candidate);
  assert.ok(r.detail.workflow.find(x=>x.code==='archive').candidate);
  assert.ok(r.detail.workflow.every(x=>x.authority==='NOT_VERIFIED_FOR_EXECUTION'));
@@ -186,4 +196,22 @@ test('SEC13 app binds only the existing finance tab and drops stale details on s
  assert.match(app,/state\.frtFinanceDetail=null/);
  assert.match(app,/state\.context\?\.workspace_id===workspace/);
  assert.doesNotMatch(app,/frt_request_action|service_role|supabaseAdminClient/);
+});
+
+test('SEC14 rejects unexpected or optimistic server workflow assertions',()=>{
+ const ctx={requestId:id,companyCode,workspaceId:ws,role:'REQUESTOR'};
+ for(const raw of [
+  {...base,workflow:undefined},
+  {...base,workflow:serverWorkflow(['approve'])},
+  {...base,workflow:[...serverWorkflow()].reverse()},
+  {...base,workflow:serverWorkflow().map((x,i)=>i===0?{...x,authority:'EXECUTE_ALLOWED'}:x)}
+ ]){
+  const out=projectFRTRequestDetail(raw,ctx);
+  assert.equal(out.status,'BLOCKED');
+ }
+});
+test('SEC14 client never calls legacy broad FRT request detail',()=>{
+ const source=readFileSync(new URL('../frt-finance-workflow.js',import.meta.url),'utf8');
+ assert.match(source,/api\.rpc\('frt_restricted_request_detail'/);
+ assert.doesNotMatch(source,/api\.rpc\('frt_get_request'/);
 });
