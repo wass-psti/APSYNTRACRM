@@ -17,6 +17,8 @@ on:
       - "sql/tests/cp-frt-sec10-*.sql"
       - "sql/cp-frt-sec11-*.sql"
       - "sql/tests/cp-frt-sec11-*.sql"
+      - "sql/cp-frt-sec14-*.sql"
+      - "sql/tests/cp-frt-sec14-*.sql"
       - "docs/CP-FRT-SEC11-SIGNED-EFFECTIVE-ACCESS.md"
       - "docs/CP-FRT-SEC10-CONTROLLED-TRANSITIONS.md"
       - "docs/CP-FRT-SEC07-CONTROLLED-ACTIVATION.md"
@@ -90,7 +92,10 @@ jobs:
             -f sql/tests/cp-frt-sec06-disposable-acceptance.sql \
             -f sql/tests/cp-frt-sec10-disposable-session-transitions.sql \
             -f sql/cp-frt-sec11-signed-effective-access.sql \
-            -f sql/tests/cp-frt-sec11-self-access-disposable.sql
+            -f sql/tests/cp-frt-sec11-self-access-disposable.sql \
+            -f sql/tests/cp-frt-sec10-ci03-native-finance.sql \
+            -f sql/cp-frt-sec14-board-safe-read-contracts.sql \
+            -f sql/tests/cp-frt-sec14-safe-board-disposable.sql
   live-pages:
     needs: frontend
     if: github.ref == 'refs/heads/main'
