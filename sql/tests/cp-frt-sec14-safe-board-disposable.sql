@@ -47,6 +47,8 @@ BEGIN
     has_function_privilege('anon','public.frt_board_dashboard_safe(uuid,text)','EXECUTE') OR
     has_function_privilege('anon','public.frt_restricted_request_detail(uuid,uuid)','EXECUTE') OR
     has_function_privilege('authenticated','public.frt_get_request(uuid,uuid)','EXECUTE') OR
+    has_function_privilege('authenticated','public.frt_list_requests(uuid,text,text)','EXECUTE') OR
+    has_function_privilege('authenticated','public.frt_dashboard(uuid,text)','EXECUTE') OR
     has_table_privilege('authenticated','public.frt_requests','SELECT') THEN
    RAISE EXCEPTION 'SEC14 routine or table grants incorrect';
  END IF;
