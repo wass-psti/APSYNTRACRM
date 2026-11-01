@@ -132,3 +132,41 @@ test('SEC12 is attached only to the existing named FRT board and keeps no financ
  assert.match(app,/case 'frt-finance-company'/);
  assert.doesNotMatch(app,/service_role|secretKey|supabaseAdminClient/i);
 });
+
+
+test('SEC14 safe dashboard/list never downgrade to financial-data-bearing legacy RPCs',async()=>{
+ const f=fixture();
+ const original=f.api.rpc.bind(f.api),requested=[];
+ f.api.rpc=async(name,args)=>{
+  requested.push(name);
+  if(name==='frt_board_dashboard_safe')return {
+   total_requests:1,pending:1,in_progress:0,completed:0,pending_liquidation_count:0
+  };
+  if(name==='frt_board_list_safe')return [{
+   id:record,company_code:'PSTI',voucher_no:'SAFE-1',
+   title:'Approved visibility',status:'PENDING_APPROVAL',date_needed:'2026-11-02'
+  }];
+  if(name==='frt_bootstrap')return original(name,args);
+  throw Error('Forbidden legacy financial RPC: '+name);
+ };
+ const response=await loadFRTFinanceReadOnly({...f,secureContracts:true});
+ assert.equal(response.status,'PASS');
+ assert.equal(response.requests.length,1);
+ assert.deepEqual(requested,['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
+ assert.equal(response.writesAttempted,0);
+});
+
+test('SEC14 unavailable safe endpoint fails closed without a legacy fallback',async()=>{
+ const f=fixture();const calls=[];
+ const original=f.api.rpc.bind(f.api);
+ f.api.rpc=async(name,args)=>{
+  calls.push(name);
+  if(name==='frt_bootstrap')return original(name,args);
+  throw Object.assign(Error('RPC missing'),{code:'PGRST202'});
+ };
+ const response=await loadFRTFinanceReadOnly({...f,secureContracts:true});
+ assert.equal(response.status,'BLOCKED');
+ assert.equal(response.reason,'FRT_READONLY_RPC_MISSING');
+ assert.ok(!calls.includes('frt_dashboard'));
+ assert.ok(!calls.includes('frt_list_requests'));
+});
