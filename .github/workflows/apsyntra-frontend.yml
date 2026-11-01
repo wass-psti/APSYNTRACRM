@@ -94,6 +94,8 @@ jobs:
             -f sql/cp-frt-sec11-signed-effective-access.sql \
             -f sql/tests/cp-frt-sec11-self-access-disposable.sql \
             -f sql/tests/cp-frt-sec10-ci03-native-finance.sql \
+            -f sql/tests/cp-frt-sec14-canonical-preflight-fixture.sql \
+            -f sql/cp-frt-sec14-restricted-details-action-access.sql \
             -f sql/cp-frt-sec14-board-safe-read-contracts.sql \
             -f sql/tests/cp-frt-sec14-safe-board-disposable.sql
   live-pages:
