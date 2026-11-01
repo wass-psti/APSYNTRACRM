@@ -12,7 +12,7 @@ const denied=(reason)=>({status:'BLOCKED',reason,companies:[],requests:[],
  summary:null,role:'UNVERIFIED',companyCode:null,writesAttempted:0});
 const short=(value,length)=>typeof value==='string'&&value.length<=length?value:null;
 const validDate=v=>v===null||(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v));
-export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
+export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,secureContracts=false}={}){
  const result=denied('UNVERIFIED_SIGNED_CONTEXT');
  if(!auth||!api)return denied('SIGNED_AUTH_AND_API_REQUIRED');
  try{
@@ -47,8 +47,10 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
    return denied('UNAUTHORIZED_COMPANY_SELECTION');
 
   const [dashboard,items]=await Promise.all([
-   api.rpc('frt_dashboard',{p_workspace_id:context.workspace_id,p_company:selected}),
-   api.rpc('frt_list_requests',{p_workspace_id:context.workspace_id,p_company:selected,p_search:''})
+   api.rpc(secureContracts?'frt_board_dashboard_safe':'frt_dashboard',
+    {p_workspace_id:context.workspace_id,p_company:selected}),
+   api.rpc(secureContracts?'frt_board_list_safe':'frt_list_requests',
+    {p_workspace_id:context.workspace_id,p_company:selected,p_search:''})
   ]);
   const keys=['total_requests','pending','in_progress','completed','pending_liquidation_count'];
   if(!dashboard||keys.some(k=>!validCount(dashboard[k]))||
