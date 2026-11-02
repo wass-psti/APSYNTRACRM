@@ -102,3 +102,23 @@
 /* CP-FRT-SEC11: readable board and stage selection without overlapping labels. */
 .sec10-label{display:block;margin:15px 0 7px;font-size:13px;font-weight:650}
 .sec10-select{display:block;box-sizing:border-box;margin-bottom:14px;min-height:44px}
+
+
+/* Native TimeTracker Attendance board integration */
+.tt-native{display:grid;gap:18px;min-width:0}
+.tt-native .tt-title{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.tt-native .tt-title h2{margin:4px 0;font-size:24px;letter-spacing:-.035em}
+.tt-native .tt-title p{margin:0;color:var(--muted,#687085)}
+.tt-native .tt-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tt-native .tt-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(250px,1fr);gap:14px}
+.tt-native .tt-grid .panel,.tt-native .panel{min-width:0}
+.tt-native .tt-grid .panel-body{display:grid;gap:12px}
+.tt-native .tt-form-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tt-native label{display:grid;gap:7px;font-size:13px;font-weight:650}
+.tt-native select,.tt-native textarea{width:100%;min-width:0;background:var(--surface,#fff);color:inherit;border:1px solid #ccd1da;border-radius:8px;padding:10px;font:inherit}
+.tt-native .tt-note-field[hidden]{display:none}
+.tt-native .panel-header h3{margin:0}
+.tt-native .table-scroll{max-height:540px;overflow:auto}
+.tt-native .board-table th{position:sticky;top:0;background:var(--surface,#fff);z-index:1}
+@media(max-width:920px){.tt-native .tt-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.tt-native .tt-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.tt-native .tt-form-fields{grid-template-columns:1fr}.tt-native .tt-title h2{font-size:20px}}
