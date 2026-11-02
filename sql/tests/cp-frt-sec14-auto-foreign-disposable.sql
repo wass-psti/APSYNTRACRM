@@ -72,6 +72,26 @@ BEGIN
  IF NOT denied THEN RAISE EXCEPTION 'SEC14 unsigned actor allowed'; END IF;
 END $probe$;
 RESET ROLE;
+-- Exercise the empty-foreign-target path in the SAME disposable transaction:
+-- actor B is now a member of every fixture workspace.
+INSERT INTO public.workspace_members(workspace_id,user_id,active)
+VALUES ('00000000-0000-4000-8000-000000000002',
+        '00000000-0000-4000-8000-00000000000b',true);
+SET ROLE authenticated;
+DO $no_target$
+DECLARE r jsonb;
+BEGIN
+ PERFORM set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-00000000000b',true);
+ r:=public.frt_sec14_auto_foreign_denials(
+  '00000000-0000-4000-8000-000000000001');
+ IF r IS DISTINCT FROM jsonb_build_object(
+   'status','PENDING','reason','NO_INDEPENDENT_FOREIGN_WORKSPACE',
+   'foreignWorkspaceExistence','NOT_VERIFIED','dashboard','PENDING','list','PENDING')
+ THEN RAISE EXCEPTION 'SEC14 nonexistent independent target reported as PASS'; END IF;
+END
+$no_target$;
+RESET ROLE;
 DO $unchanged$
 BEGIN
  IF (SELECT count(*) FROM public.frt_requests)<>2 OR
