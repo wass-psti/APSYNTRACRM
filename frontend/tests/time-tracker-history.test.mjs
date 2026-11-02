@@ -127,6 +127,7 @@ test('native signed snapshot wires sanitized all-date Log without weakening pers
    }));
    if(name==='list_module_state')return [{state_key:'timetracker.attendance.v1',
      scope:'shared',revision:2,value:JSON.stringify(state)}];
+   if(name==='timetracker_ot_snapshot')throw Error('PGRST202: Could not find the function');
    throw Error('Unexpected RPC: '+name);
   }
  };
