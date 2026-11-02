@@ -30,13 +30,17 @@ const select=(id,values,placeholder)=>
 export function timeTrackerClockParts(at=new Date()){
  const time=new Date(at);
  if(!Number.isFinite(time.getTime()))throw new Error('Invalid clock date');
- const hour=time.getHours();
+ // Philippine Time is UTC+08:00; never depend on the device/CI timezone.
+ const ph=new Date(time.getTime()+8*60*60*1000);
+ const hour=ph.getUTCHours();
  return {
   greeting:hour<12?'Good morning,':hour<17?'Good afternoon,':'Good evening,',
-  day:time.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}),
+  day:time.toLocaleDateString('en-US',{
+   timeZone:'Asia/Manila',weekday:'long',month:'long',day:'numeric'
+  }),
   hours:String(hour%12||12).padStart(2,'0'),
-  minutes:String(time.getMinutes()).padStart(2,'0'),
-  seconds:String(time.getSeconds()).padStart(2,'0'),
+  minutes:String(ph.getUTCMinutes()).padStart(2,'0'),
+  seconds:String(ph.getUTCSeconds()).padStart(2,'0'),
   period:hour>=12?'PM':'AM'
  };
 }
