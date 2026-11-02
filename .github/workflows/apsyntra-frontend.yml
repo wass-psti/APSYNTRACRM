@@ -9,6 +9,7 @@ on:
       - "scripts/cp-frt-sec10-*.mjs"
       - "docs/CP-FRT-SEC10-ISOLATED-LIVE-ACCEPTANCE.md"
       - "scripts/pages-smoke.mjs"
+      - "scripts/pages-smoke-supersession.mjs"
       - "scripts/sec14-legacy-read-consumer-guard.mjs"
       - "docs/CP-FRT-SEC14-LEGACY-RPC-CONSUMER-COMPATIBILITY.md"
       - "docs/PAGES-OPERATIONS.md"
@@ -166,4 +167,5 @@ jobs:
       - name: Verify live GitHub Pages assets match this main commit
         env:
           EXPECTED_DEPLOY_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/pages-smoke.mjs
