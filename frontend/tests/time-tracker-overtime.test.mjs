@@ -59,7 +59,7 @@ test('staged modal is visible but submission and ordinary approvals fail closed'
   requests:rows,access:{bootstrapApprover:true},now});
  assert.match(bootstrap,/tt-ot-review-actions/);
  assert.match(bootstrap,/Approve<\/button>/);
- assert.match(bootstrap,/type="button" disabled/);
+ assert.match(bootstrap,/data-action="tt-ot-approve"[^>]* disabled/);
  assert.equal(TT_OT_WRITES_ACCEPTED,false);
 });
 function setup({role='System Admin',snapshot=null}={}){
