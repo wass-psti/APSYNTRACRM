@@ -250,7 +250,7 @@ export function renderTimeTrackerLog({
    '<span class="tt-log-readonly">Read-only · '+
     (team?'Authorized team':'Signed account')+'</span></header>'+
   '<section class="tt-log-controls" aria-label="Attendance Log filters">'+
-   '<label class="tt-log-search">Search name, ID or department'+
+   '<label class="tt-log-search">Search employee or department'+
    '<input type="search" id="tt-log-search" maxlength="120" value="'+esc(options.search)+
     '" placeholder="Search employee, department or location…" autocomplete="off"></label>'+
    '<label>Date range'+choices('tt-log-period',periods,options.period)+'</label>'+
