@@ -1,4 +1,4 @@
-import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
+import {TT_LOCATIONS,creditedAttendanceMs,manilaClockMinutes,TT_PHT_OFFSET_MS} from './time-tracker-policy.js';
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 /**
@@ -29,8 +29,7 @@ export function attendanceClassification(record){
  if(record?.clockOut?.status==='administratively_closed'||record?.reconciliation?.type==='legacy_duplicate_session')
   return 'Administrative closure';
  if(!safeTime(record?.clockIn?.timestamp))return 'Unknown';
- const t=new Date(record.clockIn.timestamp);
- return t.getHours()*60+t.getMinutes()>TT_POLICY.standardClockInMinutes?'Late':'On time';
+ return manilaClockMinutes(record.clockIn.timestamp)>TT_POLICY.standardClockInMinutes?'Late':'On time';
 }
 export function projectOwnAttendance(value,userId){
  if(!uuid.test(userId||''))deny('A verified user is required');
@@ -85,15 +84,17 @@ export function filterMyAttendancePeriod(records,period='all',at=new Date()){
  if(!['all','today','week','month'].includes(period))deny('Unsupported report period');
  const now=new Date(at);
  if(!Number.isFinite(now.getTime()))deny('Invalid report date');
- let start=null;
+ let startMs=null;
  if(period!=='all'){
-  start=new Date(now);start.setHours(0,0,0,0);
-  if(period==='week')start.setDate(start.getDate()-((start.getDay()+6)%7));
-  if(period==='month')start.setDate(1);
+  const local=new Date(now.getTime()+TT_PHT_OFFSET_MS);
+  const dayMs=24*60*60*1000;
+  startMs=Date.UTC(local.getUTCFullYear(),local.getUTCMonth(),local.getUTCDate())-TT_PHT_OFFSET_MS;
+  if(period==='week')startMs-=((local.getUTCDay()+6)%7)*dayMs;
+  if(period==='month')startMs=Date.UTC(local.getUTCFullYear(),local.getUTCMonth(),1)-TT_PHT_OFFSET_MS;
  }
  return (records||[]).filter(x=>safeTime(x.clockIn)&&
-  (!start||(new Date(x.clockIn).getTime()>=start.getTime()&&
-   new Date(x.clockIn).getTime()<=now.getTime())));
+  (startMs===null||(Date.parse(x.clockIn)>=startMs&&
+   Date.parse(x.clockIn)<=now.getTime())));
 }
 function verifiedContext(auth,context,boardId){
  if(!auth||!uuid.test(auth.userId||'')||!isRecord(context)||
