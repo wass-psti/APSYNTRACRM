@@ -9,7 +9,7 @@ const rows=[
 test('authorized Reports include current and older sessions',()=>{
  assert.equal(filterTimeTrackerReportRows(rows,{period:'all',now}).length,2);
  assert.equal(filterTimeTrackerReportRows(rows,{period:'today',now}).length,1);
- assert.equal(filterTimeTrackerReportRows(rows,{period:'month',now}).length,1);
+ assert.equal(filterTimeTrackerReportRows(rows,{period:'month',now}).length,2);
  assert.equal(filterTimeTrackerReportRows(rows,{period:'custom',filters:{start:'2026-11-01',end:'2026-11-02'},now}).length,2);
 });
 test('Reports analytics and rendered names use projected records',()=>{
