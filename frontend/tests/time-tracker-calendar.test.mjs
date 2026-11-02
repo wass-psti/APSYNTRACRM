@@ -96,6 +96,8 @@ test('2026 November verified holidays do not become invented time records',()=>{
   'ATTENDANCE CALENDAR','HOLIDAYS THIS MONTH','Clock-ins'])
   assert.ok(html.includes(label),label);
  assert.match(html,/tt-cal-grid/);
+ assert.match(html,/UPCOMING NATIONAL HOLIDAY/);
+ assert.match(html,/In 28 days/);
  assert.match(html,/data-action="tt-calendar-prev"/);
  assert.match(html,/data-action="tt-calendar-next"/);
  assert.match(html,/data-action="tt-calendar-today"/);
