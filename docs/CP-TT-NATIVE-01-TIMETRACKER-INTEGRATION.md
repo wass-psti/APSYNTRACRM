@@ -93,3 +93,13 @@ The read-only source-controlled audit `sql/tests/cp-tt-native-01-production-read
 - No data, employee information, financial or attendance writes, or production permissions were changed by this preflight.
 
 **Safety disposition:** The native commit adapter is implemented and unit-tested, but the deployed UI keeps Clock In/Out disabled until the server security gaps and signed operational acceptance are verified. Existing production grants are unchanged and the historical RPC remains directly callable by previously authorized clients. Frontend gating is **not a substitute** for backend security hardening.
+
+## Latest automated integration evidence — 2026-11-02
+
+**GitHub Actions:** [Frontend Validation #41405150992](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41405150992) ran against native TimeTracker revision `49eaed3d7246914dcda7035317a8c78a5926a249`. **SUCCESS:** frontend **259/259**, disposable PostgreSQL **SUCCESS**, live Pages source smoke **SUCCESS**. This verifies build/source/unit regression contracts, not a genuine browser clock transaction. The signed production backend was inspected only with the no-write preflight described above.
+
+**Verified code coverage added for this application:** source attendance policy, per-user filtering, concurrency rejection preflight, central module and board gate, stable identity, GPS client acquisition validation, constrained server receipts, escaped history/report/OT display, CSV formula escaping, report periods, session-expiry state clearing, and explicit disabled production write state.
+
+**Acceptance accounting:** TT-01, TT-02 and TT-03 are **VERIFIED**, or **3 of 10 narrow acceptance gates = 30%**. TT-04 through TT-10 are not accepted. No other application board was modified by the native TimeTracker work. Overall twelve-application final acceptance remains **0/12**.
+
+**Next implementation blocker:** stage server-enforced board grant, offsite Work Note, location/department validation, and immutable attendance audit changes against the existing transaction contract, then complete controlled authorization review before any production deployment. The current Clock In/Out user interface stays disabled; no live clock writes or operator sign-in were performed in this development run. All 12 original source modules require separate parity mapping; this initial slice does not constitute full TimeTracker feature equivalence.
