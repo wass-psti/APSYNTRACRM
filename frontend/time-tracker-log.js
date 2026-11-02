@@ -78,6 +78,8 @@ const durationLabel=ms=>{
  return Math.floor(minutes/60)+'h '+String(minutes%60).padStart(2,'0')+'m';
 };
 const ratio=(num,total)=>total?Math.round(100*num/total):0;
+const widthBucket=percent=>'tt-log-width-'+Math.max(0,Math.min(100,
+ Math.round(percent/5)*5));
 const openDuration=(row,now)=>row.status==='Active'?
  Math.max(0,Date.parse(now)-Date.parse(row.clockIn)):0;
 const auditPill=(label,value,style='neutral')=>
@@ -101,8 +103,8 @@ function locationDistribution(rows){
    ' location'+(buckets.filter(x=>x.count>0).length===1?'':'s')+'</span></div>'+
   '<div class="tt-log-location-track" role="img" aria-label="Attendance session location distribution">'+
    (total?buckets.filter(x=>x.count).map(x=>
-    '<span class="tt-log-segment tt-log-segment-'+x.color+'" style="width:'+
-     (100*x.count/total).toFixed(4)+'%" title="'+esc(x.location)+
+    '<span class="tt-log-segment tt-log-segment-'+x.color+' '+
+     widthBucket(100*x.count/total)+'" title="'+esc(x.location)+
      ': '+x.count+' session(s)">'+
      (ratio(x.count,total)>=12?x.count+' ('+ratio(x.count,total)+'%)':'')+
     '</span>').join(''):'<span class="tt-log-no-location">No signed sessions in this selection</span>')+
@@ -136,8 +138,8 @@ function dailyOperations(rows,now){
    '<div><span aria-hidden="true">'+symbol+'</span>'+
    '<small>'+(rate===null?'Not verified':rate+'%')+'</small></div>'+
    '<strong>'+value+'</strong><span>'+esc(label)+'</span>'+
-   '<div class="tt-log-operation-meter"><i style="width:'+
-    (rate===null?0:rate)+'%"></i></div></article>').join('')+
+   '<div class="tt-log-operation-meter"><i class="'+
+    widthBucket(rate===null?0:rate)+'"></i></div></article>').join('')+
   '</div></section>';
 }
 function shiftProgress(rows,now){
@@ -264,7 +266,7 @@ export function renderTimeTrackerLog({
   locationDistribution(rows)+dailyOperations(rows,now)+shiftProgress(rows,now)+
   '<section class="tt-log-panel tt-log-records">'+
    '<div class="tt-log-panel-top"><div><h4>Attendance Records</h4>'+
-    '<p><span id="tt-log-visible-count">'+visible.length+'</span> of '+
+    '<p>Attendance history · <span id="tt-log-visible-count">'+visible.length+'</span> of '+
     summary.sessions+' sessions match filters · '+summary.people+
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
