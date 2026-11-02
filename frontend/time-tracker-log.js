@@ -51,11 +51,13 @@ export function filterTimeTrackerLogRows(records=[],filters={},now=new Date()){
 
 export function timeTrackerLogSummary(rows=[],now=new Date()){
  const eligible=safeRows(rows);
+ const dateKey=manilaDay(now);
+ const currentCount=eligible.filter(r=>manilaDay(r.clockIn)===dateKey).length;
  return Object.freeze({
  sessions:eligible.length,
- people:new Set(eligible.map(r=>r.ownerId||r.name||r.id)).size,
- today:eligible.filter(r=>manilaDay(r.clockIn)===manilaDay(now)).length,
- historical:eligible.filter(r=>manilaDay(r.clockIn)!==manilaDay(now)).length,
+ people:new Set(eligible.map(r=>r.ownerId||r.name||'Signed member')).size,
+ today:currentCount,
+ historical:eligible.length-currentCount,
  completed:eligible.filter(r=>r.status==='Completed').length,
  active:eligible.filter(r=>r.status==='Active').length,
  late:eligible.filter(r=>r.classification==='Late').length,
