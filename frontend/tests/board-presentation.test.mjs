@@ -91,7 +91,7 @@ test('UI only persists presentation layout and uses existing signed audit API',(
  assert.match(app,/case 'board-tab-move'/);
  assert.match(app,/case 'board-column-move'/);
  assert.match(app,/case 'board-activity'/);
- assert.match(app,/db\.boardEvents\(boardId,100\)/);
+ assert.match(app,/db\.boardEvents\(snapshot\.boardId,100\)/);
  assert.match(app,/case 'board-layout-reset'/);
  assert.match(app,/root\.addEventListener\('dragstart'/);
  assert.match(app,/window\.addEventListener\('pointermove'/);

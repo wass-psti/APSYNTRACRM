@@ -21,7 +21,7 @@ export function boardGrid(detail,{groupId=null,layout=null}={}){
  const displayed=groupId?items.filter(i=>i.group_id===groupId):items;
  const lookup=new Map(values.map(v=>[v.item_id+':'+v.column_id,v.value]));
  const rows=displayed.map(item=>{
-  const cells={record:escape(item.title||'Untitled'),
+  const cells={record:'<button type="button" class="board-item-open" data-action="board-item-detail" data-id="'+escape(item.id)+'" aria-label="Open '+escape(item.title||'Untitled')+' details">'+escape(item.title||'Untitled')+'</button>',
    status:'<span class="status">'+escape(item.status??'—')+'</span>'};
   for(const col of visibleColumns){
    const value=lookup.get(item.id+':'+col.id);

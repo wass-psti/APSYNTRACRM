@@ -1465,3 +1465,59 @@
 @media(max-width:750px){.board-table-custom th,.board-table-custom td{padding:11px 8px}
  .board-column-menu-content{right:auto;left:0}.board-tab-slot .board-tab-reorder{min-width:27px}}
 @media(prefers-reduced-motion:reduce){.board-table-custom *,.board-draggable-tabs *{scroll-behavior:auto;transition:none}}
+
+/* CP-BOARD-UX02 — scoped context menu, activity filters and read-only item details. */
+.board-actions-menu{position:relative;display:inline-block}
+.board-actions-menu>summary{list-style:none;cursor:pointer;border:1px solid #d8ddec;
+ border-radius:9px;background:#fff;color:#465371;padding:10px 13px;font-weight:700;font-size:12px}
+.board-actions-menu>summary::-webkit-details-marker{display:none}
+.board-actions-menu>summary:after{content:" ▾";color:#8290aa}
+.board-actions-popover{position:absolute;top:calc(100% + 5px);right:0;z-index:20;
+ background:#fff;border:1px solid #d6deeb;border-radius:10px;padding:5px;min-width:186px;
+ box-shadow:0 10px 26px #1f2d4926}
+.board-actions-popover>button{display:block;width:100%;border:0;background:transparent;
+ color:#3d4a63;text-align:left;padding:10px 13px;border-radius:7px;cursor:pointer}
+.board-actions-popover>button:hover{background:#f0f4ff}
+.board-actions-popover>button:focus-visible,.board-actions-menu>summary:focus-visible{
+ outline:2px solid #4e64d6;outline-offset:2px}
+.board-item-open{border:0;background:transparent;color:#293751;font:inherit;
+ font-weight:650;text-align:left;padding:2px 0;cursor:pointer;max-width:100%;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.board-item-open:hover{text-decoration:underline;text-decoration-color:#5d61e8}
+.board-item-open:focus-visible{outline:2px solid #4e64d6;outline-offset:2px}
+.board-detail-backdrop{justify-content:flex-end;align-items:stretch}
+.board-item-drawer{background:#fff;display:flex;flex-direction:column;width:min(560px,100vw);
+ height:100%;padding:30px 32px;overflow-y:auto;box-shadow:-14px 0 50px #14264925}
+.board-item-drawer-header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.board-item-drawer h2{color:#1e2d45;font-size:24px;overflow-wrap:anywhere;margin:20px 0 6px}
+.board-item-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:20px 0}
+.board-item-summary>div{border:1px solid #e1e6f0;border-radius:9px;padding:14px;min-width:0}
+.board-item-summary dt{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8390a7}
+.board-item-summary dd{margin:5px 0 0;font-weight:650;color:#263750;overflow-wrap:anywhere}
+.board-item-notes{border-top:1px solid #e2e7ee;padding-top:14px;overflow-wrap:anywhere}
+.board-item-notes p{white-space:pre-wrap}
+.board-activity-controls{display:grid;grid-template-columns:auto minmax(110px,1fr) auto minmax(120px,1fr);
+ gap:8px;align-items:center;margin:8px 0 12px}
+.board-activity-controls label{font-size:11px;font-weight:750;color:#68758d}
+.board-activity-controls input,.board-activity-controls select{padding:9px 10px;min-width:0;
+ border:1px solid #d9dfe9;border-radius:7px;background:#fff;color:#37435b}
+.board-activity-controls [data-board-history-action]{grid-column:4;justify-self:end}
+.board-activity-count{color:#64718a;font-size:11px}
+.board-activity-error{color:#ac2c3d}
+.board-history-modal{width:min(770px,96vw);max-width:770px;max-height:88vh}
+.board-history-list{max-height:48vh;overflow-y:auto}
+.board-history-entry-head{display:flex;justify-content:space-between;gap:12px}
+.board-history-entry p{margin:5px 0;color:#46536b;overflow-wrap:anywhere}
+.board-activity-pagination{display:flex;justify-content:space-between;align-items:center;
+ gap:12px;padding:12px 0}
+.board-activity-pagination button{padding:7px 12px;border:1px solid #d9dfec;
+ border-radius:7px;background:#fff;color:#43506c;cursor:pointer}
+.board-activity-pagination button:disabled{opacity:.4;cursor:not-allowed}
+.board-member-list{overflow-y:auto;max-height:55vh}
+.board-member{display:flex;justify-content:space-between;gap:16px;padding:14px 6px;
+ border-bottom:1px solid #e8ecf2}
+.board-member span{color:#63708a;text-transform:capitalize}
+@media(max-width:760px){.board-activity-controls{grid-template-columns:1fr 1fr}
+ .board-activity-controls label{grid-column:span 2}
+ .board-activity-controls [data-board-history-action]{grid-column:span 2}
+ .board-item-drawer{padding:20px}.board-item-summary{grid-template-columns:1fr}}

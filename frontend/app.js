@@ -11,6 +11,7 @@ import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {boardGrid,boardGridColumns} from './board-grid.js';
+import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS} from './board-presentation.js';
 import {runTwelveBoardQa} from './board-operational-qa.js';
@@ -219,7 +220,7 @@ function boardsPage(){
 }
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped'){
  const rows=items.map(item=>({search:String(item.title||'').toLowerCase(),
-  cells:{record:'▥ &nbsp; '+e(item.title||'Untitled'),
+  cells:{record:'<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(item.id)+'" aria-label="Open '+e(item.title||'Untitled')+' details">▥ &nbsp; '+e(item.title||'Untitled')+'</button>',
    status:'<span class="status '+statusClass(item.status)+'">'+e(item.status||'Planned')+'</span>',
    owner:item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned',
    due:e(displayDate(item.due_date)),
@@ -270,7 +271,7 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(b.description||'Track your team’s work and updates.')}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
@@ -811,40 +812,124 @@ function persistBoardLayout(transform){
  const changed=normalizeLayout(transform(a.pref,a),a.tabs,a.columns);
  return saveBoardLayout(state.context,state.boardId,changed);
 }
+let boardHistory=null;
+function boardHistoryAuthorized(snapshot){
+ return snapshot&&auth.isSignedIn&&
+  state.view==='board'&&state.boardId===snapshot.boardId&&
+  state.context?.workspace_id===snapshot.workspaceId&&
+  auth.userId===snapshot.userId&&
+  activeBoardLayout()!==null;
+}
+function redrawBoardHistory({focus=false}={}){
+ if(!modal||!boardHistoryAuthorized(boardHistory)){hideModal();boardHistory=null;return;}
+ const host=modal.querySelector('[data-board-activity-results]');
+ if(!host)return;
+ const results=renderBoardActivityResults(boardHistory.rows,boardHistory);
+ boardHistory.page=results.page;
+ host.innerHTML=results.html;
+ if(focus){
+  const search=host.querySelector('#board-activity-search');
+  search?.focus();search?.setSelectionRange(search.value.length,search.value.length);
+ }
+}
 async function openBoardActivity(){
- const c=activeBoardLayout();
- if(!c)return;
- const boardId=state.boardId,userId=auth.userId,workspaceId=state.context.workspace_id;
- const events=await db.boardEvents(boardId,100);
- if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
-  state.context?.workspace_id!==workspaceId)return;
- hideModal();
- modal=document.createElement('div');
+ if(!activeBoardLayout())return;
+ const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
+ const events=await db.boardEvents(snapshot.boardId,100);
+ if(!boardHistoryAuthorized(snapshot))return;
+ boardHistory={...snapshot,rows:normalizeBoardActivity(events),limit:100,
+  search:'',type:'all',actor:'all',page:0,busy:false,error:''};
+ hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-history-backdrop';
  modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-activity-title">'+
   '<div class="modal-head"><h2 id="board-activity-title">Board activity history</h2>'+
   '<button type="button" data-dismiss class="modal-close" aria-label="Close activity history">×</button></div>'+
-  '<p class="muted">Read-only authoritative board events (up to 100). No separate activity database.</p>'+
-  '<div class="board-history-list">'+(events.length?events.map(x=>{
-   const type=x.event_type||x.action||x.event_action||'Board activity';
-   const time=x.created_at||x.occurred_at||x.event_time||'';
-   const actor=x.actor_id||x.user_id||'Recorded actor';
-   const record=x.item_id||x.entity_id||x.record_id||'';
-   return '<article class="board-history-entry"><strong>'+e(type)+'</strong>'+
-    '<time>'+e(time)+'</time><small>Actor: '+e(actor)+
-    (record?' · Record: '+e(record):'')+'</small></article>';
-  }).join(''):'<p>No authorized events were returned for this board.</p>')+
-  '</div></section>';
+  '<p class="muted">Read-only signed board events. Filters apply to records retrieved from the authoritative server.</p>'+
+  '<div data-board-activity-results></div></section>';
+ document.body.append(modal);
+ modal.addEventListener('click',async event=>{
+  if(event.target===modal||event.target.closest('[data-dismiss]')){hideModal();boardHistory=null;return;}
+  const action=event.target.closest('[data-board-history-action]')?.dataset.boardHistoryAction;
+  if(!action||!boardHistoryAuthorized(boardHistory)||boardHistory.busy)return;
+  if(action==='next')boardHistory.page++;
+  if(action==='previous')boardHistory.page--;
+  if(['more','refresh'].includes(action)){
+   const current=boardHistory;
+   current.busy=true;redrawBoardHistory();
+   try{
+    const limit=action==='more'?200:current.limit;
+    const rows=await db.boardEvents(current.boardId,limit);
+    if(!boardHistoryAuthorized(current)||boardHistory!==current)return;
+    current.rows=normalizeBoardActivity(rows);current.limit=limit;current.page=0;current.error='';
+   }catch(err){if(boardHistory===current)current.error='Activity could not be refreshed. Retry after checking your signed access.';}
+   finally{current.busy=false;}
+  }
+  redrawBoardHistory();
+ });
+ modal.addEventListener('input',event=>{
+  if(event.target.id!=='board-activity-search'||!boardHistory)return;
+  boardHistory.search=event.target.value.slice(0,160);
+  boardHistory.page=0;redrawBoardHistory({focus:true});
+ });
+ modal.addEventListener('change',event=>{
+  if(!boardHistory)return;
+  if(event.target.id==='board-activity-type')boardHistory.type=event.target.value;
+  else if(event.target.id==='board-activity-actor')boardHistory.actor=event.target.value;
+  else return;
+  boardHistory.page=0;redrawBoardHistory();
+ });
+ redrawBoardHistory();modal.querySelector('[data-dismiss]')?.focus();
+}
+function openBoardItemDetails(itemId){
+ if(!activeBoardLayout())return;
+ const item=state.board?.items?.find(x=>x.id===itemId);
+ if(!item)return;
+ const restricted=!!moduleByBoardName(state.board.board.name);
+ const group=state.board.groups?.find(x=>x.id===item.group_id);
+ hideModal();modal=document.createElement('div');
+ modal.className='modal-backdrop board-detail-backdrop';
+ modal.innerHTML='<aside class="board-item-drawer" role="dialog" aria-modal="true" aria-labelledby="board-detail-title">'+
+  '<div class="board-item-drawer-header"><span class="label-top">APSYNTRA CRM / Board item</span>'+
+  '<button type="button" class="modal-close" data-dismiss aria-label="Close item details">×</button></div>'+
+  '<h2 id="board-detail-title">'+e(item.title||'Untitled')+'</h2>'+
+  '<p class="muted">Read-only item details from the signed board response.</p>'+
+  boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
+  '<p class="muted">Updates, replies and file attachments require authorized item-read contracts before activation.</p>'+
+  '</aside>';
  document.body.append(modal);
  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
  modal.querySelector('[data-dismiss]')?.focus();
 }
+async function openBoardMembers(){
+ if(!activeBoardLayout())return;
+ const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
+ const detail=await db.board(snapshot.boardId);
+ if(!boardHistoryAuthorized(snapshot)||detail.board?.workspace_id!==snapshot.workspaceId)return;
+ // The existing signed board RPC returns only this board's membership.
+ const members=Array.isArray(detail.members)?detail.members:[];
+ hideModal();modal=document.createElement('div');
+ modal.className='modal-backdrop board-history-backdrop';
+ modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-members-title">'+
+  '<div class="modal-head"><h2 id="board-members-title">Board members</h2>'+
+  '<button type="button" data-dismiss class="modal-close" aria-label="Close board members">×</button></div>'+
+  '<p class="muted">Existing authorized membership. New invitations require a verified server-side same-workspace and role-ceiling contract.</p>'+
+  '<div class="board-member-list">'+(members.length?members.map(row=>
+    '<div class="board-member"><strong>'+e(row.display_name||'Registered user')+'</strong>'+
+    '<span>'+e(row.role||'Member')+'</span></div>').join(''):
+    '<p>No board membership records were returned.</p>')+'</div></section>';
+ document.body.append(modal);
+ modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
+ modal.querySelector('[data-dismiss]')?.focus();
+}
+
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
  case 'logout':{await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'board-activity':{await openBoardActivity();break;}
+ case 'board-members':{await openBoardMembers();break;}
+ case 'board-item-detail':{openBoardItemDetails(button.dataset.id);break;}
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;
   resetBoardLayout(state.context,state.boardId);render();break;
