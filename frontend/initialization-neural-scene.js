@@ -63,16 +63,18 @@ const PREFERENCE_LOW=()=>Boolean((navigator.hardwareConcurrency&&navigator.hardw
  (navigator.deviceMemory&&navigator.deviceMemory<=4));
 export async function createNeuralScene(host){
  if(!host?.isConnected||typeof window==='undefined')return null;
+ // Fetch optional libraries before requesting a GPU context. When authorization
+ // finishes during CDN loading, no detached WebGL canvas/context is allocated.
+ const [THREE,gsapBundle]=await Promise.all([
+  import(THREE_URL),import(GSAP_URL).catch(()=>null)
+ ]);
+ if(!host.isConnected)return null;
  const canvas=document.createElement('canvas');
  canvas.className='aps-init-canvas';
  canvas.setAttribute('aria-hidden','true');
  const context=canvas.getContext('webgl2',{alpha:true,antialias:false,
   depth:true,powerPreference:'low-power',preserveDrawingBuffer:false});
  if(!context)return null;
- const [THREE,gsapBundle]=await Promise.all([
-  import(THREE_URL),import(GSAP_URL).catch(()=>null)
- ]);
- if(!host.isConnected)return null;
  let renderer;
  try{
   renderer=new THREE.WebGLRenderer({canvas,context,alpha:true,antialias:false,
