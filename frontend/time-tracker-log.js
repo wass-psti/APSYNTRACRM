@@ -279,7 +279,7 @@ export function renderTimeTrackerLog({
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    '<p id="tt-log-empty-search" class="tt-log-empty"'+
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>'+
-   '<p class="tt-log-footnote">Today's operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
+   '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
    '<p class="tt-log-footnote">Audit scores, exact GPS satellite maps, device fingerprints and manual-edit evidence require an approved server-backed evidence contract. This view does not generate or infer those values.</p>'+
   '</section></section>';
 }
