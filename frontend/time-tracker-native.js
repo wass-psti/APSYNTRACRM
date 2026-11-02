@@ -1,3 +1,5 @@
+import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
+export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
@@ -9,10 +11,6 @@ const moduleId='time-tracker';
 export const TT_LIVE_ATTENDANCE_WRITES_ACCEPTED=false;
 const stateKey='timetracker.attendance.v1';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-export const TT_LOCATIONS=Object.freeze([
- 'Office-Base Duty','Offsite (Home)','Local Field Works',
- 'Out of Town Assignment','International Field Assignments'
-]);
 export const TT_DEPARTMENTS=Object.freeze([
  'HR','Materials and Logistics','Engineering','Finance and Accounting',
  'Sales and Marketing','Information Technology'
@@ -27,20 +25,6 @@ export const TT_POLICY=Object.freeze({
 const deny=(message)=>{throw new Error(message);};
 const isRecord=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const safeTime=v=>typeof v==='string'&&Number.isFinite(Date.parse(v));
-export function creditedAttendanceMs(start,end){
- const a=new Date(start).getTime(),b=new Date(end).getTime();
- if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a)return 0;
- let deducted=0;
- const cursor=new Date(a);cursor.setHours(0,0,0,0);
- const final=new Date(b);final.setHours(0,0,0,0);
- for(let day=0;cursor.getTime()<=final.getTime()&&day<370;day++){
-  const noon=new Date(cursor);noon.setHours(12,0,0,0);
-  const one=new Date(cursor);one.setHours(13,0,0,0);
-  deducted+=Math.max(0,Math.min(b,one.getTime())-Math.max(a,noon.getTime()));
-  cursor.setDate(cursor.getDate()+1);
- }
- return Math.max(0,b-a-deducted);
-}
 export function attendanceClassification(record){
  if(record?.clockOut?.status==='administratively_closed'||record?.reconciliation?.type==='legacy_duplicate_session')
   return 'Administrative closure';
