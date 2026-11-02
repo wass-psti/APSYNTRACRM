@@ -62,10 +62,10 @@ test('reduced-motion fallback remains accessible and is removed immediately on r
  }};
  globalThis.window={WebGL2RenderingContext:function(){},
   matchMedia(){return {matches:true}},clearTimeout(){},setTimeout(){throw Error('Reduced motion must not defer readiness');}};
- setInitializationPhase('authentication');
- assert.equal(label.textContent,'Restoring signed session…');
  startInitialization();
  assert.equal(node.dataset.graphics,'reduced');
+ setInitializationPhase('authentication');
+ assert.equal(label.textContent,'Restoring signed session…');
  finishInitialization();
  assert.equal(removed,true);
  assert.equal(node.inert,true);
