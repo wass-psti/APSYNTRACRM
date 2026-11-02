@@ -163,7 +163,8 @@ export function renderTimeTrackerLog({records=[],scope='OWN_ATTENDANCE_ONLY',fil
 
 const logCsvCell=value=>{
  const raw=String(value??'');
- const escaped=/^[=+@-]/.test(raw)?"'"+raw:raw;
+ const escaped=(/^[=+@-]/.test(raw)||raw.startsWith(String.fromCharCode(9))||
+  raw.startsWith(String.fromCharCode(13))||raw.startsWith(String.fromCharCode(10)))?"'"+raw:raw;
  return '"'+escaped.replaceAll('"','""')+'"';
 };
 /** CSV contains only sanitized, already-authorized Log projections. */
