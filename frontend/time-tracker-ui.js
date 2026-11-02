@@ -1,5 +1,5 @@
 /** Native TimeTracker board surface. Never embeds the standalone app. */
-import {TT_LOCATIONS,TT_DEPARTMENTS,creditedAttendanceMs,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
+import {TT_LOCATIONS,TT_DEPARTMENTS,creditedAttendanceMs,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?Number.isFinite(Date.parse(v))?new Date(v).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'—':'—';
 const hrs=ms=>Number.isFinite(ms)?(ms/3600000).toFixed(2)+' h':'—';
@@ -13,7 +13,7 @@ export function ownAttendanceCsv(records){
   r.classification,r.status,r.creditedMs===null?'':(r.creditedMs/3600000).toFixed(2)]);
  return '\uFEFF'+rows.map(row=>row.map(safe).join(',')).join('\r\n')+'\r\n';
 }
-export function renderTimeTrackerNative({result=null,busy=false,error='',success=''}={}){
+export function renderTimeTrackerNative({result=null,busy=false,error='',success='',period='week'}={}){
  let html='<section class="tt-native" aria-label="TimeTracker attendance application">'+
   '<div class="tt-title"><div><span class="label-top">Native application / TimeTracker</span>'+
   '<h2>Attendance workspace</h2><p>Signed, server-authoritative timekeeping within APSYNTRA CRM.</p></div>'+
@@ -27,6 +27,8 @@ export function renderTimeTrackerNative({result=null,busy=false,error='',success
   return html;
  }
  const {access,records,active}=result;
+ const reportRecords=filterMyAttendancePeriod(records,period);
+ const otRequests=Array.isArray(result.otRequests)?result.otRequests:[];
  const now=Date.now();
  const completed=records.filter(x=>x.status==='Completed').length;
  const late=records.filter(x=>x.classification==='Late').length;
@@ -58,13 +60,17 @@ export function renderTimeTrackerNative({result=null,busy=false,error='',success
     '<p class="muted">Approved overtime and launch-only automatic clock-out require a separately verified authoritative operational workflow. This native surface does not invent or backdate attendance events.</p>'+
     '</div></div></div>';
  html+='<div class="panel"><div class="panel-header"><h3>My attendance history</h3>'+
-   '<span>'+records.length+' authorized record(s)</span></div><div class="panel-body">'+
+   '<span>'+reportRecords.length+' report record(s)</span></div><div class="panel-body">'+
+   '<label for="tt-report-period">Report period <select id="tt-report-period">'+
+   [['today','Today'],['week','This week'],['month','This month'],['all','All history']].map(([key,label])=>
+    '<option value="'+key+'"'+(period===key?' selected':'')+'>'+label+'</option>').join('')+
+    '</select></label>'+
    '<div class="head-actions"><button class="secondary" type="button" data-action="tt-export"'+
-   (busy||!records.length?' disabled':'')+'>Export my attendance CSV</button></div>'+
+   (busy||!reportRecords.length?' disabled':'')+'>Export my attendance CSV</button></div>'+
    '<div class="table-scroll"><table class="board-table"><thead><tr>'+
    '<th>Clock In</th><th>Clock Out</th><th>Location</th><th>Department</th>'+
    '<th>Status</th><th>Credited work</th></tr></thead><tbody>'+
-   (records.slice(0,200).map(r=>'<tr><td>'+esc(date(r.clockIn))+'</td><td>'+
+   (reportRecords.slice(0,200).map(r=>'<tr><td>'+esc(date(r.clockIn))+'</td><td>'+
     esc(date(r.clockOut))+'</td><td>'+esc(r.location)+'</td><td>'+esc(r.department)+
     '</td><td>'+esc(r.classification)+' · '+esc(r.status)+'</td>'+
     '<td>'+esc(r.creditedMs===null?hrs(creditedAttendanceMs(r.clockIn,now)):hrs(r.creditedMs))+
@@ -73,5 +79,13 @@ export function renderTimeTrackerNative({result=null,busy=false,error='',success
     '</tbody></table></div>'+
    '<p class="muted">Only records owned by your signed account are projected here. Exact GPS evidence, privileged audit payloads, and other employees’ records are not displayed.</p>'+
    '</div></div></section>';
- return html;
+ html+='<div class="panel"><div class="panel-header"><h3>My overtime requests</h3><span>Read-only</span></div>'+
+   '<div class="panel-body"><div class="table-scroll"><table class="board-table">'+
+   '<thead><tr><th>Date</th><th>Time</th><th>Duration</th><th>Status</th><th>Task</th></tr></thead><tbody>'+
+   (otRequests.map(r=>'<tr><td>'+esc(r.date)+'</td><td>'+esc(r.start)+'–'+esc(r.end)+
+    '</td><td>'+esc(r.durationMinutes===null?'—':(r.durationMinutes/60).toFixed(2)+' h')+'</td>'+
+    '<td>'+esc(r.status)+'</td><td>'+esc(r.task)+'</td></tr>').join('')||
+    '<tr><td colspan="5">No authorized overtime requests in the central store.</td></tr>')+
+   '</tbody></table></div><p class="muted">OT creation, decisions and approved-duration clock-out adjustments remain disabled until server-authorized workflow and audit acceptance.</p></div></div>';
+return html;
 }
