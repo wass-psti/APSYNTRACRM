@@ -1042,3 +1042,12 @@
 .tt-cal-source a{color:#be602e}
 @media(max-width:950px){.tt-cal-analytics{grid-template-columns:1fr}}
 @media(max-width:600px){.tt-calendar{padding:17px 12px 30px;gap:15px}.tt-cal-panel{padding:12px}.tt-cal-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tt-cal-kpis>div:nth-child(2){border-right:0}.tt-cal-kpis>div:nth-child(-n+2){border-bottom:1px dashed #e0e2e5}.tt-cal-navigate strong{font-size:21px}.tt-cal-attendee{align-items:flex-start;flex-direction:column}}
+
+
+/* CP-TT-CALENDAR-UPCOMING */
+.tt-cal-upcoming{display:flex;gap:15px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid #f1cdbd;background:#fff5f0;border-radius:8px;padding:13px 16px}
+.tt-cal-upcoming>div{display:grid;gap:5px}
+.tt-cal-upcoming small{color:#9b795f;font-weight:700;letter-spacing:.1em;font-size:10px}
+.tt-cal-upcoming strong{color:#41454c;font-size:13px}
+.tt-cal-upcoming span{color:#8c8c96;font-size:11px}
+.tt-cal-upcoming b{background:#e46b32;color:#fff;padding:8px 12px;border-radius:18px;font-size:11px}
