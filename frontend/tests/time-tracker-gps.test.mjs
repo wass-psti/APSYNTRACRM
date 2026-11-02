@@ -34,9 +34,55 @@ test('GPS presentation hides member coordinates unless explicitly eligible',()=>
 test('broad attendance snapshot remains GPS-free and cannot supply the scoped GPS view',()=>{
  const native=readFileSync('frontend/time-tracker-native.js','utf8');
  assert.match(native,/projectOwnAttendance/);
- assert.doesNotMatch(native,/async gpsEvidence\(/);
+ assert.match(native,/async gpsEvidence\(/);
  const sql=readFileSync('sql/cp-tt-gps01-staged-evidence.sql','utf8');
  assert.match(sql,/timetracker_ot_require_scope/);
  assert.match(sql,/apsyntra_role_is_bootstrap/);
  assert.match(sql,/module_role_for/);
+});
+
+import {TimeTrackerNativeClient} from '../time-tracker-native.js';
+test('signed server GPS endpoint accepts only bootstrap or assigned Supervisor',async()=>{
+ const assigned='10000000-0000-4000-8000-000000000012';
+ const payload={...raw};
+ const make=(moduleRole,bootstrap=false,foreign=false)=>{
+  let calls=0;
+  const client=new TimeTrackerNativeClient({
+   auth:{userId:id,isSignedIn:true,getVerifiedUser:async()=>({id})},
+   api:{
+    context:async()=>({user_id:id,workspace_id:ws,profile:{status:'active'}}),
+    board:async()=>({board:{id:board,workspace_id:ws,name:'TimeTracker Attendance'}}),
+    allowed:async()=>true,
+    rpc:async(name)=>{
+     if(name==='has_module_access')return true;
+     if(name==='list_module_directory')return [{id,status:'active',module_role:moduleRole,display_name:'Example'}];
+     if(name==='apsyntra_role_is_bootstrap')return bootstrap;
+     if(name==='timetracker_gps_snapshot'){calls++;return {...payload,workspaceId:foreign?assigned:ws};}
+     throw Error('Unexpected RPC '+name);
+    }
+   }
+  });
+  return {client,get calls(){return calls;}};
+ };
+ const params={from:'2026-11-01',to:'2026-11-02'};
+ for(const [role,bootstrap] of [['Supervisor',false],['Employee',true]]){
+  const x=make(role,bootstrap);
+  assert.equal((await x.client.gpsEvidence(board,params)).events.length,1);
+  assert.equal(x.calls,1);
+ }
+ for(const role of ['Employee','HR','Finance','System Admin','IT Administrator','OJT']){
+  const x=make(role,false);
+  await assert.rejects(()=>x.client.gpsEvidence(board,params),/Only bootstrap administrators/);
+  assert.equal(x.calls,0);
+ }
+ const cross=make('Supervisor',false,true);
+ await assert.rejects(()=>cross.client.gpsEvidence(board,params),/Signed GPS scope mismatch/);
+});
+test('GPS app wiring retains privacy and clears state on logout and expiry',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/timeTracker\.gpsEvidence/);
+ assert.match(app,/case 'tt-gps-load'/);
+ assert.match(app,/case 'tt-gps-compare'/);
+ assert.match(app,/state\.ttGpsRunId\+\+/);
+ assert.match(app,/gpsEligible:state\.roleVerified===true\|\|state\.ttAttendance\?\.access\?\.moduleRole==='Supervisor'/);
 });
