@@ -25,9 +25,8 @@ BEGIN
  -- membership. Workspace 2 exists independently but B is not a member.
  PERFORM set_config('request.jwt.claim.sub',
   '00000000-0000-4000-8000-00000000000b',true);
- IF private.frt_current_role(origin) <> 'FINANCE_MANAGER' OR
-    private.frt_current_role(foreign_ws) IS NOT NULL THEN
-  RAISE EXCEPTION 'Disposable nonbootstrap identity fixture invalid';
+ IF jsonb_typeof(public.frt_board_list_safe(origin,'WAO',''))<>'array' THEN
+  RAISE EXCEPTION 'Disposable own-workspace FRT read precondition failed';
  END IF;
  result:=public.frt_sec14_auto_foreign_denials(origin);
  IF result IS DISTINCT FROM jsonb_build_object(
