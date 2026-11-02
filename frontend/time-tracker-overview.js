@@ -3,15 +3,16 @@
  */
 import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-native.js';
 const timeTrackerClockParts=value=>{
- const t=new Date(value),h=t.getHours();
+ const t=new Date(value);
+ const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',hour:'2-digit',hourCycle:'h23'}).format(t));
  return {
-  greeting:h<12?'Good morning,':h<17?'Good afternoon,':'Good evening,',
+  greeting:hour<12?'Good morning,':hour<17?'Good afternoon,':'Good evening,',
   day:new Intl.DateTimeFormat('en-US',{
    timeZone:'Asia/Manila',weekday:'long',month:'long',day:'numeric'
   }).format(t),
-  hours:String((h+24-8)%12||12).padStart(2,'0'),
-  minutes:String(t.getMinutes()).padStart(2,'0'),
-  seconds:String(t.getSeconds()).padStart(2,'0'),
+  hours:String(hour%12||12).padStart(2,'0'),
+  minutes:new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',minute:'2-digit'}).format(t).padStart(2,'0'),
+  seconds:new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',second:'2-digit'}).format(t).padStart(2,'0'),
   period:new Intl.DateTimeFormat('en-US',{
    timeZone:'Asia/Manila',hour:'numeric',hour12:true
   }).formatToParts(t).find(p=>p.type==='dayPeriod')?.value||'AM'
