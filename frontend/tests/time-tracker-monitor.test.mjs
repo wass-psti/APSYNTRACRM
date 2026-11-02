@@ -95,3 +95,36 @@ test('Roles tab is absent, Monitor enabled; no persistent telemetry or polling i
  const monitor=readFileSync('frontend/time-tracker-monitor.js','utf8');
  assert.doesNotMatch(monitor,/localStorage|sessionStorage|setInterval|sendBeacon|WebSocket/);
 });
+
+test('server aggregate metrics require signed bootstrap identity and matching board',async()=>{
+ const {validateTimeTrackerServerHealth}=await import('../time-tracker-monitor.js');
+ const payload={mode:'ACTIVE',scope:'BOOTSTRAP_AGGREGATE',actorId:user,workspaceId:ws,
+  boardId:board,serverTime:'2026-11-02T11:00:00Z',database:{
+   connections:4,transactionsCommitted:210,transactionsRolledBack:3,
+   cacheHits:900,diskReads:100,deadlocks:0,statsReset:'2026-10-31T00:00:00Z'
+  }};
+ const good=validateTimeTrackerServerHealth(payload,{userId:user,workspaceId:ws,boardId:board});
+ assert.equal(good.status,'VERIFIED');
+ assert.equal(good.cacheHitPercent,90);
+ assert.equal(good.connections,4);
+ assert.throws(()=>validateTimeTrackerServerHealth({...payload,actorId:'other'},
+  {userId:user,workspaceId:ws,boardId:board}),/identity\/scope mismatch/);
+ assert.throws(()=>validateTimeTrackerServerHealth({...payload,
+  database:{...payload.database,connections:-10}},{userId:user,workspaceId:ws,boardId:board}),/Invalid server/);
+});
+test('server metrics remain optional for ordinary users and missing RPC',async()=>{
+ let requested=0;
+ const standard=source();
+ const old=standard.api.rpc;
+ standard.api.rpc=async(name,args)=>{
+  if(name==='timetracker_monitor_snapshot'){requested++;throw Error('PGRST202: Could not find the function');}
+  return old(name,args);
+ };
+ const ordinary=await probeTimeTrackerMonitor({...standard,bootstrapEligible:false});
+ assert.equal(ordinary.server,null);
+ assert.equal(requested,0);
+ const bootstrap=await probeTimeTrackerMonitor({...standard,bootstrapEligible:true});
+ assert.equal(requested,1);
+ assert.equal(bootstrap.status,'VERIFIED');
+ assert.equal(bootstrap.server.status,'NOT DEPLOYED');
+});
