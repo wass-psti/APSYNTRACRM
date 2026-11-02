@@ -2,6 +2,7 @@ import {TT_LOCATIONS,creditedAttendanceMs,manilaClockMinutes,TT_PHT_OFFSET_MS} f
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
+import {projectTimeTrackerOtRows} from './time-tracker-overtime.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
  * No standalone app, storage shim, local JWT, synthetic rows, or privileged key.
@@ -163,9 +164,38 @@ export class TimeTrackerNativeClient{
    moduleRole:access.moduleRole
   });
   const otRow=raw.find(x=>x?.state_key==='timetracker.ot.v1'&&x.scope==='shared');
-  const otRequests=projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId);
+  let otRequests=projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId)
+   .map(row=>Object.freeze({...row,ownerId:'cloud:'+access.userId,name:access.name}));
+  let otAccess=Object.freeze({scope:'OWN_OT_ONLY',
+   bootstrapApprover:false,otContractActive:false});
+  // Optional dedicated OT read endpoint. Before activation, degrade to owner-only
+  // legacy rows; never infer team permissions from frontend platform role.
+  try{
+   const response=await this.api.rpc('timetracker_ot_snapshot',{p_board_id:boardId});
+   if(!isRecord(response)||response.mode!=='ACTIVE'||
+      response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
+      !['OWN_OT_ONLY','AUTHORIZED_WORKSPACE_TEAM'].includes(response.scope)||
+      typeof response.bootstrapApprover!=='boolean'||!Array.isArray(response.rows))
+    deny('Signed OT snapshot identity, scope or schema mismatch');
+   if(response.scope==='AUTHORIZED_WORKSPACE_TEAM'&&response.bootstrapApprover!==true)
+    deny('Team OT access is not bootstrap-authorized');
+   const allowed=new Set(access.overviewDirectory.map(u=>'cloud:'+u.id));
+   const projected=projectTimeTrackerOtRows(response.rows).filter(row=>
+    allowed.has(row.ownerId)&&(
+      response.scope==='AUTHORIZED_WORKSPACE_TEAM'||
+      row.ownerId==='cloud:'+access.userId));
+   otRequests=projected;
+   otAccess=Object.freeze({scope:response.scope,
+    bootstrapApprover:response.bootstrapApprover,otContractActive:true});
+  }catch(error){
+   // Only missing RPC is an expected predeployment state. All other errors
+   // reject instead of silently substituting potentially stale authority.
+   const msg=String(error?.message||error);
+   if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ot_snapshot/.test(msg))
+    throw error;
+  }
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access,records,otRequests,overview,log,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access:{...access,...otAccess},records,otRequests,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  async commit(boardId,{action,location,department,workNote='',geo}={}){
