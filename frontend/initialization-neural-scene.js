@@ -18,6 +18,7 @@ const CORE_VERTEX=String.raw`
 const CORE_FRAGMENT=String.raw`
  uniform float uTime;
  uniform float uReveal;
+ uniform float uActivity;
  varying vec3 vNormal;
  varying vec3 vWorld;
  void main(){
@@ -29,7 +30,7 @@ const CORE_FRAGMENT=String.raw`
   vec3 blue=vec3(0.25,0.26,1.0);
   vec3 color=mix(dark,mix(blue,cyan,energy),0.16+fresnel*0.9);
   color+=cyan*0.13*(0.5+0.5*sin(uTime*2.0+vWorld.x*4.0));
-  gl_FragColor=vec4(color,(0.65+fresnel*0.34)*uReveal);
+  gl_FragColor=vec4(color,(0.65+fresnel*0.34)*uReveal*(0.6+uActivity*0.4));
  }
 `;
 const PARTICLE_VERTEX=String.raw`
@@ -50,11 +51,12 @@ const PARTICLE_VERTEX=String.raw`
  }
 `;
 const PARTICLE_FRAGMENT=String.raw`
+ uniform float uActivity;
  varying float vAlpha;
  void main(){
   vec2 uv=gl_PointCoord-vec2(0.5);
   float glow=smoothstep(0.5,0.03,length(uv));
-  gl_FragColor=vec4(0.20,0.78,1.0,glow*vAlpha);
+  gl_FragColor=vec4(0.20,0.78,1.0,glow*vAlpha*uActivity);
  }
 `;
 const PREFERENCE_LOW=()=>Boolean((navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)||
@@ -82,7 +84,7 @@ export async function createNeuralScene(host){
  camera.position.set(0,0,8);
  const group=new THREE.Group();
  scene.add(group);
- const uniforms={uTime:{value:0},uReveal:{value:0}};
+ const uniforms={uTime:{value:0},uReveal:{value:0},uActivity:{value:0.45}};
  const geometry=new THREE.IcosahedronGeometry(1.27,4);
  const material=new THREE.ShaderMaterial({
   uniforms,vertexShader:CORE_VERTEX,fragmentShader:CORE_FRAGMENT,
@@ -125,6 +127,7 @@ export async function createNeuralScene(host){
   transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
  });
  group.add(new THREE.Points(pointGeometry,pointMaterial));
+ const activity={target:0.45,value:0.45};
  const progress={reveal:0};
  const gsap=gsapBundle?.gsap;
  const timeline=gsap?.timeline?.({paused:false})||null;
@@ -148,7 +151,10 @@ export async function createNeuralScene(host){
   const elapsed=Math.min((performance.now()-start)/1000,3600);
   uniforms.uTime.value=elapsed;
   uniforms.uReveal.value=progress.reveal;
-  group.rotation.y=elapsed*0.095;
+  activity.value+=(activity.target-activity.value)*0.08;
+  uniforms.uActivity.value=activity.value;
+  for(const ring of rings)ring.material.opacity=0.1+activity.value*0.26;
+  group.rotation.y=elapsed*(0.065+0.04*activity.value);
   group.rotation.x=0.18+0.07*Math.sin(elapsed*0.36);
   core.rotation.y=-elapsed*0.17;
   cage.rotation.set(0.3,elapsed*-0.11,elapsed*0.055);
@@ -169,7 +175,10 @@ export async function createNeuralScene(host){
  else window.addEventListener('resize',resize);
  resize();
  raf=window.requestAnimationFrame(tick);
- return {destroy(){
+ return {setPhase(phase){
+  activity.target=({startup:0.45,authentication:0.62,
+   authorization:0.80,workspace:1})[phase]??0.45;
+ },destroy(){
   if(!active)return;
   active=false;
   timeline?.kill?.();

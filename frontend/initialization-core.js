@@ -9,6 +9,7 @@ const PHASES=Object.freeze({
  authorization:'Verifying workspace access…',
  workspace:'Opening authorized workspace…'
 });
+let currentPhase='startup';
 let finished=false;
 let controller=null;
 let scenePromise=null;
@@ -20,10 +21,11 @@ export function setInitializationPhase(phase){
  if(finished||typeof document==='undefined')return;
  const node=document.getElementById('apsyntra-init');
  if(!node)return;
- const current=Object.hasOwn(PHASES,phase)?phase:'startup';
- node.dataset.phase=current;
+ currentPhase=Object.hasOwn(PHASES,phase)?phase:'startup';
+ node.dataset.phase=currentPhase;
  const label=node.querySelector('#apsyntra-init-phase');
- if(label&&label.textContent!==PHASES[current])label.textContent=PHASES[current];
+ if(label&&label.textContent!==PHASES[currentPhase])label.textContent=PHASES[currentPhase];
+ controller?.setPhase?.(currentPhase);
 }
 export function startInitialization(){
  if(finished||typeof document==='undefined'||scenePromise)return;
@@ -50,6 +52,7 @@ export function startInitialization(){
    const handle=await module.createNeuralScene(host);
    if(finished||!overlay.isConnected){handle?.destroy?.();return;}
    controller=handle;
+   controller?.setPhase?.(currentPhase);
    overlay.dataset.graphics=handle?'webgl':'fallback';
   }catch{
    if(!finished&&overlay.isConnected)overlay.dataset.graphics='fallback';
