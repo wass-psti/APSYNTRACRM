@@ -95,6 +95,8 @@ jobs:
             -f sql/tests/cp-frt-sec11-self-access-disposable.sql \
             -f sql/tests/cp-frt-sec10-ci03-native-finance.sql \
             -f sql/tests/cp-frt-sec14-canonical-preflight-fixture.sql \
+            -f sql/cp-frt-sec14-production-additive-read-activation.sql \
+            -f sql/tests/cp-frt-sec14-production-additive-disposable.sql \
             -f sql/cp-frt-sec14-restricted-details-action-access.sql \
             -f sql/cp-frt-sec14-board-safe-read-contracts.sql \
             -f sql/cp-frt-sec14-legacy-summary-list-cutover.sql \
