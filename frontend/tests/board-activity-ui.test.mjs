@@ -81,6 +81,7 @@ test('application preserves identity checks, signed RPCs and disallows client-on
  assert.match(app,/case 'board-item-detail'/);
  assert.match(app,/case 'board-members'/);
  assert.match(app,/boardItemSummary\(item,/);
+ assert.match(app,/await db\.allowed\(snapshot\.boardId,'view'\)/);
  assert.match(app,/New invitations require a verified server-side same-workspace/);
  assert.doesNotMatch(app,/Build with Vibe|monday\.com/);
 });

@@ -880,8 +880,11 @@ async function openBoardActivity(){
  });
  redrawBoardHistory();modal.querySelector('[data-dismiss]')?.focus();
 }
-function openBoardItemDetails(itemId){
+async function openBoardItemDetails(itemId){
  if(!activeBoardLayout())return;
+ const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
+ // Revalidate server-side board access before revealing details from cached state.
+ if(!(await db.allowed(snapshot.boardId,'view'))||!boardHistoryAuthorized(snapshot))return;
  const item=state.board?.items?.find(x=>x.id===itemId);
  if(!item)return;
  const restricted=!!moduleByBoardName(state.board.board.name);
@@ -929,7 +932,7 @@ async function action(name,button){
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'board-activity':{await openBoardActivity();break;}
  case 'board-members':{await openBoardMembers();break;}
- case 'board-item-detail':{openBoardItemDetails(button.dataset.id);break;}
+ case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;
   resetBoardLayout(state.context,state.boardId);render();break;
