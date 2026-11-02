@@ -141,8 +141,9 @@ BEGIN
   OR jsonb_array_length(v->'rows')<>2 THEN
   RAISE EXCEPTION 'FAIL: bootstrap team scope %',v;
  END IF;
- SELECT id INTO v_request FROM public.timetracker_ot_requests
-  WHERE owner_id='10000000-0000-4000-8000-000000000011';
+ SELECT (r->>'id')::uuid INTO v_request
+ FROM jsonb_array_elements(v->'rows') AS r
+ WHERE r->>'ownerId'='cloud:10000000-0000-4000-8000-000000000011';
  v:=public.timetracker_ot_decide(
   '10000000-0000-4000-8000-000000000021',v_request,'Approved');
  IF v->>'status'<>'Approved' OR
@@ -155,8 +156,10 @@ BEGIN
   RAISE EXCEPTION 'FAIL: repeated decision allowed';
  EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL;
  END;
- SELECT id INTO v_request FROM public.timetracker_ot_requests
-  WHERE owner_id='10000000-0000-4000-8000-000000000012';
+ v:=public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
+ SELECT (r->>'id')::uuid INTO v_request
+ FROM jsonb_array_elements(v->'rows') AS r
+ WHERE r->>'ownerId'='cloud:10000000-0000-4000-8000-000000000012';
  v:=public.timetracker_ot_decide(
   '10000000-0000-4000-8000-000000000021',v_request,'Rejected');
  IF v->>'status'<>'Rejected' THEN RAISE EXCEPTION 'FAIL: reject receipt %',v; END IF;
