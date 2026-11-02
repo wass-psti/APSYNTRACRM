@@ -153,7 +153,7 @@ const details=r=>'<details class="tt-report-record-details"><summary>Details</su
  '<span>Location: '+esc(r.location||'Unspecified')+'</span>'+
  '<span>Department: '+esc(r.department||'Unassigned')+'</span>'+
  '<span>Arrival: '+esc(r.classification||'Unknown')+'</span></div></details>';
-const recordRow=r=>{
+const recordRow=(r,query='')=>{
  const terms=[r.name,r.department,r.location,r.status,r.classification,
   manilaDay(r.clockIn)].join(' ').toLocaleLowerCase();
  return '<tr class="tt-report-filterable" data-report-search="'+esc(terms)+'">'+
