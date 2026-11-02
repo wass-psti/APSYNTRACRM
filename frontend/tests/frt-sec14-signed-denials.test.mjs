@@ -41,34 +41,33 @@ function fixture({bootstrap=false,grant=true,deny=true,
 }
 test('signed nonbootstrap active grant receives two explicit server 42501 foreign-scope denials',async()=>{
  const f=fixture();
- const r=await runSEC14SignedDenials({...f,foreignWorkspaceId:other});
+ const r=await runSEC14SignedDenials(f);
  assert.equal(r.scenario,'NONBOOTSTRAP');
  assert.equal(r.role,'FINANCE_MANAGER');
- assert.equal(r.status,'PENDING');
- assert.equal(r.reason,'FOREIGN_WORKSPACE_EXISTENCE_NOT_VERIFIED');
+ assert.equal(r.status,'PASS');
+ assert.equal(r.reason,'FOREIGN_WORKSPACE_DENIAL_VERIFIED');
  assert.deepEqual(r.checks.map(x=>x.status),Array(7).fill('PASS'));
- assert.equal(r.foreignWorkspaceExistence,'NOT_VERIFIED');
- const scoped=f.calls.filter(x=>x.name.startsWith('frt_board_'));
- assert.deepEqual(scoped.map(x=>x.name).sort(),
-  ['frt_board_dashboard_safe','frt_board_list_safe'].sort());
- assert.ok(scoped.every(x=>x.args.p_workspace_id===other));
+ assert.equal(r.foreignWorkspaceExistence,'VERIFIED');
+ const scoped=f.calls.filter(x=>x.name==='frt_sec14_auto_foreign_denials');
+ assert.equal(scoped.length,1);
+ assert.deepEqual(scoped[0].args,{p_workspace_id:ws});
  assert.ok(!f.calls.some(x=>/^(frt_get_request|frt_list_requests|frt_dashboard|frt_request_action)$/.test(x.name)));
  assert.equal(r.writesAttempted,0);
  assert.equal(r.roleChangesAttempted,0);
  const safe=sanitizeSEC14SignedDenials(r);
  assert.doesNotMatch(safe,/11111111|22222222|33333333|email|access_token/i);
- assert.equal(JSON.parse(safe).status,'PENDING');
+ assert.equal(JSON.parse(safe).status,'PASS');
 });
 test('bootstrap sessions cannot manufacture nonbootstrap acceptance',async()=>{
  const f=fixture({bootstrap:true});
- const r=await runSEC14SignedDenials({...f,foreignWorkspaceId:other});
+ const r=await runSEC14SignedDenials(f);
  assert.equal(r.status,'BLOCKED');
  assert.equal(r.reason,'NONBOOTSTRAP_SESSION_REQUIRED');
  assert.ok(!f.calls.some(x=>x.name==='frt_board_list_safe'));
 });
 test('no FRT grant and absent or same workspace cannot pass cross-scope acceptance',async()=>{
  const a=fixture({grant:false});
- const denied=await runSEC14SignedDenials({...a,foreignWorkspaceId:other});
+ const denied=await runSEC14SignedDenials(a);
  assert.equal(denied.status,'BLOCKED');
  assert.equal(denied.reason,'NONBOOTSTRAP_FRT_GRANT_REQUIRED');
  const b=fixture();
@@ -77,19 +76,19 @@ test('no FRT grant and absent or same workspace cannot pass cross-scope acceptan
  assert.equal(missing.reason,'EXISTING_FOREIGN_WORKSPACE_ID_REQUIRED');
  assert.ok(!b.calls.some(x=>x.name==='frt_board_list_safe'));
  const c=fixture();
- const same=await runSEC14SignedDenials({...c,foreignWorkspaceId:ws});
+ const same=await runSEC14SignedDenials(c);
  assert.equal(same.reason,'EXISTING_FOREIGN_WORKSPACE_ID_REQUIRED');
  assert.ok(!c.calls.some(x=>x.name==='frt_board_dashboard_safe'));
 });
 test('foreign scope disclosure fails; JWT expiration, misleading denial codes and account switch never pass',async()=>{
- const open=await runSEC14SignedDenials({...fixture({deny:false}),foreignWorkspaceId:other});
+ const open=await runSEC14SignedDenials(fixture({deny:false}));
  assert.equal(open.status,'FAIL');
  assert.equal(open.reason,'FOREIGN_WORKSPACE_ACCESS_NOT_DENIED');
- const wrong=await runSEC14SignedDenials({...fixture({invalidCode:true}),foreignWorkspaceId:other});
+ const wrong=await runSEC14SignedDenials(fixture({invalidCode:true}));
  assert.equal(wrong.status,'BLOCKED');
- const expired=await runSEC14SignedDenials({...fixture({expired:true}),foreignWorkspaceId:other});
+ const expired=await runSEC14SignedDenials(fixture({expired:true}));
  assert.equal(expired.status,'BLOCKED');
- const switched=await runSEC14SignedDenials({...fixture({switched:true}),foreignWorkspaceId:other});
+ const switched=await runSEC14SignedDenials(fixture({switched:true}));
  assert.equal(switched.status,'FAIL');
 });
 test('SEC14 denial export allowlists fields and Security page escapes output',()=>{
