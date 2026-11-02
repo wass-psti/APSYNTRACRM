@@ -18,16 +18,18 @@ test('uploaded brand asset is a small, valid WebP image',()=>{
  assert.equal(bytes.readUInt32LE(4)+8,bytes.length,'RIFF length matches file');
 });
 
-test('sidebar, login, access denied and startup share the uploaded brand mark',()=>{
+test('sidebar, login, access denied and browser favicon retain uploaded branding',()=>{
  const ref='src="./frontend/apsyntra-logo.webp"';
  assert.equal((app.match(/src="\.\/frontend\/apsyntra-logo\.webp"/g)||[]).length,3);
  assert.doesNotMatch(app,/<span class="brand-mark(?: csp-u059)?"[^>]*>A<\/span>/);
  assert.match(app,/class="brand-mark" src="\.\/frontend\/apsyntra-logo\.webp" alt=""/);
  assert.match(app,/class="brand-mark csp-u059" src="\.\/frontend\/apsyntra-logo\.webp" alt=""/);
- assert.match(html,/class="aps-init-brand-icon" src="\.\/frontend\/apsyntra-logo\.webp"/);
+ assert.doesNotMatch(html,/aps-init-brand-icon/);
+ assert.doesNotMatch(loadingCss,/aps-init-brand-icon/);
+ assert.match(html,/id="apsyntra-init"/);
+ assert.match(html,/class="aps-init-name"/);
  assert.match(html,/<link rel="icon" href="\.\/frontend\/apsyntra-logo\.webp" type="image\/webp"\/>/);
  assert.ok(css.includes('.brand-mark{display:block;'));
- assert.ok(loadingCss.includes('.aps-init-brand-icon{'));
  assert.ok(app.includes(ref));
 });
 
