@@ -120,7 +120,7 @@ export async function runCol01SignedHttp(env,fetcher=globalThis.fetch,{
   sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
  }={}){
  const report={checkpoint:'CP-BOARD-COL01',environment:'REAL_HTTPS',
-  productionMutations:0,tests:[],status:'BLOCKED',reason:null};
+  boardOrPermissionMutations:0,tests:[],status:'BLOCKED',reason:null};
  const createdSessions=[];
  let c;
  try{c=readSignedConfig(env);}

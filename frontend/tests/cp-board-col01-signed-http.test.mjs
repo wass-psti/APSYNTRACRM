@@ -81,7 +81,7 @@ test('real HTTPS protocol harness requires actor, workspace, roles, revoked and 
  const out=await runCol01SignedHttp(env,fetcher,{nowSeconds,sleep});
  assert.equal(out.status,'VERIFIED');
  assert.deepEqual(out.tests.map(x=>x.status),Array(6).fill('PASS'));
- assert.equal(out.productionMutations,0);
+ assert.equal(out.boardOrPermissionMutations,0);
  assert.equal(calls.filter(x=>x.path==='/auth/v1/token').length,3);
  assert.equal(calls.filter(x=>x.path==='/auth/v1/logout').length,3);
  assert.doesNotMatch(JSON.stringify(out),/owner@example|member@example|Bearer|sb_publishable/);
