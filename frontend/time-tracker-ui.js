@@ -9,6 +9,7 @@ import {renderTimeTrackerOverview} from './time-tracker-overview.js';
 import {renderTimeTrackerLog} from './time-tracker-log.js';
 import {renderTimeTrackerReports} from './time-tracker-reports.js';
 import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
+import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -183,23 +184,9 @@ function historyPage(result,period,busy,view){
    '<p class="tt-muted">Only your signed account’s records are displayed. GPS evidence, privileged audit payloads and other employees’ records are not included.</p>'+
   '</div></div>';
 }
-function overtimePage(result){
- const rows=Array.isArray(result.otRequests)?result.otRequests:[];
- return '<div class="tt-secondary-content">'+
- heading('My overtime requests','Read-only requests from the existing centralized TimeTracker state.')+
- '<div class="tt-content-panel"><h4>My overtime requests</h4>'+
- '<div class="table-scroll"><table class="board-table"><thead><tr>'+
- '<th>Date</th><th>Time</th><th>Duration</th><th>Status</th><th>Task</th>'+
- '</tr></thead><tbody>'+
- (rows.map(r=>'<tr><td>'+esc(r.date)+'</td><td>'+esc(r.start)+'–'+esc(r.end)+
- '</td><td>'+esc(r.durationMinutes===null?'—':(r.durationMinutes/60).toFixed(2)+' h')+
- '</td><td>'+esc(r.status)+'</td><td>'+esc(r.task)+'</td></tr>').join('')||
- '<tr><td colspan="5">No authorized overtime requests available.</td></tr>')+
- '</tbody></table></div><p class="tt-muted">OT creation, approval and hour adjustments remain disabled until server-authorized workflows are verified.</p>'+
- '</div></div>';
-}
+
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay=''
+ result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={}
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=['overview','clock','log','reports','calendar','ot'].includes(view)?view:'clock';
@@ -233,7 +220,10 @@ export function renderTimeTrackerNative({
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
   month:calendarMonth,selectedDay:calendarSelectedDay,now,busy
  });
- if(selected==='ot')html+=overtimePage(result);
+ if(selected==='ot')html+=renderTimeTrackerOvertime({
+  requests:result.otRequests||[],access:result.access,
+  filters:otFilters,modalOpen:otModalOpen,form:otDraft,now
+ });
  html+='</section>';
  return html;
 }
