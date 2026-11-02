@@ -277,3 +277,11 @@ test('TimeTracker reference navigation exposes only already implemented views',(
  assert.match(app,/maintainTimeTrackerClock\(\)/);
  assert.match(app,/stopTimeTrackerClock\(\)/);
 });
+
+test('opening TimeTracker board lands on Clock but generic board items stay reachable',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/const defaultClock=!parts\[2\]/);
+ assert.match(app,/defaultClock\?'attendance':'items'/);
+ assert.match(app,/key==='timetracker'\?'\/items':''/);
+ assert.match(app,/data-action="tt-tab"/);
+});
