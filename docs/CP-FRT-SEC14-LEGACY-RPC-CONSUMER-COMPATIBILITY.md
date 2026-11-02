@@ -80,3 +80,25 @@ Before retirement, the release owner must:
 5. Keep the financial action grants, RLS, bootstrap identities, role management, historical finance records, and the accepted 12-board architecture unchanged.
 
 **Current aggregate SEC14 accounting:** **6/8 verified (75%)**, with signed foreign-workspace denial confirmed as a completed subcheckpoint but real request-detail and full legacy-consumer/retirement acceptance still outstanding. This inventory does not alter that figure.
+
+
+## Historical APSYNTRA CRM attribution — linked source and Pages deployment — 2026-11-02
+
+**Major new finding: older first-party APSYNTRA CRM versions were actual legacy RPC callers in code, and a legacy-default version had a successful Pages deployment workflow.** This narrows the historical-traffic explanation substantially; it does **not** prove which exact deployed browser made each of the database calls.
+
+| Timestamp (UTC) | Evidence | Exact behavior |
+| --- | --- | --- |
+| 2026-10-31 16:03:51 | [Initial SEC12 client commit `1b40e693`](https://github.com/wass-psti/APSYNTRACRM/commit/1b40e693edee3f9f2173727501fa53fdb894fb60) | `frontend/frt-finance-readonly.js` directly called `frt_dashboard` and `frt_list_requests` under the current signed workspace. |
+| 2026-11-01 09:34:49 | [Fallback-enabled commit `b2851b9d`](https://github.com/wass-psti/APSYNTRACRM/commit/b2851b9d04614c32c56fa97d8ed0be6ebf5c1117) | Introduced `secureContracts=false` as the **default**, using `secureContracts ? frt_board_dashboard_safe : frt_dashboard` and the equivalent safe/legacy list switch. Default calls still used legacy RPCs. |
+| 2026-11-01 09:34:50 | [GitHub Pages workflow #41293742066](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41293742066) | **SUCCESS** for commit `b2851b9d`. The separate frontend validation run for the same commit **FAILED**, so do not equate this historic Pages deployment success with passed frontend acceptance. |
+| 2026-11-02 00:28:54 | [Safe-only migration commit `ea43e52d`](https://github.com/wass-psti/APSYNTRACRM/commit/ea43e52daae8308cd641bbd2b3b15322859fa7e4) | Removed the conditional and always invoked the two `frt_board_*_safe` read APIs. Later current `main` source and CI explicitly enforce no fallback. |
+| 2026-11-02 | [Current first-party CI #41396326150](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41396326150) | **PASS**, zero deprecated read RPC names across 46 scanned runtime files, with safe read signatures in the intended finance modules; 244/244 frontend tests. |
+
+**Independent SQL fingerprint attribution:** The previous 88 and 18 historical counts were not incidental catalog mentions. Both `authenticated` normalized SQL statements explicitly invoke `"public"."frt_list_requests"` or `"public"."frt_dashboard"` from the generated `WITH pgrst_source AS (...)` PostgREST RPC wrapper. This proves **historical authenticated PostgREST RPC executions**, but not which website/actor generated them. The historical application versions above are a concrete first-party candidate matching both RPC names, including a Pages deployment of the default-legacy revision.
+
+The added, reusable read-only query [`sql/tests/cp-frt-sec14-legacy-usage-attribution-readonly.sql`](../sql/tests/cp-frt-sec14-legacy-usage-attribution-readonly.sql) was independently executed against production; it returned `frt_list_requests=88`, `frt_dashboard=18`, `nonPostgrestMentions=0`, with reset `2026-10-20T05:09:04.110272+00:00`. It emits no user UUID, token, financial data or raw normalized SQL. It does not reset `pg_stat_statements` or install monitoring. **Neither pg_stat_statements nor this query provides the individual call timestamp or client identity.**
+
+**Bounded API-log corroboration:** Two historical 24-hour log windows (October 31 and November 1 UTC) returned no matching gateway entries, which cannot disprove older requests because historical log retention/coverage is unknown. A separate November 2 UTC window showed 21 successful POSTs each to `frt_board_dashboard_safe` and `frt_board_list_safe` and none to the three legacy REST routes. This confirms *observed recent restricted-API traffic only*, not total compatibility. No persistent monitoring or telemetry was introduced.
+
+**Revised retirement decision:** The identity of a real historical *code consumer* is now **VERIFIED** (prior APSYNTRA CRM frontend), and a legacy-default Pages workflow success is **VERIFIED**. Attribution of all accumulated production calls to that client is still **UNVERIFIED**. Untracked external scripts, currently open old browser tabs, cached assets, alternate historical deployments and direct database consumers remain **NOT EXHAUSTIVELY AUDITED**. All three legacy read RPC grants must continue unchanged until controlled consumer compatibility/retirement authorization is satisfied; do not use the historical code identification alone as permission to revoke.
+
