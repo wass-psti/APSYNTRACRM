@@ -12,6 +12,16 @@ BEGIN
  THEN
    RAISE EXCEPTION 'Signed nonbootstrap FRT access required' USING ERRCODE='42501';
  END IF;
+ -- The caller must also be eligible for the safe read API. A missing or
+ -- revoked own-workspace grant cannot masquerade as a foreign denial.
+ IF NOT pg_catalog.has_function_privilege('authenticated',
+    'public.frt_board_dashboard_safe(uuid,text)','EXECUTE')
+    OR NOT pg_catalog.has_function_privilege('authenticated',
+    'public.frt_board_list_safe(uuid,text,text)','EXECUTE') THEN
+   RAISE EXCEPTION 'Restricted read grants unavailable' USING ERRCODE='42501';
+ END IF;
+ PERFORM public.frt_board_dashboard_safe(p_workspace_id,'WAO');
+ PERFORM public.frt_board_list_safe(p_workspace_id,'WAO','');
  SELECT w.id INTO target_workspace
  FROM public.workspaces w
  WHERE w.id<>p_workspace_id AND NOT EXISTS (
