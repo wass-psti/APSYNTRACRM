@@ -197,7 +197,7 @@ function boardPage(){
  <div class="head-actions"><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
- <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}">▤ Board items <span class="csp-u060" >(${items.length})</span></a>
+ <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}${moduleByBoardName(b.name)?.key==='timetracker'?'/items':''}">▤ Board items <span class="csp-u060" >(${items.length})</span></a>
  <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span class="csp-u060" >(${state.issues.length})</span></a>
  ${moduleByBoardName(b.name)?.key==='frt'?`<a class="tab ${state.tab==='finance'?'active':''}" href="#/boards/${e(b.id)}/finance">▣ FRT finance (read-only)</a>`:''}
  ${moduleByBoardName(b.name)?.key==='timetracker'?`<a class="tab ${state.tab==='attendance'?'active':''}" href="#/boards/${e(b.id)}/attendance">◷ TimeTracker attendance</a>`:''}</div>
@@ -451,7 +451,15 @@ async function onRoute(){
  if(!state.context)return;
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
- if(parts[0]==='boards'&&validUuid(parts[1])){await loadBoard(parts[1],parts[2]==='issues'?'issues':parts[2]==='finance'?'finance':parts[2]==='attendance'?'attendance':'items');return;}
+ if(parts[0]==='boards'&&validUuid(parts[1])){
+  const defaultClock=!parts[2]&&state.boards.some(b=>
+    b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
+  const requested=parts[2]==='issues'?'issues':
+    parts[2]==='finance'?'finance':
+    parts[2]==='attendance'?'attendance':defaultClock?'attendance':'items';
+  await loadBoard(parts[1],requested);
+  return;
+ }
  routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
  if(state.view==='role-configuration'||state.view==='user-role-management'){
    // Recheck current server authority on EVERY entry, including direct URL visits.
