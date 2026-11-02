@@ -176,7 +176,9 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
  // timetracker_gps_snapshot RPC. The broad attendance Log never supplies GPS.
  const events=gpsEligible&&Array.isArray(gpsData?.events)?
   gpsData.events.filter(p=>p.recordId===row.id&&
-   row.ownerId==='cloud:'+p.userId&&['in','out'].includes(p.kind)):[];
+   row.ownerId==='cloud:'+p.userId&&['in','out'].includes(p.kind)&&
+   Array.isArray(gpsData.ranges)&&gpsData.ranges.some(range=>
+    manilaDay(p.timestamp)>=range.from&&manilaDay(p.timestamp)<=range.to)):[];
  const days=[manilaDay(row.clockIn),...(row.clockOut?[manilaDay(row.clockOut)]:[])];
  const covered=Boolean(gpsEligible&&gpsData?.ranges?.some(r=>
   days.every(d=>d>=r.from&&d<=r.to)));
