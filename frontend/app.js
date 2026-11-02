@@ -395,7 +395,8 @@ async function loadTimeTrackerMonitor(seq=routeSerial){
   workspace=state.context?.workspace_id,boardId=state.boardId;
  state.ttMonitor=null;state.ttMonitorError='';state.ttMonitorBusy=true;render();
  try{
-  const result=await probeTimeTrackerMonitor({auth,api:db,boardId});
+  const result=await probeTimeTrackerMonitor({auth,api:db,boardId,
+   bootstrapEligible:state.roleVerified===true});
   if(run===state.ttMonitorRunId&&seq===routeSerial&&
      state.view==='board'&&state.ttView==='monitor'&&state.boardId===boardId&&
      auth.isSignedIn&&auth.userId===identity&&
