@@ -82,8 +82,8 @@ const widthBucket=percent=>'tt-log-width-'+Math.max(0,Math.min(100,
  Math.round(percent/5)*5));
 const openDuration=(row,now)=>row.status==='Active'?
  Math.max(0,Date.parse(now)-Date.parse(row.clockIn)):0;
-const auditPill=(label,value,style='neutral')=>
- '<div class="tt-log-audit-pill tt-log-audit-'+style+'"><strong>'+esc(value)+
+const auditPill=(label,value,tone='neutral')=>
+ '<div class="tt-log-audit-pill tt-log-audit-'+tone+'"><strong>'+esc(value)+
  '</strong><span>'+esc(label)+'</span></div>';
 const locationsPalette=[
  ['Office-Base Duty','office'],['Offsite (Home)','offsite'],
