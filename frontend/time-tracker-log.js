@@ -218,7 +218,7 @@ const sessionRow=(r,query='',now=new Date())=>{
   '<details class="tt-log-detail"><summary class="tt-log-row-summary">'+
    '<span class="tt-log-row-person"><strong>'+esc(r.name||'Signed member')+
     '</strong><small>'+esc(r.department||'Unassigned')+'</small></span>'+
-   '<span>'+esc(dateTime(r.clockIn))+'</span>'+
+   '<span title="'+esc(phtDate(r.clockIn))+'">'+esc(dateTime(r.clockIn))+'</span>'+
    '<span>'+esc(dateTime(r.clockOut))+'</span>'+
    '<span class="tt-log-row-location">'+esc(r.location||'Unspecified')+'</span>'+
    '<span>'+esc(r.department||'Unassigned')+'</span>'+
@@ -243,7 +243,7 @@ export function renderTimeTrackerLog({
  return '<section class="tt-log" aria-label="Signed attendance Log">'+
   '<header class="tt-log-hero"><div><h3>Attendance Log</h3>'+
    '<p>'+esc(phtDate(now))+' · '+(team?
-    'Authorized workforce history':'Your attendance history')+
+    'Authorized team history':'Your attendance history')+
    ' · Today and earlier sessions</p></div>'+
    '<span class="tt-log-readonly">Read-only · '+
     (team?'Authorized team':'Signed account')+'</span></header>'+
