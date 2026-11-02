@@ -142,6 +142,23 @@ export function renderTimeTrackerLog({records=[],filters={},now=new Date(),busy=
   '</div></section>';
 }
 
+
+const logCsvCell=value=>{
+ const raw=String(value??'');
+ const escaped=/^[=+@-]/.test(raw)?"'"+raw:raw;
+ return '"'+escaped.replaceAll('"','""')+'"';
+};
+/** CSV contains only sanitized, already-authorized Log projections. */
+export function timeTrackerLogCsv(rows=[]){
+ return '\uFEFF'+[
+  ['Employee','Department','Location','Clock In','Clock Out','Status','Arrival','Credited Hours'],
+  ...safeRows(rows).map(row=>[
+   row.name||'Signed member',row.department||'',row.location||'',row.clockIn,
+   row.clockOut||'',row.status||'',row.classification||'',creditedHours(row.creditedMs)
+  ])
+ ].map(row=>row.map(logCsvCell).join(',')).join('\r\n')+'\r\n';
+}
+
 /** Search only rows already authorized and rendered by the signed Log read. */
 export function applyTimeTrackerLogSearch(root,query=''){
  const section=root?.querySelector?.('.tt-log');
