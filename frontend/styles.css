@@ -1140,3 +1140,82 @@
 /* CP-TT-OT-REVIEW-GATE */
 .tt-ot-review-actions{display:flex;gap:9px;margin-left:auto}
 .tt-ot-review-actions button{border:1px solid #e0d4c8;background:#f6ebe1;color:#8c6c58;border-radius:5px;padding:7px 10px;font-size:11px}
+
+
+/* CP-TT-MY-HOURS-01 — signed personal attendance, unified vertical scrolling */
+.tt-my-hours{max-width:900px;margin:0 auto;padding:35px clamp(14px,3vw,30px) 44px;display:grid;gap:20px;color:#292d33;min-width:0}
+.tt-hours-header{display:flex;align-items:start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.tt-hours-header h3{font:700 clamp(25px,3vw,33px)/1.16 Georgia,"Times New Roman",serif;margin:0}
+.tt-hours-header h4{font:700 clamp(18px,2.4vw,25px) Georgia,"Times New Roman",serif;margin:5px 0 10px;color:#e46230}
+.tt-hours-header p{font-size:12px;color:#8e8b91;margin:0}
+.tt-hours-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.tt-hours-actions button{border:1px solid #e9d0c8;background:#f5b7a1;color:#7a4634;padding:10px 13px;border-radius:6px;font-size:11px;font-weight:650}
+.tt-hours-actions button:first-child{border-color:transparent;background:transparent;color:#96979d}
+.tt-hours-actions button:disabled{opacity:.65;cursor:not-allowed}
+.tt-hours-week-nav{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tt-hours-week-nav>span{color:#93939d;font-size:10px;font-weight:700;letter-spacing:.14em}
+.tt-hours-week-nav>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tt-hours-week-nav button,.tt-hours-month-nav button{border:1px solid #e0e1e5;border-radius:5px;background:#fff;color:#585e68;min-height:32px;padding:6px 11px;font-size:12px;cursor:pointer}
+.tt-hours-week-nav strong{font:700 12px ui-monospace,SFMono-Regular,monospace;white-space:nowrap}
+.tt-hours-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fbfbfc;border:1px dashed #e1e2e6;border-radius:7px;overflow:hidden}
+.tt-hours-kpis>div{display:grid;align-content:center;justify-items:center;gap:7px;min-height:84px;border-right:1px dashed #e1e2e6}
+.tt-hours-kpis>div:last-child{border:0}
+.tt-hours-kpis strong{font:700 clamp(16px,2vw,21px) ui-monospace,monospace;color:#26282e}
+.tt-hours-kpis span{font-size:10px;letter-spacing:.12em;color:#98949a}
+.tt-hours-section{display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:.1em;color:#9b969b}
+.tt-hours-section:after{content:"";flex:1;height:1px;background:#e4e3e6}
+.tt-hours-section>span{order:2;letter-spacing:0;font:500 10px ui-monospace,monospace;white-space:nowrap}
+.tt-hours-panel{border:1px solid #e2e3e7;background:#fff;border-radius:7px;min-width:0}
+.tt-hours-week-records{min-height:110px}
+.tt-hours-empty{min-height:110px;display:grid;align-content:center;justify-items:center;gap:10px;padding:22px;text-align:center}
+.tt-hours-empty strong{font-style:italic;font-size:12px;color:#969398;font-weight:450}
+.tt-hours-empty p{margin:0;color:#a1a0a7;font-size:10px}
+.tt-hours-session{display:grid;grid-template-columns:minmax(110px,1fr) minmax(100px,1fr) 62px;gap:12px;align-items:center;padding:14px 15px;border-bottom:1px solid #eaebee}
+.tt-hours-session:last-child{border-bottom:0}
+.tt-hours-session>div{min-width:0;display:grid;gap:6px}
+.tt-hours-session strong{font-size:12px;color:#30343c}
+.tt-hours-session small{font-size:10px;color:#97939a;overflow-wrap:anywhere}
+.tt-hours-session span{font:600 11px ui-monospace,monospace;color:#535963;white-space:nowrap}
+.tt-hours-session b{font:700 12px ui-monospace,monospace;text-align:right;color:#3c8d72}
+.tt-hours-progress{padding:0;overflow:hidden}
+.tt-hours-progress-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.tt-hours-progress-kpis>div{min-height:72px;display:grid;align-content:center;justify-items:center;gap:7px;border-right:1px solid #e9e9ec}
+.tt-hours-progress-kpis>div:last-child{border:0}
+.tt-hours-progress-kpis strong{font:700 17px ui-monospace,monospace}
+.tt-hours-progress-kpis span{font-size:10px;color:#95949a;letter-spacing:.08em}
+.tt-hours-progress-foot{padding:10px 10px 12px}
+.tt-hours-progress-foot progress{display:block;width:100%;height:8px;accent-color:#75ae8b}
+.tt-hours-progress-foot>div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:5px;color:#9a999f;font-size:10px}
+.tt-hours-calendar{padding:14px 15px 17px;overflow-x:auto;overflow-y:visible}
+.tt-hours-month-nav{display:flex;align-items:center;gap:10px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid #e9e9ec}
+.tt-hours-month-nav strong{font:700 15px Georgia,"Times New Roman",serif}
+.tt-hours-month-nav button:last-child{margin-left:auto;color:#d96339;border-color:#f4e0d8}
+.tt-hours-month-grid{min-width:390px}
+.tt-hours-weekdays,.tt-hours-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.tt-hours-weekdays{margin-bottom:7px}
+.tt-hours-weekdays span{text-align:center;font-size:10px;color:#98969c}
+.tt-hours-days{grid-auto-rows:minmax(41px,auto)}
+.tt-hours-day{display:flex;align-items:center;justify-content:center;position:relative;border:1px solid #eaeaec;border-radius:4px;color:#928e94;background:#eeedeb;font-size:11px;min-width:0;min-height:40px;padding:7px 4px;cursor:pointer}
+.tt-hours-day small{position:absolute;right:4px;top:2px;color:#60666e;font:700 9px ui-monospace,monospace}
+.tt-hours-outside{border:0;background:transparent;pointer-events:none}
+.tt-hours-full{background:#83ac90;color:#fff}
+.tt-hours-partial{background:#efa17d;color:#26292d}
+.tt-hours-late{background:#ca7767;color:#fff}
+.tt-hours-active{background:#c9ddee;color:#344456}
+.tt-hours-unverified{background:#ededeb}
+.tt-hours-today{border:2px solid #ee6231;color:#2a2d33;font-weight:700}
+.tt-hours-selected{outline:3px solid #ee6231;outline-offset:1px}
+.tt-hours-day:focus-visible{outline:3px solid #d45f3b;outline-offset:2px}
+.tt-hours-legend{display:flex;gap:9px 13px;justify-content:center;flex-wrap:wrap;border-top:1px dashed #e6e4e4;padding-top:12px;margin-top:12px}
+.tt-hours-legend span{display:flex;gap:5px;align-items:center;font-size:10px;color:#95949b}
+.tt-hours-legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.tt-hours-key-full{background:#83ac90}
+.tt-hours-key-partial{background:#efa17d}
+.tt-hours-key-late{background:#ca7767}
+.tt-hours-key-active{background:#c9ddee}
+.tt-hours-key-none{background:#eeedeb}
+.tt-hours-selected-records{padding:15px}
+.tt-hours-selected-records h5{font:700 14px Georgia,serif;margin:0 0 10px}
+.tt-hours-selected-records p{font-size:12px;color:#89878e}
+.tt-hours-footnote{font-size:11px;line-height:1.7;color:#8f9199;margin:0}
+@media(max-width:640px){.tt-my-hours{padding:20px 12px 30px;gap:15px}.tt-hours-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tt-hours-kpis>div:nth-child(2){border-right:0}.tt-hours-kpis>div:nth-child(-n+2){border-bottom:1px dashed #e1e2e6}.tt-hours-week-nav{align-items:start}.tt-hours-session{grid-template-columns:1fr 1fr}.tt-hours-session>b{grid-column:2;text-align:left}.tt-hours-calendar{padding:11px}}
