@@ -75,6 +75,41 @@ export function projectOwnAttendance(value,userId){
   deny('Conflicting active attendance records require reconciliation');
  return rows;
 }
+export function projectOwnOvertime(value,userId){
+ if(!uuid.test(userId||''))deny('A verified user is required');
+ let state;
+ try{state=typeof value==='string'?JSON.parse(value):value;}
+ catch{deny('Overtime state is malformed');}
+ if(!isRecord(state)||state.version!==1||!Array.isArray(state.requests))
+  deny('Overtime state contract invalid');
+ if(state.requests.length>25000)deny('Overtime state exceeds permitted read budget');
+ return state.requests.filter(x=>isRecord(x)&&x.ownerId==='cloud:'+userId&&
+  typeof x.id==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(x.date||'')&&
+  ['Draft','Submitted','Approved','Rejected'].includes(x.status))
+ .map(x=>Object.freeze({
+   id:x.id.slice(0,140),date:x.date,status:x.status,
+   start:typeof x.start==='string'?x.start.slice(0,5):'—',
+   end:typeof x.end==='string'?x.end.slice(0,5):'—',
+   durationMinutes:Number.isInteger(x.durationMinutes)&&x.durationMinutes>=0&&
+    x.durationMinutes<=960?x.durationMinutes:null,
+   task:String(x.task||'').slice(0,160)
+ }))
+ .sort((a,b)=>b.date.localeCompare(a.date)).slice(0,200);
+}
+export function filterMyAttendancePeriod(records,period='all',at=new Date()){
+ if(!['all','today','week','month'].includes(period))deny('Unsupported report period');
+ const now=new Date(at);
+ if(!Number.isFinite(now.getTime()))deny('Invalid report date');
+ let start=null;
+ if(period!=='all'){
+  start=new Date(now);start.setHours(0,0,0,0);
+  if(period==='week')start.setDate(start.getDate()-((start.getDay()+6)%7));
+  if(period==='month')start.setDate(1);
+ }
+ return (records||[]).filter(x=>safeTime(x.clockIn)&&
+  (!start||(new Date(x.clockIn).getTime()>=start.getTime()&&
+   new Date(x.clockIn).getTime()<=now.getTime())));
+}
 function verifiedContext(auth,context,boardId){
  if(!auth||!uuid.test(auth.userId||'')||!isRecord(context)||
   context.user_id!==auth.userId||!uuid.test(context.workspace_id||'')||
@@ -124,8 +159,10 @@ export class TimeTrackerNativeClient{
   if(row&&(!Number.isSafeInteger(Number(row.revision))||Number(row.revision)<1||
     typeof row.value!=='string'))deny('Invalid authoritative attendance revision');
   const records=projectOwnAttendance(row?row.value:{version:1,records:[]},access.userId);
+  const otRow=raw.find(x=>x?.state_key==='timetracker.ot.v1'&&x.scope==='shared');
+  const otRequests=projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId);
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access,records,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access,records,otRequests,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  async commit(boardId,{action,location,department,workNote='',geo}={}){
