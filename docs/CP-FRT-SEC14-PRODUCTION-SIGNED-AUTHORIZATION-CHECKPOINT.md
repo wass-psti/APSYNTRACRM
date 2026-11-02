@@ -241,3 +241,31 @@ User submitted a **sanitized browser-generated** `CP-FRT-SEC10-CI07` read-only r
 **Evidence scope:** Confirms the operator reported a successful CI07 current-session FRT positive role read. It is **not** an `CP-FRT-SEC14-DENIAL` test and provides no proof of automatic foreign-workspace `42501` rejections, nonbootstrap classification by this particular runner, revocation/expired-token enforcement, request-detail execution, or financial action authorization. The earlier SEC14-DENIAL `AUTO_FOREIGN_WORKSPACE_RPC_NOT_ACTIVE` observation was superseded by independent read-only production installation/grant checks, but **no new signed automatic denial report** has yet been submitted.
 
 **Next evidence:** In the deployed Security page, run **Verify SEC14 nonbootstrap and cross-workspace denials** under the existing nonbootstrap `FINANCE_APPROVER` session and export the sanitized `CP-FRT-SEC14-DENIAL` result. No manual workspace UUID is required. Overall SEC14 remains **6/8 fully VERIFIED (75%)** until the outstanding SEC14-specific signed negative and real-request detail gates are closed. Legacy read RPC retirement and finance authorization remain separate unresolved requirements.
+
+
+## Operator-submitted production SEC14 automatic foreign-workspace denial PASS — 2026-11-02
+
+**Evidence source:** a **user-submitted, sanitized `CP-FRT-SEC14-DENIAL` browser report** from the deployed APSYNTRA CRM Security interface. Its fields and decision rule match the currently source-controlled `frontend/frt-sec14-signed-denials.js` and `public.frt_sec14_auto_foreign_denials(uuid)` output contract. This is **real operator-reported signed-user evidence**, not an independently captured signed HTTP transaction or direct JWT trace.
+
+| Reported field / check | Reported result |
+| --- | --- |
+| `checkpoint` | `CP-FRT-SEC14-DENIAL` |
+| `status`; `scenario`; `role` | **PASS**; **NONBOOTSTRAP**; **FINANCE_APPROVER** |
+| `signed-context` | PASS |
+| `nonbootstrap-classification` | PASS |
+| `active-frt-module-grant` | PASS |
+| `signed-frt-own-workspace` | PASS |
+| `foreign-workspace-dashboard-denied` | **PASS** |
+| `foreign-workspace-list-denied` | **PASS** |
+| `stable-signed-context` | PASS |
+| `reason`; `foreignWorkspaceExistence` | `FOREIGN_WORKSPACE_DENIAL_VERIFIED`; **VERIFIED** |
+| `writesAttempted`; `roleChangesAttempted` | **0**; **0** |
+| `financialWritesVerified` | **NOT_VERIFIED** |
+
+**Interpretation:** all **7/7 signed denial checks were reported PASS**, including two separately checked backend restricted read rejections against an automatically selected **existing foreign workspace**, with the same verified nonbootstrap identity and current FRT module grant. This retires the specific prior `EXISTING_FOREIGN_WORKSPACE_ID_REQUIRED` and `AUTO_FOREIGN_WORKSPACE_RPC_NOT_ACTIVE` acceptance blockers. No foreign workspace identifier, token, user identifier, financial request payload, role mutation, or transaction was exported.
+
+**Independent corroboration:** a fresh, read-only production Supabase catalog check returned `auto_rpc_installed=true`, `authenticated_execute=true`, `anon_execute=false`, **2 existing workspaces** and **0 existing FRT requests**. The three older broad authenticated read grants (`frt_get_request`, `frt_list_requests`, `frt_dashboard`) remain **true**, unchanged. The server code and previous disposable PostgreSQL checks established that the auto probe chooses a real other workspace and records `PASS` only for the two underlying `42501` insufficient-privilege denials. This corroboration does **not** independently replay the signed operator's token or prove session revocation.
+
+**Acceptance accounting:** the **nonbootstrap signed cross-workspace-denial subcheckpoint is VERIFIED (operator report + source/production guard corroboration)**. The aggregate gate labelled `Genuine signed positive/negative operator session, real request details` still lacks the **real existing-request detail** leg because production contains no FRT requests; it therefore remains **PENDING**, not partially rounded up to an eighth completed gate. The second aggregate gate `Complete compatibility and approved legacy read revocation, actual finance authorization acceptance` remains **BLOCKED**, since live legacy grants and unknown client compatibility are unresolved and no financial write authorization was tested. **Overall SEC14 stays 6/8 fully VERIFIED = 75%** under the existing ledger definition.
+
+**Next priorities:** stop repeating the now-passed foreign-workspace denial. Conduct actual client compatibility inventory and migration for the three legacy broad-read RPCs without modifying grants, finance records or shared authentication. Validate the restricted detail against the **first legitimate operational FRT request** when one naturally exists; do not create dummy finance records solely to satisfy acceptance. Plan legacy revocation as a separately authorized controlled production security change, with rollback and signed-authorization regression evidence.
