@@ -27,12 +27,12 @@ function fixture({denied=false,wrongMember=false,stale=false,badCount=false,
       role:'FINANCE_APPROVER',enabled:true,status:'active',
       email:'secret@example.org'},companies};
    }
-   if(name==='frt_dashboard'){
+   if(name==='frt_board_dashboard_safe'){
     return {total_requests:badCount?'1':1,pending:1,in_progress:0,
      completed:0,pending_liquidation_count:0,total_amount:100000,
      released:999999,monthly_trend:[],top_categories:[]};
    }
-   if(name==='frt_list_requests')return rows;
+   if(name==='frt_board_list_safe')return rows;
    throw Error('Unexpected RPC '+name);
   }
  };
@@ -47,7 +47,7 @@ test('authorized FRT board integration reads only signed domain RPCs and removes
  assert.equal(report.summary.total_requests,1);
  assert.equal(report.requests.length,1);
  assert.deepEqual(f.calls.filter(x=>typeof x==='object').map(x=>x.name),
-   ['frt_bootstrap','frt_dashboard','frt_list_requests']);
+   ['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
  assert.ok(!f.calls.some(x=>typeof x==='object'&&/create|update|delete|admin_set|request_action/i.test(x.name)));
  assert.equal(report.writesAttempted,0);
  const out=JSON.stringify(report);
@@ -69,9 +69,9 @@ test('valid company switching sends exact workspace/company filters to existing 
  const r=await loadFRTFinanceReadOnly({...f,companyCode:'WASS'});
  assert.equal(r.status,'PASS');
  assert.equal(r.companyCode,'WASS');
- assert.deepEqual(f.calls.filter(x=>typeof x==='object'&&x.name==='frt_dashboard')[0].args,
+ assert.deepEqual(f.calls.filter(x=>typeof x==='object'&&x.name==='frt_board_dashboard_safe')[0].args,
   {p_workspace_id:ws,p_company:'WASS'});
- assert.deepEqual(f.calls.filter(x=>typeof x==='object'&&x.name==='frt_list_requests')[0].args,
+ assert.deepEqual(f.calls.filter(x=>typeof x==='object'&&x.name==='frt_board_list_safe')[0].args,
   {p_workspace_id:ws,p_company:'WASS',p_search:''});
 });
 test('signed denial and mismatched membership fail closed',async()=>{
@@ -82,7 +82,7 @@ test('signed denial and mismatched membership fail closed',async()=>{
  const invalid=await loadFRTFinanceReadOnly(f);
  assert.equal(invalid.status,'BLOCKED');
  assert.equal(invalid.reason,'FRT_ROLE_OR_COMPANY_CONTRACT_INVALID');
- assert.ok(!f.calls.some(x=>typeof x==='object'&&x.name==='frt_dashboard'));
+ assert.ok(!f.calls.some(x=>typeof x==='object'&&x.name==='frt_board_dashboard_safe'));
 });
 test('stale identity, invalid counts, mismatched company and unexpected rows cannot PASS',async()=>{
  const stale=await loadFRTFinanceReadOnly(fixture({stale:true}));
@@ -100,7 +100,7 @@ test('empty company list is a safe empty state, never a fabricated finance amoun
  assert.equal(r.status,'PASS');
  assert.equal(r.summary,null);
  assert.deepEqual(r.companies,[]);
- assert.ok(!f.calls.some(x=>typeof x==='object'&&x.name==='frt_dashboard'));
+ assert.ok(!f.calls.some(x=>typeof x==='object'&&x.name==='frt_board_dashboard_safe'));
 });
 test('FRT board UI escapes names, company codes, vouchers and status',()=>{
  const html=renderFRTFinanceReadOnly({result:{
@@ -127,7 +127,7 @@ test('blocked board UI never renders request content or permission-changing cont
 test('SEC12 is attached only to the existing named FRT board and keeps no finance data after logout',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/moduleByBoardName\(b\.name\)\?\.key==='frt'/);
- assert.match(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode,secureContracts:true\}\)/);
+ assert.match(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode\}\)/);
  assert.match(app,/state\.frtFinance=null;state\.frtFinanceBusy=false/);
  assert.match(app,/case 'frt-finance-company'/);
  assert.doesNotMatch(app,/service_role|secretKey|supabaseAdminClient/i);
@@ -149,7 +149,7 @@ test('SEC14 safe dashboard/list never downgrade to financial-data-bearing legacy
   if(name==='frt_bootstrap')return original(name,args);
   throw Error('Forbidden legacy financial RPC: '+name);
  };
- const response=await loadFRTFinanceReadOnly({...f,secureContracts:true});
+ const response=await loadFRTFinanceReadOnly(f);
  assert.equal(response.status,'PASS');
  assert.equal(response.requests.length,1);
  assert.deepEqual(requested,['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
@@ -164,7 +164,7 @@ test('SEC14 unavailable safe endpoint fails closed without a legacy fallback',as
   if(name==='frt_bootstrap')return original(name,args);
   throw Object.assign(Error('RPC missing'),{code:'PGRST202'});
  };
- const response=await loadFRTFinanceReadOnly({...f,secureContracts:true});
+ const response=await loadFRTFinanceReadOnly(f);
  assert.equal(response.status,'BLOCKED');
  assert.equal(response.reason,'FRT_READONLY_RPC_MISSING');
  assert.ok(!calls.includes('frt_dashboard'));
@@ -173,7 +173,8 @@ test('SEC14 unavailable safe endpoint fails closed without a legacy fallback',as
 
 test('SEC14 production board entry always requests server-restricted reads',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- const matches=[...app.matchAll(/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode,secureContracts:true\}\)/g)];
+ const matches=[...app.matchAll(/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode\}\)/g)];
  assert.equal(matches.length,1);
- assert.doesNotMatch(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode\}\)/);
+ assert.doesNotMatch(readFileSync(new URL('../frt-finance-readonly.js',import.meta.url),'utf8'),
+  /frt_list_requests|frt_dashboard|secureContracts/);
 });
