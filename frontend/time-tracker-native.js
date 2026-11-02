@@ -84,7 +84,7 @@ export function projectOwnOvertime(value,userId){
   deny('Overtime state contract invalid');
  if(state.requests.length>25000)deny('Overtime state exceeds permitted read budget');
  return state.requests.filter(x=>isRecord(x)&&x.ownerId==='cloud:'+userId&&
-  typeof x.id==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(x.date||'')&&
+  typeof x.id==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')&&
   ['Draft','Submitted','Approved','Rejected'].includes(x.status))
  .map(x=>Object.freeze({
    id:x.id.slice(0,140),date:x.date,status:x.status,
