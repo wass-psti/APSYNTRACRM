@@ -6,8 +6,38 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
+import {classifyPagesSmokeHead} from './pages-smoke-supersession.mjs';
 const origin='https://wass-psti.github.io/APSYNTRACRM/';
 const sha=process.env.EXPECTED_DEPLOY_SHA || process.env.GITHUB_SHA || 'main';
+const inMainCI=process.env.GITHUB_ACTIONS==='true' &&
+ process.env.GITHUB_REF==='refs/heads/main';
+const repository=process.env.GITHUB_REPOSITORY;
+if(inMainCI && (repository!=='wass-psti/APSYNTRACRM'||sha!==process.env.GITHUB_SHA))
+ throw Error('Pages smoke CI repository or commit mismatch');
+const githubHeaders={
+ 'Accept':'application/vnd.github+json',
+ ...(process.env.GH_TOKEN?{Authorization:'Bearer '+process.env.GH_TOKEN}:{})
+};
+async function githubJSON(path){
+ const response=await fetch('https://api.github.com/repos/wass-psti/APSYNTRACRM/'+path,{
+  headers:githubHeaders,redirect:'error',cache:'no-store',
+  signal:AbortSignal.timeout(15000)
+ });
+ assert.equal(response.status,200,'GitHub Pages source ancestry HTTP '+response.status);
+ return response.json();
+}
+async function sourceIsSuperseded(){
+ if(!inMainCI)return false;
+ const head=(await githubJSON('git/ref/heads/main'))?.object?.sha;
+ if(head===sha)return false;
+ // Never waive live verification for an unrelated or rewritten branch.
+ const comparison=await githubJSON('compare/'+sha+'...'+head);
+ return classifyPagesSmokeHead(sha,head,comparison)==='SUPERSEDED';
+}
+function reportSuperseded(){
+ console.log('LIVE PAGES SMOKE: SUPERSEDED — a newer verified descendant is main.');
+ console.log('This source commit was NOT deployment-verified. Latest main remains responsible for live verification.');
+}
 const paths=['index.html','frontend/app.js','frontend/config.js','frontend/session.js',
  'frontend/data.js','frontend/acceptance.js','frontend/pages-persistence.js',
  'frontend/pages-acceptance-ui.js','frontend/native-client.js','frontend/native-qa.js',
@@ -52,9 +82,17 @@ async function check(){
 }
 let last;
 for(let attempt=1;attempt<=25;attempt++){
- try{await check();console.log('LIVE PAGES SMOKE: PASS for '+sha);process.exit(0);}
- catch(error){last=error;console.error('Deployment propagation attempt '+attempt+': '+error.message);
-   if(attempt<25)await sleep(4000);}
+ // CDN contents are inherently mutable. Do not compare a superseded source
+ // against newer production assets and then report a false source regression.
+ if(await sourceIsSuperseded()){reportSuperseded();process.exit(0);}
+ try{
+  await check();
+  if(await sourceIsSuperseded()){reportSuperseded();process.exit(0);}
+  console.log('LIVE PAGES SMOKE: PASS for '+sha);process.exit(0);
+ }catch(error){
+  last=error;console.error('Deployment propagation attempt '+attempt+': '+error.message);
+  if(attempt<25)await sleep(4000);
+ }
 }
 console.error('LIVE PAGES SMOKE: FAIL — '+last?.message);
 process.exitCode=1;
