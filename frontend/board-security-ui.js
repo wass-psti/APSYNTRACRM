@@ -2,7 +2,7 @@
 import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
 import {identifySecurityScenario} from './board-negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,ci07Result=null,ci07Busy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false,effectiveAccessResult=null,effectiveAccessBusy=false,sec10BoardsError=''}={}){
+export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,ci07Result=null,ci07Busy=false,sec14Result=null,sec14Busy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false,effectiveAccessResult=null,effectiveAccessBusy=false,sec10BoardsError=''}={}){
  const eligible=identifySecurityScenario(context);
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
@@ -70,6 +70,24 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
     escape(c.status)+'</td></tr>').join('')+'</tbody></table></div>'+
    '<p class="muted">Writes: 0 · Session revocation: NOT VERIFIED · Finance transactions: NOT VERIFIED. This is a positive, current-session FRT read test only.</p>'+
    '<button class="secondary" data-action="security-ci07-copy">Copy nonsecret CI07 result</button></div>';
+ }
+ html+='</div></div>';
+ html+='<div class="panel"><div class="panel-header"><h3>SEC14 · Signed restricted FRT reads</h3></div>'+
+ '<div class="panel-body"><p class="muted">Check the deployed restricted dashboard, list and, when a real request exists, detail endpoint under your own signed session. No finance writes or permission changes. An empty list leaves request-detail acceptance PENDING.</p>'+
+ '<button class="primary" data-action="security-sec14-readonly" '+(sec14Busy?'disabled':'')+'>'+
+ (sec14Busy?'Checking restricted FRT access…':'Verify SEC14 signed reads — read-only')+'</button>';
+ if(sec14Result){
+  const passed=(sec14Result.checks||[]).filter(x=>x.status==='PASS').length;
+  html+='<div class="csp-u053"><strong>SEC14 signed read result: '+
+   escape(sec14Result.status||'BLOCKED')+' ('+passed+'/'+
+   (sec14Result.checks||[]).length+' PASS)</strong>'+
+   '<p class="muted">FRT role: '+escape(sec14Result.role||'UNVERIFIED')+'</p>';
+  if(sec14Result.reason)html+='<p class="muted">Reason: '+escape(sec14Result.reason)+'</p>';
+  html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>'+
+   (sec14Result.checks||[]).map(x=>'<tr><td>'+escape(x.name)+'</td><td>'+
+    escape(x.status)+'</td></tr>').join('')+'</tbody></table></div>'+
+   '<p class="muted">Financial writes: NOT VERIFIED · Legacy API revocation: NOT VERIFIED. This test never changes finance records.</p>'+
+   '<button class="secondary" data-action="security-sec14-copy">Copy nonsecret SEC14 report</button></div>';
  }
  html+='</div></div>';
  html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC07 · CRM platform-role activation</h3></div>'+
