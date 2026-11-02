@@ -772,11 +772,10 @@ async function action(name,button){
  }
  case 'security-sec14-denial':{
    if(state.sec14DenialBusy||!state.context||!auth.isSignedIn)return;
-   const foreignWorkspaceId=String(document.getElementById('security-sec14-foreign-workspace')?.value||'').trim();
    state.sec14DenialBusy=true;state.sec14DenialResult=null;
    const revision=++state.sec14DenialRunId;render();
    try{
-    const result=await runSEC14SignedDenials({auth,api:db,foreignWorkspaceId});
+    const result=await runSEC14SignedDenials({auth,api:db});
     if(revision!==state.sec14DenialRunId||!auth.isSignedIn)return;
     state.sec14DenialResult=result;
     toast('SEC14 nonbootstrap denial verification: '+result.status,result.status!=='PASS');
