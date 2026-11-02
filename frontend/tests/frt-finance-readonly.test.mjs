@@ -127,7 +127,7 @@ test('blocked board UI never renders request content or permission-changing cont
 test('SEC12 is attached only to the existing named FRT board and keeps no finance data after logout',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/moduleByBoardName\(b\.name\)\?\.key==='frt'/);
- assert.match(app,/loadFRTFinanceReadOnly\\(\\{auth,api:db,companyCode,secureContracts:true\\}\\)/);
+ assert.match(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode,secureContracts:true\}\)/);
  assert.match(app,/state\.frtFinance=null;state\.frtFinanceBusy=false/);
  assert.match(app,/case 'frt-finance-company'/);
  assert.doesNotMatch(app,/service_role|secretKey|supabaseAdminClient/i);
