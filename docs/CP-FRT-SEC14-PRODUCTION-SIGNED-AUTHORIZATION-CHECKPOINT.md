@@ -211,3 +211,24 @@ Both reports say `writesAttempted:0` and the second also `roleChangesAttempted:0
 - Financial actions / nonempty request-detail: **PENDING**, no artificial finance writes permitted.
 
 **SEC14 overall remains 6/8 verified = 75%**, unchanged by completed isolated implementation tests. Do not portray CI-only checks as live role/workspace or financial acceptance.
+
+
+## Production automatic-denial RPC activation verified — 2026-11-02
+
+**Operator action:** user reported executing the staged `sql/cp-frt-sec14-auto-foreign-denials.sql` in the existing project SQL editor. Independent, live, read-only production checks then returned:
+
+| Verification | Observed evidence |
+| --- | --- |
+| Function installation | `to_regprocedure('public.frt_sec14_auto_foreign_denials(uuid)') IS NOT NULL = true` |
+| Privileged execution boundary | `SECURITY DEFINER = true`, volatility `STABLE`, owner `postgres`, `search_path=""` |
+| RPC grants | `authenticated EXECUTE = true`, `anon EXECUTE = false`, `proacl = {postgres=X/postgres,authenticated=X/postgres}` (no public EXECUTE) |
+| Server-side protective structures | Live `pg_get_functiondef` membership/selector checks found `apsyntra_role_is_bootstrap`, `private.frt_current_role`, `public.workspaces`, `workspace_members`, `frt_board_dashboard_safe`, `frt_board_list_safe` all present |
+| Unsigned authenticated denial | Transaction-scoped `SET LOCAL ROLE authenticated` with no signed JWT, then call `frt_sec14_auto_foreign_denials` inside a PL/pgSQL exception handler: expected SQLSTATE `42501` caught; transaction `ROLLBACK`. **PASS**. No persistent grants, finance or role mutations. |
+| Live finance and workspace baseline | `frt_requests = 0`, `frt_audit_logs = 2`, `frt_liquidations = 0`, `workspaces = 2` |
+| Legacy API unchanged | `authenticated` EXECUTE on all three `frt_get_request`, `frt_list_requests`, `frt_dashboard` remains `true`; no legacy RPC retirement was performed |
+
+**Milestone classification:** production auto-denial RPC deployment and grant inventory **VERIFIED**, no-session negative **VERIFIED**; genuine nonbootstrap **signed** cross-workspace denial still **PENDING** pending operator rerun of the `#/security` automatic-denial acceptance under an existing nonbootstrap account. The earlier `FINANCE_APPROVER` report with `AUTO_FOREIGN_WORKSPACE_RPC_NOT_ACTIVE` is **superseded as a deployment-state observation**, not counted as signed denial evidence. No existing FRT request means positive restricted-detail remains **PENDING**. Finance action execution and three-legacy-RPC compatibility/retirement remain separately **NOT VERIFIED / BLOCKED**.
+
+**Next user-visible action:** in `https://wass-psti.github.io/APSYNTRACRM/#/security`, signed in as the same existing nonbootstrap `FINANCE_APPROVER`, run **Verify SEC14 nonbootstrap and cross-workspace denials** and copy the **nonsecret SEC14 denial report**. No foreign workspace UUID, finance test request, role changes or other manual preparation is required. Evaluate PASS only if the server-selected real foreign workspace and both read denials report PASS along with a stable signed identity.
+
+**Overall SEC14 remains 6/8 verified (75%)** until the complete production signed negative and detail acceptance gates are satisfied, independent of successful RPC activation.
