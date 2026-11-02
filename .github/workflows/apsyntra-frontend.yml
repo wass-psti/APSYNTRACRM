@@ -9,6 +9,8 @@ on:
       - "scripts/cp-frt-sec10-*.mjs"
       - "docs/CP-FRT-SEC10-ISOLATED-LIVE-ACCEPTANCE.md"
       - "scripts/pages-smoke.mjs"
+      - "scripts/sec14-legacy-read-consumer-guard.mjs"
+      - "docs/CP-FRT-SEC14-LEGACY-RPC-CONSUMER-COMPATIBILITY.md"
       - "docs/PAGES-OPERATIONS.md"
       - "frontend/**"
       - "sql/cp-frt-sec06-*.sql"
@@ -49,6 +51,8 @@ jobs:
           test -f frontend/app.js
           test -f frontend/styles.css
           grep -q 'frontend/app.js' index.html
+      - name: Block regression to broad FRT read RPCs in shipped first-party code
+        run: node scripts/sec14-legacy-read-consumer-guard.mjs
       - name: Test authentication and existing backend contracts
         run: node --test frontend/tests/*.test.mjs
 
