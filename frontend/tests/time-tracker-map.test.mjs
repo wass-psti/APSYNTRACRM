@@ -48,3 +48,19 @@ test('opt-in map does not trigger tile requests during signed TimeTracker loadin
  assert.match(index,/script-src 'self' https:\/\/unpkg.com/);
  assert.match(index,/connect-src 'self' https:\/\/jtlusodorfnyzgyuewkz\.supabase\.co/);
 });
+
+test('nonessential signed TimeTracker reads are concurrent but access checks remain first',()=>{
+ const native=readFileSync('frontend/time-tracker-native.js','utf8');
+ const body=native.slice(native.indexOf('async snapshot(boardId){'),
+  native.indexOf('async teamDirectory(boardId){'));
+ assert.match(body,/const access=await this\.access\(boardId\)/);
+ assert.match(body,/const otRead=this\.api\.rpc\('timetracker_ot_snapshot'/);
+ assert.match(body,/const clockRead=this\.attendanceCapability\(boardId,access\)/);
+ assert.match(body,/const raw=await this\.api\.rpc\('list_module_state'/);
+ assert.ok(body.indexOf('const access=await')<body.indexOf('const otRead='));
+ assert.ok(body.indexOf('const otRead=')<body.indexOf('const raw=await'));
+ assert.match(body,/await checkIdentity\(this\.auth,this\.api,access,boardId\)/);
+ const map=readFileSync('frontend/time-tracker-map.js','utf8');
+ assert.match(map,/Intermittent tile errors must not destroy a functioning map/);
+ assert.doesNotMatch(map,/map\.on\('error',\(\)=>showMessage/);
+});

@@ -150,7 +150,11 @@ export async function mountTimeTrackerMaps(root,configs=[]){
     });
     fit(map,lib,points);
    });
-   map.on('error',()=>showMessage(host,'Street map tiles are unavailable. Signed GPS records remain accessible.'));
+   map.on('error',()=>{
+    // Intermittent tile errors must not destroy a functioning map or its markers.
+    const pending=host.querySelector('.tt-map-loading');
+    if(pending)pending.textContent='Street map tiles are unavailable. Recorded coordinates remain accessible.';
+   });
   }catch{
    const existing=instances.get(host);if(existing){try{existing.map.remove()}catch{}instances.delete(host);}
    showMessage(host,'Street map could not initialize. Signed GPS records remain accessible.');

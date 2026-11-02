@@ -163,6 +163,11 @@ export class TimeTrackerNativeClient{
  }
  async snapshot(boardId){
   const access=await this.access(boardId);
+  // Issue independent, read-only RPCs together AFTER signed access verification.
+  // Backend scope checks remain authoritative; identity is checked again below.
+  const otRead=this.api.rpc('timetracker_ot_snapshot',{p_board_id:boardId})
+   .then(response=>({response}),error=>({error}));
+  const clockRead=this.attendanceCapability(boardId,access);
   const raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
   if(!Array.isArray(raw))deny('TimeTracker state API contract invalid');
   const row=raw.find(x=>x?.state_key===stateKey&&x.scope==='shared');
@@ -187,7 +192,8 @@ export class TimeTrackerNativeClient{
   // Optional dedicated OT read endpoint. Before activation, degrade to owner-only
   // legacy rows; never infer team permissions from frontend platform role.
   try{
-   const response=await this.api.rpc('timetracker_ot_snapshot',{p_board_id:boardId});
+   const {response,error}=await otRead;
+   if(error)throw error;
    if(!isRecord(response)||response.mode!=='ACTIVE'||
       response.actorId!==access.userId||response.workspaceId!==access.workspaceId||
       !['OWN_OT_ONLY','AUTHORIZED_WORKSPACE_TEAM'].includes(response.scope)||
@@ -210,7 +216,7 @@ export class TimeTrackerNativeClient{
    if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ot_snapshot/.test(msg))
     throw error;
   }
-  const attendanceWritesAccepted=await this.attendanceCapability(boardId,access);
+  const attendanceWritesAccepted=await clockRead;
   await checkIdentity(this.auth,this.api,access,boardId);
   return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted},records,otRequests,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
