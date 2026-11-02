@@ -21,3 +21,12 @@ test('claims cannot override central bootstrap and workspace denials',()=>{
  assert.throws(()=>projectTimeTrackerTeamDirectory({...teamFixture,bootstrapVerified:false},input),/contract/);
  assert.throws(()=>projectTimeTrackerTeamDirectory({...teamFixture,workspaceId:teamActor},input),/contract/);
 });
+import {renderTimeTrackerTeam,timeTrackerTeamCsv,timeTrackerTeamSummary} from '../time-tracker-team.js';
+test('directory UI renders counts only for matching signed bootstrap',()=>{
+ const access={userId:teamActor,workspaceId:teamWs,bootstrapTeamEligible:true};
+ const data=projectTimeTrackerTeamDirectory(teamFixture,{workspaceId:teamWs,actorId:teamActor});
+ assert.equal(timeTrackerTeamSummary(data).admins,1);
+ assert.match(renderTimeTrackerTeam({directory:data,access}),/Team Directory/);
+ assert.doesNotMatch(renderTimeTrackerTeam({directory:data,access:{...access,bootstrapTeamEligible:false}}),/MEMBER LIST/);
+ assert.match(timeTrackerTeamCsv(data),/System Admin/);
+});
