@@ -103,3 +103,21 @@ The read-only source-controlled audit `sql/tests/cp-tt-native-01-production-read
 **Acceptance accounting:** TT-01, TT-02 and TT-03 are **VERIFIED**, or **3 of 10 narrow acceptance gates = 30%**. TT-04 through TT-10 are not accepted. No other application board was modified by the native TimeTracker work. Overall twelve-application final acceptance remains **0/12**.
 
 **Next implementation blocker:** stage server-enforced board grant, offsite Work Note, location/department validation, and immutable attendance audit changes against the existing transaction contract, then complete controlled authorization review before any production deployment. The current Clock In/Out user interface stays disabled; no live clock writes or operator sign-in were performed in this development run. All 12 original source modules require separate parity mapping; this initial slice does not constitute full TimeTracker feature equivalence.
+
+
+## Clock reference design integration — 2026-11-02
+
+**Operator visual reference:** supplied annotated screenshot of the original TimeTracker **Clock** tab within Monday.com. The screenshot was used as a **visual-language reference**, not embedded or redeployed. The surrounding Monday.com toolbar, application shell, branding and public-share indicator were intentionally not copied; APSYNTRA's existing board shell, authentication, and route remain authoritative.
+
+**Implemented natively in** \`frontend/time-tracker-ui.js\`, \`frontend/styles.css\`, \`frontend/app.js\`:
+
+- Light segmented TimeTracker sub-header, small orange clock icon, dynamic centralized TimeTracker role badge, real backend safety notices.
+- Horizontally independently scrolling feature tab strip. Clock is the default active tab. Log, Reports, OT remain functional, authorized read-only native screens. Source-only Overview, Calendar, My Hours, Team, Roles, Monitor and GPS tab labels are **disabled**, not implied complete.
+- Central, large serif local clock with real greeting, current date, orange colon, separately styled seconds and AM/PM, source screenshot's session indicators (today's records/credited hours/Idle or Active state).
+- Centered Clock In/Out card with server-derived active state, location and department selectors, Office/Home quick-select chips, offsite work-note field and explicit fail-closed production write banner. Disabled Clock start/end preserves backend security boundary.
+- Scope-specific clean styling, responsive narrow-screen layout, visible keyboard focus, reduced-motion support, CSS-isolated table scrolling and no new rendering framework.
+- A **single 1-second text-only timer** is created only while the authenticated native Clock view is mounted; it is stopped when leaving that view, signing out, or session expiring. No recurring database polling, persistent monitoring, or telemetry was added.
+
+**Verification:** [GitHub Actions Frontend Validation #41406622172](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41406622172) for commit \`7981535b9ef9e1e37820494345bd8f48a2e9bdd3\` — **PASS: 262/262 frontend tests**, disposable PostgreSQL **SUCCESS**, exact-source Pages smoke **SUCCESS**. Added Clock visual contract, local-time formatting, text-node-only ticker, quick-location/navigation, disabled server-write presentation and existing authorization regression tests. Earlier SEC07 session-expiry test caught a timer cleanup placement change; corrected without altering expiry semantics before the final green run.
+
+**Classification:** Clock visual and frontend regression implementation **VERIFIED at source/CI scope**, signed live TimeTracker read and clock transactions **NOT VERIFIED** by this visual task. Clock-in/out production writes remain deliberately **DISABLED** pending the independently documented backend board grant, offsite-note and audit enforcement gaps. This design milestone **does not change TT-01..TT-10 acceptance accounting**: **3/10 verified = 30%**, and all twelve applications remain **0/12 fully operationally accepted**. No records, module roles, production function grants, auth policies or board schema were modified.
