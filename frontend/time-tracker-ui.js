@@ -5,6 +5,7 @@ import {
  TT_LOCATIONS,TT_DEPARTMENTS,creditedAttendanceMs,filterMyAttendancePeriod,
  TT_LIVE_ATTENDANCE_WRITES_ACCEPTED
 } from './time-tracker-native.js';
+import {renderTimeTrackerOverview} from './time-tracker-overview.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -13,7 +14,7 @@ const date=v=>v&&Number.isFinite(Date.parse(v))?
  new Date(v).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'—';
 const hrs=ms=>Number.isFinite(ms)?(ms/3600000).toFixed(2)+' h':'—';
 const sections=[
- ['overview','Overview',false],['clock','Clock',true],['log','Log',true],
+ ['overview','Overview',true],['clock','Clock',true],['log','Log',true],
  ['reports','Reports',true],['calendar','Calendar',false],
  ['ot','OT',true],['hours','My Hours',false],['team','Team',false],
  ['roles','Roles',false],['monitor','Monitor',false],['gps','GPS',false]
@@ -191,10 +192,10 @@ function overtimePage(result){
  '</div></div>';
 }
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='week',view='clock',now=new Date()
+ result=null,busy=false,error='',success='',period='week',view='clock',now=new Date(),overviewFilters={}
 }={}){
  const verified=result?.status==='VERIFIED_READ';
- const selected=['clock','log','reports','ot'].includes(view)?view:'clock';
+ const selected=['overview','clock','log','reports','ot'].includes(view)?view:'clock';
  let html='<section class="tt-native" aria-label="TimeTracker attendance application">'+
   head(verified?result.access:null)+notifications(verified)+navigation(selected,busy);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
@@ -206,6 +207,9 @@ export function renderTimeTrackerNative({
    '</p></div></section>';
   return html;
  }
+ if(selected==='overview')html+=renderTimeTrackerOverview({
+  overview:result.overview,access:result.access,now,filters:overviewFilters
+ });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now));
  if(selected==='log'||selected==='reports')
   html+=historyPage(result,period,busy,selected);
