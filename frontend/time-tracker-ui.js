@@ -141,13 +141,20 @@ function clockPage(result,busy,now){
    (active?'<p class="tt-active-copy">Your signed session began '+esc(date(active.clockIn))+
      '.</p>':'')+
    '<form id="tt-clock-form">'+
-    '<label for="tt-location">Location'+select('tt-location',TT_LOCATIONS,'Select location…')+'</label>'+
-    '<div class="tt-quick-location"><span>Quick select</span>'+
-     '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty">◴ &nbsp; Office</button>'+
-     '<button type="button" data-action="tt-location-shortcut" data-location="Offsite (Home)">⌖ &nbsp; Home</button>'+
-    '</div>'+
-    '<label for="tt-department">Department'+select('tt-department',TT_DEPARTMENTS,'Select department…')+'</label>'+
-    '<label for="tt-note" class="tt-note-field" id="tt-note-wrap" hidden>'+
+    (active?
+     '<div class="tt-active-session-context" aria-label="Active attendance details">'+
+      '<div><span>Recorded work location</span><strong>'+esc(active.location)+'</strong></div>'+
+      '<div><span>Recorded department</span><strong>'+esc(active.department)+'</strong></div>'+
+      '<p>Clock Out uses the same signed attendance session and captures a new browser GPS fix.</p>'+
+     '</div>':
+     '<label for="tt-location">Location'+select('tt-location',TT_LOCATIONS,'Select location…')+'</label>'+
+     '<div class="tt-quick-location"><span>Quick select</span>'+
+      '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty">◴ &nbsp; Office</button>'+
+      '<button type="button" data-action="tt-location-shortcut" data-location="Offsite (Home)">⌖ &nbsp; Home</button>'+
+     '</div>'+
+     '<label for="tt-department">Department'+select('tt-department',TT_DEPARTMENTS,'Select department…')+'</label>')+
+    '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
+     ((active&&active.location==='Offsite (Home)')?'':' hidden')+'>'+
      'Offsite Work Note<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
     '<button class="tt-start-button" type="submit" name="tt-action" value="'+
       (active?'clock-out':'clock-in')+'"'+
@@ -193,7 +200,8 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError=''
+ result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=((view==='team'&&teamEligible!==true)||
@@ -217,7 +225,8 @@ export function renderTimeTrackerNative({
  if(selected==='log')html+=renderTimeTrackerLog({
   records:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
-  filters:logFilters,now,busy
+  filters:logFilters,now,busy,
+  gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError
  });
  if(selected==='reports')html+=renderTimeTrackerReports({
   rows:result.log?.rows||result.records,

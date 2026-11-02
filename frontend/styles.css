@@ -1319,3 +1319,29 @@
 .tt-monitor-history strong{font-size:10px;color:#525b63}
 .tt-monitor-history>div>span:last-child{text-align:right;font:600 11px ui-monospace,monospace}
 .tt-monitor-unavailable{font-size:11px;color:#9c8580;padding:12px;border:1px dashed #e2d5cf;border-radius:5px}
+
+/* CP-TT-GPS-LOG-01: privileged signed attendance event GPS evidence. */
+.tt-log-gps-evidence{display:grid;gap:9px;margin:12px 0}
+.tt-log-gps-fix{display:flex;align-items:flex-start;gap:8px 16px;flex-wrap:wrap;
+ border:1px solid #d9e6de;background:#f6fbf7;border-radius:7px;padding:11px 12px;
+ color:#354f43;font-size:11px;overflow-wrap:anywhere}
+.tt-log-gps-fix strong{min-width:120px;font-size:11px}
+.tt-log-gps-fix code{font:700 12px ui-monospace,SFMono-Regular,monospace;color:#245a41;letter-spacing:.02em}
+.tt-log-gps-fix span{color:#687970}
+.tt-log-gps-fix a{color:#155eb8;text-decoration:underline;text-underline-offset:2px}
+.tt-log-evidence-load{display:inline-flex;align-items:center;justify-content:center;min-height:34px;
+ padding:7px 11px;margin-top:10px;border:1px solid #c7d7e1;border-radius:6px;
+ color:#345c78;background:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.tt-log-evidence-load:disabled{opacity:.6;cursor:wait}
+.tt-log-gps-error{color:#a43d37;font-size:11px}
+.tt-active-session-context{display:grid;gap:11px;margin:8px 0 14px;padding:14px;
+ border:1px solid #cfdad5;background:#f8fbfa;border-radius:7px}
+.tt-active-session-context>div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+ font-size:12px;color:#6e7874}
+.tt-active-session-context strong{color:#283b33;font-size:12px;font-weight:700;text-align:right}
+.tt-active-session-context p{margin:3px 0 0;font-size:11px;line-height:1.6;color:#738078}
+.tt-log :is(button,a):focus-visible,.tt-active-session-context :focus-visible{
+ outline:3px solid #ec925d;outline-offset:2px}
+@media(max-width:680px){.tt-log-gps-fix{display:grid;grid-template-columns:1fr}
+.tt-active-session-context>div{display:grid;gap:4px}
+.tt-active-session-context strong{text-align:left}}

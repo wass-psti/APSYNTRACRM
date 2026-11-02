@@ -163,7 +163,7 @@ function shiftProgress(rows,now){
    '" aria-label="Completed sessions among today clock-ins"></progress>'+
    '<strong>'+complete+' / '+todays.length+'</strong></div></div>';
 }
-function safeSessionDetails(row,now){
+function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError=''}={}){
  const start=Date.parse(row.clockIn),end=Date.parse(row.clockOut||now);
  const elapsed=Math.max(0,end-start);
  const active=row.status==='Active';
@@ -172,11 +172,42 @@ function safeSessionDetails(row,now){
   durationLabel(row.creditedMs):'Not finalized';
  const eventLabel=active?'Clock-out not yet recorded':
   row.clockOut?'Clock-out timestamp recorded':'Clock-out evidence unavailable';
+ // Exact fixes originate ONLY from the server-authorized, identity-checked
+ // timetracker_gps_snapshot RPC. The broad attendance Log never supplies GPS.
+ const events=gpsEligible&&Array.isArray(gpsData?.events)?
+  gpsData.events.filter(p=>p.recordId===row.id&&
+   row.ownerId==='cloud:'+p.userId&&['in','out'].includes(p.kind)):[];
+ const days=[manilaDay(row.clockIn),...(row.clockOut?[manilaDay(row.clockOut)]:[])];
+ const covered=Boolean(gpsEligible&&gpsData?.ranges?.some(r=>
+  days.every(d=>d>=r.from&&d<=r.to)));
+ const available=events.length>0;
+ const gpsStatus=available?'Recorded':covered&&!gpsData?.truncated?
+  'Not recorded':'Not loaded';
+ const locationEvidence=gpsEligible?
+  (available?
+   '<div class="tt-log-gps-evidence" aria-label="Signed attendance GPS fixes">'+
+   events.map(p=>'<div class="tt-log-gps-fix"><strong>'+
+    (p.kind==='in'?'Clock In':'Clock Out')+' · '+esc(dateTime(p.timestamp))+'</strong>'+
+    '<code>'+p.latitude.toFixed(6)+', '+p.longitude.toFixed(6)+'</code>'+
+    '<span>±'+Math.round(p.accuracyM)+' m · '+esc(p.source)+'</span>'+
+    '<a target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" '+
+    'title="Opens external OpenStreetMap and shares the selected point only after you click" '+
+    'href="https://www.openstreetmap.org/?mlat='+p.latitude+'&mlon='+p.longitude+
+    '#map=17/'+p.latitude+'/'+p.longitude+'">Open point on map</a></div>').join('')+
+   '</div>':
+   '<span>'+esc(gpsBusy?'Loading signed GPS evidence…':
+    covered&&!gpsData?.truncated?'No captured GPS fix is available for this record.':
+    'Exact GPS details are available through the privileged signed evidence endpoint.')+'</span>')+
+  '<button type="button" class="tt-log-evidence-load" data-action="tt-log-gps-load" '+
+   'data-record-id="'+esc(row.id)+'"'+(gpsBusy?' disabled':'')+
+   '>'+esc(available?'Refresh GPS evidence':'Load recorded GPS')+'</button>'+
+  (gpsError?'<p class="tt-log-gps-error" role="alert">'+esc(gpsError)+'</p>':''):
+  '<span>Exact coordinates are restricted to bootstrap administrators and assigned TimeTracker Supervisors.</span>';
  return '<div class="tt-log-expanded">'+
   '<div class="tt-log-evidence-title"><strong>AUDIT DETAILS</strong>'+
    '<span class="tt-log-evidence-unverified">Evidence not independently verified</span></div>'+
   '<div class="tt-log-audit-grid">'+
-   auditPill('GPS','Unavailable','neutral')+
+   auditPill('GPS',gpsStatus,available?'green':'neutral')+
    auditPill('Timing','Recorded','green')+
    auditPill('Edits','Not verified','neutral')+
    auditPill('Device','Unavailable','neutral')+
@@ -204,13 +235,16 @@ function safeSessionDetails(row,now){
   '<div class="tt-log-evidence-title"><strong>DEVICE &amp; LOCATION</strong></div>'+
   '<div class="tt-log-location-evidence"><div>'+
    '<h6>LOCATION EVIDENCE</h6><p>'+esc(row.location||'Unspecified')+'</p>'+
-   '<span>Exact GPS coordinates and device details are not available in this authorized read.</span>'+
+   locationEvidence+
    '</div><div class="tt-log-map-unavailable" role="note">'+
-   '<strong>Satellite map unavailable</strong><p>A verified, independently authorized GPS evidence endpoint is required. No coordinates or map position have been inferred.</p>'+
+   '<strong>Satellite map unavailable</strong><p>'+
+    (available?'Coordinates are from the signed server GPS snapshot. Map links open an external service only when selected.':
+     'No satellite imagery is loaded. GPS positions are never inferred from work-location labels.')+
+   '</p>'+
    '</div></div>'+
   '</div>';
 }
-const sessionRow=(r,query='',now=new Date())=>{
+const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
  const done=r.status==='Completed';
  const state=r.classification==='Administrative closure'?
@@ -229,10 +263,11 @@ const sessionRow=(r,query='',now=new Date())=>{
     state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span>'+
    '<span class="tt-log-hours">'+esc(creditedHours(r.creditedMs))+'</span>'+
    '<span class="tt-log-disclosure" aria-label="Expand session evidence">⌄</span>'+
-  '</summary>'+safeSessionDetails(r,now)+'</details></td></tr>';
+  '</summary>'+safeSessionDetails(r,now,gpsOptions)+'</details></td></tr>';
 };
 export function renderTimeTrackerLog({
- records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false
+ records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false,
+ gpsEligible=false,gpsData=null,gpsBusy=false,gpsError=''
 }={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
@@ -276,13 +311,14 @@ export function renderTimeTrackerLog({
      '<th>Employee</th><th>Clock In</th><th>Clock Out</th>'+
      '<th>Location</th><th>Department</th><th>Arrival</th>'+
      '<th>Status</th><th>Hours</th><th>Details</th></tr></thead>'+
-     '<tbody>'+rows.map(r=>sessionRow(r,query,now)).join('')+
+     '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
+      gpsEligible,gpsData,gpsBusy,gpsError})).join('')+
      '</tbody></table></div></div>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    '<p id="tt-log-empty-search" class="tt-log-empty"'+
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>'+
    '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
-   '<p class="tt-log-footnote">Audit scores, exact GPS satellite maps, device fingerprints and manual-edit evidence require an approved server-backed evidence contract. This view does not generate or infer those values.</p>'+
+   '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
   '</section></section>';
 }
 

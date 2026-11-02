@@ -20,7 +20,7 @@ const example=(ownerId=user)=>({
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
  records=[],malformed=false,writeReady=false,foreignCapability=false}={}){
- let commitCount=0;
+ let commitCount=0, lastWrite=null;
  const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser})};
  let currentRecords=records;
  const api={
@@ -40,6 +40,7 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
       actorId:activeUser,workspaceId:foreignCapability?foreign:ctxWs,boardId:board};
     case 'timetracker_attendance_commit_v2':{
      commitCount++;
+     lastWrite=args;
      if(args.p_action==='clock-in'){
       currentRecords=[{id:'new-attendance',ownerId:'cloud:'+activeUser,clockIn:{
        timestamp:stamp(8),location:args.p_location,department:args.p_department},clockOut:null},
@@ -53,7 +54,8 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
    }
   }
  };
- return {client:new TimeTrackerNativeClient({auth,api}),auth,api,commits:()=>commitCount};
+ return {client:new TimeTrackerNativeClient({auth,api}),auth,api,commits:()=>commitCount,
+  lastWrite:()=>lastWrite};
 }
 
 test('source 08:00 late threshold and unpaid 12:00–13:00 credit policy',()=>{
@@ -342,4 +344,32 @@ test('Clock button activates only after signed backend capability is in snapshot
  const inactive=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
   access:{...access,attendanceWritesAccepted:false},records:[],active:null}});
  assert.match(inactive,/value="clock-in" disabled/);
+});
+
+test('active Clock Out reuses signed Clock In context and requires a fresh GPS fix',async()=>{
+ const s=setup({records:[example()],writeReady:true});
+ const gps={status:'captured',latitude:10.2,longitude:123.9,accuracy:12,
+  capturedAt:new Date().toISOString(),source:'browser-geolocation'};
+ const result=await s.client.commit(board,{action:'clock-out',
+  location:'malicious client-selected location',department:'invalid',geo:gps});
+ assert.equal(result.action,'clock-out');
+ assert.equal(s.lastWrite().p_record_id,'session-1');
+ assert.equal(s.lastWrite().p_location,TT_LOCATIONS[0]);
+ assert.equal(s.lastWrite().p_department,TT_DEPARTMENTS[0]);
+ assert.deepEqual(s.lastWrite().p_geo,gps);
+ const snap=await s.client.snapshot(board);
+ const html=renderTimeTrackerNative({result:snap,view:'clock'});
+ assert.match(html,/tt-active-session-context/);
+ assert.match(html,/Recorded work location/);
+ assert.match(html,/captures a new browser GPS fix/);
+ assert.doesNotMatch(html,/id="tt-location"/);
+ assert.doesNotMatch(html,/id="tt-department"/);
+ const offsite={...example(),clockIn:{...example().clockIn,
+  location:'Offsite (Home)'}};
+ const home=setup({records:[offsite],writeReady:true});
+ const homeView=renderTimeTrackerNative({result:await home.client.snapshot(board)});
+ assert.match(homeView,/Offsite Work Note/);
+ assert.doesNotMatch(homeView,/id="tt-note-wrap" hidden/);
+ await assert.rejects(()=>home.client.commit(board,{
+  action:'clock-out',geo:gps}),/Offsite Work Note/);
 });

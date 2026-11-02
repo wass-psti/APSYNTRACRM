@@ -301,14 +301,17 @@ export class TimeTrackerNativeClient{
   const before=await this.snapshot(boardId);
   if(before.access.attendanceWritesAccepted!==true)
    deny('Server-verified TimeTracker Clock activation required');
-  if(!TT_LOCATIONS.includes(location)||!TT_DEPARTMENTS.includes(department))
-   deny('Select an approved work location and department');
-  const note=String(workNote||'').trim();
-  if(note.length>500)deny('Work note exceeds 500 characters');
-  if(location==='Offsite (Home)'&&before.access.moduleRole!=='System Admin'&&!note)
-   deny('Offsite Work Note is mandatory');
   if(action==='clock-in'&&before.active)deny('Already clocked in');
   if(action==='clock-out'&&!before.active)deny('No active clock-in session');
+  // Clock Out inherits the signed server-recorded context, never mutable form fields.
+  const committedLocation=action==='clock-out'?before.active.location:location;
+  const committedDepartment=action==='clock-out'?before.active.department:department;
+  if(!TT_LOCATIONS.includes(committedLocation)||!TT_DEPARTMENTS.includes(committedDepartment))
+   deny('Attendance location and department require an authorized session');
+  const note=String(workNote||'').trim();
+  if(note.length>500)deny('Work note exceeds 500 characters');
+  if(committedLocation==='Offsite (Home)'&&before.access.moduleRole!=='System Admin'&&!note)
+   deny('Offsite Work Note is mandatory');
   if(!isRecord(geo)||geo.status!=='captured'||!Number.isFinite(geo.latitude)||
     geo.latitude < -90||geo.latitude>90||!Number.isFinite(geo.longitude)||
     geo.longitude < -180||geo.longitude>180||!Number.isFinite(geo.accuracy)||
@@ -320,7 +323,7 @@ export class TimeTrackerNativeClient{
   const result=await this.api.rpc('timetracker_attendance_commit_v2',{
    p_board_id:boardId,p_action:action,
    p_record_id:action==='clock-out'?before.active.id:null,
-   p_location:location,p_department:department,p_geo:geo,
+   p_location:committedLocation,p_department:committedDepartment,p_geo:geo,
    p_work_note:note||null
   });
   if(!isRecord(result)||result.mode!=='COMMITTED'||

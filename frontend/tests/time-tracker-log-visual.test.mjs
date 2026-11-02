@@ -62,3 +62,36 @@ test('today operations do not remove old authorized history',()=>{
  assert.equal(filterTimeTrackerLogRows(records,{period:'all'},now).length,2);
  assert.equal(filterTimeTrackerLogRows(records,{period:'today'},now).length,1);
 });
+
+test('privileged signed GPS snapshot displays matching attendance fixes, not raw projection GPS',()=>{
+ const gpsData={actorId:'bootstrap',workspaceId:'workspace',boardId:'board',
+  ranges:[{from:'2026-11-01',to:'2026-11-02'}],
+  events:[{userId:'one',recordId:'today',kind:'in',
+    timestamp:'2026-11-02T01:00:00Z',latitude:10.234567,
+    longitude:123.987654,accuracyM:12,source:'Browser GPS'},
+   {userId:'two',recordId:'older',kind:'in',
+    timestamp:'2026-10-28T01:00:00Z',latitude:11.34,
+    longitude:124.55,accuracyM:20,source:'Browser GPS'}]};
+ const privileged=renderTimeTrackerLog({records,gpsEligible:true,gpsData,now});
+ assert.match(privileged,/10\.234567, 123\.987654/);
+ assert.match(privileged,/Recorded from signed GPS|Recorded<\/strong>/);
+ assert.match(privileged,/Open point on map/);
+ assert.match(privileged,/data-action="tt-log-gps-load"/);
+ assert.doesNotMatch(privileged,/11\.340000, 124\.550000/);
+ const ordinary=renderTimeTrackerLog({records,gpsEligible:false,gpsData,now});
+ assert.doesNotMatch(ordinary,/10\.234567|123\.987654|href="https:\/\/www\.openstreetmap\.org/);
+ assert.doesNotMatch(ordinary,/data-action="tt-log-gps-load"/);
+ const foreign=renderTimeTrackerLog({records,gpsEligible:true,gpsData:{
+  events:[{...gpsData.events[0],userId:'other-user'}],ranges:gpsData.ranges},now});
+ assert.doesNotMatch(foreign,/10\.234567, 123\.987654/);
+});
+test('Log GPS loading uses dedicated signed RPC, maintains authorization and no broad GPS scope',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/async function loadTimeTrackerLogGps/);
+ assert.match(app,/timeTracker\.gpsEvidence\(boardId,params\)/);
+ assert.match(app,/if\(next==='log'\)await loadTimeTrackerLogGps\(\)/);
+ assert.match(app,/case 'tt-log-gps-load'/);
+ assert.match(app,/state\.ttLogGpsData=null/);
+ const raw=readFileSync('frontend/time-tracker-native.js','utf8');
+ assert.match(raw,/timetracker_gps_snapshot/);
+});
