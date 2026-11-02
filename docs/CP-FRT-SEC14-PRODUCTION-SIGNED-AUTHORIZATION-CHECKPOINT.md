@@ -143,3 +143,17 @@ The tests in `frontend/tests/frt-sec14-signed-acceptance.test.mjs` cover a reque
 4. Retain SEC14 request-detail and financial execution acceptance as PENDING until legitimate operational records and independently authorized action tests exist; do not create dummy production finance data.
 
 **Overall SEC14 remains 6/8 VERIFIED = 75%**. The new browser probe and CI verify implementation and isolated authorization behavior; they are not evidence of actual nonbootstrap production signed denial or retired production legacy grants.
+
+
+## Operator-submitted paired bootstrap reports — 2026-11-02
+
+**Evidence type:** operator-submitted, sanitized browser acceptance results; not independently captured Supabase network proof. Both reports are read-only and include no user IDs, workspace IDs or tokens.
+
+| Submitted result | Operator-reported outcome | Interpretation |
+| --- | --- | --- |
+| `CP-FRT-SEC14` | `PENDING`, FRT role `GENERAL_MANAGER`; `signed-context` PASS; `restricted-summary-list` PASS; `restricted-detail` PENDING; `stable-context` PASS; reason `NO_EXISTING_FRT_REQUEST` | Repeat of previously recorded partial positive signed-read result. No existing request means restricted detail was not exercised. |
+| `CP-FRT-SEC14-DENIAL` | `BLOCKED`, scenario `BOOTSTRAP`; `signed-context` PASS only; role `UNVERIFIED`; reason `NONBOOTSTRAP_SESSION_REQUIRED` | **Expected eligibility block**, not proof of actual cross-workspace RPC denial. Negative test stopped before own-FRT membership and foreign-workspace calls. |
+
+Both reports explicitly show `writesAttempted: 0`, and the denial report shows `roleChangesAttempted: 0`; neither verifies financial actions. The two statuses are compatible: `GENERAL_MANAGER` is an FRT domain role, whereas `BOOTSTRAP` is the independent administrator classification of the account. The denial probe is intentionally ineligible for a bootstrap session to avoid claiming independent nonbootstrap authorization evidence from the same privileged actor.
+
+**Acceptance impact:** no additional SEC14 gate becomes fully verified. Overall remains **6/8 VERIFIED (75%)**. Real nonbootstrap / other-existing-workspace denial remains **PENDING**, request-detail acceptance remains **PENDING**, and legacy broad RPC retirement remains **BLOCKED** pending verified consumer compatibility and the required production grant-change authorization. Do not repeat either probe with this bootstrap session. Next genuine acceptance requires a previously authorized **nonbootstrap** FRT-granted user and an independently verified existing **other** workspace ID; run the isolated negative probe with that actor, then preserve only the nonsecret report. Do not create new accounts, finance records or grant permissions solely for testing.
