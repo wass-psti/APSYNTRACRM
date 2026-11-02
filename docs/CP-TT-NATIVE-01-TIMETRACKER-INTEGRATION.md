@@ -48,7 +48,7 @@ The ZIP contains TimeTracker Attendance standalone **v0.1.60**, derived from **v
 - `frontend/styles.css`: scoped responsive TimeTracker styles with isolated horizontal table scrolling.
 - `frontend/tests/time-tracker-native.test.mjs`: policy, per-user scope, deny cases, GPS, server receipt, duplicate active-session conflict, CSV escaping, native UI and routing assertions. Existing full frontend suite remains mandatory.
 
-**Write boundary:** the native UI invokes the existing production attendance action only after a signed user explicitly submits Clock In/Out and browser geolocation succeeds. No operator/assistant-driven production attendance mutations or demo data writes were performed during development. No new tables, roles, grants, JWT configurations, SDK dependencies or app hosting were created.
+**Write boundary:** the native commit client is implemented, but live Clock In/Out UI controls and their event handler are **fail-closed disabled** via `TT_LIVE_ATTENDANCE_WRITES_ACCEPTED=false` until server-side work-note/audit requirements and genuine signed operational acceptance pass. The native UI provides personal attendance reads and CSV while the write gate remains closed. No operator/assistant-driven production attendance mutations or demo data writes were performed during development. No new tables, roles, grants, JWT configurations, SDK dependencies or app hosting were created.
 
 ## Critical security and operational acceptance gaps
 
@@ -76,3 +76,17 @@ The phases below are deliberately narrow to distinguish verified source/build ev
 **Progress metric:** when TT-03 CI is green, **3/10 narrow gates verified = 30% TimeTracker stage acceptance** (not 30% feature parity). Otherwise 2/10 = 20%. **Overall 12-app final acceptance: 0/12**, because no application has passed complete native operational acceptance yet.
 
 **Next action:** finish server-side attendance validation and audit hardening as a staged, reviewed, additive-to-current-contract change before enabling full operational acceptance; run a genuine existing signed TimeTracker user Clock In/Out only with user-initiated action, then implement restricted team overview, OT, Reports, Calendar and authorized corrections. Do not proceed to any of the other 11 applications until TimeTracker applicable acceptance requirements pass.
+
+
+## CP-TT-NATIVE-01 no-write production backend preflight
+
+The read-only source-controlled audit `sql/tests/cp-tt-native-01-production-readonly-preflight.sql` was executed against production. Its observed result:
+
+- One existing TimeTracker board, **40** active module role assignments, and **one** current authoritative attendance state entry.
+- Existing `commit_timetracker_attendance_action`: installed, `SECURITY DEFINER`, authenticated EXECUTE **true**, anonymous EXECUTE **false**.
+- Signed identity, `has_module_access`, current workspace, advisory concurrency lock and state invariants: present in live server code.
+- Explicit `Offsite (Home)` work-note enforcement: **absent** in server function.
+- Explicit TimeTracker audit append on clock commit: **absent** in server function.
+- No data, employee information, financial or attendance writes, or production permissions were changed by this preflight.
+
+**Safety disposition:** The native commit adapter is implemented and unit-tested, but the deployed UI keeps Clock In/Out disabled until the server security gaps and signed operational acceptance are verified. Existing production grants are unchanged and the historical RPC remains directly callable by previously authorized clients. Frontend gating is **not a substitute** for backend security hardening.
