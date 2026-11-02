@@ -4,7 +4,6 @@
  */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ms=v=>Number.isFinite(v)&&v>=0?Math.round(v):null;
-const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const realUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const pht=at=>new Intl.DateTimeFormat('en-PH',{
  timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'medium'
@@ -38,6 +37,30 @@ function cleanError(error){
  if(code===404)return 'Backend resource unavailable';
  return 'Check failed; inspect your authorized session and connection';
 }
+/** Only server-verified, deidentified aggregate database health is exposed. */
+export function validateTimeTrackerServerHealth(payload,{userId,workspaceId,boardId}){
+ if(!payload||payload.mode!=='ACTIVE'||payload.scope!=='BOOTSTRAP_AGGREGATE'||
+    payload.actorId!==userId||payload.workspaceId!==workspaceId||
+    payload.boardId!==boardId||!payload.database||
+    !Number.isFinite(Date.parse(payload.serverTime||'')))
+  throw Error('Server operational diagnostics identity/scope mismatch');
+ const d=payload.database;
+ const fields=['connections','transactionsCommitted','transactionsRolledBack',
+  'cacheHits','diskReads','deadlocks'];
+ for(const field of fields)if(!Number.isSafeInteger(d[field])||d[field]<0)
+  throw Error('Invalid server operational counter');
+ const total=d.cacheHits+d.diskReads;
+ return Object.freeze({
+  status:'VERIFIED',sampledAt:payload.serverTime,
+  connections:d.connections,
+  commitCount:d.transactionsCommitted,
+  rollbackCount:d.transactionsRolledBack,
+  deadlocks:d.deadlocks,
+  cacheHitPercent:total>0?round(100*d.cacheHits/total):null,
+  statsReset:typeof d.statsReset==='string'&&Number.isFinite(Date.parse(d.statsReset))?
+   d.statsReset:null
+ });
+}
 export function classifyTimeTrackerMonitor(result){
  if(!result)return 'NOT CHECKED';
  if(result.status==='BLOCKED')return 'BLOCKED';
@@ -46,7 +69,7 @@ export function classifyTimeTrackerMonitor(result){
 }
 export function formatMonitorDuration(value){return value===null||value===undefined?'—':ms(value)+' ms';}
 export async function probeTimeTrackerMonitor({
- auth,api,boardId,perf=globalThis.performance,clock=()=>Date.now(),
+ auth,api,boardId,bootstrapEligible=false,perf=globalThis.performance,clock=()=>Date.now(),
  monotonic=()=>globalThis.performance?.now?.()??Date.now()
 }={}){
  if(!auth||!api||!realUuid.test(boardId||'')||!auth.isSignedIn)
@@ -90,10 +113,22 @@ export async function probeTimeTrackerMonitor({
  const same=await run('Fresh signed identity',()=>api.context(),
   c=>auth.isSignedIn&&auth.userId===initialId&&c?.user_id===initialId&&
    c?.workspace_id===ctx.workspace_id&&c?.profile?.status==='active');
+ let server=null;
+ if(bootstrapEligible===true&&same&&checks.every(c=>c.status==='PASS')){
+  try{
+   const value=await api.rpc('timetracker_monitor_snapshot',{p_board_id:boardId});
+   server=validateTimeTrackerServerHealth(value,{
+    userId:initialId,workspaceId:ctx.workspace_id,boardId
+   });
+  }catch(error){
+   const missing=error?.status===404||/PGRST202|Could not find the function/i.test(String(error?.message||''));
+   server=Object.freeze({status:missing?'NOT DEPLOYED':'UNAVAILABLE'});
+  }
+ }
  return Object.freeze({
   status:same&&checks.every(c=>c.status==='PASS')?'VERIFIED':'DEGRADED',
   sampledAt:new Date(clock()).toISOString(),
-  checks:Object.freeze(checks),
+  server,checks:Object.freeze(checks),
   client:collectTimeTrackerClientMetrics(perf),
   network:Object.freeze({
    sampleMs:ms(clock()-started),
@@ -137,7 +172,17 @@ export function renderTimeTrackerMonitor({result=null,loading=false,error='',now
     (c.status==='PASS'?'ok':'bad')+'">'+esc(c.status)+'</span>'+
     '<strong>'+esc(c.name)+'</strong><span>'+esc(formatMonitorDuration(c.durationMs))+
     '</span><small>'+esc(c.detail)+'</small></div>').join('')+'</section>'+
-   '<div class="tt-monitor-section"><strong>CLIENT RUNTIME</strong><span>Browser-reported readings</span></div>'+
+   (result.server?'<div class="tt-monitor-section"><strong>POSTGRESQL / BOOTSTRAP</strong><span>'+
+   esc(result.server.status==='VERIFIED'?'Server-verified aggregate sample':
+    'Optional endpoint '+result.server.status.toLowerCase())+'</span></div>'+
+   (result.server.status==='VERIFIED'?'<div class="tt-monitor-stats">'+
+    entry('CONNECTIONS',result.server.connections)+
+    entry('CACHE HIT RATIO',result.server.cacheHitPercent===null?'—':
+      result.server.cacheHitPercent+'%')+
+    entry('TRANSACTION ROLLBACKS',result.server.rollbackCount,'Cumulative')+
+    entry('DEADLOCKS',result.server.deadlocks,'Cumulative')+'</div>':
+    '<p class="tt-monitor-unavailable">Database-level metrics are not active. Only verified bootstrap administrators can use the separately staged read-only endpoint.</p>'):'')+
+  '<div class="tt-monitor-section"><strong>CLIENT RUNTIME</strong><span>Browser-reported readings</span></div>'+
    '<div class="tt-monitor-stats">'+
     entry('NAVIGATION',formatMonitorDuration(client.navigationMs))+
     entry('DOM INTERACTIVE',formatMonitorDuration(client.domInteractiveMs))+
@@ -148,6 +193,6 @@ export function renderTimeTrackerMonitor({result=null,loading=false,error='',now
     entry('JS HEAP',client.heapMb===null||client.heapMb===undefined?'—':client.heapMb+' MiB','Only if supported')+
     entry('GPS CACHE HIT','—','Not instrumented')+
     entry('INPUT LATENCY','—','Not instrumented')+'</div>')+
-  '<p class="tt-monitor-footnote">Checks use existing signed Supabase RPCs and board permissions; they do not alter data. Backend timings represent this browser’s observed requests, not server CPU, database utilization or a service-level guarantee. Unsupported browser metrics are shown as unavailable. No raw URLs, tokens, employee records, location coordinates or persistent monitoring logs are collected.</p>'+
+  '<p class="tt-monitor-footnote">Checks use existing signed Supabase RPCs and board permissions; they do not alter data. Backend timings represent this browser’s observed requests. When enabled, PostgreSQL counters are aggregate and cumulative since stats reset; neither sample establishes a service-level guarantee. Unsupported browser metrics are shown as unavailable. No raw URLs, tokens, employee records, location coordinates or persistent monitoring logs are collected.</p>'+
  '</section>';
 }
