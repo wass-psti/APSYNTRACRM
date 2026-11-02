@@ -28,7 +28,7 @@ const periods=[['all','All dates'],['today','Today'],
 const statuses=[['all','All statuses'],['Active','Active'],
  ['Completed','Completed'],['Late','Late'],['Administrative closure','Administrative closure']];
 const sortModes=[['newest','Newest first'],['oldest','Oldest first']];
-const searchText=r=>[r.location,r.department,r.classification,r.status,
+const searchText=r=>[r.name,r.location,r.department,r.classification,r.status,
  manilaDay(r.clockIn),phtTime(r.clockIn)]
  .map(x=>String(x??'').toLocaleLowerCase()).join(' ');
 
@@ -71,6 +71,7 @@ const sessionRow=(r,query='')=>{
   status==='Completed'?'tt-log-badge-done':'tt-log-badge-unknown';
  return '<tr class="tt-log-filterable" data-log-search="'+esc(searchText(r))+'"'+
   (hidden?' hidden':'')+'>'+
+  '<td><strong>'+esc(r.name||'Signed member')+'</strong></td>'+ 
   '<td><strong>'+esc(phtTime(r.clockIn))+'</strong><small>Clock in</small></td>'+
   '<td><strong>'+esc(phtTime(r.clockOut))+'</strong><small>Clock out</small></td>'+
   '<td><span class="tt-log-location">'+esc(r.location||'Unspecified')+'</span></td>'+
@@ -127,7 +128,7 @@ export function renderTimeTrackerLog({records=[],filters={},now=new Date(),busy=
     '<div class="tt-log-day"><h5>'+esc(phtDate(key+'T00:00:00+08:00'))+
     '<span>'+items.length+' session'+(items.length===1?'':'s')+'</span></h5>'+
     '<div class="tt-log-table-scroll"><table class="board-table tt-log-table">'+
-    '<thead><tr><th>Clock In</th><th>Clock Out</th><th>Location</th>'+
+    '<thead><tr><th>Employee</th><th>Clock In</th><th>Clock Out</th><th>Location</th>'+
     '<th>Department</th><th>Status</th><th>Arrival</th><th>Hours</th></tr></thead>'+
     '<tbody>'+items.map(r=>sessionRow(r,query)).join('')+'</tbody></table></div></div>'
    ).join(''):'<p class="tt-log-empty">No signed attendance sessions match this view.</p>')+
