@@ -232,3 +232,12 @@ Both reports say `writesAttempted:0` and the second also `roleChangesAttempted:0
 **Next user-visible action:** in `https://wass-psti.github.io/APSYNTRACRM/#/security`, signed in as the same existing nonbootstrap `FINANCE_APPROVER`, run **Verify SEC14 nonbootstrap and cross-workspace denials** and copy the **nonsecret SEC14 denial report**. No foreign workspace UUID, finance test request, role changes or other manual preparation is required. Evaluate PASS only if the server-selected real foreign workspace and both read denials report PASS along with a stable signed identity.
 
 **Overall SEC14 remains 6/8 verified (75%)** until the complete production signed negative and detail acceptance gates are satisfied, independent of successful RPC activation.
+
+
+## Operator-submitted CP-FRT-SEC10-CI07 signed finance approver PASS — 2026-11-02
+
+User submitted a **sanitized browser-generated** `CP-FRT-SEC10-CI07` read-only report: `status=PASS`, `role=FINANCE_APPROVER`. All **5/5** checks reported `PASS`: `signed-authenticated-context`, `active-module-grant`, `signed-frt-bootstrap-role-resolved`, `frt-companies-read-contract`, `signed-identity-and-workspace-stable`. `writesAttempted=0`, `roleChangesAttempted=0`, `revocationVerified=NOT_VERIFIED`, and `financialOperationsVerified=NOT_VERIFIED`.
+
+**Evidence scope:** Confirms the operator reported a successful CI07 current-session FRT positive role read. It is **not** an `CP-FRT-SEC14-DENIAL` test and provides no proof of automatic foreign-workspace `42501` rejections, nonbootstrap classification by this particular runner, revocation/expired-token enforcement, request-detail execution, or financial action authorization. The earlier SEC14-DENIAL `AUTO_FOREIGN_WORKSPACE_RPC_NOT_ACTIVE` observation was superseded by independent read-only production installation/grant checks, but **no new signed automatic denial report** has yet been submitted.
+
+**Next evidence:** In the deployed Security page, run **Verify SEC14 nonbootstrap and cross-workspace denials** under the existing nonbootstrap `FINANCE_APPROVER` session and export the sanitized `CP-FRT-SEC14-DENIAL` result. No manual workspace UUID is required. Overall SEC14 remains **6/8 fully VERIFIED (75%)** until the outstanding SEC14-specific signed negative and real-request detail gates are closed. Legacy read RPC retirement and finance authorization remain separate unresolved requirements.
