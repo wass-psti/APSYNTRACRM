@@ -201,7 +201,7 @@ function historyPage(result,period,busy,view){
 
 export function renderTimeTrackerNative({
  result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
- logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError=''
+ logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=((view==='team'&&teamEligible!==true)||
@@ -226,7 +226,8 @@ export function renderTimeTrackerNative({
   records:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
   filters:logFilters,now,busy,
-  gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError
+  gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError,
+  gpsErrorRecordId:logGpsErrorRecordId,expandedRecordIds:logExpandedRecordIds
  });
  if(selected==='reports')html+=renderTimeTrackerReports({
   rows:result.log?.rows||result.records,

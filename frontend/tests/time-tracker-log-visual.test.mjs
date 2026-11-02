@@ -95,3 +95,23 @@ test('Log GPS loading uses dedicated signed RPC, maintains authorization and no 
  const raw=readFileSync('frontend/time-tracker-native.js','utf8');
  assert.match(raw,/timetracker_gps_snapshot/);
 });
+
+test('GPS load retains expanded audit details and scopes errors to selected record',()=>{
+ const pending=renderTimeTrackerLog({records,now,gpsEligible:true,gpsBusy:true,
+  expandedRecordIds:['today']});
+ assert.match(pending,/class="tt-log-detail" data-record-id="today" open/);
+ assert.match(pending,/class="tt-log-detail" data-record-id="older"/);
+ assert.doesNotMatch(pending,/data-record-id="older" open/);
+ assert.match(pending,/Loading signed GPS evidence/);
+ const failed=renderTimeTrackerLog({records,now,gpsEligible:true,
+  expandedRecordIds:['today'],gpsError:'Signed GPS request failed validation.',
+  gpsErrorRecordId:'today'});
+ assert.match(failed,/class="tt-log-detail" data-record-id="today" open/);
+ assert.equal((failed.match(/Signed GPS request failed validation\./g)||[]).length,1);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/function preserveTimeTrackerLogExpansion/);
+ assert.match(app,/querySelectorAll\('\.tt-log-detail\[open\]\[data-record-id\]'\)/);
+ assert.match(app,/preserveTimeTrackerLogExpansion\(\);/);
+ assert.match(app,/state\.ttLogGpsErrorRecordId=record\?\.id/);
+ assert.doesNotMatch(app,/state\.ttLogGpsData=null;\s*state\.ttLogGpsError='Signed GPS evidence could not be verified/);
+});

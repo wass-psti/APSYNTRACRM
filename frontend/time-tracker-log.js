@@ -163,7 +163,7 @@ function shiftProgress(rows,now){
    '" aria-label="Completed sessions among today clock-ins"></progress>'+
    '<strong>'+complete+' / '+todays.length+'</strong></div></div>';
 }
-function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError=''}={}){
+function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId=''}={}){
  const start=Date.parse(row.clockIn),end=Date.parse(row.clockOut||now);
  const elapsed=Math.max(0,end-start);
  const active=row.status==='Active';
@@ -203,7 +203,8 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
   '<button type="button" class="tt-log-evidence-load" data-action="tt-log-gps-load" '+
    'data-record-id="'+esc(row.id)+'"'+(gpsBusy?' disabled':'')+
    '>'+esc(available?'Refresh GPS evidence':'Load recorded GPS')+'</button>'+
-  (gpsError?'<p class="tt-log-gps-error" role="alert">'+esc(gpsError)+'</p>':''):
+  (gpsError&&(!gpsErrorRecordId||gpsErrorRecordId===row.id)?
+   '<p class="tt-log-gps-error" role="alert">'+esc(gpsError)+'</p>':''):
   '<span>Exact coordinates are restricted to bootstrap administrators and assigned TimeTracker Supervisors.</span>';
  return '<div class="tt-log-expanded">'+
   '<div class="tt-log-evidence-title"><strong>AUDIT DETAILS</strong>'+
@@ -253,7 +254,9 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
   'Administrative closure':done?'Completed':r.status==='Active'?'Active':'Unknown';
  return '<tr class="tt-log-filterable" data-log-search="'+esc(searchText(r))+'"'+
   (hidden?' hidden':'')+'><td colspan="9">'+
-  '<details class="tt-log-detail"><summary class="tt-log-row-summary">'+
+  '<details class="tt-log-detail" data-record-id="'+esc(r.id)+'"'+
+   (gpsOptions.expandedRecordIds?.includes(r.id)?' open':'')+
+   '><summary class="tt-log-row-summary">'+
    '<span class="tt-log-row-person"><strong>'+esc(r.name||'Signed member')+
     '</strong><small>'+esc(r.department||'Unassigned')+'</small></span>'+
    '<span title="'+esc(phtDate(r.clockIn))+'">'+esc(dateTime(r.clockIn))+'</span>'+
@@ -269,7 +272,8 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
 };
 export function renderTimeTrackerLog({
  records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false,
- gpsEligible=false,gpsData=null,gpsBusy=false,gpsError=''
+ gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',
+ expandedRecordIds=[]
 }={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
@@ -314,7 +318,8 @@ export function renderTimeTrackerLog({
      '<th>Location</th><th>Department</th><th>Arrival</th>'+
      '<th>Status</th><th>Hours</th><th>Details</th></tr></thead>'+
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
-      gpsEligible,gpsData,gpsBusy,gpsError})).join('')+
+      gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,
+      expandedRecordIds})).join('')+
      '</tbody></table></div></div>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    '<p id="tt-log-empty-search" class="tt-log-empty"'+
