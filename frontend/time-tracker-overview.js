@@ -1,7 +1,7 @@
 /** Native TimeTracker Overview — strictly scoped to current signed workspace/module.
  * No GPS, email, company-wide user registry, or standalone backend is used.
  */
-import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-native.js';
+import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 const timeTrackerClockParts=value=>{
  const t=new Date(value);
  const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',hour:'2-digit',hourCycle:'h23'}).format(t));
