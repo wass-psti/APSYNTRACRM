@@ -150,7 +150,7 @@ test('native UI mounts within board and escapes untrusted record metadata',()=>{
   access:{moduleRole:'Employee',platformRole:'hr',name:'<script>bad</script>'},
   records:[{...projectOwnAttendance({version:1,records:[example()]},user)[0],
    location:'<img src=x onerror=evil()>',department:'HR'}]},view:'log'});
- assert.match(log,/My attendance history/);
+ assert.match(log,/Attendance history/);
  assert.doesNotMatch(log,/<img src=x/);
  const denied=renderTimeTrackerNative({error:'No module access'});
  assert.doesNotMatch(denied,/tt-clock-form/);
