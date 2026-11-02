@@ -93,7 +93,7 @@ export function boardColumnMenu(columns,layout){
  const pref=normalizeLayout(layout||{},[],columns.map(c=>c.key));
  return '<details class="board-column-menu"><summary>Columns</summary>'+
   '<div class="board-column-menu-content"><strong>Visible columns</strong>'+
-  columns.map(c=>'<label><input type="checkbox" data-board-column-toggle="'+esc(c.key)+'" '+
+  columns.map(c=>'<label for="board-column-'+esc(c.key)+'"><input id="board-column-'+esc(c.key)+'" type="checkbox" data-board-column-toggle="'+esc(c.key)+'" '+
    (!pref.hidden.includes(c.key)?'checked ':'')+
    (BOARD_REQUIRED_COLUMNS.includes(c.key)||c.key==='actions'?'disabled ':'')+'/>'+
    '<span>'+esc(c.title)+'</span></label>').join('')+

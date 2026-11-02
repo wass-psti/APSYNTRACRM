@@ -87,7 +87,7 @@ test('UI only persists presentation layout and uses existing signed audit API',(
  const css=readFileSync('frontend/styles.css','utf8');
  assert.match(app,/function activeBoardLayout\(\)/);
  assert.match(app,/auth\.userId!==state\.context\?\.user_id/);
- assert.match(app,/board\.workspace_id/);
+ assert.match(app,/state\.board\?\.board\?\.workspace_id/);
  assert.match(app,/case 'board-tab-move'/);
  assert.match(app,/case 'board-column-move'/);
  assert.match(app,/case 'board-activity'/);

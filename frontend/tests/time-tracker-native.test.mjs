@@ -315,7 +315,7 @@ test('opening TimeTracker board lands on Clock but generic board items stay reac
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/const defaultClock=!parts\[2\]/);
  assert.match(app,/defaultClock\?'attendance':'items'/);
- assert.match(app,/key==='timetracker'\?'\/items':''/);
+ assert.match(app,/moduleKey==='timetracker'\?'\/items':''/);
  assert.match(readFileSync('frontend/time-tracker-ui.js','utf8'),/data-action="tt-tab"/);
 });
 
