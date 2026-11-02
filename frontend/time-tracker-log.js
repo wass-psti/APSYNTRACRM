@@ -67,101 +67,222 @@ export function timeTrackerLogSummary(rows=[],now=new Date()){
  });
 }
 
-const sessionRow=(r,query='')=>{
- const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
- const completed=r.status==='Completed';
- const status=r.classification==='Administrative closure'?
-  'Administrative closure':completed?'Completed':r.status==='Active'?'Active':'Unknown';
- const badge=status==='Active'?'tt-log-badge-active':
-  status==='Completed'?'tt-log-badge-done':'tt-log-badge-unknown';
- return '<tr class="tt-log-filterable" data-log-search="'+esc(searchText(r))+'"'+
-  (hidden?' hidden':'')+'>'+
-  '<td><strong>'+esc(r.name||'Signed member')+'</strong></td>'+ 
-  '<td><strong>'+esc(phtTime(r.clockIn))+'</strong><small>Clock in</small></td>'+
-  '<td><strong>'+esc(phtTime(r.clockOut))+'</strong><small>Clock out</small></td>'+
-  '<td><span class="tt-log-location">'+esc(r.location||'Unspecified')+'</span></td>'+
-  '<td>'+esc(r.department||'Unassigned')+'</td>'+
-  '<td><span class="tt-log-badge '+badge+'">'+esc(status)+'</span></td>'+
-  '<td>'+esc(r.classification||'Unknown')+'</td>'+
-  '<td class="tt-log-hours">'+esc(creditedHours(r.creditedMs))+'</td>'+
-  '<td><details class="tt-log-detail"><summary>Details</summary><div class="tt-log-detail-body">'+
-   '<span>Clock In: '+esc(phtTime(r.clockIn))+'</span>'+
-   '<span>Clock Out: '+esc(phtTime(r.clockOut))+'</span>'+
-   '<span>Location: '+esc(r.location||'Unspecified')+'</span>'+
-   '<span>Department: '+esc(r.department||'Unassigned')+'</span>'+
-   '<span>Arrival: '+esc(r.classification||'Unknown')+'</span>'+
-   '<span>Credited hours: '+esc(creditedHours(r.creditedMs))+'</span>'+
-  '</div></details></td>'+
-  '</tr>';
+
+const dateTime=value=>validTime(value)?new Intl.DateTimeFormat('en-PH',{
+ timeZone:'Asia/Manila',month:'short',day:'numeric',
+ hour:'numeric',minute:'2-digit',hour12:true
+}).format(new Date(value)):'—';
+const durationLabel=ms=>{
+ if(!Number.isFinite(ms)||ms<0)return '—';
+ const minutes=Math.floor(ms/60000);
+ return Math.floor(minutes/60)+'h '+String(minutes%60).padStart(2,'0')+'m';
 };
-export function renderTimeTrackerLog({records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false}={}){
+const ratio=(num,total)=>total?Math.round(100*num/total):0;
+const openDuration=(row,now)=>row.status==='Active'?
+ Math.max(0,Date.parse(now)-Date.parse(row.clockIn)):0;
+const auditPill=(label,value,style='neutral')=>
+ '<div class="tt-log-audit-pill tt-log-audit-'+style+'"><strong>'+esc(value)+
+ '</strong><span>'+esc(label)+'</span></div>';
+const locationsPalette=[
+ ['Office-Base Duty','office'],['Offsite (Home)','offsite'],
+ ['Local Field Works','local'],['Out of Town Assignment','outtown'],
+ ['International Field Assignments','international']
+];
+function locationDistribution(rows){
+ const total=rows.length;
+ const buckets=locationsPalette.map(([location,color])=>({
+  location,color,count:rows.filter(r=>r.location===location).length
+ }));
+ const unknown=rows.filter(r=>!TT_LOCATIONS.includes(r.location)).length;
+ if(unknown)buckets.push({location:'Unspecified',color:'other',count:unknown});
+ return '<section class="tt-log-location-panel" aria-label="Location distribution">'+
+  '<div class="tt-log-section-heading"><h4>⌖ &nbsp; LOCATION DISTRIBUTION</h4>'+
+   '<span>'+total+' sessions across '+buckets.filter(x=>x.count>0).length+
+   ' location'+(buckets.filter(x=>x.count>0).length===1?'':'s')+'</span></div>'+
+  '<div class="tt-log-location-track" role="img" aria-label="Attendance session location distribution">'+
+   (total?buckets.filter(x=>x.count).map(x=>
+    '<span class="tt-log-segment tt-log-segment-'+x.color+'" style="width:'+
+     (100*x.count/total).toFixed(4)+'%" title="'+esc(x.location)+
+     ': '+x.count+' session(s)">'+
+     (ratio(x.count,total)>=12?x.count+' ('+ratio(x.count,total)+'%)':'')+
+    '</span>').join(''):'<span class="tt-log-no-location">No signed sessions in this selection</span>')+
+  '</div>'+
+  '<div class="tt-log-location-legend">'+buckets.filter(x=>x.count).map(x=>
+   '<span><i class="tt-log-dot tt-log-dot-'+x.color+'"></i>'+esc(x.location)+
+   ' <strong>'+x.count+'</strong></span>').join('')+'</div></section>';
+}
+function dailyOperations(rows,now){
+ const today=manilaDay(now);
+ const todays=rows.filter(r=>manilaDay(r.clockIn)===today);
+ const before=todays.filter(r=>r.classification==='On time').length;
+ const late=todays.filter(r=>r.classification==='Late').length;
+ const active=todays.filter(r=>r.status==='Active').length;
+ const stagnant=todays.filter(r=>r.status==='Active'&&openDuration(r,now)>=14*3600000).length;
+ const total=todays.length;
+ const items=[
+  ['✓','Before 8 AM',before,ratio(before,total),'green'],
+  ['◷','Late Today',late,ratio(late,total),'orange'],
+  ['⌁','Still Working',active,ratio(active,total),'green'],
+  ['△','Open Sessions',active,ratio(active,total),'orange'],
+  ['✎','Manual Edits','—',null,'neutral'],
+  ['⚡','Stagnant (14h+)',stagnant,ratio(stagnant,total),'red']
+ ];
+ return '<section class="tt-log-operations" aria-label="Today daily operations">'+
+  '<div class="tt-log-section-heading"><h4>DAILY OPERATIONS</h4>'+
+   '<span>'+total+' authorized clock-in'+(total===1?'':'s')+
+   ' today · Philippine Time</span></div>'+
+  '<div class="tt-log-operation-grid">'+items.map(([symbol,label,value,rate,color])=>
+   '<article class="tt-log-operation tt-log-operation-'+color+'">'+
+   '<div><span aria-hidden="true">'+symbol+'</span>'+
+   '<small>'+(rate===null?'Not verified':rate+'%')+'</small></div>'+
+   '<strong>'+value+'</strong><span>'+esc(label)+'</span>'+
+   '<div class="tt-log-operation-meter"><i style="width:'+
+    (rate===null?0:rate)+'%"></i></div></article>').join('')+
+  '</div></section>';
+}
+function shiftProgress(rows,now){
+ const today=manilaDay(now);
+ const todays=rows.filter(r=>manilaDay(r.clockIn)===today);
+ const active=todays.filter(r=>r.status==='Active').length;
+ const complete=todays.filter(r=>r.status==='Completed').length;
+ const office=todays.filter(r=>r.location==='Office-Base Duty').length;
+ const late=todays.filter(r=>r.classification==='Late').length;
+ const credits=todays.reduce((sum,r)=>sum+(Number.isFinite(r.creditedMs)?
+  r.creditedMs:0),0);
+ const cards=[
+  ['TOTAL',todays.length],['ACTIVE',active],['ON-SITE',office],
+  ['LATE',late],['CREDITED HRS',durationLabel(credits)],['DONE',complete]
+ ];
+ return '<div class="tt-log-shift-strip" aria-label="Today shift progress">'+
+  '<div class="tt-log-shift-cards">'+cards.map(([label,value])=>
+   '<div><strong>'+esc(value)+'</strong><span>'+esc(label)+'</span></div>').join('')+'</div>'+
+  '<div class="tt-log-progress"><span>SHIFT PROGRESS</span>'+
+   '<progress value="'+complete+'" max="'+Math.max(1,todays.length)+
+   '" aria-label="Completed sessions among today clock-ins"></progress>'+
+   '<strong>'+complete+' / '+todays.length+'</strong></div></div>';
+}
+function safeSessionDetails(row,now){
+ const start=Date.parse(row.clockIn),end=Date.parse(row.clockOut||now);
+ const elapsed=Math.max(0,end-start);
+ const active=row.status==='Active';
+ const duration=active?'Current elapsed': 'Elapsed';
+ const credit=Number.isFinite(row.creditedMs)?
+  durationLabel(row.creditedMs):'Not finalized';
+ const eventLabel=active?'Clock-out not yet recorded':
+  row.clockOut?'Clock-out timestamp recorded':'Clock-out evidence unavailable';
+ return '<div class="tt-log-expanded">'+
+  '<div class="tt-log-evidence-title"><strong>AUDIT DETAILS</strong>'+
+   '<span class="tt-log-evidence-unverified">Evidence not independently verified</span></div>'+
+  '<div class="tt-log-audit-grid">'+
+   auditPill('GPS','Unavailable','neutral')+
+   auditPill('Timing','Recorded','green')+
+   auditPill('Edits','Not verified','neutral')+
+   auditPill('Device','Unavailable','neutral')+
+   auditPill('Audit score','N/A','neutral')+
+  '</div>'+
+  '<section class="tt-log-shift-card"><div class="tt-log-detail-title">'+
+   '<h6>SHIFT SUMMARY</h6><span>'+esc(manilaDay(row.clockIn))+'</span></div>'+
+   '<div class="tt-log-shift-timeline"><div><small>IN</small><strong>'+
+    esc(phtTime(row.clockIn))+'</strong></div>'+
+    '<div class="tt-log-time-track"><i></i></div>'+
+    '<div><small>'+duration.toUpperCase()+'</small><strong>'+
+     esc(durationLabel(elapsed))+'</strong></div>'+
+    '<div><small>OUT</small><strong>'+esc(active?'Active':phtTime(row.clockOut))+
+    '</strong></div></div>'+
+   '<p>Credited hours: '+esc(credit)+'</p></section>'+
+  '<section class="tt-log-evidence-info"><strong>RECORDED SESSION</strong>'+
+   '<p>'+esc(eventLabel)+'. Historical event modifications and independent audit verification are not available in this read-only projection.</p>'+
+   '<div class="tt-log-detail-fields">'+
+    '<span><small>Employee</small>'+esc(row.name||'Signed member')+'</span>'+
+    '<span><small>Clock In</small>'+esc(dateTime(row.clockIn))+'</span>'+
+    '<span><small>Clock Out</small>'+esc(dateTime(row.clockOut))+'</span>'+
+    '<span><small>Department</small>'+esc(row.department||'Unassigned')+'</span>'+
+    '<span><small>Location</small>'+esc(row.location||'Unspecified')+'</span>'+
+    '<span><small>Arrival</small>'+esc(row.classification||'Unknown')+'</span></div></section>'+
+  '<div class="tt-log-evidence-title"><strong>DEVICE &amp; LOCATION</strong></div>'+
+  '<div class="tt-log-location-evidence"><div>'+
+   '<h6>LOCATION EVIDENCE</h6><p>'+esc(row.location||'Unspecified')+'</p>'+
+   '<span>Exact GPS coordinates and device details are not available in this authorized read.</span>'+
+   '</div><div class="tt-log-map-unavailable" role="note">'+
+   '<strong>Satellite map unavailable</strong><p>A verified, independently authorized GPS evidence endpoint is required. No coordinates or map position have been inferred.</p>'+
+   '</div></div>'+
+  '</div>';
+}
+const sessionRow=(r,query='',now=new Date())=>{
+ const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
+ const done=r.status==='Completed';
+ const state=r.classification==='Administrative closure'?
+  'Administrative closure':done?'Completed':r.status==='Active'?'Active':'Unknown';
+ return '<tr class="tt-log-filterable" data-log-search="'+esc(searchText(r))+'"'+
+  (hidden?' hidden':'')+'><td colspan="9">'+
+  '<details class="tt-log-detail"><summary class="tt-log-row-summary">'+
+   '<span class="tt-log-row-person"><strong>'+esc(r.name||'Signed member')+
+    '</strong><small>'+esc(r.department||'Unassigned')+'</small></span>'+
+   '<span>'+esc(dateTime(r.clockIn))+'</span>'+
+   '<span>'+esc(dateTime(r.clockOut))+'</span>'+
+   '<span class="tt-log-row-location">'+esc(r.location||'Unspecified')+'</span>'+
+   '<span>'+esc(r.department||'Unassigned')+'</span>'+
+   '<span class="tt-log-row-arrival">'+esc(r.classification||'Unknown')+'</span>'+
+   '<span class="tt-log-badge '+(done?'tt-log-badge-done':
+    state==='Active'?'tt-log-badge-active':'tt-log-badge-unknown')+'">'+esc(state)+'</span>'+
+   '<span class="tt-log-hours">'+esc(creditedHours(r.creditedMs))+'</span>'+
+   '<span class="tt-log-disclosure" aria-label="Expand session evidence">⌄</span>'+
+  '</summary>'+safeSessionDetails(r,now)+'</details></td></tr>';
+};
+export function renderTimeTrackerLog({
+ records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false
+}={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
  const visible=filterTimeTrackerLogRows(records,options,now);
  const query=String(options.search??'').slice(0,120);
  const summary=timeTrackerLogSummary(rows,now);
  const team=scope==='AUTHORIZED_WORKSPACE_TEAM';
- const locations=[...new Set(safeRows(records).map(r=>r.location).
+ const places=[...new Set(safeRows(records).map(r=>r.location).
   filter(v=>TT_LOCATIONS.includes(v)))].sort();
- const days=new Map();
- for(const r of rows){
-  const key=manilaDay(r.clockIn);
-  if(!days.has(key))days.set(key,[]);
-  days.get(key).push(r);
- }
- const metrics=[
-  ['Sessions',String(summary.sessions)],
-  ['People',String(summary.people)],
-  ['Today',String(summary.today)],
-  ['Earlier',String(summary.historical)],
-  ['Active',String(summary.active)],
-  ['Completed',String(summary.completed)],
-  ['Late',String(summary.late)]
- ];
  return '<section class="tt-log" aria-label="Signed attendance Log">'+
   '<header class="tt-log-hero"><div><h3>Attendance Log</h3>'+
-   '<p>'+(team?'Authorized team history':'Your attendance history')+
-   ' · Today and earlier sessions · Philippine Time</p>'+
-   '</div><span class="tt-log-readonly">Read-only · '+(team?'Authorized team':'Signed account')+'</span></header>'+
-  '<div class="tt-log-metrics">'+metrics.map(([label,value])=>
-   '<div class="tt-log-metric"><span>'+esc(label)+'</span><strong>'+esc(value)+
-   '</strong></div>').join('')+'</div>'+
+   '<p>'+esc(phtDate(now))+' · '+(team?
+    'Authorized workforce history':'Your attendance history')+
+   ' · Today and earlier sessions</p></div>'+
+   '<span class="tt-log-readonly">Read-only · '+
+    (team?'Authorized team':'Signed account')+'</span></header>'+
   '<section class="tt-log-controls" aria-label="Attendance Log filters">'+
-   '<label class="tt-log-search">Search records'+
-    '<input type="search" id="tt-log-search" placeholder="Search employee name, location, department or time" maxlength="120" value="'+esc(options.search)+'" autocomplete="off"></label>'+
+   '<label class="tt-log-search">Search name, ID or department'+
+   '<input type="search" id="tt-log-search" maxlength="120" value="'+esc(options.search)+
+    '" placeholder="Search employee, department or location…" autocomplete="off"></label>'+
    '<label>Date range'+choices('tt-log-period',periods,options.period)+'</label>'+
    '<label>Status'+choices('tt-log-status',statuses,options.status)+'</label>'+
    '<label>Location'+choices('tt-log-location',[
-    ['all','All locations'],...locations.map(v=>[v,v])
+    ['all','All locations'],...places.map(v=>[v,v])
    ],options.location)+'</label>'+
    '<label>Sort'+choices('tt-log-sort',sortModes,options.sort)+'</label>'+
-  '</section>'+
-  '<div class="tt-log-panel"><div class="tt-log-panel-top">'+
-   '<div><h4>Attendance history</h4>'+
-   '<p><span id="tt-log-visible-count">'+visible.length+'</span> sessions match the selected filters</p></div>'+
+   '<span class="tt-log-results-count">'+visible.length+' of '+summary.sessions+
+   ' authorized sessions</span>'+
    '<button class="secondary" type="button" data-action="tt-log-export"'+
-    (busy||!visible.length?' disabled':'')+'>Export filtered CSV</button></div>'+
-   (days.size?[...days].map(([key,items])=>
-    '<div class="tt-log-day"><h5>'+esc(phtDate(key+'T00:00:00+08:00'))+
-    '<span>'+items.length+' session'+(items.length===1?'':'s')+'</span></h5>'+
-    '<div class="tt-log-table-scroll"><table class="board-table tt-log-table">'+
-    '<thead><tr><th>Employee</th><th>Clock In</th><th>Clock Out</th><th>Location</th>'+
-    '<th>Department</th><th>Status</th><th>Arrival</th><th>Hours</th><th>Details</th></tr></thead>'+
-    '<tbody>'+items.map(r=>sessionRow(r,query)).join('')+'</tbody></table></div></div>'
-   ).join(''):'<p class="tt-log-empty">No signed attendance sessions match this view.</p>')+
-   '<p id="tt-log-empty-search" class="tt-log-empty"'+(rows.length&&visible.length?' hidden':'')+
-    '>'+(!rows.length?'':'No sessions match the search.')+'</p>'+
-   '<p class="tt-log-footnote">Summary cards cover the selected date, status, and location; '+
-    'search narrows the listed sessions and CSV export.</p>'+
-   '<p class="tt-log-footnote">'+(team?
-    'Only approved active workspace members in your central directory are included. ':
-    'Only your own attendance history is included. ')+
-    'Exact GPS coordinates and privileged audit or device details are excluded. '+
-    'Historical members absent from the authorized active directory are not exposed. '+
-    'Clock edits and manual corrections remain unavailable pending backend acceptance.</p>'+
-  '</div></section>';
+    (busy||!visible.length?' disabled':'')+'>Export CSV</button></section>'+
+  locationDistribution(rows)+dailyOperations(rows,now)+shiftProgress(rows,now)+
+  '<section class="tt-log-panel tt-log-records">'+
+   '<div class="tt-log-panel-top"><div><h4>Attendance Records</h4>'+
+    '<p><span id="tt-log-visible-count">'+visible.length+'</span> of '+
+    summary.sessions+' sessions match filters · '+summary.people+
+    ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
+    '<span class="tt-log-readonly">'+summary.historical+
+    ' earlier · '+summary.today+' today</span></div>'+
+   (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
+     '<table class="board-table tt-log-table"><thead><tr>'+
+     '<th>Employee</th><th>Clock In</th><th>Clock Out</th>'+
+     '<th>Location</th><th>Department</th><th>Arrival</th>'+
+     '<th>Status</th><th>Hours</th><th>Details</th></tr></thead>'+
+     '<tbody>'+rows.map(r=>sessionRow(r,query,now)).join('')+
+     '</tbody></table></div></div>':
+     '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
+   '<p id="tt-log-empty-search" class="tt-log-empty"'+
+    (visible.length?' hidden':'')+'>No sessions match the current search.</p>'+
+   '<p class="tt-log-footnote">Today's operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
+   '<p class="tt-log-footnote">Audit scores, exact GPS satellite maps, device fingerprints and manual-edit evidence require an approved server-backed evidence contract. This view does not generate or infer those values.</p>'+
+  '</section></section>';
 }
-
 
 const logCsvCell=value=>{
  const raw=String(value??'');
