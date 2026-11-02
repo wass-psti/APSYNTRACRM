@@ -235,10 +235,11 @@ test('personal today, week and month boundaries follow the PHT calendar',()=>{
 test('native report UI includes period selection and signed-user OT read-only table',()=>{
  const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
    access:{moduleRole:'Employee',platformRole:'employee',name:'User'},
-   records:[],otRequests:[{id:'one',date:'2026-11-02',status:'Draft',
+   records:[],otRequests:[{id:'one',date:'2026-11-02',status:'Submitted',
     start:'18:00',end:'20:00',durationMinutes:120,task:'Overtime work'}],
    active:null},period:'week',view:'ot'});
- assert.match(html,/My overtime requests/);
+ assert.match(html,/Overtime/);
+ assert.match(html,/Pending/);
  assert.match(html,/Overtime work/);
  assert.doesNotMatch(html,/data-action="tt-ot-approve"/);
  const reports=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
