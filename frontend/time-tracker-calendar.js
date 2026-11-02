@@ -148,6 +148,9 @@ export function renderTimeTrackerCalendar({
  const monthName=new Intl.DateTimeFormat('en-US',{month:'long',timeZone:'UTC'}).format(date);
  const offset=date.getUTCDay(),cells=Math.ceil((offset+data.days)/7)*7;
  const holidays=new Map(data.holidays.map(h=>[h.day,h]));
+ const nextHoliday=data.holidays.find(holiday=>holiday.day>today);
+ const holidayDaysRemaining=nextHoliday?
+  (Date.parse(nextHoliday.day+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000:null;
  const todayMonth=today.slice(0,7)===requested;
  const selected=data.entries.find(e=>e.day===selectedDay);
  const counts=data.entries.map(e=>e.count);
@@ -220,6 +223,9 @@ export function renderTimeTrackerCalendar({
   '<div class="tt-cal-legend"><span>● Regular holiday</span>'+
    '<span>● Special non-working</span><span>● Special working</span>'+
    '<span>● Today</span><span>● Weekend</span></div>'+
+  (nextHoliday?'<section class="tt-cal-upcoming"><div><small>UPCOMING NATIONAL HOLIDAY</small>'+
+   '<strong>'+esc(nextHoliday.name)+'</strong><span>'+esc(dateText(nextHoliday.day))+'</span></div>'+
+   '<b>In '+holidayDaysRemaining+' day'+(holidayDaysRemaining===1?'':'s')+'</b></section>':'')+
   heading('HOLIDAYS THIS MONTH',data.holidays.length+
    ' verified national date(s)')+
   '<section class="tt-cal-panel tt-cal-holiday-list">'+
