@@ -2,7 +2,7 @@ import {TT_LOCATIONS,creditedAttendanceMs,manilaClockMinutes,TT_PHT_OFFSET_MS} f
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
-import {projectTimeTrackerOtRows} from './time-tracker-overtime.js';
+import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
  * No standalone app, storage shim, local JWT, synthetic rows, or privileged key.
@@ -197,6 +197,47 @@ export class TimeTrackerNativeClient{
   await checkIdentity(this.auth,this.api,access,boardId);
   return {status:'VERIFIED_READ',access:{...access,...otAccess},records,otRequests,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
+ }
+ async submitOvertime(boardId,draft){
+  if(!TT_OT_WRITES_ACCEPTED)deny('Overtime writes require signed backend acceptance');
+  const before=await this.snapshot(boardId);
+  if(before.access.otContractActive!==true)deny('Authoritative OT contract unavailable');
+  const form=validateOvertimeDraft(draft);
+  if(!form.valid)deny(form.message);
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  const receipt=await this.api.rpc('timetracker_ot_submit',{
+   p_board_id:boardId,p_date:form.date,p_start:form.start,
+   p_end:form.end,p_reason:form.reason
+  });
+  if(!isRecord(receipt)||!uuid.test(receipt.id||'')||
+     receipt.workspaceId!==before.access.workspaceId||
+     receipt.ownerId!=='cloud:'+before.access.userId||
+     receipt.status!=='Submitted')
+   deny('OT submission receipt is not verified');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  return Object.freeze({id:receipt.id,status:receipt.status});
+ }
+ async decideOvertime(boardId,requestId,decision){
+  if(!TT_OT_WRITES_ACCEPTED)deny('Overtime decisions require signed backend acceptance');
+  if(!uuid.test(requestId||'')||!['Approved','Rejected'].includes(decision))
+   deny('Invalid overtime decision');
+  const before=await this.snapshot(boardId);
+  if(before.access.otContractActive!==true||before.access.bootstrapApprover!==true||
+     before.access.scope!=='AUTHORIZED_WORKSPACE_TEAM')
+   deny('Bootstrap OT approval denied');
+  const request=before.otRequests.find(r=>r.id===requestId&&r.status==='Submitted'&&
+    r.ownerId!=='cloud:'+before.access.userId);
+  if(!request)deny('OT decision target unavailable or already reviewed');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  const receipt=await this.api.rpc('timetracker_ot_decide',{
+    p_board_id:boardId,p_request_id:requestId,p_decision:decision
+  });
+  if(!isRecord(receipt)||receipt.id!==requestId||
+     receipt.workspaceId!==before.access.workspaceId||
+     receipt.status!==decision||receipt.decidedBy!==before.access.userId)
+   deny('OT decision receipt is not verified');
+  await checkIdentity(this.auth,this.api,before.access,boardId);
+  return Object.freeze({id:requestId,status:decision});
  }
  async commit(boardId,{action,location,department,workNote='',geo}={}){
   if(!['clock-in','clock-out'].includes(action))deny('Unsupported attendance action');
