@@ -25,6 +25,7 @@ SELECT jsonb_build_object(
    'public.commit_timetracker_attendance_action(text,text,text,text,jsonb,text,jsonb)','EXECUTE') ELSE NULL END,
  'signedIdentityGuard',COALESCE((SELECT position('auth.uid()' in definition)>0 FROM rpc),false),
  'moduleRoleGuard',COALESCE((SELECT position('has_module_access' in definition)>0 FROM rpc),false),
+ 'dedicatedBoardGrantGuard',COALESCE((SELECT position('work_board_access' in definition)>0 FROM rpc),false),
  'workspaceGuard',COALESCE((SELECT position('current_workspace_id' in definition)>0 FROM rpc),false),
  'concurrencyGuard',COALESCE((SELECT position('pg_advisory_xact_lock' in definition)>0 FROM rpc),false),
  'integrityGuard',COALESCE((SELECT position('module_state_invariants_valid' in definition)>0 FROM rpc),false),
