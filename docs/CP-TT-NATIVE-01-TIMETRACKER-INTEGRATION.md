@@ -145,3 +145,38 @@ The read-only source-controlled audit `sql/tests/cp-tt-native-01-production-read
 **Acceptance status:** Overview source, frontend test, and deployed-source integration **VERIFIED**; genuine signed management account seeing all expected current-workspace users **IMPLEMENTED-UNVERIFIED** in production runtime; broader original Overview requirements such as authorized department-scoped Supervisor reporting, audit-backed manual edits, individual employee detail views, and write workflows **PENDING**. Existing TT-01..TT-10 ledger remains **3/10 verified = 30%**; full twelve-application operational acceptance remains **0/12**. No separate application or source ZIP was installed.
 
 **Next TimeTracker-only validation:** perform browser runtime acceptance under an existing signed `IT Administrator`/`HR` or `System Admin` with granted TimeTracker module and board access. Compare the dashboard's shown sessions with authorized current-day source records (without sharing personal employee identifiers); exercise empty and nonempty states, search/filters and CSV. Verify Employee/OJT and Supervisor/Finance cannot see unauthorized colleagues. Continue server-side board-grant, offsite Work Note and append-only audit hardening separately before enabling Clock In/Out.
+
+
+## TT-OV-01 — Native workforce Overview from four visual references — 2026-11-02
+
+**User request / input:** four annotated screenshots of the original TimeTracker **Overview** tab, presented as separate scroll positions of one long board view. Screenshots are *visual references only*, not source data, a user list to import, an embedded Monday page, or permission to replicate its outside hosting.
+
+**Native implementation on \`main\`:**
+- \`frontend/time-tracker-overview.js\`: signed current-workspace daily attendance projection, PHT calendar-day and 08:00 late classification, unique employee and active headcounts, on-time rate, hours, location/department groupings, histogram, attendance pulse, late arrivals and whereabouts, role-sanitized search/filter CSV export. No GPS, email or private audit metadata in the view.
+- \`frontend/time-tracker-native.js\`: uses existing \`list_module_directory('time-tracker')\` result from \`TimeTrackerNativeClient.access\`, keeps only active current-workspace directory members, and combines those with the **existing** signed \`list_module_state('time-tracker')\` attendance entry after validation. No new backend function, table, workspace, grant or login.
+- \`frontend/time-tracker-ui.js\`: the Overview tab is now enabled and rendered natively within the same TimeTracker board shell, alongside Clock, Log, Reports and OT. Source-only unimplemented tabs remain explicitly disabled.
+- \`frontend/app.js\`: Overview is read-only, with local search, location/department/status selection, chronological sorting, sanitized authorized CSV export, and the existing single one-second on-screen text clock (no periodic API requests).
+- \`frontend/styles.css\`: screenshot-derived orange/neutral cards, stats, distribution, arrival visualizations, whereabouts cards, roster and responsive layout, including independent table/section horizontal scrolling.
+- \`frontend/tests/time-tracker-overview.test.mjs\`: isolated authorized team projection, zero foreign/inactive/unlisted users, PHT midnight boundary, role-based privacy, injection-safe display/CSV, filter behavior and session UI contracts.
+
+**Server-side authorization verified via read-only function-definition inspection:**
+- \`list_module_state\` requires \`auth.uid()\`, \`has_module_access\`, and filters \`module_state_entries.workspace_id = current_workspace_id(caller)\`.
+- \`list_module_directory\` requires the same signed module grant and selects **active current-workspace members**. For TimeTracker, it can return team members for \`System Admin\`, \`IT Administrator\`, \`HR\`, \`Supervisor\`, and \`Finance\`; Employee/OJT receive only self.
+- Existing \`module_state_visible_value\` returns attendance state filtered to self for Employee/OJT. It returns broad attendance state to other roles; **the new Overview deliberately restricts team display to \`System Admin\`, \`IT Administrator\`, and \`HR\`** and returns self-only projection for \`Supervisor\`, \`Finance\`, Employee, OJT until specific departmental and finance read boundaries are independently accepted. This is a frontend narrowing of existing backend permissions, **not a server-side security hardening** for Supervisor/Finance. Do not state that all-role team access is fully enforced in the database.
+
+**Visual feature mapping:**
+| Reference section | Native result | Scope |
+| --- | --- | --- |
+| Greeting, live PHT clock, search | IMPLEMENTED, CI tested | Authorized current session |
+| Employee/Active/Completed/On-Site/Late/Avg Hours KPIs, on-time rate | IMPLEMENTED, CI tested | Unique today clock-in members |
+| Location cards and stacked distribution | IMPLEMENTED, CI tested | Current active locations |
+| Hourly arrivals, attendance pulse, late roster | IMPLEMENTED, CI tested | PHT time and 08:00 threshold |
+| Arrival pattern and department breakdown | IMPLEMENTED, CI tested | Approved directory only |
+| Employee Whereabouts cards | IMPLEMENTED, CI tested | Approved directory, active today |
+| Attendance records table, filters, CSV | IMPLEMENTED, CI tested | No email, exact GPS, or private audit values |
+| Signed cross-role, live user/browser acceptance | PENDING | No signed user session exercised by CI |
+| Team-level Supervisor and Finance read authority | BLOCKED | Requires server-enforced role/department permission decisions |
+
+**Security and operational limits:** Test data in automated unit tests are synthetic fixtures ONLY, never written to production or shown as real employees. Team names are drawn only from the existing signed backend directory in the same workspace; legacy screenshot names, personnel numbers and counts are not hardcoded or imported. If no authorized attendees have clocked in today, Overview shows zero and explicit empty states. Clock In/Out writes remain intentionally disabled due the previously identified missing backend offsite-note, dedicated-board grant and audit enforcement. The existing original RPC and grants have **not** been changed.
+
+**Acceptance accounting:** \`TT-OV-01\` native source/UI/security regression acceptance **VERIFIED at static and unit/CI scope**, signed live runtime acceptance **PENDING**. This expands TT-05 implementation but **does not close TT-05** (full authorized Overview, Log and role-specific audit operation remains incomplete), so project-wide TimeTracker acceptance stays **3/10 VERIFIED = 30%**, all 12 applications **0/12** fully operationally accepted. Next: signed read-only Overview walkthrough for a real current-workspace IT Administrator/HR session; independently design/authorize server-side scoped Supervisor/Finance team views, then continue TimeTracker's remaining native functional milestones. Do not proceed to any other application yet.
