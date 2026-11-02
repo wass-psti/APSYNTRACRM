@@ -531,6 +531,57 @@
 
 
 /* CP-TT-NATIVE-02: signed team Overview reference layout */
+
+/* Native signed TimeTracker Log — grouped history, local table overflow only. */
+.tt-log{padding:30px clamp(12px,2vw,26px) 40px;background:#f6f6f8;display:grid;gap:17px;min-width:0}
+.tt-log[hidden],.tt-log [hidden]{display:none!important}
+.tt-log-hero{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.tt-log-hero h3{font:700 clamp(21px,2vw,27px)/1.2 Georgia,"Times New Roman",serif;margin:0 0 7px;color:#30343b}
+.tt-log-hero p{font-size:12px;margin:0;color:#7c8190}
+.tt-log-readonly{border:1px solid #d9e4dd;border-radius:20px;background:#eef6f0;color:#4e8062;font-size:11px;padding:7px 11px}
+.tt-log-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.tt-log-metric{background:#fff;border:1px solid #dfe2e8;border-radius:9px;padding:15px;min-width:0;display:grid;gap:8px}
+.tt-log-metric span{font-size:11px;color:#777c87}
+.tt-log-metric strong{font:700 23px/1.15 ui-monospace,SFMono-Regular,monospace;color:#30343b;font-variant-numeric:tabular-nums}
+.tt-log-controls{display:flex;align-items:end;flex-wrap:wrap;gap:10px;background:#fff;border:1px solid #dfe2e8;border-radius:9px;padding:13px}
+.tt-log-controls label{display:grid;gap:6px;font-size:11px;color:#757985;min-width:115px}
+.tt-log-controls .tt-log-search{flex:1 1 210px}
+.tt-log-controls input,.tt-log-controls select{height:37px;background:#fafbfc;border:1px solid #dce0e8;border-radius:6px;color:#3d434d;padding:0 10px;font:400 12px Inter,system-ui,sans-serif;width:100%;min-width:0}
+.tt-log-controls input:focus-visible,.tt-log-controls select:focus-visible{outline:2px solid #eb754e;outline-offset:1px}
+.tt-log-panel{background:#fff;border:1px solid #dfe2e8;border-radius:10px;min-width:0;padding:18px;display:grid;gap:16px}
+.tt-log-panel-top{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.tt-log-panel-top h4{font:700 16px Georgia,"Times New Roman",serif;margin:0 0 6px}
+.tt-log-panel-top p{font-size:11px;color:#838894;margin:0}
+.tt-log-panel-top button{white-space:nowrap}
+.tt-log-day{min-width:0}
+.tt-log-day h5{font:700 13px Georgia,"Times New Roman",serif;margin:0;padding:13px 3px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#3b414b}
+.tt-log-day h5 span{font:400 11px Inter,system-ui,sans-serif;color:#8c909a}
+.tt-log-table-scroll{max-width:100%;overflow-x:auto;border:1px solid #e2e5ea;border-radius:7px}
+.tt-log-table{min-width:795px;width:100%;border-collapse:collapse}
+.tt-log-table thead{background:#f7f8fa}
+.tt-log-table th{font-size:10px;color:#858b97;white-space:nowrap;padding:12px 10px;text-align:left}
+.tt-log-table td{font-size:11px;padding:14px 10px;vertical-align:middle;color:#484e58;white-space:nowrap;border-top:1px solid #f0f1f3}
+.tt-log-table td strong{display:block;color:#363c46;font-size:12px}
+.tt-log-table td small{display:block;color:#999ea7;font-size:10px;margin-top:4px}
+.tt-log-table .tt-log-hours{font-variant-numeric:tabular-nums;font-weight:700}
+.tt-log-badge{display:inline-flex;align-items:center;border-radius:14px;padding:5px 8px;font-size:10px;white-space:nowrap}
+.tt-log-badge-active{background:#fff0e7;color:#c65324}
+.tt-log-badge-done{background:#e9f5ee;color:#3d8559}
+.tt-log-badge-unknown{background:#edf0f5;color:#657084}
+.tt-log-location{font-size:11px}
+.tt-log-empty{padding:30px 12px;text-align:center;color:#858994;font-size:12px;border:1px dashed #e0e4e9;border-radius:7px}
+.tt-log-footnote{font-size:11px;line-height:1.6;color:#8a909b;margin:0}
+@media(max-width:840px){.tt-log-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:540px){
+ .tt-log{padding:18px 12px 28px}
+ .tt-log-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .tt-log-metric{padding:12px}
+ .tt-log-metric strong{font-size:18px}
+ .tt-log-panel{padding:12px}
+ .tt-log-controls label{flex:1 1 140px}
+ .tt-log-controls .tt-log-search{flex-basis:100%}
+}
+
 .tt-overview{padding:30px clamp(12px,2vw,26px) 40px;background:#f6f6f8;display:grid;gap:18px;min-width:0}
 .tt-overview-hero{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
 .tt-overview-hero h3{font:700 clamp(20px,2vw,27px)/1.2 Georgia,"Times New Roman",serif;margin:0 0 6px}
