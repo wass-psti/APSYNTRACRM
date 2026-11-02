@@ -82,6 +82,14 @@ const sessionRow=(r,query='')=>{
   '<td><span class="tt-log-badge '+badge+'">'+esc(status)+'</span></td>'+
   '<td>'+esc(r.classification||'Unknown')+'</td>'+
   '<td class="tt-log-hours">'+esc(creditedHours(r.creditedMs))+'</td>'+
+  '<td><details class="tt-log-detail"><summary>Details</summary><div class="tt-log-detail-body">'+
+   '<span>Clock In: '+esc(phtTime(r.clockIn))+'</span>'+
+   '<span>Clock Out: '+esc(phtTime(r.clockOut))+'</span>'+
+   '<span>Location: '+esc(r.location||'Unspecified')+'</span>'+
+   '<span>Department: '+esc(r.department||'Unassigned')+'</span>'+
+   '<span>Arrival: '+esc(r.classification||'Unknown')+'</span>'+
+   '<span>Credited hours: '+esc(creditedHours(r.creditedMs))+'</span>'+
+  '</div></details></td>'+
   '</tr>';
 };
 export function renderTimeTrackerLog({records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false}={}){
@@ -136,15 +144,18 @@ export function renderTimeTrackerLog({records=[],scope='OWN_ATTENDANCE_ONLY',fil
     '<span>'+items.length+' session'+(items.length===1?'':'s')+'</span></h5>'+
     '<div class="tt-log-table-scroll"><table class="board-table tt-log-table">'+
     '<thead><tr><th>Employee</th><th>Clock In</th><th>Clock Out</th><th>Location</th>'+
-    '<th>Department</th><th>Status</th><th>Arrival</th><th>Hours</th></tr></thead>'+
+    '<th>Department</th><th>Status</th><th>Arrival</th><th>Hours</th><th>Details</th></tr></thead>'+
     '<tbody>'+items.map(r=>sessionRow(r,query)).join('')+'</tbody></table></div></div>'
    ).join(''):'<p class="tt-log-empty">No signed attendance sessions match this view.</p>')+
    '<p id="tt-log-empty-search" class="tt-log-empty"'+(rows.length&&visible.length?' hidden':'')+
     '>'+(!rows.length?'':'No sessions match the search.')+'</p>'+
    '<p class="tt-log-footnote">Summary cards cover the selected date, status, and location; '+
     'search narrows the listed sessions and CSV export.</p>'+
-   '<p class="tt-log-footnote">Only your centrally authorized attendance history is shown. '+
-    'GPS coordinates, other employees’ records, and privileged audit evidence are excluded. '+
+   '<p class="tt-log-footnote">'+(team?
+    'Only approved active workspace members in your central directory are included. ':
+    'Only your own attendance history is included. ')+
+    'Exact GPS coordinates and privileged audit or device details are excluded. '+
+    'Historical members absent from the authorized active directory are not exposed. '+
     'Clock edits and manual corrections remain unavailable pending backend acceptance.</p>'+
   '</div></section>';
 }
