@@ -61,6 +61,25 @@ test('nonessential signed TimeTracker reads are concurrent but access checks rem
  assert.ok(body.indexOf('const otRead=')<body.indexOf('const raw=await'));
  assert.match(body,/await checkIdentity\(this\.auth,this\.api,access,boardId\)/);
  const map=readFileSync('frontend/time-tracker-map.js','utf8');
- assert.match(map,/Intermittent tile errors must not destroy a functioning map/);
+ assert.match(map,/map\.on\('style\.load'/);
+ assert.match(map,/map\.setStyle\(FALLBACK_STYLE/);
  assert.doesNotMatch(map,/map\.on\('error',\(\)=>showMessage/);
+});
+
+test('default street map is identity-bound and nonprivileged views never initialize',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/mapEnabled:auth\.isSignedIn&&state\.ttAttendance\?\.status==='VERIFIED_READ'/);
+ assert.match(app,/void mountSignedTimeTrackerMaps\(\)/);
+ assert.doesNotMatch(app,/if\(state\.ttMapConsent\)void mountSignedTimeTrackerMaps/);
+ assert.match(app,/state\.ttAttendance\.access\?\.moduleRole==='Supervisor'/);
+ assert.match(app,/case 'tt-map-retry'/);
+ assert.match(app,/setTimeTrackerMapTheme\(theme\)/);
+ assert.match(app,/Date\.now\(\)-state\.ttLogGpsCacheAt<15000/);
+ assert.match(app,/Date\.now\(\)-state\.ttGpsCacheAt<15000/);
+ const module=readFileSync('frontend/time-tracker-map.js','utf8');
+ assert.match(module,/map\.on\('style\.load'/);
+ assert.match(module,/map\.setStyle\(FALLBACK_STYLE/);
+ assert.match(module,/export function setTimeTrackerMapTheme/);
+ assert.match(module,/export async function retryTimeTrackerMaps/);
+ assert.doesNotMatch(module,/map\.on\('load'/);
 });

@@ -34,7 +34,7 @@ import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
-import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps} from './time-tracker-map.js';
+import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps} from './time-tracker-map.js';
 import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
@@ -49,7 +49,7 @@ const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:false,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -138,8 +138,7 @@ function timeTrackerMapConsentKey(){
  return [state.context?.user_id,state.context?.workspace_id,state.boardId].join('|');
 }
 function timeTrackerSignedMapConfigs(){
- if(!state.ttMapConsent||state.ttMapConsentIdentity!==timeTrackerMapConsentKey()||
-  state.view!=='board'||state.tab!=='attendance'||!auth.isSignedIn||
+ if(state.view!=='board'||state.tab!=='attendance'||!auth.isSignedIn||
   state.ttAttendance?.status!=='VERIFIED_READ'||
   !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))
   return [];
@@ -148,7 +147,7 @@ function timeTrackerSignedMapConfigs(){
   const data=state.ttLogGpsData;
   if(data?.actorId!==actor||data?.workspaceId!==ws||data?.boardId!==state.boardId)return [];
   return (state.ttAttendance.log?.rows||[]).map(row=>({
-   scope:'log',elementId:row.id,points:signedMapPoints(data,{type:'log',record:row}),theme:'map'
+   scope:'log',elementId:row.id,points:signedMapPoints(data,{type:'log',record:row}),theme:state.ttGpsFilters.theme==='dark'?'dark':'map'
   })).filter(item=>item.points.length);
  }
  if(state.ttView==='gps'){
@@ -175,7 +174,7 @@ function shell(body){
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  maintainTimeTrackerClock();
- if(state.ttMapConsent)void mountSignedTimeTrackerMaps();
+ void mountSignedTimeTrackerMaps();
 }
 function boardCard(board,index){
  return `<a class="board-card" data-searchable="${e((board.name+' '+(board.description||'')).toLowerCase())}" href="#/boards/${e(board.id)}">
@@ -252,7 +251,7 @@ function boardPage(){
  <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span class="csp-u060" >(${state.issues.length})</span></a>
  ${moduleByBoardName(b.name)?.key==='frt'?`<a class="tab ${state.tab==='finance'?'active':''}" href="#/boards/${e(b.id)}/finance">▣ FRT finance (read-only)</a>`:''}
  ${moduleByBoardName(b.name)?.key==='timetracker'?`<a class="tab ${state.tab==='attendance'?'active':''}" href="#/boards/${e(b.id)}/attendance">◷ TimeTracker attendance</a>`:''}</div>
- ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:state.ttMapConsent&&state.ttMapConsentIdentity===timeTrackerMapConsentKey(),
+ ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='issues'?issuesPage():`
  <div class="toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
@@ -437,7 +436,7 @@ async function loadTimeTracker(seq=routeSerial){
  }
 }
 /** Privileged attendance Log GPS. Never sourced from broad, redacted attendance state. */
-async function loadTimeTrackerLogGps(seq=routeSerial,record=null){
+async function loadTimeTrackerLogGps(seq=routeSerial,record=null,{force=false}={}){
  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||
     state.ttAttendance?.status!=='VERIFIED_READ'||!auth.isSignedIn||
     state.ttBusy||state.ttLogGpsBusy)return;
@@ -450,6 +449,12 @@ async function loadTimeTrackerLogGps(seq=routeSerial,record=null){
   timeTrackerGpsWindow(new Date(),31);
  const params={from:range.from,to:range.to,
   userId:record?String(record.ownerId||'').replace(/^cloud:/,''):null};
+ const cached=state.ttLogGpsData;
+ if(!force&&Date.now()-state.ttLogGpsCacheAt<15000&&!cached?.truncated&&
+    cached?.actorId===identity&&cached?.workspaceId===workspace&&cached?.boardId===boardId&&
+    cached.ranges?.some(x=>x.from<=range.from&&x.to>=range.to)&&
+    (!record||cached.events.some(p=>p.recordId===record.id&&
+      'cloud:'+p.userId===record.ownerId)))return;
  state.ttLogGpsBusy=true;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';
  render();
  try{
@@ -467,6 +472,7 @@ async function loadTimeTrackerLogGps(seq=routeSerial,record=null){
    for(const p of data.events)merged.set(p.userId+':'+p.recordId+':'+p.kind,p);
    const ranges=existing?.actorId===identity&&existing.workspaceId===workspace&&
       existing.boardId===boardId?existing.ranges||[]:[];
+   state.ttLogGpsCacheAt=Date.now();
    state.ttLogGpsData={...data,events:[...merged.values()],
     ranges:[...ranges,{from:range.from,to:range.to}],
     truncated:existing?.truncated===true||data.truncated===true};
@@ -498,7 +504,7 @@ async function loadTimeTrackerLogGps(seq=routeSerial,record=null){
  }
 }
 /** Fetch only dedicated server-guarded GPS evidence, never broad module state. */
-async function loadTimeTrackerGps(seq=routeSerial){
+async function loadTimeTrackerGps(seq=routeSerial,{force=false}={}){
  if(state.view!=='board'||state.tab!=='attendance'||
     state.ttAttendance?.status!=='VERIFIED_READ'||!auth.isSignedIn||
     state.ttBusy||state.ttGpsBusy||state.ttView!=='gps')return;
@@ -510,14 +516,19 @@ async function loadTimeTrackerGps(seq=routeSerial){
  const range=timeTrackerGpsWindow();
  const params={from:state.ttGpsFilters.from||range.from,
   to:state.ttGpsFilters.to||range.to,userId:state.ttGpsFilters.userId||null};
- state.ttGpsBusy=true;state.ttGpsData=null;state.ttGpsError='';render();
+ if(!force&&Date.now()-state.ttGpsCacheAt<15000&&!state.ttGpsData?.truncated&&
+    state.ttGpsData?.actorId===identity&&state.ttGpsData?.workspaceId===workspace&&
+    state.ttGpsData?.boardId===boardId&&
+    state.ttGpsData?.from===params.from&&state.ttGpsData?.to===params.to&&
+    (!params.userId||state.ttGpsData.events.some(p=>p.userId===params.userId)))return;
+ state.ttGpsBusy=true;state.ttGpsError='';render();
  try{
   const data=await timeTracker.gpsEvidence(boardId,params);
   if(run===state.ttGpsRunId&&seq===routeSerial&&
      state.view==='board'&&state.tab==='attendance'&&state.ttView==='gps'&&
      state.boardId===boardId&&auth.isSignedIn&&auth.userId===identity&&
      state.context?.user_id===identity&&state.context?.workspace_id===workspace){
-   state.ttGpsData=data;
+   state.ttGpsData=data;state.ttGpsCacheAt=Date.now();
   }
  }catch(err){
   if(run===state.ttGpsRunId&&seq===routeSerial){
@@ -774,6 +785,13 @@ async function action(name,button){
   if(next==='log')await loadTimeTrackerLogGps();
   break;
  }
+ case 'tt-map-retry':{
+  if(!auth.isSignedIn||state.view!=='board'||state.tab!=='attendance'||
+    state.ttAttendance?.status!=='VERIFIED_READ'||
+    !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor')||
+    !['log','gps'].includes(state.ttView))return;
+  await retryTimeTrackerMaps(root,timeTrackerSignedMapConfigs(),button.closest('.tt-map-host'));break;
+ }
  case 'tt-map-enable':{
   if(!auth.isSignedIn||state.view!=='board'||state.tab!=='attendance'||
    state.ttAttendance?.status!=='VERIFIED_READ'||
@@ -781,7 +799,7 @@ async function action(name,button){
    !['log','gps'].includes(state.ttView))return;
   state.ttMapConsent=true;
   state.ttMapConsentIdentity=timeTrackerMapConsentKey();
-  render();break;
+  void mountSignedTimeTrackerMaps();break;
  }
  case 'tt-log-gps-load':{
   if(state.ttView!=='log'||state.ttBusy||state.ttLogGpsBusy||
@@ -790,7 +808,7 @@ async function action(name,button){
   const record=(state.ttAttendance.log?.rows||[]).find(r=>
    r.id===button.dataset.recordId);
   if(!record||typeof record.ownerId!=='string'||!record.ownerId.startsWith('cloud:'))return;
-  await loadTimeTrackerLogGps(routeSerial,record);break;
+  await loadTimeTrackerLogGps(routeSerial,record,{force:button.textContent?.includes('Refresh')===true});break;
  }
  case 'tt-location-shortcut':{
   if(state.ttBusy||state.ttAttendance?.status!=='VERIFIED_READ'||state.ttView!=='clock')return;
@@ -890,14 +908,21 @@ async function action(name,button){
   state.ttGpsFilters={...state.ttGpsFilters,zoom};
   render();break;
  }
- case 'tt-gps-theme':{
-  if(state.ttView!=='gps'||state.ttBusy||state.ttGpsBusy||
+ case 'tt-gps-theme':
+ case 'tt-map-style':{
+  if(!['gps','log'].includes(state.ttView)||state.ttBusy||state.ttGpsBusy||
      state.ttAttendance?.status!=='VERIFIED_READ'||
      !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))return;
   const theme=button.dataset.theme;
   if(theme!=='map'&&theme!=='dark')return;
   state.ttGpsFilters={...state.ttGpsFilters,theme};
-  render();break;
+  setTimeTrackerMapTheme(theme);
+  for(const control of root.querySelectorAll('[data-action="tt-gps-theme"],[data-action="tt-map-style"]')){
+   const chosen=control.dataset.theme===theme;
+   control.classList.toggle('is-active',chosen);
+   control.setAttribute('aria-pressed',String(chosen));
+  }
+  break;
  }
  case 'tt-gps-load':{
   if(state.ttView!=='gps'||state.ttBusy||state.ttGpsBusy||
@@ -912,7 +937,7 @@ async function action(name,button){
      (end-start)>30*86400000||to>today)return;
   if(userId&&!(state.ttGpsData?.events||[]).some(p=>p.userId===userId))return;
   state.ttGpsFilters={...state.ttGpsFilters,from,to,userId,referenceId:''};
-  await loadTimeTrackerGps();break;
+  await loadTimeTrackerGps(routeSerial,{force:true});break;
  }
  case 'tt-gps-compare':{
   if(state.ttView!=='gps'||state.ttGpsView!=='geofence'||
@@ -1672,7 +1697,7 @@ async function action(name,button){
  }
 }
 root.addEventListener('toggle',event=>{
- if(event.target.matches('.tt-log-detail')&&event.target.open&&state.ttMapConsent)
+ if(event.target.matches('.tt-log-detail')&&event.target.open)
   void mountSignedTimeTrackerMaps();
 },true);
 root.addEventListener('click',event=>{

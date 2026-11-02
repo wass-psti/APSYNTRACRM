@@ -64,13 +64,39 @@ export function mapFrame({hasPoints=false,enabled=false,scope='hub'}={}){
   'aria-label="Interactive map of authorized attendance locations">'+
   '<div class="tt-map-loading" role="status">Loading street map…</div></div>';
 }
-function showMessage(host,message){
+
+const FALLBACK_STYLE={
+ version:8,name:'Recorded GPS — offline coordinate view',
+ sources:{},layers:[{id:'tt-background',type:'background',
+  paint:{'background-color':'#e7eff3'}}]
+};
+function message(host,message,{retry=true}={}){
  if(!host?.isConnected)return;
- // On map initialization failure, never display raw location or API details.
  host.replaceChildren();
- const span=document.createElement('div');
- span.className='tt-map-message';span.setAttribute('role','status');span.textContent=message;
- host.append(span);
+ const box=document.createElement('div');
+ box.className='tt-map-message';
+ box.setAttribute('role','status');
+ const note=document.createElement('span');
+ note.textContent=message;
+ box.append(note);
+ if(retry){
+  const button=document.createElement('button');
+  button.type='button';button.dataset.action='tt-map-retry';
+  button.textContent='Retry street map';
+  box.append(button);
+ }
+ host.append(box);
+}
+function banner(host,content,{retry=false}={}){
+ if(!host?.isConnected)return;
+ let box=host.querySelector('.tt-map-banner');
+ if(!box){box=document.createElement('div');box.className='tt-map-banner';host.append(box);}
+ box.replaceChildren();
+ const label=document.createElement('span');label.textContent=content;box.append(label);
+ if(retry){
+  const btn=document.createElement('button');btn.type='button';
+  btn.dataset.action='tt-map-retry';btn.textContent='Retry street tiles';box.append(btn);
+ }
 }
 async function loadLibrary(){
  if(!libraryPromise){
@@ -86,16 +112,90 @@ async function loadLibrary(){
  return libraryPromise;
 }
 function fit(map,lib,points){
- if(points.length===1){map.jumpTo({center:[points[0].longitude,points[0].latitude],zoom:14});return;}
+ if(points.length===1){
+  map.jumpTo({center:[points[0].longitude,points[0].latitude],zoom:14});
+  return;
+ }
  const bounds=new lib.LngLatBounds();
  for(const p of points)bounds.extend([p.longitude,p.latitude]);
- map.fitBounds(bounds,{padding:56,maxZoom:15,duration:0});
+ map.fitBounds(bounds,{padding:40,maxZoom:15,duration:0});
 }
 export function disposeTimeTrackerMaps(){
  for(const {map} of instances.values())try{map.remove()}catch{}
  instances.clear();
 }
-/** Called after rendering and on audit disclosure toggle. No tracking or polling. */
+function drawEvidence(map,lib,points){
+ if(map.getSource('tt-fixes'))return;
+ map.addSource('tt-fixes',{type:'geojson',data:mapGeoJSON(points)});
+ map.addSource('tt-direct-line',{type:'geojson',data:mapLineGeoJSON(points)});
+ map.addLayer({id:'tt-direct-line',type:'line',source:'tt-direct-line',
+  paint:{'line-color':'#596c9f','line-width':2,'line-dasharray':[3,3]}});
+ map.addLayer({id:'tt-fixes',type:'circle',source:'tt-fixes',
+  paint:{'circle-radius':9,'circle-color':['match',['get','kind'],
+   'in','#16976b','out','#ed5b2a','#397ac7'],
+   'circle-stroke-width':3,'circle-stroke-color':'#fff'}});
+}
+function createMap(host,config,lib){
+ const points=config.points.filter(isPoint).slice(0,500);
+ if(!points.length)return;
+ if(typeof lib.supported==='function'&&!lib.supported()){
+  message(host,'WebGL maps are unavailable in this browser. Signed coordinates remain listed.');
+  return;
+ }
+ const map=new lib.Map({container:host,
+  style:TT_MAP_STYLE[config.theme]||TT_MAP_STYLE.map,
+  center:[points[0].longitude,points[0].latitude],
+  zoom:13,attributionControl:true,cooperativeGestures:true,
+  fadeDuration:0,renderWorldCopies:false});
+ const entry={map,lib,points,theme:config.theme||'map',
+  ready:false,fallback:false,wasStyled:false};
+ instances.set(host,entry);
+ map.addControl(new lib.NavigationControl({visualizePitch:false}),'top-right');
+ map.addControl(new lib.FullscreenControl(),'top-right');
+ map.addControl(new lib.ScaleControl({unit:'metric'}),'bottom-left');
+ // Source/layer creation needs only style.load, not waiting for every remote tile,
+ // sprite and glyph request to settle. That was the blank-map defect.
+ map.on('style.load',()=>{
+  if(!host.isConnected||instances.get(host)!==entry)return;
+  try{
+   drawEvidence(map,lib,points);
+   entry.ready=true;
+   host.querySelector('.tt-map-loading')?.remove();
+   if(entry.fallback){
+    banner(host,'Street basemap unavailable — interactive GPS coordinates shown.',{retry:true});
+   }else host.querySelector('.tt-map-banner')?.remove();
+   fit(map,lib,points);
+   map.resize();
+  }catch{
+   if(!entry.fallback){
+    entry.fallback=true;
+    map.setStyle(FALLBACK_STYLE,{diff:false});
+   }else banner(host,'Unable to plot GPS points on this device.',{retry:true});
+  }
+ });
+ map.on('click',e=>{
+  if(!map.getLayer('tt-fixes'))return;
+  const feature=map.queryRenderedFeatures(e.point,{layers:['tt-fixes']})?.[0];
+  if(!feature)return;
+  new lib.Popup({closeButton:true})
+   .setLngLat(feature.geometry.coordinates)
+   .setText(String(feature.properties?.label||'Attendance location')+
+     ' · ±'+String(feature.properties?.accuracyM??'—')+' m')
+   .addTo(map);
+ });
+ map.on('error',()=>{
+  if(!host.isConnected||instances.get(host)!==entry)return;
+  if(!entry.ready&&!entry.fallback){
+   // A failed style or resource request must not leave the loading veil over
+   // a usable canvas. Fall back to an offline interactive coordinate map.
+   entry.fallback=true;
+   map.setStyle(FALLBACK_STYLE,{diff:false});
+  }else if(entry.ready&&!entry.fallback){
+   banner(host,'Some street tiles could not load. Recorded GPS markers remain available.',
+    {retry:true});
+  }
+ });
+}
 export async function mountTimeTrackerMaps(root,configs=[]){
  if(typeof document==='undefined'||!root)return;
  const hosts=[...root.querySelectorAll('.tt-map-host')].filter(host=>
@@ -105,59 +205,52 @@ export async function mountTimeTrackerMaps(root,configs=[]){
   return {host,config:configs.find(c=>scope==='log'?
    c.scope==='log'&&c.elementId===host.closest('[data-record-id]')?.dataset.recordId:
    c.scope===scope)};
- }).filter(x=>x.config?.points?.length);
+ }).filter(x=>x.config?.points?.length&&!instances.has(x.host));
  if(!entries.length)return;
  let lib;
  try{lib=await loadLibrary()}catch{
-  entries.forEach(({host})=>showMessage(host,'Street map could not load. Check the connection and retry.'));
+  entries.forEach(({host})=>message(host,
+   'Street map library could not load. Check the network, then retry.'));
   return;
  }
  for(const {host,config} of entries){
   if(!host.isConnected||host.closest('details')?.open===false||
     instances.has(host))continue;
-  const points=config.points.filter(isPoint).slice(0,500);
-  if(!points.length)continue;
-  try{
-   if(typeof lib.supported==='function'&&!lib.supported()){
-    showMessage(host,'WebGL2 is unavailable. Use the listed coordinates or external map link.');
-    continue;
-   }
-   const style=TT_MAP_STYLE[config.theme]||TT_MAP_STYLE.map;
-   const map=new lib.Map({container:host,style,center:[points[0].longitude,points[0].latitude],
-    zoom:13,attributionControl:true,cooperativeGestures:true,
-    fadeDuration:0,renderWorldCopies:false});
-   instances.set(host,{map});
-   map.addControl(new lib.NavigationControl({visualizePitch:false}),'top-right');
-   map.addControl(new lib.FullscreenControl(),'top-right');
-   map.addControl(new lib.ScaleControl({unit:'metric'}),'bottom-left');
-   map.on('load',()=>{
-    if(!host.isConnected||!instances.has(host))return;
-    const notice=host.querySelector('.tt-map-loading');notice?.remove();
-    map.addSource('tt-fixes',{type:'geojson',data:mapGeoJSON(points)});
-    map.addSource('tt-direct-line',{type:'geojson',data:mapLineGeoJSON(points)});
-    map.addLayer({id:'tt-direct-line',type:'line',source:'tt-direct-line',
-     paint:{'line-color':'#596c9f','line-width':2,'line-dasharray':[3,3]}});
-    map.addLayer({id:'tt-fixes',type:'circle',source:'tt-fixes',
-     paint:{'circle-radius':9,'circle-color':['match',['get','kind'],
-      'in','#16976b','out','#ed5b2a','#397ac7'],
-      'circle-stroke-width':3,'circle-stroke-color':'#fff'}});
-    map.on('click','tt-fixes',e=>{
-     const feature=e.features?.[0];if(!feature)return;
-     new lib.Popup({closeButton:true}).setLngLat(feature.geometry.coordinates)
-      .setText(String(feature.properties?.label||'Recorded attendance location')+
-       ' · ±'+String(feature.properties?.accuracyM||'—')+' m')
-      .addTo(map);
-    });
-    fit(map,lib,points);
-   });
-   map.on('error',()=>{
-    // Intermittent tile errors must not destroy a functioning map or its markers.
-    const pending=host.querySelector('.tt-map-loading');
-    if(pending)pending.textContent='Street map tiles are unavailable. Recorded coordinates remain accessible.';
-   });
-  }catch{
-   const existing=instances.get(host);if(existing){try{existing.map.remove()}catch{}instances.delete(host);}
-   showMessage(host,'Street map could not initialize. Signed GPS records remain accessible.');
+  try{createMap(host,config,lib)}catch{
+   const entry=instances.get(host);
+   if(entry){try{entry.map.remove()}catch{}instances.delete(host);}
+   message(host,'Street map could not initialize. Signed coordinates remain available.');
   }
  }
+}
+/** Updates map style without rebuilding the surrounding attendance UI. */
+export function setTimeTrackerMapTheme(theme){
+ if(theme!=='map'&&theme!=='dark')return;
+ for(const entry of instances.values()){
+  if(entry.theme===theme&&!entry.fallback)continue;
+  entry.theme=theme;entry.ready=false;entry.fallback=false;
+  try{entry.map.setStyle(TT_MAP_STYLE[theme],{diff:false})}catch{
+   entry.fallback=true;
+   entry.map.setStyle(FALLBACK_STYLE,{diff:false});
+  }
+ }
+}
+/** Retry is a direct map operation; audit disclosure and scroll stay untouched. */
+export async function retryTimeTrackerMaps(root,configs=[],selectedHost=null){
+ if(typeof document==='undefined'||!root)return;
+ const targets=[...root.querySelectorAll('.tt-map-host')].filter(host=>
+  host.closest('details')?.open!==false&&(!selectedHost||selectedHost===host));
+ for(const host of targets){
+  const entry=instances.get(host);
+  if(entry){
+   entry.ready=false;entry.fallback=false;
+   try{entry.map.setStyle(TT_MAP_STYLE[entry.theme]||TT_MAP_STYLE.map,{diff:false})}
+   catch{entry.fallback=true;entry.map.setStyle(FALLBACK_STYLE,{diff:false})}
+  }else{
+   const old=host.querySelector('.tt-map-message');
+   if(old){old.remove();const spinner=document.createElement('div');
+    spinner.className='tt-map-loading';spinner.textContent='Loading street map…';host.append(spinner);}
+  }
+ }
+ await mountTimeTrackerMaps(root,configs);
 }

@@ -120,3 +120,18 @@ test('GPS load retains expanded audit details and scopes errors to selected reco
  assert.match(app,/state\.ttLogGpsErrorRecordId=record\?\.id/);
  assert.doesNotMatch(app,/state\.ttLogGpsData=null;\s*state\.ttLogGpsError='Signed GPS evidence could not be verified/);
 });
+
+test('authorized Log maps are automatically visible, dark theme switches and ordinary users remain redacted',()=>{
+ const data={ranges:[{from:'2026-11-01',to:'2026-11-03'}],events:[
+  {userId:'one',recordId:'today',kind:'in',timestamp:'2026-11-02T01:00:00Z',
+   latitude:10.234567,longitude:123.987654,accuracyM:15,source:'Browser GPS'}]};
+ const admin=renderTimeTrackerLog({records,now,gpsEligible:true,gpsData:data,
+  expandedRecordIds:['today'],mapEnabled:true,mapTheme:'dark'});
+ assert.match(admin,/data-map-scope="log"/);
+ assert.match(admin,/data-action="tt-map-style" data-theme="dark" aria-pressed="true"/);
+ assert.match(admin,/class="tt-log-detail" data-record-id="today" open/);
+ assert.doesNotMatch(admin,/Enable street map/);
+ const employee=renderTimeTrackerLog({records,now,gpsEligible:false,
+  gpsData:data,mapEnabled:false});
+ assert.doesNotMatch(employee,/123\.987654|data-map-scope="log"|data-action="tt-map-style"/);
+});

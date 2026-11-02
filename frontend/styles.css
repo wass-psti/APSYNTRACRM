@@ -1371,3 +1371,19 @@
 .tt-gps-map-canvas .tt-map-consent,.tt-gps-map-canvas .tt-map-empty{width:100%;height:100%}
 @media(max-width:650px){.tt-log-street-map .tt-map-host{height:260px}
  .tt-map-consent{padding:14px}}
+
+/* CP-TT-MAP-02 — visible recoverable map errors without masking the canvas. */
+.tt-log-map-modes{display:flex;gap:5px;padding:7px;background:#f5f7f9;z-index:2}
+.tt-log-map-modes button{font-size:11px;border:1px solid #d8dde6;border-radius:5px;
+ padding:7px 12px;color:#536377;background:#fff;min-height:30px}
+.tt-log-map-modes button.is-active{color:#fff;background:#344e72;border-color:#344e72}
+.tt-map-message button,.tt-map-banner button{font-size:11px;font-weight:650;
+ border:1px solid #bfd2e5;color:#235b88;background:#fff;padding:6px 10px;border-radius:5px}
+.tt-map-message button:focus-visible,.tt-map-banner button:focus-visible,
+.tt-log-map-modes button:focus-visible{outline:3px solid #ec925d;outline-offset:2px}
+.tt-map-banner{position:absolute;bottom:28px;left:8px;right:8px;z-index:5;
+ display:flex;justify-content:center;gap:8px;align-items:center;flex-wrap:wrap;
+ font-size:11px;padding:7px;border:1px solid #cfdae4;border-radius:6px;
+ background:#fffef1eb;color:#475366;pointer-events:auto}
+.tt-map-host .tt-map-message{height:100%;width:100%}
+.tt-map-host .tt-map-message span{max-width:350px}
