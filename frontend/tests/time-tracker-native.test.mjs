@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TimeTrackerNativeClient,projectOwnAttendance,creditedAttendanceMs,
- attendanceClassification,captureAttendanceGeo,TT_LOCATIONS,TT_DEPARTMENTS}
+ attendanceClassification,captureAttendanceGeo,TT_LOCATIONS,TT_DEPARTMENTS,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED}
  from '../time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv} from '../time-tracker-ui.js';
 
@@ -158,4 +158,16 @@ test('board route integrates TimeTracker without standalone imports or local sto
  assert.match(app,/commit_timetracker_attendance_action|timeTracker\.commit/);
  assert.match(app,/parts\[2\]==='attendance'/);
  assert.doesNotMatch(app,/time-tracker\.zip|\/apps\/time-tracker\/|ttStorage/);
+});
+
+test('production clock actions fail closed until signed backend audit/work-note gates pass',()=>{
+ assert.equal(TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,false);
+ const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
+  access:{moduleRole:'Employee',platformRole:'employee',name:'User'},
+  records:[],active:null}});
+ assert.match(html,/Live writes remain disabled/);
+ assert.match(html,/name="tt-action" value="clock-in" disabled/);
+ assert.match(html,/name="tt-action" value="clock-out" disabled/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/if\(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED\)/);
 });
