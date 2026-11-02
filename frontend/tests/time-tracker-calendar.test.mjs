@@ -113,7 +113,7 @@ test('selected date shows only sanitized authorized employees and no raw GPS',()
  assert.doesNotMatch(html,/125\.4811|6\.9911|private fingerprint|Inactive Member/);
  assert.doesNotMatch(html,/\bstyle\s*=\s*["']/);
  const userFacing=renderTimeTrackerCalendar({
-  records:[{...signed.rows[0],name:'<img src=x onerror=alert(1)>'}],
+  records:[{...signed.rows.find(row=>row.id==='today-one'),name:'<img src=x onerror=alert(1)>'}],
   month:'2026-11',selectedDay:'2026-11-02',now
  });
  assert.match(userFacing,/&lt;img/);
