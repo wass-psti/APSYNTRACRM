@@ -13,6 +13,7 @@ import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 import {renderTimeTrackerMyHours} from './time-tracker-my-hours.js';
 import {renderTimeTrackerTeam} from './time-tracker-team.js';
 import {renderTimeTrackerMonitor} from './time-tracker-monitor.js';
+import {renderTimeTrackerGps} from './time-tracker-gps.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -24,7 +25,7 @@ const sections=[
  ['overview','Overview',true],['clock','Clock',true],['log','Log',true],
  ['reports','Reports',true],['calendar','Calendar',true],
  ['ot','OT',true],['hours','My Hours',true],['team','Team',true],
- ['monitor','Monitor',true],['gps','GPS',false]
+ ['monitor','Monitor',true],['gps','GPS',true]
 ];
 const select=(id,values,placeholder)=>
  '<select id="'+id+'" name="'+id+'" required>'+
@@ -77,10 +78,11 @@ export function ownAttendanceCsv(records){
  return '\uFEFF'+rows.map(row=>row.map(safe).join(',')) .join('\r\n')+'\r\n';
 }
 
-function navigation(view,busy,bootstrapEligible=false){
+function navigation(view,busy,bootstrapEligible=false,gpsEligible=false){
  return '<nav class="tt-navigation" aria-label="TimeTracker sections">'+
   '<div class="tt-navigation-scroll" role="tablist" aria-label="TimeTracker views">'+
-  sections.filter(([key])=>key!=='team'||bootstrapEligible===true).map(([key,label,enabled])=>
+  sections.filter(([key])=>(key!=='team'||bootstrapEligible===true)&&
+   (key!=='gps'||gpsEligible===true)).map(([key,label,enabled])=>
    '<button type="button" role="tab" class="tt-nav-tab'+(view===key?' is-current':'')+
    '" aria-selected="'+(view===key)+'" data-action="tt-tab" data-target="'+key+'"'+
    (!enabled||busy?' disabled aria-disabled="true"':'')+
@@ -189,13 +191,14 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError=''
+ result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
- const selected=(view==='team'&&teamEligible!==true)?'clock':
- ['overview','clock','log','reports','calendar','ot','hours','team','monitor'].includes(view)?view:'clock';
+ const selected=((view==='team'&&teamEligible!==true)||
+  (view==='gps'&&gpsEligible!==true))?'clock':
+ ['overview','clock','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
  let html='<section class="tt-native" aria-label="TimeTracker attendance application">'+
-  head(verified?result.access:null)+notifications(verified)+navigation(selected,busy,verified&&teamEligible===true);
+  head(verified?result.access:null)+notifications(verified)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
  if(success)html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
  if(!verified){
@@ -227,6 +230,10 @@ export function renderTimeTrackerNative({
  if(selected==='team')html+=renderTimeTrackerTeam({
   directory:teamDirectory,access:{...result.access,bootstrapTeamEligible:teamEligible===true},
   filters:teamFilters,loading:teamBusy,error:teamError,now
+ });
+ if(selected==='gps')html+=renderTimeTrackerGps({
+  data:gpsData,eligible:gpsEligible,view:gpsView,filters:gpsFilters,
+  loading:gpsBusy,error:gpsError,now
  });
  if(selected==='monitor')html+=renderTimeTrackerMonitor({
   result:monitorResult,history:monitorHistory,loading:monitorBusy,error:monitorError,now
