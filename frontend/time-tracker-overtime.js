@@ -90,8 +90,12 @@ const row=(r,bootstrap=false)=>'<details class="tt-ot-request"><summary>'+
  '<p><b>Reason:</b> '+esc(r.task||'Not supplied')+'</p>'+
  '<p>Approval/rejection is restricted to server-verified bootstrap administrators.</p>'+ 
  (bootstrap&&r.status==='Submitted'?'<div class="tt-ot-review-actions">'+
-  '<button type="button" disabled title="Backend acceptance pending">Approve</button>'+ 
-  '<button type="button" disabled title="Backend acceptance pending">Reject</button>'+ 
+  '<button type="button" data-action="tt-ot-approve" data-id="'+esc(r.id)+'"'+
+   (!TT_OT_WRITES_ACCEPTED?' disabled title="Backend acceptance pending"':'')+'>'+
+   'Approve</button>'+ 
+  '<button type="button" data-action="tt-ot-reject" data-id="'+esc(r.id)+'"'+
+   (!TT_OT_WRITES_ACCEPTED?' disabled title="Backend acceptance pending"':'')+'>'+
+   'Reject</button>'+ 
   '</div>':'')+'</div></details>';
 function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date()){
  const amount=overtimeDurationMinutes(start,end);
@@ -110,7 +114,7 @@ function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(
  '<small>'+String(reason).length+'/500</small></label></div>'+
  '<p class="tt-ot-gate">Submission is pending server-side authorization and immutable audit verification.</p>'+
  '<footer><button type="button" data-action="tt-ot-close">Cancel</button>'+
- '<button type="submit" disabled>Submit Request</button></footer></form></section></div>';
+ '<button type="submit"'+(!TT_OT_WRITES_ACCEPTED?' disabled':'')+'>Submit Request</button></footer></form></section></div>';
 }
 export function renderTimeTrackerOvertime({
  requests=[],access={},filters={},modalOpen=false,form={},now=new Date()
