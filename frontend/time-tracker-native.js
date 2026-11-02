@@ -4,6 +4,8 @@
  * All attendance mutations use the existing atomic signed PostgreSQL RPC.
  */
 const moduleId='time-tracker';
+// Fail closed until backend offsite-note/audit acceptance and signed runtime proof.
+export const TT_LIVE_ATTENDANCE_WRITES_ACCEPTED=false;
 const stateKey='timetracker.attendance.v1';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const TT_LOCATIONS=Object.freeze([
