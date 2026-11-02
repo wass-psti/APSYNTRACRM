@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TimeTrackerNativeClient,projectOwnAttendance,creditedAttendanceMs,
- attendanceClassification,captureAttendanceGeo,TT_LOCATIONS,TT_DEPARTMENTS,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED}
+ attendanceClassification,captureAttendanceGeo,TT_LOCATIONS,TT_DEPARTMENTS,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,projectOwnOvertime,filterMyAttendancePeriod}
  from '../time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv} from '../time-tracker-ui.js';
 
@@ -170,4 +170,44 @@ test('production clock actions fail closed until signed backend audit/work-note 
  assert.match(html,/name="tt-action" value="clock-out" disabled/);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/if\(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED\)/);
+});
+
+test('overtime projection only includes verified signed owner and valid statuses',()=>{
+ const requests=[
+  {id:'ot-one',ownerId:'cloud:'+user,date:'2026-11-02',status:'Submitted',
+   start:'18:00',end:'19:00',durationMinutes:60,task:'Site review'},
+  {id:'ot-other',ownerId:'cloud:'+other,date:'2026-11-02',status:'Approved',
+   start:'18:00',end:'19:00',durationMinutes:60,task:'Restricted item'},
+  {id:'ot-invalid',ownerId:'cloud:'+user,date:'invalid',status:'Approved'}
+ ];
+ const result=projectOwnOvertime({version:1,requests},user);
+ assert.equal(result.length,1);
+ assert.equal(result[0].id,'ot-one');
+ assert.equal(JSON.stringify(result).includes('Restricted item'),false);
+ assert.throws(()=>projectOwnOvertime('invalid-json',user),/malformed/);
+});
+
+test('weekly and monthly personal reporting preserve period and owner scope',()=>{
+ const monday=new Date(2026,10,2,12);
+ const rows=[
+  {clockIn:new Date(2026,10,2,8).toISOString()},
+  {clockIn:new Date(2026,9,31,8).toISOString()}
+ ];
+ assert.equal(filterMyAttendancePeriod(rows,'today',monday).length,1);
+ assert.equal(filterMyAttendancePeriod(rows,'week',monday).length,1);
+ assert.equal(filterMyAttendancePeriod(rows,'month',monday).length,1);
+ assert.equal(filterMyAttendancePeriod(rows,'all',monday).length,2);
+ assert.throws(()=>filterMyAttendancePeriod(rows,'nextYear',monday),/Unsupported report period/);
+});
+
+test('native report UI includes period selection and signed-user OT read-only table',()=>{
+ const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
+   access:{moduleRole:'Employee',platformRole:'employee',name:'User'},
+   records:[],otRequests:[{id:'one',date:'2026-11-02',status:'Draft',
+    start:'18:00',end:'20:00',durationMinutes:120,task:'Overtime work'}],
+   active:null},period:'week'});
+ assert.match(html,/tt-report-period/);
+ assert.match(html,/My overtime requests/);
+ assert.match(html,/Overtime work/);
+ assert.doesNotMatch(html,/data-action="tt-ot-approve"/);
 });
