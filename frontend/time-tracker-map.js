@@ -148,8 +148,6 @@ export async function mountTimeTrackerMaps(root,configs=[]){
        ' · ±'+String(feature.properties?.accuracyM||'—')+' m')
       .addTo(map);
     });
-    map.on('mouseenter','tt-fixes',()=>{map.getCanvas().style.cursor='pointer'});
-    map.on('mouseleave','tt-fixes',()=>{map.getCanvas().style.cursor=''});
     fit(map,lib,points);
    });
    map.on('error',()=>showMessage(host,'Street map tiles are unavailable. Signed GPS records remain accessible.'));

@@ -13,16 +13,19 @@ test('temporary annotation-only CSS exception preserves other CSP protections',(
  assert.ok(meta,'CSP must remain present in the main HTML document');
  const directives=Object.fromEntries(meta[1].split(';').map(d=>d.trim()).filter(Boolean)
   .map(d=>{const [name,...values]=d.split(/\s+/);return [name,values]}));
- assert.deepEqual(directives['style-src'],["'self'","'unsafe-inline'"]);
+ assert.deepEqual(directives['style-src'],["'self'","'unsafe-inline'",'https://unpkg.com']);
  assert.deepEqual(directives['style-src-attr'],["'none'"]);
- assert.deepEqual(directives['script-src'],["'self'"]);
+ assert.deepEqual(directives['script-src'],["'self'",'https://unpkg.com']);
  assert.deepEqual(directives['default-src'],["'self'"]);
  assert.deepEqual(directives['object-src'],["'none'"]);
- assert.deepEqual(directives['img-src'],["'self'",'data:']);
+ assert.deepEqual(directives['img-src'],["'self'",'data:','blob:','https://tiles.openfreemap.org']);
+ assert.deepEqual(directives['font-src'],["'self'",'https://tiles.openfreemap.org']);
+ assert.deepEqual(directives['worker-src'],["'self'",'blob:']);
  assert.deepEqual(directives['frame-src'],["'none'"]);
  assert.deepEqual(directives['base-uri'],["'self'"]);
  assert.deepEqual(directives['form-action'],["'self'"]);
- assert.deepEqual(directives['connect-src'],["'self'",'https://jtlusodorfnyzgyuewkz.supabase.co']);
+ assert.deepEqual(directives['connect-src'],["'self'",'https://jtlusodorfnyzgyuewkz.supabase.co',
+  'https://unpkg.com','https://tiles.openfreemap.org']);
  assert.equal((meta[1].match(/'unsafe-inline'/g)||[]).length,1,'only style-src may allow inline styling');
  assert.doesNotMatch(meta[1],/unsafe-eval|unsafe-hashes|\*/);
 });
@@ -42,4 +45,15 @@ test('dynamic acceptance check status uses named CSS classes',()=>{
   assert.match(code,new RegExp(name));
   assert.match(css,new RegExp('#app \\.'+name+'\\{'));
  }
+});
+
+test('external maps are opt-in and vendors are pinned to approved hosts',()=>{
+ const map=readFileSync('frontend/time-tracker-map.js','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(map,/maplibre-gl@6\.16\.0/);
+ assert.match(map,/https:\/\/tiles\.openfreemap\.org\/styles\/liberty/);
+ assert.match(app,/case 'tt-map-enable'/);
+ assert.match(app,/state\.ttMapConsent=true/);
+ assert.match(app,/state\.ttAttendance\?\.status!=='VERIFIED_READ'/);
+ assert.doesNotMatch(map,/innerHTML|setHTML\(/);
 });
