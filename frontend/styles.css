@@ -1020,7 +1020,7 @@
 .tt-cal-selected{background:#fff;border:1px solid #e0e2e6;border-radius:9px;padding:17px;display:grid;gap:12px}
 .tt-cal-selected h4{font:700 18px Georgia,serif;margin:0}
 .tt-cal-selected>p{color:#888d94;font-size:12px;margin:0}
-.tt-cal-attendees{display:grid;gap:6px;max-height:320px;overflow-y:auto}
+.tt-cal-attendees{display:grid;gap:6px}
 .tt-cal-attendee{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e9ebee;border-radius:6px;padding:11px 12px}
 .tt-cal-attendee>div{display:grid;gap:5px;min-width:0}
 .tt-cal-attendee strong{font-size:12px;color:#40424c;overflow-wrap:anywhere}
