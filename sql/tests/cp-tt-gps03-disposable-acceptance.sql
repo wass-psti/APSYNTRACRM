@@ -1,6 +1,6 @@
 -- CP-TT-GPS-03: synthetic-only disposable regression. NO production writes.
-\\set ON_ERROR_STOP on
-\\echo 'CP-TT-GPS-03: verify GPS read paths and attendance commit receipts'
+\set ON_ERROR_STOP on
+\echo 'CP-TT-GPS-03: verify GPS read paths and attendance commit receipts'
 DO $test$
 DECLARE
  v_audit jsonb;
@@ -83,4 +83,4 @@ BEGIN
 END $test$;
 ROLLBACK;
 
-\\echo 'CP-TT-GPS-03 PASS: redaction, receipt compatibility and grants'
+\echo 'CP-TT-GPS-03 PASS: redaction, receipt compatibility and grants'
