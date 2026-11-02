@@ -933,3 +933,26 @@
 .tt-log-records>.tt-log-footnote{padding:12px 22px!important;margin:0!important;border-top:1px solid #e5e8eb}
 @media(max-width:1050px){.tt-log-operation-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tt-log-location-evidence{grid-template-columns:1fr}}
 @media(max-width:680px){.tt-log-operation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tt-log-shift-cards{grid-template-columns:repeat(3,minmax(0,1fr))}.tt-log-audit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tt-log-expanded{padding:14px}.tt-log-detail-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.tt-log-shift-timeline{grid-template-columns:1fr 2fr 1fr;gap:8px}.tt-log-shift-timeline>div:last-child{grid-column:3}.tt-log-hero{padding:0}.tt-log-location-panel{padding:13px}}
+
+/* CP-TT-LOG-WIDTHS-CSP */
+.tt-log-width-0{width:0%}
+.tt-log-width-5{width:5%}
+.tt-log-width-10{width:10%}
+.tt-log-width-15{width:15%}
+.tt-log-width-20{width:20%}
+.tt-log-width-25{width:25%}
+.tt-log-width-30{width:30%}
+.tt-log-width-35{width:35%}
+.tt-log-width-40{width:40%}
+.tt-log-width-45{width:45%}
+.tt-log-width-50{width:50%}
+.tt-log-width-55{width:55%}
+.tt-log-width-60{width:60%}
+.tt-log-width-65{width:65%}
+.tt-log-width-70{width:70%}
+.tt-log-width-75{width:75%}
+.tt-log-width-80{width:80%}
+.tt-log-width-85{width:85%}
+.tt-log-width-90{width:90%}
+.tt-log-width-95{width:95%}
+.tt-log-width-100{width:100%}
