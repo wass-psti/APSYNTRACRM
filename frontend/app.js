@@ -341,7 +341,7 @@ async function loadFRTFinance(companyCode=null,seq=routeSerial){
  const workspace=state.context?.workspace_id;
  state.frtFinanceBusy=true;state.frtFinance=null;state.frtFinanceDetail=null;state.frtFinanceDetailId=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailRevision++;render();
  try{
-  const result=await loadFRTFinanceReadOnly({auth,api:db,companyCode});
+  const result=await loadFRTFinanceReadOnly({auth,api:db,companyCode,secureContracts:true});
   if(seq===routeSerial&&auth.isSignedIn&&state.context?.user_id===identity&&
      state.context?.workspace_id===workspace)state.frtFinance=result;
  }finally{if(seq===routeSerial){state.frtFinanceBusy=false;render();}}
