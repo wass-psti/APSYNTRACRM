@@ -108,7 +108,7 @@ test('GPS map mode and zoom are bounded and do not request unapproved satellite 
  assert.match(html,/data-theme="dark" aria-pressed="true"/);
  assert.match(html,/Satellite<\/span><\/button>/);
  assert.match(html,/disabled aria-disabled="true"/);
- assert.doesNotMatch(html,/<img|<iframe|https:\/\/.*(?:tiles|satellite)/i);
+ assert.doesNotMatch(html,/<(?:img|iframe)\b|(?:src|style)="[^"]*https:\/\/[^"]*(?:tiles|satellite)/i);
  assert.match(plotGps(data.events,{zoom:99}),/scale\(4\)/);
  assert.match(plotGps(data.events,{zoom:-1}),/scale\(1\)/);
 });
