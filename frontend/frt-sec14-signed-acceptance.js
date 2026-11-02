@@ -11,7 +11,7 @@ export async function runSEC14SignedRead({auth,api}={}){
   if(!who?.id||who.id!==auth.userId||ctx?.user_id!==who.id||ctx?.profile?.status!=='active')
    return {...r,reason:'SIGNED_CONTEXT_INVALID'};
   r.checks.push({name:'signed-context',status:'PASS'});
-  const snapshot=await loadFRTFinanceReadOnly({auth,api,secureContracts:true});
+  const snapshot=await loadFRTFinanceReadOnly({auth,api});
   if(snapshot.status!=='PASS')return {...r,reason:snapshot.reason||'RESTRICTED_READ_FAILED'};
   r.checks.push({name:'restricted-summary-list',status:'PASS'});
   r.role=snapshot.role;
