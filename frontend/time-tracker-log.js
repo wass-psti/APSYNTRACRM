@@ -49,10 +49,13 @@ export function filterTimeTrackerLogRows(records=[],filters={},now=new Date()){
   Date.parse(b.clockIn)-Date.parse(a.clockIn));
 }
 
-export function timeTrackerLogSummary(rows=[]){
+export function timeTrackerLogSummary(rows=[],now=new Date()){
  const eligible=safeRows(rows);
  return Object.freeze({
  sessions:eligible.length,
+ people:new Set(eligible.map(r=>r.ownerId||r.name||r.id)).size,
+ today:eligible.filter(r=>manilaDay(r.clockIn)===manilaDay(now)).length,
+ historical:eligible.filter(r=>manilaDay(r.clockIn)!==manilaDay(now)).length,
  completed:eligible.filter(r=>r.status==='Completed').length,
  active:eligible.filter(r=>r.status==='Active').length,
  late:eligible.filter(r=>r.classification==='Late').length,
@@ -81,12 +84,13 @@ const sessionRow=(r,query='')=>{
   '<td class="tt-log-hours">'+esc(creditedHours(r.creditedMs))+'</td>'+
   '</tr>';
 };
-export function renderTimeTrackerLog({records=[],filters={},now=new Date(),busy=false}={}){
+export function renderTimeTrackerLog({records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false}={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
  const visible=filterTimeTrackerLogRows(records,options,now);
  const query=String(options.search??'').slice(0,120);
- const summary=timeTrackerLogSummary(rows);
+ const summary=timeTrackerLogSummary(rows,now);
+ const team=scope==='AUTHORIZED_WORKSPACE_TEAM';
  const locations=[...new Set(safeRows(records).map(r=>r.location).
   filter(v=>TT_LOCATIONS.includes(v)))].sort();
  const days=new Map();
@@ -97,21 +101,24 @@ export function renderTimeTrackerLog({records=[],filters={},now=new Date(),busy=
  }
  const metrics=[
   ['Sessions',String(summary.sessions)],
-  ['Completed',String(summary.completed)],
+  ['People',String(summary.people)],
+  ['Today',String(summary.today)],
+  ['Earlier',String(summary.historical)],
   ['Active',String(summary.active)],
-  ['Late arrivals',String(summary.late)],
-  ['Credited hours',creditedHours(summary.creditedMs)+' h']
+  ['Completed',String(summary.completed)],
+  ['Late',String(summary.late)]
  ];
  return '<section class="tt-log" aria-label="Signed attendance Log">'+
   '<header class="tt-log-hero"><div><h3>Attendance Log</h3>'+
-   '<p>Review your recorded Clock In and Clock Out sessions · Philippine Time</p>'+
-   '</div><span class="tt-log-readonly">Read-only · Signed account</span></header>'+
+   '<p>'+(team?'Authorized team history':'Your attendance history')+
+   ' · Today and earlier sessions · Philippine Time</p>'+
+   '</div><span class="tt-log-readonly">Read-only · '+(team?'Authorized team':'Signed account')+'</span></header>'+
   '<div class="tt-log-metrics">'+metrics.map(([label,value])=>
    '<div class="tt-log-metric"><span>'+esc(label)+'</span><strong>'+esc(value)+
    '</strong></div>').join('')+'</div>'+
   '<section class="tt-log-controls" aria-label="Attendance Log filters">'+
    '<label class="tt-log-search">Search records'+
-    '<input type="search" id="tt-log-search" placeholder="Search location, department or time" maxlength="120" value="'+esc(options.search)+'" autocomplete="off"></label>'+
+    '<input type="search" id="tt-log-search" placeholder="Search employee name, location, department or time" maxlength="120" value="'+esc(options.search)+'" autocomplete="off"></label>'+
    '<label>Date range'+choices('tt-log-period',periods,options.period)+'</label>'+
    '<label>Status'+choices('tt-log-status',statuses,options.status)+'</label>'+
    '<label>Location'+choices('tt-log-location',[
