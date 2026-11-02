@@ -98,7 +98,7 @@ test('rendered team Log identifies employee names without raw GPS or audit metad
  assert.match(html,/October 28/);
  assert.match(html,/November 2/);
  assert.match(html,/Details/);
- assert.doesNotMatch(html,/6\\.99|125\\.48|privileged|private/);
+ assert.doesNotMatch(html,/6\\.99|125\\.48|"audit":|"geo":/);
  const csv=timeTrackerLogCsv(filterTimeTrackerLogRows(log.rows,{search:'Engineering'},now));
  assert.match(csv,/Engineering Member/);
  assert.doesNotMatch(csv,/Staff Two|latitude|device/);
