@@ -2,6 +2,7 @@
 import {TT_LOCATIONS} from './time-tracker-policy.js';
 import {filterMyAttendancePeriod} from './time-tracker-native.js';
 import {manilaDay} from './time-tracker-overview.js';
+import {mapFrame} from './time-tracker-map.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -163,7 +164,7 @@ function shiftProgress(rows,now){
    '" aria-label="Completed sessions among today clock-ins"></progress>'+
    '<strong>'+complete+' / '+todays.length+'</strong></div></div>';
 }
-function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId=''}={}){
+function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',mapEnabled=false}={}){
  const start=Date.parse(row.clockIn),end=Date.parse(row.clockOut||now);
  const elapsed=Math.max(0,end-start);
  const active=row.status==='Active';
@@ -239,11 +240,10 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
   '<div class="tt-log-location-evidence"><div>'+
    '<h6>LOCATION EVIDENCE</h6><p>'+esc(row.location||'Unspecified')+'</p>'+
    locationEvidence+
-   '</div><div class="tt-log-map-unavailable" role="note">'+
-   '<strong>Satellite map unavailable</strong><p>'+
-    (available?'Coordinates are from the signed server GPS snapshot. Map links open an external service only when selected.':
-     'No satellite imagery is loaded. GPS positions are never inferred from work-location labels.')+
-   '</p>'+
+   '</div><div class="tt-log-street-map">'+
+    (gpsEligible?mapFrame({hasPoints:available,enabled:mapEnabled,scope:'log'}):
+     '<div class="tt-map-empty">Precise GPS maps require a privileged signed session.</div>')+
+    (available?'<p class="tt-map-note">Green: Clock In · Orange: Clock Out. Connecting lines show straight-line distance, not a tracked route.</p>':'')+
    '</div></div>'+
   '</div>';
 }
@@ -273,7 +273,7 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
 export function renderTimeTrackerLog({
  records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false,
  gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',
- expandedRecordIds=[]
+ expandedRecordIds=[],mapEnabled=false
 }={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
@@ -319,7 +319,7 @@ export function renderTimeTrackerLog({
      '<th>Status</th><th>Hours</th><th>Details</th></tr></thead>'+
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
       gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,
-      expandedRecordIds})).join('')+
+      expandedRecordIds,mapEnabled})).join('')+
      '</tbody></table></div></div>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    '<p id="tt-log-empty-search" class="tt-log-empty"'+

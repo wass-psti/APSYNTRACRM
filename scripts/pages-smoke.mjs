@@ -46,7 +46,9 @@ const paths=['index.html','frontend/app.js','frontend/config.js','frontend/sessi
  'frontend/board-security-targets.js','frontend/board-negative-acceptance.js','frontend/board-security-ui.js','frontend/board-negative-write.js',
  'frontend/role-configuration-ui.js','frontend/role-configuration-client.js','frontend/user-role-management.js',
  'frontend/frt-finance-readonly.js','frontend/frt-finance-ui.js','frontend/frt-finance-workflow.js',
- 'frontend/styles.css'];
+ 'frontend/styles.css','frontend/time-tracker-map.js',
+ 'frontend/time-tracker-log.js','frontend/time-tracker-gps.js',
+ 'frontend/time-tracker-gps.css'];
 const digest=x=>createHash('sha256').update(x).digest('hex');
 function url(path){
  const remote=new URL(path==='index.html'?'./':path,origin);

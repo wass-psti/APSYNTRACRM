@@ -1345,3 +1345,29 @@
 @media(max-width:680px){.tt-log-gps-fix{display:grid;grid-template-columns:1fr}
 .tt-active-session-context>div{display:grid;gap:4px}
 .tt-active-session-context strong{text-align:left}}
+
+/* CP-TT-MAP-01 — opt-in MapLibre vector map, scoped to GPS and audit. */
+.tt-log-street-map{min-width:0;min-height:236px;display:flex;flex-direction:column;
+ border:1px solid #dce3e9;border-radius:9px;overflow:hidden;background:#f7f9fa}
+.tt-map-host{position:relative;flex:1;min-height:230px;width:100%;height:100%;overflow:hidden}
+.tt-map-consent,.tt-map-empty,.tt-map-message{min-height:228px;display:flex;flex-direction:column;
+ justify-content:center;align-items:center;gap:10px;text-align:center;padding:22px;
+ color:#546277;background:linear-gradient(135deg,#eff4f8,#f9fbfc)}
+.tt-map-consent strong{font-size:14px;color:#273649}
+.tt-map-consent p{font-size:11px;line-height:1.6;max-width:360px;margin:0}
+.tt-map-consent button{border:1px solid #d95a30;border-radius:7px;
+ background:#e65b30;color:#fff;min-height:37px;padding:8px 14px;font-weight:750;
+ font-size:12px;cursor:pointer}
+.tt-map-consent button:hover{background:#c9512c}
+.tt-map-consent button:focus-visible{outline:3px solid #126abe;outline-offset:3px}
+.tt-map-empty,.tt-map-message{font-size:12px}
+.tt-map-loading{position:absolute;inset:0;z-index:1;display:grid;place-items:center;
+ background:#edf1f2;color:#6d7786;font-size:12px;pointer-events:none}
+.tt-map-note{margin:0!important;padding:8px 11px;font-size:10px!important;
+ color:#6e7784;font-weight:500!important;background:#fff;line-height:1.4}
+.tt-map-host .maplibregl-ctrl-attrib{font-size:10px}
+.tt-log-street-map .tt-map-host{height:230px}
+.tt-gps-map-canvas .tt-map-host{height:100%;min-height:100%;width:100%}
+.tt-gps-map-canvas .tt-map-consent,.tt-gps-map-canvas .tt-map-empty{width:100%;height:100%}
+@media(max-width:650px){.tt-log-street-map .tt-map-host{height:260px}
+ .tt-map-consent{padding:14px}}

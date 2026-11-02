@@ -54,6 +54,7 @@ export function summarizeGps(data,options={}){
  return {points,latest:[...latest.values()],selected,reference,radius,distances,average,trend,
   poor:points.filter(p=>p.accuracyM>200).length};
 }
+import {mapFrame} from './time-tracker-map.js';
 const human=p=>new Intl.DateTimeFormat('en-PH',{
  timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'
 }).format(new Date(p.timestamp));
@@ -111,7 +112,7 @@ export function plotGps(points,{zoom=1,theme='map'}={}){
   '<path d="M0 98H800 M0 196H800 M0 294H800 M160 0V390 M320 0V390 M480 0V390 M640 0V390" fill="none" stroke="'+grid+'" stroke-width="1" stroke-dasharray="4 7"/>'+
   dots+'</g></g></svg>';
 }
-const mapView=(points,s,data,filters,loading)=>{
+const mapView=(points,s,data,filters,loading,mapEnabled=false)=>{
  const zoom=Number.isFinite(Number(filters.zoom))?
   Math.max(1,Math.min(4,Number(filters.zoom))):1;
  const theme=filters.theme==='dark'?'dark':'map';
@@ -119,7 +120,8 @@ const mapView=(points,s,data,filters,loading)=>{
  const inCount=records.filter(p=>p.kind==='in').length;
  const outCount=records.filter(p=>p.kind==='out').length;
  return '<div class="tt-gps-map-shell tt-gps-theme-'+theme+'">'+
-  '<div class="tt-gps-map-canvas">'+plotGps(points,{zoom,theme})+'</div>'+
+  '<div class="tt-gps-map-canvas">'+mapFrame({
+   hasPoints:points.length>0,enabled:mapEnabled,scope:'hub'})+'</div>'+
   '<div class="tt-gps-map-stats" aria-label="Recorded attendance GPS statistics">'+
   metric('RECORDED',records.length)+metric('CLOCK IN',inCount)+metric('CLOCK OUT',outCount)+
   '<button type="button" class="tt-gps-refresh" data-action="tt-gps-load" '+
@@ -131,13 +133,16 @@ const mapView=(points,s,data,filters,loading)=>{
   '" class="'+(theme==='dark'?'is-active':'')+'">◐ <span>Dark</span></button>'+
   '<button type="button" disabled aria-disabled="true" '+
   'title="Satellite imagery requires an approved provider; no employee locations are sent to external tiles">◎ <span>Satellite</span></button></div>'+
-  '<div class="tt-gps-map-zoom" role="group" aria-label="Coordinate plot zoom">'+
-  '<button type="button" data-action="tt-gps-zoom" data-direction="in" aria-label="Zoom in"'+
-  (zoom>=4?' disabled':'')+'>+</button>'+
-  '<button type="button" data-action="tt-gps-zoom" data-direction="out" aria-label="Zoom out"'+
-  (zoom<=1?' disabled':'')+'>−</button></div>'+
-  '<div class="tt-gps-map-footer"><span>⌖ &nbsp; Relative coordinate plot · North ↑</span>'+
-  '<span>'+esc(zoom.toFixed(1))+'×</span></div></div>';
+  (mapEnabled?'':(
+   '<div class="tt-gps-map-zoom" role="group" aria-label="Schematic zoom controls">'+
+   '<button type="button" data-action="tt-gps-zoom" data-direction="in" aria-label="Zoom in"'+
+   (zoom>=4?' disabled':'')+'>+</button>'+
+   '<button type="button" data-action="tt-gps-zoom" data-direction="out" aria-label="Zoom out"'+
+   (zoom<=1?' disabled':'')+'>−</button></div>'))+
+  '<div class="tt-gps-map-footer"><span>'+
+   (mapEnabled?'OpenFreeMap / OpenStreetMap · Recorded fixes only':
+    'Enable the street map to display geographic locations')+
+   '</span></div></div>';
 };
 const panel=(title,subtitle,body)=>'<div class="tt-gps-panel"><div class="tt-gps-panel-head"><div>'+
  '<h4>'+esc(title)+'</h4><p>'+esc(subtitle)+'</p></div></div>'+body+'</div>';
@@ -146,7 +151,7 @@ const bars=items=>'<div class="tt-gps-bars">'+items.map(([label,count,max,suffix
  Math.max(1,max)+'" value="'+Math.max(0,count)+'"></progress><strong>'+
  esc(suffix||count)+'</strong></div>').join('')+'</div>';
 export function renderTimeTrackerGps({
- data=null,eligible=false,view='map',filters={},loading=false,error='',now=new Date()
+ data=null,eligible=false,view='map',filters={},loading=false,error='',now=new Date(),mapEnabled=false
 }={}){
  if(!eligible)return '<section class="tt-gps"><p class="tt-gps-restricted">Privileged GPS authorization required.</p></section>';
  const tab=TT_GPS_VIEWS.includes(view)?view:'map',s=summarizeGps(data,filters);
@@ -168,9 +173,9 @@ export function renderTimeTrackerGps({
   '<span><i class="tt-gps-legend-out"></i>Clock out</span>'+
   '<span>Positions shown only at recorded attendance events</span></div>';
  let content='';
- if(tab==='map')content=mapView(s.latest,s,data,filters,loading)+legend+
+ if(tab==='map')content=mapView(s.points,s,data,filters,loading,mapEnabled)+legend+
   panel('Recorded attendance locations',
-   'Latest signed clock-in point per member, within the selected date range.',list(s.latest));
+   'Signed clock-in and clock-out fixes in the selected date range.',list(s.points));
  if(tab==='geofence'){
   content='<p class="tt-gps-note">Ad-hoc distance comparison only. No enforced geofence is configured.</p>'+
    '<div class="tt-gps-compare-controls"><label for="tt-gps-reference">Reference location<select id="tt-gps-reference">'+
@@ -181,11 +186,11 @@ export function renderTimeTrackerGps({
    s.radius+'"></label><button type="button" data-action="tt-gps-compare">Compare distances</button></div>'+
    '<div class="tt-gps-kpis">'+metric('INSIDE RADIUS',s.reference?s.distances.filter(x=>x.metres<=s.radius).length:'—')+
    metric('OUTSIDE RADIUS',s.reference?s.distances.filter(x=>x.metres>s.radius).length:'—')+'</div>'+
-   mapView(s.latest,s,data,filters,loading)+legend+
+   mapView(s.latest,s,data,filters,loading,mapEnabled)+legend+
    panel('Distance comparison','Approximate distance between recorded clock-in positions.',list(s.distances.map(x=>x.point)));
  }
  if(tab==='trail')content='<p class="tt-gps-note">The trail contains only clock-in/out fixes, not continuous movement.</p>'+
-  mapView(s.selected,s,data,filters,loading)+legend+
+  mapView(s.selected,s,data,filters,loading,mapEnabled)+legend+
   panel('Attendance event trail','Select a member above to show their recorded event sequence.',
    filters.userId?list(s.selected):'<p class="tt-gps-empty-list">Select an employee to view attendance fixes.</p>');
  if(tab==='accuracy'){
@@ -217,6 +222,6 @@ export function renderTimeTrackerGps({
   controls+(loading?'<p class="tt-gps-loading" role="status">Checking signed GPS records…</p>':'')+
   content+
   '<p class="tt-gps-note tt-gps-privacy">Only bootstrap administrators and assigned TimeTracker Supervisors may read signed GPS evidence. '+
-  'This north-up coordinate plot is not satellite imagery or continuous live tracking. External map links share the selected point only after you open them.</p>'+
+  'This street map shows recorded event coordinates, not continuous tracking or satellite imagery. External basemap requests begin only after your consent and may reveal the approximate map area.</p>'+
   '</section>';
 }

@@ -113,3 +113,13 @@
  .tt-gps-bar{grid-template-columns:70px minmax(0,1fr) 60px}
 }
 @media(prefers-reduced-motion:reduce){.tt-gps *{scroll-behavior:auto!important;transition:none!important}}
+
+/* CP-TT-MAP-01: MapLibre supplies navigation, scale and fullscreen controls. */
+.tt-gps-map-canvas{display:block}
+.tt-gps-map-canvas .tt-map-host{position:absolute;inset:0}
+.tt-gps-map-canvas .tt-map-consent{min-height:100%;height:100%;width:100%}
+.tt-gps-map-canvas .tt-map-loading{inset:0}
+.tt-gps-map-modes,.tt-gps-map-stats{z-index:5}
+.tt-gps-map-footer{z-index:4}
+.tt-gps-map-shell .maplibregl-ctrl-top-right{top:128px;right:12px}
+@media(max-width:840px){.tt-gps-map-shell .maplibregl-ctrl-top-right{top:120px}}

@@ -24,7 +24,7 @@ test('reference Log sections render on the existing signed history',()=>{
  for(const heading of [
   'LOCATION DISTRIBUTION','DAILY OPERATIONS','SHIFT PROGRESS',
   'Attendance Records','AUDIT DETAILS','SHIFT SUMMARY',
-  'DEVICE &amp; LOCATION','Satellite map unavailable'
+  'DEVICE &amp; LOCATION','Precise GPS maps require a privileged signed session.'
  ])assert.ok(html.includes(heading),heading);
  for(const heading of [
   'Before 8 AM','Late Today','Still Working','No Time-Out',
@@ -49,7 +49,7 @@ test('CSP-safe rendering never embeds precise location or invented scores',()=>{
  assert.doesNotMatch(html,/125\.49|6\.91/);
  assert.match(html,/Evidence not independently verified/);
  assert.match(html,/Audit score/);
- assert.match(html,/Satellite map unavailable/);
+ assert.match(html,/Precise GPS maps require a privileged signed session/);
  const css=readFileSync('frontend/styles.css','utf8');
  assert.match(css,/CP-TT-LOG-VISUAL-03/);
  assert.match(css,/CP-TT-LOG-WIDTHS-CSP/);
@@ -77,10 +77,15 @@ test('privileged signed GPS snapshot displays matching attendance fixes, not raw
  assert.match(privileged,/Recorded from signed GPS|Recorded<\/strong>/);
  assert.match(privileged,/Open point on map/);
  assert.match(privileged,/data-action="tt-log-gps-load"/);
+ assert.match(privileged,/data-action="tt-map-enable"/);
+ const mapped=renderTimeTrackerLog({records,gpsEligible:true,gpsData,now,mapEnabled:true});
+ assert.match(mapped,/class="tt-map-host" data-map-scope="log"/);
+ assert.doesNotMatch(mapped,/https:\/\/tiles\.openfreemap\.org/);
  assert.doesNotMatch(privileged,/11\.340000, 124\.550000/);
  const ordinary=renderTimeTrackerLog({records,gpsEligible:false,gpsData,now});
  assert.doesNotMatch(ordinary,/10\.234567|123\.987654|href="https:\/\/www\.openstreetmap\.org/);
  assert.doesNotMatch(ordinary,/data-action="tt-log-gps-load"/);
+ assert.doesNotMatch(ordinary,/data-action="tt-map-enable"|data-map-scope="log"/);
  const foreign=renderTimeTrackerLog({records,gpsEligible:true,gpsData:{
   events:[{...gpsData.events[0],userId:'other-user'}],ranges:gpsData.ranges},now});
  assert.doesNotMatch(foreign,/10\.234567, 123\.987654/);
