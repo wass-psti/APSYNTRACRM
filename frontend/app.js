@@ -10,7 +10,9 @@ import {NativeIssueClient} from './native-client.js';
 import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
-import {boardGrid} from './board-grid.js';
+import {boardGrid,boardGridColumns} from './board-grid.js';
+import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
+ normalizeLayout,BOARD_REQUIRED_COLUMNS} from './board-presentation.js';
 import {runTwelveBoardQa} from './board-operational-qa.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
@@ -42,6 +44,8 @@ import {RoleConfigurationClient} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 import {UserRoleManagementClient,renderUserRoleManagement,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 
+const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'Status'},
+ {key:'owner',title:'Owner'},{key:'due',title:'Due date'},{key:'actions',title:'Actions'}];
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
@@ -213,13 +217,18 @@ function boardsPage(){
  ${items.length?`<div class="card-grid">${items.map(boardCard).join('')}</div>`:
  `<div class="panel">${empty(state.showArchived?'No archived boards':'No boards available',state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
 }
-function groupRows(items,allowEdit){
- return `<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr><th class="csp-u069" >Item name</th><th>Status</th><th>Owner</th><th>Due date</th><th></th></tr></thead>
- <tbody>${items.map(item=>`<tr data-searchable="${e((item.title||'').toLowerCase())}">
- <td>▥ &nbsp; ${e(item.title||'Untitled')}</td><td><span class="status ${statusClass(item.status)}">${e(item.status||'Planned')}</span></td>
- <td>${item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned'}</td><td>${e(displayDate(item.due_date))}</td>
- <td>${allowEdit?`<button class="icon-button" data-action="edit-item" data-id="${e(item.id)}" title="Edit item">✎ Edit</button>`:''}</td></tr>`).join('')||'<tr><td class="csp-u065" colspan="5" >No items in this group yet</td></tr>'}</tbody></table></div></div>`;
+function groupRows(items,allowEdit,layout=null,groupId='ungrouped'){
+ const rows=items.map(item=>({search:String(item.title||'').toLowerCase(),
+  cells:{record:'▥ &nbsp; '+e(item.title||'Untitled'),
+   status:'<span class="status '+statusClass(item.status)+'">'+e(item.status||'Planned')+'</span>',
+   owner:item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned',
+   due:e(displayDate(item.due_date)),
+   actions:allowEdit?'<button class="icon-button" data-action="edit-item" data-id="'+
+    e(item.id)+'" title="Edit item">✎ Edit</button>':''}}));
+ return boardTable({columns:BOARD_BASE_COLUMNS,rows,layout,groupId,
+  empty:'No items in this group yet'});
 }
+
 function issuesPage(){
  if(state.loadingIssues)return '<div class="panel">'+empty('Loading issues','Checking permitted Issue records…')+'</div>';
  const rows=state.issues;
@@ -243,23 +252,45 @@ function boardPage(){
  const b=state.board.board;
  const items=Array.isArray(state.board.items)?state.board.items:[];
  const groups=Array.isArray(state.board.groups)?state.board.groups:[];
+ const moduleKey=moduleByBoardName(b.name)?.key;
+ const tabSpecs=[
+  {key:'items',href:'#/boards/'+b.id+(moduleKey==='timetracker'?'/items':''),
+    label:'▤ Board items <span class="csp-u060">('+items.length+')</span>'},
+  {key:'issues',href:'#/boards/'+b.id+'/issues',
+    label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
+  ...(moduleKey==='frt'?[{key:'finance',href:'#/boards/'+b.id+'/finance',
+    label:'▣ FRT finance (read-only)'}]:[]),
+  ...(moduleKey==='timetracker'?[{key:'attendance',href:'#/boards/'+b.id+'/attendance',
+    label:'◷ TimeTracker attendance'}]:[])
+ ];
+ const columns=moduleKey?boardGridColumns(state.board):BOARD_BASE_COLUMNS;
+ const layout=loadBoardLayout(state.context,b.id,tabSpecs.map(t=>t.key),columns.map(c=>c.key));
+ const tabLookup=new Map(tabSpecs.map(t=>[t.key,t]));
+ const tabOrder=layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean);
+
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(b.description||'Track your team’s work and updates.')}</p></div>
- <div class="head-actions"><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
- <div class="tabs" role="tablist"><a class="tab ${state.tab==='items'?'active':''}" href="#/boards/${e(b.id)}${moduleByBoardName(b.name)?.key==='timetracker'?'/items':''}">▤ Board items <span class="csp-u060" >(${items.length})</span></a>
- <a class="tab ${state.tab==='issues'?'active':''}" href="#/boards/${e(b.id)}/issues">◇ APSYNTRA Issues <span class="csp-u060" >(${state.issues.length})</span></a>
- ${moduleByBoardName(b.name)?.key==='frt'?`<a class="tab ${state.tab==='finance'?'active':''}" href="#/boards/${e(b.id)}/finance">▣ FRT finance (read-only)</a>`:''}
- ${moduleByBoardName(b.name)?.key==='timetracker'?`<a class="tab ${state.tab==='attendance'?'active':''}" href="#/boards/${e(b.id)}/attendance">◷ TimeTracker attendance</a>`:''}</div>
+ <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
+ ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
+  '<a role="tab" draggable="true" data-board-tab="'+e(t.key)+'" aria-selected="'+(state.tab===t.key)+
+  '" class="tab '+(state.tab===t.key?'active':'')+'" href="'+e(t.href)+'">'+t.label+'</a>'+
+  '<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
+  '" data-direction="-1" aria-label="Move '+e(t.key)+' tab left" title="Move tab left">‹</button>'+
+  '<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
+  '" data-direction="1" aria-label="Move '+e(t.key)+' tab right" title="Move tab right">›</button></div>').join('')}</div>
+
  ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='issues'?issuesPage():`
- <div class="toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
+ <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
+ ${boardColumnMenu(columns,layout)}
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
  ${groups.length?groups.map(g=>`<div class="group-heading"><h3>${e(g.title||'Group')}</h3><small>${items.filter(i=>i.group_id===g.id).length} items</small></div>
- ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id}):groupRows(items.filter(i=>i.group_id===g.id),state.edit)}`).join(''):
+ ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit)}`:''}`}`;
+ ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout)}`:''}`}`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -764,12 +795,83 @@ const select=(label,key,choices,current)=>
 const priorities=[['0','None'],['1','Low'],['2','Medium'],['3','High'],['4','Urgent']];
 const statuses=[['tracker:status:Todo','To do'],['tracker:status:InProgress','In progress'],['tracker:status:Done','Done'],['tracker:status:Blocked','Blocked']];
 async function writeGuard(){if(!state.boardId||!await db.allowed(state.boardId,'edit'))throw new ApiError('No edit permission for this board.',403);}
+function activeBoardLayout(){
+ if(state.view!=='board'||!auth.isSignedIn||auth.userId!==state.context?.user_id||
+    state.board?.board?.id!==state.boardId||
+    state.board?.board?.workspace_id!==state.context?.workspace_id)return null;
+ const moduleKey=moduleByBoardName(state.board.board.name)?.key;
+ const tabs=['items','issues',...(moduleKey==='frt'?['finance']:[]),
+  ...(moduleKey==='timetracker'?['attendance']:[])];
+ const columns=(moduleKey?boardGridColumns(state.board):BOARD_BASE_COLUMNS).map(c=>c.key);
+ return {tabs,columns,pref:loadBoardLayout(state.context,state.boardId,tabs,columns)};
+}
+function persistBoardLayout(transform){
+ const a=activeBoardLayout();
+ if(!a)return false;
+ const changed=normalizeLayout(transform(a.pref,a),a.tabs,a.columns);
+ return saveBoardLayout(state.context,state.boardId,changed);
+}
+async function openBoardActivity(){
+ const c=activeBoardLayout();
+ if(!c)return;
+ const boardId=state.boardId,userId=auth.userId,workspaceId=state.context.workspace_id;
+ const events=await db.boardEvents(boardId,100);
+ if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
+  state.context?.workspace_id!==workspaceId)return;
+ hideModal();
+ modal=document.createElement('div');
+ modal.className='modal-backdrop board-history-backdrop';
+ modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-activity-title">'+
+  '<div class="modal-head"><h2 id="board-activity-title">Board activity history</h2>'+
+  '<button type="button" data-dismiss class="modal-close" aria-label="Close activity history">×</button></div>'+
+  '<p class="muted">Read-only authoritative board events (up to 100). No separate activity database.</p>'+
+  '<div class="board-history-list">'+(events.length?events.map(x=>{
+   const type=x.event_type||x.action||x.event_action||'Board activity';
+   const time=x.created_at||x.occurred_at||x.event_time||'';
+   const actor=x.actor_id||x.user_id||'Recorded actor';
+   const record=x.item_id||x.entity_id||x.record_id||'';
+   return '<article class="board-history-entry"><strong>'+e(type)+'</strong>'+
+    '<time>'+e(time)+'</time><small>Actor: '+e(actor)+
+    (record?' · Record: '+e(record):'')+'</small></article>';
+  }).join(''):'<p>No authorized events were returned for this board.</p>')+
+  '</div></section>';
+ document.body.append(modal);
+ modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
+ modal.querySelector('[data-dismiss]')?.focus();
+}
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
  case 'logout':{await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
- case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
+ case 'board-activity':{await openBoardActivity();break;}
+ case 'board-layout-reset':{
+  const current=activeBoardLayout();if(!current)return;
+  resetBoardLayout(state.context,state.boardId);render();break;
+ }
+ case 'board-column-move':{
+  const current=activeBoardLayout(),key=button.dataset.key,
+   delta=Number(button.dataset.direction);
+  if(!current||!current.columns.includes(key)||
+    BOARD_REQUIRED_COLUMNS.includes(key)||![-1,1].includes(delta))return;
+  persistBoardLayout(p=>{
+   const movable=p.columns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k));
+   const index=movable.indexOf(key),target=movable[index+delta];
+   return target?{...p,columns:[...BOARD_REQUIRED_COLUMNS,...reorderVisible(movable,key,target)]}:p;
+  });
+  render();root.querySelector('.board-column-menu')?.setAttribute('open','');break;
+ }
+ case 'board-tab-move':{
+  const current=activeBoardLayout(),key=button.dataset.key,
+   delta=Number(button.dataset.direction);
+  if(!current||!current.tabs.includes(key)||![-1,1].includes(delta))return;
+  persistBoardLayout(p=>{
+   const target=p.tabs[p.tabs.indexOf(key)+delta];
+   return target?{...p,tabs:reorderVisible(p.tabs,key,target)}:p;
+  });
+  render();root.querySelector('[data-board-tab="'+key+'"]')?.focus();break;
+ }
+  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'tt-refresh':{if(!state.ttBusy){const team=state.ttView==='team',gps=state.ttView==='gps',log=state.ttView==='log';await loadTimeTracker();if(team&&state.roleVerified===true&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerTeam();if(gps&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerGps();if(log&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerLogGps();}break;}
  case 'tt-tab':{
   if(state.ttBusy||state.view!=='board'||state.tab!=='attendance'||
@@ -1708,6 +1810,112 @@ root.addEventListener('toggle',event=>{
  if(event.target.matches('.tt-log-detail')&&event.target.open)
   void mountSignedTimeTrackerMaps();
 },true);
+
+let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;
+function moveBoardPresentation(kind,from,to){
+ if(!from||!to||from===to||!activeBoardLayout())return false;
+ if(kind==='tab'){
+  const c=activeBoardLayout();
+  if(!c.tabs.includes(from)||!c.tabs.includes(to))return false;
+  persistBoardLayout(p=>({...p,tabs:reorderVisible(p.tabs,from,to)}));
+ }else if(kind==='column'){
+  const c=activeBoardLayout();
+  if(!c.columns.includes(from)||!c.columns.includes(to)||
+    BOARD_REQUIRED_COLUMNS.includes(from)||BOARD_REQUIRED_COLUMNS.includes(to))return false;
+  persistBoardLayout(p=>{
+   const movable=p.columns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k));
+   return {...p,columns:[...BOARD_REQUIRED_COLUMNS,...reorderVisible(movable,from,to)]};
+  });
+ }else return false;
+ render();return true;
+}
+root.addEventListener('dragstart',event=>{
+ if(!activeBoardLayout())return;
+ const tab=event.target.closest('[data-board-tab]');
+ const th=event.target.closest('th[data-column-key]');
+ const kind=tab?'tab':th?'column':null;
+ if(!kind)return;
+ const key=(tab||th).dataset[kind==='tab'?'boardTab':'columnKey'];
+ if(kind==='column'&&BOARD_REQUIRED_COLUMNS.includes(key)){event.preventDefault();return;}
+ boardDrag={kind,key};
+ event.dataTransfer?.setData('text/plain','APSYNTRA board layout');
+ if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
+ (tab||th).classList.add('board-dragging');
+});
+root.addEventListener('dragover',event=>{
+ if(!boardDrag)return;
+ const target=event.target.closest(boardDrag.kind==='tab'?'[data-board-tab]':'th[data-column-key]');
+ if(!target)return;
+ const key=target.dataset[boardDrag.kind==='tab'?'boardTab':'columnKey'];
+ if(boardDrag.kind==='column'&&BOARD_REQUIRED_COLUMNS.includes(key))return;
+ if(key!==boardDrag.key){event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='move';}
+});
+root.addEventListener('drop',event=>{
+ if(!boardDrag)return;
+ const target=event.target.closest(boardDrag.kind==='tab'?'[data-board-tab]':'th[data-column-key]');
+ if(!target)return;
+ const key=target.dataset[boardDrag.kind==='tab'?'boardTab':'columnKey'];
+ event.preventDefault();moveBoardPresentation(boardDrag.kind,boardDrag.key,key);
+ boardDrag=null;
+});
+root.addEventListener('dragend',()=>{
+ boardDrag=null;root.querySelectorAll('.board-dragging').forEach(x=>x.classList.remove('board-dragging'));
+});
+root.addEventListener('pointerdown',event=>{
+ if(!activeBoardLayout())return;
+ const resize=event.target.closest('button.board-column-resize');
+ if(resize){
+  const th=resize.closest('th[data-column-key]');
+  const table=resize.closest('table.board-table-custom');
+  const col=table?.querySelector('col[data-column-key="'+resize.dataset.columnKey+'"]');
+  if(!col||!th)return;
+  boardResize={pointerId:event.pointerId,x:event.clientX,key:resize.dataset.columnKey,
+   col,table,start:col.width?Number(col.getAttribute('width')):th.offsetWidth};
+  resize.setPointerCapture?.(event.pointerId);event.preventDefault();return;
+ }
+ // Native drag is for mouse/trackpad; pointer reorder supports touch and pen.
+ if(event.pointerType==='mouse')return;
+ const tab=event.target.closest('[data-board-tab]');
+ const handle=event.target.closest('button.board-column-handle');
+ if(!tab&&!handle)return;
+ const kind=tab?'tab':'column';
+ const element=tab||handle.closest('th[data-column-key]');
+ boardTouch={kind,key:element.dataset[kind==='tab'?'boardTab':'columnKey'],
+  x:event.clientX,y:event.clientY,pointerId:event.pointerId};
+});
+window.addEventListener('pointermove',event=>{
+ if(boardResize&&event.pointerId===boardResize.pointerId){
+  const width=columnWidth(boardResize.start+event.clientX-boardResize.x);
+  const previous=Number(boardResize.col.getAttribute('width'))||boardResize.start;
+  boardResize.col.setAttribute('width',String(width));
+  const total=Number(boardResize.table.getAttribute('width'))||boardResize.table.offsetWidth;
+  boardResize.table.setAttribute('width',String(total+width-previous));
+  return;
+ }
+});
+window.addEventListener('pointerup',event=>{
+ if(boardResize&&event.pointerId===boardResize.pointerId){
+  const {key,col}=boardResize;
+  const width=columnWidth(col.getAttribute('width'));
+  persistBoardLayout(p=>({...p,widths:{...p.widths,[key]:width}}));
+  boardResize=null;return;
+ }
+ if(boardTouch&&event.pointerId===boardTouch.pointerId){
+  const {kind,key,x,y}=boardTouch;boardTouch=null;
+  if(Math.hypot(event.clientX-x,event.clientY-y)<24)return;
+  const at=document.elementFromPoint(event.clientX,event.clientY);
+  const target=at?.closest(kind==='tab'?'[data-board-tab]':'th[data-column-key]');
+  const to=target?.dataset[kind==='tab'?'boardTab':'columnKey'];
+  if(moveBoardPresentation(kind,key,to)){boardSuppressedClick=true;}
+ }
+});
+window.addEventListener('pointercancel',()=>{boardResize=null;boardTouch=null;});
+root.addEventListener('click',event=>{
+ if(boardSuppressedClick&&event.target.closest('[data-board-tab]')){
+  event.preventDefault();boardSuppressedClick=false;
+ }
+},true);
+
 root.addEventListener('click',event=>{
  const target=event.target.closest('[data-action]');
  if(!target)return;
@@ -1715,6 +1923,14 @@ root.addEventListener('click',event=>{
  Promise.resolve(action(target.dataset.action,target)).catch(notice);
 });
 root.addEventListener('change',event=>{
+ if(event.target.matches('[data-board-column-toggle]')){
+  const c=activeBoardLayout(),key=event.target.dataset.boardColumnToggle;
+  if(!c||!c.columns.includes(key)||BOARD_REQUIRED_COLUMNS.includes(key))return;
+  persistBoardLayout(p=>({...p,hidden:event.target.checked?
+   p.hidden.filter(x=>x!==key):[...p.hidden,key]}));
+  render();root.querySelector('.board-column-menu')?.setAttribute('open','');return;
+ }
+
  if(['tt-overview-location','tt-overview-department','tt-overview-status','tt-overview-sort'].includes(event.target.id)&&
     state.view==='board'&&state.ttView==='overview'){
   const key=event.target.id.slice('tt-overview-'.length);
