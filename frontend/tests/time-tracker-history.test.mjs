@@ -98,7 +98,9 @@ test('rendered team Log identifies employee names without raw GPS or audit metad
  assert.match(html,/October 28/);
  assert.match(html,/November 2/);
  assert.match(html,/Details/);
- assert.doesNotMatch(html,/6\\.99|125\\.48|"audit":|"geo":/);
+ assert.ok(!html.includes(String(state.records[0].clockIn.geo.latitude)));
+ assert.ok(!html.includes(String(state.records[0].clockIn.geo.longitude)));
+ assert.doesNotMatch(html,/"geo":|"audit":/);
  const csv=timeTrackerLogCsv(filterTimeTrackerLogRows(log.rows,{search:'Engineering Member'},now));
  assert.match(csv,/Engineering Member/);
  assert.doesNotMatch(csv,/Staff Two|latitude|device/);
@@ -106,6 +108,9 @@ test('rendered team Log identifies employee names without raw GPS or audit metad
   ...log.rows[0],name:'=HYPERLINK("https:\/\/bad.example")'
  }]);
  assert.ok(malicious.includes("'=HYPERLINK"));
+ const controlCsv=timeTrackerLogCsv([{...log.rows[0],name:String.fromCharCode(9)+'=SUM(1,1)'}]);
+ assert.ok(controlCsv.includes("'"+String.fromCharCode(9)+'=SUM'));
+
 });
 
 test('native signed snapshot wires sanitized all-date Log without weakening personal Clock records',async()=>{
