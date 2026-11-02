@@ -174,3 +174,19 @@ Both reports explicitly show `writesAttempted: 0`, and the denial report shows `
 **Critical unfinished dependency:** The new SQL file is **staged in GitHub, NOT applied to production Supabase**. The current disposable PostgreSQL job does **not** yet execute/test this newly staged SQL function. No real signed nonbootstrap caller has tested the automated backend contract. Until controlled activation, the new button fails closed with `AUTO_FOREIGN_WORKSPACE_RPC_NOT_ACTIVE` (backend's `PGRST202`) rather than reverting to an unverified random/manual workspace.
 
 **Security and authorization:** Adding a privileged database RPC requires isolated SQL validation, a production review and deployment postchecks. This change is not authority to revoke the three existing broad legacy RPC grants or to write finance data. The current bootstrap `GENERAL_MANAGER` session remains ineligible to certify independent nonbootstrap denial. Overall scoped SEC14 acceptance remains **6/8 VERIFIED (75%)**. Mark auto-selection client/UI **VERIFIED**, new server RPC **IMPLEMENTED-UNVERIFIED**, production activation **PENDING** and genuine nonbootstrap negative acceptance **PENDING**.
+
+
+## FINANCE_APPROVER nonbootstrap operator evidence — 2026-11-02
+
+User submitted two **sanitized, operator-reported** read-only acceptance results:
+
+| Report | Status | Verified by the reporter | Not established |
+| --- | --- | --- | --- |
+| `CP-FRT-SEC14`, FRT role `FINANCE_APPROVER` | `PENDING` | Signed context PASS; restricted summary/list PASS; stable context PASS | Request detail PENDING because `NO_EXISTING_FRT_REQUEST`; finance writes `NOT_VERIFIED` |
+| `CP-FRT-SEC14-DENIAL`, scenario `NONBOOTSTRAP`, FRT role `FINANCE_APPROVER` | `PENDING` | Signed context PASS; nonbootstrap classification PASS; active FRT module grant PASS; signed own-workspace FRT scope PASS | `EXISTING_FOREIGN_WORKSPACE_ID_REQUIRED`; no foreign-RPC denial was attempted; foreign-workspace existence `NOT_VERIFIED` |
+
+Both reports say `writesAttempted:0` and the second also `roleChangesAttempted:0`. These are submitted browser outputs, not independently captured Supabase requests.
+
+**Version analysis:** The `EXISTING_FOREIGN_WORKSPACE_ID_REQUIRED` reason exists only in the earlier **manual foreign-workspace** frontend contract; the current committed `frontend/frt-sec14-signed-denials.js` does not emit it. The tested browser session therefore supplied an earlier report, not evidence of the new automated API. The SEC14 automatic SQL RPC was independently inspected and confirmed **absent from production** at the time of this checkpoint. A new automated report should not be requested until backend activation passes its isolated tests and controlled deployment.
+
+**Acceptance status:** The nonbootstrap actor's *prerequisites* have now been demonstrated by user-submitted evidence, but full positive detail, genuine cross-workspace negative denial, and legacy RPC retirement are still open. Overall SEC14 remains **6/8 verified (75%)**, preserving prior gate definitions. Do not invent a foreign UUID, create test finance data, or infer backend privilege revocation from these reports.
