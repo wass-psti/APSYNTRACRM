@@ -246,7 +246,7 @@ export function renderTimeTrackerReports({
     '<thead><tr><th>Employee</th><th>Clock In</th><th>Clock Out</th>'+
     '<th>Location</th><th>Department</th><th>Arrival</th><th>Status</th>'+
     '<th>Hours</th><th>Details</th></tr></thead>'+
-    '<tbody>'+filtered.map(recordRow).join('')+'</tbody></table></div>'+
+    '<tbody>'+filtered.map(r=>recordRow(r,String(settings.search||'').toLocaleLowerCase().trim().slice(0,120))).join('')+'</tbody></table></div>'+
    '<p id="tt-report-empty-search" class="tt-report-empty"'+
     (visible.length?' hidden':'')+'>No authorized sessions match this selection.</p>'+
    '<p class="tt-report-footnote">Charts and headline metrics use selected date/status filters. '+
