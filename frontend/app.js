@@ -664,6 +664,23 @@ async function action(name,button){
     sort:state.ttOtFilters.sort==='oldest'?'newest':'oldest'};
   render();break;
  }
+ case 'tt-ot-approve':
+ case 'tt-ot-reject':{
+  if(!TT_OT_WRITES_ACCEPTED||state.ttBusy||
+     state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
+     state.ttAttendance?.status!=='VERIFIED_READ'||
+     state.ttAttendance.access?.bootstrapApprover!==true)return;
+  const requestId=button.dataset.id;
+  const decision=name==='tt-ot-approve'?'Approved':'Rejected';
+  if(!confirm(decision+' this overtime request? The decision will be audited and cannot be reversed here.'))return;
+  state.ttBusy=true;render();
+  try{
+   await timeTracker.decideOvertime(state.boardId,requestId,decision);
+   await loadTimeTracker();
+   toast('Overtime request '+decision.toLowerCase()+'.');
+  }finally{state.ttBusy=false;render();}
+  break;
+ }
  case 'tt-report-preset':{
   if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='reports'||
      state.ttAttendance?.status!=='VERIFIED_READ'||state.ttBusy)return;
@@ -1360,6 +1377,19 @@ root.addEventListener('submit',event=>{
    toast('OT submission remains disabled until signed backend authorization and audit are verified.',true);
    return;
   }
+  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='ot'||
+     state.ttAttendance?.status!=='VERIFIED_READ'||state.ttBusy)return;
+  const draft={
+   date:root.querySelector('#tt-ot-date')?.value||'',
+   start:root.querySelector('#tt-ot-start')?.value||'',
+   end:root.querySelector('#tt-ot-end')?.value||'',
+   reason:root.querySelector('#tt-ot-reason')?.value||''
+  };
+  state.ttBusy=true;
+  Promise.resolve(timeTracker.submitOvertime(state.boardId,draft))
+   .then(async()=>{state.ttOtModalOpen=false;state.ttOtDraft={};
+     await loadTimeTracker();toast('OT request submitted for bootstrap review.');})
+   .catch(notice).finally(()=>{state.ttBusy=false;render();});
   return;
  }
  if(event.target.id==='login-form'){event.preventDefault();login(event.target);}
