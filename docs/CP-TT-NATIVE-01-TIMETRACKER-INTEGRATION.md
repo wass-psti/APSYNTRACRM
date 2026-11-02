@@ -180,3 +180,15 @@ The read-only source-controlled audit `sql/tests/cp-tt-native-01-production-read
 **Security and operational limits:** Test data in automated unit tests are synthetic fixtures ONLY, never written to production or shown as real employees. Team names are drawn only from the existing signed backend directory in the same workspace; legacy screenshot names, personnel numbers and counts are not hardcoded or imported. If no authorized attendees have clocked in today, Overview shows zero and explicit empty states. Clock In/Out writes remain intentionally disabled due the previously identified missing backend offsite-note, dedicated-board grant and audit enforcement. The existing original RPC and grants have **not** been changed.
 
 **Acceptance accounting:** \`TT-OV-01\` native source/UI/security regression acceptance **VERIFIED at static and unit/CI scope**, signed live runtime acceptance **PENDING**. This expands TT-05 implementation but **does not close TT-05** (full authorized Overview, Log and role-specific audit operation remains incomplete), so project-wide TimeTracker acceptance stays **3/10 VERIFIED = 30%**, all 12 applications **0/12** fully operationally accepted. Next: signed read-only Overview walkthrough for a real current-workspace IT Administrator/HR session; independently design/authorize server-side scoped Supervisor/Finance team views, then continue TimeTracker's remaining native functional milestones. Do not proceed to any other application yet.
+
+
+### Production read-only attendance population check
+
+A **read-only, aggregate-only** live Supabase query against the existing TimeTracker board's own workspace and \`module_state_entries\` returned:
+- One authoritative shared \`timetracker.attendance.v1\` state entry.
+- **9 historical attendance records** in that state.
+- **0 records whose Clock In falls on the current Philippine calendar day**, at the moment of the query.
+
+No employee names, IDs, GPS coordinates, or raw record payloads were extracted. **Consequently, the new Overview must show an empty today's roster under this source until authentic attendance occurs in the centralized backend.** The five people visible in the external Monday.com screenshots are *reference-page data*, not automatically synced or imported production attendance entries. This design work does not migrate records and does not enable clock writes. Do not populate demo employees merely to match screenshot counts.
+
+**Final automated evidence for implemented native read UI:** [GitHub Actions #41408977402](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41408977402), **274/274 frontend tests PASS**, disposable PostgreSQL **PASS**, Pages exact-source smoke **PASS**. Subsequent documentation-only Pages deployment [#41409120717](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41409120717) succeeded. Full signed live-user visibility, cross-role runtime verification and visual pixel accuracy remain **PENDING**.
