@@ -647,3 +647,68 @@
  .tt-employee-grid{grid-template-columns:1fr}
  .tt-overview-metric strong{font-size:18px}
 }
+
+/* TimeTracker Overview CSP-safe chart percentage classes */
+.tt-on-time-bar .tt-ov-p0,.tt-location-segment.tt-ov-p0,.tt-department-row i.tt-ov-p0{width:0%}
+.tt-arrival-bar i.tt-ov-p0{height:0%}
+.tt-arrival-timeline i.tt-ov-p0{left:0%}
+.tt-on-time-bar .tt-ov-p5,.tt-location-segment.tt-ov-p5,.tt-department-row i.tt-ov-p5{width:5%}
+.tt-arrival-bar i.tt-ov-p5{height:5%}
+.tt-arrival-timeline i.tt-ov-p5{left:5%}
+.tt-on-time-bar .tt-ov-p10,.tt-location-segment.tt-ov-p10,.tt-department-row i.tt-ov-p10{width:10%}
+.tt-arrival-bar i.tt-ov-p10{height:10%}
+.tt-arrival-timeline i.tt-ov-p10{left:10%}
+.tt-on-time-bar .tt-ov-p15,.tt-location-segment.tt-ov-p15,.tt-department-row i.tt-ov-p15{width:15%}
+.tt-arrival-bar i.tt-ov-p15{height:15%}
+.tt-arrival-timeline i.tt-ov-p15{left:15%}
+.tt-on-time-bar .tt-ov-p20,.tt-location-segment.tt-ov-p20,.tt-department-row i.tt-ov-p20{width:20%}
+.tt-arrival-bar i.tt-ov-p20{height:20%}
+.tt-arrival-timeline i.tt-ov-p20{left:20%}
+.tt-on-time-bar .tt-ov-p25,.tt-location-segment.tt-ov-p25,.tt-department-row i.tt-ov-p25{width:25%}
+.tt-arrival-bar i.tt-ov-p25{height:25%}
+.tt-arrival-timeline i.tt-ov-p25{left:25%}
+.tt-on-time-bar .tt-ov-p30,.tt-location-segment.tt-ov-p30,.tt-department-row i.tt-ov-p30{width:30%}
+.tt-arrival-bar i.tt-ov-p30{height:30%}
+.tt-arrival-timeline i.tt-ov-p30{left:30%}
+.tt-on-time-bar .tt-ov-p35,.tt-location-segment.tt-ov-p35,.tt-department-row i.tt-ov-p35{width:35%}
+.tt-arrival-bar i.tt-ov-p35{height:35%}
+.tt-arrival-timeline i.tt-ov-p35{left:35%}
+.tt-on-time-bar .tt-ov-p40,.tt-location-segment.tt-ov-p40,.tt-department-row i.tt-ov-p40{width:40%}
+.tt-arrival-bar i.tt-ov-p40{height:40%}
+.tt-arrival-timeline i.tt-ov-p40{left:40%}
+.tt-on-time-bar .tt-ov-p45,.tt-location-segment.tt-ov-p45,.tt-department-row i.tt-ov-p45{width:45%}
+.tt-arrival-bar i.tt-ov-p45{height:45%}
+.tt-arrival-timeline i.tt-ov-p45{left:45%}
+.tt-on-time-bar .tt-ov-p50,.tt-location-segment.tt-ov-p50,.tt-department-row i.tt-ov-p50{width:50%}
+.tt-arrival-bar i.tt-ov-p50{height:50%}
+.tt-arrival-timeline i.tt-ov-p50{left:50%}
+.tt-on-time-bar .tt-ov-p55,.tt-location-segment.tt-ov-p55,.tt-department-row i.tt-ov-p55{width:55%}
+.tt-arrival-bar i.tt-ov-p55{height:55%}
+.tt-arrival-timeline i.tt-ov-p55{left:55%}
+.tt-on-time-bar .tt-ov-p60,.tt-location-segment.tt-ov-p60,.tt-department-row i.tt-ov-p60{width:60%}
+.tt-arrival-bar i.tt-ov-p60{height:60%}
+.tt-arrival-timeline i.tt-ov-p60{left:60%}
+.tt-on-time-bar .tt-ov-p65,.tt-location-segment.tt-ov-p65,.tt-department-row i.tt-ov-p65{width:65%}
+.tt-arrival-bar i.tt-ov-p65{height:65%}
+.tt-arrival-timeline i.tt-ov-p65{left:65%}
+.tt-on-time-bar .tt-ov-p70,.tt-location-segment.tt-ov-p70,.tt-department-row i.tt-ov-p70{width:70%}
+.tt-arrival-bar i.tt-ov-p70{height:70%}
+.tt-arrival-timeline i.tt-ov-p70{left:70%}
+.tt-on-time-bar .tt-ov-p75,.tt-location-segment.tt-ov-p75,.tt-department-row i.tt-ov-p75{width:75%}
+.tt-arrival-bar i.tt-ov-p75{height:75%}
+.tt-arrival-timeline i.tt-ov-p75{left:75%}
+.tt-on-time-bar .tt-ov-p80,.tt-location-segment.tt-ov-p80,.tt-department-row i.tt-ov-p80{width:80%}
+.tt-arrival-bar i.tt-ov-p80{height:80%}
+.tt-arrival-timeline i.tt-ov-p80{left:80%}
+.tt-on-time-bar .tt-ov-p85,.tt-location-segment.tt-ov-p85,.tt-department-row i.tt-ov-p85{width:85%}
+.tt-arrival-bar i.tt-ov-p85{height:85%}
+.tt-arrival-timeline i.tt-ov-p85{left:85%}
+.tt-on-time-bar .tt-ov-p90,.tt-location-segment.tt-ov-p90,.tt-department-row i.tt-ov-p90{width:90%}
+.tt-arrival-bar i.tt-ov-p90{height:90%}
+.tt-arrival-timeline i.tt-ov-p90{left:90%}
+.tt-on-time-bar .tt-ov-p95,.tt-location-segment.tt-ov-p95,.tt-department-row i.tt-ov-p95{width:95%}
+.tt-arrival-bar i.tt-ov-p95{height:95%}
+.tt-arrival-timeline i.tt-ov-p95{left:95%}
+.tt-on-time-bar .tt-ov-p100,.tt-location-segment.tt-ov-p100,.tt-department-row i.tt-ov-p100{width:100%}
+.tt-arrival-bar i.tt-ov-p100{height:100%}
+.tt-arrival-timeline i.tt-ov-p100{left:100%}
