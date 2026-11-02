@@ -1,6 +1,7 @@
 import {TT_LOCATIONS,creditedAttendanceMs,manilaClockMinutes,TT_PHT_OFFSET_MS} from './time-tracker-policy.js';
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
+import {projectTimeTrackerLog} from './time-tracker-history.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
  * No standalone app, storage shim, local JWT, synthetic rows, or privileged key.
@@ -156,10 +157,15 @@ export class TimeTrackerNativeClient{
    directory:access.overviewDirectory,userId:access.userId,
    moduleRole:access.moduleRole
   });
+  const log=projectTimeTrackerLog({
+   value:row?row.value:{version:1,records:[]},
+   directory:access.overviewDirectory,userId:access.userId,
+   moduleRole:access.moduleRole
+  });
   const otRow=raw.find(x=>x?.state_key==='timetracker.ot.v1'&&x.scope==='shared');
   const otRequests=projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId);
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access,records,otRequests,overview,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access,records,otRequests,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  async commit(boardId,{action,location,department,workNote='',geo}={}){
