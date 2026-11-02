@@ -4,7 +4,7 @@
  * compatibility evidence; a static source scan cannot certify those consumers.
  */
 import {readFileSync,readdirSync} from 'node:fs';
-import {resolve,relative,join,extname} from 'node:path';
+import {resolve,join,extname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 const legacy=Object.freeze(['frt_'+'get_request','frt_'+'list_requests','frt_'+'dashboard']);
@@ -17,7 +17,7 @@ export function deprecatedRpcReferences(source){
  if(typeof source!=='string')throw new TypeError('Expected source text');
  const matcher=new RegExp('\\b(?:'+legacy.join('|')+')\\b','g');
  return Array.from(source.matchAll(matcher),hit=>({
-  name:hit[0],line:source.slice(0,hit.index).split('\\n').length
+  name:hit[0],line:source.slice(0,hit.index).split(String.fromCharCode(10)).length
  }));
 }
 function runtimeFiles(root){
