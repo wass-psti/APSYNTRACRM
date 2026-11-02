@@ -10,7 +10,7 @@ const ws='22222222-2222-4222-8222-222222222222';
 const other='33333333-3333-4333-8333-333333333333';
 const claim={user_id:uid,workspace_id:ws,profile:{status:'active'}};
 function fixture({bootstrap=false,grant=true,deny=true,
- invalidCode=false,expired=false,switched=false}={}){
+ noForeign=false,malformed=false,expired=false,switched=false}={}){
  const calls=[];let seen=0;
  const auth={userId:uid,async getVerifiedUser(){
   seen++;
@@ -29,6 +29,9 @@ function fixture({bootstrap=false,grant=true,deny=true,
    };
    if(name==='frt_sec14_auto_foreign_denials'){
     if(expired)throw Object.assign(Error('expired'),{status:401});
+    if(malformed)return {status:'PASS',foreignWorkspaceExistence:'VERIFIED'};
+    if(noForeign)return {status:'PENDING',reason:'NO_INDEPENDENT_FOREIGN_WORKSPACE',
+     foreignWorkspaceExistence:'NOT_VERIFIED',dashboard:'PENDING',list:'PENDING'};
     if(deny)return {status:'PASS',reason:'FOREIGN_WORKSPACE_DENIAL_VERIFIED',
      foreignWorkspaceExistence:'VERIFIED',dashboard:'PASS',list:'PASS'};
     return {status:'FAIL',reason:'FOREIGN_WORKSPACE_ACCESS_NOT_DENIED',
@@ -65,27 +68,22 @@ test('bootstrap sessions cannot manufacture nonbootstrap acceptance',async()=>{
  assert.equal(r.reason,'NONBOOTSTRAP_SESSION_REQUIRED');
  assert.ok(!f.calls.some(x=>x.name==='frt_board_list_safe'));
 });
-test('no FRT grant and absent or same workspace cannot pass cross-scope acceptance',async()=>{
- const a=fixture({grant:false});
- const denied=await runSEC14SignedDenials(a);
+test('no FRT grant or independent foreign workspace remains fail-closed',async()=>{
+ const denied=await runSEC14SignedDenials(fixture({grant:false}));
  assert.equal(denied.status,'BLOCKED');
  assert.equal(denied.reason,'NONBOOTSTRAP_FRT_GRANT_REQUIRED');
- const b=fixture();
- const missing=await runSEC14SignedDenials(b);
- assert.equal(missing.status,'PENDING');
- assert.equal(missing.reason,'EXISTING_FOREIGN_WORKSPACE_ID_REQUIRED');
- assert.ok(!b.calls.some(x=>x.name==='frt_board_list_safe'));
- const c=fixture();
- const same=await runSEC14SignedDenials(c);
- assert.equal(same.reason,'EXISTING_FOREIGN_WORKSPACE_ID_REQUIRED');
- assert.ok(!c.calls.some(x=>x.name==='frt_board_dashboard_safe'));
+ const empty=await runSEC14SignedDenials(fixture({noForeign:true}));
+ assert.equal(empty.status,'PENDING');
+ assert.equal(empty.reason,'NO_INDEPENDENT_FOREIGN_WORKSPACE');
+ assert.equal(empty.foreignWorkspaceExistence,'NOT_VERIFIED');
 });
 test('foreign scope disclosure fails; JWT expiration, misleading denial codes and account switch never pass',async()=>{
  const open=await runSEC14SignedDenials(fixture({deny:false}));
  assert.equal(open.status,'FAIL');
  assert.equal(open.reason,'FOREIGN_WORKSPACE_ACCESS_NOT_DENIED');
- const wrong=await runSEC14SignedDenials(fixture({invalidCode:true}));
+ const wrong=await runSEC14SignedDenials(fixture({malformed:true}));
  assert.equal(wrong.status,'BLOCKED');
+ assert.equal(wrong.reason,'AUTO_FOREIGN_WORKSPACE_CONTRACT_INVALID');
  const expired=await runSEC14SignedDenials(fixture({expired:true}));
  assert.equal(expired.status,'BLOCKED');
  const switched=await runSEC14SignedDenials(fixture({switched:true}));
@@ -108,6 +106,7 @@ test('SEC14 denial export allowlists fields and Security page escapes output',()
  });
  assert.match(render,/security-sec14-denial/);
  assert.match(render,/security-sec14-denial-copy/);
+ assert.doesNotMatch(render,/id="security-sec14-foreign-workspace"/);
  assert.match(render,/&lt;svg onload=alert\(1\)&gt;/);
  assert.doesNotMatch(render,/<svg onload=/);
 });
@@ -115,5 +114,7 @@ test('SEC14 app invalidates denial results on workspace switch, logout, sign-in 
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/case 'security-sec14-denial'/);
  assert.match(app,/case 'security-sec14-denial-copy'/);
+ assert.match(app,/runSEC14SignedDenials\\\(\\\{auth,api:db\\\}\\\)/);
+ assert.doesNotMatch(app,/getElementById\\\('security-sec14-foreign-workspace'\\\)/);
  assert.equal((app.match(/state\.sec14DenialResult=null;state\.sec14DenialRunId\+\+;state\.sec14DenialBusy=false;/g)||[]).length,4);
 });
