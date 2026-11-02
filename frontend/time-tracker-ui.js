@@ -11,6 +11,7 @@ import {renderTimeTrackerReports} from './time-tracker-reports.js';
 import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
 import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 import {renderTimeTrackerMyHours} from './time-tracker-my-hours.js';
+import {renderTimeTrackerTeam} from './time-tracker-team.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -21,7 +22,7 @@ const hrs=ms=>Number.isFinite(ms)?(ms/3600000).toFixed(2)+' h':'—';
 const sections=[
  ['overview','Overview',true],['clock','Clock',true],['log','Log',true],
  ['reports','Reports',true],['calendar','Calendar',true],
- ['ot','OT',true],['hours','My Hours',true],['team','Team',false],
+ ['ot','OT',true],['hours','My Hours',true],['team','Team',true],
  ['roles','Roles',false],['monitor','Monitor',false],['gps','GPS',false]
 ];
 const select=(id,values,placeholder)=>
@@ -75,10 +76,10 @@ export function ownAttendanceCsv(records){
  return '\uFEFF'+rows.map(row=>row.map(safe).join(',')) .join('\r\n')+'\r\n';
 }
 
-function navigation(view,busy){
+function navigation(view,busy,bootstrapEligible=false){
  return '<nav class="tt-navigation" aria-label="TimeTracker sections">'+
   '<div class="tt-navigation-scroll" role="tablist" aria-label="TimeTracker views">'+
-  sections.map(([key,label,enabled])=>
+  sections.filter(([key])=>key!=='team'||bootstrapEligible===true).map(([key,label,enabled])=>
    '<button type="button" role="tab" class="tt-nav-tab'+(view===key?' is-current':'')+
    '" aria-selected="'+(view===key)+'" data-action="tt-tab" data-target="'+key+'"'+
    (!enabled||busy?' disabled aria-disabled="true"':'')+
@@ -187,12 +188,13 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay=''
+ result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
- const selected=['overview','clock','log','reports','calendar','ot','hours'].includes(view)?view:'clock';
+ const selected=(view==='team'&&teamEligible!==true)?'clock':
+ ['overview','clock','log','reports','calendar','ot','hours','team'].includes(view)?view:'clock';
  let html='<section class="tt-native" aria-label="TimeTracker attendance application">'+
-  head(verified?result.access:null)+notifications(verified)+navigation(selected,busy);
+  head(verified?result.access:null)+notifications(verified)+navigation(selected,busy,verified&&teamEligible===true);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
  if(success)html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
  if(!verified){
@@ -220,6 +222,10 @@ export function renderTimeTrackerNative({
   records:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
   month:calendarMonth,selectedDay:calendarSelectedDay,now,busy
+ });
+ if(selected==='team')html+=renderTimeTrackerTeam({
+  directory:teamDirectory,access:{...result.access,bootstrapTeamEligible:teamEligible===true},
+  filters:teamFilters,loading:teamBusy,error:teamError,now
  });
  if(selected==='hours')html+=renderTimeTrackerMyHours({
   records:result.records,access:result.access,
