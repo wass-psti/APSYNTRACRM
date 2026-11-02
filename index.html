@@ -11,11 +11,30 @@
   <title>APSYNTRA CRM — Workspace</title>
   <link rel="icon" href="./frontend/favicon.svg" type="image/svg+xml"/>
   <link rel="stylesheet" href="./frontend/styles.css"/>
+  <link rel="stylesheet" href="./frontend/initialization-core.css"/>
   <link rel="stylesheet" href="./frontend/time-tracker-gps.css"/>
   <script type="module" src="./frontend/app.js"></script>
 </head>
 <body>
-  <div id="app"><div class="bootstrap"><div class="spinner"></div><p>Initializing APSYNTRA CRM…</p></div></div>
+  <div id="apsyntra-init" class="aps-init" data-phase="startup" data-graphics="fallback"
+       role="status" aria-live="polite" aria-label="APSYNTRA CRM initialization">
+    <div class="aps-init-orb-fallback" aria-hidden="true"></div>
+    <div id="apsyntra-init-scene" class="aps-init-scene" aria-hidden="true"></div>
+    <div class="aps-init-content">
+      <div class="aps-init-eyebrow">Advanced Workspace Intelligence</div>
+      <h1 class="aps-init-name">APSYNTRA <span>CRM</span></h1>
+      <p class="aps-init-tagline">NEURAL CORE / ENTERPRISE SYSTEMS</p>
+      <div class="aps-init-readiness">
+        <div class="aps-init-track" aria-hidden="true"></div>
+        <div class="aps-init-details">
+          <span id="apsyntra-init-phase" class="aps-init-status">Preparing frontend…</span>
+          <span>Secure startup</span>
+        </div>
+      </div>
+    </div>
+    <div class="aps-init-footer" aria-hidden="true">PRECISION · CONNECTIVITY · INTELLIGENCE</div>
+  </div>
+  <div id="app"></div>
   <noscript>JavaScript is required to sign in to APSYNTRA CRM.</noscript>
 </body>
 </html>

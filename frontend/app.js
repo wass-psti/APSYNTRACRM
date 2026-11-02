@@ -1,4 +1,5 @@
 import {AuthClient,ApiError} from './session.js';
+import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {DomainApi,validUuid} from './data.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
@@ -1842,10 +1843,17 @@ window.addEventListener('keydown',event=>{if(event.key==='Escape'){
 }});
 auth.onExpired=()=>{state.context=null;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};renderLogin('Session expired. Please sign in again.');};
 async function boot(){
+ startInitialization();
  try{
+  setInitializationPhase('authentication');
   if(await auth.restore()){
     state.user=auth.session.user;
-    try{await refreshWorkspace();await onRoute();}catch(err){
+    setInitializationPhase('authorization');
+    try{
+      await refreshWorkspace();
+      setInitializationPhase('workspace');
+      await onRoute();
+    }catch(err){
       if(err instanceof ApiError&&err.status===403){
         root.innerHTML=`<div class="access-denied"><div class="denied-panel"><span class="brand-mark csp-u059" >A</span><h1>Workspace access unavailable</h1>
         <p>${e(errorMessage(err))} Contact your administrator to activate your existing profile or workspace membership.</p>
@@ -1854,5 +1862,6 @@ async function boot(){
     }
   }else renderLogin();
  }catch{renderLogin('Unable to initialize session. Please try signing in.');}
+ finally{finishInitialization();}
 }
 boot();

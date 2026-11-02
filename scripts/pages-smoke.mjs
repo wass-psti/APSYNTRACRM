@@ -48,7 +48,8 @@ const paths=['index.html','frontend/app.js','frontend/config.js','frontend/sessi
  'frontend/frt-finance-readonly.js','frontend/frt-finance-ui.js','frontend/frt-finance-workflow.js',
  'frontend/styles.css','frontend/time-tracker-map.js',
  'frontend/time-tracker-log.js','frontend/time-tracker-gps.js',
- 'frontend/time-tracker-gps.css'];
+ 'frontend/time-tracker-gps.css','frontend/initialization-core.js',
+ 'frontend/initialization-neural-scene.js','frontend/initialization-core.css'];
 const digest=x=>createHash('sha256').update(x).digest('hex');
 function url(path){
  const remote=new URL(path==='index.html'?'./':path,origin);

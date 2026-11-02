@@ -1,0 +1,11 @@
+# CP-INIT-01 — APSYNTRA Neural Core initialization screen
+
+Scope: purely frontend startup overlay, detached from the existing CRM's session, RBAC, board, RPC and routing behavior. The overlay appears immediately from static HTML; app.js calls \`startInitialization\` without awaiting WebGL, then reports real milestones: restoring auth, resolving authorized workspace, opening route. The \`finally\` clause always removes the overlay whether startup succeeds or fails. Existing access-denied and login screens remain authoritative. No invented progress percentage or artificial startup delay.
+
+Rendering: CSS navy/blue atmospheric fallback; optional Three.js 0.170.0 WebGL2 scene with GLSL ShaderMaterial holographic core, wire cage, three torus rings and batched GPU points. GSAP 3.12.5 orchestrates the entrance fade; if GSAP is unavailable a static fully visible core is used. The implementation intentionally avoids a separate bloom postprocessing chain or extra GPU render targets; additive glow is provided by shader and materials. WebGL/CSS animation is skipped for reduced-motion users. Fallback remains if CDN, shader, or WebGL initialization fails.
+
+Performance: never await animation imports before restoring a session, adaptive geometry count (120/280), pixel ratio <=1.7, one-pass scene, no recurring telemetry, no artificial CPU/GPU stress. Graphics pause when hidden; after startup the controller cancels the animation, removes listeners, kills GSAP timeline, disposes geometries/materials, releases the WebGL context and removes the overlay. During a quick startup the WebGL payload may not load at all.
+
+External assets: browser permits the existing \`https://unpkg.com\` CSP script/style host; no additional CSP relaxation, embedded credentials, persistent files, new backend host, or production database change. Versions are exact-pinned in the loader module.
+
+Verification: Node regression tests check actual lifecycle hooks and reduced-motion fallback, CSP, code security checks and Pages CDN source integrity. The 120 FPS/60 FPS targets and native GPU/browser evidence require a signed-user browser acceptance run with supported hardware; CI passing is not performance certification.
