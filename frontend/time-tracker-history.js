@@ -53,7 +53,7 @@ export function projectTimeTrackerLog({value,directory=[],userId,moduleRole}={})
   const location=TT_LOCATIONS.includes(record.clockIn.location)?
    record.clockIn.location:'Unspecified';
   rows.push(Object.freeze({
-   id:record.id,name:members.get(record.ownerId).name,
+   id:record.id,ownerId:record.ownerId,name:members.get(record.ownerId).name,
    clockIn:inTime,clockOut:outTime,
    department:text(record.clockIn.department||'Unassigned',80),
    location,status,classification,
