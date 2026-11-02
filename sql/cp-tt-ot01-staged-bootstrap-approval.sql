@@ -67,7 +67,7 @@ BEGIN
  IF v_session_text IS NULL OR
     v_session_text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' OR
     NOT EXISTS (SELECT 1 FROM auth.sessions s WHERE s.id=v_session_text::uuid
-      AND s.user_id=v_user) THEN
+      AND s.user_id=v_user AND (s.not_after IS NULL OR s.not_after>clock_timestamp())) THEN
   RAISE EXCEPTION 'Current signed session required' USING ERRCODE='42501';
  END IF;
  v_ws:=public.current_workspace_id(v_user);
