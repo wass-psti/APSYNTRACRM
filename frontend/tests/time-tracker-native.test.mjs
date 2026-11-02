@@ -291,7 +291,8 @@ test('TimeTracker reference navigation exposes only already implemented views',(
   records:[],active:null,otRequests:[]}});
  for(const section of ['clock','log','reports','ot'])
   assert.match(html,new RegExp('data-target="'+section+'"'));
- assert.match(html,/data-target="calendar" disabled aria-disabled="true"/);
+ assert.match(html,/data-target="calendar"/);
+ assert.doesNotMatch(html,/data-target="calendar" disabled aria-disabled="true"/);
  assert.match(html,/data-target="roles" disabled aria-disabled="true"/);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/case 'tt-tab'/);
