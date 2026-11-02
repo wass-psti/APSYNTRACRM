@@ -1,5 +1,5 @@
 /** Native TimeTracker board surface. Never embeds the standalone app. */
-import {TT_LOCATIONS,TT_DEPARTMENTS,creditedAttendanceMs} from './time-tracker-native.js';
+import {TT_LOCATIONS,TT_DEPARTMENTS,creditedAttendanceMs,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?Number.isFinite(Date.parse(v))?new Date(v).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'—':'—';
 const hrs=ms=>Number.isFinite(ms)?(ms/3600000).toFixed(2)+' h':'—';
@@ -47,10 +47,10 @@ export function renderTimeTrackerNative({result=null,busy=false,error='',success
     '<label for="tt-department">Department'+select('tt-department',TT_DEPARTMENTS,'Select department')+'</label></div>'+
     '<label class="tt-note-field" for="tt-note" id="tt-note-wrap" hidden>Offsite Work Note'+
     '<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
-    '<p class="muted">Precise browser GPS permission is required for each action. Timestamp and revision are committed by PostgreSQL, not by this browser.</p>'+
+    '<p class="muted">Precise browser GPS permission is required for each action. Timestamp and revision are committed by PostgreSQL, not by this browser.</p>'+    (!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED?'<p class="note" role="status">Clock actions are staged. Live writes remain disabled until server-side offsite work-note enforcement, authoritative audit append and signed operational acceptance are verified.</p>':'')+
     '<div class="head-actions"><button class="primary" type="submit" name="tt-action" value="clock-in"'+
-    (busy||active?' disabled':'')+'>Clock In</button><button class="secondary" type="submit" name="tt-action" value="clock-out"'+
-    (busy||!active?' disabled':'')+'>Clock Out</button></div></form></div></div>'+
+    (busy||active||!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED?' disabled':'')+'>Clock In</button><button class="secondary" type="submit" name="tt-action" value="clock-out"'+
+    (busy||!active||!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED?' disabled':'')+'>Clock Out</button></div></form></div></div>'+
    '<div class="panel"><div class="panel-header"><h3>Attendance policy</h3></div>'+
     '<div class="panel-body"><p>Standard clock-in: <strong>08:00</strong> (local)</p>'+
     '<p>Unpaid break: <strong>12:00–13:00</strong></p>'+
