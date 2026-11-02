@@ -1136,3 +1136,7 @@
 .tt-ot-modal footer button[type=submit]{background:#ecb2a1;border-color:#ecb2a1}
 @media(max-width:750px){.tt-ot-insights{grid-template-columns:1fr}.tt-ot-list{overflow-x:auto}.tt-ot-metrics{grid-template-columns:repeat(2,1fr)}.tt-ot-metrics>div:nth-child(2){border-right:0}.tt-ot-metrics>div:nth-child(-n+2){border-bottom:1px dashed #e2e3e6}.tt-ot-week .tt-ot-submit{margin-left:0}}
 @media(max-width:500px){.tt-overtime{padding:18px 12px}.tt-ot-form-grid{grid-template-columns:1fr}.tt-ot-week>div strong{flex-basis:100%;order:-1}.tt-ot-modal{padding:16px}}
+
+/* CP-TT-OT-REVIEW-GATE */
+.tt-ot-review-actions{display:flex;gap:9px;margin-left:auto}
+.tt-ot-review-actions button{border:1px solid #e0d4c8;background:#f6ebe1;color:#8c6c58;border-radius:5px;padding:7px 10px;font-size:11px}
