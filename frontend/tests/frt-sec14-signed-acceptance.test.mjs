@@ -11,7 +11,8 @@ const codes=['approve','approve/revoke','reject','transfer',
  'transfer/revoke','close','archive','liquidation/approve'];
 const context={user_id:uid,workspace_id:ws,profile:{status:'active',platform_role:'employee'}};
 function fixture({hasRequest=false,denied=false,changed=false,invalid=false,
- secondCompany=false,secondOnly=false,denySecond=false,noCompanies=false}={}){
+ secondCompany=false,secondOnly=false,denySecond=false,noCompanies=false,
+ summaryMismatch=false}={}){
  const calls=[];let n=0;
  const auth={userId:uid,async getVerifiedUser(){
   n++;return {id:changed&&n>1?id:uid};
@@ -31,7 +32,7 @@ function fixture({hasRequest=false,denied=false,changed=false,invalid=false,
     throw Object.assign(Error('private read denied'),{status:403});
    const visible=hasRequest&&(!secondOnly||args?.p_company==='WASS');
    if(name==='frt_board_dashboard_safe')return {
-    total_requests:visible?1:0,pending:visible?1:0,
+    total_requests:visible||summaryMismatch?1:0,pending:visible||summaryMismatch?1:0,
     in_progress:0,completed:0,pending_liquidation_count:0};
    if(name==='frt_board_list_safe')return visible?[{
     id,company_code:args.p_company,voucher_no:'FRT-01',
@@ -140,4 +141,12 @@ test('SEC14 signed acceptance refuses partial company inspection or no granted c
  assert.equal(empty.status,'PENDING');
  assert.equal(empty.reason,'NO_AUTHORIZED_FRT_COMPANY');
  assert.deepEqual(empty.checks.map(x=>x.status),['PASS','PENDING','PENDING','PASS']);
+});
+
+test('SEC14 rejects a claimed nonempty financial summary with no matching restricted rows',async()=>{
+ const result=await runSEC14SignedRead(fixture({summaryMismatch:true}));
+ assert.equal(result.status,'FAIL');
+ assert.equal(result.reason,'SUMMARY_LIST_INCONSISTENT');
+ assert.equal(result.writesAttempted,0);
+ assert.equal(result.financialWritesVerified,'NOT_VERIFIED');
 });
