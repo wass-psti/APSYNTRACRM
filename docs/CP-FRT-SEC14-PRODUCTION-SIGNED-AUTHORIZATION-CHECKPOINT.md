@@ -86,3 +86,29 @@ The tests in `frontend/tests/frt-sec14-signed-acceptance.test.mjs` cover a reque
 - No authentic Supabase user token/session, permission to impersonate a user, or genuine existing FRT request was available to complete the signed detail and authorization acceptance. The Security-page runner is deployed and prepared for a real operator session but no real operator result is claimed.
 
 **Latest milestone status remains 6/8 VERIFIED = 75%.** The two pending/blocked gates are unchanged.
+
+
+## Operator-submitted SEC14 read-only acceptance — 2026-11-02
+
+**Evidence source:** user-submitted sanitized JSON output from the deployed `#/security` SEC14 signed-read checker. This is **operator-reported application execution**, not an independently captured database-signed test, and it contains no user ID, workspace ID, raw token or monetary data.
+
+```json
+{
+  "checkpoint": "CP-FRT-SEC14",
+  "status": "PENDING",
+  "role": "GENERAL_MANAGER",
+  "checks": [
+    { "name": "signed-context", "status": "PASS" },
+    { "name": "restricted-summary-list", "status": "PASS" },
+    { "name": "restricted-detail", "status": "PENDING" },
+    { "name": "stable-context", "status": "PASS" }
+  ],
+  "reason": "NO_EXISTING_FRT_REQUEST",
+  "writesAttempted": 0,
+  "financialWritesVerified": "NOT_VERIFIED"
+}
+```
+
+**Interpretation:** three of four application-reported signed read checks passed for the reported effective `GENERAL_MANAGER` role: signed context, safe summary/list, and stable session/workspace. The detail check was not executed because the app found no existing eligible FRT request; this agrees with the most recent independently read production inventory showing zero `frt_requests`. No financial mutation was attempted. The report does **not** prove any completed detail response, financial action execution authority, nonbootstrap denial, revoked/expired JWT denial or isolation of unrelated workspaces.
+
+**Gate accounting:** The signed-operator gate has **partial positive evidence**, but its complete acceptance criteria are **PENDING**. The production legacy RPC retirement/financial-authority gate remains **BLOCKED**. SEC14 remains **6/8 fully VERIFIED (75%)**, not 7/8 or 100%. Avoid creating synthetic production FRT requests to force the pending detail check. Next steps are independent valid-user denial coverage, eventual genuine operational request detail when one exists, and separately approved legacy contract retirement after all actual consumers are reconciled.
