@@ -4,6 +4,8 @@
 
 Enable existing Clock In / Clock Out only after current, signed server authorization, validated browser GPS, offsite work-note enforcement, atomic shared-state revision + recovery copy, and immutable audit evidence all pass. The client is now *protocol-ready*, but without an exact `ACTIVE` capability response from the server it remains read-only.
 
+Generic `put_module_state` and `delete_module_state` calls for the authoritative attendance and backup keys are explicitly denied after activation, preventing the non-audited legacy path. Other module keys retain their existing policies.
+
 The authoritative attendance records remain under `module_state_entries` / `timetracker.attendance.v1`, with the established transaction-scoped lock and backup. No new attendance store, identity provider, or standalone login is introduced.
 
 ## Controlled production migration gate — NOT YET APPROVED / NOT INSTALLED

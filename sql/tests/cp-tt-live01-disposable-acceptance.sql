@@ -144,4 +144,50 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 ROLLBACK;
+
+-- Guard the generic mutation RPCs against attendance authority bypasses.
+DO $source_review$
+DECLARE
+ v_writer text;
+ v_deleter text;
+BEGIN
+ SELECT pg_catalog.pg_get_functiondef(p.oid) INTO v_writer
+ FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+ WHERE n.nspname='public' AND p.proname='module_state_write_allowed';
+ SELECT pg_catalog.pg_get_functiondef(p.oid) INTO v_deleter
+ FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+ WHERE n.nspname='public' AND p.proname='delete_module_state';
+ IF v_writer IS NULL OR v_deleter IS NULL OR
+  position('timetracker.attendance.v1.backup' IN v_writer)=0 OR
+  position('timetracker.attendance.v1.backup' IN v_deleter)=0 THEN
+  RAISE EXCEPTION 'FAIL: generic attendance mutation bypass guard absent';
+ END IF;
+END $source_review$;
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT pg_catalog.set_config('request.jwt.claims',
+ '{"sub":"10000000-0000-4000-8000-000000000011","session_id":"10000000-0000-4000-8000-000000000031"}',true);
+DO $generic$
+BEGIN
+ IF public.module_state_write_allowed('time-tracker','timetracker.attendance.v1',auth.uid())
+ OR public.module_state_write_allowed('time-tracker','timetracker.attendance.v1.backup',auth.uid())
+ THEN RAISE EXCEPTION 'FAIL: generic attendance write gate left open'; END IF;
+ IF NOT public.module_state_write_allowed('time-tracker','timetracker.audit.v1',auth.uid()) THEN
+  RAISE EXCEPTION 'FAIL: unrelated TimeTracker state write changed'; END IF;
+ BEGIN
+  PERFORM public.put_module_state('time-tracker','timetracker.attendance.v1',
+    '{"version":1,"records":[]}','shared',NULL);
+  RAISE EXCEPTION 'FAIL: generic put_module_state can bypass Clock audit';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM public.delete_module_state('time-tracker','timetracker.attendance.v1','shared',NULL);
+  RAISE EXCEPTION 'FAIL: generic delete_module_state can erase attendance';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM public.delete_module_state('time-tracker','timetracker.attendance.v1.backup','shared',NULL);
+  RAISE EXCEPTION 'FAIL: generic delete can erase attendance recovery copy';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $generic$;
+ROLLBACK;
+
 \echo 'CP-TT-LIVE-01 PASS: synthetic signed scopes, privacy and audit'

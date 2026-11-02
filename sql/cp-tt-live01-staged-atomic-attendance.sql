@@ -56,6 +56,83 @@ CREATE TRIGGER timetracker_attendance_immutable
 REVOKE ALL ON FUNCTION public.timetracker_attendance_audit_immutable()
  FROM PUBLIC, anon, authenticated;
 
+
+-- Attendance state becomes write-once-through-the-signed Clock endpoint.
+-- Generic state write/delete RPCs must not bypass atomic audit obligations.
+-- Other modules and TimeTracker non-attendance keys retain their prior rules.
+CREATE OR REPLACE FUNCTION public.module_state_write_allowed(
+ p_module_id text,p_state_key text,p_user_id uuid DEFAULT auth.uid())
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $write_allowed$
+DECLARE
+ r text:=public.module_role_for(p_module_id,p_user_id);
+ pol record;
+BEGIN
+ IF NOT public.has_module_access(p_module_id,p_user_id) THEN RETURN false; END IF;
+ IF p_module_id='time-tracker' AND p_state_key IN (
+  'timetracker.attendance.v1','timetracker.attendance.v1.backup'
+ ) THEN RETURN false; END IF;
+ SELECT * INTO pol FROM public.module_state_policy(p_module_id,p_state_key);
+ IF NOT FOUND OR NOT pol.writable THEN RETURN false; END IF;
+ IF p_module_id='time-tracker' AND p_state_key IN (
+  'timetracker.rbac.v1','timetracker.rbac.v1.backup'
+ ) THEN RETURN false; END IF;
+ IF p_module_id='fueltrack-plus' AND p_state_key IN (
+  'fueltrackplus.userroles.v3','fueltrackplus.activity.v3'
+ ) THEN RETURN false; END IF;
+ RETURN true;
+END;
+$write_allowed$;
+
+-- Existing delete_module_state interface/semantics preserved, with an early
+-- denied key check for both authoritative attendance and recovery backup.
+CREATE OR REPLACE FUNCTION public.delete_module_state(
+ p_module_id text,p_state_key text,p_scope text DEFAULT 'shared',
+ p_expected_revision bigint DEFAULT NULL)
+RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path TO 'public'
+AS $delete_guard$
+DECLARE
+ caller uuid:=auth.uid();
+ ws uuid;
+ owner text;
+ current_revision bigint;
+ affected integer;
+ pol record;
+BEGIN
+ IF caller IS NULL THEN RAISE EXCEPTION 'authentication required' USING ERRCODE='42501'; END IF;
+ IF NOT public.has_module_access(p_module_id,caller) THEN
+  RAISE EXCEPTION 'module access denied' USING ERRCODE='42501';
+ END IF;
+ IF p_module_id='time-tracker' AND p_state_key IN (
+  'timetracker.attendance.v1','timetracker.attendance.v1.backup'
+ ) THEN
+  RAISE EXCEPTION 'Dedicated Clock service owns attendance state'
+    USING ERRCODE='42501';
+ END IF;
+ SELECT * INTO pol FROM public.module_state_policy(p_module_id,p_state_key);
+ IF NOT FOUND THEN RAISE EXCEPTION 'state key is not registered for module'
+  USING ERRCODE='22023'; END IF;
+ IF p_scope<>pol.required_scope THEN RAISE EXCEPTION 'state scope mismatch: expected %',pol.required_scope
+  USING ERRCODE='22023'; END IF;
+ IF NOT public.module_state_delete_allowed(p_module_id,p_scope,caller) THEN
+  RAISE EXCEPTION 'module state delete denied' USING ERRCODE='42501'; END IF;
+ ws:=public.current_workspace_id(caller);
+ owner:=CASE WHEN p_scope='user' THEN caller::text ELSE '*' END;
+ SELECT e.revision INTO current_revision FROM public.module_state_entries e
+ WHERE e.workspace_id=ws AND e.module_id=p_module_id
+ AND e.state_key=p_state_key AND e.scope=p_scope AND e.owner_key=owner FOR UPDATE;
+ IF p_expected_revision IS NOT NULL AND COALESCE(current_revision,0)<>p_expected_revision THEN
+  RAISE EXCEPTION 'WM_STATE_CONFLICT expected %, current %',p_expected_revision,COALESCE(current_revision,0)
+   USING ERRCODE='40001';
+ END IF;
+ DELETE FROM public.module_state_entries e
+ WHERE e.workspace_id=ws AND e.module_id=p_module_id AND e.state_key=p_state_key
+ AND e.scope=p_scope AND e.owner_key=owner;
+ GET DIAGNOSTICS affected=ROW_COUNT;
+ RETURN affected>0;
+END;
+$delete_guard$;
+
 -- Existing OT scope guard checks auth.sessions revocation and expiry, active
 -- central module membership, exact active board, board grant and workspace.
 CREATE FUNCTION public.timetracker_attendance_capabilities(p_board_id uuid)
