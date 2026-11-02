@@ -3,6 +3,7 @@ export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
+import {projectTimeTrackerTeamDirectory} from './time-tracker-team.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
  * No standalone app, storage shim, local JWT, synthetic rows, or privileged key.
@@ -197,6 +198,22 @@ export class TimeTrackerNativeClient{
   await checkIdentity(this.auth,this.api,access,boardId);
   return {status:'VERIFIED_READ',access:{...access,...otAccess},records,otRequests,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
+ }
+ /** A fresh independently guarded bootstrap read; no Team information for normal users. */
+ async teamDirectory(boardId){
+  const access=await this.access(boardId);
+  const bootstrap=await this.api.rpc('apsyntra_role_is_bootstrap');
+  if(bootstrap!==true)deny('Bootstrap Team Directory authorization required');
+  const response=await this.api.rpc('apsyntra_role_configuration_snapshot',{
+   p_workspace_id:access.workspaceId
+  });
+  const directory=projectTimeTrackerTeamDirectory(response,{
+   workspaceId:access.workspaceId,actorId:access.userId
+  });
+  await checkIdentity(this.auth,this.api,access,boardId);
+  if(await this.api.rpc('apsyntra_role_is_bootstrap')!==true)
+   deny('Bootstrap authorization changed during Team Directory read');
+  return directory;
  }
  async submitOvertime(boardId,draft){
   if(!TT_OT_WRITES_ACCEPTED)deny('Overtime writes require signed backend acceptance');
