@@ -140,11 +140,27 @@ export async function probeTimeTrackerMonitor({
 const entry=(label,value,sub='')=>'<div class="tt-monitor-stat"><span>'+esc(label)+
  '</span><strong>'+esc(value)+'</strong><small>'+esc(sub)+'</small></div>';
 const fmtBytes=v=>v===null?'—':v>=1048576?round(v/1048576)+' MiB':Math.round(v/1024)+' KiB';
-export function renderTimeTrackerMonitor({result=null,loading=false,error='',now=new Date()}={}){
+export function summarizeTimeTrackerMonitorHistory(samples=[]){
+ const list=(Array.isArray(samples)?samples:[]).slice(-12).filter(s=>
+  s&&Number.isFinite(s?.network?.sampleMs)&&s.network.sampleMs>=0&&
+  ['VERIFIED','DEGRADED','BLOCKED'].includes(s.status));
+ const durations=list.map(s=>s.network.sampleMs);
+ const verified=list.filter(s=>s.status==='VERIFIED').length;
+ return Object.freeze({
+  count:list.length,verified,passRate:list.length?Math.round(100*verified/list.length):null,
+  avgMs:list.length?Math.round(durations.reduce((a,b)=>a+b,0)/list.length):null,
+  maxMs:durations.length?Math.max(...durations):null,
+  samples:Object.freeze(list.map(s=>Object.freeze({
+   at:s.sampledAt,status:s.status,durationMs:s.network.sampleMs
+  })))
+ });
+}
+export function renderTimeTrackerMonitor({result=null,history=[],loading=false,error='',now=new Date()}={}){
  const state=classifyTimeTrackerMonitor(result);
  const client=result?.client||{};
  const net=result?.network||{};
  const results=result?.checks||[];
+ const trend=summarizeTimeTrackerMonitorHistory(history);
  const live=state==='HEALTHY AT CHECK',degraded=state==='DEGRADED';
  return '<section class="tt-monitor" aria-label="TimeTracker API and browser health monitor">'+
   '<header class="tt-monitor-head"><div><h3>API Health Monitor</h3>'+
@@ -193,6 +209,17 @@ export function renderTimeTrackerMonitor({result=null,loading=false,error='',now
     entry('JS HEAP',client.heapMb===null||client.heapMb===undefined?'—':client.heapMb+' MiB','Only if supported')+
     entry('GPS CACHE HIT','—','Not instrumented')+
     entry('INPUT LATENCY','—','Not instrumented')+'</div>')+
-  '<p class="tt-monitor-footnote">Checks use existing signed Supabase RPCs and board permissions; they do not alter data. Backend timings represent this browser’s observed requests. When enabled, PostgreSQL counters are aggregate and cumulative since stats reset; neither sample establishes a service-level guarantee. Unsupported browser metrics are shown as unavailable. No raw URLs, tokens, employee records, location coordinates or persistent monitoring logs are collected.</p>'+
+  (trend.count?'<div class="tt-monitor-section"><strong>ON-DEMAND HISTORY</strong><span>'+
+     trend.count+' session sample(s)</span></div>'+
+    '<div class="tt-monitor-stats">'+
+      entry('SAMPLES',trend.count)+
+      entry('VERIFIED',trend.verified)+
+      entry('AVERAGE CHECK',formatMonitorDuration(trend.avgMs))+
+      entry('SLOWEST CHECK',formatMonitorDuration(trend.maxMs))+
+    '</div><div class="tt-monitor-history">'+trend.samples.slice(-8).map(sample=>
+      '<div><span>'+esc(pht(sample.at))+'</span><strong>'+esc(sample.status)+
+      '</strong><span>'+esc(formatMonitorDuration(sample.durationMs))+'</span></div>').join('')+
+    '</div>':'')+
+  '<p class="tt-monitor-footnote">Checks use existing signed Supabase RPCs and board permissions; they do not alter data. Backend timings represent this browser’s observed requests. When enabled, PostgreSQL counters are aggregate and cumulative since stats reset; neither sample establishes a service-level guarantee. Unsupported browser metrics are shown as unavailable. No raw URLs, tokens, employee records, location coordinates or persistent monitoring logs are collected. Up to 12 bounded samples are retained only in current browser memory and can be cleared.</p>'+
  '</section>';
 }
