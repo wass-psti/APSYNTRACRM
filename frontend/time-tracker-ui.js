@@ -189,7 +189,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorBusy=false,monitorError=''
+ result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=(view==='team'&&teamEligible!==true)?'clock':
@@ -229,7 +229,7 @@ export function renderTimeTrackerNative({
   filters:teamFilters,loading:teamBusy,error:teamError,now
  });
  if(selected==='monitor')html+=renderTimeTrackerMonitor({
-  result:monitorResult,loading:monitorBusy,error:monitorError,now
+  result:monitorResult,history:monitorHistory,loading:monitorBusy,error:monitorError,now
  });
  if(selected==='hours')html+=renderTimeTrackerMyHours({
   records:result.records,access:result.access,
