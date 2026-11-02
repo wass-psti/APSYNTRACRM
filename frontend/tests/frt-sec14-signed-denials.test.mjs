@@ -27,11 +27,12 @@ function fixture({bootstrap=false,grant=true,deny=true,
       status:'active',role:'FINANCE_MANAGER'},
     companies:[{code:'WASS',name:'WASS'}]
    };
-   if(['frt_board_dashboard_safe','frt_board_list_safe'].includes(name)){
-    if(expired)throw Object.assign(Error('expired'),{status:401,code:'PGRST301'});
-    if(deny)throw Object.assign(Error('permission'),{status:403,
-      code:invalidCode?'PGRST301':'42501'});
-    return name==='frt_board_list_safe'?[]:{total_requests:0};
+   if(name==='frt_sec14_auto_foreign_denials'){
+    if(expired)throw Object.assign(Error('expired'),{status:401});
+    if(deny)return {status:'PASS',reason:'FOREIGN_WORKSPACE_DENIAL_VERIFIED',
+     foreignWorkspaceExistence:'VERIFIED',dashboard:'PASS',list:'PASS'};
+    return {status:'FAIL',reason:'FOREIGN_WORKSPACE_ACCESS_NOT_DENIED',
+     foreignWorkspaceExistence:'VERIFIED',dashboard:'FAIL',list:'FAIL'};
    }
    throw Error('Unexpected backend name: '+name);
   }
