@@ -73,3 +73,7 @@
  .aps-init,.aps-init-track:before,.aps-init-orb-fallback{animation:none;transition:none}
  .aps-init-exiting{opacity:0}
 }
+
+/* CP-BRAND-01: uploaded APSYNTRA logo, optimized and same-origin. */
+.aps-init-brand-icon{display:block;width:76px;height:76px;margin:0 auto 12px;object-fit:contain;border-radius:18px;filter:drop-shadow(0 9px 22px #2977eb35)}
+@media(max-width:600px){.aps-init-brand-icon{width:60px;height:60px;margin-bottom:10px}}

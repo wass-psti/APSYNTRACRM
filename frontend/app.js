@@ -94,7 +94,7 @@ function notice(err){toast(errorMessage(err),true);}
 function renderLogin(message=''){
  stopTimeTrackerClock();
  root.innerHTML=`<div class="auth-layout">
- <div class="auth-left"><a href="#/login" class="brand"><span class="brand-mark">A</span><span>APSYNTRA <span class="csp-u043" >CRM</span></span></a>
+ <div class="auth-left"><a href="#/login" class="brand"><img class="brand-mark" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/><span>APSYNTRA <span class="csp-u043" >CRM</span></span></a>
  <section class="auth-panel"><span class="eyebrow">Your connected workspace</span>
  <h1>Welcome back<span class="csp-u010" >.</span></h1>
  <p class="muted">Sign in with your existing WatchdogWorkspace account to manage boards, collaborate, and stay on top of every detail.</p>
@@ -116,7 +116,7 @@ function renderLogin(message=''){
 function sidebar(){
  const currentBoard=state.boardId;
  return `<aside class="sidebar">
-   <a href="#/overview" class="brand"><span class="brand-mark">A</span><span class="brand-text">APSYNTRA <span class="csp-u043" >CRM</span></span></a>
+   <a href="#/overview" class="brand"><img class="brand-mark" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/><span class="brand-text">APSYNTRA <span class="csp-u043" >CRM</span></span></a>
    <div class="workspace-switcher"><div class="workspace-icon">W</div><div><div class="workspace-name">${e(workspaceName())}</div><div class="workspace-sub">Connected workspace</div></div></div>
    <div class="side-section">Workspace</div>
    <nav class="nav-list" aria-label="Primary">
@@ -1855,7 +1855,7 @@ async function boot(){
       await onRoute();
     }catch(err){
       if(err instanceof ApiError&&err.status===403){
-        root.innerHTML=`<div class="access-denied"><div class="denied-panel"><span class="brand-mark csp-u059" >A</span><h1>Workspace access unavailable</h1>
+        root.innerHTML=`<div class="access-denied"><div class="denied-panel"><img class="brand-mark csp-u059" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/><h1>Workspace access unavailable</h1>
         <p>${e(errorMessage(err))} Contact your administrator to activate your existing profile or workspace membership.</p>
         <button class="secondary" data-action="logout">Sign out</button></div></div>`;
       }else{await auth.signOut();renderLogin('Your session could not be restored. Please sign in again.');}
