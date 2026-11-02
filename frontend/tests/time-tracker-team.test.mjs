@@ -30,3 +30,27 @@ test('directory UI renders counts only for matching signed bootstrap',()=>{
  assert.doesNotMatch(renderTimeTrackerTeam({directory:data,access:{...access,bootstrapTeamEligible:false}}),/MEMBER LIST/);
  assert.match(timeTrackerTeamCsv(data),/System Admin/);
 });
+import {TimeTrackerNativeClient} from '../time-tracker-native.js';
+test('fresh bootstrap RPC is necessary even when module role is administrative',async()=>{
+ const setup=allowed=>new TimeTrackerNativeClient({
+  auth:{userId:teamActor,getVerifiedUser:async()=>({id:teamActor})},
+  api:{
+   context:async()=>({user_id:teamActor,workspace_id:teamWs,
+    profile:{status:'active',platform_role:'admin_general_manager'}}),
+   board:async()=>({board:{id:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
+    workspace_id:teamWs,name:'TimeTracker Attendance'}}),
+   allowed:async()=>true,
+   rpc:async name=>{
+    if(name==='has_module_access')return true;
+    if(name==='list_module_directory')return [
+     {id:teamActor,status:'active',module_role:'System Admin',display_name:'Example'}];
+    if(name==='apsyntra_role_is_bootstrap')return allowed;
+    if(name==='apsyntra_role_configuration_snapshot')return teamFixture;
+    throw Error('Unsupported RPC');
+   }
+  }
+ });
+ const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
+ await assert.rejects(()=>setup(false).teamDirectory(board),/Bootstrap Team Directory/);
+ assert.equal((await setup(true).teamDirectory(board)).members.length,1);
+});
