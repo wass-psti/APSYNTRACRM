@@ -21,6 +21,8 @@ on:
       - "sql/tests/cp-frt-sec11-*.sql"
       - "sql/cp-frt-sec14-*.sql"
       - "sql/tests/cp-frt-sec14-*.sql"
+      - "sql/cp-tt-ot01-*.sql"
+      - "sql/tests/cp-tt-ot02-*.sql"
       - "docs/CP-FRT-SEC11-SIGNED-EFFECTIVE-ACCESS.md"
       - "docs/CP-FRT-SEC10-CONTROLLED-TRANSITIONS.md"
       - "docs/CP-FRT-SEC07-CONTROLLED-ACTIVATION.md"
@@ -112,8 +114,44 @@ jobs:
             -f sql/cp-frt-sec14-auto-foreign-denials.sql \
             -f sql/tests/cp-frt-sec14-auto-foreign-disposable.sql \
             -f sql/tests/cp-frt-sec14-auto-foreign-grant-drift.sql
+  disposable-ot-postgres:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify signed OT permissions in disposable PostgreSQL 17
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tt-ot02-disposable-setup.sql \
+            -f sql/cp-tt-ot01-staged-bootstrap-approval.sql \
+            -f sql/tests/cp-tt-ot02-disposable-acceptance.sql
   live-pages:
-    needs: frontend
+    needs: [frontend, disposable-ot-postgres]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
