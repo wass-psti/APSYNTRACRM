@@ -1,5 +1,8 @@
 # CP-FRT-SEC14 — Production Activation and Signed Authorization Acceptance
 
+**Administrative checkpoint disposition:** **CLOSED — OWNER ACCEPTED WITH DEFERRED EXCEPTIONS (2026-11-02).** This is project milestone sign-off, **not** full security certification or production finance acceptance. Evidence-based verification remains **6/8 gates = 75%**, and open risks have not been reclassified as PASS. See [Owner-directed closure](#owner-directed-closure--2026-11-02) and the retained compatibility audit.
+
+
 **Checkpoint date:** 2026-11-02 (Asia/Manila)  
 **Canonical repository:** `wass-psti/APSYNTRACRM`, direct `main`  
 **Production:** existing Supabase project `jtlusodorfnyzgyuewkz`, GitHub Pages `https://wass-psti.github.io/APSYNTRACRM/#/security`
@@ -295,3 +298,26 @@ User submitted a **sanitized browser-generated** `CP-FRT-SEC10-CI07` read-only r
 **Updated authoritative inventory:** [`docs/CP-FRT-SEC14-LEGACY-RPC-CONSUMER-COMPATIBILITY.md`](./CP-FRT-SEC14-LEGACY-RPC-CONSUMER-COMPATIBILITY.md) includes exact commit provenance, old deployment, SQL request shape, bounded logs, confidence limitations and retirement exit conditions. First-party compatibility CI remains green at its last tested SHA (244/244). `wass-psti/Fund-Released-Tracker` current source uses its separate Express/pg backend; its deployed runtime and unknown third-party external consumers remain unverified. Previously referenced `wass-psti/WatchdogWorkspace` was not retrievable from the currently connected GitHub access (repository GET returned 404); do **not** infer that it has no consumers.
 
 **Decision unchanged:** legacy authenticated EXECUTE for `frt_get_request(uuid,uuid)`, `frt_list_requests(uuid,text,text)` and `frt_dashboard(uuid,text)` is **PRESERVED**; retirement candidate is **NOT APPLIED**. Full deployed-client inventory, historical call attribution or defensible migration/retirement window, rollback, and explicit production permission-change authorization remain **BLOCKED / PENDING**. Genuine request-detail still waits for a legitimate FRT operational request; the already PASS 7/7 signed nonbootstrap denial is retained. Overall SEC14 remains **6/8 VERIFIED (75%)**.
+
+
+## Owner-directed closure — 2026-11-02
+
+**User-directed project decision:** On 2026-11-02 the project owner expressly asked to **consider CP-FRT-SEC14 finished and proceed**. Record the milestone as **CLOSED — OWNER ACCEPTED WITH DEFERRED EXCEPTIONS** and cease repeating already-passed signed authorization checks or blocking subsequent unrelated milestones on SEC14's administrative status.
+
+**This is an administrative scope sign-off, not evidence that missing technical checks passed.**
+
+| Acceptance / remaining work | Evidence-based classification at closure | Disposition |
+| --- | --- | --- |
+| Production safe list/dashboard RPCs, verified signed context | **VERIFIED** | Accepted and retained |
+| Automatic foreign-workspace denial under nonbootstrap FINANCE_APPROVER | **VERIFIED**, 7/7 signed operator checks PASS | Accepted; no rerun required |
+| First-party finance frontend source compatibility and CI guard | **VERIFIED**, 244/244 frontend tests in final relevant CI, PostgreSQL/Page checks PASS | Accepted and retained |
+| Live existing-request detail | **PENDING**: no legitimate production FRT request exists | **DEFERRED** until an authentic operational request exists, without synthetic financial entries |
+| Historical/external consumer compatibility | **BLOCKED / NOT FULLY VERIFIED**: historical authenticated PostgREST usage and unknown clients | **DEFERRED** as its own compatibility/security backlog item |
+| Revocation of `frt_get_request`, `frt_list_requests`, `frt_dashboard` EXECUTE | **NOT APPLIED**; all three legacy grants remain active | **DEFERRED**, explicitly **not authorized** by checkpoint closure; requires complete compatibility and separate production change approval |
+| Financial action execution, session revocation / financial write acceptance | **NOT VERIFIED** by SEC14 read-only reports | **OUT OF SCOPE of this administrative sign-off**; retain as operational authorization acceptance work |
+
+**Verification ledger frozen at closure:** **6/8 fully verified = 75%.** Administrative checkpoint disposition is **CLOSED WITH EXCEPTIONS**; it is inaccurate to report **100% security acceptance, PASS 8/8, all financial operations verified, full field-level secrecy, or production-ready legacy grant retirement**.
+
+**Production protections:** no function grants, FRT financial records, roles, memberships, RLS, JWT policy or financial action API are changed by this sign-off. Preserve the current backend and frontend behavior. The existing `sql/cp-frt-sec14-legacy-read-grant-retirement-candidate.sql` is retained as an unapplied candidate only; never run it simply because SEC14 was closed administratively.
+
+**Continuation:** move future development to the next independently approved APSYNTRA CRM roadmap milestone. If a real request later exists or a safe legacy-retirement change is authorized, track those as **post-SEC14 follow-up work**, without reopening repeated positive/negative tests or silently changing this closure record.
