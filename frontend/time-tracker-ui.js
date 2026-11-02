@@ -8,6 +8,7 @@ import {
 import {renderTimeTrackerOverview} from './time-tracker-overview.js';
 import {renderTimeTrackerLog} from './time-tracker-log.js';
 import {renderTimeTrackerReports} from './time-tracker-reports.js';
+import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -17,7 +18,7 @@ const date=v=>v&&Number.isFinite(Date.parse(v))?
 const hrs=ms=>Number.isFinite(ms)?(ms/3600000).toFixed(2)+' h':'—';
 const sections=[
  ['overview','Overview',true],['clock','Clock',true],['log','Log',true],
- ['reports','Reports',true],['calendar','Calendar',false],
+ ['reports','Reports',true],['calendar','Calendar',true],
  ['ot','OT',true],['hours','My Hours',false],['team','Team',false],
  ['roles','Roles',false],['monitor','Monitor',false],['gps','GPS',false]
 ];
@@ -198,10 +199,10 @@ function overtimePage(result){
  '</div></div>';
 }
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={}
+ result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
- const selected=['overview','clock','log','reports','ot'].includes(view)?view:'clock';
+ const selected=['overview','clock','log','reports','calendar','ot'].includes(view)?view:'clock';
  let html='<section class="tt-native" aria-label="TimeTracker attendance application">'+
   head(verified?result.access:null)+notifications(verified)+navigation(selected,busy);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
@@ -226,6 +227,11 @@ export function renderTimeTrackerNative({
   rows:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
   period,filters:reportFilters,now,busy
+ });
+ if(selected==='calendar')html+=renderTimeTrackerCalendar({
+  records:result.log?.rows||result.records,
+  scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
+  month:calendarMonth,selectedDay:calendarSelectedDay,now,busy
  });
  if(selected==='ot')html+=overtimePage(result);
  html+='</section>';
