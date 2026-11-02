@@ -2,6 +2,10 @@
 -- All attendance writes are synthetic and scoped to the isolated CI fixture.
 \set ON_ERROR_STOP on
 \echo 'CP-TT-LIVE-01: signed clock operations, isolation, audit and rollback'
+-- Earlier OT fixture tests intentionally expired actor A; restore only the
+-- disposable actor to independently validate a fresh active Clock session.
+UPDATE auth.sessions SET not_after=pg_catalog.clock_timestamp()+INTERVAL '2 hours'
+ WHERE id='10000000-0000-4000-8000-000000000031';
 DO $$
 DECLARE
  v_acl boolean;
@@ -94,6 +98,23 @@ BEGIN
   RAISE EXCEPTION 'FAIL: attendance audit not atomic with write';
  END IF;
 END $audit_check$;
+ROLLBACK;
+
+-- Expired token's still-valid JWT must not count as a live server session.
+BEGIN;
+UPDATE auth.sessions SET not_after=pg_catalog.clock_timestamp()-INTERVAL '1 second'
+ WHERE id='10000000-0000-4000-8000-000000000031';
+SET LOCAL ROLE authenticated;
+SELECT pg_catalog.set_config('request.jwt.claims',
+ '{"sub":"10000000-0000-4000-8000-000000000011","session_id":"10000000-0000-4000-8000-000000000031"}',true);
+DO $expired$
+BEGIN
+ BEGIN
+  PERFORM public.timetracker_attendance_capabilities(
+   '10000000-0000-4000-8000-000000000021'::uuid);
+  RAISE EXCEPTION 'FAIL: expired session unexpectedly has Clock capability';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $expired$;
 ROLLBACK;
 
 -- Revoked sessions, other workspace, disabled module, inactive profile denied.
