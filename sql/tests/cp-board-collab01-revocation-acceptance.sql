@@ -13,6 +13,7 @@ DELETE FROM public.work_board_members
   AND user_id='20000000-0000-4000-8000-000000000002';
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000002',false);
+SELECT set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000002',false);
 DO $revoked$
 BEGIN
  BEGIN
@@ -40,6 +41,7 @@ UPDATE public.workspace_members SET active=false
   AND user_id='20000000-0000-4000-8000-000000000002';
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000002',false);
+SELECT set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000002',false);
 DO $inactive$
 BEGIN
  BEGIN
@@ -55,6 +57,31 @@ RESET ROLE;
 UPDATE public.workspace_members SET active=true
  WHERE workspace_id='10000000-0000-4000-8000-000000000001'
  AND user_id='20000000-0000-4000-8000-000000000002';
+
+-- Simulate a still-unexpired JWT whose auth.sessions entry has been removed.
+DELETE FROM auth.sessions
+ WHERE id='70000000-0000-4000-8000-000000000002';
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000002',false);
+SELECT set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000002',false);
+DO $revoked_gotrue$
+BEGIN
+ BEGIN
+  PERFORM public.wm_list_board_item_updates('40000000-0000-4000-8000-000000000001',10);
+  RAISE EXCEPTION 'COL01 removed GoTrue session still reads item updates';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM public.wm_list_board_item_files('40000000-0000-4000-8000-000000000001',10);
+  RAISE EXCEPTION 'COL01 removed GoTrue session still reads item files';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM public.wm_list_board_events_page('30000000-0000-4000-8000-000000000001',NULL,10);
+  RAISE EXCEPTION 'COL01 removed GoTrue session still reads events';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $revoked_gotrue$;
+RESET ROLE;
+INSERT INTO auth.sessions(id,user_id) VALUES
+ ('70000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002');
 
 -- No real Supabase GoTrue session ID is simulated here.
 -- Expired/revoked GoTrue bearer-token acceptance remains an independent

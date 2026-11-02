@@ -3,11 +3,13 @@
 DO $grants$
 BEGIN
  IF has_function_privilege('anon','public.wm_add_board_member(uuid,text,text)','EXECUTE')
+   OR has_function_privilege('anon','public.wm_col01_session_active()','EXECUTE')
    OR has_function_privilege('anon','public.wm_board_invitable_users(uuid,text)','EXECUTE')
    OR has_function_privilege('anon','public.wm_list_board_item_updates(uuid,integer)','EXECUTE')
    OR has_function_privilege('anon','public.wm_list_board_item_files(uuid,integer)','EXECUTE')
    OR has_function_privilege('anon','public.wm_list_board_events_page(uuid,bigint,integer)','EXECUTE')
    OR NOT has_function_privilege('authenticated','public.wm_add_board_member(uuid,text,text)','EXECUTE')
+   OR NOT has_function_privilege('authenticated','public.wm_col01_session_active()','EXECUTE')
    OR NOT has_function_privilege('authenticated','public.wm_list_board_item_updates(uuid,integer)','EXECUTE')
    OR has_table_privilege('authenticated','public.work_board_item_updates','SELECT')
    OR has_table_privilege('authenticated','public.work_board_item_files','SELECT') THEN

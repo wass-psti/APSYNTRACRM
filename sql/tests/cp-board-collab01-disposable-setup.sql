@@ -5,6 +5,11 @@ CREATE ROLE anon NOLOGIN;
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE
 AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+CREATE TABLE auth.sessions(id uuid PRIMARY KEY,user_id uuid NOT NULL,
+ not_after timestamptz);
+CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE
+AS $$ SELECT jsonb_build_object('session_id',
+  nullif(current_setting('request.jwt.claim.session_id',true),'')) $$;
 CREATE TABLE public.profiles(
  id uuid PRIMARY KEY,email text NOT NULL UNIQUE,display_name text,
  platform_role text NOT NULL DEFAULT 'employee',status text NOT NULL DEFAULT 'active');
@@ -87,6 +92,12 @@ INSERT INTO public.profiles(id,email,display_name,platform_role,status) VALUES
  ('20000000-0000-4000-8000-000000000003','viewer@example.test','Viewer','viewer','active'),
  ('20000000-0000-4000-8000-000000000004','foreign@example.test','Foreign','employee','active'),
  ('20000000-0000-4000-8000-000000000005','inactive@example.test','Inactive','employee','inactive');
+INSERT INTO auth.sessions(id,user_id) VALUES
+ ('70000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001'),
+ ('70000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002'),
+ ('70000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003'),
+ ('70000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000004'),
+ ('70000000-0000-4000-8000-000000000005','20000000-0000-4000-8000-000000000005');
 INSERT INTO public.workspace_members(workspace_id,user_id,active) VALUES
  ('10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',true),
  ('10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002',true),

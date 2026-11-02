@@ -4,6 +4,25 @@
 -- Reuses existing Work Management authorization, tables and logging.
 BEGIN;
 
+-- Reject revoked GoTrue sessions for CP-BOARD-COL01 RPCs.
+CREATE OR REPLACE FUNCTION public.wm_col01_session_active()
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
+AS $function$
+DECLARE v_actor uuid:=auth.uid();
+ v_claim text:=auth.jwt()->>'session_id';
+ v_session uuid;
+BEGIN
+ IF v_actor IS NULL OR v_claim IS NULL OR
+    v_claim !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+ THEN RETURN false; END IF;
+ v_session:=v_claim::uuid;
+ RETURN EXISTS(SELECT 1 FROM auth.sessions s WHERE s.id=v_session
+    AND s.user_id=v_actor AND (s.not_after IS NULL OR s.not_after>pg_catalog.now()));
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.wm_col01_session_active() FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.wm_col01_session_active() TO authenticated;
+
 -- Existing member grant is guarded by the caller's MANAGE ceiling but does not
 -- explicitly verify that a target profile belongs to the board's workspace.
 CREATE OR REPLACE FUNCTION public.wm_add_board_member(
@@ -16,7 +35,8 @@ DECLARE
  v_old_role text;
  v_ceiling text;
 BEGIN
- IF auth.uid() IS NULL OR NOT public.work_board_access(p_board_id,'manage') THEN
+ IF auth.uid() IS NULL OR NOT public.wm_col01_session_active() OR
+    NOT public.work_board_access(p_board_id,'manage') THEN
    RAISE EXCEPTION 'Board management access denied' USING ERRCODE='42501';
  END IF;
  IF p_role IS NULL OR p_role NOT IN ('viewer','editor') THEN
@@ -62,7 +82,8 @@ DECLARE
  v_ws uuid;
  v_q text:=pg_catalog.lower(pg_catalog.btrim(coalesce(p_query,'')));
 BEGIN
- IF auth.uid() IS NULL OR NOT public.work_board_access(p_board_id,'manage') THEN
+ IF auth.uid() IS NULL OR NOT public.wm_col01_session_active() OR
+    NOT public.work_board_access(p_board_id,'manage') THEN
    RAISE EXCEPTION 'Board management access denied' USING ERRCODE='42501';
  END IF;
  IF pg_catalog.length(v_q)>120 THEN RAISE EXCEPTION 'Search too long' USING ERRCODE='22023'; END IF;
@@ -96,7 +117,7 @@ DECLARE v_board uuid;
 BEGIN
  SELECT i.board_id INTO v_board FROM public.work_board_items i
  WHERE i.id=p_item_id AND i.archived_at IS NULL;
- IF auth.uid() IS NULL OR v_board IS NULL OR
+ IF auth.uid() IS NULL OR NOT public.wm_col01_session_active() OR v_board IS NULL OR
     NOT public.work_board_access(v_board,'view') THEN
    RAISE EXCEPTION 'Item update access denied' USING ERRCODE='42501';
  END IF;
@@ -120,7 +141,7 @@ DECLARE v_board uuid;
 BEGIN
  SELECT i.board_id INTO v_board FROM public.work_board_items i
  WHERE i.id=p_item_id AND i.archived_at IS NULL;
- IF auth.uid() IS NULL OR v_board IS NULL OR
+ IF auth.uid() IS NULL OR NOT public.wm_col01_session_active() OR v_board IS NULL OR
     NOT public.work_board_access(v_board,'view') THEN
    RAISE EXCEPTION 'Item file access denied' USING ERRCODE='42501';
  END IF;
@@ -143,7 +164,8 @@ CREATE OR REPLACE FUNCTION public.wm_list_board_events_page(
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
 AS $function$
 BEGIN
- IF auth.uid() IS NULL OR NOT public.work_board_access(p_board_id,'view') THEN
+ IF auth.uid() IS NULL OR NOT public.wm_col01_session_active() OR
+    NOT public.work_board_access(p_board_id,'view') THEN
    RAISE EXCEPTION 'Board event access denied' USING ERRCODE='42501';
  END IF;
  IF p_before_id IS NOT NULL AND p_before_id<=0 THEN

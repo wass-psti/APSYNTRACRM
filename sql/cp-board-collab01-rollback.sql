@@ -46,6 +46,7 @@ DROP FUNCTION public.wm_board_invitable_users(uuid,text);
 DROP FUNCTION public.wm_list_board_item_updates(uuid,integer);
 DROP FUNCTION public.wm_list_board_item_files(uuid,integer);
 DROP FUNCTION public.wm_list_board_events_page(uuid,bigint,integer);
+DROP FUNCTION public.wm_col01_session_active();
 
 -- Verify original source and that new APIs are gone before committing.
 DO $verify$
@@ -57,7 +58,8 @@ BEGIN
  IF to_regprocedure('public.wm_board_invitable_users(uuid,text)') IS NOT NULL OR
     to_regprocedure('public.wm_list_board_item_updates(uuid,integer)') IS NOT NULL OR
     to_regprocedure('public.wm_list_board_item_files(uuid,integer)') IS NOT NULL OR
-    to_regprocedure('public.wm_list_board_events_page(uuid,bigint,integer)') IS NOT NULL THEN
+    to_regprocedure('public.wm_list_board_events_page(uuid,bigint,integer)') IS NOT NULL OR
+    to_regprocedure('public.wm_col01_session_active()') IS NOT NULL THEN
    RAISE EXCEPTION 'One or more candidate functions remain deployed';
  END IF;
  IF NOT has_function_privilege('authenticated',

@@ -6,6 +6,7 @@ WITH expected AS (
  SELECT
   md5(pg_get_functiondef('public.wm_add_board_member(uuid,text,text)'::regprocedure)) AS writer_hash,
   to_regprocedure('public.wm_board_invitable_users(uuid,text)') IS NULL AS directory_not_activated,
+  to_regprocedure('public.wm_col01_session_active()') IS NULL AS session_guard_not_activated,
   to_regprocedure('public.wm_list_board_item_updates(uuid,integer)') IS NULL AS updates_not_activated,
   to_regprocedure('public.wm_list_board_item_files(uuid,integer)') IS NULL AS files_not_activated,
   to_regprocedure('public.wm_list_board_events_page(uuid,bigint,integer)') IS NULL AS pagination_not_activated,
@@ -30,7 +31,7 @@ WITH expected AS (
    WHERE m.role='editor' AND r.role='viewer') AS viewer_ceiling_conflicts
 )
 SELECT
- CASE WHEN writer_hash=baseline_hash AND directory_not_activated
+ CASE WHEN writer_hash=baseline_hash AND directory_not_activated AND session_guard_not_activated
  AND updates_not_activated AND files_not_activated
  AND pagination_not_activated AND signed_member_writer AND anon_member_writer_denied
  AND all_target_tables_have_rls AND no_direct_signed_table_reads
@@ -38,7 +39,7 @@ SELECT
  THEN 'PREFLIGHT_SCHEMA_PASS_WITH_SIGNED_SESSION_GATE_PENDING'
  ELSE 'BLOCKED_SCHEMA_DRIFT_OR_AUTHORIZATION_ISSUE' END AS decision,
  writer_hash=baseline_hash AS original_writer_unchanged,
- directory_not_activated,updates_not_activated,files_not_activated,pagination_not_activated,
+ directory_not_activated,session_guard_not_activated,updates_not_activated,files_not_activated,pagination_not_activated,
  signed_member_writer,anon_member_writer_denied,all_target_tables_have_rls,
  no_direct_signed_table_reads,foreign_or_inactive_members,viewer_ceiling_conflicts
 FROM state CROSS JOIN expected;

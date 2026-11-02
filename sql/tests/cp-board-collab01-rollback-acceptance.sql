@@ -10,6 +10,7 @@ BEGIN
   OR to_regprocedure('public.wm_list_board_item_updates(uuid,integer)') IS NOT NULL
   OR to_regprocedure('public.wm_list_board_item_files(uuid,integer)') IS NOT NULL
   OR to_regprocedure('public.wm_list_board_events_page(uuid,bigint,integer)') IS NOT NULL
+  OR to_regprocedure('public.wm_col01_session_active()') IS NOT NULL
  THEN RAISE EXCEPTION 'COL01 rollback API restoration FAILED'; END IF;
  IF s.memberships<>(SELECT count(*) FROM public.work_board_members)
   OR s.events<>(SELECT count(*) FROM public.work_board_events)

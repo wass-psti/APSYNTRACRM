@@ -7,6 +7,7 @@ on:
       - ".nojekyll"
       - "scripts/verify-pages-source.mjs"
       - "scripts/cp-frt-sec10-*.mjs"
+      - "scripts/cp-board-col01-*.mjs"
       - "docs/CP-FRT-SEC10-ISOLATED-LIVE-ACCEPTANCE.md"
       - "scripts/pages-smoke.mjs"
       - "scripts/pages-smoke-supersession.mjs"
@@ -60,6 +61,7 @@ jobs:
       - name: Check shipped JavaScript syntax
         run: |
           for source in frontend/*.js; do node --check "$source"; done
+          node --check scripts/cp-board-col01-signed-http.mjs
       - name: Check main HTML entry point
         run: |
           test -f index.html
@@ -216,7 +218,7 @@ jobs:
             -f sql/cp-tt-gps04-fix-privileged-snapshot-cte.sql \
             -f sql/tests/cp-tt-gps04-disposable-acceptance.sql
   live-pages:
-    needs: [frontend, disposable-ot-postgres]
+    needs: [frontend, disposable-ot-postgres, disposable-collaboration-postgres]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
