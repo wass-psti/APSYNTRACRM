@@ -16,7 +16,7 @@ const blank=()=>({checkpoint:'CP-FRT-SEC14-DENIAL',status:'BLOCKED',
  foreignWorkspaceExistence:'NOT_VERIFIED',writesAttempted:0,
  roleChangesAttempted:0,financialWritesVerified:'NOT_VERIFIED'});
 const add=(r,name,status)=>r.checks.push({name,status});
-const denied=e=>e?.code==='42501' || (e?.status===403&&e?.code==='PGRST301');
+const denied=e=>e?.code==='42501';
 async function expectDeny(api,name,args){
  try { await api.rpc(name,args);return 'FAIL'; }
  catch(e){return denied(e)?'PASS':'BLOCKED';}
