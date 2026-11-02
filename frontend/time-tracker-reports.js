@@ -156,7 +156,8 @@ const details=r=>'<details class="tt-report-record-details"><summary>Details</su
 const recordRow=(r,query='')=>{
  const terms=[r.name,r.department,r.location,r.status,r.classification,
   manilaDay(r.clockIn)].join(' ').toLocaleLowerCase();
- return '<tr class="tt-report-filterable" data-report-search="'+esc(terms)+'">'+
+ return '<tr class="tt-report-filterable" data-report-search="'+esc(terms)+'"'+
+  (query&&!terms.includes(query)?' hidden':'')+'>' +
   '<td><strong>'+esc(r.name||'Signed member')+'</strong></td>'+
   '<td>'+esc(fmtTime(r.clockIn))+'</td><td>'+esc(fmtTime(r.clockOut))+'</td>'+
   '<td>'+esc(r.location||'Unspecified')+'</td>'+
