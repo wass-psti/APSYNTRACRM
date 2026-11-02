@@ -258,10 +258,10 @@ export function renderTimeTrackerOverview({
   '<section class="tt-overview-panel tt-location-distribution"><div class="tt-overview-panel-heading">'+
    '<h4>Location distribution</h4><b>'+totalLocations+' active</b></div>'+
    '<div class="tt-location-track" role="img" aria-label="Location distribution for active workers">'+
-   overview.locations.filter(x=>x.count).map((x,i)=>
+   overview.locations.map((x,i)=>x.count?
     '<span class="tt-location-segment tt-location-color-'+i+' '+bucket(ratio(x.count,totalLocations))+
     '" title="'+
-    escapeHtml(locationLabel(x.location)+': '+x.count)+'">'+x.count+'</span>').join('')+
+    escapeHtml(locationLabel(x.location)+': '+x.count)+'">'+x.count+'</span>':'').join('')+
    '</div><div class="tt-location-legend">'+overview.locations.map((x,i)=>
     '<span><i class="tt-location-color-'+i+'"></i>'+
     escapeHtml(locationLabel(x.location))+' · '+x.count+'</span>').join('')+
