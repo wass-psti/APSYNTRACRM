@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {TimeTrackerNativeClient,projectOwnAttendance,creditedAttendanceMs,
  attendanceClassification,captureAttendanceGeo,TT_LOCATIONS,TT_DEPARTMENTS,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,projectOwnOvertime,filterMyAttendancePeriod}
  from '../time-tracker-native.js';
-import {renderTimeTrackerNative,ownAttendanceCsv} from '../time-tracker-ui.js';
+import {renderTimeTrackerNative,ownAttendanceCsv,timeTrackerClockParts,syncTimeTrackerClock} from '../time-tracker-ui.js';
 
 const user='a1208d7e-8d27-4f77-947a-9c6fcd742ed0';
 const other='ed2ef1bc-50ea-4eea-8b83-2d6ec8434797';
@@ -136,9 +136,15 @@ test('native UI mounts within board and escapes untrusted record metadata',()=>{
   location:'<img src=x onerror=evil()>',department:'HR'}],
  active:null}});
  assert.match(html,/tt-clock-form/);
- assert.match(html,/My attendance history/);
+ assert.match(html,/tt-clock-face/);
+ assert.match(html,/tt-session-summary/);
  assert.doesNotMatch(html,/<script>bad<\/script>/);
- assert.doesNotMatch(html,/<img src=x/);
+ const log=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
+  access:{moduleRole:'Employee',platformRole:'hr',name:'<script>bad</script>'},
+  records:[{...projectOwnAttendance({version:1,records:[example()]},user)[0],
+   location:'<img src=x onerror=evil()>',department:'HR'}]},view:'log'});
+ assert.match(log,/My attendance history/);
+ assert.doesNotMatch(log,/<img src=x/);
  const denied=renderTimeTrackerNative({error:'No module access'});
  assert.doesNotMatch(denied,/tt-clock-form/);
 });
@@ -167,7 +173,11 @@ test('production clock actions fail closed until signed backend audit/work-note 
   records:[],active:null}});
  assert.match(html,/Live writes remain disabled/);
  assert.match(html,/name="tt-action" value="clock-in" disabled/);
- assert.match(html,/name="tt-action" value="clock-out" disabled/);
+ assert.doesNotMatch(html,/name="tt-action" value="clock-out"/);
+ const active=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
+  access:{moduleRole:'Employee',platformRole:'employee',name:'User'},
+  records:[],active:{id:'session-1',clockIn:stamp(8)}},view:'clock'});
+ assert.match(active,/name="tt-action" value="clock-out" disabled/);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/if\(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED\)/);
 });
@@ -205,9 +215,65 @@ test('native report UI includes period selection and signed-user OT read-only ta
    access:{moduleRole:'Employee',platformRole:'employee',name:'User'},
    records:[],otRequests:[{id:'one',date:'2026-11-02',status:'Draft',
     start:'18:00',end:'20:00',durationMinutes:120,task:'Overtime work'}],
-   active:null},period:'week'});
- assert.match(html,/tt-report-period/);
+   active:null},period:'week',view:'ot'});
  assert.match(html,/My overtime requests/);
  assert.match(html,/Overtime work/);
  assert.doesNotMatch(html,/data-action="tt-ot-approve"/);
+ const reports=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
+  access:{moduleRole:'Employee',platformRole:'employee',name:'User'},
+  records:[],active:null},view:'reports',period:'month'});
+ assert.match(reports,/tt-report-period/);
+ assert.match(reports,/value="month" selected/);
+});
+
+test('Clock reference layout formats stable local time and daytime greeting',()=>{
+ const time=new Date(2026,10,2,15,22,31);
+ const parts=timeTrackerClockParts(time);
+ assert.equal(parts.greeting,'Good afternoon,');
+ assert.equal(parts.day,'Monday, November 2');
+ assert.equal(parts.hours,'03');
+ assert.equal(parts.minutes,'22');
+ assert.equal(parts.seconds,'31');
+ assert.equal(parts.period,'PM');
+ const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
+  access:{moduleRole:'Employee',platformRole:'hr',name:'Employee'},
+  records:[],active:null,otRequests:[]},now:time});
+ assert.match(html,/Good afternoon,/);
+ assert.match(html,/Monday, November 2/);
+ assert.match(html,/id="tt-clock-hours">03/);
+ assert.match(html,/id="tt-clock-minutes">22/);
+ assert.match(html,/tt-clock-colon/);
+ assert.match(html,/tt-session-summary/);
+ assert.match(html,/Quick select/);
+ assert.match(html,/data-location="Office-Base Duty"/);
+ assert.match(html,/data-location="Offsite \(Home\)"/);
+ assert.match(html,/value="clock-in" disabled/);
+ assert.match(html,/Clock actions pending backend acceptance/);
+});
+
+test('Clock ticker updates only mounted text nodes and does not fetch data',()=>{
+ const nodes=new Map();
+ for(const key of ['greeting','date','hours','minutes','seconds','period'])
+  nodes.set('#tt-clock-'+key,{textContent:''});
+ const root={querySelector:id=>nodes.get(id)||null};
+ assert.equal(syncTimeTrackerClock(root,new Date(2026,10,2,15,22,31)),true);
+ assert.equal(nodes.get('#tt-clock-hours').textContent,'03');
+ assert.equal(nodes.get('#tt-clock-minutes').textContent,'22');
+ assert.equal(nodes.get('#tt-clock-seconds').textContent,'31');
+ assert.equal(syncTimeTrackerClock({querySelector:()=>null}),false);
+});
+
+test('TimeTracker reference navigation exposes only already implemented views',()=>{
+ const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
+  access:{moduleRole:'Employee',platformRole:'hr',name:'Employee'},
+  records:[],active:null,otRequests:[]}});
+ for(const section of ['clock','log','reports','ot'])
+  assert.match(html,new RegExp('data-target="'+section+'"'));
+ assert.match(html,/data-target="calendar" disabled aria-disabled="true"/);
+ assert.match(html,/data-target="roles" disabled aria-disabled="true"/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/case 'tt-tab'/);
+ assert.match(app,/case 'tt-location-shortcut'/);
+ assert.match(app,/maintainTimeTrackerClock\(\)/);
+ assert.match(app,/stopTimeTrackerClock\(\)/);
 });
