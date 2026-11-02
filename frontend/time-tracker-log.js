@@ -125,7 +125,7 @@ function dailyOperations(rows,now){
   ['✓','Before 8 AM',before,ratio(before,total),'green'],
   ['◷','Late Today',late,ratio(late,total),'orange'],
   ['⌁','Still Working',active,ratio(active,total),'green'],
-  ['△','Open Sessions',active,ratio(active,total),'orange'],
+  ['△','No Time-Out','—',null,'orange'],
   ['✎','Manual Edits','—',null,'neutral'],
   ['⚡','Stagnant (14h+)',stagnant,ratio(stagnant,total),'red']
  ];
