@@ -128,3 +128,19 @@ test('server metrics remain optional for ordinary users and missing RPC',async()
  assert.equal(bootstrap.status,'VERIFIED');
  assert.equal(bootstrap.server.status,'NOT DEPLOYED');
 });
+
+test('on-demand history computes bounded observed latencies only',async()=>{
+ const {summarizeTimeTrackerMonitorHistory}=await import('../time-tracker-monitor.js');
+ const make=(i)=>({status:i%2?'DEGRADED':'VERIFIED',
+   sampledAt:'2026-11-02T11:00:00Z',network:{sampleMs:i*10}});
+ const history=summarizeTimeTrackerMonitorHistory(Array.from({length:20},(_,i)=>make(i)));
+ assert.equal(history.count,12);
+ assert.equal(history.verified,6);
+ assert.equal(history.avgMs,135);
+ assert.equal(history.maxMs,190);
+ const html=renderTimeTrackerMonitor({result:await probeTimeTrackerMonitor(source()),
+   history:[make(0),make(1)]});
+ assert.match(html,/ON-DEMAND HISTORY/);
+ assert.match(html,/SLOWEST CHECK/);
+ assert.doesNotMatch(html,/Bearer |sb_secret_|location coordinates: /);
+});
