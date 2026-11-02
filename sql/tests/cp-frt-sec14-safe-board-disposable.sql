@@ -109,6 +109,36 @@ BEGIN
     jsonb_array_length(public.frt_board_list_safe(w,'NOT_FOUND',''))<>0 THEN
   RAISE EXCEPTION 'SEC14 company-filtered list isolation failed';
  END IF;
+ -- Independent cross-workspace denial: the already-active NONBOOTSTRAP
+ -- Finance Manager of workspace 1 must NOT read workspace 2. Both UUIDs
+ -- reference genuine fixture workspaces; this is NOT a random nonexistent ID.
+ blocked:=false;
+ BEGIN
+  PERFORM public.frt_board_list_safe(
+   '00000000-0000-4000-8000-000000000002','WAO','');
+ EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
+ END;
+ IF NOT blocked THEN
+  RAISE EXCEPTION 'SEC14 nonbootstrap other-workspace list denial failed';
+ END IF;
+ blocked:=false;
+ BEGIN
+  PERFORM public.frt_board_dashboard_safe(
+   '00000000-0000-4000-8000-000000000002','WAO');
+ EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
+ END;
+ IF NOT blocked THEN
+  RAISE EXCEPTION 'SEC14 nonbootstrap other-workspace dashboard denial failed';
+ END IF;
+ blocked:=false;
+ BEGIN
+  PERFORM public.frt_restricted_request_detail(
+   '00000000-0000-4000-8000-000000000002',r1);
+ EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
+ END;
+ IF NOT blocked THEN
+  RAISE EXCEPTION 'SEC14 nonbootstrap other-workspace detail denial failed';
+ END IF;
  -- Bootstrap/GM role may see candidate approval; still not executable.
  PERFORM set_config('request.jwt.claim.sub',
   '00000000-0000-4000-8000-00000000000a',true);
