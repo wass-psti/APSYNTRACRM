@@ -60,3 +60,43 @@ Controlled deployment requires independent compatibility verification for any ex
 **Release order and material-risk boundary:** (1) reconcile all legitimate external legacy FRT consumers and get change-window approval for live EXECUTE revocations; (2) activate the restricted-detail and additive list/dashboard RPCs with guarded preflight and rollback; (3) deploy APSYNTRA board client with `secureContracts:true`, verify exact GitHub Pages assets and real signed nonbootstrap/GM read/denial behavior; (4) only once consumer compatibility is established, run the legacy summary/list revoke; (5) rerun read-only grants/metadata postchecks, sign-out/session-revocation and financial authorization negative checks in a controlled nonproduction environment, preserving production financial data. Production privilege changes and live finance write acceptance remain subject to separate change authorization and must not be inferred from isolated CI.
 
 **SEC14 final scoped gates:** **6/8 VERIFIED (75%); 2/8 PENDING** — independent production activation/field-grant postchecks and genuine signed financial action acceptance. These gates do not inherit CI07's earlier waived tests.
+
+
+## CP-FRT-SEC14 production checkpoint — 2026-11-02 additive activation
+
+**Important supersession of earlier status:** Prior sections above correctly documented the predeployment baseline when the SEC14 restricted RPC was absent. On **2026-11-02** the restricted RPC and two complementary safe reads were actually activated in production through a deliberately **nonbreaking additive migration**. However, the historical broad RPC endpoints remain callable, so **complete server-side disclosure prevention and legacy retirement are not yet accepted**.
+
+### Production migration and deployment evidence
+
+- **Project:** `jtlusodorfnyzgyuewkz` (existing Supabase project, no parallel database).
+- **Installed migration:** `cp_frt_sec14_additive_restricted_board_reads`, ledger version **`20261102001945`**, executed through Supabase migration capability with `success: true`.
+- **Exact source:** `sql/cp-frt-sec14-production-additive-read-activation.sql`, Git blob `ba8dce939398f0aff888380b90d986911f898a6e`. Reuses the previously isolated-tested canonical restricted detail body and safe dashboard/list bodies. Installs `frt_restricted_request_detail(uuid,uuid)`, `frt_board_list_safe(uuid,text,text)`, and `frt_board_dashboard_safe(uuid,text)` in one transaction. New EXECUTE grants are **authenticated-only**. It intentionally does not revoke, change, drop or replace any preexisting FRT RPC.
+- **Read-only preflight:** all ten FRT tables had RLS; no direct authenticated FRT table SELECT or write grants; existing `private.frt_signed_session_active()` and `private.frt_current_role(uuid)` were installed; role resolver still required session guard and CRM ceiling; all three new RPC signatures were absent; three legacy read RPCs remained executable; no authenticated CREATE on public schema.
+- **Postactivation SQL:** all three new functions exist, owned by `postgres`, `SECURITY DEFINER`, with authenticated EXECUTE true and anonymous EXECUTE false; all delegate to `private.frt_current_role`. The board list/dashboard use blank search paths. Restricted detail uses its original `public, private, pg_temp` path; authenticated callers lack public schema CREATE. Ten FRT RLS tables and zero direct authenticated FRT table SELECT grants remain unchanged. Legacy detail/list/dashboard and `frt_request_action` retain their original authenticated EXECUTE grants.
+- **Production inventory before/after migration:** zero FRT requests, two FRT finance audit rows, zero liquidations, 123 module-role assignments and three explicit CRM role overrides. No financial data, memberships, user accounts or role assignments were modified by the migration.
+- **Unsigned production denial:** performed under the SQL `authenticated` database role with empty JWT claims and subject. All three new RPCs returned `42501` within a rolled-back transaction; result `SEC14_UNSIGNED_POSTCHECK_PASS`. This is an unsigned/no-session *negative* check only, **not a genuine issued Supabase Auth session test**.
+
+### Frontend and CI evidence
+
+- `frontend/app.js` now always invokes the finance list/summary client with `secureContracts:true`, so the APSYNTRA FRT board calls `frt_board_list_safe` and `frt_board_dashboard_safe`. There is no fallback on RPC failure. Existing `frt-finance-workflow.js` calls only the canonical `frt_restricted_request_detail` for legitimate listed requests. No financial write controls were activated.
+- `frontend/frt-sec14-signed-acceptance.js` adds a **read-only signed acceptance runner**, with a sanitized report for the Security page. It evaluates actual session-bound safe summary/list, request detail only when an authorized existing request appears, and signed user/workspace stability. On an empty real request list it reports `PENDING / NO_EXISTING_FRT_REQUEST`; it never creates an artificial request or reports finance writes as verified.
+- `frontend/board-security-ui.js` and `frontend/app.js` expose **SEC14 · Signed restricted FRT reads** on `#/security` with a copyable nonsecret report, a busy guard and state invalidation on logout, auth expiry and workspace changes.
+- Candidate isolated additive activation validated with [frontend/PostgreSQL/Pages run #41366459522](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41366459522): success for all three jobs.
+- Signed acceptance UI, secure frontend activation and regressions validated with [run #41366997392](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41366997392): **231/231 frontend tests PASS**, disposable PostgreSQL SUCCESS, live Pages exact-source smoke SUCCESS. [GitHub Pages deployment #41366997226](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41366997226) succeeded for implementation commit `0b176201492c2d93cf4c30082a8227fb9bd90fa0`.
+
+### Production checkpoint gate accounting
+
+| Gate | Evidence classification |
+| --- | --- |
+| Actual live RLS, role-ceiling, signed-session guard and RPC drift preflight | VERIFIED |
+| Additive restricted-detail/list/dashboard backend migration entered in production ledger | VERIFIED |
+| New RPC ownership, authenticated-only grants, unchanged legacy and finance permissions | VERIFIED |
+| Production unsigned/no-session denials for all three new RPCs | VERIFIED |
+| APSYNTRA finance board restricted-only integration and GitHub Pages deployment | VERIFIED |
+| Isolated SQL regression and 231 frontend tests | VERIFIED |
+| Genuine positive signed-user and request-detail role/workspace boundary acceptance | **PENDING** — operator report absent; zero FRT requests available |
+| Compatibility reconciliation, controlled legacy read RPC revocations, and genuine financial authorization acceptance | **BLOCKED / PENDING** — unknown external FRT consumers, material API break, no live finance-write tests |
+
+**Current checkpoint: 6/8 verified = 75%**. This percentage covers the eight defined activation/acceptance gates, not the whole APSYNTRA CRM project. Existing broad `frt_get_request`, `frt_list_requests`, and `frt_dashboard` remain callable by authorized members. Hence **full server-side restricted-field enforcement across every legacy route is NOT COMPLETE**; don't claim total production information-flow protection. The new safe RPCs are active, and APSYNTRA itself now uses them.
+
+**Next controlled authorization gate:** reconcile all independent FRT clients and migrate them to the safe interface, then separately authorize and execute the already staged legacy revoke scripts, validating rollback compatibility. A positive signed read-only check can be run now by an existing FRT-authorized user on `https://wass-psti.github.io/APSYNTRACRM/#/security` → `Verify SEC14 signed reads — read-only` → `Copy nonsecret SEC14 report`. This cannot prove financial mutations, logout revocation, or any request detail when no genuine request exists. Any emergency rollback that re-enables broad financial RPCs must be explicitly recognized as a disclosure-security regression.
