@@ -1,3 +1,4 @@
+import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
  * No standalone app, storage shim, local JWT, synthetic rows, or privileged key.
@@ -147,9 +148,15 @@ export class TimeTrackerNativeClient{
   if(!self||!TT_ROLES.includes(self.module_role))
    deny('Central TimeTracker role assignment unavailable');
   await checkIdentity(auth,api,{userId:who.id,workspaceId:ctx.workspace_id},boardId);
+  const overviewDirectory=users.filter(u=>u&&u.status==='active'&&
+    typeof u.id==='string'&&(u.id===who.id||TT_TEAM_OVERVIEW_ROLES.includes(self.module_role)))
+    .map(u=>Object.freeze({id:u.id,status:'active',
+      display_name:String(u.display_name||'Workforce member').slice(0,100)}));
   return Object.freeze({userId:who.id,workspaceId:ctx.workspace_id,boardId,
     platformRole:ctx.profile?.platform_role||'Unassigned',
-    moduleRole:self.module_role,name:String(self.display_name||'Signed user').slice(0,100)});
+    moduleRole:self.module_role,name:String(self.display_name||'Signed user').slice(0,100),
+    overviewDirectory:Object.freeze(overviewDirectory)});
+
  }
  async snapshot(boardId){
   const access=await this.access(boardId);
@@ -159,10 +166,15 @@ export class TimeTrackerNativeClient{
   if(row&&(!Number.isSafeInteger(Number(row.revision))||Number(row.revision)<1||
     typeof row.value!=='string'))deny('Invalid authoritative attendance revision');
   const records=projectOwnAttendance(row?row.value:{version:1,records:[]},access.userId);
+  const overview=projectTimeTrackerOverview({
+   value:row?row.value:{version:1,records:[]},
+   directory:access.overviewDirectory,userId:access.userId,
+   moduleRole:access.moduleRole
+  });
   const otRow=raw.find(x=>x?.state_key==='timetracker.ot.v1'&&x.scope==='shared');
   const otRequests=projectOwnOvertime(otRow?.value||{version:1,requests:[]},access.userId);
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access,records,otRequests,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access,records,otRequests,overview,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  async commit(boardId,{action,location,department,workNote='',geo}={}){
