@@ -16,3 +16,8 @@ test('bootstrap directory derives real authorized membership',()=>{
  assert.equal(data.members.length,1);
  assert.equal(data.members[0].role,'System Admin');
 });
+test('claims cannot override central bootstrap and workspace denials',()=>{
+ const input={workspaceId:teamWs,actorId:teamActor};
+ assert.throws(()=>projectTimeTrackerTeamDirectory({...teamFixture,bootstrapVerified:false},input),/contract/);
+ assert.throws(()=>projectTimeTrackerTeamDirectory({...teamFixture,workspaceId:teamActor},input),/contract/);
+});
