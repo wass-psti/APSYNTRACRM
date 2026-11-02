@@ -4,6 +4,7 @@ import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-
 import {projectTimeTrackerLog} from './time-tracker-history.js';
 import {projectTimeTrackerOtRows,validateOvertimeDraft,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {projectTimeTrackerTeamDirectory} from './time-tracker-team.js';
+import {validateTimeTrackerGps} from './time-tracker-gps.js';
 /**
  * TimeTracker native APSYNTRA adapter. Source reference: TimeTracker v2.0.14.
  * No standalone app, storage shim, local JWT, synthetic rows, or privileged key.
@@ -214,6 +215,30 @@ export class TimeTrackerNativeClient{
   if(await this.api.rpc('apsyntra_role_is_bootstrap')!==true)
    deny('Bootstrap authorization changed during Team Directory read');
   return directory;
+ }
+ /** Read privileged signed attendance coordinates without exposing raw module state. */
+ async gpsEvidence(boardId,{from,to,userId=null}={}){
+  const access=await this.access(boardId);
+  const bootstrap=await this.api.rpc('apsyntra_role_is_bootstrap');
+  if(bootstrap!==true&&access.moduleRole!=='Supervisor')
+   deny('Only bootstrap administrators and TimeTracker Supervisors can view GPS evidence');
+  const day=/^\d{4}-(0[1-9]|1[0-2])-([0-3]\d)$/;
+  if(!day.test(from||'')||!day.test(to||''))
+   deny('Valid GPS date range required');
+  if(userId!==null&&!uuid.test(userId))
+   deny('GPS employee filter invalid');
+  const payload=await this.api.rpc('timetracker_gps_snapshot',{
+   p_board_id:boardId,p_from:from,p_to:to,p_user_id:userId
+  });
+  const data=validateTimeTrackerGps(payload,{
+   userId:access.userId,workspaceId:access.workspaceId,boardId
+  });
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const fresh=await this.access(boardId);
+  if(fresh.moduleRole!=='Supervisor'&&
+     await this.api.rpc('apsyntra_role_is_bootstrap')!==true)
+   deny('GPS authorization was revoked during the request');
+  return data;
  }
  async submitOvertime(boardId,draft){
   if(!TT_OT_WRITES_ACCEPTED)deny('Overtime writes require signed backend acceptance');
