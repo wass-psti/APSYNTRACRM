@@ -114,7 +114,7 @@ test('SEC14 app invalidates denial results on workspace switch, logout, sign-in 
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/case 'security-sec14-denial'/);
  assert.match(app,/case 'security-sec14-denial-copy'/);
- assert.match(app,/runSEC14SignedDenials\\\(\\\{auth,api:db\\\}\\\)/);
- assert.doesNotMatch(app,/getElementById\\\('security-sec14-foreign-workspace'\\\)/);
+ assert.ok(app.includes("runSEC14SignedDenials({auth,api:db})"));
+ assert.ok(!app.includes("getElementById('security-sec14-foreign-workspace')"));
  assert.equal((app.match(/state\.sec14DenialResult=null;state\.sec14DenialRunId\+\+;state\.sec14DenialBusy=false;/g)||[]).length,4);
 });
