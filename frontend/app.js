@@ -26,7 +26,7 @@ import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
-import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
+import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
@@ -585,12 +585,12 @@ async function action(name,button){
  case 'tt-log-export':{
   if(state.ttBusy||state.ttView!=='log'||state.view!=='board'||
      state.tab!=='attendance'||state.ttAttendance?.status!=='VERIFIED_READ')return;
-  const rows=filterTimeTrackerLogRows(state.ttAttendance.records,state.ttLogFilters);
+  const rows=filterTimeTrackerLogRows(state.ttAttendance.log?.rows||state.ttAttendance.records,state.ttLogFilters);
   if(!rows.length)return;
-  const blob=new Blob([ownAttendanceCsv(rows)],{type:'text/csv;charset=utf-8'});
+  const blob=new Blob([timeTrackerLogCsv(rows)],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   try{const link=document.createElement('a');link.href=url;
-   link.download='timetracker-my-filtered-log.csv';link.click();}
+   link.download='timetracker-authorized-filtered-log.csv';link.click();}
   finally{URL.revokeObjectURL(url);}
   break;
  }
@@ -1246,7 +1246,7 @@ root.addEventListener('change',event=>{
   if(key==='period'&&['all','today','week','month'].includes(value)||
      key==='status'&&['all','Active','Completed','Late','Administrative closure'].includes(value)||
      key==='sort'&&['newest','oldest'].includes(value)||
-     key==='location'&&(value==='all'||state.ttAttendance.records.some(r=>r.location===value))){
+     key==='location'&&(value==='all'||(state.ttAttendance.log?.rows||state.ttAttendance.records).some(r=>r.location===value))){
     state.ttLogFilters={...state.ttLogFilters,[key]:value};
     render();
   }
