@@ -75,7 +75,7 @@ test('malformed records or conflicting active sessions deny rather than fabricat
 });
 
 test('signed module role, board permission and workspace context guard access',async()=>{
- await assert.rejects(setup({grant:false}).client.snapshot(board),/module grant/);
+ await assert.rejects(setup({grant:false}).client.snapshot(board),/application grant/);
  await assert.rejects(setup({view:false}).client.snapshot(board),/Board access/);
  await assert.rejects(setup({role:'invalid'}).client.snapshot(board),/role assignment/);
  const s=setup();s.auth.userId=other;
