@@ -225,14 +225,14 @@ SELECT set_config('request.jwt.claims',
  jsonb_build_object('sub','20000000-0000-4000-8000-000000000015',
  'session_id','20000000-0000-4000-8000-000000000035')::text,false);
 SET ROLE authenticated;
-DO $
+DO $$
 BEGIN
  BEGIN
   PERFORM public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
   RAISE EXCEPTION 'FAIL: foreign workspace user allowed on local board';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
-END $;
+END $$;
 RESET ROLE;
 
 -- Inactive employee with a valid session must be denied.
@@ -240,14 +240,14 @@ SELECT set_config('request.jwt.claims',
  jsonb_build_object('sub','10000000-0000-4000-8000-000000000017',
  'session_id','10000000-0000-4000-8000-000000000037')::text,false);
 SET ROLE authenticated;
-DO $
+DO $$
 BEGIN
  BEGIN
   PERFORM public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
   RAISE EXCEPTION 'FAIL: inactive employee session accepted';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
-END $;
+END $$;
 RESET ROLE;
 
 -- A current session is insufficient after the user's module grant is revoked.
@@ -258,14 +258,14 @@ SELECT set_config('request.jwt.claims',
  jsonb_build_object('sub','10000000-0000-4000-8000-000000000012',
  'session_id','10000000-0000-4000-8000-000000000032')::text,false);
 SET ROLE authenticated;
-DO $
+DO $$
 BEGIN
  BEGIN
   PERFORM public.timetracker_ot_snapshot('10000000-0000-4000-8000-000000000021');
   RAISE EXCEPTION 'FAIL: revoked TimeTracker module access accepted';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
-END $;
+END $$;
 RESET ROLE;
 
 -- Audit changes must be blocked even for the migration executor.
