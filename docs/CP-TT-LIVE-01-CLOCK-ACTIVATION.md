@@ -40,3 +40,20 @@ The GitHub workflow runs the staged GPS-03 migration followed by the LIVE-01 mig
 - Production migration: BLOCKED until separate authorization
 - Genuine signed-user clock-in/out and rollback acceptance: PENDING
 - All TimeTracker workflows production-ready: NOT VERIFIED
+
+## Production execution handoff — 2026-11-02
+
+**Authorization:** The project owner explicitly authorized the controlled installation of GPS-03 and LIVE-01 and subsequent genuine signed-user acceptance. The automated production migration invocation was **BLOCKED BY EXECUTION SAFETY CONTROLS**; this is not a SQL failure, and must not be circumvented with an alternate tool or unreviewed ad-hoc command. A read-only post-block inspection confirmed both migrations uninstalled, audit table absent and the old authenticated writer still executable. No production data or permissions were altered.
+
+**Operator sequence, using the project's authorized database change-management path:**
+
+1. Confirm the connected project reference is `jtlusodorfnyzgyuewkz` and the database is expected production. Capture the verified function definitions, grants, existing object signatures and migration history in secure evidence (never GitHub or chat for raw employee records/GPS).
+2. Execute `sql/cp-tt-gps03-remaining-read-path-redaction.sql` in its own complete transaction, using a trusted authorized operator/CI connection. Stop on any error; transaction rollback must be confirmed before retry. This contains a preflight to prevent running twice.
+3. Verify GPS-03 helper installation, signed attendance read redaction and internal raw RPC revocation. Ensure no anonymous or nonprivileged route exposes coordinates. Do not enable clock writes if this fails.
+4. Execute `sql/cp-tt-live01-staged-atomic-attendance.sql` in its own complete transaction. It creates the audit table, signed Clock capability and write RPC, blocks generic attendance state write/delete, and revokes the legacy attendance writer.
+5. Run the read-only inventory in `sql/tests/cp-tt-live01-production-readonly-preflight.sql` and independently verify `authenticated` can execute only the new scoped Clock RPC, while `anon` and the legacy endpoint cannot. Verify audit RLS/forced RLS, trigger, and generic mutation denials; never use the privileged migration connection to pretend to be a genuine employee.
+6. Verify the GitHub Pages asset revision is `3e7301e0476e290eb20cbd7077028a7a6c3a1361` or a later tested successor. Perform fresh genuine owner-approved Clock In/Out on nonproduction or explicitly authorized QA identities only; validate work-note and denied paths, duplicate sessions, stale/revoked sessions, cross-workspace denial, and a matching immutable audit entry for each successful write. Do not create test attendance for a real employee without that actor's operational authorization.
+7. If operational acceptance fails, execute `sql/cp-tt-live01-rollback-revoke.sql` through the same trusted change path to disable the new public RPCs. **Never restore the legacy unaudited writer or purge attendance/audit records.** Record incident evidence and verify the UI returns to read-only.
+
+**Current result:** PRE-FLIGHT VERIFIED; SOURCE/CI VERIFIED (338/338 frontend, disposable PostgreSQL); PRODUCTION ACTIVATION BLOCKED; GENUINE SIGNED-USERS PENDING. This handoff does not represent a successful production migration or a verified live Clock workflow.
+
