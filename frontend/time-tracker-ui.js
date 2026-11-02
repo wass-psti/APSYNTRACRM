@@ -6,6 +6,7 @@ import {
  TT_LIVE_ATTENDANCE_WRITES_ACCEPTED
 } from './time-tracker-native.js';
 import {renderTimeTrackerOverview} from './time-tracker-overview.js';
+import {renderTimeTrackerLog} from './time-tracker-log.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -192,7 +193,7 @@ function overtimePage(result){
  '</div></div>';
 }
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='week',view='clock',now=new Date(),overviewFilters={}
+ result=null,busy=false,error='',success='',period='week',view='clock',now=new Date(),overviewFilters={},logFilters={}
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=['overview','clock','log','reports','ot'].includes(view)?view:'clock';
@@ -211,8 +212,8 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now));
- if(selected==='log'||selected==='reports')
-  html+=historyPage(result,period,busy,selected);
+ if(selected==='log')html+=renderTimeTrackerLog({records:result.records,filters:logFilters,now,busy});
+ if(selected==='reports')html+=historyPage(result,period,busy,selected);
  if(selected==='ot')html+=overtimePage(result);
  html+='</section>';
  return html;
