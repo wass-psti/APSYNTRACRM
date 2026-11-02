@@ -121,7 +121,7 @@ const mapView=(points,s,data,filters,loading,mapEnabled=false)=>{
  const outCount=records.filter(p=>p.kind==='out').length;
  return '<div class="tt-gps-map-shell tt-gps-theme-'+theme+'">'+
   '<div class="tt-gps-map-canvas">'+mapFrame({
-   hasPoints:points.length>0,enabled:mapEnabled,scope:'hub'})+'</div>'+
+   hasPoints:points.length>0,enabled:mapEnabled,scope:'hub',loading})+'</div>'+
   '<div class="tt-gps-map-stats" aria-label="Recorded attendance GPS statistics">'+
   metric('RECORDED',records.length)+metric('CLOCK IN',inCount)+metric('CLOCK OUT',outCount)+
   '<button type="button" class="tt-gps-refresh" data-action="tt-gps-load" '+
@@ -140,7 +140,7 @@ const mapView=(points,s,data,filters,loading,mapEnabled=false)=>{
    '<button type="button" data-action="tt-gps-zoom" data-direction="out" aria-label="Zoom out"'+
    (zoom<=1?' disabled':'')+'>−</button></div>'))+
   '<div class="tt-gps-map-footer"><span>'+
-   (mapEnabled?'OpenFreeMap / OpenStreetMap · Recorded fixes only':
+   (mapEnabled?'Leaflet / OpenStreetMap · Recorded fixes only':
     'Enable the street map to display geographic locations')+
    '</span></div></div>';
 };
@@ -222,6 +222,6 @@ export function renderTimeTrackerGps({
   controls+(loading?'<p class="tt-gps-loading" role="status">Checking signed GPS records…</p>':'')+
   content+
   '<p class="tt-gps-note tt-gps-privacy">Only bootstrap administrators and assigned TimeTracker Supervisors may read signed GPS evidence. '+
-  'This street map shows recorded event coordinates, not continuous tracking or satellite imagery. External basemap requests begin only after your consent and may reveal the approximate map area.</p>'+
+  'This street map shows recorded event coordinates, not continuous tracking or satellite imagery. The public tile service receives requests for the approximate displayed area after signed GPS authorization.</p>'+
   '</section>';
 }

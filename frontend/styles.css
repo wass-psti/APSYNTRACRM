@@ -1365,7 +1365,6 @@
  background:#edf1f2;color:#6d7786;font-size:12px;pointer-events:none}
 .tt-map-note{margin:0!important;padding:8px 11px;font-size:10px!important;
  color:#6e7784;font-weight:500!important;background:#fff;line-height:1.4}
-.tt-map-host .maplibregl-ctrl-attrib{font-size:10px}
 .tt-log-street-map .tt-map-host{height:230px}
 .tt-gps-map-canvas .tt-map-host{height:100%;min-height:100%;width:100%}
 .tt-gps-map-canvas .tt-map-consent,.tt-gps-map-canvas .tt-map-empty{width:100%;height:100%}
@@ -1387,3 +1386,20 @@
  background:#fffef1eb;color:#475366;pointer-events:auto}
 .tt-map-host .tt-map-message{height:100%;width:100%}
 .tt-map-host .tt-map-message span{max-width:350px}
+
+/* CP-TT-LEAFLET-01: same-origin overlays; raster tiles only from OSM standard. */
+.tt-map-host .leaflet-container{font:inherit;background:#edf2f5}
+.tt-map-host .leaflet-control-attribution{font-size:10px;max-width:95%;white-space:normal}
+.tt-map-host .leaflet-control-zoom a:focus-visible{outline:3px solid #2178b9;outline-offset:2px}
+.tt-map-host.tt-leaflet-dark .leaflet-tile-pane{filter:grayscale(.25) invert(.95) hue-rotate(185deg) brightness(.86) contrast(.89)}
+.tt-map-host .tt-map-banner{z-index:1100}
+.tt-map-host .tt-map-message{z-index:1000;position:relative}
+.tt-map-host .tt-map-loading{z-index:1000}
+.tt-map-popup{color:#283844;font-size:12px;line-height:1.5}
+.tt-map-host .leaflet-popup-content{margin:9px 12px}
+
+/* Compact Leaflet fullscreen control, anchored above the raster map. */
+.tt-map-fullscreen{position:absolute;right:12px;top:12px;z-index:850;padding:6px 10px;border:1px solid #aebaca;border-radius:5px;min-height:32px;color:#34445a;background:#fff;font-size:11px;font-weight:700;box-shadow:0 1px 6px #213b6030;cursor:pointer}
+.tt-map-fullscreen:focus-visible{outline:3px solid #2376c2;outline-offset:2px}
+.tt-map-host:fullscreen{height:100vh;min-height:100vh;background:#edf2f5}
+.tt-map-host:fullscreen .leaflet-container{height:100%}

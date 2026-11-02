@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {signedMapPoints,mapGeoJSON,mapLineGeoJSON,mapFrame,mountTimeTrackerMaps,
- disposeTimeTrackerMaps,TT_MAPLIBRE_URL,TT_MAP_STYLE} from '../time-tracker-map.js';
+ disposeTimeTrackerMaps,TT_LEAFLET_JS,TT_LEAFLET_CSS,TT_OSM_TILES} from '../time-tracker-map.js';
 
 const inFix={userId:'member-1',recordId:'shift-1',kind:'in',
  timestamp:'2026-11-02T10:00:00Z',latitude:9.55,longitude:123.45,accuracyM:12};
@@ -32,8 +32,9 @@ test('opt-in map does not trigger tile requests during signed TimeTracker loadin
  assert.doesNotMatch(mapFrame({hasPoints:true,enabled:false}),/data-map-scope="hub"/);
  assert.match(mapFrame({hasPoints:true,enabled:true,scope:'log'}),/data-map-scope="log"/);
  assert.doesNotMatch(mapFrame({hasPoints:false,enabled:true}),/data-map-scope/);
- assert.match(TT_MAPLIBRE_URL,/maplibre-gl@6\.16\.0/);
- assert.match(TT_MAP_STYLE.map,/tiles\.openfreemap\.org/);
+ assert.match(TT_LEAFLET_JS,/leaflet@1\.9\.4/);
+ assert.match(TT_LEAFLET_CSS,/leaflet@1\.9\.4/);
+ assert.match(TT_OSM_TILES,/tile\.openstreetmap\.org/);
  // Calling the lifecycle under Node cannot initialize a map or perform network I/O.
  await mountTimeTrackerMaps(null,[]);
  disposeTimeTrackerMaps();
@@ -44,7 +45,7 @@ test('opt-in map does not trigger tile requests during signed TimeTracker loadin
  assert.match(app,/mountSignedTimeTrackerMaps/);
  assert.match(app,/state\.ttAttendance\?\.status!=='VERIFIED_READ'/);
  const index=readFileSync('index.html','utf8');
- assert.match(index,/worker-src 'self' blob:/);
+ assert.match(index,/worker-src 'self'/);
  assert.match(index,/script-src 'self' https:\/\/unpkg.com/);
  assert.match(index,/connect-src 'self' https:\/\/jtlusodorfnyzgyuewkz\.supabase\.co/);
 });
@@ -61,9 +62,10 @@ test('nonessential signed TimeTracker reads are concurrent but access checks rem
  assert.ok(body.indexOf('const otRead=')<body.indexOf('const raw=await'));
  assert.match(body,/await checkIdentity\(this\.auth,this\.api,access,boardId\)/);
  const map=readFileSync('frontend/time-tracker-map.js','utf8');
- assert.match(map,/map\.on\('style\.load'/);
- assert.match(map,/map\.setStyle\(FALLBACK_STYLE/);
- assert.doesNotMatch(map,/map\.on\('error',\(\)=>showMessage/);
+ assert.match(map,/L\.circleMarker/);
+ assert.match(map,/L\.tileLayer/);
+ assert.match(map,/\.on\('tileerror'/);
+ assert.doesNotMatch(map,/maplibre|OpenFreeMap|map\.setStyle/);
 });
 
 test('default street map is identity-bound and nonprivileged views never initialize',()=>{
@@ -77,9 +79,22 @@ test('default street map is identity-bound and nonprivileged views never initial
  assert.match(app,/Date\.now\(\)-state\.ttLogGpsCacheAt<15000/);
  assert.match(app,/Date\.now\(\)-state\.ttGpsCacheAt<15000/);
  const module=readFileSync('frontend/time-tracker-map.js','utf8');
- assert.match(module,/map\.on\('style\.load'/);
- assert.match(module,/map\.setStyle\(FALLBACK_STYLE/);
+ assert.match(module,/L\.circleMarker/);
+ assert.match(module,/L\.tileLayer/);
  assert.match(module,/export function setTimeTrackerMapTheme/);
  assert.match(module,/export async function retryTimeTrackerMaps/);
- assert.doesNotMatch(module,/map\.on\('load'/);
+ assert.doesNotMatch(module,/maplibre|OpenFreeMap/);
+});
+
+test('Leaflet tile lifecycle keeps signed GPS points visible during tile errors',()=>{
+ const source=readFileSync('frontend/time-tracker-map.js','utf8');
+ assert.match(source,/L\.circleMarker\(latlng/);
+ assert.match(source,/L\.polyline\(\[\[pair\.in\.latitude/);
+ assert.match(source,/map\.fitBounds\(bounds/);
+ assert.match(source,/map\.invalidateSize/);
+ assert.match(source,/entry\.resize\?\.disconnect/);
+ assert.match(source,/entry\.map\.remove\(\)/);
+ assert.match(source,/entry\.layer\?\.redraw\(\)/);
+ assert.match(source,/crossOrigin:'anonymous'/);
+ assert.doesNotMatch(source,/setHTML\(|innerHTML|maplibre-gl|tiles\.openfreemap\.org/);
 });

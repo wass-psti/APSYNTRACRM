@@ -35,7 +35,7 @@ import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
-import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps} from './time-tracker-map.js';
+import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
@@ -785,6 +785,13 @@ async function action(name,button){
   if(next==='gps')await loadTimeTrackerGps();
   if(next==='log')await loadTimeTrackerLogGps();
   break;
+ }
+ case 'tt-map-fullscreen':{
+  if(!auth.isSignedIn||state.view!=='board'||state.tab!=='attendance'||
+     state.ttAttendance?.status!=='VERIFIED_READ'||
+     !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor')||
+     !['log','gps'].includes(state.ttView))return;
+  await toggleTimeTrackerMapFullscreen(button.closest('.tt-map-host'));break;
  }
  case 'tt-map-retry':{
   if(!auth.isSignedIn||state.view!=='board'||state.tab!=='attendance'||

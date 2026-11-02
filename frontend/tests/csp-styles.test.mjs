@@ -18,14 +18,14 @@ test('temporary annotation-only CSS exception preserves other CSP protections',(
  assert.deepEqual(directives['script-src'],["'self'",'https://unpkg.com']);
  assert.deepEqual(directives['default-src'],["'self'"]);
  assert.deepEqual(directives['object-src'],["'none'"]);
- assert.deepEqual(directives['img-src'],["'self'",'data:','blob:','https://tiles.openfreemap.org']);
- assert.deepEqual(directives['font-src'],["'self'",'https://tiles.openfreemap.org']);
- assert.deepEqual(directives['worker-src'],["'self'",'blob:']);
+ assert.deepEqual(directives['img-src'],["'self'",'data:','blob:','https://tile.openstreetmap.org']);
+ assert.deepEqual(directives['font-src'],["'self'"]);
+ assert.deepEqual(directives['worker-src'],["'self'"]);
  assert.deepEqual(directives['frame-src'],["'none'"]);
  assert.deepEqual(directives['base-uri'],["'self'"]);
  assert.deepEqual(directives['form-action'],["'self'"]);
  assert.deepEqual(directives['connect-src'],["'self'",'https://jtlusodorfnyzgyuewkz.supabase.co',
-  'https://unpkg.com','https://tiles.openfreemap.org']);
+  'https://unpkg.com']);
  assert.equal((meta[1].match(/'unsafe-inline'/g)||[]).length,1,'only style-src may allow inline styling');
  assert.doesNotMatch(meta[1],/unsafe-eval|unsafe-hashes|\*/);
 });
@@ -47,13 +47,12 @@ test('dynamic acceptance check status uses named CSS classes',()=>{
  }
 });
 
-test('external maps are opt-in and vendors are pinned to approved hosts',()=>{
+test('Leaflet migration loads approved pinned script and standard OSM raster tiles',()=>{
  const map=readFileSync('frontend/time-tracker-map.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(map,/maplibre-gl@6\.16\.0/);
- assert.match(map,/https:\/\/tiles\.openfreemap\.org\/styles\/liberty/);
- assert.match(app,/case 'tt-map-enable'/);
- assert.match(app,/state\.ttMapConsent=true/);
+ assert.match(map,/leaflet@1\.9\.4/);
+ assert.match(map,/https:\/\/tile\.openstreetmap\.org/);
+ assert.doesNotMatch(map,/maplibre-gl|tiles\.openfreemap\.org|innerHTML|setHTML\(/);
  assert.match(app,/state\.ttAttendance\?\.status!=='VERIFIED_READ'/);
- assert.doesNotMatch(map,/innerHTML|setHTML\(/);
+ assert.match(app,/case 'tt-map-retry'/);
 });

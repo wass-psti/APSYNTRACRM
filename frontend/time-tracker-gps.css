@@ -114,12 +114,13 @@
 }
 @media(prefers-reduced-motion:reduce){.tt-gps *{scroll-behavior:auto!important;transition:none!important}}
 
-/* CP-TT-MAP-01: MapLibre supplies navigation, scale and fullscreen controls. */
+
+/* CP-TT-LEAFLET-01: Leaflet controls stay below TimeTracker filters. */
 .tt-gps-map-canvas{display:block}
-.tt-gps-map-canvas .tt-map-host{position:absolute;inset:0}
-.tt-gps-map-canvas .tt-map-consent{min-height:100%;height:100%;width:100%}
-.tt-gps-map-canvas .tt-map-loading{inset:0}
-.tt-gps-map-modes,.tt-gps-map-stats{z-index:5}
-.tt-gps-map-footer{z-index:4}
-.tt-gps-map-shell .maplibregl-ctrl-top-right{top:128px;right:12px}
-@media(max-width:840px){.tt-gps-map-shell .maplibregl-ctrl-top-right{top:120px}}
+.tt-gps-map-canvas .tt-map-host{position:absolute;inset:0;min-height:100%;width:100%}
+.tt-gps-map-shell .leaflet-top.leaflet-left{top:110px;left:10px}
+.tt-gps-map-shell .leaflet-bottom.leaflet-left{bottom:30px}
+.tt-gps-map-shell .leaflet-bottom.leaflet-right{bottom:30px}
+.tt-gps-map-modes,.tt-gps-map-stats{z-index:500}
+.tt-gps-map-footer{z-index:450;pointer-events:none}
+@media(max-width:650px){.tt-gps-map-shell .leaflet-top.leaflet-left{top:145px}}
