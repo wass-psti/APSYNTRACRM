@@ -80,7 +80,7 @@ export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
   owners:[...owners].sort((a,b)=>b[1]-a[1]).slice(0,5)};
 }
 const metric=(name,value)=>'<div><strong>'+esc(value)+'</strong><span>'+esc(name)+'</span></div>';
-const row=r=>'<details class="tt-ot-request"><summary>'+
+const row=(r,bootstrap=false)=>'<details class="tt-ot-request"><summary>'+
  '<span>'+esc(r.name)+'</span><span>'+esc(fmt(r.date))+'</span>'+
  '<strong>'+esc(minutesLabel(r.durationMinutes))+'</strong>'+
  '<span class="tt-ot-pill tt-ot-'+r.status.toLowerCase()+'">'+
@@ -88,7 +88,11 @@ const row=r=>'<details class="tt-ot-request"><summary>'+
  '<div class="tt-ot-detail"><span><b>Start:</b> '+esc(r.start)+'</span>'+
  '<span><b>End:</b> '+esc(r.end)+'</span>'+
  '<p><b>Reason:</b> '+esc(r.task||'Not supplied')+'</p>'+
- '<p>Approval/rejection is restricted to server-verified bootstrap administrators.</p></div></details>';
+ '<p>Approval/rejection is restricted to server-verified bootstrap administrators.</p>'+ 
+ (bootstrap&&r.status==='Submitted'?'<div class="tt-ot-review-actions">'+
+  '<button type="button" disabled title="Backend acceptance pending">Approve</button>'+ 
+  '<button type="button" disabled title="Backend acceptance pending">Reject</button>'+ 
+  '</div>':'')+'</div></details>';
 function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date()){
  const amount=overtimeDurationMinutes(start,end);
  return '<div class="tt-ot-backdrop"><section class="tt-ot-modal" role="dialog" aria-modal="true"'+
@@ -149,7 +153,7 @@ export function renderTimeTrackerOvertime({
  '<button data-action="tt-ot-sort">Date '+(opts.sort==='oldest'?'↑':'↓')+'</button></div>'+
  (m.visible.length?'<div class="tt-ot-row-head"><span>Employee</span><span>Date</span>'+
  '<span>Duration</span><span>Status</span><span>Details</span></div>'+
- m.visible.map(row).join(''):'<div class="tt-ot-empty"><span>◷</span>'+
+ m.visible.map(r=>row(r,access?.bootstrapApprover===true)).join(''):'<div class="tt-ot-empty"><span>◷</span>'+
  '<strong>No matching requests</strong><p>Try a different week, search or status.</p>'+
  '<button data-action="tt-ot-open">＋ Submit a request</button></div>')+
  '<p class="tt-ot-note">'+(access?.bootstrapApprover===true?
