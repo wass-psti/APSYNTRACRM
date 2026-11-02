@@ -212,7 +212,11 @@ export function renderTimeTrackerNative({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
  if(selected==='clock')html+=clockPage(result,busy,new Date(now));
- if(selected==='log')html+=renderTimeTrackerLog({records:result.records,filters:logFilters,now,busy});
+ if(selected==='log')html+=renderTimeTrackerLog({
+  records:result.log?.rows||result.records,
+  scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
+  filters:logFilters,now,busy
+ });
  if(selected==='reports')html+=historyPage(result,period,busy,selected);
  if(selected==='ot')html+=overtimePage(result);
  html+='</section>';
