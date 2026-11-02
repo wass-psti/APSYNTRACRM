@@ -2,7 +2,21 @@
  * No GPS, email, company-wide user registry, or standalone backend is used.
  */
 import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-native.js';
-import {timeTrackerClockParts} from './time-tracker-ui.js';
+const timeTrackerClockParts=value=>{
+ const t=new Date(value),h=t.getHours();
+ return {
+  greeting:h<12?'Good morning,':h<17?'Good afternoon,':'Good evening,',
+  day:new Intl.DateTimeFormat('en-US',{
+   timeZone:'Asia/Manila',weekday:'long',month:'long',day:'numeric'
+  }).format(t),
+  hours:String((h+24-8)%12||12).padStart(2,'0'),
+  minutes:String(t.getMinutes()).padStart(2,'0'),
+  seconds:String(t.getSeconds()).padStart(2,'0'),
+  period:new Intl.DateTimeFormat('en-US',{
+   timeZone:'Asia/Manila',hour:'numeric',hour12:true
+  }).formatToParts(t).find(p=>p.type==='dayPeriod')?.value||'AM'
+ };
+};
 
 export const TT_TEAM_OVERVIEW_ROLES=Object.freeze([
  'System Admin','IT Administrator','HR'
