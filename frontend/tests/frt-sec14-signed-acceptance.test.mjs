@@ -10,7 +10,8 @@ const id='33333333-3333-4333-8333-333333333333';
 const codes=['approve','approve/revoke','reject','transfer',
  'transfer/revoke','close','archive','liquidation/approve'];
 const context={user_id:uid,workspace_id:ws,profile:{status:'active',platform_role:'employee'}};
-function fixture({hasRequest=false,denied=false,changed=false,invalid=false}={}){
+function fixture({hasRequest=false,denied=false,changed=false,invalid=false,
+ secondCompany=false,secondOnly=false,denySecond=false,noCompanies=false}={}){
  const calls=[];let n=0;
  const auth={userId:uid,async getVerifiedUser(){
   n++;return {id:changed&&n>1?id:uid};
@@ -22,17 +23,22 @@ function fixture({hasRequest=false,denied=false,changed=false,invalid=false}={})
     if(denied)throw Object.assign(Error('private account'),{status:403});
     return {membership:{workspace_id:ws,user_id:uid,role:'FINANCE_APPROVER',
      enabled:true,status:'active',email:'private@example.org'},
-     companies:[{code:'PSTI',name:'PSTI'}]};
+     companies:noCompanies?[]:secondCompany?
+      [{code:'PSTI',name:'PSTI'},{code:'WASS',name:'WASS'}]:
+      [{code:'PSTI',name:'PSTI'}]};
    }
+   if(denySecond&&args?.p_company==='WASS')
+    throw Object.assign(Error('private read denied'),{status:403});
+   const visible=hasRequest&&(!secondOnly||args?.p_company==='WASS');
    if(name==='frt_board_dashboard_safe')return {
-    total_requests:hasRequest?1:0,pending:hasRequest?1:0,
+    total_requests:visible?1:0,pending:visible?1:0,
     in_progress:0,completed:0,pending_liquidation_count:0};
-   if(name==='frt_board_list_safe')return hasRequest?[{
-    id,company_code:'PSTI',voucher_no:'FRT-01',
+   if(name==='frt_board_list_safe')return visible?[{
+    id,company_code:args.p_company,voucher_no:'FRT-01',
     title:'Approved visibility',status:'PENDING_APPROVAL',date_needed:'2026-11-15'
    }]:[];
    if(name==='frt_restricted_request_detail')return {
-    id,workspace_id:ws,company_code:'PSTI',
+    id,workspace_id:ws,company_code:secondOnly?'WASS':'PSTI',
     voucher_no:'FRT-01',title:'Approved visibility',
     date_needed:'2026-11-15',status:'PENDING_APPROVAL',
     liquidation_status:'NOT_SUBMITTED',finance_approved_at:null,
@@ -114,4 +120,24 @@ test('SEC14 app clears reports on workspace transitions, signout and stale sessi
  assert.match(app,/case 'security-sec14-copy'/);
  assert.match(app,/state\.sec14Result=null;state\.sec14RunId\+\+;state\.sec14Busy=false;/);
  assert.match(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode\}\)/);
+});
+
+test('SEC14 signed acceptance inspects all authorized companies before marking request detail absent',async()=>{
+ const f=fixture({hasRequest:true,secondCompany:true,secondOnly:true});
+ const report=await runSEC14SignedRead(f);
+ assert.equal(report.status,'PASS');
+ assert.deepEqual(report.checks.map(x=>x.status),['PASS','PASS','PASS','PASS']);
+ assert.equal(f.calls.filter(x=>x==='frt_board_dashboard_safe').length,2);
+ assert.equal(f.calls.filter(x=>x==='frt_board_list_safe').length,2);
+ assert.equal(f.calls.filter(x=>x==='frt_restricted_request_detail').length,1);
+ assert.equal(report.writesAttempted,0);
+});
+test('SEC14 signed acceptance refuses partial company inspection or no granted company',async()=>{
+ const denied=await runSEC14SignedRead(fixture({secondCompany:true,denySecond:true}));
+ assert.equal(denied.status,'BLOCKED');
+ assert.equal(denied.reason,'RESTRICTED_COMPANY_READ_FAILED');
+ const empty=await runSEC14SignedRead(fixture({noCompanies:true}));
+ assert.equal(empty.status,'PENDING');
+ assert.equal(empty.reason,'NO_AUTHORIZED_FRT_COMPANY');
+ assert.deepEqual(empty.checks.map(x=>x.status),['PASS','PENDING','PENDING','PASS']);
 });
