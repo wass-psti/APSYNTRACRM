@@ -18,6 +18,7 @@ BEGIN
 END $grants$;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000001',false);
+SELECT set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000001',false);
 DO $owner$
 DECLARE
  board uuid:='30000000-0000-4000-8000-000000000001';
@@ -73,6 +74,7 @@ END $owner$;
 -- Nonmanager editor cannot invite or list the manager-only workspace directory,
 -- but can see explicitly authorized board updates.
 SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000002',false);
+SELECT set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000002',false);
 DO $editor$
 BEGIN
  IF (SELECT count(*) FROM public.wm_list_board_item_updates(
@@ -90,6 +92,7 @@ BEGIN
 END $editor$;
 -- Explicit platform Viewer may read only their own authorized board.
 SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000003',false);
+SELECT set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000003',false);
 DO $viewer$
 BEGIN
  IF (SELECT count(*) FROM public.wm_list_board_item_files(
@@ -103,6 +106,7 @@ BEGIN
 END $viewer$;
 -- Foreign workspace owner must not read any item metadata/events from workspace 1.
 SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000004',false);
+SELECT set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000004',false);
 DO $foreign$
 BEGIN
  BEGIN
@@ -120,6 +124,7 @@ BEGIN
 END $foreign$;
 -- Expired/no signed identity denies all signed reads.
 SELECT set_config('request.jwt.claim.sub','',false);
+SELECT set_config('request.jwt.claim.session_id','',false);
 DO $expired$
 BEGIN
  BEGIN
