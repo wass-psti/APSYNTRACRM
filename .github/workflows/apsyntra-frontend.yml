@@ -25,6 +25,8 @@ on:
       - "sql/cp-tt-ot01-*.sql"
       - "sql/tests/cp-tt-ot02-*.sql"
       - "sql/cp-tt-monitor01-*.sql"
+      - "sql/cp-tt-gps02-*.sql"
+      - "sql/tests/cp-tt-gps02-*.sql"
       - "sql/tests/cp-tt-monitor01-*.sql"
       - "docs/CP-FRT-SEC11-SIGNED-EFFECTIVE-ACCESS.md"
       - "docs/CP-FRT-SEC10-CONTROLLED-TRANSITIONS.md"
@@ -154,7 +156,9 @@ jobs:
             -f sql/cp-tt-ot01-staged-bootstrap-approval.sql \
             -f sql/tests/cp-tt-ot02-disposable-acceptance.sql \
             -f sql/cp-tt-monitor01-staged-health.sql \
-            -f sql/tests/cp-tt-monitor01-disposable-acceptance.sql
+            -f sql/tests/cp-tt-monitor01-disposable-acceptance.sql \
+            -f sql/cp-tt-gps02-server-read-redaction.sql \
+            -f sql/tests/cp-tt-gps02-disposable-redaction.sql
   live-pages:
     needs: [frontend, disposable-ot-postgres]
     if: github.ref == 'refs/heads/main'
