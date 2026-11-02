@@ -220,14 +220,16 @@ test('weekly and monthly personal reporting preserve period and owner scope',()=
 test('personal today, week and month boundaries follow the PHT calendar',()=>{
  const now=new Date('2026-11-01T17:00:00.000Z'); // Monday 01:00 PHT
  const rows=[
+  {clockIn:'2026-10-31T15:59:59.000Z'}, // October 31 23:59 PHT
   {clockIn:'2026-11-01T15:59:59.000Z'}, // Sunday 23:59 PHT
   {clockIn:'2026-11-01T16:00:00.000Z'}, // Monday 00:00 PHT
   {clockIn:'2026-11-01T16:30:00.000Z'}, // Monday 00:30 PHT
   {clockIn:'2026-11-01T18:00:00.000Z'}  // future session, excluded
  ];
- for(const period of ['today','week','month'])
-  assert.deepEqual(filterMyAttendancePeriod(rows,period,now),rows.slice(1,3));
- assert.equal(filterMyAttendancePeriod(rows,'all',now).length,4);
+ for(const period of ['today','week'])
+  assert.deepEqual(filterMyAttendancePeriod(rows,period,now),rows.slice(2,4));
+ assert.deepEqual(filterMyAttendancePeriod(rows,'month',now),rows.slice(1,4));
+ assert.equal(filterMyAttendancePeriod(rows,'all',now).length,5);
 });
 
 test('native report UI includes period selection and signed-user OT read-only table',()=>{
