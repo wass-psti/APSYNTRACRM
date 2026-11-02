@@ -176,6 +176,7 @@ const locationLabel=v=>({
  'International Field Assignments':'International field assignment'
 }[v]||v);
 const ratio=(a,total)=>total?Math.round(100*a/total):0;
+const bucket=value=>'tt-ov-p'+Math.max(0,Math.min(100,Math.round(Number(value)/5)*5));
 const dropdown=(id,values,selected,caption)=>{
  return '<label for="'+id+'">'+escapeHtml(caption)+
  '<select id="'+id+'">'+values.map(([key,label])=>
@@ -234,8 +235,7 @@ export function renderTimeTrackerOverview({
     ['Late',overview.lateCount],['Avg Hours',hours(overview.averageCreditedMs)]
    ].map(([label,value])=>'<div class="tt-overview-metric"><strong>'+
      escapeHtml(value)+'</strong><span>'+escapeHtml(label)+'</span></div>').join('')+
-   '<div class="tt-on-time"><span>On-time rate</span><div class="tt-on-time-bar"><i style="width:'+
-    (overview.onTimeRate??0)+'%"></i></div><b>'+
+   '<div class="tt-on-time"><span>On-time rate</span><div class="tt-on-time-bar"><i class="'+bucket(overview.onTimeRate??0)+'"></i></div><b>'+
     (overview.onTimeRate===null?'No arrivals':overview.onTimeRate+'%')+
     '</b></div></section>'+
   '<div class="tt-overview-filters">'+
@@ -259,8 +259,8 @@ export function renderTimeTrackerOverview({
    '<h4>Location distribution</h4><b>'+totalLocations+' active</b></div>'+
    '<div class="tt-location-track" role="img" aria-label="Location distribution for active workers">'+
    overview.locations.filter(x=>x.count).map((x,i)=>
-    '<span class="tt-location-segment tt-location-color-'+i+
-    '" style="width:'+ratio(x.count,totalLocations)+'%" title="'+
+    '<span class="tt-location-segment tt-location-color-'+i+' '+bucket(ratio(x.count,totalLocations))+
+    '" title="'+
     escapeHtml(locationLabel(x.location)+': '+x.count)+'">'+x.count+'</span>').join('')+
    '</div><div class="tt-location-legend">'+overview.locations.map((x,i)=>
     '<span><i class="tt-location-color-'+i+'"></i>'+
@@ -271,8 +271,7 @@ export function renderTimeTrackerOverview({
     '<small>Arrivals by hour · PHT</small></div>'+
     '<div class="tt-arrival-bars" role="img" aria-label="Hourly attendance arrivals">'+
      (overview.hourly.map(x=>
-      '<div class="tt-arrival-bar"><b>'+x.count+'</b><i style="height:'+
-      Math.round(x.count/maxHourly*100)+'%"></i><span>'+escapeHtml(x.hour)+':00</span></div>').join('')||
+      '<div class="tt-arrival-bar"><b>'+x.count+'</b><i class="'+bucket(x.count/maxHourly*100)+'"></i><span>'+escapeHtml(x.hour)+':00</span></div>').join('')||
       '<p>No attendance arrivals today.</p>')+'</div></section>'+
    '<section class="tt-overview-panel"><div class="tt-overview-panel-heading"><h4>Attendance Pulse</h4>'+
      '<small>'+overview.rows.length+' records</small></div>'+
@@ -297,8 +296,7 @@ export function renderTimeTrackerOverview({
     '<div class="tt-arrival-timeline">'+
      overview.people.map(x=>'<i title="'+
       escapeHtml(x.name+': '+clockTime(x.clockIn))+
-      '" style="left:'+Math.max(0,Math.min(100,
-      (arrivalMinutes(x.clockIn)-300)/420*100))+'%" class="'+
+      '" class="'+bucket((arrivalMinutes(x.clockIn)-300)/420*100)+' '+
       (x.lateMinutes?'is-late':'is-ontime')+'"></i>').join('')+
     '</div><div class="tt-arrival-hours"><span>5 AM</span><span>8 AM</span><span>12 PM</span></div>'+
    '</section>'+
@@ -307,7 +305,7 @@ export function renderTimeTrackerOverview({
     overview.departmentCounts.map(x=>
      '<div class="tt-department-row"><div><b>'+escapeHtml(x.department)+'</b>'+
      '<span>'+x.count+' ('+ratio(x.count,overview.peopleCount)+'%)</span></div>'+
-     '<div><i style="width:'+ratio(x.count,overview.peopleCount)+'%"></i></div></div>'
+     '<div><i class="'+bucket(ratio(x.count,overview.peopleCount))+'"></i></div></div>'
     ).join('')+'</section></div>'+
   '<section class="tt-overview-whereabouts"><div class="tt-overview-panel-heading"><h4>Employee Whereabouts</h4>'+
    '<small>'+selected.length+' active</small></div>'+
@@ -326,7 +324,7 @@ export function renderTimeTrackerOverview({
       '<p>'+escapeHtml(r.department)+'</p><p>In: <b>'+escapeHtml(clockTime(r.clockIn))+
       '</b></p><small>Active · '+escapeHtml(toMin(r.creditedMs))+'</small>'+
      '</article>').join('')+'</div></div>'
-   ).join('')||'<p class="tt-muted">No active workers in the authorized attendance scope.</p>'))+
+   ).join('')||'<p class="tt-muted">No active workers in the authorized attendance scope.</p>')+
   '</section>'+
   '<section class="tt-overview-panel tt-attendance-list"><div class="tt-overview-panel-heading"><h4>Attendance Records</h4>'+
    '<span>'+allRows.length+' entries</span>'+
