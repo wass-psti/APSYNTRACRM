@@ -162,7 +162,10 @@ jobs:
           psql -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-board-collab01-disposable-setup.sql \
             -f sql/cp-board-collab01-authorization-candidate.sql \
-            -f sql/tests/cp-board-collab01-disposable-acceptance.sql
+            -f sql/tests/cp-board-collab01-disposable-acceptance.sql \
+            -f sql/tests/cp-board-collab01-revocation-acceptance.sql \
+            -f sql/cp-board-collab01-rollback.sql \
+            -f sql/tests/cp-board-collab01-rollback-acceptance.sql
 
   disposable-ot-postgres:
     runs-on: ubuntu-latest
