@@ -27,6 +27,8 @@ export async function runSEC14SignedRead({auth,api}={}){
    let selected=first,checked=1;
    for(const company of allowed.slice(1,maxCompanies)){
     if(selected.requests.length)break;
+    if(selected.summary?.total_requests>0)
+     return {...r,status:'FAIL',reason:'SUMMARY_LIST_INCONSISTENT'};
     const next=await loadFRTFinanceReadOnly({auth,api,companyCode:company.code});
     if(next.status!=='PASS'||next.role!==first.role||
        next.companyCode!==company.code||
@@ -36,6 +38,8 @@ export async function runSEC14SignedRead({auth,api}={}){
     }
     selected=next;checked++;
    }
+   if(selected.summary?.total_requests>0&&!selected.requests.length)
+    return {...r,status:'FAIL',reason:'SUMMARY_LIST_INCONSISTENT'};
    r.checks.push({name:'restricted-summary-list',status:'PASS'});
    if(selected.requests.length){
     const details=await loadFRTRequestDetailReadOnly({auth,api,
