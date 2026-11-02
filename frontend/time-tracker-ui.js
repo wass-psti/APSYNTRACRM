@@ -12,6 +12,7 @@ import {renderTimeTrackerCalendar} from './time-tracker-calendar.js';
 import {renderTimeTrackerOvertime} from './time-tracker-overtime.js';
 import {renderTimeTrackerMyHours} from './time-tracker-my-hours.js';
 import {renderTimeTrackerTeam} from './time-tracker-team.js';
+import {renderTimeTrackerMonitor} from './time-tracker-monitor.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -23,7 +24,7 @@ const sections=[
  ['overview','Overview',true],['clock','Clock',true],['log','Log',true],
  ['reports','Reports',true],['calendar','Calendar',true],
  ['ot','OT',true],['hours','My Hours',true],['team','Team',true],
- ['roles','Roles',false],['monitor','Monitor',false],['gps','GPS',false]
+ ['monitor','Monitor',true],['gps','GPS',false]
 ];
 const select=(id,values,placeholder)=>
  '<select id="'+id+'" name="'+id+'" required>'+
@@ -188,11 +189,11 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError=''
+ result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorBusy=false,monitorError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=(view==='team'&&teamEligible!==true)?'clock':
- ['overview','clock','log','reports','calendar','ot','hours','team'].includes(view)?view:'clock';
+ ['overview','clock','log','reports','calendar','ot','hours','team','monitor'].includes(view)?view:'clock';
  let html='<section class="tt-native" aria-label="TimeTracker attendance application">'+
   head(verified?result.access:null)+notifications(verified)+navigation(selected,busy,verified&&teamEligible===true);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
@@ -226,6 +227,9 @@ export function renderTimeTrackerNative({
  if(selected==='team')html+=renderTimeTrackerTeam({
   directory:teamDirectory,access:{...result.access,bootstrapTeamEligible:teamEligible===true},
   filters:teamFilters,loading:teamBusy,error:teamError,now
+ });
+ if(selected==='monitor')html+=renderTimeTrackerMonitor({
+  result:monitorResult,loading:monitorBusy,error:monitorError,now
  });
  if(selected==='hours')html+=renderTimeTrackerMyHours({
   records:result.records,access:result.access,
