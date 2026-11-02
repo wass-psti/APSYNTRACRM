@@ -86,3 +86,44 @@ test('GPS app wiring retains privacy and clears state on logout and expiry',()=>
  assert.match(app,/state\.ttGpsRunId\+\+/);
  assert.match(app,/gpsEligible:state\.roleVerified===true\|\|state\.ttAttendance\?\.access\?\.moduleRole==='Supervisor'/);
 });
+
+test('GPS reference redesign renders accessible mapped tabs, counters and filters',()=>{
+ const data=validateTimeTrackerGps(raw,{userId:id,workspaceId:ws,boardId:board});
+ const html=renderTimeTrackerGps({data,eligible:true,view:'map',now:new Date('2026-11-02T04:00:00Z')});
+ for(const token of ['tt-gps-heading','tt-gps-map-shell','tt-gps-map-stats',
+  'tt-gps-map-modes','tt-gps-map-zoom','tt-gps-controls','tt-gps-records',
+  'Live Map','Geofence','Trail','Accuracy','Trends','Load signed evidence']){
+  assert.ok(html.includes(token),'missing GPS design feature: '+token);
+ }
+ assert.match(html,/role="tablist"/);
+ assert.match(html,/aria-selected="true"/);
+ assert.match(html,/RECORDED/);
+ assert.doesNotMatch(html,/Tracking Active|live employee location/i);
+});
+test('GPS map mode and zoom are bounded and do not request unapproved satellite tiles',()=>{
+ const data=validateTimeTrackerGps(raw,{userId:id,workspaceId:ws,boardId:board});
+ const html=renderTimeTrackerGps({data,eligible:true,filters:{theme:'dark',zoom:3}});
+ assert.match(html,/tt-gps-theme-dark/);
+ assert.match(html,/scale\(3\)/);
+ assert.match(html,/data-theme="dark" aria-pressed="true"/);
+ assert.match(html,/Satellite<\/span><\/button>/);
+ assert.match(html,/disabled aria-disabled="true"/);
+ assert.doesNotMatch(html,/<img|<iframe|https:\/\/.*(?:tiles|satellite)/i);
+ assert.match(plotGps(data.events,{zoom:99}),/scale\(4\)/);
+ assert.match(plotGps(data.events,{zoom:-1}),/scale\(1\)/);
+});
+test('GPS privacy and geofence, trail and analysis views retain signed records',()=>{
+ const data=validateTimeTrackerGps(raw,{userId:id,workspaceId:ws,boardId:board});
+ for(const view of ['geofence','trail','accuracy','trends']){
+  const html=renderTimeTrackerGps({data,eligible:true,view,filters:{userId:id,referenceId:'safe-id:in',radius:300}});
+  assert.match(html,/GPS &amp; Location Hub/);
+  assert.match(html,/Employee Sample/);
+ }
+ const hidden=renderTimeTrackerGps({data,eligible:false});
+ assert.doesNotMatch(hidden,/Employee Sample|6\.990000|tt-gps-map-modes/);
+ const index=readFileSync('index.html','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(index,/frontend\/time-tracker-gps\.css/);
+ assert.match(app,/case 'tt-gps-zoom'/);
+ assert.match(app,/case 'tt-gps-theme'/);
+});

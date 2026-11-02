@@ -747,6 +747,26 @@ async function action(name,button){
   if(!['map','geofence','trail','accuracy','trends'].includes(next))return;
   state.ttGpsView=next;render();break;
  }
+ case 'tt-gps-zoom':{
+  if(state.ttView!=='gps'||state.ttBusy||state.ttGpsBusy||
+     state.ttAttendance?.status!=='VERIFIED_READ'||
+     !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))return;
+  const direction=button.dataset.direction;
+  if(direction!=='in'&&direction!=='out')return;
+  const current=Number(state.ttGpsFilters.zoom)||1;
+  const zoom=Math.max(1,Math.min(4,current+(direction==='in'?.5:-.5)));
+  state.ttGpsFilters={...state.ttGpsFilters,zoom};
+  render();break;
+ }
+ case 'tt-gps-theme':{
+  if(state.ttView!=='gps'||state.ttBusy||state.ttGpsBusy||
+     state.ttAttendance?.status!=='VERIFIED_READ'||
+     !(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'))return;
+  const theme=button.dataset.theme;
+  if(theme!=='map'&&theme!=='dark')return;
+  state.ttGpsFilters={...state.ttGpsFilters,theme};
+  render();break;
+ }
  case 'tt-gps-load':{
   if(state.ttView!=='gps'||state.ttBusy||state.ttGpsBusy||
      state.ttAttendance?.status!=='VERIFIED_READ')return;
