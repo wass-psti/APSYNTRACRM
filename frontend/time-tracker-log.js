@@ -28,6 +28,9 @@ const periods=[['all','All dates'],['today','Today'],
 const statuses=[['all','All statuses'],['Active','Active'],
  ['Completed','Completed'],['Late','Late'],['Administrative closure','Administrative closure']];
 const sortModes=[['newest','Newest first'],['oldest','Oldest first']];
+const searchText=r=>[r.location,r.department,r.classification,r.status,
+ manilaDay(r.clockIn),phtTime(r.clockIn)]
+ .map(x=>String(x??'').toLocaleLowerCase()).join(' ');
 
 export function filterTimeTrackerLogRows(records=[],filters={},now=new Date()){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
@@ -40,9 +43,7 @@ export function filterTimeTrackerLogRows(records=[],filters={},now=new Date()){
    r.classification==='Late':
    options.status==='Administrative closure'?
    r.classification==='Administrative closure':r.status===options.status))&&
-  (!search||[r.location,r.department,r.classification,r.status,
-   manilaDay(r.clockIn),phtTime(r.clockIn)]
-   .some(x=>String(x??'').toLocaleLowerCase().includes(search))));
+  (!search||searchText(r).includes(search)));
  return [...result].sort((a,b)=>options.sort==='oldest'?
   Date.parse(a.clockIn)-Date.parse(b.clockIn):
   Date.parse(b.clockIn)-Date.parse(a.clockIn));
@@ -61,13 +62,15 @@ export function timeTrackerLogSummary(rows=[]){
  });
 }
 
-const sessionRow=r=>{
+const sessionRow=(r,query='')=>{
+ const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
  const completed=r.status==='Completed';
  const status=r.classification==='Administrative closure'?
   'Administrative closure':completed?'Completed':r.status==='Active'?'Active':'Unknown';
  const badge=status==='Active'?'tt-log-badge-active':
   status==='Completed'?'tt-log-badge-done':'tt-log-badge-unknown';
- return '<tr class="tt-log-filterable">'+
+ return '<tr class="tt-log-filterable" data-log-search="'+esc(searchText(r))+'"'+
+  (hidden?' hidden':'')+'>'+
   '<td><strong>'+esc(phtTime(r.clockIn))+'</strong><small>Clock in</small></td>'+
   '<td><strong>'+esc(phtTime(r.clockOut))+'</strong><small>Clock out</small></td>'+
   '<td><span class="tt-log-location">'+esc(r.location||'Unspecified')+'</span></td>'+
@@ -79,7 +82,9 @@ const sessionRow=r=>{
 };
 export function renderTimeTrackerLog({records=[],filters={},now=new Date(),busy=false}={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
- const rows=filterTimeTrackerLogRows(records,options,now);
+ const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
+ const visible=filterTimeTrackerLogRows(records,options,now);
+ const query=String(options.search??'').slice(0,120);
  const summary=timeTrackerLogSummary(rows);
  const locations=[...new Set(safeRows(records).map(r=>r.location).
   filter(v=>TT_LOCATIONS.includes(v)))].sort();
@@ -115,19 +120,46 @@ export function renderTimeTrackerLog({records=[],filters={},now=new Date(),busy=
   '</section>'+
   '<div class="tt-log-panel"><div class="tt-log-panel-top">'+
    '<div><h4>Attendance history</h4>'+
-   '<p><span id="tt-log-visible-count">'+rows.length+'</span> sessions match the selected filters</p></div>'+
+   '<p><span id="tt-log-visible-count">'+visible.length+'</span> sessions match the selected filters</p></div>'+
    '<button class="secondary" type="button" data-action="tt-log-export"'+
-    (busy||!rows.length?' disabled':'')+'>Export filtered CSV</button></div>'+
+    (busy||!visible.length?' disabled':'')+'>Export filtered CSV</button></div>'+
    (days.size?[...days].map(([key,items])=>
     '<div class="tt-log-day"><h5>'+esc(phtDate(key+'T00:00:00+08:00'))+
     '<span>'+items.length+' session'+(items.length===1?'':'s')+'</span></h5>'+
     '<div class="tt-log-table-scroll"><table class="board-table tt-log-table">'+
     '<thead><tr><th>Clock In</th><th>Clock Out</th><th>Location</th>'+
     '<th>Department</th><th>Status</th><th>Arrival</th><th>Hours</th></tr></thead>'+
-    '<tbody>'+items.map(sessionRow).join('')+'</tbody></table></div></div>'
+    '<tbody>'+items.map(r=>sessionRow(r,query)).join('')+'</tbody></table></div></div>'
    ).join(''):'<p class="tt-log-empty">No signed attendance sessions match this view.</p>')+
+   '<p id="tt-log-empty-search" class="tt-log-empty"'+(rows.length&&visible.length?' hidden':'')+
+    '>'+(!rows.length?'':'No sessions match the search.')+'</p>'+
+   '<p class="tt-log-footnote">Summary cards cover the selected date, status, and location; '+
+    'search narrows the listed sessions and CSV export.</p>'+
    '<p class="tt-log-footnote">Only your centrally authorized attendance history is shown. '+
     'GPS coordinates, other employees’ records, and privileged audit evidence are excluded. '+
     'Clock edits and manual corrections remain unavailable pending backend acceptance.</p>'+
   '</div></section>';
+}
+
+/** Search only rows already authorized and rendered by the signed Log read. */
+export function applyTimeTrackerLogSearch(root,query=''){
+ const section=root?.querySelector?.('.tt-log');
+ if(!section)return false;
+ const search=String(query??'').toLocaleLowerCase().trim().slice(0,120);
+ let count=0;
+ for(const group of section.querySelectorAll('.tt-log-day')){
+  let displayed=0;
+  for(const row of group.querySelectorAll('.tt-log-filterable')){
+   row.hidden=Boolean(search&&!String(row.dataset.logSearch||'').includes(search));
+   if(!row.hidden){count++;displayed++;}
+  }
+  group.hidden=displayed===0;
+ }
+ const counter=section.querySelector('#tt-log-visible-count');
+ if(counter)counter.textContent=String(count);
+ const empty=section.querySelector('#tt-log-empty-search');
+ if(empty){empty.hidden=count!==0;empty.textContent='No signed sessions match this search.';}
+ const exportButton=section.querySelector('[data-action="tt-log-export"]');
+ if(exportButton)exportButton.disabled=count===0;
+ return true;
 }
