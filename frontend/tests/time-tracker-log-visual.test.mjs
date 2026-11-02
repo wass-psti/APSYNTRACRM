@@ -72,12 +72,12 @@ test('privileged signed GPS snapshot displays matching attendance fixes, not raw
    {userId:'two',recordId:'older',kind:'in',
     timestamp:'2026-10-28T01:00:00Z',latitude:11.34,
     longitude:124.55,accuracyM:20,source:'Browser GPS'}]};
- const privileged=renderTimeTrackerLog({records,gpsEligible:true,gpsData,now});
+ const privileged=renderTimeTrackerLog({records,gpsEligible:true,gpsData,now,mapEnabled:true});
  assert.match(privileged,/10\.234567, 123\.987654/);
  assert.match(privileged,/Recorded from signed GPS|Recorded<\/strong>/);
  assert.match(privileged,/Open point on map/);
  assert.match(privileged,/data-action="tt-log-gps-load"/);
- assert.match(privileged,/data-action="tt-map-enable"/);
+ assert.match(privileged,/class="tt-map-host" data-map-scope="log"/);
  const mapped=renderTimeTrackerLog({records,gpsEligible:true,gpsData,now,mapEnabled:true});
  assert.match(mapped,/class="tt-map-host" data-map-scope="log"/);
  assert.doesNotMatch(mapped,/https:\/\/tiles\.openfreemap\.org/);

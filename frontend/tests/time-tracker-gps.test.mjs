@@ -26,11 +26,11 @@ test('GPS presentation hides member coordinates unless explicitly eligible',()=>
  const data=validateTimeTrackerGps(raw,{userId:id,workspaceId:ws,boardId:board});
  const hidden=renderTimeTrackerGps({data,eligible:false});
  assert.doesNotMatch(hidden,/6\.990000|Employee Sample/);
- const shown=renderTimeTrackerGps({data,eligible:true});
+ const shown=renderTimeTrackerGps({data,eligible:true,mapEnabled:true});
  assert.match(shown,/GPS &amp; Location Hub/);
  assert.match(shown,/Employee Sample/);
  assert.match(shown,/satellite imagery/);
- assert.match(shown,/data-action="tt-map-enable"/);
+ assert.match(shown,/class="tt-map-host" data-map-scope="hub"/);
 });
 test('broad attendance snapshot remains GPS-free and cannot supply the scoped GPS view',()=>{
  const native=readFileSync('frontend/time-tracker-native.js','utf8');
@@ -103,9 +103,9 @@ test('GPS reference redesign renders accessible mapped tabs, counters and filter
 });
 test('GPS map mode and zoom are bounded and do not request unapproved satellite tiles',()=>{
  const data=validateTimeTrackerGps(raw,{userId:id,workspaceId:ws,boardId:board});
- const html=renderTimeTrackerGps({data,eligible:true,filters:{theme:'dark',zoom:3}});
+ const html=renderTimeTrackerGps({data,eligible:true,filters:{theme:'dark',zoom:3},mapEnabled:true});
  assert.match(html,/tt-gps-theme-dark/);
- assert.match(html,/data-action="tt-map-enable"/);
+ assert.match(html,/class="tt-map-host" data-map-scope="hub"/);
  const enabled=renderTimeTrackerGps({data,eligible:true,filters:{theme:'dark'},mapEnabled:true});
  assert.match(enabled,/class="tt-map-host" data-map-scope="hub"/);
  assert.doesNotMatch(enabled,/data-action="tt-map-enable"/);

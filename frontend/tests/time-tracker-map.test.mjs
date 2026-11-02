@@ -28,7 +28,7 @@ test('signed geographic overlays are scoped to the attendance record and PHT evi
  assert.equal(mapLineGeoJSON([inFix]).features.length,0);
 });
 test('opt-in map does not trigger tile requests during signed TimeTracker loading',async()=>{
- assert.match(mapFrame({hasPoints:true,enabled:false,scope:'hub'}),/data-action="tt-map-enable"/);
+ assert.match(mapFrame({hasPoints:true,enabled:false,scope:'hub'}),/GPS map authorization required/);
  assert.doesNotMatch(mapFrame({hasPoints:true,enabled:false}),/data-map-scope="hub"/);
  assert.match(mapFrame({hasPoints:true,enabled:true,scope:'log'}),/data-map-scope="log"/);
  assert.doesNotMatch(mapFrame({hasPoints:false,enabled:true}),/data-map-scope/);
