@@ -16,9 +16,9 @@ The ZIP contains TimeTracker Attendance standalone **v0.1.60**, derived from **v
 | Clock | Clock In/Out, GPS, location, department, non-admin offsite Work Note, attendance session state | **IMPLEMENTED-UNVERIFIED** actual signed production commits; native frontend and atomic RPC client unit tested |
 | Overview | Day-focused multiuser morning flow, whereabouts, department activity, exception stream | **PARTIAL** personal daily KPIs; full scoped team/day overview **PENDING** backend scoped projection |
 | Log | Attendance records, expanded audit, GPS evidence, search/filters, admin corrections | **PARTIAL** own record history, safe fields and credited-time calculation; corrections/GPS details **PENDING** |
-| Reports | Period/department/location filters, date summaries, print, CSV export | **PARTIAL** own attendance CSV; full authorized reports and print **PENDING** |
+| Reports | Period/department/location filters, date summaries, print, CSV export | **PARTIAL** personal today/week/month/all reports and period-scoped CSV implemented; cross-user authorized reports, advanced filters and print **PENDING** |
 | Calendar | Philippine holiday data, date views and authorized custom events | **PENDING** |
-| OT | Draft/Submitted/Approved/Rejected, request editing, department approval, self-approval prohibition, credited OT impact | **PENDING** — must be server-enforced, not raw snapshot writes |
+| OT | Draft/Submitted/Approved/Rejected, request editing, department approval, self-approval prohibition, credited OT impact | **PARTIAL** own OT requests preview through signed central state; creation/review decisions/credit impact **PENDING** server-enforced workflow |
 | Roles | TimeTracker-only `System Admin`, `IT Administrator`, `HR`, `Supervisor`, `Finance`, `OJT`, `Employee` | **PARTIAL** current signed module role resolved from centralized directory; all mutations remain in central User Role Management |
 | Audit | Clock and correction audit events; privileged audit views/exports | **PENDING** native server append-only audit event acceptance |
 | Auto Clock-Out | **Only on app initialization**, exact computed credited-hours threshold, approved OT extension, GPS retry/recovery evidence | **PENDING** — the existing manual transactional RPC timestamps at server commit time; it is **not** an auto-backdating API |
@@ -50,9 +50,11 @@ The ZIP contains TimeTracker Attendance standalone **v0.1.60**, derived from **v
 
 **Write boundary:** the native commit client is implemented, but live Clock In/Out UI controls and their event handler are **fail-closed disabled** via `TT_LIVE_ATTENDANCE_WRITES_ACCEPTED=false` until server-side work-note/audit requirements and genuine signed operational acceptance pass. The native UI provides personal attendance reads and CSV while the write gate remains closed. No operator/assistant-driven production attendance mutations or demo data writes were performed during development. No new tables, roles, grants, JWT configurations, SDK dependencies or app hosting were created.
 
+**Additional native read-only slice:** personal Today / This Week / This Month / All History reporting and export use the existing signed attendance state, and personal Draft/Submitted/Approved/Rejected OT previews use `timetracker.ot.v1`. Both explicitly re-filter signed owner IDs in the browser and contain no OT mutation or privileged approve/reject functionality. Backend-role-scoped supervisor/finance reporting and independent OT request/action authorization are not yet certified.
+
 ## Critical security and operational acceptance gaps
 
-The existing server function requires `p_geo.status='captured'` but, as a browser-supplied claim, that is **not a cryptographic attestation of physical position**. It also **does not enforce offsite Work Note server-side** (current native frontend enforces it, which is not sufficient as a security control). The server function does not visibly append a corresponding TimeTracker audit event during its transaction; separate source app audit state should not be presumed from its existence. Existing `list_module_state` returns role-dependent data, with broader data exposure for privileged roles, but server-side department-scoped Supervisor reporting and exact-GPS Finance restrictions need separate verification/hardening.
+The existing server function requires `p_geo.status='captured'` but, as a browser-supplied claim, that is **not a cryptographic attestation of physical position**. It also **does not enforce offsite Work Note server-side** (current native frontend enforces it, which is not sufficient as a security control). The server function does not visibly append a corresponding TimeTracker audit event during its transaction; separate source app audit state should not be presumed from its existence. Existing `list_module_state` returns role-dependent data, with broader data exposure for privileged roles, but server-side department-scoped Supervisor reporting and exact-GPS Finance restrictions need separate verification/hardening. The existing attendance RPC contains a module grant but does **not** call `work_board_access` or independently require this dedicated board ID; the native browser gates board access, but that is not a replacement for server-side board-authorization enforcement.
 
 Therefore **full production authorization, offsite policy enforcement, audit logging, supervisor/finance scoped projections, and auto-clock-out are NOT ACCEPTED** by the UI implementation. Treat these as backend acceptance blockers. Do not silently modify the existing live security-definer RPC or permissions without a controlled and separately authorized production change.
 
@@ -86,6 +88,7 @@ The read-only source-controlled audit `sql/tests/cp-tt-native-01-production-read
 - Existing `commit_timetracker_attendance_action`: installed, `SECURITY DEFINER`, authenticated EXECUTE **true**, anonymous EXECUTE **false**.
 - Signed identity, `has_module_access`, current workspace, advisory concurrency lock and state invariants: present in live server code.
 - Explicit `Offsite (Home)` work-note enforcement: **absent** in server function.
+- Explicit dedicated-board permission check inside commit function: **absent** (`work_board_access` not referenced).
 - Explicit TimeTracker audit append on clock commit: **absent** in server function.
 - No data, employee information, financial or attendance writes, or production permissions were changed by this preflight.
 
