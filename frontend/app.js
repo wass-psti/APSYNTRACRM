@@ -23,7 +23,7 @@ import {runSEC14SignedRead,sanitizeSEC14SignedRead} from './frt-sec14-signed-acc
 import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-signed-denials.js';
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
-import {TimeTrackerNativeClient,captureAttendanceGeo} from './time-tracker-native.js';
+import {TimeTrackerNativeClient,captureAttendanceGeo,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv} from './time-tracker-ui.js';
 import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
@@ -357,6 +357,7 @@ async function submitTimeTrackerAction(form,actionName){
  if(state.view!=='board'||state.tab!=='attendance'||state.ttBusy||
     moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
  if(!['clock-in','clock-out'].includes(actionName)||state.ttAttendance?.status!=='VERIFIED_READ')return;
+ if(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED){state.ttError='Live attendance writes require accepted server-side policy and audit enforcement.';render();return;}
  const values=new FormData(form);
  const location=String(values.get('tt-location')||'');
  const department=String(values.get('tt-department')||'');
