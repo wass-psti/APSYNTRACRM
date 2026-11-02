@@ -113,5 +113,5 @@ test('SEC14 app clears reports on workspace transitions, signout and stale sessi
  assert.match(app,/case 'security-sec14-readonly'/);
  assert.match(app,/case 'security-sec14-copy'/);
  assert.match(app,/state\.sec14Result=null;state\.sec14RunId\+\+;state\.sec14Busy=false;/);
- assert.match(app,/secureContracts:true/);
+ assert.match(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode\}\)/);
 });
