@@ -539,7 +539,7 @@
 .tt-log-hero h3{font:700 clamp(21px,2vw,27px)/1.2 Georgia,"Times New Roman",serif;margin:0 0 7px;color:#30343b}
 .tt-log-hero p{font-size:12px;margin:0;color:#7c8190}
 .tt-log-readonly{border:1px solid #d9e4dd;border-radius:20px;background:#eef6f0;color:#4e8062;font-size:11px;padding:7px 11px}
-.tt-log-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.tt-log-metrics{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
 .tt-log-metric{background:#fff;border:1px solid #dfe2e8;border-radius:9px;padding:15px;min-width:0;display:grid;gap:8px}
 .tt-log-metric span{font-size:11px;color:#777c87}
 .tt-log-metric strong{font:700 23px/1.15 ui-monospace,SFMono-Regular,monospace;color:#30343b;font-variant-numeric:tabular-nums}
@@ -557,7 +557,7 @@
 .tt-log-day h5{font:700 13px Georgia,"Times New Roman",serif;margin:0;padding:13px 3px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#3b414b}
 .tt-log-day h5 span{font:400 11px Inter,system-ui,sans-serif;color:#8c909a}
 .tt-log-table-scroll{max-width:100%;overflow-x:auto;border:1px solid #e2e5ea;border-radius:7px}
-.tt-log-table{min-width:795px;width:100%;border-collapse:collapse}
+.tt-log-table{min-width:1040px;width:100%;border-collapse:collapse}
 .tt-log-table thead{background:#f7f8fa}
 .tt-log-table th{font-size:10px;color:#858b97;white-space:nowrap;padding:12px 10px;text-align:left}
 .tt-log-table td{font-size:11px;padding:14px 10px;vertical-align:middle;color:#484e58;white-space:nowrap;border-top:1px solid #f0f1f3}
@@ -569,9 +569,14 @@
 .tt-log-badge-done{background:#e9f5ee;color:#3d8559}
 .tt-log-badge-unknown{background:#edf0f5;color:#657084}
 .tt-log-location{font-size:11px}
+.tt-log-detail{min-width:100px;max-width:180px}
+.tt-log-detail summary{cursor:pointer;color:#c65324;font-weight:600;list-style-position:inside}
+.tt-log-detail summary:focus-visible{outline:2px solid #c65324;outline-offset:3px}
+.tt-log-detail-body{display:grid;gap:6px;max-width:180px;padding:10px 6px 4px;white-space:normal;line-height:1.5;color:#606774}
+.tt-log-detail-body span{overflow-wrap:anywhere}
 .tt-log-empty{padding:30px 12px;text-align:center;color:#858994;font-size:12px;border:1px dashed #e0e4e9;border-radius:7px}
 .tt-log-footnote{font-size:11px;line-height:1.6;color:#8a909b;margin:0}
-@media(max-width:840px){.tt-log-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1100px){.tt-log-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:540px){
  .tt-log{padding:18px 12px 28px}
  .tt-log-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
