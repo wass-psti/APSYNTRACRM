@@ -1270,3 +1270,45 @@
 .tt-team-warning{color:#947133;background:#fff8e8}
 .tt-team-footnote{font-size:11px;color:#909198;line-height:1.7;margin:0}
 @media(max-width:700px){.tt-team-directory{padding:18px 12px}.tt-team-stats{grid-template-columns:repeat(2,1fr)}.tt-team-stats>div:nth-child(2){border:0}.tt-team-stats>div:nth-child(-n+2){border-bottom:1px dashed #e2e2e4}.tt-team-members-grid{grid-template-columns:1fr}.tt-team-member{grid-template-columns:35px minmax(0,1fr) auto}.tt-team-locked{display:none}}
+
+
+/* CP-TT-MONITOR-01 — lightweight on-demand browser and signed backend diagnostics */
+.tt-monitor{max-width:980px;margin:auto;padding:32px clamp(14px,3vw,30px);display:grid;gap:21px;min-width:0;color:#272b32}
+.tt-monitor-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.tt-monitor-head h3{font:700 clamp(26px,3.4vw,34px) Georgia,"Times New Roman",serif;margin:0 0 8px}
+.tt-monitor-head p{font-size:12px;color:#898b93;margin:0}
+.tt-monitor-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tt-monitor-actions button{padding:8px 12px;border:1px solid #dbdfe4;border-radius:5px;background:#fff;color:#5e6470;font-size:12px}
+.tt-monitor-actions button:disabled{opacity:.45;cursor:not-allowed}
+.tt-monitor-indicator{display:inline-flex;align-items:center;gap:7px;border:1px solid #dee1e5;padding:8px 12px;border-radius:5px;background:#f9f9fa;color:#6d7380;font:650 11px system-ui,sans-serif}
+.tt-monitor-indicator:before{content:"";width:7px;height:7px;border-radius:50%;background:#a1a8b3}
+.tt-monitor-healthy{color:#427f56;border-color:#bcdac7;background:#edf8f1}
+.tt-monitor-healthy:before{background:#3bb275}
+.tt-monitor-degraded{color:#a45a24;border-color:#efcfac;background:#fff8ec}
+.tt-monitor-degraded:before{background:#e6a140}
+.tt-monitor-subheading{font-size:11px;color:#91929a;padding-bottom:10px;border-bottom:1px solid #e5e6e9}
+.tt-monitor-empty{min-height:190px;display:grid;justify-items:center;align-content:center;text-align:center;gap:12px}
+.tt-monitor-empty>span{font-size:30px;color:#a3a4ab;border:1px dashed #e1e3e8;border-radius:50%;padding:12px 20px}
+.tt-monitor-empty strong{font:700 16px Georgia,serif}
+.tt-monitor-empty p{font-size:12px;color:#8f919b;line-height:1.6;max-width:400px;margin:0}
+.tt-monitor-section{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.12em;color:#96959e;font-weight:700}
+.tt-monitor-section:after{content:"";height:1px;background:#e0e2e7;flex:1}
+.tt-monitor-section span{order:2;font-size:10px;letter-spacing:0;font-weight:400}
+.tt-monitor-stats{border:1px dashed #e2e4e8;border-radius:6px;background:#fafbfe;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:hidden}
+.tt-monitor-stat{min-height:90px;display:grid;justify-items:center;align-content:center;gap:7px;text-align:center;padding:12px 4px;border-right:1px dashed #e2e4e8}
+.tt-monitor-stat:last-child{border:0}
+.tt-monitor-stat>span{font-size:10px;letter-spacing:.08em;color:#91929c}
+.tt-monitor-stat strong{font:700 clamp(13px,1.7vw,18px) ui-monospace,SFMono-Regular,monospace;overflow-wrap:anywhere}
+.tt-monitor-stat small{font-size:10px;color:#9c9da6}
+.tt-monitor-checks{border:1px solid #e3e5e8;background:#fff;border-radius:7px;overflow:hidden}
+.tt-monitor-check{display:grid;grid-template-columns:72px minmax(0,1fr) 80px;gap:9px 13px;align-items:center;padding:12px 14px;border-bottom:1px solid #eef0f3}
+.tt-monitor-check:last-child{border:0}
+.tt-monitor-check strong{font-size:12px;font-weight:650}
+.tt-monitor-check>span:nth-child(3){font:600 11px ui-monospace,monospace;text-align:right}
+.tt-monitor-check small{grid-column:2/4;color:#9b9fa8;font-size:10px}
+.tt-monitor-check-status{font-size:10px;font-weight:700}
+.tt-monitor-ok{color:#27915e}
+.tt-monitor-bad{color:#ce6241}
+.tt-monitor-footnote{font-size:11px;line-height:1.7;color:#90939b;margin:0}
+.tt-monitor-error{border:1px solid #ebc5c5;background:#fff3f3;color:#a74343;padding:12px;border-radius:5px;font-size:12px}
+@media(max-width:690px){.tt-monitor{padding:19px 12px}.tt-monitor-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.tt-monitor-stat:nth-child(2){border-right:0}.tt-monitor-stat:nth-child(-n+2){border-bottom:1px dashed #e2e4e8}.tt-monitor-check{grid-template-columns:60px minmax(0,1fr) 62px;gap:6px}.tt-monitor-check small{grid-column:2/4}}
