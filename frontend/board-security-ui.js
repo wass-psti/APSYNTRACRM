@@ -91,9 +91,7 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
  }
  html+='</div></div>';
  html+='<div class="panel"><div class="panel-header"><h3>SEC14 · Independent nonbootstrap / foreign-workspace denial</h3></div>'+
- '<div class="panel-body"><p class="muted">Run under an existing nonbootstrap account with an active FRT grant. Supply an independently verified, existing other-workspace UUID; it is never included in copied evidence. No finance writes or role changes. Without an established foreign workspace, acceptance remains PENDING.</p>'+
- '<label for="security-sec14-foreign-workspace">Other existing workspace UUID (not your active workspace)</label>'+
- '<input id="security-sec14-foreign-workspace" type="text" autocomplete="off" spellcheck="false" maxlength="36" placeholder="xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx" />'+
+ '<div class="panel-body"><p class="muted">Under an existing nonbootstrap FRT-authorized account, the backend automatically selects a real foreign workspace and verifies both restricted read denials. No workspace ID, finance write or role change is required. Bootstrap accounts remain ineligible.</p>'+
  '<button class="primary" data-action="security-sec14-denial" '+(sec14DenialBusy?'disabled':'')+'>'+
  (sec14DenialBusy?'Checking nonbootstrap boundaries…':'Verify SEC14 nonbootstrap and cross-workspace denials')+'</button>';
  if(sec14DenialResult){
@@ -106,7 +104,7 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
   html+='<div class="table-scroll"><table class="board-table"><thead><tr><th>Check</th><th>Status</th></tr></thead><tbody>'+
    (sec14DenialResult.checks||[]).map(x=>'<tr><td>'+escape(x.name)+'</td><td>'+escape(x.status)+'</td></tr>').join('')+
    '</tbody></table></div>'+
-   '<p class="muted">Foreign workspace existence: NOT VERIFIED by this browser probe. Financial operations: NOT VERIFIED.</p>'+
+   '<p class="muted">Foreign workspace existence: '+escape(sec14DenialResult.foreignWorkspaceExistence||'NOT_VERIFIED')+'. Financial operations: NOT VERIFIED.</p>'+
    '<button class="secondary" data-action="security-sec14-denial-copy">Copy nonsecret SEC14 denial report</button></div>';
  }
  html+='</div></div>';
