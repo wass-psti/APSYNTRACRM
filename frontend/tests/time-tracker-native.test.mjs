@@ -11,7 +11,7 @@ const other='ed2ef1bc-50ea-4eea-8b83-2d6ec8434797';
 const workspace='00000000-0000-4000-8000-000000000001';
 const foreign='00000000-0000-4000-8000-000000000002';
 const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
-const stamp=(hour,minute=0)=>new Date(2026,10,2,hour,minute).toISOString();
+const stamp=(hour,minute=0)=>new Date(Date.UTC(2026,10,2,hour-8,minute)).toISOString();
 const example=(ownerId=user)=>({
  id:'session-1',ownerId:'cloud:'+ownerId,
  clockIn:{timestamp:stamp(8),location:TT_LOCATIONS[0],department:TT_DEPARTMENTS[0],
@@ -57,6 +57,13 @@ test('source 08:00 late threshold and unpaid 12:00–13:00 credit policy',()=>{
  assert.equal(creditedAttendanceMs(stamp(11),stamp(14)),2*3600000);
  assert.equal(creditedAttendanceMs(stamp(13),stamp(14)),3600000);
  assert.equal(creditedAttendanceMs('bad-date',stamp(14)),0);
+});
+
+test('attendance classifications and break deductions use PHT even outside Asia/Manila',()=>{
+ assert.equal(attendanceClassification({clockIn:{timestamp:'2026-11-02T00:00:00.000Z'}}),'On time');
+ assert.equal(attendanceClassification({clockIn:{timestamp:'2026-11-02T00:01:00.000Z'}}),'Late');
+ assert.equal(creditedAttendanceMs('2026-11-02T03:00:00.000Z','2026-11-02T06:00:00.000Z'),2*3600000);
+ assert.equal(creditedAttendanceMs('2026-11-01T15:00:00.000Z','2026-11-01T17:00:00.000Z'),2*3600000);
 });
 
 test('native projection returns only signed actor fields, no GPS or foreign rows',()=>{
@@ -198,16 +205,29 @@ test('overtime projection only includes verified signed owner and valid statuses
 });
 
 test('weekly and monthly personal reporting preserve period and owner scope',()=>{
- const monday=new Date(2026,10,2,12);
+ const monday=new Date('2026-11-02T04:00:00.000Z'); // 12:00 PHT
  const rows=[
-  {clockIn:new Date(2026,10,2,8).toISOString()},
-  {clockIn:new Date(2026,9,31,8).toISOString()}
+  {clockIn:'2026-11-02T00:00:00.000Z'}, // Monday 08:00 PHT
+  {clockIn:'2026-10-31T00:00:00.000Z'}  // Saturday 08:00 PHT
  ];
  assert.equal(filterMyAttendancePeriod(rows,'today',monday).length,1);
  assert.equal(filterMyAttendancePeriod(rows,'week',monday).length,1);
  assert.equal(filterMyAttendancePeriod(rows,'month',monday).length,1);
  assert.equal(filterMyAttendancePeriod(rows,'all',monday).length,2);
  assert.throws(()=>filterMyAttendancePeriod(rows,'nextYear',monday),/Unsupported report period/);
+});
+
+test('personal today, week and month boundaries follow the PHT calendar',()=>{
+ const now=new Date('2026-11-01T17:00:00.000Z'); // Monday 01:00 PHT
+ const rows=[
+  {clockIn:'2026-11-01T15:59:59.000Z'}, // Sunday 23:59 PHT
+  {clockIn:'2026-11-01T16:00:00.000Z'}, // Monday 00:00 PHT
+  {clockIn:'2026-11-01T16:30:00.000Z'}, // Monday 00:30 PHT
+  {clockIn:'2026-11-01T18:00:00.000Z'}  // future session, excluded
+ ];
+ for(const period of ['today','week','month'])
+  assert.deepEqual(filterMyAttendancePeriod(rows,period,now),rows.slice(1,3));
+ assert.equal(filterMyAttendancePeriod(rows,'all',now).length,4);
 });
 
 test('native report UI includes period selection and signed-user OT read-only table',()=>{
@@ -227,7 +247,7 @@ test('native report UI includes period selection and signed-user OT read-only ta
 });
 
 test('Clock reference layout formats stable local time and daytime greeting',()=>{
- const time=new Date(2026,10,2,15,22,31);
+ const time=new Date('2026-11-02T07:22:31.000Z');
  const parts=timeTrackerClockParts(time);
  assert.equal(parts.greeting,'Good afternoon,');
  assert.equal(parts.day,'Monday, November 2');
@@ -256,7 +276,7 @@ test('Clock ticker updates only mounted text nodes and does not fetch data',()=>
  for(const key of ['greeting','date','hours','minutes','seconds','period'])
   nodes.set('#tt-clock-'+key,{textContent:''});
  const root={querySelector:id=>nodes.get(id)||null};
- assert.equal(syncTimeTrackerClock(root,new Date(2026,10,2,15,22,31)),true);
+ assert.equal(syncTimeTrackerClock(root,new Date('2026-11-02T07:22:31.000Z')),true);
  assert.equal(nodes.get('#tt-clock-hours').textContent,'03');
  assert.equal(nodes.get('#tt-clock-minutes').textContent,'22');
  assert.equal(nodes.get('#tt-clock-seconds').textContent,'31');
