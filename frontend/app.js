@@ -480,7 +480,7 @@ async function submitTimeTrackerAction(form,actionName){
  if(state.view!=='board'||state.tab!=='attendance'||state.ttBusy||
     moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
  if(!['clock-in','clock-out'].includes(actionName)||state.ttAttendance?.status!=='VERIFIED_READ')return;
- if(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED){state.ttError='Live attendance writes require accepted server-side policy and audit enforcement.';render();return;}
+ if(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED||state.ttAttendance?.access?.attendanceWritesAccepted!==true){state.ttError='Live attendance writes require a signed, server-verified Clock capability.';render();return;}
  const values=new FormData(form);
  const location=String(values.get('tt-location')||'');
  const department=String(values.get('tt-department')||'');

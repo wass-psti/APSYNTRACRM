@@ -11,8 +11,9 @@ import {validateTimeTrackerGps} from './time-tracker-gps.js';
  * All attendance mutations use the existing atomic signed PostgreSQL RPC.
  */
 const moduleId='time-tracker';
-// Fail closed until backend offsite-note/audit acceptance and signed runtime proof.
-export const TT_LIVE_ATTENDANCE_WRITES_ACCEPTED=false;
+// The client supports the signed v2 protocol, but the server capability must also pass.
+// A missing, expired, revoked or mismatched capability keeps all writes disabled.
+export const TT_LIVE_ATTENDANCE_WRITES_ACCEPTED=true;
 const stateKey='timetracker.attendance.v1';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const TT_DEPARTMENTS=Object.freeze([
@@ -147,6 +148,19 @@ export class TimeTrackerNativeClient{
     overviewDirectory:Object.freeze(overviewDirectory)});
 
  }
+ /** Only a current signed, board-scoped server v2 capability can unlock Clock. */
+ async attendanceCapability(boardId,access){
+  if(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED)return false;
+  try{
+   const cap=await this.api.rpc('timetracker_attendance_capabilities',{p_board_id:boardId});
+   return isRecord(cap)&&cap.mode==='ACTIVE'&&cap.contract==='tt-attendance-1'&&
+    cap.canClock===true&&cap.actorId===access.userId&&
+    cap.workspaceId===access.workspaceId&&cap.boardId===boardId;
+  }catch{
+   // Old or unaccepted backend, revoked role/session, and network failures are read-only.
+   return false;
+  }
+ }
  async snapshot(boardId){
   const access=await this.access(boardId);
   const raw=await this.api.rpc('list_module_state',{p_module_id:moduleId});
@@ -196,8 +210,9 @@ export class TimeTrackerNativeClient{
    if(!/PGRST202|Could not find the function|Unexpected RPC timetracker_ot_snapshot/.test(msg))
     throw error;
   }
+  const attendanceWritesAccepted=await this.attendanceCapability(boardId,access);
   await checkIdentity(this.auth,this.api,access,boardId);
-  return {status:'VERIFIED_READ',access:{...access,...otAccess},records,otRequests,overview,log,revision:row?Number(row.revision):0,
+  return {status:'VERIFIED_READ',access:{...access,...otAccess,attendanceWritesAccepted},records,otRequests,overview,log,revision:row?Number(row.revision):0,
    active:records.find(x=>x.status==='Active')||null};
  }
  /** A fresh independently guarded bootstrap read; no Team information for normal users. */
@@ -284,6 +299,8 @@ export class TimeTrackerNativeClient{
  async commit(boardId,{action,location,department,workNote='',geo}={}){
   if(!['clock-in','clock-out'].includes(action))deny('Unsupported attendance action');
   const before=await this.snapshot(boardId);
+  if(before.access.attendanceWritesAccepted!==true)
+   deny('Server-verified TimeTracker Clock activation required');
   if(!TT_LOCATIONS.includes(location)||!TT_DEPARTMENTS.includes(department))
    deny('Select an approved work location and department');
   const note=String(workNote||'').trim();
@@ -298,19 +315,26 @@ export class TimeTrackerNativeClient{
     geo.accuracy<0||geo.accuracy>100000)
    deny('A captured browser GPS fix is required');
   await checkIdentity(this.auth,this.api,before.access,boardId);
-  const result=await this.api.rpc('commit_timetracker_attendance_action',{
-   p_action:action,p_record_id:action==='clock-out'?before.active.id:null,
+  if(await this.attendanceCapability(boardId,before.access)!==true)
+   deny('Signed attendance write authorization changed; no action performed');
+  const result=await this.api.rpc('timetracker_attendance_commit_v2',{
+   p_board_id:boardId,p_action:action,
+   p_record_id:action==='clock-out'?before.active.id:null,
    p_location:location,p_department:department,p_geo:geo,
-   p_work_note:note||null,p_attendance_policy:TT_POLICY
+   p_work_note:note||null
   });
-  if(!isRecord(result)||result.action!==action||result.state_key!==stateKey||
-    !Number.isSafeInteger(Number(result.revision))||Number(result.revision)<=before.revision||
-    !safeTime(result.committed_at)||!isRecord(result.record)||
-    result.record.ownerId!=='cloud:'+before.access.userId)
+  if(!isRecord(result)||result.mode!=='COMMITTED'||
+    result.contract!=='tt-attendance-1'||
+    result.actorId!==before.access.userId||
+    result.workspaceId!==before.access.workspaceId||result.boardId!==boardId||
+    result.action!==action||!Number.isSafeInteger(Number(result.revision))||
+    Number(result.revision)<=before.revision||!safeTime(result.committedAt)||
+    typeof result.recordId!=='string'||result.recordId.length<1||
+    result.recordId.length>150||'value'in result||'record'in result||'geo'in result)
    deny('Attendance commit receipt is unverified; refresh before trying again');
   await checkIdentity(this.auth,this.api,before.access,boardId);
-  return Object.freeze({action,revision:Number(result.revision),committedAt:result.committed_at,
-   recordId:result.record.id});
+  return Object.freeze({action,revision:Number(result.revision),committedAt:result.committedAt,
+   recordId:result.recordId});
  }
 }
 export async function captureAttendanceGeo(geolocation){

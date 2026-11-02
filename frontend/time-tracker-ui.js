@@ -99,9 +99,10 @@ function head(access){
     esc(access?.moduleRole||'Signed access required')+'</span>'+
   '</div></header>';
 }
-function notifications(verified){
+function notifications(verified,writeReady=false){
  return '<div class="tt-notices" role="status">'+
-  '<span class="tt-notice tt-notice-warning">⚠ &nbsp; Clock actions pending backend acceptance</span>'+
+  (writeReady?'<span class="tt-notice tt-notice-neutral">✓ &nbsp; Signed Clock writes active</span>':
+  '<span class="tt-notice tt-notice-warning">⚠ &nbsp; Clock actions pending backend acceptance</span>')+
   (verified?'<span class="tt-notice tt-notice-neutral">ⓘ &nbsp; Signed workspace verified</span>':'')+
   '</div>';
 }
@@ -111,6 +112,7 @@ function heading(title,desc){
 }
 function clockPage(result,busy,now){
  const {access,records,active}=result;
+ const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
  const t=timeTrackerClockParts(now);
  const today=now.toDateString();
  const todayRows=records.filter(r=>new Date(r.clockIn).toDateString()===today);
@@ -149,9 +151,9 @@ function clockPage(result,busy,now){
      'Offsite Work Note<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
     '<button class="tt-start-button" type="submit" name="tt-action" value="'+
       (active?'clock-out':'clock-in')+'"'+
-      (busy||!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED?' disabled':'')+'>'+
+      (busy||!writeReady?' disabled':'')+'>'+
       (active?'End session':'Start session')+'</button>'+
-    (!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED?
+    (!writeReady?
      '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
      '<p class="tt-clock-hint">Your attendance uses signed PostgreSQL timestamps and current GPS permission.</p>')+
    '</form></section>'+
@@ -198,7 +200,7 @@ export function renderTimeTrackerNative({
   (view==='gps'&&gpsEligible!==true))?'clock':
  ['overview','clock','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
  let html='<section class="tt-native" aria-label="TimeTracker attendance application">'+
-  head(verified?result.access:null)+notifications(verified)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true);
+  head(verified?result.access:null)+notifications(verified,verified&&result.access?.attendanceWritesAccepted===true)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
  if(success)html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
  if(!verified){

@@ -19,7 +19,7 @@ const example=(ownerId=user)=>({
  clockOut:null
 });
 function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=workspace,
- records=[],malformed=false}={}){
+ records=[],malformed=false,writeReady=false,foreignCapability=false}={}){
  let commitCount=0;
  const auth={userId:activeUser,getVerifiedUser:async()=>({id:activeUser})};
  let currentRecords=records;
@@ -34,15 +34,20 @@ function setup({grant=true,view=true,role='Employee',activeUser=user,ctxWs=works
      display_name:'Test signed employee'}];
     case 'list_module_state':return [{state_key:'timetracker.attendance.v1',
      scope:'shared',revision:2,value:malformed?'not-json':JSON.stringify({version:1,records:currentRecords})}];
-    case 'commit_timetracker_attendance_action':{
+    case 'timetracker_attendance_capabilities':
+     if(!writeReady)throw Error('PGRST202: function not deployed');
+     return {mode:'ACTIVE',contract:'tt-attendance-1',canClock:true,
+      actorId:activeUser,workspaceId:foreignCapability?foreign:ctxWs,boardId:board};
+    case 'timetracker_attendance_commit_v2':{
      commitCount++;
      if(args.p_action==='clock-in'){
       currentRecords=[{id:'new-attendance',ownerId:'cloud:'+activeUser,clockIn:{
        timestamp:stamp(8),location:args.p_location,department:args.p_department},clockOut:null},
        ...currentRecords];
      }
-     return {action:args.p_action,revision:3,state_key:'timetracker.attendance.v1',
-      committed_at:stamp(8),record:currentRecords[0]};
+     return {mode:'COMMITTED',contract:'tt-attendance-1',action:args.p_action,
+      revision:3,committedAt:stamp(8),actorId:activeUser,
+      workspaceId:ctxWs,boardId:board,recordId:currentRecords[0].id};
     }
     default:throw new Error('Unexpected RPC '+name);
    }
@@ -99,7 +104,7 @@ test('read projects existing authoritative state and rejects malformed state',as
 });
 
 test('clock-in validates offsite note, GPS and duplicate sessions before RPC',async()=>{
- const s=setup();
+ const s=setup({writeReady:true});
  const base={action:'clock-in',location:'Offsite (Home)',department:'HR',
  geo:{status:'captured',latitude:10,longitude:123,accuracy:20}};
  await assert.rejects(s.client.commit(board,base),/Work Note/);
@@ -111,7 +116,7 @@ test('clock-in validates offsite note, GPS and duplicate sessions before RPC',as
  assert.equal(result.action,'clock-in');
  assert.equal(result.revision,3);
  assert.equal(s.commits(),1);
- const dup=setup({records:[example()]});
+ const dup=setup({records:[example()],writeReady:true});
  await assert.rejects(dup.client.commit(board,{...base,workNote:'Site supervision'}),/Already clocked in/);
  assert.equal(dup.commits(),0);
 });
@@ -121,7 +126,7 @@ test('clock-out requires active record; invalid geographic coordinates never sen
  await assert.rejects(s.client.commit(board,{action:'clock-out',location:TT_LOCATIONS[0],
   department:'HR',geo:{status:'captured',latitude:10,longitude:123,accuracy:20}}),/No active/);
  assert.equal(s.commits(),0);
- const yes=setup({records:[example()]});
+ const yes=setup({records:[example()],writeReady:true});
  await assert.rejects(yes.client.commit(board,{action:'clock-out',location:TT_LOCATIONS[0],
   department:'HR',geo:{status:'captured',latitude:999,longitude:123,accuracy:20}}),/GPS/);
  assert.equal(yes.commits(),0);
@@ -173,8 +178,8 @@ test('board route integrates TimeTracker without standalone imports or local sto
  assert.doesNotMatch(app,/time-tracker\.zip|\/apps\/time-tracker\/|ttStorage/);
 });
 
-test('production clock actions fail closed until signed backend audit/work-note gates pass',()=>{
- assert.equal(TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,false);
+test('Clock supports v2 but stays disabled without a validated signed server capability',()=>{
+ assert.equal(TT_LIVE_ATTENDANCE_WRITES_ACCEPTED,true);
  const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
   access:{moduleRole:'Employee',platformRole:'employee',name:'User'},
   records:[],active:null}});
@@ -186,7 +191,7 @@ test('production clock actions fail closed until signed backend audit/work-note 
   records:[],active:{id:'session-1',clockIn:stamp(8)}},view:'clock'});
  assert.match(active,/name="tt-action" value="clock-out" disabled/);
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/if\(!TT_LIVE_ATTENDANCE_WRITES_ACCEPTED\)/);
+ assert.match(app,/state\.ttAttendance\?\.access\?\.attendanceWritesAccepted!==true/);
 });
 
 test('overtime projection only includes verified signed owner and valid statuses',()=>{
@@ -310,4 +315,31 @@ test('opening TimeTracker board lands on Clock but generic board items stay reac
  assert.match(app,/defaultClock\?'attendance':'items'/);
  assert.match(app,/key==='timetracker'\?'\/items':''/);
  assert.match(readFileSync('frontend/time-tracker-ui.js','utf8'),/data-action="tt-tab"/);
+});
+
+test('Clock backend capability is bound to signed actor, workspace and board',async()=>{
+ const ready=setup({writeReady:true});
+ const signed=await ready.client.snapshot(board);
+ assert.equal(signed.access.attendanceWritesAccepted,true);
+ const cross=setup({writeReady:true,foreignCapability:true});
+ assert.equal((await cross.client.snapshot(board)).access.attendanceWritesAccepted,false);
+ const readOnly=setup();
+ assert.equal((await readOnly.client.snapshot(board)).access.attendanceWritesAccepted,false);
+ await assert.rejects(()=>readOnly.client.commit(board,{action:'clock-in',location:TT_LOCATIONS[0],
+  department:'HR',geo:{status:'captured',latitude:10,longitude:123,accuracy:20}}),/activation required/);
+ assert.equal(readOnly.commits(),0);
+});
+
+test('Clock button activates only after signed backend capability is in snapshot',()=>{
+ const access={moduleRole:'Employee',platformRole:'employee',name:'User',
+  attendanceWritesAccepted:true};
+ const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',access,
+  records:[],active:null}});
+ assert.match(html,/name="tt-action" value="clock-in"/);
+ assert.doesNotMatch(html,/name="tt-action" value="clock-in" disabled/);
+ assert.match(html,/Signed Clock writes active/);
+ assert.doesNotMatch(html,/Live writes remain disabled/);
+ const inactive=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
+  access:{...access,attendanceWritesAccepted:false},records:[],active:null}});
+ assert.match(inactive,/value="clock-in" disabled/);
 });

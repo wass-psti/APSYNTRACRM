@@ -29,6 +29,8 @@ on:
       - "sql/cp-tt-gps03-*.sql"
       - "sql/tests/cp-tt-gps02-*.sql"
       - "sql/tests/cp-tt-gps03-*.sql"
+      - "sql/cp-tt-live01-*.sql"
+      - "sql/tests/cp-tt-live01-*.sql"
       - "sql/tests/cp-tt-monitor01-*.sql"
       - "docs/CP-FRT-SEC11-SIGNED-EFFECTIVE-ACCESS.md"
       - "docs/CP-FRT-SEC10-CONTROLLED-TRANSITIONS.md"
@@ -163,7 +165,10 @@ jobs:
             -f sql/tests/cp-tt-gps02-disposable-redaction.sql \
             -f sql/tests/cp-tt-gps03-disposable-setup.sql \
             -f sql/cp-tt-gps03-remaining-read-path-redaction.sql \
-            -f sql/tests/cp-tt-gps03-disposable-acceptance.sql
+            -f sql/tests/cp-tt-gps03-disposable-acceptance.sql \
+            -f sql/tests/cp-tt-live01-disposable-setup.sql \
+            -f sql/cp-tt-live01-staged-atomic-attendance.sql \
+            -f sql/tests/cp-tt-live01-disposable-acceptance.sql
   live-pages:
     needs: [frontend, disposable-ot-postgres]
     if: github.ref == 'refs/heads/main'
