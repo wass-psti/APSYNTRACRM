@@ -69,6 +69,12 @@ BEGIN
  );
 END $fn$;
 
+-- New endpoint execution is authenticated only; preserve every legacy grant.
+REVOKE ALL ON FUNCTION public.frt_restricted_request_detail(uuid,uuid)
+ FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.frt_restricted_request_detail(uuid,uuid)
+ TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.frt_board_list_safe(
  p_workspace_id uuid, p_company text, p_search text DEFAULT '')
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO ''
