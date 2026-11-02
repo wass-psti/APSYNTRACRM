@@ -86,7 +86,7 @@ BEGIN
   UPDATE public.timetracker_attendance_mutation_audit SET action='clock-out';
   RAISE EXCEPTION 'FAIL: immutable audit accepted UPDATE';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
-END $;
+END $$;
 RESET ROLE;
 DO $audit_check$
 BEGIN

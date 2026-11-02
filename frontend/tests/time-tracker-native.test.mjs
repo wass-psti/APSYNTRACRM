@@ -122,7 +122,7 @@ test('clock-in validates offsite note, GPS and duplicate sessions before RPC',as
 });
 
 test('clock-out requires active record; invalid geographic coordinates never sent',async()=>{
- const s=setup();
+ const s=setup({writeReady:true});
  await assert.rejects(s.client.commit(board,{action:'clock-out',location:TT_LOCATIONS[0],
   department:'HR',geo:{status:'captured',latitude:10,longitude:123,accuracy:20}}),/No active/);
  assert.equal(s.commits(),0);
