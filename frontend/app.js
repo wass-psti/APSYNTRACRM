@@ -2,6 +2,7 @@ import {AuthClient,ApiError} from './session.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
 import {mountAuthExperience} from './auth-experience.js';
+import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {DomainApi,validUuid} from './data.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
@@ -131,29 +132,79 @@ function stopAuthVisuals(){
 function renderLogin(message=''){
  stopTimeTrackerClock();
  stopAuthVisuals();
+ stopSidebarSelection();
  root.innerHTML=renderAuthMarkup({message});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
+
+/** Visual-only route links. Permission-aware inclusion stays server-derived. */
+function sidebarNav(href,label,icon,active,{count=null}={}){
+ const selected=active?' aria-current="page"':'';
+ const badge=count!==null?'<span class="nav-count">'+e(count)+'</span>':'';
+ return '<a class="nav-link '+(active?'active':'')+'" href="'+e(href)+'" '+
+  'title="'+e(label)+'" aria-label="'+e(label)+'"'+selected+'>'+
+  '<span class="nav-ico">'+sidebarIcon(icon)+'</span>'+
+  '<span class="nav-label">'+e(label)+'</span>'+badge+'</a>';
+}
 function sidebar(){
  const currentBoard=state.boardId;
- return `<aside class="sidebar">
-   <a href="#/overview" class="brand"><img class="brand-mark" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/><span class="brand-text">APSYNTRA <span class="csp-u043" >CRM</span></span></a>
-   <div class="workspace-switcher"><div class="workspace-icon">W</div><div><div class="workspace-name">${e(workspaceName())}</div><div class="workspace-sub">Connected workspace</div></div></div>
-   <div class="side-section">Workspace</div>
-   <nav class="nav-list" aria-label="Primary">
-     <a class="nav-link ${state.view==='overview'?'active':''}" href="#/overview"><span class="nav-ico">◫</span><span class="nav-label">Overview</span></a>
-     <a class="nav-link ${state.view==='boards'?'active':''}" href="#/boards"><span class="nav-ico">▤</span><span class="nav-label">My boards</span><span class="nav-count">${state.boards.length}</span></a>
-     <a class="nav-link ${state.view==='foundation'?'active':''}" href="#/foundation"><span class="nav-ico">◇</span><span class="nav-label">12-board foundation</span></a>
-     <a class="nav-link ${state.view==='security'?'active':''}" href="#/security"><span class="nav-ico">◈</span><span class="nav-label">Access acceptance</span></a>
-     ${state.roleVerified===true?`<div class="side-section">Administration</div><a class="nav-link ${state.view==='role-configuration'?'active':''}" href="#/role-configuration"><span class="nav-ico">⚿</span><span class="nav-label">Role Configuration</span></a><a class="nav-link ${state.view==='user-role-management'?'active':''}" href="#/user-role-management"><span class="nav-ico">♧</span><span class="nav-label">User Role Management</span></a>`:''}
-     <a class="nav-link ${state.view==='settings'?'active':''}" href="#/settings"><span class="nav-ico">⚙</span><span class="nav-label">Settings</span></a>
-     <a class="nav-link ${state.view==='acceptance'?'active':''}" href="#/acceptance"><span class="nav-ico">✓</span><span class="nav-label">Pages acceptance</span></a>
-   </nav>
-   <div class="side-section">Recent boards</div>
-   <nav class="nav-list" aria-label="Recent boards">${state.boards.slice(0,6).map((b,i)=>`<a class="nav-link ${currentBoard===b.id?'active':''}" href="#/boards/${e(b.id)}"><span class="nav-ico csp-u011" >▦</span><span class="nav-label">${e(b.name)}</span></a>`).join('')||'<div class="muted csp-u061" >No boards yet</div>'}</nav>
-   <div class="side-bottom"><div class="profile"><span class="avatar">${e(initials(name()))}</span>
-   <div><div class="name">${e(name())}</div><div class="role">${e(state.context?.profile?.platform_role||'Team member')}</div></div></div>
-   <button class="sign-out" data-action="logout">⇥ <span>Sign out of workspace</span></button></div></aside>`;
+ const recent=state.boards.slice(0,6);
+ const admin=state.roleVerified===true;
+ const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
+  sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
+  sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation')+
+  sidebarNav('#/security','Access acceptance','security',state.view==='security')+
+  (admin?'<div class="side-section sidebar-nav-section">Administration</div>'+
+   sidebarNav('#/role-configuration','Role Configuration','roles',state.view==='role-configuration')+
+   sidebarNav('#/user-role-management','User Role Management','users',state.view==='user-role-management'):'')+
+  sidebarNav('#/settings','Settings','settings',state.view==='settings')+
+  sidebarNav('#/acceptance','Pages acceptance','acceptance',state.view==='acceptance');
+ return `<aside class="sidebar aps-sidebar" aria-label="Workspace sidebar">
+  <div class="sidebar-brand-wrap">
+   <a href="#/overview" class="brand" aria-label="APSYNTRA CRM — Go to overview" title="Go to overview">
+    <img class="brand-mark" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/>
+    <span class="brand-text">APSYNTRA <span class="csp-u043">CRM</span></span>
+   </a>
+   <span class="sidebar-brand-subtitle" aria-hidden="true">WORKSPACE OPERATIONS</span>
+  </div>
+  <div class="workspace-switcher" role="group" aria-label="Current connected workspace">
+   <span class="workspace-icon" aria-hidden="true">W</span>
+   <div class="sidebar-workspace-copy"><div class="workspace-name">`+e(workspaceName())+`</div>
+    <div class="workspace-sub"><span class="sidebar-workspace-dot" aria-hidden="true"></span>Connected workspace</div>
+   </div>
+  </div>
+  <div class="sidebar-nav-scroll">
+   <div class="side-section sidebar-nav-section">Workspace</div>
+   <nav class="nav-list" aria-label="Primary">`+nav+`</nav>
+   <div class="side-section sidebar-recent-heading">Recent boards
+    <span class="sidebar-recent-count" aria-hidden="true">`+recent.length+`</span>
+   </div>
+   <nav class="nav-list sidebar-recent-list" aria-label="Recent boards">`+
+    (recent.map((b,i)=>{
+     const title=String(b.name||'Untitled board');
+     const active=currentBoard===b.id;
+     const tone=['violet','teal','amber','rose','blue','indigo'][i%6];
+     return '<a class="nav-link sidebar-recent-link '+(active?'active':'')+
+      '" href="#/boards/'+e(b.id)+'" title="'+e(title)+'" aria-label="'+e(title)+'"'+
+      (active?' aria-current="page"':'')+'>'+
+      '<span class="sidebar-board-initial sidebar-tone-'+tone+'" aria-hidden="true">'+
+      e(title.slice(0,1).toUpperCase())+'</span>'+
+      '<span class="nav-label">'+e(title)+'</span></a>';
+    }).join('')||'<div class="sidebar-empty-recent">No boards yet</div>')+`</nav>
+  </div>
+  <div class="side-bottom">
+   <div class="profile">
+    <span class="avatar" aria-hidden="true">`+e(initials(name()))+`</span>
+    <div class="sidebar-profile-text"><div class="name">`+e(name())+`</div>
+     <div class="role">`+e(state.context?.profile?.platform_role||'Team member')+`</div>
+    </div>
+   </div>
+   <button type="button" class="sign-out" data-action="logout" aria-label="Sign out of workspace" title="Sign out of workspace">
+    <span class="sidebar-signout-icon">`+sidebarIcon('logout')+`</span>
+    <span>Sign out</span>
+   </button>
+  </div>
+ </aside>`;
 }
 /** Signed session-local basemap opt-in. No persisted third-party access consent. */
 function timeTrackerMapConsentKey(){
@@ -196,6 +247,7 @@ function shell(body){
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
  <div class="main-content">${body}</div></main></div>`;
+ animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
 }
