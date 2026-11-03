@@ -385,8 +385,7 @@ BEGIN
     'action',p_action,'recordId',v_record_id,
     'revision',v_revision,'committedAt',v_stamp);
 END;
-$function$
-
+$function$;
 
 REVOKE ALL ON FUNCTION public.timetracker_attendance_commit_v2(
  uuid,text,text,text,text,jsonb,text) FROM PUBLIC,anon;
