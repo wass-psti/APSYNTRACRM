@@ -1719,12 +1719,21 @@
 .board-status-click-cell>.board-full-status-trigger:active{background:#e3eaff}
 .board-configured-status{
  display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;
- padding:5px 9px;border-left:3px solid var(--board-status-accent,#8d97ab);
+ padding:5px 9px;border-left:3px solid #8d97ab;
  border-radius:5px;background:#f3f5fa;color:#29334d;font-weight:650;
  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
 .board-status-click-cell .board-inline-pencil{margin-left:auto;flex:none}
 
+
+.board-configured-status.board-status-color-muted{border-left-color:#7f8a9a}
+.board-configured-status.board-status-color-blue{border-left-color:#4f7df3}
+.board-configured-status.board-status-color-rose{border-left-color:#e64f70}
+.board-configured-status.board-status-color-green{border-left-color:#22c55e}
+.board-configured-status.board-status-color-amber{border-left-color:#f59e0b}
+.board-configured-status.board-status-color-red{border-left-color:#ef4444}
+.board-configured-status.board-status-color-purple{border-left-color:#8b5cf6}
+.board-configured-status.board-status-color-neutral{border-left-color:#8d97ab}
 /* Header actions: overflow-safe, keyboard-usable menu and separate resize handle. */
 .board-table-custom .board-heading-label{max-width:calc(100% - 68px)}
 .board-column-more,.board-column-resize{
@@ -1738,7 +1747,7 @@
  outline:2px solid #526ae2;outline-offset:2px
 }
 .board-header-context-menu{
- position:fixed;z-index:320;min-width:190px;width:max-content;max-width:min(300px,90vw);
+ position:fixed;z-index:320;top:76px;right:20px;min-width:190px;width:max-content;max-width:min(300px,90vw);
  padding:6px;border:1px solid #d9e1ef;border-radius:10px;background:#fff;
  box-shadow:0 12px 32px #26385430;display:grid;gap:2px
 }
@@ -1749,6 +1758,16 @@
 .board-header-context-menu button:hover,
 .board-header-context-menu button:focus-visible{
  background:#eef2ff;outline:2px solid #536be2;outline-offset:-2px
+}
+
+/* Static stylesheet anchors comply with style-src-attr 'none'. */
+@supports (anchor-name:--board-col-menu) and (top:anchor(bottom)){
+ .board-column-anchor-open{anchor-name:--board-col-menu}
+ .board-header-context-menu{
+  position-anchor:--board-col-menu;top:anchor(bottom);left:anchor(left);
+  right:auto;bottom:auto;margin-top:5px;
+  position-try-fallbacks:flip-inline,flip-block
+ }
 }
 @media(max-width:750px){
  .board-status-click-cell>.board-full-status-trigger{padding-inline:8px}

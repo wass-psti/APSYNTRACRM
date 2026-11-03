@@ -16,7 +16,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
-import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus} from './board-inline-items.js';
+import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
@@ -292,8 +292,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
    const value=expectedCellValue(detail,item,column.key);
    const status=def?.data_type==='status'?configuredStatus(value,def.config):null;
    const formatted=status?
-    '<span class="board-configured-status"'+
-     (status.color?' style="--board-status-accent:'+status.color+'"':'')+'>'+
+    '<span class="board-configured-status '+statusColorClass(status.color)+'">'+
      e(status.label)+'</span>':
     e(visibleValue(value,def?.data_type,def?.config));
    cell[column.key]=display(column.key,formatted);
@@ -2833,6 +2832,7 @@ function closeBoardColumnContext({restoreFocus=false}={}){
  boardColumnMenuNode=null;boardColumnMenuTrigger=null;
  if(trigger?.isConnected){
   trigger.setAttribute('aria-expanded','false');
+  trigger.classList.remove('board-column-anchor-open');
   if(restoreFocus)trigger.focus();
  }
 }
@@ -2863,11 +2863,7 @@ function openBoardColumnContext(trigger){
  boardColumnMenuNode=node;boardColumnMenuTrigger=trigger;
  trigger.setAttribute('aria-expanded','true');
  trigger.setAttribute('aria-controls',node.id);
- const rect=trigger.getBoundingClientRect(),width=node.offsetWidth;
- node.style.left=Math.max(8,Math.min(rect.right-width,window.innerWidth-width-8))+'px';
- const h=node.offsetHeight;
- node.style.top=(rect.bottom+h+6<=window.innerHeight?
-  rect.bottom+4:Math.max(8,rect.top-h-4))+'px';
+ trigger.classList.add('board-column-anchor-open');
  node.querySelector('[role="menuitem"]')?.focus();
 }
 let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;

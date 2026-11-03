@@ -74,6 +74,19 @@ export function configuredStatus(value,config={}){
   option.color:null;
  return {label:name||id||'—',color};
 }
+/** CSP-safe rendering of the known configured board palette; never interpolate CSS. */
+export function statusColorClass(color){
+ const safe=typeof color==='string'?color.toLowerCase():'';
+ return ({
+  '#7f8a9a':'board-status-color-muted',
+  '#4f7df3':'board-status-color-blue',
+  '#e64f70':'board-status-color-rose',
+  '#22c55e':'board-status-color-green',
+  '#f59e0b':'board-status-color-amber',
+  '#ef4444':'board-status-color-red',
+  '#8b5cf6':'board-status-color-purple'
+ })[safe]||'board-status-color-neutral';
+}
 export function visibleValue(value,type,config={}){
  if(value==null||value==='')return '—';
  if(type==='status')return configuredStatus(value,config).label;

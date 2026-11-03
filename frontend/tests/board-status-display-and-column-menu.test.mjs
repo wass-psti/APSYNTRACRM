@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- configuredStatus,visibleValue,editableCellButton,renderInlineCellEditor,
+ configuredStatus,statusColorClass,visibleValue,editableCellButton,renderInlineCellEditor,
  inputForColumn,parseCellForm
 } from '../board-inline-items.js';
 import {boardTable} from '../board-presentation.js';
@@ -49,7 +49,11 @@ test('configured colors are accepted only as strict six-digit CSS hex, never CSS
  assert.equal(visibleValue('evil','status',malicious),'<img onerror=alert(1)>');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/e\(status\.label\)/);
- assert.match(app,/status\.color\?' style="--board-status-accent:'/);
+ assert.match(app,/statusColorClass\(status\.color\)/);
+ assert.doesNotMatch(app,/style="--board-status-accent/);
+ assert.equal(statusColorClass('#4f7df3'),'board-status-color-blue');
+ assert.equal(statusColorClass('#e64f70'),'board-status-color-rose');
+ assert.equal(statusColorClass('dangerous-css'),'board-status-color-neutral');
 });
 test('custom status editor presents named option while saving stable ID through CAS',()=>{
  const html=renderInlineCellEditor({item,key:'col:'+columnId,detail});
@@ -121,5 +125,7 @@ test('existing status writes keep signed preflight, revision CAS, and backend au
  assert.match(css,/\.board-status-click-cell>\.board-full-status-trigger/);
  assert.match(css,/position:absolute;inset:0;width:100%;height:100%/);
  assert.match(css,/\.board-header-context-menu/);
+ assert.match(css,/position-anchor:--board-col-menu/);
+ assert.match(css,/\.board-status-color-blue\{border-left-color:#4f7df3\}/);
  assert.match(css,/\.board-column-more:focus-visible/);
 });
