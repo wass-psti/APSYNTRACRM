@@ -31,13 +31,14 @@ function apiFixture({allowed=true,context=null,reply=null}={}){
   }
  }};
 }
-test('board menu lifecycle is fail-closed until production RPC is activated',async()=>{
- assert.equal(BOARD_CARD_LIFECYCLE_ENABLED,false);
+test('activated board menu remains fail-closed when its explicit override is disabled',async()=>{
+ assert.equal(BOARD_CARD_LIFECYCLE_ENABLED,true);
  const fixture=apiFixture();
- const client=new BoardCardLifecycleClient(fixture.api);
+ const client=new BoardCardLifecycleClient(fixture.api,{enabled:false});
  await assert.rejects(()=>client.edit(custom,{name:'Renamed',description:'ok'}),ApiError);
  assert.equal(fixture.calls.length,0);
- assert.equal(boardCardActionState(custom),'DISABLED');
+ assert.equal(boardCardActionState(custom),'MANAGE');
+ assert.equal(boardCardActionState(custom,{enabled:false}),'DISABLED');
 });
 test('application module and APSYNTRA QA boards are protected even when owner',()=>{
  assert.equal(isProtectedBoard(managed),true);

@@ -32,10 +32,10 @@ const apiFactory=({ctx=context,answer=response}={})=>{
 };
 const auth=()=>({getVerifiedUser:async()=>({id:user})});
 
-test('default-disabled GPS projection performs no signed backend calls',async()=>{
- assert.equal(TT_BOARD_GPS_PROJECTION_ENABLED,false);
+test('activated GPS projection honors explicit disabling without backend calls',async()=>{
+ assert.equal(TT_BOARD_GPS_PROJECTION_ENABLED,true);
  const fixture=apiFactory(),result=await loadTimeTrackerBoardGps({
-  auth:auth(),api:fixture.api,boardId:board,workspaceId:ws
+  auth:auth(),api:fixture.api,boardId:board,workspaceId:ws,enabled:false
  });
  assert.equal(result.status,'DISABLED');
  assert.deepEqual(fixture.calls,[]);
