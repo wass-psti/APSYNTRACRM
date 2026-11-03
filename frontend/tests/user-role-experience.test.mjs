@@ -123,7 +123,7 @@ test('server-controlled user labels and errors remain HTML escaped',()=>{
  assert.match(result,/&lt;img src=x onerror=alert\(2\)&gt;/);
  assert.match(result,/&lt;svg onload=alert\(3\)&gt;/);
  assert.match(result,/&lt;b onclick=alert\(4\)&gt;oops&lt;\/b&gt;/);
- assert.doesNotMatch(result,/\sonclick=|\sstyle="|\soninput=/);
+ assert.doesNotMatch(result,/<(?:button|input|div|select|section|table|td|span|svg|a|h1|p|b|img)[^>]*\s(?:onclick|oninput|style)=/i);
 });
 
 test('scoped stylesheet includes responsive, keyboard, reduced-motion and contrast rules',()=>{
