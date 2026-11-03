@@ -15,7 +15,8 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
-import {BOARD_BULK02_ENABLED,canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
+import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
+import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
@@ -69,7 +70,7 @@ const nativeIssues=new NativeIssueClient(db);
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,boardLifecycleBusy:false,board:null,boardUi:null,issues:[],edit:false,
+const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,board:null,boardUi:null,issues:[],edit:false,
   view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -270,6 +271,17 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids}});
 }
 
+function bulkReadyFor(board){
+ const access=state.bulk02Access;
+ return !!boardBulkClient.enabled&&!!access&&auth.isSignedIn&&
+  state.edit&&canBulkEditBoard(board)&&
+  access.boardId===board?.id&&access.userId===state.context?.user_id&&
+  access.workspaceId===state.context?.workspace_id;
+}
+function clearBulkActivation(){
+ state.bulk02Access=null;state.bulk02Result=null;state.bulk02Busy=false;
+ boardBulkClient.enabled=false;
+}
 function groupHeading(group,count){
  const id=e(group.id),editing=state.groupEditId===group.id;
  const title=e(group.title||'Group');
@@ -285,7 +297,7 @@ function groupHeading(group,count){
    '" title="Group actions">⋮</summary><div class="board-group-actions-list">'+
    '<button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
    '<button type="button" data-action="group-select-visible" data-id="'+id+'">Select visible records</button>'+
-   (BOARD_BULK02_ENABLED&&canBulkEditBoard(state.board?.board)?
+   (bulkReadyFor(state.board?.board)&&state.bulk02Access?.canManage?
     '<button type="button" data-action="group-delete-empty" data-id="'+id+'">Delete empty group</button>':
     '<button type="button" disabled title="Atomic deletion requires approved production activation">Delete group — unavailable</button>')+
    '</div></details>':'')+'</div>';
@@ -353,11 +365,21 @@ function boardPage(){
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${boardColumnMenu(columns,layout)}<button type="button" class="secondary" data-action="board-structure">Manage columns</button>
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
- ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
+ ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}
+  ${state.edit&&canBulkEditBoard(b)?'<button type="button" class="secondary" data-action="bulk02-verify" '+(state.bulk02Busy?'disabled':'')+'>'+(
+   state.bulk02Busy?'Checking signed permissions…':bulkReadyFor(b)?'✓ Bulk access verified':'Verify signed bulk access')+'</button>':''}</div>
+  ${state.bulk02Result&&state.bulk02Result.boardId===b.id?
+   '<div class="board-bulk-probe-summary" role="status" aria-live="polite">Signed bulk authorization: '+e(state.bulk02Result.status)+
+   ' — '+state.bulk02Result.checks.filter(x=>x.status==='PASS').length+' / '+state.bulk02Result.checks.length+
+   ' checks. '+(state.bulk02Result.ready?'Mutations enabled for this verified board and session.':'No bulk writes enabled. Review account permissions or unavailable evidence.')+
+    '<details class="board-bulk-probe-details"><summary>Signed check details</summary>'+
+    state.bulk02Result.checks.map(x=>'<p><strong>'+e(x.id)+' — '+e(x.status)+':</strong> '+e(x.detail)+'</p>').join('')+
+    '<p>Still pending: real authorized disposable-board writes, revoked/expired sessions and cross-workspace browser acceptance.</p></details>'+
+    '<button type="button" class="secondary" data-action="bulk02-copy-report">Copy nonsecret check report</button></div>':''}
   <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button>
- <button type="button" class="secondary" data-action="bulk-status" ${BOARD_BULK02_ENABLED&&state.edit&&canBulkEditBoard(b)?'':'disabled title="Requires separately authorized atomic SQL activation"'}>Bulk status</button>
- <button type="button" class="secondary" data-action="bulk-archive" ${BOARD_BULK02_ENABLED&&state.edit&&canBulkEditBoard(b)?'':'disabled title="Requires separately authorized atomic SQL activation"'}>Bulk archive</button>
- <span class="muted">${BOARD_BULK02_ENABLED&&state.edit&&canBulkEditBoard(b)?'Max 50 records per atomic batch.':'Bulk writes are awaiting secure production activation; protected application records cannot be bulk-modified.'}</span></div>
+ <button type="button" class="secondary" data-action="bulk-status" ${bulkReadyFor(b)?'':'disabled title="Verify signed access first; protected application boards cannot use generic bulk writes"'}>Bulk status</button>
+ <button type="button" class="secondary" data-action="bulk-archive" ${bulkReadyFor(b)?'':'disabled title="Verify signed access first; protected application boards cannot use generic bulk writes"'}>Bulk archive</button>
+ <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Run signed verification for this ordinary board; application-managed records remain protected.'}</span></div>
  ${groups.length?groups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
  ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
@@ -473,7 +495,7 @@ function syncBoardSelectionUi(){
  const count=root.querySelector('#board-selected-count');if(count)count.textContent=itemSelection.size+' selected';
 }
 async function applySelectedBulk(action,status=null){
- if(!BOARD_BULK02_ENABLED||!activeBoardLayout()||!state.edit||!canBulkEditBoard(state.board?.board))
+ if(!bulkReadyFor(state.board?.board)||!activeBoardLayout())
   throw new ApiError('Atomic bulk mutation is not yet authorized for this board.',403);
  const ids=[...itemSelection.ids],board=state.board.board;
  const selected=state.board.items?.filter(item=>ids.includes(item.id))||[];
@@ -500,7 +522,7 @@ async function saveGroupInline(form){
     !original||original.updated_at!==group.updated_at||original.title!==group.title)
    throw new ApiError('Group changed since opening. Refresh before editing.',409);
   if(!await db.allowed(boardId,'edit'))throw new ApiError('Group editing is not permitted.',403);
-  if(BOARD_BULK02_ENABLED)await boardBulkClient.group(fresh.board,original,'rename',{title});
+  if(bulkReadyFor(fresh.board))await boardBulkClient.group(fresh.board,original,'rename',{title});
   else await db.updateGroup(id,title);
   state.groupEditId=null;await loadBoard(boardId,'items');toast('Group renamed.');
  }finally{state.groupEditBusy=false;}
@@ -509,6 +531,7 @@ async function refreshWorkspace(){
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
  state.context=await db.context();
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
+   clearBulkActivation();
    state.boardTtSignedResult=null;state.boardTtSignedBusy=false;
    state.roleData=null;state.userRoleData=null;state.userRoleSelected=null;
    state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
@@ -583,6 +606,7 @@ async function refreshFoundation(){
  state.foundationError='';
 }
 async function loadBoard(boardId,tab){
+ if(state.bulk02Access?.boardId!==boardId)clearBulkActivation();
  const seq=++routeSerial;
  state.groupEditId=null;state.groupEditBusy=false;state.ttBoardGpsEligible=false;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
  if(state.boardId!==boardId||state.tab!=='attendance'){
@@ -1293,7 +1317,7 @@ async function openBoardStructure(){
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
- case 'logout':{await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'logout':{clearBulkActivation();await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'board-activity':{await openBoardActivity();break;}
  case 'board-members':{await openBoardMembers();break;}
@@ -2201,8 +2225,45 @@ case 'group-select-visible':{
   .filter(input=>!input.closest('tr')?.hidden).map(input=>input.dataset.boardSelectItem);
  itemSelection.selectVisible(visible);syncBoardSelectionUi();break;
 }
+case 'bulk02-verify':{
+ if(state.bulk02Busy||!activeBoardLayout()||!state.edit||
+    !canBulkEditBoard(state.board?.board))return;
+ const verifyingBoard=state.board.board;
+ const user=state.context?.user_id,workspace=state.context?.workspace_id;
+ clearBulkActivation();state.bulk02Busy=true;render();
+ try{
+  const result=await probeBulk02SignedSession({auth,api:db,board:verifyingBoard});
+  if(!auth.isSignedIn||state.context?.user_id!==user||
+     state.context?.workspace_id!==workspace||state.boardId!==verifyingBoard.id){
+   clearBulkActivation();return;
+  }
+  state.bulk02Result=result;
+  if(result.ready){
+   state.bulk02Access={boardId:verifyingBoard.id,userId:user,workspaceId:workspace,
+    canManage:result.canManage};
+   boardBulkClient.enabled=true;
+  }else boardBulkClient.enabled=false;
+  toast(result.ready?'Current signed board bulk permissions verified.':
+   'Bulk activation pending: review the signed authorization result.',!result.ready);
+ }catch{
+  clearBulkActivation();
+  toast('Signed bulk check unavailable; no mutation functions were enabled.',true);
+ }finally{state.bulk02Busy=false;render();}
+ break;
+}
+case 'bulk02-copy-report':{
+ if(!state.bulk02Result)return;
+ const {checkpoint,status,ready,canManage,checks,pending}=state.bulk02Result;
+ try{
+  await navigator.clipboard.writeText(JSON.stringify({
+   checkpoint,status,ready,canManage,checks,pending
+  },null,2));
+  toast('Nonsecret signed bulk acceptance result copied.');
+ }catch{toast('Clipboard unavailable. Review the visible signed checks.',true);}
+ break;
+}
 case 'bulk-status':{
- if(!BOARD_BULK02_ENABLED||!state.edit||!canBulkEditBoard(state.board?.board))return;
+ if(!bulkReadyFor(state.board?.board))return;
  const c=state.board.columns?.find(col=>col.system_key==='status'&&col.data_type==='status');
  const options=c?Array.isArray(c.config?.labels)?c.config.labels.filter(x=>x.active!==false)
    .map(x=>[String(x.id),String(x.title||x.label||x.name||x.id)]):[]:
@@ -2214,13 +2275,13 @@ case 'bulk-status':{
  break;
 }
 case 'bulk-archive':{
- if(!BOARD_BULK02_ENABLED||!state.edit||!canBulkEditBoard(state.board?.board))return;
+ if(!bulkReadyFor(state.board?.board))return;
  if(itemSelection.size>50)throw new ApiError('Archive up to 50 items per atomic batch.',400);
  if(!confirm('Archive '+itemSelection.size+' selected records? This action will not delete their history.'))return;
  await applySelectedBulk('archive');break;
 }
 case 'group-delete-empty':{
- if(!BOARD_BULK02_ENABLED||!state.edit||!canBulkEditBoard(state.board?.board))return;
+ if(!bulkReadyFor(state.board?.board)||!state.bulk02Access?.canManage)return;
  const group=state.board.groups?.find(g=>g.id===button.dataset.id);
  if(!group||!activeBoardLayout())return;
  if(state.board.groups.length<=1||state.board.items?.some(item=>item.group_id===group.id))

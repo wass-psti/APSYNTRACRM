@@ -1630,3 +1630,14 @@
  .board-bulk-toolbar .muted{flex-basis:100%}
  .board-group-actions-list{right:0;max-width:80vw}
 }
+
+/* CP-BOARD-BULK02 — session-scoped live authorization feedback. */
+.board-bulk-probe-summary{
+ margin:10px 0 12px;padding:11px 13px;border:1px solid #d5dbf6;
+ background:#f5f6ff;border-radius:10px;color:#303d69;font-size:12px;
+ overflow-wrap:anywhere
+}
+.board-bulk-probe-details{margin:9px 0}
+.board-bulk-probe-details>summary{font-weight:700;cursor:pointer;padding:4px 0}
+.board-bulk-probe-details p{margin:6px 0;line-height:1.5}
+.board-bulk-probe-summary .secondary{margin-top:8px}
