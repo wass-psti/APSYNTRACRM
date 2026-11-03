@@ -1458,6 +1458,20 @@
 .board-column-resize:focus-visible,.board-column-menu>summary:focus-visible{
  outline:2px solid #4b68d9;outline-offset:2px}
 .board-history-modal{max-height:min(85vh,850px);overflow:hidden;display:flex;flex-direction:column}
+/* Scroll only the long structure form; retain the modal header and other dialogs. */
+.board-structure-modal>.modal-head{flex:0 0 auto}
+.board-structure-modal>.board-structure-scroll{
+ flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;
+ overscroll-behavior-y:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;
+ scroll-padding-block:12px;
+}
+.board-structure-modal>.board-structure-scroll:focus-visible{
+ outline:2px solid #4b68d9;outline-offset:-2px;
+}
+.board-structure-modal .board-member-list{
+ max-height:none;overflow:visible;
+}
+
 .board-history-list{overflow-y:auto;min-height:80px;flex:1}
 .board-history-entry{padding:14px 6px;border-top:1px solid #ecf0f6;display:grid;gap:4px}
 .board-history-entry>time{color:#6e7c94;font-size:11px}

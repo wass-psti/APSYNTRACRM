@@ -254,3 +254,22 @@ test('enabled configuration denies editor control rendering while preserving boa
  assert.match(html,/Only authorized board managers/);
  assert.doesNotMatch(html,/data-structure-form|data-structure-delete|Supervisor note/);
 });
+
+test('board structure modal uses one keyboard-accessible scroll region below fixed header',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const css=readFileSync('frontend/styles.css','utf8');
+ const begin=app.indexOf('async function openBoardStructure(){');
+ const end=app.indexOf('async function action(name,button){',begin);
+ assert.ok(begin>=0&&end>begin,'board structure handler must exist');
+ const section=app.slice(begin,end);
+ assert.match(section,/board-history-modal board-structure-modal/);
+ assert.match(section,/class="modal-head"/);
+ assert.match(section,/class="board-structure-scroll" role="region" aria-label="Board structure form" tabindex="0"/);
+ assert.match(section,/renderBoardStructureAdmin\(detail,settings,\{canManage,availableTabs\}\)\+'<\/div><\/section>'/);
+ assert.match(css,/\.board-history-modal\{max-height:min\(85vh,850px\);overflow:hidden;display:flex;flex-direction:column\}/);
+ assert.match(css,/\.board-structure-modal>\.modal-head\{flex:0 0 auto\}/);
+ assert.match(css,/\.board-structure-modal>\.board-structure-scroll\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*overscroll-behavior-y:contain/);
+ assert.match(css,/\.board-structure-modal>\.board-structure-scroll:focus-visible\{/);
+ assert.match(css,/\.board-structure-modal \.board-member-list\{[^}]*max-height:none;overflow:visible/);
+ assert.doesNotMatch(section,/preventDefault\(\).*wheel|touchmove/);
+});

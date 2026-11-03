@@ -1014,11 +1014,12 @@ async function openBoardStructure(){
  hideModal();modal=document.createElement('div');
  const view=modal;
  view.className='modal-backdrop board-history-backdrop';
- view.innerHTML='<section class="modal board-history-modal" role="dialog" '+
+ view.innerHTML='<section class="modal board-history-modal board-structure-modal" role="dialog" '+
   'aria-modal="true" aria-labelledby="board-structure-title">'+
   '<div class="modal-head"><h2 id="board-structure-title">Board structure &amp; views</h2>'+
   '<button type="button" data-dismiss class="modal-close" aria-label="Close settings">×</button></div>'+
-  renderBoardStructureAdmin(detail,settings,{canManage,availableTabs})+'</section>';
+  '<div class="board-structure-scroll" role="region" aria-label="Board structure form" tabindex="0">'+
+  renderBoardStructureAdmin(detail,settings,{canManage,availableTabs})+'</div></section>';
  document.body.append(view);
  const authorized=()=>view===modal&&boardHistoryAuthorized(snapshot);
  view.addEventListener('submit',async event=>{
