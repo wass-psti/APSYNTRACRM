@@ -44,6 +44,7 @@ import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
+import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
@@ -298,6 +299,7 @@ function boardPage(){
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${boardColumnMenu(columns,layout)}<button type="button" class="secondary" data-action="board-structure">Manage columns</button>
+  ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
  ${groups.length?groups.map(g=>`<div class="group-heading"><h3>${e(g.title||'Group')}</h3><small>${items.filter(i=>i.group_id===g.id).length} items</small></div>
  ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle)}`).join(''):
@@ -996,6 +998,33 @@ async function openBoardMembers(){
  view.querySelector('[data-dismiss]')?.focus();
 }
 
+async function openTimeTrackerBoardProjectedGps(){
+ if(!TT_BOARD_GPS_PROJECTION_ENABLED||!activeBoardLayout()||
+  state.tab!=='items'||moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
+ const snapshot={boardId:state.boardId,userId:auth.userId,
+  workspaceId:state.context.workspace_id};
+ const details=await loadTimeTrackerBoardGps({
+  auth,api:db,boardId:snapshot.boardId,workspaceId:snapshot.workspaceId
+ });
+ if(!boardHistoryAuthorized(snapshot)||details.status!=='VERIFIED_READ')return;
+ hideModal();modal=document.createElement('div');
+ const current=modal;
+ current.className='modal-backdrop board-history-backdrop';
+ current.innerHTML='<section class="modal board-history-modal board-structure-modal" '+
+  'role="dialog" aria-modal="true" aria-labelledby="tt-board-gps-title">'+
+  '<div class="modal-head"><h2 id="tt-board-gps-title">TimeTracker attendance — restricted GPS</h2>'+
+  '<button type="button" class="modal-close" data-dismiss aria-label="Close GPS table">×</button></div>'+
+  '<div class="board-structure-scroll" role="region" aria-label="Authorized attendance table" tabindex="0">'+
+  renderTimeTrackerBoardGps(details)+'</div></section>';
+ document.body.append(current);
+ current.addEventListener('click',event=>{
+  if(event.target===current||event.target.closest('[data-dismiss]')){
+   if(current===modal)hideModal();
+  }
+ });
+ current.querySelector('[data-dismiss]')?.focus();
+}
+
 async function openBoardStructure(){
  if(!activeBoardLayout())return;
  const snapshot={boardId:state.boardId,userId:auth.userId,
@@ -1108,6 +1137,7 @@ async function action(name,button){
  case 'board-activity':{await openBoardActivity();break;}
  case 'board-members':{await openBoardMembers();break;}
  case 'board-structure':{await openBoardStructure();break;}
+ case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
  case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;

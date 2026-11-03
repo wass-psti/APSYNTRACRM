@@ -24,6 +24,7 @@ INSERT INTO public.work_board_groups(id,board_id)
  VALUES('90000000-0000-4000-8000-000000000001',
         '30000000-0000-4000-8000-000000000001');
 
+ALTER TABLE public.work_board_items ALTER COLUMN id SET DEFAULT gen_random_uuid();
 ALTER TABLE public.work_board_items
  ADD COLUMN group_id uuid REFERENCES public.work_board_groups(id),
  ADD COLUMN title text NOT NULL DEFAULT 'Existing item',

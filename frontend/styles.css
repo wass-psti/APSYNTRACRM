@@ -1535,3 +1535,16 @@
  .board-activity-controls label{grid-column:span 2}
  .board-activity-controls [data-board-history-action]{grid-column:span 2}
  .board-item-drawer{padding:20px}.board-item-summary{grid-template-columns:1fr}}
+
+
+/* CP-TT-GPS01: horizontal scrolling is scoped to the restricted table only. */
+.tt-projection-table-wrap{overflow-x:auto;max-width:100%;overscroll-behavior-x:contain;
+ scrollbar-gutter:stable;touch-action:pan-x pan-y}
+.tt-projection-table{border-collapse:collapse;min-width:950px;width:100%;
+ font-size:.86rem;text-align:left}
+.tt-projection-table th,.tt-projection-table td{padding:12px 14px;
+ border-bottom:1px solid var(--border,#e5e7f0);vertical-align:top}
+.tt-projection-table th{font-weight:700;white-space:nowrap}
+.tt-projection-gps{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tt-projection-gps small{display:block;opacity:.72}
+.tt-projection-table-wrap:focus-visible{outline:2px solid #4b68d9;outline-offset:-2px}
