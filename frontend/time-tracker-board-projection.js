@@ -105,7 +105,7 @@ export function renderTimeTrackerBoardGps(data){
    '<td>'+place(row.clockOutGps)+'</td>'+
    '<td>'+esc(row.status)+'</td>'+
    '<td>'+esc(hours(row.creditedMs))+'</td></tr>').join(''):
-   '<tr><td colspan="7">No synchronized attendance board records were returned.</td></tr>')+
+   '<tr><td colspan="7">No synchronized attendance board records have been projected yet. Historical attendance requires authorized reconciliation.</td></tr>')+
   '</tbody></table></div>'+
   (data.hasMore?'<p class="muted">Showing the latest 50 records. Additional pages require a reviewed cursor contract.</p>':'');
 }

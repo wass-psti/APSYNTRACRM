@@ -121,3 +121,13 @@ test('board card markup uses separate links and menu, safe confirmation and Tras
  assert.match(css,/\.board-card-actions>summary:focus-visible/);
  assert.match(css,/\.board-card-actions-list\{/);
 });
+
+test('activated board menu preserves reversible confirmation and server authorization',()=>{
+ assert.equal(BOARD_CARD_LIFECYCLE_ENABLED,true);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/submitLabel:'Move board to trash'/);
+ assert.match(app,/await boardCardLifecycle\.trash\(board,String\(fd\.get\('confirm'\)\|\|''\)\)/);
+ assert.match(app,/await db\.allowed\(id,'manage'\)/);
+ assert.match(app,/closeBoardCardMenus\(\);hideModal\(\)/);
+ assert.doesNotMatch(app,/wm_delete_board_permanently/);
+});

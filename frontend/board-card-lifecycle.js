@@ -2,7 +2,7 @@ import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 
 /** CP-BOARD-MENU01. Enable only after the guarded CAS backend is activated. */
-export const BOARD_CARD_LIFECYCLE_ENABLED=false;
+export const BOARD_CARD_LIFECYCLE_ENABLED=true; // Database CAS/RBAC migration installed.
 
 const moduleMarker=/^\[APSYNTRA:MODULE:[a-z0-9-]+:v\d+\]/i;
 const reservedNames=new Set(['APSYNTRA QA']);

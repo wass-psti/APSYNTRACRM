@@ -122,3 +122,15 @@ test('frontend wiring keeps private GPS separate from normal board item projecti
  assert.match(manifest,/"GPS coordinates and location"/);
  assert.doesNotMatch(app,/work_board_item_values.*clockInGps|boardGrid\(.*clockOutGps/);
 });
+
+test('activated private GPS control is available only to signed bootstrap/Supervisor board viewers',()=>{
+ assert.equal(TT_BOARD_GPS_PROJECTION_ENABLED,true);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/state\.ttBoardGpsEligible=false;state\.ttRunId\+\+/);
+ assert.match(app,/timeTracker\.snapshot\(boardId\)/);
+ assert.match(app,/signed\?\.access\?\.moduleRole==='Supervisor'/);
+ assert.match(app,/state\.roleVerified===true\|\|state\.ttBoardGpsEligible===true/);
+ assert.match(app,/!activeBoardLayout\(\)\|\|state\.tab!=='items'/);
+ assert.match(app,/await loadTimeTrackerBoardGps\(\{/);
+ assert.doesNotMatch(app,/work_board_item_values.*clockInGps/);
+});
