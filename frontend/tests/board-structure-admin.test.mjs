@@ -40,13 +40,13 @@ function spy({manage=true,read=raw}={}){
 }
 test('no production configuration calls while feature gate is disabled',async()=>{
  const s=spy(),client=new BoardStructureClient(s.api);
- assert.equal(BOARD_STRUCTURE_ADMIN_ENABLED,false);
- assert.equal((await client.read(board)).status,'LOCKED');
- await assert.rejects(()=>client.save(detail,normalizeBoardUi(raw,board)),/pending/);
+ assert.equal(BOARD_STRUCTURE_ADMIN_ENABLED,true);
+ assert.equal((await client.read(board,{enabled:false})).status,'LOCKED');
+ await assert.rejects(()=>client.save(detail,normalizeBoardUi(raw,board),{enabled:false}),/pending/);
  await assert.rejects(()=>client.mutate(detail,{action:'delete',columnId:custom,
-  confirmation:'DELETE Supervisor note'}),/pending/);
+  confirmation:'DELETE Supervisor note'},{enabled:false}),/pending/);
  assert.deepEqual(s.calls,[]);
- const html=renderBoardStructureAdmin(detail,{status:'LOCKED'},{canManage:true,availableTabs:tabs});
+ const html=renderBoardStructureAdmin(detail,{status:'LOCKED'},{canManage:true,availableTabs:tabs,enabled:false});
  assert.match(html,/staged but not activated/);
  assert.match(html,/Primary column — permanently protected/);
  assert.doesNotMatch(html,/data-structure-delete|columnLabel:|Supervisor note/);
@@ -166,7 +166,7 @@ test('typed domain board keeps restricted projection until approved config gate'
  const markup=boardGrid(detail,{primaryTitle:'Work item',allowCustom:true});
  assert.match(markup,/Supervisor note/);
  assert.doesNotMatch(markup,/GPS coordinates and location/);
- assert.equal(BOARD_STRUCTURE_ADMIN_ENABLED,false);
+ assert.equal(BOARD_STRUCTURE_ADMIN_ENABLED,true);
 });
 test('view order controls are shown only as disabled until server activation',()=>{
  const ui=renderBoardStructureAdmin(detail,normalizeBoardUi(raw,board),{
@@ -183,7 +183,7 @@ test('locked or unauthorized administration does not enumerate hidden metadata',
    data_type:'text',system_key:null}
  ]};
  const settings=normalizeBoardUi(raw,board);
- const locked=renderBoardStructureAdmin(context,settings,{canManage:true,availableTabs:tabs});
+ const locked=renderBoardStructureAdmin(context,settings,{canManage:true,availableTabs:tabs,enabled:false});
  const denied=renderBoardStructureAdmin(context,settings,{
   canManage:false,availableTabs:tabs,enabled:true});
  assert.doesNotMatch(locked,/Sensitive employee identity|Attendance Ref/);
@@ -232,4 +232,25 @@ test('manager save forbids persisted domain-label overrides and marks inputs pro
  assert.match(html,/application schema — protected/);
  assert.doesNotMatch(html,/name="columnLabel:11111111-1111-4111-8111-111111111111"/);
  assert.match(html,/name="columnLabel:22222222-2222-4222-8222-222222222222"/);
+});
+
+test('enabled configuration initializes from live zero-revision settings without hiding existing tabs',async()=>{
+ const response={board_id:board,revision:0,primary_label:'Record',tabs:[],column_labels:{}};
+ const backend=spy({read:response}),client=new BoardStructureClient(backend.api);
+ const config=await client.read(board);
+ assert.equal(config.status,'VERIFIED_READ');
+ assert.equal(config.revision,0);
+ assert.deepEqual(applyBoardViewSettings(tabs,config),tabs);
+ assert.deepEqual(backend.calls.map(call=>call[0]),['wm_board_ui_read']);
+ const html=renderBoardStructureAdmin(detail,config,{canManage:true,availableTabs:tabs});
+ assert.match(html,/data-structure-form="create"/);
+ assert.match(html,/Save board display settings/);
+ assert.doesNotMatch(html,/staged but not activated/);
+});
+test('enabled configuration denies editor control rendering while preserving board item operations',()=>{
+ const ui=normalizeBoardUi({board_id:board,revision:0,
+  primary_label:'Record',tabs:[],column_labels:{}},board);
+ const html=renderBoardStructureAdmin(detail,ui,{canManage:false,availableTabs:tabs});
+ assert.match(html,/Only authorized board managers/);
+ assert.doesNotMatch(html,/data-structure-form|data-structure-delete|Supervisor note/);
 });

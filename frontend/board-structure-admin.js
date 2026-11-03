@@ -6,7 +6,7 @@ import {validUuid} from './data.js';
 import {moduleByBoardName} from './board-manifest.js';
 import {boardGridColumns} from './board-grid.js';
 
-export const BOARD_STRUCTURE_ADMIN_ENABLED=false;
+export const BOARD_STRUCTURE_ADMIN_ENABLED=true;
 export const BOARD_STRUCTURE_TYPES=Object.freeze([
  'text','long_text','number','status','dropdown','date','people',
  'checkbox','url','email','timeline'
