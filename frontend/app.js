@@ -12,6 +12,7 @@ import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {boardGrid,boardGridColumns} from './board-grid.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
+import {loadBoardCollaboration,renderBoardCollaboration} from './board-collaboration.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS} from './board-presentation.js';
 import {runTwelveBoardQa} from './board-operational-qa.js';
@@ -889,6 +890,8 @@ async function openBoardItemDetails(itemId){
  if(!item)return;
  const restricted=!!moduleByBoardName(state.board.board.name);
  const group=state.board.groups?.find(x=>x.id===item.group_id);
+ const collaboration=await loadBoardCollaboration(db,itemId).catch(()=>({status:'ERROR'}));
+ if(!boardHistoryAuthorized(snapshot))return;
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-detail-backdrop';
  modal.innerHTML='<aside class="board-item-drawer" role="dialog" aria-modal="true" aria-labelledby="board-detail-title">'+
@@ -897,7 +900,7 @@ async function openBoardItemDetails(itemId){
   '<h2 id="board-detail-title">'+e(item.title||'Untitled')+'</h2>'+
   '<p class="muted">Read-only item details from the signed board response.</p>'+
   boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
-  '<p class="muted">Updates, replies and file attachments require authorized item-read contracts before activation.</p>'+
+  renderBoardCollaboration(collaboration)+
   '</aside>';
  document.body.append(modal);
  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
