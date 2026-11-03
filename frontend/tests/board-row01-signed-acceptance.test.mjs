@@ -63,7 +63,7 @@ test('successful signed fixture flow requires real reload, verifies CAS stale de
  assert.equal(h.counts().deleteCalls,0);
  const completed=await finalizeRow01Acceptance(args(h,'second-boot'));
  assert.equal(completed.status,'PASS');
- assert.equal(completed.checks.length,3);
+ assert.equal(completed.checks.length,4);
  assert.deepEqual(h.counts().items,[]);
  assert.equal(h.counts().deleteCalls,1);
  assert.equal(readRow01Pending(h.storage),null);
@@ -105,6 +105,21 @@ test('unexpected record owner prevents cleanup, signed refresh does not delete s
  assert.equal(out.status,'BLOCKED');
  assert.equal(h.counts().deleteCalls,0);
  assert.ok(readRow01Pending(h.storage));
+});
+test('concurrent unrelated fixture item is preserved but prevents full acceptance',async()=>{
+ const h=harness();
+ assert.equal((await prepareRow01Acceptance(args(h))).status,'AWAITING_RELOAD');
+ const orig=h.api.board;
+ h.api.board=async()=>{
+  const current=await orig();
+  current.items.push({id:'99999999-9999-4999-8999-999999999999',
+   board_id:boardId,group_id:groupId,title:'Unrelated QA record',created_by:actorId});
+  return current;
+ };
+ const result=await finalizeRow01Acceptance(args(h,'reloaded'));
+ assert.equal(result.status,'FAIL');
+ assert.equal(result.checks.find(c=>c.id==='fixture-isolation-after-reload').status,'FAIL');
+ assert.equal(h.counts().deleteCalls,1);
 });
 test('in-progress orphan recovery does not attest full PASS',async()=>{
  const h=harness();

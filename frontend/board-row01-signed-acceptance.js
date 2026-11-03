@@ -99,12 +99,13 @@ export async function prepareRow01Acceptance({auth,api,boardId,storage=globalThi
    bootId,createdAt:Date.now()};
   persist(storage,record);
   const created=await api.board(boardId);
-  if(!matchOwned(created,record)||!created.items.some(i=>i.id===id&&i.title===title))
+  if(!matchOwned(created,record)||created.items.length!==1||
+    !created.items.some(i=>i.id===id&&i.title===title))
    throw new ApiError('Signed create was not independently persisted.',409);
   checks.push(pass('signed-create-and-database-read'));
   const pre=await verifyScope(auth,api,boardId);
   if(pre.actorId!==record.actorId||pre.workspaceId!==record.workspaceId||
-    !matchOwned(pre.detail,record))
+    pre.detail.items.length!==1||!matchOwned(pre.detail,record))
    throw new ApiError('Signed scope changed before CAS editing.',403);
   await api.setBoardCellCas(id,null,updatedTitle,title);
   const updated=await api.board(boardId);
@@ -128,7 +129,7 @@ export async function prepareRow01Acceptance({auth,api,boardId,storage=globalThi
    try{await deleteOnlyOwned(auth,api,record);clear(storage);}
    catch{return fail('BLOCKED','Acceptance failed and QA cleanup needs manual reconciliation.',checks);}
   }
-  return fail('FAIL',error?.message||'Signed acceptance could not complete.',checks);
+  return fail('FAIL','Signed fixture verification failed. Review the QA item and audit before retrying.',checks);
  }
 }
 export async function finalizeRow01Acceptance({auth,api,boardId,storage=globalThis.sessionStorage,
@@ -153,6 +154,8 @@ export async function finalizeRow01Acceptance({auth,api,boardId,storage=globalTh
   }
   if(row.title!==record.updatedTitle)
    return fail('FAIL','Edited QA value did not survive the browser refresh.');
+  const isolated=scope.detail.items.length===1;
+  checks.push(check('fixture-isolation-after-reload',isolated?'PASS':'FAIL'));
   checks.push(pass('real-browser-reload-and-persistence'));
   await deleteOnlyOwned(auth,api,record);
   clear(storage);
@@ -163,9 +166,9 @@ export async function finalizeRow01Acceptance({auth,api,boardId,storage=globalTh
    events.some(e=>e.entity_id===record.itemId&&e.event_type===type&&
     e.actor_id===record.actorId));
   checks.push(check('signed-create-edit-remove-audit',good?'PASS':'FAIL'));
-  return {checkpoint:'CP-BOARD-ROW01',status:good?'PASS':'FAIL',checks,
-   reason:good?'Signed fixture acceptance passed. Only the owned QA item was removed.':
-    'Owned QA item was removed, but authoritative audit evidence is incomplete.'};
+  return {checkpoint:'CP-BOARD-ROW01',status:good&&isolated?'PASS':'FAIL',checks,
+   reason:good&&isolated?'Signed fixture acceptance passed. Only the owned QA item was removed.':
+    'Owned QA item removed; audit was incomplete or the fixture was concurrently modified.'};
  }catch{return fail('BLOCKED','Signed acceptance or owned-item cleanup could not be verified.',checks);}
 }
 /** Nonsecret report: never include user IDs, titles, board IDs, bearer tokens or JWTs. */
