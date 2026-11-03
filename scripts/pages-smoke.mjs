@@ -51,6 +51,7 @@ const paths=['index.html','frontend/app.js','frontend/config.js','frontend/sessi
  'frontend/board-catalog-experience.css','frontend/board-catalog-visuals.js',
  'frontend/foundation-experience.css','frontend/foundation-visuals.js',
  'frontend/security-experience.css','frontend/security-experience.js',
+ 'frontend/role-configuration-experience.css','frontend/role-configuration-visuals.js',
  'frontend/apsyntra-logo.webp','frontend/time-tracker-map.js',
  'frontend/time-tracker-log.js','frontend/time-tracker-gps.js',
  'frontend/time-tracker-gps.css','frontend/initialization-core.js',

@@ -70,6 +70,7 @@ import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
+import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {UserRoleManagementClient,renderUserRoleManagement,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 
 const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'Status'},
@@ -141,6 +142,7 @@ function renderLogin(message=''){
  stopBoardCatalogMotion();
  stopFoundationMotion();
  stopSecurityMotion();
+ stopRoleConfigurationMotion();
  root.innerHTML=renderAuthMarkup({message});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
@@ -258,11 +260,13 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
  root.querySelector('.main')?.classList.toggle('aps-security-shell',state.view==='security');
+ root.querySelector('.main')?.classList.toggle('aps-role-config-shell',state.view==='role-configuration');
  animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
  mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
  mountBoardCatalogMotion(root.querySelector('.aps-boards'),state.view);
  mountFoundationMotion(root.querySelector('.aps-foundation'),state.view);
  mountSecurityMotion(root.querySelector('.aps-security'),state.view);
+ mountRoleConfigurationMotion(root.querySelector('.aps-role-configuration'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
 }

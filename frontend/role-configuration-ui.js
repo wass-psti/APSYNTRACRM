@@ -2,25 +2,26 @@
  * All writes are proposals. This UI cannot elevate a user or alter live membership.
  */
 import {BOARD_MODULES} from './board-manifest.js';
+import {roleConfigurationIcon} from './role-configuration-visuals.js';
 const actions=['view','create','edit','delete','approve','export','administer'];
 const x=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const PERMISSION_ACTIONS=Object.freeze(actions);
 const summaryCards=(d)=>{
  const roles=d.roles||[],users=d.users||[],proposals=d.proposals||[],boards=d.boards||[];
- return '<div class="stat-grid">'+[
-  ['Reference / draft roles',roles.length],
-  ['Workspace users',users.length],
-  ['Accessible boards',boards.length],
-  ['Pending proposals',proposals.length]
- ].map(([label,value])=>'<div class="stat-card"><div class="stat-label">'+x(label)+'</div><div class="stat-value">'+value+'</div></div>').join('')+'</div>';
+ return '<section class="stat-grid role-stat-grid role-entrance" aria-label="Role configuration statistics">'+[
+  ['Reference / draft roles',roles.length,'roles'],
+  ['Workspace users',users.length,'users'],
+  ['Accessible boards',boards.length,'boards'],
+  ['Pending proposals',proposals.length,'proposals']
+ ].map(([label,value,icon])=>'<div class="stat-card role-stat-card role-stat-'+icon+'"><span class="role-stat-icon" aria-hidden="true">'+roleConfigurationIcon(icon)+'</span><div class="stat-label">'+x(label)+'</div><div class="stat-value">'+value+'</div></div>').join('')+'</section>';
 };
 const tabs=[
  ['roles','Role catalog'],['users','Assignments'],
  ['matrix','Permission matrix'],['workspace','Workspace access'],['audit','Change history']
 ];
 function sectionTable(headers,body){
- return '<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr>'+
- headers.map(h=>'<th>'+x(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div></div>';
+ return '<div class="panel role-table-panel"><div class="table-scroll role-table-scroll"><table class="board-table role-data-table"><thead><tr>'+
+ headers.map(h=>'<th scope="col">'+x(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div></div>';
 }
 function roles(d){
  const records=d.roles||[];
@@ -31,8 +32,8 @@ function roles(d){
  (r.kind==='system_reference'?'Protected default role':
  '<button class="secondary" data-action="role-propose-edit" data-role-key="'+x(r.roleKey)+'">Propose edit</button>')+
  '</td></tr>').join('');
- const crmCatalog='<div class="section-header"><strong>APSYNTRA CRM platform authorization</strong></div>'+
- '<div class="note">The CRM role tier is separate from WatchdogWorkspace identity and from the twelve application and board assignments. An explicitly assigned CRM tier sets the maximum effective permission level, but never grants an application membership, board ownership or bootstrap administration.</div>'+
+ const crmCatalog='<div class="section-header role-section-header role-entrance"><strong>APSYNTRA CRM platform authorization</strong></div>'+
+ '<div class="note role-info-note">The CRM role tier is separate from WatchdogWorkspace identity and from the twelve application and board assignments. An explicitly assigned CRM tier sets the maximum effective permission level, but never grants an application membership, board ownership or bootstrap administration.</div>'+
  sectionTable(['CRM role','Ceiling','Central administration'],[
  ['Admin','Maximum CRM operational tier; existing module and board grants remain required','Bootstrap-only role management'],
  ['Supervisor','Supervisory/module scope; no board manage through a CRM override','Not delegated by default'],
@@ -40,11 +41,11 @@ function roles(d){
  ['Viewer','View-only where the domain defines a read role; blocks edit/manage','Not delegated']
  ].map(([role,ceiling,admin])=>'<tr><td><strong>'+x(role)+'</strong></td><td>'+
  x(ceiling)+'</td><td>'+x(admin)+'</td></tr>').join(''));
- return crmCatalog+'<div class="section-header"><strong>Central role catalog</strong><button class="primary" data-action="role-propose-create">＋ New role proposal</button></div>'+
- '<div class="note">Default role hierarchy: <strong>Admin → Supervisor → Employee → Viewer</strong>. These are immutable reference definitions. New roles and revisions are staged only; live backend permissions are unchanged.</div>'+
- '<input id="search-system-roles" class="search-input csp-u057" placeholder="Search roles" aria-label="Search roles" >'+
+ return crmCatalog+'<div class="section-header role-section-header role-catalog-heading"><strong>Central role catalog</strong><button class="primary role-proposal-button" data-action="role-propose-create">＋ New role proposal</button></div>'+
+ '<div class="note role-info-note role-hierarchy-note">Default role hierarchy: <strong>Admin → Supervisor → Employee → Viewer</strong>. These are immutable reference definitions. New roles and revisions are staged only; live backend permissions are unchanged.</div>'+
+ '<div class="role-search-wrap"><input id="search-system-roles" class="search-input csp-u057 role-search" type="search" placeholder="Search roles" aria-label="Search roles" ></div>'+
  sectionTable(['Role','Kind','State','Revision','Actions'],rows||'<tr><td colspan="5">No role definitions</td></tr>')+
- '<div class="csp-u046" ><button class="secondary" data-action="role-propose-activation">Propose activation / deactivation</button></div>';
+ '<div class="csp-u046 role-catalog-actions" ><button class="secondary role-activation-button" data-action="role-propose-activation">Propose activation / deactivation</button></div>';
 }
 function assignments(d){
  const users=d.users||[],assignments=d.assignments||[];
@@ -105,19 +106,20 @@ function audit(d){
 }
 export function renderRoleConfiguration({verified=false,loading=false,data=null,tab='roles',error=''}={}){
  if(!verified)return '<div class="access-denied"><div class="denied-panel"><h1>Access unavailable</h1><p>This module is restricted to verified bootstrap administrators.</p></div></div>';
- let html='<div class="page-head"><div><span class="label-top">Administration / Central authorization</span>'+
- '<h1>Role Configuration</h1><p>Manage centrally governed role change requests and review authoritative workspace grants.</p></div>'+
- '<button class="secondary" data-action="role-refresh">↻ Refresh verified data</button></div>'+
- '<div class="note security-note">Bootstrap administrators only. <strong>Change control: STAGED ONLY</strong> — production roles, permissions, board access and memberships cannot be altered by this module until a separately approved activation release. No bootstrap identity can be assigned or revoked here.</div>';
+ let html='<div class="aps-role-configuration"><section class="page-head role-config-hero role-entrance" aria-labelledby="role-config-title"><div class="role-hero-copy"><span class="label-top"><span class="role-hero-dot" aria-hidden="true"></span> Administration / Central authorization</span>'+
+ '<h1 id="role-config-title">Role Configuration<span class="role-heading-stop">.</span></h1><p>Manage centrally governed role change requests and review authoritative workspace grants.</p></div>'+
+ '<button class="secondary role-refresh-button" data-action="role-refresh">'+roleConfigurationIcon('refresh')+'<span>Refresh verified data</span></button>'+
+ '<svg class="role-hero-art" viewBox="0 0 420 210" aria-hidden="true" focusable="false" fill="none"><circle cx="334" cy="12" r="125" stroke="currentColor" stroke-opacity=".15"/><circle cx="334" cy="12" r="181" stroke="currentColor" stroke-opacity=".07"/><path d="M108 222C186 77 327 79 433 135" stroke="currentColor" stroke-opacity=".16"/><circle cx="257" cy="69" r="4" fill="#a9c9ff"/></svg></section>'+
+ '<div class="note security-note role-staged-note role-entrance"><span class="role-note-icon" aria-hidden="true">'+roleConfigurationIcon('lock')+'</span><div>Bootstrap administrators only. <strong>Change control: STAGED ONLY</strong> — production roles, permissions, board access and memberships cannot be altered by this module until a separately approved activation release. No bootstrap identity can be assigned or revoked here.</div></div>';
  if(error)html+='<div class="error-banner" role="alert">'+x(error)+'</div>';
  if(loading)html+='<p class="muted">Loading verified workspace configuration…</p>';
- if(!data)return html;
+ if(!data)return html+'</div>';
  html+=summaryCards(data);
- html+='<nav class="row csp-u016" aria-label="Role configuration sections" >'+
-  tabs.map(([key,label])=>'<button class="'+(tab===key?'primary':'secondary')+'" data-action="role-tab" data-tab="'+key+'">'+x(label)+'</button>').join('')+'</nav>';
+ html+='<nav class="row csp-u016 role-config-tabs role-entrance" aria-label="Role configuration sections" >'+
+  tabs.map(([key,label])=>'<button type="button" class="'+(tab===key?'primary':'secondary')+' role-tab-button" data-action="role-tab" data-tab="'+key+'" aria-pressed="'+(tab===key?'true':'false')+'">'+x(label)+'</button>').join('')+'</nav>';
  html+=tab==='roles'?roles(data):tab==='users'?assignments(data):
  tab==='matrix'?matrix(data):tab==='workspace'?workspaces(data):audit(data);
- return html;
+ return html+'</div>';
 }
 export const ROLE_MODULE_OPTIONS=BOARD_MODULES.map(m=>[{
  fueltrans:'fueltrans',tools:'tool-traceability',toolbox:'toolbox-issues',frt:'fund-released-tracker',
