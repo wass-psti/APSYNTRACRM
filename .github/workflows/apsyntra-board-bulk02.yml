@@ -6,6 +6,7 @@ on:
       - ".github/workflows/apsyntra-board-bulk02.yml"
       - "sql/cp-board-bulk02-*.sql"
       - "sql/tests/cp-board-bulk02-*.sql"
+      - "scripts/cp-board-bulk02-concurrency.sh"
   workflow_dispatch:
 permissions:
   contents: read
@@ -44,6 +45,8 @@ jobs:
             -f sql/tests/cp-board-menu01-disposable-setup.sql \
             -f sql/tests/cp-board-bulk02-disposable-setup.sql \
             -f sql/cp-board-bulk02-staged-atomic-mutations.sql \
-            -f sql/tests/cp-board-bulk02-disposable-acceptance.sql \
+            -f sql/tests/cp-board-bulk02-disposable-acceptance.sql
+          bash scripts/cp-board-bulk02-concurrency.sh
+          psql -v ON_ERROR_STOP=1 \
             -f sql/cp-board-bulk02-fail-closed-rollback.sql \
             -f sql/tests/cp-board-bulk02-rollback-acceptance.sql
