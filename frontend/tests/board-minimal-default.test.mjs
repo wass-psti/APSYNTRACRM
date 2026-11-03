@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BoardStructureClient,normalizeBoardUi} from '../board-structure-admin.js';
+import {BoardStructureClient,normalizeBoardUi,parseChoiceConfig,columnOptionLines} from '../board-structure-admin.js';
 import {genericBoardColumns} from '../board-inline-items.js';
 import {boardTable} from '../board-presentation.js';
 import {
- ITEM_ONLY_MODE,isItemOnlyBoard,enableItemOnlyBoard,createItemOnlyBoard
+ ITEM_ONLY_MODE,isItemOnlyBoard,enableItemOnlyBoard,createItemOnlyBoard,itemOnlyColumnKeys
 } from '../board-minimal-default.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
@@ -103,11 +103,79 @@ test('Item-plus-Add-Column is one data column plus an explicit accessible comman
  assert.match(html,/aria-label="Add a new board column"/);
  assert.match(html,/colspan="2"/);
 });
+test('signed column order is stable across devices and filters unknown local or stale keys',()=>{
+ const second='66666666-6666-4666-8666-666666666666';
+ const cols=['record','col:'+col,'col:'+second];
+ assert.deepEqual(itemOnlyColumnKeys(cols,{columnOrder:[second,col]}),
+  ['record','col:'+second,'col:'+col]);
+ assert.deepEqual(itemOnlyColumnKeys(cols,{columnOrder:['77777777-7777-4777-8777-777777777777']}),
+  cols);
+});
+test('column order lives inside the signed Item-only settings while primary label can change',async()=>{
+ const second='66666666-6666-4666-8666-666666666666';
+ const raw={board_id:boardId,revision:4,primary_label:'Client',
+  tabs:[{key:'items',label:'Items',visible:true,schema_mode:ITEM_ONLY_MODE,
+    column_order:[second,col]}],column_labels:{}};
+ const settings=normalizeBoardUi(raw,boardId);
+ assert.deepEqual(settings.columnOrder,[second,col]);
+ const logs=[];
+ const api={allowed:async()=>true,rpc:async(name,args)=>{
+  logs.push({name,args});return raw;
+ }};
+ const client=new BoardStructureClient(api);
+ const columns=[col,second].map((id,i)=>({id,column_key:'custom:'+id,position:i,
+  name:'Field '+i,system_key:null,data_type:'text'}));
+ await client.save({board:{id:boardId},columns},settings);
+ const stored=logs[0].args.p_tabs[0];
+ assert.deepEqual(stored.column_order,[second,col]);
+ assert.equal(stored.schema_mode,ITEM_ONLY_MODE);
+ assert.equal(logs[0].args.p_expected_revision,4);
+});
+test('invalid or duplicate column order metadata is ignored without granting access',()=>{
+ const base={board_id:boardId,revision:0,primary_label:'Item',
+  tabs:[{key:'items',label:'Items',visible:true,schema_mode:ITEM_ONLY_MODE,
+   column_order:[col,col]}],column_labels:{}};
+ assert.deepEqual(normalizeBoardUi(base,boardId).columnOrder,[]);
+ const foreign={...base,tabs:[{...base.tabs[0],column_order:['not-a-uuid']}]};
+ assert.deepEqual(normalizeBoardUi(foreign,boardId).columnOrder,[]);
+});
+test('obsolete server-saved column order IDs are pruned after non-destructive column removal',async()=>{
+ const obsolete='66666666-6666-4666-8666-666666666666';
+ const raw={board_id:boardId,revision:5,primary_label:'Item',
+  tabs:[{key:'items',label:'Board items',visible:true,schema_mode:ITEM_ONLY_MODE,
+   column_order:[obsolete,col]}],column_labels:{}};
+ const settings=normalizeBoardUi(raw,boardId);
+ const rpc=[];
+ const client=new BoardStructureClient({allowed:async()=>true,
+  rpc:async(_name,args)=>{rpc.push(args);return raw;}});
+ await client.save({board:{id:boardId},
+  columns:[{id:col,column_key:'custom:'+col,name:'Cost',system_key:null,data_type:'number'}]},
+  settings);
+ assert.deepEqual(rpc[0].p_tabs[0].column_order,[col]);
+});
+test('explicit choices validate status and dropdown labels, preserving stored IDs when unchanged',()=>{
+ assert.deepEqual(parseChoiceConfig('dropdown','A\nB'),{options:['A','B']});
+ assert.deepEqual(parseChoiceConfig('status','Open\nClosed'),{options:['Open','Closed']});
+ const original={labels:[{id:'open',name:'Open'},{id:'done',name:'Done'}]};
+ assert.equal(parseChoiceConfig('status','Open\nDone',original),original);
+ assert.equal(columnOptionLines({type:'status',config:original}),'Open\nDone');
+ assert.throws(()=>parseChoiceConfig('dropdown','Same\nsame'),/unique option/);
+ assert.throws(()=>parseChoiceConfig('status','A\n'.repeat(51)),/50 unique/);
+ assert.deepEqual(parseChoiceConfig('text','Anything'),{});
+});
+test('the first custom column can use accessible drag handles after Item-only mode is enabled',()=>{
+ const html=boardTable({columns:[{key:'record',title:'Item'},
+  {key:'col:'+col,title:'Score'}],minimal:true,rows:[]});
+ assert.match(html,/data-column-key="col:55555555-5555-4555-8555-555555555555" draggable="true"/);
+ assert.match(html,/board-column-handle/);
+});
 test('the deployed board creation and manager add-column actions use the signed configuration workflow',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/createItemOnlyBoard\(/);
  assert.match(app,/case 'board-add-column'/);
  assert.match(app,/data-structure-enable-item-only/);
  assert.match(app,/addColumn:minimal&&state\.boardManage/);
+ assert.match(app,/persistItemOnlyColumnOrder\(/);
+ assert.match(app,/parseChoiceConfig\(/);
  assert.match(app,/genericBoardColumns\(state\.board,\{primaryTitle,columnLabels,minimal\}\)/);
 });

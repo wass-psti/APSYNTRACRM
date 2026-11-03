@@ -33,6 +33,26 @@ const hasManage=async(api,id)=>{
 const isCustomKey=key=>typeof key==='string'&&
  (key.startsWith('custom:')||key.startsWith('custom_'));
 
+/** User-editable options for a newly created or safely reconfigured typed column. */
+export function columnOptionLines(column){
+ if(column?.type==='status')return (column.config?.labels||[])
+  .map(x=>x.name||x.label||'').filter(Boolean).join('\n');
+ if(column?.type==='dropdown')return (column.config?.options||[]).join('\n');
+ return '';
+}
+export function parseChoiceConfig(type,source,previous={}){
+ if(!TYPES.has(type))fail('Unsupported column type.');
+ if(type!=='status'&&type!=='dropdown')return {};
+ const lines=String(source||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ if(!lines.length)return previous&&typeof previous==='object'?previous:{};
+ if(lines.length>50||lines.some(x=>x.length>80)||
+   new Set(lines.map(x=>x.toLocaleLowerCase())).size!==lines.length)
+  fail('Enter 1–50 unique option labels, each at most 80 characters.');
+ const old=type==='status'?(previous?.labels||[]).map(x=>x.name||x.label||''):
+  previous?.options||[];
+ if(Array.isArray(old)&&JSON.stringify(old)===JSON.stringify(lines))return previous;
+ return {options:lines};
+}
 export function describeBoardColumns(detail){
  const columns=Array.isArray(detail?.columns)?detail.columns:[];
  const knownModule=moduleByBoardName(detail?.board?.name);
@@ -66,9 +86,13 @@ export function normalizeBoardUi(raw,boardIdValue){
    Object.entries(raw.column_labels).some(([id,label])=>!validUuid(id)||
     typeof label!=='string'||!label.trim()||label.trim().length>80))
   throw new ApiError('Invalid column display settings response.');
- const schemaMode=tabs.some(t=>t.key==='items'&&t.schema_mode==='item_only_v1')?
-  'item_only_v1':'legacy';
- return {status:'VERIFIED_READ',schemaMode,boardId:boardIdValue,revision:Number(raw.revision),
+ const itemTab=tabs.find(t=>t.key==='items');
+ const schemaMode=itemTab?.schema_mode==='item_only_v1'?'item_only_v1':'legacy';
+ const requestedOrder=itemTab?.column_order;
+ const columnOrder=Array.isArray(requestedOrder)&&requestedOrder.length<=30&&
+  requestedOrder.every(validUuid)&&new Set(requestedOrder).size===requestedOrder.length?
+   [...requestedOrder]:[];
+ return {status:'VERIFIED_READ',schemaMode,columnOrder,boardId:boardIdValue,revision:Number(raw.revision),
   primaryLabel:label,tabs:tabs.map(t=>({key:t.key,label:t.label.trim(),visible:t.visible})),
   columnLabels:Object.fromEntries(Object.entries(raw.column_labels).map(([k,v])=>[k,v.trim()]))};
 }
@@ -103,7 +127,7 @@ export class BoardStructureClient{
  async read(id,{enabled=BOARD_STRUCTURE_ADMIN_ENABLED}={}){
   boardId(id);
   if(enabled!==true)return {status:'LOCKED',revision:0,
-   primaryLabel:'Record',schemaMode:'legacy',tabs:[],columnLabels:{}};
+   primaryLabel:'Record',schemaMode:'legacy',columnOrder:[],tabs:[],columnLabels:{}};
   if(typeof this.api?.rpc!=='function')
    throw new ApiError('Signed board configuration API unavailable.',403);
   const raw=await this.api.rpc('wm_board_ui_read',{p_board_id:id});
@@ -128,6 +152,16 @@ export class BoardStructureClient{
    fail('Invalid board view configuration.');
   const allowedIds=new Set(describeBoardColumns(detail).filter(c=>c.kind==='custom').map(c=>c.id));
   const labels=settings.columnLabels||{};
+  const requestedOrder=settings.columnOrder??[];
+  if(!Array.isArray(requestedOrder)||requestedOrder.length>30||
+     new Set(requestedOrder).size!==requestedOrder.length||
+     requestedOrder.some(id=>!validUuid(id)))
+   fail('Invalid saved custom-column order.');
+  // A column may have been safely removed after the settings were saved.
+  // Drop obsolete identifiers; never persist a reference to another board.
+  const columnOrder=requestedOrder.filter(id=>allowedIds.has(id));
+  if(settings.schemaMode!=='item_only_v1'&&columnOrder.length)
+   fail('Authoritative column order is available only for Item-only boards.');
   if(Object.entries(labels).some(([id,label])=>!allowedIds.has(id)||
     !validUuid(id)||!nameOf(label)||nameOf(label).length>80))
    fail('Foreign or invalid column label.');
@@ -135,7 +169,8 @@ export class BoardStructureClient{
    p_board_id:id,p_expected_revision:settings.revision,
    p_primary_label:primary,p_tabs:tabs.map(t=>({key:t.key,label:t.label,
     visible:t.visible,...(t.key==='items'&&settings.schemaMode==='item_only_v1'?
-     {schema_mode:'item_only_v1'}:{})})),p_column_labels:labels
+     {schema_mode:'item_only_v1',
+      ...(columnOrder.length?{column_order:columnOrder}:{})}:{})})),p_column_labels:labels
   });
   return normalizeBoardUi(response,id);
  }
@@ -230,6 +265,8 @@ export function renderBoardStructureAdmin(detail,settings,
   '<div class="field"><label for="structure-new-type">Column type</label>'+
   '<select id="structure-new-type" name="type"'+disabled+'>'+
   BOARD_STRUCTURE_TYPES.map(t=>'<option value="'+t+'">'+esc(t)+'</option>').join('')+'</select></div>'+
+  '<div class="field"><label for="structure-new-options">Choice options (Status / Dropdown only; one per line)</label>'+ 
+  '<textarea id="structure-new-options" name="options" maxlength="4100" rows="3"'+disabled+'></textarea></div>'+ 
   '<button class="primary" type="submit"'+disabled+'>Add column</button></form>'+
   '<div class="board-member-list">'+cols.slice(1).map(c=>
    '<div class="board-member"><strong>'+esc(c.name)+'</strong>'+

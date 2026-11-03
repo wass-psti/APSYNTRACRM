@@ -14,7 +14,7 @@
 1. The main UI's **New board** flow calls the existing signed board-creation RPC and then initializes its existing signed board-view settings to `Item` with the mode marker. It verifies current signed user, workspace, ordinary active board, `manage`, and zero items/columns. It does not create any physical default column, demo content, or an unapproved application record.
 2. A failed settings write after successful board creation **never retries the create**. It reports the partial state; the authorized board manager can open **Manage columns** and explicitly choose **Use Item-only layout**. This two-RPC flow is **not atomic**. Enforcing a truly indivisible system-wide default across all API clients requires a separately approved backend creation/settings transaction.
 3. Ordinary boards with verified `item_only_v1` settings render only **Item** and authorized physical custom columns; Status, Owner, Due Date and Actions are not auto-rendered. The `+ Add Column` table-header button opens the existing server-backed creation workflow for managers.
-4. The existing Manage columns panel retains Item's primary schema identity while permitting a persisted display name. Custom columns can be created, renamed, retyped if safe, hidden, and deleted only when empty. Their rows and values stay in PostgreSQL. Existing board data and module-defined fields are not modified. Column order and widths currently also use user-scoped local preferences; cross-client authoritative column reordering is **not yet implemented**.
+4. The existing Manage columns panel retains Item's primary schema identity while permitting a persisted display name. Custom columns can be created, renamed, retyped if safe, configured with Status/Dropdown choices, hidden, and deleted only when empty. Their rows and values stay in PostgreSQL. Existing board data and module-defined fields are not modified. For Item-only boards, authorized custom-column order is persisted inside the signed board settings through revision CAS and audit; device-local preferences remain for widths, user-specific visibility and legacy layouts.
 5. The selected-record toolbar has **Delete item**, available only with **exactly one selected editable ordinary-board item**. It requires the exact item name in a confirmation dialog, rechecks current GoTrue identity, workspace, server edit permission, item title, board and update timestamp, and then calls the existing signed server delete RPC. A fresh read confirms absence; authoritative item deletion audit is independently checked when available. Multi-item permanent deletion is unavailable; no non-atomic deletion loop is introduced.
 
 ## Safety boundaries
@@ -32,7 +32,8 @@
 - [x] Single-item confirmed delete action integrated with existing signed RPC — **IMPLEMENTED**.
 - [ ] Genuine signed create board, page refresh and sign-out/sign-in persistence — **PENDING live browser evidence**.
 - [ ] Live manager/editor/viewer and foreign-workspace denial; item delete audit — **PENDING real signed sessions**.
-- [ ] Cross-client persistent server-side column reordering and atomic creation/settings transaction — **PENDING backend design and separate production permission approval**.
+- [x] Item-only custom-column display order persisted with signed CAS settings and audit — **IMPLEMENTED; live two-session acceptance pending**.
+- [ ] Atomic board creation/settings transaction for every API client — **PENDING backend design and separate production permission approval**.
 - [ ] Atomic multi-item permanent delete, server-side stale CAS and revocation binding — **BLOCKED until separate backend review/approval**.
 - [ ] Measured frame pacing, keyboard accessibility and mobile scroll testing — **PENDING real browser measurement**.
 

@@ -11,6 +11,15 @@ export const newOrdinaryTabs=()=>[
  {key:'items',label:'Board items',visible:true},
  {key:'issues',label:'APSYNTRA Issues',visible:true}
 ];
+/** Server-saved order wins over device-local column order for Item-only boards. */
+export function itemOnlyColumnKeys(columns,settings){
+ const all=columns.map(c=>typeof c==='string'?c:c.key).filter(Boolean);
+ const custom=all.filter(k=>k.startsWith('col:'));
+ const fromServer=(settings?.columnOrder||[]).map(id=>'col:'+id)
+  .filter((k,i,a)=>custom.includes(k)&&a.indexOf(k)===i);
+ return [...all.filter(k=>!k.startsWith('col:')),...fromServer,
+  ...custom.filter(k=>!fromServer.includes(k))];
+}
 export function isItemOnlyBoard(detail,settings){
  const b=detail?.board;
  return settings?.status==='VERIFIED_READ'&&settings.schemaMode===ITEM_ONLY_MODE&&
@@ -36,8 +45,12 @@ export async function enableItemOnlyBoard({api,structure,auth,boardId,strictEmpt
  if(settings.revision>0&&strictEmpty)
   throw new ApiError('Board settings changed during creation. Review them before proceeding.',409);
  const tabs=settings.tabs?.length?settings.tabs:newOrdinaryTabs();
+ const columnOrder=(detail.columns||[]).filter(c=>c.system_key==null&&
+  (String(c.column_key||'').startsWith('custom:')||
+   String(c.column_key||'').startsWith('custom_'))&&validUuid(c.id))
+  .sort((a,b)=>a.position-b.position).map(c=>c.id);
  return structure.save(detail,{...settings,primaryLabel:'Item',
-  schemaMode:ITEM_ONLY_MODE,tabs,columnLabels:settings.columnLabels||{}});
+  schemaMode:ITEM_ONLY_MODE,columnOrder,tabs,columnLabels:settings.columnLabels||{}});
 }
 /** Use the existing board creation RPC; a failed second write never creates a duplicate board. */
 export async function createItemOnlyBoard({api,structure,auth,name,description=''}={}){

@@ -12,13 +12,13 @@ import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {boardGrid,boardGridColumns} from './board-grid.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
- applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns} from './board-structure-admin.js';
+ applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
-import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard} from './board-minimal-default.js';
+import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
 import {deleteOneAuthorizedItem} from './board-single-delete.js';
 import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board-row01-signed-acceptance.js';
 import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
@@ -75,7 +75,7 @@ const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
+const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
   view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -295,7 +295,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
   summaries:groupColumnSummaries({items,columns,detail}),
-  addColumn:minimal&&state.boardManage});
+  addColumn:minimal&&state.boardManage,minimal});
 }
 
 function bulkReadyFor(board){
@@ -394,6 +394,7 @@ function boardPage(){
  const columns=moduleKey?boardGridColumns(state.board,{primaryTitle,columnLabels,allowCustom}):
   genericBoardColumns(state.board,{primaryTitle,columnLabels,minimal});
  const layout=loadBoardLayout(state.context,b.id,tabSpecs.map(t=>t.key),columns.map(c=>c.key));
+ if(minimal)layout.columns=itemOnlyColumnKeys(columns,state.boardUi);
  const tabLookup=new Map(tabSpecs.map(t=>[t.key,t]));
  const tabOrder=applyBoardViewSettings(layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean),state.boardUi);
 
@@ -1149,8 +1150,11 @@ function activeBoardLayout(){
  const moduleKey=moduleByBoardName(state.board.board.name)?.key;
  const tabs=['items','issues',...(moduleKey==='frt'?['finance']:[]),
   ...(moduleKey==='timetracker'?['attendance']:[])];
- const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board,{minimal:isItemOnlyBoard(state.board,state.boardUi)})).map(c=>c.key);
- return {tabs,columns,pref:loadBoardLayout(state.context,state.boardId,tabs,columns)};
+ const minimal=isItemOnlyBoard(state.board,state.boardUi);
+ const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board,{minimal})).map(c=>c.key);
+ const pref=loadBoardLayout(state.context,state.boardId,tabs,columns);
+ if(minimal)pref.columns=itemOnlyColumnKeys(columns,state.boardUi);
+ return {tabs,columns,pref};
 }
 function persistBoardLayout(transform){
  const a=activeBoardLayout();
@@ -1411,7 +1415,8 @@ async function openBoardStructure(){
    }else if(form.dataset.structureForm==='create'){
     await boardStructureClient.mutate(detail,{
      action:'create',name:String(fd.get('name')||''),
-     type:String(fd.get('type')||'text'),config:{}
+     type:String(fd.get('type')||'text'),
+     config:parseChoiceConfig(String(fd.get('type')||'text'),fd.get('options'))
     });
    }else return;
    if(!authorized())return;
@@ -1446,13 +1451,17 @@ async function openBoardStructure(){
   if(edit){
    openModal('Edit custom column',input('Column name','name',column.name)+
     select('Column type','type',BOARD_STRUCTURE_TYPES.map(t=>[t,t]),column.type)+
+    '<div class="field"><label for="modal-column-options">Choice options (Status / Dropdown only; one per line)</label>'+ 
+    '<textarea id="modal-column-options" name="options" maxlength="4100" rows="3">'+e(columnOptionLines(column))+'</textarea></div>'+ 
     '<div class="field"><label><input type="checkbox" name="visible" '+
     (column.visible?'checked ':'')+'/> Visible on board</label></div>',
     async fd=>{
      if(!boardHistoryAuthorized(snapshot))throw new ApiError('Board context changed.',403);
      await boardStructureClient.mutate(detail,{action:'update',columnId:column.id,
       name:String(fd.get('name')||''),type:String(fd.get('type')||''),
-      config:column.config,visible:fd.has('visible')});
+      config:parseChoiceConfig(String(fd.get('type')||''),fd.get('options'),
+       String(fd.get('type')||'')===column.type?column.config:{}),
+      visible:fd.has('visible')});
      await loadBoard(snapshot.boardId,state.tab);
     });
   }else{
@@ -1494,12 +1503,10 @@ async function action(name,button){
    delta=Number(button.dataset.direction);
   if(!current||!current.columns.includes(key)||
     BOARD_REQUIRED_COLUMNS.includes(key)||![-1,1].includes(delta))return;
-  persistBoardLayout(p=>{
-   const movable=p.columns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k));
-   const index=movable.indexOf(key),target=movable[index+delta];
-   return target?{...p,columns:[...BOARD_REQUIRED_COLUMNS,...reorderVisible(movable,key,target)]}:p;
-  });
-  render();root.querySelector('.board-column-menu')?.setAttribute('open','');break;
+  const movable=current.pref.columns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k));
+  const target=movable[movable.indexOf(key)+delta];
+  if(target)await moveBoardPresentation('column',key,target);
+  root.querySelector('.board-column-menu')?.setAttribute('open','');break;
  }
  case 'board-tab-move':{
   const current=activeBoardLayout(),key=button.dataset.key,
@@ -2675,7 +2682,40 @@ root.addEventListener('toggle',event=>{
 },true);
 
 let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;
-function moveBoardPresentation(kind,from,to){
+/** Save one authoritative, CAS-checked custom-column order for a signed Item-only board. */
+async function persistItemOnlyColumnOrder(keys){
+ if(state.columnOrderBusy||!state.boardManage||
+    !isItemOnlyBoard(state.board,state.boardUi)||!activeBoardLayout())
+  throw new ApiError('Signed board manager is required to reorder columns.',403);
+ const boardId=state.boardId,actorId=state.context.user_id,
+  workspaceId=state.context.workspace_id;
+ state.columnOrderBusy=true;
+ try{
+  const [actor,ctx,detail,settings]=await Promise.all([
+   auth.getVerifiedUser(),db.context(),db.board(boardId),boardStructureClient.read(boardId)]);
+  if(actor.id!==actorId||ctx.user_id!==actorId||ctx.workspace_id!==workspaceId||
+     detail.board?.id!==boardId||detail.board.workspace_id!==workspaceId||
+     !isItemOnlyBoard(detail,settings))
+   throw new ApiError('Board session or Item-only configuration changed.',409);
+  const visible=genericBoardColumns(detail,{minimal:true})
+   .map(c=>c.key).filter(k=>k.startsWith('col:'));
+  if(keys.length!==visible.length||new Set(keys).size!==visible.length||
+     keys.some(k=>!visible.includes(k)))
+   throw new ApiError('Column set changed; reload before reordering.',409);
+  const orderedIds=keys.map(k=>k.slice(4));
+  const hidden=describeBoardColumns(detail).filter(c=>c.kind==='custom'&&
+   !orderedIds.includes(c.id)).map(c=>c.id);
+  const fullOrder=[...orderedIds,
+   ...(settings.columnOrder||[]).filter(id=>hidden.includes(id)),
+   ...hidden.filter(id=>!(settings.columnOrder||[]).includes(id))];
+  await boardStructureClient.save(detail,{...settings,columnOrder:fullOrder});
+  if(state.boardId!==boardId||state.context?.user_id!==actorId||
+     state.context?.workspace_id!==workspaceId)return false;
+  await loadBoard(boardId,'items');
+  return true;
+ }finally{state.columnOrderBusy=false;}
+}
+async function moveBoardPresentation(kind,from,to){
  if(!from||!to||from===to||!activeBoardLayout())return false;
  if(kind==='tab'){
   const c=activeBoardLayout();
@@ -2685,10 +2725,15 @@ function moveBoardPresentation(kind,from,to){
   const c=activeBoardLayout();
   if(!c.columns.includes(from)||!c.columns.includes(to)||
     BOARD_REQUIRED_COLUMNS.includes(from)||BOARD_REQUIRED_COLUMNS.includes(to))return false;
-  persistBoardLayout(p=>{
-   const movable=p.columns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k));
-   return {...p,columns:[...BOARD_REQUIRED_COLUMNS,...reorderVisible(movable,from,to)]};
-  });
+  const movable=c.pref.columns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k));
+  if(!movable.includes(from)||!movable.includes(to))return false;
+  if(isItemOnlyBoard(state.board,state.boardUi)){
+   if(!state.boardManage)return false;
+   return persistItemOnlyColumnOrder(reorderVisible(movable,from,to));
+  }
+  persistBoardLayout(p=>({...p,columns:[
+   ...p.columns.filter(k=>BOARD_REQUIRED_COLUMNS.includes(k)),
+   ...reorderVisible(movable,from,to)]}));
  }else return false;
  render();return true;
 }
@@ -2699,7 +2744,8 @@ root.addEventListener('dragstart',event=>{
  const kind=tab?'tab':th?'column':null;
  if(!kind)return;
  const key=(tab||th).dataset[kind==='tab'?'boardTab':'columnKey'];
- if(kind==='column'&&BOARD_REQUIRED_COLUMNS.includes(key)){event.preventDefault();return;}
+ if(kind==='column'&&(BOARD_REQUIRED_COLUMNS.includes(key)||
+    (isItemOnlyBoard(state.board,state.boardUi)&&!state.boardManage))){event.preventDefault();return;}
  boardDrag={kind,key};
  event.dataTransfer?.setData('text/plain','APSYNTRA board layout');
  if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
@@ -2718,7 +2764,7 @@ root.addEventListener('drop',event=>{
  const target=event.target.closest(boardDrag.kind==='tab'?'[data-board-tab]':'th[data-column-key]');
  if(!target)return;
  const key=target.dataset[boardDrag.kind==='tab'?'boardTab':'columnKey'];
- event.preventDefault();moveBoardPresentation(boardDrag.kind,boardDrag.key,key);
+ event.preventDefault();void moveBoardPresentation(boardDrag.kind,boardDrag.key,key).catch(notice);
  boardDrag=null;
 });
 root.addEventListener('dragend',()=>{
@@ -2769,7 +2815,9 @@ window.addEventListener('pointerup',event=>{
   const at=document.elementFromPoint(event.clientX,event.clientY);
   const target=at?.closest(kind==='tab'?'[data-board-tab]':'th[data-column-key]');
   const to=target?.dataset[kind==='tab'?'boardTab':'columnKey'];
-  if(moveBoardPresentation(kind,key,to)){boardSuppressedClick=true;}
+  void moveBoardPresentation(kind,key,to).then(moved=>{
+   if(moved)boardSuppressedClick=true;
+  }).catch(notice);
  }
 });
 window.addEventListener('pointercancel',()=>{boardResize=null;boardTouch=null;});

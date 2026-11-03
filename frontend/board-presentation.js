@@ -64,7 +64,7 @@ export function resetBoardLayout(context,boardId,storage=globalThis.localStorage
  try{storage.removeItem(key);return true;}catch{return false;}
 }
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function boardTable({columns=[],rows=[],empty='No persisted records',layout=null,groupId='ungrouped',selection=null,footer='',summaries=null,addColumn=false}={}){
+export function boardTable({columns=[],rows=[],empty='No persisted records',layout=null,groupId='ungrouped',selection=null,footer='',summaries=null,addColumn=false,minimal=false}={}){
  const available=columns.map(c=>c.key);
  const pref=normalizeLayout(layout||{},[],available);
  const visible=pref.columns.filter(k=>!pref.hidden.includes(k));
@@ -75,10 +75,10 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
   'role="region" tabindex="0" aria-label="Horizontally scrollable board group">'+
   '<table class="board-table board-table-custom" data-group-id="'+esc(groupId)+'" width="'+tableWidth+'">'+
   '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+(addColumn?'<col width="150">':'')+'</colgroup>'+
-  '<thead><tr>'+cells.map((c,i)=>'<th scope="col" data-column-key="'+esc(c.key)+'" draggable="'+(i>1)+'"'+
+  '<thead><tr>'+cells.map((c,i)=>'<th scope="col" data-column-key="'+esc(c.key)+'" draggable="'+(i>1||(minimal&&i>0))+'"'+
     (i===0?' class="board-frozen-column"':'')+'>'+
    '<span class="board-heading-label">'+(i===0&&selection?.enabled?'<input id="board-select-all-'+esc(groupId)+'" name="board-select-all-'+esc(groupId)+'" type="checkbox" class="board-select-all" data-board-select-all="'+esc(groupId)+'" aria-label="Select visible eligible items in this group" />':'')+esc(c.title)+'</span>'+
-   (i>1?'<button type="button" class="board-column-handle" data-column-key="'+esc(c.key)+'" '+
+   (i>1||(minimal&&i>0)?'<button type="button" class="board-column-handle" data-column-key="'+esc(c.key)+'" '+
     'aria-label="Drag to reorder '+esc(c.title)+' column" title="Drag to reorder">⠿</button>':'')+
    '<button type="button" class="board-column-resize" data-column-key="'+esc(c.key)+'" '+
     'aria-label="Resize '+esc(c.title)+' column" title="Drag to resize">⋮</button>'+
