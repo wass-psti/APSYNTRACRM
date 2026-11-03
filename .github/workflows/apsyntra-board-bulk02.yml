@@ -1,0 +1,49 @@
+name: APSYNTRA CP-BOARD-BULK02 — Disposable Atomic Board Acceptance
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apsyntra-board-bulk02.yml"
+      - "sql/cp-board-bulk02-*.sql"
+      - "sql/tests/cp-board-bulk02-*.sql"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pg17-atomic-bulk-and-group-cas:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify isolated atomic batches, role denials, CAS, safe group deletion and fail-closed rollback
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-board-collab01-disposable-setup.sql \
+            -f sql/tests/cp-board-menu01-disposable-setup.sql \
+            -f sql/tests/cp-board-bulk02-disposable-setup.sql \
+            -f sql/cp-board-bulk02-staged-atomic-mutations.sql \
+            -f sql/tests/cp-board-bulk02-disposable-acceptance.sql \
+            -f sql/cp-board-bulk02-fail-closed-rollback.sql \
+            -f sql/tests/cp-board-bulk02-rollback-acceptance.sql
