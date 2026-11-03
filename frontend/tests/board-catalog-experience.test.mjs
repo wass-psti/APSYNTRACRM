@@ -40,7 +40,7 @@ test('all ten requested areas retain exact functional hooks and signed state',()
  assert.match(catalog,/id="board-search"/);
  assert.match(catalog,/type="search" class="search-input"/);
  assert.match(catalog,/aria-label="Search boards"/);
- assert.match(catalog,/value="`+e\(state\.boardSearch\)\+`"/);
+ assert.ok(catalog.includes('value="`+e(state.boardSearch)+`"'));
  assert.match(catalog,/id="board-search-result" role="status" aria-live="polite"/);
  assert.match(catalog,/items\.length/);
  assert.match(catalog,/class="boards-hero-decor"/);
