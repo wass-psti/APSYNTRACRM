@@ -129,3 +129,21 @@ test('existing status writes keep signed preflight, revision CAS, and backend au
  assert.match(css,/\.board-status-color-blue\{border-left-color:#4f7df3\}/);
  assert.match(css,/\.board-column-more:focus-visible/);
 });
+
+test('status-cell click invokes the native picker during the user gesture with secure write checks',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf('async function startBoardInlineEdit(');
+ const end=app.indexOf('async function saveBoardInlineCell(',start);
+ assert.ok(start>=0&&end>start);
+ const handler=app.slice(start,end);
+ assert.match(handler,/if\(col\.virtual&&!await ensureSignedBulkReady/);
+ assert.match(handler,/editor\.showPicker\?\.\(\)/);
+ assert.match(handler,/editor\?\.focus\(\)/);
+ assert.ok(handler.indexOf('editor.showPicker?.()')<
+  handler.indexOf('if(col.data_type===\'status\'&&!col.virtual)'),
+  'native picker must open before the physical-status read-only preflight await');
+ assert.match(handler,/await verifyOrdinaryItemWrite\(boardId\)/);
+ const save=app.slice(end,app.indexOf('async function saveGroupInline(',end));
+ assert.match(save,/await verifyOrdinaryItemWrite\(boardId\)/);
+ assert.match(save,/await db\.setBoardCellCas\(item\.id,col\.id,value,stateCell\.expected\)/);
+});

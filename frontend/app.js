@@ -679,14 +679,30 @@ async function startBoardInlineEdit(itemId,key){
  if(!validUuid(itemId)||!activeBoardLayout()||
   !canManuallyEditBoard(state.board?.board,state.edit))return;
  const boardId=state.boardId,item=state.board.items?.find(x=>x.id===itemId);
- if(!item||item.archived_at||!cellColumn(state.board,key))return;
- if(cellColumn(state.board,key)?.virtual&&
-    !await ensureSignedBulkReady(state.board.board))return;
- await verifyOrdinaryItemWrite(boardId);
+ const col=cellColumn(state.board,key);
+ if(!item||item.archived_at||!col)return;
+ if(col.virtual&&!await ensureSignedBulkReady(state.board.board))return;
+ // Opening a select is a local, nonmutating UI action. Keep the same signed
+ // preflight for normal fields, but open a physical status picker synchronously
+ // during its user gesture; showPicker requires transient browser activation.
+ if(col.data_type!=='status'||col.virtual)await verifyOrdinaryItemWrite(boardId);
  if(state.boardId!==boardId)return;
  state.inlineCell={boardId,itemId,key,expected:expectedCellValue(state.board,item,key)};
  preserveInlineScroll();
- root.querySelector('[data-inline-cell-form] input,[data-inline-cell-form] select,[data-inline-cell-form] textarea')?.focus();
+ const editor=root.querySelector('[data-inline-cell-form] input,[data-inline-cell-form] select,[data-inline-cell-form] textarea');
+ editor?.focus();
+ if(col.data_type==='status'&&editor?.tagName==='SELECT'){
+  try{editor.showPicker?.();}catch{/* Native picker may require a fresh gesture; focus remains usable. */}
+ }
+ if(col.data_type==='status'&&!col.virtual){
+  try{await verifyOrdinaryItemWrite(boardId);}
+  catch(error){
+   if(state.inlineCell?.boardId===boardId&&state.inlineCell?.itemId===itemId){
+    state.inlineCell=null;preserveInlineScroll();
+   }
+   throw error;
+  }
+ }
 }
 async function saveBoardInlineCell(form){
  const stateCell=state.inlineCell,boardId=state.boardId;
