@@ -42,6 +42,7 @@ import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLay
 import {runTwelveBoardQa} from './board-operational-qa.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
+import {mountSecurityMotion,stopSecurityMotion} from './security-experience.js';
 import {runDeniedQaWrite} from './board-negative-write.js';
 import {runFRTSec03SignedAcceptance} from './frt-sec03-signed-acceptance.js';
 import {runFRTSec07ActivationGate} from './frt-sec07-signed-activation.js';
@@ -139,6 +140,7 @@ function renderLogin(message=''){
  stopOverviewMotion();
  stopBoardCatalogMotion();
  stopFoundationMotion();
+ stopSecurityMotion();
  root.innerHTML=renderAuthMarkup({message});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
@@ -255,10 +257,12 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
+ root.querySelector('.main')?.classList.toggle('aps-security-shell',state.view==='security');
  animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
  mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
  mountBoardCatalogMotion(root.querySelector('.aps-boards'),state.view);
  mountFoundationMotion(root.querySelector('.aps-foundation'),state.view);
+ mountSecurityMotion(root.querySelector('.aps-security'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
 }

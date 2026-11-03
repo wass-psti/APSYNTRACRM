@@ -1,0 +1,328 @@
+/* CP-SECURITY-VIS01: scope ALL styles to signed #/security only.
+ * Static SVG, native WAAPI and compositor-friendly transitions; no GPU loops.
+ */
+#app .aps-security-shell{
+ --sec-ink:#23304d;--sec-muted:#77849e;--sec-line:#e4e9f4;--sec-accent:#5d60e7;
+ min-width:0;background:radial-gradient(ellipse 61% 23% at 84% 8%,#e7ebff66,transparent 88%),#f6f8fd
+}
+#app .aps-security-shell>.topbar{
+ min-height:77px;position:relative;
+ background:linear-gradient(90deg,#fff,#fbfcff);
+ border-bottom:1px solid #e7ebf5
+}
+#app .aps-security-shell .topbar .breadcrumb{gap:11px;font-size:12px;color:#8a96ac}
+#app .aps-security-shell .topbar .breadcrumb strong{color:#334361;font-weight:800}
+#app .aps-security-shell .topbar .top-actions{gap:12px}
+#app .aps-security-shell .topbar .top-pill{
+ display:inline-flex;align-items:center;gap:8px;
+ border:1px solid #e3ebf3;background:#f8fbfc;
+ padding:10px 13px;border-radius:30px;
+ color:#526983;font-weight:790;font-size:11px
+}
+#app .aps-security-shell .topbar .online-dot{
+ flex:none;width:7px;height:7px;border-radius:50%;
+ background:#23b58d;box-shadow:0 0 0 3px #25b89420
+}
+#app .aps-security-shell .topbar .top-avatar{
+ width:35px;height:35px;display:grid;place-items:center;border-radius:12px;
+ color:#fff;font-weight:850;
+ background:linear-gradient(135deg,#a4a7ff,#665fe1);
+ box-shadow:0 6px 15px #5e5ace2c;
+ transition:transform .18s,box-shadow .18s
+}
+#app .aps-security-shell .topbar .top-avatar:hover{
+ transform:translateY(-1px);box-shadow:0 8px 21px #5555c743
+}
+#app .aps-security-shell .topbar .top-avatar:focus-visible{
+ outline:2px solid #5f66e9;outline-offset:3px
+}
+#app .aps-security-shell>.main-content{
+ max-width:1570px;padding:33px clamp(21px,3vw,49px) 90px
+}
+#app .aps-security{color:var(--sec-ink);min-width:0;counter-reset:security-checkpoint}
+#app .aps-security .security-hero{
+ isolation:isolate;position:relative;overflow:hidden;
+ display:flex;align-items:center;justify-content:space-between;
+ gap:22px;min-height:164px;margin:0 0 23px;
+ padding:29px clamp(24px,3.2vw,46px);
+ border:1px solid #2b3272;border-radius:22px;
+ background:
+  radial-gradient(ellipse 65% 150% at 100% 100%,#58529aba,transparent 83%),
+  radial-gradient(ellipse 77% 107% at 15% 0%,#38477f 0%,transparent 75%),
+  linear-gradient(125deg,#151f44 0%,#222b5b 59%,#433c84 100%);
+ box-shadow:0 20px 42px #1f2d6b20,0 2px 6px #1b245918
+}
+#app .aps-security .security-hero:after{
+ content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;
+ background-image:linear-gradient(#ffffff05 1px,transparent 1px),
+  linear-gradient(90deg,#ffffff05 1px,transparent 1px);
+ background-size:40px 40px;
+ mask-image:linear-gradient(90deg,transparent 20%,#0006 100%)
+}
+#app .aps-security .security-hero-copy{position:relative;z-index:1;min-width:0}
+#app .aps-security .security-hero .label-top{
+ display:inline-flex;align-items:center;gap:9px;
+ color:#bcc8ff;font-size:10px;letter-spacing:1.75px;font-weight:850
+}
+#app .aps-security .security-hero-dot{
+ flex:none;width:6px;height:6px;border-radius:50%;
+ background:#9fc5ff;box-shadow:0 0 0 4px #a5b9ff22
+}
+#app .aps-security .security-hero h1{
+ color:#fff;font-size:clamp(26px,3vw,41px);font-weight:850;
+ line-height:1.17;letter-spacing:-1.3px;margin:13px 0 9px;
+ text-wrap:balance
+}
+#app .aps-security .security-hero-stop{color:#adbaff}
+#app .aps-security .security-hero p{
+ color:#cbd4f1;font-size:13px;line-height:1.65;
+ max-width:610px;margin:0
+}
+#app .aps-security .security-hero-insignia{
+ flex:none;position:relative;z-index:1;display:grid;place-items:center;
+ width:147px;height:147px;border-radius:50%;
+ color:#cbd8ff;opacity:.92;pointer-events:none;
+ background:radial-gradient(circle,#a8b9ff15 0%,transparent 75%)
+}
+#app .aps-security .security-hero-insignia svg{width:100%;height:100%;display:block}
+#app .aps-security>.security-check-panel{
+ counter-increment:security-checkpoint;
+ margin:0 0 16px;min-width:0;
+ overflow:clip;
+ border:1px solid var(--sec-line);border-radius:17px;
+ background:linear-gradient(140deg,#fff,#fcfdff);
+ box-shadow:0 9px 28px #25335f0f,0 1px 3px #1a24430a;
+ transition:border-color .2s,box-shadow .2s
+}
+#app .aps-security>.security-check-panel:focus-within{
+ border-color:#c6cef4;box-shadow:0 13px 33px #20306417
+}
+#app .aps-security .security-panel-header{
+ display:flex;align-items:center;gap:14px;min-height:68px;
+ padding:17px 24px;
+ border-bottom:1px solid #e8edf6;
+ background:linear-gradient(110deg,#fafbff,#f6f8ff)
+}
+#app .aps-security .security-panel-header:before{
+ content:counter(security-checkpoint,decimal-leading-zero);
+ display:grid;place-items:center;flex:none;
+ width:36px;height:36px;border-radius:11px;
+ background:#e9ebff;color:#5e63da;
+ font-size:11px;font-weight:850;letter-spacing:.2px
+}
+#app .aps-security .security-panel-header h2{
+ color:#273651;font-weight:830;font-size:14px;
+ line-height:1.42;letter-spacing:-.12px;margin:0
+}
+#app .aps-security>.security-check-panel>.panel-body{
+ padding:23px 24px 25px;
+ color:#586782;min-width:0
+}
+#app .aps-security>.security-check-panel>.panel-body>p.muted,
+#app .aps-security>.security-check-panel>.panel-body>.csp-u033{
+ margin:0 0 17px;
+ color:#70809b;font-size:12px;line-height:1.75;
+ max-width:1140px;overflow-wrap:anywhere
+}
+#app .aps-security>.security-check-panel>.panel-body>.note{
+ border:1px solid #e4e8fb;border-left:3px solid #858aef;
+ background:linear-gradient(100deg,#f1f3ff,#f7f8ff);
+ border-radius:11px;
+ padding:16px 18px;margin:0 0 18px;
+ color:#697692;font-size:11.5px;line-height:1.68;
+ overflow-wrap:anywhere
+}
+#app .aps-security>.security-check-panel>.panel-body>.note b{
+ color:#414b6c;font-weight:820
+}
+#app .aps-security>.security-check-panel>.panel-body>.note.security-note{
+ border-color:#f1dfc5;border-left-color:#dfaa61;
+ background:#fff8ef;color:#865e2c
+}
+#app .aps-security .security-check-panel .panel-body>button{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:41px;max-width:100%;
+ font-size:11.5px;font-weight:810;line-height:1.4;
+ border-radius:10px;padding:11px 16px;
+ white-space:normal;text-align:center;
+ transition:transform .17s,background .17s,box-shadow .17s,border-color .17s;
+ vertical-align:middle
+}
+#app .aps-security .security-check-panel .panel-body>button.primary{
+ color:#fff;background:linear-gradient(110deg,#6268ec,#565cda);
+ border:1px solid #666be5;
+ box-shadow:0 6px 15px #5960de21
+}
+#app .aps-security .security-check-panel .panel-body>button.primary:hover:not(:disabled){
+ transform:translateY(-2px);box-shadow:0 10px 22px #555bdc35
+}
+#app .aps-security .security-check-panel .panel-body>button.secondary{
+ background:#fff;border:1px solid #dfe5f2;color:#4f5d79
+}
+#app .aps-security .security-check-panel .panel-body>button.secondary:hover:not(:disabled){
+ background:#f2f4ff;border-color:#cdd5ed;transform:translateY(-2px)
+}
+#app .aps-security .security-check-panel .panel-body>button:disabled{
+ opacity:.52;cursor:not-allowed;box-shadow:none;transform:none
+}
+#app .aps-security .security-check-panel button:focus-visible{
+ outline:2px solid #6067e8;outline-offset:3px
+}
+#app .aps-security .security-check-panel .panel-body>p.muted.csp-u027,
+#app .aps-security .security-check-panel .panel-body>p.muted.csp-u029{
+ margin:12px 0 0;color:#858fa5;font-size:11px;line-height:1.6
+}
+#app .aps-security .security-check-panel .csp-u053{
+ border-top:1px solid #e7ebf4;margin:24px 0 0;
+ padding:21px 0 0;
+ color:#4f5e7a;overflow-wrap:anywhere
+}
+#app .aps-security .security-check-panel .csp-u053>h3,
+#app .aps-security .security-check-panel .csp-u053>strong{
+ display:block;color:#303c59;font-weight:830;
+ font-size:13px;line-height:1.6;margin:0 0 10px
+}
+#app .aps-security .security-check-panel .csp-u053>p.muted{
+ margin:9px 0 13px;color:#8290a8;
+ line-height:1.6;font-size:11px
+}
+#app .aps-security .security-check-panel .csp-u053>button,
+#app .aps-security .security-check-panel .csp-u049 button{
+ border:1px solid #dbe0f0;background:#fff;color:#4b5880;
+ font-size:11px;font-weight:780;min-height:37px;
+ border-radius:9px;padding:9px 13px;
+ transition:background .17s,border-color .17s
+}
+#app .aps-security .security-check-panel .csp-u053>button:hover:not(:disabled),
+#app .aps-security .security-check-panel .csp-u049 button:hover:not(:disabled){
+ background:#eff1ff;border-color:#cbd1f1
+}
+#app .aps-security .security-check-panel .csp-u049{
+ border-top:1px solid #e9edf7;margin-top:18px;padding-top:18px
+}
+#app .aps-security .security-check-panel .csp-u049 h3{
+ color:#33405e;font-size:13px;font-weight:820;margin:0 0 10px
+}
+#app .aps-security .security-check-panel .table-scroll{
+ max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+ border:1px solid #edf0f6;border-radius:11px;
+ margin:14px 0 16px;scrollbar-width:thin;
+ scrollbar-color:#c7d0e7 transparent
+}
+#app .aps-security .security-check-panel .board-table{
+ width:100%;min-width:540px;border-collapse:separate;
+ border-spacing:0;margin:0
+}
+#app .aps-security .security-check-panel .board-table thead{
+ background:#f3f5ff
+}
+#app .aps-security .security-check-panel .board-table th{
+ padding:12px 14px;color:#7a87a2;font-weight:825;
+ font-size:10px;letter-spacing:.6px;
+ border-bottom:1px solid #e5e9f5
+}
+#app .aps-security .security-check-panel .board-table td{
+ color:#4f5d79;font-size:11px;line-height:1.5;
+ padding:12px 14px;border-bottom:1px solid #eff1f7;
+ overflow-wrap:anywhere
+}
+#app .aps-security .security-check-panel .board-table tbody tr:last-child td{
+ border-bottom:0
+}
+#app .aps-security .security-check-panel .board-table tbody tr:hover{
+ background:#f8f9ff
+}
+#app .aps-security .sec10-label{
+ display:block;margin:16px 0 7px;
+ color:#445370;font-size:11px;font-weight:825
+}
+#app .aps-security .sec10-select{
+ width:100%;max-width:690px;min-height:45px;
+ padding:11px 14px;border:1px solid #dfe5f2;border-radius:10px;
+ background:#f9faff;color:#33415c;font-size:12px;
+ transition:border-color .17s,box-shadow .17s
+}
+#app .aps-security .sec10-select:focus-visible{
+ outline:0;border-color:#666bed;box-shadow:0 0 0 4px #6872ee20
+}
+#app .aps-security .sec10-select:disabled{
+ opacity:.58;cursor:not-allowed
+}
+#app .aps-security .sec10-select + .note{
+ margin:12px 0 8px
+}
+#app .aps-security .sec10-select ~ button.primary{
+ display:flex;margin-top:19px
+}
+#app .aps-security .security-boundary-note{
+ display:flex;align-items:flex-start;gap:13px;
+ border:1px solid #f4dca8;border-left:3px solid #dba358;
+ border-radius:13px;padding:18px 20px;margin:23px 0 0;
+ background:linear-gradient(105deg,#fffbf4,#fff7eb);
+ color:#89602b;font-size:11.5px;line-height:1.75;
+ box-shadow:0 5px 18px #704a1609
+}
+#app .aps-security .security-boundary-note p{
+ flex:1;min-width:0;margin:0;overflow-wrap:anywhere
+}
+#app .aps-security .security-boundary-icon{
+ flex:none;width:22px;height:22px;margin-top:2px;color:#b78438
+}
+@media(max-width:950px){
+ #app .aps-security .security-hero-insignia{width:120px;height:120px}
+ #app .aps-security .security-hero{padding:26px 29px}
+}
+@media(max-width:650px){
+ #app .aps-security-shell>.main-content{padding:20px 15px 65px}
+ #app .aps-security-shell>.topbar{min-height:64px}
+ #app .aps-security-shell .topbar .top-pill{display:none}
+ #app .aps-security .security-hero{
+  min-height:0;padding:23px 21px;border-radius:17px
+ }
+ #app .aps-security .security-hero h1{
+  font-size:27px;letter-spacing:-.85px
+ }
+ #app .aps-security .security-hero p{font-size:12px}
+ #app .aps-security .security-hero-insignia{
+  position:absolute;right:-35px;top:-31px;
+  width:140px;height:140px;opacity:.23
+ }
+ #app .aps-security .security-panel-header{
+  padding:14px 16px;gap:12px;min-height:62px
+ }
+ #app .aps-security .security-panel-header:before{
+  width:32px;height:32px;font-size:10px
+ }
+ #app .aps-security .security-panel-header h2{font-size:12px}
+ #app .aps-security>.security-check-panel>.panel-body{padding:17px 16px 20px}
+ #app .aps-security .security-check-panel .panel-body>button{
+  width:100%;font-size:11px
+ }
+ #app .aps-security .security-boundary-note{
+  padding:15px;gap:10px;font-size:11px
+ }
+}
+@media(max-width:395px){
+ #app .aps-security .security-hero h1{font-size:25px}
+ #app .aps-security .security-panel-header{align-items:flex-start}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-security *,#app .aps-security *:before,#app .aps-security *:after,
+ #app .aps-security-shell .topbar *,#app .aps-security-shell .topbar *:before,
+ #app .aps-security-shell .topbar *:after{
+  transition:none!important;animation:none!important
+ }
+ #app .aps-security .security-check-panel button:hover,
+ #app .aps-security-shell .topbar .top-avatar:hover{transform:none}
+}
+@media(prefers-contrast:more){
+ #app .aps-security .security-hero{background:#17244e;border-color:#abb6e9}
+ #app .aps-security .security-hero p{color:#fff}
+ #app .aps-security>.security-check-panel{border-color:#78849c}
+ #app .aps-security .security-check-panel .panel-body>p.muted{
+  color:#3e4f6c
+ }
+ #app .aps-security .security-boundary-note{
+  color:#614013;border-color:#b98236
+ }
+}

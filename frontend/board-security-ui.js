@@ -7,10 +7,10 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
  const source=eligible==='cross_workspace'?'Cross-workspace session':
   eligible==='unassigned_nonadmin'?'Existing nonadministrator session':
   eligible==='admin_not_eligible'?'Administrator session — not eligible':'Inactive or unknown workspace';
- let html='<div class="page-head"><div><span class="label-top">Phase A / Security</span>'+
-  '<h1>Signed negative authorization</h1>'+
-  '<p>Verify real server-side denial on the twelve existing boards without changing application data or memberships.</p></div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>Existing signed session</h3></div>'+
+ let html='<div class="aps-security"><section class="page-head security-hero security-entrance" aria-labelledby="security-title"><div class="security-hero-copy"><span class="label-top"><span class="security-hero-dot" aria-hidden="true"></span> Phase A / Security</span>'+
+  '<h1 id="security-title">Signed negative authorization<span class="security-hero-stop">.</span></h1>'+
+  '<p>Verify real server-side denial on the twelve existing boards without changing application data or memberships.</p></div>'+'<div class="security-hero-insignia" aria-hidden="true"><svg viewBox="0 0 170 170" width="170" height="170" fill="none" stroke="currentColor" stroke-width="1.5">'+'<circle cx="85" cy="85" r="69" opacity=".17"/><circle cx="85" cy="85" r="48" opacity=".26"/>'+'<path d="M85 31 124 46v35c0 33-20 52-39 62-19-10-39-29-39-62V46l39-15Z" opacity=".6"/>'+'<path d="m67 85 13 13 25-27" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'+'</svg></div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>Existing signed session</h2></div>'+
   '<div class="panel-body"><div class="note"><b>'+escape(source)+'</b> · Read-only.<br>'+
   'This test calls existing signed Supabase board access, detail, event-history and board-list RPCs. It never performs an INSERT, UPDATE or DELETE.</div>'+
   '<p class="muted csp-u033" >For nonadministrator role denial, sign in with an existing authorized nonadmin in the primary workspace who is not a member of these boards. For cross-workspace denial, use an existing authorized user whose actual active workspace differs from Work Management. No impersonation, role switching, or temporary accounts.</p>'+
@@ -37,8 +37,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
   if(report.results?.length)html+='<button class="secondary csp-u047" data-action="security-copy-report" >Copy nonsecret result summary</button>';
   html+='</div>';
  }
- html+='</div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>FRT centralized role and signed-session acceptance</h3></div>'+
+ html+='</div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>FRT centralized role and signed-session acceptance</h2></div>'+
  '<div class="panel-body"><p class="muted">CP-FRT-SEC03 verifies the currently signed account and read-only role governance. This does not create users, assign permissions or modify financial records.</p>'+
  '<button class="primary" data-action="security-frt-readonly" '+(frtBusy?'disabled':'')+'>'+
  (frtBusy?'Verifying current signed session…':'Run FRT read-only signed acceptance')+'</button>';
@@ -54,8 +54,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
   html+='<p class="muted">Changes attempted: 0. Results do not certify fresh-session role changes, cross-workspace writes or local 5173 board-host operations.</p>'+
   '<button class="secondary" data-action="security-frt-copy">Copy nonsecret FRT result</button></div>';
  }
- html+='</div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>CI07 · Production signed FRT session check</h3></div>'+
+ html+='</div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>CI07 · Production signed FRT session check</h2></div>'+
  '<div class="panel-body"><p class="muted">Use the existing signed account. This read-only test calls the actual FRT bootstrap RPC through the deployed session-aware role resolver. It checks genuine FRT authorization without changing roles, revoking sessions or writing financial data. It does not certify token revocation or financial transactions.</p>'+
  '<button class="primary" data-action="security-ci07-readonly" '+(ci07Busy?'disabled':'')+'>'+
  (ci07Busy?'Verifying signed FRT role…':'Verify live FRT session guard — read-only')+'</button>';
@@ -71,8 +71,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
    '<p class="muted">Writes: 0 · Session revocation: NOT VERIFIED · Finance transactions: NOT VERIFIED. This is a positive, current-session FRT read test only.</p>'+
    '<button class="secondary" data-action="security-ci07-copy">Copy nonsecret CI07 result</button></div>';
  }
- html+='</div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>SEC14 · Signed restricted FRT reads</h3></div>'+
+ html+='</div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>SEC14 · Signed restricted FRT reads</h2></div>'+
  '<div class="panel-body"><p class="muted">Check the deployed restricted dashboard, list and, when a real request exists, detail endpoint under your own signed session. No finance writes or permission changes. An empty list leaves request-detail acceptance PENDING.</p>'+
  '<button class="primary" data-action="security-sec14-readonly" '+(sec14Busy?'disabled':'')+'>'+
  (sec14Busy?'Checking restricted FRT access…':'Verify SEC14 signed reads — read-only')+'</button>';
@@ -89,8 +89,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
    '<p class="muted">Financial writes: NOT VERIFIED · Legacy API revocation: NOT VERIFIED. This test never changes finance records.</p>'+
    '<button class="secondary" data-action="security-sec14-copy">Copy nonsecret SEC14 report</button></div>';
  }
- html+='</div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>SEC14 · Independent nonbootstrap / foreign-workspace denial</h3></div>'+
+ html+='</div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>SEC14 · Independent nonbootstrap / foreign-workspace denial</h2></div>'+
  '<div class="panel-body"><p class="muted">Under an existing nonbootstrap FRT-authorized account, the backend automatically selects a real foreign workspace and verifies both restricted read denials. No workspace ID, finance write or role change is required. Bootstrap accounts remain ineligible.</p>'+
  '<button class="primary" data-action="security-sec14-denial" '+(sec14DenialBusy?'disabled':'')+'>'+
  (sec14DenialBusy?'Checking nonbootstrap boundaries…':'Verify SEC14 nonbootstrap and cross-workspace denials')+'</button>';
@@ -107,8 +107,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
    '<p class="muted">Foreign workspace existence: '+escape(sec14DenialResult.foreignWorkspaceExistence||'NOT_VERIFIED')+'. Financial operations: NOT VERIFIED.</p>'+
    '<button class="secondary" data-action="security-sec14-denial-copy">Copy nonsecret SEC14 denial report</button></div>';
  }
- html+='</div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC07 · CRM platform-role activation</h3></div>'+
+ html+='</div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>CP-FRT-SEC07 · CRM platform-role activation</h2></div>'+
  '<div class="panel-body"><p class="muted">Run a signed, read-only test of the CRM platform-role backend and administrator isolation. A missing backend migration is BLOCKED, not PASS. No account, role, finance or board data is modified.</p>'+
  '<button class="primary" data-action="security-sec07-readonly" '+(sec07Busy?'disabled':'')+'>'+
  (sec07Busy?'Checking signed CRM backend…':'Verify signed CRM platform-role backend')+'</button>';
@@ -124,8 +124,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
   html+='<p class="muted">Writes attempted: 0. This read-only result cannot certify role mutation, fresh post-change sessions, FRT finance writes or the native 5173 board host.</p>'+
    '<button class="secondary" data-action="security-sec07-copy">Copy nonsecret SEC07 result</button></div>';
  }
- html+='</div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC09 · Signed platform-role acceptance</h3></div>'+
+ html+='</div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>CP-FRT-SEC09 · Signed platform-role acceptance</h2></div>'+
  '<div class="panel-body"><p class="muted">Run the existing FRT governance and CRM backend acceptance checks together under this signed session. This requires both results to agree and attempts no role, membership, board or finance writes. A PASS does not certify role assignment/revocation or a new post-change session.</p>'+
  '<button class="primary" data-action="security-sec09-readonly" '+(sec09Busy?'disabled':'')+'>'+
  (sec09Busy?'Verifying paired signed acceptance…':'Run CP-FRT-SEC09 signed acceptance')+'</button>';
@@ -143,8 +143,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
    '</tbody></table></div><p class="muted">Writes attempted: 0. No role changes or fresh-session permission transitions tested. Copy the nonsecret result for acceptance review.</p>'+
    '<button class="secondary" data-action="security-sec09-copy">Copy nonsecret SEC09 result</button></div>';
  }
- html+='</div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>Signed effective-permissions inspection · CP-FRT-SEC11</h3></div>'+
+ html+='</div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>Signed effective-permissions inspection · CP-FRT-SEC11</h2></div>'+
  '<div class="panel-body"><p class="muted">For every active signed account, including bootstrap administrators and HR members. Reads authoritative platform, application and board permissions for this account only. Does not grant board access or change roles. This is separate from controlled Viewer/Supervisor/Restored acceptance.</p>'+
  '<button class="primary" data-action="security-effective-access" '+(effectiveAccessBusy?'disabled':'')+'>'+
  (effectiveAccessBusy?'Checking signed effective permissions…':'Check signed role ceilings — read-only')+'</button>';
@@ -172,8 +172,8 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
   html+='<p class="muted">Read-only: 0 role changes or writes attempted. This does not certify fresh session issuance, actual finance transactions or role mutation.</p>'+
    '<button class="secondary" data-action="security-effective-access-copy">Copy sanitized permission summary</button></div>';
  }
- html+='</div></div>';
- html+='<div class="panel"><div class="panel-header"><h3>CP-FRT-SEC10 · Controlled transition read-only probe</h3></div>'+
+ html+='</div></section>';
+ html+='<section class="panel security-check-panel security-entrance"><div class="panel-header security-panel-header"><h2>CP-FRT-SEC10 · Controlled transition read-only probe</h2></div>'+
  '<div class="panel-body"><p class="muted">Use only with an independently approved isolated nonproduction role transition. The signed nonbootstrap user must already own the selected board and have an FRT module assignment before the transition. Sign out and sign in separately after each change. This probe first checks that the selected transition stage is active in the central backend; choosing a stage does not assign any role. It never modifies a role and cannot independently prove a newly issued Auth session or original ownership.</p>'+
  '<label class="sec10-label" for="sec10-board">Existing accessible board</label><select id="sec10-board" class="search-input sec10-select" '+(!(sec10Boards||[]).length?'disabled':'')+'>'+
  (sec10Boards||[]).filter(b=>typeof b?.id==='string').map(b=>'<option value="'+escape(b.id)+'">'+escape(b.name||'Board')+'</option>').join('')+
@@ -210,7 +210,7 @@ export function renderSecurityAcceptance({context,report,busy=false,progress=[],
    '</tbody></table></div><p class="muted">Writes: 0 · Fresh Auth session independently verified: NO · Prior ownership independently verified: NO. Do not treat this report alone as final mutation/revocation acceptance.</p>'+
    '<button class="secondary" data-action="security-sec10-copy">Copy nonsecret SEC10 result</button></div>';
  }
- html+='</div></div>';
- html+='<div class="note security-note csp-u050" >The real target board UUIDs were confirmed through PostgreSQL inventory. A different workspace UUID is not a fabricated board. A successful negative result cannot substitute for application-level acceptance, membership revocation testing or field-level security. Reports are temporary in this browser tab and contain no names, emails, access tokens or location data.</div>';
- return html;
+ html+='</div></section>';
+ html+='<aside class="note security-note csp-u050 security-boundary-note" role="note"><svg class="security-boundary-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 22s8-4.2 8-10V5l-8-3-8 3v7c0 5.8 8 10 8 10Z"/><path d="M12 8v5M12 17h.01"/></svg><p>The real target board UUIDs were confirmed through PostgreSQL inventory. A different workspace UUID is not a fabricated board. A successful negative result cannot substitute for application-level acceptance, membership revocation testing or field-level security. Reports are temporary in this browser tab and contain no names, emails, access tokens or location data.</p></aside>';
+ return html+'</div>';
 }
