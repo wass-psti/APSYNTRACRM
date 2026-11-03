@@ -2,6 +2,7 @@
  * The existing module_role_assignments and work_board_members stay authoritative.
  */
 import {ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
+import {roleConfigurationIcon} from './role-configuration-visuals.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const APSYNTRA_CRM_PLATFORM_ROLES=Object.freeze(['admin','supervisor','employee','viewer']);
@@ -86,33 +87,34 @@ function selected(data,id){
 }
 export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,busy=false,error=''}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
- let html='<div class="page-head"><div><span class="label-top">Administration / Bootstrap authority</span>'+
- '<h1>User Role Management</h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
- '<button class="secondary" data-action="user-role-refresh" '+(busy?'disabled':'')+'>Refresh assignments</button></div>'+
- '<div class="note security-note">Only the two verified bootstrap administrators can apply changes. The backend rejects self-promotion, protected administrators, stale updates, and cross-workspace targets. Changes are audited and visible to subsequent signed sessions.</div>';
+ let html='<div class="aps-user-role-management"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / Bootstrap authority</span>'+
+ '<h1 id="user-role-title">User Role Management<span class="user-role-heading-stop">.</span></h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
+ '<button class="secondary user-role-refresh" data-action="user-role-refresh" '+(busy?'disabled':'')+'>'+roleConfigurationIcon('refresh')+'<span>Refresh assignments</span></button>'+
+ '<svg class="user-role-hero-decoration" viewBox="0 0 420 210" aria-hidden="true" focusable="false" fill="none"><circle cx="345" cy="0" r="122" stroke="currentColor" stroke-opacity=".16"/><circle cx="345" cy="0" r="192" stroke="currentColor" stroke-opacity=".07"/><path d="M95 230C201 80 319 86 449 139" stroke="currentColor" stroke-opacity=".18"/></svg></section>'+
+ '<div class="note security-note user-role-warning user-role-entrance"><span class="user-role-warning-icon" aria-hidden="true">'+roleConfigurationIcon('lock')+'</span><div>Only the two verified bootstrap administrators can apply changes. The backend rejects self-promotion, protected administrators, stale updates, and cross-workspace targets. Changes are audited and visible to subsequent signed sessions.</div></div>';
  if(error)html+='<div class="error-banner" role="alert">'+esc(error)+'</div>';
  if(data?.crmPlatformUnavailable)html+='<div class="note security-note" role="status">APSYNTRA CRM platform role assignments are unavailable because the required backend migration is not installed. CRM changes are disabled. Existing application and board assignments remain governed by the centralized backend.</div>';
- if(!data)return html+'<div class="panel"><p class="muted">Loading authorized workspace members…</p></div>';
+ if(!data)return html+'<div class="panel user-role-loading"><p class="muted">Loading authorized workspace members…</p></div></div>';
  const u=selected(data,selectedUserId)||data.users[0]||null;
- html+='<div class="stat-grid">'+[
-  ['Active workspace members',data.users.length],['Application assignments',data.moduleAssignments.length],
-  ['Board memberships',data.boardAssignments.length],['Available boards',data.boards.length]
- ].map(([k,v])=>'<div class="stat-card"><span class="stat-label">'+esc(k)+'</span><strong class="stat-value">'+Number(v)+'</strong></div>').join('')+'</div>';
- html+='<div class="panel"><div class="panel-header"><h3>Select user</h3><span>Workspace scoped</span></div>'+
- '<div class="panel-body"><label for="managed-user">Existing account</label><select id="managed-user" class="search-input" data-action="user-role-select">'+
+ html+='<section class="stat-grid user-role-stat-grid user-role-entrance" aria-label="User role management statistics">'+[
+  ['Active workspace members',data.users.length,'users'],['Application assignments',data.moduleAssignments.length,'roles'],
+  ['Board memberships',data.boardAssignments.length,'boards'],['Available boards',data.boards.length,'proposals']
+ ].map(([k,v,icon])=>'<div class="stat-card user-role-stat-card user-role-stat-'+icon+'"><span class="user-role-stat-icon" aria-hidden="true">'+roleConfigurationIcon(icon)+'</span><span class="stat-label">'+esc(k)+'</span><strong class="stat-value">'+Number(v)+'</strong></div>').join('')+'</section>';
+ html+='<section class="panel user-role-selection-panel user-role-entrance" aria-labelledby="user-role-select-title"><div class="panel-header"><h3 id="user-role-select-title">Select user</h3><span>Workspace scoped</span></div>'+
+ '<div class="panel-body"><label for="managed-user">Existing account</label><select id="managed-user" class="search-input user-role-account-select" data-action="user-role-select">'+
  data.users.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===u?.id?'selected':'')+'>'+esc(x.name||x.email)+' — '+esc(x.platformRole)+(x.protected?' (protected)':'')+'</option>').join('')+
- '</select></div></div>';
- if(!u)return html+'<p class="muted">No active members.</p>';
- html+='<div class="panel"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>'+esc(u.platformRole)+'</span></div>'+
+ '</select></div></section>';
+ if(!u)return html+'<p class="muted">No active members.</p></div>';
+ html+='<section class="panel user-role-selected-panel user-role-entrance" aria-label="Selected user authorization"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>'+esc(u.platformRole)+'</span></div>'+
  '<div class="panel-body">'+(u.protected||['admin_general_manager'].includes(u.platformRole)?
- '<div class="note security-note">Protected administrator — role modifications are intentionally disabled.</div>':
- '<div class="note">Select a module or board below to update this user’s actual role. The next dialog requires explicit confirmation.</div>')+
- '</div></div>';
+ '<div class="note security-note user-role-protected">Protected administrator — role modifications are intentionally disabled.</div>':
+ '<div class="note user-role-helper">Select a module or board below to update this user’s actual role. The next dialog requires explicit confirmation.</div>')+
+ '</div></section>';
  const locked=!!u.protected||u.platformRole==='admin_general_manager'||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
- html+='<div class="section-header"><strong>APSYNTRA CRM Platform Role</strong></div>'+
- '<div class="note security-note">This is the CRM-wide authorization ceiling, separate from WatchdogWorkspace identity, application assignments and board membership. Changes cannot grant module roles or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
- '<div class="panel"><div class="panel-body"><div class="settings-detail"><label>Inherited WatchdogWorkspace role</label><strong>'+
+ html+='<div class="section-header user-role-section-header user-role-entrance"><strong>APSYNTRA CRM Platform Role</strong></div>'+
+ '<div class="note security-note user-role-ceiling-note">This is the CRM-wide authorization ceiling, separate from WatchdogWorkspace identity, application assignments and board membership. Changes cannot grant module roles or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
+ '<div class="panel user-role-platform-panel"><div class="panel-body"><div class="settings-detail"><label>Inherited WatchdogWorkspace role</label><strong>'+
  esc(u.platformRole)+'</strong></div><div class="settings-detail"><label>CRM platform role</label><strong>'+
  esc(data.crmPlatformUnavailable?'Unavailable — backend migration pending':crm?.effectiveRole||'Unverified')+(data.crmPlatformUnavailable?'':crm?.assignedRole?' (explicit)':' (inherited)')+
  '</strong></div>'+
@@ -121,8 +123,8 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  (crm?.assignedRole?'<button class="secondary" data-action="user-role-revert-crm-platform" data-user-id="'+esc(u.id)+'" '+
  (locked?'disabled':'')+'>Revert to inherited role</button>':'')+
  '</div></div>';
- html+='<div class="section-header"><strong>Application-specific assignments</strong></div>'+
- '<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr><th>Application</th><th>Effective stored role</th><th>Enforcement</th><th>Action</th></tr></thead><tbody>';
+ html+='<div class="section-header user-role-section-header"><strong>Application-specific assignments</strong></div>'+
+ '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll"><table class="board-table user-role-table" aria-label="Application-specific assignments"><thead><tr><th scope="col">Application</th><th scope="col">Effective stored role</th><th scope="col">Enforcement</th><th scope="col">Action</th></tr></thead><tbody>';
  for(const [id,name] of ROLE_MODULE_OPTIONS){
   const a=data.moduleAssignments.find(x=>x.userId===u.id&&x.moduleId===id);
   const opt=MODULE_ROLE_OPTIONS[id]||[];
@@ -134,9 +136,9 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   '</td></tr>';
  }
  html+='</tbody></table></div></div>';
- html+='<div class="section-header"><strong>Individual board access</strong></div>'+
- '<div class="note">Viewer permits reads; Editor permits reads and writes. Owner privileges cannot be granted or changed here. Backend checks are performed on every authorized board request.</div>'+
- '<div class="panel"><div class="table-scroll"><table class="board-table"><thead><tr><th>Board</th><th>Membership</th><th>Action</th></tr></thead><tbody>';
+ html+='<div class="section-header user-role-section-header"><strong>Individual board access</strong></div>'+
+ '<div class="note user-role-board-note">Viewer permits reads; Editor permits reads and writes. Owner privileges cannot be granted or changed here. Backend checks are performed on every authorized board request.</div>'+
+ '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll"><table class="board-table user-role-table" aria-label="Individual board access"><thead><tr><th scope="col">Board</th><th scope="col">Membership</th><th scope="col">Action</th></tr></thead><tbody>';
  for(const board of data.boards){
   const a=data.boardAssignments.find(x=>x.userId===u.id&&x.boardId===board.id);
   html+='<tr><td>'+esc(board.name)+'</td><td>'+esc(a?.role||'No membership')+'</td><td>'+
@@ -144,6 +146,6 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    (a&&a.role!=='owner'?'<button class="secondary" data-action="user-role-revoke-board" data-user-id="'+esc(u.id)+'" data-resource="'+esc(board.id)+'" '+(locked?'disabled':'')+'>Revoke</button>':'')+
   '</td></tr>';
  }
- html+='</tbody></table></div></div><p class="muted">The existing backend still governs approval, export, finance and domain-specific operations separately. A board membership alone does not grant access to sensitive domain records.</p>';
- return html;
+ html+='</tbody></table></div></div><p class="muted user-role-boundary-note">'+roleConfigurationIcon('shield')+'<span>The existing backend still governs approval, export, finance and domain-specific operations separately. A board membership alone does not grant access to sensitive domain records.</span></p>';
+ return html+'</div>';
 }
