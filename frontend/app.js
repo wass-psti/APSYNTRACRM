@@ -1,5 +1,7 @@
 import {AuthClient,ApiError} from './session.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
+import {renderAuthMarkup} from './auth-markup.js';
+import {mountAuthExperience} from './auth-experience.js';
 import {DomainApi,validUuid} from './data.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
@@ -121,27 +123,16 @@ function toast(message,error=false){
 }
 function errorMessage(err){if(err instanceof ApiError&&err.status===403)return 'Access denied by your workspace permissions.';return err?.message||'Unable to complete the request.';}
 function notice(err){toast(errorMessage(err),true);}
+let authVisualController=null;
+function stopAuthVisuals(){
+ authVisualController?.destroy?.();
+ authVisualController=null;
+}
 function renderLogin(message=''){
  stopTimeTrackerClock();
- root.innerHTML=`<div class="auth-layout">
- <div class="auth-left"><a href="#/login" class="brand"><img class="brand-mark" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/><span>APSYNTRA <span class="csp-u043" >CRM</span></span></a>
- <section class="auth-panel"><span class="eyebrow">Your connected workspace</span>
- <h1>Welcome back<span class="csp-u010" >.</span></h1>
- <p class="muted">Sign in with your existing WatchdogWorkspace account to manage boards, collaborate, and stay on top of every detail.</p>
- ${message?`<div class="login-error" role="alert">${e(message)}</div>`:''}
- <form id="login-form"><div class="field"><label for="email">Work email</label><input id="email" name="email" type="email" placeholder="you@company.com" autocomplete="username" required autofocus/></div>
- <div class="field"><label for="password">Password</label><div class="password-wrap"><input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required minlength="1"/><button type="button" class="eye-btn" data-action="toggle-password">Show</button></div></div>
- <button class="primary wide" type="submit" id="login-submit">Sign in to workspace <span aria-hidden="true">→</span></button></form>
- <p class="csp-u064" >Access is managed by your organization. No new account is created.</p></section>
- <div class="auth-bottom">© ${new Date().getFullYear()} APSYNTRA CRM · Secured by Supabase Authentication</div></div>
- <div class="auth-right"><section class="auth-pitch"><span class="eyebrow csp-u014" >Built for better work</span>
- <h2>One workspace.<br/>Every possibility.</h2><p>Bring work, tasks, and conversations together in a single, beautifully organized platform.</p>
- <div class="preview"><div class="preview-top"><span class="dot csp-u003" ></span><span class="dot csp-u004" ></span><span class="dot csp-u001" ></span><strong class="csp-u022" >Your team workspace</strong></div>
- <div class="preview-body"><div class="csp-u038" >Project overview</div>
- <div class="preview-row"><span class="csp-u066" ></span><b class="csp-u018" >Plan upcoming activities</b><span class="preview-status">Done</span></div>
- <div class="preview-row"><span class="csp-u068" ></span><b class="csp-u018" >Review team assignments</b><span class="preview-status csp-u005" >In progress</span></div>
- <div class="preview-row"><span class="csp-u067" ></span><b class="csp-u018" >Monitor active requests</b><span class="preview-status csp-u002" >Planned</span></div>
- <div class="preview-line csp-u071" ></div><div class="preview-line csp-u070" ></div></div></div></section></div></div>`;
+ stopAuthVisuals();
+ root.innerHTML=renderAuthMarkup({message});
+ authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
 function sidebar(){
  const currentBoard=state.boardId;
@@ -198,6 +189,7 @@ async function mountSignedTimeTrackerMaps(){
  if(configs.length)await mountTimeTrackerMaps(root,configs);
 }
 function shell(body){
+ stopAuthVisuals();
  const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':'Settings';
  disposeTimeTrackerMaps();
  root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
@@ -1587,7 +1579,7 @@ async function openBoardStructure(){
 
 async function action(name,button){
  switch(name){
- case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
+ case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';button.setAttribute('aria-label',f.type==='password'?'Show password':'Hide password');button.setAttribute('aria-pressed',String(f.type==='text'));}break;}
  case 'logout':{clearBulkActivation();state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'board-activity':{await openBoardActivity();break;}
