@@ -96,12 +96,15 @@ test('rendering escapes untrusted labels, never creates destructive primary acti
 });
 test('configured settings save uses verified revision, validated owned column labels',async()=>{
  const s=spy(),client=new BoardStructureClient(s.api);
- const saved=await client.save(detail,normalizeBoardUi(raw,board),{enabled:true});
+ const managerSettings=normalizeBoardUi({...raw,
+  column_labels:{[custom]:'Supervisor comment'}},board);
+ const saved=await client.save(detail,managerSettings,{enabled:true});
  assert.equal(saved.revision,2);
  assert.deepEqual(s.calls.map(c=>c[0]),['allowed','wm_board_ui_save']);
  assert.equal(s.calls[1][1].p_expected_revision,1);
  assert.equal(s.calls[1][1].p_primary_label,'Work item');
- assert.equal(s.calls[1][1].p_column_labels[domain],'Attendance reference');
+ assert.equal(s.calls[1][1].p_column_labels[custom],'Supervisor comment');
+ assert.equal(s.calls[1][1].p_column_labels[domain],undefined);
  await assert.rejects(()=>client.save(detail,{...normalizeBoardUi(raw,board),
   columnLabels:{[other]:'Foreign field'}},{enabled:true}),/Foreign or invalid/);
  await assert.rejects(()=>client.save(detail,{...normalizeBoardUi(raw,board),
@@ -204,4 +207,29 @@ test('settings writes exclude restricted module columns even for board managers'
  const s=spy(),client=new BoardStructureClient(s.api);
  await assert.rejects(()=>client.save(restrictedDetail,settings,{enabled:true}),/Foreign or invalid/);
  assert.equal(s.calls.some(call=>call[0]==='wm_board_ui_save'),false);
+});
+
+test('first-run board configuration accepts empty preferences without hiding existing views',()=>{
+ const initial=normalizeBoardUi({
+  board_id:board,revision:0,primary_label:'Record',tabs:[],column_labels:{}
+ },board);
+ assert.equal(initial.status,'VERIFIED_READ');
+ assert.equal(initial.revision,0);
+ assert.deepEqual(applyBoardViewSettings(tabs,initial),tabs);
+ assert.equal(displayColumnLabel(initial,describeBoardColumns(detail)[0]),'Record');
+});
+test('manager save forbids persisted domain-label overrides and marks inputs protected',async()=>{
+ const clientSpy=spy(),client=new BoardStructureClient(clientSpy.api);
+ const domainSettings=normalizeBoardUi({...raw,
+  column_labels:{[domain]:'Change system field label'}},board);
+ await assert.rejects(()=>client.save(detail,domainSettings,{enabled:true}),
+  /Foreign or invalid column label/);
+ assert.equal(clientSpy.calls.some(c=>c[0]==='wm_board_ui_save'),false);
+ const html=renderBoardStructureAdmin(detail,normalizeBoardUi({...raw,
+  column_labels:{[custom]:'Note display'}},board),{
+   canManage:true,availableTabs:tabs,enabled:true
+  });
+ assert.match(html,/application schema — protected/);
+ assert.doesNotMatch(html,/name="columnLabel:11111111-1111-4111-8111-111111111111"/);
+ assert.match(html,/name="columnLabel:22222222-2222-4222-8222-222222222222"/);
 });

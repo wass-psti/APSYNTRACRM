@@ -1039,7 +1039,7 @@ async function openBoardStructure(){
      position:Number(fd.get('order:'+t.key))||currentTabs.get(t.key)?.position||index+1
     })).sort((a,b)=>a.position-b.position).map(({position,...tab})=>tab);
     const columnLabels=Object.fromEntries(describeBoardColumns(detail)
-     .filter(col=>col.id).map(col=>
+     .filter(col=>col.kind==='custom').map(col=>
       [col.id,String(fd.get('columnLabel:'+col.id)||col.name||'').trim()]));
     await boardStructureClient.save(detail,{
      ...settings,primaryLabel:String(fd.get('primaryLabel')||''),

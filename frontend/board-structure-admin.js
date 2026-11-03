@@ -70,7 +70,7 @@ export function normalizeBoardUi(raw,boardIdValue){
   columnLabels:Object.fromEntries(Object.entries(raw.column_labels).map(([k,v])=>[k,v.trim()]))};
 }
 export function applyBoardViewSettings(available,settings){
- if(settings?.status!=='VERIFIED_READ')return [...available];
+ if(settings?.status!=='VERIFIED_READ'||settings.tabs.length===0)return [...available];
  const original=new Map(available.map(t=>[t.key,t]));
  const result=[],seen=new Set();
  for(const entry of settings.tabs){
@@ -121,7 +121,7 @@ export class BoardStructureClient{
     tabs.some(t=>!TAB_KEYS.has(t?.key)||typeof t.visible!=='boolean'||
       !nameOf(t.label)||nameOf(t.label).length>60))
    fail('Invalid board view configuration.');
-  const allowedIds=new Set(describeBoardColumns(detail).filter(c=>c.id).map(c=>c.id));
+  const allowedIds=new Set(describeBoardColumns(detail).filter(c=>c.kind==='custom').map(c=>c.id));
   const labels=settings.columnLabels||{};
   if(Object.entries(labels).some(([id,label])=>!allowedIds.has(id)||
     !validUuid(id)||!nameOf(label)||nameOf(label).length>80))
@@ -205,9 +205,11 @@ export function renderBoardStructureAdmin(detail,settings,
   '<h3>Column display names</h3>'+
   cols.slice(1).map(c=>
    '<div class="field"><label for="structure-label-'+esc(c.id)+'">'+esc(c.name)+
-   (c.immutable?' (application schema)':' (custom column)')+'</label>'+
-   '<input id="structure-label-'+esc(c.id)+'" maxlength="80" name="columnLabel:'+esc(c.id)+
-   '" value="'+esc(labels[c.id]||c.name)+'"'+disabled+' /></div>').join('')+
+   (c.immutable?' (application schema — protected)':' (custom column)')+'</label>'+
+   '<input id="structure-label-'+esc(c.id)+'" maxlength="80"'+
+   (c.kind==='custom'?' name="columnLabel:'+esc(c.id)+'"':'')+
+   ' value="'+esc(labels[c.id]||c.name)+'"'+
+   (c.immutable?' readonly disabled':'')+disabled+' /></div>').join('')+
   '<div class="modal-actions"><button class="primary" type="submit"'+disabled+'>Save board display settings</button></div></form></section>'+
   '<section class="panel panel-body"><h3>Additional columns</h3>'+
   '<p class="muted">Application-defined columns are dependency-protected. Custom columns may be updated and deleted only after server approval and data validation.</p>'+
