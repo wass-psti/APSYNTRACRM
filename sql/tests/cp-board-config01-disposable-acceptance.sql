@@ -130,6 +130,9 @@ BEGIN
  IF public.wm_board_ui_read(v_board)->>'primary_label'<>'Work item' THEN
   RAISE EXCEPTION 'Signed viewer cannot read board configuration';
  END IF;
+ IF public.wm_board_ui_read(v_board)->'column_labels'<>'{}'::jsonb THEN
+  RAISE EXCEPTION 'Signed viewer received manager-only column label metadata';
+ END IF;
  BEGIN
   PERFORM public.wm_board_ui_save(v_board,1,'Unauthorized',
     '[{"key":"items","label":"Tasks","visible":true}]'::jsonb,'{}'::jsonb);
@@ -155,8 +158,14 @@ BEGIN
  END IF;
 
  -- Legacy editor-accessible write RPCs must be unreachable to signed editors.
- IF has_function_privilege('authenticated','public.wm_delete_board_column(uuid)','EXECUTE') OR
-    has_function_privilege('authenticated','public.wm_add_board_column(uuid,text,text,jsonb)','EXECUTE') OR
+ IF (SELECT count(*) FROM pg_catalog.pg_proc f
+     JOIN pg_catalog.pg_namespace n ON n.oid=f.pronamespace
+     WHERE n.nspname='public' AND f.proname IN
+      ('wm_add_board_column','wm_add_board_column_at','wm_change_board_column_type',
+       'wm_delete_board_column','wm_duplicate_board_column','wm_move_board_column',
+       'wm_update_board_column')
+       AND (has_function_privilege('authenticated',f.oid,'EXECUTE')
+        OR has_function_privilege('anon',f.oid,'EXECUTE')))>0 OR
     has_table_privilege('authenticated','public.wm_board_ui_settings','SELECT') THEN
   RAISE EXCEPTION 'Legacy bypass or direct settings privilege remains';
  END IF;

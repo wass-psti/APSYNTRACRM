@@ -3,6 +3,8 @@
  */
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
+import {moduleByBoardName} from './board-manifest.js';
+import {boardGridColumns} from './board-grid.js';
 
 export const BOARD_STRUCTURE_ADMIN_ENABLED=false;
 export const BOARD_STRUCTURE_TYPES=Object.freeze([
@@ -32,10 +34,13 @@ const isCustomKey=key=>typeof key==='string'&&
 
 export function describeBoardColumns(detail){
  const columns=Array.isArray(detail?.columns)?detail.columns:[];
+ const knownModule=moduleByBoardName(detail?.board?.name);
+ const allowed=knownModule?new Set(boardGridColumns(detail,{allowCustom:true})
+  .slice(2).map(column=>column.key.slice(4))):null;
  return [
   {id:null,key:'record',name:'Record',kind:'primary',deletable:false,
    type:'text',immutable:true},
-  ...columns.filter(col=>validUuid(col.id)).map(col=>{
+  ...columns.filter(col=>validUuid(col.id)&&(!allowed||allowed.has(col.id))).map(col=>{
    const custom=col.system_key==null&&isCustomKey(col.column_key);
    return {id:col.id,key:'col:'+col.id,name:String(col.name||'Column'),
     kind:custom?'custom':'domain',deletable:custom,
@@ -160,8 +165,15 @@ export class BoardStructureClient{
   return result;
  }
 }
-export function renderBoardStructureAdmin(detail,settings,{canManage=false,availableTabs=[]}={}){
- const ready=BOARD_STRUCTURE_ADMIN_ENABLED&&canManage&&settings?.status==='VERIFIED_READ';
+export function renderBoardStructureAdmin(detail,settings,
+ {canManage=false,availableTabs=[],enabled=BOARD_STRUCTURE_ADMIN_ENABLED}={}){
+ const ready=enabled===true&&canManage&&settings?.status==='VERIFIED_READ';
+ if(!ready)return '<section class="board-structure-admin" aria-label="Board structure">'+
+  '<h3>Primary column — permanently protected</h3>'+
+  '<p class="muted" role="status">'+(enabled===true?
+   'Only authorized board managers can configure columns and views.':
+   'Board structure management is staged but not activated. Existing board operations remain available.')+
+  '</p></section>';
  const disabled=ready?'':' disabled';
  const cols=describeBoardColumns(detail);
  const primary=displayColumnLabel(settings,cols[0]);

@@ -34,7 +34,8 @@ BEGIN
   'revision',coalesce(v.revision,0),
   'primary_label',coalesce(v.primary_label,'Record'),
   'tabs',coalesce(v.tabs,'[]'::jsonb),
-  'column_labels',coalesce(v.column_labels,'{}'::jsonb)
+  'column_labels',CASE WHEN public.work_board_access(p_board_id,'manage')
+    THEN coalesce(v.column_labels,'{}'::jsonb) ELSE '{}'::jsonb END
  );
 END;
 $function$;
@@ -243,4 +244,22 @@ REVOKE EXECUTE ON FUNCTION public.wm_move_board_column(uuid,integer)
  FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.wm_update_board_column(uuid,text,jsonb,boolean)
  FROM authenticated;
+
+-- Fail the entire transaction if any legacy editor-accessible path remains.
+DO $verify_grants$
+DECLARE legacy_count integer;
+BEGIN
+ SELECT count(*) INTO legacy_count FROM pg_catalog.pg_proc f
+ JOIN pg_catalog.pg_namespace n ON n.oid=f.pronamespace
+ WHERE n.nspname='public' AND f.proname IN
+  ('wm_add_board_column','wm_add_board_column_at','wm_change_board_column_type',
+   'wm_delete_board_column','wm_duplicate_board_column','wm_move_board_column',
+   'wm_update_board_column')
+  AND (pg_catalog.has_function_privilege('authenticated',f.oid,'EXECUTE')
+    OR pg_catalog.has_function_privilege('anon',f.oid,'EXECUTE'));
+ IF legacy_count<>0 THEN
+  RAISE EXCEPTION 'Legacy column-management execution grants remain; activation aborted'
+   USING ERRCODE='42501';
+ END IF;
+END $verify_grants$;
 COMMIT;

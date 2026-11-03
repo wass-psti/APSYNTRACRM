@@ -49,8 +49,7 @@ test('no production configuration calls while feature gate is disabled',async()=
  const html=renderBoardStructureAdmin(detail,{status:'LOCKED'},{canManage:true,availableTabs:tabs});
  assert.match(html,/staged but not activated/);
  assert.match(html,/Primary column — permanently protected/);
- assert.match(html,/data-structure-delete/);
- assert.match(html,/disabled/);
+ assert.doesNotMatch(html,/data-structure-delete|columnLabel:|Supervisor note/);
 });
 test('primary and application columns cannot be physically deleted or retyped',async()=>{
  const columns=describeBoardColumns(detail);
@@ -87,7 +86,8 @@ test('signed state normalizes display-only labels and preserves immutable IDs',(
 test('rendering escapes untrusted labels, never creates destructive primary actions',()=>{
  const settings=normalizeBoardUi({...raw,primary_label:'<img src=x onerror=1>',
   column_labels:{[domain]:'<svg onload=1>'}},board);
- const html=renderBoardStructureAdmin(detail,settings,{canManage:false,availableTabs:tabs});
+ const html=renderBoardStructureAdmin(detail,settings,{
+  canManage:true,availableTabs:tabs,enabled:true});
  assert.match(html,/&lt;img src=x onerror=1&gt;/);
  assert.match(html,/&lt;svg onload=1&gt;/);
  assert.doesNotMatch(html,/<img src=|<svg onload=/);
@@ -167,9 +167,24 @@ test('typed domain board keeps restricted projection until approved config gate'
 });
 test('view order controls are shown only as disabled until server activation',()=>{
  const ui=renderBoardStructureAdmin(detail,normalizeBoardUi(raw,board),{
-  canManage:true,availableTabs:tabs});
+  canManage:true,availableTabs:tabs,enabled:true});
  assert.match(ui,/name="order:items"/);
  assert.match(ui,/name="order:attendance"/);
  assert.match(ui,/board-structure-tab/);
- assert.match(ui,/disabled/);
+ assert.doesNotMatch(ui,/staged but not activated/);
 });
+test('locked or unauthorized administration does not enumerate hidden metadata',()=>{
+ const context={...detail,columns:[
+  ...detail.columns,
+  {id:other,column_key:'col_hidden',name:'Sensitive employee identity',
+   data_type:'text',system_key:null}
+ ]};
+ const settings=normalizeBoardUi(raw,board);
+ const locked=renderBoardStructureAdmin(context,settings,{canManage:true,availableTabs:tabs});
+ const denied=renderBoardStructureAdmin(context,settings,{
+  canManage:false,availableTabs:tabs,enabled:true});
+ assert.doesNotMatch(locked,/Sensitive employee identity|Attendance Ref/);
+ assert.doesNotMatch(denied,/Sensitive employee identity|Attendance Ref/);
+ assert.match(denied,/Only authorized board managers/);
+});
+

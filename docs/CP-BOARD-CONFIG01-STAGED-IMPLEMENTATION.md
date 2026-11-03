@@ -34,3 +34,9 @@ First implementation target: TimeTracker Attendance. Shared frontend modules als
 5. Implement validated **default values for newly created items** and a separately approved domain-dependent migration pathway before claiming support for all column types and all application-owned column changes. Current staged mutation is deliberately conservative about potentially destructive type changes and populated columns.
 
 Do not interpret successful mock tests or disposable SQL fixture results as production authorization acceptance.
+
+## Final privacy hardening
+
+The configuration dialog does **not enumerate** underlying column names to users when the feature is locked or they lack board MANAGE authority. On activation, the signed settings-read RPC may be used by board viewers for primary display and tab labels, but **redacts the complete column-label override map** for nonmanagers. Managers can edit only module-approved and safe custom column metadata in the frontend; application-restricted fields do not appear in the structure-management listing. This intentionally limits per-column display-label propagation to managers until an independently reviewed field-level authorization contract is available.
+
+The activation SQL also verifies the actual PostgreSQL EXECUTE grants for all seven legacy column writers and aborts the transaction if any editor-accessible bypass remains. The separate production permission-change approval must explicitly include retiring these legacy RPC grants and an integration compatibility plan.
