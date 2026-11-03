@@ -4,6 +4,7 @@ import {renderAuthMarkup} from './auth-markup.js';
 import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
+import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {DomainApi,validUuid} from './data.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
@@ -135,6 +136,7 @@ function renderLogin(message=''){
  stopAuthVisuals();
  stopSidebarSelection();
  stopOverviewMotion();
+ stopBoardCatalogMotion();
  root.innerHTML=renderAuthMarkup({message});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
@@ -249,8 +251,10 @@ function shell(body){
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
+ root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
  mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
+ mountBoardCatalogMotion(root.querySelector('.aps-boards'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
 }
@@ -365,18 +369,54 @@ function overview(){
 }
 function boardsPage(){
  const items=cards().filter(b=>matchBoardSearch(b,state.boardSearch));
- return `<div class="page-head"><div><span class="label-top">Workspace / Boards</span><h1>My boards</h1><p>Everything your team is working on, organized in one place.</p></div>
-  <button class="primary" data-action="new-board">＋ New board</button></div>
-  <div class="toolbar"><div class="segmented" aria-label="Board status">
-   <button class="segment ${!state.showArchived&&!state.showTrash?'active':''}" data-action="active-boards">Active</button>
-   <button class="segment ${state.showArchived?'active':''}" data-action="archived-boards">Archived</button>
-   ${BOARD_CARD_LIFECYCLE_ENABLED?'<button class="segment '+(state.showTrash?'active':'')+'" data-action="trashed-boards">Trash</button>':''}
-   </div><div class="search-wrap"><input type="search" class="search-input" id="board-search" placeholder="Search boards…" aria-label="Search boards" value="${e(state.boardSearch)}" autocomplete="off" /></div></div>
-  <p class="board-search-result" id="board-search-result" role="status" aria-live="polite">${items.length} matching board${items.length===1?'':'s'}</p>
+ const active=!state.showArchived&&!state.showTrash;
+ const selectedStatus=state.showTrash?'Trash':state.showArchived?'Archived':'Active';
+ return `<div class="aps-boards">
+  <section class="page-head boards-hero boards-entrance" aria-labelledby="boards-page-title">
+   <div class="boards-hero-copy">
+    <span class="label-top"><span class="boards-hero-dot" aria-hidden="true"></span>Workspace / Boards</span>
+    <h1 id="boards-page-title">My boards<span class="boards-heading-stop">.</span></h1>
+    <p>Everything your team is working on, organized in one place.</p>
+   </div>
+   <button type="button" class="primary boards-create-button" data-action="new-board">`+overviewIcon('plus')+`<span>New board</span></button>
+   <svg class="boards-hero-decor" viewBox="0 0 500 220" aria-hidden="true" focusable="false" fill="none">
+    <circle cx="397" cy="30" r="130" stroke="currentColor" stroke-opacity=".13"/>
+    <circle cx="397" cy="30" r="190" stroke="currentColor" stroke-opacity=".06"/>
+    <path d="M176 250C268 48 352 137 506 81" stroke="currentColor" stroke-opacity=".14"/>
+    <circle cx="251" cy="102" r="3" fill="#97e7ef" fill-opacity=".86"/>
+    <circle cx="475" cy="182" r="4" fill="#b9b8ff" fill-opacity=".85"/>
+   </svg>
+  </section>
+  <section class="boards-filter-panel boards-entrance" aria-label="Browse workspace boards">
+   <div class="toolbar boards-toolbar">
+    <div class="boards-status-picker">
+     <span class="boards-control-label">BOARD STATUS</span>
+     <div class="segmented boards-status-segments" aria-label="Board status" role="group">
+      <button type="button" class="segment `+(active?'active':'')+`" data-action="active-boards" aria-pressed="`+active+`">Active</button>
+      <button type="button" class="segment `+(state.showArchived?'active':'')+`" data-action="archived-boards" aria-pressed="`+state.showArchived+`">Archived</button>
+      `+(BOARD_CARD_LIFECYCLE_ENABLED?'<button type="button" class="segment '+(state.showTrash?'active':'')+'" data-action="trashed-boards" aria-pressed="'+state.showTrash+'">Trash</button>':'')+`
+     </div>
+    </div>
+    <div class="boards-search-wrap">
+     <label class="boards-control-label" for="board-search">FIND A BOARD</label>
+     <div class="search-wrap">
+      <svg class="boards-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input type="search" class="search-input" id="board-search" placeholder="Search boards…" aria-label="Search boards" aria-controls="boards-catalog-grid" aria-describedby="board-search-result" value="`+e(state.boardSearch)+`" autocomplete="off" />
+     </div>
+    </div>
+   </div>
+   <div class="boards-filter-footer">
+    <p class="board-search-result" id="board-search-result" role="status" aria-live="polite">`+items.length+` matching board`+(items.length===1?'':'s')+`</p>
+    <span class="boards-selected-filter" aria-hidden="true">`+e(selectedStatus)+` boards</span>
+   </div>
+  </section>
   <p id="board-search-no-results" class="board-search-no-results" hidden>No boards match this search.</p>
-  ${items.length?`<div class="card-grid">${items.map(boardCard).join('')}</div>`:
-  `<div class="panel">${empty(state.boardSearch?'No matching boards':state.showTrash?'Trash is empty':state.showArchived?'No archived boards':'No boards available',
-   state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
+  `+(items.length?
+   '<div class="card-grid boards-catalog-grid boards-entrance" id="boards-catalog-grid">'+items.map(boardCard).join('')+'</div>':
+   '<div class="panel boards-empty-state" id="boards-catalog-grid">'+
+   empty(state.boardSearch?'No matching boards':state.showTrash?'Trash is empty':state.showArchived?'No archived boards':'No boards available',
+    state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')+'</div>')+`
+ </div>`;
 }
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={}){
  const minimal=isItemOnlyBoard(detail,state.boardUi);
