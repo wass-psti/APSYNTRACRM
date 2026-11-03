@@ -39,7 +39,7 @@ test('generic columns retain the primary field and expose only actual typed visi
  assert.deepEqual(columns.map(x=>x.key),['record','status','owner','due','col:'+customId,'actions']);
  assert.equal(columns[0].title,'Item');
  assert.equal(columns[4].title,'Approved Cost');
- assert.equal(cellColumn({columns:[]},'status'),null);
+ assert.equal(cellColumn({columns:[]},'status').virtual,true);
  assert.equal(cellColumn(detail,'status').id,statusId);
  assert.equal(cellColumn(detail,'col:'+customId).id,customId);
  assert.equal(cellColumn(detail,'record').id,null);
@@ -115,6 +115,8 @@ test('existing UI directly submits forms using authorized RPC and CAS, without m
  assert.match(app,/data-inline-cell-form/);
  assert.match(app,/await db\.addItem\(boardId,groupId,title\)/);
  assert.match(app,/await db\.setBoardCellCas\(item\.id,col\.id,value,stateCell\.expected\)/);
+ assert.match(app,/await boardBulkClient\.apply\(fresh\.board,'status',\[item\],\{status:value\}\)/);
+ assert.match(app,/!bulkReadyFor\(fresh\.board\)/);
  assert.match(app,/await verifyOrdinaryItemWrite\(boardId/);
  assert.match(app,/case 'inline-cell-start'/);
  assert.match(app,/case 'inline-cell-cancel'/);

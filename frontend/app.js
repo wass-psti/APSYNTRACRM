@@ -268,7 +268,9 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   const display=(key,content)=>{
    if(state.inlineCell?.itemId===item.id&&state.inlineCell?.key===key)
     return renderInlineCellEditor({item,key,detail,members:detail?.members||[]});
-   return editableCellButton({key,item,detail,writable:editable,cellContent:content});
+   return editableCellButton({key,item,detail,
+    writable:editable&&(!cellColumn(detail,key)?.virtual||bulkReadyFor(detail?.board)),
+    cellContent:content});
   };
   cell.record='<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(item.id)+'" aria-label="Open '+e(item.title||'Untitled')+' details">▥</button> '+
    display('record',e(item.title||'Untitled'));
@@ -577,7 +579,8 @@ async function startBoardInlineEdit(itemId,key){
  if(!validUuid(itemId)||!activeBoardLayout()||
   !canManuallyEditBoard(state.board?.board,state.edit))return;
  const boardId=state.boardId,item=state.board.items?.find(x=>x.id===itemId);
- if(!item||item.archived_at||!cellColumn(state.board,key))return;
+ if(!item||item.archived_at||!cellColumn(state.board,key)||
+  (cellColumn(state.board,key)?.virtual&&!bulkReadyFor(state.board.board)))return;
  await verifyOrdinaryItemWrite(boardId);
  if(state.boardId!==boardId)return;
  state.inlineCell={boardId,itemId,key,expected:expectedCellValue(state.board,item,key)};
@@ -604,7 +607,10 @@ async function saveBoardInlineCell(form){
    column.data_type!==col.data_type||
    JSON.stringify(expectedCellValue(fresh,item,stateCell.key))!==JSON.stringify(stateCell.expected))
    throw new ApiError('This cell changed. Reload it before saving.',409);
-  await db.setBoardCellCas(item.id,col.id,value,stateCell.expected);
+  if(col.virtual){
+   if(!bulkReadyFor(fresh.board))throw new ApiError('Verify signed bulk access before editing status.',403);
+   await boardBulkClient.apply(fresh.board,'status',[item],{status:value});
+  }else await db.setBoardCellCas(item.id,col.id,value,stateCell.expected);
   state.inlineCell=null;
   if(state.boardId===boardId){await loadBoard(boardId,'items');toast('Cell saved.');}
  }finally{

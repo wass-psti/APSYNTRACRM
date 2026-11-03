@@ -36,8 +36,18 @@ export function cellColumn(detail,key){
  }
  const system={status:'status',owner:'assignee',due:'due_date'}[key];
  if(!system)return null;
- return cols.find(c=>c.system_key===system&&
+ const real=cols.find(c=>c.system_key===system&&
   c.visible!==false&&TYPES.has(c.data_type))||null;
+ if(real)return real;
+ // Standard ordinary boards can lack a physical status column. Their signed,
+ // revision-guarded status edits use CP-BOARD-BULK02, never the title CAS path.
+ if(key==='status')return {id:null,name:'Status',data_type:'status',virtual:true,
+  system_key:'status',required:true,config:{labels:[
+   {id:'not_started',label:'Not started'},
+   {id:'in_progress',label:'In progress'},
+   {id:'blocked',label:'Blocked'},
+   {id:'done',label:'Done'}]}};
+ return null;
 }
 export function expectedCellValue(detail,item,key){
  if(key==='record')return item.title;
