@@ -2,6 +2,8 @@
 -- Data-preserving guard refuses to drop stored settings. Custom column rows and
 -- existing item values are never deleted by rollback. Older editor-accessible
 -- mutations are restored: explicitly review this privilege regression.
+-- SUPERSEDED, FAIL CLOSED. Use the independently reviewed v2 successor only after separate production approval.
+DO $superseded$ BEGIN RAISE EXCEPTION 'CP-BOARD-CONFIG01 v1 rollback retired: do not execute; review v2 artifacts' USING ERRCODE='42501'; END $superseded$;
 BEGIN;
 DO $guard$
 BEGIN

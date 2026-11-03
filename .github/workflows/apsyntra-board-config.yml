@@ -45,8 +45,9 @@ jobs:
           psql -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-board-collab01-disposable-setup.sql \
             -f sql/tests/cp-board-config01-disposable-setup.sql \
-            -f sql/cp-board-config01-staged-authorization.sql \
+            -f sql/tests/cp-board-config01-disposable-legacy-live-functions.sql \
+            -f sql/cp-board-config01-staged-authorization-v2.sql \
             -f sql/tests/cp-board-config01-disposable-acceptance.sql \
-            -f sql/tests/cp-board-config01-disposable-reset.sql \
-            -f sql/cp-board-config01-guarded-rollback.sql \
-            -f sql/tests/cp-board-config01-rollback-acceptance.sql
+            -f sql/tests/cp-board-config01-dependency-acceptance-v2.sql \
+            -f sql/cp-board-config01-compensating-rollback-v2.sql \
+            -f sql/tests/cp-board-config01-rollback-acceptance-v2.sql

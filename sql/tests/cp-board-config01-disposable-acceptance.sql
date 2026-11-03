@@ -15,6 +15,7 @@ BEGIN
  SELECT id INTO v_primary FROM public.work_board_columns
  WHERE board_id=v_board AND system_key='title';
  PERFORM pg_catalog.set_config('request.jwt.claim.sub',v_owner::text,false);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000001',false);
  IF NOT public.work_board_access(v_board,'manage') THEN
   RAISE EXCEPTION 'Fixture manager role unavailable';
  END IF;
@@ -68,6 +69,7 @@ BEGIN
 
  -- Separate schema (manager) and item editing (editor) privileges.
  PERFORM pg_catalog.set_config('request.jwt.claim.sub',v_editor::text,false);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000002',false);
  IF NOT public.work_board_access(v_board,'edit') OR public.work_board_access(v_board,'manage') THEN
   RAISE EXCEPTION 'Editor privilege fixture invalid';
  END IF;
@@ -84,11 +86,12 @@ BEGIN
 
  -- Protected UI label changes leave the physical item primary field untouched.
  PERFORM pg_catalog.set_config('request.jwt.claim.sub',v_owner::text,false);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000001',false);
  v_result:=public.wm_board_ui_save(v_board,0,'Work item',
   '[{"key":"items","label":"Tasks","visible":true},{"key":"attendance","label":"Attendance","visible":true}]'::jsonb,
-  pg_catalog.jsonb_build_object(v_domain::text,'Shift reference'));
+  pg_catalog.jsonb_build_object(v_custom::text,'Supervisor note label'));
  IF v_result->>'primary_label'<>'Work item' OR (v_result->>'revision')::bigint<>1 OR
-    v_result->'column_labels'->>v_domain::text<>'Shift reference' THEN
+    v_result->'column_labels'->>v_custom::text<>'Supervisor note label' THEN
   RAISE EXCEPTION 'Primary display or seeded column label not saved';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM public.work_board_columns WHERE id=v_domain AND name='Attendance Ref') THEN
@@ -127,6 +130,7 @@ BEGIN
   RAISE EXCEPTION 'Foreign board schema was modified';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  PERFORM pg_catalog.set_config('request.jwt.claim.sub',v_viewer::text,false);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000003',false);
  IF public.wm_board_ui_read(v_board)->>'primary_label'<>'Work item' THEN
   RAISE EXCEPTION 'Signed viewer cannot read board configuration';
  END IF;
@@ -141,6 +145,7 @@ BEGIN
 
  -- Manager deletes only an empty custom column after explicit confirmation.
  PERFORM pg_catalog.set_config('request.jwt.claim.sub',v_owner::text,false);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000001',false);
  DELETE FROM public.work_board_item_values WHERE column_id=v_custom;
  BEGIN
   PERFORM public.wm_board_schema_mutate(v_board,(SELECT updated_at FROM public.work_boards WHERE id=v_board),

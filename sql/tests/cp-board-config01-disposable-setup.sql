@@ -1,6 +1,8 @@
 -- CP-BOARD-CONFIG01: extend only the disposable COL01 fixture (not production).
 \set ON_ERROR_STOP on
+CREATE SCHEMA IF NOT EXISTS private;
 ALTER TABLE public.work_boards
+ ADD COLUMN status text NOT NULL DEFAULT 'active',
  ADD COLUMN name text NOT NULL DEFAULT 'Demo Board',
  ADD COLUMN updated_at timestamptz NOT NULL DEFAULT pg_catalog.clock_timestamp(),
  ADD COLUMN updated_by uuid;
@@ -26,6 +28,8 @@ CREATE TABLE public.work_board_columns(
  updated_at timestamptz NOT NULL DEFAULT now(),
  UNIQUE(board_id,column_key)
 );
+ALTER TABLE public.work_board_items
+ ADD COLUMN status text;
 CREATE TABLE public.work_board_item_values(
  item_id uuid NOT NULL REFERENCES public.work_board_items(id),
  column_id uuid NOT NULL REFERENCES public.work_board_columns(id) ON DELETE CASCADE,
@@ -46,6 +50,11 @@ BEGIN
  IF p_type NOT IN ('text','long_text','number','status','dropdown','date','people',
    'checkbox','url','email','timeline') THEN
   RAISE EXCEPTION 'Unsupported column type' USING ERRCODE='22023';
+ END IF;
+ IF p_type='status' THEN
+  RETURN pg_catalog.jsonb_build_object('labels',
+   coalesce(p_config->'labels','[]'::jsonb),
+   'default_label_id',p_config->'default_label_id');
  END IF;
  IF p_type='dropdown' THEN
   IF p_config IS NULL OR jsonb_typeof(p_config->'options')<>'array' THEN
@@ -96,3 +105,14 @@ REVOKE EXECUTE ON FUNCTION public.wm_add_board_column(uuid,text,text,jsonb),
  public.wm_duplicate_board_column(uuid,boolean),
  public.wm_move_board_column(uuid,integer),
  public.wm_update_board_column(uuid,text,jsonb,boolean) FROM PUBLIC;
+
+-- Fixture for destructive-status-label rejection and allowed non-destructive rename.
+INSERT INTO public.work_board_columns(
+ board_id,column_key,name,data_type,position,config,created_by,updated_by)
+VALUES ('30000000-0000-4000-8000-000000000001','custom:fixture-status','Recorded status',
+ 'status',2,'{"labels":[{"id":"alpha","label":"Alpha"}]}'::jsonb,
+ '20000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001');
+INSERT INTO public.work_board_item_values(item_id,column_id,value,updated_by)
+SELECT '40000000-0000-4000-8000-000000000001',id,'"alpha"'::jsonb,
+ '20000000-0000-4000-8000-000000000001'
+ FROM public.work_board_columns WHERE column_key='custom:fixture-status';

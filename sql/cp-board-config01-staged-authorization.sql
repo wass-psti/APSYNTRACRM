@@ -3,6 +3,8 @@
 -- Separate production authorization, independent security review, disposable PostgreSQL
 -- acceptance and signed-session regression checks are required BEFORE execution.
 -- Existing domain columns (column_key col_*) are never physically deleted or retyped.
+-- SUPERSEDED, FAIL CLOSED. Use the independently reviewed v2 successor only after separate production approval.
+DO $superseded$ BEGIN RAISE EXCEPTION 'CP-BOARD-CONFIG01 v1 candidate retired: do not execute; review v2 artifacts' USING ERRCODE='42501'; END $superseded$;
 BEGIN;
 
 CREATE TABLE public.wm_board_ui_settings (
