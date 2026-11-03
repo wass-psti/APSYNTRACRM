@@ -13,6 +13,7 @@ import {renderFoundation} from './board-foundation-ui.js';
 import {boardGrid,boardGridColumns} from './board-grid.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns} from './board-structure-admin.js';
+import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
@@ -58,11 +59,12 @@ const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const boardStructureClient=new BoardStructureClient(db);
+const boardCardLifecycle=new BoardCardLifecycleClient(db);
 const nativeIssues=new NativeIssueClient(db);
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,boardUi:null,issues:[],edit:false,
+const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardLifecycleBusy:false,board:null,boardUi:null,issues:[],edit:false,
   view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -72,7 +74,7 @@ const initials=value=>String(value||'U').trim().split(/\s+/).slice(0,2).map(w=>w
 const iconColor=index=>['','green','orange','pink','blue'][Math.abs(index)%5];
 const name=()=>state.context?.profile?.display_name||state.context?.profile?.email?.split('@')[0]||'Member';
 const workspaceName=()=>state.context?.workspace_id==='00000000-0000-4000-8000-000000000001'?'Work Management':'Current workspace';
-const cards=()=>state.showArchived?state.archived:state.boards;
+const cards=()=>state.showTrash?state.trashed:state.showArchived?state.archived:state.boards;
 const routeHome='#/overview';
 let modal=null;
 let routeSerial=0;
@@ -191,10 +193,29 @@ function shell(body){
  void mountSignedTimeTrackerMaps();
 }
 function boardCard(board,index){
- return `<a class="board-card" data-searchable="${e((board.name+' '+(board.description||'')).toLowerCase())}" href="#/boards/${e(board.id)}">
- <div class="board-card-top"><span class="board-symbol ${iconColor(index)}">${e((board.name||'B').slice(0,1).toUpperCase())}</span><span class="board-menu">···</span></div>
- <h3>${e(board.name||'Untitled board')}</h3><p>${e(board.description||'Organize work and track progress in this board.')}</p>
- <div class="board-card-footer"><span>▤ ${Number(board.item_count)||0} items</span><span>${e(displayDate(board.updated_at))}</span></div></a>`;
+ const status=boardCardActionState(board),href='#/boards/'+e(board.id);
+ const options=BOARD_CARD_LIFECYCLE_ENABLED?
+  '<details class="board-card-actions"><summary aria-label="Board actions for '+e(board.name)+
+  '" title="Board actions"><span aria-hidden="true">···</span></summary>'+
+  '<div class="board-card-actions-list" role="group" aria-label="Board actions">'+
+  (status==='MANAGE'?
+    (board.status==='trashed'?
+      '<button type="button" data-action="board-card-restore" data-id="'+e(board.id)+'">Restore board</button>':
+      '<button type="button" data-action="board-card-edit" data-id="'+e(board.id)+'">Edit board</button>'+
+      (board.status==='archived'?'<button type="button" data-action="board-card-restore" data-id="'+e(board.id)+'">Restore board</button>':'')+
+      '<button type="button" class="board-card-danger" data-action="board-card-trash" data-id="'+e(board.id)+'">Delete board · Move to trash</button>'):
+   '<p class="board-card-actions-info">'+
+    e(status==='PROTECTED'?'Application-managed board. Editing and deletion are protected.':
+      'Only authorized board managers can edit or delete this board.')+'</p>')+
+  '</div></details>':
+  '<span class="board-menu" aria-label="Board management not yet activated">···</span>';
+ return '<article class="board-card" data-searchable="'+e((board.name+' '+(board.description||'')).toLowerCase())+'">'+
+  '<div class="board-card-top"><a class="board-card-symbol-link" href="'+href+'" aria-label="Open '+e(board.name)+'">'+
+   '<span class="board-symbol '+iconColor(index)+'">'+e((board.name||'B').slice(0,1).toUpperCase())+'</span></a>'+options+'</div>'+
+  '<a class="board-card-main" href="'+href+'"><h3>'+e(board.name||'Untitled board')+'</h3>'+
+  '<p>'+e(board.description||'Organize work and track progress in this board.')+'</p>'+
+  '<div class="board-card-footer"><span>▤ '+(Number(board.item_count)||0)+' items</span>'+
+  '<span>'+e(displayDate(board.updated_at))+'</span></div></a></article>';
 }
 function empty(title,description,action=''){
  return `<div class="empty"><span class="empty-icon">▦</span><h3>${e(title)}</h3><p>${e(description)}</p>${action}</div>`;
@@ -220,11 +241,15 @@ function overview(){
 function boardsPage(){
  const items=cards();
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards</span><h1>My boards</h1><p>Everything your team is working on, organized in one place.</p></div>
- <button class="primary" data-action="new-board">＋ New board</button></div>
- <div class="toolbar"><div class="segmented"><button class="segment ${!state.showArchived?'active':''}" data-action="active-boards">Active</button><button class="segment ${state.showArchived?'active':''}" data-action="archived-boards">Archived</button></div>
- <div class="search-wrap"><input class="search-input" id="board-search" placeholder="Search boards…" aria-label="Search boards" autocomplete="off" /></div></div>
- ${items.length?`<div class="card-grid">${items.map(boardCard).join('')}</div>`:
- `<div class="panel">${empty(state.showArchived?'No archived boards':'No boards available',state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
+  <button class="primary" data-action="new-board">＋ New board</button></div>
+  <div class="toolbar"><div class="segmented" aria-label="Board status">
+   <button class="segment ${!state.showArchived&&!state.showTrash?'active':''}" data-action="active-boards">Active</button>
+   <button class="segment ${state.showArchived?'active':''}" data-action="archived-boards">Archived</button>
+   ${BOARD_CARD_LIFECYCLE_ENABLED?'<button class="segment '+(state.showTrash?'active':'')+'" data-action="trashed-boards">Trash</button>':''}
+   </div><div class="search-wrap"><input class="search-input" id="board-search" placeholder="Search boards…" aria-label="Search boards" autocomplete="off" /></div></div>
+  ${items.length?`<div class="card-grid">${items.map(boardCard).join('')}</div>`:
+  `<div class="panel">${empty(state.showTrash?'Trash is empty':state.showArchived?'No archived boards':'No boards available',
+   state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
 }
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record'){
  const rows=items.map(item=>({search:String(item.title||'').toLowerCase(),
@@ -364,6 +389,29 @@ function render(){
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
+}
+function findBoardCard(id){
+ return [...state.boards,...state.archived,...state.trashed].find(b=>b.id===id)||null;
+}
+async function refreshBoardCardLists(){
+ await refreshWorkspace();
+ const [archived,trashed]=await Promise.all([db.boards('archived'),db.boards('trashed')]);
+ state.archived=archived;state.trashed=trashed;
+}
+function closeBoardCardMenus(except=null){
+ for(const menu of root.querySelectorAll('.board-card-actions[open]')){
+  if(menu!==except)menu.open=false;
+ }
+}
+async function authorizeBoardCardAction(id){
+ if(!BOARD_CARD_LIFECYCLE_ENABLED||state.boardLifecycleBusy)
+  throw new ApiError('Board actions are unavailable.');
+ const board=findBoardCard(id);
+ if(!board||isProtectedBoard(board))
+  throw new ApiError('Board is protected or no longer available.',403);
+ if(!(await db.allowed(id,'manage')))
+  throw new ApiError('Board management permission required.',403);
+ return board;
 }
 async function refreshWorkspace(){
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
@@ -763,6 +811,7 @@ async function onRoute(){
    catch{state.boards=[];state.securityBoardsError='SIGNED_BOARD_LIST_REFRESH_FAILED';}
  }
  if(state.view==='boards'&&state.showArchived&&!state.archived.length){try{state.archived=await db.boards('archived');}catch(err){notice(err);}}
+  if(state.view==='boards'&&state.showTrash&&!state.trashed.length){try{state.trashed=await db.boards('trashed');}catch(err){notice(err);}}
  if(state.view==='foundation'){
    state.foundationBusy=true;render();
    try{await refreshFoundation();}catch(err){state.foundationError=errorMessage(err);}
@@ -1975,9 +2024,58 @@ async function action(name,button){
      await db.createBoard(title,String(fd.get('description')||''));await refreshWorkspace();location.hash='#/boards';await onRoute();
    });break;
  }
- case 'active-boards':{state.showArchived=false;render();break;}
- case 'archived-boards':{state.showArchived=true;try{state.archived=await db.boards('archived');}catch(err){notice(err);}render();break;}
- case 'new-group':{
+ case 'active-boards':{state.showArchived=false;state.showTrash=false;render();break;}
+ case 'archived-boards':{state.showArchived=true;state.showTrash=false;try{state.archived=await db.boards('archived');}catch(err){notice(err);}render();break;}
+ case 'trashed-boards':{if(!BOARD_CARD_LIFECYCLE_ENABLED)return;state.showTrash=true;state.showArchived=false;try{state.trashed=await db.boards('trashed');}catch(err){notice(err);}render();break;}
+ case 'board-card-edit':{
+  const board=await authorizeBoardCardAction(button.dataset.id);
+  closeBoardCardMenus();
+  openModal('Edit board — '+board.name,
+   '<div class="field"><label for="modal-board-name">Board name</label>'+
+   '<input id="modal-board-name" name="name" required maxlength="120" value="'+e(board.name)+'"/></div>'+
+   '<div class="field"><label for="modal-board-description">Description</label>'+
+   '<textarea id="modal-board-description" name="description" maxlength="1200">'+
+   e(board.description||'')+'</textarea></div>'+
+   '<div class="note">Existing items, columns, members and audit history remain unchanged.</div>',
+   async fd=>{
+    state.boardLifecycleBusy=true;
+    try{
+     await boardCardLifecycle.edit(board,{name:String(fd.get('name')||''),
+      description:String(fd.get('description')||'')});
+     await refreshBoardCardLists();render();
+    }finally{state.boardLifecycleBusy=false;}
+   });
+  break;
+ }
+ case 'board-card-trash':{
+  const board=await authorizeBoardCardAction(button.dataset.id);
+  closeBoardCardMenus();
+  openModal('Delete board — '+board.name,
+   '<div class="note security-note">Move this exact board to recoverable Trash? '+
+   'Its '+(Number(board.item_count)||0)+' active items, columns, groups, files, audit history and members remain stored. '+
+   'It will disappear from Active and Archived. Restore it from Trash when needed. '+
+   'Permanent deletion is not offered.</div>'+
+   '<div class="field"><label for="modal-board-confirm">Type '+e(board.name)+' to confirm</label>'+
+   '<input id="modal-board-confirm" name="confirm" required autocomplete="off" maxlength="120" /></div>',
+   async fd=>{
+    state.boardLifecycleBusy=true;
+    try{
+     await boardCardLifecycle.trash(board,String(fd.get('confirm')||''));
+     await refreshBoardCardLists();render();
+    }finally{state.boardLifecycleBusy=false;}
+   });
+  break;
+ }
+ case 'board-card-restore':{
+  const board=await authorizeBoardCardAction(button.dataset.id);
+  closeBoardCardMenus();state.boardLifecycleBusy=true;
+  try{
+   await boardCardLifecycle.restore(board);
+   await refreshBoardCardLists();render();toast('Board restored to Active.');
+  }finally{state.boardLifecycleBusy=false;}
+  break;
+ }
+case 'new-group':{
    await writeGuard();
    openModal('Add board group',input('Group name','name','New group'),async fd=>{
      await writeGuard();await db.addGroup(state.boardId,String(fd.get('name')||''));await loadBoard(state.boardId,'items');
@@ -2210,6 +2308,16 @@ root.addEventListener('click',event=>{
  }
 },true);
 
+document.addEventListener('click',event=>{
+ const active=event.target.closest?.('.board-card-actions')||null;
+ closeBoardCardMenus(active);
+});
+root.addEventListener('toggle',event=>{
+ if(!event.target.matches?.('.board-card-actions'))return;
+ const card=event.target.closest('.board-card');
+ if(card)card.classList.toggle('board-card-menu-open',event.target.open);
+ if(event.target.open)closeBoardCardMenus(event.target);
+},true);
 root.addEventListener('click',event=>{
  const target=event.target.closest('[data-action]');
  if(!target)return;
@@ -2356,7 +2464,7 @@ root.addEventListener('input',event=>{
 });
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
 window.addEventListener('keydown',event=>{if(event.key==='Escape'){
- hideModal();if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
+ closeBoardCardMenus();hideModal();if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
 auth.onExpired=()=>{state.context=null;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};renderLogin('Session expired. Please sign in again.');};
 async function boot(){

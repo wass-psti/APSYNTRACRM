@@ -1548,3 +1548,40 @@
 .tt-projection-gps{font-variant-numeric:tabular-nums;white-space:nowrap}
 .tt-projection-gps small{display:block;opacity:.72}
 .tt-projection-table-wrap:focus-visible{outline:2px solid #4b68d9;outline-offset:-2px}
+
+
+/* CP-BOARD-MENU01: independent board card links and accessible action dropdown. */
+.board-card{position:relative;z-index:0}
+.board-card.board-card-menu-open{z-index:40}
+.board-card-main,.board-card-symbol-link{display:block;color:inherit;text-decoration:none}
+.board-card-main:focus-visible,.board-card-symbol-link:focus-visible{
+ outline:2px solid #4e64d6;outline-offset:3px;border-radius:7px}
+.board-card-actions{position:relative;flex:0 0 auto}
+.board-card-actions>summary{
+ list-style:none;display:flex;align-items:center;justify-content:center;
+ width:32px;height:32px;border-radius:8px;cursor:pointer;
+ color:#7d86a0;font-size:19px;line-height:1;user-select:none;
+ touch-action:manipulation
+}
+.board-card-actions>summary::-webkit-details-marker{display:none}
+.board-card-actions>summary:hover,.board-card-actions[open]>summary{background:#f1f3ff;color:#545ede}
+.board-card-actions>summary:focus-visible,.board-card-actions-list button:focus-visible{
+ outline:2px solid #4e64d6;outline-offset:2px}
+.board-card-actions-list{
+ position:absolute;top:calc(100% + 5px);right:0;
+ width:max-content;min-width:215px;max-width:min(290px,80vw);
+ z-index:50;padding:6px;border:1px solid #dce2ee;border-radius:11px;
+ background:#fff;box-shadow:0 12px 30px #222f4b27
+}
+.board-card-actions-list>button{
+ display:block;width:100%;border:0;background:transparent;
+ color:#36415b;text-align:left;padding:10px 11px;font:inherit;
+ font-size:12px;font-weight:700;border-radius:7px;cursor:pointer
+}
+.board-card-actions-list>button:hover{background:#f0f3ff}
+.board-card-actions-list>button.board-card-danger{color:#b13f53}
+.board-card-actions-list>button.board-card-danger:hover{background:#fff0f2}
+.board-card-actions-info{
+ height:auto!important;overflow:visible!important;margin:0!important;
+ padding:10px!important;font-size:12px!important;line-height:1.5!important
+}
