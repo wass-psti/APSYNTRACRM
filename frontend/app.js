@@ -15,6 +15,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
+import {BOARD_BULK02_ENABLED,canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
@@ -63,6 +64,7 @@ const db=new DomainApi(auth);
 const boardStructureClient=new BoardStructureClient(db);
 const boardCardLifecycle=new BoardCardLifecycleClient(db);
 const itemSelection=new BoardItemSelection();
+const boardBulkClient=new BoardBulkClient(db);
 const nativeIssues=new NativeIssueClient(db);
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
@@ -283,7 +285,9 @@ function groupHeading(group,count){
    '" title="Group actions">⋮</summary><div class="board-group-actions-list">'+
    '<button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
    '<button type="button" data-action="group-select-visible" data-id="'+id+'">Select visible records</button>'+
-   '<button type="button" disabled title="Safe deletion requires a reviewed atomic empty-group guard">Delete group — unavailable</button>'+
+   (BOARD_BULK02_ENABLED&&canBulkEditBoard(state.board?.board)?
+    '<button type="button" data-action="group-delete-empty" data-id="'+id+'">Delete empty group</button>':
+    '<button type="button" disabled title="Atomic deletion requires approved production activation">Delete group — unavailable</button>')+
    '</div></details>':'')+'</div>';
 }
 function issuesPage(){
@@ -350,7 +354,10 @@ function boardPage(){
  ${boardColumnMenu(columns,layout)}<button type="button" class="secondary" data-action="board-structure">Manage columns</button>
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
-  <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button><span class="muted">Bulk editing, archive and deletion require an atomic write contract.</span></div>
+  <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button>
+ <button type="button" class="secondary" data-action="bulk-status" ${BOARD_BULK02_ENABLED&&state.edit&&canBulkEditBoard(b)?'':'disabled title="Requires separately authorized atomic SQL activation"'}>Bulk status</button>
+ <button type="button" class="secondary" data-action="bulk-archive" ${BOARD_BULK02_ENABLED&&state.edit&&canBulkEditBoard(b)?'':'disabled title="Requires separately authorized atomic SQL activation"'}>Bulk archive</button>
+ <span class="muted">${BOARD_BULK02_ENABLED&&state.edit&&canBulkEditBoard(b)?'Max 50 records per atomic batch.':'Bulk writes are awaiting secure production activation; protected application records cannot be bulk-modified.'}</span></div>
  ${groups.length?groups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
  ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
@@ -465,6 +472,18 @@ function syncBoardSelectionUi(){
  const toolbar=root.querySelector('#board-bulk-toolbar');if(toolbar)toolbar.hidden=itemSelection.size===0;
  const count=root.querySelector('#board-selected-count');if(count)count.textContent=itemSelection.size+' selected';
 }
+async function applySelectedBulk(action,status=null){
+ if(!BOARD_BULK02_ENABLED||!activeBoardLayout()||!state.edit||!canBulkEditBoard(state.board?.board))
+  throw new ApiError('Atomic bulk mutation is not yet authorized for this board.',403);
+ const ids=[...itemSelection.ids],board=state.board.board;
+ const selected=state.board.items?.filter(item=>ids.includes(item.id))||[];
+ if(!ids.length||ids.length>50||selected.length!==ids.length)
+  throw new ApiError('Select between 1 and 50 currently accessible board items.',400);
+ const receipt=await boardBulkClient.apply(board,action,selected,{status});
+ itemSelection.clear();await loadBoard(board.id,'items');
+ toast(receipt.applied+' board records changed atomically.');
+ return receipt;
+}
 async function saveGroupInline(form){
  if(state.groupEditBusy||state.groupEditId!==form.dataset.groupInlineForm||
     !activeBoardLayout()||!state.edit)throw new ApiError('Authorized group edit required.',403);
@@ -481,7 +500,8 @@ async function saveGroupInline(form){
     !original||original.updated_at!==group.updated_at||original.title!==group.title)
    throw new ApiError('Group changed since opening. Refresh before editing.',409);
   if(!await db.allowed(boardId,'edit'))throw new ApiError('Group editing is not permitted.',403);
-  await db.updateGroup(id,title);
+  if(BOARD_BULK02_ENABLED)await boardBulkClient.group(fresh.board,original,'rename',{title});
+  else await db.updateGroup(id,title);
   state.groupEditId=null;await loadBoard(boardId,'items');toast('Group renamed.');
  }finally{state.groupEditBusy=false;}
 }
@@ -2180,6 +2200,36 @@ case 'group-select-visible':{
  const visible=[...root.querySelectorAll('table[data-group-id="'+button.dataset.id+'"] [data-board-select-item]')]
   .filter(input=>!input.closest('tr')?.hidden).map(input=>input.dataset.boardSelectItem);
  itemSelection.selectVisible(visible);syncBoardSelectionUi();break;
+}
+case 'bulk-status':{
+ if(!BOARD_BULK02_ENABLED||!state.edit||!canBulkEditBoard(state.board?.board))return;
+ const c=state.board.columns?.find(col=>col.system_key==='status'&&col.data_type==='status');
+ const options=c?Array.isArray(c.config?.labels)?c.config.labels.filter(x=>x.active!==false)
+   .map(x=>[String(x.id),String(x.title||x.label||x.name||x.id)]):[]:
+   [['not_started','Not started'],['in_progress','In progress'],['blocked','Blocked'],['done','Done']];
+ if(!options.length)throw new ApiError('No writable status labels are configured for this board.',400);
+ openModal('Bulk status — '+itemSelection.size+' selected',
+  select('New status','status',options,options[0][0]),
+  async fd=>{await applySelectedBulk('status',String(fd.get('status')||''));});
+ break;
+}
+case 'bulk-archive':{
+ if(!BOARD_BULK02_ENABLED||!state.edit||!canBulkEditBoard(state.board?.board))return;
+ if(itemSelection.size>50)throw new ApiError('Archive up to 50 items per atomic batch.',400);
+ if(!confirm('Archive '+itemSelection.size+' selected records? This action will not delete their history.'))return;
+ await applySelectedBulk('archive');break;
+}
+case 'group-delete-empty':{
+ if(!BOARD_BULK02_ENABLED||!state.edit||!canBulkEditBoard(state.board?.board))return;
+ const group=state.board.groups?.find(g=>g.id===button.dataset.id);
+ if(!group||!activeBoardLayout())return;
+ if(state.board.groups.length<=1||state.board.items?.some(item=>item.group_id===group.id))
+  throw new ApiError('Only a completely empty, nonfinal group can be deleted.',400);
+ if(!await db.allowed(state.boardId,'manage'))
+  throw new ApiError('Group deletion requires effective board manager permission.',403);
+ if(!confirm('Delete the empty group "'+group.title+'"? This cannot be undone.'))return;
+ await boardBulkClient.group(state.board.board,group,'delete_empty');
+ await loadBoard(state.boardId,'items');toast('Empty group deleted.');break;
 }
 case 'bulk-clear':{itemSelection.clear();syncBoardSelectionUi();break;}
 case 'bulk-export':{
