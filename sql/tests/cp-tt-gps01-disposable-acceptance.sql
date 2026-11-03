@@ -81,7 +81,7 @@ BEGIN
  -- A projection failure rolls back the raw authoritative source and mutation audit.
  SELECT count(*) INTO v_count FROM public.work_board_items;
  SELECT count(*) INTO v_audit FROM public.timetracker_attendance_mutation_audit;
- DELETE FROM public.work_board_columns WHERE board_id=board AND name='Attendance Ref';
+ UPDATE public.work_board_columns SET name='Attendance Reference (drift)' WHERE board_id=board AND name='Attendance Ref';
  BEGIN
   PERFORM public.timetracker_attendance_commit_v2(
    board,'clock-in',NULL,'Office-Base Duty','HR',geo_in,NULL);
