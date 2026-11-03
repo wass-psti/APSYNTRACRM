@@ -134,3 +134,12 @@ test('browser acceptance remains token-free with a scoped, session-only runtime 
  assert.doesNotMatch(source,/access_token|refresh_token|navigator\.clipboard|localStorage/);
  assert.doesNotMatch(source,/wm_delete_board_group/);
 });
+
+test('generic HTTP 403 without the expected PostgreSQL RBAC code cannot unlock writes',async()=>{
+ const f=fake();
+ f.api.rpc=async()=>{throw new ApiError('Gateway refusal',403,'');};
+ const result=await probeBulk02SignedSession({auth:f.auth,api:f.api,board});
+ assert.equal(result.status,'BLOCKED');
+ assert.equal(result.ready,false);
+ assert.ok(result.checks.some(x=>x.id==='bulk-edit-permission'&&x.status==='BLOCKED'));
+});

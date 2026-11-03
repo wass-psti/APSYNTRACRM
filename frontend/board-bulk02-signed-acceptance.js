@@ -9,8 +9,7 @@ import {isProtectedBoard} from './board-card-lifecycle.js';
 const check=(id,status,detail)=>Object.freeze({id,status,detail});
 const codeOf=error=>String(error?.code||'');
 const isInvalid=error=>codeOf(error)==='22023';
-const isDenied=error=>codeOf(error)==='42501'||
-  (error?.status===403&&codeOf(error)!=='22023');
+const isDenied=error=>codeOf(error)==='42501';
 const combine=checks=>checks.some(x=>x.status==='FAIL')?'FAIL':
  checks.some(x=>x.status==='BLOCKED')?'BLOCKED':'PASS';
 const sentinelItem='00000000-0000-4000-8000-000000000000';
