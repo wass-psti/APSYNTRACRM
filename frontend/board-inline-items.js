@@ -17,14 +17,15 @@ export function canManuallyEditBoard(board,canEdit=false){
   board.status==='active'&&!isProtectedBoard(board)&&
   !moduleByBoardName(board.name);
 }
-export function genericBoardColumns(detail,{primaryTitle='Record',columnLabels={}}={}){
+export function genericBoardColumns(detail,{primaryTitle='Record',columnLabels={},minimal=false}={}){
  const cols=Array.isArray(detail?.columns)?detail.columns:[];
- const base=[{key:'record',title:primaryTitle},{key:'status',title:'Status'},
-  {key:'owner',title:'Owner'},{key:'due',title:'Due date'}];
+ const base=minimal?[{key:'record',title:primaryTitle}]:
+  [{key:'record',title:primaryTitle},{key:'status',title:'Status'},
+   {key:'owner',title:'Owner'},{key:'due',title:'Due date'}];
  const custom=cols.filter(c=>validUuid(c.id)&&c.visible!==false&&
   !c.system_key&&TYPES.has(c.data_type)).sort((a,b)=>a.position-b.position);
  return [...base,...custom.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name})),
-  {key:'actions',title:'Actions'}];
+  ...(minimal?[]:[{key:'actions',title:'Actions'}])];
 }
 export function cellColumn(detail,key){
  const cols=Array.isArray(detail?.columns)?detail.columns:[];

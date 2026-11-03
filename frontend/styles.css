@@ -1688,3 +1688,18 @@
 @media(prefers-reduced-motion:reduce){
  .board-inline-add-form *, .board-inline-cell-form *{transition:none!important}
 }
+
+/* CP-BOARD-BASE01: minimal Item board with a separate command, not a schema column. */
+.board-table-custom th.board-add-column-header{
+ min-width:150px;max-width:150px;padding:7px 9px;background:#f7f9ff;
+ border-left:1px solid #e2e7f3;text-align:left
+}
+.board-add-column-header button{
+ min-height:32px;width:100%;border:1px dashed #b9c4e8;border-radius:7px;
+ background:#fff;color:#485b98;font:inherit;font-size:12px;font-weight:650;cursor:pointer
+}
+.board-add-column-header button:hover{background:#eef2ff;border-color:#7d91db}
+.board-add-column-header button:focus-visible{outline:2px solid #536ce2;outline-offset:2px}
+.board-table-custom td.board-add-column-spacer{background:#fafbfe}
+.board-delete-one:not(:disabled){color:#aa273a;border-color:#e8acb4}
+.board-delete-one:not(:disabled):hover{background:#fff1f2}

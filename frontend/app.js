@@ -18,6 +18,8 @@ import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './boa
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
+import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard} from './board-minimal-default.js';
+import {deleteOneAuthorizedItem} from './board-single-delete.js';
 import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board-row01-signed-acceptance.js';
 import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
@@ -73,7 +75,7 @@ const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,board:null,boardUi:null,issues:[],edit:false,
+const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
   view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -263,7 +265,8 @@ function boardsPage(){
    state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
 }
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={}){
- const columns=genericBoardColumns(detail,{primaryTitle,columnLabels});
+ const minimal=isItemOnlyBoard(detail,state.boardUi);
+ const columns=genericBoardColumns(detail,{primaryTitle,columnLabels,minimal});
  const writable=canManuallyEditBoard(detail?.board,allowEdit);
  const rows=items.map(item=>{
   const editable=writable&&!item.archived_at,cell={};
@@ -291,7 +294,8 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
  return boardTable({columns,rows,layout,groupId,
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
-  summaries:groupColumnSummaries({items,columns,detail})});
+  summaries:groupColumnSummaries({items,columns,detail}),
+  addColumn:minimal&&state.boardManage});
 }
 
 function bulkReadyFor(board){
@@ -373,6 +377,7 @@ function boardPage(){
  itemSelection.bind([state.context?.user_id,state.context?.workspace_id,state.boardId].join('|'),items.filter(i=>!i.archived_at).map(i=>i.id));
  const groups=Array.isArray(state.board.groups)?state.board.groups:[];
  const moduleKey=moduleByBoardName(b.name)?.key;
+ const minimal=isItemOnlyBoard(state.board,state.boardUi);
  const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record';
  const columnLabels=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{};
  const allowCustom=BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ';
@@ -387,7 +392,7 @@ function boardPage(){
     label:'◷ TimeTracker attendance'}]:[])
  ];
  const columns=moduleKey?boardGridColumns(state.board,{primaryTitle,columnLabels,allowCustom}):
-  genericBoardColumns(state.board,{primaryTitle,columnLabels});
+  genericBoardColumns(state.board,{primaryTitle,columnLabels,minimal});
  const layout=loadBoardLayout(state.context,b.id,tabSpecs.map(t=>t.key),columns.map(c=>c.key));
  const tabLookup=new Map(tabSpecs.map(t=>[t.key,t]));
  const tabOrder=applyBoardViewSettings(layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean),state.boardUi);
@@ -426,6 +431,7 @@ function boardPage(){
   <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button>
  <button type="button" class="secondary" data-action="bulk-status" ${bulkReadyFor(b)?'':'disabled title="Verify signed access first; protected application boards cannot use generic bulk writes"'}>Bulk status</button>
  <button type="button" class="secondary" data-action="bulk-archive" ${bulkReadyFor(b)?'':'disabled title="Verify signed access first; protected application boards cannot use generic bulk writes"'}>Bulk archive</button>
+ <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size===1&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select exactly one editable ordinary-board item"'}>Delete item</button>
  <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Run signed verification for this ordinary board; application-managed records remain protected.'}</span></div>
  ${groups.length?groups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
  ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:items.filter(i=>i.group_id===g.id).length+' records'}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
@@ -540,6 +546,9 @@ function syncBoardSelectionUi(){
  }
  const toolbar=root.querySelector('#board-bulk-toolbar');if(toolbar)toolbar.hidden=itemSelection.size===0;
  const count=root.querySelector('#board-selected-count');if(count)count.textContent=itemSelection.size+' selected';
+ const del=root.querySelector('[data-action="delete-selected-item"]');
+ if(del)del.disabled=itemSelection.size!==1||!state.edit||
+  !canManuallyEditBoard(state.board?.board,true);
 }
 async function applySelectedBulk(action,status=null){
  if(!bulkReadyFor(state.board?.board)||!activeBoardLayout())
@@ -751,14 +760,14 @@ async function loadBoard(boardId,tab){
  if(state.boardId!==boardId||state.tab!=='attendance'){
   state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
- state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.error=null;state.issues=[];state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
+ state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardManage=false;state.error=null;state.issues=[];state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
    const detail=await db.board(boardId);
-   const edit=await db.allowed(boardId,'edit');
-   const boardUi=await boardStructureClient.read(boardId);
+   const [edit,manage,boardUi]=await Promise.all([
+    db.allowed(boardId,'edit'),db.allowed(boardId,'manage'),boardStructureClient.read(boardId)]);
    if(seq!==routeSerial)return;
-   state.board=detail;state.edit=edit;state.boardUi=boardUi;
+   state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
  }catch(err){if(seq!==routeSerial)return;state.error=errorMessage(err);}
  finally{if(seq===routeSerial){state.loading=false;render();}}
  if(seq!==routeSerial||!state.board)return;
@@ -1140,7 +1149,7 @@ function activeBoardLayout(){
  const moduleKey=moduleByBoardName(state.board.board.name)?.key;
  const tabs=['items','issues',...(moduleKey==='frt'?['finance']:[]),
   ...(moduleKey==='timetracker'?['attendance']:[])];
- const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board)).map(c=>c.key);
+ const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board,{minimal:isItemOnlyBoard(state.board,state.boardUi)})).map(c=>c.key);
  return {tabs,columns,pref:loadBoardLayout(state.context,state.boardId,tabs,columns)};
 }
 function persistBoardLayout(transform){
@@ -1419,6 +1428,15 @@ async function openBoardStructure(){
    return;
   }
   if(!authorized()||!canManage||!BOARD_STRUCTURE_ADMIN_ENABLED)return;
+  if(event.target.closest('[data-structure-enable-item-only]')){
+   if(!confirm('Use Item-only display for this ordinary board? Existing custom columns and all data remain stored.'))return;
+   try{
+    await enableItemOnlyBoard({api:db,structure:boardStructureClient,auth,boardId:snapshot.boardId});
+    if(!authorized())return;
+    hideModal();await loadBoard(snapshot.boardId,state.tab);toast('Item-only display saved.');
+   }catch(err){if(authorized())notice(err);}
+   return;
+  }
   const edit=event.target.closest('[data-structure-edit]');
   const remove=event.target.closest('[data-structure-delete]');
   if(!edit&&!remove)return;
@@ -1461,6 +1479,10 @@ async function action(name,button){
  case 'board-activity':{await openBoardActivity();break;}
  case 'board-members':{await openBoardMembers();break;}
  case 'board-structure':{await openBoardStructure();break;}
+ case 'board-add-column':{
+  if(!activeBoardLayout()||!isItemOnlyBoard(state.board,state.boardUi)||!state.boardManage)return;
+  await openBoardStructure();modal?.querySelector('#structure-new-name')?.focus();break;
+ }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
  case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
  case 'board-layout-reset':{
@@ -2296,7 +2318,9 @@ async function action(name,button){
  case 'new-board':{
    openModal('Create a board',input('Board name','name')+input('Description (optional)','description','','text',false),async fd=>{
      const title=String(fd.get('name')||'').trim();if(!title)throw new ApiError('Board name is required.');
-     await db.createBoard(title,String(fd.get('description')||''));await refreshWorkspace();location.hash='#/boards';await onRoute();
+     const id=await createItemOnlyBoard({api:db,structure:boardStructureClient,auth,
+      name:title,description:String(fd.get('description')||'')});
+     await refreshWorkspace();location.hash='#/boards/'+id;await onRoute();
    });break;
  }
  case 'active-boards':{state.showArchived=false;state.showTrash=false;render();break;}
@@ -2441,6 +2465,29 @@ case 'bulk-status':{
  openModal('Bulk status — '+itemSelection.size+' selected',
   select('New status','status',options,options[0][0]),
   async fd=>{await applySelectedBulk('status',String(fd.get('status')||''));});
+ break;
+}
+case 'delete-selected-item':{
+ if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit)||
+     itemSelection.size!==1)return;
+ const selectedId=[...itemSelection.ids][0];
+ const item=state.board.items?.find(x=>x.id===selectedId&&!x.archived_at);
+ if(!item)return;
+ const board=state.board.board,identity=state.context?.user_id,
+  workspace=state.context?.workspace_id;
+ openModal('Permanently delete item', 
+  '<div class="note security-note">This permanently deletes one selected ordinary-board item and its stored cell values. Existing file-backed items are blocked by PostgreSQL. The legacy delete RPC does not provide atomic revision CAS: concurrent updates after the final read remain a known risk. Multi-item deletion is unavailable.</div>'+
+  '<div class="field"><label for="modal-delete-title">Type the exact item name: '+e(item.title)+'</label>'+
+  '<input id="modal-delete-title" name="confirmTitle" required autocomplete="off" maxlength="240" /></div>',
+  async fd=>{
+   if(state.boardId!==board.id||state.context?.user_id!==identity||
+      state.context?.workspace_id!==workspace||!itemSelection.has(item.id))
+    throw new ApiError('Signed board selection changed.',403);
+   const result=await deleteOneAuthorizedItem({api:db,auth,board,item,
+    confirmTitle:String(fd.get('confirmTitle')||'')});
+   itemSelection.clear();await loadBoard(board.id,'items');
+   if(result.audit!=='VERIFIED')toast('Item deleted. Audit read requires independent verification.',true);
+  },{submitLabel:'Delete item permanently'});
  break;
 }
 case 'bulk-archive':{

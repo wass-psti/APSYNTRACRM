@@ -4,6 +4,7 @@
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {moduleByBoardName} from './board-manifest.js';
+import {isProtectedBoard} from './board-card-lifecycle.js';
 import {boardGridColumns} from './board-grid.js';
 
 export const BOARD_STRUCTURE_ADMIN_ENABLED=true;
@@ -65,7 +66,9 @@ export function normalizeBoardUi(raw,boardIdValue){
    Object.entries(raw.column_labels).some(([id,label])=>!validUuid(id)||
     typeof label!=='string'||!label.trim()||label.trim().length>80))
   throw new ApiError('Invalid column display settings response.');
- return {status:'VERIFIED_READ',boardId:boardIdValue,revision:Number(raw.revision),
+ const schemaMode=tabs.some(t=>t.key==='items'&&t.schema_mode==='item_only_v1')?
+  'item_only_v1':'legacy';
+ return {status:'VERIFIED_READ',schemaMode,boardId:boardIdValue,revision:Number(raw.revision),
   primaryLabel:label,tabs:tabs.map(t=>({key:t.key,label:t.label.trim(),visible:t.visible})),
   columnLabels:Object.fromEntries(Object.entries(raw.column_labels).map(([k,v])=>[k,v.trim()]))};
 }
@@ -100,7 +103,7 @@ export class BoardStructureClient{
  async read(id,{enabled=BOARD_STRUCTURE_ADMIN_ENABLED}={}){
   boardId(id);
   if(enabled!==true)return {status:'LOCKED',revision:0,
-   primaryLabel:'Record',tabs:[],columnLabels:{}};
+   primaryLabel:'Record',schemaMode:'legacy',tabs:[],columnLabels:{}};
   if(typeof this.api?.rpc!=='function')
    throw new ApiError('Signed board configuration API unavailable.',403);
   const raw=await this.api.rpc('wm_board_ui_read',{p_board_id:id});
@@ -115,6 +118,8 @@ export class BoardStructureClient{
    fail('Stale or invalid configuration revision.');
   const primary=validName(settings.primaryLabel);
   const tabs=settings.tabs;
+  if(settings.schemaMode!=null&&!['legacy','item_only_v1'].includes(settings.schemaMode))
+   fail('Invalid board view mode.');
   if(!Array.isArray(tabs)||tabs.length<1||tabs.length>4||
     !tabs.some(t=>t?.key==='items'&&t.visible===true)||
     new Set(tabs.map(t=>t.key)).size!==tabs.length||
@@ -128,7 +133,9 @@ export class BoardStructureClient{
    fail('Foreign or invalid column label.');
   const response=await this.api.rpc('wm_board_ui_save',{
    p_board_id:id,p_expected_revision:settings.revision,
-   p_primary_label:primary,p_tabs:tabs,p_column_labels:labels
+   p_primary_label:primary,p_tabs:tabs.map(t=>({key:t.key,label:t.label,
+    visible:t.visible,...(t.key==='items'&&settings.schemaMode==='item_only_v1'?
+     {schema_mode:'item_only_v1'}:{})})),p_column_labels:labels
   });
   return normalizeBoardUi(response,id);
  }
@@ -188,6 +195,11 @@ export function renderBoardStructureAdmin(detail,settings,
   'Board structure management is staged but not activated. Current board and item operations remain available.';
  return '<div class="board-structure-admin">'+
   '<p role="status" class="muted">'+esc(notice)+'</p>'+
+  (settings?.schemaMode==='item_only_v1'?'':
+   (detail?.board?.status==='active'&&!isProtectedBoard(detail?.board)&&
+    !moduleByBoardName(detail?.board?.name)?
+    '<button type="button" class="secondary" data-structure-enable-item-only>'+ 
+    'Use Item-only layout (preserve existing data and custom columns)</button>':''))+
   '<section class="panel panel-body"><h3>Primary column — permanently protected</h3>'+
   '<p class="muted">Display name only. Item IDs, titles, type and primary designation are immutable.</p>'+
   '<form data-structure-form="settings">'+

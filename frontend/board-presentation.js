@@ -64,17 +64,17 @@ export function resetBoardLayout(context,boardId,storage=globalThis.localStorage
  try{storage.removeItem(key);return true;}catch{return false;}
 }
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function boardTable({columns=[],rows=[],empty='No persisted records',layout=null,groupId='ungrouped',selection=null,footer='',summaries=null}={}){
+export function boardTable({columns=[],rows=[],empty='No persisted records',layout=null,groupId='ungrouped',selection=null,footer='',summaries=null,addColumn=false}={}){
  const available=columns.map(c=>c.key);
  const pref=normalizeLayout(layout||{},[],available);
  const visible=pref.columns.filter(k=>!pref.hidden.includes(k));
  const lookup=new Map(columns.map(c=>[c.key,c]));
  const cells=visible.map(k=>lookup.get(k));
- const tableWidth=visible.reduce((total,k)=>total+pref.widths[k],0);
+ const tableWidth=visible.reduce((total,k)=>total+pref.widths[k],0)+(addColumn?150:0);
  return '<div class="panel board-group-panel"><div class="table-scroll board-group-scroll" '+
   'role="region" tabindex="0" aria-label="Horizontally scrollable board group">'+
   '<table class="board-table board-table-custom" data-group-id="'+esc(groupId)+'" width="'+tableWidth+'">'+
-  '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+'</colgroup>'+
+  '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+(addColumn?'<col width="150">':'')+'</colgroup>'+
   '<thead><tr>'+cells.map((c,i)=>'<th scope="col" data-column-key="'+esc(c.key)+'" draggable="'+(i>1)+'"'+
     (i===0?' class="board-frozen-column"':'')+'>'+
    '<span class="board-heading-label">'+(i===0&&selection?.enabled?'<input id="board-select-all-'+esc(groupId)+'" name="board-select-all-'+esc(groupId)+'" type="checkbox" class="board-select-all" data-board-select-all="'+esc(groupId)+'" aria-label="Select visible eligible items in this group" />':'')+esc(c.title)+'</span>'+
@@ -82,17 +82,17 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
     'aria-label="Drag to reorder '+esc(c.title)+' column" title="Drag to reorder">⠿</button>':'')+
    '<button type="button" class="board-column-resize" data-column-key="'+esc(c.key)+'" '+
     'aria-label="Resize '+esc(c.title)+' column" title="Drag to resize">⋮</button>'+
-   '</th>').join('')+'</tr></thead>'+
+   '</th>').join('')+(addColumn?'<th scope="col" class="board-add-column-header"><button type="button" data-action="board-add-column" aria-label="Add a new board column">＋ Add Column</button></th>':'')+'</tr></thead>'+
   '<tbody>'+(rows.length?rows.map(row=>'<tr data-searchable="'+esc(row.search||'')+'"'+(selection?.enabled&&row.itemId?' data-bulk-row="'+esc(row.itemId)+'"':'')+'>'+
    visible.map((k,i)=>'<td'+(i===0?' class="board-frozen-column"':'')+'>'+
     (i===0&&selection?.enabled&&row.itemId?'<input id="board-row-select-'+esc(row.itemId)+'" name="board-row-select-'+esc(row.itemId)+'" type="checkbox" class="board-row-select" data-board-select-item="'+esc(row.itemId)+'" aria-label="Select this record"'+(selection.selected?.has(row.itemId)?' checked':'')+' />':'')+
-    String(row.cells?.[k]??'—')+'</td>').join('')+'</tr>').join(''):
-   '<tr><td colspan="'+visible.length+'" class="board-empty-row">'+esc(empty)+'</td></tr>')+
+    String(row.cells?.[k]??'—')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>').join(''):
+   '<tr><td colspan="'+(visible.length+(addColumn?1:0))+'" class="board-empty-row">'+esc(empty)+'</td></tr>')+
   '</tbody>'+
   (footer||summaries?'<tfoot class="board-footer">'+
-   (footer?'<tr class="board-add-item-row"><td colspan="'+visible.length+'">'+footer+'</td></tr>':'')+
+   (footer?'<tr class="board-add-item-row"><td colspan="'+(visible.length+(addColumn?1:0))+'">'+footer+'</td></tr>':'')+
    (summaries?'<tr class="board-column-summaries">'+visible.map(k=>
-    '<td'+(k==='record'?' class="board-frozen-column"':'')+' aria-label="'+esc(lookup.get(k)?.title||k)+' summary">'+esc(summaries[k]??'—')+'</td>').join('')+'</tr>':'')+
+    '<td'+(k==='record'?' class="board-frozen-column"':'')+' aria-label="'+esc(lookup.get(k)?.title||k)+' summary">'+esc(summaries[k]??'—')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>':'')+
   '</tfoot>':'')+
   '</table></div></div>';
 }
