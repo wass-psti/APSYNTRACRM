@@ -119,9 +119,9 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  esc(data.crmPlatformUnavailable?'Unavailable — backend migration pending':crm?.effectiveRole||'Unverified')+(data.crmPlatformUnavailable?'':crm?.assignedRole?' (explicit)':' (inherited)')+
  '</strong></div>'+
  '<button class="secondary" data-action="user-role-edit-crm-platform" data-user-id="'+esc(u.id)+'" '+
- (locked||!crm?'disabled':'')+'>Assign / change CRM role</button> '+
+ (locked||data.crmPlatformUnavailable||!crm?'disabled':'')+'>Assign / change CRM role</button> '+
  (crm?.assignedRole?'<button class="secondary" data-action="user-role-revert-crm-platform" data-user-id="'+esc(u.id)+'" '+
- (locked?'disabled':'')+'>Revert to inherited role</button>':'')+
+ (locked||data.crmPlatformUnavailable?'disabled':'')+'>Revert to inherited role</button>':'')+
  '</div></div>';
  html+='<div class="section-header user-role-section-header"><strong>Application-specific assignments</strong></div>'+
  '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll"><table class="board-table user-role-table" aria-label="Application-specific assignments"><thead><tr><th scope="col">Application</th><th scope="col">Effective stored role</th><th scope="col">Enforcement</th><th scope="col">Action</th></tr></thead><tbody>';

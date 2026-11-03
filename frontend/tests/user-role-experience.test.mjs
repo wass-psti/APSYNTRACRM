@@ -113,7 +113,8 @@ test('ordinary account keeps editable role actions, revocation and CRM ceiling m
 
 test('server-controlled user labels and errors remain HTML escaped',()=>{
  const malicious={...data,
-  users:[{...data.users[0],name:'<script>alert(1)</script>',email:'<img src=x onerror=alert(2)>',platformRole:'employee'}],
+  users:[{...data.users[0],name:'<script>alert(1)</script>',email:'member@example.invalid',platformRole:'employee'},
+   {...data.users[1],name:'',email:'<img src=x onerror=alert(2)>',platformRole:'admin_general_manager'}],
   boards:[{id:boardId,name:'<svg onload=alert(3)>'}]};
  const result=renderUserRoleManagement({verified:true,data:malicious,selectedUserId:target,
   error:'<b onclick=alert(4)>oops</b>'});
