@@ -1,0 +1,49 @@
+name: APSYNTRA CP-BOARD-MENU01 — Disposable Board Lifecycle
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sql/cp-board-menu01-*.sql"
+      - "sql/tests/cp-board-menu01-*.sql"
+      - ".github/workflows/apsyntra-board-menu.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  board-lifecycle-rbac:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate signed board lifecycle, denial and recoverable trash
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-board-collab01-disposable-setup.sql \
+            -f sql/tests/cp-board-menu01-disposable-setup.sql \
+            -f sql/tests/cp-board-menu01-live-baseline.sql \
+            -f sql/cp-board-menu01-staged-lifecycle.sql \
+            -f sql/tests/cp-board-menu01-disposable-acceptance.sql \
+            -f sql/cp-board-menu01-fail-closed-rollback.sql \
+            -f sql/tests/cp-board-menu01-rollback-acceptance.sql
