@@ -149,12 +149,11 @@ function sidebarNav(href,label,icon,active,{count=null}={}){
 function sidebar(){
  const currentBoard=state.boardId;
  const recent=state.boards.slice(0,6);
- const admin=state.roleVerified===true;
  const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
   sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
   sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation')+
   sidebarNav('#/security','Access acceptance','security',state.view==='security')+
-  (admin?'<div class="side-section sidebar-nav-section">Administration</div>'+
+  (state.roleVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
    sidebarNav('#/role-configuration','Role Configuration','roles',state.view==='role-configuration')+
    sidebarNav('#/user-role-management','User Role Management','users',state.view==='user-role-management'):'')+
   sidebarNav('#/settings','Settings','settings',state.view==='settings')+
