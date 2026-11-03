@@ -57,8 +57,8 @@ function assignments(d){
   return '<tr data-searchable="'+x((u.displayName+' '+u.email+' '+u.platformRole).toLowerCase())+'"><td><strong>'+
    x(u.displayName||'User')+'</strong><div class="muted csp-u020" >'+x(u.email)+'</div></td>'+
    '<td>'+x(u.platformRole)+'</td><td>'+
-    roles.map(r=>'<span class="status '+(r.enabled?'done':'todo')+'">'+x(r.moduleId)+': '+x(r.role)+'</span>').join(' ')||
-    '<span class="muted">No existing module assignment</span>'+
+   (roles.map(r=>'<span class="status '+(r.enabled?'done':'todo')+'">'+x(r.moduleId)+': '+x(r.role)+'</span>').join(' ')||
+    '<span class="muted">No existing module assignment</span>')+
    '</td><td>'+(protectedAccount?'<span class="status done">Protected bootstrap identity</span>':
      '<button class="secondary" data-action="role-propose-assign" data-user-id="'+x(u.id)+'">Stage assignment</button>')+
    '</td></tr>';

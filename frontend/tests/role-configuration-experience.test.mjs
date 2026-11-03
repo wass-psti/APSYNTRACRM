@@ -105,6 +105,18 @@ test('five tabs preserve server data and original action handlers, selection and
   assert.ok(app.includes("case '"+action+"'"),action);
 });
 
+test('Assignments rows render four intact cells, including correct staged-only account actions',()=>{
+ const nonbootstrap=renderRoleConfiguration({verified:true,data,tab:'users'});
+ assert.match(nonbootstrap,/No existing module assignment<\/span><\/td><td><button class="secondary" data-action="role-propose-assign"/);
+ const assigned=renderRoleConfiguration({verified:true,data:{...data,
+  assignments:[{userId:data.users[0].id,moduleId:'time-tracker',role:'viewer',enabled:true}]},tab:'users'});
+ assert.match(assigned,/time-tracker: viewer<\/span><\/td><td><button class="secondary" data-action="role-propose-assign"/);
+ const protectedUser=renderRoleConfiguration({verified:true,data:{...data,
+  users:[{...data.users[0],bootstrapProtected:true}]},tab:'users'});
+ assert.match(protectedUser,/Protected bootstrap identity<\/span><\/td><\/tr>/);
+ assert.doesNotMatch(protectedUser,/data-action="role-propose-assign"/);
+});
+
 test('untrusted names and errors are escaped and native controls remain CSP compatible',()=>{
  const result=renderRoleConfiguration({verified:true,data:{...data,
   roles:[{roleKey:'<svg onload=alert(1)>',displayName:'<script>x</script>',kind:'custom_draft',state:'proposal'}]},
