@@ -1585,3 +1585,48 @@
  height:auto!important;overflow:visible!important;margin:0!important;
  padding:10px!important;font-size:12px!important;line-height:1.5!important
 }
+
+
+/* Board search and batch selection: preserve hidden display across card/table CSS. */
+.board-card[hidden],.board-table tr[hidden],
+.board-bulk-toolbar[hidden],.board-search-no-results[hidden]{display:none!important}
+.board-search-result{font-size:11px;color:#8992a8;margin:0 0 12px}
+.board-search-no-results{padding:22px;text-align:center;color:#7b849e}
+.board-bulk-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+ padding:10px 13px;margin:11px 0;border:1px solid #ccd6fc;border-radius:10px;
+ background:#f2f5ff;font-size:12px}
+.board-bulk-toolbar strong{font-size:12px;color:#303f6c}
+.board-bulk-toolbar .muted{font-size:11px}
+.board-row-select,.board-select-all{vertical-align:middle;accent-color:#625fe6;
+ width:16px;height:16px;cursor:pointer;margin-right:10px}
+.board-table tbody tr.board-row-selected,
+.board-table tbody tr.board-row-selected:hover{background:#edf0ff}
+.board-group-actions{margin-left:auto;position:relative;z-index:12}
+.board-group-actions>summary{display:flex;align-items:center;justify-content:center;
+ width:30px;height:30px;border-radius:8px;cursor:pointer;list-style:none;
+ color:#7d86a0;font-size:19px}
+.board-group-actions>summary::-webkit-details-marker{display:none}
+.board-group-actions>summary:focus-visible,.board-row-select:focus-visible,
+.board-select-all:focus-visible,.board-group-inline-form input:focus-visible,
+.board-group-actions-list button:focus-visible{outline:2px solid #4e64d6;outline-offset:2px}
+.board-group-actions[open]>summary,.board-group-actions>summary:hover{background:#eef1ff}
+.board-group-actions-list{position:absolute;top:100%;right:0;width:max-content;
+ min-width:190px;padding:6px;background:#fff;border:1px solid #dbe1f1;border-radius:10px;
+ box-shadow:0 10px 30px #202c4b25;z-index:20}
+.board-group-actions-list>button{display:block;background:transparent;border:0;
+ padding:10px;text-align:left;font:inherit;font-size:12px;cursor:pointer;
+ border-radius:6px;width:100%}
+.board-group-actions-list>button:not(:disabled):hover{background:#eef1ff}
+.board-group-actions-list>button:disabled{cursor:not-allowed;color:#a1a7b8}
+.board-group-inline-form{display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+ min-width:0;flex:1}
+.board-group-inline-form input{font:inherit;font-size:13px;min-width:120px;
+ width:min(280px,55vw);padding:9px 10px;border:1px solid #c9d2ef;border-radius:8px}
+.board-group-inline-form button{padding:8px 12px;font-size:12px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:620px){
+ .board-bulk-toolbar{align-items:flex-start}
+ .board-bulk-toolbar .muted{flex-basis:100%}
+ .board-group-actions-list{right:0;max-width:80vw}
+}

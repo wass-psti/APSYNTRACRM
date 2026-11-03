@@ -53,6 +53,11 @@ export class DomainApi {
    return rows;
  }
  async addGroup(boardId,title){return this.rpc('wm_add_board_group',{p_board_id:requireUuid(boardId),p_title:title.trim()});}
+ async updateGroup(groupId,title){
+  if(typeof title!=='string'||title.trim().length<1||title.trim().length>120)
+   throw new ApiError('Group name must contain 1–120 characters.');
+  return this.rpc('wm_update_board_group',{p_group_id:requireUuid(groupId),p_title:title.trim()});
+ }
  async addItem(boardId,groupId,title){return this.rpc('wm_add_board_item',{
    p_board_id:requireUuid(boardId),p_group_id:requireUuid(groupId),p_title:title.trim()
  });}

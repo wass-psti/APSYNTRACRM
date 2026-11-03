@@ -14,6 +14,7 @@ import {boardGrid,boardGridColumns} from './board-grid.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
+import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
 import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
@@ -61,11 +62,12 @@ const auth=new AuthClient();
 const db=new DomainApi(auth);
 const boardStructureClient=new BoardStructureClient(db);
 const boardCardLifecycle=new BoardCardLifecycleClient(db);
+const itemSelection=new BoardItemSelection();
 const nativeIssues=new NativeIssueClient(db);
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardLifecycleBusy:false,board:null,boardUi:null,issues:[],edit:false,
+const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,boardLifecycleBusy:false,board:null,boardUi:null,issues:[],edit:false,
   view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -240,20 +242,22 @@ function overview(){
  <div class="activity-item"><div class="activity-avatar">↻</div><div><b>Native issue transactions</b><small>Issue records use the existing RLS view and atomic Supabase transaction RPC.</small></div></div></div></div>`;
 }
 function boardsPage(){
- const items=cards();
+ const items=cards().filter(b=>matchBoardSearch(b,state.boardSearch));
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards</span><h1>My boards</h1><p>Everything your team is working on, organized in one place.</p></div>
   <button class="primary" data-action="new-board">＋ New board</button></div>
   <div class="toolbar"><div class="segmented" aria-label="Board status">
    <button class="segment ${!state.showArchived&&!state.showTrash?'active':''}" data-action="active-boards">Active</button>
    <button class="segment ${state.showArchived?'active':''}" data-action="archived-boards">Archived</button>
    ${BOARD_CARD_LIFECYCLE_ENABLED?'<button class="segment '+(state.showTrash?'active':'')+'" data-action="trashed-boards">Trash</button>':''}
-   </div><div class="search-wrap"><input class="search-input" id="board-search" placeholder="Search boards…" aria-label="Search boards" autocomplete="off" /></div></div>
+   </div><div class="search-wrap"><input type="search" class="search-input" id="board-search" placeholder="Search boards…" aria-label="Search boards" value="${e(state.boardSearch)}" autocomplete="off" /></div></div>
+  <p class="board-search-result" id="board-search-result" role="status" aria-live="polite">${items.length} matching board${items.length===1?'':'s'}</p>
+  <p id="board-search-no-results" class="board-search-no-results" hidden>No boards match this search.</p>
   ${items.length?`<div class="card-grid">${items.map(boardCard).join('')}</div>`:
-  `<div class="panel">${empty(state.showTrash?'Trash is empty':state.showArchived?'No archived boards':'No boards available',
-   state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
+  `<div class="panel">${empty(state.boardSearch?'No matching boards':state.showTrash?'Trash is empty':state.showArchived?'No archived boards':'No boards available',
+   state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
 }
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record'){
- const rows=items.map(item=>({search:String(item.title||'').toLowerCase(),
+ const rows=items.map(item=>({itemId:item.archived_at?null:item.id,search:String(item.title||'').toLowerCase(),
   cells:{record:'<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(item.id)+'" aria-label="Open '+e(item.title||'Untitled')+' details">▥ &nbsp; '+e(item.title||'Untitled')+'</button>',
    status:'<span class="status '+statusClass(item.status)+'">'+e(item.status||'Planned')+'</span>',
    owner:item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned',
@@ -261,9 +265,27 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
    actions:allowEdit?'<button class="icon-button" data-action="edit-item" data-id="'+
     e(item.id)+'" title="Edit item">✎ Edit</button>':''}}));
  return boardTable({columns:BOARD_BASE_COLUMNS.map(c=>c.key==='record'?{...c,title:primaryTitle}:c),rows,layout,groupId,
-  empty:'No items in this group yet'});
+  empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids}});
 }
 
+function groupHeading(group,count){
+ const id=e(group.id),editing=state.groupEditId===group.id;
+ const title=e(group.title||'Group');
+ if(editing)return '<div class="group-heading board-group-editing" data-group-id="'+id+'">'+
+  '<form class="board-group-inline-form" data-group-inline-form="'+id+'">'+
+  '<label class="sr-only" for="group-title-'+id+'">Group name</label>'+
+  '<input id="group-title-'+id+'" name="title" required maxlength="120" value="'+title+'"'+(state.groupEditBusy?' disabled':'')+' />'+
+  '<button type="submit" class="primary"'+(state.groupEditBusy?' disabled':'')+'>Save</button>'+
+  '<button type="button" class="secondary" data-action="group-inline-cancel"'+(state.groupEditBusy?' disabled':'')+'>Cancel</button>'+
+  '</form></div>';
+ return '<div class="group-heading" data-group-id="'+id+'"><h3>'+title+'</h3><small>'+count+' items</small>'+
+  (state.edit?'<details class="board-group-actions"><summary aria-label="Actions for '+title+
+   '" title="Group actions">⋮</summary><div class="board-group-actions-list">'+
+   '<button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
+   '<button type="button" data-action="group-select-visible" data-id="'+id+'">Select visible records</button>'+
+   '<button type="button" disabled title="Safe deletion requires a reviewed atomic empty-group guard">Delete group — unavailable</button>'+
+   '</div></details>':'')+'</div>';
+}
 function issuesPage(){
  if(state.loadingIssues)return '<div class="panel">'+empty('Loading issues','Checking permitted Issue records…')+'</div>';
  const rows=state.issues;
@@ -286,6 +308,7 @@ function boardPage(){
  if(!state.board)return `<div class="panel">${empty('Board unavailable',state.error||'Unable to access this board.','<a class="secondary" href="#/boards">Back to boards</a>')}</div>`;
  const b=state.board.board;
  const items=Array.isArray(state.board.items)?state.board.items:[];
+ itemSelection.bind([state.context?.user_id,state.context?.workspace_id,state.boardId].join('|'),items.filter(i=>!i.archived_at).map(i=>i.id));
  const groups=Array.isArray(state.board.groups)?state.board.groups:[];
  const moduleKey=moduleByBoardName(b.name)?.key;
  const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record';
@@ -327,10 +350,11 @@ function boardPage(){
  ${boardColumnMenu(columns,layout)}<button type="button" class="secondary" data-action="board-structure">Manage columns</button>
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
- ${groups.length?groups.map(g=>`<div class="group-heading"><h3>${e(g.title||'Group')}</h3><small>${items.filter(i=>i.group_id===g.id).length} items</small></div>
- ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle)}`).join(''):
+  <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button><span class="muted">Bulk editing, archive and deletion require an atomic write contract.</span></div>
+ ${groups.length?groups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
+ ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout,primaryTitle,columnLabels,allowCustom}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout,'ungrouped',primaryTitle)}`:''}`}`;
+ ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout,'ungrouped',primaryTitle)}`:''}`}`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -401,6 +425,7 @@ function render(){
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
+ if(state.view==='board'&&state.tab==='items')syncBoardSelectionUi();
 }
 function findBoardCard(id){
  return [...state.boards,...state.archived,...state.trashed].find(b=>b.id===id)||null;
@@ -424,6 +449,41 @@ async function authorizeBoardCardAction(id){
  if(!(await db.allowed(id,'manage')))
   throw new ApiError('Board management permission required.',403);
  return board;
+}
+function syncBoardSelectionUi(){
+ if(state.view!=='board'||state.tab!=='items')return;
+ for(const input of root.querySelectorAll('[data-board-select-item]')){
+  const selected=itemSelection.has(input.dataset.boardSelectItem);
+  input.checked=selected;input.closest('tr')?.classList.toggle('board-row-selected',selected);
+ }
+ for(const checkbox of root.querySelectorAll('[data-board-select-all]')){
+  const rows=[...root.querySelectorAll('table[data-group-id="'+checkbox.dataset.boardSelectAll+'"] [data-board-select-item]')]
+   .filter(el=>!el.closest('tr')?.hidden);
+  checkbox.checked=rows.length>0&&rows.every(el=>itemSelection.has(el.dataset.boardSelectItem));
+  checkbox.indeterminate=rows.some(el=>itemSelection.has(el.dataset.boardSelectItem))&&!checkbox.checked;
+ }
+ const toolbar=root.querySelector('#board-bulk-toolbar');if(toolbar)toolbar.hidden=itemSelection.size===0;
+ const count=root.querySelector('#board-selected-count');if(count)count.textContent=itemSelection.size+' selected';
+}
+async function saveGroupInline(form){
+ if(state.groupEditBusy||state.groupEditId!==form.dataset.groupInlineForm||
+    !activeBoardLayout()||!state.edit)throw new ApiError('Authorized group edit required.',403);
+ const id=state.groupEditId,group=state.board.groups?.find(g=>g.id===id);
+ const title=String(new FormData(form).get('title')||'').trim();
+ if(!group||title.length<1||title.length>120)throw new ApiError('Group name must contain 1–120 characters.');
+ if(title===group.title){state.groupEditId=null;render();return;}
+ state.groupEditBusy=true;
+ const boardId=state.boardId,identity=state.context?.user_id,workspace=state.context?.workspace_id;
+ try{
+  const verified=await auth.getVerifiedUser(),fresh=await db.board(boardId);
+  const original=fresh.groups?.find(g=>g.id===id);
+  if(verified?.id!==identity||!fresh.board||fresh.board.workspace_id!==workspace||
+    !original||original.updated_at!==group.updated_at||original.title!==group.title)
+   throw new ApiError('Group changed since opening. Refresh before editing.',409);
+  if(!await db.allowed(boardId,'edit'))throw new ApiError('Group editing is not permitted.',403);
+  await db.updateGroup(id,title);
+  state.groupEditId=null;await loadBoard(boardId,'items');toast('Group renamed.');
+ }finally{state.groupEditBusy=false;}
 }
 async function refreshWorkspace(){
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
@@ -504,7 +564,7 @@ async function refreshFoundation(){
 }
 async function loadBoard(boardId,tab){
  const seq=++routeSerial;
- state.ttBoardGpsEligible=false;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
+ state.groupEditId=null;state.groupEditBusy=false;state.ttBoardGpsEligible=false;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
  if(state.boardId!==boardId||state.tab!=='attendance'){
   state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
@@ -2107,6 +2167,38 @@ async function action(name,button){
   }finally{state.boardLifecycleBusy=false;}
   break;
  }
+case 'group-inline-edit':{
+ if(!activeBoardLayout()||!state.edit||state.groupEditBusy)return;
+ if(!state.board.groups?.some(g=>g.id===button.dataset.id))return;
+ if(!await db.allowed(state.boardId,'edit'))throw new ApiError('Group editing not permitted.',403);
+ state.groupEditId=button.dataset.id;render();
+ root.querySelector('[data-group-inline-form] input')?.focus();break;
+}
+case 'group-inline-cancel':{if(!state.groupEditBusy){state.groupEditId=null;render();}break;}
+case 'group-select-visible':{
+ if(!activeBoardLayout())return;
+ const visible=[...root.querySelectorAll('table[data-group-id="'+button.dataset.id+'"] [data-board-select-item]')]
+  .filter(input=>!input.closest('tr')?.hidden).map(input=>input.dataset.boardSelectItem);
+ itemSelection.selectVisible(visible);syncBoardSelectionUi();break;
+}
+case 'bulk-clear':{itemSelection.clear();syncBoardSelectionUi();break;}
+case 'bulk-export':{
+ if(!activeBoardLayout()||!itemSelection.size)return;
+ const before={user:state.context?.user_id,workspace:state.context?.workspace_id,
+  board:state.boardId,ids:[...itemSelection.ids]};
+ if(before.ids.length>2000)throw new ApiError('Export is limited to 2,000 records.');
+ const actor=await auth.getVerifiedUser(),fresh=await db.board(before.board);
+ if(actor.id!==before.user||!fresh?.board||fresh.board.workspace_id!==before.workspace||
+   !await db.allowed(before.board,'view')||state.boardId!==before.board||
+   state.context?.user_id!==before.user||state.context?.workspace_id!==before.workspace)
+  throw new ApiError('Signed board scope changed. Refresh before exporting.',403);
+ const csv=exportVisibleBoardItems(fresh.items||[],before.ids,{boardId:before.board});
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;
+ a.download='apsyntra-selected-'+before.board.slice(0,8)+'.csv';
+ document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);
+ toast('Selected authorized board records exported.');break;
+}
 case 'new-group':{
    await writeGuard();
    openModal('Add board group',input('Group name','name','New group'),async fd=>{
@@ -2361,6 +2453,8 @@ root.addEventListener('click',event=>{
 document.addEventListener('click',event=>{
  const active=event.target.closest?.('.board-card-actions')||null;
  closeBoardCardMenus(active);
+ for(const menu of root.querySelectorAll('.board-group-actions[open]'))
+  if(!event.target.closest?.('.board-group-actions')?.isSameNode(menu))menu.open=false;
 });
 root.addEventListener('toggle',event=>{
  if(!event.target.matches?.('.board-card-actions'))return;
@@ -2369,12 +2463,28 @@ root.addEventListener('toggle',event=>{
  if(event.target.open)closeBoardCardMenus(event.target);
 },true);
 root.addEventListener('click',event=>{
+ const checkbox=event.target.closest('[data-board-select-item]');
+ if(checkbox)checkbox.dataset.shiftSelect=event.shiftKey?'true':'false';
  const target=event.target.closest('[data-action]');
  if(!target)return;
  event.preventDefault();
  Promise.resolve(action(target.dataset.action,target)).catch(notice);
 });
 root.addEventListener('change',event=>{
+ if(event.target.matches('[data-board-select-item]')&&activeBoardLayout()){
+  const input=event.target;
+  const order=[...root.querySelectorAll('[data-board-select-item]')]
+   .filter(el=>!el.closest('tr')?.hidden).map(el=>el.dataset.boardSelectItem);
+  itemSelection.toggle(input.dataset.boardSelectItem,input.checked,{
+   shift:input.dataset.shiftSelect==='true',ordered:order});
+  delete input.dataset.shiftSelect;syncBoardSelectionUi();return;
+ }
+ if(event.target.matches('[data-board-select-all]')&&activeBoardLayout()){
+  const input=event.target;
+  const visible=[...root.querySelectorAll('table[data-group-id="'+input.dataset.boardSelectAll+'"] [data-board-select-item]')]
+   .filter(el=>!el.closest('tr')?.hidden).map(el=>el.dataset.boardSelectItem);
+  itemSelection.selectVisible(visible,{checked:input.checked});syncBoardSelectionUi();return;
+ }
  if(event.target.matches('[data-board-column-toggle]')){
   const c=activeBoardLayout(),key=event.target.dataset.boardColumnToggle;
   if(!c||!c.columns.includes(key)||BOARD_REQUIRED_COLUMNS.includes(key))return;
@@ -2440,6 +2550,9 @@ root.addEventListener('change',event=>{
  }
 });
 root.addEventListener('submit',event=>{
+ if(event.target.matches('[data-group-inline-form]')){
+  event.preventDefault();Promise.resolve(saveGroupInline(event.target)).catch(notice);return;
+ }
  if(event.target.id==='tt-ot-form'){
   event.preventDefault();
   if(!TT_OT_WRITES_ACCEPTED){
@@ -2509,12 +2622,26 @@ root.addEventListener('input',event=>{
   return;
  }
  if(!event.target.matches('.search-input'))return;
- const value=event.target.value.toLowerCase().trim();
- for(const row of root.querySelectorAll('[data-searchable]'))row.hidden=!row.dataset.searchable.includes(value);
+ const value=event.target.value.toLocaleLowerCase().trim();
+ if(event.target.id==='board-search')state.boardSearch=event.target.value.slice(0,160);
+ let matched=0;
+ for(const row of root.querySelectorAll('[data-searchable]')){
+  row.hidden=!row.dataset.searchable.toLocaleLowerCase().includes(value);
+  if(!row.hidden&&row.matches('.board-card'))matched++;
+ }
+ if(event.target.id==='board-search'){
+  const result=root.querySelector('#board-search-result');
+  if(result)result.textContent=matched+' matching board'+(matched===1?'':'s');
+  const hint=root.querySelector('#board-search-no-results');
+  if(hint)hint.hidden=matched!==0;
+ }else if(event.target.id==='search-board-items')syncBoardSelectionUi();
 });
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
 window.addEventListener('keydown',event=>{if(event.key==='Escape'){
- closeBoardCardMenus();hideModal();if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
+ closeBoardCardMenus();hideModal();
+  for(const menu of root.querySelectorAll('.board-group-actions[open]'))menu.open=false;
+  if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
+  if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
 auth.onExpired=()=>{state.context=null;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};renderLogin('Session expired. Please sign in again.');};
 async function boot(){
