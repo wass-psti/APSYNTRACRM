@@ -63,8 +63,20 @@ export function expectedCellValue(detail,item,key){
  }
  return null;
 }
-export function visibleValue(value,type){
+/** The saved value is the stable option ID; render the current configured label. */
+export function configuredStatus(value,config={}){
+ const id=String(value??'');
+ const labels=Array.isArray(config?.labels)?config.labels:[];
+ const option=labels.find(o=>o&&typeof o==='object'&&String(o.id)===id);
+ const name=option&&[option.label,option.title,option.name]
+  .find(x=>typeof x==='string'&&x.trim().length>0);
+ const color=typeof option?.color==='string'&&/^#[0-9a-f]{6}$/i.test(option.color)?
+  option.color:null;
+ return {label:name||id||'—',color};
+}
+export function visibleValue(value,type,config={}){
  if(value==null||value==='')return '—';
+ if(type==='status')return configuredStatus(value,config).label;
  if(type==='checkbox')return value===true?'Yes':'No';
  if(type==='timeline'&&typeof value==='object')
   return [value.start,value.end].filter(Boolean).join(' → ')||'—';
@@ -74,7 +86,8 @@ export function visibleValue(value,type){
 export function editableCellButton({key,item,detail,writable,editing=false,cellContent}){
  const col=cellColumn(detail,key);
  if(!writable||!col||editing)return cellContent;
- return '<button type="button" class="board-inline-cell-trigger" data-action="inline-cell-start" '+
+ return '<button type="button" class="board-inline-cell-trigger'+
+  (col.data_type==='status'?' board-full-status-trigger':'')+'" data-action="inline-cell-start" '+
   'data-item-id="'+esc(item.id)+'" data-column-key="'+esc(key)+'" '+
   'aria-label="Edit '+esc(col.name||key)+' for '+esc(item.title)+'">'+cellContent+
   '<span class="board-inline-pencil" aria-hidden="true"> ✎</span></button>';

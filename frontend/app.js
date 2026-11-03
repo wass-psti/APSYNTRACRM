@@ -16,7 +16,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
-import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm} from './board-inline-items.js';
+import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
@@ -32,7 +32,7 @@ import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardAuditCursorPage,renderBoardAuditCursorPage} from './board-col01-readers.js';
 import {loadBoardCollaboration,renderBoardCollaboration} from './board-collaboration.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
- normalizeLayout,BOARD_REQUIRED_COLUMNS} from './board-presentation.js';
+ normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board-presentation.js';
 import {runTwelveBoardQa} from './board-operational-qa.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
@@ -279,7 +279,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
    if(state.inlineCell?.itemId===item.id&&state.inlineCell?.key===key)
     return renderInlineCellEditor({item,key,detail,members:detail?.members||[]});
    return editableCellButton({key,item,detail,
-    writable:editable&&(!cellColumn(detail,key)?.virtual||bulkReadyFor(detail?.board)),
+    writable:editable&&(!cellColumn(detail,key)?.virtual||canBulkEditBoard(detail?.board)),
     cellContent:content});
   };
   cell.record='<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(item.id)+'" aria-label="Open '+e(item.title||'Untitled')+' details">▥</button> '+
@@ -290,11 +290,22 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   for(const column of columns.filter(c=>c.key.startsWith('col:'))){
    const def=cellColumn(detail,column.key);
    const value=expectedCellValue(detail,item,column.key);
-   cell[column.key]=display(column.key,e(visibleValue(value,def?.data_type)));
+   const status=def?.data_type==='status'?configuredStatus(value,def.config):null;
+   const formatted=status?
+    '<span class="board-configured-status"'+
+     (status.color?' style="--board-status-accent:'+status.color+'"':'')+'>'+
+     e(status.label)+'</span>':
+    e(visibleValue(value,def?.data_type,def?.config));
+   cell[column.key]=display(column.key,formatted);
   }
   cell.actions=editable?'<button class="icon-button" data-action="edit-item" data-id="'+
    e(item.id)+'" title="Edit item name inline">✎ Edit</button>':'';
-  return {itemId:item.archived_at?null:item.id,search:String(item.title||'').toLowerCase(),cells:cell};
+  const statusKeys=editable?columns.filter(c=>{
+   const def=cellColumn(detail,c.key);
+   return def?.data_type==='status'&&(!def.virtual||canBulkEditBoard(detail?.board));
+  }).map(c=>c.key):[];
+  return {itemId:item.archived_at?null:item.id,search:String(item.title||'').toLowerCase(),
+   cells:cell,statusKeys};
  });
  return boardTable({columns,rows,layout,groupId,
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
@@ -669,8 +680,9 @@ async function startBoardInlineEdit(itemId,key){
  if(!validUuid(itemId)||!activeBoardLayout()||
   !canManuallyEditBoard(state.board?.board,state.edit))return;
  const boardId=state.boardId,item=state.board.items?.find(x=>x.id===itemId);
- if(!item||item.archived_at||!cellColumn(state.board,key)||
-  (cellColumn(state.board,key)?.virtual&&!bulkReadyFor(state.board.board)))return;
+ if(!item||item.archived_at||!cellColumn(state.board,key))return;
+ if(cellColumn(state.board,key)?.virtual&&
+    !await ensureSignedBulkReady(state.board.board))return;
  await verifyOrdinaryItemWrite(boardId);
  if(state.boardId!==boardId)return;
  state.inlineCell={boardId,itemId,key,expected:expectedCellValue(state.board,item,key)};
@@ -1568,6 +1580,54 @@ async function action(name,button){
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;
   resetBoardLayout(state.context,state.boardId);render();break;
+ }
+ case 'board-column-context':{
+  openBoardColumnContext(button);break;
+ }
+ case 'board-column-set-width':{
+  const key=button.dataset.key,layout=activeBoardLayout();
+  if(!layout?.columns.includes(key))return;
+  closeBoardColumnContext();
+  const answer=window.prompt('Column width in pixels ('+BOARD_COLUMN_MIN+'–'+BOARD_COLUMN_MAX+'):',
+   String(layout.pref.widths[key]||185));
+  if(answer===null)return;
+  const width=Number(answer.trim());
+  if(!Number.isFinite(width)||width<BOARD_COLUMN_MIN||width>BOARD_COLUMN_MAX)
+   throw new ApiError('Enter a width between '+BOARD_COLUMN_MIN+' and '+BOARD_COLUMN_MAX+' pixels.',400);
+  persistBoardLayout(p=>({...p,widths:{...p.widths,[key]:columnWidth(width)}}));
+  render();break;
+ }
+ case 'board-column-reset-width':{
+  const key=button.dataset.key,layout=activeBoardLayout();
+  if(!layout?.columns.includes(key))return;
+  closeBoardColumnContext();
+  persistBoardLayout(p=>({...p,widths:{...p.widths,[key]:185}}));render();break;
+ }
+ case 'board-column-manage':{
+  const key=button.dataset.key,layout=activeBoardLayout();
+  closeBoardColumnContext();
+  if(!layout?.columns.includes(key)||!state.boardManage)return;
+  await openBoardStructure();
+  if(key==='record')modal?.querySelector('#structure-primary')?.focus();
+  else{
+   const customId=key.startsWith('col:')?key.slice(4):null;
+   const edit=[...modal?.querySelectorAll('[data-structure-edit]')||[]]
+     .find(el=>el.dataset.structureEdit===customId);
+   if(edit)edit.click();
+   else modal?.querySelector('.board-structure-scroll')?.focus();
+  }
+  break;
+ }
+ case 'board-column-delete-custom':{
+  const key=button.dataset.key,layout=activeBoardLayout();
+  closeBoardColumnContext();
+  if(!layout?.columns.includes(key)||!state.boardManage||!key.startsWith('col:'))return;
+  const customId=key.slice(4);
+  if(!describeBoardColumns(state.board).some(c=>c.id===customId&&c.deletable))return;
+  await openBoardStructure();
+  const remove=[...modal?.querySelectorAll('[data-structure-delete]')||[]]
+    .find(el=>el.dataset.structureDelete===customId);
+  remove?.click();break;
  }
  case 'board-column-move':{
   const current=activeBoardLayout(),key=button.dataset.key,
@@ -2766,6 +2826,50 @@ root.addEventListener('toggle',event=>{
   void mountSignedTimeTrackerMaps();
 },true);
 
+let boardColumnMenuNode=null,boardColumnMenuTrigger=null;
+function closeBoardColumnContext({restoreFocus=false}={}){
+ const trigger=boardColumnMenuTrigger;
+ boardColumnMenuNode?.remove();
+ boardColumnMenuNode=null;boardColumnMenuTrigger=null;
+ if(trigger?.isConnected){
+  trigger.setAttribute('aria-expanded','false');
+  if(restoreFocus)trigger.focus();
+ }
+}
+function openBoardColumnContext(trigger){
+ const layout=activeBoardLayout(),key=trigger?.dataset.columnKey;
+ if(!layout?.columns.includes(key)||!trigger.closest('th[data-column-key]'))return;
+ if(boardColumnMenuTrigger===trigger&&boardColumnMenuNode?.isConnected){
+  closeBoardColumnContext({restoreFocus:true});return;
+ }
+ closeBoardColumnContext();
+ const name=trigger.closest('th')?.querySelector('.board-heading-label')?.textContent?.trim()||key;
+ const customId=key.startsWith('col:')?key.slice(4):null;
+ const editableCustom=state.boardManage&&customId&&
+  describeBoardColumns(state.board).some(c=>c.id===customId&&c.deletable);
+ const manageable=state.boardManage&&
+  (key==='record'||editableCustom||key==='status'||key==='owner'||key==='due'||key==='actions');
+ const make=(action,label)=>'<button type="button" role="menuitem" data-action="'+action+
+  '" data-key="'+e(key)+'">'+e(label)+'</button>';
+ const node=document.createElement('div');
+ node.className='board-header-context-menu';node.id='board-header-context-menu';
+ node.setAttribute('role','menu');node.setAttribute('aria-label','Column options: '+name);
+ node.innerHTML=make('board-column-set-width','Set width…')+
+  make('board-column-reset-width','Reset width')+
+  (manageable?make('board-column-manage',key==='record'?'Rename title column…':
+   editableCustom?'Edit custom column…':'Manage board columns…'):'')+
+  (editableCustom?make('board-column-delete-custom','Delete custom column…'):'');
+ root.append(node);
+ boardColumnMenuNode=node;boardColumnMenuTrigger=trigger;
+ trigger.setAttribute('aria-expanded','true');
+ trigger.setAttribute('aria-controls',node.id);
+ const rect=trigger.getBoundingClientRect(),width=node.offsetWidth;
+ node.style.left=Math.max(8,Math.min(rect.right-width,window.innerWidth-width-8))+'px';
+ const h=node.offsetHeight;
+ node.style.top=(rect.bottom+h+6<=window.innerHeight?
+  rect.bottom+4:Math.max(8,rect.top-h-4))+'px';
+ node.querySelector('[role="menuitem"]')?.focus();
+}
 let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;
 /** Save one authoritative, CAS-checked custom-column order for a signed Item-only board. */
 async function persistItemOnlyColumnOrder(keys){
@@ -2823,6 +2927,9 @@ async function moveBoardPresentation(kind,from,to){
  render();return true;
 }
 root.addEventListener('dragstart',event=>{
+ if(event.target.closest('.board-column-more,.board-column-resize')){
+  event.preventDefault();return;
+ }
  if(!activeBoardLayout())return;
  const tab=event.target.closest('[data-board-tab]');
  const th=event.target.closest('th[data-column-key]');
@@ -2906,6 +3013,27 @@ window.addEventListener('pointerup',event=>{
  }
 });
 window.addEventListener('pointercancel',()=>{boardResize=null;boardTouch=null;});
+document.addEventListener('pointerdown',event=>{
+ if(boardColumnMenuNode?.isConnected&&
+    !boardColumnMenuNode.contains(event.target)&&
+    !event.target.closest('.board-column-more'))
+  closeBoardColumnContext();
+},true);
+document.addEventListener('keydown',event=>{
+ if(!boardColumnMenuNode?.isConnected)return;
+ if(event.key==='Escape'){
+  event.preventDefault();closeBoardColumnContext({restoreFocus:true});return;
+ }
+ if(!['ArrowDown','ArrowUp'].includes(event.key)||
+    !boardColumnMenuNode.contains(document.activeElement))return;
+ const options=[...boardColumnMenuNode.querySelectorAll('[role="menuitem"]')];
+ const idx=options.indexOf(document.activeElement);
+ if(idx<0||!options.length)return;
+ event.preventDefault();
+ options[(idx+(event.key==='ArrowDown'?1:-1)+options.length)%options.length].focus();
+});
+window.addEventListener('scroll',()=>closeBoardColumnContext(),true);
+window.addEventListener('resize',()=>closeBoardColumnContext());
 root.addEventListener('click',event=>{
  if(boardSuppressedClick&&event.target.closest('[data-board-tab]')){
   event.preventDefault();boardSuppressedClick=false;

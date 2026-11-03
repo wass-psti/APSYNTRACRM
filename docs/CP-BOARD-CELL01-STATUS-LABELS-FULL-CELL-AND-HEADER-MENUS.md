@@ -1,0 +1,25 @@
+# CP-BOARD-CELL01 — Status labels, full-cell editing, and functional header menus
+
+**Scope:** Six annotated Contacts board defects, November 3, 2026. Only frontend modules and regression tests are changed. No production SQL, RBAC/RLS policies, roles, record values, sessions, or application-managed schemas may be mutated by this release.
+
+## Verified root causes
+
+1. **Raw status IDs:** The Contacts board has a physical custom `Status I` field of type `status`. Production configuration stores the stable identifiers `status_c76a5e84e4bdee527e27`, `status_c3ad6b4710797b607e5f`, `status_2b122770316eec706934` with labels **Active**, **Non-Active**, **Decline**, and configured hex colors. The three saved item values contain these identifiers. The generic board renderer previously printed raw string values without resolving the labels from the column's `config.labels`; underlying database data are correct.
+2. **Small click target:** `editableCellButton` rendered only a content-sized button inside a padded table cell. Empty padding could not initiate editing.
+3. **Inert ⋮ menu:** The visible ellipsis was actually the drag-to-resize button `.board-column-resize`, not a menu, and had no click handler or menu actions.
+
+## Implementation
+
+- `configuredStatus` looks up a saved status ID in its own column configuration, preferring an explicitly configured label/title/name, and returns the configured six-digit color when valid. Rendering escapes untrusted text and allows only strictly validated `#RRGGBB` accent values. An unknown/retired ID remains visible instead of being mapped to an incorrect label. **No record values are rewritten.** Select options still use stable IDs; read-only display can resolve even an inactive historical label.
+- Authorized ordinary-board status editors render a full-size native `button` in the selected cell. An explicit per-row status-key list gives only eligible cells padding-free, position-relative containers; absolute inset 0 makes the whole visible cell clickable while preserving the existing table's row height, independent group horizontal scroll, frozen Title column and selection checkbox. Native Enter/Space activates it. Hover/focus/active styling is scoped to editable status cells. Read-only/archived/application-owned cells do not gain write access.
+- Virtual status cells perform the **existing signed, read-only bulk activation check** on demand before entering their editor. Saving follows the existing signed CAS RPC for physical status columns or atomic revision-checked bulk RPC for the virtual status; backend RBAC and audit remain authoritative.
+- Header `⋮` is now an explicit **Column options** button for each column, with `aria-haspopup="menu"`, `aria-expanded`, a role=menu popover, keyboard navigation (Tab/Enter/Space and ArrowUp/ArrowDown), Escape dismissal, and automatic closing on outside pointer, scroll or resize. A separate `↔` button retains the existing pointer-based resize implementation. Context options include Set width, Reset width, and for authorized managers: Rename/Manage column, Edit/Delete custom columns by invoking the existing guarded column-management path. The primary Title column never receives a delete action; application-specific columns retain their deletion restrictions.
+- Reusable existing `BoardStructureClient`, `boardTable`, `editableCellButton`, `activeBoardLayout`, and authenticated board RPCs are preserved. No duplicate mutation endpoints or alternate role systems are introduced.
+
+## Acceptance
+
+**Automated tests:** Mapping the three real configured IDs to names and colors; editing still submits IDs, not labels; invalid CSS and HTML escaping; inactive legacy labels; full-cell button coverage and keyboard semantics; separate header controls and menu actions; signed preflight and CAS wiring; frozen primary and horizontally scrollable groups; existing suite regression. Verify actual GitHub test/deploy outcomes against the exact commit.
+
+**Genuine signed-browser acceptance (separate gate):** On the existing Contacts board, verify all three configured names render, full-cell pointer/keyboard dropdown opening and saving on an authorized user, status changes persist after reload and sign-in, disabled/denied user cannot mutate, stale writes return conflict, menu opens on both Title and Status I, set/reset/drag width operate without menu click conflicts, custom-column edit/delete remains protected by exact confirmation, and primary Title cannot be deleted. Do not perform destructive operations on business records merely for QA; use an independently approved disposable ordinary-board fixture for mutation acceptance.
+
+**Risk:** The frontend maps colors as validated left-border accents while keeping text high contrast; this is deliberately safer than interpolating arbitrary custom CSS colors. Exact visual color matching and 120 FPS responsiveness still require real browser observation.

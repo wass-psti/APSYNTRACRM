@@ -80,11 +80,14 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
    '<span class="board-heading-label">'+(i===0&&selection?.enabled?'<input id="board-select-all-'+esc(groupId)+'" name="board-select-all-'+esc(groupId)+'" type="checkbox" class="board-select-all" data-board-select-all="'+esc(groupId)+'" aria-label="Select visible eligible items in this group" />':'')+esc(c.title)+'</span>'+
    (i>1||(minimal&&i>0)?'<button type="button" class="board-column-handle" data-column-key="'+esc(c.key)+'" '+
     'aria-label="Drag to reorder '+esc(c.title)+' column" title="Drag to reorder">⠿</button>':'')+
+   '<button type="button" class="board-column-more" data-action="board-column-context" '+
+    'data-column-key="'+esc(c.key)+'" aria-label="Column options for '+esc(c.title)+'" '+
+    'aria-haspopup="menu" aria-expanded="false" title="Column options">⋮</button>'+
    '<button type="button" class="board-column-resize" data-column-key="'+esc(c.key)+'" '+
-    'aria-label="Resize '+esc(c.title)+' column" title="Drag to resize">⋮</button>'+
+    'aria-label="Resize '+esc(c.title)+' column" title="Drag to resize">↔</button>'+
    '</th>').join('')+(addColumn?'<th scope="col" class="board-add-column-header"><button type="button" data-action="board-add-column" aria-label="Add a new board column">＋ Add Column</button></th>':'')+'</tr></thead>'+
   '<tbody>'+(rows.length?rows.map(row=>'<tr data-searchable="'+esc(row.search||'')+'"'+(selection?.enabled&&row.itemId?' data-bulk-row="'+esc(row.itemId)+'"':'')+'>'+
-   visible.map((k,i)=>'<td'+(i===0?' class="board-frozen-column"':'')+'>'+
+   visible.map((k,i)=>'<td'+(i===0?' class="board-frozen-column"':row.statusKeys?.includes(k)?' class="board-status-click-cell"':'')+'>'+
     (i===0&&selection?.enabled&&row.itemId?'<input id="board-row-select-'+esc(row.itemId)+'" name="board-row-select-'+esc(row.itemId)+'" type="checkbox" class="board-row-select" data-board-select-item="'+esc(row.itemId)+'" aria-label="Select this record"'+(selection.selected?.has(row.itemId)?' checked':'')+' />':'')+
     String(row.cells?.[k]??'—')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>').join(''):
    '<tr><td colspan="'+(visible.length+(addColumn?1:0))+'" class="board-empty-row">'+esc(empty)+'</td></tr>')+
