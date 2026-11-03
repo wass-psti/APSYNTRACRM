@@ -129,7 +129,7 @@ test('scene loader is cancellable and never gates authentication',async()=>{
    querySelectorAll:()=>[],
    querySelector:()=>host
   };
-  const handle=mountAuthExperience(layout,{sceneLoader:async()=>{
+  const handle=mountAuthExperience(layout,{device:{hardwareConcurrency:8,deviceMemory:8,connection:{saveData:false}},sceneLoader:async()=>{
    loaded++;
    return {createAuthScene:async()=>({destroy(){destroyed++;}})};
   }});

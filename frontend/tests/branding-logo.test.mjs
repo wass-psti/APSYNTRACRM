@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 const logoPath='frontend/apsyntra-logo.webp';
 const bytes=readFileSync(logoPath);
 const app=readFileSync('frontend/app.js','utf8');
+const login=readFileSync('frontend/auth-markup.js','utf8');
 const html=readFileSync('index.html','utf8');
 const css=readFileSync('frontend/styles.css','utf8');
 const loadingCss=readFileSync('frontend/initialization-core.css','utf8');
@@ -20,9 +21,10 @@ test('uploaded brand asset is a small, valid WebP image',()=>{
 
 test('sidebar, login, access denied and browser favicon retain uploaded branding',()=>{
  const ref='src="./frontend/apsyntra-logo.webp"';
- assert.equal((app.match(/src="\.\/frontend\/apsyntra-logo\.webp"/g)||[]).length,3);
+ assert.equal(((app+login).match(/src="\.\/frontend\/apsyntra-logo\.webp"/g)||[]).length,3);
  assert.doesNotMatch(app,/<span class="brand-mark(?: csp-u059)?"[^>]*>A<\/span>/);
  assert.match(app,/class="brand-mark" src="\.\/frontend\/apsyntra-logo\.webp" alt=""/);
+ assert.match(login,/class="brand-mark" src="\.\/frontend\/apsyntra-logo\.webp" alt=""/);
  assert.match(app,/class="brand-mark csp-u059" src="\.\/frontend\/apsyntra-logo\.webp" alt=""/);
  assert.doesNotMatch(html,/aps-init-brand-icon/);
  assert.doesNotMatch(loadingCss,/aps-init-brand-icon/);

@@ -6,20 +6,20 @@
 
 /** @typedef {{destroy:()=>void}} AuthExperienceHandle */
 /** @param {HTMLElement|null} layout
- *  @param {{sceneLoader?:()=>Promise<unknown>}} options
+ *  @param {{sceneLoader?:()=>Promise<unknown>,device?:object}} options
  *  @returns {AuthExperienceHandle}
  */
-export function mountAuthExperience(layout,{sceneLoader=()=>import('./auth-scene.js')}={}){
+export function mountAuthExperience(layout,{sceneLoader=()=>import('./auth-scene.js'),
+ device=typeof navigator==='undefined'?{}:navigator}={}){
  if(!layout||!layout.isConnected||typeof window==='undefined')
   return {destroy(){}};
  let active=true,scene=null,waiter=null,waiterKind=null;
  const animations=[];
  const prefers=(query)=>Boolean(window.matchMedia?.(query)?.matches);
  const reduced=prefers('(prefers-reduced-motion: reduce)');
- const client=typeof navigator==='undefined'?{}:navigator;
- const lowPower=Boolean(client.connection?.saveData||
-  (client.deviceMemory&&client.deviceMemory<=4)||
-  (client.hardwareConcurrency&&client.hardwareConcurrency<=4));
+ const lowPower=Boolean(device.connection?.saveData||
+  (device.deviceMemory&&device.deviceMemory<=4)||
+  (device.hardwareConcurrency&&device.hardwareConcurrency<=4));
  if(!reduced&&typeof layout.querySelectorAll==='function'){
   const reveal=[...layout.querySelectorAll('.auth-reveal')];
   if(typeof layout.animate==='function'||reveal.some(el=>typeof el.animate==='function')){
