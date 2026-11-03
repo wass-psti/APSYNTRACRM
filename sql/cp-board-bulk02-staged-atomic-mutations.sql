@@ -25,7 +25,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $bulk$
 DECLARE
  actor uuid:=auth.uid(); b public.work_boards%rowtype;
- action_key text:=pg_catalog.btrim(pg_catalog.coalesce(p_action,''));
+ action_key text:=pg_catalog.btrim(coalesce(p_action,''));
  entry jsonb; ids uuid[]:=ARRAY[]::uuid[]; expected_times timestamptz[]:=ARRAY[]::timestamptz[];
  status_values text[]:=ARRAY[]::text[]; record_id uuid; expected_at timestamptz;
  v_status text; it public.work_board_items%rowtype; status_column public.work_board_columns%rowtype;
@@ -99,9 +99,9 @@ BEGIN
    IF status_column.id IS NOT NULL THEN
     IF NOT EXISTS(
      SELECT 1 FROM pg_catalog.jsonb_array_elements(
-      pg_catalog.coalesce(status_column.config->'labels','[]'::jsonb)) x
+      coalesce(status_column.config->'labels','[]'::jsonb)) x
       WHERE x->>'id'=status_values[idx] AND
-       pg_catalog.coalesce((x->>'active')::boolean,true)
+       coalesce((x->>'active')::boolean,true)
     ) THEN
      RAISE EXCEPTION 'Selected status not supported by board schema' USING ERRCODE='22023';
     END IF;
@@ -126,7 +126,7 @@ BEGIN
   'Atomic bulk item action applied','board',b.id::text,
   pg_catalog.jsonb_build_object('action',action_key,'count',pg_catalog.array_length(ids,1),
    'item_ids',pg_catalog.to_jsonb(ids)));
- SELECT pg_catalog.coalesce(pg_catalog.jsonb_agg(
+ SELECT coalesce(pg_catalog.jsonb_agg(
   pg_catalog.jsonb_build_object('id',i.id::text,'updatedAt',i.updated_at,'archived',i.archived_at IS NOT NULL)
   ORDER BY i.id),'[]'::jsonb) INTO latest
  FROM public.work_board_items i WHERE i.board_id=b.id AND i.id=ANY(ids);
@@ -142,8 +142,8 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $group$
 DECLARE
  actor uuid:=auth.uid(); b public.work_boards%rowtype; grp public.work_board_groups%rowtype;
- action_key text:=pg_catalog.btrim(pg_catalog.coalesce(p_action,''));
- cleaned text:=pg_catalog.btrim(pg_catalog.coalesce(p_title,''));
+ action_key text:=pg_catalog.btrim(coalesce(p_action,''));
+ cleaned text:=pg_catalog.btrim(coalesce(p_title,''));
  revised timestamptz; group_total int;
 BEGIN
  IF actor IS NULL OR NOT private.wm_board_config_session_active()
