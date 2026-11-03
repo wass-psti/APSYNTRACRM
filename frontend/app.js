@@ -15,6 +15,7 @@ import {NativeIssueClient} from './native-client.js';
 import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
+import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns} from './board-grid.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
@@ -137,6 +138,7 @@ function renderLogin(message=''){
  stopSidebarSelection();
  stopOverviewMotion();
  stopBoardCatalogMotion();
+ stopFoundationMotion();
  root.innerHTML=renderAuthMarkup({message});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
@@ -252,9 +254,11 @@ function shell(body){
  <div class="main-content">${body}</div></main></div>`;
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
+ root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
  animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
  mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
  mountBoardCatalogMotion(root.querySelector('.aps-boards'),state.view);
+ mountFoundationMotion(root.querySelector('.aps-foundation'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
 }
