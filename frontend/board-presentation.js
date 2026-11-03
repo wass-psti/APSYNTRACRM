@@ -64,7 +64,7 @@ export function resetBoardLayout(context,boardId,storage=globalThis.localStorage
  try{storage.removeItem(key);return true;}catch{return false;}
 }
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function boardTable({columns=[],rows=[],empty='No persisted records',layout=null,groupId='ungrouped',selection=null}={}){
+export function boardTable({columns=[],rows=[],empty='No persisted records',layout=null,groupId='ungrouped',selection=null,footer='',summaries=null}={}){
  const available=columns.map(c=>c.key);
  const pref=normalizeLayout(layout||{},[],available);
  const visible=pref.columns.filter(k=>!pref.hidden.includes(k));
@@ -88,7 +88,13 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
     (i===0&&selection?.enabled&&row.itemId?'<input id="board-row-select-'+esc(row.itemId)+'" name="board-row-select-'+esc(row.itemId)+'" type="checkbox" class="board-row-select" data-board-select-item="'+esc(row.itemId)+'" aria-label="Select this record"'+(selection.selected?.has(row.itemId)?' checked':'')+' />':'')+
     String(row.cells?.[k]??'—')+'</td>').join('')+'</tr>').join(''):
    '<tr><td colspan="'+visible.length+'" class="board-empty-row">'+esc(empty)+'</td></tr>')+
-  '</tbody></table></div></div>';
+  '</tbody>'+
+  (footer||summaries?'<tfoot class="board-footer">'+
+   (footer?'<tr class="board-add-item-row"><td colspan="'+visible.length+'">'+footer+'</td></tr>':'')+
+   (summaries?'<tr class="board-column-summaries">'+visible.map(k=>
+    '<td'+(k==='record'?' class="board-frozen-column"':'')+' aria-label="'+esc(lookup.get(k)?.title||k)+' summary">'+esc(summaries[k]??'—')+'</td>').join('')+'</tr>':'')+
+  '</tfoot>':'')+
+  '</table></div></div>';
 }
 export function boardColumnMenu(columns,layout){
  const pref=normalizeLayout(layout||{},[],columns.map(c=>c.key));

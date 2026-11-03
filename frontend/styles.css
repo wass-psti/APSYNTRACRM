@@ -1641,3 +1641,50 @@
 .board-bulk-probe-details>summary{font-weight:700;cursor:pointer;padding:4px 0}
 .board-bulk-probe-details p{margin:6px 0;line-height:1.5}
 .board-bulk-probe-summary .secondary{margin-top:8px}
+
+
+/* CP-BOARD-ROW01 — native group footer, inline edit and nonsecret summaries. */
+.board-table-custom .board-footer td{border-top:1px solid #e4e9f3}
+.board-table-custom .board-add-item-row td{background:#f4f7ff;padding:0!important}
+.board-inline-add-form{display:flex;align-items:center;gap:8px;min-height:38px;padding:4px 10px}
+.board-inline-add-icon{font-weight:800;font-size:17px;color:#5669c3;flex-shrink:0}
+.board-inline-add-form input{min-width:130px;max-width:500px;flex:1;font:inherit;font-size:12px;
+ border:1px solid transparent;border-radius:6px;background:transparent;padding:7px 9px;
+ color:#24314e}
+.board-inline-add-form input:focus{background:#fff;border-color:#7487f2;outline:2px solid #b3bcff}
+.board-inline-add-submit{border:1px solid #c9d3fb;border-radius:7px;background:#eef1ff;
+ color:#444eb2;padding:7px 11px;font:inherit;font-size:11px;cursor:pointer}
+.board-inline-add-submit:disabled{opacity:.55;cursor:not-allowed}
+.board-table-custom .board-column-summaries td{background:#f8f9fe;color:#7c849b;font-size:11px;
+ font-weight:650;white-space:nowrap;border-top:1px solid #e1e6f0;min-height:35px}
+.board-table-custom .board-column-summaries td.board-frozen-column{background:#f8f9fe;z-index:2}
+.board-domain-row-note{padding:11px 14px;color:#8b92a9;background:#f7f8fc;
+ font-size:11px;font-style:italic}
+.board-inline-cell-trigger{display:inline-flex;align-items:center;gap:3px;
+ font:inherit;color:inherit;background:transparent;border:0;text-align:left;
+ cursor:text;border-radius:5px;padding:3px 4px;max-width:100%;white-space:normal}
+.board-inline-cell-trigger:hover{background:#edf0ff}
+.board-inline-cell-trigger:focus-visible{outline:2px solid #6478e9;outline-offset:1px}
+.board-inline-pencil{font-size:11px;color:#767ff2;opacity:0}
+.board-inline-cell-trigger:hover .board-inline-pencil,
+.board-inline-cell-trigger:focus-visible .board-inline-pencil{opacity:1}
+.board-inline-cell-form{display:flex;flex-direction:column;gap:5px;min-width:135px;max-width:100%;
+ padding:3px}
+.board-inline-cell-form input,.board-inline-cell-form textarea,.board-inline-cell-form select{
+ box-sizing:border-box;width:100%;min-width:0;font:inherit;font-size:12px;
+ color:#273152;background:#fff;border:1px solid #bdc9ea;border-radius:6px;padding:7px 8px}
+.board-inline-cell-form input:focus,.board-inline-cell-form textarea:focus,
+.board-inline-cell-form select:focus{outline:2px solid #909ef2}
+.board-inline-controls{display:flex;flex-wrap:wrap;gap:4px}
+.board-inline-controls button{font-size:10px;padding:5px 8px}
+.board-inline-range{display:grid;grid-template-columns:1fr;gap:3px}
+.board-inline-range label{display:flex;align-items:center;gap:5px;font-size:10px}
+.board-inline-boolean{display:flex;align-items:center;gap:4px;font-size:11px}
+.board-inline-boolean input{width:16px}
+@media(max-width:620px){
+ .board-inline-add-form{min-width:250px}
+ .board-inline-cell-form{min-width:105px}
+}
+@media(prefers-reduced-motion:reduce){
+ .board-inline-add-form *, .board-inline-cell-form *{transition:none!important}
+}

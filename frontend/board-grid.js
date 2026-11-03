@@ -15,7 +15,7 @@ export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},a
  return [{key:'record',title:primaryTitle},{key:'status',title:'Status'},
   ...columns.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name}))];
 }
-export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record',columnLabels={},allowCustom=false,selection=null}={}){
+export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record',columnLabels={},allowCustom=false,selection=null,footer='',summaries=null}={}){
  const items=Array.isArray(detail?.items)?detail.items:[];
  const values=Array.isArray(detail?.values)?detail.values:[];
  const module=moduleByBoardName(detail?.board?.name);
@@ -40,7 +40,7 @@ export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record'
   return {itemId:item.archived_at?null:item.id,search:String(item.title||'').toLowerCase(),cells};
  });
  let html=boardTable({columns,rows,layout,groupId:groupId||'ungrouped',
-  empty:'No persisted records in this board group',selection});
+  empty:'No persisted records in this board group',selection,footer,summaries});
  if(module)html+='<p class="muted csp-u025" >Operational records will appear here only when the corresponding APSYNTRA domain module writes and reconciles them through the authorized backend. Restricted fields are not displayed.</p>';
  return html;
 }
