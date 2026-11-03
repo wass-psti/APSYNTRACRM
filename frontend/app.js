@@ -12,6 +12,9 @@ import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {boardGrid,boardGridColumns} from './board-grid.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
+import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
+ loadBoardInvitableDirectory,renderBoardInvitableDirectory,
+ loadBoardAuditCursorPage,renderBoardAuditCursorPage} from './board-col01-readers.js';
 import {loadBoardCollaboration,renderBoardCollaboration} from './board-collaboration.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS} from './board-presentation.js';
@@ -825,6 +828,14 @@ function redrawBoardHistory({focus=false}={}){
  if(!modal||!boardHistoryAuthorized(boardHistory)){hideModal();boardHistory=null;return;}
  const host=modal.querySelector('[data-board-activity-results]');
  if(!host)return;
+ if(boardHistory.mode==='cursor'){
+  const result=boardHistory.pages[boardHistory.index];
+  host.innerHTML=renderBoardAuditCursorPage(result,{
+   pageIndex:boardHistory.index,busy:boardHistory.busy,error:boardHistory.error,
+   cachedNext:boardHistory.index<boardHistory.pages.length-1
+  });
+  return;
+ }
  const results=renderBoardActivityResults(boardHistory.rows,boardHistory);
  boardHistory.page=results.page;
  host.innerHTML=results.html;
@@ -836,22 +847,54 @@ function redrawBoardHistory({focus=false}={}){
 async function openBoardActivity(){
  if(!activeBoardLayout())return;
  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
- const events=await db.boardEvents(snapshot.boardId,100);
+ const cursorMode=BOARD_COL01_AUDIT_CURSOR_ENABLED;
+ const events=cursorMode?
+  await loadBoardAuditCursorPage(db,snapshot.boardId):
+  await db.boardEvents(snapshot.boardId,100);
  if(!boardHistoryAuthorized(snapshot))return;
- boardHistory={...snapshot,rows:normalizeBoardActivity(events),limit:100,
-  search:'',type:'all',actor:'all',page:0,busy:false,error:''};
+ boardHistory=cursorMode?
+  {...snapshot,mode:'cursor',pages:[events],index:0,busy:false,error:''}:
+  {...snapshot,rows:normalizeBoardActivity(events),limit:100,
+   search:'',type:'all',actor:'all',page:0,busy:false,error:''};
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-history-backdrop';
  modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-activity-title">'+
   '<div class="modal-head"><h2 id="board-activity-title">Board activity history</h2>'+
   '<button type="button" data-dismiss class="modal-close" aria-label="Close activity history">×</button></div>'+
-  '<p class="muted">Read-only signed board events. Filters apply to records retrieved from the authoritative server.</p>'+
+  '<p class="muted">'+(cursorMode?'Signed server-paginated board events. Older pages use a protected audit cursor.':'Read-only signed board events. Filters apply to records retrieved from the authoritative server.')+'</p>'+
   '<div data-board-activity-results></div></section>';
  document.body.append(modal);
  modal.addEventListener('click',async event=>{
   if(event.target===modal||event.target.closest('[data-dismiss]')){hideModal();boardHistory=null;return;}
   const action=event.target.closest('[data-board-history-action]')?.dataset.boardHistoryAction;
   if(!action||!boardHistoryAuthorized(boardHistory)||boardHistory.busy)return;
+  if(boardHistory.mode==='cursor'){
+   const current=boardHistory;
+   if(action==='cursor-previous'&&current.index>0)current.index--;
+   else if(action==='cursor-next'){
+    if(current.index<current.pages.length-1)current.index++;
+    else if(current.pages.length<BOARD_COL01_AUDIT_MAX_PAGES&&
+     current.pages[current.index]?.hasMore){
+     current.busy=true;redrawBoardHistory();
+     try{
+      const page=await loadBoardAuditCursorPage(db,current.boardId,{
+       beforeId:current.pages[current.index].nextCursor});
+      if(!boardHistoryAuthorized(current)||boardHistory!==current)return;
+      current.pages.push(page);current.index++;current.error='';
+     }catch{if(boardHistory===current)current.error='Older audit events could not be loaded.';}
+     finally{current.busy=false;}
+    }
+   }else if(action==='cursor-refresh'){
+    current.busy=true;redrawBoardHistory();
+    try{
+     const page=await loadBoardAuditCursorPage(db,current.boardId);
+     if(!boardHistoryAuthorized(current)||boardHistory!==current)return;
+     current.pages=[page];current.index=0;current.error='';
+    }catch{if(boardHistory===current)current.error='Audit events could not be refreshed.';}
+    finally{current.busy=false;}
+   }
+   redrawBoardHistory();return;
+  }
   if(action==='next')boardHistory.page++;
   if(action==='previous')boardHistory.page--;
   if(['more','refresh'].includes(action)){
@@ -913,6 +956,9 @@ async function openBoardMembers(){
  if(!boardHistoryAuthorized(snapshot)||detail.board?.workspace_id!==snapshot.workspaceId)return;
  // The existing signed board RPC returns only this board's membership.
  const members=Array.isArray(detail.members)?detail.members:[];
+ const directory=await loadBoardInvitableDirectory(db,snapshot.boardId)
+  .catch(()=>({status:'ERROR'}));
+ if(!boardHistoryAuthorized(snapshot))return;
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-history-backdrop';
  modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-members-title">'+
@@ -922,10 +968,24 @@ async function openBoardMembers(){
   '<div class="board-member-list">'+(members.length?members.map(row=>
     '<div class="board-member"><strong>'+e(row.display_name||'Registered user')+'</strong>'+
     '<span>'+e(row.role||'Member')+'</span></div>').join(''):
-    '<p>No board membership records were returned.</p>')+'</div></section>';
+    '<p>No board membership records were returned.</p>')+'</div>'+
+  '<div data-col01-directory-results>'+renderBoardInvitableDirectory(directory)+'</div></section>';
  document.body.append(modal);
- modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
- modal.querySelector('[data-dismiss]')?.focus();
+ const view=modal;
+ view.addEventListener('submit',async event=>{
+  if(!event.target.matches('[data-col01-directory-search]'))return;
+  event.preventDefault();
+  if(!boardHistoryAuthorized(snapshot))return;
+  const query=event.target.elements.namedItem('query')?.value||'';
+  let result;
+  try{result=await loadBoardInvitableDirectory(db,snapshot.boardId,{query});}
+  catch{result={status:'ERROR'};}
+  if(view!==modal||!boardHistoryAuthorized(snapshot))return;
+  const host=view.querySelector('[data-col01-directory-results]');
+  if(host)host.innerHTML=renderBoardInvitableDirectory(result);
+ });
+ view.addEventListener('click',event=>{if(event.target===view||event.target.closest('[data-dismiss]'))hideModal();});
+ view.querySelector('[data-dismiss]')?.focus();
 }
 
 async function action(name,button){
