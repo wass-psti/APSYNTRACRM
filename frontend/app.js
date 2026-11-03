@@ -20,7 +20,7 @@ import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,vi
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
-import {deleteOneAuthorizedItem} from './board-single-delete.js';
+import {deleteOneAuthorizedItem,selectedDeleteCandidates} from './board-single-delete.js';
 import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
  canSafelyHideEmptyTimeTrackerGroup,readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
  restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup} from './managed-time-tracker-groups.js';
@@ -492,7 +492,7 @@ function boardPage(){
   <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button>
  <button type="button" class="secondary" data-action="bulk-status" ${canRequestBulk(b)?'':'disabled title="Select 1–50 records on an editable ordinary board"'}>Bulk status</button>
  <button type="button" class="secondary" data-action="bulk-archive" ${canRequestBulk(b)?'':'disabled title="Select 1–50 records on an editable ordinary board"'}>Bulk archive</button>
- <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size===1&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select exactly one editable ordinary-board item"'}>Delete item</button>
+ <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
  <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; protected application records remain excluded.'}</span></div>
  ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
  ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:items.filter(i=>i.group_id===g.id).length+' records'}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
@@ -612,8 +612,15 @@ function syncBoardSelectionUi(){
   if(control)control.disabled=!canRequestBulk(state.board?.board);
  }
  const del=root.querySelector('[data-action="delete-selected-item"]');
- if(del)del.disabled=itemSelection.size!==1||!state.edit||
-  !canManuallyEditBoard(state.board?.board,true);
+ if(del){
+  del.disabled=itemSelection.size===0||!state.edit||
+   !canManuallyEditBoard(state.board?.board,true);
+  del.textContent=itemSelection.size>1?
+   'Delete one of '+itemSelection.size+'…':'Delete item';
+  del.title=itemSelection.size>1?
+   'Choose one of '+itemSelection.size+' selected items to permanently delete':
+   'Delete the selected item after confirmation';
+ }
 }
 async function applySelectedBulk(action,status=null){
  if(!bulkReadyFor(state.board?.board)||!activeBoardLayout())
@@ -2603,25 +2610,51 @@ case 'bulk-status':{
 }
 case 'delete-selected-item':{
  if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit)||
-     itemSelection.size!==1)return;
- const selectedId=[...itemSelection.ids][0];
- const item=state.board.items?.find(x=>x.id===selectedId&&!x.archived_at);
- if(!item)return;
+    itemSelection.size===0)return;
  const board=state.board.board,identity=state.context?.user_id,
   workspace=state.context?.workspace_id;
- openModal('Permanently delete item', 
-  '<div class="note security-note">This permanently deletes one selected ordinary-board item and its stored cell values. Existing file-backed items are blocked by PostgreSQL. The legacy delete RPC does not provide atomic revision CAS: concurrent updates after the final read remain a known risk. Multi-item deletion is unavailable.</div>'+
-  '<div class="field"><label for="modal-delete-title">Type the exact item name: '+e(item.title)+'</label>'+
+ const originalIds=new Set(itemSelection.ids);
+ const selected=selectedDeleteCandidates(board,state.board.items,originalIds);
+ const first=selected[0];
+ const choices=selected.map(item=>[item.id,item.title+' — '+item.id.slice(0,8)]);
+ const chooser=selected.length>1?
+  select('Choose one record to delete','deleteItemId',choices,first.id):'';
+ const warning=selected.length>1?
+  'You selected '+selected.length+' records. This action permanently deletes ONE chosen record, not the entire selection. The others remain selected. ': '';
+ openModal(selected.length>1?'Permanently delete one of '+selected.length+' selected items':
+  'Permanently delete item',
+  '<div class="note security-note">'+e(warning)+
+   'Existing file-backed items are blocked by PostgreSQL. The current delete RPC has no server-side revision compare-and-swap; a simultaneous edit after the final read remains a risk. No multi-item delete loop is performed.</div>'+
+  chooser+
+  '<div class="field"><label id="modal-delete-title-label" for="modal-delete-title">Type the exact item name: '+e(first.title)+'</label>'+
   '<input id="modal-delete-title" name="confirmTitle" required autocomplete="off" maxlength="240" /></div>',
   async fd=>{
    if(state.boardId!==board.id||state.context?.user_id!==identity||
-      state.context?.workspace_id!==workspace||!itemSelection.has(item.id))
-    throw new ApiError('Signed board selection changed.',403);
+      state.context?.workspace_id!==workspace||
+      itemSelection.size!==originalIds.size||
+      [...originalIds].some(id=>!itemSelection.has(id)))
+    throw new ApiError('Signed board selection changed. Reopen the confirmation.',403);
+   const id=selected.length===1?first.id:String(fd.get('deleteItemId')||'');
+   const item=selected.find(row=>row.id===id);
+   if(!item||!itemSelection.has(item.id))
+    throw new ApiError('Selected deletion target is no longer available.',409);
    const result=await deleteOneAuthorizedItem({api:db,auth,board,item,
     confirmTitle:String(fd.get('confirmTitle')||'')});
-   itemSelection.clear();await loadBoard(board.id,'items');
-   if(result.audit!=='VERIFIED')toast('Item deleted. Audit read requires independent verification.',true);
-  },{submitLabel:'Delete item permanently'});
+   // loadBoard reconciles selection against the authoritative remaining records.
+   // Do not clear unrelated selected items or send a non-atomic delete loop.
+   await loadBoard(board.id,'items');
+   if(result.audit!=='VERIFIED')
+    toast('Item deleted; audit read requires independent verification.',true);
+  },{submitLabel:'Delete one item permanently'});
+ const targetSelector=modal?.querySelector('[name="deleteItemId"]');
+ targetSelector?.addEventListener('change',()=>{
+  const chosen=selected.find(x=>x.id===targetSelector.value);
+  const label=modal?.querySelector('#modal-delete-title-label');
+  const input=modal?.querySelector('#modal-delete-title');
+  if(!chosen||!label||!input)return;
+  label.textContent='Type the exact item name: '+chosen.title;
+  input.value='';input.focus();
+ });
  break;
 }
 case 'bulk-archive':{

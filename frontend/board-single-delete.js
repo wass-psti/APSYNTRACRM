@@ -7,6 +7,26 @@ import {validUuid} from './data.js';
 import {canManuallyEditBoard} from './board-inline-items.js';
 
 function deny(message,status=403){throw new ApiError(message,status);}
+/** Resolve a selection to authoritative, active ordinary-board rows.
+ * This is a chooser, NOT a multi-record deletion or mutation permission grant.
+ */
+export function selectedDeleteCandidates(board,items,selectedIds){
+ if(!canManuallyEditBoard(board,true)||!Array.isArray(items)||
+    !(selectedIds instanceof Set)||selectedIds.size===0)
+  deny('Select an active ordinary-board item first.',400);
+ if(selectedIds.size>2000)deny('Too many selected items; narrow the selection.',400);
+ const lookup=new Map(items.filter(i=>i&&validUuid(i.id)&&i.board_id===board.id)
+  .map(item=>[item.id,item]));
+ const selected=[];
+ for(const id of selectedIds){
+  const item=lookup.get(id);
+  if(!item||item.archived_at||typeof item.title!=='string'||!item.title||
+     typeof item.updated_at!=='string'||!Number.isFinite(Date.parse(item.updated_at)))
+   deny('Selected items changed. Refresh before deletion.',409);
+  selected.push(item);
+ }
+ return selected;
+}
 export async function deleteOneAuthorizedItem({api,auth,board,item,confirmTitle}={}){
  if(!canManuallyEditBoard(board,true)||!validUuid(item?.id)||
     item.board_id!==board.id||item.archived_at||

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ApiError} from '../session.js';
 import {readFileSync} from 'node:fs';
-import {deleteOneAuthorizedItem} from '../board-single-delete.js';
+import {deleteOneAuthorizedItem,selectedDeleteCandidates} from '../board-single-delete.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const actor='33333333-3333-4333-8333-333333333333';
@@ -60,6 +60,65 @@ test('the selected-record toolbar exposes explicitly confirmed single-item delet
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/data-action="delete-selected-item"/);
  assert.match(app,/case 'delete-selected-item'/);
- assert.match(app,/itemSelection.size!==1/);
+ assert.match(app,/itemSelection.size===0/);
+ assert.match(app,/selectedDeleteCandidates\(board,state\.board\.items,originalIds\)/);
+ assert.match(app,/select\('Choose one record to delete','deleteItemId'/);
+ assert.match(app,/Delete one of '\+itemSelection\.size/);
+ assert.match(app,/itemSelection\.size>0&&state\.edit/);
+ assert.doesNotMatch(app,/itemSelection\.clear\(\);await loadBoard\(board\.id,'items'\)/);
  assert.match(app,/deleteOneAuthorizedItem\(/);
+});
+
+test('three selected records resolve to three individually addressable, nonmutating delete choices',()=>{
+ const second={...item,id:'66666666-6666-4666-8666-666666666666',title:'Second record'};
+ const third={...item,id:'77777777-7777-4777-8777-777777777777',title:'Third record'};
+ const result=selectedDeleteCandidates(board,[item,second,third],
+  new Set([third.id,item.id,second.id]));
+ assert.deepEqual(result.map(x=>x.id),[third.id,item.id,second.id]);
+ assert.equal(result.length,3);
+});
+test('selected records with missing, archived, invalid revision or wrong-board IDs fail closed',()=>{
+ const other={...item,id:'66666666-6666-4666-8666-666666666666'};
+ assert.throws(()=>selectedDeleteCandidates(board,[item],new Set([other.id])),/changed/);
+ assert.throws(()=>selectedDeleteCandidates(board,[{...item,archived_at:'2026-11-03T07:00:00Z'}],
+   new Set([item.id])),/changed/);
+ assert.throws(()=>selectedDeleteCandidates(board,[{...item,updated_at:'bad'}],
+   new Set([item.id])),/changed/);
+ assert.throws(()=>selectedDeleteCandidates(board,[{...item,board_id:ws}],
+   new Set([item.id])),/changed/);
+ assert.throws(()=>selectedDeleteCandidates(board,[item],new Set()),/Select an active/);
+});
+test('protected and inactive boards cannot offer destructive item choices',()=>{
+ assert.throws(()=>selectedDeleteCandidates({...board,name:'TimeTracker Attendance'},
+  [item],new Set([item.id])),/ordinary-board/);
+ assert.throws(()=>selectedDeleteCandidates({...board,status:'archived'},
+  [item],new Set([item.id])),/ordinary-board/);
+});
+test('one-choice deletion checks exact name and keeps the existing signed RPC audit',async()=>{
+ const a=make();
+ const selected=selectedDeleteCandidates(board,[item],new Set([item.id]));
+ await assert.rejects(()=>deleteOneAuthorizedItem({...a,board,item:selected[0],
+  confirmTitle:'Not the selected title'}),/confirmation/);
+ assert.equal(a.calls.length,0);
+ const result=await deleteOneAuthorizedItem({...a,board,item:selected[0],confirmTitle:item.title});
+ assert.equal(result.audit,'VERIFIED');
+ assert.deepEqual(a.calls,[itemId]);
+});
+test('delete modal guards against a changed selection, discloses single-item action and preserves remaining choices',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf("case 'delete-selected-item':{");
+ const end=app.indexOf("case 'bulk-archive':{",start);
+ assert.ok(start>0&&end>start);
+ const code=app.slice(start,end);
+ assert.match(code,/new Set\(itemSelection\.ids\)/);
+ assert.match(code,/itemSelection\.size!==originalIds\.size/);
+ assert.match(code,/\[\.\.\.originalIds\]\.some\(id=>!itemSelection\.has\(id\)\)/);
+ assert.match(code,/ONE chosen record, not the entire selection/);
+ assert.match(code,/const item=selected\.find\(row=>row\.id===id\)/);
+ assert.match(code,/confirmTitle:String\(fd\.get\('confirmTitle'\)\|\|''\)/);
+ assert.match(code,/targetSelector\?\.addEventListener\('change'/);
+ assert.match(code,/input\.value='';input\.focus\(\)/);
+ assert.match(code,/await loadBoard\(board\.id,'items'\)/);
+ assert.doesNotMatch(code,/for\s*\([^)]*\)\s*await\s+deleteOneAuthorizedItem/);
+ assert.doesNotMatch(code,/itemSelection\.clear\(\)/);
 });
