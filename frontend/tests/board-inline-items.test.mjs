@@ -100,6 +100,22 @@ test('typed editor validates numbers and rejects invalid empty, invalid status a
  assert.throws(()=>parseCellForm(cellColumn(detail,'record'),form('')),/required/);
  assert.throws(()=>parseCellForm(cellColumn(detail,'record'),form('A'.repeat(241))),/length/);
 });
+test('typed date and timeline inputs enforce real calendar days including leap years',()=>{
+ const due={name:'Due date',data_type:'date',config:{},required:true};
+ assert.equal(parseCellForm(due,form('2024-02-29')),'2024-02-29');
+ assert.throws(()=>parseCellForm(due,form('2026-02-29')),/valid date/);
+ assert.throws(()=>parseCellForm(due,form('2026-04-31')),/valid date/);
+ assert.throws(()=>parseCellForm(due,form('0000-01-01')),/valid date/);
+ const timeline={name:'Period',data_type:'timeline',config:{},required:true};
+ const range=(start,end)=>{
+  const data=new FormData();data.set('start',start);data.set('end',end);
+  return data;
+ };
+ assert.deepEqual(parseCellForm(timeline,range('2024-02-29','2024-03-01')),
+  {start:'2024-02-29',end:'2024-03-01'});
+ assert.throws(()=>parseCellForm(timeline,range('2026-02-29','2026-03-01')),/valid timeline/);
+ assert.throws(()=>parseCellForm(timeline,range('2026-04-30','2026-04-31')),/valid timeline/);
+});
 test('column summaries calculate nonsecret counts and numeric sums from visible rows',()=>{
  const sums=groupColumnSummaries({items:[item],detail,
   columns:genericBoardColumns(detail)});

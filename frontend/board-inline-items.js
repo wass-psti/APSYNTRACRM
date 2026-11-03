@@ -86,6 +86,14 @@ function optionsOf(col,members=[]){
   col.config.options.filter(o=>typeof o==='string').map(o=>({id:o,label:o})):[];
  return [];
 }
+function validCalendarDate(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+ const [year,month,day]=value.split('-').map(Number);
+ if(year<1||month<1||month>12||day<1)return false;
+ const leap=year%4===0&&(year%100!==0||year%400===0);
+ const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+ return day<=days[month-1];
+}
 export function inputForColumn(col,value,members=[]){
  if(!col||!TYPES.has(col.data_type))throw new ApiError('Unsupported inline column type.',400);
  const type=col.data_type,required=col.required?' required':'';
@@ -115,7 +123,7 @@ export function parseCellForm(col,formData){
  if(type==='timeline'){
   const start=String(formData.get('start')||''),end=String(formData.get('end')||'');
   if(!start&&!end&&!col.required)return null;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||
+  if(!validCalendarDate(start)||!validCalendarDate(end)||
     end<start)throw new ApiError('Choose a valid timeline with end after start.',400);
   return {start,end};
  }
@@ -130,7 +138,7 @@ export function parseCellForm(col,formData){
   return n;
  }
  if(type==='date'){
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(raw)||Number.isNaN(Date.parse(raw)))
+  if(!validCalendarDate(raw))
    throw new ApiError('Enter a valid date.',400);
  }
  if(type==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw))
