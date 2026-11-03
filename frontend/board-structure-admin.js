@@ -121,7 +121,7 @@ export class BoardStructureClient{
     tabs.some(t=>!TAB_KEYS.has(t?.key)||typeof t.visible!=='boolean'||
       !nameOf(t.label)||nameOf(t.label).length>60))
    fail('Invalid board view configuration.');
-  const allowedIds=new Set((detail.columns||[]).map(c=>c.id));
+  const allowedIds=new Set(describeBoardColumns(detail).filter(c=>c.id).map(c=>c.id));
   const labels=settings.columnLabels||{};
   if(Object.entries(labels).some(([id,label])=>!allowedIds.has(id)||
     !validUuid(id)||!nameOf(label)||nameOf(label).length>80))

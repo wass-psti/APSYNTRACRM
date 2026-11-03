@@ -188,3 +188,20 @@ test('locked or unauthorized administration does not enumerate hidden metadata',
  assert.match(denied,/Only authorized board managers/);
 });
 
+
+test('settings writes exclude restricted module columns even for board managers',async()=>{
+ const restrictedDetail={board:{...detail.board,name:'TimeTracker Attendance'},
+  columns:[
+   {...detail.columns[0],name:'Attendance Ref'},
+   detail.columns[1],
+   {id:other,name:'GPS coordinates and location',data_type:'text',
+    column_key:'custom:private',system_key:null,visible:true}
+  ]};
+ const visible=describeBoardColumns(restrictedDetail);
+ assert.equal(visible.some(col=>col.id===other),false);
+ const settings={...normalizeBoardUi(raw,board),
+  columnLabels:{[domain]:'Attendance reference',[other]:'Should not reach server'}};
+ const s=spy(),client=new BoardStructureClient(s.api);
+ await assert.rejects(()=>client.save(restrictedDetail,settings,{enabled:true}),/Foreign or invalid/);
+ assert.equal(s.calls.some(call=>call[0]==='wm_board_ui_save'),false);
+});
