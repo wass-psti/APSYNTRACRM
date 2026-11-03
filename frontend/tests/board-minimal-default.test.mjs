@@ -98,7 +98,7 @@ test('a failed post-create settings write never retries board creation or invent
 test('Item-plus-Add-Column is one data column plus an explicit accessible command',()=>{
  const html=boardTable({groupId:group,columns:[{key:'record',title:'Item'}],
   rows:[],addColumn:true,summaries:{record:'0 items'}});
- assert.equal((html.match(/data-column-key="record"/g)||[]).length,2);
+ assert.equal((html.match(/<col data-column-key="record"/g)||[]).length,1);
  assert.match(html,/data-action="board-add-column"/);
  assert.match(html,/aria-label="Add a new board column"/);
  assert.match(html,/colspan="2"/);
