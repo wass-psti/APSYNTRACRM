@@ -77,7 +77,7 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
   '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+'</colgroup>'+
   '<thead><tr>'+cells.map((c,i)=>'<th scope="col" data-column-key="'+esc(c.key)+'" draggable="'+(i>1)+'"'+
     (i===0?' class="board-frozen-column"':'')+'>'+
-   '<span class="board-heading-label">'+(i===0&&selection?.enabled?'<input type="checkbox" class="board-select-all" data-board-select-all="'+esc(groupId)+'" aria-label="Select visible eligible items in this group" />':'')+esc(c.title)+'</span>'+
+   '<span class="board-heading-label">'+(i===0&&selection?.enabled?'<input id="board-select-all-'+esc(groupId)+'" name="board-select-all-'+esc(groupId)+'" type="checkbox" class="board-select-all" data-board-select-all="'+esc(groupId)+'" aria-label="Select visible eligible items in this group" />':'')+esc(c.title)+'</span>'+
    (i>1?'<button type="button" class="board-column-handle" data-column-key="'+esc(c.key)+'" '+
     'aria-label="Drag to reorder '+esc(c.title)+' column" title="Drag to reorder">⠿</button>':'')+
    '<button type="button" class="board-column-resize" data-column-key="'+esc(c.key)+'" '+
@@ -85,7 +85,7 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
    '</th>').join('')+'</tr></thead>'+
   '<tbody>'+(rows.length?rows.map(row=>'<tr data-searchable="'+esc(row.search||'')+'"'+(selection?.enabled&&row.itemId?' data-bulk-row="'+esc(row.itemId)+'"':'')+'>'+
    visible.map((k,i)=>'<td'+(i===0?' class="board-frozen-column"':'')+'>'+
-    (i===0&&selection?.enabled&&row.itemId?'<input type="checkbox" class="board-row-select" data-board-select-item="'+esc(row.itemId)+'" aria-label="Select this record"'+(selection.selected?.has(row.itemId)?' checked':'')+' />':'')+
+    (i===0&&selection?.enabled&&row.itemId?'<input id="board-row-select-'+esc(row.itemId)+'" name="board-row-select-'+esc(row.itemId)+'" type="checkbox" class="board-row-select" data-board-select-item="'+esc(row.itemId)+'" aria-label="Select this record"'+(selection.selected?.has(row.itemId)?' checked':'')+' />':'')+
     String(row.cells?.[k]??'—')+'</td>').join('')+'</tr>').join(''):
    '<tr><td colspan="'+visible.length+'" class="board-empty-row">'+esc(empty)+'</td></tr>')+
   '</tbody></table></div></div>';
