@@ -4,7 +4,7 @@
  */
 import {ApiError} from './session.js';
 
-export const TT_BOARD_GPS_PROJECTION_ENABLED=false; // Requires separately approved SQL activation.
+export const TT_BOARD_GPS_PROJECTION_ENABLED=true; // Server-enforced bootstrap/Supervisor read only.
 const id=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
