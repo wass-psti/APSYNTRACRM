@@ -1,0 +1,49 @@
+name: APSYNTRA CP-TT-GPS01 — Disposable Atomic GPS Projection
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sql/cp-tt-gps01-*.sql"
+      - "sql/tests/cp-tt-gps01-*.sql"
+      - ".github/workflows/apsyntra-tt-gps01.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  atomic-gps-projection:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify authoritative commit integration and fail-closed recovery
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-board-collab01-disposable-setup.sql \
+            -f sql/tests/cp-tt-gps01-disposable-setup.sql \
+            -f sql/tests/cp-tt-gps01-live-commit-baseline.sql \
+            -f sql/cp-tt-gps01-atomic-board-projection.sql \
+            -f sql/tests/cp-tt-gps01-disposable-acceptance.sql \
+            -f sql/cp-tt-gps01-fail-closed-rollback.sql \
+            -f sql/tests/cp-tt-gps01-disposable-rollback.sql
