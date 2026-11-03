@@ -3,6 +3,7 @@ import {startInitialization,setInitializationPhase,finishInitialization} from '.
 import {renderAuthMarkup} from './auth-markup.js';
 import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
+import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {DomainApi,validUuid} from './data.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
@@ -133,6 +134,7 @@ function renderLogin(message=''){
  stopTimeTrackerClock();
  stopAuthVisuals();
  stopSidebarSelection();
+ stopOverviewMotion();
  root.innerHTML=renderAuthMarkup({message});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
@@ -246,7 +248,9 @@ function shell(body){
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
  <div class="main-content">${body}</div></main></div>`;
+ root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
+ mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
 }
@@ -281,20 +285,83 @@ function empty(title,description,action=''){
 function overview(){
  const total=state.boards.reduce((a,b)=>a+(Number(b.item_count)||0),0);
  const recent=state.boards.slice(0,6);
- return `<div class="page-head"><div><span class="label-top">Workspace / Overview</span><h1>Good to see you, ${e(name().split(' ')[0])} 👋</h1><p>Here's what your workspace looks like today.</p></div>
- <div class="head-actions"><button class="secondary" data-action="refresh">↻ Refresh</button><button class="primary" data-action="new-board">＋ New board</button></div></div>
- <section class="stat-grid" aria-label="Workspace statistics">
- <div class="stat-card"><span class="stat-icon">▦</span><div class="stat-label">Active boards</div><div class="stat-value">${state.boards.length}</div><div class="stat-footer">Available to your account</div></div>
- <div class="stat-card"><span class="stat-icon green">☷</span><div class="stat-label">Board items</div><div class="stat-value">${total}</div><div class="stat-footer">Across your active boards</div></div>
- <div class="stat-card"><span class="stat-icon orange">◷</span><div class="stat-label">Workspace status</div><div class="stat-value csp-u042" >Active</div><div class="stat-footer">Access context verified</div></div>
- <div class="stat-card"><span class="stat-icon pink">♢</span><div class="stat-label">Your access</div><div class="stat-value csp-u041" >${e(state.context?.profile?.platform_role||'Member')}</div><div class="stat-footer">Authoritative account role</div></div></section>
- <div class="section-header"><span class="section-title">Your boards</span><a class="inline-link" href="#/boards">View all boards →</a></div>
- ${recent.length?`<div class="card-grid">${recent.map(boardCard).join('')}</div>`:
- `<div class="panel">${empty('Start with your first board','Create a board to organize tasks and updates.','<button class="primary" data-action="new-board">＋ Create board</button>')}</div>`}
- <div class="section-header"><span class="section-title">Workspace essentials</span></div>
- <div class="panel"><div class="panel-body"><div class="activity-item"><div class="activity-avatar">✓</div><div><b>Supabase Auth connected</b><small>Your session is verified against the existing identity system.</small></div></div>
- <div class="activity-item"><div class="activity-avatar">▦</div><div><b>Board permissions are centralized</b><small>Each board and action is checked against the authoritative workspace permissions.</small></div></div>
- <div class="activity-item"><div class="activity-avatar">↻</div><div><b>Native issue transactions</b><small>Issue records use the existing RLS view and atomic Supabase transaction RPC.</small></div></div></div></div>`;
+ return `<div class="aps-overview">
+ <section class="page-head overview-hero overview-entrance" aria-labelledby="overview-title">
+  <div class="overview-hero-copy">
+   <span class="label-top"><span class="overview-hero-dot" aria-hidden="true"></span> Workspace / Overview</span>
+   <h1 id="overview-title">Good to see you, `+e(name().split(' ')[0])+` <span class="overview-wave" aria-hidden="true">👋</span></h1>
+   <p>Here's what your workspace looks like today.</p>
+  </div>
+  <div class="head-actions">
+   <button type="button" class="secondary overview-refresh" data-action="refresh">`+overviewIcon('refresh')+`<span>Refresh</span></button>
+   <button type="button" class="primary overview-create" data-action="new-board">`+overviewIcon('plus')+`<span>New board</span></button>
+  </div>
+  <svg class="overview-hero-art" viewBox="0 0 430 230" aria-hidden="true" focusable="false" fill="none">
+   <circle cx="358" cy="49" r="112" stroke="currentColor" stroke-opacity=".12"/>
+   <circle cx="358" cy="49" r="163" stroke="currentColor" stroke-opacity=".07"/>
+   <path d="M133 222C190 87 287 73 451 118" stroke="currentColor" stroke-opacity=".13"/>
+   <circle cx="299" cy="73" r="4" fill="#9af2e5" fill-opacity=".75"/>
+   <circle cx="145" cy="185" r="3" fill="#dce0ff" fill-opacity=".7"/>
+  </svg>
+ </section>
+ <section class="stat-grid overview-stat-grid overview-entrance" aria-label="Workspace statistics">
+  <div class="stat-card">
+   <span class="stat-icon">`+overviewIcon('grid')+`</span>
+   <div class="stat-label">Active boards</div>
+   <div class="stat-value">`+state.boards.length+`</div>
+   <div class="stat-footer">Available to your account</div>
+  </div>
+  <div class="stat-card">
+   <span class="stat-icon green">`+overviewIcon('items')+`</span>
+   <div class="stat-label">Board items</div>
+   <div class="stat-value">`+total+`</div>
+   <div class="stat-footer">Across your active boards</div>
+  </div>
+  <div class="stat-card">
+   <span class="stat-icon orange">`+overviewIcon('pulse')+`</span>
+   <div class="stat-label">Workspace status</div>
+   <div class="stat-value csp-u042">Active</div>
+   <div class="stat-footer">Access context verified</div>
+  </div>
+  <div class="stat-card">
+   <span class="stat-icon pink">`+overviewIcon('shield')+`</span>
+   <div class="stat-label">Your access</div>
+   <div class="stat-value csp-u041" title="Current platform role">`+e(state.context?.profile?.platform_role||'Member')+`</div>
+   <div class="stat-footer">Authoritative account role</div>
+  </div>
+ </section>
+ <div class="section-header overview-section-heading overview-entrance">
+  <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 class="section-title">Your boards</h2></div>
+  <a class="inline-link" href="#/boards"><span>View all boards</span>`+overviewIcon('arrow')+`</a>
+ </div>
+ `+(recent.length?
+  '<div class="card-grid overview-board-grid overview-entrance">'+recent.map(boardCard).join('')+'</div>':
+  '<div class="panel overview-empty">'+empty('Start with your first board',
+   'Create a board to organize tasks and updates.',
+   '<button class="primary" data-action="new-board">＋ Create board</button>')+'</div>')+`
+ <div class="section-header overview-section-heading overview-essentials-heading overview-entrance">
+  <div class="overview-heading-copy"><span class="overview-section-eyebrow">FOUNDATION</span><h2 class="section-title">Workspace essentials</h2></div>
+ </div>
+ <section class="panel overview-essentials overview-entrance" aria-label="Workspace essentials">
+  <div class="panel-body">
+   <div class="activity-item">
+    <span class="activity-avatar" aria-hidden="true">`+overviewIcon('lock')+`</span>
+    <div><b>Supabase Auth connected</b><small>Your session is verified against the existing identity system.</small></div>
+    <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
+   </div>
+   <div class="activity-item">
+    <span class="activity-avatar" aria-hidden="true">`+overviewIcon('shield')+`</span>
+    <div><b>Board permissions are centralized</b><small>Each board and action is checked against the authoritative workspace permissions.</small></div>
+    <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
+   </div>
+   <div class="activity-item">
+    <span class="activity-avatar" aria-hidden="true">`+overviewIcon('items')+`</span>
+    <div><b>Native issue transactions</b><small>Issue records use the existing RLS view and atomic Supabase transaction RPC.</small></div>
+    <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
+   </div>
+  </div>
+ </section>
+ </div>`;
 }
 function boardsPage(){
  const items=cards().filter(b=>matchBoardSearch(b,state.boardSearch));
