@@ -1,0 +1,53 @@
+name: APSYNTRA CP-TT-GROUP01 — Disposable Protected Empty-Group Acceptance
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apsyntra-tt-group01.yml"
+      - "sql/cp-tt-group01-*.sql"
+      - "sql/tests/cp-tt-group01-*.sql"
+      - "sql/tests/cp-board-bulk02-disposable-setup.sql"
+      - "sql/cp-board-bulk02-staged-atomic-mutations.sql"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pg17-protected-group-delete:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify isolated signed administrator, CAS, archived-record denial, foreign scope, audit, rollback
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-board-collab01-disposable-setup.sql \
+            -f sql/tests/cp-board-menu01-disposable-setup.sql \
+            -f sql/tests/cp-board-bulk02-disposable-setup.sql \
+            -f sql/cp-board-bulk02-staged-atomic-mutations.sql \
+            -f sql/tests/cp-tt-group01-disposable-setup.sql \
+            -f sql/cp-tt-group01-managed-delete-staged.sql \
+            -f sql/tests/cp-tt-group01-disposable-acceptance.sql \
+            -f sql/cp-tt-group01-fail-closed-rollback.sql \
+            -f sql/tests/cp-tt-group01-rollback-acceptance.sql

@@ -20,6 +20,9 @@ import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
 import {deleteOneAuthorizedItem} from './board-single-delete.js';
+import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
+ canSafelyHideEmptyTimeTrackerGroup,readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
+ restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup} from './managed-time-tracker-groups.js';
 import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board-row01-signed-acceptance.js';
 import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
@@ -311,6 +314,9 @@ function clearBulkActivation(){
 }
 function groupHeading(group,count){
  const id=e(group.id),editing=state.groupEditId===group.id;
+ const managedEmpty=canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
+  state.board?.groups||[],state.board?.items||[]);
+ const managedDelete=managedEmpty&&MANAGED_TT_GROUP_DELETE_ENABLED&&state.boardManage;
  const title=e(group.title||'Group');
  if(editing)return '<div class="group-heading board-group-editing" data-group-id="'+id+'">'+
   '<form class="board-group-inline-form" data-group-inline-form="'+id+'">'+
@@ -326,7 +332,9 @@ function groupHeading(group,count){
    '<button type="button" data-action="group-select-visible" data-id="'+id+'">Select visible records</button>'+
    (bulkReadyFor(state.board?.board)&&state.bulk02Access?.canManage?
     '<button type="button" data-action="group-delete-empty" data-id="'+id+'">Delete empty group</button>':
-    '<button type="button" disabled title="Atomic deletion requires approved production activation">Delete group — unavailable</button>')+
+    managedDelete?'<button type="button" data-action="managed-group-delete-empty" data-id="'+id+'">Delete empty group (signed admin)</button>':
+    '<button type="button" disabled title="Protected-board deletion requires independent security review and separate production permission approval">Delete group — awaiting approval</button>')+
+   (managedEmpty?'<button type="button" data-action="group-hide-empty" data-id="'+id+'">Hide empty group (this browser)</button>':'')+
    '</div></details>':'')+'</div>';
 }
 function row01AcceptancePanel(board){
@@ -376,6 +384,10 @@ function boardPage(){
  const items=Array.isArray(state.board.items)?state.board.items:[];
  itemSelection.bind([state.context?.user_id,state.context?.workspace_id,state.boardId].join('|'),items.filter(i=>!i.archived_at).map(i=>i.id));
  const groups=Array.isArray(state.board.groups)?state.board.groups:[];
+ const hiddenIds=isManagedTimeTrackerBoard(b)?readHiddenEmptyGroups(state.context,b.id):new Set();
+ const hiddenGroups=groups.filter(g=>hiddenIds.has(g.id)&&
+  canSafelyHideEmptyTimeTrackerGroup(b,g,groups,items));
+ const shownGroups=groups.filter(g=>!hiddenGroups.includes(g));
  const moduleKey=moduleByBoardName(b.name)?.key;
  const minimal=isItemOnlyBoard(state.board,state.boardUi);
  const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record';
@@ -419,7 +431,8 @@ function boardPage(){
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}
   ${state.edit&&canBulkEditBoard(b)?'<button type="button" class="secondary" data-action="bulk02-verify" '+(state.bulk02Busy?'disabled':'')+'>'+(
-   state.bulk02Busy?'Checking signed permissions…':bulkReadyFor(b)?'✓ Bulk access verified':'Verify signed bulk access')+'</button>':''}</div>
+   state.bulk02Busy?'Checking signed permissions…':bulkReadyFor(b)?'✓ Bulk access verified':'Verify signed bulk access')+'</button>':''}
+  ${hiddenGroups.length?'<button type="button" class="secondary" data-action="group-show-hidden">Show '+hiddenGroups.length+' hidden empty group'+(hiddenGroups.length===1?'':'s')+' (this browser)</button>':''}</div>
   ${state.bulk02Result&&state.bulk02Result.boardId===b.id?
    '<div class="board-bulk-probe-summary" role="status" aria-live="polite">Signed bulk authorization: '+e(state.bulk02Result.status)+
    ' — '+state.bulk02Result.checks.filter(x=>x.status==='PASS').length+' / '+state.bulk02Result.checks.length+
@@ -434,7 +447,7 @@ function boardPage(){
  <button type="button" class="secondary" data-action="bulk-archive" ${bulkReadyFor(b)?'':'disabled title="Verify signed access first; protected application boards cannot use generic bulk writes"'}>Bulk archive</button>
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size===1&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select exactly one editable ordinary-board item"'}>Delete item</button>
  <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Run signed verification for this ordinary board; application-managed records remain protected.'}</span></div>
- ${groups.length?groups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
+ ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
  ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:items.filter(i=>i.group_id===g.id).length+' records'}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
  ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}`;
@@ -2502,6 +2515,37 @@ case 'bulk-archive':{
  if(itemSelection.size>50)throw new ApiError('Archive up to 50 items per atomic batch.',400);
  if(!confirm('Archive '+itemSelection.size+' selected records? This action will not delete their history.'))return;
  await applySelectedBulk('archive');break;
+}
+case 'group-hide-empty':{
+ if(!activeBoardLayout()||!isManagedTimeTrackerBoard(state.board?.board))return;
+ const group=state.board.groups?.find(g=>g.id===button.dataset.id);
+ if(!canSafelyHideEmptyTimeTrackerGroup(state.board.board,group,
+     state.board.groups,state.board.items))return;
+ hideEmptyTimeTrackerGroup(state.context,state.boardId,group.id);
+ render();toast('Empty group hidden in this browser only; no database records were deleted.');
+ break;
+}
+case 'group-show-hidden':{
+ if(!activeBoardLayout()||!isManagedTimeTrackerBoard(state.board?.board))return;
+ restoreHiddenTimeTrackerGroups(state.context,state.boardId);
+ render();toast('Hidden groups are visible again.');
+ break;
+}
+case 'managed-group-delete-empty':{
+ if(!MANAGED_TT_GROUP_DELETE_ENABLED||!state.boardManage||!activeBoardLayout())return;
+ const board=state.board.board,group=state.board.groups?.find(g=>g.id===button.dataset.id);
+ if(!canSafelyHideEmptyTimeTrackerGroup(board,group,state.board.groups,state.board.items))return;
+ const confirmTitle=window.prompt('Protected TimeTracker board: permanently remove the empty nonprimary group "'+group.title+'"? Type DELETE '+group.title+' to confirm:');
+ if(confirmTitle===null)return;
+ const result=await deleteEmptyManagedTimeTrackerGroup({
+  auth,api:db,board,group,allGroups:state.board.groups,items:state.board.items,
+  confirmation:confirmTitle
+ });
+ restoreHiddenTimeTrackerGroups(state.context,state.boardId);
+ await loadBoard(board.id,'items');
+ toast(result.audit==='VERIFIED'?'Signed empty group deletion audited.':
+  'Group deleted; verify the audit log.',result.audit!=='VERIFIED');
+ break;
 }
 case 'group-delete-empty':{
  if(!bulkReadyFor(state.board?.board)||!state.bulk02Access?.canManage)return;
