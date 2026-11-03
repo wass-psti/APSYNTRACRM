@@ -55,7 +55,7 @@ test('only primary Title remains mandatory when all ordinary virtual display col
  assert.deepEqual(genericBoardColumns(detail,{primaryTitle:'Title',minimal:true,
   hiddenVirtual:['status','owner','due','actions']}).map(x=>x.key),['record','col:'+colid]);
 });
-test('saved Item tab metadata restores virtual-column removals and retains title rename',()=>{
+test('saved Item tab metadata restores virtual-column removals and retains title rename',async()=>{
  const ui=normalizeBoardUi(raw(['status','due','actions']),bid);
  assert.deepEqual(ui.hiddenVirtual,['status','due','actions']);
  assert.equal(ui.primaryLabel,'Title');

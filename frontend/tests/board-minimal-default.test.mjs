@@ -177,5 +177,5 @@ test('the deployed board creation and manager add-column actions use the signed 
  assert.match(app,/addColumn:minimal&&state\.boardManage/);
  assert.match(app,/persistItemOnlyColumnOrder\(/);
  assert.match(app,/parseChoiceConfig\(/);
- assert.match(app,/genericBoardColumns\(state\.board,\{primaryTitle,columnLabels,minimal\}\)/);
+ assert.match(app,/genericBoardColumns\(state\.board,\{primaryTitle,columnLabels,minimal,/);
 });

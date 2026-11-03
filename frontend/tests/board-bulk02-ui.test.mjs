@@ -6,7 +6,8 @@ const app=readFileSync('frontend/app.js','utf8');
 test('bulk controls remain fail-closed before genuine per-session preflight',()=>{
  assert.equal(BOARD_BULK02_ENABLED,false);
  assert.match(app,/bulkReadyFor\(b\)/);
- assert.match(app,/Verify signed access first/);
+ assert.match(app,/canRequestBulk\(b\)/);
+ assert.match(app,/ensureSignedBulkReady\(state\.board\.board\)/);
  assert.match(app,/data-action="bulk02-verify"/);
  assert.match(app,/case 'bulk02-verify'/);
  assert.match(app,/boardBulkClient\.enabled=true/);
