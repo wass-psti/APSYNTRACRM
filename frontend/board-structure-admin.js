@@ -14,6 +14,21 @@ export const BOARD_STRUCTURE_TYPES=Object.freeze([
 ]);
 const TYPES=new Set(BOARD_STRUCTURE_TYPES);
 const TAB_KEYS=new Set(['items','issues','finance','attendance']);
+export const ORDINARY_VIRTUAL_COLUMNS=Object.freeze([
+ {key:'status',label:'Status'},{key:'owner',label:'Owner'},
+ {key:'due',label:'Due Date'},{key:'actions',label:'Actions'}
+]);
+const VIRTUAL_KEYS=new Set(ORDINARY_VIRTUAL_COLUMNS.map(c=>c.key));
+export function canConfigureVirtualBoardColumns(board){
+ return !!board&&board.status==='active'&&!isProtectedBoard(board)&&
+  !moduleByBoardName(board.name);
+}
+export function normalizeHiddenVirtualColumns(values){
+ if(!Array.isArray(values)||values.length>ORDINARY_VIRTUAL_COLUMNS.length||
+    new Set(values).size!==values.length||
+    values.some(key=>!VIRTUAL_KEYS.has(key)))return [];
+ return ORDINARY_VIRTUAL_COLUMNS.map(c=>c.key).filter(key=>values.includes(key));
+}
 const esc=value=>String(value??'').replace(/[&<>"']/g,
  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fail=message=>{throw new ApiError(message,400);};
@@ -92,7 +107,8 @@ export function normalizeBoardUi(raw,boardIdValue){
  const columnOrder=Array.isArray(requestedOrder)&&requestedOrder.length<=30&&
   requestedOrder.every(validUuid)&&new Set(requestedOrder).size===requestedOrder.length?
    [...requestedOrder]:[];
- return {status:'VERIFIED_READ',schemaMode,columnOrder,boardId:boardIdValue,revision:Number(raw.revision),
+ const hiddenVirtual=normalizeHiddenVirtualColumns(itemTab?.hidden_virtual_columns);
+ return {status:'VERIFIED_READ',schemaMode,columnOrder,hiddenVirtual,boardId:boardIdValue,revision:Number(raw.revision),
   primaryLabel:label,tabs:tabs.map(t=>({key:t.key,label:t.label.trim(),visible:t.visible})),
   columnLabels:Object.fromEntries(Object.entries(raw.column_labels).map(([k,v])=>[k,v.trim()]))};
 }
@@ -127,7 +143,7 @@ export class BoardStructureClient{
  async read(id,{enabled=BOARD_STRUCTURE_ADMIN_ENABLED}={}){
   boardId(id);
   if(enabled!==true)return {status:'LOCKED',revision:0,
-   primaryLabel:'Record',schemaMode:'legacy',columnOrder:[],tabs:[],columnLabels:{}};
+   primaryLabel:'Record',schemaMode:'legacy',columnOrder:[],hiddenVirtual:[],tabs:[],columnLabels:{}};
   if(typeof this.api?.rpc!=='function')
    throw new ApiError('Signed board configuration API unavailable.',403);
   const raw=await this.api.rpc('wm_board_ui_read',{p_board_id:id});
@@ -152,6 +168,12 @@ export class BoardStructureClient{
    fail('Invalid board view configuration.');
   const allowedIds=new Set(describeBoardColumns(detail).filter(c=>c.kind==='custom').map(c=>c.id));
   const labels=settings.columnLabels||{};
+  const hiddenVirtual=settings.hiddenVirtual??[];
+  if(!Array.isArray(hiddenVirtual)||hiddenVirtual.length>VIRTUAL_KEYS.size||
+   new Set(hiddenVirtual).size!==hiddenVirtual.length||
+   hiddenVirtual.some(key=>!VIRTUAL_KEYS.has(key))||
+   (hiddenVirtual.length&&!canConfigureVirtualBoardColumns(detail?.board)))
+   fail('Invalid or protected ordinary-board virtual column selection.');
   const requestedOrder=settings.columnOrder??[];
   if(!Array.isArray(requestedOrder)||requestedOrder.length>30||
      new Set(requestedOrder).size!==requestedOrder.length||
@@ -170,7 +192,9 @@ export class BoardStructureClient{
    p_primary_label:primary,p_tabs:tabs.map(t=>({key:t.key,label:t.label,
     visible:t.visible,...(t.key==='items'&&settings.schemaMode==='item_only_v1'?
      {schema_mode:'item_only_v1',
-      ...(columnOrder.length?{column_order:columnOrder}:{})}:{})})),p_column_labels:labels
+      ...(columnOrder.length?{column_order:columnOrder}:{})}:{})
+    ,...(t.key==='items'&&hiddenVirtual.length?{hidden_virtual_columns:hiddenVirtual}:{})
+   })),p_column_labels:labels
   });
   return normalizeBoardUi(response,id);
  }
@@ -207,6 +231,37 @@ export class BoardStructureClient{
   return result;
  }
 }
+/** Signed, revision-protected virtual column removal/restoration.
+ * No physical schema operation or value deletion occurs.
+ */
+export async function setOptionalVirtualColumnVisibility({
+ auth,api,structure,boardId:target,columnKey,visible
+}={}){
+ if(!validUuid(target)||!VIRTUAL_KEYS.has(columnKey)||typeof visible!=='boolean'||
+    !auth?.getVerifiedUser||!api?.context||!api?.board||!api?.allowed||
+    !structure?.read||!structure?.save)
+  throw new ApiError('Invalid optional-column configuration request.',400);
+ const actor=await auth.getVerifiedUser(),ctx=await api.context();
+ if(!validUuid(actor?.id)||actor.id!==auth.userId||
+    ctx?.user_id!==actor.id||!validUuid(ctx?.workspace_id)||
+    ctx?.profile?.status!=='active')
+  throw new ApiError('Signed workspace identity changed.',403);
+ const detail=await api.board(target);
+ if(!canConfigureVirtualBoardColumns(detail?.board)||
+    detail.board.id!==target||detail.board.workspace_id!==ctx.workspace_id||
+    await api.allowed(target,'manage')!==true)
+  throw new ApiError('Only signed ordinary-board managers can configure virtual columns.',403);
+ const settings=await structure.read(target);
+ if(settings?.status!=='VERIFIED_READ'||settings.schemaMode==='item_only_v1')
+  throw new ApiError('Virtual columns are already excluded by the Item-only layout.',409);
+ const hidden=new Set(settings.hiddenVirtual||[]);
+ if(visible)hidden.delete(columnKey);else hidden.add(columnKey);
+ const tabs=settings.tabs?.length?settings.tabs:[
+  {key:'items',label:'Board items',visible:true},
+  {key:'issues',label:'APSYNTRA Issues',visible:true}
+ ];
+ return structure.save(detail,{...settings,tabs,hiddenVirtual:[...hidden]});
+}
 export function renderBoardStructureAdmin(detail,settings,
  {canManage=false,availableTabs=[],enabled=BOARD_STRUCTURE_ADMIN_ENABLED}={}){
  const ready=enabled===true&&canManage&&settings?.status==='VERIFIED_READ';
@@ -226,6 +281,9 @@ export function renderBoardStructureAdmin(detail,settings,
   order:settings?.status==='VERIFIED_READ'&&tabPreferences.has(t.key)?
    settings.tabs.findIndex(x=>x.key===t.key)+1:index+1,
   visible:t.key==='items'||tabPreferences.get(t.key)?.visible!==false}));
+ const optionalVirtual=canConfigureVirtualBoardColumns(detail?.board)&&
+  settings.schemaMode!=='item_only_v1';
+ const virtualHidden=new Set(settings.hiddenVirtual||[]);
  const notice=ready?'Authorized board configuration. Changes are saved to PostgreSQL.':
   'Board structure management is staged but not activated. Current board and item operations remain available.';
  return '<div class="board-structure-admin">'+
@@ -258,6 +316,14 @@ export function renderBoardStructureAdmin(detail,settings,
    ' value="'+esc(labels[c.id]||c.name)+'"'+
    (c.immutable?' readonly disabled':'')+disabled+' /></div>').join('')+
   '<div class="modal-actions"><button class="primary" type="submit"'+disabled+'>Save board display settings</button></div></form></section>'+
+  (optionalVirtual?'<section class="panel panel-body"><h3>Optional default columns</h3>'+
+    '<p class="muted">Remove these virtual columns from this board without deleting stored item values. A manager can restore them later. Changes are audited and saved to PostgreSQL.</p>'+
+    '<div class="board-member-list">'+ORDINARY_VIRTUAL_COLUMNS.map(c=>
+     '<div class="board-member"><strong>'+esc(c.label)+'</strong>'+
+     '<small>'+(virtualHidden.has(c.key)?'Removed from display':'Currently displayed')+'</small>'+
+     '<button type="button" class="secondary" data-structure-virtual-toggle="'+esc(c.key)+'"'+disabled+'>'+
+      (virtualHidden.has(c.key)?'Restore column':'Remove column')+'</button></div>').join('')+
+    '</div></section>':'')+
   '<section class="panel panel-body"><h3>Additional columns</h3>'+
   '<p class="muted">Application-defined columns are dependency-protected. Custom columns may be updated and deleted only after server approval and data validation.</p>'+
   '<form data-structure-form="create"><div class="field"><label for="structure-new-name">Column name</label>'+

@@ -17,15 +17,17 @@ export function canManuallyEditBoard(board,canEdit=false){
   board.status==='active'&&!isProtectedBoard(board)&&
   !moduleByBoardName(board.name);
 }
-export function genericBoardColumns(detail,{primaryTitle='Record',columnLabels={},minimal=false}={}){
+export function genericBoardColumns(detail,{primaryTitle='Record',columnLabels={},minimal=false,hiddenVirtual=[]}={}){
  const cols=Array.isArray(detail?.columns)?detail.columns:[];
+ const hidden=new Set(Array.isArray(hiddenVirtual)?hiddenVirtual:[]);
  const base=minimal?[{key:'record',title:primaryTitle}]:
   [{key:'record',title:primaryTitle},{key:'status',title:'Status'},
-   {key:'owner',title:'Owner'},{key:'due',title:'Due date'}];
+   {key:'owner',title:'Owner'},{key:'due',title:'Due date'}]
+    .filter(c=>c.key==='record'||!hidden.has(c.key));
  const custom=cols.filter(c=>validUuid(c.id)&&c.visible!==false&&
   !c.system_key&&TYPES.has(c.data_type)).sort((a,b)=>a.position-b.position);
  return [...base,...custom.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name})),
-  ...(minimal?[]:[{key:'actions',title:'Actions'}])];
+  ...(minimal||hidden.has('actions')?[]:[{key:'actions',title:'Actions'}])];
 }
 export function cellColumn(detail,key){
  const cols=Array.isArray(detail?.columns)?detail.columns:[];

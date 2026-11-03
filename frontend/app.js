@@ -12,7 +12,8 @@ import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {boardGrid,boardGridColumns} from './board-grid.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
- applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines} from './board-structure-admin.js';
+ applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
+ setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm} from './board-inline-items.js';
@@ -269,7 +270,8 @@ function boardsPage(){
 }
 function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={}){
  const minimal=isItemOnlyBoard(detail,state.boardUi);
- const columns=genericBoardColumns(detail,{primaryTitle,columnLabels,minimal});
+ const columns=genericBoardColumns(detail,{primaryTitle,columnLabels,minimal,
+  hiddenVirtual:state.boardUi?.hiddenVirtual});
  const writable=canManuallyEditBoard(detail?.board,allowEdit);
  const rows=items.map(item=>{
   const editable=writable&&!item.archived_at,cell={};
@@ -311,6 +313,40 @@ function bulkReadyFor(board){
 function clearBulkActivation(){
  state.bulk02Access=null;state.bulk02Result=null;state.bulk02Busy=false;
  boardBulkClient.enabled=false;
+}
+async function ensureSignedBulkReady(board,{notify=true}={}){
+ if(bulkReadyFor(board))return true;
+ if(state.bulk02Busy||!auth.isSignedIn||!state.edit||
+    !canBulkEditBoard(board)||!activeBoardLayout())return false;
+ const user=state.context?.user_id,workspace=state.context?.workspace_id;
+ clearBulkActivation();state.bulk02Busy=true;render();
+ try{
+  const result=await probeBulk02SignedSession({auth,api:db,board});
+  if(!auth.isSignedIn||state.context?.user_id!==user||
+     state.context?.workspace_id!==workspace||state.boardId!==board.id){
+   clearBulkActivation();return false;
+  }
+  state.bulk02Result=result;
+  if(result.ready){
+   state.bulk02Access={boardId:board.id,userId:user,workspaceId:workspace,
+    canManage:result.canManage};
+   boardBulkClient.enabled=true;
+  }else{
+   boardBulkClient.enabled=false;
+  }
+  if(notify)toast(result.ready?'Current signed board bulk permissions verified.':
+   'Bulk action blocked: review signed authorization checks.',!result.ready);
+ }catch{
+  clearBulkActivation();
+  toast('Signed bulk check unavailable; no mutations were enabled.',true);
+ }finally{
+  state.bulk02Busy=false;render();
+ }
+ return bulkReadyFor(board);
+}
+function canRequestBulk(board){
+ return auth.isSignedIn&&state.edit&&canBulkEditBoard(board)&&
+  !state.bulk02Busy&&itemSelection.size>0&&itemSelection.size<=50;
 }
 function groupHeading(group,count){
  const id=e(group.id),editing=state.groupEditId===group.id;
@@ -404,7 +440,8 @@ function boardPage(){
     label:'◷ TimeTracker attendance'}]:[])
  ];
  const columns=moduleKey?boardGridColumns(state.board,{primaryTitle,columnLabels,allowCustom}):
-  genericBoardColumns(state.board,{primaryTitle,columnLabels,minimal});
+  genericBoardColumns(state.board,{primaryTitle,columnLabels,minimal,
+   hiddenVirtual:state.boardUi?.hiddenVirtual});
  const layout=loadBoardLayout(state.context,b.id,tabSpecs.map(t=>t.key),columns.map(c=>c.key));
  if(minimal)layout.columns=itemOnlyColumnKeys(columns,state.boardUi);
  const tabLookup=new Map(tabSpecs.map(t=>[t.key,t]));
@@ -443,10 +480,10 @@ function boardPage(){
     '<button type="button" class="secondary" data-action="bulk02-copy-report">Copy nonsecret check report</button></div>':''}
   ${row01AcceptancePanel(b)}
   <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button>
- <button type="button" class="secondary" data-action="bulk-status" ${bulkReadyFor(b)?'':'disabled title="Verify signed access first; protected application boards cannot use generic bulk writes"'}>Bulk status</button>
- <button type="button" class="secondary" data-action="bulk-archive" ${bulkReadyFor(b)?'':'disabled title="Verify signed access first; protected application boards cannot use generic bulk writes"'}>Bulk archive</button>
+ <button type="button" class="secondary" data-action="bulk-status" ${canRequestBulk(b)?'':'disabled title="Select 1–50 records on an editable ordinary board"'}>Bulk status</button>
+ <button type="button" class="secondary" data-action="bulk-archive" ${canRequestBulk(b)?'':'disabled title="Select 1–50 records on an editable ordinary board"'}>Bulk archive</button>
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size===1&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select exactly one editable ordinary-board item"'}>Delete item</button>
- <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Run signed verification for this ordinary board; application-managed records remain protected.'}</span></div>
+ <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; protected application records remain excluded.'}</span></div>
  ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
  ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:items.filter(i=>i.group_id===g.id).length+' records'}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
@@ -560,6 +597,10 @@ function syncBoardSelectionUi(){
  }
  const toolbar=root.querySelector('#board-bulk-toolbar');if(toolbar)toolbar.hidden=itemSelection.size===0;
  const count=root.querySelector('#board-selected-count');if(count)count.textContent=itemSelection.size+' selected';
+ for(const name of ['bulk-status','bulk-archive']){
+  const control=root.querySelector('[data-action="'+name+'"]');
+  if(control)control.disabled=!canRequestBulk(state.board?.board);
+ }
  const del=root.querySelector('[data-action="delete-selected-item"]');
  if(del)del.disabled=itemSelection.size!==1||!state.edit||
   !canManuallyEditBoard(state.board?.board,true);
@@ -1164,7 +1205,7 @@ function activeBoardLayout(){
  const tabs=['items','issues',...(moduleKey==='frt'?['finance']:[]),
   ...(moduleKey==='timetracker'?['attendance']:[])];
  const minimal=isItemOnlyBoard(state.board,state.boardUi);
- const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board,{minimal})).map(c=>c.key);
+ const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board,{minimal,hiddenVirtual:state.boardUi?.hiddenVirtual})).map(c=>c.key);
  const pref=loadBoardLayout(state.context,state.boardId,tabs,columns);
  if(minimal)pref.columns=itemOnlyColumnKeys(columns,state.boardUi);
  return {tabs,columns,pref};
@@ -1446,6 +1487,23 @@ async function openBoardStructure(){
    return;
   }
   if(!authorized()||!canManage||!BOARD_STRUCTURE_ADMIN_ENABLED)return;
+  const virtualToggle=event.target.closest('[data-structure-virtual-toggle]');
+  if(virtualToggle){
+   const columnKey=virtualToggle.dataset.structureVirtualToggle;
+   const visible=(settings.hiddenVirtual||[]).includes(columnKey);
+   virtualToggle.disabled=true;
+   try{
+    await setOptionalVirtualColumnVisibility({
+     auth,api:db,structure:boardStructureClient,boardId:snapshot.boardId,
+     columnKey,visible
+    });
+    if(!authorized())return;
+    hideModal();await loadBoard(snapshot.boardId,state.tab);
+    toast(visible?'Optional board column restored.':'Optional board column removed from display; stored values preserved.');
+   }catch(err){if(authorized())notice(err);}
+   finally{if(virtualToggle.isConnected)virtualToggle.disabled=false;}
+   return;
+  }
   if(event.target.closest('[data-structure-enable-item-only]')){
    if(!confirm('Use Item-only display for this ordinary board? Existing custom columns and all data remain stored.'))return;
    try{
@@ -2439,29 +2497,8 @@ case 'row01-copy-report':{
  break;
 }
 case 'bulk02-verify':{
- if(state.bulk02Busy||!activeBoardLayout()||!state.edit||
-    !canBulkEditBoard(state.board?.board))return;
- const verifyingBoard=state.board.board;
- const user=state.context?.user_id,workspace=state.context?.workspace_id;
- clearBulkActivation();state.bulk02Busy=true;render();
- try{
-  const result=await probeBulk02SignedSession({auth,api:db,board:verifyingBoard});
-  if(!auth.isSignedIn||state.context?.user_id!==user||
-     state.context?.workspace_id!==workspace||state.boardId!==verifyingBoard.id){
-   clearBulkActivation();return;
-  }
-  state.bulk02Result=result;
-  if(result.ready){
-   state.bulk02Access={boardId:verifyingBoard.id,userId:user,workspaceId:workspace,
-    canManage:result.canManage};
-   boardBulkClient.enabled=true;
-  }else boardBulkClient.enabled=false;
-  toast(result.ready?'Current signed board bulk permissions verified.':
-   'Bulk activation pending: review the signed authorization result.',!result.ready);
- }catch{
-  clearBulkActivation();
-  toast('Signed bulk check unavailable; no mutation functions were enabled.',true);
- }finally{state.bulk02Busy=false;render();}
+ if(!activeBoardLayout()||!state.edit||!canBulkEditBoard(state.board?.board))return;
+ await ensureSignedBulkReady(state.board.board);
  break;
 }
 case 'bulk02-copy-report':{
@@ -2476,7 +2513,9 @@ case 'bulk02-copy-report':{
  break;
 }
 case 'bulk-status':{
- if(!bulkReadyFor(state.board?.board))return;
+ if(!canRequestBulk(state.board?.board)&&!bulkReadyFor(state.board?.board))return;
+ if(!itemSelection.size||itemSelection.size>50)return;
+ if(!await ensureSignedBulkReady(state.board.board))return;
  const c=state.board.columns?.find(col=>col.system_key==='status'&&col.data_type==='status');
  const options=c?Array.isArray(c.config?.labels)?c.config.labels.filter(x=>x.active!==false)
    .map(x=>[String(x.id),String(x.title||x.label||x.name||x.id)]):[]:
@@ -2511,7 +2550,9 @@ case 'delete-selected-item':{
  break;
 }
 case 'bulk-archive':{
- if(!bulkReadyFor(state.board?.board))return;
+ if(!canRequestBulk(state.board?.board)&&!bulkReadyFor(state.board?.board))return;
+ if(!itemSelection.size)return;
+ if(!await ensureSignedBulkReady(state.board.board))return;
  if(itemSelection.size>50)throw new ApiError('Archive up to 50 items per atomic batch.',400);
  if(!confirm('Archive '+itemSelection.size+' selected records? This action will not delete their history.'))return;
  await applySelectedBulk('archive');break;
