@@ -65,7 +65,9 @@ test('the selected-record toolbar exposes explicitly confirmed single-item delet
  assert.match(app,/select\('Choose one record to delete','deleteItemId'/);
  assert.match(app,/Delete one of '\+itemSelection\.size/);
  assert.match(app,/itemSelection\.size>0&&state\.edit/);
- assert.doesNotMatch(app,/itemSelection\.clear\(\);await loadBoard\(board\.id,'items'\)/);
+ const handler=app.slice(app.indexOf("case 'delete-selected-item':{"),
+  app.indexOf("case 'bulk-archive':{",app.indexOf("case 'delete-selected-item':{")));
+ assert.doesNotMatch(handler,/itemSelection\.clear\(\)/);
  assert.match(app,/deleteOneAuthorizedItem\(/);
 });
 
