@@ -2,19 +2,24 @@
 import {moduleByBoardName} from './board-manifest.js';
 import {boardTable} from './board-presentation.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function boardGridColumns(detail){
+export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
  const module=moduleByBoardName(detail?.board?.name);
  const allowed=module?new Set(module.fields.map(f=>f.name)):null;
+ const restricted=module?new Set(module.restricted.map(n=>n.trim().toLowerCase())):null;
  const columns=(Array.isArray(detail?.columns)?detail.columns:[])
-  .filter(c=>c.visible!==false&&c.system_key==null&&(!allowed||allowed.has(c.name)));
- return [{key:'record',title:'Record'},{key:'status',title:'Status'},
-  ...columns.map(c=>({key:'col:'+c.id,title:c.name}))];
+  .filter(c=>c.visible!==false&&c.system_key==null&&
+   (!allowed||allowed.has(c.name)||
+    (allowCustom&&(((c.column_key||'').startsWith('custom:')||
+      (c.column_key||'').startsWith('custom_'))&&
+      !restricted.has(String(c.name||'').trim().toLowerCase())))));
+ return [{key:'record',title:primaryTitle},{key:'status',title:'Status'},
+  ...columns.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name}))];
 }
-export function boardGrid(detail,{groupId=null,layout=null}={}){
+export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record',columnLabels={},allowCustom=false}={}){
  const items=Array.isArray(detail?.items)?detail.items:[];
  const values=Array.isArray(detail?.values)?detail.values:[];
  const module=moduleByBoardName(detail?.board?.name);
- const columns=boardGridColumns(detail);
+ const columns=boardGridColumns(detail,{primaryTitle,columnLabels,allowCustom});
  const allowedIds=new Set(columns.slice(2).map(c=>c.key.slice(4)));
  const visibleColumns=(Array.isArray(detail?.columns)?detail.columns:[])
   .filter(c=>allowedIds.has(c.id));

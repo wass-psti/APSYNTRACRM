@@ -11,6 +11,8 @@ import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {boardGrid,boardGridColumns} from './board-grid.js';
+import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
+ applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns} from './board-structure-admin.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board-activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
@@ -54,11 +56,12 @@ const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
+const boardStructureClient=new BoardStructureClient(db);
 const nativeIssues=new NativeIssueClient(db);
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,issues:[],edit:false,
+const state={context:null,user:null,boards:[],archived:[],showArchived:false,board:null,boardUi:null,issues:[],edit:false,
   view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -222,7 +225,7 @@ function boardsPage(){
  ${items.length?`<div class="card-grid">${items.map(boardCard).join('')}</div>`:
  `<div class="panel">${empty(state.showArchived?'No archived boards':'No boards available',state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')}</div>`}`;
 }
-function groupRows(items,allowEdit,layout=null,groupId='ungrouped'){
+function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record'){
  const rows=items.map(item=>({search:String(item.title||'').toLowerCase(),
   cells:{record:'<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(item.id)+'" aria-label="Open '+e(item.title||'Untitled')+' details">▥ &nbsp; '+e(item.title||'Untitled')+'</button>',
    status:'<span class="status '+statusClass(item.status)+'">'+e(item.status||'Planned')+'</span>',
@@ -230,7 +233,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped'){
    due:e(displayDate(item.due_date)),
    actions:allowEdit?'<button class="icon-button" data-action="edit-item" data-id="'+
     e(item.id)+'" title="Edit item">✎ Edit</button>':''}}));
- return boardTable({columns:BOARD_BASE_COLUMNS,rows,layout,groupId,
+ return boardTable({columns:BOARD_BASE_COLUMNS.map(c=>c.key==='record'?{...c,title:primaryTitle}:c),rows,layout,groupId,
   empty:'No items in this group yet'});
 }
 
@@ -258,6 +261,9 @@ function boardPage(){
  const items=Array.isArray(state.board.items)?state.board.items:[];
  const groups=Array.isArray(state.board.groups)?state.board.groups:[];
  const moduleKey=moduleByBoardName(b.name)?.key;
+ const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record';
+ const columnLabels=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{};
+ const allowCustom=BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ';
  const tabSpecs=[
   {key:'items',href:'#/boards/'+b.id+(moduleKey==='timetracker'?'/items':''),
     label:'▤ Board items <span class="csp-u060">('+items.length+')</span>'},
@@ -268,14 +274,15 @@ function boardPage(){
   ...(moduleKey==='timetracker'?[{key:'attendance',href:'#/boards/'+b.id+'/attendance',
     label:'◷ TimeTracker attendance'}]:[])
  ];
- const columns=moduleKey?boardGridColumns(state.board):BOARD_BASE_COLUMNS;
+ const columns=moduleKey?boardGridColumns(state.board,{primaryTitle,columnLabels,allowCustom}):
+  BOARD_BASE_COLUMNS.map(c=>c.key==='record'?{...c,title:primaryTitle}:c);
  const layout=loadBoardLayout(state.context,b.id,tabSpecs.map(t=>t.key),columns.map(c=>c.key));
  const tabLookup=new Map(tabSpecs.map(t=>[t.key,t]));
- const tabOrder=layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean);
+ const tabOrder=applyBoardViewSettings(layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean),state.boardUi);
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(b.description||'Track your team’s work and updates.')}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Configure columns &amp; views</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'?'<button class="primary" data-action="new-item">＋ New item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
@@ -290,12 +297,12 @@ function boardPage(){
  ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
- ${boardColumnMenu(columns,layout)}
+ ${boardColumnMenu(columns,layout)}<button type="button" class="secondary" data-action="board-structure">Manage columns</button>
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}</div>
  ${groups.length?groups.map(g=>`<div class="group-heading"><h3>${e(g.title||'Group')}</h3><small>${items.filter(i=>i.group_id===g.id).length} items</small></div>
- ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id)}`).join(''):
+ ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout)}`:''}`}`;
+ ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout,primaryTitle,columnLabels,allowCustom}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout,'ungrouped',primaryTitle)}`:''}`}`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -438,13 +445,14 @@ async function loadBoard(boardId,tab){
  if(state.boardId!==boardId||state.tab!=='attendance'){
   state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
- state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.error=null;state.issues=[];state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
+ state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.error=null;state.issues=[];state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
    const detail=await db.board(boardId);
    const edit=await db.allowed(boardId,'edit');
+   const boardUi=await boardStructureClient.read(boardId);
    if(seq!==routeSerial)return;
-   state.board=detail;state.edit=edit;
+   state.board=detail;state.edit=edit;state.boardUi=boardUi;
  }catch(err){if(seq!==routeSerial)return;state.error=errorMessage(err);}
  finally{if(seq===routeSerial){state.loading=false;render();}}
  if(seq!==routeSerial||!state.board)return;
@@ -807,7 +815,7 @@ function activeBoardLayout(){
  const moduleKey=moduleByBoardName(state.board.board.name)?.key;
  const tabs=['items','issues',...(moduleKey==='frt'?['finance']:[]),
   ...(moduleKey==='timetracker'?['attendance']:[])];
- const columns=(moduleKey?boardGridColumns(state.board):BOARD_BASE_COLUMNS).map(c=>c.key);
+ const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):BOARD_BASE_COLUMNS).map(c=>c.key);
  return {tabs,columns,pref:loadBoardLayout(state.context,state.boardId,tabs,columns)};
 }
 function persistBoardLayout(transform){
@@ -988,6 +996,108 @@ async function openBoardMembers(){
  view.querySelector('[data-dismiss]')?.focus();
 }
 
+async function openBoardStructure(){
+ if(!activeBoardLayout())return;
+ const snapshot={boardId:state.boardId,userId:auth.userId,
+  workspaceId:state.context.workspace_id};
+ const detail=state.board;
+ const moduleKey=moduleByBoardName(detail.board.name)?.key;
+ const availableTabs=[
+  {key:'items',title:'Board items'},{key:'issues',title:'APSYNTRA Issues'},
+  ...(moduleKey==='frt'?[{key:'finance',title:'FRT finance'}]:[]),
+  ...(moduleKey==='timetracker'?[{key:'attendance',title:'TimeTracker attendance'}]:[])
+ ];
+ const settings=state.boardUi||await boardStructureClient.read(snapshot.boardId);
+ const canManage=BOARD_STRUCTURE_ADMIN_ENABLED&&
+  await db.allowed(snapshot.boardId,'manage');
+ if(!boardHistoryAuthorized(snapshot))return;
+ hideModal();modal=document.createElement('div');
+ const view=modal;
+ view.className='modal-backdrop board-history-backdrop';
+ view.innerHTML='<section class="modal board-history-modal" role="dialog" '+
+  'aria-modal="true" aria-labelledby="board-structure-title">'+
+  '<div class="modal-head"><h2 id="board-structure-title">Board structure &amp; views</h2>'+
+  '<button type="button" data-dismiss class="modal-close" aria-label="Close settings">×</button></div>'+
+  renderBoardStructureAdmin(detail,settings,{canManage,availableTabs})+'</section>';
+ document.body.append(view);
+ const authorized=()=>view===modal&&boardHistoryAuthorized(snapshot);
+ view.addEventListener('submit',async event=>{
+  const form=event.target;
+  if(!form.matches('[data-structure-form]'))return;
+  event.preventDefault();
+  if(!authorized()||!canManage||!BOARD_STRUCTURE_ADMIN_ENABLED)return;
+  const submit=form.querySelector('[type="submit"]');
+  if(!submit||submit.disabled)return;
+  submit.disabled=true;
+  try{
+   const fd=new FormData(form);
+   if(form.dataset.structureForm==='settings'){
+    const currentTabs=new Map((settings.tabs||[]).map(t=>[t.key,t]));
+    const tabs=availableTabs.map((t,index)=>({
+     key:t.key,label:String(fd.get('label:'+t.key)||t.title).trim(),
+     visible:t.key==='items'||fd.has('visible:'+t.key),
+     position:Number(fd.get('order:'+t.key))||currentTabs.get(t.key)?.position||index+1
+    })).sort((a,b)=>a.position-b.position).map(({position,...tab})=>tab);
+    const columnLabels=Object.fromEntries((detail.columns||[]).map(col=>
+     [col.id,String(fd.get('columnLabel:'+col.id)||col.name||'').trim()]));
+    await boardStructureClient.save(detail,{
+     ...settings,primaryLabel:String(fd.get('primaryLabel')||''),
+     tabs,columnLabels
+    });
+   }else if(form.dataset.structureForm==='create'){
+    await boardStructureClient.mutate(detail,{
+     action:'create',name:String(fd.get('name')||''),
+     type:String(fd.get('type')||'text'),config:{}
+    });
+   }else return;
+   if(!authorized())return;
+   hideModal();await loadBoard(snapshot.boardId,state.tab);
+   toast('Board configuration saved.');
+  }catch(err){
+   if(authorized())notice(err);
+   if(submit.isConnected)submit.disabled=false;
+  }
+ });
+ view.addEventListener('click',async event=>{
+  if(event.target===view||event.target.closest('[data-dismiss]')){
+   if(authorized())hideModal();
+   return;
+  }
+  if(!authorized()||!canManage||!BOARD_STRUCTURE_ADMIN_ENABLED)return;
+  const edit=event.target.closest('[data-structure-edit]');
+  const remove=event.target.closest('[data-structure-delete]');
+  if(!edit&&!remove)return;
+  const id=(edit||remove).dataset[edit?'structureEdit':'structureDelete'];
+  const column=describeBoardColumns(detail).find(c=>c.id===id&&c.deletable);
+  if(!column)return;
+  if(edit){
+   openModal('Edit custom column',input('Column name','name',column.name)+
+    select('Column type','type',BOARD_STRUCTURE_TYPES.map(t=>[t,t]),column.type)+
+    '<div class="field"><label><input type="checkbox" name="visible" '+
+    (column.visible?'checked ':'')+'/> Visible on board</label></div>',
+    async fd=>{
+     if(!boardHistoryAuthorized(snapshot))throw new ApiError('Board context changed.',403);
+     await boardStructureClient.mutate(detail,{action:'update',columnId:column.id,
+      name:String(fd.get('name')||''),type:String(fd.get('type')||''),
+      config:column.config,visible:fd.has('visible')});
+     await loadBoard(snapshot.boardId,state.tab);
+    });
+  }else{
+   const confirmation=window.prompt('Deleting '+column.name+
+    ' is irreversible. Existing values must be absent. Type DELETE '+column.name+' to confirm:');
+   if(confirmation===null)return;
+   try{
+    await boardStructureClient.mutate(detail,{action:'delete',columnId:column.id,
+     confirmation});
+    if(!authorized())return;
+    hideModal();await loadBoard(snapshot.boardId,state.tab);
+    toast('Empty custom column removed.');
+   }catch(err){if(authorized())notice(err);}
+  }
+ });
+ view.querySelector('[data-dismiss]')?.focus();
+}
+
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';}break;}
@@ -995,6 +1105,7 @@ async function action(name,button){
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'board-activity':{await openBoardActivity();break;}
  case 'board-members':{await openBoardMembers();break;}
+ case 'board-structure':{await openBoardStructure();break;}
  case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;
