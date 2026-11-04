@@ -5,9 +5,9 @@ export function requireUuid(v){if(!validUuid(v))throw new ApiError('Invalid boar
 function encodeQuery(input){return new URLSearchParams(input).toString();}
 export class DomainApi {
  constructor(auth){this.auth=auth;}
- rpc(name,args={}){
+ rpc(name,args={},options={}){
    if(!/^[a-z][a-z0-9_]+$/.test(name))throw new ApiError('Invalid operation.');
-   return this.auth.authorized('/rest/v1/rpc/'+name,{method:'POST',body:args});
+   return this.auth.authorized('/rest/v1/rpc/'+name,{method:'POST',body:args,...options});
  }
  async context(){
    const ctx=await this.rpc('wm_auth_access_context');
