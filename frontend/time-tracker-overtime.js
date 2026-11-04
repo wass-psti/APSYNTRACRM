@@ -124,15 +124,38 @@ export function renderTimeTrackerOvertime({
  const statuses=[['Submitted','Pending',m.submitted],
   ['Approved','Approved',m.approved],['Rejected','Rejected',m.rejected]];
  const high=Math.max(1,...m.byDay);
- return '<section class="tt-overtime"><header class="tt-ot-header"><div><h3>Overtime</h3>'+
- '<p>Track &amp; manage OT requests</p></div>'+
- '<button type="button" data-action="tt-refresh">Refresh</button></header>'+
+ return '<section class="tt-overtime tt-overtime-command" aria-label="TimeTracker authorized overtime requests">'+
+ '<header class="tt-ot-header tt-ot-command-hero" aria-label="Authorized overtime overview">'+
+  '<div class="tt-ot-graphics" aria-hidden="true">'+
+   '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+   '<span class="tt-ot-orbit tt-ot-orbit-outer"></span>'+
+   '<span class="tt-ot-orbit tt-ot-orbit-inner"></span></div>'+
+  '<div class="tt-ot-hero-content">'+
+   '<span class="tt-ot-eyebrow"><span class="tt-ot-signal" aria-hidden="true"></span>'+
+    'APSYNTRA / OVERTIME INTELLIGENCE</span>'+
+   '<h3>Overtime</h3><p>Authorized requests, approvals and weekly outcomes</p>'+
+   '<span class="tt-ot-scope">Read-only · '+
+    (access?.bootstrapApprover===true?'Bootstrap review scope':'Signed request scope')+
+   '</span><span class="tt-ot-hero-week">'+esc(m.week.label)+'</span></div>'+
+  '<div class="tt-ot-hero-telemetry" aria-label="Authorized weekly overtime snapshot">'+
+   '<span class="tt-ot-telemetry-caption">SIGNED WEEKLY SNAPSHOT</span>'+
+   '<div class="tt-ot-telemetry-primary"><strong>'+esc(minutesLabel(m.approvedMinutes))+
+    '</strong><span>Approved overtime<br>this week</span></div>'+
+   '<div class="tt-ot-telemetry-grid">'+
+    '<div><strong>'+m.submitted+'</strong><span>Pending</span></div>'+
+    '<div><strong>'+m.approved+'</strong><span>Approved</span></div>'+
+    '<div><strong>'+m.rejected+'</strong><span>Rejected</span></div></div>'+
+   '<button type="button" class="secondary tt-ot-hero-refresh" data-action="tt-refresh">'+
+    'Refresh authorized OT</button>'+
+  '</div></header>'+
  '<div class="tt-ot-week"><small>WEEK</small><div>'+
- '<button data-action="tt-ot-prev" aria-label="Previous week">‹</button>'+
+ '<button type="button" data-action="tt-ot-prev" aria-label="Previous week"'+
+ (opts.weekOffset<=-104?' disabled':'')+'>‹</button>'+
  '<strong>'+esc(m.week.label)+'</strong>'+
- '<button data-action="tt-ot-next" aria-label="Next week">›</button>'+
- '<button data-action="tt-ot-current">This Week</button>'+
- '<button class="tt-ot-submit" data-action="tt-ot-open">＋ Submit OT</button></div></div>'+
+ '<button type="button" data-action="tt-ot-next" aria-label="Next week"'+
+ (opts.weekOffset>=104?' disabled':'')+'>›</button>'+
+ '<button type="button" data-action="tt-ot-current">This Week</button>'+
+ '<button type="button" class="tt-ot-submit" data-action="tt-ot-open">＋ Submit OT</button></div></div>'+
  '<div class="tt-ot-metrics">'+metric('OT HOURS',minutesLabel(m.approvedMinutes))+
  metric('PENDING',m.submitted)+metric('APPROVED',m.approved)+
  metric('RATE',m.approvalRate===null?'—':m.approvalRate+'%')+'</div>'+
@@ -140,7 +163,9 @@ export function renderTimeTrackerOvertime({
  '<div class="tt-ot-section-heading">INSIGHTS <span>'+esc(m.week.label)+'</span></div>'+
  '<div class="tt-ot-insights"><article><h4>OT BY DAY</h4>'+
  '<div class="tt-ot-chart">'+m.byDay.map((v,i)=>
-  '<div><progress value="'+v+'" max="'+high+'"></progress><small>'+
+  '<div><progress value="'+v+'" max="'+high+'" aria-label="'+
+   ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][i]+
+   ' approved overtime minutes"></progress><small>'+
   ['S','M','T','W','T','F','S'][i]+'</small></div>').join('')+
  '</div></article><article><h4>TOP REQUESTORS</h4>'+
  (m.owners.length?m.owners.map(([name,count])=>'<div class="tt-ot-requestor"><b>'+
@@ -149,17 +174,17 @@ export function renderTimeTrackerOvertime({
   '<p>No authorized requests this week.</p>')+'</article></div>'+
  '<div class="tt-ot-section-heading">REQUESTS <span>'+esc(m.week.label)+'</span></div>'+
  '<section class="tt-ot-list"><div class="tt-ot-tabs">'+statuses.map(([status,label,count])=>
-  '<button data-action="tt-ot-status" data-status="'+status+'" aria-pressed="'+
+  '<button type="button" data-action="tt-ot-status" data-status="'+status+'" aria-pressed="'+
    (opts.status===status)+'"'+(opts.status===status?' class="is-active"':'')+'>'+
    label+' <span>('+count+')</span></button>').join('')+'</div>'+
  '<div class="tt-ot-search"><label for="tt-ot-search">Search requests</label>'+
  '<input id="tt-ot-search" type="search" maxlength="120" placeholder="Search employee or reason…" value="'+esc(opts.search)+'">'+
- '<button data-action="tt-ot-sort">Date '+(opts.sort==='oldest'?'↑':'↓')+'</button></div>'+
+ '<button type="button" data-action="tt-ot-sort">Date '+(opts.sort==='oldest'?'↑':'↓')+'</button></div>'+
  (m.visible.length?'<div class="tt-ot-row-head"><span>Employee</span><span>Date</span>'+
  '<span>Duration</span><span>Status</span><span>Details</span></div>'+
  m.visible.map(r=>row(r,access?.bootstrapApprover===true)).join(''):'<div class="tt-ot-empty"><span>◷</span>'+
  '<strong>No matching requests</strong><p>Try a different week, search or status.</p>'+
- '<button data-action="tt-ot-open">＋ Submit a request</button></div>')+
+ '<button type="button" data-action="tt-ot-open">＋ Submit a request</button></div>')+
  '<p class="tt-ot-note">'+(access?.bootstrapApprover===true?
   'Bootstrap administrator identity verified. ':'')+
  'Only bootstrap administrators may approve or reject. Live writes remain gated until server RPC acceptance.</p>'+
