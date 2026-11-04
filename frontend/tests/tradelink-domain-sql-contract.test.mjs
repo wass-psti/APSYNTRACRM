@@ -107,3 +107,10 @@ test('staged SQL is one complete migration with intact regex and no duplicated t
  assert.match(sql,/IS DISTINCT FROM pg_catalog\.btrim\(p_data->>'documentNumber'\) THEN/);
  assert.equal((sql.match(/CREATE FUNCTION public\.tl03_documents_list\(/g)||[]).length,1);
 });
+
+
+test('disposable SQL fixture uses real statement separators, not escaped newline text',()=>{
+ const setup=readFileSync('sql/tests/cp-tl03-disposable-setup.sql','utf8');
+ assert.doesNotMatch(setup,/\\n(?:GRANT|CREATE|ALTER|INSERT|REVOKE|DO|SELECT)/);
+ assert.match(setup,/-- Synthetic assertions[^\n]*\nGRANT USAGE ON SCHEMA auth TO authenticated;\nGRANT SELECT ON public\.work_board_items,public\.work_board_events TO authenticated;\nCREATE FUNCTION public\.current_workspace_id/);
+});
