@@ -91,25 +91,25 @@ test('reduced-motion disables both animations and optional graphics',()=>{
   handle.destroy();handle.destroy();
  }finally{globalThis.window=oldWindow;globalThis.document=oldDocument;}
 });
-test('mobile/reduced-power can animate once without scheduling WebGL',()=>{
+test('low-power login mounts immediately without entrance movement or GPU startup',()=>{
  const oldWindow=globalThis.window,oldDocument=globalThis.document;
- let animated=0,cancelled=0;
+ let queried=0,animated=0;
  globalThis.window={
-  matchMedia:query=>({matches:query.includes('min-width')?false:false}),
-  requestIdleCallback(){throw Error('Mobile graphics must be skipped');}
+  matchMedia:()=>({matches:false}),
+  WebGL2RenderingContext:class{},
+  requestIdleCallback(){throw Error('Low-power device must not schedule GPU work');}
  };
  globalThis.document={hidden:false};
  try{
-  const node={animate(frames,config){
-   assert.equal(frames.length,2);assert.equal(config.fill,'both');animated++;
-   return {cancel(){cancelled++;}};
-  }};
-  const layout={isConnected:true,querySelectorAll:()=>[node,node],
+  const layout={isConnected:true,querySelectorAll(){queried++;
+    return [{animate(){animated++;}}];},
    querySelector:()=>({isConnected:true})};
-  const handle=mountAuthExperience(layout);
-  assert.equal(animated,2);
-  handle.destroy();
-  assert.equal(cancelled,2);
+  const handle=mountAuthExperience(layout,{device:{hardwareConcurrency:2}});
+  assert.equal(queried,0,'login widgets must not be traversed for entrance effects');
+  assert.equal(animated,0,'login widgets must appear in their final positions');
+  handle.destroy();handle.destroy();
+  const source=readFileSync('frontend/auth-experience.js','utf8');
+  assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|auth-reveal/);
  }finally{globalThis.window=oldWindow;globalThis.document=oldDocument;}
 });
 test('scene loader is cancellable and never gates authentication',async()=>{
