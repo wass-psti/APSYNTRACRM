@@ -10,13 +10,13 @@ The enhancement deliberately does not replace multi-select controls, listbox-siz
 
 - Vanilla JavaScript ES modules; HTML5 semantics; scoped CSS3 and CSS custom properties
 - CSS transforms for the chevron and Web Animations API for one-shot popup entrance
-- Floating UI DOM 1.8.0 loaded from its version-pinned documented jsDelivr ESM endpoint, with offset, flip, shift, size and autoUpdate
+- Floating UI core/DOM 1.8.0 loaded from version-pinned UMD files on the already approved unpkg.com host, managed by the shared ES module, with offset, flip, shift, size and autoUpdate
 - WAI-ARIA select-only combobox/listbox pattern with aria-expanded, aria-controls, aria-activedescendant, aria-selected and accessible labels; Home, End, arrows, Enter, Space, Escape, Tab and typeahead
-- A single body-level dropdown portal and a MutationObserver for route, modal, optgroup and disabled-control updates. Positioning observers exist only while a menu is open.
+- A local select anchor, predefined CSS positioning classes and a MutationObserver for route, modal, optgroup and disabled-control updates. Floating UI collision calculations select CSS classes; positioning observers exist only while a menu is open. Scroll-container clipping remains a browser acceptance consideration; unsupported controls use the native dropdown.
 
 ## Security and privacy
 
-The new script-src allowance is limited to cdn.jsdelivr.net for the pinned Floating UI ESM package; other existing CSP directives are preserved. External script delivery is a third-party supply-chain dependency; review for future self-hosted bundling if needed. No credentials, workspace/role state, employee records, geolocation data, or telemetry are passed into Floating UI: only trigger and listbox DOM elements are used for positioning.
+No CSP directives are changed. The pinned Floating UI UMD files use the already approved unpkg.com script origin. External script delivery remains a third-party supply-chain dependency; future self-hosted bundling can be evaluated separately. No credentials, workspace/role state, employee records, geolocation data, or telemetry are passed into Floating UI: only trigger and listbox DOM elements are used for positioning.
 
 Options are created using textContent (never innerHTML), and selection is committed to the unchanged native select. No direct API or database writes are added. The existing server-side RBAC, RLS and signed-session rules continue to govern actions.
 

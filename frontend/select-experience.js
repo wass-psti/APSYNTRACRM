@@ -3,7 +3,25 @@
  * No application data, credentials, coordinates, or telemetry enter positioning.
  * If the pinned Floating UI module cannot load, selects remain native.
  */
-export const FLOATING_SELECT_URL='https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.8.0/+esm';
+export const FLOATING_CORE_URL='https://unpkg.com/@floating-ui/core@1.8.0/dist/floating-ui.core.umd.min.js';
+export const FLOATING_SELECT_URL='https://unpkg.com/@floating-ui/dom@1.8.0/dist/floating-ui.dom.umd.min.js';
+/** Load the two official, pinned UMD artifacts from the already-approved CSP host.
+ * The consuming application and all dropdown behavior remain native ES modules.
+ */
+async function loadPinnedFloatingUI(){
+ const doc=globalThis.document;
+ if(!doc?.head)throw Error('Floating UI needs a browser document');
+ const inject=src=>new Promise((resolve,reject)=>{
+  const script=doc.createElement('script');
+  script.src=src;script.async=true;script.referrerPolicy='no-referrer';
+  script.onload=resolve;
+  script.onerror=()=>reject(Error('Floating UI asset unavailable'));
+  doc.head.append(script);
+ });
+ if(!globalThis.FloatingUICore)await inject(FLOATING_CORE_URL);
+ if(!globalThis.FloatingUIDOM)await inject(FLOATING_SELECT_URL);
+ return globalThis.FloatingUIDOM;
+}
 export const MAX_FLOATING_OPTIONS=400;
 let sequence=0;
 export function isStandardSelect(select){
@@ -65,7 +83,7 @@ function animateOpen(panel,win){
   {duration:150,easing:'cubic-bezier(.2,.8,.2,1)'});
 }
 export function startSelectExperience(root=globalThis.document?.body,{
- loadFloating=()=>import(FLOATING_SELECT_URL)
+ loadFloating=loadPinnedFloatingUI
 }={}){
  const doc=root?.ownerDocument||globalThis.document,win=globalThis.window;
  if(!root?.querySelectorAll||!doc||!win||typeof MutationObserver!=='function')
@@ -86,6 +104,8 @@ export function startSelectExperience(root=globalThis.document?.body,{
   if(!running||!select.isConnected||controls.has(select)||!isStandardSelect(select))
    return;
   const id='aps-select-'+(++sequence),abort=new AbortController();
+  const anchor=doc.createElement('span');
+  anchor.className='aps-select-anchor';
   const trigger=doc.createElement('div');
   const text=doc.createElement('span'),chevron=doc.createElement('span');
   trigger.className='aps-select-trigger';
@@ -114,7 +134,10 @@ export function startSelectExperience(root=globalThis.document?.body,{
   function destroy(){
    if(disposed)return;
    close(false);disposed=true;abort.abort();
-   trigger.remove();select.classList.remove('aps-select-source');
+   trigger.remove();
+   if(select.isConnected&&anchor.isConnected)anchor.insertAdjacentElement('afterend',select);
+   anchor.remove();
+   select.classList.remove('aps-select-source');
    if(originalTab===null)select.removeAttribute('tabindex');
    else select.setAttribute('tabindex',originalTab);
    if(originalHidden===null)select.removeAttribute('aria-hidden');
@@ -162,18 +185,23 @@ export function startSelectExperience(root=globalThis.document?.body,{
   function position(){
    if(!popup||disposed||!trigger.isConnected)return;
    const target=popup;
+   // Floating UI determines collision/placement; audited CSS classes apply it.
+   // No style attributes, CSSOM writes, or CSP exceptions are necessary.
    return lib.computePosition(trigger,target,{
-    placement:'bottom-start',strategy:'fixed',
+    placement:'bottom-start',strategy:'absolute',
     middleware:[lib.offset(7),lib.flip({padding:9}),lib.shift({padding:9}),
-     lib.size({padding:9,apply({availableHeight,rects}){
-      target.style.maxHeight=Math.max(96,Math.min(360,availableHeight-8))+'px';
-      target.style.width=Math.max(140,Math.min(rects.reference.width,win.innerWidth-18))+'px';
+     lib.size({padding:9,apply({availableHeight}){
+      target.classList.toggle('aps-select-compact',availableHeight<180);
+      target.classList.toggle('aps-select-medium',
+       availableHeight>=180&&availableHeight<280);
      }})]
-   }).then(({x,y})=>{
+   }).then(({placement,middlewareData})=>{
     if(target!==popup||disposed)return;
-    target.style.left=Math.round(x)+'px';
-    target.style.top=Math.round(y)+'px';
-    target.style.visibility='visible';
+    target.classList.toggle('aps-select-above',placement.startsWith('top'));
+    const rect=trigger.getBoundingClientRect();
+    const nearRight=rect.left+Math.max(170,rect.width)>win.innerWidth-9;
+    target.classList.toggle('aps-select-end',
+     nearRight||Number(middlewareData?.shift?.x||0)<-2);
    }).catch(()=>{if(target===popup){destroy();select.focus();}});
   }
   function open(){
@@ -182,7 +210,7 @@ export function startSelectExperience(root=globalThis.document?.body,{
    if(active&&active!==controller)active.close(false);
    items=readSelectOptions(select);
    const list=doc.createElement('div');
-   list.className='aps-select-listbox';list.id=id+'-listbox';
+   list.className='aps-select-listbox is-open';list.id=id+'-listbox';
    list.setAttribute('role','listbox');
    list.setAttribute('aria-label',accessibleLabel(select));
    let group=null;nodes=[];
@@ -215,7 +243,7 @@ export function startSelectExperience(root=globalThis.document?.body,{
     const option=event.target.closest?.('[data-option-index]');
     if(option)choose(Number(option.getAttribute('data-option-index')));
    },{signal:abort.signal});
-   popup=list;doc.body.append(list);
+   popup=list;anchor.append(list);
    trigger.setAttribute('aria-controls',list.id);
    trigger.setAttribute('aria-expanded','true');
    active=controller;cursor=-1;
@@ -277,7 +305,8 @@ export function startSelectExperience(root=globalThis.document?.body,{
   }
   select.classList.add('aps-select-source');
   select.setAttribute('aria-hidden','true');select.tabIndex=-1;
-  select.insertAdjacentElement('afterend',trigger);
+  select.insertAdjacentElement('afterend',anchor);
+  anchor.append(select,trigger);
   controls.set(select,controller);sync();
  }
  function offer(select){

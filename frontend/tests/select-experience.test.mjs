@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- FLOATING_SELECT_URL,MAX_FLOATING_OPTIONS,isStandardSelect,
+ FLOATING_CORE_URL,FLOATING_SELECT_URL,MAX_FLOATING_OPTIONS
  readSelectOptions,nextSelectableIndex,findSelectTypeahead,startSelectExperience
 } from '../select-experience.js';
 
@@ -61,9 +61,13 @@ test('typeahead is case insensitive, cycles, and never selects disabled options'
  assert.equal(findSelectTypeahead(opts,'z'),-1);
 });
 test('pinned version-correct Floating UI and semantic select-only WAI-ARIA roles',()=>{
+ assert.equal(FLOATING_CORE_URL,
+  'https://unpkg.com/@floating-ui/core@1.8.0/dist/floating-ui.core.umd.min.js');
  assert.equal(FLOATING_SELECT_URL,
-  'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.8.0/+esm');
- assert.match(source,/loadFloating=\(\)=>import\(FLOATING_SELECT_URL\)/);
+  'https://unpkg.com/@floating-ui/dom@1.8.0/dist/floating-ui.dom.umd.min.js');
+ assert.match(source,/loadFloating=loadPinnedFloatingUI/);
+ assert.match(source,/globalThis\.FloatingUIDOM/);
+ assert.match(source,/doc\.head\.append\(script\)/);
  for(const attr of ["'combobox'","'listbox'","'option'","'aria-expanded'",
   "'aria-controls'","'aria-activedescendant'","'aria-selected'",
   "'aria-required'","'aria-disabled'"])
@@ -89,7 +93,10 @@ test('native select stays the source of truth for form validation and delegated 
 test('floating positioning and motion use documented API with lifecycle disposal',()=>{
  for(const item of ['computePosition','autoUpdate','offset','flip','shift','size'])
   assert.ok(source.includes(item),item);
- assert.match(source,/strategy:'fixed'/);
+ assert.match(source,/strategy:'absolute'/);
+ assert.match(source,/aps-select-above/);
+ assert.match(source,/aps-select-compact/);
+ assert.doesNotMatch(source,/\.style\s*\.|\.style\s*=|\.cssText\s*=|setAttribute\s*\(\s*['"]style['"]/);
  assert.match(source,/stopPosition\?\.\(\)/);
  assert.match(source,/observer\.disconnect\(\)/);
  assert.match(source,/new MutationObserver\(/);
@@ -104,7 +111,8 @@ test('startup and Pages smoke register global dropdown across all dynamic routes
  assert.match(app,/startSelectExperience\(document\.body\)/);
  assert.match(app,/root\.addEventListener\('change'/);
  assert.match(index,/frontend\/select-experience\.css/);
- assert.match(index,/script-src 'self' https:\/\/unpkg\.com https:\/\/cdn\.jsdelivr\.net/);
+ assert.match(index,/script-src 'self' https:\/\/unpkg\.com;/);
+ assert.doesNotMatch(index,/cdn\.jsdelivr\.net/);
  assert.match(index,/style-src-attr 'none'/);
  assert.match(smoke,/'frontend\/select-experience\.js'/);
  assert.match(smoke,/'frontend\/select-experience\.css'/);
@@ -112,7 +120,7 @@ test('startup and Pages smoke register global dropdown across all dynamic routes
 });
 test('global selector styles have CSS variables, transforms, focus and high-contrast rules',()=>{
  for(const fragment of ['--aps-select-surface','--aps-select-focus',
-  '.aps-select-source','.aps-select-trigger','.aps-select-listbox',
+  '.aps-select-source','.aps-select-anchor','.aps-select-trigger','.aps-select-listbox',
   '.aps-select-option','transform:translateY','border-radius:13px',
   ':focus-visible','@media(max-width:720px)',
   '@media(prefers-reduced-motion:reduce)','@media(prefers-contrast:more)',
@@ -144,7 +152,13 @@ class ElementFake{
  removeAttribute(name){this.attributes.delete(name);}
  hasAttribute(name){return this.attributes.has(name);}
  append(...nodes){
-  for(const node of nodes){node.parentElement=this;node.isConnected=true;this.children.push(node);}
+  for(const node of nodes){
+   if(node.parentElement){
+    const index=node.parentElement.children.indexOf(node);
+    if(index>=0)node.parentElement.children.splice(index,1);
+   }
+   node.parentElement=this;node.isConnected=true;this.children.push(node);
+  }
  }
  insertAdjacentElement(position,node){
   assert.equal(position,'afterend');
@@ -194,6 +208,7 @@ class ElementFake{
   return e;
  }
  focus(){this.doc.focused=this;}
+ getBoundingClientRect(){return {left:16,right:256,width:240,top:32,bottom:74,height:42};}
  scrollIntoView(){}
 }
 test('mock DOM: popup opens, chooses native value, dispatches change, and disposes',async()=>{
@@ -231,13 +246,15 @@ test('mock DOM: popup opens, chooses native value, dispatches change, and dispos
   Object.defineProperty(globalThis,'MutationObserver',{value:MO,configurable:true});
   const stop=startSelectExperience(doc.body,{loadFloating:async()=>lib});
   for(let i=0;i<8;i++)await Promise.resolve();
-  const trigger=doc.body.children.find(n=>n.getAttribute('role')==='combobox');
+  const anchor=doc.body.children.find(n=>n.className==='aps-select-anchor');
+  assert.ok(anchor,'a select positioning anchor is rendered');
+  const trigger=anchor.children.find(n=>n.getAttribute('role')==='combobox');
   assert.ok(trigger,'a progressive combobox is rendered');
   assert.equal(select.getAttribute('aria-hidden'),'true');
   assert.equal(select.tabIndex,-1);
   trigger.emit('click');
-  const list=doc.body.children.find(n=>n.getAttribute('role')==='listbox');
-  assert.ok(list,'a popover listbox is rendered in the body portal');
+  const list=anchor.children.find(n=>n.getAttribute('role')==='listbox');
+  assert.ok(list,'a popup listbox is positioned in the select anchor');
   assert.equal(trigger.getAttribute('aria-expanded'),'true');
   assert.equal(trigger.getAttribute('aria-controls'),list.id);
   const option=list.children.find(n=>n.getAttribute('data-option-index')==='1');
@@ -245,7 +262,7 @@ test('mock DOM: popup opens, chooses native value, dispatches change, and dispos
   assert.equal(select.value,'valid-id');
   assert.deepEqual(doc.events.filter(x=>x==='input'||x==='change'),['input','change']);
   assert.equal(trigger.getAttribute('aria-expanded'),'false');
-  assert.ok(!doc.body.children.find(n=>n.getAttribute('role')==='listbox'));
+  assert.ok(!anchor.children.find(n=>n.getAttribute('role')==='listbox'));
   select.remove();
   observer.callback([{type:'childList',target:doc.body,addedNodes:[]}]);
   assert.equal(trigger.isConnected,false);
