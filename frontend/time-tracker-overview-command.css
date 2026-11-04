@@ -1,0 +1,517 @@
+/* CP-TT-OVERVIEW-VIS01 · Native workforce intelligence dashboard.
+ * Shares the optional Pixi v8 scene with Clock and uses no fake KPI telemetry.
+ * Scope is exclusively the TimeTracker Overview; other tabs remain unchanged.
+ */
+#app .aps-board-shell .tt-native .tt-overview.tt-overview-command{
+ min-width:0;
+ padding:clamp(14px,2.2vw,27px);
+ gap:clamp(14px,1.7vw,22px);
+ background:linear-gradient(155deg,#f0f4fd 0%,#f8faff 55%,#f2f6ff 100%);
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero.tt-overview-command-hero{
+ display:grid;
+ position:relative;
+ isolation:isolate;
+ overflow:hidden;
+ grid-template-columns:minmax(0,1.17fr) minmax(270px,.83fr);
+ gap:clamp(18px,2.9vw,42px);
+ align-items:stretch;
+ padding:clamp(21px,3.1vw,40px);
+ min-height:342px;
+ background:
+  radial-gradient(ellipse at 83% 35%,#3e6fc947,transparent 55%),
+  linear-gradient(120deg,#0b1836 0%,#162b59 53%,#333a82 100%);
+ color:#f4f8ff;
+ border:1px solid #587ab775;
+ border-radius:23px;
+ box-shadow:0 17px 42px #1e39742c,inset 0 1px #ffffff24;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero::before{
+ content:"";
+ position:absolute;inset:0;
+ pointer-events:none;
+ background-image:
+  linear-gradient(#b5d5ff0b 1px,transparent 1px),
+  linear-gradient(90deg,#b5d5ff0b 1px,transparent 1px);
+ background-size:38px 38px;
+ mask-image:linear-gradient(110deg,#0002,transparent 85%);
+ z-index:0;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-graphics{
+ position:absolute;inset:0;
+ overflow:hidden;pointer-events:none;
+ z-index:0;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-graphics .tt-pixi-backdrop{
+ position:absolute;inset:0;
+ background:
+  radial-gradient(circle at 69% 53%,#42b7ff30 0%,transparent 32%),
+  radial-gradient(circle at 92% 7%,#8e7eff18 0%,transparent 32%);
+ pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-graphics .tt-pixi-backdrop::after{
+ width:170px;height:170px;left:76%;top:50%;
+ border:1px solid #8ad4ff3d;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-graphics .tt-pixi-backdrop canvas{
+ display:block;
+ position:absolute;
+ inset:0;
+ width:100%;height:100%;
+ pointer-events:none;
+ opacity:.85;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-orbit{
+ position:absolute;
+ width:350px;height:350px;
+ left:74%;top:53%;
+ border-radius:50%;
+ border:1px solid #8bc9ff20;
+ transform:translate(-50%,-50%) rotate(27deg) scaleY(.74);
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-orbit-outer{
+ width:590px;height:590px;
+ border-color:#9b9afa17;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-orbit-inner{
+ width:220px;height:220px;
+ border-color:#9deaff26;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-orbit-ring{
+ width:650px;height:210px;
+ border-color:#c1c5ff1b;
+ transform:translate(-50%,-50%) rotate(-27deg);
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero-content,
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry{
+ position:relative;z-index:1;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero-content{
+ display:flex;
+ flex-direction:column;
+ align-items:flex-start;
+ justify-content:center;
+ min-height:250px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-heading-kicker{
+ display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+ font-size:10px;
+ font-weight:820;
+ letter-spacing:.19em;
+ line-height:1.6;
+ color:#a8c8ef;
+ margin-bottom:27px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-heading-dot{
+ width:7px;height:7px;
+ border-radius:50%;
+ background:#58cce4;
+ box-shadow:0 0 0 4px #58cce422;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-heading-divider{
+ color:#68cff1;
+ font-weight:900;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero h3{
+ color:#fff;
+ font:800 clamp(28px,3.0vw,42px)/1.12 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ letter-spacing:-.055em;
+ max-width:550px;
+ margin:0 0 15px;
+ overflow-wrap:anywhere;
+ text-shadow:0 5px 20px #050c254d;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero-content>p{
+ color:#bdcee8;
+ font-size:13px;
+ line-height:1.5;
+ margin:0;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-scope{
+ display:inline-flex;align-items:center;gap:9px;
+ margin-top:29px;
+ border-radius:999px;
+ border:1px solid #8cdacb55;
+ background:#4da9a51c;
+ padding:9px 13px;
+ color:#cbf8ee;
+ font-size:11px;
+ font-weight:680;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-scope-indicator{
+ width:7px;height:7px;
+ border-radius:50%;
+ background:#6bdfb9;
+ box-shadow:0 0 0 4px #6bdfb91f;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry{
+ display:flex;flex-direction:column;align-items:stretch;
+ min-width:0;
+ border:1px solid #b5d4ff36;
+ border-radius:17px;
+ padding:clamp(17px,2vw,24px);
+ background:linear-gradient(145deg,#dfedff16,#cbdafa0a);
+ box-shadow:inset 0 1px #ffffff20,0 10px 25px #060f3033;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry-title{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;
+ font-size:10px;
+ color:#afc4e9;
+ font-weight:830;
+ letter-spacing:.15em;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-live-marker{
+ display:block;
+ width:8px;height:8px;
+ border-radius:50%;
+ background:#72e0c7;
+ box-shadow:0 0 0 4px #6fdac521;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-live{
+ display:flex;flex-direction:column;align-items:flex-start;
+ gap:7px;
+ padding:21px 0;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-live time{
+ font:780 clamp(27px,3vw,42px)/1.08 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ color:#fff;
+ font-variant-numeric:tabular-nums;
+ letter-spacing:-.045em;
+ white-space:nowrap;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-live>span{
+ color:#9cb9e0;
+ font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats{
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ border:1px solid #8dbaff24;
+ border-radius:10px;
+ overflow:hidden;
+ margin:auto 0 15px;
+ background:#d5e8ff0b;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats>div{
+ min-width:0;
+ display:grid;
+ gap:7px;
+ padding:12px 7px;
+ text-align:center;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats>div+div{
+ border-left:1px solid #8dbaff21;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats strong{
+ color:#f3fbff;
+ font-size:clamp(15px,1.7vw,22px);
+ font-weight:820;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats span{
+ font-size:9px;
+ color:#aac2e8;
+ white-space:normal;
+ line-height:1.4;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-refresh{
+ width:100%;
+ min-height:34px;
+ display:inline-flex;
+ justify-content:center;align-items:center;
+ border-radius:9px;
+ color:#d7eaff;
+ background:#cfe4ff17;
+ border:1px solid #b1d5ff48;
+ font-size:11px;
+ font-weight:710;
+ transition:background-color .15s ease,border-color .15s ease;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-refresh:hover{
+ background:#cfe4ff29;
+ border-color:#b1d5ff8f;
+}
+#app .aps-board-shell .tt-native .tt-ov-refresh:focus-visible{
+ outline:2px solid #a1d2ff;outline-offset:3px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-search{
+ max-width:none;
+ display:grid;
+ gap:8px;
+ background:#fff;
+ padding:19px 20px;
+ border:1px solid #dfe7f6;
+ border-radius:14px;
+ box-shadow:0 8px 23px #1d36700d;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-search label{
+ color:#667ca4;
+ font-weight:720;
+ letter-spacing:.03em;
+ font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-search input{
+ border:1px solid #dae5f6;
+ background:#f5f8ff;
+ border-radius:9px;
+ height:43px;
+ padding:0 13px;
+ color:#344d7d;
+ font-size:12px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-search input:focus-visible{
+ outline:2px solid #676fe8;outline-offset:2px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metrics{
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:12px;
+ background:transparent;
+ border:none;
+ border-radius:0;
+ overflow:visible;
+ box-shadow:none;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric{
+ position:relative;
+ min-height:102px;
+ min-width:0;
+ display:grid;
+ text-align:left;
+ align-content:center;
+ gap:9px;
+ padding:20px 21px;
+ border:1px solid #dfe7f6;
+ border-radius:14px;
+ background:linear-gradient(160deg,#fff,#fbfcff);
+ box-shadow:0 7px 20px #1b35670c;
+ overflow:hidden;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric::after{
+ content:"";
+ position:absolute;
+ right:15px;top:16px;
+ width:8px;height:8px;
+ border-radius:50%;
+ background:#7891f3;
+ box-shadow:0 0 0 5px #7891f314;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric:nth-child(2)::after,
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric:nth-child(3)::after{
+ background:#54ba9d;box-shadow:0 0 0 5px #54ba9d16;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric:nth-child(5)::after{
+ background:#e7a26f;box-shadow:0 0 0 5px #e7a26f16;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric strong{
+ order:2;
+ color:#243866;
+ font-size:clamp(26px,2.45vw,34px);
+ font-weight:840;
+ line-height:1;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric span{
+ order:1;
+ color:#7387aa;
+ font-weight:710;
+ font-size:10px;
+ letter-spacing:.06em;
+ text-transform:uppercase;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-on-time{
+ grid-column:1/-1;
+ display:flex;
+ align-items:center;
+ gap:15px;
+ padding:18px 20px;
+ border:1px solid #dfe8f8;
+ border-radius:13px;
+ background:#fff;
+ box-shadow:0 7px 20px #1b35670d;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-on-time>span{
+ color:#5d739d;
+ font-weight:730;
+ font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-on-time-bar{
+ background:#e6eefd;
+ height:7px;
+ border-radius:50px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-on-time-bar i{
+ background:linear-gradient(90deg,#6680eb,#52ccb3);
+ border-radius:50px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-on-time b{
+ color:#2b8c70;font-size:12px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-filters{
+ padding:16px;
+ gap:12px;
+ background:#fff;
+ border:1px solid #dfe8f8;
+ border-radius:13px;
+ box-shadow:0 7px 22px #1b35670d;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-filters label{
+ color:#6d809f;
+ font-weight:700;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-filters select{
+ background:#f5f8ff;
+ border-color:#dee6f5;
+ border-radius:8px;
+ min-height:37px;
+ color:#4b5f85;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-location{
+ padding:19px;
+ gap:9px;
+ min-height:110px;
+ border:1px solid #dce7f6;
+ border-radius:13px;
+ background:#fff;
+ box-shadow:0 7px 22px #1b35670c;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-location strong{
+ color:#2b4474;
+ font-size:27px;
+ font-weight:820;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-location span{
+ font-weight:720;
+ color:#657b9f;
+ font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-location small{
+ color:#8d9cb6;
+ font-size:10px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-panel{
+ padding:clamp(17px,2vw,24px);
+ border:1px solid #dfe7f5;
+ border-radius:15px;
+ background:linear-gradient(165deg,#fff,#fcfdff);
+ box-shadow:0 10px 27px #1b35670e;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-panel-heading h4{
+ font:800 16px/1.25 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ color:#273a65;
+ letter-spacing:-.035em;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-panel-heading small,
+#app .aps-board-shell .tt-native .tt-overview-command .tt-overview-panel-heading>b{
+ color:#8595b0;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-arrival-bar i{
+ background:linear-gradient(180deg,#7b8df8,#5c6edb);
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-arrival-bar b,
+#app .aps-board-shell .tt-native .tt-overview-command .tt-pulse-grid strong{
+ color:#506bdf;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-pulse-grid{
+ border:1px solid #e4eafb;
+ border-radius:12px;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-pulse-grid>div{
+ border-color:#e6ebf8;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-employee-card{
+ border-color:#dfe7f5;
+ border-radius:12px;
+ background:#fbfcff;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-employee-identity span{
+ border-color:#8191f2;
+ background:#f0f3ff;
+ color:#475ac4;
+ font:800 13px Inter,system-ui,sans-serif;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-attendance-list{
+ min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-attendance-list .board-table th{
+ color:#7085aa;
+ background:#eef3fd;
+}
+#app .aps-board-shell .tt-native .tt-overview-command .tt-attendance-list .board-table td{
+ color:#3e5275;
+}
+#app .aps-board-shell .tt-native .tt-overview-command :is(button,input,select):focus-visible{
+ outline:2px solid #5c6bea;
+ outline-offset:2px;
+}
+@media(max-width:1100px){
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero.tt-overview-command-hero{
+  grid-template-columns:1fr;
+  min-height:0;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero-content{
+  min-height:190px;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry{
+  max-width:100%;
+ }
+}
+@media(max-width:720px){
+ #app .aps-board-shell .tt-native .tt-overview.tt-overview-command{padding:13px;gap:13px}
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero.tt-overview-command-hero{
+  padding:22px 19px;
+  border-radius:17px;
+  gap:15px;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero-content{min-height:175px}
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-ov-heading-kicker{margin-bottom:20px;font-size:9px}
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero h3{
+  font-size:clamp(26px,6.8vw,36px);
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metrics{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric{
+  padding:18px 16px;
+  min-height:95px;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats strong{font-size:18px}
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-search{padding:16px}
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-on-time{
+  padding:16px;flex-wrap:wrap;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-on-time-bar{min-width:140px}
+}
+@media(max-width:400px){
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-live time{
+  font-size:29px;white-space:normal;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-ov-telemetry-stats span{font-size:8px}
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-metric strong{font-size:23px}
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-filters label{
+  width:100%;justify-content:space-between;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-filters select{
+  flex:1;max-width:none;min-width:0;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .tt-native .tt-overview-command,
+ #app .aps-board-shell .tt-native .tt-overview-command *{
+  animation:none!important;
+  transition:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero{
+  border-color:#dceeff;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-hero h3,
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-live time{
+  color:#fff;
+ }
+ #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-panel{
+  border-color:#7182ae;
+ }
+}
