@@ -7,7 +7,7 @@ const VAT_RATES=Object.freeze({'15_tkm':0.15,'15_ksa':0.15,'12':0.12,exempt:0,ze
 export const TRADELINK_VAT_CODES=Object.freeze(['15_tkm','15_ksa','12','exempt','zero']);
 export const TRADELINK_CURRENCIES=Object.freeze(['PHP','USD','EUR','GBP','JPY','CNY','SGD','AUD','SAR']);
 const bounded=v=>{const n=Number(v);return Number.isFinite(n)?Math.max(0,n):0;};
-export function tradeLinkVatRate(code){return VAT_RATES[code]??0;}
+export function tradeLinkVatRate(code){return Object.hasOwn(VAT_RATES,code)?VAT_RATES[code]:0;}
 export function calculateTradeLinkAmounts(document={}){
  const items=Array.isArray(document.items)?document.items:[];
  const subtotal=items.filter(i=>i?.kind==='item').reduce((sum,i)=>
