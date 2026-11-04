@@ -15,7 +15,8 @@ const deny=(message,status=403)=>{throw new ApiError(message,status);};
 export function validateTradeLinkDraftEnvelope(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||
    !TYPES.has(value.documentType)||typeof value.documentNumber!=='string'||
-   !/^[A-Za-z0-9][A-Za-z0-9._ /-]{0,119}$/.test(value.documentNumber))
+   !/^[A-Za-z0-9][A-Za-z0-9._ /-]{0,119}$/.test(value.documentNumber)||
+   value.documentNumber!==value.documentNumber.trim())
   deny('Invalid TradeLink draft type or document number.',400);
  for(const blocked of ['id','workflow','status','revision','revisionNo','history',
   'createdBy','updatedBy','approvedAt','verifiedAt','attachments','createdById',
