@@ -120,33 +120,18 @@ test('scoped CSS provides accessible controls, responsive cards and no persisten
  assert.doesNotMatch(motion,/\.style\s*\.|\.cssText\s*=|setAttribute\s*\(\s*['"]style/);
 });
 
-test('short native entrance motion is cancellable and respects reduced motion and hidden document',()=>{
- const priorWindow=globalThis.window,priorDocument=globalThis.document;
- let starts=0,stops=0;
- const blocks=Array.from({length:3},()=>({animate(keys,options){
-  starts++;assert.equal(keys.length,2);assert.equal(options.fill,'none');
-  return {cancel(){stops++;}};
- }}));
- const root={isConnected:true,querySelectorAll(selector){
-  assert.equal(selector,'.security-entrance');return blocks;
- }};
- try{
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:false};
-  stopSecurityMotion();
-  mountSecurityMotion(root,'security');assert.equal(starts,3);
-  mountSecurityMotion(root,'security');assert.equal(starts,3);
-  assert.equal(stops,3);
-  mountSecurityMotion(null,'boards');
-  mountSecurityMotion(root,'security');assert.equal(starts,6);
-  stopSecurityMotion();assert.equal(stops,6);
-  globalThis.window={matchMedia:()=>({matches:true})};
-  mountSecurityMotion(root,'security');assert.equal(starts,6);
-  stopSecurityMotion();
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:true};
-  mountSecurityMotion(root,'security');assert.equal(starts,6);
- }finally{
-  stopSecurityMotion();globalThis.window=priorWindow;globalThis.document=priorDocument;
- }
+test('mounted security components remain stationary on entry and refresh',()=>{
+ let queries=0,animations=0;
+ const node={isConnected:true,querySelectorAll(){queries++;return [{animate(){animations++;}}]},
+  animate(){animations++;}};
+ stopSecurityMotion();
+ mountSecurityMotion(node,'security');
+ mountSecurityMotion(node,'security');
+ mountSecurityMotion(null,'overview');
+ mountSecurityMotion(node,'security');
+ stopSecurityMotion();
+ assert.equal(queries,0,'no entrance element traversal');
+ assert.equal(animations,0,'no mount-time animations');
+ const source=readFileSync('frontend/security-experience.js','utf8');
+ assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
