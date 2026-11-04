@@ -16,29 +16,8 @@ export function roleConfigurationIcon(kind){
   'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" '+
   'aria-hidden="true" focusable="false">'+(Object.hasOwn(paths,kind)?paths[kind]:paths.shield)+'</svg>';
 }
-let lastView=null;
-let animations=[];
-/** @param {HTMLElement|null} section @param {string} view */
-export function mountRoleConfigurationMotion(section,view){
- const entered=lastView!==view;
- lastView=view;
- for(const animation of animations)animation.cancel?.();
- animations=[];
- if(!entered||view!=='role-configuration'||!section?.isConnected||
-  typeof window==='undefined'||typeof document==='undefined'||document.hidden||
-  window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
- const elements=[...section.querySelectorAll('.role-entrance')].slice(0,6);
- elements.forEach((node,index)=>{
-  if(typeof node.animate!=='function')return;
-  animations.push(node.animate([
-   {opacity:.87,transform:'translate3d(0,8px,0)'},
-   {opacity:1,transform:'translate3d(0,0,0)'}
-  ],{duration:Math.min(275+index*25,405),delay:Math.min(index*38,165),
-   easing:'cubic-bezier(.22,1,.36,1)',fill:'none'}));
- });
-}
-export function stopRoleConfigurationMotion(){
- for(const animation of animations)animation.cancel?.();
- animations=[];
- lastView=null;
-}
+/** Minimal-motion presentation hook retained for existing shell imports.
+ * Route content appears at its final position without stagger or overshoot.
+ */
+export function mountRoleConfigurationMotion(){}
+export function stopRoleConfigurationMotion(){}
