@@ -63,3 +63,19 @@
 .aps-tradelink-app .tl-activity-line time,.aps-tradelink-app .tl-activity-entry small{font-size:11px;color:#76819b}
 .aps-tradelink-app .tl-activity-entry p{font-size:12px;line-height:1.6;margin:9px 0;color:#4e5972;white-space:pre-wrap}
 .aps-tradelink-app .tl-activity-entry small{display:block;margin-top:8px}
+
+/* TradeLink source-formula preview only; no document write controls. */
+.aps-tradelink-app .tl-finance-preview{margin:26px 0;border:1px solid #dce2f8;border-radius:14px;padding:20px;background:#f9faff}
+.aps-tradelink-app .tl-finance-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.aps-tradelink-app .tl-finance-head h3{margin:0;font-size:17px}
+.aps-tradelink-app .tl-finance-local{font-size:11px;color:#747e99;font-weight:700}
+.aps-tradelink-app .tl-finance-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+.aps-tradelink-app .tl-finance-fields label{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:750;color:#53617b;min-width:0}
+.aps-tradelink-app .tl-finance-fields input,.aps-tradelink-app .tl-finance-fields select{font:inherit;width:100%;min-width:0;min-height:42px;border-radius:9px;border:1px solid #dce2ef;background:#fff;color:#26334e;padding:8px 10px}
+.aps-tradelink-app .tl-finance-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:20px 0 13px}
+.aps-tradelink-app .tl-finance-results>div{background:#fff;border:1px solid #e5e9f4;border-radius:10px;padding:12px;min-width:0}
+.aps-tradelink-app .tl-finance-results dt{font-size:10px;color:#77839e}
+.aps-tradelink-app .tl-finance-results dd{margin:8px 0 0;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.aps-tradelink-app .tl-finance-fields input:focus-visible,.aps-tradelink-app .tl-finance-fields select:focus-visible{outline:3px solid #8d95ee;outline-offset:2px}
+@media(max-width:760px){.aps-tradelink-app .tl-finance-fields,.aps-tradelink-app .tl-finance-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){.aps-tradelink-app .tl-finance-fields,.aps-tradelink-app .tl-finance-results{grid-template-columns:1fr}}
