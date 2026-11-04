@@ -110,7 +110,7 @@ function heading(title,desc){
  return '<div class="tt-subview-head"><div><h3>'+esc(title)+'</h3><p>'+
   esc(desc)+'</p></div></div>';
 }
-function clockPage(result,busy,now){
+function clockPage(result,busy,now,clockPending=false){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
  const t=timeTrackerClockParts(now);
@@ -156,10 +156,14 @@ function clockPage(result,busy,now){
     '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
      ((active&&active.location==='Offsite (Home)')?'':' hidden')+'>'+
      'Offsite Work Note<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
-    '<button class="tt-start-button" type="submit" name="tt-action" value="'+
+    (clockPending?
+     '<p class="tt-clock-hint" role="status">Clock-out status needs verification. A second attendance write is blocked until a fresh signed read confirms the result.</p>'+
+     '<button class="tt-start-button" type="button" data-action="tt-clock-verify"'+
+      (busy?' disabled':'')+'>Verify session status</button>':
+     '<button class="tt-start-button" type="submit" name="tt-action" value="'+
       (active?'clock-out':'clock-in')+'"'+
       (busy||!writeReady?' disabled':'')+'>'+
-      (active?'End session':'Start session')+'</button>'+
+      (active?'End session':'Start session')+'</button>')+
     (!writeReady?
      '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
      '<p class="tt-clock-hint">Your attendance uses signed PostgreSQL timestamps and current GPS permission.</p>')+
@@ -200,7 +204,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
@@ -221,7 +225,7 @@ export function renderTimeTrackerNative({
  if(selected==='overview')html+=renderTimeTrackerOverview({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
- if(selected==='clock')html+=clockPage(result,busy,new Date(now));
+ if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending);
  if(selected==='log')html+=renderTimeTrackerLog({
   records:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
