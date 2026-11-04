@@ -6,6 +6,8 @@ import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sideba
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {DomainApi,validUuid} from './data.js';
+import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
+import {PlatformSync} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
@@ -86,6 +88,10 @@ const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
+const platformSync=new PlatformSync({
+ auth,api:db,url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY,
+ onStatus:updatePlatformSyncIndicator,onInvalidate:reconcilePlatformSync
+});
 const boardStructureClient=new BoardStructureClient(db);
 const boardCardLifecycle=new BoardCardLifecycleClient(db);
 const itemSelection=new BoardItemSelection();
@@ -304,7 +310,7 @@ function shell(body){
  }else{
   root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
- <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
+ <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  }
  const previousRoute=shellRoute;
@@ -335,6 +341,7 @@ function shell(body){
  mountSettingsMotion(root.querySelector('.aps-settings'),state.view);
  mountPagesAcceptanceMotion(root.querySelector('.aps-pages-acceptance'),state.view);
  maintainTimeTrackerClock();
+ updatePlatformSyncIndicator(platformSync.lastStatus);
  void mountSignedTimeTrackerMaps();
 }
 function animateTabContent(selector){
@@ -825,6 +832,11 @@ function render(){
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
  if(state.view==='board'&&state.tab==='items')syncBoardSelectionUi();
+ if(state.context&&auth.isSignedIn)platformSync.start({
+  userId:state.context.user_id,workspaceId:state.context.workspace_id,
+  priorityBoardId:state.view==='board'?state.boardId:null,
+  boardIds:state.boards.map(board=>board.id)
+ });
 }
 function findBoardCard(id){
  return [...state.boards,...state.archived,...state.trashed].find(b=>b.id===id)||null;
@@ -1019,6 +1031,122 @@ async function saveGroupInline(form){
   state.groupEditId=null;await loadBoard(boardId,'items');toast('Group renamed.');
  }finally{state.groupEditBusy=false;}
 }
+
+/** Status is patched in-place; a heartbeat never triggers a page render. */
+function updatePlatformSyncIndicator(status){
+ const element=root.querySelector('.aps-sync');
+ if(!element||!status)return;
+ const labels={connecting:'Connecting',synchronized:status.transport==='realtime'?'Live synced':'Checked',
+  synchronizing:'Syncing',reconnecting:'Reconnecting',offline:'Offline',error:'Sync issue'};
+ element.dataset.syncState=status.phase;
+ element.querySelector('.aps-sync-caption').textContent=labels[status.phase]||'Checking';
+ const time=status.lastSyncAt?new Intl.DateTimeFormat('en-PH',{
+  hour:'numeric',minute:'2-digit',second:'2-digit',timeZone:'Asia/Manila'
+ }).format(status.lastSyncAt):'Not yet verified';
+ const label=labels[status.phase]+' · '+(status.detail||'')+' · Last authoritative check: '+time;
+ element.setAttribute('aria-label',label);
+ element.title=label;
+}
+/** Protect active forms, selections, modals and local unsaved edits from background
+ * DOM replacement; the controller will reconcile again on the next poll/focus.
+ */
+function platformSyncEditInProgress(){
+ const focused=document.activeElement;
+ return !!(modal?.isConnected||state.ttBusy||state.ttClockPending||
+  state.inlineCell||state.inlineCellBusy||state.inlineAddBusy||
+  state.groupEditId||state.groupEditBusy||state.userRoleBusy||state.roleBusy||
+  state.ttOtModalOpen||state.loading||state.loadingIssues||
+  focused?.closest?.('input,textarea,select,[contenteditable="true"]'));
+}
+async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
+ if(!state.context||state.context.user_id!==userId||
+  state.context.workspace_id!==workspaceId||!auth.isSignedIn)return false;
+ if(platformSyncEditInProgress())return false;
+ const serial=routeSerial,view=state.view,tab=state.tab,boardId=state.boardId;
+ const isCurrent=()=>auth.isSignedIn&&state.context?.user_id===userId&&
+  state.context?.workspace_id===workspaceId&&serial===routeSerial&&
+  state.view===view&&state.tab===tab&&state.boardId===boardId;
+ const sensitive=reason!=='broadcast';
+ const boardChanged=boardId&&boardIds.includes(boardId);
+ // Board broadcasts carry identifiers only; the server remains authoritative.
+ if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
+ const who=await auth.getVerifiedUser();
+ const current=await db.context();
+ if(who?.id!==userId||current.user_id!==userId||
+  current.workspace_id!==workspaceId||!isCurrent()){
+  platformSync.stop();return false;
+ }
+ const roleChanged=current.profile?.platform_role!==state.context.profile?.platform_role;
+ const boards=await db.boards('active');
+ if(!isCurrent())return false;
+ if(!boards.some(board=>board.id===boardId)&&view==='board'){
+  platformSync.stop();state.board=null;location.hash='#/boards';return false;
+ }
+ const changedBoards=JSON.stringify(state.boards)!==JSON.stringify(boards);
+ state.boards=boards;state.context=current;state.user=auth.session?.user;
+ if(roleChanged||sensitive){
+  const verified=await roleConfig.bootstrapVerified().catch(()=>false);
+  if(!isCurrent())return false;
+  if(verified!==state.roleVerified){
+   state.roleVerified=verified;state.roleData=null;state.userRoleData=null;
+   if(!verified&&(view==='role-configuration'||view==='user-role-management')){
+    platformSync.stop();location.hash='#/overview';return false;
+   }
+  }
+ }
+ if(view==='board'&&boardId){
+  const [detail,edit,manage,boardUi]=await Promise.all([
+   db.board(boardId),db.allowed(boardId,'edit'),db.allowed(boardId,'manage'),
+   boardStructureClient.read(boardId)
+  ]);
+  if(!isCurrent()||platformSyncEditInProgress())return false;
+  if(detail?.board?.id!==boardId||detail.board.workspace_id!==workspaceId)
+   return false;
+  const changed=JSON.stringify(state.board)!==JSON.stringify(detail);
+  state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
+  if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
+  if(tab==='attendance'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
+   const fresh=await timeTracker.snapshot(boardId);
+   if(!isCurrent()||platformSyncEditInProgress())return false;
+   state.ttAttendance=fresh;
+   if(state.ttClockPending)reconcileTimeTrackerClock(fresh,{allowRetry:true});
+  }
+  if(tab==='items'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
+   if(state.ttBoardGpsEligible&&TT_BOARD_GPS_PROJECTION_ENABLED){
+    state.ttBoardAttendance=await loadTimeTrackerBoardGps({
+     auth,api:db,boardId,workspaceId,enabled:true
+    });
+   }else{
+    const signed=await timeTracker.snapshot(boardId);
+    if(!isCurrent())return false;
+    const access=signed.access;
+    const scope=signed.log?.scope;
+    if(signed.status==='VERIFIED_READ'&&access?.userId===userId&&
+       access?.workspaceId===workspaceId&&access?.boardId===boardId&&
+       ['OWN_ATTENDANCE_ONLY','AUTHORIZED_WORKSPACE_TEAM'].includes(scope)){
+     state.ttBoardAttendance={status:'VERIFIED_LOG',userId,workspaceId,boardId,
+      scope,rows:signed.log.rows||[]};
+    }else state.ttBoardAttendance={status:'RESTRICTED'};
+   }
+  }
+  if(tab==='finance'&&moduleByBoardName(detail.board.name)?.key==='frt')
+   state.frtFinance=await loadFRTFinanceReadOnly({auth,api:db,companyCode:null});
+  if(!isCurrent()||platformSyncEditInProgress())return false;
+  if(changed||changedBoards||reason!=='broadcast'||tab!=='items')render();
+  return true;
+ }
+ if(view==='user-role-management'&&state.roleVerified===true)
+  await loadUserRoleManagement();
+ if(view==='role-configuration'&&state.roleVerified===true)
+  await loadRoleConfiguration();
+ if(view==='foundation'&&sensitive)await refreshFoundation();
+ if(view==='boards'&&state.showArchived)state.archived=await db.boards('archived');
+ if(view==='boards'&&state.showTrash)state.trashed=await db.boards('trashed');
+ if(!isCurrent()||platformSyncEditInProgress())return false;
+ if(changedBoards||roleChanged||reason!=='broadcast')render();
+ return true;
+}
+
 async function refreshWorkspace(){
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
  state.context=await db.context();
@@ -1979,7 +2107,8 @@ async function openBoardStructure(){
 async function action(name,button){
  switch(name){
  case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';button.setAttribute('aria-label',f.type==='password'?'Show password':'Hide password');button.setAttribute('aria-pressed',String(f.type==='text'));}break;}
- case 'logout':{clearBulkActivation();state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'logout':{platformSync.stop();clearBulkActivation();state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'platform-sync-verify':{await platformSync.syncNow('manual',[]);break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'board-activity':{await openBoardActivity();break;}
  case 'board-members':{await openBoardMembers();break;}
@@ -3692,6 +3821,9 @@ root.addEventListener('input',event=>{
   if(hint)hint.hidden=matched!==0;
  }else if(event.target.id==='search-board-items')syncBoardSelectionUi();
 });
+document.addEventListener('visibilitychange',()=>platformSync.visibilityChanged());
+window.addEventListener('online',()=>platformSync.network(true));
+window.addEventListener('offline',()=>platformSync.network(false));
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
 window.addEventListener('keydown',event=>{if(event.key==='Escape'){
  closeBoardCardMenus();hideModal();
@@ -3700,7 +3832,7 @@ window.addEventListener('keydown',event=>{if(event.key==='Escape'){
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{state.context=null;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{platformSync.stop();state.context=null;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  startInitialization();
  try{
