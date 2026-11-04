@@ -63,6 +63,7 @@ import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
+import {startSelectExperience} from './select-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
@@ -3907,4 +3908,5 @@ async function boot(){
  }catch{renderLogin('Unable to initialize session. Please try signing in.');}
  finally{finishInitialization();}
 }
+startSelectExperience(document.body);
 boot();
