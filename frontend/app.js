@@ -1099,7 +1099,7 @@ async function refreshFoundation(){
 async function loadBoard(boardId,tab){
  if(state.bulk02Access?.boardId!==boardId)clearBulkActivation();
  const seq=++routeSerial;
- state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=null;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
+ state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=tab==='items'?{status:'LOADING'}:null;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
  if(state.boardId!==boardId||state.tab!=='attendance'){
   state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
@@ -1120,7 +1120,6 @@ async function loadBoard(boardId,tab){
    const sameSession=()=>seq===routeSerial&&auth.isSignedIn&&
      state.view==='board'&&state.tab==='items'&&state.boardId===boardId&&
      state.context?.user_id===identity&&state.context?.workspace_id===workspace;
-   state.ttBoardAttendance={status:'LOADING'};
    if(state.roleVerified===true)state.ttBoardGpsEligible=true;
    else {
      try{
