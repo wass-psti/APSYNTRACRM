@@ -152,34 +152,18 @@ test('responsive scoped CSS preserves keyboard focus, no infinite GPU loop and s
  assert.doesNotMatch(visuals,/\.style\s*\.|\.cssText\s*=|setAttribute\s*\(\s*['"]style/);
 });
 
-test('short native motion cancels on rerender and respects reduced-motion and hidden page',()=>{
- const oldWindow=globalThis.window,oldDocument=globalThis.document;
- let started=0,canceled=0;
- const blocks=Array.from({length:4},()=>({animate(frames,options){
-  started++;assert.equal(frames.length,2);assert.equal(options.fill,'none');
-  return {cancel(){canceled++;}};
- }}));
- const section={isConnected:true,querySelectorAll(selector){
-  assert.equal(selector,'.role-entrance');return blocks;
- }};
- try{
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:false};
-  stopRoleConfigurationMotion();
-  mountRoleConfigurationMotion(section,'role-configuration');assert.equal(started,4);
-  mountRoleConfigurationMotion(section,'role-configuration');assert.equal(started,4);
-  assert.equal(canceled,4);
-  mountRoleConfigurationMotion(null,'boards');
-  mountRoleConfigurationMotion(section,'role-configuration');assert.equal(started,8);
-  stopRoleConfigurationMotion();assert.equal(canceled,8);
-  globalThis.window={matchMedia:()=>({matches:true})};
-  mountRoleConfigurationMotion(section,'role-configuration');assert.equal(started,8);
-  stopRoleConfigurationMotion();
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:true};
-  mountRoleConfigurationMotion(section,'role-configuration');assert.equal(started,8);
- }finally{
-  stopRoleConfigurationMotion();
-  globalThis.window=oldWindow;globalThis.document=oldDocument;
- }
+test('mounted role-configuration components remain stationary on entry and refresh',()=>{
+ let queries=0,animations=0;
+ const node={isConnected:true,querySelectorAll(){queries++;return [{animate(){animations++;}}]},
+  animate(){animations++;}};
+ stopRoleConfigurationMotion();
+ mountRoleConfigurationMotion(node,'role-configuration');
+ mountRoleConfigurationMotion(node,'role-configuration');
+ mountRoleConfigurationMotion(null,'overview');
+ mountRoleConfigurationMotion(node,'role-configuration');
+ stopRoleConfigurationMotion();
+ assert.equal(queries,0,'no entrance element traversal');
+ assert.equal(animations,0,'no mount-time animations');
+ const source=readFileSync('frontend/role-configuration-visuals.js','utf8');
+ assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
