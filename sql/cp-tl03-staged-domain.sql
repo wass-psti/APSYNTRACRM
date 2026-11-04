@@ -85,8 +85,8 @@ BEGIN
  IF v_actor IS NULL OR NOT private.wm_board_config_session_active()
   OR p_board_id IS DISTINCT FROM '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid THEN
   RETURN false; END IF;
- RETURN public.work_board_access(p_board_id,'manage')
-  AND public.module_role_for('tradelink',v_actor)='General Manager'
+ RETURN coalesce(public.work_board_access(p_board_id,'manage'),false)
+  AND coalesce(public.module_role_for('tradelink',v_actor)='General Manager',false)
   AND EXISTS(SELECT 1 FROM public.work_boards b WHERE b.id=p_board_id
    AND b.name='TradeLink' AND b.status='active' AND b.archived_at IS NULL
    AND b.trashed_at IS NULL AND b.workspace_id=public.current_workspace_id(v_actor)
@@ -199,7 +199,7 @@ DECLARE actor uuid:=auth.uid(); d public.tradelink_documents%rowtype;
  projection public.work_board_items%rowtype; payload jsonb;
  group_id uuid; item_id uuid; rev bigint;
 BEGIN
- IF actor IS NULL OR NOT private.tl03_can_manage(p_board_id) THEN
+ IF actor IS NULL OR private.tl03_can_manage(p_board_id) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Signed TradeLink General Manager access required' USING ERRCODE='42501'; END IF;
  IF p_document_id IS NULL OR p_expected_revision IS NULL OR p_expected_revision<0
   OR p_operation IS NULL OR p_operation NOT IN ('create','update','archive','restore') THEN
@@ -301,7 +301,7 @@ CREATE FUNCTION public.tl03_document_read(p_board_id uuid,p_document_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $read$
 DECLARE result jsonb;
 BEGIN
- IF NOT private.tl03_can_manage(p_board_id) THEN
+ IF private.tl03_can_manage(p_board_id) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Signed TradeLink read denied' USING ERRCODE='42501'; END IF;
  SELECT pg_catalog.to_jsonb(d) INTO result FROM public.tradelink_documents d
   WHERE d.board_id=p_board_id AND d.id=p_document_id;
@@ -313,7 +313,7 @@ CREATE FUNCTION public.tl03_documents_list(p_board_id uuid,p_limit integer DEFAU
 RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $list$
 DECLARE result jsonb;
 BEGIN
- IF NOT private.tl03_can_manage(p_board_id) THEN
+ IF private.tl03_can_manage(p_board_id) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Signed TradeLink list denied' USING ERRCODE='42501'; END IF;
  IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 100 THEN
   RAISE EXCEPTION 'Invalid list limit' USING ERRCODE='22023'; END IF;
