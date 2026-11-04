@@ -120,56 +120,80 @@ function clockPage(result,busy,now,clockPending=false){
  const credited=todayRows.reduce((sum,r)=>sum+(r.creditedMs===null?
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
  const status=active?'Active':'Idle';
- let html='<div class="tt-clock-stage">'+
-  '<div class="tt-clock-aura" aria-hidden="true"><span></span><span></span><span></span></div>'+ 
-  '<div class="tt-clock-hero"><span class="tt-clock-eyebrow">SIGNED WORKFORCE TIME</span><h3 id="tt-clock-greeting">'+t.greeting+'</h3>'+
-   '<p id="tt-clock-date">'+t.day+'</p>'+
-   '<div class="tt-clock-face" role="timer" aria-label="Current local time">'+
-    '<span id="tt-clock-hours">'+t.hours+'</span>'+
-    '<span class="tt-clock-colon" aria-hidden="true">:</span>'+
-    '<span id="tt-clock-minutes">'+t.minutes+'</span>'+
-    '<span class="tt-clock-suffix"><span id="tt-clock-seconds">'+t.seconds+
-    '</span><span id="tt-clock-period">'+t.period+'</span></span>'+
-   '</div></div>'+
-  '<div class="tt-session-summary" aria-label="My attendance today">'+
-   '<div><strong>'+todayRows.length+'</strong><span>Sessions</span></div>'+
-   '<div><strong>'+(credited/3600000).toFixed(1)+'</strong><span>Hours</span></div>'+
-   '<div><strong class="tt-summary-status">'+status+'</strong><span>Status</span></div>'+
-  '</div>'+
-  '<section class="tt-clock-card" aria-label="Attendance clock form">'+
-   '<div class="tt-clock-card-head"><h4>'+ (active?'Clock Out':'Clock In')+
-   '</h4><span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+
-    (active?'ACTIVE':'IDLE')+'</span></div>'+
-   (active?'<p class="tt-active-copy">Your signed session began '+esc(date(active.clockIn))+
-     '.</p>':'')+
-   '<form id="tt-clock-form">'+
-    (active?
-     '<div class="tt-active-session-context" aria-label="Active attendance details">'+
-      '<div><span>Recorded work location</span><strong>'+esc(active.location)+'</strong></div>'+
-      '<div><span>Recorded department</span><strong>'+esc(active.department)+'</strong></div>'+
-      '<p>Clock Out uses the same signed attendance session and captures a new browser GPS fix.</p>'+
-     '</div>':
-     '<label for="tt-location">Location'+select('tt-location',TT_LOCATIONS,'Select location…')+'</label>'+
-     '<div class="tt-quick-location"><span>Quick select</span>'+
-      '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty">◴ &nbsp; Office</button>'+
-      '<button type="button" data-action="tt-location-shortcut" data-location="Offsite (Home)">⌖ &nbsp; Home</button>'+
+ let html='<div class="tt-clock-stage tt-command-center">'+
+  '<div class="tt-command-layout">'+
+   '<section class="tt-time-dashboard" aria-label="Live time and attendance summary">'+
+    '<div class="tt-time-scene" aria-hidden="true">'+
+     '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+     '<span class="tt-time-orbit tt-time-orbit-outer"></span>'+
+     '<span class="tt-time-orbit tt-time-orbit-inner"></span>'+
+     '<span class="tt-time-orbit tt-time-orbit-horizon"></span>'+
+    '</div>'+
+    '<div class="tt-time-dashboard-head">'+
+     '<span class="tt-dashboard-kicker">APSYNTRA <span class="tt-kicker-separator">/</span> TIMEKEEPING</span>'+
+     '<span class="tt-timezone-pill">UTC +08:00</span>'+
+    '</div>'+
+    '<div class="tt-clock-hero">'+
+     '<span class="tt-clock-eyebrow">PHILIPPINE STANDARD TIME</span>'+
+     '<h3 id="tt-clock-greeting">'+t.greeting+'</h3>'+
+     '<p id="tt-clock-date">'+t.day+'</p>'+
+     '<div class="tt-clock-face" role="timer" aria-label="Current Philippine time">'+
+      '<span id="tt-clock-hours">'+t.hours+'</span>'+
+      '<span class="tt-clock-colon" aria-hidden="true">:</span>'+
+      '<span id="tt-clock-minutes">'+t.minutes+'</span>'+
+      '<span class="tt-clock-suffix"><span id="tt-clock-seconds">'+t.seconds+
+      '</span><span id="tt-clock-period">'+t.period+'</span></span>'+
      '</div>'+
-     '<label for="tt-department">Department'+select('tt-department',TT_DEPARTMENTS,'Select department…')+'</label>')+
-    '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
-     ((active&&active.location==='Offsite (Home)')?'':' hidden')+'>'+
-     'Offsite Work Note<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
-    (clockPending?
-     '<p class="tt-clock-hint" role="status">Clock-out status needs verification. A second attendance write is blocked until a fresh signed read confirms the result.</p>'+
-     '<button class="tt-start-button" type="button" data-action="tt-clock-verify"'+
-      (busy?' disabled':'')+'>Verify session status</button>':
-     '<button class="tt-start-button" type="submit" name="tt-action" value="'+
-      (active?'clock-out':'clock-in')+'"'+
-      (busy||!writeReady?' disabled':'')+'>'+
-      (active?'End session':'Start session')+'</button>')+
-    (!writeReady?
-     '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
-     '<p class="tt-clock-hint">Your attendance uses signed PostgreSQL timestamps and current GPS permission.</p>')+
-   '</form></section>'+
+     '<p class="tt-clock-source">Live device time displayed in the organization’s timezone</p>'+
+    '</div>'+
+    '<div class="tt-dashboard-section-label">TODAY’S ATTENDANCE</div>'+
+    '<div class="tt-session-summary" aria-label="My attendance today">'+
+     '<div><strong>'+todayRows.length+'</strong><span>Sessions</span></div>'+
+     '<div><strong>'+(credited/3600000).toFixed(1)+'</strong><span>Hours</span></div>'+
+     '<div><strong class="tt-summary-status">'+status+'</strong><span>Status</span></div>'+
+    '</div>'+
+    '<p class="tt-dashboard-source">Attendance totals use your authorized TimeTracker records.</p>'+
+   '</section>'+
+   '<section class="tt-clock-card tt-attendance-console" aria-label="Attendance clock form">'+
+    '<div class="tt-console-kicker"><span class="tt-console-kicker-mark" aria-hidden="true"></span> ATTENDANCE CONTROL</div>'+
+    '<div class="tt-clock-card-head"><h4>'+ (active?'Clock Out':'Clock In')+
+     '</h4><span class="tt-idle-badge '+(active?'tt-badge-active':'')+'">'+
+      (active?'ACTIVE':'IDLE')+'</span></div>'+
+    '<p class="tt-console-description">'+(active?
+     'End the current signed attendance session using a fresh GPS fix.':
+     'Start your work session with a signed record and a fresh GPS fix.')+'</p>'+
+    (active?'<p class="tt-active-copy">Your signed session began '+esc(date(active.clockIn))+
+      '.</p>':'')+
+    '<form id="tt-clock-form">'+
+     (active?
+      '<div class="tt-active-session-context" aria-label="Active attendance details">'+
+       '<div><span>Recorded work location</span><strong>'+esc(active.location)+'</strong></div>'+
+       '<div><span>Recorded department</span><strong>'+esc(active.department)+'</strong></div>'+
+       '<p>Clock Out uses the same signed attendance session and captures a new browser GPS fix.</p>'+
+      '</div>':
+      '<label for="tt-location">Location'+select('tt-location',TT_LOCATIONS,'Select location…')+'</label>'+
+      '<div class="tt-quick-location"><span>Quick select</span>'+
+       '<button type="button" data-action="tt-location-shortcut" data-location="Office-Base Duty">◴ &nbsp; Office</button>'+
+       '<button type="button" data-action="tt-location-shortcut" data-location="Offsite (Home)">⌖ &nbsp; Home</button>'+
+      '</div>'+
+      '<label for="tt-department">Department'+select('tt-department',TT_DEPARTMENTS,'Select department…')+'</label>')+
+     '<label for="tt-note" class="tt-note-field" id="tt-note-wrap"'+
+      ((active&&active.location==='Offsite (Home)')?'':' hidden')+'>'+
+      'Offsite Work Note<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
+     (clockPending?
+      '<p class="tt-clock-hint" role="status">Clock-out status needs verification. A second attendance write is blocked until a fresh signed read confirms the result.</p>'+
+      '<button class="tt-start-button" type="button" data-action="tt-clock-verify"'+
+       (busy?' disabled':'')+'>Verify session status</button>':
+      '<button class="tt-start-button" type="submit" name="tt-action" value="'+
+       (active?'clock-out':'clock-in')+'"'+
+       (busy||!writeReady?' disabled':'')+'>'+
+       (active?'End session':'Start session')+'</button>')+
+     (!writeReady?
+      '<p class="tt-write-restriction" role="status">Live writes remain disabled until server-side offsite work-note, dedicated-board authorization and audit logging are accepted.</p>':
+      '<p class="tt-clock-hint">Your attendance uses signed PostgreSQL timestamps and current GPS permission.</p>')+
+    '</form>'+
+   '</section>'+
+  '</div>'+
   '<p class="tt-clock-footnote">Time records and permissions are provided by APSYNTRA CRM. No standalone TimeTracker login or local attendance store is used.</p>'+
  '</div>';
  return html;
