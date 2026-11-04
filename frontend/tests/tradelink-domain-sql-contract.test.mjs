@@ -93,3 +93,15 @@ test('document number normalization cannot desynchronize the board Item title',(
  assert.match(sql,/IS DISTINCT FROM pg_catalog\.btrim\(p_data->>'documentNumber'\)/);
  assert.match(sql,/public\.wm_add_board_item\(p_board_id,group_id,payload->>'documentNumber'\)/);
 });
+
+
+test('staged SQL is one complete migration with intact regex and no duplicated tail',()=>{
+ const commits=sql.match(/^COMMIT;$/gm)||[];
+ const begins=sql.match(/^BEGIN;$/gm)||[];
+ assert.equal(begins.length,1);
+ assert.equal(commits.length,1);
+ assert.equal(sql.trim().endsWith('COMMIT;'),true);
+ assert.match(sql,/documentNumber' !~ '\^\[A-Za-z0-9\].*\*\$'\s*OR/);
+ assert.match(sql,/IS DISTINCT FROM pg_catalog\.btrim\(p_data->>'documentNumber'\) THEN/);
+ assert.equal((sql.match(/CREATE FUNCTION public\.tl03_documents_list\(/g)||[]).length,1);
+});
