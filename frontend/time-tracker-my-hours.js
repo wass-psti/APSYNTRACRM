@@ -145,18 +145,42 @@ export function renderTimeTrackerMyHours({
  const greeting=h<12?'Good morning,':h<17?'Good afternoon,':'Good evening,';
  const selected=model.days.find(d=>d.day===selectedDay);
  const progress=Math.min(45,model.weekCreditedMs/3600000);
- return '<section class="tt-my-hours" aria-label="My signed attendance hours">'+
-  '<header class="tt-hours-header"><div><h3>'+greeting+'</h3>'+
-   '<h4>'+esc(access.name||'Signed employee')+'</h4>'+
-   '<p>'+esc(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',
-    weekday:'long',month:'long',day:'numeric'}).format(new Date(now)))+
-   '</p></div><div class="tt-hours-actions">'+
-   '<button type="button" data-action="tt-refresh"'+(busy?' disabled':'')+
-   '>Refresh</button><button type="button" disabled title="Correction submission requires an approved signed backend workflow">✎ Request Correction</button></div></header>'+
+ return '<section class="tt-my-hours tt-my-hours-command" aria-label="My signed attendance hours">'+
+  '<header class="tt-hours-header tt-hours-command-hero" aria-label="Personal signed attendance overview">'+
+   '<div class="tt-hours-graphics" aria-hidden="true">'+
+    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+    '<span class="tt-hours-orbit tt-hours-orbit-outer"></span>'+
+    '<span class="tt-hours-orbit tt-hours-orbit-inner"></span></div>'+
+   '<div class="tt-hours-hero-content">'+
+    '<span class="tt-hours-eyebrow"><span class="tt-hours-signal" aria-hidden="true"></span>'+
+     'APSYNTRA / PERSONAL TIME INTELLIGENCE</span>'+
+    '<h3>'+greeting+'</h3>'+
+    '<h4>'+esc(access.name||'Signed employee')+'</h4>'+
+    '<p>'+esc(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',
+     weekday:'long',month:'long',day:'numeric'}).format(new Date(now)))+'</p>'+
+    '<span class="tt-hours-hero-scope">Read-only · Your signed sessions</span>'+
+   '</div>'+
+   '<div class="tt-hours-hero-telemetry" aria-label="Signed personal attendance snapshot">'+
+    '<span class="tt-hours-telemetry-caption">SIGNED WEEKLY SNAPSHOT</span>'+
+    '<div class="tt-hours-telemetry-primary"><strong>'+hours(model.weekCreditedMs)+
+     'h</strong><span>Credited this week<br>from signed history</span></div>'+
+    '<div class="tt-hours-telemetry-grid">'+
+     '<div><strong>'+hours(model.monthCreditedMs)+'h</strong><span>Month total</span></div>'+
+     '<div><strong>'+model.sessions+'</strong><span>Sessions</span></div>'+
+     '<div><strong>'+model.late+'</strong><span>Late</span></div>'+
+    '</div>'+
+    '<div class="tt-hours-actions">'+
+     '<button type="button" data-action="tt-refresh"'+(busy?' disabled':'')+
+      '>Refresh my hours</button>'+
+     '<button type="button" disabled title="Correction submission requires an approved signed backend workflow">'+
+      '✎ Request Correction</button></div>'+
+   '</div></header>'+
   '<div class="tt-hours-week-nav"><span>MY HOURS</span><div>'+
-   '<button type="button" data-action="tt-hours-week-prev" aria-label="Previous week">‹</button>'+
+   '<button type="button" data-action="tt-hours-week-prev" aria-label="Previous week"'+
+    (weekOffset<=-104?' disabled':'')+'>‹</button>'+
    '<strong>'+esc(model.week.label)+'</strong>'+
-   '<button type="button" data-action="tt-hours-week-next" aria-label="Next week">›</button>'+
+   '<button type="button" data-action="tt-hours-week-next" aria-label="Next week"'+
+    (weekOffset>=104?' disabled':'')+'>›</button>'+
    '<button type="button" data-action="tt-hours-week-current">This Week</button></div></div>'+
   '<div class="tt-hours-kpis">'+
    [['WEEK HOURS',hours(model.weekCreditedMs)+'h'],['MONTH HOURS',hours(model.monthCreditedMs)+'h'],
@@ -182,9 +206,11 @@ export function renderTimeTrackerMyHours({
   '</section>'+
   section('MONTHLY OVERVIEW',displayMonth)+
   '<section class="tt-hours-panel tt-hours-calendar"><div class="tt-hours-month-nav">'+
-   '<button type="button" data-action="tt-hours-month-prev" aria-label="Previous month">‹</button>'+
+   '<button type="button" data-action="tt-hours-month-prev" aria-label="Previous month"'+
+    (model.month==='2000-01'?' disabled':'')+'>‹</button>'+
    '<strong>'+esc(displayMonth)+'</strong>'+
-   '<button type="button" data-action="tt-hours-month-next" aria-label="Next month">›</button>'+
+   '<button type="button" data-action="tt-hours-month-next" aria-label="Next month"'+
+    (model.month==='2100-12'?' disabled':'')+'>›</button>'+
    '<button type="button" data-action="tt-hours-month-current">This Month</button></div>'+
    monthGrid(model,selectedDay)+
    '<div class="tt-hours-legend">'+
