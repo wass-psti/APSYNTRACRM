@@ -48,7 +48,7 @@ function fake(){
    sock.emit([frame[0],frame[1],frame[2],'phx_reply',{status:'ok',response:{}}]);
   await wait();
  };
- return {ctl,sockets,statuses,invalidations,wait,flush,intervals,
+ return {ctl,sockets,statuses,invalidations,wait,flush,join,intervals,
   setVisible:v=>{visible=v;},setOnline:v=>{online=v;},setToken:v=>{token=v;},
   advance:ms=>{time+=ms;}};
 }
