@@ -25,7 +25,7 @@ test('temporary annotation-only CSS exception preserves other CSP protections',(
  assert.deepEqual(directives['base-uri'],["'self'"]);
  assert.deepEqual(directives['form-action'],["'self'"]);
  assert.deepEqual(directives['connect-src'],["'self'",'https://jtlusodorfnyzgyuewkz.supabase.co',
-  'https://unpkg.com']);
+  'wss://jtlusodorfnyzgyuewkz.supabase.co','https://unpkg.com']);
  assert.equal((meta[1].match(/'unsafe-inline'/g)||[]).length,1,'only style-src may allow inline styling');
  assert.doesNotMatch(meta[1],/unsafe-eval|unsafe-hashes|\*/);
 });
