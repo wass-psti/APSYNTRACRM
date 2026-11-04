@@ -40,6 +40,22 @@ test('vertical ellipsis has three identical filled dots symmetric in a 24px icon
  assert.deepEqual(svg.children.map(node=>node.tagName),['circle','circle','circle']);
  assert.equal(svg.children[0].attrs.get('r'),'1.5');
 });
+test('horizontal ellipsis shares centered filled geometry and 18px SVG metrics',()=>{
+ const points=lucideIconNodes('ellipsis-horizontal');
+ assert.deepEqual(points,[
+  ['circle',{cx:5,cy:12,r:1.5}],
+  ['circle',{cx:12,cy:12,r:1.5}],
+  ['circle',{cx:19,cy:12,r:1.5}]
+ ]);
+ const svg=createLucideActionIcon('ellipsis-horizontal',mockDocument());
+ assert.equal(svg.getAttribute('viewBox'),'0 0 24 24');
+ assert.equal(svg.getAttribute('width'),'18');
+ assert.equal(svg.getAttribute('height'),'18');
+ assert.equal(svg.getAttribute('fill'),'currentColor');
+ assert.equal(svg.getAttribute('stroke'),'none');
+ assert.equal(svg.getAttribute('class'),'aps-action-icon aps-ellipsis-icon');
+ assert.equal(svg.children.length,3);
+});
 test('all other Lucide menu glyphs remain 17px stroke icons',()=>{
  const document=mockDocument();
  for(const name of ['pencil','trash-2','ruler','columns-3','rotate-ccw','users','settings-2']){
@@ -110,4 +126,24 @@ test('shared SVGs remain decorative with existing keyboard, action, and overlay 
  assert.doesNotMatch(js,/\.innerHTML\s*=|setAttribute\('style'|\.style\s*\.|eval\(/);
  assert.match(smoke,/'frontend\/action-menu-experience\.js'/);
  assert.match(smoke,/'frontend\/action-menu-experience\.css'/);
+});
+
+test('high-specificity board-header/catalog styles cannot override centered icon sizing',()=>{
+ const hardening=css.slice(css.indexOf('/* CP-CRM-ACTION-ICON-03'));
+ assert.ok(hardening.length>650);
+ for(const selector of [
+  '#app .aps-board-shell .page-head .board-actions-menu>summary.aps-ellipsis-trigger',
+  '#app .aps-board-shell .page-head .head-actions>.board-actions-menu>summary.aps-ellipsis-trigger',
+  '#app .aps-boards .boards-catalog-grid .board-card-actions>summary.aps-ellipsis-trigger',
+  '#app .aps-board-shell .group-heading .board-group-actions>summary.aps-ellipsis-trigger',
+  '#app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger)>svg.aps-ellipsis-icon'
+ ])assert.ok(hardening.includes(selector),selector);
+ assert.match(hardening,/justify-content:center/);
+ assert.match(hardening,/padding:0/);
+ assert.match(hardening,/font-size:0/);
+ assert.match(hardening,/transform:none/);
+ assert.match(hardening,/width:18px;height:18px/);
+ assert.match(hardening,/@media\(max-width:720px\)/);
+ assert.match(hardening,/content:none/);
+ assert.doesNotMatch(hardening,/z-index:|position:fixed|position-anchor|url\(/);
 });

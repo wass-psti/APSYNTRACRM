@@ -19,6 +19,7 @@ const LUCIDE_NODES=Object.freeze({
  'search':[['circle',{cx:11,cy:11,r:8}],['path',{d:'m21 21-4.35-4.35'}]],
  'x':[['path',{d:'M18 6 6 18'}],['path',{d:'m6 6 12 12'}]],
  'ellipsis-vertical':[['circle',{cx:12,cy:5,r:1.5}],['circle',{cx:12,cy:12,r:1.5}],['circle',{cx:12,cy:19,r:1.5}]],
+ 'ellipsis-horizontal':[['circle',{cx:5,cy:12,r:1.5}],['circle',{cx:12,cy:12,r:1.5}],['circle',{cx:19,cy:12,r:1.5}]],
  'pencil':[['path',{d:'M12 19l7-7 3 3-7 7-4 1 1-4Z'}],['path',{d:'m18 13 3 3'}]],
  'trash-2':[['path',{d:'M3 6h18'}],['path',{d:'M8 6V4h8v2'}],['path',{d:'m19 6-1 14H6L5 6'}],['path',{d:'M10 11v6'}],['path',{d:'M14 11v6'}]],
  'rotate-ccw':[['path',{d:'M3 11a9 9 0 1 1 2.65 6.35'}],['path',{d:'M3 3v8h8'}]],
@@ -59,7 +60,7 @@ export function lucideIconNodes(name){
 export function createLucideActionIcon(name,doc=globalThis.document){
  if(!doc?.createElementNS)return null;
  const svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');
- const ellipsis=name==='ellipsis-vertical';
+ const ellipsis=name==='ellipsis-vertical'||name==='ellipsis-horizontal';
  svg.setAttribute('class',ellipsis?
   'aps-action-icon aps-ellipsis-icon':'aps-action-icon');
  svg.setAttribute('width',ellipsis?'18':'17');

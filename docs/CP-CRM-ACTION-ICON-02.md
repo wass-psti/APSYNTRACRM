@@ -27,3 +27,8 @@ Existing \`data-action\` values, authorizations, signed-session checks, board-ed
 Focused Node tests cover consistent centered dot geometry; solid versus stroke icon behavior; Overview, catalog, group, header and column trigger normalization; global CSS/keyboard/accessibility; and unchanged foreground-positioning/action handlers. The existing full regression suite, build, and live exact-asset SHA verification provide deployment evidence when they pass.
 
 A production-browser visual check of Overview, the Contacts board column dropdown shown in the report, nested board groups, mobile/tablet, focus, and modal/menu overlap is a separate gate. Do not conflate automated markup/CSS assertions or successful Pages deployment with observed signed-browser pixel acceptance. No SQL, Supabase Auth/RLS, RBAC, permissions, credentials or production data were changed.
+
+
+## Specificity follow-up — CP-CRM-ACTION-ICON-03
+
+The later audit found more specific board-header and catalog rules that could override the generic trigger dimensions and padding. This revision adds narrowly scoped zero-padding, flex centering, pseudo-marker suppression, and responsive sizes for those exact selectors while retaining the measured foreground overlay. The shared factory also defines a symmetrical, filled horizontal variant for consistency if an existing or future action control requests that orientation. It does not change which existing menus use vertical ellipses, event dispatch, authorization, or page routing.

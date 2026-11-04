@@ -343,3 +343,69 @@
   outline:2px solid Highlight;outline-offset:-2px;
  }
 }
+
+/* CP-CRM-ACTION-ICON-03 — finish high-specificity route coverage.
+ * Board-header and catalog stylesheets have selectors more specific than
+ * the global .aps-ellipsis-trigger rule. Never let their legacy padding or
+ * font metrics shift the actual centered SVG, including at small widths.
+ */
+#app .aps-board-shell .page-head .board-actions-menu>summary.aps-ellipsis-trigger,
+#app .aps-board-shell .page-head .head-actions>.board-actions-menu>summary.aps-ellipsis-trigger{
+ box-sizing:border-box;
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ width:36px;height:36px;
+ min-width:36px;min-height:36px;
+ padding:0;
+ font-size:0;
+ line-height:1;
+ white-space:nowrap;
+}
+#app .aps-board-shell .page-head .board-actions-menu>summary.aps-ellipsis-trigger::after{
+ content:none;
+ display:none;
+}
+#app .aps-boards .boards-catalog-grid .board-card-actions>summary.aps-ellipsis-trigger{
+ box-sizing:border-box;
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ width:36px;height:36px;
+ min-width:36px;min-height:36px;
+ padding:0;
+ font-size:0;
+ line-height:1;
+}
+#app .aps-board-shell .group-heading .board-group-actions>summary.aps-ellipsis-trigger{
+ box-sizing:border-box;
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ padding:0;
+ font-size:0;
+ line-height:1;
+}
+/* Never allow typography, pseudo-markers, or transforms to distort the dots. */
+#app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger)>svg.aps-ellipsis-icon{
+ display:block;
+ flex:0 0 18px;
+ width:18px;height:18px;
+ min-width:18px;min-height:18px;
+ max-width:18px;max-height:18px;
+ aspect-ratio:1;
+ margin:0;
+ padding:0;
+ transform:none;
+ transform-origin:50% 50%;
+ stroke:none;
+ fill:currentColor;
+ pointer-events:none;
+}
+@media(max-width:720px){
+ #app .aps-board-shell .page-head .board-actions-menu>summary.aps-ellipsis-trigger,
+ #app .aps-board-shell .page-head .head-actions>.board-actions-menu>summary.aps-ellipsis-trigger,
+ #app .aps-boards .boards-catalog-grid .board-card-actions>summary.aps-ellipsis-trigger{
+  width:42px;height:42px;min-width:42px;min-height:42px;
+ }
+}
