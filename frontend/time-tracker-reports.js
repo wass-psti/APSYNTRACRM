@@ -190,13 +190,39 @@ export function renderTimeTrackerReports({
  ];
  const periods=[['all','All dates'],['today','Today'],
   ['week','This Week'],['month','This Month'],['custom','Custom']];
- return '<section class="tt-reports" aria-label="Authorized attendance Reports">'+
-  '<div class="tt-reports-heading"><div><h3>Reports</h3><p>Attendance trends &amp; analytics · '+
-   (team?'Authorized workspace team':'Your own signed attendance')+'</p></div>'+
-  '<div class="tt-reports-actions">'+
-   '<button type="button" class="secondary" data-action="tt-refresh"'+(busy?' disabled':'')+
-   '>Refresh</button><button type="button" class="secondary" data-action="tt-export"'+
-   (busy||!visible.length?' disabled':'')+'>Export report CSV</button></div></div>'+
+ return '<section class="tt-reports tt-reports-command" aria-label="Authorized attendance Reports">'+
+  '<header class="tt-reports-heading tt-reports-command-hero" aria-label="Authorized attendance analytics">'+
+   '<div class="tt-report-graphics" aria-hidden="true">'+
+    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+    '<span class="tt-report-orbit tt-report-orbit-outer"></span>'+
+    '<span class="tt-report-orbit tt-report-orbit-inner"></span>'+
+   '</div>'+
+   '<div class="tt-reports-hero-content">'+
+    '<span class="tt-reports-eyebrow"><span class="tt-report-signal" aria-hidden="true"></span>'+
+     'APSYNTRA / WORKFORCE ANALYTICS</span>'+
+    '<h3>Attendance Reports</h3>'+
+    '<p>Authorized attendance trends, patterns and workforce insights</p>'+
+    '<span class="tt-reports-hero-scope">Read-only · '+
+     (team?'Authorized workspace team':'Your own signed attendance')+'</span>'+
+    '<span class="tt-reports-hero-period">'+esc(range)+'</span>'+
+   '</div>'+
+   '<div class="tt-reports-telemetry" aria-label="Authorized report snapshot">'+
+    '<span class="tt-report-telemetry-caption">SIGNED REPORT SNAPSHOT</span>'+
+    '<div class="tt-report-telemetry-primary"><strong>'+summary.records+
+     '</strong><span>Attendance sessions<br>in selected range</span></div>'+
+    '<div class="tt-report-telemetry-grid">'+
+     '<div><strong>'+summary.completed+'</strong><span>Completed</span></div>'+
+     '<div><strong>'+(summary.onTimeRate===null?'—':summary.onTimeRate+'%')+
+      '</strong><span>On-time rate</span></div>'+
+     '<div><strong>'+(summary.averageMs===null?'—':fmtHours(summary.averageMs)+' h')+
+      '</strong><span>Avg credited hours</span></div>'+
+    '</div>'+
+    '<div class="tt-reports-actions">'+
+     '<button type="button" class="secondary" data-action="tt-refresh"'+(busy?' disabled':'')+
+     '>Refresh</button><button type="button" class="secondary" data-action="tt-export"'+
+     (busy||!visible.length?' disabled':'')+'>Export report CSV</button></div>'+
+   '</div>'+
+  '</header>'+
   '<section class="tt-reports-range"><label for="tt-report-period">DATE RANGE</label>'+
    '<div class="tt-report-presets">'+
    periods.map(([key,label])=>'<button type="button" data-action="tt-report-preset"'+
