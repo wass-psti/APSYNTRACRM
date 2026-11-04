@@ -54,3 +54,12 @@
 @media(max-width:1040px){.tl-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tl-app-layout{grid-template-columns:1fr}.tl-app-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.tl-app-nav h3{grid-column:1/-1}}
 @media(max-width:620px){.tl-app-hero{padding:25px 21px}.tl-stat-grid{gap:8px}.tl-stat{padding:15px}.tl-app-nav{grid-template-columns:1fr}.tl-overview-tiles{grid-template-columns:1fr}.tl-content-panel{padding:18px}.tl-panel-heading a{width:100%}}
 @media(prefers-reduced-motion:reduce){.aps-tradelink-app *, .aps-tradelink-app *::before,.aps-tradelink-app *::after{animation:none!important;transition:none!important}.tl-overview-tile:hover{transform:none}}
+
+/* Signed board audit projection (not source TradeLink notifications). */
+.aps-tradelink-app .tl-activity-list{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:9px}
+.aps-tradelink-app .tl-activity-entry{border:1px solid var(--tl-line);border-radius:12px;padding:14px 16px;background:#fafbff;overflow-wrap:anywhere}
+.aps-tradelink-app .tl-activity-line{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.aps-tradelink-app .tl-activity-line strong{font-size:12px}
+.aps-tradelink-app .tl-activity-line time,.aps-tradelink-app .tl-activity-entry small{font-size:11px;color:#76819b}
+.aps-tradelink-app .tl-activity-entry p{font-size:12px;line-height:1.6;margin:9px 0;color:#4e5972;white-space:pre-wrap}
+.aps-tradelink-app .tl-activity-entry small{display:block;margin-top:8px}
