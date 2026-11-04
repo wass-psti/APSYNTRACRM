@@ -42,7 +42,9 @@ jobs:
       PGCONNECT_TIMEOUT: '5'
       PGOPTIONS: '-c statement_timeout=30000'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install PostgreSQL CLI (disposable runner only)
         run: |
           sudo apt-get update -qq
