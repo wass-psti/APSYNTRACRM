@@ -1440,7 +1440,9 @@ async function submitTimeTrackerAction(form,actionName){
    if(actionName==='clock-out'&&reconcileTimeTrackerClock(snapshot)!=='CONFIRMED')
     state.ttError='Clock Out was committed, but the current session view is not reconciled. Select Verify session status.';
   }catch{
-   if(sameSession())state.ttError='Attendance was committed, but the refreshed session is unavailable. Select Verify session status.';
+   if(sameSession())state.ttError=actionName==='clock-out'?
+    'Clock Out was committed, but the refreshed session is unavailable. Select Verify session status.':
+    'Clock In was committed, but the refreshed session is unavailable. Refresh the board before further attendance actions.';
   }
  }catch(err){
   if(!sameSession())return;
