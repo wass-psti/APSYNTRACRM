@@ -45,7 +45,7 @@ test('startup-critical shell function encloses post-render mounts',()=>{
  assert.ok(shellStart>=0&&helperStart>shellStart);
  const shellSource=app.slice(shellStart,helperStart);
  assert.match(shellSource,/root\.querySelector\('\.main'\)\?\.classList\.toggle/);
- assert.match(shellSource,/void mountSignedTimeTrackerMaps\(\);\s*\}$/);
+ assert.match(shellSource.trimEnd(),/void mountSignedTimeTrackerMaps\(\);\s*\}$/);
  assert.match(app.slice(helperStart),/^function animateTabContent\(selector\)\{/);
 });
 
