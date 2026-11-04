@@ -82,7 +82,6 @@
 #app .aps-metric-chart{
  max-width:100%;
  min-width:0;
- contain:layout;
 }
 #app .aps-metric-chart svg,
 #app .aps-metric-chart canvas{

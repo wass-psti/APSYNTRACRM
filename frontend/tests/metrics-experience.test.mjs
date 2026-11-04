@@ -141,6 +141,18 @@ test('Motion fallback uses WAAPI and short RAF only; no expensive looping animat
  assert.match(js,/visibilityObserver\?\.disconnect\(\);resizeObserver\?\.disconnect\(\)/);
  assert.doesNotMatch(js,/setInterval|setTimeout|new Worker|WebAssembly|requestIdleCallback/);
 });
+test('existing charts receive visibility-only one-shot animation on intersection',()=>{
+ assert.match(js,/function revealChart(chart)/);
+ assert.match(js,/function watchChart(chart)/);
+ assert.match(js,/if(charts\.has(change\.target))revealChart(change\.target)/);
+ assert.match(js,/chart\.animate\(\[/);
+ assert.match(js,/chart\.querySelectorAll\?\.\('svg rect'\)/);
+ assert.match(js,/bar\.animate\(\[\{opacity:0\.7\},\{opacity:1\}\]/);
+ assert.match(js,/chartAnimations\.clear\(\)/);
+ assert.match(js,/charts\.clear\(\)/);
+ assert.doesNotMatch(js,/path\.setAttribute\('d'/);
+ assert.doesNotMatch(css,/contain:layout/);
+});
 test('canonical metric text and chart contracts remain untouched by animation',()=>{
  assert.match(js,/node\.classList\.add\('aps-metric-value'\)/);
  assert.match(js,/node\.children\?\.length/);

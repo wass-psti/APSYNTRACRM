@@ -142,6 +142,7 @@ export function startMetricsExperience(root=globalThis.document?.body,{
  const reduced=()=>motionAllowed(doc,win);
  let running=true,hasRefreshIntent=false,activeAnimations=0;
  const entries=new Map(),profileSamples=[],observed=new Set();
+ const charts=new Set(),chartAnimations=new Map();
  let live=null;
  const observerAvailable=typeof IntersectionObserver==='function';
  const resizeAvailable=typeof ResizeObserver==='function';
@@ -279,12 +280,43 @@ export function startMetricsExperience(root=globalThis.document?.body,{
   if(visibilityObserver){visibilityObserver.observe(card);observed.add(card);}
   else maybeReveal(entry);
  }
+ function revealChart(chart){
+  if(!running||!chart.isConnected||!charts.has(chart))return;
+  charts.delete(chart);
+  const level=reduced();
+  if(level==='none')return;
+  if(typeof chart.animate==='function'){
+   try{
+    const animation=chart.animate([
+     {opacity:0.86,transform:'translateY(5px)'},
+     {opacity:1,transform:'translateY(0)'}
+    ],{duration:level==='lite'?150:260,easing:'ease-out'});
+    chartAnimations.set(chart,animation);
+   }catch{/* Static original chart remains fully visible. */}
+  }
+  // Existing SVG chart bars keep their source dimensions and values.
+  // Animate visibility only, never invent data points or path positions.
+  for(const bar of Array.from(chart.querySelectorAll?.('svg rect')||[]).slice(0,12)){
+   if(typeof bar.animate==='function'){
+    try{bar.animate([{opacity:0.7},{opacity:1}],
+     {duration:level==='lite'?140:240,easing:'ease-out'});}
+    catch{/* Original SVG bar remains unchanged. */}
+   }
+  }
+ }
+ function watchChart(chart){
+  if(!chart?.isConnected||charts.has(chart)||chartAnimations.has(chart))return;
+  chart.classList.add('aps-metric-chart');
+  charts.add(chart);
+  if(visibilityObserver){visibilityObserver.observe(chart);observed.add(chart);}
+  else revealChart(chart);
+ }
  function scan(node){
   if(node?.nodeType!==1)return;
   if(node.matches?.(METRIC_VALUE_SELECTOR))attach(node);
   node.querySelectorAll?.(METRIC_VALUE_SELECTOR).forEach(attach);
-  if(node.matches?.(METRIC_CHART_SELECTOR))node.classList.add('aps-metric-chart');
-  node.querySelectorAll?.(METRIC_CHART_SELECTOR).forEach(el=>el.classList.add('aps-metric-chart'));
+  if(node.matches?.(METRIC_CHART_SELECTOR))watchChart(node);
+  node.querySelectorAll?.(METRIC_CHART_SELECTOR).forEach(watchChart);
  }
  if(observerAvailable){
   visibilityObserver=new IntersectionObserver(changes=>{
@@ -292,6 +324,7 @@ export function startMetricsExperience(root=globalThis.document?.body,{
     if(!change.isIntersecting)continue;
     for(const entry of entries.values())
      if(entry.card===change.target)maybeReveal(entry);
+    if(charts.has(change.target))revealChart(change.target);
     visibilityObserver.unobserve(change.target);
     observed.delete(change.target);
    }
@@ -321,6 +354,10 @@ export function startMetricsExperience(root=globalThis.document?.body,{
     if(entry.gauge?.isConnected)entry.gauge.remove();
     entries.delete(node);
    }
+  for(const chart of charts)
+   if(!chart.isConnected){visibilityObserver?.unobserve(chart);charts.delete(chart);}
+  for(const [chart,animation] of chartAnimations)
+   if(!chart.isConnected){animation?.cancel?.();chartAnimations.delete(chart);}
   if(added&&hasRefreshIntent){
    hasRefreshIntent=false;
    if(live)live.textContent='Authorized metrics refreshed.';
@@ -332,8 +369,11 @@ export function startMetricsExperience(root=globalThis.document?.body,{
    +'[data-action="tt-gps-load"]'))hasRefreshIntent=true;
  };
  const onVisibility=()=>{
-  if(doc.visibilityState==='hidden')
+  if(doc.visibilityState==='hidden'){
    for(const entry of entries.values())finish(entry);
+   for(const animation of chartAnimations.values())animation?.cancel?.();
+   chartAnimations.clear();
+  }
  };
  if(root.append&&doc.createElement){
   live=doc.createElement('div');
@@ -352,6 +392,12 @@ export function startMetricsExperience(root=globalThis.document?.body,{
   root.removeEventListener?.('click',onRefresh,true);
   doc.removeEventListener?.('visibilitychange',onVisibility);
   visibilityObserver?.disconnect();resizeObserver?.disconnect();
+  for(const [chart,animation] of chartAnimations){
+   animation?.cancel?.();chart.classList.remove('aps-metric-chart');
+  }
+  chartAnimations.clear();
+  for(const chart of charts)chart.classList.remove('aps-metric-chart');
+  charts.clear();
   for(const entry of entries.values()){
    stop(entry);entry.gauge?.remove();
    entry.node.classList.remove('aps-metric-value');
