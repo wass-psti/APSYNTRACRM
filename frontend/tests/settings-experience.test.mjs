@@ -67,8 +67,8 @@ test('profile preserves authoritative identity fields, user ID and signed worksp
  assert.match(page,/employee/);
  assert.match(page,/class="status done">active<\/span>/);
  assert.equal(count(page,/class="settings-detail(?:\s|")/g),5); // four profile fields plus one session authentication field
- assert.equal(count(page,/class="settings-profile-panel/g),1);
- assert.equal(count(page,/class="settings-session-panel/g),1);
+ assert.equal(count(page,/class="panel settings-profile-panel/g),1);
+ assert.equal(count(page,/class="panel settings-session-panel/g),1);
 });
 
 test('Settings redesign preserves all four original action handlers and restricted warnings',()=>{
