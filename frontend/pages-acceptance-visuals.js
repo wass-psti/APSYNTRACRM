@@ -1,5 +1,5 @@
 /** CP-PAGES-VIS01: lightweight presentation-only SVG icons and one-shot motion.
- * No canvas, WebGL, network access, API calls, telemetry or continuous frame loops.
+ * No graphics context, network access, API calls, telemetry or continuous frame loops.
  */
 const paths=Object.freeze({
  shield:'<path d="M12 22s8-4.2 8-10V5l-8-3-8 3v7c0 5.8 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
