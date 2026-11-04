@@ -137,34 +137,18 @@ test('scoped responsive CSS and static SVG maintain accessibility and avoid cont
  assert.doesNotMatch(graphics,/\.style\s*\.|\.cssText\s*=|setAttribute\s*\(\s*['"]style/);
 });
 
-test('one-shot foundation motion cancels on rerender, respects reduced motion and hidden state',()=>{
- const oldWindow=globalThis.window,oldDocument=globalThis.document;
- let started=0,cancelled=0;
- const targets=Array.from({length:4},()=>({animate(keyframes,opts){
-  started++;assert.equal(keyframes.length,2);assert.equal(opts.fill,'none');
-  return {cancel(){cancelled++;}};
- }}));
- const section={isConnected:true,querySelectorAll(selector){
-  assert.equal(selector,'.foundation-entrance');return targets;
- }};
- try{
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:false};
-  stopFoundationMotion();
-  mountFoundationMotion(section,'foundation');assert.equal(started,4);
-  mountFoundationMotion(section,'foundation');assert.equal(started,4);
-  assert.equal(cancelled,4);
-  mountFoundationMotion(null,'boards');
-  mountFoundationMotion(section,'foundation');assert.equal(started,8);
-  stopFoundationMotion();assert.equal(cancelled,8);
-  globalThis.window={matchMedia:()=>({matches:true})};
-  mountFoundationMotion(section,'foundation');assert.equal(started,8);
-  stopFoundationMotion();
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:true};
-  mountFoundationMotion(section,'foundation');assert.equal(started,8);
- }finally{
-  stopFoundationMotion();
-  globalThis.window=oldWindow;globalThis.document=oldDocument;
- }
+test('mounted foundation components remain stationary on entry and refresh',()=>{
+ let queries=0,animations=0;
+ const node={isConnected:true,querySelectorAll(){queries++;return [{animate(){animations++;}}]},
+  animate(){animations++;}};
+ stopFoundationMotion();
+ mountFoundationMotion(node,'foundation');
+ mountFoundationMotion(node,'foundation');
+ mountFoundationMotion(null,'overview');
+ mountFoundationMotion(node,'foundation');
+ stopFoundationMotion();
+ assert.equal(queries,0,'no entrance element traversal');
+ assert.equal(animations,0,'no mount-time animations');
+ const source=readFileSync('frontend/foundation-visuals.js','utf8');
+ assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
