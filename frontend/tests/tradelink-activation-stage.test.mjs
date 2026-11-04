@@ -6,6 +6,8 @@ const staged=readFileSync('sql/cp-tl03-staged-domain.sql','utf8');
 const preflight=readFileSync('sql/tests/cp-tl03c-production-readiness.sql','utf8');
 const phaseA=readFileSync('sql/tests/cp-tl03c-stage-a-readonly.sql','utf8');
 const phaseB=readFileSync('sql/cp-tl03c-write-permission-candidate.sql','utf8');
+const rollback=readFileSync('sql/cp-tl03c-emergency-disable-candidate.sql','utf8');
+const rollbackQA=readFileSync('sql/tests/cp-tl03c-disposable-emergency-acceptance.sql','utf8');
 const ci=readFileSync('.github/workflows/cp-tl03b-disposable-postgres.yml','utf8');
 
 test('production Stage A cannot grant either public or private document mutation',()=>{
@@ -57,7 +59,9 @@ test('disposable PostgreSQL CI proves deny-before-grant then signed transaction 
  'cp-tl03c-stage-a-readonly.sql',
  'cp-tl03c-write-permission-candidate.sql',
  'cp-tl03-disposable-acceptance.sql',
- 'cp-tl03-postactivation-readonly.sql'
+ 'cp-tl03-postactivation-readonly.sql',
+ 'cp-tl03c-emergency-disable-candidate.sql',
+ 'cp-tl03c-disposable-emergency-acceptance.sql'
  ];
  const steps=ci.slice(ci.indexOf('    steps:'));
  const offsets=ordered.map(v=>steps.indexOf(v));
@@ -67,4 +71,18 @@ test('disposable PostgreSQL CI proves deny-before-grant then signed transaction 
  assert.match(ci,/PGDATABASE: tradelink_disposable/);
  assert.match(ci,/persist-credentials: false/);
  assert.match(ci,/node --test/);
+});
+
+test('emergency disable revokes new document API grants without destroying audit or board data',()=>{
+ assert.match(rollback,/REVOKE ALL ON FUNCTION private\.tl03_commit/);
+ assert.match(rollback,/REVOKE ALL ON FUNCTION public\.tl03_document_commit/);
+ assert.match(rollback,/REVOKE ALL ON FUNCTION public\.tl03_document_read/);
+ assert.match(rollback,/REVOKE ALL ON FUNCTION public\.tl03_documents_list/);
+ assert.match(rollback,/REVOKE SELECT ON TABLE public\.tradelink_documents,public\.tradelink_document_events/);
+ assert.match(rollback,/^BEGIN;$/m);
+ assert.match(rollback,/^COMMIT;$/m);
+ assert.doesNotMatch(rollback,/^\s*(?:DROP|TRUNCATE|DELETE|UPDATE|INSERT|CREATE|ALTER)\b/m);
+ assert.match(rollbackQA,/count\(\*\) FROM public\.tradelink_document_events/);
+ assert.match(rollbackQA,/count\(\*\) FROM public\.work_board_items/);
+ assert.match(rollbackQA,/Emergency disable modified disposable domain or board records/);
 });
