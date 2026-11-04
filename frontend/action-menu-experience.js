@@ -234,13 +234,16 @@ export function enhanceActionContextMenu(trigger,menu,{close=()=>{}}={}){
   kind:'action',onDismiss:()=>close(),
   onPlacementFailure:()=>close()
  });
- // Native popover anchors already track scroll, zoom and resize in CSS.
- // Only the local fallback needs legacy Floating UI class calculations.
- const stopPosition=stopForeground?()=>{}:
-  attachFloatingPosition(trigger,menu,()=>menu.isConnected);
+ // Column menus are attached directly to the board shell, so their local
+ // fallback has no safe trigger-relative containing block. Close instead
+ // of displaying an unpositioned menu at the viewport origin.
+ if(!stopForeground){
+  queueMicrotask(()=>{if(menu.isConnected)close();});
+  return ()=>abort.abort();
+ }
  animateMenu(menu);
  keyboard.focusBoundary();
- return ()=>{abort.abort();stopPosition();stopForeground?.();};
+ return ()=>{abort.abort();stopForeground();};
 }
 /** Dynamically enhance <details> action menus while leaving other details alone. */
 export function startActionMenuExperience(root=globalThis.document?.body){
@@ -303,7 +306,8 @@ export function startActionMenuExperience(root=globalThis.document?.body){
     shown=true;opened=controller;
     if(hasItems){
      stopForeground=showForegroundPopover(menu,trigger,{
-      kind:'action',onDismiss:()=>close(false)
+      kind:'action',onDismiss:()=>close(false),
+      onPlacementFailure:()=>close(false)
      });
      if(!stopForeground)
       stopPosition=attachFloatingPosition(trigger,menu,()=>details.open&&details.isConnected);

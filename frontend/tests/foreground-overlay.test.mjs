@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- supportsForegroundPopover,showForegroundPopover,isForegroundPositionValid
+ supportsForegroundPopover,showForegroundPopover,isForegroundPositionValid,calculateActionMenuPlacement
 } from '../foreground-overlay.js';
 
 const implementation=readFileSync('frontend/foreground-overlay.js','utf8');
@@ -19,21 +19,55 @@ function classSet(){
   remove:(...names)=>names.forEach(name=>data.delete(name)),
   contains:name=>data.has(name)};
 }
-function fixture({supported=true}={}){
- const document={
-  defaultView:{CSS:{supports:(key,value)=>{
+function fixture({supported=true,cssom=true}={}){
+ const rules=[],pending=[];
+ const sheet={
+  href:'https://wass-psti.github.io/APSYNTRACRM/frontend/foreground-overlay.css',
+  cssRules:rules,
+  insertRule(text,index){
+   const values=new Map();
+   const rule={cssText:text,style:{
+    setProperty:(name,value)=>values.set(name,value),
+    getPropertyValue:name=>values.get(name)||''
+   }};
+   rules.splice(index,0,rule);return index;
+  },
+  deleteRule(index){rules.splice(index,1);}
+ };
+ const listeners=new Map();
+ const window={
+  CSS:{supports:(key,value)=>{
    if(!supported)return false;
    return key==='position-anchor'&&value==='auto'||
     key==='top'&&value==='anchor(bottom)';
-  }}},
-  createElement:()=>({showPopover(){}})
+  }},
+  innerWidth:1100,innerHeight:820,
+  requestAnimationFrame:callback=>{pending.push(callback);return pending.length;},
+  cancelAnimationFrame:()=>{},
+  addEventListener:(name,fn)=>listeners.set('window:'+name,fn),
+  removeEventListener:name=>listeners.delete('window:'+name),
  };
- const trigger={isConnected:true,classList:classSet()};
+ const document={
+  defaultView:window,
+  styleSheets:cssom?[sheet]:[],
+  createElement:()=>({showPopover(){}}),
+  addEventListener:(name,fn)=>listeners.set('document:'+name,fn),
+  removeEventListener:name=>listeners.delete('document:'+name)
+ };
+ const trigger={isConnected:true,classList:classSet(),
+  getBoundingClientRect:()=>({left:700,right:738,top:310,bottom:348})};
  const attributes=new Map();
  let open=false,shown=0,hidden=0;
  const menu={
-  ownerDocument:document,isConnected:true,
-  classList:classSet(),
+  id:'aps-action-menu-fixture',ownerDocument:document,isConnected:true,
+  classList:classSet(),closest:selector=>selector==='#app'?{}:null,
+  getBoundingClientRect(){
+   const match=rules.find(rule=>rule.cssText.startsWith('#app #'+this.id));
+   const left=Number.parseFloat(match?.style.getPropertyValue('left'));
+   const top=Number.parseFloat(match?.style.getPropertyValue('top'));
+   const x=Number.isFinite(left)?left:0,y=Number.isFinite(top)?top:0;
+   return {left:x,top:y,right:x+210,bottom:y+120,width:210,height:120};
+  },
   getAttribute:name=>attributes.has(name)?attributes.get(name):null,
   setAttribute:(name,value)=>attributes.set(name,String(value)),
   removeAttribute:name=>attributes.delete(name),
@@ -44,9 +78,13 @@ function fixture({supported=true}={}){
   hidePopover(){open=false;hidden++;},
   matches:selector=>selector===':popover-open'&&open
  };
- return {document,trigger,menu,
+ return {document,window,sheet,rules,listeners,trigger,menu,
+  flush(){
+   const jobs=pending.splice(0);jobs.forEach(fn=>fn(0));
+  },
   get open(){return open;},get shown(){return shown;},
-  get hidden(){return hidden;}};
+  get hidden(){return hidden;}
+ };
 }
 test('feature detection fails closed without CSS anchors or native Popover API',()=>{
  const yes=fixture();
@@ -132,6 +170,7 @@ test('board, group and column action menus stay in the delegated click hierarchy
  assert.match(action,/kind:'action',onDismiss:\(\)=>close\(false\)/);
  assert.match(action,/stopForeground\?\.\(\);stopForeground=null/);
  assert.match(action,/const stopForeground=showForegroundPopover\(menu,trigger/);
+ assert.match(action,/if\(!stopForeground\)\{\s*queueMicrotask/);
  assert.match(action,/trigger\.setAttribute\('aria-haspopup','menu'\)/);
  assert.match(action,/keyboard\.focusBoundary\(\)/);
  assert.doesNotMatch(implementation,/appendChild|append\(menu\)|document\.body\.append/);
@@ -158,7 +197,8 @@ test('overlay CSS uses browser top layer and anchors without global z-index infl
   ':popover-open','@media(prefers-reduced-motion:reduce)'
  ])assert.ok(css.includes(token),token);
  assert.doesNotMatch(css,/z-index:\s*\d+|@import|url\(https?:|will-change|animation:.*infinite/);
- assert.doesNotMatch(implementation,/\.style\s*\.|\.cssText\s*=|setAttribute\s*\(\s*['"]style['"]/);
+ assert.match(implementation,/rule\.style\.setProperty\('top'/);
+ assert.doesNotMatch(implementation,/menu\.style\.|trigger\.style\.|setAttribute\s*\(\s*['"]style['"]/);
  assert.match(html,/style-src-attr 'none'/);
  assert.match(html,/script-src 'self' https:\/\/unpkg\.com;/);
 });
@@ -198,21 +238,15 @@ test('viewport-relative geometry accepts adjacent dropdowns at all edges and rej
  assert.equal(isForegroundPositionValid(trigger,{...below,width:0},viewport),false);
 });
 function measuredFixture(){
- const f=fixture(),win=f.document.defaultView;
- const frames=[],events=new Map();
- win.requestAnimationFrame=callback=>{frames.push(callback);return frames.length;};
- win.cancelAnimationFrame=()=>{};
- win.innerWidth=1100;win.innerHeight=820;
- win.addEventListener=(event,callback)=>events.set('window:'+event,callback);
- win.removeEventListener=(event)=>events.delete('window:'+event);
- f.document.addEventListener=(event,callback)=>events.set('document:'+event,callback);
- f.document.removeEventListener=(event)=>events.delete('document:'+event);
+ const f=fixture();
  let trigger={left:960,right:1000,top:360,bottom:398};
- let menu={left:790,right:1000,top:406,bottom:550,width:210,height:144};
+ const defaultRect=f.menu.getBoundingClientRect.bind(f.menu);
  f.trigger.getBoundingClientRect=()=>trigger;
- f.menu.getBoundingClientRect=()=>menu;
- return {f,events,flush(){const next=frames.splice(0);next.forEach(cb=>cb());},
-  moveTrigger(rect){trigger=rect;},moveMenu(rect){menu=rect;}};
+ f.menu.getBoundingClientRect=()=>defaultRect();
+ return {f,events:f.listeners,flush:()=>f.flush(),
+  moveTrigger(rect){trigger=rect;},
+  moveMenu(rect){f.menu.getBoundingClientRect=()=>rect;}
+ };
 }
 test('unresolved top-left placement is never displayed: hidden until checked then restored to local fallback',()=>{
  const m=measuredFixture(),failures=[];
@@ -254,4 +288,66 @@ test('engines rejecting showPopover source cannot silently open an unanchored me
  assert.equal(calls,1);
  assert.equal(f.menu.getAttribute('popover'),null);
  assert.equal(f.menu.classList.contains('aps-foreground-surface'),false);
+});
+
+test('measured action menus use actual trigger geometry rather than CSS anchors',()=>{
+ const corners=[
+  [{left:10,right:48,top:12,bottom:50},{width:220,height:120}],
+  [{left:1040,right:1078,top:12,bottom:50},{width:220,height:120}],
+  [{left:10,right:48,top:760,bottom:798},{width:220,height:120}],
+  [{left:1040,right:1078,top:760,bottom:798},{width:220,height:120}]
+ ];
+ for(const [anchor,menu] of corners){
+  const pos=calculateActionMenuPlacement(anchor,menu,{width:1100,height:820});
+  assert.ok(pos,'must position a menu near each corner');
+  const drawn={left:pos.left,top:pos.top,right:pos.left+220,
+   bottom:pos.top+Math.min(pos.maxHeight,120),
+   width:220,height:Math.min(pos.maxHeight,120)};
+  assert.equal(isForegroundPositionValid(anchor,drawn,{width:1100,height:820}),true);
+  assert.ok(drawn.left>=0&&drawn.right<=1100);
+  assert.ok(drawn.top>=0&&drawn.bottom<=820);
+ }
+ assert.equal(calculateActionMenuPlacement({left:1,right:2,top:1,bottom:2},
+  {width:120,height:120},{width:0,height:0}),null);
+});
+test('CSSOM action rule opens with measured fixed viewport coordinates and is removed on close',()=>{
+ const f=fixture();
+ const done=showForegroundPopover(f.menu,f.trigger,{kind:'action'});
+ assert.equal(typeof done,'function');
+ assert.equal(f.rules.length,1);
+ assert.match(f.rules[0].cssText,/#app #aps-action-menu-fixture:popover-open/);
+ assert.match(f.rules[0].cssText,/left:-10000px!important/);
+ f.flush();
+ assert.equal(f.menu.classList.contains('aps-foreground-pending'),false);
+ const x=Number.parseFloat(f.rules[0].style.getPropertyValue('left'));
+ const y=Number.parseFloat(f.rules[0].style.getPropertyValue('top'));
+ assert.equal(x,528);assert.equal(y,356);
+ f.trigger.getBoundingClientRect=()=>({left:360,right:398,top:260,bottom:298});
+ f.listeners.get('document:scroll')();
+ f.flush();
+ assert.equal(Number.parseFloat(f.rules[0].style.getPropertyValue('left')),188);
+ assert.equal(Number.parseFloat(f.rules[0].style.getPropertyValue('top')),306);
+ done();
+ assert.equal(f.rules.length,0,'no CSSOM rule leaks after dismissal');
+ assert.equal(f.listeners.size,0,'no hanging scroll/resize listeners');
+});
+test('three-dot foreground fails safely to local native details when CSSOM is blocked',()=>{
+ const f=fixture({cssom:false});
+ const result=showForegroundPopover(f.menu,f.trigger,{kind:'action'});
+ assert.equal(result,null);
+ assert.equal(f.open,false);
+ assert.equal(f.rules.length,0);
+ assert.equal(f.menu.getAttribute('popover'),null);
+});
+test('top-left geometry failure triggers cleanup without exposing detached menu',()=>{
+ const m=measuredFixture(),failures=[];
+ const done=showForegroundPopover(m.f.menu,m.f.trigger,{
+  kind:'action',onPlacementFailure:()=>failures.push('invalid position')
+ });
+ m.moveMenu({left:0,right:210,top:0,bottom:120,width:210,height:120});
+ m.flush();
+ assert.deepEqual(failures,['invalid position']);
+ assert.equal(m.f.open,false);
+ assert.equal(m.f.rules.length,0);
+ assert.doesNotThrow(done);
 });

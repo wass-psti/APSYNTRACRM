@@ -33,7 +33,19 @@ test('frontend generated markup never uses blocked inline styles or CSSOM inject
  for(const file of readdirSync('frontend').filter(x=>x.endsWith('.js'))){
   const source=readFileSync('frontend/'+file,'utf8');
   assert.doesNotMatch(source,/\bstyle\s*=\s*(?:["']|\x60)/,'blocked inline style in '+file);
-  assert.doesNotMatch(source,/\.style\s*\.|\.style\s*=|\.cssText\s*=|setAttribute\s*\(\s*["']style["']/,'runtime style injection in '+file);
+  if(file==='foreground-overlay.js'){
+   // CP-CRM-OVERLAY-03: single, audited exception for a measured, numeric
+   // rule in an existing same-origin stylesheet. Never a style attribute.
+   assert.match(source,/getPlacementSheet\(doc\)/);
+   assert.ok(source.includes('foreground-overlay\\.css'));
+   assert.match(source,/calculateActionMenuPlacement\(anchor,before,viewport\)/);
+   assert.match(source,/Number\.isFinite/);
+   assert.match(source,/sheet\.insertRule\(/);
+   assert.match(source,/sheet\.deleteRule\(/);
+   assert.doesNotMatch(source,/menu\.style\.|trigger\.style\.|setAttribute\s*\(\s*["']style["']/);
+  }else{
+   assert.doesNotMatch(source,/\.style\s*\.|\.style\s*=|\.cssText\s*=|setAttribute\s*\(\s*["']style["']/,'runtime style injection in '+file);
+  }
   for(const m of source.matchAll(/\bcsp-u\d{3}\b/g)){
    assert.ok(css.includes('#app .'+m[0]+'{'),'missing scoped same-origin CSS for '+m[0]+' in '+file);
   }
