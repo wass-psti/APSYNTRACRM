@@ -370,9 +370,9 @@ function boardCard(board,index){
   '</div></details>':
   '<span class="board-menu" aria-label="Board management not yet activated">···</span>';
  return '<article class="board-card" data-searchable="'+e((board.name+' '+(board.description||'')).toLowerCase())+'">'+
-  '<div class="board-card-top"><a class="board-card-symbol-link" href="'+href+'" aria-label="Open '+e(board.name)+'">'+
-   '<span class="board-symbol '+iconColor(index)+'">'+e((board.name||'B').slice(0,1).toUpperCase())+'</span></a>'+options+'</div>'+
-  '<a class="board-card-main" href="'+href+'"><h3>'+e(board.name||'Untitled board')+'</h3>'+
+  '<div class="board-card-top"><span class="board-symbol '+iconColor(index)+'" aria-hidden="true">'+
+   e((board.name||'B').slice(0,1).toUpperCase())+'</span>'+options+'</div>'+
+  '<a class="board-card-main" href="'+href+'" aria-label="Open '+e(board.name||'Untitled board')+'"><h3>'+e(board.name||'Untitled board')+'</h3>'+
   '<p>'+e(publicBoardDescription(board))+'</p>'+
   '<div class="board-card-footer"><span>▤ '+(Number(board.item_count)||0)+' items</span>'+
   '<span>'+e(displayDate(board.updated_at))+'</span></div></a></article>';
