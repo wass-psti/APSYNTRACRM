@@ -27,11 +27,11 @@ export function prepareBoardGrid(detail,{primaryTitle='Record',columnLabels={},a
  const lookup=new Map(values.map(v=>[v.item_id+':'+v.column_id,v.value]));
  return {columns,visibleColumns,lookup};
 }
-export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record',columnLabels={},allowCustom=false,selection=null,footer='',summaries=null,prepared=null}={}){
+export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record',columnLabels={},allowCustom=false,selection=null,footer='',summaries=null,prepared=null,groupItems=null}={}){
  const items=Array.isArray(detail?.items)?detail.items:[];
  const {columns,visibleColumns,lookup}=prepared||
   prepareBoardGrid(detail,{primaryTitle,columnLabels,allowCustom});
- const displayed=groupId?items.filter(i=>i.group_id===groupId):items;
+ const displayed=Array.isArray(groupItems)?groupItems:(groupId?items.filter(i=>i.group_id===groupId):items);
  const rows=displayed.map(item=>{
   const cells={record:'<button type="button" class="board-item-open" data-action="board-item-detail" data-id="'+escape(item.id)+'" aria-label="Open '+escape(item.title||'Untitled')+' details">'+escape(item.title||'Untitled')+'</button>',
    status:'<span class="status">'+escape(item.status??'—')+'</span>'};
