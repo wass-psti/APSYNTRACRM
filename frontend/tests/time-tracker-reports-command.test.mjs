@@ -91,7 +91,7 @@ test('Existing report controls, charts, date input, records and CSV workflow rem
  assert.equal((html.match(/data-action="tt-export"/g)||[]).length,1);
  assert.match(html,/role="img" aria-label="On-time and late arrivals by date"/);
  assert.match(html,/role="img" aria-label="Clock-in counts by hour"/);
- assert.match(html,/November/);
+ assert.match(html,/2026-11-03 → 2026-11-04/);
  assert.match(app,/case 'tt-report-preset'/);
  assert.match(app,/case 'tt-report-status'/);
  assert.match(app,/case 'tt-export'/);
