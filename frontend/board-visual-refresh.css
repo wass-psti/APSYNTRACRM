@@ -1,0 +1,363 @@
+/* APSYNTRA CRM — Board visual system v2.
+   Deliberately scoped to board routes across all 12 application boards.
+   Static CSS only: no WebGL/canvas layers, entrance animations or layout rewrites.
+   Keep signed session UI, native group scrolling, sticky columns and data intact. */
+
+#app .aps-board-shell {
+  --board-ink: #202b4d;
+  --board-muted: #70809c;
+  --board-indigo: #5459e4;
+  --board-line: #dce4f3;
+  --board-table-head: #eaf0fc;
+  background: linear-gradient(180deg, #f0f4fd 0, #f7f9ff 470px, #f8faff 100%);
+  min-height: calc(100vh - 77px);
+  color: var(--board-ink);
+}
+
+/* 7, 8 — Persistent workspace top bar and signed identity. */
+#app .aps-board-shell > .topbar {
+  background: #ffffff;
+  border-bottom: 1px solid #dbe5f7;
+  box-shadow: 0 1px 0 #ffffff, 0 2px 12px #263c7610;
+}
+#app .aps-board-shell .topbar .breadcrumb {
+  color: #8291b3;
+  letter-spacing: .01em;
+}
+#app .aps-board-shell .topbar .breadcrumb strong {
+  color: #293a66;
+  font-weight: 750;
+}
+#app .aps-board-shell .top-actions .top-pill {
+  background: #eefbf6;
+  color: #22684e;
+  border: 1px solid #caecdb;
+}
+#app .aps-board-shell .top-actions .top-avatar {
+  box-shadow: 0 0 0 3px #f0efff;
+}
+
+/* 1, 2, 9 — Clearly differentiated board hero and actions. */
+#app .aps-board-shell > .main-content {
+  padding-top: clamp(20px, 2.6vw, 34px);
+}
+#app .aps-board-shell .page-head {
+  position: relative;
+  isolation: isolate;
+  min-height: 158px;
+  padding: clamp(24px, 3vw, 36px);
+  border: 1px solid #324780;
+  border-radius: 21px;
+  background:
+    radial-gradient(ellipse at 91% 13%, #7b75df69 0, #7b75df00 48%),
+    linear-gradient(117deg, #17234b 0%, #253c7b 57%, #36377f 100%);
+  box-shadow: 0 12px 30px #1d32611a;
+  align-items: center;
+  margin-bottom: 20px;
+}
+#app .aps-board-shell .page-head::before {
+  content: "";
+  position: absolute;
+  inset: auto 30px 0 30px;
+  height: 3px;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(90deg, #77c4ff, #7779ff 58%, transparent);
+  opacity: .9;
+  pointer-events: none;
+}
+#app .aps-board-shell .page-head .label-top {
+  color: #a8c7ff;
+  letter-spacing: .16em;
+  font-weight: 800;
+}
+#app .aps-board-shell .page-head h1 {
+  color: #ffffff;
+  font-size: clamp(27px, 2.35vw, 37px);
+  letter-spacing: -.035em;
+  line-height: 1.16;
+  margin: 11px 0 9px;
+}
+#app .aps-board-shell .page-head p {
+  color: #d1dffc;
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 680px;
+}
+#app .aps-board-shell .page-head .head-actions {
+  align-items: center;
+  gap: 8px;
+}
+#app .aps-board-shell .page-head .head-actions > .secondary,
+#app .aps-board-shell .page-head .head-actions > .primary,
+#app .aps-board-shell .page-head .board-actions-menu > summary {
+  min-height: 39px;
+  border: 1px solid #ffffff5c;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #ffffff1b;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 740;
+  padding: 10px 13px;
+  transform: none;
+  transition: background-color .14s ease, border-color .14s ease;
+}
+#app .aps-board-shell .page-head .head-actions > .primary {
+  background: #e7e9ff;
+  color: #283577;
+  border-color: #e7e9ff;
+}
+#app .aps-board-shell .page-head .head-actions > .secondary:hover,
+#app .aps-board-shell .page-head .board-actions-menu > summary:hover {
+  background: #ffffff30;
+  border-color: #ffffffb0;
+  transform: none;
+}
+#app .aps-board-shell .page-head .head-actions > .primary:hover {
+  background: #ffffff;
+  color: #26346f;
+  transform: none;
+}
+#app .aps-board-shell .page-head .board-actions-menu > summary::after {
+  color: #d5dfff;
+}
+#app .aps-board-shell .page-head .board-actions-popover {
+  background: #ffffff;
+  color: #283754;
+  border-color: #d9e1f0;
+  box-shadow: 0 14px 30px #12224732;
+}
+#app .aps-board-shell .page-head :is(button, summary):focus-visible {
+  outline: 3px solid #b4ddff;
+  outline-offset: 2px;
+}
+
+/* 3 — Readable, clearly active views; no movement or spring feedback. */
+#app .aps-board-shell .tabs.board-draggable-tabs {
+  margin-bottom: 19px;
+  padding: 6px;
+  border: 1px solid #dde5f4;
+  border-radius: 14px;
+  background: #e9eefa;
+  box-shadow: inset 0 1px 2px #2338650b;
+  gap: 5px;
+}
+#app .aps-board-shell .board-tab-slot {
+  min-height: 38px;
+  gap: 3px;
+}
+#app .aps-board-shell .board-tab-slot > .tab {
+  min-height: 37px;
+  padding: 9px 12px;
+  margin-bottom: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #647391;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 730;
+  transition: color .14s ease, background-color .14s ease;
+}
+#app .aps-board-shell .board-tab-slot > .tab:hover {
+  color: #273b81;
+  background: #ffffffa8;
+}
+#app .aps-board-shell .board-tab-slot > .tab.active,
+#app .aps-board-shell .board-tab-slot > .tab[aria-selected="true"] {
+  color: #ffffff;
+  border-color: #4a51d9;
+  background: #5056da;
+  box-shadow: 0 2px 6px #3842ad2d;
+}
+#app .aps-board-shell .board-tab-slot > .tab.active:hover {
+  background: #424bc7;
+  color: #ffffff;
+}
+#app .aps-board-shell .board-tab-slot > .tab.active .csp-u060 {
+  color: #f0f0ff;
+}
+#app .aps-board-shell .board-tab-slot .board-tab-reorder {
+  min-width: 24px;
+  min-height: 26px;
+  padding: 2px 4px;
+  background: #ffffffb6;
+  border: 1px solid #d6def0;
+  color: #63759c;
+  border-radius: 7px;
+}
+#app .aps-board-shell .board-tab-slot .board-tab-reorder:hover {
+  background: #ffffff;
+  color: #4a53bd;
+}
+
+/* 4 — Give board tools an intentional, full-width command surface. */
+#app .aps-board-shell .toolbar.board-customize-toolbar {
+  padding: 14px;
+  margin-bottom: 20px;
+  gap: 9px;
+  background: #ffffff;
+  border: 1px solid #dce4f2;
+  border-radius: 15px;
+  box-shadow: 0 3px 16px #243c7110;
+}
+#app .aps-board-shell .board-customize-toolbar .search-wrap .search-input {
+  min-height: 40px;
+  background: #f6f8fe;
+  border: 1px solid #dce4f3;
+  color: #233256;
+}
+#app .aps-board-shell .board-customize-toolbar .search-wrap .search-input:focus {
+  background: #ffffff;
+  border-color: #7b85ee;
+  box-shadow: 0 0 0 3px #e9ebff;
+}
+#app .aps-board-shell .board-customize-toolbar > .secondary,
+#app .aps-board-shell .board-column-menu > summary {
+  background: #f6f8ff;
+  border: 1px solid #dce3f2;
+  color: #354775;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 730;
+  box-shadow: none;
+  transition: background-color .14s ease, border-color .14s ease;
+}
+#app .aps-board-shell .board-customize-toolbar > .secondary:hover,
+#app .aps-board-shell .board-column-menu > summary:hover {
+  background: #eaf0ff;
+  border-color: #b9c8ed;
+}
+#app .aps-board-shell .board-customize-toolbar > .secondary:focus-visible,
+#app .aps-board-shell .board-column-menu > summary:focus-visible {
+  outline: 2px solid #5166d9;
+  outline-offset: 2px;
+}
+
+/* 5 — Group headers as purposeful, separated information surfaces. */
+#app .aps-board-shell .group-heading {
+  min-height: 54px;
+  padding: 10px 14px;
+  margin: 22px 0 9px;
+  border: 1px solid #dce5f3;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 9px #2941790c;
+}
+#app .aps-board-shell .group-heading::before {
+  height: 26px;
+  width: 5px;
+  flex: none;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #6e76ff, #446cda);
+}
+#app .aps-board-shell .group-heading h3 {
+  font-size: 13px;
+  font-weight: 800;
+  color: #24375d;
+}
+#app .aps-board-shell .group-heading small {
+  display: inline-flex;
+  padding: 4px 9px;
+  border-radius: 99px;
+  background: #edf1ff;
+  color: #6674ab;
+  font-size: 10px;
+  font-weight: 740;
+}
+#app .aps-board-shell .group-heading .board-group-actions {
+  margin-left: auto;
+}
+#app .aps-board-shell .group-heading .board-group-actions > summary {
+  border-radius: 8px;
+}
+#app .aps-board-shell .group-heading.board-group-editing {
+  background: #f7f9ff;
+}
+
+/* 6 — Crisp structured data grid with preserved sticky/frozen columns. */
+#app .aps-board-shell .panel.board-group-panel {
+  border: 1px solid #d8e2f2;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 7px 20px #233a6a0e;
+}
+#app .aps-board-shell .board-group-scroll {
+  border-radius: inherit;
+  scrollbar-color: #aebcdf #eef2fa;
+  scrollbar-width: thin;
+}
+#app .aps-board-shell .board-group-scroll::-webkit-scrollbar {
+  height: 9px;
+}
+#app .aps-board-shell .board-group-scroll::-webkit-scrollbar-track {
+  background: #edf1fb;
+  border-radius: 99px;
+}
+#app .aps-board-shell .board-group-scroll::-webkit-scrollbar-thumb {
+  background: #b3c1e2;
+  border-radius: 99px;
+  border: 2px solid #edf1fb;
+}
+#app .aps-board-shell .board-table-custom thead th,
+#app .aps-board-shell .board-table-custom thead th.board-frozen-column {
+  background: var(--board-table-head);
+  border-bottom: 1px solid #d6e1f3;
+  color: #56688d;
+  font-size: 10px;
+  font-weight: 790;
+  letter-spacing: .075em;
+}
+#app .aps-board-shell .board-table-custom tbody tr td {
+  background: #ffffff;
+  border-bottom: 1px solid #edf1f8;
+  color: #3b4a67;
+}
+#app .aps-board-shell .board-table-custom tbody tr:nth-child(even) td {
+  background: #f8faff;
+}
+#app .aps-board-shell .board-table-custom tbody tr:hover td {
+  background: #eef3ff;
+}
+#app .aps-board-shell .board-table-custom tbody tr td.board-frozen-column {
+  font-weight: 740;
+  color: #25355a;
+  box-shadow: 1px 0 0 #dfe6f4;
+}
+#app .aps-board-shell .board-table-custom tfoot td {
+  background: #f3f6fd;
+  color: #657595;
+  border-top: 1px solid #e4ebf7;
+}
+#app .aps-board-shell .board-table-custom .board-item-open {
+  color: #253b69;
+  font-weight: 760;
+}
+#app .aps-board-shell .board-table-custom :is(button, input):focus-visible {
+  outline: 2px solid #5267dc;
+  outline-offset: 2px;
+}
+
+/* All boards retain native horizontal group scrolling and one vertical page. */
+@media (max-width: 900px) {
+  #app .aps-board-shell .page-head { align-items: flex-start; flex-wrap: wrap; }
+  #app .aps-board-shell .page-head .head-actions { flex: 1 1 100%; justify-content: flex-start; }
+}
+@media (max-width: 570px) {
+  #app .aps-board-shell .page-head {
+    padding: 22px 18px;
+    border-radius: 16px;
+    min-height: 0;
+  }
+  #app .aps-board-shell .page-head h1 { font-size: 26px; }
+  #app .aps-board-shell .board-draggable-tabs { border-radius: 11px; }
+  #app .aps-board-shell .board-tab-slot > .tab { padding: 9px 10px; }
+  #app .aps-board-shell .toolbar.board-customize-toolbar { padding: 11px; }
+  #app .aps-board-shell .group-heading { padding: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #app .aps-board-shell .board-tab-slot > .tab,
+  #app .aps-board-shell .toolbar.board-customize-toolbar :is(button, summary) {
+    transition: none;
+  }
+}
