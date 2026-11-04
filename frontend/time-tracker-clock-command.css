@@ -1,0 +1,388 @@
+/* CP-TT-CLOCK-02 — deliberately different Clock composition.
+ * Native DOM/form and signed TimeTracker rules are untouched.
+ * The optional Pixi scene renders only behind the left dashboard.
+ */
+#app .aps-board-shell .tt-native .tt-clock-stage.tt-command-center{
+ display:block;
+ min-height:0;
+ padding:clamp(15px,2.35vw,26px);
+ background:linear-gradient(160deg,#f0f4fc,#f8faff 65%,#f1f5ff);
+ overflow:visible;
+}
+#app .aps-board-shell .tt-native .tt-command-layout{
+ display:grid;
+ grid-template-columns:minmax(0,1.16fr) minmax(320px,.84fr);
+ align-items:stretch;
+ gap:clamp(15px,1.8vw,24px);
+ width:100%;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard{
+ position:relative;
+ isolation:isolate;
+ overflow:hidden;
+ min-width:0;
+ min-height:584px;
+ border-radius:22px;
+ border:1px solid #4169a77c;
+ display:flex;
+ flex-direction:column;
+ padding:clamp(22px,2.35vw,32px);
+ background:
+  radial-gradient(ellipse at 78% 38%,#245eaa65,transparent 51%),
+  radial-gradient(ellipse at 0% 95%,#1b528a65,transparent 57%),
+  linear-gradient(145deg,#0b1939 0%,#122750 49%,#22366f 100%);
+ box-shadow:inset 0 1px #ffffff22,0 18px 35px #14244d25;
+ color:#eef7ff;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard::after{
+ content:"";
+ position:absolute;inset:0;
+ background-image:
+  linear-gradient(#b3d5ff0b 1px,transparent 1px),
+  linear-gradient(90deg,#b3d5ff0b 1px,transparent 1px);
+ background-size:38px 38px;
+ mask-image:linear-gradient(115deg,#0003,transparent 80%);
+ pointer-events:none;z-index:-1;
+}
+#app .aps-board-shell .tt-native .tt-time-scene{
+ position:absolute;
+ inset:0;
+ z-index:-1;
+ pointer-events:none;
+ overflow:hidden;
+}
+#app .aps-board-shell .tt-native .tt-time-scene .tt-pixi-backdrop{
+ position:absolute;inset:0;
+ z-index:0;
+ background:radial-gradient(circle at 78% 46%,#3ca0fa29 0%,transparent 37%);
+ pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-time-scene .tt-pixi-backdrop::after{
+ width:242px;height:242px;
+ left:79%;top:48%;
+ border-color:#86bdff25;
+}
+#app .aps-board-shell .tt-native .tt-time-orbit{
+ position:absolute;
+ display:block;
+ width:390px;height:390px;
+ left:77%;top:43%;
+ border:1px solid #80caff22;
+ border-radius:50%;
+ transform:translate(-50%,-50%) rotate(-24deg) scaleY(.68);
+ pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-time-orbit-outer{
+ width:520px;height:520px;
+ border-color:#9ba8ff1d;
+}
+#app .aps-board-shell .tt-native .tt-time-orbit-inner{
+ width:270px;height:270px;
+ border-color:#6de1ff27;
+}
+#app .aps-board-shell .tt-native .tt-time-orbit-horizon{
+ width:620px;height:190px;
+ border-color:#7fcfff1d;
+ transform:translate(-50%,-50%) rotate(-24deg);
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard-head{
+ display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:10px;
+ position:relative;
+ z-index:1;
+}
+#app .aps-board-shell .tt-native .tt-dashboard-kicker{
+ color:#b4c8f0;
+ font-size:10px;
+ font-weight:850;
+ letter-spacing:.18em;
+}
+#app .aps-board-shell .tt-native .tt-kicker-separator{
+ color:#65c4f7;
+ margin:0 4px;
+}
+#app .aps-board-shell .tt-native .tt-timezone-pill{
+ border:1px solid #98c8ff44;
+ border-radius:999px;
+ background:#a6c7ff12;
+ padding:7px 10px;
+ color:#cee8ff;
+ font-size:10px;font-weight:760;letter-spacing:.08em;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-hero{
+ position:relative;z-index:1;
+ text-align:left;
+ width:100%;
+ margin:auto 0 27px;
+ padding-top:45px;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-eyebrow{
+ display:inline-flex;
+ margin:0 0 18px;
+ color:#9cd4fc;
+ font-size:10px;
+ letter-spacing:.16em;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-eyebrow::before{
+ background:#54d4d2;box-shadow:0 0 0 4px #4beed222;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-hero h3{
+ text-align:left;
+ font-weight:760;
+ font-size:clamp(22px,2.6vw,35px);
+ letter-spacing:-.045em;
+ color:#f0f6ff;
+ line-height:1.18;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-hero>p{
+ text-align:left;
+ margin:10px 0 0;
+ color:#b7c8e5;
+ font-size:12px;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-face{
+ display:flex;
+ align-items:baseline;
+ justify-content:flex-start;
+ width:max-content;
+ max-width:100%;
+ gap:0;
+ margin:30px 0 15px;
+ color:#fff;
+ font-size:clamp(47px,5.2vw,88px);
+ font-weight:820;
+ line-height:1;
+ letter-spacing:-.085em;
+ text-shadow:0 8px 22px #030c3080;
+ font-variant-numeric:tabular-nums;
+ white-space:nowrap;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-colon{
+ color:#61d7e7;
+ transform:none;
+ padding:0 6px 0 3px;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-suffix{
+ display:inline-flex;
+ align-items:baseline;
+ gap:5px;
+ color:#b9ddf7;
+ font-size:clamp(11px,1.1vw,15px);
+ font-weight:720;
+ letter-spacing:0;
+ padding-left:11px;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-source{
+ margin-top:2px;
+ font-size:11px;
+ color:#95b3d7;
+ line-height:1.5;
+}
+#app .aps-board-shell .tt-native .tt-dashboard-section-label{
+ position:relative;z-index:1;
+ color:#9db6e3;
+ font-size:10px;
+ font-weight:800;
+ letter-spacing:.14em;
+ margin-bottom:12px;
+ padding-top:18px;
+ border-top:1px solid #c4deff2b;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-session-summary{
+ position:relative;z-index:1;
+ width:100%;
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ margin:0;
+ background:#ecf4ff0b;
+ border:1px solid #a8d5ff29;
+ border-radius:13px;
+ box-shadow:inset 0 1px #e7f5ff13;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-session-summary>div{
+ min-width:0;
+ min-height:84px;
+ padding:15px 6px;
+ align-content:center;
+ gap:9px;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-session-summary>div+div{
+ border-left:1px solid #a8d5ff23;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-session-summary strong{
+ color:#f8fcff;
+ font-size:25px;
+ font-weight:830;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-session-summary .tt-summary-status{
+ color:#80e9d1;
+ font-size:17px;
+ font-weight:790;
+}
+#app .aps-board-shell .tt-native .tt-time-dashboard .tt-session-summary span{
+ color:#a5c1e5;
+ font-size:9px;
+ letter-spacing:.12em;
+}
+#app .aps-board-shell .tt-native .tt-dashboard-source{
+ position:relative;z-index:1;
+ margin:14px 0 0;
+ color:#a4badb;
+ font-size:10px;
+ line-height:1.5;
+}
+#app .aps-board-shell .tt-native .tt-clock-card.tt-attendance-console{
+ min-width:0;
+ width:100%;
+ min-height:584px;
+ border-radius:22px;
+ padding:clamp(20px,2.6vw,33px);
+ display:flex;
+ flex-direction:column;
+ background:
+  radial-gradient(ellipse at 100% 0,#e7edff 0%,transparent 52%),
+  linear-gradient(165deg,#fff 0%,#fcfdff 100%);
+ border:1px solid #d9e4f7;
+ box-shadow:0 18px 35px #20375a12,inset 0 1px #fff;
+}
+#app .aps-board-shell .tt-native .tt-clock-card.tt-attendance-console::before{
+ top:0;left:24px;right:24px;
+ background:linear-gradient(90deg,transparent,#746ff7,#65b2e9,transparent);
+ height:2px;
+}
+#app .aps-board-shell .tt-native .tt-console-kicker{
+ display:flex;align-items:center;gap:9px;
+ color:#667bad;
+ font-size:10px;
+ font-weight:840;
+ letter-spacing:.14em;
+ margin-bottom:23px;
+}
+#app .aps-board-shell .tt-native .tt-console-kicker-mark{
+ display:inline-block;
+ width:18px;height:18px;
+ border-radius:6px;
+ background:
+  linear-gradient(90deg,#fff6 1px,transparent 1px),
+  linear-gradient(#fff6 1px,transparent 1px),
+  linear-gradient(140deg,#5c68df,#8c8aff);
+ background-size:6px 6px,6px 6px,100% 100%;
+ box-shadow:0 3px 10px #6d78e53a;
+}
+#app .aps-board-shell .tt-native .tt-attendance-console .tt-clock-card-head{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:10px;
+ margin:0 0 8px;
+}
+#app .aps-board-shell .tt-native .tt-attendance-console h4{
+ font-size:clamp(25px,2.35vw,32px);
+ color:#1a2f57;
+ letter-spacing:-.065em;
+}
+#app .aps-board-shell .tt-native .tt-console-description{
+ color:#7487a8;
+ font-size:12px;
+ line-height:1.65;
+ margin:0 0 24px;
+ max-width:380px;
+}
+#app .aps-board-shell .tt-native .tt-attendance-console .tt-active-copy{
+ margin:-7px 0 17px;
+ font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-attendance-console form{
+ display:grid;gap:17px;
+ margin-top:4px;
+ min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-attendance-console .tt-quick-location{
+ margin:0 0 2px;
+}
+#app .aps-board-shell .tt-native .tt-attendance-console .tt-start-button{
+ margin-top:4px;
+ min-height:55px;
+ border-radius:12px;
+}
+#app .aps-board-shell .tt-native .tt-attendance-console .tt-clock-hint{
+ margin-top:2px;
+}
+#app .aps-board-shell .tt-native .tt-command-center .tt-clock-footnote{
+ max-width:none;
+ width:100%;
+ text-align:center;
+ padding:0 18px;
+ margin:20px 0 0;
+ font-size:10px;
+ color:#8293b2;
+}
+#app .aps-board-shell .tt-native .tt-attendance-console :is(input,select,textarea,button):focus-visible{
+ outline:3px solid #7075e9;outline-offset:3px;
+}
+@media(max-width:1140px){
+ #app .aps-board-shell .tt-native .tt-command-layout{
+  grid-template-columns:minmax(0,1fr);
+ }
+ #app .aps-board-shell .tt-native .tt-time-dashboard{
+  min-height:455px;
+ }
+ #app .aps-board-shell .tt-native .tt-clock-card.tt-attendance-console{
+  min-height:0;
+ }
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-hero{
+  padding-top:32px;
+  margin:24px 0;
+ }
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-face{
+  font-size:clamp(57px,8vw,87px);
+ }
+}
+@media(max-width:600px){
+ #app .aps-board-shell .tt-native .tt-clock-stage.tt-command-center{
+  padding:11px;
+ }
+ #app .aps-board-shell .tt-native .tt-command-layout{gap:12px}
+ #app .aps-board-shell .tt-native .tt-time-dashboard{
+  padding:21px 18px;
+  min-height:415px;
+  border-radius:17px;
+ }
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-time-orbit{
+  left:85%;
+ }
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-hero h3{
+  font-size:clamp(24px,5.5vw,31px);
+ }
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-face{
+  font-size:clamp(43px,10vw,68px);
+ }
+ #app .aps-board-shell .tt-native .tt-clock-card.tt-attendance-console{
+  padding:23px 17px;
+  border-radius:17px;
+ }
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-session-summary strong{font-size:21px}
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-session-summary .tt-summary-status{font-size:15px}
+ #app .aps-board-shell .tt-native .tt-command-center .tt-clock-footnote{
+  padding:0 6px;
+ }
+}
+@media(max-width:380px){
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-face{
+  font-size:42px;
+  letter-spacing:-.055em;
+ }
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-colon{padding-inline:2px}
+ #app .aps-board-shell .tt-native .tt-time-dashboard .tt-clock-suffix{
+  padding-left:5px;font-size:10px;
+ }
+ #app .aps-board-shell .tt-native .tt-timezone-pill{font-size:9px}
+ #app .aps-board-shell .tt-native .tt-dashboard-kicker{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .tt-native .tt-command-center,
+ #app .aps-board-shell .tt-native .tt-command-center *{
+  animation:none!important;transition:none!important;
+ }
+}
