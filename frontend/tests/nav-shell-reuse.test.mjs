@@ -21,12 +21,22 @@ test('sidebar updates current navigation without replacing unchanged structure',
  assert.match(shell,/existing\.querySelector\('\.main-content'\)\.innerHTML=body/);
 });
 
-test('route-only entrance is short, compositor-friendly and reduced-motion-aware',()=>{
- assert.match(shell,/shellRoute!==route/);
+test('board-tab transition uses a single short fade without whole-page bounce',()=>{
+ assert.match(shell,/previousBoard\?\.\[0\]==='board'/);
+ assert.match(shell,/previousBoard\[1\]===String\(state\.boardId\)/);
+ assert.match(shell,/previousBoard\[2\]!==state\.tab/);
+ assert.match(shell,/animateTabContent\('\.main-content'\)/);
  assert.match(shell,/prefers-reduced-motion: reduce/);
- assert.match(shell,/duration:175/);
- assert.match(shell,/translate3d\(0,5px,0\)/);
- assert.doesNotMatch(shell,/setInterval|requestAnimationFrame|WebGL|new Worker/);
+ assert.match(shell,/duration:170/);
+ assert.match(shell,/opacity:\.88/);
+ assert.doesNotMatch(shell,/translate3d|scale\(|requestAnimationFrame|WebGL|new Worker/);
+});
+
+test('nested TimeTracker and role tabs do not animate repeated selection',()=>{
+ assert.match(app,/if\(next===state\.ttView\)return/);
+ assert.match(app,/animateTabContent\('\.tt-secondary-content, \.tt-clock-stage'\)/);
+ assert.match(app,/tab!==state\.roleTab/);
+ assert.match(app,/animateTabContent\('\.aps-role-configuration'\)/);
 });
 
 test('existing session-sensitive route and map cleanup remain intact',()=>{
