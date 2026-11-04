@@ -229,6 +229,7 @@ test('mock DOM: popup opens, chooses native value, dispatches change, and dispos
   set(value){this.selectedIndex=this.options.findIndex(opt=>opt.value===value);}
  });
  doc.body.append(select);
+ doc.activeElement=select;
  const win={innerWidth:950,requestAnimationFrame:fn=>fn(),
   matchMedia:()=>({matches:false})};
  class MO{
@@ -252,6 +253,10 @@ test('mock DOM: popup opens, chooses native value, dispatches change, and dispos
   assert.ok(trigger,'a progressive combobox is rendered');
   assert.equal(select.getAttribute('aria-hidden'),'true');
   assert.equal(select.tabIndex,-1);
+  assert.equal(doc.focused,trigger,'initial native focus transfers to the combobox');
+  doc.focused=null;
+  select.emit('focus');
+  assert.equal(doc.focused,trigger,'legacy programmatic select.focus() is proxied');
   trigger.emit('click');
   const list=anchor.children.find(n=>n.getAttribute('role')==='listbox');
   assert.ok(list,'a popup listbox is positioned in the select anchor');

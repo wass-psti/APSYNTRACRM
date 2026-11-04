@@ -293,6 +293,11 @@ export function startSelectExperience(root=globalThis.document?.body,{
   },{signal:abort.signal});
   trigger.addEventListener('keydown',keydown,{signal:abort.signal});
   trigger.addEventListener('focus',sync,{signal:abort.signal});
+  // Existing inline editors can focus a select before asynchronous enhancement.
+  // Preserve visible keyboard focus and legacy programmatic select.focus() calls.
+  select.addEventListener('focus',()=>{
+   if(!disposed&&!select.disabled)trigger.focus();
+  },{signal:abort.signal});
   select.addEventListener('invalid',event=>{
    event.preventDefault();trigger.setAttribute('aria-invalid','true');trigger.focus();
   },{signal:abort.signal});
@@ -303,11 +308,13 @@ export function startSelectExperience(root=globalThis.document?.body,{
     event.preventDefault();trigger.focus();open();
    },{signal:abort.signal});
   }
+  const wasFocused=doc.activeElement===select;
   select.classList.add('aps-select-source');
   select.setAttribute('aria-hidden','true');select.tabIndex=-1;
   select.insertAdjacentElement('afterend',anchor);
   anchor.append(select,trigger);
   controls.set(select,controller);sync();
+  if(wasFocused)trigger.focus();
  }
  function offer(select){
   if(!running)return;
