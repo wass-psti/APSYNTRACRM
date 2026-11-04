@@ -64,6 +64,7 @@ import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {startSelectExperience} from './select-experience.js';
+import {startActionMenuExperience,enhanceActionContextMenu} from './action-menu-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
@@ -3460,8 +3461,9 @@ root.addEventListener('toggle',event=>{
   void mountSignedTimeTrackerMaps();
 },true);
 
-let boardColumnMenuNode=null,boardColumnMenuTrigger=null;
+let boardColumnMenuNode=null,boardColumnMenuTrigger=null,boardColumnMenuCleanup=null;
 function closeBoardColumnContext({restoreFocus=false}={}){
+ boardColumnMenuCleanup?.();boardColumnMenuCleanup=null;
  const trigger=boardColumnMenuTrigger;
  boardColumnMenuNode?.remove();
  boardColumnMenuNode=null;boardColumnMenuTrigger=null;
@@ -3499,6 +3501,9 @@ function openBoardColumnContext(trigger){
  trigger.setAttribute('aria-expanded','true');
  trigger.setAttribute('aria-controls',node.id);
  trigger.classList.add('board-column-anchor-open');
+ boardColumnMenuCleanup=enhanceActionContextMenu(trigger,node,{
+  close:()=>closeBoardColumnContext()
+ });
  node.querySelector('[role="menuitem"]')?.focus();
 }
 let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;
@@ -3909,4 +3914,5 @@ async function boot(){
  finally{finishInitialization();}
 }
 startSelectExperience(document.body);
+startActionMenuExperience(document.body);
 boot();

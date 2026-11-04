@@ -8,19 +8,26 @@ export const FLOATING_SELECT_URL='https://unpkg.com/@floating-ui/dom@1.8.0/dist/
 /** Load the two official, pinned UMD artifacts from the already-approved CSP host.
  * The consuming application and all dropdown behavior remain native ES modules.
  */
-async function loadPinnedFloatingUI(){
- const doc=globalThis.document;
- if(!doc?.head)throw Error('Floating UI needs a browser document');
- const inject=src=>new Promise((resolve,reject)=>{
-  const script=doc.createElement('script');
-  script.src=src;script.async=true;script.referrerPolicy='no-referrer';
-  script.onload=resolve;
-  script.onerror=()=>reject(Error('Floating UI asset unavailable'));
-  doc.head.append(script);
- });
- if(!globalThis.FloatingUICore)await inject(FLOATING_CORE_URL);
- if(!globalThis.FloatingUIDOM)await inject(FLOATING_SELECT_URL);
- return globalThis.FloatingUIDOM;
+let floatingPromise=null;
+/** One pinned loader is shared by select dropdowns and action menus. */
+export function loadPinnedFloatingUI(){
+ if(globalThis.FloatingUIDOM)return Promise.resolve(globalThis.FloatingUIDOM);
+ if(floatingPromise)return floatingPromise;
+ floatingPromise=(async()=>{
+  const doc=globalThis.document;
+  if(!doc?.head)throw Error('Floating UI needs a browser document');
+  const inject=src=>new Promise((resolve,reject)=>{
+   const script=doc.createElement('script');
+   script.src=src;script.async=true;script.referrerPolicy='no-referrer';
+   script.onload=resolve;
+   script.onerror=()=>reject(Error('Floating UI asset unavailable'));
+   doc.head.append(script);
+  });
+  if(!globalThis.FloatingUICore)await inject(FLOATING_CORE_URL);
+  if(!globalThis.FloatingUIDOM)await inject(FLOATING_SELECT_URL);
+  return globalThis.FloatingUIDOM;
+ })().catch(error=>{floatingPromise=null;throw error;});
+ return floatingPromise;
 }
 export const MAX_FLOATING_OPTIONS=400;
 let sequence=0;

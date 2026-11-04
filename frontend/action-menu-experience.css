@@ -1,0 +1,201 @@
+/* CP-CRM-ACTION-MENU-01 — shared three-dot command surfaces.
+ * Strict-CSP CSS3: no JS style attributes or CSSOM writes.
+ * Lucide SVG is decorative; action semantics and authorization remain in app.
+ */
+:root{
+ --aps-action-ink:#34476c;
+ --aps-action-soft:#edf2ff;
+ --aps-action-accent:#596bd7;
+ --aps-action-border:#d6e0f2;
+ --aps-action-danger:#bb4056;
+ --aps-action-shadow:0 19px 44px #14244736,0 4px 12px #243b6b18;
+ --aps-action-ease:cubic-bezier(.2,.8,.2,1);
+}
+#app .aps-board-shell .aps-action-surface{
+ position:relative;isolation:isolate;
+}
+#app .aps-board-shell .board-card-actions.aps-action-surface,
+#app .aps-board-shell .board-group-actions.aps-action-surface{
+ flex:none;
+}
+#app .aps-board-shell .aps-action-surface>summary,
+#app .aps-board-shell .board-column-more{
+ box-sizing:border-box;display:inline-flex;align-items:center;
+ justify-content:center;flex:none;
+ width:36px;height:36px;min-width:36px;min-height:36px;
+ padding:0;border:1px solid #dde4f4;border-radius:10px;
+ color:#6f7c9e;background:#f7f9ff;
+ box-shadow:inset 0 1px #fff,0 2px 8px #2234620b;
+ cursor:pointer;user-select:none;touch-action:manipulation;
+ transition:color .16s var(--aps-action-ease),
+  background-color .16s var(--aps-action-ease),
+  border-color .16s var(--aps-action-ease),
+  box-shadow .16s var(--aps-action-ease);
+ list-style:none;
+}
+#app .aps-board-shell .aps-action-surface>summary::-webkit-details-marker{
+ display:none;
+}
+#app .aps-board-shell .aps-action-surface>summary::after{
+ content:none;
+}
+#app .aps-board-shell .aps-action-surface>summary:hover,
+#app .aps-board-shell .aps-action-surface[open]>summary,
+#app .aps-board-shell .board-column-more:hover,
+#app .aps-board-shell .board-column-more[aria-expanded="true"]{
+ background:#eaf0ff;border-color:#becbef;
+ color:var(--aps-action-accent);
+ box-shadow:0 4px 12px #21377414;
+}
+#app .aps-board-shell .aps-action-surface>summary:focus-visible,
+#app .aps-board-shell .board-column-more:focus-visible{
+ outline:3px solid #8193e8b0;outline-offset:3px;
+ border-color:var(--aps-action-accent);
+}
+#app .aps-board-shell .aps-action-surface>summary[aria-expanded="true"]{
+ background:var(--aps-action-soft);color:var(--aps-action-accent);
+ border-color:#a9b7ef;
+}
+#app .aps-board-shell .aps-action-icon{
+ display:inline-block;flex:none;width:17px;height:17px;
+ overflow:visible;stroke:currentColor;pointer-events:none;
+}
+#app .aps-board-shell .aps-action-surface>summary>.aps-action-icon,
+#app .aps-board-shell .board-column-more>.aps-action-icon{
+ width:18px;height:18px;
+}
+#app .aps-board-shell .aps-action-surface .aps-action-popover,
+#app .aps-board-shell .board-header-context-menu.aps-action-popover{
+ box-sizing:border-box;z-index:150;display:grid;
+ gap:3px;width:max-content;min-width:210px;
+ max-width:min(310px,calc(100vw - 20px));
+ padding:7px;border:1px solid var(--aps-action-border);
+ border-radius:14px;
+ color:var(--aps-action-ink);
+ background:linear-gradient(165deg,#fff 0%,#fcfdff 100%);
+ box-shadow:var(--aps-action-shadow);
+ overflow-y:auto;overscroll-behavior:contain;
+ max-height:min(370px,calc(100dvh - 32px));
+}
+#app .aps-board-shell .aps-action-surface .aps-action-popover{
+ position:absolute;top:calc(100% + 7px);right:0;left:auto;bottom:auto;
+}
+#app .aps-board-shell .aps-action-surface .aps-action-popover.aps-menu-above{
+ top:auto;bottom:calc(100% + 7px);
+}
+#app .aps-board-shell .aps-action-surface .aps-action-popover.aps-menu-align-start{
+ left:0;right:auto;
+}
+#app .aps-board-shell .aps-action-popover.aps-menu-compact{
+ max-height:125px;
+}
+#app .aps-board-shell .aps-action-popover.aps-menu-medium{
+ max-height:230px;
+}
+#app .aps-board-shell .aps-action-popover>[role="menuitem"],
+#app .aps-board-shell .aps-action-popover>button[data-action],
+#app .aps-board-shell .aps-action-popover>a[href]{
+ box-sizing:border-box;display:flex;align-items:center;justify-content:flex-start;
+ gap:11px;width:100%;min-height:40px;padding:10px 12px;
+ border:1px solid transparent;border-radius:9px;
+ font:700 12px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ color:var(--aps-action-ink);background:transparent;
+ cursor:pointer;text-align:left;text-decoration:none;
+ transition:background-color .14s ease,color .14s ease,border-color .14s ease;
+}
+#app .aps-board-shell .aps-action-popover>[role="menuitem"]:hover:not(:disabled),
+#app .aps-board-shell .aps-action-popover>[role="menuitem"]:focus-visible{
+ background:#eef2ff;border-color:#d5defa;
+ color:#465bc5;outline:none;
+}
+#app .aps-board-shell .aps-action-popover>[role="menuitem"]:focus-visible{
+ box-shadow:inset 3px 0 #6575d7;
+}
+#app .aps-board-shell .aps-action-popover>[role="menuitem"][aria-disabled="true"],
+#app .aps-board-shell .aps-action-popover>[role="menuitem"]:disabled{
+ cursor:not-allowed;opacity:.53;
+}
+#app .aps-board-shell .aps-action-popover>.board-card-danger,
+#app .aps-board-shell .aps-action-popover>[data-action*="delete"],
+#app .aps-board-shell .aps-action-popover>[data-action*="trash"]{
+ color:var(--aps-action-danger);
+}
+#app .aps-board-shell .aps-action-popover>.board-card-danger:hover,
+#app .aps-board-shell .aps-action-popover>[data-action*="delete"]:hover,
+#app .aps-board-shell .aps-action-popover>[data-action*="trash"]:hover{
+ color:#a7304b;background:#fff1f4;border-color:#f6d3db;
+}
+#app .aps-board-shell .aps-action-popover>.board-card-actions-info{
+ padding:12px;color:#6c7a98;font-size:11px;line-height:1.65;
+}
+#app .aps-board-shell .board-card.board-card-menu-open{
+ z-index:80;
+}
+#app .aps-board-shell .board-header-context-menu.aps-action-popover{
+ z-index:350;position:fixed;
+}
+#app .aps-board-shell .board-header-context-menu.aps-action-popover.aps-menu-compact{
+ max-height:125px;
+}
+#app .aps-board-shell .board-column-more{
+ margin:0 2px;vertical-align:middle;
+}
+#app .aps-board-shell .board-actions-menu.aps-action-surface>summary{
+ background:#ffffff1b;border-color:#ffffff70;color:#fff;
+}
+#app .aps-board-shell .board-actions-menu.aps-action-surface>summary:hover,
+#app .aps-board-shell .board-actions-menu.aps-action-surface[open]>summary{
+ background:#ffffff32;border-color:#ffffffb0;color:#fff;
+}
+/* Keep one-scene, CSP-safe CSS anchor positioning in supporting browsers. */
+@supports (anchor-name:--aps-action-open) and (top:anchor(bottom)){
+ #app .aps-board-shell .aps-action-surface[open]>summary{
+  anchor-name:--aps-action-open;
+ }
+ #app .aps-board-shell .aps-action-surface[open]>.aps-action-popover{
+  position-anchor:--aps-action-open;
+  position:fixed;top:anchor(bottom);left:anchor(left);
+  right:auto;bottom:auto;margin-top:7px;
+  position-try-fallbacks:flip-block,flip-inline;
+ }
+}
+@media(max-width:720px){
+ #app .aps-board-shell .aps-action-surface>summary,
+ #app .aps-board-shell .board-column-more{
+  width:42px;height:42px;min-width:42px;min-height:42px;
+ }
+ #app .aps-board-shell .aps-action-popover>[role="menuitem"]{
+  min-height:44px;padding:11px 12px;
+ }
+ #app .aps-board-shell .aps-action-popover{
+  max-width:min(292px,calc(100vw - 16px));
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .aps-action-surface>summary,
+ #app .aps-board-shell .board-column-more,
+ #app .aps-board-shell .aps-action-popover>[role="menuitem"]{
+  transition:none!important;animation:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-board-shell .aps-action-surface>summary,
+ #app .aps-board-shell .board-column-more{
+  border:2px solid #3d527c;
+ }
+ #app .aps-board-shell .aps-action-popover{
+  border:2px solid #314970;box-shadow:0 10px 30px #0007;
+ }
+ #app .aps-board-shell .aps-action-popover>[role="menuitem"]:focus-visible{
+  outline:2px solid #2d4ab1;outline-offset:-2px;
+ }
+}
+@media(forced-colors:active){
+ #app .aps-board-shell .aps-action-surface>summary,
+ #app .aps-board-shell .aps-action-popover{
+  forced-color-adjust:auto;border:1px solid ButtonText;
+ }
+ #app .aps-board-shell .aps-action-popover>[role="menuitem"]:focus-visible{
+  outline:2px solid Highlight;
+ }
+}
