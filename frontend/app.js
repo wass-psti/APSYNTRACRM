@@ -65,6 +65,7 @@ import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './t
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {startSelectExperience} from './select-experience.js';
 import {startActionMenuExperience,enhanceActionContextMenu} from './action-menu-experience.js';
+import {startSearchExperience} from './search-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
@@ -3915,4 +3916,5 @@ async function boot(){
 }
 startSelectExperience(document.body);
 startActionMenuExperience(document.body);
+startSearchExperience(document.body);
 boot();

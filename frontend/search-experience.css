@@ -1,0 +1,218 @@
+/* CP-CRM-SEARCH-01 — shared search inputs and authorized local suggestions.
+ * CSP-safe: all layout via CSS classes, no inline styles or runtime CSSOM.
+ * Keep native input elements so existing synchronous search handlers still run.
+ */
+:root{
+ --aps-search-surface:#fff;
+ --aps-search-border:#d5dff1;
+ --aps-search-border-hover:#9daee5;
+ --aps-search-ink:#344a70;
+ --aps-search-muted:#8292ad;
+ --aps-search-accent:#5b70d9;
+ --aps-search-focus:#7c8ee6;
+ --aps-search-shadow:0 16px 42px #1d346928,0 5px 18px #17305b12;
+ --aps-search-radius:11px;
+}
+#app .aps-search-field{
+ box-sizing:border-box;display:flex;position:relative;
+ align-items:center;width:100%;min-width:0;
+ flex:1 1 auto;vertical-align:middle;isolation:isolate;
+}
+#app .aps-search-field .aps-search-source{
+ box-sizing:border-box;display:block;width:100%;min-width:0;max-width:none;
+ min-height:43px;padding:10px 43px 10px 42px;
+ border:1px solid var(--aps-search-border);
+ border-radius:var(--aps-search-radius);
+ color:var(--aps-search-ink);background:var(--aps-search-surface);
+ box-shadow:inset 0 1px #fff,0 2px 9px #1d34630a;
+ font:600 12px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ outline:none;appearance:none;-webkit-appearance:none;
+ transition:border-color .16s ease,box-shadow .16s ease,background-color .16s ease;
+}
+#app .aps-search-field .aps-search-source:hover:not(:disabled){
+ background:#fbfcff;border-color:var(--aps-search-border-hover);
+}
+#app .aps-search-field .aps-search-source:focus,
+#app .aps-search-field .aps-search-source:focus-visible{
+ outline:3px solid #8598ee91;outline-offset:2px;
+ border-color:var(--aps-search-accent);
+ box-shadow:0 0 0 4px #6076d91d;
+}
+#app .aps-search-field .aps-search-source::placeholder{
+ color:var(--aps-search-muted);opacity:1;font-weight:520;
+}
+#app .aps-search-field .aps-search-source::-webkit-search-cancel-button{
+ display:none;
+}
+#app .aps-search-field .aps-search-mark{
+ box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+ position:absolute;left:13px;top:50%;z-index:1;
+ width:19px;height:19px;transform:translateY(-50%);
+ color:#889cbd;pointer-events:none;
+}
+#app .aps-search-field .aps-search-mark>.aps-action-icon{
+ width:18px;height:18px;stroke:currentColor;stroke-width:1.9;
+ fill:none;overflow:visible;
+}
+#app .aps-search-field .aps-search-clear{
+ box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+ position:absolute;right:8px;top:50%;z-index:2;
+ width:28px;height:28px;min-width:28px;min-height:28px;
+ padding:0;transform:translateY(-50%);
+ border:1px solid transparent;border-radius:7px;
+ background:transparent;color:#8492af;cursor:pointer;
+ transition:background-color .14s ease,color .14s ease;
+}
+#app .aps-search-field .aps-search-clear:hover{
+ background:#edf1ff;color:#5269d2;
+}
+#app .aps-search-field .aps-search-clear:focus-visible{
+ outline:2px solid var(--aps-search-focus);outline-offset:2px;
+}
+#app .aps-search-field .aps-search-clear>.aps-action-icon{
+ width:16px;height:16px;stroke:currentColor;stroke-width:2;
+ pointer-events:none;
+}
+#app .aps-search-field .aps-search-clear[hidden]{
+ display:none!important;
+}
+#app .aps-search-field .aps-search-suggestions{
+ box-sizing:border-box;display:grid;gap:3px;
+ position:absolute;z-index:170;top:calc(100% + 8px);
+ left:0;right:0;bottom:auto;
+ width:100%;min-width:min(210px,calc(100vw - 18px));
+ max-width:min(420px,calc(100vw - 18px));
+ max-height:min(315px,calc(100dvh - 24px));
+ padding:7px;overflow-y:auto;overscroll-behavior:contain;
+ border:1px solid var(--aps-search-border);
+ border-radius:13px;background:#fff;
+ box-shadow:var(--aps-search-shadow);
+ scrollbar-width:thin;scrollbar-color:#afbee1 transparent;
+}
+#app .aps-search-field .aps-search-suggestions[hidden]{
+ display:none!important;
+}
+#app .aps-search-field .aps-search-suggestions.aps-search-above{
+ top:auto;bottom:calc(100% + 8px);
+}
+#app .aps-search-field .aps-search-suggestions.aps-search-align-end{
+ left:auto;right:0;
+}
+#app .aps-search-field .aps-search-suggestions.aps-search-compact{
+ max-height:125px;
+}
+#app .aps-search-field .aps-search-suggestions.aps-search-medium{
+ max-height:220px;
+}
+#app .aps-search-field .aps-search-option{
+ box-sizing:border-box;display:flex;align-items:center;
+ min-height:39px;max-width:100%;padding:10px 12px;
+ border:1px solid transparent;border-radius:9px;
+ color:#3a507b;background:transparent;
+ font:650 12px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ overflow-wrap:anywhere;cursor:pointer;
+}
+#app .aps-search-field .aps-search-option:hover,
+#app .aps-search-field .aps-search-option.is-active,
+#app .aps-search-field .aps-search-option[aria-selected="true"]{
+ color:#4259c3;background:#eff3ff;border-color:#d7e0ff;
+}
+#app .aps-search-field .aps-search-option.is-active{
+ box-shadow:inset 3px 0 #6c7cdc;
+}
+#app .aps-search-field .aps-search-status{
+ position:absolute;width:1px;height:1px;overflow:hidden;
+ clip-path:inset(50%);white-space:nowrap;
+}
+#app .search-wrap:has(>.aps-search-field)::before,
+#app .role-search-wrap:has(>.aps-search-field)::before,
+#app .role-search-wrap:has(>.aps-search-field)::after{
+ content:none!important;display:none!important;
+}
+#app .aps-boards .search-wrap:has(>.aps-search-field)>.boards-search-icon{
+ display:none!important;
+}
+/* Previous board catalog input is still the same ID/name; only its wrapper changed. */
+#app .aps-boards #board-search.aps-search-source{
+ min-height:45px;padding:10px 43px 10px 43px;
+}
+#app .aps-role-configuration .aps-search-field{
+ width:100%;margin-bottom:14px;
+}
+#app .aps-role-configuration .role-search-wrap .aps-search-field{
+ margin-bottom:0;
+}
+#app .aps-role-configuration .aps-search-field input.search-input{
+ min-height:44px;padding:10px 43px 10px 42px;
+}
+#app .aps-board-shell .tt-native .aps-search-field .aps-search-source{
+ min-height:43px;padding:10px 43px 10px 42px;
+ background:#fbfcff;border-radius:10px;
+}
+#app .aps-board-shell .tt-native .tt-ot-search .aps-search-field{
+ flex:1 1 230px;min-width:170px;
+}
+#app .aps-board-shell .tt-native .tt-ot-search .aps-search-field input{
+ width:100%;
+}
+#app .aps-board-shell .tt-native .tt-team-toolbar .aps-search-field,
+#app .aps-board-shell .tt-native .tt-log-search .aps-search-field{
+ width:100%;
+}
+#app .aps-board-shell .tt-native .tt-reports-record-head .aps-search-field{
+ max-width:360px;
+}
+#app .aps-search-field:focus-within{
+ z-index:60;
+}
+@supports (anchor-name:--aps-search-input) and (top:anchor(bottom)){
+ #app .aps-search-field .aps-search-source:focus{
+  anchor-name:--aps-search-input;
+ }
+ #app .aps-search-field .aps-search-suggestions:not([hidden]){
+  position:fixed;
+  position-anchor:--aps-search-input;
+  top:anchor(bottom);left:anchor(left);right:auto;bottom:auto;
+  margin-top:8px;position-try-fallbacks:flip-block,flip-inline;
+ }
+}
+@media(max-width:720px){
+ #app .aps-search-field .aps-search-source{
+  min-height:45px;padding:12px 44px 12px 43px;
+ }
+ #app .aps-search-field .aps-search-clear{
+  width:32px;height:32px;min-width:32px;min-height:32px;
+ }
+ #app .aps-search-field .aps-search-option{
+  min-height:44px;padding:12px 13px;
+ }
+ #app .aps-search-field .aps-search-suggestions{
+  max-height:min(275px,55dvh);
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-search-field .aps-search-source,
+ #app .aps-search-field .aps-search-clear{
+  transition:none!important;animation:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-search-field .aps-search-source{
+  border:2px solid #3d5383;
+ }
+ #app .aps-search-field .aps-search-source:focus-visible{
+  outline:3px solid #30469f;
+ }
+ #app .aps-search-field .aps-search-suggestions{
+  border:2px solid #384e7a;
+ }
+}
+@media(forced-colors:active){
+ #app .aps-search-field .aps-search-source,
+ #app .aps-search-field .aps-search-suggestions{
+  forced-color-adjust:auto;border:1px solid ButtonText;
+ }
+ #app .aps-search-field .aps-search-option.is-active{
+  outline:2px solid Highlight;
+ }
+}
