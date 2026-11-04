@@ -65,3 +65,9 @@ Two consistency boundaries were also strengthened: canonical TradeLink document 
 **Evidence:** 16/16 isolated JavaScript/static checks passed against the current committed source. Those checks exercise a stripped ES-module client with synthetic signed context and inspect SQL source text; they **do not** replace actual Node test execution or PostgreSQL runtime/RLS acceptance. The current project's read-only preflight still shows zero board items, eight existing columns, and **no** `tradelink_documents`, `tradelink_document_events` or `tl03_* public RPCs`. No production DDL, grants, RLS, data writes, user-role mutations or attachment changes were performed.
 
 **Activation block remains:** run the committed disposable PostgreSQL 17 suite and independently review the privileged function/security model, then obtain the separately required production permission/schema approval. Keep both frontend read/write flags disabled until actual signed acceptance.
+
+## Superseding activation control — CP-TL-03C (2026-11-05)
+
+**The Stage A / Stage B split in [CP-TL-03C](CP-TL-03C.md) supersedes the earlier single-phase activation discussion in this historical 03A record.** The current `sql/cp-tl03-staged-domain.sql` deliberately withholds *both* private and public write RPC EXECUTE grants from `authenticated`. Production schema/read permissions (Stage A) and production document-write grants (Stage B) each require separate explicit approval. The new `sql/cp-tl03c-emergency-disable-candidate.sql` is a nondestructive read/write access shutoff, not a data migration rollback.
+
+The fingerprinted production preflight passed all ten database readiness conditions before activation. New disposable CI must pass the deny-before-grant, signed transactions, and emergency-disable retention sequence before a production stage is eligible. Neither production stage has been executed by CP-TL-03C preparation.
