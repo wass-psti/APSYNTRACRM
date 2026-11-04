@@ -326,12 +326,15 @@ export class TimeTrackerNativeClient{
   await checkIdentity(this.auth,this.api,before.access,boardId);
   if(await this.attendanceCapability(boardId,before.access)!==true)
    deny('Signed attendance write authorization changed; no action performed');
+  // An interrupted write has an unknown outcome until a signed read reconciles it.
+  // Never replay this non-idempotent RPC on an HTTP 401 or network timeout.
+  const signal=globalThis.AbortSignal?.timeout?.(25000);
   const result=await this.api.rpc('timetracker_attendance_commit_v2',{
    p_board_id:boardId,p_action:action,
    p_record_id:action==='clock-out'?before.active.id:null,
    p_location:committedLocation,p_department:committedDepartment,p_geo:geo,
    p_work_note:note||null
-  });
+  },{retryUnauthorized:false,...(signal?{signal}:{})});
   if(!isRecord(result)||result.mode!=='COMMITTED'||
     result.contract!=='tt-attendance-1'||
     result.actorId!==before.access.userId||
