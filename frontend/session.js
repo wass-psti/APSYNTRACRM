@@ -29,7 +29,10 @@ export class AuthClient {
            ...(accessToken?{Authorization:'Bearer '+accessToken}:{})},
         ...(body===undefined?{}:{body:JSON.stringify(body)}),signal
       });
-    }catch{throw new ApiError('Network unavailable. Verify your internet connection and retry.');}
+    }catch{
+      if(signal?.aborted)throw new ApiError('Request timed out before confirmation.',0,'REQUEST_TIMEOUT');
+      throw new ApiError('Network unavailable. Verify your internet connection and retry.');
+    }
     let data;
     try{data=await response.json();}catch{data=null;}
     if(!response.ok){
@@ -94,12 +97,13 @@ export class AuthClient {
     return this.session.access_token;
   }
   async authorized(path,options={}){
+    const {retryUnauthorized=true,...requestOptions}=options;
     const token=await this.token();
-    try{return await this.call(path,{...options,accessToken:token});}
+    try{return await this.call(path,{...requestOptions,accessToken:token});}
     catch(err){
-      if(err.status!==401)throw err;
+      if(err.status!==401||!retryUnauthorized)throw err;
       const renewed=await this.refresh();
-      return this.call(path,{...options,accessToken:renewed});
+      return this.call(path,{...requestOptions,accessToken:renewed});
     }
   }
   async signOut(){
