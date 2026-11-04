@@ -213,7 +213,10 @@ BEGIN
    RAISE EXCEPTION 'Creation requires revision zero' USING ERRCODE='40001'; END IF;
   IF d.id IS NOT NULL THEN
    IF d.board_id=p_board_id AND d.created_by=actor AND d.revision=1
-    AND d.workflow_state='draft' AND d.archived_at IS NULL AND d.content=payload THEN
+    AND d.workflow_state='draft' AND d.archived_at IS NULL AND d.content=payload
+    AND EXISTS(SELECT 1 FROM public.work_board_items i
+      WHERE i.id=d.board_item_id AND i.board_id=p_board_id
+        AND i.title=d.document_number AND i.archived_at IS NULL) THEN
     RETURN pg_catalog.jsonb_build_object('documentId',d.id,'boardItemId',d.board_item_id,
      'revision',1,'state','draft','operation','create','idempotent',true);
    END IF;
