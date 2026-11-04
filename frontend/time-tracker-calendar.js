@@ -185,12 +185,35 @@ export function renderTimeTrackerCalendar({
    (holiday?'<span class="tt-cal-holiday-label">'+esc(holiday.name)+'</span>':'')+
    '</button>';
  }
- return '<section class="tt-calendar" aria-label="TimeTracker monthly attendance calendar">'+
-  '<header class="tt-cal-header"><div><h3>Calendar</h3>'+
-   '<p>Monthly attendance &amp; Philippine national holidays · '+
-   esc(scopeText)+'</p></div>'+
-   '<button class="secondary" type="button" data-action="tt-refresh"'+
-   (busy?' disabled':'')+'>Refresh</button></header>'+
+ return '<section class="tt-calendar tt-calendar-command" aria-label="TimeTracker monthly attendance calendar">'+
+  '<header class="tt-cal-header tt-cal-command-hero" aria-label="Authorized attendance calendar intelligence">'+
+   '<div class="tt-cal-graphics" aria-hidden="true">'+
+    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+    '<span class="tt-cal-orbit tt-cal-orbit-outer"></span>'+
+    '<span class="tt-cal-orbit tt-cal-orbit-inner"></span>'+
+   '</div>'+
+   '<div class="tt-cal-hero-content">'+
+    '<span class="tt-cal-hero-eyebrow"><span class="tt-cal-hero-signal" aria-hidden="true"></span>'+
+     'APSYNTRA / WORKFORCE CALENDAR</span>'+
+    '<h3>Attendance Calendar</h3>'+
+    '<p>Authorized attendance, daily activity and verified Philippine holidays</p>'+
+    '<span class="tt-cal-hero-scope">Read-only · '+esc(scopeText)+'</span>'+
+    '<span class="tt-cal-hero-month">'+esc(monthName)+' '+year+'</span>'+
+   '</div>'+
+   '<div class="tt-cal-hero-telemetry" aria-label="Authorized monthly attendance snapshot">'+
+    '<span class="tt-cal-telemetry-caption">SIGNED MONTHLY SNAPSHOT</span>'+
+    '<div class="tt-cal-telemetry-primary"><strong>'+data.sessions+
+     '</strong><span>Authorized clock-ins<br>this month</span></div>'+
+    '<div class="tt-cal-telemetry-grid">'+
+     '<div><strong>'+data.activeDays+'</strong><span>Active days</span></div>'+
+     '<div><strong>'+data.peak+'</strong><span>Peak day</span></div>'+
+     '<div><strong>'+(data.coverage===null?'—':data.coverage+'%')+
+      '</strong><span>Day coverage</span></div>'+
+    '</div>'+
+    '<button class="secondary tt-cal-hero-refresh" type="button" data-action="tt-refresh"'+
+     (busy?' disabled':'')+'>Refresh authorized calendar</button>'+
+   '</div>'+
+  '</header>'+
   '<div class="tt-cal-navigate"><div><small>NAVIGATE</small>'+
    '<div><button type="button" data-action="tt-calendar-prev"'+
    (requested==='2000-01'?' disabled':'')+' aria-label="Previous month">‹</button>'+
