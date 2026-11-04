@@ -300,18 +300,23 @@ function shell(body){
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  }
- const routeChanged=reusable&&shellRoute!==route;
+ const previousRoute=shellRoute;
  shellIdentity=identity;
  shellSidebarSignature=sidebarSignature;
  shellRoute=route;
- if(routeChanged&&!document.hidden&&
-  !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches){
-  const main=root.querySelector('.main-content');
-  main?.animate?.([
-   {opacity:.87,transform:'translate3d(0,5px,0)'},
-   {opacity:1,transform:'translate3d(0,0,0)'}
-  ],{duration:175,easing:'cubic-bezier(.2,.8,.2,1)',fill:'none'});
- }
+ // Full-page routes have their own entrance effects. Avoid stacking motion.
+ const previousBoard=previousRoute?.split('|');
+ if(reusable&&previousBoard?.[0]==='board'&&state.view==='board'&&
+    previousBoard[1]===String(state.boardId)&&previousBoard[2]!==state.tab)
+  animateTabContent('.main-content');
+}
+function animateTabContent(selector){
+ if(document.hidden||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
+ // Old animations are disposed along with replaced content; no animation queue.
+ root.querySelector(selector)?.animate?.([{opacity:.88},{opacity:1}],{
+  duration:170,easing:'cubic-bezier(.2,.75,.3,1)',fill:'none'
+ });
+}
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
@@ -1939,7 +1944,9 @@ async function action(name,button){
   if(next==='gps'&&state.roleVerified!==true&&state.ttAttendance.access?.moduleRole!=='Supervisor')return;
   if(next==='team'&&state.roleVerified!==true)return;
   if(next!=='ot')state.ttOtModalOpen=false;
+  if(next===state.ttView)return;
   state.ttView=next;render();
+  animateTabContent('.tt-secondary-content, .tt-clock-stage');
   if(next==='team')await loadTimeTrackerTeam();
   if(next==='monitor')await loadTimeTrackerMonitor();
   if(next==='gps')await loadTimeTrackerGps();
@@ -2327,7 +2334,10 @@ async function action(name,button){
  case 'role-tab':{
    if(!state.roleVerified)return;
    const tab=button.dataset.tab;
-   if(['roles','users','matrix','workspace','audit'].includes(tab)){state.roleTab=tab;render();}
+   if(['roles','users','matrix','workspace','audit'].includes(tab)&&tab!==state.roleTab){
+    state.roleTab=tab;render();
+    animateTabContent('.aps-role-configuration');
+   }
    break;
  }
  case 'role-refresh':{
