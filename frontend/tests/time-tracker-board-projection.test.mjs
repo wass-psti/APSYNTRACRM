@@ -126,9 +126,16 @@ test('frontend wiring keeps private GPS separate from normal board item projecti
 test('activated private GPS control is available only to signed bootstrap/Supervisor board viewers',()=>{
  assert.equal(TT_BOARD_GPS_PROJECTION_ENABLED,true);
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/state\.ttBoardGpsEligible=false;state\.ttRunId\+\+/);
+ assert.match(app,/state\.ttBoardGpsEligible=false;state\.ttBoardAttendance=tab==='items'\?\{status:'LOADING'\}:null;state\.ttRunId\+\+/);
  assert.match(app,/timeTracker\.snapshot\(boardId\)/);
- assert.match(app,/signed\?\.access\?\.moduleRole==='Supervisor'/);
+ assert.match(app,/const sameSession=\(\)=>seq===routeSerial&&auth\.isSignedIn&&/);
+ assert.match(app,/state\.context\?\.user_id===identity&&state\.context\?\.workspace_id===workspace/);
+ assert.match(app,/const checked=signed\?\.status==='VERIFIED_READ'&&/);
+ assert.match(app,/signed\?\.access\?\.userId===identity&&/);
+ assert.match(app,/signed\?\.access\?\.workspaceId===workspace&&/);
+ assert.match(app,/signed\?\.access\?\.boardId===boardId/);
+ assert.match(app,/state\.ttBoardGpsEligible=checked&&signed\.access\.moduleRole==='Supervisor'/);
+ assert.match(app,/if\(!sameSession\(\)\)return/);
  assert.match(app,/state\.roleVerified===true\|\|state\.ttBoardGpsEligible===true/);
  assert.match(app,/!activeBoardLayout\(\)\|\|state\.tab!=='items'/);
  assert.match(app,/await loadTimeTrackerBoardGps\(\{/);
