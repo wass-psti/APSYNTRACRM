@@ -1,0 +1,61 @@
+/* CP-CRM-RT01 · Precision Orbital Sync Pulse.
+ * Native-compositor microanimation only during actual connecting or syncing.
+ * Idle and hidden indicators consume no animation frames.
+ */
+#app .aps-sync{
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ min-height:31px;max-width:158px;padding:5px 10px 5px 8px;
+ border:1px solid #dfe6f7;border-radius:999px;background:#f7f9ff;
+ color:#52658a;font-size:10px;font-weight:750;line-height:1.1;
+ cursor:pointer;white-space:nowrap;flex:none;letter-spacing:.01em;
+ transition:border-color .15s ease,background-color .15s ease,color .15s ease;
+}
+#app .aps-sync:hover{background:#edf2ff;border-color:#b6c4ef}
+#app .aps-sync:focus-visible{outline:2px solid #5965dd;outline-offset:2px}
+#app .aps-sync-caption{overflow:hidden;text-overflow:ellipsis;min-width:0}
+#app .aps-sync-orbit{
+ width:16px;height:16px;flex:none;border-radius:50%;
+ display:inline-block;position:relative;
+ background:conic-gradient(from 25deg,#5966ea 0 60deg,#98d6ff 60deg 118deg,transparent 118deg 290deg,#5966ea 290deg 360deg);
+ -webkit-mask:radial-gradient(farthest-side,transparent 63%,#000 68%);
+ mask:radial-gradient(farthest-side,transparent 63%,#000 68%);
+}
+#app .aps-sync-orbit::after{
+ content:"";position:absolute;inset:5px;border-radius:50%;
+ background:#7b96ee;opacity:.65;
+}
+#app .aps-sync[data-sync-state="synchronized"]{
+ color:#187258;border-color:#c9e9dc;background:#f0fbf5;
+}
+#app .aps-sync[data-sync-state="synchronized"] .aps-sync-orbit{
+ background:conic-gradient(from 25deg,#22a67e 0 320deg,transparent 320deg);
+ animation:none;
+}
+#app .aps-sync[data-sync-state="connecting"] .aps-sync-orbit,
+#app .aps-sync[data-sync-state="synchronizing"] .aps-sync-orbit{
+ animation:aps-sync-orbit 1.2s linear infinite;
+}
+#app .aps-sync[data-sync-state="reconnecting"]{
+ color:#987122;border-color:#f0ddb1;background:#fffaf0;
+}
+#app .aps-sync[data-sync-state="reconnecting"] .aps-sync-orbit{
+ background:conic-gradient(#db9b3e,transparent 72%,#db9b3e);
+ animation:aps-sync-orbit 1.65s ease-in-out infinite;
+}
+#app .aps-sync[data-sync-state="offline"],
+#app .aps-sync[data-sync-state="error"]{
+ color:#aa5160;border-color:#f1cad2;background:#fff4f6;
+}
+#app .aps-sync[data-sync-state="offline"] .aps-sync-orbit,
+#app .aps-sync[data-sync-state="error"] .aps-sync-orbit{
+ background:conic-gradient(#c45e70 0 180deg,transparent 180deg);
+ animation:none;
+}
+@keyframes aps-sync-orbit{to{transform:rotate(360deg)}}
+@media(max-width:570px){
+ #app .top-actions .aps-sync{padding:6px;min-width:29px;max-width:29px}
+ #app .top-actions .aps-sync-caption{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-sync,#app .aps-sync-orbit{animation:none!important;transition:none!important}
+}
