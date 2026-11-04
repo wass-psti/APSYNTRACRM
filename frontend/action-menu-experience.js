@@ -231,9 +231,13 @@ export function enhanceActionContextMenu(trigger,menu,{close=()=>{}}={}){
    queueMicrotask(()=>{if(menu.isConnected)close();});
  },{signal:abort.signal});
  const stopForeground=showForegroundPopover(menu,trigger,{
-  kind:'action',onDismiss:()=>close()
+  kind:'action',onDismiss:()=>close(),
+  onPlacementFailure:()=>close()
  });
- const stopPosition=attachFloatingPosition(trigger,menu,()=>menu.isConnected);
+ // Native popover anchors already track scroll, zoom and resize in CSS.
+ // Only the local fallback needs legacy Floating UI class calculations.
+ const stopPosition=stopForeground?()=>{}:
+  attachFloatingPosition(trigger,menu,()=>menu.isConnected);
  animateMenu(menu);
  keyboard.focusBoundary();
  return ()=>{abort.abort();stopPosition();stopForeground?.();};
@@ -301,7 +305,8 @@ export function startActionMenuExperience(root=globalThis.document?.body){
      stopForeground=showForegroundPopover(menu,trigger,{
       kind:'action',onDismiss:()=>close(false)
      });
-     stopPosition=attachFloatingPosition(trigger,menu,()=>details.open&&details.isConnected);
+     if(!stopForeground)
+      stopPosition=attachFloatingPosition(trigger,menu,()=>details.open&&details.isConnected);
     }
     animateMenu(menu);
    }

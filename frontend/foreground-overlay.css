@@ -1,113 +1,74 @@
-/* CP-CRM-OVERLAY-01 — top layer rather than arbitrary z-index escalation.
- * Every menu retains its original DOM parent and delegated event handlers.
- * Only CSS Anchor Positioning-capable browsers use these rules.
+/* CP-CRM-OVERLAY-02 — reliable implicit popover anchoring.
+ * showPopover({source:trigger}) supplies the implicit anchor. With anchor()
+ * offsets, position-anchor:auto MUST be explicit (not a named anchor).
+ * Works for overview-card menus outside .aps-board-shell as well as table cells.
+ * Top-layer paint escapes clipped scroll/table ancestors; no z-index inflation.
  */
-@supports (position-anchor:--aps-foreground-select) and (top:anchor(bottom)){
- .aps-foreground-anchor-select{
-  anchor-name:--aps-foreground-select;
- }
- .aps-foreground-anchor-action{
-  anchor-name:--aps-foreground-action;
- }
- .aps-foreground-anchor-search{
-  anchor-name:--aps-foreground-search;
- }
- /* Override earlier component anchor names without global z-index changes. */
- #app .aps-board-shell .aps-action-surface[open]>summary.aps-foreground-anchor-action,
- #app .aps-board-shell .board-column-more.aps-foreground-anchor-action{
-  anchor-name:--aps-foreground-action;
- }
- #app .aps-search-field .aps-search-source.aps-foreground-anchor-search:focus{
-  anchor-name:--aps-foreground-search;
- }
- /* HTML popovers are painted in the top layer: parent overflow, isolation,
-    sticky table headers and transforms cannot clip their open surfaces. */
+@supports (position-anchor:auto) and (top:anchor(bottom)){
  .aps-foreground-surface[popover]:popover-open{
   box-sizing:border-box;
   position:fixed!important;
-  inset:auto;
+  position-anchor:auto!important;
+  inset:auto!important;
   margin:0!important;
-  overflow-y:auto;
-  overscroll-behavior:contain;
   max-height:calc(100dvh - 18px);
   max-width:calc(100vw - 18px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
   position-try-fallbacks:flip-block,flip-inline;
  }
+ /* Keep an unresolved anchor from ever flashing at 0,0. The component
+    removes this flag after its first verified layout measurement. */
+ .aps-foreground-surface.aps-foreground-pending:popover-open{
+  visibility:hidden!important;
+ }
  .aps-select-listbox.aps-foreground-select:popover-open{
-  position-anchor:--aps-foreground-select;
-  top:calc(anchor(bottom) + 7px);
-  left:anchor(left);
-  right:auto;bottom:auto;
-  width:max(140px,anchor-size(width));
-  min-width:0;
+  top:calc(anchor(bottom) + 7px)!important;
+  left:anchor(left)!important;
+  right:auto!important;bottom:auto!important;
+  width:anchor-size(width);min-width:140px;
   max-width:min(480px,calc(100vw - 18px));
   max-height:min(360px,calc(100dvh - 18px));
  }
  .aps-select-listbox.aps-foreground-select.aps-select-above:popover-open{
-  top:auto;
-  bottom:calc(anchor(top) + 7px);
+  top:auto!important;bottom:calc(anchor(top) + 7px)!important;
  }
  .aps-select-listbox.aps-foreground-select.aps-select-end:popover-open{
-  left:auto;right:anchor(right);
+  left:auto!important;right:anchor(right)!important;
  }
- #app .aps-board-shell .aps-action-popover.aps-foreground-action:popover-open{
-  position-anchor:--aps-foreground-action;
-  top:calc(anchor(bottom) + 8px);
-  right:anchor(right);
-  bottom:auto;left:auto;
-  width:max-content;
+ /* Unscoped coverage is necessary: Overview board cards are not members
+    of the .aps-board-shell subtree. */
+ .aps-action-popover.aps-foreground-action:popover-open{
+  top:calc(anchor(bottom) + 8px)!important;
+  right:anchor(right)!important;
+  left:auto!important;bottom:auto!important;
+  width:max-content;min-width:210px;
   max-width:min(310px,calc(100vw - 20px));
   max-height:min(370px,calc(100dvh - 20px));
  }
- #app .aps-board-shell .aps-action-popover.aps-foreground-action.aps-menu-above:popover-open{
-  top:auto;bottom:calc(anchor(top) + 8px);
+ .aps-action-popover.aps-foreground-action.aps-menu-above:popover-open{
+  top:auto!important;bottom:calc(anchor(top) + 8px)!important;
  }
- #app .aps-board-shell .aps-action-popover.aps-foreground-action.aps-menu-align-start:popover-open{
-  right:auto;left:anchor(left);
+ .aps-action-popover.aps-foreground-action.aps-menu-align-start:popover-open{
+  right:auto!important;left:anchor(left)!important;
  }
- #app .aps-search-field .aps-search-suggestions.aps-foreground-search:popover-open{
-  position-anchor:--aps-foreground-search;
-  top:calc(anchor(bottom) + 8px);
-  left:anchor(left);
-  right:auto;bottom:auto;
-  width:max(210px,anchor-size(width));
-  min-width:0;
+ .aps-search-suggestions.aps-foreground-search:popover-open{
+  top:calc(anchor(bottom) + 8px)!important;
+  left:anchor(left)!important;
+  right:auto!important;bottom:auto!important;
+  width:anchor-size(width);min-width:210px;
   max-width:min(420px,calc(100vw - 18px));
   max-height:min(315px,calc(100dvh - 18px));
  }
- #app .aps-search-field .aps-search-suggestions.aps-foreground-search.aps-search-above:popover-open{
-  top:auto;bottom:calc(anchor(top) + 8px);
+ .aps-search-suggestions.aps-foreground-search.aps-search-above:popover-open{
+  top:auto!important;bottom:calc(anchor(top) + 8px)!important;
  }
- #app .aps-search-field .aps-search-suggestions.aps-foreground-search.aps-search-align-end:popover-open{
-  left:auto;right:anchor(right);
- }
- /* Avoid the legacy local-anchor CSS overriding the top-layer coordinates. */
- #app .aps-board-shell .aps-action-surface[open]>.aps-action-popover.aps-foreground-action:popover-open{
-  position-anchor:--aps-foreground-action;
-  position:fixed!important;
-  margin:0!important;
-  top:calc(anchor(bottom) + 8px);right:anchor(right);
-  left:auto;bottom:auto;
- }
- #app .aps-board-shell .aps-action-surface[open]>.aps-action-popover.aps-foreground-action.aps-menu-above:popover-open{
-  top:auto;bottom:calc(anchor(top) + 8px);
- }
- #app .aps-board-shell .aps-action-surface[open]>.aps-action-popover.aps-foreground-action.aps-menu-align-start:popover-open{
-  right:auto;left:anchor(left);
- }
- #app .aps-search-field .aps-search-suggestions.aps-foreground-search:not([hidden]):popover-open{
-  position:fixed!important;
-  position-anchor:--aps-foreground-search;
-  top:calc(anchor(bottom) + 8px);left:anchor(left);
-  right:auto;bottom:auto;margin:0!important;
- }
- #app .aps-search-field .aps-search-suggestions.aps-foreground-search.aps-search-above:not([hidden]):popover-open{
-  top:auto;bottom:calc(anchor(top) + 8px);
- }
- #app .aps-search-field .aps-search-suggestions.aps-foreground-search.aps-search-align-end:not([hidden]):popover-open{
-  left:auto;right:anchor(right);
+ .aps-search-suggestions.aps-foreground-search.aps-search-align-end:popover-open{
+  left:auto!important;right:anchor(right)!important;
  }
 }
 @media(prefers-reduced-motion:reduce){
- .aps-foreground-surface[popover]:popover-open{animation:none!important;transition:none!important;}
+ .aps-foreground-surface[popover]:popover-open{
+  animation:none!important;transition:none!important;
+ }
 }

@@ -265,10 +265,13 @@ export function startSelectExperience(root=globalThis.document?.body,{
    const selected=select.selectedIndex;
    activate(selected>=0&&!items[selected]?.disabled?
     selected:nextSelectableIndex(items,-1,1));
-   stopPosition=lib.autoUpdate(trigger,list,position,{
-    ancestorScroll:true,ancestorResize:true,elementResize:true,layoutShift:true
-   });
-   void position();animateOpen(list,win);
+   if(!stopForeground){
+    stopPosition=lib.autoUpdate(trigger,list,position,{
+     ancestorScroll:true,ancestorResize:true,elementResize:true,layoutShift:true
+    });
+    void position();
+   }
+   animateOpen(list,win);
   }
   function keydown(event){
    const key=event.key;

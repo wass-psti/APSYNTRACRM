@@ -240,7 +240,8 @@ export function startSearchExperience(root=globalThis.document?.body){
    input.setAttribute('aria-expanded','true');
    input.setAttribute('aria-controls',menu.id);
    status.textContent=String(found.length)+' local suggestion'+(found.length===1?'':'s');
-   stopPosition=positionSuggestions(input,menu,()=>!menu.hidden&&input.isConnected);
+   if(!stopForeground)
+    stopPosition=positionSuggestions(input,menu,()=>!menu.hidden&&input.isConnected);
    enterAnimation(menu,win);
   }
   function queueUpdate(){

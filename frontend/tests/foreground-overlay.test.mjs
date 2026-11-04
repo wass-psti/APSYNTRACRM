@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- supportsForegroundPopover,showForegroundPopover
+ supportsForegroundPopover,showForegroundPopover,isForegroundPositionValid
 } from '../foreground-overlay.js';
 
 const implementation=readFileSync('frontend/foreground-overlay.js','utf8');
@@ -23,7 +23,7 @@ function fixture({supported=true}={}){
  const document={
   defaultView:{CSS:{supports:(key,value)=>{
    if(!supported)return false;
-   return key==='position-anchor'&&value==='--aps-foreground-select'||
+   return key==='position-anchor'&&value==='auto'||
     key==='top'&&value==='anchor(bottom)';
   }}},
   createElement:()=>({showPopover(){}})
@@ -125,7 +125,7 @@ test('select options retain their original native form and work outside clipped 
  assert.match(select,/anchor\.append\(select,trigger\)/);
  assert.match(select,/anchor\.append\(list\)/);
  assert.match(css,/\.aps-select-listbox\.aps-foreground-select:popover-open/);
- assert.match(css,/position-anchor:--aps-foreground-select/);
+ assert.match(css,/position-anchor:auto!important/);
 });
 test('board, group and column action menus stay in the delegated click hierarchy',()=>{
  assert.match(action,/showForegroundPopover\(menu,trigger,\{/);
@@ -135,26 +135,26 @@ test('board, group and column action menus stay in the delegated click hierarchy
  assert.match(action,/trigger\.setAttribute\('aria-haspopup','menu'\)/);
  assert.match(action,/keyboard\.focusBoundary\(\)/);
  assert.doesNotMatch(implementation,/appendChild|append\(menu\)|document\.body\.append/);
- assert.match(css,/#app \.aps-board-shell \.aps-action-surface\[open\]>summary\.aps-foreground-anchor-action/);
+ assert.match(css,/\.aps-action-popover\.aps-foreground-action:popover-open/);
+ assert.match(css,/position-anchor:auto!important/);
 });
 test('search suggestions retain input focus and original filtering with top-layer positioning',()=>{
  assert.match(search,/stopForeground=showForegroundPopover\(menu,input,\{/);
  assert.match(search,/kind:'search',onDismiss:\(\)=>close\(\)/);
  assert.match(search,/stopForeground\?\.\(\);stopForeground=null/);
  assert.match(search,/input\.dispatchEvent\(new Event\('input',\{bubbles:true\}\)\)/);
- assert.match(css,/#app \.aps-search-field \.aps-search-source\.aps-foreground-anchor-search:focus/);
+ assert.match(css,/\.aps-search-suggestions\.aps-foreground-search:popover-open/);
  assert.match(css,/\.aps-search-suggestions\.aps-foreground-search:popover-open/);
 });
 test('overlay CSS uses browser top layer and anchors without global z-index inflation or CSP bypass',()=>{
  for(const token of [
-  'position-anchor:--aps-foreground-select',
-  'position-anchor:--aps-foreground-action',
-  'position-anchor:--aps-foreground-search',
+  'position-anchor:auto!important',
+  'aps-foreground-pending',
   'position-try-fallbacks:flip-block,flip-inline',
   'top:calc(anchor(bottom)',
   'bottom:calc(anchor(top)',
   'right:anchor(right)',
-  'width:max(140px,anchor-size(width))',
+  'width:anchor-size(width)',
   ':popover-open','@media(prefers-reduced-motion:reduce)'
  ])assert.ok(css.includes(token),token);
  assert.doesNotMatch(css,/z-index:\s*\d+|@import|url\(https?:|will-change|animation:.*infinite/);
@@ -169,4 +169,89 @@ test('production Pages manifest protects shared overlay code and overlay CSS',()
  assert.match(smoke,/'frontend\/foreground-overlay\.js'/);
  assert.match(smoke,/'frontend\/foreground-overlay\.css'/);
  assert.doesNotMatch(implementation,/fetch\(|\.rpc\(|setTimeout\(|setInterval\(|localStorage|sessionStorage|sendBeacon/);
+});
+
+test('explicit implicit anchor avoids unnamed top-left popovers in all three menu categories',()=>{
+ assert.match(implementation,/menu\.showPopover\(\{source:trigger\}\)/);
+ assert.match(implementation,/win\.CSS\.supports\('position-anchor','auto'\)/);
+ assert.match(implementation,/getBoundingClientRect\(\)/);
+ assert.match(css,/\.aps-action-popover\.aps-foreground-action:popover-open/);
+ assert.match(css,/\.aps-select-listbox\.aps-foreground-select:popover-open/);
+ assert.match(css,/\.aps-search-suggestions\.aps-foreground-search:popover-open/);
+ assert.match(css,/position-anchor:auto!important/);
+ assert.doesNotMatch(css,/position-anchor:--aps-foreground-/);
+ assert.doesNotMatch(implementation,/menu\.showPopover\(\)/);
+});
+test('viewport-relative geometry accepts adjacent dropdowns at all edges and rejects 0,0 regressions',()=>{
+ const trigger={left:1020,right:1060,top:590,bottom:628};
+ const flipped={left:845,right:1060,top:370,bottom:582,width:215,height:212};
+ const below={left:845,right:1060,top:636,bottom:780,width:215,height:144};
+ const misplaced={left:0,right:215,top:0,bottom:144,width:215,height:144};
+ const viewport={width:1100,height:820};
+ assert.equal(isForegroundPositionValid(trigger,flipped,viewport),true);
+ assert.equal(isForegroundPositionValid(trigger,below,viewport),true);
+ assert.equal(isForegroundPositionValid(trigger,misplaced,viewport),false);
+ assert.equal(isForegroundPositionValid(
+  {left:12,right:50,top:12,bottom:48},
+  {left:12,right:222,top:56,bottom:220,width:210,height:164},viewport),true);
+ assert.equal(isForegroundPositionValid(trigger,{...below,left:NaN},viewport),false);
+ assert.equal(isForegroundPositionValid(trigger,{...below,width:0},viewport),false);
+});
+function measuredFixture(){
+ const f=fixture(),win=f.document.defaultView;
+ const frames=[],events=new Map();
+ win.requestAnimationFrame=callback=>{frames.push(callback);return frames.length;};
+ win.cancelAnimationFrame=()=>{};
+ win.innerWidth=1100;win.innerHeight=820;
+ win.addEventListener=(event,callback)=>events.set('window:'+event,callback);
+ win.removeEventListener=(event)=>events.delete('window:'+event);
+ f.document.addEventListener=(event,callback)=>events.set('document:'+event,callback);
+ f.document.removeEventListener=(event)=>events.delete('document:'+event);
+ let trigger={left:960,right:1000,top:360,bottom:398};
+ let menu={left:790,right:1000,top:406,bottom:550,width:210,height:144};
+ f.trigger.getBoundingClientRect=()=>trigger;
+ f.menu.getBoundingClientRect=()=>menu;
+ return {f,events,flush(){const next=frames.splice(0);next.forEach(cb=>cb());},
+  moveTrigger(rect){trigger=rect;},moveMenu(rect){menu=rect;}};
+}
+test('unresolved top-left placement is never displayed: hidden until checked then restored to local fallback',()=>{
+ const m=measuredFixture(),failures=[];
+ const stop=showForegroundPopover(m.f.menu,m.f.trigger,{
+  kind:'action',onPlacementFailure:()=>failures.push('failed anchor')
+ });
+ assert.equal(m.f.menu.classList.contains('aps-foreground-pending'),true);
+ assert.equal(m.f.open,true);
+ m.moveMenu({left:0,right:210,top:0,bottom:144,width:210,height:144});
+ m.flush();
+ assert.deepEqual(failures,['failed anchor']);
+ assert.equal(m.f.open,false);
+ assert.equal(m.f.menu.classList.contains('aps-foreground-pending'),false);
+ assert.equal(m.f.menu.getAttribute('popover'),null);
+ assert.doesNotThrow(stop);
+});
+test('valid placement reveals menu, tracks scroll/resize and disposes listeners when closed',()=>{
+ const m=measuredFixture();
+ const stop=showForegroundPopover(m.f.menu,m.f.trigger,{kind:'action'});
+ m.flush();
+ assert.equal(m.f.open,true);
+ assert.equal(m.f.menu.classList.contains('aps-foreground-pending'),false);
+ assert.equal(typeof m.events.get('document:scroll'),'function');
+ assert.equal(typeof m.events.get('window:resize'),'function');
+ m.moveTrigger({left:500,right:540,top:100,bottom:138});
+ m.moveMenu({left:330,right:540,top:146,bottom:290,width:210,height:144});
+ m.events.get('document:scroll')();
+ m.flush();
+ assert.equal(m.f.open,true);
+ stop();
+ assert.equal(m.events.size,0);
+ assert.equal(m.f.open,false);
+});
+test('engines rejecting showPopover source cannot silently open an unanchored menu',()=>{
+ const f=fixture();
+ let calls=0;
+ f.menu.showPopover=()=>{calls++;throw Error('no source support');};
+ assert.equal(showForegroundPopover(f.menu,f.trigger,{kind:'action'}),null);
+ assert.equal(calls,1);
+ assert.equal(f.menu.getAttribute('popover'),null);
+ assert.equal(f.menu.classList.contains('aps-foreground-surface'),false);
 });
