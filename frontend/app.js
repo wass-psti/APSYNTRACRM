@@ -309,14 +309,6 @@ function shell(body){
  if(reusable&&previousBoard?.[0]==='board'&&state.view==='board'&&
     previousBoard[1]===String(state.boardId)&&previousBoard[2]!==state.tab)
   animateTabContent('.main-content');
-}
-function animateTabContent(selector){
- if(document.hidden||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
- // Old animations are disposed along with replaced content; no animation queue.
- root.querySelector(selector)?.animate?.([{opacity:.88},{opacity:1}],{
-  duration:170,easing:'cubic-bezier(.2,.75,.3,1)',fill:'none'
- });
-}
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
@@ -336,6 +328,13 @@ function animateTabContent(selector){
  mountPagesAcceptanceMotion(root.querySelector('.aps-pages-acceptance'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
+}
+function animateTabContent(selector){
+ if(document.hidden||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
+ // Old animations are disposed along with replaced content; no animation queue.
+ root.querySelector(selector)?.animate?.([{opacity:.88},{opacity:1}],{
+  duration:170,easing:'cubic-bezier(.2,.75,.3,1)',fill:'none'
+ });
 }
 function boardCard(board,index){
  const status=boardCardActionState(board),href='#/boards/'+e(board.id);
