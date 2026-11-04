@@ -30,12 +30,16 @@ export function validateTradeLinkDraftEnvelope(value){
   deny('TradeLink draft is too large.',400);
  return value;
 }
-export function normalizeTradeLinkDomainReceipt(value,expectedId,operation){
+export function normalizeTradeLinkDomainReceipt(value,expectedId,operation,expectedRevision=null){
  if(!validUuid(expectedId)||!OPS.has(operation)||!value||typeof value!=='object'||
   value.documentId!==expectedId||!validUuid(value.boardItemId)||
   !Number.isSafeInteger(value.revision)||value.revision<1||
   value.state!=='draft'||value.operation!==operation||
-  typeof value.idempotent!=='boolean')
+  typeof value.idempotent!=='boolean'||
+  (expectedRevision!==null&&(
+   !Number.isSafeInteger(expectedRevision)||expectedRevision<0||
+   (value.idempotent?(operation!=='create'||expectedRevision!==0||value.revision!==1):
+    value.revision!==expectedRevision+1))))
   deny('TradeLink authoritative commit receipt mismatch.',409);
  return value;
 }
@@ -96,7 +100,7 @@ export class TradeLinkDomainClient{
   if(!validUuid(documentId)||!OPS.has(operation)||
     !Number.isSafeInteger(expectedRevision)||expectedRevision<0||
     (operation==='create'&&expectedRevision!==0)||
-    (operation==='update'&&expectedRevision<1)||
+    (operation!=='create'&&expectedRevision<1)||
     (['archive','restore'].includes(operation)&&draft!==null))
    deny('Invalid TradeLink revision, operation or payload.',400);
   if(operation==='create'||operation==='update')validateTradeLinkDraftEnvelope(draft);
@@ -104,6 +108,6 @@ export class TradeLinkDomainClient{
   const receipt=await this.api.rpc('tl03_document_commit',{
    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
    p_expected_revision:expectedRevision,p_operation:operation,p_data:draft});
-  return normalizeTradeLinkDomainReceipt(receipt,documentId,operation);
+  return normalizeTradeLinkDomainReceipt(receipt,documentId,operation,expectedRevision);
  }
 }
