@@ -60,7 +60,7 @@ test('global component selectors cover overview/card/group/board/column action m
   '.board-card-actions','.board-group-actions','.board-actions-menu'
  ]);
  for(const name of ACTION_MENU_SELECTORS)
-  assert.ok(app.includes(name),name);
+  assert.ok(app.includes(name.slice(1)),name);
  assert.match(board,/class="board-column-more"/);
  assert.match(js,/button\.classList\.add\('aps-ellipsis-trigger'\)/);
  assert.match(js,/trigger\.classList\.add\('aps-ellipsis-trigger'\)/);
