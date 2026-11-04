@@ -13,6 +13,8 @@ export const ACTION_MENU_MAX_ITEMS=32;
 let serial=0;
 
 const LUCIDE_NODES=Object.freeze({
+ 'circle-alert':[['circle',{cx:12,cy:12,r:10}],['path',{d:'M12 8v4'}],['path',{d:'M12 16h.01'}]],
+ 'circle-check':[['circle',{cx:12,cy:12,r:10}],['path',{d:'m8 12 2.5 2.5L16 9'}]],
  'search':[['circle',{cx:11,cy:11,r:8}],['path',{d:'m21 21-4.35-4.35'}]],
  'x':[['path',{d:'M18 6 6 18'}],['path',{d:'m6 6 12 12'}]],
  'ellipsis-vertical':[['circle',{cx:12,cy:5,r:1}],['circle',{cx:12,cy:12,r:1}],['circle',{cx:12,cy:19,r:1}]],

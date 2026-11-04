@@ -1,0 +1,188 @@
+/* CP-CRM-INPUT-01 — global native form input surface and validation feedback.
+ * CSP-safe: no runtime inline styles. Search/select/action modules remain isolated.
+ * Validity is local HTML syntax only; never evidence of server authorization.
+ */
+:root{
+ --aps-field-surface:#fff;
+ --aps-field-ink:#2f4265;
+ --aps-field-muted:#8796ad;
+ --aps-field-outline:#d6dfef;
+ --aps-field-hover:#9aaddc;
+ --aps-field-focus:#5b6fdc;
+ --aps-field-error:#b73551;
+ --aps-field-error-background:#fff1f3;
+ --aps-field-radius:10px;
+ --aps-field-ease:cubic-bezier(.2,.8,.2,1);
+}
+#app :is(input,textarea).aps-field-control,
+body>.modal-backdrop :is(input,textarea).aps-field-control{
+ box-sizing:border-box;max-width:100%;
+ border:1px solid var(--aps-field-outline);
+ border-radius:var(--aps-field-radius);
+ background-color:var(--aps-field-surface);
+ color:var(--aps-field-ink);
+ font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ font-size:12px;line-height:1.5;
+ transition:background-color .16s var(--aps-field-ease),
+  border-color .16s var(--aps-field-ease),
+  box-shadow .16s var(--aps-field-ease);
+}
+#app input.aps-field-control,
+body>.modal-backdrop input.aps-field-control{
+ min-height:41px;
+}
+#app textarea.aps-field-control,
+body>.modal-backdrop textarea.aps-field-control{
+ min-height:80px;resize:vertical;
+}
+#app :is(input,textarea).aps-field-control::placeholder,
+body>.modal-backdrop :is(input,textarea).aps-field-control::placeholder{
+ color:var(--aps-field-muted);opacity:1;
+}
+#app :is(input,textarea).aps-field-control:hover:not(:disabled):not(:read-only),
+body>.modal-backdrop :is(input,textarea).aps-field-control:hover:not(:disabled):not(:read-only){
+ border-color:var(--aps-field-hover);background-color:#fcfdff;
+}
+#app :is(input,textarea).aps-field-control:focus-visible,
+body>.modal-backdrop :is(input,textarea).aps-field-control:focus-visible{
+ outline:3px solid #8195ec9e;outline-offset:2px;
+ border-color:var(--aps-field-focus);
+ box-shadow:0 0 0 4px #7186e51c;
+}
+#app :is(input,textarea).aps-field-control.aps-field-valid:not(:focus),
+body>.modal-backdrop :is(input,textarea).aps-field-control.aps-field-valid:not(:focus){
+ border-color:#9daed6;
+}
+#app :is(input,textarea).aps-field-control.aps-field-invalid,
+body>.modal-backdrop :is(input,textarea).aps-field-control.aps-field-invalid{
+ border-color:var(--aps-field-error)!important;
+ background-color:var(--aps-field-error-background);
+ box-shadow:0 0 0 3px #b7355119;
+}
+#app :is(input,textarea).aps-field-control.aps-field-invalid:focus-visible,
+body>.modal-backdrop :is(input,textarea).aps-field-control.aps-field-invalid:focus-visible{
+ outline-color:#cc526f;
+ box-shadow:0 0 0 4px #b7355129;
+}
+#app :is(input,textarea).aps-field-control:disabled,
+body>.modal-backdrop :is(input,textarea).aps-field-control:disabled{
+ opacity:.66;cursor:not-allowed;box-shadow:none;
+}
+#app :is(input,textarea).aps-field-control:read-only,
+body>.modal-backdrop :is(input,textarea).aps-field-control:read-only{
+ background-color:#f4f6fa;cursor:default;
+}
+/* The original date/time/number pickers remain native for correctness and input modes. */
+#app :is(input[type="date"],input[type="time"],input[type="month"],
+ input[type="week"],input[type="datetime-local"],input[type="number"]).aps-field-control{
+ color-scheme:light;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-field-feedback,
+body>.modal-backdrop .aps-field-feedback{
+ box-sizing:border-box;display:inline-flex;gap:7px;
+ align-items:flex-start;max-width:100%;
+ padding:5px 9px;margin-top:5px;
+ border:1px solid #f2c8d1;border-radius:8px;
+ background:var(--aps-field-error-background);
+ color:var(--aps-field-error);
+ font:690 11px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ overflow-wrap:anywhere;
+}
+#app .aps-field-feedback[hidden],
+body>.modal-backdrop .aps-field-feedback[hidden]{
+ display:none!important;
+}
+#app .aps-field-feedback>.aps-action-icon,
+body>.modal-backdrop .aps-field-feedback>.aps-action-icon{
+ display:block;flex:none;width:16px;height:16px;
+ margin-top:1px;stroke:currentColor;fill:none;
+ pointer-events:none;transform:translateY(-1px);
+}
+#app .aps-field-feedback .aps-field-message,
+body>.modal-backdrop .aps-field-feedback .aps-field-message{
+ display:block;min-width:0;max-width:100%;
+}
+/* Inline board controls are dense grid editors: show native invalid border and
+ * expose the error to AT without inserting a new grid track or moving buttons. */
+#app .aps-field-feedback.aps-field-feedback-compact,
+body>.modal-backdrop .aps-field-feedback.aps-field-feedback-compact{
+ position:absolute!important;width:1px!important;height:1px!important;
+ margin:0!important;padding:0!important;overflow:hidden!important;
+ clip-path:inset(50%)!important;white-space:nowrap!important;
+ border:0!important;
+}
+#app .board-inline-add-form input.aps-field-control{
+ min-height:inherit;
+}
+#app .board-inline-cell-form input.aps-field-control,
+#app .board-inline-range input.aps-field-control{
+ min-height:35px;
+}
+#app .aps-auth-v2 input.aps-field-control{
+ background:#fbfcff;border-color:var(--aps-field-outline);
+ color:var(--aps-field-ink);border-radius:11px;
+}
+#app .aps-auth-v2 input.aps-field-control:focus-visible{
+ outline:3px solid #8795f29e;outline-offset:2px;
+ border-color:var(--aps-field-focus);
+ box-shadow:0 0 0 4px #7186e526;
+}
+#app .aps-auth-v2 input.aps-field-control.aps-field-invalid{
+ border-color:var(--aps-field-error)!important;
+ background:var(--aps-field-error-background);
+}
+#app .aps-auth-v2 .password-wrap input.aps-field-control{
+ padding-right:76px; /* existing reveal button retains its hit area */
+}
+#app .tt-native input.aps-field-control,
+#app .tt-native textarea.aps-field-control{
+ border-radius:9px;min-width:0;
+}
+#app .aps-board-shell .tt-native :is(input,textarea).aps-field-control.aps-field-invalid{
+ border-color:var(--aps-field-error)!important;
+ background:var(--aps-field-error-background);
+}
+@media(max-width:720px){
+ #app input.aps-field-control,
+ body>.modal-backdrop input.aps-field-control{
+  min-height:44px;
+ }
+ #app :is(input,textarea).aps-field-control,
+ body>.modal-backdrop :is(input,textarea).aps-field-control{
+  font-size:14px;
+ }
+ #app .aps-field-feedback,
+ body>.modal-backdrop .aps-field-feedback{
+  font-size:12px;padding:7px 9px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app :is(input,textarea).aps-field-control,
+ body>.modal-backdrop :is(input,textarea).aps-field-control{
+  transition:none!important;animation:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app :is(input,textarea).aps-field-control,
+ body>.modal-backdrop :is(input,textarea).aps-field-control{
+  border:2px solid #435a85;
+ }
+ #app :is(input,textarea).aps-field-control.aps-field-invalid,
+ body>.modal-backdrop :is(input,textarea).aps-field-control.aps-field-invalid{
+  border:2px solid #a3193d!important;
+ }
+ #app .aps-field-feedback,body>.modal-backdrop .aps-field-feedback{
+  border:2px solid #a3193d;
+ }
+}
+@media(forced-colors:active){
+ #app :is(input,textarea).aps-field-control,
+ body>.modal-backdrop :is(input,textarea).aps-field-control{
+  forced-color-adjust:auto;border:1px solid ButtonText;
+ }
+ #app :is(input,textarea).aps-field-control.aps-field-invalid,
+ body>.modal-backdrop :is(input,textarea).aps-field-control.aps-field-invalid{
+  outline:2px solid Mark!important;
+ }
+}
