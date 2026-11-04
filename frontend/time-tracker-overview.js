@@ -218,14 +218,40 @@ export function renderTimeTrackerOverview({
  const late=overview.people.filter(x=>x.lateMinutes>0);
  const selected=overview.rows.filter(x=>x.status==='Active');
  const heading=t.greeting+' '+(String(access.name||'').split(/\s+/)[0]||'');
- let html='<div class="tt-overview" data-tt-view="overview">'+
-  '<div class="tt-overview-hero"><div><h3>'+escapeHtml(heading)+'</h3>'+
-   '<p>'+escapeHtml(t.day)+
-    (overview.scope==='AUTHORIZED_WORKSPACE_TEAM'?' · Workspace team':' · My attendance')+
-   '</p></div><div class="tt-overview-live">'+
-   '<time id="tt-overview-time">'+escapeHtml(t.hours+':'+t.minutes+':'+t.seconds+' '+t.period)+'</time>'+
-   '<span>Philippine Time</span>'+
-   '<button type="button" class="secondary" data-action="tt-refresh" aria-label="Refresh authorized attendance">↻ Refresh</button></div></div>'+
+ let html='<div class="tt-overview tt-overview-command" data-tt-view="overview">'+
+  '<section class="tt-overview-hero tt-overview-command-hero" aria-label="Authorized attendance intelligence">'+
+   '<div class="tt-overview-graphics" aria-hidden="true">'+
+    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+    '<span class="tt-ov-orbit tt-ov-orbit-outer"></span>'+
+    '<span class="tt-ov-orbit tt-ov-orbit-inner"></span>'+
+    '<span class="tt-ov-orbit tt-ov-orbit-ring"></span>'+
+   '</div>'+
+   '<div class="tt-overview-hero-content">'+
+    '<div class="tt-ov-heading-kicker"><span class="tt-ov-heading-dot" aria-hidden="true"></span>'+
+     'APSYNTRA <span class="tt-ov-heading-divider">/</span> WORKFORCE INTELLIGENCE</div>'+
+    '<h3>'+escapeHtml(heading)+'</h3>'+
+    '<p>'+escapeHtml(t.day)+'</p>'+
+    '<div class="tt-ov-scope">'+
+     '<span class="tt-ov-scope-indicator" aria-hidden="true"></span>'+
+     (overview.scope==='AUTHORIZED_WORKSPACE_TEAM'?
+      'Authorized workspace team':'My authorized attendance')+
+    '</div>'+
+   '</div>'+
+   '<div class="tt-ov-telemetry">'+
+    '<div class="tt-ov-telemetry-title"><span>LIVE STATUS</span><span class="tt-ov-live-marker" aria-hidden="true"></span></div>'+
+    '<div class="tt-overview-live">'+
+     '<time id="tt-overview-time">'+escapeHtml(t.hours+':'+t.minutes+':'+t.seconds+' '+t.period)+'</time>'+
+     '<span>Philippine Time · UTC +08:00</span>'+
+    '</div>'+
+    '<div class="tt-ov-telemetry-stats" aria-label="Current attendance snapshot">'+
+     '<div><strong>'+overview.activeCount+'</strong><span>Working now</span></div>'+
+     '<div><strong>'+overview.completedCount+'</strong><span>Completed</span></div>'+
+     '<div><strong>'+(overview.onTimeRate===null?'—':overview.onTimeRate+'%')+
+      '</strong><span>On-time rate</span></div>'+
+    '</div>'+
+    '<button type="button" class="secondary tt-ov-refresh" data-action="tt-refresh" aria-label="Refresh authorized attendance">↻ Refresh authorized data</button>'+
+   '</div>'+
+  '</section>'+
   '<div class="tt-overview-search"><label for="tt-overview-search">Search today’s authorized attendance</label>'+
    '<input id="tt-overview-search" type="search" placeholder="Search by name, department, or location…" value="'+escapeHtml(filterData.search)+'" autocomplete="off" /></div>'+
   '<section class="tt-overview-metrics" aria-label="Today attendance summary">'+
