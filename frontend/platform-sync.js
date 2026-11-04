@@ -26,7 +26,7 @@ export class PlatformSync {
   this.running=false;this.generation=0;this.timer=null;this.flushTimer=null;
   this.heartbeat=null;this.reconnectTimer=null;this.socket=null;
   this.ref=0;this.attempt=0;this.pending=new Set();this.joins=new Map();
-  this.joined=new Map();this.inFlight=false;this.lastSyncAt=null;
+  this.joined=new Map();this.inFlight=false;this.heartbeatsPending=0;this.lastSyncAt=null;
   this.lastCheckAt=null;this.lastTransport='none';
   this.scope=null;this.lastStatus=null;this.boardIds=[];
  }
@@ -76,7 +76,7 @@ export class PlatformSync {
   if(this.heartbeat!==null)this.clearIntervalFn?.(this.heartbeat);
   this.heartbeat=null;
   const ws=this.socket;this.socket=null;
-  this.joins.clear();this.joined.clear();
+  this.joins.clear();this.joined.clear();this.heartbeatsPending=0;
   if(ws){ws.onopen=ws.onclose=ws.onmessage=ws.onerror=null;try{ws.close();}catch{}}
  }
  async authenticate(gen){
@@ -154,7 +154,8 @@ export class PlatformSync {
     for(const [id,ref] of this.joined)
      this.send(ws,ref,'realtime:board:'+id,'access_token',{access_token:token});
    }
-   this.send(ws,null,'phoenix','heartbeat',{});
+   if(this.heartbeatsPending>=2){this.reconnect(gen);return;}
+   if(this.send(ws,null,'phoenix','heartbeat',{}))this.heartbeatsPending++;
   }catch{this.stop();this.status('error','Signed session verification failed');}
  }
  receive(ws,gen,raw){
@@ -163,6 +164,11 @@ export class PlatformSync {
   if(!Array.isArray(packet)||packet.length!==5)return;
   const [joinRef,ref,topic,event,payload]=packet;
   if(typeof topic!=='string'||typeof event!=='string')return;
+  if(topic==='phoenix'&&event==='phx_reply'){
+   if(payload?.status==='ok')this.heartbeatsPending=0;
+   else this.reconnect(gen);
+   return;
+  }
   if(event==='phx_reply'&&this.joins.has(String(ref))){
    const requested=this.joins.get(String(ref));this.joins.delete(String(ref));
    if(payload?.status!=='ok'){this.reconnect(gen);return;}
