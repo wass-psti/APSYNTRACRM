@@ -67,7 +67,9 @@ test('tab filters, search and lifecycle authorization behavior remain unchanged'
  assert.match(card,/class="board-card-actions"/);
  assert.match(card,/class="board-card-actions-list"/);
  assert.match(card,/class="board-card-main"/);
- assert.match(card,/class="board-card-symbol-link"/);
+ assert.match(card,/class="board-symbol '/);
+ assert.doesNotMatch(card,/class="board-card-symbol-link"/);
+ assert.match(card,/aria-label="Open '/);
  assert.match(card,/data-id="'\+e\(board\.id\)/);
  assert.match(app,/await db\.allowed\(id,'manage'\)/);
  assert.match(app,/closeBoardCardMenus\(\)/);
