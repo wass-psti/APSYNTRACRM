@@ -1,0 +1,177 @@
+/* TimeTracker Log command view: one optional Pixi scene, all data as semantic DOM. */
+#app .aps-board-shell .tt-native .tt-log.tt-log-command{
+ padding:clamp(13px,2vw,26px);gap:17px;
+ background:linear-gradient(155deg,#f1f5fd,#f9fbff 60%,#f3f7ff);
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero.tt-log-command-hero{
+ position:relative;isolation:isolate;overflow:hidden;
+ display:grid;grid-template-columns:minmax(0,1.1fr) minmax(250px,.75fr);
+ align-items:center;gap:clamp(18px,3vw,42px);
+ min-height:298px;padding:clamp(23px,3vw,38px);
+ border:1px solid #5678b68a;border-radius:22px;
+ background:radial-gradient(ellipse at 78% 39%,#396cc05e,transparent 52%),linear-gradient(122deg,#0b1939,#192f61 56%,#38418b);
+ box-shadow:0 17px 40px #1d35702a,inset 0 1px #ffffff22;
+ color:#f3f8ff;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero::before{
+ content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+ background-image:linear-gradient(#b6d7ff0b 1px,transparent 1px),linear-gradient(90deg,#b6d7ff0b 1px,transparent 1px);
+ background-size:38px 38px;mask-image:linear-gradient(105deg,#0001,transparent 85%);
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-graphics{
+ position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-graphics .tt-pixi-backdrop{
+ position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(circle at 77% 48%,#47afff2a,transparent 35%);
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-graphics .tt-pixi-backdrop::after{
+ width:200px;height:200px;top:49%;left:77%;border-color:#83d2ff40;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-graphics .tt-pixi-backdrop canvas{
+ position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;opacity:.9;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-orbit{
+ position:absolute;top:50%;left:77%;width:320px;height:320px;
+ border:1px solid #83d6ff24;border-radius:50%;transform:translate(-50%,-50%) rotate(21deg) scaleY(.7);
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-orbit-outer{width:520px;height:520px;border-color:#a5aaff1b}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-orbit-inner{width:210px;height:210px;border-color:#8ceaff2e}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-content,
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-telemetry{
+ position:relative;z-index:1;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-eyebrow{
+ display:flex;align-items:center;gap:9px;margin-bottom:23px;
+ color:#a5c7f3;font-size:10px;letter-spacing:.18em;font-weight:830;line-height:1.6;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-live-dot{
+ width:7px;height:7px;flex:none;border-radius:50%;background:#69e1cd;box-shadow:0 0 0 4px #6ae1cc20;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero h3{
+ font:830 clamp(29px,3.3vw,43px)/1.12 Inter,system-ui,sans-serif;
+ color:#fff;letter-spacing:-.05em;margin:0 0 17px;text-shadow:0 6px 25px #030b2680;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-content p{
+ margin:0;color:#c0d3ee;font-size:12px;line-height:1.6;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-scope{
+ display:inline-flex;align-items:center;max-width:100%;margin-top:24px;
+ padding:10px 13px;border:1px solid #9ac9ed5b;border-radius:999px;
+ background:#a9dfff13;color:#c8e5fc;font-size:11px;line-height:1.5;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-telemetry{
+ display:grid;gap:14px;border:1px solid #b5d5ff42;
+ border-radius:16px;padding:clamp(16px,2.4vw,24px);
+ background:linear-gradient(145deg,#d6eaff16,#c4d9ff0d);
+ box-shadow:0 9px 27px #040e2a38,inset 0 1px #fff2;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-label{
+ color:#a9c6eb;letter-spacing:.13em;font-weight:820;font-size:9px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-total{
+ display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-total strong{
+ font-size:clamp(42px,4.5vw,63px);font-weight:840;line-height:1;color:#fff;font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-total span{
+ color:#bad4f1;font-size:11px;max-width:135px;line-height:1.5;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ border:1px solid #accdff2b;border-radius:11px;overflow:hidden;background:#d9e8ff0b;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid div{
+ display:grid;text-align:center;gap:6px;padding:13px 6px;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid div+div{border-left:1px solid #accdff25}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid strong{
+ color:#f6fbff;font-size:19px;font-weight:820;font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-grid span{
+ color:#acc9e9;font-size:9px;line-height:1.4;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-telemetry .tt-log-readonly{
+ justify-self:start;background:#4eb6a41b;border-color:#7fd5bd4a;color:#c5f4e7;
+ border-radius:999px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-controls{
+ border:1px solid #dce6f6;border-radius:14px;padding:17px;
+ background:#fff;box-shadow:0 8px 23px #152f620e;gap:13px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-controls label{
+ color:#667b9e;font-size:10px;font-weight:750;gap:8px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-controls :is(input,select){
+ border-color:#dbe5f5;border-radius:9px;background:#f5f8ff;
+ color:#3a5077;min-height:40px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-controls :is(input,select,button):focus-visible{
+ outline:2px solid #6370e9;outline-offset:2px;
+}
+#app .aps-board-shell .tt-native .tt-log-command :is(.tt-log-location-panel,.tt-log-operations,.tt-log-shift-strip,.tt-log-panel){
+ border:1px solid #dee8f7;border-radius:15px;background:#fff;
+ box-shadow:0 10px 27px #1b35670e;
+}
+#app .aps-board-shell .tt-native .tt-log-command :is(.tt-log-location-panel,.tt-log-operations){
+ padding:clamp(15px,2vw,23px);
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-section-heading h4,
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-panel-top h4{
+ font:810 15px/1.3 Inter,system-ui,sans-serif;letter-spacing:-.02em;color:#253b69;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-section-heading>span,
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-panel-top p{
+ color:#8395b3;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-operation{
+ border-radius:12px;background:linear-gradient(150deg,#fcfdff,#f4f7fe);
+ border-color:#e1e8f5;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-operation strong{
+ color:#3859a6;font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-shift-strip{
+ padding:clamp(14px,1.8vw,21px);
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-panel{
+ padding:clamp(15px,2vw,23px);
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-row-summary:focus-visible,
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-evidence-load:focus-visible{
+ outline:2px solid #6370e9;outline-offset:2px;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table th{
+ background:#eef3fd;color:#7186aa;
+}
+#app .aps-board-shell .tt-native .tt-log-command .tt-log-table td{
+ border-color:#e5ecf7;
+}
+@media(max-width:1100px){
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero.tt-log-command-hero{
+  grid-template-columns:1fr;min-height:0;
+ }
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero-telemetry{max-width:100%}
+}
+@media(max-width:650px){
+ #app .aps-board-shell .tt-native .tt-log.tt-log-command{padding:12px;gap:12px}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero.tt-log-command-hero{
+  padding:21px 17px;border-radius:17px;gap:22px;
+ }
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-eyebrow{font-size:9px;margin-bottom:17px}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero h3{font-size:30px}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-telemetry-total strong{font-size:49px}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-controls{padding:13px}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .tt-native .tt-log-command,
+ #app .aps-board-shell .tt-native .tt-log-command *{
+  animation:none!important;transition:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero{border-color:#d8eaff}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-hero h3{color:#fff}
+ #app .aps-board-shell .tt-native .tt-log-command .tt-log-panel{border-color:#7f90b2}
+}
