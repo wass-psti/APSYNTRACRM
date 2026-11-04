@@ -70,6 +70,7 @@ BEGIN
 END $event$;
 CREATE TRIGGER tl03_events_append_only BEFORE UPDATE OR DELETE ON public.tradelink_document_events
  FOR EACH ROW EXECUTE FUNCTION private.tl03_deny_event_change();
+REVOKE ALL ON FUNCTION private.tl03_deny_event_change() FROM PUBLIC,anon,authenticated;
 
 ALTER TABLE public.tradelink_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tradelink_document_events ENABLE ROW LEVEL SECURITY;
@@ -119,7 +120,8 @@ BEGIN
   'paymentParticulars','receivedBy','drIncludePricing','checkedBy','deliveredBy'
  ])<>'{}'::jsonb THEN
   RAISE EXCEPTION 'Unknown or server-owned document property' USING ERRCODE='22023'; END IF;
- IF p_data->>'documentType' IS NULL
+ IF pg_catalog.jsonb_typeof(p_data->'documentType') IS DISTINCT FROM 'string'
+  OR pg_catalog.jsonb_typeof(p_data->'documentNumber') IS DISTINCT FROM 'string'
   OR p_data->>'documentType' NOT IN ('esi','packing','delivery','payment','quotation','po')
   OR p_data->>'documentNumber' IS NULL
   OR pg_catalog.char_length(p_data->>'documentNumber') NOT BETWEEN 1 AND 120
@@ -172,6 +174,10 @@ BEGIN
     OR it->>'kind' NOT IN ('item','note')
     OR pg_catalog.char_length(coalesce(it->>'id','')) NOT BETWEEN 1 AND 120
     OR pg_catalog.char_length(coalesce(it->>'description',''))>2000
+    OR pg_catalog.jsonb_typeof(it->'id') IS DISTINCT FROM 'string'
+    OR (it ? 'description' AND pg_catalog.jsonb_typeof(it->'description')<>'string')
+    OR (it ? 'unit' AND pg_catalog.jsonb_typeof(it->'unit')<>'string')
+    OR (it ? 'serialNumber' AND pg_catalog.jsonb_typeof(it->'serialNumber')<>'string')
     OR (it - ARRAY['id','kind','description','quantity','unit','unitPrice','serialNumber'])<>'{}'::jsonb THEN
     RAISE EXCEPTION 'Invalid source line item' USING ERRCODE='22023'; END IF;
    IF it->>'kind'='item' AND
@@ -196,7 +202,7 @@ BEGIN
  IF actor IS NULL OR NOT private.tl03_can_manage(p_board_id) THEN
   RAISE EXCEPTION 'Signed TradeLink General Manager access required' USING ERRCODE='42501'; END IF;
  IF p_document_id IS NULL OR p_expected_revision IS NULL OR p_expected_revision<0
-  OR p_operation NOT IN ('create','update','archive','restore') THEN
+  OR p_operation IS NULL OR p_operation NOT IN ('create','update','archive','restore') THEN
   RAISE EXCEPTION 'Invalid document command' USING ERRCODE='22023'; END IF;
  IF p_operation IN ('create','update') THEN payload:=private.tl03_validate_draft(p_data);
  ELSIF p_data IS NOT NULL THEN
