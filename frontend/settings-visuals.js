@@ -20,29 +20,8 @@ export function settingsIcon(kind){
   'stroke-linejoin="round" aria-hidden="true" focusable="false">'+
   (Object.hasOwn(iconPaths,kind)?iconPaths[kind]:iconPaths.shield)+'</svg>';
 }
-let lastView=null;
-let animations=[];
-/** @param {HTMLElement|null} section @param {string} view */
-export function mountSettingsMotion(section,view){
- const entered=lastView!==view;
- lastView=view;
- for(const animation of animations)animation.cancel?.();
- animations=[];
- if(!entered||view!=='settings'||!section?.isConnected||
-  typeof window==='undefined'||typeof document==='undefined'||document.hidden||
-  window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
- const elements=[...section.querySelectorAll('.settings-entrance')].slice(0,5);
- elements.forEach((node,index)=>{
-  if(typeof node.animate!=='function')return;
-  animations.push(node.animate([
-   {opacity:.9,transform:'translate3d(0,7px,0)'},
-   {opacity:1,transform:'translate3d(0,0,0)'}
-  ],{duration:Math.min(270+index*28,390),delay:Math.min(index*42,155),
-   easing:'cubic-bezier(.22,1,.36,1)',fill:'none'}));
- });
-}
-export function stopSettingsMotion(){
- for(const animation of animations)animation.cancel?.();
- animations=[];
- lastView=null;
-}
+/** Minimal-motion presentation hook retained for existing shell imports.
+ * Route content appears at its final position without stagger or overshoot.
+ */
+export function mountSettingsMotion(){}
+export function stopSettingsMotion(){}
