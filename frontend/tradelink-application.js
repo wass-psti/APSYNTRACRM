@@ -123,7 +123,7 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
    '<a class="tl-section-link'+(current==='documents'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents"'+(current==='documents'?' aria-current="page"':'')+'>Board records <span>'+sum.activeBoardItems+'</span></a>'+
    '<h3>Document modules</h3>'+
    TRADELINK_SOURCE_MODULES.map(entry=>moduleLink(entry,current)).join('')+'</nav>'+
-   '<main class="tl-app-main">'+
+   '<div class="tl-app-main">'+
     (m?renderModule(m):current==='documents'?renderDocuments(detail):
       '<section class="tl-content-panel"><p class="tl-eyebrow">TradeLink application</p><h2>Source-aligned workspace</h2>'+
        '<p class="muted">Open a document module to review its source-defined business purpose and submission requirements. Authorized Board Items can be inspected without creating duplicate records.</p>'+
@@ -133,7 +133,7 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
        '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents">View authorized board records</a>'+
        '</section>')+
     '<p class="tl-app-caution">No standalone authentication, synthetic records, browser-only document persistence, or unsupported backend writes.</p>'+
-   '</main></div></div>';
+   '</div></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network
  * request, privilege check bypass, cached identity or persistence mutation. */
