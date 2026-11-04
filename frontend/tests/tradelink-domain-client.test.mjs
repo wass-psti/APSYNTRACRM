@@ -68,3 +68,19 @@ test('no source local-first fallback, duplicated auth or privileged client crede
  assert.match(source,/await this\.api\.allowed\(TRADELINK_BOARD_ID,'manage'\)/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|service_role|sb_secret|fetch\(/);
 });
+
+
+test('CAS receipts must advance by exactly one; only revision-one identical create may be idempotent',()=>{
+ const first={documentId:id,boardItemId:item,revision:1,state:'draft',
+  operation:'create',idempotent:false};
+ assert.equal(normalizeTradeLinkDomainReceipt(first,id,'create',0).revision,1);
+ assert.equal(normalizeTradeLinkDomainReceipt({...first,idempotent:true},id,'create',0).revision,1);
+ for(const invalid of [
+  [{...first,revision:3},'create',0],
+  [{...first,idempotent:true,revision:2},'create',0],
+  [{...first,idempotent:true,operation:'update'},'update',1],
+  [{...first,operation:'update',revision:4},'update',1],
+  [{...first,operation:'archive',revision:2},'archive',9]
+ ])assert.throws(()=>normalizeTradeLinkDomainReceipt(invalid[0],id,invalid[1],invalid[2]),/mismatch/);
+ assert.throws(()=>validateTradeLinkDraftEnvelope({...draft,documentNumber:'Q-000001 '}),/Invalid/);
+});
