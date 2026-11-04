@@ -162,15 +162,38 @@ export function renderTimeTrackerMonitor({result=null,history=[],loading=false,e
  const results=result?.checks||[];
  const trend=summarizeTimeTrackerMonitorHistory(history);
  const live=state==='HEALTHY AT CHECK',degraded=state==='DEGRADED';
- return '<section class="tt-monitor" aria-label="TimeTracker API and browser health monitor">'+
-  '<header class="tt-monitor-head"><div><h3>API Health Monitor</h3>'+
-   '<p>'+esc(pht(now))+'</p></div><div class="tt-monitor-actions">'+
-   '<span class="tt-monitor-indicator '+(live?'tt-monitor-healthy':degraded?'tt-monitor-degraded':'')+
-   '">'+esc(loading?'Checking…':state)+'</span>'+
-   '<button type="button" data-action="tt-monitor-refresh"'+(loading?' disabled':'')+
-   '>Run checks</button>'+
-   '<button type="button" data-action="tt-monitor-clear"'+(!result||loading?' disabled':'')+
-   ' title="Discard in-memory readings">Clear</button></div></header>'+
+ const checksLabel=result?String(net.successful??0)+' / '+String(net.total??0):'—';
+ const statusStyle=live?'tt-monitor-healthy':degraded?'tt-monitor-degraded':
+  state==='BLOCKED'?'tt-monitor-blocked':'';
+ return '<section class="tt-monitor tt-monitor-command" aria-label="TimeTracker API and browser health monitor">'+
+  '<header class="tt-monitor-head tt-monitor-command-hero" aria-label="On-demand operational diagnostics">'+
+   '<div class="tt-monitor-graphics" aria-hidden="true">'+
+    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+    '<span class="tt-monitor-orbit tt-monitor-orbit-outer"></span>'+
+    '<span class="tt-monitor-orbit tt-monitor-orbit-inner"></span></div>'+
+   '<div class="tt-monitor-hero-content">'+
+    '<span class="tt-monitor-eyebrow"><span class="tt-monitor-signal" aria-hidden="true"></span>'+
+     'APSYNTRA / OPERATIONAL INTELLIGENCE</span>'+
+    '<h3>API Health Monitor</h3>'+
+    '<p>Authenticated diagnostics for the TimeTracker platform</p>'+
+    '<span class="tt-monitor-hero-scope">On demand · No recurring telemetry</span>'+
+    '<span class="tt-monitor-hero-date">'+esc(pht(now))+'</span></div>'+
+   '<div class="tt-monitor-hero-telemetry" aria-label="On-demand signed diagnostic summary">'+
+    '<span class="tt-monitor-telemetry-caption">LATEST ON-DEMAND CHECK</span>'+
+    '<span class="tt-monitor-indicator '+statusStyle+'" role="status">'+
+     esc(loading?'Checking…':state)+'</span>'+
+    '<div class="tt-monitor-telemetry-grid">'+
+     '<div><strong>'+esc(checksLabel)+'</strong><span>Signed checks</span></div>'+
+     '<div><strong>'+esc(result?formatMonitorDuration(net.sampleMs):'—')+
+      '</strong><span>Check duration</span></div>'+
+     '<div><strong>'+trend.count+'</strong><span>Memory samples</span></div></div>'+
+    '<div class="tt-monitor-actions">'+
+     '<button type="button" data-action="tt-monitor-refresh"'+(loading?' disabled':'')+
+      '>Run checks</button>'+
+     '<button type="button" data-action="tt-monitor-clear"'+(!result||loading?' disabled':'')+
+      ' title="Discard in-memory readings">Clear</button></div>'+
+    '<p class="tt-monitor-telemetry-source">Readings are measured only when checks are run.</p>'+
+   '</div></header>'+
   '<div class="tt-monitor-subheading">On-demand diagnostics · No recurring telemetry</div>'+
   (error?'<p role="alert" class="tt-monitor-error">'+esc(error)+'</p>':'')+
   (!result?'<div class="tt-monitor-empty"><span aria-hidden="true">⌁</span>'+
