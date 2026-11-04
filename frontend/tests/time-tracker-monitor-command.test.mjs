@@ -50,7 +50,7 @@ test('Monitor hero renders actual signed on-demand metrics and bounded session h
  assert.match(html,/>1<\/strong><span>Memory samples<\/span>/);
  assert.match(html,/ON-DEMAND HISTORY/);
  assert.equal(summarizeTimeTrackerMonitorHistory([sample]).count,1);
- assert.doesNotMatch(html,/Bearer|access_token|longitude|latitude|raw URL/);
+ assert.doesNotMatch(html,/Bearer |access_token|longitude|latitude|https?:\/\//);
 });
 test('Degraded and blocked statuses never display a healthy state',()=>{
  const degraded={...sample,status:'DEGRADED',
