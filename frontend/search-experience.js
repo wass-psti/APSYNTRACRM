@@ -5,6 +5,7 @@
  */
 import {createLucideActionIcon} from './action-menu-experience.js';
 import {loadPinnedFloatingUI} from './select-experience.js';
+import {showForegroundPopover,supportsForegroundPopover} from './foreground-overlay.js';
 
 export const SEARCH_SELECTOR='input[type="search"],input.search-input:not([type]),input.search-input[type="text"]';
 export const MAX_SEARCH_SUGGESTIONS=6;
@@ -96,7 +97,10 @@ export function startSearchExperience(root=globalThis.document?.body){
  const controls=new Map();
  function attach(input){
   if(!running||!input?.isConnected||controls.has(input)||!isSearchField(input))return;
-  const source=LOCAL_SEARCH_SOURCES[input.id]||null;
+  // In older engines without top-layer anchors keep the existing search filter,
+  // but never show an autocomplete popup that may be clipped.
+  const source=win?.CSS?.supports&&!supportsForegroundPopover(doc)?
+   null:LOCAL_SEARCH_SOURCES[input.id]||null;
   const id='aps-search-'+(++serial);
   const abort=new AbortController();
   const shell=doc.createElement('span');
@@ -148,7 +152,8 @@ export function startSearchExperience(root=globalThis.document?.body){
    input.setAttribute('role','searchbox');
   }
   // Native search, keyboard, and browser autofill continue to use the original input.
-  let suggestions=[],optionNodes=[],cursor=-1,stopPosition=null,disposed=false;
+  let suggestions=[],optionNodes=[],cursor=-1,stopPosition=null,
+   stopForeground=null,disposed=false;
   function restore(name,original){
    if(original===null)input.removeAttribute(name);
    else input.setAttribute(name,original);
@@ -156,6 +161,7 @@ export function startSearchExperience(root=globalThis.document?.body){
   function close(){
    if(menu.hidden)return;
    stopPosition?.();stopPosition=null;
+   stopForeground?.();stopForeground=null;
    menu.hidden=true;menu.replaceChildren();
    menu.classList.remove('aps-search-above','aps-search-align-end',
     'aps-search-compact','aps-search-medium');
@@ -228,6 +234,9 @@ export function startSearchExperience(root=globalThis.document?.body){
    }
    if(active&&active!==controller)active.close();
    active=controller;menu.hidden=false;
+   stopForeground=showForegroundPopover(menu,input,{
+    kind:'search',onDismiss:()=>close()
+   });
    input.setAttribute('aria-expanded','true');
    input.setAttribute('aria-controls',menu.id);
    status.textContent=String(found.length)+' local suggestion'+(found.length===1?'':'s');

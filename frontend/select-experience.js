@@ -1,3 +1,5 @@
+import {showForegroundPopover,supportsForegroundPopover} from './foreground-overlay.js';
+
 /** Shared APSYNTRA CRM select-only combobox enhancement.
  * Native selects remain authoritative for values, validity, and form events.
  * No application data, credentials, coordinates, or telemetry enter positioning.
@@ -110,6 +112,8 @@ export function startSelectExperience(root=globalThis.document?.body,{
  function attach(select,lib){
   if(!running||!select.isConnected||controls.has(select)||!isStandardSelect(select))
    return;
+  // Unsupported engines retain the native select rather than a clipped imitation.
+  if(win.CSS?.supports&&!supportsForegroundPopover(doc))return;
   const id='aps-select-'+(++sequence),abort=new AbortController();
   const anchor=doc.createElement('span');
   anchor.className='aps-select-anchor';
@@ -125,11 +129,12 @@ export function startSelectExperience(root=globalThis.document?.body,{
   trigger.append(text,chevron);
   const originalTab=select.getAttribute('tabindex');
   const originalHidden=select.getAttribute('aria-hidden');
-  let popup=null,stopPosition=null,items=[],nodes=[],cursor=-1;
+  let popup=null,stopPosition=null,stopForeground=null,items=[],nodes=[],cursor=-1;
   let typed='',typedAt=0,disposed=false;
   function close(focus=false){
    if(!popup)return;
    stopPosition?.();stopPosition=null;
+   stopForeground?.();stopForeground=null;
    const old=popup;popup=null;items=[];nodes=[];cursor=-1;
    trigger.setAttribute('aria-expanded','false');
    trigger.removeAttribute('aria-controls');
@@ -251,6 +256,9 @@ export function startSelectExperience(root=globalThis.document?.body,{
     if(option)choose(Number(option.getAttribute('data-option-index')));
    },{signal:abort.signal});
    popup=list;anchor.append(list);
+   stopForeground=showForegroundPopover(list,trigger,{
+    kind:'select',onDismiss:()=>close(false)
+   });
    trigger.setAttribute('aria-controls',list.id);
    trigger.setAttribute('aria-expanded','true');
    active=controller;cursor=-1;

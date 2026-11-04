@@ -5,6 +5,7 @@
  * No new permissions, remote data access, inline styles or CSSOM mutations.
  */
 import {loadPinnedFloatingUI} from './select-experience.js';
+import {showForegroundPopover} from './foreground-overlay.js';
 
 export const ACTION_MENU_SELECTORS=[
  '.board-card-actions','.board-group-actions','.board-actions-menu'
@@ -229,10 +230,13 @@ export function enhanceActionContextMenu(trigger,menu,{close=()=>{}}={}){
   if(event.target.closest?.('[role="menuitem"]'))
    queueMicrotask(()=>{if(menu.isConnected)close();});
  },{signal:abort.signal});
+ const stopForeground=showForegroundPopover(menu,trigger,{
+  kind:'action',onDismiss:()=>close()
+ });
  const stopPosition=attachFloatingPosition(trigger,menu,()=>menu.isConnected);
  animateMenu(menu);
  keyboard.focusBoundary();
- return ()=>{abort.abort();stopPosition();};
+ return ()=>{abort.abort();stopPosition();stopForeground?.();};
 }
 /** Dynamically enhance <details> action menus while leaving other details alone. */
 export function startActionMenuExperience(root=globalThis.document?.body){
@@ -266,7 +270,7 @@ export function startActionMenuExperience(root=globalThis.document?.body){
   details.classList.add('aps-action-surface');
   menu.classList.add('aps-action-popover');
   enhanceVisuals(trigger,menu,{replaceTrigger:true});
-  let stopPosition=null,shown=false;
+  let stopPosition=null,stopForeground=null,shown=false;
   const close=(focus=false)=>{
    if(!details.open)return;
    details.open=false;
@@ -276,6 +280,7 @@ export function startActionMenuExperience(root=globalThis.document?.body){
   const keyboard=createKeyboardBehavior(trigger,menu,close);
   const controller={details,close,destroy(){
    stopPosition?.();stopPosition=null;
+   stopForeground?.();stopForeground=null;
    abort.abort();if(opened===controller)opened=null;
    controllers.delete(details);
   }};
@@ -285,13 +290,19 @@ export function startActionMenuExperience(root=globalThis.document?.body){
    if(!open){
     shown=false;
     stopPosition?.();stopPosition=null;
+    stopForeground?.();stopForeground=null;
     if(opened===controller)opened=null;
     menu.classList.remove('aps-menu-above','aps-menu-align-start',
      'aps-menu-compact','aps-menu-medium');
    }else if(!shown){
     if(opened&&opened!==controller)opened.close();
     shown=true;opened=controller;
-    if(hasItems)stopPosition=attachFloatingPosition(trigger,menu,()=>details.open&&details.isConnected);
+    if(hasItems){
+     stopForeground=showForegroundPopover(menu,trigger,{
+      kind:'action',onDismiss:()=>close(false)
+     });
+     stopPosition=attachFloatingPosition(trigger,menu,()=>details.open&&details.isConnected);
+    }
     animateMenu(menu);
    }
   }
