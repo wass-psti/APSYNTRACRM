@@ -27,39 +27,63 @@ export const TIMETRACKER_MAIN_GROUP_HEADINGS=headings;
  * Never fall back to raw board values if the signed projection is unavailable.
  */
 export function renderTimeTrackerMainGroup({
- groupId,groupItems=[],projection=null,userId=null,workspaceId=null,boardId=null
+ groupId,groupItems=[],boardColumns=[],boardValues=[],
+ projection=null,userId=null,workspaceId=null,boardId=null
 }={}){
- const verified=projection?.status==='VERIFIED_READ'&&
-  projection.userId===userId&&projection.workspaceId===workspaceId&&
-  projection.boardId===boardId;
+ const identityMatched=projection?.userId===userId&&
+  projection.workspaceId===workspaceId&&projection.boardId===boardId;
+ const privateRead=identityMatched&&projection?.status==='VERIFIED_READ'&&
+  Array.isArray(projection.rows);
+ const logRead=identityMatched&&projection?.status==='VERIFIED_LOG'&&
+  ['OWN_ATTENDANCE_ONLY','AUTHORIZED_WORKSPACE_TEAM'].includes(projection.scope)&&
+  Array.isArray(projection.rows);
  const visible=new Set(groupItems.map(item=>item.id));
- const rows=verified?projection.rows.filter(row=>visible.has(row.itemId)):[];
- const safeStatus=verified?'VERIFIED_READ':projection?.status||'RESTRICTED';
+ // The generic board source ID is a join key only; NEVER a source of employee,
+ // clock, duration or GPS field values.
+ const sourceColumn=boardColumns.find(c=>c.name==='Source Record ID'&&c.system_key==null);
+ const recordByItem=new Map(sourceColumn?boardValues.filter(value=>
+  visible.has(value.item_id)&&value.column_id===sourceColumn.id&&
+  typeof value.value==='string').map(value=>[value.item_id,value.value]):[]);
+ const recordIds=new Set(recordByItem.values());
+ const rows=privateRead?projection.rows.filter(row=>visible.has(row.itemId)):
+  logRead?projection.rows.filter(row=>recordIds.has(row.id)).map(row=>({
+   employeeName:row.name,clockInAt:row.clockIn,clockOutAt:row.clockOut,
+   clockInGps:null,clockOutGps:null,status:row.status,
+   creditedMs:row.creditedMs,gpsRestricted:true
+  })):[];
+ const verified=privateRead||logRead;
+ const safeStatus=verified?projection.status:projection?.status||'RESTRICTED';
  const message=safeStatus==='LOADING'?
   'Checking authorized attendance details…':
   safeStatus==='UNAVAILABLE'?
    'Attendance details are temporarily unavailable. Try refreshing this board.':
-  safeStatus==='RESTRICTED'||!verified?
-   'Employee attendance details require an authorized signed TimeTracker role. GPS remains restricted to the existing privileged server endpoint.':
-  projection.hasMore?
+  !verified?
+   'Detailed attendance is restricted by the current signed server scope. Open TimeTracker attendance for other permitted views. Precise GPS requires bootstrap or assigned Supervisor authorization.':
+  privateRead&&projection.hasMore?
    'No matching records in the latest authorized page. Additional attendance history requires a reviewed cursor contract.':
-   'No authorized attendance details are available for the records in this group.';
+   'No authorized attendance details match the records in this group.';
  const tableRows=rows.map(row=>{
-  const status=row.status==='Active'?'Active':'Completed';
+  const status=['Active','Completed','Unknown'].includes(row.status)?row.status:'Unknown';
   const employee=esc(row.employeeName);
+  const gpsRestricted=row.gpsRestricted===true;
+  const gpsText='<span class="tt-main-unavailable">Restricted</span>';
+  const missingOut=status==='Active'?'Not yet clocked out':'Clock-out unavailable';
   return '<tr data-searchable="'+esc(row.employeeName.toLowerCase())+'">'+
    '<td class="tt-main-employee"><strong>'+employee+'</strong></td>'+
    '<td><time datetime="'+esc(row.clockInAt)+'">'+esc(when(row.clockInAt))+'</time></td>'+
-   '<td>'+point(row.clockInGps)+'</td>'+
+   '<td>'+(gpsRestricted?gpsText:point(row.clockInGps))+'</td>'+
    '<td>'+(row.clockOutAt?
     '<time datetime="'+esc(row.clockOutAt)+'">'+esc(when(row.clockOutAt))+'</time>':
-    '<span class="tt-main-unavailable">Not yet clocked out</span>')+'</td>'+
-   '<td>'+point(row.clockOutGps)+'</td>'+
+    '<span class="tt-main-unavailable">'+missingOut+'</span>')+'</td>'+
+   '<td>'+(row.clockOutAt?(gpsRestricted?gpsText:point(row.clockOutGps)):
+    '<span class="tt-main-unavailable">Not recorded</span>')+'</td>'+
    '<td><span class="tt-main-status tt-main-status-'+status.toLowerCase()+'">'+esc(status)+'</span></td>'+
-   '<td>'+duration(row.creditedMs)+'</td></tr>';
+   '<td>'+(row.creditedMs===null&&status!=='Active'?
+    '<span class="tt-main-unavailable">Unavailable</span>':duration(row.creditedMs))+'</td></tr>';
  }).join('');
- const remaining=verified&&projection.hasMore?
-  '<p class="tt-main-footnote">Showing the latest authorized attendance page. Further records may not be included.</p>':'';
+ const remaining=privateRead&&projection.hasMore?
+  '<p class="tt-main-footnote">Showing the latest authorized attendance page. Further records may not be included.</p>':
+  logRead?'<p class="tt-main-footnote">Location coordinates are excluded from this signed non-GPS history view.</p>':'';
  return '<div class="panel board-group-panel tt-main-attendance-panel" data-tt-main-attendance>'+
   '<div class="table-scroll board-group-scroll" role="region" tabindex="0" '+
   'aria-label="TimeTracker Main Group employee attendance table">'+
