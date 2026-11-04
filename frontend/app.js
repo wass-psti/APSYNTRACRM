@@ -256,14 +256,62 @@ async function mountSignedTimeTrackerMaps(){
  const configs=timeTrackerSignedMapConfigs();
  if(configs.length)await mountTimeTrackerMaps(root,configs);
 }
+let shellIdentity=null;
+let shellSidebarSignature=null;
+let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
  const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':'Settings';
+ const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
+ const sidebarSignature=JSON.stringify([state.roleVerified,name(),
+  state.context?.profile?.platform_role,workspaceName(),
+  state.boards.slice(0,6).map(board=>[board.id,board.name]),
+  state.boards.length]);
+ const route=[state.view,state.boardId,state.tab].join('|');
  disposeTimeTrackerMaps();
- root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
+ const existing=root.querySelector(':scope > .shell');
+ const reusable=existing&&shellIdentity===identity;
+ if(reusable){
+  const oldSidebar=existing.querySelector('.aps-sidebar');
+  if(shellSidebarSignature!==sidebarSignature){
+   const scroll=oldSidebar?.querySelector('.sidebar-nav-scroll')?.scrollTop||0;
+   const template=document.createElement('template');
+   template.innerHTML=sidebar();
+   oldSidebar?.replaceWith(template.content.firstElementChild);
+   const navScroll=existing.querySelector('.sidebar-nav-scroll');
+   if(navScroll)navScroll.scrollTop=scroll;
+  }else{
+   for(const link of existing.querySelectorAll('.aps-sidebar a.nav-link')){
+    const path=link.getAttribute('href')||'';
+    const active=state.view==='board'?
+     path==='#/boards/'+state.boardId:
+     path==='#/'+state.view;
+    link.classList.toggle('active',active);
+    if(active)link.setAttribute('aria-current','page');
+    else link.removeAttribute('aria-current');
+   }
+  }
+  existing.querySelector('.breadcrumb strong').textContent=crumb;
+  existing.querySelector('.top-avatar').textContent=initials(name());
+  existing.querySelector('.main-content').innerHTML=body;
+ }else{
+  root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
  <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
  <div class="main-content">${body}</div></main></div>`;
+ }
+ const routeChanged=reusable&&shellRoute!==route;
+ shellIdentity=identity;
+ shellSidebarSignature=sidebarSignature;
+ shellRoute=route;
+ if(routeChanged&&!document.hidden&&
+  !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches){
+  const main=root.querySelector('.main-content');
+  main?.animate?.([
+   {opacity:.87,transform:'translate3d(0,5px,0)'},
+   {opacity:1,transform:'translate3d(0,0,0)'}
+  ],{duration:175,easing:'cubic-bezier(.2,.8,.2,1)',fill:'none'});
+ }
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
