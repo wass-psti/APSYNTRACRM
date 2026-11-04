@@ -289,13 +289,34 @@ export function renderTimeTrackerLog({
  const team=scope==='AUTHORIZED_WORKSPACE_TEAM';
  const places=[...new Set(safeRows(records).map(r=>r.location).
   filter(v=>TT_LOCATIONS.includes(v)))].sort();
- return '<section class="tt-log" aria-label="Signed attendance Log">'+
-  '<header class="tt-log-hero"><div><h3>Attendance Log</h3>'+
-   '<p>'+esc(phtDate(now))+' · '+(team?
-    'Authorized team history':'Your attendance history')+
-   ' · Today and earlier sessions</p></div>'+
-   '<span class="tt-log-readonly">Read-only · '+
-    (team?'Authorized team':'Signed account')+'</span></header>'+
+ return '<section class="tt-log tt-log-command" aria-label="Signed attendance Log">'+
+  '<header class="tt-log-hero tt-log-command-hero" aria-label="Authorized attendance history">'+
+   '<div class="tt-log-graphics" aria-hidden="true">'+
+    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+    '<span class="tt-log-orbit tt-log-orbit-outer"></span>'+
+    '<span class="tt-log-orbit tt-log-orbit-inner"></span>'+
+   '</div>'+
+   '<div class="tt-log-hero-content">'+
+    '<div class="tt-log-eyebrow"><span class="tt-log-live-dot" aria-hidden="true"></span>'+
+     'APSYNTRA / ATTENDANCE INTELLIGENCE</div>'+
+    '<h3>Attendance Log</h3>'+
+    '<p>'+esc(phtDate(now))+'</p>'+
+    '<div class="tt-log-hero-scope">Read-only · '+
+     (team?'Authorized team history':'Your attendance history')+
+     ' · Today and earlier sessions</div>'+
+   '</div>'+
+   '<div class="tt-log-hero-telemetry" aria-label="Signed attendance history snapshot">'+
+    '<span class="tt-log-telemetry-label">AUTHORIZED SESSION HISTORY</span>'+
+    '<div class="tt-log-telemetry-total"><strong>'+summary.sessions+
+     '</strong><span>Sessions in selected period</span></div>'+
+    '<div class="tt-log-telemetry-grid">'+
+     '<div><strong>'+summary.today+'</strong><span>Today</span></div>'+
+     '<div><strong>'+summary.completed+'</strong><span>Completed</span></div>'+
+     '<div><strong>'+summary.active+'</strong><span>Active</span></div>'+
+    '</div>'+
+    '<span class="tt-log-readonly">Signed account · Read-only</span>'+
+   '</div>'+
+  '</header>'+
   '<section class="tt-log-controls" aria-label="Attendance Log filters">'+
    '<label class="tt-log-search">Search employee or department'+
    '<input type="search" id="tt-log-search" maxlength="120" value="'+esc(options.search)+
