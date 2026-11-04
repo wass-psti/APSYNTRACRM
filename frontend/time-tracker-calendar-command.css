@@ -1,0 +1,407 @@
+/* CP-TT-CALENDAR-VIS02: Calendar-only presentation with optional shared
+ * Pixi v8 decoration. Signed data, holidays and day selection stay native. */
+#app .aps-board-shell .tt-native .tt-calendar.tt-calendar-command{
+ padding:clamp(13px,2vw,27px);
+ gap:clamp(15px,1.8vw,22px);
+ background:linear-gradient(155deg,#f0f4fd 0%,#f9fbff 56%,#f2f6ff 100%);
+ color:#26395e;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-header.tt-cal-command-hero{
+ display:grid;
+ position:relative;
+ isolation:isolate;
+ overflow:hidden;
+ grid-template-columns:minmax(0,1.18fr) minmax(270px,.82fr);
+ gap:clamp(18px,3vw,41px);
+ align-items:center;
+ min-height:338px;
+ padding:clamp(21px,3.1vw,40px);
+ border-radius:22px;
+ border:1px solid #587abb8a;
+ background:
+  radial-gradient(ellipse at 80% 37%,#5086d44d,transparent 52%),
+  linear-gradient(120deg,#0a1938 0%,#192f60 56%,#3b4189 100%);
+ color:#f5f9ff;
+ box-shadow:0 18px 43px #203b7429,inset 0 1px #ffffff28;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-command-hero::before{
+ content:"";position:absolute;inset:0;z-index:0;
+ background-image:linear-gradient(#b8d7ff0b 1px,transparent 1px),
+  linear-gradient(90deg,#b8d7ff0b 1px,transparent 1px);
+ background-size:36px 36px;
+ mask-image:linear-gradient(107deg,#0002,transparent 85%);
+ pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-graphics{
+ position:absolute;inset:0;z-index:0;
+ overflow:hidden;pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-graphics .tt-pixi-backdrop{
+ position:absolute;inset:0;
+ background:radial-gradient(circle at 78% 47%,#55c4ff2a,transparent 33%);
+ pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-graphics .tt-pixi-backdrop::after{
+ width:205px;height:205px;top:50%;left:78%;
+ border-color:#a9e2ff3b;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-graphics .tt-pixi-backdrop canvas{
+ display:block;position:absolute;inset:0;
+ width:100%;height:100%;opacity:.86;
+ pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-orbit{
+ position:absolute;width:340px;height:340px;
+ left:76%;top:51%;
+ transform:translate(-50%,-50%) rotate(26deg) scaleY(.74);
+ border:1px solid #89d5ff28;
+ border-radius:50%;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-orbit-outer{
+ width:540px;height:540px;border-color:#a5a9ff1a;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-orbit-inner{
+ width:192px;height:192px;border-color:#7eecff2d;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-content,
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-telemetry{
+ position:relative;z-index:1;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-content{
+ min-height:235px;
+ display:flex;flex-direction:column;
+ align-items:flex-start;justify-content:center;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-eyebrow{
+ display:inline-flex;align-items:center;gap:9px;
+ margin-bottom:24px;
+ color:#b4d2f4;
+ font-size:10px;font-weight:840;letter-spacing:.18em;
+ line-height:1.5;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-signal{
+ width:7px;height:7px;flex:none;border-radius:50%;
+ background:#77e7d1;box-shadow:0 0 0 4px #74edcf22;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-content h3{
+ color:#fff;
+ font:820 clamp(28px,3.2vw,43px)/1.11 Inter,system-ui,sans-serif;
+ letter-spacing:-.05em;
+ margin:0 0 15px;
+ max-width:520px;
+ text-shadow:0 6px 24px #07112b64;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-content>p{
+ color:#c3d6f2;
+ font-size:12px;
+ line-height:1.65;
+ margin:0;
+ max-width:420px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-scope{
+ display:inline-flex;
+ margin-top:24px;
+ padding:8px 12px;
+ border:1px solid #86d5ca5b;
+ border-radius:999px;
+ background:#38b5a821;
+ color:#d2f9f0;
+ font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-month{
+ margin-top:16px;
+ color:#a8c0e4;
+ font-size:11px;
+ font-weight:710;
+ letter-spacing:.06em;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-telemetry{
+ display:grid;align-content:center;gap:17px;
+ min-height:270px;
+ padding:clamp(17px,2.2vw,25px);
+ border:1px solid #c1d9ff37;
+ border-radius:17px;
+ background:linear-gradient(140deg,#dce9ff19,#abc5ff0c);
+ box-shadow:0 10px 29px #06132e33,inset 0 1px #fff2;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-caption{
+ color:#b3cdf2;
+ font-size:9px;font-weight:830;letter-spacing:.16em;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-primary{
+ display:flex;align-items:baseline;gap:15px;flex-wrap:wrap;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-primary strong{
+ color:#fff;
+ font-size:clamp(39px,4.4vw,62px);
+ font-weight:840;line-height:1;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-primary span{
+ color:#bdd4f0;font-size:11px;line-height:1.45;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-grid{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ background:#cce3ff0d;
+ border:1px solid #c1dbff29;
+ border-radius:10px;
+ overflow:hidden;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-grid>div{
+ min-width:0;padding:12px 5px;
+ display:grid;gap:7px;text-align:center;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-grid>div+div{
+ border-left:1px solid #c1dbff24;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-grid strong{
+ color:#f7fcff;
+ font-size:clamp(15px,1.55vw,20px);
+ font-weight:810;font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-grid span{
+ font-size:9px;line-height:1.4;color:#b4cae9;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-refresh{
+ display:inline-flex;align-items:center;justify-content:center;
+ width:100%;min-height:39px;
+ border:1px solid #9cc5ff5d;
+ border-radius:9px;
+ background:#d8ebff19;
+ color:#e5f2ff;
+ font-size:11px;font-weight:730;
+ transition:background-color .16s ease,border-color .16s ease;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-refresh:hover:not(:disabled){
+ background:#d8ebff2b;border-color:#a9d1ff93;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-refresh:disabled{
+ opacity:.5;cursor:not-allowed;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate{
+ padding:18px 21px;
+ border:1px solid #dfe7f6;border-radius:14px;
+ background:#fff;
+ box-shadow:0 9px 23px #1e37680d;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate small{
+ color:#6d80a3;letter-spacing:.15em;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate strong{
+ font:820 24px/1.2 Inter,system-ui,sans-serif;
+ letter-spacing:-.04em;color:#29436f;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate strong span{
+ font:640 17px/1.2 Inter,system-ui,sans-serif;
+ color:#8b9cb6;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate button{
+ min-width:38px;min-height:38px;
+ border:1px solid #dbe5f7;
+ border-radius:9px;
+ background:#f4f7ff;
+ color:#566bac;
+ font-weight:770;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate button:hover:not(:disabled){
+ background:#e9efff;border-color:#b8c6f4;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate>p{
+ color:#8495ae;font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-kpis{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:12px;
+ border:none;border-radius:0;overflow:visible;background:transparent;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-kpis>div{
+ min-width:0;min-height:96px;
+ border:1px solid #dce6f5;border-radius:13px;
+ background:linear-gradient(165deg,#fff,#fbfcff);
+ box-shadow:0 8px 22px #1737640e;
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+ padding:16px 19px;gap:10px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-kpis strong{
+ font:830 clamp(22px,2vw,29px)/1 Inter,system-ui,sans-serif;
+ color:#334f8a;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-kpis span{
+ color:#7184a6;font-size:10px;font-weight:730;
+ letter-spacing:.08em;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-metric-note{
+ margin:-9px 0 0;color:#8797ae;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-section-title{
+ color:#6f82a2;font-size:10px;
+ letter-spacing:.14em;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-section-title::after{
+ background:#dce6f6;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-section-title span{
+ color:#8799b4;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-analytics{
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:15px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command :is(.tt-cal-panel,.tt-cal-selected){
+ border:1px solid #dfe7f5;
+ border-radius:14px;
+ background:linear-gradient(165deg,#fff,#fcfdff);
+ box-shadow:0 9px 25px #1b376a10;
+ padding:clamp(16px,2vw,24px);
+}
+#app .aps-board-shell .tt-native .tt-calendar-command :is(.tt-cal-panel,.tt-cal-selected) h4{
+ font:800 16px/1.3 Inter,system-ui,sans-serif;
+ letter-spacing:-.03em;
+ color:#28416f;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-panel>p{
+ color:#8798b1;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-trend-bar{fill:#7288e7}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-baseline{stroke:#dbe6f6}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-weekbar progress{
+ accent-color:#62bca9;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-weekbar strong{color:#3c6091}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-month{
+ overflow-x:auto;overflow-y:visible;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-weekdays span{
+ color:#768aaa;font-weight:780;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-grid{
+ gap:7px;grid-auto-rows:minmax(90px,auto);
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-day{
+ background:#f9fbff;
+ color:#354c72;
+ border:1px solid #e0e8f6;
+ border-radius:10px;
+ padding:10px 9px;
+ min-height:90px;
+ transition:background-color .14s ease,border-color .14s ease;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-day:hover{
+ background:#f1f5ff;border-color:#b0c0f3;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-outside{
+ background:#f5f7fc;border-color:transparent;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-has-records{
+ background:#f0f6ff;border-color:#a3beeb;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-high{
+ background:#e9f1ff;border-color:#6985d9;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-today{
+ box-shadow:inset 0 0 0 2px #6b79e5;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-selected-day{
+ outline:2px solid #535fd0;outline-offset:1px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-count{
+ background:#596bd5;color:#fff;
+ border-radius:999px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-now{
+ background:#5665d1;color:#fff;
+ border-radius:5px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-attendee{
+ border-color:#e2eaf7;
+ background:#fbfcff;
+ border-radius:9px;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-attendee strong{
+ color:#31496f;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-legend{
+ border:1px solid #e1e9f7;border-radius:11px;
+ background:#fff;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-holiday-list>div{
+ border-color:#e4eaf5;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-source a{
+ color:#4d61bd;text-decoration:underline;
+}
+#app .aps-board-shell .tt-native .tt-calendar-command :is(button,a):focus-visible{
+ outline:3px solid #586de4;outline-offset:3px;
+}
+@media(max-width:1100px){
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-header.tt-cal-command-hero{
+  grid-template-columns:1fr;min-height:0;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-content{
+  min-height:175px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-telemetry{
+  min-height:0;
+ }
+}
+@media(max-width:720px){
+ #app .aps-board-shell .tt-native .tt-calendar.tt-calendar-command{
+  padding:12px;gap:15px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-header.tt-cal-command-hero{
+  border-radius:16px;padding:22px 18px;gap:20px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-content h3{
+  font-size:clamp(27px,6.5vw,37px);
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate{
+  padding:16px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate strong{
+  font-size:20px;min-width:0;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-kpis{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-kpis>div{
+  min-height:92px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-analytics{
+  grid-template-columns:1fr;
+ }
+}
+@media(max-width:400px){
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-grid strong{
+  font-size:16px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-telemetry-grid span{
+  font-size:8px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate>div>div{
+  gap:6px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-navigate button{
+  min-width:34px;padding-inline:8px;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-kpis>div{
+  padding:14px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .tt-native .tt-calendar-command,
+ #app .aps-board-shell .tt-native .tt-calendar-command *{
+  animation:none!important;transition:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-command-hero{
+  border-color:#dcefff;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command .tt-cal-hero-content h3{
+  color:#fff;
+ }
+ #app .aps-board-shell .tt-native .tt-calendar-command :is(.tt-cal-panel,.tt-cal-selected){
+  border-color:#7588af;
+ }
+}
