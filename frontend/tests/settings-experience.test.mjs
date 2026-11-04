@@ -183,34 +183,18 @@ test('route-scoped responsive, reduced-motion, high-contrast and keyboard rules 
  assert.match(css,/overflow-wrap:anywhere/);
 });
 
-test('one-shot settings motion cancels on rerender and disables when hidden or reduced',()=>{
- const oldWindow=globalThis.window,oldDocument=globalThis.document;
- let started=0,canceled=0;
- const nodes=Array.from({length:3},()=>({animate(frames,options){
-  started++;assert.equal(frames.length,2);assert.equal(options.fill,'none');
-  return {cancel(){canceled++;}};
- }}));
- const section={isConnected:true,querySelectorAll(query){
-  assert.equal(query,'.settings-entrance');return nodes;
- }};
- try{
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:false};
-  stopSettingsMotion();
-  mountSettingsMotion(section,'settings');assert.equal(started,3);
-  mountSettingsMotion(section,'settings');assert.equal(started,3);
-  assert.equal(canceled,3);
-  mountSettingsMotion(null,'boards');
-  mountSettingsMotion(section,'settings');assert.equal(started,6);
-  stopSettingsMotion();assert.equal(canceled,6);
-  globalThis.window={matchMedia:()=>({matches:true})};
-  mountSettingsMotion(section,'settings');assert.equal(started,6);
-  stopSettingsMotion();
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:true};
-  mountSettingsMotion(section,'settings');assert.equal(started,6);
- }finally{
-  stopSettingsMotion();
-  globalThis.window=oldWindow;globalThis.document=oldDocument;
- }
+test('mounted settings components remain stationary on entry and refresh',()=>{
+ let queries=0,animations=0;
+ const node={isConnected:true,querySelectorAll(){queries++;return [{animate(){animations++;}}]},
+  animate(){animations++;}};
+ stopSettingsMotion();
+ mountSettingsMotion(node,'settings');
+ mountSettingsMotion(node,'settings');
+ mountSettingsMotion(null,'overview');
+ mountSettingsMotion(node,'settings');
+ stopSettingsMotion();
+ assert.equal(queries,0,'no entrance element traversal');
+ assert.equal(animations,0,'no mount-time animations');
+ const source=readFileSync('frontend/settings-visuals.js','utf8');
+ assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
