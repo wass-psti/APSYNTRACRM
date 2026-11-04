@@ -1,8 +1,11 @@
 /** Authorized typed board-grid presentation. No domain records are synthesized. */
 import {moduleByBoardName} from './board-manifest.js';
+import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
 import {boardTable} from './board-presentation.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
+ const tradeLink=tradeLinkGridColumns(detail);
+ if(tradeLink)return tradeLink;
  const module=moduleByBoardName(detail?.board?.name);
  const allowed=module?new Set(module.fields.map(f=>f.name)):null;
  const restricted=module?new Set(module.restricted.map(n=>n.trim().toLowerCase())):null;
@@ -20,7 +23,7 @@ export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},a
  */
 export function prepareBoardGrid(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
  const columns=boardGridColumns(detail,{primaryTitle,columnLabels,allowCustom});
- const allowedIds=new Set(columns.slice(2).map(c=>c.key.slice(4)));
+ const allowedIds=new Set(columns.filter(c=>c.key.startsWith('col:')).map(c=>c.key.slice(4)));
  const visibleColumns=(Array.isArray(detail?.columns)?detail.columns:[])
   .filter(c=>allowedIds.has(c.id));
  const values=Array.isArray(detail?.values)?detail.values:[];
@@ -32,12 +35,14 @@ export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record'
  const {columns,visibleColumns,lookup}=prepared||
   prepareBoardGrid(detail,{primaryTitle,columnLabels,allowCustom});
  const displayed=Array.isArray(groupItems)?groupItems:(groupId?items.filter(i=>i.group_id===groupId):items);
+ const tradeLink=isTradeLinkBoard(detail?.board);
  const rows=displayed.map(item=>{
   const cells={record:'<button type="button" class="board-item-open" data-action="board-item-detail" data-id="'+escape(item.id)+'" aria-label="Open '+escape(item.title||'Untitled')+' details">'+escape(item.title||'Untitled')+'</button>',
    status:'<span class="status">'+escape(item.status??'—')+'</span>'};
+  if(tradeLink)cells[TRADELINK_FILES_KEY]='—';
   for(const col of visibleColumns){
    const value=lookup.get(item.id+':'+col.id);
-   const shown=value===null||value===undefined?'—':
+   const shown=tradeLink?tradeLinkDisplayValue(col,value):value===null||value===undefined?'—':
     typeof value==='boolean'?(value?'Yes':'No'):
     typeof value==='number'?String(value):
     typeof value==='string'?value:
