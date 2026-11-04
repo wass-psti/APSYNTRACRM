@@ -1,0 +1,65 @@
+name: CP-TL-03B Disposable PostgreSQL Acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-tl03b-disposable-postgres.yml'
+      - 'sql/cp-tl03-staged-domain.sql'
+      - 'sql/tests/cp-tl03-*.sql'
+      - 'frontend/tradelink-domain-client.js'
+      - 'frontend/tests/tradelink-domain-*.test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  disposable-postgres:
+    name: Signed-fixture transactions, RBAC and RLS (PostgreSQL 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ci_only
+          POSTGRES_DB: tradelink_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tradelink_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: tradelink_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable_ci_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL CLI (disposable runner only)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Assert isolated PostgreSQL runner identity
+        run: |
+          set -euo pipefail
+          test "$PGHOST" = 127.0.0.1
+          test "$PGDATABASE" = tradelink_disposable
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'tradelink_disposable|t'
+      - name: Create synthetic board, users, JWT session and role fixture
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-setup.sql
+      - name: Apply staged CP-TL-03 document contract to disposable database
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03-staged-domain.sql
+      - name: Execute signed fixture, CAS, audit, RLS and denial acceptance
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-acceptance.sql
+      - name: Check post-migration grants and board projection
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-postactivation-readonly.sql
+      - name: Run frontend adapter and SQL-contract regression tests
+        run: node --test frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-domain-sql-contract.test.mjs
