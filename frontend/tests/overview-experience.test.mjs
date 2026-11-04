@@ -45,7 +45,9 @@ test('overview retains exact page navigation, refresh, new-board and board-card 
  assert.match(card,/return '<article class="board-card"/);
  assert.match(card,/class="board-card-actions"/);
  assert.match(card,/class="board-card-main"/);
- assert.match(card,/class="board-card-symbol-link"/);
+ assert.match(card,/class="board-symbol '/);
+ assert.doesNotMatch(card,/class="board-card-symbol-link"/);
+ assert.match(card,/aria-label="Open '/);
  assert.match(card,/boardCardActionState\(board\)/);
  assert.match(card,/data-action="board-card-trash"/);
  assert.match(card,/data-action="board-card-edit"/);
