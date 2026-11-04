@@ -93,34 +93,21 @@ test('filter layout, responsive cards, focus and hidden search items are explici
  assert.doesNotMatch(catalog, /\sstyle="|\sonclick=|\soninput=/);
 });
 
-test('native board-catalog animation is one shot per navigation and cancels on re-render',()=>{
- const priorWindow=globalThis.window,priorDocument=globalThis.document;
- let plays=0,cancels=0;
- const blocks=Array.from({length:3},()=>({animate(keyframes,options){
-  plays++;assert.equal(keyframes.length,2);assert.equal(options.fill,'none');
-  return {cancel(){cancels++;}};
- }}));
- const root={isConnected:true,querySelectorAll(selector){
-  assert.equal(selector,'.boards-entrance');return blocks;
- }};
- try{
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:false};
-  stopBoardCatalogMotion();
-  mountBoardCatalogMotion(root,'boards');assert.equal(plays,3);
-  mountBoardCatalogMotion(root,'boards');
-  assert.equal(plays,3);assert.equal(cancels,3);
-  mountBoardCatalogMotion(null,'overview');
-  mountBoardCatalogMotion(root,'boards');assert.equal(plays,6);
-  stopBoardCatalogMotion();assert.equal(cancels,6);
-  globalThis.window={matchMedia:()=>({matches:true})};
-  mountBoardCatalogMotion(root,'boards');assert.equal(plays,6);
- }finally{
-  stopBoardCatalogMotion();
-  globalThis.window=priorWindow;globalThis.document=priorDocument;
- }
+test('mounted boards components remain stationary on entry and refresh',()=>{
+ let queries=0,animations=0;
+ const node={isConnected:true,querySelectorAll(){queries++;return [{animate(){animations++;}}]},
+  animate(){animations++;}};
+ stopBoardCatalogMotion();
+ mountBoardCatalogMotion(node,'boards');
+ mountBoardCatalogMotion(node,'boards');
+ mountBoardCatalogMotion(null,'overview');
+ mountBoardCatalogMotion(node,'boards');
+ stopBoardCatalogMotion();
+ assert.equal(queries,0,'no entrance element traversal');
+ assert.equal(animations,0,'no mount-time animations');
+ const source=readFileSync('frontend/board-catalog-visuals.js','utf8');
+ assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
-
 test('short, hidden and reduced-motion states cannot start a continuous GPU loop',()=>{
  const js=readFileSync('frontend/board-catalog-visuals.js','utf8');
  assert.doesNotMatch(js,/WebGL|requestAnimationFrame|setInterval|fetch\(|XMLHttpRequest|new Worker/);
