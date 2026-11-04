@@ -61,6 +61,21 @@ test('clock-out fields stay absent for active sessions, with no fabricated elaps
  assert.doesNotMatch(html,/10\.54321|11\.00 h/);
 });
 
+test('overnight shifts use Philippine calendar dates and authoritative credited duration',()=>{
+ const shift={...row,
+  clockInAt:'2026-11-03T15:30:00Z',
+  clockOutAt:'2026-11-03T19:30:00Z',
+  creditedMs:14400000
+ };
+ const html=renderTimeTrackerMainGroup({...opts,projection:{...verified,rows:[shift]}});
+ const fmt=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',
+  dateStyle:'medium',timeStyle:'short'});
+ assert.ok(html.includes(fmt.format(new Date(shift.clockInAt))));
+ assert.ok(html.includes(fmt.format(new Date(shift.clockOutAt))));
+ assert.match(html,/4\.00 h/);
+ assert.doesNotMatch(html,/11\.00 h/);
+});
+
 test('foreign board, workspace, actor and out-of-group private rows never display',()=>{
  for(const mismatch of [
   {...verified,userId:other},{...verified,workspaceId:other},
