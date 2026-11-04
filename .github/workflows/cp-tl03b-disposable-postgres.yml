@@ -11,7 +11,9 @@ on:
     paths:
       - '.github/workflows/cp-tl03b-disposable-postgres.yml'
       - 'sql/cp-tl03-staged-domain.sql'
+      - 'sql/cp-tl03c-write-permission-candidate.sql'
       - 'sql/tests/cp-tl03-*.sql'
+      - 'sql/tests/cp-tl03c-*.sql'
       - 'frontend/tradelink-domain-client.js'
       - 'frontend/tests/tradelink-domain-*.test.mjs'
 
@@ -63,6 +65,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-setup.sql
       - name: Apply staged CP-TL-03 document contract to disposable database
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03-staged-domain.sql
+      - name: Verify Stage A denies authenticated document writes
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03c-stage-a-readonly.sql
+      - name: Activate write grants ONLY in this disposable PostgreSQL runner
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03c-write-permission-candidate.sql
       - name: Execute signed fixture, CAS, audit, RLS and denial acceptance
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-acceptance.sql
       - name: Check post-migration grants and board projection
