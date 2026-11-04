@@ -20,7 +20,7 @@ const LUCIDE_NODES=Object.freeze({
  'x':[['path',{d:'M18 6 6 18'}],['path',{d:'m6 6 12 12'}]],
  'ellipsis-vertical':[['circle',{cx:12,cy:5,r:1.5}],['circle',{cx:12,cy:12,r:1.5}],['circle',{cx:12,cy:19,r:1.5}]],
  'ellipsis-horizontal':[['circle',{cx:5,cy:12,r:1.5}],['circle',{cx:12,cy:12,r:1.5}],['circle',{cx:19,cy:12,r:1.5}]],
- 'pencil':[['path',{d:'M12 19l7-7 3 3-7 7-4 1 1-4Z'}],['path',{d:'m18 13 3 3'}]],
+ 'pencil':[['path',{d:'M15 5l4 4'}],['path',{d:'M4 20l4.5-1 11-11a2.12 2.12 0 0 0-3-3l-11 11L4 20Z'}]],
  'trash-2':[['path',{d:'M3 6h18'}],['path',{d:'M8 6V4h8v2'}],['path',{d:'m19 6-1 14H6L5 6'}],['path',{d:'M10 11v6'}],['path',{d:'M14 11v6'}]],
  'rotate-ccw':[['path',{d:'M3 11a9 9 0 1 1 2.65 6.35'}],['path',{d:'M3 3v8h8'}]],
  'users':[['path',{d:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'}],['circle',{cx:9,cy:7,r:4}],['path',{d:'M22 21v-2a4 4 0 0 0-3-3.87'}],['path',{d:'M16 3.13a4 4 0 0 1 0 7.75'}]],

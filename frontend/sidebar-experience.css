@@ -139,7 +139,7 @@
  color:#8996b0;background:#f2f4fb;
  transition:color .18s,background .18s,transform .18s
 }
-#app .aps-sidebar .sidebar-svg-icon{display:block;flex:none;width:17px;height:17px}
+#app .aps-sidebar .sidebar-svg-icon{display:block;flex:none;width:17px;height:auto;aspect-ratio:1}
 #app .aps-sidebar .nav-link:hover .nav-ico{
  color:#5c60d9;background:#e5e9ff
 }

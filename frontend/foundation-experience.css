@@ -50,7 +50,7 @@
 }
 #app .aps-foundation{color:var(--foundation-ink);min-width:0}
 #app .aps-foundation .foundation-svg-icon{
- width:19px;height:19px;display:block;flex:none
+ width:19px;height:auto;aspect-ratio:1;display:block;flex:none
 }
 #app .aps-foundation .foundation-hero{
  position:relative;isolation:isolate;overflow:hidden;

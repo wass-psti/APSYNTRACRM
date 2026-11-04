@@ -47,7 +47,7 @@
 }
 #app .aps-overview{min-width:0;color:var(--ov-ink)}
 #app .aps-overview .overview-svg-icon{
- display:block;width:19px;height:19px;flex:none
+ display:block;width:19px;height:auto;aspect-ratio:1;flex:none
 }
 #app .aps-overview .overview-hero{
  isolation:isolate;overflow:hidden;position:relative;

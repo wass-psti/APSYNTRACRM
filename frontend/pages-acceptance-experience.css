@@ -42,7 +42,7 @@
 }
 #app .aps-pages-acceptance{color:var(--pages-ink);min-width:0}
 #app .aps-pages-acceptance .pages-icon{
- display:block;flex:none;width:19px;height:19px
+ display:block;flex:none;width:19px;height:auto;aspect-ratio:1
 }
 #app .aps-pages-acceptance .pages-hero{
  position:relative;isolation:isolate;overflow:hidden;

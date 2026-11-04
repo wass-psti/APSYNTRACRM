@@ -41,7 +41,7 @@
  min-width:0;color:var(--role-ink)
 }
 #app .aps-role-configuration .role-icon{
- display:block;width:19px;height:19px;flex:none
+ display:block;width:19px;height:auto;aspect-ratio:1;flex:none
 }
 #app .aps-role-configuration .role-config-hero{
  position:relative;isolation:isolate;overflow:hidden;
