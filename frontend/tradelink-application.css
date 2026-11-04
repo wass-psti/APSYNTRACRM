@@ -79,3 +79,11 @@
 .aps-tradelink-app .tl-finance-fields input:focus-visible,.aps-tradelink-app .tl-finance-fields select:focus-visible{outline:3px solid #8d95ee;outline-offset:2px}
 @media(max-width:760px){.aps-tradelink-app .tl-finance-fields,.aps-tradelink-app .tl-finance-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:440px){.aps-tradelink-app .tl-finance-fields,.aps-tradelink-app .tl-finance-results{grid-template-columns:1fr}}
+
+/* Source-defined, noninteractive workflow reference; no action grant controls. */
+.aps-tradelink-app .tl-workflow-reference{margin-top:20px;border:1px solid var(--tl-line);border-radius:12px;padding:14px 16px;background:#fafbff}
+.aps-tradelink-app .tl-workflow-reference summary{cursor:pointer;color:#444e83;font-weight:750;font-size:12px;min-height:28px}
+.aps-tradelink-app .tl-workflow-reference summary:focus-visible{outline:3px solid #8d95ee;outline-offset:3px}
+.aps-tradelink-app .tl-workflow-reference>p{font-size:12px;line-height:1.65;color:#65718b}
+.aps-tradelink-app .tl-workflow-reference .tl-records-scroll{max-height:380px;overflow:auto;overscroll-behavior:contain}
+.aps-tradelink-app .tl-workflow-reference code{overflow-wrap:anywhere;font-size:11px}
