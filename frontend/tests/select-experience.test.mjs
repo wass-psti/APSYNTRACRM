@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- FLOATING_CORE_URL,FLOATING_SELECT_URL,MAX_FLOATING_OPTIONS
+ FLOATING_CORE_URL,FLOATING_SELECT_URL,MAX_FLOATING_OPTIONS,isStandardSelect,
  readSelectOptions,nextSelectableIndex,findSelectTypeahead,startSelectExperience
 } from '../select-experience.js';
 
