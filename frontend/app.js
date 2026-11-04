@@ -1092,6 +1092,16 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   current.workspace_id!==workspaceId){
   invalidateSignedSyncView();return false;
  }
+ // Revocation takes precedence over preserving local editor state. This is
+ // an authoritative signed board-view check, not a client-side visibility rule.
+ if(view==='board'&&boardId&&await db.allowed(boardId,'view')!==true){
+  if(isCurrent()){
+   platformSync.stop();state.board=null;state.boardUi=null;
+   state.ttAttendance=null;state.ttBoardAttendance=null;
+   state.edit=false;state.boardManage=false;location.hash='#/boards';
+  }
+  return false;
+ }
  // Authorization reads must occur even while an unsaved editor is open.
  if(platformSyncEditInProgress())return false;
  const roleChanged=current.profile?.platform_role!==state.context.profile?.platform_role;
