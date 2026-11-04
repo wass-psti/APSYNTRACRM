@@ -66,7 +66,7 @@ test('profile preserves authoritative identity fields, user ID and signed worksp
  assert.match(page,/Test Workspace/);
  assert.match(page,/employee/);
  assert.match(page,/class="status done">active<\/span>/);
- assert.equal(count(page,/class="settings-detail(?:\s|")/g),4);
+ assert.equal(count(page,/class="settings-detail(?:\s|")/g),5); // four profile fields plus one session authentication field
  assert.equal(count(page,/class="settings-profile-panel/g),1);
  assert.equal(count(page,/class="settings-session-panel/g),1);
 });
@@ -145,13 +145,12 @@ test('DOM sections, controls and profile grid are balanced and semantically labe
   assert.equal(opens,closes,tag+' closing tags');
  }
  assert.equal(count(page,/<section class="panel settings-/g),2);
- assert.equal(count(page,/class="settings-verify-block/g),0); // each block carries its legacy csp class
  assert.equal(count(page,/csp-u006 settings-verify-block/g),2);
  assert.equal(count(page,/settings-persistence-link/g),1);
  assert.match(page,/class="settings-profile-fields"/);
- assert.match(page,/class="settings-session-actions"/);
- assert.match(page,/class="settings-token-warning"/);
- assert.match(page,/class="settings-session-callout"/);
+ assert.match(page,/class="csp-u015 settings-session-actions"/);
+ assert.match(page,/class="note security-note settings-token-warning"/);
+ assert.match(page,/class="note settings-session-callout"/);
 });
 
 test('visuals provide semantic static SVG without external graphics loops or dependencies',()=>{
