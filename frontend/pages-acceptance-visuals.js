@@ -20,27 +20,8 @@ export function pagesAcceptanceIcon(kind){
   'stroke-linejoin="round" aria-hidden="true" focusable="false">'+
   (Object.hasOwn(paths,kind)?paths[kind]:paths.shield)+'</svg>';
 }
-let previousView=null;
-let animations=[];
-export function mountPagesAcceptanceMotion(section,view){
- const entered=previousView!==view;
- previousView=view;
- for(const animation of animations)animation.cancel?.();
- animations=[];
- if(!entered||view!=='acceptance'||!section?.isConnected||
-   typeof window==='undefined'||typeof document==='undefined'||
-   document.hidden||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
- [...section.querySelectorAll('.pages-entrance')].slice(0,4).forEach((node,index)=>{
-  if(typeof node.animate!=='function')return;
-  animations.push(node.animate([
-   {opacity:.9,transform:'translate3d(0,7px,0)'},
-   {opacity:1,transform:'translate3d(0,0,0)'}
-  ],{duration:Math.min(280+index*34,400),delay:Math.min(index*45,145),
-     easing:'cubic-bezier(.22,1,.36,1)',fill:'none'}));
- });
-}
-export function stopPagesAcceptanceMotion(){
- for(const animation of animations)animation.cancel?.();
- animations=[];
- previousView=null;
-}
+/** Minimal-motion presentation hook retained for existing shell imports.
+ * Route content appears at its final position without stagger or overshoot.
+ */
+export function mountPagesAcceptanceMotion(){}
+export function stopPagesAcceptanceMotion(){}
