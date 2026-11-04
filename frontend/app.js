@@ -668,7 +668,7 @@ function boardPage(){
  // Partition once for every board type; preserve source order and ungrouped items.
  const groupedItems=new Map(groups.map(group=>[group.id,[]]));
  const ungroupedItems=[];
- for(const item of items){
+ if(state.tab==='items')for(const item of items){
   const bucket=groupedItems.get(item.group_id);
   if(bucket)bucket.push(item);
   else ungroupedItems.push(item);
