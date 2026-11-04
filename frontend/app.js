@@ -37,7 +37,8 @@ import {deleteOneAuthorizedItem,selectedDeleteCandidates} from './board-single-d
 import {moveTabInOrder,reorderManagedTimeTrackerTabs} from './board-tab-order.js';
 import {publicBoardDescription} from './board-public-copy.js';
 import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
- canSafelyHideEmptyTimeTrackerGroup,readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
+ canSafelyHideEmptyTimeTrackerGroup,isRedundantEmptyTimeTrackerGroup,
+ readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
  restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup} from './managed-time-tracker-groups.js';
 import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board-row01-signed-acceptance.js';
 import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
@@ -705,9 +706,15 @@ function boardPage(){
   else ungroupedItems.push(item);
  }
  const hiddenIds=isManagedTimeTrackerBoard(b)?readHiddenEmptyGroups(state.context,b.id):new Set();
- const hiddenGroups=groups.filter(g=>hiddenIds.has(g.id)&&
+ // The exact, verified empty TimeTracker secondary group is omitted for all
+ // signed viewers, without any DB mutation or browser-local preference.
+ // Populated, renamed or archived-item-bearing groups are never suppressed.
+ const redundantGroups=groups.filter(g=>
+  isRedundantEmptyTimeTrackerGroup(b,g,groups,items));
+ const hiddenGroups=groups.filter(g=>!redundantGroups.includes(g)&&hiddenIds.has(g.id)&&
   canSafelyHideEmptyTimeTrackerGroup(b,g,groups,items));
- const shownGroups=groups.filter(g=>!hiddenGroups.includes(g));
+ const shownGroups=groups.filter(g=>
+  !hiddenGroups.includes(g)&&!redundantGroups.includes(g));
  const moduleKey=moduleByBoardName(b.name)?.key;
  const minimal=isItemOnlyBoard(state.board,state.boardUi);
  const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record';

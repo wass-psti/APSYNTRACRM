@@ -20,6 +20,22 @@ export function canSafelyHideEmptyTimeTrackerGroup(board,group,allGroups,items){
   allGroups.some(g=>g.id===group.id)&&Array.isArray(items)&&
   !items.some(i=>i.group_id===group.id);
 }
+/** CP-TT-GROUP02 — specific redundant *empty* secondary group, verified in
+ * the managed TimeTracker board. Read-only presentation suppression only:
+ * every signed view retains the authoritative server detail and all records.
+ * If renamed, populated (including archived records), or moved, show it again.
+ */
+export const TIMETRACKER_REDUNDANT_GROUP=Object.freeze({
+ boardId:'46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
+ groupId:'d0224e2b-20c0-41a3-90f0-046aad545191',
+ title:'Main Group II'
+});
+export function isRedundantEmptyTimeTrackerGroup(board,group,allGroups,items){
+ return board?.id===TIMETRACKER_REDUNDANT_GROUP.boardId&&
+  group?.id===TIMETRACKER_REDUNDANT_GROUP.groupId&&
+  group?.title===TIMETRACKER_REDUNDANT_GROUP.title&&
+  canSafelyHideEmptyTimeTrackerGroup(board,group,allGroups,items);
+}
 function key(context,boardId){
  if(!validUuid(context?.user_id)||!validUuid(context?.workspace_id)||!validUuid(boardId))
   deny('Signed view preference context is unavailable.');

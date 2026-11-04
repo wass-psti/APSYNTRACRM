@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
 import {
  MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
+ TIMETRACKER_REDUNDANT_GROUP,isRedundantEmptyTimeTrackerGroup,
  canSafelyHideEmptyTimeTrackerGroup,readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
  restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup
 } from '../managed-time-tracker-groups.js';
@@ -132,4 +133,41 @@ test('TimeTracker view-hiding and staged explicit delete are wired without gener
  assert.match(app,/deleteEmptyManagedTimeTrackerGroup\(/);
  assert.match(app,/Remove empty group from view \(reversible\)/);
  assert.match(app,/Permanent deletion — approval required/);
+});
+
+test('only the exact verified redundant empty TimeTracker secondary group is auto-suppressed',()=>{
+ assert.deepEqual(TIMETRACKER_REDUNDANT_GROUP,{
+  boardId,groupId:secondId,title:'Main Group II'
+ });
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,groups[1],groups,[]),true);
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,groups[0],groups,[]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup({...board,name:'Contacts'},groups[1],groups,[]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup({...board,status:'archived'},groups[1],groups,[]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup({...board,id:'22222222-2222-4222-8222-222222222222'},groups[1],groups,[]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,{...groups[1],id:'22222222-2222-4222-8222-222222222222'},groups,[]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,{...groups[1],title:'Operations'},groups,[]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,{...groups[1],position:0},groups,[]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,groups[1],[groups[1]],[]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,groups[1],groups,
+  [{group_id:secondId,archived_at:null}]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,groups[1],groups,
+  [{group_id:secondId,archived_at:'2026-11-01T00:00:00Z'}]),false);
+ assert.equal(isRedundantEmptyTimeTrackerGroup(board,groups[1],groups,
+  [{group_id:mainId,archived_at:null}]),true);
+});
+test('default suppression is scoped to board view, separate from manual browser preferences',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/isRedundantEmptyTimeTrackerGroup\(b,g,groups,items\)/);
+ assert.match(app,/const redundantGroups=groups\.filter/);
+ assert.match(app,/const hiddenGroups=groups\.filter\(g=>!redundantGroups\.includes\(g\)/);
+ assert.match(app,/const shownGroups=groups\.filter\(g=>\s*!hiddenGroups\.includes\(g\)&&!redundantGroups\.includes\(g\)\)/);
+ assert.match(app,/shownGroups\.map\(g=>/);
+ assert.match(app,/renderTimeTrackerMainGroup\(/);
+ assert.match(app,/const groupedItems=new Map\(groups\.map/);
+ assert.match(app,/const ungroupedItems=\[\]/);
+ assert.equal(MANAGED_TT_GROUP_DELETE_ENABLED,false);
+ const begin=app.indexOf('const redundantGroups=groups.filter');
+ const end=app.indexOf('const moduleKey=',begin);
+ assert.ok(begin>=0&&end>begin);
+ assert.doesNotMatch(app.slice(begin,end),/\.delete\(/);
 });
