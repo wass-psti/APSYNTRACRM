@@ -374,7 +374,7 @@ export async function captureAttendanceGeo(geolocation){
   if(![2,3].includes(Number(first?.code)))throw locationError(first);
   try{
    position=await geolocationRequest(geolocation,{
-    enableHighAccuracy:false,timeout:7000,maximumAge:30000
+    enableHighAccuracy:false,timeout:7000,maximumAge:0
    });
   }catch(second){throw locationError(second);}
  }
