@@ -18,6 +18,7 @@ import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
+import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
@@ -268,6 +269,9 @@ function shell(body){
   state.boards.slice(0,6).map(board=>[board.id,board.name]),
   state.boards.length]);
  const route=[state.view,state.boardId,state.tab].join('|');
+ // Preserve each group's horizontal position only across same-signed-view renders.
+ const scrollPositions=state.view==='board'&&shellIdentity===identity&&shellRoute===route?
+  captureBoardGroupScroll(root.querySelector(':scope > .shell .main-content')):null;
  disposeTimeTrackerMaps();
  const existing=root.querySelector(':scope > .shell');
  const reusable=existing&&shellIdentity===identity;
@@ -294,6 +298,7 @@ function shell(body){
   existing.querySelector('.breadcrumb strong').textContent=crumb;
   existing.querySelector('.top-avatar').textContent=initials(name());
   existing.querySelector('.main-content').innerHTML=body;
+  if(scrollPositions)restoreBoardGroupScroll(existing.querySelector('.main-content'),scrollPositions);
  }else{
   root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div>
@@ -309,6 +314,7 @@ function shell(body){
  if(reusable&&previousBoard?.[0]==='board'&&state.view==='board'&&
     previousBoard[1]===String(state.boardId)&&previousBoard[2]!==state.tab)
   animateTabContent('.main-content');
+ root.querySelector('.main')?.classList.toggle('aps-board-shell',state.view==='board');
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
