@@ -46,7 +46,7 @@ const paths=['index.html','frontend/app.js','frontend/config.js','frontend/sessi
  'frontend/board-security-targets.js','frontend/board-negative-acceptance.js','frontend/board-security-ui.js','frontend/board-negative-write.js',
  'frontend/role-configuration-ui.js','frontend/role-configuration-client.js','frontend/user-role-management.js',
  'frontend/frt-finance-readonly.js','frontend/frt-finance-ui.js','frontend/frt-finance-workflow.js',
- 'frontend/styles.css','frontend/platform-sync.css','frontend/board-visual-refresh.css','frontend/board-loading.css','frontend/time-tracker-main-group.css','frontend/time-tracker-pixi-experience.css','frontend/time-tracker-clock-command.css','frontend/time-tracker-overview-command.css','frontend/sidebar-experience.css','frontend/sidebar-visuals.js',
+ 'frontend/styles.css','frontend/platform-sync.css','frontend/board-visual-refresh.css','frontend/board-loading.css','frontend/time-tracker-main-group.css','frontend/time-tracker-pixi-experience.css','frontend/time-tracker-clock-command.css','frontend/time-tracker-overview-command.css','frontend/time-tracker-log-command.css','frontend/sidebar-experience.css','frontend/sidebar-visuals.js',
  'frontend/overview-experience.css','frontend/overview-visuals.js',
  'frontend/board-catalog-experience.css','frontend/board-catalog-visuals.js',
  'frontend/foundation-experience.css','frontend/foundation-visuals.js',
