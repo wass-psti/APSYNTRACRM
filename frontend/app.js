@@ -21,6 +21,7 @@ import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
+import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
@@ -668,8 +669,12 @@ function issuesPage(){
  `<div class="panel">${empty('No issues yet','No active APSYNTRA Issues were found for this board.',canEdit?'<button class="primary" data-action="new-issue">＋ Create first issue</button>':'')}</div>`}`;
 }
 function boardPage(){
- if(state.loading)return `<div class="page-head"><div><span class="label-top">Workspace / Board</span><h1>Loading board…</h1></div></div><div class="panel">${empty('Loading board','Retrieving authorized board details…')}</div>`;
- if(!state.board)return `<div class="panel">${empty('Board unavailable',state.error||'Unable to access this board.','<a class="secondary" href="#/boards">Back to boards</a>')}</div>`;
+ if(state.loading)return renderBoardLoading({
+  hidden:document.hidden,
+  lowPower:navigator.connection?.saveData===true||
+   (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4)
+ });
+ if(!state.board)return renderBoardLoadingError(state.error);
  const b=state.board.board;
  const items=Array.isArray(state.board.items)?state.board.items:[];
  itemSelection.bind([state.context?.user_id,state.context?.workspace_id,state.boardId].join('|'),items.filter(i=>!i.archived_at).map(i=>i.id));
@@ -3862,7 +3867,10 @@ root.addEventListener('input',event=>{
   if(hint)hint.hidden=matched!==0;
  }else if(event.target.id==='search-board-items')syncBoardSelectionUi();
 });
-document.addEventListener('visibilitychange',()=>platformSync.visibilityChanged());
+document.addEventListener('visibilitychange',()=>{
+ platformSync.visibilityChanged();
+ setBoardLoadingVisibility(root,document.hidden);
+});
 window.addEventListener('online',()=>platformSync.network(true));
 window.addEventListener('offline',()=>platformSync.network(false));
 window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
