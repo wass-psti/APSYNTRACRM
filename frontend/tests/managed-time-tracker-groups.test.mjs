@@ -166,6 +166,8 @@ test('default suppression is scoped to board view, separate from manual browser 
  assert.match(app,/const groupedItems=new Map\(groups\.map/);
  assert.match(app,/const ungroupedItems=\[\]/);
  assert.equal(MANAGED_TT_GROUP_DELETE_ENABLED,false);
+ assert.match(readFileSync('scripts/pages-smoke.mjs','utf8'),
+  /'frontend\/managed-time-tracker-groups\.js'/);
  const begin=app.indexOf('const redundantGroups=groups.filter');
  const end=app.indexOf('const moduleKey=',begin);
  assert.ok(begin>=0&&end>begin);
