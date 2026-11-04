@@ -747,6 +747,7 @@ function boardPage(){
  ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0)}
  ${moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
   renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
+   boardColumns:state.board.columns||[],boardValues:state.board.values||[],
    projection:state.ttBoardAttendance,userId:state.context?.user_id,
    workspaceId:state.context?.workspace_id,boardId:b.id}):
   moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
@@ -1125,8 +1126,19 @@ async function loadBoard(boardId,tab){
      try{
        const signed=await timeTracker.snapshot(boardId);
        if(!sameSession())return;
-       state.ttBoardGpsEligible=signed?.status==='VERIFIED_READ'&&
-         signed?.access?.moduleRole==='Supervisor';
+       const checked=signed?.status==='VERIFIED_READ'&&
+         signed?.access?.userId===identity&&
+         signed?.access?.workspaceId===workspace&&
+         signed?.access?.boardId===boardId;
+       state.ttBoardGpsEligible=checked&&signed.access.moduleRole==='Supervisor';
+       const permittedLogRole=checked&&
+         ['HR','System Admin','IT Administrator','Employee','OJT']
+           .includes(signed.access.moduleRole);
+       if(permittedLogRole&&Array.isArray(signed.log?.rows)&&
+          ['OWN_ATTENDANCE_ONLY','AUTHORIZED_WORKSPACE_TEAM'].includes(signed.log.scope)){
+         state.ttBoardAttendance={status:'VERIFIED_LOG',userId:identity,
+           workspaceId:workspace,boardId,scope:signed.log.scope,rows:signed.log.rows};
+       }
      }catch{
        if(!sameSession())return;
        state.ttBoardGpsEligible=false;
@@ -1147,7 +1159,8 @@ async function loadBoard(boardId,tab){
          'RESTRICTED':'UNAVAILABLE'};
        // No fallback to broad module state or generic board values.
      }
-   }else state.ttBoardAttendance={status:'RESTRICTED'};
+   }else if(state.ttBoardAttendance?.status!=='VERIFIED_LOG')
+     state.ttBoardAttendance={status:'RESTRICTED'};
    if(sameSession())render();
  }
  if(tab==='issues')await loadIssues(seq);
