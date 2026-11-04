@@ -93,6 +93,9 @@
 #app .aps-board-shell .tt-main-status-completed{
  color:#137653;background:#eaf9f2;border-color:#cceadd
 }
+#app .aps-board-shell .tt-main-status-unknown{
+ color:#657185;background:#f0f3f8;border-color:#dce3ed
+}
 #app .aps-board-shell .tt-main-attendance-table td.tt-main-empty{
  padding:26px 20px;
  text-align:left;
