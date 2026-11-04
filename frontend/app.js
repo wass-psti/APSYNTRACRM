@@ -23,6 +23,7 @@ import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
+import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
@@ -113,7 +114,7 @@ const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tradeLinkSection:'overview',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -726,6 +727,8 @@ function boardPage(){
     label:'▤ Board items <span class="csp-u060">('+items.length+')</span>'},
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
+  ...(moduleKey==='tradelink'?[{key:'tradelink',href:'#/boards/'+b.id+'/tradelink',
+    label:'▤ TradeLink application'}]:[]),
   ...(moduleKey==='frt'?[{key:'finance',href:'#/boards/'+b.id+'/finance',
     label:'▣ FRT finance (read-only)'}]:[]),
   ...(moduleKey==='timetracker'?[{key:'attendance',href:'#/boards/'+b.id+'/attendance',
@@ -760,7 +763,7 @@ function boardPage(){
   '" data-direction="1" aria-label="Move '+e(t.key)+' tab right" title="Move tab right">›</button>':'')+'</div>').join('')}</div>
 
  ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='issues'?issuesPage():`
+ gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${boardColumnMenu(columns,layout)}<button type="button" class="secondary" data-action="board-structure">Manage columns</button>
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
@@ -1725,7 +1728,11 @@ async function onRoute(){
     b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
   const requested=parts[2]==='issues'?'issues':
     parts[2]==='finance'?'finance':
-    parts[2]==='attendance'?'attendance':defaultClock?'attendance':'items';
+    parts[2]==='attendance'?'attendance':
+    parts[2]==='tradelink'&&state.boards.some(b=>b.id===parts[1]&&
+      moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
+    defaultClock?'attendance':'items';
+  state.tradeLinkSection=requested==='tradelink'?normalizeTradeLinkSection(parts[3]):'overview';
   await loadBoard(parts[1],requested);
   return;
  }
@@ -3915,6 +3922,12 @@ root.addEventListener('submit',event=>{
  }
 });
 root.addEventListener('input',event=>{
+ if(event.target.matches('[data-tradelink-search]')&&
+    state.view==='board'&&state.tab==='tradelink'&&
+    state.boardId===TRADELINK_BOARD_ID&&state.board?.board?.workspace_id===state.context?.workspace_id){
+  filterTradeLinkRenderedRows(root.querySelector('.aps-tradelink-app'),event.target.value);
+  return;
+ }
  if(event.target.id==='tt-team-search'&&state.view==='board'&&state.ttView==='team'&&
     state.roleVerified===true&&state.ttTeam&&
     state.ttAttendance?.status==='VERIFIED_READ'){
