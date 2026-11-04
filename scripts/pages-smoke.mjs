@@ -39,14 +39,14 @@ function reportSuperseded(){
  console.log('This source commit was NOT deployment-verified. Latest main remains responsible for live verification.');
 }
 const paths=['index.html','frontend/app.js','frontend/config.js','frontend/session.js',
- 'frontend/data.js','frontend/acceptance.js','frontend/pages-persistence.js',
+ 'frontend/data.js','frontend/platform-sync.js','frontend/acceptance.js','frontend/pages-persistence.js',
  'frontend/pages-acceptance-ui.js','frontend/native-client.js','frontend/native-qa.js',
  'frontend/board-manifest.js','frontend/board-foundation.js','frontend/board-foundation-ui.js',
  'frontend/board-grid.js','frontend/board-scroll-state.js','frontend/time-tracker-main-group.js','frontend/board-tab-order.js','frontend/board-public-copy.js','frontend/board-operational-qa.js',
  'frontend/board-security-targets.js','frontend/board-negative-acceptance.js','frontend/board-security-ui.js','frontend/board-negative-write.js',
  'frontend/role-configuration-ui.js','frontend/role-configuration-client.js','frontend/user-role-management.js',
  'frontend/frt-finance-readonly.js','frontend/frt-finance-ui.js','frontend/frt-finance-workflow.js',
- 'frontend/styles.css','frontend/board-visual-refresh.css','frontend/time-tracker-main-group.css','frontend/sidebar-experience.css','frontend/sidebar-visuals.js',
+ 'frontend/styles.css','frontend/platform-sync.css','frontend/board-visual-refresh.css','frontend/time-tracker-main-group.css','frontend/sidebar-experience.css','frontend/sidebar-visuals.js',
  'frontend/overview-experience.css','frontend/overview-visuals.js',
  'frontend/board-catalog-experience.css','frontend/board-catalog-visuals.js',
  'frontend/foundation-experience.css','frontend/foundation-visuals.js',
