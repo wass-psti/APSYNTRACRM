@@ -124,7 +124,7 @@ export class PlatformSync {
  }
  send(ws,joinRef,topic,event,payload={}){
   if(ws!==this.socket||ws.readyState!==1)return false;
-  try{ws.send(JSON.stringify([joinRef,String(++this.ref),topic,event,payload]));return true;}
+  try{const ref=String(++this.ref);ws.send(JSON.stringify([joinRef,ref,topic,event,payload]));return ref;}
   catch{return false;}
  }
  joinChannels(ws,gen){
@@ -133,11 +133,12 @@ export class PlatformSync {
   const boardIds=this.boardIds.slice(0,SYNC_MAX_BOARD_CHANNELS);
   for(const id of boardIds){
    const joinRef=String(++this.ref),topic='realtime:board:'+id;
-   this.joins.set(joinRef,id);
-   if(!this.send(ws,joinRef,topic,'phx_join',{
+   const requestRef=this.send(ws,joinRef,topic,'phx_join',{
     config:{broadcast:{ack:false,self:false},presence:{enabled:false},
      postgres_changes:[],private:true},access_token:this.token
-   }))return this.reconnect(gen);
+   });
+   if(!requestRef)return this.reconnect(gen);
+   this.joins.set(requestRef,{boardId:id,joinRef});
   }
   this.heartbeat=this.setIntervalFn?.(()=>this.tickHeartbeat(ws,gen),20000);
   if(boardIds.length===0){this.lastTransport='polling';void this.syncNow('join',[]);}
@@ -163,9 +164,9 @@ export class PlatformSync {
   const [joinRef,ref,topic,event,payload]=packet;
   if(typeof topic!=='string'||typeof event!=='string')return;
   if(event==='phx_reply'&&this.joins.has(String(ref))){
-   const boardId=this.joins.get(String(ref));this.joins.delete(String(ref));
+   const requested=this.joins.get(String(ref));this.joins.delete(String(ref));
    if(payload?.status!=='ok'){this.reconnect(gen);return;}
-   this.joined.set(boardId,String(joinRef));
+   this.joined.set(requested.boardId,requested.joinRef);
    if(this.joins.size===0){
     this.attempt=0;this.lastTransport='realtime';
     void this.syncNow('join',[]);
