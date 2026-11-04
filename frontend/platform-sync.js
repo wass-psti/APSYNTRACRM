@@ -247,6 +247,9 @@ export class PlatformSync {
   if(!isOnline){
    this.closeSocket();this.status('offline','Network disconnected');
   }else if(this.visible()){
+   if(this.reconnectTimer!==null){
+    this.clearTimeoutFn?.(this.reconnectTimer);this.reconnectTimer=null;
+   }
    this.status('reconnecting','Reconnecting authenticated updates');
    void this.connect(this.generation);
    void this.syncNow('online',[]);
