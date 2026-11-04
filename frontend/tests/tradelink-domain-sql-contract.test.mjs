@@ -56,6 +56,9 @@ test('payload is bounded and server-controlled identity/workflow/attachments are
  assert.match(sql,/pg_catalog\.octet_length\(p_data::text\)>131072/);
  assert.match(sql,/Unknown or server-owned document property/);
  assert.match(sql,/Invalid bounded line items/);
+ assert.match(sql,/p_operation IS NULL/);
+ assert.match(sql,/jsonb_typeof\(p_data->'documentNumber'\) IS DISTINCT FROM 'string'/);
+ assert.match(sql,/jsonb_typeof\(it->'unit'\)<>'string'/);
  assert.match(sql,/Invalid quantity or unit price/);
  assert.match(sql,/Invalid VAT code/);
  assert.match(sql,/Invalid currency/);
