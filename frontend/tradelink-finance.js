@@ -47,7 +47,7 @@ export function renderTradeLinkFinancePreview(){
   '<dl class="tl-finance-results" aria-live="polite" aria-atomic="true">'+
    [['subtotal','Subtotal'],['discount','Discount'],['taxable','Taxable'],['vat','VAT'],
     ['total','Total'],['phpEquivalent','PHP equivalent']].map(([key,label])=>
-    '<div><dt>'+label+'</dt><dd data-tradelink-finance-result="'+key+'">0.00</dd></div>').join('')+'</dl>'+
+    '<div><dt>'+(key==='total'?'Total (<span data-tradelink-finance-currency>PHP</span>)':label)+'</dt><dd data-tradelink-finance-result="'+key+'">0.00</dd></div>').join('')+'</dl>'+
    '<p class="tl-finance-local">Preview only · no database transaction or draft persistence</p></section>';
 }
 /** Delegated from the existing APSYNTRA shell. Updates text nodes only. */
@@ -55,6 +55,8 @@ export function updateTradeLinkFinancePreview(container){
  if(!container||!container.querySelector)return null;
  const field=name=>container.querySelector('[name="'+name+'"]')?.value;
  const currency=field('currency');
+ const currencyLabel=container.parentElement?.querySelector('[data-tradelink-finance-currency]');
+ if(currencyLabel)currencyLabel.textContent=TRADELINK_CURRENCIES.includes(currency)?currency:'—';
  const result=calculateTradeLinkAmounts({
   items:[{kind:'item',quantity:field('quantity'),unitPrice:field('unitPrice')}],
   discountType:field('discountType'),discountValue:field('discountValue'),
