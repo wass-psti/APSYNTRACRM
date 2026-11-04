@@ -143,7 +143,6 @@ export function mountTimeTrackerPixi(root,{load=()=>import(PIXI_V8_URL)}={}){
    });
    application.canvas.setAttribute('aria-hidden','true');
    application.canvas.setAttribute('tabindex','-1');
-   application.canvas.style.pointerEvents='none';
    host.appendChild(application.canvas);
    host.dataset.pixi='ready';
    update();
