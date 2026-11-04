@@ -17,7 +17,7 @@ import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
-import {boardGrid,boardGridColumns} from './board-grid.js';
+import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
@@ -688,6 +688,9 @@ function boardPage(){
   layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean),state.boardUi);
  const canReorderTabs=moduleKey!=='timetracker'||(state.boardManage&&
   state.boardUi?.status==='VERIFIED_READ'&&!state.tabMoveBusy);
+ // One render-local value index for all application-managed board groups.
+ const preparedGrid=moduleKey&&state.tab==='items'?
+  prepareBoardGrid(state.board,{primaryTitle,columnLabels,allowCustom}):null;
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
@@ -727,9 +730,9 @@ function boardPage(){
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
  <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; protected application records remain excluded.'}</span></div>
  ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
- ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:items.filter(i=>i.group_id===g.id).length+' records'}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
+ ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:items.filter(i=>i.group_id===g.id).length+' records'}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout,primaryTitle,columnLabels,allowCustom,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}`;
+ ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}`;
 }
 function settingsPage(){
  const p=state.context.profile;
