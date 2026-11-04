@@ -1058,10 +1058,18 @@ function platformSyncEditInProgress(){
   state.ttOtModalOpen||state.loading||state.loadingIssues||
   focused?.closest?.('input,textarea,select,[contenteditable="true"]'));
 }
+/** Revoke stale rendered data immediately when the server invalidates identity. */
+function invalidateSignedSyncView(){
+ platformSync.stop();
+ state.board=null;state.boardUi=null;state.boards=[];
+ state.ttAttendance=null;state.ttBoardAttendance=null;state.ttBoardGpsEligible=false;
+ state.roleVerified=false;state.roleData=null;state.userRoleData=null;
+ state.context=null;auth.clear();
+ renderLogin('Your signed workspace access changed. Sign in again to continue.');
+}
 async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  if(!state.context||state.context.user_id!==userId||
   state.context.workspace_id!==workspaceId||!auth.isSignedIn)return false;
- if(platformSyncEditInProgress())return false;
  const serial=routeSerial,view=state.view,tab=state.tab,boardId=state.boardId;
  const isCurrent=()=>auth.isSignedIn&&state.context?.user_id===userId&&
   state.context?.workspace_id===workspaceId&&serial===routeSerial&&
@@ -1070,12 +1078,22 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  const boardChanged=boardId&&boardIds.includes(boardId);
  // Board broadcasts carry identifiers only; the server remains authoritative.
  if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
- const who=await auth.getVerifiedUser();
- const current=await db.context();
- if(who?.id!==userId||current.user_id!==userId||
-  current.workspace_id!==workspaceId||!isCurrent()){
-  platformSync.stop();return false;
+ let who,current;
+ try{
+  who=await auth.getVerifiedUser();
+  current=await db.context();
+ }catch(error){
+  if(isCurrent()&&([401,403].includes(Number(error?.status))||
+     error?.code==='42501'))invalidateSignedSyncView();
+  throw error;
  }
+ if(!isCurrent())return false;
+ if(who?.id!==userId||current.user_id!==userId||
+  current.workspace_id!==workspaceId){
+  invalidateSignedSyncView();return false;
+ }
+ // Authorization reads must occur even while an unsaved editor is open.
+ if(platformSyncEditInProgress())return false;
  const roleChanged=current.profile?.platform_role!==state.context.profile?.platform_role;
  const boards=await db.boards('active');
  if(!isCurrent())return false;
@@ -1095,10 +1113,23 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   }
  }
  if(view==='board'&&boardId){
-  const [detail,edit,manage,boardUi]=await Promise.all([
-   db.board(boardId),db.allowed(boardId,'edit'),db.allowed(boardId,'manage'),
-   boardStructureClient.read(boardId)
-  ]);
+  let detail,edit,manage,boardUi;
+  try{
+   [detail,edit,manage,boardUi]=await Promise.all([
+    db.board(boardId),db.allowed(boardId,'edit'),db.allowed(boardId,'manage'),
+    boardStructureClient.read(boardId)
+   ]);
+  }catch(error){
+   if(isCurrent()&&([403,404].includes(Number(error?.status))||
+      error?.code==='42501')){
+    platformSync.stop();state.board=null;state.boardUi=null;
+    state.ttAttendance=null;state.ttBoardAttendance=null;
+    state.edit=false;state.boardManage=false;
+    location.hash='#/boards';
+    return false;
+   }
+   throw error;
+  }
   if(!isCurrent()||platformSyncEditInProgress())return false;
   if(detail?.board?.id!==boardId||detail.board.workspace_id!==workspaceId)
    return false;
