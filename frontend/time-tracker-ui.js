@@ -92,6 +92,7 @@ function navigation(view,busy,bootstrapEligible=false,gpsEligible=false){
 }
 function head(access){
  return '<header class="tt-app-header">'+
+  '<div class="tt-pixi-backdrop" aria-hidden="true" data-pixi="fallback"></div>'+ 
   '<div class="tt-app-brand"><span class="tt-brand-icon" aria-hidden="true">◷</span>'+
    '<div><h2>TimeTracker</h2><p>Attendance, scheduling &amp; team management</p></div></div>'+
   '<div class="tt-header-actions">'+
@@ -120,7 +121,8 @@ function clockPage(result,busy,now,clockPending=false){
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
  const status=active?'Active':'Idle';
  let html='<div class="tt-clock-stage">'+
-  '<div class="tt-clock-hero"><h3 id="tt-clock-greeting">'+t.greeting+'</h3>'+
+  '<div class="tt-clock-aura" aria-hidden="true"><span></span><span></span><span></span></div>'+ 
+  '<div class="tt-clock-hero"><span class="tt-clock-eyebrow">SIGNED WORKFORCE TIME</span><h3 id="tt-clock-greeting">'+t.greeting+'</h3>'+
    '<p id="tt-clock-date">'+t.day+'</p>'+
    '<div class="tt-clock-face" role="timer" aria-label="Current local time">'+
     '<span id="tt-clock-hours">'+t.hours+'</span>'+
