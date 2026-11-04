@@ -1776,3 +1776,68 @@
 @media(prefers-reduced-motion:reduce){
  .board-status-click-cell>.board-full-status-trigger{transition:none}
 }
+
+
+/* CP-BOARD-SURFACE-01 — common treatment for all authorized board views.
+   Covers annotated page, heading, tabs, toolbar, groups, scrollers and topbar.
+   No entrance transforms, GPU layer pinning, new nested vertical scroll or timers. */
+#app .aps-board-shell{min-width:0}
+#app .aps-board-shell .main-content{box-sizing:border-box;width:100%;min-width:0}
+#app .aps-board-shell .page-head{gap:clamp(12px,2vw,24px);min-width:0}
+#app .aps-board-shell .page-head>div:first-child{flex:1 1 260px;min-width:0}
+#app .aps-board-shell .page-head h1{overflow-wrap:anywhere}
+#app .aps-board-shell .head-actions{
+ flex:0 1 auto;min-width:0;align-items:center;justify-content:flex-end;gap:8px
+}
+#app .aps-board-shell .head-actions>.secondary,
+#app .aps-board-shell .head-actions>.board-actions-menu>summary{
+ min-height:38px;white-space:nowrap
+}
+#app .aps-board-shell .board-draggable-tabs{
+ box-sizing:border-box;width:100%;max-width:100%;gap:6px;
+ scroll-padding-inline:6px;scroll-behavior:auto
+}
+#app .aps-board-shell .board-tab-slot{min-height:42px}
+#app .aps-board-shell .board-tab-slot>.tab{
+ display:inline-flex;align-items:center;min-height:40px;padding:10px 4px;
+ transition:color .15s ease,border-color .15s ease,background-color .15s ease
+}
+#app .aps-board-shell .board-tab-slot>.tab:focus-visible{
+ outline:2px solid #5067dc;outline-offset:-2px;border-radius:4px
+}
+#app .aps-board-shell .board-customize-toolbar{
+ box-sizing:border-box;min-width:0;gap:10px;align-items:center
+}
+#app .aps-board-shell .board-customize-toolbar .search-wrap{
+ flex:1 1 220px;min-width:min(180px,100%);max-width:360px
+}
+#app .aps-board-shell .board-customize-toolbar>.secondary{
+ min-height:38px;white-space:normal;text-align:center
+}
+#app .aps-board-shell .group-heading{min-width:0;gap:9px;align-items:center}
+#app .aps-board-shell .group-heading h3{min-width:0;overflow-wrap:anywhere}
+#app .aps-board-shell .group-heading small{white-space:nowrap}
+#app .aps-board-shell .board-group-panel{box-sizing:border-box;min-width:0;max-width:100%;contain:style}
+#app .aps-board-shell .board-group-scroll{
+ box-sizing:border-box;max-width:100%;scroll-behavior:auto;
+ -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain
+}
+#app .aps-board-shell .topbar{min-width:0}
+#app .aps-board-shell .breadcrumb{min-width:0;overflow:hidden}
+#app .aps-board-shell .breadcrumb strong{
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#app .aps-board-shell .top-actions{flex:none;white-space:nowrap}
+#app .aps-board-shell .top-avatar{flex:none}
+@media(max-width:750px){
+ #app .aps-board-shell .page-head{flex-wrap:wrap;align-items:flex-start}
+ #app .aps-board-shell .head-actions{
+  flex:1 1 100%;margin-left:0;justify-content:flex-start
+ }
+ #app .aps-board-shell .board-customize-toolbar .search-wrap{
+  flex:1 1 100%;max-width:none
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .board-tab-slot>.tab{transition:none}
+}
