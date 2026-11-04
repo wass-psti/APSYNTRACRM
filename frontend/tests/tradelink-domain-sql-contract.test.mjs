@@ -76,3 +76,14 @@ test('audit is append-only; list omits financial content',()=>{
  assert.doesNotMatch(list,/'content'|'customerName'|'items'|'customerTin'/);
  assert.match(list,/p_limit NOT BETWEEN 1 AND 100/);
 });
+
+test('missing module-role assignment is strictly denied, never NULL-approved by a definer',()=>{
+ assert.match(sql,/coalesce\(public\.module_role_for\('tradelink',v_actor\)='General Manager',false\)/);
+ assert.match(sql,/coalesce\(public\.work_board_access\(p_board_id,'manage'\),false\)/);
+ assert.match(sql,/IF actor IS NULL OR private\.tl03_can_manage\(p_board_id\) IS DISTINCT FROM TRUE THEN/);
+ assert.match(sql,/IF private\.tl03_can_manage\(p_board_id\) IS DISTINCT FROM TRUE THEN/);
+ assert.doesNotMatch(sql,/IF (?:actor IS NULL OR )?NOT private\.tl03_can_manage\(/);
+ const fixture=readFileSync('sql/tests/cp-tl03-disposable-acceptance.sql','utf8');
+ assert.match(fixture,/no module role assignment/i);
+ assert.match(fixture,/unassigned role could (read|commit)/i);
+});
