@@ -148,3 +148,37 @@ BEGIN
   RAISE EXCEPTION 'Denial tests mutated authoritative records'; END IF;
  RAISE NOTICE 'CP-TL-03A role ceilings, foreign scope, expired/revoked session, immutable audit PASS';
 END $audit$;
+
+-- Owner of the TradeLink board but WITHOUT a module-role assignment.
+-- This is not the same as the explicit 'User' assignment tested above.
+RESET ROLE;
+INSERT INTO auth.users(id) VALUES ('ffffffff-ffff-4fff-8fff-ffffffffffff');
+INSERT INTO public.profiles(id,status) VALUES ('ffffffff-ffff-4fff-8fff-ffffffffffff','active');
+INSERT INTO public.workspace_members(workspace_id,user_id) VALUES
+ ('00000000-0000-4000-8000-000000000001','ffffffff-ffff-4fff-8fff-ffffffffffff');
+INSERT INTO public.work_board_members(board_id,user_id,role) VALUES
+ ('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','ffffffff-ffff-4fff-8fff-ffffffffffff','owner');
+INSERT INTO auth.sessions(id,user_id) VALUES
+ ('55555555-5555-4555-8555-555555555555','ffffffff-ffff-4fff-8fff-ffffffffffff');
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','ffffffff-ffff-4fff-8fff-ffffffffffff',false);
+SELECT set_config('request.jwt.claim.session_id','55555555-5555-4555-8555-555555555555',false);
+DO $unassigned$
+BEGIN
+ IF private.tl03_can_manage('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88') IS DISTINCT FROM FALSE THEN
+  RAISE EXCEPTION 'Missing module assignment should yield definite FALSE'; END IF;
+ IF (SELECT count(*) FROM public.tradelink_documents)>0 THEN
+  RAISE EXCEPTION 'Unassigned role could read via table RLS'; END IF;
+ BEGIN
+  PERFORM public.tl03_documents_list('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',10);
+  RAISE EXCEPTION 'Unassigned role could read via RPC';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM public.tl03_document_commit(
+   '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
+   '99999999-9999-4999-8999-999999999999',4,'archive',NULL);
+  RAISE EXCEPTION 'Unassigned role could commit';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ RAISE NOTICE 'CP-TL-03A absent module role with board owner denied';
+END $unassigned$;
+RESET ROLE;
