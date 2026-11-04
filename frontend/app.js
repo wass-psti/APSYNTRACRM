@@ -28,6 +28,8 @@ import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
 import {deleteOneAuthorizedItem,selectedDeleteCandidates} from './board-single-delete.js';
+import {moveTabInOrder,reorderManagedTimeTrackerTabs} from './board-tab-order.js';
+import {publicBoardDescription} from './board-public-copy.js';
 import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
  canSafelyHideEmptyTimeTrackerGroup,readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
  restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup} from './managed-time-tracker-groups.js';
@@ -303,7 +305,7 @@ function boardCard(board,index){
   '<div class="board-card-top"><a class="board-card-symbol-link" href="'+href+'" aria-label="Open '+e(board.name)+'">'+
    '<span class="board-symbol '+iconColor(index)+'">'+e((board.name||'B').slice(0,1).toUpperCase())+'</span></a>'+options+'</div>'+
   '<a class="board-card-main" href="'+href+'"><h3>'+e(board.name||'Untitled board')+'</h3>'+
-  '<p>'+e(board.description||'Organize work and track progress in this board.')+'</p>'+
+  '<p>'+e(publicBoardDescription(board))+'</p>'+
   '<div class="board-card-footer"><span>▤ '+(Number(board.item_count)||0)+' items</span>'+
   '<span>'+e(displayDate(board.updated_at))+'</span></div></a></article>';
 }
@@ -553,8 +555,9 @@ function groupHeading(group,count){
    (bulkReadyFor(state.board?.board)&&state.bulk02Access?.canManage?
     '<button type="button" data-action="group-delete-empty" data-id="'+id+'">Delete empty group</button>':
     managedDelete?'<button type="button" data-action="managed-group-delete-empty" data-id="'+id+'">Delete empty group (signed admin)</button>':
-    '<button type="button" disabled title="Protected-board deletion requires independent security review and separate production permission approval">Delete group — awaiting approval</button>')+
-   (managedEmpty?'<button type="button" data-action="group-hide-empty" data-id="'+id+'">Hide empty group (this browser)</button>':'')+
+    (managedEmpty?'<button type="button" data-action="group-hide-empty" data-id="'+id+'">Remove empty group from view (reversible)</button>':
+     '<button type="button" disabled title="This group is protected or contains records">Delete group — protected</button>'))+
+   (managedEmpty&&!managedDelete?'<button type="button" disabled title="Permanent deletion requires separate production security approval">Permanent deletion — approval required</button>':'')+
    '</div></details>':'')+'</div>';
 }
 function row01AcceptancePanel(board){
@@ -629,21 +632,24 @@ function boardPage(){
  const layout=loadBoardLayout(state.context,b.id,tabSpecs.map(t=>t.key),columns.map(c=>c.key));
  if(minimal)layout.columns=itemOnlyColumnKeys(columns,state.boardUi);
  const tabLookup=new Map(tabSpecs.map(t=>[t.key,t]));
- const tabOrder=applyBoardViewSettings(layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean),state.boardUi);
+ const tabOrder=applyBoardViewSettings(moduleKey==='timetracker'?tabSpecs:
+  layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean),state.boardUi);
+ const canReorderTabs=moduleKey!=='timetracker'||(state.boardManage&&
+  state.boardUi?.status==='VERIFIED_READ'&&!state.tabMoveBusy);
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
- <h1>${e(b.name)}</h1><p>${e(b.description||'Track your team’s work and updates.')}</p></div>
+ <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
  <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Configure columns &amp; views</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
  ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
-  '<a role="tab" draggable="true" data-board-tab="'+e(t.key)+'" aria-selected="'+(state.tab===t.key)+
+  '<a role="tab" draggable="'+(canReorderTabs?'true':'false')+'" data-board-tab="'+e(t.key)+'" aria-selected="'+(state.tab===t.key)+
   '" class="tab '+(state.tab===t.key?'active':'')+'" href="'+e(t.href)+'">'+t.label+'</a>'+
-  '<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
-  '" data-direction="-1" aria-label="Move '+e(t.key)+' tab left" title="Move tab left">‹</button>'+
-  '<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
-  '" data-direction="1" aria-label="Move '+e(t.key)+' tab right" title="Move tab right">›</button></div>').join('')}</div>
+  (canReorderTabs?'<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
+  '" data-direction="-1" aria-label="Move '+e(t.key)+' tab left" title="Move tab left">‹</button>':'')+
+  (canReorderTabs?'<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
+  '" data-direction="1" aria-label="Move '+e(t.key)+' tab right" title="Move tab right">›</button>':'')+'</div>').join('')}</div>
 
  ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='issues'?issuesPage():`
@@ -1405,6 +1411,26 @@ const select=(label,key,choices,current)=>
 const priorities=[['0','None'],['1','Low'],['2','Medium'],['3','High'],['4','Urgent']];
 const statuses=[['tracker:status:Todo','To do'],['tracker:status:InProgress','In progress'],['tracker:status:Done','Done'],['tracker:status:Blocked','Blocked']];
 async function writeGuard(){if(!state.boardId||!await db.allowed(state.boardId,'edit'))throw new ApiError('No edit permission for this board.',403);}
+async function moveManagedTimeTrackerTab(from,to){
+ if(state.tabMoveBusy||!activeBoardLayout()||!state.boardManage)return false;
+ const board=state.board.board,settings=state.boardUi;
+ const snapshot={boardId:board.id,userId:state.context.user_id,
+  workspaceId:state.context.workspace_id};
+ state.tabMoveBusy=true;
+ try{
+  const saved=await reorderManagedTimeTrackerTabs({
+   auth,api:db,structure:boardStructureClient,board,settings,
+   context:state.context,from,to
+  });
+  if(!boardHistoryAuthorized(snapshot))return false;
+  state.boardUi=saved;
+  state.tabMoveBusy=false;
+  render();toast('Shared board view order saved.');
+  return true;
+ }finally{
+  state.tabMoveBusy=false;
+ }
+}
 function activeBoardLayout(){
  if(state.view!=='board'||!auth.isSignedIn||auth.userId!==state.context?.user_id||
     state.board?.board?.id!==state.boardId||
@@ -1839,11 +1865,21 @@ async function action(name,button){
   const current=activeBoardLayout(),key=button.dataset.key,
    delta=Number(button.dataset.direction);
   if(!current||!current.tabs.includes(key)||![-1,1].includes(delta))return;
-  persistBoardLayout(p=>{
-   const target=p.tabs[p.tabs.indexOf(key)+delta];
-   return target?{...p,tabs:reorderVisible(p.tabs,key,target)}:p;
-  });
-  render();root.querySelector('[data-board-tab="'+key+'"]')?.focus();break;
+  if(isManagedTimeTrackerBoard(state.board?.board)){
+   if(!state.boardManage||state.tabMoveBusy)return;
+   const configured=state.boardUi?.tabs||[];
+   const keys=[...configured.filter(t=>t.visible).map(t=>t.key),
+    ...['items','issues','attendance'].filter(k=>!configured.some(t=>t.key===k))];
+   const target=keys[keys.indexOf(key)+delta];
+   if(target)await moveManagedTimeTrackerTab(key,target);
+  }else{
+   persistBoardLayout(p=>{
+    const target=p.tabs[p.tabs.indexOf(key)+delta];
+    return target?{...p,tabs:moveTabInOrder(p.tabs,key,target)}:p;
+   });
+   render();
+  }
+  root.querySelector('[data-board-tab="'+key+'"]')?.focus();break;
  }
   case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'tt-refresh':{if(!state.ttBusy){const team=state.ttView==='team',gps=state.ttView==='gps',log=state.ttView==='log';await loadTimeTracker();if(team&&state.roleVerified===true&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerTeam();if(gps&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerGps();if(log&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerLogGps();}break;}
@@ -3128,7 +3164,9 @@ async function moveBoardPresentation(kind,from,to){
  if(kind==='tab'){
   const c=activeBoardLayout();
   if(!c.tabs.includes(from)||!c.tabs.includes(to))return false;
-  persistBoardLayout(p=>({...p,tabs:reorderVisible(p.tabs,from,to)}));
+  if(isManagedTimeTrackerBoard(state.board?.board))
+   return moveManagedTimeTrackerTab(from,to);
+  persistBoardLayout(p=>({...p,tabs:moveTabInOrder(p.tabs,from,to)}));
  }else if(kind==='column'){
   const c=activeBoardLayout();
   if(!c.columns.includes(from)||!c.columns.includes(to)||
@@ -3155,6 +3193,10 @@ root.addEventListener('dragstart',event=>{
  const kind=tab?'tab':th?'column':null;
  if(!kind)return;
  const key=(tab||th).dataset[kind==='tab'?'boardTab':'columnKey'];
+ if(kind==='tab'&&isManagedTimeTrackerBoard(state.board?.board)&&
+    (!state.boardManage||state.boardUi?.status!=='VERIFIED_READ'||state.tabMoveBusy)){
+  event.preventDefault();return;
+ }
  if(kind==='column'&&(BOARD_REQUIRED_COLUMNS.includes(key)||
     (isItemOnlyBoard(state.board,state.boardUi)&&!state.boardManage))){event.preventDefault();return;}
  boardDrag={kind,key};
@@ -3199,6 +3241,8 @@ root.addEventListener('pointerdown',event=>{
  const handle=event.target.closest('button.board-column-handle');
  if(!tab&&!handle)return;
  const kind=tab?'tab':'column';
+ if(kind==='tab'&&isManagedTimeTrackerBoard(state.board?.board)&&
+    (!state.boardManage||state.boardUi?.status!=='VERIFIED_READ'||state.tabMoveBusy))return;
  const element=tab||handle.closest('th[data-column-key]');
  boardTouch={kind,key:element.dataset[kind==='tab'?'boardTab':'columnKey'],
   x:event.clientX,y:event.clientY,pointerId:event.pointerId};

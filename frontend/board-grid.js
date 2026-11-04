@@ -40,7 +40,7 @@ export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record'
   return {itemId:item.archived_at?null:item.id,search:String(item.title||'').toLowerCase(),cells};
  });
  let html=boardTable({columns,rows,layout,groupId:groupId||'ungrouped',
-  empty:'No persisted records in this board group',selection,footer,summaries});
- if(module)html+='<p class="muted csp-u025" >Operational records will appear here only when the corresponding APSYNTRA domain module writes and reconciles them through the authorized backend. Restricted fields are not displayed.</p>';
+  empty:'No items in this group yet',selection,footer,summaries});
+ // Internal data-flow details belong in administrator diagnostics, not the board UI.
  return html;
 }

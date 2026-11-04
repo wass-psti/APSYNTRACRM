@@ -194,7 +194,7 @@ export function renderInlineCellEditor({item,key,detail,members=[]}){
   '<button type="button" class="secondary" data-action="inline-cell-cancel">Cancel</button></div></form>';
 }
 export function renderGroupAddRow({groupId,enabled=false,busy=false,domain=false}={}){
- if(!enabled)return domain?'<div class="board-domain-row-note">Application-managed records are created through their authorized module workflow.</div>':'';
+ if(!enabled)return ''; // Do not surface implementation details on protected boards.
  return '<form class="board-inline-add-form" data-inline-add-row="'+esc(groupId)+'">'+
   '<label class="sr-only" for="board-add-'+esc(groupId)+'">New item name</label>'+
   '<span aria-hidden="true" class="board-inline-add-icon">＋</span>'+
