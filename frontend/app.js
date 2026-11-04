@@ -72,6 +72,7 @@ import {RoleConfigurationClient} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
 import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
+import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {UserRoleManagementClient,renderUserRoleManagement,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 
 const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'Status'},
@@ -145,6 +146,7 @@ function renderLogin(message=''){
  stopSecurityMotion();
  stopRoleConfigurationMotion();
  stopUserRoleMotion();
+ stopSettingsMotion();
  root.innerHTML=renderAuthMarkup({message});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
@@ -264,6 +266,7 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-security-shell',state.view==='security');
  root.querySelector('.main')?.classList.toggle('aps-role-config-shell',state.view==='role-configuration');
  root.querySelector('.main')?.classList.toggle('aps-user-roles-shell',state.view==='user-role-management');
+ root.querySelector('.main')?.classList.toggle('aps-settings-shell',state.view==='settings');
  animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
  mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
  mountBoardCatalogMotion(root.querySelector('.aps-boards'),state.view);
@@ -271,6 +274,7 @@ function shell(body){
  mountSecurityMotion(root.querySelector('.aps-security'),state.view);
  mountRoleConfigurationMotion(root.querySelector('.aps-role-configuration'),state.view);
  mountUserRoleMotion(root.querySelector('.aps-user-role-management'),state.view);
+ mountSettingsMotion(root.querySelector('.aps-settings'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
 }
@@ -667,27 +671,27 @@ function boardPage(){
 }
 function settingsPage(){
  const p=state.context.profile;
- return `<div class="page-head"><div><span class="label-top">Workspace / Account</span><h1>Account & security</h1><p>Your verified user identity and session preferences.</p></div></div>
- <div class="settings-grid"><section class="panel"><div class="panel-header"><h3>Profile information</h3><span>Supabase Auth</span></div>
- <div class="panel-body"><div class="profile"><span class="avatar csp-u044" >${e(initials(name()))}</span>
- <div><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
- <div class="settings-detail"><label>Work email</label><strong>${e(p.email||state.user?.email||'Not available')}</strong></div>
- <div class="settings-detail"><label>Account status</label><strong><span class="status done">${e(p.status)}</span></strong></div>
+ return `<div class="aps-settings"><section class="page-head settings-hero settings-entrance" aria-labelledby="settings-title"><div class="settings-hero-copy"><span class="label-top"><span class="settings-hero-dot" aria-hidden="true"></span>Workspace / Account</span><h1 id="settings-title">Account & security<span class="settings-heading-stop">.</span></h1><p>Your verified user identity and session preferences.</p></div><span class="settings-hero-status">${settingsIcon('shield')}<span>Verified workspace account</span></span><svg class="settings-hero-decoration" viewBox="0 0 420 200" fill="none" aria-hidden="true" focusable="false"><circle cx="355" cy="0" r="120" stroke="currentColor" stroke-opacity=".16"/><circle cx="355" cy="0" r="193" stroke="currentColor" stroke-opacity=".09"/><path d="M105 230C201 70 334 93 446 146" stroke="currentColor" stroke-opacity=".16"/></svg></section>
+ <div class="settings-grid"><section class="panel settings-profile-panel settings-entrance" aria-labelledby="settings-profile-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('user')}</span><h3 id="settings-profile-heading">Profile information</h3></div><span class="settings-auth-provider">Supabase Auth</span></div>
+ <div class="panel-body settings-panel-body"><div class="profile settings-profile-identity"><span class="avatar csp-u044 settings-profile-avatar" aria-hidden="true">${e(initials(name()))}</span>
+ <div class="settings-profile-copy"><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div><div class="settings-profile-fields">
+ <div class="settings-detail settings-detail-wide"><label>Work email</label><strong>${e(p.email||state.user?.email||'Not available')}</strong></div>
+ <div class="settings-detail settings-detail-status"><label>Account status</label><strong><span class="status done">${e(p.status)}</span></strong></div>
  <div class="settings-detail"><label>Workspace</label><strong>${e(workspaceName())}</strong></div>
- <div class="settings-detail"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div></section>
- <section class="panel"><div class="panel-header"><h3>Session security</h3><span class="online-dot"></span></div>
- <div class="panel-body"><p class="muted csp-u032" >Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p>
- <div class="note">The application never requires a database password or privileged backend key. Permissions are enforced by the existing workspace RPCs and row-level security.</div>
- <div class="settings-detail"><label>Authentication</label><strong>Signed in and verified</strong></div>
- <div class="csp-u015" >
- <button class="secondary" data-action="copy-token">⎘ Copy short-lived access token</button>
- <button class="secondary" data-action="logout">⇥ Sign out</button></div>
- <div class="note security-note"><b>Access token:</b> Copy only when necessary for local acceptance testing. Anyone holding it may act as your account until it expires. Never share it in chat or commit it.</div>
- <p class="csp-u047" ><a class="secondary" href="#/acceptance">✓ GitHub Pages persistence acceptance</a></p>
- <div class="csp-u006" >
-  <h3 class="csp-u039">Board actions &amp; TimeTracker GPS — live signed acceptance</h3>
+ <div class="settings-detail settings-detail-wide settings-detail-identifier"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div><p class="settings-profile-footnote">${settingsIcon('shield')}<span>Identity details are provided by your signed workspace session.</span></p></div></section>
+ <section class="panel settings-session-panel settings-entrance" aria-labelledby="settings-session-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('lock')}</span><h3 id="settings-session-heading">Session security</h3></div><span class="settings-session-indicator"><span class="online-dot"></span>Authenticated</span></div>
+ <div class="panel-body settings-panel-body"><div class="settings-session-intro"><span class="settings-session-intro-badge" aria-hidden="true">${settingsIcon('shield')}</span><p class="muted csp-u032" >Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p></div>
+ <div class="note settings-session-callout">${settingsIcon('shield')}<span>The application never requires a database password or privileged backend key. Permissions are enforced by the existing workspace RPCs and row-level security.</span></div>
+ <div class="settings-detail settings-auth-detail"><label>Authentication</label><strong>Signed in and verified</strong></div>
+ <div class="csp-u015 settings-session-actions" >
+ <button class="secondary settings-token-button" data-action="copy-token">${settingsIcon('copy')}<span>Copy short-lived access token</span></button>
+ <button class="secondary settings-signout-button" data-action="logout">${settingsIcon('logout')}<span>Sign out</span></button></div>
+ <div class="note security-note settings-token-warning">${settingsIcon('lock')}<div><b>Access token:</b> Copy only when necessary for local acceptance testing. Anyone holding it may act as your account until it expires. Never share it in chat or commit it.</div></div>
+ <div class="csp-u047 settings-verify-block settings-persistence-link" ><a class="secondary" href="#/acceptance">${settingsIcon('check')}<span>GitHub Pages persistence acceptance</span></a></div>
+ <div class="csp-u006 settings-verify-block" >
+  <h3 class="csp-u039">${settingsIcon('activity')}<span>Board actions &amp; TimeTracker GPS — live signed acceptance</span></h3>
   <p class="muted csp-u031">Runs only read-only checks using your current authenticated browser session. It will not edit boards, clock attendance, revoke sessions, or display employee GPS coordinates.</p>
-  <button class="secondary" data-action="board-tt-signed-verify" ${state.boardTtSignedBusy?'disabled':''}>${state.boardTtSignedBusy?'Verifying signed access…':'✓ Verify board and GPS access'}</button>
+  <button class="secondary" data-action="board-tt-signed-verify" ${state.boardTtSignedBusy?'disabled':''}>${settingsIcon('shield')}<span>${state.boardTtSignedBusy?'Verifying signed access…':'Verify board and GPS access'}</span></button>
   ${state.boardTtSignedResult?`<div class="csp-u048">
    <div class="csp-u028">Signed integration: ${e(state.boardTtSignedResult.status)} — ${state.boardTtSignedResult.checks.filter(c=>c.status==='PASS').length} / ${state.boardTtSignedResult.checks.length} checks passed</div>
    ${state.boardTtSignedResult.checks.map(c=>`<div class="csp-u008">
@@ -695,10 +699,10 @@ function settingsPage(){
     <div class="csp-u058">${e(c.detail)}</div></div>`).join('')}
    <p class="muted csp-u026">Read-only session checks do not certify Clock-In/Out persistence, role transitions or historical GPS reconciliation.</p></div>`:''}
  </div>
- <div class="csp-u006" >
-  <h3 class="csp-u039" >Signed backend verification</h3>
+ <div class="csp-u006 settings-verify-block" >
+  <h3 class="csp-u039" >${settingsIcon('lock')}<span>Signed backend verification</span></h3>
   <p class="muted csp-u031" >Run read-only checks against the actual authenticated Supabase session, central board permissions, and Issue view. No token copying or database write required.</p>
-  <button class="primary" data-action="verify-backend" ${state.acceptanceBusy?'disabled':''}>${state.acceptanceBusy?'Verifying…':'✓ Verify backend connection'}</button>
+  <button class="primary" data-action="verify-backend" ${state.acceptanceBusy?'disabled':''}>${settingsIcon('check')}<span>${state.acceptanceBusy?'Verifying…':'Verify backend connection'}</span></button>
   ${state.acceptance ? `<div class="csp-u048" ><div class="csp-u028" >
   ${summarizeAcceptance(state.acceptance).passed} of ${summarizeAcceptance(state.acceptance).total} read-only checks passed</div>
   ${state.acceptance.map(check=>`<div class="csp-u008" >
@@ -706,7 +710,7 @@ function settingsPage(){
   <div class="csp-u058" >${e(check.detail)}</div></div>`).join('')}
   <p class="muted csp-u026" >These checks do not certify the local 5173 host or native transaction writes.</p></div>` : ''}
  </div>
- </div></section></div>`;
+ </div></section></div></div>`;
 }
 function preserveTimeTrackerLogExpansion(){
  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||

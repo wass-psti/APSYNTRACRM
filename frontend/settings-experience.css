@@ -1,0 +1,377 @@
+/* CP-SETTINGS-VIS01 — visual-only, Settings / Account & security route.
+ * Scoped selectors prevent cross-page changes to identity, permissions or UI.
+ */
+#app .aps-settings-shell{
+ --settings-ink:#25334f;--settings-muted:#7987a2;
+ --settings-accent:#6469ea;--settings-stroke:#e2e8f5;
+ background:radial-gradient(ellipse 70% 31% at 90% 0%,#e7ecff83,transparent 85%),#f6f8fd;
+ min-width:0
+}
+#app .aps-settings-shell>.topbar{
+ min-height:76px;position:relative;
+ border-bottom:1px solid #e5eaf5;background:linear-gradient(90deg,#fff,#fcfdff)
+}
+#app .aps-settings-shell .topbar .breadcrumb{gap:11px;font-size:12px;color:#8995ab}
+#app .aps-settings-shell .topbar .breadcrumb strong{color:#33435f;font-weight:800}
+#app .aps-settings-shell .topbar .top-actions{gap:12px}
+#app .aps-settings-shell .topbar .top-pill{
+ display:inline-flex;align-items:center;gap:9px;padding:10px 14px;
+ border:1px solid #dfe7f2;border-radius:40px;
+ background:#f8fbff;color:#4e617c;font-size:11px;font-weight:800;
+ box-shadow:0 3px 9px #1a28520b
+}
+#app .aps-settings-shell .topbar .online-dot{
+ flex:none;width:7px;height:7px;border-radius:50%;
+ background:#24b58c;box-shadow:0 0 0 3px #24b58c1b
+}
+#app .aps-settings-shell .topbar .top-avatar{
+ display:grid;place-items:center;width:36px;height:36px;border-radius:12px;
+ background:linear-gradient(135deg,#a7a8fb,#6961e1);color:#fff;font-weight:850;
+ box-shadow:0 6px 16px #5e5bd02a;
+ transition:transform .18s,box-shadow .18s
+}
+#app .aps-settings-shell .topbar .top-avatar:hover{
+ transform:translateY(-1px);box-shadow:0 8px 23px #5e5bd044
+}
+#app .aps-settings-shell .topbar .top-avatar:focus-visible{
+ outline:2px solid #6168e6;outline-offset:3px
+}
+#app .aps-settings-shell>.main-content{
+ max-width:1570px;padding:33px clamp(21px,3vw,49px) 85px
+}
+#app .aps-settings{color:var(--settings-ink);min-width:0}
+#app .aps-settings .settings-icon{
+ display:block;flex:none;width:19px;height:19px
+}
+#app .aps-settings .settings-hero{
+ position:relative;isolation:isolate;overflow:hidden;
+ display:flex;justify-content:space-between;align-items:center;gap:22px;
+ min-height:172px;margin:0 0 23px;padding:29px clamp(25px,3.2vw,46px);
+ border:1px solid #293774;border-radius:22px;
+ background:radial-gradient(ellipse 65% 135% at 100% 103%,#5953a9af,transparent 80%),
+ radial-gradient(ellipse 70% 117% at 8% 0%,#405489,transparent 77%),
+ linear-gradient(124deg,#151f44 0%,#252c5d 59%,#3d3881 100%);
+ box-shadow:0 20px 43px #1f2f6c1c,0 2px 6px #202c6413
+}
+#app .aps-settings .settings-hero:before{
+ content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background-image:linear-gradient(#ffffff05 1px,transparent 1px),
+ linear-gradient(90deg,#ffffff05 1px,transparent 1px);
+ background-size:41px 41px;
+ mask-image:linear-gradient(90deg,transparent 16%,#0009 100%)
+}
+#app .aps-settings .settings-hero-copy{min-width:0;position:relative;z-index:2}
+#app .aps-settings .settings-hero .label-top{
+ display:inline-flex;align-items:center;gap:9px;color:#bbc9ff;
+ font-size:10px;letter-spacing:1.75px;font-weight:850
+}
+#app .aps-settings .settings-hero-dot{
+ width:6px;height:6px;flex:none;border-radius:50%;
+ background:#9cbaff;box-shadow:0 0 0 4px #b6c7ff22
+}
+#app .aps-settings .settings-hero h1{
+ color:#fff;font-size:clamp(27px,3.2vw,42px);
+ font-weight:860;line-height:1.12;letter-spacing:-1.4px;
+ margin:14px 0 10px;text-wrap:balance
+}
+#app .aps-settings .settings-heading-stop{color:#9caaff}
+#app .aps-settings .settings-hero p{
+ color:#cbd5f1;font-size:13px;line-height:1.65;margin:0;
+ max-width:570px
+}
+#app .aps-settings .settings-hero-status{
+ display:inline-flex;align-items:center;gap:10px;flex:none;
+ padding:11px 15px;border:1px solid #c6d6ff55;border-radius:13px;
+ color:#f2f5ff;background:#ffffff16;backdrop-filter:blur(5px);
+ font-weight:780;font-size:11px;line-height:1.2;
+ position:relative;z-index:2;white-space:nowrap
+}
+#app .aps-settings .settings-hero-status .settings-icon{
+ color:#aee8da;width:19px;height:19px
+}
+#app .aps-settings .settings-hero-decoration{
+ position:absolute;right:-20px;top:-35px;width:min(42%,405px);
+ height:auto;color:#e9efff;z-index:0;pointer-events:none
+}
+#app .aps-settings .settings-grid{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.13fr);
+ align-items:start;gap:19px;min-width:0
+}
+#app .aps-settings .settings-profile-panel,
+#app .aps-settings .settings-session-panel{
+ overflow:hidden;min-width:0;margin:0;
+ border:1px solid var(--settings-stroke);border-radius:17px;
+ background:#fff;
+ box-shadow:0 13px 32px #1b2a5c12,0 2px 4px #1c2a5007
+}
+#app .aps-settings .settings-panel-header{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ background:linear-gradient(90deg,#f7f8fe,#fcfdff);
+ border-bottom:1px solid #e5eaf5;
+ padding:20px 21px
+}
+#app .aps-settings .settings-panel-title{
+ display:flex;align-items:center;gap:11px;min-width:0
+}
+#app .aps-settings .settings-panel-title>span{
+ display:grid;place-items:center;flex:none;width:35px;height:35px;
+ border-radius:11px;background:#eaeaff;color:#6663db
+}
+#app .aps-settings .settings-session-panel .settings-panel-title>span{
+ background:#e8f8f3;color:#269980
+}
+#app .aps-settings .settings-panel-header h3{
+ margin:0;color:#28364f;font-size:14px;font-weight:850;
+ line-height:1.35;letter-spacing:-.15px
+}
+#app .aps-settings .settings-panel-header>.settings-auth-provider{
+ color:#6572ab;border:1px solid #e2e7fb;background:#f3f5ff;
+ border-radius:30px;padding:7px 10px;
+ font-size:10px;font-weight:780;white-space:nowrap
+}
+#app .aps-settings .settings-session-indicator{
+ display:flex;align-items:center;gap:7px;
+ border:1px solid #d4f0e7;border-radius:30px;
+ background:#ecfaf5;color:#238c71;padding:7px 10px;
+ font-size:10px;font-weight:800
+}
+#app .aps-settings .settings-session-indicator .online-dot{
+ width:6px;height:6px;box-shadow:none
+}
+#app .aps-settings .settings-panel-body{padding:23px}
+#app .aps-settings .settings-profile-identity{
+ display:flex;align-items:center;gap:15px;min-width:0;
+ padding:16px 16px;
+ margin-bottom:20px;
+ border:1px solid #e7e9f9;border-radius:13px;
+ background:linear-gradient(105deg,#f3f3ff,#fafaff)
+}
+#app .aps-settings .settings-profile-avatar{
+ flex:none;display:grid;place-items:center;
+ width:56px;height:56px;border-radius:15px;color:#fff;
+ font-size:16px;font-weight:850;
+ background:linear-gradient(135deg,#a0a4fc,#655dde);
+ box-shadow:0 9px 19px #605dd037
+}
+#app .aps-settings .settings-profile-copy{min-width:0}
+#app .aps-settings .settings-profile-copy .name{
+ color:#273450;font-size:15px;font-weight:850;
+ letter-spacing:-.25px;line-height:1.45;overflow-wrap:anywhere
+}
+#app .aps-settings .settings-profile-copy .role{
+ color:#7e87a5;font-size:11px;font-weight:700;
+ line-height:1.6;overflow-wrap:anywhere
+}
+#app .aps-settings .settings-profile-fields{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px
+}
+#app .aps-settings .settings-detail{
+ display:flex;flex-direction:column;gap:8px;
+ min-width:0;margin:0;padding:15px;
+ background:#fbfcff;border:1px solid #e7ebf5;border-radius:11px
+}
+#app .aps-settings .settings-detail-wide{grid-column:1/-1}
+#app .aps-settings .settings-detail label{
+ color:#8792ad;font-size:9px;font-weight:850;
+ letter-spacing:1px;line-height:1.5;text-transform:uppercase
+}
+#app .aps-settings .settings-detail strong{
+ color:#2c3953;font-size:12px;font-weight:800;
+ line-height:1.65;overflow-wrap:anywhere;word-break:break-word
+}
+#app .aps-settings .settings-detail-identifier strong{
+ font-size:10.5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+ font-weight:720;letter-spacing:.08px
+}
+#app .aps-settings .settings-detail-status .status{
+ display:inline-flex;align-items:center;
+ padding:5px 10px;border:1px solid #bfeada;border-radius:30px;
+ color:#21876b;background:#e6f8ef;font-size:10px;font-weight:840
+}
+#app .aps-settings .settings-profile-footnote{
+ display:flex;align-items:flex-start;gap:9px;margin:19px 0 0;
+ color:#7785a0;font-size:11px;line-height:1.6
+}
+#app .aps-settings .settings-profile-footnote .settings-icon{
+ color:#6d74da;width:16px;height:16px;flex:none
+}
+#app .aps-settings .settings-session-intro{
+ display:flex;gap:13px;align-items:flex-start;margin:0 0 17px
+}
+#app .aps-settings .settings-session-intro-badge{
+ display:grid;place-items:center;flex:none;
+ width:39px;height:39px;border-radius:12px;
+ color:#259578;background:#e5f8f1
+}
+#app .aps-settings .settings-session-intro p{
+ color:#65748d;font-size:12px;line-height:1.75;margin:1px 0 0
+}
+#app .aps-settings .settings-session-callout{
+ display:flex;align-items:flex-start;gap:11px;
+ padding:16px 17px;border:1px solid #dce5f9;
+ border-left:3px solid #858ceb;border-radius:12px;
+ background:linear-gradient(105deg,#f3f5ff,#f9faff);
+ color:#5a6887;font-size:11.5px;line-height:1.75;margin:0 0 18px
+}
+#app .aps-settings .settings-session-callout .settings-icon{
+ width:18px;height:18px;color:#6574d2
+}
+#app .aps-settings .settings-auth-detail{
+ margin-bottom:16px;padding:14px 16px;background:#f9fbff
+}
+#app .aps-settings .settings-auth-detail strong{
+ display:inline-flex;align-items:center;gap:8px
+}
+#app .aps-settings .settings-auth-detail strong:before{
+ content:"";display:block;width:6px;height:6px;border-radius:50%;
+ background:#23b48d;box-shadow:0 0 0 3px #24b48d1c
+}
+#app .aps-settings .settings-session-actions{
+ display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:15px 0
+}
+#app .aps-settings .settings-session-actions button{
+ display:inline-flex;align-items:center;gap:8px;justify-content:center;
+ min-height:42px;margin:0;border:1px solid #dce2f2;border-radius:10px;
+ background:#fff;color:#4b5975;padding:10px 13px;
+ font-size:11px;font-weight:800;line-height:1.4;
+ transition:transform .16s,background .16s,border-color .16s,box-shadow .16s
+}
+#app .aps-settings .settings-session-actions button .settings-icon{
+ width:15px;height:15px
+}
+#app .aps-settings .settings-session-actions .settings-token-button{
+ border-color:#dcdcf9;background:#f7f7ff;color:#565ab6
+}
+#app .aps-settings .settings-session-actions button:hover:not(:disabled){
+ transform:translateY(-1px);background:#f1f3ff;border-color:#adbaf2;
+ box-shadow:0 6px 14px #272f7c0d
+}
+#app .aps-settings .settings-session-actions button:focus-visible,
+#app .aps-settings .settings-verify-block a:focus-visible,
+#app .aps-settings .settings-verify-block button:focus-visible{
+ outline:2px solid #6269e9;outline-offset:3px
+}
+#app .aps-settings .settings-token-warning{
+ display:flex;gap:11px;align-items:flex-start;
+ padding:15px 16px;margin:0 0 17px;
+ border:1px solid #f0dcbf;border-left:3px solid #d6a35b;border-radius:11px;
+ background:linear-gradient(106deg,#fff9f1,#fff5ea);
+ color:#865f37;font-size:11px;line-height:1.7
+}
+#app .aps-settings .settings-token-warning .settings-icon{
+ color:#aa752b;width:18px;height:18px;flex:none
+}
+#app .aps-settings .settings-token-warning b{
+ display:inline;color:#76512c;font-weight:850
+}
+#app .aps-settings .settings-verify-block{
+ border-top:1px solid #e9edf7;padding:20px 0 0;margin:19px 0 0;
+ min-width:0
+}
+#app .aps-settings .settings-verify-block h3{
+ display:flex;align-items:center;gap:9px;
+ color:#29354c;font-size:12.5px;font-weight:840;line-height:1.45;
+ margin:0 0 9px
+}
+#app .aps-settings .settings-verify-block h3 .settings-icon{
+ width:17px;height:17px;color:#636bdc
+}
+#app .aps-settings .settings-verify-block>p.muted{
+ color:#77849c;font-size:11.5px;line-height:1.75;margin:0 0 14px
+}
+#app .aps-settings .settings-verify-block button,
+#app .aps-settings .settings-verify-block a.secondary{
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ min-height:41px;margin:0;border-radius:10px;
+ font-size:11px;font-weight:800;padding:10px 14px;
+ text-decoration:none;
+ transition:transform .16s,background .16s,box-shadow .16s
+}
+#app .aps-settings .settings-verify-block button .settings-icon,
+#app .aps-settings .settings-verify-block a .settings-icon{
+ width:16px;height:16px
+}
+#app .aps-settings .settings-verify-block button:hover:not(:disabled),
+#app .aps-settings .settings-verify-block a.secondary:hover{
+ transform:translateY(-1px);box-shadow:0 6px 16px #29327618
+}
+#app .aps-settings .settings-verify-block button:disabled{
+ opacity:.65;cursor:wait
+}
+#app .aps-settings .settings-persistence-link{margin:0 0 6px}
+#app .aps-settings .settings-verify-block .settings-readonly-chip{
+ display:inline-flex;vertical-align:middle;margin-left:10px;
+ color:#6877a8;background:#f0f3fd;border-radius:20px;
+ padding:4px 7px;font-size:9px;font-weight:780;letter-spacing:.2px
+}
+#app .aps-settings .settings-verify-block .csp-u048{
+ max-width:100%;margin-top:14px;
+ border:1px solid #dfe6f4;border-radius:11px;
+ background:#fafbff;padding:13px;overflow-wrap:anywhere
+}
+#app .aps-settings .settings-verify-block .csp-u028{
+ font-size:11px;font-weight:850;color:#35466b;line-height:1.5
+}
+#app .aps-settings .settings-verify-block .csp-u008{
+ margin-top:11px;padding:10px;border-radius:8px;
+ background:#fff;border:1px solid #e9edf6
+}
+#app .aps-settings .settings-verify-block .csp-u017{display:flex;align-items:center;gap:8px}
+#app .aps-settings .settings-verify-block .csp-u058{
+ color:#65718a;font-size:10.5px;line-height:1.65;margin-top:5px;overflow-wrap:anywhere
+}
+@media(max-width:1200px){
+ #app .aps-settings .settings-grid{grid-template-columns:1fr}
+ #app .aps-settings .settings-profile-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:800px){
+ #app .aps-settings .settings-hero{gap:18px;align-items:flex-start;flex-wrap:wrap}
+ #app .aps-settings .settings-hero-decoration{width:65%;right:-70px}
+ #app .aps-settings .settings-hero-status{padding:9px 12px}
+}
+@media(max-width:600px){
+ #app .aps-settings-shell>.main-content{padding:19px 15px 65px}
+ #app .aps-settings-shell>.topbar{min-height:65px}
+ #app .aps-settings-shell .topbar .top-pill{display:none}
+ #app .aps-settings .settings-hero{padding:24px 21px;border-radius:17px}
+ #app .aps-settings .settings-hero h1{font-size:28px;letter-spacing:-.8px}
+ #app .aps-settings .settings-hero p{font-size:12px}
+ #app .aps-settings .settings-hero-status{width:100%;justify-content:center}
+ #app .aps-settings .settings-grid{gap:14px}
+ #app .aps-settings .settings-panel-header{padding:16px}
+ #app .aps-settings .settings-panel-body{padding:16px}
+ #app .aps-settings .settings-profile-identity{padding:13px}
+ #app .aps-settings .settings-profile-avatar{width:47px;height:47px;border-radius:13px}
+ #app .aps-settings .settings-profile-fields{gap:9px}
+ #app .aps-settings .settings-detail{padding:12px}
+ #app .aps-settings .settings-panel-header h3{font-size:13px}
+ #app .aps-settings .settings-session-actions button{flex:1 1 170px}
+ #app .aps-settings .settings-verify-block .settings-readonly-chip{margin:6px 0 0}
+}
+@media(max-width:380px){
+ #app .aps-settings .settings-profile-fields{grid-template-columns:1fr}
+ #app .aps-settings .settings-profile-fields .settings-detail-wide{grid-column:auto}
+ #app .aps-settings .settings-panel-header>.settings-auth-provider{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-settings *,
+ #app .aps-settings *:before,
+ #app .aps-settings *:after,
+ #app .aps-settings-shell .topbar *,
+ #app .aps-settings-shell .topbar *:before,
+ #app .aps-settings-shell .topbar *:after{
+  animation:none!important;transition:none!important
+ }
+ #app .aps-settings .settings-session-actions button:hover,
+ #app .aps-settings .settings-verify-block button:hover,
+ #app .aps-settings-shell .topbar .top-avatar:hover{transform:none}
+}
+@media(prefers-contrast:more){
+ #app .aps-settings .settings-hero{background:#17244b;border-color:#9cabdb}
+ #app .aps-settings .settings-hero p{color:#fff}
+ #app .aps-settings .settings-profile-panel,
+ #app .aps-settings .settings-session-panel{border-color:#62718b}
+ #app .aps-settings .settings-detail{border-color:#75819a}
+ #app .aps-settings .settings-token-warning{border-color:#a27739;color:#644420}
+ #app .aps-settings .settings-session-callout{border-color:#667eb5;color:#3e5278}
+}
