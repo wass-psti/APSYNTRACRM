@@ -89,36 +89,18 @@ test('static SVG icons and CSS support reduced motion, focus and mobile without 
  assert.doesNotMatch(visuals,/WebGL|requestAnimationFrame|setInterval|new Worker|fetch\(/);
  assert.doesNotMatch(visuals,/\.style\s*\.|\.cssText\s*=|setAttribute\s*\(\s*['"]style/);
 });
-test('one-shot motion runs only upon entry, cleans up, and respects reduced motion',()=>{
- const oldWindow=globalThis.window,oldDocument=globalThis.document;
- let played=0,cancelled=0;
- const blocks=Array.from({length:4},()=>({animate(keyframes,options){
-  played++;assert.equal(keyframes.length,2);
-  assert.equal(options.fill,'none');
-  return {cancel(){cancelled++;}};
- }}));
- const root={isConnected:true,querySelectorAll(selector){
-  assert.equal(selector,'.overview-entrance');return blocks;
- }};
- try{
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:false};
-  stopOverviewMotion();
-  mountOverviewMotion(root,'overview');
-  assert.equal(played,4);
-  mountOverviewMotion(root,'overview');
-  assert.equal(played,4,'overview refresh should not replay entrance');
-  assert.equal(cancelled,4);
-  mountOverviewMotion(null,'boards');
-  mountOverviewMotion(root,'overview');
-  assert.equal(played,8);
-  stopOverviewMotion();
-  assert.equal(cancelled,8);
-  globalThis.window={matchMedia:()=>({matches:true})};
-  mountOverviewMotion(root,'overview');
-  assert.equal(played,8,'reduced-motion must disable entrance');
- }finally{
-  stopOverviewMotion();
-  globalThis.window=oldWindow;globalThis.document=oldDocument;
- }
+test('mounted overview components remain stationary on entry and refresh',()=>{
+ let queries=0,animations=0;
+ const node={isConnected:true,querySelectorAll(){queries++;return [{animate(){animations++;}}]},
+  animate(){animations++;}};
+ stopOverviewMotion();
+ mountOverviewMotion(node,'overview');
+ mountOverviewMotion(node,'overview');
+ mountOverviewMotion(null,'overview');
+ mountOverviewMotion(node,'overview');
+ stopOverviewMotion();
+ assert.equal(queries,0,'no entrance element traversal');
+ assert.equal(animations,0,'no mount-time animations');
+ const source=readFileSync('frontend/overview-visuals.js','utf8');
+ assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
