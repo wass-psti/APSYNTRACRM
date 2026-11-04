@@ -59,18 +59,21 @@ test('only source commercial modules display a nonpersistent preview',()=>{
 test('native preview updates only textContent and cannot make network or DB mutations',()=>{
  const fields={quantity:'2',unitPrice:'100',discountType:'percentage',discountValue:'10',
   vatType:'12',currency:'USD',exchangeRate:'56'};
+ const currencyLabel={textContent:''};
  const outputs=Object.fromEntries(['subtotal','discount','taxable','vat','total','phpEquivalent']
   .map(key=>[key,{textContent:''}]));
  const container={querySelector(query){
   const key=query.match(/\[name="([^"]+)"\]/)?.[1];
   return key?{value:fields[key]}:null;
  },parentElement:{querySelector(query){
+  if(query==='[data-tradelink-finance-currency]')return currencyLabel;
   const key=query.match(/data-tradelink-finance-result="([^"]+)"/)?.[1];
   return outputs[key]||null;
  }}};
  const result=updateTradeLinkFinancePreview(container);
  assert.equal(result.subtotal,200);
  assert.equal(outputs.total.textContent,'201.60');
+ assert.equal(currencyLabel.textContent,'USD');
  assert.equal(outputs.phpEquivalent.textContent,'11,289.60');
  assert.equal(updateTradeLinkFinancePreview(null),null);
  const js=readFileSync('frontend/tradelink-finance.js','utf8');
