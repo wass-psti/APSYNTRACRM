@@ -1,0 +1,490 @@
+/*
+ * APSYNTRA / TimeTracker precision interface.
+ * Pixi v8 is an OPTIONAL decoration in the header; all actual controls remain
+ * accessible native HTML. No third-party CSS, continuous scroll or page motion.
+ */
+#app .aps-board-shell .tt-native{
+ --tt-orange:#ec6240;
+ --tt-orange-dark:#d84b2b;
+ --tt-ink:#1a2a4c;
+ --tt-line:#e0e7f6;
+ --tt-ground:#f5f7fd;
+ --tt-card:#ffffff;
+ position:relative;
+ background:linear-gradient(180deg,#f5f8ff 0%,#f9fbff 100%);
+ border:1px solid #dce5f8;
+ border-radius:19px;
+ box-shadow:0 12px 37px #172f6212;
+ overflow:hidden;
+ color:var(--tt-ink);
+}
+#app .aps-board-shell .tt-native .tt-app-header{
+ position:relative;
+ isolation:isolate;
+ min-height:117px;
+ padding:26px clamp(18px,3.1vw,34px);
+ background:
+  radial-gradient(ellipse at 78% 4%,#668be948,transparent 52%),
+  linear-gradient(111deg,#13234e 0%,#1d376f 55%,#364188 100%);
+ border-bottom:1px solid #8ca6e74d;
+ color:#f4f9ff;
+ box-shadow:inset 0 1px #a7cbff22;
+}
+#app .aps-board-shell .tt-native .tt-app-header::before{
+ content:"";
+ position:absolute;inset:0;
+ background-image:
+  linear-gradient(#a9c9ff0a 1px,transparent 1px),
+  linear-gradient(90deg,#a9c9ff0a 1px,transparent 1px);
+ background-size:32px 32px;
+ mask-image:linear-gradient(90deg,transparent 24%,#000 100%);
+ pointer-events:none;z-index:0;
+}
+#app .aps-board-shell .tt-native .tt-pixi-backdrop{
+ position:absolute;inset:0;
+ overflow:hidden;pointer-events:none;
+ z-index:0;
+ background:
+  radial-gradient(circle at 78% 48%,#59baff30 0%,transparent 24%),
+  radial-gradient(circle at 88% 80%,#9272ff2a,transparent 29%);
+}
+#app .aps-board-shell .tt-native .tt-pixi-backdrop::after{
+ content:"";
+ width:156px;height:156px;
+ position:absolute;top:50%;left:79%;
+ border:1px solid #81c8fa31;
+ border-radius:50%;
+ transform:translate(-50%,-50%) rotate(-24deg) scaleY(.7);
+ pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-pixi-backdrop[data-pixi="ready"]::after{opacity:0}
+#app .aps-board-shell .tt-native .tt-pixi-backdrop canvas{
+ display:block;width:100%;height:100%;
+ position:absolute;inset:0;
+ pointer-events:none;
+ opacity:.92;
+}
+#app .aps-board-shell .tt-native :is(.tt-app-brand,.tt-header-actions){
+ position:relative;
+ z-index:1;
+}
+#app .aps-board-shell .tt-native .tt-app-brand{
+ gap:15px;
+}
+#app .aps-board-shell .tt-native .tt-brand-icon{
+ width:51px;height:51px;flex:0 0 51px;
+ border-radius:14px;
+ background:linear-gradient(135deg,#ff9a71,#ec6240 55%,#c94959);
+ color:#fff;
+ border:1px solid #ffc9ad66;
+ box-shadow:0 9px 25px #060d2f52,inset 0 1px #fff6;
+ font-size:25px;
+}
+#app .aps-board-shell .tt-native .tt-app-brand h2{
+ margin:0 0 5px;
+ color:#fff;
+ font:820 clamp(20px,2.1vw,27px)/1.15 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ letter-spacing:-.045em;
+}
+#app .aps-board-shell .tt-native .tt-app-brand p{
+ color:#baceef;
+ font-size:12px;
+ letter-spacing:.02em;
+}
+#app .aps-board-shell .tt-native .tt-role-pill{
+ background:#d5e6ff17;
+ border:1px solid #a8c2ff61;
+ color:#e7efff;
+ font-size:11px;
+ font-weight:730;
+ padding:9px 13px;
+ backdrop-filter:blur(6px);
+ box-shadow:inset 0 1px #fff2;
+}
+#app .aps-board-shell .tt-native .tt-notices{
+ margin:15px clamp(14px,2.5vw,26px) 8px;
+ padding:10px 12px;
+ min-height:44px;
+ display:flex;
+ align-items:center;
+ justify-content:flex-start;
+ gap:8px;
+ background:#fff;
+ border:1px solid #dce6f5;
+ border-radius:12px;
+ box-shadow:0 6px 18px #233e7010;
+}
+#app .aps-board-shell .tt-native .tt-notice{
+ background:#f1f6ff;
+ color:#4c628e;
+ border:1px solid #dfe8fa;
+ border-radius:8px;
+ padding:8px 11px;
+ font-weight:680;
+ font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-notice-warning{
+ background:#fff5ee;
+ border-color:#f6d6c9;
+ color:#a75a42;
+}
+#app .aps-board-shell .tt-native .tt-navigation{
+ margin:0 clamp(14px,2.5vw,26px);
+ border-bottom:1px solid #dce5f4;
+}
+#app .aps-board-shell .tt-native .tt-navigation-scroll{
+ gap:4px;
+ padding-top:5px;
+ scroll-padding-left:5px;
+}
+#app .aps-board-shell .tt-native .tt-nav-tab{
+ min-height:43px;
+ padding:11px 13px 10px;
+ margin-bottom:0;
+ color:#627393;
+ border-radius:9px 9px 0 0;
+ border-bottom:2px solid transparent;
+ font-size:12px;
+ font-weight:670;
+ transition:color .16s ease,background-color .16s ease,border-color .16s ease;
+}
+#app .aps-board-shell .tt-native .tt-nav-tab:hover:not(:disabled){
+ background:#e9effd;
+ color:#3d55ba;
+}
+#app .aps-board-shell .tt-native .tt-nav-tab.is-current{
+ background:linear-gradient(#edf1ff,#eaf0ff);
+ color:#4656ce;
+ border-bottom-color:#6665ee;
+ font-weight:820;
+}
+#app .aps-board-shell .tt-native .tt-nav-tab:focus-visible{
+ outline:2px solid #636be6;outline-offset:-3px;
+}
+#app .aps-board-shell .tt-native .tt-feedback{
+ margin-inline:clamp(14px,2.5vw,26px);
+ border-radius:11px;
+ line-height:1.55;
+ font-size:12px;
+}
+#app .aps-board-shell .tt-native .tt-clock-stage{
+ position:relative;
+ isolation:isolate;
+ min-height:720px;
+ padding:clamp(35px,4vw,54px) 18px 45px;
+ background:
+  radial-gradient(ellipse at 50% 10%,#edf1ff 0%,transparent 44%),
+  linear-gradient(180deg,#f5f8ff 0%,#f9fbff 100%);
+ overflow:hidden;
+}
+#app .aps-board-shell .tt-native .tt-clock-aura{
+ position:absolute;
+ z-index:-1;
+ pointer-events:none;
+ width:min(700px,92vw);
+ aspect-ratio:1;
+ top:-330px;
+ left:50%;
+ transform:translateX(-50%);
+ border-radius:50%;
+ background:radial-gradient(circle,#c6d7ff40 0%,#bcd7ff20 35%,transparent 72%);
+}
+#app .aps-board-shell .tt-native .tt-clock-aura span{
+ position:absolute;
+ display:block;
+ left:50%;top:50%;
+ border:1px solid #96b7ee35;
+ width:72%;height:72%;
+ border-radius:50%;
+ transform:translate(-50%,-50%);
+}
+#app .aps-board-shell .tt-native .tt-clock-aura span:nth-child(2){width:85%;height:85%;border-color:#c7d8ff42}
+#app .aps-board-shell .tt-native .tt-clock-aura span:nth-child(3){width:100%;height:100%;border-color:#dae4ff3d}
+#app .aps-board-shell .tt-native .tt-clock-hero{
+ position:relative;
+ text-align:center;
+}
+#app .aps-board-shell .tt-native .tt-clock-eyebrow{
+ display:inline-flex;
+ align-items:center;gap:8px;
+ color:#647bb3;
+ font-size:10px;
+ letter-spacing:.21em;
+ font-weight:850;
+ margin:0 0 19px;
+}
+#app .aps-board-shell .tt-native .tt-clock-eyebrow::before{
+ content:"";width:7px;height:7px;
+ border-radius:50%;background:#716bff;
+ box-shadow:0 0 0 4px #817aff22;
+}
+#app .aps-board-shell .tt-native .tt-clock-hero h3{
+ font:800 clamp(28px,3vw,40px)/1.17 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ letter-spacing:-.055em;
+ color:#1b2a50;
+ margin:0;
+}
+#app .aps-board-shell .tt-native .tt-clock-hero>p{
+ margin-top:9px;
+ color:#7d8eac;
+ font-size:12px;
+ font-weight:590;
+}
+#app .aps-board-shell .tt-native .tt-clock-face{
+ display:flex;
+ justify-content:center;
+ align-items:baseline;
+ margin:20px 0 21px;
+ font:820 clamp(62px,8.4vw,100px)/1.05 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ letter-spacing:-.085em;
+ color:#17284f;
+ text-shadow:0 6px 24px #8aa6de28;
+}
+#app .aps-board-shell .tt-native .tt-clock-colon{
+ color:#ed6445;
+ padding:0 7px 0 4px;
+ transform:none;
+}
+#app .aps-board-shell .tt-native .tt-clock-suffix{
+ align-items:baseline;
+ display:inline-flex;
+ gap:7px;
+ padding-left:11px;
+ font:680 15px/1.2 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ letter-spacing:0;
+ color:#7081a3;
+}
+#app .aps-board-shell .tt-native .tt-session-summary{
+ width:min(100%,590px);
+ margin:10px 0 27px;
+ border:1px solid #dce5f5;
+ border-radius:13px;
+ background:linear-gradient(180deg,#fff,#f9fbff);
+ box-shadow:0 9px 26px #2344800b;
+ overflow:hidden;
+}
+#app .aps-board-shell .tt-native .tt-session-summary>div{
+ min-height:86px;
+ gap:7px;
+ padding:13px 9px;
+}
+#app .aps-board-shell .tt-native .tt-session-summary>div+div{
+ border-left:1px solid #e9eef8;
+}
+#app .aps-board-shell .tt-native .tt-session-summary strong{
+ font:800 23px/1.1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ color:#1f335c;
+}
+#app .aps-board-shell .tt-native .tt-session-summary .tt-summary-status{
+ font:780 17px/1.1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ color:#4367a6;
+}
+#app .aps-board-shell .tt-native .tt-session-summary span{
+ font-size:10px;
+ color:#8494b3;
+ letter-spacing:.13em;
+}
+#app .aps-board-shell .tt-native .tt-clock-card{
+ position:relative;
+ width:min(100%,590px);
+ padding:clamp(19px,2.4vw,29px);
+ border:1px solid #dce5f5;
+ border-radius:17px;
+ background:linear-gradient(145deg,#fff 0%,#fafcff 100%);
+ box-shadow:0 16px 43px #213e7614,inset 0 1px #fff;
+}
+#app .aps-board-shell .tt-native .tt-clock-card::before{
+ content:"";
+ position:absolute;
+ top:-1px;left:25px;right:25px;
+ height:2px;
+ border-radius:0 0 5px 5px;
+ background:linear-gradient(90deg,transparent,#8383f6,transparent);
+ pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-clock-card-head{
+ gap:12px;
+ margin-bottom:20px;
+}
+#app .aps-board-shell .tt-native .tt-clock-card h4{
+ color:#23345d;
+ font:800 20px/1.2 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ letter-spacing:-.035em;
+}
+#app .aps-board-shell .tt-native .tt-idle-badge{
+ border-radius:999px;
+ border:1px solid #dee6f4;
+ background:#f4f7ff;
+ color:#778aa8;
+ padding:6px 11px;
+ font-size:10px;
+ letter-spacing:.08em;
+}
+#app .aps-board-shell .tt-native .tt-idle-badge.tt-badge-active{
+ background:#e8f8f0;
+ border-color:#b8e6cb;
+ color:#13805a;
+}
+#app .aps-board-shell .tt-native .tt-active-copy{
+ color:#6a7c9c;
+ font-size:12px;
+ line-height:1.6;
+}
+#app .aps-board-shell .tt-native .tt-clock-card form>label{
+ font-size:10px;color:#6980a4;
+ letter-spacing:.09em;
+}
+#app .aps-board-shell .tt-native .tt-clock-card :is(select,textarea){
+ background:#f8faff;
+ border:1px solid #dce5f4;
+ color:#2e4165;
+ border-radius:10px;
+ min-height:46px;
+ box-shadow:inset 0 1px #fff;
+ transition:border-color .15s ease,box-shadow .15s ease;
+}
+#app .aps-board-shell .tt-native .tt-clock-card :is(select,textarea):focus{
+ border-color:#7b89ef;
+ box-shadow:0 0 0 3px #7773f51d;
+ outline:none;
+}
+#app .aps-board-shell .tt-native .tt-quick-location button{
+ border:1px solid #dce6f6;
+ border-radius:999px;
+ background:#f3f6ff;
+ color:#5c6f9b;
+ min-height:30px;
+ padding:6px 12px;
+}
+#app .aps-board-shell .tt-native .tt-quick-location button:hover,
+#app .aps-board-shell .tt-native .tt-quick-location button.is-selected{
+ border-color:#bfc8ff;
+ background:#e9edff;
+ color:#5056c7;
+}
+#app .aps-board-shell .tt-native .tt-start-button{
+ min-height:54px;
+ background:linear-gradient(107deg,#ec6544,#db4a36);
+ color:#fff;
+ border:1px solid #e25239;
+ border-radius:11px;
+ box-shadow:0 8px 23px #dd583c2c,inset 0 1px #ffffff3d;
+ font-size:12px;
+ letter-spacing:.12em;
+ font-weight:820;
+ transition:background-color .16s ease,box-shadow .16s ease;
+}
+#app .aps-board-shell .tt-native .tt-start-button:hover:not(:disabled){
+ background:linear-gradient(107deg,#e35939,#c94130);
+ box-shadow:0 10px 25px #dc503937;
+}
+#app .aps-board-shell .tt-native .tt-start-button:disabled{
+ background:#eef1f7;color:#98a5bd;border-color:#e4e9f2;box-shadow:none;
+}
+#app .aps-board-shell .tt-native .tt-clock-hint,
+#app .aps-board-shell .tt-native .tt-clock-footnote{
+ color:#8796b0;
+ line-height:1.65;
+}
+#app .aps-board-shell .tt-native .tt-clock-footnote{max-width:600px}
+#app .aps-board-shell .tt-native .tt-active-session-context{
+ border:1px solid #d5ebe1;
+ border-radius:11px;
+ background:#f5fbf7;
+ color:#345b4e;
+}
+#app .aps-board-shell .tt-native .tt-unavailable{
+ color:#7585a3;
+ min-height:330px;
+}
+#app .aps-board-shell .tt-native .tt-secondary-content{
+ min-height:540px;
+ background:linear-gradient(180deg,#f8faff,#f6f8fd);
+ padding:clamp(17px,2.5vw,31px);
+}
+#app .aps-board-shell .tt-native .tt-subview-head h3,
+#app .aps-board-shell .tt-native .tt-overview-hero h3{
+ font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ font-weight:820;
+ letter-spacing:-.045em;
+ color:#1e2d53;
+}
+#app .aps-board-shell .tt-native .tt-subview-head p{
+ color:#8492ac;
+ line-height:1.55;
+}
+#app .aps-board-shell .tt-native .tt-content-panel,
+#app .aps-board-shell .tt-native .tt-overview-panel,
+#app .aps-board-shell .tt-native .tt-overview-location{
+ border:1px solid #dfe7f6;
+ border-radius:13px;
+ background:#fff;
+ box-shadow:0 7px 24px #172f6110;
+}
+#app .aps-board-shell .tt-native .tt-overview{
+ background:linear-gradient(180deg,#f8faff,#f6f8fd);
+}
+#app .aps-board-shell .tt-native .tt-overview-metrics{
+ border:1px solid #dfe7f6;
+ border-radius:13px;
+ overflow:hidden;
+ background:#fff;
+ box-shadow:0 6px 22px #172f610b;
+}
+#app .aps-board-shell .tt-native .tt-overview-metric strong,
+#app .aps-board-shell .tt-native .tt-overview-location strong{
+ color:#263e74;
+}
+#app .aps-board-shell .tt-native .tt-content-panel .board-table th{
+ background:#ecf1fc;
+ color:#657c9e;
+}
+#app .aps-board-shell .tt-native :is(.tt-notices,.tt-clock-card,.tt-content-panel,.tt-overview-metrics) *{
+ animation:none;
+}
+@media(max-width:720px){
+ #app .aps-board-shell .tt-native{border-radius:14px}
+ #app .aps-board-shell .tt-native .tt-app-header{
+  min-height:112px;
+  padding:20px 16px;
+ }
+ #app .aps-board-shell .tt-native .tt-app-brand{gap:11px}
+ #app .aps-board-shell .tt-native .tt-brand-icon{
+  width:42px;height:42px;flex-basis:42px;font-size:21px;border-radius:12px;
+ }
+ #app .aps-board-shell .tt-native .tt-app-brand h2{font-size:21px}
+ #app .aps-board-shell .tt-native .tt-app-brand p{font-size:10px}
+ #app .aps-board-shell .tt-native .tt-notices{margin:12px 13px 7px}
+ #app .aps-board-shell .tt-native .tt-navigation{margin:0 13px}
+ #app .aps-board-shell .tt-native .tt-clock-stage{
+  min-height:650px;padding:38px 14px;
+ }
+ #app .aps-board-shell .tt-native .tt-clock-face{font-size:clamp(51px,10vw,75px)}
+ #app .aps-board-shell .tt-native .tt-clock-suffix{font-size:12px}
+ #app .aps-board-shell .tt-native .tt-session-summary>div{min-height:78px}
+ #app .aps-board-shell .tt-native .tt-session-summary strong{font-size:19px}
+ #app .aps-board-shell .tt-native .tt-session-summary .tt-summary-status{font-size:15px}
+}
+@media(max-width:440px){
+ #app .aps-board-shell .tt-native .tt-app-header{gap:12px}
+ #app .aps-board-shell .tt-native .tt-role-pill{padding:6px 10px}
+ #app .aps-board-shell .tt-native .tt-clock-face{
+  font-size:clamp(43px,10vw,61px);
+  letter-spacing:-.065em;
+ }
+ #app .aps-board-shell .tt-native .tt-clock-colon{padding-inline:3px}
+ #app .aps-board-shell .tt-native .tt-clock-suffix{padding-left:5px;gap:3px}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .tt-native *,#app .aps-board-shell .tt-native *::before,
+ #app .aps-board-shell .tt-native *::after{
+  animation:none!important;transition:none!important;scroll-behavior:auto!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-board-shell .tt-native :is(.tt-clock-card,.tt-content-panel,.tt-overview-panel){
+  border-color:#7e8cb5;
+ }
+ #app .aps-board-shell .tt-native .tt-app-brand p{color:#fff}
+ #app .aps-board-shell .tt-native .tt-nav-tab{color:#24365b}
+}
