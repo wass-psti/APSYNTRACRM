@@ -24,6 +24,7 @@ import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.j
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
+import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
@@ -3819,7 +3820,17 @@ root.addEventListener('click',event=>{
  event.preventDefault();
  Promise.resolve(action(target.dataset.action,target)).catch(notice);
 });
+/** Source financial calculation is a nonpersistent preview; no write client involved. */
+function syncTradeLinkFinanceInput(event){
+ const panel=event.target?.closest?.('[data-tradelink-finance-preview]');
+ if(!panel||state.view!=='board'||state.tab!=='tradelink'||
+    state.boardId!==TRADELINK_BOARD_ID||
+    state.board?.board?.workspace_id!==state.context?.workspace_id)return false;
+ updateTradeLinkFinancePreview(panel);
+ return true;
+}
 root.addEventListener('change',event=>{
+ if(syncTradeLinkFinanceInput(event))return;
  if(event.target.matches('[data-board-select-item]')&&activeBoardLayout()){
   const input=event.target;
   const order=[...root.querySelectorAll('[data-board-select-item]')]
@@ -3951,6 +3962,7 @@ root.addEventListener('submit',event=>{
  }
 });
 root.addEventListener('input',event=>{
+ if(syncTradeLinkFinanceInput(event))return;
  if(event.target.matches('[data-tradelink-search]')&&
     state.view==='board'&&state.tab==='tradelink'&&
     state.boardId===TRADELINK_BOARD_ID&&state.board?.board?.workspace_id===state.context?.workspace_id){
