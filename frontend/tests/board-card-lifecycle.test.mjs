@@ -98,7 +98,7 @@ test('invalid names, descriptions and stale signed receipt fail safely',async()=
  assert.equal(fixture.calls.length,0);
  await assert.rejects(()=>client.edit(custom,{name:'OK',description:''}),ApiError);
 });
-test('board card markup uses separate links and menu, safe confirmation and Trash restoration',()=>{
+test('board card markup uses one stretched link and independent menu, preserving safe lifecycle actions',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const css=readFileSync('frontend/styles.css','utf8');
  const menuStart=app.indexOf('function boardCard(board,index){');
@@ -108,7 +108,9 @@ test('board card markup uses separate links and menu, safe confirmation and Tras
  assert.match(card,/return '<article class="board-card"/);
  assert.match(card,/class="board-card-actions"/);
  assert.match(card,/class="board-card-main"/);
- assert.match(card,/class="board-card-symbol-link"/);
+ assert.match(card,/class="board-symbol '/);
+ assert.doesNotMatch(card,/class="board-card-symbol-link"/);
+ assert.match(card,/aria-label="Open '/);
  assert.doesNotMatch(card,/return \`<a class="board-card"/);
  assert.match(app,/case 'board-card-edit'/);
  assert.match(app,/case 'board-card-trash'/);
