@@ -1,0 +1,125 @@
+/* CP-CRM-METRIC-01 — global signed metrics presentation.
+ * Preserve exact canonical text, chart contracts and content visibility.
+ * Decorative SVG/Canvas gauges only when a rendered value is a valid 0–100%.
+ * All animation state is scoped, reduced-motion aware, and CSP compliant.
+ */
+:root{
+ --aps-metric-accent:#6879db;
+ --aps-metric-track:#dae4f6;
+ --aps-metric-outline:#e1e8f6;
+ --aps-metric-ease:cubic-bezier(.2,.75,.25,1);
+}
+#app .aps-metric-card{
+ position:relative;
+ isolation:isolate;
+ min-width:0;
+}
+#app .aps-metric-value{
+ font-variant-numeric:tabular-nums;
+ font-feature-settings:"tnum" 1;
+}
+#app .aps-metric-card:focus-within{
+ outline:2px solid #697cda9e;
+ outline-offset:2px;
+}
+#app .aps-metric-gauge{
+ box-sizing:border-box;
+ position:absolute;
+ top:10px;right:10px;
+ width:52px;height:52px;
+ max-width:22%;max-height:65%;
+ display:block;overflow:visible;
+ opacity:.70;pointer-events:none;
+ z-index:0;flex:none;
+}
+#app .aps-metric-gauge-svg circle{
+ stroke-linecap:round;
+}
+#app .aps-metric-gauge-canvas{
+ object-fit:contain;
+ image-rendering:auto;
+}
+#app .aps-metric-gauge-track{
+ stroke:var(--aps-metric-track);
+}
+#app .aps-metric-gauge-fill{
+ stroke:var(--aps-metric-accent);
+}
+#app .tt-native .aps-metric-gauge{
+ --aps-metric-accent:#6576de;
+ --aps-metric-track:#d3def3;
+ opacity:.60;
+}
+#app .tt-native .tt-ov-telemetry-stats .aps-metric-gauge,
+#app .tt-native .tt-gps-telemetry-grid .aps-metric-gauge,
+#app .tt-native .tt-team-telemetry-grid .aps-metric-gauge,
+#app .tt-native .tt-monitor-telemetry-grid .aps-metric-gauge{
+ --aps-metric-accent:#88dce6;
+ --aps-metric-track:#e1edff35;
+ opacity:.6;
+ width:39px;height:39px;
+ top:3px;right:3px;
+}
+#app .stat-card.aps-metric-card,
+#app .tt-report-stat.aps-metric-card,
+#app .tt-overview-metric.aps-metric-card,
+#app .tt-monitor-stat.aps-metric-card,
+#app .tt-gps-kpi.aps-metric-card{
+ border-color:var(--aps-metric-outline);
+ transition:border-color .18s var(--aps-metric-ease),
+  box-shadow .18s var(--aps-metric-ease);
+}
+#app .stat-card.aps-metric-card:hover,
+#app .tt-report-stat.aps-metric-card:hover,
+#app .tt-overview-metric.aps-metric-card:hover,
+#app .tt-monitor-stat.aps-metric-card:hover,
+#app .tt-gps-kpi.aps-metric-card:hover{
+ border-color:#aebce9;
+}
+#app .aps-metric-card .aps-metric-value{
+ position:relative;z-index:1;
+}
+#app .aps-metric-chart{
+ max-width:100%;
+ min-width:0;
+ contain:layout;
+}
+#app .aps-metric-chart svg,
+#app .aps-metric-chart canvas{
+ max-width:100%;
+}
+/* A single polite live region reports deliberate signed refreshes only.
+ * It never streams individual count-up frames, personnel identities, or GPS data. */
+#app .aps-metric-live{
+ position:absolute!important;width:1px!important;height:1px!important;
+ padding:0!important;margin:0!important;overflow:hidden!important;
+ clip-path:inset(50%)!important;
+ white-space:nowrap!important;border:0!important;
+}
+@media(max-width:720px){
+ #app .aps-metric-gauge{width:40px;height:40px;max-width:20%;opacity:.52;}
+ #app .stat-card.aps-metric-card{min-width:0;}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-metric-card,
+ #app .aps-metric-card *,
+ #app .aps-metric-chart,
+ #app .aps-metric-chart *{
+  animation:none!important;transition:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-metric-gauge{
+  --aps-metric-accent:#3249a6;
+  --aps-metric-track:#7383a5;
+  opacity:1;
+ }
+ #app .aps-metric-card .aps-metric-value{
+  text-decoration-thickness:2px;
+ }
+}
+@media(forced-colors:active){
+ #app .aps-metric-gauge{opacity:.6;forced-color-adjust:auto;}
+ #app .aps-metric-gauge-track{stroke:GrayText;}
+ #app .aps-metric-gauge-fill{stroke:Highlight;}
+}
