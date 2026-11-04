@@ -22,33 +22,8 @@ export function overviewIcon(icon){
   'stroke-linejoin="round" aria-hidden="true" focusable="false">'+
   (Object.hasOwn(paths,icon)?paths[icon]:paths.grid)+'</svg>';
 }
-let lastView=null;
-let animations=[];
-/**
- * Animate only entry into the overview, not every data refresh.
- * @param {HTMLElement|null} section
- * @param {string} view
+/** Intentional minimal-motion policy: route content is placed immediately.
+ * Retain public hooks for existing shell imports; no entrance animation work.
  */
-export function mountOverviewMotion(section,view){
- const changed=lastView!==view;
- lastView=view;
- animations.forEach(animation=>animation.cancel?.());
- animations=[];
- if(!section?.isConnected||view!=='overview'||!changed||
-  typeof window==='undefined'||typeof document==='undefined'||document.hidden||
-  window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
- const blocks=[...section.querySelectorAll('.overview-entrance')].slice(0,8);
- for(const [index,block] of blocks.entries()){
-  if(typeof block.animate!=='function')continue;
-  animations.push(block.animate([
-   {opacity:.86,transform:'translate3d(0,9px,0)'},
-   {opacity:1,transform:'translate3d(0,0,0)'}
-  ],{duration:Math.min(300+index*25,450),delay:Math.min(index*45,180),
-   easing:'cubic-bezier(.22,1,.36,1)',fill:'none'}));
- }
-}
-export function stopOverviewMotion(){
- animations.forEach(animation=>animation.cancel?.());
- animations=[];
- lastView=null;
-}
+export function mountOverviewMotion(){}
+export function stopOverviewMotion(){}
