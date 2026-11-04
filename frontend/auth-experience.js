@@ -1,7 +1,7 @@
 /**
  * Login-only visual lifecycle. Never owns or reads credentials, tokens, roles,
  * routes, or the authentication client. Graphics never gate sign-in.
- * Native Web Animations API handles entrance motion; WebGL is opportunistic.
+ * The login form appears immediately; decorative WebGL remains opportunistic.
  */
 
 /** @typedef {{destroy:()=>void}} AuthExperienceHandle */
@@ -14,25 +14,11 @@ export function mountAuthExperience(layout,{sceneLoader=()=>import('./auth-scene
  if(!layout||!layout.isConnected||typeof window==='undefined')
   return {destroy(){}};
  let active=true,scene=null,waiter=null,waiterKind=null;
- const animations=[];
  const prefers=(query)=>Boolean(window.matchMedia?.(query)?.matches);
  const reduced=prefers('(prefers-reduced-motion: reduce)');
  const lowPower=Boolean(device.connection?.saveData||
   (device.deviceMemory&&device.deviceMemory<=4)||
   (device.hardwareConcurrency&&device.hardwareConcurrency<=4));
- if(!reduced&&typeof layout.querySelectorAll==='function'){
-  const reveal=[...layout.querySelectorAll('.auth-reveal')];
-  if(typeof layout.animate==='function'||reveal.some(el=>typeof el.animate==='function')){
-   reveal.forEach((element,index)=>{
-    if(typeof element.animate!=='function')return;
-    const animation=element.animate([
-     {opacity:0,transform:'translate3d(0,16px,0)'},
-     {opacity:1,transform:'translate3d(0,0,0)'}
-    ],{duration:500,delay:Math.min(index*65,260),easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});
-    animations.push(animation);
-   });
-  }
- }
  const host=layout.querySelector('[data-auth-scene]');
  const eligible=Boolean(!reduced&&!lowPower&&!document.hidden&&host?.isConnected&&
   window.WebGL2RenderingContext&&prefers('(min-width: 1021px)'));
@@ -62,7 +48,6 @@ export function mountAuthExperience(layout,{sceneLoader=()=>import('./auth-scene
  return {destroy(){
   if(!active)return;
   active=false;
-  animations.forEach(animation=>animation.cancel?.());
   if(waiter!==null){
    if(waiterKind==='idle')window.cancelIdleCallback?.(waiter);
    else window.clearTimeout(waiter);
