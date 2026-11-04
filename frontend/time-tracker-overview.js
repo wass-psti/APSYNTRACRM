@@ -238,7 +238,7 @@ export function renderTimeTrackerOverview({
     '</div>'+
    '</div>'+
    '<div class="tt-ov-telemetry">'+
-    '<div class="tt-ov-telemetry-title"><span>LIVE STATUS</span><span class="tt-ov-live-marker" aria-hidden="true"></span></div>'+
+    '<div class="tt-ov-telemetry-title"><span>SIGNED SNAPSHOT</span><span class="tt-ov-live-marker" aria-hidden="true"></span></div>'+
     '<div class="tt-overview-live">'+
      '<time id="tt-overview-time">'+escapeHtml(t.hours+':'+t.minutes+':'+t.seconds+' '+t.period)+'</time>'+
      '<span>Philippine Time · UTC +08:00</span>'+
