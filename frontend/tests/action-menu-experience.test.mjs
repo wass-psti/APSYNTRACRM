@@ -49,7 +49,9 @@ test('Lucide SVG geometry is local, decorative, bounded and never injects HTML',
  const svg=createLucideActionIcon('ellipsis-vertical',doc);
  assert.equal(svg.tag,'svg');
  assert.equal(svg.attributes['aria-hidden'],'true');
- assert.equal(svg.attributes.stroke,'currentColor');
+ assert.equal(svg.attributes.stroke,'none');
+ assert.equal(svg.attributes.fill,'currentColor');
+ assert.equal(svg.attributes.class,'aps-action-icon aps-ellipsis-icon');
  assert.equal(svg.children.length,3);
  assert.ok(svg.children.every(x=>x.tag==='circle'));
  assert.equal(createLucideActionIcon('pencil',null),null);

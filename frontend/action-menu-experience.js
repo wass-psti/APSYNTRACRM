@@ -18,7 +18,7 @@ const LUCIDE_NODES=Object.freeze({
  'circle-check':[['circle',{cx:12,cy:12,r:10}],['path',{d:'m8 12 2.5 2.5L16 9'}]],
  'search':[['circle',{cx:11,cy:11,r:8}],['path',{d:'m21 21-4.35-4.35'}]],
  'x':[['path',{d:'M18 6 6 18'}],['path',{d:'m6 6 12 12'}]],
- 'ellipsis-vertical':[['circle',{cx:12,cy:5,r:1}],['circle',{cx:12,cy:12,r:1}],['circle',{cx:12,cy:19,r:1}]],
+ 'ellipsis-vertical':[['circle',{cx:12,cy:5,r:1.5}],['circle',{cx:12,cy:12,r:1.5}],['circle',{cx:12,cy:19,r:1.5}]],
  'pencil':[['path',{d:'M12 19l7-7 3 3-7 7-4 1 1-4Z'}],['path',{d:'m18 13 3 3'}]],
  'trash-2':[['path',{d:'M3 6h18'}],['path',{d:'M8 6V4h8v2'}],['path',{d:'m19 6-1 14H6L5 6'}],['path',{d:'M10 11v6'}],['path',{d:'M14 11v6'}]],
  'rotate-ccw':[['path',{d:'M3 11a9 9 0 1 1 2.65 6.35'}],['path',{d:'M3 3v8h8'}]],
@@ -59,11 +59,15 @@ export function lucideIconNodes(name){
 export function createLucideActionIcon(name,doc=globalThis.document){
  if(!doc?.createElementNS)return null;
  const svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');
- svg.setAttribute('class','aps-action-icon');
- svg.setAttribute('width','17');svg.setAttribute('height','17');
+ const ellipsis=name==='ellipsis-vertical';
+ svg.setAttribute('class',ellipsis?
+  'aps-action-icon aps-ellipsis-icon':'aps-action-icon');
+ svg.setAttribute('width',ellipsis?'18':'17');
+ svg.setAttribute('height',ellipsis?'18':'17');
  svg.setAttribute('viewBox','0 0 24 24');
- svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');
- svg.setAttribute('stroke-width','1.8');
+ svg.setAttribute('fill',ellipsis?'currentColor':'none');
+ svg.setAttribute('stroke',ellipsis?'none':'currentColor');
+ svg.setAttribute('stroke-width',ellipsis?'0':'1.8');
  svg.setAttribute('stroke-linecap','round');
  svg.setAttribute('stroke-linejoin','round');
  svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');
@@ -107,7 +111,8 @@ function labelSummary(summary){
 }
 function enhanceVisuals(trigger,menu,{replaceTrigger=false}={}){
  const doc=trigger.ownerDocument;
- if(replaceTrigger&&!trigger.querySelector('.aps-action-icon')){
+ if(replaceTrigger)trigger.classList.add('aps-ellipsis-trigger');
+ if(replaceTrigger&&!trigger.querySelector('.aps-ellipsis-icon')){
   const label=labelSummary(trigger);
   trigger.setAttribute('aria-label',label);
   trigger.setAttribute('title',trigger.getAttribute('title')||label);
@@ -347,6 +352,7 @@ export function startActionMenuExperience(root=globalThis.document?.body){
   for(const button of buttons){
    if(columnButtons.has(button))continue;
    columnButtons.add(button);
+   button.classList.add('aps-ellipsis-trigger');
    const svg=createLucideActionIcon('ellipsis-vertical',doc);
    if(svg)button.replaceChildren(svg);
    button.setAttribute('aria-haspopup','menu');

@@ -199,3 +199,147 @@
   outline:2px solid Highlight;
  }
 }
+
+/* CP-CRM-ACTION-ICON-02 — global icon geometry and menu alignment.
+ * Previously the glyph rules applied only under .aps-board-shell. Column
+ * context menus are appended directly to #app and Overview is a sibling route.
+ * Scope to the shared component, not a particular board/page ancestor.
+ */
+#app svg.aps-action-icon{
+ box-sizing:content-box;
+ display:block;
+ flex:0 0 17px;
+ width:17px;height:17px;
+ min-width:17px;min-height:17px;
+ max-width:17px;max-height:17px;
+ aspect-ratio:1;
+ overflow:visible;
+ stroke:currentColor;fill:none;
+ vertical-align:middle;
+ transform:none;
+ pointer-events:none;
+}
+#app svg.aps-action-icon.aps-ellipsis-icon{
+ flex:0 0 18px;
+ width:18px;height:18px;
+ min-width:18px;min-height:18px;
+ max-width:18px;max-height:18px;
+ stroke:none;fill:currentColor;
+}
+#app svg.aps-ellipsis-icon>circle{
+ fill:currentColor;stroke:none;
+}
+#app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger){
+ box-sizing:border-box;
+ display:inline-flex;
+ align-items:center;justify-content:center;
+ flex:none;
+ width:36px;height:36px;min-width:36px;min-height:36px;
+ padding:0;
+ border:1px solid #dde4f4;border-radius:10px;
+ color:#6f7c9e;background:#f7f9ff;
+ line-height:1;
+ vertical-align:middle;
+ list-style:none;cursor:pointer;touch-action:manipulation;
+}
+#app summary.aps-ellipsis-trigger::-webkit-details-marker{display:none;}
+#app summary.aps-ellipsis-trigger::after{content:none;}
+#app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger):hover,
+#app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger)[aria-expanded="true"]{
+ color:var(--aps-action-accent,#596bd7);
+ background:#eaf0ff;border-color:#becbef;
+}
+#app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger):focus-visible{
+ outline:3px solid #8193e8b0;outline-offset:3px;
+}
+#app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger):disabled{
+ opacity:.5;cursor:not-allowed;
+}
+/* Board-header three-dot triggers are on a navy banner. */
+#app .board-actions-menu>summary.aps-ellipsis-trigger{
+ color:#fff;background:#ffffff1b;border-color:#ffffff70;
+}
+#app .board-actions-menu>summary.aps-ellipsis-trigger:hover,
+#app .board-actions-menu>summary.aps-ellipsis-trigger[aria-expanded="true"]{
+ color:#fff;background:#ffffff32;border-color:#ffffffb0;
+}
+/* Shared menu rows are standardized even when rendered directly under #app.
+ * Keep the existing popover top-layer positioning and action dispatch intact.
+ */
+#app .aps-action-popover{
+ box-sizing:border-box;
+ display:grid;gap:3px;
+ min-width:210px;width:max-content;
+ max-width:min(310px,calc(100vw - 20px));
+ padding:7px;border:1px solid var(--aps-action-border,#d6e0f2);
+ border-radius:14px;
+ color:var(--aps-action-ink,#34476c);
+ background:linear-gradient(165deg,#fff 0%,#fcfdff 100%);
+ box-shadow:var(--aps-action-shadow,0 19px 44px #14244736);
+ overflow-y:auto;overscroll-behavior:contain;
+ max-height:min(370px,calc(100dvh - 20px));
+}
+#app .aps-action-popover>:is([role="menuitem"],button[data-action],a[href]){
+ box-sizing:border-box;
+ display:flex;align-items:center;justify-content:flex-start;
+ gap:10px;width:100%;min-height:40px;
+ margin:0;padding:10px 12px;
+ border:1px solid transparent;border-radius:9px;
+ background:transparent;
+ font:700 12px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ color:var(--aps-action-ink,#34476c);
+ text-align:left;text-decoration:none;
+ cursor:pointer;white-space:normal;
+}
+#app .aps-action-popover>:is([role="menuitem"],button[data-action],a[href])>svg.aps-action-icon{
+ align-self:center;
+ flex:0 0 17px;
+ width:17px;height:17px;
+ min-width:17px;min-height:17px;
+ max-width:17px;max-height:17px;
+}
+#app .aps-action-popover>[role="menuitem"]:hover:not(:disabled),
+#app .aps-action-popover>[role="menuitem"]:focus-visible{
+ background:#eef2ff;border-color:#d5defa;
+ color:#465bc5;outline:none;
+}
+#app .aps-action-popover>[role="menuitem"]:focus-visible{
+ box-shadow:inset 3px 0 #6575d7;
+}
+#app .aps-action-popover>[role="menuitem"]:disabled,
+#app .aps-action-popover>[role="menuitem"][aria-disabled="true"]{
+ opacity:.53;cursor:not-allowed;
+}
+#app .aps-action-popover>:is([data-action*="delete"],[data-action*="trash"],.board-card-danger){
+ color:var(--aps-action-danger,#bb4056);
+}
+#app .aps-action-popover>:is([data-action*="delete"],[data-action*="trash"],.board-card-danger):hover:not(:disabled){
+ color:#a7304b;background:#fff1f4;border-color:#f6d3db;
+}
+@media(max-width:720px){
+ #app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger){
+  width:42px;height:42px;min-width:42px;min-height:42px;
+ }
+ #app .aps-action-popover>[role="menuitem"]{
+  min-height:44px;padding:11px 12px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger),
+ #app .aps-action-popover>[role="menuitem"]{
+  transition:none!important;animation:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app :is(summary.aps-ellipsis-trigger,button.aps-ellipsis-trigger){
+  border:2px solid currentColor;
+ }
+ #app .aps-action-popover{
+  border:2px solid #314970;
+ }
+}
+@media(forced-colors:active){
+ #app .aps-action-popover>[role="menuitem"]:focus-visible{
+  outline:2px solid Highlight;outline-offset:-2px;
+ }
+}
