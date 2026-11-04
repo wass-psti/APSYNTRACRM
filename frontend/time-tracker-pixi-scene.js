@@ -70,7 +70,7 @@ export function mountTimeTrackerPixi(root,{load=()=>import(PIXI_V8_URL)}={}){
    await application.init({
     preference:globalThis.navigator?.gpu?['webgpu','webgl']:'webgl',
     preferWebGLVersion:2,powerPreference:'low-power',
-    backgroundAlpha:0,antialias:false,autoDensity:true,
+    backgroundAlpha:0,antialias:false,autoDensity:false,
     resolution:Math.min(1.25,globalThis.devicePixelRatio||1),
     resizeTo:host,autoStart:false,sharedTicker:false,
     eventFeatures:{move:false,globalMove:false,click:false,wheel:false}
