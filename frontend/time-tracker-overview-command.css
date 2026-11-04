@@ -232,7 +232,7 @@
  background:#cfe4ff29;
  border-color:#b1d5ff8f;
 }
-#app .aps-board-shell .tt-native .tt-ov-refresh:focus-visible{
+#app .aps-board-shell .tt-native .tt-overview-command .tt-ov-refresh:focus-visible{
  outline:2px solid #a1d2ff;outline-offset:3px;
 }
 #app .aps-board-shell .tt-native .tt-overview-command .tt-overview-search{
