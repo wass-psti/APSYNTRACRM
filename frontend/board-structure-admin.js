@@ -72,7 +72,7 @@ export function describeBoardColumns(detail){
  const columns=Array.isArray(detail?.columns)?detail.columns:[];
  const knownModule=moduleByBoardName(detail?.board?.name);
  const allowed=knownModule?new Set(boardGridColumns(detail,{allowCustom:true})
-  .slice(2).map(column=>column.key.slice(4))):null;
+  .filter(column=>column.key.startsWith('col:')).map(column=>column.key.slice(4))):null;
  return [
   {id:null,key:'record',name:'Record',kind:'primary',deletable:false,
    type:'text',immutable:true},
