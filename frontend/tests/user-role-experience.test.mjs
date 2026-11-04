@@ -143,34 +143,18 @@ test('scoped stylesheet includes responsive, keyboard, reduced-motion and contra
  assert.doesNotMatch(visual,/\.style\s*\.|\.cssText\s*=|setAttribute\s*\(\s*['"]style/);
 });
 
-test('one-shot motion cancels on rerender and pauses for reduced motion or hidden document',()=>{
- const prevWindow=globalThis.window,prevDocument=globalThis.document;
- let started=0,cancelled=0;
- const nodes=Array.from({length:4},()=>({animate(frames,opts){
-  started++;assert.equal(frames.length,2);assert.equal(opts.fill,'none');
-  return {cancel(){cancelled++;}};
- }}));
- const section={isConnected:true,querySelectorAll(query){
-  assert.equal(query,'.user-role-entrance');return nodes;
- }};
- try{
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:false};
-  stopUserRoleMotion();
-  mountUserRoleMotion(section,'user-role-management');assert.equal(started,4);
-  mountUserRoleMotion(section,'user-role-management');assert.equal(started,4);
-  assert.equal(cancelled,4);
-  mountUserRoleMotion(null,'boards');
-  mountUserRoleMotion(section,'user-role-management');assert.equal(started,8);
-  stopUserRoleMotion();assert.equal(cancelled,8);
-  globalThis.window={matchMedia:()=>({matches:true})};
-  mountUserRoleMotion(section,'user-role-management');assert.equal(started,8);
-  stopUserRoleMotion();
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:true};
-  mountUserRoleMotion(section,'user-role-management');assert.equal(started,8);
- }finally{
-  stopUserRoleMotion();
-  globalThis.window=prevWindow;globalThis.document=prevDocument;
- }
+test('mounted user-role-management components remain stationary on entry and refresh',()=>{
+ let queries=0,animations=0;
+ const node={isConnected:true,querySelectorAll(){queries++;return [{animate(){animations++;}}]},
+  animate(){animations++;}};
+ stopUserRoleMotion();
+ mountUserRoleMotion(node,'user-role-management');
+ mountUserRoleMotion(node,'user-role-management');
+ mountUserRoleMotion(null,'overview');
+ mountUserRoleMotion(node,'user-role-management');
+ stopUserRoleMotion();
+ assert.equal(queries,0,'no entrance element traversal');
+ assert.equal(animations,0,'no mount-time animations');
+ const source=readFileSync('frontend/user-role-visuals.js','utf8');
+ assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
