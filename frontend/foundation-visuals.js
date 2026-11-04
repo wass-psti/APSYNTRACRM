@@ -22,32 +22,8 @@ export function foundationIcon(kind){
   'stroke-linejoin="round" aria-hidden="true" focusable="false">'+
   (Object.hasOwn(icons,kind)?icons[kind]:icons.grid)+'</svg>';
 }
-let lastView=null;
-let animations=[];
-/** One-shot route entrance only. Never animates live metrics or a status change.
- * @param {HTMLElement|null} section
- * @param {string} view
+/** Intentional minimal-motion policy: route content is placed immediately.
+ * Retain public hooks for existing shell imports; no entrance animation work.
  */
-export function mountFoundationMotion(section,view){
- const entered=lastView!==view;
- lastView=view;
- for(const animation of animations)animation.cancel?.();
- animations=[];
- if(!entered||view!=='foundation'||!section?.isConnected||
-   typeof window==='undefined'||typeof document==='undefined'||document.hidden||
-   window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
- const targets=[...section.querySelectorAll('.foundation-entrance')].slice(0,6);
- for(const [index,node] of targets.entries()){
-  if(typeof node.animate!=='function')continue;
-  animations.push(node.animate([
-   {opacity:.87,transform:'translate3d(0,9px,0)'},
-   {opacity:1,transform:'translate3d(0,0,0)'}
-  ],{duration:Math.min(270+index*25,410),delay:Math.min(index*42,170),
-   easing:'cubic-bezier(.22,1,.36,1)',fill:'none'}));
- }
-}
-export function stopFoundationMotion(){
- for(const animation of animations)animation.cancel?.();
- animations=[];
- lastView=null;
-}
+export function mountFoundationMotion(){}
+export function stopFoundationMotion(){}
