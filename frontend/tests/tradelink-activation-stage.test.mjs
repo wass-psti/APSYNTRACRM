@@ -23,7 +23,7 @@ test('separate Stage B grant is preflight guarded, atomic, and draft-only',()=>{
  assert.match(phaseB,/SEPARATE, EXPLICIT PRODUCTION PERMISSION-CHANGE APPROVAL/);
  assert.match(phaseB,/^BEGIN;$/m);
  assert.match(phaseB,/^COMMIT;$/m);
- assert.match(phaseB,/CREATE|ALTER/); // only in comments/preflight message; NOT DDL
+ assert.match(phaseB,/DO \$write_activation_preflight\$/);
  assert.match(phaseB,/to_regclass\('public\.tradelink_documents'\)/);
  assert.match(phaseB,/private\.wm_board_config_session_active\(\)/);
  assert.match(phaseB,/has_function_privilege\('authenticated'/);
@@ -59,7 +59,8 @@ test('disposable PostgreSQL CI proves deny-before-grant then signed transaction 
  'cp-tl03-disposable-acceptance.sql',
  'cp-tl03-postactivation-readonly.sql'
  ];
- const offsets=ordered.map(v=>ci.indexOf(v));
+ const steps=ci.slice(ci.indexOf('    steps:'));
+ const offsets=ordered.map(v=>steps.indexOf(v));
  assert.ok(offsets.every((p,i)=>p>=0 && (i===0 || p>offsets[i-1])));
  assert.match(ci,/image: postgres:17/);
  assert.match(ci,/PGHOST: 127\.0\.0\.1/);
