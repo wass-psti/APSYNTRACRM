@@ -144,6 +144,25 @@ test('channel authorization failure does not claim synchronization and triggers 
  assert.equal(x.sockets[0].readyState,3);
  x.ctl.stop();
 });
+test('missed heartbeat acknowledgments trigger bounded reconnection',async()=>{
+ const x=fake();x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await x.wait();await x.join(x.sockets[0]);
+ const socket=x.sockets[0],gen=x.ctl.generation;
+ await x.ctl.tickHeartbeat(socket,gen);
+ assert.equal(x.ctl.heartbeatsPending,1);
+ const heartbeat=socket.sent.at(-1);
+ assert.equal(heartbeat[3],'heartbeat');
+ socket.emit([null,heartbeat[1],'phoenix','phx_reply',{status:'ok',response:{}}]);
+ assert.equal(x.ctl.heartbeatsPending,0);
+ await x.ctl.tickHeartbeat(socket,gen);
+ await x.ctl.tickHeartbeat(socket,gen);
+ assert.equal(x.ctl.heartbeatsPending,2);
+ await x.ctl.tickHeartbeat(socket,gen);
+ assert.equal(x.ctl.heartbeatsPending,0);
+ assert.equal(socket.readyState,3);
+ assert.equal(x.statuses.at(-1).phase,'reconnecting');
+ x.ctl.stop();
+});
 test('subscription counts stay bounded and stop disposes socket/timers',async()=>{
  const x=fake();
  x.ctl.start({userId:uid,workspaceId:wid,
