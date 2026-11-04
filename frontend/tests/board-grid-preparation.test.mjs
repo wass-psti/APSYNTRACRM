@@ -56,3 +56,19 @@ test('board page shares one prepared lookup without changing signed UI shell',()
  assert.match(app,/function shell\(body\)\{/);
  assert.match(app,/void mountSignedTimeTrackerMaps\(\);\s*\}/);
 });
+
+test('partitioned group rows preserve exact group presentation and ordering',()=>{
+ const prepared=prepareBoardGrid(detail);
+ for(const groupId of ['group-a','group-b','group-missing']){
+  const groupItems=detail.items.filter(item=>item.group_id===groupId);
+  assert.equal(
+   boardGrid(detail,{groupId,prepared,groupItems}),
+   boardGrid(detail,{groupId,prepared})
+  );
+ }
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/const groupedItems=new Map\(groups\.map\(group=>\[group\.id,\[\]\]\)\)/);
+ assert.match(app,/if\(state\.tab==='items'\)for\(const item of items\)/);
+ assert.match(app,/groupItems:groupedItems\.get\(g\.id\)\|\|\[\]/);
+ assert.match(app,/ungroupedItems\.length\?/);
+});
