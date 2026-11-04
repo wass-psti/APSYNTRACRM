@@ -10,6 +10,7 @@ import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
 import {renderPagesAcceptance} from './pages-acceptance-ui.js';
+import {mountPagesAcceptanceMotion,stopPagesAcceptanceMotion} from './pages-acceptance-visuals.js';
 import {runNativeQa} from './native-qa.js';
 import {NativeIssueClient} from './native-client.js';
 import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
@@ -147,6 +148,7 @@ function renderLogin(message=''){
  stopRoleConfigurationMotion();
  stopUserRoleMotion();
  stopSettingsMotion();
+ stopPagesAcceptanceMotion();
  root.innerHTML=renderAuthMarkup({message});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
@@ -267,6 +269,7 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-role-config-shell',state.view==='role-configuration');
  root.querySelector('.main')?.classList.toggle('aps-user-roles-shell',state.view==='user-role-management');
  root.querySelector('.main')?.classList.toggle('aps-settings-shell',state.view==='settings');
+ root.querySelector('.main')?.classList.toggle('aps-pages-shell',state.view==='acceptance');
  animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
  mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
  mountBoardCatalogMotion(root.querySelector('.aps-boards'),state.view);
@@ -275,6 +278,7 @@ function shell(body){
  mountRoleConfigurationMotion(root.querySelector('.aps-role-configuration'),state.view);
  mountUserRoleMotion(root.querySelector('.aps-user-role-management'),state.view);
  mountSettingsMotion(root.querySelector('.aps-settings'),state.view);
+ mountPagesAcceptanceMotion(root.querySelector('.aps-pages-acceptance'),state.view);
  maintainTimeTrackerClock();
  void mountSignedTimeTrackerMaps();
 }
