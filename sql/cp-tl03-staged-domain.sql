@@ -286,7 +286,9 @@ BEGIN
   'revision',rev,'state','draft','operation',p_operation,'idempotent',false);
 END $commit$;
 REVOKE ALL ON FUNCTION private.tl03_commit(uuid,uuid,bigint,text,jsonb) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION private.tl03_commit(uuid,uuid,bigint,text,jsonb) TO authenticated;
+-- CP-TL-03C Stage A: intentionally DO NOT grant authenticated EXECUTE.
+-- Staged private write implementation remains inaccessible until the separately
+-- reviewed Stage B grant script is approved and run.
 
 -- Public wrappers are SECURITY INVOKER; no public SECURITY DEFINER endpoint.
 CREATE FUNCTION public.tl03_document_commit(
@@ -296,8 +298,8 @@ CREATE FUNCTION public.tl03_document_commit(
 $rpc$;
 REVOKE ALL ON FUNCTION public.tl03_document_commit(uuid,uuid,bigint,text,jsonb)
  FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.tl03_document_commit(uuid,uuid,bigint,text,jsonb)
- TO authenticated;
+-- CP-TL-03C Stage A: public write wrapper exists but is NOT executable by authenticated.
+-- Never rely on a frontend feature flag as the server-side write gate.
 CREATE FUNCTION public.tl03_document_read(p_board_id uuid,p_document_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $read$
 DECLARE result jsonb;
