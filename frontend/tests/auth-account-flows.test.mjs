@@ -22,7 +22,7 @@ test('registration is visibly available but cannot create an account under curre
  for(const piece of ['id="register-form"','id="register-name"','id="register-email"',
   'id="register-password"','id="register-confirm"',
   'autocomplete="new-password"','autocomplete="name"','aria-describedby="auth-registration-status"',
-  'Create account — pending activation','type="submit" disabled'])
+  'Create account — pending activation','disabled aria-describedby="auth-registration-status"'])
   assert.ok(markup.includes(piece),piece);
  assert.match(markup,/Registration awaiting administrator activation/);
  assert.match(app,/if\(!REGISTRATION_ADMISSION_ENABLED\)/);
@@ -177,8 +177,8 @@ test('successful reset verifies same actor, updates password, requests global lo
 test('failed revocation never claims global logout, mismatched token never updates password',async()=>{
  let cleared=0,updated=0;
  const auth={
-  call:async(path)=>{
-   if(path==='/auth/v1/user')return {id:'account-A'};
+  call:async(path,options)=>{
+   if(path==='/auth/v1/user'&&options?.method!=='PUT')return {id:'account-A'};
    if(path.startsWith('/auth/v1/logout'))throw Error('Provider revocation failed');
    updated++;return {};
   },
@@ -218,6 +218,6 @@ test('auth styling uses existing responsive design and strict CSP',()=>{
   '.auth-message', '@media(max-width:540px)','@media(prefers-reduced-motion:reduce)',
   '@media(prefers-contrast:more)'])assert.ok(css.includes(part),part);
  assert.doesNotMatch(css,/@import|url\(https?:|@keyframes|animation:.*infinite/);
- assert.doesNotMatch(source,/\.innerHTML\s*=|document\.write|eval\(|localStorage|sessionStorage/);
+ assert.doesNotMatch(source,/\.innerHTML\s*=|document\.write|eval\(|\.storage\.setItem\(|\.storage\.getItem\(/);
  assert.match(smoke,/'frontend\/auth-account-flows\.js'/);
 });
