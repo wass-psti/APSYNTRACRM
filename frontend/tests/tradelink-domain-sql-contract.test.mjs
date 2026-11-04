@@ -29,6 +29,7 @@ test('transaction guarantees CAS and one board projection, not duplicate creatio
  assert.match(sql,/d\.revision IS DISTINCT FROM p_expected_revision/);
  assert.match(sql,/existing document ID conflict/i);
  assert.match(sql,/idempotent',true/);
+ assert.match(sql,/i\.title=d\.document_number AND i\.archived_at IS NULL/);
  assert.match(sql,/public\.wm_add_board_item\(/);
  assert.match(sql,/public\.wm_set_board_cell_if_current\(/);
  assert.match(sql,/public\.wm_set_board_item_archived\(/);
