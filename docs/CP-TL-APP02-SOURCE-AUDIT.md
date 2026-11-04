@@ -11,7 +11,7 @@ The uploaded archive contains 231 ZIP entries / 214 regular files, including:
 - `src/{auth,data,sync,services,files}/**`, `src/bootstrap.ts`, `watchdog-host-bridge.js`, server code, migrations and verification scripts.
 - No React, Vue or Angular frontend dependency. The source is browser-native TypeScript transpiled to JavaScript.
 
-Offline in the extracted archive: `tsc --noEmit -p tsconfig.json` passed using TypeScript 5.8.3. `tsc -p tsconfig.json` passed. These original-source scripts passed: `verify-workflow.mjs`, `verify-create-modules.mjs`, `verify-rbac.mjs`, `verify-attachments.mjs`, and `verify-all-documents.mjs`. They use source-defined local fixtures/roles; **none is a signed APSYNTRA acceptance test**.
+Offline in the extracted archive: `tsc --noEmit -p tsconfig.json` passed using TypeScript 5.8.3. `tsc -p tsconfig.json` passed. These original-source scripts passed: `verify-workflow.mjs`, `verify-create-modules.mjs`, `verify-rbac.mjs`, `verify-attachments.mjs`, `verify-all-documents.mjs`, `verify-persistence.mjs`, `verify-version-history.mjs`, `verify-collaboration.mjs`, and `verify-server-sync.mjs`. `verify-supabase-integration.mjs` did **not** pass: the offline build emits `dist/tradelink-config.js` with `enabled:false`, whereas that script asserts the production Supabase URL and publishable key. No credentials were injected to force this test to pass. They use source-defined local fixtures/roles; **none is a signed APSYNTRA acceptance test**.
 
 The package's `APP_VERSION` is `0.1.74`, while historical README headings refer to `v2.0.15`. Preserve the actual domain contracts; do not infer release equivalence from the mixed headings.
 
@@ -41,6 +41,7 @@ The package's `APP_VERSION` is `0.1.74`, while historical README headings refer 
 
 - `frontend/tradelink-application.js`: source-defined module descriptions and workflow stages; six module navigation routes; signed board records query surface; no local mock documents or workflow writes.
 - `frontend/tradelink-activity.js`: a real read-only **board event** view using the existing `wm_list_board_events` path via `DomainApi.boardEvents`. A signed `view` check, actor/workspace/route revalidation, and escaped rendering prevent cross-session stale data. This is **not** the original TradeLink collaboration/notification stream.
+- `frontend/tradelink-finance.js`: source-derived line-item, discount, VAT (15% TKM/KSA, 12%, exempt and zero), currency and PHP exchange-rate calculation for an **unsaved** preview on Electronic SI, Quotation and PO module pages. Browser input/change updates text nodes; no document writes, local persistence or API calls. The original source's separate full document readiness rules remain unported.
 - `frontend/tradelink-board-items.js`: seven-column UI contract and signed manager-only setup for five supported typed columns. The Files column remains inactive.
 - `frontend/tradelink-application.css`: scoped responsive and reduced-motion treatments, no new framework.
 
