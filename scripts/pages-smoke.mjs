@@ -38,7 +38,7 @@ function reportSuperseded(){
  console.log('LIVE PAGES SMOKE: SUPERSEDED — a newer verified descendant is main.');
  console.log('This source commit was NOT deployment-verified. Latest main remains responsible for live verification.');
 }
-const paths=['index.html','frontend/app.js','frontend/config.js','frontend/session.js',
+const paths=['index.html','frontend/app.js','frontend/config.js','frontend/session.js','frontend/auth-account-flows.js','frontend/auth-markup.js',
  'frontend/data.js','frontend/platform-sync.js','frontend/select-experience.js','frontend/action-menu-experience.js','frontend/search-experience.js','frontend/input-experience.js','frontend/metrics-experience.js','frontend/acceptance.js','frontend/pages-persistence.js',
  'frontend/pages-acceptance-ui.js','frontend/native-client.js','frontend/native-qa.js',
  'frontend/board-manifest.js','frontend/board-foundation.js','frontend/board-foundation-ui.js',

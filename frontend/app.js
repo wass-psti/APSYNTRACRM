@@ -1,6 +1,8 @@
 import {AuthClient,ApiError} from './session.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
+import {REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,captureAuthReturn,
+ inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword} from './auth-account-flows.js';
 import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
@@ -151,11 +153,18 @@ function toast(message,error=false){
 function errorMessage(err){if(err instanceof ApiError&&err.status===403)return 'Access denied by your workspace permissions.';return err?.message||'Unable to complete the request.';}
 function notice(err){toast(errorMessage(err),true);}
 let authVisualController=null;
+let recoveryContext=null;
+function authViewFromHash(hash=location.hash){
+ if(hash==='#/register')return 'register';
+ if(hash==='#/forgot-password')return 'forgot';
+ if(hash==='#/reset-password')return 'reset';
+ return 'login';
+}
 function stopAuthVisuals(){
  authVisualController?.destroy?.();
  authVisualController=null;
 }
-function renderLogin(message=''){
+function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
  stopAuthVisuals();
@@ -168,7 +177,7 @@ function renderLogin(message=''){
  stopUserRoleMotion();
  stopSettingsMotion();
  stopPagesAcceptanceMotion();
- root.innerHTML=renderAuthMarkup({message});
+ root.innerHTML=renderAuthMarkup({message,notice,mode,resetReady:mode==='reset'&&!!recoveryContext});
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
 }
 
@@ -1744,6 +1753,41 @@ async function onRoute(){
  }
  render();
 }
+async function submitRecoveryRequest(form){
+ if(state.authBusy)return;
+ const button=form.querySelector('[type="submit"]');
+ const email=String(new FormData(form).get('email')||'');
+ state.authBusy=true;
+ if(button){button.disabled=true;button.textContent='Requesting…';}
+ try{
+  const result=await requestPasswordRecovery(auth,email);
+  if(result.startsWith('Too many'))renderLogin(result,{mode:'forgot'});
+  else renderLogin('',{mode:'forgot',notice:result});
+ }catch(error){renderLogin(errorMessage(error),{mode:'forgot'});}
+ finally{state.authBusy=false;}
+}
+async function submitRecoveryPassword(form){
+ if(state.authBusy)return;
+ if(!recoveryContext){renderLogin('Your recovery link is unavailable or expired.',{mode:'forgot'});return;}
+ const password=String(new FormData(form).get('password')||'');
+ const confirmation=String(new FormData(form).get('confirmation')||'');
+ const button=form.querySelector('[type="submit"]');
+ state.authBusy=true;
+ if(button){button.disabled=true;button.textContent='Updating…';}
+ try{
+  const result=await applyRecoveredPassword(auth,recoveryContext,password,confirmation);
+  recoveryContext=null;
+  location.hash='#/login';
+  renderLogin('',{mode:'login',notice:result.globalRevoked?
+   'Password updated. Other refresh sessions were signed out. Sign in with your new password.':
+   'Password updated. Sign in with your new password. Other sessions may remain valid until expiry; contact your administrator if immediate revocation is required.'});
+ }catch(error){
+  const invalid=error instanceof ApiError&&[400,401,403].includes(error.status);
+  if(invalid)recoveryContext=null;
+  renderLogin(invalid?'Recovery session expired or could not be verified. Request a new link.':
+   errorMessage(error),{mode:invalid?'forgot':'reset'});
+ }finally{state.authBusy=false;}
+}
 async function login(form){
  if(state.authBusy)return;
  const email=String(new FormData(form).get('email')||'');
@@ -2160,7 +2204,13 @@ async function openBoardStructure(){
 
 async function action(name,button){
  switch(name){
- case 'toggle-password':{const f=root.querySelector('#password');if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';button.setAttribute('aria-label',f.type==='password'?'Show password':'Hide password');button.setAttribute('aria-pressed',String(f.type==='text'));}break;}
+ case 'toggle-password':{
+  const target=String(button.dataset.passwordTarget||'password');
+  if(!['password','register-password','register-confirm','reset-password','reset-confirm'].includes(target))break;
+  const f=root.querySelector('#'+target);
+  if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';button.setAttribute('aria-label',f.type==='password'?'Show password':'Hide password');button.setAttribute('aria-pressed',String(f.type==='text'));}
+  break;
+ }
  case 'logout':{clearBulkActivation();platformSync.stop();state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.context=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
  case 'platform-sync-verify':{await platformSync.syncNow('manual',[]);break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
@@ -3817,7 +3867,21 @@ root.addEventListener('submit',event=>{
    .catch(notice).finally(()=>{state.ttBusy=false;render();});
   return;
  }
- if(event.target.id==='login-form'){event.preventDefault();login(event.target);}
+ if(event.target.id==='login-form'){event.preventDefault();login(event.target);return;}
+ if(event.target.id==='register-form'){
+  event.preventDefault();
+  // This cannot be lifted by frontend configuration: production admission
+  // requires the independently approved server-side trigger/RLS activation.
+  if(!REGISTRATION_ADMISSION_ENABLED)
+   renderLogin(REGISTRATION_BLOCKED,{mode:'register'});
+  return;
+ }
+ if(event.target.id==='forgot-form'){
+  event.preventDefault();Promise.resolve(submitRecoveryRequest(event.target)).catch(notice);return;
+ }
+ if(event.target.id==='reset-form'){
+  event.preventDefault();Promise.resolve(submitRecoveryPassword(event.target)).catch(notice);return;
+ }
  if(event.target.id==='tt-clock-form'){
   event.preventDefault();
   const kind=event.submitter?.value;
@@ -3885,7 +3949,15 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('online',()=>platformSync.network(true));
 window.addEventListener('offline',()=>platformSync.network(false));
-window.addEventListener('hashchange',()=>{onRoute().catch(notice);});
+window.addEventListener('hashchange',()=>{
+ if(!state.context){
+  const mode=authViewFromHash();
+  if(mode!=='reset')recoveryContext=null;
+  renderLogin(mode==='reset'&&!recoveryContext?'Your recovery link is unavailable or expired. Request a new link.':'',{mode});
+  return;
+ }
+ onRoute().catch(notice);
+});
 window.addEventListener('keydown',event=>{if(event.key==='Escape'){
  closeBoardCardMenus();hideModal();
   for(const menu of root.querySelectorAll('.board-group-actions[open]'))menu.open=false;
@@ -3898,6 +3970,26 @@ async function boot(){
  startInitialization();
  try{
   setInitializationPhase('authentication');
+  const callback=captureAuthReturn(location,history);
+  if(callback){
+   // Recovery tokens are never installed as normal CRM sessions.
+   auth.clear();
+   if(callback.kind==='recovery'){
+    try{
+     recoveryContext=await inspectRecoveryToken(auth,callback);
+     renderLogin('',{mode:'reset'});
+    }catch{recoveryContext=null;renderLogin('The recovery link is invalid or expired. Request a new link.',{mode:'forgot'});}
+   }else if(callback.kind==='confirmation'){
+    renderLogin('',{mode:'login',notice:'Email verification completed. Workspace access still requires administrator approval. Sign in only after your account is admitted.'});
+   }else{
+    renderLogin('The authentication link is invalid or expired.',{mode:'forgot'});
+   }
+   return;
+  }
+  if(['#/register','#/forgot-password','#/reset-password'].includes(location.hash)){
+   renderLogin(location.hash==='#/reset-password'?'Your recovery link is unavailable or expired. Request a new link.':'');
+   return;
+  }
   if(await auth.restore()){
     state.user=auth.session.user;
     setInitializationPhase('authorization');

@@ -1,37 +1,15 @@
 /**
- * Login-only presentation. The IDs, field names, and data-action hooks are the
+ * Login, registration-admission and password-recovery presentation. The IDs, field names, and data-action hooks are the
  * existing signed-auth contract; no credentials are processed in this module.
- * @typedef {{message?:string, year?:number}} AuthMarkupOptions
+ * @typedef {{message?:string,notice?:string,year?:number,mode?:string,resetReady?:boolean}} AuthMarkupOptions
  */
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,
  char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 /** @param {AuthMarkupOptions} options */
-export function renderAuthMarkup({message='',year=new Date().getFullYear()}={}){
+export function renderAuthMarkup({message='',notice='',year=new Date().getFullYear(),mode='login',resetReady=false}={}){
  const error=message?'<div class="login-error" role="alert">'+escapeHtml(message)+'</div>':'';
- return `<div class="auth-layout aps-auth-v2">
-  <div class="auth-left">
-   <header class="auth-brandbar auth-reveal">
-    <a href="#/login" class="brand" aria-label="APSYNTRA CRM login">
-     <img class="brand-mark" src="./frontend/apsyntra-logo.webp" alt="" width="40" height="40" decoding="async"/>
-     <span>APSYNTRA <span class="auth-brand-accent">CRM</span></span>
-    </a>
-    <span class="auth-brandbar-meta"><span class="auth-live-indicator" aria-hidden="true"></span>SECURE WORKSPACE</span>
-   </header>
-   <main class="auth-panel">
-    <div class="auth-intro auth-reveal">
-     <span class="eyebrow">Your connected workspace</span>
-     <h1>Welcome back<span class="auth-heading-stop">.</span></h1>
-     <p class="muted" id="auth-login-description">One secure sign-in to your projects, boards, and team. Continue with your existing WatchdogWorkspace account.</p>
-    </div>
-    <div class="auth-form-card auth-reveal">
-     <div class="auth-form-card-header">
-      <span class="auth-form-card-label">WORKSPACE ACCESS</span>
-      <span class="auth-lock-visual" aria-hidden="true">
-       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg>
-      </span>
-     </div>
-     `+error+`
-     <form id="login-form" aria-describedby="auth-login-description">
+ const confirmation=notice?'<div class="auth-message" role="status">'+escapeHtml(notice)+'</div>':'';
+ const loginForm=`     <form id="login-form" aria-describedby="auth-login-description">
       <div class="field">
        <label for="email">Work email</label>
        <input id="email" name="email" type="email" placeholder="you@company.com" autocomplete="username" inputmode="email" required autofocus/>
@@ -47,10 +25,66 @@ export function renderAuthMarkup({message='',year=new Date().getFullYear()}={}){
        <span>Sign in to workspace</span>
        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>
       </button>
-     </form>
+     </form>`;
+ const registerForm=`<div class="auth-admission-warning" role="status" id="auth-registration-status"><strong>Registration awaiting administrator activation</strong>
+      <p>Current backend account-creation triggers automatically grant workspace membership. Self-registration is disabled until administrator-controlled admission is approved and verified.</p></div>
+     <form id="register-form" aria-describedby="auth-registration-status">
+      <div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="120" required placeholder="Your full name"/></div>
+      <div class="field"><label for="register-email">Work email</label><input id="register-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@company.com"/></div>
+      <div class="field"><label for="register-password">Password</label><div class="password-wrap"><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="At least 12 characters"/><button type="button" class="eye-btn" data-action="toggle-password" data-password-target="register-password" aria-controls="register-password" aria-label="Show password" aria-pressed="false">Show</button></div></div>
+      <div class="field"><label for="register-confirm">Confirm password</label><div class="password-wrap"><input id="register-confirm" name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="Repeat password"/><button type="button" class="eye-btn" data-action="toggle-password" data-password-target="register-confirm" aria-controls="register-confirm" aria-label="Show password" aria-pressed="false">Show</button></div></div>
+      <button type="submit" class="primary wide auth-submit" disabled aria-describedby="auth-registration-status">Create account — pending activation</button>
+     </form>`;
+ const forgotForm=`<form id="forgot-form">
+      <p class="auth-form-explanation">Enter your work email. If an eligible account exists, a recovery link will be sent. We never disclose account existence.</p>
+      <div class="field"><label for="recovery-email">Work email</label><input id="recovery-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@company.com" required autofocus/></div>
+      <button type="submit" class="primary wide auth-submit">Send recovery instructions</button>
+     </form>`;
+ const resetForm=`<form id="reset-form" aria-describedby="reset-guidance">
+      <p id="reset-guidance" class="auth-form-explanation">Choose a new password with at least 12 characters, one letter, and one number. A verified recovery link is required.</p>
+      <div class="field"><label for="reset-password">New password</label><div class="password-wrap"><input id="reset-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="New password" ${resetReady?'':'disabled'}/><button type="button" class="eye-btn" data-action="toggle-password" data-password-target="reset-password" aria-controls="reset-password" aria-label="Show password" aria-pressed="false" ${resetReady?'':'disabled'}>Show</button></div></div>
+      <div class="field"><label for="reset-confirm">Confirm new password</label><div class="password-wrap"><input id="reset-confirm" name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="Repeat new password" ${resetReady?'':'disabled'}/><button type="button" class="eye-btn" data-action="toggle-password" data-password-target="reset-confirm" aria-controls="reset-confirm" aria-label="Show password" aria-pressed="false" ${resetReady?'':'disabled'}>Show</button></div></div>
+      <button type="submit" class="primary wide auth-submit" ${resetReady?'':'disabled'}>Update password</button>
+      ${resetReady?'':'<p class="auth-form-explanation" role="alert">Your recovery link is unavailable or expired. Request a new link.</p>'}
+     </form>`;
+ const view=['login','register','forgot','reset'].includes(mode)?mode:'login';
+ const copy={
+ login:{eyebrow:'Your connected workspace',title:'Welcome back',description:'One secure sign-in to your projects, boards, and team. Continue with your existing WatchdogWorkspace account.',label:'WORKSPACE ACCESS',note:'Access is managed by your organization. No new account is created on sign in.'},
+ register:{eyebrow:'Request secure access',title:'Create an account',description:'Registration is prepared for administrator-controlled admission. Workspace access is not automatic.',label:'ACCOUNT REGISTRATION',note:'No privileged roles or workspace access can be self-assigned.'},
+ forgot:{eyebrow:'Secure account recovery',title:'Forgot password',description:'Request a time-limited recovery link for your existing APSYNTRA CRM account.',label:'PASSWORD RECOVERY',note:'Recovery never modifies roles, memberships, or board permissions.'},
+ reset:{eyebrow:'Protected password update',title:'Reset password',description:'Verify your recovery link and choose a new password.',label:'PASSWORD RESET',note:'Sign in again after changing your password.'}
+ }[view];
+ const form=view==='register'?registerForm:view==='forgot'?forgotForm:view==='reset'?resetForm:loginForm;
+ const links=[['login','Sign in','#/login'],['register','Create account','#/register'],['forgot','Forgot password?','#/forgot-password']]
+  .map(([key,label,url])=>'<a href="'+url+'"'+(view===key?' aria-current="page"':'')+'>'+label+'</a>').join('');
+ return `<div class="auth-layout aps-auth-v2">
+  <div class="auth-left">
+   <header class="auth-brandbar auth-reveal">
+    <a href="#/login" class="brand" aria-label="APSYNTRA CRM login">
+     <img class="brand-mark" src="./frontend/apsyntra-logo.webp" alt="" width="40" height="40" decoding="async"/>
+     <span>APSYNTRA <span class="auth-brand-accent">CRM</span></span>
+    </a>
+    <span class="auth-brandbar-meta"><span class="auth-live-indicator" aria-hidden="true"></span>SECURE WORKSPACE</span>
+   </header>
+   <main class="auth-panel">
+    <div class="auth-intro auth-reveal">
+     <span class="eyebrow">${escapeHtml(copy.eyebrow)}</span>
+     <h1>${escapeHtml(copy.title)}<span class="auth-heading-stop">.</span></h1>
+     <p class="muted" id="auth-login-description">${escapeHtml(copy.description)}</p>
+    </div>
+    <div class="auth-form-card auth-reveal">
+     <div class="auth-form-card-header">
+      <span class="auth-form-card-label">${escapeHtml(copy.label)}</span>
+      <span class="auth-lock-visual" aria-hidden="true">
+       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg>
+      </span>
+     </div>
+     `+error+confirmation+`
+     ${form}
+     <nav class="auth-access-links" aria-label="Account access options">${links}</nav>
      <div class="auth-access-note">
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-9h.01"/></svg>
-      <p>Access is managed by your organization. No new account is created.</p>
+      <p>${escapeHtml(copy.note)}</p>
      </div>
     </div>
     <div class="auth-trust-line auth-reveal" aria-hidden="true">
