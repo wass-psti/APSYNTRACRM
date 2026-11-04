@@ -39,6 +39,16 @@ test('nested TimeTracker and role tabs do not animate repeated selection',()=>{
  assert.match(app,/animateTabContent\('\.aps-role-configuration'\)/);
 });
 
+test('startup-critical shell function encloses post-render mounts',()=>{
+ const shellStart=app.indexOf('function shell(body){');
+ const helperStart=app.indexOf('function animateTabContent(selector){');
+ assert.ok(shellStart>=0&&helperStart>shellStart);
+ const shellSource=app.slice(shellStart,helperStart);
+ assert.match(shellSource,/root\.querySelector\('\.main'\)\?\.classList\.toggle/);
+ assert.match(shellSource,/void mountSignedTimeTrackerMaps\(\);\s*\}$/);
+ assert.match(app.slice(helperStart),/^function animateTabContent\(selector\)\{/);
+});
+
 test('existing session-sensitive route and map cleanup remain intact',()=>{
  assert.match(shell,/disposeTimeTrackerMaps\(\)/);
  assert.match(app,/function renderLogin\(/);
