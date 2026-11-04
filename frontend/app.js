@@ -62,6 +62,7 @@ import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
+import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
 import {applyTimeTrackerLogSearch,filterTimeTrackerLogRows,timeTrackerLogCsv,TT_LOG_DEFAULT_FILTERS} from './time-tracker-log.js';
 import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAULT_FILTERS} from './time-tracker-reports.js';
@@ -151,6 +152,7 @@ function stopAuthVisuals(){
 }
 function renderLogin(message=''){
  stopTimeTrackerClock();
+ stopTimeTrackerPixi();
  stopAuthVisuals();
  stopSidebarSelection();
  stopOverviewMotion();
@@ -342,6 +344,7 @@ function shell(body){
  mountSettingsMotion(root.querySelector('.aps-settings'),state.view);
  mountPagesAcceptanceMotion(root.querySelector('.aps-pages-acceptance'),state.view);
  maintainTimeTrackerClock();
+ mountTimeTrackerPixi(root);
  updatePlatformSyncIndicator(platformSync.lastStatus);
  void mountSignedTimeTrackerMaps();
 }
