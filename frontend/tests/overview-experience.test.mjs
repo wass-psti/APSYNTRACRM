@@ -57,7 +57,7 @@ test('overview retains exact page navigation, refresh, new-board and board-card 
 test('overview uses escaped identity and board descriptions, no mock operational data',()=>{
  assert.match(view,/e\(name\(\)\.split\(' '\)\[0\]\)/);
  assert.match(card,/e\(board\.name\)/);
- assert.match(card,/e\(board\.description\|\|'Organize work and track progress in this board\.'\)/);
+ assert.match(card,/e\(publicBoardDescription\(board\)\)/);
  assert.match(view,/Supabase Auth connected/);
  assert.match(view,/Board permissions are centralized/);
  assert.match(view,/Native issue transactions/);

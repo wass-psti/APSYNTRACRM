@@ -59,7 +59,7 @@ test('generic footer provides required title and stays in a single table tfoot',
 });
 test('domain-managed board never exposes an executable add-row form',()=>{
  const footer=renderGroupAddRow({groupId:group,enabled:false,domain:true});
- assert.match(footer,/authorized module workflow/);
+ assert.equal(footer,'');
  assert.doesNotMatch(footer,/<form/);
 });
 test('record and custom inline editors escape untrusted text and preserve CAS inputs',()=>{
