@@ -15,16 +15,23 @@ export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},a
  return [{key:'record',title:primaryTitle},{key:'status',title:'Status'},
   ...columns.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name}))];
 }
-export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record',columnLabels={},allowCustom=false,selection=null,footer='',summaries=null}={}){
- const items=Array.isArray(detail?.items)?detail.items:[];
- const values=Array.isArray(detail?.values)?detail.values:[];
- const module=moduleByBoardName(detail?.board?.name);
+/** Prepare authorized, visible board fields once per board render.
+ * Kept render-local: no cross-session cache or stale authorization state.
+ */
+export function prepareBoardGrid(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
  const columns=boardGridColumns(detail,{primaryTitle,columnLabels,allowCustom});
  const allowedIds=new Set(columns.slice(2).map(c=>c.key.slice(4)));
  const visibleColumns=(Array.isArray(detail?.columns)?detail.columns:[])
   .filter(c=>allowedIds.has(c.id));
- const displayed=groupId?items.filter(i=>i.group_id===groupId):items;
+ const values=Array.isArray(detail?.values)?detail.values:[];
  const lookup=new Map(values.map(v=>[v.item_id+':'+v.column_id,v.value]));
+ return {columns,visibleColumns,lookup};
+}
+export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record',columnLabels={},allowCustom=false,selection=null,footer='',summaries=null,prepared=null}={}){
+ const items=Array.isArray(detail?.items)?detail.items:[];
+ const {columns,visibleColumns,lookup}=prepared||
+  prepareBoardGrid(detail,{primaryTitle,columnLabels,allowCustom});
+ const displayed=groupId?items.filter(i=>i.group_id===groupId):items;
  const rows=displayed.map(item=>{
   const cells={record:'<button type="button" class="board-item-open" data-action="board-item-detail" data-id="'+escape(item.id)+'" aria-label="Open '+escape(item.title||'Untitled')+' details">'+escape(item.title||'Untitled')+'</button>',
    status:'<span class="status">'+escape(item.status??'—')+'</span>'};
