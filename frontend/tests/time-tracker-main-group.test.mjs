@@ -135,13 +135,13 @@ test('no stale GPS fallback, group-specific replacement and existing 11 boards r
 
 test('attendance status and duration headers reserve enough width without changing group scrolling',()=>{
  const css=readFileSync('frontend/time-tracker-main-group.css','utf8');
- const width=Number(css.match(/tt-main-attendance-table\\s*\\{[\\s\\S]*?min-width:\\s*(\\d+)px/)[1]);
- const lastColumns=css.match(/tt-main-attendance-table th:nth-child\\(6\\),\\s*#app \\.aps-board-shell \\.tt-main-attendance-table th:nth-child\\(7\\)\\{width:(\\d+)%\\}/);
- assert.ok(lastColumns,'the final two columns share a protected width rule');
- const percentage=Number(lastColumns[1]);
+ const tableRule=css.match(/\.tt-main-attendance-table\{[^}]*\}/)?.[0]||'';
+ const width=Number(tableRule.match(/min-width:\s*(\d+)px/)?.[1]);
+ const percentage=Number(css.match(/th:nth-child\(7\)\{width:(\d+)%\}/)?.[1]);
+ assert.match(css,/th:nth-child\(6\),\s*#app \.aps-board-shell \.tt-main-attendance-table th:nth-child\(7\)/);
  assert.ok(width>=1300,'the grid must provide enough intrinsic horizontal space');
  assert.ok(width*percentage/100>=170,'status and duration headings need adequate width');
  assert.equal(16+15+15+13+13+percentage*2,100,'column width allocations remain balanced');
- assert.match(css,/tt-main-attendance-panel \\.board-group-scroll\\{[\\s\\S]*?overflow-x:auto/);
- assert.doesNotMatch(css,/@keyframes|will-change|overflow-y:\\s*auto/);
+ assert.match(css,/tt-main-attendance-panel \.board-group-scroll\{[^}]*overflow-x:auto/);
+ assert.doesNotMatch(css,/@keyframes|will-change|overflow-y:\s*auto/);
 });
