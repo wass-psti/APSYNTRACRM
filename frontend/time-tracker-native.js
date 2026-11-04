@@ -346,15 +346,45 @@ export class TimeTrackerNativeClient{
    recordId:result.recordId});
  }
 }
+/** Acquire a real browser fix within the existing 12-second sensor budget.
+ * Retry sensor acquisition only; never retry an attendance write here.
+ */
+function geolocationRequest(geolocation,options){
+ return new Promise((resolve,reject)=>{
+  try{geolocation.getCurrentPosition(resolve,reject,options);}
+  catch(error){reject(error);}
+ });
+}
+function locationError(reason){
+ const denied=Number(reason?.code)===1;
+ const error=new Error(denied?'Browser location permission denied':'Current browser GPS fix unavailable');
+ error.code=denied?'TT_GEO_DENIED':'TT_GEO_UNAVAILABLE';
+ return error;
+}
 export async function captureAttendanceGeo(geolocation){
  if(!geolocation||typeof geolocation.getCurrentPosition!=='function')
-  deny('Browser geolocation is unavailable');
- const position=await new Promise((resolve,reject)=>geolocation.getCurrentPosition(resolve,reject,
-  {enableHighAccuracy:true,timeout:12000,maximumAge:0}));
+  throw locationError({code:2});
+ let position;
+ try{
+  position=await geolocationRequest(geolocation,{
+   enableHighAccuracy:true,timeout:5000,maximumAge:0
+  });
+ }catch(first){
+  if(Number(first?.code)===1)throw locationError(first);
+  if(![2,3].includes(Number(first?.code)))throw locationError(first);
+  try{
+   position=await geolocationRequest(geolocation,{
+    enableHighAccuracy:false,timeout:7000,maximumAge:30000
+   });
+  }catch(second){throw locationError(second);}
+ }
  const {latitude,longitude,accuracy}=position?.coords||{};
+ const capturedAt=Number(position?.timestamp);
  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(accuracy)||
-   latitude < -90||latitude>90||longitude < -180||longitude>180||accuracy<0)
-  deny('GPS fix is invalid');
+   latitude < -90||latitude>90||longitude < -180||longitude>180||
+   accuracy<0||accuracy>100000||!Number.isFinite(capturedAt)||
+   Date.now()-capturedAt>60000||capturedAt-Date.now()>120000)
+  throw locationError({code:2});
  return {status:'captured',latitude,longitude,accuracy,
-  capturedAt:new Date(position.timestamp||Date.now()).toISOString(),source:'browser-geolocation'};
+  capturedAt:new Date(capturedAt).toISOString(),source:'browser-geolocation'};
 }
