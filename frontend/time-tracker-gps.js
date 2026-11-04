@@ -206,12 +206,41 @@ export function renderTimeTrackerGps({
   panel('Daily GPS evidence','Average reported location uncertainty by attendance date.',
    bars(s.trend.map(p=>[p.day,p.accuracy,Math.max(1,...s.trend.map(x=>x.accuracy)),'±'+p.accuracy+'m'])))+
   panel('Signed recorded fixes','All authorized clock-in/out events in the selected window.',list(s.points));
- return '<section class="tt-gps" aria-label="Restricted GPS and Location Hub">'+
-  '<header class="tt-gps-heading"><div><h3>GPS &amp; Location Hub</h3>'+
-  '<p>'+esc(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',
-   weekday:'long',month:'long',day:'numeric'}).format(new Date(now)))+'</p></div>'+
-  '<div class="tt-gps-status" role="status"><span class="tt-gps-status-dot" aria-hidden="true"></span>'+
-  '<span>'+esc(dataStatus)+'</span></div></header>'+
+ const signed=!!data;
+ const clockIns=signed?s.points.filter(p=>p.kind==='in').length:null;
+ const members=signed?new Set(s.points.map(p=>p.userId)).size:null;
+ const accuracy=signed&&s.average!==null?'±'+s.average+' m':'—';
+ const total=signed?s.points.length:'—';
+ const asMetric=(value,label)=>'<div><strong>'+esc(value===null?'—':value)+
+  '</strong><span>'+esc(label)+'</span></div>';
+ return '<section class="tt-gps tt-gps-command" aria-label="Restricted GPS and Location Hub">'+
+  '<header class="tt-gps-heading tt-gps-command-hero" aria-label="Authorized GPS evidence overview">'+
+   '<div class="tt-gps-graphics" aria-hidden="true">'+
+    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+    '<span class="tt-gps-orbit tt-gps-orbit-outer"></span>'+
+    '<span class="tt-gps-orbit tt-gps-orbit-inner"></span></div>'+
+   '<div class="tt-gps-hero-content">'+
+    '<span class="tt-gps-eyebrow"><span class="tt-gps-signal" aria-hidden="true"></span>'+
+     'APSYNTRA / LOCATION INTELLIGENCE</span>'+
+    '<h3>GPS &amp; Location Hub</h3>'+
+    '<p>Signed attendance event locations and spatial insights</p>'+
+    '<span class="tt-gps-hero-scope">Restricted · Recorded event evidence only</span>'+
+    '<span class="tt-gps-hero-date">'+esc(new Intl.DateTimeFormat('en-US',{
+     timeZone:'Asia/Manila',weekday:'long',month:'long',day:'numeric'
+    }).format(new Date(now)))+'</span></div>'+
+   '<div class="tt-gps-hero-telemetry" aria-label="Authorized GPS evidence snapshot">'+
+    '<span class="tt-gps-telemetry-caption">SIGNED LOCATION SNAPSHOT</span>'+
+    '<div class="tt-gps-status" role="status">'+
+     '<span class="tt-gps-status-dot" aria-hidden="true"></span>'+
+     '<span>'+esc(dataStatus)+'</span></div>'+
+    '<div class="tt-gps-telemetry-primary"><strong>'+esc(total)+
+     '</strong><span>Recorded attendance<br>GPS fixes</span></div>'+
+    '<div class="tt-gps-telemetry-grid">'+
+     asMetric(clockIns,'Clock-ins')+
+     asMetric(members,'Members')+
+     asMetric(accuracy,'Avg. uncertainty')+'</div>'+
+    '<p class="tt-gps-telemetry-source">Signed coordinates stay in authorized map and evidence views.</p>'+
+   '</div></header>'+
   '<div class="tt-gps-tabs" role="tablist" aria-label="GPS detail views">'+
   [['map','⌖','Live Map'],['geofence','⬡','Geofence'],['trail','⇢','Trail'],
    ['accuracy','⌁','Accuracy'],['trends','↗','Trends']].map(([key,glyph,title])=>
