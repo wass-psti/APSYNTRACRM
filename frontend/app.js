@@ -1172,6 +1172,9 @@ async function loadTimeTracker(seq=routeSerial){
  if(state.view!=='board'||state.tab!=='attendance'||
     moduleByBoardName(state.board?.board?.name)?.key!=='timetracker')return;
  const run=++state.ttRunId,identity=state.context?.user_id,ws=state.context?.workspace_id;
+ if(state.ttClockPending&&(state.ttClockPending.userId!==identity||
+  state.ttClockPending.workspaceId!==ws||state.ttClockPending.boardId!==state.boardId))
+  state.ttClockPending=null;
  state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';
  state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  state.ttBusy=true;state.ttError='';render();
@@ -1180,7 +1183,7 @@ async function loadTimeTracker(seq=routeSerial){
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)
    {state.ttAttendance=snapshot;
-    if(state.ttClockPending)reconcileTimeTrackerClock(snapshot);}
+    if(state.ttClockPending)reconcileTimeTrackerClock(snapshot,{allowRetry:true});}
  }catch(err){
   if(run===state.ttRunId&&seq===routeSerial){
    state.ttAttendance=null;state.ttError=errorMessage(err);
@@ -1353,7 +1356,7 @@ async function loadTimeTrackerTeam(seq=routeSerial){
 /** Resolve only from a fresh signed read of the exact attendance record.
  * Missing history, changed identity and invalid state never permit another write.
  */
-function reconcileTimeTrackerClock(snapshot){
+function reconcileTimeTrackerClock(snapshot,{allowRetry=false}={}){
  const pending=state.ttClockPending;
  if(!pending)return null;
  const outcome=clockOutSnapshotOutcome(snapshot,pending);
@@ -1361,7 +1364,9 @@ function reconcileTimeTrackerClock(snapshot){
   state.ttClockPending=null;
   state.ttSuccess='Clock Out confirmed in your signed PostgreSQL attendance record.';
   state.ttError='';
- }else if(outcome==='STILL_ACTIVE'){
+ }else if(outcome==='STILL_ACTIVE'&&allowRetry&&!pending.receiptVerified){
+  // Only a distinct, user-triggered signed reconciliation may unlock another
+  // submission. The database's per-actor transaction lock still rejects races.
   state.ttClockPending=null;
   state.ttSuccess='';
   state.ttError='Your signed attendance record is still active. Clock Out was not completed; you may try again.';
@@ -1382,7 +1387,7 @@ async function verifyTimeTrackerClockOut(){
      state.context?.user_id!==pending.userId||
      state.context?.workspace_id!==pending.workspaceId)return;
   state.ttAttendance=snapshot;
-  if(reconcileTimeTrackerClock(snapshot)==='UNVERIFIED')
+  if(reconcileTimeTrackerClock(snapshot,{allowRetry:true})==='UNVERIFIED')
    state.ttError='The server has not confirmed this attendance record yet. Refresh your signed session before attempting another Clock Out.';
  }catch(err){
   if(seq===routeSerial&&run===state.ttRunId)
@@ -1427,7 +1432,7 @@ async function submitTimeTrackerAction(form,actionName){
   state.ttSuccess=(receipt.action==='clock-in'?'Clock In':'Clock Out')+
    ' confirmed by PostgreSQL · revision '+receipt.revision;
   // The commit receipt is authoritative; a failed refresh is not a failed write.
-  if(actionName==='clock-out')state.ttClockPending=context;
+  if(actionName==='clock-out')state.ttClockPending={...context,receiptVerified:true};
   try{
    const snapshot=await timeTracker.snapshot(boardId);
    if(!sameSession())return;
