@@ -6,6 +6,7 @@
 import {isTradeLinkBoard,tradeLinkSetupStatus,TRADELINK_BOARD_ID} from './tradelink-board-items.js';
 import {renderTradeLinkActivity} from './tradelink-activity.js';
 import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
+import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
 
 export const TRADELINK_SOURCE_MODULES=Object.freeze([
  Object.freeze({key:'esi',label:'Electronic SI',short:'ESI',
@@ -95,7 +96,7 @@ function renderModule(m){
   '<p class="tl-module-purpose">'+esc(m.purpose)+'</p>'+
   '<h3>Submission readiness</h3><p>'+esc(m.readiness)+'</p>'+
   '<h3>Original document lifecycle</h3><div class="tl-states">'+
-  TRADELINK_SOURCE_WORKFLOW_STATES.map(s=>'<span class="tl-state">'+esc(s)+'</span>').join('')+'</div>'+
+  TRADELINK_SOURCE_WORKFLOW_STATES.map(s=>'<span class="tl-state">'+esc(s)+'</span>').join('')+'</div>'+renderTradeLinkWorkflowReference(m.key)+
   (m.key==='quotation'?'<h3>Original quotation commercial stages</h3>'+
    '<div class="tl-states">'+TRADELINK_SOURCE_QUOTE_STATUSES.map(s=>'<span class="tl-state">'+esc(s)+'</span>').join('')+'</div>'+
    '<p class="muted">These stages differ from the APSYNTRA board Quote Status choices. No automatic mapping is enabled.</p>':'')+
