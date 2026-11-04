@@ -1,0 +1,434 @@
+/* TimeTracker Reports command view. Decoration only; all report records, SVG
+ * charts, filtering and export remain existing signed native DOM operations.
+ */
+#app .aps-board-shell .tt-native .tt-reports.tt-reports-command{
+ padding:clamp(13px,2vw,26px);
+ gap:clamp(15px,2vw,24px);
+ background:linear-gradient(150deg,#f1f5fd,#f9fbff 57%,#f2f6ff);
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-heading.tt-reports-command-hero{
+ display:grid;
+ position:relative;
+ isolation:isolate;
+ overflow:hidden;
+ grid-template-columns:minmax(0,1.14fr) minmax(275px,.86fr);
+ align-items:center;
+ gap:clamp(18px,3vw,42px);
+ min-height:346px;
+ padding:clamp(22px,3.1vw,41px);
+ border-radius:22px;
+ border:1px solid #567dbb82;
+ background:radial-gradient(ellipse at 79% 40%,#4e83d458,transparent 50%),
+  linear-gradient(122deg,#0b1838 0%,#1a3264 56%,#3b428b 100%);
+ box-shadow:0 18px 40px #1d35702c,inset 0 1px #ffffff22;
+ color:#f4f9ff;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-command-hero::before{
+ content:"";
+ position:absolute;inset:0;
+ z-index:0;
+ pointer-events:none;
+ background-image:linear-gradient(#bad7ff0b 1px,transparent 1px),
+  linear-gradient(90deg,#bad7ff0b 1px,transparent 1px);
+ background-size:36px 36px;
+ mask-image:linear-gradient(105deg,#0001,transparent 88%);
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-graphics{
+ position:absolute;inset:0;z-index:0;
+ pointer-events:none;
+ overflow:hidden;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-graphics .tt-pixi-backdrop{
+ position:absolute;inset:0;
+ pointer-events:none;
+ background:radial-gradient(circle at 78% 50%,#47baff31,transparent 35%);
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-graphics .tt-pixi-backdrop::after{
+ width:210px;height:210px;
+ top:50%;left:79%;
+ border:1px solid #85d2ff36;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-graphics .tt-pixi-backdrop canvas{
+ display:block;position:absolute;inset:0;
+ width:100%;height:100%;
+ pointer-events:none;opacity:.86;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-orbit{
+ position:absolute;
+ width:330px;height:330px;
+ top:51%;left:79%;
+ transform:translate(-50%,-50%) rotate(27deg) scaleY(.72);
+ border:1px solid #92d4ff27;
+ border-radius:50%;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-orbit-outer{
+ width:550px;height:550px;border-color:#a8a7ff1b;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-orbit-inner{
+ width:185px;height:185px;border-color:#8ee8ff2d;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-content,
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-telemetry{
+ position:relative;z-index:1;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-content{
+ display:flex;flex-direction:column;
+ align-items:flex-start;justify-content:center;
+ min-height:258px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-eyebrow{
+ display:inline-flex;align-items:center;gap:10px;
+ margin-bottom:26px;
+ color:#b6d2f6;
+ letter-spacing:.18em;
+ font-weight:840;font-size:10px;
+ line-height:1.5;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-signal{
+ width:7px;height:7px;flex:none;
+ border-radius:50%;
+ background:#68e6cb;
+ box-shadow:0 0 0 4px #68e6cb24;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-content h3{
+ margin:0 0 15px;
+ font:810 clamp(29px,3.2vw,44px)/1.1 Inter,system-ui,sans-serif;
+ letter-spacing:-.055em;
+ color:#fff;
+ max-width:550px;
+ text-shadow:0 6px 23px #05102d64;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-content>p{
+ color:#c3d3ed;font-size:12px;
+ line-height:1.65;max-width:420px;
+ margin:0;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-scope{
+ display:inline-flex;
+ margin-top:29px;
+ border:1px solid #80d3cf64;
+ border-radius:999px;
+ background:#2eb8a51b;
+ color:#d2f7ed;
+ padding:9px 13px;
+ font-size:11px;
+ line-height:1.5;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-period{
+ display:block;
+ margin-top:15px;
+ color:#a7bde0;
+ font-size:11px;
+ font-variant-numeric:tabular-nums;
+ overflow-wrap:anywhere;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-telemetry{
+ display:grid;
+ align-content:center;
+ gap:17px;
+ min-height:264px;
+ border:1px solid #bad8ff3c;
+ border-radius:17px;
+ padding:clamp(17px,2.25vw,25px);
+ background:linear-gradient(145deg,#d6e9ff14,#9cb9ff0b);
+ box-shadow:0 10px 28px #06132e33,inset 0 1px #fff2;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-caption{
+ font-size:9px;font-weight:820;letter-spacing:.16em;
+ color:#b2c9ee;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-primary{
+ display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-primary strong{
+ color:#fff;font-size:clamp(41px,4.5vw,64px);font-weight:830;
+ line-height:1;font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-primary span{
+ color:#b9d3f2;line-height:1.5;font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-grid{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ border:1px solid #c2d8ff28;
+ border-radius:10px;
+ overflow:hidden;
+ background:#d9e8ff0b;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-grid>div{
+ min-width:0;padding:13px 6px;
+ display:grid;gap:7px;text-align:center;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-grid>div+div{
+ border-left:1px solid #c2d8ff25;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-grid strong{
+ color:#f5fbff;font-size:clamp(16px,1.7vw,21px);
+ font-weight:800;font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-grid span{
+ color:#aec9e9;font-size:9px;line-height:1.4;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-actions{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);
+ gap:9px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-actions button{
+ min-width:0;min-height:38px;
+ padding:9px 12px;
+ border:1px solid #a4d0ff49;
+ border-radius:9px;
+ background:#cde6ff18;
+ color:#e2efff;
+ font-size:11px;
+ font-weight:720;
+ transition:background-color .15s ease,border-color .15s ease;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-actions button:hover:not(:disabled){
+ border-color:#a5d1ff8c;background:#cde6ff2a;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-actions button:disabled{
+ opacity:.52;cursor:not-allowed;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-actions button:focus-visible{
+ outline:2px solid #9dd5ff;outline-offset:3px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-range{
+ display:grid;
+ justify-items:stretch;
+ gap:12px;
+ padding:19px 21px;
+ border:1px solid #dfe7f6;
+ border-radius:14px;
+ background:#fff;
+ box-shadow:0 8px 22px #1d38670f;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-range>label{
+ color:#6c80a3;letter-spacing:.14em;font-size:10px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-presets{
+ gap:9px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-presets button,
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-record-chips button{
+ border:1px solid #dce5f5;
+ border-radius:9px;
+ padding:9px 13px;
+ background:#f5f8ff;
+ color:#5b6f96;
+ font-size:11px;
+ font-weight:700;
+ transition:border-color .15s ease,background-color .15s ease;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-presets button.is-active,
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-record-chips button.is-active{
+ background:#e8edff;
+ border-color:#aab9f1;
+ color:#4858c8;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-presets button:hover,
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-record-chips button:hover{
+ background:#eaf1ff;
+}
+#app .aps-board-shell .tt-native .tt-reports-command :is(.tt-reports-range select,.tt-reports-custom input,.tt-reports-record-head input){
+ border-color:#dbe5f3;
+ border-radius:8px;
+ min-height:39px;
+ background:#f7faff;
+ color:#455b82;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-range>p{
+ color:#7f90ab;font-size:11px;line-height:1.6;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-kpis{
+ grid-template-columns:repeat(5,minmax(0,1fr));
+ gap:12px;
+ background:transparent;border:0;border-radius:0;
+ box-shadow:none;overflow:visible;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-stat{
+ position:relative;
+ min-width:0;min-height:108px;
+ display:flex;flex-direction:column;align-items:flex-start;
+ justify-content:center;
+ text-align:left;
+ gap:12px;
+ border:1px solid #dfe7f5;
+ border-radius:14px;
+ padding:20px;
+ background:linear-gradient(160deg,#fff,#fafcff);
+ box-shadow:0 9px 21px #1d38670c;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-stat::before{
+ content:"";position:absolute;top:17px;right:17px;
+ width:8px;height:8px;border-radius:50%;
+ background:#7d8cf1;box-shadow:0 0 0 5px #7d8cf115;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-stat:nth-child(3)::before{
+ background:#58b99c;box-shadow:0 0 0 5px #58b99c15;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-stat:nth-child(4)::before{
+ background:#e8a674;box-shadow:0 0 0 5px #e8a67415;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-stat strong{
+ order:2;
+ font:820 clamp(23px,2.25vw,32px)/1 Inter,system-ui,sans-serif;
+ color:#28416e;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-stat span{
+ order:1;
+ color:#7489a9;
+ font-size:10px;
+ font-weight:730;
+ letter-spacing:.08em;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-section-title{
+ color:#687e9f;
+ font-size:10px;
+ letter-spacing:.16em;
+ font-weight:820;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-section-title::after{
+ background:#dce5f5;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-section-title span{
+ color:#8294ae;font-weight:540;letter-spacing:0;
+ overflow-wrap:anywhere;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-analytics{
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:16px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-panel{
+ border:1px solid #dee7f5;
+ border-radius:15px;
+ padding:clamp(18px,2vw,24px);
+ background:linear-gradient(165deg,#fff,#fcfdff);
+ box-shadow:0 10px 26px #1c36650e;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-panel h4{
+ color:#243a67;
+ font:800 16px/1.3 Inter,system-ui,sans-serif;
+ letter-spacing:-.025em;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-panel>p{
+ color:#8a9bb4;
+ font-size:11px;
+ line-height:1.65;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-svg text{
+ fill:#7a8fac;font-size:10px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-bar-good{
+ fill:#7288ec;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-bar-late{
+ fill:#ed9878;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-axis{
+ stroke:#dce7f7;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-dept progress{
+ accent-color:#6d84e7;
+ height:11px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-dept strong{
+ color:#45597d;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-record-head{
+ align-items:center;
+ gap:12px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-record-head>label{
+ color:#7084a4;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-reports-table-scroll{
+ border:1px solid #e1e8f5;
+ border-radius:11px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-table th{
+ background:#eef3fd;
+ color:#6881a6;
+ font-weight:760;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-table td{
+ color:#445675;
+ border-color:#e7edf8;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-record-details summary{
+ color:#4d67c5;
+ font-weight:750;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-record-details summary:focus-visible,
+#app .aps-board-shell .tt-native .tt-reports-command :is(input,select,button):focus-visible{
+ outline:2px solid #6772e4;
+ outline-offset:2px;
+}
+#app .aps-board-shell .tt-native .tt-reports-command .tt-report-footnote{
+ color:#8293ac;
+ line-height:1.7;
+}
+@media(max-width:1100px){
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-heading.tt-reports-command-hero{
+  grid-template-columns:1fr;min-height:0;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-content{min-height:190px}
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-telemetry{min-height:0}
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-report-kpis{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+ }
+}
+@media(max-width:720px){
+ #app .aps-board-shell .tt-native .tt-reports.tt-reports-command{padding:12px;gap:14px}
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-heading.tt-reports-command-hero{
+  border-radius:16px;padding:22px 18px;gap:22px;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-content{min-height:175px}
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-content h3{
+  font-size:clamp(27px,6vw,38px);
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-report-kpis{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-report-stat{
+  padding:18px 15px;min-height:95px;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-report-analytics{
+  grid-template-columns:1fr;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-range{
+  padding:17px 15px;
+ }
+}
+@media(max-width:400px){
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-actions{
+  grid-template-columns:1fr;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-report-telemetry-grid strong{
+  font-size:16px;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-report-stat strong{
+  font-size:22px;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-report-presets button{
+  flex:1 1 28%;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .tt-native .tt-reports-command,
+ #app .aps-board-shell .tt-native .tt-reports-command *{
+  transition:none!important;animation:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-command-hero{
+  border-color:#d9e9ff;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-reports-hero-content h3{
+  color:#fff;
+ }
+ #app .aps-board-shell .tt-native .tt-reports-command .tt-report-panel{
+  border-color:#8494bb;
+ }
+}
