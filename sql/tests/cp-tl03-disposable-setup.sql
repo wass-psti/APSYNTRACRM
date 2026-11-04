@@ -43,7 +43,10 @@ CREATE TABLE public.work_board_events(
  message text NOT NULL,entity_type text,entity_id text,
  payload jsonb NOT NULL DEFAULT '{}'::jsonb,created_at timestamptz NOT NULL DEFAULT now()
 );
--- Synthetic assertions may inspect only these QA-only tables under authenticated.\nGRANT USAGE ON SCHEMA auth TO authenticated;\nGRANT SELECT ON public.work_board_items,public.work_board_events TO authenticated;\nCREATE FUNCTION public.current_workspace_id(p_user_id uuid DEFAULT auth.uid())
+-- Synthetic assertions may inspect only these QA-only tables under authenticated.
+GRANT USAGE ON SCHEMA auth TO authenticated;
+GRANT SELECT ON public.work_board_items,public.work_board_events TO authenticated;
+CREATE FUNCTION public.current_workspace_id(p_user_id uuid DEFAULT auth.uid())
 RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $$SELECT workspace_id FROM public.workspace_members m JOIN public.profiles p ON p.id=m.user_id
  WHERE m.user_id=p_user_id AND m.active AND p.status='active'
