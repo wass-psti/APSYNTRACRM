@@ -5,6 +5,7 @@
  */
 import {isTradeLinkBoard,tradeLinkSetupStatus,TRADELINK_BOARD_ID} from './tradelink-board-items.js';
 import {renderTradeLinkActivity} from './tradelink-activity.js';
+import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 
 export const TRADELINK_SOURCE_MODULES=Object.freeze([
  Object.freeze({key:'esi',label:'Electronic SI',short:'ESI',
@@ -98,6 +99,7 @@ function renderModule(m){
   (m.key==='quotation'?'<h3>Original quotation commercial stages</h3>'+
    '<div class="tl-states">'+TRADELINK_SOURCE_QUOTE_STATUSES.map(s=>'<span class="tl-state">'+esc(s)+'</span>').join('')+'</div>'+
    '<p class="muted">These stages differ from the APSYNTRA board Quote Status choices. No automatic mapping is enabled.</p>':'')+
+  (['esi','quotation','po'].includes(m.key)?renderTradeLinkFinancePreview():'')+
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
   '<p>Document creation, changes, approvals, PDFs, and attachments are unavailable here until the central signed domain API and its server-side authorization are verified. No local-only draft will be presented as saved.</p></div></section>';
 }
