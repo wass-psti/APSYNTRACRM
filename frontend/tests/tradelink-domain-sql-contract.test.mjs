@@ -87,3 +87,9 @@ test('missing module-role assignment is strictly denied, never NULL-approved by 
  assert.match(fixture,/no module role assignment/i);
  assert.match(fixture,/unassigned role could (read|commit)/i);
 });
+
+
+test('document number normalization cannot desynchronize the board Item title',()=>{
+ assert.match(sql,/IS DISTINCT FROM pg_catalog\.btrim\(p_data->>'documentNumber'\)/);
+ assert.match(sql,/public\.wm_add_board_item\(p_board_id,group_id,payload->>'documentNumber'\)/);
+});
