@@ -52,6 +52,7 @@ export function mountTimeTrackerPixi(root,{load=()=>import(PIXI_V8_URL)}={}){
  const host=root?.querySelector?.('.tt-native .tt-calendar-command .tt-pixi-backdrop')||
   root?.querySelector?.('.tt-native .tt-overtime-command .tt-pixi-backdrop')||
   root?.querySelector?.('.tt-native .tt-my-hours-command .tt-pixi-backdrop')||
+  root?.querySelector?.('.tt-native .tt-team-command .tt-pixi-backdrop')||
   root?.querySelector?.('.tt-native .tt-reports-command .tt-pixi-backdrop')||
   root?.querySelector?.('.tt-native .tt-log-command .tt-pixi-backdrop')||
   root?.querySelector?.('.tt-native .tt-overview .tt-pixi-backdrop')||

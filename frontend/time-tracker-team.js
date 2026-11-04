@@ -102,13 +102,40 @@ export function renderTimeTrackerTeam({
  const state=valid?filterTimeTrackerTeam(directory,filters):null;
  const date=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',
   weekday:'long',month:'long',day:'numeric'}).format(new Date(now));
- return '<section class="tt-team-directory" aria-label="Bootstrap-only TimeTracker Team Directory">'+
-  '<header class="tt-team-head"><div><h3>Team Directory</h3><p>'+esc(date)+'</p></div>'+
-   '<div class="tt-team-header-actions"><button type="button" data-action="tt-team-refresh"'+
-    (loading?' disabled':'')+' aria-label="Refresh Team Directory">↻</button>'+
-    '<button type="button" data-action="tt-team-export"'+
-    (!valid||loading||!state.members.length?' disabled':'')+
-    ' aria-label="Export authorized Team Directory CSV">↓</button></div></header>'+
+ const actions='<div class="tt-team-header-actions">'+
+  '<button type="button" data-action="tt-team-refresh"'+
+   (loading?' disabled':'')+' aria-label="Refresh Team Directory">↻</button>'+
+  '<button type="button" data-action="tt-team-export"'+
+   (!valid||loading||!state.members.length?' disabled':'')+
+   ' aria-label="Export authorized Team Directory CSV">↓</button></div>';
+ // No Team identities or totals are rendered in the decorative scene.
+ // Unverified bootstrap claims retain the restricted, scene-free fallback.
+ const pageHeader=valid?
+  '<header class="tt-team-head tt-team-command-hero" aria-label="Signed workforce directory overview">'+
+   '<div class="tt-team-graphics" aria-hidden="true">'+
+    '<div class="tt-pixi-backdrop" data-pixi="fallback"></div>'+
+    '<span class="tt-team-orbit tt-team-orbit-outer"></span>'+
+    '<span class="tt-team-orbit tt-team-orbit-inner"></span></div>'+
+   '<div class="tt-team-hero-content">'+
+    '<span class="tt-team-eyebrow"><span class="tt-team-signal" aria-hidden="true"></span>'+
+     'APSYNTRA / WORKFORCE DIRECTORY</span>'+
+    '<h3>Team Directory</h3>'+
+    '<p>Authorized workspace members and centralized TimeTracker roles</p>'+
+    '<span class="tt-team-hero-scope">Bootstrap verified · Read-only directory</span>'+
+    '<span class="tt-team-hero-date">'+esc(date)+'</span></div>'+
+   '<div class="tt-team-hero-telemetry" aria-label="Signed workspace team snapshot">'+
+    '<span class="tt-team-telemetry-caption">SIGNED WORKSPACE SNAPSHOT</span>'+
+    '<div class="tt-team-telemetry-primary"><strong>'+summary.total+
+     '</strong><span>Authorized members<br>in workspace</span></div>'+
+    '<div class="tt-team-telemetry-grid">'+
+     '<div><strong>'+summary.active+'</strong><span>Active</span></div>'+
+     '<div><strong>'+summary.deactivated+'</strong><span>Deactivated</span></div>'+
+     '<div><strong>'+summary.admins+'</strong><span>Active admins</span></div></div>'+
+    actions+'</div></header>':
+  '<header class="tt-team-head"><div><h3>Team Directory</h3><p>'+esc(date)+
+   '</p></div>'+actions+'</header>';
+ return '<section class="tt-team-directory tt-team-command" aria-label="Bootstrap-only TimeTracker Team Directory">'+
+  pageHeader+
   (error?'<p class="tt-team-error" role="alert">'+esc(error)+'</p>':'')+
   (loading?'<p class="tt-team-loading" role="status">Verifying bootstrap authorization and loading current workspace members…</p>':
    !valid?'<p class="tt-team-loading">Team directory unavailable until signed bootstrap authorization is verified.</p>':
@@ -117,9 +144,9 @@ export function renderTimeTrackerTeam({
     ' value="'+esc(filters.search||'')+'"></label>'+
     '<div class="tt-team-layout" role="group" aria-label="Member layout">'+
      '<button type="button" data-action="tt-team-layout" data-layout="grid"'+
-      ' aria-pressed="'+(state.layout==='grid')+'">▦</button>'+
+      ' aria-label="Grid view" aria-pressed="'+(state.layout==='grid')+'">▦</button>'+
      '<button type="button" data-action="tt-team-layout" data-layout="list"'+
-      ' aria-pressed="'+(state.layout==='list')+'">☷</button></div>'+
+      ' aria-label="List view" aria-pressed="'+(state.layout==='list')+'">☷</button></div>'+
     '<strong class="tt-team-count">'+summary.total+' <span>MEMBERS</span></strong></div>'+
    '<div class="tt-team-stats">'+[
     ['TOTAL',summary.total],['ACTIVE',summary.active],

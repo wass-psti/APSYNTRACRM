@@ -1,0 +1,342 @@
+/* CP-TT-TEAM-VIS01: signed bootstrap directory presentation only.
+ * No standalone personnel store, role mutation, or additional GPU scene. */
+#app .aps-board-shell .tt-native .tt-team-directory.tt-team-command{
+ max-width:none;min-width:0;margin:0;
+ padding:clamp(13px,2vw,27px);gap:clamp(15px,1.8vw,22px);
+ background:linear-gradient(155deg,#f0f4fd 0%,#f9fbff 56%,#f2f6ff 100%);
+ color:#26395e;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-head.tt-team-command-hero{
+ display:grid;position:relative;isolation:isolate;overflow:hidden;
+ grid-template-columns:minmax(0,1.18fr) minmax(270px,.82fr);
+ gap:clamp(18px,3vw,41px);align-items:center;
+ min-height:338px;padding:clamp(21px,3.1vw,40px);
+ border:1px solid #587abb8a;border-radius:22px;
+ background:radial-gradient(ellipse at 82% 37%,#5086d44d,transparent 52%),
+  linear-gradient(120deg,#0a1938 0%,#192f60 56%,#3b4189 100%);
+ color:#f5f9ff;
+ box-shadow:0 18px 43px #203b7429,inset 0 1px #ffffff28;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-command-hero::before{
+ content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+ background-image:linear-gradient(#b8d7ff0b 1px,transparent 1px),
+  linear-gradient(90deg,#b8d7ff0b 1px,transparent 1px);
+ background-size:36px 36px;mask-image:linear-gradient(107deg,#0002,transparent 85%);
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-graphics{
+ position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-graphics .tt-pixi-backdrop{
+ position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(circle at 78% 47%,#55c4ff2a,transparent 33%);
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-graphics .tt-pixi-backdrop canvas{
+ display:block;position:absolute;inset:0;width:100%;height:100%;
+ opacity:.86;pointer-events:none;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-orbit{
+ position:absolute;width:340px;height:340px;left:76%;top:51%;
+ transform:translate(-50%,-50%) rotate(26deg) scaleY(.74);
+ border:1px solid #89d5ff28;border-radius:50%;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-orbit-outer{
+ width:540px;height:540px;border-color:#a5a9ff1a;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-orbit-inner{
+ width:192px;height:192px;border-color:#7eecff2d;
+}
+#app .aps-board-shell .tt-native .tt-team-command :is(.tt-team-hero-content,.tt-team-hero-telemetry){
+ position:relative;z-index:1;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-hero-content{
+ min-height:235px;display:flex;flex-direction:column;
+ align-items:flex-start;justify-content:center;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-eyebrow{
+ display:inline-flex;align-items:center;gap:9px;margin-bottom:24px;
+ color:#b4d2f4;font-size:10px;font-weight:840;letter-spacing:.18em;line-height:1.5;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-signal{
+ width:7px;height:7px;flex:none;border-radius:50%;
+ background:#77e7d1;box-shadow:0 0 0 4px #74edcf22;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-command-hero h3{
+ color:#fff;font:820 clamp(28px,3.2vw,43px)/1.11 Inter,system-ui,sans-serif;
+ letter-spacing:-.05em;margin:0 0 15px;max-width:520px;
+ text-shadow:0 6px 24px #07112b64;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-hero-content>p{
+ color:#c3d6f2;font-size:12px;line-height:1.65;margin:0;max-width:420px;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-hero-scope{
+ display:inline-flex;margin-top:24px;padding:8px 12px;
+ border:1px solid #86d5ca5b;border-radius:999px;
+ background:#38b5a821;color:#d2f9f0;font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-hero-date{
+ margin-top:16px;color:#a8c0e4;font-size:11px;font-weight:710;letter-spacing:.06em;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-hero-telemetry{
+ display:grid;align-content:center;gap:17px;min-height:270px;
+ padding:clamp(17px,2.2vw,25px);
+ border:1px solid #c1d9ff37;border-radius:17px;
+ background:linear-gradient(140deg,#dce9ff19,#abc5ff0c);
+ box-shadow:0 10px 29px #06132e33,inset 0 1px #fff2;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-caption{
+ color:#b3cdf2;font-size:9px;font-weight:830;letter-spacing:.16em;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-primary{
+ display:flex;align-items:baseline;gap:15px;flex-wrap:wrap;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-primary strong{
+ color:#fff;font-size:clamp(39px,4.4vw,62px);
+ font-weight:840;line-height:1;font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-primary span{
+ color:#bdd4f0;font-size:11px;line-height:1.45;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-grid{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ background:#cce3ff0d;border:1px solid #c1dbff29;border-radius:10px;overflow:hidden;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-grid>div{
+ min-width:0;padding:12px 5px;display:grid;gap:7px;text-align:center;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-grid>div+div{
+ border-left:1px solid #c1dbff24;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-grid strong{
+ color:#f7fcff;font-size:clamp(15px,1.55vw,20px);
+ font-weight:810;font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-grid span{
+ font-size:9px;line-height:1.4;color:#b4cae9;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-command-hero .tt-team-header-actions{
+ display:grid;grid-template-columns:1fr 1fr;gap:9px;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-command-hero .tt-team-header-actions button{
+ min-height:39px;padding:9px 14px;min-width:0;
+ border:1px solid #9cc5ff5d;border-radius:9px;
+ background:#d8ebff19;color:#e5f2ff;
+ font-size:20px;font-weight:730;
+ transition:background-color .16s ease,border-color .16s ease;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-command-hero .tt-team-header-actions button:hover:not(:disabled){
+ background:#d8ebff2b;border-color:#a9d1ff93;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-toolbar{
+ display:flex;gap:12px;padding:17px 20px;align-items:end;
+ background:#fff;border:1px solid #dfe7f6;border-radius:14px;
+ box-shadow:0 9px 23px #1e37680d;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-toolbar label{
+ display:grid;gap:7px;flex:1;min-width:190px;
+ font-size:11px;font-weight:730;color:#6c80a0;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-toolbar input{
+ min-height:41px;border:1px solid #dce5f5;border-radius:9px;
+ background:#fbfcff;padding:11px 13px;
+ color:#304a70;font-size:12px;
+ transition:background-color .15s ease,border-color .15s ease;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-toolbar input:focus{
+ background:#fff;border-color:#7284df;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-layout{
+ border:1px solid #d9e2f5;border-radius:9px;gap:3px;padding:3px;
+ background:#f4f7ff;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-layout button{
+ min-width:39px;min-height:39px;border-radius:7px;color:#64799e;
+ background:transparent;font-size:20px;
+ transition:background-color .15s ease;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-layout button[aria-pressed="true"]{
+ color:#465ac6;background:#e4ecff;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-count{
+ color:#2d4b7d;font:800 23px Inter,system-ui,sans-serif;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-count span{
+ color:#8497b1;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-stats{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:12px;background:transparent;border:0;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-stats>div{
+ min-width:0;min-height:96px;display:grid;
+ align-content:center;justify-items:start;gap:8px;padding:18px 12px;
+ background:#fff;border:1px solid #dfe7f5;border-radius:13px;
+ box-shadow:0 8px 22px #1e37680e;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-stats strong{
+ color:#24446e;font:820 clamp(17px,2vw,25px)/1.15 Inter,system-ui,sans-serif;
+ font-variant-numeric:tabular-nums;letter-spacing:-.025em;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-stats span{
+ color:#788ca9;font-size:10px;font-weight:750;letter-spacing:.12em;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-section-title{
+ color:#61799d;font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-section-title:after{
+ background:#dce6f6;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-filters{
+ display:flex;gap:8px;flex-wrap:wrap;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-filters button{
+ border:1px solid #dce5f5;border-radius:9px;
+ padding:10px 13px;min-height:38px;
+ color:#637895;background:#fff;font-size:11px;font-weight:750;
+ transition:background-color .15s ease,border-color .15s ease;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-filters button[aria-pressed="true"]{
+ color:#4656c8;background:#eef1ff;border-color:#a3aaf2;
+ box-shadow:inset 0 -2px #6467d9;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-filters button:hover:not([aria-pressed="true"]){
+ background:#f1f5ff;border-color:#b1c5ec;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-members{
+ border:1px solid #dfe7f5;border-radius:14px;
+ background:linear-gradient(165deg,#fff,#fcfdff);
+ box-shadow:0 9px 25px #1b376a10;min-width:0;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-member{
+ padding:16px 18px;gap:13px;border-bottom-color:#e5ecf8;
+ transition:background-color .15s ease;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-member:hover{
+ background:#f5f8ff;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-avatar{
+ width:41px;height:41px;border-radius:12px;
+ background:#eaf0ff;color:#536ac9;
+ border:1px solid #d3dffa;font-size:12px;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-member-main strong{
+ color:#304b77;font:780 14px Inter,system-ui,sans-serif;
+ overflow-wrap:anywhere;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-member-main small{
+ color:#778ca9;font-size:11px;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-role{
+ padding:6px 9px;color:#5363a7;background:#edf1ff;
+ border:1px solid #dce3fc;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-role-employee{
+ color:#657c9a;background:#f3f6fc;border-color:#e2e9f7;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-status{
+ border-radius:999px;padding:6px 11px;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-status-active{
+ color:#21735d;background:#e5f5ef;border-color:#b9e2d3;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-status-deactivated{
+ color:#a23848;background:#fdecef;border-color:#f5c5cf;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-status-unknown{
+ color:#6b7a8f;background:#f1f4f8;border-color:#dce3ed;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-locked{
+ color:#6a79cb;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-members-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;border:0;background:transparent;box-shadow:none;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-members-grid .tt-team-member{
+ border:1px solid #dfe7f5;border-radius:12px;
+ background:#fff;grid-template-columns:41px minmax(0,1fr);
+}
+#app .aps-board-shell .tt-native .tt-team-command :is(.tt-team-warning,.tt-team-error,.tt-team-loading,.tt-team-empty){
+ border:1px solid #dfe7f5;border-radius:12px;
+ padding:18px 20px;background:#fff;color:#6f829e;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-warning{
+ background:#fff7eb;color:#86683f;border-color:#efd6b5;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-error{
+ background:#fff3f4;color:#a34052;border-color:#eebec7;
+}
+#app .aps-board-shell .tt-native .tt-team-command .tt-team-footnote{
+ color:#7589a7;line-height:1.7;
+}
+#app .aps-board-shell .tt-native .tt-team-command :is(button,input):focus-visible{
+ outline:3px solid #586de4;outline-offset:3px;
+}
+#app .aps-board-shell .tt-native .tt-team-command button:disabled{
+ opacity:.52;cursor:not-allowed;
+}
+@media(max-width:1100px){
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-head.tt-team-command-hero{
+  grid-template-columns:1fr;min-height:0;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-hero-content{
+  min-height:175px;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-hero-telemetry{
+  min-height:0;
+ }
+}
+@media(max-width:720px){
+ #app .aps-board-shell .tt-native .tt-team-directory.tt-team-command{
+  padding:12px;gap:15px;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-head.tt-team-command-hero{
+  border-radius:16px;padding:22px 18px;gap:20px;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-command-hero h3{
+  font-size:clamp(27px,6.5vw,37px);
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-toolbar{
+  padding:15px;align-items:stretch;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-stats{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-members-grid{
+  grid-template-columns:1fr;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-member{
+  grid-template-columns:41px minmax(0,1fr) auto;
+ }
+}
+@media(max-width:400px){
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-grid strong{
+  font-size:16px;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-telemetry-grid span{
+  font-size:8px;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-stats>div{
+  padding:14px;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-toolbar label{
+  min-width:100%;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-count{
+  margin-left:0;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-board-shell .tt-native .tt-team-command,
+ #app .aps-board-shell .tt-native .tt-team-command *{
+  animation:none!important;transition:none!important;
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-board-shell .tt-native .tt-team-command .tt-team-command-hero{
+  border-color:#dcefff;
+ }
+ #app .aps-board-shell .tt-native .tt-team-command :is(.tt-team-members,.tt-team-member,.tt-team-stats>div){
+  border-color:#7588af;
+ }
+}
