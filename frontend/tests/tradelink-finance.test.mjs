@@ -20,6 +20,7 @@ test('VAT, discount, currency and exchange rules agree with original model calcu
  assert.equal(tradeLinkVatRate('12'),0.12);
  assert.equal(tradeLinkVatRate('exempt'),0);
  assert.equal(tradeLinkVatRate('zero'),0);
+ assert.equal(tradeLinkVatRate('__proto__'),0);
  const values=calculateTradeLinkAmounts({
   items:[{kind:'item',quantity:2,unitPrice:100},{kind:'note',quantity:10,unitPrice:9999}],
   discountType:'percentage',discountValue:10,vatType:'12',currency:'USD',exchangeRate:56
