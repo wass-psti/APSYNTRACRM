@@ -665,6 +665,14 @@ function boardPage(){
  const items=Array.isArray(state.board.items)?state.board.items:[];
  itemSelection.bind([state.context?.user_id,state.context?.workspace_id,state.boardId].join('|'),items.filter(i=>!i.archived_at).map(i=>i.id));
  const groups=Array.isArray(state.board.groups)?state.board.groups:[];
+ // Partition once for every board type; preserve source order and ungrouped items.
+ const groupedItems=new Map(groups.map(group=>[group.id,[]]));
+ const ungroupedItems=[];
+ for(const item of items){
+  const bucket=groupedItems.get(item.group_id);
+  if(bucket)bucket.push(item);
+  else ungroupedItems.push(item);
+ }
  const hiddenIds=isManagedTimeTrackerBoard(b)?readHiddenEmptyGroups(state.context,b.id):new Set();
  const hiddenGroups=groups.filter(g=>hiddenIds.has(g.id)&&
   canSafelyHideEmptyTimeTrackerGroup(b,g,groups,items));
@@ -735,10 +743,10 @@ function boardPage(){
  <button type="button" class="secondary" data-action="bulk-archive" ${canRequestBulk(b)?'':'disabled title="Select 1–50 records on an editable ordinary board"'}>Bulk archive</button>
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
  <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; protected application records remain excluded.'}</span></div>
- ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,items.filter(i=>i.group_id===g.id).length)}
- ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:items.filter(i=>i.group_id===g.id).length+' records'}}):groupRows(items.filter(i=>i.group_id===g.id),state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
+ ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0)}
+ ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${items.filter(i=>!groups.some(g=>g.id===i.group_id)).length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:items.filter(i=>!groups.some(g=>g.id===i.group_id))},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(items.filter(i=>!groups.some(g=>g.id===i.group_id)),state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}`;
+ ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}`;
 }
 function settingsPage(){
  const p=state.context.profile;
