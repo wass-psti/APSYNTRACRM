@@ -15,7 +15,8 @@
  scrollbar-color:#aebcdf #edf2ff;
 }
 #app .aps-board-shell .tt-main-attendance-table{
- min-width:1190px;
+ /* Reserve real width for the last two headings; overflow stays inside this group. */
+ min-width:1380px;
  width:100%;
  table-layout:fixed;
  border-collapse:separate;
@@ -33,13 +34,16 @@
  white-space:nowrap;
  border-bottom:1px solid #d5e2f3;
 }
-#app .aps-board-shell .tt-main-attendance-table th:nth-child(1){width:17%}
+#app .aps-board-shell .tt-main-attendance-table th:nth-child(1){width:16%}
 #app .aps-board-shell .tt-main-attendance-table th:nth-child(2),
-#app .aps-board-shell .tt-main-attendance-table th:nth-child(4){width:17%}
+#app .aps-board-shell .tt-main-attendance-table th:nth-child(4){width:15%}
 #app .aps-board-shell .tt-main-attendance-table th:nth-child(3),
-#app .aps-board-shell .tt-main-attendance-table th:nth-child(5){width:15%}
-#app .aps-board-shell .tt-main-attendance-table th:nth-child(6){width:11%}
-#app .aps-board-shell .tt-main-attendance-table th:nth-child(7){width:8%}
+#app .aps-board-shell .tt-main-attendance-table th:nth-child(5){width:13%}
+#app .aps-board-shell .tt-main-attendance-table th:nth-child(6),
+#app .aps-board-shell .tt-main-attendance-table th:nth-child(7){width:14%}
+#app .aps-board-shell .tt-main-attendance-table th + th{
+ border-left:1px solid #d5e2f3;
+}
 #app .aps-board-shell .tt-main-attendance-table td{
  padding:15px;
  background:#fff;
