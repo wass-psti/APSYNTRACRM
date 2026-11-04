@@ -15,7 +15,8 @@ const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 
 function classSet(){
  const data=new Set();
- return {add:name=>data.add(name),remove:name=>data.delete(name),
+ return {add:(...names)=>names.forEach(name=>data.add(name)),
+  remove:(...names)=>names.forEach(name=>data.delete(name)),
   contains:name=>data.has(name)};
 }
 function fixture({supported=true}={}){
