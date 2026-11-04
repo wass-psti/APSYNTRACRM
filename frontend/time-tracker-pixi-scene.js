@@ -47,9 +47,10 @@ export function stopTimeTrackerPixi(){
 }
 
 export function mountTimeTrackerPixi(root,{load=()=>import(PIXI_V8_URL)}={}){
- // Prefer the visible Clock dashboard; other TimeTracker tabs retain the
- // header decoration. Never create simultaneous GPU contexts for both.
- const host=root?.querySelector?.('.tt-native .tt-clock-stage .tt-pixi-backdrop')||
+ // Prefer the active TimeTracker content, reusing one GPU scene at a time.
+ // Other application tabs retain the existing lightweight header decoration.
+ const host=root?.querySelector?.('.tt-native .tt-overview .tt-pixi-backdrop')||
+  root?.querySelector?.('.tt-native .tt-clock-stage .tt-pixi-backdrop')||
   root?.querySelector?.('.tt-native .tt-app-header .tt-pixi-backdrop');
  if(!host){
   stopTimeTrackerPixi();
