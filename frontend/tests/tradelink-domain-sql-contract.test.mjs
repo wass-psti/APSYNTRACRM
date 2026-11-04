@@ -84,7 +84,9 @@ test('missing module-role assignment is strictly denied, never NULL-approved by 
  assert.match(sql,/IF private\.tl03_can_manage\(p_board_id\) IS DISTINCT FROM TRUE THEN/);
  assert.doesNotMatch(sql,/IF (?:actor IS NULL OR )?NOT private\.tl03_can_manage\(/);
  const fixture=readFileSync('sql/tests/cp-tl03-disposable-acceptance.sql','utf8');
- assert.match(fixture,/no module role assignment/i);
+ assert.match(fixture,/DO \$unassigned\$/);
+ assert.match(fixture,/('ffffffff-ffff-4fff-8fff-ffffffffffff','owner'|WITHOUT a module-role assignment)/i);
+ assert.match(fixture,/Missing module assignment should yield definite FALSE/);
  assert.match(fixture,/unassigned role could (read|commit)/i);
 });
 
