@@ -69,6 +69,7 @@ import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
+import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
@@ -94,7 +95,7 @@ const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -744,7 +745,11 @@ function boardPage(){
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
  <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; protected application records remain excluded.'}</span></div>
  ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0)}
- ${moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
+ ${moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
+  renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
+   projection:state.ttBoardAttendance,userId:state.context?.user_id,
+   workspaceId:state.context?.workspace_id,boardId:b.id}):
+  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
  ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}`;
 }
@@ -1094,7 +1099,7 @@ async function refreshFoundation(){
 async function loadBoard(boardId,tab){
  if(state.bulk02Access?.boardId!==boardId)clearBulkActivation();
  const seq=++routeSerial;
- state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
+ state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=null;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
  if(state.boardId!==boardId||state.tab!=='attendance'){
   state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
@@ -1112,20 +1117,39 @@ async function loadBoard(boardId,tab){
  if(tab==='items'&&TT_BOARD_GPS_PROJECTION_ENABLED&&
     moduleByBoardName(state.board.board?.name)?.key==='timetracker'){
    const identity=state.context?.user_id,workspace=state.context?.workspace_id;
+   const sameSession=()=>seq===routeSerial&&auth.isSignedIn&&
+     state.view==='board'&&state.tab==='items'&&state.boardId===boardId&&
+     state.context?.user_id===identity&&state.context?.workspace_id===workspace;
+   state.ttBoardAttendance={status:'LOADING'};
    if(state.roleVerified===true)state.ttBoardGpsEligible=true;
    else {
      try{
        const signed=await timeTracker.snapshot(boardId);
-       if(seq!==routeSerial||!auth.isSignedIn||
-         state.context?.user_id!==identity||state.context?.workspace_id!==workspace)return;
+       if(!sameSession())return;
        state.ttBoardGpsEligible=signed?.status==='VERIFIED_READ'&&
          signed?.access?.moduleRole==='Supervisor';
      }catch{
-       if(seq===routeSerial)state.ttBoardGpsEligible=false;
+       if(!sameSession())return;
+       state.ttBoardGpsEligible=false;
      }
    }
-   if(seq===routeSerial&&auth.isSignedIn&&state.context?.user_id===identity&&
-       state.context?.workspace_id===workspace)render();
+   if(!sameSession())return;
+   if(state.ttBoardGpsEligible){
+     try{
+       const data=await loadTimeTrackerBoardGps({
+         auth,api:db,boardId,workspaceId:workspace,enabled:true
+       });
+       if(!sameSession())return;
+       state.ttBoardAttendance=data;
+     }catch(err){
+       if(!sameSession())return;
+       const code=String(err?.code||''),status=Number(err?.status);
+       state.ttBoardAttendance={status:status===401||status===403||code==='42501'?
+         'RESTRICTED':'UNAVAILABLE'};
+       // No fallback to broad module state or generic board values.
+     }
+   }else state.ttBoardAttendance={status:'RESTRICTED'};
+   if(sameSession())render();
  }
  if(tab==='issues')await loadIssues(seq);
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')await loadTimeTracker(seq);
