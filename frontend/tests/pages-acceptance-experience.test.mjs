@@ -146,39 +146,21 @@ test('responsive, focus-visible, reduced motion and high contrast are route-scop
  assert.doesNotMatch(css,/@import|url\(\s*https?:|animation:.*infinite/);
 });
 
-test('one-shot route entrance cancels on rerender, leave, hidden tab and reduced motion',()=>{
- const oldWindow=globalThis.window,oldDocument=globalThis.document;
- let started=0,canceled=0;
- const nodes=Array.from({length:3},()=>({animate(frames,options){
-  started++;assert.equal(frames.length,2);assert.equal(options.fill,'none');
-  return {cancel(){canceled++}};
- }}));
- const section={isConnected:true,querySelectorAll(selector){
-  assert.equal(selector,'.pages-entrance');return nodes;
- }};
- try{
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:false};
-  stopPagesAcceptanceMotion();
-  mountPagesAcceptanceMotion(section,'acceptance');assert.equal(started,3);
-  mountPagesAcceptanceMotion(section,'acceptance');assert.equal(started,3);
-  assert.equal(canceled,3);
-  mountPagesAcceptanceMotion(null,'overview');
-  mountPagesAcceptanceMotion(section,'acceptance');assert.equal(started,6);
-  stopPagesAcceptanceMotion();assert.equal(canceled,6);
-  globalThis.window={matchMedia:()=>({matches:true})};
-  mountPagesAcceptanceMotion(section,'acceptance');assert.equal(started,6);
-  stopPagesAcceptanceMotion();
-  globalThis.window={matchMedia:()=>({matches:false})};
-  globalThis.document={hidden:true};
-  mountPagesAcceptanceMotion(section,'acceptance');assert.equal(started,6);
- }finally{
-  stopPagesAcceptanceMotion();
-  globalThis.window=oldWindow;
-  globalThis.document=oldDocument;
- }
+test('mounted acceptance components remain stationary on entry and refresh',()=>{
+ let queries=0,animations=0;
+ const node={isConnected:true,querySelectorAll(){queries++;return [{animate(){animations++;}}]},
+  animate(){animations++;}};
+ stopPagesAcceptanceMotion();
+ mountPagesAcceptanceMotion(node,'acceptance');
+ mountPagesAcceptanceMotion(node,'acceptance');
+ mountPagesAcceptanceMotion(null,'overview');
+ mountPagesAcceptanceMotion(node,'acceptance');
+ stopPagesAcceptanceMotion();
+ assert.equal(queries,0,'no entrance element traversal');
+ assert.equal(animations,0,'no mount-time animations');
+ const source=readFileSync('frontend/pages-acceptance-visuals.js','utf8');
+ assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
-
 test('QA page markup is structurally balanced and uses no inline click handlers',()=>{
  for(const page of [renderPagesAcceptance(),renderPagesAcceptance({qaBoard}),
   renderPagesAcceptance({qaBoard,result:{status:'fail',passed:0,total:0,steps:[]}})]){
