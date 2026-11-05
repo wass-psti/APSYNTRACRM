@@ -4,6 +4,8 @@ CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE SCHEMA auth;
 CREATE SCHEMA private;
+CREATE SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 GRANT USAGE ON SCHEMA auth,private TO authenticated;
 CREATE TABLE auth.users(
  id uuid PRIMARY KEY,
