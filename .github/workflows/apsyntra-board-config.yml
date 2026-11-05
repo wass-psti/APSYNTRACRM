@@ -52,6 +52,7 @@ jobs:
             -f sql/tests/cp-board-config01-disposable-acceptance.sql \
             -f sql/tests/cp-board-config01-dependency-acceptance-v2.sql \
             -f sql/cp-board-col-delete-recoverable-candidate.sql \
+            -f sql/tests/cp-board-col-delete-authenticated-role-denial.sql \
             -f sql/tests/cp-board-col-delete-recoverable-acceptance.sql \
             -f sql/tests/cp-board-col-delete-recoverable-reset.sql \
             -f sql/cp-board-config01-compensating-rollback-v2.sql \
