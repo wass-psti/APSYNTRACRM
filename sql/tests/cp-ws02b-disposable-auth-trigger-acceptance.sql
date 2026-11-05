@@ -75,6 +75,67 @@ BEGIN
  THEN RAISE EXCEPTION 'Repeated verification duplicated personal workspace'; END IF;
 END $replayed_confirmation$;
 
+-- A once-verified newly admitted account must lose server-side B2 workspace
+-- access when its email becomes unverified. The membership stays intact
+-- for an idempotent restoration after verification.
+INSERT INTO auth.sessions(id,user_id,not_after) VALUES
+ ('77777777-0000-4000-8000-000000000001',
+  '77777777-7777-4777-8777-777777777777',NULL);
+UPDATE auth.users SET email_confirmed_at=NULL
+ WHERE id='77777777-7777-4777-8777-777777777777';
+DO $unverified_again$
+BEGIN
+ IF (SELECT status FROM public.profiles
+  WHERE id='77777777-7777-4777-8777-777777777777')<>'pending'
+  OR (SELECT count(*) FROM private.ws02_personal_workspaces
+      WHERE user_id='77777777-7777-4777-8777-777777777777')<>1
+ THEN RAISE EXCEPTION 'Revoked verification did not fail closed'; END IF;
+END $unverified_again$;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub',
+ '77777777-7777-4777-8777-777777777777',false);
+SELECT set_config('request.jwt.claim.session_id',
+ '77777777-0000-4000-8000-000000000001',false);
+DO $read_denial$
+BEGIN
+ BEGIN
+  PERFORM public.wm_ws01_list();
+  RAISE EXCEPTION 'Unverified profile accessed signed workspace discovery'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $read_denial$;
+RESET ROLE;
+
+UPDATE auth.users SET email_confirmed_at=now()
+ WHERE id='77777777-7777-4777-8777-777777777777';
+DO $restored_verification$
+BEGIN
+ IF (SELECT status FROM public.profiles
+  WHERE id='77777777-7777-4777-8777-777777777777')<>'active'
+ OR (SELECT count(*) FROM private.ws02_personal_workspaces
+     WHERE user_id='77777777-7777-4777-8777-777777777777')<>1
+ OR (SELECT count(*) FROM private.ws02_provision_events
+     WHERE user_id='77777777-7777-4777-8777-777777777777')<>1
+ THEN RAISE EXCEPTION 'Reverification created duplicates or was not restored'; END IF;
+END $restored_verification$;
+
+-- An intentionally disabled user cannot be revived by email verification
+-- or provisioning retries. This must not make Auth updates fail.
+UPDATE public.profiles SET status='disabled'
+ WHERE id='77777777-7777-4777-8777-777777777777';
+UPDATE auth.users SET email_confirmed_at=NULL
+ WHERE id='77777777-7777-4777-8777-777777777777';
+UPDATE auth.users SET email_confirmed_at=now()
+ WHERE id='77777777-7777-4777-8777-777777777777';
+DO $disabled_stays_disabled$
+BEGIN
+ IF (SELECT status FROM public.profiles
+  WHERE id='77777777-7777-4777-8777-777777777777')<>'disabled'
+  OR (SELECT count(*) FROM private.ws02_provision_events
+      WHERE user_id='77777777-7777-4777-8777-777777777777')<>1
+ THEN RAISE EXCEPTION 'Disabled user reactivated by verification callback'; END IF;
+END $disabled_stays_disabled$;
+
 -- Even a newly verified signup with legacy bootstrap-style email
 -- must be an employee, not a platform administrator.
 INSERT INTO auth.users(id,email,email_confirmed_at,is_anonymous)
