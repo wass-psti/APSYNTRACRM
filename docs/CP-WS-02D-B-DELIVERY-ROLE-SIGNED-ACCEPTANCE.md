@@ -43,6 +43,12 @@ The raw one-time token is emitted only by the private issue function to an event
 
 The `private.ws02d_workspace_ceiling` function returns only a **maximum** capability bound for `view/edit/manage`, and requires the same active signed actor and current authoritative workspace. Legacy owners remain workspace-scoped, ordinary invited Members may have at most view/edit, gated Viewers at most view and gated Admins at most view/edit/manage. It never grants board or domain rights by itself. Each board/resource RPC must also pass its existing server-side RBAC/RLS and platform role ceiling; the signed predicate must be applied **as an AND**, not an OR. Until every path is covered and signed Viewer denial is verified, do not activate advanced roles.
 
+## CP-WS-02D/B2 board ACL and optional provider acceptance — 2026-11-05
+
+[CP-WS-02D/B2 detailed evidence](./CP-WS-02D-B2-ROLE-PROVIDER-ACCEPTANCE.md) records [PG17/Node workflow #99](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41989469639) **SUCCESS**. The original board ACL was reproduced in disposable PG17; the staged `AND` integration enforces `private.ws02d_workspace_ceiling` before the platform-administrator fast path while preserving existing platform and board ACL checks. Mock Resend HTTP transport tests also passed with no credentials and no live email delivery.
+
+Read-only production inventory found **53** definer functions referencing the board ACL and **30** candidate independent domain mutation paths referencing workspace scope but not that ACL. Those 30 are **review candidates, not proven vulnerabilities**; they require individual module RBAC review. The production board function, private invitation runtime, workspace lifecycle flags and existing user/member records remain unchanged. Resend is only an optional candidate; no provider was selected or activated.
+
 ## Remaining gates (no production mutations authorized)
 
 1. **Audit all board and domain operations**, including the 53 current board-ACL callers, and stage/verify integrated owner/Member/Admin/Viewer enforcement. Include negative Viewer writes, an Admin's platform-ceiling denial, revoked workspace memberships, and foreign-workspace access.
