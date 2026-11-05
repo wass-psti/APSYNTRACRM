@@ -44,6 +44,8 @@ export function explainColumnDeleteError(error){
   return new ApiError('Column action denied. Verify your signed session and board-manager permissions.',403,code);
  if(code==='40001'||/COL_(DELETE|RESTORE)_STALE/.test(message))
   return new ApiError('Board or column values changed. Refresh and review before trying again.',409,code);
+ if(/Column contains values/i.test(message))
+  return new ApiError('This column now contains stored cell rows. Empty-only deletion was safely denied; refresh and use recoverable deletion when activated.',409,code);
  if(code==='23503'||/COL_RESTORE_ITEM_DEPENDENCY_MISSING/.test(message))
   return new ApiError('Column recovery requires existing item relationships. Restore missing items first.',409,code);
  if(code==='23505')
