@@ -117,6 +117,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-issue-accept.sql
       - name: Verify denied foreign send, revoked tokens and expired sessions
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-revoke-denial.sql
+      - name: Verify bounded invitation sends, recipient quota and retry suppression
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-rate-limits.sql
       - name: Install inactive workspace-selection cutover
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-session-cutover-candidate.sql
       - name: Verify default-deny grants and preactivation signed reads
