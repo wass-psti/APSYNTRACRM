@@ -80,7 +80,7 @@ BEGIN
  THEN RAISE EXCEPTION 'Duplicate skip receipt or write failed: %',receipt; END IF;
  SELECT id,updated_at INTO item_id,item_at FROM public.work_board_items
  WHERE board_id=board AND title='Import Alpha';
- IF (SELECT value FROM public.work_board_item_values WHERE item_id=bimp02.item_id
+ IF (SELECT value FROM public.work_board_item_values WHERE item_id=item_id
  AND column_id=amount)<>'20'::jsonb
  THEN RAISE EXCEPTION 'Skipped match overwrote existing value'; END IF;
  RAISE NOTICE 'BIMP02 signed editor skip/preserve PASS';
@@ -98,7 +98,7 @@ BEGIN
  'expected_item_updated_at',item_at,'values',jsonb_build_object('Amount',44))));
  receipt:=public.wm_import_board_wizard_atomic(board,expected_at,payload);
  IF receipt->>'updated'<>'1' OR (SELECT value FROM public.work_board_item_values
- WHERE item_id=bimp02.item_id AND column_id=amount)<>'44'::jsonb
+ WHERE item_id=item_id AND column_id=amount)<>'44'::jsonb
  THEN RAISE EXCEPTION 'Signed update mode did not persist: %',receipt; END IF;
  RAISE NOTICE 'BIMP02 signed editor update/CAS PASS';
 
