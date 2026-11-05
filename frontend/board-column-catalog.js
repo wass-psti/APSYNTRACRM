@@ -17,6 +17,13 @@ export const BOARD_STANDARD_COLUMN_CATALOG=Object.freeze([
 ]);
 export const BOARD_STANDARD_COLUMN_GROUPS=Object.freeze(['Essentials','Super useful']);
 export const SUPPORTED_COLUMN_TYPE_IDS=Object.freeze(BOARD_STANDARD_COLUMN_CATALOG.map(x=>x.type));
+export const BOARD_COLUMN_PRESETS=Object.freeze([
+ {type:'priority_preset',label:'Priority (Status preset)',group:'Presets',
+  description:'A real Status column with Critical, High, Medium and Low options.',
+  icon:'!',keywords:'priority urgency severity labels',backendType:'status'}
+]);
+export const COLUMN_CENTER_GROUPS=Object.freeze([...BOARD_STANDARD_COLUMN_GROUPS,'Presets']);
+const COLUMN_CENTER_ENTRIES=Object.freeze([...BOARD_STANDARD_COLUMN_CATALOG,...BOARD_COLUMN_PRESETS]);
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function findStandardColumnType(type){
@@ -28,9 +35,9 @@ export function searchStandardColumns(query=''){
   words.every(w=>[x.label,x.description,x.type,x.keywords,x.group]
    .join(' ').toLocaleLowerCase().includes(w)));
 }
-export function renderColumnTypeOptions(entries=BOARD_STANDARD_COLUMN_CATALOG){
+export function renderColumnTypeOptions(entries=COLUMN_CENTER_ENTRIES){
  const options=[];
- for(const group of BOARD_STANDARD_COLUMN_GROUPS){
+ for(const group of COLUMN_CENTER_GROUPS){
   const subset=entries.filter(x=>x.group===group);
   if(!subset.length)continue;
   options.push('<optgroup label="'+escape(group)+'">'+subset.map(x=>
@@ -40,9 +47,9 @@ export function renderColumnTypeOptions(entries=BOARD_STANDARD_COLUMN_CATALOG){
  return options.join('');
 }
 export function renderColumnCenterCards(){
- return '<div class="board-column-center-cards" role="group" aria-label="Available operational columns">'+
-  BOARD_STANDARD_COLUMN_GROUPS.map(group=>{
-   const items=BOARD_STANDARD_COLUMN_CATALOG.filter(x=>x.group===group);
+ return '<div class="board-column-center-cards" role="group" aria-label="Available operational columns and presets">'+
+  COLUMN_CENTER_GROUPS.map(group=>{
+   const items=COLUMN_CENTER_ENTRIES.filter(x=>x.group===group);
    return '<section class="board-column-center-category" data-column-group>'+
     '<h5>'+escape(group)+'</h5><div class="board-column-center-grid">'+
     items.map(x=>'<button type="button" data-column-type="'+escape(x.type)+'" '+
