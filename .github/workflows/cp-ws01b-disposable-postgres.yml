@@ -23,6 +23,7 @@ on:
       - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
       - 'frontend/workspace-b3-signed-read-preflight.js'
       - 'frontend/tests/workspace-b3-signed-read-preflight.test.mjs'
+      - 'scripts/ws02d-b3-*'
       - 'server/ws02d-*.mjs'
       - 'server/tests/ws02d-*.test.mjs'
   workflow_dispatch:
@@ -204,3 +205,5 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-admin-role-positive-fixture.sql
       - name: Accept Charter and application role grant, revision, revoke and denied actors
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-admin-two-valid-write.sql
+      - name: Verify actual two-session advisory asset and FuelTrack request CAS races
+        run: node scripts/ws02d-b3-disposable-concurrency.mjs
