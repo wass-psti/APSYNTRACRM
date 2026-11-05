@@ -34,7 +34,8 @@ DECLARE
  deletion uuid;
  board_version timestamptz;
  original_column jsonb;
- original_cell jsonb;
+ original_cells jsonb;
+ original_snapshot_cells jsonb;
  deleted jsonb;
  restored jsonb;
  listed jsonb;
@@ -46,7 +47,22 @@ BEGIN
  SELECT id INTO STRICT domain_col FROM public.work_board_columns
  WHERE board_id=b AND column_key='col_seeded';
  SELECT to_jsonb(x) INTO STRICT original_column FROM public.work_board_columns x WHERE x.id=c;
- SELECT to_jsonb(x) INTO STRICT original_cell FROM public.work_board_item_values x WHERE x.column_id=c;
+ -- Reproduce the actual Contacts / Status I four-value scenario, including
+ -- JSON null and SQL NULL so restore must preserve complete row semantics.
+ INSERT INTO public.work_board_items(id,board_id) VALUES
+  ('40000000-0000-4000-8000-000000000011',b),
+  ('40000000-0000-4000-8000-000000000012',b),
+  ('40000000-0000-4000-8000-000000000013',b);
+ INSERT INTO public.work_board_item_values(item_id,column_id,value,updated_by) VALUES
+  ('40000000-0000-4000-8000-000000000011',c,'"beta"'::jsonb,owner),
+  ('40000000-0000-4000-8000-000000000012',c,'null'::jsonb,owner),
+  ('40000000-0000-4000-8000-000000000013',c,NULL,owner);
+ SELECT jsonb_agg(to_jsonb(x) ORDER BY x.item_id),
+        jsonb_agg(to_jsonb(x)-'column_id' ORDER BY x.item_id)
+ INTO STRICT original_cells,original_snapshot_cells
+ FROM public.work_board_item_values x WHERE x.column_id=c;
+ IF jsonb_array_length(original_cells)<>4 THEN
+  RAISE EXCEPTION 'Four-row populated-column fixture failed to initialize'; END IF;
  UPDATE public.wm_board_ui_settings
  SET column_labels=column_labels||jsonb_build_object(c::text,'Business status')
  WHERE board_id=b;
@@ -62,12 +78,12 @@ BEGIN
  EXCEPTION WHEN serialization_failure THEN NULL; END;
  BEGIN
   PERFORM public.wm_delete_board_column_recoverable(
-   b,c,board_version-interval '1 second',1,'DELETE Recorded status');
+   b,c,board_version-interval '1 second',4,'DELETE Recorded status');
   RAISE EXCEPTION 'Stale board CAS accepted' USING ERRCODE='P9999';
  EXCEPTION WHEN serialization_failure THEN NULL; END;
  BEGIN
   PERFORM public.wm_delete_board_column_recoverable(
-   b,c,board_version,1,'DELETE recorded status');
+   b,c,board_version,4,'DELETE recorded status');
   RAISE EXCEPTION 'Wrong confirmation accepted' USING ERRCODE='P9999';
  EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
  FOR i IN 1..2 LOOP
@@ -84,19 +100,19 @@ BEGIN
 
  -- Same column restoration must work after actual FK cascade.
  deleted:=public.wm_delete_board_column_recoverable(
-  b,c,board_version,1,'DELETE Recorded status');
+  b,c,board_version,4,'DELETE Recorded status');
  deletion:=(deleted->>'deletion_id')::uuid;
  IF deleted->>'action'<>'delete-recoverable'
- OR (deleted->>'value_rows')::int<>1
+ OR (deleted->>'value_rows')::int<>4
  OR EXISTS(SELECT 1 FROM public.work_board_columns WHERE id=c)
  OR EXISTS(SELECT 1 FROM public.work_board_item_values WHERE column_id=c)
  OR (SELECT count(*) FROM private.wm_recoverable_deleted_cells
-     WHERE deletion_id=deletion)<>1
+     WHERE deletion_id=deletion)<>4
  OR (SELECT column_snapshot FROM private.wm_recoverable_deleted_columns
      WHERE deletion_id=deletion)<>original_column
- OR (SELECT to_jsonb(x)-'deletion_id' FROM private.wm_recoverable_deleted_cells x
-     WHERE deletion_id=deletion)
-   <> (original_cell-'column_id')
+ OR (SELECT jsonb_agg(to_jsonb(x)-'deletion_id' ORDER BY x.item_id)
+     FROM private.wm_recoverable_deleted_cells x WHERE deletion_id=deletion)
+    IS DISTINCT FROM original_snapshot_cells
  THEN
   RAISE EXCEPTION 'Private recovery snapshot or deletion lost data';
  END IF;
@@ -104,7 +120,7 @@ BEGIN
  OR NOT EXISTS(SELECT 1 FROM public.work_board_events
    WHERE board_id=b AND event_type='column.deleted_recoverable'
    AND (payload->>'deletion_id')::uuid=deletion
-   AND (payload->>'value_rows')::int=1
+   AND (payload->>'value_rows')::int=4
    AND actor_id=owner)
  THEN RAISE EXCEPTION 'Deletion UI/audit receipt absent'; END IF;
  listed:=public.wm_list_recoverable_board_columns(b);
@@ -153,7 +169,8 @@ BEGIN
  IF restored->>'action'<>'restore-recoverable'
  OR (restored->>'column_id')::uuid<>c
  OR (SELECT to_jsonb(x) FROM public.work_board_columns x WHERE x.id=c)<>original_column
- OR (SELECT to_jsonb(x) FROM public.work_board_item_values x WHERE x.column_id=c)<>original_cell
+ OR (SELECT jsonb_agg(to_jsonb(x) ORDER BY x.item_id)
+     FROM public.work_board_item_values x WHERE x.column_id=c)<>original_cells
  OR (SELECT column_labels->>c::text FROM public.wm_board_ui_settings
      WHERE board_id=b)<>'Business status'
  OR NOT EXISTS(SELECT 1 FROM public.work_board_events
@@ -170,7 +187,7 @@ BEGIN
 
  -- Missing parent row must refuse restore without partial change.
  deleted:=public.wm_delete_board_column_recoverable(
-  b,c,(restored->>'updated_at')::timestamptz,1,'DELETE Recorded status');
+  b,c,(restored->>'updated_at')::timestamptz,4,'DELETE Recorded status');
  deletion:=(deleted->>'deletion_id')::uuid;
  DELETE FROM public.work_board_items WHERE id='40000000-0000-4000-8000-000000000001';
  BEGIN
