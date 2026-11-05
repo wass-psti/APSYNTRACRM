@@ -65,9 +65,9 @@ test('populated column conversion rejects without running server mutation or dro
   {name:'Renamed',type:'status',visible:true});
  assert.deepEqual(populated.values,detail.values.concat({item_id:itemId,column_id:customId,value:'active'}));
  const empty={...detail,values:[{column_id:customId,value:null}]};
- assert.equal(columnStoredValueCount(empty,customId),0);
- assert.equal(prepareInlineColumnUpdate(empty,editable,
-  form({name:'Converted',type:'text'})).type,'text');
+ assert.equal(columnStoredValueCount(empty,customId),1);
+ assert.throws(()=>prepareInlineColumnUpdate(empty,editable,
+  form({name:'Converted',type:'text'})),/persisted data/);
 });
 test('deletion requires exact named confirmation and excludes Item or domain columns',()=>{
  assert.equal(confirmInlineColumnDelete(

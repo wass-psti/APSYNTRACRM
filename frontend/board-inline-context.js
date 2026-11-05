@@ -20,8 +20,8 @@ export function resolveInlineColumn(detail,key,{canManage=false}={}){
 }
 export function columnStoredValueCount(detail,columnId){
  if(!validUuid(columnId))return 0;
- return (detail?.values||[]).filter(x=>x.column_id===columnId &&
-  x.value!==null&&x.value!==undefined).length;
+ // Match PostgreSQL count(*) for persisted cell rows, including SQL NULL.
+ return (detail?.values||[]).filter(x=>x.column_id===columnId).length;
 }
 export function prepareInlineColumnUpdate(detail,column,form){
  if(!column?.deletable||!validUuid(column.id)||!form)

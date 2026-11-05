@@ -40,6 +40,7 @@ import {openBoardImportWizard} from './board-import-ui.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
+import {BOARD_COLUMN_RECOVERY_ENABLED,BoardColumnRecoveryClient,renderBoardColumnRecoveryList} from './board-column-recovery.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
@@ -115,6 +116,7 @@ const platformSync=new PlatformSync({
  onStatus:updatePlatformSyncIndicator,onInvalidate:reconcilePlatformSync
 });
 const boardStructureClient=new BoardStructureClient(db);
+const boardColumnRecovery=new BoardColumnRecoveryClient(db);
 const boardCardLifecycle=new BoardCardLifecycleClient(db);
 const itemSelection=new BoardItemSelection();
 const boardBulkClient=new BoardBulkClient(db);
@@ -1861,7 +1863,7 @@ async function login(form){
  finally{state.authBusy=false;}
 }
 function hideModal(){if(modal){modal.remove();modal=null;}}
-function openModal(title,fields,submit,{submitLabel='Save changes'}={}){
+function openModal(title,fields,submit,{submitLabel='Save changes',submitDisabled=false}={}){
  const previousFocus=document.activeElement;
  hideModal();
  modal=document.createElement('div');modal.className='modal-backdrop';modal.setAttribute('role','presentation');
@@ -1869,7 +1871,7 @@ function openModal(title,fields,submit,{submitLabel='Save changes'}={}){
  modal.innerHTML=`<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal-head"><h2 id="modal-title">${e(title)}</h2><button type="button" class="modal-close" data-dismiss aria-label="Close dialog">×</button></div>
   <form id="modal-form">${fields}<div class="modal-actions"><button class="secondary" type="button" data-dismiss>Cancel</button>
-  <button class="primary" type="submit">${e(submitLabel)}</button></div></form></section>`;
+  <button class="primary" type="submit"${submitDisabled?' disabled':''}>${e(submitLabel)}</button></div></form></section>`;
  document.body.append(modal);
  const closeAndRestore=()=>{
   if(modal!==view)return;
@@ -1979,7 +1981,8 @@ function redrawBoardHistory({focus=false}={}){
  if(!host)return;
  if(boardHistory.mode==='cursor'){
   const result=boardHistory.pages[boardHistory.index];
-  host.innerHTML=renderBoardAuditCursorPage(result,{
+  host.innerHTML=renderBoardColumnRecoveryList(boardHistory.recoveries)+
+   renderBoardAuditCursorPage(result,{
    pageIndex:boardHistory.index,busy:boardHistory.busy,error:boardHistory.error,
    cachedNext:boardHistory.index<boardHistory.pages.length-1
   });
@@ -1987,7 +1990,7 @@ function redrawBoardHistory({focus=false}={}){
  }
  const results=renderBoardActivityResults(boardHistory.rows,boardHistory);
  boardHistory.page=results.page;
- host.innerHTML=results.html;
+ host.innerHTML=renderBoardColumnRecoveryList(boardHistory.recoveries)+results.html;
  if(focus){
   const search=host.querySelector('#board-activity-search');
   search?.focus();search?.setSelectionRange(search.value.length,search.value.length);
@@ -1996,14 +1999,19 @@ function redrawBoardHistory({focus=false}={}){
 async function openBoardActivity(){
  if(!activeBoardLayout())return;
  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
+ let recoveries=[];
+ if(BOARD_COLUMN_RECOVERY_ENABLED&&state.boardManage){
+  try{recoveries=await boardColumnRecovery.list(snapshot.boardId);}
+  catch{toast('Column recovery list is unavailable; no data changed.',true);}
+ }
  const cursorMode=BOARD_COL01_AUDIT_CURSOR_ENABLED;
  const events=cursorMode?
   await loadBoardAuditCursorPage(db,snapshot.boardId):
   await db.boardEvents(snapshot.boardId,100);
  if(!boardHistoryAuthorized(snapshot))return;
  boardHistory=cursorMode?
-  {...snapshot,mode:'cursor',pages:[events],index:0,busy:false,error:''}:
-  {...snapshot,rows:normalizeBoardActivity(events),limit:100,
+  {...snapshot,recoveries,mode:'cursor',pages:[events],index:0,busy:false,error:''}:
+  {...snapshot,recoveries,rows:normalizeBoardActivity(events),limit:100,
    search:'',type:'all',actor:'all',page:0,busy:false,error:''};
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-history-backdrop';
@@ -2017,6 +2025,31 @@ async function openBoardActivity(){
   if(event.target===modal||event.target.closest('[data-dismiss]')){hideModal();boardHistory=null;return;}
   const action=event.target.closest('[data-board-history-action]')?.dataset.boardHistoryAction;
   if(!action||!boardHistoryAuthorized(boardHistory)||boardHistory.busy)return;
+  if(action==='restore-column'){
+   if(!BOARD_COLUMN_RECOVERY_ENABLED||!state.boardManage)return;
+   const current=boardHistory;
+   const entry=current.recoveries?.find(x=>x.deletionId===
+     event.target.closest('[data-board-history-action]')?.dataset.id);
+   if(!entry?.restorable)return;
+   current.busy=true;redrawBoardHistory();
+   try{
+    const fresh=await verifyInlineColumnBoard({...current,
+     boardRevision:state.board?.board?.updated_at});
+    await boardColumnRecovery.restore(fresh,entry);
+    if(boardHistory!==current||!boardHistoryAuthorized(current))return;
+    hideModal();boardHistory=null;
+    await loadBoard(current.boardId,'items');
+    toast('Column restored with its original stored values.');
+   }catch(err){
+    if(boardHistory===current){
+     current.error='Column restoration could not be confirmed. Refresh and review Activity.';
+     notice(err);
+    }
+   }finally{
+    if(boardHistory===current){current.busy=false;redrawBoardHistory();}
+   }
+   return;
+  }
   if(boardHistory.mode==='cursor'){
    const current=boardHistory;
    if(action==='cursor-previous'&&current.index>0)current.index--;
@@ -2242,26 +2275,44 @@ function contextualColumnDelete(key){
  const snapshot=inlineColumnSnapshot();
  if(!snapshot||!state.boardManage)return;
  const column=resolveInlineColumn(state.board,key,{canManage:true});
- if(column.kind==='primary')throw new ApiError('The required Item column cannot be deleted.',403);
+ if(column.kind==='primary')
+  throw new ApiError('The required Item column cannot be deleted.',403);
  const storedCount=columnStoredValueCount(state.board,column.id);
+ const recoverable=storedCount>0&&BOARD_COLUMN_RECOVERY_ENABLED;
+ const blocked=storedCount>0&&!BOARD_COLUMN_RECOVERY_ENABLED;
+ const summary=blocked?
+  'This column has '+storedCount+' stored value row'+(storedCount===1?'':'s')+
+  '. It is not empty. The current server safely denies its deletion. '+
+  'Recoverable deletion requires an activated, tested private backup and restore contract. '+
+  'Nothing has been deleted; you may hide this column without losing its data.':
+  recoverable?
+   'This column contains '+storedCount+' stored value row'+(storedCount===1?'':'s')+
+   '. Deletion will first store a private transactional recovery snapshot. '+
+   'Authorized managers can restore its original values from Board Activity.':
+   'This custom column has zero stored value rows. '+
+   'Deletion removes only this column and records an Activity event.';
  openModal('Delete '+column.name+' column',
-  '<p class="note security-note">This operation removes an empty custom column only. '+
-  'Existing cell values are protected by PostgreSQL. '+storedCount+
-  ' stored value'+(storedCount===1?'':'s')+' currently detected. '+
-  'Deleting the column is irreversible when the server accepts it.</p>'+
-  input('Type DELETE '+column.name+' exactly','confirmation',''),
+  '<p class="note security-note">'+e(summary)+'</p>'+
+  (blocked?'':input('Type DELETE '+column.name+' exactly','confirmation','')),
   async fd=>{
    const fresh=await verifyInlineColumnBoard(snapshot);
    const target=resolveInlineColumn(fresh,key,{canManage:true});
    if(target.name!==column.name)
     throw new ApiError('Column was renamed. Reopen deletion confirmation.',409);
-   if(columnStoredValueCount(fresh,target.id)>0)
-    throw new ApiError('Column contains values. Remove or migrate those values before deleting.',409);
+   const valuesNow=columnStoredValueCount(fresh,target.id);
+   if(valuesNow!==storedCount)
+    throw new ApiError('Stored column values changed. Refresh and review before deleting.',409);
    const confirmation=confirmInlineColumnDelete(target,String(fd.get('confirmation')||''));
-   await boardStructureClient.mutate(fresh,{action:'delete',columnId:target.id,
-    confirmation});
+   if(valuesNow>0){
+    await boardColumnRecovery.delete(fresh,target,confirmation);
+   }else{
+    await boardStructureClient.mutate(fresh,{action:'delete',columnId:target.id,
+     confirmation});
+   }
    await loadBoard(snapshot.boardId,'items');
-  },{submitLabel:'Delete empty column'});
+  },{submitLabel:blocked?'Deletion unavailable':
+   recoverable?'Delete with recovery':'Delete empty column',
+   submitDisabled:blocked});
 }
 function contextualColumnCreate(){
  const snapshot=inlineColumnSnapshot();
