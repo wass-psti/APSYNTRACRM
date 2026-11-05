@@ -1,3 +1,4 @@
+import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
 const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30;
 const invalid=message=>{throw new Error(message);};
@@ -156,51 +157,182 @@ async function unzipEntry(zip,path){
  if(zipCrc32(data)!==info.crc)invalid('XLSX checksum mismatch.');
  return new TextDecoder('utf-8',{fatal:true}).decode(data);
 }
-function excelDate(serial,offset=0){
- const n=Number(serial);
- if(!Number.isFinite(n)||n<0||n>2958465)invalid('Invalid Excel date.');
- return new Date(Date.UTC(1899,11,30)+Math.floor(n+offset)*86400000).toISOString().slice(0,10);
-}
+
+/** Excel built-in number formats; custom formats are parsed separately. */
 function styleDates(doc){
- const formats=new Map(nodes(doc,'numFmt').map(x=>[Number(x.getAttribute('numFmtId')),x.getAttribute('formatCode')||'']));
+ const formats=new Map(nodes(doc,'numFmt').map(x=>
+  [Number(x.getAttribute('numFmtId')),x.getAttribute('formatCode')||'']));
  const xfs=nodes(first(doc,'cellXfs')||doc,'xf');
  return xfs.map(x=>{
   const id=Number(x.getAttribute('numFmtId'));
-  return (id>=14&&id<=22)||(id>=45&&id<=47)||
-   (formats.has(id)&&/[dmyhHsS]/.test(formats.get(id).replace(/"[^"]*"/g,'')));
+  if(id>=14&&id<=17||id>=27&&id<=36||id>=50&&id<=58)
+   return {date:true,time:false};
+  if(id>=18&&id<=21||id>=45&&id<=47)
+   return {date:false,time:true};
+  if(id===22)return {date:true,time:true};
+  return formats.has(id)?excelDateFormat(formats.get(id)):null;
  });
 }
-function sheetRows(xml,shared,dates,offset){
- const sheetData=first(xml,'sheetData');
- if(!sheetData)return null;
- const rows=[];
- for(const r of nodes(sheetData,'row')){
-  const cells=[],seen=new Set();
-  for(const cell of nodes(r,'c')){
-   if(nodes(cell,'f').length)invalid('Formula cells must be replaced with verified values before import.');
-   const address=cell.getAttribute('r')||'';
-   const letters=address.match(/^[A-Z]+/i)?.[0]||'';
-   let col=0;for(const ch of letters.toUpperCase())col=col*26+ch.charCodeAt(0)-64;
-   if(col<1||col>MAX_COLUMNS||seen.has(col))
-    invalid('XLSX contains a missing, repeated, or unsupported cell address.');
-   seen.add(col);
-   const t=cell.getAttribute('t'),raw=textNode(cell,'v');let value='';
-   if(t==='inlineStr')value=nodes(first(cell,'is')||cell,'t').map(x=>x.textContent||'').join('');
-   else if(t==='s'){const idx=Number(raw);if(!Number.isSafeInteger(idx)||idx<0||idx>=shared.length)invalid('Invalid shared string index.');value=shared[idx];}
-   else if(t==='e')invalid('Spreadsheet error cells cannot be imported.');
-   else if(t==='b')value=raw==='1'?'true':'false';
-   else if(t==='d')value=raw.slice(0,10);
-   else if(raw&&dates[Number(cell.getAttribute('s')||0)])value=excelDate(raw,offset);
-   else value=raw;
-   if(String(value).length>5000)invalid('An imported cell exceeds 5,000 characters.');
-   cells[col-1]=value;
+function cellColumn(address){
+ const match=String(address||'').match(/^([A-Z]+)([1-9][0-9]*)$/i);
+ if(!match)return 0;
+ let col=0;
+ for(const ch of match[1].toUpperCase())
+  col=col*26+ch.charCodeAt(0)-64;
+ return col;
+}
+function contextualError(sheet,row,address,column,raw,reason){
+ const excerpt=String(raw??'').slice(0,96);
+ const name=column?' · column "'+column+'"':'';
+ return new Error('Worksheet "'+sheet+'" · row '+row+
+  ' · cell '+address+name+' · value "'+excerpt+'": '+reason);
+}
+function headerCandidate(values){
+ if(!values?.[0]||values.length>MAX_COLUMNS)return null;
+ const last=values.reduce((n,v,i)=>String(v??'').trim()?i+1:n,0);
+ if(last<2)return null;
+ const header=Array.from({length:last},(_,i)=>String(values[i]??'').trim());
+ if(header.some(x=>!x||x.length>240))return null;
+ if(new Set(header.map(x=>x.toLocaleLowerCase())).size!==last)return null;
+ return header;
+}
+function sameHeader(values,header){
+ if(!header)return false;
+ const candidate=headerCandidate(values);
+ return !!candidate&&candidate.length===header.length&&
+  candidate.every((name,i)=>name.toLocaleLowerCase()===header[i].toLocaleLowerCase());
+}
+function rowLabel(entry){
+ const present=entry.values.filter(x=>String(x??'').trim());
+ return present.length===1&&String(entry.values[0]??'').trim()?
+  String(entry.values[0]).trim():null;
+}
+export function splitWorksheetSections(entries,sheetName){
+ if(!Array.isArray(entries)||entries.length===0)return [];
+ const firstHeader=entries.findIndex(entry=>headerCandidate(entry.values));
+ if(firstHeader<0)return [];
+ const tables=[];
+ let current=null,sectionTitle='',omitted=[];
+ const flush=()=>{
+  if(!current)return;
+  if(current.rows.length){
+   const label=current.sectionTitle;
+   const display=label?sheetName+' — '+label:
+    (tables.length?sheetName+' — Section '+(tables.length+1):sheetName);
+   const checked=validateImportSheet(current.headers,current.rows);
+   tables.push({...checked,name:display,worksheet:sheetName,
+    headerRow:current.headerRow,rowNumbers:current.rowNumbers,
+    omittedRows:current.omittedRows});
   }
-  if(cells.some(x=>String(x??'').trim()))rows.push(cells);
-  if(rows.length>MAX_ROWS+1)invalid('XLSX exceeds 5,000 data rows.');
+ };
+ for(let i=firstHeader;i<entries.length;i++){
+  const entry=entries[i],values=entry.values;
+  if(!current){
+   const header=headerCandidate(values);
+   if(!header)continue;
+   const prev=entries[i-1],label=prev&&rowLabel(prev);
+   current={headers:header,rows:[],headerRow:entry.number,
+    sectionTitle:label||'',rowNumbers:[],omittedRows:[]};
+   continue;
+  }
+  if(sameHeader(values,current.headers)){
+   flush();
+   current={headers:[...current.headers],rows:[],headerRow:entry.number,
+    sectionTitle:sectionTitle||'',rowNumbers:[],omittedRows:[]};
+   sectionTitle='';
+   continue;
+  }
+  // A single-cell section title preceding a repeated header is metadata,
+  // not a record with empty status/date fields.
+  if(rowLabel(entry)&&entries[i+1]&&sameHeader(entries[i+1].values,current.headers)){
+   sectionTitle=rowLabel(entry);
+   continue;
+  }
+  if(!values.some(x=>String(x??'').trim()))continue;
+  // Totals/report footers have an empty Item/Name field. Do not
+  // silently turn them into empty-title board records.
+  if(!String(values[0]??'').trim()){
+   current.omittedRows.push(entry.number);
+   continue;
+  }
+  if(values.slice(current.headers.length).some(x=>String(x??'').trim()))
+   throw contextualError(sheetName,entry.number,'A'+entry.number,
+    current.headers[0],values[0],'Row contains values beyond the header columns.');
+  current.rows.push(Array.from({length:current.headers.length},
+   (_,n)=>String(values[n]??'')));
+  current.rowNumbers.push(entry.number);
  }
- if(rows.length<2)return null;
- return validateImportSheet(rows.shift().map(x=>String(x??'').trim()),
-  rows.map(r=>Array.from({length:Math.max(0,Math.min(MAX_COLUMNS,r.length))},(_,i)=>String(r[i]??''))));
+ flush();
+ // If a sheet contains multiple sections, each is selectable in the UI.
+ return tables;
+}
+function sheetRows(xml,shared,dates,date1904,sheetName){
+ const sheetData=first(xml,'sheetData');
+ if(!sheetData)return [];
+ const rows=[];
+ let fallbackRow=0,knownHeader=null;
+ for(const r of nodes(sheetData,'row')){
+  const excelRow=Number(r.getAttribute('r'))||++fallbackRow;
+  if(!Number.isSafeInteger(excelRow)||excelRow<1)
+   throw new Error('Worksheet "'+sheetName+'" contains an invalid row number.');
+  fallbackRow=excelRow;
+  const values=[],seen=new Set();
+  for(const cell of nodes(r,'c')){
+   const address=cell.getAttribute('r')||'';
+   const col=cellColumn(address);
+   if(col<1||col>MAX_COLUMNS||seen.has(col))
+    throw contextualError(sheetName,excelRow,address,'','',
+     'Missing, repeated or unsupported cell address.');
+   seen.add(col);
+   const type=cell.getAttribute('t'),styleIndex=Number(cell.getAttribute('s')||0);
+   const format=dates[styleIndex]||null;
+   const cached=first(cell,'v');
+   const f=first(cell,'f');
+   let raw=cached?.textContent||'';
+   if(type==='inlineStr')raw=nodes(first(cell,'is')||cell,'t').map(x=>x.textContent||'').join('');
+   else if(type==='s'){
+    const idx=Number(raw);
+    if(!Number.isSafeInteger(idx)||idx<0||idx>=shared.length)
+     throw contextualError(sheetName,excelRow,address,knownHeader?.[col-1],raw,
+      'Invalid shared string index.');
+    raw=shared[idx];
+   }
+   const label=knownHeader?.[col-1]||'';
+   if(f&&(!cached||type==='e'))
+    throw contextualError(sheetName,excelRow,address,label,raw,
+     'Formula has no supported cached result. Recalculate in Excel and save a values-only copy.');
+   if(f&&/\\[[^\\]]+\\]/.test(f.textContent||''))
+    throw contextualError(sheetName,excelRow,address,label,raw,
+     'External workbook formulas are not supported.');
+   if(type==='e')throw contextualError(sheetName,excelRow,address,label,raw,
+    'Spreadsheet error cells cannot be imported.');
+   try{
+    let value=raw;
+    if(type==='b'){
+     if(raw!=='1'&&raw!=='0')throw Error('Invalid cached boolean.');
+     value=raw==='1'?'true':'false';
+    }else if(type==='d'){
+     value=normalizeTextDate(raw,{dateTime:raw.includes('T')||raw.includes(' ')});
+    }else if(format&&raw!==''){
+     value=normalizeExcelCellDate(raw,{
+      date1904,format,cellType:type||'n'
+     });
+    }
+    if(String(value).length>5000)throw Error('An imported cell exceeds 5,000 characters.');
+    values[col-1]=String(value??'');
+   }catch(error){
+    throw contextualError(sheetName,excelRow,address,label,raw,error.message);
+   }
+  }
+  if(values.some(x=>String(x??'').trim())){
+   rows.push({number:excelRow,values});
+   const candidate=headerCandidate(values);
+   if(!knownHeader&&candidate)knownHeader=candidate;
+  }
+  if(rows.length>MAX_ROWS+70)
+   throw new Error('Worksheet "'+sheetName+'" exceeds the supported row limit.');
+ }
+ return splitWorksheetSections(rows,sheetName);
 }
 async function parseWorkbook(buffer){
  const zip=zipDirectory(buffer);
@@ -234,9 +366,11 @@ async function parseWorkbook(buffer){
   path=path.startsWith('/xl/')?path.slice(1):'xl/'+path.replace(/^\//,'');
   if(!/^xl\/worksheets\/[^/]+\.xml$/i.test(path))
    invalid('Workbook contains an unexpected worksheet path.');
-  const parsed=sheetRows(xmlDocument(await unzipEntry(zip,path)),shared,styles,offset);
-  // A blank worksheet must not prevent selecting another populated worksheet.
-  if(parsed)sheets.push({name:sheet.getAttribute('name')||'Sheet '+(sheets.length+1),...parsed});
+  const worksheetName=sheet.getAttribute('name')||'Sheet '+(sheets.length+1);
+  const parsed=sheetRows(xmlDocument(await unzipEntry(zip,path)),
+   shared,styles,offset===1462,worksheetName);
+  // Blank sheets are ignored. Each populated report section is selectable.
+  sheets.push(...parsed);
  }
  if(!sheets.length)invalid('Workbook contains no populated worksheets to import.');
  return sheets;
