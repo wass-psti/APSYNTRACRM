@@ -25,6 +25,22 @@ BEGIN
  END IF;
 END $pre$;
 
+-- The current production profiles_status_check only accepts active/disabled.
+-- Add an explicit PENDING state; never reuse DISABLED for unverified signup,
+-- because a later verification callback must not reenable suspended accounts.
+DO $status_preflight$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint c
+  WHERE c.conrelid='public.profiles'::regclass
+   AND c.conname='profiles_status_check'
+   AND c.contype='c')
+ THEN RAISE EXCEPTION 'Expected profile status constraint missing'
+  USING ERRCODE='42501'; END IF;
+END $status_preflight$;
+ALTER TABLE public.profiles DROP CONSTRAINT profiles_status_check;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_status_check
+ CHECK(status IN ('active','disabled','pending'));
+
 -- Preserve the trigger name/contract while preventing any new signup from
 -- being silently admitted to the existing shared primary workspace.
 -- Intentionally no-op; a later separately approved cleanup may drop the
