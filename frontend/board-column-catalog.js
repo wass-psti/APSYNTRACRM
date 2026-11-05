@@ -35,6 +35,14 @@ export function searchStandardColumns(query=''){
   words.every(w=>[x.label,x.description,x.type,x.keywords,x.group]
    .join(' ').toLocaleLowerCase().includes(w)));
 }
+/** Converts a visual preset into an existing authoritative schema type. */
+export function resolveColumnTypeSelection(type,options=''){
+ if(type==='priority_preset')
+  return {type:'status',options:'Critical\\nHigh\\nMedium\\nLow',preset:'priority'};
+ if(!SUPPORTED_COLUMN_TYPE_IDS.includes(type))
+  throw new Error('Unsupported column type or preset.');
+ return {type,options:String(options??''),preset:null};
+}
 export function renderColumnTypeOptions(entries=COLUMN_CENTER_ENTRIES){
  const options=[];
  for(const group of COLUMN_CENTER_GROUPS){
