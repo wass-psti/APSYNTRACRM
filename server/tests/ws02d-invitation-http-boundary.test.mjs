@@ -133,7 +133,7 @@ test('strict JSON input/size/role bound and registered identity',async()=>{
 test('verified user -> signed private issuance -> mock provider, no secret response',async()=>{
  const {calls,handler}=build();
  const response=await handler(post());
- assert.equal(response.status,202);
+ assert.equal(response.status,202,'Unexpected fail-closed stage: '+JSON.stringify(calls));
  assert.equal(response.headers.get('cache-control'),'no-store, max-age=0');
  assert.equal(response.headers.get('x-content-type-options'),'nosniff');
  assert.equal(response.headers.get('access-control-allow-origin'),origin);
