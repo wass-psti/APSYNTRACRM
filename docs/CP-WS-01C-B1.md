@@ -1,6 +1,6 @@
 # CP-WS-01C/B1 — controlled production additive-schema readiness
 
-**Status (2026-11-05): VERIFIED preflight + disposable CI, production DDL NOT AUTHORIZED / NOT EXECUTED.**
+**Current status (2026-11-05): B1 PRODUCTION ACTIVATED AND VERIFIED.** Earlier readiness/NO-GO entries below are historical and superseded by the activation evidence at the end of this document.
 
 ## Scope
 
@@ -90,3 +90,30 @@ All prerequisites must be fulfilled **before** production migration invocation:
 **Production decision:** `B1_ACTIVATION_BLOCKED_BACKUP_RECOVERY_POINT_UNVERIFIED`. No production DDL, grant, role or data modifications were made in this check. The B1 schema source and acceptance tests remain ready; resume activation using the exact single migration only after the recovery-point prerequisite is verifiably satisfied. Do not rerun B1 once the migration ledger confirms activation. No approval question is needed for ordinary, nonproduction work under standing authorization. New production permission/access-policy changes remain separately scoped.
 
 **Recovery verification location:** [Existing Supabase project — Database Backups](https://supabase.com/dashboard/project/jtlusodorfnyzgyuewkz/database/backups/scheduled). Relevant evidence is a currently listed backup or PITR restore point, its timestamp and recovery window, not a mere generic account plan assumption. Do not initiate a production restore as a test because it may cause downtime and data loss.
+
+## CP-WS-01C/B1 — controlled production activation evidence (2026-11-05)
+
+**Authorization and backup:** User explicitly stated that database backup is all good and authorized progression to the next gate. This is **user-attested backup availability** for B1, not an independently completed restore rehearsal. No production restore or downtime-causing recovery test was performed. The approval is limited to the **additive B1-only schema**; B2 discovery grants, B3 creation, B4 selection and role/permission changes are not included.
+
+**Exact activated source:** `sql/cp-ws01b-lifecycle-contract-candidate.sql`, Git blob `83b86ce5f20fcf6f90bdf204a4e8b9467e08f10d`. Verified the SQL had exactly one `BEGIN` and `COMMIT`, six `CREATE TABLE private.ws01_*` statements, six RLS enables, **zero** function definitions, **zero** new EXECUTE grants, **zero** direct changes to existing `public.workspaces`/`workspace_members` or central workspace authority, and no DROP statements.
+
+**Pre-migration verification:** The committed `sql/tests/cp-ws01c-b1-production-preflight.sql` reported `B1_SCHEMA_READY__SEPARATE_PRODUCTION_APPROVAL_AND_BACKUP_EVIDENCE_REQUIRED`, with:
+- 162 migration ledger entries and **zero** existing CP-WS-01B/C migrations;
+- 2 existing workspaces, 40 active workspace membership records;
+- `current_workspace_id(uuid)` fingerprint `ceb6a14da8c7c8ed46187bae4833d575`;
+- all required legacy auth/session/board access prerequisites present, six proposed tables and all WS01 RPCs absent;
+- existing direct authenticated workspace membership INSERT denied.
+
+**Production application:** Supabase `apply_migration` on **existing project `jtlusodorfnyzgyuewkz`**, name `cp_ws01c_b1_additive_private_workspace_schema`, returned `{"success":true}`. Migration ledger entry version **`20261105043155`**, migration count **162 → 163**, **exactly one** B1 entry. **Do not reapply B1.**
+
+**Postactivation verified evidence:**
+- Exact committed `sql/tests/cp-ws01c-b1-schema-acceptance.sql` ran without SQL error and returned `B1_ONLY_POSTCHECK_PASS__NO_PUBLIC_LIFECYCLE_RPC`.
+- All six `private.ws01_*` tables exist, all six have RLS enabled, **zero** anonymous/authenticated SELECT/INSERT/UPDATE/DELETE privileges, and no user-facing RLS policies.
+- Only initial `private.ws01_lifecycle_flags` row exists, `creation_enabled=false` and `selection_enabled=false`; all other new tables remain empty.
+- Public `wm_ws01_list()`, `wm_ws01_create(text,text,uuid)`, and `wm_ws01_select(uuid,uuid)` **do not exist**; no app feature or data API permission was enabled.
+- Existing production workspaces and active workspace members **unchanged: 2 and 40**.
+- The central `current_workspace_id(uuid)` definition hash remains **`ceb6a14da8c7c8ed46187bae4833d575`**, exactly matching the pre-migration fingerprint.
+- Independent SQL rechecked each table's RLS/grants and absence of public lifecycle RPCs after the migration.
+- Security advisor shows six `rls_enabled_no_policy` **INFO** findings for the six new `private.ws01_*` tables; this is the expected intentional no-policy/default-deny setup, not permission leakage. Pre-existing project-wide advisories were not modified.
+
+**Acceptance classification:** B1 additive database migration **VERIFIED / PASS**; B1 auth/RLS/default-deny **VERIFIED / PASS**; full signed-user browser regression following schema installation **NOT TESTED HERE**; backup recoverability **USER-ATTESTED, NOT RESTORE-TESTED**. The next permitted engineering sequence is **CP-WS-01C/B2 read-only member discovery readiness**. B2 production installation would create `public.wm_ws01_list()` and grant authenticated EXECUTE, which is a separately scoped **production permission change**. B3 transactional creation and B4 high-risk central authority/session switching remain explicitly disabled and require independent acceptance. Do not treat structural B1 activation as full multi-workspace application readiness.
