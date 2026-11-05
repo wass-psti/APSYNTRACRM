@@ -77,3 +77,16 @@ All prerequisites must be fulfilled **before** production migration invocation:
 - Workflow stages and job result: **all success**. No production Supabase writes.
 
 **B1 production go/no-go:** **NO-GO for execution until separate approval and current backup/restore evidence are secured.** Preflight/readiness/isolated CI are **GO**. The existing project has no installed B1 objects, no newly granted lifecycle RPCs, and no session-authority cutover. Never interpret the green disposable workflow as signed production acceptance or production permission to apply schema changes.
+
+
+## B1 go-ahead and pre-execution safeguard reassessment — 2026-11-05
+
+**User direction:** The user issued standing authorization to continue routine in-scope engineering without repetitive approval requests and then requested to **begin the next gate**. This direction establishes intent to advance CP-WS-01C/B1 readiness; it does not waive mandatory recovery safeguards or authorize B2 discovery, B3 creation, or B4 central authority changes.
+
+**Verified on the existing production project:** PostgreSQL 17.6, project `ACTIVE_HEALTHY`, committed B1-only source blob `83b86ce5f20fcf6f90bdf204a4e8b9467e08f10d` contains six private tables, six RLS enables, no lifecycle functions or authenticated EXECUTE grants, atomic `BEGIN/COMMIT`; committed read-only preflight returned `B1_SCHEMA_READY__SEPARATE_PRODUCTION_APPROVAL_AND_BACKUP_EVIDENCE_REQUIRED`, with 2 workspaces, 40 active memberships and authority fingerprint `ceb6a14da8c7c8ed46187bae4833d575`. Latest applicable isolated B1 runtime run #26 remained `success`.
+
+**Recovery evidence boundary:** An earlier same-day user confirmation covered backup *availability* for the separate TradeLink Stage A migration. That entry expressly did not establish tested restoration. The Supabase connection here provides no `list_backups` or PITR inventory function; `get_project` does not return backup plan, recovery date, retention or restorable recovery points. Supabase backup documentation confirms that backup availability varies by subscription and PITR configuration. Therefore, a **current validated B1 restore point and recovery scope cannot be independently attested** from this execution context. Do not claim backup recoverability, invent timestamps, assume subscription status, or create a production backup table as an unapproved substitute.
+
+**Production decision:** `B1_ACTIVATION_BLOCKED_BACKUP_RECOVERY_POINT_UNVERIFIED`. No production DDL, grant, role or data modifications were made in this check. The B1 schema source and acceptance tests remain ready; resume activation using the exact single migration only after the recovery-point prerequisite is verifiably satisfied. Do not rerun B1 once the migration ledger confirms activation. No approval question is needed for ordinary, nonproduction work under standing authorization. New production permission/access-policy changes remain separately scoped.
+
+**Recovery verification location:** [Existing Supabase project — Database Backups](https://supabase.com/dashboard/project/jtlusodorfnyzgyuewkz/database/backups/scheduled). Relevant evidence is a currently listed backup or PITR restore point, its timestamp and recovery window, not a mere generic account plan assumption. Do not initiate a production restore as a test because it may cause downtime and data loss.
