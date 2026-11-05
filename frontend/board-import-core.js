@@ -195,21 +195,30 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
  const rows=[];let previewExisting=0,previewNew=0,previewSkipped=0;
  const byHeader=new Map(sheet.headers.map((h,i)=>[h,i]));
  for(let i=0;i<sheet.rows.length;i++){
-  const sourceRow=sheet.rows[i],title=clean(sourceRow[byHeader.get(primary)]);
-  if(!title||title.length>240)deny('Row '+(i+2)+' must have an Item title of 1–240 characters.');
+  const sourceRow=sheet.rows[i],sourceLine=sheet.rowNumbers?.[i]??i+2;
+  const origin='Worksheet "'+(sheet.worksheet||sheet.name||'CSV')+'" · row '+sourceLine;
+  const title=clean(sourceRow[byHeader.get(primary)]);
+  if(!title||title.length>240)
+   deny(origin+' · column "'+primary+'": Item title must have 1–240 characters.');
   forbidFormula(title);
   const values={};
   for(const [source,col] of refMap){
    const raw=sourceRow[byHeader.get(source)];
-   const value=valueAsType(raw,col.type,col.config);
+   let value;
+   try{value=valueAsType(raw,col.type,col.config);}
+   catch(error){
+    const original=String(raw??'').slice(0,96);
+    deny(origin+' · column "'+source+'" · value "'+original+'": '+error.message,
+     error.status||400);
+   }
    if(value!==null)values[source]=value;
   }
   const row={title,values};
   if(behavior!=='add-new'){
    const candidate=matchSource===primary?title:values[matchSource];
    const k=matchText(candidate);
-   if(!k)deny('Row '+(i+2)+' has an empty duplicate-match key.');
-   if(duplicateKeys.has(k))deny('Row '+(i+2)+' duplicates another file matching key.');
+   if(!k)deny(origin+' · '+Row '+(i+2)+' has an empty duplicate-match key.');
+   if(duplicateKeys.has(k))deny(origin+' · '+Row '+(i+2)+' duplicates another file matching key.');
    duplicateKeys.add(k);
    const existing=itemMatches.get(k);
    if(existing===null)deny('The destination Group has ambiguous duplicate keys.');
