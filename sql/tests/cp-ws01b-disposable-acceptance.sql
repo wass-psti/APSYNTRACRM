@@ -103,9 +103,9 @@ BEGIN
  IF receipt->>'switched'<>'true'
   OR public.current_workspace_id(auth.uid()) IS DISTINCT FROM
    '00000000-0000-4000-8000-000000000002'::uuid
-  OR public.ws01_fixture_visible_boards() NOT LIKE '%Foreign%'
+  OR public.ws01_fixture_visible_boards()::text NOT LIKE '%Foreign%'
  THEN RAISE EXCEPTION 'Signed session switch failed to scope domain projection'; END IF;
- IF public.ws01_fixture_visible_boards() LIKE '%Main%'
+ IF public.ws01_fixture_visible_boards()::text LIKE '%Main%'
  THEN RAISE EXCEPTION 'Old workspace board leaked after switch'; END IF;
  BEGIN
   PERFORM public.wm_ws01_select(
@@ -122,8 +122,8 @@ DO $second_session$
 BEGIN
  IF public.current_workspace_id(auth.uid()) IS DISTINCT FROM
   '00000000-0000-4000-8000-000000000001'::uuid
-  OR public.ws01_fixture_visible_boards() NOT LIKE '%Main%'
-  OR public.ws01_fixture_visible_boards() LIKE '%Foreign%'
+  OR public.ws01_fixture_visible_boards()::text NOT LIKE '%Main%'
+  OR public.ws01_fixture_visible_boards()::text LIKE '%Foreign%'
  THEN RAISE EXCEPTION 'Other GoTrue session workspace changed'; END IF;
  RAISE NOTICE 'CP-WS-01B independent concurrent sessions PASS';
 END $second_session$;
