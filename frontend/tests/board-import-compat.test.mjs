@@ -114,33 +114,21 @@ async function parseWithFixtureDom(bytes){
   else globalThis.DOMParser=original;
  }
 }
+const LF=String.fromCharCode(10),CRLF=String.fromCharCode(13,10);
 test('CSV: semicolon, quoted multiline fields, UTF-16LE BOM, and short rows',async()=>{
- const csv=parseDelimited('Name;Note;Value
-"A, B";"first
-second";8
-C;yes
-');
+ const csv=parseDelimited(['Name;Note;Value','"A, B";"first'+CRLF+'second";8','C;yes',''].join(CRLF));
  assert.deepEqual(csv.headers,['Name','Note','Value']);
- assert.deepEqual(csv.rows,[['A, B','first
-second','8'],['C','yes','']]);
- const buffer=Buffer.from('﻿Name,Score
-A,10
-','utf16le');
+ assert.deepEqual(csv.rows,[['A, B','first'+CRLF+'second','8'],['C','yes','']]);
+ const buffer=Buffer.from([String.fromCharCode(0xfeff)+'Name,Score','A,10',''].join(CRLF),'utf16le');
  const result=await parseImportFile(new File([buffer],'utf16.csv'));
  assert.deepEqual(result.sheets[0].rows,[['A','10']]);
 });
 test('CSV: extra meaningful fields, duplicate normalized headers and bad quoting reject',()=>{
- assert.throws(()=>parseDelimited('Name,Score
-A,1,EXTRA'),/beyond its header columns/);
- assert.throws(()=>parseDelimited('Name,name
-A,B'),/unique/);
- assert.throws(()=>parseDelimited('Name,Score
-A,"abc"extra'),/Unexpected content/);
- assert.throws(()=>parseDelimited('Name,Score
-A,"unterminated'),/unterminated/);
- assert.deepEqual(parseDelimited('Name,Score
-A,1,
-').rows,[['A','1']]);
+ assert.throws(()=>parseDelimited(['Name,Score','A,1,EXTRA'].join(LF)),/beyond its header columns/);
+ assert.throws(()=>parseDelimited(['Name,name','A,B'].join(LF)),/unique/);
+ assert.throws(()=>parseDelimited(['Name,Score','A,"abc"extra'].join(LF)),/Unexpected content/);
+ assert.throws(()=>parseDelimited(['Name,Score','A,"unfinished'].join(LF)),/unterminated/);
+ assert.deepEqual(parseDelimited(['Name,Score','A,1,',''].join(LF)).rows,[['A','1']]);
 });
 test('XLSX: actual deflate ZIP with empty sheet and absolute relationship target',async()=>{
  const parsed=await parseWithFixtureDom(makeZip(workbookEntries()));
