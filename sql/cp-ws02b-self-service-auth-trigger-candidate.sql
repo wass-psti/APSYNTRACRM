@@ -145,6 +145,46 @@ END $verified$;
 REVOKE ALL ON FUNCTION public.sync_profile_email_verification()
  FROM PUBLIC,anon,authenticated;
 
+-- Privileged recovery hook for a verified new account whose admission was
+-- paused during a disabled/signup-off window or interrupted verification.
+-- Default-deny, NEVER available through a signed browser or public API.
+CREATE FUNCTION private.ws02_reconcile_verified_admission(p_user_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $repair$
+DECLARE v_status text;
+BEGIN
+ IF p_user_id IS NULL
+  OR NOT EXISTS(SELECT 1 FROM private.ws02_activation_flags
+    WHERE id IS TRUE AND signup_enabled IS TRUE)
+  OR NOT EXISTS(SELECT 1 FROM private.ws02_new_account_admissions
+    WHERE user_id=p_user_id)
+  OR NOT EXISTS(SELECT 1 FROM auth.users
+    WHERE id=p_user_id AND email_confirmed_at IS NOT NULL
+     AND is_anonymous IS FALSE
+     AND NULLIF(pg_catalog.btrim(email),'') IS NOT NULL)
+ THEN RAISE EXCEPTION 'Verified account reconciliation denied'
+   USING ERRCODE='42501'; END IF;
+
+ SELECT status INTO v_status FROM public.profiles
+ WHERE id=p_user_id FOR UPDATE;
+ IF v_status IS DISTINCT FROM 'pending'
+  AND v_status IS DISTINCT FROM 'active'
+ THEN RAISE EXCEPTION 'Disabled or missing profile cannot be reconciled'
+  USING ERRCODE='42501'; END IF;
+
+ IF v_status='pending' THEN
+  UPDATE public.profiles p SET status='active',
+   email_verified_at=(SELECT email_confirmed_at FROM auth.users WHERE id=p_user_id),
+   updated_at=now()
+  WHERE p.id=p_user_id AND p.status='pending';
+ END IF;
+ -- Unique ledger and active-profile lock ensure exactly one workspace,
+ -- without restoring a membership that was deliberately disabled.
+ RETURN private.ws02_provision_main_workspace(p_user_id);
+END $repair$;
+REVOKE ALL ON FUNCTION private.ws02_reconcile_verified_admission(uuid)
+ FROM PUBLIC,anon,authenticated;
+
 -- No sign-up provider setting, webhook, user insertion, migration backfill,
 -- membership grant or client RPC enablement is changed by this candidate.
 COMMIT;
