@@ -5,7 +5,11 @@ CREATE ROLE authenticated NOLOGIN;
 CREATE SCHEMA auth;
 CREATE SCHEMA private;
 GRANT USAGE ON SCHEMA auth,private TO authenticated;
-CREATE TABLE auth.users(id uuid PRIMARY KEY);
+CREATE TABLE auth.users(
+ id uuid PRIMARY KEY,
+ email_confirmed_at timestamptz DEFAULT now(),
+ is_anonymous boolean NOT NULL DEFAULT false
+);
 CREATE TABLE auth.sessions(
  id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES auth.users(id),
  not_after timestamptz
