@@ -96,7 +96,7 @@ test('future server catalog validates exact identity, active workspace, no dupli
  assert.equal(parsed.canCreate,false);
  assert.equal(parsed.canDiscoverAll,false);
  assert.deepEqual(visibleWorkspaces(parsed,{tab:'member'}).map(x=>x.id),
-  [signedWorkspace,foreignWorkspace]);
+  [signedWorkspace]);
  assert.deepEqual(visibleWorkspaces(parsed,{tab:'recent'}).map(x=>x.id),
   [signedWorkspace]);
  assert.deepEqual(visibleWorkspaces(parsed,{tab:'owner'}),[]);
