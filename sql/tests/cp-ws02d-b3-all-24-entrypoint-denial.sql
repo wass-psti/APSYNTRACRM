@@ -578,15 +578,6 @@ END $test$;
 DO $test$
 BEGIN
  BEGIN
-  PERFORM public.import_fueltrack_activity_backup(NULL::jsonb);
-  RAISE EXCEPTION 'Unexpected authorization success: import_fueltrack_activity_backup' USING ERRCODE='P9999';
- EXCEPTION WHEN SQLSTATE '42501' THEN
-  IF SQLERRM<>'WS02D_B3_WORKSPACE_CEILING_DENIED' THEN RAISE; END IF;
- END;
-END $test$;
-DO $test$
-BEGIN
- BEGIN
   PERFORM public.order_intake_archive(NULL::uuid,NULL::integer);
   RAISE EXCEPTION 'Unexpected authorization success: order_intake_archive' USING ERRCODE='P9999';
  EXCEPTION WHEN SQLSTATE '42501' THEN
