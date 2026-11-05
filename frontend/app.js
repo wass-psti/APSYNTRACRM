@@ -40,7 +40,7 @@ import {openBoardImportWizard} from './board-import-ui.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
-import {BOARD_COLUMN_RECOVERY_ENABLED,BoardColumnRecoveryClient,renderBoardColumnRecoveryList} from './board-column-recovery.js';
+import {BOARD_COLUMN_RECOVERY_ENABLED,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
@@ -2306,8 +2306,10 @@ function contextualColumnDelete(key){
    if(valuesNow>0){
     await boardColumnRecovery.delete(fresh,target,confirmation);
    }else{
-    await boardStructureClient.mutate(fresh,{action:'delete',columnId:target.id,
-     confirmation});
+    try{
+     await boardStructureClient.mutate(fresh,{action:'delete',columnId:target.id,
+      confirmation});
+    }catch(error){throw explainColumnDeleteError(error);}
    }
    await loadBoard(snapshot.boardId,'items');
   },{submitLabel:blocked?'Deletion unavailable':
