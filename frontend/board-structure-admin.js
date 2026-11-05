@@ -335,7 +335,11 @@ export function renderBoardStructureAdmin(detail,settings,
   ' data-column-catalog-search'+disabled+' /></div>'+
   renderColumnCenterCards()+'</details>'+
   '<div class="field" data-structure-choice-options hidden><label for="structure-new-options">Choice options (Status / Dropdown; one per line)</label>'+ 
-  '<textarea id="structure-new-options" name="options" maxlength="4100" rows="3"'+disabled+'></textarea></div>'+ 
+  '<textarea id="structure-new-options" name="options" maxlength="4100" rows="3"'+disabled+'></textarea></div>'+
+  '<div class="field" data-structure-rating-config hidden><label for="structure-rating-max">Rating scale maximum (3–10)</label>'+
+  '<input id="structure-rating-max" name="ratingMax" type="number" min="3" max="10" step="1" value="5"'+disabled+' /></div>'+
+  '<div class="field" data-structure-percentage-config hidden><label for="structure-percentage-decimals">Percentage decimal places (0–4)</label>'+
+  '<input id="structure-percentage-decimals" name="percentageDecimals" type="number" min="0" max="4" step="1" value="2"'+disabled+' /></div>'+
   '<button class="primary" type="submit"'+disabled+'>Add column</button></form>'+
   '<div class="board-member-list">'+cols.slice(1).map(c=>
    '<div class="board-member"><strong>'+esc(c.name)+'</strong>'+
