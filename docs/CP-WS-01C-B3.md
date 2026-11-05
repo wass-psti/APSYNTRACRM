@@ -58,3 +58,12 @@ Read-only evidence at this checkpoint: all six private `ws01_*` tables have RLS 
 **Approval boundary:** Running the nonmutating preflight and disposable tests requires no production permission changes. Installing the new `SECURITY DEFINER` create function, granting `authenticated` EXECUTE, or enabling `creation_enabled` are separate production authorization events and remain outside this gate. B4 remains disabled. Outstanding real B2 foreign-workspace and revoked/expired-session coverage remains independently tracked.
 
 **Automated check:** [Workspace lifecycle workflow run #40](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41975195556), head `757065eb7621ac1b525808c44ef04b319fedd9d0`, completed **SUCCESS**. The new read-only B3 preactivation step passed, as did the B2 denial and B3 rollback/creation steps. No live B3 create testing or production activation is implied.
+
+
+## CP-WS-02 approved self-service creator policy — 2026-11-05
+
+The owner approved the `CP-WS-02` specification: **any eligible authenticated, email-verified non-anonymous APSYNTRA CRM user may create and own workspaces**. Existing platform administration is independent and must never be granted through workspace creation. This supersedes prior unselected administrator-only/delegated-creator recommendations.
+
+The B3 creation candidate continues to require an active GoTrue session, active profile and existing active membership (normally supplied by the independent Main Workspace onboarding path). It now also checks live `auth.users.email_confirmed_at IS NOT NULL` and `auth.users.is_anonymous IS FALSE`; no client-controlled role claim confers authority.
+
+Disposable PG17 [run #43](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41976847871) completed success for ordinary nonadministrator creation, unchanged `platform_role`, and denial for unverified/anonymous users. Later [run #44](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41977702471) also passed that regression and isolated personal Main Workspace provisioning. All code remains dormant in production. Public registration remains blocked by legacy signup triggers; role policy decision alone does **not** authorize or execute any migration, production permission grant, flag activation or account creation.
