@@ -64,6 +64,15 @@ DECLARE
  v_active boolean;
 BEGIN
  v_session:=private.ws01_signed_actor_session();
+ -- Lock this GoTrue session before evaluating the expected active scope.
+ -- Concurrent switches on the SAME session cannot both pass a stale CAS.
+ PERFORM 1 FROM auth.sessions s WHERE s.id=v_session
+  AND s.user_id=v_actor AND (s.not_after IS NULL OR s.not_after>now())
+  FOR UPDATE;
+ IF NOT FOUND THEN
+  RAISE EXCEPTION 'Workspace session revoked during selection'
+   USING ERRCODE='42501';
+ END IF;
  IF NOT EXISTS(SELECT 1 FROM private.ws01_lifecycle_flags
   WHERE id IS TRUE AND selection_enabled IS TRUE)
  THEN RAISE EXCEPTION 'Workspace switching not activated' USING ERRCODE='42501';
