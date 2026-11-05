@@ -86,8 +86,8 @@ test('integration is limited to authorized workspace context and never executes 
 test('future server catalog validates exact identity, active workspace, no duplicate or forged roles',()=>{
  const alice='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
  const good={schemaVersion:1,userId:alice,activeWorkspaceId:signedWorkspace,rows:[
-  {id:signedWorkspace,name:'Work Management',relation:'member',active:true},
-  {id:foreignWorkspace,name:'Engineering',relation:'member',active:false}
+  {id:signedWorkspace,name:'Work Management',relation:'member',privacy:'closed',active:true},
+  {id:foreignWorkspace,name:'Engineering',relation:'collaborator',privacy:'open',active:false}
  ]};
  const scope={userId:alice,workspaceId:signedWorkspace};
  const parsed=normalizeServerWorkspaceCatalog(good,scope);
@@ -100,12 +100,14 @@ test('future server catalog validates exact identity, active workspace, no dupli
  assert.deepEqual(visibleWorkspaces(parsed,{tab:'recent'}).map(x=>x.id),
   [signedWorkspace]);
  assert.deepEqual(visibleWorkspaces(parsed,{tab:'owner'}),[]);
+ assert.deepEqual(visibleWorkspaces(parsed,{tab:'collaborator'}).map(x=>x.id),[foreignWorkspace]);
  for(const invalid of [
   {...good,userId:foreignWorkspace},
   {...good,activeWorkspaceId:foreignWorkspace},
   {...good,rows:[...good.rows,{...good.rows[0]}]},
   {...good,rows:[{...good.rows[0],active:false},good.rows[1]]},
-  {...good,rows:[{...good.rows[0],relation:'owner'},good.rows[1]]},
+  {...good,rows:[{...good.rows[0],relation:'superuser'},good.rows[1]]},
+  {...good,rows:[{...good.rows[0],privacy:'public'},good.rows[1]]},
   {...good,rows:good.rows.slice(1)},
   {...good,rows:[{...good.rows[0],name:' '},good.rows[1]]}
  ])assert.equal(normalizeServerWorkspaceCatalog(invalid,scope).status,'INVALID');
@@ -120,4 +122,17 @@ test('staged discovery SQL requires genuine signed session and never grants tabl
  assert.match(sql,/GRANT EXECUTE ON FUNCTION public\.wm_ws01_list\(\) TO authenticated/);
  assert.doesNotMatch(sql,/GRANT (?:SELECT|INSERT|UPDATE|DELETE) ON (?:TABLE )?public\.(?:workspaces|workspace_members)/i);
  assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE)\s+public\.(?:workspaces|workspace_members)/i);
+});
+
+test('signed membership role is server-supplied and cannot be invented for legacy workspaces',()=>{
+ const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const raw={schemaVersion:1,userId:actor,activeWorkspaceId:signedWorkspace,rows:[
+  {id:signedWorkspace,name:'Main',relation:'owner',privacy:'closed',active:true},
+  {id:foreignWorkspace,name:'Shared',relation:'collaborator',privacy:'closed',active:false}
+ ]};
+ const parsed=normalizeServerWorkspaceCatalog(raw,{userId:actor,workspaceId:signedWorkspace});
+ assert.equal(parsed.status,'SIGNED_MEMBER_DISCOVERY');
+ assert.deepEqual(visibleWorkspaces(parsed,{tab:'owner'}).map(x=>x.id),[signedWorkspace]);
+ assert.deepEqual(visibleWorkspaces(parsed,{tab:'collaborator'}).map(x=>x.id),[foreignWorkspace]);
+ assert.equal(visibleWorkspaces(workspaceCatalog(current),{tab:'owner'}).length,0);
 });
