@@ -26,8 +26,8 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>
       </button>
      </form>`;
- const registerForm=`<div class="auth-admission-warning" role="status" id="auth-registration-status"><strong>Registration awaiting administrator activation</strong>
-      <p>Current backend account-creation triggers automatically grant workspace membership. Self-registration is disabled until administrator-controlled admission is approved and verified.</p></div>
+ const registerForm=`<div class="auth-admission-warning" role="status" id="auth-registration-status"><strong>Self-service registration is being secured</strong>
+      <p>Legacy signup triggers must be replaced before activation. Verified new accounts will receive their own Main Workspace, without gaining platform-administrator privileges.</p></div>
      <form id="register-form" aria-describedby="auth-registration-status">
       <div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="120" required placeholder="Your full name"/></div>
       <div class="field"><label for="register-email">Work email</label><input id="register-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@company.com"/></div>
@@ -50,7 +50,7 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
  const view=['login','register','forgot','reset'].includes(mode)?mode:'login';
  const copy={
  login:{eyebrow:'Your connected workspace',title:'Welcome back',description:'One secure sign-in to your projects, boards, and team. Continue with your existing WatchdogWorkspace account.',label:'WORKSPACE ACCESS',note:'Access is managed by your organization. No new account is created on sign in.'},
- register:{eyebrow:'Request secure access',title:'Create an account',description:'Registration is prepared for administrator-controlled admission. Workspace access is not automatic.',label:'ACCOUNT REGISTRATION',note:'No privileged roles or workspace access can be self-assigned.'},
+ register:{eyebrow:'Your personal workspace',title:'Create an account',description:'Self-service signup will include email verification and an automatically provisioned Main Workspace. Registration is temporarily disabled during backend security activation.',label:'ACCOUNT REGISTRATION',note:'Workspace ownership never grants global platform-administrator privileges.'},
  forgot:{eyebrow:'Secure account recovery',title:'Forgot password',description:'Request a time-limited recovery link for your existing APSYNTRA CRM account.',label:'PASSWORD RECOVERY',note:'Recovery never modifies roles, memberships, or board permissions.'},
  reset:{eyebrow:'Protected password update',title:'Reset password',description:'Verify your recovery link and choose a new password.',label:'PASSWORD RESET',note:'Sign in again after changing your password.'}
  }[view];
