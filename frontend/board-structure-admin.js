@@ -216,16 +216,29 @@ export class BoardStructureClient{
   const updated=detail.board.updated_at;
   if(typeof updated!=='string'||!Number.isFinite(Date.parse(updated)))
    fail('Board structure version is missing; refresh.');
-  const result=await this.api.rpc('wm_board_schema_mutate',{
-   p_board_id:id,p_expected_updated_at:updated,p_action:action,
-   p_column_id:columnId,p_name:action==='delete'?null:name,
-   p_data_type:action==='delete'?null:type,
-   p_config:config,p_visible:visible===true,
-   p_confirm_delete:action==='delete'
-  });
+  const uncertain=()=>{
+   const error=new ApiError(
+    'Board mutation receipt verification failed or the server response was lost. Do not retry. Close this dialog, refresh the board, and inspect the activity log.',409);
+   error.schemaOutcomeUncertain=true;
+   throw error;
+  };
+  let result;
+  try{
+   result=await this.api.rpc('wm_board_schema_mutate',{
+    p_board_id:id,p_expected_updated_at:updated,p_action:action,
+    p_column_id:columnId,p_name:action==='delete'?null:name,
+    p_data_type:action==='delete'?null:type,
+    p_config:config,p_visible:visible===true,
+    p_confirm_delete:action==='delete'
+   });
+  }catch(error){
+   const status=Number(error?.status);
+   if(!Number.isInteger(status)||status<400||status>=500)uncertain();
+   throw error;
+  }
   if(!result||result.board_id!==id||result.action!==action||
     !validUuid(result.column_id)||typeof result.updated_at!=='string')
-   throw new ApiError('Board mutation receipt verification failed.');
+   uncertain();
   return result;
  }
 }
