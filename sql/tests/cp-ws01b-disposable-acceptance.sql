@@ -12,7 +12,6 @@ DECLARE
  result jsonb;
  replay jsonb;
  workspace uuid;
- catalog jsonb;
 BEGIN
  result:=public.wm_ws01_create('Engineering', 'open',
   '11111111-1111-4111-8111-111111111111');
@@ -24,15 +23,9 @@ BEGIN
   '11111111-1111-4111-8111-111111111111');
  IF replay->>'idempotent'<>'true' OR replay->>'workspaceId'<>workspace::text
  THEN RAISE EXCEPTION 'Idempotent create repeated a workspace'; END IF;
- catalog:=public.wm_ws01_list();
- IF jsonb_array_length(catalog->'rows')<>2
-  OR NOT EXISTS(
-   SELECT 1 FROM pg_catalog.jsonb_array_elements(catalog->'rows') x
-   WHERE x->>'id'=workspace::text AND x->>'relation'='owner'
-    AND x->>'privacy'='open' AND x->>'active'='false')
-  OR public.current_workspace_id(auth.uid()) IS DISTINCT FROM
+ IF public.current_workspace_id(auth.uid()) IS DISTINCT FROM
    '00000000-0000-4000-8000-000000000001'::uuid
- THEN RAISE EXCEPTION 'Owner role, signed discovery or non-switching creation failed'; END IF;
+ THEN RAISE EXCEPTION 'Creation unexpectedly switched the current workspace'; END IF;
  BEGIN
   PERFORM public.wm_ws01_create('Different Workspace', 'open',
    '11111111-1111-4111-8111-111111111111');
@@ -50,6 +43,22 @@ BEGIN
  EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
  RAISE NOTICE 'CP-WS-01B owner/create/retry/privacy/invalid denial PASS';
 END $owner_create$;
+
+-- New statement: STABLE signed discovery must observe the committed
+-- result of the previous creation statement, not a DO-block snapshot.
+DO $owner_discovery$
+DECLARE catalog jsonb;
+BEGIN
+ catalog:=public.wm_ws01_list();
+ IF jsonb_array_length(catalog->'rows')<>2
+  OR NOT EXISTS(
+   SELECT 1 FROM pg_catalog.jsonb_array_elements(catalog->'rows') x
+   WHERE x->>'relation'='owner'
+    AND x->>'name'='Engineering'
+    AND x->>'privacy'='open' AND x->>'active'='false')
+ THEN RAISE EXCEPTION 'Signed owner discovery after creation failed'; END IF;
+ RAISE NOTICE 'CP-WS-01B committed owner is discoverable PASS';
+END $owner_discovery$;
 
 -- Genuine foreign-account fixture still sees only its membership,
 -- even when the owner created an OPEN workspace.
@@ -101,7 +110,15 @@ BEGIN
   '00000000-0000-4000-8000-000000000002',
   '00000000-0000-4000-8000-000000000001');
  IF receipt->>'switched'<>'true'
-  OR public.current_workspace_id(auth.uid()) IS DISTINCT FROM
+  OR receipt->>'workspaceId'<>'00000000-0000-4000-8000-000000000002'
+ THEN RAISE EXCEPTION 'Workspace switch receipt invalid'; END IF;
+END $session_switch$;
+
+-- New statement, with a new snapshot: the authority and every board reader
+-- must now project the selected workspace instead of the primary workspace.
+DO $session_scope$
+BEGIN
+ IF public.current_workspace_id(auth.uid()) IS DISTINCT FROM
    '00000000-0000-4000-8000-000000000002'::uuid
   OR public.ws01_fixture_visible_boards()::text NOT LIKE '%Foreign%'
  THEN RAISE EXCEPTION 'Signed session switch failed to scope domain projection'; END IF;
@@ -114,7 +131,7 @@ BEGIN
   RAISE EXCEPTION 'Stale expected workspace accepted' USING ERRCODE='P9999';
  EXCEPTION WHEN serialization_failure THEN NULL; END;
  RAISE NOTICE 'CP-WS-01B signed switch + board isolation + stale CAS PASS';
-END $session_switch$;
+END $session_scope$;
 
 -- Same user, different authenticated session remains in initial workspace.
 SELECT set_config('request.jwt.claim.session_id','cccccccc-0000-4000-8000-000000000002',false);
