@@ -33,6 +33,10 @@ All private lifecycle functions have `SECURITY DEFINER SET search_path=''` and e
 - `frontend/workspace-ui.js` retains `WS02_INVITATIONS_ENABLED=false` and a permanently disabled send button. The existing invitation modal is a safe draft/preview, not a sending feature.
 - No production SQL DDL/DML, Auth trigger change, role/permission grant, account update, notification, invitation, workspace membership or provider setting change occurred.
 
+## CP-WS-02D/B trusted-delivery and role-ceiling engineering — 2026-11-05
+
+See [CP-WS-02D/B acceptance evidence and production blockers](./CP-WS-02D-B-DELIVERY-ROLE-SIGNED-ACCEPTANCE.md). [Isolated PostgreSQL/Node run #87](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41987273034) passed the additional sender/recipient rate limits, token retry denial, backend-only mock delivery, and signed role-ceiling predicates. Live read-only preflight confirmed WS02D objects absent, B3/B4 disabled and existing board ACL fingerprint unchanged. The current board ACL has 53 SECURITY DEFINER callers; the new Viewer/Admin ceiling has **not** been wired into that live resource authorization. No provider, production invocation, invitation or email is enabled.
+
 ## Remaining acceptance and release blockers
 
 1. **Role ceilings:** prove server-side board/application RLS and API enforcement of workspace Admin/Member/Viewer, including Viewer write denial. Do not enable `advanced_roles_enabled` merely because a role appears in the UI.
