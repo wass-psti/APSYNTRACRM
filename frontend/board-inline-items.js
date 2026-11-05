@@ -6,11 +6,13 @@ import {ApiError} from './session.js';
 import {isProtectedBoard} from './board-card-lifecycle.js';
 import {moduleByBoardName} from './board-manifest.js';
 import {validUuid} from './data.js';
+import {cmp02Validate,cmp02VisibleValue,cmp02RatingMax,
+ cmp02PercentageDecimals} from './board-typed-cmp02.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,
  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TYPES=new Set(['text','long_text','number','date','status','dropdown',
- 'people','checkbox','email','url','timeline']);
+ 'people','checkbox','email','url','timeline','phone','rating','percentage']);
 const builtInKeys=new Set(['status','assignee','due_date','notes']);
 export function canManuallyEditBoard(board,canEdit=false){
  return !!canEdit&&validUuid(board?.id)&&validUuid(board?.workspace_id)&&
@@ -96,6 +98,8 @@ export function visibleValue(value,type,config={}){
  if(value==null||value==='')return '—';
  if(type==='status')return configuredStatus(value,config).label;
  if(type==='checkbox')return value===true?'Yes':'No';
+ if(['phone','rating','percentage'].includes(type))
+  return cmp02VisibleValue(value,type,config);
  if(type==='timeline'&&typeof value==='object')
   return [value.start,value.end].filter(Boolean).join(' → ')||'—';
  if(typeof value==='object')return '—';
@@ -137,6 +141,14 @@ export function inputForColumn(col,value,members=[]){
     '<option value="">—</option>'+options.map(o=>'<option value="'+esc(o.id)+'"'+
     (o.id===String(value??'')?' selected':'')+'>'+esc(o.label)+'</option>').join('')+'</select>';
  }
+ if(type==='rating'){
+  const max=cmp02RatingMax(col.config);
+  return '<select name="value" aria-label="'+esc(col.name)+'"'+required+'>'+
+   '<option value="">—</option>'+
+   Array.from({length:max},(_,i)=>'<option value="'+(i+1)+'"'+
+    (Number(value)===i+1?' selected':'')+'>'+(i+1)+' / '+max+'</option>').join('')+
+   '</select>';
+ }
  if(type==='checkbox')return '<label class="board-inline-boolean"><input type="checkbox" name="value"'+
    (value===true?' checked':'')+' /> Yes</label>';
  if(type==='timeline')return '<div class="board-inline-range">'+
@@ -144,10 +156,14 @@ export function inputForColumn(col,value,members=[]){
   '<label>End <input type="date" name="end" value="'+esc(value?.end||'')+'"'+required+' /></label></div>';
  if(type==='long_text')return '<textarea name="value" maxlength="5000" rows="2" aria-label="'+esc(col.name)+'"'+
   required+'>'+esc(value??'')+'</textarea>';
- const inputType={number:'number',date:'date',email:'email',url:'url'}[type]||'text';
- const max={text:1000,email:320,url:2000}[type];
+ const inputType={number:'number',date:'date',email:'email',url:'url',
+  phone:'tel',percentage:'number'}[type]||'text';
+ const max={text:1000,email:320,url:2000,phone:16}[type];
+ const step=type==='number'?' step="any"':
+  type==='percentage'?' min="0" max="100" step="'+
+   (10**(-cmp02PercentageDecimals(col.config)))+'"':'';
  return '<input type="'+inputType+'" name="value"'+(max?' maxlength="'+max+'"':'')+
-   (type==='number'?' step="any"':'')+' aria-label="'+esc(col.name)+'" '+
+   step+' aria-label="'+esc(col.name)+'" '+
    'value="'+esc(value??'')+'"'+required+' />';
 }
 export function parseCellForm(col,formData){
@@ -165,6 +181,10 @@ export function parseCellForm(col,formData){
  if(!raw){
   if(col.required||col.system_key==='title')throw new ApiError('A required field cannot be empty.',400);
   return null;
+ }
+ if(['phone','rating','percentage'].includes(type)){
+  try{return cmp02Validate(type,raw,col.config);}
+  catch(error){throw new ApiError(error.message,400);}
  }
  if(type==='number'){
   const n=Number(raw);
