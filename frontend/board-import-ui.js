@@ -90,8 +90,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      type:m.choiceType,name:m.name,detail});}
     catch(err){error=String(err.message||err);}
     choiceSetup='<div class="aps-import-choice-config" role="group" aria-label="Choice column approval">'+
-     '<p>Configured '+esc(m.choiceType)+' · '+esc(m.name||m.source)+
+     '<p>Configured '+esc(m.choiceType)+
      '. This is a separate audited schema operation before record import.</p>'+
+     '<label>New column name<input name="imp-choice-name-'+i+
+     '" data-imp-choice-name="'+i+'" maxlength="80" value="'+esc(m.name||m.source)+'"></label>'+
      (proposed?'<p>Labels ('+proposed.labels.length+'): '+
       proposed.labels.map(esc).join(' · ')+'</p>'+
       '<label class="aps-import-choice-consent"><input type="checkbox" name="imp-choice-consent-'+i+
@@ -323,6 +325,11 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    state.choiceConsent[Number(el.dataset.impChoiceConsent)]=el.checked;
    render();return;
   }
+  if(el.dataset.impChoiceName!=null){
+   const index=Number(el.dataset.impChoiceName);
+   state.mappings[index].name=el.value.trim();
+   state.choiceConsent={};state.confirmed=false;render();return;
+  }
   if(el.dataset.impMap!=null){adjustMapping(Number(el.dataset.impMap),el.value);render();return;}
   if(el.dataset.impGroup!=null){state.group=el.value;state.confirmed=false;render();return;}
   if(el.dataset.impDefault!=null&&el.value==='create'){
@@ -337,6 +344,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  overlay.addEventListener('input',event=>{
   const el=event.target;
   if(el.dataset.impGroupName!=null){state.groupName=el.value;state.confirmed=false;return;}
+  if(el.dataset.impChoiceName!=null){
+   state.mappings[Number(el.dataset.impChoiceName)].name=el.value;
+   state.choiceConsent={};state.confirmed=false;return;
+  }
   if(el.dataset.impName!=null){
    state.mappings[Number(el.dataset.impName)].name=el.value;
    state.allowColumns=false;state.choiceConsent={};state.confirmed=false;return;
