@@ -198,7 +198,7 @@ function sheetRows(xml,shared,dates,offset){
   if(cells.some(x=>String(x??'').trim()))rows.push(cells);
   if(rows.length>MAX_ROWS+1)invalid('XLSX exceeds 5,000 data rows.');
  }
- if(!rows.length)return null;
+ if(rows.length<2)return null;
  return validateImportSheet(rows.shift().map(x=>String(x??'').trim()),
   rows.map(r=>Array.from({length:Math.max(0,Math.min(MAX_COLUMNS,r.length))},(_,i)=>String(r[i]??''))));
 }
@@ -218,7 +218,8 @@ async function parseWorkbook(buffer){
    type:r.getAttribute('Type'),external:r.getAttribute('TargetMode')==='External'}]));
  const sheetNodes=nodes(wb,'sheet');
  if(!sheetNodes.length||sheetNodes.length>20)invalid('Workbook must contain 1–20 worksheets.');
- const offset=first(wb,'workbookPr')?.getAttribute('date1904')==='1'?1462:0;
+ const dateMode=first(wb,'workbookPr')?.getAttribute('date1904');
+ const offset=dateMode==='1'||dateMode==='true'?1462:0;
  const sheets=[];
  for(const sheet of sheetNodes){
   const id=sheet.getAttribute('r:id')||sheet.getAttributeNS(
