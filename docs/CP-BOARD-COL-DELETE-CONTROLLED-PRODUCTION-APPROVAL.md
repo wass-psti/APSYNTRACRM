@@ -69,3 +69,13 @@ Three separable authorizations are necessary; none is inferred from the phrase *
 **Progress:** Preproduction recovery design and test coverage **VERIFIED**, production activation **0%**; overall checkpoint **IN PROGRESS** (no defensible aggregate denominator).
 
 **Next required gate:** **Approval A (dark-launch production recovery schema and RPC grants)** → separate **B (genuine signed QA fixture / server activation)** → separate **C (Contacts Status I deletion / Activity recovery acceptance)**. Treat neither a passing CI build nor a read-only catalog query as production acceptance.
+
+## Phase A approval recorded — 2026-11-05
+
+The project owner explicitly authorized **Phase A** (production additive recovery schema plus `authenticated` EXECUTE grants, with **both** server activation flags remaining `false`). This authorization **does not** authorize activation, a signed write fixture on the live database, deleting Contacts / Status I, or changing real member roles. Do not request Phase A approval again; continue once its prerequisite gates pass.
+
+**Execution state:** `APPROVED — INSTALLATION BLOCKED ON CURRENT BACKUP EVIDENCE`. The connected Supabase tools return project health, database source, migrations and advisors, but do not expose the Management API's `GET /v1/projects/{ref}/database/backups` or the current completed backup timestamp/PITR window. Earlier operator acceptance of backups was acknowledged; however a fresh independently verified recovery point and retention window have not been established for this production change. The source-locked migration is not applied until that release prerequisite is satisfied.
+
+**Verified preparation:** The candidate `sql/cp-board-col-delete-recoverable-candidate.sql` now has a pre-COMMIT `$phase_a_integrity$` assertion of default-off activation, private RLS, zero archive rows, exact RPC grants, and anonymous denial. [Disposable PostgreSQL 17 run #42009553295](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42009553295) concluded `SUCCESS`. Production read-only preflight again returned `CP_BOARD_COL_DELETE_LIVE_4_ROWS_INTACT_RECOVERY_NOT_INSTALLED`. No production schema, role/permission, board, event or cell changes were made by this preparation.
+
+**Next required action:** Verify a completed, current backup and restore route in the existing project's Supabase **Database → Backups** page (or the read-only `database/backups` Management API), then invoke the already approved additive migration through the migration tool. Immediately verify RLS, ACLs, server flags, snapshot emptiness, existing 4 values and source fingerprints. Do not use a destructive restore as a backup verification test. Approval B/C remain separate.
