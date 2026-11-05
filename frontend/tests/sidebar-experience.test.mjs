@@ -27,7 +27,7 @@ test('signed sidebar preserves the required route vocabulary and active semantic
  assert.match(sidebar,/aria-label="Recent boards"/);
 });
 test('workspace and recent board lists use existing authorized state only',()=>{
- assert.match(sidebar,/e\(workspaceName\(\)\)/);
+ assert.match(sidebar,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
  assert.match(sidebar,/state\.boards\.slice\(0,6\)/);
  assert.match(sidebar,/const currentBoard=state\.boardId/);
  assert.match(sidebar,/href="#\/boards\/'\+e\(b\.id\)/);
