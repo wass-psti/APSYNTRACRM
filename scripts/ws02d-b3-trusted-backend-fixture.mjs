@@ -39,12 +39,14 @@ assert.match(WS02D_ACTIVE_SESSION_SQL,/s\.id=\$2::uuid/);
 assert.match(WS02D_ACTIVE_SESSION_SQL,/s\.user_id=\$1::uuid/);
 assert.doesNotMatch(WS02D_ACTIVE_SESSION_SQL,/\b(INSERT|UPDATE|DELETE|GRANT|REVOKE)\b/i);
 
+// The disposable schema must persist through SEPARATE backend connections.
+// Remove these temporary columns after all isolated execution checks.
+execute('ALTER TABLE auth.users ADD COLUMN deleted_at timestamptz, ADD COLUMN banned_until timestamptz;');
 const sqlBody=WS02D_ACTIVE_SESSION_SQL;
 // EXECUTE ... USING is PostgreSQL server-side parameter binding, not string
 // substitution. Test-only temporary function reuses the production adapter SQL.
 const fixture=[
  'BEGIN;',
- "ALTER TABLE auth.users ADD COLUMN deleted_at timestamptz, ADD COLUMN banned_until timestamptz;",
  'CREATE FUNCTION pg_temp.ws02d_b3_read(p_actor uuid,p_session uuid)',
  ' RETURNS boolean LANGUAGE plpgsql AS $func$',
  ' DECLARE found boolean;',
@@ -106,7 +108,7 @@ const cleanup=execute(
  " ||':'||(SELECT count(*) FROM information_schema.columns"+
  " WHERE table_schema='auth' AND table_name='users'"+
  " AND column_name IN('deleted_at','banned_until'))::text");
-assert.equal(cleanup,'1:0');
+assert.equal(cleanup,'1:2');
 
 function queryPsql(preparedSql,values){
  assert.equal(preparedSql,WS02D_ACTIVE_SESSION_SQL);
@@ -157,6 +159,10 @@ await assert.rejects(verifier(makeJwt(ACTOR_A,SID_UNKNOWN)),
 await assert.rejects(verifier(makeJwt(ACTOR_B,SID_A)),
  /authentication denied/);
 assert.equal(goTrueChecks,3);
+execute('ALTER TABLE auth.users DROP COLUMN deleted_at, DROP COLUMN banned_until;');
+assert.equal(execute(
+ "SELECT count(*) FROM information_schema.columns WHERE table_schema='auth'"+
+ " AND table_name='users' AND column_name IN('deleted_at','banned_until')"),'0');
 // Never put user identifiers, secrets or tokens into CI stdout.
 process.stdout.write('WS02D_B3_TRUSTED_PG17_SESSION_INTEGRATION_PASS '+
  'valid=2 foreign_own=1 cross_identity=denied '+
