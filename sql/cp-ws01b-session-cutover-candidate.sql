@@ -102,8 +102,14 @@ BEGIN
   workspace_id=excluded.workspace_id,
   actor_id=excluded.actor_id,
   updated_at=now();
- IF public.current_workspace_id(v_actor) IS DISTINCT FROM p_workspace_id
- THEN RAISE EXCEPTION 'Server workspace switch not effective'
+ -- Verify the persisted choice directly inside this VOLATILE write RPC.
+ -- current_workspace_id() is STABLE and must be checked by the caller in a
+ -- later SQL statement, not re-read from the same statement's old snapshot.
+ IF NOT EXISTS (
+  SELECT 1 FROM private.ws01_session_choices choice
+  WHERE choice.session_id=v_session AND choice.actor_id=v_actor
+   AND choice.workspace_id=p_workspace_id
+ ) THEN RAISE EXCEPTION 'Server workspace choice was not persisted'
   USING ERRCODE='42501'; END IF;
  INSERT INTO private.ws01_events(workspace_id,actor_id,session_id,action)
  VALUES(p_workspace_id,v_actor,v_session,'workspace.selected');
