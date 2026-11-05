@@ -200,3 +200,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-tradelink-positive-fixture.sql
       - name: Accept six TradeLink asset, reconciliation, fence and cleanup audit workflows
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-tradelink-six-valid-write.sql
+      - name: Reproduce original bootstrap guard with synthetic roles and identities
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-admin-role-positive-fixture.sql
+      - name: Accept Charter and application role grant, revision, revoke and denied actors
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-admin-two-valid-write.sql
