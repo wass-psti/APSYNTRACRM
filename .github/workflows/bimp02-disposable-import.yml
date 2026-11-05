@@ -1,0 +1,72 @@
+name: BIMP-02 Disposable Signed Import Acceptance
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bimp02-disposable-import.yml'
+      - 'sql/bimp02-session-enforcement-candidate.sql'
+      - 'sql/tests/bimp02-*.sql'
+      - 'sql/cp-board-config01-staged-authorization-v2.sql'
+      - 'sql/tests/cp-board-config01-disposable-*.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  atomic-import:
+    name: Isolated signed-claim and integrity acceptance (PostgreSQL 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_bimp02_ci_only
+          POSTGRES_DB: bimp02_disposable
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bimp02_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: bimp02_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable_bimp02_ci_only
+      PGCONNECT_TIMEOUT: "5"
+      PGOPTIONS: "-c statement_timeout=30000"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify isolated PostgreSQL target
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          fi
+          test "$PGHOST" = 127.0.0.1
+          test "$PGDATABASE" = bimp02_disposable
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'bimp02_disposable|t'
+      - name: Install isolated signed identity and board fixtures
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-board-collab01-disposable-setup.sql \
+            -f sql/tests/cp-board-config01-disposable-setup.sql \
+            -f sql/tests/cp-board-config01-disposable-legacy-live-functions.sql
+      - name: Install hardened existing board configuration contract
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-board-config01-staged-authorization-v2.sql
+      - name: Stage BIMP-02 active-session enforcement in disposable DB only
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/bimp02-session-enforcement-candidate.sql
+      - name: Verify transactional imports, RBAC, revocation and auditing
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/bimp02-disposable-setup.sql \
+            -f sql/tests/bimp02-disposable-acceptance.sql
