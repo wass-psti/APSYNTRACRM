@@ -36,12 +36,9 @@ DO $signed$
 DECLARE
  v_board uuid:='30000000-0000-4000-8000-000000000001';
 BEGIN
- IF NOT private.wm_board_config_session_active() THEN
-  RAISE EXCEPTION 'Synthetic caller has no registered session' USING ERRCODE='P9999';
- END IF;
- IF NOT public.work_board_access(v_board,'manage') THEN
-  RAISE EXCEPTION 'Synthetic caller missing original board ACL' USING ERRCODE='P9999';
- END IF;
+ -- Deliberately call only the public RPC. Private helpers are not granted
+ -- to the caller and must execute within the SECURITY DEFINER boundary.
+ -- Exact NOT_ACTIVATED errors prove signed session and manager ACL passed.
  BEGIN
   PERFORM public.wm_delete_board_column_recoverable(
     v_board,NULL::uuid,now(),0,'DELETE synthetic');
