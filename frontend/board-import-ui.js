@@ -2,6 +2,7 @@
 import {ApiError} from './session.js';
 import {canManuallyEditBoard} from './board-inline-items.js';
 import {parseImportFile} from './board-import-parse.js';
+import {choiceCreationPreview,provisionImportChoiceColumn} from './board-import-choice-setup.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
  buildImportPlan,executeBoardImport} from './board-import-core.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
@@ -11,7 +12,7 @@ const stepLabels=['Upload','Map columns','Handle matches'];
 export async function openBoardImportWizard({api,auth,boardId,onComplete=async()=>{}}={}){
  if(!api?.board||!api?.allowed||!api?.context||!auth?.getVerifiedUser)
   throw new ApiError('Signed board-import clients unavailable.',403);
- const [actor,ctx,detail,edit,manage]=await Promise.all([
+ let [actor,ctx,detail,edit,manage]=await Promise.all([
   auth.getVerifiedUser(),api.context(),api.board(boardId),
   api.allowed(boardId,'edit'),api.allowed(boardId,'manage')]);
  if(actor?.id!==auth.userId||ctx.user_id!==actor.id||ctx.workspace_id!==detail.board.workspace_id||
@@ -19,7 +20,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   throw new ApiError('Only signed ordinary-board editors can import records.',403);
  const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
   behavior:'add-new',matchColumnId:'item',allowColumns:false,manage,busy:false,
-  complete:null,error:'',confirmed:false,plan:null,uncertain:false,renderedStep:0};
+  complete:null,error:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,choiceConsent:{}};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -33,9 +34,13 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const group=()=>state.group==='create'?
   {action:'create',name:state.groupName}:
   {action:'existing',groupId:state.group};
- const computePlan=()=>buildImportPlan({sheet:sheet(),detail,mappings:state.mappings,
-  group:group(),matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
-  allowColumns:state.allowColumns});
+ const computePlan=()=>{
+  if(state.mappings.some(m=>m.action==='configure'))
+   throw new Error('Configure or skip the pending Status/Dropdown columns before proceeding.');
+  return buildImportPlan({sheet:sheet(),detail,mappings:state.mappings,
+   group:group(),matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
+   allowColumns:state.allowColumns});
+ };
  function top(){
   return '<header class="aps-import-head"><strong>Import file</strong>'+
    '<nav class="aps-import-steps" aria-label="Import progress">'+stepLabels.map((s,i)=>
@@ -68,8 +73,34 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     choice('item','Item (main title)',m.action==='item'),
     ...columns.map(c=>choice('existing:'+c.id,c.name+' · '+c.type,
      m.action==='existing'&&m.columnId===c.id))];
-   if(state.manage)opts.push(choice('create','Create new column…',m.action==='create'));
+   if(state.manage){
+    if(CREATABLE_IMPORT_TYPES.includes(m.type)||m.action==='create')
+     opts.push(choice('create','Create new column…',m.action==='create'));
+    opts.push(choice('setup:status','Configure new Status…',
+     m.action==='configure'&&m.choiceType==='status'));
+    opts.push(choice('setup:dropdown','Configure new Dropdown…',
+     m.action==='configure'&&m.choiceType==='dropdown'));
+   }
    const suggest=m.type||'text';
+   let choiceSetup='';
+   if(m.action==='configure'){
+    let proposed=null,error='';
+    try{proposed=choiceCreationPreview({sheet:s,source:m.source,
+     type:m.choiceType,name:m.name,detail});}
+    catch(err){error=String(err.message||err);}
+    choiceSetup='<div class="aps-import-choice-config" role="group" aria-label="Choice column approval">'+
+     '<p>Configured '+esc(m.choiceType)+' · '+esc(m.name||m.source)+
+     '. This is a separate audited schema operation before record import.</p>'+
+     (proposed?'<p>Labels ('+proposed.labels.length+'): '+
+      proposed.labels.map(esc).join(' · ')+'</p>'+
+      '<label class="aps-import-choice-consent"><input type="checkbox" name="imp-choice-consent-'+i+
+      '" data-imp-choice-consent="'+i+'"'+(state.choiceConsent[i]?' checked':'')+
+      ' /> Create this column now. It will remain if I cancel or the later import fails.</label>'+
+      '<button type="button" class="secondary" data-imp-choice-create="'+i+'"'+
+      (!state.choiceConsent[i]?' disabled':'')+'>Create configured '+esc(m.choiceType)+' column</button>':
+      '<p class="aps-import-error" role="alert">'+esc(error)+'</p>')+
+     '</div>';
+   }
    return '<div class="aps-import-map-grid aps-import-map-row"><div><b>'+
     esc(m.source)+'</b><small>Detected: '+esc(suggest)+'</small><small>Example: '+
     esc(s.rows.find(r=>String(r[i]??'').trim())?.[i]??'—').slice(0,100)+'</small></div>'+
@@ -80,7 +111,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      '<label>Column type<select name="imp-column-type-'+i+'" data-imp-type="'+i+'">'+
       CREATABLE_IMPORT_TYPES.map(t=>choice(t,t,t===(m.columnType||m.type))).join('')+
      choice('unsupported','Select a compatible type…',!CREATABLE_IMPORT_TYPES.includes(m.columnType||m.type))+
-     '</select></label></div>':'')+'</div></div>';
+     '</select></label></div>':'')+choiceSetup+'</div></div>';
   }).join('');
   const newCols=missing();
   const choicePending=state.mappings.filter(m=>m.action==='skip'&&
@@ -96,7 +127,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    (choicePending.length?'<p class="aps-import-unsupported" role="note">'+
     'Status and dropdown columns require configured board options. '+ 
     'Map these file fields to a compatible existing column, or configure that column separately before importing. '+
-    'No unsupported column is created automatically.</p>':'')+
+    'Creation requires a separate, explicitly authorized configuration step.</p>':'')+
    (newCols.length?'<div class="aps-import-permission" role="group" aria-label="Confirm new columns">'+
     '<h3>'+newCols.length+' proposed column'+(newCols.length===1?'':'s')+'</h3>'+
     '<p>Creating columns changes this board for everyone. You must authorize these exact mappings.</p>'+
@@ -156,7 +187,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    (state.step>1&&state.step<4?'<button class="secondary" data-imp="back"'+
     (state.busy?' disabled':'')+'>Back</button>':'<span></span>')+
    '<span class="aps-import-fill"></span>'+
-   (state.step===2?'<button class="primary" data-imp="next">Next: Handle matches</button>':'')+
+   (state.step===2?(state.uncertain?
+     '<button class="secondary" data-imp="close">Close and verify board</button>':
+     '<button class="primary" data-imp="next"'+(state.busy?' disabled':'')+
+     '>Next: Handle matches</button>'):'')+
    (state.step===3?(state.uncertain?
     '<button class="secondary" data-imp="close">Close and verify the board</button>':
     '<button class="primary" data-imp="import"'+
@@ -185,23 +219,46 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    state.file=parsed;state.sheet=0;
    state.mappings=initialImportMappings(parsed.sheets[0],detail,{canCreate:state.manage});
    state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
-   state.step=2;state.allowColumns=false;
+   state.step=2;state.allowColumns=false;state.choiceConsent={};
   }catch(error){state.error=String(error.message||error);}
   finally{state.busy=false;render();}
  }
  function adjustMapping(index,value){
   const m=state.mappings[index];
   if(!m)return;
-  state.allowColumns=false;state.confirmed=false;
+  state.allowColumns=false;state.confirmed=false;state.choiceConsent={};
   if(value==='item'){
    state.mappings=state.mappings.map((a,i)=>i!==index&&a.action==='item'?
     {...a,action:'skip'}:a);
    state.mappings[index]={...m,action:'item'};
   }else if(value==='create')state.mappings[index]={...m,action:'create',
    name:m.name||m.source,columnType:CREATABLE_IMPORT_TYPES.includes(m.type)?m.type:'unsupported'};
+  else if(value==='setup:status'||value==='setup:dropdown')
+   state.mappings[index]={...m,action:'configure',
+    name:m.name||m.source,choiceType:value.slice(6)};
   else if(value==='skip')state.mappings[index]={...m,action:'skip'};
   else if(value.startsWith('existing:'))state.mappings[index]={...m,
    action:'existing',columnId:value.slice(9)};
+ }
+ async function createChoice(index){
+  if(state.busy||state.uncertain||!state.manage||!state.choiceConsent[index])return;
+  const mapping=state.mappings[index];
+  if(!mapping||mapping.action!=='configure')return;
+  state.busy=true;state.error='';render();
+  try{
+   const result=await provisionImportChoiceColumn({api,auth,boardId,
+    detail,sheet:sheet(),source:mapping.source,
+    type:mapping.choiceType,name:mapping.name||mapping.source});
+   detail=result.detail;
+   state.mappings[index]={...mapping,action:'existing',
+    type:mapping.choiceType,columnId:result.columnId};
+   state.allowColumns=false;state.choiceConsent={};state.confirmed=false;
+   state.error='Configured '+mapping.choiceType+' column created. Review mappings and approve any remaining changes before importing.';
+  }catch(error){
+   state.error=String(error.message||error);
+   if(/receipt is uncertain|committed, but verification failed|stored choices differ/i.test(state.error))
+    state.uncertain=true;
+  }finally{state.busy=false;render();}
  }
  async function doImport(){
   if(state.busy||state.uncertain||!state.confirmed||!state.plan)return;
@@ -242,16 +299,25 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   }
   if(action==='import')void doImport();
  });
+ overlay.addEventListener('click',event=>{
+  if(state.busy||state.uncertain)return;
+  const button=event.target.closest('[data-imp-choice-create]');
+  if(button)void createChoice(Number(button.dataset.impChoiceCreate));
+ });
  overlay.addEventListener('change',event=>{
   const el=event.target;
   if(el.id==='aps-import-file-input'){if(el.files?.[0])void readFile(el.files[0]);return;}
-  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage});state.allowColumns=false;state.confirmed=false;state.error='';render();return;}
+  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage});state.allowColumns=false;state.choiceConsent={};state.confirmed=false;state.error='';render();return;}
+  if(el.dataset.impChoiceConsent!=null){
+   state.choiceConsent[Number(el.dataset.impChoiceConsent)]=el.checked;
+   render();return;
+  }
   if(el.dataset.impMap!=null){adjustMapping(Number(el.dataset.impMap),el.value);render();return;}
   if(el.dataset.impGroup!=null){state.group=el.value;state.confirmed=false;render();return;}
   if(el.dataset.impDefault!=null&&el.value==='create'){
-   state.mappings=state.mappings.map(m=>m.action==='skip'?{...m,action:'create',name:m.source,
-    columnType:CREATABLE_IMPORT_TYPES.includes(m.type)?m.type:'unsupported'}:m);
-   state.allowColumns=false;render();return;
+   state.mappings=state.mappings.map(m=>m.action==='skip'&&CREATABLE_IMPORT_TYPES.includes(m.type)?
+    {...m,action:'create',name:m.source,columnType:m.type}:m);
+   state.allowColumns=false;state.choiceConsent={};render();return;
   }
   if(el.name==='imp-behavior'){state.behavior=el.value;state.confirmed=false;render();return;}
   if(el.dataset.impMatch!=null){state.matchColumnId=el.value;state.confirmed=false;render();return;}
@@ -262,7 +328,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   if(el.dataset.impGroupName!=null){state.groupName=el.value;state.confirmed=false;return;}
   if(el.dataset.impName!=null){
    state.mappings[Number(el.dataset.impName)].name=el.value;
-   state.allowColumns=false;state.confirmed=false;return;
+   state.allowColumns=false;state.choiceConsent={};state.confirmed=false;return;
   }
   if(el.dataset.impType!=null){
    state.mappings[Number(el.dataset.impType)].columnType=el.value;
