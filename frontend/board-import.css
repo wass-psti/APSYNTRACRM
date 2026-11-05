@@ -1,0 +1,62 @@
+/* BIMP-04: focused import dialog styles, isolated from the board grid. */
+.aps-import-overlay{position:fixed;inset:0;z-index:10050;background:rgba(5,9,15,.78);display:grid;place-items:center;padding:12px;color:#ecf0f7}
+.aps-import-dialog{width:min(1050px,100%);height:min(94vh,900px);display:flex;flex-direction:column;background:#101418;border:1px solid #424a58;border-radius:14px;box-shadow:0 30px 96px #0009;overflow:hidden;color:inherit;font:inherit}
+.aps-import-head{min-height:62px;display:flex;align-items:center;gap:20px;padding:14px 24px;border-bottom:1px solid #353e49}
+.aps-import-head>strong{font-size:15px;white-space:nowrap}
+.aps-import-steps{display:flex;justify-content:center;align-items:center;flex:1;gap:16px;flex-wrap:wrap}
+.aps-import-steps>span{display:inline-flex;align-items:center;gap:7px;color:#9ba9bb;font-size:12px}
+.aps-import-steps b{display:grid;place-items:center;width:23px;height:23px;border:1px solid #6b7482;border-radius:50%;font-weight:600}
+.aps-import-steps .active{color:#fff}.aps-import-steps .active b{border-color:#1680ff;background:#1673db;color:#fff}
+.aps-import-steps .done b{background:#1673db;border-color:#1673db;color:#fff}
+.aps-import-close{border:0!important;background:transparent!important;color:#e9eef5!important;font-size:27px!important;line-height:1;cursor:pointer}
+.aps-import-body{flex:1;min-height:0;overflow-y:auto;padding:24px;overscroll-behavior:contain}
+.aps-import-center{min-height:100%;display:grid;place-items:center}
+.aps-import-drop{width:min(490px,100%);min-height:180px;border:1px dashed #7b899a;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center}
+.aps-import-drop:hover,.aps-import-drop:focus-within{border-color:#2485ff;box-shadow:0 0 0 2px #2485ff33}
+.aps-import-drop h2{font-size:19px;font-weight:500;margin:0}.aps-import-drop p{font-size:13px;color:#b0bbc8;margin:0}
+.aps-import-config,.aps-import-match-screen{max-width:840px;margin:0 auto}
+.aps-import-config h2,.aps-import-match-screen h2,.aps-import-success h2{font-size:20px;margin:2px 0 8px;text-align:center;color:#edf2fa}
+.aps-import-config>p,.aps-import-match-screen>p{text-align:center;color:#aebaca;font-size:13px}
+.aps-import-controls{display:flex;align-items:end;justify-content:center;flex-wrap:wrap;gap:16px;margin:24px 0}
+.aps-import-dialog label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#d6dfeb}
+.aps-import-dialog select,.aps-import-dialog input:not([type=radio]):not([type=checkbox]):not([type=file]){
+ min-height:36px;background:#20262e;color:#f0f3f8;border:1px solid #626c7a;border-radius:6px;padding:7px 10px;max-width:100%;width:100%}
+.aps-import-dialog select:focus-visible,.aps-import-dialog input:focus-visible,.aps-import-dialog button:focus-visible{outline:2px solid #2087ff;outline-offset:2px}
+.aps-import-dialog button.primary{background:#0073eb;color:white;border:1px solid #1985ff;border-radius:6px;padding:9px 16px;min-height:36px}
+.aps-import-dialog button.secondary{background:#252c35;color:#e5ebf5;border:1px solid #6a7481;border-radius:6px;padding:9px 16px;min-height:36px}
+.aps-import-dialog button:disabled{opacity:.46;cursor:not-allowed}
+.aps-import-mapping{border:1px solid #4b5563;border-radius:8px;overflow:hidden}
+.aps-import-map-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;padding:12px 18px}
+.aps-import-map-heading{background:#272e37;font-weight:650;font-size:13px}
+.aps-import-map-row{border-top:1px solid #404955;font-size:14px;min-height:64px}
+.aps-import-map-row b{display:block;font-weight:500;overflow-wrap:anywhere}
+.aps-import-map-row small{display:block;color:#99a9bb;font-size:11px;margin-top:4px;overflow-wrap:anywhere}
+.aps-import-proposed{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.aps-import-proposed label{font-size:11px}
+.aps-import-permission{margin:22px 0;padding:17px;border:1px solid #4571ad;background:#142033;border-radius:9px}
+.aps-import-permission h3,.aps-import-summary h3{margin:0 0 6px;font-size:16px}
+.aps-import-permission p,.aps-import-summary p{font-size:13px;color:#b9c6d5;overflow-wrap:anywhere}
+.aps-import-choice{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.aps-import-match-screen{max-width:560px}
+.aps-import-match{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:14px;margin:12px 0;padding:15px;border:1px solid #596473;border-radius:9px;cursor:pointer}
+.aps-import-match.selected{border-color:#187cff;background:#15243a}
+.aps-import-match input{margin-top:3px;accent-color:#137fff}
+.aps-import-match span{display:flex;flex-direction:column;gap:5px}
+.aps-import-match small{color:#b6c3d1;font-size:12px}
+.aps-import-summary{margin:20px 0 6px;padding:16px;border-top:1px solid #4b5665}
+.aps-import-final-check{flex-direction:row!important;align-items:start;gap:10px!important;margin-top:16px}
+.aps-import-error{margin:16px auto;color:#ffd0d0;background:#582024;border:1px solid #ce646c;border-radius:7px;padding:10px 13px;max-width:840px}
+.aps-import-success{display:flex;min-height:100%;justify-content:center;align-items:center;flex-direction:column;text-align:center;color:#cfe3fa}
+.aps-import-footer{min-height:66px;border-top:1px solid #414954;padding:12px 24px;display:flex;align-items:center;gap:12px}
+.aps-import-fill{flex:1}
+@media(max-width:700px){
+ .aps-import-overlay{padding:0}
+ .aps-import-dialog{height:100dvh;border-radius:0}
+ .aps-import-head,.aps-import-footer{padding:12px}
+ .aps-import-steps{gap:7px}
+ .aps-import-steps>span{font-size:10px}
+ .aps-import-body{padding:14px}
+ .aps-import-map-grid{gap:8px;padding:10px;grid-template-columns:42% minmax(0,58%)}
+ .aps-import-proposed{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.aps-import-dialog *{scroll-behavior:auto;transition:none!important}}
