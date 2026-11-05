@@ -1,0 +1,255 @@
+/** BIMP-03: reusable, signed board-import wizard for ordinary APSYNTRA boards. */
+import {ApiError} from './session.js';
+import {canManuallyEditBoard} from './board-inline-items.js';
+import {parseImportFile} from './board-import-parse.js';
+import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
+ buildImportPlan,executeBoardImport} from './board-import-core.js';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
+ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+const choice=(id,label,selected)=>'<option value="'+esc(id)+'"'+(selected?' selected':'')+'>'+esc(label)+'</option>';
+const stepLabels=['Upload','Map columns','Handle matches'];
+export async function openBoardImportWizard({api,auth,boardId,onComplete=async()=>{}}={}){
+ if(!api?.board||!api?.allowed||!api?.context||!auth?.getVerifiedUser)
+  throw new ApiError('Signed board-import clients unavailable.',403);
+ const [actor,ctx,detail,edit,manage]=await Promise.all([
+  auth.getVerifiedUser(),api.context(),api.board(boardId),
+  api.allowed(boardId,'edit'),api.allowed(boardId,'manage')]);
+ if(actor?.id!==auth.userId||ctx.user_id!==actor.id||ctx.workspace_id!==detail.board.workspace_id||
+    ctx.profile?.status!=='active'||!edit||!canManuallyEditBoard(detail.board,true))
+  throw new ApiError('Only signed ordinary-board editors can import records.',403);
+ const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
+  behavior:'add-new',matchColumnId:'item',allowColumns:false,manage,busy:false,
+  complete:null,error:'',confirmed:false,plan:null};
+ const overlay=document.createElement('div');
+ overlay.className='aps-import-overlay';
+ overlay.setAttribute('role','presentation');
+ const previousFocus=document.activeElement;
+ const close=()=>{
+  if(state.busy)return;
+  overlay.remove();previousFocus?.focus?.();
+ };
+ const sheet=()=>state.file?.sheets[state.sheet];
+ const missing=()=>state.mappings.filter(m=>m.action==='create');
+ const group=()=>state.group==='create'?
+  {action:'create',name:state.groupName}:
+  {action:'existing',groupId:state.group};
+ const computePlan=()=>buildImportPlan({sheet:sheet(),detail,mappings:state.mappings,
+  group:group(),matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
+  allowColumns:state.allowColumns});
+ function top(){
+  return '<header class="aps-import-head"><strong>Import file</strong>'+
+   '<nav class="aps-import-steps" aria-label="Import progress">'+stepLabels.map((s,i)=>
+    '<span class="'+(i+1===state.step?'active':i+1<state.step?'done':'')+'">'+
+    '<b>'+(i+1<state.step?'✓':i+1)+'</b>'+esc(s)+'</span>').join('')+'</nav>'+
+   '<button type="button" data-imp="close" aria-label="Close import" class="aps-import-close">×</button></header>';
+ }
+ function upload(){
+  return '<div class="aps-import-center"><div class="aps-import-drop" data-imp-drop>'+
+   '<input type="file" id="aps-import-file-input" accept=".csv,.xlsx" hidden />'+
+   '<button type="button" class="primary" data-imp="browse">Browse</button>'+
+   '<h2>or drag and drop your file</h2><p>CSV and XLSX supported · Maximum 8 MB · 5,000 rows</p>'+
+   '</div></div>';
+ }
+ function mapStep(){
+  const s=sheet(),columns=availableImportColumns(detail);
+  const groupChoices=choice('create','New group',state.group==='create')+
+   (detail.groups||[]).map(g=>choice(g.id,g.title,state.group===g.id)).join('');
+  const header='<div class="aps-import-map-grid aps-import-map-heading"><span>'+
+   esc(state.file.name)+'</span><span>Board columns</span></div>';
+  const mapping=state.mappings.map((m,i)=>{
+   const opts=[choice('skip',"Don't import column",m.action==='skip'),
+    choice('item','Item (main title)',m.action==='item'),
+    ...columns.map(c=>choice('existing:'+c.id,c.name+' · '+c.type,
+     m.action==='existing'&&m.columnId===c.id))];
+   if(state.manage)opts.push(choice('create','Create new column…',m.action==='create'));
+   const suggest=m.type||'text';
+   return '<div class="aps-import-map-grid aps-import-map-row"><div><b>'+
+    esc(m.source)+'</b><small>Detected: '+esc(suggest)+'</small><small>Example: '+
+    esc(s.rows.find(r=>String(r[i]??'').trim())?.[i]??'—').slice(0,100)+'</small></div>'+
+    '<div><label class="sr-only" for="imp-map-'+i+'">Map '+esc(m.source)+'</label>'+
+    '<select id="imp-map-'+i+'" data-imp-map="'+i+'">'+opts.join('')+'</select>'+
+    (m.action==='create'?'<div class="aps-import-proposed">'+
+     '<label>New column name<input data-imp-name="'+i+'" maxlength="80" value="'+esc(m.name||m.source)+'"></label>'+
+     '<label>Column type<select data-imp-type="'+i+'">'+
+      CREATABLE_IMPORT_TYPES.map(t=>choice(t,t,t===(m.columnType||m.type))).join('')+
+     choice('unsupported','Select a compatible type…',!CREATABLE_IMPORT_TYPES.includes(m.columnType||m.type))+
+     '</select></label></div>':'')+'</div></div>';
+  }).join('');
+  const newCols=missing();
+  return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
+   '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+
+   '<div class="aps-import-controls"><label>Add items to<select data-imp-group>'+groupChoices+
+   '</select></label>'+(state.group==='create'?'<label>New group name<input maxlength="120" data-imp-group-name value="'+esc(state.groupName)+'"></label>':'')+
+   '<label>Unmapped columns<select data-imp-default>'+choice('skip',"Don't import",true)+
+   (state.manage?choice('create','Create columns after approval',false):'')+'</select></label></div>'+
+   '<div class="aps-import-mapping">'+header+mapping+'</div>'+
+   (newCols.length?'<div class="aps-import-permission" role="group" aria-label="Confirm new columns">'+
+    '<h3>'+newCols.length+' proposed column'+(newCols.length===1?'':'s')+'</h3>'+
+    '<p>Creating columns changes this board for everyone. You must authorize these exact mappings.</p>'+
+    '<p>'+newCols.map(m=>esc(m.name||m.source)+' ('+esc(m.columnType||m.type)+')').join(' · ')+'</p>'+
+    '<div class="aps-import-choice"><button type="button" class="primary" data-imp="allow-columns"'+(state.allowColumns?' disabled':'')+'>Allow creation</button>'+
+    '<button type="button" class="secondary" data-imp="decline-columns">Decline and skip columns</button>'+
+    '</div>'+(state.allowColumns?'<strong role="status">Column creation approved for this import preview.</strong>':'')+
+    '</div>':'')+'</section>';
+ }
+ function matchStep(){
+  const cols=availableImportColumns(detail).filter(c=>
+   ['text','email','url','dropdown','status'].includes(c.type)&&
+   state.mappings.some(m=>m.action==='existing'&&m.columnId===c.id));
+  let result=null,validation='';
+  try{result=computePlan();state.plan=result;}catch(error){validation=String(error.message||error);state.plan=null;}
+  const radio=(id,title,description)=>'<label class="aps-import-match '+(state.behavior===id?'selected':'')+'">'+
+   '<input type="radio" name="imp-behavior" value="'+id+'"'+(state.behavior===id?' checked':'')+' />'+
+   '<span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>';
+  const matchSelect='<label>Matched by<select data-imp-match>'+
+   choice('item','Item title',state.matchColumnId==='item')+
+   cols.map(c=>choice(c.id,c.name,state.matchColumnId===c.id)).join('')+'</select></label>';
+  return '<section class="aps-import-match-screen"><h2>Set duplicate behavior</h2>'+
+   '<p>Choose how rows in this file match records in the destination Group.</p>'+
+   radio('add-new','Add as new items','Create every row; existing records are never changed.')+
+   radio('skip','Skip','Do not import rows matching an existing record.')+
+   radio('update','Update','Update matching items only; preserve empty destination cells.')+
+   (state.behavior==='add-new'?'':matchSelect)+
+   (validation?'<p class="aps-import-error" role="alert">'+esc(validation)+'</p>':'')+
+   (result?'<div class="aps-import-summary"><h3>Import preview</h3><p>'+
+    result.preview.newItems+' new · '+result.preview.updatedItems+' updates · '+
+    result.preview.skippedItems+' skipped · '+result.preview.newColumns+
+    ' new columns · '+result.preview.rowCount+' rows</p>'+
+    '<p>The server will atomically validate and commit this import against the current board revision.</p>'+
+    '<label class="aps-import-final-check"><input type="checkbox" data-imp-confirm'+
+    (state.confirmed?' checked':'')+' /> I have reviewed the mapping and the selected duplicate behavior.</label>'+
+    '</div>':'')+'</section>';
+ }
+ function resultStep(){
+  const r=state.complete;
+  return '<section class="aps-import-success" role="status"><h2>Import committed</h2>'+
+   '<p>'+r.created+' created · '+r.updated+' updated · '+r.skipped+
+   ' skipped · '+r.columnsCreated+' columns created · '+r.groupsCreated+
+   ' groups created.</p><p>Refresh and audit verification are available on your board.</p></section>';
+ }
+ function render(){
+  if(!overlay.isConnected)document.body.append(overlay);
+  overlay.innerHTML='<div class="aps-import-dialog" role="dialog" aria-modal="true" '+
+   'aria-label="Import board data">'+top()+
+   '<main class="aps-import-body">'+(state.step===1?upload():state.step===2?mapStep():
+   state.step===3?matchStep():resultStep())+
+   (state.error?'<p class="aps-import-error" role="alert">'+esc(state.error)+'</p>':'')+
+   '</main><footer class="aps-import-footer">'+
+   (state.step>1&&state.step<4?'<button class="secondary" data-imp="back"'+
+    (state.busy?' disabled':'')+'>Back</button>':'<span></span>')+
+   '<span class="aps-import-fill"></span>'+
+   (state.step===2?'<button class="primary" data-imp="next">Next: Handle matches</button>':'')+
+   (state.step===3?'<button class="primary" data-imp="import"'+
+    (!state.plan||!state.confirmed||state.busy?' disabled':'')+'>'+
+    (state.busy?'Importing…':'Import Now')+'</button>':'')+
+   (state.step===4?'<button class="primary" data-imp="close">Done</button>':'')+
+   '</footer></div>';
+  overlay.querySelector('.aps-import-dialog')?.focus?.();
+ }
+ async function readFile(file){
+  if(state.busy)return;
+  state.busy=true;state.error='';render();
+  try{
+   const parsed=await parseImportFile(file);
+   if(!overlay.isConnected)return;
+   state.file=parsed;state.sheet=0;
+   state.mappings=initialImportMappings(parsed.sheets[0],detail);
+   state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
+   state.step=2;state.allowColumns=false;
+  }catch(error){state.error=String(error.message||error);}
+  finally{state.busy=false;render();}
+ }
+ function adjustMapping(index,value){
+  const m=state.mappings[index];
+  if(!m)return;
+  state.allowColumns=false;state.confirmed=false;
+  if(value==='item'){
+   state.mappings=state.mappings.map((a,i)=>i!==index&&a.action==='item'?
+    {...a,action:'skip'}:a);
+   state.mappings[index]={...m,action:'item'};
+  }else if(value==='create')state.mappings[index]={...m,action:'create',
+   name:m.name||m.source,columnType:CREATABLE_IMPORT_TYPES.includes(m.type)?m.type:'unsupported'};
+  else if(value==='skip')state.mappings[index]={...m,action:'skip'};
+  else if(value.startsWith('existing:'))state.mappings[index]={...m,
+   action:'existing',columnId:value.slice(9)};
+ }
+ async function doImport(){
+  if(state.busy||!state.confirmed||!state.plan)return;
+  const plan=computePlan();
+  state.busy=true;state.error='';render();
+  try{
+   const receipt=await executeBoardImport({api,auth,plan});
+   state.complete=receipt;state.step=4;
+   try{await onComplete(receipt);}catch{state.error='Import committed, but the board refresh failed. Refresh manually before retrying anything.';}
+  }catch(error){state.error=String(error.message||error);}
+  finally{state.busy=false;render();}
+ }
+ overlay.addEventListener('click',event=>{
+  if(event.target===overlay){close();return;}
+  const button=event.target.closest('[data-imp]');if(!button||state.busy)return;
+  const action=button.dataset.imp;
+  if(action==='close'){close();return;}
+  if(action==='browse'){overlay.querySelector('#aps-import-file-input')?.click();return;}
+  if(action==='back'){state.step--;state.error='';state.confirmed=false;render();return;}
+  if(action==='allow-columns'){
+   if(!state.manage){state.error='Board management permission required.';}
+   else{state.allowColumns=true;state.error='';}render();return;
+  }
+  if(action==='decline-columns'){
+   state.mappings=state.mappings.map(m=>m.action==='create'?{...m,action:'skip'}:m);
+   state.allowColumns=false;render();return;
+  }
+  if(action==='next'){
+   state.error='';
+   try{if(missing().length&&!state.allowColumns)throw new Error('Choose Allow or Decline for proposed columns.');
+    computePlan();state.step=3;state.confirmed=false;}
+   catch(error){state.error=String(error.message||error);}
+   render();return;
+  }
+  if(action==='import')void doImport();
+ });
+ overlay.addEventListener('change',event=>{
+  const el=event.target;
+  if(el.id==='aps-import-file-input'){if(el.files?.[0])void readFile(el.files[0]);return;}
+  if(el.dataset.impMap!=null){adjustMapping(Number(el.dataset.impMap),el.value);render();return;}
+  if(el.dataset.impGroup!=null){state.group=el.value;state.confirmed=false;render();return;}
+  if(el.dataset.impDefault!=null&&el.value==='create'){
+   state.mappings=state.mappings.map(m=>m.action==='skip'?{...m,action:'create',name:m.source,
+    columnType:CREATABLE_IMPORT_TYPES.includes(m.type)?m.type:'unsupported'}:m);
+   state.allowColumns=false;render();return;
+  }
+  if(el.name==='imp-behavior'){state.behavior=el.value;state.confirmed=false;render();return;}
+  if(el.dataset.impMatch!=null){state.matchColumnId=el.value;state.confirmed=false;render();return;}
+  if(el.dataset.impConfirm!=null){state.confirmed=el.checked;render();}
+ });
+ overlay.addEventListener('input',event=>{
+  const el=event.target;
+  if(el.dataset.impGroupName!=null){state.groupName=el.value;state.confirmed=false;return;}
+  if(el.dataset.impName!=null){
+   state.mappings[Number(el.dataset.impName)].name=el.value;
+   state.allowColumns=false;state.confirmed=false;return;
+  }
+  if(el.dataset.impType!=null){
+   state.mappings[Number(el.dataset.impType)].columnType=el.value;
+   state.allowColumns=false;state.confirmed=false;
+  }
+ });
+ overlay.addEventListener('dragover',event=>{
+  if(event.target.closest('[data-imp-drop]'))event.preventDefault();
+ });
+ overlay.addEventListener('drop',event=>{
+  if(!event.target.closest('[data-imp-drop]'))return;
+  event.preventDefault();if(event.dataTransfer?.files?.[0])void readFile(event.dataTransfer.files[0]);
+ });
+ const escHandler=event=>{
+  if(event.key==='Escape'){event.preventDefault();close();}
+  if(event.key==='Tab'){
+   const focusable=[...overlay.querySelectorAll('button:not([disabled]),input:not([disabled]):not([hidden]),select:not([disabled])')];
+   if(!focusable.length)return;
+   if(event.shiftKey&&document.activeElement===focusable[0]){event.preventDefault();focusable.at(-1).focus();}
+   else if(!event.shiftKey&&document.activeElement===focusable.at(-1)){event.preventDefault();focusable[0].focus();}
+  }
+ };
+ overlay.addEventListener('keydown',escHandler);
+ render();overlay.querySelector('.aps-import-close')?.focus();
+}
