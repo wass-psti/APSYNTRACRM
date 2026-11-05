@@ -148,3 +148,21 @@ test('disposable lifecycle reads observe committed writes in distinct statement 
  assert.match(acceptance,/Changed idempotency key payload allowed/);
  assert.match(acceptance,/Stale expected workspace accepted/);
 });
+
+test('disposable GoTrue fixture recognizes full UUID sessions and contains one initialization path',()=>{
+ const setup=readFileSync('sql/tests/cp-ws01b-disposable-setup.sql','utf8');
+ const guard=setup.split('CREATE FUNCTION private.wm_board_config_session_active()')[1]
+  ?.split('END $guard$;')[0];
+ assert.ok(guard,'Synthetic guard must exist');
+ const match=guard.match(/sid\s*!~\s*'([^']+)'/);
+ assert.ok(match,'Synthetic guard must validate a signed session UUID');
+ const pattern=new RegExp(match[1]);
+ assert.match('aaaaaaaa-0000-4000-8000-000000000001',pattern);
+ assert.doesNotMatch('aaaaaaaa-0000-4000-000000000001',pattern);
+ assert.equal((setup.match(/CREATE FUNCTION public\.ws01_fixture_auth_diagnostics\(/g)||[]).length,1);
+ assert.equal((setup.match(/CREATE FUNCTION public\.ws01_fixture_visible_boards\(/g)||[]).length,1);
+ assert.equal((setup.match(/INSERT INTO auth\.users\(id\)/g)||[]).length,1);
+ assert.equal((setup.match(/INSERT INTO auth\.sessions\(id,user_id,not_after\)/g)||[]).length,1);
+ assert.equal((setup.match(/\$diagnostics\$/g)||[]).length,2);
+ assert.equal((setup.match(/\$boards\$/g)||[]).length,2);
+});
