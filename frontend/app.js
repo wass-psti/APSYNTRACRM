@@ -938,7 +938,17 @@ async function applySelectedBulk(action,status=null){
  const selected=state.board.items?.filter(item=>ids.includes(item.id))||[];
  if(!ids.length||ids.length>50||selected.length!==ids.length)
   throw new ApiError('Select between 1 and 50 currently accessible board items.',400);
- const receipt=await boardBulkClient.apply(board,action,selected,{status});
+ let receipt;
+ try{
+  receipt=await boardBulkClient.apply(board,action,selected,{status});
+ }catch(error){
+  if(error?.bulkOutcomeUncertain===true){
+   clearBulkActivation();
+   itemSelection.clear();
+   try{await loadBoard(board.id,'items');}catch{/* Preserve the uncertainty outcome. */}
+  }
+  throw error;
+ }
  itemSelection.clear();await loadBoard(board.id,'items');
  toast(receipt.applied+' board records changed atomically.');
  return receipt;
