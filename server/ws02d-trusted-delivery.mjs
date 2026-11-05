@@ -39,10 +39,11 @@ export function inviteLinkForTrustedEmail(token){
 }
 
 export async function submitTrustedWorkspaceInvitation(draft,{
- issueForSignedActor,sendEmail,deliveryEnabled=false
+ issueForSignedActor,sendEmail,recordDeliveryOutcome,deliveryEnabled=false
 }={}){
  if(deliveryEnabled!==true||
-    typeof issueForSignedActor!=='function'||typeof sendEmail!=='function')
+    typeof issueForSignedActor!=='function'||typeof sendEmail!=='function'||
+    typeof recordDeliveryOutcome!=='function')
   throw new Error('Trusted invitation delivery not activated');
  const valid=validateTrustedDeliveryDraft(draft);
  if(!valid)throw new Error('Invalid workspace invitation draft');
@@ -74,19 +75,40 @@ export async function submitTrustedWorkspaceInvitation(draft,{
   link,
   'The invitation expires after 24 hours. Do not forward this link.'
  ].filter(Boolean).join('\n\n');
+ let providerResult;
  try{
-  const result=await sendEmail(Object.freeze({
+  providerResult=await sendEmail(Object.freeze({
    to:valid.email,
    subject:'APSYNTRA CRM workspace invitation',
    text:plainText,
    invitationId:receipt.invitationId
   }));
-  if(result?.accepted!==true)
+  if(providerResult?.accepted!==true)
    throw new Error('Delivery provider did not accept the message');
  }catch{
-  // A provider timeout might still have delivered the email. Do NOT retry
-  // issuance with a new request ID automatically or reveal the token in logs.
+  // The provider may have delivered despite a timeout. Record an unresolved
+  // attempt with IDs only, never with the bearer URL, token, or message body.
+  try{
+   await recordDeliveryOutcome(Object.freeze({
+    invitationId:receipt.invitationId,state:'delivery-uncertain',providerMessageId:null
+   }));
+  }catch{
+   // Failure to persist even uncertainty must not expose secrets or retry.
+  }
   throw new Error('Invitation delivery outcome requires trusted reconciliation');
+ }
+ try{
+  const providerMessageId=providerResult?.providerMessageId;
+  if(typeof providerMessageId!=='string'||!UUID.test(providerMessageId))
+   throw new Error('Invalid internal provider receipt');
+  const recorded=await recordDeliveryOutcome(Object.freeze({
+   invitationId:receipt.invitationId,state:'provider-accepted',providerMessageId
+  }));
+  if(recorded?.persisted!==true)throw new Error('Unrecorded provider receipt');
+ }catch{
+  // A message may already have been submitted; fail closed instead of
+  // reissuing a token, retrying delivery, or claiming a completed audit.
+  throw new Error('Invitation delivery receipt requires trusted reconciliation');
  }
  return Object.freeze({state:'delivery-submitted',invitationId:receipt.invitationId});
 }
