@@ -2148,7 +2148,7 @@ async function openBoardStructure(){
  view.addEventListener('input',event=>{
   const search=event.target.closest('[data-column-catalog-search]');
   if(!search||!authorized())return;
-  const words=search.value.toLocaleLowerCase().trim().split(/\\s+/).filter(Boolean);
+  const words=search.value.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
   view.querySelectorAll('[data-column-group]').forEach(group=>{
    let count=0;
    group.querySelectorAll('[data-column-type]').forEach(button=>{
