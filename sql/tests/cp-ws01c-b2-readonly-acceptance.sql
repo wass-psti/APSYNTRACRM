@@ -12,9 +12,8 @@ BEGIN
  IF v_proc IS NULL THEN
   RAISE EXCEPTION 'CP-WS-01C/B2 read RPC absent' USING ERRCODE='42501';
  END IF;
- SELECT pg_get_functiondef(v_proc),p.prosecdef,p.provolatile='s'
- INTO v_source
- FROM pg_proc p WHERE p.oid=v_proc;
+ SELECT pg_get_functiondef(v_proc)
+ INTO v_source;
  -- This is only an added read RPC: no writable RPC, no role/permission
  -- mutation, and no backend workspace switching.
  IF NOT EXISTS(
@@ -23,7 +22,10 @@ BEGIN
     AND 'search_path='=ANY(p.proconfig)
  ) OR NOT has_function_privilege('authenticated',v_proc,'EXECUTE')
    OR has_function_privilege('anon',v_proc,'EXECUTE')
-   OR has_function_privilege('PUBLIC',v_proc,'EXECUTE')
+   OR EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL
+    aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) grant_item
+    WHERE p.oid=v_proc AND grant_item.grantee=0
+      AND grant_item.privilege_type='EXECUTE')
    OR v_source NOT LIKE '%private.wm_board_config_session_active()%'
    OR v_source NOT LIKE '%m.user_id=v_actor AND m.active IS TRUE%'
    OR v_source NOT LIKE '%p.status=''active''%'
