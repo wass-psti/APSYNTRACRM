@@ -78,6 +78,7 @@ export const WS02D_ACTIVE_SESSION_SQL=[
  ' WHERE s.id=$2::uuid AND s.user_id=$1::uuid',
  ' AND (s.not_after IS NULL OR s.not_after>now())',
  ' AND u.deleted_at IS NULL',
+ ' AND (u.banned_until IS NULL OR u.banned_until<=now())',
  " AND p.status='active'",
  ' AND m.active IS TRUE',
  ') AS active'
