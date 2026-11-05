@@ -60,6 +60,9 @@ test('choice setup rejects ambiguous and unsafe labels without backend calls',()
  assert.throws(()=>choiceCreationPreview({sheet,source:'Status',type:'formula',detail}),/Only Status or Dropdown/);
  assert.throws(()=>choiceCreationPreview({sheet,source:'Status',type:'status',
   detail:{...detail,columns:[{name:'STATUS'}]}}),/already contains/);
+ assert.deepEqual(choiceCreationPreview({sheet,source:'Status',type:'status',
+  name:'Imported Status',detail:{...detail,columns:[{name:'STATUS'}]}}).name,
+  'Imported Status');
  assert.throws(()=>importChoiceLabels({...sheet,rows:[['A','=HYPERLINK()']]},'Status'),
   /Formula-like option/);
  assert.throws(()=>importChoiceLabels({...sheet,rows:[['A','x'.repeat(81)]]},'Status'),
@@ -107,6 +110,7 @@ test('UI has manager-only choice setup with explicit warning, consent, and no au
  assert.match(ui,/Configure new Dropdown/);
  assert.match(ui,/will remain if I cancel or the later import fails/);
  assert.match(ui,/data-imp-choice-consent/);
+ assert.match(ui,/data-imp-choice-name/);
  assert.match(ui,/provisionImportChoiceColumn/);
  assert.match(ui,/state\.allowColumns=false;state\.choiceConsent=\{\}/);
 });
