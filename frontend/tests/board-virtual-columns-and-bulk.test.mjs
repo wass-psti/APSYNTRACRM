@@ -142,6 +142,7 @@ test('bulk buttons request on-demand signed verification instead of permanent di
   const action=app.slice(match,match+350);
   assert.match(action,/ensureSignedBulkReady/);
  }
- assert.match(app,/data-action="bulk-status" \$\{canRequestBulk\(b\)/);
- assert.match(app,/data-action="bulk-archive" \$\{canRequestBulk\(b\)/);
+ assert.match(app,/data-action="bulk-actions" \$\{canRequestBulk\(b\)\|\|bulkReadyFor\(b\)/);
+ assert.match(app,/case 'bulk-actions'/);
+ assert.match(app,/Unsupported bulk operation/);
 });
