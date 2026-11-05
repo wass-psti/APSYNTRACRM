@@ -76,3 +76,20 @@ This stage has **not** changed production schema or permissions.
 **Verification boundary:** B2 production activation and scoped single-user signed discovery are evidenced. The report does not establish cross-account role ceilings, unrelated-workspace non-disclosure for other identities, or live revoked/expired-session denial. Disposable regression [workflow #33](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41970070348) was independently confirmed `completed/success`, but it is not a substitute for those live cases.
 
 **Next acceptance gate:** Run the same sanitized B2 probe under a distinct existing authorized nonadministrator account and, if available, an existing genuinely foreign-workspace member. Complete controlled revoked/expired-session denial checks without mutating production users or permissions. Keep `WS01_DISCOVERY_ENABLED=false`, B3 creation, and B4 switching disabled until separately authorized and accepted. Do not reapply the B2 migration.
+
+
+## CP-WS-01C/B2 cross-identity and authorization denial acceptance — 2026-11-05
+
+**Gate status: AUTOMATED DENIAL VERIFIED; LIVE CROSS-IDENTITY ACCEPTANCE INCOMPLETE.** One prior genuine signed-user B2 report remains 5/5 PASS. Do not equate synthetic user/session testing with authenticated production acceptance by multiple identities.
+
+**New repository artifacts:**
+- `sql/tests/cp-ws01c-b2-cross-identity-denial-disposable.sql`: guards against running outside `workspace_disposable`, then exercises synthetic manager and nonmanager workspace isolation, dual-membership discovery, absent membership, inactive profile, inactive membership, cross-account session mismatch, missing session claim, revoked GoTrue session, expired GoTrue session and anon execution.
+- `.github/workflows/cp-ws01b-disposable-postgres.yml`: runs this dedicated B2-only denial suite **before** any staged B3 creation or B4 selection function is installed. No real identities, tokens or production records are used.
+
+**CI execution:** [CP-WS-01B disposable workflow run #36](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41973353012), commit `de686cd165b161ceb0de9159063e3fa6f3dca716`: completed **SUCCESS**. The added B2 cross-identity/foreign/revoked/expired test step passed; all other PostgreSQL 17 lifecycle steps passed.
+
+**Production read-only results:** Executed a no-JWT call to `public.wm_ws01_list()`, which was rejected with `insufficient_privilege`; inspected effective execution privileges and private-schema protection. `authenticated` EXECUTE=true, `anon` EXECUTE=false, PUBLIC EXECUTE=false. Both B3/B4 RPCs remain absent, both lifecycle flags false, and workspace lifecycle event count unchanged at zero. No production SQL DDL, DML, grants, user/session revocation or membership changes performed.
+
+**Coverage limitation observed in production inventory:** Two workspaces exist, but only one has active memberships, and no pair of current active member identities has disjoint workspace memberships. Therefore, a real foreign-workspace-member comparison cannot be run with the current production membership layout. Existing nonadministrator active member profiles do exist; verifying a distinct user still requires that account's genuine signed GoTrue browser session.
+
+**Remaining genuine live acceptance:** (1) run the sanitized `#/security` B2 probe in a distinct nonadministrator account, (2) compare genuinely disjoint workspace membership scopes if a legitimate existing eligible identity becomes available without manufacturing accounts/permissions, and (3) collect controlled real revoked/expired-session denial evidence without mutating production accounts for testing. Keep `WS01_DISCOVERY_ENABLED=false`, B3 and B4 disabled until independently accepted.
