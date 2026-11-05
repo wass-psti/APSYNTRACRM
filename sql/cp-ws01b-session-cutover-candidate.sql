@@ -97,6 +97,26 @@ BEGIN
  RETURN pg_catalog.jsonb_build_object('schemaVersion',1,
   'workspaceId',p_workspace_id,'previousWorkspaceId',v_current,'switched',true);
 END $select$;
+-- Revocation must not reactivate a previously selected workspace when
+-- membership is later restored in the same still-valid GoTrue session.
+CREATE FUNCTION private.ws01_prune_session_choices()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $prune$
+BEGIN
+ IF TG_OP='DELETE' THEN
+  DELETE FROM private.ws01_session_choices
+  WHERE actor_id=OLD.user_id AND workspace_id=OLD.workspace_id;
+ ELSIF OLD.active IS TRUE AND NEW.active IS DISTINCT FROM TRUE THEN
+  DELETE FROM private.ws01_session_choices
+  WHERE actor_id=OLD.user_id AND workspace_id=OLD.workspace_id;
+ END IF;
+ RETURN NULL;
+END $prune$;
+REVOKE ALL ON FUNCTION private.ws01_prune_session_choices()
+ FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER ws01_prune_session_choices
+AFTER UPDATE OF active OR DELETE ON public.workspace_members
+FOR EACH ROW EXECUTE FUNCTION private.ws01_prune_session_choices();
+
 REVOKE ALL ON FUNCTION public.wm_ws01_select(uuid,uuid)
  FROM PUBLIC,anon,authenticated;
 -- No GRANT or flag activation. Existing signed sessions remain on the old
