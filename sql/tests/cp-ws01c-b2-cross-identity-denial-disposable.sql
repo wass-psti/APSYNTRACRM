@@ -168,7 +168,7 @@ END $revoked$;
 RESET ROLE;
 
 -- Inactive profiles and revoked memberships must also fail even if signed.
-UPDATE public.profiles SET status='inactive'
+UPDATE public.profiles SET status='disabled'
  WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub',
