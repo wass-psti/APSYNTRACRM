@@ -184,3 +184,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-timetracker-positive-fixture.sql
       - name: Verify TimeTracker signed clock-in and clock-out, GPS, CAS, workspace and expiry denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-timetracker-valid-write-acceptance.sql
+      - name: Stage synthetic Employee Evaluation domain schema, audit and role fixtures
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-employee-eval-positive-fixture.sql
+      - name: Verify Employee Evaluation authorized transactions, CAS, review, scope and Viewer denial
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-employee-eval-valid-write-acceptance.sql
