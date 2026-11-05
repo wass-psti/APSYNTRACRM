@@ -21,6 +21,18 @@
 
 These are disposable-test changes; they do not modify production data, users, role grants or authorization functions.
 
+## Live read-only domain inventory (2026-11-05)
+
+A read-only SQL inventory of the **existing** Supabase project (`jtlusodorfnyzgyuewkz`; PostgreSQL 17) executed successfully. It reported:
+
+- **53** public `SECURITY DEFINER` routine source references to `work_board_access`.
+- **55** public `SECURITY DEFINER` routine source references to `current_workspace_id`.
+- **30** candidate independent, workspace-scoped routine bodies with a possible mutation marker and without a direct `work_board_access` reference.
+
+The 30-name review sample spans TimeTracker, TradeLink, Order Intake, Employee Evaluation, module state and platform/board administration. The scanner is a conservative source-text classification, **not** proof that 30 authorization defects exist. Review each candidate's actual call graph, signed-session check, platform/workspace ceiling, domain RBAC, RLS and negative cases before claiming production coverage.
+
+The inventory SQL is retained in `sql/tests/cp-ws02d-b2-domain-authorization-inventory.sql`. The live query was **SELECT-only** and performed no data, permission, role, schema, invitation or provider mutation.
+
 ## Not yet accepted
 
 - **Live board authorization:** staged ACL integration is not installed in the production Supabase project; the existing production function and its dependent callers require read-only fingerprint revalidation before a separately authorized migration.
