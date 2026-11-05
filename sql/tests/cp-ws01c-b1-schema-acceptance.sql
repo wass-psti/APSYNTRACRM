@@ -51,3 +51,18 @@ BEGIN
  END IF;
  RAISE NOTICE 'CP-WS-01C/B1 six private RLS tables, no direct grants, disabled flags, zero new RPCs PASS';
 END $ws01_b1$;
+
+-- Compare this fingerprint and counts with the preactivation inventory.
+-- A B1-only migration must leave existing workspace authority and data intact.
+SELECT
+ md5(pg_get_functiondef(to_regprocedure('public.current_workspace_id(uuid)')))
+  AS current_workspace_authority_fingerprint,
+ (SELECT count(*) FROM public.workspaces) AS existing_workspace_count,
+ (SELECT count(*) FROM public.workspace_members WHERE active)
+  AS existing_active_membership_count,
+ (SELECT creation_enabled FROM private.ws01_lifecycle_flags WHERE id IS TRUE)
+  AS creation_enabled,
+ (SELECT selection_enabled FROM private.ws01_lifecycle_flags WHERE id IS TRUE)
+  AS selection_enabled,
+ 'B1_ONLY_POSTCHECK_PASS__NO_PUBLIC_LIFECYCLE_RPC'::text
+  AS verification_status;
