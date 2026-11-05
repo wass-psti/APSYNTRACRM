@@ -139,3 +139,9 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b2-board-acl-integration-candidate.sql
       - name: Prove platform ceiling, Viewer denial, resource ACL and revoked-session integration
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-acl-integration-acceptance.sql
+      - name: Reproduce existing standard and configured board creation functions
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-create-fixture.sql
+      - name: Stage signed edit ceiling for both board creation functions
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b2-board-create-ceiling-candidate.sql
+      - name: Verify Member/Admin creation, Viewer denial, scope, audit and rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-create-acceptance.sql
