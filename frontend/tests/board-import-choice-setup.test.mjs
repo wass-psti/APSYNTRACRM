@@ -104,6 +104,43 @@ test('denied role, stale revision, and foreign workspace never submit a schema m
   assert.equal(calls.some(x=>x.name==='wm_board_schema_mutate'),false);
  }
 });
+test('ambiguous configured-column mutation cannot be retried without verifying board state',async()=>{
+ for(const mode of ['network','server','receipt','readback']){
+  const {api,calls}=fixture();
+  let mutations=0,reads=0;
+  const originalRpc=api.rpc,originalBoard=api.board;
+  api.rpc=async(name,args)=>{
+   if(name==='wm_board_schema_mutate'){
+    mutations++;
+    if(mode==='network')throw new TypeError('Failed to fetch');
+    if(mode==='server'){
+     const error=new Error('Upstream response lost');error.status=503;throw error;
+    }
+    if(mode==='receipt')return {action:'create',board_id:boardId,column_id:'invalid'};
+   }
+   return originalRpc(name,args);
+  };
+  api.board=async(...args)=>{
+   reads++;
+   if(mode==='readback'&&reads===2)throw new Error('Lost read-back connection');
+   return originalBoard(...args);
+  };
+  await assert.rejects(()=>provisionImportChoiceColumn({
+   api,auth,boardId,detail,sheet,source:'Status',type:'status',name:'Status'
+  }),error=>error.schemaOutcomeUncertain===true&&/refresh the board/.test(error.message));
+  assert.equal(mutations,1,'one writer call; no blind retry in '+mode);
+ }
+});
+test('definitive schema CAS denial is distinct from an uncertain server outcome',async()=>{
+ const {api}=fixture();
+ api.rpc=async(name)=>{
+  if(name==='wm_board_ui_read')return {board_id:boardId};
+  const error=new Error('Board revision is stale');error.status=409;throw error;
+ };
+ await assert.rejects(()=>provisionImportChoiceColumn({
+  api,auth,boardId,detail,sheet,source:'Status',type:'status',name:'Status'
+ }),error=>error.status===409&&error.schemaOutcomeUncertain!==true);
+});
 test('UI has manager-only choice setup with explicit warning, consent, and no automatic import submission',()=>{
  const ui=readFileSync('frontend/board-import-ui.js','utf8');
  assert.match(ui,/Configure new Status/);
@@ -112,5 +149,6 @@ test('UI has manager-only choice setup with explicit warning, consent, and no au
  assert.match(ui,/data-imp-choice-consent/);
  assert.match(ui,/data-imp-choice-name/);
  assert.match(ui,/provisionImportChoiceColumn/);
+ assert.match(ui,/schemaOutcomeUncertain/);
  assert.match(ui,/state\.allowColumns=false;state\.choiceConsent=\{\}/);
 });
