@@ -123,6 +123,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-revoke-denial.sql
       - name: Verify bounded invitation sends, recipient quota and retry suppression
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-rate-limits.sql
+      - name: Stage private default-deny provider receipt and audit contract
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b3-delivery-receipt-candidate.sql
+      - name: Verify provider accepted, uncertain, replay, foreign actor and expired session
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-delivery-receipt-acceptance.sql
       - name: Stage private additive workspace permission ceiling
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-permission-ceiling-candidate.sql
       - name: Verify viewer-write denial, admin gating and workspace scope
