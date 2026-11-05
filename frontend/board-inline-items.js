@@ -82,9 +82,14 @@ export function statusColorClass(color){
   '#4f7df3':'board-status-color-blue',
   '#e64f70':'board-status-color-rose',
   '#22c55e':'board-status-color-green',
+  '#23b784':'board-status-color-green',
   '#f59e0b':'board-status-color-amber',
+  '#d9a227':'board-status-color-amber',
   '#ef4444':'board-status-color-red',
-  '#8b5cf6':'board-status-color-purple'
+  '#8b5cf6':'board-status-color-purple',
+  '#6d5bd0':'board-status-color-purple',
+  '#2a9bb8':'board-status-color-cyan',
+  '#d54a9c':'board-status-color-pink'
  })[safe]||'board-status-color-neutral';
 }
 export function visibleValue(value,type,config={}){
