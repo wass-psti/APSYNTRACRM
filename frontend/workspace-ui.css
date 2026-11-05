@@ -11,8 +11,8 @@
 .ws01-overlay button:focus-visible,.ws01-overlay input:focus-visible,
 .ws01-topbar-launch:focus-visible{outline:2px solid #5d64ec;outline-offset:3px}
 #app .aps-sidebar .ws01-switcher-button .sidebar-workspace-copy{display:block}
-#app .aps-sidebar .ws01-switcher-button .workspace-name,
-#app .aps-sidebar .ws01-switcher-button .workspace-sub{display:block}
+#app .aps-sidebar .ws01-switcher-button .workspace-name{display:block}
+#app .aps-sidebar .ws01-switcher-button .workspace-sub{display:flex}
 #app .aps-sidebar .ws01-chevron{font-size:18px;color:#737eab;margin-left:auto}
 .ws01-topbar-launch{
  display:none;align-items:center;gap:5px;border:1px solid #dfe4f6;
