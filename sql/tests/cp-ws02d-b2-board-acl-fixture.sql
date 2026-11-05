@@ -10,8 +10,10 @@ BEGIN
  THEN RAISE EXCEPTION 'WS02D/B2 baseline fixture collision'
    USING ERRCODE='42501'; END IF;
 END $pre$;
+-- Prior disposable Auth fixture can already define platform_role.
+-- Only supply it when absent; keep existing prior-stage schema intact.
 ALTER TABLE public.profiles
- ADD COLUMN platform_role text NOT NULL DEFAULT 'employee';
+ ADD COLUMN IF NOT EXISTS platform_role text NOT NULL DEFAULT 'employee';
 CREATE TABLE public.work_board_members(
  board_id uuid NOT NULL REFERENCES public.work_boards(id),
  user_id uuid NOT NULL REFERENCES public.profiles(id),
