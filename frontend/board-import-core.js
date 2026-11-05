@@ -13,6 +13,12 @@ export const CREATABLE_IMPORT_TYPES=Object.freeze([
 const creatable=new Set(CREATABLE_IMPORT_TYPES);
 const allowedTypes=new Set([...creatable,'status','dropdown']);
 const deny=(msg,status=400)=>{throw new ApiError(msg,status);};
+const uncertainImport=()=>{
+ const error=new ApiError(
+  'Import outcome is uncertain. Do not retry this request. Close the wizard, refresh the board, and check its activity log before starting a new import.',409);
+ error.importOutcomeUncertain=true;
+ throw error;
+};
 const clean=s=>String(s??'').trim();
 const key=s=>clean(s).toLocaleLowerCase();
 const matchText=s=>key(s);
@@ -244,15 +250,30 @@ export async function executeBoardImport({api,auth,plan}={}){
  const liveSession=await api.rpc('wm_board_ui_read',{p_board_id:plan.boardId});
  if(liveSession?.board_id!==plan.boardId)
   deny('Active signed board session could not be verified.',403);
- const receipt=await api.rpc('wm_import_board_wizard_atomic',{
-  p_board_id:plan.boardId,p_expected_updated_at:plan.boardRevision,p_payload:plan.payload
- });
+ let receipt;
+ try{
+  receipt=await api.rpc('wm_import_board_wizard_atomic',{
+   p_board_id:plan.boardId,p_expected_updated_at:plan.boardRevision,p_payload:plan.payload
+  });
+ }catch(error){
+  // An authorization/validation/CAS rejection is atomic and safe to correct.
+  // A connection failure or HTTP 5xx may happen AFTER the server committed.
+  const status=Number(error?.status);
+  if(!Number.isInteger(status)||status<400||status>=500)uncertainImport();
+  throw error;
+ }
  if(!receipt||!['created','updated','skipped','columnsCreated','groupsCreated'].every(k=>
     Number.isSafeInteger(receipt[k])&&receipt[k]>=0)||
    receipt.created+receipt.updated+receipt.skipped!==plan.preview.rowCount)
-  deny('Import receipt is uncertain. Refresh the board and review audit events before retrying.',409);
- const after=await api.context();
- if(after.user_id!==ctx.user_id||after.workspace_id!==ctx.workspace_id)
-  deny('Signed session changed; verify the board and audit before proceeding.',409);
+  uncertainImport();
+ try{
+  const after=await api.context();
+  if(after.user_id!==ctx.user_id||after.workspace_id!==ctx.workspace_id)
+   uncertainImport();
+ }catch{
+  // A verified writer receipt must never be converted into a retryable error
+  // merely because the post-commit identity refresh failed.
+  uncertainImport();
+ }
  return receipt;
 }
