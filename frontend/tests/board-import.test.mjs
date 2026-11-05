@@ -89,7 +89,7 @@ test('duplicate Skip and Update review keys within the selected Group',()=>{
 test('duplicate headers, duplicate match keys and ambiguous destination keys reject',()=>{
  const duplicateRows={...sheet,rows:[['Alice','25','yes'],['Alice','28','yes']]};
  assert.throws(()=>buildImportPlan({sheet:duplicateRows,detail,mappings:existingMaps,group,
-  matches:{behavior:'skip',matchColumnId:'item'}}),/duplicates another/);
+  matches:{behavior:'skip',matchColumnId:'item'}}),/Duplicate-match key appears twice/);
  const multiple={...detail,items:[
   {id:'66666666-6666-4666-8666-666666666666',group_id:groupId,title:'Alice'},
   {id:'77777777-7777-4777-8777-777777777777',group_id:groupId,title:'alice'}]};
