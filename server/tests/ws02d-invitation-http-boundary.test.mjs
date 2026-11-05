@@ -28,7 +28,7 @@ function post(body=draft,headers={}){
  });
 }
 function build(overrides={}){
- const calls={verified:0,issued:0,sent:0};
+ const calls={verified:0,issued:0,sent:0,recorded:0};
  const verifySignedActor=async jwt=>{
   calls.verified++;
   assert.equal(jwt,token);
@@ -46,11 +46,21 @@ function build(overrides={}){
  const sendEmail=async message=>{
   calls.sent++;
   assert.match(message.text,/#\/invitations\/accept\//);
-  return {accepted:true};
+  return {accepted:true,providerMessageId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'};
+ };
+ const recordDeliveryOutcome=async receipt=>{
+  calls.recorded++;
+  assert.equal(receipt.invitationId,invitationId);
+  assert.ok(['provider-accepted','delivery-uncertain'].includes(receipt.state));
+  if(receipt.state==='provider-accepted'){
+   assert.equal(receipt.providerMessageId,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+  }else assert.equal(receipt.providerMessageId,null);
+  return {persisted:true};
  };
  return {
   calls,handler:createTrustedInvitationHttpBoundary({
    enabled:true,verifySignedActor,issueForAuthorizedActor,sendEmail,
+   recordDeliveryOutcome,
    ...overrides
   })
  };
@@ -61,7 +71,7 @@ test('endpoint disabled by default; no provider or authorization callback execut
  const response=await handler(post());
  assert.equal(response.status,503);
  assert.equal((await response.json()).state,'unavailable');
- assert.deepEqual(calls,{verified:0,issued:0,sent:0});
+ assert.deepEqual(calls,{verified:0,issued:0,sent:0,recorded:0});
 });
 test('CORS exact origin and HTTP method enforce zero side effects',async()=>{
  const {calls,handler}=build();
@@ -75,7 +85,7 @@ test('CORS exact origin and HTTP method enforce zero side effects',async()=>{
  assert.equal(preflight.headers.get('access-control-allow-origin'),origin);
  const get=await handler(new Request(url,{method:'GET',headers:{origin}}));
  assert.equal(get.status,405);
- assert.deepEqual(calls,{verified:0,issued:0,sent:0});
+ assert.deepEqual(calls,{verified:0,issued:0,sent:0,recorded:0});
 });
 test('missing/incorrect JWT and non-verified session fail before issue',async()=>{
  const {calls,handler}=build();
@@ -140,8 +150,15 @@ test('verified user -> signed private issuance -> mock provider, no secret respo
  assert.deepEqual(await response.json(),{
   state:'delivery-submitted',invitationId
  });
- assert.deepEqual(calls,{verified:1,issued:1,sent:1});
+ assert.deepEqual(calls,{verified:1,issued:1,sent:1,recorded:1});
 });
+test('durable delivery ledger adapter is mandatory before issuance',async()=>{
+ const {calls,handler}=build({recordDeliveryOutcome:undefined});
+ const r=await handler(post());
+ assert.equal(r.status,503);
+ assert.deepEqual(calls,{verified:0,issued:0,sent:0,recorded:0});
+});
+
 test('database and provider errors produce uniform denial without secret exposure',async()=>{
  for(const overrides of [
   {issueForAuthorizedActor:async()=>{throw new Error('secret '+inviteToken);}},
