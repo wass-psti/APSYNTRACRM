@@ -145,3 +145,5 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b2-board-create-ceiling-candidate.sql
       - name: Verify Member/Admin creation, Viewer denial, scope, audit and rollback
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-create-acceptance.sql
+      - name: Verify independent domain RBAC AND workspace ceiling without real records
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-independent-domain-ceiling-disposable.sql
