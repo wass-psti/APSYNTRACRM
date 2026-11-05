@@ -62,8 +62,8 @@ Ownership transfer must be accepted by an eligible member, atomic and audited, a
 | Gate | Acceptance focus | Current classification |
 | --- | --- | --- |
 | CP-WS-02A | Existing auth/role/workspace contracts, security architecture | **IMPLEMENTED-UNVERIFIED**: live inventory and design documented; unsafe signup trigger is a known blocker |
-| CP-WS-02B | New-user Main Workspace idempotent verified-email provisioning | **PENDING** |
-| CP-WS-02C | Ordinary-member workspace ownership + audited creation | **IMPLEMENTED-UNVERIFIED**: isolated PG17 candidate and negative tests; production still disabled |
+| CP-WS-02B | New-user Main Workspace idempotent verified-email provisioning | **IMPLEMENTED-UNVERIFIED**: dormant private candidate and isolated PG17 pass; no Auth trigger |
+| CP-WS-02C | Ordinary-member workspace ownership + audited creation | **IMPLEMENTED-UNVERIFIED**: verified-email ordinary-member PG17 pass; production disabled |
 | CP-WS-02D | Single-use invitation lifecycle, accepted recipient membership | **PENDING** |
 | CP-WS-02E | Multi-membership, secure switching and restoration | **PENDING** |
 | CP-WS-02F | Ownership transfer, delegated admins, removal, archival | **PENDING** |
