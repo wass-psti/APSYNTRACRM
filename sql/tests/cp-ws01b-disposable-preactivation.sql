@@ -34,6 +34,19 @@ END $preflight$;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',false);
 SELECT set_config('request.jwt.claim.session_id','aaaaaaaa-0000-4000-8000-000000000001',false);
+DO $fixture_identity$
+DECLARE details jsonb := public.ws01_fixture_auth_diagnostics();
+BEGIN
+ RAISE NOTICE 'Synthetic signed fixture checks: %', details;
+ IF details->>'actor_present'<>'true'
+  OR details->>'session_claim_present'<>'true'
+  OR details->>'signed_session_guard'<>'true'
+  OR details->>'active_profile'<>'true'
+  OR details->>'active_membership'<>'true'
+ THEN RAISE EXCEPTION 'Disposable fixture signed-session prerequisite failed: %',
+  details USING ERRCODE='42501';
+ END IF;
+END $fixture_identity$;
 DO $signed$
 DECLARE snap jsonb;
 BEGIN
