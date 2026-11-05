@@ -25,7 +25,7 @@ for(const entry of manifest.functions){
  const patched=segment.slice(0,-2);
  const g=guard(entry.action);
  if(patched.split(g).length!==2)fail('single inserted guard expected '+entry.name);
- const original=patched.replace(g,'');
+ const original=patched.replace('\n'+g,'');
  if(!original.startsWith('CREATE OR REPLACE FUNCTION '+entry.signature.split('(')[0]+'('))
  fail('signature changed '+entry.name);
  if(createHash('md5').update(original).digest('hex')!==entry.fingerprint)fail('source drift '+entry.name);
