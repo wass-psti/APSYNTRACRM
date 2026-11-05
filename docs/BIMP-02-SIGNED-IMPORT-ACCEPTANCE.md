@@ -63,3 +63,16 @@ No production SQL, credentials, user roles, permissions, or existing board recor
 - Production migration: IMPLEMENTED-UNVERIFIED (candidate only).
 - Genuine live signed-session acceptance: BLOCKED on approval and appropriate nonproduction fixture / signed browser context.
 - Production certification: PENDING.
+
+## BIMP-02 continuation — production-side preflight defense in depth
+
+Date: 2026-11-05
+
+- Commit c1c8273dee943ca73233fd0399998965085cdad2 adds a mandatory `wm_board_ui_read` call immediately before `wm_import_board_wizard_atomic` in the ordinary-board frontend. This read-only RPC enforces signed `auth.sessions` membership and board viewing permissions on the server. The returned `board_id` must equal the intended board or the client stops without a write.
+- Commit 72e1d7dfdb8f800550d61f9ce68f1466f52c0ddc updates the automated test matrix: verified import invokes an active-session read before exactly one writer call, while revoked/expired-simulation errors and invalid preflight board IDs cause zero import RPC invocations.
+- CI: https://github.com/wass-psti/APSYNTRACRM/actions/runs/41967088948 — 942/942 Node frontend tests PASS; frontend and disposable database jobs PASS, including live-Pages validation.
+- A subsequent read-only inspection of production function metadata verified that `wm_board_ui_read` is authenticated-only and calls the hardened signed-session validator; the current `wm_import_board_wizard_atomic` remains the earlier MD5 1f928b22da5c2e762999fcd87f53484f.
+
+**Important security boundary:** The browser preflight protects ordinary UI-driven imports but is NOT a security boundary against an attacker invoking the import RPC directly or a session revoked between the read and write. Only an unconditional active-session check inside the transactional import writer closes that gap. The reviewed candidate SQL remains undeployed. No production credentials, roles, policies, sessions, rows, or schemas were changed during this continuation.
+
+**Live browser gate:** The connected browser could not be read from this ChatGPT context (originating-browser-context requirement). Therefore no genuine signed Pages CSV/XLSX upload, read-after-refresh, production audit, or signed HTTP revocation/foreign-workspace test was performed. These requirements remain PENDING/BLOCKED, not PASS.
