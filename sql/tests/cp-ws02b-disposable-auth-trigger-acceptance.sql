@@ -9,6 +9,8 @@ BEGIN
   OR (SELECT count(*) FROM private.ws02_new_account_admissions)<>0
   OR (SELECT count(*) FROM private.ws02_personal_workspaces)<>0
   OR to_regprocedure('public.wm_ws01_select(uuid,uuid)') IS NOT NULL
+  OR to_regclass('private.ws02_activation_flags') IS NULL
+  OR (SELECT count(*) FROM private.ws02_activation_flags WHERE id AND signup_enabled IS FALSE)<>1
   OR pg_get_functiondef(to_regprocedure('public.handle_new_user()'))
       LIKE '%admin_general_manager%'
   OR pg_get_functiondef(to_regprocedure('public.ensure_default_workspace_membership()'))
@@ -18,6 +20,27 @@ BEGIN
 END $pre$;
 
 BEGIN;
+-- Installation is not approval: direct Auth signup must be denied by the
+-- dormant private activation flag, regardless of frontend button state.
+DO $off$
+BEGIN
+ BEGIN
+  INSERT INTO auth.users(id,email,email_confirmed_at,is_anonymous)
+  VALUES('55555555-5555-4555-8555-555555555555',
+   'blocked-signup@example.invalid',NULL,false);
+  RAISE EXCEPTION 'Dormant migration unexpectedly enabled signup'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ IF EXISTS(SELECT 1 FROM auth.users
+  WHERE id='55555555-5555-4555-8555-555555555555')
+ OR EXISTS(SELECT 1 FROM public.profiles
+  WHERE id='55555555-5555-4555-8555-555555555555')
+ THEN RAISE EXCEPTION 'Denied signup persisted an identity or profile'; END IF;
+END $off$;
+
+-- Synthetic activation is transaction-scoped and rolled back at test end.
+UPDATE private.ws02_activation_flags SET signup_enabled=true WHERE id IS TRUE;
+
 -- Unverified new account: PENDING profile and no automatically joined workspace.
 INSERT INTO auth.users(id,email,email_confirmed_at,is_anonymous,raw_user_meta_data)
  VALUES('77777777-7777-4777-8777-777777777777',
@@ -203,6 +226,7 @@ BEGIN
  OR (SELECT count(*) FROM private.ws02_new_account_admissions)<>0
  OR (SELECT count(*) FROM private.ws02_personal_workspaces)<>0
  OR (SELECT count(*) FROM private.ws02_provision_events)<>0
+ OR (SELECT signup_enabled FROM private.ws02_activation_flags WHERE id IS TRUE)
  OR (SELECT count(*) FROM public.profiles)<>5
  OR (SELECT count(*) FROM private.ws01_events)<>0
  THEN RAISE EXCEPTION 'WS02B signup fixture rollback failed'; END IF;
