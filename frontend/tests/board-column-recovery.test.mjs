@@ -143,3 +143,25 @@ test('UI accurately reports populated column and keeps recovery disabled until a
  assert.match(app,/renderBoardColumnRecoveryList\(boardHistory\.recoveries\)/);
  assert.match(inline,/\.filter\(x=>x.column_id===columnId\)\.length/);
 });
+
+test('specific backend deletion failures have accurate, actionable classifications',()=>{
+ const reasons=[
+  ['COL_DELETE_PROTECTED_COLUMN','42501',403,'protected'],
+  ['COL_RESTORE_SNAPSHOT_INTEGRITY','42501',403,'protected'],
+  ['COL_RESTORE_SNAPSHOT_UNAVAILABLE','42501',409,'no pending recovery snapshot'],
+  ['COL_DELETE_BOARD_NOT_FOUND','42501',404,'Board is unavailable'],
+  ['COL_RESTORE_BOARD_NOT_FOUND','42501',404,'Board is unavailable'],
+  ['COL_DELETE_FOREIGN_ITEM_BOUNDARY','42501',409,'invalid board relationships'],
+  ['COL_DELETE_CONFIRMATION_REQUIRED','22023',400,'confirmation did not match']
+ ];
+ for(const [reason,sqlstate,status,explanation] of reasons){
+  const result=explainColumnDeleteError(new ApiError(reason,400,sqlstate));
+  assert.equal(result.status,status,reason);
+  assert.match(result.message,new RegExp(explanation,'i'),reason);
+  assert.doesNotMatch(result.message,/private recovery tables|SQLSTATE|secret/);
+ }
+ const permission=explainColumnDeleteError(new ApiError(
+  'COL_DELETE_AUTHORIZATION_DENIED',403,'42501'));
+ assert.equal(permission.status,403);
+ assert.match(permission.message,/signed session/);
+});
