@@ -46,7 +46,7 @@ DECLARE
  v_email text:=pg_catalog.lower(coalesce(NEW.email,''));
  v_verified boolean:=NEW.email_confirmed_at IS NOT NULL AND NEW.is_anonymous IS FALSE;
  v_name text:=pg_catalog.left(coalesce(
-  pg_catalog.nullif(pg_catalog.btrim(NEW.raw_user_meta_data->>'display_name'),''),
+  nullif(pg_catalog.btrim(NEW.raw_user_meta_data->>'display_name'),''),
   pg_catalog.split_part(v_email,'@',1)
  ),120);
 BEGIN
