@@ -137,3 +137,24 @@ No separate Supabase project, second login, direct client table access, producti
 **Still required:** inspect a new [CP-WS-01B disposable PG17 workflow](https://github.com/wass-psti/APSYNTRACRM/actions/workflows/cp-ws01b-disposable-postgres.yml) run containing all fixes, confirm each test phase and the native Node suite green; investigate any remaining failure using its actual job logs. The current GitHub connector does not expose push-triggered workflow run IDs or their logs, and the environment does not have a local PostgreSQL server, so end-to-end runtime PASS cannot yet be attested. **Gate remains IMPLEMENTED-UNVERIFIED pending a confirmed new green workflow.**
 
 **Production state:** zero production changes to Supabase schema, roles, workspace membership, authentication, permissions, or data. The dangerous current-workspace cutover remains disabled; production activation requires its own approval and broader signed-session acceptance.
+
+## CP-WS-01B — Disposable PostgreSQL runtime acceptance VERIFIED (2026-11-05)
+
+**Latest independently inspected green evidence:** [Actions run #21](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41964302674), exact head commit `6476258e5941c6f3bc781aecada1d3395c16357f`. Run and job both returned `completed / success`; PostgreSQL container was **17.x**. Every fixture/install/authorization/lifecycle step returned `success`.
+
+**Node acceptance:** `node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs` executed natively in the runner with **19 tests passed, 0 failed**.
+
+**PostgreSQL acceptance:** actual `psql -X -v ON_ERROR_STOP=1` against disposable PostgreSQL 17 confirmed:
+- Private lifecycle schema, signed membership discovery RPC, and inactive session-selection cutover install cleanly.
+- Default private-table RLS and privilege denial: PASS.
+- Valid synthetic five-group GoTrue session UUID, authenticated membership and server-side signed discovery: PASS.
+- Transactional workspace creation, owner classification, idempotency, privacy validation, rejected invalid inputs, and discovery after creation: PASS.
+- Open workspace does not disclose unjoined workspace content, signed member/collaborator isolation: PASS.
+- Session workspace switch, board-level isolation, stale expected-workspace CAS denial, second independent session: PASS.
+- Foreign-workspace selection denied, revoked/expired session denied, membership revocation and reactivation do not restore a stale selection: PASS.
+- Event/audit counts, no anonymous write grants and no direct authenticated workspace-table grants: PASS.
+- Final log line `CP-WS-01B all disposable acceptance gates PASS`.
+
+**Root cause of earlier red CI runs:** the synthetic session-guard regex was missing one of the five canonical UUID groups, causing `private.wm_board_config_session_active()` to deny every valid fixture session even though user, profile and membership checks were correct. Reconstructed the disposable SQL fixture to remove accidentally duplicated/truncated diagnostics, corrected the regex, and added a permanent fixture-integrity test that validates both canonical UUID acceptance and single-instance fixture initialization. Fix commit `56c38a6d4ce634a46a7c19a8378925399c10df3e`; guard-test commit `6476258e5941c6f3bc781aecada1d3395c16357f`.
+
+**Outcome:** The **CP-WS-01B disposable PostgreSQL runtime acceptance gate is VERIFIED / PASS**. Historical failures remain in Actions history, but new run #21 proves the corrected source. This supersedes earlier entries in this document that classified disposable runtime evidence as blocked/unverified. No new production Supabase schema, permission, membership, role or record changes were applied. The production rollout remains a separate controlled process: B1 additive schema, B2 signed discovery grants, B3 creation, and B4 high-risk session switching (62 existing dependent function definitions), each with its own authorization and production signed-session acceptance.
