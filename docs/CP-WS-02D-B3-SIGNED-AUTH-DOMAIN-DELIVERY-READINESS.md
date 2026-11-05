@@ -6,6 +6,10 @@
 
 **Scope:** Existing APSYNTRA CRM repository `wass-psti/APSYNTRACRM`, existing Supabase project `jtlusodorfnyzgyuewkz`, GitHub Pages signed frontend. No change to production PostgreSQL, Supabase Auth sessions, roles, grants, workspace memberships, storage or external email. New source is staged only and default-off. No role ceilings or invitations are deployed.
 
+## Follow-on B3 signed-read/trusted Auth contract — 2026-11-05
+
+[Signed-read and trusted contract report](./CP-WS-02D-B3-SIGNED-READ-TRUSTED-CONTRACT.md) records [PG17/Node CI #176](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42007719449) **SUCCESS**. Concrete server-only, default-disabled GoTrue user lookup and strictly parameterized live-session SQL adapters now compose with the existing fail-closed identity verifier. Tests validate allowed `sb_publishable_` key use, exact Supabase HTTPS host, redacted Auth response, bad/expired/mismatched/revoked identities, and disabled defaults. The trusted SELECT was validated on production with invented nonmember UUIDs only; no genuine signed JWT, external provider, private issuer or backend deployment was used. **The original 5/10 development/readiness criteria remain unchanged**, as genuine signed read/production integration remains pending.
+
 ## 1. Evidence verified now
 
 | Area | Evidence | Result |
