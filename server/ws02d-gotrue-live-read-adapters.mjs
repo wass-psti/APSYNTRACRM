@@ -12,7 +12,7 @@ import {createGoTrueActorVerifier}
  * Issuance must independently recheck role, session and workspace authority
  * INSIDE its own eventual database transaction; this is only a preflight.
  */
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const TOKEN=/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 export const WS02D_LIVE_READ_ADAPTERS_ENABLED=false;
 
