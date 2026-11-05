@@ -188,3 +188,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-employee-eval-positive-fixture.sql
       - name: Verify Employee Evaluation authorized transactions, CAS, review, scope and Viewer denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-employee-eval-valid-write-acceptance.sql
+      - name: Stage synthetic Order Intake currency, financial, audit and idempotency schema
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-order-intake-positive-fixture.sql
+      - name: Verify Order Intake authorized create/update/status/archive/restore and denied writes
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-order-intake-valid-write-acceptance.sql
