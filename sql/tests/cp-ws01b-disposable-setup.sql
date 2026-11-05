@@ -7,8 +7,10 @@ CREATE SCHEMA private;
 GRANT USAGE ON SCHEMA auth,private TO authenticated;
 CREATE TABLE auth.users(
  id uuid PRIMARY KEY,
+ email text NOT NULL DEFAULT 'fixture@example.invalid',
  email_confirmed_at timestamptz DEFAULT now(),
- is_anonymous boolean NOT NULL DEFAULT false
+ is_anonymous boolean NOT NULL DEFAULT false,
+ raw_user_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 CREATE TABLE auth.sessions(
  id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES auth.users(id),
@@ -21,6 +23,9 @@ CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE
   nullif(current_setting('request.jwt.claim.session_id',true),'')) $$;
 CREATE TABLE public.profiles(
  id uuid PRIMARY KEY REFERENCES auth.users(id),
+ email text NOT NULL DEFAULT '',
+ display_name text,
+ email_verified_at timestamptz,
  status text NOT NULL DEFAULT 'active'
 );
 CREATE TABLE public.workspaces(
