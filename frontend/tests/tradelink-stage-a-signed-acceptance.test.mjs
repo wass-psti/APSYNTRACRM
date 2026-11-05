@@ -138,3 +138,15 @@ test('Access acceptance action is wired, signed, route-isolated and cleared on l
  assert.match(app,/state\.tl03ReadResult=null;state\.context=null/);
  assert.match(smoke,/frontend\/tradelink-stage-a-signed-acceptance\.js/);
 });
+
+test('foreign-workspace eligibility is a nonsecret read-only inventory, never a substituted signed test',()=>{
+ const sql=readFileSync('sql/tests/cp-tl03c-foreign-workspace-eligibility.sql','utf8');
+ assert.match(sql,/public\.workspace_members/);
+ assert.match(sql,/public\.profiles/);
+ assert.match(sql,/auth\.sessions/);
+ assert.match(sql,/BLOCKED_NO_ACTIVE_FOREIGN_MEMBERS/);
+ assert.match(sql,/CANDIDATE_ONLY__GENUINE_SIGNED_USER_ACCEPTANCE_STILL_REQUIRED/);
+ assert.match(sql,/NO_WRITES__NO_MEMBERSHIP_CHANGES__NO_IMPERSONATION/);
+ assert.doesNotMatch(sql,/^\s*(?:CREATE|ALTER|DROP|TRUNCATE|INSERT|UPDATE|DELETE|GRANT|REVOKE|COPY|CALL)\b/im);
+ assert.doesNotMatch(sql,/\b(?:m\.user_id|pr\.email|s\.id)\s+AS\s+\w+/i);
+});
