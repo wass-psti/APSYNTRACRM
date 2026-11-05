@@ -94,6 +94,22 @@ BEGIN
    RAISE EXCEPTION 'Protected column was deleted' USING ERRCODE='P9999';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  END LOOP;
+ -- The API must reject archived and application-protected boards, even if
+ -- the caller is the signed board owner and the column key is custom.
+ INSERT INTO private.wm_board_protected_ids(board_id) VALUES (b);
+ BEGIN
+  PERFORM public.wm_delete_board_column_recoverable(
+   b,c,board_version,4,'DELETE Recorded status');
+  RAISE EXCEPTION 'Protected application board deleted' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ DELETE FROM private.wm_board_protected_ids WHERE board_id=b;
+ UPDATE public.work_boards SET status='archived' WHERE id=b;
+ BEGIN
+  PERFORM public.wm_delete_board_column_recoverable(
+   b,c,board_version,4,'DELETE Recorded status');
+  RAISE EXCEPTION 'Archived board deleted' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ UPDATE public.work_boards SET status='active' WHERE id=b;
  IF (SELECT count(*) FROM private.wm_recoverable_deleted_columns)<>0
  OR NOT EXISTS(SELECT 1 FROM public.work_board_item_values WHERE column_id=c) THEN
   RAISE EXCEPTION 'Preflight denied writes changed data'; END IF;
@@ -123,6 +139,15 @@ BEGIN
    AND (payload->>'value_rows')::int=4
    AND actor_id=owner)
  THEN RAISE EXCEPTION 'Deletion UI/audit receipt absent'; END IF;
+ -- Restoring onto a newly protected board is also denied with its
+ -- original snapshot and all value rows unchanged.
+ INSERT INTO private.wm_board_protected_ids(board_id) VALUES(b);
+ BEGIN
+  PERFORM public.wm_restore_board_column_recoverable(
+   b,deletion,(deleted->>'updated_at')::timestamptz);
+  RAISE EXCEPTION 'Protected application board restored' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ DELETE FROM private.wm_board_protected_ids WHERE board_id=b;
  listed:=public.wm_list_recoverable_board_columns(b);
  IF jsonb_array_length(listed)<>1 OR listed->0->>'name'<>'Recorded status'
  OR (listed->0->>'restorable')::boolean IS DISTINCT FROM true

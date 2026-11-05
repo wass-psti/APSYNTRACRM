@@ -30,6 +30,8 @@ export function explainColumnDeleteError(error){
  const message=String(error?.message||'');
  // Server emits stable SQLSTATE plus domain-specific reason. Distinguish
  // protected objects, unavailable snapshots and true authorization denial.
+ if(/COL_(DELETE|RESTORE)_PROTECTED_BOARD/.test(message))
+  return new ApiError('This archived or application-protected board cannot change or restore columns.',403,code);
  if(/COL_DELETE_PROTECTED_COLUMN|COL_RESTORE_SNAPSHOT_INTEGRITY/.test(message))
   return new ApiError('The required Item or application-owned column is protected and cannot be removed.',403,code);
  if(/COL_RESTORE_SNAPSHOT_UNAVAILABLE/.test(message))

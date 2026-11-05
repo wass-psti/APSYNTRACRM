@@ -1,6 +1,7 @@
 -- CP-BOARD-CONFIG01: extend only the disposable COL01 fixture (not production).
 \set ON_ERROR_STOP on
 CREATE SCHEMA IF NOT EXISTS private;
+ALTER TABLE public.work_boards ADD COLUMN description text NOT NULL DEFAULT '';
 ALTER TABLE public.work_boards
  ADD COLUMN status text NOT NULL DEFAULT 'active',
  ADD COLUMN name text NOT NULL DEFAULT 'Demo Board',
@@ -10,6 +11,22 @@ UPDATE public.work_boards SET
  name=CASE WHEN id='30000000-0000-4000-8000-000000000001' THEN
    'TimeTracker Attendance' ELSE 'Foreign Board' END,
  updated_by='20000000-0000-4000-8000-000000000001';
+
+-- Reproduce the live protected-board predicate verbatim in the isolated fixture.
+CREATE TABLE private.wm_board_protected_ids(
+ board_id uuid PRIMARY KEY REFERENCES public.work_boards(id));
+CREATE OR REPLACE FUNCTION private.wm_board_is_protected(p_board_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+ SELECT EXISTS(SELECT 1 FROM private.wm_board_protected_ids p WHERE p.board_id=p_board_id)
+ OR EXISTS(SELECT 1 FROM public.work_boards b WHERE b.id=p_board_id
+   AND (b.description LIKE '[APSYNTRA:MODULE:%' OR b.name='APSYNTRA QA'));
+$function$;
+REVOKE ALL ON FUNCTION private.wm_board_is_protected(uuid) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON TABLE private.wm_board_protected_ids FROM PUBLIC,anon,authenticated;
 
 CREATE TABLE public.work_board_columns(
  id uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),

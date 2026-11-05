@@ -12,6 +12,9 @@ BEGIN
  OR to_regprocedure('public.wm_board_schema_mutate(uuid,timestamptz,text,uuid,text,text,jsonb,boolean,boolean)') IS NULL
  OR md5(pg_get_functiondef('public.wm_board_schema_mutate(uuid,timestamptz,text,uuid,text,text,jsonb,boolean,boolean)'::regprocedure))
   <> '7e5ae389363acffa093ad3291314cf2a'
+ OR to_regprocedure('private.wm_board_is_protected(uuid)') IS NULL
+ OR md5(pg_get_functiondef('private.wm_board_is_protected(uuid)'::regprocedure))
+  <> '3e82cd9d78fa7699e5e65f985bd4afa9'
  OR to_regprocedure('public.work_board_log(uuid,text,text,text,text,jsonb)') IS NULL
  OR to_regclass('public.work_board_item_values') IS NULL
  OR to_regclass('public.work_board_columns') IS NULL
@@ -78,6 +81,10 @@ BEGIN
  SELECT * INTO v_board FROM public.work_boards WHERE id=p_board_id FOR UPDATE;
  IF v_board.id IS NULL THEN
   RAISE EXCEPTION 'COL_DELETE_BOARD_NOT_FOUND' USING ERRCODE='42501';
+ END IF;
+ IF v_board.status IS DISTINCT FROM 'active'
+  OR private.wm_board_is_protected(p_board_id) THEN
+  RAISE EXCEPTION 'COL_DELETE_PROTECTED_BOARD' USING ERRCODE='42501';
  END IF;
  IF p_expected_updated_at IS NULL
  OR v_board.updated_at IS DISTINCT FROM p_expected_updated_at THEN
@@ -172,6 +179,10 @@ BEGIN
  SELECT * INTO v_board FROM public.work_boards WHERE id=p_board_id FOR UPDATE;
  IF v_board.id IS NULL THEN
   RAISE EXCEPTION 'COL_RESTORE_BOARD_NOT_FOUND' USING ERRCODE='42501';
+ END IF;
+ IF v_board.status IS DISTINCT FROM 'active'
+  OR private.wm_board_is_protected(p_board_id) THEN
+  RAISE EXCEPTION 'COL_RESTORE_PROTECTED_BOARD' USING ERRCODE='42501';
  END IF;
  IF p_expected_updated_at IS NULL
  OR v_board.updated_at IS DISTINCT FROM p_expected_updated_at THEN
