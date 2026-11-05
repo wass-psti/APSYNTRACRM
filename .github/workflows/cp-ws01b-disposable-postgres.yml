@@ -10,7 +10,9 @@ on:
       - '.github/workflows/cp-ws01b-disposable-postgres.yml'
       - 'sql/cp-ws01-discovery-activation-candidate.sql'
       - 'sql/cp-ws01b-*.sql'
+      - 'sql/cp-ws01c-*.sql'
       - 'sql/tests/cp-ws01b-*.sql'
+      - 'sql/tests/cp-ws01c-*.sql'
       - 'frontend/workspace-ui.js'
       - 'frontend/workspace-lifecycle-client.js'
       - 'frontend/tests/workspace-ui.test.mjs'
@@ -68,10 +70,14 @@ jobs:
         run: node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
-      - name: Install private workspace lifecycle contract
+      - name: Install private B1-only schema (no lifecycle RPCs)
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-lifecycle-contract-candidate.sql
+      - name: Verify isolated B1 schema, zero RPCs, disabled flags
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b1-schema-acceptance.sql
       - name: Install signed member discovery contract
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01-discovery-activation-candidate.sql
+      - name: Stage dormant B3 creation RPC (no authenticated write grants)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01c-b3-create-contract-candidate.sql
       - name: Install inactive workspace-selection cutover
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-session-cutover-candidate.sql
       - name: Verify default-deny grants and preactivation signed reads
