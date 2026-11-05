@@ -15,16 +15,16 @@ const source=readFileSync('frontend/auth-account-flows.js','utf8');
 const css=readFileSync('frontend/auth-experience.css','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 
-test('registration is visibly available but cannot create an account under current unsafe production triggers',()=>{
+test('self-service registration stays disabled until verified personal-workspace admission hardening',()=>{
  assert.equal(REGISTRATION_ADMISSION_ENABLED,false);
- assert.match(REGISTRATION_BLOCKED,/administrator/i);
+ assert.match(REGISTRATION_BLOCKED,/Self-service registration is temporarily unavailable/);
  const markup=renderAuthMarkup({mode:'register',year:2026});
  for(const piece of ['id="register-form"','id="register-name"','id="register-email"',
   'id="register-password"','id="register-confirm"',
   'autocomplete="new-password"','autocomplete="name"','aria-describedby="auth-registration-status"',
   'Create account — pending activation','disabled aria-describedby="auth-registration-status"'])
   assert.ok(markup.includes(piece),piece);
- assert.match(markup,/Registration awaiting administrator activation/);
+ assert.match(markup,/Self-service registration is being secured/);
  assert.match(app,/if\(!REGISTRATION_ADMISSION_ENABLED\)/);
  assert.match(app,/REGISTRATION_BLOCKED/);
  assert.doesNotMatch(source,/auth\/v1\/signup/);
