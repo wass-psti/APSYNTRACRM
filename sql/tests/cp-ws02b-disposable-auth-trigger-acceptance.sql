@@ -217,6 +217,78 @@ BEGIN
  THEN RAISE EXCEPTION 'Unexpected duplicate workspace creation'; END IF;
 END $legacy_unchanged$;
 
+-- Verify a controlled pause and safe repair of pending verified signups.
+INSERT INTO auth.users(id,email,email_confirmed_at,is_anonymous)
+ VALUES('44444444-4444-4444-8444-444444444444',
+  'recovery@example.invalid',NULL,false);
+UPDATE private.ws02_activation_flags SET signup_enabled=false WHERE id IS TRUE;
+UPDATE auth.users SET email_confirmed_at=now()
+ WHERE id='44444444-4444-4444-8444-444444444444';
+DO $paused_verification$
+BEGIN
+ IF (SELECT status FROM public.profiles
+     WHERE id='44444444-4444-4444-8444-444444444444')<>'pending'
+  OR EXISTS(SELECT 1 FROM private.ws02_personal_workspaces
+     WHERE user_id='44444444-4444-4444-8444-444444444444')
+ THEN RAISE EXCEPTION 'Disabled signup flag failed to pause verification'; END IF;
+ BEGIN
+  PERFORM private.ws02_reconcile_verified_admission(
+   '44444444-4444-4444-8444-444444444444');
+  RAISE EXCEPTION 'Reconciliation ignored disabled admission gate'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $paused_verification$;
+
+UPDATE private.ws02_activation_flags SET signup_enabled=true WHERE id IS TRUE;
+DO $safe_repair$
+DECLARE first jsonb; retry jsonb; ws uuid;
+BEGIN
+ first:=private.ws02_reconcile_verified_admission(
+  '44444444-4444-4444-8444-444444444444');
+ retry:=private.ws02_reconcile_verified_admission(
+  '44444444-4444-4444-8444-444444444444');
+ ws:=(first->>'workspaceId')::uuid;
+ IF first->>'idempotent'<>'false'
+ OR retry->>'idempotent'<>'true'
+ OR first->>'workspaceId'<>retry->>'workspaceId'
+ OR (SELECT status FROM public.profiles
+    WHERE id='44444444-4444-4444-8444-444444444444')<>'active'
+ OR (SELECT platform_role FROM public.profiles
+    WHERE id='44444444-4444-4444-8444-444444444444')<>'employee'
+ OR (SELECT count(*) FROM public.workspace_members
+    WHERE workspace_id=ws AND user_id='44444444-4444-4444-8444-444444444444'
+      AND active)<>1
+ OR (SELECT count(*) FROM private.ws01_member_roles
+    WHERE workspace_id=ws AND user_id='44444444-4444-4444-8444-444444444444'
+      AND relation='owner')<>1
+ OR (SELECT count(*) FROM private.ws02_provision_events
+    WHERE workspace_id=ws AND action='workspace.main.provisioned')<>1
+ THEN RAISE EXCEPTION 'Verified admission repair not atomic or idempotent'; END IF;
+END $safe_repair$;
+
+UPDATE public.profiles SET status='disabled'
+ WHERE id='44444444-4444-4444-8444-444444444444';
+DO $safe_repair_denial$
+BEGIN
+ BEGIN
+  PERFORM private.ws02_reconcile_verified_admission(
+   '44444444-4444-4444-8444-444444444444');
+  RAISE EXCEPTION 'Disabled user was repaired without authorization'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM private.ws02_reconcile_verified_admission(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  RAISE EXCEPTION 'Existing account was backfilled by repair helper'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ IF has_function_privilege('authenticated',
+    'private.ws02_reconcile_verified_admission(uuid)','EXECUTE')
+ OR has_function_privilege('anon',
+    'private.ws02_reconcile_verified_admission(uuid)','EXECUTE')
+ THEN RAISE EXCEPTION 'Reconciliation helper leaked client EXECUTE'; END IF;
+END $safe_repair_denial$;
+
 ROLLBACK;
 DO $rollback$
 BEGIN
