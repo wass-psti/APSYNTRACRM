@@ -61,7 +61,9 @@ export function closeWorkspacePanels(){
  returnFocus=null;
 }
 function panel(html,kind){
- closeWorkspacePanels();
+ // Modal transitions retain the original invoker for focus restoration.
+ activeOverlay?.remove();
+ activeOverlay=null;
  const layer=document.createElement('div');
  layer.className='ws01-overlay ws01-'+kind;
  layer.innerHTML=html;
