@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BOARD_STANDARD_COLUMN_CATALOG,SUPPORTED_COLUMN_TYPE_IDS,
- searchStandardColumns,findStandardColumnType,
+ searchStandardColumns,findStandardColumnType,resolveColumnTypeSelection,
  renderColumnTypeOptions,renderColumnCenterCards} from '../board-column-catalog.js';
+import {parseChoiceConfig} from '../board-structure-admin.js';
 import {BOARD_STRUCTURE_TYPES,renderBoardStructureAdmin} from '../board-structure-admin.js';
 import {detectMondayCheckboxMarkers,mondayCheckboxCell} from '../monday-import-compat.js';
 import {buildImportPlan} from '../board-import-core.js';
@@ -55,6 +56,20 @@ test('authorized board structure exposes searchable type cards without changing 
  assert.match(app,/const syncColumnPicker=/);
  assert.match(app,/data-column-catalog-search/);
  assert.match(app,/data-column-type/);
+});
+test('Priority is a functioning configured Status preset, never a fake backend type',()=>{
+ const preset=resolveColumnTypeSelection('priority_preset');
+ assert.equal(preset.type,'status');
+ assert.equal(preset.preset,'priority');
+ const labels=parseChoiceConfig(preset.type,preset.options).options;
+ assert.deepEqual(labels,['Critical','High','Medium','Low']);
+ assert.match(renderColumnCenterCards(),/data-column-type="priority_preset"/);
+ assert.match(renderColumnTypeOptions(),/value="priority_preset"/);
+ assert.equal(findStandardColumnType('priority_preset'),null);
+ assert.throws(()=>resolveColumnTypeSelection('fake_remote_ai'),/Unsupported/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/resolveColumnTypeSelection\(String\(fd\.get\('type'\)/);
+ assert.match(app,/if\(select\.value==='priority_preset'\)/);
 });
 test('monday Checkbox text marker v with blanks is an explicit boolean convention',()=>{
  const sheet={headers:['Name','Checkbox'],rows:[['A','v'],['B',''],['C','V']]};
