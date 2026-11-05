@@ -55,6 +55,20 @@ test('configured colors are accepted only as strict six-digit CSS hex, never CSS
  assert.equal(statusColorClass('#e64f70'),'board-status-color-rose');
  assert.equal(statusColorClass('dangerous-css'),'board-status-color-neutral');
 });
+test('the live PostgreSQL configured eight-color Status palette maps without inline styles',()=>{
+ const expected={
+  '#7f8a9a':'muted','#4f7df3':'blue','#e64f70':'rose',
+  '#23b784':'tealgreen','#6d5bd0':'indigo',
+  '#2a9bb8':'cyan','#d9a227':'gold','#d54a9c':'pink'
+ };
+ const css=readFileSync('frontend/styles.css','utf8');
+ for(const [hex,slug] of Object.entries(expected)){
+  assert.equal(statusColorClass(hex),'board-status-color-'+slug);
+  assert.ok(css.includes('.board-configured-status.board-status-color-'+slug+
+   '{border-left-color:'+hex+'}'));
+ }
+ assert.equal(statusColorClass('rgba(1,2,3,4)'),'board-status-color-neutral');
+});
 test('custom status editor presents named option while saving stable ID through CAS',()=>{
  const html=renderInlineCellEditor({item,key:'col:'+columnId,detail});
  assert.match(html,/data-inline-cell-form/);
