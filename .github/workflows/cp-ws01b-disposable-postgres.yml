@@ -1,0 +1,75 @@
+name: CP-WS-01B Disposable Workspace Lifecycle Acceptance
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-ws01b-disposable-postgres.yml'
+      - 'sql/cp-ws01-discovery-activation-candidate.sql'
+      - 'sql/cp-ws01b-*.sql'
+      - 'sql/tests/cp-ws01b-*.sql'
+      - 'frontend/workspace-ui.js'
+      - 'frontend/tests/workspace-ui.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  workspace-contracts:
+    name: Isolated session, privacy, idempotency and workspace denial (PG17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ws01_ci_only
+          POSTGRES_DB: workspace_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workspace_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: workspace_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable_ws01_ci_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install PostgreSQL client in disposable runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Verify isolated PostgreSQL 17 environment
+        run: |
+          set -euo pipefail
+          test "$PGHOST" = 127.0.0.1
+          test "$PGDATABASE" = workspace_disposable
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'workspace_disposable|t'
+      - name: Stage contracts and run signed synthetic authorization acceptance
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-ws01b-disposable-setup.sql \
+            -f sql/cp-ws01b-lifecycle-contract-candidate.sql \
+            -f sql/cp-ws01-discovery-activation-candidate.sql \
+            -f sql/cp-ws01b-session-cutover-candidate.sql \
+            -f sql/tests/cp-ws01b-disposable-preactivation.sql \
+            -f sql/tests/cp-ws01b-disposable-acceptance.sql
+      - name: Run workspace UI and staged-contract regression tests
+        run: node --test frontend/tests/workspace-ui.test.mjs
