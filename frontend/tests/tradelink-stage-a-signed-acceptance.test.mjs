@@ -16,7 +16,7 @@ const moduleIds=['aps-aims','charter-navigator','employee-eval','fueltrack-plus'
  'fueltrans','fund-released-tracker','material-request-hub','order-intake',
  'time-tracker','tool-traceability','toolbox-issues','tradelink'];
 const denial=()=>new ApiError('Signed TradeLink read denied',403,'42501');
-function makeFixture(scenario='manager',{wrongBoardAllowed=false,brokenList=false}={}){
+function makeFixture(scenario='manager',{wrongBoardAllowed=false,brokenList=false,leakForeignBoard=false}={}){
  const isForeign=scenario==='foreign';
  const isManager=scenario==='manager';
  const boardManage=scenario!=='editor';
@@ -24,7 +24,7 @@ function makeFixture(scenario='manager',{wrongBoardAllowed=false,brokenList=fals
  const workspaceId=isForeign?foreign:primary;
  const profile={status:'active',platform_role:'admin_general_manager'};
  const context={user_id:actor,workspace_id:workspaceId,profile};
- const boardRows=isForeign?[]:[{id:TRADELINK_BOARD_ID,name:'TradeLink',
+ const boardRows=isForeign&&!leakForeignBoard?[]:[{id:TRADELINK_BOARD_ID,name:'TradeLink',
   view:true,edit:true,manage:boardManage,memberRole:boardManage?'owner':'editor'}];
  const snapshot={schemaVersion:1,workspaceId,platformRole:profile.platform_role,
   effectivePlatformRole:'admin',explicitPlatformRole:null,bootstrap:false,
@@ -85,6 +85,12 @@ test('genuine foreign-workspace context is denied without fabricating a target m
  const {report}=await run('foreign');
  assert.equal(report.scenario,'FOREIGN_WORKSPACE_DENIED');
  assert.equal(report.status,'PASS');
+});
+test('foreign-workspace self-permission snapshot must not leak the TradeLink board',async()=>{
+ const {report}=await run('foreign',{leakForeignBoard:true});
+ assert.equal(report.status,'FAIL');
+ assert.equal(report.scenario,'UNVERIFIED');
+ assert.equal(report.checks.find(c=>c.name==='effective-access').status,'FAIL');
 });
 test('unexpected document access, wrong-board access and malformed server responses fail',async()=>{
  const a=await run('module-user',{wrongBoardAllowed:true});
