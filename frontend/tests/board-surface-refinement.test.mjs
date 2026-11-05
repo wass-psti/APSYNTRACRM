@@ -5,7 +5,9 @@ import {captureBoardGroupScroll,restoreBoardGroupScroll} from '../board-scroll-s
 
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/styles.css','utf8');
-const part=css.slice(css.indexOf('CP-BOARD-SURFACE-01'));
+const surfaceStart=css.indexOf('CP-BOARD-SURFACE-01');
+const surfaceEnd=css.indexOf('/* CMP-01:',surfaceStart);
+const part=css.slice(surfaceStart,surfaceEnd<0?undefined:surfaceEnd);
 
 function scrollGroup(id,left){
  return {scrollLeft:left,querySelector(selector){
