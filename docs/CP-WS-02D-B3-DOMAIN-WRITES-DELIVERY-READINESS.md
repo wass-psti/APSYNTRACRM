@@ -19,17 +19,17 @@ The production SQL inventory `sql/tests/cp-ws02d-b2-domain-authorization-invento
 | --- | ---: | ---: | ---: |
 | Board creation | 2 | 2 (`wm_create_board`, `wm_create_board_configured`) | 0 |
 | Shared module state and operation locks | 4 | 4 (`put_module_state`, `delete_module_state`, `acquire_module_operation_lock`, `release_module_operation_lock`) | 0 |
-| FuelTrack/activity/import (nonshared) | 3 | 0 | 3 |
+| FuelTrack/activity/import (nonshared) | 3 | 1 (`import_fueltrack_activity_backup`) | 2 |
 | Employee Evaluation | 5 | 0 | 5 |
 | Order Intake | 7 | 0 | 7 |
 | TradeLink | 6 | 0 | 6 |
 | TimeTracker attendance | 1 | 0 | 1 |
 | Charter platform/admin role paths | 2 | 0 | 2 |
-| **Total** | **30** | **6** | **24** |
+| **Total** | **30** | **7** | **23** |
 
-The remaining 24 are:
+The remaining 23 are:
 
-- **FuelTrack:** `append_module_activity`, `commit_fueltrack_requests_with_activity`, `import_fueltrack_activity_backup`.
+- **FuelTrack:** `append_module_activity`, `commit_fueltrack_requests_with_activity`.
 - **Employee Evaluation:** `employee_evaluation_create_employee`, `employee_evaluation_review_transition`, `employee_evaluation_save`, `employee_evaluation_update_employee`, `employee_evaluation_update_settings`.
 - **Order Intake:** `order_intake_archive`, `order_intake_create`, `order_intake_create_idempotent`, `order_intake_qa_archive_once`, `order_intake_restore`, `order_intake_update_details`, `order_intake_update_status`.
 - **TradeLink:** `tradelink_asset_write`, `tradelink_cleanup_fence_activate`, `tradelink_cleanup_fence_release`, `tradelink_reconciliation_assess`, `tradelink_reconciliation_report`, `tradelink_reconciliation_request_cleanup`.
@@ -45,6 +45,16 @@ No bulk rewriting is permitted: each domain has independent record-level RBAC, p
 `sql/tests/cp-ws02d-b3-module-mutation-fixture.sql` reproduces those functions using synthetic domain dependencies, not real app records. `sql/tests/cp-ws02d-b3-module-mutation-acceptance.sql` checks Member create/update/CAS conflict/delete, operation lock acquire/release/replay, Viewer denial with advanced flag both off/on, preexisting Viewer-owned record/lock denial, unauthorized module denial, foreign workspace isolation, revoked GoTrue session denial and full rollback.
 
 The four function replacements are **not deployed**. The baseline MD5s are checked again before any authorized production change.
+
+### FuelTrack privileged activity import — seventh staged integration
+
+The live `public.import_fueltrack_activity_backup(jsonb)` function already requires the **FuelTrack+ Admin** module role. The staged `sql/cp-ws02d-b3-fueltrack-import-ceiling-candidate.sql` adds a signed workspace `edit` upper bound immediately before the event inserts, preserving the existing Admin role and import semantics. `sql/tests/cp-ws02d-b3-fueltrack-import-fixture.sql` reproduces the production function using synthetic events and module-role data; `sql/tests/cp-ws02d-b3-fueltrack-import-acceptance.sql` proves Admin-Member import, duplicate suppression, Viewer denial with advanced flag off/on, original module-Admin denial for ordinary users, foreign scope, expired session and rollback.
+
+[PG17 CI Run #131](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41995268080) **completed SUCCESS**, including this seventh review candidate and prior B3 tests. No production FuelTrack function, activity record, module grant or archive was modified.
+
+### Read-only grant inventory of remaining 23 candidates
+
+`sql/tests/cp-ws02d-b3-remaining-domain-grant-inventory.sql` queried production catalog metadata, without reading records or changing permissions. Results: **23** remaining candidate functions; **0** directly executable by `anon`; **20** executable by `authenticated`; **3** not directly executable by the `authenticated` role. Direct source-text checks found `has_module_access` in **21** and `is_platform_admin` in **14**. None contains the literal `wm_board_config_session_active` call, but indirect helpers may enforce the session; this result **does not establish a missing session guard**. Continue reviewing each function's actual transitive authorization and mutation path, rather than treating textual matches as proof of a vulnerability.
 
 ## Trusted delivery prerequisites
 
@@ -75,6 +85,7 @@ Resend documents a [24-hour idempotency key scope](https://resend.com/changelog/
 | Domain candidate inventory and risk grouping | **VERIFIED** |
 | Two B2 board-creation integrations | **VERIFIED — disposable** |
 | Four B3 module-state/lock integrations | **VERIFIED — disposable** |
+| FuelTrack Admin-only import with Viewer write denial | **VERIFIED — disposable** |
 | Synthetic independent domain `AND` permission contract | **VERIFIED — disposable** |
 | Default-off HTTP authentication boundary, no secret response | **VERIFIED — Node mocks** |
 | Durable provider receipt/audit lifecycle | **VERIFIED — disposable** |
@@ -82,4 +93,4 @@ Resend documents a [24-hour idempotency key scope](https://resend.com/changelog/
 | Deployed trusted issuer and real provider/webhooks | **PENDING** |
 | Genuine signed invitation acceptance and production authorization | **BLOCKED** |
 
-**Gate decision:** `CP-WS-02D/B3` is partially accepted at its isolated development boundary; **not production-ready**. All delivery gates remain off. **Next required checkpoint:** continue `CP-WS-02D/B3` for the 24 remaining independent domain reviews, with priority on TimeTracker/employee data and restricted administrative role changes, followed by provider/domain verification and controlled signed acceptance.
+**Gate decision:** `CP-WS-02D/B3` is partially accepted at its isolated development boundary; **not production-ready**. All delivery gates remain off. **Next required checkpoint:** continue `CP-WS-02D/B3` for the 23 remaining independent domain reviews, with priority on TimeTracker/employee data and restricted administrative role changes, followed by provider/domain verification and controlled signed acceptance.
