@@ -64,14 +64,17 @@ jobs:
           test "$PGHOST" = 127.0.0.1
           test "$PGDATABASE" = workspace_disposable
           psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'workspace_disposable|t'
-      - name: Stage contracts and run signed synthetic authorization acceptance
-        run: |
-          psql -X -v ON_ERROR_STOP=1 \
-            -f sql/tests/cp-ws01b-disposable-setup.sql \
-            -f sql/cp-ws01b-lifecycle-contract-candidate.sql \
-            -f sql/cp-ws01-discovery-activation-candidate.sql \
-            -f sql/cp-ws01b-session-cutover-candidate.sql \
-            -f sql/tests/cp-ws01b-disposable-preactivation.sql \
-            -f sql/tests/cp-ws01b-disposable-acceptance.sql
       - name: Run workspace UI and staged-contract regression tests
         run: node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs
+      - name: Install synthetic users, sessions and workspace fixture
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
+      - name: Install private workspace lifecycle contract
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-lifecycle-contract-candidate.sql
+      - name: Install signed member discovery contract
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01-discovery-activation-candidate.sql
+      - name: Install inactive workspace-selection cutover
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-session-cutover-candidate.sql
+      - name: Verify default-deny grants and preactivation signed reads
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-preactivation.sql
+      - name: Accept disposable owner creation, privacy, CAS, revocation and isolation
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-acceptance.sql
