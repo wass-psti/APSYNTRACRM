@@ -82,6 +82,11 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-readonly-acceptance.sql
       - name: Verify B2-only synthetic cross-identity, foreign, revoked and expired denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-cross-identity-denial-disposable.sql
+      - name: Verify B3 production-safe schema preactivation gate (no writes)
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -At -f sql/tests/cp-ws01c-b3-production-readonly-preflight.sql |
+            grep -F 'B3_PREACTIVATION_SCHEMA_READY__ROLE_CEILING_AND_PRODUCTION_APPROVAL_PENDING'
       - name: Stage dormant B3 creation RPC (no authenticated write grants)
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01c-b3-create-contract-candidate.sql
       - name: Verify B3-only atomic creation, idempotency and rollback without B4
