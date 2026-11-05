@@ -156,6 +156,9 @@ SELECT set_config('request.jwt.claim.sub','cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 SELECT set_config('request.jwt.claim.session_id','cccccccc-0000-4000-8000-000000000001',false);
 DO $revoked$
 BEGIN
+ IF public.current_workspace_id(auth.uid()) IS NOT NULL
+   OR public.ws01_fixture_visible_boards() IS DISTINCT FROM '[]'::jsonb
+ THEN RAISE EXCEPTION 'Revoked session retained current workspace or board access'; END IF;
  BEGIN
   PERFORM public.wm_ws01_list();
   RAISE EXCEPTION 'Revoked session could discover workspaces' USING ERRCODE='P9999';
@@ -209,6 +212,9 @@ SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.session_id','cccccccc-0000-4000-8000-000000000002',false);
 DO $expired$
 BEGIN
+ IF public.current_workspace_id(auth.uid()) IS NOT NULL
+  OR public.ws01_fixture_visible_boards() IS DISTINCT FROM '[]'::jsonb
+ THEN RAISE EXCEPTION 'Expired session retained workspace or board access'; END IF;
  BEGIN
   PERFORM public.wm_ws01_list();
   RAISE EXCEPTION 'Expired session could discover' USING ERRCODE='P9999';
