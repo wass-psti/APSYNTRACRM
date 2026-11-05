@@ -6,12 +6,10 @@ import {validUuid} from './data.js';
 import {moduleByBoardName} from './board-manifest.js';
 import {isProtectedBoard} from './board-card-lifecycle.js';
 import {boardGridColumns} from './board-grid.js';
+import {SUPPORTED_COLUMN_TYPE_IDS,renderColumnTypeOptions,renderColumnCenterCards} from './board-column-catalog.js';
 
 export const BOARD_STRUCTURE_ADMIN_ENABLED=true;
-export const BOARD_STRUCTURE_TYPES=Object.freeze([
- 'text','long_text','number','status','dropdown','date','people',
- 'checkbox','url','email','timeline'
-]);
+export const BOARD_STRUCTURE_TYPES=SUPPORTED_COLUMN_TYPE_IDS;
 const TYPES=new Set(BOARD_STRUCTURE_TYPES);
 const TAB_KEYS=new Set(['items','issues','finance','attendance']);
 export const ORDINARY_VIRTUAL_COLUMNS=Object.freeze([
@@ -330,8 +328,13 @@ export function renderBoardStructureAdmin(detail,settings,
   '<input id="structure-new-name" name="name" maxlength="80" required'+disabled+' /></div>'+
   '<div class="field"><label for="structure-new-type">Column type</label>'+
   '<select id="structure-new-type" name="type"'+disabled+'>'+
-  BOARD_STRUCTURE_TYPES.map(t=>'<option value="'+t+'">'+esc(t)+'</option>').join('')+'</select></div>'+
-  '<div class="field"><label for="structure-new-options">Choice options (Status / Dropdown only; one per line)</label>'+ 
+  renderColumnTypeOptions()+'</select></div>'+
+  '<details class="board-column-center"><summary>Column Center — browse the 11 available standard types</summary>'+
+  '<div class="field"><label for="structure-column-search">Search column types</label>'+
+  '<input id="structure-column-search" type="search" placeholder="Search text, status, dates…"'+
+  ' data-column-catalog-search'+disabled+' /></div>'+
+  renderColumnCenterCards()+'</details>'+
+  '<div class="field" data-structure-choice-options hidden><label for="structure-new-options">Choice options (Status / Dropdown; one per line)</label>'+ 
   '<textarea id="structure-new-options" name="options" maxlength="4100" rows="3"'+disabled+'></textarea></div>'+ 
   '<button class="primary" type="submit"'+disabled+'>Add column</button></form>'+
   '<div class="board-member-list">'+cols.slice(1).map(c=>
