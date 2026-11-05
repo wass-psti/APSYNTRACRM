@@ -323,4 +323,43 @@ REVOKE ALL ON FUNCTION public.wm_list_recoverable_board_columns(uuid)
  FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.wm_list_recoverable_board_columns(uuid)
  TO authenticated;
+
+-- All acceptance conditions are enforced BEFORE transaction COMMIT.
+-- A future production rollout must fail atomically on any unexpected grant
+-- or activation state; the frontend feature flag is never authoritative.
+DO $phase_a_integrity$
+BEGIN
+ IF (SELECT count(*) FROM private.wm_recoverable_column_activation)<>1
+ OR (SELECT NOT (delete_enabled OR restore_enabled)
+       FROM private.wm_recoverable_column_activation WHERE id IS TRUE)
+   IS DISTINCT FROM true
+ OR (SELECT count(*) FROM private.wm_recoverable_deleted_columns)<>0
+ OR (SELECT count(*) FROM private.wm_recoverable_deleted_cells)<>0
+ OR NOT (SELECT relrowsecurity FROM pg_class
+       WHERE oid='private.wm_recoverable_column_activation'::regclass)
+ OR NOT (SELECT relrowsecurity FROM pg_class
+       WHERE oid='private.wm_recoverable_deleted_columns'::regclass)
+ OR NOT (SELECT relrowsecurity FROM pg_class
+       WHERE oid='private.wm_recoverable_deleted_cells'::regclass)
+ OR has_table_privilege('anon','private.wm_recoverable_column_activation','SELECT')
+ OR has_table_privilege('authenticated','private.wm_recoverable_column_activation','SELECT')
+ OR has_table_privilege('anon','private.wm_recoverable_deleted_columns','SELECT')
+ OR has_table_privilege('authenticated','private.wm_recoverable_deleted_columns','SELECT')
+ OR has_table_privilege('anon','private.wm_recoverable_deleted_cells','SELECT')
+ OR has_table_privilege('authenticated','private.wm_recoverable_deleted_cells','SELECT')
+ OR NOT has_function_privilege('authenticated',
+   'public.wm_delete_board_column_recoverable(uuid,uuid,timestamptz,integer,text)','EXECUTE')
+ OR NOT has_function_privilege('authenticated',
+   'public.wm_restore_board_column_recoverable(uuid,uuid,timestamptz)','EXECUTE')
+ OR NOT has_function_privilege('authenticated',
+   'public.wm_list_recoverable_board_columns(uuid)','EXECUTE')
+ OR has_function_privilege('anon',
+   'public.wm_delete_board_column_recoverable(uuid,uuid,timestamptz,integer,text)','EXECUTE')
+ OR has_function_privilege('anon',
+   'public.wm_restore_board_column_recoverable(uuid,uuid,timestamptz)','EXECUTE')
+ OR has_function_privilege('anon',
+   'public.wm_list_recoverable_board_columns(uuid)','EXECUTE')
+ THEN RAISE EXCEPTION 'COL_DELETE_PHASE_A_INTEGRITY_FAILED; full migration transaction rejected'
+  USING ERRCODE='42501'; END IF;
+END $phase_a_integrity$;
 COMMIT;
