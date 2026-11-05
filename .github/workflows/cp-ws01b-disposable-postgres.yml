@@ -153,3 +153,14 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-module-mutation-acceptance.sql
       - name: Verify independent domain RBAC AND workspace ceiling without real records
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-independent-domain-ceiling-disposable.sql
+      - name: Validate all 24 remaining deployed domain source fingerprints and ceiling-only changes
+        run: node scripts/ws02d-b3-source-check.mjs --check
+      - name: Reproduce 24 remaining domain sources in disposable PG17
+        run: |
+          set -euo pipefail
+          node scripts/ws02d-b3-source-check.mjs --emit-fixture > /tmp/ws02d-b3-original.sql
+          psql -X -v ON_ERROR_STOP=1 -f /tmp/ws02d-b3-original.sql
+      - name: Stage 24 remaining source-preserving edit and manage ceilings
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b3-remaining-domain-ceiling-candidate.sql
+      - name: Check Viewer edit, Member manage, signed expiry denial and rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-remaining-domain-acceptance.sql
