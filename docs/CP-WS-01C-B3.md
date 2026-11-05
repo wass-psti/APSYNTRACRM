@@ -41,3 +41,18 @@ The currently outstanding B2 live security denial cases are separately tracked; 
 ## Automated execution result — 2026-11-05
 
 GitHub Actions [workspace lifecycle run #38](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41974370264) on commit `bce3226ea6e2f9ba4313c1b47028313ec64b5380` completed **SUCCESS**. The named step **Verify B3-only atomic creation, idempotency and rollback without B4** completed **SUCCESS**, as did the B2 denial regression and downstream disposable lifecycle acceptance. This verifies the test suite in the GitHub Actions PostgreSQL 17 fixture, not production runtime or a real signed-user create operation. Production creation remains disabled.
+
+
+## CP-WS-01C/B3 authorization-ceiling and production preactivation gate — 2026-11-05
+
+**Gate opened and nonmutating preflight verified.** Committed `sql/tests/cp-ws01c-b3-production-readonly-preflight.sql` and wired it into the disposable PG17 workflow immediately before installing dormant B3 SQL. The exact committed query was executed against existing production project `jtlusodorfnyzgyuewkz` and returned:
+
+```
+B3_PREACTIVATION_SCHEMA_READY__ROLE_CEILING_AND_PRODUCTION_APPROVAL_PENDING
+```
+
+Read-only evidence at this checkpoint: all six private `ws01_*` tables have RLS and zero direct client DML grants; no RLS policies were added to those tables; existing session guard, workspace resolver and B2 authenticated discovery grant are intact; neither B3 creation nor B4 switching functions exist; direct `authenticated` / `anon` workspace creation grants remain denied; both private lifecycle flags are false; there are zero B3 create requests or workspace lifecycle events; workspace inventory 2, active memberships 40. These are live snapshots, not future guarantees. No production SQL mutations were executed.
+
+**Critical role-ceiling boundary:** Existing `sql/cp-ws01c-b3-create-contract-candidate.sql` checks signed session, active profile and any active workspace membership, but does not read `profiles.platform_role` or implement an administrator/other-role creation ceiling. No final production policy is established by this gate. Decide whether the intended creator eligibility is (a) only specified platform administrators, (b) all active signed members, or (c) explicitly delegated creation permission; design and test denied-role and role-revocation behavior against that decision before any production function/grant activation. Do not infer creator authority from frontend flags alone.
+
+**Approval boundary:** Running the nonmutating preflight and disposable tests requires no production permission changes. Installing the new `SECURITY DEFINER` create function, granting `authenticated` EXECUTE, or enabling `creation_enabled` are separate production authorization events and remain outside this gate. B4 remains disabled. Outstanding real B2 foreign-workspace and revoked/expired-session coverage remains independently tracked.
