@@ -8,7 +8,7 @@ export const RECOVERY_REDIRECT_URL='https://wass-psti.github.io/APSYNTRACRM/?aut
 export const PASSWORD_MIN_LENGTH=12;
 export const PASSWORD_MAX_LENGTH=72;
 export const RECOVERY_CONFIRMATION='If the address is eligible, password recovery instructions will be sent. Check your inbox and spam folder.';
-export const REGISTRATION_BLOCKED='Registration is awaiting activation of secure administrator-controlled account admission. Please contact your workspace administrator.';
+export const REGISTRATION_BLOCKED='Self-service registration is temporarily unavailable while verified-email signup and automatic personal Main Workspace provisioning are being secured. Existing accounts can still sign in.';
 
 export function validateRegistration({name='',email='',password='',confirmation=''}={}){
  const errors={};
