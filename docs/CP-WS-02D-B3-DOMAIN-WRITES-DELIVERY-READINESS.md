@@ -77,6 +77,12 @@ A new `server/ws02d-invitation-http-boundary.mjs` is an **unmounted/un-deployed 
 
 Resend documents a [24-hour idempotency key scope](https://resend.com/changelog/idempotency-keys) and [signed webhook verification](https://resend.com/changelog/managing-webhooks-via-api). These behaviors are reference constraints, not evidence that APSYNTRA has configured or exercised those provider functions.
 
+## Additional activation dependency — invited workspace selection
+
+Production `public.current_workspace_id(uuid)` currently resolves the caller's existing active workspace, and the CP-WS-01C/B4 session-switching feature remains disabled. The staged invitation acceptance returns `switched:false` and does not automatically change the active workspace. **An existing account joining another workspace, or a new account with an independently provisioned personal Main Workspace, therefore cannot assume immediate access to the invited workspace through APIs that require the current authoritative workspace.**
+
+Before enabling real invitations, complete a separately approved and tested B4 signed-session workspace-selection cutover **or** implement an independently authorized explicit-workspace-scoped access route. Preserve personal Main Workspace and other memberships. Do not turn on B4 or replace `current_workspace_id` as an incidental part of email activation. This is an operational usability and authorization dependency, not permission to loosen workspace isolation.
+
 ## Verification and delivery decision
 
 | Acceptance criterion | Classification |
