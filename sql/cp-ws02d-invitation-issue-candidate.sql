@@ -65,6 +65,25 @@ BEGIN
    'schemaVersion',1,'invitationId',v_prior.id,
    'idempotent',true,'tokenAvailable',false,'state',v_prior.state);
  END IF;
+ -- Actor profile row lock serializes issuance and quotas for an actor.
+ -- Quotas are scoped to the signed actor and authoritative workspace; they
+ -- include finalized invitations to prevent reissue/revoke quota evasion.
+ -- Retry of an existing request above is exempt and never returns a token.
+ IF (SELECT count(*) FROM private.ws02d_invitations i
+      WHERE i.workspace_id=p_workspace AND i.issued_by=v_actor
+        AND i.issued_at>now()-interval '1 hour')>=5
+ OR (SELECT count(*) FROM private.ws02d_invitations i
+      WHERE i.workspace_id=p_workspace
+        AND i.recipient_email=v_email
+        AND i.issued_at>now()-interval '24 hours')>=2
+ THEN RAISE EXCEPTION 'Invitation rate limit reached'
+   USING ERRCODE='42501'; END IF;
+ IF EXISTS(SELECT 1 FROM auth.users u
+   JOIN public.workspace_members m ON m.user_id=u.id
+   WHERE pg_catalog.lower(pg_catalog.btrim(u.email))=v_email
+    AND m.workspace_id=p_workspace)
+ THEN RAISE EXCEPTION 'Already-member invitation disallowed'
+   USING ERRCODE='42501'; END IF;
  v_token:=pg_catalog.encode(extensions.gen_random_bytes(32),'hex');
  v_salt:=extensions.gen_random_bytes(16);
  INSERT INTO private.ws02d_invitations(
