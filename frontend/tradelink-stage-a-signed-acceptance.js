@@ -54,10 +54,10 @@ export async function runTradeLinkStageASignedReadOnly({auth,api,createProbeId=(
    const mod=snapshot.modules.find(x=>x.moduleId==='tradelink');
    const board=snapshot.boards.find(x=>x.id===TRADELINK_BOARD_ID);
    const foreign=context.workspace_id!==TARGET_WORKSPACE;
-   if(!mod||typeof mod.allowed!=='boolean'||
+   if(!mod||typeof mod.allowed!=='boolean'||(foreign&&board)||
       (board&&(!board.view||typeof board.manage!=='boolean'))){
     checks.push(entry('effective-access','FAIL',
-     'Authoritative self-access snapshot is incomplete or inconsistent.'));
+     'Authoritative self-access snapshot is incomplete, inconsistent, or leaks a foreign board.'));
    }else{
     scenario=foreign?'FOREIGN_WORKSPACE_DENIED':
      !board?.manage?'BOARD_MANAGER_DENIED':
@@ -145,7 +145,7 @@ export function renderTradeLinkStageAAcceptance({busy=false,report=null}={}){
  const status=OUTCOMES.has(report?.status)?report.status:'NOT RUN';
  const scenario=SCENARIOS.has(report?.scenario)?report.scenario:'UNVERIFIED';
  const checks=Array.isArray(report?.checks)?report.checks.filter(c=>SAFE_CHECKS.has(c?.name)): [];
- return '<section class="panel security-check-panel" aria-labelledby="tl03-stagea-title">'+
+ return '<div class="aps-security"><section class="panel security-check-panel" aria-labelledby="tl03-stagea-title">'+
   '<div class="panel-header security-panel-header"><h2 id="tl03-stagea-title">TradeLink · Stage A signed read acceptance</h2></div>'+
   '<div class="panel-body"><p class="muted">Use an existing signed account. Checks GoTrue identity, the server-authoritative platform/module/board ceiling, TradeLink document read/list RPCs and wrong-board denial. Read-only: zero uploads, role changes, data writes or record-content exports.</p>'+
   '<p class="muted">Run separately as an authorized TradeLink General Manager, an existing nonmanager, and an existing foreign-workspace account where available. Real expired/revoked-session tests require separate controlled acceptance; this panel does not revoke a session.</p>'+
@@ -156,5 +156,5 @@ export function renderTradeLinkStageAAcceptance({busy=false,report=null}={}){
    checks.map(c=>'<tr><td>'+escape(c.name.replaceAll('-',' '))+'</td><td>'+escape(c.status)+'</td></tr>').join('')+
    '</tbody></table></div><p class="muted">Writes attempted: 0 · Document contents disclosed: 0. A PASS applies only to this genuine signed role/session, not all roles or revocation scenarios.</p>'+
    '<button type="button" class="secondary" data-action="security-tl03-stage-a-copy">Copy nonsecret result</button></div>':'')+
-  '</div></section>';
+  '</div></section></div>';
 }
