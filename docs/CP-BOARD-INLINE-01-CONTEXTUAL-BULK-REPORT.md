@@ -13,11 +13,13 @@ Status: IMPLEMENTED — AUTOMATED CI / DEPLOYMENT VERIFIED — GENUINE SIGNED-BR
 - Deletion of populated custom columns is deliberately denied before mutation. The backend also protects nonempty, domain, primary, and relationship-sensitive columns.
 - The redundant toolbar **Manage columns** control was replaced by **Add column**, opening a small in-place dialog. Advanced board view settings remain reachable from Board options; no capability was silently deleted.
 - Every contextual schema write reuses the existing board structure client, server-side manager authorization, verified active signed session, board/workspace identity, expected revision (CAS), and board audit behavior.
+- Ambiguous column-schema mutation network/5xx/receipt outcomes are tagged nonretryable. The contextual modal disables its submit until board refresh and activity verification; definitive 4xx denials remain distinct.
 - Escape dismissal, focus trapping, focus restoration, and contextual keyboard controls are supported by the existing overlay/menu and revised modal behavior. A board data refresh occurs after a successful write; there is no full-page navigation.
 
 **Bulk selection and actions**
 - The selection toolbar retains row, group-visible Select All, Shift-range, cross-filter selection scope, CSV export, and clear-selection.
 - For an ordinary authorized board, one **Bulk actions…** dialog now exposes the only currently supported atomic write operations: **Status update** and **Archive**. It operates on 1–50 selected items and uses the existing signed server `wm_board_bulk_mutate` RPC with per-item revision CAS and audit.
+- The bulk Status action updates **native record status only**, not custom Status columns such as the imported `Status I`. Typed bulk editing of custom Status columns is pending an independent server batch contract.
 - Server-side `wm_board_bulk_mutate` and `wm_board_group_cas` are present in production. Read-only metadata confirms authenticated EXECUTE, not anonymous EXECUTE, checks for active signed session, protected boards, and expected revisions.
 - The client also forbids generic mutations on every named APSYNTRA module board, including TimeTracker Attendance, even if a module marker is absent. Its generic atomic writer **cannot** be reused for restricted GPS, attendance, payroll, OT, or domain-owned fields.
 - Ambiguous network/server/receipt outcomes after a bulk mutation are nonretryable and clear the current selection and activation before refresh; definitive 4xx authorization/CAS denials remain distinct.
@@ -38,9 +40,9 @@ Status: IMPLEMENTED — AUTOMATED CI / DEPLOYMENT VERIFIED — GENUINE SIGNED-BR
 
 ## Tests and deployment
 
-- [Frontend Validation — 1011/1011 tests and all disposable PostgreSQL jobs PASS](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41986825000).
-- [GitHub Pages code deployment — SUCCESS for the same code commit](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41986824615).
-- Code checkpoint: `2a05917a9a11c3e39dd750e10ab1649ae5043add`.
+- [Frontend Validation — 1014/1014 tests and all disposable PostgreSQL jobs PASS](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41987456952).
+- [Previously verified Pages deployment and source smoke](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41986824615); latest code deployment must be verified independently..
+- Latest validated implementation SHA: `c878daac593403b43acfb55346cbf7688412e78d`.
 - Live, signed-browser acceptance has **not** been completed in this chat; connected browser inspection was unavailable from the originating session. Do not infer production item mutation or persisted audit acceptance from source/CI success.
 
 ## Scope and acceptance tracker
