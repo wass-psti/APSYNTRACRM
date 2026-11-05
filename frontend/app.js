@@ -34,6 +34,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
+import {openBoardImportWizard} from './board-import-ui.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
@@ -767,6 +768,7 @@ function boardPage(){
  ${boardColumnMenu(columns,layout)}<button type="button" class="secondary" data-action="board-structure">Manage columns</button>
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
+ ${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-import">⇧ Import CSV/XLSX</button>':''}
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}
   ${state.edit&&canBulkEditBoard(b)?'<button type="button" class="secondary" data-action="bulk02-verify" '+(state.bulk02Busy?'disabled':'')+'>'+(
    state.bulk02Busy?'Checking signed permissions…':bulkReadyFor(b)?'✓ Bulk access verified':'Verify signed bulk access')+'</button>':''}
@@ -2259,6 +2261,15 @@ async function action(name,button){
  case 'platform-sync-verify':{await platformSync.syncNow('manual',[]);break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
  case 'board-activity':{await openBoardActivity();break;}
+ case 'board-import':{
+  if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit))
+   throw new ApiError('Import is limited to signed ordinary-board editors.',403);
+  const selected=state.boardId;
+  await openBoardImportWizard({api:db,auth,boardId:selected,onComplete:async receipt=>{
+   if(state.boardId===selected){await loadBoard(selected,'items');toast('Imported '+receipt.created+' items; updated '+receipt.updated+'.');}
+  }});
+  break;
+ }
  case 'security-tl03-stage-a-run':{
   if(state.tl03ReadBusy||state.view!=='security'||!state.context||!auth.isSignedIn)break;
   const run=++state.tl03ReadRunId;
