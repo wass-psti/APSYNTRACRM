@@ -37,6 +37,7 @@ import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,Board
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
 import {openBoardImportWizard} from './board-import-ui.js';
 import {resolveColumnTypeSelection} from './board-column-catalog.js';
+import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
@@ -2145,6 +2146,10 @@ async function openBoardStructure(){
   });
   const options=view.querySelector('[data-structure-choice-options]');
   if(options)options.hidden=!(chosen==='status'||chosen==='dropdown');
+  const rating=view.querySelector('[data-structure-rating-config]');
+  if(rating)rating.hidden=chosen!=='rating';
+  const percentage=view.querySelector('[data-structure-percentage-config]');
+  if(percentage)percentage.hidden=chosen!=='percentage';
  };
  view.addEventListener('input',event=>{
   const search=event.target.closest('[data-column-catalog-search]');
@@ -2208,7 +2213,10 @@ async function openBoardStructure(){
     await boardStructureClient.mutate(detail,{
      action:'create',name:String(fd.get('name')||''),
      type:selection.type,
-     config:parseChoiceConfig(selection.type,selection.options)
+     config:['phone','rating','percentage'].includes(selection.type)?
+      cmp02CreationConfig(selection.type,{
+       max:fd.get('ratingMax'),decimals:fd.get('percentageDecimals')
+      }):parseChoiceConfig(selection.type,selection.options)
     });
    }else return;
    if(!authorized())return;
