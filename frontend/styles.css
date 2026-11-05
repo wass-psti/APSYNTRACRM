@@ -1841,3 +1841,22 @@
 @media(prefers-reduced-motion:reduce){
  #app .aps-board-shell .board-tab-slot>.tab{transition:none}
 }
+
+/* CMP-01: searchable catalogue of genuinely supported standard board columns. */
+.board-column-center{margin:12px 0 18px;border:1px solid #9ca6b7;border-radius:12px;padding:12px;background:rgba(122,139,165,.06);color:inherit}
+.board-column-center>summary{cursor:pointer;font-size:13px;font-weight:750;list-style-position:inside}
+.board-column-center>summary:focus-visible{outline:2px solid #247af0;outline-offset:3px}
+.board-column-center>.field{margin:14px 0 8px}
+.board-column-center-cards{display:grid;gap:16px;max-height:340px;overflow-y:auto;overscroll-behavior:contain;padding:4px}
+.board-column-center-category h5{font-size:12px;letter-spacing:.03em;margin:0 0 8px;color:inherit}
+.board-column-center-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.board-column-center-choice{display:flex;gap:10px;align-items:start;text-align:start;border:1px solid #a8b1c0;background:rgba(155,171,192,.07);border-radius:9px;color:inherit;padding:11px;min-height:64px;cursor:pointer}
+.board-column-center-choice[aria-pressed="true"]{border-color:#247af0;box-shadow:inset 0 0 0 1px #247af0;background:rgba(36,122,240,.1)}
+.board-column-center-choice:focus-visible{outline:2px solid #247af0;outline-offset:2px}
+.board-column-icon{flex:none;width:31px;height:31px;border-radius:7px;background:#175fc2;color:white;display:grid;place-items:center;font-size:14px;font-weight:750}
+.board-column-choice-info{display:flex;flex-direction:column;gap:3px;min-width:0}
+.board-column-choice-info strong{font-size:12px}
+.board-column-choice-info small{font-size:11px;line-height:1.35;opacity:.75}
+.board-column-center-choice[hidden],.board-column-center-category[hidden],[data-structure-choice-options][hidden]{display:none!important}
+@media(max-width:640px){.board-column-center-grid{grid-template-columns:1fr}.board-column-center-cards{max-height:270px}}
+@media(prefers-reduced-motion:reduce){.board-column-center-choice{scroll-behavior:auto;transition:none}}
