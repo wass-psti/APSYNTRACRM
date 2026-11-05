@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED,
- workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,validateWorkspaceProposal,renderWorkspaceSwitcher
+ workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,validateWorkspaceProposal,renderWorkspaceSwitcher,
+ WS02_INVITATIONS_ENABLED,validateWorkspaceInvitationDraft,renderWorkspaceInviteLaunch
 } from '../workspace-ui.js';
 
 const signedWorkspace='00000000-0000-4000-8000-000000000001';
@@ -135,4 +136,69 @@ test('signed membership role is server-supplied and cannot be invented for legac
  assert.deepEqual(visibleWorkspaces(parsed,{tab:'owner'}).map(x=>x.id),[signedWorkspace]);
  assert.deepEqual(visibleWorkspaces(parsed,{tab:'collaborator'}).map(x=>x.id),[foreignWorkspace]);
  assert.equal(visibleWorkspaces(workspaceCatalog(current),{tab:'owner'}).length,0);
+});
+
+// CP-WS-02D reference interaction: the invitation UI is visible without claiming
+// platform authority, backend invitation delivery, or privileged role grants.
+test('workspace invitation launch exists only for the signed current workspace',()=>{
+ assert.equal(WS02_INVITATIONS_ENABLED,false);
+ const launch=renderWorkspaceInviteLaunch(current);
+ assert.match(launch,/data-action="ws02-open-invites"/);
+ assert.match(launch,/Invite members/);
+ assert.match(launch,/aria-haspopup="dialog"/);
+ assert.match(renderWorkspaceInviteLaunch(current,{placement:'topbar'}),/ws02-invite-topbar/);
+ assert.equal(renderWorkspaceInviteLaunch({id:'bad-id',name:'Private'}),'');
+ assert.equal(renderWorkspaceInviteLaunch({id:signedWorkspace,name:' '}),'');
+ const malicious=renderWorkspaceInviteLaunch({id:signedWorkspace,name:'<img src=x onerror=alert(1)>'});
+ assert.doesNotMatch(malicious,/<img/);
+ assert.match(malicious,/&lt;img/);
+});
+
+test('invitation review accepts distinct emails and strictly workspace-local role drafts',()=>{
+ const valid=validateWorkspaceInvitationDraft({
+  emails:'  member@example.com,admin@example.org;viewer@example.net  ',
+  role:'viewer',message:'Coordinate next week.'
+ });
+ assert.equal(valid.valid,true);
+ assert.deepEqual(valid.recipients,['member@example.com','admin@example.org','viewer@example.net']);
+ assert.equal(valid.role,'viewer');
+ assert.equal(valid.message,'Coordinate next week.');
+ assert.equal(Object.isFrozen(valid),true);
+ assert.equal(Object.isFrozen(valid.recipients),true);
+ for(const role of ['admin','member','viewer']){
+  assert.equal(validateWorkspaceInvitationDraft({emails:'friend@example.com',role}).valid,true);
+ }
+ for(const bad of [
+  {emails:'',role:'member'},
+  {emails:'not-email',role:'member'},
+  {emails:'name@example.com,NAME@example.com',role:'member'},
+  {emails:'email@example.com',role:'owner'},
+  {emails:'email@example.com',role:'admin_general_manager'},
+  {emails:'email@example.com',role:'member',message:'X'.repeat(501)},
+  {emails:'email@example.com',role:'viewer',message:'Hello\u0000there'},
+  {emails:Array.from({length:11},(_,i)=>'person'+i+'@example.com').join(','),role:'viewer'}
+ ])assert.equal(validateWorkspaceInvitationDraft(bad).valid,false,JSON.stringify(bad).slice(0,140));
+});
+
+test('invitation panel previews draft only, never sends email or creates memberships',()=>{
+ const module=readFileSync('frontend/workspace-ui.js','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ const css=readFileSync('frontend/workspace-ui.css','utf8');
+ assert.match(module,/function inviteContent\(current\)/);
+ assert.match(module,/role="dialog" aria-modal="true"/);
+ assert.match(module,/ws02-invite-title/);
+ for(const part of ['name="emails"','name="role"','name="message"',
+  'value="admin"','value="member"','value="viewer"',
+  'Send invites — pending activation','disabled aria-describedby',
+  'data-ws02-context','No invitations were sent',
+  'WS02_INVITATIONS_ENABLED=false'])
+  assert.ok(module.includes(part),part);
+ assert.doesNotMatch(module,/\.rpc\(['"](?:wm_ws02_invite|wm_invite_workspace|wm_ws01_invite)/);
+ assert.doesNotMatch(module,/fetch\(['"]\/auth\/v1\/invite|fetch\(['"]\/rest\/v1\/rpc/);
+ assert.match(app,/renderWorkspaceInviteLaunch\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
+ assert.match(app,/data-action="ws02-open-invites"/);
+ assert.match(app,/case 'ws02-open-invites':/);
+ assert.match(app,/openWorkspaceInvitationDialog\(\{/);
+ assert.match(css,/\.ws02-invite-card/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
