@@ -182,7 +182,7 @@ test('frontend integration preserves signed state, edits and background-independ
  assert.match(app,/root\.querySelector\('\.aps-sync'\)/);
  assert.match(app,/if\(platformSyncEditInProgress\(\)\)return false/);
  assert.match(app,/if\(state\.context&&auth\.isSignedIn\)platformSync\.start/);
- assert.match(app,/case 'logout':\{clearBulkActivation\(\);platformSync\.stop\(\)/);
+ assert.match(app,/case 'logout':\{(?:closeWorkspacePanels\(\);)?clearBulkActivation\(\);platformSync\.stop\(\)/);
  assert.match(app,/auth\.onExpired=\(\)=>\{state\.context=null/);
  assert.match(app,/state\.userRoleData=null;state\.boards=\[\];platformSync\.stop\(\)/);
  assert.match(index,/wss:\/\/jtlusodorfnyzgyuewkz.supabase.co/);
