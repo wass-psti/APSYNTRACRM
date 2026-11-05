@@ -15,6 +15,11 @@ BEGIN
  THEN RAISE EXCEPTION 'Integrated board ACL test fixture invalid'
  USING ERRCODE='42501'; END IF;
 END $pre$;
+-- Snapshot rows from previously accepted disposable workspace stages.
+-- Their records must survive this B2 rollback unchanged.
+CREATE TEMP TABLE ws02d_b2_baseline AS
+ SELECT (SELECT count(*) FROM private.ws01_member_roles) AS role_count,
+        (SELECT count(*) FROM public.workspace_members WHERE active) AS active_count;
 BEGIN;
 -- Existing B4 disposable acceptance deliberately revoked C's original
 -- GoTrue session and left C's recovered session ...0003 active. Reuse
@@ -128,13 +133,15 @@ BEGIN
  IF (SELECT count(*) FROM private.ws02d_member_access)<>0
   -- Previous B4 acceptance retained C's one synthetic collaborator relation.
  -- Rollback must restore that fixture, not erase it.
- OR (SELECT count(*) FROM private.ws01_member_roles)<>1
+ OR (SELECT count(*) FROM private.ws01_member_roles)<>
+    (SELECT role_count FROM ws02d_b2_baseline)
  OR (SELECT count(*) FROM private.ws01_member_roles r WHERE
    r.workspace_id='00000000-0000-4000-8000-000000000002'
    AND r.user_id='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
    AND r.relation='collaborator')<>1
   OR (SELECT advanced_roles_enabled FROM private.ws02d_invitation_flags WHERE id)
-  OR (SELECT count(*) FROM public.workspace_members WHERE active)<>5
+  OR (SELECT count(*) FROM public.workspace_members WHERE active)<>
+    (SELECT active_count FROM ws02d_b2_baseline)
   OR (SELECT count(*) FROM public.work_board_members)<>4
  THEN RAISE EXCEPTION 'Role integration fixture rollback failed'; END IF;
  RAISE NOTICE 'CP-WS-02D/B2 integrated board permission ceiling PASS';
