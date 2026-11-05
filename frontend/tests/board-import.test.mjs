@@ -144,6 +144,43 @@ test('expired, revoked, and mismatched signed-session preflights reject without 
  await assert.rejects(()=>executeBoardImport({api,auth,plan}),/could not be verified/);
  assert.deepEqual(writes,[]);
 });
+test('ambiguous network, server, receipt, and post-commit failures forbid blind import retry',async()=>{
+ const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ for(const mode of ['network','server','receipt','postcommit']){
+  let writes=0,contexts=0;
+  const api={
+   context:async()=>{
+    contexts++;
+    if(mode==='postcommit'&&contexts>1)throw new Error('Session check interrupted');
+    return {user_id:actor,workspace_id:ws,profile:{status:'active'}};
+   },
+   board:async()=>detail,allowed:async()=>true,
+   rpc:async(name)=>{
+    if(name==='wm_board_ui_read')return {board_id:boardId};
+    writes++;
+    if(mode==='network')throw new TypeError('Failed to fetch');
+    if(mode==='server'){const e=new Error('Backend unavailable');e.status=503;throw e;}
+    if(mode==='receipt')return {created:1,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};
+    return {created:2,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};
+   }
+  };
+  await assert.rejects(()=>executeBoardImport({api,auth,plan}),
+   error=>error.importOutcomeUncertain===true&&/Do not retry/.test(error.message));
+  assert.equal(writes,1,mode+' attempted exactly one atomic write');
+ }
+});
+test('authoritative 4xx validation denial remains a safe, clear failure',async()=>{
+ const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>detail,allowed:async()=>true,rpc:async(name)=>{
+   if(name==='wm_board_ui_read')return {board_id:boardId};
+   const e=new Error('Board changed after preview');e.status=409;throw e;
+  }};
+ await assert.rejects(()=>executeBoardImport({api,auth,plan}),
+  error=>error.status===409&&error.importOutcomeUncertain!==true);
+});
 test('signed workspace, permissions and stale revisions fail without any write',async()=>{
  const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
  const calls=[];const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
@@ -166,6 +203,8 @@ test('UI and entrypoint are wired without bypassing the domain restriction',()=>
  assert.match(ui,/Allow creation/);
  assert.match(ui,/Decline and skip columns/);
  assert.match(ui,/Import Now/);
+ assert.match(ui,/state\.uncertain/);
+ assert.match(ui,/Close and verify the board/);
  assert.match(ui,/Handle matches/);
  assert.match(html,/board-import\.css/);
 });
