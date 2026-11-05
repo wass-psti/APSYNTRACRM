@@ -106,19 +106,43 @@ test('protected application boards cannot be mutated through the generic importe
  const restricted={...detail,board:{...detail.board,name:'TimeTracker Attendance'}};
  assert.throws(()=>buildImportPlan({sheet,detail:restricted,mappings:existingMaps,group}),/domain-specific/);
 });
-test('authorized import uses one atomic RPC and checks receipt',async()=>{
+test('authorized import checks server-side active session before one atomic write RPC',async()=>{
  const calls=[];
  const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
  const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
  const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
   board:async()=>detail,allowed:async()=>true,
-  rpc:async(name,args)=>{calls.push({name,args});return {
-   created:2,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};}};
+  rpc:async(name,args)=>{
+   calls.push({name,args});
+   if(name==='wm_board_ui_read')return {board_id:boardId,revision:0};
+   return {created:2,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};
+  }};
  const reply=await executeBoardImport({api,auth,plan});
  assert.equal(reply.created,2);
- assert.equal(calls.length,1);
- assert.equal(calls[0].name,'wm_import_board_wizard_atomic');
- assert.equal(calls[0].args.p_expected_updated_at,now);
+ assert.equal(calls.length,2);
+ assert.equal(calls[0].name,'wm_board_ui_read');
+ assert.deepEqual(calls[0].args,{p_board_id:boardId});
+ assert.equal(calls[1].name,'wm_import_board_wizard_atomic');
+ assert.equal(calls[1].args.p_expected_updated_at,now);
+});
+test('expired, revoked, and mismatched signed-session preflights reject without import writes',async()=>{
+ const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const writes=[];
+ const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>detail,allowed:async()=>true,
+  rpc:async(name)=>{
+   if(name==='wm_import_board_wizard_atomic')writes.push(name);
+   throw new Error('Board view access denied: inactive session');
+  }};
+ await assert.rejects(()=>executeBoardImport({api,auth,plan}),/inactive session/);
+ assert.deepEqual(writes,[]);
+ api.rpc=async(name)=>{
+  if(name==='wm_board_ui_read')return {board_id:'99999999-9999-4999-8999-999999999999'};
+  writes.push(name);
+ };
+ await assert.rejects(()=>executeBoardImport({api,auth,plan}),/could not be verified/);
+ assert.deepEqual(writes,[]);
 });
 test('signed workspace, permissions and stale revisions fail without any write',async()=>{
  const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
