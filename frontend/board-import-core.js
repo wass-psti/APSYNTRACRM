@@ -61,6 +61,9 @@ export function initialImportMappings(sheet,detail,{canCreate=false}={}){
    used.add(matches[0].id);
    return {source,action:'existing',columnId:matches[0].id,type};
   }
+  if(canCreate&&(type==='status'||type==='dropdown')&&
+     !columns.some(c=>key(c.name)===key(source)))
+   return {source,action:'configure',type,choiceType:type,name:source,requiresDecision:true};
   if(canCreate&&creatable.has(type)&&!columns.some(c=>key(c.name)===key(source))){
    return {source,action:'create',type,columnType:type,name:source,requiresDecision:true};
   }
