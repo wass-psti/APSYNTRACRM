@@ -43,6 +43,18 @@ test('source type detection and exact existing-column reuse are stable',()=>{
  assert.equal(mappings[2].action,'skip');
  assert.equal(availableImportColumns(detail).length,1);
 });
+test('manager receives missing-column proposal; editor sees no auto-creation',()=>{
+ const editor=initialImportMappings(sheet,detail);
+ assert.equal(editor[2].action,'skip');
+ const manager=initialImportMappings(sheet,detail,{canCreate:true});
+ assert.equal(manager[0].action,'item');
+ assert.equal(manager[1].action,'existing');
+ assert.equal(manager[2].action,'create');
+ assert.equal(manager[2].columnType,'checkbox');
+ assert.throws(()=>buildImportPlan({sheet,detail,mappings:manager,group}),/explicit Allow/);
+ const granted=buildImportPlan({sheet,detail,mappings:manager,group,allowColumns:true});
+ assert.equal(granted.payload.newColumns.length,1);
+});
 test('no new columns unless the approved plan explicitly includes them',()=>{
  const proposed=existingMaps.map(m=>({...m}));
  proposed[2]={source:'Checked',action:'create',name:'Checked',columnType:'checkbox'};
