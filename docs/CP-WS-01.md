@@ -49,3 +49,57 @@ Explicit disabled gates: `WS01_DISCOVERY_ENABLED=false`, `WS01_CREATION_ENABLED=
 - GitHub Pages full frontend CI, live interactive browser UX, and deploy asset check: **PENDING separate verification**.
 - Production schema or permission changes for CP-WS-01: **NONE**. Only read-only catalog/security inspection was performed.
 - **Overall CP-WS-01: PARTIALLY IMPLEMENTED**. The selector and browse/create review UI exist; genuine multi-workspace discovery, creation, ownership, privacy and switching remain blocked on server contracts and separate activation approval.
+
+## CP-WS-01B — Server-authorized lifecycle contracts (2026-11-05)
+
+**Classification:** IMPLEMENTED IN SOURCE — DISPOSABLE POSTGRESQL CI PENDING INDEPENDENT RESULT — PRODUCTION NOT ACTIVATED. The prior signed-context sidebar remains read-only. No production workspace, membership, role, grant, schema or record mutation was made.
+
+### Actual production readiness evidence
+
+Read-only SQL from `sql/tests/cp-ws01b-production-readiness.sql` was executed against existing Supabase project `jtlusodorfnyzgyuewkz` and returned
+`SCHEMA_PRECHECK_PASS__SEPARATE_PRODUCTION_APPROVAL_REQUIRED`.
+
+- All existing `public.workspaces`, `public.workspace_members`, `public.profiles`, `auth.sessions` and existing active-session guard prerequisites exist.
+- `auth.sessions.id` has a primary key; previously staged WS01 tables and RPCs remain absent.
+- Direct authenticated workspace-table SELECT/INSERT privileges remain denied.
+- Existing workspaces: **2**; active membership rows: **40**.
+- `public.current_workspace_id` is referenced by **62 database function definitions**, so switching is a cross-platform authorization change. No central function was replaced in production.
+
+This preflight does **not** demonstrate that migration candidates compile or pass runtime acceptance on the real installation. It is a compatibility inventory only.
+
+### Staged server contract (no production DDL executed)
+
+1. `sql/cp-ws01b-lifecycle-contract-candidate.sql`: private, RLS-enabled `ws01_workspace_policy`, `ws01_member_roles`, `ws01_create_requests`, `ws01_session_choices`, `ws01_lifecycle_flags` and `ws01_events`. The default owner and privacy of legacy workspaces are deliberately **not inferred**: a missing role is `member`, and a missing policy is `closed`. Existing records and memberships are preserved.
+2. `sql/cp-ws01-discovery-activation-candidate.sql`: `public.wm_ws01_list()` lists **only active memberships of the real signed caller**, with server-owned `owner/member/collaborator` relation and privacy fields. Requires an active profile, a live GoTrue session and an existing active workspace. Direct table grants remain denied. The `authenticated` RPC EXECUTE grant exists **only in the unexecuted candidate file**.
+3. `public.wm_ws01_create(name,privacy,requestId)`: transactionally inserts a new workspace, active owner membership, closed/open privacy policy, server role assignment, idempotency receipt and audit event. Serializes same-user claims by profile-row lock. An identical request is idempotent; altered replay fails. Creating a workspace **does not implicitly switch** the caller's active workspace. The RPC has no authenticated EXECUTE grant, and `creation_enabled=false` by default.
+4. `sql/cp-ws01b-session-cutover-candidate.sql`: **SEPARATE HIGH-RISK GATE**. Stages a session-scoped `current_workspace_id` replacement, `public.wm_ws01_select(target,expected)` with stale-context CAS, per-GoTrue-session row lock, signed target-membership verification, and a trigger that deletes selections when a membership is revoked. Current-workspace behavior remains unchanged while `selection_enabled=false`; the select RPC is not granted to authenticated users. This file is **not** authorized for production execution.
+
+**Open/Closed semantics currently enforce conservative non-disclosure.** `open` is recorded as privacy metadata but cannot expose a workspace to, or automatically admit, an unrelated account without a verified shared account/organization boundary and an independently reviewed join/invitation policy. An Open workspace is **not** globally public.
+
+### Client contract and automated test staging
+
+- `frontend/workspace-lifecycle-client.js` adds signed identity checks, strict server receipts, exact workspace CAS verification and a requirement to reread authoritative `wm_auth_access_context` after switching. The compile-time discovery/creation/switching flags remain **false**; existing UI does not invoke any new RPC.
+- `frontend/workspace-ui.js` now validates a future server-issued `owner/member/collaborator` role and `open/closed` privacy without inventing privileges for the current legacy workspace.
+- `frontend/tests/workspace-ui.test.mjs`: **10/10 source-replayed JS checks PASS**.
+- `frontend/tests/workspace-lifecycle-client.test.mjs`: **6/6 source-replayed JS checks PASS**.
+- `.github/workflows/cp-ws01b-disposable-postgres.yml` stages a **PostgreSQL 17 disposable database** with synthetic GoTrue users/sessions and runs `sql/tests/cp-ws01b-disposable-setup.sql`, both staged migration candidates, preactivation denial and postactivation signed acceptance **only in that disposable database**. The SQL assertions cover user/session revocation, foreign-workspace denial, permission/default-deny, scoped owner/collaborator discovery, idempotency, concurrent independent sessions, stale-CAS, membership revocation, privacy non-disclosure and audit.
+- **Disposable PostgreSQL runtime outcome and current GitHub Actions checks: NOT VERIFIED HERE.** Do not treat source-replayed JavaScript assertions or a successful production preflight as a PostgreSQL runtime PASS. A green independently inspected disposable workflow run is required.
+
+### Production activation decision gates (all PENDING separate approval)
+
+| Stage | Required boundary |
+| --- | --- |
+| B0 — source/CI | Confirm disposable PostgreSQL 17 run succeeded; verify frontend CI and live assets |
+| B1 — additive private schema | Separate approval for production schema/RLS/functions; prerequisite audit and backup evidence |
+| B2 — read-only member discovery | Separate approval for `authenticated` read RPC grant; genuine signed-manager, nonmanager and foreign-membership tests |
+| B3 — transactional creation | Separate approval for creation grant and activation flag; accepted name, owner, privacy, audit and idempotency checks |
+| B4 — session-bound switching | Separate high-risk approval to replace `current_workspace_id`, create membership-revocation trigger and grant selection; assess all 62 affected functions and their board/module/storage/cache consumers |
+| B5 — cross-workspace acceptance | Real signed cross-user and same-user two-session tests, revocation, expired sessions, cross-workspace board/document/attachment isolation, synchronization/cache invalidation and negative tests |
+
+No separate Supabase project, second login, direct client table access, production test fixture, role bypass, or unverified workspace ownership will be introduced.
+
+### Security-relevant caveats
+
+- Workspace-level **owner** is independent of the existing APSYNTRA platform role. The existing backend platform-role ceiling must be reviewed for users who belong to more than one workspace; a global platform administrator must not gain unauthorized access by relying solely on a UI selection.
+- Workspace switching affects data consumers beyond board lists: TradeLink, TimeTracker, FRT, 12 typed boards, file storage, realtime, audit and platform-sync state. The current source boundary must remain disabled until comprehensive authorization tests pass.
+- The legacy primary-workspace behavior is untouched in production. This phase does not unblock CP-TL-03C's separate genuine foreign-workspace denial test, because the foreign workspace currently has no active member.
