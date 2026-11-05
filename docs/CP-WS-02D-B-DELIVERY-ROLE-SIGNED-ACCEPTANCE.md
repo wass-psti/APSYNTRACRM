@@ -49,6 +49,10 @@ The `private.ws02d_workspace_ceiling` function returns only a **maximum** capabi
 
 Read-only production inventory found **53** definer functions referencing the board ACL and **30** candidate independent domain mutation paths referencing workspace scope but not that ACL. Those 30 are **review candidates, not proven vulnerabilities**; they require individual module RBAC review. The production board function, private invitation runtime, workspace lifecycle flags and existing user/member records remain unchanged. Resend is only an optional candidate; no provider was selected or activated.
 
+## CP-WS-02D/B3 additional safe-write and provider lifecycle coverage — 2026-11-05
+
+The [B3 technical report](./CP-WS-02D-B3-DOMAIN-WRITES-DELIVERY-READINESS.md) covers [CI #131](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41995268080) **PASS**: four original shared module mutation functions now have staged signed workspace `edit` ceilings, FuelTrack's original Admin-only import additionally denies workspace Viewer writes, and a default-off HTTP delivery boundary requires a verified GoTrue caller, private issuance and a durable delivery-outcome writer. A dormant, private receipt ledger audits provider-accepted/uncertain states and idempotent reconciliation without storing bearer tokens. All integrations are **isolated synthetic contracts only**; production function source, Auth, workspace/board memberships, and outbound delivery remain unchanged. The read-only production catalog identified 23 still-unreviewed domain mutations and zero anonymous EXECUTE privileges among them. Genuine provider and signed-session acceptance remain blocked until separate authorization.
+
 ## Remaining gates (no production mutations authorized)
 
 1. **Audit all board and domain operations**, including the 53 current board-ACL callers, and stage/verify integrated owner/Member/Admin/Viewer enforcement. Include negative Viewer writes, an Admin's platform-ceiling denial, revoked workspace memberships, and foreign-workspace access.
