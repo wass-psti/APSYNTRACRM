@@ -7,12 +7,13 @@ import {canManuallyEditBoard} from './board-inline-items.js';
 import {isProtectedBoard} from './board-card-lifecycle.js';
 import {moduleByBoardName} from './board-manifest.js';
 import {detectMondayCheckboxMarkers,mondayCheckboxCell} from './monday-import-compat.js';
+import {cmp02Validate} from './board-typed-cmp02.js';
 export const IMPORT_CONTRACT='m143-v1';
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
 ]);
 const creatable=new Set(CREATABLE_IMPORT_TYPES);
-const allowedTypes=new Set([...creatable,'status','dropdown']);
+const allowedTypes=new Set([...creatable,'status','dropdown','phone','rating','percentage']);
 const deny=(msg,status=400)=>{throw new ApiError(msg,status);};
 const uncertainImport=()=>{
  const error=new ApiError(
@@ -32,9 +33,13 @@ export function inferImportType(header,values=[]){
  if(label==='status'||label==='priority')return 'status';
  if(label.includes('checkbox')||label.startsWith('is '))return 'checkbox';
  if(label.includes('date')||label.endsWith(' at'))return 'date';
+ if(label==='phone'||label.includes('mobile')||label.includes('telephone'))return 'phone';
+ if(label==='rating'||label.endsWith(' rating'))return 'rating';
+ if(label.includes('percentage')||label.endsWith(' percent')||label.endsWith(' %'))return 'percentage';
  if(label.includes('email'))return 'email';
  if(label.includes('url')||label.includes('website'))return 'url';
  if(!sample.length)return 'text';
+ if(sample.every(x=>/^(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)%$/.test(x)))return 'percentage';
  if(sample.every(x=>/^(true|false|yes|no|0|1)$/i.test(x)))return 'checkbox';
  if(sample.every(x=>/^-?\d+(?:\.\d+)?$/.test(x)))return 'number';
  if(sample.every(x=>/^\d{4}-\d\d-\d\d$/.test(x)))return 'date';
@@ -79,6 +84,10 @@ function validDate(raw){
 function valueAsType(raw,type,config={}){
  const text=clean(raw);
  if(!text)return null;
+ if(['phone','rating','percentage'].includes(type)){
+  try{return cmp02Validate(type,text,config,{allowPercentSymbol:type==='percentage'});}
+  catch(error){deny(error.message);}
+ }
  if(type==='number'){
   if(!/^-?\d+(?:\.\d+)?$/.test(text)||!Number.isFinite(Number(text)))
    deny('A number cell contains an invalid value: '+text.slice(0,60));
