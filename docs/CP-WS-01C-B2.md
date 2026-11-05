@@ -1,6 +1,6 @@
 # CP-WS-01C/B2 — signed member workspace discovery readiness
 
-**State, 2026-11-05:** READ-ONLY B2 PRODUCTION PREFLIGHT VERIFIED. DISCOVERY EXECUTE GRANT NOT APPLIED. No production permission change in B2.
+**Current state, 2026-11-05: B2 PRODUCTION SIGNED-DISCOVERY RPC ACTIVATED AND STRUCTURALLY VERIFIED.** Historical readiness and unactivated statements below are superseded by the activation evidence at the end of this document. Genuine live signed-user acceptance remains pending.
 
 ## Authoritative baseline
 
@@ -20,3 +20,32 @@ B2 adds a **new production authenticated EXECUTE grant** for a SECURITY DEFINER 
 After an independently authorized B2 activation, verify exact grant visibility, anon denial, active signed manager/nonmanager access limited to each user's memberships, foreign-workspace isolation, revoked/expired-session denial, zero direct table privilege escalation, and compatibility with the frontend's existing `WS01_DISCOVERY_ENABLED=false` flag. Only enable frontend discovery after these pass. **B3 transactional creation and B4 workspace selection remain disabled.**
 
 This stage has **not** changed production schema or permissions.
+
+
+## CP-WS-01C/B2 production activation and independent checks — 2026-11-05
+
+**Authorization:** The user explicitly requested "alright begin Next gate — CP-WS-01C/B2" after the B1 activation and separate-permission boundary were explained. The operation was limited to the previously reviewed read-only discovery RPC and `authenticated` EXECUTE grant; no workspace creation/switch or data changes were authorized or performed. The earlier database backup was user-confirmed, not independently restore-tested.
+
+**Preflight and source identity:**
+- Exact committed migration: `sql/cp-ws01-discovery-activation-candidate.sql`, blob SHA `0815e4eac3fefa8688ddaf0bc09024dcaaef82fe`.
+- `BEGIN/COMMIT` once, one `CREATE FUNCTION public.wm_ws01_list()`, `SECURITY DEFINER` with empty `search_path`, `auth.uid()`, existing `private.wm_board_config_session_active()`, active profile and member-filter check `m.user_id=v_actor AND m.active IS TRUE`. `REVOKE ALL` to `PUBLIC,anon,authenticated`; `GRANT EXECUTE` only to `authenticated`. No direct table grants, DML, public workspace authority replacement, or creation/switch RPCs.
+- Preflight query: `sql/tests/cp-ws01c-b2-production-preflight.sql` returned `B2_DISCOVERY_SCHEMA_READY__NEW_AUTHENTICATED_EXECUTE_GRANT_NOT_APPLIED`, exactly six B1 RLS tables, 2 workspaces, 40 active memberships, both lifecycle flags disabled.
+- Disposable PostgreSQL 17 acceptance: [run #32](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41969525661) **SUCCESS**, 20/20 native Node tests and isolated B2 authenticated/anon/unsigned grant tests, followed by prior lifecycle acceptance.
+- Latest complete regression: [run #33](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41970070348) **SUCCESS**, 26/26 native Node tests, B2-only signed discovery/default-deny SQL, all staged domain acceptance. This also tests the B2 genuine-session browser probe with mock auth contexts; not a genuine production signed-user result.
+
+**Production DDL activation:** Supabase `apply_migration` on the existing project `jtlusodorfnyzgyuewkz` with name `cp_ws01c_b2_signed_member_workspace_discovery` returned `{"success":true}`. Migration ledger version **`20261105044441`**, count **163 → 164**, exactly one B2 entry. **Do not reapply B2.**
+
+**Executed production postcheck:** exact committed `sql/tests/cp-ws01c-b2-readonly-acceptance.sql` returned `B2_SERVER_READ_GRANT_POSTCHECK_PASS__LIVE_SIGNED_USER_TESTS_STILL_REQUIRED`. Verified:
+- Public `wm_ws01_list()` exists, `authenticated` EXECUTE **true**; `anon` and `PUBLIC` EXECUTE **false**.
+- Function requires signed session, active profile and membership; no-claim database probe was explicitly denied.
+- All six private `ws01_*` tables retain RLS, and direct `anon` and `authenticated` SELECT/INSERT/UPDATE/DELETE privileges remain **denied**.
+- B3 `wm_ws01_create(text,text,uuid)`, B4 `wm_ws01_select(uuid,uuid)`, and the private creation helper are **absent**. `creation_enabled=false`, `selection_enabled=false`.
+- Existing workspaces **2**, active memberships **40**, unchanged.
+- Existing `public.current_workspace_id(uuid)` definition fingerprint **`ceb6a14da8c7c8ed46187bae4833d575`**, unchanged.
+- Postactivation advisor flagged `authenticated_security_definer_function_executable` (WARN) for `public.wm_ws01_list()`: **intentional and expected** for a restricted authenticated read RPC. The read-only function checks the GoTrue session and returns only active caller memberships; retaining SECURITY DEFINER is necessary to read protected internal tables, and no general table permission was granted. This warning is tracked; it must never be dismissed as blanket permission for arbitrary SECURITY DEFINER APIs.
+
+**Live signed-user acceptance tool:** `frontend/workspace-b2-signed-acceptance.js` is wired into `#/security` by `frontend/app.js`. The control "Run B2 signed read checks" invokes `wm_ws01_list()` using the current genuine GoTrue bearer, verifies server-current workspace/user correspondence, validates the returned scoped catalog, re-verifies identity/session after the request, and exports only five check statuses and the count of signed memberships. No user names, workspace IDs, document content, credentials or tokens are exported. Reports clear on sign-out/session expiry, and are not persisted to browser storage.
+
+**Acceptance boundary:** Structural server-side production activation **VERIFIED PASS**. Genuine signed manager, nonmanager and foreign-workspace browser acceptance **PENDING**; a successful isolated fixture or unsigned DB denial does not satisfy those real-user gates. The connected browser API was inaccessible in chat mode. Frontend general discovery `WS01_DISCOVERY_ENABLED=false` remains disabled until actual signed-user acceptance. B3 creation and B4 session switching remain **DISABLED and NOT APPLIED**. The previously identified lack of a foreign-workspace member remains a real-user coverage blocker, not an authorization failure.
+
+**Next test:** After GitHub Pages deploys the new B2 probe, open `https://wass-psti.github.io/APSYNTRACRM/#/security` using each existing signed account; run "Run B2 signed read checks" and copy the sanitized JSON report. Compare authorized manager and nonmanager results, then cover an existing genuinely foreign-workspace user if one becomes eligible. For revoked/expired sessions, use controlled account-safe acceptance; no production token/user revocation was performed during B2.
