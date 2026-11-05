@@ -4,6 +4,8 @@ import {canManuallyEditBoard} from './board-inline-items.js';
 import {parseImportFile} from './board-import-parse.js';
 import {choiceCreationPreview,provisionImportChoiceColumn} from './board-import-choice-setup.js';
 import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
+import {importMappingReadiness,skipPendingImportChoice,
+ matchConfiguredImportChoice} from './board-import-readiness.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
  buildImportPlan,executeBoardImport} from './board-import-core.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
@@ -21,7 +23,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   throw new ApiError('Only signed ordinary-board editors can import records.',403);
  const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
   behavior:'add-new',matchColumnId:'item',allowColumns:false,manage,busy:false,
-  complete:null,error:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,choiceConsent:{}};
+  complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,choiceConsent:{}};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -32,12 +34,15 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  };
  const sheet=()=>state.file?.sheets[state.sheet];
  const missing=()=>state.mappings.filter(m=>m.action==='create');
+ const readiness=()=>importMappingReadiness(state.mappings,state.allowColumns);
+ const proposalSignature=mappings=>mappings.filter(m=>m.action==='create')
+  .map(m=>[m.source,m.name||m.source,m.columnType||m.type].join(':')).join('|');
  const group=()=>state.group==='create'?
   {action:'create',name:state.groupName}:
   {action:'existing',groupId:state.group};
  const computePlan=()=>{
-  if(state.mappings.some(m=>m.action==='configure'))
-   throw new Error('Configure or skip the pending Status/Dropdown columns before proceeding.');
+  if(readiness().pendingChoices.length)
+   throw new Error('Finish or explicitly skip each pending Status/Dropdown setup before proceeding.');
   return buildImportPlan({sheet:sheet(),detail,mappings:state.mappings,
    group:group(),matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
    allowColumns:state.allowColumns});
@@ -104,7 +109,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
       '<p class="aps-import-error" role="alert">'+esc(error)+'</p>')+
      '</div>';
    }
-   return '<div class="aps-import-map-grid aps-import-map-row"><div><b>'+
+   return '<div class="aps-import-map-grid aps-import-map-row" data-imp-map-row="'+i+'"><div><b>'+
     esc(m.source)+'</b><small>Detected: '+esc(suggest)+'</small><small>Example: '+
     esc(s.rows.find(r=>String(r[i]??'').trim())?.[i]??'—').slice(0,100)+'</small></div>'+
     '<div><label class="sr-only" for="imp-map-'+i+'">Map '+esc(m.source)+'</label>'+
@@ -122,7 +127,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    return (m.action==='create'?m.columnType:column?.type)==='checkbox'&&
     detectMondayCheckboxMarkers(s,m.source);
   });
-  const choicePending=state.mappings.filter(m=>m.action==='skip'&&
+  const gate=readiness(),choicePending=gate.pendingChoices;
+  const skippedChoices=state.mappings.filter(m=>m.action==='skip'&&
    (m.type==='status'||m.type==='dropdown'));
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
    '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+
@@ -137,17 +143,34 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     mondayCheckboxSources.map(m=>esc(m.source)).join(', ')+
     ': "v" will import as checked (true), and empty cells as unchecked (false).'+
     ' Generic blank cells in other columns remain empty.</p>':'')+
-   (choicePending.length?'<p class="aps-import-unsupported" role="note">'+
-    'Status and dropdown columns require configured board options. '+ 
-    'Map these file fields to a compatible existing column, or configure that column separately before importing. '+
-    'Creation requires a separate, explicitly authorized configuration step.</p>':'')+
+   (choicePending.length?'<div class="aps-import-resolve" role="region" aria-label="Required choice-column decisions">'+
+    '<h3>'+choicePending.length+' Status/Dropdown decision'+(choicePending.length===1?'':'s')+
+    ' required before continuing</h3>'+
+    '<p>These choice columns are separate from the '+newCols.length+
+    ' ordinary proposed column'+(newCols.length===1?'':'s')+
+    '. Configure their source labels with board-manager approval, map to a compatible existing column, or explicitly exclude their data.</p>'+
+    choicePending.map(({index,source,type})=>
+     '<div class="aps-import-resolve-row"><strong>'+esc(source)+' ('+esc(type)+')</strong>'+
+     '<div class="aps-import-choice">'+
+     '<button type="button" class="primary" data-imp-review-choice="'+index+'">Review '+esc(source)+' setup</button>'+
+     '<button type="button" class="secondary" data-imp-skip-choice="'+index+'">Skip '+esc(source)+' values (do not import)</button>'+
+     '</div></div>').join('')+
+    '<p>No records have been imported. Approved ordinary columns are not created until you click Import Now.</p>'+
+    '</div>':'')+
+   (skippedChoices.length?'<p class="aps-import-excluded" role="status">Not importing values from: '+
+    skippedChoices.map(m=>esc(m.source)).join(', ')+
+    '. You can restore these mappings before importing.</p>':'')+
    (newCols.length?'<div class="aps-import-permission" role="group" aria-label="Confirm new columns">'+
     '<h3>'+newCols.length+' proposed column'+(newCols.length===1?'':'s')+'</h3>'+
     '<p>Creating columns changes this board for everyone. You must authorize these exact mappings.</p>'+
     '<p>'+newCols.map(m=>esc(m.name||m.source)+' ('+esc(m.columnType||m.type)+')').join(' · ')+'</p>'+
     '<div class="aps-import-choice"><button type="button" class="primary" data-imp="allow-columns"'+(state.allowColumns?' disabled':'')+'>Allow creation</button>'+
     '<button type="button" class="secondary" data-imp="decline-columns">Decline and skip columns</button>'+
-    '</div>'+(state.allowColumns?'<strong role="status">Column creation approved for this import preview.</strong>':'')+
+    '</div>'+(state.allowColumns?'<strong role="status">'+
+     newCols.length+' ordinary column'+(newCols.length===1?'':'s')+
+     ' approved for the import preview.'+
+     (choicePending.length?' Resolve the separate Status/Dropdown setup above before continuing.':'')+
+     '</strong>':'')+
     '</div>':'')+'</section>';
  }
  function matchStep(){
@@ -173,6 +196,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     result.preview.newItems+' new · '+result.preview.updatedItems+' updates · '+
     result.preview.skippedItems+' skipped · '+result.preview.newColumns+
     ' new columns · '+result.preview.rowCount+' rows</p>'+
+    (readiness().skipped.length?'<p>Excluded source columns: '+
+     readiness().skipped.map(esc).join(', ')+'. Their values will not be imported.</p>':'')+
     '<p>The server will atomically validate and commit this import against the current board revision.</p>'+
     '<label class="aps-import-final-check"><input type="checkbox" name="imp-confirm" data-imp-confirm'+
     (state.confirmed?' checked':'')+' /> I have reviewed the mapping and the selected duplicate behavior.</label>'+
@@ -195,6 +220,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    'aria-label="Import board data">'+top()+
    '<main class="aps-import-body" tabindex="-1">'+(state.step===1?upload():state.step===2?mapStep():
    state.step===3?matchStep():resultStep())+
+   (state.notice?'<p class="aps-import-notice" role="status">'+esc(state.notice)+'</p>':'')+
    (state.error?'<p class="aps-import-error" role="alert">'+esc(state.error)+'</p>':'')+
    '</main><footer class="aps-import-footer">'+
    (state.step>1&&state.step<4?'<button class="secondary" data-imp="back"'+
@@ -202,6 +228,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    '<span class="aps-import-fill"></span>'+
    (state.step===2?(state.uncertain?
      '<button class="secondary" data-imp="close">Close and verify board</button>':
+     readiness().pendingChoices.length?
+     '<button class="primary" data-imp="review-choice"'+(state.busy?' disabled':'')+
+     '>Review '+readiness().pendingChoices.length+' Status/Dropdown setup'+
+     (readiness().pendingChoices.length===1?'':'s')+'</button>':
      '<button class="primary" data-imp="next"'+(state.busy?' disabled':'')+
      '>Next: Handle matches</button>'):'')+
    (state.step===3?(state.uncertain?
@@ -239,7 +269,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  function adjustMapping(index,value){
   const m=state.mappings[index];
   if(!m)return;
-  state.allowColumns=false;state.confirmed=false;state.choiceConsent={};
+  const before=proposalSignature(state.mappings);
+  state.confirmed=false;state.choiceConsent={};state.notice='';state.error='';
   if(value==='item'){
    state.mappings=state.mappings.map((a,i)=>i!==index&&a.action==='item'?
     {...a,action:'skip'}:a);
@@ -252,6 +283,14 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   else if(value==='skip')state.mappings[index]={...m,action:'skip'};
   else if(value.startsWith('existing:'))state.mappings[index]={...m,
    action:'existing',columnId:value.slice(9)};
+  // Unrelated, already-approved ordinary columns retain their consent.
+  if(proposalSignature(state.mappings)!==before)state.allowColumns=false;
+ }
+ function focusChoice(index){
+  const target=overlay.querySelector('[data-imp-map-row="'+index+'"]');
+  target?.scrollIntoView?.({block:'center',behavior:'auto'});
+  (target?.querySelector('[data-imp-choice-consent]')||
+   target?.querySelector('[data-imp-map]'))?.focus?.({preventScroll:true});
  }
  async function createChoice(index){
   if(state.busy||state.uncertain||!state.manage||!state.choiceConsent[index])return;
@@ -263,10 +302,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     detail,sheet:sheet(),source:mapping.source,
     type:mapping.choiceType,name:mapping.name||mapping.source});
    detail=result.detail;
-   state.mappings[index]={...mapping,action:'existing',
-    type:mapping.choiceType,columnId:result.columnId};
+   state.mappings=matchConfiguredImportChoice(state.mappings,index,result.columnId);
    state.allowColumns=false;state.choiceConsent={};state.confirmed=false;
-   state.error='Configured '+mapping.choiceType+' column created. Review mappings and approve any remaining changes before importing.';
+   state.notice='Configured '+mapping.choiceType+' column created. Review and approve the remaining ordinary columns before importing.';
   }catch(error){
    state.error=String(error.message||error);
    if(/receipt is uncertain|committed, but verification failed|stored choices differ/i.test(state.error))
@@ -294,7 +332,12 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const action=button.dataset.imp;
   if(action==='close'){close();return;}
   if(action==='browse'){overlay.querySelector('#aps-import-file-input')?.click();return;}
-  if(action==='back'){state.step--;state.error='';state.confirmed=false;render();return;}
+  if(action==='back'){state.step--;state.error='';state.notice='';state.confirmed=false;render();return;}
+  if(action==='review-choice'){
+   const pending=readiness().pendingChoices[0];
+   if(pending)focusChoice(pending.index);
+   return;
+  }
   if(action==='allow-columns'){
    if(!state.manage){state.error='Board management permission required.';}
    else{state.allowColumns=true;state.error='';}render();return;
@@ -305,17 +348,35 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   }
   if(action==='next'){
    state.error='';
-   try{if(missing().length&&!state.allowColumns)throw new Error('Choose Allow or Decline for proposed columns.');
-    computePlan();state.step=3;state.confirmed=false;}
-   catch(error){state.error=String(error.message||error);}
+   const gate=readiness();
+   if(gate.pendingChoices.length){focusChoice(gate.pendingChoices[0].index);return;}
+   try{
+    if(gate.awaitingColumnApproval)
+     throw new Error('Choose Allow or Decline for the proposed ordinary columns.');
+    computePlan();state.step=3;state.confirmed=false;
+   }catch(error){state.error=String(error.message||error);}
    render();return;
   }
   if(action==='import')void doImport();
  });
  overlay.addEventListener('click',event=>{
   if(state.busy||state.uncertain)return;
-  const button=event.target.closest('[data-imp-choice-create]');
-  if(button)void createChoice(Number(button.dataset.impChoiceCreate));
+  const button=event.target.closest('[data-imp-choice-create], [data-imp-review-choice], [data-imp-skip-choice]');
+  if(!button)return;
+  if(button.dataset.impChoiceCreate!=null){
+   void createChoice(Number(button.dataset.impChoiceCreate));return;
+  }
+  if(button.dataset.impReviewChoice!=null){
+   focusChoice(Number(button.dataset.impReviewChoice));return;
+  }
+  if(button.dataset.impSkipChoice!=null){
+   const index=Number(button.dataset.impSkipChoice);
+   const source=state.mappings[index]?.source;
+   state.mappings=skipPendingImportChoice(state.mappings,index);
+   state.choiceConsent={};state.confirmed=false;state.error='';
+   state.notice='Excluded '+source+' values from this import. The remaining approved ordinary columns are unchanged.';
+   render();
+  }
  });
  overlay.addEventListener('change',event=>{
   const el=event.target;
