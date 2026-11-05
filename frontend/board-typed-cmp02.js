@@ -53,5 +53,22 @@ export function cmp02VisibleValue(value,type,config={}){
  if(type==='percentage')return String(value)+'%';
  return '—';
 }
+/** Fail closed for administrator-supplied type-specific configuration. */
+export function cmp02CreationConfig(type,settings={}){
+ if(type==='phone')return {};
+ if(type==='rating'){
+  const max=Number(settings.max??5);
+  if(!Number.isInteger(max)||max<3||max>10)
+   throw new Error('Rating maximum must be an integer from 3 to 10.');
+  return {max};
+ }
+ if(type==='percentage'){
+  const decimals=Number(settings.decimals??2);
+  if(!Number.isInteger(decimals)||decimals<0||decimals>4)
+   throw new Error('Percentage precision must be an integer from 0 to 4.');
+  return {decimals};
+ }
+ throw new Error('Unsupported CMP-02 configuration.');
+}
 export function cmp02RatingMax(config){return maxRating(config);}
 export function cmp02PercentageDecimals(config){return percentageDecimals(config);}
