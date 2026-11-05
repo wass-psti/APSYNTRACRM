@@ -35,8 +35,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const sheet=()=>state.file?.sheets[state.sheet];
  const missing=()=>state.mappings.filter(m=>m.action==='create');
  const readiness=()=>importMappingReadiness(state.mappings,state.allowColumns);
- const proposalSignature=mappings=>mappings.filter(m=>m.action==='create')
-  .map(m=>[m.source,m.name||m.source,m.columnType||m.type].join(':')).join('|');
+ const proposalSignature=mappings=>JSON.stringify(mappings.filter(m=>m.action==='create')
+  .map(m=>[m.source,m.name||m.source,m.columnType||m.type]));
  const group=()=>state.group==='create'?
   {action:'create',name:state.groupName}:
   {action:'existing',groupId:state.group};
