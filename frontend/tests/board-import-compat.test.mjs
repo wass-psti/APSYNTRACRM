@@ -127,6 +127,24 @@ test('XLSX: actual deflate ZIP with empty sheet and absolute relationship target
  assert.deepEqual(parsed.sheets[0].headers,['Name','Score']);
  assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
 });
+test('XLSX: stored ZIP entries and header-only companion worksheets are supported',async()=>{
+ const entries=workbookEntries().map(entry=>({...entry,method:0}));
+ entries[2].xml='<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Unused Header</t></is></c></row></sheetData></worksheet>';
+ const parsed=await parseWithFixtureDom(makeZip(entries));
+ assert.equal(parsed.sheets.length,1);
+ assert.equal(parsed.sheets[0].name,'Contacts');
+});
+test('XLSX: formula cells, repeated physical coordinates and XML DTD declarations reject',async()=>{
+ const formula=workbookEntries();
+ formula[3].xml=contactsSheet.replace('<v>12.5</v>','<f>2+2</f><v>4</v>');
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(formula)),/Formula cells/);
+ const duplicate=workbookEntries();
+ duplicate[3].xml=contactsSheet.replace('<c r="B2" t="n"><v>12.5</v></c>',
+  '<c r="B2" t="n"><v>12.5</v></c><c r="B2" t="n"><v>99</v></c>');
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(duplicate)),/repeated, or unsupported cell address/);
+ const dtd=workbookEntries();dtd[0].xml='<!DOCTYPE workbook>'+workbookXml;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(dtd)),/entity and document declarations/);
+});
 test('XLSX: ZIP central checksum tampering is rejected before XML import',async()=>{
  const parts=workbookEntries();parts[0].invalidCrc=true;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(parts)),/checksum mismatch/);
