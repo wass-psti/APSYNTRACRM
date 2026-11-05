@@ -36,6 +36,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
 import {openBoardImportWizard} from './board-import-ui.js';
+import {resolveColumnTypeSelection} from './board-column-catalog.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
@@ -2166,6 +2167,10 @@ async function openBoardStructure(){
   const select=view.querySelector('#structure-new-type');
   if(!select||select.disabled)return;
   select.value=button.dataset.columnType;
+  if(select.value==='priority_preset'){
+   const name=view.querySelector('#structure-new-name');
+   if(name&&!name.value.trim())name.value='Priority';
+  }
   syncColumnPicker();
   select.focus();
  });
@@ -2198,10 +2203,12 @@ async function openBoardStructure(){
      tabs,columnLabels
     });
    }else if(form.dataset.structureForm==='create'){
+    const selection=resolveColumnTypeSelection(String(fd.get('type')||'text'),
+     fd.get('options'));
     await boardStructureClient.mutate(detail,{
      action:'create',name:String(fd.get('name')||''),
-     type:String(fd.get('type')||'text'),
-     config:parseChoiceConfig(String(fd.get('type')||'text'),fd.get('options'))
+     type:selection.type,
+     config:parseChoiceConfig(selection.type,selection.options)
     });
    }else return;
    if(!authorized())return;
