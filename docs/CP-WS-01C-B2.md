@@ -93,3 +93,19 @@ This stage has **not** changed production schema or permissions.
 **Coverage limitation observed in production inventory:** Two workspaces exist, but only one has active memberships, and no pair of current active member identities has disjoint workspace memberships. Therefore, a real foreign-workspace-member comparison cannot be run with the current production membership layout. Existing nonadministrator active member profiles do exist; verifying a distinct user still requires that account's genuine signed GoTrue browser session.
 
 **Remaining genuine live acceptance:** (1) run the sanitized `#/security` B2 probe in a distinct nonadministrator account, (2) compare genuinely disjoint workspace membership scopes if a legitimate existing eligible identity becomes available without manufacturing accounts/permissions, and (3) collect controlled real revoked/expired-session denial evidence without mutating production accounts for testing. Keep `WS01_DISCOVERY_ENABLED=false`, B3 and B4 disabled until independently accepted.
+
+
+## CP-WS-01C/B2 second signed-account acceptance — HR nonadministrator — 2026-11-05
+
+**Evidence provided:** The user submitted a sanitized `CP-WS-01C-B2-SIGNED-DISCOVERY` JSON report from a distinct existing account explicitly identified by the user as having the **HR** platform role. No account display name, user ID, workspace ID, session ID or bearer token is stored in this public repository record.
+
+- Reported checkpoint status: **PASS**.
+- Five checks: **signed-identity PASS**, **workspace-context PASS**, **server-discovery PASS**, **membership-catalog PASS**, **stable-session PASS**.
+- `signedWorkspaceCount=1`; `writesAttempted=0`; `identifiersDisclosed=0`.
+- This is **the second received genuine signed-user report**; earlier one-account report also had five PASS checks, but its platform role is not independently attested by that JSON itself.
+
+**Read-only independent inventory:** The connected production database has two active HR member profiles and one active HR member with a non-expired GoTrue session row. This aggregate is consistent with the reported acceptance context, but is **not** direct proof that the submitted JSON was executed by a specifically named person or a particular browser session. Production still has two workspaces, 40 active memberships and only one workspace with active membership. `wm_ws01_create` and `wm_ws01_select` remain absent, both lifecycle flags disabled.
+
+**Classification:** HR-attributed nonadministrator signed-workspace discovery **PASS (user-supplied evidence)**; automated cross-identity/denial acceptance **VERIFIED** by [PG17 workflow #36](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41973353012). Cross-workspace results for genuinely disjoint production members **BLOCKED** by existing membership configuration; genuine live revoked/expired-session denial **PENDING**. Do not conflate role-labeled discovery success with full permission-ceiling verification, real foreign-workspace isolation, or actual revoked-session denial.
+
+**Safety:** No production data, accounts, memberships, session records, role grants, policy settings, migration history or frontend enablement flags were modified for this report. B3/B4 stay disabled. No production privilege activation is authorized by the report.
