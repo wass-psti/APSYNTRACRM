@@ -68,3 +68,16 @@
 .aps-import-choice-config input[type="checkbox"]{flex:none;accent-color:#218cff;width:17px;height:17px;margin:0}
 .aps-import-choice-config button{justify-self:start;font-size:12px}
 .aps-import-choice-config button:disabled{opacity:.5}
+
+/* CMP-01 import gate repair: surface a pending choice setup at the current scroll
+   position without suggesting ordinary-column consent includes Status/Dropdown. */
+.aps-import-resolve{margin:16px 0;padding:16px;border:1px solid #d4a347;border-radius:9px;background:#302619;display:grid;gap:10px}
+.aps-import-resolve h3{font-size:15px;margin:0;color:#fff4dd}
+.aps-import-resolve p{font-size:12px;color:#f2dbb7;line-height:1.5;margin:0}
+.aps-import-resolve-row{border-top:1px solid #947242;padding-top:10px;display:grid;gap:4px}
+.aps-import-resolve-row strong{font-size:13px;overflow-wrap:anywhere}
+.aps-import-resolve .aps-import-choice{margin:4px 0}
+.aps-import-resolve button{font-size:12px;white-space:normal;text-align:center}
+.aps-import-excluded{padding:10px 12px;border-radius:7px;background:#25313e;border:1px solid #557086;color:#e6edf5;font-size:12px}
+.aps-import-notice{margin:16px auto;color:#daf8e8;background:#193e32;border:1px solid #42a87f;border-radius:7px;padding:10px 13px;max-width:840px}
+@media(max-width:600px){.aps-import-resolve .aps-import-choice{flex-direction:column;align-items:stretch}}
