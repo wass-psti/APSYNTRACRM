@@ -28,7 +28,7 @@ export function createGoTrueUserReader({
  }catch{ /* fail closed */ }
  return async function getUserForToken(jwt){
   if(enabled!==true||!origin||typeof fetchImpl!=='function'||
-     typeof publishableKey!=='string'||publishableKey.length<10||
+     typeof publishableKey!=='string'||!/^sb_publishable_[A-Za-z0-9_-]{8,}$/.test(publishableKey)||
      publishableKey.length>1500||
      typeof jwt!=='string'||jwt.length>10000||!TOKEN.test(jwt))
    throw new Error('Trusted GoTrue user lookup unavailable');
