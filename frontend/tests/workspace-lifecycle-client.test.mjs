@@ -103,7 +103,7 @@ test('isolated CI combines both contract stages and signs with disposable GoTrue
  assert.match(fixture,/CREATE TABLE auth\.sessions/);
  assert.match(tests,/Workspace request replay conflict|Changed idempotency key payload allowed/);
  assert.match(tests,/Foreign-account workspace switch allowed/);
- assert.match(tests,/Revoked GoTrue session could select workspace/);
+ assert.match(tests,/Revoked session could select workspace/);
  assert.match(tests,/Expired session could discover/);
  assert.match(tests,/Reactivated member recovered stale session choice/);
 });
