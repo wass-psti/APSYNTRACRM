@@ -2129,7 +2129,8 @@ async function verifyInlineColumnBoard(snapshot){
  ]);
  if(user?.id!==snapshot.userId||ctx?.user_id!==snapshot.userId||
     ctx?.profile?.status!=='active'||ctx?.workspace_id!==snapshot.workspaceId||
-    allowed!==true||fresh?.board?.id!==snapshot.boardId||
+    allowed!==true||!canManuallyEditBoard(fresh?.board,true)||
+    fresh?.board?.id!==snapshot.boardId||
     fresh?.board?.workspace_id!==snapshot.workspaceId)
   throw new ApiError('Signed board manager authorization is no longer valid.',403);
  if(fresh.board.updated_at!==snapshot.boardRevision)
@@ -2213,7 +2214,8 @@ function contextualColumnDelete(key){
 }
 function contextualColumnCreate(){
  const snapshot=inlineColumnSnapshot();
- if(!snapshot||!state.boardManage||!activeBoardLayout())return;
+ if(!snapshot||!state.boardManage||!activeBoardLayout()||
+    !canManuallyEditBoard(state.board?.board,true))return;
  const fields=input('Column name','name','')+
   '<div class="field"><label for="modal-type">Column type</label>'+
   '<select name="type" id="modal-type">'+renderColumnTypeOptions()+'</select></div>'+
