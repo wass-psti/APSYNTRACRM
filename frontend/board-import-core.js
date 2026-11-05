@@ -225,7 +225,7 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
 }
 export async function executeBoardImport({api,auth,plan}={}){
  if(!plan?.boardId||!plan?.payload||!api?.board||!api?.allowed||
-  !api?.context||!auth?.getVerifiedUser)deny('Signed import service is unavailable.',403);
+  !api?.context||!api?.rpc||!auth?.getVerifiedUser)deny('Signed import service is unavailable.',403);
  const actor=await auth.getVerifiedUser(),ctx=await api.context();
  if(!validUuid(actor?.id)||actor.id!==ctx.user_id||actor.id!==auth.userId||
   ctx.workspace_id!==plan.workspaceId||ctx.profile?.status!=='active')
@@ -238,6 +238,12 @@ export async function executeBoardImport({api,auth,plan}={}){
  if(!await api.allowed(plan.boardId,'edit'))deny('Board edit access required.',403);
  if(plan.payload.newColumns.length&&!await api.allowed(plan.boardId,'manage'))
   deny('Board manage access required to create columns.',403);
+ // BIMP-02 defense in depth: the existing signed board UI read checks the
+ // server's auth.sessions registry. Do not attempt an import if it fails.
+ // This client preflight cannot replace a guard inside the import RPC itself.
+ const liveSession=await api.rpc('wm_board_ui_read',{p_board_id:plan.boardId});
+ if(liveSession?.board_id!==plan.boardId)
+  deny('Active signed board session could not be verified.',403);
  const receipt=await api.rpc('wm_import_board_wizard_atomic',{
   p_board_id:plan.boardId,p_expected_updated_at:plan.boardRevision,p_payload:plan.payload
  });
