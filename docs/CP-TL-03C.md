@@ -1,13 +1,13 @@
 # CP-TL-03C — Controlled TradeLink production activation
 
-**Status:** PRE-ACTIVATION CHECKS PASS; NO PRODUCTION SQL ACTIVATED.  
+**Status:** STAGE A ACTIVATED IN PRODUCTION — READ-ONLY; STAGE B NOT APPROVED/NOT ACTIVATED; SIGNED-USER ACCEPTANCE PENDING.  
 **Project:** existing Supabase `jtlusodorfnyzgyuewkz` ONLY. No new project, backend, login, or independent user-role store.  
 **Board:** existing TradeLink `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, workspace `00000000-0000-4000-8000-000000000001`.
 
-## Verified production state — read-only, 2026-11-05 Asia/Manila
+## Verified pre-activation baseline — read-only, 2026-11-05 Asia/Manila (historical)
 
 - PostgreSQL `17.6`; exact v1 TradeLink board active, one group, eight legacy columns, zero board items.
-- `public.tradelink_documents`, `public.tradelink_document_events` and `public.tl03_document_{commit,read}`/`public.tl03_documents_list` **absent**.
+- Before Stage A, `public.tradelink_documents`, `public.tradelink_document_events` and the new document RPCs were **absent**. See the deployment evidence below for their current installed state.
 - `sql/tests/cp-tl03c-production-readiness.sql` was committed and executed against the actual existing project. All **10/10 readiness fields passed**, including exact scope, private schema access, current `auth.sessions` columns and eight previously reviewed backend function definitions (MD5 fingerprints), with `changed_dependencies=[]`.
 - The existing security advisor reports project-wide warnings for exposed security-definer functions and other tables. These were **not** amended or bypassed in CP-TL-03C. Evaluate them separately in their respective module authorization scope, using the Supabase dashboard security advisor. Do not weaken permissions to silence advisories.
 
@@ -59,7 +59,7 @@ Source: `sql/cp-tl03c-emergency-disable-candidate.sql`.
 7. `sql/tests/cp-tl03c-disposable-emergency-acceptance.sql`: grants denied; 1 document, 4 events and linked board item preserved.
 8. Focused frontend contract unit tests.
 
-The prior CP-TL-03B GitHub run passed before the two-stage changes. **The revised CI run must also finish successfully before either production stage is considered activation-eligible.**
+The revised two-stage CI showed **SUCCESS** in the user-supplied GitHub Actions screenshot (CP-TL-03B run #12 on main), including the emergency-disable chain. Individual per-step logs were not independently re-read in this session. Production Stage A was separately authorized, applied and verified as recorded below; the prior run alone does not authorize Stage B.
 
 ## Stop and escalation conditions
 
@@ -74,10 +74,28 @@ The prior CP-TL-03B GitHub run passed before the two-stage changes. **The revise
 1. Existing live board/schema and signed function baseline — **VERIFIED**.
 2. Read-only dependency drift preflight — **VERIFIED** (10/10 checks).
 3. Split Stage A/Stage B source implementation — **IMPLEMENTED** (6/6 isolated contract checks).
-4. Nondestructive emergency-disable candidate and retention tests — **IMPLEMENTED**; runtime evidence pending.
-5. Revised disposable PostgreSQL CI and regression — **PENDING actual run**.
-6. Stage A explicit production permission/schema approval and activation — **PENDING**.
+4. Nondestructive emergency-disable candidate and retention tests — **CI PASS evidenced by run #12**; actual production disable not executed.
+5. Revised disposable PostgreSQL CI and regression — **CI PASS evidenced by run #12 screenshot** (individual steps not independently audited).
+6. Stage A explicit production permission/schema approval and activation — **VERIFIED** (migration history and read-only grant/RLS verification).
 7. Stage B explicit production write-grant approval and activation — **PENDING**.
 8. Genuine signed-session production operational acceptance — **PENDING**.
 
-**No production migration, GRANT, REVOKE, table creation, document mutation or role change performed in CP-TL-03C preparation.**
+**The initial CP-TL-03C preparation did not modify production. Following separate authorization and user confirmation of backup availability, Stage A was subsequently applied. Stage B, document mutations, and role changes were NOT performed.**
+
+## Stage A production activation evidence — 2026-11-05 Asia/Manila
+
+- **Authorization:** separate user approval of CP-TL-03C Stage A production schema/RLS/read permissions had already been obtained; the user subsequently confirmed backup availability in the existing Supabase Dashboard. Recoverability was **user-confirmed**, not independently demonstrated by a restored backup.
+- **Immediately before migration:** reran the exact `sql/tests/cp-tl03c-production-readiness.sql` against the existing project. Result: `PRECHECK_PASS__SEPARATE_PRODUCTION_APPROVAL_STILL_REQUIRED`; all ten expected scope/dependency checks matched; `changed_dependencies=[]`. Previous migration ledger had 161 entries and no CP-TL-03C activation.
+- **Migration operation:** used the connected Supabase `apply_migration` method with the exact committed SQL from `sql/cp-tl03-staged-domain.sql` (Git blob `57a37d7ecab183cd2f548b3b53b70bd44fce2ec3`), name `cp_tl03c_stage_a_readonly_domain_activation`. Returned `{"success":true}`.
+- **Recorded migration:** `20261105011611`, `cp_tl03c_stage_a_readonly_domain_activation`, confirmed in Supabase migration history (162 entries).
+- **Post-activation acceptance:** the approved read-only `sql/tests/cp-tl03c-stage-a-readonly.sql` check completed without exception. An independent SQL read then confirmed:
+  - Two new tables exist, both with RLS enabled and policy `private.tl03_can_manage(board_id)` for authenticated SELECT.
+  - `authenticated`: EXECUTE on read/list RPCs **true**; EXECUTE on both public and private commit RPCs **false**.
+  - `anon`: EXECUTE on read and commit RPCs **false**.
+  - `authenticated`: SELECT on documents **true** with RLS; direct INSERT, UPDATE and audit-event INSERT **false**.
+  - Both document and audit-event counts **zero**.
+  - Existing board remains active with eight legacy columns and zero records; no operational data imported.
+- **Security advisor:** unchanged existing project-wide advisory classes were observed; no new CP-TL-03 function/table warnings singled out in the retrieved advisor summary.
+- **Not verified:** authenticated browser request with genuine nonbootstrap/manager user, session revocation production test, backup restoration rehearsal. No test user/record created.
+
+**Stage A = ACTIVATED AND STRUCTURALLY VERIFIED. Stage B = DISABLED, STILL REQUIRES A SEPARATE PRODUCTION WRITE-PERMISSION APPROVAL.**
