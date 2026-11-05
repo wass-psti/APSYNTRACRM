@@ -192,3 +192,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-order-intake-positive-fixture.sql
       - name: Verify Order Intake authorized create/update/status/archive/restore and denied writes
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-order-intake-valid-write-acceptance.sql
+      - name: Stage remaining FuelTrack activity and request-state test dependencies
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-fueltrack-two-positive-fixture.sql
+      - name: Accept FuelTrack event append, atomic request CAS and signed authorization denials
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-fueltrack-two-valid-write.sql
