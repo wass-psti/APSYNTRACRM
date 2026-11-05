@@ -16,6 +16,9 @@ CREATE FUNCTION private.ws02d_workspace_ceiling(
   WHEN p_workspace IS NULL OR p_actor IS NULL OR
    p_action NOT IN('view','edit','manage') OR p_action IS NULL
    THEN false
+  WHEN auth.uid() IS DISTINCT FROM p_actor
+   OR NOT private.wm_board_config_session_active()
+   THEN false
   WHEN public.current_workspace_id(p_actor) IS DISTINCT FROM p_workspace
    OR NOT EXISTS(SELECT 1 FROM public.profiles p
      WHERE p.id=p_actor AND p.status='active')
