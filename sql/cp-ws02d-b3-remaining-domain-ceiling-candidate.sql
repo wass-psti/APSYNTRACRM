@@ -579,7 +579,7 @@ AS $function$
 declare caller uuid:=auth.uid(); ws uuid; role_name text; item jsonb; eid text; at_time timestamptz; inserted_count integer:=0; prof public.profiles%rowtype;
 begin
   IF auth.uid() IS NULL OR NOT private.ws02d_workspace_ceiling(
-    public.current_workspace_id(auth.uid()),auth.uid(),'manage') THEN
+    public.current_workspace_id(auth.uid()),auth.uid(),'edit') THEN
     RAISE EXCEPTION 'WS02D_B3_WORKSPACE_CEILING_DENIED' USING ERRCODE='42501';
   END IF;
 
