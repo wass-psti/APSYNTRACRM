@@ -40,8 +40,9 @@ export async function runWs01B2SignedDiscovery({auth,api}={}){
    catalog.status==='SIGNED_MEMBER_DISCOVERY'&&
     catalog.rows.length>=1&&catalog.rows.some(x=>x.id===context.workspace_id&&x.active)?
     'PASS':'FAIL'));
- }catch{
-  checks.push(item('server-discovery','BLOCKED'));
+ }catch(error){
+  const denied=error?.status===401||error?.status===403||error?.code==='42501';
+  checks.push(item('server-discovery',denied?'FAIL':'BLOCKED'));
   checks.push(item('membership-catalog','BLOCKED'));
  }
  try{
