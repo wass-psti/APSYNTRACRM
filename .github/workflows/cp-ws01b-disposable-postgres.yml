@@ -15,8 +15,10 @@ on:
       - 'sql/tests/cp-ws01c-*.sql'
       - 'frontend/workspace-ui.js'
       - 'frontend/workspace-lifecycle-client.js'
+      - 'frontend/workspace-b2-signed-acceptance.js'
       - 'frontend/tests/workspace-ui.test.mjs'
       - 'frontend/tests/workspace-lifecycle-client.test.mjs'
+      - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
   workflow_dispatch:
 
 permissions:
@@ -67,7 +69,7 @@ jobs:
           test "$PGDATABASE" = workspace_disposable
           psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'workspace_disposable|t'
       - name: Run workspace UI and staged-contract regression tests
-        run: node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs
+        run: node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs frontend/tests/workspace-b2-signed-acceptance.test.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
       - name: Install private B1-only schema (no lifecycle RPCs)
