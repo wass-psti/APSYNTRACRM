@@ -58,6 +58,59 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $diagnostics$
   'actor_present',auth.uid() IS NOT NULL,
   'session_claim_present',auth.jwt()->>'session_id' IS NOT NULL,
   'signed_session_guard',private.wm_board_config_session_active(),
+  'actor_matches_fixture',auth.uid()='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+  'session_claim_matches_fixture',auth.jwt()->>'session_id'='aaaaaaaa-0000-4000-8000-000000000001',
+  'session_claim_uuid_shape',(auth.jwt()->>'session_id') ~
+    '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}
+    WHERE p.id=auth.uid() AND p.status='active'),
+  'active_membership',EXISTS(SELECT 1 FROM public.workspace_members m
+    WHERE m.user_id=auth.uid() AND m.active IS TRUE))
+$diagnostics$;
+REVOKE ALL ON FUNCTION public.ws01_fixture_auth_diagnostics() FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.ws01_fixture_auth_diagnostics() TO authenticated;
+
+CREATE FUNCTION public.ws01_fixture_visible_boards() RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $boards$
+ SELECT coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+  'id',b.id,'name',b.name) ORDER BY b.name),'[]'::jsonb)
+ FROM public.work_boards b
+ WHERE b.workspace_id=public.current_workspace_id(auth.uid());
+$boards$;
+REVOKE ALL ON FUNCTION public.ws01_fixture_visible_boards() FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.ws01_fixture_visible_boards() TO authenticated;
+
+INSERT INTO auth.users(id) VALUES
+ ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+ ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+ ('cccccccc-cccc-4ccc-8ccc-cccccccccccc'),
+ ('dddddddd-dddd-4ddd-8ddd-dddddddddddd');
+INSERT INTO public.profiles(id,status)
+ SELECT id,'active' FROM auth.users;
+INSERT INTO public.workspaces(id,name) VALUES
+ ('00000000-0000-4000-8000-000000000001','Main Workspace'),
+ ('00000000-0000-4000-8000-000000000002','Foreign Workspace');
+INSERT INTO public.workspace_members(workspace_id,user_id,active,created_at) VALUES
+ ('00000000-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',true,'2026-01-01'),
+ ('00000000-0000-4000-8000-000000000002','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',true,'2026-01-02'),
+ ('00000000-0000-4000-8000-000000000001','cccccccc-cccc-4ccc-8ccc-cccccccccccc',true,'2026-01-03'),
+ ('00000000-0000-4000-8000-000000000002','cccccccc-cccc-4ccc-8ccc-cccccccccccc',true,'2026-01-04'),
+ ('00000000-0000-4000-8000-000000000001','dddddddd-dddd-4ddd-8ddd-dddddddddddd',true,'2026-01-05');
+INSERT INTO public.work_boards(id,workspace_id,name) VALUES
+ ('11111111-1111-4111-8111-111111111111','00000000-0000-4000-8000-000000000001','Private Main Board'),
+ ('22222222-2222-4222-8222-222222222222','00000000-0000-4000-8000-000000000002','Private Foreign Board');
+INSERT INTO auth.sessions(id,user_id,not_after) VALUES
+ ('aaaaaaaa-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',NULL),
+ ('aaaaaaaa-0000-4000-8000-000000000002','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',NULL),
+ ('bbbbbbbb-0000-4000-8000-000000000001','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',NULL),
+ ('cccccccc-0000-4000-8000-000000000001','cccccccc-cccc-4ccc-8ccc-cccccccccccc',NULL),
+ ('cccccccc-0000-4000-8000-000000000002','cccccccc-cccc-4ccc-8ccc-cccccccccccc',NULL),
+ ('dddddddd-0000-4000-8000-000000000001','dddddddd-dddd-4ddd-8ddd-dddddddddddd',NULL);
+,
+  'matching_session_row',EXISTS(SELECT 1 FROM auth.sessions s
+    WHERE s.id=(auth.jwt()->>'session_id')::uuid AND s.user_id=auth.uid()),
+  'session_not_expired',EXISTS(SELECT 1 FROM auth.sessions s
+    WHERE s.id=(auth.jwt()->>'session_id')::uuid AND s.user_id=auth.uid()
+      AND (s.not_after IS NULL OR s.not_after>now())),
   'active_profile',EXISTS(SELECT 1 FROM public.profiles p
     WHERE p.id=auth.uid() AND p.status='active'),
   'active_membership',EXISTS(SELECT 1 FROM public.workspace_members m
