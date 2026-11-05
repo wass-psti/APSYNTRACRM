@@ -24,12 +24,38 @@ export function workspaceCatalog(current){
   canCreate:false,canSwitch:false,canDiscoverAll:false
  });
 }
+/** Strict parser for a future separately approved signed wm_ws01_list RPC.
+ * Do not run this RPC until its production grant is approved and verified. */
+export function normalizeServerWorkspaceCatalog(raw,{userId,workspaceId}={}){
+ const rows=raw?.rows;
+ const safe=Array.isArray(rows)&&rows.length>0&&rows.length<=100&&
+  raw?.schemaVersion===1&&validUuid(userId)&&validUuid(workspaceId)&&
+  raw.userId===userId&&raw.activeWorkspaceId===workspaceId;
+ if(!safe)return {status:'INVALID',rows:[],canCreate:false,canSwitch:false,canDiscoverAll:false};
+ const seen=new Set();
+ const normalized=[];
+ for(const row of rows){
+  if(!validUuid(row?.id)||seen.has(row.id)||
+    typeof row.name!=='string'||!row.name.trim()||row.name.length>120||
+    row.relation!=='member'||typeof row.active!=='boolean'||
+    row.active!==(row.id===workspaceId))
+   return {status:'INVALID',rows:[],canCreate:false,canSwitch:false,canDiscoverAll:false};
+  seen.add(row.id);
+  normalized.push(Object.freeze({id:row.id,name:row.name.trim(),relation:'member',
+   active:row.active,verifiedScope:'SIGNED_MEMBER_RPC'}));
+ }
+ if(!seen.has(workspaceId))
+  return {status:'INVALID',rows:[],canCreate:false,canSwitch:false,canDiscoverAll:false};
+ return Object.freeze({status:'SIGNED_MEMBER_DISCOVERY',
+  rows:Object.freeze(normalized),canCreate:false,canSwitch:false,canDiscoverAll:false});
+}
 export function visibleWorkspaces(catalog,{tab='all',query=''}={}){
  const segment=TABS.has(tab)?tab:'all';
  const term=String(query||'').trim().toLocaleLowerCase().slice(0,120);
  return (Array.isArray(catalog?.rows)?catalog.rows:[]).filter(w=>
-  w?.verifiedScope==='SIGNED_CURRENT_ONLY'&&validUuid(w.id)&&
-  (segment==='all'||segment==='recent'||segment==='member')&&
+  (w?.verifiedScope==='SIGNED_CURRENT_ONLY'||w?.verifiedScope==='SIGNED_MEMBER_RPC')&&
+  validUuid(w.id)&&
+  (segment==='all'||segment==='member'||(segment==='recent'&&w.active))&&
   w.name.toLocaleLowerCase().includes(term));
 }
 export function validateWorkspaceProposal({name,privacy}={}){
