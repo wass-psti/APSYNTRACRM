@@ -6,6 +6,10 @@
 
 [CP-WS-02D/B3 priority-domain valid-write report](./CP-WS-02D-B3-PRIORITY-DOMAIN-VALID-WRITES.md) and [CI #152](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42000295939) have superseded the earlier **7/30** positive-transaction baseline below. **Current individually exercised valid-write coverage is 20/30**, including TimeTracker (1), Employee Evaluation (5) and Order Intake (7). **10** distinct paths still require individual authorized-workflow acceptance. The original 24/24 synthetic denial and production source-integrity boundaries remain unchanged; no production deployment or provider activation followed.
 
+## Latest follow-on checkpoint — 30/30 isolated operational tests (2026-11-05)
+
+[The remaining ten domain transaction report](./CP-WS-02D-B3-REMAINING-TEN-DOMAIN-VALID-WRITES.md) records [CI #162](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42002817567) **PASS**, upgrading staged individual authorized/denied transaction coverage from **20/30 to 30/30**. The older 7/30 and 20/30 statistics in the original text are historical, not present blockers. Genuine GoTrue integration, production read/write permissions, provider delivery, concurrency and application acceptance remain separate requirements.
+
 ## Acceptance boundary
 
 This checkpoint continues the existing [B3 domain-write/delivery gate](./CP-WS-02D-B3-DOMAIN-WRITES-DELIVERY-READINESS.md). There were 30 original independent write-path review candidates. Seven have prior positive/negative transactional evidence in disposable PostgreSQL (two board-creation, four module-state/lock, FuelTrack Admin import). An additional **24** functions, including the already-reviewed FuelTrack import, were staged via a source-preserving SQL candidate. Consequently, **30 distinct identified functions are covered by staged upper-bound code**, but **only 7 have individual authorized-business-transaction acceptance**. The other **23 still require successful original domain write, CAS, record ownership, audit, concurrency and rollback coverage**. Do not treat denial-only tests as proof of those business invariants.
