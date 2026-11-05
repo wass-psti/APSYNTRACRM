@@ -52,3 +52,21 @@ Verified unchanged board ACL and four shared module routine fingerprints; invita
 **Progress:** Staged integration candidates **30/30 (100%)**; production-activated **0/30 (0%)**; overall checkpoint completion **indeterminate** pending signed-user acceptance and provider selection.
 
 **Next required checkpoint:** Continue **CP-WS-02D/B3 — Genuine signed-session domain authorization and trusted delivery operational acceptance**, then seek a separate scoped approval for any production migration/role activation. Do not represent B3 as production-complete from synthetic CI or a successful Pages build.
+
+## 5. CP-WS-02D/B3 genuine-session preflight preparation (2026-11-05)
+
+The user's currently open GitHub Pages site could not be read from this chat's browser connector: the originating browser context was unavailable. **No genuine signed-browser execution was observed.** Privileged SQL with a synthetic JWT is not counted as genuine acceptance.
+
+The **Security → B3 · Signed domain read preflight** is now a user-initiated production-safe read check. The code in `frontend/workspace-b3-signed-read-preflight.js` verifies `auth.getVerifiedUser()`, the authoritative workspace returned by `wm_auth_access_context`, 12 `has_module_access` read-only calls using the signed user's default `auth.uid()` (never an arbitrary `p_user_id`), and fresh identity/context continuity. The UI emits only whitelisted check names/statuses and aggregate counts; the report contains zero identifiers, bearer tokens, writes, provider sends or speculative write-denial PASS statuses. It resets and discards results on logout or session expiry. **A successful run certifies a signed read preflight only; it does not certify the 30 mutation gates or live invitation delivery.**
+
+- [Frontend Validation #41995728202](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41995728202): **SUCCESS** after immutable-report fixture correction.
+- [Disposable PG17 Acceptance #41995728086](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41995728086): **SUCCESS**.
+- [Pages Deployment #41995726902](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41995726902): **SUCCESS**.
+- Read-only 30-function production preflight `sql/tests/cp-ws02d-b3-live-original-source-preflight.sql` was executed on the existing Supabase project and returned **`WS02D_B3_LIVE_30_ORIGINAL_FUNCTIONS_AND_DEFAULT_DENY_VERIFIED`**: 30 expected, 30 exist, 30 original MD5 fingerprints unchanged, no candidate directly executable by `anon`, catalog still 30, board ACL unchanged, signed-read predicate grants intact, invitation / role-ceiling runtime absent, workspace lifecycle disabled; 2 workspaces / 40 active memberships. This result is **LIVE READ ONLY**, not a signed-user test.
+- Supabase Edge Function inventory found three active functions (`admin-sync-auth-access`, `toolbox-attachment-maintenance`, `apsyntra-native-issues`). **No `ws02d-invite` trusted delivery function was deployed.** This does not prove anything about external email providers but confirms this planned endpoint is not active.
+
+**Required interactive acceptance:** open [APSYNTRA CRM Security](https://wass-psti.github.io/APSYNTRACRM/#/security) while genuinely signed in; select **Run B3 signed read preflight** then **Copy nonsecret B3 preflight**. Do not share cookies, a JWT, bearer invitation links or raw database responses. The outcome requires review; a PASS does not authorize writes or promotion.
+
+**Outstanding operational acceptance:** separately approved production domain/role/permission cutover, genuine signed Member/Viewer/Admin positive and denied write workflows with reversible fixtures and complete audit evidence, revoked/expired-session and cross-workspace denial, real provider selection and sender DNS, durable deployed issuer/receipt adapters, webhook verification and end-to-end deliverability. Without those, classify genuine signed write and provider delivery **BLOCKED/PENDING**, not PASS.
+
+**Next required gate: CP-WS-02D/B3 — Genuine signed-browser preflight evidence and separately approved domain-write/provider operational activation.**
