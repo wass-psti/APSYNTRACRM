@@ -10,6 +10,10 @@
 
 [Signed-read and trusted contract report](./CP-WS-02D-B3-SIGNED-READ-TRUSTED-CONTRACT.md) records [PG17/Node CI #176](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42007719449) **SUCCESS**. Concrete server-only, default-disabled GoTrue user lookup and strictly parameterized live-session SQL adapters now compose with the existing fail-closed identity verifier. Tests validate allowed `sb_publishable_` key use, exact Supabase HTTPS host, redacted Auth response, bad/expired/mismatched/revoked identities, and disabled defaults. The trusted SELECT was validated on production with invented nonmember UUIDs only; no genuine signed JWT, external provider, private issuer or backend deployment was used. **The original 5/10 development/readiness criteria remain unchanged**, as genuine signed read/production integration remains pending.
 
+## Latest approved-scope trusted execution fixture — 2026-11-05
+
+[New signed-read/trusted execution evidence](./CP-WS-02D-B3-GENUINE-READ-TRUSTED-EXECUTION-FIXTURE.md): [PG17 CI #181](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42010423515) **SUCCESS**. The actual constant backend session SQL was executed using PostgreSQL server-side parameters against synthetic active/expired/revoked/deleted/banned identities, with all records cleaned. A **NOLOGIN** disposable role invoked only the private issuer and verified default-deny, owner-only issuance, replay withholding, foreign, Member and expired denials, audit integrity and complete rollback of role/grants/flags. **No genuine signed browser token, live trusted service, production write or external email** was involved. B3 integration readiness stays **5/10** pending user-supplied sanitized signed-read evidence and separately approved staging/backend activation.
+
 ## 1. Evidence verified now
 
 | Area | Evidence | Result |
