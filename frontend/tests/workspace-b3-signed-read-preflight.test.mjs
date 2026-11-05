@@ -63,6 +63,8 @@ test('B3 signed identity change fails stable-session checkpoint',async()=>{
 test('B3 report sanitizes raw IDs, tokens and untrusted rows',async()=>{
  const {auth,api}=fixture();
  const report=await runWs02dB3SignedReadPreflight({auth,api});
+ assert.equal(Object.isFrozen(report),true);
+ assert.equal(Object.isExtensible(report),false);
  report.checks[0].raw='Bearer secret '+actor;
  const injected={...report,user_id:actor,workspace_id:workspace,email:'secret@example.invalid'};
  const exported=sanitizeWs02dB3SignedReport(injected);
