@@ -36,7 +36,9 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
 import {openBoardImportWizard} from './board-import-ui.js';
-import {resolveColumnTypeSelection} from './board-column-catalog.js';
+import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
+import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
+ confirmInlineColumnDelete} from './board-inline-context.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
@@ -2112,6 +2114,120 @@ async function openTimeTrackerBoardProjectedGps(){
  current.querySelector('[data-dismiss]')?.focus();
 }
 
+
+/** Contextual column actions remain on the current board and use its existing
+ * signed, audited server CAS writer. No Manage Columns navigation is required.
+ */
+async function verifyInlineColumnBoard(snapshot){
+ if(!BOARD_STRUCTURE_ADMIN_ENABLED||!state.boardManage||!state.board||
+    state.boardId!==snapshot.boardId||state.context?.user_id!==snapshot.userId||
+    state.context?.workspace_id!==snapshot.workspaceId)
+  throw new ApiError('Board context or manager permission changed.',403);
+ const [user,ctx,fresh,allowed]=await Promise.all([
+  auth.getVerifiedUser(),db.context(),db.board(snapshot.boardId),
+  db.allowed(snapshot.boardId,'manage')
+ ]);
+ if(user?.id!==snapshot.userId||ctx?.user_id!==snapshot.userId||
+    ctx?.profile?.status!=='active'||ctx?.workspace_id!==snapshot.workspaceId||
+    allowed!==true||fresh?.board?.id!==snapshot.boardId||
+    fresh?.board?.workspace_id!==snapshot.workspaceId)
+  throw new ApiError('Signed board manager authorization is no longer valid.',403);
+ if(fresh.board.updated_at!==snapshot.boardRevision)
+  throw new ApiError('Board columns changed since this menu was opened. Refresh and review.',409);
+ const session=await db.rpc('wm_board_ui_read',{p_board_id:snapshot.boardId});
+ if(session?.board_id!==snapshot.boardId)
+  throw new ApiError('Active signed board session is required.',403);
+ return fresh;
+}
+function inlineColumnSnapshot(){
+ if(!state.board?.board||!state.context)return null;
+ return {boardId:state.boardId,userId:state.context.user_id,
+  workspaceId:state.context.workspace_id,boardRevision:state.board.board.updated_at};
+}
+function contextualColumnEditor(key){
+ const snapshot=inlineColumnSnapshot();
+ if(!snapshot||!state.boardManage)return;
+ const column=resolveInlineColumn(state.board,key,{canManage:state.boardManage});
+ if(column.kind==='primary'){
+  openModal('Rename Item column',
+   input('Main title column label','primaryLabel',state.boardUi?.primaryLabel||'Item'),
+   async fd=>{
+    const fresh=await verifyInlineColumnBoard(snapshot);
+    const settings=await boardStructureClient.read(snapshot.boardId);
+    await boardStructureClient.save(fresh,{...settings,
+     primaryLabel:String(fd.get('primaryLabel')||'')});
+    await loadBoard(snapshot.boardId,'items');
+   });
+  return;
+ }
+ const storedCount=columnStoredValueCount(state.board,column.id);
+ const existing=column.type;
+ const form=input('Column name','name',column.name)+
+  select('Column type','type',BOARD_STRUCTURE_TYPES.map(t=>[t,t]),existing)+
+  '<p class="muted">Type conversion is denied for populated columns. '+storedCount+
+   ' stored value'+(storedCount===1?'':'s')+' detected.</p>'+
+  '<div class="field"><label for="modal-column-options">Status/Dropdown labels (one per line)</label>'+
+  '<textarea id="modal-column-options" name="options" maxlength="4100" rows="3">'+
+   e(columnOptionLines(column))+'</textarea></div>'+
+  '<div class="field"><label><input type="checkbox" name="visible" '+
+   (column.visible?'checked ':'')+'/> Visible on board</label></div>';
+ openModal('Configure '+column.name+' column',form,async fd=>{
+  const fresh=await verifyInlineColumnBoard(snapshot);
+  const target=resolveInlineColumn(fresh,key,{canManage:true});
+  if(target.type!==existing||target.name!==column.name)
+   throw new ApiError('Column changed while editing. Refresh and review.',409);
+  const update=prepareInlineColumnUpdate(fresh,target,fd);
+  const sameType=update.type===target.type;
+  const config=['status','dropdown'].includes(update.type)?
+   parseChoiceConfig(update.type,fd.get('options'),sameType?target.config:{}):
+   sameType?target.config:{};
+  await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
+   name:update.name,type:update.type,config,visible:update.visible});
+  await loadBoard(snapshot.boardId,'items');
+ });
+}
+function contextualColumnDelete(key){
+ const snapshot=inlineColumnSnapshot();
+ if(!snapshot||!state.boardManage)return;
+ const column=resolveInlineColumn(state.board,key,{canManage:true});
+ if(column.kind==='primary')throw new ApiError('The required Item column cannot be deleted.',403);
+ const storedCount=columnStoredValueCount(state.board,column.id);
+ openModal('Delete '+column.name+' column',
+  '<p class="note security-note">This operation removes an empty custom column only. '+
+  'Existing cell values are protected by PostgreSQL. '+storedCount+
+  ' stored value'+(storedCount===1?'':'s')+' currently detected. '+
+  'Deleting the column is irreversible when the server accepts it.</p>'+
+  input('Type DELETE '+column.name+' exactly','confirmation',''),
+  async fd=>{
+   const fresh=await verifyInlineColumnBoard(snapshot);
+   const target=resolveInlineColumn(fresh,key,{canManage:true});
+   if(target.name!==column.name)
+    throw new ApiError('Column was renamed. Reopen deletion confirmation.',409);
+   if(columnStoredValueCount(fresh,target.id)>0)
+    throw new ApiError('Column contains values. Remove or migrate those values before deleting.',409);
+   const confirmation=confirmInlineColumnDelete(target,String(fd.get('confirmation')||''));
+   await boardStructureClient.mutate(fresh,{action:'delete',columnId:target.id,
+    confirmation});
+   await loadBoard(snapshot.boardId,'items');
+  },{submitLabel:'Delete empty column'});
+}
+function contextualColumnCreate(){
+ const snapshot=inlineColumnSnapshot();
+ if(!snapshot||!state.boardManage||!activeBoardLayout())return;
+ const fields=input('Column name','name','')+
+  '<div class="field"><label for="modal-type">Column type</label>'+
+  '<select name="type" id="modal-type">'+renderColumnTypeOptions()+'</select></div>'+
+  '<div class="field"><label for="modal-column-options">Status/Dropdown options (one per line)</label>'+
+  '<textarea name="options" id="modal-column-options" rows="3" maxlength="4100"></textarea></div>';
+ openModal('Add column to this board',fields,async fd=>{
+  const fresh=await verifyInlineColumnBoard(snapshot);
+  const selection=resolveColumnTypeSelection(String(fd.get('type')||'text'),
+   fd.get('options'));
+  await boardStructureClient.mutate(fresh,{action:'create',name:String(fd.get('name')||''),
+   type:selection.type,config:parseChoiceConfig(selection.type,selection.options)});
+  await loadBoard(snapshot.boardId,'items');
+ },{submitLabel:'Add column'});
+}
 async function openBoardStructure(){
  if(!activeBoardLayout())return;
  const snapshot={boardId:state.boardId,userId:auth.userId,
