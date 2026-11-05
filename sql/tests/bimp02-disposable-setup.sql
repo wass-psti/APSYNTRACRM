@@ -13,6 +13,9 @@ ALTER TABLE public.work_board_groups ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.work_board_groups FROM PUBLIC,anon,authenticated;
 
 ALTER TABLE public.work_board_items
+ ALTER COLUMN id SET DEFAULT gen_random_uuid();
+
+ALTER TABLE public.work_board_items
  ADD COLUMN group_id uuid REFERENCES public.work_board_groups(id),
  ADD COLUMN title text NOT NULL DEFAULT 'Fixture',
  ADD COLUMN position integer NOT NULL DEFAULT 0,
