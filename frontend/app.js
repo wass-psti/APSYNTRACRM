@@ -756,7 +756,7 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Configure columns &amp; views</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
@@ -771,7 +771,7 @@ function boardPage(){
  ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError}}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
- ${boardColumnMenu(columns,layout)}<button type="button" class="secondary" data-action="board-structure">Manage columns</button>
+ ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
  ${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-import">⇧ Import CSV/XLSX</button>':''}
@@ -2541,8 +2541,8 @@ async function action(name,button){
   break;
  }
  case 'board-add-column':{
-  if(!activeBoardLayout()||!isItemOnlyBoard(state.board,state.boardUi)||!state.boardManage)return;
-  await openBoardStructure();modal?.querySelector('#structure-new-name')?.focus();break;
+  if(!activeBoardLayout()||!state.boardManage)return;
+  contextualColumnCreate();break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
  case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
@@ -2576,27 +2576,20 @@ async function action(name,button){
   const key=button.dataset.key,layout=activeBoardLayout();
   closeBoardColumnContext();
   if(!layout?.columns.includes(key)||!state.boardManage)return;
-  await openBoardStructure();
-  if(key==='record')modal?.querySelector('#structure-primary')?.focus();
-  else{
-   const customId=key.startsWith('col:')?key.slice(4):null;
-   const edit=[...modal?.querySelectorAll('[data-structure-edit]')||[]]
-     .find(el=>el.dataset.structureEdit===customId);
-   if(edit)edit.click();
-   else modal?.querySelector('.board-structure-scroll')?.focus();
-  }
-  break;
+  contextualColumnEditor(key);break;
  }
  case 'board-column-delete-custom':{
   const key=button.dataset.key,layout=activeBoardLayout();
   closeBoardColumnContext();
   if(!layout?.columns.includes(key)||!state.boardManage||!key.startsWith('col:'))return;
-  const customId=key.slice(4);
-  if(!describeBoardColumns(state.board).some(c=>c.id===customId&&c.deletable))return;
-  await openBoardStructure();
-  const remove=[...modal?.querySelectorAll('[data-structure-delete]')||[]]
-    .find(el=>el.dataset.structureDelete===customId);
-  remove?.click();break;
+  contextualColumnDelete(key);break;
+ }
+ case 'board-column-hide':{
+  const key=button.dataset.key,layout=activeBoardLayout();
+  closeBoardColumnContext();
+  if(!layout?.columns.includes(key)||BOARD_REQUIRED_COLUMNS.includes(key))return;
+  persistBoardLayout(p=>({...p,hidden:[...new Set([...p.hidden,key])]}));
+  render();break;
  }
  case 'board-column-move':{
   const current=activeBoardLayout(),key=button.dataset.key,
@@ -3860,8 +3853,7 @@ function openBoardColumnContext(trigger){
  const customId=key.startsWith('col:')?key.slice(4):null;
  const editableCustom=state.boardManage&&customId&&
   describeBoardColumns(state.board).some(c=>c.id===customId&&c.deletable);
- const manageable=state.boardManage&&
-  (key==='record'||editableCustom||key==='status'||key==='owner'||key==='due'||key==='actions');
+ const manageable=state.boardManage&&(key==='record'||editableCustom);
  const make=(action,label)=>'<button type="button" role="menuitem" data-action="'+action+
   '" data-key="'+e(key)+'">'+e(label)+'</button>';
  const node=document.createElement('div');
@@ -3869,9 +3861,10 @@ function openBoardColumnContext(trigger){
  node.setAttribute('role','menu');node.setAttribute('aria-label','Column options: '+name);
  node.innerHTML=make('board-column-set-width','Set width…')+
   make('board-column-reset-width','Reset width')+
-  (manageable?make('board-column-manage',key==='record'?'Rename title column…':
-   editableCustom?'Edit custom column…':'Manage board columns…'):'')+
-  (editableCustom?make('board-column-delete-custom','Delete custom column…'):'');
+  (!BOARD_REQUIRED_COLUMNS.includes(key)?make('board-column-hide','Hide from my board view'):'')+
+  (manageable?make('board-column-manage',key==='record'?'Rename Item column…':
+   'Configure column here…'):'')+
+  (editableCustom?make('board-column-delete-custom','Delete column here…'):'');
  root.append(node);
  boardColumnMenuNode=node;boardColumnMenuTrigger=trigger;
  trigger.setAttribute('aria-expanded','true');
