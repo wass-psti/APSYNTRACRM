@@ -56,6 +56,9 @@ BEGIN
   WHERE id IS TRUE AND advanced_roles_enabled IS TRUE
  ) THEN RAISE EXCEPTION 'Advanced invitation roles disabled' USING ERRCODE='42501'; END IF;
  PERFORM 1 FROM public.profiles WHERE id=v_actor AND status='active' FOR UPDATE;
+ -- Serialize quotas across multiple authorized senders in the SAME workspace.
+ -- Without this lock, simultaneous actors could exceed the per-recipient cap.
+ PERFORM 1 FROM public.workspaces WHERE id=p_workspace FOR UPDATE;
  SELECT * INTO v_prior FROM private.ws02d_invitations
  WHERE workspace_id=p_workspace AND issued_by=v_actor AND request_id=p_request_id;
  IF FOUND THEN
