@@ -64,12 +64,12 @@ test('B3 report sanitizes raw IDs, tokens and untrusted rows',async()=>{
  const {auth,api}=fixture();
  const report=await runWs02dB3SignedReadPreflight({auth,api});
  report.checks[0].raw='Bearer secret '+actor;
- report.user_id=actor;report.workspace_id=workspace;report.email='secret@example.invalid';
- const exported=sanitizeWs02dB3SignedReport(report);
+ const injected={...report,user_id:actor,workspace_id:workspace,email:'secret@example.invalid'};
+ const exported=sanitizeWs02dB3SignedReport(injected);
  assert.doesNotMatch(exported,/Bearer|secret@example.invalid|aaaaaaaa-aaaa|00000000-0000/);
  assert.match(exported,/READ_ONLY_NOT_DOMAIN_WRITE_OR_EMAIL_ACCEPTANCE/);
  assert.equal(JSON.parse(exported).writesAttempted,0);
- const rendered=renderWs02dB3SignedPreflight({report});
+ const rendered=renderWs02dB3SignedPreflight({report:injected});
  assert.match(rendered,/security-ws02d-b3-run/);
  assert.match(rendered,/NOT RUN/);
  assert.doesNotMatch(rendered,/Bearer|aaaaaaaa-aaaa|secret@example.invalid/);

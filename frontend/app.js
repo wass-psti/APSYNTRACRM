@@ -2505,7 +2505,7 @@ async function action(name,button){
   if(state.ws01B2Busy||state.view!=='security'||!state.context||!auth.isSignedIn)break;
   const run=++state.ws01B2RunId;
   const actor=state.context.user_id,workspace=state.context.workspace_id;
-  state.ws01B2Busy=true;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;render();
+  state.ws01B2Busy=true;state.ws01B2Result=null;render();
   try{
    const report=await runWs01B2SignedDiscovery({auth,api:db});
    if(run===state.ws01B2RunId&&auth.isSignedIn&&
