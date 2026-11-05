@@ -19,3 +19,15 @@ LANGUAGE sql STABLE AS $p$
   AND p_state_key='project.plan')
  OR (p_module_id='fueltrack-plus' AND p_state_key='fueltrackplus.requests.v3');
 $p$;
+
+-- Match the registered disposable request key in the ownership test double.
+-- Real RPC already performs the full domain policy checks.
+CREATE OR REPLACE FUNCTION public.module_state_payload_allowed(
+ p_module_id text,p_state_key text,p_old text,p_new text,p_actor uuid
+) RETURNS boolean LANGUAGE sql STABLE AS $allowed$
+ SELECT p_new IS NOT NULL AND p_actor=auth.uid()
+ AND (
+  (p_module_id IN('fueltrack-plus','tradelink') AND p_state_key='project.plan')
+  OR (p_module_id='fueltrack-plus' AND p_state_key='fueltrackplus.requests.v3')
+ );
+$allowed$;
