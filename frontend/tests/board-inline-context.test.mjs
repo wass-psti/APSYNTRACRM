@@ -54,17 +54,18 @@ test('inline custom-column rename and visibility preserve immutable type and fie
 });
 test('populated column conversion rejects without running server mutation or dropping values',()=>{
  const populated={...detail,values:[{item_id:itemId,column_id:customId,value:'active'}]};
+ const editable=resolveInlineColumn(populated,'col:'+customId,{canManage:true});
  assert.equal(columnStoredValueCount(populated,customId),1);
- assert.throws(()=>prepareInlineColumnUpdate(populated,column,
+ assert.throws(()=>prepareInlineColumnUpdate(populated,editable,
   form({name:'Status I',type:'text',visible:true})),
   error=>error instanceof ApiError&&error.status===409&&/persisted data/.test(error.message));
- assert.deepEqual(prepareInlineColumnUpdate(populated,column,
+ assert.deepEqual(prepareInlineColumnUpdate(populated,editable,
   form({name:'Renamed',type:'status',visible:true})),
   {name:'Renamed',type:'status',visible:true});
  assert.deepEqual(populated.values,detail.values.concat({item_id:itemId,column_id:customId,value:'active'}));
  const empty={...detail,values:[{column_id:customId,value:null}]};
  assert.equal(columnStoredValueCount(empty,customId),0);
- assert.equal(prepareInlineColumnUpdate(empty,column,
+ assert.equal(prepareInlineColumnUpdate(empty,editable,
   form({name:'Converted',type:'text'})).type,'text');
 });
 test('deletion requires exact named confirmation and excludes Item or domain columns',()=>{
@@ -72,7 +73,7 @@ test('deletion requires exact named confirmation and excludes Item or domain col
   resolveInlineColumn(detail,'col:'+customId,{canManage:true}),'DELETE Status I'),
   'DELETE Status I');
  for(const wrong of ['DELETE status i','DELETE Status','Status I','DELETE  Status I']){
-  assert.throws(()=>confirmInlineColumnDelete(column,wrong),/exactly/);
+  assert.throws(()=>confirmInlineColumnDelete(resolveInlineColumn(detail,'col:'+customId,{canManage:true}),wrong),/exactly/);
  }
  assert.throws(()=>confirmInlineColumnDelete({id:customId,deletable:false,name:'Item'},
   'DELETE Item'),/Only ordinary/);
