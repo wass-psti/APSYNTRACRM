@@ -196,3 +196,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-fueltrack-two-positive-fixture.sql
       - name: Accept FuelTrack event append, atomic request CAS and signed authorization denials
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-fueltrack-two-valid-write.sql
+      - name: Stage TradeLink asset and reconciliation verifier with synthetic storage
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-tradelink-positive-fixture.sql
+      - name: Accept six TradeLink asset, reconciliation, fence and cleanup audit workflows
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-tradelink-six-valid-write.sql
