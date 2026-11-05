@@ -4,6 +4,10 @@
 
 **Scope:** TimeTracker Attendance, Employee Evaluation and Order Intake. Real domain RPC bodies from the production read-only source snapshot were installed and tested with synthetic GoTrue claims, synthesized domain schemas and permission doubles in disposable PostgreSQL 17. Existing private workspace-role ceiling guards are staged in source only. No live attendance, employee, financial or workspace record was created or changed.
 
+## Latest follow-on checkpoint — complete isolated domain path coverage
+
+[CP-WS-02D/B3 remaining ten valid-write acceptance](./CP-WS-02D-B3-REMAINING-TEN-DOMAIN-VALID-WRITES.md) and [PG17 CI #162](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42002817567) verified FuelTrack (2), TradeLink (6) and administrative role management (2) in isolated synthetic transactions. **Current individual valid-write coverage is 30/30 (100%)**, superseding the 20/30 baseline below. The new outcome applies only to disposable Postgres, not live GoTrue, RLS, provider delivery or production activation.
+
 ## Evidence
 
 [GitHub Actions Workspace Lifecycle run #152](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42000295939) **completed SUCCESS** on main commit `4f918e1b805d4bec7b80a864cd9e08b0e2bbed88`. Named CI steps for all three priority domains passed and existing B1/B2/B3/WS02B, invitation, permission, and FuelTrack regression tests remained green.
