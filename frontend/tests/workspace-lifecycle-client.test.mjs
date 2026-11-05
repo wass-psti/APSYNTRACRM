@@ -65,6 +65,7 @@ test('pure signed identity validation fails closed on mismatches',async()=>{
 });
 test('staged SQL separates secure discovery, creation, default denial and session cutover',()=>{
  const schema=readFileSync('sql/cp-ws01b-lifecycle-contract-candidate.sql','utf8');
+ const creation=readFileSync('sql/cp-ws01c-b3-create-contract-candidate.sql','utf8');
  const discovery=readFileSync('sql/cp-ws01-discovery-activation-candidate.sql','utf8');
  const cutover=readFileSync('sql/cp-ws01b-session-cutover-candidate.sql','utf8');
  assert.match(schema,/ALTER TABLE private\.ws01_workspace_policy ENABLE ROW LEVEL SECURITY/);
@@ -74,10 +75,12 @@ test('staged SQL separates secure discovery, creation, default denial and sessio
  assert.match(schema,/CHECK \(privacy IN \('open','closed'\)\)/);
  assert.match(schema,/CREATE TABLE private\.ws01_create_requests/);
  assert.match(schema,/PRIMARY KEY\(actor_id,request_id\)/);
- assert.match(schema,/FOR UPDATE/);
- assert.match(schema,/private\.wm_board_config_session_active\(\)/);
- assert.match(schema,/REVOKE ALL ON FUNCTION public\.wm_ws01_create\(text,text,uuid\)/);
- assert.doesNotMatch(schema,/GRANT EXECUTE ON FUNCTION public\.wm_ws01_create\(/i);
+ assert.doesNotMatch(schema,/CREATE FUNCTION (?:public|private)\.wm_ws01_/);
+ assert.doesNotMatch(schema,/CREATE FUNCTION public\.wm_ws01_create\(/);
+ assert.match(creation,/FOR UPDATE/);
+ assert.match(creation,/private\.wm_board_config_session_active\(\)/);
+ assert.match(creation,/REVOKE ALL ON FUNCTION public\.wm_ws01_create\(text,text,uuid\)/);
+ assert.doesNotMatch(creation,/GRANT EXECUTE ON FUNCTION public\.wm_ws01_create\(/i);
  assert.match(discovery,/m\.user_id=v_actor AND m\.active IS TRUE/);
  assert.match(discovery,/coalesce\(r\.relation,'member'\)/);
  assert.match(discovery,/coalesce\(policy\.privacy,'closed'\)/);
@@ -102,7 +105,8 @@ test('isolated CI combines both contract stages and signs with disposable GoTrue
  assert.match(workflow,/PGDATABASE: workspace_disposable/);
  for(const path of [
   'cp-ws01b-disposable-setup.sql','cp-ws01b-lifecycle-contract-candidate.sql',
-  'cp-ws01-discovery-activation-candidate.sql','cp-ws01b-session-cutover-candidate.sql',
+  'cp-ws01-discovery-activation-candidate.sql','cp-ws01c-b3-create-contract-candidate.sql',
+  'cp-ws01c-b1-schema-acceptance.sql','cp-ws01b-session-cutover-candidate.sql',
   'cp-ws01b-disposable-preactivation.sql','cp-ws01b-disposable-acceptance.sql'
  ])assert.ok(workflow.includes(path),path);
  assert.match(fixture,/CREATE TABLE auth\.sessions/);
@@ -117,6 +121,7 @@ test('every staged migration has intact SQL boundaries and no literal escaped ne
  for(const path of [
   'sql/cp-ws01b-lifecycle-contract-candidate.sql',
   'sql/cp-ws01-discovery-activation-candidate.sql',
+  'sql/cp-ws01c-b3-create-contract-candidate.sql',
   'sql/cp-ws01b-session-cutover-candidate.sql'
  ]){
   const sql=readFileSync(path,'utf8');
@@ -165,4 +170,28 @@ test('disposable GoTrue fixture recognizes full UUID sessions and contains one i
  assert.equal((setup.match(/INSERT INTO auth\.sessions\(id,user_id,not_after\)/g)||[]).length,1);
  assert.equal((setup.match(/\$diagnostics\$/g)||[]).length,2);
  assert.equal((setup.match(/\$boards\$/g)||[]).length,2);
+});
+
+
+test('B1 migration contains no public or private RPCs and is accepted before B2/B3',()=>{
+ const b1=readFileSync('sql/cp-ws01b-lifecycle-contract-candidate.sql','utf8');
+ const b3=readFileSync('sql/cp-ws01c-b3-create-contract-candidate.sql','utf8');
+ const workflow=readFileSync('.github/workflows/cp-ws01b-disposable-postgres.yml','utf8');
+ const post=readFileSync('sql/tests/cp-ws01c-b1-schema-acceptance.sql','utf8');
+ assert.equal((b1.match(/^CREATE TABLE private\.ws01_/gm)||[]).length,6);
+ assert.equal((b1.match(/^ALTER TABLE private\.ws01_.* ENABLE ROW LEVEL SECURITY;$/gm)||[]).length,6);
+ assert.doesNotMatch(b1,/CREATE FUNCTION/);
+ assert.doesNotMatch(b1,/GRANT EXECUTE/);
+ assert.match(b1,/creation_enabled boolean NOT NULL DEFAULT false/);
+ assert.match(b1,/selection_enabled boolean NOT NULL DEFAULT false/);
+ assert.match(b3,/CREATE FUNCTION private\.ws01_signed_actor_session/);
+ assert.match(b3,/CREATE FUNCTION public\.wm_ws01_create/);
+ assert.doesNotMatch(b3,/GRANT EXECUTE.*TO authenticated/);
+ assert.match(post,/to_regprocedure\('public\.wm_ws01_create\(text,text,uuid\)'\) IS NOT NULL/);
+ assert.match(post,/v_total<>6 OR v_rls<>6 OR v_direct<>0 OR v_policies<>0/);
+ const install=workflow.indexOf('-f sql/cp-ws01b-lifecycle-contract-candidate.sql');
+ const verify=workflow.indexOf('-f sql/tests/cp-ws01c-b1-schema-acceptance.sql');
+ const discover=workflow.indexOf('-f sql/cp-ws01-discovery-activation-candidate.sql');
+ const create=workflow.indexOf('-f sql/cp-ws01c-b3-create-contract-candidate.sql');
+ assert.ok(install>=0&&install<verify&&verify<discover&&discover<create);
 });
