@@ -81,6 +81,8 @@ jobs:
         run: node --test server/tests/ws02d-trusted-delivery.test.mjs server/tests/ws02d-resend-transport.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs server/tests/ws02d-gotrue-actor-verifier.test.mjs server/tests/ws02d-gotrue-live-read-adapters.test.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
+      - name: Execute real disposable Auth/session SQL with synthetic identity and mocked GoTrue user
+        run: node scripts/ws02d-b3-trusted-backend-fixture.mjs
       - name: Install private B1-only schema (no lifecycle RPCs)
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-lifecycle-contract-candidate.sql
       - name: Verify isolated B1 schema, zero RPCs, disabled flags
