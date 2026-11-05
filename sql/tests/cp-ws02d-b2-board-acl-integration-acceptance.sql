@@ -16,6 +16,17 @@ BEGIN
  USING ERRCODE='42501'; END IF;
 END $pre$;
 BEGIN;
+-- Existing B4 disposable acceptance deliberately revoked C's original
+-- GoTrue session and left C's recovered session ...0003 active. Reuse
+-- the real surviving synthetic session; do not weaken the session guard.
+DO $session_ready$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM auth.sessions s
+  WHERE s.id='cccccccc-0000-4000-8000-000000000003'
+   AND s.user_id='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+   AND (s.not_after IS NULL OR s.not_after>now()))
+ THEN RAISE EXCEPTION 'Required recovered synthetic session missing'; END IF;
+END $session_ready$;
 -- Old board ACL assigned D a board Owner and can give global admin fastpath;
 -- the new role ceiling must deny edit/manage for a scoped Viewer anyway.
 UPDATE public.profiles SET platform_role='admin_general_manager'
@@ -58,7 +69,7 @@ BEGIN
 END $viewer_cap$;
 
 SELECT set_config('request.jwt.claim.sub','cccccccc-cccc-4ccc-8ccc-cccccccccccc',true);
-SELECT set_config('request.jwt.claim.session_id','cccccccc-0000-4000-8000-000000000001',true);
+SELECT set_config('request.jwt.claim.session_id','cccccccc-0000-4000-8000-000000000003',true);
 DO $member$
 BEGIN
  IF NOT public.work_board_access('11111111-1111-4111-8111-111111111111','view')
