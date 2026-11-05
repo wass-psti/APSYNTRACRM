@@ -103,12 +103,20 @@ BEGIN
  UPDATE public.profiles p
  SET email=pg_catalog.lower(coalesce(NEW.email,p.email)),
   email_verified_at=NEW.email_confirmed_at,
-  status=CASE WHEN v_admitted AND v_verified AND p.status='pending'
-   THEN 'active' ELSE p.status END,
+  status=CASE
+   WHEN v_admitted AND p.status='disabled' THEN 'disabled'
+   WHEN v_admitted AND v_verified AND p.status='pending' THEN 'active'
+   WHEN v_admitted AND NOT v_verified AND p.status='active' THEN 'pending'
+   ELSE p.status END,
   updated_at=now()
  WHERE p.id=NEW.id;
 
- IF v_admitted AND v_verified THEN
+ -- Re-verification restores only a legitimate pending account. A disabled
+ -- account must not be provisioned or accidentally reactivated.
+ IF v_admitted AND v_verified AND EXISTS(
+  SELECT 1 FROM public.profiles p
+  WHERE p.id=NEW.id AND p.status='active'
+ ) THEN
   PERFORM private.ws02_provision_main_workspace(NEW.id);
  END IF;
  RETURN NEW;
