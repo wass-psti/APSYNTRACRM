@@ -2,7 +2,18 @@
  * Inventory is intentionally narrower than monday.com; no AI, Marketplace,
  * proprietary monday, file-storage or unimplemented relationship columns.
  */
+import {CMP02_SCHEMA_ACTIVATED} from './board-typed-cmp02.js';
+/** Staged contracts are not selectable until database activation is accepted. */
+export const CMP02_STAGED_CATALOG=Object.freeze([
+ {type:'phone',label:'Phone',group:'Super useful',
+  description:'International E.164 phone number.',icon:'☎',keywords:'mobile contact calling'},
+ {type:'rating',label:'Rating',group:'Super useful',
+  description:'Whole-number rating on a configurable 3–10 point scale.',icon:'★',keywords:'stars score max'},
+ {type:'percentage',label:'Percentage',group:'Super useful',
+  description:'Percentage points 0–100 with 0–4 decimal places.',icon:'%',keywords:'percent progress rate'}
+]);
 export const BOARD_STANDARD_COLUMN_CATALOG=Object.freeze([
+
  {type:'text',label:'Text',group:'Essentials',description:'Single-line text up to 1,000 characters.',icon:'T',keywords:'name label'},
  {type:'long_text',label:'Long Text',group:'Essentials',description:'Multiline notes up to 5,000 characters.',icon:'≡',keywords:'notes description'},
  {type:'number',label:'Numbers',group:'Essentials',description:'Validated finite numeric values and numeric summaries.',icon:'123',keywords:'numeric amount'},
@@ -13,7 +24,8 @@ export const BOARD_STANDARD_COLUMN_CATALOG=Object.freeze([
  {type:'checkbox',label:'Checkbox',group:'Essentials',description:'Boolean yes/no tracking.',icon:'☑',keywords:'true false'},
  {type:'timeline',label:'Timeline',group:'Super useful',description:'Start and end dates with validity checking.',icon:'⟷',keywords:'range dates'},
  {type:'email',label:'Email',group:'Super useful',description:'Validated email address.',icon:'@',keywords:'contact'},
- {type:'url',label:'Link',group:'Super useful',description:'Validated HTTP(S) URL.',icon:'↗',keywords:'website url'}
+ {type:'url',label:'Link',group:'Super useful',description:'Validated HTTP(S) URL.',icon:'↗',keywords:'website url'},
+ ...(CMP02_SCHEMA_ACTIVATED?CMP02_STAGED_CATALOG:[])
 ]);
 export const BOARD_STANDARD_COLUMN_GROUPS=Object.freeze(['Essentials','Super useful']);
 export const SUPPORTED_COLUMN_TYPE_IDS=Object.freeze(BOARD_STANDARD_COLUMN_CATALOG.map(x=>x.type));
