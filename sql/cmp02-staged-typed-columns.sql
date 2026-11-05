@@ -159,7 +159,7 @@ begin
       if (p_value#>>'{}')::numeric<0 or (p_value#>>'{}')::numeric>100 or
          (p_value#>>'{}')::numeric<>round((p_value#>>'{}')::numeric,
            coalesce((c.config->>'decimals')::integer,2)) then
-        raise exception '% requires 0–100 with configured decimal precision',c.name;
+        raise exception '% requires 0-100 with configured decimal precision',c.name;
       end if;
       return p_value;
     when 'checkbox' then if jsonb_typeof(p_value)<>'boolean' then raise exception '% requires true or false',c.name; end if; return p_value;
@@ -170,19 +170,8 @@ begin
     when 'date' then begin d:=t::date; exception when others then raise exception '% requires a valid date',c.name; end; return to_jsonb(d::text);
     when 'people' then begin u:=t::uuid; exception when others then raise exception '% requires a valid board member',c.name; end; if not exists(select 1 from public.work_board_members where board_id=p_board_id and user_id=u) then raise exception 'Assignee must be a board member'; end if; return to_jsonb(u::text);
     when 'phone' then
-      if t !~ '^[+][1-9][0-9]{6,14} if t !~* '^https?://[^[:space:]]+$' or char_length(t)>2000 then raise exception '% requires a valid http(s) URL',c.name; end if; return to_jsonb(t);
-    when 'email' then if t !~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' or char_length(t)>320 then raise exception '% requires a valid email address',c.name; end if; return to_jsonb(lower(t));
-    when 'timeline' then
-      if jsonb_typeof(p_value)<>'object' then raise exception '% requires a start/end date range',c.name; end if;
-      if coalesce(p_value->>'start','')='' and coalesce(p_value->>'end','')='' then if c.required then raise exception '% is required',c.name; end if; return null; end if;
-      begin start_d:=(p_value->>'start')::date; end_d:=(p_value->>'end')::date; exception when others then raise exception '% requires valid start and end dates',c.name; end;
-      if end_d<start_d then raise exception '% end date cannot be before its start date',c.name; end if;
-      return jsonb_build_object('start',start_d::text,'end',end_d::text);
-    else raise exception 'Unsupported column type';
-  end case;
-end $function$
- then
-        raise exception '% requires international E.164 (+country code and 7–15 digits)',c.name;
+      if t !~ '^[+][1-9][0-9]{6,14}$' then
+        raise exception '% requires international E.164 (+country code and 7-15 digits)',c.name;
       end if;
       return to_jsonb(t);
     when 'url' then if t !~* '^https?://[^[:space:]]+$' or char_length(t)>2000 then raise exception '% requires a valid http(s) URL',c.name; end if; return to_jsonb(t);
