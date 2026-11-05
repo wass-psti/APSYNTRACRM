@@ -47,6 +47,12 @@ Architecture stays **one platform / one Supabase Auth identity / many isolated w
 
 The [workspace invitation UI and acceptance plan](./CP-WS-02D-INVITATION-UI.md) now covers the signed workspace **Invite members** entry points, a multi-email draft dialog, Admin/Member/Viewer workspace-role previews, optional custom message and accessible review. Automated frontend, Postgres regression and Pages deployment workflows passed. **Invitation sending remains explicitly disabled** pending signed backend authorization, invitation persistence and secure delivery. The current database role enum does not yet implement the preview Admin/Viewer roles; no platform role elevation or production schema/permission change is implied.
 
+## CP-WS-02D private invitation server-stage checkpoint — 2026-11-05
+
+[Server invitation acceptance evidence](./CP-WS-02D-SERVER-INVITATIONS.md) documents private default-deny token storage, salted SHA256 token digests, workspace owner/delegated-admin eligibility, verified-email recipient acceptance, idempotent issuance, atomic membership/audit, token revocation, and synthetic role/session/foreign-workspace denial. [Disposable PostgreSQL 17 run #75](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41985272232) **PASSED** including B2/B3 regressions.
+
+**Production remains unchanged:** no WS02D private schema/RPCs/grants are installed; B3/B4 remain disabled. The user-visible Invite members dialog still only validates a preview, never sends. Actual email provider delivery, rate limits, invite decline/expiry-state transitions, genuine signed-session acceptance and Admin/Viewer permission-ceiling enforcement are outstanding. No production-activation authority is inferred from the passing isolated tests.
+
 ## Invitation contract (CP-WS-02D)
 
 - Only workspace Owners and delegated authorized workspace administrators may issue, resend or revoke invitations.
@@ -68,7 +74,7 @@ Ownership transfer must be accepted by an eligible member, atomic and audited, a
 | CP-WS-02A | Existing auth/role/workspace contracts, security architecture | **IMPLEMENTED-UNVERIFIED**: live inventory and design documented; unsafe signup trigger is a known blocker |
 | CP-WS-02B | New-user Main Workspace idempotent verified-email provisioning | **IMPLEMENTED-UNVERIFIED**: dormant private candidate and isolated PG17 pass; no Auth trigger |
 | CP-WS-02C | Ordinary-member workspace ownership + audited creation | **IMPLEMENTED-UNVERIFIED**: verified-email ordinary-member PG17 pass; production disabled |
-| CP-WS-02D | Single-use invitation lifecycle, accepted recipient membership | **PENDING** |
+| CP-WS-02D | Single-use invitation lifecycle, accepted recipient membership | **IMPLEMENTED-UNVERIFIED**: private dormant issue/accept/revoke, isolated PG17 PASS; email and signed E2E pending |
 | CP-WS-02E | Multi-membership, secure switching and restoration | **PENDING** |
 | CP-WS-02F | Ownership transfer, delegated admins, removal, archival | **PENDING** |
 | CP-WS-02G | Isolation, RLS/RBAC, role denial, token abuse and audit | **PENDING** |
