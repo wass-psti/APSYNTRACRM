@@ -1,0 +1,59 @@
+-- CP-WS-02D/B3 reproducible production READ-ONLY original-source preflight.
+-- No DDL, mutation, secrets or user-level records. Compare before any cutover.
+-- Manifest: sql/tests/cp-ws02d-b3-remaining-domain-manifest.json
+WITH expected(name,signature,fingerprint) AS (
+ VALUES
+ ('append_module_activity','public.append_module_activity(text,text,text,text,text,text,jsonb)','5b37cb732bfd115cab7e90db58ed192f'),
+ ('charter_admin_set_role','public.charter_admin_set_role(uuid,text,boolean)','105feace9e2f6b6248e062b6b8829767'),
+ ('commit_fueltrack_requests_with_activity','public.commit_fueltrack_requests_with_activity(text,bigint,text,text,text,text,text,jsonb)','4ed0b71c722ef5165250b651f3af05ce'),
+ ('employee_evaluation_create_employee','public.employee_evaluation_create_employee(jsonb)','3dd42c3432a005df286313c92d9f1345'),
+ ('employee_evaluation_review_transition','public.employee_evaluation_review_transition(uuid,text,text,bigint)','0dba32d8f84cc3ccecec8dc12b60a4b3'),
+ ('employee_evaluation_save','public.employee_evaluation_save(jsonb)','71f32c1ba726e32e9fda0ffbab139efa'),
+ ('employee_evaluation_update_employee','public.employee_evaluation_update_employee(uuid,jsonb)','ff6444c8ebbb11e7966dd25a655e8f60'),
+ ('employee_evaluation_update_settings','public.employee_evaluation_update_settings(jsonb)','c573ec4251b51a6f1865561aeac684cc'),
+ ('import_fueltrack_activity_backup','public.import_fueltrack_activity_backup(jsonb)','2dc777a252161222a3d2e316dd458eb6'),
+ ('order_intake_archive','public.order_intake_archive(uuid,integer)','893ef210228eeaa5e07f4e1c777982d4'),
+ ('order_intake_create','public.order_intake_create(jsonb)','97365c21506bf81389667b1314ad9a13'),
+ ('order_intake_create_idempotent','public.order_intake_create_idempotent(jsonb,uuid)','bf1d6594b6846ff5d8b0acdf77799ce3'),
+ ('order_intake_qa_archive_once','public.order_intake_qa_archive_once()','545be53d8ded36aff7ebc423b57dd741'),
+ ('order_intake_restore','public.order_intake_restore(uuid,integer)','32998bbb80e1a15a5dd12f14a7f8f96a'),
+ ('order_intake_update_details','public.order_intake_update_details(uuid,jsonb,integer)','1c6d418d29f31b27a8e35597c7ca3c7a'),
+ ('order_intake_update_status','public.order_intake_update_status(uuid,text,integer)','ae38dd0d556a963388b513501beb9942'),
+ ('timetracker_commit_attendance_raw_gps03','public.timetracker_commit_attendance_raw_gps03(text,text,text,text,jsonb,text,jsonb)','985640385f673b5b8ef74ce480ec6ccd'),
+ ('tradelink_asset_write','public.tradelink_asset_write(text,text,text,bigint)','1f00702f27deee65b3f134e81bb36cb7'),
+ ('tradelink_cleanup_fence_activate','public.tradelink_cleanup_fence_activate(text,bigint)','aeda00392edb96c1269e7c60bc6e1f56'),
+ ('tradelink_cleanup_fence_release','public.tradelink_cleanup_fence_release(text)','7ecd455a908c55d3136a85c2bfd01660'),
+ ('tradelink_reconciliation_assess','public.tradelink_reconciliation_assess(text)','55678732a50cca6d4d4dd2cd0b0b4810'),
+ ('tradelink_reconciliation_report','public.tradelink_reconciliation_report(text,text,text)','6327889c48be4e8d69c576513958c3c1'),
+ ('tradelink_reconciliation_request_cleanup','public.tradelink_reconciliation_request_cleanup(text,bigint)','fa073e92fe1300403d3088a927b53b44'),
+ ('wm_admin_set_application_role','public.wm_admin_set_application_role(uuid,text,text,boolean)','3bd0edfb36b956ca68729ea81dc7a83e')
+), matched AS(
+ SELECT name,signature,fingerprint,to_regprocedure(signature) AS routine,
+  md5(pg_get_functiondef(to_regprocedure(signature))) AS current_fingerprint
+ FROM expected
+), summary AS (
+ SELECT count(*) AS expected_count,
+  count(*) FILTER(WHERE routine IS NOT NULL
+   AND current_fingerprint=fingerprint) AS unchanged_count,
+  count(*) FILTER(WHERE routine IS NULL
+   OR current_fingerprint IS DISTINCT FROM fingerprint) AS changed_count,
+  coalesce(jsonb_agg(name ORDER BY name) FILTER(
+    WHERE routine IS NULL OR current_fingerprint IS DISTINCT FROM fingerprint
+  ),'[]'::jsonb) AS changed_functions
+ FROM matched
+)
+SELECT CASE WHEN expected_count=24 AND unchanged_count=24
+ AND changed_count=0
+ AND to_regclass('private.ws02d_invitations') IS NULL
+ AND to_regclass('private.ws02d_delivery_receipts') IS NULL
+ AND to_regprocedure('private.ws02d_issue(uuid,text,text,uuid)') IS NULL
+ AND to_regprocedure('private.ws02d_workspace_ceiling(uuid,uuid,text)') IS NULL
+ AND to_regprocedure('public.wm_ws01_create(text,text,uuid)') IS NULL
+ AND to_regprocedure('public.wm_ws01_select(uuid,uuid)') IS NULL
+ THEN 'CP_WS_02D_B3_24_LIVE_ORIGINALS_VERIFIED_DEFAULT_OFF'
+ ELSE 'CP_WS_02D_B3_PRODUCTION_DRIFT_OR_ACTIVATION_DETECTED'
+ END AS status,
+ summary.*,
+ (SELECT count(*) FROM public.workspaces) AS current_workspace_count,
+ (SELECT count(*) FROM public.workspace_members WHERE active) AS current_active_memberships
+FROM summary;
