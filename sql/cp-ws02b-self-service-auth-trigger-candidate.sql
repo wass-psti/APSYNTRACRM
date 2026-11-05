@@ -11,6 +11,7 @@ BEGIN
   OR to_regprocedure('public.handle_new_user()') IS NULL
   OR to_regprocedure('public.sync_profile_email_verification()') IS NULL
   OR to_regprocedure('public.ensure_default_workspace_membership()') IS NULL
+  OR to_regclass('private.ws02_activation_flags') IS NOT NULL
   OR NOT EXISTS(SELECT 1 FROM pg_trigger
    WHERE tgname='on_auth_user_created' AND NOT tgisinternal
     AND tgrelid='auth.users'::regclass)
@@ -24,6 +25,18 @@ BEGIN
    USING ERRCODE='42501';
  END IF;
 END $pre$;
+
+-- Staged migration is fail-closed. Changing the existing auth.users trigger
+-- while a client signup API is reachable must NEVER open signup by accident.
+-- Separate production enablement requires explicit approval and a verified
+-- activation step; neither UI toggles nor installation enables this flag.
+CREATE TABLE private.ws02_activation_flags (
+ id boolean PRIMARY KEY DEFAULT true CHECK (id IS TRUE),
+ signup_enabled boolean NOT NULL DEFAULT false
+);
+INSERT INTO private.ws02_activation_flags(id,signup_enabled) VALUES(true,false);
+ALTER TABLE private.ws02_activation_flags ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON private.ws02_activation_flags FROM PUBLIC,anon,authenticated;
 
 -- The current production profiles_status_check only accepts active/disabled.
 -- Add an explicit PENDING state; never reuse DISABLED for unverified signup,
@@ -66,6 +79,11 @@ DECLARE
   pg_catalog.split_part(v_email,'@',1)
  ),120);
 BEGIN
+ IF NOT EXISTS(SELECT 1 FROM private.ws02_activation_flags
+   WHERE id IS TRUE AND signup_enabled IS TRUE)
+ THEN RAISE EXCEPTION 'Self-service registration not activated'
+  USING ERRCODE='42501'; END IF;
+
  INSERT INTO public.profiles(
   id,email,display_name,platform_role,status,email_verified_at
  ) VALUES(
@@ -97,7 +115,10 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $verifie
 DECLARE
  v_admitted boolean;
  v_verified boolean:=NEW.email_confirmed_at IS NOT NULL AND NEW.is_anonymous IS FALSE;
+ v_signup_enabled boolean;
 BEGIN
+ SELECT signup_enabled INTO v_signup_enabled
+ FROM private.ws02_activation_flags WHERE id IS TRUE;
  SELECT EXISTS(SELECT 1 FROM private.ws02_new_account_admissions
   WHERE user_id=NEW.id) INTO v_admitted;
  UPDATE public.profiles p
@@ -105,7 +126,7 @@ BEGIN
   email_verified_at=NEW.email_confirmed_at,
   status=CASE
    WHEN v_admitted AND p.status='disabled' THEN 'disabled'
-   WHEN v_admitted AND v_verified AND p.status='pending' THEN 'active'
+   WHEN v_admitted AND v_verified AND v_signup_enabled AND p.status='pending' THEN 'active'
    WHEN v_admitted AND NOT v_verified AND p.status='active' THEN 'pending'
    ELSE p.status END,
   updated_at=now()
@@ -113,7 +134,7 @@ BEGIN
 
  -- Re-verification restores only a legitimate pending account. A disabled
  -- account must not be provisioned or accidentally reactivated.
- IF v_admitted AND v_verified AND EXISTS(
+ IF v_admitted AND v_verified AND v_signup_enabled AND EXISTS(
   SELECT 1 FROM public.profiles p
   WHERE p.id=NEW.id AND p.status='active'
  ) THEN
