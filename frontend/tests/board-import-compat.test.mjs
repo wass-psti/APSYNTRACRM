@@ -169,3 +169,86 @@ test('XLSX: encrypted ZIP and worksheet path traversal are rejected',async()=>{
  unsafe[1].xml=relsXml.replace('worksheets/sheet1.xml','../secret.xml');
  await assert.rejects(()=>parseWithFixtureDom(makeZip(unsafe)),/unsafe worksheet reference/);
 });
+
+
+/** Sanitized structural reproduction of Live_Identification_Status_1793847689.xlsx:
+ * The source contains title row 1, first header row 3, styled string C20
+ * ("2026-07-09 to 2026-08-18"), and a repeated header at row 23.
+ * Values and names below are intentionally synthetic except the failing
+ * cell, whose type, format and exact text constitute the regression.
+ */
+function styledReportEntries({invalidSerial=false,date1904=false}={}){
+ const text=(r,cell,value,style=0)=>
+  '<c r="'+cell+r+'" t="str"'+(style?' s="'+style+'"':'')+
+  '><v>'+value+'</v></c>';
+ const numeric=(r,cell,value,style=0)=>
+  '<c r="'+cell+r+'" t="n"'+(style?' s="'+style+'"':'')+
+  '><v>'+value+'</v></c>';
+ const row=(r,...cells)=>'<row r="'+r+'">'+cells.join('')+'</row>';
+ const headers=r=>row(r,text(r,'A','Name'),text(r,'B','Status'),
+  text(r,'C','Date Updated'),text(r,'D','Location'),text(r,'E','Checkbox'));
+ const document='<worksheet><sheetData>'+
+  row(1,text(1,'A','Live Identification Status'))+
+  row(2,text(2,'A','Running Monday Apps'))+
+  headers(3)+
+  row(4,text(4,'A','Sample App'),text(4,'B','Active'),
+   numeric(4,'C',invalidSerial?'not-a-serial':46233,1),text(4,'E','v'))+
+  row(7,text(7,'A','Time Tracker'),text(7,'B','Active'),
+   numeric(7,'C',46252,1),text(7,'E','v'))+
+  row(20,text(20,'C','2026-07-09 to 2026-08-18',1),
+   text(20,'E','15/16'))+
+  row(22,text(22,'A','Running Starlink'))+
+  headers(23)+
+  row(24,text(24,'A','Unit 1'),text(24,'B','Active'),
+   text(24,'D','Location 1'))+
+  row(25,text(25,'A','Unit 2'),text(25,'B','Active'),
+   text(25,'D','Location 2'))+
+  row(26,text(26,'E','0/2'))+
+  '</sheetData></worksheet>';
+ const workbook='<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+  (date1904?'<workbookPr date1904="true"/>':'')+
+  '<sheets><sheet name="live identification status" r:id="rId1"/></sheets></workbook>';
+ const relationships='<Relationships><Relationship Id="rId1" '+
+  'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '+
+  'Target="worksheets/sheet1.xml"/></Relationships>';
+ const styles='<styleSheet><numFmts count="1"><numFmt numFmtId="164" '+
+  'formatCode="yyyy-mm-dd"/></numFmts><cellXfs count="2">'+
+  '<xf numFmtId="0"/><xf numFmtId="164"/></cellXfs></styleSheet>';
+ return [
+  {name:'xl/workbook.xml',xml:workbook},
+  {name:'xl/_rels/workbook.xml.rels',xml:relationships},
+  {name:'xl/styles.xml',xml:styles},
+  {name:'xl/worksheets/sheet1.xml',xml:document}
+ ];
+}
+test('uploaded report structure: styled text C20 does not trigger invalid Excel date',async()=>{
+ const workbook=await parseWithFixtureDom(makeZip(styledReportEntries()));
+ assert.equal(workbook.sheets.length,2,'two independent report sections');
+ const [apps,starlink]=workbook.sheets;
+ assert.equal(apps.name,'live identification status — Running Monday Apps');
+ assert.equal(apps.worksheet,'live identification status');
+ assert.deepEqual(apps.headers,['Name','Status','Date Updated','Location','Checkbox']);
+ assert.deepEqual(apps.rowNumbers,[4,7]);
+ assert.deepEqual(apps.omittedRows,[20]);
+ assert.deepEqual(apps.rows[0],['Sample App','Active','2026-07-30','','v']);
+ assert.deepEqual(apps.rows[1],['Time Tracker','Active','2026-08-18','','v']);
+ assert.equal(starlink.name,'live identification status — Running Starlink');
+ assert.deepEqual(starlink.rowNumbers,[24,25]);
+ assert.deepEqual(starlink.omittedRows,[26]);
+ assert.equal(starlink.rows[1][0],'Unit 2');
+});
+test('invalid numeric date reports exact sheet, Excel cell and source value',async()=>{
+ await assert.rejects(
+  ()=>parseWithFixtureDom(makeZip(styledReportEntries({invalidSerial:true}))),
+  error=>/Worksheet "live identification status"/.test(error.message)&&
+   /row 4/.test(error.message)&&/cell C4/.test(error.message)&&
+   /column "Date Updated"/.test(error.message)&&
+   /value "not-a-serial"/.test(error.message)
+ );
+});
+test('1904-date workbook flag adjusts true numeric serials only',async()=>{
+ const entries=styledReportEntries({date1904:true});
+ entries[3].xml=entries[3].xml.replace('<v>46233</v>','<v>0</v>');
+ const parsed=await parseWithFixtureDom(makeZip(entries));
+ assert.equal(parsed.sheets[0].rows[0][2],'1904-01-01');
+});
