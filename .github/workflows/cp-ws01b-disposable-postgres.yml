@@ -145,5 +145,11 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b2-board-create-ceiling-candidate.sql
       - name: Verify Member/Admin creation, Viewer denial, scope, audit and rollback
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-create-acceptance.sql
+      - name: Reproduce four shared module state and lock mutation contracts
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-module-mutation-fixture.sql
+      - name: Stage edit ceiling for module state and operation locks
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b3-shared-module-mutation-ceiling-candidate.sql
+      - name: Verify Member CAS/lock, Viewer denial, revoked session and isolated rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-module-mutation-acceptance.sql
       - name: Verify independent domain RBAC AND workspace ceiling without real records
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-independent-domain-ceiling-disposable.sql
