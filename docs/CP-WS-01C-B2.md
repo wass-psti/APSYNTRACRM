@@ -1,6 +1,6 @@
 # CP-WS-01C/B2 — signed member workspace discovery readiness
 
-**Current state, 2026-11-05: B2 PRODUCTION SIGNED-DISCOVERY RPC ACTIVATED AND STRUCTURALLY VERIFIED.** Historical readiness and unactivated statements below are superseded by the activation evidence at the end of this document. Genuine live signed-user acceptance remains pending.
+**Current state, 2026-11-05: B2 PRODUCTION SIGNED-DISCOVERY RPC ACTIVATED AND STRUCTURALLY VERIFIED; ONE GENUINE SIGNED-USER REPORT RECEIVED (5/5 PASS).** Historical readiness and unactivated statements below are superseded by the activation evidence at the end of this document. Cross-role, foreign-workspace, and invalid-session live acceptance remain pending.
 
 ## Authoritative baseline
 
@@ -49,3 +49,30 @@ This stage has **not** changed production schema or permissions.
 **Acceptance boundary:** Structural server-side production activation **VERIFIED PASS**. Genuine signed manager, nonmanager and foreign-workspace browser acceptance **PENDING**; a successful isolated fixture or unsigned DB denial does not satisfy those real-user gates. The connected browser API was inaccessible in chat mode. Frontend general discovery `WS01_DISCOVERY_ENABLED=false` remains disabled until actual signed-user acceptance. B3 creation and B4 session switching remain **DISABLED and NOT APPLIED**. The previously identified lack of a foreign-workspace member remains a real-user coverage blocker, not an authorization failure.
 
 **Next test:** After GitHub Pages deploys the new B2 probe, open `https://wass-psti.github.io/APSYNTRACRM/#/security` using each existing signed account; run "Run B2 signed read checks" and copy the sanitized JSON report. Compare authorized manager and nonmanager results, then cover an existing genuinely foreign-workspace user if one becomes eligible. For revoked/expired sessions, use controlled account-safe acceptance; no production token/user revocation was performed during B2.
+
+## CP-WS-01C/B2 signed-user report received — 2026-11-05
+
+**Evidence source:** The user supplied the sanitized result from the production `#/security` B2 signed-discovery probe. This is one signed-session report, **not** a verified manager-vs-nonmanager or foreign-workspace comparison.
+
+```json
+{
+  "checkpoint": "CP-WS-01C-B2-SIGNED-DISCOVERY",
+  "status": "PASS",
+  "checks": [
+    {"name": "signed-identity", "status": "PASS"},
+    {"name": "workspace-context", "status": "PASS"},
+    {"name": "server-discovery", "status": "PASS"},
+    {"name": "membership-catalog", "status": "PASS"},
+    {"name": "stable-session", "status": "PASS"}
+  ],
+  "signedWorkspaceCount": 1,
+  "writesAttempted": 0,
+  "identifiersDisclosed": 0
+}
+```
+
+**Read-only production recheck:** The connected Supabase database was queried without changing data or privileges. `wm_ws01_list()` exists as a STABLE SECURITY DEFINER function with signed-session guard and active-member filter; authenticated EXECUTE=true, anon EXECUTE=false, PUBLIC EXECUTE=false. The six `private.ws01_*` tables retain RLS and have zero direct client DML grants. B3/B4 RPCs remain absent and both lifecycle flags are false. At the time of recheck, global inventory was two workspaces and 40 active memberships; the reporting user's one-workspace count is caller-scoped, not a global total.
+
+**Verification boundary:** B2 production activation and scoped single-user signed discovery are evidenced. The report does not establish cross-account role ceilings, unrelated-workspace non-disclosure for other identities, or live revoked/expired-session denial. Disposable regression [workflow #33](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41970070348) was independently confirmed `completed/success`, but it is not a substitute for those live cases.
+
+**Next acceptance gate:** Run the same sanitized B2 probe under a distinct existing authorized nonadministrator account and, if available, an existing genuinely foreign-workspace member. Complete controlled revoked/expired-session denial checks without mutating production users or permissions. Keep `WS01_DISCOVERY_ENABLED=false`, B3 creation, and B4 switching disabled until separately authorized and accepted. Do not reapply the B2 migration.
