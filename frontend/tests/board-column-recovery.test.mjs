@@ -146,6 +146,9 @@ test('UI accurately reports populated column and keeps recovery disabled until a
 
 test('specific backend deletion failures have accurate, actionable classifications',()=>{
  const reasons=[
+  ['COL_DELETE_NOT_ACTIVATED','42501',503,'not activated'],
+  ['COL_RESTORE_NOT_ACTIVATED','42501',503,'not activated'],
+  ['COL_RECOVERY_LIST_NOT_ACTIVATED','42501',503,'not activated'],
   ['COL_DELETE_PROTECTED_BOARD','42501',403,'archived or application-protected'],
   ['COL_RESTORE_PROTECTED_BOARD','42501',403,'archived or application-protected'],
   ['COL_DELETE_PROTECTED_COLUMN','42501',403,'protected'],

@@ -19,6 +19,7 @@ BEGIN
  OR to_regclass('public.work_board_item_values') IS NULL
  OR to_regclass('public.work_board_columns') IS NULL
  OR to_regclass('public.wm_board_ui_settings') IS NULL
+ OR to_regclass('private.wm_recoverable_column_activation') IS NOT NULL
  OR to_regclass('private.wm_recoverable_deleted_columns') IS NOT NULL
  OR to_regclass('private.wm_recoverable_deleted_cells') IS NOT NULL
  OR to_regprocedure('public.wm_delete_board_column_recoverable(uuid,uuid,timestamptz,integer,text)') IS NOT NULL
@@ -28,6 +29,21 @@ BEGIN
    USING ERRCODE='42501';
  END IF;
 END $preflight$;
+
+-- Default-off, server-authoritative two-stage activation. The production
+-- migration can be installed without enabling any destructive RPC. Enabling
+-- deletion or restoration separately requires an approved administrative
+-- database change. Browser feature flags never grant database permission.
+CREATE TABLE private.wm_recoverable_column_activation (
+ id boolean PRIMARY KEY DEFAULT true CHECK(id IS TRUE),
+ delete_enabled boolean NOT NULL DEFAULT false,
+ restore_enabled boolean NOT NULL DEFAULT false,
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO private.wm_recoverable_column_activation(id,delete_enabled,restore_enabled)
+ VALUES(true,false,false);
+ALTER TABLE private.wm_recoverable_column_activation ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON private.wm_recoverable_column_activation FROM PUBLIC,anon,authenticated;
 
 CREATE TABLE private.wm_recoverable_deleted_columns (
  deletion_id uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
@@ -76,6 +92,11 @@ BEGIN
  IF NOT private.wm_board_config_session_active()
  OR NOT public.work_board_access(p_board_id,'manage') THEN
   RAISE EXCEPTION 'COL_DELETE_AUTHORIZATION_DENIED' USING ERRCODE='42501';
+ END IF;
+ PERFORM 1 FROM private.wm_recoverable_column_activation
+  WHERE id IS TRUE AND delete_enabled IS TRUE FOR SHARE;
+ IF NOT FOUND THEN
+  RAISE EXCEPTION 'COL_DELETE_NOT_ACTIVATED' USING ERRCODE='42501';
  END IF;
  -- Same lock order as existing schema-mutating RPC; prevent stale deletion.
  SELECT * INTO v_board FROM public.work_boards WHERE id=p_board_id FOR UPDATE;
@@ -176,6 +197,11 @@ BEGIN
  OR NOT public.work_board_access(p_board_id,'manage') THEN
   RAISE EXCEPTION 'COL_RESTORE_AUTHORIZATION_DENIED' USING ERRCODE='42501';
  END IF;
+ PERFORM 1 FROM private.wm_recoverable_column_activation
+  WHERE id IS TRUE AND restore_enabled IS TRUE FOR SHARE;
+ IF NOT FOUND THEN
+  RAISE EXCEPTION 'COL_RESTORE_NOT_ACTIVATED' USING ERRCODE='42501';
+ END IF;
  SELECT * INTO v_board FROM public.work_boards WHERE id=p_board_id FOR UPDATE;
  IF v_board.id IS NULL THEN
   RAISE EXCEPTION 'COL_RESTORE_BOARD_NOT_FOUND' USING ERRCODE='42501';
@@ -273,6 +299,10 @@ BEGIN
  IF NOT private.wm_board_config_session_active()
  OR NOT public.work_board_access(p_board_id,'manage') THEN
   RAISE EXCEPTION 'COL_RECOVERY_LIST_AUTHORIZATION_DENIED' USING ERRCODE='42501';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM private.wm_recoverable_column_activation
+   WHERE id IS TRUE AND (delete_enabled IS TRUE OR restore_enabled IS TRUE)) THEN
+  RAISE EXCEPTION 'COL_RECOVERY_LIST_NOT_ACTIVATED' USING ERRCODE='42501';
  END IF;
  RETURN coalesce((
   SELECT pg_catalog.jsonb_agg(

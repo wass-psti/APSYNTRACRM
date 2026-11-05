@@ -30,6 +30,8 @@ export function explainColumnDeleteError(error){
  const message=String(error?.message||'');
  // Server emits stable SQLSTATE plus domain-specific reason. Distinguish
  // protected objects, unavailable snapshots and true authorization denial.
+ if(/COL_(DELETE|RESTORE)_NOT_ACTIVATED|COL_RECOVERY_LIST_NOT_ACTIVATED/.test(message))
+  return new ApiError('Recoverable column operations are not activated on the server. No stored values were removed.',503,code);
  if(/COL_(DELETE|RESTORE)_PROTECTED_BOARD/.test(message))
   return new ApiError('This archived or application-protected board cannot change or restore columns.',403,code);
  if(/COL_DELETE_PROTECTED_COLUMN|COL_RESTORE_SNAPSHOT_INTEGRITY/.test(message))

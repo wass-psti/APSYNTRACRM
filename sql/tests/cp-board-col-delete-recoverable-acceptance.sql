@@ -6,6 +6,12 @@ BEGIN
  IF current_database()<>'postgres'
  OR to_regclass('private.wm_recoverable_deleted_columns') IS NULL
  OR to_regprocedure('public.wm_delete_board_column_recoverable(uuid,uuid,timestamptz,integer,text)') IS NULL
+ OR to_regclass('private.wm_recoverable_column_activation') IS NULL
+ OR (SELECT count(*) FROM private.wm_recoverable_column_activation)<>1
+ OR (SELECT delete_enabled OR restore_enabled
+     FROM private.wm_recoverable_column_activation WHERE id)
+ OR has_table_privilege('authenticated','private.wm_recoverable_column_activation','SELECT')
+ OR has_table_privilege('anon','private.wm_recoverable_column_activation','UPDATE')
  OR has_table_privilege('authenticated','private.wm_recoverable_deleted_cells','SELECT')
  OR has_function_privilege('anon','public.wm_delete_board_column_recoverable(uuid,uuid,timestamptz,integer,text)','EXECUTE')
  OR has_function_privilege('anon','public.wm_restore_board_column_recoverable(uuid,uuid,timestamptz)','EXECUTE')
@@ -69,6 +75,33 @@ BEGIN
  PERFORM pg_catalog.set_config('request.jwt.claim.sub',owner::text,true);
  PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000001',true);
  board_version:=(SELECT updated_at FROM public.work_boards WHERE id=b);
+ -- These RPCs are already granted to authenticated in the candidate; the
+ -- private activation gate must independently block both writes and metadata.
+ BEGIN
+  PERFORM public.wm_delete_board_column_recoverable(
+   b,c,board_version,4,'DELETE Recorded status');
+  RAISE EXCEPTION 'Default-off deletion was allowed' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN
+  IF SQLERRM<>'COL_DELETE_NOT_ACTIVATED' THEN RAISE; END IF;
+ END;
+ BEGIN
+  PERFORM public.wm_restore_board_column_recoverable(
+   b,'11111111-1111-4111-8111-111111111111',board_version);
+  RAISE EXCEPTION 'Default-off restoration was allowed' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN
+  IF SQLERRM<>'COL_RESTORE_NOT_ACTIVATED' THEN RAISE; END IF;
+ END;
+ BEGIN
+  PERFORM public.wm_list_recoverable_board_columns(b);
+  RAISE EXCEPTION 'Default-off recovery metadata was exposed' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN
+  IF SQLERRM<>'COL_RECOVERY_LIST_NOT_ACTIVATED' THEN RAISE; END IF;
+ END;
+ IF (SELECT count(*) FROM private.wm_recoverable_deleted_columns)<>0 THEN
+  RAISE EXCEPTION 'Default-off functions created recovery artifacts'; END IF;
+ -- Enable only inside disposable transaction; final ROLLBACK resets flags.
+ UPDATE private.wm_recoverable_column_activation
+ SET delete_enabled=true,restore_enabled=true WHERE id;
 
  -- Count and board CAS checks fail before any snapshot or delete.
  BEGIN
@@ -235,7 +268,9 @@ BEGIN
  OR (SELECT count(*) FROM public.work_board_events)<>orig.events
  OR (SELECT count(*) FROM private.wm_recoverable_deleted_columns)<>orig.recovery
  OR (SELECT count(*) FROM private.wm_recoverable_deleted_cells)<>orig.archived
- THEN RAISE EXCEPTION 'Disposable recovery acceptance failed to roll back'; END IF;
+ OR (SELECT delete_enabled OR restore_enabled
+     FROM private.wm_recoverable_column_activation WHERE id) THEN
+  RAISE EXCEPTION 'Disposable recovery acceptance failed to roll back'; END IF;
  RAISE NOTICE 'CP-BOARD-COL-DELETE recovery delete/CAS/RBAC/restore/audit/rollback PASS';
 END $post$;
 DROP TABLE pg_temp.col_delete_before;
