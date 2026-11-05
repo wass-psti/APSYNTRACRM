@@ -1,0 +1,135 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {parseDelimited,parseImportFile} from '../board-import-parse.js';
+import {inferImportType,initialImportMappings,buildImportPlan,
+ executeBoardImport,availableImportColumns} from '../board-import-core.js';
+const boardId='11111111-1111-4111-8111-111111111111';
+const ws='22222222-2222-4222-8222-222222222222';
+const actor='33333333-3333-4333-8333-333333333333';
+const groupId='44444444-4444-4444-8444-444444444444';
+const colId='55555555-5555-4555-8555-555555555555';
+const now='2026-11-05T03:00:00.123Z';
+const detail={board:{id:boardId,workspace_id:ws,updated_at:now,status:'active',name:'Contacts'},
+ groups:[{id:groupId,title:'Current'}],columns:[{id:colId,name:'Amount',data_type:'number',
+ column_key:'custom:amount',system_key:null,config:{}}],items:[],values:[]};
+const sheet={headers:['Name','Amount','Checked'],rows:[
+ ['Alice','25','yes'],['Bob','31','no']]};
+const existingMaps=[
+ {source:'Name',action:'item'},
+ {source:'Amount',action:'existing',columnId:colId},
+ {source:'Checked',action:'skip'}
+];
+const group={action:'existing',groupId};
+test('CSV handles BOM, multiline quoted cells, escaped quotes, and delimiter detection',()=>{
+ const parsed=parseDelimited('\uFEFFName;Notes\r\n"Alice";"Line 1\nLine ""2"""\r\nBob;Hello\r\n');
+ assert.deepEqual(parsed.headers,['Name','Notes']);
+ assert.deepEqual(parsed.rows,[['Alice','Line 1\nLine "2"'],['Bob','Hello']]);
+ assert.throws(()=>parseDelimited('Name,Name\nA,B'),/unique/);
+ assert.throws(()=>parseDelimited('Name\n"unfinished'),/unterminated/);
+});
+test('file checks reject bad extensions and invalid XLSX structures',async()=>{
+ await assert.rejects(()=>parseImportFile(new File(['abc'],'import.xls')),/CSV and XLSX/);
+ await assert.rejects(()=>parseImportFile(new File(['abc'],'import.xlsx')),/XLSX ZIP/);
+});
+test('source type detection and exact existing-column reuse are stable',()=>{
+ assert.equal(inferImportType('Date Updated',['2026-11-05']),'date');
+ assert.equal(inferImportType('Checked',['yes','no']),'checkbox');
+ assert.equal(inferImportType('Status',['Open']),'status');
+ assert.equal(inferImportType('Amount',['1','-2.5']),'number');
+ const mappings=initialImportMappings(sheet,detail);
+ assert.equal(mappings[0].action,'item');
+ assert.deepEqual([mappings[1].action,mappings[1].columnId],['existing',colId]);
+ assert.equal(mappings[2].action,'skip');
+ assert.equal(availableImportColumns(detail).length,1);
+});
+test('no new columns unless the approved plan explicitly includes them',()=>{
+ const proposed=existingMaps.map(m=>({...m}));
+ proposed[2]={source:'Checked',action:'create',name:'Checked',columnType:'checkbox'};
+ assert.throws(()=>buildImportPlan({sheet,detail,mappings:proposed,group}),/explicit Allow/);
+ const plan=buildImportPlan({sheet,detail,mappings:proposed,group,allowColumns:true});
+ assert.equal(plan.payload.contract,'m143-v1');
+ assert.deepEqual(plan.payload.newColumns,[{source:'Checked',name:'Checked',type:'checkbox',config:{}}]);
+ assert.equal(plan.payload.rows[0].values.Amount,25);
+ assert.equal(plan.payload.rows[0].values.Checked,true);
+ assert.equal(plan.preview.newItems,2);
+ assert.equal(plan.boardRevision,now);
+});
+test('declined mapping changes never create a board column',()=>{
+ const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group,allowColumns:false});
+ assert.deepEqual(plan.payload.newColumns,[]);
+ assert.deepEqual(plan.payload.rows[0].values,{Amount:25});
+});
+test('duplicate Skip and Update review keys within the selected Group',()=>{
+ const existing={id:'66666666-6666-4666-8666-666666666666',group_id:groupId,
+  title:'Alice',updated_at:'2026-11-05T02:00:00Z'};
+ const populated={...detail,items:[existing]};
+ const skip=buildImportPlan({sheet,detail:populated,mappings:existingMaps,group,
+  matches:{behavior:'skip',matchColumnId:'item'}});
+ assert.deepEqual(skip.preview,{newItems:1,updatedItems:0,skippedItems:1,newColumns:0,rowCount:2});
+ const update=buildImportPlan({sheet,detail:populated,mappings:existingMaps,group,
+  matches:{behavior:'update',matchColumnId:'item'}});
+ assert.equal(update.preview.updatedItems,1);
+ assert.equal(update.preview.skippedItems,1);
+ assert.equal(update.payload.rows[0].expected_item_updated_at,existing.updated_at);
+ assert.equal(update.payload.rows[1].expected_item_updated_at,undefined);
+});
+test('duplicate headers, duplicate match keys and ambiguous destination keys reject',()=>{
+ const duplicateRows={...sheet,rows:[['Alice','25','yes'],['Alice','28','yes']]};
+ assert.throws(()=>buildImportPlan({sheet:duplicateRows,detail,mappings:existingMaps,group,
+  matches:{behavior:'skip',matchColumnId:'item'}}),/duplicates another/);
+ const multiple={...detail,items:[
+  {id:'66666666-6666-4666-8666-666666666666',group_id:groupId,title:'Alice'},
+  {id:'77777777-7777-4777-8777-777777777777',group_id:groupId,title:'alice'}]};
+ assert.throws(()=>buildImportPlan({sheet,detail:multiple,mappings:existingMaps,group,
+  matches:{behavior:'skip',matchColumnId:'item'}}),/ambiguous/);
+});
+test('formula-like cells and invalid typed values reject before persistence',()=>{
+ const formula={...sheet,rows:[['=cmd','25','no']]};
+ assert.throws(()=>buildImportPlan({sheet:formula,detail,mappings:existingMaps,group}),/formula-like/);
+ const bad={...sheet,rows:[['Alice','not-a-number','no']]};
+ assert.throws(()=>buildImportPlan({sheet:bad,detail,mappings:existingMaps,group}),/invalid value/);
+});
+test('protected application boards cannot be mutated through the generic importer',()=>{
+ const restricted={...detail,board:{...detail.board,name:'TimeTracker Attendance'}};
+ assert.throws(()=>buildImportPlan({sheet,detail:restricted,mappings:existingMaps,group}),/domain-specific/);
+});
+test('authorized import uses one atomic RPC and checks receipt',async()=>{
+ const calls=[];
+ const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>detail,allowed:async()=>true,
+  rpc:async(name,args)=>{calls.push({name,args});return {
+   created:2,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};}};
+ const reply=await executeBoardImport({api,auth,plan});
+ assert.equal(reply.created,2);
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].name,'wm_import_board_wizard_atomic');
+ assert.equal(calls[0].args.p_expected_updated_at,now);
+});
+test('signed workspace, permissions and stale revisions fail without any write',async()=>{
+ const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
+ const calls=[];const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>({...detail,board:{...detail.board,updated_at:'2026-11-05T03:00:01Z'}}),
+  allowed:async()=>true,rpc:async()=>{calls.push(1);}};
+ await assert.rejects(()=>executeBoardImport({api,auth,plan}),/Board changed/);
+ assert.equal(calls.length,0);
+ api.board=async()=>detail;
+ api.context=async()=>({user_id:actor,workspace_id:'88888888-8888-4888-8888-888888888888',profile:{status:'active'}});
+ await assert.rejects(()=>executeBoardImport({api,auth,plan}),/workspace has changed/);
+ assert.equal(calls.length,0);
+});
+test('UI and entrypoint are wired without bypassing the domain restriction',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const ui=readFileSync('frontend/board-import-ui.js','utf8');
+ const html=readFileSync('index.html','utf8');
+ assert.match(app,/data-action="board-import"/);
+ assert.match(app,/openBoardImportWizard/);
+ assert.match(ui,/Allow creation/);
+ assert.match(ui,/Decline and skip columns/);
+ assert.match(ui,/Import Now/);
+ assert.match(ui,/Handle matches/);
+ assert.match(html,/board-import\.css/);
+});
