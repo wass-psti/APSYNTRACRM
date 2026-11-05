@@ -150,7 +150,7 @@ test('XLSX: cached formulas are read as values, while unsupported formulas, dupl
  const duplicate=workbookEntries();
  duplicate[3].xml=contactsSheet.replace('<c r="B2" t="n"><v>12.5</v></c>',
   '<c r="B2" t="n"><v>12.5</v></c><c r="B2" t="n"><v>99</v></c>');
- await assert.rejects(()=>parseWithFixtureDom(makeZip(duplicate)),/repeated, or unsupported cell address/);
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(duplicate)),/repeated or unsupported cell address/);
  const dtd=workbookEntries();dtd[0].xml='<!DOCTYPE workbook>'+workbookXml;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(dtd)),/entity and document declarations/);
 });
