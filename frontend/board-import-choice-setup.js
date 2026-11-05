@@ -66,25 +66,41 @@ export async function provisionImportChoiceColumn({
  const session=await api.rpc('wm_board_ui_read',{p_board_id:boardId});
  if(session?.board_id!==boardId)
   fail('An active, authorized board session could not be confirmed.',403);
- const receipt=await api.rpc('wm_board_schema_mutate',{
-  p_board_id:boardId,p_expected_updated_at:live.board.updated_at,
-  p_action:'create',p_column_id:null,p_name:preview.name,
-  p_data_type:type,p_config:{options:preview.labels},
-  p_visible:true,p_confirm_delete:false
- });
+ // A lost response may arrive after an already-committed mutation.
+ // Treat transport/5xx and failed read-back as uncertain; never retry blindly.
+ const uncertain=()=>{
+  const error=new ApiError(
+   'Column creation outcome is uncertain. Close the wizard, refresh the board, and check its columns and activity before retrying.',409);
+  error.schemaOutcomeUncertain=true;
+  throw error;
+ };
+ let receipt;
+ try{
+  receipt=await api.rpc('wm_board_schema_mutate',{
+   p_board_id:boardId,p_expected_updated_at:live.board.updated_at,
+   p_action:'create',p_column_id:null,p_name:preview.name,
+   p_data_type:type,p_config:{options:preview.labels},
+   p_visible:true,p_confirm_delete:false
+  });
+ }catch(error){
+  const status=Number(error?.status);
+  if(!Number.isInteger(status)||status<400||status>=500)uncertain();
+  throw error;
+ }
  if(receipt?.board_id!==boardId||receipt?.action!=='create'||
     !validUuid(receipt.column_id)||typeof receipt.updated_at!=='string')
-  fail('Column creation receipt is uncertain. Refresh the board and check the activity log before retrying.',409);
- const updated=await api.board(boardId);
- const col=(updated.columns||[]).find(c=>c.id===receipt.column_id);
+  uncertain();
+ let updated;
+ try{updated=await api.board(boardId);}catch{uncertain();}
+ const col=(updated?.columns||[]).find(c=>c.id===receipt.column_id);
  if(!col||updated.board?.workspace_id!==context.workspace_id||
     col.name!==preview.name||col.data_type!==type||
     col.system_key!=null)
-  fail('Column creation committed, but verification failed. Refresh the board before importing.',409);
+  uncertain();
  const choices=type==='status'?(col.config?.labels||[])
    .map(x=>x.name||x.label).filter(Boolean):col.config?.options||[];
  if(choices.length!==preview.labels.length||
     choices.some((x,i)=>norm(x)!==norm(preview.labels[i])))
-  fail('Column was created, but stored choices differ from the approved labels. Review board configuration.',409);
+  uncertain();
  return {detail:updated,columnId:col.id,labels:preview.labels};
 }
