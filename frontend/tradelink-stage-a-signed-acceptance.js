@@ -28,7 +28,7 @@ const invalidClients=()=>finish([
 const validList=rows=>Array.isArray(rows)&&rows.length<=1&&
  rows.every(r=>validUuid(r?.documentId)&&validUuid(r?.boardItemId)&&
   typeof r?.documentType==='string'&&Number.isSafeInteger(r?.revision)&&r.revision>=1);
-export async function runTradeLinkStageASignedReadOnly({auth,api}={}){
+export async function runTradeLinkStageASignedReadOnly({auth,api,createProbeId=()=>globalThis.crypto?.randomUUID?.()}={}){
  if(typeof auth?.getVerifiedUser!=='function'||typeof api?.context!=='function'||
     typeof api?.rpc!=='function')return invalidClients();
  const checks=[];
@@ -74,7 +74,7 @@ export async function runTradeLinkStageASignedReadOnly({auth,api}={}){
  const expectedAllow=scenario==='AUTHORIZED_MANAGER';
  const expectedDeny=SCENARIOS.has(scenario)&&
   scenario!=='AUTHORIZED_MANAGER'&&scenario!=='UNVERIFIED';
- const classify=(name,allowed,error,valid)=>{
+ const classify=(name,error,valid)=>{
   if(!expectedAllow&&!expectedDeny)return entry(name,'BLOCKED',
    'Effective role expectation is unknown; result cannot be certified.');
   if(error){
@@ -91,12 +91,11 @@ export async function runTradeLinkStageASignedReadOnly({auth,api}={}){
   const rows=await api.rpc('tl03_documents_list',{
    p_board_id:TRADELINK_BOARD_ID,p_limit:1
   });
-  checks.push(classify('document-list',true,null,validList(rows)));
- }catch(error){checks.push(classify('document-list',false,error,false));}
+  checks.push(classify('document-list',null,validList(rows)));
+ }catch(error){checks.push(classify('document-list',error,false));}
  // The probe uses an unpredictable nonexisting ID, not a production document ID.
  // Never render or copy the resulting document body.
- const randomId=typeof globalThis.crypto?.randomUUID==='function'?
-  globalThis.crypto.randomUUID():null;
+ const randomId=typeof createProbeId==='function'?createProbeId():null;
  if(!validUuid(randomId))checks.push(entry('missing-document-read','BLOCKED',
   'A cryptographically random document ID was unavailable.'));
  else {
@@ -104,8 +103,8 @@ export async function runTradeLinkStageASignedReadOnly({auth,api}={}){
    const response=await api.rpc('tl03_document_read',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:randomId
    });
-   checks.push(classify('missing-document-read',true,null,response===null));
-  }catch(error){checks.push(classify('missing-document-read',false,error,false));}
+   checks.push(classify('missing-document-read',null,response===null));
+  }catch(error){checks.push(classify('missing-document-read',error,false));}
  }
  // This checks exact board-ID scope, not a substitute for a genuine
  // foreign-workspace signed account (scenario above).
