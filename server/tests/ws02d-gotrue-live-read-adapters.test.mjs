@@ -4,7 +4,8 @@ import {
  WS02D_LIVE_READ_ADAPTERS_ENABLED,
  WS02D_ACTIVE_SESSION_SQL,
  createGoTrueUserReader,
- createLiveSessionAuthority
+ createLiveSessionAuthority,
+ createTrustedSignedActorReadVerifier
 } from '../ws02d-gotrue-live-read-adapters.mjs';
 import {createGoTrueActorVerifier}
  from '../ws02d-gotrue-actor-verifier.mjs';
@@ -170,4 +171,28 @@ test('end-to-end staged adapter wiring rejects a revoked database session after 
  assert.deepEqual(first,{id,sessionId:session,active:true,verified:true});
  await assert.rejects(verify(fakeToken),/authentication denied/);
  assert.deepEqual(observations,[[id,session],[id,session]]);
+});
+
+test('one factory composes true GoTrue-shaped read and parameterized live session check',async()=>{
+ let fetched=0,queried=0;
+ const verifier=createTrustedSignedActorReadVerifier({
+  enabled:true,
+  projectUrl,publishableKey:pub,
+  fetchImpl:async()=>{fetched++;return {ok:true,json:async()=>({id})};},
+  db:{query:async(_sql,params)=>{
+   queried++;
+   assert.deepEqual(params,[id,session]);
+   return {rows:[{active:true}]};
+  }},
+  clock:()=>1900000000000
+ });
+ const actor=await verifier(fakeToken);
+ assert.deepEqual(actor,{id,sessionId:session,active:true,verified:true});
+ assert.deepEqual({fetched,queried},{fetched:1,queried:1});
+ const disabled=createTrustedSignedActorReadVerifier({
+  projectUrl,publishableKey:pub,fetchImpl:async()=>{fetched++;},
+  db:{query:async()=>{queried++;return {rows:[{active:true}]};}}
+ });
+ await assert.rejects(disabled(fakeToken),/authentication denied/);
+ assert.deepEqual({fetched,queried},{fetched:1,queried:1});
 });
