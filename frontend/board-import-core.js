@@ -39,7 +39,7 @@ export function availableImportColumns(detail){
  return (detail?.columns||[]).filter(c=>validUuid(c.id)&&c.visible!==false&&
   allowedTypes.has(c.data_type)&&(c.system_key==null||c.system_key==='status')&&
   (c.system_key==='status'||String(c.column_key||'').startsWith('custom')))
-  .map(c=>({id:c.id,name:c.name,type:c.data_type,config:c.config||{}}));
+  .map(c=>({id:c.id,name:c.name,type:c.data_type,system_key:c.system_key||null,config:c.config||{}}));
 }
 function autoTitle(headers){
  const exact=['item','name','title','item name','record'];
