@@ -77,8 +77,8 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'workspace_disposable|t'
       - name: Run workspace UI and staged-contract regression tests
         run: node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs frontend/tests/workspace-b2-signed-acceptance.test.mjs frontend/tests/workspace-b3-signed-read-preflight.test.mjs
-      - name: Verify backend-only invitation, authenticated HTTP boundary and provider mocks
-        run: node --test server/tests/ws02d-trusted-delivery.test.mjs server/tests/ws02d-resend-transport.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs
+      - name: Verify backend-only invitation, real-Auth adapter boundary and provider mocks
+        run: node --test server/tests/ws02d-trusted-delivery.test.mjs server/tests/ws02d-resend-transport.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs server/tests/ws02d-gotrue-actor-verifier.test.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
       - name: Install private B1-only schema (no lifecycle RPCs)
