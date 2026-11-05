@@ -37,12 +37,13 @@ export function normalizeServerWorkspaceCatalog(raw,{userId,workspaceId}={}){
  for(const row of rows){
   if(!validUuid(row?.id)||seen.has(row.id)||
     typeof row.name!=='string'||!row.name.trim()||row.name.length>120||
-    row.relation!=='member'||typeof row.active!=='boolean'||
+    !['owner','member','collaborator'].includes(row.relation)||
+    !['open','closed'].includes(row.privacy)||typeof row.active!=='boolean'||
     row.active!==(row.id===workspaceId))
    return {status:'INVALID',rows:[],canCreate:false,canSwitch:false,canDiscoverAll:false};
   seen.add(row.id);
-  normalized.push(Object.freeze({id:row.id,name:row.name.trim(),relation:'member',
-   active:row.active,verifiedScope:'SIGNED_MEMBER_RPC'}));
+  normalized.push(Object.freeze({id:row.id,name:row.name.trim(),relation:row.relation,
+   privacy:row.privacy,active:row.active,verifiedScope:'SIGNED_MEMBER_RPC'}));
  }
  if(!seen.has(workspaceId))
   return {status:'INVALID',rows:[],canCreate:false,canSwitch:false,canDiscoverAll:false};
@@ -55,7 +56,7 @@ export function visibleWorkspaces(catalog,{tab='all',query=''}={}){
  return (Array.isArray(catalog?.rows)?catalog.rows:[]).filter(w=>
   (w?.verifiedScope==='SIGNED_CURRENT_ONLY'||w?.verifiedScope==='SIGNED_MEMBER_RPC')&&
   validUuid(w.id)&&
-  (segment==='all'||segment==='member'||(segment==='recent'&&w.active))&&
+  (segment==='all'||segment==='recent'&&w.active||segment===w.relation)&&
   w.name.toLocaleLowerCase().includes(term));
 }
 export function validateWorkspaceProposal({name,privacy}={}){
@@ -115,7 +116,8 @@ function panel(html,kind){
 function rowMarkup(row){
  return '<div class="ws01-entry"><span class="ws01-entry-icon" aria-hidden="true">'+
   escape(row.name.slice(0,1).toUpperCase())+'</span><span class="ws01-entry-copy">'+
-  '<strong>'+escape(row.name)+'</strong><small>Current signed workspace</small></span>'+
+  '<strong>'+escape(row.name)+'</strong><small>'+escape(row.relation)+
+  ' · '+(row.active?'Current signed workspace':'Signed member workspace')+'</small></span>'+
   '<span class="ws01-entry-badge">Active</span></div>';
 }
 function resultsMarkup(catalog,tab,query){
