@@ -69,4 +69,5 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 \
             -f sql/tests/bimp02-disposable-setup.sql \
-            -f sql/tests/bimp02-disposable-acceptance.sql
+            -f sql/tests/bimp02-disposable-acceptance.sql \
+            -f sql/tests/bimp02-disposable-negative.sql
