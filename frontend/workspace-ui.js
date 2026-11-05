@@ -79,7 +79,7 @@ export function validateWorkspaceInvitationDraft({emails='',role='member',messag
  const seen=new Set();
  for(const email of recipients){
   const canonical=email.toLowerCase();
-  if(email.length>254||! /^(?!\\s)[^\\s@,;<>]+@[^\\s@,;<>]+\\.[^\\s@,;<>]+$/.test(email))
+  if(email.length>254||!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email))
    return {valid:false,reason:'Check the email addresses and separate each one with a comma.'};
   if(seen.has(canonical))
    return {valid:false,reason:'Remove duplicate email addresses before continuing.'};
@@ -88,7 +88,7 @@ export function validateWorkspaceInvitationDraft({emails='',role='member',messag
  if(!INVITE_ROLES.has(role))
   return {valid:false,reason:'Choose an approved workspace invitation role.'};
  const clean=typeof message==='string'?message.trim():'';
- if(clean.length>500||/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F]/.test(clean))
+ if(clean.length>500||/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(clean))
   return {valid:false,reason:'Keep the optional message within 500 readable characters.'};
  return Object.freeze({valid:true,recipients:Object.freeze(recipients),role,message:clean});
 }
@@ -172,7 +172,8 @@ function menuContent(catalog){
   '<p class="ws01-eyebrow">Recent workspaces</p>'+
   '<div data-ws01-results>'+resultsMarkup(catalog,'recent','')+'</div>'+
   '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
-  '<button type="button" data-ws01-action="create">Add workspace</button>'+\n  '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
+  '<button type="button" data-ws01-action="create">Add workspace</button>'+
+  '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
   currentFootnote()+'</section>';
 }
 function openMenu(catalog){
