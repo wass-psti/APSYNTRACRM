@@ -1,6 +1,6 @@
 # CP-WS-01C/B3 — controlled workspace creation development gate
 
-**Status: IMPLEMENTED-UNVERIFIED (isolated B3 acceptance added, CI result pending).** Production activation is **NOT authorized or applied**. B2 cross-identity/denial coverage is partly complete; real revoked/expired-session and genuinely disjoint foreign-workspace live cases remain unverified.
+**Status: AUTOMATED B3 ISOLATED ACCEPTANCE VERIFIED (PG17 CI PASS); LIVE SIGNED-CREATE ACCEPTANCE AND PRODUCTION ACTIVATION PENDING.** Production activation is **NOT authorized or applied**. B2 cross-identity/denial coverage is partly complete; real revoked/expired-session and genuinely disjoint foreign-workspace live cases remain unverified.
 
 ## Verified starting baseline
 
@@ -37,3 +37,7 @@
 Future production activation requires separate explicit permission-change approval and verified policy decision, a reversible migration and rollback, genuine signed create/deny acceptance across allowed and disallowed roles, isolation, audit, refresh persistence, concurrency/idempotency, and evidence of no B2 or B4 regressions.
 
 The currently outstanding B2 live security denial cases are separately tracked; passing isolated B3 tests does not close them.
+
+## Automated execution result — 2026-11-05
+
+GitHub Actions [workspace lifecycle run #38](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41974370264) on commit `bce3226ea6e2f9ba4313c1b47028313ec64b5380` completed **SUCCESS**. The named step **Verify B3-only atomic creation, idempotency and rollback without B4** completed **SUCCESS**, as did the B2 denial regression and downstream disposable lifecycle acceptance. This verifies the test suite in the GitHub Actions PostgreSQL 17 fixture, not production runtime or a real signed-user create operation. Production creation remains disabled.
