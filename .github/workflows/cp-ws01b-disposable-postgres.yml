@@ -103,6 +103,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02b-self-service-auth-trigger-candidate.sql
       - name: Verify confirmed Main provisioning, legacy preservation and no email admin promotion
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02b-disposable-auth-trigger-acceptance.sql
+      - name: Stage dormant private workspace invitation schema
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-invitation-schema-candidate.sql
+      - name: Verify default-off invitation role, token and RLS constraints
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-schema-acceptance.sql
       - name: Install inactive workspace-selection cutover
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-session-cutover-candidate.sql
       - name: Verify default-deny grants and preactivation signed reads
