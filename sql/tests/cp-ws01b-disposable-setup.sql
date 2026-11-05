@@ -26,6 +26,7 @@ CREATE TABLE public.profiles(
  email text NOT NULL DEFAULT '',
  display_name text,
  email_verified_at timestamptz,
+ updated_at timestamptz NOT NULL DEFAULT now(),
  status text NOT NULL DEFAULT 'active',
  CONSTRAINT profiles_status_check CHECK(status IN ('active','disabled'))
 );
