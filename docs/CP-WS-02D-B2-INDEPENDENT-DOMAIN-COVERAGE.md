@@ -35,9 +35,11 @@ The table is an **integration queue**. Full per-domain code-diff, grants/depende
 
 `sql/tests/cp-ws02d-b3-independent-domain-ceiling-disposable.sql` creates disposable-only synthetic domain entitlements and event rows, then composes `private.ws02d_workspace_ceiling` with a separate domain permission grant.
 
-Expected checks: Member with domain edit authorization succeeds; workspace admin without domain authorization is denied; disabled and enabled Viewer writes are denied; foreign workspace writes are denied; expired signed session writes are denied; rollback restores all prior fixtures. **This test validates the reusable integration invariant, not each real application endpoint.** CI must pass before it is classified VERIFIED.
+Expected checks: Member with domain edit authorization succeeds; workspace admin without domain authorization is denied; disabled and enabled Viewer writes are denied; foreign workspace writes are denied; expired signed session writes are denied; rollback restores all prior fixtures. **This test validates the reusable integration invariant, not each real application endpoint.** [PG17 workflow #41992314970](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41992314970) completed **SUCCESS**, including the new independent-domain check. This verifies the synthetic signed-claim denial composition only, not live-domain integration.
 
 The board-create candidates and PG17 tests were already added in the parallel CP-WS-02D/B2 implementation; do not duplicate or activate them.
+
+A separate scoped B3 candidate now stages guards for **four shared-module mutations** (`put_module_state`, `delete_module_state`, `acquire_module_operation_lock`, `release_module_operation_lock`) with source fingerprint preflights. The new fixture is synthetic only; until its corresponding named integration and denial test runs, do not include these four as VERIFIED integration coverage.
 
 ## Trusted provider — receipt reconciliation increment
 
@@ -50,8 +52,10 @@ Mock tests cover positive acknowledgment, missing audit callback, failed receipt
 ## Progress and next gate
 
 - **Inventory enumeration:** 30/30 reviewed by read-only catalog (**100% of inventory**, not 100% domain acceptance).
-- **Per-domain production ceiling integration:** **0/30** (staged board-create candidates are not installed).
+- **Per-domain production ceiling integration:** **0/30** (board-create and shared-module candidates are staged, not installed).
 - **Provider mock audit contract:** staged and tested; no external sender acceptance.
 - **Full checkpoint completion:** **indeterminate**, because domain-specific runtime acceptance and provider deployment denominators require approved scope and real signed evidence.
+
+**Read-only production integrity postcheck (November 5, 2026):** `work_board_access(uuid,text)` remains MD5 `6a7c23c439e8c59d7883bc8f59d66d08`; WS02D ceiling and invitation flags absent; workspace create/switch RPCs absent. No production role migration or invitation activation occurred.
 
 **Next required gate: CP-WS-02D/B3 — verify remaining independent domain writer ceilings and trusted delivery activation prerequisites.** No production migration or external sends until separately scoped approvals, rollback and genuine signed-session evidence.
