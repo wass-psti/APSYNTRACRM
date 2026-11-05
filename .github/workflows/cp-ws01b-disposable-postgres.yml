@@ -80,6 +80,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01-discovery-activation-candidate.sql
       - name: Verify B2-only authenticated discovery and anon denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-readonly-acceptance.sql
+      - name: Verify B2-only synthetic cross-identity, foreign, revoked and expired denial
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-cross-identity-denial-disposable.sql
       - name: Stage dormant B3 creation RPC (no authenticated write grants)
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01c-b3-create-contract-candidate.sql
       - name: Install inactive workspace-selection cutover
