@@ -1906,7 +1906,14 @@ function openModal(title,fields,submit,{submitLabel='Save changes'}={}){
    if(modal===view){closeAndRestore();toast('Changes saved.');}
   }catch(err){
    notice(err);
-   if(button.isConnected){button.disabled=false;button.textContent=submitLabel;}
+   if(button.isConnected){
+    if(err?.schemaOutcomeUncertain===true){
+     button.disabled=true;
+     button.textContent='Close and verify board';
+    }else{
+     button.disabled=false;button.textContent=submitLabel;
+    }
+   }
   }
  });
  view.querySelector('input,select,textarea')?.focus();
