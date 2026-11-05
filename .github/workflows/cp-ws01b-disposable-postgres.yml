@@ -133,3 +133,9 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-preactivation.sql
       - name: Accept disposable owner creation, privacy, CAS, revocation and isolation
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-acceptance.sql
+      - name: Reproduce deployed board ACL in synthetic workspace fixture
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-acl-fixture.sql
+      - name: Stage minimal AND-integrated board role ceiling (disposable only)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b2-board-acl-integration-candidate.sql
+      - name: Prove platform ceiling, Viewer denial, resource ACL and revoked-session integration
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-acl-integration-acceptance.sql
