@@ -15,7 +15,7 @@ UPDATE auth.users SET email='owner@example.invalid'
  WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 UPDATE auth.users SET email='foreign@example.invalid'
  WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-UPDATE auth.users SET email='invited-third@example.invalid'
+UPDATE auth.users SET email='third@example.invalid'
  WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 INSERT INTO private.ws01_member_roles(workspace_id,user_id,relation)
  VALUES('00000000-0000-4000-8000-000000000001',
