@@ -76,6 +76,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      '</select></label></div>':'')+'</div></div>';
   }).join('');
   const newCols=missing();
+  const choicePending=state.mappings.filter(m=>m.action==='skip'&&
+   (m.type==='status'||m.type==='dropdown'));
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
    '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+
    '<div class="aps-import-controls">'+(state.file.sheets.length>1?'<label>Worksheet<select name="imp-sheet" data-imp-sheet>'+state.file.sheets.map((x,i)=>choice(i,x.name,i===state.sheet)).join('')+'</select></label>':'')+'<label>Add items to<select name="imp-group" data-imp-group>'+groupChoices+
@@ -83,6 +85,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    '<label>Unmapped columns<select name="imp-default" data-imp-default>'+choice('skip',"Don't import",true)+
    (state.manage?choice('create','Create columns after approval',false):'')+'</select></label></div>'+
    '<div class="aps-import-mapping">'+header+mapping+'</div>'+
+   (choicePending.length?'<p class="aps-import-unsupported" role="note">'+
+    'Status and dropdown columns require configured board options. '+ 
+    'Map these file fields to a compatible existing column, or configure that column separately before importing. '+
+    'No unsupported column is created automatically.</p>':'')+
    (newCols.length?'<div class="aps-import-permission" role="group" aria-label="Confirm new columns">'+
     '<h3>'+newCols.length+' proposed column'+(newCols.length===1?'':'s')+'</h3>'+
     '<p>Creating columns changes this board for everyone. You must authorize these exact mappings.</p>'+
