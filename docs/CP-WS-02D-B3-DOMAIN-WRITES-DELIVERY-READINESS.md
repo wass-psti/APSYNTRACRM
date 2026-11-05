@@ -23,6 +23,10 @@ The latest [priority-domain valid-write acceptance report](./CP-WS-02D-B3-PRIORI
 
 Production remains default-denied. A new read-only invocation of the 24-function source integrity preflight confirmed all 24 live source definitions unchanged, no private invitation runtime and B3/B4 absent. Source: `sql/tests/cp-ws02d-b3-24-live-original-preflight.sql`.
 
+## Latest B3 continuation — remaining ten individual valid-write operations (2026-11-05)
+
+[The final ten-path acceptance report](./CP-WS-02D-B3-REMAINING-TEN-DOMAIN-VALID-WRITES.md) confirms [CI #162](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42002817567) **SUCCESS** for two FuelTrack, six TradeLink and two administrative source-preserved write contracts. Including earlier seven and thirteen priority-domain paths, the **current staged individual operational coverage is 30/30 (100%)**. All earlier counts (7/30, 20/30, 23 or 10 remaining) in this historical roadmap refer to prior acceptance snapshots and **are superseded** for *disposable valid-write coverage only*. Real signed-user authorization, production RLS/role ceilings, independent backup/rollback, provider approval and B4 workspace switching remain pending. No production writes or role updates occurred.
+
 ## Domain RBAC integration boundary
 
 The production SQL inventory `sql/tests/cp-ws02d-b2-domain-authorization-inventory.sql` yielded **30 candidate independent mutation paths** (textually referencing current workspace but not `work_board_access`). The textual classification is *not* evidence that any listed routine lacks its own domain authorization.
