@@ -180,3 +180,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-all-24-entrypoint-denial.sql
       - name: Preserve allowed FuelTrack module-Admin import after aggregate 24-function ceiling
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-import-role-preservation.sql
+      - name: Stage isolated TimeTracker domain authorization and GPS read test doubles
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-timetracker-positive-fixture.sql
+      - name: Verify TimeTracker signed clock-in and clock-out, GPS, CAS, workspace and expiry denial
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-timetracker-valid-write-acceptance.sql
