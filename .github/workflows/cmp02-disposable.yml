@@ -1,0 +1,81 @@
+name: CMP-02 — Disposable Native Column Contract Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sql/cmp02-*.sql"
+      - "sql/tests/cmp02-*.sql"
+      - ".github/workflows/cmp02-disposable.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cmp02-postgres17:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate staged contracts in disposable PostgreSQL 17
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-board-collab01-disposable-setup.sql \
+            -f sql/tests/cp-board-config01-disposable-setup.sql \
+            -f sql/tests/cp-board-config01-disposable-legacy-live-functions.sql \
+            -f sql/cp-board-config01-staged-authorization-v2.sql \
+            -f sql/tests/cmp02-disposable-production-contracts.sql \
+            -f sql/cmp02-staged-typed-columns.sql \
+            -f sql/tests/cmp02-disposable-acceptance.sql
+      - name: Confirm rollback fails closed while native columns exist
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          set -euo pipefail
+          if psql -v ON_ERROR_STOP=1 -f sql/cmp02-guarded-rollback.sql > /tmp/cmp02-rollback.log 2>&1; then
+            echo "FAIL: populated CMP02 schema rolled back without removal" >&2
+            exit 1
+          fi
+          grep -q "CMP02 rollback blocked" /tmp/cmp02-rollback.log
+          echo "Expected fail-closed rollback denial verified."
+      - name: Verify reversible cleanup and original function restoration
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cmp02-disposable-cleanup.sql \
+            -f sql/cmp02-guarded-rollback.sql \
+            -f sql/tests/cmp02-disposable-rollback-acceptance.sql
