@@ -1,0 +1,199 @@
+-- CP-BOARD-COL-DELETE: disposable PostgreSQL 17 only.
+-- Real candidate RPCs under synthetic signed sessions. No production data.
+\set ON_ERROR_STOP on
+DO $pre$
+BEGIN
+ IF current_database()<>'postgres'
+ OR to_regclass('private.wm_recoverable_deleted_columns') IS NULL
+ OR to_regprocedure('public.wm_delete_board_column_recoverable(uuid,uuid,timestamptz,integer,text)') IS NULL
+ OR has_table_privilege('authenticated','private.wm_recoverable_deleted_cells','SELECT')
+ OR has_function_privilege('anon','public.wm_delete_board_column_recoverable(uuid,uuid,timestamptz,integer,text)','EXECUTE')
+ OR has_function_privilege('anon','public.wm_restore_board_column_recoverable(uuid,uuid,timestamptz)','EXECUTE')
+ THEN RAISE EXCEPTION 'Recovery fixture is not isolated/default deny' USING ERRCODE='42501';
+ END IF;
+END $pre$;
+CREATE TEMP TABLE col_delete_before AS
+ SELECT
+ (SELECT count(*) FROM public.work_board_columns) AS columns,
+ (SELECT count(*) FROM public.work_board_item_values) AS cells,
+ (SELECT count(*) FROM public.work_board_events) AS events,
+ (SELECT count(*) FROM private.wm_recoverable_deleted_columns) AS recovery,
+ (SELECT count(*) FROM private.wm_recoverable_deleted_cells) AS archived;
+BEGIN;
+DO $run$
+DECLARE
+ b uuid:='30000000-0000-4000-8000-000000000001';
+ foreign_board uuid:='30000000-0000-4000-8000-000000000002';
+ owner uuid:='20000000-0000-4000-8000-000000000001';
+ editor uuid:='20000000-0000-4000-8000-000000000002';
+ viewer uuid:='20000000-0000-4000-8000-000000000003';
+ foreign_user uuid:='20000000-0000-4000-8000-000000000004';
+ c uuid;
+ primary_col uuid;
+ domain_col uuid;
+ deletion uuid;
+ board_version timestamptz;
+ original_column jsonb;
+ original_cell jsonb;
+ deleted jsonb;
+ restored jsonb;
+ listed jsonb;
+BEGIN
+ SELECT id INTO STRICT c FROM public.work_board_columns
+ WHERE board_id=b AND column_key='custom:fixture-status';
+ SELECT id INTO STRICT primary_col FROM public.work_board_columns
+ WHERE board_id=b AND system_key='title';
+ SELECT id INTO STRICT domain_col FROM public.work_board_columns
+ WHERE board_id=b AND column_key='col_seeded';
+ SELECT to_jsonb(x) INTO STRICT original_column FROM public.work_board_columns x WHERE x.id=c;
+ SELECT to_jsonb(x) INTO STRICT original_cell FROM public.work_board_item_values x WHERE x.column_id=c;
+ UPDATE public.wm_board_ui_settings
+ SET column_labels=column_labels||jsonb_build_object(c::text,'Business status')
+ WHERE board_id=b;
+ PERFORM pg_catalog.set_config('request.jwt.claim.sub',owner::text,true);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000001',true);
+ board_version:=(SELECT updated_at FROM public.work_boards WHERE id=b);
+
+ -- Count and board CAS checks fail before any snapshot or delete.
+ BEGIN
+  PERFORM public.wm_delete_board_column_recoverable(
+   b,c,board_version,0,'DELETE Recorded status');
+  RAISE EXCEPTION 'Wrong value count was accepted' USING ERRCODE='P9999';
+ EXCEPTION WHEN serialization_failure THEN NULL; END;
+ BEGIN
+  PERFORM public.wm_delete_board_column_recoverable(
+   b,c,board_version-interval '1 second',1,'DELETE Recorded status');
+  RAISE EXCEPTION 'Stale board CAS accepted' USING ERRCODE='P9999';
+ EXCEPTION WHEN serialization_failure THEN NULL; END;
+ BEGIN
+  PERFORM public.wm_delete_board_column_recoverable(
+   b,c,board_version,1,'DELETE recorded status');
+  RAISE EXCEPTION 'Wrong confirmation accepted' USING ERRCODE='P9999';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ FOR i IN 1..2 LOOP
+  BEGIN
+   PERFORM public.wm_delete_board_column_recoverable(
+    b,CASE WHEN i=1 THEN primary_col ELSE domain_col END,
+    board_version,0,'DELETE Primary');
+   RAISE EXCEPTION 'Protected column was deleted' USING ERRCODE='P9999';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ END LOOP;
+ IF (SELECT count(*) FROM private.wm_recoverable_deleted_columns)<>0
+ OR NOT EXISTS(SELECT 1 FROM public.work_board_item_values WHERE column_id=c) THEN
+  RAISE EXCEPTION 'Preflight denied writes changed data'; END IF;
+
+ -- Same column restoration must work after actual FK cascade.
+ deleted:=public.wm_delete_board_column_recoverable(
+  b,c,board_version,1,'DELETE Recorded status');
+ deletion:=(deleted->>'deletion_id')::uuid;
+ IF deleted->>'action'<>'delete-recoverable'
+ OR (deleted->>'value_rows')::int<>1
+ OR EXISTS(SELECT 1 FROM public.work_board_columns WHERE id=c)
+ OR EXISTS(SELECT 1 FROM public.work_board_item_values WHERE column_id=c)
+ OR (SELECT count(*) FROM private.wm_recoverable_deleted_cells
+     WHERE deletion_id=deletion)<>1
+ OR (SELECT column_snapshot FROM private.wm_recoverable_deleted_columns
+     WHERE deletion_id=deletion)<>original_column
+ OR (SELECT to_jsonb(x)-'deletion_id' FROM private.wm_recoverable_deleted_cells x
+     WHERE deletion_id=deletion)
+   <> (original_cell-'column_id')
+ THEN
+  RAISE EXCEPTION 'Private recovery snapshot or deletion lost data';
+ END IF;
+ IF (SELECT column_labels ? c::text FROM public.wm_board_ui_settings WHERE board_id=b)
+ OR NOT EXISTS(SELECT 1 FROM public.work_board_events
+   WHERE board_id=b AND event_type='column.deleted_recoverable'
+   AND (payload->>'deletion_id')::uuid=deletion
+   AND (payload->>'value_rows')::int=1
+   AND actor_id=owner)
+ THEN RAISE EXCEPTION 'Deletion UI/audit receipt absent'; END IF;
+ listed:=public.wm_list_recoverable_board_columns(b);
+ IF jsonb_array_length(listed)<>1 OR listed->0->>'name'<>'Recorded status'
+ OR (listed->0->>'restorable')::boolean IS DISTINCT FROM true
+ OR listed::text LIKE '%alpha%' OR listed::text LIKE '%Business status%'
+ THEN RAISE EXCEPTION 'Manager recovery list invalid or leaks cell contents'; END IF;
+
+ -- Editor, viewer and foreign/expired sessions cannot read recovery index or restore.
+ PERFORM pg_catalog.set_config('request.jwt.claim.sub',editor::text,true);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000002',true);
+ BEGIN
+  PERFORM public.wm_restore_board_column_recoverable(b,deletion,(deleted->>'updated_at')::timestamptz);
+  RAISE EXCEPTION 'Editor restored manager column' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ PERFORM pg_catalog.set_config('request.jwt.claim.sub',viewer::text,true);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000003',true);
+ BEGIN
+  PERFORM public.wm_list_recoverable_board_columns(b);
+  RAISE EXCEPTION 'Viewer read recovery metadata' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ PERFORM pg_catalog.set_config('request.jwt.claim.sub',foreign_user::text,true);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000004',true);
+ BEGIN
+  PERFORM public.wm_restore_board_column_recoverable(b,deletion,(deleted->>'updated_at')::timestamptz);
+  RAISE EXCEPTION 'Foreign actor restored column' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ PERFORM pg_catalog.set_config('request.jwt.claim.sub',owner::text,true);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000001',true);
+ UPDATE auth.sessions SET not_after=now()-interval '1 minute'
+ WHERE id='70000000-0000-4000-8000-000000000001';
+ BEGIN
+  PERFORM public.wm_restore_board_column_recoverable(b,deletion,(deleted->>'updated_at')::timestamptz);
+  RAISE EXCEPTION 'Expired owner restored column' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ UPDATE auth.sessions SET not_after=NULL
+ WHERE id='70000000-0000-4000-8000-000000000001';
+
+ BEGIN
+  PERFORM public.wm_restore_board_column_recoverable(b,deletion,board_version);
+  RAISE EXCEPTION 'Stale restore revision accepted' USING ERRCODE='P9999';
+ EXCEPTION WHEN serialization_failure THEN NULL; END;
+
+ restored:=public.wm_restore_board_column_recoverable(
+  b,deletion,(deleted->>'updated_at')::timestamptz);
+ IF restored->>'action'<>'restore-recoverable'
+ OR (restored->>'column_id')::uuid<>c
+ OR (SELECT to_jsonb(x) FROM public.work_board_columns x WHERE x.id=c)<>original_column
+ OR (SELECT to_jsonb(x) FROM public.work_board_item_values x WHERE x.column_id=c)<>original_cell
+ OR (SELECT column_labels->>c::text FROM public.wm_board_ui_settings
+     WHERE board_id=b)<>'Business status'
+ OR NOT EXISTS(SELECT 1 FROM public.work_board_events
+   WHERE board_id=b AND event_type='column.restored'
+   AND (payload->>'deletion_id')::uuid=deletion AND actor_id=owner)
+ THEN RAISE EXCEPTION 'Column restore did not preserve originals / audit'; END IF;
+ IF jsonb_array_length(public.wm_list_recoverable_board_columns(b))<>0 THEN
+  RAISE EXCEPTION 'Restored column remains in pending recovery list'; END IF;
+ BEGIN
+  PERFORM public.wm_restore_board_column_recoverable(
+    b,deletion,(restored->>'updated_at')::timestamptz);
+  RAISE EXCEPTION 'Replay of completed recovery accepted' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+ -- Missing parent row must refuse restore without partial change.
+ deleted:=public.wm_delete_board_column_recoverable(
+  b,c,(restored->>'updated_at')::timestamptz,1,'DELETE Recorded status');
+ deletion:=(deleted->>'deletion_id')::uuid;
+ DELETE FROM public.work_board_items WHERE id='40000000-0000-4000-8000-000000000001';
+ BEGIN
+  PERFORM public.wm_restore_board_column_recoverable(
+    b,deletion,(deleted->>'updated_at')::timestamptz);
+  RAISE EXCEPTION 'Missing item accepted without full restore' USING ERRCODE='P9999';
+ EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+ IF NOT EXISTS(SELECT 1 FROM private.wm_recoverable_deleted_cells
+   WHERE deletion_id=deletion) OR
+   EXISTS(SELECT 1 FROM public.work_board_columns WHERE id=c) THEN
+  RAISE EXCEPTION 'Failed restore erased snapshot or partly restored column'; END IF;
+END $run$;
+ROLLBACK;
+DO $post$
+DECLARE orig record;
+BEGIN
+ SELECT * INTO orig FROM pg_temp.col_delete_before;
+ IF (SELECT count(*) FROM public.work_board_columns)<>orig.columns
+ OR (SELECT count(*) FROM public.work_board_item_values)<>orig.cells
+ OR (SELECT count(*) FROM public.work_board_events)<>orig.events
+ OR (SELECT count(*) FROM private.wm_recoverable_deleted_columns)<>orig.recovery
+ OR (SELECT count(*) FROM private.wm_recoverable_deleted_cells)<>orig.archived
+ THEN RAISE EXCEPTION 'Disposable recovery acceptance failed to roll back'; END IF;
+ RAISE NOTICE 'CP-BOARD-COL-DELETE recovery delete/CAS/RBAC/restore/audit/rollback PASS';
+END $post$;
+DROP TABLE pg_temp.col_delete_before;
