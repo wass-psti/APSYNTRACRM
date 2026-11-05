@@ -61,6 +61,10 @@ The current static GitHub Pages UI cannot safely hold a provider secret. A futur
 
 The provider acceptance gate must prove production-compatible sender-domain DNS, delivery, bounce/failure behavior, rate limits, expired token routes, idempotent resend reconciliation and origin/redirect controls before activation.
 
+## Follow-on checkpoint CP-WS-02D/B3 (2026-11-05)
+
+[Follow-on B3 evidence](./CP-WS-02D-B3-DOMAIN-WRITES-DELIVERY-READINESS.md) verified five additional staged independent domain restrictions (four module state/lock paths plus FuelTrack privileged import), mock trusted HTTP issuance and provider receipt persistence. This is separate from B2's two board-create paths. [PG17/Node run #131](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41995268080) passed. The remaining **23** domain candidates still require their own role and record authorization reviews; no production activation is implied.
+
 ## 4. Execution evidence and remaining blockers
 
 | Criterion | Classification |
