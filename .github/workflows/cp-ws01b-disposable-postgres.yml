@@ -155,6 +155,12 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b3-shared-module-mutation-ceiling-candidate.sql
       - name: Verify Member CAS/lock, Viewer denial, revoked session and isolated rollback
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-module-mutation-acceptance.sql
+      - name: Reproduce FuelTrack Admin import with synthetic domain-role and activity dependencies
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-fueltrack-import-fixture.sql
+      - name: Stage workspace edit ceiling on FuelTrack privileged activity import
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b3-fueltrack-import-ceiling-candidate.sql
+      - name: Verify FuelTrack Admin role, Viewer write denial and import rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-fueltrack-import-acceptance.sql
       - name: Verify independent domain RBAC AND workspace ceiling without real records
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-independent-domain-ceiling-disposable.sql
       - name: Validate all 24 remaining deployed domain source fingerprints and ceiling-only changes
