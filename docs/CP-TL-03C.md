@@ -113,3 +113,30 @@ The revised two-stage CI showed **SUCCESS** in the user-supplied GitHub Actions 
 **Actual genuine-user acceptance:** **PENDING.** The connected browser tool returned `Browser access requires the originating browser context`; the agent could not obtain or invoke the signed APSYNTRA CRM session in this chat. Do not elevate mock tests or structural RLS verification to genuine signed acceptance. For live acceptance, open the deployed `https://wass-psti.github.io/APSYNTRACRM/#/security`, run the button as an existing authorized TradeLink General Manager, then a legitimate nonmanager and an existing foreign-workspace user where available. Copy each sanitized result separately and preserve screenshots showing the signed user category without exposing credentials. The report is deliberately reset on logout. Nonexistent-document reads on the current empty table cannot prove row-level separation for an existing real document; that requires separately authorized later document fixtures.
 
 **Not covered by this probe:** truly revoked/expired production sessions, cross-user role transitions, concurrent document writes and real document-data RLS isolation. These remain pending separate controlled signed-session procedures and Stage B where needed. **Stage B document-write permissions remain disabled.**
+
+## Genuine foreign-workspace signed denial — checkpoint blocked (2026-11-05)
+
+**Requested:** CP-TL-03C genuine foreign-workspace authorization denial using an already-existing signed account, without provisioning, impersonation, or production role/membership mutations.
+
+**Verified production inventory:** Ran read-only, aggregate-only `sql/tests/cp-tl03c-foreign-workspace-eligibility.sql` on the existing Supabase project.
+
+| Verified condition | Value |
+| --- | ---: |
+| Total existing workspaces | 2 |
+| Non-TradeLink (foreign) workspaces | 1 |
+| Foreign workspaces with active memberships | 0 |
+| Foreign workspaces with active profiles | 0 |
+| Foreign workspaces with nonexpired session candidates | 0 |
+| Active foreign memberships | 0 |
+
+Query returned **`BLOCKED_NO_ACTIVE_FOREIGN_MEMBERS`**. The foreign workspace exists but currently has no eligible active member or session to submit a genuinely signed GoTrue request. This is a prerequisite blocker, **not an authorization bypass or denial failure**. Synthetic JWTs, SQL role impersonation and altering an existing primary-workspace account cannot be substituted for a real signed user.
+
+**Security unchanged:** `public.tradelink_documents` and `public.tradelink_document_events` remain deployed with both scoped SELECT RLS policies. Read/list RPC grants for `authenticated` remain enabled, document-write RPC grant remains disabled, and the production document count remains zero. No test records, accounts, memberships, roles, or permissions were changed in this gate.
+
+**Prior accepted actual signed-user reports:** `AUTHORIZED_MANAGER` 6/6 PASS and an existing HR user `BOARD_MANAGER_DENIED` 6/6 PASS were supplied by the user. They establish those two specific signed scenarios only. They do not establish foreign-workspace denial or revoked/expired-token behavior.
+
+**Repeatable evidence and safety guard:** The new SQL inventory reports only aggregate counts; `frontend/tests/tradelink-stage-a-signed-acceptance.test.mjs` adds a read-only/no-PII static contract test. Isolated source-replayed assertions **10/10 PASS**. Full Node/GitHub CI must be assessed separately.
+
+**To unblock genuine foreign-workspace acceptance:** a real user must already hold a legitimately authorized *active* membership in the foreign workspace, have an active profile and authenticate with their own session. Any new production membership, account, role, permission, or session changes require **separate scoped authorization** and must preserve workspace isolation; they were not performed. Once a qualifying account legitimately exists, rerun the signed Stage A read acceptance from `#/security`. Expected result: `FOREIGN_WORKSPACE_DENIED` with 6/6 signed checks PASS and zero writes; then separately cover controlled revoked/expired sessions. Until then, **genuine foreign-workspace acceptance status = BLOCKED**.
+
+**CP-TL-03C overall:** Stage A production activation and current-manager/nonmanager signed checks verified; Stage B remains disabled/unapproved and final multi-role acceptance is incomplete.
