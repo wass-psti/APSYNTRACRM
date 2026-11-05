@@ -6,6 +6,8 @@ on:
     paths:
       - "sql/cp-board-config01-*.sql"
       - "sql/tests/cp-board-config01-*.sql"
+      - "sql/cp-board-col-delete-*.sql"
+      - "sql/tests/cp-board-col-delete-*.sql"
       - ".github/workflows/apsyntra-board-config.yml"
   workflow_dispatch:
 
@@ -49,5 +51,8 @@ jobs:
             -f sql/cp-board-config01-staged-authorization-v2.sql \
             -f sql/tests/cp-board-config01-disposable-acceptance.sql \
             -f sql/tests/cp-board-config01-dependency-acceptance-v2.sql \
+            -f sql/cp-board-col-delete-recoverable-candidate.sql \
+            -f sql/tests/cp-board-col-delete-recoverable-acceptance.sql \
+            -f sql/tests/cp-board-col-delete-recoverable-reset.sql \
             -f sql/cp-board-config01-compensating-rollback-v2.sql \
             -f sql/tests/cp-board-config01-rollback-acceptance-v2.sql
