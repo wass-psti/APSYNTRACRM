@@ -14,6 +14,21 @@ BEGIN
  END IF;
  SELECT pg_get_functiondef(v_proc)
  INTO v_source;
+ RAISE NOTICE 'B2 authorization predicates: %',
+  pg_catalog.jsonb_build_object(
+   'definer',(SELECT p.prosecdef FROM pg_proc p WHERE p.oid=v_proc),
+   'stable',(SELECT p.provolatile='s' FROM pg_proc p WHERE p.oid=v_proc),
+   'search_path_config',(SELECT p.proconfig::text FROM pg_proc p WHERE p.oid=v_proc),
+   'auth_exec',has_function_privilege('authenticated',v_proc,'EXECUTE'),
+   'anon_exec',has_function_privilege('anon',v_proc,'EXECUTE'),
+   'public_exec',EXISTS(
+    SELECT 1 FROM pg_proc p CROSS JOIN LATERAL
+      aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+    WHERE p.oid=v_proc AND a.grantee=0 AND a.privilege_type='EXECUTE'),
+   'guard_present',v_source LIKE '%private.wm_board_config_session_active()%',
+   'member_filter_present',v_source LIKE '%m.user_id=v_actor AND m.active IS TRUE%',
+   'active_profile_present',v_source LIKE '%p.status=''active''%',
+   'current_scope_present',v_source LIKE '%public.current_workspace_id(v_actor)%');
  -- This is only an added read RPC: no writable RPC, no role/permission
  -- mutation, and no backend workspace switching.
  IF NOT EXISTS(
