@@ -134,10 +134,19 @@ test('XLSX: stored ZIP entries and header-only companion worksheets are supporte
  assert.equal(parsed.sheets.length,1);
  assert.equal(parsed.sheets[0].name,'Contacts');
 });
-test('XLSX: formula cells, repeated physical coordinates and XML DTD declarations reject',async()=>{
+test('XLSX: cached formulas are read as values, while unsupported formulas, duplicate cells and DTD reject',async()=>{
  const formula=workbookEntries();
  formula[3].xml=contactsSheet.replace('<v>12.5</v>','<f>2+2</f><v>4</v>');
- await assert.rejects(()=>parseWithFixtureDom(makeZip(formula)),/Formula cells/);
+ const parsed=await parseWithFixtureDom(makeZip(formula));
+ assert.equal(parsed.sheets[0].rows[0][1],'4');
+ const missing=workbookEntries();
+ missing[3].xml=contactsSheet.replace('<v>12.5</v>','<f>2+2</f>');
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(missing)),
+  /Worksheet "Contacts".*row 2.*B2.*no supported cached result/);
+ const external=workbookEntries();
+ external[3].xml=contactsSheet.replace('<v>12.5</v>','<f>[1]Other!A1</f><v>4</v>');
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(external)),
+  /External workbook formulas are not supported/);
  const duplicate=workbookEntries();
  duplicate[3].xml=contactsSheet.replace('<c r="B2" t="n"><v>12.5</v></c>',
   '<c r="B2" t="n"><v>12.5</v></c><c r="B2" t="n"><v>99</v></c>');
