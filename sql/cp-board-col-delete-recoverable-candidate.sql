@@ -263,7 +263,7 @@ BEGIN
  OR NOT public.work_board_access(p_board_id,'manage') THEN
   RAISE EXCEPTION 'COL_RECOVERY_LIST_AUTHORIZATION_DENIED' USING ERRCODE='42501';
  END IF;
- RETURN pg_catalog.coalesce((
+ RETURN coalesce((
   SELECT pg_catalog.jsonb_agg(
    pg_catalog.jsonb_build_object('deletion_id',d.deletion_id,
     'column_id',d.column_id,'name',d.column_snapshot->>'name',
