@@ -160,6 +160,12 @@ test('specific backend deletion failures have accurate, actionable classificatio
   assert.match(result.message,new RegExp(explanation,'i'),reason);
   assert.doesNotMatch(result.message,/private recovery tables|SQLSTATE|secret/);
  }
+ const legacyNonempty=explainColumnDeleteError(new ApiError(
+  'Column contains values. Remove or migrate those values before deleting.',
+  400,'23503'));
+ assert.equal(legacyNonempty.status,409);
+ assert.match(legacyNonempty.message,/Empty-only deletion was safely denied/);
+ assert.match(legacyNonempty.message,/recoverable deletion when activated/);
  const permission=explainColumnDeleteError(new ApiError(
   'COL_DELETE_AUTHORIZATION_DENIED',403,'42501'));
  assert.equal(permission.status,403);
