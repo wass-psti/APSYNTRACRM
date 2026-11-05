@@ -255,7 +255,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  }
  async function readFile(file){
   if(state.busy)return;
-  state.busy=true;state.error='';render();
+  state.busy=true;state.error='';state.notice='';render();
   try{
    const parsed=await parseImportFile(file);
    if(!overlay.isConnected)return;
@@ -296,7 +296,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   if(state.busy||state.uncertain||!state.manage||!state.choiceConsent[index])return;
   const mapping=state.mappings[index];
   if(!mapping||mapping.action!=='configure')return;
-  state.busy=true;state.error='';render();
+  state.busy=true;state.error='';state.notice='';render();
   try{
    const result=await provisionImportChoiceColumn({api,auth,boardId,
     detail,sheet:sheet(),source:mapping.source,
@@ -307,8 +307,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    state.notice='Configured '+mapping.choiceType+' column created. Review and approve the remaining ordinary columns before importing.';
   }catch(error){
    state.error=String(error.message||error);
-   if(/receipt is uncertain|committed, but verification failed|stored choices differ/i.test(state.error))
-    state.uncertain=true;
+   if(error?.schemaOutcomeUncertain===true)state.uncertain=true;
   }finally{state.busy=false;render();}
  }
  async function doImport(){
