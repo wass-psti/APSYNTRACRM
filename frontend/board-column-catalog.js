@@ -38,7 +38,7 @@ export function searchStandardColumns(query=''){
 /** Converts a visual preset into an existing authoritative schema type. */
 export function resolveColumnTypeSelection(type,options=''){
  if(type==='priority_preset')
-  return {type:'status',options:'Critical\\nHigh\\nMedium\\nLow',preset:'priority'};
+  return {type:'status',options:'Critical\nHigh\nMedium\nLow',preset:'priority'};
  if(!SUPPORTED_COLUMN_TYPE_IDS.includes(type))
   throw new Error('Unsupported column type or preset.');
  return {type,options:String(options??''),preset:null};
