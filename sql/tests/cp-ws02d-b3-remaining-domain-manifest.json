@@ -72,7 +72,7 @@
       "name": "import_fueltrack_activity_backup",
       "signature": "public.import_fueltrack_activity_backup(jsonb)",
       "fingerprint": "2dc777a252161222a3d2e316dd458eb6",
-      "action": "manage",
+      "action": "edit",
       "authenticatedExecute": true,
       "anonymousExecute": false
     },
