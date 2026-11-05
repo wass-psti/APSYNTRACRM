@@ -17,6 +17,12 @@
 
 The reproducible read-only `sql/tests/cp-ws02d-b3-24-live-original-preflight.sql` returned `CP_WS_02D_B3_24_LIVE_ORIGINALS_VERIFIED_DEFAULT_OFF`: **24/24 unchanged live function source fingerprints, zero drift**, two production workspaces and 40 active memberships. The private invitation runtime and creation/switching RPCs remain absent. This is **not** genuine signed production denial or email-delivery acceptance.
 
+## 2026-11-05 continuation — TimeTracker, Employee Evaluation and Order Intake
+
+The latest [priority-domain valid-write acceptance report](./CP-WS-02D-B3-PRIORITY-DOMAIN-VALID-WRITES.md) records [PG17 CI #152](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42000295939) **PASS**. In addition to the previous seven paths, the real staged TimeTracker clock-in/out function, **five** Employee Evaluation functions and **seven** Order Intake functions have now passed isolated positive/negative business transaction tests with synthetic GoTrue claims and synthetic domain schema dependencies. This changes individual valid-write coverage from **7/30 to 20/30**; **10 domain paths remain** (FuelTrack 2, TradeLink 6, Administration 2). The historical 7/30 table below describes the **pre-continuation B3 baseline** and should not be read as the current total.
+
+Production remains default-denied. A new read-only invocation of the 24-function source integrity preflight confirmed all 24 live source definitions unchanged, no private invitation runtime and B3/B4 absent. Source: `sql/tests/cp-ws02d-b3-24-live-original-preflight.sql`.
+
 ## Domain RBAC integration boundary
 
 The production SQL inventory `sql/tests/cp-ws02d-b2-domain-authorization-inventory.sql` yielded **30 candidate independent mutation paths** (textually referencing current workspace but not `work_board_access`). The textual classification is *not* evidence that any listed routine lacks its own domain authorization.
