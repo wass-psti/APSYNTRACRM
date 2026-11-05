@@ -3608,7 +3608,7 @@ case 'bulk-actions':{
   [['not_started','Not started'],['in_progress','In progress'],
    ['blocked','Blocked'],['done','Done']];
  const actions=[['archive','Archive selected items'],
-  ...(labels.length?[['status','Set status on selected items']]:[])];
+  ...(labels.length?[['status','Set record status (not custom Status columns)']]:[])];
  const fields=select('Bulk operation','operation',actions,actions[0][0])+
   (labels.length?select('New status (for Set status only)','status',labels,labels[0][0]):'')+
   '<p class="muted">Review before applying to '+count+
