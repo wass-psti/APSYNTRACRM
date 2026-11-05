@@ -114,6 +114,7 @@ test('session read query has only constant SELECT with parameterized actor and s
  assert.match(WS02D_ACTIVE_SESSION_SQL,/s\.user_id=\$1::uuid/);
  assert.match(WS02D_ACTIVE_SESSION_SQL,/s\.not_after/);
  assert.match(WS02D_ACTIVE_SESSION_SQL,/u\.deleted_at IS NULL/);
+ assert.match(WS02D_ACTIVE_SESSION_SQL,/u\.banned_until/);
  assert.match(WS02D_ACTIVE_SESSION_SQL,/p\.status='active'/);
  assert.match(WS02D_ACTIVE_SESSION_SQL,/m\.active IS TRUE/);
  assert.doesNotMatch(WS02D_ACTIVE_SESSION_SQL,/\b(INSERT|UPDATE|DELETE|GRANT|REVOKE)\b/i);
