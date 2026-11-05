@@ -37,6 +37,19 @@ The 30 candidates include TimeTracker attendance, Order Intake writes, Employee 
 
 No one-size-fits-all rewrite of these 30 functions was attempted because that risks altering approved module authorization and existing production workflows.
 
+### First independent write-path integration: board creation (disposable)
+
+The review of the 30 independent mutation candidates identified two core paths that create new boards without an existing board ACL check:
+
+- `public.wm_create_board(text,text)` — live original MD5 `8925b3f3203d41306cfbc8a8f21bae87`.
+- `public.wm_create_board_configured(text,text,jsonb)` — live original MD5 `46576d8e4a295fa95f158d87dc1f0504`.
+
+The approved Member UX allows creating and editing boards, while Viewer is read-only. The review-only `sql/cp-ws02d-b2-board-create-ceiling-candidate.sql` adds `private.ws02d_workspace_ceiling(ws,caller,'edit')` **after authoritative current-workspace resolution but before either board insertion**, keeping all original validation, group/column initialization, board ownership, audit, function signature and existing grants. It adds no administrator privilege or cross-workspace access.
+
+`sql/tests/cp-ws02d-b2-board-create-fixture.sql` reproduces the original functions with synthetic supporting tables. `sql/tests/cp-ws02d-b2-board-create-acceptance.sql` verifies ordinary Member creation, configured columns, board Owner membership/audit, Viewer denial both with advanced-role flag off and on, scoped Admin without platform-admin elevation, foreign member's own workspace, expired GoTrue session denial, and complete transaction rollback.
+
+[Isolated PG17 Run #104](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41990746425) completed **SUCCESS**, including these three new steps and the earlier board ACL, invitation and provider mock regressions. **The live board-creation RPCs are unchanged.** These 2 of the 30 inventory paths now have isolated staged integration evidence; the other **28 independent review candidates remain unintegrated**. They must not be mass-rewritten without separate domain-specific authorization review.
+
 ## 3. Optional trusted provider adapter (not selected, not live)
 
 - Existing `server/ws02d-trusted-delivery.mjs`: backend-only orchestration, requiring injected `issueForSignedActor` that must verify the genuine GoTrue caller and workspace ownership; never returns a bearer invitation token to the browser. No deployed handler or provider credentials.
