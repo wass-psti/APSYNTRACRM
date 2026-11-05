@@ -50,6 +50,22 @@ BEGIN
  RETURN EXISTS(SELECT 1 FROM auth.sessions s WHERE s.id=sid::uuid
   AND s.user_id=actor AND (s.not_after IS NULL OR s.not_after>now()));
 END $guard$;
+-- Disposable fixture introspection only: return booleans, not tokens or PII.
+-- All underlying checks run as the same definer context as staged RPCs.
+CREATE FUNCTION public.ws01_fixture_auth_diagnostics() RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $diagnostics$
+ SELECT pg_catalog.jsonb_build_object(
+  'actor_present',auth.uid() IS NOT NULL,
+  'session_claim_present',auth.jwt()->>'session_id' IS NOT NULL,
+  'signed_session_guard',private.wm_board_config_session_active(),
+  'active_profile',EXISTS(SELECT 1 FROM public.profiles p
+    WHERE p.id=auth.uid() AND p.status='active'),
+  'active_membership',EXISTS(SELECT 1 FROM public.workspace_members m
+    WHERE m.user_id=auth.uid() AND m.active IS TRUE))
+$diagnostics$;
+REVOKE ALL ON FUNCTION public.ws01_fixture_auth_diagnostics() FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.ws01_fixture_auth_diagnostics() TO authenticated;
+
 CREATE FUNCTION public.ws01_fixture_visible_boards() RETURNS jsonb
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $boards$
  SELECT coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
