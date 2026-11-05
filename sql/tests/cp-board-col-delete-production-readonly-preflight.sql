@@ -16,6 +16,8 @@ WITH target AS (
     AND system_key IS NULL AND required IS FALSE
     AND (column_key LIKE 'custom:%' OR column_key LIKE 'custom_%')),false)
     AS is_active_ordinary_custom_column,
+  coalesce(bool_and(NOT private.wm_board_is_protected(t.id)),false)
+    AS target_not_protected,
   coalesce(sum((SELECT count(*) FROM public.work_board_item_values v
                 WHERE v.column_id=t.column_id)),0)::int AS stored_value_rows
  FROM target t
@@ -24,13 +26,17 @@ WITH target AS (
  md5(pg_get_functiondef(
   'public.wm_board_schema_mutate(uuid,timestamptz,text,uuid,text,text,jsonb,boolean,boolean)'::regprocedure
  ))='7e5ae389363acffa093ad3291314cf2a' AS original_empty_only_rpc_unchanged,
+ md5(pg_get_functiondef('private.wm_board_is_protected(uuid)'::regprocedure))
+   ='3e82cd9d78fa7699e5e65f985bd4afa9'
+   AS protected_board_predicate_unchanged,
  md5(pg_get_functiondef(
   'private.wm_board_config_session_active()'::regprocedure
  ))='a2284885128169732cb646fe03adcd83' AS genuine_session_guard_unchanged,
  to_regprocedure('public.work_board_access(uuid,text)') IS NOT NULL AS board_acl_present,
  to_regprocedure('public.work_board_log(uuid,text,text,text,text,jsonb)') IS NOT NULL
   AS board_activity_log_present,
- to_regclass('private.wm_recoverable_deleted_columns') IS NULL
+ to_regclass('private.wm_recoverable_column_activation') IS NULL
+  AND to_regclass('private.wm_recoverable_deleted_columns') IS NULL
   AND to_regclass('private.wm_recoverable_deleted_cells') IS NULL
   AND to_regprocedure(
    'public.wm_delete_board_column_recoverable(uuid,uuid,timestamptz,integer,text)'
@@ -46,8 +52,10 @@ WITH target AS (
 )
 SELECT
  CASE WHEN f.matched_target_columns=1
- AND f.is_active_ordinary_custom_column AND f.stored_value_rows=4
- AND c.original_empty_only_rpc_unchanged AND c.genuine_session_guard_unchanged
+ AND f.is_active_ordinary_custom_column AND f.target_not_protected
+ AND f.stored_value_rows=4
+ AND c.original_empty_only_rpc_unchanged AND c.protected_board_predicate_unchanged
+ AND c.genuine_session_guard_unchanged
  AND c.board_acl_present AND c.board_activity_log_present
  AND c.recoverable_delete_not_installed
  AND c.cell_fk_cascades_if_column_removed
