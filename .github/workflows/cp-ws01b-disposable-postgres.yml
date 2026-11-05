@@ -84,6 +84,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-cross-identity-denial-disposable.sql
       - name: Stage dormant B3 creation RPC (no authenticated write grants)
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01c-b3-create-contract-candidate.sql
+      - name: Verify B3-only atomic creation, idempotency and rollback without B4
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql
       - name: Install inactive workspace-selection cutover
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-session-cutover-candidate.sql
       - name: Verify default-deny grants and preactivation signed reads
