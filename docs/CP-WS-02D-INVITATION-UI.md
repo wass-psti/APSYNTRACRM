@@ -2,7 +2,7 @@
 
 ## Scope and evidence
 
-**Status: UI IMPLEMENTED, AUTOMATED VERIFICATION PASSED; LIVE SIGNED BROWSER ACCEPTANCE AND INVITATION BACKEND PENDING.**
+**Status: UI IMPLEMENTED, AUTOMATED VERIFICATION PASSED; PRIVATE INVITATION BACKEND VERIFIED IN DISPOSABLE PG17; LIVE SIGNED BROWSER ACCEPTANCE AND DELIVERY PENDING.**
 
 The user provided three screenshots of a monday.com work-management invitation flow as *visual and interaction references*, not as proof of APSYNTRA CRM behavior. The reference shows a visible **Invite members** action, invitation email entry, optional custom message, and role picker with **Admin**, **Member**, and **Viewer**.
 
@@ -32,6 +32,10 @@ Sending must be server-authorized against current signed GoTrue session, workspa
 - [GitHub Pages build/deployment run #1063](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41982418526): **SUCCESS**.
 
 These checks establish that the UI code and deployment pipeline passed. They do **not** independently prove the modal's placement/appearance in a genuinely authenticated browser or that email invitations function.
+
+## Private invitation backend progress — 2026-11-05
+
+The [dormant server-side invitation contract](./CP-WS-02D-SERVER-INVITATIONS.md) has now passed [disposable PostgreSQL 17 CI #75](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41985272232). It covers owner-scoped issuance, hashed single-use tokens, confirmed-email recipient acceptance, atomic non-owner member creation, revocation, audit and signed-session/foreign-scope denials. No production function, email provider, client grant or permission activation has been installed. The original preview-only frontend and disabled send button remain unchanged.
 
 ## Next required acceptance (CP-WS-02D server stage)
 
