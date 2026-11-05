@@ -112,3 +112,26 @@ test('isolated CI combines both contract stages and signs with disposable GoTrue
  assert.match(tests,/Expired session could discover/);
  assert.match(tests,/Reactivated member recovered stale session choice/);
 });
+
+test('every staged migration has intact SQL boundaries and no literal escaped newlines',()=>{
+ for(const path of [
+  'sql/cp-ws01b-lifecycle-contract-candidate.sql',
+  'sql/cp-ws01-discovery-activation-candidate.sql',
+  'sql/cp-ws01b-session-cutover-candidate.sql'
+ ]){
+  const sql=readFileSync(path,'utf8');
+  assert.doesNotMatch(sql,/\\n/,'Literal escaped newline in '+path);
+  assert.equal((sql.match(/^BEGIN;$/gm)||[]).length,1,path+' transaction opens once');
+  assert.equal((sql.match(/^COMMIT;$/gm)||[]).length,1,path+' transaction commits once');
+  assert.equal(sql.trim().endsWith('COMMIT;'),true,path+' cannot contain trailing SQL');
+ }
+ const discovery=readFileSync('sql/cp-ws01-discovery-activation-candidate.sql','utf8');
+ assert.match(discovery,/LEFT JOIN private\.ws01_member_roles r ON/);
+ assert.match(discovery,/LEFT JOIN private\.ws01_workspace_policy policy ON/);
+ const cutover=readFileSync('sql/cp-ws01b-session-cutover-candidate.sql','utf8');
+ assert.equal((cutover.match(/CREATE FUNCTION public\.wm_ws01_select\(/g)||[]).length,1);
+ assert.equal((cutover.match(/END \$scope\$;/g)||[]).length,1);
+ assert.equal((cutover.match(/END \$select\$;/g)||[]).length,1);
+ assert.match(cutover,/'\^\[0-9a-fA-F\]\{8\}.*\{12\}\$'/);
+ assert.match(cutover,/OR NOT private\.wm_board_config_session_active\(\)/);
+});
