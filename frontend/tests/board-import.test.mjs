@@ -102,6 +102,24 @@ test('formula-like cells and invalid typed values reject before persistence',()=
  const bad={...sheet,rows:[['Alice','not-a-number','no']]};
  assert.throws(()=>buildImportPlan({sheet:bad,detail,mappings:existingMaps,group}),/invalid value/);
 });
+test('mapped date rejection identifies real Excel worksheet, row, header and original value',()=>{
+ const report={
+  name:'live identification status — Running Monday Apps',
+  worksheet:'live identification status',
+  headers:['Name','Date Updated'],
+  rowNumbers:[4,20],
+  rows:[['Sample App','2026-07-09'],['Invalid date','2026-07-09 to 2026-08-18']]
+ };
+ const mappings=[
+  {source:'Name',action:'item'},
+  {source:'Date Updated',action:'create',columnType:'date',name:'Date Updated'}
+ ];
+ assert.throws(()=>buildImportPlan({sheet:report,detail,mappings,group,allowColumns:true}),
+  error=>/Worksheet "live identification status"/.test(error.message)&&
+   /row 20/.test(error.message)&&/column "Date Updated"/.test(error.message)&&
+   /2026-07-09 to 2026-08-18/.test(error.message)&&
+   /YYYY-MM-DD/.test(error.message));
+});
 test('protected application boards cannot be mutated through the generic importer',()=>{
  const restricted={...detail,board:{...detail.board,name:'TimeTracker Attendance'}};
  assert.throws(()=>buildImportPlan({sheet,detail:restricted,mappings:existingMaps,group}),/domain-specific/);
