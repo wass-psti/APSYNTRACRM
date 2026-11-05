@@ -74,7 +74,8 @@ test('Access acceptance wiring is signed-only, cancellable on sign-out and leave
  assert.match(app,/runWs01B2SignedDiscovery\(\{auth,api:db\}\)/);
  assert.match(app,/state\.view!=='security'/);
  assert.match(app,/state\.ws01B2RunId\+\+/);
- assert.match(app,/state\.ws01B2Result=null;state\.context=null/);
+ assert.match(app,/state\.context=null;state\.ws01B2RunId\+\+;state\.ws01B2Busy=false;state\.ws01B2Result=null/);
+ assert.match(app,/auth\.onExpired=\(\)=>\{closeWorkspacePanels\(\);state\.context=null;state\.frtSecurityResult=null;state\.sec07Result=null;state\.ws01B2RunId\+\+;/);
  assert.match(app,/renderWs01B2SignedAcceptance/);
  assert.match(ui,/WS01_DISCOVERY_ENABLED=false/);
  assert.match(ui,/WS01_CREATION_ENABLED=false/);
