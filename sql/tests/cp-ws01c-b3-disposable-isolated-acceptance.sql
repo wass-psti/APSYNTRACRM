@@ -141,6 +141,82 @@ BEGIN
 END $foreign$;
 RESET ROLE;
 
+-- CP-WS-02C: ordinary verified members may create, irrespective of platform role.
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub',
+ 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',false);
+SELECT set_config('request.jwt.claim.session_id',
+ 'bbbbbbbb-0000-4000-8000-000000000001',false);
+DO $nonadmin_create$
+DECLARE r jsonb;
+BEGIN
+ r:=public.wm_ws01_create('Independent HR Workspace','open',
+  '22222222-2222-4222-8222-222222222201');
+ IF r->>'relation'<>'owner' OR r->>'privacy'<>'open'
+  OR r->>'active'<>'false' OR r->>'idempotent'<>'false'
+ THEN RAISE EXCEPTION 'Signed nonadmin workspace create denied or wrong receipt'; END IF;
+ IF public.current_workspace_id(auth.uid()) IS DISTINCT FROM
+  '00000000-0000-4000-8000-000000000002'::uuid
+ THEN RAISE EXCEPTION 'Nonadmin creation switched the current workspace'; END IF;
+END $nonadmin_create$;
+RESET ROLE;
+DO $nonadmin_scope$
+DECLARE workspace uuid;
+BEGIN
+ IF (SELECT platform_role FROM public.profiles
+     WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')<>'employee'
+ THEN RAISE EXCEPTION 'Workspace owner received global administrator privileges'; END IF;
+ SELECT workspace_id INTO STRICT workspace
+ FROM private.ws01_create_requests
+ WHERE actor_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid;
+ IF (SELECT count(*) FROM public.workspaces)<>4
+ OR (SELECT count(*) FROM public.workspace_members WHERE active)<>7
+ OR (SELECT count(*) FROM private.ws01_member_roles
+     WHERE user_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+      AND workspace_id=workspace AND relation='owner')<>1
+ OR (SELECT count(*) FROM private.ws01_events
+     WHERE actor_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+      AND workspace_id=workspace AND action='workspace.created')<>1
+ THEN RAISE EXCEPTION 'Nonadmin ownership, audit or isolation invariant failed'; END IF;
+END $nonadmin_scope$;
+
+-- Signed but unverified or anonymous users must fail even if they are members.
+UPDATE auth.users SET email_confirmed_at=NULL
+ WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub',
+ 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',false);
+SELECT set_config('request.jwt.claim.session_id',
+ 'dddddddd-0000-4000-8000-000000000001',false);
+DO $unverified$
+BEGIN
+ BEGIN
+  PERFORM public.wm_ws01_create('Denied Unverified','closed',
+   '33333333-3333-4333-8333-333333333301');
+  RAISE EXCEPTION 'Unverified email granted owner role' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $unverified$;
+RESET ROLE;
+UPDATE auth.users SET email_confirmed_at=now(),is_anonymous=true
+ WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+SET ROLE authenticated;
+DO $anonymous$
+BEGIN
+ BEGIN
+  PERFORM public.wm_ws01_create('Denied Anonymous','closed',
+   '33333333-3333-4333-8333-333333333302');
+  RAISE EXCEPTION 'Anonymous identity granted owner role' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $anonymous$;
+RESET ROLE;
+DO $denied_counts$
+BEGIN
+ IF (SELECT count(*) FROM public.workspaces)<>4
+ OR (SELECT count(*) FROM private.ws01_create_requests)<>2
+ OR (SELECT count(*) FROM private.ws01_events)<>2
+ THEN RAISE EXCEPTION 'Unverified or anonymous account created unauthorized workspace'; END IF;
+END $denied_counts$;
+
 -- Restore all synthetic write attempts, grants and flags atomically.
 ROLLBACK;
 
