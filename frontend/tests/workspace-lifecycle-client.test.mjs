@@ -82,6 +82,11 @@ test('staged SQL separates secure discovery, creation, default denial and sessio
  assert.match(discovery,/coalesce\(r\.relation,'member'\)/);
  assert.match(discovery,/coalesce\(policy\.privacy,'closed'\)/);
  assert.match(cutover,/selection_enabled IS TRUE/);
+ assert.match(cutover,/OR NOT private\.wm_board_config_session_active\(\)/);
+ assert.match(cutover,/THEN RETURN NULL; END IF;/);
+ const disposable=readFileSync('sql/tests/cp-ws01b-disposable-acceptance.sql','utf8');
+ assert.match(disposable,/Revoked session retained current workspace or board access/);
+ assert.match(disposable,/Expired session retained workspace or board access/);
  assert.match(cutover,/FOR UPDATE/);
  assert.match(cutover,/FOR SHARE/);
  assert.match(cutover,/CREATE TRIGGER ws01_prune_session_choices/);
