@@ -217,8 +217,8 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
   if(behavior!=='add-new'){
    const candidate=matchSource===primary?title:values[matchSource];
    const k=matchText(candidate);
-   if(!k)deny(origin+' · '+Row '+(i+2)+' has an empty duplicate-match key.');
-   if(duplicateKeys.has(k))deny(origin+' · '+Row '+(i+2)+' duplicates another file matching key.');
+   if(!k)deny(origin+' · column "'+matchSource+'": Duplicate-match key is empty.');
+   if(duplicateKeys.has(k))deny(origin+' · column "'+matchSource+'": Duplicate-match key appears twice in the file.');
    duplicateKeys.add(k);
    const existing=itemMatches.get(k);
    if(existing===null)deny('The destination Group has ambiguous duplicate keys.');
