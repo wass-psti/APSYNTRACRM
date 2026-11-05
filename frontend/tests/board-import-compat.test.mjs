@@ -68,16 +68,6 @@ function minimalXmlDom(source){
  function childrenOf(node){
   return node.children.flatMap(x=>x.tag==='text'?[]:[x,...childrenOf(x)]);
  }
- function element(tag,attrs={}){
-  return {
-   tag,attrs,children:[],
-   getAttribute:key=>attrs[key]??null,
-   getAttributeNS:(_ns,key)=>attrs['r:'+key]??attrs[key]??null,
-   getElementsByTagNameNS:(_ns,local)=>childrenOf(this).filter(x=>x.tag.split(':').at(-1)===local),
-   getElementsByTagName:name=>childrenOf(this).filter(x=>x.tag===name),
-   get textContent(){return this.children.map(x=>x.tag==='text'?x.text:x.textContent).join('');}
-  };
- }
  const create=(tag,attrs={})=>({
   tag,attrs,children:[],
   getAttribute(key){return this.attrs[key]??null;},
@@ -91,10 +81,10 @@ function minimalXmlDom(source){
   if(token.startsWith('<?')||token.startsWith('<!--'))continue;
   if(token.startsWith('</')){assert.ok(stack.length>1);stack.pop();continue;}
   if(token.startsWith('<')){
-   const m=token.match(/^<([A-Za-z_][w:.-]*)/);
+   const m=token.match(/^<([A-Za-z_][A-Za-z0-9_:.-]*)/);
    assert.ok(m,'Fixture has invalid markup: '+token);
    const attrs={};
-   for(const a of token.matchAll(/([A-Za-z_:][w:.-]*)="([^"]*)"/g))attrs[a[1]]=a[2];
+   for(const a of token.matchAll(/([A-Za-z_:][A-Za-z0-9_:.-]*)="([^"]*)"/g))attrs[a[1]]=a[2];
    const child=create(m[1],attrs);
    stack.at(-1).children.push(child);
    if(!token.endsWith('/>'))stack.push(child);
