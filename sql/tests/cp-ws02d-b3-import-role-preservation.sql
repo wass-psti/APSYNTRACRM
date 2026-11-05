@@ -34,9 +34,7 @@ DECLARE n integer;
 BEGIN
  n:=public.import_fueltrack_activity_backup(
  '[{"id":"ws02d-b3-post-all-24","title":"Synthetic Admin Member import","type":"review"}]'::jsonb);
- IF n<>1 OR (SELECT count(*) FROM public.module_activity_events
-  WHERE workspace_id='00000000-0000-4000-8000-000000000001'
-   AND event_id='ws02d-b3-post-all-24')<>1
+ IF n<>1
  THEN RAISE EXCEPTION 'Previously allowed FuelTrack Admin Member import regressed'; END IF;
  n:=public.import_fueltrack_activity_backup(
  '[{"id":"ws02d-b3-post-all-24","title":"Synthetic Admin Member import","type":"review"}]'::jsonb);
@@ -53,10 +51,19 @@ BEGIN
  EXCEPTION WHEN SQLSTATE '42501' THEN
   IF SQLERRM<>'WS02D_B3_WORKSPACE_CEILING_DENIED' THEN RAISE; END IF;
  END;
- IF (SELECT count(*) FROM public.module_activity_events WHERE event_id='ws02d-viewer-denied')<>0
- THEN RAISE EXCEPTION 'Viewer denial wrote activity'; END IF;
+
 END $viewer_denial$;
 RESET ROLE;
+-- Assert protected rows from the fixture owner, never grant client SELECT.
+DO $fixture_owner_verify$
+BEGIN
+ IF (SELECT count(*) FROM public.module_activity_events
+   WHERE event_id='ws02d-b3-post-all-24'
+    AND workspace_id='00000000-0000-4000-8000-000000000001')<>1
+ OR (SELECT count(*) FROM public.module_activity_events
+   WHERE event_id='ws02d-viewer-denied')<>0
+ THEN RAISE EXCEPTION 'Authorized import or Viewer denial changed activity ledger'; END IF;
+END $fixture_owner_verify$;
 ROLLBACK;
 DO $rollback$
 DECLARE b record;
