@@ -6,6 +6,7 @@ import {validUuid} from './data.js';
 import {canManuallyEditBoard} from './board-inline-items.js';
 import {isProtectedBoard} from './board-card-lifecycle.js';
 import {moduleByBoardName} from './board-manifest.js';
+import {detectMondayCheckboxMarkers,mondayCheckboxCell} from './monday-import-compat.js';
 export const IMPORT_CONTRACT='m143-v1';
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
@@ -197,6 +198,10 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
  }
  const rows=[];let previewExisting=0,previewNew=0,previewSkipped=0;
  const byHeader=new Map(sheet.headers.map((h,i)=>[h,i]));
+ // A marker-only source is a verified monday.com checkbox text convention:
+ // "v" is checked and a blank is unchecked, unlike generic missing cells.
+ const mondayCheckboxes=new Set([...refMap].filter(([source,col])=>
+  col.type==='checkbox'&&detectMondayCheckboxMarkers(sheet,source)).map(([source])=>source));
  for(let i=0;i<sheet.rows.length;i++){
   const sourceRow=sheet.rows[i],sourceLine=sheet.rowNumbers?.[i]??i+2;
   const origin='Worksheet "'+(sheet.worksheet||sheet.name||'CSV')+'" · row '+sourceLine;
@@ -208,7 +213,8 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
   for(const [source,col] of refMap){
    const raw=sourceRow[byHeader.get(source)];
    let value;
-   try{value=valueAsType(raw,col.type,col.config);}
+   try{value=mondayCheckboxes.has(source)?
+    mondayCheckboxCell(raw):valueAsType(raw,col.type,col.config);}
    catch(error){
     const original=String(raw??'').slice(0,96);
     deny(origin+' · column "'+source+'" · value "'+original+'": '+error.message,
