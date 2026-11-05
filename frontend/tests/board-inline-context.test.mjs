@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
+import {BoardStructureClient} from '../board-structure-admin.js';
 import {
  resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete
@@ -100,4 +101,48 @@ test('column menus stay contextual, are keyboard reachable and never call Manage
  assert.match(app,/confirmInlineColumnDelete/);
  assert.match(app,/closeBoardColumnContext\(\{restoreFocus:true\}\)/);
  assert.match(app,/event\.key==='Escape'/);
+});
+
+
+test('uncertain contextual server mutations cannot be resubmitted on a lost response',async()=>{
+ for(const mode of ['transport','server','receipt']){
+  let writes=0;
+  const api={
+   allowed:async()=>true,
+   rpc:async()=>{
+    writes++;
+    if(mode==='transport')throw new TypeError('Failed to fetch');
+    if(mode==='server'){
+     const err=new Error('Server busy');err.status=503;throw err;
+    }
+    return {board_id:boardId,action:'create',column_id:'not-a-uuid'};
+   }
+  };
+  const manager=new BoardStructureClient(api);
+  await assert.rejects(()=>manager.mutate(detail,{action:'create',name:'Comments',
+   type:'text',config:{}}),
+   err=>err.schemaOutcomeUncertain===true&&/Do not retry/.test(err.message));
+  assert.equal(writes,1);
+ }
+});
+test('definitive server-side 403/409 column mutation denial remains retry-safe after correction',async()=>{
+ for(const status of [403,409]){
+  const manager=new BoardStructureClient({
+   allowed:async()=>true,
+   rpc:async()=>{
+    const err=new Error('Denied by authoritative server');err.status=status;throw err;
+   }
+  });
+  await assert.rejects(()=>manager.mutate(detail,{action:'create',
+   name:'Comments',type:'text',config:{}}),
+   err=>err.status===status&&err.schemaOutcomeUncertain!==true);
+ }
+});
+test('contextual dialog disables submit after an uncertain column mutation',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/if\(err\?\.schemaOutcomeUncertain===true\)/);
+ assert.match(app,/Close and verify board/);
+ assert.match(app,/view\.addEventListener\('keydown'/);
+ assert.match(app,/event\.key==='Escape'/);
+ assert.match(app,/closeAndRestore\(\)/);
 });
