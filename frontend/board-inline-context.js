@@ -5,9 +5,11 @@
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {describeBoardColumns,BOARD_STRUCTURE_TYPES} from './board-structure-admin.js';
+import {canManuallyEditBoard} from './board-inline-items.js';
 const fail=(message,status=403)=>{throw new ApiError(message,status);};
 export function resolveInlineColumn(detail,key,{canManage=false}={}){
- if(!canManage)fail('Board manager permission is required for inline column changes.');
+ if(!canManage||!canManuallyEditBoard(detail?.board,true))
+  fail('Only authorized ordinary-board managers can change columns inline.');
  if(key==='record')return {kind:'primary',name:'Item',key};
  if(typeof key!=='string'||!key.startsWith('col:')||!validUuid(key.slice(4)))
   fail('Only an ordinary custom column is configurable here.');
