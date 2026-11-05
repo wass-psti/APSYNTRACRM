@@ -57,7 +57,8 @@ async function readBoundedJson(request){
 }
 
 export function createTrustedInvitationHttpBoundary({
- enabled=false,verifySignedActor,issueForAuthorizedActor,sendEmail
+ enabled=false,verifySignedActor,issueForAuthorizedActor,sendEmail,
+ recordDeliveryOutcome
 }={}){
  return async function handleInvitation(request){
   const originAllowed=request instanceof Request
@@ -68,7 +69,8 @@ export function createTrustedInvitationHttpBoundary({
   if(request.method!=='POST')return response(405,{state:'denied'},true);
   if(typeof verifySignedActor!=='function'
    ||typeof issueForAuthorizedActor!=='function'
-   ||typeof sendEmail!=='function')
+   ||typeof sendEmail!=='function'
+   ||typeof recordDeliveryOutcome!=='function')
    return response(503,{state:'unavailable'},true);
   if(request.headers.get('content-type')!=='application/json')
    return response(415,{state:'denied'},true);
@@ -102,7 +104,7 @@ export function createTrustedInvitationHttpBoundary({
 
   try{
    const result=await submitTrustedWorkspaceInvitation(draft,{
-    deliveryEnabled:true,sendEmail,
+    deliveryEnabled:true,sendEmail,recordDeliveryOutcome,
     issueForSignedActor:args=>issueForAuthorizedActor(Object.freeze({
      id:actor.id,sessionId:actor.sessionId
     }),args)
