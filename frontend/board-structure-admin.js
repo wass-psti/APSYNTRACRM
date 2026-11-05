@@ -329,7 +329,7 @@ export function renderBoardStructureAdmin(detail,settings,
   '<div class="field"><label for="structure-new-type">Column type</label>'+
   '<select id="structure-new-type" name="type"'+disabled+'>'+
   renderColumnTypeOptions()+'</select></div>'+
-  '<details class="board-column-center"><summary>Column Center — browse the 11 available standard types</summary>'+
+  '<details class="board-column-center"><summary>Column Center — 11 supported types and one Priority preset</summary>'+
   '<div class="field"><label for="structure-column-search">Search column types</label>'+
   '<input id="structure-column-search" type="search" placeholder="Search text, status, dates…"'+
   ' data-column-catalog-search'+disabled+' /></div>'+
