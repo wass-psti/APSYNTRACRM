@@ -28,6 +28,18 @@ const currentRevision=detail=>{
 export function explainColumnDeleteError(error){
  const code=String(error?.code||'');
  const message=String(error?.message||'');
+ // Server emits stable SQLSTATE plus domain-specific reason. Distinguish
+ // protected objects, unavailable snapshots and true authorization denial.
+ if(/COL_DELETE_PROTECTED_COLUMN|COL_RESTORE_SNAPSHOT_INTEGRITY/.test(message))
+  return new ApiError('The required Item or application-owned column is protected and cannot be removed.',403,code);
+ if(/COL_RESTORE_SNAPSHOT_UNAVAILABLE/.test(message))
+  return new ApiError('This deleted column has no pending recovery snapshot or has already been restored.',409,code);
+ if(/COL_(DELETE|RESTORE)_BOARD_NOT_FOUND/.test(message))
+  return new ApiError('Board is unavailable in the current workspace. Refresh before continuing.',404,code);
+ if(/COL_DELETE_FOREIGN_ITEM_BOUNDARY/.test(message))
+  return new ApiError('Column values have invalid board relationships. Deletion was safely denied.',409,code);
+ if(/COL_DELETE_CONFIRMATION_REQUIRED/.test(message))
+  return new ApiError('The confirmation did not match the current column name. Refresh and retype it.',400,code);
  if(code==='42501'||error?.status===401||error?.status===403)
   return new ApiError('Column action denied. Verify your signed session and board-manager permissions.',403,code);
  if(code==='40001'||/COL_(DELETE|RESTORE)_STALE/.test(message))
