@@ -26,7 +26,8 @@ CREATE TABLE public.profiles(
  email text NOT NULL DEFAULT '',
  display_name text,
  email_verified_at timestamptz,
- status text NOT NULL DEFAULT 'active'
+ status text NOT NULL DEFAULT 'active',
+ CONSTRAINT profiles_status_check CHECK(status IN ('active','disabled'))
 );
 CREATE TABLE public.workspaces(
  id uuid PRIMARY KEY,name text NOT NULL,created_at timestamptz NOT NULL DEFAULT now()
