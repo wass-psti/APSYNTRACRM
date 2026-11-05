@@ -1861,21 +1861,55 @@ async function login(form){
 }
 function hideModal(){if(modal){modal.remove();modal=null;}}
 function openModal(title,fields,submit,{submitLabel='Save changes'}={}){
+ const previousFocus=document.activeElement;
  hideModal();
  modal=document.createElement('div');modal.className='modal-backdrop';modal.setAttribute('role','presentation');
+ const view=modal;
  modal.innerHTML=`<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal-head"><h2 id="modal-title">${e(title)}</h2><button type="button" class="modal-close" data-dismiss aria-label="Close dialog">×</button></div>
   <form id="modal-form">${fields}<div class="modal-actions"><button class="secondary" type="button" data-dismiss>Cancel</button>
   <button class="primary" type="submit">${e(submitLabel)}</button></div></form></section>`;
  document.body.append(modal);
- modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
- modal.querySelector('form').addEventListener('submit',async event=>{
-   event.preventDefault();const button=modal?.querySelector('[type="submit"]');if(!button||button.disabled)return;
-   button.disabled=true;button.textContent='Saving…';
-   try{await submit(new FormData(event.currentTarget));hideModal();toast('Changes saved.');}
-   catch(err){notice(err);button.disabled=false;button.textContent=submitLabel;}
+ const closeAndRestore=()=>{
+  if(modal!==view)return;
+  hideModal();
+  const target=previousFocus?.isConnected?previousFocus:
+   root.querySelector('[data-action="board-column-context"]')||
+   root.querySelector('.board-customize-toolbar button')||
+   root.querySelector('.head-actions button');
+  target?.focus?.();
+ };
+ view.addEventListener('click',event=>{
+  if(event.target===view||event.target.closest('[data-dismiss]'))closeAndRestore();
  });
- modal.querySelector('input,select,textarea')?.focus();
+ view.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){
+   event.preventDefault();event.stopPropagation();closeAndRestore();return;
+  }
+  if(event.key!=='Tab')return;
+  const focusable=[...view.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled])')]
+   .filter(el=>!el.hidden&&!el.closest('[hidden]'));
+  if(!focusable.length)return;
+  if(event.shiftKey&&document.activeElement===focusable[0]){
+   event.preventDefault();focusable.at(-1).focus();
+  }else if(!event.shiftKey&&document.activeElement===focusable.at(-1)){
+   event.preventDefault();focusable[0].focus();
+  }
+ });
+ view.querySelector('form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const button=view.querySelector('[type="submit"]');
+  if(modal!==view||!button||button.disabled)return;
+  button.disabled=true;button.textContent='Saving…';
+  try{
+   await submit(new FormData(event.currentTarget));
+   if(modal===view){closeAndRestore();toast('Changes saved.');}
+  }catch(err){
+   notice(err);
+   if(button.isConnected){button.disabled=false;button.textContent=submitLabel;}
+  }
+ });
+ view.querySelector('input,select,textarea')?.focus();
 }
 const input=(label,key,value='',type='text',required=true)=>
  `<div class="field"><label for="modal-${e(key)}">${e(label)}</label><input id="modal-${e(key)}" name="${e(key)}" type="${e(type)}" value="${e(value)}" ${required?'required':''} maxlength="180"/></div>`;
