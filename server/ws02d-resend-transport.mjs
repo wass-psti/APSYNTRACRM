@@ -70,6 +70,8 @@ export function createResendTransport({
   }
   if(!body||typeof body.id!=='string'||!UUID.test(body.id))
    throw new Error('Email provider acceptance receipt invalid');
-  return Object.freeze({accepted:true});
+  // Trusted-server receipt only. Never include this value in a browser-facing
+  // response until it has been durably reconciled with the invitation record.
+  return Object.freeze({accepted:true,providerMessageId:body.id});
  };
 }
