@@ -135,3 +135,16 @@ test('every staged migration has intact SQL boundaries and no literal escaped ne
  assert.match(cutover,/'\^\[0-9a-fA-F\]\{8\}.*\{12\}\$'/);
  assert.match(cutover,/OR NOT private\.wm_board_config_session_active\(\)/);
 });
+
+test('disposable lifecycle reads observe committed writes in distinct statement snapshots',()=>{
+ const cutover=readFileSync('sql/cp-ws01b-session-cutover-candidate.sql','utf8');
+ const acceptance=readFileSync('sql/tests/cp-ws01b-disposable-acceptance.sql','utf8');
+ const switchBody=cutover.split('CREATE FUNCTION public.wm_ws01_select(')[1]
+  ?.split('END $select$;')[0]||'';
+ assert.match(switchBody,/SELECT 1 FROM private\.ws01_session_choices choice/);
+ assert.doesNotMatch(switchBody,/IF public\.current_workspace_id\(v_actor\) IS DISTINCT FROM p_workspace_id/);
+ assert.match(acceptance,/END \$owner_create\$;[\s\S]*DO \$owner_discovery\$/);
+ assert.match(acceptance,/END \$session_switch\$;[\s\S]*DO \$session_scope\$/);
+ assert.match(acceptance,/Changed idempotency key payload allowed/);
+ assert.match(acceptance,/Stale expected workspace accepted/);
+});
