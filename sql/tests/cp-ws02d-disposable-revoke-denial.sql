@@ -15,7 +15,7 @@ UPDATE auth.users SET email='owner@example.invalid'
  WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 UPDATE auth.users SET email='foreign@example.invalid'
  WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-UPDATE auth.users SET email='third@example.invalid'
+UPDATE auth.users SET email='invited-third@example.invalid'
  WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 INSERT INTO private.ws01_member_roles(workspace_id,user_id,relation)
  VALUES('00000000-0000-4000-8000-000000000001',
@@ -28,7 +28,7 @@ BEGIN
  BEGIN
   PERFORM private.ws02d_issue(
    '00000000-0000-4000-8000-000000000002',
-   'third@example.invalid','member',
+   'invited-third@example.invalid','member',
    '22222222-2222-4222-8222-222222222201');
   RAISE EXCEPTION 'Ordinary member issued invitation' USING ERRCODE='P9999';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
@@ -41,17 +41,17 @@ BEGIN
  BEGIN
   PERFORM private.ws02d_issue(
    '00000000-0000-4000-8000-000000000002',
-   'third@example.invalid','member',
+   'invited-third@example.invalid','member',
    '22222222-2222-4222-8222-222222222202');
   RAISE EXCEPTION 'Owner invited across foreign workspace' USING ERRCODE='P9999';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  r:=private.ws02d_issue('00000000-0000-4000-8000-000000000001',
-  'third@example.invalid','member',
+  'invited-third@example.invalid','member',
   '22222222-2222-4222-8222-222222222203');
  INSERT INTO pg_temp.ws02d_test_token VALUES
   ('revoked',r->>'token',(r->>'invitationId')::uuid);
  r:=private.ws02d_issue('00000000-0000-4000-8000-000000000001',
-  'third@example.invalid','member',
+  'invited-third@example.invalid','member',
   '22222222-2222-4222-8222-222222222204');
  INSERT INTO pg_temp.ws02d_test_token VALUES
   ('expired',r->>'token',(r->>'invitationId')::uuid);
