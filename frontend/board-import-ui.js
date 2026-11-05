@@ -19,7 +19,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   throw new ApiError('Only signed ordinary-board editors can import records.',403);
  const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
   behavior:'add-new',matchColumnId:'item',allowColumns:false,manage,busy:false,
-  complete:null,error:'',confirmed:false,plan:null};
+  complete:null,error:'',confirmed:false,plan:null,uncertain:false,renderedStep:0};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -134,10 +134,14 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    ' groups created.</p><p>Refresh and audit verification are available on your board.</p></section>';
  }
  function render(){
+  const active=overlay.contains(document.activeElement)?document.activeElement:null;
+  const focusId=active?.id,focusName=active?.getAttribute('name'),focusValue=active?.value;
+  const previousScroll=overlay.querySelector('.aps-import-body')?.scrollTop||0;
+  const sameStep=state.renderedStep===state.step;
   if(!overlay.isConnected)document.body.append(overlay);
   overlay.innerHTML='<div class="aps-import-dialog" role="dialog" aria-modal="true" '+
    'aria-label="Import board data">'+top()+
-   '<main class="aps-import-body">'+(state.step===1?upload():state.step===2?mapStep():
+   '<main class="aps-import-body" tabindex="-1">'+(state.step===1?upload():state.step===2?mapStep():
    state.step===3?matchStep():resultStep())+
    (state.error?'<p class="aps-import-error" role="alert">'+esc(state.error)+'</p>':'')+
    '</main><footer class="aps-import-footer">'+
@@ -145,12 +149,24 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     (state.busy?' disabled':'')+'>Back</button>':'<span></span>')+
    '<span class="aps-import-fill"></span>'+
    (state.step===2?'<button class="primary" data-imp="next">Next: Handle matches</button>':'')+
-   (state.step===3?'<button class="primary" data-imp="import"'+
+   (state.step===3?(state.uncertain?
+    '<button class="secondary" data-imp="close">Close and verify the board</button>':
+    '<button class="primary" data-imp="import"'+
     (!state.plan||!state.confirmed||state.busy?' disabled':'')+'>'+
-    (state.busy?'Importing…':'Import Now')+'</button>':'')+
+    (state.busy?'Importing…':'Import Now')+'</button>'):'')+
    (state.step===4?'<button class="primary" data-imp="close">Done</button>':'')+
    '</footer></div>';
-  overlay.querySelector('.aps-import-dialog')?.focus?.();
+  const body=overlay.querySelector('.aps-import-body');
+  body.scrollTop=sameStep?previousScroll:0;
+  if(!sameStep)body.focus({preventScroll:true});
+  else if(active){
+   const controls=[...overlay.querySelectorAll('input,select,button')];
+   const focused=controls.find(el=>focusId&&el.id===focusId)||
+    controls.find(el=>focusName&&el.name===focusName&&el.value===focusValue)||
+    controls.find(el=>focusName&&el.name===focusName);
+   focused?.focus({preventScroll:true});
+  }
+  state.renderedStep=state.step;
  }
  async function readFile(file){
   if(state.busy)return;
@@ -180,15 +196,19 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    action:'existing',columnId:value.slice(9)};
  }
  async function doImport(){
-  if(state.busy||!state.confirmed||!state.plan)return;
-  const plan=computePlan();
+  if(state.busy||state.uncertain||!state.confirmed||!state.plan)return;
   state.busy=true;state.error='';render();
   try{
+   const plan=computePlan();
    const receipt=await executeBoardImport({api,auth,plan});
    state.complete=receipt;state.step=4;
-   try{await onComplete(receipt);}catch{state.error='Import committed, but the board refresh failed. Refresh manually before retrying anything.';}
-  }catch(error){state.error=String(error.message||error);}
-  finally{state.busy=false;render();}
+   try{await onComplete(receipt);}catch{
+    state.error='Import committed, but the board refresh failed. Refresh the board before starting another import.';
+   }
+  }catch(error){
+   state.uncertain=error?.importOutcomeUncertain===true;
+   state.error=String(error.message||error);
+  }finally{state.busy=false;render();}
  }
  overlay.addEventListener('click',event=>{
   if(event.target===overlay){close();return;}
