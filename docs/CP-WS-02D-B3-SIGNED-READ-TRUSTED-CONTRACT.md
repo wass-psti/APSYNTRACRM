@@ -4,6 +4,10 @@
 
 This checkpoint follows [CP-WS-02D/B3 production RLS and concurrency readiness](./CP-WS-02D-B3-SIGNED-AUTH-DOMAIN-DELIVERY-READINESS.md) and preserves the **30/30 isolated domain write/denial** baseline.
 
+## Follow-on trusted backend execution fixture — 2026-11-05
+
+[Execution fixture acceptance report](./CP-WS-02D-B3-GENUINE-READ-TRUSTED-EXECUTION-FIXTURE.md) and [CI #181](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42010423515) **SUCCESS** validate the exact active-session SQL on disposable PostgreSQL 17 with real server-side parameters, and a transaction-rolled-back **NOLOGIN** private issuer role with owner-only issuance, idempotent replay, foreign/nonowner and expired-session denials. GoTrue remains **mocked**, browser B3 signed-read acceptance remains **PENDING**, and no production WS02D object, role grant, provider or B4 selector was activated. The original readiness score remains **5/10**, not a new live-signed PASS.
+
 ## 1. Signed read acceptance: existing real user path, no fabricated evidence
 
 The deployed GitHub Pages `#/security` route already provides **Run B3 signed read preflight**, wired via `frontend/app.js` to `frontend/workspace-b3-signed-read-preflight.js`. It runs `auth.getVerifiedUser()`, reads authoritative workspace context, calls all **12** `has_module_access` predicates using the signed actor (no user-id override), checks stable session identity, and can copy a **nonsecret** report.
