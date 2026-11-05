@@ -126,7 +126,13 @@ ROLLBACK;
 DO $rollback$
 BEGIN
  IF (SELECT count(*) FROM private.ws02d_member_access)<>0
-  OR (SELECT count(*) FROM private.ws01_member_roles)<>0
+  -- Previous B4 acceptance retained C's one synthetic collaborator relation.
+ -- Rollback must restore that fixture, not erase it.
+ OR (SELECT count(*) FROM private.ws01_member_roles)<>1
+ OR (SELECT count(*) FROM private.ws01_member_roles r WHERE
+   r.workspace_id='00000000-0000-4000-8000-000000000002'
+   AND r.user_id='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+   AND r.relation='collaborator')<>1
   OR (SELECT advanced_roles_enabled FROM private.ws02d_invitation_flags WHERE id)
   OR (SELECT count(*) FROM public.workspace_members WHERE active)<>5
   OR (SELECT count(*) FROM public.work_board_members)<>4
