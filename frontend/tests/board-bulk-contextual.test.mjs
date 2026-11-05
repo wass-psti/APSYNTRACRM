@@ -60,7 +60,7 @@ test('contextual toolbar offers only supported server action choices with explic
  assert.match(app,/data-action="bulk-actions"/);
  assert.match(app,/case 'bulk-actions'/);
  assert.match(app,/\[\['archive','Archive selected items'\]/);
- assert.match(app,/\['status','Set status on selected items'\]/);
+ assert.match(app,/\['status','Set record status \(not custom Status columns\)'\]/);
  assert.match(app,/one revision-checked atomic server transaction/);
  assert.match(app,/Protected application records: selection and export only/);
  assert.match(app,/if\(error\?\.bulkOutcomeUncertain===true\)/);
