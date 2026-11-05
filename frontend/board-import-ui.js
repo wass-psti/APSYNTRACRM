@@ -3,6 +3,7 @@ import {ApiError} from './session.js';
 import {canManuallyEditBoard} from './board-inline-items.js';
 import {parseImportFile} from './board-import-parse.js';
 import {choiceCreationPreview,provisionImportChoiceColumn} from './board-import-choice-setup.js';
+import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
  buildImportPlan,executeBoardImport} from './board-import-core.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
@@ -114,6 +115,11 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      '</select></label></div>':'')+choiceSetup+'</div></div>';
   }).join('');
   const newCols=missing();
+  const mondayCheckboxSources=state.mappings.filter(m=>{
+   const column=m.action==='existing'?columns.find(c=>c.id===m.columnId):null;
+   return (m.action==='create'?m.columnType:column?.type)==='checkbox'&&
+    detectMondayCheckboxMarkers(s,m.source);
+  });
   const choicePending=state.mappings.filter(m=>m.action==='skip'&&
    (m.type==='status'||m.type==='dropdown'));
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
@@ -124,6 +130,11 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    '<label>Unmapped columns<select name="imp-default" data-imp-default>'+choice('skip',"Don't import",true)+
    (state.manage?choice('create','Create columns after approval',false):'')+'</select></label></div>'+
    '<div class="aps-import-mapping">'+header+mapping+'</div>'+
+   (mondayCheckboxSources.length?
+    '<p role="status" class="aps-import-checkbox-note">monday.com checkbox pattern detected in '+
+    mondayCheckboxSources.map(m=>esc(m.source)).join(', ')+
+    ': "v" will import as checked (true), and empty cells as unchecked (false).'+
+    ' Generic blank cells in other columns remain empty.</p>':'')+
    (choicePending.length?'<p class="aps-import-unsupported" role="note">'+
     'Status and dropdown columns require configured board options. '+ 
     'Map these file fields to a compatible existing column, or configure that column separately before importing. '+
