@@ -4,13 +4,20 @@
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {isProtectedBoard} from './board-card-lifecycle.js';
+import {moduleByBoardName} from './board-manifest.js';
 
 export const BOARD_BULK02_ENABLED=false; // Requires new production migration and real signed acceptance.
 const reject=(reason,status=403)=>{throw new ApiError(reason,status);};
+const uncertain=()=>{
+ const error=new ApiError('Atomic bulk mutation receipt is uncertain. Do not retry blindly. Refresh the board and inspect activity before choosing another action.',409);
+ error.bulkOutcomeUncertain=true;
+ throw error;
+};
 const validTimestamp=value=>typeof value==='string'&&!Number.isNaN(Date.parse(value));
 const supported=new Set(['status','archive','restore']);
 export function canBulkEditBoard(board){
- return validUuid(board?.id)&&board?.status==='active'&&!isProtectedBoard(board);
+ return validUuid(board?.id)&&board?.status==='active'&&!isProtectedBoard(board)&&
+  !moduleByBoardName(board.name);
 }
 export class BoardBulkClient{
  constructor(api,{enabled=BOARD_BULK02_ENABLED}={}){
@@ -48,17 +55,25 @@ export class BoardBulkClient{
    return row;
   });
   const ctx=await this.signed(board,'edit');
-  const reply=await this.api.rpc('wm_board_bulk_mutate',{
-   p_board_id:board.id,p_action:action,p_rows:rows
-  });
+  let reply;
+  try{
+   reply=await this.api.rpc('wm_board_bulk_mutate',{
+    p_board_id:board.id,p_action:action,p_rows:rows
+   });
+  }catch(error){
+   const status=Number(error?.status);
+   if(!Number.isInteger(status)||status<400||status>=500)uncertain();
+   throw error;
+  }
   if(reply?.boardId!==board.id||reply?.action!==action||reply?.applied!==rows.length||
       !Array.isArray(reply.items)||reply.items.length!==rows.length||
       new Set(reply.items.map(x=>x?.id)).size!==rows.length||
       reply.items.some(x=>!seen.has(x?.id)||!validTimestamp(x?.updatedAt)))
-   reject('Atomic mutation receipt did not match all selected records.',409);
-  const after=await this.api.context();
+   uncertain();
+  let after;
+  try{after=await this.api.context();}catch{uncertain();}
   if(after?.user_id!==ctx.user_id||after?.workspace_id!==ctx.workspace_id)
-   reject('Signed identity changed during the operation.',403);
+   uncertain();
   return reply;
  }
  async group(board,group,action,{title=null}={}){
@@ -70,18 +85,26 @@ export class BoardBulkClient{
   if(action==='rename'&&(typeof title!=='string'||title.trim().length<1||title.trim().length>120))
    reject('Group title must contain 1–120 characters.',400);
   const ctx=await this.signed(board,action==='delete_empty'?'manage':'edit');
-  const reply=await this.api.rpc('wm_board_group_cas',{
-   p_board_id:board.id,p_group_id:group.id,
-   p_expected_updated_at:group.updated_at,
-   p_action:action,p_title:action==='rename'?title.trim():null
-  });
+  let reply;
+  try{
+   reply=await this.api.rpc('wm_board_group_cas',{
+    p_board_id:board.id,p_group_id:group.id,
+    p_expected_updated_at:group.updated_at,
+    p_action:action,p_title:action==='rename'?title.trim():null
+   });
+  }catch(error){
+   const status=Number(error?.status);
+   if(!Number.isInteger(status)||status<400||status>=500)uncertain();
+   throw error;
+  }
   if(reply?.boardId!==board.id||reply?.groupId!==group.id||reply?.action!==action||
    (action==='rename'&&!validTimestamp(reply.updatedAt))||
    (action==='delete_empty'&&reply.updatedAt!==null))
-   reject('Group concurrency receipt did not match the intended operation.',409);
-  const after=await this.api.context();
+   uncertain();
+  let after;
+  try{after=await this.api.context();}catch{uncertain();}
   if(after?.user_id!==ctx.user_id||after?.workspace_id!==ctx.workspace_id)
-   reject('Signed identity changed during the operation.',403);
+   uncertain();
   return reply;
  }
 }
