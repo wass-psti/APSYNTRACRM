@@ -34,7 +34,7 @@ BEGIN
  IF NOT EXISTS(
   SELECT 1 FROM pg_proc p
   WHERE p.oid=v_proc AND p.prosecdef IS TRUE AND p.provolatile='s'
-    AND 'search_path='=ANY(p.proconfig)
+    AND (('search_path='=ANY(p.proconfig)) OR ('search_path=""'=ANY(p.proconfig)))
  ) OR NOT has_function_privilege('authenticated',v_proc,'EXECUTE')
    OR has_function_privilege('anon',v_proc,'EXECUTE')
    OR EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL
