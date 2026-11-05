@@ -1,5 +1,5 @@
 import {AuthClient,ApiError} from './session.js';
-import {renderWorkspaceSwitcher,openWorkspaceSelector,closeWorkspacePanels} from './workspace-ui.js';
+import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels} from './workspace-ui.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
 import {REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,captureAuthReturn,
@@ -221,6 +221,7 @@ function sidebar(){
    <span class="sidebar-brand-subtitle" aria-hidden="true">WORKSPACE OPERATIONS</span>
   </div>
   `+renderWorkspaceSwitcher({id:state.context?.workspace_id,name:workspaceName()})+`
+  <div class="ws02-sidebar-action">`+renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()})+`</div>
   <div class="sidebar-nav-scroll">
    <div class="side-section sidebar-nav-section">Workspace</div>
    <nav class="nav-list" aria-label="Primary">`+nav+`</nav>
@@ -333,7 +334,7 @@ function shell(body){
  }else{
   root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div><button type="button" class="ws01-topbar-launch" data-action="ws01-open" aria-label="Browse authorized workspaces">Workspaces ▾</button>
- <div class="top-actions"><span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
+ <div class="top-actions">${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  }
  const previousRoute=shellRoute;
@@ -2310,6 +2311,13 @@ async function action(name,button){
  case 'ws01-open':{
    if(!auth.isSignedIn||!state.context)break;
    openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()});
+   break;
+ }
+ case 'ws02-open-invites':{
+   if(!auth.isSignedIn||!state.context?.workspace_id)break;
+   openWorkspaceInvitationDialog({
+    id:state.context.workspace_id,name:workspaceName()
+   });
    break;
  }
  case 'platform-sync-verify':{await platformSync.syncNow('manual',[]);break;}
