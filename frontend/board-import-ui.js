@@ -69,8 +69,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     '<div><label class="sr-only" for="imp-map-'+i+'">Map '+esc(m.source)+'</label>'+
     '<select id="imp-map-'+i+'" data-imp-map="'+i+'">'+opts.join('')+'</select>'+
     (m.action==='create'?'<div class="aps-import-proposed">'+
-     '<label>New column name<input data-imp-name="'+i+'" maxlength="80" value="'+esc(m.name||m.source)+'"></label>'+
-     '<label>Column type<select data-imp-type="'+i+'">'+
+     '<label>New column name<input name="imp-column-name-'+i+'" data-imp-name="'+i+'" maxlength="80" value="'+esc(m.name||m.source)+'"></label>'+
+     '<label>Column type<select name="imp-column-type-'+i+'" data-imp-type="'+i+'">'+
       CREATABLE_IMPORT_TYPES.map(t=>choice(t,t,t===(m.columnType||m.type))).join('')+
      choice('unsupported','Select a compatible type…',!CREATABLE_IMPORT_TYPES.includes(m.columnType||m.type))+
      '</select></label></div>':'')+'</div></div>';
@@ -78,9 +78,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const newCols=missing();
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
    '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+
-   '<div class="aps-import-controls"><label>Add items to<select data-imp-group>'+groupChoices+
-   '</select></label>'+(state.group==='create'?'<label>New group name<input maxlength="120" data-imp-group-name value="'+esc(state.groupName)+'"></label>':'')+
-   '<label>Unmapped columns<select data-imp-default>'+choice('skip',"Don't import",true)+
+   '<div class="aps-import-controls">'+(state.file.sheets.length>1?'<label>Worksheet<select name="imp-sheet" data-imp-sheet>'+state.file.sheets.map((x,i)=>choice(i,x.name,i===state.sheet)).join('')+'</select></label>':'')+'<label>Add items to<select name="imp-group" data-imp-group>'+groupChoices+
+   '</select></label>'+(state.group==='create'?'<label>New group name<input name="imp-group-name" maxlength="120" data-imp-group-name value="'+esc(state.groupName)+'"></label>':'')+
+   '<label>Unmapped columns<select name="imp-default" data-imp-default>'+choice('skip',"Don't import",true)+
    (state.manage?choice('create','Create columns after approval',false):'')+'</select></label></div>'+
    '<div class="aps-import-mapping">'+header+mapping+'</div>'+
    (newCols.length?'<div class="aps-import-permission" role="group" aria-label="Confirm new columns">'+
@@ -101,7 +101,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const radio=(id,title,description)=>'<label class="aps-import-match '+(state.behavior===id?'selected':'')+'">'+
    '<input type="radio" name="imp-behavior" value="'+id+'"'+(state.behavior===id?' checked':'')+' />'+
    '<span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>';
-  const matchSelect='<label>Matched by<select data-imp-match>'+
+  const matchSelect='<label>Matched by<select name="imp-match" data-imp-match>'+
    choice('item','Item title',state.matchColumnId==='item')+
    cols.map(c=>choice(c.id,c.name,state.matchColumnId===c.id)).join('')+'</select></label>';
   return '<section class="aps-import-match-screen"><h2>Set duplicate behavior</h2>'+
@@ -116,7 +116,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     result.preview.skippedItems+' skipped · '+result.preview.newColumns+
     ' new columns · '+result.preview.rowCount+' rows</p>'+
     '<p>The server will atomically validate and commit this import against the current board revision.</p>'+
-    '<label class="aps-import-final-check"><input type="checkbox" data-imp-confirm'+
+    '<label class="aps-import-final-check"><input type="checkbox" name="imp-confirm" data-imp-confirm'+
     (state.confirmed?' checked':'')+' /> I have reviewed the mapping and the selected duplicate behavior.</label>'+
     '</div>':'')+'</section>';
  }
@@ -211,6 +211,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  overlay.addEventListener('change',event=>{
   const el=event.target;
   if(el.id==='aps-import-file-input'){if(el.files?.[0])void readFile(el.files[0]);return;}
+  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail);state.allowColumns=false;state.confirmed=false;state.error='';render();return;}
   if(el.dataset.impMap!=null){adjustMapping(Number(el.dataset.impMap),el.value);render();return;}
   if(el.dataset.impGroup!=null){state.group=el.value;state.confirmed=false;render();return;}
   if(el.dataset.impDefault!=null&&el.value==='create'){
