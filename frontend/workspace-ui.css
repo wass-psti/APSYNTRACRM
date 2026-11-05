@@ -125,3 +125,78 @@
  .ws01-create-card{padding:23px 18px}
 }
 @media(prefers-reduced-motion:reduce){.ws01-overlay *{scroll-behavior:auto!important;transition:none!important}}
+
+/* CP-WS-02D — invitation experience, display-only until signed server activation. */
+#app .aps-sidebar .ws02-sidebar-action{padding:4px 12px 12px}
+#app .aps-sidebar .ws02-invite-sidebar{width:100%;justify-content:center}
+.ws02-invite-launch{display:inline-flex;align-items:center;justify-content:center;
+ gap:8px;padding:9px 13px;border:1px solid #d7dcf7;border-radius:10px;
+ background:linear-gradient(145deg,#f5f6ff,#ecefff);color:#434aab;
+ font-size:12px;font-weight:760;line-height:1.2;cursor:pointer;
+ transition:background .18s,border-color .18s,transform .18s;
+ white-space:nowrap;min-height:36px}
+.ws02-invite-launch:hover{border-color:#929bef;background:#e9edff;transform:translateY(-1px)}
+.ws02-invite-launch:focus-visible{outline:2px solid #5b5fe1;outline-offset:3px}
+.ws02-invite-glyph{width:18px;height:18px;border-radius:6px;display:grid;place-items:center;
+ background:#6065e2;color:#fff;font-size:16px;font-weight:550}
+.ws02-invite-card{width:min(620px,calc(100vw - 24px));max-height:min(780px,calc(100dvh - 30px));
+ overflow-y:auto;border:1px solid #e1e5f4;border-radius:20px;
+ box-shadow:0 35px 100px #101e4d55;background:#fff;color:#283652;
+ padding:26px 28px;animation:ws02-card-enter .2s ease-out}
+@keyframes ws02-card-enter{from{opacity:.7;transform:translateY(8px) scale(.99)}
+ to{opacity:1;transform:translateY(0) scale(1)}}
+.ws02-invite-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.ws02-invite-heading h2{font-size:24px;line-height:1.22;letter-spacing:-.6px;margin:4px 0 0;
+ font-weight:820;overflow-wrap:anywhere}
+.ws02-invite-card .ws02-eyebrow{margin:0;color:#646bce;font-size:11px;
+ text-transform:uppercase;letter-spacing:.9px;font-weight:800}
+.ws02-invite-card .ws02-invite-subtitle{font-size:12px;color:#697793;line-height:1.6;
+ margin:13px 0 21px}
+.ws02-invite-card form{display:grid;gap:13px}
+.ws02-invite-card label{font-size:12px;font-weight:760;color:#2e3b57;display:block}
+.ws02-invite-card label span{font-weight:500;color:#8b95aa}
+.ws02-invite-fields{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(155px,1fr);
+ gap:13px;align-items:start}
+.ws02-invite-fields>div{display:grid;gap:8px;min-width:0}
+.ws02-invite-card textarea,.ws02-invite-card select{width:100%;min-width:0;
+ background:#fcfdff;border:1px solid #cdd5ec;border-radius:10px;
+ padding:11px 12px;color:#283652;font:inherit;font-size:12px;line-height:1.5;
+ outline:none;transition:border-color .15s,box-shadow .15s}
+.ws02-invite-card textarea{resize:vertical;min-height:64px}
+.ws02-invite-card select{appearance:auto;min-height:44px}
+.ws02-invite-card textarea:focus-visible,.ws02-invite-card select:focus-visible{
+ border-color:#6667df;box-shadow:0 0 0 3px #7076de22}
+.ws02-invite-card small{font-size:11px;line-height:1.5;color:#8b95ae}
+.ws02-invite-context{display:grid;gap:9px;padding-top:4px}
+.ws02-invite-context>span{font-size:11px;font-weight:760;color:#53627f}
+.ws02-invite-context>div{display:flex;flex-wrap:wrap;gap:7px}
+.ws02-invite-context button{border:1px solid #d8def0;background:#fbfcff;
+ border-radius:999px;padding:8px 10px;color:#485776;font-size:11px}
+.ws02-invite-context button:hover{background:#eff1ff;color:#3d46ae;border-color:#a9b1ea}
+.ws02-invite-card .ws02-invite-safety{font-size:11px;line-height:1.65;
+ color:#596888;background:#f4f6fc;border:1px solid #e8ebf5;
+ border-radius:10px;padding:12px;margin:1px 0 0}
+.ws02-invite-feedback{font-size:12px;color:#6357a7;min-height:16px;
+ line-height:1.5;margin:0}
+.ws02-invite-footer{border-top:1px solid #e9edf6;padding-top:15px;margin-top:4px;
+ display:flex;justify-content:flex-end;flex-wrap:wrap;align-items:center;gap:8px}
+.ws02-invite-footer button{font-size:12px;font-weight:760;padding:10px 13px;
+ border-radius:9px;border:1px solid #d7dcec;background:#fff;color:#51617e}
+.ws02-invite-footer button[type=submit]{color:#4b4fc2;border-color:#9ca6ee;
+ background:#f1f2ff}
+.ws02-invite-footer .ws02-send{background:#6266de;color:#fff;border-color:#6266de}
+.ws02-invite-footer button[disabled]{cursor:not-allowed;opacity:.48}
+@media(max-width:700px){
+ #app .top-actions .ws02-invite-topbar{padding:8px 10px}
+ #app .top-actions .ws02-invite-topbar span:last-child{display:none}
+ .ws02-invite-card{padding:21px 17px;max-height:calc(100dvh - 20px)}
+ .ws02-invite-fields{grid-template-columns:1fr}
+ .ws02-invite-heading h2{font-size:20px}
+ .ws02-invite-footer{justify-content:stretch}
+ .ws02-invite-footer button{flex:1 1 auto}
+}
+@media(prefers-reduced-motion:reduce){
+ .ws02-invite-card{animation:none}
+ .ws02-invite-launch{transition:none}
+ .ws02-invite-launch:hover{transform:none}
+}
