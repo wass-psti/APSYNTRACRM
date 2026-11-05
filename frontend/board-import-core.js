@@ -45,7 +45,7 @@ function autoTitle(headers){
  const exact=['item','name','title','item name','record'];
  return headers.find(h=>exact.includes(key(h)))||headers[0];
 }
-export function initialImportMappings(sheet,detail){
+export function initialImportMappings(sheet,detail,{canCreate=false}={}){
  const columns=availableImportColumns(detail),primary=autoTitle(sheet.headers),used=new Set();
  return sheet.headers.map((source,i)=>{
   const type=inferImportType(source,sheet.rows.map(r=>r[i]));
@@ -54,6 +54,9 @@ export function initialImportMappings(sheet,detail){
   if(matches.length===1){
    used.add(matches[0].id);
    return {source,action:'existing',columnId:matches[0].id,type};
+  }
+  if(canCreate&&creatable.has(type)&&!columns.some(c=>key(c.name)===key(source))){
+   return {source,action:'create',type,columnType:type,name:source,requiresDecision:true};
   }
   return {source,action:'skip',type,proposed:type,requiresDecision:true};
  });
