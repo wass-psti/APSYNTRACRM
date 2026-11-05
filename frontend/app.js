@@ -790,10 +790,9 @@ function boardPage(){
     '<button type="button" class="secondary" data-action="bulk02-copy-report">Copy nonsecret check report</button></div>':''}
   ${row01AcceptancePanel(b)}
   <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button>
- <button type="button" class="secondary" data-action="bulk-status" ${canRequestBulk(b)?'':'disabled title="Select 1–50 records on an editable ordinary board"'}>Bulk status</button>
- <button type="button" class="secondary" data-action="bulk-archive" ${canRequestBulk(b)?'':'disabled title="Select 1–50 records on an editable ordinary board"'}>Bulk archive</button>
+ <button type="button" class="secondary" data-action="bulk-actions" ${canRequestBulk(b)||bulkReadyFor(b)?'':'disabled title="Bulk changes require an authorized ordinary board and 1–50 records"'}>Bulk actions…</button>
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
- <span class="muted">${bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; protected application records remain excluded.'}</span></div>
+ <span class="muted">${!canBulkEditBoard(b)?'Protected application records: selection and export only; domain-specific bulk writes require separate server authorization.':bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; unsupported field edits and multi-delete are unavailable.'}</span></div>
  ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0)}
  ${moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
   renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
@@ -3550,6 +3549,42 @@ case 'bulk02-copy-report':{
   },null,2));
   toast('Nonsecret signed bulk acceptance result copied.');
  }catch{toast('Clipboard unavailable. Review the visible signed checks.',true);}
+ break;
+}
+case 'bulk-actions':{
+ const board=state.board?.board;
+ if(!activeBoardLayout()||!itemSelection.size||itemSelection.size>50||
+    !canBulkEditBoard(board))return;
+ if(!await ensureSignedBulkReady(board))return;
+ const count=itemSelection.size;
+ const configured=state.board.columns?.find(c=>c.system_key==='status'&&c.data_type==='status');
+ const labels=configured?Array.isArray(configured.config?.labels)?
+  configured.config.labels.filter(x=>x.active!==false).map(x=>
+   [String(x.id),String(x.title||x.label||x.name||x.id)]):[]:
+  [['not_started','Not started'],['in_progress','In progress'],
+   ['blocked','Blocked'],['done','Done']];
+ const actions=[['archive','Archive selected items'],
+  ...(labels.length?[['status','Set status on selected items']]:[])];
+ const fields=select('Bulk operation','operation',actions,actions[0][0])+
+  (labels.length?select('New status (for Set status only)','status',labels,labels[0][0]):'')+
+  '<p class="muted">Applies one revision-checked atomic server transaction to '+count+
+  ' currently selected items. Only actions authorized by this board are offered.</p>';
+ openModal('Bulk actions — '+count+' selected',fields,async fd=>{
+  const operation=String(fd.get('operation')||'');
+  if(!actions.some(([id])=>id===operation))
+   throw new ApiError('Unsupported bulk operation.',400);
+  if(itemSelection.size!==count||state.boardId!==board.id)
+   throw new ApiError('Selection changed; review the bulk action again.',409);
+  if(operation==='archive'&&
+    !window.confirm('Archive '+count+' selected records? History is preserved.'))return;
+  await applySelectedBulk(operation,operation==='status'?String(fd.get('status')||''):null);
+ },{submitLabel:'Apply to selected items'});
+ if(labels.length){
+  const operation=modal?.querySelector('#modal-operation');
+  const statusField=modal?.querySelector('#modal-status')?.closest('.field');
+  const sync=()=>{if(statusField)statusField.hidden=operation?.value!=='status';};
+  operation?.addEventListener('change',sync);sync();
+ }
  break;
 }
 case 'bulk-status':{
