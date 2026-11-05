@@ -27,6 +27,9 @@ BEGIN
  IF v_actor IS NULL OR sid_text IS NULL OR sid_text !~
   '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
   OR NOT private.wm_board_config_session_active()
+  OR NOT EXISTS(SELECT 1 FROM auth.users u
+   WHERE u.id=v_actor AND u.email_confirmed_at IS NOT NULL
+    AND u.is_anonymous IS FALSE)
   OR NOT EXISTS(SELECT 1 FROM public.profiles
    WHERE id=v_actor AND status='active')
   OR NOT EXISTS(SELECT 1 FROM public.workspace_members
@@ -42,6 +45,10 @@ BEGIN
 END $actor$;
 REVOKE ALL ON FUNCTION private.ws01_signed_actor_session() FROM PUBLIC,anon,authenticated;
 
+-- Only verified, non-anonymous active users with an established membership.
+-- Registration/verification must first idempotently provision Main Workspace.
+-- Authorization is platform-role-independent: existing admin roles never arise
+-- from workspace creation. Workspace ownership remains workspace-local.
 -- Idempotent, atomic owner+membership creation. NO automatic session switch.
 -- Open privacy is metadata only; unrestricted join/discovery is NOT enabled.
 CREATE FUNCTION public.wm_ws01_create(
