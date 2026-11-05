@@ -65,3 +65,15 @@ All prerequisites must be fulfilled **before** production migration invocation:
 - Separate B1 production schema-change approval: **PENDING**.
 - Production B1 migration/postactivation acceptance: **NOT EXECUTED / PENDING**.
 - B2/B3/B4 activation: **DISABLED / OUT OF B1 SCOPE**.
+
+## Final disposable run and production safety boundary — 2026-11-05
+
+**Verified latest B1-isolated CI:** [CP-WS-01B/01C run #26](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41965781675), head commit `ac32683995fa3837e6512b0317eab8298524553e`, **completed / success**. GitHub run metadata, job steps and log output were independently read:
+
+- Native `node --test`: **20 passed / 0 failed**.
+- B1-only SQL postcheck: `CP-WS-01C/B1 six private RLS tables, no direct grants, disabled flags, zero new RPCs PASS`.
+- Read-only B1 postcheck report: `B1_ONLY_POSTCHECK_PASS__NO_PUBLIC_LIFECYCLE_RPC`, with the disposable fixture's two workspaces and five memberships unchanged and both lifecycle flags false.
+- Subsequent B2/B3/B4 disposable-only contract installation, preactivation denial, full signed-user workspace isolation/revocation acceptance: **PASS**.
+- Workflow stages and job result: **all success**. No production Supabase writes.
+
+**B1 production go/no-go:** **NO-GO for execution until separate approval and current backup/restore evidence are secured.** Preflight/readiness/isolated CI are **GO**. The existing project has no installed B1 objects, no newly granted lifecycle RPCs, and no session-authority cutover. Never interpret the green disposable workflow as signed production acceptance or production permission to apply schema changes.
