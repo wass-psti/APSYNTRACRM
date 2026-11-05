@@ -178,3 +178,5 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-remaining-domain-acceptance.sql
       - name: Exercise all 24 source-preserved entrypoints under Viewer, Member and expired session
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-all-24-entrypoint-denial.sql
+      - name: Preserve allowed FuelTrack module-Admin import after aggregate 24-function ceiling
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-import-role-preservation.sql
