@@ -1733,6 +1733,11 @@
 .board-configured-status.board-status-color-amber{border-left-color:#f59e0b}
 .board-configured-status.board-status-color-red{border-left-color:#ef4444}
 .board-configured-status.board-status-color-purple{border-left-color:#8b5cf6}
+.board-configured-status.board-status-color-tealgreen{border-left-color:#23b784}
+.board-configured-status.board-status-color-indigo{border-left-color:#6d5bd0}
+.board-configured-status.board-status-color-cyan{border-left-color:#2a9bb8}
+.board-configured-status.board-status-color-gold{border-left-color:#d9a227}
+.board-configured-status.board-status-color-pink{border-left-color:#d54a9c}
 .board-configured-status.board-status-color-neutral{border-left-color:#8d97ab}
 /* Header actions: overflow-safe, keyboard-usable menu and separate resize handle. */
 .board-table-custom .board-heading-label{max-width:calc(100% - 68px)}
