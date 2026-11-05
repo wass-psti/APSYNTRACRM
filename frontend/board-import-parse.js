@@ -301,7 +301,7 @@ function sheetRows(xml,shared,dates,date1904,sheetName){
    if(f&&(!cached||type==='e'))
     throw contextualError(sheetName,excelRow,address,label,raw,
      'Formula has no supported cached result. Recalculate in Excel and save a values-only copy.');
-   if(f&&/\\[[^\\]]+\\]/.test(f.textContent||''))
+   if(f&&String(f.textContent||'').includes('['))
     throw contextualError(sheetName,excelRow,address,label,raw,
      'External workbook formulas are not supported.');
    if(type==='e')throw contextualError(sheetName,excelRow,address,label,raw,
