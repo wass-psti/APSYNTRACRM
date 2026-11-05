@@ -14,6 +14,7 @@ const env={
  text:'Use the one-time link: https://wass-psti.github.io/APSYNTRACRM/#/invitations/accept/'+token,
  invitationId
 };
+const providerMessageId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const success={
  ok:true,status:200,json:async()=>({id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'})
 };
@@ -57,7 +58,7 @@ test('mock Resend request uses pinned origin, idempotency and no redirect',async
    return success;
   }
  });
- assert.deepEqual(await send(env),{accepted:true});
+ assert.deepEqual(await send(env),{accepted:true,providerMessageId});
  assert.equal(calls,1);
 });
 
@@ -113,7 +114,12 @@ test('trusted issuer -> mocked Resend accepted receipt never exposes bearer toke
    schemaVersion:1,invitationId,idempotent:false,tokenAvailable:true,
    state:'pending',token
   }),
-  sendEmail
+  sendEmail,
+  recordDeliveryOutcome:async outcome=>{
+   assert.deepEqual(outcome,{invitationId,state:'provider-accepted',providerMessageId});
+   assert.equal(JSON.stringify(outcome).includes(token),false);
+   return {persisted:true};
+  }
  });
  assert.deepEqual(result,{state:'delivery-submitted',invitationId});
  assert.equal(JSON.stringify(result).includes(token),false);
