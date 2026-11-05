@@ -153,7 +153,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    const parsed=await parseImportFile(file);
    if(!overlay.isConnected)return;
    state.file=parsed;state.sheet=0;
-   state.mappings=initialImportMappings(parsed.sheets[0],detail);
+   state.mappings=initialImportMappings(parsed.sheets[0],detail,{canCreate:state.manage});
    state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
    state.step=2;state.allowColumns=false;
   }catch(error){state.error=String(error.message||error);}
@@ -211,7 +211,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  overlay.addEventListener('change',event=>{
   const el=event.target;
   if(el.id==='aps-import-file-input'){if(el.files?.[0])void readFile(el.files[0]);return;}
-  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail);state.allowColumns=false;state.confirmed=false;state.error='';render();return;}
+  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage});state.allowColumns=false;state.confirmed=false;state.error='';render();return;}
   if(el.dataset.impMap!=null){adjustMapping(Number(el.dataset.impMap),el.value);render();return;}
   if(el.dataset.impGroup!=null){state.group=el.value;state.confirmed=false;render();return;}
   if(el.dataset.impDefault!=null&&el.value==='create'){
