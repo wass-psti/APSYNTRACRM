@@ -77,3 +77,14 @@ The previously identified unconditional active-session issue inside the import R
 Explicit exclusions: AI-powered columns, Marketplace apps, monday-branded columns and proprietary document/application integrations.
 
 **Coverage metric:** 11 of 11 **currently backed** types plus one clearly labeled Priority preset listed in the Column Center (100% backend-type catalog accuracy). This is NOT 100% of the requested target inventory, and does not claim all existing types have passed genuine signed-browser acceptance. Overall request completion is indeterminate pending confirmed target inventory and specialized backend implementations.
+
+## CMP-01 focused closeout — latest evidence
+
+- **Frontend regression at commit `1318a858085b20b0842977ff4b8cf82a52c52c8d`: 985/985 tests passed, 0 failed.** GitHub Actions: https://github.com/wass-psti/APSYNTRACRM/actions/runs/41975470000
+- **GitHub Pages for the same SHA deployed successfully.** Deployment: https://github.com/wass-psti/APSYNTRACRM/actions/runs/41975469828
+- The searchable Column Center exposes the eleven native backed types and one transparently identified, operational **Priority (Status preset)**. No non-backed type is advertised as independently implemented.
+- A schema-manager with a signed session may explicitly create a Status or Dropdown column from analyzed source labels, using a separate authorized `wm_board_schema_mutate` transaction. The selected column can be renamed (e.g. `Imported Status`) to avoid collision, while existing columns remain unchanged.
+- If a new choice-column operation is successful, it remains after any subsequent cancellation or failure of the record import; the interface requires explicit consent and discloses this boundary.
+- The monday.com Checkbox text representation `v` for true and empty for false is normalized only for an unambiguous checkbox marker-only source, not for generic missing cells.
+- All eight server-configured Status palette colors now map to exact CSP-safe CSS classes.
+- **Original genuine monday export compatibility, physical live-browser column creation, production refresh persistence, and signed cross-workspace denials remain PENDING.** Current source/CI results are not live end-to-end certification.
