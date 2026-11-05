@@ -1,3 +1,6 @@
+import {createGoTrueActorVerifier}
+ from './ws02d-gotrue-actor-verifier.mjs';
+
 /**
  * CP-WS-02D/B3: concrete trusted READ-ONLY adapters for signed GoTrue context.
  * STAGED: not mounted, not deployed, no email, no invitation issuance.
@@ -94,4 +97,23 @@ export function createLiveSessionAuthority({enabled=false,db}={}){
    return false;
   }
  };
+}
+
+/**
+ * Compile the two backend read adapters into the existing actor boundary.
+ * Both explicit booleans must be true; this does not mount an HTTP handler.
+ */
+export function createTrustedSignedActorReadVerifier({
+ enabled=false,projectUrl,publishableKey,fetchImpl,db,clock
+}={}){
+ const readUser=createGoTrueUserReader({
+  enabled,projectUrl,publishableKey,fetchImpl
+ });
+ const readSession=createLiveSessionAuthority({enabled,db});
+ return createGoTrueActorVerifier({
+  enabled,
+  getUserForToken:readUser,
+  assertActiveSession:readSession,
+  clock
+ });
 }
