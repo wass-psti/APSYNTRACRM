@@ -107,6 +107,16 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-invitation-schema-candidate.sql
       - name: Verify default-off invitation role, token and RLS constraints
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-schema-acceptance.sql
+      - name: Stage private signed invitation issuance (no client grants)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-invitation-issue-candidate.sql
+      - name: Stage private verified-recipient one-time acceptance
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-invitation-accept-candidate.sql
+      - name: Stage private owner-authorized invitation revocation
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-invitation-revoke-candidate.sql
+      - name: Verify invitation issue, email binding, replay and atomic acceptance
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-issue-accept.sql
+      - name: Verify denied foreign send, revoked tokens and expired sessions
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-disposable-revoke-denial.sql
       - name: Install inactive workspace-selection cutover
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-session-cutover-candidate.sql
       - name: Verify default-deny grants and preactivation signed reads
