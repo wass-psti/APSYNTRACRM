@@ -47,6 +47,10 @@ Architecture stays **one platform / one Supabase Auth identity / many isolated w
 
 The [workspace invitation UI and acceptance plan](./CP-WS-02D-INVITATION-UI.md) now covers the signed workspace **Invite members** entry points, a multi-email draft dialog, Admin/Member/Viewer workspace-role previews, optional custom message and accessible review. Automated frontend, Postgres regression and Pages deployment workflows passed. **Invitation sending remains explicitly disabled** pending signed backend authorization, invitation persistence and secure delivery. The current database role enum does not yet implement the preview Admin/Viewer roles; no platform role elevation or production schema/permission change is implied.
 
+## CP-WS-02D/B bounded delivery and role-ceiling checkpoint — 2026-11-05
+
+[Trusted delivery and role-ceiling evidence](./CP-WS-02D-B-DELIVERY-ROLE-SIGNED-ACCEPTANCE.md) records [PG17/Node CI #87](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41987273034) **PASS** for rate limits, mock trusted delivery, signed-session ceiling, replay/revocation and prior regression checks. A read-only live SQL fingerprint check confirmed invitation runtime absent and the existing board ACL unchanged. Real provider sending, link acceptance routing, all board/domain Viewer/Admin ceilings and genuine signed-user invitation acceptance are **PENDING**; production changes remain unauthorized and disabled.
+
 ## CP-WS-02D private invitation server-stage checkpoint — 2026-11-05
 
 [Server invitation acceptance evidence](./CP-WS-02D-SERVER-INVITATIONS.md) documents private default-deny token storage, salted SHA256 token digests, workspace owner/delegated-admin eligibility, verified-email recipient acceptance, idempotent issuance, atomic membership/audit, token revocation, and synthetic role/session/foreign-workspace denial. [Disposable PostgreSQL 17 run #75](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41985272232) **PASSED** including B2/B3 regressions.
