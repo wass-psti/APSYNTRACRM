@@ -43,6 +43,10 @@ Architecture stays **one platform / one Supabase Auth identity / many isolated w
 - Ordinary nonadministrator creation is explicitly permitted; creator's existing `platform_role` remains unchanged. Unverified and anonymous identities are denied.
 - Until the server-side production grant/flag is separately approved, UI create remains a nonmutating readiness dialog.
 
+## CP-WS-02D invitation interface checkpoint — 2026-11-05
+
+The [workspace invitation UI and acceptance plan](./CP-WS-02D-INVITATION-UI.md) now covers the signed workspace **Invite members** entry points, a multi-email draft dialog, Admin/Member/Viewer workspace-role previews, optional custom message and accessible review. Automated frontend, Postgres regression and Pages deployment workflows passed. **Invitation sending remains explicitly disabled** pending signed backend authorization, invitation persistence and secure delivery. The current database role enum does not yet implement the preview Admin/Viewer roles; no platform role elevation or production schema/permission change is implied.
+
 ## Invitation contract (CP-WS-02D)
 
 - Only workspace Owners and delegated authorized workspace administrators may issue, resend or revoke invitations.
