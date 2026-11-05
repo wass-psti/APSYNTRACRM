@@ -52,7 +52,15 @@ export function parseDelimited(text,delimiter){
  while(matrix.length&&matrix.at(-1).every(x=>!String(x??'').trim()))matrix.pop();
  if(!matrix.length)invalid('CSV has no header.');
  const headers=matrix.shift().map(x=>String(x).trim());
- return validateImportSheet(headers,matrix.filter(r=>r.some(x=>String(x??'').trim())));
+ const data=matrix.filter(r=>r.some(x=>String(x??'').trim()));
+ for(let i=0;i<data.length;i++){
+  if(data[i].length>headers.length&&
+     data[i].slice(headers.length).some(x=>String(x??'').trim()))
+   invalid('CSV row '+(i+2)+' contains values beyond its header columns.');
+  // Short rows are valid CSV; missing trailing fields are empty cells.
+  data[i]=Array.from({length:headers.length},(_,col)=>data[i][col]??'');
+ }
+ return validateImportSheet(headers,data);
 }
 function decodedText(buffer){
  const data=new Uint8Array(buffer);
@@ -61,7 +69,8 @@ function decodedText(buffer){
  return new TextDecoder('utf-8',{fatal:true}).decode(data);
 }
 function xmlDocument(text){
- if(text.includes('<!DOCTYPE')||text.includes('<!ENTITY'))invalid('Workbook XML declarations are not supported.');
+ if(/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(text))
+  invalid('Workbook XML entity and document declarations are not supported.');
  if(typeof DOMParser==='undefined')invalid('XLSX XML parsing is unavailable.');
  const doc=new DOMParser().parseFromString(text,'application/xml');
  if(doc.getElementsByTagName('parsererror').length)invalid('Workbook contains invalid XML.');
@@ -71,6 +80,14 @@ const nodes=(parent,name)=>Array.from(parent.getElementsByTagNameNS('*',name));
 const first=(parent,name)=>nodes(parent,name)[0]||null;
 const textNode=(parent,name)=>first(parent,name)?.textContent||'';
 const le=(view,pos,n)=>n===2?view.getUint16(pos,true):view.getUint32(pos,true);
+function zipCrc32(data){
+ let crc=0xffffffff;
+ for(const byte of data){
+  crc^=byte;
+  for(let n=0;n<8;n++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);
+ }
+ return (crc^0xffffffff)>>>0;
+}
 function zipDirectory(buffer){
  const view=new DataView(buffer),bytes=new Uint8Array(buffer);
  let eocd=-1;
@@ -79,13 +96,16 @@ function zipDirectory(buffer){
  }
  if(eocd<0||le(view,eocd+4,2)||le(view,eocd+6,2))invalid('Not a supported XLSX ZIP workbook.');
  const count=le(view,eocd+10,2),offset=le(view,eocd+16,4);
- if(count>300||offset>=buffer.byteLength)invalid('Workbook ZIP directory exceeds limits.');
+ if(count===0xffff||offset===0xffffffff||count>300||offset>=buffer.byteLength)
+  invalid('Unsupported ZIP64 workbook or oversized ZIP directory.');
  const entries=new Map();let p=offset,total=0;
  for(let i=0;i<count;i++){
   if(p+46>buffer.byteLength||le(view,p,4)!==0x02014b50)invalid('Damaged XLSX directory.');
-  const flags=le(view,p+8,2),method=le(view,p+10,2),packed=le(view,p+20,4),raw=le(view,p+24,4);
+  const flags=le(view,p+8,2),method=le(view,p+10,2),
+   crc=le(view,p+16,4),packed=le(view,p+20,4),raw=le(view,p+24,4);
   const nameLen=le(view,p+28,2),extra=le(view,p+30,2),comment=le(view,p+32,2),local=le(view,p+42,4);
-  if(flags&1||![0,8].includes(method)||raw>4*1024*1024||packed>MAX_BYTES||
+  if(flags&1||![0,8].includes(method)||raw===0xffffffff||
+   packed===0xffffffff||raw>4*1024*1024||packed>MAX_BYTES||
    (packed>0&&raw>packed*200))invalid('Encrypted, unusually compressed or oversized workbook entry.');
   total+=raw;if(total>24*1024*1024)invalid('Workbook expands beyond the safe XML limit.');
   const end=p+46+nameLen+extra+comment;
@@ -93,7 +113,7 @@ function zipDirectory(buffer){
   const name=new TextDecoder('utf-8',{fatal:true}).decode(bytes.subarray(p+46,p+46+nameLen));
   if(name.includes('..')||name.startsWith('/')||name.includes('\\')||entries.has(name))
    invalid('Unsafe or duplicate XLSX path.');
-  entries.set(name,{method,packed,raw,local});
+  entries.set(name,{method,packed,raw,local,crc});
   p=end;
  }
  return {entries,view,bytes};
@@ -107,15 +127,33 @@ async function unzipEntry(zip,path){
  if(at+info.packed>v.byteLength)invalid('Truncated XLSX entry.');
  let data=zip.bytes.slice(at,at+info.packed);
  if(info.method===8){
-  if(typeof DecompressionStream==='undefined')invalid('This browser does not support XLSX decompression.');
+  if(typeof DecompressionStream==='undefined')
+   invalid('XLSX decompression requires a browser supporting deflate-raw.');
   let stream;
   try{stream=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));}
-  catch{invalid('This browser does not support XLSX ZIP compression.');}
-  const expanded=await new Response(stream).arrayBuffer();
-  if(expanded.byteLength!==info.raw)invalid('XLSX entry length does not match.');
-  data=new Uint8Array(expanded);
+  catch{invalid('XLSX decompression requires a browser supporting deflate-raw.');}
+  // Do not trust central-directory size claims enough to use Response.arrayBuffer:
+  // a dishonest ZIP stream could expand well past the 4 MB per-entry limit.
+  const reader=stream.getReader(),expanded=new Uint8Array(info.raw);
+  let written=0;
+  try{
+   while(true){
+    const {value,done}=await reader.read();
+    if(done)break;
+    if(written+value.byteLength>info.raw)
+     invalid('Workbook ZIP entry expands beyond its declared safe size.');
+    expanded.set(value,written);
+    written+=value.byteLength;
+   }
+  }catch(error){
+   try{await reader.cancel();}catch{}
+   throw error;
+  }finally{reader.releaseLock();}
+  if(written!==info.raw)invalid('XLSX entry length does not match.');
+  data=expanded;
  }
  if(data.byteLength!==info.raw)invalid('Damaged XLSX entry size.');
+ if(zipCrc32(data)!==info.crc)invalid('XLSX checksum mismatch.');
  return new TextDecoder('utf-8',{fatal:true}).decode(data);
 }
 function excelDate(serial,offset=0){
@@ -133,15 +171,19 @@ function styleDates(doc){
  });
 }
 function sheetRows(xml,shared,dates,offset){
+ const sheetData=first(xml,'sheetData');
+ if(!sheetData)return null;
  const rows=[];
- for(const r of nodes(first(xml,'sheetData')||xml,'row')){
-  const cells=[];
+ for(const r of nodes(sheetData,'row')){
+  const cells=[],seen=new Set();
   for(const cell of nodes(r,'c')){
    if(nodes(cell,'f').length)invalid('Formula cells must be replaced with verified values before import.');
    const address=cell.getAttribute('r')||'';
    const letters=address.match(/^[A-Z]+/i)?.[0]||'';
    let col=0;for(const ch of letters.toUpperCase())col=col*26+ch.charCodeAt(0)-64;
-   if(col<1||col>MAX_COLUMNS)invalid('XLSX exceeds 30 columns.');
+   if(col<1||col>MAX_COLUMNS||seen.has(col))
+    invalid('XLSX contains a missing, repeated, or unsupported cell address.');
+   seen.add(col);
    const t=cell.getAttribute('t'),raw=textNode(cell,'v');let value='';
    if(t==='inlineStr')value=nodes(first(cell,'is')||cell,'t').map(x=>x.textContent||'').join('');
    else if(t==='s'){const idx=Number(raw);if(!Number.isSafeInteger(idx)||idx<0||idx>=shared.length)invalid('Invalid shared string index.');value=shared[idx];}
@@ -150,12 +192,13 @@ function sheetRows(xml,shared,dates,offset){
    else if(t==='d')value=raw.slice(0,10);
    else if(raw&&dates[Number(cell.getAttribute('s')||0)])value=excelDate(raw,offset);
    else value=raw;
+   if(String(value).length>5000)invalid('An imported cell exceeds 5,000 characters.');
    cells[col-1]=value;
   }
   if(cells.some(x=>String(x??'').trim()))rows.push(cells);
   if(rows.length>MAX_ROWS+1)invalid('XLSX exceeds 5,000 data rows.');
  }
- if(!rows.length)invalid('Worksheet is empty.');
+ if(!rows.length)return null;
  return validateImportSheet(rows.shift().map(x=>String(x??'').trim()),
   rows.map(r=>Array.from({length:Math.max(0,Math.min(MAX_COLUMNS,r.length))},(_,i)=>String(r[i]??''))));
 }
@@ -171,7 +214,8 @@ async function parseWorkbook(buffer){
    nodes(n,'t').map(x=>x.textContent||'').join('')):[];
  if(shared.length>100000)invalid('Workbook shared strings exceed limits.');
  const relationships=new Map(nodes(rel,'Relationship').map(r=>[
-  r.getAttribute('Id'),r.getAttribute('Target')]));
+  r.getAttribute('Id'),{target:r.getAttribute('Target'),
+   type:r.getAttribute('Type'),external:r.getAttribute('TargetMode')==='External'}]));
  const sheetNodes=nodes(wb,'sheet');
  if(!sheetNodes.length||sheetNodes.length>20)invalid('Workbook must contain 1–20 worksheets.');
  const offset=first(wb,'workbookPr')?.getAttribute('date1904')==='1'?1462:0;
@@ -179,13 +223,21 @@ async function parseWorkbook(buffer){
  for(const sheet of sheetNodes){
   const id=sheet.getAttribute('r:id')||sheet.getAttributeNS(
    'http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
-  let path=relationships.get(id);
+  const relation=relationships.get(id);
+  if(!relation||relation.external)invalid('Workbook contains an unsafe worksheet reference.');
+  // Ignore chart sheets, which have no rows. They are not data-import targets.
+  if(!relation.type?.endsWith('/worksheet'))continue;
+  let path=relation.target;
   if(!path||path.includes('..')||path.includes('\\')||path.includes(':'))
    invalid('Workbook contains an unsafe worksheet reference.');
   path=path.startsWith('/xl/')?path.slice(1):'xl/'+path.replace(/^\//,'');
+  if(!/^xl\/worksheets\/[^/]+\.xml$/i.test(path))
+   invalid('Workbook contains an unexpected worksheet path.');
   const parsed=sheetRows(xmlDocument(await unzipEntry(zip,path)),shared,styles,offset);
-  sheets.push({name:sheet.getAttribute('name')||'Sheet '+(sheets.length+1),...parsed});
+  // A blank worksheet must not prevent selecting another populated worksheet.
+  if(parsed)sheets.push({name:sheet.getAttribute('name')||'Sheet '+(sheets.length+1),...parsed});
  }
+ if(!sheets.length)invalid('Workbook contains no populated worksheets to import.');
  return sheets;
 }
 export async function parseImportFile(file){
