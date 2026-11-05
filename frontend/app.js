@@ -3567,16 +3567,16 @@ case 'bulk-actions':{
   ...(labels.length?[['status','Set status on selected items']]:[])];
  const fields=select('Bulk operation','operation',actions,actions[0][0])+
   (labels.length?select('New status (for Set status only)','status',labels,labels[0][0]):'')+
-  '<p class="muted">Applies one revision-checked atomic server transaction to '+count+
-  ' currently selected items. Only actions authorized by this board are offered.</p>';
+  '<p class="muted">Review before applying to '+count+
+  ' selected items. Archive removes records from the active board view but preserves history. '+
+  'Submitting is your confirmation for one revision-checked atomic server transaction.</p>';
  openModal('Bulk actions — '+count+' selected',fields,async fd=>{
   const operation=String(fd.get('operation')||'');
   if(!actions.some(([id])=>id===operation))
    throw new ApiError('Unsupported bulk operation.',400);
   if(itemSelection.size!==count||state.boardId!==board.id)
    throw new ApiError('Selection changed; review the bulk action again.',409);
-  if(operation==='archive'&&
-    !window.confirm('Archive '+count+' selected records? History is preserved.'))return;
+  // This focused submit dialog is the explicit archive confirmation.
   await applySelectedBulk(operation,operation==='status'?String(fd.get('status')||''):null);
  },{submitLabel:'Apply to selected items'});
  if(labels.length){
