@@ -11,6 +11,12 @@
 - `sql/tests/cp-ws02d-b3-production-readonly-preflight.sql` executed against the existing Supabase production database and returned `WS02D_B3_PRODUCTION_DEFAULT_DENY_AND_ORIGINAL_DOMAIN_FINGERPRINTS_VERIFIED`. No private WS02D invitation or receipt objects were present. Board ACL, module-state and lock functions retained their original definitions; B3 creation/B4 selection remained disabled. **2 live workspaces / 40 active memberships**. This is a read-only production verification, not invitation acceptance.
 - Read-only Edge Function catalog inspection found **three active functions** (admin sync, attachment maintenance, native issues); none was a WS02D invitation-delivery function. This does not reveal whether an external provider exists; no provider account/secret was queried or created.
 
+## B3 continuation — 24 direct denial tests, no production activation
+
+[24-function signed denial acceptance](./CP-WS-02D-B3-ALL-DOMAIN-DENIAL-ACCEPTANCE.md) and [PG17 CI #142](https://github.com/wass-psti/APSYNTRACRM/actions/runs/41997607247) now establish *disposable negative-path execution* of all 24 staged aggregate functions. Since one is the previously covered FuelTrack import, this represents ceiling-source coverage across the 30 original unique domain candidate paths. **The independently tested authorized business transactions remain 7/30; the remaining 23 still require positive domain workflow, CAS, audit and record authorization acceptance.** The FuelTrack import ceiling was corrected to `edit` (rather than `manage`) to keep a workspace Member with preexisting FuelTrack module Admin rights operational while denying workspace Viewers.
+
+The reproducible read-only `sql/tests/cp-ws02d-b3-24-live-original-preflight.sql` returned `CP_WS_02D_B3_24_LIVE_ORIGINALS_VERIFIED_DEFAULT_OFF`: **24/24 unchanged live function source fingerprints, zero drift**, two production workspaces and 40 active memberships. The private invitation runtime and creation/switching RPCs remain absent. This is **not** genuine signed production denial or email-delivery acceptance.
+
 ## Domain RBAC integration boundary
 
 The production SQL inventory `sql/tests/cp-ws02d-b2-domain-authorization-inventory.sql` yielded **30 candidate independent mutation paths** (textually referencing current workspace but not `work_board_access`). The textual classification is *not* evidence that any listed routine lacks its own domain authorization.
