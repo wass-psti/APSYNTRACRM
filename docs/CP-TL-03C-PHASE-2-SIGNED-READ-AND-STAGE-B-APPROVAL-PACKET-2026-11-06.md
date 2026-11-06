@@ -2,7 +2,7 @@
 
 **As of:** 2026-11-06, Asia/Manila  
 **Project:** APSYNTRA CRM, existing `jtlusodorfnyzgyuewkz` Supabase project, existing TradeLink board `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88` only.  
-**Disposition:** **Approval packet PREPARED; Stage A live structural 15/15 VERIFIED; fresh deployed signed-user refresh PENDING; Stage B production grant NOT AUTHORIZED and NOT APPLIED.**  
+**Disposition:** **Approval packet PREPARED; Stage A live structural 15/15 VERIFIED (previous preflight); fresh signed manager Stage A read 6/6 ACCEPTED from user-supplied deployed application report; HR Phase 2 refresh PENDING; Stage B production grant NOT AUTHORIZED and NOT APPLIED.**  
 **Change type if subsequently approved:** Production privilege modification for two tightly scoped draft-command functions; not a schema reapplication, data migration, account/role change, or frontend feature activation.
 
 ## Evidence and environment baseline
@@ -63,7 +63,8 @@ No grants to `anon`; no direct table mutations; no role/membership changes, no i
 | Installed Stage A schema, RLS, grants, audit, dependency fingerprints | **VERIFIED — 15/15 live SQL** |
 | Disposable PostgreSQL synthetic create/CAS/roles/RLS/emergency | **VERIFIED — run #13, logs and 16 Node passes** |
 | Dedicated Stage B write-only rollback candidate and data-preservation fixture | **VERIFIED — disposable PostgreSQL CI run #16 and decoded job logs** |
-| Genuine Stage A manager and HR signed reports | **Historical USER-SUBMITTED PASS; Phase 2 refresh PENDING** |
+| Genuine Stage A manager signed report | **PHASE 2 PASS — fresh user-submitted signed report, 6/6** |
+| Genuine Stage A HR nonmanager signed report | **Historical USER-SUBMITTED PASS; fresh Phase 2 refresh PENDING** |
 | Genuine foreign-workspace/expired/revoked production acceptance | **BLOCKED/PENDING** |
 | Current backup and tested recovery path | **PENDING** |
 | Separate signed production Stage B permission-change approval | **NOT RECEIVED** |
@@ -81,7 +82,7 @@ No grants to `anon`; no direct table mutations; no role/membership changes, no i
 5. On unexpected privilege, scope, integrity, or audit outcomes, stop further writes and separately authorize the narrow Stage B rollback. Use the full emergency-disable candidate only when the wider read-service outage is warranted and approved.
 6. Close this gate only after signed production runtime, post-deployment regression, rollback readiness and retained-data integrity have real evidence. Track unresolved legacy source workflow, attachments and approvals separately.
 
-**Next required action within Phase 2:** collect new nonsecret signed manager and HR Stage A reports from the live Security panel. The narrowed disposable rollback CI is now VERIFIED. Production Stage B remains disabled.
+**Next required action within Phase 2:** collect a new nonsecret signed HR nonmanager Stage A report from the live Security panel. The fresh manager PASS and disposable narrow-rollback CI are VERIFIED. Production Stage B remains disabled.
 
 
 ## Verified Stage B-only rollback CI follow-up — 2026-11-06
@@ -92,3 +93,14 @@ Authoritative GitHub Actions **run #16**, ID `42177877866`, head `6757a5703e5ff4
 - `Verify read continuity and record retention after narrow revoke`.
 
 Decoded PostgreSQL log: `CP-TL-03C narrow Stage B write revoke PASS: Stage A reads preserved, documents and audit intact`. Earlier signed fixture, RLS and CAS steps remained successful; the later broad emergency-disable and retention checks also passed. Node suite result **16 pass, 0 fail**. [Run #16](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42177877866). This verifies the **disposable-only** rollback mechanism, **not** a production rollback rehearsal. No production grant/revoke was executed in this run.
+
+
+## Genuine signed manager Stage A read refresh — PASS (user report, 2026-11-06)
+
+A fresh sanitized output was provided by the user from the deployed APSYNTRA CRM Security page (ambient location `#/security`). Its exact classification is `checkpoint=CP-TL-03C-STAGE-A-SIGNED-READ`, `status=PASS`, `scenario=AUTHORIZED_MANAGER`. All six checks are PASS: `signed-identity`, `effective-access`, `document-list`, `missing-document-read`, `wrong-board-denial`, and `stable-session`. It reports `writesAttempted=0` and `documentsDisclosed=0`. The report matches the safe output schema of the committed `frontend/tradelink-stage-a-signed-acceptance.js` and constitutes **user-submitted genuine signed application evidence** for *this manager/read scenario only*. The assistant did not independently open the session, obtain a token or execute a bearer-bound browser request.
+
+**Additional live read-only check on this turn:** PostgreSQL returned `documents=0`, `events=0`, `write_enabled=false` for authenticated `public.tl03_document_commit`, and `read_enabled=true` for authenticated `public.tl03_documents_list`. The full previously committed 15-point structural preflight was already accepted in Phase 1; its repeated attempt in this turn could not provide a fresh usable result, so **do not claim a fresh 15/15 re-run here**. These database queries do not independently bind to the user's GoTrue bearer.
+
+**Acceptance update:** Phase 2 manager signed read **VERIFIED (6/6 user report + independent no-write DB baseline)**. New Phase 2 genuine HR `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED` **PENDING**; the historical HR result remains accepted for its earlier milestone but is not a second fresh Phase 2 submission. Foreign workspace **BLOCKED BY PREREQUISITE**, revoked and expired sessions **PENDING**. Stage B write approval and grant **NOT RECEIVED / NOT EXECUTED**. No user account, workspace role, document, audit data, privilege, RLS policy or session was modified in this acceptance.
+
+**Next required result:** A separately signed, existing HR/nonmanager account runs `Run Stage A signed read checks` and copies the sanitized output. The expected `scenario` is `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED` with all six checks PASS and zero writes/disclosures. Do not repeat the manager scenario to satisfy this separate case.
