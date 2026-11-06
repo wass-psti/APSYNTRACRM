@@ -29,6 +29,7 @@ CREATE OR REPLACE FUNCTION public.has_module_access(
  SET search_path TO 'public'
 AS $function$
  SELECT p_user_id IS NOT NULL
+  AND auth.uid() IS NOT NULL
   AND p_user_id = auth.uid()
   AND public.current_workspace_id(p_user_id) IS NOT NULL
   AND EXISTS(SELECT 1 FROM public.profiles p WHERE p.id=p_user_id AND p.status='active')
