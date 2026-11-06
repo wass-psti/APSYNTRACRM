@@ -63,6 +63,7 @@ jobs:
           test "$PGDATABASE" = "gotrue_disposable"
           psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'gotrue_disposable|t'
           psql -X -v ON_ERROR_STOP=1 -c 'CREATE SCHEMA IF NOT EXISTS auth;'
+          psql -X -v ON_ERROR_STOP=1 -c 'ALTER ROLE postgres IN DATABASE gotrue_disposable SET search_path TO auth, public;'
       - name: Start pinned GoTrue on runner loopback only (no SMTP or external identities)
         run: |
           set -euo pipefail
@@ -99,6 +100,16 @@ jobs:
           exit 1
       - name: Verify real local GoTrue-signed JWT, session revocation and workspace isolation
         run: node scripts/ws02d-b3-gotrue-disposable-acceptance.mjs
+      - name: Categorize disposable GoTrue failure without leaking identities
+        if: failure()
+        run: |
+          logs="$(docker logs --tail 120 ws02d-b3-local-auth 2>&1 || true)"
+          if printf '%s' "$logs" | grep -Eqi 'relation .* does not exist'; then echo 'LOCAL_GOTRUE_ERROR_MISSING_RELATION'; fi
+          if printf '%s' "$logs" | grep -Eqi 'permission denied'; then echo 'LOCAL_GOTRUE_ERROR_DB_PRIVILEGE'; fi
+          if printf '%s' "$logs" | grep -Eqi 'SQLSTATE 42P01'; then echo 'LOCAL_GOTRUE_ERROR_UNDEFINED_TABLE'; fi
+          if printf '%s' "$logs" | grep -Eqi 'database error'; then echo 'LOCAL_GOTRUE_ERROR_DATABASE'; fi
+          if printf '%s' "$logs" | grep -Eqi 'smtp|send email'; then echo 'LOCAL_GOTRUE_ERROR_MAILER'; fi
+          echo 'LOCAL_GOTRUE_REDACTED_DIAGNOSTIC_COMPLETE'
       - name: Stop and discard ephemeral GoTrue container
         if: always()
         run: |
