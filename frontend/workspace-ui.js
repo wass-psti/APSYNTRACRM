@@ -282,23 +282,36 @@ function detailsContent(row){
    '<button type="button" disabled title="Workspace switching is not activated">Switch workspace — unavailable</button>')+
   '</div></section>';
 }
-function configurationContent(row){
- const writableDraft=row.relation==='owner'&&row.verifiedScope==='SIGNED_MEMBER_RPC';
+/** A configuration becomes editable only after a fresh signed read receipt.
+ * Until server activation, keep the existing owner draft validation behavior. */
+function configurationContent(row,{live=false,settings=null,loading=false,error=''}={}){
+ const ownerDraft=row.relation==='owner'&&row.verifiedScope==='SIGNED_MEMBER_RPC';
+ const verifiedEdit=live&&ownerDraft&&settings?.workspaceId===row.id&&settings.canEdit===true;
+ const editable=live?verifiedEdit:ownerDraft;
+ const name=live&&settings?settings.name:row.name;
+ const privacy=live&&settings?settings.privacy:row.privacy;
  return '<section class="ws01-details-card" role="dialog" aria-modal="true" aria-labelledby="ws01-config-title">'+
   '<header class="ws01-details-heading"><h2 id="ws01-config-title">Workspace configuration</h2>'+
   '<button type="button" class="ws01-close" data-ws01-close aria-label="Close configuration">×</button></header>'+
-  '<p class="ws01-details-description">Review settings for '+escape(row.name)+'. No configuration writes are activated.</p>'+
+  '<p class="ws01-details-description">Review settings for '+escape(row.name)+'. '+
+   (live?'Settings require fresh server-authorized owner access.':
+    'No configuration writes are activated.')+'</p>'+
   '<form id="ws01-config-preview" novalidate>'+
   '<label for="ws01-config-name">Workspace name</label>'+
-  '<input id="ws01-config-name" name="name" type="text" minlength="2" maxlength="80" value="'+escape(row.name)+'"'+(writableDraft?'':' disabled')+'/>'+
+  '<input id="ws01-config-name" name="name" type="text" minlength="2" maxlength="80" value="'+escape(name)+'"'+(editable?'':' disabled')+'/>'+
   '<fieldset><legend>Privacy</legend>'+
-  '<label><input type="radio" name="privacy" value="closed"'+(row.privacy==='closed'?' checked':'')+(writableDraft?'':' disabled')+'/> Closed</label>'+
-  '<label><input type="radio" name="privacy" value="open"'+(row.privacy==='open'?' checked':'')+(writableDraft?'':' disabled')+'/> Open</label></fieldset>'+
-  '<p class="ws01-details-note">Only owners can validate a settings draft. Saving configuration requires a separate server-authorized update contract. Nothing entered here is saved.</p>'+
-  '<p class="ws01-config-feedback" role="status" aria-live="polite"></p>'+
+  '<label><input type="radio" name="privacy" value="closed"'+(privacy==='closed'?' checked':'')+(editable?'':' disabled')+'/> Closed</label>'+
+  '<label><input type="radio" name="privacy" value="open"'+(privacy==='open'?' checked':'')+(editable?'':' disabled')+'/> Open</label></fieldset>'+
+  '<p class="ws01-details-note">'+(live?
+   'Saving uses a server-supplied revision and rechecks the signed configuration; switching is unchanged.':
+   'Only owners can validate a settings draft. Saving configuration requires a separate server-authorized update contract. Nothing entered here is saved.')+'</p>'+
+  '<p class="ws01-config-feedback" role="status" aria-live="polite">'+
+   escape(error||(loading?'Checking signed configuration access…':''))+'</p>'+
   '<div class="ws01-details-actions"><button type="button" data-ws01-action="back-details">Back to details</button>'+
-  (writableDraft?'<button type="submit" class="ws01-details-primary">Validate settings draft</button>':
-   '<button type="button" disabled>Owner permissions required</button>')+
+  (editable?'<button type="submit" class="ws01-details-primary">'+
+   (live?'Save workspace settings':'Validate settings draft')+'</button>':
+   (live&&error?'<button type="button" data-ws01-action="retry-config">Retry signed configuration read</button>':
+    '<button type="button" disabled>'+(loading?'Checking access…':'Owner permissions required')+'</button>'))+
   '</div></form></section>';
 }
 function openDetails(catalog,workspaceId,options={}){
@@ -319,24 +332,107 @@ function openDetails(catalog,workspaceId,options={}){
 function openConfiguration(catalog,workspaceId,options={}){
  const row=workspaceDetailsFor(catalog,workspaceId);
  if(!row)return;
- const layer=panel(configurationContent(row),'configuration');
- const form=layer.querySelector('#ws01-config-preview');
+ // Flag is supplied from the typed lifecycle module by the application shell.
+ // Never infer activation from a visible owner badge or an available method.
+ const live=options.configurationEnabled===true&&
+  typeof options.lifecycle?.readConfiguration==='function'&&
+  typeof options.lifecycle?.updateConfiguration==='function';
+ const layer=panel(configurationContent(row,{live,loading:live}),'configuration');
+ let signed=null,busy=false,completed=false,readRun=0;
+ const active=()=>activeOverlay===layer&&layer.isConnected;
+ const focusForm=()=>{
+  (layer.querySelector('#ws01-config-name:not([disabled])')||
+   layer.querySelector('[data-ws01-action="retry-config"]')||
+   layer.querySelector('[data-ws01-action="back-details"]'))?.focus();
+ };
+ const load=async()=>{
+  if(!live||busy||completed)return;
+  const id=++readRun;
+  layer.firstElementChild.outerHTML=configurationContent(row,{live,loading:true});
+  try{
+   const result=await options.lifecycle.readConfiguration(row.id);
+   if(!active()||readRun!==id)return;
+   if(result?.workspaceId!==row.id)throw Error('Unexpected signed settings scope');
+   signed=result;
+   layer.firstElementChild.outerHTML=configurationContent(row,{live,settings:signed});
+  }catch{
+   if(!active()||readRun!==id)return;
+   signed=null;
+   layer.firstElementChild.outerHTML=configurationContent(row,{live,
+    error:'Could not verify signed workspace configuration. No changes can be saved. Retry the authorized read.'});
+  }
+  focusForm();
+ };
  layer.addEventListener('click',event=>{
-  if(event.target.closest('[data-ws01-action="back-details"]'))openDetails(catalog,row.id,options);
+  if(event.target.closest('[data-ws01-action="back-details"]')){
+   readRun++;
+   openDetails(options.selectorSession?.catalog||catalog,row.id,options);
+  }
+  if(event.target.closest('[data-ws01-action="retry-config"]'))void load();
  });
- if(row.relation==='owner'&&row.verifiedScope==='SIGNED_MEMBER_RPC'){
-  form.addEventListener('submit',event=>{
-   event.preventDefault();
-   const data=new FormData(form);
-   const result=validateWorkspaceProposal({name:data.get('name'),privacy:data.get('privacy')});
-   form.querySelector('.ws01-config-feedback').textContent=result.valid?
-    'Settings draft validated. No changes were saved; workspace updates require server authorization.':
-    result.reason;
-   form.querySelector('#ws01-config-name').setAttribute('aria-invalid',String(!result.valid));
-  });
- }
- (form.querySelector('#ws01-config-name:not([disabled])')||
-  layer.querySelector('[data-ws01-action="back-details"]')).focus();
+ layer.addEventListener('submit',async event=>{
+  if(!event.target.matches('#ws01-config-preview'))return;
+  event.preventDefault();
+  if(busy||completed)return;
+  const form=event.target;
+  const field=form.querySelector('#ws01-config-name');
+  const data=new FormData(form);
+  const proposal=validateWorkspaceProposal({name:data.get('name'),privacy:data.get('privacy')});
+  field.setAttribute('aria-invalid',String(!proposal.valid));
+  const feedback=form.querySelector('.ws01-config-feedback');
+  if(!proposal.valid){feedback.textContent=proposal.reason;return;}
+  if(!live){
+   feedback.textContent='Settings draft validated. No changes were saved; workspace updates require server authorization.';
+   return;
+  }
+  if(!signed?.canEdit||signed.workspaceId!==row.id)return;
+  busy=true;
+  const submit=form.querySelector('button[type="submit"]');
+  submit.disabled=true;
+  field.disabled=true;
+  for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=true;
+  feedback.textContent='Requesting signed owner authorization…';
+  let saved=null,confirmed=null,error=null;
+  try{
+   saved=await options.lifecycle.updateConfiguration({
+    workspaceId:row.id,name:proposal.name,privacy:proposal.privacy,
+    expectedRevision:signed.revision
+   });
+   // Mutation receipts alone are insufficient. Re-read the server state
+   // before reporting persistence or refreshing the visible membership list.
+   confirmed=await options.lifecycle.readConfiguration(row.id);
+   if(confirmed?.workspaceId!==row.id||
+      confirmed?.name!==saved.name||confirmed?.privacy!==saved.privacy||
+      confirmed?.revision!==saved.revision)
+    throw Error('Configuration commit could not be independently verified.');
+  }catch(cause){error=cause;}
+  busy=false;
+  if(!active()||!form.isConnected)return;
+  if(!error){
+   completed=true;signed=confirmed;
+   feedback.textContent=saved.updated?
+    'Workspace settings saved and verified through the signed server.':
+    'Workspace settings are already up to date and verified.';
+   void options.selectorSession?.load?.();
+   return;
+  }
+  submit.disabled=false;field.disabled=false;
+  for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=false;
+  const code=Number.isInteger(error?.status)?error.status:0;
+  feedback.textContent=code===401?
+   'Your signed session expired. Sign in again before configuring workspaces.':
+   code===403||code===404?
+   'Your account no longer has permission to configure this workspace.':
+   code===409?
+   'Workspace settings changed in another session. Reopen the configuration to review the current revision.':
+   code===400||code===422?
+   'The server rejected these workspace settings.':
+   'The server did not confirm this save. Reopen and verify current settings before trying again.';
+  // On an uncertain outcome never retry automatically with a stale revision.
+  submit.disabled=true;
+ });
+ if(live)void load();
+ else focusForm();
 }
 function currentFootnote(catalog,options={}){
  const status=options.selectorSession?.status;
