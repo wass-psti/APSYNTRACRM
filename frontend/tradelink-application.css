@@ -87,3 +87,24 @@
 .aps-tradelink-app .tl-workflow-reference>p{font-size:12px;line-height:1.65;color:#65718b}
 .aps-tradelink-app .tl-workflow-reference .tl-records-scroll{max-height:380px;overflow:auto;overscroll-behavior:contain}
 .aps-tradelink-app .tl-workflow-reference code{overflow-wrap:anywhere;font-size:11px}
+
+
+/* CP-TL-03D / Phase 1 — dark-launched Draft editor; no persistence styling. */
+.aps-tradelink-app .tl-draft-workspace{display:grid;gap:14px;min-width:0}
+.aps-tradelink-app .tl-draft-panel{background:#fff;border:1px solid var(--tl-line);border-radius:15px;padding:clamp(18px,2.6vw,29px);box-shadow:var(--shadow,0 8px 28px #1f2b4c0e);min-width:0}
+.aps-tradelink-app .tl-draft-panel h2{font-size:22px;margin:0 0 10px}
+.aps-tradelink-app .tl-draft-panel h3{font-size:15px;margin:7px 0}
+.aps-tradelink-app .tl-draft-panel p{font-size:12px;line-height:1.6}
+.aps-tradelink-app .tl-draft-badge{display:inline-flex;align-items:center;border:1px solid #d9dcf7;background:#f5f6ff;color:#4e55b6;border-radius:30px;padding:7px 10px;font-size:11px;font-weight:700}
+.aps-tradelink-app .tl-draft-boundary{background:#f7f8ff;border-left:3px solid #6972e8;padding:12px 14px;border-radius:0 10px 10px 0;color:#54617c}
+.aps-tradelink-app .tl-draft-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.aps-tradelink-app .tl-draft-field{display:flex;flex-direction:column;gap:6px;min-width:0;color:#53607b;font-size:12px;font-weight:680}
+.aps-tradelink-app .tl-draft-field :is(input,select,textarea){width:100%;min-width:0;border-radius:9px;border:1px solid #dbe0f0;background:#fff;color:#273452;min-height:40px;padding:10px;font:inherit;font-size:13px}
+.aps-tradelink-app .tl-draft-field textarea{resize:vertical;line-height:1.5}
+.aps-tradelink-app .tl-draft-field :is(input,select,textarea):focus-visible{outline:3px solid #8d95ee;outline-offset:1px}
+.aps-tradelink-app .tl-draft-lines{margin:20px 0;border:1px solid #e4e8f2;border-radius:12px;padding:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;min-width:0}
+.aps-tradelink-app .tl-draft-lines legend{font-size:12px;font-weight:740;color:#53607b;padding:0 6px}
+.aps-tradelink-app .tl-draft-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0 8px}
+.aps-tradelink-app .tl-draft-actions button:disabled{opacity:.5;cursor:not-allowed}
+.aps-tradelink-app [data-tradelink-draft-preview-status]{font-size:11px;color:#717b93}
+@media(max-width:660px){.aps-tradelink-app .tl-draft-form-grid,.aps-tradelink-app .tl-draft-lines{grid-template-columns:1fr}}
