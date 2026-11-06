@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
  WS02D_B3_EDGE_SIGNED_READ_ENABLED,createB3EdgeSignedReadStaging
 } from '../ws02d-b3-edge-signed-read.mjs';
+import {createGoTrueUserReader} from '../ws02d-gotrue-live-read-adapters.mjs';
 
 const projectUrl='https://jtlusodorfnyzgyuewkz.supabase.co/';
 const origin='https://wass-psti.github.io';
@@ -98,6 +99,21 @@ test('synthetic signed-envelope framing matches pinned project and clock',()=>{
  assert.equal(got.iss,'https://jtlusodorfnyzgyuewkz.supabase.co/auth/v1');
  assert.ok(Number.isSafeInteger(got.exp));
  assert.ok(got.exp*1000>1900000000000);
+});
+
+test('GoTrue reader alone accepts the synthetic fixture before session RPC',async()=>{
+ const seen=[];
+ const getUser=createGoTrueUserReader({
+  enabled:true,projectUrl,publishableKey:pub,
+  fetchImpl:async (url,options)=>{
+   seen.push(new URL(url).pathname);
+   assert.equal(options.headers.apikey,pub);
+   return Response.json({id:actor,is_anonymous:false});
+  }
+ });
+ const response=await getUser(token);
+ assert.equal(response.data.user.id,actor);
+ assert.deepEqual(seen,['/auth/v1/user']);
 });
 
 test('Edge B3 host is default-disabled and cannot call any upstream',async()=>{
