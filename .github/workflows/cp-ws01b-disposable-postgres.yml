@@ -29,6 +29,10 @@ on:
       - 'scripts/ws02d-b3-*'
       - 'server/ws02d-*.mjs'
       - 'server/tests/ws02d-*.test.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/cp-ws01b-disposable-postgres.yml'
+      - 'sql/tests/cp-ws01c-b3-dormant-production-postinstall-readonly.sql'
   workflow_dispatch:
 
 permissions:
@@ -103,6 +107,12 @@ jobs:
             grep -F 'B3_PREACTIVATION_SCHEMA_READY__ROLE_CEILING_AND_PRODUCTION_APPROVAL_PENDING'
       - name: Stage dormant B3 creation RPC (no authenticated write grants)
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01c-b3-create-contract-candidate.sql
+      - name: Assert B3 dormant no-client-EXECUTE and creation-off postinstallation
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -At -f sql/tests/cp-ws01c-b3-dormant-production-postinstall-readonly.sql |
+            grep -F 'B3_DORMANT_SIGNED_CREATE_CONTRACT_INSTALLED__NO_CLIENT_EXECUTE_NO_CREATION'
+          echo 'CP_WS01C_B3_DORMANT_FUNCTION_SECURITY_PASS'
       - name: Verify B3-only atomic creation, idempotency and rollback without B4
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql
       - name: Prove controlled B3 activation/grant and fail-closed rollback in disposable PG17
