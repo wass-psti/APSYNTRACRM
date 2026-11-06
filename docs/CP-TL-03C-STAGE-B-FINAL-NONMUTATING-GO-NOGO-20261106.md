@@ -38,3 +38,11 @@
 5. Keep existing dark-launch flags `TL03_DOMAIN_READS_ENABLED=false` and `TL03_DOMAIN_WRITES_ENABLED=false` until separate activation/acceptance has actually passed.
 
 **No production writes, grants, record mutations, role changes, restores or new projects were performed.**
+
+## Owner acceptance addendum — 2026-11-06
+
+**Owner message:** “consider it all good.” The project owner accepts **completion of the authorized non-mutating CP-TL-03C Stage B readiness review** and its documented technical evidence for roadmap tracking. **Review gate disposition: CLOSED — USER-ACCEPTED WITH THE FORMAL NO-GO DECISION PRESERVED.**
+
+Acceptance of a readiness **report** does not approve the separately scoped **production permission change**, nor designate the production executor/security reviewer/rollback owner, determine shared-project recovery RPO/RTO, verify a current restorable backup, authorize production Draft test records, or remove any remaining signed-user acceptance requirements. The source-controlled two-function `authenticated GRANT EXECUTE` candidate remains **NOT AUTHORIZED AND NOT APPLIED**; Stage B production activation remains **NO-GO (4/7)**.
+
+**Safe continuation:** Advance only independent non-mutating work such as documenting recovery/ownership evidence or source-level TradeLink features. Reassess go/no-go when current backup evidence, accountable ownership and a separate exact-grant authorization are actually available. Never interpret “all good” as permission to bypass protections, write production records, enable Draft write flags, or execute the candidate SQL.
