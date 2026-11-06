@@ -217,6 +217,177 @@ BEGIN
  THEN RAISE EXCEPTION 'Unverified or anonymous account created unauthorized workspace'; END IF;
 END $denied_counts$;
 
+-- Final B3 denial checks: exercise the *creation* RPC itself, not only B2 reads.
+-- All synthetic identities, session mutations and grants exist inside ROLLBACK.
+INSERT INTO auth.sessions(id,user_id,not_after) VALUES
+ ('aaaaaaaa-0000-4000-8000-000000000002',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now()-interval '1 minute'),
+ ('aaaaaaaa-0000-4000-8000-000000000003',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',NULL);
+DELETE FROM auth.sessions
+ WHERE id='aaaaaaaa-0000-4000-8000-000000000003';
+INSERT INTO auth.users(id) VALUES('ffffffff-ffff-4fff-8fff-ffffffffffff');
+INSERT INTO public.profiles(id,status) VALUES
+ ('ffffffff-ffff-4fff-8fff-ffffffffffff','active');
+INSERT INTO auth.sessions(id,user_id,not_after) VALUES
+ ('ffffffff-0000-4000-8000-000000000001',
+  'ffffffff-ffff-4fff-8fff-ffffffffffff',NULL);
+DO $isolated_nonmember$
+BEGIN
+ IF EXISTS (SELECT 1 FROM public.workspace_members
+    WHERE user_id='ffffffff-ffff-4fff-8fff-ffffffffffff')
+ THEN RAISE EXCEPTION 'Synthetic nonmember unexpectedly has workspace access'; END IF;
+END $isolated_nonmember$;
+
+-- Anonymous lacks EXECUTE even when the server-side creation flag is on.
+SET ROLE anon;
+DO $no_anon_create$
+BEGIN
+ BEGIN
+  PERFORM public.wm_ws01_create('Anonymous Denied','closed',
+   '44444444-4444-4444-8444-444444444401');
+  RAISE EXCEPTION 'Anonymous caller created a workspace' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $no_anon_create$;
+RESET ROLE;
+
+-- An authenticated database role is insufficient without a matching live
+-- verified actor, unexpired session and active workspace membership.
+SET ROLE authenticated;
+DO $signed_negative_contexts$
+BEGIN
+ PERFORM pg_catalog.set_config('request.jwt.claim.sub','',false);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id',
+   'aaaaaaaa-0000-4000-8000-000000000001',false);
+ BEGIN
+  PERFORM public.wm_ws01_create('Missing Actor Denied','closed',
+   '44444444-4444-4444-8444-444444444402');
+  RAISE EXCEPTION 'Missing actor created a workspace' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+ PERFORM pg_catalog.set_config('request.jwt.claim.sub',
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',false);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id','',false);
+ BEGIN
+  PERFORM public.wm_ws01_create('Missing Session Denied','closed',
+   '44444444-4444-4444-8444-444444444403');
+  RAISE EXCEPTION 'Missing session created a workspace' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id',
+   'bbbbbbbb-0000-4000-8000-000000000001',false);
+ BEGIN
+  PERFORM public.wm_ws01_create('Borrowed Session Denied','closed',
+   '44444444-4444-4444-8444-444444444404');
+  RAISE EXCEPTION 'Cross-identity session created a workspace'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id',
+   'not-a-valid-session-uuid',false);
+ BEGIN
+  PERFORM public.wm_ws01_create('Malformed Session Denied','closed',
+   '44444444-4444-4444-8444-444444444405');
+  RAISE EXCEPTION 'Malformed session created a workspace'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id',
+   'aaaaaaaa-0000-4000-8000-000000000002',false);
+ BEGIN
+  PERFORM public.wm_ws01_create('Expired Session Denied','closed',
+   '44444444-4444-4444-8444-444444444406');
+  RAISE EXCEPTION 'Expired session created a workspace' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id',
+   'aaaaaaaa-0000-4000-8000-000000000003',false);
+ BEGIN
+  PERFORM public.wm_ws01_create('Revoked Session Denied','closed',
+   '44444444-4444-4444-8444-444444444407');
+  RAISE EXCEPTION 'Revoked session created a workspace' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+ PERFORM pg_catalog.set_config('request.jwt.claim.sub',
+   'ffffffff-ffff-4fff-8fff-ffffffffffff',false);
+ PERFORM pg_catalog.set_config('request.jwt.claim.session_id',
+   'ffffffff-0000-4000-8000-000000000001',false);
+ BEGIN
+  PERFORM public.wm_ws01_create('Nonmember Denied','closed',
+   '44444444-4444-4444-8444-444444444408');
+  RAISE EXCEPTION 'Nonmember created a workspace' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $signed_negative_contexts$;
+RESET ROLE;
+
+-- A still-signed actor loses creation authority when its profile or its
+-- workspace memberships are disabled. Restore fixtures before further cases.
+UPDATE public.profiles SET status='disabled'
+ WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+SET ROLE authenticated;
+SELECT pg_catalog.set_config('request.jwt.claim.sub',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',false);
+SELECT pg_catalog.set_config('request.jwt.claim.session_id',
+ 'aaaaaaaa-0000-4000-8000-000000000001',false);
+DO $inactive_profile$
+BEGIN
+ BEGIN
+  PERFORM public.wm_ws01_create('Inactive Profile Denied','closed',
+   '44444444-4444-4444-8444-444444444409');
+  RAISE EXCEPTION 'Inactive profile created workspace' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $inactive_profile$;
+RESET ROLE;
+UPDATE public.profiles SET status='active'
+ WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+UPDATE public.workspace_members SET active=false
+ WHERE user_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+SET ROLE authenticated;
+DO $revoked_memberships$
+BEGIN
+ BEGIN
+  PERFORM public.wm_ws01_create('Revoked Membership Denied','closed',
+   '44444444-4444-4444-8444-444444444410');
+  RAISE EXCEPTION 'Revoked member created workspace' USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $revoked_memberships$;
+RESET ROLE;
+UPDATE public.workspace_members SET active=true
+ WHERE user_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+-- Even an exact replay must not bypass a disabled creation feature gate.
+UPDATE private.ws01_lifecycle_flags SET creation_enabled=false WHERE id IS TRUE;
+SET ROLE authenticated;
+DO $disabled_replay$
+BEGIN
+ BEGIN
+  PERFORM public.wm_ws01_create('Engineering Pilot','closed',
+   '11111111-1111-4111-8111-111111111102');
+  RAISE EXCEPTION 'Disabled gate permitted creation replay'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $disabled_replay$;
+RESET ROLE;
+UPDATE private.ws01_lifecycle_flags SET creation_enabled=true WHERE id IS TRUE;
+
+DO $final_negative_integrity$
+BEGIN
+ IF (SELECT count(*) FROM public.workspaces)<>4
+ OR (SELECT count(*) FROM public.workspace_members WHERE active)<>7
+ OR (SELECT count(*) FROM private.ws01_create_requests)<>2
+ OR (SELECT count(*) FROM private.ws01_events WHERE action='workspace.created')<>2
+ OR (SELECT count(*) FROM private.ws01_member_roles WHERE relation='owner')<>2
+ OR (SELECT status FROM public.profiles
+     WHERE id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')<>'active'
+ OR (SELECT count(*) FROM private.ws01_lifecycle_flags
+     WHERE id IS TRUE AND creation_enabled IS TRUE
+      AND selection_enabled IS FALSE)<>1
+ OR to_regprocedure('public.wm_ws01_select(uuid,uuid)') IS NOT NULL
+ THEN RAISE EXCEPTION 'B3 negative cases modified workspace data or authority'; END IF;
+ RAISE NOTICE 'CP_WS01C_B3_FINAL_SIGNED_NEGATIVE_DISPOSABLE_PASS';
+END $final_negative_integrity$;
+
 -- Restore all synthetic write attempts, grants and flags atomically.
 ROLLBACK;
 
