@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED,
- workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,validateWorkspaceProposal,assessWorkspaceCreationReadiness,submitWorkspaceCreation,renderWorkspaceSwitcher,
+ workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,workspaceDetailsFor,validateWorkspaceProposal,assessWorkspaceCreationReadiness,submitWorkspaceCreation,renderWorkspaceSwitcher,
  WS02_INVITATIONS_ENABLED,validateWorkspaceInvitationDraft,renderWorkspaceInviteLaunch
 } from '../workspace-ui.js';
 
@@ -230,7 +230,7 @@ test('signed create UI is enabled with guarded server-denial and idempotency bra
  assert.match(module,/Create workspace/);
  assert.match(module,/Validate draft/);
  assert.match(app,/new WorkspaceLifecycleClient\(\{auth,api:db\}\)/);
- assert.match(app,/\{lifecycle:workspaceLifecycleClient\}/);
+ assert.match(app,/lifecycle:workspaceLifecycleClient,onOpenCurrent:/);
  assert.doesNotMatch(module,/fetch\(|localStorage|sessionStorage/);
 });
 
@@ -253,7 +253,7 @@ test('integration is limited to authorized workspace context and never executes 
  assert.match(module,/WS01_CREATION_ENABLED=true/);
  assert.match(module,/No workspace was created/);
  assert.match(app,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
- assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\{lifecycle:workspaceLifecycleClient\}\)/);
+ assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\s*\{lifecycle:workspaceLifecycleClient,onOpenCurrent:/);
  assert.match(app,/closeWorkspacePanels\(\);clearBulkActivation\(\)/);
  assert.match(index,/frontend\/workspace-ui\.css/);
  assert.match(smoke,/frontend\/workspace-ui\.js/);
@@ -397,7 +397,7 @@ test('frontend entrypoint refreshes workspace-related module assets together',()
  const app=readFileSync('frontend/app.js','utf8');
  const lifecycle=readFileSync('frontend/workspace-lifecycle-client.js','utf8');
  const index=readFileSync('index.html','utf8');
- const moduleUrl='./workspace-ui.js?v=ws01-member-catalog-20261106';
+ const moduleUrl='./workspace-ui.js?v=ws01-controls-20261106';
  assert.ok(app.includes(moduleUrl));
  assert.ok(lifecycle.includes(moduleUrl));
  assert.ok(index.includes('<script type="module" src="./frontend/app.js"></script>'));
@@ -418,4 +418,44 @@ test('server member list displays two eligible workspaces without fabricating gl
  assert.deepEqual(visibleWorkspaces(catalog).map(w=>w.name),['Work Management','Operations']);
  assert.ok(visibleWorkspaces(catalog).every(w=>w.id!==third));
  assert.equal(catalog.canSwitch,false);
+});
+
+
+test('workspace cards open signed details without selecting another active workspace',()=>{
+ const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const catalog=normalizeServerWorkspaceCatalog({
+  schemaVersion:1,userId:actor,activeWorkspaceId:signedWorkspace,rows:[
+   {id:signedWorkspace,name:'Work Management',relation:'member',privacy:'closed',active:true},
+   {id:foreignWorkspace,name:'Shared Operations',relation:'owner',privacy:'open',active:false}
+  ]},{userId:actor,workspaceId:signedWorkspace});
+ assert.equal(workspaceDetailsFor(catalog,foreignWorkspace)?.name,'Shared Operations');
+ assert.equal(workspaceDetailsFor(catalog,foreignWorkspace)?.active,false);
+ assert.equal(workspaceDetailsFor(catalog,signedWorkspace)?.active,true);
+ assert.equal(workspaceDetailsFor(catalog,'00000000-0000-4000-8000-000000000003'),null);
+ assert.equal(workspaceDetailsFor(workspaceCatalog(current),foreignWorkspace),null);
+ assert.equal(workspaceDetailsFor({status:'UNAVAILABLE',rows:catalog.rows},foreignWorkspace),null);
+ assert.equal(catalog.canSwitch,false);
+});
+test('workspace controls are actionable for verified rows and fail closed for unavailable writes',()=>{
+ const source=readFileSync('frontend/workspace-ui.js','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ const css=readFileSync('frontend/workspace-ui.css','utf8');
+ assert.match(source,/class="ws01-entry-button"/);
+ assert.match(source,/data-ws01-action="details"/);
+ assert.match(source,/function openDetails\(catalog,workspaceId,options=\{\}\)/);
+ assert.match(source,/workspaceDetailsFor\(catalog,workspaceId\)/);
+ assert.match(source,/data-ws01-action="configure"/);
+ assert.match(source,/data-ws01-action="open-current"/);
+ assert.match(source,/options\.onOpenCurrent\?\.\(\)/);
+ assert.match(source,/data-ws01-action="back-details"/);
+ assert.match(source,/Validate settings draft/);
+ assert.match(source,/No changes were saved/);
+ assert.match(source,/Switch workspace — unavailable/);
+ assert.match(source,/void selectorSession\?\.load\?\.\(\)/);
+ assert.match(source,/Browse authorized workspaces/);
+ assert.match(app,/onOpenCurrent:\(\)=>\{location\.hash='#\/overview';\}/);
+ assert.match(css,/\.ws01-entry-button:focus-visible/);
+ assert.match(css,/\.ws01-details-card/);
+ assert.match(source,/WS01_SWITCHING_ENABLED=false/);
+ assert.match(source,/WS02_INVITATIONS_ENABLED=false/);
 });
