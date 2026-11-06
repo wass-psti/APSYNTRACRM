@@ -1,8 +1,30 @@
 # CP-BOARD-COL-DELETE — Controlled Production Approval and Signed Recovery Acceptance
 
-**Date:** 2026-11-05.  
-**Decision:** **PRE-MIGRATION READINESS VERIFIED; PRODUCTION CHANGE NOT AUTHORIZED OR EXECUTED.**  
+**Updated:** 2026-11-06.  
+**Current decision:** **PHASE A COMPLETE — MANAGED PRODUCTION MIGRATION APPLIED AND VERIFIED. PHASE B/C NOT AUTHORIZED.**  
 **Target:** Existing Supabase project `jtlusodorfnyzgyuewkz`; board `b2dabbd5-a04f-4e99-a8a3-62551cdbfe1d` (Contacts); custom Status I column with four persisted cell rows at the latest read-only inspection.
+
+## Latest verified production state — Phase A completed 2026-11-06
+
+The project owner previously expressly approved the **Phase A dark launch**, and subsequently said to consider Phase A all good. The operator's acceptance resolved the prior release hold for execution, **not** the absence of an independently verified backup timestamp or recovery window: the Supabase integration still does not provide that metadata. Do not describe backup freshness or restorability as verified.
+
+**Actual production operation:** Supabase managed `apply_migration` completed with `success: true`, recorded in `supabase_migrations.schema_migrations` as version **`20261106002107`**, migration **`cp_board_col_delete_phase_a_dark_launch_20261106`**. It installed the source-locked additive candidate `sql/cp-board-col-delete-recoverable-candidate.sql`, stripping only the file's outer `BEGIN;`/`COMMIT;` wrappers so the managed migration owned the transaction. No existing board mutation RPC, member roles, workspaces, cell contents or audit rows were deliberately changed.
+
+**Executed production postchecks:**
+
+- Ran the exact `sql/tests/cp-board-col-delete-phase-a-postinstall-readonly.sql` against the live database. Returned **`PHASE_A_POSTINSTALL_DEFAULT_OFF_RLS_GRANTS_AND_SOURCE_VERIFIED`**.
+- All **3 private tables** are installed with RLS enabled and no direct `anon`/`authenticated` table privileges: `private.wm_recoverable_column_activation`, `private.wm_recoverable_deleted_columns`, and `private.wm_recoverable_deleted_cells`.
+- All **3 new `public` RPCs** are `SECURITY DEFINER` with an empty `search_path`, granted `EXECUTE` to `authenticated` only and denied to `anon`: `wm_delete_board_column_recoverable`, `wm_restore_board_column_recoverable`, and `wm_list_recoverable_board_columns`.
+- The sole private activation row has **`delete_enabled=false` and `restore_enabled=false`**. Snapshot tables contain **0 archived columns and 0 archived cells**. Frontend recovery remains disabled.
+- Production read-only Contacts postcheck confirms board **active**, `Status I` column **present exactly once**, its **4 original stored cell rows remain present**, and total board columns **5** (4 other columns preserved). All existing mutator, GoTrue signed-session guard and protected-board predicate hashes still match.
+- Supabase migration history is now **165 migrations** (previously 164). Current project health was `ACTIVE_HEALTHY` on PostgreSQL 17.6 during the gate.
+- The security advisor inventory includes unchanged broad project security categories; 3 newly created private no-policy RLS tables and 3 purpose-gated authenticated `SECURITY DEFINER` RPCs are expected, not evidence that caller authorization is bypassed. The established server-side signed-session and board-manager checks remain mandatory.
+
+**Acceptance:** Phase A **COMPLETE — VERIFIED IN PRODUCTION**. This must not be interpreted as authorization for enabling the server's flags, producing real board fixtures, deleting Status I, or restoring data. Genuine signed-user negative/positive QA acceptance is still pending.
+
+**Next required gate:** **CP-BOARD-COL-DELETE / Phase B — Controlled signed-session QA fixture, server activation approval, refresh and Activity restoration verification.** A separate, scoped approval for changing the production activation flags and mutating a QA board remains required. Actual Contacts Status I deletion is Phase C and is not approved by Phase A.
+
+---
 
 ## 1. Material approval boundary
 
@@ -95,3 +117,5 @@ The project owner explicitly authorized **Phase A** (production additive recover
 **Next exact prerequisite:** obtain one current completed backup timestamp and available restoration window from the existing project's [Supabase scheduled backups dashboard](https://supabase.com/dashboard/project/jtlusodorfnyzgyuewkz/database/backups/scheduled). Then recheck the existing production preflight, apply `sql/cp-board-col-delete-recoverable-candidate.sql` with the authorized managed production migration operation, and immediately execute `sql/tests/cp-board-col-delete-phase-a-postinstall-readonly.sql` plus a Contacts row-count preservation query. **Keep both flags disabled, leave the frontend flag disabled, preserve all four values, and do not proceed to Phase B/C.**
 
 **Status:** Phase A **APPROVED, PRODUCTION INSTALLATION BLOCKED — BACKUP EVIDENCE**; post-install verification suite **IMPLEMENTED AND DISPOSABLE VERIFIED**.
+
+*Historical note:* The earlier `2026-11-06 Phase A attempt — backup evidence release hold` section below describes the **pre-installation state**. It is superseded by the verified migration and postcheck above. The missing independent backup metadata remains an audit limitation; it does not mean the now-installed schema is absent.
