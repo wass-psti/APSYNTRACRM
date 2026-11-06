@@ -11,7 +11,7 @@ const signedWorkspace='00000000-0000-4000-8000-000000000001';
 const foreignWorkspace='00000000-0000-4000-8000-000000000002';
 const current={id:signedWorkspace,name:'Work Management'};
 test('workspace catalog admits only the current signed context; no unverified discovery',()=>{
- assert.equal(WS01_DISCOVERY_ENABLED,false);
+ assert.equal(WS01_DISCOVERY_ENABLED,true);
  assert.equal(WS01_CREATION_ENABLED,true);
  assert.equal(WS01_SWITCHING_ENABLED,false);
  const result=workspaceCatalog(current);
@@ -47,6 +47,42 @@ test('unverified or forged foreign workspace entries never render',()=>{
  const injected={...c,rows:[...c.rows,{id:foreignWorkspace,name:'Secret',relation:'owner'}]};
  assert.deepEqual(visibleWorkspaces(injected).map(x=>x.id),[signedWorkspace]);
 });
+test('general workspace selector loads authorized member discovery without enabling switching',()=>{
+ const source=readFileSync('frontend/workspace-ui.js','utf8');
+ assert.match(source,/WS01_DISCOVERY_ENABLED=true/);
+ assert.match(source,/options\.lifecycle\.discover\(\)/);
+ assert.match(source,/result\?\.status!=='SIGNED_MEMBER_DISCOVERY'/);
+ assert.match(source,/session\.catalog=result/);
+ assert.match(source,/data-ws01-note/);
+ assert.match(source,/Authorized workspaces/);
+ assert.match(source,/resultsMarkup\(read\(\),'all',input\.value\)/);
+ assert.match(source,/openInvites\(read\(\)\.rows\.find\(row=>row\.active\)\)/);
+ assert.match(source,/Workspace switching is not yet activated/);
+ assert.match(source,/session\.status='error'/);
+ assert.doesNotMatch(source,/WS01_SWITCHING_ENABLED=true/);
+ assert.doesNotMatch(source,/\.select\(.*workspaceId/);
+});
+
+test('signed member discovery is visible only for validated server-supplied membership',()=>{
+ const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const catalog=normalizeServerWorkspaceCatalog({
+  schemaVersion:1,userId:actor,activeWorkspaceId:signedWorkspace,rows:[
+   {id:signedWorkspace,name:'Work Management',relation:'member',privacy:'closed',active:true},
+   {id:foreignWorkspace,name:'Shared Operations',relation:'owner',privacy:'closed',active:false}
+  ]
+ },{userId:actor,workspaceId:signedWorkspace});
+ assert.equal(catalog.status,'SIGNED_MEMBER_DISCOVERY');
+ assert.deepEqual(visibleWorkspaces(catalog).map(row=>row.name),
+  ['Work Management','Shared Operations']);
+ assert.deepEqual(visibleWorkspaces(catalog,{tab:'recent'}).map(row=>row.name),
+  ['Work Management']);
+ assert.deepEqual(visibleWorkspaces(catalog,{tab:'owner'}).map(row=>row.name),
+  ['Shared Operations']);
+ assert.equal(catalog.canSwitch,false);
+ assert.equal(catalog.canDiscoverAll,false);
+ assert.equal(Object.isFrozen(catalog.rows),true);
+});
+
 test('create-workspace review validates open/closed and rejects malicious names',()=>{
  assert.deepEqual(validateWorkspaceProposal({name:'  R&D Operations ',privacy:'closed'}),
   {valid:true,name:'R&D Operations',privacy:'closed'});
