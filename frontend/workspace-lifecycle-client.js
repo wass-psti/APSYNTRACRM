@@ -10,6 +10,34 @@ import {normalizeServerWorkspaceCatalog,validateWorkspaceProposal,
 } from './workspace-ui.js?v=ws01-controls-20261106';
 
 const fail=(message,status=403)=>{throw new ApiError(message,status);};
+
+/** Configuration remains disabled in the deployed browser until a separate,
+ * audited production grant and signed-user acceptance are completed. */
+export const WS01_CONFIGURATION_ENABLED=false;
+const validRevision=value=>Number.isSafeInteger(value)&&value>=1;
+export function normalizeWorkspaceConfigurationReadReceipt(receipt,target){
+ if(receipt?.schemaVersion!==1||!validUuid(target)||
+  receipt.workspaceId!==target||typeof receipt.name!=='string'||
+  receipt.name!==receipt.name.trim()||receipt.name.length<2||
+  receipt.name.length>80||!['open','closed'].includes(receipt.privacy)||
+  !validRevision(receipt.revision)||typeof receipt.canEdit!=='boolean')
+  fail('Invalid signed workspace configuration receipt.',409);
+ return Object.freeze({workspaceId:target,name:receipt.name,
+  privacy:receipt.privacy,revision:receipt.revision,canEdit:receipt.canEdit});
+}
+export function normalizeWorkspaceConfigurationUpdateReceipt(receipt,target,proposal,expectedRevision){
+ const expectedNext=expectedRevision+1;
+ if(receipt?.schemaVersion!==1||!validUuid(target)||
+  receipt.workspaceId!==target||receipt.name!==proposal?.name||
+  receipt.privacy!==proposal?.privacy||typeof receipt.updated!=='boolean'||
+  !validRevision(expectedRevision)||
+  !validRevision(receipt.revision)||
+  receipt.revision!==(receipt.updated?expectedNext:expectedRevision))
+  fail('Invalid signed workspace configuration update receipt.',409);
+ return Object.freeze({workspaceId:target,name:proposal.name,
+  privacy:proposal.privacy,revision:receipt.revision,updated:receipt.updated});
+}
+
 export function normalizeWorkspaceCreationReceipt(receipt,privacy){
  if(receipt?.schemaVersion!==1||!validUuid(receipt.workspaceId)||
   receipt.relation!=='owner'||receipt.privacy!==privacy||
@@ -67,6 +95,32 @@ export class WorkspaceLifecycleClient{
    p_name:proposal.name,p_privacy:proposal.privacy,p_request_id:requestId});
   const receipt=normalizeWorkspaceCreationReceipt(raw,proposal.privacy);
   await this.stable(signed); // creation never silently changes the workspace
+  return receipt;
+ }
+
+ async readConfiguration(workspaceId){
+  if(!WS01_CONFIGURATION_ENABLED)fail('Workspace configuration is not activated.',503);
+  if(!validUuid(workspaceId))fail('Invalid workspace target.',400);
+  const signed=await this.signed();
+  const raw=await this.api.rpc('wm_ws01_config_read',{p_workspace_id:workspaceId});
+  const receipt=normalizeWorkspaceConfigurationReadReceipt(raw,workspaceId);
+  await this.stable(signed);
+  return receipt;
+ }
+ async updateConfiguration({workspaceId,name,privacy,expectedRevision}={}){
+  if(!WS01_CONFIGURATION_ENABLED)fail('Workspace configuration is not activated.',503);
+  if(!validUuid(workspaceId)||!validRevision(expectedRevision))
+   fail('Invalid workspace revision.',400);
+  const proposal=validateWorkspaceProposal({name,privacy});
+  if(!proposal.valid)fail('Invalid workspace configuration.',400);
+  const signed=await this.signed();
+  const raw=await this.api.rpc('wm_ws01_config_update',{
+   p_workspace_id:workspaceId,p_name:proposal.name,p_privacy:proposal.privacy,
+   p_expected_revision:expectedRevision
+  });
+  const receipt=normalizeWorkspaceConfigurationUpdateReceipt(
+   raw,workspaceId,proposal,expectedRevision);
+  await this.stable(signed);
   return receipt;
  }
  async select(targetWorkspaceId,expectedWorkspaceId){
