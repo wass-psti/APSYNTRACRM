@@ -45,7 +45,18 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
   assert.ok(editor.includes('<option value="'+module.key+'" selected>'),module.label);
   assert.match(editor,/data-action="tradelink-draft-preview"/);
   assert.match(editor,/type="submit" class="primary" disabled/);
-  const valid=parseTradeLinkDraftForm(fields({documentType:module.key,documentNumber:'LOCAL-001'}));
+  const examples={
+   packing:{customerName:'Consignee',referenceNumber:'SO-7',
+    lineDescription:'Packed item',lineQuantity:'2',lineUnit:'box'},
+   delivery:{customerName:'Recipient',referenceNumber:'SO-7',
+    lineDescription:'Delivered item',lineQuantity:'1',lineUnit:'pc',
+    checkedBy:'QC',deliveredBy:'Logistics'},
+   payment:{customerName:'Payor',paymentParticulars:'Received on account',
+    cashAmount:'25',receivedBy:'Cashier',verifiedBy:'Verifier'}
+  };
+  const valid=parseTradeLinkDraftForm(fields({
+   documentType:module.key,documentNumber:'LOCAL-001',...(examples[module.key]||{})
+  }),{lineId:()=> 'local-line'});
   assert.equal(valid.documentType,module.key);
  }
  assert.equal(initialTradeLinkDraftView().formValues,null);
@@ -98,6 +109,103 @@ test('form parser accepts only bounded source Draft fields and never asserts per
   {documentType:'quotation',documentNumber:'Q-100',lineDescription:'One',lineQuantity:'1'},
   {documentType:'quotation',documentNumber:'Q-100',currency:'NOT-CURRENCY'}
  ])assert.throws(()=>parseTradeLinkDraftForm(fields(row)));
+});
+
+
+test('Packing List local readiness uses source reference, consignee and nonpriced physical item',()=>{
+ const view=initialTradeLinkDraftView('packing');
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
+ assert.match(html,/Consignee/);
+ assert.match(html,/Source reference/);
+ assert.match(html,/Physical shipment item \(required for local readiness\)/);
+ assert.doesNotMatch(html,/name="lineUnitPrice"/);
+ assert.doesNotMatch(html,/name="cashAmount"/);
+ assert.match(html,/type="submit" class="primary" disabled/);
+ const sample={documentType:'packing',documentNumber:'PL-001',
+  customerName:'Receiving company',referenceNumber:'SO-001',
+  lineDescription:'Parts',lineQuantity:'3',lineUnit:'box'};
+ const draft=parseTradeLinkDraftForm(fields(sample),{lineId:()=> 'item-1'});
+ assert.equal(draft.items[0].unitPrice,0);
+ assert.equal(draft.items[0].quantity,3);
+ assert.equal(draft.referenceNumber,'SO-001');
+ assert.equal('vatType' in draft,false);
+ for(const variant of [
+  {customerName:''},{referenceNumber:''},{lineDescription:''},
+  {lineQuantity:''},{lineQuantity:'0'},{lineQuantity:'-1'}
+ ])assert.throws(()=>parseTradeLinkDraftForm(fields({...sample,...variant})),/Draft|Shipment|Line/i);
+});
+
+test('Delivery Receipt local readiness validates QC, logistics and optional serial without delivery writes',()=>{
+ const html=renderTradeLinkDraftWorkspace({
+  detail,workspaceId:workspace,view:initialTradeLinkDraftView('delivery'),canManage:true});
+ for(const name of ['checkedBy','deliveredBy','receivedBy','lineSerialNumber'])
+  assert.ok(html.includes('name="'+name+'"'),name);
+ assert.match(html,/Delivery responsibility · preview only/);
+ assert.match(html,/type="submit" class="primary" disabled/);
+ assert.doesNotMatch(html,/name="lineUnitPrice"/);
+ const sample={documentType:'delivery',documentNumber:'DR-001',
+  customerName:'Recipient',referenceNumber:'SO-002',
+  lineDescription:'Machine',lineQuantity:'1',lineUnit:'unit',
+  lineSerialNumber:'ASSET-123',checkedBy:'QC officer',deliveredBy:'Logistics officer',
+  receivedBy:'Receiver'};
+ const draft=parseTradeLinkDraftForm(fields(sample),{lineId:()=> 'item-2'});
+ assert.equal(draft.items[0].serialNumber,'ASSET-123');
+ assert.equal(draft.items[0].unitPrice,0);
+ assert.equal(draft.checkedBy,'QC officer');
+ assert.equal(draft.deliveredBy,'Logistics officer');
+ for(const variant of [
+  {checkedBy:''},{deliveredBy:''},{customerName:''},
+  {referenceNumber:''},{lineQuantity:'0'},{lineSerialNumber:'X'.repeat(121)}
+ ])assert.throws(()=>parseTradeLinkDraftForm(fields({...sample,...variant})),/Draft|Shipment|Invalid/i);
+ const escaped=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,canManage:true,
+  view:{...initialTradeLinkDraftView('delivery'),formValues:{
+   ...sample,checkedBy:'"><img src=x onerror=alert(1)>'
+  }}});
+ assert.doesNotMatch(escaped,/<img src=x/);
+ assert.doesNotMatch(escaped,/onerror=alert\(1\)>/);
+ assert.match(escaped,/&lt;img/);
+});
+
+test('Payment AR local readiness enforces positive cash or cheque and responsibility only',()=>{
+ const html=renderTradeLinkDraftWorkspace({
+  detail,workspaceId:workspace,view:initialTradeLinkDraftView('payment'),canManage:true});
+ for(const name of ['paymentParticulars','cashAmount','chequeAmount',
+  'bankName','chequeNumber','receivedBy','verifiedBy'])
+  assert.ok(html.includes('name="'+name+'"'),name);
+ assert.doesNotMatch(html,/name="lineDescription"/);
+ assert.match(html,/This form does not receive or verify funds/);
+ assert.match(html,/type="submit" class="primary" disabled/);
+ const sample={documentType:'payment',documentNumber:'AR-001',customerName:'Payor',
+  paymentParticulars:'Partial invoice settlement',cashAmount:'250.75',
+  receivedBy:'Cashier',verifiedBy:'Finance'};
+ const cash=parseTradeLinkDraftForm(fields(sample));
+ assert.equal(cash.cashAmount,250.75);
+ assert.equal(cash.paymentParticulars,'Partial invoice settlement');
+ assert.equal('items' in cash,false);
+ assert.equal('vatType' in cash,false);
+ const cheque=parseTradeLinkDraftForm(fields({...sample,cashAmount:'',
+  chequeAmount:'400',bankName:'Bank',chequeNumber:'CHEQUE-01'}));
+ assert.equal(cheque.chequeAmount,400);
+ for(const variant of [
+  {customerName:''},{paymentParticulars:''},{receivedBy:''},{verifiedBy:''},
+  {cashAmount:''},{cashAmount:'0'},{cashAmount:'-10'},{cashAmount:'Infinity'},
+  {cashAmount:'1000000000001'},
+  {cashAmount:'',chequeAmount:'2',bankName:'',chequeNumber:'C-1'},
+  {cashAmount:'',chequeAmount:'2',bankName:'Bank',chequeNumber:''}
+ ])assert.throws(()=>parseTradeLinkDraftForm(fields({...sample,...variant})),/Payment|payment|Cheque|Invalid/i);
+});
+
+test('module switching updates ephemeral fields without storage, network or workflow actions',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
+ for(const key of ['lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
+  'paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber'])
+  assert.match(app,new RegExp("'"+key+"'"));
+ assert.match(app,/select\[name="documentType"\]/);
+ assert.match(app,/if\(captureTradeLinkDraftFields\(event\)\)\{/);
+ assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
 test('dark launch never renders stale selected document content after read access is disabled',()=>{
