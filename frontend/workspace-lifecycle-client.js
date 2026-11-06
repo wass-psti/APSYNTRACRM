@@ -16,10 +16,10 @@ const fail=(message,status=403)=>{throw new ApiError(message,status);};
 export const WS01_CONFIGURATION_ENABLED=false;
 const validRevision=value=>Number.isSafeInteger(value)&&value>=1;
 export function normalizeWorkspaceConfigurationReadReceipt(receipt,target){
+ const proposal=validateWorkspaceProposal({name:receipt?.name,privacy:receipt?.privacy});
  if(receipt?.schemaVersion!==1||!validUuid(target)||
-  receipt.workspaceId!==target||typeof receipt.name!=='string'||
-  receipt.name!==receipt.name.trim()||receipt.name.length<2||
-  receipt.name.length>80||!['open','closed'].includes(receipt.privacy)||
+  receipt.workspaceId!==target||!proposal.valid||
+  proposal.name!==receipt.name||
   !validRevision(receipt.revision)||typeof receipt.canEdit!=='boolean')
   fail('Invalid signed workspace configuration receipt.',409);
  return Object.freeze({workspaceId:target,name:receipt.name,
