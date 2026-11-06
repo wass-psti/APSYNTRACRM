@@ -767,7 +767,7 @@ test('read-only listing presents filters but never reveals rows or enables RPC u
  for(const input of ['query','documentType','workflowState','archiveMode'])
   assert.ok(html.includes('name="'+input+'"'),input);
  assert.match(html,/Search document number/);
- assert.match(html,/current signed, authorized response (maximum 50 records)/);
+ assert.match(html,/current signed, authorized response \(maximum 50 records\)/);
  assert.match(html,/data-tradelink-domain-count role="status"/);
  assert.match(html,/name="query"[^>]*disabled/);
  assert.doesNotMatch(html,/SECRET-Q|11111111-1111-4111-8111-111111111111/);

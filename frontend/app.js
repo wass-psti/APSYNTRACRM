@@ -4692,8 +4692,8 @@ function syncTradeLinkFinanceInput(event){
  return true;
 }
 root.addEventListener('change',event=>{
- if(captureTradeLinkDraftListFilters(event))return;
  if(syncTradeLinkFinanceInput(event))return;
+ if(captureTradeLinkDraftListFilters(event))return;
  if(captureTradeLinkDraftFields(event)){
   // Never transfer the previous module's customer, financial, or reviewer inputs.
   if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]')){
@@ -4842,8 +4842,8 @@ root.addEventListener('submit',event=>{
  }
 });
 root.addEventListener('input',event=>{
- if(captureTradeLinkDraftListFilters(event))return;
  if(syncTradeLinkFinanceInput(event))return;
+ if(captureTradeLinkDraftListFilters(event))return;
  if(captureTradeLinkDraftFields(event))return;
  if(event.target.matches('[data-tradelink-search]')&&
     state.view==='board'&&state.tab==='tradelink'&&
