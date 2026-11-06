@@ -32,6 +32,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/cp-ws01b-disposable-postgres.yml'
+      - 'sql/cp-ws01c-b4-owner-configuration-candidate.sql'
+      - 'sql/tests/cp-ws01c-b4-owner-configuration-disposable.sql'
       - 'sql/tests/cp-ws01c-b3-dormant-production-postinstall-readonly.sql'
       - 'sql/cp-ws01c-b3-reviewed-production-activation-20261106.sql'
       - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
@@ -171,6 +173,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-preactivation.sql
       - name: Accept disposable owner creation, privacy, CAS, revocation and isolation
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-acceptance.sql
+      - name: Stage dormant owner-only workspace configuration with no authenticated grant
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01c-b4-owner-configuration-candidate.sql
+      - name: Prove signed owner CAS, audit, foreign denial and expired session (rollback-only)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b4-owner-configuration-disposable.sql
       - name: Reproduce deployed board ACL in synthetic workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-acl-fixture.sql
       - name: Stage minimal AND-integrated board role ceiling (disposable only)
