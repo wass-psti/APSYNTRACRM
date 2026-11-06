@@ -36,7 +36,7 @@ function json(status,body,allowed){
  if(allowed){
   headers['access-control-allow-origin']=ALLOWED_ORIGIN;
   headers['access-control-allow-methods']='GET, OPTIONS';
-  headers['access-control-allow-headers']='authorization';
+  headers['access-control-allow-headers']='authorization, apikey';
  }
  return new Response(JSON.stringify(body),{status,headers});
 }
