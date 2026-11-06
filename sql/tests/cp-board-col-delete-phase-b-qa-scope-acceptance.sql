@@ -51,6 +51,11 @@ BEGIN
  IF (SELECT count(*) FROM pg_temp.phase_b_original_cells)<>4
  THEN RAISE EXCEPTION 'QA fixture failed to create exactly four cells'; END IF;
 END $four$;
+SELECT pg_catalog.set_config('cp.qa.column_id',
+ (SELECT id::text FROM pg_temp.phase_b_original_column),true);
+SELECT pg_catalog.set_config('cp.qa.board_revision',
+ (SELECT updated_at::text FROM public.work_boards
+  WHERE id='30000000-0000-4000-8000-000000000001'),true);
 UPDATE private.wm_recoverable_column_activation
  SET delete_enabled=true,restore_enabled=true WHERE id;
 -- Global activation must not permit even an authorized owner without QA scope.
@@ -64,8 +69,8 @@ BEGIN
  BEGIN
   PERFORM public.wm_delete_board_column_recoverable(
    '30000000-0000-4000-8000-000000000001',
-   (SELECT id FROM pg_temp.phase_b_original_column),
-   (SELECT updated_at FROM public.work_boards WHERE id='30000000-0000-4000-8000-000000000001'),
+   current_setting('cp.qa.column_id',true)::uuid,
+   current_setting('cp.qa.board_revision',true)::timestamptz,
    4,'DELETE Recorded status');
   RAISE EXCEPTION 'UNSCOPED_GLOBAL_FLAG_WRITE_ALLOWED' USING ERRCODE='P9999';
  EXCEPTION WHEN insufficient_privilege THEN
@@ -119,8 +124,8 @@ DECLARE
  restored jsonb;
  items jsonb;
 BEGIN
- SELECT id INTO STRICT c FROM pg_temp.phase_b_original_column;
- SELECT updated_at INTO STRICT rev FROM public.work_boards WHERE id=b;
+ c:=current_setting('cp.qa.column_id',true)::uuid;
+ rev:=current_setting('cp.qa.board_revision',true)::timestamptz;
  BEGIN
   PERFORM public.wm_delete_board_column_recoverable(b,c,rev,0,'DELETE Recorded status');
   RAISE EXCEPTION 'STALE_COUNT_ACCEPTED' USING ERRCODE='P9999';
