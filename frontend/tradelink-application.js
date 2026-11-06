@@ -7,6 +7,7 @@ import {isTradeLinkBoard,tradeLinkSetupStatus,TRADELINK_BOARD_ID} from './tradel
 import {renderTradeLinkActivity} from './tradelink-activity.js';
 import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
+import {renderTradeLinkDraftWorkspace,initialTradeLinkDraftView} from './tradelink-draft-workspace.js';
 
 export const TRADELINK_SOURCE_MODULES=Object.freeze([
  Object.freeze({key:'esi',label:'Electronic SI',short:'ESI',
@@ -41,7 +42,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const modules=new Set(TRADELINK_SOURCE_MODULES.map(m=>m.key));
 export function normalizeTradeLinkSection(value){
- return value==='documents'||value==='activity'||modules.has(value)?value:'overview';
+ return value==='documents'||value==='activity'||value==='drafts'||modules.has(value)?value:'overview';
 }
 export function tradeLinkBoardSummary(detail){
  if(!isTradeLinkBoard(detail?.board))return null;
@@ -104,7 +105,7 @@ function renderModule(m){
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
   '<p>Document creation, changes, approvals, PDFs, and attachments are unavailable here until the central signed domain API and its server-side authorization are verified. No local-only draft will be presented as saved.</p></div></section>';
 }
-export function renderTradeLinkApplication({detail,section='overview',workspaceId=null,activity=null}={}){
+export function renderTradeLinkApplication({detail,section='overview',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false}={}){
  if(!isTradeLinkBoard(detail?.board)||
     typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
@@ -125,11 +126,12 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
   '<div class="tl-app-layout"><nav class="tl-app-nav" aria-label="TradeLink application navigation">'+
    '<a class="tl-section-link'+(current==='overview'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink"'+(current==='overview'?' aria-current="page"':'')+'>Overview</a>'+
    '<a class="tl-section-link'+(current==='documents'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents"'+(current==='documents'?' aria-current="page"':'')+'>Board records <span>'+sum.activeBoardItems+'</span></a>'+
-   '<a class="tl-section-link'+(current==='activity'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/activity"'+(current==='activity'?' aria-current="page"':'')+'>Activity</a>'+ 
+   '<a class="tl-section-link'+(current==='activity'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/activity"'+(current==='activity'?' aria-current="page"':'')+'>Activity</a>'+
+   '<a class="tl-section-link'+(current==='drafts'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts"'+(current==='drafts'?' aria-current="page"':'')+'>Draft workspace <span>Staged</span></a>'+ 
    '<h3>Document modules</h3>'+
    TRADELINK_SOURCE_MODULES.map(entry=>moduleLink(entry,current)).join('')+'</nav>'+
    '<div class="tl-app-main">'+
-    (m?renderModule(m):current==='documents'?renderDocuments(detail):current==='activity'?renderTradeLinkActivity(activity||{}):
+    (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}):current==='documents'?renderDocuments(detail):current==='activity'?renderTradeLinkActivity(activity||{}):
       '<section class="tl-content-panel"><p class="tl-eyebrow">TradeLink application</p><h2>Source-aligned workspace</h2>'+
        '<p class="muted">Open a document module to review its source-defined business purpose and submission requirements. Authorized Board Items can be inspected without creating duplicate records.</p>'+
        '<div class="tl-overview-tiles">'+TRADELINK_SOURCE_MODULES.map(entry=>
