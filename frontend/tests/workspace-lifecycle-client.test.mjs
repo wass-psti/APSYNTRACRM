@@ -41,19 +41,86 @@ test('workspace selection receipt requires exact target, previous scope and chan
   {schemaVersion:1,workspaceId:foreign,previousWorkspaceId:primary,switched:'true'}
  ])assert.throws(()=>normalizeWorkspaceSelectionReceipt(invalid,foreign,primary));
 });
-test('inactive discovery/switch and mismatched authenticated identity send zero creation RPCs',async()=>{
+test('discovery fails closed on mismatched signed identity and switching remains disabled',async()=>{
  let rpcCalls=0;
  const client=new WorkspaceLifecycleClient({
   auth:{userId:actor,getVerifiedUser:async()=>({id:foreign})},
   api:{context:async()=>({user_id:actor,workspace_id:primary,profile:{status:'active'}}),
    rpc:async()=>{rpcCalls++;throw Error('UNEXPECTED_CREATION_RPC');}}
  });
- await assert.rejects(client.discover(),/not activated/);
+ await assert.rejects(client.discover(),/Signed workspace identity changed/);
  await assert.rejects(client.create({
   name:'New',privacy:'closed',requestId:foreign
  }),/Signed workspace identity changed/);
  await assert.rejects(client.select(foreign,primary),/not activated/);
  assert.equal(rpcCalls,0);
+});
+
+test('read-only signed workspace discovery shows only server-authorized member rows',async()=>{
+ let verified=0,contexts=0;
+ const rpc=[];
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>{verified++;return {id:actor};}},
+  api:{
+   context:async()=>{contexts++;return {user_id:actor,workspace_id:primary,profile:{status:'active'}};},
+   rpc:async(method,args)=>{
+    rpc.push({method,args});
+    assert.equal(method,'wm_ws01_list');
+    assert.deepEqual(args,{});
+    return {schemaVersion:1,userId:actor,activeWorkspaceId:primary,rows:[
+     {id:primary,name:'Work Management',relation:'member',privacy:'closed',active:true},
+     {id:foreign,name:'Shared Operations',relation:'owner',privacy:'closed',active:false}
+    ]};
+   }
+  }
+ });
+ const catalog=await client.discover();
+ assert.equal(catalog.status,'SIGNED_MEMBER_DISCOVERY');
+ assert.deepEqual(catalog.rows.map(row=>row.name),['Work Management','Shared Operations']);
+ assert.equal(catalog.rows[1].verifiedScope,'SIGNED_MEMBER_RPC');
+ assert.equal(catalog.canSwitch,false);
+ assert.equal(catalog.canDiscoverAll,false);
+ assert.equal(rpc.length,1);
+ assert.equal(verified,2);
+ assert.equal(contexts,2);
+});
+
+test('signed discovery rejects mismatched server actor or workspace without leaking rows',async()=>{
+ for(const mismatch of ['user','workspace']){
+  let rpcCalls=0;
+  const client=new WorkspaceLifecycleClient({
+   auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
+   api:{
+    context:async()=>({user_id:actor,workspace_id:primary,profile:{status:'active'}}),
+    rpc:async method=>{
+     rpcCalls++;
+     assert.equal(method,'wm_ws01_list');
+     return {schemaVersion:1,userId:mismatch==='user'?foreign:actor,
+      activeWorkspaceId:mismatch==='workspace'?foreign:primary,rows:[
+       {id:primary,name:'Work Management',relation:'member',privacy:'closed',active:true}
+      ]};
+    }
+   }
+  });
+  await assert.rejects(client.discover(),/Invalid signed workspace discovery result/);
+  assert.equal(rpcCalls,1);
+ }
+});
+
+test('signed discovery rejects a changed session or workspace after the read',async()=>{
+ let calls=0;
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
+  api:{
+   context:async()=>{calls++;return {user_id:actor,
+    workspace_id:calls===1?primary:foreign,profile:{status:'active'}};},
+   rpc:async()=>({schemaVersion:1,userId:actor,activeWorkspaceId:primary,rows:[
+    {id:primary,name:'Work Management',relation:'member',privacy:'closed',active:true}
+   ]})
+  }
+ });
+ await assert.rejects(client.discover(),/Signed workspace changed during request/);
+ assert.equal(calls,2);
 });
 
 test('enabled create sends exactly one caller-scoped RPC and independently rechecks stable context',async()=>{
