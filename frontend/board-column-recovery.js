@@ -30,6 +30,8 @@ export function explainColumnDeleteError(error){
  const message=String(error?.message||'');
  // Server emits stable SQLSTATE plus domain-specific reason. Distinguish
  // protected objects, unavailable snapshots and true authorization denial.
+ if(/COL_QA_SCOPE_DENIED/.test(message))
+  return new ApiError('Column recovery is restricted to the approved time-limited QA board and signed actor. No changes were made.',403,code);
  if(/COL_(DELETE|RESTORE)_NOT_ACTIVATED|COL_RECOVERY_LIST_NOT_ACTIVATED/.test(message))
   return new ApiError('Recoverable column operations are not activated on the server. No stored values were removed.',503,code);
  if(/COL_(DELETE|RESTORE)_PROTECTED_BOARD/.test(message))
