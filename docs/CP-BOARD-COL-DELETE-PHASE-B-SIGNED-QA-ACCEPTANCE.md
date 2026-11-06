@@ -77,3 +77,11 @@ Phase C deletion of Contacts / Status I is not authorized by Phase B. No live QA
 - Phase C Contacts deletion — **NOT AUTHORIZED**.
 
 **Next operational checkpoint:** Open the signed APSYNTRA CRM [Security](https://wass-psti.github.io/APSYNTRACRM/#/security) page using an existing authorized account. Select **Inspect signed QA fixture** and then, only when it reports that none exists, **Create signed B2 QA fixture**. Confirm the result is PASS and the QA board has the four synthetic cells after reopening; a read-only SQL cross-check can then independently verify its identity and count. Do not share JWTs, auth cookies, or database credentials. Do not enable any private recovery flag before B3's separate approval.
+
+## B2 authoritative fixture inventory and CI verification
+
+The committed read-only verifier `sql/tests/cp-board-col-delete-b2-production-readonly-qa-fixture.sql` was executed against the live database and returned **`B2_AWAITING_GENUINE_SIGNED_UI_ACTION`** with zero existing QA-marked boards, empty QA scope, both recovery activation flags disabled, zero private recovery snapshots and Contacts Status I's four values intact. This admin-only SQL verifier checks the eventual four QA items, exact synthetic value pairs, ordinary custom column, signed-created-by/board-owner relationship and guard preservation. It deliberately reports `signed_origin_from_privileged_sql_verified:false` — an authoritative database read cannot independently authenticate the browser request that created records.
+
+[Frontend Validation #42146478635](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42146478635): **SUCCESS**, including new signed QA workflow unit tests, no-retry/uncertain-result tests, UI event wiring, session validation, and other frontend/backend regression jobs. The QA creation procedure remains opt-in and creates no production records before a real user clicks. The global recovery flag remains disabled.
+
+The QA creation still requires a genuine user-triggered signed-app operation. If that returns PASS, rerun the named SQL verifier and confirm the QA board after refreshing/reopening. No B3 activation or Phase C operational deletion may be inferred from B2 readiness.
