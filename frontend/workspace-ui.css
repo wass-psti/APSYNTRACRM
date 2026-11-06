@@ -37,6 +37,11 @@
 .ws01-overlay [data-ws01-close]:hover{background:#edf0fc;color:#38406a}
 .ws01-overlay .ws01-note{color:#7986a0;font-size:11px;line-height:1.55;
  background:#f5f7fc;border-radius:9px;padding:12px;margin:12px 0 0}
+.ws01-overlay .ws01-retry{margin-top:8px;border:1px solid #b9c4e9;
+ background:#fff;color:#414fb4;border-radius:8px;padding:8px 12px;
+ font-size:11px;font-weight:750}
+.ws01-overlay .ws01-retry:hover{background:#edf0fc}
+.ws01-overlay .ws01-retry:focus-visible{outline:2px solid #5d67d9;outline-offset:2px}
 .ws01-overlay .ws01-eyebrow{font-size:11px;font-weight:750;color:#838eac;
  text-transform:uppercase;letter-spacing:.7px;margin:19px 0 10px}
 .ws01-overlay .ws01-entry{
