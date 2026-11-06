@@ -5,6 +5,10 @@
 
 This continues [the prior trusted-execution fixture](./CP-WS-02D-B3-GENUINE-READ-TRUSTED-EXECUTION-FIXTURE.md) and retains **30/30 isolated domain write/denial path coverage**. No changes were made to production roles, authentication, database function privileges, RLS policies, workspace memberships, domain records, invitation flags or provider delivery.
 
+## 2026-11-06 — Real local GoTrue JWT acceptance (follow-on)
+
+[Controlled local GoTrue integration report](./CP-WS-02D-B3-LOCAL-GOTRUE-ACCEPTANCE.md) and [CI #3](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42138213159) **PASS**. Two synthetic users authenticated through a real pinned local Supabase GoTrue service (not a mock), their signed JWTs were checked by GoTrue's `/user` endpoint, and the existing exact PostgreSQL session-authority query independently denied token tampering, missing membership, inactive profiles, expired and revoked sessions. The service used an ephemeral PG17 database and was discarded. **Deployed B3 browser read acceptance is still PENDING**; no production HTTPS backend, PostgREST/RLS path, invitation provider or B4 activation was changed. Overarching acceptance remains **5/10**.
+
 ## Implementation and tests
 
 [GitHub Actions PG17/Node #191](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42135755289) **completed SUCCESS** on `main`, incorporating the original PG17 session/auth and trusted private-issuer fixtures, domain contracts and the new staging read tests.
