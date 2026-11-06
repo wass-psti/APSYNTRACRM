@@ -9,7 +9,8 @@ import {
  TL03_DRAFT_INTERFACE_ENABLED,initialTradeLinkDraftView,resetTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,parseTradeLinkDraftForm,
  calculateTradeLinkDraftLocalAmounts,updateTradeLinkDraftLocalAmounts,
- updateTradeLinkDraftInputCurrencyLabels,
+ updateTradeLinkDraftInputCurrencyLabels,tradeLinkDraftLocalSummaryValues,
+ updateTradeLinkDraftLocalSummary,
  renderTradeLinkDraftWorkspace,TradeLinkDraftWorkspace,tradeLinkDraftReady
 } from '../tradelink-draft-workspace.js';
 const workspace='00000000-0000-4000-8000-000000000001';
@@ -628,6 +629,107 @@ test('Draft module is an exact-hash CDN smoke asset and focus styling remains sc
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
+
+test('six TradeLink modules render bounded hidden local document previews only',()=>{
+ for(const module of TRADELINK_SOURCE_MODULES){
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+   view:initialTradeLinkDraftView(module.key),canManage:true});
+  assert.match(html,/data-tradelink-draft-summary data-document-type="/);
+  assert.ok(html.includes('data-document-type="'+module.key+'" hidden'),module.key);
+  assert.match(html,/Validated local Draft summary · not saved/);
+  assert.match(html,/Nothing was transmitted/);
+  assert.match(html,/type="submit" class="primary" disabled/);
+  assert.match(html,/data-action="tradelink-draft-preview"/);
+ }
+ const invalid=renderTradeLinkDraftWorkspace({detail,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  view:initialTradeLinkDraftView('esi'),canManage:true});
+ assert.doesNotMatch(invalid,/data-tradelink-draft-summary/);
+});
+
+test('local summary uses parsed source fields per module and never asserts approval',()=>{
+ const cases=[
+  {documentType:'esi',documentNumber:'SI-001',customerName:'Client',currency:'PHP',
+   customerTin:'TIN-001',verifiedBy:'Finance person',approvedBy:'Manager',
+   items:[{kind:'item',id:'1',description:'Product',quantity:2,unitPrice:50}]},
+  {documentType:'packing',documentNumber:'PL-001',customerName:'Consignee',
+   referenceNumber:'SO-001',items:[{kind:'item',id:'1',description:'Box',quantity:3,unitPrice:0,unit:'box'}]},
+  {documentType:'delivery',documentNumber:'DR-001',customerName:'Receiver',
+   referenceNumber:'SO-001',checkedBy:'QC',deliveredBy:'Logistics',
+   items:[{kind:'item',id:'1',description:'Device',quantity:1,unitPrice:0,serialNumber:'ABC-1'}]},
+  {documentType:'payment',documentNumber:'AR-001',customerName:'Payor',currency:'EUR',
+   paymentParticulars:'Received funds',cashAmount:20,chequeAmount:0,
+   receivedBy:'Receiver',verifiedBy:'Verifier'},
+  {documentType:'quotation',documentNumber:'Q-001',customerName:'Prospect',currency:'USD',
+   customerEmail:'qa@example.com',validity:'30 days',paymentTerms:'Net 30',
+   approvedBy:'Manager',vatType:'zero',
+   items:[{kind:'item',id:'1',description:'Service',quantity:1,unitPrice:100}]},
+  {documentType:'po',documentNumber:'PO-001',customerName:'Supplier',currency:'PHP',
+   paymentTerms:'Net 30',targetDeliveryDate:'2026-12-01',verifiedBy:'Account manager',
+   approvedBy:'Manager',vatType:'zero',
+   items:[{kind:'item',id:'1',description:'Parts',quantity:2,unitPrice:125}]}
+ ];
+ const expectedLabels={
+  esi:['customerTin','verifiedBy','approvedBy','localTotal'],
+  packing:['referenceNumber','lineDescription','lineQuantity','lineUnit'],
+  delivery:['lineSerialNumber','checkedBy','deliveredBy'],
+  payment:['paymentParticulars','cashAmount','chequeAmount','receivedBy'],
+  quotation:['customerEmail','validity','paymentTerms','localTotal'],
+  po:['targetDeliveryDate','verifiedBy','approvedBy','localTotal']
+ };
+ for(const draft of cases){
+  const fields=tradeLinkDraftLocalSummaryValues(draft);
+  assert.equal(fields.documentNumber,draft.documentNumber);
+  assert.equal(fields.customerName,draft.customerName);
+  assert.deepEqual(Object.keys(fields).filter(x=>x==='status'||x==='workflow'||x==='approvedAt'),[]);
+  for(const k of expectedLabels[draft.documentType])assert.ok(k in fields,k);
+  if(draft.documentType==='esi')assert.equal(fields.localTotal,'112.00 PHP');
+  if(draft.documentType==='payment')assert.equal(fields.cashAmount,'20.00 EUR');
+  if(draft.documentType==='quotation')assert.equal(fields.localTotal,'100.00 USD');
+ }
+ assert.equal(tradeLinkDraftLocalSummaryValues({documentType:'wrong'}),null);
+ assert.equal(tradeLinkDraftLocalSummaryValues(null),null);
+});
+
+test('local Draft summary DOM uses text-only output and clears on changes, invalid, wrong module',()=>{
+ const htmlSensitive='"><img src=x onerror=alert(1)>';
+ const data={documentType:'quotation',documentNumber:'Q-1',customerName:htmlSensitive,
+  customerEmail:'sample@example.com',
+  items:[{kind:'item',id:'1',description:'A & B',quantity:1,unitPrice:10}],
+  currency:'PHP',vatType:'zero'};
+ const names=['documentNumber','customerName','currency','customerEmail','localTotal'];
+ const nodes=names.map(k=>({dataset:{tradelinkDraftSummaryValue:k},textContent:'old value'}));
+ const panel={dataset:{documentType:'quotation'},hidden:true,
+  querySelectorAll:()=>nodes};
+ const form={querySelector:key=>key==='[data-tradelink-draft-summary]'?panel:null};
+ const values=updateTradeLinkDraftLocalSummary(form,data);
+ assert.equal(values.customerName,htmlSensitive);
+ assert.equal(nodes[1].textContent,htmlSensitive);
+ assert.equal(nodes.at(-1).textContent,'10.00 PHP');
+ assert.equal(panel.hidden,false);
+ assert.equal('innerHTML' in nodes[1],false);
+ updateTradeLinkDraftLocalSummary(form);
+ assert.equal(panel.hidden,true);
+ for(const node of nodes)assert.equal(node.textContent,'');
+ assert.equal(updateTradeLinkDraftLocalSummary(form,{...data,documentType:'po'}),null);
+ assert.equal(panel.hidden,true);
+ assert.equal(updateTradeLinkDraftLocalSummary({querySelector:()=>null},data),null);
+});
+
+test('success/invalid/input paths wire local summary only; no new persistence route or storage',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const draft=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
+ const formSection=app.slice(app.indexOf("case 'tradelink-draft-preview':"),
+  app.indexOf("case 'tradelink-draft-clear':"));
+ assert.match(formSection,/updateTradeLinkDraftLocalSummary\(form\);/);
+ assert.match(formSection,/updateTradeLinkDraftLocalSummary\(form,draft\);/);
+ const capture=app.slice(app.indexOf('function captureTradeLinkDraftFields('),
+  app.indexOf('function syncTradeLinkFinanceInput('));
+ assert.match(capture,/updateTradeLinkDraftLocalSummary\(form\);/);
+ assert.match(draft,/class="tl-draft-summary"/);
+ assert.doesNotMatch(draft,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
 test('dark launch never renders stale selected document content after read access is disabled',()=>{
  const malicious='"><img src=x onerror=alert(1)>';
  const view={...initialTradeLinkDraftView(),mode:'edit',

@@ -28,7 +28,7 @@ import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from 
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,updateTradeLinkDraftLocalAmounts,
- updateTradeLinkDraftInputCurrencyLabels} from './tradelink-draft-workspace.js';
+ updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary} from './tradelink-draft-workspace.js';
 import {TL03_DOMAIN_READS_ENABLED} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -2991,6 +2991,8 @@ async function action(name,button){
   const form=root.querySelector('[data-tradelink-draft-form]');
   const output=form?.querySelector('[data-tradelink-draft-preview-status]');
   if(!form||!output)break;
+  // A failed or stale validation never leaves a previous local document summary visible.
+  updateTradeLinkDraftLocalSummary(form);
   if(!form.reportValidity()){
    const invalid=form.querySelector(':invalid');
    const label=invalid?.closest('label')?.querySelector('span')?.textContent?.trim();
@@ -3002,6 +3004,7 @@ async function action(name,button){
   }
   try{
    const draft=parseTradeLinkDraftForm(new FormData(form));
+   updateTradeLinkDraftLocalSummary(form,draft);
    output.dataset.validation='valid';
    output.setAttribute('role','status');
    output.textContent='Valid local '+draft.documentType+' / '+draft.documentNumber+
@@ -4650,6 +4653,7 @@ function captureTradeLinkDraftFields(event){
  }
  state.tradeLinkDraft.formValues=values;
  state.tradeLinkDraft.draftNotice='';
+ updateTradeLinkDraftLocalSummary(form);
  updateTradeLinkDraftInputCurrencyLabels(form);
  updateTradeLinkDraftLocalAmounts(form);
  // A previous successful preview must never remain authoritative after edits.

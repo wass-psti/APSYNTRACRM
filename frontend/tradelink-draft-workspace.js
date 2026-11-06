@@ -362,6 +362,91 @@ function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line){
   '</p><p class="muted">Local estimate only · no Draft save, payment, transaction or approval.</p>'+
   '</section>';
 }
+
+/** Explicitly bounded, source-module-specific, unsaved document summary fields. */
+const localSummaryRows=Object.freeze({
+ esi:[['customerTin','Client tax identity / TIN'],
+  ['lineDescription','Invoiced item'],['lineQuantity','Quantity'],
+  ['lineUnitPrice','Unit price'],['verifiedBy','Intended finance verifier'],
+  ['approvedBy','Intended management approver'],['localTotal','Local total estimate']],
+ packing:[['referenceNumber','Source reference'],['lineDescription','Physical item'],
+  ['lineQuantity','Quantity'],['lineUnit','Unit']],
+ delivery:[['referenceNumber','Source reference'],['lineDescription','Delivered item'],
+  ['lineQuantity','Quantity'],['lineUnit','Unit'],
+  ['lineSerialNumber','Serial / asset number'],['checkedBy','QC assignee'],
+  ['deliveredBy','Logistics assignee'],['receivedBy','Recipient acknowledgement']],
+ payment:[['paymentParticulars','Payment particulars'],['cashAmount','Cash amount'],
+  ['chequeAmount','Cheque amount'],['bankName','Cheque bank'],
+  ['chequeNumber','Cheque number'],['receivedBy','Received by'],
+  ['verifiedBy','Verified by']],
+ quotation:[['customerEmail','Client email'],['customerPhone','Client phone'],
+  ['lineDescription','Priced item'],['lineQuantity','Quantity'],
+  ['lineUnitPrice','Unit price'],['validity','Offer validity'],
+  ['deliveryCommitment','Delivery commitment'],['paymentTerms','Payment terms'],
+  ['approvedBy','Intended approver'],['localTotal','Local total estimate']],
+ po:[['poNumber','Supplier PO reference'],['targetDeliveryDate','Target delivery date'],
+  ['lineDescription','Purchased item'],['lineQuantity','Quantity'],
+  ['lineUnitPrice','Unit price'],['paymentTerms','Payment terms'],
+  ['verifiedBy','Intended Account Manager reviewer'],
+  ['approvedBy','Intended final approver'],['localTotal','Local total estimate']]
+});
+const commonSummaryRows=Object.freeze([
+ ['documentNumber','Document number'],['customerName','Customer / supplier / recipient'],
+ ['currency','Currency']
+]);
+export function tradeLinkDraftLocalSummaryValues(draft){
+ if(!draft||!Object.hasOwn(localSummaryRows,draft.documentType))return null;
+ const item=Array.isArray(draft.items)?draft.items[0]||{}:{};
+ const unit=currencyUnit(draft.currency);
+ const money=name=>typeof draft[name]==='number'?
+  formatTradeLinkAmount(draft[name])+' '+unit:'';
+ const fields={
+  ...draft,lineDescription:item.description??'',lineQuantity:item.quantity??'',
+  lineUnit:item.unit??'',lineSerialNumber:item.serialNumber??'',
+  lineUnitPrice:typeof item.unitPrice==='number'?
+   formatTradeLinkAmount(item.unitPrice)+' '+unit:'',
+  cashAmount:money('cashAmount'),chequeAmount:money('chequeAmount')
+ };
+ const amount=calculateTradeLinkDraftLocalAmounts({get:name=>{
+  if(name==='lineQuantity')return item.quantity??'';
+  if(name==='lineUnitPrice')return item.unitPrice??'';
+  return draft[name]??'';
+ }});
+ fields.localTotal=amount?formatTradeLinkAmount(amount.total)+' '+amount.currency:'';
+ const rows=[...commonSummaryRows,...localSummaryRows[draft.documentType]];
+ return Object.fromEntries(rows.map(([key])=>[key,String(fields[key]??'').trim()||'—']));
+}
+/** No HTML construction from user input, browser storage, RPC, or document writes. */
+export function updateTradeLinkDraftLocalSummary(form,draft=null){
+ const panel=form?.querySelector?.('[data-tradelink-draft-summary]');
+ if(!panel)return null;
+ const nodes=panel.querySelectorAll('[data-tradelink-draft-summary-value]');
+ const module=panel.dataset?.documentType;
+ const values=draft&&draft.documentType===module?
+  tradeLinkDraftLocalSummaryValues(draft):null;
+ for(const node of nodes){
+  const name=node.dataset?.tradelinkDraftSummaryValue;
+  node.textContent=values?.[name]??'';
+ }
+ panel.hidden=!values;
+ return values;
+}
+function renderTradeLinkDraftLocalSummary(type){
+ const rows=localSummaryRows[type];
+ if(!rows)return '';
+ return '<section class="tl-draft-summary" data-tradelink-draft-summary '+
+  'data-document-type="'+escape(type)+'" hidden '+
+  'aria-labelledby="tl-draft-local-summary-title">'+
+  '<h4 id="tl-draft-local-summary-title">Validated local Draft summary · not saved</h4>'+
+  '<p class="muted">Only the fields from this local form are shown. Names are '+
+  'not verified identities. This is not a created document or approval.</p>'+
+  '<dl class="tl-draft-summary-rows">'+
+  [...commonSummaryRows,...rows].map(([key,label])=>
+   '<div><dt>'+escape(label)+'</dt><dd data-tradelink-draft-summary-value="'+
+    escape(key)+'"></dd></div>').join('')+
+  '</dl><p class="muted">Edit any input or switch modules to discard this '+
+  'local validation summary. Nothing was transmitted.</p></section>';
+}
 function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const editing=mode==='edit'&&row?.workflow_state==='draft'&&
   row.content&&typeof row.content==='object'&&
@@ -452,6 +537,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
      '>'+(editing?'Save revision':'Create Draft')+'</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
     'Not saved. Domain write activation is pending.</p>'+
+   renderTradeLinkDraftLocalSummary(type)+
   '</form></section>';
 }
 export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false}={}){

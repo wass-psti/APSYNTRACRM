@@ -129,3 +129,13 @@
 .aps-tradelink-app .tl-draft-panel :is(button,select,input,textarea):focus-visible{outline:3px solid #8d95ee;outline-offset:2px}
 .aps-tradelink-app .tl-draft-help{color:#55647f;font-size:12px;line-height:1.5;margin:6px 0}
 .aps-tradelink-app .tl-draft-finance-results dt{line-height:1.5;overflow-wrap:anywhere}
+
+/* The source-aligned document preview is local-only and hidden until validation. */
+.aps-tradelink-app .tl-draft-summary[hidden]{display:none!important}
+.aps-tradelink-app .tl-draft-summary{border:1px solid #d7e0f1;border-radius:12px;background:#f7faff;padding:16px;margin-top:16px}
+.aps-tradelink-app .tl-draft-summary h4{font-size:14px;color:#334668;margin:0 0 10px}
+.aps-tradelink-app .tl-draft-summary-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.aps-tradelink-app .tl-draft-summary-rows>div{border:1px solid #e0e7f3;background:#fff;border-radius:9px;padding:10px;min-width:0}
+.aps-tradelink-app .tl-draft-summary-rows dt{font-size:11px;color:#5e6c87}
+.aps-tradelink-app .tl-draft-summary-rows dd{margin:5px 0 0;font-size:13px;color:#253654;font-weight:650;overflow-wrap:anywhere;white-space:pre-wrap}
+@media(max-width:620px){.aps-tradelink-app .tl-draft-summary-rows{grid-template-columns:1fr}}
