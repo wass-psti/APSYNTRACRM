@@ -11,6 +11,7 @@ on:
       - 'sql/cp-ws01-discovery-activation-candidate.sql'
       - 'sql/cp-ws01b-*.sql'
       - 'sql/cp-ws01c-*.sql'
+      - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
       - 'sql/cp-ws02*.sql'
       - 'sql/tests/cp-ws01b-*.sql'
       - 'sql/tests/cp-ws01c-*.sql'
@@ -104,6 +105,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01c-b3-create-contract-candidate.sql
       - name: Verify B3-only atomic creation, idempotency and rollback without B4
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql
+      - name: Prove controlled B3 activation/grant and fail-closed rollback in disposable PG17
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql
       - name: Stage private new-account Main Workspace provisioning without signup trigger
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02b-main-provisioning-candidate.sql
       - name: Verify one Main per new verified account, no legacy backfill, rollback
