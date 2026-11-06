@@ -51,3 +51,13 @@ On the existing signed General Manager TradeLink Draft page, using harmless non-
 **Stage B remains NO-GO:** no production Draft writes, workflow approvals, document lifecycle activation, financial movement, inventory movement, roles/permission grants or irreversible operations were authorized by this work.
 
 **Progress:** The source, unit/regression, isolated-database, deployment and configured CDN smoke gates all have evidence (**5/5 technical checks**, 100% of those *technical* checks); this figure intentionally excludes the outstanding real signed-browser acceptance and is **not** production certification.
+
+## Owner sign-off addendum — 2026-11-06
+
+**Decision:** Project owner said **"consider it all good proceed"** following implementation and successful 1,110/1,110 tests, isolated PostgreSQL tests, exact-SHA Pages deployment and static CDN smoke verification.
+
+**Disposition:** **CLOSED — USER-ACCEPTED FOR ROADMAP CONTINUATION WITH DOCUMENTED BROWSER EVIDENCE EXCEPTIONS.** The owner accepts the current non-mutating six-module Draft UX increment without requiring repetition of its unavailable browser interactions. This is *not* an independently executed signed-browser pass, security certification, or a waiver of genuine session tests required before any future production activation.
+
+**Unverified preserved:** Actual signed input and module-switching interactions, interactive invalid-form feedback, clear-button click, refresh/logout identity redaction. No JWT manipulation, fabricated user sessions, account creation or production test writes.
+
+**Next permitted milestone:** Reuse the existing source-derived commercial calculator inside the staged, locally validated Draft editor for Electronic SI, Quotation, and PO to Suppliers. Preserve production feature flags `TL03_DOMAIN_READS_ENABLED=false` and `TL03_DOMAIN_WRITES_ENABLED=false`, server grants, domain data and central signed routing. **Stage B remains NO-GO.**
