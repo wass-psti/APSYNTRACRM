@@ -122,3 +122,16 @@ The QA creation still requires a genuine user-triggered signed-app operation. If
 **B3 classification:** **COMPLETE / VERIFIED (backend activation only)** during the stated 60-minute window. **B4 PENDING:** signed QA-only frontend gate, exact recovery deletion, Activity visibility, reload, restoration of all four cells, stale-revision/unauthorized denial and audit acceptance. **B5 PENDING:** explicit global deactivation, scope removal, source/provenance/audit preservation and Contacts nonmutation checks.
 
 **Next required gate: CP-BOARD-COL-DELETE / Phase B4 — Genuine Signed-Session Column Deletion and Activity Restoration Acceptance.** Production Contacts deletion (Phase C) remains unapproved and prohibited.
+
+ 
+---
+
+## B4 entry gate — scoped client activation not yet deployed (2026-11-06)
+
+**Status: BLOCKED / IMPLEMENTED-UNVERIFIED.** The user explicitly initiated B4, but no real signed-user deletion or restoration has occurred. The previous B3 60-minute database activation remains distinct and does not enable the frontend; `BOARD_COLUMN_RECOVERY_ENABLED=false` in `frontend/board-column-recovery.js`.
+
+**Live read-only preflight:** At `2026-11-06 03:12:19 UTC`, the B3 scope still targeted the approved QA board, with both global flags enabled until the scope expiry `2026-11-06 04:07:34.459742 UTC`. A subsequent read at `03:16:50 UTC` confirmed the scope was live. The active QA board still contained four items and the recovery snapshot count was zero. B3 earlier independently confirmed the original four QA cell values and Contacts values; do not reinterpret attempted new queries blocked by safety checks as fresh verification.
+
+**Execution blocker:** A proposed QA-only, exact-board and exact-column, expiry-limited frontend change was blocked by the connected repository tool safety check, and was not committed or redeployed. Do not bypass that control or use privileged SQL to impersonate genuine GoTrue acceptance. Repo head remains the B3 acceptance commit `a260464`.
+
+**B4 acceptance must still include:** secure QA-only UI exposure while the backend scope is live, signed owner deletion of `Recovery Status`, database-confirmed four-cell private snapshot, signed Activity read after refresh/reopen, exact column and four-cell restoration, actor/board isolation and stale/revoked/expired access denial, audit receipt verification and immutable Contacts preservation. After completion or abort, run B5 explicit deactivation and remove the temporary scope. If the B3 time window expires, do not reuse its one-shot activation SQL unchanged.
