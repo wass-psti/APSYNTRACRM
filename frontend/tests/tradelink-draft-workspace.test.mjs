@@ -88,6 +88,23 @@ test('dark launch never renders stale selected document content after read acces
  assert.doesNotMatch(html,/saved successfully/i);
 });
 
+test('unsaved local input survives UI redraw but stale signed edit content is redacted',()=>{
+ const staged={...initialTradeLinkDraftView(),formValues:{
+  documentType:'quotation',documentNumber:'Q-LOCAL-42',customerName:'Customer & Partner',
+  remarks:'Only in memory'}};
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:staged,canManage:true});
+ assert.match(html,/value="Q-LOCAL-42"/);
+ assert.match(html,/Customer &amp; Partner/);
+ assert.match(html,/Only in memory/);
+ const revoked={...staged,mode:'edit',selected:{documentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  record:{workflow_state:'draft',revision:2,content:{documentType:'quotation',
+    documentNumber:'Q-SECRET',customerName:'Restricted record'}}},
+  formValues:{...staged.formValues,customerName:'Restricted record'}};
+ const denied=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:revoked,canManage:false});
+ assert.doesNotMatch(denied,/Restricted record|Q-SECRET/);
+ assert.match(denied,/type="submit" class="primary" disabled/);
+});
+
 test('app integration is session-cleared and route-scoped, with no new credentials or storage',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
@@ -98,6 +115,7 @@ test('app integration is session-cleared and route-scoped, with no new credentia
  assert.match(app,/case 'tradelink-draft-archive'/);
  assert.match(app,/\!tradeLinkDraftReady\(\)/);
  assert.match(app,/state\.tradeLinkDraft=initialTradeLinkDraftView\(\)/);
+ assert.match(app,/captureTradeLinkDraftFields\(event\)/);
  assert.match(app,/state\.context\?\.user_id===auth\.userId/);
  assert.match(app,/event\.target\.matches\('\[data-tradelink-draft-form\]'\)/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|service_role|sb_secret|fetch\(/);
