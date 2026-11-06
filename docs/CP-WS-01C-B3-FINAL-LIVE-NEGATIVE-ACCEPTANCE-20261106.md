@@ -1,5 +1,8 @@
 # CP-WS-01C/B3 — Production HTTP, signed-session correlation and safe live denial evidence
 
+> **Post-refresh signed acceptance — November 6, 2026:** Following the requested page refresh and repeat B2 probe, the user supplied a new sanitized PASS report. The open CRM Security page was independently inspected and displayed Work Management as the current workspace, B2 signed discovery result PASS, 2 authorized workspaces, and five PASS checks (signed identity, workspace context, server discovery, membership catalog, stable session). The report recorded 0 writes and 0 identifiers disclosed. **Current-session signed discovery VERIFIED; post-refresh continuity SUPPORTED by user-confirmed sequence and independently observed resulting state.** The browser reader did not directly observe the reload event, so this is not an independent instrumentation trace. Historical workspace creation receipt UNAVAILABLE; live foreign-user/revoked HTTP denial and rightful-actor idempotent replay PENDING. No workspace, account, role, permission or data change was made for this evidence.
+
+
 > **Signed-browser update (November 6, 2026):** The currently opened APSYNTRA CRM Security page independently displayed B2 signed discovery result **PASS**, with **2 authorized workspaces** and five PASS checks: signed-identity, workspace-context, server-discovery, membership-catalog and stable-session. The sanitized result reported zero writes and zero identifiers disclosed. The earlier pending B2 browser check is now VERIFIED for the current session only. The original B3 creation response remains unavailable; live cross-user and revoked-session HTTP denials and original-request idempotent replay remain pending. No production records, permissions or configuration were changed.
 
 
