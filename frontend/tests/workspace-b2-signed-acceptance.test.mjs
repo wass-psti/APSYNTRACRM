@@ -66,7 +66,7 @@ test('reports never disclose names, workspace IDs, bearer tokens or personal dat
  assert.doesNotMatch(html,/Authorized Workspace|aaaaaaaa-aaaa|00000000-0000/);
  assert.match(renderWs01B2SignedAcceptance({busy:true}),/disabled/);
 });
-test('Access acceptance wiring is signed-only, cancellable on sign-out and leaves UI discovery gated',()=>{
+test('Access acceptance is signed-only; read-only member discovery is UI enabled without B4 selection',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const ui=readFileSync('frontend/workspace-ui.js','utf8');
  const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
@@ -80,7 +80,9 @@ test('Access acceptance wiring is signed-only, cancellable on sign-out and leave
  assert.match(expired,/closeWorkspacePanels\(\);state\.context=null;/);
  assert.match(expired,/state\.frtSecurityResult=null;state\.sec07Result=null;state\.ws01B2RunId\+\+;/);
  assert.match(app,/renderWs01B2SignedAcceptance/);
- assert.match(ui,/WS01_DISCOVERY_ENABLED=false/);
+ assert.match(ui,/WS01_DISCOVERY_ENABLED=true/);
+ assert.match(ui,/options\.lifecycle\.discover\(\)/);
+ assert.match(ui,/result\?\.status!=='SIGNED_MEMBER_DISCOVERY'/);
  assert.match(ui,/WS01_CREATION_ENABLED=true/);
  assert.match(ui,/WS01_SWITCHING_ENABLED=false/);
  assert.match(smoke,/frontend\/workspace-b2-signed-acceptance\.js/);
