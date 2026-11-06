@@ -1,5 +1,8 @@
 # CP-WS-02D/B3 — Deployed HTTPS host: controlled live evidence and outstanding signed-user acceptance
 
+> **2026-11-06 — SUPERSEDING SIGNED ACCEPTANCE:** The earlier default-OFF deployment subsequently became active after the operator corrected the Edge secret name. Real public-origin OPTIONS **200**, foreign-origin OPTIONS **403**, unsigned/malformed GET **401**; the deployed signed-user browser report now records **PASS and 12/12 authorized module reads**. Independent RLS, foreign-workspace and revoked-session denial are **PENDING**. See [new signed read ledger](./CP-WS-02D-B3-GENUINE-SIGNED-HTTPS-ACCEPTANCE-20261106.md). Original version-1/default-OFF statements below are historical.
+
+
 **Evidence checkpoint:** 2026-11-06 (Asia/Manila).  
 **Disposition:** **PUBLIC TRUSTED HTTPS HOST DEPLOYED, DEFAULT-OFF; PUBLIC UNAUTHENTICATED / PREFLIGHT CHECKS VERIFIED; GENUINE SIGNED-USER READ/DENIAL PENDING.**  
 **Scope:** Existing WatchdogWorkspace Supabase project `jtlusodorfnyzgyuewkz`; no additional project.
