@@ -1443,7 +1443,7 @@ async function openTradeLinkDraft(documentId){
   if(!record||record.workflow_state!=='draft')
    throw new ApiError('Document is no longer an editable Draft.',409);
   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
-   selected:{documentId,record},error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
+   selected:{documentId,record},pendingCreateId:null,error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
  }catch{
   if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
    'Draft read or authorization failed. Refresh the signed list.';
@@ -1459,9 +1459,13 @@ async function commitTradeLinkDraft(form){
  const revision=selected?.record?.revision??0;
  if(!Number.isSafeInteger(revision)||revision<0)return;
  const payload=parseTradeLinkDraftForm(new FormData(form));
+ // Keep the same UUID if an accepted create response was lost: the server
+ // will idempotently replay the identical revision-zero request, not duplicate it.
+ const documentId=selected?.documentId||state.tradeLinkDraft.pendingCreateId||crypto.randomUUID();
+ if(!selected)state.tradeLinkDraft.pendingCreateId=documentId;
  state.tradeLinkDraft.busy=true;render();
  try{
-  await tradeLinkDraftWorkspace.save({documentId:selected?.documentId,
+  await tradeLinkDraftWorkspace.save({documentId,
    expectedRevision:revision,draft:payload});
   if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
    state.context.workspace_id!==ws)return;
@@ -2998,7 +3002,7 @@ async function action(name,button){
  }
  case 'tradelink-draft-new':{
   if(tradeLinkDraftRoute()&&!state.tradeLinkDraft.busy){
-   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,error:'',message:''};
+   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,error:'',message:''};
    render();
   }
   break;
