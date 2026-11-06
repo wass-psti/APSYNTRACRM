@@ -36,6 +36,7 @@ on:
       - 'sql/cp-ws01c-b3-reviewed-production-activation-20261106.sql'
       - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
       - 'sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql'
+      - 'sql/tests/cp-ws01c-g3-disposable-lookup-candidate.sql'
       - 'sql/tests/cp-ws01c-b3-production-activated-readonly.sql'
   workflow_dispatch:
 
@@ -104,6 +105,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-readonly-acceptance.sql
       - name: Verify B2-only synthetic cross-identity, foreign, revoked and expired denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-cross-identity-denial-disposable.sql
+      - name: Preview G3 caller-bound lookup with authenticated/foreign/revoked denial and rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-g3-disposable-lookup-candidate.sql
       - name: Verify B3 production-safe schema preactivation gate (no writes)
         run: |
           set -euo pipefail
