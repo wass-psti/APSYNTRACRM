@@ -31,7 +31,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Node 22
-        uses: actions/setup-node@49933ea5288ca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@v4 # consistent with repository validation; pinned ref failed runner resolution
         with:
           node-version: '22'
       - name: Confirm shipped code syntax and public-only credentials
