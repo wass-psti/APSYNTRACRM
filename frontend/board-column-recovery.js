@@ -1,5 +1,6 @@
-/** CP-BOARD-COL-DELETE — opt-in recoverable custom-column mutation adapter.
- * DORMANT until separately authorized production SQL / signed acceptance.
+/** CP-BOARD-COL-DELETE — QA-only recoverable column acceptance adapter.
+ * Enabled solely for the verified B2 fixture during the expiring B3 scope.
+ * Backend signed actor, board-manager rights, RLS and expiry remain authoritative.
  * Activity is an audit feed; private recovery RPCs own restoration.
  */
 import {ApiError} from './session.js';
