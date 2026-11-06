@@ -15,6 +15,11 @@ BEGIN
    USING ERRCODE='42501'; END IF;
 END $g3_environment$;
 
+-- Prior B2 acceptance deliberately adds nonproduction Auth/session fixtures.
+-- Snapshot the actual pre-G3 count instead of assuming setup-only state.
+SELECT pg_catalog.set_config('cp_ws01c_g3.prior_sessions',
+ (SELECT count(*)::text FROM auth.sessions),false);
+
 BEGIN;
 -- Model separation between a caller-bound exported API and a private
 -- explicitly-authorized internal lookup. No production grants are changed.
@@ -215,7 +220,8 @@ DO $g3_rollback$
 BEGIN
  IF current_database()<>'workspace_disposable'
  OR to_regprocedure('private.ws01_g3_internal_workspace_lookup(uuid)') IS NOT NULL
- OR (SELECT count(*) FROM auth.sessions)<>6
+ OR (SELECT count(*) FROM auth.sessions)<>
+  current_setting('cp_ws01c_g3.prior_sessions')::integer
  OR (SELECT count(*) FROM public.workspaces)<>2
  OR (SELECT count(*) FROM public.workspace_members WHERE active)<>5
  OR (SELECT count(*) FROM public.work_boards)<>2
