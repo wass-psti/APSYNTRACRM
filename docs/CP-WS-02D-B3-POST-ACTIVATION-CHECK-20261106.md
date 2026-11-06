@@ -1,5 +1,8 @@
 # CP-WS-02D/B3 — Operator-configured activation, live 503 and isolated signed UI
 
+> **2026-11-06 05:37 UTC — SUPERSEDING LIVE VERIFICATION:** Following the operator's correction of the Edge secret name, the [same credential-free acceptance workflow, run 42167086872, attempt 2](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42167086872) completed **SUCCESS**. Actual publicly trusted HTTPS approved-origin OPTIONS returned **200** with exact allow-origin; foreign-origin OPTIONS returned **403** without allow-origin; anonymous and malformed bearer GET each returned **401**. All **6/6 synthetic signed-browser tests** passed. **Activation and transport/origin/gateway denial VERIFIED.** The earlier 503 below is preserved as historical pre-correction evidence. **No genuine signed-user token was supplied**, so real GoTrue/session/RLS read acceptance, cross-workspace denial and revoked-session testing remain **PENDING**. The UI is still on [draft PR #35](https://github.com/wass-psti/APSYNTRACRM/pull/35), not the deployed GitHub Pages main app. No additional secret update is required.
+
+
 **Date:** 2026-11-06 (Asia/Manila)
 **Decision:** **BLOCKED — deployed host still responds 503 to the authorized-origin preflight.**
 **Important:** The operator reports having configured `WS02D_B3_EDGE_READ_APPROVED=true` in the existing Supabase project. This is a report about the dashboard change, **not runtime acceptance**.
