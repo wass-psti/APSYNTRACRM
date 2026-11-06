@@ -102,6 +102,8 @@ function renderModule(m){
    '<div class="tl-states">'+TRADELINK_SOURCE_QUOTE_STATUSES.map(s=>'<span class="tl-state">'+esc(s)+'</span>').join('')+'</div>'+
    '<p class="muted">These stages differ from the APSYNTRA board Quote Status choices. No automatic mapping is enabled.</p>':'')+
   (['esi','quotation','po'].includes(m.key)?renderTradeLinkFinancePreview():'')+
+  '<p><a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+esc(m.key)+'">Prepare a local '+esc(m.label)+' Draft</a></p>'+
+  '<p class="muted">Opens the staged, locally validated Draft form for this module. Nothing is saved or submitted, and the full module workflow remains disabled.</p>'+
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
   '<p>Document creation, changes, approvals, PDFs, and attachments are unavailable here until the central signed domain API and its server-side authorization are verified. No local-only draft will be presented as saved.</p></div></section>';
 }
