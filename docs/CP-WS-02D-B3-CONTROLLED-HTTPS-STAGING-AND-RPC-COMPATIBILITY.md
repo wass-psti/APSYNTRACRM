@@ -1,5 +1,8 @@
 # CP-WS-02D/B3 — Controlled trusted HTTPS staging and live RPC privacy compatibility
 
+> **2026-11-06 deployed-host supplement:** This document retains the earlier, historically accurate **predeployment** checklist and source compatibility evidence. A new B3 Edge Function was **deployed default-OFF, version 1**, on the same project with `verify_jwt=true`. The [deployed-host acceptance report](./CP-WS-02D-B3-DEPLOYED-HTTPS-GATE-20261106.md) supersedes the earlier "no publicly reachable B3 host" wording: [public HTTPS anonymous/malformed-token and CORS smoke 42159136903](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42159136903) **PASSED**. Genuine deployed signed-user read/revocation/foreign-scope acceptance remains **PENDING**. No live production SQL/RLS/auth migration occurred. B3 overarching readiness remains **6/10**.
+
+
 **Checkpoint date:** 2026-11-06  
 **Decision:** `IN PROGRESS — LIVE RPC CATALOG VERIFIED; DISPOSABLE PRIVACY TEST PASS; PUBLIC TRUSTED HTTPS STAGING NOT DEPLOYED`  
 **Boundary:** Repository `wass-psti/APSYNTRACRM`, existing Supabase project `jtlusodorfnyzgyuewkz`. No second Supabase project or production change is authorized by this report.
