@@ -1,0 +1,113 @@
+name: CP-WS-02D/B3 Signed HTTPS UI and Activated Host Evidence
+
+on:
+  push:
+    branches:
+      - security/ws02d-b3-genuine-signed-https-ui
+    paths:
+      - '.github/workflows/cp-ws02d-b3-genuine-signed-https-ui.yml'
+      - 'frontend/workspace-b3-deployed-https-acceptance.js'
+      - 'frontend/tests/workspace-b3-deployed-https-acceptance.test.mjs'
+      - 'frontend/app.js'
+      - 'frontend/tests/frt-sec07-security-ui.test.mjs'
+      - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/cp-ws02d-b3-genuine-signed-https-ui.yml'
+      - 'frontend/workspace-b3-deployed-https-acceptance.js'
+      - 'frontend/tests/workspace-b3-deployed-https-acceptance.test.mjs'
+      - 'frontend/app.js'
+      - 'frontend/tests/frt-sec07-security-ui.test.mjs'
+      - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-ui-and-live-activation:
+    name: Synthetic signed UI contract + credential-free live activation probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout without retained credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify dedicated synthetic browser signed-HTTPS contract
+        run: |
+          set -euo pipefail
+          node --check frontend/app.js
+          node --check frontend/workspace-b3-deployed-https-acceptance.js
+          node --test frontend/tests/workspace-b3-deployed-https-acceptance.test.mjs
+          node scripts/verify-pages-source.mjs
+          echo 'B3_SIGNED_HTTPS_UI_SOURCE_CONTRACT_PASS_NOT_GENUINE_SIGNED_ACCEPTANCE'
+      - name: Run complete frontend regression after preserving signed logout contracts
+        run: |
+          set -euo pipefail
+          node --test frontend/tests/*.test.mjs
+          echo 'WS02D_B3_FULL_FRONTEND_REGRESSION_PASS'
+      - name: Verify host activation with real credential-free public HTTPS preflight
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -X OPTIONS \
+            -H 'Origin: https://wass-psti.github.io' \
+            -H 'Access-Control-Request-Method: GET' \
+            -H 'Access-Control-Request-Headers: authorization,apikey' \
+            --dump-header "$RUNNER_TEMP/b3-valid.headers" \
+            --output "$RUNNER_TEMP/b3-valid.body" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          echo "B3_LIVE_ACTIVATION_DIAGNOSTIC legitimate_origin_options_http=$status"
+          if grep -Eqi '^access-control-allow-origin:' "$RUNNER_TEMP/b3-valid.headers"; then
+            echo "B3_LIVE_ACTIVATION_DIAGNOSTIC allow_origin_header=present"
+          else
+            echo "B3_LIVE_ACTIVATION_DIAGNOSTIC allow_origin_header=absent"
+          fi
+          test "$status" = '200'
+          grep -Eqi '^access-control-allow-origin:[[:space:]]*https://wass-psti.github.io[[:space:]]*$' "$RUNNER_TEMP/b3-valid.headers"
+          grep -Eqi '^access-control-allow-headers:.*authorization' "$RUNNER_TEMP/b3-valid.headers"
+          grep -Eqi '^access-control-allow-headers:.*apikey' "$RUNNER_TEMP/b3-valid.headers"
+          echo 'B3_ACTIVATION_PUBLIC_PREFLIGHT_PASS status=200 allow_origin=exact'
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -X OPTIONS -H 'Origin: https://untrusted.example.invalid' \
+            -H 'Access-Control-Request-Method: GET' \
+            -H 'Access-Control-Request-Headers: authorization,apikey' \
+            --dump-header "$RUNNER_TEMP/b3-foreign.headers" \
+            --output "$RUNNER_TEMP/b3-foreign.body" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          echo "B3_LIVE_ACTIVATION_DIAGNOSTIC foreign_origin_options_http=$status"
+          test "$status" = '403'
+          ! grep -qi '^access-control-allow-origin:' "$RUNNER_TEMP/b3-foreign.headers"
+          echo 'B3_FOREIGN_ORIGIN_DENIAL_PASS status=403 no_cors=true'
+      - name: Verify anonymous and malformed bearer remain rejected by JWT gateway
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          for kind in absent malformed; do
+            if [ "$kind" = malformed ]; then
+              status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+                --proto '=https' --tlsv1.2 --max-redirs 0 \
+                -H 'Authorization: Bearer malformed-not-a-jwt' \
+                --output "$RUNNER_TEMP/b3-$kind.body" \
+                --write-out '%{http_code}' "$ENDPOINT")"
+            else
+              status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+                --proto '=https' --tlsv1.2 --max-redirs 0 \
+                --output "$RUNNER_TEMP/b3-$kind.body" \
+                --write-out '%{http_code}' "$ENDPOINT")"
+            fi
+            test "$status" = 401
+            test "$(wc -c < "$RUNNER_TEMP/b3-$kind.body")" -lt 4096
+            echo "B3_GATEWAY_DENIAL_PASS kind=$kind status=401"
+          done
+          echo 'SIGNED_USER_READ_NOT_TESTED; bearer_tokens_supplied=0; production_mutations=0'
