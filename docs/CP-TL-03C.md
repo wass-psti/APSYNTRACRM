@@ -1,6 +1,6 @@
 # CP-TL-03C — Controlled TradeLink production activation
 
-**Status:** STAGE A PRODUCTION INSTALLED / LIVE STRUCTURAL PREFLIGHT 15/15 VERIFIED; DISPOSABLE POSTGRES 17 CI VERIFIED (RUN #16, INCLUDING NARROW WRITE-ONLY ROLLBACK); PHASE 2 APPROVAL PACKET PREPARED; STAGE B WRITE EXECUTE NOT APPROVED / NOT ACTIVATED; FRESH SIGNED READ REFRESH AND LIVE SIGNED-WRITE ACCEPTANCE PENDING.  
+**Status:** STAGE A PRODUCTION INSTALLED / STRUCTURAL PREFLIGHT 15/15 VERIFIED; DISPOSABLE POSTGRES 17 CI VERIFIED (RUN #16); PHASE 2 FRESH AUTHORIZED_MANAGER SIGNED READ 6/6 USER-REPORTED PASS, HR REFRESH PENDING; STAGE B WRITE EXECUTE NOT APPROVED / NOT ACTIVATED; LIVE SIGNED-WRITE ACCEPTANCE PENDING.  
 **Project:** existing Supabase `jtlusodorfnyzgyuewkz` ONLY. No new project, backend, login, or independent user-role store.  
 **Board:** existing TradeLink `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, workspace `00000000-0000-4000-8000-000000000001`.
 
@@ -172,3 +172,12 @@ The new approval dossier `docs/CP-TL-03C-PHASE-2-SIGNED-READ-AND-STAGE-B-APPROVA
 **Remaining before a Stage B production approval decision:** fresh authorized manager and genuine HR signed read reports under deployed HTTPS, current production backup/recovery readiness and change owner, explicit separate approval of production EXECUTE grants and any production test-record writes, and continued security review of the privileged mutation boundary. **Do not automatically execute** either `GRANT` or `REVOKE` candidate. A new production permission scope requires an explicit approval and followed-by genuine signed operations; synthetic CI alone is insufficient.
 
 **Next required acceptance:** collect and verify both current-session nonsecret signed Stage A reports, then revisit Stage B approval decision with the already prepared packet and separately authorized production-data test plan. Stage A stays live and read-only.
+
+
+## Phase 2 fresh signed manager read — accepted (2026-11-06)
+
+The user supplied a new sanitized result with `checkpoint: CP-TL-03C-STAGE-A-SIGNED-READ`, `status: PASS`, `scenario: AUTHORIZED_MANAGER`, and PASS on all six checks: signed identity, effective access, document list, missing-document read, wrong-board denial and stable session. `writesAttempted=0` and `documentsDisclosed=0`. This is **fresh genuine signed application evidence supplied by the user**, not a browser session independently controlled in the assistant tools.
+
+A separate read-only live SQL query again observed zero TradeLink document rows, zero domain audit events, `authenticated` document-list EXECUTE enabled and document-commit EXECUTE disabled. The prior 15-point Phase 1 structural PASS remains accepted; no new full 15/15 result is claimed in this turn. Stage B production write grants remain disabled and unapproved. This closes only the fresh `AUTHORIZED_MANAGER` signed **read** acceptance case.
+
+Next required signed report: an existing HR/nonmanager's fresh `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED` report with six PASS checks, zero writes and zero document disclosures. Genuine foreign-workspace, revoked/expired session and later production draft mutation acceptance stay blocked or pending on their own prerequisites. See `docs/CP-TL-03C-PHASE-2-SIGNED-READ-AND-STAGE-B-APPROVAL-PACKET-2026-11-06.md` for detailed evidence and approval boundaries.
