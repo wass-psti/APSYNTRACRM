@@ -74,7 +74,7 @@ test('form parser accepts only bounded source Draft fields and never asserts per
  ])assert.throws(()=>parseTradeLinkDraftForm(fields(row)));
 });
 
-test('editor escapes untrusted details and cannot present a forged saved document',()=>{
+test('dark launch never renders stale selected document content after read access is disabled',()=>{
  const malicious='"><img src=x onerror=alert(1)>';
  const view={...initialTradeLinkDraftView(),mode:'edit',
   selected:{documentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -82,7 +82,8 @@ test('editor escapes untrusted details and cannot present a forged saved documen
     documentType:'quotation',documentNumber:'Q-100',customerName:malicious}}}};
  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
  assert.doesNotMatch(html,/<img src=x/);
- assert.match(html,/&quot;&gt;&lt;img/);
+ assert.doesNotMatch(html,/onerror=alert/);
+ assert.match(html,/Prepare a Draft/);
  assert.match(html,/type="submit" class="primary" disabled/);
  assert.doesNotMatch(html,/saved successfully/i);
 });
