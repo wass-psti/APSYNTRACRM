@@ -89,7 +89,7 @@ test('synthetic signed-envelope framing matches pinned project and clock',()=>{
  assert.equal(typeof atob,'function');
  const parts=token.split('.');
  assert.equal(parts.length,3);
- assert.match(token,/^[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}$/);
+ assert.match(token,/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/);
  const payload=parts[1].replaceAll('-','+').replaceAll('_','/');
  const got=JSON.parse(atob(payload+'='.repeat((4-payload.length%4)%4)));
  assert.equal(got.sub,actor);
