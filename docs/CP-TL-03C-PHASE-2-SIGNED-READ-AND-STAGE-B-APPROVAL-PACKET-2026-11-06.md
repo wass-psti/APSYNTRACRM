@@ -62,7 +62,7 @@ No grants to `anon`; no direct table mutations; no role/membership changes, no i
 | --- | --- |
 | Installed Stage A schema, RLS, grants, audit, dependency fingerprints | **VERIFIED — 15/15 live SQL** |
 | Disposable PostgreSQL synthetic create/CAS/roles/RLS/emergency | **VERIFIED — run #13, logs and 16 Node passes** |
-| Dedicated Stage B write-only rollback candidate and data-preservation fixture | **IMPLEMENTED; fresh CI result pending until observed** |
+| Dedicated Stage B write-only rollback candidate and data-preservation fixture | **VERIFIED — disposable PostgreSQL CI run #16 and decoded job logs** |
 | Genuine Stage A manager and HR signed reports | **Historical USER-SUBMITTED PASS; Phase 2 refresh PENDING** |
 | Genuine foreign-workspace/expired/revoked production acceptance | **BLOCKED/PENDING** |
 | Current backup and tested recovery path | **PENDING** |
@@ -81,4 +81,14 @@ No grants to `anon`; no direct table mutations; no role/membership changes, no i
 5. On unexpected privilege, scope, integrity, or audit outcomes, stop further writes and separately authorize the narrow Stage B rollback. Use the full emergency-disable candidate only when the wider read-service outage is warranted and approved.
 6. Close this gate only after signed production runtime, post-deployment regression, rollback readiness and retained-data integrity have real evidence. Track unresolved legacy source workflow, attachments and approvals separately.
 
-**Next required action within Phase 2:** collect new nonsecret signed manager and HR Stage A reports from the live Security panel; verify the narrowed disposable rollback CI result. Production Stage B remains disabled.
+**Next required action within Phase 2:** collect new nonsecret signed manager and HR Stage A reports from the live Security panel. The narrowed disposable rollback CI is now VERIFIED. Production Stage B remains disabled.
+
+
+## Verified Stage B-only rollback CI follow-up — 2026-11-06
+
+Authoritative GitHub Actions **run #16**, ID `42177877866`, head `6757a5703e5ff4fc6bb3d4a035bb328a656d24ca`, job `127760532389` **SUCCEEDED**. Both newly inserted steps completed successfully:
+
+- `Revoke Stage B write grants only, retaining Stage A reads (disposable)`.
+- `Verify read continuity and record retention after narrow revoke`.
+
+Decoded PostgreSQL log: `CP-TL-03C narrow Stage B write revoke PASS: Stage A reads preserved, documents and audit intact`. Earlier signed fixture, RLS and CAS steps remained successful; the later broad emergency-disable and retention checks also passed. Node suite result **16 pass, 0 fail**. [Run #16](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42177877866). This verifies the **disposable-only** rollback mechanism, **not** a production rollback rehearsal. No production grant/revoke was executed in this run.
