@@ -65,10 +65,10 @@ WITH expected(signature, source_md5, argument_source, authenticated_execute, sec
 ), observed AS (
  SELECT signature,source_md5,authenticated_execute,security_definer,
   CASE
-   WHEN after_call ~ '^[^,]+,\\s*auth\\.uid\\(\\)\\s*\\)' THEN 'DIRECT_AUTH_UID'
-   WHEN after_call ~ '^[^,]+,\\s*p_user_id\\s*\\)' THEN 'INTERNAL_EXPLICIT_PARAM'
-   WHEN substring(after_call FROM '^[^,]+,\\s*([a-z_][a-z_0-9]*)\\s*\\)') IS NOT NULL
-    AND body ~* ('\\m' || substring(after_call FROM '^[^,]+,\\s*([a-z_][a-z_0-9]*)\\s*\\)') || '\\s+uuid\\s*:?=\\s*auth\\.uid\\(\\)')
+   WHEN after_call ~ '^[^,]+,\s*auth\.uid\(\)\s*\)' THEN 'DIRECT_AUTH_UID'
+   WHEN after_call ~ '^[^,]+,\s*p_user_id\s*\)' THEN 'INTERNAL_EXPLICIT_PARAM'
+   WHEN substring(after_call FROM '^[^,]+,\s*([a-z_][a-z_0-9]*)\s*\)') IS NOT NULL
+    AND body ~* ('\m' || substring(after_call FROM '^[^,]+,\s*([a-z_][a-z_0-9]*)\s*\)') || '\s+uuid\s*:?=\s*auth\.uid\(\)')
     THEN 'AUTH_UID_LOCAL'
    ELSE 'REQUIRES_MANUAL_REVIEW' END AS argument_source
  FROM live
