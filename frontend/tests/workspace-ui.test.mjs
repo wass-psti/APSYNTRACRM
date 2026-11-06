@@ -400,7 +400,8 @@ test('frontend entrypoint refreshes workspace-related module assets together',()
  const moduleUrl='./workspace-ui.js?v=ws01-member-catalog-20261106';
  assert.ok(app.includes(moduleUrl));
  assert.ok(lifecycle.includes(moduleUrl));
- assert.ok(index.includes('frontend/app.js?v=ws01-member-catalog-20261106'));
+ assert.ok(index.includes('<script type="module" src="./frontend/app.js"></script>'));
+ assert.doesNotMatch(index,/frontend\/app\.js\?v=/);
 });
 test('server member list displays two eligible workspaces without fabricating global third',()=>{
  const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
