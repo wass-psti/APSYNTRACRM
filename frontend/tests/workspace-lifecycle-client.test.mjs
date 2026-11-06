@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  WorkspaceLifecycleClient,normalizeWorkspaceCreationReceipt,
- normalizeWorkspaceSelectionReceipt
+ normalizeWorkspaceSelectionReceipt,normalizeWorkspaceConfigurationReceipt
 } from '../workspace-lifecycle-client.js';
 
 const primary='00000000-0000-4000-8000-000000000001';
@@ -288,4 +288,64 @@ test('B1 migration contains no public or private RPCs and is accepted before B2/
  const discover=workflow.indexOf('-f sql/cp-ws01-discovery-activation-candidate.sql');
  const create=workflow.indexOf('-f sql/cp-ws01c-b3-create-contract-candidate.sql');
  assert.ok(install>=0&&install<verify&&verify<discover&&discover<create);
+});
+
+
+test('staged owner settings receipt requires exact CAS transition, id and no-op truth',()=>{
+ const accepted=normalizeWorkspaceConfigurationReceipt({
+  schemaVersion:1,workspaceId:foreign,name:'Engineering Ops',
+  privacy:'closed',previousName:'Engineering',previousPrivacy:'open',changed:true
+ },{workspaceId:foreign,name:'Engineering Ops',privacy:'closed',
+   expectedName:'Engineering',expectedPrivacy:'open'});
+ assert.equal(accepted.changed,true);
+ assert.equal(Object.isFrozen(accepted),true);
+ assert.equal(normalizeWorkspaceConfigurationReceipt({
+  schemaVersion:1,workspaceId:foreign,name:'Engineering Ops',
+  privacy:'closed',previousName:'Engineering Ops',previousPrivacy:'closed',
+  changed:false
+ },{workspaceId:foreign,name:'Engineering Ops',privacy:'closed',
+   expectedName:'Engineering Ops',expectedPrivacy:'closed'}).changed,false);
+ const scope={workspaceId:foreign,name:'Engineering Ops',privacy:'closed',
+  expectedName:'Engineering',expectedPrivacy:'open'};
+ for(const forged of [
+  {schemaVersion:1,workspaceId:primary,name:'Engineering Ops',privacy:'closed',
+   previousName:'Engineering',previousPrivacy:'open',changed:true},
+  {schemaVersion:1,workspaceId:foreign,name:'Forged',privacy:'closed',
+   previousName:'Engineering',previousPrivacy:'open',changed:true},
+  {schemaVersion:1,workspaceId:foreign,name:'Engineering Ops',privacy:'open',
+   previousName:'Engineering',previousPrivacy:'open',changed:true},
+  {schemaVersion:1,workspaceId:foreign,name:'Engineering Ops',privacy:'closed',
+   previousName:'Unknown',previousPrivacy:'open',changed:true},
+  {schemaVersion:1,workspaceId:foreign,name:'Engineering Ops',privacy:'closed',
+   previousName:'Engineering',previousPrivacy:'open',changed:false}
+ ])assert.throws(()=>normalizeWorkspaceConfigurationReceipt(forged,scope));
+});
+
+test('workspace configuration remains ungranted and client cannot send dormant RPC',async()=>{
+ let calls=0;
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>{calls++;return {id:actor};}},
+  api:{context:async()=>{calls++;throw Error('MUST_NOT_QUERY');},
+   rpc:async()=>{calls++;throw Error('MUST_NOT_WRITE');}}
+ });
+ await assert.rejects(client.configure({
+  workspaceId:foreign,name:'Engineering Ops',privacy:'closed',
+  expectedName:'Engineering',expectedPrivacy:'open'
+ }),/not activated/);
+ assert.equal(calls,0);
+ const migration=readFileSync('sql/cp-ws01c-b4-owner-configuration-candidate.sql','utf8');
+ const acceptance=readFileSync('sql/tests/cp-ws01c-b4-owner-configuration-disposable.sql','utf8');
+ const workflow=readFileSync('.github/workflows/cp-ws01b-disposable-postgres.yml','utf8');
+ assert.match(migration,/private\.ws01_signed_actor_session\(\)/);
+ assert.match(migration,/role\.relation='owner'/);
+ assert.match(migration,/m\.active IS TRUE/);
+ assert.match(migration,/p_expected_name IS DISTINCT FROM v_old_name/);
+ assert.match(migration,/FOR UPDATE OF w,policy FOR SHARE OF m,role/);
+ assert.match(migration,/workspace\.configured/);
+ assert.match(migration,/REVOKE ALL ON FUNCTION public\.wm_ws01_configure/);
+ assert.doesNotMatch(migration,/GRANT EXECUTE ON FUNCTION public\.wm_ws01_configure/);
+ assert.match(acceptance,/WHEN serialization_failure/);
+ assert.match(acceptance,/WHEN insufficient_privilege/);
+ assert.match(acceptance,/ROLLBACK;/);
+ assert.match(workflow,/cp-ws01c-b4-owner-configuration-disposable\.sql/);
 });
