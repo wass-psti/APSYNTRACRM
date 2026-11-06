@@ -47,7 +47,8 @@ function isVerified(actor){
 }
 function scopeMatches(ctx,actor){
  return Boolean(ctx && ctx.user_id===actor.id &&
-   UUID.test(ctx.workspace_id) && ctx.profile?.status==='active');
+   UUID.test(ctx.workspace_id) && ctx.profile?.status==='active' &&
+   (!actor.workspaceId || ctx.workspace_id===actor.workspaceId));
 }
 
 /**
