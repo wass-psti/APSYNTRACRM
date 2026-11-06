@@ -378,3 +378,43 @@ test('invitation panel previews draft only, never sends email or creates members
  assert.match(css,/\.ws02-invite-card/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
+
+
+test('workspace selector uses signed catalog counts and permits a read-only retry',()=>{
+ const source=readFileSync('frontend/workspace-ui.js','utf8');
+ const css=readFileSync('frontend/workspace-ui.css','utf8');
+ assert.match(source,/Authorized workspaces · /);
+ assert.match(source,/visibleWorkspaces\(read\(\)\)\.length/);
+ assert.match(source,/data-ws01-action="retry"/);
+ assert.match(source,/selectorSession\?\.load\?\.\(\)/);
+ assert.match(source,/session\.catalog=workspaceCatalog\(current\)/);
+ assert.match(source,/if\(session\.status==='loading'&&session\.started\)return/);
+ assert.match(source,/data-ws01-feedback/);
+ assert.match(css,/\.ws01-retry:focus-visible/);
+ assert.doesNotMatch(source,/WS01_SWITCHING_ENABLED=true/);
+});
+test('frontend entrypoint refreshes workspace-related module assets together',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const lifecycle=readFileSync('frontend/workspace-lifecycle-client.js','utf8');
+ const index=readFileSync('index.html','utf8');
+ const moduleUrl='./workspace-ui.js?v=ws01-member-catalog-20261106';
+ assert.ok(app.includes(moduleUrl));
+ assert.ok(lifecycle.includes(moduleUrl));
+ assert.ok(index.includes('frontend/app.js?v=ws01-member-catalog-20261106'));
+});
+test('server member list displays two eligible workspaces without fabricating global third',()=>{
+ const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const third='00000000-0000-4000-8000-000000000003';
+ const catalog=normalizeServerWorkspaceCatalog({
+  schemaVersion:1,userId:actor,activeWorkspaceId:signedWorkspace,
+  rows:[
+   {id:signedWorkspace,name:'Work Management',relation:'member',privacy:'closed',active:true},
+   {id:foreignWorkspace,name:'Operations',relation:'owner',privacy:'closed',active:false}
+  ]
+ },{userId:actor,workspaceId:signedWorkspace});
+ assert.equal(catalog.status,'SIGNED_MEMBER_DISCOVERY');
+ assert.equal(visibleWorkspaces(catalog).length,2);
+ assert.deepEqual(visibleWorkspaces(catalog).map(w=>w.name),['Work Management','Operations']);
+ assert.ok(visibleWorkspaces(catalog).every(w=>w.id!==third));
+ assert.equal(catalog.canSwitch,false);
+});
