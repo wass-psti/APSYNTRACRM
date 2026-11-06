@@ -6,7 +6,8 @@
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {normalizeServerWorkspaceCatalog,validateWorkspaceProposal,
- WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED
+ WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED,
+ WS01_CONFIGURATION_ENABLED
 } from './workspace-ui.js?v=ws01-controls-20261106';
 
 const fail=(message,status=403)=>{throw new ApiError(message,status);};
@@ -28,6 +29,20 @@ export function normalizeWorkspaceSelectionReceipt(receipt,target,expected){
   fail('Invalid authoritative workspace switch receipt.',409);
  return Object.freeze({workspaceId:target,previousWorkspaceId:expected,
   switched:receipt.switched});
+}
+/** A configuration receipt must match the requested optimistic-CAS transition.
+ * The caller must still fetch fresh signed discovery before displaying values. */
+export function normalizeWorkspaceConfigurationReceipt(receipt,{
+ workspaceId,name,privacy,expectedName,expectedPrivacy
+}={}){
+ const changed=name!==expectedName||privacy!==expectedPrivacy;
+ if(receipt?.schemaVersion!==1||!validUuid(workspaceId)||
+  receipt.workspaceId!==workspaceId||receipt.name!==name||
+  receipt.privacy!==privacy||receipt.previousName!==expectedName||
+  receipt.previousPrivacy!==expectedPrivacy||
+  typeof receipt.changed!=='boolean'||receipt.changed!==changed)
+  fail('Invalid authoritative workspace configuration receipt.',409);
+ return Object.freeze({workspaceId,name,privacy,changed});
 }
 export class WorkspaceLifecycleClient{
  constructor({auth,api}={}){this.auth=auth;this.api=api;}
@@ -67,6 +82,28 @@ export class WorkspaceLifecycleClient{
    p_name:proposal.name,p_privacy:proposal.privacy,p_request_id:requestId});
   const receipt=normalizeWorkspaceCreationReceipt(raw,proposal.privacy);
   await this.stable(signed); // creation never silently changes the workspace
+  return receipt;
+ }
+ async configure({workspaceId,name,privacy,expectedName,expectedPrivacy}={}){
+  if(!WS01_CONFIGURATION_ENABLED)
+   fail('Workspace configuration is not activated.',503);
+  const validated=validateWorkspaceProposal({name,privacy});
+  if(!validUuid(workspaceId)||!validated.valid||
+   typeof expectedName!=='string'||!expectedName.trim()||
+   expectedName.length>120||!['open','closed'].includes(expectedPrivacy))
+   fail('Invalid workspace configuration request.',400);
+  const signed=await this.signed();
+  const raw=await this.api.rpc('wm_ws01_configure',{
+   p_workspace_id:workspaceId,p_name:validated.name,
+   p_privacy:validated.privacy,p_expected_name:expectedName,
+   p_expected_privacy:expectedPrivacy
+  });
+  const receipt=normalizeWorkspaceConfigurationReceipt(raw,{
+   workspaceId,name:validated.name,privacy:validated.privacy,
+   expectedName,expectedPrivacy
+  });
+  // A confirmed mutation must never change the active session's workspace.
+  await this.stable(signed);
   return receipt;
  }
  async select(targetWorkspaceId,expectedWorkspaceId){
