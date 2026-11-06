@@ -41,19 +41,46 @@ test('workspace selection receipt requires exact target, previous scope and chan
   {schemaVersion:1,workspaceId:foreign,previousWorkspaceId:primary,switched:'true'}
  ])assert.throws(()=>normalizeWorkspaceSelectionReceipt(invalid,foreign,primary));
 });
-test('client lifecycle methods fail closed before production approval and send zero RPCs',async()=>{
- let calls=0;
+test('inactive discovery/switch and mismatched authenticated identity send zero creation RPCs',async()=>{
+ let rpcCalls=0;
  const client=new WorkspaceLifecycleClient({
-  auth:{userId:actor,getVerifiedUser:async()=>{calls++;return {id:actor};}},
-  api:{context:async()=>{calls++;return {
-   user_id:actor,workspace_id:primary,profile:{status:'active'}};},
-   rpc:async()=>{calls++;throw Error('PRODUCTION_RPC_MUST_NOT_RUN');}}
+  auth:{userId:actor,getVerifiedUser:async()=>({id:foreign})},
+  api:{context:async()=>({user_id:actor,workspace_id:primary,profile:{status:'active'}}),
+   rpc:async()=>{rpcCalls++;throw Error('UNEXPECTED_CREATION_RPC');}}
  });
  await assert.rejects(client.discover(),/not activated/);
  await assert.rejects(client.create({
-  name:'New',privacy:'closed',requestId:foreign}),/not activated/);
+  name:'New',privacy:'closed',requestId:foreign
+ }),/Signed workspace identity changed/);
  await assert.rejects(client.select(foreign,primary),/not activated/);
- assert.equal(calls,0);
+ assert.equal(rpcCalls,0);
+});
+
+test('enabled create sends exactly one caller-scoped RPC and independently rechecks stable context',async()=>{
+ let signedChecks=0,contextChecks=0,rpcCalls=0;
+ const requestId='99999999-9999-4999-8999-999999999901';
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>{signedChecks++;return {id:actor};}},
+  api:{
+   context:async()=>{contextChecks++;return {user_id:actor,
+    workspace_id:primary,profile:{status:'active'}};},
+   rpc:async(method,args)=>{
+    rpcCalls++;assert.equal(method,'wm_ws01_create');
+    assert.deepEqual(args,{p_name:'Authorized Workspace',
+     p_privacy:'closed',p_request_id:requestId});
+    return {schemaVersion:1,workspaceId:foreign,relation:'owner',
+     privacy:'closed',idempotent:false,active:false};
+   }
+  }
+ });
+ const r=await client.create({name:' Authorized Workspace ',
+  privacy:'closed',requestId});
+ assert.equal(r.relation,'owner');
+ assert.equal(r.active,false);
+ assert.equal(r.workspaceId,foreign);
+ assert.equal(rpcCalls,1);
+ assert.equal(signedChecks,2);
+ assert.equal(contextChecks,2);
 });
 test('pure signed identity validation fails closed on mismatches',async()=>{
  const client=new WorkspaceLifecycleClient({

@@ -12,7 +12,7 @@ const foreignWorkspace='00000000-0000-4000-8000-000000000002';
 const current={id:signedWorkspace,name:'Work Management'};
 test('workspace catalog admits only the current signed context; no unverified discovery',()=>{
  assert.equal(WS01_DISCOVERY_ENABLED,false);
- assert.equal(WS01_CREATION_ENABLED,false);
+ assert.equal(WS01_CREATION_ENABLED,true);
  assert.equal(WS01_SWITCHING_ENABLED,false);
  const result=workspaceCatalog(current);
  assert.equal(result.status,'CURRENT_WORKSPACE_ONLY');
@@ -58,12 +58,12 @@ test('create-workspace review validates open/closed and rejects malicious names'
   {name:'Test',privacy:'public'},{name:'Test',privacy:''}
  ])assert.equal(validateWorkspaceProposal(proposal).valid,false);
 });
-test('workspace creation readiness explicitly blocks server activation without any workspace mutation',()=>{
+test('workspace creation readiness does not override the server authorization boundary',()=>{
  const valid=assessWorkspaceCreationReadiness({name:' Main Workspace ',privacy:'closed'});
  assert.equal(valid.valid,true);
  assert.equal(valid.canCreate,false);
- assert.equal(valid.status,'PENDING_SERVER_ACTIVATION');
- assert.match(valid.message,/approved signed server lifecycle/);
+ assert.equal(valid.status,'SERVER_ACCEPTANCE_REQUIRED');
+ assert.match(valid.message,/server must independently authorize creation/i);
  assert.match(valid.message,/No workspace was created/);
  assert.ok(Object.isFrozen(valid));
  for(const draft of [
@@ -105,7 +105,7 @@ test('create modal explains blocked lifecycle and defaults privacy closed withou
  assert.match(css,/overflow-wrap:anywhere/);
 });
 
-test('workspace creation stays server-blocked by default and never invokes client create',async()=>{
+test('explicit local disable remains fail-closed without invoking creation RPC',async()=>{
  let calls=0;
  const lifecycle={create:async()=>{calls++;throw Error('MUST_NOT_WRITE');}};
  const requestId='11111111-1111-4111-8111-111111111111';
@@ -114,13 +114,13 @@ test('workspace creation stays server-blocked by default and never invokes clien
  });
  assert.equal(invalid.status,'INVALID_DRAFT');
  const disabled=await submitWorkspaceCreation({
-  proposal:{name:'A Valid Workspace',privacy:'closed'},lifecycle,requestId
+  proposal:{name:'A Valid Workspace',privacy:'closed'},enabled:false,lifecycle,requestId
  });
  assert.equal(disabled.status,'PENDING_SERVER_ACTIVATION');
  assert.equal(disabled.ok,false);
  assert.equal(disabled.valid,true);
  assert.equal(calls,0);
- assert.equal(WS01_CREATION_ENABLED,false);
+ assert.equal(WS01_CREATION_ENABLED,true);
 });
 
 test('authorized creation path validates an exact owner receipt, stable UUID and idempotent replay',async()=>{
@@ -179,10 +179,10 @@ test('creation handler never mistakes denial, malformed receipt or ambiguous tim
  assert.equal(badId.status,'CLIENT_NOT_READY');
 });
 
-test('new create UI keeps draft mode by default, guarded branch for authorized signed lifecycle',()=>{
+test('signed create UI is enabled with guarded server-denial and idempotency branches',()=>{
  const module=readFileSync('frontend/workspace-ui.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(module,/WS01_CREATION_ENABLED=false/);
+ assert.match(module,/WS01_CREATION_ENABLED=true/);
  assert.match(module,/function createContent\(\{enabled=WS01_CREATION_ENABLED\}=\{\}\)/);
  assert.match(module,/if\(!enabled\)\{/);
  assert.match(module,/await submitWorkspaceCreation\(\{proposal:validated/);
@@ -214,7 +214,7 @@ test('integration is limited to authorized workspace context and never executes 
  const index=readFileSync('index.html','utf8');
  const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
  assert.doesNotMatch(module,/[.]rpc\(['"](?:wm_create_workspace|wm_switch_workspace|wm_ws01_create|wm_ws01_switch)/);
- assert.match(module,/WS01_CREATION_ENABLED=false/);
+ assert.match(module,/WS01_CREATION_ENABLED=true/);
  assert.match(module,/No workspace was created/);
  assert.match(app,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
  assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\{lifecycle:workspaceLifecycleClient\}\)/);

@@ -81,7 +81,7 @@ test('Access acceptance wiring is signed-only, cancellable on sign-out and leave
  assert.match(expired,/state\.frtSecurityResult=null;state\.sec07Result=null;state\.ws01B2RunId\+\+;/);
  assert.match(app,/renderWs01B2SignedAcceptance/);
  assert.match(ui,/WS01_DISCOVERY_ENABLED=false/);
- assert.match(ui,/WS01_CREATION_ENABLED=false/);
+ assert.match(ui,/WS01_CREATION_ENABLED=true/);
  assert.match(ui,/WS01_SWITCHING_ENABLED=false/);
  assert.match(smoke,/frontend\/workspace-b2-signed-acceptance\.js/);
 });
