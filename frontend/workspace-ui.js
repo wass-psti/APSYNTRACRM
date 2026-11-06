@@ -6,7 +6,7 @@
 import {validUuid} from './data.js';
 
 export const WS01_DISCOVERY_ENABLED=false;
-export const WS01_CREATION_ENABLED=false;
+export const WS01_CREATION_ENABLED=true;
 export const WS01_SWITCHING_ENABLED=false;
 // Invitation delivery requires the separately gated CP-WS-02D backend.
 export const WS02_INVITATIONS_ENABLED=false;
