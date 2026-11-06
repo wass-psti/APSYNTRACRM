@@ -1,6 +1,6 @@
 # CP-TL-03C — Controlled TradeLink production activation
 
-**Status:** STAGE A PRODUCTION INSTALLED / LIVE STRUCTURAL PREFLIGHT 15/15 VERIFIED (2026-11-06); DISPOSABLE POSTGRES 17 CI VERIFIED (RUN #13); STAGE B WRITE EXECUTE NOT APPROVED / NOT ACTIVATED; LIVE SIGNED-WRITE ACCEPTANCE PENDING.  
+**Status:** STAGE A PRODUCTION INSTALLED / LIVE STRUCTURAL PREFLIGHT 15/15 VERIFIED; DISPOSABLE POSTGRES 17 CI VERIFIED (RUN #16, INCLUDING NARROW WRITE-ONLY ROLLBACK); PHASE 2 APPROVAL PACKET PREPARED; STAGE B WRITE EXECUTE NOT APPROVED / NOT ACTIVATED; FRESH SIGNED READ REFRESH AND LIVE SIGNED-WRITE ACCEPTANCE PENDING.  
 **Project:** existing Supabase `jtlusodorfnyzgyuewkz` ONLY. No new project, backend, login, or independent user-role store.  
 **Board:** existing TradeLink `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, workspace `00000000-0000-4000-8000-000000000001`.
 
@@ -155,3 +155,20 @@ Query returned **`BLOCKED_NO_ACTIVE_FOREIGN_MEMBERS`**. The foreign workspace ex
 **Canonical detailed checkpoint:** `docs/CP-TL-03C-PHASE-1-PRODUCTION-PREFLIGHT-2026-11-06.md`.
 
 **Next:** `CP-TL-03C / Phase 2 — Genuine Signed Stage A Read Acceptance Refresh and Stage B Approval Packet`. Do not activate `sql/cp-tl03c-write-permission-candidate.sql` without new separately scoped production permission approval and a maintained rollback decision.
+
+
+## Phase 2 — Genuine signed Stage A refresh and Stage B approval packet (2026-11-06)
+
+**Classification:** Phase 2 implementation and risk/approval preparation **VERIFIED**; new live signed read refresh **PENDING**; Stage B production permission change **NOT AUTHORIZED / NOT EXECUTED**.
+
+The existing `frontend/tradelink-stage-a-signed-acceptance.js` is already wired to the real Security page under `Run Stage A signed read checks` and `Copy nonsecret result`. It performs six signed GoTrue/self-effective-access/authorized-list/nonexistent-read/wrong-board/stable-session checks without any write RPC. Historical signed user-submitted `AUTHORIZED_MANAGER` 6/6 and HR `BOARD_MANAGER_DENIED` 6/6 evidence is preserved; **no new live signed report was generated or intercepted by the assistant** because the originating browser context is unavailable. The existing foreign-workspace user prerequisite remains blocked, and controlled revoked/expired production bearer tests remain pending.
+
+The new approval dossier `docs/CP-TL-03C-PHASE-2-SIGNED-READ-AND-STAGE-B-APPROVAL-PACKET-2026-11-06.md` records the proposed **exact two EXECUTE grants** for `authenticated`, Stage A integrity, existing SHA/source guards, technical authority boundaries, production rollout sequence, nonproduction acceptance, outstanding backup/recovery and explicit approval requirements. No Stage B grants, role changes, records, or schema alterations were made during Phase 2.
+
+**Stage B-only rollback gap closed in staged code:** `sql/cp-tl03c-stage-b-write-revoke-candidate.sql` reverses only the two authenticated draft-command EXECUTE permissions, **preserving approved Stage A read/list access and existing documents, board items, immutable audit events, and RLS**. It is distinct from the existing broader `sql/cp-tl03c-emergency-disable-candidate.sql`, which also disables Stage A reads. The new `sql/tests/cp-tl03c-disposable-write-revoke-acceptance.sql` tests data retention and restricted grants in disposable PostgreSQL. Neither candidate was executed against production.
+
+**Independent CI proof:** GitHub Actions [run #16](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42177877866), PostgreSQL 17 job `127760532389`, completed **SUCCESS**. All workflow steps, including narrow Stage B-only write revoke, post-revoke read continuity and retention checks, and final emergency-disable fixture, passed. Actual decoded PostgreSQL log: `CP-TL-03C narrow Stage B write revoke PASS: Stage A reads preserved, documents and audit intact`. Node suite **16 pass / 0 fail**. This is disposable-only integration evidence, not production role/session validation.
+
+**Remaining before a Stage B production approval decision:** fresh authorized manager and genuine HR signed read reports under deployed HTTPS, current production backup/recovery readiness and change owner, explicit separate approval of production EXECUTE grants and any production test-record writes, and continued security review of the privileged mutation boundary. **Do not automatically execute** either `GRANT` or `REVOKE` candidate. A new production permission scope requires an explicit approval and followed-by genuine signed operations; synthetic CI alone is insufficient.
+
+**Next required acceptance:** collect and verify both current-session nonsecret signed Stage A reports, then revisit Stage B approval decision with the already prepared packet and separately authorized production-data test plan. Stage A stays live and read-only.
