@@ -18,7 +18,7 @@ BEGIN
 END
 $guard$;
 
--- Only added condition: explicit user must equal the signed database actor.
+-- Only added conditions: a non-null signed actor and matching explicit user.
 -- All existing domain paths and the original function signature are preserved.
 CREATE OR REPLACE FUNCTION public.has_module_access(
  p_module_id text, p_user_id uuid DEFAULT auth.uid()
