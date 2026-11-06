@@ -15,6 +15,7 @@ END $pre$;
 
 -- The real candidate activation must pass exact source/prerequisite/grant gates.
 \i sql/cp-ws01c-b3-controlled-production-activation-candidate.sql
+\i sql/tests/cp-ws01c-b3-production-activated-readonly.sql
 DO $active$
 BEGIN
  IF NOT has_function_privilege('authenticated',
