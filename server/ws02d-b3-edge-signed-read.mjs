@@ -16,27 +16,29 @@ const PROJECT='https://jtlusodorfnyzgyuewkz.supabase.co';
 const PUBLISHABLE=/^sb_publishable_[A-Za-z0-9_-]{8,}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const TOKEN=/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/;
-const denied=()=>new Error('Signed staging context unavailable');
+const denied=(stage='')=>new Error('Signed staging context unavailable'+(stage?': '+stage:''));
 export const WS02D_B3_EDGE_SIGNED_READ_ENABLED=false;
 
 function verifiedEnvelope(jwt,clock){
  if(typeof jwt!=='string'||jwt.length<65||jwt.length>10000||!TOKEN.test(jwt))
-  throw denied();
+  throw denied('framing');
  try{
   const payload=jwt.split('.')[1];
-  if(payload.length>7000)throw denied();
+  if(payload.length>7000)throw denied('payload-size');
   const base64=payload.replaceAll('-','+').replaceAll('_','/');
   const json=atob(base64+'='.repeat((4-base64.length%4)%4));
-  if(json.length>5000)throw denied();
+  if(json.length>5000)throw denied('decoded-size');
   const c=JSON.parse(json);
   if(!c||Array.isArray(c)||c.role!=='authenticated'||
      !UUID.test(c.sub)||!UUID.test(c.session_id)||
      c.iss!==PROJECT+'/auth/v1'||c.is_anonymous===true||
      !Number.isSafeInteger(c.exp)||c.exp*1000<=clock())
-   throw denied();
+   throw denied('claims');
   return Object.freeze({id:c.sub,sessionId:c.session_id});
- }catch{throw denied();}
+ }catch(err){throw denied(err?.message?.split(': ').at(-1)||'decode');}
 }
+/** Test-only inspection of UNTRUSTED claims. Never authorizes access. */
+export function inspectB3UntrustedEnvelopeForTest(jwt,clock){return verifiedEnvelope(jwt,clock);}
 function exactlyApprovedProject(projectUrl){
  try{
   const u=new URL(projectUrl);
