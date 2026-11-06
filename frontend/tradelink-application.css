@@ -112,3 +112,12 @@
 .aps-tradelink-app .tl-draft-feedback{margin:14px 0 0;padding:10px 13px;border-radius:9px;border:1px solid #dce3f9;background:#f6f8ff;color:#3e5180}
 .aps-tradelink-app [data-tradelink-draft-preview-status][data-validation="invalid"]{color:#a12b3d;font-weight:650}
 .aps-tradelink-app [data-tradelink-draft-preview-status][data-validation="valid"]{color:#17734e;font-weight:650}
+
+/* Local Draft commercial numbers never imply a saved document or workflow approval. */
+.aps-tradelink-app .tl-draft-finance{margin:16px 0;padding:15px 17px;border:1px solid #dce4f2;background:#f8faff;border-radius:12px}
+.aps-tradelink-app .tl-draft-finance h4{font-size:13px;margin:0 0 9px;color:#354468}
+.aps-tradelink-app .tl-draft-finance-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:12px 0}
+.aps-tradelink-app .tl-draft-finance-results>div{min-width:0;padding:10px;border-radius:9px;background:#fff;border:1px solid #e2e8f4}
+.aps-tradelink-app .tl-draft-finance-results dt{font-size:11px;color:#66738c}
+.aps-tradelink-app .tl-draft-finance-results dd{margin:5px 0 0;font-size:16px;font-weight:750;color:#2d3f69;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+@media(max-width:620px){.aps-tradelink-app .tl-draft-finance-results{grid-template-columns:1fr}}

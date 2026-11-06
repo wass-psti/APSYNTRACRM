@@ -8,6 +8,7 @@ import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from '../tradelink
 import {
  TL03_DRAFT_INTERFACE_ENABLED,initialTradeLinkDraftView,resetTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,parseTradeLinkDraftForm,
+ calculateTradeLinkDraftLocalAmounts,updateTradeLinkDraftLocalAmounts,
  renderTradeLinkDraftWorkspace,TradeLinkDraftWorkspace,tradeLinkDraftReady
 } from '../tradelink-draft-workspace.js';
 const workspace='00000000-0000-4000-8000-000000000001';
@@ -379,6 +380,85 @@ test('local validation feedback is specific, sanitized and reset after edited in
  assert.match(app,/if\(!tradeLinkDraftRoute\(\)\|\|state\.tradeLinkDraft\.busy\)break;/);
 });
 
+
+test('priced Drafts reuse source calculator and preserve explicit currency without invented FX',()=>{
+ for(const type of ['esi','quotation','po']){
+  const values={documentType:type,lineQuantity:'2',lineUnitPrice:'125',
+   currency:'PHP',vatType:'12'};
+  const result=calculateTradeLinkDraftLocalAmounts(fields(values));
+  assert.deepEqual(result,{currency:'PHP',subtotal:250,vat:30,total:280});
+  assert.deepEqual(calculateTradeLinkDraftLocalAmounts(fields({...values,currency:'EUR'})),{
+   currency:'EUR',subtotal:250,vat:30,total:280});
+  assert.deepEqual(calculateTradeLinkDraftLocalAmounts(fields({...values,vatType:'zero'})),{
+   currency:'PHP',subtotal:250,vat:0,total:250});
+ }
+ for(const type of ['packing','delivery','payment']){
+  assert.equal(calculateTradeLinkDraftLocalAmounts(fields({documentType:type,lineQuantity:'2',
+   lineUnitPrice:'125',currency:'PHP',vatType:'12'})),null);
+ }
+ for(const changes of [
+  {lineQuantity:''},{lineQuantity:'0'},{lineQuantity:'NaN'}, {lineQuantity:'-1'},
+  {lineQuantity:'1000000001'}, {lineUnitPrice:''},{lineUnitPrice:'Infinity'},
+  {lineUnitPrice:'0'}, {lineUnitPrice:'-9'}, {lineUnitPrice:'1000000001'},
+  {currency:'NOT-CURRENCY'}, {vatType:'not-vat'}
+ ]){
+  const result=calculateTradeLinkDraftLocalAmounts(fields({
+   documentType:'quotation',lineQuantity:'2',lineUnitPrice:'125',
+   currency:'PHP',vatType:'12',...changes}));
+  assert.equal(result,null,JSON.stringify(changes));
+ }
+});
+
+test('commercial estimate exists only for the three priced module forms and is never a submit',()=>{
+ for(const module of TRADELINK_SOURCE_MODULES){
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,canManage:true,
+   view:initialTradeLinkDraftView(module.key)});
+  const expected=['esi','quotation','po'].includes(module.key);
+  assert.equal(html.includes('data-tradelink-draft-finance'),expected,module.key);
+  if(expected){
+   for(const key of ['subtotal','vat','total'])
+    assert.ok(html.includes('data-tradelink-draft-amount="'+key+'"'),key);
+   assert.match(html,/No exchange rate or approval is inferred/);
+   assert.match(html,/Local estimate only · no Draft save, payment, transaction or approval/);
+  }
+  assert.match(html,/type="submit" class="primary" disabled/);
+ }
+});
+
+test('local commercial estimate updates DOM text only and resets to placeholders for invalid fields',()=>{
+ const values={documentType:'quotation',lineQuantity:'2',lineUnitPrice:'125',
+  currency:'PHP',vatType:'12'};
+ const nodes=new Map([
+  ['[data-tradelink-draft-amount-currency]',{textContent:'—'}],
+  ...['subtotal','vat','total'].map(x=>['[data-tradelink-draft-amount="'+x+'"]',{textContent:'—'}]),
+  ['[data-tradelink-draft-finance-status]',{textContent:''}]
+ ]);
+ const panel={querySelector:s=>nodes.get(s)||null};
+ const form={
+  querySelector(s){
+   if(s==='[data-tradelink-draft-finance]')return panel;
+   const name=/^\[name="([^"]+)"\]$/.exec(s)?.[1];
+   return name?{value:values[name]??''}:null;
+  }
+ };
+ assert.equal(updateTradeLinkDraftLocalAmounts(form).total,280);
+ assert.equal(nodes.get('[data-tradelink-draft-amount="total"]').textContent,'280.00');
+ assert.equal(nodes.get('[data-tradelink-draft-amount="vat"]').textContent,'30.00');
+ assert.equal(nodes.get('[data-tradelink-draft-amount-currency]').textContent,'PHP');
+ values.lineUnitPrice='';
+ assert.equal(updateTradeLinkDraftLocalAmounts(form),null);
+ for(const node of ['subtotal','vat','total'])
+  assert.equal(nodes.get('[data-tradelink-draft-amount="'+node+'"]').textContent,'—');
+ assert.equal(nodes.get('[data-tradelink-draft-amount-currency]').textContent,'—');
+ assert.match(nodes.get('[data-tradelink-draft-finance-status]').textContent,/Enter a valid positive quantity/);
+ assert.equal(updateTradeLinkDraftLocalAmounts({querySelector:()=>null}),null);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/updateTradeLinkDraftLocalAmounts\(form\)/);
+ const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
+ assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
 test('dark launch never renders stale selected document content after read access is disabled',()=>{
  const malicious='"><img src=x onerror=alert(1)>';
  const view={...initialTradeLinkDraftView(),mode:'edit',

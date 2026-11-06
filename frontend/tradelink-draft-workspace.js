@@ -3,6 +3,7 @@
  * No local persistence, fabricated domain records, second login, or write bypass.
  */
 import {ApiError} from './session.js';
+import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
  TL03_DOMAIN_WRITES_ENABLED,validateTradeLinkDraftEnvelope} from './tradelink-domain-client.js';
@@ -12,7 +13,7 @@ const typeLabels=Object.freeze([
  ['esi','Electronic SI'],['packing','Packing List'],['delivery','Delivery Receipt'],
  ['payment','Payment AR'],['quotation','Quotation'],['po','PO to Suppliers']
 ]);
-const currencies=['PHP','USD','EUR','GBP','JPY','CNY','SGD','AUD','SAR'];
+const currencies=TRADELINK_CURRENCIES;
 const vatCodes=[['12','12%'],['zero','Zero-rated'],['exempt','Exempt'],
  ['15_tkm','15% TKM'],['15_ksa','15% KSA']];
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
@@ -209,6 +210,61 @@ function renderCommercialReadiness(type,fieldValue,data){
   input('Intended final approver','approvedBy')+'</fieldset>'+note;
  return '';
 }
+
+/** An unsaved estimate derived only from the already-present, typed Draft fields. */
+export function calculateTradeLinkDraftLocalAmounts(fields){
+ if(!fields||typeof fields.get!=='function')return null;
+ const value=name=>String(fields.get(name)??'').trim();
+ if(!['esi','quotation','po'].includes(value('documentType')))return null;
+ const qText=value('lineQuantity'),pText=value('lineUnitPrice');
+ const quantity=Number(qText),unitPrice=Number(pText);
+ const currency=value('currency'),vatType=value('vatType');
+ if(!qText||!pText||!Number.isFinite(quantity)||!Number.isFinite(unitPrice)||
+  quantity<=0||unitPrice<=0||quantity>1000000000||unitPrice>1000000000||
+  !currencies.includes(currency)||!TRADELINK_VAT_CODES.includes(vatType))
+  return null;
+ const result=calculateTradeLinkAmounts({
+  items:[{kind:'item',quantity,unitPrice}],currency,vatType
+ });
+ return Number.isFinite(result.total)&&Number.isFinite(result.subtotal)&&
+  Number.isFinite(result.vat)?{currency,subtotal:result.subtotal,vat:result.vat,total:result.total}:null;
+}
+/**
+ * Safe DOM text-only update inside the existing signed, local Draft form.
+ * Never processes a payment, saves a document or calls an API.
+ */
+export function updateTradeLinkDraftLocalAmounts(form){
+ const panel=form?.querySelector?.('[data-tradelink-draft-finance]');
+ if(!panel)return null;
+ const fields={get:key=>form.querySelector('[name="'+key+'"]')?.value??''};
+ const result=calculateTradeLinkDraftLocalAmounts(fields);
+ const currency=panel.querySelector('[data-tradelink-draft-amount-currency]');
+ if(currency)currency.textContent=result?.currency||'—';
+ for(const name of ['subtotal','vat','total']){
+  const target=panel.querySelector('[data-tradelink-draft-amount="'+name+'"]');
+  if(target)target.textContent=result?formatTradeLinkAmount(result[name]):'—';
+ }
+ const status=panel.querySelector('[data-tradelink-draft-finance-status]');
+ if(status)status.textContent=result?
+  'Unsaved estimate only. Validate the Draft separately; nothing was transmitted.':
+  'Enter a valid positive quantity, unit price, currency and VAT to preview amounts.';
+ return result;
+}
+function renderTradeLinkDraftLocalAmounts(){
+ return '<section class="tl-draft-finance" data-tradelink-draft-finance '+
+  'aria-label="Source-aligned local commercial estimate">'+
+  '<h4>Local commercial estimate</h4>'+
+  '<p class="muted">Uses the existing TradeLink calculation rules for one priced item, '+
+  'with the selected currency and VAT. No exchange rate or approval is inferred.</p>'+
+  '<dl class="tl-draft-finance-results">'+
+  [['subtotal','Subtotal'],['vat','VAT'],['total','Total']].map(([key,label])=>
+   '<div><dt>'+label+'</dt><dd data-tradelink-draft-amount="'+key+'">—</dd></div>').join('')+
+  '</dl><p class="muted">Currency: <span data-tradelink-draft-amount-currency>—</span></p>'+
+  '<p data-tradelink-draft-finance-status role="status" aria-live="polite">'+
+  'Enter a valid positive quantity, unit price, currency and VAT to preview amounts.</p>'+
+  '<p class="muted">Local estimate only · no Draft save, payment, transaction or approval.</p>'+
+  '</section>';
+}
 function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const editing=mode==='edit'&&row?.workflow_state==='draft'&&
   row.content&&typeof row.content==='object'&&
@@ -286,6 +342,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
        'maxlength="5000"')+
      '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
+   (priced?renderTradeLinkDraftLocalAmounts():'')+
    renderCommercialReadiness(type,fieldValue,data)+
    '<label class="tl-draft-field"><span>Remarks</span>'+
     '<textarea name="remarks" maxlength="5000" rows="3">'+escape(fieldValue('remarks',data.remarks||''))+'</textarea></label>'+
