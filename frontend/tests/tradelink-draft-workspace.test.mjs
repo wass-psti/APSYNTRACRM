@@ -648,7 +648,7 @@ test('six TradeLink modules render bounded hidden local document previews only',
 
 test('local summary uses parsed source fields per module and never asserts approval',()=>{
  const cases=[
-  {documentType:'esi',documentNumber:'SI-001',customerName:'Client',currency:'PHP',
+  {documentType:'esi',documentNumber:'SI-001',customerName:'Client',currency:'PHP',vatType:'12',
    customerTin:'TIN-001',verifiedBy:'Finance person',approvedBy:'Manager',
    items:[{kind:'item',id:'1',description:'Product',quantity:2,unitPrice:50}]},
   {documentType:'packing',documentNumber:'PL-001',customerName:'Consignee',
