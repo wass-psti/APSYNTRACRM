@@ -108,3 +108,7 @@
 .aps-tradelink-app .tl-draft-actions button:disabled{opacity:.5;cursor:not-allowed}
 .aps-tradelink-app [data-tradelink-draft-preview-status]{font-size:11px;color:#717b93}
 @media(max-width:660px){.aps-tradelink-app .tl-draft-form-grid,.aps-tradelink-app .tl-draft-lines{grid-template-columns:1fr}}
+
+.aps-tradelink-app .tl-draft-feedback{margin:14px 0 0;padding:10px 13px;border-radius:9px;border:1px solid #dce3f9;background:#f6f8ff;color:#3e5180}
+.aps-tradelink-app [data-tradelink-draft-preview-status][data-validation="invalid"]{color:#a12b3d;font-weight:650}
+.aps-tradelink-app [data-tradelink-draft-preview-status][data-validation="valid"]{color:#17734e;font-weight:650}

@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
+import {ApiError} from '../session.js';
 import {TRADELINK_SOURCE_MODULES,normalizeTradeLinkSection,renderTradeLinkApplication} from '../tradelink-application.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from '../tradelink-domain-client.js';
 import {
- TL03_DRAFT_INTERFACE_ENABLED,initialTradeLinkDraftView,parseTradeLinkDraftForm,
+ TL03_DRAFT_INTERFACE_ENABLED,initialTradeLinkDraftView,resetTradeLinkDraftForm,
+ tradeLinkDraftValidationMessage,parseTradeLinkDraftForm,
  renderTradeLinkDraftWorkspace,TradeLinkDraftWorkspace,tradeLinkDraftReady
 } from '../tradelink-draft-workspace.js';
 const workspace='00000000-0000-4000-8000-000000000001';
@@ -302,6 +304,79 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,false);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
+
+
+test('switching all six modules discards prior unsaved fields without altering the signed view',()=>{
+ const keys=TRADELINK_SOURCE_MODULES.map(m=>m.key);
+ assert.equal(keys.length,6);
+ for(const from of keys){
+  for(const to of keys){
+   if(from===to)continue;
+   const before={...initialTradeLinkDraftView(from),rows:[{documentId:'unchanged'}],
+    selected:{record:{customerName:'restricted'}},mode:'edit',pendingCreateId:'pending',
+    error:'old error',message:'old status',formValues:{
+     documentType:from,documentNumber:'SECRET-FROM-'+from,customerName:'Sensitive customer',
+     customerTin:'sensitive tin',receivedBy:'Sensitive receiver',cashAmount:'300',
+     approvedBy:'Sensitive approver',lineDescription:'Confidential item'
+    }};
+   const next=resetTradeLinkDraftForm(before,to);
+   assert.deepEqual(next.formValues,{documentType:to});
+   assert.equal(next.rows,before.rows);
+   assert.equal(next.selected,null);
+   assert.equal(next.mode,'create');
+   assert.equal(next.pendingCreateId,null);
+   assert.equal(next.error,'');
+   assert.equal(next.message,'');
+   const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:next,canManage:true});
+   assert.ok(html.includes('<option value="'+to+'" selected>'),to);
+   for(const sensitive of ['SECRET-FROM','Sensitive customer','sensitive tin',
+    'Sensitive receiver','Sensitive approver','Confidential item'])
+    assert.ok(!html.includes(sensitive),from+' → '+to+' leaked '+sensitive);
+   assert.match(html,/Unsaved local fields cleared/);
+   assert.match(html,/data-action="tradelink-draft-clear"/);
+   assert.match(html,/type="submit" class="primary" disabled/);
+  }
+ }
+ const stale=resetTradeLinkDraftForm({...initialTradeLinkDraftView('po'),formValues:{
+  documentType:'po',customerName:'Secret supplier'
+ }},'../../esi');
+ assert.deepEqual(stale.formValues,{documentType:'quotation'});
+ assert.ok(!JSON.stringify(stale).includes('Secret supplier'));
+});
+
+test('clearing local inputs preserves selected type and drops preview-related stale data',()=>{
+ for(const module of TRADELINK_SOURCE_MODULES){
+  const view={...initialTradeLinkDraftView(module.key),formValues:{
+   documentType:module.key,documentNumber:'QA-SENSITIVE',remarks:'Clear this locally'
+  }};
+  const cleared=resetTradeLinkDraftForm(view);
+  assert.deepEqual(cleared.formValues,{documentType:module.key});
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:cleared,canManage:true});
+  assert.doesNotMatch(html,/QA-SENSITIVE|Clear this locally/);
+  assert.match(html,/Clear local fields/);
+ }
+});
+
+test('local validation feedback is specific, sanitized and reset after edited input',()=>{
+ assert.equal(tradeLinkDraftValidationMessage(new ApiError(
+  'Shipment Draft requires consignee/recipient and source reference.',400)),
+  'Shipment Draft requires consignee/recipient and source reference.');
+ assert.equal(tradeLinkDraftValidationMessage(new Error('secret user payload')),'Invalid Draft input.');
+ assert.equal(tradeLinkDraftValidationMessage(new ApiError('hidden server response',500)),'Invalid Draft input.');
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,canManage:true});
+ assert.match(html,/data-validation="pending"/);
+ assert.match(html,/data-tradelink-draft-preview-status/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/status\.dataset\.validation='pending'/);
+ assert.match(app,/Inputs changed\. Validate again\. Nothing saved or transmitted/);
+ assert.match(app,/output\.dataset\.validation='invalid'/);
+ assert.match(app,/output\.dataset\.validation='valid'/);
+ assert.match(app,/tradeLinkDraftValidationMessage\(error\)/);
+ assert.match(app,/form\.querySelector\(':invalid'\)/);
+ assert.match(app,/resetTradeLinkDraftForm\(state\.tradeLinkDraft,event\.target\.value\)/);
+ assert.match(app,/case 'tradelink-draft-clear'/);
+ assert.match(app,/if\(!tradeLinkDraftRoute\(\)\|\|state\.tradeLinkDraft\.busy\)break;/);
 });
 
 test('dark launch never renders stale selected document content after read access is disabled',()=>{

@@ -26,7 +26,8 @@ import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.j
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
-import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,parseTradeLinkDraftForm,tradeLinkDraftReady} from './tradelink-draft-workspace.js';
+import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
+ tradeLinkDraftValidationMessage,tradeLinkDraftReady} from './tradelink-draft-workspace.js';
 import {TL03_DOMAIN_READS_ENABLED} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -2989,12 +2990,33 @@ async function action(name,button){
   const form=root.querySelector('[data-tradelink-draft-form]');
   const output=form?.querySelector('[data-tradelink-draft-preview-status]');
   if(!form||!output)break;
+  if(!form.reportValidity()){
+   const invalid=form.querySelector(':invalid');
+   const label=invalid?.closest('label')?.querySelector('span')?.textContent?.trim();
+   output.dataset.validation='invalid';
+   output.setAttribute('role','alert');
+   output.textContent=(label?'Check '+label+'.':'Check required Draft fields.')+
+    ' Nothing saved or transmitted.';
+   break;
+  }
   try{
-   if(!form.reportValidity()){output.textContent='Invalid fields. Nothing saved.';break;}
    const draft=parseTradeLinkDraftForm(new FormData(form));
+   output.dataset.validation='valid';
+   output.setAttribute('role','status');
    output.textContent='Valid local '+draft.documentType+' / '+draft.documentNumber+
     ' preview. Nothing saved or transmitted.';
-  }catch{output.textContent='Invalid Draft input. Nothing saved or transmitted.';}
+  }catch(error){
+   output.dataset.validation='invalid';
+   output.setAttribute('role','alert');
+   output.textContent=tradeLinkDraftValidationMessage(error)+' Nothing saved or transmitted.';
+  }
+  break;
+ }
+ case 'tradelink-draft-clear':{
+  if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)break;
+  state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft);
+  render();
+  root.querySelector('[data-tradelink-draft-form] select[name="documentType"]')?.focus({preventScroll:true});
   break;
  }
  case 'tradelink-draft-refresh':{
@@ -4625,6 +4647,14 @@ function captureTradeLinkDraftFields(event){
   values[key]=String(fd.get(key)??'').slice(0,5000);
  }
  state.tradeLinkDraft.formValues=values;
+ state.tradeLinkDraft.draftNotice='';
+ // A previous successful preview must never remain authoritative after edits.
+ const status=form.querySelector('[data-tradelink-draft-preview-status]');
+ if(status&&status.dataset.validation!=='pending'){
+  status.dataset.validation='pending';
+  status.setAttribute('role','status');
+  status.textContent='Inputs changed. Validate again. Nothing saved or transmitted.';
+ }
  return true;
 }
 /** Source financial calculation is a nonpersistent preview; no write client involved. */
@@ -4639,9 +4669,12 @@ function syncTradeLinkFinanceInput(event){
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
  if(captureTradeLinkDraftFields(event)){
-  // Rebuild only when changing the source module. Keep all other inputs in
-  // current signed view memory; neither path persists a document.
-  if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]'))render();
+  // Never transfer the previous module's customer, financial, or reviewer inputs.
+  if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]')){
+   state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft,event.target.value);
+   render();
+   root.querySelector('[data-tradelink-draft-form] select[name="documentType"]')?.focus({preventScroll:true});
+  }
   return;
  }
  if(event.target.matches('[data-board-select-item]')&&activeBoardLayout()){

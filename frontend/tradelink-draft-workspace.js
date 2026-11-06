@@ -27,8 +27,24 @@ export function initialTradeLinkDraftView(documentType=null){
  // This is transient UI state, never browser or server persistence.
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
  return {status:'DARK_LAUNCH',rows:[],selected:null,busy:false,error:'',
-  message:'',mode:'create',pendingCreateId:null,
+  message:'',draftNotice:'',mode:'create',pendingCreateId:null,
   formValues:selected?{documentType:selected}:null};
+}
+/**
+ * Discard ALL prior module inputs, including sensitive financial and reviewer
+ * fields. This is in-memory UI state only; no browser or server persistence.
+ */
+export function resetTradeLinkDraftForm(view=initialTradeLinkDraftView(),documentType=null){
+ const requested=documentType??view?.formValues?.documentType??'quotation';
+ const safeType=typeLabels.some(([id])=>id===requested)?requested:'quotation';
+ return {...view,mode:'create',selected:null,pendingCreateId:null,error:'',message:'',
+  draftNotice:'Unsaved local fields cleared. Nothing saved or transmitted.',
+  formValues:{documentType:safeType}};
+}
+/** Expose only program-defined local validation messages, not field values. */
+export function tradeLinkDraftValidationMessage(error){
+ return error instanceof ApiError&&error.status===400?
+  error.message:'Invalid Draft input.';
 }
 export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.randomUUID?.()}={}){
  if(!fields||typeof fields.get!=='function')
@@ -193,7 +209,7 @@ function renderCommercialReadiness(type,fieldValue,data){
   input('Intended final approver','approvedBy')+'</fieldset>'+note;
  return '';
 }
-function renderEditor(row,mode,canManage,formValues=null){
+function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const editing=mode==='edit'&&row?.workflow_state==='draft'&&
   row.content&&typeof row.content==='object'&&
   (!Array.isArray(row.content.items)||row.content.items.length<=1);
@@ -215,6 +231,7 @@ function renderEditor(row,mode,canManage,formValues=null){
   (editing?'<button type="button" class="secondary" data-action="tradelink-draft-new">New Draft</button>':'')+'</div>'+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   '<p class="muted">Fields are a local, unsaved preparation form. Preview validation does not create a server record.</p>'+
+  (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
   '<form data-tradelink-draft-form>'+
    '<div class="tl-draft-form-grid"><label class="tl-draft-field"><span>Document module</span>'+
     '<select name="documentType" '+(editing?'disabled':'')+'>'+options(typeLabels,type)+'</select></label>'+
@@ -274,9 +291,10 @@ function renderEditor(row,mode,canManage,formValues=null){
     '<textarea name="remarks" maxlength="5000" rows="3">'+escape(fieldValue('remarks',data.remarks||''))+'</textarea></label>'+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-preview">Validate locally</button>'+
+    '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear local fields</button>'+
     '<button type="submit" class="primary"'+(live?'':' disabled title="Production Draft writes are not activated"')+
      '>'+(editing?'Save revision':'Create Draft')+'</button>'+
-   '</div><p data-tradelink-draft-preview-status role="status" aria-live="polite">'+
+   '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite">'+
     'Not saved. Domain write activation is pending.</p>'+
   '</form></section>';
 }
@@ -314,5 +332,5 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
      '</td></tr>').join('')+'</tbody></table></div>':
     '<p class="muted">No persisted TradeLink Draft records are displayed. The signed document-list endpoint remains off during this dark launch.</p>')+
   '</section>'+renderEditor(selected?.record,view.mode,canManage,
-   view.mode==='edit'&&!selected?null:view.formValues)+'</div>';
+   view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'')+'</div>';
 }
