@@ -1,0 +1,55 @@
+name: CP-WS-02D/B3 Genuine Public HTTPS and Anonymous Denial Smoke
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-ws02d-b3-deployed-https-smoke.yml'
+      - 'supabase/functions/apsyntra-ws02d-b3-read/index.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-host-anonymous-denial:
+    name: Public CA TLS and unauthenticated Edge denial (no user tokens)
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Verify pinned HTTPS endpoint and TLS certificate validation
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          case "$ENDPOINT" in
+            'https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read') ;;
+            *) echo 'BLOCKED_UNEXPECTED_HOST'; exit 1 ;;
+          esac
+          # No JWT, publishable key, environment secrets or cookies are used.
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -H 'Accept: application/json' \
+            -H 'Origin: https://wass-psti.github.io' \
+            --output "$RUNNER_TEMP/b3-anon.json" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          test "$status" = '401'
+          test "$(wc -c < "$RUNNER_TEMP/b3-anon.json")" -lt 4096
+          echo 'WS02D_B3_PUBLIC_TLS_AND_ANON_DENIAL_PASS status=401 no_session_token=true'
+      - name: Verify malformed-bearer denial on the same public HTTPS endpoint
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -H 'Authorization: Bearer malformed-not-a-jwt' \
+            -H 'Origin: https://wass-psti.github.io' \
+            --output "$RUNNER_TEMP/b3-invalid.json" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          test "$status" = '401'
+          test "$(wc -c < "$RUNNER_TEMP/b3-invalid.json")" -lt 4096
+          echo 'WS02D_B3_PUBLIC_INVALID_TOKEN_DENIAL_PASS status=401'
+      - name: State precise scope of verified evidence
+        run: |
+          echo 'WS02D_B3_PUBLIC_HTTPS_SMOKE_PASS'
+          echo 'SIGNED_USER_READ_NOT_TESTED bearer_tokens_supplied=0 production_mutations=0'
