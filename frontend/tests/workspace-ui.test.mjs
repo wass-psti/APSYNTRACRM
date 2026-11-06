@@ -459,3 +459,28 @@ test('workspace controls are actionable for verified rows and fail closed for un
  assert.match(source,/WS01_SWITCHING_ENABLED=false/);
  assert.match(source,/WS02_INVITATIONS_ENABLED=false/);
 });
+
+
+test('workspace configuration UI follows the new server revision contract and remains default-off',()=>{
+ const source=readFileSync('frontend/workspace-ui.js','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ const lifecycle=readFileSync('frontend/workspace-lifecycle-client.js','utf8');
+ assert.match(lifecycle,/export const WS01_CONFIGURATION_ENABLED=false/);
+ assert.match(app,/import \{WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED\}/);
+ assert.match(app,/configurationEnabled:WS01_CONFIGURATION_ENABLED/);
+ assert.match(source,/options\.configurationEnabled===true/);
+ assert.match(source,/options\.lifecycle\.readConfiguration\(row\.id\)/);
+ assert.match(source,/options\.lifecycle\.updateConfiguration\(\{/);
+ assert.match(source,/expectedRevision:signed\.revision/);
+ assert.match(source,/confirmed\?\.revision!==saved\.revision/);
+ assert.match(source,/confirmed\?\.name!==saved\.name/);
+ assert.match(source,/signed\?\.canEdit/);
+ assert.match(source,/busy\|\|completed/);
+ assert.match(source,/readRun!==id/);
+ assert.match(source,/No changes were saved/);
+ assert.match(source,/Retry the authorized read/);
+ assert.match(source,/submit\.disabled=true/);
+ assert.doesNotMatch(source,/\.rpc\('wm_ws01_config_update'/);
+ const fallback=readFileSync('frontend/workspace-ui.js','utf8');
+ assert.match(fallback,/live\?'Save workspace settings':'Validate settings draft'/);
+});
