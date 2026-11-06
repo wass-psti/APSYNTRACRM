@@ -16,6 +16,10 @@ Phase A production migration `20261106002107` remains installed, with its three 
 
 [PostgreSQL run #42137611502](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42137611502): SUCCESS. Logs confirm both the QA scoped delete/restore Activity rollback test and preservation of the original function sources.
 
+[Frontend Validation #42138438191](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42138438191): SUCCESS, including the QA-only UI checks, existing client behavior, and other frontend regression suites. [Pages deployment #42138437582](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42138437582): SUCCESS. A previous frontend run failed due to an outdated test assertion for the former global UI flag; the test was updated for the QA-board predicate and all suites passed on the corrective commit.
+
+A subsequent production read-only inspection confirmed three unchanged Phase A RPC fingerprints, **both activation flags still false**, no QA scope deployment, zero recovery snapshots, and **all four Contacts / Status I rows present**.
+
 Synthetic PostgreSQL session tests are not proof of genuine GoTrue browser authentication or post-refresh persistence.
 
 ## Pending production gates
