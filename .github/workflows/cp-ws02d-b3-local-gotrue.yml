@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/cp-ws02d-b3-local-gotrue.yml'
       - 'scripts/ws02d-b3-gotrue-disposable-acceptance.mjs'
+      - 'scripts/ws02d-b3-https-rls-acceptance.mjs'
+      - 'sql/tests/cp-ws02d-b3-local-user-scoped-rls.sql'
+      - 'server/ws02d-b3-signed-read-staging.mjs'
+      - 'server/ws02d-b3-user-scoped-rpc.mjs'
       - 'server/ws02d-gotrue-live-read-adapters.mjs'
       - 'server/ws02d-gotrue-actor-verifier.mjs'
   workflow_dispatch:
@@ -68,6 +72,8 @@ jobs:
         run: |
           set -euo pipefail
           jwt_secret="$(openssl rand -hex 48)"
+          install -m 600 /dev/null "$RUNNER_TEMP/ws02d-b3-ci-jwt-secret"
+          printf '%s' "$jwt_secret" > "$RUNNER_TEMP/ws02d-b3-ci-jwt-secret"
           docker pull supabase/gotrue:v2.189.0 >/dev/null
           docker run --rm -d --name ws02d-b3-local-auth --network host \
             -e GOTRUE_API_HOST=127.0.0.1 \
@@ -100,6 +106,48 @@ jobs:
           exit 1
       - name: Verify real local GoTrue-signed JWT, session revocation and workspace isolation
         run: node scripts/ws02d-b3-gotrue-disposable-acceptance.mjs
+
+      - name: Stage disposable signed-user RLS policies and scoped read RPCs
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-local-user-scoped-rls.sql
+      - name: Start pinned PostgREST with the same ephemeral GoTrue signing secret
+        run: |
+          set -euo pipefail
+          jwt_secret="$(cat "$RUNNER_TEMP/ws02d-b3-ci-jwt-secret")"
+          test "${#jwt_secret}" -ge 32
+          docker pull postgrest/postgrest:v14.17 >/dev/null
+          docker run --rm -d --name ws02d-b3-local-rest --network host \
+            -e PGRST_DB_URI='postgres://ws02d_b3_authenticator:disposable_ws02d_b3_postgrest_only@127.0.0.1:5432/gotrue_disposable?sslmode=disable' \
+            -e PGRST_DB_SCHEMAS=public \
+            -e PGRST_DB_ANON_ROLE=anon \
+            -e PGRST_JWT_SECRET="$jwt_secret" \
+            -e PGRST_SERVER_HOST=127.0.0.1 \
+            -e PGRST_SERVER_PORT=3000 \
+            -e PGRST_LOG_LEVEL=crit \
+            postgrest/postgrest:v14.17 >/dev/null
+          ready=0
+          for i in $(seq 1 60); do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 1 http://127.0.0.1:3000/ || true)"
+            if [ "$code" = '200' ] || [ "$code" = '401' ]; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          echo 'LOCAL_POSTGREST_READY'
+      - name: Create temporary localhost CA and certificate for HTTPS acceptance
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -subj '/CN=localhost' \
+            -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' \
+            -keyout "$RUNNER_TEMP/ws02d-b3-ci-local.key" \
+            -out "$RUNNER_TEMP/ws02d-b3-ci-local.crt" >/dev/null 2>&1
+          chmod 600 "$RUNNER_TEMP/ws02d-b3-ci-local.key"
+          echo 'LOCAL_HTTPS_TEST_CERTIFICATE_READY'
+      - name: Verify TLS, cryptographic JWT, signed PostgREST RLS and revocation
+        env:
+          WS02D_TLS_CERT: ${{ runner.temp }}/ws02d-b3-ci-local.crt
+          WS02D_TLS_KEY: ${{ runner.temp }}/ws02d-b3-ci-local.key
+          NODE_EXTRA_CA_CERTS: ${{ runner.temp }}/ws02d-b3-ci-local.crt
+        run: node scripts/ws02d-b3-https-rls-acceptance.mjs
       - name: Categorize disposable GoTrue failure without leaking identities
         if: failure()
         run: |
@@ -110,8 +158,10 @@ jobs:
           if printf '%s' "$logs" | grep -Eqi 'database error'; then echo 'LOCAL_GOTRUE_ERROR_DATABASE'; fi
           if printf '%s' "$logs" | grep -Eqi 'smtp|send email'; then echo 'LOCAL_GOTRUE_ERROR_MAILER'; fi
           echo 'LOCAL_GOTRUE_REDACTED_DIAGNOSTIC_COMPLETE'
-      - name: Stop and discard ephemeral GoTrue container
+      - name: Discard local GoTrue, PostgREST and ephemeral TLS/key material
         if: always()
         run: |
+          docker rm -f ws02d-b3-local-rest >/dev/null 2>&1 || true
           docker rm -f ws02d-b3-local-auth >/dev/null 2>&1 || true
-          echo 'LOCAL_GOTRUE_EPHEMERAL_CLEANUP_COMPLETE'
+          rm -f "$RUNNER_TEMP/ws02d-b3-ci-jwt-secret" "$RUNNER_TEMP/ws02d-b3-ci-local.key" "$RUNNER_TEMP/ws02d-b3-ci-local.crt"
+          echo 'LOCAL_GOTRUE_POSTGREST_TLS_EPHEMERAL_CLEANUP_COMPLETE'
