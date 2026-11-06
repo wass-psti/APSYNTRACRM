@@ -1,5 +1,8 @@
 # CP-WS-02D/B3 — Controlled signed-read activation and real deployed GoTrue/session/RLS acceptance
 
+> **2026-11-06 — SUPERSEDING ACCEPTANCE STATUS:** The managed Edge activation and public HTTPS/CORS/anonymous denial are now **VERIFIED**, and the operator has supplied a genuine deployed signed-HTTPS acceptance report with **PASS, 12/12 module probes, 12/12 authorized**, zero writes and zero identifiers. Main has deployed the UI via PR #35 / commit `a2b5532`. **Foreign-workspace denial, independent table-level RLS and revoked-session denial remain PENDING.** See [genuine signed-read evidence ledger](./CP-WS-02D-B3-GENUINE-SIGNED-HTTPS-ACCEPTANCE-20261106.md). The remainder of this document preserves its earlier activation-pending state as historical evidence.
+
+
 **2026-11-06 decision:** `SIGNED BROWSER HARNESS IMPLEMENTED-UNVERIFIED; LIVE RLS CATALOG VERIFIED; APPLICATION ACTIVATION BLOCKED; GENUINE SIGNED-HTTPS READ PENDING`.
 
 This is the **next-stage evidence** following [deployed default-off HTTPS host acceptance](./CP-WS-02D-B3-DEPLOYED-HTTPS-GATE-20261106.md). Do not confuse successful transport-layer checks or synthetic browser harness tests with a genuine production signed-user read.
