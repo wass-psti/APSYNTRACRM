@@ -27,7 +27,8 @@ import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
- tradeLinkDraftValidationMessage,tradeLinkDraftReady,updateTradeLinkDraftLocalAmounts} from './tradelink-draft-workspace.js';
+ tradeLinkDraftValidationMessage,tradeLinkDraftReady,updateTradeLinkDraftLocalAmounts,
+ updateTradeLinkDraftInputCurrencyLabels} from './tradelink-draft-workspace.js';
 import {TL03_DOMAIN_READS_ENABLED} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -4649,6 +4650,7 @@ function captureTradeLinkDraftFields(event){
  }
  state.tradeLinkDraft.formValues=values;
  state.tradeLinkDraft.draftNotice='';
+ updateTradeLinkDraftInputCurrencyLabels(form);
  updateTradeLinkDraftLocalAmounts(form);
  // A previous successful preview must never remain authoritative after edits.
  const status=form.querySelector('[data-tradelink-draft-preview-status]');

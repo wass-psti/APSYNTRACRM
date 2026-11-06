@@ -14,6 +14,7 @@ const typeLabels=Object.freeze([
  ['payment','Payment AR'],['quotation','Quotation'],['po','PO to Suppliers']
 ]);
 const currencies=TRADELINK_CURRENCIES;
+const currencyUnit=v=>currencies.includes(String(v))?String(v):'—';
 const vatCodes=[['12','12%'],['zero','Zero-rated'],['exempt','Exempt'],
  ['15_tkm','15% TKM'],['15_ksa','15% KSA']];
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
@@ -208,6 +209,11 @@ function field(label,name,val='',attrs=''){
  return '<label class="tl-draft-field"><span>'+escape(label)+'</span>'+
   '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+'></label>';
 }
+function moneyField(label,name,val,currency,attrs){
+ return '<label class="tl-draft-field"><span>'+escape(label)+
+  ' (<span data-tradelink-draft-money-currency>'+escape(currency)+'</span>)</span>'+
+  '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+'></label>';
+}
 function renderCommercialReadiness(type,fieldValue,data){
  const input=(label,name,attrs='maxlength="5000" required')=>
   field(label,name,fieldValue(name,data[name]||''),attrs);
@@ -277,6 +283,13 @@ export function updateTradeLinkDraftLocalAmounts(form){
  const result=calculateTradeLinkDraftLocalAmounts(fields);
  const currency=panel.querySelector('[data-tradelink-draft-amount-currency]');
  if(currency)currency.textContent=result?.currency||'—';
+ const unit=currencyUnit(fields.get('currency'));
+ const fxBase=panel.querySelector('[data-tradelink-draft-fx-base]');
+ if(fxBase)fxBase.textContent=unit;
+ for(const name of ['subtotal','discount','taxable','vat','total']){
+  const label=panel.querySelector('[data-tradelink-draft-denomination="'+name+'"]');
+  if(label)label.textContent=unit;
+ }
  for(const name of ['subtotal','discount','taxable','vat','total','phpEquivalent']){
   const target=panel.querySelector('[data-tradelink-draft-amount="'+name+'"]');
   if(target)target.textContent=result&&result[name]!==null?
@@ -290,6 +303,16 @@ export function updateTradeLinkDraftLocalAmounts(form){
    'Unsaved estimate only. Validate the Draft separately; nothing was transmitted.';
  return result;
 }
+/**
+ * Refresh the currency code inside both payment amount and priced unit-price labels.
+ * Uses textContent only; no markup injection or external data.
+ */
+export function updateTradeLinkDraftInputCurrencyLabels(form){
+ if(!form?.querySelectorAll||!form?.querySelector)return;
+ const unit=currencyUnit(form.querySelector('[name="currency"]')?.value);
+ for(const label of form.querySelectorAll('[data-tradelink-draft-money-currency]'))
+  label.textContent=unit;
+}
 function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line){
  const defaults={documentType:type,lineQuantity:line.quantity??'',
   lineUnitPrice:line.unitPrice??'',currency:data.currency||'PHP',
@@ -297,6 +320,7 @@ function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line){
   discountValue:data.discountValue??'',exchangeRate:data.exchangeRate??''};
  const value=key=>fieldValue(key,defaults[key]??'');
  const initial=calculateTradeLinkDraftLocalAmounts({get:value});
+ const unit=currencyUnit(value('currency'));
  const display=key=>initial&&initial[key]!==null?formatTradeLinkAmount(initial[key]):'—';
  return '<section class="tl-draft-finance" data-tradelink-draft-finance '+
   'aria-label="Source-aligned local commercial estimate">'+
@@ -304,22 +328,33 @@ function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line){
   '<p class="muted">One priced item using the source discount, VAT and currency rules. '+
   'All amounts remain unsaved. No exchange rate or approval is inferred.</p>'+
   '<div class="tl-draft-finance-inputs">'+
-   '<label class="tl-draft-field"><span>Discount method</span><select name="discountType">'+
+   '<label class="tl-draft-field"><span>Discount method</span>'+
+    '<select name="discountType" aria-describedby="tl-draft-discount-help">'+
     options([['percentage','Percentage'],['fixed','Fixed amount']],value('discountType'))+
    '</select></label>'+
    field('Discount value','discountValue',value('discountValue'),
-    'type="number" min="0" max="1000000000000" step="any"')+
-   field('PHP exchange rate (non-PHP only)','exchangeRate',value('exchangeRate'),
-    'type="number" min="0" max="1000000000000" step="any"')+
+    'type="number" min="0" max="1000000000000" step="any" aria-describedby="tl-draft-discount-help"')+
+   '<label class="tl-draft-field"><span>PHP conversion rate (PHP per 1 '+
+    '<span data-tradelink-draft-fx-base>'+escape(unit)+'</span>)</span>'+
+    '<input name="exchangeRate" value="'+escape(value('exchangeRate'))+
+    '" type="number" min="0" max="1000000000000" step="any" '+
+    'aria-describedby="tl-draft-fx-help"></label>'+
   '</div>'+
+  '<p id="tl-draft-discount-help" class="tl-draft-help">Percentage: 0–100. '+
+   'Fixed discount: amount in the selected currency.</p>'+
+  '<p id="tl-draft-fx-help" class="tl-draft-help">Optional for non-PHP currencies. '+
+   'Enter the number of Philippine pesos for one unit of the selected currency. '+
+   'Ignored for PHP. No external exchange-rate lookup occurs.</p>'+
   '<dl class="tl-draft-finance-results">'+
   [['subtotal','Subtotal'],['discount','Discount'],['taxable','Taxable'],
    ['vat','VAT'],['total','Total'],['phpEquivalent','PHP equivalent']].map(([key,label])=>
-   '<div><dt>'+label+'</dt><dd data-tradelink-draft-amount="'+key+'">'+
+   '<div><dt>'+label+(key==='phpEquivalent'?' (PHP)':
+    ' (<span data-tradelink-draft-denomination="'+key+'">'+escape(unit)+'</span>)')+
+   '</dt><dd data-tradelink-draft-amount="'+key+'">'+
     display(key)+'</dd></div>').join('')+
   '</dl><p class="muted">Currency: <span data-tradelink-draft-amount-currency>'+
   escape(initial?.currency||'—')+'</span></p>'+
-  '<p data-tradelink-draft-finance-status role="status" aria-live="polite">'+
+  '<p data-tradelink-draft-finance-status role="status" aria-live="polite" aria-atomic="true">'+
   (initial?(initial.currency!=='PHP'&&initial.phpEquivalent===null?
    'Selected-currency estimate only. Enter a positive PHP exchange rate for conversion. Nothing saved.':
    'Unsaved estimate only. Validate the Draft separately; nothing was transmitted.'):
@@ -340,6 +375,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const physical=type==='packing'||type==='delivery';
  const payment=type==='payment';
  const priced=type==='esi'||type==='quotation'||type==='po';
+ const inputUnit=currencyUnit(fieldValue('currency',data.currency||'PHP'));
  const commonPartyLabel=type==='packing'?'Consignee':type==='delivery'?'Recipient / consignee':
   payment?'Payor':type==='po'?'Supplier':type==='esi'?'Invoice client':
   type==='quotation'?'Prospective client':'Customer / supplier';
@@ -360,7 +396,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
     field(physical?'Source reference':'Reference','referenceNumber',
      fieldValue('referenceNumber',data.referenceNumber||''),
      'maxlength="5000"'+(physical?' required':''))+
-    '<label class="tl-draft-field"><span>Currency</span><select name="currency">'+
+    '<label class="tl-draft-field"><span>Currency (ISO code)</span><select name="currency">'+
      options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select></label>'+
     (physical||payment?'':'<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
      options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>')+
@@ -369,10 +405,10 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
     '<fieldset class="tl-draft-lines"><legend>Received payment · local readiness only</legend>'+
      field('Payment particulars','paymentParticulars',fieldValue('paymentParticulars',data.paymentParticulars||''),
       'maxlength="5000" required')+
-     field('Cash amount','cashAmount',fieldValue('cashAmount',data.cashAmount??''),
-      'type="number" min="0" max="1000000000000" step="any"')+
-     field('Cheque amount','chequeAmount',fieldValue('chequeAmount',data.chequeAmount??''),
-      'type="number" min="0" max="1000000000000" step="any"')+
+     moneyField('Cash amount','cashAmount',fieldValue('cashAmount',data.cashAmount??''),
+      inputUnit,'type="number" min="0" max="1000000000000" step="any"')+
+     moneyField('Cheque amount','chequeAmount',fieldValue('chequeAmount',data.chequeAmount??''),
+      inputUnit,'type="number" min="0" max="1000000000000" step="any"')+
      field('Bank name (for cheque)','bankName',fieldValue('bankName',data.bankName||''),'maxlength="5000"')+
      field('Cheque number (for cheque)','chequeNumber',fieldValue('chequeNumber',data.chequeNumber||''),'maxlength="5000"')+
      field('Received by','receivedBy',fieldValue('receivedBy',data.receivedBy||''),'maxlength="5000" required')+
@@ -387,7 +423,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
      'maxlength="2000"'+(physical||priced?' required':''))+
     field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),
      'type="number" min="0" max="1000000000" step="any"'+(physical||priced?' required':''))+
-    (physical?'':field('Unit price','lineUnitPrice',fieldValue('lineUnitPrice',line.unitPrice??''),
+    (physical?'':moneyField('Unit price','lineUnitPrice',
+     fieldValue('lineUnitPrice',line.unitPrice??''),inputUnit,
      'type="number" min="0" max="1000000000" step="any"'+(priced?' required':'')))+
     field('Unit','lineUnit',fieldValue('lineUnit',line.unit||''),'maxlength="120"')+
     (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
@@ -413,7 +450,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear local fields</button>'+
     '<button type="submit" class="primary"'+(live?'':' disabled title="Production Draft writes are not activated"')+
      '>'+(editing?'Save revision':'Create Draft')+'</button>'+
-   '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite">'+
+   '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
     'Not saved. Domain write activation is pending.</p>'+
   '</form></section>';
 }

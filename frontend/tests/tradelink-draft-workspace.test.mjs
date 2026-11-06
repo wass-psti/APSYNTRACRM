@@ -9,6 +9,7 @@ import {
  TL03_DRAFT_INTERFACE_ENABLED,initialTradeLinkDraftView,resetTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,parseTradeLinkDraftForm,
  calculateTradeLinkDraftLocalAmounts,updateTradeLinkDraftLocalAmounts,
+ updateTradeLinkDraftInputCurrencyLabels,
  renderTradeLinkDraftWorkspace,TradeLinkDraftWorkspace,tradeLinkDraftReady
 } from '../tradelink-draft-workspace.js';
 const workspace='00000000-0000-4000-8000-000000000001';
@@ -529,6 +530,104 @@ test('commercial estimate rerender restores source-calculated amount and remains
  assert.equal(TL03_DOMAIN_READS_ENABLED,false);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
+
+test('Draft financial rows expose correct ISO currency units and explicit PHP denomination',()=>{
+ for(const type of ['esi','quotation','po']){
+  const state={...initialTradeLinkDraftView(type),formValues:{
+   documentType:type,currency:'USD',lineQuantity:'2',lineUnitPrice:'50',
+   vatType:'zero',exchangeRate:'60',discountType:'fixed',discountValue:'10'
+  }};
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:state,canManage:true});
+  for(const key of ['subtotal','discount','taxable','vat','total'])
+   assert.ok(html.includes('data-tradelink-draft-denomination="'+key+'">USD</span>'),key);
+  assert.match(html,/PHP equivalent \(PHP\)/);
+  assert.match(html,/data-tradelink-draft-fx-base>USD<\/span>/);
+  assert.match(html,/aria-describedby="tl-draft-discount-help"/);
+  assert.match(html,/aria-describedby="tl-draft-fx-help"/);
+  assert.match(html,/No external exchange-rate lookup occurs/);
+  assert.match(html,/aria-live="polite" aria-atomic="true"/);
+  assert.match(html,/data-tradelink-draft-money-currency>USD<\/span>/);
+  assert.match(html,/data-tradelink-draft-amount="total">90\.00/);
+  assert.match(html,/data-tradelink-draft-amount="phpEquivalent">5,400\.00/);
+ }
+});
+
+test('Payment AR cash and cheque fields expose selected currency without financial preview',()=>{
+ for(const currency of ['PHP','USD','EUR']){
+  const state={...initialTradeLinkDraftView('payment'),formValues:{
+   documentType:'payment',currency,cashAmount:'12',chequeAmount:'8'
+  }};
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:state,canManage:true});
+  assert.match(html,/Cash amount/);
+  assert.match(html,/Cheque amount/);
+  assert.equal((html.match(new RegExp('data-tradelink-draft-money-currency>'+currency+'<\\/span>','g'))||[]).length,2);
+  assert.doesNotMatch(html,/data-tradelink-draft-finance|data-tradelink-draft-amount=/);
+  assert.match(html,/type="submit" class="primary" disabled/);
+ }
+});
+
+test('currency switching updates text-only labels and FX denomination without changing stored fields',()=>{
+ const money=[{textContent:'PHP'},{textContent:'PHP'}];
+ const fields={currency:'USD',documentType:'quotation',lineQuantity:'2',
+  lineUnitPrice:'125',vatType:'12',discountType:'percentage'};
+ const dom=new Map([
+  ['[data-tradelink-draft-amount-currency]',{textContent:'—'}],
+  ['[data-tradelink-draft-fx-base]',{textContent:'PHP'}],
+  ['[data-tradelink-draft-finance-status]',{textContent:''}],
+  ...['subtotal','discount','taxable','vat','total'].flatMap(k=>[
+   ['[data-tradelink-draft-denomination="'+k+'"]',{textContent:'PHP'}],
+   ['[data-tradelink-draft-amount="'+k+'"]',{textContent:'—'}]
+  ]),
+  ['[data-tradelink-draft-amount="phpEquivalent"]',{textContent:'—'}]
+ ]);
+ const panel={querySelector:s=>dom.get(s)||null};
+ const form={
+  querySelector(s){
+   if(s==='[data-tradelink-draft-finance]')return panel;
+   const key=/^\[name="([^"]+)"\]$/.exec(s)?.[1];
+   return key?{value:fields[key]??''}:null;
+  },
+  querySelectorAll(s){return s==='[data-tradelink-draft-money-currency]'?money:[];}
+ };
+ updateTradeLinkDraftInputCurrencyLabels(form);
+ updateTradeLinkDraftLocalAmounts(form);
+ for(const entry of money)assert.equal(entry.textContent,'USD');
+ for(const key of ['subtotal','discount','taxable','vat','total'])
+  assert.equal(dom.get('[data-tradelink-draft-denomination="'+key+'"]').textContent,'USD');
+ assert.equal(dom.get('[data-tradelink-draft-fx-base]').textContent,'USD');
+ assert.equal(dom.get('[data-tradelink-draft-amount="phpEquivalent"]').textContent,'—');
+ fields.currency='EUR';
+ updateTradeLinkDraftInputCurrencyLabels(form);
+ updateTradeLinkDraftLocalAmounts(form);
+ assert.equal(money[0].textContent,'EUR');
+ assert.equal(dom.get('[data-tradelink-draft-fx-base]').textContent,'EUR');
+ fields.currency='<img src=x onerror=alert(1)>';
+ updateTradeLinkDraftInputCurrencyLabels(form);
+ updateTradeLinkDraftLocalAmounts(form);
+ assert.equal(money[0].textContent,'—');
+ assert.equal(dom.get('[data-tradelink-draft-denomination="total"]').textContent,'—');
+ assert.equal(dom.get('[data-tradelink-draft-amount="total"]').textContent,'—');
+ assert.equal(updateTradeLinkDraftInputCurrencyLabels({querySelector:()=>null}),undefined);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/updateTradeLinkDraftInputCurrencyLabels\(form\)/);
+ const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
+ assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
+});
+
+test('Draft module is an exact-hash CDN smoke asset and focus styling remains scoped',()=>{
+ const source=readFileSync('scripts/pages-smoke.mjs','utf8');
+ assert.match(source,/'frontend\/tradelink-draft-workspace\.js'/);
+ const css=readFileSync('frontend/tradelink-application.css','utf8');
+ assert.match(css,/\.aps-tradelink-app \.tl-draft-panel :is\(button,select,input,textarea\):focus-visible/);
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+  view:initialTradeLinkDraftView('quotation'),canManage:true});
+ assert.match(html,/id="tl-draft-discount-help"/);
+ assert.match(html,/id="tl-draft-fx-help"/);
+ assert.match(html,/data-tradelink-draft-preview-status[^>]*aria-atomic="true"/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
+
 test('dark launch never renders stale selected document content after read access is disabled',()=>{
  const malicious='"><img src=x onerror=alert(1)>';
  const view={...initialTradeLinkDraftView(),mode:'edit',

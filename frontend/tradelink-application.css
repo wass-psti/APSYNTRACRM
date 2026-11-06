@@ -124,3 +124,8 @@
 
 .aps-tradelink-app .tl-draft-finance-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
 @media(max-width:750px){.aps-tradelink-app .tl-draft-finance-inputs{grid-template-columns:1fr}}
+
+/* TradeLink Draft: readable units, keyboard focus and help across breakpoints. */
+.aps-tradelink-app .tl-draft-panel :is(button,select,input,textarea):focus-visible{outline:3px solid #8d95ee;outline-offset:2px}
+.aps-tradelink-app .tl-draft-help{color:#55647f;font-size:12px;line-height:1.5;margin:6px 0}
+.aps-tradelink-app .tl-draft-finance-results dt{line-height:1.5;overflow-wrap:anywhere}
