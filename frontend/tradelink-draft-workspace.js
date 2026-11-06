@@ -170,5 +170,6 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
       (!canManage||!TL03_DOMAIN_WRITES_ENABLED||!row.archived||row.workflowState!=='draft'?' disabled':'')+'>Restore</button>'+
      '</td></tr>').join('')+'</tbody></table></div>':
     '<p class="muted">No persisted TradeLink Draft records are displayed. The signed document-list endpoint remains off during this dark launch.</p>')+
-  '</section>'+renderEditor(selected?.record,view.mode,canManage,view.formValues)+'</div>';
+  '</section>'+renderEditor(selected?.record,view.mode,canManage,
+   view.mode==='edit'&&!selected?null:view.formValues)+'</div>';
 }
