@@ -84,4 +84,4 @@ jobs:
       - name: Verify permissions are revoked but domain and board audit survive
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03c-disposable-emergency-acceptance.sql
       - name: Run frontend adapter and SQL-contract regression tests
-        run: node --test frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-domain-sql-contract.test.mjs
+        run: node --test frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-domain-sql-contract.test.mjs frontend/tests/tradelink-domain-stage-b-release-boundary.test.mjs
