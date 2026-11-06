@@ -135,7 +135,8 @@ test('SQLSTATE errors are translated without leaking raw server details',()=>{
 test('UI accurately reports populated column and keeps recovery disabled until activation',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const inline=readFileSync('frontend/board-inline-context.js','utf8');
- assert.match(app,/const blocked=storedCount>0&&!BOARD_COLUMN_RECOVERY_ENABLED/);
+ assert.match(app,/const qaRecoveryEnabled=isQaBoardRecoveryInterfaceAllowed\(state\.board\)/);
+ assert.match(app,/const blocked=storedCount>0&&!qaRecoveryEnabled/);
  assert.match(app,/submitDisabled:blocked/);
  assert.match(app,/Deletion unavailable/);
  assert.match(app,/boardColumnRecovery\.delete\(fresh,target,confirmation\)/);
