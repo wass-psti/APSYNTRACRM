@@ -146,6 +146,7 @@ test('UI accurately reports populated column and keeps recovery disabled until a
 
 test('specific backend deletion failures have accurate, actionable classifications',()=>{
  const reasons=[
+  ['COL_QA_SCOPE_DENIED','42501',403,'approved time-limited QA board'],
   ['COL_DELETE_NOT_ACTIVATED','42501',503,'not activated'],
   ['COL_RESTORE_NOT_ACTIVATED','42501',503,'not activated'],
   ['COL_RECOVERY_LIST_NOT_ACTIVATED','42501',503,'not activated'],
