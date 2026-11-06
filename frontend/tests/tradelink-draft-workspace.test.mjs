@@ -11,6 +11,8 @@ import {
  calculateTradeLinkDraftLocalAmounts,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkDraftInputCurrencyLabels,tradeLinkDraftLocalSummaryValues,
  updateTradeLinkDraftLocalSummary,
+ initialTradeLinkDraftListFilters,normalizeTradeLinkDraftListFilters,
+ filterTradeLinkDraftAuthorizedRows,updateTradeLinkDraftListUI,
  renderTradeLinkDraftWorkspace,TradeLinkDraftWorkspace,tradeLinkDraftReady
 } from '../tradelink-draft-workspace.js';
 const workspace='00000000-0000-4000-8000-000000000001';
@@ -727,6 +729,114 @@ test('success/invalid/input paths wire local summary only; no new persistence ro
  assert.match(capture,/updateTradeLinkDraftLocalSummary\(form\);/);
  assert.match(draft,/class="tl-draft-summary"/);
  assert.doesNotMatch(draft,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
+
+test('local priced summary names financial components and never fabricates foreign-currency conversion',()=>{
+ for(const type of ['esi','quotation','po']){
+  const input={documentType:type,documentNumber:'QA-COMM',customerName:'QA Client',
+   currency:'USD',vatType:'12',discountType:'fixed',discountValue:5,
+   items:[{id:'item',kind:'item',description:'Source item',quantity:2,unitPrice:50}]};
+  const values=tradeLinkDraftLocalSummaryValues(input);
+  assert.equal(values.localSubtotal,'100.00 USD');
+  assert.equal(values.localDiscount,'5.00 USD');
+  assert.equal(values.localVat,'11.40 USD');
+  assert.equal(values.localTotal,'106.40 USD');
+  assert.equal(values.localPhpEquivalent,'—');
+  const withFx=tradeLinkDraftLocalSummaryValues({...input,exchangeRate:60});
+  assert.equal(withFx.localPhpEquivalent,'6,384.00 PHP');
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+   view:initialTradeLinkDraftView(type),canManage:true});
+  for(const key of ['localSubtotal','localDiscount','localVat','localTotal','localPhpEquivalent'])
+   assert.ok(html.includes('data-tradelink-draft-summary-value="'+key+'"'),key);
+ }
+ for(const type of ['payment','packing','delivery']){
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+   view:initialTradeLinkDraftView(type),canManage:true});
+  assert.doesNotMatch(html,/data-tradelink-draft-summary-value="localVat"/);
+ }
+});
+
+test('read-only listing presents filters but never reveals rows or enables RPC under dark launch',async()=>{
+ const seed={...initialTradeLinkDraftView('quotation'),status:'AUTHORIZED_READ',
+  rows:[{documentId:'11111111-1111-4111-8111-111111111111',documentNumber:'SECRET-Q',
+   boardItemId:'22222222-2222-4222-8222-222222222222',documentType:'quotation',
+   workflowState:'draft',revision:2,archived:false}]};
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:seed,canManage:true});
+ for(const input of ['query','documentType','workflowState','archiveMode'])
+  assert.ok(html.includes('name="'+input+'"'),input);
+ assert.match(html,/Search document number/);
+ assert.match(html,/current signed, authorized response (maximum 50 records)/);
+ assert.match(html,/data-tradelink-domain-count role="status"/);
+ assert.match(html,/name="query"[^>]*disabled/);
+ assert.doesNotMatch(html,/SECRET-Q|11111111-1111-4111-8111-111111111111/);
+ assert.match(html,/signed document-list endpoint remains off/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ const client=new TradeLinkDraftWorkspace({
+  auth:{getVerifiedUser:async()=>{throw Error('auth must not be read');}},
+  api:{rpc:async()=>{throw Error('RPC must not be called');}}
+ });
+ assert.deepEqual(await client.list(),{status:'DARK_LAUNCH',rows:[]});
+});
+
+test('source-bound local document search filters only previously authorized page entries',()=>{
+ const rows=[
+  {documentNumber:'Q-100',documentType:'quotation',workflowState:'draft',archived:false},
+  {documentNumber:'Q-200',documentType:'quotation',workflowState:'approved',archived:false},
+  {documentNumber:'PO-300',documentType:'po',workflowState:'draft',archived:true},
+  {documentNumber:'PL-400',documentType:'packing',workflowState:'completed',archived:false},
+  {documentNumber:'E-500',documentType:'esi',workflowState:'revision-required',archived:false}
+ ];
+ assert.deepEqual(initialTradeLinkDraftListFilters(),{
+  query:'',documentType:'all',workflowState:'all',archiveMode:'active'});
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows).map(x=>x.documentNumber),
+  ['Q-100','Q-200','PL-400','E-500']);
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{query:' q-',documentType:'quotation',
+  workflowState:'draft'}).map(x=>x.documentNumber),['Q-100']);
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{archiveMode:'archived'}).map(x=>x.documentNumber),
+  ['PO-300']);
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{archiveMode:'all',workflowState:'draft'})
+  .map(x=>x.documentNumber),['Q-100','PO-300']);
+ const unsafe=normalizeTradeLinkDraftListFilters({
+  query:'X'.repeat(400),documentType:'../payment',workflowState:'approved;drop',archiveMode:'x'});
+ assert.equal(unsafe.query.length,120);
+ assert.equal(unsafe.documentType,'all');
+ assert.equal(unsafe.workflowState,'all');
+ assert.equal(unsafe.archiveMode,'active');
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(null,{}),[]);
+ assert.equal(filterTradeLinkDraftAuthorizedRows(Array.from({length:120},
+  (_,i)=>({...rows[0],documentNumber:'Q-'+i})),{archiveMode:'all'}).length,50);
+});
+
+test('document-list DOM filters hide rows and show accessible counts without writes',()=>{
+ const fixtures=[
+  {documentNumber:'Q-100',documentType:'quotation',workflowState:'draft',archived:'false'},
+  {documentNumber:'PO-200',documentType:'po',workflowState:'draft',archived:'true'},
+  {documentNumber:'Q-300',documentType:'quotation',workflowState:'approved',archived:'false'}
+ ];
+ const rows=fixtures.map(row=>({dataset:row,hidden:false}));
+ const count={textContent:''},empty={hidden:true};
+ const container={
+  querySelectorAll(selector){return selector==='[data-tradelink-domain-record]'?rows:[];},
+  querySelector(selector){return selector==='[data-tradelink-domain-count]'?count:
+   selector==='[data-tradelink-domain-no-match]'?empty:null;}
+ };
+ assert.equal(updateTradeLinkDraftListUI(container,{query:'q-'}),2);
+ assert.equal(count.textContent,'2 of 3 authorized records in this response');
+ assert.deepEqual(rows.map(row=>row.hidden),[false,true,false]);
+ assert.equal(updateTradeLinkDraftListUI(container,{query:'absent'}),0);
+ assert.equal(empty.hidden,false);
+ assert.equal(updateTradeLinkDraftListUI(container,{documentType:'po',archiveMode:'all'}),1);
+ assert.equal(rows[1].hidden,false);
+ assert.equal(empty.hidden,true);
+ assert.equal(updateTradeLinkDraftListUI(null,{}),0);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/function captureTradeLinkDraftListFilters\(event\)/);
+ assert.match(app,/state\.tradeLinkDraft\?\.status!=='AUTHORIZED_READ'/);
+ assert.match(app,/captureTradeLinkDraftListFilters\(event\)/);
+ assert.match(app,/updateTradeLinkDraftListUI\(container,filters\)/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,false);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });

@@ -139,3 +139,12 @@
 .aps-tradelink-app .tl-draft-summary-rows dt{font-size:11px;color:#5e6c87}
 .aps-tradelink-app .tl-draft-summary-rows dd{margin:5px 0 0;font-size:13px;color:#253654;font-weight:650;overflow-wrap:anywhere;white-space:pre-wrap}
 @media(max-width:620px){.aps-tradelink-app .tl-draft-summary-rows{grid-template-columns:1fr}}
+
+/* Stage-A-first authorized list readiness: only the signed response is searchable. */
+.aps-tradelink-app .tl-draft-list-filters{display:grid;grid-template-columns:minmax(170px,1.3fr) repeat(3,minmax(120px,1fr));gap:12px;margin:15px 0 8px}
+.aps-tradelink-app .tl-draft-list-filters :disabled{background:#f2f5fa;color:#66738c;cursor:not-allowed}
+.aps-tradelink-app .tl-records-table tr[hidden],.aps-tradelink-app [data-tradelink-domain-no-match][hidden]{display:none!important}
+.aps-tradelink-app [data-tradelink-domain-count]{font-variant-numeric:tabular-nums}
+.aps-tradelink-app .tl-records-table caption{text-align:left;font-size:12px;color:#52617d;padding:8px 0}
+@media(max-width:880px){.aps-tradelink-app .tl-draft-list-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){.aps-tradelink-app .tl-draft-list-filters{grid-template-columns:1fr}}

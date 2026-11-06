@@ -28,7 +28,8 @@ import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from 
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,updateTradeLinkDraftLocalAmounts,
- updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary} from './tradelink-draft-workspace.js';
+ updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
+ normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
 import {TL03_DOMAIN_READS_ENABLED} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -4639,6 +4640,21 @@ root.addEventListener('click',event=>{
 /** Preserve unsaved Draft fields only in current signed UI memory across redraws.
  * No browser storage, network requests or persistent document semantics.
  */
+
+function captureTradeLinkDraftListFilters(event){
+ const control=event.target?.closest?.('[data-tradelink-domain-filter]');
+ const container=control?.closest?.('[data-tradelink-domain-list]');
+ if(!control||!container||!tradeLinkDraftRoute()||!TL03_DOMAIN_READS_ENABLED||
+  state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)return false;
+ const get=name=>container.querySelector('[data-tradelink-domain-filter][name="'+name+'"]')?.value;
+ const filters=normalizeTradeLinkDraftListFilters({
+  query:get('query'),documentType:get('documentType'),
+  workflowState:get('workflowState'),archiveMode:get('archiveMode')
+ });
+ state.tradeLinkDraft.listFilters=filters;
+ updateTradeLinkDraftListUI(container,filters);
+ return true;
+}
 function captureTradeLinkDraftFields(event){
  const form=event.target?.closest?.('[data-tradelink-draft-form]');
  if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)return false;
@@ -4676,6 +4692,7 @@ function syncTradeLinkFinanceInput(event){
  return true;
 }
 root.addEventListener('change',event=>{
+ if(captureTradeLinkDraftListFilters(event))return;
  if(syncTradeLinkFinanceInput(event))return;
  if(captureTradeLinkDraftFields(event)){
   // Never transfer the previous module's customer, financial, or reviewer inputs.
@@ -4825,6 +4842,7 @@ root.addEventListener('submit',event=>{
  }
 });
 root.addEventListener('input',event=>{
+ if(captureTradeLinkDraftListFilters(event))return;
  if(syncTradeLinkFinanceInput(event))return;
  if(captureTradeLinkDraftFields(event))return;
  if(event.target.matches('[data-tradelink-search]')&&
