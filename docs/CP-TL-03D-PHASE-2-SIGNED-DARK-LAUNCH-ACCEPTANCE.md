@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-06 (Asia/Manila)  
 **Scope:** Existing APSYNTRA CRM TradeLink board `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, existing Supabase project `jtlusodorfnyzgyuewkz`.  
-**Decision:** **PARTIALLY VERIFIED — FULL PHASE 2 ACCEPTANCE BLOCKED.** This is the formal evidence/disposition record, **not** a signed-user acceptance certificate or permission to enable production writes.
+**Decision:** **USER-ACCEPTED FOR ROADMAP CONTINUATION; VERIFIED PORTION ONLY; UNTESTED SECURITY SCENARIOS REMAIN BLOCKED/PENDING.** The project owner explicitly instructed on 2026-11-06 to “consider it all good.” This is an operational acceptance of the current Phase 2 dark-launch behavior, **not** independently verified completion of every acceptance criterion, security certification, or permission to enable production writes.
 
 ## Verified evidence
 
@@ -33,8 +33,17 @@ The browser tool returned: `Browser access requires the originating browser cont
 
 ## Closure rule / next action
 
-**DO NOT mark Phase 2 VERIFIED yet.** Collect genuine nonsecret signed browser evidence for the pending/blocked cells above using existing authorized accounts, safely classify unavailable real foreign/revoked-session fixtures as BLOCKED, repeat read-only database non-mutation, and update this record only with actual outcomes. If mandatory acceptance cannot be performed, preserve **BLOCKED**, not a fabricated 100% completion.
+**USER ACCEPTANCE / CONDITIONAL CLOSEOUT:** On 2026-11-06, the project owner stated “consider it all good.” Record Phase 2 as **user-accepted for roadmap continuity** while retaining every PENDING/BLOCKED or partially verified evidence cell above as-is. Do not relabel these checks VERIFIED or represent owner sign-off as a signed security test. They remain required evidence before any production Draft write activation. Collect genuine nonsecret signed browser evidence when access permits and repeat the read-only database non-mutation check after any new testing.
 
 **Production boundary:** Keep Draft reads/writes and lifecycle OFF. Do not apply Stage B grants, change roles/memberships, create business records or test users, or treat this UI gate as production activation authorization. Recovery/owner/permission approvals in `docs/CP-TL-03C-PHASE-3B-RECOVERY-AND-PERMISSION-DECISION-2026-11-06.md` remain a separate NO-GO gate.
 
 **Progress:** indeterminate; authenticated browser acceptance does not have a defensible verified denominator until required scenarios are executable.
+
+## Owner sign-off addendum — 2026-11-06
+
+- **User decision:** “consider it all good.” Accepted as a direction to stop repeating Phase 2 dark-launch UX checks and continue the TradeLink roadmap within the already approved non-mutating scope.
+- **Milestone disposition:** **CLOSED — USER-ACCEPTED WITH DOCUMENTED EVIDENCE EXCEPTIONS.** This is **not** `VERIFIED` for unexecuted signed-session, revoked-session, cross-workspace, or API-denial cases.
+- **Evidence preserved:** Screenshot-confirmed General Manager Draft access and local Quotation validation; HR board denial; independently queried zero documents/events/board items; disabled authenticated and anonymous commit EXECUTE grants; automated 1,098/1,098 Phase 1 tests.
+- **Residual risks:** Six-type negative browser validation, session switch/refresh/redaction, foreign-workspace and revoked/expired bearer tests, direct HR read API denial remain pending/blocked. They may not be silently waived for future production security activation.
+- **Permitted continuation:** Source review, focused nonproduction tests, non-mutating UX preparation, implementation within approved scope, and planning the next TradeLink gate. **Not permitted:** Stage B production permission grants, production Draft writes, role changes, credential changes or lifecycle activation without separately satisfied gates and authorizations.
+- **Next roadmap action:** Inspect current TradeLink roadmap/CP-TL-03C Stage B decision and choose the next non-mutating gate; do not invent a new checkpoint identifier or treat this sign-off as Stage B go-ahead.
