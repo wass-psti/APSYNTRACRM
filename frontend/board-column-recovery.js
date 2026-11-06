@@ -21,6 +21,10 @@ export function isQaBoardRecoveryInterfaceAllowed(detail,{
   board?.id===B4_QA_BOARD_ID&&board.name===B4_QA_BOARD_NAME&&
   board.status==='active';
 }
+export function canStartB4QaRecoveryDeletion(detail,column,{now=Date.now()}={}){
+ return isQaBoardRecoveryInterfaceAllowed(detail,{now})&&
+  column?.name===B4_QA_COLUMN_NAME&&now<B4_QA_EXPIRES_AT-600000;
+}
 const fail=(message,status=403,code='')=>{throw new ApiError(message,status,code);};
 const safeHtml=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
