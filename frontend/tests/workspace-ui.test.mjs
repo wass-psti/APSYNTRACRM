@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED,
+ WS01_CONFIGURATION_ENABLED,
  workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,workspaceDetailsFor,validateWorkspaceProposal,assessWorkspaceCreationReadiness,submitWorkspaceCreation,renderWorkspaceSwitcher,
  WS02_INVITATIONS_ENABLED,validateWorkspaceInvitationDraft,renderWorkspaceInviteLaunch
 } from '../workspace-ui.js';
@@ -458,4 +459,22 @@ test('workspace controls are actionable for verified rows and fail closed for un
  assert.match(css,/\.ws01-details-card/);
  assert.match(source,/WS01_SWITCHING_ENABLED=false/);
  assert.match(source,/WS02_INVITATIONS_ENABLED=false/);
+});
+
+
+test('configuration save UI is wired behind an inactive production authorization gate',()=>{
+ assert.equal(WS01_CONFIGURATION_ENABLED,false);
+ const source=readFileSync('frontend/workspace-ui.js','utf8');
+ const client=readFileSync('frontend/workspace-lifecycle-client.js','utf8');
+ assert.match(source,/WS01_CONFIGURATION_ENABLED=false/);
+ assert.match(source,/const enabled=WS01_CONFIGURATION_ENABLED&&typeof options\.lifecycle\?\.configure==='function'/);
+ assert.match(source,/canSave\?'Save workspace settings':'Validate settings draft'/);
+ assert.match(source,/await options\.lifecycle\.configure\(/);
+ assert.match(source,/expectedName:row\.name,expectedPrivacy:row\.privacy/);
+ assert.match(source,/void options\.selectorSession\?\.load\?\.\(\)/);
+ assert.match(source,/The server did not confirm this save/);
+ assert.match(client,/if\(!WS01_CONFIGURATION_ENABLED\)/);
+ assert.match(client,/this\.api\.rpc\('wm_ws01_configure'/);
+ assert.match(client,/await this\.stable\(signed\)/);
+ assert.match(source,/No changes were saved/);
 });
