@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
-import {normalizeTradeLinkSection,renderTradeLinkApplication} from '../tradelink-application.js';
+import {TRADELINK_SOURCE_MODULES,normalizeTradeLinkSection,renderTradeLinkApplication} from '../tradelink-application.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from '../tradelink-domain-client.js';
 import {
  TL03_DRAFT_INTERFACE_ENABLED,initialTradeLinkDraftView,parseTradeLinkDraftForm,
@@ -29,6 +29,32 @@ test('dark-launch UI is routed inside the existing signed TradeLink app',()=>{
  assert.equal(TL03_DOMAIN_READS_ENABLED,false);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
  assert.equal(tradeLinkDraftReady(),false);
+});
+
+
+test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
+ assert.equal(TRADELINK_SOURCE_MODULES.length,6);
+ for(const module of TRADELINK_SOURCE_MODULES){
+  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:module.key,canManage:true});
+  const href='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+module.key;
+  assert.ok(html.includes('href="'+href+'"'),module.label);
+  assert.match(html,/Nothing is saved or submitted/);
+  const view=initialTradeLinkDraftView(module.key);
+  assert.deepEqual(view.formValues,{documentType:module.key});
+  const editor=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
+  assert.ok(editor.includes('<option value="'+module.key+'" selected>'),module.label);
+  assert.match(editor,/data-action="tradelink-draft-preview"/);
+  assert.match(editor,/type="submit" class="primary" disabled/);
+  const valid=parseTradeLinkDraftForm(fields({documentType:module.key,documentNumber:'LOCAL-001'}));
+  assert.equal(valid.documentType,module.key);
+ }
+ assert.equal(initialTradeLinkDraftView().formValues,null);
+ for(const bad of ['unknown','../payment','quotation?commit=true','<script>',null,{}])
+  assert.equal(initialTradeLinkDraftView(bad).formValues,null);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.ok(app.includes('async function loadBoard(boardId,tab,draftType=null)'));
+ assert.ok(app.includes("state.tradeLinkDraft=initialTradeLinkDraftView(tab==='tradelink'&&state.tradeLinkSection==='drafts'?draftType:null)"));
+ assert.ok(app.includes("requested==='tradelink'&&state.tradeLinkSection==='drafts'?parts[4]:null"));
 });
 
 test('foreign workspace or an unrelated board renders no usable editor',()=>{
