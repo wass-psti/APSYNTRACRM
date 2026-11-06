@@ -1,0 +1,45 @@
+name: CP-WS-02D/B3 Default-Off Edge Signed Read Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-ws02d-b3-staged-edge-read.yml'
+      - 'server/ws02d-b3-edge-signed-read.mjs'
+      - 'server/ws02d-b3-signed-read-staging.mjs'
+      - 'server/ws02d-b3-user-scoped-rpc.mjs'
+      - 'server/ws02d-gotrue-live-read-adapters.mjs'
+      - 'server/tests/ws02d-b3-edge-signed-read.test.mjs'
+      - 'supabase/functions/apsyntra-ws02d-b3-read/index.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-edge-read-default-off:
+    name: Synthetic Edge read and fail-closed contract (no deployment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify offline signed Edge host and existing staging boundaries
+        run: |
+          set -euo pipefail
+          node --test \
+            server/tests/ws02d-b3-edge-signed-read.test.mjs \
+            server/tests/ws02d-b3-signed-read-staging.test.mjs \
+            server/tests/ws02d-b3-user-scoped-rpc.test.mjs \
+            server/tests/ws02d-gotrue-live-read-adapters.test.mjs
+      - name: Assert deployment flag is default-off
+        run: |
+          set -euo pipefail
+          grep -F "export const WS02D_B3_EDGE_SIGNED_READ_ENABLED=false;" server/ws02d-b3-edge-signed-read.mjs
+          grep -F "Deno.env.get('WS02D_B3_EDGE_READ_APPROVED')==='true'" supabase/functions/apsyntra-ws02d-b3-read/index.ts
+          echo WS02D_B3_EDGE_READ_UNDEPLOYED_SOURCE_CONTRACT_PASS
