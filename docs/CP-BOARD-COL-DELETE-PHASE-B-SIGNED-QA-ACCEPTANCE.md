@@ -1,7 +1,7 @@
 # CP-BOARD-COL-DELETE — Phase B signed QA acceptance
 
 **Date:** 2026-11-06  
-**Status:** **B1 PRODUCTION MIGRATION COMPLETE AND VERIFIED** / B2–B5 GENUINE SIGNED ACCEPTANCE PENDING.
+**Status (2026-11-06):** **B1 COMPLETE / VERIFIED; B2 SIGNED QA FIXTURE COMPLETE / VERIFIED; B3–B5 NOT YET AUTHORIZED OR ACCEPTED.** Historical pre-fixture evidence is retained below. 
 
 ## Verified baseline
 
@@ -85,3 +85,19 @@ The committed read-only verifier `sql/tests/cp-board-col-delete-b2-production-re
 [Frontend Validation #42146478635](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42146478635): **SUCCESS**, including new signed QA workflow unit tests, no-retry/uncertain-result tests, UI event wiring, session validation, and other frontend/backend regression jobs. The QA creation procedure remains opt-in and creates no production records before a real user clicks. The global recovery flag remains disabled.
 
 The QA creation still requires a genuine user-triggered signed-app operation. If that returns PASS, rerun the named SQL verifier and confirm the QA board after refreshing/reopening. No B3 activation or Phase C operational deletion may be inferred from B2 readiness.
+
+
+---
+
+## B2 genuine signed QA fixture acceptance — independently verified 2026-11-06
+
+**Classification:** **B2 SIGNED QA FIXTURE COMPLETE / VERIFIED**, limited to controlled setup and readback. **B3/B4/B5 remain pending and are not authorized by this certificate.**
+
+- **Authenticated-client evidence:** The signed APSYNTRA CRM Security-page report submitted by the user states `CP-BOARD-COL-DELETE-B2`, `status:PASS`, `stage:completed`, `reason:NONE`, `completedCells:4`, `expectedCells:4`, `activationChanged:false`, `recoveryWritesAttempted:0`. The browser view independently displays the four synthetic item titles and their expected values. The signed origin is evidenced by the application report and cannot be proved from privileged SQL alone.
+- **Independent live database read:** Reran `sql/tests/cp-board-col-delete-b2-production-readonly-qa-fixture.sql` against existing Supabase project `jtlusodorfnyzgyuewkz` after signed-client creation. Result: `B2_AUTHORITATIVE_FOUR_CELL_FIXTURE_PRESENT_GOTRUE_PROVENANCE_UNVERIFIED`. Exactly one QA-marker board, one custom Recovery Status column, four items, four stored cells and all four exact expected item/value pairs. Owner-membership, creator, active-board and column guards passed. This confirms PostgreSQL persistence in an independent database session, not a controlled page-reload browser acceptance.
+- **Audit read:** A read-only aggregate over `public.work_board_events` for the QA board found `board.created:1`, `column.created:1`, `item.created:4`, `item.cell_updated:4` with every actor matching the board creator. Additionally, two `items.bulk_status` events were present, also attributed to that creator; these are separate from B2 fixture creation and must not be misrepresented as recovery activity.
+- **Production safety:** Both recovery activation flags remained disabled, QA recovery scope empty, private recovery snapshots empty, and Contacts / Status I present with all four stored values. No recovery or deletion RPC was executed by the acceptance verifier; no production permission or role changes.
+- **Validation boundary:** Existing disposable PostgreSQL QA-scope/role/expired-scope tests and prior frontend CI are referenced in the earlier sections. This acceptance does **not** establish fresh live foreign-workspace, revoked-session or second-role denial tests, nor does the unrelated `CP-BOARD-BULK02` signed-access preflight certify those pending checks.
+- **Dispatch correction:** `frontend/app.js` now selects creation using `name==='security-b2-qa-create'` instead of mistakenly comparing the `action` function. Fix commit `2fc9d13`; regression assertion commit `7bde8b0`. The subsequent user-reported PASS establishes actual execution after the correction; newly triggered CI/deployment checks were not independently confirmed in this acceptance.
+
+**Next required gate:** **B3 — Controlled, time-limited QA recovery activation**, restricted to the verified fixture board and signed actor, requiring separate authorization because it modifies production recovery activation and private scope. Then B4 signed deletion/restoration and Activity acceptance, followed by B5 deactivation and cleanup verification. **Phase C Contacts deletion remains not authorized.**
