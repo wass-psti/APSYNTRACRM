@@ -1,6 +1,6 @@
 # CP-TL-03C — Controlled TradeLink production activation
 
-**Status:** STAGE A PRODUCTION READ-ONLY VERIFIED (FRESH PHASE 3B RECHECK 15/15 PASS); DISPOSABLE POSTGRES 17 RUN #16 PASS; PHASE 2 MANAGER AND HR SIGNED READ 2/2 USER-REPORTED PASS; PHASE 3B DECISION NO-GO — BACKUP RECOVERABILITY, NAMED CHANGE/ROLLBACK OWNER AND EXPLICIT WRITE-GRANT APPROVAL PENDING. STAGE B NOT ACTIVATED.  
+**Status:** STAGE A PRODUCTION READ-ONLY VERIFIED (PRIOR FULL 15/15 PASS); PHASE 2 MANAGER AND HR SIGNED READ 2/2 PASS (USER REPORTS); STAGE B EXACT-GRANT/ROLLBACK GUARDS TESTED IN POSTGRES 17 CI RUN #18 (19 PASS, 0 FAIL); USER GO-AHEAD RECORDED; STAGE B LIVE PERMISSION GRANTS NOT APPLIED — RECOVERY/OWNER EVIDENCE AND NEW FULL INTEGRITY PRECHECK NOT VERIFIED.  
 **Project:** existing Supabase `jtlusodorfnyzgyuewkz` ONLY. No new project, backend, login, or independent user-role store.  
 **Board:** existing TradeLink `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, workspace `00000000-0000-4000-8000-000000000001`.
 
@@ -216,3 +216,14 @@ A fresh execution of the committed `sql/tests/cp-tl03c-phase1-readonly-activatio
 **Readiness remains 4/7 decision predicates VERIFIED** (Stage A, signed manager/HR read, disposable write/RBAC/rollback, production write-off baseline). The three pending predicates are current backup/recovery proof, change ownership/window, and separate production permission authorization. No production test Draft records are approved. The narrow SQL write-only rollback is disposable-tested and preserves Stage A reads and audit; it cannot erase mutations already committed.
 
 **Next gate:** `CP-TL-03C / Phase 3B Evidence Closure — Current Backup Status, Named Change and Recovery Owner, Separate Production Stage B Approval`. Do not activate the candidate until those independent material prerequisites are VERIFIED. After they pass, execute only the separately authorized controlled write grant and approved genuine signed Draft tests.
+
+
+## Controlled Stage B continuation — user proceed attestation and release guard (2026-11-06)
+
+The user directed **“consider it all good and proceed”**, acknowledged as permission to advance within the already reviewed Stage B scope. This does not itself supply a current backup restore-point timestamp, RPO/RTO, or a designated live change/incident owner, and it does not authorize arbitrary production test-document creation. No new production privilege, schema, row, role, session or backup operation was performed.
+
+Within the authorized nonproduction work, a static regression `frontend/tests/tradelink-domain-stage-b-release-boundary.test.mjs` now confirms that the candidate production activation grants **only** the two agreed `authenticated` Draft write RPC EXECUTEs; that the narrow rollback revokes those same two permissions and retains Stage A reads; and that frontend write flags remain disabled. The disposable PostgreSQL 17 workflow now runs this test. [GitHub Actions run #18](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42193460380), job `127810848655`, **SUCCESS**. Database/RBAC/RLS/CAS/audit/narrow rollback/emergency-disable checks passed; Node tests **19/19 PASS**. This is not a production browser-signed write acceptance.
+
+Live SQL sampled an unchanged Stage A baseline: zero domain documents/audit events/board items, signed public/private Draft commit privileges both **FALSE**, signed read/list both **TRUE**, and two scoped TL03 policies. An attempted fresh execution of the complete 15-check source-fingerprint preflight, plus a narrower fingerprint query, was blocked by tool safety controls; do not claim those fresh tests passed. The last independently verified full 15/15 remains the prior Phase 3B baseline, and the inability to revalidate it is a controlled release stop.
+
+The updated [Phase 3B decision packet](docs/CP-TL-03C-PHASE-3B-RECOVERY-AND-PERMISSION-DECISION-2026-11-06.md) records the user's go-ahead, the independent 19-pass nonproduction CI evidence, unresolved recovery/owner proof, and the unchanged **NO-GO production activation** classification. Neither `sql/cp-tl03c-write-permission-candidate.sql` nor its rollback has been executed against production. Next release action requires an approved owner, verifiable recovery position and passing fresh Stage A source guard, followed by the exact two-grant change under the authorized release process.
