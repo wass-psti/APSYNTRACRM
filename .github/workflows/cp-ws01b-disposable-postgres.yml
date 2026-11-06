@@ -37,6 +37,7 @@ on:
       - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
       - 'sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql'
       - 'sql/tests/cp-ws01c-g3-disposable-lookup-candidate.sql'
+      - 'sql/tests/cp-ws01c-g4-delegated-compatibility-disposable.sql'
       - 'sql/tests/cp-ws01c-b3-production-activated-readonly.sql'
   workflow_dispatch:
 
