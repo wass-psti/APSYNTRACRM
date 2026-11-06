@@ -2,7 +2,7 @@
 
 **As of:** 2026-11-06, Asia/Manila  
 **Project:** APSYNTRA CRM, existing `jtlusodorfnyzgyuewkz` Supabase project, existing TradeLink board `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88` only.  
-**Disposition:** **Approval packet PREPARED; Stage A live structural 15/15 VERIFIED (previous preflight); fresh signed manager Stage A read 6/6 ACCEPTED from user-supplied deployed application report; HR Phase 2 refresh PENDING; Stage B production grant NOT AUTHORIZED and NOT APPLIED.**  
+**Disposition:** **Approval packet PREPARED; Stage A live structural 15/15 VERIFIED (previous preflight); BOTH fresh signed read cases ACCEPTED: manager AUTHORIZED_MANAGER 6/6 and HR BOARD_MANAGER_DENIED 6/6 (separate user-supplied deployed application reports); Stage B production grant NOT AUTHORIZED and NOT APPLIED.**  
 **Change type if subsequently approved:** Production privilege modification for two tightly scoped draft-command functions; not a schema reapplication, data migration, account/role change, or frontend feature activation.
 
 ## Evidence and environment baseline
@@ -64,7 +64,7 @@ No grants to `anon`; no direct table mutations; no role/membership changes, no i
 | Disposable PostgreSQL synthetic create/CAS/roles/RLS/emergency | **VERIFIED — run #13, logs and 16 Node passes** |
 | Dedicated Stage B write-only rollback candidate and data-preservation fixture | **VERIFIED — disposable PostgreSQL CI run #16 and decoded job logs** |
 | Genuine Stage A manager signed report | **PHASE 2 PASS — fresh user-submitted signed report, 6/6** |
-| Genuine Stage A HR nonmanager signed report | **Historical USER-SUBMITTED PASS; fresh Phase 2 refresh PENDING** |
+| Genuine Stage A HR nonmanager signed report | **PHASE 2 PASS — fresh user-submitted BOARD_MANAGER_DENIED, 6/6** |
 | Genuine foreign-workspace/expired/revoked production acceptance | **BLOCKED/PENDING** |
 | Current backup and tested recovery path | **PENDING** |
 | Separate signed production Stage B permission-change approval | **NOT RECEIVED** |
@@ -82,7 +82,7 @@ No grants to `anon`; no direct table mutations; no role/membership changes, no i
 5. On unexpected privilege, scope, integrity, or audit outcomes, stop further writes and separately authorize the narrow Stage B rollback. Use the full emergency-disable candidate only when the wider read-service outage is warranted and approved.
 6. Close this gate only after signed production runtime, post-deployment regression, rollback readiness and retained-data integrity have real evidence. Track unresolved legacy source workflow, attachments and approvals separately.
 
-**Next required action within Phase 2:** collect a new nonsecret signed HR nonmanager Stage A report from the live Security panel. The fresh manager PASS and disposable narrow-rollback CI are VERIFIED. Production Stage B remains disabled.
+**Next required gate after signed-read refresh:** verify current backup and recoverability, assign change/rollback ownership, review remaining security restrictions and obtain separately scoped production Stage B write-permission approval before any grant. Both fresh signed role reports and disposable narrow-rollback CI are VERIFIED. Production Stage B remains disabled.
 
 
 ## Verified Stage B-only rollback CI follow-up — 2026-11-06
@@ -104,3 +104,14 @@ A fresh sanitized output was provided by the user from the deployed APSYNTRA CRM
 **Acceptance update:** Phase 2 manager signed read **VERIFIED (6/6 user report + independent no-write DB baseline)**. New Phase 2 genuine HR `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED` **PENDING**; the historical HR result remains accepted for its earlier milestone but is not a second fresh Phase 2 submission. Foreign workspace **BLOCKED BY PREREQUISITE**, revoked and expired sessions **PENDING**. Stage B write approval and grant **NOT RECEIVED / NOT EXECUTED**. No user account, workspace role, document, audit data, privilege, RLS policy or session was modified in this acceptance.
 
 **Next required result:** A separately signed, existing HR/nonmanager account runs `Run Stage A signed read checks` and copies the sanitized output. The expected `scenario` is `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED` with all six checks PASS and zero writes/disclosures. Do not repeat the manager scenario to satisfy this separate case.
+
+
+## Genuine signed HR board-manager denial refresh — PASS (user report, 2026-11-06)
+
+The user submitted a fresh sanitized report from the existing HR account identified by the user as belonging to Amalia P. Señagan. It contains `checkpoint: CP-TL-03C-STAGE-A-SIGNED-READ`, `status: PASS`, `scenario: BOARD_MANAGER_DENIED`, with **all six checks PASS**: `signed-identity`, `effective-access`, `document-list`, `missing-document-read`, `wrong-board-denial`, and `stable-session`. It explicitly states `writesAttempted: 0` and `documentsDisclosed: 0`. This proves the expected non-manager access denial only within the submitted application's genuine signed-session evidence boundary; the assistant did not independently control the user's browser or authenticate the human account holder.
+
+**Independent authorization baseline on this turn:** Read-only PostgreSQL confirmed `has_function_privilege('authenticated', 'public.tl03_document_commit(uuid,uuid,bigint,text,jsonb)', 'EXECUTE') = false` and `has_function_privilege('authenticated', 'public.tl03_documents_list(uuid,integer)', 'EXECUTE') = true`. An earlier more comprehensive read-only query was blocked by tool safety checks; do not assert a fresh full 15/15 preflight or zero row counts from this turn. The prior 15/15 Stage A preflight and run #16 disposable rollback PASS remain established historical evidence.
+
+**Disposition:** Fresh Phase 2 signed-read acceptance for the two required existing roles — `AUTHORIZED_MANAGER` and `BOARD_MANAGER_DENIED` — is **2/2 VERIFIED (user-submitted application reports)**. This is **not** global authorization certification: genuine foreign-workspace test remains **BLOCKED** (no active foreign member), revoked/expired production bearer checks **PENDING**, and actual persisted-row RLS isolation **NOT EXERCISED** because no production document fixture was written. Stage B remains **NO-GO / NOT AUTHORIZED** until current backup recoverability, security/change ownership and a separately explicit production write-EXECUTE approval are established. No production data writes, session/role changes, permission modifications or recovery actions were performed during this acceptance.
+
+**Next required gate:** `CP-TL-03C / Phase 3 — Stage B Production-Change Approval and Recovery Readiness Decision`. This is an **approval and evidence gate**, not permission to execute `GRANT`. Prepare the exact change ticket and recovery plan; request separate approval before activating Stage B or creating production test records.
