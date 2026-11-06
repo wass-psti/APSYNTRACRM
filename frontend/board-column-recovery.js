@@ -1,5 +1,5 @@
 /** CP-BOARD-COL-DELETE — QA-only recoverable column acceptance adapter.
- * Enabled solely for the verified B2 fixture during the expiring B3 scope.
+ * B5: default-off after signed QA acceptance and controlled deactivation.
  * Backend signed actor, board-manager rights, RLS and expiry remain authoritative.
  * Activity is an audit feed; private recovery RPCs own restoration.
  */
@@ -7,9 +7,9 @@ import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {columnStoredValueCount} from './board-inline-context.js';
 
-// Phase B4.1: the general recovery interface is enabled only for this
-// exact synthetic QA fixture, and only within its existing B3 window.
-export const BOARD_COLUMN_RECOVERY_ENABLED=true;
+// Phase B5: previous time-limited QA recovery window is complete.
+// Preserve the historical acceptance guard; no production UI recovery is enabled.
+export const BOARD_COLUMN_RECOVERY_ENABLED=false;
 export const B4_QA_BOARD_ID='8491b933-8aa7-4b10-816c-46b6758531f3';
 export const B4_QA_BOARD_NAME='CP-BOARD-COL-DELETE QA Signed Fixture';
 export const B4_QA_COLUMN_NAME='Recovery Status';
@@ -22,8 +22,10 @@ export function isQaBoardRecoveryInterfaceAllowed(detail,{
   board?.id===B4_QA_BOARD_ID&&board.name===B4_QA_BOARD_NAME&&
   board.status==='active';
 }
-export function canStartB4QaRecoveryDeletion(detail,column,{now=Date.now()}={}){
- return isQaBoardRecoveryInterfaceAllowed(detail,{now})&&
+export function canStartB4QaRecoveryDeletion(detail,column,{
+ now=Date.now(),enabled=BOARD_COLUMN_RECOVERY_ENABLED
+}={}){
+ return isQaBoardRecoveryInterfaceAllowed(detail,{enabled,now})&&
   column?.name===B4_QA_COLUMN_NAME&&now<B4_QA_EXPIRES_AT-600000;
 }
 const fail=(message,status=403,code='')=>{throw new ApiError(message,status,code);};
