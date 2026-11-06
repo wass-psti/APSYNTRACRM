@@ -1,7 +1,7 @@
 # CP-BOARD-COL-DELETE — Phase B signed QA acceptance
 
 **Date:** 2026-11-06  
-**Status (2026-11-06):** **B1 VERIFIED; B2 VERIFIED; B3 SCOPED ACTIVATION VERIFIED; B4.1 SIGNED READ-ONLY ACCEPTANCE PASS (USER REPORT + INDEPENDENT DATABASE STATE); B4.2 SIGNED QA DELETION/RESTORATION AND B5 PENDING.** Earlier sections preserve historical preactivation evidence. 
+**Status (2026-11-06):** **B1/B2 VERIFIED; B3 SCOPED ACTIVATION VERIFIED; B4.1 SIGNED READ PASS; B4.2 SIGNED QA DELETION AND EXACT FOUR-CELL RESTORATION VERIFIED (APPLICATION SCREENSHOTS + AUTHORITATIVE SQL); B4 DENIAL CASES AND B5 CLEANUP STILL PENDING.** Earlier sections preserve historical preactivation evidence. 
 
 ## Verified baseline
 
@@ -177,3 +177,24 @@ The QA creation still requires a genuine user-triggered signed-app operation. If
 **This PASS does not cover:** QA column deletion, snapshot creation, Activity events after reload/reopen, exact four-value restoration, revoked/expired-session and foreign actor/workspace denial, GitHub CI/Pages workflow provenance, or the B5 explicit server flag reset/scope cleanup. Neither production Contacts / Status I deletion nor broader Manage Columns recoverable deletion is authorized by this certificate.
 
 **Next required gate:** `CP-BOARD-COL-DELETE / B4.2 — Genuine Signed-Owner QA Column Deletion, Activity Audit and Four-Cell Restoration`. Use only the QA board `8491b933-8aa7-4b10-816c-46b6758531f3` and custom `Recovery Status` column. New deletion is blocked by the QA UI at **2026-11-06 11:57:34 Asia/Manila** (ten minutes before backend scope expiration). Restoration remains time-bound through **12:07:34 Asia/Manila**. If elapsed, stop; follow the controlled reactivation/cleanup path. Do not use privileged SQL to fabricate signed browser acceptance or repeat the B3 one-shot activation script unchanged.
+
+
+---
+
+## B4.2 signed deletion and exact restoration acceptance — 2026-11-06
+
+**Classification: VERIFIED for the authorized synthetic QA deletion/Activity/restoration cycle; do not extrapolate to Contacts or all negative security tests.**
+
+**Genuine signed-client evidence:** The user submitted a screenshot of the signed QA board Activity modal with `column.deleted_recoverable`, a recoverable deleted `Recovery Status` entry showing *4 stored values*, and an available **Restore column** action. The subsequent signed QA-board screenshot shows `Recovery Status` restored with all four original values, `B2-QA-Alpha`, `B2-QA-Beta`, `B2-QA-Gamma`, `B2-QA-Delta` on four distinct items. These are user-submitted application screenshots rather than a browser tool session executed by the assistant.
+
+**Independent authoritative SQL verification:** Reran `sql/tests/cp-board-col-delete-b4-production-readonly-recovery-audit.sql` against existing WatchdogWorkspace Supabase project `jtlusodorfnyzgyuewkz` after the screenshots. Result:
+`POST_RESTORATION_DATABASE_AND_AUDIT_PASS_SIGNED_BROWSER_EVIDENCE_SEPARATE`.
+The verifier found precisely one active QA board, four items, one restored `Recovery Status` custom column, four persisted values with all four exact original item/value matches, one private recoverable column snapshot now marked restored, zero pending snapshots, one `column.deleted_recoverable` event, one `column.restored` event, both recorded by the verified QA-board creator. All four Contacts / `Status I` values remained intact. A separate read-only query counted **four** archived recovery cell snapshots, preserved with the recovered column's audit trail.
+
+**Current activation at final B4.2 observation:** At `2026-11-06 03:56:39.242724+00` the time-bound QA scope was still live, expiring `2026-11-06 04:07:34.459742+00` (12:07:34 Philippine time), and both server activation flags remained TRUE. The frontend blocks new QA deletion in the last ten minutes. Expiry independently denies calls but does **not** reset either global flag or clear the QA scope.
+
+**No privileged deletion/restoration was performed by the assistant:** The SQL verifier and follow-up queries were read-only. No Contacts mutation, role/permission change or activation/deactivation was executed in this B4.2 evidence step.
+
+**Remaining gates:** Genuine foreign-workspace/revoked-session/expired-session and second-role denial acceptance have not all been freshly established; no full GitHub Actions/Pages CI certificate is claimed. **B5 PENDING**: separately authorized controlled production deactivation (both global flags FALSE and one-board private scope removed), followed by postcleanup source, recovered QA values, private snapshots, audit and Contacts checks. The B5 cleanup script is already committed at `sql/cp-board-col-delete-b3-qa-deactivation.sql` and its rollback rehearsal passed in B3, but it has not been executed live.
+
+**Next required gate:** `CP-BOARD-COL-DELETE / B5 — Explicit Recovery Deactivation, QA Scope Removal and Final Preservation Audit`. Phase C actual Contacts `Status I` deletion remains outside the authorized scope.
