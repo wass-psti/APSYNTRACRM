@@ -41,7 +41,7 @@ import {openBoardImportWizard} from './board-import-ui.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
-import {isQaBoardRecoveryInterfaceAllowed,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
+import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
@@ -2279,7 +2279,7 @@ function contextualColumnDelete(key){
  if(column.kind==='primary')
   throw new ApiError('The required Item column cannot be deleted.',403);
  const storedCount=columnStoredValueCount(state.board,column.id);
- const qaRecoveryEnabled=isQaBoardRecoveryInterfaceAllowed(state.board);
+ const qaRecoveryEnabled=canStartB4QaRecoveryDeletion(state.board,column);
  const recoverable=storedCount>0&&qaRecoveryEnabled;
  const blocked=storedCount>0&&!qaRecoveryEnabled;
  const summary=blocked?
