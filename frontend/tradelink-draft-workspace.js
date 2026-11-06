@@ -35,8 +35,15 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
   if(value(key))draft[key]=value(key);
  }
  const currency=value('currency'),vatType=value('vatType');
- if(currency)draft.currency=currency;
- if(vatType)draft.vatType=vatType;
+ if(currency){
+  if(!currencies.includes(currency))throw new ApiError('Invalid TradeLink currency.',400);
+  draft.currency=currency;
+ }
+ if(vatType){
+  if(!vatCodes.some(([code])=>code===vatType))
+   throw new ApiError('Invalid TradeLink VAT code.',400);
+  draft.vatType=vatType;
+ }
  const description=value('lineDescription'),quantity=value('lineQuantity'),
   unitPrice=value('lineUnitPrice'),unit=value('lineUnit');
  if(description||quantity||unitPrice||unit){
