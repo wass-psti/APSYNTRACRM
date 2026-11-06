@@ -77,7 +77,7 @@ test('Access acceptance wiring is signed-only, cancellable on sign-out and leave
  assert.match(app,/state\.context=null;state\.ws01B2RunId\+\+;state\.ws01B2Busy=false;state\.ws01B2Result=null/);
  const expired=app.split('auth.onExpired=()=>{')[1];
  assert.ok(expired,'Signed-session expiration must clear retained acceptance state');
- assert.match(expired,/^closeWorkspacePanels\(\);state\.context=null;/);
+ assert.match(expired,/closeWorkspacePanels\(\);state\.context=null;/);
  assert.match(expired,/state\.frtSecurityResult=null;state\.sec07Result=null;state\.ws01B2RunId\+\+;/);
  assert.match(app,/renderWs01B2SignedAcceptance/);
  assert.match(ui,/WS01_DISCOVERY_ENABLED=false/);

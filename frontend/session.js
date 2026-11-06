@@ -106,11 +106,20 @@ export class AuthClient {
       return this.call(path,{...requestOptions,accessToken:renewed});
     }
   }
-  async signOut(){
+  async signOut({scope='global'}={}){
+    if(scope!=='global'&&scope!=='local')throw new ApiError('Unsupported sign-out scope.');
     const token=this.session?.access_token;
-    try{if(token)await this.call('/auth/v1/logout',{method:'POST',accessToken:token});}
-    catch{/* Always end the local session even if the network is unavailable. */}
+    let serverAcknowledged=false;
+    try{
+      if(token){
+        await this.call('/auth/v1/logout'+(scope==='local'?'?scope=local':''),{
+          method:'POST',accessToken:token
+        });
+        serverAcknowledged=true;
+      }
+    }catch{/* Always end the local session even if the network is unavailable. */}
     finally{this.clear();}
+    return serverAcknowledged;
   }
   async passwordRecovery(email,redirectTo){
     const redirect=new URL(redirectTo);

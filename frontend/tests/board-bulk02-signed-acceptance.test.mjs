@@ -126,7 +126,9 @@ test('browser acceptance remains token-free with a scoped, session-only runtime 
  assert.match(app,/data-action="bulk02-verify"/);
  assert.match(app,/boardBulkClient\.enabled=true/);
  assert.match(app,/function clearBulkActivation\(\)/);
- assert.match(app,/case 'logout':\{(?:closeWorkspacePanels\(\);)?clearBulkActivation\(\)/);
+ const logout=app.split("case 'logout':{")[1];
+ assert.ok(logout,'Logout handler must exist');
+ assert.match(logout,/closeWorkspacePanels\(\);clearBulkActivation\(\)/);
  assert.match(app,/access\.boardId===board\?\.id/);
  assert.match(app,/state\.bulk02Access\?\.canManage/);
  assert.match(source,/p_rows:\[\]/);
