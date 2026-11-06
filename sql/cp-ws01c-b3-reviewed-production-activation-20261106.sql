@@ -121,5 +121,8 @@ BEGIN
  THEN RAISE EXCEPTION 'CP-WS-01C/B3 activation source-lock postcondition failed'
  USING ERRCODE='42501'; END IF;
 END $ws01_activation_extra_assert$;
+-- Notify the existing PostgREST Data API of an authenticated function grant.
+-- PostgreSQL sends this only after the transaction commits successfully.
+SELECT pg_catalog.pg_notify('pgrst','reload schema');
 
 COMMIT;
