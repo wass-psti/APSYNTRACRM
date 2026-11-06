@@ -121,7 +121,7 @@ test('strict origin, method, preflight and malformed bearer never access backend
 });
 test('source-only signed read composes GoTrue, signed session catalog and twelve user-scoped predicates',async()=>{
  const f=fixture(),res=await f.handler(req());
- assert.equal(res.status,200);
+ assert.equal(res.status,200,'Synthetic upstream sequence: '+f.seen.map(x=>x.path).join(','));
  const report=await res.json();
  assert.equal(report.status,'PASS');
  assert.equal(report.moduleProbeCount,12);
@@ -147,7 +147,7 @@ test('signed session revocation, forged identity, invalid predicate and workspac
  ]){
   const f=fixture(args);
   const res=await f.handler(req());
-  assert.equal(res.status,status,JSON.stringify(args));
+  assert.equal(res.status,status,JSON.stringify({args,paths:f.seen.map(x=>x.path)}));
   const body=await res.text();
   assert.doesNotMatch(body,/11111111|aaaa-4aaa|bbbb-4bbb|synthetic_signature|GoTrue/);
  }
