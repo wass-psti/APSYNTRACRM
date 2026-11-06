@@ -220,12 +220,12 @@ END $denied_counts$;
 -- Final B3 denial checks: exercise the *creation* RPC itself, not only B2 reads.
 -- All synthetic identities, session mutations and grants exist inside ROLLBACK.
 INSERT INTO auth.sessions(id,user_id,not_after) VALUES
- ('aaaaaaaa-0000-4000-8000-000000000002',
+ ('a3a3a3a3-0000-4000-8000-000000000902',
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now()-interval '1 minute'),
- ('aaaaaaaa-0000-4000-8000-000000000003',
+ ('a3a3a3a3-0000-4000-8000-000000000903',
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',NULL);
 DELETE FROM auth.sessions
- WHERE id='aaaaaaaa-0000-4000-8000-000000000003';
+ WHERE id='a3a3a3a3-0000-4000-8000-000000000903';
 INSERT INTO auth.users(id) VALUES('ffffffff-ffff-4fff-8fff-ffffffffffff');
 INSERT INTO public.profiles(id,status) VALUES
  ('ffffffff-ffff-4fff-8fff-ffffffffffff','active');
@@ -293,7 +293,7 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 
  PERFORM pg_catalog.set_config('request.jwt.claim.session_id',
-   'aaaaaaaa-0000-4000-8000-000000000002',false);
+   'a3a3a3a3-0000-4000-8000-000000000902',false);
  BEGIN
   PERFORM public.wm_ws01_create('Expired Session Denied','closed',
    '44444444-4444-4444-8444-444444444406');
@@ -301,7 +301,7 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 
  PERFORM pg_catalog.set_config('request.jwt.claim.session_id',
-   'aaaaaaaa-0000-4000-8000-000000000003',false);
+   'a3a3a3a3-0000-4000-8000-000000000903',false);
  BEGIN
   PERFORM public.wm_ws01_create('Revoked Session Denied','closed',
    '44444444-4444-4444-8444-444444444407');
