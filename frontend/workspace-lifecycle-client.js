@@ -1,7 +1,7 @@
 /** CP-WS-01B — typed signed workspace lifecycle adapter.
- * Not connected to the UI; all flags intentionally remain false.
- * Production permission/schema activation and scoped signed acceptance
- * are separate gates. Never use arbitrary workspace headers/JWT metadata.
+ * Injected into the signed UI; creation requires server-side authorization,
+ * verified caller identity/session, and a production-enabled creation flag.
+ * Discovery and switching stay gated. Never trust arbitrary workspace headers/JWT metadata.
  */
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
