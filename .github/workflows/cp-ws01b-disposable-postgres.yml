@@ -78,7 +78,7 @@ jobs:
       - name: Run workspace UI and staged-contract regression tests
         run: node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs frontend/tests/workspace-b2-signed-acceptance.test.mjs frontend/tests/workspace-b3-signed-read-preflight.test.mjs
       - name: Verify backend-only invitation, GoTrue HTTP/session read adapters and provider mocks
-        run: node --test server/tests/ws02d-trusted-delivery.test.mjs server/tests/ws02d-resend-transport.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs server/tests/ws02d-gotrue-actor-verifier.test.mjs server/tests/ws02d-gotrue-live-read-adapters.test.mjs server/tests/ws02d-b3-signed-read-staging.test.mjs
+        run: node --test server/tests/ws02d-trusted-delivery.test.mjs server/tests/ws02d-resend-transport.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs server/tests/ws02d-gotrue-actor-verifier.test.mjs server/tests/ws02d-gotrue-live-read-adapters.test.mjs server/tests/ws02d-b3-signed-read-staging.test.mjs server/tests/ws02d-b3-user-scoped-rpc.test.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
       - name: Execute real disposable Auth/session SQL with synthetic identity and mocked GoTrue user
