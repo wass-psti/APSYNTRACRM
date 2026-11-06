@@ -4,6 +4,7 @@ on:
     paths:
       - 'sql/cp-ws02d-b3-rpc-privacy-disposable-candidate.sql'
       - 'sql/tests/cp-ws02d-b3-rpc-privacy-disposable.sql'
+      - 'sql/tests/cp-ws02d-b3-internal-helper-runtime.sql'
       - '.github/workflows/cp-ws02d-b3-rpc-privacy.yml'
   workflow_dispatch:
 
@@ -60,3 +61,4 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-rpc-privacy-disposable.sql |
             tee /tmp/ws02d-b3-rpc-privacy.log
           grep -F 'WS02D_B3_RPC_PRIVACY_DISPOSABLE_PASS' /tmp/ws02d-b3-rpc-privacy.log
+          grep -F 'WS02D_B3_INTERNAL_HELPER_RUNTIME_PASS' /tmp/ws02d-b3-rpc-privacy.log
