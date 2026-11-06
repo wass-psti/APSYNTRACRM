@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
 import {
- BOARD_COLUMN_RECOVERY_ENABLED,BoardColumnRecoveryClient,
+ BOARD_COLUMN_RECOVERY_ENABLED,isQaBoardRecoveryInterfaceAllowed,BoardColumnRecoveryClient,
  renderBoardColumnRecoveryList,explainColumnDeleteError
 } from '../board-column-recovery.js';
 const boardId='11111111-1111-4111-8111-111111111111';
@@ -176,4 +176,19 @@ test('specific backend deletion failures have accurate, actionable classificatio
   'COL_DELETE_AUTHORIZATION_DENIED',403,'42501'));
  assert.equal(permission.status,403);
  assert.match(permission.message,/signed session/);
+});
+
+test('Phase B QA recovery UI stays dark and never exposes Contacts even after future switch',()=>{
+ const qa={board:{id:boardId,name:'CP-BOARD-COL-DELETE QA Fixture'}};
+ const contacts={board:{id:boardId,name:'Contacts'}};
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(qa),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(contacts,{enabled:true}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(qa,{enabled:true}),true);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed({board:{name:'CP-BOARD-COL-DELETE QA Fixture'}},{enabled:true}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed({board:{id:boardId,name:'APSYNTRA QA'}},{enabled:true}),false);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/if\(isQaBoardRecoveryInterfaceAllowed\(state\.board\)&&state\.boardManage\)/);
+ assert.match(app,/if\(!isQaBoardRecoveryInterfaceAllowed\(state\.board\)\|\|!state\.boardManage\)/);
+ assert.match(app,/const recoverable=storedCount>0&&qaRecoveryEnabled/);
+ assert.match(app,/const blocked=storedCount>0&&!qaRecoveryEnabled/);
 });
