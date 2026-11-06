@@ -24,7 +24,7 @@ const disabled=()=>{throw new ApiError(
 export const tradeLinkDraftReady=()=>TL03_DOMAIN_READS_ENABLED&&TL03_DOMAIN_WRITES_ENABLED;
 export function initialTradeLinkDraftView(){
  return {status:'DARK_LAUNCH',rows:[],selected:null,busy:false,error:'',
-  message:'',mode:'create'};
+  message:'',mode:'create',pendingCreateId:null};
 }
 export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.randomUUID?.()}={}){
  if(!fields||typeof fields.get!=='function')
@@ -140,8 +140,8 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
    detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="tl-draft-panel">Signed TradeLink workspace unavailable.</section>';
- const rows=TL03_DOMAIN_READS_ENABLED&&view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
- const selected=view.mode==='edit'&&view.selected?.documentId?
+ const rows=TL03_DOMAIN_READS_ENABLED&&canManage&&view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
+ const selected=TL03_DOMAIN_READS_ENABLED&&canManage&&view.mode==='edit'&&view.selected?.documentId?
    view.selected:null;
  return '<div class="tl-draft-workspace">'+
   '<section class="tl-draft-panel"><div class="tl-panel-heading">'+
@@ -164,9 +164,9 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
      (row.archived?' · Archived':'')+'</td><td>'+
      '<button type="button" class="secondary" data-action="tradelink-draft-open" data-id="'+escape(row.documentId)+'">Read</button> '+
      '<button type="button" class="secondary" data-action="tradelink-draft-archive" data-id="'+escape(row.documentId)+'"'+
-      (!canManage||!TL03_DOMAIN_WRITES_ENABLED||row.archived?' disabled':'')+'>Archive</button> '+
+      (!canManage||!TL03_DOMAIN_WRITES_ENABLED||row.archived||row.workflowState!=='draft'?' disabled':'')+'>Archive</button> '+
      '<button type="button" class="secondary" data-action="tradelink-draft-restore" data-id="'+escape(row.documentId)+'"'+
-      (!canManage||!TL03_DOMAIN_WRITES_ENABLED||!row.archived?' disabled':'')+'>Restore</button>'+
+      (!canManage||!TL03_DOMAIN_WRITES_ENABLED||!row.archived||row.workflowState!=='draft'?' disabled':'')+'>Restore</button>'+
      '</td></tr>').join('')+'</tbody></table></div>':
     '<p class="muted">No persisted TradeLink Draft records are displayed. The signed document-list endpoint remains off during this dark launch.</p>')+
   '</section>'+renderEditor(selected?.record,view.mode,canManage)+'</div>';
