@@ -67,7 +67,7 @@ test('B4 signed index preflight accepts original owner and four-cell fixture wit
  assert.equal(r.readOnly,true);
  assert.equal(r.recoveryWritesAttempted,0);
  assert.equal(m.calls.filter(x=>x==='rpc').length,1);
- assert.equal(m.calls.filter(x=>x==='verified-user').length,2);
+ assert.equal(m.calls.filter(x=>x==='verified-user').length,4);
  assert.equal(m.calls.some(x=>['createBoard','addItem','setBoardCellCas','delete','restore'].includes(x)),false);
 });
 
