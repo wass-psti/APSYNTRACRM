@@ -78,6 +78,17 @@ test('B2 identity drift and duplicate QA name deny new boards',async()=>{
   assert.equal(f.calls.includes('createBoard'),false);
  }
 });
+test('B2 refuses to create a second QA board with another approved marker name',async()=>{
+ const f=fixture({existing:true});
+ f.api.boards=async()=>[{id:boardId,name:'CP-BOARD-COL-DELETE QA Another fixture'}];
+ const result=await createB2SignedQaFixture(f);
+ assert.equal(result.status,'PENDING');
+ assert.equal(result.reason,'DUPLICATE_FIXTURE');
+ assert.equal(f.calls.filter(x=>x==='createBoard').length,0);
+ const inspection=await inspectB2SignedQaFixture(f);
+ assert.equal(inspection.status,'BLOCKED');
+ assert.equal(inspection.reason,'DUPLICATE_FIXTURE');
+});
 test('B2 genuine-session contract creates one ordinary QA board and exact 4 cell fixture',async()=>{
  const f=fixture(),r=await createB2SignedQaFixture(f);
  assert.equal(r.status,'PASS');
