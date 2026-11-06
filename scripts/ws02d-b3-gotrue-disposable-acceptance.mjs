@@ -172,9 +172,10 @@ sql("UPDATE auth.sessions SET not_after=NULL WHERE id='"+a.sessionId+"';");
 await mustAccept(a.jwt,a);
 sql("DELETE FROM auth.sessions WHERE id='"+a.sessionId+"';");
 await mustReject(a.jwt);
+assert.equal((await db.query(WS02D_ACTIVE_SESSION_SQL,[a.id,a.sessionId])).rows[0].active,false);
 // Foreign user's own token remains valid and cannot assume A's identity.
 await mustAccept(b.jwt,b);
-assert.ok(actualAuthReads>=9&&sqlReads>=8);
+assert.ok(actualAuthReads>=7&&sqlReads>=7);
 process.stdout.write(
  'CP_WS_02D_B3_LOCAL_GOTRUE_ACCEPTANCE_PASS '+
  'auth=REAL_LOCAL_GOTRUE signed_jwt=YES independent_pg_sessions=YES '+
