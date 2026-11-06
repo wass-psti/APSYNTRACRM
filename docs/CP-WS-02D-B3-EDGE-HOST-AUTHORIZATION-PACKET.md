@@ -1,5 +1,8 @@
 # CP-WS-02D/B3 — Controlled HTTPS Host Authorization and Genuine Deployed Signed-Read/Denial Gate
 
+> **Superseding deployment status — 2026-11-06:** The default-off B3 Edge Function is now **DEPLOYED v1**, with `verify_jwt=true`. Public CA-validated HTTPS anonymous/invalid-token denial and legitimate/foreign-origin OPTIONS checks **PASSED** in [GitHub Actions run 42159136903](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42159136903). Genuine live signed-user GET/RLS/revocation acceptance remains **PENDING** because the application gate has not been enabled and the originating signed browser is unavailable. See the [deployed host acceptance report](./CP-WS-02D-B3-DEPLOYED-HTTPS-GATE-20261106.md). Below is the original **predeployment authorization packet** preserved as historical requirements; its "not deployed" statements refer to that earlier state.
+
+
 **Checkpoint:** 2026-11-06  
 **Status:** `HOST SOURCE STAGED + OFFLINE TESTS VERIFIED; DEPLOYMENT NOT APPROVED OR EXECUTED; GENUINE DEPLOYED HTTPS ACCEPTANCE PENDING`
 
