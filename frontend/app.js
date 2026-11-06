@@ -1443,7 +1443,7 @@ async function openTradeLinkDraft(documentId){
   if(!record||record.workflow_state!=='draft')
    throw new ApiError('Document is no longer an editable Draft.',409);
   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
-   selected:{documentId,record},pendingCreateId:null,error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
+   selected:{documentId,record},pendingCreateId:null,formValues:null,error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
  }catch{
   if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
    'Draft read or authorization failed. Refresh the signed list.';
@@ -3002,7 +3002,7 @@ async function action(name,button){
  }
  case 'tradelink-draft-new':{
   if(tradeLinkDraftRoute()&&!state.tradeLinkDraft.busy){
-   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,error:'',message:''};
+   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,formValues:null,error:'',message:''};
    render();
   }
   break;
@@ -4608,6 +4608,20 @@ root.addEventListener('click',event=>{
  event.preventDefault();
  Promise.resolve(action(target.dataset.action,target)).catch(notice);
 });
+/** Preserve unsaved Draft fields only in current signed UI memory across redraws.
+ * No browser storage, network requests or persistent document semantics.
+ */
+function captureTradeLinkDraftFields(event){
+ const form=event.target?.closest?.('[data-tradelink-draft-form]');
+ if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)return false;
+ const fd=new FormData(form),values={};
+ for(const key of ['documentType','documentNumber','customerName','referenceNumber',
+  'currency','vatType','lineDescription','lineQuantity','lineUnitPrice','lineUnit','remarks']){
+  values[key]=String(fd.get(key)??'').slice(0,5000);
+ }
+ state.tradeLinkDraft.formValues=values;
+ return true;
+}
 /** Source financial calculation is a nonpersistent preview; no write client involved. */
 function syncTradeLinkFinanceInput(event){
  const panel=event.target?.closest?.('[data-tradelink-finance-preview]');
@@ -4618,6 +4632,7 @@ function syncTradeLinkFinanceInput(event){
  return true;
 }
 root.addEventListener('change',event=>{
+ if(captureTradeLinkDraftFields(event))return;
  if(syncTradeLinkFinanceInput(event))return;
  if(event.target.matches('[data-board-select-item]')&&activeBoardLayout()){
   const input=event.target;
@@ -4758,6 +4773,7 @@ root.addEventListener('submit',event=>{
  }
 });
 root.addEventListener('input',event=>{
+ if(captureTradeLinkDraftFields(event))return;
  if(syncTradeLinkFinanceInput(event))return;
  if(event.target.matches('[data-tradelink-search]')&&
     state.view==='board'&&state.tab==='tradelink'&&
