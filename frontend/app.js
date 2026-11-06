@@ -1,5 +1,5 @@
 import {AuthClient,ApiError} from './session.js';
-import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels} from './workspace-ui.js';
+import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels} from './workspace-ui.js?v=ws01-member-catalog-20261106';
 import {WorkspaceLifecycleClient} from './workspace-lifecycle-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
