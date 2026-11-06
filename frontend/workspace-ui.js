@@ -254,11 +254,12 @@ function currentFootnote(catalog,options={}){
  const status=options.selectorSession?.status;
  let message='Only your current server-verified workspace is shown. Additional workspaces require signed membership discovery.';
  if(status==='loading')message='Loading workspaces authorized for this signed account…';
- else if(status==='error')message='Unable to verify other workspaces. Only the current signed workspace is shown.';
+ else if(status==='error')message='Workspace list could not be verified. Retry the signed read; only the current workspace is shown until verification succeeds.';
  else if(catalog?.status==='SIGNED_MEMBER_DISCOVERY')
   message=catalog.rows.length+' authorized workspace'+(catalog.rows.length===1?'':'s')+
    ' for your signed account. Workspace switching is not yet activated.';
- return '<p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>';
+ return '<p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>'+
+  (status==='error'?'<button type="button" class="ws01-retry" data-ws01-action="retry">Retry authorized workspace discovery</button>':'');
 }
 function menuContent(catalog,options={}){
  return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Browse workspaces">'+
@@ -266,7 +267,7 @@ function menuContent(catalog,options={}){
   '<button class="ws01-close" type="button" data-ws01-close aria-label="Close workspace selector">×</button></header>'+
   '<label class="ws01-sr-only" for="ws01-menu-search">Search workspaces</label>'+
   '<input id="ws01-menu-search" type="search" placeholder="Search workspaces" autocomplete="off" maxlength="120"/>'+
-  '<p class="ws01-eyebrow">Authorized workspaces</p>'+
+  '<p class="ws01-eyebrow">Authorized workspaces · '+visibleWorkspaces(catalog).length+'</p>'+
   '<div data-ws01-results>'+resultsMarkup(catalog,'all','')+'</div>'+
   '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
   '<button type="button" data-ws01-action="create">Add workspace</button>'+
@@ -280,12 +281,15 @@ function openMenu(catalog,options={}){
  const redraw=()=>{
   if(activeOverlay!==layer||!layer.isConnected)return;
   layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),'all',input.value);
-  layer.querySelector('[data-ws01-note]').outerHTML=currentFootnote(read(),options);
+  layer.querySelector('.ws01-eyebrow').textContent='Authorized workspaces · '+visibleWorkspaces(read()).length;
+  const oldNote=layer.querySelector('[data-ws01-note]');
+  if(oldNote){oldNote.outerHTML=currentFootnote(read(),options);}
  };
  if(options.selectorSession)options.selectorSession.refresh=redraw;
  input.addEventListener('input',redraw);
  layer.addEventListener('click',event=>{
   const command=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
+  if(command==='retry')options.selectorSession?.load?.();
   if(command==='browse')openBrowse(read(),options);
   if(command==='create')openCreate(read(),options);
   if(command==='invite')openInvites(read().rows.find(row=>row.active));
@@ -317,7 +321,8 @@ function openBrowse(catalog,options={}){
  const redraw=()=>{
   if(activeOverlay!==layer||!layer.isConnected)return;
   layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),tab,input.value);
-  layer.querySelector('[data-ws01-note]').outerHTML=currentFootnote(read(),options);
+  const oldNote=layer.querySelector('[data-ws01-note]');
+  if(oldNote){oldNote.outerHTML=currentFootnote(read(),options);}
   for(const btn of layer.querySelectorAll('[data-ws01-filter]'))
    btn.setAttribute('aria-pressed',String(btn.dataset.ws01Filter===tab));
   layer.querySelector('[data-ws01-title]').textContent={
@@ -330,6 +335,7 @@ function openBrowse(catalog,options={}){
  layer.addEventListener('click',event=>{
   const filter=event.target.closest('[data-ws01-filter]')?.dataset.ws01Filter;
   if(TABS.has(filter)){tab=filter;redraw();}
+  if(event.target.closest('[data-ws01-action="retry"]'))options.selectorSession?.load?.();
   if(event.target.closest('[data-ws01-action="create"]'))openCreate(read(),options);
  });
  input.focus();
@@ -526,23 +532,32 @@ export function openWorkspaceInvitationDialog(current){
 }
 export function openWorkspaceSelector(current,options={}){
  if(activeOverlay){closeWorkspacePanels();return;}
- const session={catalog:workspaceCatalog(current),status:'loading',refresh:null};
+ const session={catalog:workspaceCatalog(current),status:'loading',refresh:null,load:null};
  returnFocus=document.activeElement;
  openMenu(session.catalog,{...options,selectorSession:session});
- if(!WS01_DISCOVERY_ENABLED||typeof options.lifecycle?.discover!=='function'){
-  session.status='unavailable';
+ // Never substitute a global workspace count for the caller's signed
+ // membership list. Every discovery is scoped and verified by the server.
+ session.load=async()=>{
+  if(session.status==='loading'&&session.started)return;
+  session.started=true;
+  if(!WS01_DISCOVERY_ENABLED||typeof options.lifecycle?.discover!=='function'){
+   session.status='unavailable';
+   session.refresh?.();
+   return;
+  }
+  session.status='loading';
   session.refresh?.();
-  return;
- }
- // A read-only, signed RPC is the only source of additional workspace names.
- // Each opening is independently verified; no cross-user/browser cache exists.
- Promise.resolve().then(()=>options.lifecycle.discover()).then(result=>{
-  if(result?.status!=='SIGNED_MEMBER_DISCOVERY')throw Error('Invalid signed catalog');
-  session.catalog=result;
-  session.status='ready';
+  try{
+   const result=await options.lifecycle.discover();
+   if(result?.status!=='SIGNED_MEMBER_DISCOVERY')throw Error('Invalid signed catalog');
+   session.catalog=result;
+   session.status='ready';
+  }catch{
+   session.catalog=workspaceCatalog(current);
+   session.status='error';
+  }
   session.refresh?.();
- }).catch(()=>{
-  session.status='error';
-  session.refresh?.();
- });
+ };
+ // Read-only signed RPC, no cross-user cache and no implicit workspace switch.
+ void session.load();
 }
