@@ -95,7 +95,7 @@ test('create modal explains blocked lifecycle and defaults privacy closed withou
  assert.match(module,/if\(!enabled\)\{/);
  assert.match(module,/ws01-create-footer/);
  assert.match(module,/aria-live="polite"/);
- assert.match(module,/assessWorkspaceCreationReadiness\(\{/);
+ assert.match(module,/assessWorkspaceCreationReadiness\(proposal\)/);
  assert.match(module,/field\.focus\(\)/);
  assert.doesNotMatch(module,/api\.rpc\(['\"]wm_ws01_create/);
  assert.match(css,/\.ws01-create-card \.ws01-create-footer\{/);
