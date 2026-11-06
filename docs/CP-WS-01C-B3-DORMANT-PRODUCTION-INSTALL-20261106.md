@@ -1,5 +1,8 @@
 # CP-WS-01C/B3 — Authorized production default-OFF function installation
 
+> **Status superseded — 2026-11-06:** The previously dormant RPC was subsequently activated under a separate, explicit requested checkpoint. The exact `authenticated` creation grant and creation-only lifecycle flag are now active; B4 remains disabled. See [controlled production activation evidence](./CP-WS-01C-B3-CONTROLLED-ACTIVATION-RESULT-20261106.md). The original dormant-state observations below remain valid as *historical installation evidence only*.
+
+
 **Execution date:** November 6, 2026 (Asia/Manila)  
 **Project:** existing `WatchdogWorkspace` Supabase project `jtlusodorfnyzgyuewkz` / PostgreSQL 17.6.  
 **Authorization:** Operator explicitly authorized **only** installing the reviewed dormant workspace-creation functions with **no authenticated EXECUTE, no lifecycle activation and no production workspace creation**.  
