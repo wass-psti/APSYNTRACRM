@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-06 (Asia/Manila)  
 **Target:** APSYNTRA CRM existing TradeLink board `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, existing WatchdogWorkspace project `jtlusodorfnyzgyuewkz`.  
-**Disposition:** **IMPLEMENTED / automated frontend acceptance VERIFIED (1,097 PASS / 0 FAIL).** Deployed authenticated browser UX acceptance remains separate. **Domain reads and Draft writes are not activated in production**; Stage B EXECUTE grants are not authorized by this milestone.
+**Disposition:** **IMPLEMENTED / automated frontend acceptance VERIFIED (1,098 PASS / 0 FAIL, final code commit 370645a).** Deployed authenticated browser UX acceptance remains separate. **Domain reads and Draft writes are not activated in production**; Stage B EXECUTE grants are not authorized by this milestone.
 
 ## Completed frontend integration
 
@@ -59,3 +59,14 @@ Original local validator initially missed an invalid currency; this was reproduc
 **CP-TL-03D / Phase 2 — Deployed signed Draft dark-launch UI acceptance and authorization-denial regression.** With the current Manager and HR accounts, verify the Draft route renders only for the correct TradeLink board, local validation sends no server write, disabled Create/Update/Archive/Restore cannot call domain commit, and navigating/switching identity discards unsaved state. Record nonsecret evidence; do not collect JWTs or document contents. Maintain both flags OFF and SQL write grants withheld.
 
 Separately, Stage B controlled production activation remains subject to accountable change ownership, approved recovery posture, the full fresh source-integrity preflight and separate production permission/data-operation approvals. **Do not use this UI gate to bypass production security controls.**
+
+
+## Final-code CI evidence and regression fixes — 2026-11-06
+
+After the first successful 1,097-case suite, the Draft form was improved to preserve unsaved user input in **ephemeral signed-session memory** during UI redraws, while still hiding stale authoritative document content when document-read permissions are off or the user loses board manager scope. The create form now retains its server-idempotent `documentId` on uncertain request failure to prevent duplicate ID allocation when actual writes are separately approved. No browser storage, cookies, parallel Draft repository or automatically enabled write RPC was added.
+
+A new focused regression checks in-memory form refresh and authorization redaction. An existing TradeLink finance-preview test detected that the new Draft input listener had been placed before the finance handler; the event priority was corrected so the original finance preview behavior remains unchanged. The local currency/VAT preview validation mismatch and the stale-selected-document test mismatch were also corrected during the implementation sequence, without weakening server controls.
+
+**Final code validation:** [APSYNTRA CRM Frontend Validation run #42196960986](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42196960986), workflow head `370645ae0aaad91927e2350cfd6d2e3d39fd6155`, frontend job `127822516958` **SUCCESS** with decoded log **1,098 tests, 1,098 pass, 0 fail**. The same run's isolated PostgreSQL, OT and collaboration jobs also completed successfully. This is a verified full frontend regression of the source-aligned Draft dark launch and all existing app behavior tested in CI; it is **not** live signed browser operation or server Draft write activation.
+
+**Production rollout boundary remains:** `TL03_DOMAIN_READS_ENABLED=false`; `TL03_DOMAIN_WRITES_ENABLED=false`; Stage B PostgreSQL write grants were not applied by this checkpoint. Only a separately approved production activation and actual signed-user acceptance can authorize persistence. The next milestone is `CP-TL-03D / Phase 2 — Deployed signed dark-launch acceptance`.
