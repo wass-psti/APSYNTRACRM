@@ -29,11 +29,14 @@ function verifiedEnvelope(jwt,clock){
   const json=atob(base64+'='.repeat((4-base64.length%4)%4));
   if(json.length>5000)throw denied('decoded-size');
   const c=JSON.parse(json);
-  if(!c||Array.isArray(c)||c.role!=='authenticated'||
-     !UUID.test(c.sub)||!UUID.test(c.session_id)||
-     c.iss!==PROJECT+'/auth/v1'||c.is_anonymous===true||
-     !Number.isSafeInteger(c.exp)||c.exp*1000<=clock())
-   throw denied('claims');
+  if(!c||Array.isArray(c))throw denied('claims-object');
+  if(c.role!=='authenticated')throw denied('claims-role');
+  if(!UUID.test(c.sub))throw denied('claims-subject');
+  if(!UUID.test(c.session_id))throw denied('claims-session');
+  if(c.iss!==PROJECT+'/auth/v1')throw denied('claims-issuer');
+  if(c.is_anonymous===true)throw denied('claims-anonymous');
+  if(!Number.isSafeInteger(c.exp))throw denied('claims-expiry-format');
+  if(c.exp*1000<=clock())throw denied('claims-expired');
   return Object.freeze({id:c.sub,sessionId:c.session_id});
  }catch(err){throw denied(err?.message?.split(': ').at(-1)||'decode');}
 }
