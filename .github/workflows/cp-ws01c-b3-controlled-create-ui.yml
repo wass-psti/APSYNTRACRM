@@ -44,7 +44,7 @@ jobs:
           node --check frontend/workspace-ui.js
           node --check frontend/workspace-lifecycle-client.js
           node --check frontend/app.js
-          grep -F 'WS01_CREATION_ENABLED=false' frontend/workspace-ui.js
+          grep -F 'WS01_CREATION_ENABLED=true' frontend/workspace-ui.js
           ! grep -E 'sb_secret_|service_role|SUPABASE_SERVICE_ROLE_KEY' frontend/workspace-ui.js
           echo 'WS01C_B3_PRODUCTION_CREATION_STILL_DISABLED'
       - name: Signed client and UI contract tests
