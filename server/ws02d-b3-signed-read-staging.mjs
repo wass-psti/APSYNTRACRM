@@ -61,7 +61,7 @@ export function createB3SignedReadStaging({
     request.headers.get('origin')===ALLOWED_ORIGIN;
   if(!enabled)return json(503,{status:'BLOCKED'},allowed);
   if(!allowed)return json(403,{status:'BLOCKED'},false);
-  if(request.method==='OPTIONS')return json(204,{},true);
+  if(request.method==='OPTIONS')return json(200,{},true);
   if(request.method!=='GET')return json(405,{status:'BLOCKED'},true);
   if(typeof verifySignedActor!=='function' ||
      typeof readSignedContext!=='function' ||
