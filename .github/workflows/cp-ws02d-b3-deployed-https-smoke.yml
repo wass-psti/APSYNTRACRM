@@ -1,4 +1,4 @@
-name: CP-WS-02D/B3 Genuine Public HTTPS and Anonymous Denial Smoke
+name: CP-WS-02D/B3 Live Activated HTTPS and Anonymous Denial Smoke
 
 on:
   pull_request:
@@ -49,7 +49,7 @@ jobs:
           test "$status" = '401'
           test "$(wc -c < "$RUNNER_TEMP/b3-invalid.json")" -lt 4096
           echo 'WS02D_B3_PUBLIC_INVALID_TOKEN_DENIAL_PASS status=401'
-      - name: Observe unsigned browser preflight without bypassing the JWT gateway
+      - name: Require activated exact-origin unsigned browser CORS preflight
         env:
           ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
         run: |
@@ -63,14 +63,13 @@ jobs:
             --dump-header "$RUNNER_TEMP/b3-preflight.headers" \
             --output "$RUNNER_TEMP/b3-preflight.body" \
             --write-out '%{http_code}' "$ENDPOINT")"
-          case "$status" in 200|204|401|403|503) ;; *) echo 'UNEXPECTED_PREFLIGHT_STATUS'; exit 1;; esac
-          if grep -qi '^access-control-allow-origin: https://wass-psti.github.io' "$RUNNER_TEMP/b3-preflight.headers"; then
-            cors=present
-          else
-            cors=absent
-          fi
-          echo "WS02D_B3_PUBLIC_PREFLIGHT_OBSERVED status=$status cors=$cors"
-          echo 'PREFLIGHT_IS_DIAGNOSTIC_ONLY_NOT_SIGNED_USER_ACCEPTANCE'
+          test "$status" = '200'
+          grep -Eqi '^access-control-allow-origin:[[:space:]]*https://wass-psti.github.io[[:space:]]*$' "$RUNNER_TEMP/b3-preflight.headers"
+          grep -Eqi '^access-control-allow-methods:.*GET' "$RUNNER_TEMP/b3-preflight.headers"
+          grep -Eqi '^access-control-allow-headers:.*authorization' "$RUNNER_TEMP/b3-preflight.headers"
+          grep -Eqi '^access-control-allow-headers:.*apikey' "$RUNNER_TEMP/b3-preflight.headers"
+          echo 'WS02D_B3_ACTIVATED_PREFLIGHT_PASS status=200 origin=exact methods=GET,OPTIONS headers=authorization,apikey'
+          echo 'PREFLIGHT_IS_ACTIVATION_EVIDENCE_ONLY_NOT_SIGNED_USER_ACCEPTANCE'
       - name: Verify foreign Origin is not admitted in actual deployed CORS preflight
         env:
           ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
@@ -85,13 +84,13 @@ jobs:
             --dump-header "$RUNNER_TEMP/b3-foreign-preflight.headers" \
             --output "$RUNNER_TEMP/b3-foreign-preflight.body" \
             --write-out '%{http_code}' "$ENDPOINT")"
-          test "$status" = '503'
+          test "$status" = '403'
           if grep -qi '^access-control-allow-origin:' "$RUNNER_TEMP/b3-foreign-preflight.headers"; then
             echo 'BLOCKED_FOREIGN_ORIGIN_CORS_ALLOWED'
             exit 1
           fi
-          echo 'WS02D_B3_PUBLIC_FOREIGN_ORIGIN_CORS_DENIAL_PASS status=503 app_gate=disabled'
+          echo 'WS02D_B3_PUBLIC_FOREIGN_ORIGIN_CORS_DENIAL_PASS status=403 app_gate=enabled'
       - name: State precise scope of verified evidence
         run: |
-          echo 'WS02D_B3_PUBLIC_HTTPS_SMOKE_PASS'
+          echo 'WS02D_B3_ACTIVATED_PUBLIC_HTTPS_SMOKE_PASS'
           echo 'SIGNED_USER_READ_NOT_TESTED bearer_tokens_supplied=0 production_mutations=0'
