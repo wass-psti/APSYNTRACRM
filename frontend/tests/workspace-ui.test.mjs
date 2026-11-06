@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED,
- workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,validateWorkspaceProposal,renderWorkspaceSwitcher,
+ workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,validateWorkspaceProposal,assessWorkspaceCreationReadiness,renderWorkspaceSwitcher,
  WS02_INVITATIONS_ENABLED,validateWorkspaceInvitationDraft,renderWorkspaceInviteLaunch
 } from '../workspace-ui.js';
 
@@ -58,6 +58,51 @@ test('create-workspace review validates open/closed and rejects malicious names'
   {name:'Test',privacy:'public'},{name:'Test',privacy:''}
  ])assert.equal(validateWorkspaceProposal(proposal).valid,false);
 });
+test('workspace creation readiness explicitly blocks server activation without any workspace mutation',()=>{
+ const valid=assessWorkspaceCreationReadiness({name:' Main Workspace ',privacy:'closed'});
+ assert.equal(valid.valid,true);
+ assert.equal(valid.canCreate,false);
+ assert.equal(valid.status,'PENDING_SERVER_ACTIVATION');
+ assert.match(valid.message,/approved signed server lifecycle/);
+ assert.match(valid.message,/No workspace was created/);
+ assert.ok(Object.isFrozen(valid));
+ for(const draft of [
+  {name:'',privacy:'closed'},
+  {name:'A',privacy:'closed'},
+  {name:'<svg onload=alert(1)>',privacy:'open'},
+  {name:'Valid Name',privacy:'public'}
+ ]){
+  const outcome=assessWorkspaceCreationReadiness(draft);
+  assert.equal(outcome.status,'INVALID_DRAFT');
+  assert.equal(outcome.canCreate,false);
+  assert.equal(outcome.valid,false);
+  assert.ok(Object.isFrozen(outcome));
+ }
+});
+
+test('create modal explains blocked lifecycle and defaults privacy closed without misleading save action',()=>{
+ const module=readFileSync('frontend/workspace-ui.js','utf8');
+ const css=readFileSync('frontend/workspace-ui.css','utf8');
+ assert.match(module,/function createContent\(\)/);
+ assert.match(module,/aria-labelledby=\\"ws01-create-title\\" aria-describedby=\\"ws01-create-description/);
+ assert.match(module,/id=\\"ws01-proposal\\" novalidate/);
+ assert.match(module,/name=\\"privacy\\" value=\\"closed\\" checked/);
+ assert.match(module,/name=\\"privacy\\" value=\\"open\\"/);
+ assert.match(module,/Open is workspace metadata only/);
+ assert.match(module,/Creation unavailable — pending authorized backend activation/);
+ assert.match(module,/type=\\"submit\\" class=\\"ws01-primary\\">Validate draft/);
+ assert.match(module,/ws01-create-footer/);
+ assert.match(module,/aria-live=\\"polite\\"/);
+ assert.match(module,/assessWorkspaceCreationReadiness\(\{/);
+ assert.match(module,/form\.querySelector\('#ws01-name'\)\.focus\(\)/);
+ assert.doesNotMatch(module,/api\.rpc\(['\"]wm_ws01_create/);
+ assert.match(css,/\.ws01-create-card \.ws01-create-footer\{/);
+ assert.match(css,/\.ws01-create-card \.ws01-create-footer button\{/);
+ assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/max-height:min\(90dvh,calc\(100dvh - 24px\)\)/);
+ assert.match(css,/overflow-wrap:anywhere/);
+});
+
 test('workspace switcher escapes signed workspace name and exposes an accessible action',()=>{
  const markup=renderWorkspaceSwitcher({
   id:signedWorkspace,name:'<script>alert("x")</script>'});
