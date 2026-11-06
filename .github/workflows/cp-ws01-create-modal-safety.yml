@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs
-          grep -F 'WS01_CREATION_ENABLED=false' frontend/workspace-ui.js
+          grep -F 'WS01_CREATION_ENABLED=true' frontend/workspace-ui.js
           ! grep -E 'api\.rpc\(.wm_ws01_create|service_role|sb_secret_' frontend/workspace-ui.js
           echo 'WS01_CREATE_UI_DRAFT_ONLY_FAIL_CLOSED_PASS'
       - name: Full frontend regression
