@@ -9,6 +9,10 @@ This continues [the prior trusted-execution fixture](./CP-WS-02D-B3-GENUINE-READ
 
 [Controlled local GoTrue integration report](./CP-WS-02D-B3-LOCAL-GOTRUE-ACCEPTANCE.md) and [CI #3](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42138213159) **PASS**. Two synthetic users authenticated through a real pinned local Supabase GoTrue service (not a mock), their signed JWTs were checked by GoTrue's `/user` endpoint, and the existing exact PostgreSQL session-authority query independently denied token tampering, missing membership, inactive profiles, expired and revoked sessions. The service used an ephemeral PG17 database and was discarded. **Deployed B3 browser read acceptance is still PENDING**; no production HTTPS backend, PostgREST/RLS path, invitation provider or B4 activation was changed. Overarching acceptance remains **5/10**.
 
+## Follow-on real PostgREST + TLS nonproduction acceptance — 2026-11-06
+
+[New isolated HTTPS/RLS acceptance](./CP-WS-02D-B3-HTTPS-POSTGREST-RLS-ACCEPTANCE.md), [CI #5](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42141011359) **PASS**: local GoTrue-signed JWTs now reach the existing staged HTTP read through a temporary locally trusted HTTPS certificate and a real PostgREST RLS database role, not mocked PostgREST responses. Own-workspace row isolation, 12 module predicates and current-session revocation were verified. The RLS and RPC fixture is not the production body; its explicit `p_user_id` rejection must not be claimed for the current live function. **Genuine deployed user report, public trusted backend, provider and B4 activation remain pending/blocked.**
+
 ## Implementation and tests
 
 [GitHub Actions PG17/Node #191](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42135755289) **completed SUCCESS** on `main`, incorporating the original PG17 session/auth and trusted private-issuer fixtures, domain contracts and the new staging read tests.
