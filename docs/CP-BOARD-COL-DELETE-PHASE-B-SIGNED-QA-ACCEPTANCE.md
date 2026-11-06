@@ -151,3 +151,16 @@ The QA creation still requires a genuine user-triggered signed-app operation. If
 - **Open acceptance items:** Independent GitHub Actions and Pages deployment checks, genuine signed-user recovery RPC preflight, one QA column deletion, exact four-cell private snapshot, Activity audit across reload, genuine restoration with all four original values, denied actors/workspaces/expired sessions, and explicit B5 deactivation/scope cleanup. The connected browser could not be read because the originating browser context was unavailable.
 
 **Next required gate:** B4.1 deployed signed-user QA recovery preflight, followed by B4.2 genuine signed-user QA column deletion and Activity restoration. A new verified B3 activation window is required if the current one expires first. Never run the prior one-time activation SQL unchanged. Contacts remains prohibited.
+
+
+## B4.1 signed recovery-index preflight — read-only implementation
+
+**Status: IMPLEMENTED / SIMULATED UNIT TESTS VERIFIED / LIVE SIGNED ACCEPTANCE PENDING.**
+
+- `frontend/board-col-delete-b4-signed-preflight.js` (commit `4eeaad4`) calls the existing B2 genuine GoTrue signed-user fixture inspector, the manager-authorized `wm_list_recoverable_board_columns` RPC for the exact QA board, and signed readback again after the RPC. It requires four persisted synthetic cells before returning `PASS`. No mutation methods are called. An existing recovery snapshot yields `PENDING`; missing/expired scope or denied RPC returns `BLOCKED`.
+- `frontend/app.js` (commit `0e506c4`) now displays a Security-page **Verify signed B4 recovery access** button and sanitized, nonsecret copy-report action. Its asynchronous result is actor/workspace/run-ID gated and cleared on logout or session expiry.
+- `frontend/tests/board-col-delete-b4-signed-preflight.test.mjs` (commits `3747705`, `8d87124`) covers PASS, absent/mismatched identity, manager denial, expired client window, backend scope denial, existing snapshots, report redaction and UI wiring. The committed six tests were executed in a V8 harness using the exact fetched source with in-memory file/Node-test shims: **6/6 PASS**. The earlier recovery-adapter suite passed **13/13** with the same qualification. These do not establish GitHub Actions, live Pages deployment or actual signed-browser provenance.
+- The production B3 activation and QA fixture were unchanged by these frontend commits. Real authenticated acceptance requires a signed user to run the read-only B4 preflight in the deployed Security page; the connected browser tool cannot access the originating signed tab in this chat.
+- After a genuine signed preflight PASS, B4.2 still requires controlled QA-only deletion, Activity review, restoration of all four values, negative authorization tests, and the B5 explicit deactivation/cleanup. If the B3 window expires, stop; do not reuse the earlier one-time activation query unchanged.
+
+**Next required acceptance:** Confirm post-commit GitHub Actions and Pages asset parity, then collect the signed `CP-BOARD-COL-DELETE-B4-1` report. Never claim the signed gate is complete from unit tests alone.
