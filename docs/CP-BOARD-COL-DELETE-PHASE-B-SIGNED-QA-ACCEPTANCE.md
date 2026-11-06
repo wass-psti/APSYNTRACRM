@@ -50,3 +50,30 @@ The user explicitly authorized **B1 only**. The source-locked candidate was appl
 Phase C deletion of Contacts / Status I is not authorized by Phase B. No live QA fixture or signed browser test is claimed here.
 
 **Next required gate:** B2 — controlled ordinary QA board fixture and genuine signed-user access, followed by separately authorized B3 time-limited activation. B1 is COMPLETE; neither B2 nor B3 is implied by the B1 approval.
+
+## B2 signed fixture entry point — 2026-11-06
+
+**Authorization:** The user selected the next gate, Phase B2, after Phase B1 was verified. Scope is one ordinary, synthetic QA board in the existing workspace and its four nonproduction test cells. No activation flag, QA scope row, live operational board, user role, or credentials are changed by this setup.
+
+**Real signed-session integration staged on the deployed app:** `frontend/board-col-delete-b2-signed-fixture.js`, `frontend/app.js`, and `frontend/tests/board-col-delete-b2-signed-fixture.test.mjs`. The signed Security page includes two explicit user actions:
+
+1. **Inspect signed QA fixture** — read-only GoTrue identity + active workspace + ordinary board-manager access + authoritative board/item/column/cell verification. Returns PENDING if no fixture exists.
+2. **Create signed B2 QA fixture** — only upon a real user's click. Requires `auth.getVerifiedUser()`, `wm_auth_access_context`, stable actor/workspace, zero existing QA-named boards and the real signed native board APIs. It creates an ordinary board named **`CP-BOARD-COL-DELETE QA Signed Fixture`** in the current workspace through `wm_create_board`; creator is the real board owner. It adds one ordinary **Recovery Status** text column through the original revision-protected `wm_board_schema_mutate`, four synthetic item rows through `wm_add_board_item`, and four values through `wm_set_board_cell_if_current`. It checks fresh signed context between operations and verifies exact four-value readback and ownership through `wm_get_board`.
+3. **Copy nonsecret QA report** — whitelists status, stage, reason, and cell count; excludes user identifiers, workspace identifiers, tokens, private snapshot contents, and board identifier. The page shows a local direct QA-board navigation link when a board identifier is known.
+
+**Safety:** This is not a privileged backdoor or server-only admin insert. It never calls the recoverable delete/restore RPCs. The browser never flips server activation flags, inserts a private QA-scope row, assigns member roles or purges data. Backend authorization remains authoritative. The workflow stops when a QA-name collision or any uncertainty is found and does not retry writes. Partial fixtures are preserved for deliberate inspection rather than automatically deleted. No new users or Supabase projects are created. In particular, the existing Contacts board and its Status I values are not referenced as mutation targets.
+
+**Integration evidence:** The native production PostgreSQL source was inspected read-only. `wm_create_board` returns UUID and creates the signed caller as board owner plus a default group; `wm_board_schema_mutate` supports ordinary custom columns; `wm_add_board_item` and `wm_set_board_cell_if_current` enforce original edit/compare-and-set checks. The connector's browser tab access failed with `Browser access requires the originating browser context`, so no real user gesture was remotely executed or claimed.
+
+**Current production state (read-only):** Zero QA-named boards, zero private Phase B scope rows, both recovery activation flags false, no private column/cell recovery snapshots, five Contacts columns including one Status I column with exactly four persisted cell rows.
+
+**Acceptance classification:**
+
+- B1 controlled production security migration — **VERIFIED**.
+- B2 signed QA fixture UI and unit/regression implementation — **IMPLEMENTED**, CI status to be recorded separately.
+- B2 genuine signed owner board creation and four-value persistence — **PENDING**, no browser-run evidence yet.
+- B3 signed actor-scoped server activation — **NOT AUTHORIZED / DISABLED**.
+- B4 signed Activity deletion/restore with refresh/reopen — **PENDING**.
+- Phase C Contacts deletion — **NOT AUTHORIZED**.
+
+**Next operational checkpoint:** Open the signed APSYNTRA CRM [Security](https://wass-psti.github.io/APSYNTRACRM/#/security) page using an existing authorized account. Select **Inspect signed QA fixture** and then, only when it reports that none exists, **Create signed B2 QA fixture**. Confirm the result is PASS and the QA board has the four synthetic cells after reopening; a read-only SQL cross-check can then independently verify its identity and count. Do not share JWTs, auth cookies, or database credentials. Do not enable any private recovery flag before B3's separate approval.
