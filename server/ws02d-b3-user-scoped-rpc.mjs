@@ -7,7 +7,7 @@
  * PostgREST API. Never replace it with service_role, secret, administrator
  * RPC or user-metadata authorization. This module is not deployed/mounted.
  */
-const HOST=/^https:\/\/[a-z0-9-]+\.supabase\.co$/;
+const HOST=/^https:\/\/jtlusodorfnyzgyuewkz\.supabase\.co$/;
 const PUB=/^sb_publishable_[A-Za-z0-9_-]{8,}$/;
 const JWT=/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
