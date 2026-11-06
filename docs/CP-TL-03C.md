@@ -1,6 +1,6 @@
 # CP-TL-03C — Controlled TradeLink production activation
 
-**Status:** STAGE A PRODUCTION INSTALLED / STRUCTURAL PREFLIGHT 15/15 VERIFIED; DISPOSABLE POSTGRES 17 CI VERIFIED (RUN #16); PHASE 2 FRESH AUTHORIZED_MANAGER 6/6 AND HR BOARD_MANAGER_DENIED 6/6 USER-REPORTED PASS; STAGE B WRITE EXECUTE NOT APPROVED / NOT ACTIVATED; LIVE SIGNED-WRITE AND REMAINING CROSS-WORKSPACE/SESSION ACCEPTANCE PENDING.  
+**Status:** STAGE A PRODUCTION READ-ONLY VERIFIED; DISPOSABLE POSTGRES 17 RUN #16 PASS; PHASE 2 GENUINE MANAGER AND HR READ 2/2 USER-REPORTED PASS; PHASE 3 STAGE B READINESS 4/7 VERIFIED — NO-GO PENDING CURRENT BACKUP/RECOVERY EVIDENCE, NAMED OWNER AND SEPARATE PRODUCTION WRITE-GRANT APPROVAL. STAGE B NOT ACTIVATED.  
 **Project:** existing Supabase `jtlusodorfnyzgyuewkz` ONLY. No new project, backend, login, or independent user-role store.  
 **Board:** existing TradeLink `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, workspace `00000000-0000-4000-8000-000000000001`.
 
@@ -190,3 +190,16 @@ The user supplied a separate current HR account report attributed to Amalia P. S
 Read-only database validation reconfirmed authenticated list EXECUTE granted and authenticated draft commit EXECUTE **denied**. The larger 15-point verifier was **not independently rerun successfully in this turn**; the previously verified Stage A contract remains the accepted baseline. The two-role signed Stage A acceptance refresh is now **2/2 PASS**, but genuine foreign workspace remains BLOCKED by absence of a foreign active member and revoked/expired bearer checks remain PENDING. No production TradeLink document mutations, grants, roles or sessions were changed.
 
 **Next gate:** `CP-TL-03C / Phase 3 — Stage B Production-Change Approval and Recovery Readiness Decision`. Reconcile production backup/recovery evidence and accountable change owner, then request new explicit production authorization for the narrow write grants; test-record data writes require their own approval. Do not apply either staged grant or rollback candidate automatically. See the Phase 2 approval packet for the precise two-function permission delta and disposable rollback verification.
+
+
+## Phase 3 — Stage B production-change decision (2026-11-06)
+
+**Decision: NO-GO — evidence and authorization prerequisites outstanding, not a failed Stage A or disposable integration contract.** The dedicated Phase 3 decision and recovery report is `docs/CP-TL-03C-PHASE-3-STAGE-B-CHANGE-DECISION-2026-11-06.md` (commit `be50191`).
+
+**Read-only live findings:** Existing project is `ACTIVE_HEALTHY` on PostgreSQL 17.6. TradeLink domain document and audit tables and its board have **zero records**, both public/private authenticated draft-command EXECUTE grants are **FALSE**, authenticated read/list grants **TRUE**, anonymous commit **FALSE**, and both domain tables have RLS enabled. No new SQL migration, permissions, document records, roles, credentials, sessions or restore action was applied in this checkpoint. Existing Phase 1 15/15 structural acceptance, genuine manager + HR Phase 2 signed-read reports and disposable PostgreSQL run #16 remain VERIFIED in their own specified scopes.
+
+**Recovery verification limit:** The prior user-confirmed scheduled backup availability is preserved as historical evidence, not conflated with a verified current restore point or restore rehearsal. Supabase project metadata and available connected tools do not expose the latest backup inventory, PITR/recovery settings, or independent restore results. Browser access requires an originating browser context and was unavailable here. No new Supabase project or potentially destructive restore was initiated. The existing candidate for Stage B-only rollback preserves Stage A reads and **does not undo already committed data**; full emergency-disable affects Stage A reads and needs its own authority. Those options were tested only in disposable CI.
+
+**Approval boundary:** The Phase 3 packet specifies the exact two proposed `GRANT EXECUTE` permissions, named production change/security/rollback ownership, current backup restore-point and recovery-impact evidence, explicit production permission-change authorization, and separate authority for real document test writes. None of the three essential external gates (current recovery proof, assigned operator/window, separate Stage B approval) is certified. **Technical+governance decision coverage 4/7 verified**; production Stage B activation remains **NO-GO / NOT AUTHORIZED**. Genuine foreign workspace and revoked/expired production sessions remain separate pending or blocked security gates, not passed by existing simulated CI.
+
+**Next gate:** `CP-TL-03C / Phase 3B — Current Backup Evidence, Change Ownership and Explicit Stage B Permission Decision`, followed only if authorized by a controlled grant and genuine signed Draft write acceptance. No automatic activation or role modification is permissible.
