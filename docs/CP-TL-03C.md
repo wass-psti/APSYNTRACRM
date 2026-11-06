@@ -1,6 +1,6 @@
 # CP-TL-03C — Controlled TradeLink production activation
 
-**Status:** STAGE A PRODUCTION INSTALLED / STRUCTURAL PREFLIGHT 15/15 VERIFIED; DISPOSABLE POSTGRES 17 CI VERIFIED (RUN #16); PHASE 2 FRESH AUTHORIZED_MANAGER SIGNED READ 6/6 USER-REPORTED PASS, HR REFRESH PENDING; STAGE B WRITE EXECUTE NOT APPROVED / NOT ACTIVATED; LIVE SIGNED-WRITE ACCEPTANCE PENDING.  
+**Status:** STAGE A PRODUCTION INSTALLED / STRUCTURAL PREFLIGHT 15/15 VERIFIED; DISPOSABLE POSTGRES 17 CI VERIFIED (RUN #16); PHASE 2 FRESH AUTHORIZED_MANAGER 6/6 AND HR BOARD_MANAGER_DENIED 6/6 USER-REPORTED PASS; STAGE B WRITE EXECUTE NOT APPROVED / NOT ACTIVATED; LIVE SIGNED-WRITE AND REMAINING CROSS-WORKSPACE/SESSION ACCEPTANCE PENDING.  
 **Project:** existing Supabase `jtlusodorfnyzgyuewkz` ONLY. No new project, backend, login, or independent user-role store.  
 **Board:** existing TradeLink `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, workspace `00000000-0000-4000-8000-000000000001`.
 
@@ -181,3 +181,12 @@ The user supplied a new sanitized result with `checkpoint: CP-TL-03C-STAGE-A-SIG
 A separate read-only live SQL query again observed zero TradeLink document rows, zero domain audit events, `authenticated` document-list EXECUTE enabled and document-commit EXECUTE disabled. The prior 15-point Phase 1 structural PASS remains accepted; no new full 15/15 result is claimed in this turn. Stage B production write grants remain disabled and unapproved. This closes only the fresh `AUTHORIZED_MANAGER` signed **read** acceptance case.
 
 Next required signed report: an existing HR/nonmanager's fresh `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED` report with six PASS checks, zero writes and zero document disclosures. Genuine foreign-workspace, revoked/expired session and later production draft mutation acceptance stay blocked or pending on their own prerequisites. See `docs/CP-TL-03C-PHASE-2-SIGNED-READ-AND-STAGE-B-APPROVAL-PACKET-2026-11-06.md` for detailed evidence and approval boundaries.
+
+
+## Phase 2 fresh signed HR non-manager denial — accepted (2026-11-06)
+
+The user supplied a separate current HR account report attributed to Amalia P. Señagan: `checkpoint=CP-TL-03C-STAGE-A-SIGNED-READ`, `status=PASS`, `scenario=BOARD_MANAGER_DENIED`. All six expected signed checks (identity, effective access, list, nonexistent read, wrong-board denial, stable session) report `PASS`; `writesAttempted=0`, `documentsDisclosed=0`. Its origin is a **user-submitted genuine application report**, not an independently controlled browser session. It closes the **fresh Phase 2 HR board-manager-denial** case, distinct from the earlier `AUTHORIZED_MANAGER` fresh 6/6 PASS.
+
+Read-only database validation reconfirmed authenticated list EXECUTE granted and authenticated draft commit EXECUTE **denied**. The larger 15-point verifier was **not independently rerun successfully in this turn**; the previously verified Stage A contract remains the accepted baseline. The two-role signed Stage A acceptance refresh is now **2/2 PASS**, but genuine foreign workspace remains BLOCKED by absence of a foreign active member and revoked/expired bearer checks remain PENDING. No production TradeLink document mutations, grants, roles or sessions were changed.
+
+**Next gate:** `CP-TL-03C / Phase 3 — Stage B Production-Change Approval and Recovery Readiness Decision`. Reconcile production backup/recovery evidence and accountable change owner, then request new explicit production authorization for the narrow write grants; test-record data writes require their own approval. Do not apply either staged grant or rollback candidate automatically. See the Phase 2 approval packet for the precise two-function permission delta and disposable rollback verification.
