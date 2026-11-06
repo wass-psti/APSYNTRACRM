@@ -11,6 +11,7 @@ on:
       - 'frontend/tests/workspace-b3-foreign-rls-denial.test.mjs'
       - 'frontend/tests/workspace-b3-revoked-session-denial.test.mjs'
       - 'frontend/app.js'
+      - 'scripts/pages-smoke.mjs'
       - 'frontend/session.js'
       - 'frontend/tests/board-bulk02-signed-acceptance.test.mjs'
       - 'frontend/tests/platform-sync.test.mjs'
@@ -24,6 +25,7 @@ on:
       - 'frontend/tests/workspace-b3-foreign-rls-denial.test.mjs'
       - 'frontend/tests/workspace-b3-revoked-session-denial.test.mjs'
       - 'frontend/app.js'
+      - 'scripts/pages-smoke.mjs'
       - 'frontend/session.js'
       - 'frontend/tests/board-bulk02-signed-acceptance.test.mjs'
       - 'frontend/tests/platform-sync.test.mjs'
@@ -53,6 +55,7 @@ jobs:
           set -euo pipefail
           node scripts/verify-pages-source.mjs
           node --check frontend/app.js
+          node --check scripts/pages-smoke.mjs
           node --check frontend/session.js
           node --check frontend/workspace-b3-foreign-rls-denial.js
           node --check frontend/workspace-b3-revoked-session-denial.js
