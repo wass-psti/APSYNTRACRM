@@ -97,3 +97,30 @@ GRANT EXECUTE ON FUNCTION public.tl03_document_commit(uuid,uuid,bigint,text,json
 6. On drift or unauthorized success, halt new writes, preserve audit and escalate. A separately authorized narrow write-only revoke should be the default, not destructive rollback or shared-project restore.
 
 **Next phase after Phase 3B:** **Controlled Stage B permission activation and genuine signed Draft acceptance — only after explicit approval and recovery/ownership gates are verified.** Until then, Stage A read-only remains the safe, supported configuration.
+
+
+---
+
+## Phase 3B evidence-closure attempt — 2026-11-06 (read-only)
+
+**Status:** **TECHNICAL GATE VERIFIED / HUMAN PRODUCTION APPROVAL GATE PENDING / NO-GO.** This entry records completion of the evidence-collection attempt, **not** production activation or recovery certification.
+
+**Fresh check:** The exact previously committed `sql/tests/cp-tl03c-phase1-readonly-activation-preflight.sql`, Git blob `5d96e2f27e49fc84fe0c8e68758646842bc9b294`, was executed again against existing project `jtlusodorfnyzgyuewkz`. It returned `STAGE_A_STRUCTURAL_PASS__STAGE_B_NOT_AUTHORIZED`: **15/15 checks PASS, failed_checks=[]**. No Stage B write permissions or mutating commands were applied. Project metadata returned `ACTIVE_HEALTHY` on PostgreSQL 17.6.1.165, and migration inventory showed Stage A `20261105011611` with no Stage B migration. The ledger also now includes an unrelated 2026-11-06 workspace B3 migration; that does **not** change the 15/15 Stage A integrity result or establish approval for Stage B.
+
+**Backup-source availability:** The Supabase connector does not expose a backup inventory or recovery history action. An attempt to read the connected user's browser tabs failed because the originating browser context was unavailable. Therefore, the current scheduled-backup timestamp, backup status, PITR/retention mode, RPO/RTO and restored-state evidence were **not obtained**. Do not equate project health or the earlier user statement that backups were satisfactory with a current restorable recovery point. No backup was initiated or restored. Do not create an additional Supabase project.
+
+**Approval-source availability:** Repository searches for an explicit Stage B approval, an assigned rollback owner, and a timestamped last successful backup produced no supporting matching records. That negative repository search does not prove no approval exists elsewhere; it establishes only that **this execution has not obtained auditable evidence**. Standing engineering authorization and the instruction to begin Phase 3B are **not** a separate production permission-change approval.
+
+**Required minimum evidence for gate closure** (nonsecret; may be an internally approved change record rather than a public GitHub document):
+
+| Required closure field | Evidence to supply | Acceptance rule |
+| --- | --- | --- |
+| Recovery point | Actual backup mechanism, latest successful recovery timestamp with timezone, and retention horizon shown in [existing project backups](https://supabase.com/dashboard/project/jtlusodorfnyzgyuewkz/database/backups/scheduled) | Backup is usable within intended window; no unverified assumptions |
+| Recovery impact | Authorized recovery approach, organization-approved RPO/RTO, shared-project blast radius and whether an actual restore drill is mandated | Decision explicit; a drill cannot be claimed without execution evidence |
+| Accountability | Approved change executor, independent security/RBAC reviewer, rollback/incident owner and deployment window | Named owners and stop authority exist |
+| Production permission change | Exact acceptance/approval of the two `authenticated` `GRANT EXECUTE` statements in `sql/cp-tl03c-write-permission-candidate.sql` | Separate scoped approval from an authorized decision-maker; version/source matches current reviewed candidate |
+| Subsequent data fixture | Explicit authorization for any real production Draft create/update/archive/restore, with disposal/retention procedure | Separate from the permission approval; no implicit records |
+
+**Decision:** **NO-GO; 4/7 readiness predicates satisfied.** None of the three independent recovery/ownership/production-permission approvals was verified by this attempt. Continue to serve the already approved Stage A read-only API. Any subsequent approved activation must first rerun the same 15-point check and follow change governance and the separately reviewed narrow write-only rollback procedure. No roles, permissions, documents, audit rows, workspace memberships, session state or backups were altered during this checkpoint.
+
+**Operator-facing next action:** Review the actual current [Supabase Backups dashboard](https://supabase.com/dashboard/project/jtlusodorfnyzgyuewkz/database/backups/scheduled) and supply the nonsecret status/retention/recovery fields with designated change and rollback owners. An authorized approver must explicitly authorize the two specific Stage B write grants separately. Until these evidence items exist, stop at NO-GO and keep Stage B disabled.
