@@ -75,3 +75,15 @@ The connected browser enumerated an existing APSYNTRA CRM tab at `#/overview` an
 **State handling:** The source preserves unsaved in-view fields during redraw and resets Draft state on signed route changes. This is a code-level expectation; real identity-change and sign-out transitions are not re-certified by this attempt.
 
 **Gate disposition:** Genuine interactive validation for the three forms and module switching **PENDING/BLOCKED**. Existing automated source tests (1,103/1,103), successful deployment, and prior non-mutation evidence remain valid as separate technical checks. Production DB tests were deliberately **not repeated**, per the user's instruction. The next step is to perform only the UI checks in a browser-control-capable session (for example, ChatGPT Work mode with connected browser), then record sanitized outcomes; do not ask for or handle user credentials.
+
+## Owner acceptance addendum — 2026-11-06
+
+**User instruction:** "consider it all good". The user accepts the current Packing List, Delivery Receipt and Payment AR **local-only Draft readiness milestone** for roadmap continuation, including the module-switching behavior delivered by the frontend implementation.
+
+**Milestone disposition:** **CLOSED — USER-ACCEPTED WITH DOCUMENTED EVIDENCE EXCEPTIONS.** This is user sign-off of staged frontend behavior and not evidence that the independently blocked genuine signed-browser interactions were performed. The interactive negative input, module-switching, and cross-session cases remain **NOT INDEPENDENTLY VERIFIED / PENDING** in the acceptance ledger above. Do not relabel those checks PASS or represent the sign-off as security certification.
+
+**Evidence retained:** automated frontend 1,103/1,103 pass (0 fail); disposable PostgreSQL jobs passed; successful deployed code workflow; last verified production read-only controls (zero TradeLink documents/events/board rows, RLS enabled, authenticated/anonymous commit EXECUTE denied). The already recorded CDN live-smoke exception is preserved. No extra production database verification was ordered or required for this sign-off.
+
+**Authorization boundary:** This acceptance does **not** authorize Stage B grants, production document writes, workflow submission/approval, payments, stock movement, PDFs, attachments, or modification of account roles, credentials or recovery settings. Any future production activation remains **NO-GO** until its independent approval, recovery, ownership, and signed security gates are satisfied.
+
+**Permitted next direction:** Continue non-mutating TradeLink source-aligned development based on the existing six-module schema and established backend contract. Avoid repeating previously accepted UI checks solely to obtain an unattainable browser-tool certification; retain the exceptions for relevant future production security gates.
