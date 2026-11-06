@@ -24,7 +24,7 @@ const disabled=()=>{throw new ApiError(
 export const tradeLinkDraftReady=()=>TL03_DOMAIN_READS_ENABLED&&TL03_DOMAIN_WRITES_ENABLED;
 export function initialTradeLinkDraftView(){
  return {status:'DARK_LAUNCH',rows:[],selected:null,busy:false,error:'',
-  message:'',mode:'create',pendingCreateId:null};
+  message:'',mode:'create',pendingCreateId:null,formValues:null};
 }
 export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.randomUUID?.()}={}){
  if(!fields||typeof fields.get!=='function')
@@ -92,15 +92,16 @@ function field(label,name,val='',attrs=''){
  return '<label class="tl-draft-field"><span>'+escape(label)+'</span>'+
   '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+'></label>';
 }
-function renderEditor(row,mode,canManage){
+function renderEditor(row,mode,canManage,formValues=null){
  const editing=mode==='edit'&&row?.workflow_state==='draft'&&
   row.content&&typeof row.content==='object'&&
   (!Array.isArray(row.content.items)||row.content.items.length<=1);
  const data=editing?row.content:{};
+ const fieldValue=(name,fallback='')=>formValues&&Object.hasOwn(formValues,name)?formValues[name]:fallback;
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
  const writeEnabled=editing||mode==='create';
  const live=TL03_DOMAIN_WRITES_ENABLED&&canManage&&writeEnabled;
- const type=editing?data.documentType:'quotation';
+ const type=editing?data.documentType:fieldValue('documentType','quotation');
  return '<section class="tl-draft-panel" aria-labelledby="tl-draft-editor-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Source-aligned Draft editor</p>'+
   '<h3 id="tl-draft-editor-title">'+(editing?'Edit authorized Draft':'Prepare a Draft')+'</h3></div>'+
@@ -111,23 +112,23 @@ function renderEditor(row,mode,canManage){
    '<div class="tl-draft-form-grid"><label class="tl-draft-field"><span>Document module</span>'+
     '<select name="documentType" '+(editing?'disabled':'')+'>'+options(typeLabels,type)+'</select></label>'+
     (editing?'<input type="hidden" name="documentType" value="'+escape(type)+'">':'')+
-    field('Document number','documentNumber',data.documentNumber||'','required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*"')+
-    field('Customer / supplier','customerName',data.customerName||'','maxlength="5000"')+
-    field('Reference','referenceNumber',data.referenceNumber||'','maxlength="5000"')+
+    field('Document number','documentNumber',fieldValue('documentNumber',data.documentNumber||''),'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*"')+
+    field('Customer / supplier','customerName',fieldValue('customerName',data.customerName||''),'maxlength="5000"')+
+    field('Reference','referenceNumber',fieldValue('referenceNumber',data.referenceNumber||''),'maxlength="5000"')+
     '<label class="tl-draft-field"><span>Currency</span><select name="currency">'+
-     options(currencies.map(v=>[v,v]),data.currency||'PHP')+'</select></label>'+
+     options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select></label>'+
     '<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
-     options(vatCodes,data.vatType||'12')+'</select></label>'+
+     options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>'+
    '</div>'+
    '<fieldset class="tl-draft-lines"><legend>Single line item (optional)</legend>'+
-    field('Description','lineDescription',line.description||'','maxlength="2000"')+
-    field('Quantity','lineQuantity',line.quantity??'','type="number" min="0" max="1000000000" step="any"')+
-    field('Unit price','lineUnitPrice',line.unitPrice??'','type="number" min="0" max="1000000000" step="any"')+
-    field('Unit','lineUnit',line.unit||'','maxlength="120"')+
+    field('Description','lineDescription',fieldValue('lineDescription',line.description||''),'maxlength="2000"')+
+    field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),'type="number" min="0" max="1000000000" step="any"')+
+    field('Unit price','lineUnitPrice',fieldValue('lineUnitPrice',line.unitPrice??''),'type="number" min="0" max="1000000000" step="any"')+
+    field('Unit','lineUnit',fieldValue('lineUnit',line.unit||''),'maxlength="120"')+
     (editing&&line.id?'<input type="hidden" name="lineId" value="'+escape(line.id)+'">':'')+
    '</fieldset>'+
    '<label class="tl-draft-field"><span>Remarks</span>'+
-    '<textarea name="remarks" maxlength="5000" rows="3">'+escape(data.remarks||'')+'</textarea></label>'+
+    '<textarea name="remarks" maxlength="5000" rows="3">'+escape(fieldValue('remarks',data.remarks||''))+'</textarea></label>'+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-preview">Validate locally</button>'+
     '<button type="submit" class="primary"'+(live?'':' disabled title="Production Draft writes are not activated"')+
@@ -169,5 +170,5 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
       (!canManage||!TL03_DOMAIN_WRITES_ENABLED||!row.archived||row.workflowState!=='draft'?' disabled':'')+'>Restore</button>'+
      '</td></tr>').join('')+'</tbody></table></div>':
     '<p class="muted">No persisted TradeLink Draft records are displayed. The signed document-list endpoint remains off during this dark launch.</p>')+
-  '</section>'+renderEditor(selected?.record,view.mode,canManage)+'</div>';
+  '</section>'+renderEditor(selected?.record,view.mode,canManage,view.formValues)+'</div>';
 }
