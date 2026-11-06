@@ -67,10 +67,12 @@ Stage outcomes are tracked independently:
 | --- | --- |
 | Production cause and private schema baseline | **VERIFIED — read-only catalog** |
 | Guarded UI, signed client injection, receipt/idempotency/error handling | **IMPLEMENTED — default-OFF** |
-| Disposable PostgreSQL creation + activation/rollback tests | **Pending CI evidence** |
+| Disposable PostgreSQL creation + activation/rollback tests | **VERIFIED — disposable PG17 only** |
 | Production dormant RPC installation | **PENDING separate approval** |
 | Authenticated creation grant + lifecycle flag | **PENDING separate approval** |
 | Frontend enablement and genuine signed creation acceptance | **PENDING** |
 | Independent cross-user/foreign-table RLS and B4 selection | **Separate gates; not waived** |
+
+**Verified CI:** [Workspace-controlled UI regression 42182676274](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42182676274) **SUCCESS**, 29/29 focused and 1,087/1,087 frontend tests. [Disposable PG17 lifecycle 42182676301](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42182676301) **SUCCESS**, 41/41 UI contracts, 44/44 trusted backend tests and the marker `CP_WS01C_B3_CONTROLLED_DISPOSABLE_ACTIVATION_AND_ROLLBACK_PASS`. The later PR-head CI also passed focused create-modal, B3 signed HTTPS and genuine-negative synthetic integration. These successes are not production authorized creation acceptance.
 
 **Explicit production authorization needed:** separately approve installation of the reviewed B3 workspace creation functions; the single authenticated EXECUTE grant and creation lifecycle flag; and genuine signed creation of one real workspace for acceptance, each with rollback and no other role/RLS/grant/domain changes. A request to repair this modal or a generic development authorization does not itself approve those security-sensitive production changes.
