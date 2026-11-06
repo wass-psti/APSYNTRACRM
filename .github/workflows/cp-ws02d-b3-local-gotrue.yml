@@ -1,0 +1,106 @@
+name: CP-WS-02D/B3 Disposable Real GoTrue Signed-Session Acceptance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cp-ws02d-b3-local-gotrue.yml'
+      - 'scripts/ws02d-b3-gotrue-disposable-acceptance.mjs'
+      - 'server/ws02d-gotrue-live-read-adapters.mjs'
+      - 'server/ws02d-gotrue-actor-verifier.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-gotrue-pg17:
+    name: Self-hosted GoTrue v2.189.0 + Disposable PostgreSQL 17
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ws01_ci_only
+          POSTGRES_DB: gotrue_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gotrue_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      CI: 'true'
+      WS02D_B3_LOCAL_GOTRUE: 'true'
+      PGHOST: '127.0.0.1'
+      PGPORT: '5432'
+      PGDATABASE: 'gotrue_disposable'
+      PGUSER: 'postgres'
+      PGPASSWORD: 'disposable_ws01_ci_only'
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - name: Checkout without stored credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install PostgreSQL client on isolated runner
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Assert disposable database and prepare isolated auth schema
+        run: |
+          set -euo pipefail
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "gotrue_disposable"
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'gotrue_disposable|t'
+          psql -X -v ON_ERROR_STOP=1 -c 'CREATE SCHEMA IF NOT EXISTS auth;'
+      - name: Start pinned GoTrue on runner loopback only (no SMTP or external identities)
+        run: |
+          set -euo pipefail
+          jwt_secret="$(openssl rand -hex 48)"
+          docker pull supabase/gotrue:v2.189.0 >/dev/null
+          docker run --rm -d --name ws02d-b3-local-auth --network host \
+            -e GOTRUE_API_HOST=127.0.0.1 \
+            -e GOTRUE_API_PORT=9999 \
+            -e API_EXTERNAL_URL=http://127.0.0.1:9999 \
+            -e GOTRUE_SITE_URL=http://127.0.0.1:5173 \
+            -e GOTRUE_DB_DRIVER=postgres \
+            -e 'GOTRUE_DB_DATABASE_URL=postgres://postgres:disposable_ws01_ci_only@127.0.0.1:5432/gotrue_disposable?sslmode=disable' \
+            -e GOTRUE_DB_NAMESPACE=auth \
+            -e GOTRUE_JWT_SECRET="$jwt_secret" \
+            -e GOTRUE_JWT_AUD=authenticated \
+            -e GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated \
+            -e GOTRUE_JWT_EXP=3600 \
+            -e GOTRUE_DISABLE_SIGNUP=false \
+            -e GOTRUE_EXTERNAL_EMAIL_ENABLED=true \
+            -e GOTRUE_EXTERNAL_PHONE_ENABLED=false \
+            -e GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED=false \
+            -e GOTRUE_MAILER_AUTOCONFIRM=true \
+            -e GOTRUE_LOG_LEVEL=error \
+            supabase/gotrue:v2.189.0 >/dev/null
+          for i in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 1 http://127.0.0.1:9999/health > /dev/null 2>&1; then
+              echo 'LOCAL_GOTRUE_HEALTH_VERIFIED'
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'Local disposable GoTrue did not become healthy'
+          docker logs --tail 30 ws02d-b3-local-auth 2>&1 | sed -E 's/(token|password|secret|authorization)[^[:space:]]*/[REDACTED]/Ig'
+          exit 1
+      - name: Verify real local GoTrue-signed JWT, session revocation and workspace isolation
+        run: node scripts/ws02d-b3-gotrue-disposable-acceptance.mjs
+      - name: Stop and discard ephemeral GoTrue container
+        if: always()
+        run: |
+          docker rm -f ws02d-b3-local-auth >/dev/null 2>&1 || true
+          echo 'LOCAL_GOTRUE_EPHEMERAL_CLEANUP_COMPLETE'
