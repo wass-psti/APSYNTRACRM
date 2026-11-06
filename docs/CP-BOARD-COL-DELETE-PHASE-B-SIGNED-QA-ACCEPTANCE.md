@@ -1,7 +1,7 @@
 # CP-BOARD-COL-DELETE — Phase B signed QA acceptance
 
 **Date:** 2026-11-06  
-**Status (2026-11-06):** **B1 COMPLETE / VERIFIED; B2 SIGNED QA FIXTURE COMPLETE / VERIFIED; B3–B5 NOT YET AUTHORIZED OR ACCEPTED.** Historical pre-fixture evidence is retained below. 
+**Status (2026-11-06):** **B1 VERIFIED; B2 VERIFIED; B3 CONTROLLED 60-MINUTE ACTIVATION VERIFIED (effective only until 2026-11-06 12:07:34 Asia/Manila); B4–B5 PENDING.** Earlier sections preserve historical preactivation evidence. 
 
 ## Verified baseline
 
@@ -101,3 +101,24 @@ The QA creation still requires a genuine user-triggered signed-app operation. If
 - **Dispatch correction:** `frontend/app.js` now selects creation using `name==='security-b2-qa-create'` instead of mistakenly comparing the `action` function. Fix commit `2fc9d13`; regression assertion commit `7bde8b0`. The subsequent user-reported PASS establishes actual execution after the correction; newly triggered CI/deployment checks were not independently confirmed in this acceptance.
 
 **Next required gate:** **B3 — Controlled, time-limited QA recovery activation**, restricted to the verified fixture board and signed actor, requiring separate authorization because it modifies production recovery activation and private scope. Then B4 signed deletion/restoration and Activity acceptance, followed by B5 deactivation and cleanup verification. **Phase C Contacts deletion remains not authorized.**
+
+
+---
+
+## B3 controlled 60-minute signed-owner QA activation — 2026-11-06
+
+**Status: COMPLETE / VERIFIED for scoped backend activation.** Authorized by the user explicitly requesting Phase B3. This is **not** B4 deletion or recovery acceptance, not authorization for Contacts, and not completion of B5 cleanup.
+
+**Target and safeguards:** Existing B2 QA board `8491b933-8aa7-4b10-816c-46b6758531f3` only. Scope actor derives from the board's persisted creator and is verified as the original `owner` membership, without publishing the actor ID. No other QA-marker board exists. The B1 recovery RPC implementations were checked against exact three deployed source hashes (delete `c9306ac46991b67bbfc1817cf197b5b5`, list `51a6f2574597107396e298277111e1c6`, restore `d569201323f80d9e5f8e08d7cdeffab5`). B3 activation additionally checked the four exact original cell values, single custom column, four active items, absence of snapshots and private scope, disabled original global flags, and four intact Contacts / Status I cells. Failure aborts the transaction.
+
+**Controlled execution:** `sql/cp-board-col-delete-b3-qa-activation.sql` was committed as `02ec112` and the rollback-safe `sql/cp-board-col-delete-b3-qa-deactivation.sql` as `2bf9754`. The activation was first executed with a transaction `ROLLBACK` dry run; both original flags were confirmed disabled and scope empty after rollback. The actual SQL was then executed against the existing WatchdogWorkspace project `jtlusodorfnyzgyuewkz`; backend returned **`B3_SCOPED_ACTIVATION_VERIFIED`**. The independent post-commit SQL check confirmed one scope row, flags delete/restore TRUE, exact QA board and creator-owner, active maximum-60-minute expiry, original RPC source hashes unchanged, four QA items/cells, zero recovery snapshots and four intact Contacts / Status I values. No live deletion/restoration RPC executed.
+
+**Scope expiry:** `2026-11-06 04:07:34.459742+00:00` = **November 6, 2026, 12:07:34 PM Asia/Manila**. All B1 recovery RPCs require the private QA scope's `expires_at > now()`; after expiry, **effective access fails closed automatically**. IMPORTANT: the two global activation flag values do **not** themselves automatically turn FALSE at expiration. The prepared deactivation SQL must be explicitly run to disable both flags and remove the private scope in B5 (or sooner if B4 is deferred). Do not claim those flags will self-reset. If the scope expires before B4's signed test, a new tightly controlled activation window must be separately staged and verified; do not repeat the one-time B3 SQL unchanged.
+
+**Negative test and deactivation rehearsal:** A live no-JWT `anon` database role invocation of the recovery-list RPC returned SQLSTATE `42501` and passed `B3_ANONYMOUS_RECOVERY_INDEX_DENIAL_PASS`; the test rolled back. The deactivation SQL was tested with a transaction rollback, showing the original one-scope and flags-TRUE state remained after the rehearsal. No new users or role grants, permission changes, JWT impersonation, or operational board mutations.
+
+**Frontend safety:** `frontend/board-column-recovery.js` retains `BOARD_COLUMN_RECOVERY_ENABLED=false`. A signed QA manager cannot use the application's delete/restore UI yet; B4 frontend enabling and genuine signed-browser acceptance are distinct upcoming work. Any unrelated signed `CP-BOARD-BULK02` report does not count as recovery acceptance.
+
+**B3 classification:** **COMPLETE / VERIFIED (backend activation only)** during the stated 60-minute window. **B4 PENDING:** signed QA-only frontend gate, exact recovery deletion, Activity visibility, reload, restoration of all four cells, stale-revision/unauthorized denial and audit acceptance. **B5 PENDING:** explicit global deactivation, scope removal, source/provenance/audit preservation and Contacts nonmutation checks.
+
+**Next required gate: CP-BOARD-COL-DELETE / Phase B4 — Genuine Signed-Session Column Deletion and Activity Restoration Acceptance.** Production Contacts deletion (Phase C) remains unapproved and prohibited.
