@@ -1,5 +1,23 @@
 # CP-WS-01C/B3 — Production HTTP, signed-session correlation and safe live denial evidence
 
+## Phase G2 — Existing-user eligibility and signed HTTP denial readiness (November 6, 2026)
+
+**Status: BLOCKED for independent signed-user HTTP denial; prior B2 signed discovery remains VERIFIED.** The review used read-only browser, repository, PostgreSQL catalog, and aggregated membership/session evidence.
+
+- The connected browser still displays the original administrator in Work Management and the verified signed B2 discovery PASS with two authorized workspaces. This is not a second independently authenticated user's session.
+- Existing production counts remain at 3 workspaces, 41 active memberships, 1 creation request, and 1 creation audit event; creation is enabled and switching disabled.
+- Aggregate existing-user inventory: 39 users have membership in one workspace and 1 has membership in two. All 39 single-workspace users belong to Work Management. Of the two other workspaces, one has zero active members and the other shares a member with Work Management; **no user belongs exclusively to either alternate workspace**.
+- Five verified active-profile single-workspace users have unexpired Auth session records. This establishes potential legitimate existing-account availability but does not prove their current browsers, access tokens, willingness, or authorization to participate. No credentials or identifiers were inspected or exported.
+- The checked-in disposable PostgreSQL 17 security suite had previously passed; this turn did not execute a new browser HTTP request using a separate genuine user's token. No signed HTTP 403 denial was attributed to a specific existing user.
+- Separate shared workspace-lookup authorization and dependency review is required prior to final certification. Detailed vulnerability analysis is intentionally excluded from this publicly readable ledger until safe remediation and review; do not alter the shared API or its grants without compatibility acceptance.
+
+**Minimum safe continuation:** An eligible existing nonadministrator may use their own independently authenticated browser session and the existing read-only B2 test to verify membership-filtered discovery. This alone is not a direct forbidden-workspace RPC denial. Do not create accounts, enroll users in alternate workspaces, impersonate, force sign-out, revoke sessions, modify permissions, issue new creation requests, or claim a direct signed HTTP denial based solely on synthetic PostgreSQL fixtures.
+
+**Phase G2 final gate:** PENDING/BLOCKED until (1) an independent legitimate signed-user read is available, (2) a valid existing read-only forbidden-workspace access path produces a verifiable negative result without changing access policy, and (3) the shared authorization boundary is reviewed. The historical original B3 creation response remains unavailable and original-request idempotent replay remains pending.
+
+---
+
+
 ## Phase G — Independent safe authorization boundary verification (November 6, 2026)
 
 **Disposition: PARTIAL PASS — final signed-user negative-security closure PENDING.** This review did not create or alter production records, memberships, roles, credentials, auth sessions, grants, RLS policies, feature flags or application code. No new user accounts were registered.
