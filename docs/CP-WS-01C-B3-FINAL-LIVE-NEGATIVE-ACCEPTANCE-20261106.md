@@ -1,5 +1,21 @@
 # CP-WS-01C/B3 — Production HTTP, signed-session correlation and safe live denial evidence
 
+## Phase G3 — Disposable-only workspace lookup guard and regression evidence (November 6, 2026)
+
+**Result: Nonproduction guard preview VERIFIED; production hardening NOT ACTIVATED; final signed-user acceptance PENDING.**
+
+- **Implementation:** PR [#50](https://github.com/wass-psti/APSYNTRACRM/pull/50), merged as `5619c54da518eb4b484f4057be159e03f19a1562`. Added `sql/tests/cp-ws01c-g3-disposable-lookup-candidate.sql` and one isolated PostgreSQL workflow step. No application runtime source or deployed database contract was modified.
+- **Independent CI:** PostgreSQL 17 Actions run [42227343708](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42227343708) **SUCCESS**. Explicit accepted markers: `CP_WS01C_B3_G3_DISPOSABLE_GUARD_PREVIEW_PASS`, `CP_WS01C_B3_G3_DISPOSABLE_ROLLBACK_PASS`; the existing B3 creation, negative-denial and activation/rollback regression markers also passed. The new candidate runs only after a strict `workspace_disposable` database preflight, within a transaction that is rolled back.
+- **Preview acceptance:** Existing synthetic user self-lookup, signed B2 discovery and board reads remain functional. Foreign identity, anonymous, missing-session, revoked and expired session lookups are denied. The private privileged lookup is denied to client database roles and remains accessible only to the trusted internal test context. Post-test fixture and function state are restored; this is *not* a new live signed-user HTTP acceptance.
+- **Compatibility boundary:** The production shared lookup is referenced by 63 database routines (57 security-definer and 6 security-invoker). Some authorized role-resolution paths may need to resolve accounts other than the signed actor. The preview deliberately does not replace all of those dependencies; source-preserving delegated-caller migration and relevant module regression tests are mandatory before any production proposal.
+- **Production invariants confirmed after the merge:** Original production SQL lookup remains installed, and the disposable-only private helper is absent. 3 workspaces, 41 active memberships, 1 creation request and 1 creation audit event persist. Creation remains enabled; workspace switching remains disabled. No SQL function, permissions, roles, JWTs, sessions, users, memberships or records were changed in production.
+- **Browser boundary:** The connected CRM Security tab was inspected under the existing administrator session. No independently controlled second-user session or signed-user forbidden-workspace HTTP result was available in this review. Previous B2 signed-browser PASS and post-refresh evidence remain accepted, but do not substitute for that independent denial.
+
+**Phase G3 next acceptance gate:** (1) preserve legitimate delegated-user authorization across shared caller routines under disposable compatibility tests; (2) review and approve a minimum, reversible production activation separately; (3) obtain a genuine second existing-user signed HTTP denial when authorized without changing membership; (4) retain original creation-response observation as UNAVAILABLE and original-request replay as PENDING unless directly evidenced. **Final CP-WS-01C/B3 security closure remains BLOCKED.**
+
+---
+
+
 ## Phase G2 — Existing-user eligibility and signed HTTP denial readiness (November 6, 2026)
 
 **Status: BLOCKED for independent signed-user HTTP denial; prior B2 signed discovery remains VERIFIED.** The review used read-only browser, repository, PostgreSQL catalog, and aggregated membership/session evidence.
