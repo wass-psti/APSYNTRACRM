@@ -37,7 +37,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Assert production create remains default-off
+      - name: Assert guarded production creation path is enabled only via signed client
         run: |
           set -euo pipefail
           node scripts/verify-pages-source.mjs
