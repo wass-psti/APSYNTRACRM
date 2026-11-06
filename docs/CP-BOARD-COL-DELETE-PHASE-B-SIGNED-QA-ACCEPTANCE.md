@@ -1,7 +1,7 @@
 # CP-BOARD-COL-DELETE — Phase B signed QA acceptance
 
 **Date:** 2026-11-06  
-**Status (2026-11-06):** **B1/B2/B4.1/B4.2/B5 VERIFIED WITH THE DOCUMENTED SCOPE. PHASE B SIGNED DENIAL PROBE IMPLEMENTED; ANON/NO-JWT ROLE DENIALS VERIFIED; REAL SIGNED MANAGER/NONMANAGER/FOREIGN-WORKSPACE/REVOKED/EXPIRED ACCEPTANCE PENDING.** Earlier sections preserve historical preactivation evidence. 
+**Status (2026-11-06):** **B1/B2/B4.1/B4.2/B5 VERIFIED. POST-B5 GENUINE SIGNED MANAGER RECOVERY DENIAL PASS (USER APPLICATION REPORT + INDEPENDENT LIVE DATABASE PRESERVATION). GENUINE SIGNED NONMANAGER, FOREIGN-WORKSPACE, REVOKED AND EXPIRED SESSION DENIALS PENDING.** Earlier sections preserve historical preactivation evidence. 
 
 ## Verified baseline
 
@@ -238,3 +238,18 @@ The verifier found precisely one active QA board, four items, one restored `Reco
 **Still pending genuine signed acceptance:** No browser-session connector access was available (originating browser context required). No legitimate distinct foreign-workspace account or second-role session was activated by this assistant. No real user session was revoked or allowed to expire intentionally. Consequently, the requested signed manager/nonmanager, foreign-workspace, revoked and expired-session denial cases remain **PENDING** until each is supported by actual session-bound evidence. Security is currently default-deny; this pending classification is about acceptance evidence, not permission to weaken controls.
 
 **Next required check:** After independently confirming the commit is deployed, a genuine signed user opens the Security page, invokes **Verify signed recovery denial**, and copies its nonsecret report. A signed manager PASS closes only the signed post-B5 manager-denial subcase; a legitimate signed nonmanager can independently exercise the manager ceiling. Foreign-workspace assertions require a proven distinct workspace context, and revoked/expired tests require safely controlled real sessions and their own authorization to alter them. Phase C Contacts deletion remains prohibited.
+
+
+---
+
+## Post-B5 genuine signed-manager denial acceptance — PASS (2026-11-06)
+
+**Scope: VERIFIED for the current genuine signed manager's recovery-list denial only.** The user supplied a sanitized report from the deployed signed Security page with `checkpoint=CP-BOARD-COL-DELETE-PHASE-B-DENIAL`, `status=PASS`, `reason=NONE`, `caseType=SIGNED_MANAGER`, `managerBoundary=NOT_APPLICABLE`, `nonmemberRead=NOT_APPLICABLE`, `foreignWorkspace=PENDING`, `revokedSession=PENDING`, `expiredSession=PENDING`, `readOnly=true`, `writeAttempts=0`, `activationChanged=false`, `identifiersDisclosed=false` and `acceptanceBoundary=CURRENT_SIGNED_USER_POST_B5_DENIAL_ONLY`. This is **user-provided signed application evidence**; the connected browser was not independently controlled in this chat.
+
+**Supporting backend verification:** After the report, live SQL on the existing Supabase project `jtlusodorfnyzgyuewkz` independently confirmed exactly one deactivated activation row and zero temporary QA scope rows at `2026-11-06 04:28:47 UTC`. The existing committed read-only `sql/tests/cp-board-col-delete-b5-final-readonly-acceptance.sql` returned `B5_DEACTIVATION_AND_FINAL_PRESERVATION_VERIFIED` again: both recovery flags FALSE; private scope empty with intact RLS and restricted grants; three RPC source hashes unchanged; four exact restored QA values, one restored private snapshot, four archived recovery cells, one deletion and one restoration audit event, and four Contacts / Status I cells untouched.
+
+**Meaning of the signed PASS:** The implemented frontend `runPhaseBSignedDenial` checks the actual signed user's identity and workspace context before and after its genuine `wm_list_recoverable_board_columns` RPC, confirms manager access, and accepts the exact expected post-B5 authorization-disabled denial. A PASS does not prove the request reached a revoked-session code path or that another identity, role or workspace was tested. No recovery activation, deletion, restoration, user-role change, credential disclosure or synthetic identity impersonation was performed.
+
+**Remaining evidence:** Genuine signed **non-manager/second role**, **foreign workspace**, **revoked-session**, and **expired-session** acceptance are each **PENDING**. The one signed-manager PASS must not be reused as evidence for them. No additional user accounts or active sessions should be created, modified or revoked without their separate scoped authorization. Phase C deletion of Contacts / Status I remains prohibited.
+
+**Next required acceptance:** `CP-BOARD-COL-DELETE / Phase B — Genuine Signed Non-Manager / Foreign-Workspace Denial Acceptance` using existing legitimate, independently verified identities only. Revoked-session and expired-session cases require their own controlled evidence and safe execution environment; do not weaken B5's default-deny state to test them.
