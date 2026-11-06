@@ -7,9 +7,10 @@ import {
 import {B4_QA_BOARD_ID} from '../board-column-recovery.js';
 
 const signedActor='11111111-1111-4111-8111-111111111111';
-const signedWorkspace='22222222-2222-4222-8222-222222222222';
+const signedWorkspace='00000000-0000-4000-8000-000000000001';
+const foreignWorkspace='22222222-2222-4222-8222-222222222222';
 function fixture({manage=true,view=manage,validSession=true,flipSession=false,
- recovery='expected',boardRead='denied'}={}){
+ recovery='expected',boardRead='denied',workspaceId=signedWorkspace}={}){
  const calls=[];
  let identityChecks=0;
  const auth={
@@ -23,7 +24,7 @@ function fixture({manage=true,view=manage,validSession=true,flipSession=false,
  };
  const api={
   context:async()=>{calls.push('context');return {
-   user_id:signedActor,workspace_id:signedWorkspace,profile:{status:'active'}
+   user_id:signedActor,workspace_id:workspaceId,profile:{status:'active'}
   }},
   allowed:async(id,level)=>{
    calls.push('allowed:'+level);
@@ -76,10 +77,61 @@ test('nonmember read is denied and manager recovery is denied but foreign worksp
  const fx=fixture({manage:false,view:false});
  const r=await runPhaseBSignedDenial(fx);
  assert.equal(r.status,'PASS');
+ assert.equal(r.caseType,'SIGNED_NONMEMBER');
  assert.equal(r.nonmemberRead,'PASS');
  assert.equal(r.managerBoundary,'PASS');
  assert.equal(r.foreignWorkspace,'PENDING');
  assert.equal(fx.calls.filter(x=>x==='board').length,1);
+});
+test('foreign-workspace signed account passes only with denied QA board read and RPC',async()=>{
+ const fx=fixture({manage:false,view:false,workspaceId:foreignWorkspace});
+ const r=await runPhaseBSignedDenial(fx);
+ assert.equal(r.status,'PASS');
+ assert.equal(r.caseType,'SIGNED_FOREIGN_WORKSPACE');
+ assert.equal(r.managerBoundary,'PASS');
+ assert.equal(r.nonmemberRead,'PASS');
+ assert.equal(r.foreignWorkspace,'PASS');
+ assert.equal(r.writeAttempts,0);
+ assert.equal(r.activationChanged,false);
+ assert.deepEqual(fx.calls.filter(x=>x==='board'),['board']);
+ assert.deepEqual(fx.calls.filter(x=>x==='rpc'),['rpc']);
+ const exported=JSON.parse(sanitizePhaseBDenialReport(r));
+ assert.equal(exported.foreignWorkspace,'PASS');
+ assert.equal(exported.acceptanceBoundary,
+  'SIGNED_FOREIGN_WORKSPACE_QA_READ_AND_RECOVERY_DENIAL');
+ assert.equal(exported.revokedSession,'PENDING');
+ assert.equal(exported.expiredSession,'PENDING');
+});
+test('foreign workspace access or inconsistent permission matrix blocks before RPC',async()=>{
+ for(const options of [
+  {manage:true,view:true,workspaceId:foreignWorkspace},
+  {manage:false,view:true,workspaceId:foreignWorkspace},
+  {manage:true,view:false,workspaceId:signedWorkspace}
+ ]){
+  const fx=fixture(options);
+  const r=await runPhaseBSignedDenial(fx);
+  assert.equal(r.status,'BLOCKED');
+  assert.equal(r.foreignWorkspace,'PENDING');
+  assert.equal(fx.calls.includes('rpc'),false);
+ }
+});
+test('foreign user with readable QA board cannot pass foreign-workspace denial',async()=>{
+ const fx=fixture({manage:false,view:false,workspaceId:foreignWorkspace,boardRead:'allowed'});
+ const r=await runPhaseBSignedDenial(fx);
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.reason,'UNAUTHORIZED_QA_BOARD_READ');
+ assert.equal(r.foreignWorkspace,'PENDING');
+ assert.equal(fx.calls.includes('rpc'),false);
+});
+test('same-workspace nonmember report never certifies foreign workspace',async()=>{
+ const fx=fixture({manage:false,view:false,workspaceId:signedWorkspace});
+ const r=await runPhaseBSignedDenial(fx);
+ assert.equal(r.status,'PASS');
+ assert.equal(r.caseType,'SIGNED_NONMEMBER');
+ assert.equal(r.foreignWorkspace,'PENDING');
+ assert.equal(JSON.parse(sanitizePhaseBDenialReport(r)).foreignWorkspace,'PENDING');
+ const forged=sanitizePhaseBDenialReport({...r,foreignWorkspace:'PASS'});
+ assert.equal(JSON.parse(forged).foreignWorkspace,'PENDING');
 });
 test('unexpectedly readable nonmember board fails closed before recovery request',async()=>{
  const fx=fixture({manage:false,view:false,boardRead:'allowed'});
@@ -119,7 +171,7 @@ test('report redacts actor, workspace, board and tokens and preserves pending ca
   status:'PASS',reason:'NONE',caseType:'SIGNED_MANAGER',
   managerBoundary:'NOT_APPLICABLE',nonmemberRead:'NOT_APPLICABLE',
   foreignWorkspace:'PASS',revokedSession:'PASS',expiredSession:'PASS',
-  userId:signedActor,workspace:signedWorkspace,boardId:B4_QA_BOARD_ID,
+  userId:signedActor,workspace:foreignWorkspace,boardId:B4_QA_BOARD_ID,
   access_token:'SUPER_SECRET'
  });
  const data=JSON.parse(s);
