@@ -4632,8 +4632,8 @@ function syncTradeLinkFinanceInput(event){
  return true;
 }
 root.addEventListener('change',event=>{
- if(captureTradeLinkDraftFields(event))return;
  if(syncTradeLinkFinanceInput(event))return;
+ if(captureTradeLinkDraftFields(event))return;
  if(event.target.matches('[data-board-select-item]')&&activeBoardLayout()){
   const input=event.target;
   const order=[...root.querySelectorAll('[data-board-select-item]')]
@@ -4773,8 +4773,8 @@ root.addEventListener('submit',event=>{
  }
 });
 root.addEventListener('input',event=>{
- if(captureTradeLinkDraftFields(event))return;
  if(syncTradeLinkFinanceInput(event))return;
+ if(captureTradeLinkDraftFields(event))return;
  if(event.target.matches('[data-tradelink-search]')&&
     state.view==='board'&&state.tab==='tradelink'&&
     state.boardId===TRADELINK_BOARD_ID&&state.board?.board?.workspace_id===state.context?.workspace_id){
