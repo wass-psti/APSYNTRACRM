@@ -12,6 +12,10 @@ on:
       - 'frontend/tests/workspace-b3-revoked-session-denial.test.mjs'
       - 'frontend/app.js'
       - 'frontend/session.js'
+      - 'frontend/tests/board-bulk02-signed-acceptance.test.mjs'
+      - 'frontend/tests/platform-sync.test.mjs'
+      - 'frontend/tests/frt-sec07-security-ui.test.mjs'
+      - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
   pull_request:
     paths:
       - '.github/workflows/cp-ws02d-b3-negative-signed-acceptance.yml'
@@ -21,6 +25,10 @@ on:
       - 'frontend/tests/workspace-b3-revoked-session-denial.test.mjs'
       - 'frontend/app.js'
       - 'frontend/session.js'
+      - 'frontend/tests/board-bulk02-signed-acceptance.test.mjs'
+      - 'frontend/tests/platform-sync.test.mjs'
+      - 'frontend/tests/frt-sec07-security-ui.test.mjs'
+      - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
   workflow_dispatch:
 
 permissions:
