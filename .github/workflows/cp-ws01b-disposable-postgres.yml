@@ -35,6 +35,7 @@ on:
       - 'sql/tests/cp-ws01c-b3-dormant-production-postinstall-readonly.sql'
       - 'sql/cp-ws01c-b3-reviewed-production-activation-20261106.sql'
       - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
+      - 'sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql'
       - 'sql/tests/cp-ws01c-b3-production-activated-readonly.sql'
   workflow_dispatch:
 
