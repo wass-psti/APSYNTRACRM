@@ -14,6 +14,10 @@
 
 [New signed-read/trusted execution evidence](./CP-WS-02D-B3-GENUINE-READ-TRUSTED-EXECUTION-FIXTURE.md): [PG17 CI #181](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42010423515) **SUCCESS**. The actual constant backend session SQL was executed using PostgreSQL server-side parameters against synthetic active/expired/revoked/deleted/banned identities, with all records cleaned. A **NOLOGIN** disposable role invoked only the private issuer and verified default-deny, owner-only issuance, replay withholding, foreign, Member and expired denials, audit integrity and complete rollback of role/grants/flags. **No genuine signed browser token, live trusted service, production write or external email** was involved. B3 integration readiness stays **5/10** pending user-supplied sanitized signed-read evidence and separately approved staging/backend activation.
 
+## Latest trusted signed-read staging contract — 2026-11-06
+
+[Staging integration report](./CP-WS-02D-B3-REAL-AUTH-TRUSTED-READ-STAGING.md) and [CI #191](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42135755289) show **PASS** for a default-off signed HTTP read boundary, verified actor/session rechecks and twelve user-scoped PostgREST predicates. Network Auth/PostgREST calls were **mocked**; real PostgreSQL and private invitation acceptance remain limited to prior disposable PG17 fixtures. The existing live Security-page report is still **PENDING**, and no WS02D issuer, delivery or B4 selection is deployed. Existing 5/10 B3 gate accounting remains unchanged.
+
 ## 1. Evidence verified now
 
 | Area | Evidence | Result |
