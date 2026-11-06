@@ -5,6 +5,10 @@
 
 This checkpoint follows [the staged signed-read and PostgREST contract](./CP-WS-02D-B3-REAL-AUTH-TRUSTED-READ-STAGING.md). All work is confined to the existing repository and **ephemeral GitHub Actions infrastructure**. The test does **not** create an additional Supabase project, access the user's signed browser token, run against production PostgreSQL, or enable invitation delivery.
 
+## Follow-on real HTTPS + PostgREST RLS acceptance — 2026-11-06
+
+[HTTPS/PostgREST/RLS acceptance report](./CP-WS-02D-B3-HTTPS-POSTGREST-RLS-ACCEPTANCE.md) and [CI #5](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42141011359) **PASS**. Added isolated pinned PostgREST + `authenticated` role, self-row RLS, twelve signed module RPCs and a trusted temporary HTTPS certificate; verified real local GoTrue JWTs, foreign-row isolation, cross-principal inspection denial, tampered JWT and revoked-session denial, cleanup and zero production requests. **The RLS/RPC functions are synthetic fixtures, not the existing production SQL**; genuine deployed-user B3 read remains PENDING and project invitations remain inactive.
+
 ## Executed integration
 
 **[Disposable Real GoTrue CI run #3](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42138213159): SUCCESS.** Workflow: `.github/workflows/cp-ws02d-b3-local-gotrue.yml`, source: `scripts/ws02d-b3-gotrue-disposable-acceptance.mjs`.
