@@ -1,7 +1,7 @@
 # CP-BOARD-COL-DELETE — Phase B signed QA acceptance
 
 **Date:** 2026-11-06  
-**Status (2026-11-06):** **B1 VERIFIED; B2 VERIFIED; B3 SCOPED ACTIVATION VERIFIED; B4.1 QA-ONLY FRONTEND IMPLEMENTED / SIGNED LIVE ACCEPTANCE PENDING; B4 RESTORATION AND B5 PENDING.** Earlier sections preserve historical preactivation evidence. 
+**Status (2026-11-06):** **B1 VERIFIED; B2 VERIFIED; B3 SCOPED ACTIVATION VERIFIED; B4.1 SIGNED READ-ONLY ACCEPTANCE PASS (USER REPORT + INDEPENDENT DATABASE STATE); B4.2 SIGNED QA DELETION/RESTORATION AND B5 PENDING.** Earlier sections preserve historical preactivation evidence. 
 
 ## Verified baseline
 
@@ -164,3 +164,16 @@ The QA creation still requires a genuine user-triggered signed-app operation. If
 - After a genuine signed preflight PASS, B4.2 still requires controlled QA-only deletion, Activity review, restoration of all four values, negative authorization tests, and the B5 explicit deactivation/cleanup. If the B3 window expires, stop; do not reuse the earlier one-time activation query unchanged.
 
 **Next required acceptance:** Confirm post-commit GitHub Actions and Pages asset parity, then collect the signed `CP-BOARD-COL-DELETE-B4-1` report. Never claim the signed gate is complete from unit tests alone.
+
+
+---
+
+## B4.1 genuine signed recovery-index acceptance — PASS (2026-11-06)
+
+**Classification: VERIFIED, scoped exclusively to the genuine signed-session read-only recovery index.** The user submitted a sanitized deployed Security-page report declaring `checkpoint:CP-BOARD-COL-DELETE-B4-1`, `status:PASS`, `stage:completed`, `reason:NONE`, `expectedCells:4`, `readOnly:true`, `activationChanged:false`, `recoveryWritesAttempted:0`, `boardIdentifierDisclosed:false`, and `acceptanceBoundary:SIGNED_RECOVERY_INDEX_READ_ONLY_NOT_DELETION_OR_RESTORATION`. The report is **user-provided application evidence**; our connector did not independently control or observe the signed browser. The signed application code performs an actual GoTrue-backed B2 QA fixture read and `wm_list_recoverable_board_columns` RPC under the user's active session, then reads the QA fixture again; it returns PASS only when the four-cell fixture is verified and the recovery list contains no snapshots.
+
+**Independent live PostgreSQL cross-check after the submitted PASS:** `private.wm_recoverable_deleted_columns` contained exactly zero snapshots; the QA `Recovery Status` column still held four stored values; Contacts / `Status I` still held four stored values. An attempt to query activation flags and expiry during this cross-check was blocked by connector safety checks, so their continued current state is *not freshly reverified here*. The most recent unblocked earlier scope verification was 2026-11-06 03:42:37 UTC, with expiry 04:07:34.459742 UTC; continue to validate live scope before any recovery mutation.
+
+**This PASS does not cover:** QA column deletion, snapshot creation, Activity events after reload/reopen, exact four-value restoration, revoked/expired-session and foreign actor/workspace denial, GitHub CI/Pages workflow provenance, or the B5 explicit server flag reset/scope cleanup. Neither production Contacts / Status I deletion nor broader Manage Columns recoverable deletion is authorized by this certificate.
+
+**Next required gate:** `CP-BOARD-COL-DELETE / B4.2 — Genuine Signed-Owner QA Column Deletion, Activity Audit and Four-Cell Restoration`. Use only the QA board `8491b933-8aa7-4b10-816c-46b6758531f3` and custom `Recovery Status` column. New deletion is blocked by the QA UI at **2026-11-06 11:57:34 Asia/Manila** (ten minutes before backend scope expiration). Restoration remains time-bound through **12:07:34 Asia/Manila**. If elapsed, stop; follow the controlled reactivation/cleanup path. Do not use privileged SQL to fabricate signed browser acceptance or repeat the B3 one-shot activation script unchanged.
