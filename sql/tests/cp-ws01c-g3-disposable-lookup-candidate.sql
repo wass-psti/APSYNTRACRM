@@ -214,6 +214,9 @@ BEGIN
  THEN RAISE EXCEPTION 'G3 scope guard mutated workspace fixture'; END IF;
  RAISE NOTICE 'CP_WS01C_B3_G3_DISPOSABLE_GUARD_PREVIEW_PASS';
 END $g3_counts$;
+
+-- Phase G4 reuses this exact disposable guard/transaction before rollback.
+\i sql/tests/cp-ws01c-g4-delegated-compatibility-disposable.sql
 ROLLBACK;
 
 DO $g3_rollback$
