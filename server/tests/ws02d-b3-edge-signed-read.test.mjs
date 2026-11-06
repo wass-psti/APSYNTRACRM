@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
- WS02D_B3_EDGE_SIGNED_READ_ENABLED,createB3EdgeSignedReadStaging
+ WS02D_B3_EDGE_SIGNED_READ_ENABLED,createB3EdgeSignedReadStaging,
+ inspectB3UntrustedEnvelopeForTest
 } from '../ws02d-b3-edge-signed-read.mjs';
 import {createGoTrueUserReader} from '../ws02d-gotrue-live-read-adapters.mjs';
 
@@ -99,6 +100,7 @@ test('synthetic signed-envelope framing matches pinned project and clock',()=>{
  assert.equal(got.iss,'https://jtlusodorfnyzgyuewkz.supabase.co/auth/v1');
  assert.ok(Number.isSafeInteger(got.exp));
  assert.ok(got.exp*1000>1900000000000);
+ assert.deepEqual(inspectB3UntrustedEnvelopeForTest(token,()=>1900000000000),{id:actor,sessionId:session});
 });
 
 test('GoTrue reader alone accepts the synthetic fixture before session RPC',async()=>{
