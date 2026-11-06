@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'sql/cp-ws02d-b3-rpc-privacy-disposable-candidate.sql'
+      - 'sql/cp-ws02d-b3-internal-helper-disposable-candidate.sql'
       - 'sql/tests/cp-ws02d-b3-rpc-privacy-disposable.sql'
       - 'sql/tests/cp-ws02d-b3-internal-helper-runtime.sql'
       - '.github/workflows/cp-ws02d-b3-rpc-privacy.yml'
