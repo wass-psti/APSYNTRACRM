@@ -230,7 +230,7 @@ test('signed create UI is enabled with guarded server-denial and idempotency bra
  assert.match(module,/Create workspace/);
  assert.match(module,/Validate draft/);
  assert.match(app,/new WorkspaceLifecycleClient\(\{auth,api:db\}\)/);
- assert.match(app,/\{lifecycle:workspaceLifecycleClient\}/);
+ assert.match(app,/lifecycle:workspaceLifecycleClient,onOpenCurrent:/);
  assert.doesNotMatch(module,/fetch\(|localStorage|sessionStorage/);
 });
 
@@ -253,7 +253,7 @@ test('integration is limited to authorized workspace context and never executes 
  assert.match(module,/WS01_CREATION_ENABLED=true/);
  assert.match(module,/No workspace was created/);
  assert.match(app,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
- assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\{lifecycle:workspaceLifecycleClient\}\)/);
+ assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\s*\{lifecycle:workspaceLifecycleClient,onOpenCurrent:/);
  assert.match(app,/closeWorkspacePanels\(\);clearBulkActivation\(\)/);
  assert.match(index,/frontend\/workspace-ui\.css/);
  assert.match(smoke,/frontend\/workspace-ui\.js/);
@@ -397,7 +397,7 @@ test('frontend entrypoint refreshes workspace-related module assets together',()
  const app=readFileSync('frontend/app.js','utf8');
  const lifecycle=readFileSync('frontend/workspace-lifecycle-client.js','utf8');
  const index=readFileSync('index.html','utf8');
- const moduleUrl='./workspace-ui.js?v=ws01-member-catalog-20261106';
+ const moduleUrl='./workspace-ui.js?v=ws01-controls-20261106';
  assert.ok(app.includes(moduleUrl));
  assert.ok(lifecycle.includes(moduleUrl));
  assert.ok(index.includes('<script type="module" src="./frontend/app.js"></script>'));
