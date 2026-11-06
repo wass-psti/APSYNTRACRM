@@ -1,3 +1,6 @@
+import {createTrustedSignedActorReadVerifier} from './ws02d-gotrue-live-read-adapters.mjs';
+import {createB3UserScopedRpc} from './ws02d-b3-user-scoped-rpc.mjs';
+
 /**
  * CP-WS-02D/B3 — non-deployed, default-OFF signed-read staging boundary.
  * NO invitation issuance, secrets, database mutations or mail delivery.
@@ -114,4 +117,24 @@ export function createB3SignedReadStaging({
    trustBoundary:'SERVER_VERIFIED_GOTRUE_AND_USER_SCOPED_READ'
   },true);
  };
+}
+
+
+/**
+ * Compose the existing GoTrue + PostgreSQL session verifier and exact
+ * user-JWT PostgREST readers. Staged only: must be explicitly enabled by
+ * an independently approved trusted backend. No route or listener created.
+ */
+export function createB3TrustedReadStagingFixture({
+ enabled=false,projectUrl,publishableKey,fetchImpl,db,clock
+}={}){
+ const verifySignedActor=createTrustedSignedActorReadVerifier({
+  enabled,projectUrl,publishableKey,fetchImpl,db,clock
+ });
+ const {readSignedContext,readSignedModuleAccess}=createB3UserScopedRpc({
+  enabled,projectUrl,publishableKey,fetchImpl
+ });
+ return createB3SignedReadStaging({
+  enabled,verifySignedActor,readSignedContext,readSignedModuleAccess
+ });
 }
