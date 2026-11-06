@@ -5,7 +5,7 @@
  */
 import {validUuid} from './data.js';
 
-export const WS01_DISCOVERY_ENABLED=false;
+export const WS01_DISCOVERY_ENABLED=true;
 export const WS01_CREATION_ENABLED=true;
 export const WS01_SWITCHING_ENABLED=false;
 // Invitation delivery requires the separately gated CP-WS-02D backend.
@@ -27,8 +27,8 @@ export function workspaceCatalog(current){
   canCreate:false,canSwitch:false,canDiscoverAll:false
  });
 }
-/** Strict parser for a future separately approved signed wm_ws01_list RPC.
- * Do not run this RPC until its production grant is approved and verified. */
+/** Strict parser for the existing signed, membership-scoped wm_ws01_list RPC.
+ * Its response cannot authorize a workspace switch or direct table access. */
 export function normalizeServerWorkspaceCatalog(raw,{userId,workspaceId}={}){
  const rows=raw?.rows;
  const safe=Array.isArray(rows)&&rows.length>0&&rows.length<=100&&
@@ -242,45 +242,57 @@ function rowMarkup(row){
  return '<div class="ws01-entry"><span class="ws01-entry-icon" aria-hidden="true">'+
   escape(row.name.slice(0,1).toUpperCase())+'</span><span class="ws01-entry-copy">'+
   '<strong>'+escape(row.name)+'</strong><small>'+escape(row.relation)+
-  ' · '+(row.active?'Current signed workspace':'Signed member workspace')+'</small></span>'+
-  '<span class="ws01-entry-badge">Active</span></div>';
+  ' · '+(row.active?'Current signed workspace':'Signed member workspace · switching unavailable')+'</small></span>'+
+  '<span class="ws01-entry-badge">'+(row.active?'Current':'Member')+'</span></div>';
 }
 function resultsMarkup(catalog,tab,query){
  const rows=visibleWorkspaces(catalog,{tab,query});
  return rows.length?rows.map(rowMarkup).join(''):
   '<p class="ws01-empty" role="status">No authorized workspaces match this filter.</p>';
 }
-function currentFootnote(){
- return '<p class="ws01-note">Only your current server-verified workspace is shown. '+
-  'Account-wide discovery and switching are pending a reviewed server-side authorization contract.</p>';
+function currentFootnote(catalog,options={}){
+ const status=options.selectorSession?.status;
+ let message='Only your current server-verified workspace is shown. Additional workspaces require signed membership discovery.';
+ if(status==='loading')message='Loading workspaces authorized for this signed account…';
+ else if(status==='error')message='Unable to verify other workspaces. Only the current signed workspace is shown.';
+ else if(catalog?.status==='SIGNED_MEMBER_DISCOVERY')
+  message=catalog.rows.length+' authorized workspace'+(catalog.rows.length===1?'':'s')+
+   ' for your signed account. Workspace switching is not yet activated.';
+ return '<p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>';
 }
-function menuContent(catalog){
- return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Select workspace">'+
+function menuContent(catalog,options={}){
+ return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Browse workspaces">'+
   '<header class="ws01-menu-heading"><strong>Workspaces</strong>'+
   '<button class="ws01-close" type="button" data-ws01-close aria-label="Close workspace selector">×</button></header>'+
   '<label class="ws01-sr-only" for="ws01-menu-search">Search workspaces</label>'+
   '<input id="ws01-menu-search" type="search" placeholder="Search workspaces" autocomplete="off" maxlength="120"/>'+
-  '<p class="ws01-eyebrow">Recent workspaces</p>'+
-  '<div data-ws01-results>'+resultsMarkup(catalog,'recent','')+'</div>'+
+  '<p class="ws01-eyebrow">Authorized workspaces</p>'+
+  '<div data-ws01-results>'+resultsMarkup(catalog,'all','')+'</div>'+
   '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
   '<button type="button" data-ws01-action="create">Add workspace</button>'+
   '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
-  currentFootnote()+'</section>';
+  currentFootnote(catalog,options)+'</section>';
 }
 function openMenu(catalog,options={}){
- const layer=panel(menuContent(catalog),'menu');
+ const read=()=>options.selectorSession?.catalog||catalog;
+ const layer=panel(menuContent(read(),options),'menu');
  const input=layer.querySelector('#ws01-menu-search');
- input.addEventListener('input',()=>{layer.querySelector('[data-ws01-results]').innerHTML=
-  resultsMarkup(catalog,'recent',input.value);});
+ const redraw=()=>{
+  if(activeOverlay!==layer||!layer.isConnected)return;
+  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),'all',input.value);
+  layer.querySelector('[data-ws01-note]').outerHTML=currentFootnote(read(),options);
+ };
+ if(options.selectorSession)options.selectorSession.refresh=redraw;
+ input.addEventListener('input',redraw);
  layer.addEventListener('click',event=>{
   const command=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
-  if(command==='browse')openBrowse(catalog,options);
-  if(command==='create')openCreate(catalog,options);
-  if(command==='invite')openInvites(catalog.rows[0]);
+  if(command==='browse')openBrowse(read(),options);
+  if(command==='create')openCreate(read(),options);
+  if(command==='invite')openInvites(read().rows.find(row=>row.active));
  });
  input.focus();
 }
-function browseContent(catalog){
+function browseContent(catalog,options={}){
  const tabs=[['all','All workspaces'],['recent','Recent workspaces'],
   ['owner','Owner'],['member','Member'],['collaborator','Collaborator']];
  return '<section class="ws01-browser-card" role="dialog" aria-modal="true"'+
@@ -295,26 +307,30 @@ function browseContent(catalog){
   '<button type="button" data-ws01-action="create" class="ws01-add-button">+ Add workspace</button></nav>'+
   '<div class="ws01-browser-results"><h3 data-ws01-title>All workspaces</h3>'+
   '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','')+'</div>'+
-  currentFootnote()+'</div></div></section>';
+  currentFootnote(catalog,options)+'</div></div></section>';
 }
 function openBrowse(catalog,options={}){
- const layer=panel(browseContent(catalog),'browse');
+ const read=()=>options.selectorSession?.catalog||catalog;
+ const layer=panel(browseContent(read(),options),'browse');
  let tab='all';
  const input=layer.querySelector('#ws01-browser-search');
  const redraw=()=>{
-  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(catalog,tab,input.value);
+  if(activeOverlay!==layer||!layer.isConnected)return;
+  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),tab,input.value);
+  layer.querySelector('[data-ws01-note]').outerHTML=currentFootnote(read(),options);
   for(const btn of layer.querySelectorAll('[data-ws01-filter]'))
    btn.setAttribute('aria-pressed',String(btn.dataset.ws01Filter===tab));
   layer.querySelector('[data-ws01-title]').textContent={
-   all:'All workspaces',recent:'Recent workspaces',owner:'Workspaces owned by me',
+   all:'All authorized workspaces',recent:'Current workspace',owner:'Workspaces owned by me',
    member:'Workspaces I am a member of',collaborator:'Workspaces I collaborate in'
   }[tab];
  };
+ if(options.selectorSession)options.selectorSession.refresh=redraw;
  input.addEventListener('input',redraw);
  layer.addEventListener('click',event=>{
   const filter=event.target.closest('[data-ws01-filter]')?.dataset.ws01Filter;
   if(TABS.has(filter)){tab=filter;redraw();}
-  if(event.target.closest('[data-ws01-action="create"]'))openCreate(catalog,options);
+  if(event.target.closest('[data-ws01-action="create"]'))openCreate(read(),options);
  });
  input.focus();
 }
@@ -510,7 +526,23 @@ export function openWorkspaceInvitationDialog(current){
 }
 export function openWorkspaceSelector(current,options={}){
  if(activeOverlay){closeWorkspacePanels();return;}
- const catalog=workspaceCatalog(current);
+ const session={catalog:workspaceCatalog(current),status:'loading',refresh:null};
  returnFocus=document.activeElement;
- openMenu(catalog,options);
+ openMenu(session.catalog,{...options,selectorSession:session});
+ if(!WS01_DISCOVERY_ENABLED||typeof options.lifecycle?.discover!=='function'){
+  session.status='unavailable';
+  session.refresh?.();
+  return;
+ }
+ // A read-only, signed RPC is the only source of additional workspace names.
+ // Each opening is independently verified; no cross-user/browser cache exists.
+ Promise.resolve().then(()=>options.lifecycle.discover()).then(result=>{
+  if(result?.status!=='SIGNED_MEMBER_DISCOVERY')throw Error('Invalid signed catalog');
+  session.catalog=result;
+  session.status='ready';
+  session.refresh?.();
+ }).catch(()=>{
+  session.status='error';
+  session.refresh?.();
+ });
 }
