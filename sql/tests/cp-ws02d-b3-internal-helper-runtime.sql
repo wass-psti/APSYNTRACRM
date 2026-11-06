@@ -110,6 +110,10 @@ GRANT EXECUTE ON FUNCTION public.ws02d_b3_internal_helper_read_probe(text,text) 
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+-- Synthetic diagnostic only; no real actor identifiers or secrets.
+SELECT public.ws02d_b3_internal_helper_read_probe('time-tracker','test.note') AS signed_one_own,
+       public.ws02d_b3_internal_helper_read_probe('tradelink','test.note') AS signed_one_denied,
+       public.ws02d_b3_internal_helper_read_probe('time-tracker','timetracker.attendance.v1') AS signed_one_protected;
 DO $signed_one$
 BEGIN
  IF public.ws02d_b3_internal_helper_read_probe('time-tracker','test.note')
