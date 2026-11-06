@@ -49,6 +49,28 @@ jobs:
           test "$status" = '401'
           test "$(wc -c < "$RUNNER_TEMP/b3-invalid.json")" -lt 4096
           echo 'WS02D_B3_PUBLIC_INVALID_TOKEN_DENIAL_PASS status=401'
+      - name: Observe unsigned browser preflight without bypassing the JWT gateway
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -X OPTIONS \
+            -H 'Origin: https://wass-psti.github.io' \
+            -H 'Access-Control-Request-Method: GET' \
+            -H 'Access-Control-Request-Headers: authorization,apikey' \
+            --dump-header "$RUNNER_TEMP/b3-preflight.headers" \
+            --output "$RUNNER_TEMP/b3-preflight.body" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          case "$status" in 200|204|401|403|503) ;; *) echo 'UNEXPECTED_PREFLIGHT_STATUS'; exit 1;; esac
+          if grep -qi '^access-control-allow-origin: https://wass-psti.github.io' "$RUNNER_TEMP/b3-preflight.headers"; then
+            cors=present
+          else
+            cors=absent
+          fi
+          echo "WS02D_B3_PUBLIC_PREFLIGHT_OBSERVED status=$status cors=$cors"
+          echo 'PREFLIGHT_IS_DIAGNOSTIC_ONLY_NOT_SIGNED_USER_ACCEPTANCE'
       - name: State precise scope of verified evidence
         run: |
           echo 'WS02D_B3_PUBLIC_HTTPS_SMOKE_PASS'
