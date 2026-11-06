@@ -42,7 +42,7 @@ BEGIN
        OR NOT EXISTS(
          SELECT 1 FROM pg_proc p
          WHERE p.oid=to_regprocedure(fn)
-           AND 'search_path='=ANY(p.proconfig)
+           AND 'search_path=""'=ANY(p.proconfig)
        ) THEN
       RAISE EXCEPTION 'PHASE_A_POSTINSTALL_RPC_GRANT_OR_SECURITY_DRIFT: %',fn;
     END IF;
