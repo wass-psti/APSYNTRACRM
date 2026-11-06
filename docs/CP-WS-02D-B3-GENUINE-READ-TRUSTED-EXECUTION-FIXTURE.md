@@ -53,6 +53,10 @@ Read-only inventory after the fixture completed:
 - Existing Supabase Edge Function inventory has no `ws02d-invite` function.
 - The signed user's Security-page B3 preflight was **not** executed in this assistant session: the browser connector reported that it requires the originating connected browser context. An aggregate Auth-session inventory or prior B2 user report **cannot** substitute for the genuine B3 result.
 
+## Follow-on signed read staging integration — 2026-11-06
+
+[Signed read staging evidence](./CP-WS-02D-B3-REAL-AUTH-TRUSTED-READ-STAGING.md) and [CI #191](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42135755289) **PASS**. A default-disabled HTTP GET boundary now composes the existing GoTrue + PostgreSQL active-session adapter with user-JWT scoped `wm_auth_access_context` and `has_module_access` reads, rechecks the actor after 12 predicates, and emits only sanitized checks. This is **mocked Auth/PostgREST integration, not a genuine browser signature, deployed Edge Function or active production issuer**. Live metadata review also identified `has_module_access`'s optional `p_user_id` for separate entitlement privacy review. B3 overarching 5/10 readiness remains unchanged pending real signed evidence and approved staging deployment.
+
 ## Gate accounting and decision
 
 The existing **10-criterion B3 integration/delivery readiness ledger remains 5/10 (50%)**. This checkpoint strengthens one of the already-counted backend-contract criteria; it does **not** supply the still-missing genuine signed user test, real deployed issuer, production write denial, provider acceptance or workspace-selection criteria. The two **new disposable execution fixtures are 2/2 PASS**, but do not alter that top-level denominator.
