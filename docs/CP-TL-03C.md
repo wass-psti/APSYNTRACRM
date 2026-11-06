@@ -1,6 +1,6 @@
 # CP-TL-03C — Controlled TradeLink production activation
 
-**Status:** STAGE A ACTIVATED IN PRODUCTION — READ-ONLY; STAGE B NOT APPROVED/NOT ACTIVATED; SIGNED-USER ACCEPTANCE PENDING.  
+**Status:** STAGE A PRODUCTION INSTALLED / LIVE STRUCTURAL PREFLIGHT 15/15 VERIFIED (2026-11-06); DISPOSABLE POSTGRES 17 CI VERIFIED (RUN #13); STAGE B WRITE EXECUTE NOT APPROVED / NOT ACTIVATED; LIVE SIGNED-WRITE ACCEPTANCE PENDING.  
 **Project:** existing Supabase `jtlusodorfnyzgyuewkz` ONLY. No new project, backend, login, or independent user-role store.  
 **Board:** existing TradeLink `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, workspace `00000000-0000-4000-8000-000000000001`.
 
@@ -140,3 +140,18 @@ Query returned **`BLOCKED_NO_ACTIVE_FOREIGN_MEMBERS`**. The foreign workspace ex
 **To unblock genuine foreign-workspace acceptance:** a real user must already hold a legitimately authorized *active* membership in the foreign workspace, have an active profile and authenticate with their own session. Any new production membership, account, role, permission, or session changes require **separate scoped authorization** and must preserve workspace isolation; they were not performed. Once a qualifying account legitimately exists, rerun the signed Stage A read acceptance from `#/security`. Expected result: `FOREIGN_WORKSPACE_DENIED` with 6/6 signed checks PASS and zero writes; then separately cover controlled revoked/expired sessions. Until then, **genuine foreign-workspace acceptance status = BLOCKED**.
 
 **CP-TL-03C overall:** Stage A production activation and current-manager/nonmanager signed checks verified; Stage B remains disabled/unapproved and final multi-role acceptance is incomplete.
+
+
+## Phase 1 restart — 2026-11-06 read-only contract verification
+
+**Verified continuation:** Stage A production installation and its restricted read-only grants are still intact. The previously approved migration `20261105011611` remains recorded; **do not repeat** the additive Stage A schema DDL. A newly committed repeatable post-Stage-A verifier `sql/tests/cp-tl03c-phase1-readonly-activation-preflight.sql` returned `STAGE_A_STRUCTURAL_PASS__STAGE_B_NOT_AUTHORIZED` with **15/15 PASS**. Live TradeLink board shape is one group, eight columns, zero items; both authoritative domain tables and their audit ledger have zero rows; both have enabled RLS with exactly the two signed role-scoped SELECT policies. Authenticated read/list execute grants are present; both authenticated/private/public document commit execute grants remain **disabled**; no anonymous document access or direct authenticated table mutations are granted. All eight central dependencies and five TL03 function source fingerprints/definer modes remain unchanged, and the append-only audit trigger is enabled.
+
+**Improved CI provenance:** GitHub Actions run #13, `41950802327`, PostgreSQL 17 job `126994002587`, was independently retrieved as **SUCCESS** with all acceptance steps green. The decoded job log includes PASS notices for signed draft create/retry/CAS/archive/restore, foreign scope and role ceilings, expired/revoked synthetic sessions, immutable audit and emergency-disable-with-data-retention; Node summary **16 passed/0 failed**. This closes the old *disposable CI unverified* documentation gap only; it does not certify live production signed CRUD or authorize Stage B.
+
+**Current security review:** The Supabase security advisor still exposes unrelated legacy TradeLink asset/reconciliation `SECURITY DEFINER` callable RPC notices and other project-wide warnings. They were not modified. The new installed TL03 public API facades are `SECURITY INVOKER`, their private implementations require signed/manager/module authorization, and signed write EXECUTE remains withheld. Findings affecting other legacy features need a separate ownership review before broad activation; see the full Phase 1 certificate.
+
+**Outstanding:** Genuine fresh signed Stage A read acceptance under deployed HTTPS, cross-workspace where a legitimate active foreign user becomes available, current backup-restoration evidence, separate explicit Stage B permission approval, and Stage B controlled real-session mutation/CAS/audit acceptance remain PENDING. No production data, roles, RLS, flags, or permissions were changed during this restart. The previous pre-Stage-A readiness query intentionally expects absent schema and is **not** suitable for post-Stage-A monitoring; use the new Phase 1 verifier.
+
+**Canonical detailed checkpoint:** `docs/CP-TL-03C-PHASE-1-PRODUCTION-PREFLIGHT-2026-11-06.md`.
+
+**Next:** `CP-TL-03C / Phase 2 — Genuine Signed Stage A Read Acceptance Refresh and Stage B Approval Packet`. Do not activate `sql/cp-tl03c-write-permission-candidate.sql` without new separately scoped production permission approval and a maintained rollback decision.
