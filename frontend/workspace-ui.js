@@ -466,7 +466,8 @@ function createContent({enabled=WS01_CREATION_ENABLED}={}){
    '<button type="submit" class="ws01-primary">'+(active?'Create workspace':'Validate draft')+'</button>'+
   '</footer></form></section>';
 }
-function openCreate(catalog,{lifecycle}={}){
+function openCreate(catalog,options={}){
+ const {lifecycle,selectorSession}=options;
  const enabled=WS01_CREATION_ENABLED&&typeof lifecycle?.create==='function';
  const layer=panel(createContent({enabled}),'create');
  const form=layer.querySelector('#ws01-proposal');
@@ -530,6 +531,14 @@ function openCreate(catalog,{lifecycle}={}){
    field.disabled=true;
    for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=true;
    submit.textContent='Created';
+   // Refresh only through the signed membership endpoint after server receipt.
+   // A newly created workspace is never silently made active.
+   void selectorSession?.load?.();
+   const browse=document.createElement('button');
+   browse.type='button';
+   browse.textContent='Browse authorized workspaces';
+   browse.addEventListener('click',()=>openBrowse(selectorSession?.catalog||catalog,options));
+   form.querySelector('.ws01-create-footer').prepend(browse);
   }else if(result.status==='REQUEST_CONFLICT'){
    requestId=null;requestDraft=null;
   }
