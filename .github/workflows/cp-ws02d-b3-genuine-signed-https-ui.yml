@@ -9,12 +9,16 @@ on:
       - 'frontend/workspace-b3-deployed-https-acceptance.js'
       - 'frontend/tests/workspace-b3-deployed-https-acceptance.test.mjs'
       - 'frontend/app.js'
+      - 'frontend/tests/frt-sec07-security-ui.test.mjs'
+      - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
   pull_request:
     paths:
       - '.github/workflows/cp-ws02d-b3-genuine-signed-https-ui.yml'
       - 'frontend/workspace-b3-deployed-https-acceptance.js'
       - 'frontend/tests/workspace-b3-deployed-https-acceptance.test.mjs'
       - 'frontend/app.js'
+      - 'frontend/tests/frt-sec07-security-ui.test.mjs'
+      - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
   workflow_dispatch:
 
 permissions:
@@ -42,6 +46,11 @@ jobs:
           node --test frontend/tests/workspace-b3-deployed-https-acceptance.test.mjs
           node scripts/verify-pages-source.mjs
           echo 'B3_SIGNED_HTTPS_UI_SOURCE_CONTRACT_PASS_NOT_GENUINE_SIGNED_ACCEPTANCE'
+      - name: Run complete frontend regression after preserving signed logout contracts
+        run: |
+          set -euo pipefail
+          node --test frontend/tests/*.test.mjs
+          echo 'WS02D_B3_FULL_FRONTEND_REGRESSION_PASS'
       - name: Verify host activation with real credential-free public HTTPS preflight
         env:
           ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
