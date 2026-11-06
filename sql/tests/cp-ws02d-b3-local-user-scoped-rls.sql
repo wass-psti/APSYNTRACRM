@@ -23,7 +23,7 @@ GRANT USAGE ON SCHEMA public TO authenticated;
 
 -- GoTrue JWTs are *cryptographically* verified by PostgREST before it sets
 -- request.jwt.claims. No user-supplied p_user_id can change the caller.
-CREATE FUNCTION auth.uid() RETURNS uuid
+CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
  LANGUAGE sql STABLE SECURITY INVOKER SET search_path=''
  AS $func$
  SELECT nullif(
