@@ -56,6 +56,12 @@ jobs:
             --dump-header "$RUNNER_TEMP/b3-valid.headers" \
             --output "$RUNNER_TEMP/b3-valid.body" \
             --write-out '%{http_code}' "$ENDPOINT")"
+          echo "B3_LIVE_ACTIVATION_DIAGNOSTIC legitimate_origin_options_http=$status"
+          if grep -Eqi '^access-control-allow-origin:' "$RUNNER_TEMP/b3-valid.headers"; then
+            echo "B3_LIVE_ACTIVATION_DIAGNOSTIC allow_origin_header=present"
+          else
+            echo "B3_LIVE_ACTIVATION_DIAGNOSTIC allow_origin_header=absent"
+          fi
           test "$status" = '200'
           grep -Eqi '^access-control-allow-origin:[[:space:]]*https://wass-psti.github.io[[:space:]]*$' "$RUNNER_TEMP/b3-valid.headers"
           grep -Eqi '^access-control-allow-headers:.*authorization' "$RUNNER_TEMP/b3-valid.headers"
@@ -69,6 +75,7 @@ jobs:
             --dump-header "$RUNNER_TEMP/b3-foreign.headers" \
             --output "$RUNNER_TEMP/b3-foreign.body" \
             --write-out '%{http_code}' "$ENDPOINT")"
+          echo "B3_LIVE_ACTIVATION_DIAGNOSTIC foreign_origin_options_http=$status"
           test "$status" = '403'
           ! grep -qi '^access-control-allow-origin:' "$RUNNER_TEMP/b3-foreign.headers"
           echo 'B3_FOREIGN_ORIGIN_DENIAL_PASS status=403 no_cors=true'
