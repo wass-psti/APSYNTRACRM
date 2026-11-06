@@ -4643,7 +4643,8 @@ function captureTradeLinkDraftFields(event){
   'lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
   'paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber',
   'customerTin','customerEmail','customerPhone','validity','deliveryCommitment',
-  'paymentTerms','targetDeliveryDate','poNumber','approvedBy','remarks']){
+  'paymentTerms','targetDeliveryDate','poNumber','approvedBy',
+  'discountType','discountValue','exchangeRate','remarks']){
   values[key]=String(fd.get(key)??'').slice(0,5000);
  }
  state.tradeLinkDraft.formValues=values;

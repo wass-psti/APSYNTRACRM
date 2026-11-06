@@ -121,3 +121,6 @@
 .aps-tradelink-app .tl-draft-finance-results dt{font-size:11px;color:#66738c}
 .aps-tradelink-app .tl-draft-finance-results dd{margin:5px 0 0;font-size:16px;font-weight:750;color:#2d3f69;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 @media(max-width:620px){.aps-tradelink-app .tl-draft-finance-results{grid-template-columns:1fr}}
+
+.aps-tradelink-app .tl-draft-finance-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+@media(max-width:750px){.aps-tradelink-app .tl-draft-finance-inputs{grid-template-columns:1fr}}

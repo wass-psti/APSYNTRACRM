@@ -386,11 +386,11 @@ test('priced Drafts reuse source calculator and preserve explicit currency witho
   const values={documentType:type,lineQuantity:'2',lineUnitPrice:'125',
    currency:'PHP',vatType:'12'};
   const result=calculateTradeLinkDraftLocalAmounts(fields(values));
-  assert.deepEqual(result,{currency:'PHP',subtotal:250,vat:30,total:280});
+  assert.deepEqual(result,{currency:'PHP',subtotal:250,discount:0,taxable:250,vat:30,total:280,phpEquivalent:280});
   assert.deepEqual(calculateTradeLinkDraftLocalAmounts(fields({...values,currency:'EUR'})),{
-   currency:'EUR',subtotal:250,vat:30,total:280});
+   currency:'EUR',subtotal:250,discount:0,taxable:250,vat:30,total:280,phpEquivalent:null});
   assert.deepEqual(calculateTradeLinkDraftLocalAmounts(fields({...values,vatType:'zero'})),{
-   currency:'PHP',subtotal:250,vat:0,total:250});
+   currency:'PHP',subtotal:250,discount:0,taxable:250,vat:0,total:250,phpEquivalent:250});
  }
  for(const type of ['packing','delivery','payment']){
   assert.equal(calculateTradeLinkDraftLocalAmounts(fields({documentType:type,lineQuantity:'2',
@@ -416,7 +416,7 @@ test('commercial estimate exists only for the three priced module forms and is n
   const expected=['esi','quotation','po'].includes(module.key);
   assert.equal(html.includes('data-tradelink-draft-finance'),expected,module.key);
   if(expected){
-   for(const key of ['subtotal','vat','total'])
+   for(const key of ['subtotal','discount','taxable','vat','total','phpEquivalent'])
     assert.ok(html.includes('data-tradelink-draft-amount="'+key+'"'),key);
    assert.match(html,/No exchange rate or approval is inferred/);
    assert.match(html,/Local estimate only · no Draft save, payment, transaction or approval/);
@@ -430,7 +430,8 @@ test('local commercial estimate updates DOM text only and resets to placeholders
   currency:'PHP',vatType:'12'};
  const nodes=new Map([
   ['[data-tradelink-draft-amount-currency]',{textContent:'—'}],
-  ...['subtotal','vat','total'].map(x=>['[data-tradelink-draft-amount="'+x+'"]',{textContent:'—'}]),
+  ...['subtotal','discount','taxable','vat','total','phpEquivalent'].map(x=>[
+   '[data-tradelink-draft-amount="'+x+'"]',{textContent:'—'}]),
   ['[data-tradelink-draft-finance-status]',{textContent:''}]
  ]);
  const panel={querySelector:s=>nodes.get(s)||null};
@@ -447,15 +448,84 @@ test('local commercial estimate updates DOM text only and resets to placeholders
  assert.equal(nodes.get('[data-tradelink-draft-amount-currency]').textContent,'PHP');
  values.lineUnitPrice='';
  assert.equal(updateTradeLinkDraftLocalAmounts(form),null);
- for(const node of ['subtotal','vat','total'])
+ for(const node of ['subtotal','discount','taxable','vat','total','phpEquivalent'])
   assert.equal(nodes.get('[data-tradelink-draft-amount="'+node+'"]').textContent,'—');
  assert.equal(nodes.get('[data-tradelink-draft-amount-currency]').textContent,'—');
- assert.match(nodes.get('[data-tradelink-draft-finance-status]').textContent,/Enter a valid positive quantity/);
+ assert.match(nodes.get('[data-tradelink-draft-finance-status]').textContent,/Enter valid positive quantity/);
  assert.equal(updateTradeLinkDraftLocalAmounts({querySelector:()=>null}),null);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/updateTradeLinkDraftLocalAmounts\(form\)/);
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
+
+test('commercial Draft preview uses source discount and explicit FX with no assumed conversion',()=>{
+ const base={documentType:'quotation',lineQuantity:'2',lineUnitPrice:'125',
+  currency:'PHP',vatType:'12',discountType:'percentage',discountValue:'10'};
+ assert.deepEqual(calculateTradeLinkDraftLocalAmounts(fields(base)),{
+  currency:'PHP',subtotal:250,discount:25,taxable:225,vat:27,total:252,phpEquivalent:252});
+ assert.deepEqual(calculateTradeLinkDraftLocalAmounts(fields({...base,discountType:'fixed',
+  discountValue:'50'})),{
+  currency:'PHP',subtotal:250,discount:50,taxable:200,vat:24,total:224,phpEquivalent:224});
+ const foreign=calculateTradeLinkDraftLocalAmounts(fields({...base,currency:'EUR',
+  exchangeRate:'62'}));
+ assert.equal(foreign.currency,'EUR');
+ assert.equal(foreign.total,252);
+ assert.equal(foreign.phpEquivalent,15624);
+ assert.equal(calculateTradeLinkDraftLocalAmounts(fields({...base,currency:'EUR'})).phpEquivalent,null);
+ for(const bad of [
+  {discountType:'not-supported'}, {discountValue:'-1'}, {discountValue:'101'},
+  {discountValue:'Infinity'}, {discountValue:'not-a-number'},
+  {discountValue:'1000000000001'}, {discountValue:'0x20'},
+  {currency:'USD',exchangeRate:'-1'}, {currency:'USD',exchangeRate:'0'},
+  {currency:'USD',exchangeRate:'Infinity'}, {currency:'USD',exchangeRate:'foo'}
+ ])assert.equal(calculateTradeLinkDraftLocalAmounts(fields({...base,...bad})),null,
+  JSON.stringify(bad));
+});
+
+test('discount and FX fields remain within existing contract, sanitized, and never affect payment modules',()=>{
+ const base={documentType:'quotation',documentNumber:'Q-1',customerName:'Client',
+  customerEmail:'c@example.com',validity:'30 days',deliveryCommitment:'2 weeks',
+  paymentTerms:'Net 30',approvedBy:'Approver',lineDescription:'Service',
+  lineQuantity:'1',lineUnitPrice:'100',currency:'USD',vatType:'zero',
+  discountType:'percentage',discountValue:'10',exchangeRate:'55'};
+ const draft=parseTradeLinkDraftForm(fields(base),{lineId:()=> 'one'});
+ assert.equal(draft.discountValue,10);
+ assert.equal(draft.discountType,'percentage');
+ assert.equal(draft.exchangeRate,55);
+ for(const change of [{discountType:'not-supported'}, {discountValue:'-1'},
+  {discountValue:'101'}, {discountValue:'foo'}, {exchangeRate:'0'},
+  {exchangeRate:'-55'}, {exchangeRate:'Infinity'}])
+  assert.throws(()=>parseTradeLinkDraftForm(fields({...base,...change}),
+   {lineId:()=> 'one'}),/discount|exchange rate/i);
+ const php=parseTradeLinkDraftForm(fields({...base,currency:'PHP'}),
+  {lineId:()=> 'one'});
+ assert.equal('exchangeRate' in php,false);
+ for(const type of ['packing','delivery','payment']){
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+   view:initialTradeLinkDraftView(type),canManage:true});
+  assert.doesNotMatch(html,/data-tradelink-draft-finance|name="discountValue"|name="exchangeRate"/);
+ }
+});
+
+test('commercial estimate rerender restores source-calculated amount and remains safe when invalid',()=>{
+ const data={documentType:'quotation',lineQuantity:'2',lineUnitPrice:'125',
+  currency:'USD',vatType:'zero',discountType:'fixed',discountValue:'50',
+  exchangeRate:'60',documentNumber:'Q-TEST'};
+ const valid=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+  view:{...initialTradeLinkDraftView('quotation'),formValues:data},canManage:true});
+ assert.match(valid,/data-tradelink-draft-amount="total">200\.00/);
+ assert.match(valid,/data-tradelink-draft-amount="phpEquivalent">12,000\.00/);
+ assert.match(valid,/data-tradelink-draft-amount-currency>USD/);
+ const invalid=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+  view:{...initialTradeLinkDraftView('quotation'),formValues:{...data,exchangeRate:'oops'}},canManage:true});
+ assert.match(invalid,/data-tradelink-draft-amount="total">—/);
+ assert.doesNotMatch(invalid,/12,000\.00/);
+ const app=readFileSync('frontend/app.js','utf8');
+ for(const key of ['discountType','discountValue','exchangeRate'])
+  assert.ok(app.includes("'"+key+"'"));
  assert.equal(TL03_DOMAIN_READS_ENABLED,false);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });

@@ -72,6 +72,27 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
    throw new ApiError('Invalid TradeLink VAT code.',400);
   draft.vatType=vatType;
  }
+ if(priced){
+  const method=value('discountType'),rawDiscount=value('discountValue');
+  const rawRate=value('exchangeRate');
+  const amount=v=>/^\d+(?:\.\d+)?$/.test(v)&&Number.isFinite(Number(v))&&
+   Number(v)>=0&&Number(v)<=1000000000000;
+  if(method){
+   if(!['percentage','fixed'].includes(method))
+    throw new ApiError('Invalid TradeLink discount method.',400);
+   draft.discountType=method;
+  }
+  if(rawDiscount){
+   if(!amount(rawDiscount)||(method==='percentage'&&Number(rawDiscount)>100))
+    throw new ApiError('Invalid TradeLink discount value.',400);
+   draft.discountValue=Number(rawDiscount);
+  }
+  if(rawRate&&draft.currency!=='PHP'){
+   if(!amount(rawRate)||Number(rawRate)===0)
+    throw new ApiError('Invalid TradeLink PHP exchange rate.',400);
+   draft.exchangeRate=Number(rawRate);
+  }
+ }
  const description=value('lineDescription'),quantity=value('lineQuantity'),
   unitPrice=physical?'':value('lineUnitPrice'),unit=value('lineUnit');
  if(physical||description||quantity||unitPrice||unit){
@@ -211,7 +232,7 @@ function renderCommercialReadiness(type,fieldValue,data){
  return '';
 }
 
-/** An unsaved estimate derived only from the already-present, typed Draft fields. */
+/** One unsaved priced line; reuse the authoritative source calculation formula. */
 export function calculateTradeLinkDraftLocalAmounts(fields){
  if(!fields||typeof fields.get!=='function')return null;
  const value=name=>String(fields.get(name)??'').trim();
@@ -223,16 +244,32 @@ export function calculateTradeLinkDraftLocalAmounts(fields){
   quantity<=0||unitPrice<=0||quantity>1000000000||unitPrice>1000000000||
   !currencies.includes(currency)||!TRADELINK_VAT_CODES.includes(vatType))
   return null;
+ const method=value('discountType')||'percentage';
+ if(!['percentage','fixed'].includes(method))return null;
+ const rawDiscount=value('discountValue'),rawRate=value('exchangeRate');
+ const decimal=v=>/^\d+(?:\.\d+)?$/.test(v)&&Number.isFinite(Number(v))&&
+  Number(v)>=0&&Number(v)<=1000000000000;
+ if(rawDiscount&&!decimal(rawDiscount))return null;
+ const discountValue=rawDiscount?Number(rawDiscount):0;
+ if(method==='percentage'&&discountValue>100)return null;
+ // A non-PHP amount remains denominated in its selected currency. A PHP
+ // equivalent is NEVER synthesized without a user-entered conversion rate.
+ const needsRate=currency!=='PHP';
+ if(needsRate&&rawRate&&(!decimal(rawRate)||Number(rawRate)===0))return null;
+ const hasRate=needsRate&&rawRate!=='';
+ const exchangeRate=hasRate?Number(rawRate):0;
  const result=calculateTradeLinkAmounts({
-  items:[{kind:'item',quantity,unitPrice}],currency,vatType
+  items:[{kind:'item',quantity,unitPrice}],currency,vatType,
+  discountType:method,discountValue,exchangeRate
  });
- return Number.isFinite(result.total)&&Number.isFinite(result.subtotal)&&
-  Number.isFinite(result.vat)?{currency,subtotal:result.subtotal,vat:result.vat,total:result.total}:null;
+ if(['subtotal','discount','taxable','vat','total'].some(key=>
+  !Number.isFinite(result[key])))return null;
+ if((!needsRate||hasRate)&&!Number.isFinite(result.phpEquivalent))return null;
+ return {currency,subtotal:result.subtotal,discount:result.discount,
+  taxable:result.taxable,vat:result.vat,total:result.total,
+  phpEquivalent:needsRate&&!hasRate?null:result.phpEquivalent};
 }
-/**
- * Safe DOM text-only update inside the existing signed, local Draft form.
- * Never processes a payment, saves a document or calls an API.
- */
+/** Pure DOM text updates inside the existing signed Draft form; no API/write. */
 export function updateTradeLinkDraftLocalAmounts(form){
  const panel=form?.querySelector?.('[data-tradelink-draft-finance]');
  if(!panel)return null;
@@ -240,29 +277,54 @@ export function updateTradeLinkDraftLocalAmounts(form){
  const result=calculateTradeLinkDraftLocalAmounts(fields);
  const currency=panel.querySelector('[data-tradelink-draft-amount-currency]');
  if(currency)currency.textContent=result?.currency||'—';
- for(const name of ['subtotal','vat','total']){
+ for(const name of ['subtotal','discount','taxable','vat','total','phpEquivalent']){
   const target=panel.querySelector('[data-tradelink-draft-amount="'+name+'"]');
-  if(target)target.textContent=result?formatTradeLinkAmount(result[name]):'—';
+  if(target)target.textContent=result&&result[name]!==null?
+   formatTradeLinkAmount(result[name]):'—';
  }
  const status=panel.querySelector('[data-tradelink-draft-finance-status]');
- if(status)status.textContent=result?
-  'Unsaved estimate only. Validate the Draft separately; nothing was transmitted.':
-  'Enter a valid positive quantity, unit price, currency and VAT to preview amounts.';
+ if(status)status.textContent=!result?
+  'Enter valid positive quantity, price, discount, currency and VAT to preview amounts.':
+  result.currency!=='PHP'&&result.phpEquivalent===null?
+   'Selected-currency estimate only. Enter a positive PHP exchange rate for conversion. Nothing saved.':
+   'Unsaved estimate only. Validate the Draft separately; nothing was transmitted.';
  return result;
 }
-function renderTradeLinkDraftLocalAmounts(){
+function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line){
+ const defaults={documentType:type,lineQuantity:line.quantity??'',
+  lineUnitPrice:line.unitPrice??'',currency:data.currency||'PHP',
+  vatType:data.vatType||'12',discountType:data.discountType||'percentage',
+  discountValue:data.discountValue??'',exchangeRate:data.exchangeRate??''};
+ const value=key=>fieldValue(key,defaults[key]??'');
+ const initial=calculateTradeLinkDraftLocalAmounts({get:value});
+ const display=key=>initial&&initial[key]!==null?formatTradeLinkAmount(initial[key]):'—';
  return '<section class="tl-draft-finance" data-tradelink-draft-finance '+
   'aria-label="Source-aligned local commercial estimate">'+
   '<h4>Local commercial estimate</h4>'+
-  '<p class="muted">Uses the existing TradeLink calculation rules for one priced item, '+
-  'with the selected currency and VAT. No exchange rate or approval is inferred.</p>'+
+  '<p class="muted">One priced item using the source discount, VAT and currency rules. '+
+  'All amounts remain unsaved. No exchange rate or approval is inferred.</p>'+
+  '<div class="tl-draft-finance-inputs">'+
+   '<label class="tl-draft-field"><span>Discount method</span><select name="discountType">'+
+    options([['percentage','Percentage'],['fixed','Fixed amount']],value('discountType'))+
+   '</select></label>'+
+   field('Discount value','discountValue',value('discountValue'),
+    'type="number" min="0" max="1000000000000" step="any"')+
+   field('PHP exchange rate (non-PHP only)','exchangeRate',value('exchangeRate'),
+    'type="number" min="0" max="1000000000000" step="any"')+
+  '</div>'+
   '<dl class="tl-draft-finance-results">'+
-  [['subtotal','Subtotal'],['vat','VAT'],['total','Total']].map(([key,label])=>
-   '<div><dt>'+label+'</dt><dd data-tradelink-draft-amount="'+key+'">—</dd></div>').join('')+
-  '</dl><p class="muted">Currency: <span data-tradelink-draft-amount-currency>—</span></p>'+
+  [['subtotal','Subtotal'],['discount','Discount'],['taxable','Taxable'],
+   ['vat','VAT'],['total','Total'],['phpEquivalent','PHP equivalent']].map(([key,label])=>
+   '<div><dt>'+label+'</dt><dd data-tradelink-draft-amount="'+key+'">'+
+    display(key)+'</dd></div>').join('')+
+  '</dl><p class="muted">Currency: <span data-tradelink-draft-amount-currency>'+
+  escape(initial?.currency||'—')+'</span></p>'+
   '<p data-tradelink-draft-finance-status role="status" aria-live="polite">'+
-  'Enter a valid positive quantity, unit price, currency and VAT to preview amounts.</p>'+
-  '<p class="muted">Local estimate only · no Draft save, payment, transaction or approval.</p>'+
+  (initial?(initial.currency!=='PHP'&&initial.phpEquivalent===null?
+   'Selected-currency estimate only. Enter a positive PHP exchange rate for conversion. Nothing saved.':
+   'Unsaved estimate only. Validate the Draft separately; nothing was transmitted.'):
+   'Enter valid positive quantity, price, discount, currency and VAT to preview amounts.')+
+  '</p><p class="muted">Local estimate only · no Draft save, payment, transaction or approval.</p>'+
   '</section>';
 }
 function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
@@ -342,7 +404,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
        'maxlength="5000"')+
      '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
-   (priced?renderTradeLinkDraftLocalAmounts():'')+
+   (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line):'')+
    renderCommercialReadiness(type,fieldValue,data)+
    '<label class="tl-draft-field"><span>Remarks</span>'+
     '<textarea name="remarks" maxlength="5000" rows="3">'+escape(fieldValue('remarks',data.remarks||''))+'</textarea></label>'+
