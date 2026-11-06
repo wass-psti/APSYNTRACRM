@@ -70,6 +70,29 @@ export function validateWorkspaceProposal({name,privacy}={}){
   return {valid:false,reason:'Choose a workspace name (2–80 characters) and privacy.'};
  return {valid:true,name:clean,privacy};
 }
+/** Readiness UI must never imply that client validation authorizes creation.
+ * CP-WS-01C/B3 requires separately approved server RPC, grants, lifecycle
+ * activation and genuine signed-session acceptance. Nothing in this pure
+ * assessment calls an RPC or creates a workspace.
+ */
+export function assessWorkspaceCreationReadiness(proposal){
+ const validated=validateWorkspaceProposal(proposal);
+ if(!validated.valid)return Object.freeze({
+  status:'INVALID_DRAFT',canCreate:false,valid:false,
+  message:validated.reason
+ });
+ // The currently deployed production lifecycle has no create RPC, and the
+ // static client feature gate is deliberately OFF. A future enablement
+ // must be tied to reviewed backend acceptance, not to this UI.
+ if(!WS01_CREATION_ENABLED)return Object.freeze({
+  status:'PENDING_SERVER_ACTIVATION',canCreate:false,valid:true,
+  message:'Draft validated. Workspace creation requires the approved signed server lifecycle, authenticated permission grant, and production activation. No workspace was created.'
+ });
+ return Object.freeze({
+  status:'SERVER_ACCEPTANCE_REQUIRED',canCreate:false,valid:true,
+  message:'Draft validated. The server must independently authorize creation. No workspace was created.'
+ });
+}
 /** Validates preview-only invitation drafts; never issues or stores an invitation. */
 export function validateWorkspaceInvitationDraft({emails='',role='member',message=''}={}){
  const raw=typeof emails==='string'?emails.trim():'';
@@ -228,30 +251,50 @@ function openBrowse(catalog){
  input.focus();
 }
 function createContent(){
- return '<section class="ws01-create-card" role="dialog" aria-modal="true" aria-labelledby="ws01-create-title">'+
- '<header><h2 id="ws01-create-title">Add new workspace</h2>'+
- '<button type="button" class="ws01-close" data-ws01-close aria-label="Close create workspace">×</button></header>'+
- '<div class="ws01-create-symbol" aria-hidden="true">N</div>'+
- '<form id="ws01-proposal"><label for="ws01-name">Workspace name</label>'+
- '<input id="ws01-name" name="name" maxlength="80" minlength="2" autocomplete="off" required placeholder="New Workspace"/>'+
- '<fieldset><legend>Privacy</legend><label><input type="radio" name="privacy" value="open" checked/> Open</label>'+
- '<label><input type="radio" name="privacy" value="closed"/> Closed</label></fieldset>'+
- '<p class="ws01-note">Privacy requires server-enforced workspace visibility and admission rules. '+
- 'Creation is disabled until the production workspace lifecycle contract is approved.</p>'+
- '<p class="ws01-form-feedback" role="status"></p>'+
- '<footer><button type="button" data-ws01-close>Cancel</button>'+
- '<button type="submit" class="ws01-primary">Review readiness</button></footer></form></section>';
+ return '<section class="ws01-create-card" role="dialog" aria-modal="true"'+
+  ' aria-labelledby="ws01-create-title" aria-describedby="ws01-create-description">'+
+  '<header class="ws01-create-heading"><div><h2 id="ws01-create-title">Add new workspace</h2>'+
+  '<p class="ws01-create-subtitle" id="ws01-create-description">Workspace creation is not activated. '+
+   'You can validate a draft, but nothing will be saved.</p></div>'+
+  '<button type="button" class="ws01-close" data-ws01-close aria-label="Close create workspace">×</button></header>'+
+  '<div class="ws01-create-symbol" aria-hidden="true">N</div>'+
+  '<form id="ws01-proposal" novalidate>'+
+  '<label for="ws01-name">Workspace name</label>'+
+  '<input id="ws01-name" type="text" name="name" maxlength="80" minlength="2"'+
+   ' autocomplete="off" spellcheck="false" required placeholder="New Workspace"'+
+   ' aria-describedby="ws01-name-hint"/>'+
+  '<p id="ws01-name-hint" class="ws01-field-hint">2–80 characters. Draft only.</p>'+
+  '<fieldset><legend>Workspace privacy</legend>'+
+   '<label><input type="radio" name="privacy" value="closed" checked/> Closed</label>'+
+   '<label><input type="radio" name="privacy" value="open"/> Open</label></fieldset>'+
+  '<p class="ws01-create-safety">Closed is selected by default. Open is workspace metadata only; '+
+   'it does not permit unrestricted discovery, joining or access. Server-enforced membership '+
+   'and workspace isolation remain mandatory.</p>'+
+  '<p class="ws01-create-state">Creation unavailable — pending authorized backend activation.</p>'+
+  '<p class="ws01-form-feedback" role="status" aria-live="polite" aria-atomic="true"></p>'+
+  '<footer class="ws01-create-footer">'+
+   '<button type="button" class="ws01-create-cancel" data-ws01-close>Cancel</button>'+
+   '<button type="submit" class="ws01-primary">Validate draft</button>'+
+  '</footer></form></section>';
 }
 function openCreate(catalog){
  const layer=panel(createContent(),'create');
  const form=layer.querySelector('#ws01-proposal');
+ const feedback=layer.querySelector('.ws01-form-feedback');
  form.addEventListener('submit',event=>{
   event.preventDefault();
   const values=new FormData(form);
-  const proposed=validateWorkspaceProposal({name:values.get('name'),privacy:values.get('privacy')});
-  const label=layer.querySelector('.ws01-form-feedback');
-  label.textContent=!proposed.valid?proposed.reason:
-   'Configuration checked. Workspace creation remains unavailable until an authorized server lifecycle is activated. No workspace was created.';
+  const assessed=assessWorkspaceCreationReadiness({
+   name:values.get('name'),privacy:values.get('privacy')
+  });
+  feedback.textContent=assessed.message;
+  feedback.dataset.status=assessed.status;
+  form.querySelector('#ws01-name').setAttribute('aria-invalid',String(!assessed.valid));
+ });
+ form.addEventListener('input',()=>{
+  feedback.textContent='';
+  delete feedback.dataset.status;
+  form.querySelector('#ws01-name').removeAttribute('aria-invalid');
  });
  form.querySelector('#ws01-name').focus();
 }
