@@ -24,3 +24,10 @@ The existing PG17 workflow now installs the candidate after the existing create/
 ## Required separate activation
 
 Reconcile current production metadata and function ownership/ACLs; complete G4C-R compatibility and signed negative scenarios; review the ALTER TABLE lock/constraint rollback, backup, change ownership and approved window; test the typed client and configuration UI against a trusted signed nonproduction endpoint; and obtain explicit approval for production schema/grant changes. Invitation delivery and TradeLink persistence remain separately gated.
+
+## Dormant frontend integration
+
+- `frontend/workspace-lifecycle-client.js` now contains a typed configure adapter and strictly validates the schema-versioned CAS receipt against the submitted target, name, privacy and original values. It independently rechecks unchanged signed workspace context after the RPC.
+- `frontend/workspace-ui.js` contains a save path with duplicate-submit suppression, in-flight input locking, sanitized denial/conflict/network feedback and signed catalog refresh after a confirmed write.
+- The checked-in `WS01_CONFIGURATION_ENABLED=false` flag keeps production UI at **Validate settings draft**; `WorkspaceLifecycleClient.configure()` denies calls before any network operation. Enabling the flag or granting production RPC execution requires the independent activation gate above. These source changes do **not** make the live configuration UI writable.
+- Frontend regression tests exercise receipt validation, gate denial, and code-path wiring. Actual signed-browser save acceptance remains **PENDING**.
