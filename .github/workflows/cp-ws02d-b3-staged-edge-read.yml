@@ -9,6 +9,9 @@ on:
       - 'server/ws02d-b3-user-scoped-rpc.mjs'
       - 'server/ws02d-gotrue-live-read-adapters.mjs'
       - 'server/tests/ws02d-b3-edge-signed-read.test.mjs'
+      - 'frontend/workspace-b3-deployed-https-acceptance.js'
+      - 'frontend/tests/workspace-b3-deployed-https-acceptance.test.mjs'
+      - 'frontend/app.js'
       - 'supabase/functions/apsyntra-ws02d-b3-read/index.ts'
   workflow_dispatch:
 
@@ -36,10 +39,17 @@ jobs:
             server/tests/ws02d-b3-edge-signed-read.test.mjs \
             server/tests/ws02d-b3-signed-read-staging.test.mjs \
             server/tests/ws02d-b3-user-scoped-rpc.test.mjs \
-            server/tests/ws02d-gotrue-live-read-adapters.test.mjs
+            server/tests/ws02d-gotrue-live-read-adapters.test.mjs \
+            frontend/tests/workspace-b3-deployed-https-acceptance.test.mjs
+      - name: Validate unchanged app syntax and security-view wiring
+        run: |
+          set -euo pipefail
+          node --check frontend/app.js
+          node --check frontend/workspace-b3-deployed-https-acceptance.js
+          grep -F 'renderWs02dB3DeployedHttpsAcceptance({busy:state.ws02dB3HttpsBusy' frontend/app.js
       - name: Assert deployment flag is default-off
         run: |
           set -euo pipefail
           grep -F "export const WS02D_B3_EDGE_SIGNED_READ_ENABLED=false;" server/ws02d-b3-edge-signed-read.mjs
           grep -F "Deno.env.get('WS02D_B3_EDGE_READ_APPROVED')==='true'" supabase/functions/apsyntra-ws02d-b3-read/index.ts
-          echo WS02D_B3_EDGE_READ_UNDEPLOYED_SOURCE_CONTRACT_PASS
+          echo WS02D_B3_EDGE_READ_DEFAULT_OFF_SOURCE_AND_BROWSER_ACCEPTANCE_CONTRACT_PASS
