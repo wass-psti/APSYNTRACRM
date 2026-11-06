@@ -25,7 +25,7 @@ export function createGoTrueUserReader({
   const url=new URL(projectUrl);
   if(url.protocol==='https:'&&url.username===''&&url.password===''&&
      url.pathname==='/'&&url.search===''&&url.hash===''&&
-     /^https:\/\/[a-z0-9-]+\.supabase\.co\/$/.test(url.href)){
+     url.origin==='https://jtlusodorfnyzgyuewkz.supabase.co'){
    origin=url.origin;
   }
  }catch{ /* fail closed */ }
