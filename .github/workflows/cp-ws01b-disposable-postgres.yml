@@ -38,6 +38,8 @@ on:
       - 'sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql'
       - 'sql/tests/cp-ws01c-g3-disposable-lookup-candidate.sql'
       - 'sql/tests/cp-ws01c-g4-delegated-compatibility-disposable.sql'
+      - 'sql/tests/cp-ws01c-g4b-source-fingerprint-inventory.json'
+      - 'scripts/ws01c-g4b-verify-inventory.mjs'
       - 'sql/tests/cp-ws01c-b3-production-activated-readonly.sql'
   workflow_dispatch:
 
@@ -92,6 +94,8 @@ jobs:
         run: node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs frontend/tests/workspace-b2-signed-acceptance.test.mjs frontend/tests/workspace-b3-signed-read-preflight.test.mjs
       - name: Verify backend-only invitation, GoTrue HTTP/session read adapters and provider mocks
         run: node --test server/tests/ws02d-trusted-delivery.test.mjs server/tests/ws02d-resend-transport.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs server/tests/ws02d-gotrue-actor-verifier.test.mjs server/tests/ws02d-gotrue-live-read-adapters.test.mjs server/tests/ws02d-b3-signed-read-staging.test.mjs server/tests/ws02d-b3-user-scoped-rpc.test.mjs
+      - name: Verify complete G4B production source-fingerprint manifest structure
+        run: node scripts/ws01c-g4b-verify-inventory.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
       - name: Execute real disposable Auth/session SQL with synthetic identity and mocked GoTrue user
