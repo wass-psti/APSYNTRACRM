@@ -55,6 +55,9 @@ jobs:
             -f sql/tests/cp-board-col-delete-phase-a-postinstall-readonly.sql \
             -f sql/tests/cp-board-col-delete-authenticated-role-denial.sql \
             -f sql/tests/cp-board-col-delete-recoverable-acceptance.sql \
+            -f sql/cp-board-col-delete-phase-b-qa-scope-candidate.sql \
+            -f sql/tests/cp-board-col-delete-phase-b-qa-scope-acceptance.sql \
+            -f sql/tests/cp-board-col-delete-phase-b-qa-scope-reset.sql \
             -f sql/tests/cp-board-col-delete-recoverable-reset.sql \
             -f sql/cp-board-config01-compensating-rollback-v2.sql \
             -f sql/tests/cp-board-config01-rollback-acceptance-v2.sql
