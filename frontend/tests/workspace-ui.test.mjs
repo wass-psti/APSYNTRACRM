@@ -83,18 +83,20 @@ test('workspace creation readiness explicitly blocks server activation without a
 test('create modal explains blocked lifecycle and defaults privacy closed without misleading save action',()=>{
  const module=readFileSync('frontend/workspace-ui.js','utf8');
  const css=readFileSync('frontend/workspace-ui.css','utf8');
- assert.match(module,/function createContent\(\)/);
+ assert.match(module,/function createContent\(\{enabled=WS01_CREATION_ENABLED\}=\{\}\)/);
  assert.match(module,/aria-labelledby="ws01-create-title" aria-describedby="ws01-create-description/);
  assert.match(module,/id="ws01-proposal" novalidate/);
  assert.match(module,/name="privacy" value="closed" checked/);
  assert.match(module,/name="privacy" value="open"/);
  assert.match(module,/Open is workspace metadata only/);
  assert.match(module,/Creation unavailable — pending authorized backend activation/);
- assert.match(module,/type="submit" class="ws01-primary">Validate draft/);
+ assert.match(module,/type="submit" class="ws01-primary"/);
+ assert.match(module,/active\?'Create workspace':'Validate draft'/);
+ assert.match(module,/if\(!enabled\)\{/);
  assert.match(module,/ws01-create-footer/);
  assert.match(module,/aria-live="polite"/);
  assert.match(module,/assessWorkspaceCreationReadiness\(\{/);
- assert.match(module,/form\.querySelector\('#ws01-name'\)\.focus\(\)/);
+ assert.match(module,/field\.focus\(\)/);
  assert.doesNotMatch(module,/api\.rpc\(['\"]wm_ws01_create/);
  assert.match(css,/\.ws01-create-card \.ws01-create-footer\{/);
  assert.match(css,/\.ws01-create-card \.ws01-create-footer button\{/);
