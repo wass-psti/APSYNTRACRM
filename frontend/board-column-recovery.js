@@ -7,6 +7,13 @@ import {validUuid} from './data.js';
 import {columnStoredValueCount} from './board-inline-context.js';
 
 export const BOARD_COLUMN_RECOVERY_ENABLED=false;
+// Frontend defense in depth for the separate Phase B QA cutover. Server-side
+// scope is authoritative; this cannot grant any RPC permission by itself.
+export function isQaBoardRecoveryInterfaceAllowed(detail,{enabled=BOARD_COLUMN_RECOVERY_ENABLED}={}){
+ const board=detail?.board;
+ return enabled===true&&validUuid(board?.id)&&
+  typeof board?.name==='string'&&board.name.startsWith('CP-BOARD-COL-DELETE QA ');
+}
 const fail=(message,status=403,code='')=>{throw new ApiError(message,status,code);};
 const safeHtml=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
