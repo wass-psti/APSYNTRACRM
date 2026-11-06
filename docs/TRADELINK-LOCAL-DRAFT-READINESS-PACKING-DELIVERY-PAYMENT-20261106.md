@@ -53,3 +53,25 @@ Fresh read-only SQL against the **existing** project after the implementation ve
 **Progress:** Five of five independently completed source/test/deployment/database technical checks verified, excluding the two separately pending live-browser/CDN acceptance checks. Do not convert the scoped verification percentage into full production security certification.
 
 **Next authorized direction:** Complete the remaining non-mutating CDN and genuine signed browser acceptance when accessible; continue source-specific preview completeness or UX refinement without enabling writes. Production Stage B remains subject to separate current recoverability, change ownership, explicit grants, security and data authorization gates.
+
+## Interactive signed-browser gate attempt — November 6, 2026
+
+**Result: BLOCKED for browser interactions; authenticated overview context READ-ONLY OBSERVED.**
+
+The connected browser enumerated an existing APSYNTRA CRM tab at `#/overview` and returned current page text identifying a secure, connected Work Management workspace and an `admin_general_manager` account role. This demonstrates a signed *overview page snapshot*, **not** independent verification of TradeLink's Draft route or any clicks or inputs. The available Chat-mode browser connector permits only tab listing and page-text reads; it exposes **no click, navigation, form fill, or screenshot automation actions**. No account token or identity identifier was exported. The assistant did not run these form tests with the signed user.
+
+**Non-mutating, source-grounded acceptance cases to execute in a controllable signed browser context:**
+
+| Test | Valid local sample | Required negative scenario | Expected visible result |
+| --- | --- | --- | --- |
+| Packing List | `PL-QA-001`, consignee `QA Consignee`, reference `SO-QA-1`, physical item `QA Parts`, quantity `2` | Blank consignee/reference or quantity `0` | Valid: `Valid local packing / PL-QA-001 preview. Nothing saved or transmitted.`; invalid: validation denial, no save |
+| Delivery Receipt | `DR-QA-001`, recipient `QA Recipient`, reference `SO-QA-2`, item `QA Device`, quantity `1`, optional serial `TEST-01`, QC `QA QC`, logistics `QA Logistics` | Missing QC or logistics assignee, or zero item quantity | Valid: `Valid local delivery / DR-QA-001 preview. Nothing saved or transmitted.`; invalid: validation denial, no save |
+| Payment AR | `AR-QA-001`, payor `QA Payor`, particulars `QA only`, cash `25.50`, receiver `QA Receiver`, verifier `QA Verifier` | Zero/negative amount; cheque amount positive without bank or cheque number | Valid: `Valid local payment / AR-QA-001 preview. Nothing saved or transmitted.`; invalid: validation denial, no funds transferred |
+| Module switching | Switch `packing → delivery → payment → packing` in the current signed Draft form | Attempt wrong-module fields and route refresh | Correct per-module fields and draft type; no saved document or workflow transition |
+| Disabled actions | Inspect `Create Draft` and `Refresh` while all production flags remain disabled | Attempt to submit only via ordinary disabled UI (no direct RPC probes) | Controls are disabled and no persistent success is shown |
+
+**Execution limitations:** `form.reportValidity()` may produce browser-native field errors instead of the custom `Invalid Draft input` status for required controls; either is a denial, not a pass for a valid sample. Browser-native text/number input constraints can prevent entering malformed values by ordinary typing. Avoid modifying DOM internals or bypassing disabled controls to force production RPCs.
+
+**State handling:** The source preserves unsaved in-view fields during redraw and resets Draft state on signed route changes. This is a code-level expectation; real identity-change and sign-out transitions are not re-certified by this attempt.
+
+**Gate disposition:** Genuine interactive validation for the three forms and module switching **PENDING/BLOCKED**. Existing automated source tests (1,103/1,103), successful deployment, and prior non-mutation evidence remain valid as separate technical checks. Production DB tests were deliberately **not repeated**, per the user's instruction. The next step is to perform only the UI checks in a browser-control-capable session (for example, ChatGPT Work mode with connected browser), then record sanitized outcomes; do not ask for or handle user credentials.
