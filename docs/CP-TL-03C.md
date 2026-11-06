@@ -1,6 +1,6 @@
 # CP-TL-03C — Controlled TradeLink production activation
 
-**Status:** STAGE A PRODUCTION READ-ONLY VERIFIED; DISPOSABLE POSTGRES 17 RUN #16 PASS; PHASE 2 GENUINE MANAGER AND HR READ 2/2 USER-REPORTED PASS; PHASE 3 STAGE B READINESS 4/7 VERIFIED — NO-GO PENDING CURRENT BACKUP/RECOVERY EVIDENCE, NAMED OWNER AND SEPARATE PRODUCTION WRITE-GRANT APPROVAL. STAGE B NOT ACTIVATED.  
+**Status:** STAGE A PRODUCTION READ-ONLY VERIFIED (FRESH PHASE 3B RECHECK 15/15 PASS); DISPOSABLE POSTGRES 17 RUN #16 PASS; PHASE 2 MANAGER AND HR SIGNED READ 2/2 USER-REPORTED PASS; PHASE 3B DECISION NO-GO — BACKUP RECOVERABILITY, NAMED CHANGE/ROLLBACK OWNER AND EXPLICIT WRITE-GRANT APPROVAL PENDING. STAGE B NOT ACTIVATED.  
 **Project:** existing Supabase `jtlusodorfnyzgyuewkz` ONLY. No new project, backend, login, or independent user-role store.  
 **Board:** existing TradeLink `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, workspace `00000000-0000-4000-8000-000000000001`.
 
@@ -203,3 +203,16 @@ Read-only database validation reconfirmed authenticated list EXECUTE granted and
 **Approval boundary:** The Phase 3 packet specifies the exact two proposed `GRANT EXECUTE` permissions, named production change/security/rollback ownership, current backup restore-point and recovery-impact evidence, explicit production permission-change authorization, and separate authority for real document test writes. None of the three essential external gates (current recovery proof, assigned operator/window, separate Stage B approval) is certified. **Technical+governance decision coverage 4/7 verified**; production Stage B activation remains **NO-GO / NOT AUTHORIZED**. Genuine foreign workspace and revoked/expired production sessions remain separate pending or blocked security gates, not passed by existing simulated CI.
 
 **Next gate:** `CP-TL-03C / Phase 3B — Current Backup Evidence, Change Ownership and Explicit Stage B Permission Decision`, followed only if authorized by a controlled grant and genuine signed Draft write acceptance. No automatic activation or role modification is permissible.
+
+
+## Phase 3B — backup and production grant decision (2026-11-06)
+
+**Formal result:** Phase 3B evidence-gathering and decision packet **COMPLETED / VERIFIED**. Stage B production activation **NO-GO / NOT AUTHORIZED**. Canonical checkpoint: `docs/CP-TL-03C-PHASE-3B-RECOVERY-AND-PERMISSION-DECISION-2026-11-06.md` (commit `1409a98`).
+
+A fresh execution of the committed `sql/tests/cp-tl03c-phase1-readonly-activation-preflight.sql` returned `STAGE_A_STRUCTURAL_PASS__STAGE_B_NOT_AUTHORIZED`, **15/15 PASS**, no drift. A separate live query confirmed zero document/audit/board records, authenticated read/list EXECUTE still enabled, and both private/public authenticated write RPC EXECUTE grants **FALSE**. WatchdogWorkspace remains `ACTIVE_HEALTHY` (PostgreSQL 17.6); migration history continues to list Stage A `20261105011611`, not any Stage B activation. No production SQL grant, revoke, RLS change, data writes, credential/session mutation or backup restoration occurred.
+
+**Approval/recovery blocker:** A prior user attestation that scheduled backups were acceptable is historical, not current evidence of the latest recoverable backup or an independent restore drill. The live Supabase connector has no backup-inventory function; the connected browser could not access the originating signed tab; current backup mode, restore-point timestamp, RPO/RTO and shared-project restore impact could therefore not be certified. Neither a named executor/security/rollback owner and approved change window nor explicit approval of the two production `GRANT EXECUTE` permissions has been documented. Do not infer these decisions from repository ownership or standing development authorization.
+
+**Readiness remains 4/7 decision predicates VERIFIED** (Stage A, signed manager/HR read, disposable write/RBAC/rollback, production write-off baseline). The three pending predicates are current backup/recovery proof, change ownership/window, and separate production permission authorization. No production test Draft records are approved. The narrow SQL write-only rollback is disposable-tested and preserves Stage A reads and audit; it cannot erase mutations already committed.
+
+**Next gate:** `CP-TL-03C / Phase 3B Evidence Closure — Current Backup Status, Named Change and Recovery Owner, Separate Production Stage B Approval`. Do not activate the candidate until those independent material prerequisites are VERIFIED. After they pass, execute only the separately authorized controlled write grant and approved genuine signed Draft tests.
