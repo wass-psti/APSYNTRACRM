@@ -52,7 +52,15 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
     lineDescription:'Delivered item',lineQuantity:'1',lineUnit:'pc',
     checkedBy:'QC',deliveredBy:'Logistics'},
    payment:{customerName:'Payor',paymentParticulars:'Received on account',
-    cashAmount:'25',receivedBy:'Cashier',verifiedBy:'Verifier'}
+    cashAmount:'25',receivedBy:'Cashier',verifiedBy:'Verifier'},
+   esi:{customerName:'Invoice client',customerTin:'TIN-001',verifiedBy:'Finance',approvedBy:'Manager',
+    lineDescription:'Goods',lineQuantity:'2',lineUnitPrice:'150'},
+   quotation:{customerName:'Prospective client',customerEmail:'client@example.com',
+    validity:'30 days',deliveryCommitment:'Within 14 days',paymentTerms:'Net 30',approvedBy:'Manager',
+    lineDescription:'Service',lineQuantity:'2',lineUnitPrice:'150'},
+   po:{customerName:'Supplier',targetDeliveryDate:'2026-12-01',paymentTerms:'Net 30',
+    verifiedBy:'Account manager',approvedBy:'Final manager',
+    lineDescription:'Materials',lineQuantity:'2',lineUnitPrice:'150'}
   };
   const valid=parseTradeLinkDraftForm(fields({
    documentType:module.key,documentNumber:'LOCAL-001',...(examples[module.key]||{})
@@ -94,6 +102,8 @@ test('client never contacts auth, boards or RPC while both production flags are 
 test('form parser accepts only bounded source Draft fields and never asserts persistence',()=>{
  const draft=parseTradeLinkDraftForm(fields({documentType:'quotation',documentNumber:'Q-100',
   currency:'PHP',vatType:'12',customerName:'Sample customer',referenceNumber:'REF-7',
+  customerEmail:'customer@example.com',validity:'30 days',deliveryCommitment:'Within 14 days',
+  paymentTerms:'Net 30',approvedBy:'Manager',
   lineDescription:'Sample item',lineQuantity:'2',lineUnitPrice:'150.25',lineUnit:'pc',
   remarks:'Local only'}),{lineId:()=> 'line-001'});
  assert.deepEqual(draft.items,[{id:'line-001',kind:'item',description:'Sample item',
@@ -204,6 +214,92 @@ test('module switching updates ephemeral fields without storage, network or work
  assert.match(app,/select\[name="documentType"\]/);
  assert.match(app,/if\(captureTradeLinkDraftFields\(event\)\)\{/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
+
+test('Electronic SI preview validates client identity, priced line and intended review names',()=>{
+ const html=renderTradeLinkDraftWorkspace({
+  detail,workspaceId:workspace,view:initialTradeLinkDraftView('esi'),canManage:true});
+ for(const name of ['customerTin','verifiedBy','approvedBy','lineUnitPrice'])
+  assert.ok(html.includes('name="'+name+'"'),name);
+ assert.match(html,/Electronic SI readiness · preview only/);
+ assert.match(html,/type="submit" class="primary" disabled/);
+ const base={documentType:'esi',documentNumber:'SI-001',customerName:'Client',
+  customerTin:'TIN-123',verifiedBy:'Finance',approvedBy:'Manager',
+  lineDescription:'Invoiced goods',lineQuantity:'1',lineUnitPrice:'100'};
+ const draft=parseTradeLinkDraftForm(fields(base),{lineId:()=> 'si-line'});
+ assert.equal(draft.customerTin,'TIN-123');
+ assert.equal(draft.items[0].unitPrice,100);
+ assert.equal('workflow' in draft,false);
+ for(const change of [{customerName:''},{customerTin:''},{verifiedBy:''},{approvedBy:''},
+  {lineQuantity:'0'},{lineUnitPrice:'0'},{lineDescription:''}])
+  assert.throws(()=>parseTradeLinkDraftForm(fields({...base,...change})),/Commercial|TradeLink|Line|Invalid/i);
+});
+
+test('Quotation preview validates client contact and source commercial terms without approval',()=>{
+ const html=renderTradeLinkDraftWorkspace({
+  detail,workspaceId:workspace,view:initialTradeLinkDraftView('quotation'),canManage:true});
+ for(const name of ['customerEmail','customerPhone','validity','deliveryCommitment','paymentTerms','approvedBy'])
+  assert.ok(html.includes('name="'+name+'"'),name);
+ assert.match(html,/Quotation readiness · preview only/);
+ const base={documentType:'quotation',documentNumber:'Q-001',customerName:'Prospect',
+  customerEmail:'contact@example.com',validity:'30 days',deliveryCommitment:'4 weeks',
+  paymentTerms:'Net 30',approvedBy:'Reviewer',
+  lineDescription:'Consulting',lineQuantity:'1',lineUnitPrice:'250'};
+ const draft=parseTradeLinkDraftForm(fields(base),{lineId:()=> 'quote-line'});
+ assert.equal(draft.customerEmail,'contact@example.com');
+ assert.equal(draft.validity,'30 days');
+ assert.equal('approvedAt' in draft,false);
+ const byPhone=parseTradeLinkDraftForm(fields({...base,customerEmail:'',customerPhone:'5550100'}),
+  {lineId:()=> 'quote-line'});
+ assert.equal(byPhone.customerPhone,'5550100');
+ for(const change of [{customerEmail:'',customerPhone:''},{customerEmail:'invalid'},
+  {validity:''},{deliveryCommitment:''},{paymentTerms:''},{approvedBy:''},
+  {lineQuantity:'0'},{lineUnitPrice:'0'}])
+  assert.throws(()=>parseTradeLinkDraftForm(fields({...base,...change})),/Quotation|Commercial|Invalid/i);
+});
+
+test('Supplier PO preview requires priced items, terms and intended reviewers',()=>{
+ const html=renderTradeLinkDraftWorkspace({
+  detail,workspaceId:workspace,view:initialTradeLinkDraftView('po'),canManage:true});
+ for(const name of ['poNumber','targetDeliveryDate','paymentTerms','verifiedBy','approvedBy','lineUnitPrice'])
+  assert.ok(html.includes('name="'+name+'"'),name);
+ assert.match(html,/Supplier PO readiness · preview only/);
+ assert.match(html,/type="submit" class="primary" disabled/);
+ const base={documentType:'po',documentNumber:'PO-001',customerName:'Supplier',
+  targetDeliveryDate:'2026-12-15',paymentTerms:'Net 15',verifiedBy:'Account manager',
+  approvedBy:'Final manager',poNumber:'V-PO-111',
+  lineDescription:'Parts',lineQuantity:'2',lineUnitPrice:'50'};
+ const draft=parseTradeLinkDraftForm(fields(base),{lineId:()=> 'po-line'});
+ assert.equal(draft.targetDeliveryDate,'2026-12-15');
+ assert.equal(draft.poNumber,'V-PO-111');
+ for(const change of [{customerName:''},{targetDeliveryDate:''},
+  {targetDeliveryDate:'2026-02-30'},{targetDeliveryDate:'invalid'},
+  {paymentTerms:''},{verifiedBy:''},{approvedBy:''},
+  {lineQuantity:'0'},{lineUnitPrice:'0'}])
+  assert.throws(()=>parseTradeLinkDraftForm(fields({...base,...change})),/PO|Commercial|Invalid/i);
+});
+
+test('commercial UI redraw and signed client boundaries do not persist or leak draft inputs',()=>{
+ const state={...initialTradeLinkDraftView('esi'),formValues:{
+  documentType:'esi',documentNumber:'SI-LOCAL',customerName:'Client',
+  customerTin:'"><img src=x onerror=alert(1)>',verifiedBy:'Local',approvedBy:'Local'}};
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:state,canManage:true});
+ assert.doesNotMatch(html,/<img src=x/);
+ assert.match(html,/&lt;img/);
+ for(const type of ['esi','quotation','po']){
+  const output=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+   view:initialTradeLinkDraftView(type),canManage:true});
+  assert.match(output,/type="submit" class="primary" disabled/);
+  assert.match(output,/Validate locally/);
+ }
+ const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ for(const key of ['customerTin','customerEmail','customerPhone','validity',
+  'deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy'])
+  assert.ok(app.includes("'"+key+"'"),key);
+ assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,false);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });

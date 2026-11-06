@@ -4619,7 +4619,9 @@ function captureTradeLinkDraftFields(event){
  for(const key of ['documentType','documentNumber','customerName','referenceNumber',
   'currency','vatType','lineDescription','lineQuantity','lineUnitPrice','lineUnit',
   'lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
-  'paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber','remarks']){
+  'paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber',
+  'customerTin','customerEmail','customerPhone','validity','deliveryCommitment',
+  'paymentTerms','targetDeliveryDate','poNumber','approvedBy','remarks']){
   values[key]=String(fd.get(key)??'').slice(0,5000);
  }
  state.tradeLinkDraft.formValues=values;

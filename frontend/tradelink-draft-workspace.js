@@ -36,6 +36,7 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
  const value=k=>String(fields.get(k)??'').trim();
  const type=value('documentType');
  const physical=type==='packing'||type==='delivery';
+ const priced=type==='esi'||type==='quotation'||type==='po';
  const draft={documentType:type,documentNumber:value('documentNumber')};
  const addText=(key,{required=false}={})=>{
   const text=value(key);
@@ -61,7 +62,8 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
    throw new ApiError('Line item requires description, quantity and unit price where applicable.',400);
   const q=Number(quantity),p=physical?0:Number(unitPrice);
   if(!Number.isFinite(q)||!Number.isFinite(p)||q<0||p<0||
-     q>1000000000||p>1000000000||(physical&&q===0))
+     q>1000000000||p>1000000000||((physical||priced)&&q===0)||
+     (priced&&p===0))
    throw new ApiError('Invalid Draft line quantity or unit price.',400);
   const id=value('lineId')||lineId();
   if(typeof id!=='string'||!id||id.length>120)
@@ -105,6 +107,36 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
   if((draft.chequeAmount??0)>0&&(!draft.bankName||!draft.chequeNumber))
    throw new ApiError('Cheque Draft needs bank name and cheque number.',400);
  }
+ if(priced){
+  // Local submission-readiness previews only: these named reviewers are
+  // not authoritative identities and do not authorize workflow actions.
+  if(!draft.customerName||!draft.items?.length)
+   throw new ApiError('Commercial Draft needs a customer or supplier and a priced item.',400);
+  if(type==='esi'){
+   for(const key of ['customerTin','verifiedBy','approvedBy'])
+    addText(key,{required:true});
+  }else if(type==='quotation'){
+   for(const key of ['customerEmail','customerPhone','validity',
+    'deliveryCommitment','paymentTerms','approvedBy'])addText(key);
+   if((!draft.customerEmail&&!draft.customerPhone)||
+     !draft.validity||!draft.deliveryCommitment||
+     !draft.paymentTerms||!draft.approvedBy)
+    throw new ApiError('Quotation readiness needs client contact, validity, delivery, payment terms and an intended approver.',400);
+   if(draft.customerEmail&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(draft.customerEmail))
+    throw new ApiError('Invalid Quotation contact email.',400);
+  }else if(type==='po'){
+   for(const key of ['poNumber','targetDeliveryDate','paymentTerms',
+    'verifiedBy','approvedBy'])addText(key);
+   if(!draft.paymentTerms||!draft.verifiedBy||!draft.approvedBy||
+      !draft.targetDeliveryDate)
+    throw new ApiError('Supplier PO readiness needs delivery date, payment terms, reviewer and intended approver.',400);
+   const date=draft.targetDeliveryDate;
+   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||
+      !Number.isFinite(Date.parse(date))||
+      new Date(date).toISOString().slice(0,10)!==date)
+    throw new ApiError('Invalid supplier PO delivery date.',400);
+  }
+ }
  return validateTradeLinkDraftEnvelope(draft);
 }
 export class TradeLinkDraftWorkspace{
@@ -138,6 +170,29 @@ function field(label,name,val='',attrs=''){
  return '<label class="tl-draft-field"><span>'+escape(label)+'</span>'+
   '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+'></label>';
 }
+function renderCommercialReadiness(type,fieldValue,data){
+ const input=(label,name,attrs='maxlength="5000" required')=>
+  field(label,name,fieldValue(name,data[name]||''),attrs);
+ const note='<p class="muted">Readiness is local only. Reviewer and approver names do not assign roles, grant approval, or submit a workflow.</p>';
+ if(type==='esi')return '<fieldset class="tl-draft-lines"><legend>Electronic SI readiness · preview only</legend>'+
+  input('Client tax identity / TIN','customerTin')+
+  input('Intended finance verifier','verifiedBy')+
+  input('Intended management approver','approvedBy')+'</fieldset>'+note;
+ if(type==='quotation')return '<fieldset class="tl-draft-lines"><legend>Quotation readiness · preview only</legend>'+
+  input('Client email (or phone)','customerEmail','type="email" maxlength="5000"')+
+  input('Client phone (or email)','customerPhone','maxlength="5000"')+
+  input('Offer validity','validity')+
+  input('Delivery commitment','deliveryCommitment')+
+  input('Payment terms','paymentTerms')+
+  input('Intended approver','approvedBy')+'</fieldset>'+note;
+ if(type==='po')return '<fieldset class="tl-draft-lines"><legend>Supplier PO readiness · preview only</legend>'+
+  input('Supplier PO number (optional)','poNumber','maxlength="5000"')+
+  input('Target delivery date','targetDeliveryDate','type="date" required')+
+  input('Payment terms','paymentTerms')+
+  input('Intended Account Manager reviewer','verifiedBy')+
+  input('Intended final approver','approvedBy')+'</fieldset>'+note;
+ return '';
+}
 function renderEditor(row,mode,canManage,formValues=null){
  const editing=mode==='edit'&&row?.workflow_state==='draft'&&
   row.content&&typeof row.content==='object'&&
@@ -150,8 +205,10 @@ function renderEditor(row,mode,canManage,formValues=null){
  const type=editing?data.documentType:fieldValue('documentType','quotation');
  const physical=type==='packing'||type==='delivery';
  const payment=type==='payment';
+ const priced=type==='esi'||type==='quotation'||type==='po';
  const commonPartyLabel=type==='packing'?'Consignee':type==='delivery'?'Recipient / consignee':
-  payment?'Payor':'Customer / supplier';
+  payment?'Payor':type==='po'?'Supplier':type==='esi'?'Invoice client':
+  type==='quotation'?'Prospective client':'Customer / supplier';
  return '<section class="tl-draft-panel" aria-labelledby="tl-draft-editor-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Source-aligned Draft editor</p>'+
   '<h3 id="tl-draft-editor-title">'+(editing?'Edit authorized Draft':'Prepare a Draft')+'</h3></div>'+
@@ -164,7 +221,7 @@ function renderEditor(row,mode,canManage,formValues=null){
     (editing?'<input type="hidden" name="documentType" value="'+escape(type)+'">':'')+
     field('Document number','documentNumber',fieldValue('documentNumber',data.documentNumber||''),'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*"')+
     field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
-     'maxlength="5000"'+(physical||payment?' required':''))+
+     'maxlength="5000"'+(physical||payment||priced?' required'))+
     field(physical?'Source reference':'Reference','referenceNumber',
      fieldValue('referenceNumber',data.referenceNumber||''),
      'maxlength="5000"'+(physical?' required':''))+
@@ -188,14 +245,15 @@ function renderEditor(row,mode,canManage,formValues=null){
     '</fieldset>'+
     '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
     '<fieldset class="tl-draft-lines"><legend>'+
-     (physical?'Physical shipment item (required for local readiness)':'Single line item (optional)')+
+     (physical?'Physical shipment item (required for local readiness)':
+      priced?'Priced line item (required for local readiness)':'Single line item (optional)')+
      '</legend>'+
     field('Description','lineDescription',fieldValue('lineDescription',line.description||''),
-     'maxlength="2000"'+(physical?' required':''))+
+     'maxlength="2000"'+(physical||priced?' required':''))+
     field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),
-     'type="number" min="0" max="1000000000" step="any"'+(physical?' required':''))+
+     'type="number" min="0" max="1000000000" step="any"'+(physical||priced?' required':''))+
     (physical?'':field('Unit price','lineUnitPrice',fieldValue('lineUnitPrice',line.unitPrice??''),
-     'type="number" min="0" max="1000000000" step="any"'))+
+     'type="number" min="0" max="1000000000" step="any"'+(priced?' required':'')))+
     field('Unit','lineUnit',fieldValue('lineUnit',line.unit||''),'maxlength="120"')+
     (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
      fieldValue('lineSerialNumber',line.serialNumber||''),'maxlength="120"'):'')+
@@ -211,6 +269,7 @@ function renderEditor(row,mode,canManage,formValues=null){
        'maxlength="5000"')+
      '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
+   renderCommercialReadiness(type,fieldValue,data)+
    '<label class="tl-draft-field"><span>Remarks</span>'+
     '<textarea name="remarks" maxlength="5000" rows="3">'+escape(fieldValue('remarks',data.remarks||''))+'</textarea></label>'+
    '<div class="tl-draft-actions">'+
