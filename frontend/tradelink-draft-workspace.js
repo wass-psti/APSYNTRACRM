@@ -122,7 +122,7 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
      !draft.validity||!draft.deliveryCommitment||
      !draft.paymentTerms||!draft.approvedBy)
     throw new ApiError('Quotation readiness needs client contact, validity, delivery, payment terms and an intended approver.',400);
-   if(draft.customerEmail&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(draft.customerEmail))
+   if(draft.customerEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.customerEmail))
     throw new ApiError('Invalid Quotation contact email.',400);
   }else if(type==='po'){
    for(const key of ['poNumber','targetDeliveryDate','paymentTerms',
@@ -131,7 +131,7 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
       !draft.targetDeliveryDate)
     throw new ApiError('Supplier PO readiness needs delivery date, payment terms, reviewer and intended approver.',400);
    const date=draft.targetDeliveryDate;
-   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||
       !Number.isFinite(Date.parse(date))||
       new Date(date).toISOString().slice(0,10)!==date)
     throw new ApiError('Invalid supplier PO delivery date.',400);

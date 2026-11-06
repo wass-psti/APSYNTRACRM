@@ -299,7 +299,7 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
  for(const key of ['customerTin','customerEmail','customerPhone','validity',
   'deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy'])
   assert.ok(app.includes("'"+key+"'"),key);
- assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\\(/);
+ assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,false);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
