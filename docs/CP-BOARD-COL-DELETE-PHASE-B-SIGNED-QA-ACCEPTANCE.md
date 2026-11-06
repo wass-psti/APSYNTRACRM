@@ -1,7 +1,7 @@
 # CP-BOARD-COL-DELETE — Phase B signed QA acceptance
 
 **Date:** 2026-11-06  
-**Status (2026-11-06):** **B1 VERIFIED; B2 VERIFIED; B3 CONTROLLED 60-MINUTE ACTIVATION VERIFIED (effective only until 2026-11-06 12:07:34 Asia/Manila); B4–B5 PENDING.** Earlier sections preserve historical preactivation evidence. 
+**Status (2026-11-06):** **B1 VERIFIED; B2 VERIFIED; B3 SCOPED ACTIVATION VERIFIED; B4.1 QA-ONLY FRONTEND IMPLEMENTED / SIGNED LIVE ACCEPTANCE PENDING; B4 RESTORATION AND B5 PENDING.** Earlier sections preserve historical preactivation evidence. 
 
 ## Verified baseline
 
@@ -135,3 +135,19 @@ The QA creation still requires a genuine user-triggered signed-app operation. If
 **Execution blocker:** A proposed QA-only, exact-board and exact-column, expiry-limited frontend change was blocked by the connected repository tool safety check, and was not committed or redeployed. Do not bypass that control or use privileged SQL to impersonate genuine GoTrue acceptance. Repo head remains the B3 acceptance commit `a260464`.
 
 **B4 acceptance must still include:** secure QA-only UI exposure while the backend scope is live, signed owner deletion of `Recovery Status`, database-confirmed four-cell private snapshot, signed Activity read after refresh/reopen, exact column and four-cell restoration, actor/board isolation and stale/revoked/expired access denial, audit receipt verification and immutable Contacts preservation. After completion or abort, run B5 explicit deactivation and remove the temporary scope. If the B3 time window expires, do not reuse its one-shot activation SQL unchanged.
+
+
+---
+
+## B4.1 QA-only frontend recovery implementation — 2026-11-06
+
+**Status: IMPLEMENTED / TARGETED TESTS PASSED / LIVE SIGNED-BROWSER ACCEPTANCE PENDING.** This section supersedes the earlier B4 entry blocker, which remains above as historical evidence. Phase B4 deletion/restoration and B5 are not yet verified.
+
+- **Scoped UI:** `frontend/board-column-recovery.js` permits recoverable controls only when the board's ID exactly matches `8491b933-8aa7-4b10-816c-46b6758531f3`, name is `CP-BOARD-COL-DELETE QA Signed Fixture`, status is active, and current browser time is strictly earlier than `2026-11-06T04:07:34Z`. It restricts deletion and restoration to `Recovery Status`. General-board recovery remains unavailable. The backend B1 RPCs independently enforce genuine session, authorized manager, signed actor, board scope and database time.
+- **Late deletion safety:** The UI and recovery client refuse to start deletion within the final ten minutes of B3 authorization, leaving time for signed restoration. Recovery-list and restoration remain available until actual B3 expiry, after which the frontend also fails closed.
+- **Source commits:** `ceed604` (strict QA recovery client), `bc8e13b` (ten-minute cutoff), `f8b893e` (precise UI gating), `73522b4`/`5576ecd` (regression tests), `0c8bed8`/`08822da` (documentation and test labeling).
+- **Targeted checks:** 14 direct V8 smoke assertions were run against the actual fetched recovery module. Separately, all 13 committed test cases were executed against the fetched module and application sources with in-memory dependency/file-read shims: PASS 13/13. These are **not** native Node CI execution, actual Pages deployment evidence or signed browser acceptance.
+- **Live database read at 2026-11-06 03:35:51 UTC:** B3 scope still valid (expiry 04:07:34.459742 UTC), both recovery activation flags TRUE; four QA cells and four Contacts / Status I cells intact; zero recovery snapshots. No column deletion or restoration performed in this step.
+- **Open acceptance items:** Independent GitHub Actions and Pages deployment checks, genuine signed-user recovery RPC preflight, one QA column deletion, exact four-cell private snapshot, Activity audit across reload, genuine restoration with all four original values, denied actors/workspaces/expired sessions, and explicit B5 deactivation/scope cleanup. The connected browser could not be read because the originating browser context was unavailable.
+
+**Next required gate:** B4.1 deployed signed-user QA recovery preflight, followed by B4.2 genuine signed-user QA column deletion and Activity restoration. A new verified B3 activation window is required if the current one expires first. Never run the prior one-time activation SQL unchanged. Contacts remains prohibited.
