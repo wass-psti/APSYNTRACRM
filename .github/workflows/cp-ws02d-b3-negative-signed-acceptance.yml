@@ -1,0 +1,71 @@
+name: CP-WS-02D/B3 Genuine Negative Acceptance Controls
+
+on:
+  push:
+    branches:
+      - security/ws02d-b3-real-foreign-rls-denial
+    paths:
+      - '.github/workflows/cp-ws02d-b3-negative-signed-acceptance.yml'
+      - 'frontend/workspace-b3-foreign-rls-denial.js'
+      - 'frontend/workspace-b3-revoked-session-denial.js'
+      - 'frontend/tests/workspace-b3-foreign-rls-denial.test.mjs'
+      - 'frontend/tests/workspace-b3-revoked-session-denial.test.mjs'
+      - 'frontend/app.js'
+      - 'frontend/session.js'
+  pull_request:
+    paths:
+      - '.github/workflows/cp-ws02d-b3-negative-signed-acceptance.yml'
+      - 'frontend/workspace-b3-foreign-rls-denial.js'
+      - 'frontend/workspace-b3-revoked-session-denial.js'
+      - 'frontend/tests/workspace-b3-foreign-rls-denial.test.mjs'
+      - 'frontend/tests/workspace-b3-revoked-session-denial.test.mjs'
+      - 'frontend/app.js'
+      - 'frontend/session.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  negative-acceptance-contract:
+    name: Full frontend and isolated synthetic cross-workspace/revocation contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout without credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify app module syntax and pinned public client source
+        run: |
+          set -euo pipefail
+          node scripts/verify-pages-source.mjs
+          node --check frontend/app.js
+          node --check frontend/session.js
+          node --check frontend/workspace-b3-foreign-rls-denial.js
+          node --check frontend/workspace-b3-revoked-session-denial.js
+      - name: Targeted two-identity and local signout synthetic contracts
+        run: |
+          set -euo pipefail
+          node --test \
+            frontend/tests/workspace-b3-foreign-rls-denial.test.mjs \
+            frontend/tests/workspace-b3-revoked-session-denial.test.mjs
+          echo 'B3_SYNTHETIC_NEGATIVE_CONTROLS_PASS_NOT_GENUINE_SIGNED_ACCEPTANCE'
+      - name: Full frontend regression after additive Security view integration
+        run: |
+          set -euo pipefail
+          node --test frontend/tests/*.test.mjs
+          echo 'B3_FULL_FRONTEND_REGRESSION_PASS'
+      - name: Assert no privileged keys, mutation or automatic monitoring in negative probes
+        run: |
+          set -euo pipefail
+          ! grep -E 'service.role|sb_secret_|SUPABASE_SECRET_KEY|INSERT INTO|DELETE FROM|UPDATE public|setInterval|localStorage|sessionStorage' \
+            frontend/workspace-b3-foreign-rls-denial.js \
+            frontend/workspace-b3-revoked-session-denial.js
+          grep -F "scope:'local'" frontend/workspace-b3-revoked-session-denial.js
+          grep -F "order_intake_orders" frontend/workspace-b3-foreign-rls-denial.js
+          echo 'B3_READ_ONLY_AND_LOCAL_SCOPE_GUARD_PASS'
