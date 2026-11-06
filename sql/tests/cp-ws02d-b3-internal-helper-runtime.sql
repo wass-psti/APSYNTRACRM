@@ -87,6 +87,18 @@ BEGIN
 END;
 $function$;
 
+-- Reproduce the real helper's nullable permission result on synthetic data,
+-- then apply a disposable-only fail-closed candidate for comparative regression.
+SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+DO $nullable_baseline$
+BEGIN
+ IF public.module_state_delete_allowed('tradelink','workspace',
+     '11111111-1111-4111-8111-111111111111'::uuid) IS NOT NULL
+ THEN RAISE EXCEPTION 'Original nullable workspace permission not reproduced'; END IF;
+ RAISE NOTICE 'WS02D_B3_NULL_PERMISSION_BASELINE_REPRODUCED';
+END $nullable_baseline$;
+\i sql/cp-ws02d-b3-internal-helper-disposable-candidate.sql
+
 -- Internal helpers stay unreachable to direct user JWT roles.
 REVOKE ALL ON FUNCTION public.module_state_write_allowed(text,text,uuid) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.module_state_delete_allowed(text,text,uuid) FROM PUBLIC,anon,authenticated;
