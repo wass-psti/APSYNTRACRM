@@ -20,6 +20,10 @@ BEGIN
  RAISE NOTICE 'CP_WS01_CONFIG_DEFAULT_DENY_SCHEMA_PASS';
 END $preflight$;
 
+-- Prior disposable lifecycle acceptance can create additional synthetic rows.
+-- Capture the real initial membership count for a no-mutation invariant.
+SELECT pg_catalog.set_config('cp_ws01_config.prior_members',
+ (SELECT count(*)::text FROM public.workspace_members WHERE active),false);
 BEGIN;
 -- Use only synthetic existing fixture accounts. No roles/permissions persist.
 INSERT INTO private.ws01_workspace_policy(workspace_id,privacy,created_by)
@@ -211,7 +215,8 @@ BEGIN
   OR (SELECT next_name FROM private.ws01_config_events LIMIT 1)<>'Engineering Operations'
   OR (SELECT previous_privacy FROM private.ws01_config_events LIMIT 1)<>'closed'
   OR (SELECT next_privacy FROM private.ws01_config_events LIMIT 1)<>'open'
-  OR (SELECT count(*) FROM public.workspace_members WHERE active)<>5
+  OR (SELECT count(*) FROM public.workspace_members WHERE active) <>
+   current_setting('cp_ws01_config.prior_members')::bigint
   OR has_function_privilege('anon','public.wm_ws01_config_update(uuid,text,text,bigint)','EXECUTE')
  THEN RAISE EXCEPTION 'Owner CAS or private audit integrity failed'; END IF;
  RAISE NOTICE 'CP_WS01_CONFIG_OWNER_CAS_FOREIGN_SESSION_AUDIT_DISPOSABLE_PASS';
