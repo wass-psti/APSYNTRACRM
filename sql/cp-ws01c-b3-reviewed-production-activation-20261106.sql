@@ -5,6 +5,38 @@
 -- No workspace is created by this activation script. B4 switching remains OFF.
 -- Must be run only in an approved release window after reviewed disposable acceptance.
 BEGIN;
+DO $ws01_activation_source_lock$
+BEGIN
+ IF NOT EXISTS(
+  SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname='public' AND p.proname='wm_ws01_create'
+     AND pg_get_function_identity_arguments(p.oid)='p_name text, p_privacy text, p_request_id uuid'
+     AND md5(pg_get_functiondef(p.oid))='63395e8cb451560b16fd2ccb07a8d20c'
+     AND pg_get_userbyid(p.proowner)='postgres'
+     AND p.prosecdef AND p.proconfig @> ARRAY['search_path=""']::text[]
+ ) OR NOT EXISTS(
+  SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname='private' AND p.proname='ws01_signed_actor_session'
+     AND md5(pg_get_functiondef(p.oid))='25a49e8acb1429110456c4de2211691e'
+     AND pg_get_userbyid(p.proowner)='postgres'
+     AND p.prosecdef AND p.proconfig @> ARRAY['search_path=""']::text[]
+ ) OR has_function_privilege('anon','public.wm_ws01_create(text,text,uuid)','EXECUTE')
+    OR has_function_privilege('authenticated','public.wm_ws01_create(text,text,uuid)','EXECUTE')
+    OR has_function_privilege('authenticated','private.ws01_signed_actor_session()','EXECUTE')
+    OR has_function_privilege('anon','private.ws01_signed_actor_session()','EXECUTE')
+    OR EXISTS (
+      SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
+      WHERE ((n.nspname='public' AND p.proname='wm_ws01_create')
+         OR (n.nspname='private' AND p.proname='ws01_signed_actor_session'))
+      AND acl.grantee=0 AND acl.privilege_type='EXECUTE'
+    )
+ OR (SELECT count(*) FROM private.ws01_create_requests)<>0
+ OR (SELECT count(*) FROM private.ws01_events)<>0
+ THEN RAISE EXCEPTION 'CP-WS-01C/B3 source lock or default-off ACL mismatch'
+ USING ERRCODE='42501'; END IF;
+END $ws01_activation_source_lock$;
+
 DO $ws01_activate_preflight$
 DECLARE
  flags record;
