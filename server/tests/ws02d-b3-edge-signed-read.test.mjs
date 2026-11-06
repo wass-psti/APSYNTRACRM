@@ -85,6 +85,21 @@ function fixture(overrides={}){
  return {handler,seen,counters:()=>({catalogReads,moduleReads})};
 }
 
+test('synthetic signed-envelope framing matches pinned project and clock',()=>{
+ assert.equal(typeof atob,'function');
+ const parts=token.split('.');
+ assert.equal(parts.length,3);
+ assert.match(token,/^[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}$/);
+ const payload=parts[1].replaceAll('-','+').replaceAll('_','/');
+ const got=JSON.parse(atob(payload+'='.repeat((4-payload.length%4)%4)));
+ assert.equal(got.sub,actor);
+ assert.equal(got.session_id,session);
+ assert.equal(got.role,'authenticated');
+ assert.equal(got.iss,'https://jtlusodorfnyzgyuewkz.supabase.co/auth/v1');
+ assert.ok(Number.isSafeInteger(got.exp));
+ assert.ok(got.exp*1000>1900000000000);
+});
+
 test('Edge B3 host is default-disabled and cannot call any upstream',async()=>{
  assert.equal(WS02D_B3_EDGE_SIGNED_READ_ENABLED,false);
  const f=fixture({enabled:false});
