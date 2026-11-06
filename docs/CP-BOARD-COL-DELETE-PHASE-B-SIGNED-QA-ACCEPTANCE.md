@@ -1,7 +1,7 @@
 # CP-BOARD-COL-DELETE — Phase B signed QA acceptance
 
 **Date:** 2026-11-06  
-**Status (2026-11-06):** **B1/B2/B4.1/B4.2/B5 VERIFIED; GENUINE SIGNED MANAGER DENIAL PASS; NONMANAGER AND FOREIGN-WORKSPACE DENIAL PROBE READY AND UNIT-TESTED, LIVE SIGNED NONMANAGER PENDING, GENUINE FOREIGN WORKSPACE BLOCKED BY ABSENT ACTIVE FOREIGN MEMBERSHIP; REVOKED/EXPIRED SESSION DENIALS PENDING.** Earlier sections preserve historical preactivation evidence. 
+**Status (2026-11-06):** **B1/B2/B4.1/B4.2/B5 VERIFIED; GENUINE SIGNED MANAGER DENIAL PASS; GENUINE SIGNED HR NONMEMBER/NONMANAGER AND BOARD READ DENIAL PASS (USER-SUBMITTED APPLICATION REPORT); FOREIGN WORKSPACE BLOCKED BY ABSENT ACTIVE FOREIGN MEMBERSHIP; REVOKED/EXPIRED SESSION DENIALS PENDING.** Earlier sections preserve historical preactivation evidence. 
 
 ## Verified baseline
 
@@ -274,3 +274,18 @@ The verifier found precisely one active QA board, four items, one restored `Reco
 **Open gates:** (1) The Security page's **Verify signed recovery denial** action must be run with an existing legitimate active employee/HR or other non-manager session to collect a genuine `SIGNED_NONMANAGER` or `SIGNED_NONMEMBER` PASS. (2) Foreign-workspace signed acceptance is **BLOCKED BY ENVIRONMENT** until a separate, legitimate active foreign-workspace identity is available and approved; do not create a workspace, test account or membership just to close acceptance. (3) Revoked/expired signed-session denials remain **PENDING** and require their own controlled real-session evidence. The connected browser could not be accessed in Chat mode (originating context required), and no Pages deployment/CI execution is independently certified here.
 
 **Next actionable gate:** Existing-user genuine signed nonmanager/nonmember acceptance, then a separate decision on whether foreign-workspace identity provisioning is in approved scope. Leave the B5 backend disabled and Contacts / Status I untouched; no Phase C deletion is authorized.
+
+
+---
+
+## Phase B genuine signed HR nonmember denial acceptance — PASS (2026-11-06)
+
+**Classification: VERIFIED within the genuine signed application report's acceptance boundary.** The user supplied a report from an existing HR account, described by the user as belonging to Amalia P. Senagan, containing `checkpoint=CP-BOARD-COL-DELETE-PHASE-B-DENIAL`, `status=PASS`, `reason=NONE`, `caseType=SIGNED_NONMEMBER`, `managerBoundary=PASS`, `nonmemberRead=PASS`, `foreignWorkspace=PENDING`, `revokedSession=PENDING`, `expiredSession=PENDING`, `readOnly=true`, `writeAttempts=0`, `activationChanged=false`, `identifiersDisclosed=false`, and `acceptanceBoundary=CURRENT_SIGNED_USER_POST_B5_DENIAL_ONLY`. The report was user-submitted from the application's Security interface; this assistant did not directly control the signed browser, acquire credentials, or independently identify the human operator.
+
+**What it proves:** The deployed signed-denial client received a verified active real session and authorized workspace context, `work_board_access(manage)` and `work_board_access(view)` both returned false for the QA board, the signed `wm_get_board` attempt was denied, the signed recovery-index RPC was denied with expected SQLSTATE/reason, and the same signed identity/workspace remained stable after the calls. This satisfies the separate **genuine non-manager/nonmember access-denial** checkpoint; do not misclassify it as a foreign-workspace test, since the report itself correctly leaves `foreignWorkspace=PENDING`. No token/actor/workspace/board identifiers are exported and no writes were attempted.
+
+**Verification limit on this turn:** Fresh read-only production database queries, including the committed B5 preservation verifier, were attempted but blocked by OpenAI tool safety checks. Consequently, **no new independent database verification is claimed on this turn**; the pre-existing B5 deactivation and QA/Contacts preservation certificate remains the last independently established baseline. The application report shows `activationChanged=false` and zero writes, not a fresh privileged confirmation of the current flags. The account's asserted personal identity was supplied by the user, not independently established through a direct browser session.
+
+**Acceptance inventory:** Genuine signed-manager denial **PASS**; genuine signed HR nonmember/nonmanager management denial plus QA-board read denial **PASS** (two distinct accepted user/session categories out of five original categories). Foreign-workspace genuine acceptance remains **BLOCKED BY ENVIRONMENT** based on the most recent independent inventory showing zero active memberships outside the QA workspace. Revoked-session and expired-session genuine acceptance remain **PENDING**. Neither simulated tests nor this signed HR case can close those three remaining cases.
+
+**Next gate:** Determine whether foreign-workspace test prerequisites can be satisfied under a separately approved identity/workspace policy, and define controlled real-session revoked/expired tests without modifying active production accounts or permissions. Keep recovery disabled and Contacts / Status I protected.
