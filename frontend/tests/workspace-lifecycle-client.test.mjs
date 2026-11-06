@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  WorkspaceLifecycleClient,normalizeWorkspaceCreationReceipt,
- normalizeWorkspaceSelectionReceipt
+ normalizeWorkspaceSelectionReceipt,WS01_CONFIGURATION_ENABLED,
+ normalizeWorkspaceConfigurationReadReceipt,normalizeWorkspaceConfigurationUpdateReceipt
 } from '../workspace-lifecycle-client.js';
 
 const primary='00000000-0000-4000-8000-000000000001';
@@ -288,4 +289,75 @@ test('B1 migration contains no public or private RPCs and is accepted before B2/
  const discover=workflow.indexOf('-f sql/cp-ws01-discovery-activation-candidate.sql');
  const create=workflow.indexOf('-f sql/cp-ws01c-b3-create-contract-candidate.sql');
  assert.ok(install>=0&&install<verify&&verify<discover&&discover<create);
+});
+
+
+test('workspace config integration remains default-off with zero RPCs',async()=>{
+ let calls=0;
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>{calls++;return {id:actor};}},
+  api:{context:async()=>{calls++;return {user_id:actor,workspace_id:primary,profile:{status:'active'}};},
+   rpc:async()=>{calls++;throw new Error('Unexpected configuration RPC');}}
+ });
+ assert.equal(WS01_CONFIGURATION_ENABLED,false);
+ await assert.rejects(client.readConfiguration(primary),/not activated/);
+ await assert.rejects(client.updateConfiguration({
+  workspaceId:primary,name:'Engineering',privacy:'closed',expectedRevision:1
+ }),/not activated/);
+ assert.equal(calls,0);
+});
+
+test('configuration read rejects forged targets, invalid owner flags and unsafe text',()=>{
+ const valid={schemaVersion:1,workspaceId:primary,name:'Engineering',
+  privacy:'closed',revision:1,canEdit:true};
+ const receipt=normalizeWorkspaceConfigurationReadReceipt(valid,primary);
+ assert.deepEqual(receipt,{workspaceId:primary,name:'Engineering',privacy:'closed',
+  revision:1,canEdit:true});
+ assert.ok(Object.isFrozen(receipt));
+ for(const bad of [
+  {...valid,workspaceId:foreign},
+  {...valid,name:'<script>'},
+  {...valid,name:' Engineering '},
+  {...valid,privacy:'public'},
+  {...valid,canEdit:'true'},
+  {...valid,revision:0},
+  {...valid,revision:1.5},
+  {...valid,schemaVersion:2}
+ ])assert.throws(()=>normalizeWorkspaceConfigurationReadReceipt(bad,primary));
+});
+test('configuration update receipts enforce exact signed target, proposal and CAS version',()=>{
+ const proposal={name:'Engineering',privacy:'open'};
+ const updated={schemaVersion:1,workspaceId:primary,name:'Engineering',
+  privacy:'open',revision:2,updated:true};
+ assert.deepEqual(normalizeWorkspaceConfigurationUpdateReceipt(
+  updated,primary,proposal,1),{workspaceId:primary,name:'Engineering',
+   privacy:'open',revision:2,updated:true});
+ assert.equal(normalizeWorkspaceConfigurationUpdateReceipt({
+  ...updated,revision:1,updated:false
+ },primary,proposal,1).updated,false);
+ for(const bad of [
+  {...updated,workspaceId:foreign},
+  {...updated,name:'Different'},
+  {...updated,privacy:'closed'},
+  {...updated,revision:1},
+  {...updated,updated:'true'},
+  {...updated,revision:4},
+  {...updated,schemaVersion:0}
+ ])assert.throws(()=>normalizeWorkspaceConfigurationUpdateReceipt(
+  bad,primary,proposal,1));
+});
+test('new dormant configuration SQL has no frontend grants or production activation',()=>{
+ const sql=readFileSync('sql/cp-ws01-config-update-dormant-candidate.sql','utf8');
+ const workflow=readFileSync('.github/workflows/cp-ws01b-disposable-postgres.yml','utf8');
+ assert.match(sql,/current_database\(\) <> 'workspace_disposable'/);
+ assert.match(sql,/CREATE FUNCTION public\.wm_ws01_config_read/);
+ assert.match(sql,/CREATE FUNCTION public\.wm_ws01_config_update/);
+ assert.match(sql,/private\.ws01_signed_actor_session\(\)/);
+ assert.match(sql,/r\.relation='owner'/);
+ assert.match(sql,/FOR UPDATE OF w,pol/);
+ assert.match(sql,/Stale workspace configuration/);
+ assert.match(sql,/INSERT INTO private\.ws01_config_events/);
+ assert.match(sql,/enabled boolean NOT NULL DEFAULT false/);
+ assert.doesNotMatch(sql,/GRANT EXECUTE ON FUNCTION public\.wm_ws01_config_.*TO authenticated/);
+ assert.match(workflow,/sql\/tests\/cp-ws01-config-disposable-acceptance\.sql/);
 });
