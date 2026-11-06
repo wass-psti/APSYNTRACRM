@@ -2979,6 +2979,38 @@ async function action(name,button){
   }catch{toast('Clipboard is unavailable; no report was exported.',true);}
   break;
  }
+ case 'tradelink-draft-preview':{
+  if(!tradeLinkDraftRoute())break;
+  const form=root.querySelector('[data-tradelink-draft-form]');
+  const output=form?.querySelector('[data-tradelink-draft-preview-status]');
+  if(!form||!output)break;
+  try{
+   if(!form.reportValidity()){output.textContent='Invalid fields. Nothing saved.';break;}
+   const draft=parseTradeLinkDraftForm(new FormData(form));
+   output.textContent='Valid local '+draft.documentType+' / '+draft.documentNumber+
+    ' preview. Nothing saved or transmitted.';
+  }catch{output.textContent='Invalid Draft input. Nothing saved or transmitted.';}
+  break;
+ }
+ case 'tradelink-draft-refresh':{
+  if(tradeLinkDraftRoute())await loadTradeLinkDrafts(routeSerial);
+  break;
+ }
+ case 'tradelink-draft-new':{
+  if(tradeLinkDraftRoute()&&!state.tradeLinkDraft.busy){
+   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,error:'',message:''};
+   render();
+  }
+  break;
+ }
+ case 'tradelink-draft-open':{
+  await openTradeLinkDraft(button.dataset.id);break;
+ }
+ case 'tradelink-draft-archive':
+ case 'tradelink-draft-restore':{
+  await changeTradeLinkDraftState(button.dataset.id,
+   name==='tradelink-draft-archive'?'archive':'restore');break;
+ }
  case 'tradelink-activity-refresh':{
   if(state.boardId===TRADELINK_BOARD_ID&&state.view==='board'&&
      state.tab==='tradelink'&&state.tradeLinkSection==='activity'&&
@@ -4662,6 +4694,14 @@ root.addEventListener('change',event=>{
  }
 });
 root.addEventListener('submit',event=>{
+ if(event.target.matches('[data-tradelink-draft-form]')){
+  event.preventDefault();
+  if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage){
+   toast('TradeLink Draft persistence is not activated. Nothing saved.',true);
+   return;
+  }
+  Promise.resolve(commitTradeLinkDraft(event.target)).catch(notice);return;
+ }
  if(event.target.matches('[data-inline-add-row]')){
   event.preventDefault();Promise.resolve(addBoardRowInline(event.target)).catch(notice);return;
  }
