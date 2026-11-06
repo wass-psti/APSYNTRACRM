@@ -11,7 +11,10 @@ on:
       - 'sql/cp-ws01-discovery-activation-candidate.sql'
       - 'sql/cp-ws01b-*.sql'
       - 'sql/cp-ws01c-*.sql'
+      - 'sql/cp-ws01-config-update-dormant-candidate.sql'
       - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
+      - 'sql/cp-ws01-config-update-dormant-candidate.sql'
+      - 'sql/tests/cp-ws01-config-disposable-acceptance.sql'
       - 'sql/cp-ws02*.sql'
       - 'sql/tests/cp-ws01b-*.sql'
       - 'sql/tests/cp-ws01c-*.sql'
@@ -238,3 +241,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-admin-two-valid-write.sql
       - name: Verify actual two-session advisory asset and FuelTrack request CAS races
         run: node scripts/ws02d-b3-disposable-concurrency.mjs
+      - name: Stage dormant owner configuration revision and audit contract (disposable only)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01-config-update-dormant-candidate.sql
+      - name: Verify owner CAS, foreign/member/session denials and full rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01-config-disposable-acceptance.sql
