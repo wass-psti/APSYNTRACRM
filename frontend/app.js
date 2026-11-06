@@ -4617,7 +4617,9 @@ function captureTradeLinkDraftFields(event){
  if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)return false;
  const fd=new FormData(form),values={};
  for(const key of ['documentType','documentNumber','customerName','referenceNumber',
-  'currency','vatType','lineDescription','lineQuantity','lineUnitPrice','lineUnit','remarks']){
+  'currency','vatType','lineDescription','lineQuantity','lineUnitPrice','lineUnit',
+  'lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
+  'paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber','remarks']){
   values[key]=String(fd.get(key)??'').slice(0,5000);
  }
  state.tradeLinkDraft.formValues=values;
@@ -4634,7 +4636,12 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
- if(captureTradeLinkDraftFields(event))return;
+ if(captureTradeLinkDraftFields(event)){
+  // Rebuild only when changing the source module. Keep all other inputs in
+  // current signed view memory; neither path persists a document.
+  if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]'))render();
+  return;
+ }
  if(event.target.matches('[data-board-select-item]')&&activeBoardLayout()){
   const input=event.target;
   const order=[...root.querySelectorAll('[data-board-select-item]')]
