@@ -1,7 +1,7 @@
 # CP-BOARD-COL-DELETE — Phase B signed QA acceptance
 
 **Date:** 2026-11-06  
-**Status (2026-11-06):** **B1/B2/B4.1/B4.2/B5 VERIFIED; GENUINE SIGNED MANAGER DENIAL PASS; GENUINE SIGNED HR NONMEMBER/NONMANAGER AND BOARD READ DENIAL PASS (USER-SUBMITTED APPLICATION REPORT); FOREIGN WORKSPACE BLOCKED BY ABSENT ACTIVE FOREIGN MEMBERSHIP; REVOKED/EXPIRED SESSION DENIALS PENDING.** Earlier sections preserve historical preactivation evidence. 
+**Status (2026-11-06):** **B1/B2/B4.1/B4.2/B5 VERIFIED. GENUINE SIGNED MANAGER AND HR NONMEMBER DENIALS PASS. PHASE B FOREIGN/SESSION PREREQUISITE VERIFIER PASS; GENUINE FOREIGN-WORKSPACE ACCEPTANCE BLOCKED (NO ACTIVE FOREIGN MEMBER); GENUINE REVOKED AND EXPIRED SESSION ACCEPTANCE PENDING. B5 DEFAULT-DENY REVERIFIED.** Earlier sections preserve historical preactivation evidence. 
 
 ## Verified baseline
 
@@ -289,3 +289,22 @@ The verifier found precisely one active QA board, four items, one restored `Reco
 **Acceptance inventory:** Genuine signed-manager denial **PASS**; genuine signed HR nonmember/nonmanager management denial plus QA-board read denial **PASS** (two distinct accepted user/session categories out of five original categories). Foreign-workspace genuine acceptance remains **BLOCKED BY ENVIRONMENT** based on the most recent independent inventory showing zero active memberships outside the QA workspace. Revoked-session and expired-session genuine acceptance remain **PENDING**. Neither simulated tests nor this signed HR case can close those three remaining cases.
 
 **Next gate:** Determine whether foreign-workspace test prerequisites can be satisfied under a separately approved identity/workspace policy, and define controlled real-session revoked/expired tests without modifying active production accounts or permissions. Keep recovery disabled and Contacts / Status I protected.
+
+
+---
+
+## Foreign-workspace prerequisites and controlled session-denial protocol — 2026-11-06
+
+**Classification: VERIFIED (non-destructive readiness), BLOCKED (genuine foreign-workspace identity prerequisite), PENDING (controlled genuine revoked/expired sessions).** No production workspace memberships, user identities, roles, passwords, credentials, refresh tokens, JWTs, auth sessions, recovery activation settings, QA board values or Contacts values were changed.
+
+**Live evidence:** The committed read-only `sql/tests/cp-board-col-delete-phase-b-foreign-session-prerequisite.sql` (commit `d0dbfc2`) was executed against the existing WatchdogWorkspace Supabase project. It returned `NONDESTRUCTIVE_BASELINE_VERIFIED`. Checks confirmed two workspace records in total, one additional workspace record, **zero active foreign-workspace profiles**, 36 active same-workspace employee/HR candidates, one valid QA board, recovery flags both disabled, zero private QA scope rows, QA four-cell and Contacts / Status I preservation, and unchanged original source fingerprints of `private.wm_board_config_session_active()`, `public.wm_list_recoverable_board_columns(uuid)`, `public.work_board_access(uuid,text)`, and `public.wm_get_board(uuid)`. The report explicitly returned `live_signed_session_verified:false`, `sessions_altered:false`, `roles_or_memberships_altered:false`, and `recovery_writes_attempted:0`.
+
+**Provider documentation and session contract:** Supabase Auth documentation specifies that sessions use JWT access tokens with `session_id` and separate refresh tokens; expiration or refresh-token revocation must not be conflated with proven server-side invalidation of an already issued access JWT. The existing private session guard checks `auth.uid()`, the JWT `session_id`, and matching `auth.sessions` rows plus `not_after` when set. A static PostgreSQL source fingerprint establishes contract integrity but is not a real revoked- or expired-session test. The frontend `AuthClient.authorized()` supports automatic refresh/retry on 401; an actual expired/revoked-token acceptance must specifically avoid refresh or token substitution.
+
+**Controlled procedure committed:** `docs/CP-BOARD-COL-DELETE-PHASE-B-CONTROLLED-SESSION-DENIAL-PROTOCOL.md` (commit `7f86402`) defines prerequisites, acceptance boundaries, failure handling, redaction, and post-test preservation for (F) genuine active foreign-workspace user, (R) controlled revoked session, and (E) naturally expired access JWT. It forbids false certifications from simulated identities, auto-refreshed requests, changed role/workspace memberships, session alterations or fabricated claims. It is procedural documentation, not authorization to modify the production identity model or any live user session.
+
+**Independent final preservation check:** After the read-only prerequisite work, the unchanged canonical `sql/tests/cp-board-col-delete-b5-final-readonly-acceptance.sql` returned `B5_DEACTIVATION_AND_FINAL_PRESERVATION_VERIFIED` again: four exact restored QA values, one restored private snapshot, four archived recovery cells, one deletion and one restoration audit event, protected Contacts / Status I preserved, both recovery flags FALSE, private scope empty, unchanged RPCs, and intact RLS/privilege restrictions.
+
+**Outstanding genuine acceptance:** The manager and signed HR nonmember denial reports remain **PASS (2 of 5 original session categories)**. Foreign workspace remains **BLOCKED BY ENVIRONMENT** because no existing legitimately signed active identity belongs to another workspace. Revoked session and expired session remain **PENDING**; testing them requires an independently authorized, isolated eligible session without changing existing operational users. This assistant did not initiate revocation, wait for background expiry, log user tokens, or certify unperformed real-session tests.
+
+**Next execution gate:** Obtain separate scoped organizational approval if changing membership/identity or invalidating sessions is required. Otherwise preserve the current default-deny state and continue independent work-management milestones; do not weaken production authorization, create a new Supabase project, or delete Contacts / Status I data.
