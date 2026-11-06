@@ -14,34 +14,32 @@ import {createGoTrueUserReader} from './ws02d-gotrue-live-read-adapters.mjs';
  */
 const PROJECT='https://jtlusodorfnyzgyuewkz.supabase.co';
 const PUBLISHABLE=/^sb_publishable_[A-Za-z0-9_-]{8,}$/;
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const TOKEN=/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/;
-const denied=(stage='')=>new Error('Signed staging context unavailable'+(stage?': '+stage:''));
+const denied=()=>new Error('Signed staging context unavailable');
 export const WS02D_B3_EDGE_SIGNED_READ_ENABLED=false;
 
 function verifiedEnvelope(jwt,clock){
  if(typeof jwt!=='string'||jwt.length<65||jwt.length>10000||!TOKEN.test(jwt))
-  throw denied('framing');
+  throw denied();
  try{
   const payload=jwt.split('.')[1];
-  if(payload.length>7000)throw denied('payload-size');
+  if(payload.length>7000)throw denied();
   const base64=payload.replaceAll('-','+').replaceAll('_','/');
   const json=atob(base64+'='.repeat((4-base64.length%4)%4));
-  if(json.length>5000)throw denied('decoded-size');
+  if(json.length>5000)throw denied();
   const c=JSON.parse(json);
-  if(!c||Array.isArray(c))throw denied('claims-object');
-  if(c.role!=='authenticated')throw denied('claims-role');
-  if(!UUID.test(c.sub))throw denied('claims-subject');
-  if(!UUID.test(c.session_id))throw denied('claims-session');
-  if(c.iss!==PROJECT+'/auth/v1')throw denied('claims-issuer');
-  if(c.is_anonymous===true)throw denied('claims-anonymous');
-  if(!Number.isSafeInteger(c.exp))throw denied('claims-expiry-format');
-  if(c.exp*1000<=clock())throw denied('claims-expired');
+  if(!c||Array.isArray(c))throw denied();
+  if(c.role!=='authenticated')throw denied();
+  if(!UUID.test(c.sub))throw denied();
+  if(!UUID.test(c.session_id))throw denied();
+  if(c.iss!==PROJECT+'/auth/v1')throw denied();
+  if(c.is_anonymous===true)throw denied();
+  if(!Number.isSafeInteger(c.exp))throw denied();
+  if(c.exp*1000<=clock())throw denied();
   return Object.freeze({id:c.sub,sessionId:c.session_id});
- }catch(err){throw denied(err?.message?.split(': ').at(-1)||'decode');}
+ }catch{throw denied();}
 }
-/** Test-only inspection of UNTRUSTED claims. Never authorizes access. */
-export function inspectB3UntrustedEnvelopeForTest(jwt,clock){return verifiedEnvelope(jwt,clock);}
 function exactlyApprovedProject(projectUrl){
  try{
   const u=new URL(projectUrl);
