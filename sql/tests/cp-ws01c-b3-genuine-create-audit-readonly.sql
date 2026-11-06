@@ -24,8 +24,8 @@ integrity AS (
         count(*) FILTER(WHERE workspace_confirmed AND active_owner_membership
          AND privacy_confirmed AND local_owner_role_confirmed AND event_count=1)
           AS fully_integrated_requests,
-        count(*) FILTER(WHERE NOT(workspace_confirmed AND active_owner_membership
-         AND privacy_confirmed AND local_owner_role_confirmed AND event_count=1))
+        count(*) FILTER(WHERE NOT COALESCE(workspace_confirmed AND active_owner_membership
+         AND privacy_confirmed AND local_owner_role_confirmed AND event_count=1,FALSE))
           AS violations
  FROM req
 )
