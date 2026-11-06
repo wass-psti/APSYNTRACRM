@@ -65,7 +65,7 @@ export async function createB2SignedQaFixture({auth,api,structure}={}){
   stage='existing-boards';
   const boards=await api.boards('active');
   if(!Array.isArray(boards))return report('BLOCKED',stage,'SIGNED_API_ERROR');
-  if(boards.some(b=>b?.name===B2_QA_FIXTURE_BOARD_NAME))
+  if(boards.some(b=>typeof b?.name==='string'&&b.name.startsWith('CP-BOARD-COL-DELETE QA ')))
    return report('PENDING',stage,'DUPLICATE_FIXTURE');
   if(!await properSession(auth,api,ctx))
    return report('BLOCKED',stage,'WORKSPACE_CHANGED');
@@ -134,6 +134,10 @@ export async function inspectB2SignedQaFixture({auth,api}={}){
   const boards=await api.boards('active');
   if(!Array.isArray(boards))return report('BLOCKED','existing-boards','SIGNED_API_ERROR');
   const matches=boards.filter(b=>b?.name===B2_QA_FIXTURE_BOARD_NAME);
+  if(boards.some(b=>typeof b?.name==='string'&&
+    b.name.startsWith('CP-BOARD-COL-DELETE QA ')&&
+    b.name!==B2_QA_FIXTURE_BOARD_NAME))
+   return report('BLOCKED','existing-boards','DUPLICATE_FIXTURE');
   if(matches.length===0)return report('PENDING','existing-boards','NOT_CREATED');
   if(matches.length!==1||!validUuid(matches[0]?.id))
    return report('BLOCKED','existing-boards','DUPLICATE_FIXTURE');
