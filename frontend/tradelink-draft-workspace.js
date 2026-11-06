@@ -91,7 +91,7 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
   for(const key of ['cashAmount','chequeAmount']){
    const raw=value(key);
    if(!raw)continue;
-   if(!/^\\d+(?:\\.\\d+)?$/.test(raw))
+   if(!/^\d+(?:\.\d+)?$/.test(raw))
     throw new ApiError('Invalid payment amount.',400);
    const n=Number(raw);
    if(!Number.isFinite(n)||n<0||n>1000000000000)
