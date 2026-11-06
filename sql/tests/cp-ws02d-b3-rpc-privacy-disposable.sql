@@ -144,5 +144,6 @@ BEGIN
       'public.has_module_access(text,uuid)','EXECUTE')
  THEN RAISE EXCEPTION 'Function grants unexpectedly changed'; END IF;
 END $privileges$;
+\i sql/tests/cp-ws02d-b3-internal-helper-runtime.sql
 ROLLBACK;
 \echo 'WS02D_B3_RPC_PRIVACY_DISPOSABLE_PASS baseline_exposure=REPRODUCED self_reads=PASS foreign_denial=PASS unsigned_denial=PASS grants=PRESERVED production_requests=0 production_writes=0'
