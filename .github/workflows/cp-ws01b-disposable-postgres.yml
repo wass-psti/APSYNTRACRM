@@ -5,7 +5,7 @@ concurrency:
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/ws01c-b3-controlled-workspace-creation]
     paths:
       - '.github/workflows/cp-ws01b-disposable-postgres.yml'
       - 'sql/cp-ws01-discovery-activation-candidate.sql'
@@ -16,9 +16,11 @@ on:
       - 'sql/tests/cp-ws01c-*.sql'
       - 'sql/tests/cp-ws02*.sql'
       - 'frontend/workspace-ui.js'
+      - 'frontend/app.js'
       - 'frontend/workspace-lifecycle-client.js'
       - 'frontend/workspace-b2-signed-acceptance.js'
       - 'frontend/tests/workspace-ui.test.mjs'
+      - 'frontend/workspace-ui.css'
       - 'frontend/tests/workspace-lifecycle-client.test.mjs'
       - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
       - 'frontend/workspace-b3-signed-read-preflight.js'
