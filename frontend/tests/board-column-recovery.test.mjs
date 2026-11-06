@@ -136,7 +136,7 @@ test('SQLSTATE errors are translated without leaking raw server details',()=>{
   assert.doesNotMatch(e.message,/private detail/);
  }
 });
-test('UI accurately reports populated column and keeps recovery disabled until activation',()=>{
+test('UI offers populated deletion only through the scoped QA acceptance gate',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const inline=readFileSync('frontend/board-inline-context.js','utf8');
  assert.match(app,/const qaRecoveryEnabled=canStartB4QaRecoveryDeletion\(state\.board,column\)/);
