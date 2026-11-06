@@ -1,5 +1,8 @@
 # CP-WS-01C/B3 — Controlled per-user workspace creation handoff
 
+> **Superseding activation update — 2026-11-06:** Production creation grant and `creation_enabled=true` were explicitly authorized and activated via migration `20261106092625_cp_ws01c_b3_controlled_authenticated_create_activation_20261106`, with anonymous access, private direct access and B4 switching still denied. Signed creation UI PR #40 was merged, GitHub Pages deployed and validated. **A real signed-user workspace creation remains pending**, so do not confuse the activated grant with end-to-end acceptance. See the [current activation and signed acceptance ledger](./CP-WS-01C-B3-CONTROLLED-ACTIVATION-RESULT-20261106.md). Earlier approval-pending statements below are historical.
+
+
 > **Superseding production checkpoint — 2026-11-06:** The operator explicitly authorized the **default-OFF function installation only**, and the immutable B3 creation SQL was installed in existing production as migration `20261106090007_cp_ws01c_b3_dormant_signed_create_contract_20261106`. Both functions exist with locked empty search paths and **no anonymous, authenticated, or PUBLIC EXECUTE**. Creation and switching remain **OFF**, and no workspace/member/audit data changed. See the [verified dormant installation evidence](./CP-WS-01C-B3-DORMANT-PRODUCTION-INSTALL-20261106.md). The "RPC absent" and "not installed" statements below describe the **earlier preinstallation baseline**, not current production. Authenticated grant/flag activation **still requires separate approval**.
 
 
