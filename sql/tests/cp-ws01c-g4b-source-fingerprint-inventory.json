@@ -1,0 +1,514 @@
+{
+  "checkpoint": "CP-WS-01C/B3-G4B",
+  "provenance": "read-only live pg_proc catalog of existing Supabase project, 2026-11-06",
+  "source_commit": "G4B pre-activation source baseline",
+  "classification_warning": "Call-site classification is syntactic metadata, not proof that variable values are always caller-bound. Full source-faithful behavior tests are still required.",
+  "expected_callers": 63,
+  "source_bodies_excluded": true,
+  "entries": [
+    {
+      "signature": "huly_rewrite.log_document_event()",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "default_auth_uid",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "1ea2e8e753d45b3af77942d5d9da54627247f4c63d85a148eae21ac553f7650d"
+    },
+    {
+      "signature": "private.tl03_can_manage(p_board_id uuid)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "c03580a7800f25eb47e00eda265396a157755fddf3bbe1295f039732972b3c90"
+    },
+    {
+      "signature": "private.tl03_commit(p_board_id uuid, p_document_id uuid, p_expected_revision bigint, p_operation text, p_data jsonb)",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d"
+    },
+    {
+      "signature": "public.acquire_module_operation_lock(p_module_id text, p_lock_key text, p_ttl_seconds integer)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "51c7ab16c5f74e9839decec7692485fb34751b881912ad2a5fae0b77cf98815c"
+    },
+    {
+      "signature": "public.append_module_activity(p_module_id text, p_event_id text, p_event_type text, p_title text, p_message text, p_request_id text, p_payload jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "23c9b7834de2bcb9ba93e32f6c7e09abe562a6bc50b991ad630543ac55b34f9b"
+    },
+    {
+      "signature": "public.aps_aims_custody_transition(p_asset_id uuid, p_action text, p_target_id uuid, p_notes text)",
+      "security_definer": false,
+      "authenticated_execute": true,
+      "call_site_category": "direct_auth_uid",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "d598dfc95660b223210a1c4b37ecffb7c7869ff819db4e6790433520140bc0a0"
+    },
+    {
+      "signature": "public.aps_aims_finish_workflow(p_entity_id uuid, p_kind text, p_action text, p_notes text)",
+      "security_definer": false,
+      "authenticated_execute": true,
+      "call_site_category": "direct_auth_uid",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "be2e168e1591ca0963b9639474879287917d6de6fe31a03c1cd3dbdd51db4fa8"
+    },
+    {
+      "signature": "public.aps_aims_service_transition(p_asset_id uuid, p_kind text, p_action text, p_service_id uuid, p_input jsonb)",
+      "security_definer": false,
+      "authenticated_execute": true,
+      "call_site_category": "direct_auth_uid",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "8730d843bf7ca6fedbbd768a4d454f9c91740cba4679811ef1ce9542111d8252"
+    },
+    {
+      "signature": "public.aps_aims_transfer_asset(p_asset_id uuid, p_location_id uuid, p_notes text)",
+      "security_definer": false,
+      "authenticated_execute": true,
+      "call_site_category": "direct_auth_uid",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "e5511ac3d873ddd0e4a3d455792b5dfd479d6b513a843e762cc2d3e065138459"
+    },
+    {
+      "signature": "public.apsyntra_crm_my_effective_access()",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "bb6f01201c6f7c64ed1a01f49374b1571bed96e45e332283ed76f0868bbbd9c8"
+    },
+    {
+      "signature": "public.apsyntra_role_require_scope(p_workspace_id uuid)",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "bb300a74c1515b014da9cf2f6a6bd45c2005efedf427bbd47001f7ccf322a50b"
+    },
+    {
+      "signature": "public.charter_admin_roles()",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "2a94d4fa21e02a159310220d484d34f7255c737b8e39ef309d28cb63666bae6f"
+    },
+    {
+      "signature": "public.charter_admin_set_role(p_user_id uuid, p_role text, p_enabled boolean)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "c876cc3ac290e9f37541296bf387d689fbfbe58680355f3dc9073431a38f9689"
+    },
+    {
+      "signature": "public.commit_fueltrack_requests_with_activity(p_value text, p_expected_revision bigint, p_event_id text, p_event_type text, p_title text, p_message text, p_request_id text, p_payload jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "14b429dd2b340d96fe23e1eb2f0d02d1873882a5831cf7b40176b3f002fe3dc9"
+    },
+    {
+      "signature": "public.delete_module_state(p_module_id text, p_state_key text, p_scope text, p_expected_revision bigint)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "b094592ee140eb6628d5b14d71882dff451dd240b1731c6695bfa5090b4d436b"
+    },
+    {
+      "signature": "public.employee_evaluation_create_employee(p_input jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "c66589f73aa7eb26ee8ab52822b7934da05e6cd48ae9a12f46af048182fcfc30"
+    },
+    {
+      "signature": "public.employee_evaluation_management_snapshot()",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "4f7f5333ebad79fe73d04b244581ab9327576459fdbd389df6fd23da8faf3501"
+    },
+    {
+      "signature": "public.employee_evaluation_my_snapshot()",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "c40400809e57eebaf2651e1581bf75f0f175cc761c0a8bb9f640b9aacc827083"
+    },
+    {
+      "signature": "public.employee_evaluation_review_transition(p_evaluation_id uuid, p_target_status text, p_review_comment text, p_expected_revision bigint)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "cdc730ef1ea945a813dee9d7d49f2bcfaa23833093ce503bf54ee24281df0a9f"
+    },
+    {
+      "signature": "public.employee_evaluation_save(p_input jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "a163c8bb8bbf741a6e9fdbc27e591c9d87657e9e9ee21681b31c8f1d3a0f52f5"
+    },
+    {
+      "signature": "public.employee_evaluation_update_employee(p_id uuid, p_patch jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "998c066b1472e01b13ecb644e88e1cb0fc52b8094298b678b53bba5abfdcc990"
+    },
+    {
+      "signature": "public.employee_evaluation_update_settings(p_patch jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "a56dc12facf4bab46d605ee469e42efd01dbed997fe2928677423e3e5613b218"
+    },
+    {
+      "signature": "public.has_module_access(p_module_id text, p_user_id uuid)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "target_user",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "58d5af1ddbb54db20a80522335e2ac14bae4e175639cfa4b5da5ad1072f69beb"
+    },
+    {
+      "signature": "public.huly_sb04_transact(p_board_id uuid, p_workspace_id uuid, p_operations jsonb)",
+      "security_definer": false,
+      "authenticated_execute": true,
+      "call_site_category": "default_auth_uid",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "9e8caabd86a7a9220ac0f3bc836ac78fa5221196f84f9e7d0019bec6caae281a"
+    },
+    {
+      "signature": "public.huly_sb06_transact(p_board_id uuid, p_workspace_id uuid, p_operations jsonb)",
+      "security_definer": false,
+      "authenticated_execute": true,
+      "call_site_category": "default_auth_uid",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "6f76aafa14ff46f8602bf0e9b89cf825a880f4de30f5f493daf031e66430d39c"
+    },
+    {
+      "signature": "public.import_fueltrack_activity_backup(p_events jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "04d59618e8cc2007f3ccbf3f3bc2765ad6d16f53a4aaa1a0c1e93b2638d6d41e"
+    },
+    {
+      "signature": "public.list_module_activity(p_module_id text, p_before_sequence bigint, p_limit integer)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "8e138b713938f940aa3f7406ef97f7eb86bdc9aba85285db92955315d78151cb"
+    },
+    {
+      "signature": "public.list_module_directory(p_module_id text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "1bca29f0a9d84ec0d230622a3aac938658f828f737fdfbc3a4c9bd73f4dbe6cb"
+    },
+    {
+      "signature": "public.list_module_state(p_module_id text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "a1ae8788b5b4854a199f0243c43b7ebfa22dc9167c04f279407b2601452ae66b"
+    },
+    {
+      "signature": "public.module_role_for(p_module_id text, p_user_id uuid)",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "target_user",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "01c0ee05ac0655ea89f68b6c363acdf2ce74ffcd825a9b5491239cccf6580f21"
+    },
+    {
+      "signature": "public.order_intake_archive(p_id uuid, p_expected_revision integer)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "028fbe7a39a208bc1f57c85ea5f989dbb1a8fdb8f9e2bc88e313f44d7dda3ceb"
+    },
+    {
+      "signature": "public.order_intake_create(p_order jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "352bcd6cc218fe5e2428cf5af3cd191a712b8cd20041e21e5b3a354c1e5871c3"
+    },
+    {
+      "signature": "public.order_intake_create_idempotent(p_order jsonb, p_request_id uuid)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "ec5986934b9721ffafc55d7d939a22f57f15f66d660c13047d5bedc6f363e4e6"
+    },
+    {
+      "signature": "public.order_intake_qa_archive_once()",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "073d0dd330d0bf9fb3febb4e1967c4c5ac06a23e71111268e956825b81af6fbc"
+    },
+    {
+      "signature": "public.order_intake_qa_create_once()",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "feb61cb612a5a2487355b679dfd91e75426c8c7e45a4256744acf2001a88f1c8"
+    },
+    {
+      "signature": "public.order_intake_restore(p_id uuid, p_expected_revision integer)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "9ac20699f6ea1f6f268d0479100afaa6f34f8da2df49ef029bc775704bb30362"
+    },
+    {
+      "signature": "public.order_intake_update_details(p_id uuid, p_patch jsonb, p_expected_revision integer)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "69d9252f10f7193a287ad50eb08af6fce780340a1fd56cb426d8f09b2e16fa04"
+    },
+    {
+      "signature": "public.order_intake_update_status(p_id uuid, p_status text, p_expected_revision integer)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "1b7935eca9288779b6d01a48c03768d81aa806abee73b8c888bb8aa4a829c995"
+    },
+    {
+      "signature": "public.put_module_state(p_module_id text, p_state_key text, p_value text, p_scope text, p_expected_revision bigint)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "059af346c419bcb74a7c77e108039349ab0a04ab77af648b0445ec6b2a723f34"
+    },
+    {
+      "signature": "public.release_module_operation_lock(p_module_id text, p_lock_key text, p_token text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "2a9f0cf2feea1aa4bf756525fcde063e7d5bfc9bfdd717adcdecb74890ed4633"
+    },
+    {
+      "signature": "public.timetracker_commit_attendance_raw_gps03(p_action text, p_record_id text, p_location text, p_department text, p_geo jsonb, p_work_note text, p_attendance_policy jsonb)",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "1e24e1ea34360c48465af7f99a07ef5cdb035563497b5e024400a5d77357c35f"
+    },
+    {
+      "signature": "public.timetracker_ot_require_scope(p_board_id uuid)",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "1a12b281d121aa5af48dc04983dd0feeb60e4098580f98725e405611a5f32446"
+    },
+    {
+      "signature": "public.tradelink_asset_read(p_vendor_id text, p_kind text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "991f5cdc74881f3a1b79bef89bbe156ce583b8cd1dab4c196017a89d62339a36"
+    },
+    {
+      "signature": "public.tradelink_asset_write(p_vendor_id text, p_kind text, p_image_data text, p_expected_revision bigint)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "2c4c176ea13b82f0536e5092669356259ac8cd0d8ebbfaf9973b889a0336b136"
+    },
+    {
+      "signature": "public.tradelink_cleanup_fence_activate(p_storage_key text, p_expected_revision bigint)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "633e61c8983982212f52155193cf4fef5a93d8554365f284fa8d776705ba47a9"
+    },
+    {
+      "signature": "public.tradelink_cleanup_fence_release(p_storage_key text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "a02809c15dbdac408a1c67644b220b171ac332e39d53ec8625c55bd424b51649"
+    },
+    {
+      "signature": "public.tradelink_reconciliation_assess(p_storage_key text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "4913ebcfd0e9c4332d781c793acf55bcb99b4c75b13384f2c12d61daadae875d"
+    },
+    {
+      "signature": "public.tradelink_reconciliation_cleanup_audit_list(p_limit integer)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "25c4d26827fea388679fd4572c70f4ea773ea0e928469ba9a534223f1fb9be8f"
+    },
+    {
+      "signature": "public.tradelink_reconciliation_cleanup_preflight(p_storage_key text, p_expected_revision bigint)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "46108bc0deb15f442d6d2fed37d13d64688aab33c9a8e4b5dd21383b912f4745"
+    },
+    {
+      "signature": "public.tradelink_reconciliation_list(p_limit integer)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "258210769be8fdfa8a8d600fbaf696af984a80c493ae1456062e2bcde242a3ca"
+    },
+    {
+      "signature": "public.tradelink_reconciliation_report(p_storage_key text, p_attachment_id text, p_reason text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "74765232c9d1bb0277303be2ed68d96af0884d7f981675d8305b7f66000ff1f3"
+    },
+    {
+      "signature": "public.tradelink_reconciliation_request_cleanup(p_storage_key text, p_expected_revision bigint)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "1a35e64ab6982e9c1d611981c9b06664c00a2aba8b1a73d10f0d73a7b72d8b77"
+    },
+    {
+      "signature": "public.tradelink_reconciliation_verify_revision(p_storage_key text, p_expected_revision bigint)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "9d00475944de6fb2fbfefeb9636a9ceb15a6c57249017721d101793a85d026d5"
+    },
+    {
+      "signature": "public.wm_admin_application_roles()",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "bfe83797660824255d82eaaf6a19b6613289eb4e4a74f9c3c241008a872e7af8"
+    },
+    {
+      "signature": "public.wm_admin_set_application_role(p_user_id uuid, p_module_id text, p_role text, p_enabled boolean)",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "2e9d2972e22ea31960eab55b9c8163dd8fcfb2e05bb2a1c5bd8dbc060ef32e3a"
+    },
+    {
+      "signature": "public.wm_auth_access_context()",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "7b60bbc93690cbdf34c9db2e7c541e1a563a385aeeae75642fb1c2e6e7eb49d7"
+    },
+    {
+      "signature": "public.wm_board_member_active(p_workspace_id uuid, p_user_id uuid)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "80eabf50fc0bbb9b3fc47969e4e1e219d6ab6e3825f926bc4201b1c7a342cd21"
+    },
+    {
+      "signature": "public.wm_create_board(p_name text, p_description text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "3ada85509b36c4e969d40768d40e5f1e0addc1b12089e342fb2e31c77122e700"
+    },
+    {
+      "signature": "public.wm_create_board_configured(p_name text, p_description text, p_columns jsonb)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "2014ecc9e513e4c2562c81de7f93e15584af89338789a0e97807196f1c777744"
+    },
+    {
+      "signature": "public.wm_list_boards(p_status text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "direct_auth_uid",
+      "alias_declares_auth_uid": false,
+      "source_sha256": "84b234773633bfd2ec56c028eabdb2a6645600b8c687d2d586ed1132ea842488"
+    },
+    {
+      "signature": "public.wm_restore_board_backup_v4(p_snapshot jsonb)",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "7ddf68c9f72fb8beaf9880c052cbbe2e30726940d5a3d248bf722b13a7108c50"
+    },
+    {
+      "signature": "public.wm_ws01_list()",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "94a506392da2428c3cd77198dc62b53aa4d684fe903edaabb127778a3af0c588"
+    },
+    {
+      "signature": "public.work_board_access(p_board_id uuid, p_required text)",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "call_site_category": "actor_alias",
+      "alias_declares_auth_uid": true,
+      "source_sha256": "8c42108ac8ea9221f7f7bccce4aa166ce7c8d12208b7a944d03fe17e77b7bab2"
+    }
+  ]
+}
