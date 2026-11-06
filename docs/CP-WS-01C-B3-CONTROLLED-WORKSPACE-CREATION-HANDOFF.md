@@ -1,5 +1,8 @@
 # CP-WS-01C/B3 — Controlled per-user workspace creation handoff
 
+> **Superseding production checkpoint — 2026-11-06:** The operator explicitly authorized the **default-OFF function installation only**, and the immutable B3 creation SQL was installed in existing production as migration `20261106090007_cp_ws01c_b3_dormant_signed_create_contract_20261106`. Both functions exist with locked empty search paths and **no anonymous, authenticated, or PUBLIC EXECUTE**. Creation and switching remain **OFF**, and no workspace/member/audit data changed. See the [verified dormant installation evidence](./CP-WS-01C-B3-DORMANT-PRODUCTION-INSTALL-20261106.md). The "RPC absent" and "not installed" statements below describe the **earlier preinstallation baseline**, not current production. Authenticated grant/flag activation **still requires separate approval**.
+
+
 **Evidence date:** 2026-11-06. **Production-connected project:** existing WatchdogWorkspace `jtlusodorfnyzgyuewkz`. No other Supabase project or test accounts required.
 
 **Scope:** Replace the passive "Draft validated" UI as an application feature **only after** reviewed server-side creation authorization. Implement and verify creation flow behind default-off controls; do not execute SQL or enable privileges without the separate production approval. Preserve board/TimeTracker/TradeLink permissions, current workspace, and existing 40 active memberships.
