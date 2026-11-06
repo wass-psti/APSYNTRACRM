@@ -221,7 +221,7 @@ function renderEditor(row,mode,canManage,formValues=null){
     (editing?'<input type="hidden" name="documentType" value="'+escape(type)+'">':'')+
     field('Document number','documentNumber',fieldValue('documentNumber',data.documentNumber||''),'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*"')+
     field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
-     'maxlength="5000"'+(physical||payment||priced?' required'))+
+     'maxlength="5000"'+(physical||payment||priced?' required':''))+
     field(physical?'Source reference':'Reference','referenceNumber',
      fieldValue('referenceNumber',data.referenceNumber||''),
      'maxlength="5000"'+(physical?' required':''))+
