@@ -7,7 +7,7 @@ import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {normalizeServerWorkspaceCatalog,validateWorkspaceProposal,
  WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED
-} from './workspace-ui.js?v=ws01-member-catalog-20261106';
+} from './workspace-ui.js?v=ws01-controls-20261106';
 
 const fail=(message,status=403)=>{throw new ApiError(message,status);};
 export function normalizeWorkspaceCreationReceipt(receipt,privacy){
