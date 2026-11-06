@@ -239,16 +239,104 @@ function panel(html,kind){
  return layer;
 }
 function rowMarkup(row){
- return '<div class="ws01-entry"><span class="ws01-entry-icon" aria-hidden="true">'+
+ // Row interaction opens signed metadata, not an unauthorized workspace switch.
+ return '<div class="ws01-entry"><button type="button" class="ws01-entry-button"'+
+  ' data-ws01-action="details" data-ws01-workspace="'+escape(row.id)+'"'+
+  ' aria-label="View details for '+escape(row.name)+'">'+
+  '<span class="ws01-entry-icon" aria-hidden="true">'+
   escape(row.name.slice(0,1).toUpperCase())+'</span><span class="ws01-entry-copy">'+
   '<strong>'+escape(row.name)+'</strong><small>'+escape(row.relation)+
   ' · '+(row.active?'Current signed workspace':'Signed member workspace · switching unavailable')+'</small></span>'+
-  '<span class="ws01-entry-badge">'+(row.active?'Current':'Member')+'</span></div>';
+  '<span class="ws01-entry-badge">'+(row.active?'Current':'Member')+'</span></button></div>';
 }
 function resultsMarkup(catalog,tab,query){
  const rows=visibleWorkspaces(catalog,{tab,query});
  return rows.length?rows.map(rowMarkup).join(''):
   '<p class="ws01-empty" role="status">No authorized workspaces match this filter.</p>';
+}
+/** A detail action may only resolve a row from the validated signed catalog.
+ * It never changes the authoritative active workspace or expands membership. */
+export function workspaceDetailsFor(catalog,workspaceId){
+ if(!validUuid(workspaceId)||!['SIGNED_MEMBER_DISCOVERY','CURRENT_WORKSPACE_ONLY'].includes(catalog?.status))
+  return null;
+ const row=visibleWorkspaces(catalog).find(w=>w.id===workspaceId);
+ return row&&((catalog.status==='SIGNED_MEMBER_DISCOVERY'&&row.verifiedScope==='SIGNED_MEMBER_RPC')||
+  (catalog.status==='CURRENT_WORKSPACE_ONLY'&&row.verifiedScope==='SIGNED_CURRENT_ONLY'))?row:null;
+}
+function detailsContent(row){
+ const name=escape(row.name);
+ return '<section class="ws01-details-card" role="dialog" aria-modal="true"'+
+  ' aria-labelledby="ws01-details-title">'+
+  '<header class="ws01-details-heading"><h2 id="ws01-details-title">'+name+'</h2>'+
+  '<button type="button" class="ws01-close" data-ws01-close aria-label="Close workspace details">×</button></header>'+
+  '<p class="ws01-details-description">Workspace details verified for your signed membership.</p>'+
+  '<dl class="ws01-details-fields"><div><dt>Membership</dt><dd>'+escape(row.relation)+'</dd></div>'+
+  '<div><dt>Privacy</dt><dd>'+escape(row.privacy||'Not provided by current context')+'</dd></div>'+
+  '<div><dt>Session</dt><dd>'+(row.active?'Current workspace':'Not active · switching unavailable')+'</dd></div></dl>'+
+  '<p class="ws01-details-note" role="status">'+(row.active?
+   'This is your current server-selected workspace.':
+   'You can inspect this authorized membership, but changing the active workspace requires the separate signed switching contract.')+'</p>'+
+  '<div class="ws01-details-actions"><button type="button" data-ws01-action="back">Back to workspaces</button>'+
+  '<button type="button" data-ws01-action="configure">Configuration</button>'+
+  (row.active?'<button type="button" class="ws01-details-primary" data-ws01-action="open-current">Open current workspace</button>':
+   '<button type="button" disabled title="Workspace switching is not activated">Switch workspace — unavailable</button>')+
+  '</div></section>';
+}
+function configurationContent(row){
+ const writableDraft=row.relation==='owner'&&row.verifiedScope==='SIGNED_MEMBER_RPC';
+ return '<section class="ws01-details-card" role="dialog" aria-modal="true" aria-labelledby="ws01-config-title">'+
+  '<header class="ws01-details-heading"><h2 id="ws01-config-title">Workspace configuration</h2>'+
+  '<button type="button" class="ws01-close" data-ws01-close aria-label="Close configuration">×</button></header>'+
+  '<p class="ws01-details-description">Review settings for '+escape(row.name)+'. No configuration writes are activated.</p>'+
+  '<form id="ws01-config-preview" novalidate>'+
+  '<label for="ws01-config-name">Workspace name</label>'+
+  '<input id="ws01-config-name" name="name" type="text" minlength="2" maxlength="80" value="'+escape(row.name)+'"'+(writableDraft?'':' disabled')+'/>'+
+  '<fieldset><legend>Privacy</legend>'+
+  '<label><input type="radio" name="privacy" value="closed"'+(row.privacy==='closed'?' checked':'')+(writableDraft?'':' disabled')+'/> Closed</label>'+
+  '<label><input type="radio" name="privacy" value="open"'+(row.privacy==='open'?' checked':'')+(writableDraft?'':' disabled')+'/> Open</label></fieldset>'+
+  '<p class="ws01-details-note">Only owners can validate a settings draft. Saving configuration requires a separate server-authorized update contract. Nothing entered here is saved.</p>'+
+  '<p class="ws01-config-feedback" role="status" aria-live="polite"></p>'+
+  '<div class="ws01-details-actions"><button type="button" data-ws01-action="back-details">Back to details</button>'+
+  (writableDraft?'<button type="submit" class="ws01-details-primary">Validate settings draft</button>':
+   '<button type="button" disabled>Owner permissions required</button>')+
+  '</div></form></section>';
+}
+function openDetails(catalog,workspaceId,options={}){
+ const row=workspaceDetailsFor(catalog,workspaceId);
+ if(!row)return;
+ const layer=panel(detailsContent(row),'details');
+ layer.addEventListener('click',event=>{
+  const action=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
+  if(action==='back')openBrowse(options.selectorSession?.catalog||catalog,options);
+  if(action==='configure')openConfiguration(catalog,row.id,options);
+  if(action==='open-current'&&row.active){
+   closeWorkspacePanels();
+   options.onOpenCurrent?.();
+  }
+ });
+ layer.querySelector('[data-ws01-action="back"]').focus();
+}
+function openConfiguration(catalog,workspaceId,options={}){
+ const row=workspaceDetailsFor(catalog,workspaceId);
+ if(!row)return;
+ const layer=panel(configurationContent(row),'configuration');
+ const form=layer.querySelector('#ws01-config-preview');
+ layer.addEventListener('click',event=>{
+  if(event.target.closest('[data-ws01-action="back-details"]'))openDetails(catalog,row.id,options);
+ });
+ if(row.relation==='owner'&&row.verifiedScope==='SIGNED_MEMBER_RPC'){
+  form.addEventListener('submit',event=>{
+   event.preventDefault();
+   const data=new FormData(form);
+   const result=validateWorkspaceProposal({name:data.get('name'),privacy:data.get('privacy')});
+   form.querySelector('.ws01-config-feedback').textContent=result.valid?
+    'Settings draft validated. No changes were saved; workspace updates require server authorization.':
+    result.reason;
+   form.querySelector('#ws01-config-name').setAttribute('aria-invalid',String(!result.valid));
+  });
+ }
+ (form.querySelector('#ws01-config-name:not([disabled])')||
+  layer.querySelector('[data-ws01-action="back-details"]')).focus();
 }
 function currentFootnote(catalog,options={}){
  const status=options.selectorSession?.status;
@@ -289,6 +377,10 @@ function openMenu(catalog,options={}){
  input.addEventListener('input',redraw);
  layer.addEventListener('click',event=>{
   const command=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
+  if(command==='details'){
+   const workspaceId=event.target.closest('[data-ws01-workspace]')?.dataset.ws01Workspace;
+   openDetails(read(),workspaceId,options);
+  }
   if(command==='retry')options.selectorSession?.load?.();
   if(command==='browse')openBrowse(read(),options);
   if(command==='create')openCreate(read(),options);
@@ -335,6 +427,8 @@ function openBrowse(catalog,options={}){
  layer.addEventListener('click',event=>{
   const filter=event.target.closest('[data-ws01-filter]')?.dataset.ws01Filter;
   if(TABS.has(filter)){tab=filter;redraw();}
+  const detail=event.target.closest('[data-ws01-action="details"]');
+  if(detail)openDetails(read(),detail.dataset.ws01Workspace,options);
   if(event.target.closest('[data-ws01-action="retry"]'))options.selectorSession?.load?.();
   if(event.target.closest('[data-ws01-action="create"]'))openCreate(read(),options);
  });
