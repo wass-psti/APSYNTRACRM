@@ -258,8 +258,8 @@ function currentFootnote(catalog,options={}){
  else if(catalog?.status==='SIGNED_MEMBER_DISCOVERY')
   message=catalog.rows.length+' authorized workspace'+(catalog.rows.length===1?'':'s')+
    ' for your signed account. Workspace switching is not yet activated.';
- return '<p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>'+
-  (status==='error'?'<button type="button" class="ws01-retry" data-ws01-action="retry">Retry authorized workspace discovery</button>':'');
+ return '<div data-ws01-feedback><p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>'+
+  (status==='error'?'<button type="button" class="ws01-retry" data-ws01-action="retry">Retry authorized workspace discovery</button>':'')+'</div>';
 }
 function menuContent(catalog,options={}){
  return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Browse workspaces">'+
@@ -282,8 +282,8 @@ function openMenu(catalog,options={}){
   if(activeOverlay!==layer||!layer.isConnected)return;
   layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),'all',input.value);
   layer.querySelector('.ws01-eyebrow').textContent='Authorized workspaces · '+visibleWorkspaces(read()).length;
-  const oldNote=layer.querySelector('[data-ws01-note]');
-  if(oldNote){oldNote.outerHTML=currentFootnote(read(),options);}
+  const feedback=layer.querySelector('[data-ws01-feedback]');
+  if(feedback)feedback.outerHTML=currentFootnote(read(),options);
  };
  if(options.selectorSession)options.selectorSession.refresh=redraw;
  input.addEventListener('input',redraw);
@@ -321,8 +321,8 @@ function openBrowse(catalog,options={}){
  const redraw=()=>{
   if(activeOverlay!==layer||!layer.isConnected)return;
   layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),tab,input.value);
-  const oldNote=layer.querySelector('[data-ws01-note]');
-  if(oldNote){oldNote.outerHTML=currentFootnote(read(),options);}
+  const feedback=layer.querySelector('[data-ws01-feedback]');
+  if(feedback)feedback.outerHTML=currentFootnote(read(),options);
   for(const btn of layer.querySelectorAll('[data-ws01-filter]'))
    btn.setAttribute('aria-pressed',String(btn.dataset.ws01Filter===tab));
   layer.querySelector('[data-ws01-title]').textContent={
