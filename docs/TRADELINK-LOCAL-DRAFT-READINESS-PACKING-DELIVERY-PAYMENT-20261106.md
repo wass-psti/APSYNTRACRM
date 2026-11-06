@@ -1,0 +1,55 @@
+# TradeLink — Local-only Draft readiness for Packing List, Delivery Receipt, and Payment AR
+
+**Date:** 2026-11-06 (Asia/Manila)  
+**Scope:** Next authorized, non-mutating TradeLink frontend milestone after the user-accepted CP-TL-03D dark launch and six-module local entry links.  
+**Target:** Existing TradeLink board `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`, existing Supabase project `jtlusodorfnyzgyuewkz`.  
+**Decision:** **IMPLEMENTED AND AUTOMATED-TEST VERIFIED; DEPLOYMENT WORKFLOW SUCCESS; GENUINE SIGNED BROWSER ACCEPTANCE PENDING.** This increment does not authorize Stage B production writes, workflow transitions, or permission changes.
+
+## Source and contract mapping
+
+Existing source-derived module purpose/readiness in `frontend/tradelink-application.js` and the Stage A JSONB field allowlist in `sql/cp-tl03-staged-domain.sql` are authoritative; no new document types or database schema are introduced.
+
+| Source module | Bounded local editor | Existing draft-contract fields |
+| --- | --- | --- |
+| Packing List (`packing`) | Consignee, required source reference and one physical item with description/positive quantity; unit optional | `customerName`, `referenceNumber`, `items[0]` with `unitPrice:0` for the preexisting numeric line-item shape |
+| Delivery Receipt (`delivery`) | Recipient, source reference, physical item, optional serial/asset number, QC and logistics assignees, optional receiver | `customerName`, `referenceNumber`, `items[0].serialNumber`, `checkedBy`, `deliveredBy`, optional `receivedBy` |
+| Payment AR (`payment`) | Payor, payment particulars, positive cash/cheque amount, receiver and verifier; cheque requires bank/cheque number | `customerName`, `paymentParticulars`, `cashAmount`, `chequeAmount`, `bankName`, `chequeNumber`, `receivedBy`, `verifiedBy` |
+
+All three continue to use the existing document number, optional remarks, supported currency list, client-side parsing, and **Validate locally** button. The physical-line `unitPrice:0` exists solely to match the preexisting draft schema's required numeric item shape. It does **not** represent a financial valuation or inventory movement. Payment entries are *draft estimates only*; no funds are received or verified.
+
+**Supported limits:** one physical line item in the current staged editor, bounded strings and numeric amounts, positive physical quantity and positive total payment. These are preview-readiness checks, **not** complete document templates, submissions, approvals, PDF creation, attachments, logistics delivery confirmation, or actual payment processing.
+
+## Implementation and verification
+
+- `frontend/tradelink-draft-workspace.js`: Conditional form fields and document-specific local validation for packing/delivery/payment while retaining the original generic editor for ESI/Quotation/PO. All data remains transient UI memory, with HTML-safe escaping. Both production read/write flags remain `false`. `Create Draft` and authoritative `Refresh` remain disabled.
+- `frontend/app.js`: Extends the existing in-memory `captureTradeLinkDraftFields` allowlist to include the source fields and re-renders the appropriate module-specific form on document type selection. Existing signed TradeLink board, route, workspace and session guards remain unchanged.
+- `frontend/tests/tradelink-draft-workspace.test.mjs`: Tests valid and invalid shipment/receipt/payment fixtures, zero-priced physical projection, serial escaping, missing assignees, zero/negative/malformed amounts, cheque instrument details, all six entry links, module switching, disabled submit and no browser persistence/network fallback.
+- **Code series:** `2bbe8c1` (source-specific form/validation), `17b0ba8` (ephemeral capture/module switching), `42eea90` (regression fixtures), `594f0d29380e9924a99075e5e7e7509089344b83` (corrected decimal validation).
+- **Frontend validation:** [Actions run 42220950949](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42220950949), **SUCCESS on second attempt**; frontend job passed **1,103/1,103 tests**, 0 failures. Disposable PostgreSQL, collaboration and OT jobs also passed. The initial live-Pages job failed because deployed `frontend/app.js` was stale while the concurrent Pages job was pending. After the code deployment succeeded, the retry reported **SUPERSEDED** because a newer documentation-only descendant had become `main`. Therefore **an exact-commit live-asset smoke PASS was not obtained**; do not claim one based solely on workflow success.
+- **Production Pages deployment:** [run 42220950591](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42220950591), **SUCCESS** for code SHA `594f0d29380e9924a99075e5e7e7509089344b83`. A later unrelated documentation-only descendant does not change TradeLink frontend content.
+
+## Live non-mutation and privilege evidence
+
+Fresh read-only SQL against the **existing** project after the implementation verified:
+
+- `public.tradelink_documents = 0`; `public.tradelink_document_events = 0`; TradeLink board items `= 0`.
+- `public.tradelink_documents` and `public.tradelink_document_events`: RLS **enabled**, authenticated INSERT/UPDATE/DELETE privileges **false**.
+- `authenticated` and `anon`: EXECUTE **false** for both `private.tl03_commit(uuid,uuid,bigint,text,jsonb)` and `public.tl03_document_commit(uuid,uuid,bigint,text,jsonb)`.
+- No schema/DDL, roles, sessions, grants, lifecycle actions or business-record writes were executed.
+
+## Acceptance classification and next gate
+
+| Requirement | Classification |
+| --- | --- |
+| Source-aligned three local forms and six-module preservation | **IMPLEMENTED** |
+| Frontend regression 1,103/1,103 | **VERIFIED** |
+| Disposable PostgreSQL jobs | **VERIFIED** |
+| GitHub Pages deployment workflow at code SHA | **VERIFIED** |
+| Post-change production non-mutation, RLS and disabled commit privileges | **VERIFIED** |
+| Exact-commit live asset CDN smoke | **PENDING** (stale then superseded) |
+| Genuine signed interactive browser acceptance including all three module forms | **PENDING** |
+| Production Draft writes, Stage B grants, lifecycle, PDF, attachments, payment/stock operations | **NO-GO / NOT IN SCOPE** |
+
+**Progress:** Five of five independently completed source/test/deployment/database technical checks verified, excluding the two separately pending live-browser/CDN acceptance checks. Do not convert the scoped verification percentage into full production security certification.
+
+**Next authorized direction:** Complete the remaining non-mutating CDN and genuine signed browser acceptance when accessible; continue source-specific preview completeness or UX refinement without enabling writes. Production Stage B remains subject to separate current recoverability, change ownership, explicit grants, security and data authorization gates.
