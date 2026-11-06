@@ -39,7 +39,7 @@ function client({manage=true,mode='ok'}={}){
    action:'restore-recoverable',value_rows:2,updated_at:newUpdated
   };
   if(name==='wm_list_recoverable_board_columns')return [{
-   deletion_id:deletionId,column_id:columnId,name:'Status I',value_rows:2,
+   deletion_id:deletionId,column_id:columnId,name:B4_QA_COLUMN_NAME,value_rows:2,
    deleted_at:updatedAt,restorable:true
   }];
   throw new Error('Unexpected operation');
