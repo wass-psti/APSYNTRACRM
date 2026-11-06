@@ -82,3 +82,31 @@ The overall **CP-WS-02D/B3 ledger remains 6/10** because catalog verification an
 Before activating any service: select and approve the trusted host and least-privileged session authority; review the 45 caller paths and prove compatible allow/deny behavior; then run real trusted HTTPS signed-user and denial acceptance. Capture sanitized results and immutable revision/CI evidence. A disposable test PASS never approves a live function replacement.
 
 **Next required gate:** `CP-WS-02D/B3 — Signed HTTPS Host Approval, 45-Consumer Compatibility Regression and Production-Source-Locked Privacy Cutover Review`. Production SQL migration, provider sending and B4 workspace selection remain distinct gates.
+
+## 2026-11-06 — Source-locked 45-consumer compatibility gate (follow-on)
+
+**New executed evidence, existing Supabase project, read-only only:**
+
+1. [45-consumer source-locked catalog](../sql/tests/cp-ws02d-b3-45-consumer-source-lock-preflight.sql), commit `853475f42f64c5d1522da79be097761dc99c4dda`, was executed against the live `pg_proc` catalog. Result: `SOURCE_LOCK_MATCH__RUNTIME_COMPATIBILITY_STILL_PENDING`; **45 compared, 45 matched, 0 drifted**. Caller-origin categorization: **4** direct `auth.uid()` calls; **39** signed local variables initialized from `auth.uid()`; **2** internal helpers receiving `p_user_id`. This is *static source syntax and fingerprint verification*, not program-flow proof that the variable is never reassigned nor authorized runtime regression across 45 functions.
+2. [Delegated-helper call-chain source lock](../sql/tests/cp-ws02d-b3-delegated-helper-source-lock.sql), commit `1c4e4ae779283723b3ea281aa355fb85c5bd73f7`, was executed read-only: `SIGNED_ENTRY_SOURCE_MATCH__RUNTIME_DENIAL_NOT_TESTED`; **4/4** helper/entrypoint sources, grant boundaries and `caller := auth.uid()` source expressions matched. The signed entrypoints are `put_module_state` and `delete_module_state`; their internal helpers are `module_state_write_allowed` and `module_state_delete_allowed`. The internal helpers deny direct `authenticated`/anonymous EXECUTE, whereas the signed entrypoints are executable by authenticated actors but not anonymous actors.
+3. [Existing disposable privacy workflow 42151763205](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42151763205) completed success at `853475f42f64c5d1522da79be097761dc99c4dda`. It executes the pre-existing disposable privacy fixture, not the live catalog preflight. The latter was separately executed through the connected SQL tool. Do not claim CI ran a 45-function runtime test.
+4. A proposed additional disposable internal-helper runtime test could not be applied in this session because the write operation was blocked by execution safeguards. The existing 149-line disposable regression fixture remains unmodified. **Do not report this proposed test as implemented or passed.**
+
+### Staging host approval prerequisites — still unmet
+
+A publicly trusted HTTPS staging endpoint linked to the existing live Supabase project represents a separately controlled deployment, even when read-only or configured as an Edge Function. The following must be independently authorized and verified before any deployment or testing with live signed JWTs:
+
+- **Host and blast radius:** Explicit hosting choice, staging route URL and origin, whether it shares production resources, a deployment window, rollback/disable procedure and responsible operator.
+- **Identity authority:** Exact platform JWT validation mode appropriate for actual project's signing keys; trusted `getUser()` verification; active session/revocation authority with documented least-privilege access. No raw JWT/session IDs or secrets in logs.
+- **Database access:** User-scoped PostgREST with the caller's bearer JWT and publishable API key; no `service_role` or broad database-admin connection to resolve authorization or RLS errors. A future session-authority reader must be separately reviewed, not created with blanket private-schema access.
+- **Boundary tests:** Signed same-actor read; anonymous/malformed/expired/revoked denial; foreign actor/workspace denial; proper 401/403 response semantics; twelve-module Boolean reads; session change before and after read; no writes, no credentials or sensitive account fields in response; CORS and TLS chain validation.
+- **Source-locked privacy cutover:** Retest current function source MD5 plus all 45 consumer source hashes immediately before migration, review valid/denied domain action regressions (including two internal helper chains), use a separate reviewed production-specific migration with reversible rollback and staged activation. No production migration has been prepared or authorized in this gate.
+
+### Updated decision
+
+- **Verified:** Submitted genuine signed frontend preflight, earlier disposable GoTrue/PostgREST/TLS/RLS tests, disposable privacy candidate and the new 45/45 live source-fingerprint inventory.
+- **Pending:** 45-consumer runtime regression; safe negative testing across actual authorized signed-user sessions; trusted public HTTPS backend acceptance.
+- **Blocked:** Public staging deployment and privileges, production privacy cutover, provider deliveries and B4 active-workspace switching pending their separate approvals and prerequisites.
+- **Overall B3 readiness:** **6/10 (60%)** unchanged. The new evidence strengthens a development/security-review layer but does not close any of the four outstanding overarching criteria.
+
+**Next required gate:** `CP-WS-02D/B3 — Nonproduction Internal-Helper Runtime Regression and Approved Signed HTTPS Host Activation`. Maintain PR draft until these gates are separately accepted.
