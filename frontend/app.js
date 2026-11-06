@@ -1409,6 +1409,96 @@ async function loadBoard(boardId,tab){
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')await loadTimeTracker(seq);
  if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt')await loadFRTFinance(null,seq);
 }
+/** CP-TL-03D: authority and route bound Draft UI, never browser persistence. */
+function tradeLinkDraftRoute(){
+ return auth.isSignedIn&&state.view==='board'&&state.tab==='tradelink'&&
+  state.boardId===TRADELINK_BOARD_ID&&state.tradeLinkSection==='drafts'&&
+  state.context?.user_id===auth.userId&&
+  state.board?.board?.workspace_id===state.context?.workspace_id;
+}
+async function loadTradeLinkDrafts(seq=routeSerial){
+ if(!tradeLinkDraftRoute()||!TL03_DOMAIN_READS_ENABLED||
+  state.tradeLinkDraft.busy)return;
+ const actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkDraftRoute()&&
+  auth.userId===actor&&state.context?.workspace_id===ws;
+ state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
+ try{
+  const result=await tradeLinkDraftWorkspace.list();
+  if(same())state.tradeLinkDraft={...state.tradeLinkDraft,...result,busy:false};
+ }catch{
+  if(same())state.tradeLinkDraft={...initialTradeLinkDraftView(),
+   error:'Signed Draft list unavailable. No records were cached.'};
+ }finally{if(same()){state.tradeLinkDraft.busy=false;render();}}
+}
+async function openTradeLinkDraft(documentId){
+ if(!tradeLinkDraftRoute()||!TL03_DOMAIN_READS_ENABLED||state.tradeLinkDraft.busy||
+  !state.tradeLinkDraft.rows.some(row=>row.documentId===documentId))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ state.tradeLinkDraft.busy=true;render();
+ try{
+  const record=await tradeLinkDraftWorkspace.read(documentId);
+  if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
+   state.context.workspace_id!==ws)return;
+  if(!record||record.workflow_state!=='draft')
+   throw new ApiError('Document is no longer an editable Draft.',409);
+  state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
+   selected:{documentId,record},error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
+ }catch{
+  if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
+   'Draft read or authorization failed. Refresh the signed list.';
+ }finally{
+  if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+async function commitTradeLinkDraft(form){
+ if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage||
+  state.tradeLinkDraft.busy)return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const selected=state.tradeLinkDraft.mode==='edit'?state.tradeLinkDraft.selected:null;
+ const revision=selected?.record?.revision??0;
+ if(!Number.isSafeInteger(revision)||revision<0)return;
+ const payload=parseTradeLinkDraftForm(new FormData(form));
+ state.tradeLinkDraft.busy=true;render();
+ try{
+  await tradeLinkDraftWorkspace.save({documentId:selected?.documentId,
+   expectedRevision:revision,draft:payload});
+  if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
+   state.context.workspace_id!==ws)return;
+  state.tradeLinkDraft={...initialTradeLinkDraftView(),
+   message:'Authoritative server confirmed the Draft command.'};
+  await loadTradeLinkDrafts(seq);
+ }catch{
+  if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
+   'Draft write not confirmed. Refresh authoritative records before retrying.';
+ }finally{
+  if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+async function changeTradeLinkDraftState(documentId,operation){
+ if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage||
+   state.tradeLinkDraft.busy)return;
+ const record=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!record||!Number.isSafeInteger(record.revision)||record.revision<1||
+   (operation==='archive'&&record.archived)||
+   (operation==='restore'&&!record.archived))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ state.tradeLinkDraft.busy=true;render();
+ try{
+  await tradeLinkDraftWorkspace.changeState({
+   documentId,revision:record.revision,operation});
+  if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
+   state.context.workspace_id!==ws)return;
+  state.tradeLinkDraft={...initialTradeLinkDraftView(),
+   message:'Server confirmed the Draft '+operation+'.'};
+  await loadTradeLinkDrafts(seq);
+ }catch{
+  if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
+   'Draft revision or authorization changed. Refresh before retrying.';
+ }finally{
+  if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
 /** Read-only signed board events; never substitutes for source TradeLink collaboration records. */
 async function loadTradeLinkActivity(seq=routeSerial){
  const userId=state.context?.user_id,workspaceId=state.context?.workspace_id;
