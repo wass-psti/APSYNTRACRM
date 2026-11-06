@@ -51,7 +51,7 @@ This signature is referenced by 45 stored functions, including `apsyntra_crm_my_
 
 ## Disposable-only remediation candidate and tests
 
-- `sql/cp-ws02d-b3-rpc-privacy-disposable-candidate.sql` keeps the existing function name, default argument, domain checks and `SECURITY DEFINER` shape and adds **only** `AND p_user_id = auth.uid()`. It **refuses execution outside** `ws02d_privacy_disposable` on PostgreSQL 17 and is **not a production migration**.
+- `sql/cp-ws02d-b3-rpc-privacy-disposable-candidate.sql` keeps the existing function name, default argument, domain checks and `SECURITY DEFINER` shape and adds only `auth.uid() IS NOT NULL` and `p_user_id = auth.uid()` checks. It **refuses execution outside** `ws02d_privacy_disposable` on PostgreSQL 17 and is **not a production migration**.
 - `sql/tests/cp-ws02d-b3-rpc-privacy-disposable.sql` uses only synthetic users/workspaces. It first reproduces the vulnerable foreign-user Boolean read using the original function body; then it applies the candidate and checks both signed actors' authorized self-reads, unauthorized module denial, two-way foreign inspection denial, absent-JWT denial and unchanged anonymous/authenticated EXECUTE boundary. Changes are rolled back.
 - `.github/workflows/cp-ws02d-b3-rpc-privacy.yml` runs this test in disposable PG17 on a pull request, with no production credentials or external provider.
 
