@@ -22,9 +22,13 @@ const disabled=()=>{throw new ApiError(
  'TradeLink Draft API is in dark launch; production persistence is disabled.',503);
 };
 export const tradeLinkDraftReady=()=>TL03_DOMAIN_READS_ENABLED&&TL03_DOMAIN_WRITES_ENABLED;
-export function initialTradeLinkDraftView(){
+export function initialTradeLinkDraftView(documentType=null){
+ // The route may request only one of the existing six source document types.
+ // This is transient UI state, never browser or server persistence.
+ const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
  return {status:'DARK_LAUNCH',rows:[],selected:null,busy:false,error:'',
-  message:'',mode:'create',pendingCreateId:null,formValues:null};
+  message:'',mode:'create',pendingCreateId:null,
+  formValues:selected?{documentType:selected}:null};
 }
 export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.randomUUID?.()}={}){
  if(!fields||typeof fields.get!=='function')
