@@ -34,34 +34,76 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
  if(!fields||typeof fields.get!=='function')
   throw new ApiError('TradeLink Draft input is missing.',400);
  const value=k=>String(fields.get(k)??'').trim();
- const draft={documentType:value('documentType'),documentNumber:value('documentNumber')};
- for(const key of ['customerName','referenceNumber','remarks']){
-  if(value(key))draft[key]=value(key);
- }
+ const type=value('documentType');
+ const physical=type==='packing'||type==='delivery';
+ const draft={documentType:type,documentNumber:value('documentNumber')};
+ const addText=(key,{required=false}={})=>{
+  const text=value(key);
+  if(text.length>5000||(required&&!text))
+   throw new ApiError('Invalid or missing TradeLink '+key+'.',400);
+  if(text)draft[key]=text;
+ };
+ for(const key of ['customerName','referenceNumber','remarks'])addText(key);
  const currency=value('currency'),vatType=value('vatType');
  if(currency){
   if(!currencies.includes(currency))throw new ApiError('Invalid TradeLink currency.',400);
   draft.currency=currency;
  }
- if(vatType){
+ if(vatType&&!physical&&type!=='payment'){
   if(!vatCodes.some(([code])=>code===vatType))
    throw new ApiError('Invalid TradeLink VAT code.',400);
   draft.vatType=vatType;
  }
  const description=value('lineDescription'),quantity=value('lineQuantity'),
-  unitPrice=value('lineUnitPrice'),unit=value('lineUnit');
- if(description||quantity||unitPrice||unit){
-  if(!description||!quantity||!unitPrice)
-   throw new ApiError('Line item requires description, quantity and unit price.',400);
-  const q=Number(quantity),p=Number(unitPrice);
+  unitPrice=physical?'':value('lineUnitPrice'),unit=value('lineUnit');
+ if(physical||description||quantity||unitPrice||unit){
+  if(!description||!quantity||(!physical&&!unitPrice))
+   throw new ApiError('Line item requires description, quantity and unit price where applicable.',400);
+  const q=Number(quantity),p=physical?0:Number(unitPrice);
   if(!Number.isFinite(q)||!Number.isFinite(p)||q<0||p<0||
-     q>1000000000||p>1000000000)
+     q>1000000000||p>1000000000||(physical&&q===0))
    throw new ApiError('Invalid Draft line quantity or unit price.',400);
   const id=value('lineId')||lineId();
   if(typeof id!=='string'||!id||id.length>120)
    throw new ApiError('Could not create a valid line-item identifier.',400);
-  draft.items=[{id,kind:'item',description,quantity:q,unitPrice:p,
-   ...(unit?{unit}:{})}];
+  const item={id,kind:'item',description,quantity:q,unitPrice:p,
+   ...(unit?{unit}:{})};
+  if(type==='delivery'){
+   const serial=value('lineSerialNumber');
+   if(serial.length>120)throw new ApiError('Invalid serial or asset number.',400);
+   if(serial)item.serialNumber=serial;
+  }
+  draft.items=[item];
+ }
+ if(physical){
+  if(!draft.customerName||!draft.referenceNumber)
+   throw new ApiError('Shipment Draft requires consignee/recipient and source reference.',400);
+  if(type==='delivery'){
+   addText('checkedBy',{required:true});
+   addText('deliveredBy',{required:true});
+   addText('receivedBy');
+  }
+ }
+ if(type==='payment'){
+  for(const key of ['paymentParticulars','receivedBy','verifiedBy','bankName','chequeNumber'])
+   addText(key);
+  let amount=0;
+  for(const key of ['cashAmount','chequeAmount']){
+   const raw=value(key);
+   if(!raw)continue;
+   if(!/^\\d+(?:\\.\\d+)?$/.test(raw))
+    throw new ApiError('Invalid payment amount.',400);
+   const n=Number(raw);
+   if(!Number.isFinite(n)||n<0||n>1000000000000)
+    throw new ApiError('Invalid payment amount.',400);
+   draft[key]=n;
+   amount+=n;
+  }
+  if(!draft.customerName||!draft.paymentParticulars||!draft.receivedBy||
+     !draft.verifiedBy||amount<=0)
+   throw new ApiError('Payment Draft needs payor, particulars, a positive amount, receiver and verifier.',400);
+  if((draft.chequeAmount??0)>0&&(!draft.bankName||!draft.chequeNumber))
+   throw new ApiError('Cheque Draft needs bank name and cheque number.',400);
  }
  return validateTradeLinkDraftEnvelope(draft);
 }
@@ -106,6 +148,10 @@ function renderEditor(row,mode,canManage,formValues=null){
  const writeEnabled=editing||mode==='create';
  const live=TL03_DOMAIN_WRITES_ENABLED&&canManage&&writeEnabled;
  const type=editing?data.documentType:fieldValue('documentType','quotation');
+ const physical=type==='packing'||type==='delivery';
+ const payment=type==='payment';
+ const commonPartyLabel=type==='packing'?'Consignee':type==='delivery'?'Recipient / consignee':
+  payment?'Payor':'Customer / supplier';
  return '<section class="tl-draft-panel" aria-labelledby="tl-draft-editor-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Source-aligned Draft editor</p>'+
   '<h3 id="tl-draft-editor-title">'+(editing?'Edit authorized Draft':'Prepare a Draft')+'</h3></div>'+
@@ -117,20 +163,54 @@ function renderEditor(row,mode,canManage,formValues=null){
     '<select name="documentType" '+(editing?'disabled':'')+'>'+options(typeLabels,type)+'</select></label>'+
     (editing?'<input type="hidden" name="documentType" value="'+escape(type)+'">':'')+
     field('Document number','documentNumber',fieldValue('documentNumber',data.documentNumber||''),'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*"')+
-    field('Customer / supplier','customerName',fieldValue('customerName',data.customerName||''),'maxlength="5000"')+
-    field('Reference','referenceNumber',fieldValue('referenceNumber',data.referenceNumber||''),'maxlength="5000"')+
+    field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
+     'maxlength="5000"'+(physical||payment?' required':''))+
+    field(physical?'Source reference':'Reference','referenceNumber',
+     fieldValue('referenceNumber',data.referenceNumber||''),
+     'maxlength="5000"'+(physical?' required':''))+
     '<label class="tl-draft-field"><span>Currency</span><select name="currency">'+
      options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select></label>'+
-    '<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
-     options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>'+
+    (physical||payment?'':'<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
+     options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>')+
    '</div>'+
-   '<fieldset class="tl-draft-lines"><legend>Single line item (optional)</legend>'+
-    field('Description','lineDescription',fieldValue('lineDescription',line.description||''),'maxlength="2000"')+
-    field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),'type="number" min="0" max="1000000000" step="any"')+
-    field('Unit price','lineUnitPrice',fieldValue('lineUnitPrice',line.unitPrice??''),'type="number" min="0" max="1000000000" step="any"')+
+   (payment?
+    '<fieldset class="tl-draft-lines"><legend>Received payment · local readiness only</legend>'+
+     field('Payment particulars','paymentParticulars',fieldValue('paymentParticulars',data.paymentParticulars||''),
+      'maxlength="5000" required')+
+     field('Cash amount','cashAmount',fieldValue('cashAmount',data.cashAmount??''),
+      'type="number" min="0" max="1000000000000" step="any"')+
+     field('Cheque amount','chequeAmount',fieldValue('chequeAmount',data.chequeAmount??''),
+      'type="number" min="0" max="1000000000000" step="any"')+
+     field('Bank name (for cheque)','bankName',fieldValue('bankName',data.bankName||''),'maxlength="5000"')+
+     field('Cheque number (for cheque)','chequeNumber',fieldValue('chequeNumber',data.chequeNumber||''),'maxlength="5000"')+
+     field('Received by','receivedBy',fieldValue('receivedBy',data.receivedBy||''),'maxlength="5000" required')+
+     field('Verified by','verifiedBy',fieldValue('verifiedBy',data.verifiedBy||''),'maxlength="5000" required')+
+    '</fieldset>'+
+    '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
+    '<fieldset class="tl-draft-lines"><legend>'+
+     (physical?'Physical shipment item (required for local readiness)':'Single line item (optional)')+
+     '</legend>'+
+    field('Description','lineDescription',fieldValue('lineDescription',line.description||''),
+     'maxlength="2000"'+(physical?' required':''))+
+    field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),
+     'type="number" min="0" max="1000000000" step="any"'+(physical?' required':''))+
+    (physical?'':field('Unit price','lineUnitPrice',fieldValue('lineUnitPrice',line.unitPrice??''),
+     'type="number" min="0" max="1000000000" step="any"'))+
     field('Unit','lineUnit',fieldValue('lineUnit',line.unit||''),'maxlength="120"')+
+    (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
+     fieldValue('lineSerialNumber',line.serialNumber||''),'maxlength="120"'):'')+
     (editing&&line.id?'<input type="hidden" name="lineId" value="'+escape(line.id)+'">':'')+
-   '</fieldset>'+
+    '</fieldset>'+
+    (type==='delivery'?
+     '<fieldset class="tl-draft-lines"><legend>Delivery responsibility · preview only</legend>'+
+      field('QC assignee','checkedBy',fieldValue('checkedBy',data.checkedBy||''),
+       'maxlength="5000" required')+
+      field('Logistics assignee','deliveredBy',fieldValue('deliveredBy',data.deliveredBy||''),
+       'maxlength="5000" required')+
+      field('Received by (optional)','receivedBy',fieldValue('receivedBy',data.receivedBy||''),
+       'maxlength="5000"')+
+     '</fieldset>':'')+
+    (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    '<label class="tl-draft-field"><span>Remarks</span>'+
     '<textarea name="remarks" maxlength="5000" rows="3">'+escape(fieldValue('remarks',data.remarks||''))+'</textarea></label>'+
    '<div class="tl-draft-actions">'+
