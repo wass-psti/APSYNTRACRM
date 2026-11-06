@@ -2594,7 +2594,7 @@ async function action(name,button){
   if(state.b2QaBusy||state.view!=='security'||!state.context||!auth.isSignedIn)break;
   const run=++state.b2QaRunId;
   const actor=state.context.user_id,workspace=state.context.workspace_id;
-  const create=action==='security-b2-qa-create';
+  const create=name==='security-b2-qa-create';
   state.b2QaBusy=true;state.b2QaReport=null;render();
   try{
    const report=create?
