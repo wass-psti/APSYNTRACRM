@@ -93,6 +93,74 @@ export function assessWorkspaceCreationReadiness(proposal){
   message:'Draft validated. The server must independently authorize creation. No workspace was created.'
  });
 }
+/**
+ * Creation transaction adapter: the checked-in UI gate is OFF until a
+ * separately approved signed production RPC/grant/flag activation.
+ * A submitted request ID is reused on retries to prevent duplicate writes.
+ * Only a validated server receipt can be shown as a committed creation.
+ * No raw error, bearer token, actor ID or workspace ID is rendered.
+ */
+export async function submitWorkspaceCreation({
+ proposal,lifecycle,requestId,enabled=WS01_CREATION_ENABLED
+}={}){
+ const validated=validateWorkspaceProposal(proposal);
+ if(!validated.valid)return Object.freeze({
+  status:'INVALID_DRAFT',ok:false,valid:false,message:validated.reason
+ });
+ if(enabled!==true)return Object.freeze({
+  status:'PENDING_SERVER_ACTIVATION',ok:false,valid:true,
+  message:'Draft validated. Workspace creation is not authorized on the production server. No workspace was created.'
+ });
+ if(!validUuid(requestId)||typeof lifecycle?.create!=='function')return Object.freeze({
+  status:'CLIENT_NOT_READY',ok:false,valid:true,
+  message:'Creation cannot start because its signed workspace client is unavailable. No request was sent.'
+ });
+ try{
+  const result=await lifecycle.create({
+   name:validated.name,privacy:validated.privacy,requestId
+  });
+  if(!validUuid(result?.workspaceId)||result.relation!=='owner'||
+     result.privacy!==validated.privacy||result.active!==false||
+     typeof result.idempotent!=='boolean')return Object.freeze({
+   status:'UNCONFIRMED',ok:false,valid:true,
+   message:'The server returned an unexpected receipt. Creation is not confirmed; retry this same request or contact an administrator.'
+  });
+  return Object.freeze({
+   status:result.idempotent?'EXISTING_REQUEST':'CREATED',
+   ok:true,valid:true,
+   message:result.idempotent?
+    'This workspace request was already completed. You are its workspace owner; your current workspace has not changed.':
+    'Workspace created successfully. You are its workspace owner. Your current workspace has not changed.',
+   receipt:Object.freeze({workspaceId:result.workspaceId,
+    active:false,relation:'owner',privacy:result.privacy,
+    idempotent:result.idempotent})
+  });
+ }catch(error){
+  const status=Number.isInteger(error?.status)?error.status:0;
+  if(status===401)return Object.freeze({
+   status:'SESSION_EXPIRED',ok:false,valid:true,
+   message:'Your signed session was not verified. Sign in again before attempting workspace creation.'
+  });
+  if(status===403||status===404||status===503)return Object.freeze({
+   status:'SERVER_DENIED',ok:false,valid:true,
+   message:'The server has not authorized workspace creation for this session. No successful creation was confirmed.'
+  });
+  if(status===400||status===422)return Object.freeze({
+   status:'SERVER_REJECTED',ok:false,valid:true,
+   message:'The server rejected the workspace name or privacy settings.'
+  });
+  if(status===409)return Object.freeze({
+   status:'REQUEST_CONFLICT',ok:false,valid:true,
+   message:'This request conflicts with a prior creation attempt. Review the draft and try again with a new request.'
+  });
+  // Timeouts/network/5xx can occur AFTER the server committed.
+  // Preserve the same request UUID for safe idempotent retry.
+  return Object.freeze({
+   status:'UNCONFIRMED',ok:false,valid:true,
+   message:'The server did not confirm the result. Retry this unchanged draft using the same request to avoid duplicate workspaces.'
+  });
+ }
+}
 /** Validates preview-only invitation drafts; never issues or stores an invitation. */
 export function validateWorkspaceInvitationDraft({emails='',role='member',message=''}={}){
  const raw=typeof emails==='string'?emails.trim():'';
@@ -199,15 +267,15 @@ function menuContent(catalog){
   '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
   currentFootnote()+'</section>';
 }
-function openMenu(catalog){
+function openMenu(catalog,options={}){
  const layer=panel(menuContent(catalog),'menu');
  const input=layer.querySelector('#ws01-menu-search');
  input.addEventListener('input',()=>{layer.querySelector('[data-ws01-results]').innerHTML=
   resultsMarkup(catalog,'recent',input.value);});
  layer.addEventListener('click',event=>{
   const command=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
-  if(command==='browse')openBrowse(catalog);
-  if(command==='create')openCreate(catalog);
+  if(command==='browse')openBrowse(catalog,options);
+  if(command==='create')openCreate(catalog,options);
   if(command==='invite')openInvites(catalog.rows[0]);
  });
  input.focus();
@@ -229,7 +297,7 @@ function browseContent(catalog){
   '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','')+'</div>'+
   currentFootnote()+'</div></div></section>';
 }
-function openBrowse(catalog){
+function openBrowse(catalog,options={}){
  const layer=panel(browseContent(catalog),'browse');
  let tab='all';
  const input=layer.querySelector('#ws01-browser-search');
@@ -246,16 +314,19 @@ function openBrowse(catalog){
  layer.addEventListener('click',event=>{
   const filter=event.target.closest('[data-ws01-filter]')?.dataset.ws01Filter;
   if(TABS.has(filter)){tab=filter;redraw();}
-  if(event.target.closest('[data-ws01-action="create"]'))openCreate(catalog);
+  if(event.target.closest('[data-ws01-action="create"]'))openCreate(catalog,options);
  });
  input.focus();
 }
-function createContent(){
+function createContent({enabled=WS01_CREATION_ENABLED}={}){
+ const active=enabled===true;
  return '<section class="ws01-create-card" role="dialog" aria-modal="true"'+
   ' aria-labelledby="ws01-create-title" aria-describedby="ws01-create-description">'+
   '<header class="ws01-create-heading"><div><h2 id="ws01-create-title">Add new workspace</h2>'+
-  '<p class="ws01-create-subtitle" id="ws01-create-description">Workspace creation is not activated. '+
-   'You can validate a draft, but nothing will be saved.</p></div>'+
+  '<p class="ws01-create-subtitle" id="ws01-create-description">'+
+   (active?'Create a workspace with your existing verified account. New workspaces are not automatically selected.':
+    'Workspace creation is not activated. You can validate a draft, but nothing will be saved.')+
+   '</p></div>'+
   '<button type="button" class="ws01-close" data-ws01-close aria-label="Close create workspace">×</button></header>'+
   '<div class="ws01-create-symbol" aria-hidden="true">N</div>'+
   '<form id="ws01-proposal" novalidate>'+
@@ -263,40 +334,97 @@ function createContent(){
   '<input id="ws01-name" type="text" name="name" maxlength="80" minlength="2"'+
    ' autocomplete="off" spellcheck="false" required placeholder="New Workspace"'+
    ' aria-describedby="ws01-name-hint"/>'+
-  '<p id="ws01-name-hint" class="ws01-field-hint">2–80 characters. Draft only.</p>'+
+  '<p id="ws01-name-hint" class="ws01-field-hint">2–80 characters.'+(active?'':' Draft only.')+'</p>'+
   '<fieldset><legend>Workspace privacy</legend>'+
    '<label><input type="radio" name="privacy" value="closed" checked/> Closed</label>'+
    '<label><input type="radio" name="privacy" value="open"/> Open</label></fieldset>'+
   '<p class="ws01-create-safety">Closed is selected by default. Open is workspace metadata only; '+
    'it does not permit unrestricted discovery, joining or access. Server-enforced membership '+
    'and workspace isolation remain mandatory.</p>'+
-  '<p class="ws01-create-state">Creation unavailable — pending authorized backend activation.</p>'+
+  '<p class="ws01-create-state">'+(active?
+   'Creation requires a valid signed session and explicit server authorization.':
+   'Creation unavailable — pending authorized backend activation.')+'</p>'+
   '<p class="ws01-form-feedback" role="status" aria-live="polite" aria-atomic="true"></p>'+
   '<footer class="ws01-create-footer">'+
    '<button type="button" class="ws01-create-cancel" data-ws01-close>Cancel</button>'+
-   '<button type="submit" class="ws01-primary">Validate draft</button>'+
+   '<button type="submit" class="ws01-primary">'+(active?'Create workspace':'Validate draft')+'</button>'+
   '</footer></form></section>';
 }
-function openCreate(catalog){
- const layer=panel(createContent(),'create');
+function openCreate(catalog,{lifecycle}={}){
+ const enabled=WS01_CREATION_ENABLED&&typeof lifecycle?.create==='function';
+ const layer=panel(createContent({enabled}),'create');
  const form=layer.querySelector('#ws01-proposal');
  const feedback=layer.querySelector('.ws01-form-feedback');
- form.addEventListener('submit',event=>{
+ const field=form.querySelector('#ws01-name');
+ const submit=form.querySelector('button[type="submit"]');
+ let busy=false,completed=false,requestId=null,requestDraft=null;
+ form.addEventListener('submit',async event=>{
   event.preventDefault();
+  if(busy||completed)return;
   const values=new FormData(form);
-  const assessed=assessWorkspaceCreationReadiness({
-   name:values.get('name'),privacy:values.get('privacy')
-  });
-  feedback.textContent=assessed.message;
-  feedback.dataset.status=assessed.status;
-  form.querySelector('#ws01-name').setAttribute('aria-invalid',String(!assessed.valid));
+  const proposal={name:values.get('name'),privacy:values.get('privacy')};
+  if(!enabled){
+   const assessed=assessWorkspaceCreationReadiness(proposal);
+   feedback.textContent=assessed.message;
+   feedback.dataset.status=assessed.status;
+   field.setAttribute('aria-invalid',String(!assessed.valid));
+   return;
+  }
+  const validated=validateWorkspaceProposal(proposal);
+  if(!validated.valid){
+   feedback.textContent=validated.reason;
+   feedback.dataset.status='INVALID_DRAFT';
+   field.setAttribute('aria-invalid','true');
+   return;
+  }
+  const fingerprint=JSON.stringify([validated.name,validated.privacy]);
+  if(requestDraft!==fingerprint){
+   requestId=null;requestDraft=fingerprint;
+  }
+  if(!requestId){
+   const generated=globalThis.crypto?.randomUUID?.();
+   if(!validUuid(generated)){
+    feedback.textContent='Secure request identifiers are unavailable. Creation was not attempted.';
+    feedback.dataset.status='CLIENT_NOT_READY';
+    return;
+   }
+   requestId=generated;
+  }
+  busy=true;submit.disabled=true;field.disabled=true;
+  for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=true;
+  feedback.textContent='Requesting signed server authorization…';
+  feedback.dataset.status='PENDING';
+  let result;
+  try{
+   result=await submitWorkspaceCreation({proposal:validated,
+    lifecycle,requestId,enabled});
+  }finally{
+   busy=false;
+   if(activeOverlay===layer&&layer.isConnected){
+    submit.disabled=false;field.disabled=false;
+    for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=false;
+   }
+  }
+  if(activeOverlay!==layer||!layer.isConnected)return;
+  feedback.textContent=result.message;
+  feedback.dataset.status=result.status;
+  field.setAttribute('aria-invalid',String(!result.valid));
+  if(result.ok){
+   completed=true;submit.disabled=true;
+   field.disabled=true;
+   for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=true;
+   submit.textContent='Created';
+  }else if(result.status==='REQUEST_CONFLICT'){
+   requestId=null;requestDraft=null;
+  }
  });
  form.addEventListener('input',()=>{
+  if(busy||completed)return;
   feedback.textContent='';
   delete feedback.dataset.status;
-  form.querySelector('#ws01-name').removeAttribute('aria-invalid');
+  field.removeAttribute('aria-invalid');
  });
- form.querySelector('#ws01-name').focus();
+ field.focus();
 }
 function inviteContent(current){
  const title=escape(current.name);
@@ -380,9 +508,9 @@ export function openWorkspaceInvitationDialog(current){
  returnFocus=document.activeElement;
  openInvites(row);
 }
-export function openWorkspaceSelector(current){
+export function openWorkspaceSelector(current,options={}){
  if(activeOverlay){closeWorkspacePanels();return;}
  const catalog=workspaceCatalog(current);
  returnFocus=document.activeElement;
- openMenu(catalog);
+ openMenu(catalog,options);
 }

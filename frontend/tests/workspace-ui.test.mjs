@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED,
- workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,validateWorkspaceProposal,assessWorkspaceCreationReadiness,renderWorkspaceSwitcher,
+ workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,validateWorkspaceProposal,assessWorkspaceCreationReadiness,submitWorkspaceCreation,renderWorkspaceSwitcher,
  WS02_INVITATIONS_ENABLED,validateWorkspaceInvitationDraft,renderWorkspaceInviteLaunch
 } from '../workspace-ui.js';
 
@@ -83,24 +83,119 @@ test('workspace creation readiness explicitly blocks server activation without a
 test('create modal explains blocked lifecycle and defaults privacy closed without misleading save action',()=>{
  const module=readFileSync('frontend/workspace-ui.js','utf8');
  const css=readFileSync('frontend/workspace-ui.css','utf8');
- assert.match(module,/function createContent\(\)/);
+ assert.match(module,/function createContent\(\{enabled=WS01_CREATION_ENABLED\}=\{\}\)/);
  assert.match(module,/aria-labelledby="ws01-create-title" aria-describedby="ws01-create-description/);
  assert.match(module,/id="ws01-proposal" novalidate/);
  assert.match(module,/name="privacy" value="closed" checked/);
  assert.match(module,/name="privacy" value="open"/);
  assert.match(module,/Open is workspace metadata only/);
  assert.match(module,/Creation unavailable — pending authorized backend activation/);
- assert.match(module,/type="submit" class="ws01-primary">Validate draft/);
+ assert.match(module,/type="submit" class="ws01-primary"/);
+ assert.match(module,/active\?'Create workspace':'Validate draft'/);
+ assert.match(module,/if\(!enabled\)\{/);
  assert.match(module,/ws01-create-footer/);
  assert.match(module,/aria-live="polite"/);
- assert.match(module,/assessWorkspaceCreationReadiness\(\{/);
- assert.match(module,/form\.querySelector\('#ws01-name'\)\.focus\(\)/);
+ assert.match(module,/assessWorkspaceCreationReadiness\(proposal\)/);
+ assert.match(module,/field\.focus\(\)/);
  assert.doesNotMatch(module,/api\.rpc\(['\"]wm_ws01_create/);
  assert.match(css,/\.ws01-create-card \.ws01-create-footer\{/);
  assert.match(css,/\.ws01-create-card \.ws01-create-footer button\{/);
  assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
  assert.match(css,/max-height:min\(90dvh,calc\(100dvh - 24px\)\)/);
  assert.match(css,/overflow-wrap:anywhere/);
+});
+
+test('workspace creation stays server-blocked by default and never invokes client create',async()=>{
+ let calls=0;
+ const lifecycle={create:async()=>{calls++;throw Error('MUST_NOT_WRITE');}};
+ const requestId='11111111-1111-4111-8111-111111111111';
+ const invalid=await submitWorkspaceCreation({
+  proposal:{name:'x',privacy:'closed'},enabled:true,lifecycle,requestId
+ });
+ assert.equal(invalid.status,'INVALID_DRAFT');
+ const disabled=await submitWorkspaceCreation({
+  proposal:{name:'A Valid Workspace',privacy:'closed'},lifecycle,requestId
+ });
+ assert.equal(disabled.status,'PENDING_SERVER_ACTIVATION');
+ assert.equal(disabled.ok,false);
+ assert.equal(disabled.valid,true);
+ assert.equal(calls,0);
+ assert.equal(WS01_CREATION_ENABLED,false);
+});
+
+test('authorized creation path validates an exact owner receipt, stable UUID and idempotent replay',async()=>{
+ const requestId='11111111-1111-4111-8111-111111111111';
+ const workspaceId='22222222-2222-4222-8222-222222222222';
+ const calls=[];
+ const lifecycle={create:async(arg)=>{
+  calls.push(arg);
+  return {workspaceId,relation:'owner',privacy:'closed',
+   active:false,idempotent:calls.length>1};
+ }};
+ for(const status of ['CREATED','EXISTING_REQUEST']){
+  const result=await submitWorkspaceCreation({
+   proposal:{name:'  Engineering Pilot  ',privacy:'closed'},
+   enabled:true,requestId,lifecycle
+  });
+  assert.equal(result.ok,true);
+  assert.equal(result.status,status);
+  assert.equal(result.receipt.workspaceId,workspaceId);
+  assert.equal(result.receipt.active,false);
+  assert.ok(Object.isFrozen(result));
+  assert.ok(Object.isFrozen(result.receipt));
+  assert.deepEqual(calls.at(-1),{
+   name:'Engineering Pilot',privacy:'closed',requestId
+  });
+ }
+ assert.equal(calls.length,2);
+});
+
+test('creation handler never mistakes denial, malformed receipt or ambiguous timeout as success',async()=>{
+ const requestId='11111111-1111-4111-8111-111111111111';
+ let calls=0;
+ for(const status of [401,403,404,409,503,0,500]){
+  const result=await submitWorkspaceCreation({
+   proposal:{name:'Safe Workspace',privacy:'open'},
+   enabled:true,requestId,
+   lifecycle:{create:async()=>{calls++;throw {status,message:'secret_jwt_and_email_must_not_leak'}}}
+  });
+  assert.equal(result.ok,false);
+  assert.notEqual(result.status,'CREATED');
+  assert.doesNotMatch(result.message,/secret_jwt_and_email_must_not_leak/);
+ }
+ assert.equal(calls,7);
+ const malformed=await submitWorkspaceCreation({
+  proposal:{name:'Safe Workspace',privacy:'open'},enabled:true,requestId,
+  lifecycle:{create:async()=>({workspaceId:requestId,
+   relation:'admin',privacy:'open',active:true,idempotent:false})}
+ });
+ assert.equal(malformed.status,'UNCONFIRMED');
+ assert.equal(malformed.ok,false);
+ const badId=await submitWorkspaceCreation({
+  proposal:{name:'Safe Workspace',privacy:'open'},enabled:true,
+  requestId:'fake',
+  lifecycle:{create:async()=>{throw Error('MUST_NOT_CALL')}}
+ });
+ assert.equal(badId.status,'CLIENT_NOT_READY');
+});
+
+test('new create UI keeps draft mode by default, guarded branch for authorized signed lifecycle',()=>{
+ const module=readFileSync('frontend/workspace-ui.js','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(module,/WS01_CREATION_ENABLED=false/);
+ assert.match(module,/function createContent\(\{enabled=WS01_CREATION_ENABLED\}=\{\}\)/);
+ assert.match(module,/if\(!enabled\)\{/);
+ assert.match(module,/await submitWorkspaceCreation\(\{proposal:validated/);
+ assert.match(module,/globalThis\.crypto\?\.randomUUID\?\.\(\)/);
+ assert.match(module,/requestDraft!==fingerprint/);
+ assert.match(module,/if\(busy\|\|completed\)return/);
+ assert.match(module,/activeOverlay!==layer\|\|!layer\.isConnected/);
+ assert.match(module,/data\.status|dataset\.status/);
+ assert.match(module,/Create workspace/);
+ assert.match(module,/Validate draft/);
+ assert.match(app,/new WorkspaceLifecycleClient\(\{auth,api:db\}\)/);
+ assert.match(app,/\{lifecycle:workspaceLifecycleClient\}/);
+ assert.doesNotMatch(module,/fetch\(|localStorage|sessionStorage/);
 });
 
 test('workspace switcher escapes signed workspace name and exposes an accessible action',()=>{
@@ -122,7 +217,7 @@ test('integration is limited to authorized workspace context and never executes 
  assert.match(module,/WS01_CREATION_ENABLED=false/);
  assert.match(module,/No workspace was created/);
  assert.match(app,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
- assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\}\)/);
+ assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\{lifecycle:workspaceLifecycleClient\}\)/);
  assert.match(app,/closeWorkspacePanels\(\);clearBulkActivation\(\)/);
  assert.match(index,/frontend\/workspace-ui\.css/);
  assert.match(smoke,/frontend\/workspace-ui\.js/);
