@@ -174,6 +174,8 @@ BEGIN
  IF NOT denied THEN RAISE EXCEPTION 'Owner permission crossed workspace boundary'; END IF;
 END $h_config_owner$;
 RESET ROLE;
+-- H2 delegated-role preview runs with Phase H's selected-workspace guard active.
+\i sql/tests/cp-ws01-phase-h2-scoped-delegation-disposable.sql
 UPDATE private.ws02d_invitation_flags SET enabled=true WHERE id IS TRUE;
 
 -- The trusted BACKEND private issuer remains unavailable to signed browser roles.
@@ -300,6 +302,8 @@ ROLLBACK;
 DO $h_rollback$
 BEGIN
  IF current_database()<>'workspace_disposable'
+  OR to_regprocedure('private.ws01_h2_scoped_role_actor(uuid)') IS NOT NULL
+  OR to_regprocedure('public.ws01_h2_scoped_role_review(uuid)') IS NOT NULL
   OR (SELECT count(*) FROM private.ws01_config_events)<>0
   OR (SELECT count(*) FROM private.ws01_config_revisions)<>0
   OR (SELECT count(*) FROM private.ws02d_invitations)<>0
