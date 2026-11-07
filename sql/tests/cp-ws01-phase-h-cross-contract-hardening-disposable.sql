@@ -94,7 +94,7 @@ BEGIN
  THEN RAISE EXCEPTION 'Pre-switch board scoping regressed'; END IF;
 END $h_before_switch$;
 DO $h_switch$
-DECLARE receipt jsonb; denied boolean:=false;
+DECLARE receipt jsonb;
 BEGIN
  receipt:=public.wm_ws01_select(
   '00000000-0000-4000-8000-000000000002',
@@ -102,12 +102,6 @@ BEGIN
  IF receipt->>'switched'<>'true'
   OR receipt->>'previousWorkspaceId'<>'00000000-0000-4000-8000-000000000001'
  THEN RAISE EXCEPTION 'Authoritative signed switch receipt regressed'; END IF;
- BEGIN
-  PERFORM public.wm_ws01_select(
-   '00000000-0000-4000-8000-000000000001',
-   '00000000-0000-4000-8000-000000000001');
- EXCEPTION WHEN serialization_failure THEN denied:=true; END;
- IF NOT denied THEN RAISE EXCEPTION 'Stale session CAS was not rejected'; END IF;
 END $h_switch$;
 -- STABLE function visibility requires a new statement to observe the change.
 DO $h_after_switch$
@@ -129,6 +123,13 @@ BEGIN
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
  EXCEPTION WHEN insufficient_privilege THEN denied:=true; END;
  IF NOT denied THEN RAISE EXCEPTION 'Foreign UUID disclosed an actor scope'; END IF;
+ denied:=false;
+ BEGIN
+  PERFORM public.wm_ws01_select(
+   '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000000001');
+ EXCEPTION WHEN serialization_failure THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Stale session CAS was not rejected'; END IF;
 END $h_after_switch$;
 RESET ROLE;
 
@@ -310,8 +311,8 @@ BEGIN
   OR (SELECT enabled FROM private.ws02d_invitation_flags WHERE id IS TRUE)
   OR (SELECT name FROM public.workspaces
       WHERE id='00000000-0000-4000-8000-000000000002')<>'Foreign Workspace'
-  OR NOT pg_catalog.position('v_fallback' IN pg_get_functiondef(
-      'public.current_workspace_id(uuid)'::regprocedure))>0
+  OR pg_get_functiondef('public.current_workspace_id(uuid)'::regprocedure)
+     NOT LIKE '%v_fallback%'
  THEN RAISE EXCEPTION 'Phase H disposable scope or ACL was not restored'; END IF;
  RAISE NOTICE 'CP_WS01_PHASE_H_CROSS_CONTRACT_ROLLBACK_PASS';
 END $h_rollback$;
