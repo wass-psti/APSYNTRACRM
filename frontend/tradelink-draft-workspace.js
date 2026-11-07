@@ -751,20 +751,23 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
  const selected=TL03_DOMAIN_READS_ENABLED&&canManage&&view.mode==='edit'&&view.selected?.documentId?
    view.selected:null;
  return '<div class="tl-draft-workspace">'+
-  '<section class="tl-draft-panel"><div class="tl-panel-heading">'+
-   '<div><p class="tl-eyebrow">CP-TL-03D / Phase 1</p><h2>Draft workspace</h2></div>'+
-   '<span class="tl-draft-badge">Controlled dark launch</span></div>'+
-   '<p class="muted">Draft UI is staged. Domain reads: <strong>'+
-    (TL03_DOMAIN_READS_ENABLED?'enabled':'not activated')+'</strong>. Writes: <strong>'+
-    (TL03_DOMAIN_WRITES_ENABLED?'enabled':'not activated')+
-   '</strong>. Existing APSYNTRA signed authorization remains mandatory.</p>'+
-   '<p class="tl-draft-boundary" role="note">No local draft storage, synthetic saved documents, independent login, attachments, workflow approvals or PDF export. A validated preview is not a saved record.</p>'+
-   '<div class="tl-panel-heading"><h3>Authoritative Draft records</h3>'+
-    '<button type="button" class="secondary" data-action="tradelink-draft-refresh"'+
-      (!TL03_DOMAIN_READS_ENABLED||view.busy?' disabled':'')+'>Refresh</button></div>'+
-   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
-   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
-   renderTradeLinkDraftList(rows,view,canManage)+
-  '</section>'+renderEditor(selected?.record,view.mode,canManage,
-   view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'')+'</div>';
+  renderEditor(selected?.record,view.mode,canManage,
+   view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'')+
+  '<details class="tl-reference-list-details">'+
+   '<summary>All Documents · authorized Draft listing'+
+    '<span class="tl-draft-badge">Controlled dark launch</span></summary>'+
+   '<section class="tl-draft-panel"><div class="tl-panel-heading">'+
+    '<div><p class="tl-eyebrow">CP-TL-03D / Phase 1</p><h2>Draft workspace</h2></div></div>'+
+    '<p class="muted">Domain reads: <strong>'+
+     (TL03_DOMAIN_READS_ENABLED?'enabled':'not activated')+'</strong>. Writes: <strong>'+
+     (TL03_DOMAIN_WRITES_ENABLED?'enabled':'not activated')+
+    '</strong>. Existing APSYNTRA signed authorization remains mandatory.</p>'+
+    '<p class="tl-draft-boundary" role="note">No local draft storage, synthetic saved documents, independent login, attachments, workflow approvals or PDF export. A validated preview is not a saved record.</p>'+
+    '<div class="tl-panel-heading"><h3>Authoritative Draft records</h3>'+
+     '<button type="button" class="secondary" data-action="tradelink-draft-refresh"'+
+       (!TL03_DOMAIN_READS_ENABLED||view.busy?' disabled':'')+'>Refresh</button></div>'+
+    (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
+    (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
+    renderTradeLinkDraftList(rows,view,canManage)+
+   '</section></details></div>';
 }
