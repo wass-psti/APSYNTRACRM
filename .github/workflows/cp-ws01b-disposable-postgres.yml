@@ -47,6 +47,9 @@ on:
       - 'scripts/ws01c-g4b-verify-inventory.mjs'
       - 'sql/tests/cp-ws01c-g4c-role-dependent-fingerprints.json'
       - 'scripts/ws01c-g4c-verify-dependents.mjs'
+      - 'scripts/ws01-h3-private-source-guard.mjs'
+      - 'scripts/ws01-h3-private-source-guard.test.mjs'
+      - 'sql/tests/cp-ws01-h3-private-core-source-manifest.json'
       - 'sql/tests/cp-ws01-phase-h2-scoped-delegation-disposable.sql'
       - 'sql/tests/cp-ws01c-b3-production-activated-readonly.sql'
   workflow_dispatch:
@@ -106,6 +109,10 @@ jobs:
         run: node scripts/ws01c-g4b-verify-inventory.mjs
       - name: Verify G4C direct role-dependent fingerprints and shared workspace call graph
         run: node scripts/ws01c-g4c-verify-dependents.mjs
+      - name: Guard H3 protected source fingerprints and deny unsafe private bundles (no SQL replay)
+        run: |
+          node scripts/ws01-h3-private-source-guard.mjs --manifest-only
+          node --test scripts/ws01-h3-private-source-guard.test.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
       - name: Execute real disposable Auth/session SQL with synthetic identity and mocked GoTrue user
