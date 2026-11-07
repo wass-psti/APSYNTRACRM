@@ -526,7 +526,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
    // Retain existing module form control for source contract/tests. The
    // horizontal tab links are the visible accessible module switcher.
    '<div class="tl-reference-sr-only"><label class="tl-draft-field"><span>Document module</span>'+
-    '<select name="documentType" '+(editing?'disabled':'')+'>'+
+    '<select name="documentType" tabindex="-1" aria-hidden="true" '+(editing?'disabled':'')+'>'+
      options(typeLabels,type)+'</select></label></div>'+
    (editing?'<input type="hidden" name="documentType" value="'+escape(type)+'">':'')+
    '<section class="tl-reference-form-section tl-reference-document-info">'+
