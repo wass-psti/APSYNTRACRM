@@ -51,7 +51,8 @@ References: [RLS policies](https://supabase.com/docs/guides/database/postgres/ro
 | Provider physical-backup inventory | **VERIFIED — 7 completed backups** | Existing CLI `supabase backups list`, latest `2026-11-06T17:17:11.138Z` UTC; PITR disabled |
 | Successful restoration/rehearsal, recovery owner, RPO/RTO | **PENDING** | Backup list status alone is not a verified restoration |
 | Named production executor, independent reviewer and rollback owner | **PENDING** | Responsible persons and change window not established in evidence |
-| Fresh genuine positive/negative signed Stage A acceptance | **PENDING** | Historical manager/HR 6/6 reports exist; fresh reports and genuine revoked/foreign-workspace denials outstanding |
+| Fresh signed Stage A authorized-manager acceptance | **VERIFIED — 6/6 PASS** | User-supplied sanitized report corroborated by the read-only connected Security page on 2026-11-07; zero writes/disclosures |
+| Fresh signed Stage A nonmanager and foreign/revoked-session denial | **PENDING/BLOCKED** | Older HR 6/6 accepted historically only; no new nonmanager, foreign or revoked-session report |
 | Legacy TradeLink SECURITY DEFINER/RLS risk disposition | **PENDING** | Scoped security review / risk acceptance needed |
 | Exact two-function Stage B privilege change approval | **BLOCKED — SEPARATE APPROVAL REQUIRED** | Production permission change |
 | Production QA record/cleanup authorization, if needed | **BLOCKED — SEPARATE APPROVAL REQUIRED** | Creating/cleaning production documents and Board items changes live data |
@@ -61,7 +62,7 @@ References: [RLS policies](https://supabase.com/docs/guides/database/postgres/ro
 
 ## 6. Smallest next authorized step
 
-Use the newly verified provider backup inventory to establish an accountable restore/rollback plan, explicit RPO/RTO, and named production execution, security-review and rollback owners; collect refreshed genuine signed **read-only** manager and lower-privilege reports using the existing Security-page Stage A acceptance (do not share tokens). Record a scoped disposition for legacy TradeLink security warnings. Then request **separate, exact-scope production permission and QA-fixture approval** before applying either Stage B grant, changing frontend flags or writing any real document. On authorized activation, execute the existing signed create/deny/revision/Board/list/refresh acceptance plan and be prepared to revoke the two grants if stop conditions occur.
+Use the newly verified provider backup inventory to establish an accountable restore/rollback plan, explicit RPO/RTO, and named production execution, security-review and rollback owners; retain the newly captured signed manager 6/6 evidence and collect a refreshed **read-only** lower-privilege report using the existing Security-page Stage A acceptance (do not share tokens). Record a scoped disposition for legacy TradeLink security warnings. Then request **separate, exact-scope production permission and QA-fixture approval** before applying either Stage B grant, changing frontend flags or writing any real document. On authorized activation, execute the existing signed create/deny/revision/Board/list/refresh acceptance plan and be prepared to revoke the two grants if stop conditions occur.
 
 **Operational change in this CP-TL-03E review:** Documentation only, no app code edit, no CI rerun, no backend DDL/DML, and no production activation.
 
@@ -108,7 +109,7 @@ The provider response indicates `region: ap-southeast-2`, `walg_enabled: true`, 
 - Expected lower-privilege report: `status: PASS`, `scenario: BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED`, six `PASS` checks, zero writes/disclosure.
 - A genuine foreign-workspace report remains **BLOCKED** until an independently eligible existing workspace actor is available; a wrong-board-ID probe is not a replacement.
 - A genuine expired/revoked bearer test remains **PENDING** and cannot be achieved by the UI's normal auto-refresh path; requires a separately controlled test with an authorized session authority.
-- **No fresh signed report was collected in this checkpoint.** The November 6 user-supplied manager/nonmanager reports remain historic evidence, not newly rerun.
+- **Fresh authorized-manager signed report collected on 2026-11-07, 6/6 PASS; corroborated by the signed Security page.** Nonmanager and foreign/revoked real-session checks have not been rerun here. Historical November 6 nonmanager reports remain historical evidence only.
 
 **Data security:** Capture only sanitized reports. Do not copy browser tokens, session IDs, raw HTTP headers, user IDs, private documents, database connection strings or account credentials into this repository.
 
@@ -129,7 +130,7 @@ Stage B is **Draft create/update/archive/restore only**. The frontend `TL03_DOMA
 4. **Stop immediately** on unexpected authorization, workspace crossing, duplicate Board item, incomplete transaction/audit, stale-session acceptance or unrecoverable error. Disable frontend write UI for containment, execute the **approved narrow rollback** `sql/cp-tl03c-stage-b-write-revoke-candidate.sql` through the authorized executor, verify both EXECUTE privileges are denied while Stage A reads and persisted records remain intact; invoke a broader outage/restore only with separate emergency authority.
 5. Preserve the actual signed evidence and operator sign-off. Operational activation is VERIFIED only upon all real acceptance checks, not from source or disposable tests.
 
-**As of this review:** the provider physical-backup inventory is **VERIFIED**, while successful restore/recovery evidence, executor/reviewer/rollback owner, fresh signed role acceptance, scoped production authorization, and QA document authorization remain **PENDING/BLOCKED**. **Production activation is NO-GO.** No grant/revoke SQL, DML, feature-flag edit, backup import/export, browser automation, or production deployment was performed.
+**As of this review:** the provider physical-backup inventory is **VERIFIED**, while successful restore/recovery evidence, executor/reviewer/rollback owner, fresh nonmanager/foreign/revoked signed denial acceptance, scoped production authorization, and QA document authorization remain **PENDING/BLOCKED**. **Production activation is NO-GO.** No grant/revoke SQL, DML, feature-flag edit, backup import/export, browser automation, or production deployment was performed.
 
 
 ## 10. Scoped live TradeLink security catalog inventory (2026-11-07, SELECT-only)
@@ -144,3 +145,36 @@ Fresh, production-connected **metadata-only** inspection of `pg_proc`, function 
 This read-only catalog review narrows the legacy security scope without changing any grants, functions, policies, or data. The **independent risk disposition remains PENDING**: review authorization clauses, identity/session/workspace checks, input validation and call graphs of the eleven existing elevated functions against applicable source; test valid and denied real principal behavior in an authorized environment. Do not infer they are safe merely because anonymous EXECUTE is denied, or try to fix general advisor warnings by broad grants/revocations.
 
 **Current go/no-go unchanged: NO-GO.** A good RLS metadata result and HTTP 401 are necessary but insufficient evidence of complete signed-user authorization or recoverability.
+
+
+## 11. Fresh genuine authorized-manager Stage A acceptance — 2026-11-07
+
+**Classification: VERIFIED for one existing authorized-manager signed session, limited to the six read-only Stage A acceptance checks.**
+
+The user submitted the sanitized output generated by the existing APSYNTRA CRM Security-page action. A separate read-only `Browser.get_tab_context` inspection of the currently selected signed `#/security` page independently displayed the matching **Result: PASS · AUTHORIZED MANAGER** with six PASS rows, `Writes attempted: 0`, and `Document contents disclosed: 0`. This confirms the application presented the same result; the browser inspection did **not** independently replay the underlying bearer-bound RPCs or inspect raw server logs.
+
+**Nonsecret accepted report:**
+
+```json
+{
+  "checkpoint": "CP-TL-03C-STAGE-A-SIGNED-READ",
+  "status": "PASS",
+  "scenario": "AUTHORIZED_MANAGER",
+  "checks": [
+    {"name": "signed-identity", "status": "PASS"},
+    {"name": "effective-access", "status": "PASS"},
+    {"name": "document-list", "status": "PASS"},
+    {"name": "missing-document-read", "status": "PASS"},
+    {"name": "wrong-board-denial", "status": "PASS"},
+    {"name": "stable-session", "status": "PASS"}
+  ],
+  "writesAttempted": 0,
+  "documentsDisclosed": 0
+}
+```
+
+**Accepted scope:** current signed GoTrue user and active workspace reverified by the app's Stage A checks; manager-level effective access; bounded document list; negative read for a nonexisting document; wrong-board denial; stable current session. The report contains no JWT, session identifiers, private user details, document contents, or write operations. A result of `document-list: PASS` against zero current records **does not** validate persisted-document cross-workspace RLS.
+
+**Still outstanding:** Fresh genuine HR/nonmanager denial; foreign-workspace actor denial where an eligible existing legitimate actor exists; revoked/expired bearer denial (separate controlled operation); restored-backup proof, release/review/rollback ownership, scoped legacy elevated-function risk disposition, separately approved two-function production EXECUTE grant and QA document fixture authorization. **No production permissions, flags, data, sessions, backups, or user roles were changed. Stage B NO-GO unchanged.**
+
+**Next narrow acceptance:** An existing legitimate nonmanager can use the same Security-page **Run Stage A signed read checks → Copy nonsecret result** action. Expected scenario is `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED`, `status: PASS`, all six checks PASS, zero writes and zero content disclosures. Do not create test accounts or change roles to force the result.
