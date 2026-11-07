@@ -794,13 +794,13 @@ test('source-bound local document search filters only previously authorized page
   query:'',documentType:'all',workflowState:'all',archiveMode:'active',
   sortBy:'documentNumber',sortDirection:'asc'});
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows).map(x=>x.documentNumber),
-  ['Q-100','Q-200','PL-400','E-500']);
+  ['E-500','PL-400','Q-100','Q-200']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{query:' q-',documentType:'quotation',
   workflowState:'draft'}).map(x=>x.documentNumber),['Q-100']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{archiveMode:'archived'}).map(x=>x.documentNumber),
   ['PO-300']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{archiveMode:'all',workflowState:'draft'})
-  .map(x=>x.documentNumber),['Q-100','PO-300']);
+  .map(x=>x.documentNumber),['PO-300','Q-100']);
  const unsafe=normalizeTradeLinkDraftListFilters({
   query:'X'.repeat(400),documentType:'../payment',workflowState:'approved;drop',archiveMode:'x'});
  assert.equal(unsafe.query.length,120);
