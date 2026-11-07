@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-08 (Asia/Manila)
 **Project:** APSYNTRA CRM / WatchdogWorkspace / TradeLink
-**Status:** **SOURCE IMPLEMENTED, NONPRODUCTION TESTS IN PROGRESS; RECOVERY SIGN-OFF PENDING; STAGE B NO-GO.**
+**Status:** **SOURCE IMPLEMENTED; DISPOSABLE POSTGRESQL 17 VERIFICATION PASSED; RECOVERY SIGN-OFF PENDING; STAGE B NO-GO.**
 
 This is a controlled **source-only** hardening proposal, not approval to execute any of its SQL on the shared production database. Do not merge or deploy the candidate as a live database migration until independent review and separately authorized change control are satisfied.
 
@@ -32,6 +32,8 @@ The pre-existing `private.wm_board_config_session_active()` checks the actor and
 The new `cp-tl03e-legacy-session-disposable.yml` workflow runs only against its own PostgreSQL 17 CI service `cp_tl03e_disposable`, with synthetic JWT claims, session rows, workspaces and asset records. It first installs the original live-referenced function bodies and tests that the old synthetic JWT still accesses one legacy read after session deletion, then applies the fingerprint-locked candidate **inside disposable PostgreSQL only**.
 
 Acceptance cases: valid manager read/CAS asset update; 11/11 revoked-session legacy RPC denials; expired session denial; signed employee denied asset access; foreign-workspace actor not receiving the manager workspace's asset; unchanged ACL/function count and no unwanted mutations on denial. A separate Node source-contract test protects exact function coverage, fail-closed guard placement and unchanged frontend domain flags.
+
+**Verified isolated CI:** [GitHub Actions run 42392504401](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42392504401) completed **SUCCESS** on original source commit eff2b2f5: before hardening the synthetic revoked manager could read the legacy asset, and after hardening all **11/11 RPCs** denied that bearer; valid-manager read/CAS write, expiry, employee denial, foreign-workspace isolation and authenticated/anonymous ACL checks passed. An additional exact-original-body-preservation test and function-owner preflight were subsequently added on this same draft PR; verify the new exact head commit in CI before accepting the revised candidate.
 
 **Important:** Disposable synthetic PostgreSQL tests do not prove actual signed end-user behavior after a production SQL release. Before any production activation, obtain reviewed authority and run proportionate genuine signed actor negative and positive tests in the existing permitted environment. No new user accounts or Supabase projects are required.
 

@@ -10,6 +10,7 @@ DECLARE r record; counted integer;
 BEGIN
  IF to_regprocedure('private.wm_board_config_session_active()') IS NULL
  OR md5(pg_get_functiondef('private.wm_board_config_session_active()'::regprocedure)) <> 'a2284885128169732cb646fe03adcd83'
+ OR (SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE oid='private.wm_board_config_session_active()'::regprocedure) IS DISTINCT FROM 'postgres'
  THEN RAISE EXCEPTION 'TL03E_SESSION_HELPER_DRIFT' USING ERRCODE='42501'; END IF;
  SELECT count(*) INTO counted FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
  WHERE n.nspname='public' AND p.proname LIKE 'tradelink_%'
@@ -32,6 +33,7 @@ BEGIN
    OR md5(pg_get_functiondef(to_regprocedure(r.signature))) IS DISTINCT FROM r.fingerprint
    OR NOT has_function_privilege('authenticated',r.signature,'EXECUTE')
    OR has_function_privilege('anon',r.signature,'EXECUTE')
+   OR (SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE oid=to_regprocedure(r.signature)) IS DISTINCT FROM 'postgres'
   THEN RAISE EXCEPTION 'TL03E_LEGACY_RPC_DRIFT_%',r.signature USING ERRCODE='42501'; END IF;
  END LOOP;
 END $preflight$;
@@ -369,6 +371,7 @@ BEGIN
  ) AS expected(signature,original_fingerprint) LOOP
  IF NOT has_function_privilege('authenticated',r.signature,'EXECUTE')
  OR has_function_privilege('anon',r.signature,'EXECUTE')
+ OR (SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE oid=to_regprocedure(r.signature)) IS DISTINCT FROM 'postgres'
  THEN RAISE EXCEPTION 'TL03E_ACL_MISMATCH_%',r.signature USING ERRCODE='42501'; END IF;
  END LOOP;
 END $postflight$;

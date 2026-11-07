@@ -39,6 +39,28 @@ test('all 11 legacy RPCs receive fail-closed session guard before the original a
   assert.ok(guard<body.indexOf("has_module_access('tradelink'"),name+': guard must precede module check');
  }
 });
+test('original legacy function source is preserved after removing only the session guard',()=>{
+ const inserted=[
+  " IF private.wm_board_config_session_active() IS DISTINCT FROM TRUE THEN",
+  "  RAISE EXCEPTION 'TRADELINK_SESSION_REVOKED' USING ERRCODE='42501';",
+  " END IF;",
+  ""
+ ].join('\n');
+ const section=(source,name)=>{
+  const start=source.indexOf('CREATE OR REPLACE FUNCTION public.'+name+'(');
+  assert.ok(start>=0,name);
+  const next=source.indexOf('CREATE OR REPLACE FUNCTION public.',start+10);
+  const post=source.indexOf('DO $postflight$',start+10);
+  const ends=[next,post].filter(x=>x>start);
+  return source.slice(start,ends.length?Math.min(...ends):source.length).trim();
+ };
+ for(const name of required){
+  const before=section(baseline,name);
+  const after=section(candidate,name);
+  assert.equal(after.split(inserted).length,2,name+': one guard');
+  assert.equal(after.replace(inserted,''),before,name+': unchanged original');
+ }
+});
 test('disposable tests model all distinct cases and production feature flags are not enabled',()=>{
  assert.match(checks,/REVOCATION PASS: 11 of 11/);
  assert.match(checks,/Expired synthetic session/);
