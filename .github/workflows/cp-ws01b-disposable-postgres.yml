@@ -49,6 +49,7 @@ on:
       - 'scripts/ws01c-g4c-verify-dependents.mjs'
       - 'scripts/ws01-h3-private-source-guard.mjs'
       - 'scripts/ws01-h3-private-source-guard.test.mjs'
+      - 'scripts/ws01-activate04-concurrent-cas-disposable.sh'
       - 'sql/tests/cp-ws01-h3-private-core-source-manifest.json'
       - 'sql/tests/cp-ws01-phase-h2-scoped-delegation-disposable.sql'
       - 'sql/tests/cp-ws01c-b3-production-activated-readonly.sql'
@@ -188,6 +189,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-preactivation.sql
       - name: Accept disposable owner creation, privacy, CAS, revocation and isolation
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-acceptance.sql
+      - name: Prove real simultaneous signed selection CAS under GoTrue row contention (disposable only)
+        run: bash scripts/ws01-activate04-concurrent-cas-disposable.sh
       - name: Reproduce deployed board ACL in synthetic workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b2-board-acl-fixture.sql
       - name: Stage minimal AND-integrated board role ceiling (disposable only)
