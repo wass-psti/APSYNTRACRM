@@ -16,7 +16,7 @@ mkdir -p "$temporary/storage-original/synthetic" "$temporary/storage-recovered"
 printf 'synthetic-storage-object-no-production-data\n' > "$temporary/storage-original/synthetic/fixture.txt"
 sha="$(sha256sum "$temporary/storage-original/synthetic/fixture.txt" | awk '{print $1}')"
 
-dbsql() { docker exec -i "$PG_CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$1"; }
+dbsql() { local database="$1"; shift; docker exec -i "$PG_CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$database" "$@"; }
 dbsql "$SOURCE" -v storage_sha="$sha" < sql/tests/cp-tl03e-phase3-synthetic-restore-fixture.sql
 docker exec "$PG_CONTAINER" pg_dump -U postgres -d "$SOURCE" --format=custom --file=/tmp/cp_tl03e_phase3.dump
 docker cp "$PG_CONTAINER:/tmp/cp_tl03e_phase3.dump" "$temporary/db.dump"
