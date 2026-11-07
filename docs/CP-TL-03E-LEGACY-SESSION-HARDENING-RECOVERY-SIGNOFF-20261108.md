@@ -79,3 +79,43 @@ The database is shared across WatchdogWorkspace applications. **A full database 
 **TradeLink Stage B document creation:** **NO-GO**. Authenticated EXECUTE on both Stage B document commit functions and both frontend domain feature flags remain disabled.
 
 This work does **not** repeat the previously accepted authorized manager, employee and revoked TL03 read checks. The next actionable work after isolated CI is an independent candidate review and recovery sign-off; production database mutation requires a separate authorization decision.
+
+## 6. Independent review and recovery-owner decision record — OPEN, UNSIGNED
+
+**Submission context:** Draft [PR #73](https://github.com/wass-psti/APSYNTRACRM/pull/73) has no independent APPROVED review or requested reviewer as of this inspection. No CODEOWNERS file was found in the usual root, `.github/`, or `docs/` locations. The implementer's audit and synthetic CI do not constitute independent approval or an organizational recovery decision.
+
+### Required independent security attestation
+
+Review the exact PR head SHA, the 11 SECURITY DEFINER RPC signatures and function ownership, existing EXECUTE grants, source hashes, trusted active-session helper, search paths and nested calls; verify the original roles, workspace membership, revision/CAS and audit behaviors are preserved. Inspect `auth.sessions` existence/not-after and the JWT `session_id`/`auth.uid()` binding. Explicitly assess residual stale-token and nonmanager/foreign-workspace risks.
+
+**Test-quality finding addressed in this branch:** The original synthetic acceptance counted any SQLSTATE `42501` as a successful revoked-session denial. That could mask unrelated role/workspace denial. The updated assertions require the exact `TRADELINK_SESSION_REVOKED` error message for all eleven revoked calls and expired-session denial, and retain the original `TRADELINK_ACCESS_DENIED` response for unauthorized employees. The exact-head disposable PostgreSQL 17 workflow must pass before relying on these strengthened results.
+
+| Required security evidence | Current disposition |
+| --- | --- |
+| Independent reviewer identity and role (not the implementer) | **UNASSIGNED** |
+| Pinned full reviewed SHA and review date | **PENDING** |
+| 11-function guard, ACL, ownership and source-fingerprint review | **PENDING** |
+| Positive manager, role denial, workspace and nested-call analysis | **PENDING** |
+| Exact revoked-session error cause in disposable test | **AWAITING UPDATED CI** |
+| GitHub APPROVE, REQUEST_CHANGES or BLOCK with rationale | **NOT SIGNED** |
+
+### Recovery-owner attestation — whole shared WatchdogWorkspace project
+
+Record approvals in an authenticated change record linked from this PR. Do not commit private backup contents, credentials, bearer tokens or employee identifiers.
+
+| Recovery approval field | Required decision | Status |
+| --- | --- | --- |
+| Recovery/incident owner | Named responsible operator and escalation/stop contact | **UNASSIGNED** |
+| Security reviewer | Separate authorized reviewer and approval link | **UNASSIGNED** |
+| Production executor/change window | Named permitted executor, date/timezone, target | **UNASSIGNED** |
+| Organization-approved RPO | Maximum tolerated data loss across ALL modules | **UNSET** |
+| Organization-approved RTO | Maximum tolerated outage, including validation | **UNSET** |
+| Recoverable snapshot | Refresh and choose an eligible completed backup at change time | **INVENTORY ONLY** |
+| Rehearsal or risk exception | Successful isolated restore evidence OR signed risk exception if a drill cannot be done without production impact | **NOT VERIFIED** |
+| Shared database and Storage recovery | Accept all-app database rollback and Storage object gaps | **NOT APPROVED** |
+| Containment and rollback | Stop authority, permission containment, and corrected-guard plan; never silently restore unguarded originals | **PENDING** |
+| Decision | APPROVED RECOVERY PLAN / RISK EXCEPTION ACCEPTED / REJECTED with owner, date and ticket | **NOT SIGNED** |
+
+**No-go invariant:** CI success, seven completed physical backups, GitHub PR authorship, and standing development authorization do not substitute for these independent sign-offs. Even after approvals, the exact eleven-function production SQL change needs separate permission/change approval. Stage B Draft writes and any production QA records need separate authorizations.
+
+**No project duplication or unsafe restore:** Only the existing WatchdogWorkspace Supabase project is in scope. Do not create another Supabase project or restore the shared production database as a rehearsal without separately approved authority. A signed risk exception acknowledges uncertainty; it is not evidence of a successful restore.

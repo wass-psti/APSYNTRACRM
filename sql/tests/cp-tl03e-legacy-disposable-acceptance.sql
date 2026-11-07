@@ -25,7 +25,7 @@ RESET ROLE;
 DELETE FROM auth.sessions WHERE id='33333333-3333-4333-8333-333333333333';
 SET ROLE authenticated;
 DO $revoked$
-DECLARE q text; denied integer:=0;
+DECLARE q text; denied integer:=0; denial_message text;
 BEGIN
  FOR q IN SELECT * FROM (VALUES
   ('SELECT * FROM public.tradelink_asset_read(''synthetic-vendor'',''logo'')'),
@@ -43,7 +43,12 @@ BEGIN
   BEGIN
    EXECUTE q;
    RAISE EXCEPTION 'Revoked JWT unexpectedly succeeded for %',q;
-  EXCEPTION WHEN SQLSTATE '42501' THEN denied:=denied+1;
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+   GET STACKED DIAGNOSTICS denial_message = MESSAGE_TEXT;
+   IF denial_message IS DISTINCT FROM 'TRADELINK_SESSION_REVOKED' THEN
+    RAISE EXCEPTION 'Unexpected denial for %: %',q,denial_message;
+   END IF;
+   denied:=denied+1;
   END;
  END LOOP;
  IF denied<>11 THEN RAISE EXCEPTION 'Only %/11 revoked denies observed',denied; END IF;
@@ -55,11 +60,16 @@ INSERT INTO auth.sessions(id,user_id,not_after) VALUES
 ('33333333-3333-4333-8333-333333333333','11111111-1111-4111-8111-111111111111',now()-interval '1 minute');
 SET ROLE authenticated;
 DO $expired$
+DECLARE denial_message text;
 BEGIN
  BEGIN
   PERFORM 1 FROM public.tradelink_asset_read('synthetic-vendor','logo');
   RAISE EXCEPTION 'Expired synthetic session unexpectedly succeeded';
- EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
+ EXCEPTION WHEN SQLSTATE '42501' THEN
+  GET STACKED DIAGNOSTICS denial_message = MESSAGE_TEXT;
+  IF denial_message IS DISTINCT FROM 'TRADELINK_SESSION_REVOKED' THEN
+   RAISE EXCEPTION 'Expired-session gate rejected for wrong reason: %',denial_message;
+  END IF;
  END;
 END $expired$;
 RESET ROLE;
@@ -68,11 +78,16 @@ SET ROLE authenticated;
 SELECT set_config('request.jwt.claims',
  '{"sub":"22222222-2222-4222-8222-222222222222","session_id":"44444444-4444-4444-8444-444444444444"}',false);
 DO $employee$
+DECLARE denial_message text;
 BEGIN
  BEGIN
   PERFORM 1 FROM public.tradelink_asset_read('synthetic-vendor','logo');
   RAISE EXCEPTION 'Employee gained asset read';
- EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
+ EXCEPTION WHEN SQLSTATE '42501' THEN
+  GET STACKED DIAGNOSTICS denial_message = MESSAGE_TEXT;
+  IF denial_message IS DISTINCT FROM 'TRADELINK_ACCESS_DENIED' THEN
+   RAISE EXCEPTION 'Employee denied for wrong reason: %',denial_message;
+  END IF;
  END;
 END $employee$;
 RESET ROLE;

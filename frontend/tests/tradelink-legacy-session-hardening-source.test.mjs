@@ -78,6 +78,9 @@ test('original legacy function source is preserved after removing only the sessi
 });
 test('disposable tests model all distinct cases and production feature flags are not enabled',()=>{
  assert.match(checks,/REVOCATION PASS: 11 of 11/);
+ assert.match(checks,/GET STACKED DIAGNOSTICS denial_message = MESSAGE_TEXT/);
+ assert.match(checks,/denial_message IS DISTINCT FROM 'TRADELINK_SESSION_REVOKED'/);
+ assert.match(checks,/denial_message IS DISTINCT FROM 'TRADELINK_ACCESS_DENIED'/);
  assert.match(checks,/Expired synthetic session/);
  assert.match(checks,/Employee gained asset read/);
  assert.match(checks,/Foreign workspace read exposed/);
