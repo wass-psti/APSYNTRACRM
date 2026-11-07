@@ -5,20 +5,28 @@ concurrency:
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/ws01c-b3-controlled-workspace-creation]
     paths:
       - '.github/workflows/cp-ws01b-disposable-postgres.yml'
       - 'sql/cp-ws01-discovery-activation-candidate.sql'
       - 'sql/cp-ws01b-*.sql'
       - 'sql/cp-ws01c-*.sql'
+      - 'sql/cp-ws01-config-update-dormant-candidate.sql'
+      - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
+      - 'sql/cp-ws01-config-update-dormant-candidate.sql'
+      - 'sql/tests/cp-ws01-config-disposable-acceptance.sql'
+      - 'sql/tests/cp-ws01-phase-h-cross-contract-hardening-disposable.sql'
+      - 'sql/tests/cp-ws01-phase-h2-scoped-delegation-disposable.sql'
       - 'sql/cp-ws02*.sql'
       - 'sql/tests/cp-ws01b-*.sql'
       - 'sql/tests/cp-ws01c-*.sql'
       - 'sql/tests/cp-ws02*.sql'
       - 'frontend/workspace-ui.js'
+      - 'frontend/app.js'
       - 'frontend/workspace-lifecycle-client.js'
       - 'frontend/workspace-b2-signed-acceptance.js'
       - 'frontend/tests/workspace-ui.test.mjs'
+      - 'frontend/workspace-ui.css'
       - 'frontend/tests/workspace-lifecycle-client.test.mjs'
       - 'frontend/tests/workspace-b2-signed-acceptance.test.mjs'
       - 'frontend/workspace-b3-signed-read-preflight.js'
@@ -26,6 +34,21 @@ on:
       - 'scripts/ws02d-b3-*'
       - 'server/ws02d-*.mjs'
       - 'server/tests/ws02d-*.test.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/cp-ws01b-disposable-postgres.yml'
+      - 'sql/tests/cp-ws01c-b3-dormant-production-postinstall-readonly.sql'
+      - 'sql/cp-ws01c-b3-reviewed-production-activation-20261106.sql'
+      - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
+      - 'sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql'
+      - 'sql/tests/cp-ws01c-g3-disposable-lookup-candidate.sql'
+      - 'sql/tests/cp-ws01c-g4-delegated-compatibility-disposable.sql'
+      - 'sql/tests/cp-ws01c-g4b-source-fingerprint-inventory.json'
+      - 'scripts/ws01c-g4b-verify-inventory.mjs'
+      - 'sql/tests/cp-ws01c-g4c-role-dependent-fingerprints.json'
+      - 'scripts/ws01c-g4c-verify-dependents.mjs'
+      - 'sql/tests/cp-ws01-phase-h2-scoped-delegation-disposable.sql'
+      - 'sql/tests/cp-ws01c-b3-production-activated-readonly.sql'
   workflow_dispatch:
 
 permissions:
@@ -79,6 +102,10 @@ jobs:
         run: node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs frontend/tests/workspace-b2-signed-acceptance.test.mjs frontend/tests/workspace-b3-signed-read-preflight.test.mjs
       - name: Verify backend-only invitation, GoTrue HTTP/session read adapters and provider mocks
         run: node --test server/tests/ws02d-trusted-delivery.test.mjs server/tests/ws02d-resend-transport.test.mjs server/tests/ws02d-invitation-http-boundary.test.mjs server/tests/ws02d-gotrue-actor-verifier.test.mjs server/tests/ws02d-gotrue-live-read-adapters.test.mjs server/tests/ws02d-b3-signed-read-staging.test.mjs server/tests/ws02d-b3-user-scoped-rpc.test.mjs
+      - name: Verify complete G4B production source-fingerprint manifest structure
+        run: node scripts/ws01c-g4b-verify-inventory.mjs
+      - name: Verify G4C direct role-dependent fingerprints and shared workspace call graph
+        run: node scripts/ws01c-g4c-verify-dependents.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
       - name: Execute real disposable Auth/session SQL with synthetic identity and mocked GoTrue user
@@ -93,6 +120,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-readonly-acceptance.sql
       - name: Verify B2-only synthetic cross-identity, foreign, revoked and expired denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b2-cross-identity-denial-disposable.sql
+      - name: Preview G3 caller-bound lookup with authenticated/foreign/revoked denial and rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-g3-disposable-lookup-candidate.sql
       - name: Verify B3 production-safe schema preactivation gate (no writes)
         run: |
           set -euo pipefail
@@ -100,8 +129,16 @@ jobs:
             grep -F 'B3_PREACTIVATION_SCHEMA_READY__ROLE_CEILING_AND_PRODUCTION_APPROVAL_PENDING'
       - name: Stage dormant B3 creation RPC (no authenticated write grants)
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01c-b3-create-contract-candidate.sql
+      - name: Assert B3 dormant no-client-EXECUTE and creation-off postinstallation
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -At -f sql/tests/cp-ws01c-b3-dormant-production-postinstall-readonly.sql |
+            grep -F 'B3_DORMANT_SIGNED_CREATE_CONTRACT_INSTALLED__NO_CLIENT_EXECUTE_NO_CREATION'
+          echo 'CP_WS01C_B3_DORMANT_FUNCTION_SECURITY_PASS'
       - name: Verify B3-only atomic creation, idempotency and rollback without B4
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b3-disposable-isolated-acceptance.sql
+      - name: Prove controlled B3 activation/grant and fail-closed rollback in disposable PG17
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql
       - name: Stage private new-account Main Workspace provisioning without signup trigger
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02b-main-provisioning-candidate.sql
       - name: Verify one Main per new verified account, no legacy backfill, rollback
@@ -211,3 +248,9 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-admin-two-valid-write.sql
       - name: Verify actual two-session advisory asset and FuelTrack request CAS races
         run: node scripts/ws02d-b3-disposable-concurrency.mjs
+      - name: Stage dormant owner configuration revision and audit contract (disposable only)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01-config-update-dormant-candidate.sql
+      - name: Verify owner CAS, foreign/member/session denials and full rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01-config-disposable-acceptance.sql
+      - name: Accept cross-contract signed session selection, workspace configuration, invitation and board isolation under hardened scope
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01-phase-h-cross-contract-hardening-disposable.sql

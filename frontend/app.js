@@ -3028,7 +3028,9 @@ async function action(name,button){
   if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)break;
   state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft);
   render();
-  root.querySelector('[data-tradelink-draft-form] select[name="documentType"]')?.focus({preventScroll:true});
+  root.querySelector('.tl-reference-document-tabs a.active')?.focus({preventScroll:true});
+  if(!root.querySelector('.tl-reference-document-tabs a.active'))
+   root.querySelector('[data-tradelink-draft-form] select[name="documentType"]')?.focus({preventScroll:true});
   break;
  }
  case 'tradelink-draft-refresh':{
@@ -4707,7 +4709,9 @@ root.addEventListener('change',event=>{
   if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]')){
    state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft,event.target.value);
    render();
-   root.querySelector('[data-tradelink-draft-form] select[name="documentType"]')?.focus({preventScroll:true});
+   root.querySelector('.tl-reference-document-tabs a.active')?.focus({preventScroll:true});
+   if(!root.querySelector('.tl-reference-document-tabs a.active'))
+    root.querySelector('[data-tradelink-draft-form] select[name="documentType"]')?.focus({preventScroll:true});
   }
   return;
  }

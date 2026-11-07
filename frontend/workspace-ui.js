@@ -5,8 +5,8 @@
  */
 import {validUuid} from './data.js';
 
-export const WS01_DISCOVERY_ENABLED=false;
-export const WS01_CREATION_ENABLED=false;
+export const WS01_DISCOVERY_ENABLED=true;
+export const WS01_CREATION_ENABLED=true;
 export const WS01_SWITCHING_ENABLED=false;
 // Invitation delivery requires the separately gated CP-WS-02D backend.
 export const WS02_INVITATIONS_ENABLED=false;
@@ -27,8 +27,8 @@ export function workspaceCatalog(current){
   canCreate:false,canSwitch:false,canDiscoverAll:false
  });
 }
-/** Strict parser for a future separately approved signed wm_ws01_list RPC.
- * Do not run this RPC until its production grant is approved and verified. */
+/** Strict parser for the existing signed, membership-scoped wm_ws01_list RPC.
+ * Its response cannot authorize a workspace switch or direct table access. */
 export function normalizeServerWorkspaceCatalog(raw,{userId,workspaceId}={}){
  const rows=raw?.rows;
  const safe=Array.isArray(rows)&&rows.length>0&&rows.length<=100&&
@@ -69,6 +69,97 @@ export function validateWorkspaceProposal({name,privacy}={}){
    !['open','closed'].includes(privacy))
   return {valid:false,reason:'Choose a workspace name (2–80 characters) and privacy.'};
  return {valid:true,name:clean,privacy};
+}
+/** Readiness UI must never imply that client validation authorizes creation.
+ * CP-WS-01C/B3 requires separately approved server RPC, grants, lifecycle
+ * activation and genuine signed-session acceptance. Nothing in this pure
+ * assessment calls an RPC or creates a workspace.
+ */
+export function assessWorkspaceCreationReadiness(proposal){
+ const validated=validateWorkspaceProposal(proposal);
+ if(!validated.valid)return Object.freeze({
+  status:'INVALID_DRAFT',canCreate:false,valid:false,
+  message:validated.reason
+ });
+ // The currently deployed production lifecycle has no create RPC, and the
+ // static client feature gate is deliberately OFF. A future enablement
+ // must be tied to reviewed backend acceptance, not to this UI.
+ if(!WS01_CREATION_ENABLED)return Object.freeze({
+  status:'PENDING_SERVER_ACTIVATION',canCreate:false,valid:true,
+  message:'Draft validated. Workspace creation requires the approved signed server lifecycle, authenticated permission grant, and production activation. No workspace was created.'
+ });
+ return Object.freeze({
+  status:'SERVER_ACCEPTANCE_REQUIRED',canCreate:false,valid:true,
+  message:'Draft validated. The server must independently authorize creation. No workspace was created.'
+ });
+}
+/**
+ * Creation transaction adapter: the checked-in UI gate is OFF until a
+ * separately approved signed production RPC/grant/flag activation.
+ * A submitted request ID is reused on retries to prevent duplicate writes.
+ * Only a validated server receipt can be shown as a committed creation.
+ * No raw error, bearer token, actor ID or workspace ID is rendered.
+ */
+export async function submitWorkspaceCreation({
+ proposal,lifecycle,requestId,enabled=WS01_CREATION_ENABLED
+}={}){
+ const validated=validateWorkspaceProposal(proposal);
+ if(!validated.valid)return Object.freeze({
+  status:'INVALID_DRAFT',ok:false,valid:false,message:validated.reason
+ });
+ if(enabled!==true)return Object.freeze({
+  status:'PENDING_SERVER_ACTIVATION',ok:false,valid:true,
+  message:'Draft validated. Workspace creation is not authorized on the production server. No workspace was created.'
+ });
+ if(!validUuid(requestId)||typeof lifecycle?.create!=='function')return Object.freeze({
+  status:'CLIENT_NOT_READY',ok:false,valid:true,
+  message:'Creation cannot start because its signed workspace client is unavailable. No request was sent.'
+ });
+ try{
+  const result=await lifecycle.create({
+   name:validated.name,privacy:validated.privacy,requestId
+  });
+  if(!validUuid(result?.workspaceId)||result.relation!=='owner'||
+     result.privacy!==validated.privacy||result.active!==false||
+     typeof result.idempotent!=='boolean')return Object.freeze({
+   status:'UNCONFIRMED',ok:false,valid:true,
+   message:'The server returned an unexpected receipt. Creation is not confirmed; retry this same request or contact an administrator.'
+  });
+  return Object.freeze({
+   status:result.idempotent?'EXISTING_REQUEST':'CREATED',
+   ok:true,valid:true,
+   message:result.idempotent?
+    'This workspace request was already completed. You are its workspace owner; your current workspace has not changed.':
+    'Workspace created successfully. You are its workspace owner. Your current workspace has not changed.',
+   receipt:Object.freeze({workspaceId:result.workspaceId,
+    active:false,relation:'owner',privacy:result.privacy,
+    idempotent:result.idempotent})
+  });
+ }catch(error){
+  const status=Number.isInteger(error?.status)?error.status:0;
+  if(status===401)return Object.freeze({
+   status:'SESSION_EXPIRED',ok:false,valid:true,
+   message:'Your signed session was not verified. Sign in again before attempting workspace creation.'
+  });
+  if(status===403||status===404||status===503)return Object.freeze({
+   status:'SERVER_DENIED',ok:false,valid:true,
+   message:'The server has not authorized workspace creation for this session. No successful creation was confirmed.'
+  });
+  if(status===400||status===422)return Object.freeze({
+   status:'SERVER_REJECTED',ok:false,valid:true,
+   message:'The server rejected the workspace name or privacy settings.'
+  });
+  if(status===409)return Object.freeze({
+   status:'REQUEST_CONFLICT',ok:false,valid:true,
+   message:'This request conflicts with a prior creation attempt. Review the draft and try again with a new request.'
+  });
+  // Timeouts/network/5xx can occur AFTER the server committed.
+  // Preserve the same request UUID for safe idempotent retry.
+  return Object.freeze({
+   status:'UNCONFIRMED',ok:false,valid:true,
+   message:'The server did not confirm the result. Retry this unchanged draft using the same request to avoid duplicate workspaces.'
+  });
+ }
 }
 /** Validates preview-only invitation drafts; never issues or stores an invitation. */
 export function validateWorkspaceInvitationDraft({emails='',role='member',message=''}={}){
@@ -148,48 +239,252 @@ function panel(html,kind){
  return layer;
 }
 function rowMarkup(row){
- return '<div class="ws01-entry"><span class="ws01-entry-icon" aria-hidden="true">'+
+ // Row interaction opens signed metadata, not an unauthorized workspace switch.
+ return '<div class="ws01-entry"><button type="button" class="ws01-entry-button"'+
+  ' data-ws01-action="details" data-ws01-workspace="'+escape(row.id)+'"'+
+  ' aria-label="View details for '+escape(row.name)+'">'+
+  '<span class="ws01-entry-icon" aria-hidden="true">'+
   escape(row.name.slice(0,1).toUpperCase())+'</span><span class="ws01-entry-copy">'+
   '<strong>'+escape(row.name)+'</strong><small>'+escape(row.relation)+
-  ' · '+(row.active?'Current signed workspace':'Signed member workspace')+'</small></span>'+
-  '<span class="ws01-entry-badge">Active</span></div>';
+  ' · '+(row.active?'Current signed workspace':'Signed member workspace · switching unavailable')+'</small></span>'+
+  '<span class="ws01-entry-badge">'+(row.active?'Current':'Member')+'</span></button></div>';
 }
 function resultsMarkup(catalog,tab,query){
  const rows=visibleWorkspaces(catalog,{tab,query});
  return rows.length?rows.map(rowMarkup).join(''):
   '<p class="ws01-empty" role="status">No authorized workspaces match this filter.</p>';
 }
-function currentFootnote(){
- return '<p class="ws01-note">Only your current server-verified workspace is shown. '+
-  'Account-wide discovery and switching are pending a reviewed server-side authorization contract.</p>';
+/** A detail action may only resolve a row from the validated signed catalog.
+ * It never changes the authoritative active workspace or expands membership. */
+export function workspaceDetailsFor(catalog,workspaceId){
+ if(!validUuid(workspaceId)||!['SIGNED_MEMBER_DISCOVERY','CURRENT_WORKSPACE_ONLY'].includes(catalog?.status))
+  return null;
+ const row=visibleWorkspaces(catalog).find(w=>w.id===workspaceId);
+ return row&&((catalog.status==='SIGNED_MEMBER_DISCOVERY'&&row.verifiedScope==='SIGNED_MEMBER_RPC')||
+  (catalog.status==='CURRENT_WORKSPACE_ONLY'&&row.verifiedScope==='SIGNED_CURRENT_ONLY'))?row:null;
 }
-function menuContent(catalog){
- return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Select workspace">'+
+function detailsContent(row){
+ const name=escape(row.name);
+ return '<section class="ws01-details-card" role="dialog" aria-modal="true"'+
+  ' aria-labelledby="ws01-details-title">'+
+  '<header class="ws01-details-heading"><h2 id="ws01-details-title">'+name+'</h2>'+
+  '<button type="button" class="ws01-close" data-ws01-close aria-label="Close workspace details">×</button></header>'+
+  '<p class="ws01-details-description">Workspace details verified for your signed membership.</p>'+
+  '<dl class="ws01-details-fields"><div><dt>Membership</dt><dd>'+escape(row.relation)+'</dd></div>'+
+  '<div><dt>Privacy</dt><dd>'+escape(row.privacy||'Not provided by current context')+'</dd></div>'+
+  '<div><dt>Session</dt><dd>'+(row.active?'Current workspace':'Not active · switching unavailable')+'</dd></div></dl>'+
+  '<p class="ws01-details-note" role="status">'+(row.active?
+   'This is your current server-selected workspace.':
+   'You can inspect this authorized membership, but changing the active workspace requires the separate signed switching contract.')+'</p>'+
+  '<div class="ws01-details-actions"><button type="button" data-ws01-action="back">Back to workspaces</button>'+
+  '<button type="button" data-ws01-action="configure">Configuration</button>'+
+  (row.active?'<button type="button" class="ws01-details-primary" data-ws01-action="open-current">Open current workspace</button>':
+   '<button type="button" disabled title="Workspace switching is not activated">Switch workspace — unavailable</button>')+
+  '</div></section>';
+}
+/** A configuration becomes editable only after a fresh signed read receipt.
+ * Until server activation, keep the existing owner draft validation behavior. */
+function configurationContent(row,{live=false,settings=null,loading=false,error=''}={}){
+ const ownerDraft=row.relation==='owner'&&row.verifiedScope==='SIGNED_MEMBER_RPC';
+ const verifiedEdit=live&&ownerDraft&&settings?.workspaceId===row.id&&settings.canEdit===true;
+ const editable=live?verifiedEdit:ownerDraft;
+ const name=live&&settings?settings.name:row.name;
+ const privacy=live&&settings?settings.privacy:row.privacy;
+ return '<section class="ws01-details-card" role="dialog" aria-modal="true" aria-labelledby="ws01-config-title">'+
+  '<header class="ws01-details-heading"><h2 id="ws01-config-title">Workspace configuration</h2>'+
+  '<button type="button" class="ws01-close" data-ws01-close aria-label="Close configuration">×</button></header>'+
+  '<p class="ws01-details-description">Review settings for '+escape(row.name)+'. '+
+   (live?'Settings require fresh server-authorized owner access.':
+    'No configuration writes are activated.')+'</p>'+
+  '<form id="ws01-config-preview" novalidate>'+
+  '<label for="ws01-config-name">Workspace name</label>'+
+  '<input id="ws01-config-name" name="name" type="text" minlength="2" maxlength="80" value="'+escape(name)+'"'+(editable?'':' disabled')+'/>'+
+  '<fieldset><legend>Privacy</legend>'+
+  '<label><input type="radio" name="privacy" value="closed"'+(privacy==='closed'?' checked':'')+(editable?'':' disabled')+'/> Closed</label>'+
+  '<label><input type="radio" name="privacy" value="open"'+(privacy==='open'?' checked':'')+(editable?'':' disabled')+'/> Open</label></fieldset>'+
+  '<p class="ws01-details-note">'+(live?
+   'Saving uses a server-supplied revision and rechecks the signed configuration; switching is unchanged.':
+   'Only owners can validate a settings draft. Saving configuration requires a separate server-authorized update contract. Nothing entered here is saved.')+'</p>'+
+  '<p class="ws01-config-feedback" role="status" aria-live="polite">'+
+   escape(error||(loading?'Checking signed configuration access…':''))+'</p>'+
+  '<div class="ws01-details-actions"><button type="button" data-ws01-action="back-details">Back to details</button>'+
+  (editable?'<button type="submit" class="ws01-details-primary">'+
+   (live?'Save workspace settings':'Validate settings draft')+'</button>':
+   (live&&error?'<button type="button" data-ws01-action="retry-config">Retry signed configuration read</button>':
+    '<button type="button" disabled>'+(loading?'Checking access…':'Owner permissions required')+'</button>'))+
+  '</div></form></section>';
+}
+function openDetails(catalog,workspaceId,options={}){
+ const row=workspaceDetailsFor(catalog,workspaceId);
+ if(!row)return;
+ const layer=panel(detailsContent(row),'details');
+ layer.addEventListener('click',event=>{
+  const action=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
+  if(action==='back')openBrowse(options.selectorSession?.catalog||catalog,options);
+  if(action==='configure')openConfiguration(catalog,row.id,options);
+  if(action==='open-current'&&row.active){
+   closeWorkspacePanels();
+   options.onOpenCurrent?.();
+  }
+ });
+ layer.querySelector('[data-ws01-action="back"]').focus();
+}
+function openConfiguration(catalog,workspaceId,options={}){
+ const row=workspaceDetailsFor(catalog,workspaceId);
+ if(!row)return;
+ // Flag is supplied from the typed lifecycle module by the application shell.
+ // Never infer activation from a visible owner badge or an available method.
+ const live=options.configurationEnabled===true&&
+  typeof options.lifecycle?.readConfiguration==='function'&&
+  typeof options.lifecycle?.updateConfiguration==='function';
+ const layer=panel(configurationContent(row,{live,loading:live}),'configuration');
+ let signed=null,busy=false,completed=false,readRun=0;
+ const active=()=>activeOverlay===layer&&layer.isConnected;
+ const focusForm=()=>{
+  (layer.querySelector('#ws01-config-name:not([disabled])')||
+   layer.querySelector('[data-ws01-action="retry-config"]')||
+   layer.querySelector('[data-ws01-action="back-details"]'))?.focus();
+ };
+ const load=async()=>{
+  if(!live||busy||completed)return;
+  const id=++readRun;
+  layer.firstElementChild.outerHTML=configurationContent(row,{live,loading:true});
+  try{
+   const result=await options.lifecycle.readConfiguration(row.id);
+   if(!active()||readRun!==id)return;
+   if(result?.workspaceId!==row.id)throw Error('Unexpected signed settings scope');
+   signed=result;
+   layer.firstElementChild.outerHTML=configurationContent(row,{live,settings:signed});
+  }catch{
+   if(!active()||readRun!==id)return;
+   signed=null;
+   layer.firstElementChild.outerHTML=configurationContent(row,{live,
+    error:'Could not verify signed workspace configuration. No changes can be saved. Retry the authorized read.'});
+  }
+  focusForm();
+ };
+ layer.addEventListener('click',event=>{
+  if(event.target.closest('[data-ws01-action="back-details"]')){
+   readRun++;
+   openDetails(options.selectorSession?.catalog||catalog,row.id,options);
+  }
+  if(event.target.closest('[data-ws01-action="retry-config"]'))void load();
+ });
+ layer.addEventListener('submit',async event=>{
+  if(!event.target.matches('#ws01-config-preview'))return;
+  event.preventDefault();
+  if(busy||completed)return;
+  const form=event.target;
+  const field=form.querySelector('#ws01-config-name');
+  const data=new FormData(form);
+  const proposal=validateWorkspaceProposal({name:data.get('name'),privacy:data.get('privacy')});
+  field.setAttribute('aria-invalid',String(!proposal.valid));
+  const feedback=form.querySelector('.ws01-config-feedback');
+  if(!proposal.valid){feedback.textContent=proposal.reason;return;}
+  if(!live){
+   feedback.textContent='Settings draft validated. No changes were saved; workspace updates require server authorization.';
+   return;
+  }
+  if(!signed?.canEdit||signed.workspaceId!==row.id)return;
+  busy=true;
+  const submit=form.querySelector('button[type="submit"]');
+  submit.disabled=true;
+  field.disabled=true;
+  for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=true;
+  feedback.textContent='Requesting signed owner authorization…';
+  let saved=null,confirmed=null,error=null;
+  try{
+   saved=await options.lifecycle.updateConfiguration({
+    workspaceId:row.id,name:proposal.name,privacy:proposal.privacy,
+    expectedRevision:signed.revision
+   });
+   // Mutation receipts alone are insufficient. Re-read the server state
+   // before reporting persistence or refreshing the visible membership list.
+   confirmed=await options.lifecycle.readConfiguration(row.id);
+   if(confirmed?.workspaceId!==row.id||
+      confirmed?.name!==saved.name||confirmed?.privacy!==saved.privacy||
+      confirmed?.revision!==saved.revision)
+    throw Error('Configuration commit could not be independently verified.');
+  }catch(cause){error=cause;}
+  busy=false;
+  if(!active()||!form.isConnected)return;
+  if(!error){
+   completed=true;signed=confirmed;
+   feedback.textContent=saved.updated?
+    'Workspace settings saved and verified through the signed server.':
+    'Workspace settings are already up to date and verified.';
+   void options.selectorSession?.load?.();
+   return;
+  }
+  submit.disabled=false;field.disabled=false;
+  for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=false;
+  const code=Number.isInteger(error?.status)?error.status:0;
+  feedback.textContent=code===401?
+   'Your signed session expired. Sign in again before configuring workspaces.':
+   code===403||code===404?
+   'Your account no longer has permission to configure this workspace.':
+   code===409?
+   'Workspace settings changed in another session. Reopen the configuration to review the current revision.':
+   code===400||code===422?
+   'The server rejected these workspace settings.':
+   'The server did not confirm this save. Reopen and verify current settings before trying again.';
+  // On an uncertain outcome never retry automatically with a stale revision.
+  submit.disabled=true;
+ });
+ if(live)void load();
+ else focusForm();
+}
+function currentFootnote(catalog,options={}){
+ const status=options.selectorSession?.status;
+ let message='Only your current server-verified workspace is shown. Additional workspaces require signed membership discovery.';
+ if(status==='loading')message='Loading workspaces authorized for this signed account…';
+ else if(status==='error')message='Workspace list could not be verified. Retry the signed read; only the current workspace is shown until verification succeeds.';
+ else if(catalog?.status==='SIGNED_MEMBER_DISCOVERY')
+  message=catalog.rows.length+' authorized workspace'+(catalog.rows.length===1?'':'s')+
+   ' for your signed account. Workspace switching is not yet activated.';
+ return '<div data-ws01-feedback><p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>'+
+  (status==='error'?'<button type="button" class="ws01-retry" data-ws01-action="retry">Retry authorized workspace discovery</button>':'')+'</div>';
+}
+function menuContent(catalog,options={}){
+ return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Browse workspaces">'+
   '<header class="ws01-menu-heading"><strong>Workspaces</strong>'+
   '<button class="ws01-close" type="button" data-ws01-close aria-label="Close workspace selector">×</button></header>'+
   '<label class="ws01-sr-only" for="ws01-menu-search">Search workspaces</label>'+
   '<input id="ws01-menu-search" type="search" placeholder="Search workspaces" autocomplete="off" maxlength="120"/>'+
-  '<p class="ws01-eyebrow">Recent workspaces</p>'+
-  '<div data-ws01-results>'+resultsMarkup(catalog,'recent','')+'</div>'+
+  '<p class="ws01-eyebrow">Authorized workspaces · '+visibleWorkspaces(catalog).length+'</p>'+
+  '<div data-ws01-results>'+resultsMarkup(catalog,'all','')+'</div>'+
   '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
   '<button type="button" data-ws01-action="create">Add workspace</button>'+
   '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
-  currentFootnote()+'</section>';
+  currentFootnote(catalog,options)+'</section>';
 }
-function openMenu(catalog){
- const layer=panel(menuContent(catalog),'menu');
+function openMenu(catalog,options={}){
+ const read=()=>options.selectorSession?.catalog||catalog;
+ const layer=panel(menuContent(read(),options),'menu');
  const input=layer.querySelector('#ws01-menu-search');
- input.addEventListener('input',()=>{layer.querySelector('[data-ws01-results]').innerHTML=
-  resultsMarkup(catalog,'recent',input.value);});
+ const redraw=()=>{
+  if(activeOverlay!==layer||!layer.isConnected)return;
+  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),'all',input.value);
+  layer.querySelector('.ws01-eyebrow').textContent='Authorized workspaces · '+visibleWorkspaces(read()).length;
+  const feedback=layer.querySelector('[data-ws01-feedback]');
+  if(feedback)feedback.outerHTML=currentFootnote(read(),options);
+ };
+ if(options.selectorSession)options.selectorSession.refresh=redraw;
+ input.addEventListener('input',redraw);
  layer.addEventListener('click',event=>{
   const command=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
-  if(command==='browse')openBrowse(catalog);
-  if(command==='create')openCreate(catalog);
-  if(command==='invite')openInvites(catalog.rows[0]);
+  if(command==='details'){
+   const workspaceId=event.target.closest('[data-ws01-workspace]')?.dataset.ws01Workspace;
+   openDetails(read(),workspaceId,options);
+  }
+  if(command==='retry')options.selectorSession?.load?.();
+  if(command==='browse')openBrowse(read(),options);
+  if(command==='create')openCreate(read(),options);
+  if(command==='invite')openInvites(read().rows.find(row=>row.active));
  });
  input.focus();
 }
-function browseContent(catalog){
+function browseContent(catalog,options={}){
  const tabs=[['all','All workspaces'],['recent','Recent workspaces'],
   ['owner','Owner'],['member','Member'],['collaborator','Collaborator']];
  return '<section class="ws01-browser-card" role="dialog" aria-modal="true"'+
@@ -204,56 +499,153 @@ function browseContent(catalog){
   '<button type="button" data-ws01-action="create" class="ws01-add-button">+ Add workspace</button></nav>'+
   '<div class="ws01-browser-results"><h3 data-ws01-title>All workspaces</h3>'+
   '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','')+'</div>'+
-  currentFootnote()+'</div></div></section>';
+  currentFootnote(catalog,options)+'</div></div></section>';
 }
-function openBrowse(catalog){
- const layer=panel(browseContent(catalog),'browse');
+function openBrowse(catalog,options={}){
+ const read=()=>options.selectorSession?.catalog||catalog;
+ const layer=panel(browseContent(read(),options),'browse');
  let tab='all';
  const input=layer.querySelector('#ws01-browser-search');
  const redraw=()=>{
-  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(catalog,tab,input.value);
+  if(activeOverlay!==layer||!layer.isConnected)return;
+  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),tab,input.value);
+  const feedback=layer.querySelector('[data-ws01-feedback]');
+  if(feedback)feedback.outerHTML=currentFootnote(read(),options);
   for(const btn of layer.querySelectorAll('[data-ws01-filter]'))
    btn.setAttribute('aria-pressed',String(btn.dataset.ws01Filter===tab));
   layer.querySelector('[data-ws01-title]').textContent={
-   all:'All workspaces',recent:'Recent workspaces',owner:'Workspaces owned by me',
+   all:'All authorized workspaces',recent:'Current workspace',owner:'Workspaces owned by me',
    member:'Workspaces I am a member of',collaborator:'Workspaces I collaborate in'
   }[tab];
  };
+ if(options.selectorSession)options.selectorSession.refresh=redraw;
  input.addEventListener('input',redraw);
  layer.addEventListener('click',event=>{
   const filter=event.target.closest('[data-ws01-filter]')?.dataset.ws01Filter;
   if(TABS.has(filter)){tab=filter;redraw();}
-  if(event.target.closest('[data-ws01-action="create"]'))openCreate(catalog);
+  const detail=event.target.closest('[data-ws01-action="details"]');
+  if(detail)openDetails(read(),detail.dataset.ws01Workspace,options);
+  if(event.target.closest('[data-ws01-action="retry"]'))options.selectorSession?.load?.();
+  if(event.target.closest('[data-ws01-action="create"]'))openCreate(read(),options);
  });
  input.focus();
 }
-function createContent(){
- return '<section class="ws01-create-card" role="dialog" aria-modal="true" aria-labelledby="ws01-create-title">'+
- '<header><h2 id="ws01-create-title">Add new workspace</h2>'+
- '<button type="button" class="ws01-close" data-ws01-close aria-label="Close create workspace">×</button></header>'+
- '<div class="ws01-create-symbol" aria-hidden="true">N</div>'+
- '<form id="ws01-proposal"><label for="ws01-name">Workspace name</label>'+
- '<input id="ws01-name" name="name" maxlength="80" minlength="2" autocomplete="off" required placeholder="New Workspace"/>'+
- '<fieldset><legend>Privacy</legend><label><input type="radio" name="privacy" value="open" checked/> Open</label>'+
- '<label><input type="radio" name="privacy" value="closed"/> Closed</label></fieldset>'+
- '<p class="ws01-note">Privacy requires server-enforced workspace visibility and admission rules. '+
- 'Creation is disabled until the production workspace lifecycle contract is approved.</p>'+
- '<p class="ws01-form-feedback" role="status"></p>'+
- '<footer><button type="button" data-ws01-close>Cancel</button>'+
- '<button type="submit" class="ws01-primary">Review readiness</button></footer></form></section>';
+function createContent({enabled=WS01_CREATION_ENABLED}={}){
+ const active=enabled===true;
+ return '<section class="ws01-create-card" role="dialog" aria-modal="true"'+
+  ' aria-labelledby="ws01-create-title" aria-describedby="ws01-create-description">'+
+  '<header class="ws01-create-heading"><div><h2 id="ws01-create-title">Add new workspace</h2>'+
+  '<p class="ws01-create-subtitle" id="ws01-create-description">'+
+   (active?'Create a workspace with your existing verified account. New workspaces are not automatically selected.':
+    'Workspace creation is not activated. You can validate a draft, but nothing will be saved.')+
+   '</p></div>'+
+  '<button type="button" class="ws01-close" data-ws01-close aria-label="Close create workspace">×</button></header>'+
+  '<div class="ws01-create-symbol" aria-hidden="true">N</div>'+
+  '<form id="ws01-proposal" novalidate>'+
+  '<label for="ws01-name">Workspace name</label>'+
+  '<input id="ws01-name" type="text" name="name" maxlength="80" minlength="2"'+
+   ' autocomplete="off" spellcheck="false" required placeholder="New Workspace"'+
+   ' aria-describedby="ws01-name-hint"/>'+
+  '<p id="ws01-name-hint" class="ws01-field-hint">2–80 characters.'+(active?'':' Draft only.')+'</p>'+
+  '<fieldset><legend>Workspace privacy</legend>'+
+   '<label><input type="radio" name="privacy" value="closed" checked/> Closed</label>'+
+   '<label><input type="radio" name="privacy" value="open"/> Open</label></fieldset>'+
+  '<p class="ws01-create-safety">Closed is selected by default. Open is workspace metadata only; '+
+   'it does not permit unrestricted discovery, joining or access. Server-enforced membership '+
+   'and workspace isolation remain mandatory.</p>'+
+  '<p class="ws01-create-state">'+(active?
+   'Creation requires a valid signed session and explicit server authorization.':
+   'Creation unavailable — pending authorized backend activation.')+'</p>'+
+  '<p class="ws01-form-feedback" role="status" aria-live="polite" aria-atomic="true"></p>'+
+  '<footer class="ws01-create-footer">'+
+   '<button type="button" class="ws01-create-cancel" data-ws01-close>Cancel</button>'+
+   '<button type="submit" class="ws01-primary">'+(active?'Create workspace':'Validate draft')+'</button>'+
+  '</footer></form></section>';
 }
-function openCreate(catalog){
- const layer=panel(createContent(),'create');
+function openCreate(catalog,options={}){
+ const {lifecycle,selectorSession}=options;
+ const enabled=WS01_CREATION_ENABLED&&typeof lifecycle?.create==='function';
+ const layer=panel(createContent({enabled}),'create');
  const form=layer.querySelector('#ws01-proposal');
- form.addEventListener('submit',event=>{
+ const feedback=layer.querySelector('.ws01-form-feedback');
+ const field=form.querySelector('#ws01-name');
+ const submit=form.querySelector('button[type="submit"]');
+ let busy=false,completed=false,requestId=null,requestDraft=null;
+ form.addEventListener('submit',async event=>{
   event.preventDefault();
+  if(busy||completed)return;
   const values=new FormData(form);
-  const proposed=validateWorkspaceProposal({name:values.get('name'),privacy:values.get('privacy')});
-  const label=layer.querySelector('.ws01-form-feedback');
-  label.textContent=!proposed.valid?proposed.reason:
-   'Configuration checked. Workspace creation remains unavailable until an authorized server lifecycle is activated. No workspace was created.';
+  const proposal={name:values.get('name'),privacy:values.get('privacy')};
+  if(!enabled){
+   const assessed=assessWorkspaceCreationReadiness(proposal);
+   feedback.textContent=assessed.message;
+   feedback.dataset.status=assessed.status;
+   field.setAttribute('aria-invalid',String(!assessed.valid));
+   return;
+  }
+  const validated=validateWorkspaceProposal(proposal);
+  if(!validated.valid){
+   feedback.textContent=validated.reason;
+   feedback.dataset.status='INVALID_DRAFT';
+   field.setAttribute('aria-invalid','true');
+   return;
+  }
+  const fingerprint=JSON.stringify([validated.name,validated.privacy]);
+  if(requestDraft!==fingerprint){
+   requestId=null;requestDraft=fingerprint;
+  }
+  if(!requestId){
+   const generated=globalThis.crypto?.randomUUID?.();
+   if(!validUuid(generated)){
+    feedback.textContent='Secure request identifiers are unavailable. Creation was not attempted.';
+    feedback.dataset.status='CLIENT_NOT_READY';
+    return;
+   }
+   requestId=generated;
+  }
+  busy=true;submit.disabled=true;field.disabled=true;
+  for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=true;
+  feedback.textContent='Requesting signed server authorization…';
+  feedback.dataset.status='PENDING';
+  let result;
+  try{
+   result=await submitWorkspaceCreation({proposal:validated,
+    lifecycle,requestId,enabled});
+  }finally{
+   busy=false;
+   if(activeOverlay===layer&&layer.isConnected){
+    submit.disabled=false;field.disabled=false;
+    for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=false;
+   }
+  }
+  if(activeOverlay!==layer||!layer.isConnected)return;
+  feedback.textContent=result.message;
+  feedback.dataset.status=result.status;
+  field.setAttribute('aria-invalid',String(!result.valid));
+  if(result.ok){
+   completed=true;submit.disabled=true;
+   field.disabled=true;
+   for(const radio of form.querySelectorAll('input[name="privacy"]'))radio.disabled=true;
+   submit.textContent='Created';
+   // Refresh only through the signed membership endpoint after server receipt.
+   // A newly created workspace is never silently made active.
+   void selectorSession?.load?.();
+   const browse=document.createElement('button');
+   browse.type='button';
+   browse.textContent='Browse authorized workspaces';
+   browse.addEventListener('click',()=>openBrowse(selectorSession?.catalog||catalog,options));
+   form.querySelector('.ws01-create-footer').prepend(browse);
+  }else if(result.status==='REQUEST_CONFLICT'){
+   requestId=null;requestDraft=null;
+  }
  });
- form.querySelector('#ws01-name').focus();
+ form.addEventListener('input',()=>{
+  if(busy||completed)return;
+  feedback.textContent='';
+  delete feedback.dataset.status;
+  field.removeAttribute('aria-invalid');
+ });
+ field.focus();
 }
 function inviteContent(current){
  const title=escape(current.name);
@@ -337,9 +729,34 @@ export function openWorkspaceInvitationDialog(current){
  returnFocus=document.activeElement;
  openInvites(row);
 }
-export function openWorkspaceSelector(current){
+export function openWorkspaceSelector(current,options={}){
  if(activeOverlay){closeWorkspacePanels();return;}
- const catalog=workspaceCatalog(current);
+ const session={catalog:workspaceCatalog(current),status:'loading',refresh:null,load:null};
  returnFocus=document.activeElement;
- openMenu(catalog);
+ openMenu(session.catalog,{...options,selectorSession:session});
+ // Never substitute a global workspace count for the caller's signed
+ // membership list. Every discovery is scoped and verified by the server.
+ session.load=async()=>{
+  if(session.status==='loading'&&session.started)return;
+  session.started=true;
+  if(!WS01_DISCOVERY_ENABLED||typeof options.lifecycle?.discover!=='function'){
+   session.status='unavailable';
+   session.refresh?.();
+   return;
+  }
+  session.status='loading';
+  session.refresh?.();
+  try{
+   const result=await options.lifecycle.discover();
+   if(result?.status!=='SIGNED_MEMBER_DISCOVERY')throw Error('Invalid signed catalog');
+   session.catalog=result;
+   session.status='ready';
+  }catch{
+   session.catalog=workspaceCatalog(current);
+   session.status='error';
+  }
+  session.refresh?.();
+ };
+ // Read-only signed RPC, no cross-user cache and no implicit workspace switch.
+ void session.load();
 }

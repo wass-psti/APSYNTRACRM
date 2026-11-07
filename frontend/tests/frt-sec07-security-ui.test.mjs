@@ -36,7 +36,10 @@ test('application clears old SEC07 result on signout, session expiration, worksp
  assert.match(source,/case 'security-sec07-readonly'/);
  assert.match(source,/case 'security-sec07-copy'/);
  assert.match(source,/state\.frtSecurityResult=null;state\.sec07Result=null;state\.sec09Result=null;state\.sec09RunId\+\+;state\.sec10Result=null;state\.sec10RunId\+\+;state\.effectiveAccessResult=null;state\.effectiveAccessRunId\+\+;state\.effectiveAccessBusy=false;location\.hash='#\/login'/);
- assert.match(source,/auth\.onExpired=\(\)=>\{(?:closeWorkspacePanels\(\);)?state\.context=null;state\.frtSecurityResult=null;state\.sec07Result=null/);
+ const expired=source.split('auth.onExpired=()=>{')[1];
+ assert.ok(expired,'A signed-session expiration cleanup handler must exist');
+ assert.match(expired,/closeWorkspacePanels\(\);state\.context=null;/);
+ assert.match(expired,/state\.frtSecurityResult=null;state\.sec07Result=null/);
  assert.match(source,/state\.roleData=null;state\.userRoleData=null;state\.userRoleSelected=null;\s*state\.frtSecurityResult=null;state\.sec07Result=null/);
 });
 test('SEC07 action routes only through existing read-only signed runner',()=>{

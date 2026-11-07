@@ -33,7 +33,7 @@ test('catalog card uses one semantic navigational link and decorative icon',()=>
  assert.doesNotMatch(markup,/board-card-symbol-link|onclick=|role="button"|tabindex="0"/);
  assert.ok(markup.indexOf('</div><a class="board-card-main"')>markup.indexOf('</details>'));
  assert.match(app,/if\(parts\[0\]==='boards'&&validUuid\(parts\[1\]\)\)/);
- assert.match(app,/await loadBoard\(parts\[1\],requested\)/);
+ assert.match(app,/await loadBoard\(parts\[1\],requested(?:,|\))/);
 });
 
 test('stretched link covers card geometry including top whitespace and right side',()=>{

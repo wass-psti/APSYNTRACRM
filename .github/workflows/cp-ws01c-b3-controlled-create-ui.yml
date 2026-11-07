@@ -1,0 +1,59 @@
+name: CP-WS-01C/B3 Controlled Workspace Create UI
+
+on:
+  push:
+    branches: [feature/ws01c-b3-controlled-workspace-creation]
+    paths:
+      - 'frontend/workspace-ui.js'
+      - 'frontend/app.js'
+      - 'frontend/workspace-lifecycle-client.js'
+      - 'frontend/tests/workspace-ui.test.mjs'
+      - 'frontend/tests/workspace-lifecycle-client.test.mjs'
+      - '.github/workflows/cp-ws01c-b3-controlled-create-ui.yml'
+  pull_request:
+    paths:
+      - 'frontend/workspace-ui.js'
+      - 'frontend/app.js'
+      - 'frontend/workspace-lifecycle-client.js'
+      - 'frontend/tests/workspace-ui.test.mjs'
+      - 'frontend/tests/workspace-lifecycle-client.test.mjs'
+      - '.github/workflows/cp-ws01c-b3-controlled-create-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Signed creation UI and full frontend regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Source checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert guarded production creation path is enabled only via signed client
+        run: |
+          set -euo pipefail
+          node scripts/verify-pages-source.mjs
+          node --check frontend/workspace-ui.js
+          node --check frontend/workspace-lifecycle-client.js
+          node --check frontend/app.js
+          grep -F 'WS01_CREATION_ENABLED=true' frontend/workspace-ui.js
+          ! grep -E 'sb_secret_|service_role|SUPABASE_SERVICE_ROLE_KEY' frontend/workspace-ui.js
+          echo 'WS01C_B3_PRODUCTION_CREATION_STILL_DISABLED'
+      - name: Signed client and UI contract tests
+        run: |
+          set -euo pipefail
+          node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs
+          echo 'WS01C_B3_SIGNED_CLIENT_UI_CONTRACT_PASS_SYNTHETIC'
+      - name: Full regression suite
+        run: |
+          set -euo pipefail
+          node --test frontend/tests/*.test.mjs
+          echo 'WS01C_B3_FULL_FRONTEND_REGRESSION_PASS'

@@ -51,8 +51,15 @@ The staged SQL in `main` had a malformed number regex and a duplicated tail with
 ## Evidence classification
 
 - **VERIFIED:** Existing GitHub `main` contains the CI workflow and intact staged SQL; the workflow configuration explicitly targets disposable local PostgreSQL; no production activation was requested or attempted in this checkpoint.
-- **IMPLEMENTED-UNVERIFIED:** Runtime SQL/RLS/CAS acceptance workflow and synthetic tests committed; full CI completion, job logs and PostgreSQL results not independently available through the connected GitHub interface.
-- **PENDING:** Actual CI run result, signed browser production acceptance, independent privileged-code security review and separate production schema/permission approval.
+- **VERIFIED (2026-11-06 independent follow-up):** Disposable PostgreSQL 17 CI run #13 (41950802327), job 126994002587 completed successfully; every relevant signed-fixture/CAS/RLS/role/foreign/revoked/expired/audit/emergency-disable step succeeded. Decoded logs and the final Node test summary (16 pass, 0 fail) were inspected. This is synthetic disposable integration evidence, not genuine production signed-user acceptance.
+- **PENDING:** Genuine signed production operational acceptance, independent privileged-code security review as required, and the separate Stage B production write-permission approval. Stage A production schema/read activation was already separately approved and installed; no further Stage A application is appropriate.
 - **NOT APPLICABLE at this checkpoint:** Production migration/role activation, source document approvals, private file uploads, full TradeLink app workflows.
 
-This gate is **not accepted** until the disposable PostgreSQL acceptance job has a confirmed successful outcome with matching logs and denial evidence.
+The **disposable PostgreSQL integration acceptance component is VERIFIED**, as of the independently inspected GitHub Actions run #13 and decoded logs. This does **not** certify production live signed-user acceptance or grant permission for Stage B activation.
+
+
+## Independent CI acceptance addendum — 2026-11-06
+
+The previously unavailable run-level evidence was recovered from GitHub Actions **run #13** (`41950802327`): https://github.com/wass-psti/APSYNTRACRM/actions/runs/41950802327. Job `126994002587` finished success, with all relevant PostgreSQL 17 synthetic fixture, schema, Stage A deny-write, disposable-only Stage B grant, signed create/retry/CAS/archive/restore, role ceilings, cross-workspace, revoked/expired-session fixture, audit, rollback, and frontend Node regression steps green. Decoded logs explicitly contain the signed draft, negative-role, immutable-audit and emergency-disable PASS notices. Node summary: **16 pass, 0 fail**. Earlier workflow **run #12** (`41883536962`) also finished success. No production schema, permissions or user sessions were changed by this CI evidence inspection.
+
+The separately installed Stage A production migration is `20261105011611` and its read-only contracts were independently reconfirmed by `sql/tests/cp-tl03c-phase1-readonly-activation-preflight.sql`: **15/15 checks PASS**, with Stage B write access still denied. See `docs/CP-TL-03C-PHASE-1-PRODUCTION-PREFLIGHT-2026-11-06.md`. This appendix supersedes the older unverified-CI disposition above.

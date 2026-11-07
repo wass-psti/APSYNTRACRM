@@ -12,6 +12,7 @@ on:
       - '.github/workflows/cp-tl03b-disposable-postgres.yml'
       - 'sql/cp-tl03-staged-domain.sql'
       - 'sql/cp-tl03c-write-permission-candidate.sql'
+      - 'sql/cp-tl03c-stage-b-write-revoke-candidate.sql'
       - 'sql/cp-tl03c-emergency-disable-candidate.sql'
       - 'sql/tests/cp-tl03-*.sql'
       - 'sql/tests/cp-tl03c-*.sql'
@@ -74,9 +75,13 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-acceptance.sql
       - name: Check post-migration grants and board projection
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-postactivation-readonly.sql
+      - name: Revoke Stage B write grants only, retaining Stage A reads (disposable)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03c-stage-b-write-revoke-candidate.sql
+      - name: Verify read continuity and record retention after narrow revoke
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03c-disposable-write-revoke-acceptance.sql
       - name: Exercise nondestructive API disable in disposable PostgreSQL
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03c-emergency-disable-candidate.sql
       - name: Verify permissions are revoked but domain and board audit survive
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03c-disposable-emergency-acceptance.sql
       - name: Run frontend adapter and SQL-contract regression tests
-        run: node --test frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-domain-sql-contract.test.mjs
+        run: node --test frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-domain-sql-contract.test.mjs frontend/tests/tradelink-domain-stage-b-release-boundary.test.mjs

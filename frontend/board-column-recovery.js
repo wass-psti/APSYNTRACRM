@@ -1,28 +1,42 @@
-/** CP-BOARD-COL-DELETE — opt-in recoverable custom-column mutation adapter.
- * DORMANT until separately authorized production SQL / signed acceptance.
+/** CP-BOARD-COL-DELETE — QA-only recoverable column acceptance adapter.
+ * B5: default-off after signed QA acceptance and controlled deactivation.
+ * Backend signed actor, board-manager rights, RLS and expiry remain authoritative.
  * Activity is an audit feed; private recovery RPCs own restoration.
  */
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {columnStoredValueCount} from './board-inline-context.js';
 
+// Phase B5: previous time-limited QA recovery window is complete.
+// Preserve the historical acceptance guard; no production UI recovery is enabled.
 export const BOARD_COLUMN_RECOVERY_ENABLED=false;
-// Frontend defense in depth for the separate Phase B QA cutover. Server-side
-// scope is authoritative; this cannot grant any RPC permission by itself.
-export function isQaBoardRecoveryInterfaceAllowed(detail,{enabled=BOARD_COLUMN_RECOVERY_ENABLED}={}){
+export const B4_QA_BOARD_ID='8491b933-8aa7-4b10-816c-46b6758531f3';
+export const B4_QA_BOARD_NAME='CP-BOARD-COL-DELETE QA Signed Fixture';
+export const B4_QA_COLUMN_NAME='Recovery Status';
+export const B4_QA_EXPIRES_AT=Date.parse('2026-11-06T04:07:34Z');
+export function isQaBoardRecoveryInterfaceAllowed(detail,{
+ enabled=BOARD_COLUMN_RECOVERY_ENABLED,now=Date.now()
+}={}){
  const board=detail?.board;
- return enabled===true&&validUuid(board?.id)&&
-  typeof board?.name==='string'&&board.name.startsWith('CP-BOARD-COL-DELETE QA ');
+ return enabled===true&&Number.isFinite(now)&&now<B4_QA_EXPIRES_AT&&
+  board?.id===B4_QA_BOARD_ID&&board.name===B4_QA_BOARD_NAME&&
+  board.status==='active';
+}
+export function canStartB4QaRecoveryDeletion(detail,column,{
+ now=Date.now(),enabled=BOARD_COLUMN_RECOVERY_ENABLED
+}={}){
+ return isQaBoardRecoveryInterfaceAllowed(detail,{enabled,now})&&
+  column?.name===B4_QA_COLUMN_NAME&&now<B4_QA_EXPIRES_AT-600000;
 }
 const fail=(message,status=403,code='')=>{throw new ApiError(message,status,code);};
 const safeHtml=x=>String(x??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
-const ensureReady=async(api,id,enabled)=>{
- if(enabled!==true)fail(
-  'Recoverable deletion is not activated. Your stored values are unchanged.',503,'COL_RECOVERY_DISABLED');
- if(!validUuid(id)||typeof api?.rpc!=='function'||typeof api?.allowed!=='function')
-  fail('Signed board recovery API unavailable.',403);
+const ensureReady=async(api,id,enabled,now)=>{
+ if(enabled!==true||!Number.isFinite(now)||now>=B4_QA_EXPIRES_AT)
+  fail('The time-limited QA recovery window is unavailable. No data changed.',503,'COL_RECOVERY_DISABLED');
+ if(id!==B4_QA_BOARD_ID||typeof api?.rpc!=='function'||typeof api?.allowed!=='function')
+  fail('Recovery is restricted to the approved QA fixture.',403,'COL_RECOVERY_DENIED');
  if(await api.allowed(id,'manage')!==true)
   fail('Only authorized board managers may recover columns.',403,'COL_RECOVERY_DENIED');
 };
@@ -98,9 +112,12 @@ const request=async(api,name,args,expect)=>{
 };
 export class BoardColumnRecoveryClient{
  constructor(api){this.api=api;}
- async delete(detail,column,confirmation,{enabled=BOARD_COLUMN_RECOVERY_ENABLED}={}){
+ async delete(detail,column,confirmation,{enabled=BOARD_COLUMN_RECOVERY_ENABLED,now=Date.now()}={}){
   const boardId=detail?.board?.id;
-  await ensureReady(this.api,boardId,enabled);
+  await ensureReady(this.api,boardId,enabled,now);
+  if(!isQaBoardRecoveryInterfaceAllowed(detail,{enabled,now})||
+     column?.name!==B4_QA_COLUMN_NAME||now>=B4_QA_EXPIRES_AT-600000)
+   fail('Only the verified Recovery Status fixture may be deleted with sufficient restoration time.',403);
   if(!column?.deletable||column.immutable||!validUuid(column.id)||
    typeof column.name!=='string')
    fail('The required Item and application-owned columns cannot be deleted.',403);
@@ -114,8 +131,8 @@ export class BoardColumnRecoveryClient{
    p_expected_value_count:valueRows,p_confirmation:confirmation
   },{boardId,action:'delete-recoverable',columnId:column.id,count:valueRows});
  }
- async list(boardId,{enabled=BOARD_COLUMN_RECOVERY_ENABLED}={}){
-  await ensureReady(this.api,boardId,enabled);
+ async list(boardId,{enabled=BOARD_COLUMN_RECOVERY_ENABLED,now=Date.now()}={}){
+  await ensureReady(this.api,boardId,enabled,now);
   let result;
   try{result=await this.api.rpc('wm_list_recoverable_board_columns',{p_board_id:boardId});}
   catch(error){throw explainColumnDeleteError(error);}
@@ -131,9 +148,11 @@ export class BoardColumnRecoveryClient{
    valueRows:x.value_rows,deletedAt:x.deleted_at,restorable:x.restorable
   }));
  }
- async restore(detail,entry,{enabled=BOARD_COLUMN_RECOVERY_ENABLED}={}){
+ async restore(detail,entry,{enabled=BOARD_COLUMN_RECOVERY_ENABLED,now=Date.now()}={}){
   const boardId=detail?.board?.id;
-  await ensureReady(this.api,boardId,enabled);
+  await ensureReady(this.api,boardId,enabled,now);
+  if(!isQaBoardRecoveryInterfaceAllowed(detail,{enabled,now})||entry?.name!==B4_QA_COLUMN_NAME)
+   fail('Only the verified QA fixture column may be restored.',403);
   if(!validUuid(entry?.deletionId)||!validUuid(entry?.columnId)||
    entry.restorable!==true)
    fail('This recovery snapshot is not ready to restore.',409);

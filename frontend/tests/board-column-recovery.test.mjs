@@ -3,20 +3,22 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
 import {
- BOARD_COLUMN_RECOVERY_ENABLED,isQaBoardRecoveryInterfaceAllowed,BoardColumnRecoveryClient,
- renderBoardColumnRecoveryList,explainColumnDeleteError
+ BOARD_COLUMN_RECOVERY_ENABLED,B4_QA_BOARD_ID,B4_QA_BOARD_NAME,B4_QA_COLUMN_NAME,
+ B4_QA_EXPIRES_AT,isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,
+ BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError
 } from '../board-column-recovery.js';
-const boardId='11111111-1111-4111-8111-111111111111';
+const boardId=B4_QA_BOARD_ID;
+const inWindow=Date.parse('2026-11-06T03:30:00Z');
 const columnId='22222222-2222-4222-8222-222222222222';
 const deletionId='33333333-3333-4333-8333-333333333333';
 const updatedAt='2026-11-05T10:00:00.000Z';
 const newUpdated='2026-11-05T10:01:00.000Z';
-const column={id:columnId,name:'Status I',deletable:true,immutable:false};
-const detail={board:{id:boardId,updated_at:updatedAt},values:[
+const column={id:columnId,name:B4_QA_COLUMN_NAME,deletable:true,immutable:false};
+const detail={board:{id:boardId,name:B4_QA_BOARD_NAME,status:'active',updated_at:updatedAt},values:[
  {item_id:'44444444-4444-4444-8444-444444444444',column_id:columnId,value:'active'},
  {item_id:'55555555-5555-4555-8555-555555555555',column_id:columnId,value:null}
 ]};
-const entry={deletionId,columnId,name:'Status I',valueRows:2,deletedAt:updatedAt,restorable:true};
+const entry={deletionId,columnId,name:B4_QA_COLUMN_NAME,valueRows:2,deletedAt:updatedAt,restorable:true};
 function client({manage=true,mode='ok'}={}){
  const calls=[];
  const api={allowed:async(id,required)=>{
@@ -37,52 +39,55 @@ function client({manage=true,mode='ok'}={}){
    action:'restore-recoverable',value_rows:2,updated_at:newUpdated
   };
   if(name==='wm_list_recoverable_board_columns')return [{
-   deletion_id:deletionId,column_id:columnId,name:'Status I',value_rows:2,
+   deletion_id:deletionId,column_id:columnId,name:B4_QA_COLUMN_NAME,value_rows:2,
    deleted_at:updatedAt,restorable:true
   }];
   throw new Error('Unexpected operation');
  }};
  return {api,calls,subject:new BoardColumnRecoveryClient(api)};
 }
-test('recovery remains disabled by default with zero server calls',async()=>{
+test('B4 QA recovery requires explicit active gate and safe expiry',async()=>{
  assert.equal(BOARD_COLUMN_RECOVERY_ENABLED,false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(detail,{now:inWindow}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(detail,{enabled:true,now:inWindow}),true);
  const {subject,calls}=client();
- await assert.rejects(()=>subject.delete(detail,column,'DELETE Status I'),
+ await assert.rejects(()=>subject.delete(detail,column,'DELETE Recovery Status',
+  {enabled:false,now:inWindow}),
   err=>err.status===503&&err.code==='COL_RECOVERY_DISABLED');
  assert.deepEqual(calls,[]);
 });
 test('enabled signed manager performs one CAS and count-protected populated deletion',async()=>{
  const {subject,calls}=client();
- const result=await subject.delete(detail,column,'DELETE Status I',{enabled:true});
+ const result=await subject.delete(detail,column,'DELETE Recovery Status',{enabled:true,now:inWindow});
  assert.deepEqual(result,{boardId,action:'delete-recoverable',columnId,deletionId,
   valueRows:2,updatedAt:newUpdated});
  assert.deepEqual(calls,[
   ['allowed',boardId,'manage'],
   ['rpc','wm_delete_board_column_recoverable',{
    p_board_id:boardId,p_column_id:columnId,p_expected_updated_at:updatedAt,
-   p_expected_value_count:2,p_confirmation:'DELETE Status I'
+   p_expected_value_count:2,p_confirmation:'DELETE Recovery Status'
   }]
  ]);
 });
 test('protected, invalid confirmation, unauthorized or zero-value deletion sends no mutation',async()=>{
  const none={...detail,values:[]};
  for(const [values,col,conf] of [
-  [none,column,'DELETE Status I'],
-  [detail,{...column,deletable:false},'DELETE Status I'],
-  [detail,column,'delete status i']
+  [none,column,'DELETE Recovery Status'],
+  [detail,{...column,deletable:false},'DELETE Recovery Status'],
+  [detail,column,'delete recovery status']
  ]){
   const {subject,calls}=client();
-  await assert.rejects(()=>subject.delete(values,col,conf,{enabled:true}));
+  await assert.rejects(()=>subject.delete(values,col,conf,{enabled:true,now:inWindow}));
   assert.equal(calls.filter(x=>x[0]==='rpc').length,0);
  }
  const {subject,calls}=client({manage:false});
- await assert.rejects(()=>subject.delete(detail,column,'DELETE Status I',{enabled:true}),
+ await assert.rejects(()=>subject.delete(detail,column,'DELETE Recovery Status',{enabled:true,now:inWindow}),
   err=>err.status===403);
  assert.equal(calls.filter(x=>x[0]==='rpc').length,0);
 });
 test('manager-only Activity list returns metadata, not archived values or private table fields',async()=>{
  const {subject,calls}=client();
- const rows=await subject.list(boardId,{enabled:true});
+ const rows=await subject.list(boardId,{enabled:true,now:inWindow});
  assert.deepEqual(rows,[entry]);
  assert.equal(calls.filter(x=>x[0]==='rpc')[0][1],
   'wm_list_recoverable_board_columns');
@@ -98,7 +103,7 @@ test('manager-only Activity list returns metadata, not archived values or privat
 });
 test('authorized restore uses fresh board revision and exact server receipt',async()=>{
  const {subject,calls}=client();
- const result=await subject.restore(detail,entry,{enabled:true});
+ const result=await subject.restore(detail,entry,{enabled:true,now:inWindow});
  assert.equal(result.action,'restore-recoverable');
  assert.deepEqual(calls.filter(x=>x[0]==='rpc'),[
   ['rpc','wm_restore_board_column_recoverable',{
@@ -108,18 +113,18 @@ test('authorized restore uses fresh board revision and exact server receipt',asy
 });
 test('unrestorable snapshot, stale, denied and conflicting rename fail closed',async()=>{
  const {subject,calls}=client();
- await assert.rejects(()=>subject.restore(detail,{...entry,restorable:false},{enabled:true}));
+ await assert.rejects(()=>subject.restore(detail,{...entry,restorable:false},{enabled:true,now:inWindow}));
  assert.equal(calls.filter(x=>x[0]==='rpc').length,0);
  for(const [mode,status] of [['stale',409],['denied',403],['conflict',409]]){
   const {subject:bad}=client({mode});
-  await assert.rejects(()=>bad.delete(detail,column,'DELETE Status I',{enabled:true}),
+  await assert.rejects(()=>bad.delete(detail,column,'DELETE Recovery Status',{enabled:true,now:inWindow}),
    err=>err.status===status&&err.schemaOutcomeUncertain!==true);
  }
 });
 test('lost response and malformed receipt are uncertain, never automatically retried',async()=>{
  for(const mode of ['network','invalid']){
   const {subject,calls}=client({mode});
-  await assert.rejects(()=>subject.delete(detail,column,'DELETE Status I',{enabled:true}),
+  await assert.rejects(()=>subject.delete(detail,column,'DELETE Recovery Status',{enabled:true,now:inWindow}),
    err=>err.schemaOutcomeUncertain===true&&/Do not retry/.test(err.message));
   assert.equal(calls.filter(x=>x[0]==='rpc').length,1);
  }
@@ -132,10 +137,10 @@ test('SQLSTATE errors are translated without leaking raw server details',()=>{
   assert.doesNotMatch(e.message,/private detail/);
  }
 });
-test('UI accurately reports populated column and keeps recovery disabled until activation',()=>{
+test('UI offers populated deletion only through the scoped QA acceptance gate',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const inline=readFileSync('frontend/board-inline-context.js','utf8');
- assert.match(app,/const qaRecoveryEnabled=isQaBoardRecoveryInterfaceAllowed\(state\.board\)/);
+ assert.match(app,/const qaRecoveryEnabled=canStartB4QaRecoveryDeletion\(state\.board,column\)/);
  assert.match(app,/const blocked=storedCount>0&&!qaRecoveryEnabled/);
  assert.match(app,/submitDisabled:blocked/);
  assert.match(app,/Deletion unavailable/);
@@ -179,17 +184,61 @@ test('specific backend deletion failures have accurate, actionable classificatio
  assert.match(permission.message,/signed session/);
 });
 
-test('Phase B QA recovery UI stays dark and never exposes Contacts even after future switch',()=>{
- const qa={board:{id:boardId,name:'CP-BOARD-COL-DELETE QA Fixture'}};
- const contacts={board:{id:boardId,name:'Contacts'}};
- assert.equal(isQaBoardRecoveryInterfaceAllowed(qa),false);
- assert.equal(isQaBoardRecoveryInterfaceAllowed(contacts,{enabled:true}),false);
- assert.equal(isQaBoardRecoveryInterfaceAllowed(qa,{enabled:true}),true);
- assert.equal(isQaBoardRecoveryInterfaceAllowed({board:{name:'CP-BOARD-COL-DELETE QA Fixture'}},{enabled:true}),false);
- assert.equal(isQaBoardRecoveryInterfaceAllowed({board:{id:boardId,name:'APSYNTRA QA'}},{enabled:true}),false);
+test('B4 QA-only frontend is exact-board and expires closed',()=>{
+ const qa={board:{id:boardId,name:B4_QA_BOARD_NAME,status:'active'}};
+ const contacts={board:{id:'99999999-9999-4999-8999-999999999999',name:'Contacts',status:'active'}};
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(qa,{now:inWindow}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(qa,{enabled:true,now:inWindow}),true);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(qa,{enabled:false,now:inWindow}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(qa,{enabled:true,now:B4_QA_EXPIRES_AT}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(contacts,{enabled:true,now:inWindow}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(
+  {board:{id:boardId,name:'CP-BOARD-COL-DELETE QA Other Fixture',status:'active'}},
+  {enabled:true,now:inWindow}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(
+  {board:{id:boardId,name:B4_QA_BOARD_NAME,status:'archived'}},
+  {enabled:true,now:inWindow}),false);
+ assert.equal(isQaBoardRecoveryInterfaceAllowed(
+  {board:{name:B4_QA_BOARD_NAME,status:'active'}},{enabled:true,now:inWindow}),false);
+ assert.equal(canStartB4QaRecoveryDeletion(qa,column,{now:inWindow}),false);
+ assert.equal(canStartB4QaRecoveryDeletion(qa,column,{enabled:true,now:inWindow}),true);
+ assert.equal(canStartB4QaRecoveryDeletion(qa,{...column,name:'Other'}, {enabled:true,now:inWindow}),false);
+ assert.equal(canStartB4QaRecoveryDeletion(qa,column,{enabled:true,now:B4_QA_EXPIRES_AT-600000}),false);
  const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/const qaRecoveryEnabled=canStartB4QaRecoveryDeletion\(state\.board,column\)/);
  assert.match(app,/if\(isQaBoardRecoveryInterfaceAllowed\(state\.board\)&&state\.boardManage\)/);
  assert.match(app,/if\(!isQaBoardRecoveryInterfaceAllowed\(state\.board\)\|\|!state\.boardManage\)/);
  assert.match(app,/const recoverable=storedCount>0&&qaRecoveryEnabled/);
  assert.match(app,/const blocked=storedCount>0&&!qaRecoveryEnabled/);
+});
+test('B4 client denies foreign, expired, wrong-column and late deletion without recovery RPCs',async()=>{
+ const {subject,calls}=client();
+ await assert.rejects(()=>subject.delete(
+   {...detail,board:{...detail.board,id:'99999999-9999-4999-8999-999999999999'}},
+   column,'DELETE Recovery Status',{enabled:true,now:inWindow}),
+  err=>err.status===403);
+ await assert.rejects(()=>subject.delete(
+   detail,{...column,name:'Other'},'DELETE Other',{enabled:true,now:inWindow}),
+  err=>err.status===403);
+ await assert.rejects(()=>subject.delete(
+   detail,column,'DELETE Recovery Status',{enabled:true,now:B4_QA_EXPIRES_AT-599999}),
+  err=>err.status===403);
+ await assert.rejects(()=>subject.delete(
+   detail,column,'DELETE Recovery Status',{enabled:true,now:B4_QA_EXPIRES_AT}),
+  err=>err.status===503&&err.code==='COL_RECOVERY_DISABLED');
+ await assert.rejects(()=>subject.list(boardId,{enabled:true,now:B4_QA_EXPIRES_AT}),
+  err=>err.status===503);
+ await assert.rejects(()=>subject.restore(
+   detail,entry,{enabled:true,now:B4_QA_EXPIRES_AT}),
+  err=>err.status===503);
+ await assert.rejects(()=>subject.restore(
+   detail,{...entry,name:'Other'},{enabled:true,now:inWindow}),
+  err=>err.status===403);
+ assert.equal(calls.some(([kind])=>kind==='rpc'),false);
+});
+test('B4 restored snapshots remain available in the final ten minutes',async()=>{
+ const {subject,calls}=client();
+ const receipt=await subject.restore(detail,entry,{enabled:true,now:B4_QA_EXPIRES_AT-300000});
+ assert.equal(receipt.action,'restore-recoverable');
+ assert.equal(calls.filter(([kind])=>kind==='rpc').length,1);
 });

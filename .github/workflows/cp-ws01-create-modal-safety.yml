@@ -1,0 +1,54 @@
+name: CP-WS-01 Create Modal Safety and Readiness UI
+
+on:
+  push:
+    branches:
+      - fix/ws01-create-modal-readiness-layout
+    paths:
+      - '.github/workflows/cp-ws01-create-modal-safety.yml'
+      - 'frontend/workspace-ui.js'
+      - 'frontend/workspace-ui.css'
+      - 'frontend/tests/workspace-ui.test.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/cp-ws01-create-modal-safety.yml'
+      - 'frontend/workspace-ui.js'
+      - 'frontend/workspace-ui.css'
+      - 'frontend/tests/workspace-ui.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  modal-and-workspace-regression:
+    name: All frontend tests + create-modal fail-closed guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout with no retained credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Node 22
+        uses: actions/setup-node@v4 # consistent with repository validation; pinned ref failed runner resolution
+        with:
+          node-version: '22'
+      - name: Confirm shipped code syntax and public-only credentials
+        run: |
+          set -euo pipefail
+          node --check frontend/workspace-ui.js
+          node --check frontend/app.js
+          node scripts/verify-pages-source.mjs
+      - name: Validate hardened workspace create draft contract
+        run: |
+          set -euo pipefail
+          node --test frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs
+          grep -F 'WS01_CREATION_ENABLED=true' frontend/workspace-ui.js
+          ! grep -E 'api\.rpc\(.wm_ws01_create|service_role|sb_secret_' frontend/workspace-ui.js
+          echo 'WS01_CREATE_UI_DRAFT_ONLY_FAIL_CLOSED_PASS'
+      - name: Full frontend regression
+        run: |
+          set -euo pipefail
+          node --test frontend/tests/*.test.mjs
+          echo 'WS01_CREATE_MODAL_FULL_FRONTEND_PASS'

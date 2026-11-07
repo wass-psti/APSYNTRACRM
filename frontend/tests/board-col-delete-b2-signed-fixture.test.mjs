@@ -164,6 +164,8 @@ test('B2 Security UI wires a real user click and clears state on signout',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/case 'security-b2-qa-inspect':/);
  assert.match(app,/case 'security-b2-qa-create':/);
+ assert.match(app,/const create=name==='security-b2-qa-create';/);
+ assert.doesNotMatch(app,/const create=action==='security-b2-qa-create';/);
  assert.match(app,/await createB2SignedQaFixture\(\{auth,api:db,structure:boardStructureClient\}\)/);
  assert.match(app,/renderB2SignedQaFixture\(\{busy:state.b2QaBusy,result:state.b2QaReport\}\)/);
  assert.match(app,/state.b2QaRunId\+\+;state.b2QaBusy=false;state.b2QaReport=null/);

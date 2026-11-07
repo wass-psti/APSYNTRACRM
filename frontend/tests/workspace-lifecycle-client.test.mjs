@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  WorkspaceLifecycleClient,normalizeWorkspaceCreationReceipt,
- normalizeWorkspaceSelectionReceipt
+ normalizeWorkspaceSelectionReceipt,WS01_CONFIGURATION_ENABLED,
+ normalizeWorkspaceConfigurationReadReceipt,normalizeWorkspaceConfigurationUpdateReceipt
 } from '../workspace-lifecycle-client.js';
 
 const primary='00000000-0000-4000-8000-000000000001';
@@ -41,19 +42,113 @@ test('workspace selection receipt requires exact target, previous scope and chan
   {schemaVersion:1,workspaceId:foreign,previousWorkspaceId:primary,switched:'true'}
  ])assert.throws(()=>normalizeWorkspaceSelectionReceipt(invalid,foreign,primary));
 });
-test('client lifecycle methods fail closed before production approval and send zero RPCs',async()=>{
+test('discovery fails closed on mismatched signed identity and switching remains disabled',async()=>{
+ let rpcCalls=0;
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>({id:foreign})},
+  api:{context:async()=>({user_id:actor,workspace_id:primary,profile:{status:'active'}}),
+   rpc:async()=>{rpcCalls++;throw Error('UNEXPECTED_CREATION_RPC');}}
+ });
+ await assert.rejects(client.discover(),/Signed workspace identity changed/);
+ await assert.rejects(client.create({
+  name:'New',privacy:'closed',requestId:foreign
+ }),/Signed workspace identity changed/);
+ await assert.rejects(client.select(foreign,primary),/not activated/);
+ assert.equal(rpcCalls,0);
+});
+
+test('read-only signed workspace discovery shows only server-authorized member rows',async()=>{
+ let verified=0,contexts=0;
+ const rpc=[];
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>{verified++;return {id:actor};}},
+  api:{
+   context:async()=>{contexts++;return {user_id:actor,workspace_id:primary,profile:{status:'active'}};},
+   rpc:async(method,args)=>{
+    rpc.push({method,args});
+    assert.equal(method,'wm_ws01_list');
+    assert.deepEqual(args,{});
+    return {schemaVersion:1,userId:actor,activeWorkspaceId:primary,rows:[
+     {id:primary,name:'Work Management',relation:'member',privacy:'closed',active:true},
+     {id:foreign,name:'Shared Operations',relation:'owner',privacy:'closed',active:false}
+    ]};
+   }
+  }
+ });
+ const catalog=await client.discover();
+ assert.equal(catalog.status,'SIGNED_MEMBER_DISCOVERY');
+ assert.deepEqual(catalog.rows.map(row=>row.name),['Work Management','Shared Operations']);
+ assert.equal(catalog.rows[1].verifiedScope,'SIGNED_MEMBER_RPC');
+ assert.equal(catalog.canSwitch,false);
+ assert.equal(catalog.canDiscoverAll,false);
+ assert.equal(rpc.length,1);
+ assert.equal(verified,2);
+ assert.equal(contexts,2);
+});
+
+test('signed discovery rejects mismatched server actor or workspace without leaking rows',async()=>{
+ for(const mismatch of ['user','workspace']){
+  let rpcCalls=0;
+  const client=new WorkspaceLifecycleClient({
+   auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
+   api:{
+    context:async()=>({user_id:actor,workspace_id:primary,profile:{status:'active'}}),
+    rpc:async method=>{
+     rpcCalls++;
+     assert.equal(method,'wm_ws01_list');
+     return {schemaVersion:1,userId:mismatch==='user'?foreign:actor,
+      activeWorkspaceId:mismatch==='workspace'?foreign:primary,rows:[
+       {id:primary,name:'Work Management',relation:'member',privacy:'closed',active:true}
+      ]};
+    }
+   }
+  });
+  await assert.rejects(client.discover(),/Invalid signed workspace discovery result/);
+  assert.equal(rpcCalls,1);
+ }
+});
+
+test('signed discovery rejects a changed session or workspace after the read',async()=>{
  let calls=0;
  const client=new WorkspaceLifecycleClient({
-  auth:{userId:actor,getVerifiedUser:async()=>{calls++;return {id:actor};}},
-  api:{context:async()=>{calls++;return {
-   user_id:actor,workspace_id:primary,profile:{status:'active'}};},
-   rpc:async()=>{calls++;throw Error('PRODUCTION_RPC_MUST_NOT_RUN');}}
+  auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
+  api:{
+   context:async()=>{calls++;return {user_id:actor,
+    workspace_id:calls===1?primary:foreign,profile:{status:'active'}};},
+   rpc:async()=>({schemaVersion:1,userId:actor,activeWorkspaceId:primary,rows:[
+    {id:primary,name:'Work Management',relation:'member',privacy:'closed',active:true}
+   ]})
+  }
  });
- await assert.rejects(client.discover(),/not activated/);
- await assert.rejects(client.create({
-  name:'New',privacy:'closed',requestId:foreign}),/not activated/);
- await assert.rejects(client.select(foreign,primary),/not activated/);
- assert.equal(calls,0);
+ await assert.rejects(client.discover(),/Signed workspace changed during request/);
+ assert.equal(calls,2);
+});
+
+test('enabled create sends exactly one caller-scoped RPC and independently rechecks stable context',async()=>{
+ let signedChecks=0,contextChecks=0,rpcCalls=0;
+ const requestId='99999999-9999-4999-8999-999999999901';
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>{signedChecks++;return {id:actor};}},
+  api:{
+   context:async()=>{contextChecks++;return {user_id:actor,
+    workspace_id:primary,profile:{status:'active'}};},
+   rpc:async(method,args)=>{
+    rpcCalls++;assert.equal(method,'wm_ws01_create');
+    assert.deepEqual(args,{p_name:'Authorized Workspace',
+     p_privacy:'closed',p_request_id:requestId});
+    return {schemaVersion:1,workspaceId:foreign,relation:'owner',
+     privacy:'closed',idempotent:false,active:false};
+   }
+  }
+ });
+ const r=await client.create({name:' Authorized Workspace ',
+  privacy:'closed',requestId});
+ assert.equal(r.relation,'owner');
+ assert.equal(r.active,false);
+ assert.equal(r.workspaceId,foreign);
+ assert.equal(rpcCalls,1);
+ assert.equal(signedChecks,2);
+ assert.equal(contextChecks,2);
 });
 test('pure signed identity validation fails closed on mismatches',async()=>{
  const client=new WorkspaceLifecycleClient({
@@ -194,4 +289,75 @@ test('B1 migration contains no public or private RPCs and is accepted before B2/
  const discover=workflow.indexOf('-f sql/cp-ws01-discovery-activation-candidate.sql');
  const create=workflow.indexOf('-f sql/cp-ws01c-b3-create-contract-candidate.sql');
  assert.ok(install>=0&&install<verify&&verify<discover&&discover<create);
+});
+
+
+test('workspace config integration remains default-off with zero RPCs',async()=>{
+ let calls=0;
+ const client=new WorkspaceLifecycleClient({
+  auth:{userId:actor,getVerifiedUser:async()=>{calls++;return {id:actor};}},
+  api:{context:async()=>{calls++;return {user_id:actor,workspace_id:primary,profile:{status:'active'}};},
+   rpc:async()=>{calls++;throw new Error('Unexpected configuration RPC');}}
+ });
+ assert.equal(WS01_CONFIGURATION_ENABLED,false);
+ await assert.rejects(client.readConfiguration(primary),/not activated/);
+ await assert.rejects(client.updateConfiguration({
+  workspaceId:primary,name:'Engineering',privacy:'closed',expectedRevision:1
+ }),/not activated/);
+ assert.equal(calls,0);
+});
+
+test('configuration read rejects forged targets, invalid owner flags and unsafe text',()=>{
+ const valid={schemaVersion:1,workspaceId:primary,name:'Engineering',
+  privacy:'closed',revision:1,canEdit:true};
+ const receipt=normalizeWorkspaceConfigurationReadReceipt(valid,primary);
+ assert.deepEqual(receipt,{workspaceId:primary,name:'Engineering',privacy:'closed',
+  revision:1,canEdit:true});
+ assert.ok(Object.isFrozen(receipt));
+ for(const bad of [
+  {...valid,workspaceId:foreign},
+  {...valid,name:'<script>'},
+  {...valid,name:' Engineering '},
+  {...valid,privacy:'public'},
+  {...valid,canEdit:'true'},
+  {...valid,revision:0},
+  {...valid,revision:1.5},
+  {...valid,schemaVersion:2}
+ ])assert.throws(()=>normalizeWorkspaceConfigurationReadReceipt(bad,primary));
+});
+test('configuration update receipts enforce exact signed target, proposal and CAS version',()=>{
+ const proposal={name:'Engineering',privacy:'open'};
+ const updated={schemaVersion:1,workspaceId:primary,name:'Engineering',
+  privacy:'open',revision:2,updated:true};
+ assert.deepEqual(normalizeWorkspaceConfigurationUpdateReceipt(
+  updated,primary,proposal,1),{workspaceId:primary,name:'Engineering',
+   privacy:'open',revision:2,updated:true});
+ assert.equal(normalizeWorkspaceConfigurationUpdateReceipt({
+  ...updated,revision:1,updated:false
+ },primary,proposal,1).updated,false);
+ for(const bad of [
+  {...updated,workspaceId:foreign},
+  {...updated,name:'Different'},
+  {...updated,privacy:'closed'},
+  {...updated,revision:1},
+  {...updated,updated:'true'},
+  {...updated,revision:4},
+  {...updated,schemaVersion:0}
+ ])assert.throws(()=>normalizeWorkspaceConfigurationUpdateReceipt(
+  bad,primary,proposal,1));
+});
+test('new dormant configuration SQL has no frontend grants or production activation',()=>{
+ const sql=readFileSync('sql/cp-ws01-config-update-dormant-candidate.sql','utf8');
+ const workflow=readFileSync('.github/workflows/cp-ws01b-disposable-postgres.yml','utf8');
+ assert.match(sql,/current_database\(\) <> 'workspace_disposable'/);
+ assert.match(sql,/CREATE FUNCTION public\.wm_ws01_config_read/);
+ assert.match(sql,/CREATE FUNCTION public\.wm_ws01_config_update/);
+ assert.match(sql,/private\.ws01_signed_actor_session\(\)/);
+ assert.match(sql,/r\.relation='owner'/);
+ assert.match(sql,/FOR UPDATE OF w,pol/);
+ assert.match(sql,/Stale workspace configuration/);
+ assert.match(sql,/INSERT INTO private\.ws01_config_events/);
+ assert.match(sql,/enabled boolean NOT NULL DEFAULT false/);
+ assert.doesNotMatch(sql,/GRANT EXECUTE ON FUNCTION public\.wm_ws01_config_.*TO authenticated/);
+ assert.match(workflow,/sql\/tests\/cp-ws01-config-disposable-acceptance\.sql/);
 });
