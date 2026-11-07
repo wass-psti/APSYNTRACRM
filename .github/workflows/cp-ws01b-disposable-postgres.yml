@@ -15,6 +15,7 @@ on:
       - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
       - 'sql/cp-ws01-config-update-dormant-candidate.sql'
       - 'sql/tests/cp-ws01-config-disposable-acceptance.sql'
+      - 'sql/tests/cp-ws01-phase-h-cross-contract-hardening-disposable.sql'
       - 'sql/cp-ws02*.sql'
       - 'sql/tests/cp-ws01b-*.sql'
       - 'sql/tests/cp-ws01c-*.sql'
@@ -245,3 +246,5 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01-config-update-dormant-candidate.sql
       - name: Verify owner CAS, foreign/member/session denials and full rollback
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01-config-disposable-acceptance.sql
+      - name: Accept cross-contract signed session selection, workspace configuration, invitation and board isolation under hardened scope
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01-phase-h-cross-contract-hardening-disposable.sql
