@@ -1,5 +1,5 @@
-/* CP-WS-01A — Monday-inspired patterns, APSYNTRA identity.
-   Read-only catalog; production lifecycle controls are not activated. */
+/* APSYNTRA workspace controls. Signed backend authorization, not styling,
+   determines workspace visibility and lifecycle operation availability. */
 #app .aps-sidebar .ws01-trigger-wrap{padding:0;overflow:visible}
 #app .aps-sidebar .ws01-switcher-button{
  display:flex;align-items:center;gap:10px;min-width:0;width:100%;
@@ -46,9 +46,8 @@
  text-transform:uppercase;letter-spacing:.7px;margin:19px 0 10px}
 .ws01-overlay .ws01-entry{
  display:flex;align-items:center;gap:12px;min-width:0;border:1px solid #e6e9f5;
- background:#fbfcff;border-radius:12px;padding:10px 12px
+ background:#fbfcff;border-radius:12px;padding:0;overflow:hidden
 }
-.ws01-overlay .ws01-entry{padding:0;overflow:hidden}
 .ws01-overlay .ws01-entry-button{display:flex;align-items:center;gap:12px;
  border:0;background:transparent;width:100%;min-width:0;padding:10px 12px;
  text-align:left;color:inherit;border-radius:12px}
@@ -146,8 +145,8 @@
 .ws01-create-card footer button{border-radius:9px;border:1px solid #d7dded;
  padding:10px 15px;background:#fff;color:#4e5d78;font-size:12px;font-weight:720}
 .ws01-create-card footer .ws01-primary{background:#6164e4;border-color:#6164e4;color:#fff}
-/* Protected workspace-create preview: stable sizing and no overlapping actions.
-   The production creation lifecycle remains default-off. */
+/* Workspace creation layout: stable sizing and nonoverlapping actions.
+   Signed backend grants determine whether creation can persist. */
 .ws01-overlay.ws01-create{overflow-y:auto;overscroll-behavior:contain}
 .ws01-create-card{width:min(490px,100%);min-width:0;
  max-height:min(90dvh,calc(100dvh - 24px));overflow-x:hidden;overflow-y:auto;
