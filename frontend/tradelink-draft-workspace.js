@@ -768,8 +768,9 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
    ['Document ID',row.id],['Linked Board item',row.board_item_id],
    ['Revision',row.revision],['Archived',row.archived_at?'Yes':'No'],
    ['Last updated',row.updated_at??'—'],...details.map(([key,label])=>
-    [label,key==='remarks'||key==='customerAddress'||key==='dueDate'?
-     String(data[key]??'').trim()||'—':summary?.[key]??String(data[key]??'').trim()||'—']
+    [label,(key==='remarks'||key==='customerAddress'||key==='dueDate')?
+     (String(data[key]??'').trim()||'—'):
+     (summary?.[key]??(String(data[key]??'').trim()||'—'))]
    )].map(([label,value])=>'<div><dt>'+escape(label)+'</dt><dd>'+
     escape(value)+'</dd></div>').join('')+
   '</dl>'+
