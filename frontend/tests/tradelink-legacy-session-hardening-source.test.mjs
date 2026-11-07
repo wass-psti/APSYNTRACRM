@@ -20,6 +20,21 @@ test('source candidate contains exactly the reviewed 11 legacy function bodies, 
  assert.equal((candidate.match(/TRADELINK_SESSION_REVOKED/g)||[]).length,11);
  assert.equal((candidate.match(/private\.wm_board_config_session_active\(\) IS DISTINCT FROM TRUE/g)||[]).length,11);
 });
+test('synthetic fixtures reject production and live candidate requires approval marker',()=>{
+ for(const path of [
+  '../../sql/tests/cp-tl03e-legacy-disposable-setup.sql',
+  '../../sql/tests/cp-tl03e-legacy-unguarded-disposable.sql',
+  '../../sql/tests/cp-tl03e-legacy-disposable-grants.sql',
+  '../../sql/tests/cp-tl03e-legacy-disposable-original-gap.sql',
+  '../../sql/tests/cp-tl03e-legacy-disposable-acceptance.sql'
+ ]){
+  const fixture=read(path);
+  assert.match(fixture,/current_database\(\) <> 'cp_tl03e_disposable'/);
+  assert.match(fixture,/TL03E_DISPOSABLE_ONLY/);
+ }
+ assert.match(candidate,/TL03E_CHANGE_APPROVAL_REQUIRED/);
+ assert.match(candidate,/current_setting\('apsyntra\.cp_tl03e_approved_change',true\)/);
+});
 test('candidate refuses exact source-helper drift and retains existing function grants',()=>{
  assert.match(candidate,/TL03E_SESSION_HELPER_DRIFT/);
  assert.match(candidate,/TL03E_ENTRYPOINT_COUNT_DRIFT/);

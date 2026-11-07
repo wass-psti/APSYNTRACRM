@@ -2,6 +2,13 @@
 -- This original unguarded source exists ONLY to recreate the old state for isolated tests.
 -- NOT a production migration/rollback.
 
+\set ON_ERROR_STOP on
+DO $tl03e_disposable_only$
+BEGIN
+ IF current_database() <> 'cp_tl03e_disposable'
+ THEN RAISE EXCEPTION 'TL03E_DISPOSABLE_ONLY' USING ERRCODE='42501'; END IF;
+END $tl03e_disposable_only$;
+
 CREATE OR REPLACE FUNCTION public.tradelink_asset_read(p_vendor_id text, p_kind text)
  RETURNS TABLE(image_data text, revision bigint)
  LANGUAGE plpgsql

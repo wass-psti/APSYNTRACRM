@@ -1,6 +1,13 @@
 -- Before hardening, demonstrate why a valid JWT with revoked session remains a risk.
 -- Synthetic PostgreSQL only. NO production or actual bearer is used.
 \set ON_ERROR_STOP on
+\set ON_ERROR_STOP on
+DO $tl03e_disposable_only$
+BEGIN
+ IF current_database() <> 'cp_tl03e_disposable'
+ THEN RAISE EXCEPTION 'TL03E_DISPOSABLE_ONLY' USING ERRCODE='42501'; END IF;
+END $tl03e_disposable_only$;
+
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claims',
  '{"sub":"11111111-1111-4111-8111-111111111111","session_id":"33333333-3333-4333-8333-333333333333"}',false);

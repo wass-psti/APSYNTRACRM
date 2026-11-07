@@ -27,6 +27,8 @@ The pre-existing `private.wm_board_config_session_active()` checks the actor and
 - `tradelink_reconciliation_assess`, `tradelink_reconciliation_cleanup_audit_list`, `tradelink_reconciliation_cleanup_preflight`
 - `tradelink_reconciliation_list`, `tradelink_reconciliation_report`, `tradelink_reconciliation_request_cleanup`, `tradelink_reconciliation_verify_revision`
 
+**Accidental execution protections:** All five synthetic SQL test/fixture scripts refuse to run unless the database is named cp_tl03e_disposable. The dormant hardening candidate refuses non-disposable execution unless an operator explicitly supplies the exact dedicated change-control session marker. This secondary fail-closed guard does not itself authorize production execution; a separately signed security and production database change approval remains mandatory.
+
 ## 2. Verification and limitations
 
 The new `cp-tl03e-legacy-session-disposable.yml` workflow runs only against its own PostgreSQL 17 CI service `cp_tl03e_disposable`, with synthetic JWT claims, session rows, workspaces and asset records. It first installs the original live-referenced function bodies and tests that the old synthetic JWT still accesses one legacy read after session deletion, then applies the fingerprint-locked candidate **inside disposable PostgreSQL only**.

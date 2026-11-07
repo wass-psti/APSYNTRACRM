@@ -8,6 +8,10 @@ BEGIN;
 DO $preflight$
 DECLARE r record; counted integer;
 BEGIN
+ IF current_database() <> 'cp_tl03e_disposable'
+ AND current_setting('apsyntra.cp_tl03e_approved_change',true)
+   IS DISTINCT FROM 'CP_TL03E_11_LEGACY_SESSION_GUARDS_APPROVED'
+ THEN RAISE EXCEPTION 'TL03E_CHANGE_APPROVAL_REQUIRED' USING ERRCODE='42501'; END IF;
  IF to_regprocedure('private.wm_board_config_session_active()') IS NULL
  OR md5(pg_get_functiondef('private.wm_board_config_session_active()'::regprocedure)) <> 'a2284885128169732cb646fe03adcd83'
  OR (SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE oid='private.wm_board_config_session_active()'::regprocedure) IS DISTINCT FROM 'postgres'

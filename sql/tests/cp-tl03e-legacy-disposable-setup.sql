@@ -1,5 +1,12 @@
 -- Disposable PostgreSQL 17 only. Isolated fake user/session/role fixture; no real accounts/tokens.
 \set ON_ERROR_STOP on
+\set ON_ERROR_STOP on
+DO $tl03e_disposable_only$
+BEGIN
+ IF current_database() <> 'cp_tl03e_disposable'
+ THEN RAISE EXCEPTION 'TL03E_DISPOSABLE_ONLY' USING ERRCODE='42501'; END IF;
+END $tl03e_disposable_only$;
+
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE SCHEMA auth;
