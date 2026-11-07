@@ -87,14 +87,14 @@ test('unsafe directory ACL, file ACL and extra files are rejected',()=>{
 });
 
 test('symlinked private SQL and source placed inside the public repository fail closed',()=>{
- withPrivateFixtures(({repo,bundle,snapshot,files})=>{
+ withPrivateFixtures(({base,repo,bundle,snapshot,files})=>{
   const source=join(bundle,files[0]);
-  const real=join(bundle,'real.sql');
+  const real=join(base,'real.sql');
   rmSync(source,{force:true});
   writeFileSync(real,'link target',{mode:0o600});
   symlinkSync(real,source);
   assert.throws(()=>verifyPrivateSourceBundle({directory:bundle,manifest:snapshot,repo}),
-    /UNEXPECTED_PRIVATE_BUNDLE_FILES|INSECURE_SOURCE_TYPE/);
+    /INSECURE_SOURCE_TYPE/);
   unlinkSync(source);
   rmSync(real,{force:true});
   const inside=join(repo,'source-bundle');
