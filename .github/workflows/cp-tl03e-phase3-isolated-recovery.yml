@@ -1,0 +1,55 @@
+name: CP-TL-03E Phase 3 — Isolated Synthetic Recovery Rehearsal
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-tl03e-phase3-isolated-recovery.yml'
+      - 'sql/tests/cp-tl03e-phase3-synthetic-restore-fixture.sql'
+      - 'scripts/cp-tl03e-phase3-isolated-restore.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cp-tl03e-phase3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-recovery:
+    name: Synthetic PostgreSQL 17 dump/restore and Storage integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic_disposable_ci_only
+          POSTGRES_DB: cp_tl03e_recovery_source
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cp_tl03e_recovery_source"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      GITHUB_ACTIONS: 'true'
+      PGDATABASE: cp_tl03e_recovery_source
+      PGHOST: 127.0.0.1
+      PG_CONTAINER: ${{ job.services.postgres.id }}
+    steps:
+      - name: Checkout source without credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Static syntax and boundary checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/cp-tl03e-phase3-isolated-restore.sh
+          test "${{ github.event.repository.full_name }}" = "wass-psti/APSYNTRACRM"
+          test "$PGDATABASE" = cp_tl03e_recovery_source
+          test -n "$PG_CONTAINER"
+      - name: Restore isolated synthetic PostgreSQL data and Storage archive
+        shell: bash
+        run: bash scripts/cp-tl03e-phase3-isolated-restore.sh
