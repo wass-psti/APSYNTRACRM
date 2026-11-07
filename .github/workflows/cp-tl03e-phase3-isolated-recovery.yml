@@ -2,6 +2,13 @@ name: CP-TL-03E Phase 3 — Isolated Synthetic Recovery Rehearsal
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - 'test/cp-tl03e-phase3-isolated-recovery-20261108'
+    paths:
+      - '.github/workflows/cp-tl03e-phase3-isolated-recovery.yml'
+      - 'sql/tests/cp-tl03e-phase3-synthetic-restore-fixture.sql'
+      - 'scripts/cp-tl03e-phase3-isolated-restore.sh'
   pull_request:
     paths:
       - '.github/workflows/cp-tl03e-phase3-isolated-recovery.yml'
