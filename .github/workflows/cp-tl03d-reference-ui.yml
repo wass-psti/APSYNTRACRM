@@ -45,3 +45,39 @@ jobs:
           node --test frontend/tests/tradelink-reference-ui.test.mjs frontend/tests/tradelink-draft-workspace.test.mjs frontend/tests/tradelink-activity.test.mjs frontend/tests/tradelink-domain-client.test.mjs
       - name: Full frontend regression with no production credentials
         run: node --test frontend/tests/*.test.mjs
+      - name: Render isolated browser screenshots and verify geometry
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$BROWSER" ]; then
+            echo 'BLOCKED: no supported headless browser available for visual fixture'
+            exit 1
+          fi
+          TL_REF_OUT=/tmp/tradelink-reference
+          mkdir -p "$TL_REF_OUT"
+          for module in esi packing delivery payment quotation po; do
+            node scripts/cp-tl03d-render-reference-fixture.mjs "$module" "$TL_REF_OUT/$module.html"
+          done
+          for spec in 'quotation 1365 900 desktop' 'payment 1365 900 desktop' 'delivery 1365 900 desktop' 'packing 768 1024 tablet' 'quotation 390 844 mobile'; do
+            read -r module width height size <<< "$spec"
+            input="$TL_REF_OUT/$module.html"
+            prefix="$TL_REF_OUT/$module-$size"
+            "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+              --hide-scrollbars --force-device-scale-factor=1 --virtual-time-budget=1500 \
+              --window-size="$width,$height" --screenshot="$prefix.png" "file://$input" >/dev/null 2>&1
+            "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+              --force-device-scale-factor=1 --virtual-time-budget=1500 \
+              --window-size="$width,$height" --dump-dom "file://$input" > "$prefix.dom" 2>/dev/null
+            grep -q 'data-tl-geometry-valid="true"' "$prefix.dom"
+            grep -q 'data-tl-horizontal-overflow="0"' "$prefix.dom"
+            test -s "$prefix.png"
+            echo "VISUAL_GEOMETRY_PASS module=$module viewport=$size requested=$width x $height"
+          done
+      - name: Publish synthetic reference screenshots (no authenticated records)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cp-tl03d-reference-synthetic-screenshots
+          path: /tmp/tradelink-reference/*.png
+          if-no-files-found: ignore
+          retention-days: 7
