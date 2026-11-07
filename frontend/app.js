@@ -1,5 +1,6 @@
 import {AuthClient,ApiError} from './session.js';
-import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels} from './workspace-ui.js';
+import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels} from './workspace-ui.js?v=ws01-controls-20261106';
+import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
 import {REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,captureAuthReturn,
@@ -25,11 +26,20 @@ import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.j
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
+import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
+ tradeLinkDraftValidationMessage,tradeLinkDraftReady,updateTradeLinkDraftLocalAmounts,
+ updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
+ normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
+import {TL03_DOMAIN_READS_ENABLED} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
 import {runWs02dB3SignedReadPreflight,renderWs02dB3SignedPreflight,sanitizeWs02dB3SignedReport} from './workspace-b3-signed-read-preflight.js';
 import {runWs02dB3DeployedHttpsAcceptance,renderWs02dB3DeployedHttpsAcceptance,sanitizeWs02dB3DeployedHttpsReport} from './workspace-b3-deployed-https-acceptance.js';
+import {captureWs02dB3OwnerRlsFixture,verifyWs02dB3ForeignRlsDenial,clearWs02dB3ForeignRlsFixture,hasWs02dB3ForeignRlsFixture,renderWs02dB3ForeignRlsDenial,sanitizeWs02dB3ForeignRlsReport} from './workspace-b3-foreign-rls-denial.js';
+import {runWs02dB3LocalSessionRevocation,renderWs02dB3LocalRevocation,sanitizeWs02dB3LocalRevocationReport} from './workspace-b3-revoked-session-denial.js';
 import {createB2SignedQaFixture,inspectB2SignedQaFixture,renderB2SignedQaFixture,sanitizeB2QaFixtureReport} from './board-col-delete-b2-signed-fixture.js';
+import {runB4SignedRecoveryPreflight,renderB4SignedRecoveryPreflight,sanitizeB4SignedRecoveryReport} from './board-col-delete-b4-signed-preflight.js';
+import {runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialReport} from './board-col-delete-phase-b-signed-denial.js';
 import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
@@ -42,7 +52,7 @@ import {openBoardImportWizard} from './board-import-ui.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
-import {isQaBoardRecoveryInterfaceAllowed,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
+import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
@@ -113,6 +123,7 @@ const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
+const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
 const platformSync=new PlatformSync({
  auth,api:db,url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY,
  onStatus:updatePlatformSyncIndicator,onInvalidate:reconcilePlatformSync
@@ -123,12 +134,13 @@ const boardCardLifecycle=new BoardCardLifecycleClient(db);
 const itemSelection=new BoardItemSelection();
 const boardBulkClient=new BoardBulkClient(db);
 const nativeIssues=new NativeIssueClient(db);
+const tradeLinkDraftWorkspace=new TradeLinkDraftWorkspace({auth,api:db});
 const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -774,7 +786,7 @@ function boardPage(){
   '" data-direction="1" aria-label="Move '+e(t.key)+' tab right" title="Move tab right">›</button>':'')+'</div>').join('')}</div>
 
  ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError}}):state.tab==='issues'?issuesPage():`
+ gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},draftView:state.tradeLinkDraft,canManage:state.boardManage}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
@@ -871,7 +883,7 @@ function render(){
    log:state.foundationLog,error:state.foundationError,
    canProvision:state.context?.profile?.platform_role==='admin_general_manager'
  }));
- else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,ci07Result:state.ci07Result,ci07Busy:state.ci07Busy,sec14Result:state.sec14Result,sec14Busy:state.sec14Busy,sec14DenialResult:state.sec14DenialResult,sec14DenialBusy:state.sec14DenialBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards,sec10IsBootstrap:state.roleVerified===true,effectiveAccessResult:state.effectiveAccessResult,effectiveAccessBusy:state.effectiveAccessBusy,sec10BoardsError:state.securityBoardsError})+renderTradeLinkStageAAcceptance({busy:state.tl03ReadBusy,report:state.tl03ReadResult})+renderWs01B2SignedAcceptance({busy:state.ws01B2Busy,report:state.ws01B2Result})+renderWs02dB3SignedPreflight({busy:state.ws02dB3Busy,report:state.ws02dB3Report})+renderWs02dB3DeployedHttpsAcceptance({busy:state.ws02dB3HttpsBusy,result:state.ws02dB3HttpsReport})+renderB2SignedQaFixture({busy:state.b2QaBusy,result:state.b2QaReport}));
+ else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,ci07Result:state.ci07Result,ci07Busy:state.ci07Busy,sec14Result:state.sec14Result,sec14Busy:state.sec14Busy,sec14DenialResult:state.sec14DenialResult,sec14DenialBusy:state.sec14DenialBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards,sec10IsBootstrap:state.roleVerified===true,effectiveAccessResult:state.effectiveAccessResult,effectiveAccessBusy:state.effectiveAccessBusy,sec10BoardsError:state.securityBoardsError})+renderTradeLinkStageAAcceptance({busy:state.tl03ReadBusy,report:state.tl03ReadResult})+renderWs01B2SignedAcceptance({busy:state.ws01B2Busy,report:state.ws01B2Result})+renderWs02dB3SignedPreflight({busy:state.ws02dB3Busy,report:state.ws02dB3Report})+renderWs02dB3DeployedHttpsAcceptance({busy:state.ws02dB3HttpsBusy,result:state.ws02dB3HttpsReport})+renderWs02dB3ForeignRlsDenial({busy:state.ws02dB3RlsBusy,result:state.ws02dB3RlsReport,hasFixture:hasWs02dB3ForeignRlsFixture()})+renderWs02dB3LocalRevocation({armed:state.ws02dB3RevokeArmed,report:state.ws02dB3RevokedReport})+renderB2SignedQaFixture({busy:state.b2QaBusy,result:state.b2QaReport})+renderB4SignedRecoveryPreflight({busy:state.b4QaBusy,report:state.b4QaReport})+renderPhaseBSignedDenial({busy:state.phaseBDenialBusy,report:state.phaseBDenialReport}));
  else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.roleVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
  else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.roleVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,busy:state.userRoleBusy,error:state.userRoleError}));
  else if(state.view==='boards')shell(boardsPage());
@@ -1117,7 +1129,7 @@ function platformSyncEditInProgress(){
 /** Revoke stale rendered data immediately when the server invalidates identity. */
 function invalidateSignedSyncView(){
  platformSync.stop();
- state.board=null;state.boardUi=null;state.boards=[];
+ state.board=null;state.boardUi=null;state.boards=[];state.tradeLinkDraft=initialTradeLinkDraftView();
  state.ttAttendance=null;state.ttBoardAttendance=null;state.ttBoardGpsEligible=false;
  state.roleVerified=false;state.roleData=null;state.userRoleData=null;
  state.context=null;auth.clear();
@@ -1248,6 +1260,8 @@ async function refreshWorkspace(){
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
  state.context=await db.context();
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
+   state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;
+   state.tradeLinkDraft=initialTradeLinkDraftView();
    state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;
    clearBulkActivation();state.row01Busy=false;state.row01Result=null;
    state.boardTtSignedResult=null;state.boardTtSignedBusy=false;
@@ -1323,13 +1337,14 @@ async function refreshFoundation(){
  state.foundationRows=await inspectFoundation(db,{context,boards:state.boards});
  state.foundationError='';
 }
-async function loadBoard(boardId,tab){
+async function loadBoard(boardId,tab,draftType=null){
  if(state.bulk02Access?.boardId!==boardId)clearBulkActivation();
  const seq=++routeSerial;
  state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=tab==='items'?{status:'LOADING'}:null;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
  if(state.boardId!==boardId||state.tab!=='attendance'){
   state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
+ state.tradeLinkDraft=initialTradeLinkDraftView(tab==='tradelink'&&state.tradeLinkSection==='drafts'?draftType:null);
  state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
@@ -1392,8 +1407,109 @@ async function loadBoard(boardId,tab){
  if(tab==='issues')await loadIssues(seq);
  if(tab==='tradelink'&&state.tradeLinkSection==='activity'&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkActivity(seq);
+ if(tab==='tradelink'&&['drafts','documents'].includes(state.tradeLinkSection)&&
+    TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
+  await loadTradeLinkDrafts(seq);
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')await loadTimeTracker(seq);
  if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt')await loadFRTFinance(null,seq);
+}
+/** CP-TL-03D: authority and route bound Draft UI, never browser persistence. */
+function tradeLinkAuthorizedListRoute(){
+ return auth.isSignedIn&&state.view==='board'&&state.tab==='tradelink'&&
+  state.boardId===TRADELINK_BOARD_ID&&
+  ['drafts','documents'].includes(state.tradeLinkSection)&&
+  state.context?.user_id===auth.userId&&
+  state.board?.board?.workspace_id===state.context?.workspace_id;
+}
+function tradeLinkDraftRoute(){
+ return tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='drafts';
+}
+async function loadTradeLinkDrafts(seq=routeSerial){
+ if(!tradeLinkAuthorizedListRoute()||!TL03_DOMAIN_READS_ENABLED||
+  state.tradeLinkDraft.busy)return;
+ const actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  auth.userId===actor&&state.context?.workspace_id===ws;
+ state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
+ try{
+  const result=await tradeLinkDraftWorkspace.list();
+  if(same())state.tradeLinkDraft={...state.tradeLinkDraft,...result,busy:false};
+ }catch{
+  if(same())state.tradeLinkDraft={...initialTradeLinkDraftView(),
+   error:'Signed Draft list unavailable. No records were cached.'};
+ }finally{if(same()){state.tradeLinkDraft.busy=false;render();}}
+}
+async function openTradeLinkDraft(documentId){
+ if(!tradeLinkDraftRoute()||!TL03_DOMAIN_READS_ENABLED||state.tradeLinkDraft.busy||
+  !state.tradeLinkDraft.rows.some(row=>row.documentId===documentId))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ state.tradeLinkDraft.busy=true;render();
+ try{
+  const record=await tradeLinkDraftWorkspace.read(documentId);
+  if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
+   state.context.workspace_id!==ws)return;
+  if(!record||record.workflow_state!=='draft')
+   throw new ApiError('Document is no longer an editable Draft.',409);
+  state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
+   selected:{documentId,record},pendingCreateId:null,formValues:null,error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
+ }catch{
+  if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
+   'Draft read or authorization failed. Refresh the signed list.';
+ }finally{
+  if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+async function commitTradeLinkDraft(form){
+ if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage||
+  state.tradeLinkDraft.busy)return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const selected=state.tradeLinkDraft.mode==='edit'?state.tradeLinkDraft.selected:null;
+ const revision=selected?.record?.revision??0;
+ if(!Number.isSafeInteger(revision)||revision<0)return;
+ const payload=parseTradeLinkDraftForm(new FormData(form));
+ // Keep the same UUID if an accepted create response was lost: the server
+ // will idempotently replay the identical revision-zero request, not duplicate it.
+ const documentId=selected?.documentId||state.tradeLinkDraft.pendingCreateId||crypto.randomUUID();
+ if(!selected)state.tradeLinkDraft.pendingCreateId=documentId;
+ state.tradeLinkDraft.busy=true;render();
+ try{
+  await tradeLinkDraftWorkspace.save({documentId,
+   expectedRevision:revision,draft:payload});
+  if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
+   state.context.workspace_id!==ws)return;
+  state.tradeLinkDraft={...initialTradeLinkDraftView(),
+   message:'Authoritative server confirmed the Draft command.'};
+  await loadTradeLinkDrafts(seq);
+ }catch{
+  if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
+   'Draft write not confirmed. Refresh authoritative records before retrying.';
+ }finally{
+  if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+async function changeTradeLinkDraftState(documentId,operation){
+ if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage||
+   state.tradeLinkDraft.busy)return;
+ const record=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!record||!Number.isSafeInteger(record.revision)||record.revision<1||
+   (operation==='archive'&&record.archived)||
+   (operation==='restore'&&!record.archived))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ state.tradeLinkDraft.busy=true;render();
+ try{
+  await tradeLinkDraftWorkspace.changeState({
+   documentId,revision:record.revision,operation});
+  if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
+   state.context.workspace_id!==ws)return;
+  state.tradeLinkDraft={...initialTradeLinkDraftView(),
+   message:'Server confirmed the Draft '+operation+'.'};
+  await loadTradeLinkDrafts(seq);
+ }catch{
+  if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
+   'Draft revision or authorization changed. Refresh before retrying.';
+ }finally{
+  if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
+ }
 }
 /** Read-only signed board events; never substitutes for source TradeLink collaboration records. */
 async function loadTradeLinkActivity(seq=routeSerial){
@@ -1777,7 +1893,8 @@ async function onRoute(){
       moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
     defaultClock?'attendance':'items';
   state.tradeLinkSection=requested==='tradelink'?normalizeTradeLinkSection(parts[3]):'overview';
-  await loadBoard(parts[1],requested);
+  await loadBoard(parts[1],requested,
+   requested==='tradelink'&&state.tradeLinkSection==='drafts'?parts[4]:null);
   return;
  }
  routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
@@ -2280,7 +2397,7 @@ function contextualColumnDelete(key){
  if(column.kind==='primary')
   throw new ApiError('The required Item column cannot be deleted.',403);
  const storedCount=columnStoredValueCount(state.board,column.id);
- const qaRecoveryEnabled=isQaBoardRecoveryInterfaceAllowed(state.board);
+ const qaRecoveryEnabled=canStartB4QaRecoveryDeletion(state.board,column);
  const recoverable=storedCount>0&&qaRecoveryEnabled;
  const blocked=storedCount>0&&!qaRecoveryEnabled;
  const summary=blocked?
@@ -2532,10 +2649,25 @@ async function action(name,button){
   if(f){f.type=f.type==='password'?'text':'password';button.textContent=f.type==='password'?'Show':'Hide';button.setAttribute('aria-label',f.type==='password'?'Show password':'Hide password');button.setAttribute('aria-pressed',String(f.type==='text'));}
   break;
  }
- case 'logout':{closeWorkspacePanels();clearBulkActivation();platformSync.stop();state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast('Signed out successfully.');break;}
+ case 'security-ws02d-b3-revoke-run':
+  case 'logout':{
+    const isB3LocalRevoke=name==='security-ws02d-b3-revoke-run';
+    if(isB3LocalRevoke&&(!state.ws02dB3RevokeArmed||state.view!=='security'||
+       !auth.isSignedIn||!state.context))break;
+    closeWorkspacePanels();clearBulkActivation();platformSync.stop();
+    let revoked=null;
+    if(isB3LocalRevoke){
+      try{revoked=await runWs02dB3LocalSessionRevocation({auth});}
+      catch{revoked={status:'BLOCKED',stage:'post-signout-network'};}
+      // Even a failed acceptance MUST honor this explicitly clicked local logout.
+      if(auth.isSignedIn)await auth.signOut({scope:'local'});
+    }
+    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke)await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';renderLogin();toast(isB3LocalRevoke?'Signed out of this session only. B3 revocation: '+(revoked?.status||'BLOCKED')+'.':'Signed out successfully.');break;}
  case 'ws01-open':{
    if(!auth.isSignedIn||!state.context)break;
-   openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()});
+   openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()},
+    {lifecycle:workspaceLifecycleClient,onOpenCurrent:()=>{location.hash='#/overview';},
+     configurationEnabled:WS01_CONFIGURATION_ENABLED});
    break;
  }
  case 'ws02-open-invites':{
@@ -2595,7 +2727,7 @@ async function action(name,button){
   if(state.b2QaBusy||state.view!=='security'||!state.context||!auth.isSignedIn)break;
   const run=++state.b2QaRunId;
   const actor=state.context.user_id,workspace=state.context.workspace_id;
-  const create=action==='security-b2-qa-create';
+  const create=name==='security-b2-qa-create';
   state.b2QaBusy=true;state.b2QaReport=null;render();
   try{
    const report=create?
@@ -2628,6 +2760,74 @@ async function action(name,button){
    await navigator.clipboard.writeText(sanitizeB2QaFixtureReport(state.b2QaReport));
    toast('Nonsecret B2 QA fixture report copied.');
   }catch{toast('Clipboard is unavailable; no B2 report exported.',true);}
+  break;
+ }
+ case 'security-col-delete-denial-run':{
+  if(state.phaseBDenialBusy||state.view!=='security'||!state.context||!auth.isSignedIn)break;
+  const run=++state.phaseBDenialRunId;
+  const actor=state.context.user_id,workspace=state.context.workspace_id;
+  state.phaseBDenialBusy=true;state.phaseBDenialReport=null;render();
+  try{
+   const outcome=await runPhaseBSignedDenial({auth,api:db});
+   if(run===state.phaseBDenialRunId&&auth.isSignedIn&&
+      state.context?.user_id===actor&&state.context?.workspace_id===workspace){
+    state.phaseBDenialReport=outcome;
+    toast('Signed recovery denial: '+outcome.status,outcome.status!=='PASS');
+   }
+  }catch{
+   if(run===state.phaseBDenialRunId&&state.context?.user_id===actor&&
+      state.context?.workspace_id===workspace){
+    state.phaseBDenialReport={status:'INCONCLUSIVE',reason:'SIGNED_API_ERROR'};
+   }
+  }finally{
+   if(run===state.phaseBDenialRunId){
+    state.phaseBDenialBusy=false;
+    if(state.context?.user_id===actor&&state.context?.workspace_id===workspace)render();
+   }
+  }
+  break;
+ }
+ case 'security-col-delete-denial-copy':{
+  if(state.view!=='security'||!auth.isSignedIn||!state.context||
+     !state.phaseBDenialReport)break;
+  try{
+   await navigator.clipboard.writeText(sanitizePhaseBDenialReport(state.phaseBDenialReport));
+   toast('Nonsecret signed denial report copied.');
+  }catch{toast('Clipboard unavailable; no denial report exported.',true);}
+  break;
+ }
+ case 'security-b4-qa-preflight':{
+  if(state.b4QaBusy||state.view!=='security'||!state.context||!auth.isSignedIn)break;
+  const run=++state.b4QaRunId;
+  const actor=state.context.user_id,workspace=state.context.workspace_id;
+  state.b4QaBusy=true;state.b4QaReport=null;render();
+  try{
+   const result=await runB4SignedRecoveryPreflight({auth,api:db});
+   if(run===state.b4QaRunId&&auth.isSignedIn&&
+      state.context?.user_id===actor&&state.context?.workspace_id===workspace){
+    state.b4QaReport=result;
+    toast('B4 signed recovery preflight: '+result.status,result.status!=='PASS');
+   }
+  }catch{
+   if(run===state.b4QaRunId&&state.context?.user_id===actor&&
+      state.context?.workspace_id===workspace){
+    state.b4QaReport={status:'BLOCKED',stage:'prerequisites',
+     reason:'SIGNED_RECOVERY_INDEX_DENIED'};
+   }
+  }finally{
+   if(run===state.b4QaRunId){
+    state.b4QaBusy=false;
+    if(state.context?.user_id===actor&&state.context?.workspace_id===workspace)render();
+   }
+  }
+  break;
+ }
+ case 'security-b4-qa-copy':{
+  if(state.view!=='security'||!auth.isSignedIn||!state.context||!state.b4QaReport)break;
+  try{
+   await navigator.clipboard.writeText(sanitizeB4SignedRecoveryReport(state.b4QaReport));
+   toast('Nonsecret B4 recovery report copied.');
+  }catch{toast('Clipboard unavailable; no B4 report exported.',true);}
   break;
  }
  case 'security-ws02d-b3-run':{
@@ -2663,7 +2863,69 @@ async function action(name,button){
   }catch{toast('Clipboard is unavailable; no report exported.',true);}
   break;
  }
- case 'security-ws02d-b3-https-run':{
+ case 'security-ws02d-b3-revoke-arm':{
+   if(state.view!=='security'||!auth.isSignedIn||!state.context)break;
+   state.ws02dB3RevokeArmed=true;render();break;
+  }
+  case 'security-ws02d-b3-revoke-cancel':{
+   state.ws02dB3RevokeArmed=false;if(state.view==='security')render();break;
+  }
+  case 'security-ws02d-b3-revoke-copy':{
+   if(state.view!=='security'||!auth.isSignedIn||!state.context||
+      !state.ws02dB3RevokedReport)break;
+   try{
+    await navigator.clipboard.writeText(
+     sanitizeWs02dB3LocalRevocationReport(state.ws02dB3RevokedReport));
+    toast('Nonsecret local-session revocation result copied.');
+   }catch{toast('Clipboard unavailable; no session result exported.',true);}
+   break;
+  }
+  case 'security-ws02d-b3-rls-capture':
+  case 'security-ws02d-b3-rls-verify':{
+   if(state.ws02dB3RlsBusy||state.view!=='security'||
+      !state.context||!auth.isSignedIn)break;
+   const run=++state.ws02dB3RlsRunId;
+   const actor=state.context.user_id,workspace=state.context.workspace_id;
+   state.ws02dB3RlsBusy=true;state.ws02dB3RlsReport=null;render();
+   try{
+    const outcome=name==='security-ws02d-b3-rls-capture'?
+     await captureWs02dB3OwnerRlsFixture({auth,api:db}):
+     await verifyWs02dB3ForeignRlsDenial({auth,api:db});
+    if(run===state.ws02dB3RlsRunId&&auth.isSignedIn&&
+       state.context?.user_id===actor&&state.context?.workspace_id===workspace){
+     state.ws02dB3RlsReport=outcome;
+     toast('B3 genuine targeted RLS: '+outcome.status,
+      outcome.status!=='PASS'&&outcome.status!=='READY');
+    }
+   }catch{
+    if(run===state.ws02dB3RlsRunId&&state.context?.user_id===actor&&
+       state.context?.workspace_id===workspace)
+     state.ws02dB3RlsReport={status:'BLOCKED',stage:'network'};
+   }finally{
+    if(run===state.ws02dB3RlsRunId){
+     state.ws02dB3RlsBusy=false;
+     if(state.context?.user_id===actor&&state.context?.workspace_id===workspace)render();
+    }
+   }
+   break;
+  }
+  case 'security-ws02d-b3-rls-clear':{
+   if(state.view!=='security'||!state.context||!auth.isSignedIn)break;
+   ++state.ws02dB3RlsRunId;state.ws02dB3RlsBusy=false;
+   state.ws02dB3RlsReport=clearWs02dB3ForeignRlsFixture();
+   render();break;
+  }
+  case 'security-ws02d-b3-rls-copy':{
+   if(state.view!=='security'||!auth.isSignedIn||!state.context||
+      !state.ws02dB3RlsReport)break;
+   try{
+    await navigator.clipboard.writeText(
+     sanitizeWs02dB3ForeignRlsReport(state.ws02dB3RlsReport));
+    toast('Sanitized targeted table-RLS report copied.');
+   }catch{toast('Clipboard unavailable; no RLS report exported.',true);}
+   break;
+  }
+  case 'security-ws02d-b3-https-run':{
    if(state.ws02dB3HttpsBusy||state.view!=='security'||!state.context||!auth.isSignedIn)break;
    const run=++state.ws02dB3HttpsRunId;
    const actor=state.context.user_id,workspace=state.context.workspace_id;
@@ -2731,6 +2993,62 @@ async function action(name,button){
    toast('Nonsecret TradeLink Stage A results copied.');
   }catch{toast('Clipboard is unavailable; no report was exported.',true);}
   break;
+ }
+ case 'tradelink-draft-preview':{
+  if(!tradeLinkDraftRoute())break;
+  const form=root.querySelector('[data-tradelink-draft-form]');
+  const output=form?.querySelector('[data-tradelink-draft-preview-status]');
+  if(!form||!output)break;
+  // A failed or stale validation never leaves a previous local document summary visible.
+  updateTradeLinkDraftLocalSummary(form);
+  if(!form.reportValidity()){
+   const invalid=form.querySelector(':invalid');
+   const label=invalid?.closest('label')?.querySelector('span')?.textContent?.trim();
+   output.dataset.validation='invalid';
+   output.setAttribute('role','alert');
+   output.textContent=(label?'Check '+label+'.':'Check required Draft fields.')+
+    ' Nothing saved or transmitted.';
+   break;
+  }
+  try{
+   const draft=parseTradeLinkDraftForm(new FormData(form));
+   updateTradeLinkDraftLocalSummary(form,draft);
+   output.dataset.validation='valid';
+   output.setAttribute('role','status');
+   output.textContent='Valid local '+draft.documentType+' / '+draft.documentNumber+
+    ' preview. Nothing saved or transmitted.';
+  }catch(error){
+   output.dataset.validation='invalid';
+   output.setAttribute('role','alert');
+   output.textContent=tradeLinkDraftValidationMessage(error)+' Nothing saved or transmitted.';
+  }
+  break;
+ }
+ case 'tradelink-draft-clear':{
+  if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)break;
+  state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft);
+  render();
+  root.querySelector('[data-tradelink-draft-form] select[name="documentType"]')?.focus({preventScroll:true});
+  break;
+ }
+ case 'tradelink-draft-refresh':{
+  if(tradeLinkDraftRoute())await loadTradeLinkDrafts(routeSerial);
+  break;
+ }
+ case 'tradelink-draft-new':{
+  if(tradeLinkDraftRoute()&&!state.tradeLinkDraft.busy){
+   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,formValues:null,error:'',message:''};
+   render();
+  }
+  break;
+ }
+ case 'tradelink-draft-open':{
+  await openTradeLinkDraft(button.dataset.id);break;
+ }
+ case 'tradelink-draft-archive':
+ case 'tradelink-draft-restore':{
+  await changeTradeLinkDraftState(button.dataset.id,
+   name==='tradelink-draft-archive'?'archive':'restore');break;
  }
  case 'tradelink-activity-refresh':{
   if(state.boardId===TRADELINK_BOARD_ID&&state.view==='board'&&
@@ -4325,6 +4643,53 @@ root.addEventListener('click',event=>{
  event.preventDefault();
  Promise.resolve(action(target.dataset.action,target)).catch(notice);
 });
+/** Preserve unsaved Draft fields only in current signed UI memory across redraws.
+ * No browser storage, network requests or persistent document semantics.
+ */
+
+function captureTradeLinkDraftListFilters(event){
+ const control=event.target?.closest?.('[data-tradelink-domain-filter]');
+ const container=control?.closest?.('[data-tradelink-domain-list]');
+ if(!control||!container||!tradeLinkAuthorizedListRoute()||
+  !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+  state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)return false;
+ const get=name=>container.querySelector('[data-tradelink-domain-filter][name="'+name+'"]')?.value;
+ const filters=normalizeTradeLinkDraftListFilters({
+  query:get('query'),documentType:get('documentType'),
+  workflowState:get('workflowState'),archiveMode:get('archiveMode'),
+  sortBy:get('sortBy'),sortDirection:get('sortDirection')
+ });
+ state.tradeLinkDraft.listFilters=filters;
+ updateTradeLinkDraftListUI(container,filters);
+ return true;
+}
+function captureTradeLinkDraftFields(event){
+ const form=event.target?.closest?.('[data-tradelink-draft-form]');
+ if(!form||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)return false;
+ const fd=new FormData(form),values={};
+ for(const key of ['documentType','documentNumber','customerName','referenceNumber',
+  'currency','vatType','lineDescription','lineQuantity','lineUnitPrice','lineUnit',
+  'lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
+  'paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber',
+  'customerTin','customerEmail','customerPhone','validity','deliveryCommitment',
+  'paymentTerms','targetDeliveryDate','poNumber','approvedBy',
+  'discountType','discountValue','exchangeRate','remarks']){
+  values[key]=String(fd.get(key)??'').slice(0,5000);
+ }
+ state.tradeLinkDraft.formValues=values;
+ state.tradeLinkDraft.draftNotice='';
+ updateTradeLinkDraftLocalSummary(form);
+ updateTradeLinkDraftInputCurrencyLabels(form);
+ updateTradeLinkDraftLocalAmounts(form);
+ // A previous successful preview must never remain authoritative after edits.
+ const status=form.querySelector('[data-tradelink-draft-preview-status]');
+ if(status&&status.dataset.validation!=='pending'){
+  status.dataset.validation='pending';
+  status.setAttribute('role','status');
+  status.textContent='Inputs changed. Validate again. Nothing saved or transmitted.';
+ }
+ return true;
+}
 /** Source financial calculation is a nonpersistent preview; no write client involved. */
 function syncTradeLinkFinanceInput(event){
  const panel=event.target?.closest?.('[data-tradelink-finance-preview]');
@@ -4336,6 +4701,16 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(captureTradeLinkDraftListFilters(event))return;
+ if(captureTradeLinkDraftFields(event)){
+  // Never transfer the previous module's customer, financial, or reviewer inputs.
+  if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]')){
+   state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft,event.target.value);
+   render();
+   root.querySelector('[data-tradelink-draft-form] select[name="documentType"]')?.focus({preventScroll:true});
+  }
+  return;
+ }
  if(event.target.matches('[data-board-select-item]')&&activeBoardLayout()){
   const input=event.target;
   const order=[...root.querySelectorAll('[data-board-select-item]')]
@@ -4415,6 +4790,14 @@ root.addEventListener('change',event=>{
  }
 });
 root.addEventListener('submit',event=>{
+ if(event.target.matches('[data-tradelink-draft-form]')){
+  event.preventDefault();
+  if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage){
+   toast('TradeLink Draft persistence is not activated. Nothing saved.',true);
+   return;
+  }
+  Promise.resolve(commitTradeLinkDraft(event.target)).catch(notice);return;
+ }
  if(event.target.matches('[data-inline-add-row]')){
   event.preventDefault();Promise.resolve(addBoardRowInline(event.target)).catch(notice);return;
  }
@@ -4468,6 +4851,8 @@ root.addEventListener('submit',event=>{
 });
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(captureTradeLinkDraftListFilters(event))return;
+ if(captureTradeLinkDraftFields(event))return;
  if(event.target.matches('[data-tradelink-search]')&&
     state.view==='board'&&state.tab==='tradelink'&&
     state.boardId===TRADELINK_BOARD_ID&&state.board?.board?.workspace_id===state.context?.workspace_id){
@@ -4550,7 +4935,7 @@ window.addEventListener('keydown',event=>{if(event.key==='Escape'){
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{closeWorkspacePanels();state.context=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  startInitialization();
  try{
