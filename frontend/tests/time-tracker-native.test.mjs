@@ -244,7 +244,8 @@ test('native report UI includes period selection and signed-user OT read-only ta
    access:{moduleRole:'Employee',platformRole:'employee',name:'User'},
    records:[],otRequests:[{id:'one',date:'2026-11-02',status:'Submitted',
     start:'18:00',end:'20:00',durationMinutes:120,task:'Overtime work'}],
-   active:null},period:'week',view:'ot'});
+   active:null},period:'week',view:'ot',
+   now:new Date('2026-11-04T04:00:00.000Z')});
  assert.match(html,/Overtime/);
  assert.match(html,/Pending/);
  assert.match(html,/Overtime work/);
