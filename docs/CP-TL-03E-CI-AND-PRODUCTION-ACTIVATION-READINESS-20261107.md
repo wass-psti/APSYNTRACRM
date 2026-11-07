@@ -115,3 +115,17 @@ Stage B is **Draft create/update/archive/restore only**. The frontend `TL03_DOMA
 5. Preserve the actual signed evidence and operator sign-off. Operational activation is VERIFIED only upon all real acceptance checks, not from source or disposable tests.
 
 **As of this review:** the executor/reviewer/rollback owner, restore evidence, fresh signed role acceptance, scoped production authorization, and QA document authorization remain **PENDING/BLOCKED**. **Production activation is NO-GO.** No grant/revoke SQL, DML, feature-flag edit, backup import/export, browser automation, or production deployment was performed.
+
+
+## 10. Scoped live TradeLink security catalog inventory (2026-11-07, SELECT-only)
+
+Fresh, production-connected **metadata-only** inspection of `pg_proc`, function EXECUTE ACLs, `pg_class`, RLS flags and `pg_policies` produced these precise boundaries:
+
+- **11 legacy `public.tradelink_*` SECURITY DEFINER RPCs** are executable by `authenticated`, not by `anon`: asset read/write; cleanup fence activate/release; reconciliation assess, cleanup audit list/preflight/list/report, request cleanup, and verify revision. This is an **accessible elevated execution surface** that requires source-level authorization and input review, **not** proof that any caller can misuse it.
+- **Four legacy `public.tradelink_*` tables** have RLS enabled, zero attached RLS policies, and **no direct SELECT privilege** for either `authenticated` or `anon`: attachment cleanup audit, attachment reconciliation, cleanup reference fences, and vendor assets. These are legacy guarded/private data surfaces; zero policies do **not**, by themselves, establish a read leak.
+- **Two new TL03 tables**, `public.tradelink_documents` and `public.tradelink_document_events`, both have RLS enabled and one scoped SELECT policy each, authenticated SELECT granted and anonymous SELECT denied.
+- **Three public TL03 functions** are SECURITY INVOKER; anonymous EXECUTE denied on all three. Authenticated EXECUTE is permitted only on `tl03_document_read` and `tl03_documents_list`; `tl03_document_commit` remains denied.
+
+This read-only catalog review narrows the legacy security scope without changing any grants, functions, policies, or data. The **independent risk disposition remains PENDING**: review authorization clauses, identity/session/workspace checks, input validation and call graphs of the eleven existing elevated functions against applicable source; test valid and denied real principal behavior in an authorized environment. Do not infer they are safe merely because anonymous EXECUTE is denied, or try to fix general advisor warnings by broad grants/revocations.
+
+**Current go/no-go unchanged: NO-GO.** A good RLS metadata result and HTTP 401 are necessary but insufficient evidence of complete signed-user authorization or recoverability.
