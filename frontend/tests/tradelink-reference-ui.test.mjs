@@ -55,6 +55,7 @@ test('all six modules use screenshot-led document cards, accessible tabs and no 
   assert.match(html,/class="tl-reference-document-tabs"/);
   assert.equal((html.match(/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts\//g)||[]).length,6);
   assert.match(html,/aria-current="page"/);
+  assert.match(html,/<select name="documentType" tabindex="-1" aria-hidden="true"/);
   assert.match(html,/Document Information/);
   assert.match(html,/Client Information/);
   assert.match(html,/Terms &amp; Conditions/);
@@ -129,6 +130,8 @@ test('CSS scope, responsive rules and reduced-motion behavior are bounded to Tra
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(css,/summary:focus-visible/);
  assert.match(app,/aria-disabled="true"/);
+ const shell=readFileSync('frontend/app.js','utf8');
+ assert.match(shell,/root\.querySelector\('\.tl-reference-document-tabs a\.active'\)\?\.focus/);
  assert.doesNotMatch(draftSource,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.doesNotMatch(app,/TL03_DOMAIN_(?:READS|WRITES)_ENABLED\s*=\s*true/);
 });
