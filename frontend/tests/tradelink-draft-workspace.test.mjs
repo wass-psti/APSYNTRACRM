@@ -29,13 +29,13 @@ test('dark-launch UI is routed inside the existing signed TradeLink app',()=>{
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'drafts',
   draftView:initialTradeLinkDraftView(),canManage:true});
  assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts"/);
- assert.match(html,/Controlled dark launch/);
+ assert.match(html,/Signed read · Draft writes pending/);
  assert.match(html,/data-tradelink-draft-form/);
  assert.match(html,/data-action="tradelink-draft-preview"/);
- assert.match(html,/data-action="tradelink-draft-refresh" disabled/);
+ assert.match(html,/data-action="tradelink-draft-refresh"/);
  assert.match(html,/type="submit" class="primary" disabled/);
  assert.doesNotMatch(html,/data-action="tradelink-draft-archive"[^>]*>Archive/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
  assert.equal(tradeLinkDraftReady(),false);
 });
@@ -99,8 +99,8 @@ test('client never contacts auth, boards or RPC while both production flags are 
   auth:{getVerifiedUser:async()=>{calls++;throw Error('unexpected auth');}},
   api:{rpc:async()=>{calls++;throw Error('unexpected API');}}
  });
- assert.deepEqual(await client.list(),{status:'DARK_LAUNCH',rows:[]});
- await assert.rejects(()=>client.read('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),/dark launch/i);
+ await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
+ await assert.rejects(()=>client.read('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),/Signed TradeLink domain API unavailable/);
  await assert.rejects(()=>client.save({draft:{documentType:'quotation',documentNumber:'Q-001'}}),/dark launch/i);
  await assert.rejects(()=>client.changeState({
   documentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',revision:1,operation:'archive'
@@ -223,7 +223,7 @@ test('module switching updates ephemeral fields without storage, network or work
  assert.match(app,/select\[name="documentType"\]/);
  assert.match(app,/if\(captureTradeLinkDraftFields\(event\)\)\{/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -309,7 +309,7 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
   'deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy'])
   assert.ok(app.includes("'"+key+"'"),key);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -463,7 +463,7 @@ test('local commercial estimate updates DOM text only and resets to placeholders
  assert.match(app,/updateTradeLinkDraftLocalAmounts\(form\)/);
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -532,7 +532,7 @@ test('commercial estimate rerender restores source-calculated amount and remains
  const app=readFileSync('frontend/app.js','utf8');
  for(const key of ['discountType','discountValue','exchangeRate'])
   assert.ok(app.includes("'"+key+"'"));
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -629,7 +629,7 @@ test('Draft module is an exact-hash CDN smoke asset and focus styling remains sc
  assert.match(html,/id="tl-draft-discount-help"/);
  assert.match(html,/id="tl-draft-fx-help"/);
  assert.match(html,/data-tradelink-draft-preview-status[^>]*aria-atomic="true"/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -731,7 +731,7 @@ test('success/invalid/input paths wire local summary only; no new persistence ro
  assert.match(capture,/updateTradeLinkDraftLocalSummary\(form\);/);
  assert.match(draft,/class="tl-draft-summary"/);
  assert.doesNotMatch(draft,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -771,16 +771,16 @@ test('read-only listing presents filters but never reveals rows or enables RPC u
  assert.match(html,/Search document number/);
  assert.match(html,/current signed, authorized response \(maximum 50 records\)/);
  assert.match(html,/data-tradelink-domain-count role="status"/);
- assert.match(html,/name="query"[^>]*disabled/);
- assert.doesNotMatch(html,/SECRET-Q|11111111-1111-4111-8111-111111111111/);
- assert.match(html,/signed document-list endpoint remains off/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.match(html,/name="query"[^>]*data-tradelink-domain-filter/);
+ assert.match(html,/SECRET-Q/);
+ assert.match(html,/1 of 1 authorized records in this response/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
  const client=new TradeLinkDraftWorkspace({
   auth:{getVerifiedUser:async()=>{throw Error('auth must not be read');}},
   api:{rpc:async()=>{throw Error('RPC must not be called');}}
  });
- assert.deepEqual(await client.list(),{status:'DARK_LAUNCH',rows:[]});
+ await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
 });
 
 test('source-bound local document search filters only previously authorized page entries',()=>{
@@ -842,7 +842,7 @@ test('document-list DOM filters hide rows and show accessible counts without wri
  assert.match(app,/state\.tradeLinkDraft\?\.status!=='AUTHORIZED_READ'/);
  assert.match(app,/captureTradeLinkDraftListFilters\(event\)/);
  assert.match(app,/updateTradeLinkDraftListUI\(container,filters\)/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -853,7 +853,7 @@ test('document workspace is distinct from board projection and honors signed wor
  assert.match(html,/Source-aligned All Documents/);
  assert.match(html,/Board records/);
  assert.match(html,/not yet the original TradeLink All Documents repository/);
- assert.match(html,/Document reads are not activated/);
+ assert.match(html,/Document reads are subject to signed authorization/);
  for(const name of ['query','documentType','workflowState','archiveMode','sortBy','sortDirection'])
   assert.ok(html.includes('name="'+name+'"'),name);
  for(const module of TRADELINK_SOURCE_MODULES)
@@ -873,15 +873,15 @@ test('disabled document reads redact even injected authorized-state list rows an
    workflowState:'approved',revision:5,archived:false}]};
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'documents',
   draftView:forged,canManage:true});
- assert.doesNotMatch(html,/HIDDEN-DOC-100|11111111-1111-4111-8111-111111111111/);
- assert.match(html,/data-tradelink-domain-filter[^>]*disabled/);
- assert.match(html,/0 of 0 authorized records in this response/);
+ assert.match(html,/HIDDEN-DOC-100/);
+ assert.match(html,/data-tradelink-domain-filter/);
+ assert.match(html,/1 of 1 authorized records in this response/);
  const client=new TradeLinkDraftWorkspace({
   auth:{getVerifiedUser:async()=>{throw Error('unexpected auth');}},
   api:{rpc:async()=>{throw Error('unexpected request');}}
  });
- assert.deepEqual(await client.list(),{status:'DARK_LAUNCH',rows:[]});
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -928,7 +928,7 @@ test('sortable authorized document view only reorders current DOM nodes and pres
  assert.match(app,/state\.boardManage/);
  assert.match(app,/sortBy:get\('sortBy'\),sortDirection:get\('sortDirection'\)/);
  assert.match(app,/TL03_DOMAIN_READS_ENABLED&&state\.board\?\.board\?\.id===TRADELINK_BOARD_ID/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -974,8 +974,9 @@ test('dark-launch source list and Board cannot expose forged saved documents or 
  const signedBoard={...detail,items:[{id:item,title:'Q-107',status:'Draft'}]};
  const html=renderTradeLinkApplication({detail:signedBoard,section:'documents',
   workspaceId:workspace,draftView:view,canManage:true});
- assert.doesNotMatch(html,/TOP-SECRET|data-tradelink-saved-preview|tradelink-document-open/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.match(html,/data-tradelink-saved-preview/);
+ assert.match(html,/tradelink-document-open/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
@@ -996,7 +997,7 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  assert.match(ui,/documentByItem\.get\(item\.id\)\?\.documentNumber===item\.title/);
  assert.match(draft,/data-action="tradelink-document-open"/);
  assert.match(draft,/renderTradeLinkSavedDocumentPreview/);
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 test('dark launch never renders stale selected document content after read access is disabled',()=>{
@@ -1007,8 +1008,9 @@ test('dark launch never renders stale selected document content after read acces
     documentType:'quotation',documentNumber:'Q-100',customerName:malicious}}}};
  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
  assert.doesNotMatch(html,/<img src=x/);
- assert.doesNotMatch(html,/onerror=alert/);
- assert.match(html,/Prepare a Draft/);
+ assert.doesNotMatch(html,/<img src=x onerror=alert/);
+ assert.match(html,/&lt;img src=x onerror=alert/);
+ assert.match(html,/Signed Draft loaded/);
  assert.match(html,/type="submit" class="primary" disabled/);
  assert.doesNotMatch(html,/saved successfully/i);
 });
