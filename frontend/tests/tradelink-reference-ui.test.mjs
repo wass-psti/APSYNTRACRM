@@ -29,8 +29,7 @@ test('reference portal is scoped to the genuine signed TradeLink board and uses 
  assert.match(html,/All Documents/);
  assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/documents"/);
  assert.match(html,/class="tl-reference-manual"/);
- assert.match(html,/Disaster Recovery<\/span>/);
- assert.match(html,/aria-disabled="true"/);
+ assert.doesNotMatch(html,/Disaster Recovery|tl-reference-unavailable/);
  assert.match(html,/Signed workspace/);
  assert.doesNotMatch(html,/(?:Save successful|Draft saved \d|PDF generated)/);
  const foreign=renderTradeLinkApplication({detail,
@@ -129,7 +128,7 @@ test('CSS scope, responsive rules and reduced-motion behavior are bounded to Tra
  assert.match(css,/@media\(max-width:620px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(css,/summary:focus-visible/);
- assert.match(app,/aria-disabled="true"/);
+ assert.doesNotMatch(app,/Disaster Recovery|tl-reference-unavailable/);
  const shell=readFileSync('frontend/app.js','utf8');
  assert.match(shell,/root\.querySelector\('\.tl-reference-document-tabs a\.active'\)\?\.focus/);
  assert.doesNotMatch(draftSource,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);

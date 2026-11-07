@@ -136,11 +136,8 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
      '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink local Draft guide</strong>'+
       '<p>Choose a document module, complete its required fields and select Validate locally. '+
       'This checks an unsaved preview only. The original document review, PDF export and '+
-      'recovery workflows are unavailable pending authorized activation.</p>'+
+      'document workflows are unavailable pending authorized activation.</p>'+
      '</div></details>'+
-    '<span class="tl-reference-unavailable" aria-disabled="true"'+
-     ' title="Disaster Recovery is not activated in APSYNTRA CRM">'+
-     '<span aria-hidden="true">♧</span> Disaster Recovery</span>'+
    '</nav>'+
    '<div class="tl-reference-workspace" title="Uses the existing APSYNTRA signed workspace">'+
     '<span aria-hidden="true">▤</span> Signed workspace</div>'+
