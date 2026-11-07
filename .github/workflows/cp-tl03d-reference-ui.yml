@@ -58,7 +58,7 @@ jobs:
           for module in esi packing delivery payment quotation po; do
             node scripts/cp-tl03d-render-reference-fixture.mjs "$module" "$TL_REF_OUT/$module.html"
           done
-          for spec in 'quotation 1365 900 desktop' 'payment 1365 900 desktop' 'delivery 1365 900 desktop' 'packing 768 1024 tablet' 'quotation 390 844 mobile'; do
+          for spec in 'quotation 1365 1700 desktop' 'payment 1365 1700 desktop' 'delivery 1365 1700 desktop' 'packing 768 1024 tablet' 'quotation 390 844 mobile'; do
             read -r module width height size <<< "$spec"
             input="$TL_REF_OUT/$module.html"
             prefix="$TL_REF_OUT/$module-$size"
