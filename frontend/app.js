@@ -1,5 +1,5 @@
 import {AuthClient,ApiError} from './session.js';
-import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels} from './workspace-ui.js?v=ws01-controls-20261106';
+import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
@@ -2746,7 +2746,14 @@ async function action(name,button){
    if(!auth.isSignedIn||!state.context)break;
    openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()},
     {lifecycle:workspaceLifecycleClient,onOpenCurrent:()=>{location.hash='#/overview';},
-     configurationEnabled:WS01_CONFIGURATION_ENABLED});
+     configurationEnabled:WS01_CONFIGURATION_ENABLED,
+     switchingEnabled:WS01_SWITCHING_ENABLED,
+     onWorkspaceSwitched:()=>{
+      // Reload only after a verified server-side scope change. The fresh app
+      // startup must rebuild every board/module/role cache for the new scope.
+      location.hash='#/overview';
+      location.reload();
+     }});
    break;
  }
  case 'ws02-open-invites':{

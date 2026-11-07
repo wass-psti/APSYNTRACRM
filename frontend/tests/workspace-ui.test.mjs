@@ -55,12 +55,13 @@ test('general workspace selector loads authorized member discovery without enabl
  assert.match(source,/session\.catalog=result/);
  assert.match(source,/data-ws01-note/);
  assert.match(source,/Authorized workspaces/);
- assert.match(source,/resultsMarkup\(read\(\),'all',input\.value\)/);
+ assert.match(source,/resultsMarkup\(read\(\),'all',input\.value,options\)/);
  assert.match(source,/openInvites\(read\(\)\.rows\.find\(row=>row\.active\)\)/);
  assert.match(source,/Workspace switching is not yet activated/);
  assert.match(source,/session\.status='error'/);
  assert.doesNotMatch(source,/WS01_SWITCHING_ENABLED=true/);
- assert.doesNotMatch(source,/\.select\(.*workspaceId/);
+ assert.match(source,/await lifecycle\.select\(workspaceId,expectedWorkspaceId\)/);
+ assert.match(source,/options\.switchingEnabled===true/);
 });
 
 test('signed member discovery is visible only for validated server-supplied membership',()=>{

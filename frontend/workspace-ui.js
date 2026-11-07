@@ -235,7 +235,13 @@ function panel(html,kind){
  });
  return layer;
 }
-function rowMarkup(row){
+function switchingUiReady(options={}){
+ return options.switchingEnabled===true&&
+  typeof options.lifecycle?.discover==='function'&&
+  typeof options.lifecycle?.select==='function'&&
+  typeof options.onWorkspaceSwitched==='function';
+}
+function rowMarkup(row,options={}){
  // Row interaction opens signed metadata, not an unauthorized workspace switch.
  return '<div class="ws01-entry"><button type="button" class="ws01-entry-button"'+
   ' data-ws01-action="details" data-ws01-workspace="'+escape(row.id)+'"'+
@@ -243,12 +249,13 @@ function rowMarkup(row){
   '<span class="ws01-entry-icon" aria-hidden="true">'+
   escape(row.name.slice(0,1).toUpperCase())+'</span><span class="ws01-entry-copy">'+
   '<strong>'+escape(row.name)+'</strong><small>'+escape(row.relation)+
-  ' · '+(row.active?'Current signed workspace':'Signed member workspace · switching unavailable')+'</small></span>'+
+  ' · '+(row.active?'Current signed workspace':switchingUiReady(options)?
+   'Signed member workspace · server-verified switching':'Signed member workspace · switching unavailable')+'</small></span>'+
   '<span class="ws01-entry-badge">'+(row.active?'Current':'Member')+'</span></button></div>';
 }
-function resultsMarkup(catalog,tab,query){
+function resultsMarkup(catalog,tab,query,options={}){
  const rows=visibleWorkspaces(catalog,{tab,query});
- return rows.length?rows.map(rowMarkup).join(''):
+ return rows.length?rows.map(row=>rowMarkup(row,options)).join(''):
   '<p class="ws01-empty" role="status">No authorized workspaces match this filter.</p>';
 }
 /** A detail action may only resolve a row from the validated signed catalog.
@@ -260,7 +267,29 @@ export function workspaceDetailsFor(catalog,workspaceId){
  return row&&((catalog.status==='SIGNED_MEMBER_DISCOVERY'&&row.verifiedScope==='SIGNED_MEMBER_RPC')||
   (catalog.status==='CURRENT_WORKSPACE_ONLY'&&row.verifiedScope==='SIGNED_CURRENT_ONLY'))?row:null;
 }
-function detailsContent(row){
+/** UI handoff only: production authorization is enforced again by the signed
+ * discovery RPC, the CAS selection RPC, and the lifecycle's post-write read.
+ * An existing UI catalog is never sufficient authority to switch workspaces. */
+export async function requestSignedWorkspaceSwitch({lifecycle,workspaceId,expectedWorkspaceId}={}){
+ if(!validUuid(workspaceId)||!validUuid(expectedWorkspaceId)||
+    workspaceId===expectedWorkspaceId||
+    typeof lifecycle?.discover!=='function'||typeof lifecycle?.select!=='function')
+  throw Error('Workspace selection prerequisites unavailable.');
+ const current=await lifecycle.discover();
+ if(current?.status!=='SIGNED_MEMBER_DISCOVERY'||
+    current.rows?.filter(row=>row.active&&row.verifiedScope==='SIGNED_MEMBER_RPC').length!==1||
+    !current.rows.some(row=>row.id===expectedWorkspaceId&&row.active===true&&
+      row.verifiedScope==='SIGNED_MEMBER_RPC')||
+    !current.rows.some(row=>row.id===workspaceId&&row.active===false&&
+      row.verifiedScope==='SIGNED_MEMBER_RPC'))
+  throw Error('Signed workspace membership changed.');
+ const receipt=await lifecycle.select(workspaceId,expectedWorkspaceId);
+ if(receipt?.workspaceId!==workspaceId||
+    receipt?.previousWorkspaceId!==expectedWorkspaceId||receipt?.switched!==true)
+  throw Error('Authoritative workspace selection could not be verified.');
+ return receipt;
+}
+function detailsContent(row,{canSwitch=false}={}){
  const name=escape(row.name);
  return '<section class="ws01-details-card" role="dialog" aria-modal="true"'+
   ' aria-labelledby="ws01-details-title">'+
@@ -269,15 +298,17 @@ function detailsContent(row){
   '<p class="ws01-details-description">Workspace details verified for your signed membership.</p>'+
   '<dl class="ws01-details-fields"><div><dt>Membership</dt><dd>'+escape(row.relation)+'</dd></div>'+
   '<div><dt>Privacy</dt><dd>'+escape(row.privacy||'Not provided by current context')+'</dd></div>'+
-  '<div><dt>Session</dt><dd>'+(row.active?'Current workspace':'Not active · switching unavailable')+'</dd></div></dl>'+
+  '<div><dt>Session</dt><dd>'+(row.active?'Current workspace':canSwitch?'Signed member · available to switch':'Not active · switching unavailable')+'</dd></div></dl>'+
   '<p class="ws01-details-note" role="status">'+(row.active?
    'This is your current server-selected workspace.':
-   'You can inspect this authorized membership, but changing the active workspace requires the separate signed switching contract.')+'</p>'+
+   (canSwitch?'This signed membership can be selected. The server will recheck access and reload the active workspace.':
+   'You can inspect this authorized membership, but changing the active workspace requires the separate signed switching contract.'))+'</p>'+
   '<div class="ws01-details-actions"><button type="button" data-ws01-action="back">Back to workspaces</button>'+
   '<button type="button" data-ws01-action="configure">Configuration</button>'+
   (row.active?'<button type="button" class="ws01-details-primary" data-ws01-action="open-current">Open current workspace</button>':
-   '<button type="button" disabled title="Workspace switching is not activated">Switch workspace — unavailable</button>')+
-  '</div></section>';
+   (canSwitch?'<button type="button" class="ws01-details-primary" data-ws01-action="select">Switch workspace</button>':
+   '<button type="button" disabled title="Workspace switching is not activated">Switch workspace — unavailable</button>'))+
+  '</div>'+(canSwitch?'<p class="ws01-config-feedback" data-ws01-switch-feedback role="status" aria-live="polite"></p>':'')+'</section>';
 }
 /** A configuration becomes editable only after a fresh signed read receipt.
  * Until server activation, keep the existing owner draft validation behavior. */
@@ -314,9 +345,47 @@ function configurationContent(row,{live=false,settings=null,loading=false,error=
 function openDetails(catalog,workspaceId,options={}){
  const row=workspaceDetailsFor(catalog,workspaceId);
  if(!row)return;
- const layer=panel(detailsContent(row),'details');
- layer.addEventListener('click',event=>{
+ // This is a presentation gate, never an authorization grant. Production
+ // activation also requires the reviewed signed selection RPC and DB flag.
+ const canSwitch=switchingUiReady(options)&&!row.active&&
+  row.verifiedScope==='SIGNED_MEMBER_RPC';
+ const layer=panel(detailsContent(row,{canSwitch}),'details');
+ let selecting=false;
+ layer.addEventListener('click',async event=>{
   const action=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
+  if(selecting)return; // Prevent overlapping requests and navigation while pending.
+  if(action==='select'&&canSwitch){
+   selecting=true;
+   const button=layer.querySelector('[data-ws01-action="select"]');
+   const feedback=layer.querySelector('[data-ws01-switch-feedback]');
+   button.disabled=true;
+   feedback.textContent='Rechecking your signed workspace access…';
+   try{
+    const known=options.selectorSession?.catalog||catalog;
+    const current=known?.rows?.find(item=>item.active===true&&
+      item.verifiedScope==='SIGNED_MEMBER_RPC');
+    if(!current)throw Error('Current workspace unavailable');
+    const receipt=await requestSignedWorkspaceSwitch({
+     lifecycle:options.lifecycle,workspaceId:row.id,
+     expectedWorkspaceId:current.id
+    });
+    // The app must discard all workspace-scoped state after the verified
+    // server transition. A full page reload avoids stale board/role caches.
+    await options.onWorkspaceSwitched(receipt);
+   }catch(error){
+    if(activeOverlay!==layer||!layer.isConnected)return;
+    const code=Number.isInteger(error?.status)?error.status:0;
+    feedback.textContent=code===401?
+     'Your signed session expired. Sign in again before switching.':
+     code===403||code===404?
+     'Server access to that workspace could not be confirmed. Reload before retrying.':
+     code===409?
+     'Your workspace selection changed in another session. Reload and try again.':
+     'The workspace switch could not be confirmed. Reload before trying again.';
+    // Never automatically retry a potentially committed selection RPC.
+   }
+   return;
+  }
   if(action==='back')openBrowse(options.selectorSession?.catalog||catalog,options);
   if(action==='configure')openConfiguration(catalog,row.id,options);
   if(action==='open-current'&&row.active){
@@ -438,7 +507,8 @@ function currentFootnote(catalog,options={}){
  else if(status==='error')message='Workspace list could not be verified. Retry the signed read; only the current workspace is shown until verification succeeds.';
  else if(catalog?.status==='SIGNED_MEMBER_DISCOVERY')
   message=catalog.rows.length+' authorized workspace'+(catalog.rows.length===1?'':'s')+
-   ' for your signed account. Workspace switching is not yet activated.';
+   ' for your signed account. '+(switchingUiReady(options)?
+   'Switching requires signed server confirmation.':'Workspace switching is not yet activated.');
  return '<div data-ws01-feedback><p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>'+
   (status==='error'?'<button type="button" class="ws01-retry" data-ws01-action="retry">Retry authorized workspace discovery</button>':'')+'</div>';
 }
@@ -449,7 +519,7 @@ function menuContent(catalog,options={}){
   '<label class="ws01-sr-only" for="ws01-menu-search">Search workspaces</label>'+
   '<input id="ws01-menu-search" type="search" placeholder="Search workspaces" autocomplete="off" maxlength="120"/>'+
   '<p class="ws01-eyebrow">Authorized workspaces · '+visibleWorkspaces(catalog).length+'</p>'+
-  '<div data-ws01-results>'+resultsMarkup(catalog,'all','')+'</div>'+
+  '<div data-ws01-results>'+resultsMarkup(catalog,'all','',options)+'</div>'+
   '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
   '<button type="button" data-ws01-action="create">Add workspace</button>'+
   '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
@@ -461,7 +531,7 @@ function openMenu(catalog,options={}){
  const input=layer.querySelector('#ws01-menu-search');
  const redraw=()=>{
   if(activeOverlay!==layer||!layer.isConnected)return;
-  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),'all',input.value);
+  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),'all',input.value,options);
   layer.querySelector('.ws01-eyebrow').textContent='Authorized workspaces · '+visibleWorkspaces(read()).length;
   const feedback=layer.querySelector('[data-ws01-feedback]');
   if(feedback)feedback.outerHTML=currentFootnote(read(),options);
@@ -495,7 +565,7 @@ function browseContent(catalog,options={}){
    '" aria-pressed="'+(id==='all')+'">'+escape(label)+'</button>').join('')+
   '<button type="button" data-ws01-action="create" class="ws01-add-button">+ Add workspace</button></nav>'+
   '<div class="ws01-browser-results"><h3 data-ws01-title>All workspaces</h3>'+
-  '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','')+'</div>'+
+  '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','',options)+'</div>'+
   currentFootnote(catalog,options)+'</div></div></section>';
 }
 function openBrowse(catalog,options={}){
@@ -505,7 +575,7 @@ function openBrowse(catalog,options={}){
  const input=layer.querySelector('#ws01-browser-search');
  const redraw=()=>{
   if(activeOverlay!==layer||!layer.isConnected)return;
-  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),tab,input.value);
+  layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),tab,input.value,options);
   const feedback=layer.querySelector('[data-ws01-feedback]');
   if(feedback)feedback.outerHTML=currentFootnote(read(),options);
   for(const btn of layer.querySelectorAll('[data-ws01-filter]'))
