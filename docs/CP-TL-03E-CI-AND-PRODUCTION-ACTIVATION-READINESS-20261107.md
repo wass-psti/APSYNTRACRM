@@ -53,7 +53,8 @@ References: [RLS policies](https://supabase.com/docs/guides/database/postgres/ro
 | Named production executor, independent reviewer and rollback owner | **PENDING** | Responsible persons and change window not established in evidence |
 | Fresh signed Stage A authorized-manager acceptance | **VERIFIED — 6/6 PASS** | User-supplied sanitized report corroborated by the read-only connected Security page on 2026-11-07; zero writes/disclosures |
 | Fresh signed Stage A nonmanager denial | **USER-SUPPLIED PASS — 6/6** | Sanitized employee-session report provided on 2026-11-07; the connected browser still displays a manager result, so no independent employee-page corroboration was available |
-| Genuine foreign-workspace / revoked-session denial | **PENDING / BLOCKED** | New revoked-session source probe in draft PR #68 is CI verified but not deployed or executed; no eligible foreign actor or genuine revoked bearer evidence |
+| Genuine TradeLink revoked-session read denial | **USER-SUPPLIED PASS — 403** | Sanitized `CP-TL-03E-LOCAL-SESSION-REVOCATION` signed manager report, 2026-11-08 PHT; prior manager read and local sign-out acknowledged; no raw HTTP replay captured by this review |
+| Genuine foreign-workspace signed denial / persisted-row isolation | **PENDING / BLOCKED** | No eligible existing foreign-workspace actor/approved persisted QA record evidence; wrong-board probe is not a substitute |
 | Legacy TradeLink SECURITY DEFINER/RLS risk disposition | **PENDING** | Scoped security review / risk acceptance needed |
 | Exact two-function Stage B privilege change approval | **BLOCKED — SEPARATE APPROVAL REQUIRED** | Production permission change |
 | Production QA record/cleanup authorization, if needed | **BLOCKED — SEPARATE APPROVAL REQUIRED** | Creating/cleaning production documents and Board items changes live data |
@@ -210,7 +211,7 @@ The user supplied a fresh result from an existing employee account (no account n
 **New acceptance ledger:** Manager read scenario: **VERIFIED 6/6** with same-page corroboration. Employee denial scenario: **USER-SUPPLIED PASS 6/6**, no new external corroboration. Anonymous HTTP list denial: **VERIFIED 401**, separate case. Foreign-workspace and revoked/expired bearer denial: **PENDING**, not implied by wrong-board denial. Stage A remains non-mutating with zero record contents. Stage B grants, frontend flags, QA document creation, backup recovery exercise and independent risk acceptance remain unchanged and **NO-GO**.
 
 
-## 13. CP-TL-03E — controlled revoked-session implementation and final recovery/authorization decision (2026-11-07)
+## 13. CP-TL-03E — controlled revoked-session implementation and final recovery/authorization decision (2026-11-07; historical pre-merge review, superseded for revocation status by §14)
 
 **Scope / authoritative distinction:** The existing B3 Security-page revoked-token check probes the Workspace B3 Edge endpoint and is **not** evidence that a revoked bearer cannot read TradeLink. The TradeLink source checks `private.wm_board_config_session_active()` inside `private.tl03_can_manage`; the staged backend and live function fingerprints require a live signed session before TradeLink document reads. Supabase notes that revoked JWTs can remain cryptographically valid until expiry, so a local browser sign-out or unsigned HTTP 401 alone cannot prove the TradeLink server gate.
 
@@ -251,3 +252,54 @@ Authenticated read-only `supabase backups list --project-ref jtlusodorfnyzgyuewk
 **Production decision: NO-GO.** Do not merge draft PR #68 as implicit authorization for Stage B writes; any controlled frontend release of the optional sign-out test must follow the repository's normal review and deployment policy and be communicated to the operator beforehand. Even after a genuine signed revoked-session PASS, recovery evidence, independent security risk disposition, release owner/rollback assignments and **separate express permission/data approval** are still prerequisites before activating Stage B.
 
 **No production data write, grant/revoke DDL, role/membership modification, credential access, session revocation, feature-flag change, database restore, or production deploy was made during this review.** Source-only work lives in draft PR #68. The existing evidence record continues in draft PR #66.
+
+
+## 14. Signed revoked-session acceptance and CI stabilization — 2026-11-08 PHT
+
+**Updated revocation disposition: USER-SUPPLIED SIGNED RUNTIME PASS for precisely one previously authorized manager token against `tl03_documents_list` after local sign-out.** The user supplied the sanitized result from the merged TradeLink Security-page acceptance path. Its structure, stage, and required fields match the source acceptance contract, and its `403` is the expected denied outcome. This is **not** a direct replay of HTTP authorization by the reviewing agent; no raw bearer, header, session or server log was accessed.
+
+```json
+{
+  "checkpoint": "CP-TL-03E-LOCAL-SESSION-REVOCATION",
+  "status": "PASS",
+  "stage": "revoked-rpc-denied",
+  "priorSignedManagerReadVerified": true,
+  "localSignoutAcknowledged": true,
+  "revokedTradeLinkReadDenied": true,
+  "denialHttpStatus": 403,
+  "logoutScope": "local",
+  "domainWritesAttempted": 0,
+  "identifiersDisclosed": 0,
+  "persistedDocumentContentsDisclosed": 0,
+  "acceptanceBoundary": "ONE_PREVIOUSLY_ALLOWED_MANAGER_TOKEN_DENIED_AFTER_LOCAL_LOGOUT"
+}
+```
+
+**Runtime acceptance boundary:** Before local logout, the dedicated client helper required an active verified manager read preflight with six Stage A PASS checks and an unexpired JWT. After the server acknowledged a **local-scoped** sign-out, the app replayed the previous in-memory bearer once to the TradeLink list RPC; the submitted result reports denial **HTTP 403**. This does not certify global logout, refresh-token behavior on other devices, mutations, other RPCs, cross-workspace saved-row isolation, or universal revocation enforcement. The acceptance path reports **zero writes, identifiers or persisted contents disclosed**. The user's selected tab was reported at `#/login`, consistent with local logout, but the connector's page-text snapshot did not independently corroborate the entire signed-revocation report.
+
+**Production deployment context:** Previously draft [PR #68](https://github.com/wass-psti/APSYNTRACRM/pull/68) was **merged** as `597e15f9`, and previous evidence [PR #66](https://github.com/wass-psti/APSYNTRACRM/pull/66) was **merged** at `573de53a`. GitHub Pages deployment [run 42389712371](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42389712371) for `573de53a` succeeded. The current `main` `frontend/tradelink-domain-client.js` still retains **`TL03_DOMAIN_READS_ENABLED=false` and `TL03_DOMAIN_WRITES_ENABLED=false`**, so this security test release **did not activate TradeLink persistence**.
+
+### Distinct frontend CI finding and corrective action
+
+The post-merge frontend [run 42389686352](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42389686352) at `597e15f9` was **FAILED**: **1,164/1,165** tests passed, with a single pre-existing TimeTracker UI test failing. That fixture supplies an OT request dated `2026-11-02` but implicitly renders the **current PHT week**. At `2026-11-07 16:07Z` (Sunday `2026-11-08 00:07` PHT), the displayed week advanced and the dated row was filtered out. The failure does not establish a TradeLink security regression, but remains genuine red CI and must not be ignored.
+
+In branch `fix/cp-tl03e-ci-date-and-revocation-evidence-20261108`, commit `533c5e3671d937ca195c845c2c0acf40ecdede1d`, a focused **test-only** correction passes the TimeTracker renderer an explicit fixed reference date `2026-11-04T04:00:00.000Z` while keeping the original OT request, expected row and production renderer unchanged. On the authorized Mac via Desktop Commander Remote, `node --test frontend/tests/*.test.mjs` returned **1,165/1,165 PASS, 0 FAIL**; `node scripts/verify-pages-source.mjs` and `git diff --check` passed. CI at the new PR's head must be checked independently; local tests are not a substitute for GitHub Actions.
+
+### Revised production authorization decision
+
+| Gate | Updated classification |
+| --- | --- |
+| Previously approved signed manager read (6/6) | VERIFIED — previously corroborated |
+| Employee nonmanager access denial (6/6) | USER-SUPPLIED PASS — previous checkpoint; no rerun required |
+| Actual revoked manager list RPC after local sign-out | **USER-SUPPLIED PASS — HTTP 403**; bounded live-scenario acceptance |
+| Foreign-workspace signed principal / persisted cross-workspace row isolation | PENDING / BLOCKED until a legitimate existing actor/authorized record can be used |
+| Structural Stage A read-only preflight, Stage B grants disabled | VERIFIED — latest 15/15 SELECT-only result; no new DDL |
+| Seven completed physical backup snapshots; PITR disabled | VERIFIED metadata — restoration rehearsal, full-project impact and agreed RPO/RTO PENDING |
+| Named release executor, independent security reviewer, rollback owner and maintenance window | PENDING |
+| Eleven legacy TradeLink elevated function risk disposition | PENDING |
+| Production Stage B two-function write grants and frontend activation | BLOCKED — separate production permission/release approval |
+| Production QA document creation, Board projection, All Documents and refresh acceptance | BLOCKED — separate production-data approval and genuine acceptance required |
+
+**Final conclusion: Revoked-session acceptance advanced to USER-SUPPLIED PASS within its precise read-only boundary. CP-TL-03E production activation remains NO-GO.** Do not repeat successful manager/employee/revocation checks merely to advance. Prioritize the independent legacy-security review, recoverability/whole-project restoration strategy, named accountable release owners and authorized foreign-workspace evidence where feasible. Only request distinct production-write and QA-data approval after the remaining preconditions are met.
+
+**Change audit:** This update adds a nonsecret acceptance record and a test-only clock-stability correction for CI. No production database changes, TradeLink feature-flag changes, role modifications, session action by the agent, backup restore, or data writes were performed.
