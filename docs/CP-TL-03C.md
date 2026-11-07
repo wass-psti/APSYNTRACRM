@@ -152,7 +152,7 @@ Query returned **`BLOCKED_NO_ACTIVE_FOREIGN_MEMBERS`**. The foreign workspace ex
 
 **Outstanding:** Genuine fresh signed Stage A read acceptance under deployed HTTPS, cross-workspace where a legitimate active foreign user becomes available, current backup-restoration evidence, separate explicit Stage B permission approval, and Stage B controlled real-session mutation/CAS/audit acceptance remain PENDING. No production data, roles, RLS, flags, or permissions were changed during this restart. The previous pre-Stage-A readiness query intentionally expects absent schema and is **not** suitable for post-Stage-A monitoring; use the new Phase 1 verifier.
 
-**Canonical detailed checkpoint:** `docs/CP-TL-03C-PHASE-1-PRODUCTION-PREFLIGHT-2026-11-06.md`.
+**Canonical detailed checkpoint:** `docs/TRADELINK-OPERATIONS.md`.
 
 **Next:** `CP-TL-03C / Phase 2 — Genuine Signed Stage A Read Acceptance Refresh and Stage B Approval Packet`. Do not activate `sql/cp-tl03c-write-permission-candidate.sql` without new separately scoped production permission approval and a maintained rollback decision.
 
@@ -163,7 +163,7 @@ Query returned **`BLOCKED_NO_ACTIVE_FOREIGN_MEMBERS`**. The foreign workspace ex
 
 The existing `frontend/tradelink-stage-a-signed-acceptance.js` is already wired to the real Security page under `Run Stage A signed read checks` and `Copy nonsecret result`. It performs six signed GoTrue/self-effective-access/authorized-list/nonexistent-read/wrong-board/stable-session checks without any write RPC. Historical signed user-submitted `AUTHORIZED_MANAGER` 6/6 and HR `BOARD_MANAGER_DENIED` 6/6 evidence is preserved; **no new live signed report was generated or intercepted by the assistant** because the originating browser context is unavailable. The existing foreign-workspace user prerequisite remains blocked, and controlled revoked/expired production bearer tests remain pending.
 
-The new approval dossier `docs/CP-TL-03C-PHASE-2-SIGNED-READ-AND-STAGE-B-APPROVAL-PACKET-2026-11-06.md` records the proposed **exact two EXECUTE grants** for `authenticated`, Stage A integrity, existing SHA/source guards, technical authority boundaries, production rollout sequence, nonproduction acceptance, outstanding backup/recovery and explicit approval requirements. No Stage B grants, role changes, records, or schema alterations were made during Phase 2.
+The new approval dossier `docs/TRADELINK-OPERATIONS.md` records the proposed **exact two EXECUTE grants** for `authenticated`, Stage A integrity, existing SHA/source guards, technical authority boundaries, production rollout sequence, nonproduction acceptance, outstanding backup/recovery and explicit approval requirements. No Stage B grants, role changes, records, or schema alterations were made during Phase 2.
 
 **Stage B-only rollback gap closed in staged code:** `sql/cp-tl03c-stage-b-write-revoke-candidate.sql` reverses only the two authenticated draft-command EXECUTE permissions, **preserving approved Stage A read/list access and existing documents, board items, immutable audit events, and RLS**. It is distinct from the existing broader `sql/cp-tl03c-emergency-disable-candidate.sql`, which also disables Stage A reads. The new `sql/tests/cp-tl03c-disposable-write-revoke-acceptance.sql` tests data retention and restricted grants in disposable PostgreSQL. Neither candidate was executed against production.
 
@@ -180,7 +180,7 @@ The user supplied a new sanitized result with `checkpoint: CP-TL-03C-STAGE-A-SIG
 
 A separate read-only live SQL query again observed zero TradeLink document rows, zero domain audit events, `authenticated` document-list EXECUTE enabled and document-commit EXECUTE disabled. The prior 15-point Phase 1 structural PASS remains accepted; no new full 15/15 result is claimed in this turn. Stage B production write grants remain disabled and unapproved. This closes only the fresh `AUTHORIZED_MANAGER` signed **read** acceptance case.
 
-Next required signed report: an existing HR/nonmanager's fresh `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED` report with six PASS checks, zero writes and zero document disclosures. Genuine foreign-workspace, revoked/expired session and later production draft mutation acceptance stay blocked or pending on their own prerequisites. See `docs/CP-TL-03C-PHASE-2-SIGNED-READ-AND-STAGE-B-APPROVAL-PACKET-2026-11-06.md` for detailed evidence and approval boundaries.
+Next required signed report: an existing HR/nonmanager's fresh `BOARD_MANAGER_DENIED` or `MODULE_ROLE_DENIED` report with six PASS checks, zero writes and zero document disclosures. Genuine foreign-workspace, revoked/expired session and later production draft mutation acceptance stay blocked or pending on their own prerequisites. See `docs/TRADELINK-OPERATIONS.md` for detailed evidence and approval boundaries.
 
 
 ## Phase 2 fresh signed HR non-manager denial — accepted (2026-11-06)
@@ -194,7 +194,7 @@ Read-only database validation reconfirmed authenticated list EXECUTE granted and
 
 ## Phase 3 — Stage B production-change decision (2026-11-06)
 
-**Decision: NO-GO — evidence and authorization prerequisites outstanding, not a failed Stage A or disposable integration contract.** The dedicated Phase 3 decision and recovery report is `docs/CP-TL-03C-PHASE-3-STAGE-B-CHANGE-DECISION-2026-11-06.md` (commit `be50191`).
+**Decision: NO-GO — evidence and authorization prerequisites outstanding, not a failed Stage A or disposable integration contract.** The dedicated Phase 3 decision and recovery report is `docs/TRADELINK-OPERATIONS.md` (commit `be50191`).
 
 **Read-only live findings:** Existing project is `ACTIVE_HEALTHY` on PostgreSQL 17.6. TradeLink domain document and audit tables and its board have **zero records**, both public/private authenticated draft-command EXECUTE grants are **FALSE**, authenticated read/list grants **TRUE**, anonymous commit **FALSE**, and both domain tables have RLS enabled. No new SQL migration, permissions, document records, roles, credentials, sessions or restore action was applied in this checkpoint. Existing Phase 1 15/15 structural acceptance, genuine manager + HR Phase 2 signed-read reports and disposable PostgreSQL run #16 remain VERIFIED in their own specified scopes.
 
@@ -207,7 +207,7 @@ Read-only database validation reconfirmed authenticated list EXECUTE granted and
 
 ## Phase 3B — backup and production grant decision (2026-11-06)
 
-**Formal result:** Phase 3B evidence-gathering and decision packet **COMPLETED / VERIFIED**. Stage B production activation **NO-GO / NOT AUTHORIZED**. Canonical checkpoint: `docs/CP-TL-03C-PHASE-3B-RECOVERY-AND-PERMISSION-DECISION-2026-11-06.md` (commit `1409a98`).
+**Formal result:** Phase 3B evidence-gathering and decision packet **COMPLETED / VERIFIED**. Stage B production activation **NO-GO / NOT AUTHORIZED**. Canonical checkpoint: `docs/TRADELINK-OPERATIONS.md` (commit `1409a98`).
 
 A fresh execution of the committed `sql/tests/cp-tl03c-phase1-readonly-activation-preflight.sql` returned `STAGE_A_STRUCTURAL_PASS__STAGE_B_NOT_AUTHORIZED`, **15/15 PASS**, no drift. A separate live query confirmed zero document/audit/board records, authenticated read/list EXECUTE still enabled, and both private/public authenticated write RPC EXECUTE grants **FALSE**. WatchdogWorkspace remains `ACTIVE_HEALTHY` (PostgreSQL 17.6); migration history continues to list Stage A `20261105011611`, not any Stage B activation. No production SQL grant, revoke, RLS change, data writes, credential/session mutation or backup restoration occurred.
 
@@ -226,13 +226,13 @@ Within the authorized nonproduction work, a static regression `frontend/tests/tr
 
 Live SQL sampled an unchanged Stage A baseline: zero domain documents/audit events/board items, signed public/private Draft commit privileges both **FALSE**, signed read/list both **TRUE**, and two scoped TL03 policies. An attempted fresh execution of the complete 15-check source-fingerprint preflight, plus a narrower fingerprint query, was blocked by tool safety controls; do not claim those fresh tests passed. The last independently verified full 15/15 remains the prior Phase 3B baseline, and the inability to revalidate it is a controlled release stop.
 
-The updated [Phase 3B decision packet](docs/CP-TL-03C-PHASE-3B-RECOVERY-AND-PERMISSION-DECISION-2026-11-06.md) records the user's go-ahead, the independent 19-pass nonproduction CI evidence, unresolved recovery/owner proof, and the unchanged **NO-GO production activation** classification. Neither `sql/cp-tl03c-write-permission-candidate.sql` nor its rollback has been executed against production. Next release action requires an approved owner, verifiable recovery position and passing fresh Stage A source guard, followed by the exact two-grant change under the authorized release process.
+The updated [Phase 3B decision packet](docs/TRADELINK-OPERATIONS.md) records the user's go-ahead, the independent 19-pass nonproduction CI evidence, unresolved recovery/owner proof, and the unchanged **NO-GO production activation** classification. Neither `sql/cp-tl03c-write-permission-candidate.sql` nor its rollback has been executed against production. Next release action requires an approved owner, verifiable recovery position and passing fresh Stage A source guard, followed by the exact two-grant change under the authorized release process.
 
 
 ## CP-TL-03D / Phase 1 — Draft dark launch handoff (2026-11-06)
 
 The requested next workstream is **frontend-only TradeLink Draft interface integration**. This does not waive the outstanding Stage B production activation gates or reclassify previously blocked production permissions as approved. The new source-aligned `#/boards/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88/tradelink/drafts` view is integrated inside the existing signed TradeLink board application. It exposes a bounded Draft preparation form with local-only validation, source module type/currency/VAT options, unsaved field preservation in identity-scoped memory, and Draft list/read/edit/archive/restore controller paths through the original signed `TradeLinkDomainClient`. Both domain feature flags remain **FALSE**; therefore no Draft read RPC or write RPC can be triggered by this dark launch. Stale signed document content is hidden on permission loss, and no local or synthetic saved document is fabricated.
 
-**Development evidence:** `frontend/tradelink-draft-workspace.js`, `frontend/tradelink-application.js`, `frontend/tradelink-application.css`, `frontend/app.js`, and new `frontend/tests/tradelink-draft-workspace.test.mjs`. A complete frontend validation run on the initial implemented version [run 42196153273](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42196153273) finished 1,097/1,097 PASS; subsequent in-memory unsaved-state enhancements and their focused tests require final-head CI confirmation. Live authenticated browser acceptance is separately pending. Dedicated milestone report: `docs/CP-TL-03D-PHASE-1-DRAFT-DARK-LAUNCH.md`.
+**Development evidence:** `frontend/tradelink-draft-workspace.js`, `frontend/tradelink-application.js`, `frontend/tradelink-application.css`, `frontend/app.js`, and new `frontend/tests/tradelink-draft-workspace.test.mjs`. A complete frontend validation run on the initial implemented version [run 42196153273](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42196153273) finished 1,097/1,097 PASS; subsequent in-memory unsaved-state enhancements and their focused tests require final-head CI confirmation. Live authenticated browser acceptance is separately pending. Dedicated milestone report: `docs/TRADELINK-OPERATIONS.md`.
 
 **Security:** Stage B database write grants are still OFF; no production data, schema, roles, memberships, SQL permissions or secrets were modified by this frontend checkpoint. The Phase 3B backup/owner/approval disposition remains independent. The next TradeLink gate after implementation/CI is **CP-TL-03D Phase 2 — genuine deployed signed Draft dark-launch acceptance**, testing manager/HR navigation, local preview with no network write and identity/refresh redaction, without enabling production writes.
