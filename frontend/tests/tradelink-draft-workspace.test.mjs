@@ -954,7 +954,7 @@ test('source document saved preview renders exact server revision and multiple l
  assert.doesNotMatch(html,/<img src=x onerror/);
  assert.match(html,/Persisted line items/);
  assert.match(html,/170\.00 PHP/); // All saved line items, not just the editor's first line.
- assert.doesNotMatch(html,/120\.00 PHP<\/dd>/);
+ assert.match(html,/Local total estimate<\/dt><dd>170\.00 PHP<\/dd>/);
  assert.throws(()=>renderTradeLinkSavedDocumentPreview({...record,workspace_id:id},workspace,id));
  assert.throws(()=>renderTradeLinkSavedDocumentPreview({...record,content:{
   ...record.content,documentNumber:'CHANGED'}},workspace,id));
