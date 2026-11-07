@@ -164,3 +164,16 @@
 .aps-tradelink-app [data-tradelink-saved-preview] td{overflow-wrap:anywhere}
 .aps-tradelink-app [data-tradelink-saved-preview] .tl-panel-heading{gap:10px}
 .aps-tradelink-app [data-action="tradelink-document-open"]:focus-visible{outline:3px solid #8d95ee;outline-offset:2px}
+
+/* Multi-item Draft editor; one authoritative submission covers all rows. */
+.aps-tradelink-app .tl-reference-line-item{
+ border:1px solid var(--border-color,rgba(127,127,127,.22));
+ border-radius:12px;
+ margin-block:12px;
+ padding:12px;
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));
+ gap:10px;
+}
+.aps-tradelink-app .tl-reference-line-item>.tl-panel-heading{grid-column:1 / -1;}
+.aps-tradelink-app [data-action="tradelink-draft-add-line"]{margin-block:8px;}

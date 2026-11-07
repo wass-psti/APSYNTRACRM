@@ -48,6 +48,6 @@ test('narrow rollback only removes Stage B write grants and preserves Stage A re
 test('broad emergency disable is distinct, and frontend cannot silently enable writes',()=>{
  assert.match(emergency,/REVOKE ALL ON FUNCTION public\.tl03_documents_list/);
  assert.match(emergency,/REVOKE SELECT ON TABLE public\.tradelink_documents/);
- assert.match(frontend,/export const TL03_DOMAIN_READS_ENABLED=false;/);
+ assert.match(frontend,/export const TL03_DOMAIN_READS_ENABLED=true;/);
  assert.match(frontend,/export const TL03_DOMAIN_WRITES_ENABLED=false;/);
 });

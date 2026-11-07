@@ -47,16 +47,16 @@ test('foreign workspace, board or unknown document states fail closed',()=>{
   {...row,workflow_state:'for-approval'},{...row,content:[]}])
   assert.throws(()=>normalizeTradeLinkDomainRow(changed,workspace,id));
 });
-test('feature flags block all domain traffic before approval and migration',async()=>{
- assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+test('signed reads require a complete authorized client and write RPC stays disabled',async()=>{
+ assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
  let invoked=0;
  const client=new TradeLinkDomainClient({
   auth:{getVerifiedUser:async()=>{invoked++;throw Error('Unexpected signed access');}},
   api:{rpc:async()=>{invoked++;throw Error('Unexpected network call');}}
  });
- await assert.rejects(()=>client.list(),/await production activation/);
- await assert.rejects(()=>client.read(id),/await production activation/);
+ await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
+ await assert.rejects(()=>client.read(id),/Signed TradeLink domain API unavailable/);
  await assert.rejects(()=>client.commit({documentId:id,expectedRevision:0,
   operation:'create',draft}),/await approved central activation/);
  assert.equal(invoked,0);

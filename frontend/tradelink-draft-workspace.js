@@ -29,8 +29,8 @@ export function initialTradeLinkDraftView(documentType=null){
  // The route may request only one of the existing six source document types.
  // This is transient UI state, never browser or server persistence.
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
- return {status:'DARK_LAUNCH',rows:[],selected:null,documentPreview:null,busy:false,error:'',
-  message:'',draftNotice:'',mode:'create',pendingCreateId:null,
+ return {status:'READ_PENDING',rows:[],selected:null,documentPreview:null,busy:false,error:'',
+  message:'',draftNotice:'',mode:'create',pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,
   listFilters:initialTradeLinkDraftListFilters(),
   formValues:selected?{documentType:selected}:null};
 }
@@ -41,7 +41,7 @@ export function initialTradeLinkDraftView(documentType=null){
 export function resetTradeLinkDraftForm(view=initialTradeLinkDraftView(),documentType=null){
  const requested=documentType??view?.formValues?.documentType??'quotation';
  const safeType=typeLabels.some(([id])=>id===requested)?requested:'quotation';
- return {...view,mode:'create',selected:null,documentPreview:null,pendingCreateId:null,error:'',message:'',
+ return {...view,mode:'create',selected:null,documentPreview:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,error:'',message:'',
   draftNotice:'Unsaved local fields cleared. Nothing saved or transmitted.',
   formValues:{documentType:safeType}};
 }
@@ -49,6 +49,18 @@ export function resetTradeLinkDraftForm(view=initialTradeLinkDraftView(),documen
 export function tradeLinkDraftValidationMessage(error){
  return error instanceof ApiError&&error.status===400?
   error.message:'Invalid Draft input.';
+}
+/** Deliberately sanitize server failures: no SQL details or private record data. */
+export function tradeLinkDraftSaveFailureMessage(error,{committed=false}={}){
+ if(committed)return 'Document saved, but Board and All Documents could not be verified. Refresh the signed listing before editing or retrying.';
+ const code=String(error?.code||''),status=Number(error?.status);
+ if(status===401||status===403||code==='42501')
+  return 'Saving is not authorized for this session or workspace. Nothing was confirmed. Sign in again or ask your administrator.';
+ if(status===409||code==='40001'||code==='23505')
+  return 'Draft number or revision conflicts with an existing saved record. Refresh All Documents before editing or creating another Draft.';
+ if(code==='REQUEST_TIMEOUT'||status===0)
+  return 'Save confirmation was interrupted. Retry unchanged inputs to reuse the same document ID, or refresh All Documents before changing the Draft.';
+ return 'Save could not be confirmed. Retry unchanged inputs to reuse the same document ID, or refresh All Documents before changing the Draft.';
 }
 export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.randomUUID?.()}={}){
  if(!fields||typeof fields.get!=='function')
@@ -96,27 +108,42 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
    draft.exchangeRate=Number(rawRate);
   }
  }
- const description=value('lineDescription'),quantity=value('lineQuantity'),
-  unitPrice=physical?'':value('lineUnitPrice'),unit=value('lineUnit');
- if(physical||description||quantity||unitPrice||unit){
-  if(!description||!quantity||(!physical&&!unitPrice))
-   throw new ApiError('Line item requires description, quantity and unit price where applicable.',400);
-  const q=Number(quantity),p=physical?0:Number(unitPrice);
-  if(!Number.isFinite(q)||!Number.isFinite(p)||q<0||p<0||
-     q>1000000000||p>1000000000||((physical||priced)&&q===0)||
-     (priced&&p===0))
-   throw new ApiError('Invalid Draft line quantity or unit price.',400);
-  const id=value('lineId')||lineId();
-  if(typeof id!=='string'||!id||id.length>120)
-   throw new ApiError('Could not create a valid line-item identifier.',400);
-  const item={id,kind:'item',description,quantity:q,unitPrice:p,
-   ...(unit?{unit}:{})};
-  if(type==='delivery'){
-   const serial=value('lineSerialNumber');
-   if(serial.length>120)throw new ApiError('Invalid serial or asset number.',400);
-   if(serial)item.serialNumber=serial;
+ const lineValues=name=>{
+  const raw=typeof fields.getAll==='function'?fields.getAll(name):[fields.get(name)];
+  return raw.map(v=>String(v??'').trim());
+ };
+ const descriptions=lineValues('lineDescription'),quantities=lineValues('lineQuantity'),
+  prices=lineValues('lineUnitPrice'),units=lineValues('lineUnit'),
+  ids=lineValues('lineId'),serials=lineValues('lineSerialNumber');
+ const count=Math.max(descriptions.length,quantities.length,prices.length,
+  units.length,ids.length,serials.length);
+ const anyLine=[...descriptions,...quantities,...prices,...units,...ids,...serials]
+  .some(Boolean);
+ if(physical||priced||anyLine){
+  if(count<1||count>100)throw new ApiError('Invalid Draft line-item count.',400);
+  draft.items=[];
+  for(let index=0;index<count;index++){
+   const description=descriptions[index]||'',quantity=quantities[index]||'',
+    unitPrice=physical?'':prices[index]||'',unit=units[index]||'';
+   if(!description||!quantity||(!physical&&!unitPrice))
+    throw new ApiError('Line item requires description, quantity and unit price where applicable.',400);
+   const q=Number(quantity),price=physical?0:Number(unitPrice);
+   if(!Number.isFinite(q)||!Number.isFinite(price)||q<0||price<0||
+      q>1000000000||price>1000000000||((physical||priced)&&q===0)||
+      (priced&&price===0))
+    throw new ApiError('Invalid Draft line quantity or unit price.',400);
+   const id=ids[index]||lineId(index);
+   if(typeof id!=='string'||!id||id.length>120)
+    throw new ApiError('Could not create a valid line-item identifier.',400);
+   const item={id,kind:'item',description,quantity:q,unitPrice:price,
+    ...(unit?{unit}:{})};
+   if(type==='delivery'){
+    const serial=serials[index]||'';
+    if(serial.length>120)throw new ApiError('Invalid serial or asset number.',400);
+    if(serial)item.serialNumber=serial;
+   }
+   draft.items.push(item);
   }
-  draft.items=[item];
  }
  if(physical){
   if(!draft.customerName||!draft.referenceNumber)
@@ -180,6 +207,27 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
  }
  return validateTradeLinkDraftEnvelope(draft);
 }
+/**
+ * Keep the exact payload (including line ID) for ambiguous create retries.
+ * A changed form must never reuse an uncertain document ID: this avoids
+ * inconsistent retries and duplicate authoritative Board projections.
+ */
+export function prepareTradeLinkDraftCommand(view,fields,{
+ documentId=()=>globalThis.crypto?.randomUUID?.(),
+ lineId=()=>globalThis.crypto?.randomUUID?.()
+}={}){
+ const selected=view?.mode==='edit'?view.selected:null;
+ const expectedRevision=selected?.record?.revision??0;
+ if(!Number.isSafeInteger(expectedRevision)||expectedRevision<0)
+  throw new ApiError('Invalid saved Draft revision.',409);
+ const pending=view?.pendingCreateDraft;
+ const draft=parseTradeLinkDraftForm(fields,{lineId:index=>pending?.items?.[index]?.id||lineId(index)});
+ const id=selected?.documentId||view?.pendingCreateId||documentId();
+ if(!selected&&pending&&JSON.stringify(pending)!==JSON.stringify(draft))
+  throw new ApiError('A previous save may have succeeded. Refresh All Documents before changing this Draft.',409);
+ return {documentId:id,expectedRevision,draft,
+  pendingCreateDraft:selected?null:pending||draft};
+}
 export class TradeLinkDraftWorkspace{
  constructor({auth,api}={}){this.client=new TradeLinkDomainClient({auth,api});}
  async list(){
@@ -239,13 +287,23 @@ export function calculateTradeLinkDraftLocalAmounts(fields){
  if(!fields||typeof fields.get!=='function')return null;
  const value=name=>String(fields.get(name)??'').trim();
  if(!['esi','quotation','po'].includes(value('documentType')))return null;
- const qText=value('lineQuantity'),pText=value('lineUnitPrice');
- const quantity=Number(qText),unitPrice=Number(pText);
+ const rows=name=>(typeof fields.getAll==='function'?
+  fields.getAll(name):[fields.get(name)]).map(v=>String(v??'').trim());
+ const quantities=rows('lineQuantity'),prices=rows('lineUnitPrice');
+ const count=Math.max(quantities.length,prices.length);
  const currency=value('currency'),vatType=value('vatType');
- if(!qText||!pText||!Number.isFinite(quantity)||!Number.isFinite(unitPrice)||
-  quantity<=0||unitPrice<=0||quantity>1000000000||unitPrice>1000000000||
-  !currencies.includes(currency)||!TRADELINK_VAT_CODES.includes(vatType))
-  return null;
+ if(count<1||count>100||!currencies.includes(currency)||
+    !TRADELINK_VAT_CODES.includes(vatType))return null;
+ const items=[];
+ for(let i=0;i<count;i++){
+  const q=quantities[i]||'',p=prices[i]||'';
+  if(!/^\d+(?:\.\d+)?$/.test(q)||!/^\d+(?:\.\d+)?$/.test(p))return null;
+  const quantity=Number(q),unitPrice=Number(p);
+  if(!Number.isFinite(quantity)||!Number.isFinite(unitPrice)||
+    quantity<=0||unitPrice<=0||quantity>1000000000||unitPrice>1000000000)
+   return null;
+  items.push({kind:'item',quantity,unitPrice});
+ }
  const method=value('discountType')||'percentage';
  if(!['percentage','fixed'].includes(method))return null;
  const rawDiscount=value('discountValue'),rawRate=value('exchangeRate');
@@ -261,7 +319,7 @@ export function calculateTradeLinkDraftLocalAmounts(fields){
  const hasRate=needsRate&&rawRate!=='';
  const exchangeRate=hasRate?Number(rawRate):0;
  const result=calculateTradeLinkAmounts({
-  items:[{kind:'item',quantity,unitPrice}],currency,vatType,
+  items,currency,vatType,
   discountType:method,discountValue,exchangeRate
  });
  if(['subtotal','discount','taxable','vat','total'].some(key=>
@@ -275,7 +333,12 @@ export function calculateTradeLinkDraftLocalAmounts(fields){
 export function updateTradeLinkDraftLocalAmounts(form){
  const panel=form?.querySelector?.('[data-tradelink-draft-finance]');
  if(!panel)return null;
- const fields={get:key=>form.querySelector('[name="'+key+'"]')?.value??''};
+ const fields={
+  get:key=>form.querySelector('[name="'+key+'"]')?.value??'',
+  getAll:key=>(typeof form.querySelectorAll==='function'?
+   [...form.querySelectorAll('[name="'+key+'"]')].map(el=>el.value):
+   [form.querySelector('[name="'+key+'"]')?.value??''])
+ };
  const result=calculateTradeLinkDraftLocalAmounts(fields);
  const currency=panel.querySelector('[data-tradelink-draft-amount-currency]');
  if(currency)currency.textContent=result?.currency||'—';
@@ -309,13 +372,17 @@ export function updateTradeLinkDraftInputCurrencyLabels(form){
  for(const label of form.querySelectorAll('[data-tradelink-draft-money-currency]'))
   label.textContent=unit;
 }
-function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line){
+function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines=[line]){
  const defaults={documentType:type,lineQuantity:line.quantity??'',
   lineUnitPrice:line.unitPrice??'',currency:data.currency||'PHP',
   vatType:data.vatType||'12',discountType:data.discountType||'percentage',
   discountValue:data.discountValue??'',exchangeRate:data.exchangeRate??''};
  const value=key=>fieldValue(key,defaults[key]??'');
- const initial=calculateTradeLinkDraftLocalAmounts({get:value});
+ const initial=calculateTradeLinkDraftLocalAmounts({get:value,
+  getAll:name=>name==='lineQuantity'?
+    (lines.length>1?lines.map(x=>String(x.quantity??'')):[value('lineQuantity')]):
+   name==='lineUnitPrice'?
+    (lines.length>1?lines.map(x=>String(x.unitPrice??'')):[value('lineUnitPrice')]):[]});
  const unit=currencyUnit(value('currency'));
  const display=key=>initial&&initial[key]!==null?formatTradeLinkAmount(initial[key]):'—';
  return '<section class="tl-draft-finance" data-tradelink-draft-finance '+
@@ -410,11 +477,12 @@ export function tradeLinkDraftLocalSummaryValues(draft){
    formatTradeLinkAmount(item.unitPrice)+' '+unit:'',
   cashAmount:money('cashAmount'),chequeAmount:money('chequeAmount')
  };
- const amount=calculateTradeLinkDraftLocalAmounts({get:name=>{
-  if(name==='lineQuantity')return item.quantity??'';
-  if(name==='lineUnitPrice')return item.unitPrice??'';
-  return draft[name]??'';
- }});
+ const amount=calculateTradeLinkDraftLocalAmounts({
+  get:name=>name==='lineQuantity'?item.quantity??'':
+   name==='lineUnitPrice'?item.unitPrice??'':draft[name]??'',
+  getAll:name=>name==='lineQuantity'?draft.items?.map(x=>x.quantity)??[]:
+   name==='lineUnitPrice'?draft.items?.map(x=>x.unitPrice)??[]:[]
+ });
  const priced=['esi','quotation','po'].includes(draft.documentType);
  fields.localSubtotal=priced&&amount?formatTradeLinkAmount(amount.subtotal)+' '+amount.currency:'';
  fields.localDiscount=priced&&amount?formatTradeLinkAmount(amount.discount)+' '+amount.currency:'';
@@ -499,10 +567,40 @@ function referenceDocumentHeader(type,editing,canSave=false){
    'Save, review, approval, Templates and PDF export require separately authorized server activation.'+
   '</p></div>';
 }
-function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
+/** Render one existing or newly added item; all untrusted fields are escaped. */
+export function renderTradeLinkDraftLineItem(item={},type='quotation',currency='PHP',index=0){
+ const physical=type==='packing'||type==='delivery',priced=['esi','quotation','po'].includes(type);
+ const req=(physical||priced)?' required':'';
+ const label='Item '+String(index+1);
+ return '<div class="tl-reference-line-item" data-tradelink-line-item>'+
+  '<div class="tl-panel-heading"><strong>'+escape(label)+'</strong>'+
+   '<button type="button" class="secondary" data-action="tradelink-draft-remove-line" aria-label="Remove '+
+    escape(label)+'">Remove item</button></div>'+
+  field('Description','lineDescription',item.description??'','maxlength="2000"'+req)+
+  field('Quantity','lineQuantity',item.quantity??'',
+   'type="number" min="0" max="1000000000" step="any"'+req)+
+  (physical?'':moneyField('Unit price','lineUnitPrice',item.unitPrice??'',currency,
+    'type="number" min="0" max="1000000000" step="any"'+(priced?' required':'')))+
+  field('Unit','lineUnit',item.unit??'','maxlength="120"')+
+  (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
+    item.serialNumber??'','maxlength="120"'):'')+
+  '<input type="hidden" name="lineId" value="'+escape(item.id??'')+'">'+
+  '</div>';
+}
+/** Snapshot in-memory editor rows without creating records or using storage. */
+export function snapshotTradeLinkDraftLineItems(form){
+ if(!form?.querySelectorAll)return [];
+ return [...form.querySelectorAll('[data-tradelink-line-item]')].map(row=>{
+  const get=name=>row.querySelector('[name="'+name+'"]')?.value??'';
+  return {id:get('lineId'),description:get('lineDescription'),
+   quantity:get('lineQuantity'),unitPrice:get('lineUnitPrice'),
+   unit:get('lineUnit'),serialNumber:get('lineSerialNumber')};
+ });
+}
+function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null){
  const editing=mode==='edit'&&row?.workflow_state==='draft'&&
   row.content&&typeof row.content==='object'&&
-  (!Array.isArray(row.content.items)||row.content.items.length<=1);
+  (!Array.isArray(row.content.items)||row.content.items.length<=100);
  const data=editing?row.content:{};
  const fieldValue=(name,fallback='')=>formValues&&Object.hasOwn(formValues,name)?formValues[name]:fallback;
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
@@ -513,6 +611,13 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const payment=type==='payment';
  const priced=type==='esi'||type==='quotation'||type==='po';
  const inputUnit=currencyUnit(fieldValue('currency',data.currency||'PHP'));
+ const lines=Array.isArray(lineDrafts)&&lineDrafts.length?lineDrafts:
+  editing&&Array.isArray(data.items)&&data.items.length?data.items:
+  [{id:'',description:fieldValue('lineDescription',line.description??''),
+    quantity:fieldValue('lineQuantity',line.quantity??''),
+    unitPrice:fieldValue('lineUnitPrice',line.unitPrice??''),
+    unit:fieldValue('lineUnit',line.unit??''),
+    serialNumber:fieldValue('lineSerialNumber',line.serialNumber??'')}];
  const commonPartyLabel=type==='packing'?'Consignee':type==='delivery'?'Recipient / consignee':
   payment?'Payor':type==='po'?'Supplier':type==='esi'?'Invoice client':
   type==='quotation'?'Prospective client':'Customer / supplier';
@@ -520,6 +625,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
   year:'numeric',month:'2-digit',day:'2-digit'});
  return '<section class="tl-draft-panel tl-reference-editor" aria-labelledby="tl-draft-editor-title">'+
   referenceDocumentHeader(type,editing,live)+
+  (error?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
+  (message?'<p class="tl-draft-feedback" role="status">'+escape(message)+'</p>':'')+
   (editing?'<button type="button" class="secondary tl-reference-new-draft" data-action="tradelink-draft-new">New Draft</button>':'')+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
@@ -603,16 +710,14 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
      '<p class="tl-reference-items-note">'+
       (physical?'Physical shipment item (required for local readiness)':
        priced?'Priced line item (required for local readiness)':'Single line item (optional)')+
-      '. One authorized local line item; multi-item creation requires a separately supported contract.</p>'+
-     field('Description','lineDescription',fieldValue('lineDescription',line.description||''),
-      'maxlength="2000"'+(physical||priced?' required':''))+
-     field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),
-      'type="number" min="0" max="1000000000" step="any"'+(physical||priced?' required':''))+
-     (physical?'':moneyField('Unit price','lineUnitPrice',
-      fieldValue('lineUnitPrice',line.unitPrice??''),inputUnit,
-      'type="number" min="0" max="1000000000" step="any"'+(priced?' required':'')))+
-     field('Unit','lineUnit',fieldValue('lineUnit',line.unit||''),'maxlength="120"')+
-     (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
+      '. Add up to 100 items to the same Draft revision.</p>'+
+     '<div data-tradelink-draft-line-items>'+
+      lines.map((item,index)=>renderTradeLinkDraftLineItem(item,type,inputUnit,index)).join('')+
+     '</div>'+
+     '<button type="button" class="secondary" data-action="tradelink-draft-add-line"'+
+      (lines.length>=100?' disabled':'')+'>Add item</button>'+
+    '</fieldset>'+
+    (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
       fieldValue('lineSerialNumber',line.serialNumber||''),'maxlength="120"'):'')+
      (editing&&line.id?'<input type="hidden" name="lineId" value="'+escape(line.id)+'">':'')+
     '</fieldset>'+
@@ -626,7 +731,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
        'maxlength="5000"')+
      '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
-   (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line):'')+
+   (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines):'')+
    '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
     '<label class="tl-draft-field"><span>Document notes and terms · local preview</span>'+
      '<textarea name="remarks" maxlength="5000" rows="5" '+
@@ -863,7 +968,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
     '>No matching records in this authorized response.</p>':
    '<p class="muted">'+(enabled?
     'No authorized TradeLink Draft records were returned for this page.':
-    'No persisted TradeLink Draft records are displayed. The signed document-list endpoint remains off during this dark launch.')+'</p>')+
+    'No authorized TradeLink Draft records have been loaded. Refresh the signed list.')+'</p>')+
   '</section>';
 }
 /**
@@ -922,10 +1027,11 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
    view.selected:null;
  return '<div class="tl-draft-workspace">'+
   renderEditor(selected?.record,view.mode,canManage,
-   view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'')+
+   view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
+   view.error||'',view.message||'',view.lineDrafts)+
   '<details class="tl-reference-list-details">'+
    '<summary>All Documents · authorized Draft listing'+
-    '<span class="tl-draft-badge">Controlled dark launch</span></summary>'+
+    '<span class="tl-draft-badge">Signed read · Draft writes pending</span></summary>'+
    '<section class="tl-draft-panel"><div class="tl-panel-heading">'+
     '<div><p class="tl-eyebrow">CP-TL-03D / Phase 1</p><h2>Draft workspace</h2></div></div>'+
     '<p class="muted">Domain reads: <strong>'+
