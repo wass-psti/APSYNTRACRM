@@ -66,7 +66,7 @@ BEGIN
  JOIN public.workspace_members m ON m.workspace_id=c.workspace_id
    AND m.user_id=v_actor AND m.active IS TRUE
  WHERE c.actor_id=v_actor AND c.session_id=v_sid;
- RETURN pg_catalog.coalesce(v_chosen,v_fallback);
+ RETURN coalesce(v_chosen,v_fallback);
 END $scope$;
 REVOKE ALL ON FUNCTION public.current_workspace_id(uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.current_workspace_id(uuid) TO authenticated;
