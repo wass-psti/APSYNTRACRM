@@ -219,21 +219,15 @@ function renderCommercialReadiness(type,fieldValue,data){
  const input=(label,name,attrs='maxlength="5000" required')=>
   field(label,name,fieldValue(name,data[name]||''),attrs);
  const note='<p class="muted">Readiness is local only. Reviewer and approver names do not assign roles, grant approval, or submit a workflow.</p>';
+ // All existing supported commercial contact and terms inputs now sit in
+ // Client Information, as the uploaded reference shows. Reviewer inputs stay
+ // in the final source-defined readiness section; no inputs are duplicated.
  if(type==='esi')return '<fieldset class="tl-draft-lines"><legend>Electronic SI readiness · preview only</legend>'+
-  input('Client tax identity / TIN','customerTin')+
   input('Intended finance verifier','verifiedBy')+
   input('Intended management approver','approvedBy')+'</fieldset>'+note;
  if(type==='quotation')return '<fieldset class="tl-draft-lines"><legend>Quotation readiness · preview only</legend>'+
-  input('Client email (or phone)','customerEmail','type="email" maxlength="5000"')+
-  input('Client phone (or email)','customerPhone','maxlength="5000"')+
-  input('Offer validity','validity')+
-  input('Delivery commitment','deliveryCommitment')+
-  input('Payment terms','paymentTerms')+
   input('Intended approver','approvedBy')+'</fieldset>'+note;
  if(type==='po')return '<fieldset class="tl-draft-lines"><legend>Supplier PO readiness · preview only</legend>'+
-  input('Supplier PO number (optional)','poNumber','maxlength="5000"')+
-  input('Target delivery date','targetDeliveryDate','type="date" required')+
-  input('Payment terms','paymentTerms')+
   input('Intended Account Manager reviewer','verifiedBy')+
   input('Intended final approver','approvedBy')+'</fieldset>'+note;
  return '';
@@ -560,6 +554,27 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
      field(physical?'Source reference':'Reference information','referenceNumber',
       fieldValue('referenceNumber',data.referenceNumber||''),
       'maxlength="5000"'+(physical?' required':''))+
+     (type==='esi'?field('Client tax identity / TIN','customerTin',
+      fieldValue('customerTin',data.customerTin||''),'maxlength="5000" required'):'')+
+     (type==='quotation'?
+      field('Client email (or phone)','customerEmail',fieldValue('customerEmail',data.customerEmail||''),
+       'type="email" maxlength="5000"')+
+      field('Client phone (or email)','customerPhone',fieldValue('customerPhone',data.customerPhone||''),
+       'maxlength="5000"')+
+      field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
+       'maxlength="5000" required')+
+      field('Offer validity','validity',fieldValue('validity',data.validity||''),
+       'maxlength="5000" required')+
+      field('Delivery commitment','deliveryCommitment',
+       fieldValue('deliveryCommitment',data.deliveryCommitment||''),
+       'maxlength="5000" required'):'')+
+     (type==='po'?
+      field('Supplier PO number (optional)','poNumber',fieldValue('poNumber',data.poNumber||''),
+       'maxlength="5000"')+
+      field('Target delivery date','targetDeliveryDate',
+       fieldValue('targetDeliveryDate',data.targetDeliveryDate||''),'type="date" required')+
+      field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
+       'maxlength="5000" required'):'')+
      '<label class="tl-draft-field tl-reference-currency-field"><span>Currency</span>'+
       '<select name="currency" aria-describedby="tl-reference-currency-help">'+
        options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select>'+
