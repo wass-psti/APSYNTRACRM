@@ -1,0 +1,74 @@
+name: CP-TL-03E Legacy Session Hardening — Disposable PostgreSQL 17
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-tl03e-legacy-session-disposable.yml'
+      - 'sql/cp-tl03e-legacy-session-hardening-candidate.sql'
+      - 'sql/tests/cp-tl03e-legacy-*.sql'
+      - 'frontend/tests/tradelink-legacy-session-hardening-source.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cp-tl03e-legacy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  legacy-session:
+    name: Revoked JWT, auth and workspace denial (PostgreSQL 17 disposable)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: cp_tl03e_disposable_only
+          POSTGRES_DB: cp_tl03e_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cp_tl03e_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: cp_tl03e_disposable
+      PGUSER: postgres
+      PGPASSWORD: cp_tl03e_disposable_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - name: Checkout staged source only, without persisted git credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install isolated PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Assert only disposable PostgreSQL host and database
+        run: |
+          set -euo pipefail
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "cp_tl03e_disposable"
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'cp_tl03e_disposable|t'
+      - name: Create synthetic user, role, workspace and real-shape Auth session helper
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03e-legacy-disposable-setup.sql
+      - name: Reconstitute only legacy unguarded original function bodies
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03e-legacy-unguarded-disposable.sql
+      - name: Preserve actual authenticated-only RPC grant pattern in fixture
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03e-legacy-disposable-grants.sql
+      - name: Prove original synthetic revoked-token exposure before remediation
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03e-legacy-disposable-original-gap.sql
+      - name: Apply exact source-fingerprint-locked hardening only to disposable PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03e-legacy-session-hardening-candidate.sql
+      - name: Test manager, 11 revoked functions, expiry, employee, foreign workspace and unchanged ACLs
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03e-legacy-disposable-acceptance.sql
+      - name: Verify source-only release boundary
+        run: node --test frontend/tests/tradelink-legacy-session-hardening-source.test.mjs
