@@ -53,7 +53,7 @@ References: [RLS policies](https://supabase.com/docs/guides/database/postgres/ro
 | Named production executor, independent reviewer and rollback owner | **PENDING** | Responsible persons and change window not established in evidence |
 | Fresh signed Stage A authorized-manager acceptance | **VERIFIED — 6/6 PASS** | User-supplied sanitized report corroborated by the read-only connected Security page on 2026-11-07; zero writes/disclosures |
 | Fresh signed Stage A nonmanager denial | **USER-SUPPLIED PASS — 6/6** | Sanitized employee-session report provided on 2026-11-07; the connected browser still displays a manager result, so no independent employee-page corroboration was available |
-| Genuine foreign-workspace / revoked-session denial | **PENDING / BLOCKED** | No existing eligible foreign actor confirmed; no controlled expired/revoked real bearer check |
+| Genuine foreign-workspace / revoked-session denial | **PENDING / BLOCKED** | New revoked-session source probe in draft PR #68 is CI verified but not deployed or executed; no eligible foreign actor or genuine revoked bearer evidence |
 | Legacy TradeLink SECURITY DEFINER/RLS risk disposition | **PENDING** | Scoped security review / risk acceptance needed |
 | Exact two-function Stage B privilege change approval | **BLOCKED — SEPARATE APPROVAL REQUIRED** | Production permission change |
 | Production QA record/cleanup authorization, if needed | **BLOCKED — SEPARATE APPROVAL REQUIRED** | Creating/cleaning production documents and Board items changes live data |
@@ -208,3 +208,46 @@ The user supplied a fresh result from an existing employee account (no account n
 **Independent browser observation:** At the time this report was received, read-only inspection of the selected `#/security` tab still displayed **`PASS · AUTHORIZED MANAGER`**, not the employee `BOARD_MANAGER_DENIED` report. Therefore the user-supplied employee report cannot be described as independently browser-corroborated, and this checkpoint must not claim that the connector replayed employee RPCs. No need to rerun the same employee check by default; preserve the distinct evidentiary scopes.
 
 **New acceptance ledger:** Manager read scenario: **VERIFIED 6/6** with same-page corroboration. Employee denial scenario: **USER-SUPPLIED PASS 6/6**, no new external corroboration. Anonymous HTTP list denial: **VERIFIED 401**, separate case. Foreign-workspace and revoked/expired bearer denial: **PENDING**, not implied by wrong-board denial. Stage A remains non-mutating with zero record contents. Stage B grants, frontend flags, QA document creation, backup recovery exercise and independent risk acceptance remain unchanged and **NO-GO**.
+
+
+## 13. CP-TL-03E — controlled revoked-session implementation and final recovery/authorization decision (2026-11-07)
+
+**Scope / authoritative distinction:** The existing B3 Security-page revoked-token check probes the Workspace B3 Edge endpoint and is **not** evidence that a revoked bearer cannot read TradeLink. The TradeLink source checks `private.wm_board_config_session_active()` inside `private.tl03_can_manage`; the staged backend and live function fingerprints require a live signed session before TradeLink document reads. Supabase notes that revoked JWTs can remain cryptographically valid until expiry, so a local browser sign-out or unsigned HTTP 401 alone cannot prove the TradeLink server gate.
+
+### New dedicated source-only acceptance path
+
+A separate **draft** [PR #68](https://github.com/wass-psti/APSYNTRACRM/pull/68), commit `a10b666a47655596cce9d59d2ad6bf2ef8265388`, adds:
+- `frontend/tradelink-revoked-session-acceptance.js`, its focused nine-test suite and scoped Security-page wiring in `frontend/app.js`.
+- Two deliberate operator clicks to prepare and confirm. Before sign-out it requires the existing six-check **`AUTHORIZED_MANAGER`** signed Stage A preflight, a matching current in-memory access token, and a JWT with sufficient unexpired time. A blocked/nonmanager preflight **never signs the user out**.
+- `AuthClient.signOut({scope:'local'})` only for the confirmed current session. Replay only **one read-only** `POST /rest/v1/rpc/tl03_documents_list` using the previously accepted token and exact board ID. `401` or `403` plus prior-positive read and acknowledged logout => narrow **PASS**; `200` => **FAIL**; network/expiry/ambiguous states => **INCONCLUSIVE**.
+- In-memory only old bearer; sanitized result available after sign-out on login screen; no JWT/user identifier/report secret or local draft written to storage. Other device sessions are not deliberately revoked.
+- **Source-only** release status: no commit to `main` from this work and no production deployment/activation. The signed user has **not** been signed out by this review. Genuine revoked-session HTTP evidence remains **PENDING**.
+
+**Verification:** Isolated local Node 22 source smoke, JavaScript syntax, and `node scripts/verify-pages-source.mjs` PASS. Full `node --test frontend/tests/*.test.mjs` **1,165/1,165 PASS** (1,156 baseline plus nine dedicated regression cases). Independent GitHub Actions [run 42388973797](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42388973797) at `a10b666a` **SUCCESS**: frontend, disposable PostgreSQL, collaboration PostgreSQL and OT PostgreSQL all succeeded; `live-pages` was correctly **SKIPPED** for this non-main branch. Do not use source CI PASS to certify genuine bearer revocation or production behavior.
+
+### Final live structural and recovery recheck
+
+Fresh **SELECT-only** live execution of the canonical `sql/tests/cp-tl03c-phase1-readonly-activation-preflight.sql`, blob `5d96e2f27e49fc84fe0c8e68758646842bc9b294`, again returned **`STAGE_A_STRUCTURAL_PASS__STAGE_B_NOT_AUTHORIZED`**, **15/15** checks with `failed_checks: []`. It verifies unchanged exact function fingerprints, RLS, read grants, anonymous denial, no authenticated EXECUTE on either Stage B commit function, zero TradeLink documents/events/Board items and no production mutations.
+
+Authenticated read-only `supabase backups list --project-ref jtlusodorfnyzgyuewkz --output-format json` again reported **seven COMPLETED physical backup entries**, latest at **`2026-11-06T17:17:11.138Z` (2026-11-07 01:17:11 Philippine time)**, `walg_enabled:true`, **`pitr_enabled:false`**. This proves provider-reported backup existence only. No actual restoration, database export, backup download, new Supabase project, other-instance rehearsal, or protected restore was attempted. CLI `supabase backups restore --help` documents a **PITR timestamp restore**, which cannot be treated as an available option with PITR disabled.
+
+**Material shared-project recovery risk:** Physical database restoration can replace the whole shared WatchdogWorkspace database state, not just TradeLink. With PITR unavailable, changes after the chosen snapshot could be lost. A schema source check, populated backup list and the reversible **Stage B grant revoke** do not demonstrate complete data recovery. No one has provided accepted RPO/RTO, a successful independent restore rehearsal, an accountable backup/incident owner, a maintenance window, an approved whole-project recovery impact decision, or a confirmed production QA record budget. Therefore **recoverability remains PENDING and a strict Stage B NO-GO blocker**; do not silently infer recovery readiness or permit a destructive restore.
+
+### Final authorization matrix
+
+| Required gate | Decision as of this review |
+| --- | --- |
+| Baseline application regression and synthetic Postgres security | **VERIFIED** (historical main CI, plus new branch 1,165/1,165 CI; not live revoked actor) |
+| Exact current Stage A production RLS/grants/fingerprints | **VERIFIED** (fresh read-only 15/15) |
+| Existing manager signed read and employee signed denial | **VERIFIED user-reported scope** (manager 6/6 with same-page corroboration; employee 6/6 user-supplied, browser independently unconfirmed) |
+| Actual revoked TradeLink manager bearer denied after local signout | **PENDING**, dedicated UI source implemented and tested in PR #68, not yet released/executed |
+| Foreign-workspace signed actor denial / persisted row isolation | **PENDING/BLOCKED**, no new eligible account provisioned and no authorized production fixture |
+| Seven completed physical backups | **VERIFIED METADATA**; restore and acceptable RPO/RTO **PENDING** |
+| Production executor, independent security reviewer and rollback owner | **PENDING**, do not invent assignees |
+| Review/risk disposition for eleven legacy elevated TradeLink functions | **PENDING**, scoped catalog inventory completed only |
+| Exact Stage B two-function EXECUTE grant, controlled read/write flags, real QA document | **BLOCKED — separate production permission, release and data approvals** |
+| Actual create → Board projection → All Documents → saved preview → refresh and deny cases | **PENDING AFTER AUTHORIZED ACTIVATION** |
+
+**Production decision: NO-GO.** Do not merge draft PR #68 as implicit authorization for Stage B writes; any controlled frontend release of the optional sign-out test must follow the repository's normal review and deployment policy and be communicated to the operator beforehand. Even after a genuine signed revoked-session PASS, recovery evidence, independent security risk disposition, release owner/rollback assignments and **separate express permission/data approval** are still prerequisites before activating Stage B.
+
+**No production data write, grant/revoke DDL, role/membership modification, credential access, session revocation, feature-flag change, database restore, or production deploy was made during this review.** Source-only work lives in draft PR #68. The existing evidence record continues in draft PR #66.
