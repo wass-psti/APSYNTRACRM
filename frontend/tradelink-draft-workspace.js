@@ -480,7 +480,7 @@ function referenceDraftTabs(type){
 }
 function referenceDocumentHeader(type,editing){
  const title=referenceTitles[type]||'TradeLink Draft';
- return '<header class="tl-reference-document-heading">'+
+ return '<div class="tl-reference-document-topcard"><header class="tl-reference-document-heading">'+
    '<div class="tl-reference-document-title">'+
     '<span class="tl-reference-document-icon" aria-hidden="true">'+
      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">'+
@@ -501,7 +501,7 @@ function referenceDocumentHeader(type,editing){
   '<p class="tl-reference-workflow-notice" role="note">'+
    'Local preparation only. Validate locally to check the Draft. '+
    'Save, review, approval, Templates and PDF export require separately authorized server activation.'+
-  '</p>';
+  '</p></div>';
 }
 function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const editing=mode==='edit'&&row?.workflow_state==='draft'&&
