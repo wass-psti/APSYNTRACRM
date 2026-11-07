@@ -156,6 +156,11 @@ BEGIN
  IF NOT denied THEN RAISE EXCEPTION 'Anonymous role inspection passed'; END IF;
 END $h2_anonymous$;
 RESET ROLE;
+-- Restore the signed selected actor for Phase H's subsequent invitation step.
+SELECT pg_catalog.set_config('request.jwt.claim.sub',
+ 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',true);
+SELECT pg_catalog.set_config('request.jwt.claim.session_id',
+ 'cccccccc-0000-4000-8000-000000000003',true);
 
 DO $h2_complete$
 BEGIN
