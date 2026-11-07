@@ -488,7 +488,7 @@ function referenceDocumentHeader(type,editing){
      '<path d="M15 3v6h5M8 13h8M8 17h8"/></svg></span>'+
     '<div><h3 id="tl-draft-editor-title">'+escape(title)+'</h3>'+
      '<p class="tl-reference-draft-status">'+
-      (editing?'Signed Draft loaded · unsaved edits':'Unsaved local Draft · no document created')+
+      (editing?'Signed Draft loaded · unsaved edits':'Prepare a Draft · unsaved local · no document created')+
      '</p></div></div>'+
    '<div class="tl-reference-document-toolbar" aria-label="Document actions">'+
     '<button type="button" class="tl-reference-tool" disabled title="Templates are not activated in APSYNTRA CRM">Templates</button>'+
@@ -583,7 +583,10 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
     '</fieldset>'+
     '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
     '<fieldset class="tl-draft-lines tl-reference-items"><legend>Items</legend>'+
-     '<p class="tl-reference-items-note">One authorized local line item. Multi-item creation requires a separately supported contract.</p>'+
+     '<p class="tl-reference-items-note">'+
+      (physical?'Physical shipment item (required for local readiness)':
+       priced?'Priced line item (required for local readiness)':'Single line item (optional)')+
+      '. One authorized local line item; multi-item creation requires a separately supported contract.</p>'+
      field('Description','lineDescription',fieldValue('lineDescription',line.description||''),
       'maxlength="2000"'+(physical||priced?' required':''))+
      field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),
@@ -597,7 +600,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
      (editing&&line.id?'<input type="hidden" name="lineId" value="'+escape(line.id)+'">':'')+
     '</fieldset>'+
     (type==='delivery'?
-     '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Delivery Tracking · preview only</legend>'+
+     '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Delivery responsibility · preview only</legend>'+
       field('QC assignee','checkedBy',fieldValue('checkedBy',data.checkedBy||''),
        'maxlength="5000" required')+
       field('Logistics assignee','deliveredBy',fieldValue('deliveredBy',data.deliveredBy||''),
