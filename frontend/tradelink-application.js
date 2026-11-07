@@ -107,29 +107,62 @@ function renderModule(m){
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
   '<p>Document creation, changes, approvals, PDFs, and attachments are unavailable here until the central signed domain API and its server-side authorization are verified. No local-only draft will be presented as saved.</p></div></section>';
 }
+/** Reference-led TradeLink portal is presentation-only.
+ * Links preserve the existing signed-board routes and disabled domain gates. */
 export function renderTradeLinkApplication({detail,section='overview',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false}={}){
  if(!isTradeLinkBoard(detail?.board)||
-    typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
+     typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
  const current=normalizeTradeLinkSection(section);
  const sum=tradeLinkBoardSummary(detail);
  const m=TRADELINK_SOURCE_MODULES.find(x=>x.key===current);
- return '<div class="aps-tradelink-app">'+
-  '<header class="tl-app-hero"><p class="tl-eyebrow">APSYNTRA CRM / TradeLink</p>'+
-   '<h2>Commercial operations</h2>'+
-   '<p>Six TradeLink document modules within the existing signed APSYNTRA workspace.</p>'+
-   '<span class="tl-hero-status">Source-aligned application foundation · domain writes not activated</span></header>'+
-  '<div class="tl-stat-grid">'+
-   summaryCard('Authorized board records',sum.activeBoardItems,'Current signed board response')+
-   summaryCard('Document modules',TRADELINK_SOURCE_MODULES.length,'Defined by uploaded source')+
-   summaryCard('Configured board fields',sum.operationalColumns+' / 5','Five supported typed columns')+
-   summaryCard('Domain write API','Pending','Workflow writes remain disabled')+
-   '</div>'+
+ const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink';
+ const activeNav=(key)=>current===key?' active':'';
+ const currentAttr=key=>current===key?' aria-current="page"':'';
+ return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'">'+
+  '<header class="tl-reference-topbar" aria-label="TradeLink portal">'+
+   '<a class="tl-reference-brand" href="'+base+'" aria-label="TradeLink overview">'+
+    '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
+    '<span><strong>TradeLink</strong><small>PORTAL</small></span></a>'+
+   '<nav class="tl-reference-portal-links" aria-label="TradeLink actions">'+
+    '<a class="tl-reference-create'+(current==='drafts'?' active':'')+'" href="'+base+'/drafts/quotation">'+
+     '<span aria-hidden="true">＋</span> Create New</a>'+
+    '<a href="'+base+'/documents"'+currentAttr('documents')+'>'+
+     '<span aria-hidden="true">☷</span> All Documents</a>'+
+    '<details class="tl-reference-manual"><summary>User Manual</summary>'+
+     '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink local Draft guide</strong>'+
+      '<p>Choose a document module, complete its required fields and select Validate locally. '+
+      'This checks an unsaved preview only. The original document review, PDF export and '+
+      'recovery workflows are unavailable pending authorized activation.</p>'+
+     '</div></details>'+
+    '<span class="tl-reference-unavailable" aria-disabled="true"'+
+     ' title="Disaster Recovery is not activated in APSYNTRA CRM">'+
+     '<span aria-hidden="true">♧</span> Disaster Recovery</span>'+
+   '</nav>'+
+   '<div class="tl-reference-workspace" title="Uses the existing APSYNTRA signed workspace">'+
+    '<span aria-hidden="true">▤</span> Signed workspace</div>'+
+  '</header>'+
+  '<p class="tl-reference-access-note" role="status">'+
+   'Source-aligned application foundation · domain writes not activated. '+
+   'Uses your existing APSYNTRA signed authorization.</p>'+
+  (current==='overview'?
+   '<div class="tl-reference-overview">'+
+    '<header class="tl-app-hero"><p class="tl-eyebrow">APSYNTRA CRM / TradeLink</p>'+
+     '<h2>Commercial operations</h2>'+
+     '<p>Six TradeLink document modules within the existing signed APSYNTRA workspace.</p>'+
+     '<span class="tl-hero-status">Source-aligned application foundation · domain writes not activated</span>'+
+    '</header>'+
+    '<div class="tl-stat-grid">'+
+     summaryCard('Authorized board records',sum.activeBoardItems,'Current signed board response')+
+     summaryCard('Document modules',TRADELINK_SOURCE_MODULES.length,'Defined by uploaded source')+
+     summaryCard('Configured board fields',sum.operationalColumns+' / 5','Five supported typed columns')+
+     summaryCard('Domain write API','Pending','Workflow writes remain disabled')+
+    '</div></div>':'')+
   '<div class="tl-app-layout"><nav class="tl-app-nav" aria-label="TradeLink application navigation">'+
-   '<a class="tl-section-link'+(current==='overview'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink"'+(current==='overview'?' aria-current="page"':'')+'>Overview</a>'+
-   '<a class="tl-section-link'+(current==='documents'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents"'+(current==='documents'?' aria-current="page"':'')+'>Board records <span>'+sum.activeBoardItems+'</span></a>'+
-   '<a class="tl-section-link'+(current==='activity'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/activity"'+(current==='activity'?' aria-current="page"':'')+'>Activity</a>'+
-   '<a class="tl-section-link'+(current==='drafts'?' active':'')+'" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts"'+(current==='drafts'?' aria-current="page"':'')+'>Draft workspace <span>Staged</span></a>'+ 
+   '<a class="tl-section-link'+activeNav('overview')+'" href="'+base+'"'+currentAttr('overview')+'>Overview</a>'+
+   '<a class="tl-section-link'+activeNav('documents')+'" href="'+base+'/documents"'+currentAttr('documents')+'>Board records <span>'+sum.activeBoardItems+'</span></a>'+
+   '<a class="tl-section-link'+activeNav('activity')+'" href="'+base+'/activity"'+currentAttr('activity')+'>Activity</a>'+
+   '<a class="tl-section-link'+activeNav('drafts')+'" href="'+base+'/drafts"'+currentAttr('drafts')+'>Draft workspace <span>Staged</span></a>'+
    '<h3>Document modules</h3>'+
    TRADELINK_SOURCE_MODULES.map(entry=>moduleLink(entry,current)).join('')+'</nav>'+
    '<div class="tl-app-main">'+
@@ -137,9 +170,9 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
       '<section class="tl-content-panel"><p class="tl-eyebrow">TradeLink application</p><h2>Source-aligned workspace</h2>'+
        '<p class="muted">Open a document module to review its source-defined business purpose and submission requirements. Authorized Board Items can be inspected without creating duplicate records.</p>'+
        '<div class="tl-overview-tiles">'+TRADELINK_SOURCE_MODULES.map(entry=>
-        '<a href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/'+entry.key+
+        '<a href="'+base+'/'+entry.key+
         '" class="tl-overview-tile"><strong>'+esc(entry.label)+'</strong><span>'+esc(entry.purpose)+'</span></a>').join('')+'</div>'+
-       '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents">View authorized board records</a>'+
+       '<a class="secondary" href="'+base+'/documents">View authorized board records</a>'+
        '</section>')+
     '<p class="tl-app-caution">No standalone authentication, synthetic records, browser-only document persistence, or unsupported backend writes.</p>'+
    '</div></div></div>';
