@@ -48,7 +48,8 @@ References: [RLS policies](https://supabase.com/docs/guides/database/postgres/ro
 | Live Stage A permissions/RLS/fingerprints | **VERIFIED** | SELECT-only 15/15, 2026-11-07 |
 | Production Stage B write disabled | **VERIFIED** | Both RPC EXECUTEs denied; frontend flags false |
 | Prior synthetic transaction, idempotency and RBAC | **VERIFIED — DISPOSABLE ONLY** | Run 41950802327 |
-| Current verified recoverable backup, restoration exercise, RPO/RTO | **PENDING** | Historical backup assurance is not current recovery evidence |
+| Provider physical-backup inventory | **VERIFIED — 7 completed backups** | Existing CLI `supabase backups list`, latest `2026-11-06T17:17:11.138Z` UTC; PITR disabled |
+| Successful restoration/rehearsal, recovery owner, RPO/RTO | **PENDING** | Backup list status alone is not a verified restoration |
 | Named production executor, independent reviewer and rollback owner | **PENDING** | Responsible persons and change window not established in evidence |
 | Fresh genuine positive/negative signed Stage A acceptance | **PENDING** | Historical manager/HR 6/6 reports exist; fresh reports and genuine revoked/foreign-workspace denials outstanding |
 | Legacy TradeLink SECURITY DEFINER/RLS risk disposition | **PENDING** | Scoped security review / risk acceptance needed |
@@ -60,7 +61,7 @@ References: [RLS policies](https://supabase.com/docs/guides/database/postgres/ro
 
 ## 6. Smallest next authorized step
 
-Obtain a current restore/rollback readiness statement and named production execution, security-review and rollback owners; collect refreshed genuine signed **read-only** manager and lower-privilege reports using the existing Security-page Stage A acceptance (do not share tokens). Record a scoped disposition for legacy TradeLink security warnings. Then request **separate, exact-scope production permission and QA-fixture approval** before applying either Stage B grant, changing frontend flags or writing any real document. On authorized activation, execute the existing signed create/deny/revision/Board/list/refresh acceptance plan and be prepared to revoke the two grants if stop conditions occur.
+Use the newly verified provider backup inventory to establish an accountable restore/rollback plan, explicit RPO/RTO, and named production execution, security-review and rollback owners; collect refreshed genuine signed **read-only** manager and lower-privilege reports using the existing Security-page Stage A acceptance (do not share tokens). Record a scoped disposition for legacy TradeLink security warnings. Then request **separate, exact-scope production permission and QA-fixture approval** before applying either Stage B grant, changing frontend flags or writing any real document. On authorized activation, execute the existing signed create/deny/revision/Board/list/refresh acceptance plan and be prepared to revoke the two grants if stop conditions occur.
 
 **Operational change in this CP-TL-03E review:** Documentation only, no app code edit, no CI rerun, no backend DDL/DML, and no production activation.
 
@@ -68,14 +69,28 @@ Obtain a current restore/rollback readiness statement and named production execu
 
 ## 7. Controlled recovery evidence — new verification (2026-11-07)
 
-**Connected project health:** The WatchdogWorkspace Supabase project metadata confirms the existing PostgreSQL 17 project is `ACTIVE_HEALTHY`; metadata does **not** expose backup inventory, restoration-point timestamp, successful restoration, plan-specific backup entitlement, or agreed RPO/RTO.
+**Connected project health:** The WatchdogWorkspace Supabase project metadata confirms the existing PostgreSQL 17 project is `ACTIVE_HEALTHY`. This metadata response alone does not expose backup inventory, restoration results, plan-specific entitlement or agreed RPO/RTO. A separate read-only authenticated CLI inventory now provides the actual provider backup status below.
 
-**Local artifact classification:** Through the authorized Desktop Commander Remote connection, inspected `~/WatchdogWorkspace/WATCHDOG-TRADELINK-AUTHORITATIVE-BACKUP-EXPORT-20261022.md`. It describes an older embedded TradeLink vendor-logo/QR and attachment-metadata JSON export, with separate binary-object handling, not a PostgreSQL backup of the current APSYNTRA CRM production database. Its own authenticated export acceptance was pending. It **does not satisfy this recovery gate**. A bounded local filename inventory did not establish any recent restorable project backup. No local source tree, backup file, or database record was modified.
+**Local artifact classification:** Through the authorized Desktop Commander Remote connection, inspected `~/WatchdogWorkspace/WATCHDOG-TRADELINK-AUTHORITATIVE-BACKUP-EXPORT-20261022.md`. It describes an older embedded TradeLink vendor-logo/QR and attachment-metadata JSON export, with separate binary-object handling, not a PostgreSQL backup of the current APSYNTRA CRM production database. Its own authenticated export acceptance was pending. It **does not satisfy this recovery gate**. A bounded local filename inventory was not valid provider backup evidence; the separately obtained authenticated provider backup list below establishes the available physical snapshots. No local source tree, backup file, or database record was modified.
 
-**Provider recovery contract:** [Supabase database backups](https://supabase.com/docs/guides/platform/backups) indicates paid-plan daily backups and optional PITR; free-tier projects require deliberate manual/off-site export. Project plan and backup availability were not established for this specific project. **Do not assume a backup exists based on account age or healthy database status.**
+**Provider recovery contract:** [Supabase database backups](https://supabase.com/docs/guides/platform/backups) indicates paid-plan daily backups and optional PITR; free-tier projects require deliberate manual/off-site export. The CLI independently verifies physical backup availability for this specific project, although the project billing plan was not inspected. **Do not assume a completed backup was successfully restored** based on its existence or project health.
+
+**Fresh physical-backup inventory (Desktop Commander Remote, authenticated Supabase CLI 2.121.0, read-only `supabase backups list --project-ref jtlusodorfnyzgyuewkz --output-format json`):**
+
+| Provider-reported completed physical backup (UTC) | Status |
+| --- | --- |
+| 2026-11-06 17:17:11.138 | COMPLETED — latest |
+| 2026-11-05 17:18:46.103 | COMPLETED |
+| 2026-11-04 17:17:14.372 | COMPLETED |
+| 2026-11-03 17:17:28.785 | COMPLETED |
+| 2026-11-02 17:18:56.610 | COMPLETED |
+| 2026-11-01 17:17:17.399 | COMPLETED |
+| 2026-10-31 17:18:53.474 | COMPLETED |
+
+The provider response indicates `region: ap-southeast-2`, `walg_enabled: true`, **`pitr_enabled: false`**. This validates backup *inventory and completion metadata*, **not an actual restored database**. No backup was downloaded, restored, modified, or used to alter the live project. The project's whole-database physical restore may affect unrelated WatchdogWorkspace modules; no rehearsal was undertaken. The latest reported completed backup corresponds to **2026-11-07 01:17:11 PHT**. RPO and RTO remain to be explicitly agreed for the shared project.
 
 **Owner/recovery authority evidence still required (sanitized, no secrets):**
-1. Dashboard **Database → Backups**: current backup availability/type, latest completed backup timestamp and earliest/latest eligible restore point where applicable, as-of date/time, retention and backup scope.
+1. Dashboard **Database → Backups**: independently cross-check the verified backup entries, retention, restore procedure, availability at the actual release window, and any changes since this snapshot. Document the selected point and scope before change.
 2. Identify a named recovery/rollback owner, incident contact, and acceptable **RPO (maximum potential data loss)** and **RTO (maximum outage)** for the *whole shared WatchdogWorkspace project*, not only the TradeLink module.
 3. Evidence that the selected backup can actually be restored, preferably by a controlled nonproduction rehearsal within an already authorized environment. **No new Supabase project, production overwrite, data export, or new cost commitment was attempted or authorized in this gate.** If a rehearsal is not feasible, document the risk and keep Stage B NO-GO rather than claiming recovery verified.
 4. Identify recovery interactions with Auth/Board/Audit/other modules. A whole-project restore would affect more than TradeLink. The existing **two-function narrow revoke** is a forward containment step, **not** a substitute for restoring lost/corrupted data.
@@ -114,7 +129,7 @@ Stage B is **Draft create/update/archive/restore only**. The frontend `TL03_DOMA
 4. **Stop immediately** on unexpected authorization, workspace crossing, duplicate Board item, incomplete transaction/audit, stale-session acceptance or unrecoverable error. Disable frontend write UI for containment, execute the **approved narrow rollback** `sql/cp-tl03c-stage-b-write-revoke-candidate.sql` through the authorized executor, verify both EXECUTE privileges are denied while Stage A reads and persisted records remain intact; invoke a broader outage/restore only with separate emergency authority.
 5. Preserve the actual signed evidence and operator sign-off. Operational activation is VERIFIED only upon all real acceptance checks, not from source or disposable tests.
 
-**As of this review:** the executor/reviewer/rollback owner, restore evidence, fresh signed role acceptance, scoped production authorization, and QA document authorization remain **PENDING/BLOCKED**. **Production activation is NO-GO.** No grant/revoke SQL, DML, feature-flag edit, backup import/export, browser automation, or production deployment was performed.
+**As of this review:** the provider physical-backup inventory is **VERIFIED**, while successful restore/recovery evidence, executor/reviewer/rollback owner, fresh signed role acceptance, scoped production authorization, and QA document authorization remain **PENDING/BLOCKED**. **Production activation is NO-GO.** No grant/revoke SQL, DML, feature-flag edit, backup import/export, browser automation, or production deployment was performed.
 
 
 ## 10. Scoped live TradeLink security catalog inventory (2026-11-07, SELECT-only)
