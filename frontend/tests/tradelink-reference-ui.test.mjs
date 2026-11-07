@@ -121,6 +121,7 @@ test('CSS scope, responsive rules and reduced-motion behavior are bounded to Tra
  assert.match(index,/tradelink-application\.css"\/>[\s\S]*tradelink-reference-ui\.css"\/>/);
  assert.match(css,/\.aps-tradelink-app\.tl-reference-portal/);
  assert.match(css,/\.tl-reference-portal \.tl-reference-topbar/);
+ assert.match(css,/\.tl-reference-portal \.tl-app-nav\{\s*display:flex;flex-direction:row/);
  assert.match(css,/\.tl-reference-portal \.tl-reference-document-tabs a\.active/);
  assert.match(css,/@media\(max-width:1200px\)/);
  assert.match(css,/@media\(max-width:850px\)/);
