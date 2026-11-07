@@ -747,7 +747,20 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
    data.documentNumber!==row.document_number||
    !Object.hasOwn(localSummaryRows,data.documentType))
   throw new ApiError('TradeLink saved document content mismatch.',409);
- const summary=tradeLinkDraftLocalSummaryValues(data);
+ const summary={...tradeLinkDraftLocalSummaryValues(data)};
+ // Saved documents may contain up to 100 items. Never reuse the one-line
+ // local form estimator for authoritative multi-line monetary totals.
+ if(['esi','quotation','po'].includes(row.document_type)){
+  const amounts=calculateTradeLinkAmounts(data);
+  const unit=currencyUnit(data.currency);
+  for(const [key,amount] of [
+   ['localSubtotal',amounts.subtotal],['localDiscount',amounts.discount],
+   ['localVat',amounts.vat],['localTotal',amounts.total]])
+   summary[key]=formatTradeLinkAmount(amount)+' '+unit;
+  summary.localPhpEquivalent=data.currency==='PHP'||
+   (Number.isFinite(data.exchangeRate)&&data.exchangeRate>0)?
+   formatTradeLinkAmount(amounts.phpEquivalent)+' PHP':'—';
+ }
  const type=typeLabels.find(([id])=>id===row.document_type)?.[1]||row.document_type;
  const details=[...commonSummaryRows,...localSummaryRows[row.document_type],
   ['remarks','Remarks'],['customerAddress','Party address'],['referenceNumber','Source reference'],
