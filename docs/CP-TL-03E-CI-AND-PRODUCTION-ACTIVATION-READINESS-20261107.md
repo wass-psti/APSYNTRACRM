@@ -63,3 +63,55 @@ References: [RLS policies](https://supabase.com/docs/guides/database/postgres/ro
 Obtain a current restore/rollback readiness statement and named production execution, security-review and rollback owners; collect refreshed genuine signed **read-only** manager and lower-privilege reports using the existing Security-page Stage A acceptance (do not share tokens). Record a scoped disposition for legacy TradeLink security warnings. Then request **separate, exact-scope production permission and QA-fixture approval** before applying either Stage B grant, changing frontend flags or writing any real document. On authorized activation, execute the existing signed create/deny/revision/Board/list/refresh acceptance plan and be prepared to revoke the two grants if stop conditions occur.
 
 **Operational change in this CP-TL-03E review:** Documentation only, no app code edit, no CI rerun, no backend DDL/DML, and no production activation.
+
+
+
+## 7. Controlled recovery evidence — new verification (2026-11-07)
+
+**Connected project health:** The WatchdogWorkspace Supabase project metadata confirms the existing PostgreSQL 17 project is \`ACTIVE_HEALTHY\`; metadata does **not** expose backup inventory, restoration-point timestamp, successful restoration, plan-specific backup entitlement, or agreed RPO/RTO.
+
+**Local artifact classification:** Through the authorized Desktop Commander Remote connection, inspected \`~/WatchdogWorkspace/WATCHDOG-TRADELINK-AUTHORITATIVE-BACKUP-EXPORT-20261022.md\`. It describes an older embedded TradeLink vendor-logo/QR and attachment-metadata JSON export, with separate binary-object handling, not a PostgreSQL backup of the current APSYNTRA CRM production database. Its own authenticated export acceptance was pending. It **does not satisfy this recovery gate**. A bounded local filename inventory did not establish any recent restorable project backup. No local source tree, backup file, or database record was modified.
+
+**Provider recovery contract:** [Supabase database backups](https://supabase.com/docs/guides/platform/backups) indicates paid-plan daily backups and optional PITR; free-tier projects require deliberate manual/off-site export. Project plan and backup availability were not established for this specific project. **Do not assume a backup exists based on account age or healthy database status.**
+
+**Owner/recovery authority evidence still required (sanitized, no secrets):**
+1. Dashboard **Database → Backups**: current backup availability/type, latest completed backup timestamp and earliest/latest eligible restore point where applicable, as-of date/time, retention and backup scope.
+2. Identify a named recovery/rollback owner, incident contact, and acceptable **RPO (maximum potential data loss)** and **RTO (maximum outage)** for the *whole shared WatchdogWorkspace project*, not only the TradeLink module.
+3. Evidence that the selected backup can actually be restored, preferably by a controlled nonproduction rehearsal within an already authorized environment. **No new Supabase project, production overwrite, data export, or new cost commitment was attempted or authorized in this gate.** If a rehearsal is not feasible, document the risk and keep Stage B NO-GO rather than claiming recovery verified.
+4. Identify recovery interactions with Auth/Board/Audit/other modules. A whole-project restore would affect more than TradeLink. The existing **two-function narrow revoke** is a forward containment step, **not** a substitute for restoring lost/corrupted data.
+
+## 8. Genuine HTTP boundary evidence and signed acceptance collection
+
+**Fresh independent live denial:** One anonymous HTTPS \`POST /rest/v1/rpc/tl03_documents_list\` with the public **publishable** key and an existing TradeLink board ID, \`p_limit=1\`, returned **HTTP 401**. No signed bearer, production data content, SQL mutation, Board write, or retry loop was used. This supports **anonymous runtime denial for that one list endpoint**. It does **not** prove signed actor RLS, revoked access, foreign-workspace isolation or generic API security. No commit RPC was invoked.
+
+**Connected browser evidence:** The user already has a genuine signed APSYNTRA CRM TradeLink Draft route open; the page shows a signed workspace and **Save Draft disabled** because domain writes are not activated. Browser Chat access is **read-only**, so no click/keyboard/network/session acceptance can legitimately be claimed from that page inspection.
+
+**Existing approved non-mutating signed acceptance action:** In the same signed APSYNTRA session navigate to \`#/security\` and open **TradeLink · Stage A signed read acceptance** → **Run Stage A signed read checks** → **Copy nonsecret result**. The committed implementation is \`frontend/tradelink-stage-a-signed-acceptance.js\`. It performs six read-only checks: \`signed-identity\`, \`effective-access\`, \`document-list\`, \`missing-document-read\`, \`wrong-board-denial\`, \`stable-session\`. The sanitization function outputs only checkpoint/scenario/status/check names and statuses and records \`writesAttempted:0\` and \`documentsDisclosed:0\`.
+
+- Execute with **existing** manager and existing lower-privilege signed sessions, individually and legitimately, without creating temporary users, impersonating identities, extracting tokens, or altering membership.
+- Expected manager report: \`status: PASS\`, \`scenario: AUTHORIZED_MANAGER\`, six \`PASS\` checks, zero writes/disclosure.
+- Expected lower-privilege report: \`status: PASS\`, \`scenario: BOARD_MANAGER_DENIED\` or \`MODULE_ROLE_DENIED\`, six \`PASS\` checks, zero writes/disclosure.
+- A genuine foreign-workspace report remains **BLOCKED** until an independently eligible existing workspace actor is available; a wrong-board-ID probe is not a replacement.
+- A genuine expired/revoked bearer test remains **PENDING** and cannot be achieved by the UI's normal auto-refresh path; requires a separately controlled test with an authorized session authority.
+- **No fresh signed report was collected in this checkpoint.** The November 6 user-supplied manager/nonmanager reports remain historic evidence, not newly rerun.
+
+**Data security:** Capture only sanitized reports. Do not copy browser tokens, session IDs, raw HTTP headers, user IDs, private documents, database connection strings or account credentials into this repository.
+
+## 9. Explicit Stage B activation change-control contract (not approved)
+
+**Proposed permission delta:** After independently completed gates and a separate exact-scope production permission approval only, \`sql/cp-tl03c-write-permission-candidate.sql\` would grant authenticated EXECUTE on exactly these **two pre-existing** functions:
+- \`private.tl03_commit(uuid,uuid,bigint,text,jsonb)\`
+- \`public.tl03_document_commit(uuid,uuid,bigint,text,jsonb)\`
+
+Stage B is **Draft create/update/archive/restore only**. The frontend \`TL03_DOMAIN_READS_ENABLED=false\` and \`TL03_DOMAIN_WRITES_ENABLED=false\` states are independent release controls. Neither an approved PR nor a successful CI run implies authorization to change SQL grants, enable flags, write QA records or expand submission/approval/PDF workflows.
+
+**Release/reversal packet must identify:** exact Git SHA, approved permission diff, board/workspace target, release executor, independent security reviewer, rollback executor, maintenance window, change record, recoverable-backup evidence, acceptable RPO/RTO, canary test account(s), separately authorized QA record scope, incident contact, no-go stop signals, and post-change evidence retention.
+
+**Gate sequence (future, conditional on independent approvals):**
+1. Verify repository HEAD/CI, fresh 15/15 post-Stage-A catalog preflight, provider backup/recovery evidence, owner assignments and scoped review of legacy TradeLink security warnings. Halt if drift or unknown recovery.
+2. Obtain **separate permission-change and production data-fixture approval**. In a controlled release window, grant only the approved two EXECUTEs; maintain default-off write UI until server authorization and verification are ready.
+3. Under a distinct approved frontend release, enable authorized document reads and controlled Draft write UI only for the reviewed target/roles; run real signed manager and denied principal checks. Create one authorized QA Draft, verify the exact document and Board item, audit event, idempotent retry, revision conflict, saved All Documents listing, reopened preview and refresh persistence.
+4. **Stop immediately** on unexpected authorization, workspace crossing, duplicate Board item, incomplete transaction/audit, stale-session acceptance or unrecoverable error. Disable frontend write UI for containment, execute the **approved narrow rollback** \`sql/cp-tl03c-stage-b-write-revoke-candidate.sql\` through the authorized executor, verify both EXECUTE privileges are denied while Stage A reads and persisted records remain intact; invoke a broader outage/restore only with separate emergency authority.
+5. Preserve the actual signed evidence and operator sign-off. Operational activation is VERIFIED only upon all real acceptance checks, not from source or disposable tests.
+
+**As of this review:** the executor/reviewer/rollback owner, restore evidence, fresh signed role acceptance, scoped production authorization, and QA document authorization remain **PENDING/BLOCKED**. **Production activation is NO-GO.** No grant/revoke SQL, DML, feature-flag edit, backup import/export, browser automation, or production deployment was performed.
