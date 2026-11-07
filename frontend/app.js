@@ -1,6 +1,6 @@
 import {AuthClient,ApiError} from './session.js';
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels} from './workspace-ui.js?v=ws01-controls-20261106';
-import {WorkspaceLifecycleClient} from './workspace-lifecycle-client.js';
+import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
 import {REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,captureAuthReturn,
@@ -2666,7 +2666,8 @@ async function action(name,button){
  case 'ws01-open':{
    if(!auth.isSignedIn||!state.context)break;
    openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()},
-    {lifecycle:workspaceLifecycleClient,onOpenCurrent:()=>{location.hash='#/overview';}});
+    {lifecycle:workspaceLifecycleClient,onOpenCurrent:()=>{location.hash='#/overview';},
+     configurationEnabled:WS01_CONFIGURATION_ENABLED});
    break;
  }
  case 'ws02-open-invites':{
