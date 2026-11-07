@@ -7,7 +7,7 @@ if [[ "${PGDATABASE:-}" != 'workspace_disposable' || "${PGHOST:-}" != '127.0.0.1
   echo 'CP_WS_ACTIVATE04_BLOCKED: isolated PostgreSQL connection required' >&2
   exit 1
 fi
-if [[ "$(psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database() || '|' || (current_setting('server_version_num')::integer >= 170000)")" != 'workspace_disposable|t' ]]; then
+if [[ "$(psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database() || '|' || (current_setting('server_version_num')::integer >= 170000)")" != 'workspace_disposable|true' ]]; then
   echo 'CP_WS_ACTIVATE04_BLOCKED: PG17 disposable database required' >&2
   exit 1
 fi
