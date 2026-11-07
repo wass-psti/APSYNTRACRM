@@ -1,7 +1,11 @@
 -- CP-TL-03E Phase 3: disposable synthetic recovery fixture; NOT production schema.
 \set ON_ERROR_STOP on
-SELECT CASE WHEN current_database() = 'cp_tl03e_recovery_source'
- THEN 'SOURCE_DATABASE_ISOLATED' ELSE 1/0::text END;
+DO $guard$
+BEGIN
+ IF current_database() <> 'cp_tl03e_recovery_source' THEN
+  RAISE EXCEPTION 'Refusing to set up recovery fixture outside disposable source';
+ END IF;
+END $guard$;
 CREATE ROLE recovery_actor NOLOGIN;
 CREATE TABLE recovery_memberships (
  actor_id uuid NOT NULL, workspace_id uuid NOT NULL,
