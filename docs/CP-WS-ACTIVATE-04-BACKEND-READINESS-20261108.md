@@ -30,3 +30,21 @@ This complements existing signed switching, foreign-membership denial, session r
 5. **Frontend activation:** Only after signed backend acceptance and the production authorization gate, separately enable the existing `WS01_SWITCHING_ENABLED` frontend constant. The installed client already rechecks signed discovery, CAS, server receipt and post-write authoritative context, and reloads the application to discard old workspace-scoped state. Keep configuration (`WS01_CONFIGURATION_ENABLED`) and invitations off until their own distinct audited backend contracts are accepted.
 
 **No production migration, permission grant, role assignment, lifecycle flag, database write, user sign-out or external invitation has been performed by CP-WS-ACTIVATE-04.** This is controlled nonproduction assurance, not activation approval or a production-ready certificate.
+
+## 2026-11-08 — Protected original-definition replay attempt
+
+**Result: PARTIAL SOURCE REPLAY, NOT PRODUCTION ACCEPTANCE.** All operations were limited to authorized read-only catalog inspection and a temporary isolated local test.
+
+- Extracted **74 live original function definitions**: the authoritative workspace lookup plus **73 distinct affected caller definitions**. Every complete SQL source matched its G4B/G4C/H3 pinned SHA-256: **74/74 matched, zero drift**. Source was held in a restricted temporary directory outside the repository. No production rows, identities, credentials or JWTs were exported.
+- Registered **74/74 source-identical definitions** in an in-memory PGlite PostgreSQL **18.6** engine against synthetic schema objects, with **zero installation errors**. Function-body validation was deliberately deferred because production table dependencies were not fully installed. This establishes **definition installation only**, not actual function execution, role compatibility, or PostgreSQL 17 runtime acceptance.
+- Inspected the exact definitions of five additional original role helpers for subsequent delegated-role replay. The attempted role-execution harness was **blocked by a tool safety control before execution**. No bypass was attempted, and no delegated-role result is claimed.
+- The protected SQL files, test package, embedded database and local checkout were deleted. No database daemon/service was started. A Homebrew PostgreSQL 17 installation was cancelled before it could upgrade shared system libraries; CA certificates, OpenSSL and LZ4 retained their existing versions.
+- A count-only read of existing authorized database metadata found **one account with a currently nonexpired GoTrue session and membership outside Work Management**. This does not provide usable access to that separate account and **does not establish HTTP denial**. Available browser tabs exposed only the current administrator's signed session; no second user was impersonated or accessed.
+
+### Still-required activation evidence
+
+1. **BLOCKED — production-source-faithful delegated-role regression:** A qualified security reviewer in an approved protected PostgreSQL 17 environment must execute the original role functions and all 73 affected real callers under the hardened lookup, preserving legitimate delegated administrative paths while denying unauthorized workspace/module/board access. SHA parity and deferred-body installation alone are insufficient.
+2. **PENDING — two-user signed HTTPS acceptance:** The existing read-only Security UI must capture a truly authorized row under one existing signed user and confirm genuine server-side foreign-workspace denial under a *separately signed* existing user. Attribute the reviewer; preserve redacted HTTP results. Do not copy credentials, extract tokens, impersonate, or manufacture a production account.
+3. **PENDING — independently reviewed rollback and separate production approval:** Preserve the original function body, owners, search paths, ACLs, source hashes and audit/restore guarantees in a restricted recovery bundle. Only after security acceptance should the exact production RPC cutover, grants and feature flags receive their separately required authorization.
+
+**Production decision: NO-GO.** No production SQL writes, roles, grants, sessions, memberships or feature flags changed. The already verified disposable PostgreSQL 17 concurrent-CAS test remains useful evidence but is not a production go-live certificate.
