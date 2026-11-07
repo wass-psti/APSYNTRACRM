@@ -219,21 +219,15 @@ function renderCommercialReadiness(type,fieldValue,data){
  const input=(label,name,attrs='maxlength="5000" required')=>
   field(label,name,fieldValue(name,data[name]||''),attrs);
  const note='<p class="muted">Readiness is local only. Reviewer and approver names do not assign roles, grant approval, or submit a workflow.</p>';
+ // All existing supported commercial contact and terms inputs now sit in
+ // Client Information, as the uploaded reference shows. Reviewer inputs stay
+ // in the final source-defined readiness section; no inputs are duplicated.
  if(type==='esi')return '<fieldset class="tl-draft-lines"><legend>Electronic SI readiness · preview only</legend>'+
-  input('Client tax identity / TIN','customerTin')+
   input('Intended finance verifier','verifiedBy')+
   input('Intended management approver','approvedBy')+'</fieldset>'+note;
  if(type==='quotation')return '<fieldset class="tl-draft-lines"><legend>Quotation readiness · preview only</legend>'+
-  input('Client email (or phone)','customerEmail','type="email" maxlength="5000"')+
-  input('Client phone (or email)','customerPhone','maxlength="5000"')+
-  input('Offer validity','validity')+
-  input('Delivery commitment','deliveryCommitment')+
-  input('Payment terms','paymentTerms')+
   input('Intended approver','approvedBy')+'</fieldset>'+note;
  if(type==='po')return '<fieldset class="tl-draft-lines"><legend>Supplier PO readiness · preview only</legend>'+
-  input('Supplier PO number (optional)','poNumber','maxlength="5000"')+
-  input('Target delivery date','targetDeliveryDate','type="date" required')+
-  input('Payment terms','paymentTerms')+
   input('Intended Account Manager reviewer','verifiedBy')+
   input('Intended final approver','approvedBy')+'</fieldset>'+note;
  return '';
@@ -461,6 +455,48 @@ function renderTradeLinkDraftLocalSummary(type){
   '</dl><p class="muted">Edit any input or switch modules to discard this '+
   'local validation summary. Nothing was transmitted.</p></section>';
 }
+/** Pure presentation metadata. No document number, date or workflow state is
+ * inferred from a local form, and no unapproved financial action is enabled. */
+const referenceTitles=Object.freeze({
+ esi:'Electronic Sales Invoice',packing:'Packing List',delivery:'Delivery Receipt',
+ payment:'Electronic Payment Acknowledgement Receipt',
+ quotation:'Quotation',po:'Purchase Order to Suppliers'
+});
+const referencePrefixes=Object.freeze({
+ esi:'ESI-',packing:'PL-',delivery:'DR-',payment:'AR-',quotation:'Q-',po:'PO-'
+});
+function referenceDraftTabs(type){
+ const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/';
+ return '<nav class="tl-reference-document-tabs" aria-label="TradeLink document modules">'+
+ typeLabels.map(([key,label])=>
+  '<a href="'+base+escape(key)+'"'+(key===type?' class="active" aria-current="page"':'')+
+  '>'+escape(key==='quotation'?'Quotations':label)+'</a>').join('')+'</nav>';
+}
+function referenceDocumentHeader(type,editing){
+ const title=referenceTitles[type]||'TradeLink Draft';
+ return '<div class="tl-reference-document-topcard"><header class="tl-reference-document-heading">'+
+   '<div class="tl-reference-document-title">'+
+    '<span class="tl-reference-document-icon" aria-hidden="true">'+
+     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">'+
+     '<path d="M8 3h7l5 5v12a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>'+
+     '<path d="M15 3v6h5M8 13h8M8 17h8"/></svg></span>'+
+    '<div><h3 id="tl-draft-editor-title">'+escape(title)+'</h3>'+
+     '<p class="tl-reference-draft-status">'+
+      (editing?'Signed Draft loaded · unsaved edits':'Prepare a Draft · unsaved local · no document created')+
+     '</p></div></div>'+
+   '<div class="tl-reference-document-toolbar" aria-label="Document actions">'+
+    '<button type="button" class="tl-reference-tool" disabled title="Templates are not activated in APSYNTRA CRM">Templates</button>'+
+    '<button type="button" class="tl-reference-tool" disabled title="PDF generation requires an authorized workflow">Generate PDF</button>'+
+    '<button type="button" class="tl-reference-primary" data-action="tradelink-draft-preview">Validate locally</button>'+
+    '<button type="button" class="tl-reference-save" disabled title="Workflow save and approval are not activated">'+
+     (type==='quotation'?'Save for Review':'Save')+'</button>'+
+   '</div>'+
+  '</header>'+
+  '<p class="tl-reference-workflow-notice" role="note">'+
+   'Local preparation only. Validate locally to check the Draft. '+
+   'Save, review, approval, Templates and PDF export require separately authorized server activation.'+
+  '</p></div>';
+}
 function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const editing=mode==='edit'&&row?.workflow_state==='draft'&&
   row.content&&typeof row.content==='object'&&
@@ -478,30 +514,77 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const commonPartyLabel=type==='packing'?'Consignee':type==='delivery'?'Recipient / consignee':
   payment?'Payor':type==='po'?'Supplier':type==='esi'?'Invoice client':
   type==='quotation'?'Prospective client':'Customer / supplier';
- return '<section class="tl-draft-panel" aria-labelledby="tl-draft-editor-title">'+
-  '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Source-aligned Draft editor</p>'+
-  '<h3 id="tl-draft-editor-title">'+(editing?'Edit authorized Draft':'Prepare a Draft')+'</h3></div>'+
-  (editing?'<button type="button" class="secondary" data-action="tradelink-draft-new">New Draft</button>':'')+'</div>'+
+ const localDate=new Date().toLocaleDateString('en-US',{
+  year:'numeric',month:'2-digit',day:'2-digit'});
+ return '<section class="tl-draft-panel tl-reference-editor" aria-labelledby="tl-draft-editor-title">'+
+  referenceDocumentHeader(type,editing)+
+  (editing?'<button type="button" class="secondary tl-reference-new-draft" data-action="tradelink-draft-new">New Draft</button>':'')+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
-  '<p class="muted">Fields are a local, unsaved preparation form. Preview validation does not create a server record.</p>'+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
+  '<div class="tl-reference-editor-content">'+referenceDraftTabs(type)+
   '<form data-tradelink-draft-form>'+
-   '<div class="tl-draft-form-grid"><label class="tl-draft-field"><span>Document module</span>'+
-    '<select name="documentType" '+(editing?'disabled':'')+'>'+options(typeLabels,type)+'</select></label>'+
-    (editing?'<input type="hidden" name="documentType" value="'+escape(type)+'">':'')+
-    field('Document number','documentNumber',fieldValue('documentNumber',data.documentNumber||''),'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*"')+
-    field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
-     'maxlength="5000"'+(physical||payment||priced?' required':''))+
-    field(physical?'Source reference':'Reference','referenceNumber',
-     fieldValue('referenceNumber',data.referenceNumber||''),
-     'maxlength="5000"'+(physical?' required':''))+
-    '<label class="tl-draft-field"><span>Currency (ISO code)</span><select name="currency">'+
-     options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select></label>'+
-    (physical||payment?'':'<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
-     options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>')+
-   '</div>'+
+   // Retain existing module form control for source contract/tests. The
+   // horizontal tab links are the visible accessible module switcher.
+   '<div class="tl-reference-sr-only"><label class="tl-draft-field"><span>Document module</span>'+
+    '<select name="documentType" tabindex="-1" aria-hidden="true" '+(editing?'disabled':'')+'>'+
+     options(typeLabels,type)+'</select></label></div>'+
+   (editing?'<input type="hidden" name="documentType" value="'+escape(type)+'">':'')+
+   '<section class="tl-reference-form-section tl-reference-document-info">'+
+    '<h4>Document Information</h4>'+
+    '<div class="tl-reference-document-grid">'+
+     '<div class="tl-reference-static-field"><span>Status</span>'+
+      '<output>Draft'+(editing?'':' · Not saved')+'</output></div>'+
+     '<label class="tl-draft-field"><span>Number</span>'+
+      '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+
+       '" required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" '+
+       'placeholder="'+escape(referencePrefixes[type]||'DOC-')+'Enter a reference" '+
+       'aria-describedby="tl-reference-number-help">'+
+      '<small id="tl-reference-number-help">Enter a Draft number for local validation; no number is assigned or saved automatically.</small></label>'+
+     '<div class="tl-reference-static-field"><span>Date · local only</span>'+
+      '<output>'+escape(localDate)+'</output></div>'+
+     '<div class="tl-reference-static-field tl-reference-revision"><span>Revision No.</span>'+
+      '<output>'+(editing?escape(row?.revision??'—'):'0 · Local preview')+'</output></div>'+
+    '</div>'+
+   '</section>'+
+   '<section class="tl-reference-form-section tl-reference-client">'+
+    '<h4>Client Information</h4>'+
+    '<div class="tl-draft-form-grid">'+
+     field(commonPartyLabel,'customerName',fieldValue('customerName',data.customerName||''),
+      'maxlength="5000"'+(physical||payment||priced?' required':''))+
+     field(physical?'Source reference':'Reference information','referenceNumber',
+      fieldValue('referenceNumber',data.referenceNumber||''),
+      'maxlength="5000"'+(physical?' required':''))+
+     (type==='esi'?field('Client tax identity / TIN','customerTin',
+      fieldValue('customerTin',data.customerTin||''),'maxlength="5000" required'):'')+
+     (type==='quotation'?
+      field('Client email (or phone)','customerEmail',fieldValue('customerEmail',data.customerEmail||''),
+       'type="email" maxlength="5000"')+
+      field('Client phone (or email)','customerPhone',fieldValue('customerPhone',data.customerPhone||''),
+       'maxlength="5000"')+
+      field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
+       'maxlength="5000" required')+
+      field('Offer validity','validity',fieldValue('validity',data.validity||''),
+       'maxlength="5000" required')+
+      field('Delivery commitment','deliveryCommitment',
+       fieldValue('deliveryCommitment',data.deliveryCommitment||''),
+       'maxlength="5000" required'):'')+
+     (type==='po'?
+      field('Supplier PO number (optional)','poNumber',fieldValue('poNumber',data.poNumber||''),
+       'maxlength="5000"')+
+      field('Target delivery date','targetDeliveryDate',
+       fieldValue('targetDeliveryDate',data.targetDeliveryDate||''),'type="date" required')+
+      field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
+       'maxlength="5000" required'):'')+
+     '<label class="tl-draft-field tl-reference-currency-field"><span>Currency</span>'+
+      '<select name="currency" aria-describedby="tl-reference-currency-help">'+
+       options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select>'+
+      '<small id="tl-reference-currency-help">ISO currency code for the unsaved Draft. Currency conversion is never inferred.</small></label>'+
+     (physical||payment?'':'<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
+      options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>')+
+    '</div>'+
+   '</section>'+
    (payment?
-    '<fieldset class="tl-draft-lines"><legend>Received payment · local readiness only</legend>'+
+    '<fieldset class="tl-draft-lines tl-reference-payment"><legend>Form of Payment</legend>'+
      field('Payment particulars','paymentParticulars',fieldValue('paymentParticulars',data.paymentParticulars||''),
       'maxlength="5000" required')+
      moneyField('Cash amount','cashAmount',fieldValue('cashAmount',data.cashAmount??''),
@@ -514,24 +597,25 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
      field('Verified by','verifiedBy',fieldValue('verifiedBy',data.verifiedBy||''),'maxlength="5000" required')+
     '</fieldset>'+
     '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
-    '<fieldset class="tl-draft-lines"><legend>'+
-     (physical?'Physical shipment item (required for local readiness)':
-      priced?'Priced line item (required for local readiness)':'Single line item (optional)')+
-     '</legend>'+
-    field('Description','lineDescription',fieldValue('lineDescription',line.description||''),
-     'maxlength="2000"'+(physical||priced?' required':''))+
-    field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),
-     'type="number" min="0" max="1000000000" step="any"'+(physical||priced?' required':''))+
-    (physical?'':moneyField('Unit price','lineUnitPrice',
-     fieldValue('lineUnitPrice',line.unitPrice??''),inputUnit,
-     'type="number" min="0" max="1000000000" step="any"'+(priced?' required':'')))+
-    field('Unit','lineUnit',fieldValue('lineUnit',line.unit||''),'maxlength="120"')+
-    (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
-     fieldValue('lineSerialNumber',line.serialNumber||''),'maxlength="120"'):'')+
-    (editing&&line.id?'<input type="hidden" name="lineId" value="'+escape(line.id)+'">':'')+
+    '<fieldset class="tl-draft-lines tl-reference-items"><legend>Items</legend>'+
+     '<p class="tl-reference-items-note">'+
+      (physical?'Physical shipment item (required for local readiness)':
+       priced?'Priced line item (required for local readiness)':'Single line item (optional)')+
+      '. One authorized local line item; multi-item creation requires a separately supported contract.</p>'+
+     field('Description','lineDescription',fieldValue('lineDescription',line.description||''),
+      'maxlength="2000"'+(physical||priced?' required':''))+
+     field('Quantity','lineQuantity',fieldValue('lineQuantity',line.quantity??''),
+      'type="number" min="0" max="1000000000" step="any"'+(physical||priced?' required':''))+
+     (physical?'':moneyField('Unit price','lineUnitPrice',
+      fieldValue('lineUnitPrice',line.unitPrice??''),inputUnit,
+      'type="number" min="0" max="1000000000" step="any"'+(priced?' required':'')))+
+     field('Unit','lineUnit',fieldValue('lineUnit',line.unit||''),'maxlength="120"')+
+     (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
+      fieldValue('lineSerialNumber',line.serialNumber||''),'maxlength="120"'):'')+
+     (editing&&line.id?'<input type="hidden" name="lineId" value="'+escape(line.id)+'">':'')+
     '</fieldset>'+
     (type==='delivery'?
-     '<fieldset class="tl-draft-lines"><legend>Delivery responsibility · preview only</legend>'+
+     '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Delivery responsibility · preview only</legend>'+
       field('QC assignee','checkedBy',fieldValue('checkedBy',data.checkedBy||''),
        'maxlength="5000" required')+
       field('Logistics assignee','deliveredBy',fieldValue('deliveredBy',data.deliveredBy||''),
@@ -541,9 +625,14 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
      '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line):'')+
-   renderCommercialReadiness(type,fieldValue,data)+
-   '<label class="tl-draft-field"><span>Remarks</span>'+
-    '<textarea name="remarks" maxlength="5000" rows="3">'+escape(fieldValue('remarks',data.remarks||''))+'</textarea></label>'+
+   '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
+    '<label class="tl-draft-field"><span>Document notes and terms · local preview</span>'+
+     '<textarea name="remarks" maxlength="5000" rows="5" '+
+      'placeholder="Enter local document remarks or terms">'+
+       escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
+     '<small>These notes are part of the local validation preview. No PDF, approval or document is generated.</small>'+
+    '</label></section>'+
+   (renderCommercialReadiness(type,fieldValue,data))+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-preview">Validate locally</button>'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear local fields</button>'+
@@ -552,7 +641,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
     'Not saved. Domain write activation is pending.</p>'+
    renderTradeLinkDraftLocalSummary(type)+
-  '</form></section>';
+  '</form></div></section>';
 }
 
 const draftListTypes=Object.freeze([['all','All modules'],...typeLabels]);
@@ -743,20 +832,23 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
  const selected=TL03_DOMAIN_READS_ENABLED&&canManage&&view.mode==='edit'&&view.selected?.documentId?
    view.selected:null;
  return '<div class="tl-draft-workspace">'+
-  '<section class="tl-draft-panel"><div class="tl-panel-heading">'+
-   '<div><p class="tl-eyebrow">CP-TL-03D / Phase 1</p><h2>Draft workspace</h2></div>'+
-   '<span class="tl-draft-badge">Controlled dark launch</span></div>'+
-   '<p class="muted">Draft UI is staged. Domain reads: <strong>'+
-    (TL03_DOMAIN_READS_ENABLED?'enabled':'not activated')+'</strong>. Writes: <strong>'+
-    (TL03_DOMAIN_WRITES_ENABLED?'enabled':'not activated')+
-   '</strong>. Existing APSYNTRA signed authorization remains mandatory.</p>'+
-   '<p class="tl-draft-boundary" role="note">No local draft storage, synthetic saved documents, independent login, attachments, workflow approvals or PDF export. A validated preview is not a saved record.</p>'+
-   '<div class="tl-panel-heading"><h3>Authoritative Draft records</h3>'+
-    '<button type="button" class="secondary" data-action="tradelink-draft-refresh"'+
-      (!TL03_DOMAIN_READS_ENABLED||view.busy?' disabled':'')+'>Refresh</button></div>'+
-   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
-   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
-   renderTradeLinkDraftList(rows,view,canManage)+
-  '</section>'+renderEditor(selected?.record,view.mode,canManage,
-   view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'')+'</div>';
+  renderEditor(selected?.record,view.mode,canManage,
+   view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'')+
+  '<details class="tl-reference-list-details">'+
+   '<summary>All Documents · authorized Draft listing'+
+    '<span class="tl-draft-badge">Controlled dark launch</span></summary>'+
+   '<section class="tl-draft-panel"><div class="tl-panel-heading">'+
+    '<div><p class="tl-eyebrow">CP-TL-03D / Phase 1</p><h2>Draft workspace</h2></div></div>'+
+    '<p class="muted">Domain reads: <strong>'+
+     (TL03_DOMAIN_READS_ENABLED?'enabled':'not activated')+'</strong>. Writes: <strong>'+
+     (TL03_DOMAIN_WRITES_ENABLED?'enabled':'not activated')+
+    '</strong>. Existing APSYNTRA signed authorization remains mandatory.</p>'+
+    '<p class="tl-draft-boundary" role="note">No local draft storage, synthetic saved documents, independent login, attachments, workflow approvals or PDF export. A validated preview is not a saved record.</p>'+
+    '<div class="tl-panel-heading"><h3>Authoritative Draft records</h3>'+
+     '<button type="button" class="secondary" data-action="tradelink-draft-refresh"'+
+       (!TL03_DOMAIN_READS_ENABLED||view.busy?' disabled':'')+'>Refresh</button></div>'+
+    (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
+    (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
+    renderTradeLinkDraftList(rows,view,canManage)+
+   '</section></details></div>';
 }
