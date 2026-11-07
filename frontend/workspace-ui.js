@@ -1,15 +1,13 @@
-/** CP-WS-01A — signed-workspace shell, read-only until backend lifecycle activation.
- * Design reference: workspace selector, browse, search, owner/member filters and
- * create dialog. No independent auth, fabricated workspaces or browser persistence.
- * All workspace records presented here come from the signed access context.
+/** Signed workspace catalog and lifecycle interface.
+ * Discovery and creation use separately authorized server contracts; selection,
+ * configuration and invitation delivery retain their explicit safety boundaries.
+ * No fabricated memberships, independent auth or browser-persisted scope.
  */
 import {validUuid} from './data.js';
 
 export const WS01_DISCOVERY_ENABLED=true;
 export const WS01_CREATION_ENABLED=true;
 export const WS01_SWITCHING_ENABLED=false;
-// Invitation delivery requires the separately gated CP-WS-02D backend.
-export const WS02_INVITATIONS_ENABLED=false;
 const INVITE_ROLES=new Set(['admin','member','viewer']);
 const TABS=new Set(['all','recent','owner','member','collaborator']);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
@@ -81,9 +79,8 @@ export function assessWorkspaceCreationReadiness(proposal){
   status:'INVALID_DRAFT',canCreate:false,valid:false,
   message:validated.reason
  });
- // The currently deployed production lifecycle has no create RPC, and the
- // static client feature gate is deliberately OFF. A future enablement
- // must be tied to reviewed backend acceptance, not to this UI.
+ // Validation is not a persistence grant. If creation is disabled,
+ // no RPC is attempted; otherwise the signed server remains authoritative.
  if(!WS01_CREATION_ENABLED)return Object.freeze({
   status:'PENDING_SERVER_ACTIVATION',canCreate:false,valid:true,
   message:'Draft validated. Workspace creation requires the approved signed server lifecycle, authenticated permission grant, and production activation. No workspace was created.'
@@ -94,8 +91,8 @@ export function assessWorkspaceCreationReadiness(proposal){
  });
 }
 /**
- * Creation transaction adapter: the checked-in UI gate is OFF until a
- * separately approved signed production RPC/grant/flag activation.
+ * Creation transaction adapter: a client request requires an enabled
+ * lifecycle and a separately authorized signed production RPC.
  * A submitted request ID is reused on retries to prevent duplicate writes.
  * Only a validated server receipt can be shown as a committed creation.
  * No raw error, bearer token, actor ID or workspace ID is rendered.

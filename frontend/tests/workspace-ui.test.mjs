@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {
  WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED,
  workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,workspaceDetailsFor,validateWorkspaceProposal,assessWorkspaceCreationReadiness,submitWorkspaceCreation,renderWorkspaceSwitcher,
- WS02_INVITATIONS_ENABLED,validateWorkspaceInvitationDraft,renderWorkspaceInviteLaunch
+ validateWorkspaceInvitationDraft,renderWorkspaceInviteLaunch
 } from '../workspace-ui.js';
 
 const signedWorkspace='00000000-0000-4000-8000-000000000001';
@@ -317,7 +317,6 @@ test('signed membership role is server-supplied and cannot be invented for legac
 // CP-WS-02D reference interaction: the invitation UI is visible without claiming
 // platform authority, backend invitation delivery, or privileged role grants.
 test('workspace invitation launch exists only for the signed current workspace',()=>{
- assert.equal(WS02_INVITATIONS_ENABLED,false);
  const launch=renderWorkspaceInviteLaunch(current);
  assert.match(launch,/data-action="ws02-open-invites"/);
  assert.match(launch,/Invite members/);
@@ -366,8 +365,7 @@ test('invitation panel previews draft only, never sends email or creates members
  for(const part of ['name="emails"','name="role"','name="message"',
   'value="admin"','value="member"','value="viewer"',
   'Send invites — pending activation','disabled aria-describedby',
-  'data-ws02-context','No invitations were sent',
-  'WS02_INVITATIONS_ENABLED=false'])
+  'data-ws02-context','No invitations were sent'])
   assert.ok(module.includes(part),part);
  assert.doesNotMatch(module,/\.rpc\(['"](?:wm_ws02_invite|wm_invite_workspace|wm_ws01_invite)/);
  assert.doesNotMatch(module,/fetch\(['"]\/auth\/v1\/invite|fetch\(['"]\/rest\/v1\/rpc/);
@@ -457,7 +455,9 @@ test('workspace controls are actionable for verified rows and fail closed for un
  assert.match(css,/\.ws01-entry-button:focus-visible/);
  assert.match(css,/\.ws01-details-card/);
  assert.match(source,/WS01_SWITCHING_ENABLED=false/);
- assert.match(source,/WS02_INVITATIONS_ENABLED=false/);
+ assert.doesNotMatch(source,/WS02_INVITATIONS_ENABLED/);
+ assert.match(source,/Send invites — pending activation/);
+ assert.match(source,/disabled aria-describedby/);
 });
 
 
