@@ -1,0 +1,52 @@
+{
+  "checkpoint": "CP-WS-01-Lifecycle-H3",
+  "provenance": "Read-only live pg_proc fingerprint and ACL catalog; 2026-11-07",
+  "purpose": "Verify approved, access-controlled source snapshots before source-faithful disposable replay. Metadata only; this does not certify runtime compatibility.",
+  "source_bodies_included": false,
+  "requires_private_source_bundle": true,
+  "private_bundle_rule": "External directory with mode 0700, owned by verifier; exactly three 0600 regular SQL files; do not store in GitHub/CI logs.",
+  "core_functions": [
+    {
+      "file": "current_workspace_id.sql",
+      "signature": "public.current_workspace_id(p_user_id uuid)",
+      "source_sha256": "17495f42a737de0e59f6ca4b2b36f6f02bd0647e08b0db9a358a9eac48e75e92",
+      "return_type": "uuid",
+      "owner": "postgres",
+      "language": "sql",
+      "volatility": "stable",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "anon_execute": false,
+      "search_path": "public"
+    },
+    {
+      "file": "has_module_access.sql",
+      "signature": "public.has_module_access(p_module_id text, p_user_id uuid)",
+      "source_sha256": "58d5af1ddbb54db20a80522335e2ac14bae4e175639cfa4b5da5ad1072f69beb",
+      "return_type": "boolean",
+      "owner": "postgres",
+      "language": "sql",
+      "volatility": "stable",
+      "security_definer": true,
+      "authenticated_execute": true,
+      "anon_execute": false,
+      "search_path": "public"
+    },
+    {
+      "file": "module_role_for.sql",
+      "signature": "public.module_role_for(p_module_id text, p_user_id uuid)",
+      "source_sha256": "01c0ee05ac0655ea89f68b6c363acdf2ce74ffcd825a9b5491239cccf6580f21",
+      "return_type": "text",
+      "owner": "postgres",
+      "language": "sql",
+      "volatility": "stable",
+      "security_definer": true,
+      "authenticated_execute": false,
+      "anon_execute": false,
+      "search_path": "public"
+    }
+  ],
+  "source_fidelity_status": "SOURCE_FINGERPRINTS_ONLY__UNVERIFIED_REPLAY",
+  "full_caller_replay_status": "PENDING",
+  "signed_user_https_status": "PENDING_INDEPENDENT_SESSION"
+}
