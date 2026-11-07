@@ -13,7 +13,8 @@ import {
  updateTradeLinkDraftLocalSummary,
  initialTradeLinkDraftListFilters,normalizeTradeLinkDraftListFilters,
  filterTradeLinkDraftAuthorizedRows,updateTradeLinkDraftListUI,
- renderTradeLinkDocumentRepository,renderTradeLinkDraftWorkspace,
+ renderTradeLinkDocumentRepository,renderTradeLinkSavedDocumentPreview,
+ renderTradeLinkDraftWorkspace,
  TradeLinkDraftWorkspace,tradeLinkDraftReady
 } from '../tradelink-draft-workspace.js';
 const workspace='00000000-0000-4000-8000-000000000001';
@@ -931,6 +932,71 @@ test('sortable authorized document view only reorders current DOM nodes and pres
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
 
+
+test('source document saved preview renders exact server revision and multiple lines as escaped text',()=>{
+ const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const boardItem='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ const record={id,board_id:TRADELINK_BOARD_ID,workspace_id:workspace,
+  board_item_id:boardItem,document_type:'quotation',document_number:'Q-107',
+  revision:3,workflow_state:'draft',archived_at:null,
+  updated_at:'2026-11-07T09:30:00Z',
+  content:{documentType:'quotation',documentNumber:'Q-107',
+   customerName:'<img src=x onerror=alert(1)>',currency:'PHP',vatType:'zero',
+   items:[{id:'a',kind:'item',description:'Pump & hose',quantity:1,unitPrice:120},
+    {id:'b',kind:'item',description:'Valve',quantity:2,unitPrice:25}]}};
+ const html=renderTradeLinkSavedDocumentPreview(record,workspace,id);
+ assert.match(html,/Saved document · Q-107/);
+ assert.match(html,/Revision 3/);
+ assert.match(html,/Linked Board item/);
+ assert.match(html,/Pump &amp; hose/);
+ assert.match(html,/Valve/);
+ assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
+ assert.doesNotMatch(html,/<img src=x onerror/);
+ assert.match(html,/Persisted line items/);
+ assert.throws(()=>renderTradeLinkSavedDocumentPreview({...record,workspace_id:id},workspace,id));
+ assert.throws(()=>renderTradeLinkSavedDocumentPreview({...record,content:{
+  ...record.content,documentNumber:'CHANGED'}},workspace,id));
+});
+
+test('dark-launch source list and Board cannot expose forged saved documents or preview actions',()=>{
+ const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const item='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
+  rows:[{documentId:id,boardItemId:item,documentNumber:'Q-107',
+   documentType:'quotation',workflowState:'draft',revision:1,archived:false}],
+  documentPreview:{documentId:id,record:{
+   id,board_id:TRADELINK_BOARD_ID,workspace_id:workspace,board_item_id:item,
+   document_type:'quotation',document_number:'Q-107',
+   workflow_state:'draft',revision:1,content:{
+    documentType:'quotation',documentNumber:'Q-107',customerName:'TOP-SECRET'}}}};
+ const signedBoard={...detail,items:[{id:item,title:'Q-107',status:'Draft'}]};
+ const html=renderTradeLinkApplication({detail:signedBoard,section:'documents',
+  workspaceId:workspace,draftView:view,canManage:true});
+ assert.doesNotMatch(html,/TOP-SECRET|data-tradelink-saved-preview|tradelink-document-open/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
+
+test('operational save and read handlers retain signed linkage, backend receipt and release gate',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const ui=readFileSync('frontend/tradelink-application.js','utf8');
+ const draft=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
+ assert.match(app,/async function openTradeLinkDocument\(documentId\)/);
+ assert.match(app,/record\.board_item_id!==listed\.boardItemId/);
+ assert.match(app,/state\.tradeLinkDraft\.documentPreview=\{documentId,record\}/);
+ assert.match(app,/const receipt=await tradeLinkDraftWorkspace\.save/);
+ assert.match(app,/committed=true/);
+ assert.match(app,/tradeLinkDraftWorkspace\.read\(documentId\)/);
+ assert.match(app,/tradeLinkDraftWorkspace\.list\(\)/);
+ assert.match(app,/board\.items\?\.some\(item=>item\.id===receipt\.boardItemId/);
+ assert.match(app,/location\.hash='#\/boards\/'\+TRADELINK_BOARD_ID\+'\/tradelink\/documents'/);
+ assert.match(app,/root\.querySelector\('\[data-tradelink-draft-form\]'\)\?\.requestSubmit\(\)/);
+ assert.match(ui,/documentByItem\.get\(item\.id\)\?\.documentNumber===item\.title/);
+ assert.match(draft,/data-action="tradelink-document-open"/);
+ assert.match(draft,/renderTradeLinkSavedDocumentPreview/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
 test('dark launch never renders stale selected document content after read access is disabled',()=>{
  const malicious='"><img src=x onerror=alert(1)>';
  const view={...initialTradeLinkDraftView(),mode:'edit',

@@ -9,6 +9,7 @@ import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
 import {renderTradeLinkDraftWorkspace,renderTradeLinkDocumentRepository,
  initialTradeLinkDraftView} from './tradelink-draft-workspace.js';
+import {TL03_DOMAIN_READS_ENABLED} from './tradelink-domain-client.js';
 
 export const TRADELINK_SOURCE_MODULES=Object.freeze([
  Object.freeze({key:'esi',label:'Electronic SI',short:'ESI',
@@ -76,6 +77,11 @@ function moduleLink(m,section){
 }
 function renderDocuments(detail,workspaceId,draftView,canManage){
  const rows=searchTradeLinkBoardItems(detail);
+ const verified=TL03_DOMAIN_READS_ENABLED&&canManage&&
+  draftView.status==='AUTHORIZED_READ'&&Array.isArray(draftView.rows);
+ const documentByItem=new Map((verified?draftView.rows:[]).filter(row=>
+  typeof row.boardItemId==='string'&&typeof row.documentId==='string')
+  .map(row=>[row.boardItemId,row]));
  return '<div class="tl-documents-workspace">'+
   renderTradeLinkDocumentRepository({detail,workspaceId,view:draftView,canManage})+
   '<section class="tl-content-panel" aria-labelledby="tl-documents-title">'+
@@ -86,9 +92,15 @@ function renderDocuments(detail,workspaceId,draftView,canManage){
   '<label class="tl-search-label" for="tradelink-document-search">Search board item titles</label>'+
   '<input class="search-input tl-record-search" type="search" id="tradelink-document-search" data-tradelink-search maxlength="120" autocomplete="off" placeholder="Search authorized records…"/>'+
   '<div class="tl-records-scroll"><table class="tl-records-table"><thead><tr>'+
-  '<th scope="col">Board item</th><th scope="col">Board status</th><th scope="col">Last updated</th></tr></thead><tbody>'+
+  '<th scope="col">Board item</th><th scope="col">Board status</th>'+
+  '<th scope="col">Last updated</th><th scope="col">TradeLink document</th>'+
+  '</tr></thead><tbody>'+
   rows.map(item=>'<tr data-tradelink-record data-title="'+esc(String(item.title||'').toLocaleLowerCase())+'"><td><a href="#/boards/'+TRADELINK_BOARD_ID+'">'+esc(item.title||'Untitled')+'</a></td>'+
-    '<td>'+esc(item.status||'—')+'</td><td>'+esc(item.updated_at||'—')+'</td></tr>').join('')+
+    '<td>'+esc(item.status||'—')+'</td><td>'+esc(item.updated_at||'—')+'</td><td>'+
+    (documentByItem.get(item.id)?.documentNumber===item.title?
+     '<button type="button" class="secondary" data-action="tradelink-document-open" '+
+      'data-id="'+esc(documentByItem.get(item.id).documentId)+'">Open document</button>':
+     '<span class="muted">—</span>')+'</td></tr>').join('')+
   '</tbody></table></div>'+
   '<p class="tl-empty-records" data-tradelink-empty'+(rows.length?' hidden':'')+'>'+
    (rows.length?'No matching board items.':'No authorized board items have been persisted.')+'</p>'+

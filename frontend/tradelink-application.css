@@ -157,3 +157,10 @@
 .aps-tradelink-app .tl-draft-list-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:880px){.aps-tradelink-app .tl-draft-list-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:540px){.aps-tradelink-app .tl-draft-list-filters{grid-template-columns:1fr}}
+
+/* Read-only authoritative document display and the Board-to-Document link. */
+.aps-tradelink-app [data-tradelink-saved-preview]{margin-top:18px}
+.aps-tradelink-app [data-tradelink-saved-preview] .tl-records-scroll{margin-top:12px}
+.aps-tradelink-app [data-tradelink-saved-preview] td{overflow-wrap:anywhere}
+.aps-tradelink-app [data-tradelink-saved-preview] .tl-panel-heading{gap:10px}
+.aps-tradelink-app [data-action="tradelink-document-open"]:focus-visible{outline:3px solid #8d95ee;outline-offset:2px}

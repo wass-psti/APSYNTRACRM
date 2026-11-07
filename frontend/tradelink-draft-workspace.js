@@ -6,7 +6,8 @@ import {ApiError} from './session.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
- TL03_DOMAIN_WRITES_ENABLED,validateTradeLinkDraftEnvelope} from './tradelink-domain-client.js';
+ TL03_DOMAIN_WRITES_ENABLED,validateTradeLinkDraftEnvelope,
+ normalizeTradeLinkDomainRow} from './tradelink-domain-client.js';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
 const typeLabels=Object.freeze([
@@ -28,7 +29,7 @@ export function initialTradeLinkDraftView(documentType=null){
  // The route may request only one of the existing six source document types.
  // This is transient UI state, never browser or server persistence.
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
- return {status:'DARK_LAUNCH',rows:[],selected:null,busy:false,error:'',
+ return {status:'DARK_LAUNCH',rows:[],selected:null,documentPreview:null,busy:false,error:'',
   message:'',draftNotice:'',mode:'create',pendingCreateId:null,
   listFilters:initialTradeLinkDraftListFilters(),
   formValues:selected?{documentType:selected}:null};
@@ -40,7 +41,7 @@ export function initialTradeLinkDraftView(documentType=null){
 export function resetTradeLinkDraftForm(view=initialTradeLinkDraftView(),documentType=null){
  const requested=documentType??view?.formValues?.documentType??'quotation';
  const safeType=typeLabels.some(([id])=>id===requested)?requested:'quotation';
- return {...view,mode:'create',selected:null,pendingCreateId:null,error:'',message:'',
+ return {...view,mode:'create',selected:null,documentPreview:null,pendingCreateId:null,error:'',message:'',
   draftNotice:'Unsaved local fields cleared. Nothing saved or transmitted.',
   formValues:{documentType:safeType}};
 }
@@ -472,7 +473,7 @@ function referenceDraftTabs(type){
   '<a href="'+base+escape(key)+'"'+(key===type?' class="active" aria-current="page"':'')+
   '>'+escape(key==='quotation'?'Quotations':label)+'</a>').join('')+'</nav>';
 }
-function referenceDocumentHeader(type,editing){
+function referenceDocumentHeader(type,editing,canSave=false){
  const title=referenceTitles[type]||'TradeLink Draft';
  return '<div class="tl-reference-document-topcard"><header class="tl-reference-document-heading">'+
    '<div class="tl-reference-document-title">'+
@@ -488,8 +489,9 @@ function referenceDocumentHeader(type,editing){
     '<button type="button" class="tl-reference-tool" disabled title="Templates are not activated in APSYNTRA CRM">Templates</button>'+
     '<button type="button" class="tl-reference-tool" disabled title="PDF generation requires an authorized workflow">Generate PDF</button>'+
     '<button type="button" class="tl-reference-primary" data-action="tradelink-draft-preview">Validate locally</button>'+
-    '<button type="button" class="tl-reference-save" disabled title="Workflow save and approval are not activated">'+
-     (type==='quotation'?'Save for Review':'Save')+'</button>'+
+    '<button type="button" class="tl-reference-save" data-action="tradelink-draft-submit"'+
+     (canSave?'':' disabled title="Production Draft writes are not activated"')+
+     '>Save Draft</button>'+
    '</div>'+
   '</header>'+
   '<p class="tl-reference-workflow-notice" role="note">'+
@@ -517,7 +519,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice=''){
  const localDate=new Date().toLocaleDateString('en-US',{
   year:'numeric',month:'2-digit',day:'2-digit'});
  return '<section class="tl-draft-panel tl-reference-editor" aria-labelledby="tl-draft-editor-title">'+
-  referenceDocumentHeader(type,editing)+
+  referenceDocumentHeader(type,editing,live)+
   (editing?'<button type="button" class="secondary tl-reference-new-draft" data-action="tradelink-draft-new">New Draft</button>':'')+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
@@ -733,6 +735,59 @@ export function updateTradeLinkDraftListUI(container,input={}){
  if(empty)empty.hidden=count!==0||rows.length===0;
  return count;
 }
+
+/**
+ * Only render the exact revision that came from the authenticated domain
+ * read API. This does not interpret a Board item as document content.
+ */
+export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentId){
+ const row=normalizeTradeLinkDomainRow(record,workspaceId,documentId);
+ const data=row.content;
+ if(data.documentType!==row.document_type||
+   data.documentNumber!==row.document_number||
+   !Object.hasOwn(localSummaryRows,data.documentType))
+  throw new ApiError('TradeLink saved document content mismatch.',409);
+ const summary=tradeLinkDraftLocalSummaryValues(data);
+ const type=typeLabels.find(([id])=>id===row.document_type)?.[1]||row.document_type;
+ const details=[...commonSummaryRows,...localSummaryRows[row.document_type],
+  ['remarks','Remarks'],['customerAddress','Party address'],['referenceNumber','Source reference'],
+  ['customerTin','Tax identity'],['dueDate','Due date'],['paymentTerms','Payment terms'],
+  ['verifiedBy','Intended verifier'],['approvedBy','Intended approver']]
+  .filter(([key],i,all)=>all.findIndex(([name])=>name===key)===i);
+ const currency=currencyUnit(data.currency);
+ const items=Array.isArray(data.items)?data.items.slice(0,100):[];
+ return '<section data-tradelink-saved-preview class="tl-draft-summary" '+
+  'aria-labelledby="tl-saved-document-title">'+
+  '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Authoritative saved record</p>'+
+  '<h3 id="tl-saved-document-title">Saved document · '+escape(row.document_number)+'</h3>'+
+  '</div><span class="tl-draft-badge">Revision '+escape(row.revision)+'</span></div>'+
+  '<p class="muted">This document was retrieved from the signed TradeLink server. '+
+  'The revision, identity and Board association are server-owned; viewing is not approval.</p>'+
+  '<dl class="tl-draft-summary-rows">'+
+  [['Document module',type],['Workflow state',row.workflow_state],
+   ['Document ID',row.id],['Linked Board item',row.board_item_id],
+   ['Revision',row.revision],['Archived',row.archived_at?'Yes':'No'],
+   ['Last updated',row.updated_at??'—'],...details.map(([key,label])=>
+    [label,key==='remarks'||key==='customerAddress'||key==='dueDate'?
+     String(data[key]??'').trim()||'—':summary?.[key]??String(data[key]??'').trim()||'—']
+   )].map(([label,value])=>'<div><dt>'+escape(label)+'</dt><dd>'+
+    escape(value)+'</dd></div>').join('')+
+  '</dl>'+
+  (items.length?'<div class="tl-records-scroll"><table class="tl-records-table">'+
+   '<caption>Persisted line items · '+escape(currency)+'</caption>'+
+   '<thead><tr><th scope="col">Item</th><th scope="col">Description</th>'+
+   '<th scope="col">Quantity</th><th scope="col">Unit</th>'+
+   '<th scope="col">Unit price</th><th scope="col">Serial number</th></tr></thead><tbody>'+
+   items.map((item,i)=>'<tr><td>'+escape(i+1)+'</td><td>'+
+    escape(item.description??'—')+'</td><td>'+escape(item.quantity??'—')+
+    '</td><td>'+escape(item.unit??'—')+'</td><td>'+
+    escape(item.kind==='item'&&typeof item.unitPrice==='number'?
+     formatTradeLinkAmount(item.unitPrice)+' '+currency:'—')+'</td><td>'+
+    escape(item.serialNumber??'—')+'</td></tr>').join('')+
+   '</tbody></table></div>':'')+
+  '<p class="muted">No local document copy was saved. Refresh the repository to '+
+   'verify a newer revision.</p></section>';
+}
 function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
  const enabled=TL03_DOMAIN_READS_ENABLED&&canManage&&view.status==='AUTHORIZED_READ';
  const records=enabled?rows:[];
@@ -768,7 +823,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
      ' in current response</caption>'+
     '<thead><tr><th scope="col">Document</th><th scope="col">Module</th>'+
     '<th scope="col">Revision</th><th scope="col">State</th>'+
-    (readOnly?'':'<th scope="col">Actions</th>')+
+    '<th scope="col">'+(readOnly?'Preview':'Actions')+'</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
     ordered.map(row=>{
      const match=tradeLinkDraftRowMatches(row,filters);
@@ -780,7 +835,9 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
       '<td>'+escape(row.documentNumber)+'</td><td>'+escape(row.documentType)+
       '</td><td>'+escape(row.revision)+'</td><td>'+escape(row.workflowState)+
       (row.archived?' · Archived':'')+'</td>'+
-      (readOnly?'':'<td>'+
+      (readOnly?'<td><button type="button" class="secondary" '+
+       'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
+       '">Preview saved</button></td>':'<td>'+
       '<button type="button" class="secondary" data-action="tradelink-draft-open" data-id="'+escape(row.documentId)+'">Read</button> '+
       '<button type="button" class="secondary" data-action="tradelink-draft-archive" data-id="'+escape(row.documentId)+'"'+
        (!canManage||!TL03_DOMAIN_WRITES_ENABLED||row.archived||row.workflowState!=='draft'?' disabled':'')+'>Archive</button> '+
@@ -807,6 +864,17 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   return '<section class="tl-content-panel" role="alert">Signed TradeLink document workspace unavailable.</section>';
  const rows=TL03_DOMAIN_READS_ENABLED&&canManage&&
   view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
+ const selection=view.documentPreview;
+ const linked=rows.find(item=>item.documentId===selection?.documentId&&
+  item.boardItemId===selection?.record?.board_item_id&&
+  item.revision===selection?.record?.revision&&
+  item.documentNumber===selection?.record?.document_number);
+ let selectedPreview='';
+ if(linked){
+  try{selectedPreview=renderTradeLinkSavedDocumentPreview(
+   selection.record,workspaceId,selection.documentId);}
+  catch{selectedPreview='';}
+ }
  return '<section class="tl-content-panel tl-document-repository" aria-labelledby="tl-domain-repository-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Source-aligned All Documents</p>'+
   '<h2 id="tl-domain-repository-title">TradeLink document workspace</h2></div>'+
@@ -818,7 +886,14 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   '<p class="tl-draft-boundary" role="note">No mock documents, cross-workspace search, '+
   'document editing, PDF export, attachment access or workflow transitions. '+
   'The source workflow state is never inferred from a board status.</p>'+
+  '<div class="tl-panel-heading"><h3>Authorized documents</h3>'+
+   '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
+   (!TL03_DOMAIN_READS_ENABLED||!canManage||view.busy?' disabled':'')+
+   '>Refresh documents</button></div>'+
+  (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
+  (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
   renderTradeLinkDraftList(rows,view,canManage,{readOnly:true})+
+  selectedPreview+
   '<h3>Document modules</h3><nav class="tl-document-module-nav" aria-label="TradeLink document modules">'+
   typeLabels.map(([id,label])=>'<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
    '/tradelink/'+escape(id)+'">'+escape(label)+'</a>').join('')+

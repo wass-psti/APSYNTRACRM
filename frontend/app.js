@@ -1433,7 +1433,8 @@ async function loadTradeLinkDrafts(seq=routeSerial){
  state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
  try{
   const result=await tradeLinkDraftWorkspace.list();
-  if(same())state.tradeLinkDraft={...state.tradeLinkDraft,...result,busy:false};
+  if(same())state.tradeLinkDraft={...state.tradeLinkDraft,...result,
+   documentPreview:null,busy:false};
  }catch{
   if(same())state.tradeLinkDraft={...initialTradeLinkDraftView(),
    error:'Signed Draft list unavailable. No records were cached.'};
@@ -1459,32 +1460,92 @@ async function openTradeLinkDraft(documentId){
   if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
  }
 }
+
+/** Read the exact Board-linked authoritative revision, never local Draft state. */
+async function openTradeLinkDocument(documentId){
+ if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+   !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+   state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed)return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&auth.userId===actor&&
+  state.context.workspace_id===ws;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.documentPreview=null;render();
+ try{
+  const record=await tradeLinkDraftWorkspace.read(documentId);
+  if(!same())return;
+  if(!record||record.board_item_id!==listed.boardItemId||
+   record.revision!==listed.revision||
+   record.document_number!==listed.documentNumber||
+   record.document_type!==listed.documentType||
+   record.workflow_state!==listed.workflowState)
+   throw new ApiError('Document revision changed; refresh the signed list.',409);
+  state.tradeLinkDraft.documentPreview={documentId,record};
+  state.tradeLinkDraft.error='';
+  state.tradeLinkDraft.message='Showing verified server revision '+record.revision+'.';
+ }catch{
+  if(same()){
+   state.tradeLinkDraft.documentPreview=null;
+   state.tradeLinkDraft.error='Signed document could not be verified. Refresh the list.';
+  }
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
 async function commitTradeLinkDraft(form){
  if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage||
   state.tradeLinkDraft.busy)return;
  const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkDraftRoute()&&
+  auth.userId===actor&&state.context.workspace_id===ws;
  const selected=state.tradeLinkDraft.mode==='edit'?state.tradeLinkDraft.selected:null;
  const revision=selected?.record?.revision??0;
  if(!Number.isSafeInteger(revision)||revision<0)return;
+ // Parse before rerendering: preserve exact inputs across authoritative requests.
  const payload=parseTradeLinkDraftForm(new FormData(form));
- // Keep the same UUID if an accepted create response was lost: the server
- // will idempotently replay the identical revision-zero request, not duplicate it.
+ // Preserve the same ID through ambiguous network errors for server idempotency.
  const documentId=selected?.documentId||state.tradeLinkDraft.pendingCreateId||crypto.randomUUID();
  if(!selected)state.tradeLinkDraft.pendingCreateId=documentId;
- state.tradeLinkDraft.busy=true;render();
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ let committed=false;
  try{
-  await tradeLinkDraftWorkspace.save({documentId,
-   expectedRevision:revision,draft:payload});
-  if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
-   state.context.workspace_id!==ws)return;
+  // The existing server transaction atomically writes the document, Board item
+  // and audit event; no second Board-item creation is permitted in the client.
+  const receipt=await tradeLinkDraftWorkspace.save({
+   documentId,expectedRevision:revision,draft:payload});
+  committed=true;
+  if(!same())return;
+  const [record,list,board]=await Promise.all([
+   tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
+   db.board(TRADELINK_BOARD_ID)
+  ]);
+  if(!same())return;
+  if(!record||record.revision!==receipt.revision||
+   record.board_item_id!==receipt.boardItemId||
+   record.document_number!==payload.documentNumber||
+   record.content?.documentNumber!==payload.documentNumber||
+   record.content?.documentType!==payload.documentType||
+   list.status!=='AUTHORIZED_READ'||
+   !list.rows.some(row=>row.documentId===documentId&&
+    row.boardItemId===receipt.boardItemId&&row.revision===receipt.revision)||
+   board?.board?.workspace_id!==ws||
+   !board.items?.some(item=>item.id===receipt.boardItemId&&
+    item.title===payload.documentNumber))
+   throw new ApiError('Saved document/Board projection verification incomplete.',409);
+  state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
-   message:'Authoritative server confirmed the Draft command.'};
-  await loadTradeLinkDrafts(seq);
+   status:'AUTHORIZED_READ',rows:list.rows,
+   message:'Saved Draft '+receipt.revision+' confirmed in TradeLink, Board items and All Documents.'};
+  toast('Saved Draft. Document and Board item verified.');
+  location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
  }catch{
-  if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
-   'Draft write not confirmed. Refresh authoritative records before retrying.';
+  if(same())state.tradeLinkDraft.error=committed?
+   'Document commit succeeded, but the synchronized view could not be verified. Refresh All Documents before any retry.':
+   'Draft commit not confirmed. Use the same pending document to retry; do not create a second Draft.';
  }finally{
-  if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
+  if(same()){state.tradeLinkDraft.busy=false;render();}
  }
 }
 async function changeTradeLinkDraftState(documentId,operation){
@@ -3044,6 +3105,21 @@ async function action(name,button){
  }
  case 'tradelink-draft-open':{
   await openTradeLinkDraft(button.dataset.id);break;
+ }
+ case 'tradelink-document-open':{
+  await openTradeLinkDocument(button.dataset.id);break;
+ }
+ case 'tradelink-documents-refresh':{
+  if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents')
+   await loadTradeLinkDrafts(routeSerial);
+  break;
+ }
+ case 'tradelink-draft-submit':{
+  if(tradeLinkDraftRoute()&&tradeLinkDraftReady()&&
+     state.boardManage&&!state.tradeLinkDraft.busy){
+   root.querySelector('[data-tradelink-draft-form]')?.requestSubmit();
+  }
+  break;
  }
  case 'tradelink-draft-archive':
  case 'tradelink-draft-restore':{
