@@ -565,9 +565,15 @@ const draftListStates=Object.freeze([
 const draftArchiveModes=Object.freeze([
  ['active','Active only'],['archived','Archived only'],['all','Active and archived']
 ]);
+const draftSortFields=Object.freeze([
+ ['documentNumber','Document number'],['documentType','Document module'],
+ ['revision','Revision']
+]);
+const draftSortDirections=Object.freeze([['asc','Ascending'],['desc','Descending']]);
 const matchAllowed=(list,value,fallback)=>list.some(([key])=>key===value)?value:fallback;
 export function initialTradeLinkDraftListFilters(){
- return {query:'',documentType:'all',workflowState:'all',archiveMode:'active'};
+ return {query:'',documentType:'all',workflowState:'all',archiveMode:'active',
+  sortBy:'documentNumber',sortDirection:'asc'};
 }
 export function normalizeTradeLinkDraftListFilters(input={}){
  const f=input&&typeof input==='object'&&!Array.isArray(input)?input:{};
@@ -575,7 +581,9 @@ export function normalizeTradeLinkDraftListFilters(input={}){
   query:String(typeof f.query==='string'?f.query:'').trim().slice(0,120).toLocaleLowerCase(),
   documentType:matchAllowed(draftListTypes,f.documentType,'all'),
   workflowState:matchAllowed(draftListStates,f.workflowState,'all'),
-  archiveMode:matchAllowed(draftArchiveModes,f.archiveMode,'active')
+  archiveMode:matchAllowed(draftArchiveModes,f.archiveMode,'active'),
+  sortBy:matchAllowed(draftSortFields,f.sortBy,'documentNumber'),
+  sortDirection:matchAllowed(draftSortDirections,f.sortDirection,'asc')
  };
 }
 function tradeLinkDraftRowMatches(row,filters){
@@ -589,11 +597,22 @@ function tradeLinkDraftRowMatches(row,filters){
    (filters.archiveMode==='archived'?archived:!archived))&&
   String(row.documentNumber??'').toLocaleLowerCase().includes(filters.query);
 }
+/** Stable, bounded ordering of the current signed response only; no backend query. */
+function sortTradeLinkDraftRows(rows,filters){
+ const field=filters.sortBy,descending=filters.sortDirection==='desc';
+ return [...rows].sort((left,right)=>{
+  const a=field==='revision'?Number(left?.revision)||0:String(left?.[field]??'');
+  const b=field==='revision'?Number(right?.revision)||0:String(right?.[field]??'');
+  const order=field==='revision'?a-b:a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'});
+  return descending?-order:order;
+ });
+}
 /** Search only the bounded current server-authorized page. No remote search. */
 export function filterTradeLinkDraftAuthorizedRows(rows,input={}){
  const filters=normalizeTradeLinkDraftListFilters(input);
  if(!Array.isArray(rows))return [];
- return rows.slice(0,50).filter(row=>tradeLinkDraftRowMatches(row,filters));
+ return sortTradeLinkDraftRows(rows.slice(0,50).filter(row=>
+  tradeLinkDraftRowMatches(row,filters)),filters);
 }
 /** Update native controls and visible rows of the signed listing, never its data. */
 export function updateTradeLinkDraftListUI(container,input={}){
@@ -611,6 +630,13 @@ export function updateTradeLinkDraftListUI(container,input={}){
   const matches=tradeLinkDraftRowMatches(record,filters);
   row.hidden=!matches;if(matches)count++;
  }
+ const body=container.querySelector('[data-tradelink-domain-list-body]');
+ if(body&&typeof body.appendChild==='function'){
+  for(const row of sortTradeLinkDraftRows(rows.map(el=>({
+   element:el,documentNumber:el.dataset?.documentNumber,
+   documentType:el.dataset?.documentType,revision:el.dataset?.revision
+  })),filters))body.appendChild(row.element);
+ }
  const counter=container.querySelector('[data-tradelink-domain-count]');
  if(counter)counter.textContent=count+' of '+rows.length+
   ' authorized records in this response';
@@ -618,17 +644,19 @@ export function updateTradeLinkDraftListUI(container,input={}){
  if(empty)empty.hidden=count!==0||rows.length===0;
  return count;
 }
-function renderTradeLinkDraftList(rows,view,canManage){
+function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
  const enabled=TL03_DOMAIN_READS_ENABLED&&canManage&&view.status==='AUTHORIZED_READ';
  const records=enabled?rows:[];
  const filters=normalizeTradeLinkDraftListFilters(view.listFilters);
  const displayed=filterTradeLinkDraftAuthorizedRows(records,filters);
+ const ordered=sortTradeLinkDraftRows(records,filters);
  const disabledAttr=enabled?'':' disabled';
  const filterSelect=(name,label,values,value)=>
   '<label class="tl-draft-field"><span>'+escape(label)+'</span>'+
   '<select name="'+name+'" data-tradelink-domain-filter'+disabledAttr+
   '>'+options(values,value)+'</select></label>';
- return '<section data-tradelink-domain-list aria-label="Authorized TradeLink Draft listing">'+
+ return '<section data-tradelink-domain-list aria-label="'+(readOnly?
+  'Read-only TradeLink document repository':'Authorized TradeLink Draft listing')+'">'+
   '<div class="tl-draft-list-filters" role="search" aria-label="Search authorized TradeLink Draft records">'+
    '<label class="tl-draft-field"><span>Search document number</span>'+
     '<input name="query" type="search" maxlength="120" autocomplete="off" '+
@@ -637,6 +665,8 @@ function renderTradeLinkDraftList(rows,view,canManage){
    filterSelect('documentType','Document module',draftListTypes,filters.documentType)+
    filterSelect('workflowState','Workflow state',draftListStates,filters.workflowState)+
    filterSelect('archiveMode','Archive status',draftArchiveModes,filters.archiveMode)+
+   filterSelect('sortBy','Sort by',draftSortFields,filters.sortBy)+
+   filterSelect('sortDirection','Sort order',draftSortDirections,filters.sortDirection)+
   '</div>'+
   '<p id="tl-draft-search-scope" class="muted">Search and filters apply only to the '+
     'current signed, authorized response (maximum 50 records). They do not query '+
@@ -645,25 +675,29 @@ function renderTradeLinkDraftList(rows,view,canManage){
    displayed.length+' of '+records.length+' authorized records in this response</p>'+
   (records.length?
    '<div class="tl-records-scroll"><table class="tl-records-table">'+
-    '<caption>Authorized TradeLink Draft records in current response</caption>'+
+    '<caption>'+(readOnly?'Read-only TradeLink records':'Authorized TradeLink Draft records')+
+     ' in current response</caption>'+
     '<thead><tr><th scope="col">Document</th><th scope="col">Module</th>'+
     '<th scope="col">Revision</th><th scope="col">State</th>'+
-    '<th scope="col">Actions</th></tr></thead><tbody>'+
-    records.map(row=>{
+    (readOnly?'':'<th scope="col">Actions</th>')+
+    '</tr></thead><tbody data-tradelink-domain-list-body>'+
+    ordered.map(row=>{
      const match=tradeLinkDraftRowMatches(row,filters);
      return '<tr data-tradelink-domain-record data-document-number="'+
       escape(row.documentNumber)+'" data-document-type="'+escape(row.documentType)+
-      '" data-workflow-state="'+escape(row.workflowState)+'" data-archived="'+
+      '" data-workflow-state="'+escape(row.workflowState)+'" data-revision="'+
+      escape(row.revision)+'" data-archived="'+
       (row.archived===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
       '<td>'+escape(row.documentNumber)+'</td><td>'+escape(row.documentType)+
       '</td><td>'+escape(row.revision)+'</td><td>'+escape(row.workflowState)+
-      (row.archived?' · Archived':'')+'</td><td>'+
+      (row.archived?' · Archived':'')+'</td>'+
+      (readOnly?'':'<td>'+
       '<button type="button" class="secondary" data-action="tradelink-draft-open" data-id="'+escape(row.documentId)+'">Read</button> '+
       '<button type="button" class="secondary" data-action="tradelink-draft-archive" data-id="'+escape(row.documentId)+'"'+
        (!canManage||!TL03_DOMAIN_WRITES_ENABLED||row.archived||row.workflowState!=='draft'?' disabled':'')+'>Archive</button> '+
       '<button type="button" class="secondary" data-action="tradelink-draft-restore" data-id="'+escape(row.documentId)+'"'+
        (!canManage||!TL03_DOMAIN_WRITES_ENABLED||!row.archived||row.workflowState!=='draft'?' disabled':'')+'>Restore</button>'+
-      '</td></tr>';
+      '</td>')+'</tr>';
     }).join('')+'</tbody></table></div>'+
    '<p data-tradelink-domain-no-match class="muted"'+(displayed.length?' hidden':'')+
     '>No matching records in this authorized response.</p>':
@@ -671,6 +705,35 @@ function renderTradeLinkDraftList(rows,view,canManage){
     'No authorized TradeLink Draft records were returned for this page.':
     'No persisted TradeLink Draft records are displayed. The signed document-list endpoint remains off during this dark launch.')+'</p>')+
   '</section>';
+}
+/**
+ * Source-defined All Documents staging, independently workspace-scoped.
+ * Only the existing signed response may render; never project board items into
+ * Domain DocumentRecords. Read flags remain centrally disabled.
+ */
+export function renderTradeLinkDocumentRepository({detail,workspaceId,
+ view=initialTradeLinkDraftView(),canManage=false}={}){
+ if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
+  detail.board.workspace_id!==workspaceId)
+  return '<section class="tl-content-panel" role="alert">Signed TradeLink document workspace unavailable.</section>';
+ const rows=TL03_DOMAIN_READS_ENABLED&&canManage&&
+  view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
+ return '<section class="tl-content-panel tl-document-repository" aria-labelledby="tl-domain-repository-title">'+
+  '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Source-aligned All Documents</p>'+
+  '<h2 id="tl-domain-repository-title">TradeLink document workspace</h2></div>'+
+  '<span class="tl-draft-badge">Read-only staging</span></div>'+
+  '<p class="muted">This authoritative document workspace is separate from Board Items. '+
+  'Only a signed, role-authorized Domain DocumentRecord response may appear here. '+
+  'Document reads are '+(TL03_DOMAIN_READS_ENABLED?'subject to signed authorization':
+  'not activated')+'.</p>'+
+  '<p class="tl-draft-boundary" role="note">No mock documents, cross-workspace search, '+
+  'document editing, PDF export, attachment access or workflow transitions. '+
+  'The source workflow state is never inferred from a board status.</p>'+
+  renderTradeLinkDraftList(rows,view,canManage,{readOnly:true})+
+  '<h3>Document modules</h3><nav class="tl-document-module-nav" aria-label="TradeLink document modules">'+
+  typeLabels.map(([id,label])=>'<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
+   '/tradelink/'+escape(id)+'">'+escape(label)+'</a>').join('')+
+  '</nav></section>';
 }
 export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||

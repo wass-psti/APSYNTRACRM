@@ -13,7 +13,8 @@ import {
  updateTradeLinkDraftLocalSummary,
  initialTradeLinkDraftListFilters,normalizeTradeLinkDraftListFilters,
  filterTradeLinkDraftAuthorizedRows,updateTradeLinkDraftListUI,
- renderTradeLinkDraftWorkspace,TradeLinkDraftWorkspace,tradeLinkDraftReady
+ renderTradeLinkDocumentRepository,renderTradeLinkDraftWorkspace,
+ TradeLinkDraftWorkspace,tradeLinkDraftReady
 } from '../tradelink-draft-workspace.js';
 const workspace='00000000-0000-4000-8000-000000000001';
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
@@ -790,7 +791,8 @@ test('source-bound local document search filters only previously authorized page
   {documentNumber:'E-500',documentType:'esi',workflowState:'revision-required',archived:false}
  ];
  assert.deepEqual(initialTradeLinkDraftListFilters(),{
-  query:'',documentType:'all',workflowState:'all',archiveMode:'active'});
+  query:'',documentType:'all',workflowState:'all',archiveMode:'active',
+  sortBy:'documentNumber',sortDirection:'asc'});
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows).map(x=>x.documentNumber),
   ['Q-100','Q-200','PL-400','E-500']);
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{query:' q-',documentType:'quotation',
@@ -805,6 +807,8 @@ test('source-bound local document search filters only previously authorized page
  assert.equal(unsafe.documentType,'all');
  assert.equal(unsafe.workflowState,'all');
  assert.equal(unsafe.archiveMode,'active');
+ assert.equal(unsafe.sortBy,'documentNumber');
+ assert.equal(unsafe.sortDirection,'asc');
  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(null,{}),[]);
  assert.equal(filterTradeLinkDraftAuthorizedRows(Array.from({length:120},
   (_,i)=>({...rows[0],documentNumber:'Q-'+i})),{archiveMode:'all'}).length,50);
@@ -840,6 +844,93 @@ test('document-list DOM filters hide rows and show accessible counts without wri
  assert.equal(TL03_DOMAIN_READS_ENABLED,false);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
 });
+
+test('document workspace is distinct from board projection and honors signed workspace boundary',()=>{
+ const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'documents',
+  draftView:initialTradeLinkDraftView(),canManage:true});
+ assert.match(html,/TradeLink document workspace/);
+ assert.match(html,/Source-aligned All Documents/);
+ assert.match(html,/Board records/);
+ assert.match(html,/not yet the original TradeLink All Documents repository/);
+ assert.match(html,/Document reads are not activated/);
+ for(const name of ['query','documentType','workflowState','archiveMode','sortBy','sortDirection'])
+  assert.ok(html.includes('name="'+name+'"'),name);
+ for(const module of TRADELINK_SOURCE_MODULES)
+  assert.match(html,new RegExp('href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/'+module.key+'"'));
+ assert.doesNotMatch(html,/data-action="tradelink-draft-archive"|data-action="tradelink-draft-open"/);
+ const foreign=renderTradeLinkDocumentRepository({
+  detail,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  view:initialTradeLinkDraftView(),canManage:true});
+ assert.match(foreign,/Signed TradeLink document workspace unavailable/);
+ assert.doesNotMatch(foreign,/data-tradelink-domain-list/);
+});
+
+test('disabled document reads redact even injected authorized-state list rows and never initiate RPC',async()=>{
+ const forged={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
+  rows:[{documentId:'11111111-1111-4111-8111-111111111111',
+   documentNumber:'HIDDEN-DOC-100',documentType:'quotation',
+   workflowState:'approved',revision:5,archived:false}]};
+ const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'documents',
+  draftView:forged,canManage:true});
+ assert.doesNotMatch(html,/HIDDEN-DOC-100|11111111-1111-4111-8111-111111111111/);
+ assert.match(html,/data-tradelink-domain-filter[^>]*disabled/);
+ assert.match(html,/0 of 0 authorized records in this response/);
+ const client=new TradeLinkDraftWorkspace({
+  auth:{getVerifiedUser:async()=>{throw Error('unexpected auth');}},
+  api:{rpc:async()=>{throw Error('unexpected request');}}
+ });
+ assert.deepEqual(await client.list(),{status:'DARK_LAUNCH',rows:[]});
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
+
+test('sorting handles numbered document IDs and numeric revision without re-querying server',()=>{
+ const rows=[
+  {documentNumber:'Q-10',documentType:'quotation',workflowState:'draft',revision:2,archived:false},
+  {documentNumber:'Q-2',documentType:'quotation',workflowState:'draft',revision:11,archived:false},
+  {documentNumber:'PO-3',documentType:'po',workflowState:'approved',revision:4,archived:false}
+ ];
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'documentNumber'})
+  .map(r=>r.documentNumber),['PO-3','Q-2','Q-10']);
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'documentNumber',sortDirection:'desc'})
+  .map(r=>r.documentNumber),['Q-10','Q-2','PO-3']);
+ assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'revision',sortDirection:'desc'})
+  .map(r=>r.revision),[11,4,2]);
+ const normalized=normalizeTradeLinkDraftListFilters({
+  sortBy:'../metadata',sortDirection:'drop',query:'x'.repeat(200)});
+ assert.equal(normalized.sortBy,'documentNumber');
+ assert.equal(normalized.sortDirection,'asc');
+ assert.equal(normalized.query.length,120);
+});
+
+test('sortable authorized document view only reorders current DOM nodes and preserves search count',()=>{
+ const make=(documentNumber,revision)=>({
+  dataset:{documentNumber,documentType:'quotation',workflowState:'draft',
+   revision:String(revision),archived:'false'},hidden:false
+ });
+ const rows=[make('Q-10',2),make('Q-2',11),make('Q-3',5)];
+ const order=[],tbody={appendChild(node){order.push(node.dataset.documentNumber);}};
+ const counter={textContent:''},empty={hidden:true};
+ const container={
+  querySelectorAll:key=>key==='[data-tradelink-domain-record]'?rows:[],
+  querySelector:key=>({
+   '[data-tradelink-domain-list-body]':tbody,
+   '[data-tradelink-domain-count]':counter,
+   '[data-tradelink-domain-no-match]':empty
+  })[key]??null
+ };
+ assert.equal(updateTradeLinkDraftListUI(container,{query:'Q-',sortBy:'revision',sortDirection:'desc'}),3);
+ assert.deepEqual(order,['Q-2','Q-3','Q-10']);
+ assert.equal(counter.textContent,'3 of 3 authorized records in this response');
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/function tradeLinkAuthorizedListRoute\(\)/);
+ assert.match(app,/state\.boardManage/);
+ assert.match(app,/sortBy:get\('sortBy'\),sortDirection:get\('sortDirection'\)/);
+ assert.match(app,/TL03_DOMAIN_READS_ENABLED&&state\.board\?\.board\?\.id===TRADELINK_BOARD_ID/);
+ assert.equal(TL03_DOMAIN_READS_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+});
+
 test('dark launch never renders stale selected document content after read access is disabled',()=>{
  const malicious='"><img src=x onerror=alert(1)>';
  const view={...initialTradeLinkDraftView(),mode:'edit',

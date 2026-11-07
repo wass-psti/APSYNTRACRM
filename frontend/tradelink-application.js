@@ -7,7 +7,8 @@ import {isTradeLinkBoard,tradeLinkSetupStatus,TRADELINK_BOARD_ID} from './tradel
 import {renderTradeLinkActivity} from './tradelink-activity.js';
 import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
-import {renderTradeLinkDraftWorkspace,initialTradeLinkDraftView} from './tradelink-draft-workspace.js';
+import {renderTradeLinkDraftWorkspace,renderTradeLinkDocumentRepository,
+ initialTradeLinkDraftView} from './tradelink-draft-workspace.js';
 
 export const TRADELINK_SOURCE_MODULES=Object.freeze([
  Object.freeze({key:'esi',label:'Electronic SI',short:'ESI',
@@ -73,9 +74,11 @@ function moduleLink(m,section){
   (active?' aria-current="page"':'')+'><span class="tl-module-short">'+esc(m.short)+'</span>'+
   '<span><strong>'+esc(m.label)+'</strong><small>Document module</small></span></a>';
 }
-function renderDocuments(detail){
+function renderDocuments(detail,workspaceId,draftView,canManage){
  const rows=searchTradeLinkBoardItems(detail);
- return '<section class="tl-content-panel" aria-labelledby="tl-documents-title">'+
+ return '<div class="tl-documents-workspace">'+
+  renderTradeLinkDocumentRepository({detail,workspaceId,view:draftView,canManage})+
+  '<section class="tl-content-panel" aria-labelledby="tl-documents-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Authorized board projection</p>'+
   '<h2 id="tl-documents-title">Board records</h2></div>'+
   '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'">Open Board Items</a></div>'+
@@ -89,7 +92,7 @@ function renderDocuments(detail){
   '</tbody></table></div>'+
   '<p class="tl-empty-records" data-tradelink-empty'+(rows.length?' hidden':'')+'>'+
    (rows.length?'No matching board items.':'No authorized board items have been persisted.')+'</p>'+
-  '<p class="tl-search-count" data-tradelink-count role="status" aria-live="polite">'+rows.length+' board record'+(rows.length===1?'':'s')+'</p></section>';
+  '<p class="tl-search-count" data-tradelink-count role="status" aria-live="polite">'+rows.length+' board record'+(rows.length===1?'':'s')+'</p></section></div>';
 }
 function renderModule(m){
  return '<section class="tl-content-panel" aria-labelledby="tl-module-title">'+
@@ -133,7 +136,7 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
    '<h3>Document modules</h3>'+
    TRADELINK_SOURCE_MODULES.map(entry=>moduleLink(entry,current)).join('')+'</nav>'+
    '<div class="tl-app-main">'+
-    (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}):current==='documents'?renderDocuments(detail):current==='activity'?renderTradeLinkActivity(activity||{}):
+    (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage):current==='activity'?renderTradeLinkActivity(activity||{}):
       '<section class="tl-content-panel"><p class="tl-eyebrow">TradeLink application</p><h2>Source-aligned workspace</h2>'+
        '<p class="muted">Open a document module to review its source-defined business purpose and submission requirements. Authorized Board Items can be inspected without creating duplicate records.</p>'+
        '<div class="tl-overview-tiles">'+TRADELINK_SOURCE_MODULES.map(entry=>

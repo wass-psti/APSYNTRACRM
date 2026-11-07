@@ -1407,23 +1407,28 @@ async function loadBoard(boardId,tab,draftType=null){
  if(tab==='issues')await loadIssues(seq);
  if(tab==='tradelink'&&state.tradeLinkSection==='activity'&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkActivity(seq);
- if(tab==='tradelink'&&state.tradeLinkSection==='drafts'&&TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
+ if(tab==='tradelink'&&['drafts','documents'].includes(state.tradeLinkSection)&&
+    TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkDrafts(seq);
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')await loadTimeTracker(seq);
  if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt')await loadFRTFinance(null,seq);
 }
 /** CP-TL-03D: authority and route bound Draft UI, never browser persistence. */
-function tradeLinkDraftRoute(){
+function tradeLinkAuthorizedListRoute(){
  return auth.isSignedIn&&state.view==='board'&&state.tab==='tradelink'&&
-  state.boardId===TRADELINK_BOARD_ID&&state.tradeLinkSection==='drafts'&&
+  state.boardId===TRADELINK_BOARD_ID&&
+  ['drafts','documents'].includes(state.tradeLinkSection)&&
   state.context?.user_id===auth.userId&&
   state.board?.board?.workspace_id===state.context?.workspace_id;
 }
+function tradeLinkDraftRoute(){
+ return tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='drafts';
+}
 async function loadTradeLinkDrafts(seq=routeSerial){
- if(!tradeLinkDraftRoute()||!TL03_DOMAIN_READS_ENABLED||
+ if(!tradeLinkAuthorizedListRoute()||!TL03_DOMAIN_READS_ENABLED||
   state.tradeLinkDraft.busy)return;
  const actor=auth.userId,ws=state.context.workspace_id;
- const same=()=>seq===routeSerial&&tradeLinkDraftRoute()&&
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
   auth.userId===actor&&state.context?.workspace_id===ws;
  state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
  try{
@@ -4644,12 +4649,14 @@ root.addEventListener('click',event=>{
 function captureTradeLinkDraftListFilters(event){
  const control=event.target?.closest?.('[data-tradelink-domain-filter]');
  const container=control?.closest?.('[data-tradelink-domain-list]');
- if(!control||!container||!tradeLinkDraftRoute()||!TL03_DOMAIN_READS_ENABLED||
+ if(!control||!container||!tradeLinkAuthorizedListRoute()||
+  !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
   state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)return false;
  const get=name=>container.querySelector('[data-tradelink-domain-filter][name="'+name+'"]')?.value;
  const filters=normalizeTradeLinkDraftListFilters({
   query:get('query'),documentType:get('documentType'),
-  workflowState:get('workflowState'),archiveMode:get('archiveMode')
+  workflowState:get('workflowState'),archiveMode:get('archiveMode'),
+  sortBy:get('sortBy'),sortDirection:get('sortDirection')
  });
  state.tradeLinkDraft.listFilters=filters;
  updateTradeLinkDraftListUI(container,filters);
