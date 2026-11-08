@@ -121,7 +121,7 @@ test('CLI marks metadata-only acceptance and fails closed with no secret files',
 test('live source catalog probe is read-only, deterministic and returns only hashes/signatures',()=>{
  const { generateLiveCatalogFingerprintSql } = sourceExports;
  const sql=generateLiveCatalogFingerprintSql(manifest,g4b,g4c);
- assert.match(sql,/WITH expected\(signature,expected_sha256\)/);
+ assert.match(sql,/WITH expected\(signature,expected_sha256,expected_definer,/);
  assert.match(sql,/count\(\*\)=74/);
  assert.match(sql,/SOURCE_OR_PERMISSION_BASELINE_DRIFT__REVIEW_REQUIRED/);
  assert.match(sql,/HISTORICAL_BASELINE_MATCH__RUNTIME_UNVERIFIED/);
