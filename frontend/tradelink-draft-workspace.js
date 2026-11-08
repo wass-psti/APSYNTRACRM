@@ -6,7 +6,7 @@ import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
- TL03_DOMAIN_WRITES_ENABLED,validateTradeLinkDraftEnvelope,
+ TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,validateTradeLinkDraftEnvelope,
  normalizeTradeLinkDomainRow} from './tradelink-domain-client.js';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
@@ -262,6 +262,10 @@ export class TradeLinkDraftWorkspace{
  async read(documentId){
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
   return this.client.read(documentId);
+ }
+ async submit({documentId,expectedRevision,documentType}={}){
+  if(!TL03_WORKFLOW_SUBMIT_ENABLED)disabled();
+  return this.client.submit({documentId,expectedRevision,documentType});
  }
  async save({documentId,expectedRevision=0,draft}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
@@ -1015,6 +1019,12 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
       (readOnly?'<td><button type="button" class="secondary" '+
        'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
        '">Preview saved</button> '+
+       (canManage&&row.workflowState==='draft'&&!row.archived?
+        '<button type="button" class="secondary" data-action="tradelink-document-submit" '+
+         'data-id="'+escape(row.documentId)+'"'+
+         (TL03_WORKFLOW_SUBMIT_ENABLED?'':' disabled title="Submission backend not activated"')+
+         '>'+(TL03_WORKFLOW_SUBMIT_ENABLED?'Submit Draft':'Submit (pending activation)')+
+         '</button> ':'')+
        (canManage&&TL03_DOMAIN_WRITES_ENABLED&&row.workflowState==='draft'&&
         !row.archived&&tradeLinkDraftEditHref(row.documentId)?
         '<a class="secondary" data-tradelink-document-edit href="'+

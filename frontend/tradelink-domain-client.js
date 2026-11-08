@@ -9,6 +9,10 @@ import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 export const TL03_DOMAIN_READS_ENABLED=true;
 // Stage B authenticated EXECUTE grants are live; server enforces session and workspace permissions.
 export const TL03_DOMAIN_WRITES_ENABLED=true;
+// The workflow backend adds an authenticated RPC and changes an audit CHECK.
+// Keep the Submit button disabled until that exact production candidate is
+// approved, installed, and separately verified. Existing Draft writes remain on.
+export const TL03_WORKFLOW_SUBMIT_ENABLED=false;
 const TYPES=new Set(['esi','packing','delivery','payment','quotation','po']);
 const STATES=new Set(['draft','submitted','under-review','revision-required',
  'approved','rejected','completed','cancelled']);
@@ -79,6 +83,17 @@ export function tradeLinkSavedDraftMatches(record,submitted){
   record.document_type===submitted?.documentType&&
   record.document_number===submitted?.documentNumber&&
   sameTradeLinkJsonValue(record.content,submitted);
+}
+export function normalizeTradeLinkSubmitReceipt(value,documentId,documentType,expectedRevision){
+ const target=documentType==='packing'?'completed':'submitted';
+ if(!validUuid(documentId)||!TYPES.has(documentType)||
+  !Number.isSafeInteger(expectedRevision)||expectedRevision<1||
+  !value||typeof value!=='object'||Array.isArray(value)||
+  value.documentId!==documentId||!validUuid(value.boardItemId)||
+  value.revision!==expectedRevision+1||value.state!==target||
+  value.operation!=='submit'||value.from!=='draft')
+  deny('TradeLink signed submission receipt mismatch.',409);
+ return value;
 }
 export class TradeLinkDomainClient{
  constructor({api,auth}={}){this.api=api;this.auth=auth;}
@@ -152,6 +167,18 @@ export class TradeLinkDomainClient{
         Date.parse(response.rows.at(-1).updatedAt))))
     deny('Invalid authorized TradeLink server page response.',409);
   return response;
+ }
+ async submit({documentId,expectedRevision,documentType}={}){
+  if(!TL03_WORKFLOW_SUBMIT_ENABLED)
+   deny('TradeLink submission has not been activated by the administrator.',503);
+  if(!validUuid(documentId)||!TYPES.has(documentType)||
+    !Number.isSafeInteger(expectedRevision)||expectedRevision<1)
+   deny('Invalid TradeLink submission request.',400);
+  await this.session();
+  const receipt=await this.api.rpc('tl03_document_submit',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+   p_expected_revision:expectedRevision});
+  return normalizeTradeLinkSubmitReceipt(receipt,documentId,documentType,expectedRevision);
  }
  async read(documentId){
   if(!TL03_DOMAIN_READS_ENABLED)deny('TradeLink domain reads await production activation.',503);
