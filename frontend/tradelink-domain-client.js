@@ -55,6 +55,31 @@ export function normalizeTradeLinkDomainRow(row,workspaceId,documentId){
   deny('Invalid authorized TradeLink document response.',409);
  return row;
 }
+/** Check the *entire* submitted payload after an authoritative signed read.
+ * PostgreSQL jsonb can reorder object keys, so raw JSON.stringify equality
+ * would incorrectly reject valid saves. Array order and every field/value
+ * are still checked exactly. Never log financial/customer contents.
+ */
+function sameTradeLinkJsonValue(left,right,depth=0){
+ if(left===right)return true;
+ if(depth>5)return false;
+ if(Array.isArray(left)||Array.isArray(right))
+  return Array.isArray(left)&&Array.isArray(right)&&
+   left.length===right.length&&
+   left.every((value,index)=>sameTradeLinkJsonValue(value,right[index],depth+1));
+ if(!left||!right||typeof left!=='object'||typeof right!=='object')
+  return false;
+ const leftKeys=Object.keys(left),rightKeys=Object.keys(right);
+ return leftKeys.length===rightKeys.length&&leftKeys.every(key=>
+  Object.hasOwn(right,key)&&
+   sameTradeLinkJsonValue(left[key],right[key],depth+1));
+}
+export function tradeLinkSavedDraftMatches(record,submitted){
+ return !!record&&!!record.content&&
+  record.document_type===submitted?.documentType&&
+  record.document_number===submitted?.documentNumber&&
+  sameTradeLinkJsonValue(record.content,submitted);
+}
 export class TradeLinkDomainClient{
  constructor({api,auth}={}){this.api=api;this.auth=auth;}
  async session(){
