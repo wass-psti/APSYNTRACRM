@@ -2418,3 +2418,202 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
     grid-template-columns:minmax(0,1fr);
   }
 }
+
+/* Overview route — final soft minimalist detail reconciliation.
+   Only presentation is changed; live metrics, board navigation, creation,
+   workspace context and signed-session actions remain in their controllers. */
+#app .aps-overview-shell{
+  --ov-ink:var(--sm-ink);
+  --ov-sub:var(--sm-sub);
+  --ov-line:var(--sm-border);
+  --ov-violet:var(--sm-accent);
+  background:var(--sm-bg);
+}
+#app .aps-overview-shell>.topbar{
+  background:var(--sm-surface);
+  border-bottom:1px solid var(--sm-border);
+  box-shadow:none;
+}
+#app .aps-overview-shell .topbar .breadcrumb{color:var(--sm-sub)}
+#app .aps-overview-shell .topbar .breadcrumb strong{
+  color:var(--sm-ink);font-weight:700;
+}
+#app .aps-overview-shell .topbar .top-pill{
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  box-shadow:none;font-weight:670;
+}
+#app .aps-overview-shell .topbar .top-avatar{
+  color:#fff;background:var(--sm-accent);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+  transition:background-color var(--sm-fast);
+}
+#app .aps-overview-shell .topbar .top-avatar:hover{
+  background:var(--sm-accent-hover);
+  box-shadow:none;transform:none;
+}
+#app .aps-overview-shell>.main-content{
+  width:100%;max-width:none;min-width:0;
+  box-sizing:border-box;
+  padding:clamp(20px,2.5vw,36px) clamp(18px,3vw,48px) 86px;
+}
+#app .aps-overview .overview-hero{
+  padding:clamp(22px,2.8vw,34px);
+  min-height:145px;
+}
+#app .aps-overview .overview-hero .overview-wave{color:var(--sm-accent)}
+#app .aps-overview .overview-hero .head-actions button{
+  min-height:43px;
+  border-radius:var(--sm-radius-control);
+  font-size:12px;
+  font-weight:710;
+  box-shadow:none;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast);
+}
+#app .aps-overview .overview-stat-grid{gap:15px}
+#app .aps-overview .stat-card{
+  min-width:0;
+  padding:clamp(17px,1.8vw,22px);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-overview .stat-icon{
+  color:var(--sm-accent);
+  background:var(--sm-accent-soft);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+}
+#app .aps-overview .stat-icon.green{
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+}
+#app .aps-overview .stat-icon.orange{
+  color:var(--sm-warning);
+  background:var(--sm-warning-soft);
+}
+#app .aps-overview .stat-icon.pink{
+  color:var(--sm-accent);
+  background:var(--sm-accent-soft);
+}
+#app .aps-overview .stat-label{
+  color:var(--sm-sub);
+  font-weight:680;
+}
+#app .aps-overview .stat-value{
+  color:var(--sm-ink);
+  font-weight:760;
+  letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;
+}
+#app .aps-overview .stat-footer{
+  color:var(--sm-sub);
+  line-height:1.6;
+}
+#app .aps-overview .overview-section-eyebrow{
+  color:var(--sm-accent-hover);
+  font-weight:730;
+  letter-spacing:.09em;
+}
+#app .aps-overview .overview-section-heading .section-title{
+  color:var(--sm-ink);
+  font-weight:750;
+  letter-spacing:-.02em;
+}
+#app .aps-overview .overview-section-heading .inline-link{
+  color:var(--sm-accent-hover);
+  font-weight:710;
+}
+#app .aps-overview .overview-section-heading .inline-link:focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:3px;
+  border-radius:var(--sm-radius-xs);
+}
+#app .aps-overview .overview-empty{
+  padding:clamp(22px,3vw,38px);
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-overview .overview-empty h3{
+  color:var(--sm-ink);
+  font-weight:750;
+}
+#app .aps-overview .overview-empty p{
+  color:var(--sm-sub);
+  line-height:1.7;
+}
+#app .aps-overview .overview-empty button{
+  min-height:44px;
+  color:#fff;
+  background:var(--sm-accent);
+  border:1px solid var(--sm-accent);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+  font-weight:710;
+}
+#app .aps-overview .overview-empty button:hover:not(:disabled){
+  background:var(--sm-accent-hover);
+  border-color:var(--sm-accent-hover);
+  transform:none;box-shadow:none;
+}
+#app .aps-overview .overview-empty button:focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:3px;
+}
+#app .aps-overview .overview-essentials{
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-overview .overview-essentials .activity-item{
+  border-color:var(--sm-border);
+}
+#app .aps-overview .overview-essentials .activity-avatar{
+  color:var(--sm-accent);
+  background:var(--sm-accent-soft);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-overview .overview-essentials .activity-item:nth-child(2) .activity-avatar{
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+}
+#app .aps-overview .overview-essentials .activity-item:nth-child(3) .activity-avatar{
+  color:var(--sm-accent);
+  background:var(--sm-accent-soft);
+}
+#app .aps-overview .overview-essentials .activity-item b{
+  color:var(--sm-ink);
+  font-weight:720;
+}
+#app .aps-overview .overview-essentials .activity-item small{
+  color:var(--sm-sub);
+  line-height:1.65;
+}
+#app .aps-overview .overview-essentials-indicator{
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+  border-radius:var(--sm-radius-pill);
+}
+@media(max-width:650px){
+  #app .aps-overview-shell>.main-content{padding:20px 15px 65px}
+  #app .aps-overview .overview-hero{min-height:0;padding:22px 20px}
+  #app .aps-overview .overview-stat-grid{gap:12px}
+  #app .aps-overview .stat-card{padding:17px}
+  #app .aps-overview .overview-empty{padding:22px 17px}
+}
+@media(prefers-reduced-motion:reduce){
+  #app .aps-overview .overview-hero .head-actions button,
+  #app .aps-overview .overview-empty button{transition:none}
+}
+@media(prefers-contrast:more){
+  #app .aps-overview .stat-card,
+  #app .aps-overview .overview-empty,
+  #app .aps-overview .overview-essentials{border-color:#778399}
+}
