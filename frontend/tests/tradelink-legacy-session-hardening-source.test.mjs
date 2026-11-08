@@ -86,5 +86,5 @@ test('disposable tests model all distinct cases and production feature flags are
  assert.match(checks,/Foreign workspace read exposed/);
  assert.match(checks,/Valid manager CAS write broken/);
  assert.match(client,/TL03_DOMAIN_READS_ENABLED=true/);
- assert.match(client,/TL03_DOMAIN_WRITES_ENABLED=false/);
+ assert.match(client,/TL03_DOMAIN_WRITES_ENABLED=true/);
 });
