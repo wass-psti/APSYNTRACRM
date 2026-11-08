@@ -2617,3 +2617,258 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   #app .aps-overview .overview-empty,
   #app .aps-overview .overview-essentials{border-color:#778399}
 }
+
+/* Workspace collaboration invitation dialog — soft minimalism.
+   Overlay is mounted on document.body, so do not scope these rules under #app.
+   Invitation delivery remains disabled until signed server-side activation. */
+.ws02-invite-launch{
+  min-height:40px;
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  border:1px solid #DEDFEC;
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+  font-size:12px;
+  font-weight:700;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast);
+}
+.ws02-invite-launch:hover{
+  color:var(--sm-accent-hover);
+  background:#E5E6F5;
+  border-color:var(--sm-border-strong);
+  transform:none;
+}
+.ws02-invite-launch:focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:3px;
+}
+.ws02-invite-glyph{
+  color:#fff;
+  background:var(--sm-accent);
+  border-radius:7px;
+}
+.ws01-overlay.ws01-invite{
+  padding:clamp(12px,3vw,28px);
+  background:rgba(30,39,58,.42);
+  backdrop-filter:blur(3px);
+}
+.ws01-invite .ws02-invite-card{
+  box-sizing:border-box;
+  width:min(660px,100%);
+  max-height:calc(100dvh - 32px);
+  padding:clamp(20px,3vw,32px);
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-panel);
+  box-shadow:var(--sm-shadow-popover);
+  animation:ws02-soft-enter var(--sm-normal) both;
+  overscroll-behavior:contain;
+  scrollbar-color:var(--sm-border-strong) transparent;
+}
+@keyframes ws02-soft-enter{
+  from{opacity:0;transform:translateY(7px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.ws01-invite .ws02-invite-heading{
+  align-items:center;
+  gap:16px;
+}
+.ws01-invite .ws02-invite-card .ws02-eyebrow{
+  color:var(--sm-accent-hover);
+  font-size:10px;
+  letter-spacing:1.05px;
+  font-weight:740;
+}
+.ws01-invite .ws02-invite-heading h2{
+  margin:7px 0 0;
+  color:var(--sm-ink);
+  font-size:clamp(20px,2.4vw,27px);
+  line-height:1.25;
+  letter-spacing:-.035em;
+  font-weight:760;
+}
+.ws01-invite .ws02-invite-heading [data-ws01-close]{
+  display:grid;
+  place-items:center;
+  flex:none;
+  width:38px;
+  height:38px;
+  padding:0;
+  color:var(--sm-sub);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  font-size:24px;
+  line-height:1;
+  cursor:pointer;
+}
+.ws01-invite .ws02-invite-heading [data-ws01-close]:hover{
+  color:var(--sm-ink);
+  background:var(--sm-surface-soft);
+}
+.ws01-invite .ws02-invite-subtitle{
+  margin:15px 0 22px;
+  color:var(--sm-sub);
+  font-size:12.5px;
+  line-height:1.7;
+}
+.ws01-invite .ws02-invite-card form{
+  gap:17px;
+}
+.ws01-invite .ws02-invite-fields{
+  gap:16px;
+  grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);
+}
+.ws01-invite .ws02-invite-fields>div{gap:8px}
+.ws01-invite .ws02-invite-card label{
+  color:var(--sm-ink);
+  font-size:12px;
+  font-weight:710;
+}
+.ws01-invite .ws02-invite-card label span{
+  color:var(--sm-sub);
+  font-weight:520;
+}
+.ws01-invite .ws02-invite-card textarea,
+.ws01-invite .ws02-invite-card select{
+  box-sizing:border-box;
+  min-height:46px;
+  padding:12px 13px;
+  color:var(--sm-ink);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border-strong);
+  border-radius:var(--sm-radius-control);
+  font-size:12.5px;
+  line-height:1.55;
+  box-shadow:none;
+  transition:border-color var(--sm-fast),box-shadow var(--sm-fast);
+}
+.ws01-invite .ws02-invite-card textarea::placeholder{
+  color:var(--sm-sub);
+  opacity:1;
+}
+.ws01-invite .ws02-invite-card textarea:hover:not(:disabled),
+.ws01-invite .ws02-invite-card select:hover:not(:disabled){
+  border-color:var(--sm-accent);
+}
+.ws01-invite .ws02-invite-card textarea:focus-visible,
+.ws01-invite .ws02-invite-card select:focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:2px;
+  border-color:var(--sm-accent);
+  box-shadow:var(--sm-focus);
+}
+.ws01-invite .ws02-invite-card small{
+  color:var(--sm-sub);
+  font-size:11px;
+  line-height:1.6;
+}
+.ws01-invite .ws02-invite-context{
+  gap:10px;
+  padding-top:1px;
+}
+.ws01-invite .ws02-invite-context>span{
+  color:var(--sm-text);
+  font-size:11px;
+  font-weight:710;
+}
+.ws01-invite .ws02-invite-context>div{gap:8px}
+.ws01-invite .ws02-invite-context button{
+  min-height:35px;
+  padding:8px 12px;
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-pill);
+  font-size:11px;
+  font-weight:650;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast);
+}
+.ws01-invite .ws02-invite-context button:hover{
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  border-color:var(--sm-border-strong);
+}
+.ws01-invite .ws02-invite-card .ws02-invite-safety{
+  margin:0;
+  padding:13px 15px;
+  color:var(--sm-warning);
+  background:var(--sm-warning-soft);
+  border:1px solid #EDD9B5;
+  border-left:3px solid var(--sm-warning);
+  border-radius:var(--sm-radius-control);
+  font-size:11.5px;
+  line-height:1.7;
+}
+.ws01-invite .ws02-invite-feedback{
+  color:var(--sm-accent-hover);
+  min-height:18px;
+  font-size:12px;
+  line-height:1.65;
+  overflow-wrap:anywhere;
+}
+.ws01-invite .ws02-invite-footer{
+  gap:10px;
+  margin-top:0;
+  padding-top:19px;
+  border-top:1px solid var(--sm-border);
+}
+.ws01-invite .ws02-invite-footer button{
+  min-height:43px;
+  padding:10px 15px;
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  font-size:12px;
+  font-weight:700;
+  box-shadow:none;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast);
+}
+.ws01-invite .ws02-invite-footer button:hover:not(:disabled){
+  color:var(--sm-ink);
+  background:var(--sm-surface-soft);
+  border-color:var(--sm-border-strong);
+}
+.ws01-invite .ws02-invite-footer button[type=submit]{
+  color:#fff;
+  background:var(--sm-accent);
+  border-color:var(--sm-accent);
+}
+.ws01-invite .ws02-invite-footer button[type=submit]:hover:not(:disabled){
+  color:#fff;
+  background:var(--sm-accent-hover);
+  border-color:var(--sm-accent-hover);
+}
+.ws01-invite .ws02-invite-footer .ws02-send{
+  color:var(--sm-sub);
+  background:var(--sm-surface-soft);
+  border:1px dashed var(--sm-border-strong);
+}
+.ws01-invite .ws02-invite-footer button:disabled{
+  cursor:not-allowed;
+  opacity:.8;
+}
+.ws01-invite .ws02-invite-card button:focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:3px;
+}
+@media(max-width:700px){
+  .ws01-invite .ws02-invite-card{padding:22px 18px}
+  .ws01-invite .ws02-invite-fields{grid-template-columns:minmax(0,1fr)}
+  .ws01-invite .ws02-invite-footer{align-items:stretch}
+  .ws01-invite .ws02-invite-footer button{flex:1 1 100%}
+}
+@media(prefers-reduced-motion:reduce){
+  .ws01-invite .ws02-invite-card{animation:none}
+  .ws02-invite-launch,
+  .ws01-invite .ws02-invite-card button,
+  .ws01-invite .ws02-invite-card textarea,
+  .ws01-invite .ws02-invite-card select{transition:none}
+}
+@media(prefers-contrast:more){
+  .ws01-invite .ws02-invite-card{border-color:#778399}
+  .ws01-invite .ws02-invite-card small,
+  .ws01-invite .ws02-invite-subtitle{color:var(--sm-ink)}
+}
