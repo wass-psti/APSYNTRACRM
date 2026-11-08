@@ -131,8 +131,11 @@ test('sanitizer rejects forged PASS and UI never renders retained row/user ident
  assert.doesNotMatch(JSON.stringify(safe),/synthetic_signed_token_/);
  const html=renderWs02dB3ForeignRlsDenial({hasFixture:true});
  assert.match(html,/without refreshing this tab/);
- assert.match(html,/Use Step 2 ONLY under the foreign account/);
+ assert.match(html,/Step 2 ONLY/);
+ assert.match(html,/security-ws02d-b3-rls-handoff/);
+ assert.match(html,/sign out this session only/);
  assert.doesNotMatch(html,/11111111|cccccccc-cccc/);
- assert.match(renderWs02dB3ForeignRlsDenial({hasFixture:false}),
-  /data-action="security-ws02d-b3-rls-verify" disabled/);
+ const empty=renderWs02dB3ForeignRlsDenial({hasFixture:false});
+ assert.match(empty,/data-action="security-ws02d-b3-rls-verify" disabled/);
+ assert.doesNotMatch(empty,/security-ws02d-b3-rls-handoff/);
 });
