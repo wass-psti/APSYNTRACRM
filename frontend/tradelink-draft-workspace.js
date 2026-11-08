@@ -38,7 +38,7 @@ export function initialTradeLinkDraftView(documentType=null){
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
  return {status:'READ_PENDING',rows:[],selected:null,documentPreview:null,busy:false,error:'',
   message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,
-  listFilters:initialTradeLinkDraftListFilters(),
+  listFilters:initialTradeLinkDraftListFilters(),listPage:null,
   formValues:selected?{documentType:selected}:null};
 }
 /**
@@ -240,6 +240,16 @@ export class TradeLinkDraftWorkspace{
  async list(){
   if(!TL03_DOMAIN_READS_ENABLED)return {status:'DARK_LAUNCH',rows:[]};
   return {status:'AUTHORIZED_READ',rows:await this.client.list(50)};
+ }
+ async searchPage({filters=initialTradeLinkDraftListFilters(),cursor=null}={}){
+  if(!TL03_DOMAIN_READS_ENABLED)disabled();
+  const f=normalizeTradeLinkDraftListFilters(filters);
+  const page=await this.client.searchPage({
+   query:f.query,documentType:f.documentType,workflowState:f.workflowState,
+   archiveMode:f.archiveMode,cursor,limit:50});
+  return {status:'AUTHORIZED_READ',rows:page.rows,
+   listPage:{server:true,hasMore:page.hasMore,nextCursor:page.nextCursor,
+    cursor,history:[],pageIndex:0,appliedFilters:f}};
  }
  async read(documentId){
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
@@ -935,8 +945,10 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
  const enabled=TL03_DOMAIN_READS_ENABLED&&canManage&&view.status==='AUTHORIZED_READ';
  const records=enabled?rows:[];
  const filters=normalizeTradeLinkDraftListFilters(view.listFilters);
- const displayed=filterTradeLinkDraftAuthorizedRows(records,filters);
- const ordered=sortTradeLinkDraftRows(records,filters);
+ const page=readOnly&&enabled&&view.listPage?.server===true?view.listPage:null;
+ const applied=page?normalizeTradeLinkDraftListFilters(page.appliedFilters):filters;
+ const displayed=filterTradeLinkDraftAuthorizedRows(records,applied);
+ const ordered=sortTradeLinkDraftRows(records,applied);
  const disabledAttr=enabled?'':' disabled';
  const filterSelect=(name,label,values,value)=>
   '<label class="tl-draft-field"><span>'+escape(label)+'</span>'+
@@ -947,7 +959,8 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
   '<div class="tl-draft-list-filters" role="search" aria-label="Search authorized TradeLink Draft records">'+
    '<label class="tl-draft-field"><span>Search document number</span>'+
     '<input name="query" type="search" maxlength="120" autocomplete="off" '+
-    'placeholder="Search this authorized page" value="'+escape(filters.query)+'" '+
+    'placeholder="'+(page?'Search all authorized documents':'Search this authorized page')+
+    '" value="'+escape(filters.query)+'" '+
     'data-tradelink-domain-filter aria-describedby="tl-draft-search-scope"'+disabledAttr+'></label>'+
    filterSelect('documentType','Document module',draftListTypes,filters.documentType)+
    filterSelect('workflowState','Workflow state',draftListStates,filters.workflowState)+
@@ -955,9 +968,22 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
    filterSelect('sortBy','Sort by',draftSortFields,filters.sortBy)+
    filterSelect('sortDirection','Sort order',draftSortDirections,filters.sortDirection)+
   '</div>'+
-  '<p id="tl-draft-search-scope" class="muted">Search and filters apply only to the '+
-    'current signed, authorized response (maximum 50 records). They do not query '+
-    'other workspaces or fetch additional pages.</p>'+
+  (page?
+   '<div class="tl-draft-pagination-controls" aria-label="Authorized document search">'+
+    '<button type="button" class="secondary" data-action="tradelink-documents-search"'+
+    (view.busy?' disabled':'')+'>Search documents</button>'+
+    '<button type="button" class="secondary" data-action="tradelink-documents-previous"'+
+    (!page.history?.length||view.busy?' disabled':'')+'>Previous page</button>'+
+    '<span role="status">Page '+escape(page.pageIndex+1)+'</span>'+
+    '<button type="button" class="secondary" data-action="tradelink-documents-next"'+
+    (!page.hasMore||view.busy?' disabled':'')+'>Next page</button></div>':'')+
+  '<p id="tl-draft-search-scope" class="muted">'+
+    (page?'Signed server search and filters cover all authorized documents in this Board. '+
+      'Results are paged newest-first (50 per page); Sort by applies to the visible page. '+
+      'Select Search documents to apply new criteria.':
+      'Search and filters apply only to the current signed, authorized response '+
+      '(maximum 50 records). They do not query other workspaces or fetch additional pages.')+
+   '</p>'+
   '<p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
    displayed.length+' of '+records.length+' authorized records in this response</p>'+
   (records.length?
@@ -969,7 +995,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
     '<th scope="col">Actions</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
     ordered.map(row=>{
-     const match=tradeLinkDraftRowMatches(row,filters);
+     const match=tradeLinkDraftRowMatches(row,applied);
      return '<tr data-tradelink-domain-record data-document-number="'+
       escape(row.documentNumber)+'" data-document-type="'+escape(row.documentType)+
       '" data-workflow-state="'+escape(row.workflowState)+'" data-revision="'+

@@ -88,6 +88,46 @@ export class TradeLinkDomainClient{
    deny('Invalid TradeLink document list response.',409);
   return rows;
  }
+ async searchPage({query='',documentType='all',workflowState='all',
+  archiveMode='active',cursor=null,limit=50}={}){
+  if(!TL03_DOMAIN_READS_ENABLED)
+   deny('TradeLink domain reads await production activation.',503);
+  if(typeof query!=='string'||query.length>120||
+    !TYPES.has(documentType)&&documentType!=='all'||
+    !STATES.has(workflowState)&&workflowState!=='all'||
+    !['all','active','archived'].includes(archiveMode)||
+    !Number.isSafeInteger(limit)||limit<1||limit>50||
+    (cursor!==null&&(!cursor||typeof cursor.updatedAt!=='string'||
+      !Number.isFinite(Date.parse(cursor.updatedAt))||
+      !validUuid(cursor.documentId))))
+   deny('Invalid TradeLink server search request.',400);
+  await this.session();
+  const response=await this.api.rpc('tl03_documents_page',{
+   p_board_id:TRADELINK_BOARD_ID,p_search:query,
+   p_document_type:documentType,p_workflow_state:workflowState,
+   p_archive_mode:archiveMode,p_before_at:cursor?.updatedAt??null,
+   p_before_id:cursor?.documentId??null,p_limit:limit
+  });
+  if(!response||typeof response!=='object'||Array.isArray(response)||
+    !Array.isArray(response.rows)||response.rows.length>limit||
+    typeof response.hasMore!=='boolean'||
+    (response.hasMore!==Boolean(response.nextCursor))||
+    (response.nextCursor!==null&&
+      (!validUuid(response.nextCursor?.documentId)||
+       typeof response.nextCursor?.updatedAt!=='string'||
+       !Number.isFinite(Date.parse(response.nextCursor.updatedAt))))||
+    response.rows.some(r=>!validUuid(r?.documentId)||!validUuid(r?.boardItemId)||
+      !TYPES.has(r?.documentType)||!STATES.has(r?.workflowState)||
+      typeof r?.documentNumber!=='string'||typeof r?.archived!=='boolean'||
+      !Number.isSafeInteger(r?.revision)||r.revision<1||
+      typeof r?.updatedAt!=='string'||!Number.isFinite(Date.parse(r.updatedAt)))||
+    (response.hasMore&&(!response.rows.length||
+      response.nextCursor.documentId!==response.rows.at(-1).documentId||
+      Date.parse(response.nextCursor.updatedAt)!==
+        Date.parse(response.rows.at(-1).updatedAt))))
+    deny('Invalid authorized TradeLink server page response.',409);
+  return response;
+ }
  async read(documentId){
   if(!TL03_DOMAIN_READS_ENABLED)deny('TradeLink domain reads await production activation.',503);
   if(!validUuid(documentId))deny('Invalid document identifier.',400);
