@@ -850,7 +850,7 @@ function settingsPage(){
  <div class="settings-detail settings-detail-status"><label>Account status</label><strong><span class="status done">${e(p.status)}</span></strong></div>
  <div class="settings-detail"><label>Workspace</label><strong>${e(workspaceName())}</strong></div>
  <div class="settings-detail settings-detail-wide settings-detail-identifier"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div><p class="settings-profile-footnote">${settingsIcon('shield')}<span>Identity details are provided by your signed workspace session.</span></p></div></section>
- <section class="panel settings-session-panel settings-entrance" aria-labelledby="settings-session-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('lock')}</span><h3 id="settings-session-heading">Session security</h3></div><span class="settings-session-indicator"><span class="online-dot"></span>Authenticated</span></div>
+ ${state.roleVerified===true?`<section class="panel settings-session-panel settings-entrance" aria-labelledby="settings-session-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('lock')}</span><h3 id="settings-session-heading">Session security</h3></div><span class="settings-session-indicator"><span class="online-dot"></span>Authenticated</span></div>
  <div class="panel-body settings-panel-body"><div class="settings-session-intro"><span class="settings-session-intro-badge" aria-hidden="true">${settingsIcon('shield')}</span><p class="muted csp-u032" >Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p></div>
  <div class="note settings-session-callout">${settingsIcon('shield')}<span>The application never requires a database password or privileged backend key. Permissions are enforced by the existing workspace RPCs and row-level security.</span></div>
  <div class="settings-detail settings-auth-detail"><label>Authentication</label><strong>Signed in and verified</strong></div>
@@ -881,7 +881,7 @@ function settingsPage(){
   <div class="csp-u058" >${e(check.detail)}</div></div>`).join('')}
   <p class="muted csp-u026" >These checks do not certify the local 5173 host or native transaction writes.</p></div>` : ''}
  </div>
- </div></section></div></div>`;
+ </div></section>`:''}</div></div>`;
 }
 function preserveTimeTrackerLogExpansion(){
  if(state.view!=='board'||state.tab!=='attendance'||state.ttView!=='log'||
@@ -5202,6 +5202,7 @@ case 'new-group':{
    break;
  }
  case 'board-tt-signed-verify':{
+   if(state.roleVerified!==true || !(await roleConfig.bootstrapVerified())){toast('Bootstrap administrator access required.',true);break;}
    if(state.boardTtSignedBusy||!state.context)return;
    state.boardTtSignedBusy=true;state.boardTtSignedResult=null;render();
    try{
@@ -5220,6 +5221,7 @@ case 'new-group':{
    break;
  }
  case 'verify-backend':{
+   if(state.roleVerified!==true || !(await roleConfig.bootstrapVerified())){toast('Bootstrap administrator access required.',true);break;}
    if(state.acceptanceBusy)return;
    state.acceptanceBusy=true;state.acceptance=null;render();
    try{
@@ -5266,6 +5268,7 @@ case 'new-group':{
    break;
  }
  case 'copy-token':{
+   if(state.roleVerified!==true || !(await roleConfig.bootstrapVerified())){toast('Bootstrap administrator access required.',true);break;}
    if(!confirm('Copy your short-lived access token? Anyone with this token can act as your account. Never share it publicly.'))return;
    try{const token=await auth.copyAccessToken();await navigator.clipboard.writeText(token);toast('Token copied. Use it only in your local acceptance test.');}
    catch(err){notice(err);}break;
