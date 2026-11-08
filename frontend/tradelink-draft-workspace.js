@@ -8,7 +8,7 @@ import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
  TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
- validateTradeLinkDraftEnvelope,
+ TL03_WORKFLOW_OPERATIONAL_ENABLED,validateTradeLinkDraftEnvelope,
  normalizeTradeLinkDomainRow} from './tradelink-domain-client.js';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
@@ -287,6 +287,11 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_WORKFLOW_DECISION_ENABLED)disabled();
   return this.client.decide({
    documentId,expectedRevision,action,fromState,reason});
+ }
+ async operate({documentId,expectedRevision,documentType,action,fromState,reason}={}){
+  if(!TL03_WORKFLOW_OPERATIONAL_ENABLED)disabled();
+  return this.client.operate({
+   documentId,expectedRevision,documentType,action,fromState,reason});
  }
  async save({documentId,expectedRevision=0,draft,workflowState='draft'}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
@@ -759,7 +764,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       inputUnit,'type="number" min="0" max="1000000000000" step="any"')+
      field('Bank name (for cheque)','bankName',fieldValue('bankName',data.bankName||''),'maxlength="5000"')+
      field('Cheque number (for cheque)','chequeNumber',fieldValue('chequeNumber',data.chequeNumber||''),'maxlength="5000"')+
-     field('Received by','receivedBy',fieldValue('receivedBy',data.receivedBy||''),'maxlength="5000" required')+
+     field('Received by (signed account email)','receivedBy',
+      fieldValue('receivedBy',data.receivedBy||''),'maxlength="254" required')+
      field('Verified by','verifiedBy',fieldValue('verifiedBy',data.verifiedBy||''),'maxlength="5000" required')+
     '</fieldset>'+
     '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
@@ -776,10 +782,12 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '</fieldset>'+
     (type==='delivery'?
      '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Delivery responsibility · preview only</legend>'+
-      field('QC assignee','checkedBy',fieldValue('checkedBy',data.checkedBy||''),
-       'maxlength="5000" required')+
-      field('Logistics assignee','deliveredBy',fieldValue('deliveredBy',data.deliveredBy||''),
-       'maxlength="5000" required')+
+      field('QC assignee (signed account email)','checkedBy',
+       fieldValue('checkedBy',data.checkedBy||''),
+       'maxlength="254" required')+
+      field('Logistics assignee (signed account email)','deliveredBy',
+       fieldValue('deliveredBy',data.deliveredBy||''),
+       'maxlength="254" required')+
       field('Received by (optional)','receivedBy',fieldValue('receivedBy',data.receivedBy||''),
        'maxlength="5000"')+
      '</fieldset>':'')+
@@ -1081,6 +1089,29 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
         row.documentType!=='packing'?
         '<button type="button" class="secondary" data-action="tradelink-document-reject" '+
          'data-id="'+escape(row.documentId)+'">Reject</button> ':'')+
+       (canManage&&TL03_WORKFLOW_OPERATIONAL_ENABLED&&!row.archived&&
+        ['submitted','under-review'].includes(row.workflowState)&&
+        row.documentType==='delivery'?
+        '<button type="button" class="secondary" data-action="tradelink-operational-checked" '+
+         'data-id="'+escape(row.documentId)+'">Record QC timestamp</button> '+
+        '<button type="button" class="secondary" data-action="tradelink-operational-delivered" '+
+         'data-id="'+escape(row.documentId)+'">Record delivery timestamp</button> ':'')+
+       (canManage&&TL03_WORKFLOW_OPERATIONAL_ENABLED&&!row.archived&&
+        ['submitted','under-review'].includes(row.workflowState)&&
+        row.documentType==='payment'?
+        '<button type="button" class="secondary" data-action="tradelink-operational-received" '+
+         'data-id="'+escape(row.documentId)+'">Record receipt timestamp</button> ':'')+
+       (canManage&&TL03_WORKFLOW_OPERATIONAL_ENABLED&&!row.archived&&
+        (row.workflowState==='approved'&&
+          ['esi','quotation','po'].includes(row.documentType)||
+         ['submitted','under-review'].includes(row.workflowState)&&
+          ['delivery','payment'].includes(row.documentType))?
+        '<button type="button" class="primary" data-action="tradelink-operational-complete" '+
+         'data-id="'+escape(row.documentId)+'">Mark Completed</button> ':'')+
+       (canManage&&TL03_WORKFLOW_OPERATIONAL_ENABLED&&!row.archived&&
+        ['approved','rejected','completed','cancelled'].includes(row.workflowState)?
+        '<button type="button" class="secondary" data-action="tradelink-operational-reopen" '+
+         'data-id="'+escape(row.documentId)+'">Reopen to Draft</button> ':'')+
        (canManage&&TL03_DOMAIN_WRITES_ENABLED&&
         ['draft','revision-required'].includes(row.workflowState)&&
         !row.archived&&tradeLinkDraftEditHref(row.documentId)?
