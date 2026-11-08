@@ -1,5 +1,7 @@
 # CP-WS-ACTIVATE-04 — Controlled Backend Cutover Readiness
 
+> **CURRENT CONTINUATION STATE — 2026-11-08 (supersedes older pending-B3 statements below):** Genuine two-user direct-table RLS denial was reported **PASS / foreign-row-denied** for one existing `public.order_intake_orders` row, under two distinct signed principals and different authoritative workspaces; sanitized evidence: [issue #80](https://github.com/wass-psti/APSYNTRACRM/issues/80#issuecomment-6723099220). The simplified B3 UI was merged/deployed at `6d0783710705a5a1bce6b84ae2adbedaeb16ff0d`. **Independent PostgreSQL 17 protected source-faithful caller execution and recovery sign-off are still BLOCKED/PENDING** in [issue #79](https://github.com/wass-psti/APSYNTRACRM/issues/79). Switching remains **NO-GO**. Existing read-only inventory (PG 17.6) is now **4 workspaces and 42 active memberships**; `selection_enabled=false` and `wm_ws01_select(uuid,uuid)` remains absent. These counts supersede the earlier 3/41 snapshot; no origin of the count change has been asserted.
+
 **Date:** 2026-11-08 (Asia/Manila)
 **Scope:** The already-deployed, default-off Workspace Per-User switching UI and existing CP-WS-01B session-selection candidate
 **Production go/no-go:** **NO-GO** until delegated-role source-faithful compatibility and independent signed-user HTTPS acceptance are complete and a separate production SQL/grant/flag approval is recorded.
@@ -68,3 +70,25 @@ Keep **only existing issues [#79](https://github.com/wass-psti/APSYNTRACRM/issue
 - **Issue #80:** Earlier human-provided reports include `READY / owner-row-confirmed`, `INCONCLUSIVE / owner-no-fixture`, and `INCONCLUSIVE / foreign-principal-required`. No qualifying real foreign-row denial has yet been furnished. A staged diagnostic/UI change and synthetic tests cannot substitute for the signed-user result.
 - **CI:** The focused B3 contract suite passes **14/14** on PR #104 head `67ba70b41`; the full frontend run passes **1254/1260** with six unrelated Settings experience failures also present on unmodified `main` (run [42484796954](https://github.com/wass-psti/APSYNTRACRM/actions/runs/42484796954)). Keep those failures visible; no blanket full-suite PASS is claimed.
 - **Production NO-GO:** Do not install switching RPCs, change grants/roles/session policy/RLS, set `selection_enabled`, or change `WS01_SWITCHING_ENABLED` before both existing acceptance issues pass and separate production change authorization is obtained.
+
+## 2026-11-08 — Single protected PostgreSQL 17 reviewer handoff (issue #79 only)
+
+**Purpose:** enable an *independent, identifiable qualified reviewer* to reach a defensible APPROVE / REQUEST CHANGES / BLOCKED decision, not to manufacture an AI sign-off. No further manual B3 two-user repetition is necessary absent a relevant regression. No new Supabase project, no public export of production function bodies, no production SQL/ACL/flag updates.
+
+### Source-faithful execution requirements
+
+| Evidence case | Minimum review proof | Current classification |
+| --- | --- | --- |
+| Reviewer and environment | Named reviewer distinct from implementer; approved isolated **PostgreSQL 17** environment, custodian and access limits | **BLOCKED — reviewer/environment not established** |
+| Source fidelity | Complete private source definitions for **73 unique affected original callers** plus original `current_workspace_id(uuid)`; exact normalized signature/hash parity against G4B, G4C, H3 manifests; owners, volatility, SECURITY DEFINER and search_path | **VERIFIED — historical 74/74 source fingerprints; executable compatibility not established** |
+| Real execution | Compile and **execute the original 73 caller paths** with the proposed session-aware lookup on isolated synthetic/nonproduction records; retain original API results and legitimate delegated admin behavior | **BLOCKED — no protected source-faithful runtime execution** |
+| Authorized / denied cases | Signed actor within selected membership; foreign actor/target and wrong workspace; anon/unauthenticated denial; expired/revoked session; removed membership; module/board/RLS isolation | **PENDING — synthetic tests exist, real-callers review required** |
+| Concurrency / integrity | Same-session stale CAS SQLSTATE 40001, independent sessions, single audit entry, session-choice pruning, denied cross-session leakage | **VERIFIED synthetic PG17 only; source-faithful review pending** |
+| Recoverability | Reversible protected restore of original definition, ownership, search_path and grants; verified containment disables selection/revokes RPC first; preserved audit and session state; accountable recovery owner | **PENDING — no independently signed recovery rehearsal** |
+| Decision | Redacted case-by-case outcomes and reviewer attribution/date/PG version; evidence links; explicit APPROVE / REQUEST CHANGES / BLOCKED and recovery owner decision | **BLOCKED — no reviewer sign-off** |
+
+**Do not run protected source in public CI or post it in issues.** Existing metadata-only scripts `scripts/ws01-h3-private-source-guard.mjs`, `scripts/ws01c-g4b-verify-inventory.mjs`, `scripts/ws01c-g4c-verify-dependents.mjs`, and test assets `sql/tests/cp-ws01c-g3-disposable-lookup-candidate.sql`, `sql/tests/cp-ws01c-g4-delegated-compatibility-disposable.sql`, `sql/tests/cp-ws01-phase-h2-scoped-delegation-disposable.sql`, `scripts/ws01-activate04-concurrent-cas-disposable.sh` may support the protected reviewer workflow but must **not** be relabeled source-faithful runtime acceptance: the G3/G4/H2 tests use demonstration adapters. The staged `sql/cp-ws01b-session-cutover-candidate.sql` is **not approved for production**.
+
+**Recovery:** use the existing single WatchdogWorkspace recovery ownership record; project-wide **RPO 24 hours / RTO 24 hours** and a rehearsal requirement remain objectives, **not verified restore results**. Database backups do not themselves guarantee Supabase Storage object recovery, and no rehearsal or risk exception may be fabricated. Reviewer and recovery owner must determine and record whether isolation, database+Storage coverage, and 24-hour objectives are genuinely demonstrable without creating another Supabase project or risking production.
+
+**Acceptance release rule:** The already-reported scoped B3 PASS may close only the specific two-user RLS evidence item. Production switching remains **NO-GO** until all source-faithful protected PG17 execution cases, independent reviewer/recovery sign-offs, and a separate explicit production authorization pass. No production roles, grants, migrations, RLS, session revocations, or switching flags were changed by this handoff.
