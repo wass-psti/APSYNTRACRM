@@ -16,6 +16,9 @@ on:
       - 'sql/tradelink-document-review-revision-candidate.sql'
       - 'sql/tradelink-document-decision-candidate.sql'
       - 'sql/tradelink-document-operational-candidate.sql'
+      - 'sql/tradelink-document-attachments-candidate.sql'
+      - 'sql/tests/cp-tl03-attachment-storage-fixture.sql'
+      - 'sql/tests/cp-tl03-attachments-disposable.sql'
       - 'sql/tests/cp-tl03-operational-disposable.sql'
       - 'sql/tests/cp-tl03-decisions-disposable.sql'
       - 'sql/tests/cp-tl03-review-revision-disposable.sql'
@@ -136,6 +139,12 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-operational-candidate.sql
       - name: Verify authentic timestamps, completion prerequisites, resubmission cycles and denials
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-operational-disposable.sql
+      - name: Create synthetic Storage metadata fixture (no real Storage API calls)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-attachment-storage-fixture.sql
+      - name: Install signed TradeLink attachment contract in isolated PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-attachments-candidate.sql
+      - name: Verify private Storage RLS, signed upload intents, CAS and audit
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-attachments-disposable.sql
       - name: Execute signed fixture, CAS, audit, RLS and denial acceptance
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-acceptance.sql
       - name: Check post-migration grants and board projection
