@@ -3368,7 +3368,7 @@ async function action(name,button){
   section.querySelector('[data-profile-name-view]').hidden=true;
   button.hidden=true;
   const input=section.querySelector('#settings-display-name');
-  input.value=state.context.profile?.display_name||name();
+  input.value=state.context.profile?.display_name||state.context.profile?.email?.split('@')[0]||'Member';
   input.focus();
   input.select();
   break;
