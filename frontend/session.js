@@ -42,27 +42,6 @@ export class AuthClient {
     }
     return data;
   }
-  /** Public GoTrue signup only; no local session is created from this response. */
-  async requestRegistration({name,email,password},redirectTo){
-    const address=email.trim().toLowerCase();
-    if(this.registrationPending){
-      if(this.registrationEmail===address)return this.registrationPending;
-      throw new ApiError('Another registration request is already in progress.');
-    }
-    const redirect=new URL(redirectTo);
-    if(redirect.origin!=='https://wass-psti.github.io' ||
-       redirect.pathname!=='/APSYNTRACRM/' ||
-       redirect.search!=='?auth_action=signup' || redirect.hash)
-      throw new ApiError('Invalid registration redirect.');
-    const payload={email:address,password,
-      data:{display_name:name.trim()}};
-    this.registrationEmail=address;
-    this.registrationPending=this.call(
-      '/auth/v1/signup?redirect_to='+encodeURIComponent(redirect.href),
-      {method:'POST',body:payload}
-    ).finally(()=>{this.registrationPending=null;this.registrationEmail=null;});
-    return this.registrationPending;
-  }
   async signIn(email,password){
     if(!email?.trim()||!password)throw new ApiError('Enter your email and password.');
     const data=await this.call('/auth/v1/token?grant_type=password',{
@@ -141,6 +120,15 @@ export class AuthClient {
     }catch{/* Always end the local session even if the network is unavailable. */}
     finally{this.clear();}
     return serverAcknowledged;
+  }
+  async changePassword(newPassword){
+    if(!this.isSignedIn)throw new ApiError('Sign in to change your password.',401);
+    const actor=this.userId;
+    const data=await this.authorized('/auth/v1/user',{
+      method:'PUT',body:{password:newPassword}
+    });
+    if(!data||data.id!==actor)throw new ApiError('Password update could not be verified.');
+    return true;
   }
   async passwordRecovery(email,redirectTo){
     const redirect=new URL(redirectTo);

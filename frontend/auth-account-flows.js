@@ -1,52 +1,13 @@
 /** APSYNTRA CRM account access — no new identity database.
- * Registration MUST remain disabled until the existing production triggers are
- * corrected and the verified server-side admission gate is approved.
+ * Public registration is disabled; prospective users only request access.
+ * This module handles secure password recovery, not account creation.
  * This module never saves recovery tokens to sessionStorage/localStorage.
  */
-export const REGISTRATION_ADMISSION_ENABLED=false;
 export const RECOVERY_REDIRECT_URL='https://wass-psti.github.io/APSYNTRACRM/?auth_action=recovery';
-export const REGISTRATION_REDIRECT_URL='https://wass-psti.github.io/APSYNTRACRM/?auth_action=signup';
-export const REGISTRATION_CONFIRMATION='If this address is eligible, check your inbox for a verification link. Confirm your email before signing in.';
-export const REGISTRATION_FAILURE='Account registration could not be completed. Please try again later or contact your administrator.';
 export const PASSWORD_MIN_LENGTH=12;
 export const PASSWORD_MAX_LENGTH=72;
 export const RECOVERY_CONFIRMATION='If the address is eligible, password recovery instructions will be sent. Check your inbox and spam folder.';
-export const REGISTRATION_BLOCKED='Self-service registration is temporarily unavailable while verified-email signup and automatic personal Main Workspace provisioning are being secured. Existing accounts can still sign in.';
 
-export function validateRegistration({name='',email='',password='',confirmation=''}={}){
- const errors={};
- if(String(name).trim().length<2||String(name).trim().length>120)
-  errors.name='Enter your full name (2–120 characters).';
- if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())||
-    String(email).length>254)
-  errors.email='Enter a valid email address.';
- const pw=validatePassword(password);
- if(pw)errors.password=pw;
- if(password!==confirmation)errors.confirmation='Passwords do not match.';
- return errors;
-}
-/** Never creates a CRM session or supplies caller-controlled role/workspace claims.
- * The backend gate and verified-email account provisioning are authoritative.
- */
-export async function submitRegistration(auth,{name='',email='',password='',confirmation=''}={}){
- const problems=validateRegistration({name,email,password,confirmation});
- const first=Object.values(problems)[0];
- if(first)throw Error(first);
- try{
-  const result=await auth.requestRegistration({
-   name:String(name).trim(),email:String(email).trim().toLowerCase(),password
-  },REGISTRATION_REDIRECT_URL);
-  // If the provider was configured to sign users in before verification,
-  // never treat that response as a valid CRM admission.
-  if(result?.access_token||result?.session?.access_token)
-   throw Error('Email confirmation is required before registration can be activated. Contact your administrator.');
-  return REGISTRATION_CONFIRMATION;
- }catch(error){
-  if(error?.status===429)throw Error('Too many registration requests. Please try again later.');
-  if(error?.message==='Email confirmation is required before registration can be activated. Contact your administrator.')throw error;
-  throw Error(REGISTRATION_FAILURE);
- }
-}
 export function validatePassword(value){
  const pw=String(value??'');
  if(pw.length<PASSWORD_MIN_LENGTH||pw.length>PASSWORD_MAX_LENGTH)
