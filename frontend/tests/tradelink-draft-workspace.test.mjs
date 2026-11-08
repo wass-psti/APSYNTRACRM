@@ -47,7 +47,7 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
   const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:module.key,canManage:true});
   const href='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+module.key;
   assert.ok(html.includes('href="'+href+'"'),module.label);
-  assert.match(html,/Nothing is saved or submitted/);
+  assert.match(html,/Saving persists a document and linked Board item/);
   const view=initialTradeLinkDraftView(module.key);
   assert.deepEqual(view.formValues,{documentType:module.key});
   const editor=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});

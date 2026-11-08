@@ -1064,6 +1064,9 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
       (readOnly?'<td><button type="button" class="secondary" '+
        'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
        '">Preview saved</button> '+
+       '<button type="button" class="secondary" data-action="tradelink-document-print" '+
+        'data-id="'+escape(row.documentId)+'"'+(view.busy?' disabled':'')+
+        '>Print / Save PDF</button> '+
        (canManage&&['draft','revision-required'].includes(row.workflowState)&&!row.archived?
         '<button type="button" class="secondary" data-action="tradelink-document-submit" '+
          'data-id="'+escape(row.documentId)+'"'+
@@ -1193,8 +1196,9 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   'Document reads are '+(TL03_DOMAIN_READS_ENABLED?'subject to signed authorization':
   'not activated')+'.</p>'+
   '<p class="tl-draft-boundary" role="note">Authorized Drafts can be edited, archived or restored '+
-  'through the signed database. No mock documents, cross-workspace search, PDF export, '+
-  'attachment access or unsupported approval transitions. Board status does not change '+
+  'through the signed database. Print / Save PDF opens a newly verified saved revision '+
+  'and uses the browser print dialog; this is not an issued or signed tax document. '+
+  'Secure attachment uploads remain unavailable. Board status does not change '+
   'the document workflow state.</p>'+
   '<div class="tl-panel-heading"><h3>Authorized documents</h3>'+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
@@ -1244,7 +1248,7 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
      (TL03_DOMAIN_READS_ENABLED?'enabled':'not activated')+'</strong>. Writes: <strong>'+
      (TL03_DOMAIN_WRITES_ENABLED?'enabled':'not activated')+
     '</strong>. Existing APSYNTRA signed authorization remains mandatory.</p>'+
-    '<p class="tl-draft-boundary" role="note">No local draft storage, synthetic saved documents, independent login, attachments, workflow approvals or PDF export. A validated preview is not a saved record.</p>'+
+    '<p class="tl-draft-boundary" role="note">No local draft storage, synthetic saved documents, independent login or attachments. Workflow decisions require separate server activation. For print / Save as PDF, open a genuinely saved record through All Documents; a local preview is not a saved record.</p>'+
     '<div class="tl-panel-heading"><h3>Authoritative Draft records</h3>'+
      '<button type="button" class="secondary" data-action="tradelink-draft-refresh"'+
        (!TL03_DOMAIN_READS_ENABLED||view.busy?' disabled':'')+'>Refresh</button></div>'+

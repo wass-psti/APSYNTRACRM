@@ -133,9 +133,9 @@ function renderModule(m){
    '<p class="muted">These stages differ from the APSYNTRA board Quote Status choices. No automatic mapping is enabled.</p>':'')+
   (['esi','quotation','po'].includes(m.key)?renderTradeLinkFinancePreview():'')+
   '<p><a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+esc(m.key)+'">Prepare a local '+esc(m.label)+' Draft</a></p>'+
-  '<p class="muted">Opens the staged, locally validated Draft form for this module. Nothing is saved or submitted, and the full module workflow remains disabled.</p>'+
+  '<p class="muted">Opens the signed Draft editor for this module. Saving persists a document and linked Board item; workflow submission needs separate backend activation. Use All Documents to print a saved revision.</p>'+
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
-  '<p>Document creation, changes, approvals, PDFs, and attachments are unavailable here until the central signed domain API and its server-side authorization are verified. No local-only draft will be presented as saved.</p></div></section>';
+  '<p>Signed Draft creation and editing are enabled through the existing authorized domain API. Print / Save PDF is available for saved records through All Documents. Advanced workflow transitions require their separate backend activation; secured attachments remain unavailable. Unsaved previews are never presented as persisted documents.</p></div></section>';
 }
 /** Reference-led TradeLink portal is presentation-only.
  * Links preserve the existing signed-board routes and disabled domain gates. */
@@ -164,8 +164,10 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
       '<p>Choose a document module, complete its required fields, then select Save Draft. '+
       'The same signed server record appears in All Documents and its linked Board. '+
       'Open a saved Draft and select Edit Draft to save an authorized revision. '+
-      'Archive and Restore are reversible Draft actions. Formal review, '+
-      'approvals and PDF export are not yet available.</p>'+
+      'Archive and Restore are reversible Draft actions. All Documents can print '+
+      'a freshly verified saved revision or use the browser Save as PDF option. '+
+      'Workflow submission/review/approval needs separately activated server functions; '+
+      'secured attachments are not yet enabled.</p>'+
      '</div></details>'+
    '</nav>'+
    '<div class="tl-reference-workspace" title="Uses the existing APSYNTRA signed workspace">'+

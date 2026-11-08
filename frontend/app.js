@@ -26,6 +26,8 @@ import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.j
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
+import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
+ closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,tradeLinkDraftSaveFailureMessage,
  tradeLinkDraftHasUnsavedChanges,
@@ -885,7 +887,7 @@ function preserveTimeTrackerLogExpansion(){
   .map(el=>el.dataset.recordId).filter(id=>allowed.has(id)).slice(0,30);
 }
 function render(){
- if(!state.context){renderLogin();return;}
+ if(!state.context){closeTradeLinkSavedDocumentOutput();renderLogin();return;}
  preserveTimeTrackerLogExpansion();
  if(state.view==='board')shell(boardPage());
  else if(state.view==='acceptance')shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy,nativeResult:state.nativeAcceptance,nativeRunning:state.nativeBusy}));
@@ -1577,6 +1579,48 @@ async function openTradeLinkDocument(documentId){
    state.tradeLinkDraft.documentPreview=null;
    state.tradeLinkDraft.error='Signed document could not be verified. Refresh the list.';
   }
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+/** Print only the currently authorized document revision after a fresh signed
+ * document read and matching Board projection. The resulting content stays
+ * in a dismissible, memory-only DOM preview until the user prints or closes it.
+ */
+async function printTradeLinkDocument(documentId){
+ if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+  !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+  state.tradeLinkDraft.busy||
+  state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed)return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&state.context?.workspace_id===ws&&
+  auth.userId===actor&&auth.isSignedIn;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ try{
+  const [record,board]=await Promise.all([
+   tradeLinkDraftWorkspace.read(documentId),db.board(TRADELINK_BOARD_ID)
+  ]);
+  if(!same())return;
+  if(!record||record.revision!==listed.revision||
+   record.document_type!==listed.documentType||
+   record.document_number!==listed.documentNumber||
+   record.workflow_state!==listed.workflowState||
+   record.board_item_id!==listed.boardItemId||
+   Boolean(record.archived_at)!==listed.archived||
+   board?.board?.id!==TRADELINK_BOARD_ID||
+   board.board.workspace_id!==ws||
+   !board.items?.some(item=>item.id===listed.boardItemId&&
+    item.title===listed.documentNumber))
+   throw new ApiError('Saved TradeLink print revision or Board scope changed.',409);
+  const markup=renderTradeLinkSavedDocumentOutput(record,ws,documentId);
+  if(!same())return;
+  mountTradeLinkSavedDocumentOutput(markup);
+ }catch{
+  if(same())state.tradeLinkDraft.error=
+   'Print preview could not verify the signed document, revision and Board. Refresh All Documents.';
  }finally{
   if(same()){state.tradeLinkDraft.busy=false;render();}
  }
@@ -2370,6 +2414,7 @@ async function loadFRTFinanceDetail(requestId,seq=routeSerial){
  }
 }
 async function onRoute(){
+ closeTradeLinkSavedDocumentOutput();
  if(!state.context)return;
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
@@ -3628,6 +3673,9 @@ async function action(name,button){
  }
  case 'tradelink-document-open':{
   await openTradeLinkDocument(button.dataset.id);break;
+ }
+ case 'tradelink-document-print':{
+  await printTradeLinkDocument(button.dataset.id);break;
  }
  case 'tradelink-document-submit':{
   await submitTradeLinkDocument(button.dataset.id);break;
@@ -5600,6 +5648,7 @@ window.addEventListener('hashchange',()=>{
  approvedRouteHash=nextHash;
  onRoute().catch(notice);
 });
+window.addEventListener('pagehide',closeTradeLinkSavedDocumentOutput);
 window.addEventListener('beforeunload',event=>{
  if(state.context&&tradeLinkDraftRoute()&&
     tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)){
