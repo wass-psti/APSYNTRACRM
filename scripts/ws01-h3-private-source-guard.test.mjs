@@ -121,10 +121,17 @@ test('CLI marks metadata-only acceptance and fails closed with no secret files',
 test('live source catalog probe is read-only, deterministic and returns only hashes/signatures',()=>{
  const { generateLiveCatalogFingerprintSql } = sourceExports;
  const sql=generateLiveCatalogFingerprintSql(manifest,g4b,g4c);
- assert.match(sql,/WITH expected\(signature,expected_sha256\)/);
+ assert.match(sql,/WITH expected\(signature,expected_sha256,expected_definer,/);
  assert.match(sql,/count\(\*\)=74/);
- assert.match(sql,/SOURCE_FINGERPRINT_DRIFT__REVIEW_REQUIRED/);
- assert.match(sql,/SOURCE_FINGERPRINTS_MATCH__RUNTIME_UNVERIFIED/);
+ assert.match(sql,/SOURCE_OR_PERMISSION_BASELINE_DRIFT__REVIEW_REQUIRED/);
+ assert.match(sql,/HISTORICAL_BASELINE_MATCH__RUNTIME_UNVERIFIED/);
+ assert.match(sql,/permission_mismatch_signatures/);
+ assert.match(sql,/pg_catalog\.has_function_privilege\('authenticated',p\.oid,'EXECUTE'\)/);
+ assert.match(sql,/pg_catalog\.has_function_privilege\('anon',p\.oid,'EXECUTE'\)/);
+ assert.match(sql,/count\(\*\) FILTER \(WHERE permission_drift\)/);
+ assert.match(sql,/private\.tl03_commit/);
+ assert.match(sql,/false/);
+ assert.match(sql,/NULL/);
  assert.match(sql,/pg_catalog\.pg_get_functiondef/);
  assert.match(sql,/jsonb_agg\(signature ORDER BY signature\)/);
  assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|GRANT|REVOKE|TRUNCATE)\s+(?:TABLE|FUNCTION|ROLE|ON|INTO|FROM|public|private)/i);
@@ -138,4 +145,17 @@ test('live source catalog probe is read-only, deterministic and returns only has
  assert.equal(result.status,0);
  assert.equal(result.stdout.trim(),sql.trim());
  assert.equal(result.stderr,'');
+});
+
+test('historical ACL expectations do not silently adopt later grants',()=>{
+ const sql=generateLiveCatalogFingerprintSql(manifest,g4b,g4c);
+ const entry=g4b.entries.find(e=>e.signature.startsWith('private.tl03_commit('));
+ assert.equal(entry.authenticated_execute,false,'source manifest was Stage A');
+ assert.ok(sql.includes("'"+entry.signature+"','"+entry.source_sha256+"',true,false,NULL"));
+ const drift=structuredClone(g4b);
+ drift.entries.find(e=>e.signature===entry.signature).authenticated_execute=true;
+ // Baseline comparison may differ but the stored historical manifest is never updated.
+ const changed=generateLiveCatalogFingerprintSql(manifest,drift,g4c);
+ assert.ok(changed.includes("'"+entry.signature+"','"+entry.source_sha256+"',true,true,NULL"));
+ assert.notEqual(sql,changed);
 });
