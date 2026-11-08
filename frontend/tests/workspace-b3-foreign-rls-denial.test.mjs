@@ -64,11 +64,24 @@ test('same actor or same workspace never certify foreign RLS and perform zero fo
  clearWs02dB3ForeignRlsFixture();
  await captureWs02dB3OwnerRlsFixture({...signed(),clock:()=>100});
  const same=signed();
- assert.equal((await verifyWs02dB3ForeignRlsDenial({...same,clock:()=>200})).status,'INCONCLUSIVE');
+ const sameResult=await verifyWs02dB3ForeignRlsDenial({...same,clock:()=>200});
+ assert.equal(sameResult.status,'INCONCLUSIVE');
+ assert.equal(sameResult.stage,'foreign-same-user');
  assert.equal(same.sent(),0);
+ assert.match(renderWs02dB3ForeignRlsDenial({result:sameResult,hasFixture:true}),
+  /still using the row owner account/);
  const sameWorkspace=signed({actor:B,workspace:WA});
- assert.equal((await verifyWs02dB3ForeignRlsDenial({...sameWorkspace,clock:()=>200})).status,'INCONCLUSIVE');
+ const workspaceResult=await verifyWs02dB3ForeignRlsDenial({...sameWorkspace,clock:()=>200});
+ assert.equal(workspaceResult.status,'INCONCLUSIVE');
+ assert.equal(workspaceResult.stage,'foreign-same-workspace');
  assert.equal(sameWorkspace.sent(),0);
+ assert.equal(hasWs02dB3ForeignRlsFixture(()=>201),true);
+ assert.match(renderWs02dB3ForeignRlsDenial({result:workspaceResult,hasFixture:true}),
+  /server-authoritative active workspace is the same/);
+ assert.equal(JSON.parse(sanitizeWs02dB3ForeignRlsReport(workspaceResult)).stage,
+  'foreign-same-workspace');
+ assert.doesNotMatch(sanitizeWs02dB3ForeignRlsReport(workspaceResult),
+  /11111111|22222222|aaaaaaaa-aaaa|bbbbbbbb-bbbb|cccccccc-cccc|synthetic_signed_token_/);
  clearWs02dB3ForeignRlsFixture();
 });
 
@@ -118,6 +131,7 @@ test('sanitizer rejects forged PASS and UI never renders retained row/user ident
  assert.doesNotMatch(JSON.stringify(safe),/synthetic_signed_token_/);
  const html=renderWs02dB3ForeignRlsDenial({hasFixture:true});
  assert.match(html,/without refreshing this tab/);
+ assert.match(html,/Use Step 2 ONLY under the foreign account/);
  assert.doesNotMatch(html,/11111111|cccccccc-cccc/);
  assert.match(renderWs02dB3ForeignRlsDenial({hasFixture:false}),
   /data-action="security-ws02d-b3-rls-verify" disabled/);
