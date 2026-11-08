@@ -5147,7 +5147,7 @@ async function boot(){
      renderLogin('',{mode:'reset'});
     }catch{recoveryContext=null;renderLogin('The recovery link is invalid or expired. Request a new link.',{mode:'forgot'});}
    }else if(callback.kind==='confirmation'){
-    renderLogin('',{mode:'login',notice:'Email verification completed. Workspace access still requires administrator approval. Sign in only after your account is admitted.'});
+    renderLogin('',{mode:'login',notice:'If you completed email verification, sign in to your Main Workspace. If access is not yet available, contact your administrator.'});
    }else{
     renderLogin('The authentication link is invalid or expired.',{mode:'forgot'});
    }

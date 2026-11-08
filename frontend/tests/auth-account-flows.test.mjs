@@ -35,6 +35,11 @@ test('self-service registration stays disabled until verified personal-workspace
  assert.match(client,/registrationPending/);
 });
 
+test('confirmation callback does not promise a verified identity or require manual approval',()=>{
+ assert.match(app,/If you completed email verification, sign in to your Main Workspace/);
+ assert.doesNotMatch(app,/Email verification completed\. Workspace access still requires administrator approval/);
+});
+
 test('gated signup preview is available only when backend admission is separately authorized',()=>{
  const blocked=renderAuthMarkup({mode:'register'});
  assert.match(blocked,/disabled aria-describedby="auth-registration-status"/);
