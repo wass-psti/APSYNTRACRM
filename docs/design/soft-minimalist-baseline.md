@@ -48,6 +48,7 @@ Spacing, radii, shadows, and motion tokens live in the same stylesheet. Check te
 5. **Auth / Settings:** sign-in, profile, change-password and dialogs; retain all Supabase Auth behavior.
 6. **Integrated apps:** common controls and board surfaces for the twelve integrated applications; targeted TradeLink and TimeTracker presentation only. Preserve specialized layouts and workflows.
 7. **Consolidation:** calmer sign-in preview, contrast-conscious colors, responsive and reduced-motion rules; deployment smoke includes the new CSS.
+8. **12-board foundation:** application readiness, status metrics, administrator-restricted provisioning controls and signed module table use the same tokens. Existing signed authorization and board contracts are unchanged.
 
 ## Non-negotiable behavior
 
