@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {
  captureWs02dB3OwnerRlsFixture,verifyWs02dB3ForeignRlsDenial,
  clearWs02dB3ForeignRlsFixture,hasWs02dB3ForeignRlsFixture,
@@ -64,11 +65,24 @@ test('same actor or same workspace never certify foreign RLS and perform zero fo
  clearWs02dB3ForeignRlsFixture();
  await captureWs02dB3OwnerRlsFixture({...signed(),clock:()=>100});
  const same=signed();
- assert.equal((await verifyWs02dB3ForeignRlsDenial({...same,clock:()=>200})).status,'INCONCLUSIVE');
+ const sameResult=await verifyWs02dB3ForeignRlsDenial({...same,clock:()=>200});
+ assert.equal(sameResult.status,'INCONCLUSIVE');
+ assert.equal(sameResult.stage,'foreign-same-user');
  assert.equal(same.sent(),0);
+ assert.match(renderWs02dB3ForeignRlsDenial({result:sameResult,hasFixture:true}),
+  /still using the row owner account/);
  const sameWorkspace=signed({actor:B,workspace:WA});
- assert.equal((await verifyWs02dB3ForeignRlsDenial({...sameWorkspace,clock:()=>200})).status,'INCONCLUSIVE');
+ const workspaceResult=await verifyWs02dB3ForeignRlsDenial({...sameWorkspace,clock:()=>200});
+ assert.equal(workspaceResult.status,'INCONCLUSIVE');
+ assert.equal(workspaceResult.stage,'foreign-same-workspace');
  assert.equal(sameWorkspace.sent(),0);
+ assert.equal(hasWs02dB3ForeignRlsFixture(()=>201),true);
+ assert.match(renderWs02dB3ForeignRlsDenial({result:workspaceResult,hasFixture:true}),
+  /server-authoritative active workspace is the same/);
+ assert.equal(JSON.parse(sanitizeWs02dB3ForeignRlsReport(workspaceResult)).stage,
+  'foreign-same-workspace');
+ assert.doesNotMatch(sanitizeWs02dB3ForeignRlsReport(workspaceResult),
+  /11111111|22222222|aaaaaaaa-aaaa|bbbbbbbb-bbbb|cccccccc-cccc|synthetic_signed_token_/);
  clearWs02dB3ForeignRlsFixture();
 });
 
@@ -118,7 +132,24 @@ test('sanitizer rejects forged PASS and UI never renders retained row/user ident
  assert.doesNotMatch(JSON.stringify(safe),/synthetic_signed_token_/);
  const html=renderWs02dB3ForeignRlsDenial({hasFixture:true});
  assert.match(html,/without refreshing this tab/);
+ assert.match(html,/Step 2 ONLY/);
+ assert.match(html,/security-ws02d-b3-rls-handoff/);
+ assert.match(html,/sign out this session only/);
  assert.doesNotMatch(html,/11111111|cccccccc-cccc/);
- assert.match(renderWs02dB3ForeignRlsDenial({hasFixture:false}),
-  /data-action="security-ws02d-b3-rls-verify" disabled/);
+ const empty=renderWs02dB3ForeignRlsDenial({hasFixture:false});
+ assert.match(empty,/data-action="security-ws02d-b3-rls-verify" disabled/);
+ assert.doesNotMatch(empty,/security-ws02d-b3-rls-handoff/);
+});
+
+// Source contract only: genuine signed HTTPS acceptance must be user-operated.
+test('B3 guided handoff uses only local sign-out, returns to Security, and never persists row reference',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/case 'security-ws02d-b3-rls-handoff':/);
+ assert.match(app,/const isB3RlsHandoff=name==='security-ws02d-b3-rls-handoff'/);
+ assert.match(app,/if\(isB3RlsHandoff\)\{[\s\S]*?hasWs02dB3ForeignRlsFixture\(\)/);
+ assert.match(app,/state\.ws02dB3HandoffPending=true;\s*await auth\.signOut\(\{scope:'local'\}\)/);
+ assert.match(app,/returnToB3=state\.ws02dB3HandoffPending&&hasWs02dB3ForeignRlsFixture\(\)/);
+ assert.match(app,/location\.hash=returnToB3\?'#\/security':routeHome/);
+ assert.match(app,/clearWs02dB3ForeignRlsFixture\(\)/);
+ assert.doesNotMatch(app,/ws02dB3HandoffPending=true;[\s\S]{0,250}(?:localStorage|sessionStorage|navigator\.clipboard)/);
 });

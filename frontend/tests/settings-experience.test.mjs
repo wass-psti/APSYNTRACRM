@@ -22,6 +22,7 @@ function render(overrides={}){
    platform_role:'employee',email:'operator@example.invalid',status:'active'}},
   user:{email:'fallback@example.invalid'},
   acceptanceBusy:false,acceptance:null,boardTtSignedBusy:false,boardTtSignedResult:null,
+  roleVerified:true, // Verified bootstrap session exercises the protected session controls.
   ...overrides
  };
  const name=()=>overrides.displayName??'Example Operator';
@@ -197,4 +198,15 @@ test('mounted settings components remain stationary on entry and refresh',()=>{
  assert.equal(animations,0,'no mount-time animations');
  const source=readFileSync('frontend/settings-visuals.js','utf8');
  assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
+});
+
+// Nonbootstrap accounts retain self-service account settings without privileged session tools.
+test('unverified role hides bootstrap-only session controls without suppressing password management',()=>{
+ const page=render({roleVerified:false});
+ assert.match(page,/Profile information/);
+ assert.match(page,/settings-change-password-form/);
+ assert.match(page,/settings-new-password/);
+ assert.match(page,/settings-confirm-password/);
+ assert.doesNotMatch(page,/settings-session-panel|data-action="copy-token"|data-action="verify-backend"/);
+ assert.equal(count(page,/class="panel settings-profile-panel/g),1);
 });

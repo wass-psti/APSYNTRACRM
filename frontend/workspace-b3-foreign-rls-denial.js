@@ -23,11 +23,18 @@ const TIME_TO_LIVE_MS=15*60*1000;
 const STATES=new Set(['PASS','FAIL','BLOCKED','INCONCLUSIVE','READY']);
 const STAGES=new Set(['prerequisite','owner-signed-context','owner-read',
  'owner-no-fixture','owner-row-confirmed','foreign-principal-required',
- 'foreign-read','foreign-row-visible','foreign-row-denied','expired-fixture',
+ 'foreign-same-user','foreign-same-workspace','foreign-read','foreign-row-visible','foreign-row-denied','expired-fixture',
  'session-changed','no-fixture','fixture-cleared','network']);
 let fixture=null;
 
 const stageSafe=x=>STAGES.has(x)?x:'prerequisite';
+// Do not include user IDs, workspace IDs, tokens or row references in diagnostics.
+const STAGE_GUIDANCE=Object.freeze({
+ 'foreign-same-user':'Step 2 is still using the row owner account. Sign in as a different existing user before retrying.',
+ 'foreign-same-workspace':'The signed user differs, but the server-authoritative active workspace is the same as the row owner workspace. Use an existing user with a different active workspace.',
+ 'foreign-principal-required':'A verified signed user and authoritative workspace could not be established. Reauthenticate before retrying.',
+ 'owner-no-fixture':'Step 1 found no authorized Order Intake row in this signed workspace. Run Step 1 under an authorized Work Management account.'
+});
 const report=(status,stage)=>Object.freeze({
  checkpoint:WS02D_B3_FOREIGN_RLS_CHECKPOINT,
  status:STATES.has(status)?status:'BLOCKED',
@@ -146,9 +153,10 @@ export async function verifyWs02dB3ForeignRlsDenial({
  try{
   prior=await verified(auth,api);
   if(!prior)return report('BLOCKED','foreign-principal-required');
-  if(prior.actor===sample.ownerActor||
-     prior.workspace===sample.ownerWorkspace)
-   return report('INCONCLUSIVE','foreign-principal-required');
+  if(prior.actor===sample.ownerActor)
+   return report('INCONCLUSIVE','foreign-same-user');
+  if(prior.workspace===sample.ownerWorkspace)
+   return report('INCONCLUSIVE','foreign-same-workspace');
   token=await auth.token();
  }catch{return report('BLOCKED','foreign-principal-required');}
 
@@ -206,15 +214,19 @@ export function renderWs02dB3ForeignRlsDenial({
   'for 15 minutes and disappears on refresh. No test accounts or data writes.</p>'+
   '<button class="secondary" type="button" data-action="security-ws02d-b3-rls-capture"'+
    (busy?' disabled':'')+'>1. Capture existing authorized row</button>'+
+  (hasFixture?'<button class="secondary" type="button" data-action="security-ws02d-b3-rls-handoff"'+
+   (busy?' disabled':'')+'>Continue: sign out this session only and sign in as the foreign user</button>':'')+
   '<button class="primary" type="button" data-action="security-ws02d-b3-rls-verify"'+
    (busy||!hasFixture?' disabled':'')+'>2. Test after signing in as foreign-workspace user</button>'+
   '<button class="secondary" type="button" data-action="security-ws02d-b3-rls-clear"'+
    (busy||!hasFixture?' disabled':'')+'>Discard temporary row reference</button>'+
   '<p class="muted">'+(hasFixture?'Authorized row captured in this tab; use the explicit local-session sign-out below, then sign in '+
-    'as another EXISTING user in a different workspace, without refreshing this tab.':
+    'as another EXISTING user in a different workspace, without refreshing this tab. '+
+    'Use Continue above to switch accounts, then Step 2 ONLY; Step 1 would discard the row reference.':
     'No authorized row reference is currently retained.')+'</p>'+
   (result?'<div role="status" aria-live="polite"><p><strong>Targeted RLS: '+
    status+'</strong> · '+stage+'</p>'+
+   (STAGE_GUIDANCE[stage]?'<p class="muted">'+STAGE_GUIDANCE[stage]+'</p>':'')+
    '<p class="muted">A PASS proves only one direct table/row denial; all-table RLS '+
    'and revoked-session acceptance remain pending.</p>'+
    '<button type="button" class="secondary" data-action="security-ws02d-b3-rls-copy">'+
