@@ -1,27 +1,13 @@
 /** APSYNTRA CRM account access — no new identity database.
- * Registration MUST remain disabled until the existing production triggers are
- * corrected and the verified server-side admission gate is approved.
+ * Public registration is disabled; prospective users only request access.
+ * This module handles secure password recovery, not account creation.
  * This module never saves recovery tokens to sessionStorage/localStorage.
  */
-export const REGISTRATION_ADMISSION_ENABLED=false;
 export const RECOVERY_REDIRECT_URL='https://wass-psti.github.io/APSYNTRACRM/?auth_action=recovery';
 export const PASSWORD_MIN_LENGTH=12;
 export const PASSWORD_MAX_LENGTH=72;
 export const RECOVERY_CONFIRMATION='If the address is eligible, password recovery instructions will be sent. Check your inbox and spam folder.';
-export const REGISTRATION_BLOCKED='Self-service registration is temporarily unavailable while verified-email signup and automatic personal Main Workspace provisioning are being secured. Existing accounts can still sign in.';
 
-export function validateRegistration({name='',email='',password='',confirmation=''}={}){
- const errors={};
- if(String(name).trim().length<2||String(name).trim().length>120)
-  errors.name='Enter your full name (2–120 characters).';
- if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())||
-    String(email).length>254)
-  errors.email='Enter a valid email address.';
- const pw=validatePassword(password);
- if(pw)errors.password=pw;
- if(password!==confirmation)errors.confirmation='Passwords do not match.';
- return errors;
-}
 export function validatePassword(value){
  const pw=String(value??'');
  if(pw.length<PASSWORD_MIN_LENGTH||pw.length>PASSWORD_MAX_LENGTH)

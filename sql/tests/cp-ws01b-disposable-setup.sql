@@ -2,6 +2,7 @@
 \set ON_ERROR_STOP on
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
+CREATE ROLE service_role NOLOGIN;
 CREATE SCHEMA auth;
 CREATE SCHEMA private;
 CREATE SCHEMA extensions;
@@ -12,7 +13,8 @@ CREATE TABLE auth.users(
  email text NOT NULL DEFAULT 'fixture@example.invalid',
  email_confirmed_at timestamptz DEFAULT now(),
  is_anonymous boolean NOT NULL DEFAULT false,
- raw_user_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb
+ raw_user_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb,
+ raw_app_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 CREATE TABLE auth.sessions(
  id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES auth.users(id),

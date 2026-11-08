@@ -423,3 +423,9 @@
   border:2px solid #176855;
  }
 }
+
+#app .aps-auth-v2 .request-access-privacy{font-size:12px;line-height:1.6;color:#61708c;margin:4px 0 16px}
+#app .aps-auth-v2 .request-access-privacy label{display:flex;align-items:flex-start;gap:9px;color:#334365}
+#app .aps-auth-v2 .request-access-privacy input{margin-top:4px;flex:none;accent-color:#6469ea}
+#app .aps-auth-v2 .request-access-privacy a{color:#4c61c8;text-decoration:underline}
+#app .aps-auth-v2 .request-access-honeypot{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}

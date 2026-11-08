@@ -121,6 +121,15 @@ export class AuthClient {
     finally{this.clear();}
     return serverAcknowledged;
   }
+  async changePassword(newPassword){
+    if(!this.isSignedIn)throw new ApiError('Sign in to change your password.',401);
+    const actor=this.userId;
+    const data=await this.authorized('/auth/v1/user',{
+      method:'PUT',body:{password:newPassword}
+    });
+    if(!data||data.id!==actor)throw new ApiError('Password update could not be verified.');
+    return true;
+  }
   async passwordRecovery(email,redirectTo){
     const redirect=new URL(redirectTo);
     const path='/auth/v1/recover?redirect_to='+encodeURIComponent(redirect.href);

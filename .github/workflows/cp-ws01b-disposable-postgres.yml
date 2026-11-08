@@ -264,3 +264,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01-config-disposable-acceptance.sql
       - name: Accept cross-contract signed session selection, workspace configuration, invitation and board isolation under hardened scope
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01-phase-h-cross-contract-hardening-disposable.sql
+      - name: Stage protected administrator-only provisioning ticket gate (disposable only)
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws-admin01-private-approved-provisioning-candidate.sql
+      - name: Verify approved account, replay, foreign, disabled and public denial
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws-admin01-disposable-provisioning-acceptance.sql

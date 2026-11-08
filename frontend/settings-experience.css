@@ -375,3 +375,10 @@
  #app .aps-settings .settings-token-warning{border-color:#a27739;color:#644420}
  #app .aps-settings .settings-session-callout{border-color:#667eb5;color:#3e5278}
 }
+
+#app .aps-settings .settings-password-form{display:grid;gap:9px;padding:18px 0;margin:15px 0;border-top:1px solid var(--settings-stroke);border-bottom:1px solid var(--settings-stroke)}
+#app .aps-settings .settings-password-form h3{font-size:14px;margin:0;color:var(--settings-ink)}
+#app .aps-settings .settings-password-form p{font-size:12px;margin:0 0 5px}
+#app .aps-settings .settings-password-form label{font-size:12px;font-weight:700}
+#app .aps-settings .settings-password-form input{width:100%;min-height:42px;border:1px solid var(--settings-stroke);border-radius:9px;padding:10px 12px;background:var(--surface,#fff);color:var(--settings-ink)}
+#app .aps-settings .settings-password-form button{justify-self:start;margin-top:5px}

@@ -45,7 +45,7 @@ test('redesign is scoped to login, and authentication flow and expired session r
  const source=readFileSync('frontend/app.js','utf8');
  assert.match(source,/import \{renderAuthMarkup\} from '\.\/auth-markup\.js'/);
  assert.match(source,/import \{mountAuthExperience\} from '\.\/auth-experience\.js'/);
- assert.match(source,/root\.innerHTML=renderAuthMarkup\(\{message,notice,mode,resetReady:/);
+ assert.match(source,/root\.innerHTML=renderAuthMarkup\(\{message,notice:notice\|\|\(formsubmitReturn\?/);
  assert.match(source,/authVisualController=mountAuthExperience\(root\.querySelector\('\.aps-auth-v2'\)\)/);
  assert.match(source,/function shell\(body\)\{\s*stopAuthVisuals\(\)/);
  assert.match(source,/if\(event\.target\.id==='login-form'\)\{event\.preventDefault\(\);login\(event\.target\)/);

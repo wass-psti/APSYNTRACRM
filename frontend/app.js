@@ -3,8 +3,9 @@ import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelecto
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
-import {REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,captureAuthReturn,
- inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword} from './auth-account-flows.js';
+import {validateAccessRequest} from './request-access.js';
+import {captureAuthReturn,
+ inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword,validatePassword} from './auth-account-flows.js';
 import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
@@ -209,7 +210,9 @@ function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopUserRoleMotion();
  stopSettingsMotion();
  stopPagesAcceptanceMotion();
- root.innerHTML=renderAuthMarkup({message,notice,mode,resetReady:mode==='reset'&&!!recoveryContext});
+ const formsubmitReturn=mode==='register'&&new URLSearchParams(location.search).get('request_access')==='received';
+ root.innerHTML=renderAuthMarkup({message,notice:notice||(formsubmitReturn?
+  'Returned from FormSubmit. If the provider confirmed success, the request was sent for administrator review. No account has been created.':''),mode,resetReady:mode==='reset'&&!!recoveryContext});
  if(state.tl03RevokedReport&&!auth.isSignedIn)
   root.insertAdjacentHTML('beforeend',renderTradeLinkSignedOutRevocationResult(state.tl03RevokedReport));
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
@@ -842,6 +845,15 @@ function settingsPage(){
  <div class="csp-u015 settings-session-actions" >
  <button class="secondary settings-token-button" data-action="copy-token">${settingsIcon('copy')}<span>Copy short-lived access token</span></button>
  <button class="secondary settings-signout-button" data-action="logout">${settingsIcon('logout')}<span>Sign out</span></button></div>
+ <form id="settings-change-password" class="settings-password-form" aria-labelledby="settings-password-heading">
+   <h3 id="settings-password-heading">Change password</h3>
+   <p class="muted">Use a new password with 12–72 characters, including letters and numbers. Your session will end after changing it.</p>
+   <label for="settings-new-password">New password</label>
+   <input id="settings-new-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required/>
+   <label for="settings-confirm-password">Confirm new password</label>
+   <input id="settings-confirm-password" name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="72" required/>
+   <button class="secondary" type="submit">Update password</button>
+  </form>
  <div class="note security-note settings-token-warning">${settingsIcon('lock')}<div><b>Access token:</b> Copy only when necessary for local acceptance testing. Anyone holding it may act as your account until it expires. Never share it in chat or commit it.</div></div>
  <div class="csp-u047 settings-verify-block settings-persistence-link" ><a class="secondary" href="#/acceptance">${settingsIcon('check')}<span>GitHub Pages persistence acceptance</span></a></div>
  <div class="csp-u006 settings-verify-block" >
@@ -2064,6 +2076,51 @@ async function onRoute(){
    finally{state.foundationBusy=false;}
  }
  render();
+}
+function validateAndSubmitAccessRequest(form,event){
+ const recipient=form.getAttribute('action')||'';
+ if(!/^https:\/{2}formsubmit\.co\/[A-Za-z0-9_-]{8,128}$/.test(recipient)){
+  event.preventDefault();
+  renderLogin('The administrator has not configured the request mailbox.',{mode:'register'});
+  return;
+ }
+ const fields=new FormData(form);
+ const error=validateAccessRequest({name:fields.get('name'),email:fields.get('email'),consent:fields.get('consent')==='yes'});
+ if(error){
+  event.preventDefault();
+  const message=form.querySelector('[data-request-error]')||document.createElement('p');
+  message.className='login-error';message.dataset.requestError='';
+  message.setAttribute('role','alert');message.textContent=error;
+  form.prepend(message);return;
+ }
+ // Native POST preserves FormSubmit's CAPTCHA and confirmation page.
+ const button=form.querySelector('[type="submit"]');
+ if(button)button.disabled=true;
+}
+async function submitSettingsPasswordChange(form){
+ if(state.authBusy||!auth.isSignedIn||!state.context)return;
+ const fields=new FormData(form);
+ const password=String(fields.get('password')||'');
+ const confirmation=String(fields.get('confirmation')||'');
+ const issue=validatePassword(password);
+ if(issue||password!==confirmation){
+  toast(issue||'Passwords do not match.',true);return;
+ }
+ const submit=form.querySelector('[type="submit"]');
+ state.authBusy=true;if(submit){submit.disabled=true;submit.textContent='Updating…';}
+ try{
+  await auth.changePassword(password);
+  const revoked=await auth.signOut({scope:'global'});
+  platformSync.stop();state.context=null;
+  location.hash='#/login';
+  renderLogin('',{mode:'login',notice:revoked?
+   'Password updated. Sign in again using your new password.':
+   'Password updated. Sign in again. Other sessions may remain active until expiry.'});
+ }catch(error){toast(errorMessage(error),true);}
+ finally{
+  state.authBusy=false;
+  if(submit?.isConnected){submit.disabled=false;submit.textContent='Update password';}
+ }
 }
 async function submitRecoveryRequest(form){
  if(state.authBusy)return;
@@ -5062,11 +5119,12 @@ root.addEventListener('submit',event=>{
  }
  if(event.target.id==='login-form'){event.preventDefault();login(event.target);return;}
  if(event.target.id==='register-form'){
+  validateAndSubmitAccessRequest(event.target,event);
+  return;
+ }
+ if(event.target.id==='settings-change-password'){
   event.preventDefault();
-  // This cannot be lifted by frontend configuration: production admission
-  // requires the independently approved server-side trigger/RLS activation.
-  if(!REGISTRATION_ADMISSION_ENABLED)
-   renderLogin(REGISTRATION_BLOCKED,{mode:'register'});
+  Promise.resolve(submitSettingsPasswordChange(event.target)).catch(notice);
   return;
  }
  if(event.target.id==='forgot-form'){
@@ -5182,7 +5240,7 @@ async function boot(){
      renderLogin('',{mode:'reset'});
     }catch{recoveryContext=null;renderLogin('The recovery link is invalid or expired. Request a new link.',{mode:'forgot'});}
    }else if(callback.kind==='confirmation'){
-    renderLogin('',{mode:'login',notice:'Email verification completed. Workspace access still requires administrator approval. Sign in only after your account is admitted.'});
+    renderLogin('',{mode:'login',notice:'If an administrator approved your access, sign in with credentials received through a secure channel.'});
    }else{
     renderLogin('The authentication link is invalid or expired.',{mode:'forgot'});
    }

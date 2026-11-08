@@ -2,12 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {renderAuthMarkup} from '../auth-markup.js';
-import {
- REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,RECOVERY_REDIRECT_URL,
- RECOVERY_CONFIRMATION,validateRegistration,validatePassword,
+import {formSubmitAction,validateAccessRequest} from '../request-access.js';
+import {AuthClient,ApiError} from '../session.js';
+import {RECOVERY_REDIRECT_URL,RECOVERY_CONFIRMATION,validatePassword,
  safeRecoveryError,captureAuthReturn,inspectRecoveryToken,requestPasswordRecovery,
- applyRecoveredPassword
-} from '../auth-account-flows.js';
+ applyRecoveredPassword} from '../auth-account-flows.js';
 
 const client=readFileSync('frontend/session.js','utf8');
 const app=readFileSync('frontend/app.js','utf8');
@@ -15,37 +14,47 @@ const source=readFileSync('frontend/auth-account-flows.js','utf8');
 const css=readFileSync('frontend/auth-experience.css','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 
-test('self-service registration stays disabled until verified personal-workspace admission hardening',()=>{
- assert.equal(REGISTRATION_ADMISSION_ENABLED,false);
- assert.match(REGISTRATION_BLOCKED,/Self-service registration is temporarily unavailable/);
- const markup=renderAuthMarkup({mode:'register',year:2026});
- for(const piece of ['id="register-form"','id="register-name"','id="register-email"',
-  'id="register-password"','id="register-confirm"',
-  'autocomplete="new-password"','autocomplete="name"','aria-describedby="auth-registration-status"',
-  'Create account — pending activation','disabled aria-describedby="auth-registration-status"'])
-  assert.ok(markup.includes(piece),piece);
- assert.match(markup,/Self-service registration is being secured/);
- assert.match(app,/if\(!REGISTRATION_ADMISSION_ENABLED\)/);
- assert.match(app,/REGISTRATION_BLOCKED/);
- assert.doesNotMatch(source,/auth\/v1\/signup/);
- assert.doesNotMatch(app,/auth\.signUp\(|auth\.register\(/);
- assert.doesNotMatch(client,/auth\/v1\/signup/);
+test('request account access is not public signup, and is closed until FormSubmit alias confirmation',()=>{
+ const blocked=renderAuthMarkup({mode:'register',year:2026});
+ assert.match(blocked,/id="register-form" method="POST"/);
+ assert.match(blocked,/Request access — awaiting setup/);
+ assert.match(blocked,/disabled aria-describedby="auth-registration-status"/);
+ assert.doesNotMatch(blocked,/name="password"|name="confirmation"/);
+ assert.doesNotMatch(blocked,/action="https:/);
+ assert.equal(formSubmitAction(''), '');
+ assert.equal(formSubmitAction('bad path'), '');
+ assert.equal(formSubmitAction('x" onsubmit=alert(1)'), '');
+ const enabled=renderAuthMarkup({mode:'register',requestAlias:'confirmed_ALIAS_2026'});
+ assert.match(enabled,/action="https:\/\/formsubmit.co\/confirmed_ALIAS_2026"/);
+ assert.match(enabled,/Submit access request/);
+ assert.match(enabled,/name="_honey"/);
+ assert.match(enabled,/name="_subject"/);
+ assert.match(enabled,/name="_next"/);
+ assert.match(enabled,/name="consent" value="yes" type="checkbox" required/);
+ assert.match(enabled,/FormSubmit may retain requests for 30 days/);
+ assert.match(enabled,/formsubmit.co\/privacy.pdf/);
+ assert.doesNotMatch(enabled,/name="password"|name="confirmation"|Create account/);
+ assert.match(app,/validateAndSubmitAccessRequest/);
+ assert.doesNotMatch(app,/submitRegistration\(|requestRegistration\(|auth\.signUp\(/);
+ assert.doesNotMatch(client,/\/auth\/v1\/signup/);
+ assert.match(readFileSync('index.html','utf8'),/form-action 'self' https:\/\/formsubmit.co/);
 });
-
-test('registration validation handles names, format, password and mismatched confirmation without role claims',()=>{
- assert.deepEqual(validateRegistration({
-  name:'Test Candidate',email:'candidate@example.test',
-  password:'SafePassword2026!',confirmation:'SafePassword2026!'
- }),{});
- const bad=validateRegistration({name:'',email:'bad',password:'x',confirmation:'y'});
- assert.ok(bad.name);assert.ok(bad.email);assert.ok(bad.password);assert.ok(bad.confirmation);
+test('minimum data validation denies invalid name, email and missing privacy consent',()=>{
+ assert.equal(validateAccessRequest({name:'Example Person',email:'request@example.invalid',consent:true}),'');
+ assert.match(validateAccessRequest({name:'',email:'a@example.com',consent:true}),/full name/);
+ assert.match(validateAccessRequest({name:'Hello <img>',email:'a@example.com',consent:true}),/full name/);
+ assert.match(validateAccessRequest({name:'Example',email:'invalid',consent:true}),/valid email/);
+ assert.match(validateAccessRequest({name:'Example',email:'ok@example.com'}),/Consent/);
  assert.match(validatePassword(''),/12 and 72/);
  assert.match(validatePassword('lettersbutnonumbers'),/letter and one number/);
- assert.equal(validatePassword('LongEnough2026'), '');
- assert.match(source,/REGISTRATION_ADMISSION_ENABLED=false/);
- assert.doesNotMatch(source,/platform_role|workspace_id|admin_general_manager|user_metadata|role:/);
+ assert.equal(validatePassword('LongEnough2026'),'');
 });
-
+test('FormSubmit request cannot create users or grant workspace permissions',()=>{
+ assert.match(app,/Native POST preserves FormSubmit/);
+ assert.match(app,/validateAndSubmitAccessRequest\(event.target,event\)/);
+ assert.doesNotMatch(readFileSync('frontend/request-access.js','utf8'),/service_role|secret_key|createUser\(|app_metadata/);
+ assert.doesNotMatch(renderAuthMarkup({mode:'register',requestAlias:'confirmed_ALIAS_2026'}),/admin_general_manager|workspace_id|service_role/);
+});
 test('login and recovery navigation retain known form IDs and accessible password controls',()=>{
  const login=renderAuthMarkup({mode:'login',year:2026});
  const forgot=renderAuthMarkup({mode:'forgot'});
