@@ -135,7 +135,14 @@ test('function-only migration candidate preserves existing signed write boundari
  const begin=candidate.indexOf('CREATE OR REPLACE FUNCTION private.tl03_commit(');
  const end=candidate.indexOf('DO $board_sync_postflight$',begin);
  assert.ok(stageStart>0&&stageEnd>stageStart&&begin>0&&end>begin);
- assert.equal(candidate.slice(begin,end).trim(),staged);
+ // The earlier migration remains immutable. The new review/revision
+ // candidate must be the exact updated staged commit body.
+ const reviewCandidate=readFileSync('sql/tradelink-document-review-revision-candidate.sql','utf8');
+ const reviewStart=reviewCandidate.indexOf('CREATE OR REPLACE FUNCTION private.tl03_commit(');
+ const reviewEnd=reviewCandidate.indexOf('END $commit$;',reviewStart)+'END $commit$;'.length;
+ assert.ok(reviewStart>0&&reviewEnd>reviewStart);
+ assert.equal(reviewCandidate.slice(reviewStart,reviewEnd).trim(),staged);
+ assert.match(reviewCandidate,/md5\(pg_catalog\.pg_get_functiondef\(f\.oid\)\)<>'022f93c81d7e315891e9596e24335350'/);
  assert.match(candidate,/md5\(pg_get_functiondef\(f\.oid\)\)<>'91d3f483d65b0493e92d7521b5d0de91'/);
  assert.match(candidate,/pg_get_userbyid\(f\.proowner\)<>'postgres'/);
  assert.match(candidate,/f\.proacl::text IS DISTINCT FROM '\{postgres=X\/postgres,authenticated=X\/postgres\}'/);

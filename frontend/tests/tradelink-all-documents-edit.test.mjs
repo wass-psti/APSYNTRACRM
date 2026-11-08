@@ -175,7 +175,7 @@ test('signed deep-link loading uses real revision and Board checks and no local 
  assert.match(source,/state\.tradeLinkDraft\.editRequestId=draftEditId/);
  assert.match(source,/await openTradeLinkDraft\(target\)/);
  assert.match(source,/record\.revision!==listed\.revision/);
- assert.match(source,/listed\.archived\|\|listed\.workflowState!=='draft'/);
+ assert.match(source,/listed\.archived\|\|!\['draft','revision-required'\]\.includes\(listed\.workflowState\)/);
  assert.match(source,/no longer an editable Draft/);
  assert.match(source,/record\.board_item_id!==listed\.boardItemId/);
  assert.match(source,/tradeLinkDraftWorkspace\.changeState/);

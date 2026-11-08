@@ -56,7 +56,7 @@ test('source SQL candidate enforces CAS, workspace, session, Board lock, append-
  const sql=readFileSync('sql/tradelink-document-submit-candidate.sql','utf8');
  for(const match of [/private\.tl03_can_manage\(p_board_id\)/,
   /FOR UPDATE/,/d\.workspace_id IS DISTINCT FROM public\.current_workspace_id\(actor\)/,
-  /d\.revision IS DISTINCT FROM p_expected_revision/,/d\.workflow_state<>'draft'/,
+  /d\.revision IS DISTINCT FROM p_expected_revision/,/d\.workflow_state NOT IN \('draft','revision-required'\)/,
   /Board submit projection changed/,/INSERT INTO public\.tradelink_document_events/,
   /operation IN \('created','updated','archived','restored','submitted','completed'\)/,
   /SECURITY INVOKER SET search_path=''/,

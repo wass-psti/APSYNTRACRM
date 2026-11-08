@@ -13,6 +13,8 @@ on:
       - 'sql/cp-tl03-staged-domain.sql'
       - 'sql/tradelink-documents-page-candidate.sql'
       - 'sql/tradelink-document-submit-candidate.sql'
+      - 'sql/tradelink-document-review-revision-candidate.sql'
+      - 'sql/tests/cp-tl03-review-revision-disposable.sql'
       - 'sql/tests/cp-tl03-submit-disposable.sql'
       - 'sql/tests/cp-tl03-documents-page-disposable.sql'
       - 'sql/tests/cp-tl03-six-module-roundtrip-disposable.sql'
@@ -118,6 +120,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-submit-candidate.sql
       - name: Verify signed quotation and packing submission, invalid and foreign denials
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-submit-disposable.sql
+      - name: Install assigned reviewer and revision-required editor in isolated PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-review-revision-candidate.sql
+      - name: Verify assigned review, revision requests, edits, resubmission and signed history
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-review-revision-disposable.sql
       - name: Execute signed fixture, CAS, audit, RLS and denial acceptance
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-acceptance.sql
       - name: Check post-migration grants and board projection

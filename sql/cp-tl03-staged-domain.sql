@@ -238,7 +238,8 @@ BEGIN
    OR d.workspace_id IS DISTINCT FROM public.current_workspace_id(actor)
    OR d.revision IS DISTINCT FROM p_expected_revision THEN
    RAISE EXCEPTION 'Document stale revision or foreign workspace' USING ERRCODE='PT409'; END IF;
-  IF d.workflow_state<>'draft' THEN
+  IF d.workflow_state<>'draft' AND
+    (d.workflow_state<>'revision-required' OR p_operation<>'update') THEN
    RAISE EXCEPTION 'Workflow transitions require separate signed domain API' USING ERRCODE='42501'; END IF;
   SELECT * INTO projection FROM public.work_board_items
    WHERE id=d.board_item_id AND board_id=p_board_id FOR UPDATE;
@@ -302,7 +303,8 @@ BEGIN
   'TradeLink draft revision committed','tradelink-document',p_document_id::text,
   pg_catalog.jsonb_build_object('revision',rev,'operation',p_operation));
  RETURN pg_catalog.jsonb_build_object('documentId',p_document_id,'boardItemId',item_id,
-  'revision',rev,'state','draft','operation',p_operation,'idempotent',false);
+  'revision',rev,'state',CASE WHEN p_operation='update' AND d.id IS NOT NULL THEN
+    d.workflow_state ELSE 'draft' END,'operation',p_operation,'idempotent',false);
 END $commit$;
 REVOKE ALL ON FUNCTION private.tl03_commit(uuid,uuid,bigint,text,jsonb) FROM PUBLIC,anon,authenticated;
 -- CP-TL-03C Stage A: intentionally DO NOT grant authenticated EXECUTE.

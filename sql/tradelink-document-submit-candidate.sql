@@ -58,8 +58,8 @@ BEGIN
   OR d.revision IS DISTINCT FROM p_expected_revision
  THEN RAISE EXCEPTION 'Stale or inaccessible TradeLink submission'
   USING ERRCODE='PT409'; END IF;
- IF d.workflow_state<>'draft' OR d.archived_at IS NOT NULL THEN
-  RAISE EXCEPTION 'Only an active Draft may be submitted'
+ IF d.workflow_state NOT IN ('draft','revision-required') OR d.archived_at IS NOT NULL THEN
+  RAISE EXCEPTION 'Only active Drafts or revision-requested documents may be submitted'
   USING ERRCODE='PT409'; END IF;
  SELECT * INTO projection FROM public.work_board_items
   WHERE id=d.board_item_id AND board_id=p_board_id FOR UPDATE;
@@ -145,14 +145,14 @@ BEGIN
  (document_id,board_id,workspace_id,revision,operation,actor_id,metadata)
  VALUES(d.id,p_board_id,d.workspace_id,rev,
   CASE WHEN target='completed' THEN 'completed' ELSE 'submitted' END,
-  actor,pg_catalog.jsonb_build_object('action','submit','from','draft',
+  actor,pg_catalog.jsonb_build_object('action','submit','from',d.workflow_state,
     'to',target,'documentType',d.document_type));
  PERFORM public.work_board_log(p_board_id,'tradelink.workflow.submit',
   'TradeLink workflow submission committed','tradelink-document',d.id::text,
-  pg_catalog.jsonb_build_object('revision',rev,'from','draft','to',target));
+  pg_catalog.jsonb_build_object('revision',rev,'from',d.workflow_state,'to',target));
  RETURN pg_catalog.jsonb_build_object(
   'documentId',d.id,'boardItemId',d.board_item_id,
-  'revision',rev,'state',target,'operation','submit','from','draft');
+  'revision',rev,'state',target,'operation','submit','from',d.workflow_state);
 END $tl_submit$;
 REVOKE ALL ON FUNCTION private.tl03_submit(uuid,uuid,bigint)
  FROM PUBLIC,anon,authenticated;
