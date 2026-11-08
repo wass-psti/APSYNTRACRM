@@ -1,0 +1,83 @@
+/* APSYNTRA CRM | Soft Minimalist Enterprise Design System
+ * Visual-only. This file loads after existing route styles to reconcile
+ * established components without changing routing, permissions or behavior.
+ * New refinements must reuse these tokens rather than recreate palettes.
+ */
+:root{
+  color-scheme:light;
+  --sm-bg:#F7F8FA;
+  --sm-surface:#FFFFFF;
+  --sm-surface-soft:#F1F3F7;
+  --sm-surface-raised:#FAFBFD;
+  --sm-ink:#253047;
+  --sm-text:#405068;
+  --sm-sub:#667085;
+  --sm-muted:#788397; /* readable secondary metadata */
+  --sm-accent:#6667AB;
+  --sm-accent-hover:#51528D;
+  --sm-accent-soft:#EEEEF8;
+  --sm-border:#E3E7ED;
+  --sm-border-strong:#CFD6E1;
+  --sm-success:#26745D;
+  --sm-warning:#946527;
+  --sm-danger:#B34755;
+  --sm-success-soft:#E9F5F0;
+  --sm-warning-soft:#FCF4E6;
+  --sm-danger-soft:#FBEFF1;
+  --sm-radius-xs:8px;
+  --sm-radius-control:11px;
+  --sm-radius-card:16px;
+  --sm-radius-panel:20px;
+  --sm-radius-pill:999px;
+  --sm-space-1:4px;
+  --sm-space-2:8px;
+  --sm-space-3:12px;
+  --sm-space-4:16px;
+  --sm-space-5:20px;
+  --sm-space-6:24px;
+  --sm-space-8:32px;
+  --sm-space-10:40px;
+  --sm-space-12:48px;
+  --sm-shadow-sm:0 1px 3px rgba(29,43,68,.035);
+  --sm-shadow-card:0 4px 22px rgba(29,43,68,.045);
+  --sm-shadow-popover:0 14px 36px rgba(29,43,68,.12);
+  --sm-focus:0 0 0 3px rgba(102,103,171,.21);
+  --sm-fast:140ms ease-out;
+  --sm-normal:180ms ease-out;
+  /* Compatibility aliases used by the original base stylesheet. */
+  --purple:var(--sm-accent);
+  --purple-soft:var(--sm-accent-soft);
+  --ink:var(--sm-ink);
+  --sub:var(--sm-sub);
+  --line:var(--sm-border);
+  --canvas:var(--sm-bg);
+  --card:var(--sm-surface);
+  --green:var(--sm-success);
+  --red:var(--sm-danger);
+  --shadow:var(--sm-shadow-card);
+}
+body{background:var(--sm-bg);color:var(--sm-ink)}
+#app{color:var(--sm-ink)}
+#app :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:3px;
+}
+#app :is(.primary,.secondary){
+  border-radius:var(--sm-radius-control);
+  transition:background-color var(--sm-fast),border-color var(--sm-fast),color var(--sm-fast),box-shadow var(--sm-fast);
+}
+#app .primary{color:#fff;background:var(--sm-accent);border-color:var(--sm-accent);box-shadow:none}
+#app .primary:hover:not(:disabled){background:var(--sm-accent-hover);border-color:var(--sm-accent-hover);box-shadow:var(--sm-shadow-sm)}
+#app .secondary{color:var(--sm-text);background:var(--sm-surface);border-color:var(--sm-border)}
+#app .secondary:hover:not(:disabled){background:var(--sm-surface-raised);border-color:var(--sm-border-strong)}
+#app :is(.panel,.modal){background:var(--sm-surface);border-color:var(--sm-border);box-shadow:var(--sm-shadow-card)}
+#app :is(.panel,.modal){border-radius:var(--sm-radius-card)}
+#app :is(.field input,.field select,.field textarea,.search-input):focus-visible{box-shadow:var(--sm-focus)}
+#app .muted{color:var(--sm-sub)}
+#app .status{border-radius:var(--sm-radius-xs);font-weight:700}
+#app .status:is(.done,.completed){background:var(--sm-success-soft);color:var(--sm-success)}
+#app .status:is(.stuck,.blocked){background:var(--sm-danger-soft);color:var(--sm-danger)}
+#app .status:is(.todo,.planned){background:var(--sm-surface-soft);color:var(--sm-sub)}
+@media(prefers-reduced-motion:reduce){
+  #app :is(.primary,.secondary){transition:none}
+}
