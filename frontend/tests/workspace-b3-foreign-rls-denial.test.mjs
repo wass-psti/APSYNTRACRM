@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {
  captureWs02dB3OwnerRlsFixture,verifyWs02dB3ForeignRlsDenial,
  clearWs02dB3ForeignRlsFixture,hasWs02dB3ForeignRlsFixture,
@@ -138,4 +139,17 @@ test('sanitizer rejects forged PASS and UI never renders retained row/user ident
  const empty=renderWs02dB3ForeignRlsDenial({hasFixture:false});
  assert.match(empty,/data-action="security-ws02d-b3-rls-verify" disabled/);
  assert.doesNotMatch(empty,/security-ws02d-b3-rls-handoff/);
+});
+
+// Source contract only: genuine signed HTTPS acceptance must be user-operated.
+test('B3 guided handoff uses only local sign-out, returns to Security, and never persists row reference',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/case 'security-ws02d-b3-rls-handoff':/);
+ assert.match(app,/const isB3RlsHandoff=name==='security-ws02d-b3-rls-handoff'/);
+ assert.match(app,/if\(isB3RlsHandoff\)\{[\s\S]*?hasWs02dB3ForeignRlsFixture\(\)/);
+ assert.match(app,/state\.ws02dB3HandoffPending=true;\s*await auth\.signOut\(\{scope:'local'\}\)/);
+ assert.match(app,/returnToB3=state\.ws02dB3HandoffPending&&hasWs02dB3ForeignRlsFixture\(\)/);
+ assert.match(app,/location\.hash=returnToB3\?'#\/security':routeHome/);
+ assert.match(app,/clearWs02dB3ForeignRlsFixture\(\)/);
+ assert.doesNotMatch(app,/ws02dB3HandoffPending=true;[\s\S]{0,250}(?:localStorage|sessionStorage|navigator\.clipboard)/);
 });
