@@ -19,8 +19,8 @@ const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 test('activated FormSubmit request form never creates a Supabase account',()=>{
  assert.equal(REGISTRATION_ADMISSION_ENABLED,false);
  assert.match(REGISTRATION_BLOCKED,/Self-service registration is temporarily unavailable/);
- assert.equal(FORM_SUBMIT_RECIPIENT_ALIAS,'7142b43666b25405b5175a0537ed0630');
- assert.equal(formSubmitAction(),'https://formsubmit.co/7142b43666b25405b5175a0537ed0630');
+ assert.equal(FORM_SUBMIT_RECIPIENT_ALIAS,'a87807597aa2d1a9a77c6e28e2413e1a');
+ assert.equal(formSubmitAction(),'https://formsubmit.co/a87807597aa2d1a9a77c6e28e2413e1a');
  const markup=renderAuthMarkup({mode:'register',year:2026});
  for(const piece of ['id="register-form" method="POST"',
   'id="register-name"','id="register-email"',
@@ -28,7 +28,7 @@ test('activated FormSubmit request form never creates a Supabase account',()=>{
   'Submit access request','name="_honey"','name="_next"',
   'name="consent" value="yes" type="checkbox" required'])
   assert.ok(markup.includes(piece),piece);
- assert.match(markup,/action="https:\/\/formsubmit.co\/7142b43666b25405b5175a0537ed0630"/);
+ assert.match(markup,/action="https:\/\/formsubmit.co\/a87807597aa2d1a9a77c6e28e2413e1a"/);
  assert.doesNotMatch(markup,/name="password"|name="confirmation"|Create account/);
  assert.match(markup,/FormSubmit may retain requests for 30 days/);
  assert.match(markup,/formsubmit.co\/privacy.pdf/);
