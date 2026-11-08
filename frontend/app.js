@@ -1433,28 +1433,69 @@ function tradeLinkAuthorizedListRoute(){
 function tradeLinkDraftRoute(){
  return tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='drafts';
 }
-async function loadTradeLinkDrafts(seq=routeSerial){
+async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  if(!tradeLinkAuthorizedListRoute()||!TL03_DOMAIN_READS_ENABLED||
   state.tradeLinkDraft.busy)return;
  const actor=auth.userId,ws=state.context.workspace_id;
  const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
   auth.userId===actor&&state.context?.workspace_id===ws;
+ const documents=state.tradeLinkSection==='documents';
+ const filters=normalizeTradeLinkDraftListFilters(
+  pageRequest?.filters??state.tradeLinkDraft.listFilters);
  state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
  try{
-  const result=await tradeLinkDraftWorkspace.list();
+  let result;
+  if(documents){
+   try{
+    result=await tradeLinkDraftWorkspace.searchPage({
+     filters,cursor:pageRequest?.cursor??null});
+    if(result.listPage){
+     result.listPage={...result.listPage,history:pageRequest?.history??[],
+      pageIndex:pageRequest?.pageIndex??0};
+    }
+   }catch(err){
+    // An absent, not-yet-approved RPC is not evidence of an empty repository.
+    // Continue with the original bounded signed list and its truthful scope.
+    if(err?.code!=='PGRST202'&&err?.code!=='42883')throw err;
+    result=await tradeLinkDraftWorkspace.list();
+    result.listPage=null;
+    result.message='Server-wide search is not activated. Showing the current signed 50-record response.';
+   }
+  }else result=await tradeLinkDraftWorkspace.list();
   if(same()){
    state.tradeLinkDraft={...state.tradeLinkDraft,...result,
+    listFilters:filters,listPage:result.listPage??null,
     documentPreview:null,busy:false};
    const target=state.tradeLinkDraft.editRequestId;
    if(target&&!state.tradeLinkDraft.selected&&tradeLinkDraftRoute()){
     if(!result.rows.some(row=>row.documentId===target)){
-     state.tradeLinkDraft.error='This Draft is unavailable in the current authorized document list. Refresh All Documents.';
-    }else await openTradeLinkDraft(target);
+     // An exact signed read is authoritative even when a document lies
+     // outside the first 50 list entries; it cannot become a fabricated row.
+     try{
+      const record=await tradeLinkDraftWorkspace.read(target);
+      if(!same())return;
+      if(!record||record.archived_at!==null||record.workflow_state!=='draft'||
+       record.document_number!==record.content?.documentNumber||
+       record.document_type!==record.content?.documentType)
+       throw new ApiError('Saved Draft not editable.',409);
+      state.tradeLinkDraft.rows=[...state.tradeLinkDraft.rows,{
+       documentId:record.id,boardItemId:record.board_item_id,
+       documentNumber:record.document_number,documentType:record.document_type,
+       revision:record.revision,workflowState:record.workflow_state,
+       archived:false,updatedAt:record.updated_at
+      }];
+     }catch{
+      if(same())state.tradeLinkDraft.error=
+       'This Draft could not be verified by signed server read. Return to All Documents.';
+      return;
+     }
+    }
+    if(same())await openTradeLinkDraft(target);
    }
   }
  }catch{
   if(same())state.tradeLinkDraft={...state.tradeLinkDraft,
-   status:'READ_FAILED',rows:[],selected:null,documentPreview:null,
+   status:'READ_FAILED',rows:[],selected:null,documentPreview:null,listPage:null,
    error:'Signed Draft list unavailable. No records were cached.'};
  }finally{if(same()){state.tradeLinkDraft.busy=false;render();}}
 }
@@ -3265,8 +3306,35 @@ async function action(name,button){
   await openTradeLinkDocument(button.dataset.id);break;
  }
  case 'tradelink-documents-refresh':{
-  if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents')
-   await loadTradeLinkDrafts(routeSerial);
+  if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'){
+   const page=state.tradeLinkDraft.listPage;
+   await loadTradeLinkDrafts(routeSerial,page?.server?{
+    cursor:page.cursor,history:page.history,pageIndex:page.pageIndex,
+    filters:page.appliedFilters}:null);
+  }
+  break;
+ }
+ case 'tradelink-documents-search':{
+  if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'&&
+    state.tradeLinkDraft.listPage?.server)
+   await loadTradeLinkDrafts(routeSerial,{cursor:null,history:[],pageIndex:0,
+    filters:state.tradeLinkDraft.listFilters});
+  break;
+ }
+ case 'tradelink-documents-next':
+ case 'tradelink-documents-previous':{
+  const page=state.tradeLinkDraft.listPage;
+  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+    !page?.server||state.tradeLinkDraft.busy)break;
+  if(name==='tradelink-documents-next'&&page.hasMore&&page.nextCursor){
+   await loadTradeLinkDrafts(routeSerial,{
+    cursor:page.nextCursor,history:[...page.history,page.cursor],
+    pageIndex:page.pageIndex+1,filters:page.appliedFilters});
+  }else if(name==='tradelink-documents-previous'&&page.history?.length){
+   await loadTradeLinkDrafts(routeSerial,{
+    cursor:page.history.at(-1),history:page.history.slice(0,-1),
+    pageIndex:page.pageIndex-1,filters:page.appliedFilters});
+  }
   break;
  }
  case 'tradelink-draft-submit':{
@@ -4891,7 +4959,8 @@ function captureTradeLinkDraftListFilters(event){
   sortBy:get('sortBy'),sortDirection:get('sortDirection')
  });
  state.tradeLinkDraft.listFilters=filters;
- updateTradeLinkDraftListUI(container,filters);
+ if(!state.tradeLinkDraft.listPage?.server)
+  updateTradeLinkDraftListUI(container,filters);
  return true;
 }
 function captureTradeLinkDraftFields(event){
