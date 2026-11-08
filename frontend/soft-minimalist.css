@@ -188,3 +188,143 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
     padding:20px 15px 65px;
   }
 }
+
+/* Phase 3 — Overview and My Boards. A single quiet hero treatment replaces
+   the former large saturated banners; operational data remains unchanged. */
+#app .aps-overview{
+  --ov-ink:var(--sm-ink);--ov-sub:var(--sm-sub);
+  --ov-line:var(--sm-border);--ov-violet:var(--sm-accent);
+}
+#app .aps-boards{
+  --boards-ink:var(--sm-ink);--boards-sub:var(--sm-sub);
+  --boards-border:var(--sm-border);--boards-violet:var(--sm-accent);
+}
+#app .aps-overview .overview-hero,
+#app .aps-boards .boards-hero{
+  min-height:145px;
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-panel);
+  background:var(--sm-surface);
+  box-shadow:var(--sm-shadow-card);
+  color:var(--sm-ink);
+}
+#app .aps-overview .overview-hero::after,
+#app .aps-boards .boards-hero::after{content:none}
+#app .aps-overview .overview-hero-art,
+#app .aps-boards .boards-hero-decor{
+  color:var(--sm-accent);
+  opacity:.12;
+}
+#app .aps-overview .overview-hero .label-top,
+#app .aps-boards .boards-hero .label-top{
+  color:var(--sm-accent-hover);
+  letter-spacing:1.25px;
+  font-weight:750;
+}
+#app .aps-overview .overview-hero-dot,
+#app .aps-boards .boards-hero-dot{
+  background:var(--sm-accent);box-shadow:0 0 0 3px var(--sm-accent-soft);
+}
+#app .aps-overview .overview-hero h1,
+#app .aps-boards .boards-hero h1{
+  color:var(--sm-ink);
+  font-size:clamp(25px,2.5vw,34px);
+  font-weight:750;
+  letter-spacing:-.035em;
+}
+#app .aps-overview .overview-hero p,
+#app .aps-boards .boards-hero p{color:var(--sm-sub)}
+#app .aps-boards .boards-heading-stop{color:var(--sm-accent)}
+#app .aps-overview .overview-hero .overview-refresh{
+  color:var(--sm-text);border:1px solid var(--sm-border);
+  background:var(--sm-surface-raised);
+  backdrop-filter:none;
+}
+#app .aps-overview .overview-hero .overview-refresh:hover{
+  color:var(--sm-ink);background:var(--sm-surface-soft);
+  border-color:var(--sm-border-strong);
+}
+#app .aps-overview .overview-hero .overview-create,
+#app .aps-boards .boards-create-button{
+  color:#fff;background:var(--sm-accent);
+  border:1px solid var(--sm-accent);box-shadow:none;
+  font-weight:720;
+}
+#app .aps-overview .overview-hero .overview-create:hover,
+#app .aps-boards .boards-create-button:hover{
+  color:#fff;background:var(--sm-accent-hover);
+  box-shadow:none;transform:none;
+}
+#app .aps-overview .overview-hero .head-actions button:not(:disabled):hover{transform:none}
+#app .aps-overview .overview-hero button:focus-visible,
+#app .aps-boards .boards-create-button:focus-visible{
+  outline:2px solid var(--sm-accent);outline-offset:3px;
+}
+#app .aps-overview .stat-card,
+#app .aps-overview .overview-board-grid .board-card,
+#app .aps-boards .boards-catalog-grid .board-card{
+  border:1px solid var(--sm-border);
+  background:var(--sm-surface);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+  transition:border-color var(--sm-fast),box-shadow var(--sm-fast),background-color var(--sm-fast);
+}
+#app .aps-overview .stat-card::before,
+#app .aps-overview .overview-board-grid .board-card::before,
+#app .aps-boards .boards-catalog-grid .board-card::before{content:none}
+#app .aps-overview .stat-card:hover,
+#app .aps-overview .overview-board-grid .board-card:hover,
+#app .aps-boards .boards-catalog-grid .board-card:hover{
+  transform:none;
+  border-color:var(--sm-border-strong);
+  box-shadow:var(--sm-shadow-card);
+}
+#app .aps-overview .stat-label{color:var(--sm-sub);font-weight:650}
+#app .aps-overview .stat-value{color:var(--sm-ink);font-variant-numeric:tabular-nums}
+#app .aps-overview .stat-footer{color:var(--sm-sub)}
+#app .aps-overview .overview-section-heading .section-title{color:var(--sm-ink);font-weight:750}
+#app .aps-overview .overview-section-heading .inline-link{color:var(--sm-accent-hover)}
+#app .aps-overview .overview-essentials,
+#app .aps-overview .overview-empty,
+#app .aps-boards .boards-empty-state{
+  background:var(--sm-surface);
+  border-color:var(--sm-border);
+  box-shadow:var(--sm-shadow-sm);
+  border-radius:var(--sm-radius-card);
+}
+#app .aps-overview .overview-essentials .activity-item{border-color:var(--sm-border)}
+#app .aps-overview .overview-essentials .activity-item b{color:var(--sm-ink)}
+#app .aps-overview .overview-essentials .activity-item small{color:var(--sm-sub)}
+#app .aps-boards .boards-filter-panel{
+  background:var(--sm-surface);border-color:var(--sm-border);
+  border-radius:var(--sm-radius-card);box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-boards .boards-control-label{color:var(--sm-sub);letter-spacing:1px}
+#app .aps-boards .boards-status-segments{
+  background:var(--sm-surface-soft);border-color:var(--sm-border);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-boards .boards-status-segments .segment{color:var(--sm-text);font-weight:670}
+#app .aps-boards .boards-status-segments .segment:hover{
+  background:var(--sm-accent-soft);color:var(--sm-accent-hover);
+  transform:none;
+}
+#app .aps-boards .boards-status-segments .segment.active{
+  color:var(--sm-accent-hover);background:var(--sm-surface);
+  border-color:var(--sm-border);box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-boards #board-search{
+  color:var(--sm-ink);background:var(--sm-surface-raised);
+  border-color:var(--sm-border);border-radius:var(--sm-radius-control);
+}
+#app .aps-boards #board-search:focus-visible{
+  background:var(--sm-surface);border-color:var(--sm-accent);
+  box-shadow:var(--sm-focus);
+}
+#app .aps-boards .board-search-result{color:var(--sm-sub)}
+@media(max-width:760px){
+  #app .aps-overview .overview-hero,
+  #app .aps-boards .boards-hero{padding:22px;min-height:0}
+  #app .aps-overview .overview-hero-art,
+  #app .aps-boards .boards-hero-decor{opacity:.07}
+}
