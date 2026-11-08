@@ -130,7 +130,7 @@ export function verifyCompletePrivateSourceBundle({directory,sources,repo=repoRo
  const declared=new Map();
  for(const source of sources) {
   ensure(typeof source.signature==='string'&&source.signature.length>0
-    && /^[a-f0-9]{64}\\.sql$/.test(source.file)
+    && /^[a-f0-9]{64}\.sql$/.test(source.file)
     && source.file===sha256(source.signature)+'.sql'
     && /^[a-f0-9]{64}$/.test(source.source_sha256),
    'FULL_SOURCE_MANIFEST_INVALID');
