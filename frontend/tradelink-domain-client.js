@@ -16,6 +16,9 @@ export const TL03_WORKFLOW_SUBMIT_ENABLED=false;
 // Requires the separately approved review/revision RPC, signed event history,
 // and guarded revision-required Draft update. Never enable from frontend alone.
 export const TL03_WORKFLOW_REVIEW_ENABLED=false;
+// Exact-scope signed final approval/rejection requires a distinct approved
+// production database candidate and authenticated actor verification.
+export const TL03_WORKFLOW_DECISION_ENABLED=false;
 const TYPES=new Set(['esi','packing','delivery','payment','quotation','po']);
 const STATES=new Set(['draft','submitted','under-review','revision-required',
  'approved','rejected','completed','cancelled']);
@@ -117,9 +120,24 @@ export function normalizeTradeLinkReviewReceipt(
   deny('TradeLink signed review receipt mismatch.',409);
  return value;
 }
+export function normalizeTradeLinkDecisionReceipt(
+ value,documentId,expectedRevision,action,fromState
+){
+ const target=action==='approve'?'approved':'rejected';
+ if(!validUuid(documentId)||!Number.isSafeInteger(expectedRevision)||
+    expectedRevision<1||!['approve','reject'].includes(action)||
+    !['submitted','under-review'].includes(fromState)||
+    !value||typeof value!=='object'||Array.isArray(value)||
+    value.documentId!==documentId||!validUuid(value.boardItemId)||
+    value.revision!==expectedRevision+1||value.operation!==action||
+    value.state!==target||value.from!==fromState)
+  deny('TradeLink signed approval/rejection receipt mismatch.',409);
+ return value;
+}
 export function normalizeTradeLinkSignedHistory(rows,limit=25){
  const operations=new Set(['created','updated','archived','restored',
-  'submitted','completed','reviewed','revision-requested']);
+  'submitted','completed','reviewed','revision-requested',
+  'approved','rejected']);
  if(!Array.isArray(rows)||rows.length>limit||
   rows.some((r,i)=>!Number.isSafeInteger(r?.revision)||r.revision<1||
    (i>0&&r.revision>=rows[i-1].revision)||
@@ -237,6 +255,26 @@ export class TradeLinkDomainClient{
    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
    p_expected_revision:expectedRevision,p_action:action,p_reason:trimmed||null});
   return normalizeTradeLinkReviewReceipt(
+   receipt,documentId,expectedRevision,action,fromState);
+ }
+ async decide({documentId,expectedRevision,action,fromState,reason=''}={}){
+  if(!TL03_WORKFLOW_DECISION_ENABLED)
+   deny('TradeLink approval/rejection is not activated.',503);
+  const trimmed=typeof reason==='string'?reason.trim():null;
+  if(!validUuid(documentId)||!Number.isSafeInteger(expectedRevision)||
+    expectedRevision<1||!['approve','reject'].includes(action)||
+    !['submitted','under-review'].includes(fromState)||
+    trimmed===null||reason.length>1500||
+    /[\x00-\x1f\x7f]/.test(reason)||
+    (action==='reject'&&(trimmed.length<3||trimmed.length>1500)))
+   deny('Invalid TradeLink decision or mandatory rejection reason.',400);
+  await this.session();
+  const receipt=await this.api.rpc('tl03_document_decide',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+   p_expected_revision:expectedRevision,p_action:action,
+   p_reason:trimmed||null
+  });
+  return normalizeTradeLinkDecisionReceipt(
    receipt,documentId,expectedRevision,action,fromState);
  }
  async history(documentId,limit=25){
