@@ -101,6 +101,68 @@ export function verifyPrivateSourceBundle({directory,manifest,repo=repoRoot}) {
   }
   return Object.freeze({verifiedFiles:3,sourceReplay:false});
 }
+// Protected full-caller source prerequisite (74 original function definitions).
+// Filenames are SHA-256(signature).sql so no function-body or identity is needed
+// in the public repository. The directory and contents never leave the owner host.
+export function expectedFullCallerSources(manifest,g4b,g4c) {
+ verifyPinnedCoreManifest(manifest,g4b,g4c);
+ const sources=new Map();
+ for(const entry of [...g4b.entries,...g4c.dependents,...manifest.core_functions]) {
+  const existing=sources.get(entry.signature);
+  ensure(!existing||existing.source_sha256===entry.source_sha256,
+    'FULL_SOURCE_MANIFEST_CONFLICT');
+  sources.set(entry.signature,{signature:entry.signature,
+    file:sha256(entry.signature)+'.sql',source_sha256:entry.source_sha256});
+ }
+ ensure(sources.size===74,'FULL_SOURCE_MANIFEST_COUNT');
+ // The one post-baseline production update is documented separately.
+ // Never silently substitute it for the pinned historical definition.
+ const evolutionSignature='private.tl03_commit(p_board_id uuid, p_document_id uuid, p_expected_revision bigint, p_operation text, p_data jsonb)';
+ const evolution=sources.get(evolutionSignature);
+ ensure(evolution?.source_sha256==='5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d',
+   'FULL_SOURCE_EVOLUTION_BASELINE_DRIFT');
+ return [...sources.values()].sort((a,b)=>a.signature.localeCompare(b.signature));
+}
+
+export function verifyCompletePrivateSourceBundle({directory,sources,repo=repoRoot}) {
+ ensure(typeof directory==='string'&&isAbsolute(directory),'BUNDLE_MUST_BE_ABSOLUTE');
+ ensure(Array.isArray(sources)&&sources.length===74,'FULL_SOURCE_MANIFEST_COUNT');
+ const declared=new Map();
+ for(const source of sources) {
+  ensure(typeof source.signature==='string'&&source.signature.length>0
+    && /^[a-f0-9]{64}\\.sql$/.test(source.file)
+    && source.file===sha256(source.signature)+'.sql'
+    && /^[a-f0-9]{64}$/.test(source.source_sha256),
+   'FULL_SOURCE_MANIFEST_INVALID');
+  ensure(!declared.has(source.file),'FULL_SOURCE_DUPLICATE');
+  declared.set(source.file,source);
+ }
+ const info=lstatSync(directory);
+ ensure(info.isDirectory()&&!info.isSymbolicLink(),'INSECURE_DIRECTORY_TYPE');
+ ensure((info.mode&0o077)===0,'INSECURE_DIRECTORY_PERMISSIONS');
+ if(typeof process.getuid==='function')
+  ensure(info.uid===process.getuid(),'WRONG_DIRECTORY_OWNER');
+ const realDir=realpathSync(directory);
+ ensure(!isInsideRepo(realDir,realpathSync(repo)),
+   'PRIVATE_SOURCE_WITHIN_PUBLIC_REPOSITORY');
+ const files=readdirSync(realDir).sort();
+ ensure(files.length===declared.size && files.every(x=>declared.has(x)),
+   'FULL_SOURCE_MISSING_OR_EXTRA_FILES');
+ for(const filename of files) {
+  const path=join(realDir,filename),st=lstatSync(path);
+  ensure(st.isFile()&&!st.isSymbolicLink()&&st.nlink===1,
+    'INSECURE_SOURCE_TYPE');
+  ensure((st.mode&0o077)===0,'INSECURE_SOURCE_PERMISSIONS');
+  if(typeof process.getuid==='function')
+   ensure(st.uid===process.getuid(),'WRONG_SOURCE_OWNER');
+  ensure(st.size>0&&st.size<=256*1024,'INVALID_SOURCE_SIZE');
+  ensure(sha256(readFileSync(path))===declared.get(filename).source_sha256,
+    'FULL_SOURCE_FINGERPRINT_MISMATCH');
+ }
+ return Object.freeze({verifiedOriginals:74,originalCallers:73,
+  executionPerformed:false,documentedLiveEvolutionAccepted:false});
+}
+
 // Build a read-only, metadata-only live drift probe from the pinned inventories.
 // The SQL reads pg_get_functiondef internally to hash it but returns NO source text.
 // A matching result proves source identity, never PostgreSQL runtime compatibility.
@@ -221,7 +283,8 @@ function cli() {
   try {
     const args=process.argv.slice(2);
     ensure(args.length===1&&(args[0]==='--manifest-only'||
-      args[0]==='--catalog-sql'||args[0].startsWith('--private-dir=')),'USAGE');
+      args[0]==='--catalog-sql'||args[0].startsWith('--private-dir=')||
+      args[0].startsWith('--full-private-dir=')),'USAGE');
     verifyDefaultPinnedSourceCatalog();
     if(args[0]==='--catalog-sql') {
       // No connection, credentials, source bodies or production writes.
@@ -233,6 +296,16 @@ function cli() {
     }
     if(args[0]==='--manifest-only') {
       console.log('CP_WS01_H3_CORE_PROVENANCE_PASS: 3 core sources, 73 dependencies; replay NOT RUN');
+      return;
+    }
+    if(args[0].startsWith('--full-private-dir=')) {
+      const sources=expectedFullCallerSources(
+        JSON.parse(readFileSync(manifestFile,'utf8')),
+        JSON.parse(readFileSync(g4bFile,'utf8')),
+        JSON.parse(readFileSync(g4cFile,'utf8')));
+      verifyCompletePrivateSourceBundle({
+        directory:args[0].slice('--full-private-dir='.length),sources});
+      console.log('CP_WS_ACTIVATE04_PROTECTED_74_SOURCE_FINGERPRINT_PASS: 73 original callers; runtime NOT RUN');
       return;
     }
     verifyPrivateSourceBundle({
