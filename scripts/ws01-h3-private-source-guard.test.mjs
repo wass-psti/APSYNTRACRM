@@ -8,7 +8,8 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { verifyPinnedCoreManifest, verifyPrivateSourceBundle,
-  verifyDefaultPinnedSourceCatalog, generateLiveCatalogFingerprintSql } from './ws01-h3-private-source-guard.mjs';
+  verifyDefaultPinnedSourceCatalog, generateLiveCatalogFingerprintSql,
+  expectedFullCallerSources, verifyCompletePrivateSourceBundle } from './ws01-h3-private-source-guard.mjs';
 
 const manifest = JSON.parse(readFileSync(
   new URL('../sql/tests/cp-ws01-h3-private-core-source-manifest.json',import.meta.url)));
@@ -181,4 +182,77 @@ test('documented evolution is confined to exact historical TradeLink signature a
  if(correspondingDependent) correspondingDependent.source_sha256='a'.repeat(64);
  assert.throws(()=>generateLiveCatalogFingerprintSql(manifest,drift,dependentDrift),
    /DOCUMENTED_EVOLUTION_HISTORICAL_BASELINE_DRIFT/);
+});
+
+test('complete-source inventory is 74 unique protected historical definitions',()=>{
+ const originals=expectedFullCallerSources(manifest,g4b,g4c);
+ assert.equal(originals.length,74);
+ assert.equal(new Set(originals.map(x=>x.signature)).size,74);
+ assert.equal(new Set(originals.map(x=>x.file)).size,74);
+ assert.ok(originals.every(x=>/^[a-f0-9]{64}\\.sql$/.test(x.file)));
+ assert.equal(originals.find(x=>x.signature.startsWith('private.tl03_commit(')).source_sha256,
+   '5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d');
+ const altered=structuredClone(g4b);
+ const also=structuredClone(g4c);
+ const entry=altered.entries.find(x=>x.signature.startsWith('private.tl03_commit('));
+ entry.source_sha256='f'.repeat(64);
+ const twin=also.dependents.find(x=>x.signature===entry.signature);
+ if(twin)twin.source_sha256='f'.repeat(64);
+ assert.throws(()=>expectedFullCallerSources(manifest,altered,also),
+   /FULL_SOURCE_EVOLUTION_BASELINE_DRIFT/);
+});
+
+function withFullSourceFixtures(fn) {
+ const base=mkdtempSync(join(tmpdir(),'ws01-74-'));
+ const repo=join(base,'repo'),bundle=join(base,'private');
+ mkdirSync(repo,{mode:0o700});
+ mkdirSync(bundle,{mode:0o700});
+ const names=expectedFullCallerSources(manifest,g4b,g4c);
+ const sources=names.map((entry,index)=>{
+   const content='-- synthetic only '+index+'\\n';
+   writeFileSync(join(bundle,entry.file),content,{mode:0o600});
+   return {...entry,source_sha256:hash(content)};
+ });
+ try {return fn({base,repo,bundle,sources});}
+ finally {rmSync(base,{recursive:true,force:true});}
+}
+
+test('protected 74-file bundle validates every original hash without SQL execution',()=>{
+ withFullSourceFixtures(({repo,bundle,sources})=>{
+  assert.deepEqual(verifyCompletePrivateSourceBundle({directory:bundle,sources,repo}),
+   {verifiedOriginals:74,originalCallers:73,executionPerformed:false,
+    documentedLiveEvolutionAccepted:false});
+ });
+});
+
+test('missing, modified, extra, unsafe or symlinked source fails closed',()=>{
+ withFullSourceFixtures(({repo,bundle,sources})=>{
+  const target=join(bundle,sources[0].file);
+  writeFileSync(target,'tampered',{mode:0o600});
+  assert.throws(()=>verifyCompletePrivateSourceBundle({directory:bundle,sources,repo}),
+    /FULL_SOURCE_FINGERPRINT_MISMATCH/);
+  writeFileSync(target,'-- synthetic only 0\\n',{mode:0o600});
+  chmodSync(target,0o644);
+  assert.throws(()=>verifyCompletePrivateSourceBundle({directory:bundle,sources,repo}),
+    /INSECURE_SOURCE_PERMISSIONS/);
+  chmodSync(target,0o600);
+  unlinkSync(target);
+  assert.throws(()=>verifyCompletePrivateSourceBundle({directory:bundle,sources,repo}),
+    /FULL_SOURCE_MISSING_OR_EXTRA_FILES/);
+  const other=join(bundle,sources[1].file);
+  const real=join(base,'original.sql');
+  writeFileSync(real,'other',{mode:0o600});
+  unlinkSync(other);
+  symlinkSync(real,other);
+  assert.throws(()=>verifyCompletePrivateSourceBundle({directory:bundle,sources,repo}),
+    /INSECURE_SOURCE_TYPE|FULL_SOURCE_MISSING_OR_EXTRA_FILES/);
+ });
+});
+
+test('full protected CLI fails closed when source directory is missing',()=>{
+ const exe=fileURLToPath(new URL('./ws01-h3-private-source-guard.mjs',import.meta.url));
+ const result=spawnSync(process.execPath,[exe,'--full-private-dir=/nonexistent/owner-only'],{encoding:'utf8'});
+ assert.notEqual(result.status,0);
+ assert.match(result.stderr,/CP_WS01_H3_SOURCE_BLOCKED: INPUT_OR_PERMISSION_ERROR/);
+ assert.doesNotMatch(result.stderr,/CREATE FUNCTION|service_role|postgres:\/\//i);
 });
