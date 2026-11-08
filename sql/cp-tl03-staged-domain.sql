@@ -198,7 +198,7 @@ CREATE FUNCTION private.tl03_commit(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $commit$
 DECLARE actor uuid:=auth.uid(); d public.tradelink_documents%rowtype;
  projection public.work_board_items%rowtype; payload jsonb;
- group_id uuid; item_id uuid; rev bigint;
+ group_id uuid; item_id uuid; rev bigint; modified_at timestamptz;
 BEGIN
  IF actor IS NULL OR private.tl03_can_manage(p_board_id) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Signed TradeLink General Manager access required' USING ERRCODE='42501'; END IF;
@@ -255,7 +255,16 @@ BEGIN
    UPDATE public.tradelink_documents
     SET document_number=payload->>'documentNumber',content=payload,
      revision=revision+1,updated_by=actor,updated_at=pg_catalog.clock_timestamp()
-    WHERE id=d.id RETURNING revision INTO rev;
+    WHERE id=d.id RETURNING revision,updated_at INTO rev,modified_at;
+   -- Same signed transaction and locked Board item: reflect each revision,
+   -- even when the document number (Board title) is unchanged.
+   UPDATE public.work_board_items
+    SET updated_by=actor,updated_at=modified_at
+    WHERE id=d.board_item_id AND board_id=p_board_id
+      AND title=payload->>'documentNumber' AND archived_at IS NULL;
+   IF NOT FOUND THEN
+    RAISE EXCEPTION 'Board projection changed during document update'
+     USING ERRCODE='40001'; END IF;
   ELSIF p_operation='archive' THEN
    IF d.archived_at IS NOT NULL THEN
     RAISE EXCEPTION 'Already archived' USING ERRCODE='40001'; END IF;

@@ -34,9 +34,11 @@ BEGIN
  modified:=jsonb_set(payload,'{documentNumber}','"Q-0002"'::jsonb);
  r:=public.tl03_document_commit(board,doc,1,'update',modified);
  IF (r->>'revision')::int<>2 OR
-  NOT EXISTS(SELECT 1 FROM public.work_board_items WHERE id=(r->>'boardItemId')::uuid
-    AND title='Q-0002' AND archived_at IS NULL) THEN
-  RAISE EXCEPTION 'Draft CAS update or board title projection failed'; END IF;
+  NOT EXISTS(SELECT 1 FROM public.work_board_items i
+    JOIN public.tradelink_documents d ON d.board_item_id=i.id
+    WHERE i.id=(r->>'boardItemId')::uuid AND i.title='Q-0002' AND i.archived_at IS NULL
+      AND i.updated_at=d.updated_at AND i.updated_by=d.updated_by) THEN
+  RAISE EXCEPTION 'Draft CAS update, Board title or timestamp projection failed'; END IF;
  BEGIN
   PERFORM public.tl03_document_commit(board,doc,1,'update',modified);
   RAISE EXCEPTION 'Stale revision accepted';
@@ -59,6 +61,28 @@ BEGIN
    modified||'{"items":[{"id":"line-1","kind":"item","quantity":1,"unitPrice":4,"unit":{}}]}'::jsonb);
   RAISE EXCEPTION 'Malformed source item accepted';
  EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ -- Verify a same-title, content-only edit updates Board time. Roll back
+ -- only this positive probe so the original fixture's 2→3→4 CAS remains intact.
+ DECLARE
+  old_board_modified timestamptz;
+  new_board_modified timestamptz;
+ BEGIN
+  SELECT updated_at INTO old_board_modified FROM public.work_board_items
+   WHERE id=(r->>'boardItemId')::uuid;
+  PERFORM public.tl03_document_commit(board,doc,2,'update',
+   jsonb_set(modified,'{remarks}','"Changed notes"'::jsonb));
+  SELECT i.updated_at INTO new_board_modified FROM public.work_board_items i
+   JOIN public.tradelink_documents d ON d.board_item_id=i.id WHERE d.id=doc;
+  IF new_board_modified<=old_board_modified OR
+    NOT EXISTS(SELECT 1 FROM public.work_board_items i
+      JOIN public.tradelink_documents d ON d.board_item_id=i.id WHERE d.id=doc
+       AND i.updated_at=d.updated_at AND i.updated_by=d.updated_by
+       AND d.content->>'remarks'='Changed notes')
+   THEN RAISE EXCEPTION 'Same-title Draft update failed Board time synchronization'; END IF;
+  RAISE EXCEPTION 'ROLLBACK_PROBE' USING ERRCODE='P0001';
+ EXCEPTION WHEN raise_exception THEN
+  IF SQLERRM<>'ROLLBACK_PROBE' THEN RAISE; END IF;
+ END;
  r:=public.tl03_document_commit(board,doc,2,'archive',NULL);
  IF (r->>'revision')::int<>3 OR
    NOT EXISTS(SELECT 1 FROM public.work_board_items WHERE id=(r->>'boardItemId')::uuid

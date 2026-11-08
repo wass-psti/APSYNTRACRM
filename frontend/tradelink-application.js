@@ -88,15 +88,24 @@ function renderDocuments(detail,workspaceId,draftView,canManage){
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Authorized board projection</p>'+
   '<h2 id="tl-documents-title">Board records</h2></div>'+
   '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'">Open Board Items</a></div>'+
-  '<p class="muted">Board items are linked to the same authorized TradeLink documents listed above. Preview an authorized saved document, or edit a Draft using the same revisioned server record. Approvals and attachments remain separate workflows.</p>'+
+  '<p class="muted">Board items are linked to the same signed TradeLink documents. '+
+  'Board updated is the Board record timestamp; Document updated is the authoritative '+
+  'saved document revision timestamp. Preview or edit the same linked record. '+
+  'Approvals and attachments remain separate workflows.</p>'+
   '<label class="tl-search-label" for="tradelink-document-search">Search board item titles</label>'+
   '<input class="search-input tl-record-search" type="search" id="tradelink-document-search" data-tradelink-search maxlength="120" autocomplete="off" placeholder="Search authorized records…"/>'+
   '<div class="tl-records-scroll"><table class="tl-records-table"><thead><tr>'+
   '<th scope="col">Board item</th><th scope="col">Board status</th>'+
-  '<th scope="col">Last updated</th><th scope="col">TradeLink document</th>'+
+  '<th scope="col">Board updated</th><th scope="col">Document updated</th>'+
+  '<th scope="col">TradeLink document</th>'+
   '</tr></thead><tbody>'+
   rows.map(item=>'<tr data-tradelink-record data-title="'+esc(String(item.title||'').toLocaleLowerCase())+'"><td><a href="#/boards/'+TRADELINK_BOARD_ID+'">'+esc(item.title||'Untitled')+'</a></td>'+
-    '<td>'+esc(item.status||'—')+'</td><td>'+esc(item.updated_at||'—')+'</td><td>'+
+    '<td>'+esc(item.status||'—')+'</td><td>'+esc(item.updated_at||'—')+'</td>'+
+    '<td data-tradelink-document-updated>'+
+     (documentByItem.get(item.id)?.documentNumber===item.title&&
+      typeof documentByItem.get(item.id)?.updatedAt==='string'&&
+      Number.isFinite(Date.parse(documentByItem.get(item.id).updatedAt))?
+      esc(documentByItem.get(item.id).updatedAt):'—')+'</td><td>'+
     (documentByItem.get(item.id)?.documentNumber===item.title?
      '<button type="button" class="secondary" data-action="tradelink-document-open" '+
       'data-id="'+esc(documentByItem.get(item.id).documentId)+'">Open document</button>'+

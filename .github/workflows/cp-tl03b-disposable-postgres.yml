@@ -11,6 +11,7 @@ on:
     paths:
       - '.github/workflows/cp-tl03b-disposable-postgres.yml'
       - 'sql/cp-tl03-staged-domain.sql'
+      - 'sql/tradelink-document-board-timestamp-candidate.sql'
       - 'sql/cp-tl03c-write-permission-candidate.sql'
       - 'sql/cp-tl03c-stage-b-write-revoke-candidate.sql'
       - 'sql/cp-tl03c-emergency-disable-candidate.sql'
@@ -71,6 +72,31 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03c-stage-a-readonly.sql
       - name: Activate write grants ONLY in this disposable PostgreSQL runner
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03c-write-permission-candidate.sql
+      - name: Verify pre-existing function upgrade in the same disposable database
+        run: |
+          set -euo pipefail
+          # Reconstruct the exact previous function definition from the new
+          # source in a *disposable fixture*, then test the pinned migration.
+          # No production DB, project, or credentials are involved.
+          python3 - <<'PY_FIXTURE'
+          from pathlib import Path
+          source=Path('sql/cp-tl03-staged-domain.sql').read_text()
+          start=source.index('CREATE FUNCTION private.tl03_commit(')
+          end=source.index('REVOKE ALL ON FUNCTION private.tl03_commit(',start)
+          fn=source[start:end].replace('CREATE FUNCTION ', 'CREATE OR REPLACE FUNCTION ',1)
+          a=' group_id uuid; item_id uuid; rev bigint; modified_at timestamptz;'
+          b=' group_id uuid; item_id uuid; rev bigint;'
+          assert fn.count(a)==1
+          fn=fn.replace(a,b)
+          start_update=fn.index('    WHERE id=d.id RETURNING revision,updated_at INTO rev,modified_at;')
+          end_update=fn.index("  ELSIF p_operation='archive' THEN",start_update)
+          assert fn[start_update:end_update].count('UPDATE public.work_board_items')==1
+          fn=fn[:start_update]+"    WHERE id=d.id RETURNING revision INTO rev;\n"+fn[end_update:]
+          Path('/tmp/tl03-original-function.sql').write_text(fn)
+          PY_FIXTURE
+          psql -X -v ON_ERROR_STOP=1 -f /tmp/tl03-original-function.sql
+          test "$(psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT md5(pg_get_functiondef('private.tl03_commit(uuid,uuid,bigint,text,jsonb)'::regprocedure))")" = '661e491750fbc9eeb0f619d701496306'
+          psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-board-timestamp-candidate.sql
       - name: Execute signed fixture, CAS, audit, RLS and denial acceptance
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-acceptance.sql
       - name: Check post-migration grants and board projection

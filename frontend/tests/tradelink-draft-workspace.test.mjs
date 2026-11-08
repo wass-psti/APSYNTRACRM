@@ -852,7 +852,7 @@ test('document workspace is distinct from board projection and honors signed wor
  assert.match(html,/TradeLink document workspace/);
  assert.match(html,/Source-aligned All Documents/);
  assert.match(html,/Board records/);
- assert.match(html,/Board items are linked to the same authorized TradeLink documents/);
+ assert.match(html,/Board items are linked to the same signed TradeLink documents/);
  assert.match(html,/Document reads are subject to signed authorization/);
  for(const name of ['query','documentType','workflowState','archiveMode','sortBy','sortDirection'])
   assert.ok(html.includes('name="'+name+'"'),name);
