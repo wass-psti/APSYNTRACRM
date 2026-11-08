@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {renderAuthMarkup} from '../auth-markup.js';
+import {formSubmitAction,validateAccessRequest,FORM_SUBMIT_RECIPIENT_ALIAS} from '../request-access.js';
 import {
  REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,RECOVERY_REDIRECT_URL,
  RECOVERY_CONFIRMATION,validateRegistration,validatePassword,
@@ -15,23 +16,41 @@ const source=readFileSync('frontend/auth-account-flows.js','utf8');
 const css=readFileSync('frontend/auth-experience.css','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 
-test('self-service registration stays disabled until verified personal-workspace admission hardening',()=>{
+test('activated FormSubmit request form never creates a Supabase account',()=>{
  assert.equal(REGISTRATION_ADMISSION_ENABLED,false);
  assert.match(REGISTRATION_BLOCKED,/Self-service registration is temporarily unavailable/);
+ assert.equal(FORM_SUBMIT_RECIPIENT_ALIAS,'7142b43666b25405b5175a0537ed0630');
+ assert.equal(formSubmitAction(),'https://formsubmit.co/7142b43666b25405b5175a0537ed0630');
  const markup=renderAuthMarkup({mode:'register',year:2026});
- for(const piece of ['id="register-form"','id="register-name"','id="register-email"',
-  'id="register-password"','id="register-confirm"',
-  'autocomplete="new-password"','autocomplete="name"','aria-describedby="auth-registration-status"',
-  'Create account — pending activation','disabled aria-describedby="auth-registration-status"'])
+ for(const piece of ['id="register-form" method="POST"',
+  'id="register-name"','id="register-email"',
+  'autocomplete="name"','aria-describedby="auth-registration-status"',
+  'Submit access request','name="_honey"','name="_next"',
+  'name="consent" value="yes" type="checkbox" required'])
   assert.ok(markup.includes(piece),piece);
- assert.match(markup,/Self-service registration is being secured/);
- assert.match(app,/if\(!REGISTRATION_ADMISSION_ENABLED\)/);
- assert.match(app,/REGISTRATION_BLOCKED/);
- assert.doesNotMatch(source,/auth\/v1\/signup/);
+ assert.match(markup,/action="https:\/\/formsubmit.co\/7142b43666b25405b5175a0537ed0630"/);
+ assert.doesNotMatch(markup,/name="password"|name="confirmation"|Create account/);
+ assert.match(markup,/FormSubmit may retain requests for 30 days/);
+ assert.match(markup,/formsubmit.co\/privacy.pdf/);
+ const blocked=renderAuthMarkup({mode:'register',requestAlias:''});
+ assert.match(blocked,/Request access — awaiting setup/);
+ assert.match(blocked,/disabled aria-describedby="auth-registration-status"/);
+ assert.equal(formSubmitAction(''),'');
+ assert.equal(formSubmitAction('x" onsubmit=evil'), '');
+ assert.match(app,/validateAndSubmitAccessRequest/);
  assert.doesNotMatch(app,/auth\.signUp\(|auth\.register\(/);
  assert.doesNotMatch(client,/auth\/v1\/signup/);
 });
-
+test('FormSubmit inputs are validated without collecting credentials',()=>{
+ assert.equal(validateAccessRequest({name:'Example Person',email:'request@example.invalid',consent:true}),'');
+ assert.match(validateAccessRequest({name:'',email:'a@example.com',consent:true}),/full name/);
+ assert.match(validateAccessRequest({name:'<img>',email:'a@example.com',consent:true}),/full name/);
+ assert.match(validateAccessRequest({name:'Example',email:'invalid',consent:true}),/valid email/);
+ assert.match(validateAccessRequest({name:'Example',email:'ok@example.com'}),/Consent/);
+ assert.match(app,/Native POST preserves FormSubmit CAPTCHA/);
+ assert.match(app,/validateAndSubmitAccessRequest\(event.target,event\)/);
+ assert.doesNotMatch(readFileSync('frontend/request-access.js','utf8'),/service_role|secret_key|createUser\(|app_metadata/);
+});
 test('registration validation handles names, format, password and mismatched confirmation without role claims',()=>{
  assert.deepEqual(validateRegistration({
   name:'Test Candidate',email:'candidate@example.test',
