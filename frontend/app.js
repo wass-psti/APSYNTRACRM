@@ -848,7 +848,23 @@ function settingsPage(){
  return `<div class="aps-settings"><section class="page-head settings-hero settings-entrance" aria-labelledby="settings-title"><div class="settings-hero-copy"><span class="label-top"><span class="settings-hero-dot" aria-hidden="true"></span>Workspace / Account</span><h1 id="settings-title">Account & security<span class="settings-heading-stop">.</span></h1><p>Your verified user identity and session preferences.</p></div><span class="settings-hero-status">${settingsIcon('shield')}<span>Verified workspace account</span></span><svg class="settings-hero-decoration" viewBox="0 0 420 200" fill="none" aria-hidden="true" focusable="false"><circle cx="355" cy="0" r="120" stroke="currentColor" stroke-opacity=".16"/><circle cx="355" cy="0" r="193" stroke="currentColor" stroke-opacity=".09"/><path d="M105 230C201 70 334 93 446 146" stroke="currentColor" stroke-opacity=".16"/></svg></section>
  <div class="settings-grid"><section class="panel settings-profile-panel settings-entrance" aria-labelledby="settings-profile-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('user')}</span><h3 id="settings-profile-heading">Profile information</h3></div><span class="settings-auth-provider">Supabase Auth</span></div>
  <div class="panel-body settings-panel-body"><div class="profile settings-profile-identity"><span class="avatar csp-u044 settings-profile-avatar" aria-hidden="true">${e(initials(name()))}</span>
- <div class="settings-profile-copy"><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div><div class="settings-profile-fields">
+ <div class="settings-profile-copy"><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
+ <section class="settings-profile-editor" aria-labelledby="settings-display-name-title">
+  <div class="settings-profile-editor-head"><div><h4 id="settings-display-name-title">Display name</h4><p>Choose how your name appears throughout APSYNTRA CRM.</p></div>
+   <button type="button" class="secondary settings-name-edit" data-action="profile-name-edit">Edit</button></div>
+  <div class="settings-profile-name-current" data-profile-name-view><strong>${e(name())}</strong></div>
+  <form id="settings-display-name-form" data-profile-name-form hidden>
+   <label for="settings-display-name">Display name</label>
+   <input id="settings-display-name" type="text" name="displayName" value="${e(p.display_name||'')}" minlength="2" maxlength="80" autocomplete="nickname" required aria-describedby="settings-display-name-help settings-display-name-status"/>
+   <small id="settings-display-name-help">2–80 characters. This does not change your email, roles or workspace access.</small>
+   <div class="settings-profile-editor-actions">
+    <button type="button" class="secondary" data-action="profile-name-cancel">Cancel</button>
+    <button type="submit" class="primary">Save display name</button>
+   </div>
+   <p id="settings-display-name-status" data-profile-name-status role="status" aria-live="polite"></p>
+  </form>
+ </section>
+ <div class="settings-profile-fields">
  <div class="settings-detail settings-detail-wide"><label>Work email</label><strong>${e(p.email||state.user?.email||'Not available')}</strong></div>
  <div class="settings-detail settings-detail-status"><label>Account status</label><strong><span class="status done">${e(p.status)}</span></strong></div>
  <div class="settings-detail"><label>Workspace</label><strong>${e(workspaceName())}</strong></div>
@@ -3344,6 +3360,29 @@ async function openBoardStructure(){
 
 async function action(name,button){
  switch(name){
+ case 'profile-name-edit':{
+  if(state.view!=='settings'||!state.context||!auth.isSignedIn)return;
+  const section=button.closest('.settings-profile-editor');
+  if(!section)return;
+  section.querySelector('[data-profile-name-form]').hidden=false;
+  section.querySelector('[data-profile-name-view]').hidden=true;
+  button.hidden=true;
+  const input=section.querySelector('#settings-display-name');
+  input.value=state.context.profile?.display_name||name();
+  input.focus();
+  input.select();
+  break;
+ }
+ case 'profile-name-cancel':{
+  const section=button.closest('.settings-profile-editor');
+  if(!section)return;
+  section.querySelector('[data-profile-name-form]').hidden=true;
+  section.querySelector('[data-profile-name-view]').hidden=false;
+  section.querySelector('.settings-name-edit').hidden=false;
+  section.querySelector('[data-profile-name-status]').textContent='';
+  section.querySelector('.settings-name-edit').focus();
+  break;
+ }
  case 'toggle-password':{
   const target=String(button.dataset.passwordTarget||'password');
   if(!['password','register-password','register-confirm','reset-password','reset-confirm'].includes(target))break;
@@ -5711,6 +5750,41 @@ root.addEventListener('change',event=>{
  }
 });
 root.addEventListener('submit',event=>{
+ if(event.target.id==='settings-display-name-form'){
+  event.preventDefault();
+  if(state.view!=='settings'||!state.context||!auth.isSignedIn)return;
+  const form=event.target;
+  const status=form.querySelector('[data-profile-name-status]');
+  const button=form.querySelector('button[type="submit"]');
+  if(button.disabled)return;
+  const value=String(form.elements.namedItem('displayName')?.value||'')
+   .normalize('NFC').trim().replace(/\s+/gu,' ');
+  if(value.length<2||value.length>80||/[\u0000-\u001f\u007f<>]/u.test(value)){
+   status.textContent='Enter a display name of 2–80 readable characters.';
+   form.elements.namedItem('displayName')?.focus();
+   return;
+  }
+  if(value===state.context.profile?.display_name){
+   form.closest('.settings-profile-editor')?.querySelector('[data-action="profile-name-cancel"]')?.click();
+   return;
+  }
+  const userId=state.context.user_id;
+  const workspaceId=state.context.workspace_id;
+  button.disabled=true;
+  status.textContent='Saving display name…';
+  Promise.resolve(db.rpc('update_own_profile',{p_display_name:value})).then(rows=>{
+   const updated=Array.isArray(rows)&&rows.length===1?rows[0]:null;
+   if(!updated||updated.id!==userId||updated.status!=='active'||updated.display_name!==value)
+    throw new ApiError('The profile change could not be verified. Refresh your profile before retrying.',409);
+   if(state.context?.user_id!==userId||state.context?.workspace_id!==workspaceId||!auth.isSignedIn)
+    throw new ApiError('Your signed account changed. Reload Settings to verify the update.',409);
+   state.context.profile={...state.context.profile,display_name:updated.display_name};
+   render();
+   toast('Display name updated successfully.');
+  }).catch(err=>{if(status.isConnected)status.textContent=errorMessage(err);})
+   .finally(()=>{if(button.isConnected)button.disabled=false;});
+  return;
+ }
  if(event.target.id==='settings-change-password-form'){
   event.preventDefault();
   const form=event.target;
