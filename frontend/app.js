@@ -849,15 +849,16 @@ function settingsPage(){
  <div class="settings-detail settings-detail-wide"><label>Work email</label><strong>${e(p.email||state.user?.email||'Not available')}</strong></div>
  <div class="settings-detail settings-detail-status"><label>Account status</label><strong><span class="status done">${e(p.status)}</span></strong></div>
  <div class="settings-detail"><label>Workspace</label><strong>${e(workspaceName())}</strong></div>
- <div class="settings-detail settings-detail-wide settings-detail-identifier"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div><form id="settings-change-password-form" autocomplete="off" class="settings-password-form" aria-label="Change password">
- <h4>Change password</h4>
- <p class="muted">Choose a new password for your Supabase account (12–72 characters).</p>
- <label for="settings-new-password">New password</label>
- <input id="settings-new-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required />
- <label for="settings-confirm-password">Confirm new password</label>
- <input id="settings-confirm-password" name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="72" required />
- <button type="submit" class="secondary">Update password</button>
- <p class="muted" role="status" aria-live="polite" data-password-status></p>
+ <div class="settings-detail settings-detail-wide settings-detail-identifier"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div><form id="settings-change-password-form" autocomplete="off" class="settings-password-form" aria-labelledby="settings-password-heading">
+ <div class="settings-password-heading"><span class="settings-password-icon" aria-hidden="true">${settingsIcon('lock')}</span><div><h4 id="settings-password-heading">Change password</h4><p>Update the password used to sign in to your account.</p></div></div>
+ <div class="settings-password-fields">
+ <div class="settings-password-field"><label for="settings-new-password">New password</label>
+ <input id="settings-new-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" placeholder="Enter new password" required /></div>
+ <div class="settings-password-field"><label for="settings-confirm-password">Confirm password</label>
+ <input id="settings-confirm-password" name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="72" placeholder="Re-enter new password" required /></div>
+ </div>
+ <p class="settings-password-hint">${settingsIcon('shield')}<span>Use 12–72 characters. Your password is sent securely to Supabase Auth.</span></p>
+ <div class="settings-password-footer"><button type="submit" class="primary settings-password-submit">${settingsIcon('check')}<span>Update password</span></button><p class="settings-password-status" role="status" aria-live="polite" data-password-status></p></div>
  </form><p class="settings-profile-footnote">${settingsIcon('shield')}<span>Identity details are provided by your signed workspace session.</span></p></div></section>
  ${state.roleVerified===true?`<section class="panel settings-session-panel settings-entrance" aria-labelledby="settings-session-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('lock')}</span><h3 id="settings-session-heading">Session security</h3></div><span class="settings-session-indicator"><span class="online-dot"></span>Authenticated</span></div>
  <div class="panel-body settings-panel-body"><div class="settings-session-intro"><span class="settings-session-intro-badge" aria-hidden="true">${settingsIcon('shield')}</span><p class="muted csp-u032" >Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p></div>
