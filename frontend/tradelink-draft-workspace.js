@@ -728,10 +728,6 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<button type="button" class="secondary" data-action="tradelink-draft-add-line"'+
       (lines.length>=100?' disabled':'')+'>Add item</button>'+
     '</fieldset>'+
-    (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
-      fieldValue('lineSerialNumber',line.serialNumber||''),'maxlength="120"'):'')+
-     (editing&&line.id?'<input type="hidden" name="lineId" value="'+escape(line.id)+'">':'')+
-    '</fieldset>'+
     (type==='delivery'?
      '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Delivery responsibility · preview only</legend>'+
       field('QC assignee','checkedBy',fieldValue('checkedBy',data.checkedBy||''),

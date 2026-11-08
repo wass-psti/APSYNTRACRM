@@ -152,3 +152,47 @@ test('stale save is rejected by the signed RPC, denied user never calls read RPC
   allowed:async()=>false,rpc:async()=>{throw Error('must not call');}},auth});
  await assert.rejects(()=>denied.read(id),/manager scope required/);
 });
+
+
+test('saved one-item edit has exactly one line ID and preserves quantity and price',()=>{
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+  view:{...authorizedView,mode:'edit',selected:{documentId:id,record:saved}},canManage:true});
+ assert.equal((html.match(/name="lineId"/g)||[]).length,1);
+ assert.equal((html.match(/name="lineQuantity"/g)||[]).length,1);
+ assert.equal((html.match(/name="lineUnitPrice"/g)||[]).length,1);
+ assert.match(html,/name="lineQuantity"[^>]*value="2"/);
+ assert.match(html,/name="lineUnitPrice"[^>]*value="100"/);
+ assert.equal((html.match(/<fieldset\b/g)||[]).length,
+  (html.match(/<\/fieldset>/g)||[]).length);
+});
+
+test('multi-item editing has aligned IDs, descriptions, quantities, and prices',()=>{
+ const items=[saved.content.items[0],{
+  id:'line-b',kind:'item',description:'Replacement hose',quantity:3,unitPrice:75,unit:'each'
+ }];
+ const record={...saved,content:{...saved.content,items}};
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+  view:{...authorizedView,mode:'edit',selected:{documentId:id,record}},canManage:true});
+ for(const key of ['lineId','lineDescription','lineQuantity','lineUnitPrice','lineUnit']){
+  assert.equal((html.match(new RegExp('name="'+key+'"','g'))||[]).length,2,key);
+ }
+ assert.match(html,/name="lineQuantity"[^>]*value="3"/);
+ assert.match(html,/name="lineUnitPrice"[^>]*value="75"/);
+ assert.equal((html.match(/<fieldset\b/g)||[]).length,
+  (html.match(/<\/fieldset>/g)||[]).length);
+});
+
+test('Delivery editing has exactly one serial field per real item',()=>{
+ const record={...saved,document_type:'delivery',
+  content:{documentType:'delivery',documentNumber:saved.document_number,
+   customerName:'Test recipient',referenceNumber:'SO-100',
+   checkedBy:'QC',deliveredBy:'Logistics',
+   items:[{id:'line-d',kind:'item',description:'Delivered item',quantity:1,
+    unitPrice:0,serialNumber:'SER-1'}]}};
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+  view:{...authorizedView,mode:'edit',selected:{documentId:id,record}},canManage:true});
+ assert.equal((html.match(/name="lineId"/g)||[]).length,1);
+ assert.equal((html.match(/name="lineSerialNumber"/g)||[]).length,1);
+ assert.equal((html.match(/<fieldset\b/g)||[]).length,
+  (html.match(/<\/fieldset>/g)||[]).length);
+});
