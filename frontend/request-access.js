@@ -1,5 +1,5 @@
 /** FormSubmit receives access REQUESTS ONLY. No credentials or user creation. */
-export const FORM_SUBMIT_RECIPIENT_ALIAS='7142b43666b25405b5175a0537ed0630';
+export const FORM_SUBMIT_RECIPIENT_ALIAS='a87807597aa2d1a9a77c6e28e2413e1a';
 export const REQUEST_RECEIVED_URL='https://wass-psti.github.io/APSYNTRACRM/?request_access=received#/register';
 export function formSubmitAction(alias=FORM_SUBMIT_RECIPIENT_ALIAS){
  const recipient=String(alias||'').trim();
