@@ -81,3 +81,110 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 @media(prefers-reduced-motion:reduce){
   #app :is(.primary,.secondary){transition:none}
 }
+
+/* Phase 2 — persistent shell, sidebar, workspace selection and topbar. */
+#app .shell{min-width:0;background:var(--sm-bg)}
+#app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell){
+  background:var(--sm-bg);
+  color:var(--sm-ink);
+}
+#app .aps-sidebar{
+  --side-ink:var(--sm-ink);
+  --side-muted:var(--sm-sub);
+  --side-accent:var(--sm-accent);
+  --side-line:var(--sm-border);
+  --side-surface:var(--sm-surface-raised);
+  background:var(--sm-surface-raised);
+  border-right:1px solid var(--sm-border);
+  box-shadow:none;
+}
+#app .aps-sidebar .sidebar-brand-wrap{padding-block:24px 18px;border-color:var(--sm-border)}
+#app .aps-sidebar .brand{color:var(--sm-ink);font-weight:750}
+#app .aps-sidebar .brand:hover{color:var(--sm-accent)}
+#app .aps-sidebar .brand-mark{box-shadow:var(--sm-shadow-sm);border-radius:11px}
+#app .aps-sidebar .brand-text .csp-u043{color:var(--sm-accent)}
+#app .aps-sidebar .sidebar-brand-subtitle{color:var(--sm-sub);letter-spacing:1.05px}
+#app .aps-sidebar .workspace-switcher{
+  border:1px solid var(--sm-border);
+  background:var(--sm-surface);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-sidebar .workspace-switcher::after{background:none}
+#app .aps-sidebar .workspace-icon{
+  background:var(--sm-accent-soft);
+  color:var(--sm-accent);
+  box-shadow:none;
+}
+#app .aps-sidebar .workspace-name{color:var(--sm-ink);font-weight:740}
+#app .aps-sidebar .workspace-sub{color:var(--sm-sub)}
+#app .aps-sidebar .side-section{color:var(--sm-sub);letter-spacing:1.1px}
+#app .aps-sidebar .nav-link{
+  color:var(--sm-sub);
+  border-color:transparent;
+  border-radius:var(--sm-radius-control);
+  font-weight:620;
+  transition:background-color var(--sm-fast),color var(--sm-fast),border-color var(--sm-fast);
+}
+#app .aps-sidebar .nav-link:hover{color:var(--sm-ink);border-color:var(--sm-border);background:var(--sm-surface-soft);transform:none}
+#app .aps-sidebar .nav-link.active,
+#app .aps-sidebar .nav-link.active:hover{
+  color:var(--sm-accent-hover);
+  border-color:#dcddec;
+  background:var(--sm-accent-soft);
+  box-shadow:none;
+  transform:none;
+  font-weight:740;
+}
+#app .aps-sidebar .nav-link::before{background:var(--sm-accent)}
+#app .aps-sidebar .nav-ico{
+  color:var(--sm-muted);
+  background:transparent;
+  transition:color var(--sm-fast),background-color var(--sm-fast)
+}
+#app .aps-sidebar .nav-link:hover .nav-ico{color:var(--sm-ink);background:transparent;transform:none}
+#app .aps-sidebar .nav-link.active .nav-ico{color:var(--sm-accent);background:transparent}
+#app .aps-sidebar .nav-count{color:var(--sm-sub);background:var(--sm-surface-soft)}
+#app .aps-sidebar .nav-link.active .nav-count{background:var(--sm-surface);color:var(--sm-accent-hover)}
+#app .aps-sidebar .sidebar-nav-section:not(:first-child){border-color:var(--sm-border)}
+#app .aps-sidebar .side-bottom{border-color:var(--sm-border)}
+#app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell)>.topbar,
+#app .topbar{
+  background:var(--sm-surface);
+  border-bottom:1px solid var(--sm-border);
+  box-shadow:none;
+}
+#app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell) .topbar .breadcrumb,
+#app .topbar .breadcrumb{color:var(--sm-sub)}
+#app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell) .topbar .breadcrumb strong,
+#app .topbar .breadcrumb strong{color:var(--sm-ink);font-weight:700}
+#app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell) .topbar .top-pill{
+  background:var(--sm-surface-raised);
+  color:var(--sm-text);
+  border:1px solid var(--sm-border);
+  font-weight:650;
+  box-shadow:none;
+}
+#app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell) .topbar .top-avatar{
+  color:#fff;
+  background:var(--sm-accent);
+  box-shadow:none;
+  border-radius:var(--sm-radius-control);
+  transition:background-color var(--sm-fast);
+}
+#app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell) .topbar .top-avatar:hover{
+  background:var(--sm-accent-hover);
+  box-shadow:none;
+  transform:none;
+}
+#app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell)>.main-content{
+  box-sizing:border-box;
+  width:100%;
+  max-width:none;
+  padding:clamp(20px,2.5vw,36px) clamp(18px,3vw,48px) 86px;
+}
+@media(max-width:600px){
+  #app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell)>.main-content{
+    padding:20px 15px 65px;
+  }
+}
