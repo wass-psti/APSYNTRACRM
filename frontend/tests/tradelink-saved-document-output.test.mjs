@@ -75,6 +75,15 @@ test('commercial print totals use full saved line set, source VAT, discount and 
  assert.match(fx,/997\.92 USD/);
  assert.match(fx,/57,879\.36 PHP/);
 });
+test('valid saved incomplete Drafts and note-only lines print truthfully without inventing values',()=>{
+ const content={documentType:'packing',documentNumber:'PK-INCOMPLETE',
+  items:[{id:'note-1',kind:'note'},{...line,kind:'item',description:'Packed cartons'}]};
+ const html=renderTradeLinkSavedDocumentOutput(record('packing',content),workspace,id);
+ assert.match(html,/PK-INCOMPLETE/);
+ assert.match(html,/Packed cartons/);
+ assert.match(html,/DRAFT — not approved or issued by printing/);
+ assert.doesNotMatch(html,/undefined|null/);
+});
 test('Payment AR shows recorded payment values without generating a funds receipt',()=>{
  const html=renderTradeLinkSavedDocumentOutput(record('payment'),workspace,id);
  assert.match(html,/Cash amount/);

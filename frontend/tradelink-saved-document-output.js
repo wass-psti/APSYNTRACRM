@@ -44,8 +44,9 @@ const validStamp=value=>typeof value==='string'&&Number.isFinite(Date.parse(valu
  value:'—';
 const validLines=items=>Array.isArray(items)&&items.length<=100&&
  items.every(row=>row&&typeof row==='object'&&!Array.isArray(row)&&
-  ['item','note'].includes(row.kind)&&typeof row.description==='string'&&
-  row.description.length<=2000&&
+  ['item','note'].includes(row.kind)&&
+  (row.description===undefined||
+   typeof row.description==='string'&&row.description.length<=2000)&&
   (row.kind!=='item'||(typeof row.quantity==='number'&&Number.isFinite(row.quantity)&&
    typeof row.unitPrice==='number'&&Number.isFinite(row.unitPrice))));
 const pair=(label,value)=>'<div><dt>'+safe(label)+'</dt><dd>'+display(value)+'</dd></div>';
@@ -60,7 +61,8 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   typeof row.document_number!=='string'||row.document_number.length>120||
   typeof row.updated_at!=='string'||!Number.isFinite(Date.parse(row.updated_at))||
   !validLines(data.items??[])||
-  typeof data.customerName!=='string'||data.customerName.length>5000)
+  (data.customerName!==undefined&&
+   (typeof data.customerName!=='string'||data.customerName.length>5000)))
   throw new ApiError('Saved document output cannot be verified.',409);
  const currency=TRADELINK_CURRENCIES.includes(data.currency)?data.currency:'—';
  const priced=PRICED.has(row.document_type);
