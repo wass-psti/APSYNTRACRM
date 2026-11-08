@@ -4,7 +4,8 @@ import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {renderTradeLinkApplication} from '../tradelink-application.js';
 import {initialTradeLinkDraftView,renderTradeLinkDocumentRepository,
- renderTradeLinkDraftWorkspace,tradeLinkDraftEditHref} from '../tradelink-draft-workspace.js';
+ renderTradeLinkDraftWorkspace,tradeLinkDraftEditHref,
+ filterTradeLinkDraftAuthorizedRows,updateTradeLinkDraftListUI} from '../tradelink-draft-workspace.js';
 import {TradeLinkDomainClient} from '../tradelink-domain-client.js';
 import {ApiError} from '../session.js';
 
@@ -39,6 +40,39 @@ const authorizedView={
  ...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[listed,archived]
 };
 const editPath=tradeLinkDraftEditHref(id);
+
+test('document time sorting compares instants across offsets and leaves unavailable times last',()=>{
+ const times=['2026-11-08T10:00:00+08:00','2026-11-08T03:00:00Z',null,'invalid'];
+ const rows=times.map((updatedAt,i)=>({...listed,documentNumber:'Q-'+i,updatedAt}));
+ for(const [sortDirection,expected] of [['asc',['Q-0','Q-1','Q-2','Q-3']],
+  ['desc',['Q-1','Q-0','Q-2','Q-3']]]){
+  assert.deepEqual(filterTradeLinkDraftAuthorizedRows(rows,{sortBy:'updatedAt',sortDirection})
+   .map(row=>row.documentNumber),expected);
+  const elements=rows.map(row=>({dataset:{...row,archived:'false'}}));
+  const order=[];
+  const container={querySelectorAll:()=>elements,
+   querySelector:key=>key==='[data-tradelink-domain-list-body]'?
+    {appendChild:el=>order.push(el.dataset.documentNumber)}:null};
+  assert.equal(updateTradeLinkDraftListUI(container,{sortBy:'updatedAt',sortDirection}),4);
+  assert.deepEqual(order,expected);
+ }
+ assert.deepEqual(rows.map(row=>row.updatedAt),times);
+});
+
+test('authorized listing shows server update time and preview shows creation time',()=>{
+ const updatedAt='2026-11-08T02:22:55.123456+00:00';
+ const view={...authorizedView,rows:[{...listed,updatedAt}],
+  documentPreview:{documentId:id,record:{...saved,created_at:'2026-11-07T01:00:00Z'}}};
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
+ assert.ok(html.includes('<time datetime="'+updatedAt+'">'+updatedAt+'</time>'));
+ assert.match(html,/<option value="updatedAt"[^>]*>Last updated<\/option>/);
+ assert.match(html,/<dt>Created<\/dt><dd>2026-11-07T01:00:00Z<\/dd>/);
+ const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:false});
+ assert.ok(!denied.includes(updatedAt));
+ const malformed=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
+  view:{...authorizedView,rows:[{...listed,updatedAt:'"><script>alert(1)</script>'}]},canManage:true});
+ assert.doesNotMatch(malformed,/<script>|<time datetime=/);
+});
 
 test('All Documents exposes signed edit, archive and restore for the matching Draft',()=>{
  assert.equal(editPath,'#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/edit/'+id);
