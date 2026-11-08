@@ -226,7 +226,7 @@ test('protected 74-file bundle validates every original hash without SQL executi
 });
 
 test('missing, modified, extra, unsafe or symlinked source fails closed',()=>{
- withFullSourceFixtures(({repo,bundle,sources})=>{
+ withFullSourceFixtures(({base,repo,bundle,sources})=>{
   const target=join(bundle,sources[0].file);
   writeFileSync(target,'tampered',{mode:0o600});
   assert.throws(()=>verifyCompletePrivateSourceBundle({directory:bundle,sources,repo}),
