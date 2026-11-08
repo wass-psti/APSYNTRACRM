@@ -214,13 +214,15 @@ export function renderWs02dB3ForeignRlsDenial({
   'for 15 minutes and disappears on refresh. No test accounts or data writes.</p>'+
   '<button class="secondary" type="button" data-action="security-ws02d-b3-rls-capture"'+
    (busy?' disabled':'')+'>1. Capture existing authorized row</button>'+
+  (hasFixture?'<button class="secondary" type="button" data-action="security-ws02d-b3-rls-handoff"'+
+   (busy?' disabled':'')+'>Continue: sign out this session only and sign in as the foreign user</button>':'')+
   '<button class="primary" type="button" data-action="security-ws02d-b3-rls-verify"'+
    (busy||!hasFixture?' disabled':'')+'>2. Test after signing in as foreign-workspace user</button>'+
   '<button class="secondary" type="button" data-action="security-ws02d-b3-rls-clear"'+
    (busy||!hasFixture?' disabled':'')+'>Discard temporary row reference</button>'+
   '<p class="muted">'+(hasFixture?'Authorized row captured in this tab; use the explicit local-session sign-out below, then sign in '+
     'as another EXISTING user in a different workspace, without refreshing this tab. '+
-    'Use Step 2 ONLY under the foreign account; Step 1 would discard the row reference.':
+    'Use Continue above to switch accounts, then Step 2 ONLY; Step 1 would discard the row reference.':
     'No authorized row reference is currently retained.')+'</p>'+
   (result?'<div role="status" aria-live="polite"><p><strong>Targeted RLS: '+
    status+'</strong> · '+stage+'</p>'+
