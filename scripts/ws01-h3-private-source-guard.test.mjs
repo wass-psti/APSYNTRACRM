@@ -189,7 +189,7 @@ test('complete-source inventory is 74 unique protected historical definitions',(
  assert.equal(originals.length,74);
  assert.equal(new Set(originals.map(x=>x.signature)).size,74);
  assert.equal(new Set(originals.map(x=>x.file)).size,74);
- assert.ok(originals.every(x=>/^[a-f0-9]{64}\\.sql$/.test(x.file)));
+ assert.ok(originals.every(x=>/^[a-f0-9]{64}\.sql$/.test(x.file)));
  assert.equal(originals.find(x=>x.signature.startsWith('private.tl03_commit(')).source_sha256,
    '5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d');
  const altered=structuredClone(g4b);
