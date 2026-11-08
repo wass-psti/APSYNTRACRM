@@ -31,3 +31,33 @@ This is **one real unresolved recovery limitation**, not a reason to create more
 4. Run **one end-to-end genuine authorized acceptance**: save/retry/update → persisted Draft → correctly linked Board item → All Documents → refresh/reopen, plus denied employee, foreign-workspace and revoked access. Fix any functional defects directly rather than inventing more milestone gates.
 
 **Current status (2026-11-08): The two commit EXECUTE grants are verified live, and this release enables user-facing signed Draft writes. Genuine production save/reopen/Board/All Documents acceptance remains PENDING.** Passing CI or listing backups does not prove functional runtime acceptance or the previously required restore rehearsal.
+
+## Signed saved-document output (TradeLink only)
+
+All Documents offers **Print / Save PDF** for an authorized, listed document.
+Before showing the output, the frontend makes a **new signed**
+tl03_document_read request and a signed Board read, then compares the current
+workspace, document identity/type/number, revision/state/archive marker, and
+linked Board item. If any assertion fails, printing is refused.
+
+The output is a transient in-memory preview: no duplicate database row, Storage
+object, blob download, separate login, or external rendering service is
+created. A direct user action opens the native Chromium/Safari browser print
+dialog, where the user may select **Save as PDF**. Six TradeLink module layouts
+use the actual persisted fields, including all saved line items and the existing
+commercial calculation rules; untrusted text is escaped. Each page labels the
+saved revision and workflow state. Printing does not authorize Drafts, issue
+legal/tax documents, deliver goods, or acknowledge payments.
+
+The browser print path was locally validated using a **synthetic 27-line
+Quotation**, which produced a two-page PDF in headless Chromium; fixture files
+were deleted. Live signed-user print-dialog acceptance across six module types
+remains pending.
+
+**Attachment boundary:** No dedicated TradeLink attachment Storage bucket
+exists in the current production inventory. Legacy reconciliation tables do
+not establish a secure, functioning TradeLink upload/download contract.
+Do not reuse unrelated application buckets or activate attachment controls
+until signed document-level read/write authorization, Storage RLS, metadata
+integrity, cleanup and recovery handling are verified and any production
+permissions change receives separately scoped authorization.

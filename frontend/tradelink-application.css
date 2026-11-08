@@ -187,3 +187,90 @@
 @media(max-width:620px){
  .aps-tradelink-app .tl-document-repository .tl-records-table td:last-child{min-width:190px}
 }
+
+/* TradeLink: authenticated saved record print/PDF handoff only.
+   The preview never exposes another application, and print hides the shell. */
+.tl-print-overlay{
+ position:fixed;inset:0;z-index:2147483000;overflow:auto;overscroll-behavior:contain;
+ background:rgba(15,25,46,.8);padding:clamp(10px,2vw,26px);
+ color:#192842;box-sizing:border-box;
+}
+.tl-print-shell{
+ max-width:900px;margin:0 auto;background:white;border-radius:14px;
+ box-shadow:0 18px 85px #0c193c55;overflow:hidden;
+}
+.tl-print-controls{
+ display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;
+ gap:12px;padding:16px 22px;background:#edf1f9;border-bottom:1px solid #d6deec;
+}
+.tl-print-controls span{font-size:12px;color:#4e5972;font-weight:650;margin-inline-end:auto}
+.tl-print-controls button{
+ border:1px solid #c1cce1;border-radius:9px;background:#fff;color:#263953;
+ font:inherit;font-size:12px;font-weight:750;padding:9px 13px;min-height:42px;
+ cursor:pointer;
+}
+.tl-print-controls button:first-of-type{background:#283f85;color:white;border-color:#283f85}
+.tl-print-controls button:focus-visible{outline:3px solid #678be8;outline-offset:2px}
+.tl-print-paper{
+ padding:32px clamp(18px,5vw,50px);font-family:Arial,Helvetica,sans-serif;
+ color:#1a2a43;font-size:12px;line-height:1.5;overflow-wrap:anywhere;
+}
+.tl-print-header{display:flex;justify-content:space-between;align-items:start;gap:16px;
+ border-bottom:2px solid #263f80;padding-bottom:17px}
+.tl-print-brand{font-size:10px;letter-spacing:.16em;font-weight:800;color:#48618d;margin:0 0 7px}
+.tl-print-header h1{font-size:27px;letter-spacing:-.03em;margin:0 0 6px;line-height:1.18}
+.tl-print-number{font-size:13px;margin:0;color:#4e5e79}
+.tl-print-state{font-size:10px;letter-spacing:.07em;font-weight:800;
+ border:1px solid #b9c6de;background:#f2f5fc;color:#374c77;
+ border-radius:5px;padding:7px 10px;max-width:160px;text-align:center;overflow-wrap:anywhere}
+.tl-print-notice{padding:8px 11px;background:#f7f9fd;
+ border-left:3px solid #788cb5;font-size:11px;margin:16px 0 20px}
+.tl-print-paper h3{font-size:13px;color:#263e69;margin:24px 0 8px}
+.tl-print-paper dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 15px}
+.tl-print-paper dl>div{min-width:0}
+.tl-print-paper dt{font-size:10px;color:#66748d;font-weight:650}
+.tl-print-paper dd{margin:3px 0 0;font-size:12px;font-weight:650;white-space:pre-wrap}
+.tl-print-provenance{padding:11px 0;border-bottom:1px solid #dde4ef}
+.tl-print-lines table{width:100%;border-collapse:collapse;table-layout:auto;font-size:11px}
+.tl-print-lines th{background:#eaf0f9;color:#253955;font-weight:700}
+.tl-print-lines th,.tl-print-lines td{padding:7px 8px;border-bottom:1px solid #dce4ef;
+ text-align:left;vertical-align:top}
+.tl-print-lines tbody tr{break-inside:avoid}
+.tl-print-financial dl{max-width:410px;margin-inline-start:auto}
+.tl-print-financial dl>div{display:flex;justify-content:space-between;
+ gap:14px;border-bottom:1px solid #e2e8f0;padding:6px 0}
+.tl-print-financial dd{text-align:right}
+.tl-print-remarks p{white-space:pre-wrap;margin:5px 0}
+.tl-print-footer{border-top:1px solid #ccd6e7;margin-top:29px;padding-top:11px;
+ color:#5a6a83;font-size:10px}
+@media(max-width:600px){
+ .tl-print-paper{padding:20px 16px}
+ .tl-print-paper dl{grid-template-columns:1fr}
+ .tl-print-header h1{font-size:22px}
+ .tl-print-header{flex-wrap:wrap}
+}
+@media print{
+ @page{size:A4;margin:15mm 13mm}
+ html,body{height:auto!important;overflow:visible!important;margin:0!important;
+  background:white!important;color:black!important}
+ body>*:not(#tradelink-saved-print){display:none!important}
+ #tradelink-saved-print{
+  display:block!important;position:static!important;inset:auto!important;
+  height:auto!important;max-height:none!important;overflow:visible!important;
+  background:white!important;padding:0!important;color:black!important;
+  margin:0!important;box-shadow:none!important;
+ }
+ #tradelink-saved-print .tl-print-shell{max-width:none!important;overflow:visible!important;
+  box-shadow:none!important;border-radius:0!important}
+ #tradelink-saved-print .tl-print-controls{display:none!important}
+ #tradelink-saved-print .tl-print-paper{padding:0!important;font-size:10pt;
+  box-shadow:none!important}
+ #tradelink-saved-print .tl-print-header{break-after:avoid}
+ #tradelink-saved-print .tl-print-lines table{font-size:9pt}
+ #tradelink-saved-print .tl-print-lines thead{display:table-header-group}
+ #tradelink-saved-print .tl-print-lines tr{break-inside:avoid}
+ #tradelink-saved-print .tl-print-provenance,
+ #tradelink-saved-print .tl-print-financial,
+ #tradelink-saved-print .tl-print-footer{break-inside:avoid}
+ #tradelink-saved-print .tl-print-state{color:black!important}
+}
