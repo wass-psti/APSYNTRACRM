@@ -85,13 +85,15 @@ BEGIN
  END;
  r:=public.tl03_document_commit(board,doc,2,'archive',NULL);
  IF (r->>'revision')::int<>3 OR
-   NOT EXISTS(SELECT 1 FROM public.work_board_items WHERE id=(r->>'boardItemId')::uuid
-     AND archived_at IS NOT NULL) THEN
+   NOT EXISTS(SELECT 1 FROM public.work_board_items i JOIN public.tradelink_documents d
+     ON d.board_item_id=i.id WHERE i.id=(r->>'boardItemId')::uuid
+     AND i.archived_at IS NOT NULL AND i.updated_at=d.updated_at AND i.updated_by=d.updated_by) THEN
   RAISE EXCEPTION 'Reversible archive failed'; END IF;
  r:=public.tl03_document_commit(board,doc,3,'restore',NULL);
  IF (r->>'revision')::int<>4 OR
-   NOT EXISTS(SELECT 1 FROM public.work_board_items WHERE id=(r->>'boardItemId')::uuid
-     AND archived_at IS NULL) OR
+   NOT EXISTS(SELECT 1 FROM public.work_board_items i JOIN public.tradelink_documents d
+     ON d.board_item_id=i.id WHERE i.id=(r->>'boardItemId')::uuid
+     AND i.archived_at IS NULL AND i.updated_at=d.updated_at AND i.updated_by=d.updated_by) OR
    (SELECT count(*) FROM public.tradelink_document_events WHERE document_id=doc)<>4 THEN
   RAISE EXCEPTION 'Reversible restore or monotonic audit failed'; END IF;
  RAISE NOTICE 'CP-TL-03A General Manager draft create/retry/CAS/archive/restore/audit PASS';

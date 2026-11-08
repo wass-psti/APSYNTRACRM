@@ -127,7 +127,7 @@ test('TradeLink revision update synchronizes the locked Board item timestamp and
 });
 
 test('function-only migration candidate preserves existing signed write boundaries and matches staged function',()=>{
- const candidate=readFileSync('sql/tradelink-document-board-timestamp-candidate.sql','utf8');
+ const candidate=readFileSync('sql/tradelink-document-lifecycle-timestamp-candidate.sql','utf8');
  const stageStart=sql.indexOf('CREATE FUNCTION private.tl03_commit(');
  const stageEnd=sql.indexOf('REVOKE ALL ON FUNCTION private.tl03_commit(',stageStart);
  const staged=sql.slice(stageStart,stageEnd)
@@ -136,7 +136,7 @@ test('function-only migration candidate preserves existing signed write boundari
  const end=candidate.indexOf('DO $board_sync_postflight$',begin);
  assert.ok(stageStart>0&&stageEnd>stageStart&&begin>0&&end>begin);
  assert.equal(candidate.slice(begin,end).trim(),staged);
- assert.match(candidate,/md5\(pg_get_functiondef\(f\.oid\)\)<>'661e491750fbc9eeb0f619d701496306'/);
+ assert.match(candidate,/md5\(pg_get_functiondef\(f\.oid\)\)<>'5cea3b91eeb7711f4247daa8f93f6ab2'/);
  assert.match(candidate,/pg_get_userbyid\(f\.proowner\)<>'postgres'/);
  assert.match(candidate,/f\.proacl::text IS DISTINCT FROM '\{postgres=X\/postgres,authenticated=X\/postgres\}'/);
  assert.match(candidate,/has_function_privilege\('anon',f\.oid,'EXECUTE'\)/);

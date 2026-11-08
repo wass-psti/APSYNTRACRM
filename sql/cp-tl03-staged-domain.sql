@@ -271,13 +271,23 @@ BEGIN
    PERFORM public.wm_set_board_item_archived(d.board_item_id,true);
    UPDATE public.tradelink_documents SET archived_at=pg_catalog.clock_timestamp(),
     revision=revision+1,updated_by=actor,updated_at=pg_catalog.clock_timestamp()
-    WHERE id=d.id RETURNING revision INTO rev;
+    WHERE id=d.id RETURNING revision,updated_at INTO rev,modified_at;
   ELSE
    IF d.archived_at IS NULL THEN RAISE EXCEPTION 'Not archived' USING ERRCODE='40001'; END IF;
    PERFORM public.wm_set_board_item_archived(d.board_item_id,false);
    UPDATE public.tradelink_documents SET archived_at=NULL,
     revision=revision+1,updated_by=actor,updated_at=pg_catalog.clock_timestamp()
-    WHERE id=d.id RETURNING revision INTO rev;
+    WHERE id=d.id RETURNING revision,updated_at INTO rev,modified_at;
+  END IF;
+  IF p_operation IN ('archive','restore') THEN
+   UPDATE public.work_board_items
+    SET updated_by=actor,updated_at=modified_at
+    WHERE id=d.board_item_id AND board_id=p_board_id
+      AND title=d.document_number
+      AND (archived_at IS NOT NULL)=(p_operation='archive');
+   IF NOT FOUND THEN
+    RAISE EXCEPTION 'Board projection changed during document lifecycle update'
+     USING ERRCODE='40001'; END IF;
   END IF;
   item_id:=d.board_item_id;
  END IF;
