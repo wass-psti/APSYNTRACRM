@@ -8,8 +8,8 @@ import {renderTradeLinkActivity} from './tradelink-activity.js';
 import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
 import {renderTradeLinkDraftWorkspace,renderTradeLinkDocumentRepository,
- initialTradeLinkDraftView} from './tradelink-draft-workspace.js';
-import {TL03_DOMAIN_READS_ENABLED} from './tradelink-domain-client.js';
+ initialTradeLinkDraftView,tradeLinkDraftEditHref} from './tradelink-draft-workspace.js';
+import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from './tradelink-domain-client.js';
 
 export const TRADELINK_SOURCE_MODULES=Object.freeze([
  Object.freeze({key:'esi',label:'Electronic SI',short:'ESI',
@@ -88,7 +88,7 @@ function renderDocuments(detail,workspaceId,draftView,canManage){
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Authorized board projection</p>'+
   '<h2 id="tl-documents-title">Board records</h2></div>'+
   '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'">Open Board Items</a></div>'+
-  '<p class="muted">Board items are linked to the same authorized TradeLink documents listed above. Open a linked document to preview its saved revision; approvals and attachments remain separate workflows.</p>'+
+  '<p class="muted">Board items are linked to the same authorized TradeLink documents listed above. Preview an authorized saved document, or edit a Draft using the same revisioned server record. Approvals and attachments remain separate workflows.</p>'+
   '<label class="tl-search-label" for="tradelink-document-search">Search board item titles</label>'+
   '<input class="search-input tl-record-search" type="search" id="tradelink-document-search" data-tradelink-search maxlength="120" autocomplete="off" placeholder="Search authorized records…"/>'+
   '<div class="tl-records-scroll"><table class="tl-records-table"><thead><tr>'+
@@ -99,7 +99,13 @@ function renderDocuments(detail,workspaceId,draftView,canManage){
     '<td>'+esc(item.status||'—')+'</td><td>'+esc(item.updated_at||'—')+'</td><td>'+
     (documentByItem.get(item.id)?.documentNumber===item.title?
      '<button type="button" class="secondary" data-action="tradelink-document-open" '+
-      'data-id="'+esc(documentByItem.get(item.id).documentId)+'">Open document</button>':
+      'data-id="'+esc(documentByItem.get(item.id).documentId)+'">Open document</button>'+
+      (canManage&&TL03_DOMAIN_WRITES_ENABLED&&
+       documentByItem.get(item.id).workflowState==='draft'&&
+       !documentByItem.get(item.id).archived?
+       ' <a class="secondary" data-tradelink-board-edit href="'+
+       esc(tradeLinkDraftEditHref(documentByItem.get(item.id).documentId))+
+       '">Edit Draft</a>':''):
      '<span class="muted">—</span>')+'</td></tr>').join('')+
   '</tbody></table></div>'+
   '<p class="tl-empty-records" data-tradelink-empty'+(rows.length?' hidden':'')+'>'+
@@ -145,10 +151,12 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
     '<a href="'+base+'/documents"'+currentAttr('documents')+'>'+
      '<span aria-hidden="true">☷</span> All Documents</a>'+
     '<details class="tl-reference-manual"><summary>User Manual</summary>'+
-     '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink local Draft guide</strong>'+
-      '<p>Choose a document module, complete its required fields and select Validate locally. '+
-      'This checks an unsaved preview only. The original document review, PDF export and '+
-      'document workflows are unavailable pending authorized activation.</p>'+
+     '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink document guide</strong>'+
+      '<p>Choose a document module, complete its required fields, then select Save Draft. '+
+      'The same signed server record appears in All Documents and its linked Board. '+
+      'Open a saved Draft and select Edit Draft to save an authorized revision. '+
+      'Archive and Restore are reversible Draft actions. Formal review, '+
+      'approvals and PDF export are not yet available.</p>'+
      '</div></details>'+
    '</nav>'+
    '<div class="tl-reference-workspace" title="Uses the existing APSYNTRA signed workspace">'+

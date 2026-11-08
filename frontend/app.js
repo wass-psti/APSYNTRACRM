@@ -1342,7 +1342,7 @@ async function refreshFoundation(){
  state.foundationRows=await inspectFoundation(db,{context,boards:state.boards});
  state.foundationError='';
 }
-async function loadBoard(boardId,tab,draftType=null){
+async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
  if(state.bulk02Access?.boardId!==boardId)clearBulkActivation();
  const seq=++routeSerial;
  state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=tab==='items'?{status:'LOADING'}:null;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
@@ -1350,6 +1350,10 @@ async function loadBoard(boardId,tab,draftType=null){
   state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
  state.tradeLinkDraft=initialTradeLinkDraftView(tab==='tradelink'&&state.tradeLinkSection==='drafts'?draftType:null);
+ // No saved content is trusted from the route. A deep-linked edit ID must
+ // load the current signed list and be verified by the server before editing.
+ if(tab==='tradelink'&&state.tradeLinkSection==='drafts'&&validUuid(draftEditId))
+  state.tradeLinkDraft.editRequestId=draftEditId;
  state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
@@ -1438,8 +1442,16 @@ async function loadTradeLinkDrafts(seq=routeSerial){
  state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
  try{
   const result=await tradeLinkDraftWorkspace.list();
-  if(same())state.tradeLinkDraft={...state.tradeLinkDraft,...result,
-   documentPreview:null,busy:false};
+  if(same()){
+   state.tradeLinkDraft={...state.tradeLinkDraft,...result,
+    documentPreview:null,busy:false};
+   const target=state.tradeLinkDraft.editRequestId;
+   if(target&&!state.tradeLinkDraft.selected&&tradeLinkDraftRoute()){
+    if(!result.rows.some(row=>row.documentId===target)){
+     state.tradeLinkDraft.error='This Draft is unavailable in the current authorized document list. Refresh All Documents.';
+    }else await openTradeLinkDraft(target);
+   }
+  }
  }catch{
   if(same())state.tradeLinkDraft={...state.tradeLinkDraft,
    status:'READ_FAILED',rows:[],selected:null,documentPreview:null,
@@ -1447,16 +1459,29 @@ async function loadTradeLinkDrafts(seq=routeSerial){
  }finally{if(same()){state.tradeLinkDraft.busy=false;render();}}
 }
 async function openTradeLinkDraft(documentId){
- if(!tradeLinkDraftRoute()||!TL03_DOMAIN_READS_ENABLED||state.tradeLinkDraft.busy||
-  !state.tradeLinkDraft.rows.some(row=>row.documentId===documentId))return;
+ if(!tradeLinkDraftRoute()||!TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+   state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed)return;
+ if(listed.archived||listed.workflowState!=='draft'){
+  if(state.tradeLinkDraft.editRequestId===documentId){
+   state.tradeLinkDraft.error='This document is no longer an editable Draft. Return to All Documents.';
+   render();
+  }
+  return;
+ }
  const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
  state.tradeLinkDraft.busy=true;render();
  try{
   const record=await tradeLinkDraftWorkspace.read(documentId);
   if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
    state.context.workspace_id!==ws)return;
-  if(!record||record.workflow_state!=='draft')
-   throw new ApiError('Document is no longer an editable Draft.',409);
+  if(!record||record.workflow_state!=='draft'||record.archived_at!==null||
+   record.revision!==listed.revision||
+   record.board_item_id!==listed.boardItemId||
+   record.document_number!==listed.documentNumber||
+   record.document_type!==listed.documentType)
+   throw new ApiError('Document revision or editability changed. Refresh the signed list.',409);
   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
    selected:{documentId,record},pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
  }catch{
@@ -1569,27 +1594,52 @@ async function commitTradeLinkDraft(form){
  }
 }
 async function changeTradeLinkDraftState(documentId,operation){
- if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage||
-   state.tradeLinkDraft.busy)return;
+ if(!tradeLinkAuthorizedListRoute()||!tradeLinkDraftReady()||!state.boardManage||
+   state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
  const record=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
- if(!record||!Number.isSafeInteger(record.revision)||record.revision<1||
-   (operation==='archive'&&record.archived)||
+ if(!record||record.workflowState!=='draft'||!Number.isSafeInteger(record.revision)||
+   record.revision<1||(operation==='archive'&&record.archived)||
    (operation==='restore'&&!record.archived))return;
  const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
- state.tradeLinkDraft.busy=true;render();
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  auth.userId===actor&&state.context?.workspace_id===ws;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ let committed=false;
  try{
-  await tradeLinkDraftWorkspace.changeState({
+  const receipt=await tradeLinkDraftWorkspace.changeState({
    documentId,revision:record.revision,operation});
-  if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
-   state.context.workspace_id!==ws)return;
-  state.tradeLinkDraft={...initialTradeLinkDraftView(),
-   message:'Server confirmed the Draft '+operation+'.'};
-  await loadTradeLinkDrafts(seq);
- }catch{
-  if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
-   'Draft revision or authorization changed. Refresh before retrying.';
+  committed=true;
+  if(!same())return;
+  // Verify the authoritative revision and refresh Board projection as a
+  // separate read; never synthesize archived document or Board rows locally.
+  const [list,board,updated]=await Promise.all([
+   tradeLinkDraftWorkspace.list(),db.board(TRADELINK_BOARD_ID),
+   tradeLinkDraftWorkspace.read(documentId)
+  ]);
+  if(!same())return;
+  if(list.status!=='AUTHORIZED_READ'||!Array.isArray(list.rows)||
+    !list.rows.some(row=>row.documentId===documentId&&
+      row.boardItemId===receipt.boardItemId&&row.revision===receipt.revision&&
+      row.archived===(operation==='archive'))||
+    !updated||updated.revision!==receipt.revision||
+    updated.board_item_id!==receipt.boardItemId||
+    (updated.archived_at!==null)!==(operation==='archive')||
+    board?.board?.workspace_id!==ws)
+   throw new ApiError('TradeLink document state reconciliation incomplete.',409);
+  state.board=board;
+  state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
+   message:'Signed Draft '+operation+' confirmed at revision '+receipt.revision+'.'};
+  toast('TradeLink Draft '+operation+' confirmed.');
+  if(state.tradeLinkSection==='drafts')
+   location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
+ }catch(err){
+  if(same()){
+   state.tradeLinkDraft.error=committed?
+    'The server committed the Draft change, but synchronization could not be verified. Refresh All Documents.':
+    tradeLinkDraftSaveFailureMessage(err);
+  }
  }finally{
-  if(seq===routeSerial&&tradeLinkDraftRoute()){state.tradeLinkDraft.busy=false;render();}
+  if(same()){state.tradeLinkDraft.busy=false;render();}
  }
 }
 /** Read-only signed board events; never substitutes for source TradeLink collaboration records. */
@@ -1974,8 +2024,11 @@ async function onRoute(){
       moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
     defaultClock?'attendance':'items';
   state.tradeLinkSection=requested==='tradelink'?normalizeTradeLinkSection(parts[3]):'overview';
+  const signedDraftRoute=requested==='tradelink'&&state.tradeLinkSection==='drafts';
+  const editId=signedDraftRoute&&parts[4]==='edit'&&validUuid(parts[5])?
+   parts[5]:null;
   await loadBoard(parts[1],requested,
-   requested==='tradelink'&&state.tradeLinkSection==='drafts'?parts[4]:null);
+   signedDraftRoute&&parts[4]!=='edit'?parts[4]:null,editId);
   return;
  }
  routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
@@ -3179,6 +3232,11 @@ async function action(name,button){
  }
  case 'tradelink-draft-clear':{
   if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)break;
+  if(state.tradeLinkDraft.editRequestId){
+   const type=state.tradeLinkDraft.selected?.record?.document_type||'quotation';
+   location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+type;
+   break;
+  }
   state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft);
   render();
   root.querySelector('.tl-reference-document-tabs a.active')?.focus({preventScroll:true});
@@ -3190,6 +3248,11 @@ async function action(name,button){
  }
  case 'tradelink-draft-new':{
   if(tradeLinkDraftRoute()&&!state.tradeLinkDraft.busy){
+   if(state.tradeLinkDraft.editRequestId){
+    location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+
+     (state.tradeLinkDraft.selected?.record?.document_type||'quotation');
+    break;
+   }
    state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,error:'',message:''};
    render();
   }

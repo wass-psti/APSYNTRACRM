@@ -1,8 +1,8 @@
-/** CP-TL-03D / Phase 1 — Draft workspace, controlled dark launch.
- * This is a presentation layer over the EXISTING signed TradeLinkDomainClient.
- * No local persistence, fabricated domain records, second login, or write bypass.
+/** Signed TradeLink Draft operations using the existing DomainClient.
+ * No local persistence, fabricated records, second login, or write bypass.
  */
 import {ApiError} from './session.js';
+import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
@@ -25,12 +25,19 @@ const disabled=()=>{throw new ApiError(
  'TradeLink Draft API is in dark launch; production persistence is disabled.',503);
 };
 export const tradeLinkDraftReady=()=>TL03_DOMAIN_READS_ENABLED&&TL03_DOMAIN_WRITES_ENABLED;
+// A deep link carries an identifier only. The editor ALWAYS re-fetches the
+// signed list and exact record before enabling a revisioned write.
+export function tradeLinkDraftEditHref(documentId){
+ return validUuid(documentId)?'#/boards/'+TRADELINK_BOARD_ID+
+  '/tradelink/drafts/edit/'+documentId:'';
+}
+
 export function initialTradeLinkDraftView(documentType=null){
  // The route may request only one of the existing six source document types.
  // This is transient UI state, never browser or server persistence.
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
  return {status:'READ_PENDING',rows:[],selected:null,documentPreview:null,busy:false,error:'',
-  message:'',draftNotice:'',mode:'create',pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,
+  message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,
   listFilters:initialTradeLinkDraftListFilters(),
   formValues:selected?{documentType:selected}:null};
 }
@@ -627,7 +634,11 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   referenceDocumentHeader(type,editing,live)+
   (error?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
   (message?'<p class="tl-draft-feedback" role="status">'+escape(message)+'</p>':'')+
-  (editing?'<button type="button" class="secondary tl-reference-new-draft" data-action="tradelink-draft-new">New Draft</button>':'')+
+  (editing?'<div class="tl-draft-editor-navigation">'+
+   '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
+   '/tradelink/documents">Back to All Documents</a> '+
+   '<button type="button" class="secondary tl-reference-new-draft" data-action="tradelink-draft-new">New Draft</button>'+
+   '</div>':'')+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
   '<div class="tl-reference-editor-content">'+referenceDraftTabs(type)+
@@ -938,11 +949,11 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
    displayed.length+' of '+records.length+' authorized records in this response</p>'+
   (records.length?
    '<div class="tl-records-scroll"><table class="tl-records-table">'+
-    '<caption>'+(readOnly?'Read-only TradeLink records':'Authorized TradeLink Draft records')+
+    '<caption>'+(readOnly?'Authorized TradeLink documents':'Authorized TradeLink Draft records')+
      ' in current response</caption>'+
     '<thead><tr><th scope="col">Document</th><th scope="col">Module</th>'+
     '<th scope="col">Revision</th><th scope="col">State</th>'+
-    '<th scope="col">'+(readOnly?'Preview':'Actions')+'</th>'+
+    '<th scope="col">Actions</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
     ordered.map(row=>{
      const match=tradeLinkDraftRowMatches(row,filters);
@@ -956,7 +967,17 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
       (row.archived?' · Archived':'')+'</td>'+
       (readOnly?'<td><button type="button" class="secondary" '+
        'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
-       '">Preview saved</button></td>':'<td>'+
+       '">Preview saved</button> '+
+       (canManage&&TL03_DOMAIN_WRITES_ENABLED&&row.workflowState==='draft'&&
+        !row.archived&&tradeLinkDraftEditHref(row.documentId)?
+        '<a class="secondary" data-tradelink-document-edit href="'+
+        escape(tradeLinkDraftEditHref(row.documentId))+'">Edit Draft</a> ':'')+
+       (canManage&&TL03_DOMAIN_WRITES_ENABLED&&row.workflowState==='draft'?
+        '<button type="button" class="secondary" data-action="'+
+         (row.archived?'tradelink-draft-restore':'tradelink-draft-archive')+
+         '" data-id="'+escape(row.documentId)+'">'+
+         (row.archived?'Restore':'Archive')+'</button>':'')+
+       '</td>':'<td>'+
       '<button type="button" class="secondary" data-action="tradelink-draft-open" data-id="'+escape(row.documentId)+'">Read</button> '+
       '<button type="button" class="secondary" data-action="tradelink-draft-archive" data-id="'+escape(row.documentId)+'"'+
        (!canManage||!TL03_DOMAIN_WRITES_ENABLED||row.archived||row.workflowState!=='draft'?' disabled':'')+'>Archive</button> '+
@@ -1002,9 +1023,10 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   'Only a signed, role-authorized Domain DocumentRecord response may appear here. '+
   'Document reads are '+(TL03_DOMAIN_READS_ENABLED?'subject to signed authorization':
   'not activated')+'.</p>'+
-  '<p class="tl-draft-boundary" role="note">No mock documents, cross-workspace search, '+
-  'document editing, PDF export, attachment access or workflow transitions. '+
-  'The source workflow state is never inferred from a board status.</p>'+
+  '<p class="tl-draft-boundary" role="note">Authorized Drafts can be edited, archived or restored '+
+  'through the signed database. No mock documents, cross-workspace search, PDF export, '+
+  'attachment access or unsupported approval transitions. Board status does not change '+
+  'the document workflow state.</p>'+
   '<div class="tl-panel-heading"><h3>Authorized documents</h3>'+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
    (!TL03_DOMAIN_READS_ENABLED||!canManage||view.busy?' disabled':'')+
@@ -1012,6 +1034,13 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
   renderTradeLinkDraftList(rows,view,canManage,{readOnly:true})+
+  (linked&&canManage&&TL03_DOMAIN_WRITES_ENABLED&&
+   linked.workflowState==='draft'&&!linked.archived&&
+   tradeLinkDraftEditHref(linked.documentId)?
+   '<p class="tl-document-edit-action"><a class="secondary" '+
+   'data-tradelink-document-edit href="'+
+    escape(tradeLinkDraftEditHref(linked.documentId))+
+   '">Edit this Draft</a></p>':'')+
   selectedPreview+
   '<h3>Document modules</h3><nav class="tl-document-module-nav" aria-label="TradeLink document modules">'+
   typeLabels.map(([id,label])=>'<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
@@ -1025,10 +1054,17 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
  const rows=TL03_DOMAIN_READS_ENABLED&&canManage&&view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
  const selected=TL03_DOMAIN_READS_ENABLED&&canManage&&view.mode==='edit'&&view.selected?.documentId?
    view.selected:null;
+ const pendingEdit=view.editRequestId&&!selected;
  return '<div class="tl-draft-workspace">'+
-  renderEditor(selected?.record,view.mode,canManage,
+  (pendingEdit?'<section class="tl-draft-panel" '+
+    'role="'+(view.error?'alert':'status')+'">'+
+    '<h2>Open saved Draft</h2><p>'+
+    escape(view.error||'Verifying the signed document and its latest revision…')+
+    '</p><a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
+    '/tradelink/documents">Back to All Documents</a></section>':
+   renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
-   view.error||'',view.message||'',view.lineDrafts)+
+   view.error||'',view.message||'',view.lineDrafts))+
   '<details class="tl-reference-list-details">'+
    '<summary>All Documents · authorized Draft listing'+
     '<span class="tl-draft-badge">Signed Draft operations</span></summary>'+
