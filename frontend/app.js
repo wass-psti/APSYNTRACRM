@@ -3,7 +3,8 @@ import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelecto
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
-import {REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,captureAuthReturn,
+import {validateAccessRequest} from './request-access.js';
+import {captureAuthReturn,
  inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword} from './auth-account-flows.js';
 import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
@@ -218,7 +219,9 @@ function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopUserRoleMotion();
  stopSettingsMotion();
  stopPagesAcceptanceMotion();
- root.innerHTML=renderAuthMarkup({message,notice,mode,resetReady:mode==='reset'&&!!recoveryContext});
+ const formsubmitReturn=mode==='register'&&new URLSearchParams(location.search).get('request_access')==='received';
+ root.innerHTML=renderAuthMarkup({message,notice:notice||(formsubmitReturn?
+  'Returned from FormSubmit. If the provider confirmed success, the request was sent for administrator review. No account has been created.':''),mode,resetReady:mode==='reset'&&!!recoveryContext});
  if(state.tl03RevokedReport&&!auth.isSignedIn)
   root.insertAdjacentHTML('beforeend',renderTradeLinkSignedOutRevocationResult(state.tl03RevokedReport));
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
@@ -2468,6 +2471,28 @@ async function onRoute(){
    finally{state.foundationBusy=false;}
  }
  render();
+}
+function validateAndSubmitAccessRequest(form,event){
+ const recipient=form.getAttribute('action')||'';
+ if(!/^https:\/{2}formsubmit\.co\/[A-Za-z0-9_-]{8,128}$/.test(recipient)){
+  event.preventDefault();
+  renderLogin('The administrator has not configured the request mailbox.',{mode:'register'});
+  return;
+ }
+ const fields=new FormData(form);
+ const error=validateAccessRequest({
+  name:fields.get('name'),email:fields.get('email'),consent:fields.get('consent')==='yes'
+ });
+ if(error){
+  event.preventDefault();
+  const message=form.querySelector('[data-request-error]')||document.createElement('p');
+  message.className='login-error';message.dataset.requestError='';
+  message.setAttribute('role','alert');message.textContent=error;
+  form.prepend(message);return;
+ }
+ // Native POST preserves FormSubmit CAPTCHA and provider confirmation.
+ const button=form.querySelector('[type="submit"]');
+ if(button)button.disabled=true;
 }
 async function submitRecoveryRequest(form){
  if(state.authBusy)return;
@@ -5534,11 +5559,7 @@ root.addEventListener('submit',event=>{
  }
  if(event.target.id==='login-form'){event.preventDefault();login(event.target);return;}
  if(event.target.id==='register-form'){
-  event.preventDefault();
-  // This cannot be lifted by frontend configuration: production admission
-  // requires the independently approved server-side trigger/RLS activation.
-  if(!REGISTRATION_ADMISSION_ENABLED)
-   renderLogin(REGISTRATION_BLOCKED,{mode:'register'});
+  validateAndSubmitAccessRequest(event.target,event);
   return;
  }
  if(event.target.id==='forgot-form'){
