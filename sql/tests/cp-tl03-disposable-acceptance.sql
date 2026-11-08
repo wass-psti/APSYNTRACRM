@@ -42,11 +42,11 @@ BEGIN
  BEGIN
   PERFORM public.tl03_document_commit(board,doc,1,'update',modified);
   RAISE EXCEPTION 'Stale revision accepted';
- EXCEPTION WHEN serialization_failure THEN NULL; END;
+ EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL; END;
  BEGIN
   PERFORM public.tl03_document_commit(board,doc,0,'create',payload);
   RAISE EXCEPTION 'Changed draft accepted as idempotent create';
- EXCEPTION WHEN serialization_failure THEN NULL; END;
+ EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL; END;
  BEGIN
   PERFORM public.tl03_document_commit(board,doc,2,'update',
    modified||'{"workflow":{"state":"approved"}}'::jsonb);
