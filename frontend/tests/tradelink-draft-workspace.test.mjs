@@ -80,9 +80,9 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
  for(const bad of ['unknown','../payment','quotation?commit=true','<script>',null,{}])
   assert.equal(initialTradeLinkDraftView(bad).formValues,null);
  const app=readFileSync('frontend/app.js','utf8');
- assert.ok(app.includes('async function loadBoard(boardId,tab,draftType=null)'));
+ assert.ok(app.includes('async function loadBoard(boardId,tab,draftType=null,draftEditId=null)'));
  assert.ok(app.includes("state.tradeLinkDraft=initialTradeLinkDraftView(tab==='tradelink'&&state.tradeLinkSection==='drafts'?draftType:null)"));
- assert.ok(app.includes("requested==='tradelink'&&state.tradeLinkSection==='drafts'?parts[4]:null"));
+ assert.ok(app.includes("signedDraftRoute&&parts[4]!=='edit'?parts[4]:null,editId"));
 });
 
 test('foreign workspace or an unrelated board renders no usable editor',()=>{

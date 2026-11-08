@@ -177,3 +177,13 @@
 }
 .aps-tradelink-app .tl-reference-line-item>.tl-panel-heading{grid-column:1 / -1;}
 .aps-tradelink-app [data-action="tradelink-draft-add-line"]{margin-block:8px;}
+
+.aps-tradelink-app .tl-draft-editor-navigation,
+.aps-tradelink-app .tl-document-edit-action{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}
+.aps-tradelink-app .tl-document-repository .tl-records-table td:last-child{min-width:230px}
+.aps-tradelink-app [data-tradelink-document-edit]:focus-visible,
+.aps-tradelink-app [data-tradelink-board-edit]:focus-visible,
+.aps-tradelink-app .tl-draft-editor-navigation a:focus-visible{outline:3px solid #8d95ee;outline-offset:2px}
+@media(max-width:620px){
+ .aps-tradelink-app .tl-document-repository .tl-records-table td:last-child{min-width:190px}
+}
