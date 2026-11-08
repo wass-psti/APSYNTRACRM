@@ -768,7 +768,7 @@ function boardPage(){
  const columnLabels=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{};
  const allowCustom=BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ';
  const tabSpecs=[
-  {key:'items',href:'#/boards/'+b.id+(['timetracker','fueltrans'].includes(moduleKey)?'/items':''),
+  {key:'items',href:'#/boards/'+b.id+(moduleKey==='fueltrans'?'/items':moduleKey==='timetracker'?'/items':''),
     label:'▤ Board items <span class="csp-u060">('+items.length+')</span>'},
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
