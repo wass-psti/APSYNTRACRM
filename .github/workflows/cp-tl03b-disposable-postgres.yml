@@ -15,6 +15,8 @@ on:
       - 'sql/tradelink-document-submit-candidate.sql'
       - 'sql/tradelink-document-review-revision-candidate.sql'
       - 'sql/tradelink-document-decision-candidate.sql'
+      - 'sql/tradelink-document-operational-candidate.sql'
+      - 'sql/tests/cp-tl03-operational-disposable.sql'
       - 'sql/tests/cp-tl03-decisions-disposable.sql'
       - 'sql/tests/cp-tl03-review-revision-disposable.sql'
       - 'sql/tests/cp-tl03-submit-disposable.sql'
@@ -130,6 +132,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-decision-candidate.sql
       - name: Verify assigned approver, prior signed review, rejection reason, history and denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-decisions-disposable.sql
+      - name: Install signed operational recording, completion and reopening in isolated PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-operational-candidate.sql
+      - name: Verify authentic timestamps, completion prerequisites, resubmission cycles and denials
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-operational-disposable.sql
       - name: Execute signed fixture, CAS, audit, RLS and denial acceptance
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-acceptance.sql
       - name: Check post-migration grants and board projection

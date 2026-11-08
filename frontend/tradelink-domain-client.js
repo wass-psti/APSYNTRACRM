@@ -19,6 +19,9 @@ export const TL03_WORKFLOW_REVIEW_ENABLED=false;
 // Exact-scope signed final approval/rejection requires a distinct approved
 // production database candidate and authenticated actor verification.
 export const TL03_WORKFLOW_DECISION_ENABLED=false;
+// Operational recording, completion and reopening are a separate signed
+// migration dependency. Never activate merely from deployed UI source.
+export const TL03_WORKFLOW_OPERATIONAL_ENABLED=false;
 const TYPES=new Set(['esi','packing','delivery','payment','quotation','po']);
 const STATES=new Set(['draft','submitted','under-review','revision-required',
  'approved','rejected','completed','cancelled']);
@@ -134,10 +137,37 @@ export function normalizeTradeLinkDecisionReceipt(
   deny('TradeLink signed approval/rejection receipt mismatch.',409);
  return value;
 }
+export function normalizeTradeLinkOperationalReceipt(
+ value,documentId,expectedRevision,documentType,action,fromState
+){
+ const operations=['record-checked','record-delivered','record-received','complete','reopen'];
+ const field=action==='record-checked'?'checkedAt':
+  action==='record-delivered'?'deliveredAt':
+  action==='record-received'?'receivedAt':null;
+ const toState=field?fromState:action==='complete'?'completed':'draft';
+ const validState=['submitted','under-review'].includes(fromState);
+ const valid=(action==='record-checked'||action==='record-delivered')?
+  documentType==='delivery'&&validState:
+  action==='record-received'?documentType==='payment'&&validState:
+  action==='complete'?(documentType==='packing'?false:
+   ['esi','quotation','po'].includes(documentType)?fromState==='approved':validState):
+  action==='reopen'?['approved','rejected','completed','cancelled'].includes(fromState):false;
+ if(!validUuid(documentId)||!TYPES.has(documentType)||
+  !Number.isSafeInteger(expectedRevision)||expectedRevision<1||
+  !operations.includes(action)||!valid||
+  !value||typeof value!=='object'||Array.isArray(value)||
+  value.documentId!==documentId||!validUuid(value.boardItemId)||
+  value.revision!==expectedRevision+1||value.state!==toState||
+  value.operation!==action||value.from!==fromState||
+  value.field!==field||typeof value.recordedAt!=='string'||
+  !Number.isFinite(Date.parse(value.recordedAt)))
+  deny('TradeLink signed operational receipt mismatch.',409);
+ return value;
+}
 export function normalizeTradeLinkSignedHistory(rows,limit=25){
  const operations=new Set(['created','updated','archived','restored',
   'submitted','completed','reviewed','revision-requested',
-  'approved','rejected']);
+  'approved','rejected','operational-record','reopened']);
  if(!Array.isArray(rows)||rows.length>limit||
   rows.some((r,i)=>!Number.isSafeInteger(r?.revision)||r.revision<1||
    (i>0&&r.revision>=rows[i-1].revision)||
@@ -276,6 +306,26 @@ export class TradeLinkDomainClient{
   });
   return normalizeTradeLinkDecisionReceipt(
    receipt,documentId,expectedRevision,action,fromState);
+ }
+ async operate({documentId,expectedRevision,documentType,action,fromState,reason=''}={}){
+  if(!TL03_WORKFLOW_OPERATIONAL_ENABLED)
+   deny('TradeLink operational workflow has not been activated.',503);
+  const trimmed=typeof reason==='string'?reason.trim():null;
+  if(!validUuid(documentId)||!TYPES.has(documentType)||
+    !Number.isSafeInteger(expectedRevision)||expectedRevision<1||
+    !['record-checked','record-delivered','record-received','complete','reopen'].includes(action)||
+    !STATES.has(fromState)||trimmed===null||reason.length>1500||
+    /[\x00-\x1f\x7f]/.test(reason)||
+    (action==='reopen'&&(trimmed.length<3||trimmed.length>1500)))
+   deny('Invalid TradeLink operational command or reopening reason.',400);
+  await this.session();
+  const value=await this.api.rpc('tl03_document_operate',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+   p_expected_revision:expectedRevision,p_action:action,
+   p_reason:trimmed||null
+  });
+  return normalizeTradeLinkOperationalReceipt(
+   value,documentId,expectedRevision,documentType,action,fromState);
  }
  async history(documentId,limit=25){
   if(!TL03_WORKFLOW_REVIEW_ENABLED)
