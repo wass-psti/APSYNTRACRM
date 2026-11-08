@@ -74,7 +74,7 @@ BEGIN
  EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL; END;
  FOR receipt IN SELECT pg_catalog.jsonb_build_object('action','request-revision',
      'reason',reason) FROM pg_catalog.unnest(ARRAY[
-      '', '  ', 'X', pg_catalog.repeat('x',1501), E'Contains\\nnewline']) AS reason LOOP
+      '', '  ', 'X', pg_catalog.repeat('x',1501), E'Contains\nnewline']) AS reason LOOP
   BEGIN
    PERFORM public.tl03_document_review(board,doc,3,
     receipt->>'action',receipt->>'reason');
