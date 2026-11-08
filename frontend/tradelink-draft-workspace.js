@@ -6,7 +6,8 @@ import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
- TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,validateTradeLinkDraftEnvelope,
+ TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
+ TL03_WORKFLOW_REVIEW_ENABLED,validateTradeLinkDraftEnvelope,
  normalizeTradeLinkDomainRow} from './tradelink-domain-client.js';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
@@ -91,7 +92,13 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
    throw new ApiError('Invalid or missing TradeLink '+key+'.',400);
   if(text)draft[key]=text;
  };
- for(const key of ['customerName','referenceNumber','remarks'])addText(key);
+ for(const key of ['customerName','referenceNumber','remarks',
+  'verifiedBy','verifiedByEmail','approvedByEmail'])addText(key);
+ for(const emailKey of ['verifiedByEmail','approvedByEmail']){
+  const email=draft[emailKey];
+  if(email&&(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))
+   throw new ApiError('Invalid assigned TradeLink account email.',400);
+ }
  const currency=value('currency'),vatType=value('vatType');
  if(currency){
   if(!currencies.includes(currency))throw new ApiError('Invalid TradeLink currency.',400);
@@ -263,16 +270,25 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
   return this.client.read(documentId);
  }
- async submit({documentId,expectedRevision,documentType}={}){
+ async submit({documentId,expectedRevision,documentType,fromState='draft'}={}){
   if(!TL03_WORKFLOW_SUBMIT_ENABLED)disabled();
-  return this.client.submit({documentId,expectedRevision,documentType});
+  return this.client.submit({documentId,expectedRevision,documentType,fromState});
  }
- async save({documentId,expectedRevision=0,draft}={}){
+ async review({documentId,expectedRevision,action,fromState,reason}={}){
+  if(!TL03_WORKFLOW_REVIEW_ENABLED)disabled();
+  return this.client.review({documentId,expectedRevision,action,fromState,reason});
+ }
+ async history(documentId,limit=25){
+  if(!TL03_WORKFLOW_REVIEW_ENABLED)disabled();
+  return this.client.history(documentId,limit);
+ }
+ async save({documentId,expectedRevision=0,draft,workflowState='draft'}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
   const payload=validateTradeLinkDraftEnvelope(draft);
   const id=documentId||globalThis.crypto?.randomUUID?.();
   const operation=expectedRevision===0?'create':'update';
-  return this.client.commit({documentId:id,expectedRevision,operation,draft:payload});
+  return this.client.commit({documentId:id,expectedRevision,operation,
+   draft:payload,expectedState:workflowState});
  }
  async changeState({documentId,revision,operation}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
@@ -627,7 +643,8 @@ export function snapshotTradeLinkDraftLineItems(form){
  });
 }
 function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null){
- const editing=mode==='edit'&&row?.workflow_state==='draft'&&
+ const editing=mode==='edit'&&
+  ['draft','revision-required'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
   (!Array.isArray(row.content.items)||row.content.items.length<=100);
  const data=editing?row.content:{};
@@ -675,7 +692,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '<h4>Document Information</h4>'+
     '<div class="tl-reference-document-grid">'+
      '<div class="tl-reference-static-field"><span>Status</span>'+
-      '<output>Draft'+(editing?'':' · Not saved')+'</output></div>'+
+      '<output>'+(editing&&row?.workflow_state==='revision-required'?
+       'Revision Required':'Draft'+(editing?'':' · Not saved'))+'</output></div>'+
      '<label class="tl-draft-field"><span>Number</span>'+
       '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+
        '" required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" '+
@@ -761,6 +779,19 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines):'')+
+   (type!=='packing'?
+    '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Workflow account assignments</legend>'+
+     '<p class="muted">Reviewer email must match a verified signed APSYNTRA CRM account. '+
+      'Names alone never grant review permission; this form does not assign system roles.</p>'+
+     (['quotation','delivery'].includes(type)?
+      field('Intended reviewer (optional)','verifiedBy',
+       fieldValue('verifiedBy',data.verifiedBy||''),'maxlength="5000"'):'')+
+     field('Assigned reviewer account email (optional)','verifiedByEmail',
+      fieldValue('verifiedByEmail',data.verifiedByEmail||''),'type="email" maxlength="254"')+
+     (['esi','quotation','po'].includes(type)?
+      field('Assigned approver account email (optional)','approvedByEmail',
+       fieldValue('approvedByEmail',data.approvedByEmail||''),'type="email" maxlength="254"'):'')+
+    '</fieldset>':'')+
    '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
     '<label class="tl-draft-field"><span>Document notes and terms · local preview</span>'+
      '<textarea name="remarks" maxlength="5000" rows="5" '+
@@ -1019,13 +1050,23 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
       (readOnly?'<td><button type="button" class="secondary" '+
        'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
        '">Preview saved</button> '+
-       (canManage&&row.workflowState==='draft'&&!row.archived?
+       (canManage&&['draft','revision-required'].includes(row.workflowState)&&!row.archived?
         '<button type="button" class="secondary" data-action="tradelink-document-submit" '+
          'data-id="'+escape(row.documentId)+'"'+
          (TL03_WORKFLOW_SUBMIT_ENABLED?'':' disabled title="Submission backend not activated"')+
          '>'+(TL03_WORKFLOW_SUBMIT_ENABLED?'Submit Draft':'Submit (pending activation)')+
          '</button> ':'')+
-       (canManage&&TL03_DOMAIN_WRITES_ENABLED&&row.workflowState==='draft'&&
+       (canManage&&TL03_WORKFLOW_REVIEW_ENABLED&&!row.archived&&
+        row.workflowState==='submitted'&&
+        ['esi','quotation','po','payment'].includes(row.documentType)?
+        '<button type="button" class="secondary" data-action="tradelink-document-review" '+
+         'data-id="'+escape(row.documentId)+'">Record Review</button> ':'')+
+       (canManage&&TL03_WORKFLOW_REVIEW_ENABLED&&!row.archived&&
+        ['submitted','under-review'].includes(row.workflowState)?
+        '<button type="button" class="secondary" data-action="tradelink-document-request-revision" '+
+         'data-id="'+escape(row.documentId)+'">Request Revision</button> ':'')+
+       (canManage&&TL03_DOMAIN_WRITES_ENABLED&&
+        ['draft','revision-required'].includes(row.workflowState)&&
         !row.archived&&tradeLinkDraftEditHref(row.documentId)?
         '<a class="secondary" data-tradelink-document-edit href="'+
         escape(tradeLinkDraftEditHref(row.documentId))+'">Edit Draft</a> ':'')+
@@ -1054,6 +1095,30 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
  * Only the existing signed response may render; never project board items into
  * Domain DocumentRecords. Read flags remain centrally disabled.
  */
+/** Verified signed audit rows only. Never synthesize a workflow history from
+ * a document's status or from local preview fields.
+ */
+export function renderTradeLinkSavedWorkflowHistory(events){
+ if(!Array.isArray(events)||!events.length)return '';
+ const items=events.slice(0,25).filter(event=>
+  Number.isSafeInteger(event?.revision)&&event.revision>=1&&
+  typeof event?.operation==='string'&&
+  typeof event?.at==='string'&&Number.isFinite(Date.parse(event.at))&&
+  typeof event?.actorId==='string');
+ if(!items.length)return '';
+ return '<section class="tl-signed-history" aria-labelledby="tl-signed-history-title">'+
+  '<h3 id="tl-signed-history-title">Signed document history (latest '+items.length+')</h3>'+
+  '<div class="tl-records-scroll"><table class="tl-records-table">'+
+  '<thead><tr><th scope="col">Revision</th><th scope="col">Event</th>'+
+  '<th scope="col">Time</th><th scope="col">Signed actor ID</th>'+
+  '<th scope="col">Reason</th></tr></thead><tbody>'+
+  items.map(e=>'<tr><td>'+escape(e.revision)+'</td><td>'+escape(e.operation)+
+   '</td><td><time datetime="'+escape(e.at)+'">'+escape(e.at)+'</time></td>'+
+   '<td><code>'+escape(e.actorId)+'</code></td><td>'+
+   escape(typeof e.metadata?.reason==='string'?e.metadata.reason:'—')+
+   '</td></tr>').join('')+
+  '</tbody></table></div><p class="muted">Only the latest authenticated audit events are shown; no event has been modified.</p></section>';
+}
 export function renderTradeLinkDocumentRepository({detail,workspaceId,
  view=initialTradeLinkDraftView(),canManage=false}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
@@ -1092,13 +1157,14 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
   renderTradeLinkDraftList(rows,view,canManage,{readOnly:true})+
   (linked&&canManage&&TL03_DOMAIN_WRITES_ENABLED&&
-   linked.workflowState==='draft'&&!linked.archived&&
+   ['draft','revision-required'].includes(linked.workflowState)&&!linked.archived&&
    tradeLinkDraftEditHref(linked.documentId)?
    '<p class="tl-document-edit-action"><a class="secondary" '+
    'data-tradelink-document-edit href="'+
     escape(tradeLinkDraftEditHref(linked.documentId))+
    '">Edit this Draft</a></p>':'')+
   selectedPreview+
+  (linked&&canManage?renderTradeLinkSavedWorkflowHistory(selection?.events):'')+
   '<h3>Document modules</h3><nav class="tl-document-module-nav" aria-label="TradeLink document modules">'+
   typeLabels.map(([id,label])=>'<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
    '/tradelink/'+escape(id)+'">'+escape(label)+'</a>').join('')+

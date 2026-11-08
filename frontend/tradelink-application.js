@@ -110,7 +110,7 @@ function renderDocuments(detail,workspaceId,draftView,canManage){
      '<button type="button" class="secondary" data-action="tradelink-document-open" '+
       'data-id="'+esc(documentByItem.get(item.id).documentId)+'">Open document</button>'+
       (canManage&&TL03_DOMAIN_WRITES_ENABLED&&
-       documentByItem.get(item.id).workflowState==='draft'&&
+       ['draft','revision-required'].includes(documentByItem.get(item.id).workflowState)&&
        !documentByItem.get(item.id).archived?
        ' <a class="secondary" data-tradelink-board-edit href="'+
        esc(tradeLinkDraftEditHref(documentByItem.get(item.id).documentId))+

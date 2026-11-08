@@ -34,7 +34,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
  normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
- tradeLinkSavedDraftMatches} from './tradelink-domain-client.js';
+ TL03_WORKFLOW_REVIEW_ENABLED,tradeLinkSavedDraftMatches} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runTradeLinkLocalSessionRevocation,renderTradeLinkSessionRevocation,renderTradeLinkSignedOutRevocationResult,sanitizeTradeLinkRevocationReport} from './tradelink-revoked-session-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -1479,7 +1479,8 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
      try{
       const record=await tradeLinkDraftWorkspace.read(target);
       if(!same())return;
-      if(!record||record.archived_at!==null||record.workflow_state!=='draft'||
+      if(!record||record.archived_at!==null||
+       !['draft','revision-required'].includes(record.workflow_state)||
        record.document_number!==record.content?.documentNumber||
        record.document_type!==record.content?.documentType)
        throw new ApiError('Saved Draft not editable.',409);
@@ -1509,7 +1510,7 @@ async function openTradeLinkDraft(documentId){
    state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
  const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
  if(!listed)return;
- if(listed.archived||listed.workflowState!=='draft'){
+ if(listed.archived||!['draft','revision-required'].includes(listed.workflowState)){
   if(state.tradeLinkDraft.editRequestId===documentId){
    state.tradeLinkDraft.error='This document is no longer an editable Draft. Return to All Documents.';
    render();
@@ -1522,7 +1523,8 @@ async function openTradeLinkDraft(documentId){
   const record=await tradeLinkDraftWorkspace.read(documentId);
   if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
    state.context.workspace_id!==ws)return;
-  if(!record||record.workflow_state!=='draft'||record.archived_at!==null||
+  if(!record||!['draft','revision-required'].includes(record.workflow_state)||
+   record.archived_at!==null||
    record.revision!==listed.revision||
    record.board_item_id!==listed.boardItemId||
    record.document_number!==listed.documentNumber||
@@ -1551,15 +1553,21 @@ async function openTradeLinkDocument(documentId){
   state.context.workspace_id===ws;
  state.tradeLinkDraft.busy=true;state.tradeLinkDraft.documentPreview=null;render();
  try{
-  const record=await tradeLinkDraftWorkspace.read(documentId);
+  const [record,events]=await Promise.all([
+   tradeLinkDraftWorkspace.read(documentId),
+   TL03_WORKFLOW_REVIEW_ENABLED?tradeLinkDraftWorkspace.history(documentId):null
+  ]);
   if(!same())return;
+  if(TL03_WORKFLOW_REVIEW_ENABLED&&
+    (!Array.isArray(events)||events[0]?.revision!==listed.revision))
+   throw new ApiError('Signed document history does not match the saved revision.',409);
   if(!record||record.board_item_id!==listed.boardItemId||
    record.revision!==listed.revision||
    record.document_number!==listed.documentNumber||
    record.document_type!==listed.documentType||
    record.workflow_state!==listed.workflowState)
    throw new ApiError('Document revision changed; refresh the signed list.',409);
-  state.tradeLinkDraft.documentPreview={documentId,record};
+  state.tradeLinkDraft.documentPreview={documentId,record,events};
   state.tradeLinkDraft.error='';
   state.tradeLinkDraft.message='Showing verified server revision '+record.revision+'.';
  }catch{
@@ -1592,6 +1600,7 @@ async function commitTradeLinkDraft(form){
   return;
  }
  const {documentId,expectedRevision,draft}=command;
+ const workflowState=state.tradeLinkDraft.selected?.record?.workflow_state??'draft';
  state.tradeLinkDraft={...state.tradeLinkDraft,
   pendingCreateId:expectedRevision===0?documentId:null,
   pendingCreateDraft:command.pendingCreateDraft,
@@ -1604,7 +1613,7 @@ async function commitTradeLinkDraft(form){
   // The existing server transaction atomically writes the document, Board item
   // and audit event; no second Board-item creation is permitted in the client.
   const receipt=await tradeLinkDraftWorkspace.save({
-   documentId,expectedRevision,draft});
+   documentId,expectedRevision,draft,workflowState});
   committed=true;
   if(!same())return;
   const [record,list,board]=await Promise.all([
@@ -1618,6 +1627,7 @@ async function commitTradeLinkDraft(form){
    record.content?.documentNumber!==draft.documentNumber||
    record.content?.documentType!==draft.documentType||
    !tradeLinkSavedDraftMatches(record,draft)||
+   record.workflow_state!==workflowState||
    list.status!=='AUTHORIZED_READ'||
    !list.rows.some(row=>row.documentId===documentId&&
     row.boardItemId===receipt.boardItemId&&row.revision===receipt.revision)||
@@ -1648,7 +1658,8 @@ async function submitTradeLinkDocument(documentId){
     state.tradeLinkSection!=='documents'||state.tradeLinkDraft.busy||
     state.tradeLinkDraft.status!=='AUTHORIZED_READ'||!state.boardManage)return;
  const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
- if(!listed||listed.archived||listed.workflowState!=='draft'||
+ if(!listed||listed.archived||
+   !['draft','revision-required'].includes(listed.workflowState)||
    !Number.isSafeInteger(listed.revision)||listed.revision<1)return;
  if(!confirm('Submit saved TradeLink '+listed.documentType+
   ' document '+listed.documentNumber+' at revision '+listed.revision+
@@ -1661,7 +1672,8 @@ async function submitTradeLinkDocument(documentId){
  let committed=false;
  try{
   const receipt=await tradeLinkDraftWorkspace.submit({
-   documentId,expectedRevision:listed.revision,documentType:listed.documentType});
+   documentId,expectedRevision:listed.revision,documentType:listed.documentType,
+   fromState:listed.workflowState});
   committed=true;
   if(!same())return;
   const [record,list,board]=await Promise.all([
@@ -1691,6 +1703,78 @@ async function submitTradeLinkDocument(documentId){
   if(same())state.tradeLinkDraft.error=committed?
     'The server committed a submission, but synchronized retrieval failed. Refresh All Documents before any new action.':
     tradeLinkDraftSaveFailureMessage(err);
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+/** Genuine signed reviewer decision, with server-bound account assignment.
+ * The frontend never treats an entered reviewer name as a permission.
+ */
+async function reviewTradeLinkDocument(documentId,action){
+ if(!TL03_WORKFLOW_REVIEW_ENABLED||!tradeLinkAuthorizedListRoute()||
+    state.tradeLinkSection!=='documents'||state.tradeLinkDraft.busy||
+    state.tradeLinkDraft.status!=='AUTHORIZED_READ'||!state.boardManage)return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed||listed.archived||
+   !['submitted','under-review'].includes(listed.workflowState)||
+   (action==='review'&&(listed.workflowState!=='submitted'||
+    !['esi','quotation','po','payment'].includes(listed.documentType)))||
+   !['review','request-revision'].includes(action)||
+   !Number.isSafeInteger(listed.revision)||listed.revision<1)return;
+ let reason='';
+ if(action==='request-revision'){
+  const entered=prompt('Explain which document fields require revision (3–1500 characters):','');
+  if(entered===null)return;
+  reason=entered.trim();
+  if(reason.length<3||reason.length>1500||/[\x00-\x1f\x7f]/.test(entered)){
+   state.tradeLinkDraft.error='A revision request requires a valid 3–1500 character reason.';
+   render();return;
+  }
+ }else if(!confirm('Record signed TradeLink review of '+
+  listed.documentNumber+' at revision '+listed.revision+'?'))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&state.context?.workspace_id===ws&&
+  auth.userId===actor;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ let committed=false;
+ try{
+  const receipt=await tradeLinkDraftWorkspace.review({
+   documentId,expectedRevision:listed.revision,action,
+   fromState:listed.workflowState,reason});
+  committed=true;
+  if(!same())return;
+  const [record,list,board,events]=await Promise.all([
+   tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
+   db.board(TRADELINK_BOARD_ID),tradeLinkDraftWorkspace.history(documentId)
+  ]);
+  if(!same())return;
+  if(!record||record.revision!==receipt.revision||
+    record.workflow_state!==receipt.state||
+    record.document_type!==listed.documentType||
+    record.document_number!==listed.documentNumber||
+    record.board_item_id!==receipt.boardItemId||record.archived_at!==null||
+    !list.rows.some(r=>r.documentId===documentId&&
+      r.revision===receipt.revision&&r.workflowState===receipt.state&&
+      r.boardItemId===receipt.boardItemId)||
+    !events.length||events[0].revision!==receipt.revision||
+    events[0].operation!==(action==='review'?'reviewed':'revision-requested')||
+    events[0].metadata?.from!==listed.workflowState||
+    events[0].metadata?.to!==receipt.state||
+    (action==='request-revision'&&events[0].metadata?.reason!==reason)||
+    board?.board?.workspace_id!==ws||
+    !board.items?.some(i=>i.id===receipt.boardItemId&&
+      i.title===listed.documentNumber&&i.updated_at===record.updated_at))
+   throw new ApiError('Signed TradeLink review/audit synchronization incomplete.',409);
+  state.board=board;
+  state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
+   message:'Signed '+receipt.state+' workflow decision verified at revision '+
+    receipt.revision+' in document, Board and audit history.'};
+  toast('TradeLink signed workflow decision verified.');
+ }catch(err){
+  if(same())state.tradeLinkDraft.error=committed?
+   'The server committed the workflow decision, but signed audit/Board reconciliation failed. Refresh All Documents.':
+   tradeLinkDraftSaveFailureMessage(err);
  }finally{
   if(same()){state.tradeLinkDraft.busy=false;render();}
  }
@@ -3374,6 +3458,12 @@ async function action(name,button){
  }
  case 'tradelink-document-submit':{
   await submitTradeLinkDocument(button.dataset.id);break;
+ }
+ case 'tradelink-document-review':{
+  await reviewTradeLinkDocument(button.dataset.id,'review');break;
+ }
+ case 'tradelink-document-request-revision':{
+  await reviewTradeLinkDocument(button.dataset.id,'request-revision');break;
  }
  case 'tradelink-documents-refresh':{
   if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'){
