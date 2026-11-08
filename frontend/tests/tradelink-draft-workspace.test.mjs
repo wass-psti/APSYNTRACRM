@@ -986,7 +986,7 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  const draft=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  assert.match(app,/async function openTradeLinkDocument\(documentId\)/);
  assert.match(app,/record\.board_item_id!==listed\.boardItemId/);
- assert.match(app,/state\.tradeLinkDraft\.documentPreview=\{documentId,record,events\}/);
+ assert.match(app,/state\.tradeLinkDraft\.documentPreview=\{documentId,record,events,attachments\}/);
  assert.match(app,/const receipt=await tradeLinkDraftWorkspace\.save/);
  assert.match(app,/committed=true/);
  assert.match(app,/tradeLinkDraftWorkspace\.read\(documentId\)/);

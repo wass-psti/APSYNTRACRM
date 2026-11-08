@@ -5,6 +5,8 @@ import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
+import {TL03_ATTACHMENTS_ENABLED,normalizeTradeLinkAttachmentList}
+ from './tradelink-attachments.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
  TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
@@ -1169,6 +1171,59 @@ export function renderTradeLinkSavedWorkflowHistory(events){
    '</td></tr>').join('')+
   '</tbody></table></div><p class="muted">Only the latest authenticated audit events are shown; no event has been modified.</p></section>';
 }
+/** Only a verified signed All Documents revision can reveal its attachments.
+ * The bucket is private; never generate public or persistent signed URLs.
+ */
+export function renderTradeLinkDocumentAttachments(attachments,{
+ documentId,workspaceId,editable=false,busy=false
+}={}){
+ if(!TL03_ATTACHMENTS_ENABLED)return '';
+ if(!validUuid(documentId)||!validUuid(workspaceId))return '';
+ let rows;
+ try{rows=normalizeTradeLinkAttachmentList(attachments,workspaceId,documentId);}
+ catch{return '<section role="alert">Signed attachment records could not be verified.</section>';}
+ const buttons=busy?' disabled':'';
+ return '<section class="tl-saved-attachments" data-tradelink-saved-attachments '+
+  'aria-labelledby="tl-saved-attachment-heading">'+
+  '<div class="tl-panel-heading"><h3 id="tl-saved-attachment-heading">Private document attachments</h3>'+
+  '<span class="tl-draft-badge">Signed access · 20 MB per file</span></div>'+
+  '<p class="muted">Only actively registered documents are downloadable. '+
+  'Replaced and removed files retain a restricted recovery record. '+
+  'Files are never published with anonymous links.</p>'+
+  (rows.length?
+   '<div class="tl-records-scroll"><table class="tl-records-table">'+
+    '<thead><tr><th scope="col">File</th><th scope="col">Version</th>'+
+    '<th scope="col">Size</th><th scope="col">Uploaded</th>'+
+    '<th scope="col">Actions</th></tr></thead><tbody>'+
+    rows.map(row=>'<tr><td>'+escape(row.fileName)+'</td><td>'+
+     escape(row.revision)+'</td><td>'+escape(row.sizeBytes)+' bytes</td>'+
+     '<td>'+escape(row.uploadedAt)+'</td><td>'+
+     '<button type="button" class="secondary" data-action="tradelink-attachment-download" '+
+      'data-id="'+escape(row.attachmentId)+'" data-document-id="'+escape(documentId)+'"'+
+      buttons+'>Download verified file</button> '+
+     (editable?'<button type="button" class="secondary" '+
+      'data-action="tradelink-attachment-remove" '+
+      'data-id="'+escape(row.attachmentId)+'" '+
+      'data-document-id="'+escape(documentId)+'"'+buttons+
+      '>Remove access</button>':'')+
+     '</td></tr>').join('')+'</tbody></table></div>':
+   '<p class="muted">No active attachments for this saved document.</p>')+
+  (editable?
+   '<div class="tl-attachment-upload">'+
+   '<label class="tl-draft-field"><span>File (PDF, image, text/CSV, Word, Excel; max 20 MB)</span>'+
+   '<input type="file" id="tl-attachment-upload-file" name="tlAttachmentUploadFile" data-tradelink-attachment-input '+(busy?'disabled ':'')+
+    'accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx"/></label>'+
+   '<label class="tl-draft-field"><span>Upload action</span>'+
+   '<select id="tl-attachment-replace-choice" name="tlAttachmentReplaceChoice" data-tradelink-attachment-replace'+buttons+'>'+
+   '<option value="">Add a new attachment</option>'+
+   rows.map(row=>'<option value="'+escape(row.attachmentId)+'">'+
+    'Replace '+escape(row.fileName)+'</option>').join('')+
+   '</select></label>'+
+   '<button type="button" class="primary" data-action="tradelink-attachment-upload" '+
+    'data-id="'+escape(documentId)+'"'+buttons+'>Upload to private Storage</button>'+
+   '</div>':'')+
+  '</section>';
+}
 export function renderTradeLinkDocumentRepository({detail,workspaceId,
  view=initialTradeLinkDraftView(),canManage=false}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
@@ -1198,8 +1253,10 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   '<p class="tl-draft-boundary" role="note">Authorized Drafts can be edited, archived or restored '+
   'through the signed database. Print / Save PDF opens a newly verified saved revision '+
   'and uses the browser print dialog; this is not an issued or signed tax document. '+
-  'Secure attachment uploads remain unavailable. Board status does not change '+
-  'the document workflow state.</p>'+
+  (TL03_ATTACHMENTS_ENABLED?
+   'Private document attachments require signed file-level authorization. ':
+   'Secure attachment uploads remain unavailable pending backend activation. ')+
+  'Board status does not change the document workflow state.</p>'+
   '<div class="tl-panel-heading"><h3>Authorized documents</h3>'+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
    (!TL03_DOMAIN_READS_ENABLED||!canManage||view.busy?' disabled':'')+
@@ -1215,6 +1272,12 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
     escape(tradeLinkDraftEditHref(linked.documentId))+
    '">Edit this Draft</a></p>':'')+
   selectedPreview+
+  (linked&&canManage&&TL03_ATTACHMENTS_ENABLED?
+   renderTradeLinkDocumentAttachments(selection?.attachments,{
+    documentId:linked.documentId,workspaceId,
+    editable:!linked.archived&&['draft','revision-required'].includes(linked.workflowState),
+    busy:view.busy
+   }):'')+
   (linked&&canManage?renderTradeLinkSavedWorkflowHistory(selection?.events):'')+
   '<h3>Document modules</h3><nav class="tl-document-module-nav" aria-label="TradeLink document modules">'+
   typeLabels.map(([id,label])=>'<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
