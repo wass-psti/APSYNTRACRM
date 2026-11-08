@@ -128,12 +128,24 @@ export function generateLiveCatalogFingerprintSql(manifest,g4b,g4c) {
   entries.set(entry.signature,properties);
  }
  ensure(entries.size===74,'SOURCE_CATALOG_COUNT_DRIFT');
+ // Recorded evolution, NOT a new historical baseline or security acceptance.
+ // Stage B grants: merged PR #86 (owner-authorized); PG migration history:
+ // 20261108065354 lifecycle timestamp and 20261108065903 PT409 conflicts.
+ // Only this exact source hash + expected ACL may be classified as documented.
+ const knownSignature='private.tl03_commit(p_board_id uuid, p_document_id uuid, p_expected_revision bigint, p_operation text, p_data jsonb)';
+ const knownHistoricalHash='5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d';
+ const knownLiveHash='08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618';
+ const knownEntry=entries.get(knownSignature);
+ ensure(knownEntry?.hash===knownHistoricalHash &&
+   knownEntry.authExecute===false && knownEntry.securityDefiner===true,
+   'DOCUMENTED_EVOLUTION_HISTORICAL_BASELINE_DRIFT');
  const literal=value=>"'"+value.replaceAll("'","''")+"'";
  const bool=value=>value===null||value===undefined?'NULL':value?'true':'false';
  const rows=[...entries].sort(([a],[b])=>a.localeCompare(b))
   .map(([signature,record])=>'('+
     [literal(signature),literal(record.hash),bool(record.securityDefiner),
-      bool(record.authExecute),bool(record.anonExecute)].join(',')+')')
+      bool(record.authExecute),bool(record.anonExecute),
+      signature===knownSignature?literal(knownLiveHash):'NULL'].join(',')+')')
   .join(',\n ');
  return `-- CP-WS-ACTIVATE-04 read-only historical baseline comparison.
 -- Compare catalog SHA-256, SECURITY DEFINER and direct EXECUTE grants.
@@ -141,7 +153,7 @@ export function generateLiveCatalogFingerprintSql(manifest,g4b,g4c) {
 -- Returns only counters and function signatures, NO function source bodies.
 -- No original authorization caller is executed by this query.
 WITH expected(signature,expected_sha256,expected_definer,
- expected_authenticated_execute,expected_anon_execute) AS (
+ expected_authenticated_execute,expected_anon_execute,documented_live_sha256) AS (
  VALUES
  ${rows}
 ), actual AS (
@@ -168,7 +180,12 @@ WITH expected(signature,expected_sha256,expected_definer,
        a.authenticated_execute IS DISTINCT FROM e.expected_authenticated_execute)
      OR (e.expected_anon_execute IS NOT NULL AND
        a.anon_execute IS DISTINCT FROM e.expected_anon_execute)))
-       AS permission_drift
+       AS permission_drift,
+   (e.documented_live_sha256 IS NOT NULL AND
+     a.actual_sha256=e.documented_live_sha256 AND
+     a.security_definer IS TRUE AND
+     a.authenticated_execute IS TRUE AND
+     a.anon_execute IS FALSE) AS documented_live_evolution
  FROM expected e LEFT JOIN actual a ON a.signature=e.signature
 )
 SELECT count(*) AS expected_total,
@@ -176,6 +193,9 @@ SELECT count(*) AS expected_total,
  count(*) FILTER (WHERE missing) AS missing,
  count(*) FILTER (WHERE drift) AS drift,
  count(*) FILTER (WHERE permission_drift) AS permission_drift,
+ count(*) FILTER (WHERE documented_live_evolution) AS documented_live_evolutions,
+ count(*) FILTER (WHERE (missing OR drift OR permission_drift)
+   AND NOT documented_live_evolution) AS unexplained_drift,
  COALESCE(pg_catalog.jsonb_agg(signature ORDER BY signature)
    FILTER (WHERE missing OR drift),'[]'::jsonb) AS mismatch_signatures,
  COALESCE(pg_catalog.jsonb_agg(signature ORDER BY signature)
@@ -184,6 +204,10 @@ SELECT count(*) AS expected_total,
  CASE WHEN count(*)=74 AND
    count(*) FILTER (WHERE missing OR drift OR permission_drift)=0
  THEN 'HISTORICAL_BASELINE_MATCH__RUNTIME_UNVERIFIED'
+ WHEN count(*)=74 AND count(*) FILTER (
+   WHERE (missing OR drift OR permission_drift)
+     AND NOT documented_live_evolution)=0
+ THEN 'DOCUMENTED_LIVE_EVOLUTION__RUNTIME_UNVERIFIED'
  ELSE 'SOURCE_OR_PERMISSION_BASELINE_DRIFT__REVIEW_REQUIRED' END AS status
 FROM audit;`;
 }
