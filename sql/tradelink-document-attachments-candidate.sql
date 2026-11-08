@@ -16,6 +16,7 @@ BEGIN
  IF actual IS DISTINCT FROM
   'CHECK ((operation = ANY (ARRAY[''created''::text, ''updated''::text, ''archived''::text, ''restored''::text, ''submitted''::text, ''completed''::text, ''reviewed''::text, ''revision-requested''::text, ''approved''::text, ''rejected''::text, ''operational-record''::text, ''reopened''::text])))'
  OR to_regprocedure('private.tl03_can_manage(uuid)') IS NULL
+ OR to_regprocedure('storage.allow_any_operation(text[])') IS NULL
  OR to_regprocedure('public.tl03_document_operate(uuid,uuid,bigint,text,text)') IS NULL
  OR to_regclass('private.tl03_attachments') IS NOT NULL
  OR to_regprocedure('public.tl03_attachment_prepare(uuid,uuid,bigint,text,text,bigint,uuid)') IS NOT NULL
@@ -121,13 +122,20 @@ CREATE POLICY "tl03 attachment signed upload" ON storage.objects
    AND owner_id=auth.uid()::text
    AND private.tl03_attachment_storage_authorized(name,'insert')
  );
+-- SELECT spans several Storage API operations. Permit only authenticated
+-- object-byte GET and authenticated object-info (used by Storage downloads):
+-- never object.list, object.sign or transferable signed URL creation.
+-- Official helper and the two exact operation names are version-checked.
 CREATE POLICY "tl03 attachment signed read" ON storage.objects
  FOR SELECT TO authenticated USING (
    bucket_id='tradelink-attachments'
+   AND storage.allow_any_operation(ARRAY[
+    'object.get_authenticated_info','object.get_authenticated'])
    AND private.tl03_attachment_storage_authorized(name,'read')
  );
--- No UPDATE (upsert forbidden), DELETE, public, or signed-URL grants for
--- TradeLink objects. Removed/replaced files are retained but inaccessible.
+-- No UPDATE (upsert forbidden), DELETE, public, Storage listing, or
+-- transferable signed-URL grants for TradeLink objects. Removed/replaced
+-- files are retained but inaccessible.
 
 CREATE FUNCTION private.tl03_attachment_prepare(
  p_board_id uuid,p_document_id uuid,p_expected_revision bigint,

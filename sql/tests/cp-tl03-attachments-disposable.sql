@@ -8,6 +8,9 @@ SELECT pg_catalog.set_config('request.jwt.claim.sub',
  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',true);
 SELECT pg_catalog.set_config('request.jwt.claim.session_id',
  '11111111-1111-4111-8111-111111111111',true);
+-- Simulate the direct authenticated Storage object GET route, not
+-- generic SQL SELECT or Storage's shareable signed URL generation.
+SELECT pg_catalog.set_config('storage.operation','object.get_authenticated',true);
 
 DO $create_doc$
 DECLARE board uuid:='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
@@ -115,6 +118,33 @@ BEGIN
    WHERE e.document_id=doc AND e.revision=2 AND e.operation='attachment-added'
      AND e.actor_id=auth.uid())
  THEN RAISE EXCEPTION 'File finalize, Board, document, RLS or audit failed'; END IF;
+ -- Storage SELECT is operation-scoped. A manager can download an active
+ -- object but cannot enumerate the bucket or mint a transferable signed URL.
+ PERFORM pg_catalog.set_config('storage.operation','object.list',true);
+ IF (SELECT count(*) FROM storage.objects
+   WHERE bucket_id='tradelink-attachments')<>0 THEN
+  RAISE EXCEPTION 'Signed manager may not list private TradeLink Storage'; END IF;
+ PERFORM pg_catalog.set_config('storage.operation','object.create_signed_url',true);
+ IF (SELECT count(*) FROM storage.objects
+   WHERE bucket_id='tradelink-attachments')<>0 THEN
+  RAISE EXCEPTION 'Signed manager can mint a transferable file URL'; END IF;
+ PERFORM pg_catalog.set_config('storage.operation','object.get_signed',true);
+ IF (SELECT count(*) FROM storage.objects
+   WHERE bucket_id='tradelink-attachments')<>0 THEN
+  RAISE EXCEPTION 'Signed URL GET bypassed authenticated document access'; END IF;
+ PERFORM pg_catalog.set_config('storage.operation','object.get_authenticated_info',true);
+ IF (SELECT count(*) FROM storage.objects
+   WHERE bucket_id='tradelink-attachments')<>1 THEN
+  RAISE EXCEPTION 'Authenticated file info required for download was denied'; END IF;
+ PERFORM pg_catalog.set_config('storage.operation','',true);
+ IF (SELECT count(*) FROM storage.objects
+   WHERE bucket_id='tradelink-attachments')<>0 THEN
+  RAISE EXCEPTION 'Unset Storage operation must fail closed'; END IF;
+ PERFORM pg_catalog.set_config('storage.operation','storage.object.get_authenticated',true);
+ IF (SELECT count(*) FROM storage.objects
+   WHERE bucket_id='tradelink-attachments')<>1 THEN
+  RAISE EXCEPTION 'Operation normalization denied authenticated file GET'; END IF;
+ PERFORM pg_catalog.set_config('storage.operation','object.get_authenticated',true);
  -- No authenticated Storage UPDATE grant may override an existing object,
  -- even when this signed user can read the active private file.
  UPDATE storage.objects SET metadata='{"size":1,"mimetype":"application/pdf"}'
