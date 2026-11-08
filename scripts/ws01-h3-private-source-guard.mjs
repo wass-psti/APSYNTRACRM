@@ -101,6 +101,55 @@ export function verifyPrivateSourceBundle({directory,manifest,repo=repoRoot}) {
   }
   return Object.freeze({verifiedFiles:3,sourceReplay:false});
 }
+// Build a read-only, metadata-only live drift probe from the pinned inventories.
+// The SQL reads pg_get_functiondef internally to hash it but returns NO source text.
+// A matching result proves source identity, never PostgreSQL runtime compatibility.
+export function generateLiveCatalogFingerprintSql(manifest,g4b,g4c) {
+ verifyPinnedCoreManifest(manifest,g4b,g4c);
+ const entries=new Map();
+ for(const entry of [...g4b.entries,...g4c.dependents,...manifest.core_functions]){
+  const previous=entries.get(entry.signature);
+  ensure(!previous||previous===entry.source_sha256,'SOURCE_CATALOG_CONFLICT');
+  entries.set(entry.signature,entry.source_sha256);
+ }
+ ensure(entries.size===74,'SOURCE_CATALOG_COUNT_DRIFT');
+ const literal=value=>"'"+value.replaceAll("'","''")+"'";
+ const rows=[...entries].sort(([a],[b])=>a.localeCompare(b))
+  .map(([signature,sha])=>'('+literal(signature)+','+literal(sha)+')')
+  .join(',\n ');
+ return `-- CP-WS-ACTIVATE-04 read-only production source-fingerprint preflight.
+-- This prints aggregate drift and signatures ONLY, never SQL function bodies.
+-- MATCH is provenance only; 73 real caller paths remain unexecuted.
+WITH expected(signature,expected_sha256) AS (
+ VALUES
+ ${rows}
+), actual AS (
+ SELECT pg_catalog.format('%I.%I(%s)',n.nspname,p.proname,
+    pg_catalog.pg_get_function_identity_arguments(p.oid)) AS signature,
+   pg_catalog.encode(pg_catalog.sha256(
+     pg_catalog.convert_to(pg_catalog.pg_get_functiondef(p.oid),'UTF8')),
+     'hex') AS actual_sha256
+ FROM pg_catalog.pg_proc p
+ JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+ WHERE n.nspname IN ('public','private','huly_rewrite')
+), audit AS (
+ SELECT e.signature, (a.signature IS NULL) AS missing,
+   (a.signature IS NOT NULL AND a.actual_sha256<>e.expected_sha256) AS drift
+ FROM expected e LEFT JOIN actual a ON a.signature=e.signature
+)
+SELECT count(*) AS expected_total,
+ count(*) FILTER (WHERE NOT missing) AS located,
+ count(*) FILTER (WHERE missing) AS missing,
+ count(*) FILTER (WHERE drift) AS drift,
+ COALESCE(pg_catalog.jsonb_agg(signature ORDER BY signature)
+   FILTER (WHERE missing OR drift),'[]'::jsonb) AS mismatch_signatures,
+ CASE WHEN count(*)=74 AND
+   count(*) FILTER (WHERE missing OR drift)=0
+ THEN 'SOURCE_FINGERPRINTS_MATCH__RUNTIME_UNVERIFIED'
+ ELSE 'SOURCE_FINGERPRINT_DRIFT__REVIEW_REQUIRED' END AS status
+FROM audit;`;
+}
+
 export function verifyDefaultPinnedSourceCatalog() {
   return verifyPinnedCoreManifest(JSON.parse(readFileSync(manifestFile,'utf8')),
     JSON.parse(readFileSync(g4bFile,'utf8')),
@@ -110,8 +159,16 @@ function cli() {
   try {
     const args=process.argv.slice(2);
     ensure(args.length===1&&(args[0]==='--manifest-only'||
-      args[0].startsWith('--private-dir=')),'USAGE');
+      args[0]==='--catalog-sql'||args[0].startsWith('--private-dir=')),'USAGE');
     verifyDefaultPinnedSourceCatalog();
+    if(args[0]==='--catalog-sql') {
+      // No connection, credentials, source bodies or production writes.
+      console.log(generateLiveCatalogFingerprintSql(
+        JSON.parse(readFileSync(manifestFile,'utf8')),
+        JSON.parse(readFileSync(g4bFile,'utf8')),
+        JSON.parse(readFileSync(g4cFile,'utf8'))));
+      return;
+    }
     if(args[0]==='--manifest-only') {
       console.log('CP_WS01_H3_CORE_PROVENANCE_PASS: 3 core sources, 73 dependencies; replay NOT RUN');
       return;

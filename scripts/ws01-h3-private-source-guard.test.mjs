@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { verifyPinnedCoreManifest, verifyPrivateSourceBundle,
-  verifyDefaultPinnedSourceCatalog } from './ws01-h3-private-source-guard.mjs';
+  verifyDefaultPinnedSourceCatalog, generateLiveCatalogFingerprintSql } from './ws01-h3-private-source-guard.mjs';
 
 const manifest = JSON.parse(readFileSync(
   new URL('../sql/tests/cp-ws01-h3-private-core-source-manifest.json',import.meta.url)));
@@ -16,6 +16,7 @@ const g4b = JSON.parse(readFileSync(
   new URL('../sql/tests/cp-ws01c-g4b-source-fingerprint-inventory.json',import.meta.url)));
 const g4c = JSON.parse(readFileSync(
   new URL('../sql/tests/cp-ws01c-g4c-role-dependent-fingerprints.json',import.meta.url)));
+const sourceExports={generateLiveCatalogFingerprintSql};
 const hash = text => createHash('sha256').update(text).digest('hex');
 
 test('pin 3 real source signatures, permissions and 73 unique dependency fingerprints',()=>{
@@ -115,4 +116,26 @@ test('CLI marks metadata-only acceptance and fails closed with no secret files',
  assert.notEqual(blocked.status,0);
  assert.match(blocked.stderr,/H3_SOURCE_BLOCKED: USAGE/);
  assert.doesNotMatch(blocked.stderr,/CREATE FUNCTION|supabase\.co|service_role/i);
+});
+
+test('live source catalog probe is read-only, deterministic and returns only hashes/signatures',()=>{
+ const { generateLiveCatalogFingerprintSql } = sourceExports;
+ const sql=generateLiveCatalogFingerprintSql(manifest,g4b,g4c);
+ assert.match(sql,/WITH expected\(signature,expected_sha256\)/);
+ assert.match(sql,/count\(\*\)=74/);
+ assert.match(sql,/SOURCE_FINGERPRINT_DRIFT__REVIEW_REQUIRED/);
+ assert.match(sql,/SOURCE_FINGERPRINTS_MATCH__RUNTIME_UNVERIFIED/);
+ assert.match(sql,/pg_catalog\.pg_get_functiondef/);
+ assert.match(sql,/jsonb_agg\(signature ORDER BY signature\)/);
+ assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|GRANT|REVOKE|TRUNCATE)\s+(?:TABLE|FUNCTION|ROLE|ON|INTO|FROM|public|private)/i);
+ assert.doesNotMatch(sql,/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public/i);
+ const conflict=structuredClone(g4c);
+ conflict.role_sources[0].source_sha256='0'.repeat(64);
+ assert.throws(()=>generateLiveCatalogFingerprintSql(manifest,g4b,conflict),
+   /CROSS_MANIFEST_DRIFT/);
+ const executable=fileURLToPath(new URL('./ws01-h3-private-source-guard.mjs',import.meta.url));
+ const result=spawnSync(process.execPath,[executable,'--catalog-sql'],{encoding:'utf8'});
+ assert.equal(result.status,0);
+ assert.equal(result.stdout.trim(),sql.trim());
+ assert.equal(result.stderr,'');
 });
