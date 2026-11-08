@@ -121,6 +121,13 @@ export class AuthClient {
     finally{this.clear();}
     return serverAcknowledged;
   }
+  async changePassword(newPassword){
+    if(!this.isSignedIn)throw new ApiError('Please sign in to continue.',401);
+    if(typeof newPassword!=='string'||newPassword.length<12||newPassword.length>72)
+      throw new ApiError('Use a password between 12 and 72 characters.',400);
+    await this.authorized('/auth/v1/user',{method:'PUT',body:{password:newPassword}});
+    return true;
+  }
   async passwordRecovery(email,redirectTo){
     const redirect=new URL(redirectTo);
     const path='/auth/v1/recover?redirect_to='+encodeURIComponent(redirect.href);
