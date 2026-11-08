@@ -126,6 +126,11 @@ test('live source catalog probe is read-only, deterministic and returns only has
  assert.match(sql,/SOURCE_OR_PERMISSION_BASELINE_DRIFT__REVIEW_REQUIRED/);
  assert.match(sql,/HISTORICAL_BASELINE_MATCH__RUNTIME_UNVERIFIED/);
  assert.match(sql,/permission_mismatch_signatures/);
+ assert.match(sql,/documented_live_sha256/);
+ assert.match(sql,/documented_live_evolutions/);
+ assert.match(sql,/unexplained_drift/);
+ assert.match(sql,/DOCUMENTED_LIVE_EVOLUTION__RUNTIME_UNVERIFIED/);
+ assert.match(sql,/08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618/);
  assert.match(sql,/pg_catalog\.has_function_privilege\('authenticated',p\.oid,'EXECUTE'\)/);
  assert.match(sql,/pg_catalog\.has_function_privilege\('anon',p\.oid,'EXECUTE'\)/);
  assert.match(sql,/count\(\*\) FILTER \(WHERE permission_drift\)/);
@@ -158,4 +163,19 @@ test('historical ACL expectations do not silently adopt later grants',()=>{
  const changed=generateLiveCatalogFingerprintSql(manifest,drift,g4c);
  assert.ok(changed.includes("'"+entry.signature+"','"+entry.source_sha256+"',true,true,NULL"));
  assert.notEqual(sql,changed);
+});
+
+test('documented evolution is confined to exact historical TradeLink signature and hash',()=>{
+ const sql=generateLiveCatalogFingerprintSql(manifest,g4b,g4c);
+ const entry=g4b.entries.find(e=>e.signature.startsWith('private.tl03_commit('));
+ assert.ok(entry);
+ assert.match(sql,/5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d/);
+ assert.match(sql,/08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618/);
+ const rows=sql.split('\n').filter(line=>line.trim().startsWith("('"));
+ assert.equal(rows.filter(line=>line.includes('08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618')).length,1);
+ assert.match(rows.find(line=>line.includes(entry.signature)),/true,false,NULL,'08da279/);
+ const drift=structuredClone(g4b);
+ drift.entries.find(e=>e.signature===entry.signature).source_sha256='a'.repeat(64);
+ assert.throws(()=>generateLiveCatalogFingerprintSql(manifest,drift,g4c),
+   /DOCUMENTED_EVOLUTION_HISTORICAL_BASELINE_DRIFT/);
 });
