@@ -8,6 +8,18 @@ Enable an authorized user to **create, save, reopen and preview a real Draft**, 
 
 The guarded Draft and document/Board integration code already exists. `sql/cp-tl03-staged-domain.sql` models the atomic document, Board row and audit transaction, with revision and retry protection. See [persistent document implementation](TRADELINK-PERSISTENT-DOCUMENT-OPERATIONS-INTEGRATION-20261107.md). Full submission, approval, legal PDF and attachment workflows remain separate functionality.
 
+## Most recent verified TradeLink functionality
+
+- Signed Draft persistence and All Documents/Board integration are live.
+  At the last read-only production check, seven TradeLink documents existed;
+  the QA Quotation had revision 5, five audit events and a matching Board item.
+- Saved-document Print / Save as PDF shipped in PR #99. Signed browser
+  acceptance across the six document modules remains pending.
+- Submission, assigned review/revision, approval/rejection, operational
+  completion/reopen, global signed search and secure attachment backends
+  are staged in source. Their newer SQL RPCs/bucket and activation switches
+  are not installed/enabled in production.
+
 ## Actual technical state
 
 - **Stage A:** The source-controlled `sql/tests/cp-tl03c-phase1-readonly-activation-preflight.sql` previously passed 15/15 live read-only checks. Historical signed manager/employee and one revoked TL03 read report are bounded user-provided evidence, not proof of production document writes.
@@ -61,3 +73,51 @@ Do not reuse unrelated application buckets or activate attachment controls
 until signed document-level read/write authorization, Storage RLS, metadata
 integrity, cleanup and recovery handling are verified and any production
 permissions change receives separately scoped authorization.
+
+## TradeLink dedicated private attachments — staged source contract
+
+**Scope:** Only the existing TradeLink Board and the single existing Supabase
+project. Files belong to a **signed saved TradeLink document** and its linked
+Board item. Do not reuse generic Board, FRT, Toolbox or other module buckets
+as a substitute for the source-defined private TradeLink bucket.
+
+- **Source-only candidate:** sql/tradelink-document-attachments-candidate.sql.
+  Requires the existing uninstalled TradeLink Submit, Review/Revision,
+  Decision and Operational SQL candidates plus a new **private** Storage
+  bucket provisioned with separate exact-scope authorization. The expected
+  bucket has a 20 MiB maximum and ten original TradeLink MIME types.
+  Preflight rejects missing, public or over-broad buckets; it does not
+  create Storage buckets or another Supabase project.
+- **Private metadata:** private.tl03_attachments has RLS enabled and all
+  direct client table grants revoked. Only signed, active, same-workspace
+  General Managers who pass the central Board/session contract may call
+  prepare, finalize, list and logical remove RPCs. Names, MIME, size,
+  document identity, revisions and server-created keys are checked.
+- **Storage RLS:** INSERT requires a pending upload issued to the actual
+  current user. SELECT/GET requires an active registered attachment and
+  current document-level manage scope. No anonymous/public, DELETE or
+  UPDATE/upsert Storage policies are added.
+- **Atomic persistence:** Finalize verifies Storage metadata and uploader
+  then synchronizes the file, document revision, Board modification time,
+  immutable document event and Board log in one transaction. Replacements
+  retain old versions under restricted access; removal records a reason
+  and revokes access without permanently deleting bytes.
+- **Client:** frontend/tradelink-attachments.js uses the existing APSYNTRA
+  JWT, verifies a file's recorded size and SHA-256 after authenticated GET,
+  and denies any foreign path or forged signed receipt. All Documents
+  conditionally includes upload, replacement, download and removal actions,
+  but the production flag TL03_ATTACHMENTS_ENABLED remains **false**.
+- **Synthetic acceptance:** Isolated PostgreSQL 17 tests exercise Storage
+  policy decisions, replacement, current-user upload scope, CAS, Board/audit
+  parity, and role/workspace/revoked-session denials. Storage test objects
+  contain only synthetic metadata: **no live binary upload or download**.
+
+**Recovery:** sql/tradelink-document-attachments-empty-rollback.sql may be
+used only when there are **zero** TradeLink attachment rows, zero Storage
+objects and zero attachment events. It refuses data loss or unseen drift.
+Populated rollback, physical Storage cleanup, expired upload reconciliation,
+content/malware scanning, Storage-file backup and a provider-backed restore
+rehearsal remain separate requirements. The existing whole-project
+24-hour RPO and RTO targets and mandatory rehearsal remain binding; these
+synthetic tests do not demonstrate them. New Storage permissions/production
+migration require separately scoped authorization and live signed acceptance.

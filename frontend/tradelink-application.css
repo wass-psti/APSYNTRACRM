@@ -274,3 +274,26 @@
  #tradelink-saved-print .tl-print-footer{break-inside:avoid}
  #tradelink-saved-print .tl-print-state{color:black!important}
 }
+
+/* TradeLink signed attachment manager, only rendered after backend activation. */
+.aps-tradelink-app .tl-saved-attachments{
+ margin-top:17px;border:1px solid var(--tl-line);border-radius:12px;
+ padding:16px;background:#fafbff;
+}
+.aps-tradelink-app .tl-saved-attachments h3{margin:0}
+.aps-tradelink-app .tl-attachment-upload{
+ display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-top:20px;
+ border-top:1px solid var(--tl-line);padding-top:16px;
+}
+.aps-tradelink-app .tl-attachment-upload .tl-draft-field{
+ flex:1 1 200px;max-width:350px;
+}
+.aps-tradelink-app .tl-saved-attachments :is(button,input,select):focus-visible{
+ outline:3px solid #8d95ee;outline-offset:2px;
+}
+.aps-tradelink-app .tl-saved-attachments :disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:620px){
+ .aps-tradelink-app .tl-saved-attachments{padding:12px}
+ .aps-tradelink-app .tl-attachment-upload{flex-direction:column;align-items:stretch}
+ .aps-tradelink-app .tl-attachment-upload .tl-draft-field{max-width:none;width:100%}
+}

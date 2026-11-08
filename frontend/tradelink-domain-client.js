@@ -167,7 +167,8 @@ export function normalizeTradeLinkOperationalReceipt(
 export function normalizeTradeLinkSignedHistory(rows,limit=25){
  const operations=new Set(['created','updated','archived','restored',
   'submitted','completed','reviewed','revision-requested',
-  'approved','rejected','operational-record','reopened']);
+  'approved','rejected','operational-record','reopened',
+  'attachment-added','attachment-removed']);
  if(!Array.isArray(rows)||rows.length>limit||
   rows.some((r,i)=>!Number.isSafeInteger(r?.revision)||r.revision<1||
    (i>0&&r.revision>=rows[i-1].revision)||

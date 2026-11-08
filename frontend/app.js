@@ -28,6 +28,8 @@ import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from 
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
  closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js';
+import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
+ from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,tradeLinkDraftSaveFailureMessage,
  tradeLinkDraftHasUnsavedChanges,
@@ -144,6 +146,7 @@ const itemSelection=new BoardItemSelection();
 const boardBulkClient=new BoardBulkClient(db);
 const nativeIssues=new NativeIssueClient(db);
 const tradeLinkDraftWorkspace=new TradeLinkDraftWorkspace({auth,api:db});
+const tradeLinkAttachments=new TradeLinkAttachmentClient({auth,api:db});
 const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
@@ -1557,9 +1560,10 @@ async function openTradeLinkDocument(documentId){
   state.context.workspace_id===ws;
  state.tradeLinkDraft.busy=true;state.tradeLinkDraft.documentPreview=null;render();
  try{
-  const [record,events]=await Promise.all([
+  const [record,events,attachments]=await Promise.all([
    tradeLinkDraftWorkspace.read(documentId),
-   TL03_WORKFLOW_REVIEW_ENABLED?tradeLinkDraftWorkspace.history(documentId):null
+   TL03_WORKFLOW_REVIEW_ENABLED?tradeLinkDraftWorkspace.history(documentId):null,
+   TL03_ATTACHMENTS_ENABLED?tradeLinkAttachments.list(documentId):null
   ]);
   if(!same())return;
   if(TL03_WORKFLOW_REVIEW_ENABLED&&
@@ -1571,7 +1575,7 @@ async function openTradeLinkDocument(documentId){
    record.document_type!==listed.documentType||
    record.workflow_state!==listed.workflowState)
    throw new ApiError('Document revision changed; refresh the signed list.',409);
-  state.tradeLinkDraft.documentPreview={documentId,record,events};
+  state.tradeLinkDraft.documentPreview={documentId,record,events,attachments};
   state.tradeLinkDraft.error='';
   state.tradeLinkDraft.message='Showing verified server revision '+record.revision+'.';
  }catch{
@@ -1587,6 +1591,118 @@ async function openTradeLinkDocument(documentId){
  * document read and matching Board projection. The resulting content stays
  * in a dismissible, memory-only DOM preview until the user prints or closes it.
  */
+/** Every attachment write is reconciled with the signed document, its Board
+ * projection, its newest immutable event and its active file metadata list.
+ */
+async function verifyTradeLinkAttachmentCommit(documentId,listed,receipt,operation){
+ const [record,list,board,attachments,events]=await Promise.all([
+  tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
+  db.board(TRADELINK_BOARD_ID),tradeLinkAttachments.list(documentId),
+  tradeLinkDraftWorkspace.history(documentId)
+ ]);
+ const latest=events?.[0];
+ const visible=attachments.some(a=>a.attachmentId===receipt.attachmentId);
+ if(!record||record.revision!==receipt.revision||
+  record.board_item_id!==receipt.boardItemId||
+  record.document_type!==listed.documentType||
+  record.document_number!==listed.documentNumber||
+  record.workflow_state!==listed.workflowState||
+  record.archived_at!==null||
+  !list.rows?.some(r=>r.documentId===documentId&&
+    r.revision===receipt.revision&&r.boardItemId===receipt.boardItemId)||
+  board?.board?.workspace_id!==state.context?.workspace_id||
+  !board.items?.some(i=>i.id===receipt.boardItemId&&
+    i.title===listed.documentNumber&&i.updated_at===record.updated_at)||
+  latest?.revision!==receipt.revision||latest.operation!==operation||
+  latest.metadata?.attachmentId!==receipt.attachmentId||
+  visible!==(operation==='attachment-added'))
+  throw new ApiError('Signed attachment/Board/audit reconciliation incomplete.',409);
+ return {record,list,board,attachments,events};
+}
+function currentTradeLinkAttachmentSelection(documentId){
+ if(!TL03_ATTACHMENTS_ENABLED||!tradeLinkAuthorizedListRoute()||
+  state.tradeLinkSection!=='documents'||!state.boardManage||
+  state.tradeLinkDraft.busy||
+  state.tradeLinkDraft.status!=='AUTHORIZED_READ')return null;
+ const listed=state.tradeLinkDraft.rows.find(r=>r.documentId===documentId);
+ const preview=state.tradeLinkDraft.documentPreview;
+ if(!listed||!preview||preview.documentId!==documentId||
+  preview.record?.revision!==listed.revision||
+  preview.record?.board_item_id!==listed.boardItemId||
+  !Array.isArray(preview.attachments))return null;
+ return {listed,preview};
+}
+async function mutateTradeLinkAttachment(documentId,{
+ file=null,replacesId=null,attachmentId=null,reason=null
+}={}){
+ const selection=currentTradeLinkAttachmentSelection(documentId);
+ if(!selection)return;
+ const {listed}=selection;
+ if(listed.archived||!['draft','revision-required'].includes(listed.workflowState))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&state.context?.workspace_id===ws&&
+  auth.userId===actor&&auth.isSignedIn;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ let committed=false;
+ try{
+  const receipt=file?await tradeLinkAttachments.upload({
+   documentId,expectedRevision:listed.revision,file,replacesId
+  }):await tradeLinkAttachments.remove({
+   documentId,attachmentId,expectedRevision:listed.revision,reason
+  });
+  committed=true;
+  if(!same())return;
+  const operation=file?'attachment-added':'attachment-removed';
+  const verified=await verifyTradeLinkAttachmentCommit(
+   documentId,listed,receipt,operation);
+  if(!same())return;
+  state.board=verified.board;
+  state.tradeLinkDraft={...initialTradeLinkDraftView(),...verified.list,
+   documentPreview:{documentId,record:verified.record,
+    attachments:verified.attachments,events:verified.events},
+   message:'Signed file '+(file?'uploaded':'removed from access')+
+    '; document, Board and audit confirmed at revision '+receipt.revision+'.'};
+  toast(file?'TradeLink attachment registered.':'Attachment access removed.');
+ }catch{
+  if(same())state.tradeLinkDraft.error=committed?
+   'File change committed but document/Board/audit reconciliation failed. Refresh All Documents.':
+   'Private attachment operation not confirmed. An upload may remain pending. Refresh the signed document; avoid duplicate uploads.';
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+async function downloadTradeLinkAttachment(documentId,attachmentId){
+ const selection=currentTradeLinkAttachmentSelection(documentId);
+ if(!selection||!selection.preview.attachments.some(a=>a.attachmentId===attachmentId))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&auth.userId===actor&&
+  state.context?.workspace_id===ws&&auth.isSignedIn;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ try{
+  const {blob,fileName}=await tradeLinkAttachments.download({
+   documentId,attachmentId
+  });
+  if(!same())return;
+  const url=URL.createObjectURL(blob);
+  try{
+   const link=document.createElement('a');
+   link.href=url;link.download=fileName;
+   document.body.appendChild(link);
+   link.click();link.remove();
+  }finally{
+   // Ephemeral download URL only; no permanent object URL or signed URL.
+   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  if(same())toast('Verified private file downloaded.');
+ }catch{
+  if(same())state.tradeLinkDraft.error=
+   'Attachment download was denied or failed file integrity verification. No verified file was exported.';
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
 async function printTradeLinkDocument(documentId){
  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
   !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
@@ -3676,6 +3792,41 @@ async function action(name,button){
  }
  case 'tradelink-document-print':{
   await printTradeLinkDocument(button.dataset.id);break;
+ }
+ case 'tradelink-attachment-upload':{
+  const selection=currentTradeLinkAttachmentSelection(button.dataset.id);
+  if(!selection)break;
+  const container=button.closest('[data-tradelink-saved-attachments]');
+  const file=container?.querySelector('[data-tradelink-attachment-input]')?.files?.[0];
+  if(!file){
+   state.tradeLinkDraft.error='Select one allowed TradeLink attachment file.';
+   render();break;
+  }
+  const replacesId=container?.querySelector('[data-tradelink-attachment-replace]')?.value||null;
+  await mutateTradeLinkAttachment(button.dataset.id,{file,replacesId});
+  break;
+ }
+ case 'tradelink-attachment-download':{
+  await downloadTradeLinkAttachment(button.dataset.documentId,button.dataset.id);
+  break;
+ }
+ case 'tradelink-attachment-remove':{
+  const selection=currentTradeLinkAttachmentSelection(button.dataset.documentId);
+  if(!selection)break;
+  const file=selection.preview.attachments.find(a=>a.attachmentId===button.dataset.id);
+  if(!file)break;
+  const entered=prompt('Reason to revoke access to '+file.fileName+
+   ' (3–1000 characters):','');
+  if(entered===null)break;
+  const reason=entered.trim();
+  if(reason.length<3||reason.length>1000||/[\x00-\x1f\x7f]/.test(entered)){
+   state.tradeLinkDraft.error='Attachment removal requires a valid signed reason.';
+   render();break;
+  }
+  await mutateTradeLinkAttachment(button.dataset.documentId,{
+   attachmentId:button.dataset.id,reason
+  });
+  break;
  }
  case 'tradelink-document-submit':{
   await submitTradeLinkDocument(button.dataset.id);break;

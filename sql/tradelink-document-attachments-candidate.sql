@@ -4,6 +4,7 @@
 -- ceiling and the ten original TradeLink MIME types. Provision via authorized
 -- Supabase Storage API/Dashboard; do not mutate Storage metadata directly.
 -- Apply AFTER staged TradeLink Submit, Review, Decision and Operational SQL.
+-- Reuses existing immutable append-only TradeLink event trigger and log.
 BEGIN;
 DO $tl_attach_preflight$
 DECLARE actual text;
@@ -183,7 +184,10 @@ BEGIN
  FROM private.tl03_attachments a WHERE a.document_id=d.id
  AND (a.status='active' OR
    (a.status='pending' AND a.prepared_at>pg_catalog.clock_timestamp()-INTERVAL '60 minutes'));
- IF total>=20 THEN RAISE EXCEPTION 'TradeLink attachment limit reached'
+ -- Allow bounded replacement when the document already has 20 active files,
+ -- while keeping a hard cap on pending operations and orphan exposure.
+ IF total>=25 OR (total>=20 AND p_replaces_id IS NULL)
+ THEN RAISE EXCEPTION 'TradeLink attachment limit reached'
   USING ERRCODE='PT409'; END IF;
  SELECT coalesce(pg_catalog.max(revision),0)::integer+1 INTO expected_version
  FROM private.tl03_attachments a

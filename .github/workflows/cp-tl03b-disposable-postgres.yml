@@ -17,6 +17,7 @@ on:
       - 'sql/tradelink-document-decision-candidate.sql'
       - 'sql/tradelink-document-operational-candidate.sql'
       - 'sql/tradelink-document-attachments-candidate.sql'
+      - 'sql/tradelink-document-attachments-empty-rollback.sql'
       - 'sql/tests/cp-tl03-attachment-storage-fixture.sql'
       - 'sql/tests/cp-tl03-attachments-disposable.sql'
       - 'sql/tests/cp-tl03-operational-disposable.sql'
@@ -157,5 +158,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03c-emergency-disable-candidate.sql
       - name: Verify permissions are revoked but domain and board audit survive
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03c-disposable-emergency-acceptance.sql
+      - name: Rehearse guarded EMPTY-ONLY TradeLink attachment rollback in disposable PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-attachments-empty-rollback.sql
       - name: Run frontend adapter and SQL-contract regression tests
         run: node --test frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-domain-sql-contract.test.mjs frontend/tests/tradelink-domain-stage-b-release-boundary.test.mjs

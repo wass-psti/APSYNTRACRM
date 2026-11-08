@@ -115,6 +115,11 @@ BEGIN
    WHERE e.document_id=doc AND e.revision=2 AND e.operation='attachment-added'
      AND e.actor_id=auth.uid())
  THEN RAISE EXCEPTION 'File finalize, Board, document, RLS or audit failed'; END IF;
+ -- No authenticated Storage UPDATE grant may override an existing object,
+ -- even when this signed user can read the active private file.
+ UPDATE storage.objects SET metadata='{"size":1,"mimetype":"application/pdf"}'
+  WHERE bucket_id='tradelink-attachments';
+ IF FOUND THEN RAISE EXCEPTION 'Storage UPDATE/upsert privilege was available'; END IF;
  BEGIN
   PERFORM public.tl03_attachment_finish(doc,a,1,pg_catalog.repeat('a',64));
   RAISE EXCEPTION 'Duplicate finalize accepted';
@@ -203,5 +208,28 @@ BEGIN
  IF (SELECT count(*) FROM storage.objects WHERE bucket_id='tradelink-attachments')<>0
  THEN RAISE EXCEPTION 'Foreign workspace read private objects'; END IF;
 END $workspace_denied$;
+-- Signed identity with no matching active auth.sessions row is always denied,
+-- including object GET, metadata RPC, and Storage insertion.
+SELECT pg_catalog.set_config('request.jwt.claim.sub',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',true);
+SELECT pg_catalog.set_config('request.jwt.claim.session_id',
+ '99999999-9999-4999-8999-999999999999',true);
+DO $revoked_denied$
+DECLARE doc uuid:='90000000-aaaa-4000-8000-000000000001';
+ board uuid:='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
+BEGIN
+ BEGIN
+  PERFORM public.tl03_attachment_prepare(board,doc,4,
+   'revoked.pdf','application/pdf',100,NULL);
+  RAISE EXCEPTION 'Revoked signed session prepared an attachment';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM public.tl03_attachment_list(doc,25);
+  RAISE EXCEPTION 'Revoked signed session listed private attachments';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ IF (SELECT count(*) FROM storage.objects
+  WHERE bucket_id='tradelink-attachments')<>0
+ THEN RAISE EXCEPTION 'Revoked session accessed private file'; END IF;
+END $revoked_denied$;
 RESET ROLE;
 ROLLBACK;
