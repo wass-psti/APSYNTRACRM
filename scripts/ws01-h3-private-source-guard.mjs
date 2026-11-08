@@ -107,20 +107,41 @@ export function verifyPrivateSourceBundle({directory,manifest,repo=repoRoot}) {
 export function generateLiveCatalogFingerprintSql(manifest,g4b,g4c) {
  verifyPinnedCoreManifest(manifest,g4b,g4c);
  const entries=new Map();
- for(const entry of [...g4b.entries,...g4c.dependents,...manifest.core_functions]){
-  const previous=entries.get(entry.signature);
-  ensure(!previous||previous===entry.source_sha256,'SOURCE_CATALOG_CONFLICT');
-  entries.set(entry.signature,entry.source_sha256);
+ // G4C captures source hashes only. Do NOT infer ACL expectations from
+ // signed_executable, which describes a call path rather than a direct GRANT.
+ for(const entry of g4c.dependents) {
+  entries.set(entry.signature,{hash:entry.source_sha256});
+ }
+ for(const entry of [...g4b.entries,...manifest.core_functions]) {
+  const prior=entries.get(entry.signature);
+  ensure(!prior||prior.hash===entry.source_sha256,'SOURCE_CATALOG_CONFLICT');
+  const properties={
+   hash:entry.source_sha256,
+   securityDefiner:entry.security_definer,
+   authExecute:entry.authenticated_execute,
+   anonExecute:entry.anon_execute ?? null,
+  };
+  if(prior?.securityDefiner!==undefined) {
+   ensure(prior.securityDefiner===properties.securityDefiner &&
+     prior.authExecute===properties.authExecute,'SOURCE_ACL_MANIFEST_CONFLICT');
+  }
+  entries.set(entry.signature,properties);
  }
  ensure(entries.size===74,'SOURCE_CATALOG_COUNT_DRIFT');
  const literal=value=>"'"+value.replaceAll("'","''")+"'";
+ const bool=value=>value===null||value===undefined?'NULL':value?'true':'false';
  const rows=[...entries].sort(([a],[b])=>a.localeCompare(b))
-  .map(([signature,sha])=>'('+literal(signature)+','+literal(sha)+')')
+  .map(([signature,record])=>'('+
+    [literal(signature),literal(record.hash),bool(record.securityDefiner),
+      bool(record.authExecute),bool(record.anonExecute)].join(',')+')')
   .join(',\n ');
- return `-- CP-WS-ACTIVATE-04 read-only production source-fingerprint preflight.
--- This prints aggregate drift and signatures ONLY, never SQL function bodies.
--- MATCH is provenance only; 73 real caller paths remain unexecuted.
-WITH expected(signature,expected_sha256) AS (
+ return `-- CP-WS-ACTIVATE-04 read-only historical baseline comparison.
+-- Compare catalog SHA-256, SECURITY DEFINER and direct EXECUTE grants.
+-- Historical ACL drift may reflect an authorized later activation.
+-- Returns only counters and function signatures, NO function source bodies.
+-- No original authorization caller is executed by this query.
+WITH expected(signature,expected_sha256,expected_definer,
+ expected_authenticated_execute,expected_anon_execute) AS (
  VALUES
  ${rows}
 ), actual AS (
@@ -128,25 +149,42 @@ WITH expected(signature,expected_sha256) AS (
     pg_catalog.pg_get_function_identity_arguments(p.oid)) AS signature,
    pg_catalog.encode(pg_catalog.sha256(
      pg_catalog.convert_to(pg_catalog.pg_get_functiondef(p.oid),'UTF8')),
-     'hex') AS actual_sha256
+     'hex') AS actual_sha256,
+   p.prosecdef AS security_definer,
+   pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE')
+     AS authenticated_execute,
+   pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE')
+     AS anon_execute
  FROM pg_catalog.pg_proc p
  JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
  WHERE n.nspname IN ('public','private','huly_rewrite')
 ), audit AS (
- SELECT e.signature, (a.signature IS NULL) AS missing,
-   (a.signature IS NOT NULL AND a.actual_sha256<>e.expected_sha256) AS drift
+ SELECT e.signature,(a.signature IS NULL) AS missing,
+   (a.signature IS NOT NULL AND a.actual_sha256<>e.expected_sha256) AS drift,
+   (a.signature IS NOT NULL AND
+    ((e.expected_definer IS NOT NULL AND
+       a.security_definer IS DISTINCT FROM e.expected_definer)
+     OR (e.expected_authenticated_execute IS NOT NULL AND
+       a.authenticated_execute IS DISTINCT FROM e.expected_authenticated_execute)
+     OR (e.expected_anon_execute IS NOT NULL AND
+       a.anon_execute IS DISTINCT FROM e.expected_anon_execute)))
+       AS permission_drift
  FROM expected e LEFT JOIN actual a ON a.signature=e.signature
 )
 SELECT count(*) AS expected_total,
  count(*) FILTER (WHERE NOT missing) AS located,
  count(*) FILTER (WHERE missing) AS missing,
  count(*) FILTER (WHERE drift) AS drift,
+ count(*) FILTER (WHERE permission_drift) AS permission_drift,
  COALESCE(pg_catalog.jsonb_agg(signature ORDER BY signature)
    FILTER (WHERE missing OR drift),'[]'::jsonb) AS mismatch_signatures,
+ COALESCE(pg_catalog.jsonb_agg(signature ORDER BY signature)
+   FILTER (WHERE permission_drift),'[]'::jsonb)
+   AS permission_mismatch_signatures,
  CASE WHEN count(*)=74 AND
-   count(*) FILTER (WHERE missing OR drift)=0
- THEN 'SOURCE_FINGERPRINTS_MATCH__RUNTIME_UNVERIFIED'
- ELSE 'SOURCE_FINGERPRINT_DRIFT__REVIEW_REQUIRED' END AS status
+   count(*) FILTER (WHERE missing OR drift OR permission_drift)=0
+ THEN 'HISTORICAL_BASELINE_MATCH__RUNTIME_UNVERIFIED'
+ ELSE 'SOURCE_OR_PERMISSION_BASELINE_DRIFT__REVIEW_REQUIRED' END AS status
 FROM audit;`;
 }
 
