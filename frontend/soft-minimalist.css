@@ -1191,3 +1191,318 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   #app .aps-foundation .foundation-operations,
   #app .aps-foundation .foundation-table-panel{border-color:#778399}
 }
+
+/* Soft minimalism — Access acceptance route (#/security).
+   Presentation-only: existing signed checks, eligibility/denial gates,
+   report rendering and audit evidence remain authoritative. */
+#app .aps-security-shell{
+  --sec-ink:var(--sm-ink);
+  --sec-muted:var(--sm-sub);
+  --sec-line:var(--sm-border);
+  --sec-accent:var(--sm-accent);
+  min-width:0;
+  background:var(--sm-bg);
+}
+#app .aps-security-shell>.topbar{
+  min-height:77px;
+  background:var(--sm-surface);
+  border-bottom:1px solid var(--sm-border);
+  box-shadow:none;
+}
+#app .aps-security-shell .topbar .breadcrumb{color:var(--sm-sub)}
+#app .aps-security-shell .topbar .breadcrumb strong{color:var(--sm-ink);font-weight:700}
+#app .aps-security-shell .topbar .top-pill{
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  font-weight:650;
+  box-shadow:none;
+}
+#app .aps-security-shell .topbar .top-avatar{
+  color:#fff;
+  background:var(--sm-accent);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+  transition:background-color var(--sm-fast);
+}
+#app .aps-security-shell .topbar .top-avatar:hover{
+  background:var(--sm-accent-hover);
+  box-shadow:none;
+  transform:none;
+}
+#app .aps-security-shell>.main-content{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  max-width:none;
+  padding:clamp(20px,2.5vw,36px) clamp(18px,3vw,48px) 86px;
+}
+#app .aps-security{
+  color:var(--sm-ink);
+  min-width:0;
+}
+#app .aps-security .security-hero{
+  min-width:0;
+  min-height:150px;
+  gap:22px;
+  margin-bottom:22px;
+  padding:clamp(22px,2.8vw,34px);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-panel);
+  box-shadow:var(--sm-shadow-card);
+}
+#app .aps-security .security-hero::after{content:none}
+#app .aps-security .security-hero .label-top{
+  color:var(--sm-accent-hover);
+  font-weight:750;
+  letter-spacing:1.15px;
+}
+#app .aps-security .security-hero-dot{
+  background:var(--sm-accent);
+  box-shadow:0 0 0 3px var(--sm-accent-soft);
+}
+#app .aps-security .security-hero h1{
+  color:var(--sm-ink);
+  font-size:clamp(25px,2.45vw,35px);
+  line-height:1.2;
+  letter-spacing:-.035em;
+  font-weight:750;
+}
+#app .aps-security .security-hero-stop{color:var(--sm-accent)}
+#app .aps-security .security-hero p{
+  color:var(--sm-sub);
+  font-size:13px;
+  line-height:1.65;
+}
+#app .aps-security .security-hero-insignia{
+  color:var(--sm-accent);
+  background:none;
+  opacity:.25;
+}
+#app .aps-security>.security-check-panel{
+  margin-bottom:16px;
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  background:var(--sm-surface);
+  box-shadow:var(--sm-shadow-sm);
+  transition:border-color var(--sm-fast),box-shadow var(--sm-fast);
+}
+#app .aps-security>.security-check-panel:focus-within{
+  border-color:var(--sm-border-strong);
+  box-shadow:var(--sm-shadow-card);
+}
+#app .aps-security .security-panel-header{
+  min-height:64px;
+  gap:13px;
+  padding:16px 22px;
+  background:var(--sm-surface-raised);
+  border-bottom:1px solid var(--sm-border);
+}
+#app .aps-security .security-panel-header::before{
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  border-radius:var(--sm-radius-control);
+  font-weight:740;
+}
+#app .aps-security .security-panel-header h2{
+  color:var(--sm-ink);
+  font-size:14px;
+  line-height:1.45;
+  font-weight:740;
+}
+#app .aps-security>.security-check-panel>.panel-body{
+  color:var(--sm-text);
+  padding:23px 24px 25px;
+}
+#app .aps-security>.security-check-panel>.panel-body>p.muted,
+#app .aps-security>.security-check-panel>.panel-body>.csp-u033{
+  color:var(--sm-sub);
+  font-size:12px;
+  line-height:1.75;
+}
+#app .aps-security>.security-check-panel>.panel-body>.note{
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  border-left:3px solid var(--sm-accent);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-security>.security-check-panel>.panel-body>.note b{
+  color:var(--sm-ink);
+  font-weight:740;
+}
+#app .aps-security>.security-check-panel>.panel-body>.note.security-note{
+  color:var(--sm-warning);
+  background:var(--sm-warning-soft);
+  border-color:#EDD9B5;
+  border-left-color:var(--sm-warning);
+}
+#app .aps-security .security-check-panel .panel-body>button{
+  min-height:42px;
+  border-radius:var(--sm-radius-control);
+  font-size:12px;
+  font-weight:700;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast),color var(--sm-fast);
+}
+#app .aps-security .security-check-panel .panel-body>button.primary{
+  color:#fff;
+  background:var(--sm-accent);
+  border:1px solid var(--sm-accent);
+  box-shadow:none;
+}
+#app .aps-security .security-check-panel .panel-body>button.primary:hover:not(:disabled){
+  background:var(--sm-accent-hover);
+  border-color:var(--sm-accent-hover);
+  box-shadow:none;
+  transform:none;
+}
+#app .aps-security .security-check-panel .panel-body>button.secondary{
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+}
+#app .aps-security .security-check-panel .panel-body>button.secondary:hover:not(:disabled){
+  color:var(--sm-ink);
+  background:var(--sm-surface-soft);
+  border-color:var(--sm-border-strong);
+  transform:none;
+}
+#app .aps-security .security-check-panel button:focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:3px;
+}
+#app .aps-security .security-check-panel .panel-body>p.muted.csp-u027,
+#app .aps-security .security-check-panel .panel-body>p.muted.csp-u029{
+  color:var(--sm-sub);
+  font-size:11.5px;
+}
+#app .aps-security .security-check-panel .csp-u053{
+  border-top:1px solid var(--sm-border);
+  color:var(--sm-text);
+}
+#app .aps-security .security-check-panel .csp-u053>h3,
+#app .aps-security .security-check-panel .csp-u053>strong,
+#app .aps-security .security-check-panel .csp-u049 h3{
+  color:var(--sm-ink);
+  font-weight:740;
+}
+#app .aps-security .security-check-panel .csp-u053>p.muted{
+  color:var(--sm-sub);
+  font-size:11.5px;
+}
+#app .aps-security .security-check-panel .csp-u053>button,
+#app .aps-security .security-check-panel .csp-u049 button{
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  font-weight:690;
+}
+#app .aps-security .security-check-panel .csp-u053>button:hover:not(:disabled),
+#app .aps-security .security-check-panel .csp-u049 button:hover:not(:disabled){
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  border-color:var(--sm-border-strong);
+}
+#app .aps-security .security-check-panel .csp-u049{border-color:var(--sm-border)}
+#app .aps-security .security-check-panel .table-scroll{
+  max-width:100%;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  scrollbar-color:var(--sm-border-strong) transparent;
+}
+#app .aps-security .security-check-panel .board-table{
+  min-width:540px;
+  font-variant-numeric:tabular-nums;
+}
+#app .aps-security .security-check-panel .board-table thead,
+#app .aps-security .security-check-panel .board-table th{
+  background:var(--sm-surface-raised);
+}
+#app .aps-security .security-check-panel .board-table th{
+  color:var(--sm-sub);
+  border-bottom:1px solid var(--sm-border);
+  font-size:11px;
+  font-weight:730;
+  letter-spacing:.04em;
+}
+#app .aps-security .security-check-panel .board-table td{
+  color:var(--sm-text);
+  border-bottom:1px solid var(--sm-border);
+  font-size:12px;
+  line-height:1.55;
+}
+#app .aps-security .security-check-panel .board-table tbody tr:hover td{
+  background:#F4F5FA;
+}
+#app .aps-security .security-check-panel .board-table .status{
+  border-radius:var(--sm-radius-pill);
+  font-size:10.5px;
+  font-weight:740;
+}
+#app .aps-security .security-check-panel .board-table .status.done{
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+}
+#app .aps-security .security-check-panel .board-table .status.blocked{
+  color:var(--sm-danger);
+  background:var(--sm-danger-soft);
+}
+#app .aps-security .security-check-panel .board-table .status.todo{
+  color:var(--sm-warning);
+  background:var(--sm-warning-soft);
+}
+#app .aps-security .sec10-label{
+  color:var(--sm-text);
+  font-size:12px;
+  font-weight:730;
+}
+#app .aps-security .sec10-select{
+  max-width:690px;
+  min-height:44px;
+  color:var(--sm-ink);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-security .sec10-select:focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:2px;
+  border-color:var(--sm-accent);
+  box-shadow:var(--sm-focus);
+}
+#app .aps-security .security-boundary-note{
+  color:var(--sm-warning);
+  background:var(--sm-warning-soft);
+  border:1px solid #EDD9B5;
+  border-left:3px solid var(--sm-warning);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+}
+#app .aps-security .security-boundary-icon{color:var(--sm-warning)}
+@media(max-width:650px){
+  #app .aps-security-shell>.main-content{padding:20px 15px 65px}
+  #app .aps-security .security-hero{
+    min-height:0;
+    padding:22px 20px;
+    border-radius:var(--sm-radius-card);
+  }
+  #app .aps-security .security-hero-insignia{opacity:.12}
+  #app .aps-security>.security-check-panel>.panel-body{padding:17px 16px 20px}
+  #app .aps-security .security-panel-header{padding:15px 16px}
+}
+@media(prefers-reduced-motion:reduce){
+  #app .aps-security .security-check-panel .panel-body>button,
+  #app .aps-security .security-check-panel .csp-u053>button,
+  #app .aps-security .security-check-panel .csp-u049 button,
+  #app .aps-security>.security-check-panel{transition:none}
+}
+@media(prefers-contrast:more){
+  #app .aps-security .security-hero,
+  #app .aps-security>.security-check-panel{border-color:#778399}
+  #app .aps-security .security-hero p,
+  #app .aps-security>.security-check-panel>.panel-body>p.muted{color:var(--sm-ink)}
+}
