@@ -33,7 +33,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
  normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
-import {TL03_DOMAIN_READS_ENABLED} from './tradelink-domain-client.js';
+import {TL03_DOMAIN_READS_ENABLED,tradeLinkSavedDraftMatches} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runTradeLinkLocalSessionRevocation,renderTradeLinkSessionRevocation,renderTradeLinkSignedOutRevocationResult,sanitizeTradeLinkRevocationReport} from './tradelink-revoked-session-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -1616,6 +1616,7 @@ async function commitTradeLinkDraft(form){
    record.document_number!==draft.documentNumber||
    record.content?.documentNumber!==draft.documentNumber||
    record.content?.documentType!==draft.documentType||
+   !tradeLinkSavedDraftMatches(record,draft)||
    list.status!=='AUTHORIZED_READ'||
    !list.rows.some(row=>row.documentId===documentId&&
     row.boardItemId===receipt.boardItemId&&row.revision===receipt.revision)||
