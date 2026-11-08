@@ -34,7 +34,8 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
  normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
- TL03_WORKFLOW_REVIEW_ENABLED,tradeLinkSavedDraftMatches} from './tradelink-domain-client.js';
+ TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
+ tradeLinkSavedDraftMatches} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runTradeLinkLocalSessionRevocation,renderTradeLinkSessionRevocation,renderTradeLinkSignedOutRevocationResult,sanitizeTradeLinkRevocationReport} from './tradelink-revoked-session-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -1779,6 +1780,84 @@ async function reviewTradeLinkDocument(documentId,action){
   if(same()){state.tradeLinkDraft.busy=false;render();}
  }
 }
+/** Signed final commercial decision, never a local status update.
+ * Approver email, prior review, reason and current state are enforced by SQL.
+ */
+async function decideTradeLinkDocument(documentId,action){
+ if(!TL03_WORKFLOW_DECISION_ENABLED||!TL03_WORKFLOW_REVIEW_ENABLED||
+   !tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+   state.tradeLinkDraft.busy||
+   state.tradeLinkDraft.status!=='AUTHORIZED_READ'||!state.boardManage)return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed||listed.archived||!['submitted','under-review'].includes(listed.workflowState)||
+    !['approve','reject'].includes(action)||
+    listed.documentType==='packing'||
+    (action==='approve'&&!['esi','quotation','po'].includes(listed.documentType))||
+    !Number.isSafeInteger(listed.revision)||listed.revision<1)return;
+ let reason='';
+ if(action==='reject'){
+  const entered=prompt('State the rejection reason for '+
+   listed.documentNumber+' (3–1500 characters):','');
+  if(entered===null)return;
+  reason=entered.trim();
+  if(reason.length<3||reason.length>1500||/[\x00-\x1f\x7f]/.test(entered)){
+   state.tradeLinkDraft.error='Rejection requires a valid 3–1500 character reason.';
+   render();return;
+  }
+ }else if(!confirm('Approve saved TradeLink '+listed.documentType+' '+
+  listed.documentNumber+' at revision '+listed.revision+
+  '? Only the signed, assigned approver with required verification may approve.'))return;
+ const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&state.context?.workspace_id===ws&&
+  auth.userId===actor;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ let committed=false;
+ try{
+  const receipt=await tradeLinkDraftWorkspace.decide({
+   documentId,expectedRevision:listed.revision,action,
+   fromState:listed.workflowState,reason});
+  committed=true;
+  if(!same())return;
+  const [record,list,board,events]=await Promise.all([
+   tradeLinkDraftWorkspace.read(documentId),tradeLinkDraftWorkspace.list(),
+   db.board(TRADELINK_BOARD_ID),tradeLinkDraftWorkspace.history(documentId)
+  ]);
+  if(!same())return;
+  const event=events?.[0];
+  if(!record||record.revision!==receipt.revision||
+   record.workflow_state!==receipt.state||
+   record.document_type!==listed.documentType||
+   record.document_number!==listed.documentNumber||
+   record.board_item_id!==receipt.boardItemId||record.archived_at!==null||
+   !list.rows.some(r=>r.documentId===documentId&&
+     r.revision===receipt.revision&&r.workflowState===receipt.state&&
+     r.boardItemId===receipt.boardItemId)||
+   !event||event.revision!==receipt.revision||
+   event.operation!==(action==='approve'?'approved':'rejected')||
+   event.metadata?.action!==action||
+   event.metadata?.from!==listed.workflowState||
+   event.metadata?.to!==receipt.state||
+   (action==='reject'&&event.metadata?.reason!==reason)||
+   !Number.isFinite(Date.parse(event.metadata?.decidedAt))||
+   Date.parse(event.metadata.decidedAt)!==Date.parse(record.updated_at)||
+   board?.board?.workspace_id!==ws||
+   !board.items?.some(item=>item.id===receipt.boardItemId&&
+     item.title===listed.documentNumber&&item.updated_at===record.updated_at))
+   throw new ApiError('Signed TradeLink decision/audit/Board reconciliation incomplete.',409);
+  state.board=board;
+  state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
+   message:'Signed '+receipt.state+' decision verified at revision '+
+     receipt.revision+' against document, Board and audit.'};
+  toast('TradeLink '+receipt.state+' decision verified.');
+ }catch(err){
+  if(same())state.tradeLinkDraft.error=committed?
+   'The server committed the decision, but signed audit/Board reconciliation failed. Refresh All Documents.':
+   tradeLinkDraftSaveFailureMessage(err);
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
 async function changeTradeLinkDraftState(documentId,operation){
  if(!tradeLinkAuthorizedListRoute()||!tradeLinkDraftReady()||!state.boardManage||
    state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
@@ -3464,6 +3543,12 @@ async function action(name,button){
  }
  case 'tradelink-document-request-revision':{
   await reviewTradeLinkDocument(button.dataset.id,'request-revision');break;
+ }
+ case 'tradelink-document-approve':{
+  await decideTradeLinkDocument(button.dataset.id,'approve');break;
+ }
+ case 'tradelink-document-reject':{
+  await decideTradeLinkDocument(button.dataset.id,'reject');break;
  }
  case 'tradelink-documents-refresh':{
   if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'){

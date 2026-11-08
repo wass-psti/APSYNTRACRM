@@ -7,7 +7,8 @@ import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRA
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
  TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
- TL03_WORKFLOW_REVIEW_ENABLED,validateTradeLinkDraftEnvelope,
+ TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
+ validateTradeLinkDraftEnvelope,
  normalizeTradeLinkDomainRow} from './tradelink-domain-client.js';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
@@ -281,6 +282,11 @@ export class TradeLinkDraftWorkspace{
  async history(documentId,limit=25){
   if(!TL03_WORKFLOW_REVIEW_ENABLED)disabled();
   return this.client.history(documentId,limit);
+ }
+ async decide({documentId,expectedRevision,action,fromState,reason}={}){
+  if(!TL03_WORKFLOW_DECISION_ENABLED)disabled();
+  return this.client.decide({
+   documentId,expectedRevision,action,fromState,reason});
  }
  async save({documentId,expectedRevision=0,draft,workflowState='draft'}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
@@ -1065,6 +1071,16 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
         ['submitted','under-review'].includes(row.workflowState)?
         '<button type="button" class="secondary" data-action="tradelink-document-request-revision" '+
          'data-id="'+escape(row.documentId)+'">Request Revision</button> ':'')+
+       (canManage&&TL03_WORKFLOW_DECISION_ENABLED&&!row.archived&&
+        ['submitted','under-review'].includes(row.workflowState)&&
+        ['esi','quotation','po'].includes(row.documentType)?
+        '<button type="button" class="primary" data-action="tradelink-document-approve" '+
+         'data-id="'+escape(row.documentId)+'">Approve</button> ':'')+
+       (canManage&&TL03_WORKFLOW_DECISION_ENABLED&&!row.archived&&
+        ['submitted','under-review'].includes(row.workflowState)&&
+        row.documentType!=='packing'?
+        '<button type="button" class="secondary" data-action="tradelink-document-reject" '+
+         'data-id="'+escape(row.documentId)+'">Reject</button> ':'')+
        (canManage&&TL03_DOMAIN_WRITES_ENABLED&&
         ['draft','revision-required'].includes(row.workflowState)&&
         !row.archived&&tradeLinkDraftEditHref(row.documentId)?
