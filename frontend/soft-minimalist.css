@@ -1506,3 +1506,106 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   #app .aps-security .security-hero p,
   #app .aps-security>.security-check-panel>.panel-body>p.muted{color:var(--sm-ink)}
 }
+
+/* Access acceptance supplementary panels.
+   TradeLink, Workspace B2/B3 and column-recovery acceptance renderers append
+   independent sections after the principal security component. Their actions,
+   evidence and permission checks remain in the original JS modules. */
+#app .aps-security-shell>.main-content>.panel{
+  margin:0 0 16px;
+  min-width:0;
+  padding:20px 24px;
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+  color:var(--sm-text);
+}
+#app .aps-security-shell>.main-content>.panel>.panel-header{
+  margin:-20px -24px 20px;
+  padding:16px 24px;
+  color:var(--sm-ink);
+  background:var(--sm-surface-raised);
+  border-bottom:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card) var(--sm-radius-card) 0 0;
+}
+#app .aps-security-shell>.main-content>.panel>.panel-header h2,
+#app .aps-security-shell>.main-content>.panel>h3{
+  margin:0;
+  font-size:14px;
+  font-weight:740;
+  color:var(--sm-ink);
+  line-height:1.45;
+}
+#app .aps-security-shell>.main-content>.panel>.panel-body{
+  padding:0;
+  color:var(--sm-text);
+}
+#app .aps-security-shell>.main-content>.panel>.panel-body>p.muted,
+#app .aps-security-shell>.main-content>.panel>p.muted{
+  color:var(--sm-sub);
+  font-size:12px;
+  line-height:1.7;
+}
+#app .aps-security-shell>.main-content>.panel :is(button.primary,button.secondary){
+  border-radius:var(--sm-radius-control);
+  font-weight:690;
+  box-shadow:none;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast);
+}
+#app .aps-security-shell>.main-content>.panel button.primary{
+  background:var(--sm-accent);
+  border-color:var(--sm-accent);
+  color:#fff;
+}
+#app .aps-security-shell>.main-content>.panel button.primary:hover:not(:disabled){
+  background:var(--sm-accent-hover);
+  border-color:var(--sm-accent-hover);
+  transform:none;
+}
+#app .aps-security-shell>.main-content>.panel button.secondary{
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+}
+#app .aps-security-shell>.main-content>.panel button.secondary:hover:not(:disabled){
+  background:var(--sm-surface-soft);
+  border-color:var(--sm-border-strong);
+  transform:none;
+}
+#app .aps-security-shell>.main-content>.panel button:not(.primary):not(.secondary){
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-security-shell>.main-content>.panel :is(button,a):focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:3px;
+}
+#app .aps-security-shell>.main-content>.panel .table-scroll{
+  max-width:100%;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scrollbar-color:var(--sm-border-strong) transparent;
+}
+#app .aps-security-shell>.main-content>.panel .board-table th{
+  color:var(--sm-sub);
+  background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+}
+#app .aps-security-shell>.main-content>.panel .board-table td{
+  color:var(--sm-text);
+  border-color:var(--sm-border);
+}
+@media(max-width:650px){
+  #app .aps-security-shell>.main-content>.panel{
+    padding:17px 16px;
+  }
+  #app .aps-security-shell>.main-content>.panel>.panel-header{
+    margin:-17px -16px 17px;
+    padding:15px 16px;
+  }
+}
+/* The embedded TradeLink Stage A container is intentionally separate from
+   the main <div class="aps-security"> but retains the same card treatment. */
+#app .aps-security-shell>.main-content>.aps-security{
+  margin-bottom:16px;
+}
