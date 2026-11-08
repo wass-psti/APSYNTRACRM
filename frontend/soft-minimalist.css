@@ -663,3 +663,142 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   #app .aps-sidebar .nav-link,
   #app .aps-board-shell .board-tab-slot>.tab{transition:none}
 }
+
+/* Phase 6 — shared native controls used by the twelve board integrations.
+   Only shared presentation is reconciled; specialized workflows keep layout,
+   controls, domain statuses and their existing authorized action handlers. */
+:root{
+  --aps-select-surface:var(--sm-surface);
+  --aps-select-surface-hover:var(--sm-surface-raised);
+  --aps-select-ink:var(--sm-ink);
+  --aps-select-muted:var(--sm-sub);
+  --aps-select-border:var(--sm-border);
+  --aps-select-hover-border:var(--sm-border-strong);
+  --aps-select-focus:var(--sm-accent);
+  --aps-select-highlight:var(--sm-accent-soft);
+  --aps-select-highlight-ink:var(--sm-accent-hover);
+  --aps-select-shadow:var(--sm-shadow-popover);
+  --aps-action-ink:var(--sm-text);
+  --aps-action-soft:var(--sm-accent-soft);
+  --aps-action-accent:var(--sm-accent);
+  --aps-action-border:var(--sm-border);
+  --aps-action-danger:var(--sm-danger);
+  --aps-action-shadow:var(--sm-shadow-popover);
+  --aps-field-surface:var(--sm-surface);
+  --aps-field-ink:var(--sm-ink);
+  --aps-field-muted:var(--sm-muted);
+  --aps-field-outline:var(--sm-border);
+  --aps-field-hover:var(--sm-border-strong);
+  --aps-field-focus:var(--sm-accent);
+  --aps-field-error:var(--sm-danger);
+  --aps-field-error-background:var(--sm-danger-soft);
+  --aps-field-radius:var(--sm-radius-control);
+  --aps-metric-accent:var(--sm-accent);
+  --aps-metric-track:#E6E9F0;
+  --aps-metric-outline:var(--sm-border);
+}
+#app :is(.aps-select-trigger,.aps-search-source,.aps-field-control){
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-select-trigger,
+#app .aps-search-field .aps-search-source,
+#app :is(input,textarea).aps-field-control{
+  border-color:var(--sm-border);
+  color:var(--sm-ink);
+  background-color:var(--sm-surface);
+  box-shadow:none;
+}
+#app :is(.aps-select-trigger,.aps-search-field .aps-search-source):focus-visible{
+  border-color:var(--sm-accent);
+  box-shadow:var(--sm-focus);
+}
+#app .aps-select-listbox,
+#app .aps-search-field .aps-search-suggestions,
+#app .aps-action-popover{
+  border-color:var(--sm-border);
+  background:var(--sm-surface);
+  box-shadow:var(--sm-shadow-popover);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-search-field .aps-search-option:is(:hover,.is-active,[aria-selected="true"]){
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+}
+#app .aps-board-shell .aps-action-surface>summary,
+#app .aps-board-shell .board-column-more{
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+  box-shadow:none;
+}
+#app .aps-board-shell .aps-action-surface>summary:hover,
+#app .aps-board-shell .aps-action-surface[open]>summary,
+#app .aps-board-shell .board-column-more:hover{
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  border-color:var(--sm-border-strong);
+}
+#app .aps-action-popover>:is([role="menuitem"],button[data-action],a[href]){
+  color:var(--sm-text);
+  border-radius:var(--sm-radius-xs);
+}
+#app .aps-action-popover>:is([role="menuitem"],button[data-action],a[href]):hover{
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+}
+#app .aps-metric-value{color:var(--sm-ink);font-variant-numeric:tabular-nums}
+#app .aps-metric-card:focus-within{outline-color:var(--sm-accent)}
+/* TradeLink keeps its specialized document operations, forms and tab system. */
+#app .aps-tradelink-app{
+  --tl-ink:var(--sm-ink);
+  --tl-line:var(--sm-border);
+  --tl-accent:var(--sm-accent);
+  color:var(--sm-ink);
+}
+#app .aps-tradelink-app .tl-app-hero{
+  color:var(--sm-ink);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-panel);
+  box-shadow:var(--sm-shadow-card);
+}
+#app .aps-tradelink-app .tl-app-hero::after{content:none}
+#app .aps-tradelink-app .tl-app-hero .tl-eyebrow{color:var(--sm-accent-hover)}
+#app .aps-tradelink-app .tl-app-hero h2{color:var(--sm-ink)}
+#app .aps-tradelink-app .tl-app-hero>p:not(.tl-eyebrow){color:var(--sm-sub)}
+#app .aps-tradelink-app .tl-hero-status{
+  color:var(--sm-success);background:var(--sm-success-soft);
+  border-color:#CFE7DC;
+}
+#app .aps-tradelink-app .tl-stat{
+  background:var(--sm-surface);border-color:var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-tradelink-app .tl-stat-label,
+#app .aps-tradelink-app .tl-stat-foot{color:var(--sm-sub)}
+#app .aps-tradelink-app .tl-stat-value{color:var(--sm-ink);font-variant-numeric:tabular-nums}
+/* TimeTracker operational tables retain minimum widths, group-only horizontal
+   scrolling, GPS permissions, and all domain-specific attendance states. */
+#app .aps-board-shell .tt-main-attendance-panel{
+  border-color:var(--sm-border);
+  background:var(--sm-surface);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-board-shell .tt-main-attendance-table th{
+  color:var(--sm-sub);
+  background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+}
+#app .aps-board-shell .tt-main-attendance-table td{color:var(--sm-text);border-color:var(--sm-border)}
+#app .aps-board-shell .tt-main-attendance-table tbody tr:nth-child(even) td{background:#FCFCFD}
+#app .aps-board-shell .tt-main-attendance-table tbody tr:hover td{background:#F4F5FA}
+#app .aps-board-shell .tt-main-attendance-panel .board-group-scroll{
+  scrollbar-color:var(--sm-border-strong) transparent;
+}
+/* Shared status and error surfaces express states with visible labels, never
+   with color alone; domain status text remains authored by its module. */
+#app .aps-field-feedback{color:var(--sm-sub)}
+#app .aps-field-feedback.aps-field-invalid{color:var(--sm-danger)}
+#app :is(.board-table,.board-table-custom,.tt-main-attendance-table){font-variant-numeric:tabular-nums}
