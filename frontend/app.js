@@ -1,3 +1,4 @@
+import {syncFuelTrans} from './fueltrans-native.js';
 import {AuthClient,ApiError} from './session.js';
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
@@ -212,6 +213,7 @@ function stopAuthVisuals(){
 function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
+ syncFuelTrans({container:null});
  stopAuthVisuals();
  stopSidebarSelection();
  stopOverviewMotion();
@@ -766,12 +768,13 @@ function boardPage(){
  const columnLabels=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{};
  const allowCustom=BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ';
  const tabSpecs=[
-  {key:'items',href:'#/boards/'+b.id+(moduleKey==='timetracker'?'/items':''),
+  {key:'items',href:'#/boards/'+b.id+(['timetracker','fueltrans'].includes(moduleKey)?'/items':''),
     label:'▤ Board items <span class="csp-u060">('+items.length+')</span>'},
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
   ...(moduleKey==='tradelink'?[{key:'tradelink',href:'#/boards/'+b.id+'/tradelink',
     label:'▤ TradeLink application'}]:[]),
+  ...(moduleKey==='fueltrans'?[{key:'fueltrans',href:'#/boards/'+b.id+'/fueltrans',label:'FuelTrans application'}]:[]),
   ...(moduleKey==='frt'?[{key:'finance',href:'#/boards/'+b.id+'/finance',
     label:'▣ FRT finance (read-only)'}]:[]),
   ...(moduleKey==='timetracker'?[{key:'attendance',href:'#/boards/'+b.id+'/attendance',
@@ -805,7 +808,7 @@ function boardPage(){
   (canReorderTabs?'<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
   '" data-direction="1" aria-label="Move '+e(t.key)+' tab right" title="Move tab right">›</button>':'')+'</div>').join('')}</div>
 
- ${state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
+ ${state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},draftView:state.tradeLinkDraft,canManage:state.boardManage}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
  ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
@@ -919,6 +922,7 @@ function render(){
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
+ syncFuelTrans({container:state.view==='board'&&state.tab==='fueltrans'?root.querySelector('#fueltrans-native-host'):null,auth,api:db,boardId:state.boardId,workspaceId:state.context?.workspace_id,userId:state.context?.user_id,route:location.hash.split('/').slice(4).join('/')||'dashboard'});
  if(state.view==='board'&&state.tab==='items')syncBoardSelectionUi();
  if(state.context&&auth.isSignedIn)platformSync.start({
   userId:state.context.user_id,workspaceId:state.context.workspace_id,
@@ -2544,18 +2548,22 @@ async function loadFRTFinanceDetail(requestId,seq=routeSerial){
 }
 async function onRoute(){
  closeTradeLinkSavedDocumentOutput();
+ syncFuelTrans({container:null});
  if(!state.context)return;
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='boards'&&validUuid(parts[1])){
   const defaultClock=!parts[2]&&state.boards.some(b=>
     b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
+  const defaultFuelTrans=!parts[2]&&state.boards.some(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='fueltrans');
+  if(defaultFuelTrans)history.replaceState(null,'','#/boards/'+parts[1]+'/fueltrans');
   const requested=parts[2]==='issues'?'issues':
+    parts[2]==='fueltrans'&&state.boards.some(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='fueltrans')?'fueltrans':
     parts[2]==='finance'?'finance':
     parts[2]==='attendance'?'attendance':
     parts[2]==='tradelink'&&state.boards.some(b=>b.id===parts[1]&&
       moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
-    defaultClock?'attendance':'items';
+    defaultFuelTrans?'fueltrans':defaultClock?'attendance':'items';
   state.tradeLinkSection=requested==='tradelink'?normalizeTradeLinkSection(parts[3]):'overview';
   const signedDraftRoute=requested==='tradelink'&&state.tradeLinkSection==='drafts';
   const editId=signedDraftRoute&&parts[4]==='edit'&&validUuid(parts[5])?
@@ -2767,7 +2775,7 @@ function activeBoardLayout(){
     state.board?.board?.workspace_id!==state.context?.workspace_id)return null;
  const moduleKey=moduleByBoardName(state.board.board.name)?.key;
  const tabs=['items','issues',...(moduleKey==='frt'?['finance']:[]),
-  ...(moduleKey==='timetracker'?['attendance']:[])];
+  ...(moduleKey==='fueltrans'?['fueltrans']:[]),...(moduleKey==='timetracker'?['attendance']:[])];
  const minimal=isItemOnlyBoard(state.board,state.boardUi);
  const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board,{minimal,hiddenVirtual:state.boardUi?.hiddenVirtual})).map(c=>c.key);
  const pref=loadBoardLayout(state.context,state.boardId,tabs,columns);

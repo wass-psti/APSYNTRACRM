@@ -1,0 +1,8 @@
+@media print{
+ body:has(#fueltrans-native-host) .sidebar,
+ body:has(#fueltrans-native-host) .topbar,
+ body:has(#fueltrans-native-host) .page-head,
+ body:has(#fueltrans-native-host) .board-draggable-tabs{display:none!important}
+ body:has(#fueltrans-native-host) .workspace{display:block!important}
+ body:has(#fueltrans-native-host) .main{margin:0!important;padding:0!important}
+}
