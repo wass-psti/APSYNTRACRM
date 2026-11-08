@@ -12,6 +12,8 @@ on:
       - '.github/workflows/cp-tl03b-disposable-postgres.yml'
       - 'sql/cp-tl03-staged-domain.sql'
       - 'sql/tradelink-document-board-timestamp-candidate.sql'
+      - 'sql/tradelink-document-lifecycle-timestamp-candidate.sql'
+      - 'sql/tradelink-document-conflict-response-candidate.sql'
       - 'sql/cp-tl03c-write-permission-candidate.sql'
       - 'sql/cp-tl03c-stage-b-write-revoke-candidate.sql'
       - 'sql/cp-tl03c-emergency-disable-candidate.sql'
@@ -80,10 +82,10 @@ jobs:
           # No production DB, project, or credentials are involved.
           python3 - <<'PY_FIXTURE'
           from pathlib import Path
-          source=Path('sql/cp-tl03-staged-domain.sql').read_text()
-          start=source.index('CREATE FUNCTION private.tl03_commit(')
-          end=source.index('REVOKE ALL ON FUNCTION private.tl03_commit(',start)
-          fn=source[start:end].replace('CREATE FUNCTION ', 'CREATE OR REPLACE FUNCTION ',1)
+          source=Path('sql/tradelink-document-board-timestamp-candidate.sql').read_text()
+          start=source.index('CREATE OR REPLACE FUNCTION private.tl03_commit(')
+          end=source.index('END $commit$;',start)+len('END $commit$;')
+          fn=source[start:end]
           a=' group_id uuid; item_id uuid; rev bigint; modified_at timestamptz;'
           b=' group_id uuid; item_id uuid; rev bigint;'
           assert fn.count(a)==1
@@ -97,6 +99,10 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f /tmp/tl03-original-function.sql
           test "$(psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT md5(pg_get_functiondef('private.tl03_commit(uuid,uuid,bigint,text,jsonb)'::regprocedure))")" = '661e491750fbc9eeb0f619d701496306'
           psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-board-timestamp-candidate.sql
+      - name: Upgrade lifecycle timestamps in the disposable database
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-lifecycle-timestamp-candidate.sql
+      - name: Upgrade deterministic conflicts to HTTP 409 in the disposable database
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-document-conflict-response-candidate.sql
       - name: Execute signed fixture, CAS, audit, RLS and denial acceptance
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-acceptance.sql
       - name: Check post-migration grants and board projection

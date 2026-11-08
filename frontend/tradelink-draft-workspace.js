@@ -770,7 +770,7 @@ const draftArchiveModes=Object.freeze([
 ]);
 const draftSortFields=Object.freeze([
  ['documentNumber','Document number'],['documentType','Document module'],
- ['revision','Revision']
+ ['revision','Revision'],['updatedAt','Last updated']
 ]);
 const draftSortDirections=Object.freeze([['asc','Ascending'],['desc','Descending']]);
 const matchAllowed=(list,value,fallback)=>list.some(([key])=>key===value)?value:fallback;
@@ -804,11 +804,26 @@ function tradeLinkDraftRowMatches(row,filters){
 function sortTradeLinkDraftRows(rows,filters){
  const field=filters.sortBy,descending=filters.sortDirection==='desc';
  return [...rows].sort((left,right)=>{
+  if(field==='updatedAt'){
+   const a=tradeLinkTimestamp(left?.updatedAt),b=tradeLinkTimestamp(right?.updatedAt);
+   // Missing times stay last in either direction; never invent a record date.
+   if(a===null||b===null)return a===b?0:a===null?1:-1;
+   return descending?b-a:a-b;
+  }
   const a=field==='revision'?Number(left?.revision)||0:String(left?.[field]??'');
   const b=field==='revision'?Number(right?.revision)||0:String(right?.[field]??'');
   const order=field==='revision'?a-b:a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'});
   return descending?-order:order;
  });
+}
+function tradeLinkTimestamp(value){
+ if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value))return null;
+ const time=Date.parse(value);
+ return Number.isFinite(time)?time:null;
+}
+function renderTradeLinkTimestamp(value){
+ if(tradeLinkTimestamp(value)===null)return '—';
+ return '<time datetime="'+escape(value)+'">'+escape(value)+'</time>';
 }
 /** Search only the bounded current server-authorized page. No remote search. */
 export function filterTradeLinkDraftAuthorizedRows(rows,input={}){
@@ -837,7 +852,8 @@ export function updateTradeLinkDraftListUI(container,input={}){
  if(body&&typeof body.appendChild==='function'){
   for(const row of sortTradeLinkDraftRows(rows.map(el=>({
    element:el,documentNumber:el.dataset?.documentNumber,
-   documentType:el.dataset?.documentType,revision:el.dataset?.revision
+   documentType:el.dataset?.documentType,revision:el.dataset?.revision,
+   updatedAt:el.dataset?.updatedAt
   })),filters))body.appendChild(row.element);
  }
  const counter=container.querySelector('[data-tradelink-domain-count]');
@@ -892,6 +908,7 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
   [['Document module',type],['Workflow state',row.workflow_state],
    ['Document ID',row.id],['Linked Board item',row.board_item_id],
    ['Revision',row.revision],['Archived',row.archived_at?'Yes':'No'],
+   ['Created',tradeLinkTimestamp(row.created_at)===null?'—':row.created_at],
    ['Last updated',row.updated_at??'—'],...details.map(([key,label])=>
     [label,(key==='remarks'||key==='customerAddress'||key==='dueDate')?
      (String(data[key]??'').trim()||'—'):
@@ -948,7 +965,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
     '<caption>'+(readOnly?'Authorized TradeLink documents':'Authorized TradeLink Draft records')+
      ' in current response</caption>'+
     '<thead><tr><th scope="col">Document</th><th scope="col">Module</th>'+
-    '<th scope="col">Revision</th><th scope="col">State</th>'+
+    '<th scope="col">Revision</th><th scope="col">State</th><th scope="col">Last updated</th>'+
     '<th scope="col">Actions</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
     ordered.map(row=>{
@@ -956,11 +973,11 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
      return '<tr data-tradelink-domain-record data-document-number="'+
       escape(row.documentNumber)+'" data-document-type="'+escape(row.documentType)+
       '" data-workflow-state="'+escape(row.workflowState)+'" data-revision="'+
-      escape(row.revision)+'" data-archived="'+
+      escape(row.revision)+'" data-updated-at="'+escape(tradeLinkTimestamp(row.updatedAt)===null?'':row.updatedAt)+'" data-archived="'+
       (row.archived===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
       '<td>'+escape(row.documentNumber)+'</td><td>'+escape(row.documentType)+
       '</td><td>'+escape(row.revision)+'</td><td>'+escape(row.workflowState)+
-      (row.archived?' · Archived':'')+'</td>'+
+      (row.archived?' · Archived':'')+'</td><td>'+renderTradeLinkTimestamp(row.updatedAt)+'</td>'+
       (readOnly?'<td><button type="button" class="secondary" '+
        'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
        '">Preview saved</button> '+
