@@ -122,7 +122,7 @@ function cli() {
   const target=args[0].slice('--output-dir='.length);
   // Validate the output boundary before connecting. No user-controlled shell.
   ensure(isAbsolute(target)&&!existsSync(target),'OUTPUT_MUST_BE_NEW_ABSOLUTE');
-  const opts=['-X','-q','-A','-t','-F','\t','-v','ON_ERROR_STOP=1',
+  const opts=['-X','-w','-q','-A','-t','-F','\t','-v','ON_ERROR_STOP=1',
    '-c',buildReadOnlyAcquisitionSql(sources)];
   const subprocess=spawnSync('psql',opts,{encoding:'utf8',maxBuffer:32*1024*1024,
    timeout:60000,env:{...process.env,PGCONNECT_TIMEOUT:'5'}});
