@@ -28,6 +28,7 @@ import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from 
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,tradeLinkDraftSaveFailureMessage,
+ tradeLinkDraftHasUnsavedChanges,
  prepareTradeLinkDraftCommand,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
@@ -154,6 +155,9 @@ const name=()=>state.context?.profile?.display_name||state.context?.profile?.ema
 const workspaceName=()=>state.context?.workspace_id==='00000000-0000-4000-8000-000000000001'?'Work Management':'Current workspace';
 const cards=()=>state.showTrash?state.trashed:state.showArchived?state.archived:state.boards;
 const routeHome='#/overview';
+const unsavedTradeLinkWarning='You have unsaved TradeLink Draft changes. Leave this page and discard them?';
+let approvedRouteHash=location.hash||routeHome;
+let rejectedRouteHash=null;
 let modal=null;
 let routeSerial=0;
 let ttClockTimer=null;
@@ -1524,7 +1528,7 @@ async function openTradeLinkDraft(documentId){
    record.document_type!==listed.documentType)
    throw new ApiError('Document revision or editability changed. Refresh the signed list.',409);
   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
-   selected:{documentId,record},pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
+   selected:{documentId,record},pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,unsavedChanges:false,error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
  }catch{
   if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
    'Draft read or authorization failed. Refresh the signed list.';
@@ -3273,6 +3277,9 @@ async function action(name,button){
  }
  case 'tradelink-draft-clear':{
   if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy)break;
+  if(tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
+    !confirm(unsavedTradeLinkWarning))break;
+  state.tradeLinkDraft.unsavedChanges=false;
   if(state.tradeLinkDraft.editRequestId){
    const type=state.tradeLinkDraft.selected?.record?.document_type||'quotation';
    location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+type;
@@ -3289,6 +3296,9 @@ async function action(name,button){
  }
  case 'tradelink-draft-new':{
   if(tradeLinkDraftRoute()&&!state.tradeLinkDraft.busy){
+   if(tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
+     !confirm(unsavedTradeLinkWarning))break;
+   state.tradeLinkDraft.unsavedChanges=false;
    if(state.tradeLinkDraft.editRequestId){
     location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+
      (state.tradeLinkDraft.selected?.record?.document_type||'quotation');
@@ -4978,6 +4988,7 @@ function captureTradeLinkDraftFields(event){
  }
  state.tradeLinkDraft.formValues=values;
  state.tradeLinkDraft.lineDrafts=snapshotTradeLinkDraftLineItems(form);
+ state.tradeLinkDraft.unsavedChanges=true;
  state.tradeLinkDraft.draftNotice='';
  updateTradeLinkDraftLocalSummary(form);
  updateTradeLinkDraftInputCurrencyLabels(form);
@@ -5220,14 +5231,37 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('online',()=>platformSync.network(true));
 window.addEventListener('offline',()=>platformSync.network(false));
+// Hash navigation must not silently discard locally edited Draft fields.
+// Authentication expiry remains authoritative: a revoked session is never
+// retained merely because an unsaved editor was open.
 window.addEventListener('hashchange',()=>{
+ const nextHash=location.hash||routeHome;
+ if(rejectedRouteHash===nextHash){
+  rejectedRouteHash=null;return; // Cancelled navigation restored its old URL.
+ }
  if(!state.context){
+  approvedRouteHash=nextHash;
   const mode=authViewFromHash();
   if(mode!=='reset')recoveryContext=null;
   renderLogin(mode==='reset'&&!recoveryContext?'Your recovery link is unavailable or expired. Request a new link.':'',{mode});
   return;
  }
+ if(nextHash!==approvedRouteHash&&tradeLinkDraftRoute()&&
+   tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
+   !confirm(unsavedTradeLinkWarning)){
+  rejectedRouteHash=approvedRouteHash;
+  location.replace(approvedRouteHash);
+  return;
+ }
+ approvedRouteHash=nextHash;
  onRoute().catch(notice);
+});
+window.addEventListener('beforeunload',event=>{
+ if(state.context&&tradeLinkDraftRoute()&&
+    tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)){
+  event.preventDefault();
+  event.returnValue=''; // Native browser warning; no sensitive field contents.
+ }
 });
 window.addEventListener('keydown',event=>{if(event.key==='Escape'){
  closeBoardCardMenus();hideModal();

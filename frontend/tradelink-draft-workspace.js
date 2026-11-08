@@ -37,7 +37,7 @@ export function initialTradeLinkDraftView(documentType=null){
  // This is transient UI state, never browser or server persistence.
  const selected=typeLabels.some(([key])=>key===documentType)?documentType:null;
  return {status:'READ_PENDING',rows:[],selected:null,documentPreview:null,busy:false,error:'',
-  message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,
+  message:'',draftNotice:'',mode:'create',editRequestId:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,unsavedChanges:false,
   listFilters:initialTradeLinkDraftListFilters(),listPage:null,
   formValues:selected?{documentType:selected}:null};
 }
@@ -49,8 +49,16 @@ export function resetTradeLinkDraftForm(view=initialTradeLinkDraftView(),documen
  const requested=documentType??view?.formValues?.documentType??'quotation';
  const safeType=typeLabels.some(([id])=>id===requested)?requested:'quotation';
  return {...view,mode:'create',selected:null,documentPreview:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,error:'',message:'',
-  draftNotice:'Unsaved local fields cleared. Nothing saved or transmitted.',
+  draftNotice:'Unsaved local fields cleared. Nothing saved or transmitted.',unsavedChanges:false,
   formValues:{documentType:safeType}};
+}
+/** A visible authorized Draft editor has local changes not yet committed.
+ * Conservatively warn even when the user reverts a field; there is no
+ * persisted dirty flag, client cache or additional backend operation.
+ */
+export function tradeLinkDraftHasUnsavedChanges(view){
+ return view?.unsavedChanges===true&&
+  (view.mode==='create'||(view.mode==='edit'&&validUuid(view.selected?.documentId)));
 }
 /** Expose only program-defined local validation messages, not field values. */
 export function tradeLinkDraftValidationMessage(error){
