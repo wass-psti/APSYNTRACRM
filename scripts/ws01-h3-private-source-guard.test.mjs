@@ -175,7 +175,10 @@ test('documented evolution is confined to exact historical TradeLink signature a
  assert.equal(rows.filter(line=>line.includes('08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618')).length,1);
  assert.match(rows.find(line=>line.includes(entry.signature)),/true,false,NULL,'08da279/);
  const drift=structuredClone(g4b);
+ const dependentDrift=structuredClone(g4c);
  drift.entries.find(e=>e.signature===entry.signature).source_sha256='a'.repeat(64);
- assert.throws(()=>generateLiveCatalogFingerprintSql(manifest,drift,g4c),
+ const correspondingDependent=dependentDrift.dependents.find(e=>e.signature===entry.signature);
+ if(correspondingDependent) correspondingDependent.source_sha256='a'.repeat(64);
+ assert.throws(()=>generateLiveCatalogFingerprintSql(manifest,drift,dependentDrift),
    /DOCUMENTED_EVOLUTION_HISTORICAL_BASELINE_DRIFT/);
 });
