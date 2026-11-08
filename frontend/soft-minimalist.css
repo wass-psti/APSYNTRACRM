@@ -1609,3 +1609,502 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 #app .aps-security-shell>.main-content>.aps-security{
   margin-bottom:16px;
 }
+
+/* Soft minimalism — Settings route refinement.
+   The existing signed user profile, Supabase password update, and verified
+   bootstrap-only security panel are preserved without structural changes. */
+#app .aps-settings-shell{
+  --settings-ink:var(--sm-ink);
+  --settings-muted:var(--sm-sub);
+  --settings-accent:var(--sm-accent);
+  --settings-stroke:var(--sm-border);
+  min-width:0;
+  background:var(--sm-bg);
+}
+#app .aps-settings-shell>.topbar{
+  min-height:77px;
+  background:var(--sm-surface);
+  border-bottom:1px solid var(--sm-border);
+  box-shadow:none;
+}
+#app .aps-settings-shell .topbar .breadcrumb{color:var(--sm-sub)}
+#app .aps-settings-shell .topbar .breadcrumb strong{
+  color:var(--sm-ink);font-weight:700;
+}
+#app .aps-settings-shell .topbar .top-pill{
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  box-shadow:none;font-weight:670;
+}
+#app .aps-settings-shell .topbar .top-avatar{
+  color:#fff;
+  background:var(--sm-accent);
+  box-shadow:none;
+  border-radius:var(--sm-radius-control);
+  transition:background-color var(--sm-fast);
+}
+#app .aps-settings-shell .topbar .top-avatar:hover{
+  background:var(--sm-accent-hover);
+  box-shadow:none;transform:none;
+}
+#app .aps-settings-shell>.main-content{
+  width:100%;
+  min-width:0;
+  max-width:none;
+  padding:clamp(20px,2.5vw,36px) clamp(18px,3vw,48px) 86px;
+}
+#app .aps-settings .settings-hero{
+  min-height:145px;
+  padding:clamp(22px,2.8vw,34px);
+  margin-bottom:22px;
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-panel);
+  box-shadow:var(--sm-shadow-card);
+  color:var(--sm-ink);
+}
+#app .aps-settings .settings-hero::before{content:none}
+#app .aps-settings .settings-hero .label-top{
+  color:var(--sm-accent-hover);
+  letter-spacing:1.15px;
+  font-weight:740;
+}
+#app .aps-settings .settings-hero-dot{
+  background:var(--sm-accent);
+  box-shadow:0 0 0 3px var(--sm-accent-soft);
+}
+#app .aps-settings .settings-hero h1{
+  color:var(--sm-ink);
+  font-size:clamp(25px,2.55vw,35px);
+  line-height:1.2;
+  letter-spacing:-.035em;
+  font-weight:760;
+}
+#app .aps-settings .settings-hero p{
+  color:var(--sm-sub);
+  font-size:13px;
+  line-height:1.65;
+}
+#app .aps-settings .settings-heading-stop{color:var(--sm-accent)}
+#app .aps-settings .settings-hero-decoration{
+  color:var(--sm-accent);
+  opacity:.1;
+}
+#app .aps-settings .settings-hero-status{
+  padding:10px 14px;
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+  border:1px solid #D0E6DB;
+  border-radius:var(--sm-radius-pill);
+  backdrop-filter:none;
+  box-shadow:none;
+  font-size:11px;
+  font-weight:710;
+}
+#app .aps-settings .settings-hero-status .settings-icon{color:var(--sm-success)}
+#app .aps-settings .settings-grid{
+  grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);
+  align-items:start;
+  gap:20px;
+}
+#app .aps-settings .settings-profile-panel,
+#app .aps-settings .settings-session-panel{
+  min-width:0;
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  background:var(--sm-surface);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-settings .settings-profile-panel:only-child{
+  grid-column:1/-1;
+  width:100%;
+  max-width:960px;
+}
+#app .aps-settings .settings-panel-header{
+  min-height:73px;
+  padding:19px 22px;
+  background:var(--sm-surface-raised);
+  border-bottom:1px solid var(--sm-border);
+}
+#app .aps-settings .settings-panel-title{gap:11px}
+#app .aps-settings .settings-panel-title>span{
+  width:36px;height:36px;
+  color:var(--sm-accent);
+  background:var(--sm-accent-soft);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-settings .settings-session-panel .settings-panel-title>span{
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+}
+#app .aps-settings .settings-panel-header h3{
+  color:var(--sm-ink);
+  font-weight:750;
+  font-size:14px;
+  letter-spacing:-.015em;
+}
+#app .aps-settings .settings-panel-header>.settings-auth-provider{
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  border:1px solid #DEDFEC;
+  font-size:10.5px;
+  font-weight:690;
+}
+#app .aps-settings .settings-session-indicator{
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+  border:1px solid #D0E6DB;
+  font-weight:710;
+}
+#app .aps-settings .settings-panel-body{
+  padding:clamp(18px,2.2vw,26px);
+}
+#app .aps-settings .settings-profile-identity{
+  gap:15px;
+  padding:17px 18px;
+  margin-bottom:20px;
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+}
+#app .aps-settings .settings-profile-avatar{
+  width:55px;height:55px;
+  color:#fff;
+  background:var(--sm-accent);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+  font-weight:730;
+}
+#app .aps-settings .settings-profile-copy .name{
+  color:var(--sm-ink);
+  font-size:15px;
+  font-weight:750;
+  letter-spacing:-.025em;
+}
+#app .aps-settings .settings-profile-copy .role{
+  color:var(--sm-sub);
+  font-weight:620;
+  font-size:11.5px;
+}
+#app .aps-settings .settings-profile-fields{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+#app .aps-settings .settings-detail{
+  gap:7px;
+  padding:15px 16px;
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-settings .settings-detail label{
+  color:var(--sm-sub);
+  letter-spacing:.045em;
+  font-size:10px;
+  font-weight:700;
+}
+#app .aps-settings .settings-detail strong{
+  color:var(--sm-ink);
+  font-size:12.5px;
+  font-weight:710;
+  line-height:1.55;
+}
+#app .aps-settings .settings-detail-identifier strong{
+  color:var(--sm-text);
+  font-size:11px;
+  font-weight:600;
+  line-height:1.6;
+}
+#app .aps-settings .settings-detail-status .status{
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+  border:1px solid #D0E6DB;
+  border-radius:var(--sm-radius-pill);
+  font-weight:710;
+}
+#app .aps-settings .settings-profile-footnote{
+  margin-top:18px;
+  color:var(--sm-sub);
+  font-size:11.5px;
+}
+#app .aps-settings .settings-profile-footnote .settings-icon{
+  color:var(--sm-accent);
+}
+#app .aps-settings .settings-password-form{
+  margin-top:22px;
+  padding:21px;
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  box-shadow:none;
+}
+#app .aps-settings .settings-password-heading{
+  gap:12px;
+  margin-bottom:21px;
+}
+#app .aps-settings .settings-password-icon{
+  flex-basis:43px;
+  width:43px;height:43px;
+  background:var(--sm-accent-soft);
+  color:var(--sm-accent);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-settings .settings-password-heading h4{
+  color:var(--sm-ink);
+  font-weight:750;
+  font-size:15px;
+}
+#app .aps-settings .settings-password-heading p{
+  color:var(--sm-sub);
+  font-size:12px;
+}
+#app .aps-settings .settings-password-fields{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+#app .aps-settings .settings-grid:has(.settings-session-panel) .settings-password-fields{
+  grid-template-columns:minmax(0,1fr);
+}
+#app .aps-settings .settings-password-field label{
+  color:var(--sm-text);
+  font-size:11px;
+  font-weight:710;
+  letter-spacing:.03em;
+}
+#app .aps-settings .settings-password-field input{
+  min-height:46px;
+  color:var(--sm-ink);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+}
+#app .aps-settings .settings-password-field input::placeholder{color:var(--sm-sub);opacity:1}
+#app .aps-settings .settings-password-field input:hover:not(:disabled){
+  border-color:var(--sm-border-strong);
+}
+#app .aps-settings .settings-password-field input:focus-visible{
+  border-color:var(--sm-accent);
+  outline:2px solid var(--sm-accent);
+  outline-offset:2px;
+  box-shadow:var(--sm-focus);
+}
+#app .aps-settings .settings-password-field input:invalid:not(:placeholder-shown){
+  border-color:var(--sm-danger);
+}
+#app .aps-settings .settings-password-hint{
+  margin:16px 0 19px;
+  color:var(--sm-sub);
+  font-size:11.5px;
+  line-height:1.6;
+}
+#app .aps-settings .settings-password-hint svg{color:var(--sm-accent)}
+#app .aps-settings .settings-password-footer{
+  align-items:center;
+  gap:13px;
+}
+#app .aps-settings .settings-password-submit{
+  min-height:44px;
+  color:#fff;
+  background:var(--sm-accent);
+  border:1px solid var(--sm-accent);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+  font-size:12.5px;
+  font-weight:710;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast);
+}
+#app .aps-settings .settings-password-submit:hover:not(:disabled){
+  color:#fff;
+  background:var(--sm-accent-hover);
+  border-color:var(--sm-accent-hover);
+  box-shadow:none;
+  transform:none;
+}
+#app .aps-settings .settings-password-status{
+  min-width:0;
+  color:var(--sm-text);
+  font-size:11.5px;
+  line-height:1.65;
+  overflow-wrap:anywhere;
+}
+#app .aps-settings .settings-session-intro{gap:12px}
+#app .aps-settings .settings-session-intro-badge{
+  color:var(--sm-success);
+  background:var(--sm-success-soft);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-settings .settings-session-intro p{
+  color:var(--sm-sub);
+  font-size:12px;
+}
+#app .aps-settings .settings-session-callout{
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border:1px solid var(--sm-border);
+  border-left:3px solid var(--sm-accent);
+  border-radius:var(--sm-radius-control);
+  backdrop-filter:none;
+}
+#app .aps-settings .settings-session-callout .settings-icon{color:var(--sm-accent)}
+#app .aps-settings .settings-auth-detail{
+  background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+}
+#app .aps-settings .settings-session-actions{
+  gap:10px;
+}
+#app .aps-settings .settings-session-actions button{
+  min-height:42px;
+  padding:10px 13px;
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  font-weight:690;
+  font-size:11.5px;
+  box-shadow:none;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast),color var(--sm-fast);
+}
+#app .aps-settings .settings-session-actions .settings-token-button{
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  border-color:#DDDEED;
+}
+#app .aps-settings .settings-session-actions button:hover:not(:disabled){
+  color:var(--sm-ink);
+  background:var(--sm-surface-soft);
+  border-color:var(--sm-border-strong);
+  box-shadow:none;
+  transform:none;
+}
+#app .aps-settings .settings-token-warning{
+  color:var(--sm-warning);
+  background:var(--sm-warning-soft);
+  border:1px solid #EDD9B5;
+  border-left:3px solid var(--sm-warning);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-settings .settings-token-warning .settings-icon{color:var(--sm-warning)}
+#app .aps-settings .settings-token-warning b{color:var(--sm-warning);font-weight:740}
+#app .aps-settings .settings-verify-block{
+  margin-top:19px;
+  padding-top:19px;
+  border-top:1px solid var(--sm-border);
+}
+#app .aps-settings .settings-verify-block h3{
+  color:var(--sm-ink);
+  font-size:13px;
+  font-weight:740;
+}
+#app .aps-settings .settings-verify-block h3 .settings-icon{color:var(--sm-accent)}
+#app .aps-settings .settings-verify-block>p.muted{
+  color:var(--sm-sub);
+  font-size:11.5px;
+}
+#app .aps-settings .settings-verify-block button,
+#app .aps-settings .settings-verify-block a.secondary{
+  min-height:42px;
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+  font-weight:690;
+  transition:background-color var(--sm-fast),border-color var(--sm-fast);
+}
+#app .aps-settings .settings-verify-block button:hover:not(:disabled),
+#app .aps-settings .settings-verify-block a.secondary:hover{
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  border-color:var(--sm-border-strong);
+  box-shadow:none;
+  transform:none;
+}
+#app .aps-settings .settings-verify-block button.primary{
+  color:#fff;
+  background:var(--sm-accent);
+  border-color:var(--sm-accent);
+}
+#app .aps-settings .settings-verify-block button.primary:hover:not(:disabled){
+  color:#fff;
+  background:var(--sm-accent-hover);
+  border-color:var(--sm-accent-hover);
+}
+#app .aps-settings .settings-verify-block .settings-readonly-chip{
+  color:var(--sm-accent-hover);
+  background:var(--sm-accent-soft);
+  font-weight:690;
+}
+#app .aps-settings .settings-verify-block .csp-u048{
+  border-color:var(--sm-border);
+  background:var(--sm-surface-raised);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-settings .settings-verify-block .csp-u028{
+  color:var(--sm-ink);
+  font-weight:740;
+}
+#app .aps-settings .settings-verify-block .csp-u008{
+  background:var(--sm-surface);
+  border-color:var(--sm-border);
+  border-radius:var(--sm-radius-xs);
+}
+#app .aps-settings .settings-verify-block .csp-u058{color:var(--sm-sub)}
+@media(max-width:1200px){
+  #app .aps-settings .settings-grid{grid-template-columns:minmax(0,1fr)}
+  #app .aps-settings .settings-grid:has(.settings-session-panel) .settings-password-fields{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:750px){
+  #app .aps-settings .settings-hero{
+    gap:15px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  #app .aps-settings .settings-hero-decoration{opacity:.06}
+  #app .aps-settings .settings-hero-status{white-space:normal}
+}
+@media(max-width:650px){
+  #app .aps-settings-shell>.main-content{padding:20px 15px 65px}
+  #app .aps-settings .settings-hero{
+    min-height:0;
+    padding:22px 20px;
+    border-radius:var(--sm-radius-card);
+  }
+  #app .aps-settings .settings-hero-status{justify-content:flex-start;width:auto}
+  #app .aps-settings .settings-grid{gap:14px}
+  #app .aps-settings .settings-panel-header{min-height:0;padding:17px}
+  #app .aps-settings .settings-panel-body{padding:17px}
+  #app .aps-settings .settings-profile-identity{padding:14px}
+  #app .aps-settings .settings-password-form{padding:17px}
+  #app .aps-settings .settings-password-fields,
+  #app .aps-settings .settings-grid:has(.settings-session-panel) .settings-password-fields{
+    grid-template-columns:minmax(0,1fr);
+  }
+  #app .aps-settings .settings-password-footer{align-items:stretch}
+}
+@media(max-width:450px){
+  #app .aps-settings .settings-profile-fields{
+    grid-template-columns:minmax(0,1fr);
+  }
+  #app .aps-settings .settings-detail-wide{grid-column:1}
+  #app .aps-settings .settings-session-actions button{width:100%}
+  #app .aps-settings .settings-password-submit{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  #app .aps-settings .settings-password-submit,
+  #app .aps-settings .settings-session-actions button,
+  #app .aps-settings .settings-verify-block button,
+  #app .aps-settings .settings-verify-block a,
+  #app .aps-settings .settings-password-field input{transition:none}
+}
+@media(prefers-contrast:more){
+  #app .aps-settings .settings-hero,
+  #app .aps-settings .settings-profile-panel,
+  #app .aps-settings .settings-session-panel{border-color:#778399}
+  #app .aps-settings .settings-hero p,
+  #app .aps-settings .settings-password-hint{color:var(--sm-ink)}
+}
