@@ -849,7 +849,16 @@ function settingsPage(){
  <div class="settings-detail settings-detail-wide"><label>Work email</label><strong>${e(p.email||state.user?.email||'Not available')}</strong></div>
  <div class="settings-detail settings-detail-status"><label>Account status</label><strong><span class="status done">${e(p.status)}</span></strong></div>
  <div class="settings-detail"><label>Workspace</label><strong>${e(workspaceName())}</strong></div>
- <div class="settings-detail settings-detail-wide settings-detail-identifier"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div><p class="settings-profile-footnote">${settingsIcon('shield')}<span>Identity details are provided by your signed workspace session.</span></p></div></section>
+ <div class="settings-detail settings-detail-wide settings-detail-identifier"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div><form id="settings-change-password-form" autocomplete="off" class="settings-password-form" aria-label="Change password">
+ <h4>Change password</h4>
+ <p class="muted">Choose a new password for your Supabase account (12–72 characters).</p>
+ <label for="settings-new-password">New password</label>
+ <input id="settings-new-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required />
+ <label for="settings-confirm-password">Confirm new password</label>
+ <input id="settings-confirm-password" name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="72" required />
+ <button type="submit" class="secondary">Update password</button>
+ <p class="muted" role="status" aria-live="polite" data-password-status></p>
+ </form><p class="settings-profile-footnote">${settingsIcon('shield')}<span>Identity details are provided by your signed workspace session.</span></p></div></section>
  ${state.roleVerified===true?`<section class="panel settings-session-panel settings-entrance" aria-labelledby="settings-session-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('lock')}</span><h3 id="settings-session-heading">Session security</h3></div><span class="settings-session-indicator"><span class="online-dot"></span>Authenticated</span></div>
  <div class="panel-body settings-panel-body"><div class="settings-session-intro"><span class="settings-session-intro-badge" aria-hidden="true">${settingsIcon('shield')}</span><p class="muted csp-u032" >Your login uses the existing Supabase Auth project. Your session refreshes automatically and is kept in this browser tab.</p></div>
  <div class="note settings-session-callout">${settingsIcon('shield')}<span>The application never requires a database password or privileged backend key. Permissions are enforced by the existing workspace RPCs and row-level security.</span></div>
@@ -5673,6 +5682,30 @@ root.addEventListener('change',event=>{
  }
 });
 root.addEventListener('submit',event=>{
+ if(event.target.id==='settings-change-password-form'){
+  event.preventDefault();
+  const form=event.target;
+  if(state.view!=='settings'||!auth.isSignedIn||!state.context)return;
+  const password=form.elements.namedItem('password')?.value||'';
+  const confirmation=form.elements.namedItem('confirmation')?.value||'';
+  const status=form.querySelector('[data-password-status]');
+  if(password.length<12||password.length>72||password!==confirmation){
+   if(status)status.textContent=password!==confirmation?'Passwords do not match.':'Password must contain 12–72 characters.';
+   return;
+  }
+  const button=form.querySelector('button[type="submit"]');
+  if(button.disabled)return;
+  button.disabled=true;
+  if(status)status.textContent='Updating password…';
+  Promise.resolve(auth.changePassword(password)).then(()=>{
+   form.reset();
+   if(status)status.textContent='Password updated successfully.';
+  }).catch(err=>{
+   if(status)status.textContent=err?.message||'Password update failed.';
+  }).finally(()=>{button.disabled=false;});
+  return;
+ }
+
  if(event.target.matches('[data-tradelink-draft-form]')){
   event.preventDefault();
   if(!tradeLinkDraftRoute()||!tradeLinkDraftReady()||!state.boardManage){
