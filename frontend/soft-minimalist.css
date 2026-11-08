@@ -11,8 +11,8 @@
   --sm-surface-raised:#FAFBFD;
   --sm-ink:#253047;
   --sm-text:#405068;
-  --sm-sub:#667085;
-  --sm-muted:#788397; /* readable secondary metadata */
+  --sm-sub:#626C7D;
+  --sm-muted:#647083; /* >=4.5:1 on neutral surfaces */
   --sm-accent:#6667AB;
   --sm-accent-hover:#51528D;
   --sm-accent-soft:#EEEEF8;
@@ -802,3 +802,80 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 #app .aps-field-feedback{color:var(--sm-sub)}
 #app .aps-field-feedback.aps-field-invalid{color:var(--sm-danger)}
 #app :is(.board-table,.board-table-custom,.tt-main-attendance-table){font-variant-numeric:tabular-nums}
+
+/* Phase 7 — contrast, responsive details, and calm authentication showcase. */
+#app .aps-auth-v2 .auth-right{
+  color:var(--sm-ink);
+  background:var(--sm-surface-soft);
+  border-left:1px solid var(--sm-border);
+}
+#app .aps-auth-v2 .auth-right::before,
+#app .aps-auth-v2 .auth-right::after{content:none}
+#app .aps-auth-v2 .auth-ambient-fallback{opacity:.18}
+#app .aps-auth-v2 .auth-ambient-scene{opacity:.14}
+#app .aps-auth-v2 .auth-orbit-art{color:var(--sm-accent);opacity:.12}
+#app .aps-auth-v2 .auth-pitch-eyebrow{color:var(--sm-accent-hover)}
+#app .aps-auth-v2 .auth-pitch-eyebrow::before{background:var(--sm-accent)}
+#app .aps-auth-v2 .auth-pitch h2{
+  color:var(--sm-ink);
+  font-size:clamp(30px,3.7vw,49px);
+  font-weight:750;
+  letter-spacing:-.045em;
+}
+#app .aps-auth-v2 .auth-pitch h2 span{
+  background:none;background-clip:initial;
+  -webkit-background-clip:initial;
+  color:var(--sm-accent);
+  -webkit-text-fill-color:currentColor;
+}
+#app .aps-auth-v2 .auth-pitch p{color:var(--sm-sub)}
+#app .aps-auth-v2 .auth-preview{
+  transform:none;
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-panel);
+  box-shadow:var(--sm-shadow-card);
+  transition:border-color var(--sm-fast),box-shadow var(--sm-fast);
+}
+@media(hover:hover) and (pointer:fine){
+  #app .aps-auth-v2 .auth-preview:hover{
+    transform:none;
+    border-color:var(--sm-border-strong);
+    box-shadow:var(--sm-shadow-card);
+  }
+}
+#app .aps-auth-v2 .auth-preview-badge{
+  transform:none;
+  box-shadow:var(--sm-shadow-card);
+  border-color:var(--sm-border);
+  color:var(--sm-ink);
+}
+#app .aps-auth-v2 .auth-pitch-footer{color:var(--sm-sub)}
+#app .aps-auth-v2 .auth-pitch-footline{background:var(--sm-border-strong)}
+#app .aps-overview .overview-hero,
+#app .aps-boards .boards-hero,
+#app .aps-board-shell .page-head,
+#app .aps-settings .settings-hero{min-width:0}
+#app :is(.aps-overview,.aps-boards,.aps-settings,.aps-tradelink-app){min-width:0}
+#app :is(.aps-overview,.aps-boards,.aps-board-shell,.aps-settings) :is(h1,h2,h3){
+  text-wrap:pretty;
+}
+@media(max-width:810px){
+  #app .aps-sidebar .nav-link{min-height:44px}
+  #app :is(.aps-overview-shell,.aps-boards-shell,.aps-board-shell,.aps-settings-shell)>.main-content{min-width:0}
+}
+@media(max-width:570px){
+  #app .aps-overview .overview-hero,
+  #app .aps-boards .boards-hero,
+  #app .aps-settings .settings-hero,
+  #app .aps-board-shell .page-head{
+    border-radius:var(--sm-radius-card);
+  }
+  #app .aps-settings .settings-password-fields{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){
+  #app .aps-auth-v2 .auth-preview,
+  #app .aps-auth-v2 .auth-submit,
+  #app .aps-overview .stat-card,
+  #app .aps-overview .overview-board-grid .board-card,
+  #app .aps-boards .boards-catalog-grid .board-card{transition:none}
+}
