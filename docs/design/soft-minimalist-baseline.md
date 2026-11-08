@@ -50,6 +50,7 @@ Spacing, radii, shadows, and motion tokens live in the same stylesheet. Check te
 7. **Consolidation:** calmer sign-in preview, contrast-conscious colors, responsive and reduced-motion rules; deployment smoke includes the new CSS.
 8. **12-board foundation:** application readiness, status metrics, administrator-restricted provisioning controls and signed module table use the same tokens. Existing signed authorization and board contracts are unchanged.
 9. **Access acceptance:** soft neutral security panels, signed-session checkpoint controls, reports and responsive tables; includes appended TradeLink, Workspace B2/B3, and board-recovery acceptance sections. No test execution, role change, privilege widening, or session action is introduced by the stylesheet.
+10. **Settings route:** responsive soft-surface account hero, verified profile fields, accessible password inputs, and bootstrap-only session diagnostics. Employee accounts retain only their authorized profile and password form; no role checks, authentication behavior, or diagnostics actions are changed.
 
 ## Non-negotiable behavior
 
