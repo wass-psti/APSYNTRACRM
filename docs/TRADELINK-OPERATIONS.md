@@ -95,8 +95,10 @@ as a substitute for the source-defined private TradeLink bucket.
   document identity, revisions and server-created keys are checked.
 - **Storage RLS:** INSERT requires a pending upload issued to the actual
   current user. SELECT/GET requires an active registered attachment and
-  current document-level manage scope. No anonymous/public, DELETE or
-  UPDATE/upsert Storage policies are added.
+  current document-level manage scope. The SELECT policy additionally requires
+  one of the two official authenticated object GET / object-info operations;
+  bucket listing, signed-link issuance and signed-link GET are denied. No
+  anonymous/public, DELETE or UPDATE/upsert Storage policies are added.
 - **Atomic persistence:** Finalize verifies Storage metadata and uploader
   then synchronizes the file, document revision, Board modification time,
   immutable document event and Board log in one transaction. Replacements

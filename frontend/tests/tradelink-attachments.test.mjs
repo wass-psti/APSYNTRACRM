@@ -188,6 +188,7 @@ test('SQL candidate creates no public Storage bucket, grants only signed files a
   /p_action='read' AND a\.status='active'/,
   /CREATE POLICY "tl03 attachment signed upload" ON storage\.objects/,
   /CREATE POLICY "tl03 attachment signed read" ON storage\.objects/,
+  /storage\.allow_any_operation\(ARRAY\[/,
   /owner_id=auth\.uid\(\)::text/,
   /p_expected_revision/,
   /a\.prepared_by<>actor/,

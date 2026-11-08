@@ -13,6 +13,48 @@ CREATE TABLE storage.objects(
  UNIQUE(bucket_id,name)
 );
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Match the project's verified Supabase Storage helper contract. These are
+-- QA-only doubles; production uses the actual storage.operation() helper.
+CREATE FUNCTION storage.operation() RETURNS text LANGUAGE plpgsql STABLE
+AS $operation$
+BEGIN
+ RETURN current_setting('storage.operation',true);
+END $operation$;
+CREATE FUNCTION storage.allow_only_operation(expected_operation text)
+RETURNS boolean LANGUAGE sql STABLE AS $allow$
+ WITH current_operation AS (
+  SELECT storage.operation() AS raw_operation
+ ),normalized AS (
+  SELECT CASE WHEN raw_operation LIKE 'storage.%'
+   THEN substr(raw_operation,9) ELSE raw_operation END AS current_operation,
+   CASE WHEN expected_operation LIKE 'storage.%'
+    THEN substr(expected_operation,9) ELSE expected_operation END AS requested_operation
+  FROM current_operation
+ )
+ SELECT CASE WHEN requested_operation IS NULL OR requested_operation=''
+  THEN FALSE ELSE COALESCE(current_operation=requested_operation,FALSE) END
+ FROM normalized;
+$allow$;
+CREATE FUNCTION storage.allow_any_operation(expected_operations text[])
+RETURNS boolean LANGUAGE sql STABLE AS $allow_any$
+ WITH current_operation AS (
+  SELECT storage.operation() AS raw_operation
+ ),normalized AS (
+  SELECT CASE WHEN raw_operation LIKE 'storage.%'
+   THEN substr(raw_operation,9) ELSE raw_operation END AS current_operation
+  FROM current_operation
+ )
+ SELECT EXISTS (
+  SELECT 1 FROM normalized n
+   CROSS JOIN LATERAL unnest(expected_operations) AS expected_operation
+  WHERE expected_operation IS NOT NULL AND expected_operation<>''
+   AND n.current_operation=CASE WHEN expected_operation LIKE 'storage.%'
+     THEN substr(expected_operation,9) ELSE expected_operation END
+ );
+$allow_any$;
+GRANT EXECUTE ON FUNCTION storage.operation(),
+ storage.allow_only_operation(text),storage.allow_any_operation(text[])
+ TO authenticated;
 GRANT USAGE ON SCHEMA storage TO authenticated;
 GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO authenticated;
 INSERT INTO storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
