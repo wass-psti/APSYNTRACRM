@@ -2370,3 +2370,51 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   }
   #app .aps-pages-acceptance .pages-hero p{color:var(--sm-ink)}
 }
+
+/* Pages acceptance — single-QA-card and result readability refinement. */
+/* An account without an accessible APSYNTRA QA board gets only one test card.
+   Do not reserve an unused second column or imply the missing test is runnable. */
+#app .aps-pages-acceptance .pages-test-grid:has(>.pages-test-card:only-child){
+  grid-template-columns:minmax(0,1fr);
+}
+#app .aps-pages-acceptance .pages-test-grid>.pages-test-card:only-child{
+  width:100%;
+  box-sizing:border-box;
+}
+#app .aps-pages-acceptance .pages-qa-missing{
+  align-items:flex-start;
+  gap:12px;
+  padding:15px 16px;
+  line-height:1.7;
+}
+#app .aps-pages-acceptance .pages-qa-missing strong{
+  color:var(--sm-warning);
+  font-weight:750;
+}
+#app .aps-pages-acceptance .pages-test-card:only-child .pages-open-boards{
+  margin-top:8px;
+}
+/* Keep genuine failure and cleanup warnings obvious even on quiet surfaces. */
+#app .aps-pages-acceptance .pages-results .error-banner{
+  color:var(--sm-danger);
+  background:var(--sm-danger-soft);
+  border:1px solid #EEC9CE;
+  border-left:3px solid var(--sm-danger);
+  border-radius:var(--sm-radius-control);
+  padding:13px 15px;
+  font-size:12px;
+  line-height:1.65;
+  overflow-wrap:anywhere;
+}
+#app .aps-pages-acceptance .pages-result-note{
+  font-size:12px;
+  line-height:1.7;
+}
+#app .aps-pages-acceptance .pages-result-step{
+  overflow-wrap:anywhere;
+}
+@media(max-width:600px){
+  #app .aps-pages-acceptance .pages-test-grid:has(>.pages-test-card:only-child){
+    grid-template-columns:minmax(0,1fr);
+  }
+}
