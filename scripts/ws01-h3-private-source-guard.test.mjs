@@ -160,9 +160,9 @@ test('historical ACL expectations do not silently adopt later grants',()=>{
  const drift=structuredClone(g4b);
  drift.entries.find(e=>e.signature===entry.signature).authenticated_execute=true;
  // Baseline comparison may differ but the stored historical manifest is never updated.
- const changed=generateLiveCatalogFingerprintSql(manifest,drift,g4c);
- assert.ok(changed.includes("'"+entry.signature+"','"+entry.source_sha256+"',true,true,NULL"));
- assert.notEqual(sql,changed);
+ assert.throws(()=>generateLiveCatalogFingerprintSql(manifest,drift,g4c),
+   /DOCUMENTED_EVOLUTION_HISTORICAL_BASELINE_DRIFT/,
+   'a historical ACL rewrite must fail instead of being silently adopted');
 });
 
 test('documented evolution is confined to exact historical TradeLink signature and hash',()=>{
