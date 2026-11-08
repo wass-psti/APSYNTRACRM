@@ -328,3 +328,173 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   #app .aps-overview .overview-hero-art,
   #app .aps-boards .boards-hero-decor{opacity:.07}
 }
+
+/* Phase 4 — Core board view. Retain existing group horizontal scroll,
+   frozen cells, interactive selection, editing and menu positioning. */
+#app .aps-board-shell{
+  --board-ink:var(--sm-ink);
+  --board-muted:var(--sm-sub);
+  --board-indigo:var(--sm-accent);
+  --board-line:var(--sm-border);
+  --board-table-head:var(--sm-surface-raised);
+  background:var(--sm-bg);
+}
+#app .aps-board-shell .page-head{
+  min-height:140px;
+  padding:clamp(20px,2.6vw,32px);
+  margin-bottom:20px;
+  color:var(--sm-ink);
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-panel);
+  box-shadow:var(--sm-shadow-card);
+}
+#app .aps-board-shell .page-head::before{content:none}
+#app .aps-board-shell .page-head .label-top{
+  color:var(--sm-accent-hover);
+  letter-spacing:1.15px;
+  font-weight:750;
+}
+#app .aps-board-shell .page-head h1{
+  color:var(--sm-ink);
+  font-size:clamp(24px,2.3vw,34px);
+  font-weight:750;
+}
+#app .aps-board-shell .page-head p{color:var(--sm-sub)}
+#app .aps-board-shell .page-head .head-actions > .secondary,
+#app .aps-board-shell .page-head .board-actions-menu > summary{
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+  box-shadow:none;
+}
+#app .aps-board-shell .page-head .head-actions > .primary{
+  color:#fff;background:var(--sm-accent);
+  border-color:var(--sm-accent);box-shadow:none;
+}
+#app .aps-board-shell .page-head .head-actions > .primary:hover{
+  color:#fff;background:var(--sm-accent-hover);
+  border-color:var(--sm-accent-hover);
+}
+#app .aps-board-shell .page-head .head-actions > .secondary:hover,
+#app .aps-board-shell .page-head .board-actions-menu > summary:hover{
+  color:var(--sm-ink);
+  background:var(--sm-surface-soft);
+  border-color:var(--sm-border-strong);
+}
+#app .aps-board-shell .page-head .board-actions-menu > summary::after{color:var(--sm-muted)}
+#app .aps-board-shell .page-head :is(button,summary):focus-visible{
+  outline:2px solid var(--sm-accent);outline-offset:3px;
+}
+#app .aps-board-shell .tabs.board-draggable-tabs{
+  margin-bottom:18px;
+  background:var(--sm-surface-soft);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  box-shadow:none;
+}
+#app .aps-board-shell .board-tab-slot > .tab{
+  color:var(--sm-text);font-weight:650;
+  transition:background-color var(--sm-fast),color var(--sm-fast);
+}
+#app .aps-board-shell .board-tab-slot > .tab:hover{
+  color:var(--sm-accent-hover);background:var(--sm-accent-soft);
+}
+#app .aps-board-shell .board-tab-slot > .tab.active,
+#app .aps-board-shell .board-tab-slot > .tab[aria-selected="true"],
+#app .aps-board-shell .board-tab-slot > .tab.active:hover{
+  color:var(--sm-accent-hover);background:var(--sm-surface);
+  border-color:var(--sm-border);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-board-shell .board-tab-slot > .tab.active .csp-u060{color:var(--sm-accent)}
+#app .aps-board-shell .toolbar.board-customize-toolbar{
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-board-shell .board-customize-toolbar .search-wrap .search-input{
+  color:var(--sm-ink);
+  background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+  border-radius:var(--sm-radius-control);
+}
+#app .aps-board-shell .board-customize-toolbar .search-wrap .search-input:focus{
+  border-color:var(--sm-accent);background:#fff;box-shadow:var(--sm-focus);
+}
+#app .aps-board-shell .board-customize-toolbar > .secondary,
+#app .aps-board-shell .board-column-menu > summary{
+  color:var(--sm-text);
+  background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+}
+#app .aps-board-shell .board-customize-toolbar > .secondary:hover,
+#app .aps-board-shell .board-column-menu > summary:hover{
+  color:var(--sm-ink);background:var(--sm-surface-soft);
+  border-color:var(--sm-border-strong);
+}
+#app .aps-board-shell .group-heading{margin-top:24px;gap:10px}
+#app .aps-board-shell .group-heading::before{
+  width:4px;background:var(--sm-accent);
+  border-radius:var(--sm-radius-pill);
+}
+#app .aps-board-shell .group-heading h3{color:var(--sm-ink);font-weight:740}
+#app .aps-board-shell .group-heading small{color:var(--sm-sub)}
+#app .aps-board-shell .group-heading .board-group-actions > summary{
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border-color:var(--sm-border);
+}
+#app .aps-board-shell .panel.board-group-panel{
+  background:var(--sm-surface);
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  box-shadow:var(--sm-shadow-sm);
+}
+#app .aps-board-shell .board-group-scroll{
+  scrollbar-color:var(--sm-border-strong) transparent;
+}
+#app .aps-board-shell .board-group-scroll::-webkit-scrollbar-thumb{
+  background:var(--sm-border-strong);
+}
+#app .aps-board-shell .board-table-custom thead th,
+#app .aps-board-shell .board-table-custom thead th.board-frozen-column{
+  color:var(--sm-sub);
+  background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+  font-weight:730;
+  letter-spacing:.045em;
+}
+#app .aps-board-shell .board-table-custom tbody tr td,
+#app .aps-board-shell .board-table-custom tbody tr td.board-frozen-column{
+  color:var(--sm-text);
+  background:var(--sm-surface);
+  border-color:var(--sm-border);
+}
+#app .aps-board-shell .board-table-custom tbody tr:nth-child(even) td{
+  background:#FCFCFD;
+}
+#app .aps-board-shell .board-table-custom tbody tr:hover td{
+  background:#F4F5FA;
+}
+#app .aps-board-shell .board-table-custom tfoot td{
+  color:var(--sm-sub);background:var(--sm-surface-raised);
+  border-color:var(--sm-border);
+}
+#app .aps-board-shell .board-table-custom .board-item-open{
+  color:var(--sm-ink);
+}
+#app .aps-board-shell .board-table-custom :is(button,input):focus-visible{
+  outline-color:var(--sm-accent);
+}
+@media(max-width:640px){
+  #app .aps-board-shell .page-head{padding:20px;min-height:0}
+  #app .aps-board-shell .toolbar.board-customize-toolbar{padding:12px}
+}
+/* Preserve semantic selection states over generic zebra/hover backgrounds. */
+#app .aps-board-shell .board-table-custom tbody tr[aria-selected="true"] td,
+#app .aps-board-shell .board-table-custom tbody tr.is-selected td,
+#app .aps-board-shell .board-table-custom tbody tr.selected td{
+  background:var(--sm-accent-soft);
+}
