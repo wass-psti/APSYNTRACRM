@@ -124,7 +124,7 @@ export function expectedFullCallerSources(manifest,g4b,g4c) {
  return [...sources.values()].sort((a,b)=>a.signature.localeCompare(b.signature));
 }
 
-export function verifyCompletePrivateSourceBundle({directory,sources,repo=repoRoot}) {
+export function verifyCompletePrivateSourceBundle({directory,sources,repo=repoRoot,allowDocumentedLiveEvolution=false}) {
  ensure(typeof directory==='string'&&isAbsolute(directory),'BUNDLE_MUST_BE_ABSOLUTE');
  ensure(Array.isArray(sources)&&sources.length===74,'FULL_SOURCE_MANIFEST_COUNT');
  const declared=new Map();
@@ -148,6 +148,7 @@ export function verifyCompletePrivateSourceBundle({directory,sources,repo=repoRo
  const files=readdirSync(realDir).sort();
  ensure(files.length===declared.size && files.every(x=>declared.has(x)),
    'FULL_SOURCE_MISSING_OR_EXTRA_FILES');
+ let documented=0;
  for(const filename of files) {
   const path=join(realDir,filename),st=lstatSync(path);
   ensure(st.isFile()&&!st.isSymbolicLink()&&st.nlink===1,
@@ -156,11 +157,18 @@ export function verifyCompletePrivateSourceBundle({directory,sources,repo=repoRo
   if(typeof process.getuid==='function')
    ensure(st.uid===process.getuid(),'WRONG_SOURCE_OWNER');
   ensure(st.size>0&&st.size<=256*1024,'INVALID_SOURCE_SIZE');
-  ensure(sha256(readFileSync(path))===declared.get(filename).source_sha256,
-    'FULL_SOURCE_FINGERPRINT_MISMATCH');
+  const source=declared.get(filename),observed=sha256(readFileSync(path));
+  if(observed!==source.source_sha256) {
+   ensure(allowDocumentedLiveEvolution &&
+     source.signature==='private.tl03_commit(p_board_id uuid, p_document_id uuid, p_expected_revision bigint, p_operation text, p_data jsonb)' &&
+     source.source_sha256==='5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d' &&
+     observed==='08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618',
+     'FULL_SOURCE_FINGERPRINT_MISMATCH');
+   documented++;
+  }
  }
  return Object.freeze({verifiedOriginals:74,originalCallers:73,
-  executionPerformed:false,documentedLiveEvolutionAccepted:false});
+  executionPerformed:false,documentedLiveEvolutionAccepted:documented===1});
 }
 
 // Build a read-only, metadata-only live drift probe from the pinned inventories.
@@ -284,7 +292,8 @@ function cli() {
     const args=process.argv.slice(2);
     ensure(args.length===1&&(args[0]==='--manifest-only'||
       args[0]==='--catalog-sql'||args[0].startsWith('--private-dir=')||
-      args[0].startsWith('--full-private-dir=')),'USAGE');
+      args[0].startsWith('--full-private-dir=')||
+      args[0].startsWith('--full-live-private-dir=')),'USAGE');
     verifyDefaultPinnedSourceCatalog();
     if(args[0]==='--catalog-sql') {
       // No connection, credentials, source bodies or production writes.
@@ -298,14 +307,18 @@ function cli() {
       console.log('CP_WS01_H3_CORE_PROVENANCE_PASS: 3 core sources, 73 dependencies; replay NOT RUN');
       return;
     }
-    if(args[0].startsWith('--full-private-dir=')) {
+    if(args[0].startsWith('--full-private-dir=')||
+       args[0].startsWith('--full-live-private-dir=')) {
+      const live=args[0].startsWith('--full-live-private-dir=');
       const sources=expectedFullCallerSources(
         JSON.parse(readFileSync(manifestFile,'utf8')),
         JSON.parse(readFileSync(g4bFile,'utf8')),
         JSON.parse(readFileSync(g4cFile,'utf8')));
-      verifyCompletePrivateSourceBundle({
-        directory:args[0].slice('--full-private-dir='.length),sources});
-      console.log('CP_WS_ACTIVATE04_PROTECTED_74_SOURCE_FINGERPRINT_PASS: 73 original callers; runtime NOT RUN');
+      const result=verifyCompletePrivateSourceBundle({
+        directory:args[0].slice(
+          (live?'--full-live-private-dir=':'--full-private-dir=').length),
+        sources,allowDocumentedLiveEvolution:live});
+      console.log('CP_WS_ACTIVATE04_PROTECTED_74_SOURCE_FINGERPRINT_PASS: 73 caller sources; documented live evolution='+result.documentedLiveEvolutionAccepted+'; runtime NOT RUN');
       return;
     }
     verifyPrivateSourceBundle({

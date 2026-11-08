@@ -256,3 +256,21 @@ test('full protected CLI fails closed when source directory is missing',()=>{
  assert.match(result.stderr,/CP_WS01_H3_SOURCE_BLOCKED: INPUT_OR_PERMISSION_ERROR/);
  assert.doesNotMatch(result.stderr,/CREATE FUNCTION|service_role|postgres:\/\//i);
 });
+
+test('strict private validation rejects tampering even if live mode requested',()=>{
+ withFullSourceFixtures(({repo,bundle,sources})=>{
+  const target=join(bundle,sources[0].file);
+  writeFileSync(target,'-- replacement', {mode:0o600});
+  assert.throws(()=>verifyCompletePrivateSourceBundle({
+   directory:bundle,sources,repo,allowDocumentedLiveEvolution:true
+  }),/FULL_SOURCE_FINGERPRINT_MISMATCH/);
+ });
+});
+
+test('live CLI uses explicit opt-in and never prints private source on missing inputs',()=>{
+ const exe=fileURLToPath(new URL('./ws01-h3-private-source-guard.mjs',import.meta.url));
+ const r=spawnSync(process.execPath,[exe,'--full-live-private-dir=/nonexistent/protected'],{encoding:'utf8'});
+ assert.notEqual(r.status,0);
+ assert.match(r.stderr,/CP_WS01_H3_SOURCE_BLOCKED: INPUT_OR_PERMISSION_ERROR/);
+ assert.doesNotMatch(r.stderr,/postgres:|CREATE FUNCTION|nonexistent/i);
+});
