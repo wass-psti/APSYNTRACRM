@@ -1,12 +1,12 @@
 /**
  * Login, registration-admission and password-recovery presentation. The IDs, field names, and data-action hooks are the
  * existing signed-auth contract; no credentials are processed in this module.
- * @typedef {{message?:string,notice?:string,year?:number,mode?:string,resetReady?:boolean}} AuthMarkupOptions
+ * @typedef {{message?:string,notice?:string,year?:number,mode?:string,resetReady?:boolean,registrationEnabled?:boolean}} AuthMarkupOptions
  */
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,
  char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 /** @param {AuthMarkupOptions} options */
-export function renderAuthMarkup({message='',notice='',year=new Date().getFullYear(),mode='login',resetReady=false}={}){
+export function renderAuthMarkup({message='',notice='',year=new Date().getFullYear(),mode='login',resetReady=false,registrationEnabled=false}={}){
  const error=message?'<div class="login-error" role="alert">'+escapeHtml(message)+'</div>':'';
  const confirmation=notice?'<div class="auth-message" role="status">'+escapeHtml(notice)+'</div>':'';
  const loginForm=`     <form id="login-form" aria-describedby="auth-login-description">
@@ -26,14 +26,17 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>
       </button>
      </form>`;
- const registerForm=`<div class="auth-admission-warning" role="status" id="auth-registration-status"><strong>Self-service registration is being secured</strong>
-      <p>Legacy signup triggers must be replaced before activation. Verified new accounts will receive their own Main Workspace, without gaining platform-administrator privileges.</p></div>
+ const registerNotice=registrationEnabled?
+  '<p class="auth-form-explanation" id="auth-registration-status">Verify your email to activate your own Main Workspace. Your account will have ordinary platform access.</p>':
+  `<div class="auth-admission-warning" role="status" id="auth-registration-status"><strong>Self-service registration is being secured</strong>
+      <p>Legacy signup triggers must be replaced before activation. Verified new accounts will receive their own Main Workspace, without gaining platform-administrator privileges.</p></div>`;
+ const registerForm=`${registerNotice}
      <form id="register-form" aria-describedby="auth-registration-status">
       <div class="field"><label for="register-name">Full name</label><input id="register-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="120" required placeholder="Your full name"/></div>
       <div class="field"><label for="register-email">Work email</label><input id="register-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@company.com"/></div>
       <div class="field"><label for="register-password">Password</label><div class="password-wrap"><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="At least 12 characters"/><button type="button" class="eye-btn" data-action="toggle-password" data-password-target="register-password" aria-controls="register-password" aria-label="Show password" aria-pressed="false">Show</button></div></div>
       <div class="field"><label for="register-confirm">Confirm password</label><div class="password-wrap"><input id="register-confirm" name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="Repeat password"/><button type="button" class="eye-btn" data-action="toggle-password" data-password-target="register-confirm" aria-controls="register-confirm" aria-label="Show password" aria-pressed="false">Show</button></div></div>
-      <button type="submit" class="primary wide auth-submit" disabled aria-describedby="auth-registration-status">Create account — pending activation</button>
+      <button type="submit" class="primary wide auth-submit" ${registrationEnabled?'':'disabled '}aria-describedby="auth-registration-status">${registrationEnabled?'Create account':'Create account — pending activation'}</button>
      </form>`;
  const forgotForm=`<form id="forgot-form">
       <p class="auth-form-explanation">Enter your work email. If an eligible account exists, a recovery link will be sent. We never disclose account existence.</p>
@@ -50,7 +53,9 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
  const view=['login','register','forgot','reset'].includes(mode)?mode:'login';
  const copy={
  login:{eyebrow:'Your connected workspace',title:'Welcome back',description:'One secure sign-in to your projects, boards, and team. Continue with your existing WatchdogWorkspace account.',label:'WORKSPACE ACCESS',note:'Access is managed by your organization. No new account is created on sign in.'},
- register:{eyebrow:'Your personal workspace',title:'Create an account',description:'Self-service signup will include email verification and an automatically provisioned Main Workspace. Registration is temporarily disabled during backend security activation.',label:'ACCOUNT REGISTRATION',note:'Workspace ownership never grants global platform-administrator privileges.'},
+ register:{eyebrow:'Your personal workspace',title:'Create an account',description:registrationEnabled?
+ 'Verify your email to activate an automatically provisioned personal Main Workspace.':
+ 'Self-service signup will include email verification and an automatically provisioned Main Workspace. Registration is temporarily disabled during backend security activation.',label:'ACCOUNT REGISTRATION',note:'Workspace ownership never grants global platform-administrator privileges.'},
  forgot:{eyebrow:'Secure account recovery',title:'Forgot password',description:'Request a time-limited recovery link for your existing APSYNTRA CRM account.',label:'PASSWORD RECOVERY',note:'Recovery never modifies roles, memberships, or board permissions.'},
  reset:{eyebrow:'Protected password update',title:'Reset password',description:'Verify your recovery link and choose a new password.',label:'PASSWORD RESET',note:'Sign in again after changing your password.'}
  }[view];

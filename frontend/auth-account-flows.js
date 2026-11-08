@@ -5,6 +5,9 @@
  */
 export const REGISTRATION_ADMISSION_ENABLED=false;
 export const RECOVERY_REDIRECT_URL='https://wass-psti.github.io/APSYNTRACRM/?auth_action=recovery';
+export const REGISTRATION_REDIRECT_URL='https://wass-psti.github.io/APSYNTRACRM/?auth_action=signup';
+export const REGISTRATION_CONFIRMATION='If this address is eligible, check your inbox for a verification link. Confirm your email before signing in.';
+export const REGISTRATION_FAILURE='Account registration could not be completed. Please try again later or contact your administrator.';
 export const PASSWORD_MIN_LENGTH=12;
 export const PASSWORD_MAX_LENGTH=72;
 export const RECOVERY_CONFIRMATION='If the address is eligible, password recovery instructions will be sent. Check your inbox and spam folder.';
@@ -21,6 +24,28 @@ export function validateRegistration({name='',email='',password='',confirmation=
  if(pw)errors.password=pw;
  if(password!==confirmation)errors.confirmation='Passwords do not match.';
  return errors;
+}
+/** Never creates a CRM session or supplies caller-controlled role/workspace claims.
+ * The backend gate and verified-email account provisioning are authoritative.
+ */
+export async function submitRegistration(auth,{name='',email='',password='',confirmation=''}={}){
+ const problems=validateRegistration({name,email,password,confirmation});
+ const first=Object.values(problems)[0];
+ if(first)throw Error(first);
+ try{
+  const result=await auth.requestRegistration({
+   name:String(name).trim(),email:String(email).trim().toLowerCase(),password
+  },REGISTRATION_REDIRECT_URL);
+  // If the provider was configured to sign users in before verification,
+  // never treat that response as a valid CRM admission.
+  if(result?.access_token||result?.session?.access_token)
+   throw Error('Email confirmation is required before registration can be activated. Contact your administrator.');
+  return REGISTRATION_CONFIRMATION;
+ }catch(error){
+  if(error?.status===429)throw Error('Too many registration requests. Please try again later.');
+  if(error?.message==='Email confirmation is required before registration can be activated. Contact your administrator.')throw error;
+  throw Error(REGISTRATION_FAILURE);
+ }
 }
 export function validatePassword(value){
  const pw=String(value??'');

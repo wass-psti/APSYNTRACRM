@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {renderAuthMarkup} from '../auth-markup.js';
+import {AuthClient,ApiError} from '../session.js';
 import {
  REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,RECOVERY_REDIRECT_URL,
+ REGISTRATION_REDIRECT_URL,REGISTRATION_CONFIRMATION,REGISTRATION_FAILURE,submitRegistration,
  RECOVERY_CONFIRMATION,validateRegistration,validatePassword,
  safeRecoveryError,captureAuthReturn,inspectRecoveryToken,requestPasswordRecovery,
  applyRecoveredPassword
@@ -29,7 +31,97 @@ test('self-service registration stays disabled until verified personal-workspace
  assert.match(app,/REGISTRATION_BLOCKED/);
  assert.doesNotMatch(source,/auth\/v1\/signup/);
  assert.doesNotMatch(app,/auth\.signUp\(|auth\.register\(/);
- assert.doesNotMatch(client,/auth\/v1\/signup/);
+ assert.match(client,/auth\/v1\/signup/);
+ assert.match(client,/registrationPending/);
+});
+
+test('gated signup preview is available only when backend admission is separately authorized',()=>{
+ const blocked=renderAuthMarkup({mode:'register'});
+ assert.match(blocked,/disabled aria-describedby="auth-registration-status"/);
+ const enabled=renderAuthMarkup({mode:'register',registrationEnabled:true});
+ assert.match(enabled,/id="register-form"/);
+ assert.match(enabled,/>Create account<\/button>/);
+ assert.doesNotMatch(enabled,/pending activation|is being secured/);
+ assert.match(enabled,/Verify your email to activate/);
+ assert.match(app,/REGISTRATION_ADMISSION_ENABLED/);
+ assert.match(app,/submitRegistrationForm/);
+ assert.match(app,/submitRegistration\(auth,fields\)/);
+});
+
+test('registration submits only minimal name/email/password to GoTrue, never creates a local session',async()=>{
+ const requests=[];
+ const auth=new AuthClient({storage:null,fetchImpl:async(url,options)=>{
+  requests.push({url,options});
+  return new Response(JSON.stringify({id:'non-secret-provider-result'}),{
+   status:200,headers:{'content-type':'application/json'}
+  });
+ }});
+ const form={name:'  Ordinary User  ',email:'  USER@Example.test  ',
+  password:'SecurePassword2026!',confirmation:'SecurePassword2026!'};
+ const [a,b]=await Promise.all([submitRegistration(auth,form),submitRegistration(auth,form)]);
+ assert.equal(a,REGISTRATION_CONFIRMATION);
+ assert.equal(b,REGISTRATION_CONFIRMATION);
+ assert.equal(requests.length,1,'in-flight duplicate requests must be coalesced');
+ assert.equal(requests[0].options.method,'POST');
+ const url=new URL(requests[0].url);
+ assert.equal(url.pathname.endsWith('/auth/v1/signup'),true);
+ assert.equal(url.searchParams.get('redirect_to'),REGISTRATION_REDIRECT_URL);
+ assert.deepEqual(JSON.parse(requests[0].options.body),{
+  email:'user@example.test',password:'SecurePassword2026!',
+  data:{display_name:'Ordinary User'}
+ });
+ assert.equal(auth.isSignedIn,false);
+ assert.equal(auth.session,null);
+ assert.equal(auth.registrationPending,null);
+ assert.doesNotMatch(requests[0].options.body,/workspace_id|platform_role|admin_general_manager/);
+});
+
+test('a concurrent signup for another email is rejected, never falsely acknowledged',async()=>{
+ let complete;
+ let requests=0;
+ const auth=new AuthClient({storage:null,fetchImpl:async()=>{
+  requests++;
+  await new Promise(resolve=>{complete=resolve;});
+  return new Response('{}',{status:200,headers:{'content-type':'application/json'}});
+ }});
+ const primary=auth.requestRegistration({name:'Ordinary User',
+  email:'user@example.test',password:'SecurePassword2026!'},REGISTRATION_REDIRECT_URL);
+ await assert.rejects(auth.requestRegistration({name:'Someone Else',
+  email:'other@example.test',password:'SecurePassword2026!'},REGISTRATION_REDIRECT_URL),
+  /already in progress/);
+ complete();
+ await primary;
+ assert.equal(requests,1);
+ assert.equal(auth.registrationEmail,null);
+});
+
+test('registration rejects invalid inputs before the network and never trusts unverified sessions',async()=>{
+ let calls=0;
+ const auth={requestRegistration:async()=>{calls++;return {access_token:'unsafe'};}};
+ await assert.rejects(submitRegistration(auth,{
+  name:'',email:'bad',password:'short',confirmation:'different'
+ }),/full name/);
+ assert.equal(calls,0);
+ await assert.rejects(submitRegistration(auth,{
+  name:'Ordinary User',email:'user@example.test',
+  password:'SecurePassword2026!',confirmation:'SecurePassword2026!'
+ }),/Email confirmation is required/);
+ assert.equal(calls,1);
+});
+
+test('registration errors are nonenumerating, rate-limited and do not retry failed sends',async()=>{
+ const valid={name:'Ordinary User',email:'user@example.test',
+  password:'SecurePassword2026!',confirmation:'SecurePassword2026!'};
+ let calls=0;
+ const denied={requestRegistration:async()=>{calls++;throw new ApiError('User already registered',400);}};
+ await assert.rejects(submitRegistration(denied,valid),e=>e.message===REGISTRATION_FAILURE);
+ assert.equal(calls,1);
+ const throttled={requestRegistration:async()=>{throw new ApiError('rate limited',429);}};
+ await assert.rejects(submitRegistration(throttled,valid),/Too many registration requests/);
+ const auth=new AuthClient({storage:null,fetchImpl:async()=>{throw Error('offline');}});
+ await assert.rejects(submitRegistration(auth,valid),e=>e.message===REGISTRATION_FAILURE);
+ await assert.rejects(auth.requestRegistration({name:'Ordinary User',email:'user@example.test',password:'abc'},
+   'https://evil.test/redirect'),/Invalid registration redirect/);
 });
 
 test('registration validation handles names, format, password and mismatched confirmation without role claims',()=>{

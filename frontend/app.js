@@ -3,7 +3,7 @@ import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelecto
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
-import {REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,captureAuthReturn,
+import {REGISTRATION_ADMISSION_ENABLED,REGISTRATION_BLOCKED,submitRegistration,captureAuthReturn,
  inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword} from './auth-account-flows.js';
 import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
@@ -209,7 +209,7 @@ function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopUserRoleMotion();
  stopSettingsMotion();
  stopPagesAcceptanceMotion();
- root.innerHTML=renderAuthMarkup({message,notice,mode,resetReady:mode==='reset'&&!!recoveryContext});
+ root.innerHTML=renderAuthMarkup({message,notice,mode,registrationEnabled:REGISTRATION_ADMISSION_ENABLED,resetReady:mode==='reset'&&!!recoveryContext});
  if(state.tl03RevokedReport&&!auth.isSignedIn)
   root.insertAdjacentHTML('beforeend',renderTradeLinkSignedOutRevocationResult(state.tl03RevokedReport));
  authVisualController=mountAuthExperience(root.querySelector('.aps-auth-v2'));
@@ -2011,6 +2011,33 @@ async function onRoute(){
    finally{state.foundationBusy=false;}
  }
  render();
+}
+async function submitRegistrationForm(form){
+ if(state.authBusy)return;
+ if(!REGISTRATION_ADMISSION_ENABLED){
+  renderLogin(REGISTRATION_BLOCKED,{mode:'register'});return;
+ }
+ const fields=Object.fromEntries(new FormData(form));
+ const submit=form.querySelector('[type="submit"]');
+ state.authBusy=true;
+ if(submit){submit.disabled=true;submit.textContent='Creating account…';}
+ try{
+  const confirmation=await submitRegistration(auth,fields);
+  form.reset();
+  renderLogin('',{mode:'register',notice:confirmation});
+ }catch(error){
+  const existing=form.querySelector('[data-registration-error]');
+  existing?.remove();
+  const message=document.createElement('p');
+  message.className='login-error';
+  message.dataset.registrationError='';
+  message.setAttribute('role','alert');
+  message.textContent=errorMessage(error);
+  form.prepend(message);
+ }finally{
+  state.authBusy=false;
+  if(submit?.isConnected){submit.disabled=false;submit.textContent='Create account';}
+ }
 }
 async function submitRecoveryRequest(form){
  if(state.authBusy)return;
@@ -5004,6 +5031,7 @@ root.addEventListener('submit',event=>{
   // requires the independently approved server-side trigger/RLS activation.
   if(!REGISTRATION_ADMISSION_ENABLED)
    renderLogin(REGISTRATION_BLOCKED,{mode:'register'});
+  else Promise.resolve(submitRegistrationForm(event.target)).catch(notice);
   return;
  }
  if(event.target.id==='forgot-form'){
