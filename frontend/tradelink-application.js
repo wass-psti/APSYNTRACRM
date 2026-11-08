@@ -88,7 +88,7 @@ function renderDocuments(detail,workspaceId,draftView,canManage){
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Authorized board projection</p>'+
   '<h2 id="tl-documents-title">Board records</h2></div>'+
   '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'">Open Board Items</a></div>'+
-  '<p class="muted">Only server-returned board records appear here. This is not yet the original TradeLink All Documents repository. Document type, approvals, pricing and attachments require a verified domain projection.</p>'+
+  '<p class="muted">Board items are linked to the same authorized TradeLink documents listed above. Open a linked document to preview its saved revision; approvals and attachments remain separate workflows.</p>'+
   '<label class="tl-search-label" for="tradelink-document-search">Search board item titles</label>'+
   '<input class="search-input tl-record-search" type="search" id="tradelink-document-search" data-tradelink-search maxlength="120" autocomplete="off" placeholder="Search authorized records…"/>'+
   '<div class="tl-records-scroll"><table class="tl-records-table"><thead><tr>'+
@@ -155,26 +155,26 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
     '<span aria-hidden="true">▤</span> Signed workspace</div>'+
   '</header>'+
   '<p class="tl-reference-access-note" role="status">'+
-   'Source-aligned application foundation · domain writes not activated. '+
+   'Signed Draft operations. '+
    'Uses your existing APSYNTRA signed authorization.</p>'+
   (current==='overview'?
    '<div class="tl-reference-overview">'+
     '<header class="tl-app-hero"><p class="tl-eyebrow">APSYNTRA CRM / TradeLink</p>'+
      '<h2>Commercial operations</h2>'+
      '<p>Six TradeLink document modules within the existing signed APSYNTRA workspace.</p>'+
-     '<span class="tl-hero-status">Source-aligned application foundation · domain writes not activated</span>'+
+     '<span class="tl-hero-status">Signed Draft operations</span>'+
     '</header>'+
     '<div class="tl-stat-grid">'+
      summaryCard('Authorized board records',sum.activeBoardItems,'Current signed board response')+
      summaryCard('Document modules',TRADELINK_SOURCE_MODULES.length,'Defined by uploaded source')+
      summaryCard('Configured board fields',sum.operationalColumns+' / 5','Five supported typed columns')+
-     summaryCard('Domain write API','Pending','Workflow writes remain disabled')+
+     summaryCard('Draft persistence','Enabled','Signed server authorization required')+
     '</div></div>':'')+
   '<div class="tl-app-layout"><nav class="tl-app-nav" aria-label="TradeLink application navigation">'+
    '<a class="tl-section-link'+activeNav('overview')+'" href="'+base+'"'+currentAttr('overview')+'>Overview</a>'+
    '<a class="tl-section-link'+activeNav('documents')+'" href="'+base+'/documents"'+currentAttr('documents')+'>Board records <span>'+sum.activeBoardItems+'</span></a>'+
    '<a class="tl-section-link'+activeNav('activity')+'" href="'+base+'/activity"'+currentAttr('activity')+'>Activity</a>'+
-   '<a class="tl-section-link'+activeNav('drafts')+'" href="'+base+'/drafts"'+currentAttr('drafts')+'>Draft workspace <span>Staged</span></a>'+
+   '<a class="tl-section-link'+activeNav('drafts')+'" href="'+base+'/drafts"'+currentAttr('drafts')+'>Draft workspace <span>Save enabled</span></a>'+
    '<h3>Document modules</h3>'+
    TRADELINK_SOURCE_MODULES.map(entry=>moduleLink(entry,current)).join('')+'</nav>'+
    '<div class="tl-app-main">'+

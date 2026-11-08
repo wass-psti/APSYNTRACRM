@@ -563,8 +563,8 @@ function referenceDocumentHeader(type,editing,canSave=false){
    '</div>'+
   '</header>'+
   '<p class="tl-reference-workflow-notice" role="note">'+
-   'Local preparation only. Validate locally to check the Draft. '+
-   'Save, review, approval, Templates and PDF export require separately authorized server activation.'+
+   'Validate Draft inputs locally, then Save Draft to create or update the signed database record '+
+   'and its linked Board item. Submission, approvals, Templates and PDF export remain unavailable.'+
   '</p></div>';
 }
 /** Render one existing or newly added item; all untrusted fields are escaped. */
@@ -746,7 +746,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '<button type="submit" class="primary"'+(live?'':' disabled title="Production Draft writes are not activated"')+
      '>'+(editing?'Save revision':'Create Draft')+'</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
-    'Not saved. Domain write activation is pending.</p>'+
+    'Not saved. Complete required fields before saving.</p>'+
    renderTradeLinkDraftLocalSummary(type)+
   '</form></div></section>';
 }
@@ -997,7 +997,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
  return '<section class="tl-content-panel tl-document-repository" aria-labelledby="tl-domain-repository-title">'+
   '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Source-aligned All Documents</p>'+
   '<h2 id="tl-domain-repository-title">TradeLink document workspace</h2></div>'+
-  '<span class="tl-draft-badge">Read-only staging</span></div>'+
+  '<span class="tl-draft-badge">Signed document preview</span></div>'+
   '<p class="muted">This authoritative document workspace is separate from Board Items. '+
   'Only a signed, role-authorized Domain DocumentRecord response may appear here. '+
   'Document reads are '+(TL03_DOMAIN_READS_ENABLED?'subject to signed authorization':
@@ -1031,9 +1031,9 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
    view.error||'',view.message||'',view.lineDrafts)+
   '<details class="tl-reference-list-details">'+
    '<summary>All Documents · authorized Draft listing'+
-    '<span class="tl-draft-badge">Signed read · Draft writes pending</span></summary>'+
+    '<span class="tl-draft-badge">Signed Draft operations</span></summary>'+
    '<section class="tl-draft-panel"><div class="tl-panel-heading">'+
-    '<div><p class="tl-eyebrow">CP-TL-03D / Phase 1</p><h2>Draft workspace</h2></div></div>'+
+    '<div><p class="tl-eyebrow">TradeLink document management</p><h2>Draft workspace</h2></div></div>'+
     '<p class="muted">Domain reads: <strong>'+
      (TL03_DOMAIN_READS_ENABLED?'enabled':'not activated')+'</strong>. Writes: <strong>'+
      (TL03_DOMAIN_WRITES_ENABLED?'enabled':'not activated')+

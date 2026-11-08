@@ -63,10 +63,10 @@ test('all six modules use screenshot-led document cards, accessible tabs and no 
   assert.match(html,/data-action="tradelink-draft-clear"/);
   assert.match(html,/Generate PDF<\/button>/);
   assert.match(html,/title="PDF generation requires an authorized workflow"/);
-  assert.match(html,/type="submit" class="primary" disabled/);
+  assert.match(html,/type="submit" class="primary">/);
   assert.match(html,/No PDF, approval or document is generated/);
   assert.equal(TL03_DOMAIN_READS_ENABLED,true);
-  assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+  assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
  }
 });
 
@@ -90,7 +90,7 @@ test('reference items, financial previews and workflow fields preserve module-sp
 test('disabled signed listing follows main editor and must not display synthetic rows',()=>{
  const html=draft('quotation');
  assert.ok(html.indexOf('tl-reference-document-topcard')<html.indexOf('tl-reference-list-details'));
- assert.match(html,/Signed read · Draft writes pending/);
+ assert.match(html,/Signed Draft operations/);
  assert.match(html,/data-action="tradelink-draft-refresh"/);
  assert.match(html,/No authorized TradeLink Draft records have been loaded/);
  assert.match(html,/current signed, authorized response \(maximum 50 records\)/);

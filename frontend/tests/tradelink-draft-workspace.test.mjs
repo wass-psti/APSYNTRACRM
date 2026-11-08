@@ -29,15 +29,15 @@ test('dark-launch UI is routed inside the existing signed TradeLink app',()=>{
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'drafts',
   draftView:initialTradeLinkDraftView(),canManage:true});
  assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts"/);
- assert.match(html,/Signed read · Draft writes pending/);
+ assert.match(html,/Signed Draft operations/);
  assert.match(html,/data-tradelink-draft-form/);
  assert.match(html,/data-action="tradelink-draft-preview"/);
  assert.match(html,/data-action="tradelink-draft-refresh"/);
- assert.match(html,/type="submit" class="primary" disabled/);
+ assert.match(html,/type="submit" class="primary">/);
  assert.doesNotMatch(html,/data-action="tradelink-draft-archive"[^>]*>Archive/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
- assert.equal(tradeLinkDraftReady(),false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
+ assert.equal(tradeLinkDraftReady(),true);
 });
 
 
@@ -53,7 +53,7 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
   const editor=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
   assert.ok(editor.includes('<option value="'+module.key+'" selected>'),module.label);
   assert.match(editor,/data-action="tradelink-draft-preview"/);
-  assert.match(editor,/type="submit" class="primary" disabled/);
+  assert.match(editor,/type="submit" class="primary">/);
   const examples={
    packing:{customerName:'Consignee',referenceNumber:'SO-7',
     lineDescription:'Packed item',lineQuantity:'2',lineUnit:'box'},
@@ -93,7 +93,7 @@ test('foreign workspace or an unrelated board renders no usable editor',()=>{
  assert.doesNotMatch(renderTradeLinkDraftWorkspace({detail:wrong,workspaceId:workspace}),/data-tradelink-draft-form/);
 });
 
-test('client never contacts auth, boards or RPC while both production flags are disabled',async()=>{
+test('client denies all operations when signed auth and board APIs are unavailable',async()=>{
  let calls=0;
  const client=new TradeLinkDraftWorkspace({
   auth:{getVerifiedUser:async()=>{calls++;throw Error('unexpected auth');}},
@@ -101,10 +101,10 @@ test('client never contacts auth, boards or RPC while both production flags are 
  });
  await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
  await assert.rejects(()=>client.read('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),/Signed TradeLink domain API unavailable/);
- await assert.rejects(()=>client.save({draft:{documentType:'quotation',documentNumber:'Q-001'}}),/dark launch/i);
+ await assert.rejects(()=>client.save({draft:{documentType:'quotation',documentNumber:'Q-001'}}),/Signed TradeLink domain API unavailable/i);
  await assert.rejects(()=>client.changeState({
   documentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',revision:1,operation:'archive'
- }),/dark launch/i);
+ }),/Signed TradeLink domain API unavailable/i);
  assert.equal(calls,0);
 });
 
@@ -139,7 +139,7 @@ test('Packing List local readiness uses source reference, consignee and nonprice
  assert.match(html,/Physical shipment item \(required for local readiness\)/);
  assert.doesNotMatch(html,/name="lineUnitPrice"/);
  assert.doesNotMatch(html,/name="cashAmount"/);
- assert.match(html,/type="submit" class="primary" disabled/);
+ assert.match(html,/type="submit" class="primary">/);
  const sample={documentType:'packing',documentNumber:'PL-001',
   customerName:'Receiving company',referenceNumber:'SO-001',
   lineDescription:'Parts',lineQuantity:'3',lineUnit:'box'};
@@ -160,7 +160,7 @@ test('Delivery Receipt local readiness validates QC, logistics and optional seri
  for(const name of ['checkedBy','deliveredBy','receivedBy','lineSerialNumber'])
   assert.ok(html.includes('name="'+name+'"'),name);
  assert.match(html,/Delivery responsibility · preview only/);
- assert.match(html,/type="submit" class="primary" disabled/);
+ assert.match(html,/type="submit" class="primary">/);
  assert.doesNotMatch(html,/name="lineUnitPrice"/);
  const sample={documentType:'delivery',documentNumber:'DR-001',
   customerName:'Recipient',referenceNumber:'SO-002',
@@ -193,7 +193,7 @@ test('Payment AR local readiness enforces positive cash or cheque and responsibi
   assert.ok(html.includes('name="'+name+'"'),name);
  assert.doesNotMatch(html,/name="lineDescription"/);
  assert.match(html,/This form does not receive or verify funds/);
- assert.match(html,/type="submit" class="primary" disabled/);
+ assert.match(html,/type="submit" class="primary">/);
  const sample={documentType:'payment',documentNumber:'AR-001',customerName:'Payor',
   paymentParticulars:'Partial invoice settlement',cashAmount:'250.75',
   receivedBy:'Cashier',verifiedBy:'Finance'};
@@ -224,7 +224,7 @@ test('module switching updates ephemeral fields without storage, network or work
  assert.match(app,/if\(captureTradeLinkDraftFields\(event\)\)\{/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 test('Electronic SI preview validates client identity, priced line and intended review names',()=>{
@@ -233,7 +233,7 @@ test('Electronic SI preview validates client identity, priced line and intended 
  for(const name of ['customerTin','verifiedBy','approvedBy','lineUnitPrice'])
   assert.ok(html.includes('name="'+name+'"'),name);
  assert.match(html,/Electronic SI readiness · preview only/);
- assert.match(html,/type="submit" class="primary" disabled/);
+ assert.match(html,/type="submit" class="primary">/);
  const base={documentType:'esi',documentNumber:'SI-001',customerName:'Client',
   customerTin:'TIN-123',verifiedBy:'Finance',approvedBy:'Manager',
   lineDescription:'Invoiced goods',lineQuantity:'1',lineUnitPrice:'100'};
@@ -275,7 +275,7 @@ test('Supplier PO preview requires priced items, terms and intended reviewers',(
  for(const name of ['poNumber','targetDeliveryDate','paymentTerms','verifiedBy','approvedBy','lineUnitPrice'])
   assert.ok(html.includes('name="'+name+'"'),name);
  assert.match(html,/Supplier PO readiness · preview only/);
- assert.match(html,/type="submit" class="primary" disabled/);
+ assert.match(html,/type="submit" class="primary">/);
  const base={documentType:'po',documentNumber:'PO-001',customerName:'Supplier',
   targetDeliveryDate:'2026-12-15',paymentTerms:'Net 15',verifiedBy:'Account manager',
   approvedBy:'Final manager',poNumber:'V-PO-111',
@@ -300,7 +300,7 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
  for(const type of ['esi','quotation','po']){
   const output=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
    view:initialTradeLinkDraftView(type),canManage:true});
-  assert.match(output,/type="submit" class="primary" disabled/);
+  assert.match(output,/type="submit" class="primary">/);
   assert.match(output,/Validate locally/);
  }
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
@@ -310,7 +310,7 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
   assert.ok(app.includes("'"+key+"'"),key);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 
@@ -342,7 +342,7 @@ test('switching all six modules discards prior unsaved fields without altering t
     assert.ok(!html.includes(sensitive),from+' → '+to+' leaked '+sensitive);
    assert.match(html,/Unsaved local fields cleared/);
    assert.match(html,/data-action="tradelink-draft-clear"/);
-   assert.match(html,/type="submit" class="primary" disabled/);
+   assert.match(html,/type="submit" class="primary">/);
   }
  }
  const stale=resetTradeLinkDraftForm({...initialTradeLinkDraftView('po'),formValues:{
@@ -427,7 +427,7 @@ test('commercial estimate exists only for the three priced module forms and is n
    assert.match(html,/No exchange rate or approval is inferred/);
    assert.match(html,/Local estimate only · no Draft save, payment, transaction or approval/);
   }
-  assert.match(html,/type="submit" class="primary" disabled/);
+  assert.match(html,/type="submit" class="primary">/);
  }
 });
 
@@ -464,7 +464,7 @@ test('local commercial estimate updates DOM text only and resets to placeholders
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 test('commercial Draft preview uses source discount and explicit FX with no assumed conversion',()=>{
@@ -533,7 +533,7 @@ test('commercial estimate rerender restores source-calculated amount and remains
  for(const key of ['discountType','discountValue','exchangeRate'])
   assert.ok(app.includes("'"+key+"'"));
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 test('Draft financial rows expose correct ISO currency units and explicit PHP denomination',()=>{
@@ -567,7 +567,7 @@ test('Payment AR cash and cheque fields expose selected currency without financi
   assert.match(html,/Cheque amount/);
   assert.equal((html.match(new RegExp('data-tradelink-draft-money-currency>'+currency+'<\\/span>','g'))||[]).length,2);
   assert.doesNotMatch(html,/data-tradelink-draft-finance|data-tradelink-draft-amount=/);
-  assert.match(html,/type="submit" class="primary" disabled/);
+  assert.match(html,/type="submit" class="primary">/);
  }
 });
 
@@ -630,7 +630,7 @@ test('Draft module is an exact-hash CDN smoke asset and focus styling remains sc
  assert.match(html,/id="tl-draft-fx-help"/);
  assert.match(html,/data-tradelink-draft-preview-status[^>]*aria-atomic="true"/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 
@@ -642,7 +642,7 @@ test('six TradeLink modules render bounded hidden local document previews only',
   assert.ok(html.includes('data-document-type="'+module.key+'" hidden'),module.key);
   assert.match(html,/Validated local Draft summary · not saved/);
   assert.match(html,/Nothing was transmitted/);
-  assert.match(html,/type="submit" class="primary" disabled/);
+  assert.match(html,/type="submit" class="primary">/);
   assert.match(html,/data-action="tradelink-draft-preview"/);
  }
  const invalid=renderTradeLinkDraftWorkspace({detail,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -732,7 +732,7 @@ test('success/invalid/input paths wire local summary only; no new persistence ro
  assert.match(draft,/class="tl-draft-summary"/);
  assert.doesNotMatch(draft,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 test('local priced summary names financial components and never fabricates foreign-currency conversion',()=>{
@@ -775,7 +775,7 @@ test('read-only listing presents filters but never reveals rows or enables RPC u
  assert.match(html,/SECRET-Q/);
  assert.match(html,/1 of 1 authorized records in this response/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
  const client=new TradeLinkDraftWorkspace({
   auth:{getVerifiedUser:async()=>{throw Error('auth must not be read');}},
   api:{rpc:async()=>{throw Error('RPC must not be called');}}
@@ -843,7 +843,7 @@ test('document-list DOM filters hide rows and show accessible counts without wri
  assert.match(app,/captureTradeLinkDraftListFilters\(event\)/);
  assert.match(app,/updateTradeLinkDraftListUI\(container,filters\)/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 test('document workspace is distinct from board projection and honors signed workspace boundary',()=>{
@@ -852,7 +852,7 @@ test('document workspace is distinct from board projection and honors signed wor
  assert.match(html,/TradeLink document workspace/);
  assert.match(html,/Source-aligned All Documents/);
  assert.match(html,/Board records/);
- assert.match(html,/not yet the original TradeLink All Documents repository/);
+ assert.match(html,/Board items are linked to the same authorized TradeLink documents/);
  assert.match(html,/Document reads are subject to signed authorization/);
  for(const name of ['query','documentType','workflowState','archiveMode','sortBy','sortDirection'])
   assert.ok(html.includes('name="'+name+'"'),name);
@@ -882,7 +882,7 @@ test('disabled document reads redact even injected authorized-state list rows an
  });
  await assert.rejects(()=>client.list(),/Signed TradeLink domain API unavailable/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 test('sorting handles numbered document IDs and numeric revision without re-querying server',()=>{
@@ -929,7 +929,7 @@ test('sortable authorized document view only reorders current DOM nodes and pres
  assert.match(app,/sortBy:get\('sortBy'\),sortDirection:get\('sortDirection'\)/);
  assert.match(app,/TL03_DOMAIN_READS_ENABLED&&state\.board\?\.board\?\.id===TRADELINK_BOARD_ID/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 
@@ -977,7 +977,7 @@ test('dark-launch source list and Board cannot expose forged saved documents or 
  assert.match(html,/data-tradelink-saved-preview/);
  assert.match(html,/tradelink-document-open/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 
 test('operational save and read handlers retain signed linkage, backend receipt and release gate',()=>{
@@ -998,7 +998,7 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  assert.match(draft,/data-action="tradelink-document-open"/);
  assert.match(draft,/renderTradeLinkSavedDocumentPreview/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });
 test('dark launch never renders stale selected document content after read access is disabled',()=>{
  const malicious='"><img src=x onerror=alert(1)>';
@@ -1011,7 +1011,7 @@ test('dark launch never renders stale selected document content after read acces
  assert.doesNotMatch(html,/<img src=x onerror=alert/);
  assert.match(html,/&lt;img src=x onerror=alert/);
  assert.match(html,/Signed Draft loaded/);
- assert.match(html,/type="submit" class="primary" disabled/);
+ assert.match(html,/type="submit" class="primary">/);
  assert.doesNotMatch(html,/saved successfully/i);
 });
 

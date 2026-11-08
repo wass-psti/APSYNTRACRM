@@ -103,7 +103,7 @@ test('edit uses persisted revision and all saved item IDs without a create reque
  assert.match(html,/Add item/);
  assert.match(html,/Remove item/);
  assert.match(html,/name="lineUnitPrice"/);
- assert.match(html,/type="submit" class="primary" disabled/);
+ assert.match(html,/type="submit" class="primary">/);
 });
 
 test('financial estimate uses all persisted items including PHP conversion',()=>{
@@ -124,7 +124,7 @@ test('financial estimate uses all persisted items including PHP conversion',()=>
 
 test('signed list/read uses authoritative RPC and can be reloaded in a new session client',async()=>{
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
- assert.equal(TL03_DOMAIN_WRITES_ENABLED,false);
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
  const calls=[];
  const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
  const api={
@@ -226,4 +226,39 @@ test('saved multi-item content and UI save feedback remain escaped',()=>{
  assert.match(editor,/&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
  assert.match(editor,/Saving Draft to database/);
  assert.equal((editor.match(/data-tradelink-line-item/g)||[]).length,3);
+});
+
+test('Stage B signed create/retry/update invoke only guarded RPC with authoritative receipts',async()=>{
+ assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
+ const calls=[];
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={
+  context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>detail,
+  allowed:async()=>true,
+  rpc:async(name,args)=>{
+   calls.push({name,args});
+   assert.equal(name,'tl03_document_commit');
+   assert.equal(args.p_board_id,TRADELINK_BOARD_ID);
+   assert.equal(args.p_document_id,docId);
+   return {documentId:docId,boardItemId:itemId,revision:args.p_expected_revision+1,
+    state:'draft',operation:args.p_operation,idempotent:false};
+  }
+ };
+ const client=new TradeLinkDomainClient({api,auth});
+ const create=await client.commit({documentId:docId,expectedRevision:0,operation:'create',draft});
+ assert.equal(create.revision,1);
+ const updated=await client.commit({documentId:docId,expectedRevision:1,operation:'update',draft});
+ assert.equal(updated.revision,2);
+ assert.equal(calls.length,2);
+ assert.deepEqual(calls.map(c=>c.args.p_expected_revision),[0,1]);
+ assert.deepEqual(calls.map(c=>c.args.p_operation),['create','update']);
+ assert.deepEqual(calls[0].args.p_data,draft);
+ let deniedCalls=0;
+ const noAccess=new TradeLinkDomainClient({auth,api:{...api,
+  allowed:async()=>false,rpc:async()=>{deniedCalls++;throw Error('Write must be denied');}}});
+ await assert.rejects(()=>noAccess.commit({
+  documentId:docId,expectedRevision:0,operation:'create',draft
+ }),/manager scope required/);
+ assert.equal(deniedCalls,0);
 });

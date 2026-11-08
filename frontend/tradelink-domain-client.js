@@ -7,7 +7,8 @@ import {validUuid} from './data.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 // Stage A read RPCs enforce signed-session, board and General Manager checks.
 export const TL03_DOMAIN_READS_ENABLED=true;
-export const TL03_DOMAIN_WRITES_ENABLED=false;
+// Stage B authenticated EXECUTE grants are live; server enforces session and workspace permissions.
+export const TL03_DOMAIN_WRITES_ENABLED=true;
 const TYPES=new Set(['esi','packing','delivery','payment','quotation','po']);
 const STATES=new Set(['draft','submitted','under-review','revision-required',
  'approved','rejected','completed','cancelled']);
