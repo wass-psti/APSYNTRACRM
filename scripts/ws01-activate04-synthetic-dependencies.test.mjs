@@ -9,7 +9,7 @@ const source=readFileSync(
 test('source-fidelity prerequisite fixture has exact isolated PG17 gate',()=>{
  assert.match(source,/current_database\(\)<>'workspace_disposable'/);
  assert.match(source,/current_setting\('server_version_num'\)::integer<170000/);
- assert.match(source,/SOURCE_/i);
+ assert.match(source,/Source replay synthetic dependency fixture only/);
  assert.match(source,/CREATE SCHEMA huly_rewrite/);
  assert.equal((source.match(/CREATE TABLE public\./g)||[]).length,10);
 });
