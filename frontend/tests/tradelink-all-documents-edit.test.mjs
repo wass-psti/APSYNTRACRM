@@ -69,6 +69,25 @@ test('verified preview offers Edit this Draft, but not when its revision is stal
  assert.doesNotMatch(stale,/Edit this Draft/);
 });
 
+test('Board projection distinguishes signed document revision time from Board item time',()=>{
+ const documentTime='2026-11-08T04:44:39.383119+00:00';
+ const itemTime='2026-11-08T02:22:55.295983+00:00';
+ const current={...authorizedView,rows:[
+  {...listed,revision:3,updatedAt:documentTime,boardItemId:item}]};
+ const detailWithOldBoardTime={...detail,
+  items:[{...detail.items[0],updated_at:itemTime}]};
+ const html=renderTradeLinkApplication({detail:detailWithOldBoardTime,
+  workspaceId:workspace,section:'documents',draftView:current,canManage:true});
+ assert.match(html,/<th scope="col">Board updated<\/th>/);
+ assert.match(html,/<th scope="col">Document updated<\/th>/);
+ assert.match(html,/<td>2026-11-08T02:22:55.295983\+00:00<\/td>/);
+ assert.match(html,/<td data-tradelink-document-updated>2026-11-08T04:44:39.383119\+00:00<\/td>/);
+ assert.match(html,/data-tradelink-board-edit/);
+ const denied=renderTradeLinkApplication({detail:detailWithOldBoardTime,
+  workspaceId:workspace,section:'documents',draftView:current,canManage:false});
+ assert.doesNotMatch(denied,/data-tradelink-document-updated>2026-/);
+});
+
 test('Board projection edits precisely the matching server-linked Draft, not arbitrary items',()=>{
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,
   section:'documents',draftView:authorizedView,canManage:true});

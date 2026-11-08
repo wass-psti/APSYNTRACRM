@@ -114,3 +114,33 @@ test('disposable SQL fixture uses real statement separators, not escaped newline
  assert.doesNotMatch(setup,/\\n(?:GRANT|CREATE|ALTER|INSERT|REVOKE|DO|SELECT)/);
  assert.match(setup,/-- Synthetic assertions[^\n]*\nGRANT USAGE ON SCHEMA auth TO authenticated;\nGRANT SELECT ON public\.work_board_items,public\.work_board_events TO authenticated;\nCREATE FUNCTION public\.current_workspace_id/);
 });
+
+
+test('TradeLink revision update synchronizes the locked Board item timestamp and editor, in one transaction',()=>{
+ assert.match(sql,/WHERE id=d\.id RETURNING revision,updated_at INTO rev,modified_at/);
+ assert.match(sql,/UPDATE public\.work_board_items\s+SET updated_by=actor,updated_at=modified_at/);
+ assert.match(sql,/WHERE id=d\.board_item_id AND board_id=p_board_id\s+AND title=payload->>'documentNumber' AND archived_at IS NULL/);
+ assert.match(sql,/Board projection changed during document update/);
+ const acceptance=readFileSync('sql/tests/cp-tl03-disposable-acceptance.sql','utf8');
+ assert.match(acceptance,/i\.updated_at=d\.updated_at AND i\.updated_by=d\.updated_by/);
+ assert.match(acceptance,/Same-title Draft update failed Board time synchronization/);
+});
+
+test('function-only migration candidate preserves existing signed write boundaries and matches staged function',()=>{
+ const candidate=readFileSync('sql/tradelink-document-board-timestamp-candidate.sql','utf8');
+ const stageStart=sql.indexOf('CREATE FUNCTION private.tl03_commit(');
+ const stageEnd=sql.indexOf('REVOKE ALL ON FUNCTION private.tl03_commit(',stageStart);
+ const staged=sql.slice(stageStart,stageEnd)
+  .replace('CREATE FUNCTION private.tl03_commit(','CREATE OR REPLACE FUNCTION private.tl03_commit(').trim();
+ const begin=candidate.indexOf('CREATE OR REPLACE FUNCTION private.tl03_commit(');
+ const end=candidate.indexOf('DO $board_sync_postflight$',begin);
+ assert.ok(stageStart>0&&stageEnd>stageStart&&begin>0&&end>begin);
+ assert.equal(candidate.slice(begin,end).trim(),staged);
+ assert.match(candidate,/md5\(pg_get_functiondef\(f\.oid\)\)<>'661e491750fbc9eeb0f619d701496306'/);
+ assert.match(candidate,/pg_get_userbyid\(f\.proowner\)<>'postgres'/);
+ assert.match(candidate,/f\.proacl::text IS DISTINCT FROM '\{postgres=X\/postgres,authenticated=X\/postgres\}'/);
+ assert.match(candidate,/has_function_privilege\('anon',f\.oid,'EXECUTE'\)/);
+ assert.match(candidate,/BEGIN;[\s\S]*COMMIT;/);
+ assert.equal((candidate.match(/CREATE OR REPLACE FUNCTION/g)||[]).length,1);
+ assert.doesNotMatch(candidate,/GRANT EXECUTE|CREATE TABLE|DROP TABLE|CREATE ROLE|ALTER POLICY|DELETE FROM/);
+});
