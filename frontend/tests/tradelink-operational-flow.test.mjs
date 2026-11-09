@@ -103,7 +103,7 @@ test('edit uses persisted revision and all saved item IDs without a create reque
  assert.match(html,/Add item/);
  assert.match(html,/Remove item/);
  assert.match(html,/name="lineUnitPrice"/);
- assert.match(html,/type="submit" class="primary">/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
 });
 
 test('financial estimate uses all persisted items including PHP conversion',()=>{
@@ -152,7 +152,7 @@ test('signed list/read uses authoritative RPC and can be reloaded in a new sessi
  const html=renderTradeLinkApplication({detail,workspaceId:ws,section:'documents',
   draftView:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
    rows:[listed],documentPreview:{documentId:docId,record:row}},canManage:true});
- assert.match(html,/Open document/);
+ assert.match(html,/All Documents/);
  assert.match(html,/Preview saved/);
  assert.match(html,/data-tradelink-saved-preview/);
  assert.match(html,/Q-2026-01/);

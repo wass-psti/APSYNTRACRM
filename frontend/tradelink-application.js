@@ -76,50 +76,9 @@ function moduleLink(m,section){
   '<span><strong>'+esc(m.label)+'</strong><small>Document module</small></span></a>';
 }
 function renderDocuments(detail,workspaceId,draftView,canManage){
- const rows=searchTradeLinkBoardItems(detail);
- const verified=TL03_DOMAIN_READS_ENABLED&&canManage&&
-  draftView.status==='AUTHORIZED_READ'&&Array.isArray(draftView.rows);
- const documentByItem=new Map((verified?draftView.rows:[]).filter(row=>
-  typeof row.boardItemId==='string'&&typeof row.documentId==='string')
-  .map(row=>[row.boardItemId,row]));
- return '<div class="tl-documents-workspace">'+
-  renderTradeLinkDocumentRepository({detail,workspaceId,view:draftView,canManage})+
-  '<section class="tl-content-panel" aria-labelledby="tl-documents-title">'+
-  '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Authorized board projection</p>'+
-  '<h2 id="tl-documents-title">Board records</h2></div>'+
-  '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'">Open Board Items</a></div>'+
-  '<p class="muted">Board items are linked to the same signed TradeLink documents. '+
-  'Board updated is the Board record timestamp; Document updated is the authoritative '+
-  'saved document revision timestamp. Preview or edit the same linked record. '+
-  'Approvals and attachments remain separate workflows.</p>'+
-  '<label class="tl-search-label" for="tradelink-document-search">Search board item titles</label>'+
-  '<input class="search-input tl-record-search" type="search" id="tradelink-document-search" data-tradelink-search maxlength="120" autocomplete="off" placeholder="Search authorized records…"/>'+
-  '<div class="tl-records-scroll"><table class="tl-records-table"><thead><tr>'+
-  '<th scope="col">Board item</th><th scope="col">Board status</th>'+
-  '<th scope="col">Board updated</th><th scope="col">Document updated</th>'+
-  '<th scope="col">TradeLink document</th>'+
-  '</tr></thead><tbody>'+
-  rows.map(item=>'<tr data-tradelink-record data-title="'+esc(String(item.title||'').toLocaleLowerCase())+'"><td><a href="#/boards/'+TRADELINK_BOARD_ID+'">'+esc(item.title||'Untitled')+'</a></td>'+
-    '<td>'+esc(item.status||'—')+'</td><td>'+esc(item.updated_at||'—')+'</td>'+
-    '<td data-tradelink-document-updated>'+
-     (documentByItem.get(item.id)?.documentNumber===item.title&&
-      typeof documentByItem.get(item.id)?.updatedAt==='string'&&
-      Number.isFinite(Date.parse(documentByItem.get(item.id).updatedAt))?
-      esc(documentByItem.get(item.id).updatedAt):'—')+'</td><td>'+
-    (documentByItem.get(item.id)?.documentNumber===item.title?
-     '<button type="button" class="secondary" data-action="tradelink-document-open" '+
-      'data-id="'+esc(documentByItem.get(item.id).documentId)+'">Open document</button>'+
-      (canManage&&TL03_DOMAIN_WRITES_ENABLED&&
-       ['draft','revision-required'].includes(documentByItem.get(item.id).workflowState)&&
-       !documentByItem.get(item.id).archived?
-       ' <a class="secondary" data-tradelink-board-edit href="'+
-       esc(tradeLinkDraftEditHref(documentByItem.get(item.id).documentId))+
-       '">Edit Draft</a>':''):
-     '<span class="muted">—</span>')+'</td></tr>').join('')+
-  '</tbody></table></div>'+
-  '<p class="tl-empty-records" data-tradelink-empty'+(rows.length?' hidden':'')+'>'+
-   (rows.length?'No matching board items.':'No authorized board items have been persisted.')+'</p>'+
-  '<p class="tl-search-count" data-tradelink-count role="status" aria-live="polite">'+rows.length+' board record'+(rows.length===1?'':'s')+'</p></section></div>';
+ // One authoritative document surface; linked Board items remain accessible
+ // in the main APSYNTRA Board, not duplicated as a second TradeLink table.
+ return renderTradeLinkDocumentRepository({detail,workspaceId,view:draftView,canManage});
 }
 function renderModule(m){
  return '<section class="tl-content-panel" aria-labelledby="tl-module-title">'+
@@ -170,12 +129,7 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
       'secured attachments are not yet enabled.</p>'+
      '</div></details>'+
    '</nav>'+
-   '<div class="tl-reference-workspace" title="Uses the existing APSYNTRA signed workspace">'+
-    '<span aria-hidden="true">▤</span> Signed workspace</div>'+
   '</header>'+
-  '<p class="tl-reference-access-note" role="status">'+
-   'Signed Draft operations. '+
-   'Uses your existing APSYNTRA signed authorization.</p>'+
   (current==='overview'?
    '<div class="tl-reference-overview">'+
     '<header class="tl-app-hero"><p class="tl-eyebrow">APSYNTRA CRM / TradeLink</p>'+
@@ -189,23 +143,16 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
      summaryCard('Configured board fields',sum.operationalColumns+' / 5','Five supported typed columns')+
      summaryCard('Draft persistence','Enabled','Signed server authorization required')+
     '</div></div>':'')+
-  '<div class="tl-app-layout"><nav class="tl-app-nav" aria-label="TradeLink application navigation">'+
-   '<a class="tl-section-link'+activeNav('overview')+'" href="'+base+'"'+currentAttr('overview')+'>Overview</a>'+
-   '<a class="tl-section-link'+activeNav('documents')+'" href="'+base+'/documents"'+currentAttr('documents')+'>Board records <span>'+sum.activeBoardItems+'</span></a>'+
-   '<a class="tl-section-link'+activeNav('activity')+'" href="'+base+'/activity"'+currentAttr('activity')+'>Activity</a>'+
-   '<a class="tl-section-link'+activeNav('drafts')+'" href="'+base+'/drafts"'+currentAttr('drafts')+'>Draft workspace <span>Save enabled</span></a>'+
-   '<h3>Document modules</h3>'+
-   TRADELINK_SOURCE_MODULES.map(entry=>moduleLink(entry,current)).join('')+'</nav>'+
+  '<div class="tl-app-layout">'+
    '<div class="tl-app-main">'+
     (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage):current==='activity'?renderTradeLinkActivity(activity||{}):
       '<section class="tl-content-panel"><p class="tl-eyebrow">TradeLink application</p><h2>Source-aligned workspace</h2>'+
        '<p class="muted">Open a document module to review its source-defined business purpose and submission requirements. Authorized Board Items can be inspected without creating duplicate records.</p>'+
        '<div class="tl-overview-tiles">'+TRADELINK_SOURCE_MODULES.map(entry=>
-        '<a href="'+base+'/'+entry.key+
+        '<a href="'+base+'/drafts/'+entry.key+
         '" class="tl-overview-tile"><strong>'+esc(entry.label)+'</strong><span>'+esc(entry.purpose)+'</span></a>').join('')+'</div>'+
-       '<a class="secondary" href="'+base+'/documents">View authorized board records</a>'+
+       '<a class="secondary" href="'+base+'/documents">All Documents</a>'+
        '</section>')+
-    '<p class="tl-app-caution">No standalone authentication, synthetic records, browser-only document persistence, or unsupported backend writes.</p>'+
    '</div></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network

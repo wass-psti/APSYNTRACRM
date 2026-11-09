@@ -405,3 +405,282 @@
  .tl-reference-portal *, .tl-reference-portal *::before,
  .tl-reference-portal *::after{animation:none!important;transition:none!important}
 }
+
+/* CP-TL-REBUILD-01: front-end-first enterprise shell.
+   Deliberately presentation-only; no changes to signed Draft or Board contracts. */
+.aps-tradelink-app.tl-reference-portal{
+ --tl-ref-back:#f8fafc;--tl-ref-ink:#1e293b;--tl-ref-muted:#64748b;
+ --tl-ref-line:#e5eaf0;--tl-ref-blue:#315de6;--tl-ref-shadow:none;
+ --tl-shell-max:1520px;--tl-shell-space:clamp(16px,2vw,30px);
+ background:transparent;color:var(--tl-ref-ink);
+ gap:16px;font-size:13px;line-height:1.5;
+}
+.tl-reference-portal .tl-reference-topbar{
+ display:flex;align-items:center;flex-wrap:wrap;column-gap:24px;row-gap:12px;
+ min-height:64px;padding:12px var(--tl-shell-space);border:0;
+ border-bottom:1px solid var(--tl-ref-line);border-radius:0;box-shadow:none;
+ background:#fff;
+}
+.tl-reference-portal .tl-reference-brand{margin-right:auto}
+.tl-reference-portal .tl-reference-logo{
+ width:36px;height:36px;box-shadow:none;border-radius:11px;
+ background:#315de6;
+}
+.tl-reference-portal .tl-reference-portal-links{
+ border:0;background:#f4f6f9;padding:4px;border-radius:10px;
+ flex-wrap:wrap;justify-content:center;
+}
+.tl-reference-portal .tl-reference-portal-links>a,
+.tl-reference-portal .tl-reference-manual>summary{
+ min-height:38px;padding:9px 13px;border-radius:8px;
+}
+.tl-reference-portal .tl-reference-portal-links :is(a,summary):focus-visible{
+ outline:2px solid #315de6;outline-offset:2px;
+}
+.tl-reference-portal .tl-reference-workspace{
+ margin-left:auto;min-height:38px;border:1px solid var(--tl-ref-line);
+ background:#fff;box-shadow:none;border-radius:9px;
+}
+.tl-reference-portal .tl-reference-access-note{
+ margin:0 var(--tl-shell-space);color:var(--tl-ref-muted);font-size:11px;
+}
+.tl-reference-portal .tl-reference-overview,
+.tl-reference-portal .tl-app-layout{
+ margin-inline:var(--tl-shell-space);max-width:var(--tl-shell-max);
+}
+.tl-reference-portal .tl-reference-overview{gap:18px}
+.tl-reference-portal .tl-app-hero{
+ border:0;border-bottom:1px solid var(--tl-ref-line);border-radius:0;
+ padding:22px 4px 26px;background:transparent;box-shadow:none;
+}
+.tl-reference-portal .tl-app-hero h2{font-size:clamp(24px,3vw,32px)}
+.tl-reference-portal .tl-hero-status{
+ border:0;padding:7px 12px;border-radius:8px;
+ background:#ecfdf5;color:#166534;
+}
+.tl-reference-portal .tl-stat-grid{
+ grid-template-columns:repeat(4,minmax(0,1fr));gap:0;
+ border-block:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-stat{
+ border:0;border-right:1px solid var(--tl-ref-line);border-radius:0;
+ background:transparent;padding:18px 20px;box-shadow:none;gap:6px;
+}
+.tl-reference-portal .tl-stat:last-child{border-right:0}
+.tl-reference-portal .tl-app-layout{
+ display:grid;grid-template-columns:minmax(0,1fr);
+ align-items:start;gap:14px;
+}
+.tl-reference-portal .tl-app-nav{
+ display:flex;flex-flow:row wrap;align-items:center;gap:4px;
+ padding:0 0 12px;border:0;border-bottom:1px solid var(--tl-ref-line);
+ border-radius:0;background:transparent;box-shadow:none;
+}
+.tl-reference-portal .tl-app-nav h3{
+ padding:8px 11px 8px 14px;margin:0;align-self:center;
+ border-left:1px solid var(--tl-ref-line);
+ font-size:10px;letter-spacing:.08em;
+}
+.tl-reference-portal .tl-app-nav>a{
+ min-height:40px;border-radius:8px;padding:9px 12px;
+ font-size:12px;font-weight:600;
+}
+.tl-reference-portal .tl-app-nav>a.active{
+ background:#e9efff;color:#2345ba;
+}
+.tl-reference-portal .tl-app-nav>a:focus-visible{
+ outline:2px solid #315de6;outline-offset:2px;
+}
+.tl-reference-portal .tl-content-panel,
+.tl-reference-portal .tl-draft-panel{
+ background:#fff;border:1px solid var(--tl-ref-line);border-radius:12px;
+ box-shadow:none;
+}
+.tl-reference-portal .tl-draft-workspace{gap:12px}
+.tl-reference-portal .tl-reference-document-topcard{
+ box-shadow:none;border:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-reference-editor-content{box-shadow:none}
+.tl-reference-portal .tl-overview-tiles{gap:0;border-top:1px solid var(--tl-ref-line)}
+.tl-reference-portal .tl-overview-tile{
+ border:0;border-bottom:1px solid var(--tl-ref-line);border-radius:0;
+ background:transparent;min-height:100px;transform:none;transition:background .14s ease;
+}
+.tl-reference-portal .tl-overview-tile:hover{
+ background:#f5f8ff;border-color:var(--tl-ref-line);transform:none;
+}
+.tl-reference-portal .tl-records-scroll{
+ max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+}
+@media(max-width:1200px){
+ .tl-reference-portal .tl-reference-topbar{display:flex}
+ .tl-reference-portal .tl-reference-portal-links{
+  grid-column:auto;grid-row:auto;justify-self:auto;
+ }
+ .tl-reference-portal .tl-reference-workspace{grid-column:auto;grid-row:auto}
+}
+@media(max-width:850px){
+ .tl-reference-portal .tl-app-nav{
+  flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;
+ }
+ .tl-reference-portal .tl-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .tl-reference-portal .tl-stat:nth-child(2){border-right:0}
+ .tl-reference-portal .tl-stat:nth-child(-n+2){border-bottom:1px solid var(--tl-ref-line)}
+}
+@media(max-width:620px){
+ .tl-reference-portal .tl-reference-topbar{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  padding:12px 16px;
+ }
+ .tl-reference-portal .tl-reference-workspace{
+  grid-column:2;grid-row:1;justify-self:end;
+ }
+ .tl-reference-portal .tl-reference-portal-links{
+  grid-column:1/-1;grid-row:2;justify-content:flex-start;
+  overflow-x:auto;flex-wrap:nowrap;
+ }
+ .tl-reference-portal .tl-reference-overview,
+ .tl-reference-portal .tl-app-layout{margin-inline:16px}
+ .tl-reference-portal .tl-stat{padding:15px 10px}
+ .tl-reference-portal .tl-content-panel{padding:18px}
+}
+@media(prefers-reduced-motion:reduce){
+ .tl-reference-portal .tl-overview-tile{transition:none}
+}
+
+/* CP-TL-REBUILD-03B: All Documents — compact filter strip and scannable
+   signed records. UI-only, retaining server-authorized result boundaries. */
+.tl-reference-portal .tl-document-repository{
+ padding:clamp(18px,2vw,28px);
+}
+.tl-reference-portal .tl-document-repository>.tl-panel-heading:first-child{
+ padding-bottom:18px;border-bottom:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+ grid-template-columns:minmax(210px,2fr) repeat(3,minmax(115px,1fr));
+ gap:10px;margin:18px 0 14px;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field{
+ min-width:0;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field>span{
+ font-size:11px;color:#64748b;font-weight:650;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-pagination-controls{
+ display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+ padding-block:10px;border-block:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-document-repository .tl-records-scroll{
+ overflow-x:auto;overscroll-behavior-x:contain;
+ border:1px solid var(--tl-ref-line);border-radius:10px;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table{
+ min-width:900px;width:100%;border-collapse:collapse;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table th{
+ background:#f7f9fc;color:#596579;font-size:11px;
+ letter-spacing:0;font-weight:700;white-space:nowrap;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table td,
+.tl-reference-portal .tl-document-repository .tl-records-table th{
+ padding:12px 14px;border-bottom:1px solid var(--tl-ref-line);
+ text-align:left;vertical-align:middle;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table tbody tr:hover{
+ background:#f8faff;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table td:first-child{
+ font-weight:700;color:#27364d;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table td:last-child{
+ min-width:260px;
+}
+.tl-reference-portal .tl-document-repository :is(button,a):focus-visible{
+ outline:2px solid #315de6;outline-offset:2px;
+}
+@media(max-width:1120px){
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+ }
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field:first-child{
+  grid-column:1/-1;
+ }
+}
+@media(max-width:680px){
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field:first-child{
+  grid-column:1/-1;
+ }
+ .tl-reference-portal .tl-document-repository .tl-records-table{min-width:780px}
+}
+@media(max-width:460px){
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+  grid-template-columns:minmax(0,1fr);
+ }
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field:first-child{
+  grid-column:auto;
+ }
+}
+
+/* Phase 3C: document-specific guidance and authorized repository actions. */
+.tl-reference-portal .tl-reference-module-guidance{
+ margin:14px 0 22px;padding:14px 18px;border:1px solid #dbe5f6;
+ border-left:3px solid #315de6;border-radius:8px;background:#f8fbff;
+ color:#31415f;
+}
+.tl-reference-portal .tl-reference-module-guidance strong{
+ display:block;font-size:12px;font-weight:750;color:#203a75;
+}
+.tl-reference-portal .tl-reference-module-guidance p{
+ margin:6px 0 4px;font-size:12px;line-height:1.6;
+}
+.tl-reference-portal .tl-reference-module-guidance small{
+ display:block;color:#64748b;font-size:11px;line-height:1.55;
+}
+.tl-reference-portal .tl-reference-repository-actions{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ flex-wrap:wrap;
+}
+.tl-reference-portal .tl-reference-repository-actions h3{margin:0}
+.tl-reference-portal .tl-reference-repository-buttons{
+ display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+}
+.tl-reference-portal .tl-reference-repository-buttons>a.primary{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:38px;padding:8px 15px;text-decoration:none;border-radius:8px;
+ background:#315de6;color:#fff;font-size:12px;font-weight:700;
+}
+.tl-reference-portal .tl-reference-repository-buttons>a.primary:hover{
+ background:#244dc5;
+}
+@media(max-width:620px){
+ .tl-reference-portal .tl-reference-repository-buttons{width:100%}
+ .tl-reference-portal .tl-reference-repository-buttons>*{flex:1 1 auto}
+}
+
+/* Phase 3D: accessible type tabs, backed by existing signed filters. */
+.tl-reference-portal .tl-reference-document-filter-tabs{
+ display:flex;align-items:center;gap:4px;max-width:100%;
+ overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;
+ padding:0 0 8px;margin:14px 0 4px;
+ border-bottom:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button{
+ flex:0 0 auto;min-height:38px;padding:8px 13px;
+ color:#677286;background:transparent;border:0;border-radius:7px;
+ font-size:12px;font-weight:600;cursor:pointer;
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button:hover{
+ background:#f1f5fb;color:#263c6b;
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button[aria-current="true"]{
+ background:#edf2ff;color:#2347b8;
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button:disabled{
+ opacity:.55;cursor:not-allowed;
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button:focus-visible{
+ outline:2px solid #315de6;outline-offset:2px;
+}

@@ -30,7 +30,7 @@ test('reference portal is scoped to the genuine signed TradeLink board and uses 
  assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/documents"/);
  assert.match(html,/class="tl-reference-manual"/);
  assert.doesNotMatch(html,/Disaster Recovery|tl-reference-unavailable/);
- assert.match(html,/Signed workspace/);
+ assert.doesNotMatch(html,/Signed workspace<\/div>|tl-reference-workspace/);
  assert.doesNotMatch(html,/(?:Save successful|Draft saved \d|PDF generated)/);
  const foreign=renderTradeLinkApplication({detail,
   workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',section:'drafts'});
@@ -63,7 +63,7 @@ test('all six modules use screenshot-led document cards, accessible tabs and no 
   assert.match(html,/data-action="tradelink-draft-clear"/);
   assert.match(html,/Generate PDF<\/button>/);
   assert.match(html,/title="PDF generation requires an authorized workflow"/);
-  assert.match(html,/type="submit" class="primary">/);
+  assert.match(html,/data-action="tradelink-draft-submit"/);
   assert.match(html,/No PDF, approval or document is generated/);
   assert.equal(TL03_DOMAIN_READS_ENABLED,true);
   assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
@@ -89,11 +89,12 @@ test('reference items, financial previews and workflow fields preserve module-sp
 
 test('disabled signed listing follows main editor and must not display synthetic rows',()=>{
  const html=draft('quotation');
- assert.ok(html.indexOf('tl-reference-document-topcard')<html.indexOf('tl-reference-list-details'));
- assert.match(html,/Signed Draft operations/);
- assert.match(html,/data-action="tradelink-draft-refresh"/);
- assert.match(html,/No authorized TradeLink Draft records have been loaded/);
- assert.match(html,/current signed, authorized response \(maximum 50 records\)/);
+ assert.match(html,/tl-reference-document-topcard/);
+ assert.doesNotMatch(html,/tl-reference-list-details/);
+ assert.match(html,/Save Draft/);
+ assert.doesNotMatch(html,/data-action="tradelink-draft-refresh"/);
+ assert.doesNotMatch(html,/No authorized TradeLink Draft records have been loaded/);
+ assert.doesNotMatch(html,/current signed, authorized response \(maximum 50 records\)/);
 });
 
 test('untrusted local fields are escaped and existing draft parser remains authoritative',()=>{
@@ -133,4 +134,27 @@ test('CSS scope, responsive rules and reduced-motion behavior are bounded to Tra
  assert.match(shell,/root\.querySelector\('\.tl-reference-document-tabs a\.active'\)\?\.focus/);
  assert.doesNotMatch(draftSource,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.doesNotMatch(app,/TL03_DOMAIN_(?:READS|WRITES)_ENABLED\s*=\s*true/);
+});
+
+test('reference rebuild omits obsolete navigation, duplicate board table, and technical draft listing',()=>{
+ const base={detail,workspaceId:signedWorkspace,canManage:true};
+ const documents=renderTradeLinkApplication({...base,section:'documents',
+  draftView:initialTradeLinkDraftView()});
+ const draft=renderTradeLinkApplication({...base,section:'drafts',
+  draftView:initialTradeLinkDraftView('quotation')});
+ for(const html of [documents,draft]){
+  assert.doesNotMatch(html,/class="tl-app-nav"/);
+  assert.doesNotMatch(html,/Authorized board projection|Signed Draft operations\. Uses/);
+  assert.doesNotMatch(html,/tl-reference-workspace|Save enabled/);
+  assert.match(html,/aria-label="TradeLink actions"/);
+ }
+ assert.match(documents,/<h2 id="tl-domain-repository-title">All Documents<\/h2>/);
+ assert.doesNotMatch(documents,/Board updated|Document updated|Search board item titles/);
+ assert.doesNotMatch(draft,/tl-reference-list-details|data-action="tradelink-draft-refresh"/);
+ assert.match(draft,/data-action="tradelink-draft-submit"/);
+ assert.match(draft,/data-action="tradelink-draft-preview"/);
+ assert.doesNotMatch(draft,/Validate locally|Save enabled/);
+ const source=readFileSync('frontend/app.js','utf8');
+ assert.match(source,/const directModule=requested==='tradelink'/);
+ assert.match(source,/state\.tradeLinkSection=directModule\?'drafts'/);
 });

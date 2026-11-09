@@ -2601,12 +2601,17 @@ async function onRoute(){
     parts[2]==='tradelink'&&state.boards.some(b=>b.id===parts[1]&&
       moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
     defaultFuelTrans?'fueltrans':defaultClock?'attendance':'items';
-  state.tradeLinkSection=requested==='tradelink'?normalizeTradeLinkSection(parts[3]):'overview';
+  // Legacy direct module URLs resolve to the same functional editor, never
+  // the historical reference/instruction page.
+  const directModule=requested==='tradelink'&&
+   ['esi','packing','delivery','payment','quotation','po'].includes(parts[3]);
+  state.tradeLinkSection=directModule?'drafts':
+   requested==='tradelink'?normalizeTradeLinkSection(parts[3]):'overview';
   const signedDraftRoute=requested==='tradelink'&&state.tradeLinkSection==='drafts';
   const editId=signedDraftRoute&&parts[4]==='edit'&&validUuid(parts[5])?
    parts[5]:null;
   await loadBoard(parts[1],requested,
-   signedDraftRoute&&parts[4]!=='edit'?parts[4]:null,editId);
+   signedDraftRoute&&parts[4]!=='edit'?(directModule?parts[3]:parts[4]):null,editId);
   return;
  }
  routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
@@ -4032,6 +4037,23 @@ async function action(name,button){
    await loadTradeLinkDrafts(routeSerial,page?.server?{
     cursor:page.cursor,history:page.history,pageIndex:page.pageIndex,
     filters:page.appliedFilters}:null);
+  }
+  break;
+ }
+ case 'tradelink-documents-module':{
+  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+     !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+     state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)break;
+  const selected=normalizeTradeLinkDraftListFilters({
+   ...state.tradeLinkDraft.listFilters,documentType:button.dataset.module
+  });
+  state.tradeLinkDraft.listFilters=selected;
+  if(state.tradeLinkDraft.listPage?.server){
+   await loadTradeLinkDrafts(routeSerial,{
+    cursor:null,history:[],pageIndex:0,filters:selected
+   });
+  }else{
+   render();
   }
   break;
  }

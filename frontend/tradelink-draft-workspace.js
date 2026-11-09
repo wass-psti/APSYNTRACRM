@@ -592,6 +592,44 @@ const referenceTitles=Object.freeze({
 const referencePrefixes=Object.freeze({
  esi:'ESI-',packing:'PL-',delivery:'DR-',payment:'AR-',quotation:'Q-',po:'PO-'
 });
+/** Screenshot-derived suggestions, not server-managed records or workflow states.
+ * Native datalists permit the user's custom text without changing the domain schema. */
+export const TRADELINK_COMMERCIAL_SUGGESTIONS=Object.freeze({
+ paymentTerms:Object.freeze([
+  'Due on Receipt','COD (Cash on Delivery)','15 Days PDC','30 Days PDC',
+  '50% DP-Balance upon completion','Advance payment prior to delivery',
+  'Installment plans','30 Days Net','45 Days Net','60 Days Net','90 Days Net'
+ ]),
+ validity:Object.freeze(['15 Days','30 Days','60 Days','120 Days','6 Months','1 Year']),
+ deliveryCommitment:Object.freeze([
+  '3 Days (in Stock)','4 Weeks','6 Weeks','8 Weeks','12 Weeks',
+  '16 Weeks','20 Weeks','24 Weeks'
+ ])
+});
+function commercialSuggestionLists(type){
+ if(type!=='quotation'&&type!=='po')return '';
+ return '<div class="tl-reference-suggestion-lists">'+
+  Object.entries(TRADELINK_COMMERCIAL_SUGGESTIONS).map(([name,values])=>
+   '<datalist id="tl-suggest-'+name+'">'+
+   values.map(value=>'<option value="'+escape(value)+'"></option>').join('')+
+   '</datalist>').join('')+'</div>';
+}
+/** Contextual document guidance is presentation-only and never a server verdict. */
+export const TRADELINK_MODULE_GUIDANCE=Object.freeze({
+ esi:Object.freeze({heading:'Electronic Sales Invoice',detail:'Capture invoice client identity, taxable items, prices, and finance verification details.',boundary:'Financial figures are a local calculation until an authorized Draft is saved.'}),
+ packing:Object.freeze({heading:'Packing List',detail:'Record physical item quantities and shipment references without inventing inventory movement.',boundary:'This Draft does not confirm packaging, dispatch, or delivery.'}),
+ delivery:Object.freeze({heading:'Delivery Receipt',detail:'Describe received or delivered items and serial identifiers with QC and logistics responsibility.',boundary:'Assignee text does not record a quality-control check or confirm delivery.'}),
+ payment:Object.freeze({heading:'Payment Acknowledgement',detail:'Describe the payment instrument, particulars, and intended receipt and verification responsibility.',boundary:'Entering an amount does not receive money or certify a settled receivable.'}),
+ quotation:Object.freeze({heading:'Quotation',detail:'Prepare priced items, client contact details, validity, delivery commitment, and payment terms.',boundary:'Commercial terms are editable suggestions. No approval or PDF is issued by local validation.'}),
+ po:Object.freeze({heading:'Purchase Order',detail:'Record supplier identity, purchased items, target delivery, and negotiated payment conditions.',boundary:'Saving a Draft does not authorize a purchase or trigger supplier fulfillment.'})
+});
+function renderModuleGuidance(type){
+ const guide=TRADELINK_MODULE_GUIDANCE[type];
+ return guide?'<aside class="tl-reference-module-guidance" role="note" aria-label="'+
+  escape(guide.heading)+' drafting guidance"><strong>'+escape(guide.heading)+
+  ' drafting guide</strong><p>'+escape(guide.detail)+'</p><small>'+
+  escape(guide.boundary)+'</small></aside>':'';
+}
 function referenceDraftTabs(type){
  const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/';
  return '<nav class="tl-reference-document-tabs" aria-label="TradeLink document modules">'+
@@ -609,21 +647,18 @@ function referenceDocumentHeader(type,editing,canSave=false){
      '<path d="M15 3v6h5M8 13h8M8 17h8"/></svg></span>'+
     '<div><h3 id="tl-draft-editor-title">'+escape(title)+'</h3>'+
      '<p class="tl-reference-draft-status">'+
-      (editing?'Signed Draft loaded · unsaved edits':'Prepare a Draft · unsaved local · no document created')+
+      (editing?'Editing saved Draft':'New Draft · not saved')+
      '</p></div></div>'+
    '<div class="tl-reference-document-toolbar" aria-label="Document actions">'+
     '<button type="button" class="tl-reference-tool" disabled title="Templates are not activated in APSYNTRA CRM">Templates</button>'+
     '<button type="button" class="tl-reference-tool" disabled title="PDF generation requires an authorized workflow">Generate PDF</button>'+
-    '<button type="button" class="tl-reference-primary" data-action="tradelink-draft-preview">Validate locally</button>'+
+    '<button type="button" class="tl-reference-primary" data-action="tradelink-draft-preview">Preview</button>'+
     '<button type="button" class="tl-reference-save" data-action="tradelink-draft-submit"'+
      (canSave?'':' disabled title="Production Draft writes are not activated"')+
      '>Save Draft</button>'+
    '</div>'+
   '</header>'+
-  '<p class="tl-reference-workflow-notice" role="note">'+
-   'Validate Draft inputs locally, then Save Draft to create or update the signed database record '+
-   'and its linked Board item. Submission, approvals, Templates and PDF export remain unavailable.'+
-  '</p></div>';
+  '</div>';
 }
 /** Render one existing or newly added item; all untrusted fields are escaped. */
 export function renderTradeLinkDraftLineItem(item={},type='quotation',currency='PHP',index=0){
@@ -694,6 +729,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
   '<div class="tl-reference-editor-content">'+referenceDraftTabs(type)+
+  renderModuleGuidance(type)+
   '<form data-tradelink-draft-form>'+
    // Retain existing module form control for source contract/tests. The
    // horizontal tab links are the visible accessible module switcher.
@@ -735,19 +771,19 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       field('Client phone (or email)','customerPhone',fieldValue('customerPhone',data.customerPhone||''),
        'maxlength="5000"')+
       field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
-       'maxlength="5000" required')+
+       'maxlength="5000" list="tl-suggest-paymentTerms" required')+
       field('Offer validity','validity',fieldValue('validity',data.validity||''),
-       'maxlength="5000" required')+
+       'maxlength="5000" list="tl-suggest-validity" required')+
       field('Delivery commitment','deliveryCommitment',
        fieldValue('deliveryCommitment',data.deliveryCommitment||''),
-       'maxlength="5000" required'):'')+
+       'maxlength="5000" list="tl-suggest-deliveryCommitment" required'):'')+
      (type==='po'?
       field('Supplier PO number (optional)','poNumber',fieldValue('poNumber',data.poNumber||''),
        'maxlength="5000"')+
       field('Target delivery date','targetDeliveryDate',
        fieldValue('targetDeliveryDate',data.targetDeliveryDate||''),'type="date" required')+
       field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
-       'maxlength="5000" required'):'')+
+       'maxlength="5000" list="tl-suggest-paymentTerms" required'):'')+
      '<label class="tl-draft-field tl-reference-currency-field"><span>Currency</span>'+
       '<select name="currency" aria-describedby="tl-reference-currency-help">'+
        options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select>'+
@@ -755,7 +791,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      (physical||payment?'':'<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
       options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>')+
     '</div>'+
-   '</section>'+
+   '</section>'+commercialSuggestionLists(type)+
    (payment?
     '<fieldset class="tl-draft-lines tl-reference-payment"><legend>Form of Payment</legend>'+
      field('Payment particulars','paymentParticulars',fieldValue('paymentParticulars',data.paymentParticulars||''),
@@ -817,10 +853,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '</label></section>'+
    (renderCommercialReadiness(type,fieldValue,data))+
    '<div class="tl-draft-actions">'+
-    '<button type="button" class="secondary" data-action="tradelink-draft-preview">Validate locally</button>'+
-    '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear local fields</button>'+
-    '<button type="submit" class="primary"'+(live?'':' disabled title="Production Draft writes are not activated"')+
-     '>'+(editing?'Save revision':'Create Draft')+'</button>'+
+    '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
     'Not saved. Complete required fields before saving.</p>'+
    renderTradeLinkDraftLocalSummary(type)+
@@ -1015,6 +1048,10 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
   '>'+options(values,value)+'</select></label>';
  return '<section data-tradelink-domain-list aria-label="'+(readOnly?
   'Read-only TradeLink document repository':'Authorized TradeLink Draft listing')+'">'+
+  (readOnly?'<nav class="tl-reference-document-filter-tabs" aria-label="Filter documents by module">'+
+   draftListTypes.map(([id,label])=>'<button type="button" data-action="tradelink-documents-module" '+
+    'data-module="'+escape(id)+'"'+(filters.documentType===id?' aria-current="true"':'')+
+    disabledAttr+'>'+escape(label)+'</button>').join('')+'</nav>':'')+
   '<div class="tl-draft-list-filters" role="search" aria-label="Search authorized TradeLink Draft records">'+
    '<label class="tl-draft-field"><span>Search document number</span>'+
     '<input name="query" type="search" maxlength="120" autocomplete="off" '+
@@ -1243,24 +1280,15 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   catch{selectedPreview='';}
  }
  return '<section class="tl-content-panel tl-document-repository" aria-labelledby="tl-domain-repository-title">'+
-  '<div class="tl-panel-heading"><div><p class="tl-eyebrow">Source-aligned All Documents</p>'+
-  '<h2 id="tl-domain-repository-title">TradeLink document workspace</h2></div>'+
-  '<span class="tl-draft-badge">Signed document preview</span></div>'+
-  '<p class="muted">This authoritative document workspace is separate from Board Items. '+
-  'Only a signed, role-authorized Domain DocumentRecord response may appear here. '+
-  'Document reads are '+(TL03_DOMAIN_READS_ENABLED?'subject to signed authorization':
-  'not activated')+'.</p>'+
-  '<p class="tl-draft-boundary" role="note">Authorized Drafts can be edited, archived or restored '+
-  'through the signed database. Print / Save PDF opens a newly verified saved revision '+
-  'and uses the browser print dialog; this is not an issued or signed tax document. '+
-  (TL03_ATTACHMENTS_ENABLED?
-   'Private document attachments require signed file-level authorization. ':
-   'Secure attachment uploads remain unavailable pending backend activation. ')+
-  'Board status does not change the document workflow state.</p>'+
-  '<div class="tl-panel-heading"><h3>Authorized documents</h3>'+
+  '<div class="tl-panel-heading"><div><h2 id="tl-domain-repository-title">All Documents</h2></div></div>'+
+  '<div class="tl-panel-heading tl-reference-repository-actions"><span class="tl-reference-repository-count">'+
+    escape(rows.length)+' document'+(rows.length===1?'':'s')+' in this response</span>'+
+   '<div class="tl-reference-repository-buttons">'+
+   (canManage&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="#/boards/'+TRADELINK_BOARD_ID+
+    '/tradelink/drafts/quotation">Create New Document</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
    (!TL03_DOMAIN_READS_ENABLED||!canManage||view.busy?' disabled':'')+
-   '>Refresh documents</button></div>'+
+   '>Refresh</button></div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
   renderTradeLinkDraftList(rows,view,canManage,{readOnly:true})+
@@ -1279,10 +1307,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
     busy:view.busy
    }):'')+
   (linked&&canManage?renderTradeLinkSavedWorkflowHistory(selection?.events):'')+
-  '<h3>Document modules</h3><nav class="tl-document-module-nav" aria-label="TradeLink document modules">'+
-  typeLabels.map(([id,label])=>'<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
-   '/tradelink/'+escape(id)+'">'+escape(label)+'</a>').join('')+
-  '</nav></section>';
+  '</section>';
 }
 export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
@@ -1302,21 +1327,5 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
    view.error||'',view.message||'',view.lineDrafts))+
-  '<details class="tl-reference-list-details">'+
-   '<summary>All Documents · authorized Draft listing'+
-    '<span class="tl-draft-badge">Signed Draft operations</span></summary>'+
-   '<section class="tl-draft-panel"><div class="tl-panel-heading">'+
-    '<div><p class="tl-eyebrow">TradeLink document management</p><h2>Draft workspace</h2></div></div>'+
-    '<p class="muted">Domain reads: <strong>'+
-     (TL03_DOMAIN_READS_ENABLED?'enabled':'not activated')+'</strong>. Writes: <strong>'+
-     (TL03_DOMAIN_WRITES_ENABLED?'enabled':'not activated')+
-    '</strong>. Existing APSYNTRA signed authorization remains mandatory.</p>'+
-    '<p class="tl-draft-boundary" role="note">No local draft storage, synthetic saved documents, independent login or attachments. Workflow decisions require separate server activation. For print / Save as PDF, open a genuinely saved record through All Documents; a local preview is not a saved record.</p>'+
-    '<div class="tl-panel-heading"><h3>Authoritative Draft records</h3>'+
-     '<button type="button" class="secondary" data-action="tradelink-draft-refresh"'+
-       (!TL03_DOMAIN_READS_ENABLED||view.busy?' disabled':'')+'>Refresh</button></div>'+
-    (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
-    (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
-    renderTradeLinkDraftList(rows,view,canManage)+
-   '</section></details></div>';
+  '</div>';
 }
