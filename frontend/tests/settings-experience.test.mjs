@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from '../settings-visuals.js';
+import {avatarPreviewMarkup} from '../profile-avatar.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/settings-experience.css','utf8');
@@ -27,7 +28,7 @@ function render(overrides={}){
  };
  const name=()=>overrides.displayName??'Example Operator';
  const fn=runInNewContext('('+functionSource+')',{
-  state,e:escaped,name,initials:()=> 'EO',
+  state,e:escaped,name,initials:()=> 'EO',avatarPreviewMarkup,
   workspaceName:()=>overrides.workspaceName??'Test Workspace',
   settingsIcon,summarizeAcceptance:items=>({
    total:items.length,passed:items.filter(item=>item.status==='pass').length
