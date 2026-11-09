@@ -81,9 +81,11 @@ test('effects remain board-scoped, compositor-friendly, accessible, and dependen
 });
 
 test('loader assets are linked after the shared visual system and checked in Pages CI',()=>{
- const loaderLink='./frontend/board-loading.css';
- assert.ok(html.includes(loaderLink));
- assert.ok(html.indexOf(loaderLink)>html.indexOf('./frontend/board-visual-refresh.css'));
+ const loaderLink='frontend/board-loading.css';
+ const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
+ assert.ok(html.includes('frontend/apsyntra-styles.bundle.css'));
+ assert.ok(manifest.includes(loaderLink));
+ assert.ok(manifest.indexOf(loaderLink)>manifest.indexOf('frontend/board-visual-refresh.css'));
  assert.match(smoke,/frontend\/board-loading\.js/);
  assert.match(smoke,/frontend\/board-loading\.css/);
 });
