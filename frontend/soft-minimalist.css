@@ -3111,3 +3111,153 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 @media(prefers-reduced-motion:reduce){
   #app .aps-settings .settings-profile-editor button{transition:none}
 }
+
+/* Account avatar: local-only preview/crop while protected persistence is gated. */
+#app .aps-settings .settings-avatar-editor{
+  padding:19px;
+  margin:0 0 18px;
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-card);
+  background:var(--sm-surface-raised);
+}
+#app .aps-settings .settings-avatar-editor h4{
+  margin:0 0 5px;
+  font-size:14px;
+  font-weight:750;
+  color:var(--sm-ink);
+}
+#app .aps-settings .settings-avatar-editor-head p{
+  margin:0;
+  color:var(--sm-sub);
+  font-size:11.5px;
+  line-height:1.55;
+}
+#app .aps-settings .settings-avatar-layout{
+  display:grid;
+  grid-template-columns:110px minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+  margin-top:17px;
+}
+#app .aps-settings .settings-avatar-preview{
+  position:relative;
+  width:110px;
+  aspect-ratio:1;
+  overflow:hidden;
+  border:3px solid var(--sm-surface);
+  outline:1px solid var(--sm-border);
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:var(--sm-accent-soft);
+  color:var(--sm-accent-hover);
+  font-size:29px;
+  font-weight:760;
+}
+#app .aps-settings .settings-avatar-preview img{
+  position:absolute;
+  width:100%;
+  height:100%;
+  inset:0;
+  object-fit:cover;
+}
+#app .aps-settings .settings-avatar-preview [hidden],
+#app .aps-settings .settings-avatar-editor [hidden]{display:none}
+#app .aps-settings .settings-avatar-controls{
+  display:grid;
+  gap:9px;
+  min-width:0;
+}
+#app .aps-settings .settings-avatar-file-label{
+  font-size:12px;
+  font-weight:730;
+  color:var(--sm-ink);
+}
+#app .aps-settings #settings-avatar-file{
+  box-sizing:border-box;
+  max-width:100%;
+  width:100%;
+  padding:8px;
+  border:1px solid var(--sm-border);
+  background:var(--sm-surface);
+  border-radius:var(--sm-radius-control);
+  font-size:11px;
+  color:var(--sm-text);
+}
+#app .aps-settings #settings-avatar-file::file-selector-button{
+  padding:8px 11px;
+  margin-right:10px;
+  border:1px solid #DEDFEC;
+  border-radius:var(--sm-radius-xs);
+  background:var(--sm-accent-soft);
+  color:var(--sm-accent-hover);
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+#app .aps-settings #settings-avatar-file:focus-visible,
+#app .aps-settings .settings-avatar-crop input:focus-visible{
+  outline:2px solid var(--sm-accent);
+  outline-offset:3px;
+}
+#app .aps-settings .settings-avatar-controls small{
+  color:var(--sm-sub);
+  font-size:11px;
+  line-height:1.5;
+}
+#app .aps-settings .settings-avatar-crop{
+  display:grid;
+  grid-template-columns:125px minmax(0,1fr);
+  align-items:center;
+  gap:10px;
+  margin-top:5px;
+}
+#app .aps-settings .settings-avatar-crop label{
+  color:var(--sm-text);
+  font-size:11.5px;
+  font-weight:650;
+}
+#app .aps-settings .settings-avatar-crop input{
+  width:100%;
+  accent-color:var(--sm-accent);
+}
+#app .aps-settings [data-avatar-clear]{
+  justify-self:start;
+  padding:8px 12px;
+  border:1px solid var(--sm-border);
+  border-radius:var(--sm-radius-control);
+  font-size:11.5px;
+}
+#app .aps-settings .settings-avatar-status{
+  margin:12px 0 0;
+  color:var(--sm-text);
+  font-size:11.5px;
+  line-height:1.6;
+}
+#app .aps-settings .settings-avatar-status:empty{display:none}
+#app .aps-settings .settings-avatar-gate{
+  margin:15px 0 0;
+  padding:11px 14px;
+  border:1px solid #EDD9B5;
+  border-left:3px solid var(--sm-warning);
+  border-radius:var(--sm-radius-control);
+  background:var(--sm-warning-soft);
+  color:var(--sm-warning);
+  font-size:11.5px;
+  line-height:1.65;
+}
+@media(max-width:560px){
+  #app .aps-settings .settings-avatar-editor{padding:15px}
+  #app .aps-settings .settings-avatar-layout{
+    grid-template-columns:90px minmax(0,1fr);
+    gap:14px;
+  }
+  #app .aps-settings .settings-avatar-preview{
+    width:90px;
+    font-size:23px;
+  }
+  #app .aps-settings .settings-avatar-crop{
+    grid-template-columns:minmax(0,1fr);
+    gap:6px;
+  }
+}
