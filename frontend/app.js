@@ -2700,6 +2700,35 @@ async function submitRecoveryPassword(form){
    errorMessage(error),{mode:invalid?'forgot':'reset'});
  }finally{state.authBusy=false;}
 }
+// Availability recovery never installs claims from the browser or bypasses
+// wm_auth_access_context. A signed session is preserved until the provider
+// confirms invalidation or the user explicitly signs out.
+let startupRecoveryActive=false;
+let startupBusy=false;
+function renderBootstrapFailure(error){
+ startupRecoveryActive=true;
+ platformSync.stop();
+ state.context=null;
+ state.boards=[];
+ state.board=null;
+ state.roleVerified=false;
+ const denied=error?.status===403;
+ const description=denied?
+  'The signed account has no verified access to the requested workspace. '+
+  'Contact your administrator if your membership should be active.':
+  'The authentication or workspace service could not be verified. '+
+  'Check your network connection and retry; your existing session is preserved.';
+ root.innerHTML='<div class="access-denied" role="alert">'+
+  '<div class="denied-panel">'+
+   '<img class="brand-mark csp-u059" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/>'+
+   '<h1>'+(denied?'Workspace access unavailable':'Connection interrupted')+'</h1>'+
+   '<p>'+description+'</p>'+
+   '<div class="startup-recovery-actions">'+
+    '<button type="button" class="primary" data-action="retry-startup">Retry connection</button>'+
+    (auth.isSignedIn?'<button type="button" class="secondary" data-action="logout">Sign out</button>':'')+
+   '</div>'+
+  '</div></div>';
+}
 async function login(form){
  if(state.authBusy)return;
  const email=String(new FormData(form).get('email')||'');
@@ -2717,7 +2746,14 @@ async function login(form){
    await onRoute();
    toast(returnToB3?'Signed in. In B3, click Step 2 only to test the foreign row.':
     'Successfully signed in.');
- }catch(err){await auth.signOut();state.context=null;renderLogin(errorMessage(err));}
+ }catch(err){
+   if(auth.isSignedIn&&err?.status!==401){
+     renderBootstrapFailure(err);
+   }else{
+     if(err?.status===401)auth.clear();
+     state.context=null;renderLogin(errorMessage(err));
+   }
+ }
  finally{state.authBusy=false;}
 }
 function hideModal(){if(modal){modal.remove();modal=null;}}
@@ -3404,6 +3440,14 @@ async function action(name,button){
   section.querySelector('.settings-name-edit').focus();
   break;
  }
+ case 'retry-startup':{
+   if(startupBusy)break;
+   root.innerHTML='<div class="access-denied" role="status">'+
+     '<div class="denied-panel"><h1>Retrying verified startup…</h1>'+
+     '<p>Checking your existing session and authorized workspace.</p></div></div>';
+   await boot();
+   break;
+ }
  case 'toggle-password':{
   const target=String(button.dataset.passwordTarget||'password');
   if(!['password','register-password','register-confirm','reset-password','reset-confirm'].includes(target))break;
@@ -3438,6 +3482,7 @@ async function action(name,button){
     }
     if(isB3LocalRevoke&&(!state.ws02dB3RevokeArmed||state.view!=='security'||
        !auth.isSignedIn||!state.context))break;
+    startupRecoveryActive=false;
     closeWorkspacePanels();clearBulkActivation();platformSync.stop();
     let revoked=null;
     if(isB3LocalRevoke){
@@ -5965,6 +6010,7 @@ window.addEventListener('hashchange',()=>{
  }
  if(!state.context){
   approvedRouteHash=nextHash;
+  if(startupRecoveryActive)return;
   const mode=authViewFromHash();
   if(mode!=='reset')recoveryContext=null;
   renderLogin(mode==='reset'&&!recoveryContext?'Your recovery link is unavailable or expired. Request a new link.':'',{mode});
@@ -5995,9 +6041,14 @@ window.addEventListener('keydown',event=>{if(event.key==='Escape'){
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
+ if(startupBusy)return;
+ startupBusy=true;
+ startupRecoveryActive=false;
+ window.__APSYNTRA_STARTUP?.begin();
  startInitialization();
+ let outcome='RECOVERABLE_ERROR';
  try{
   setInitializationPhase('authentication');
   const callback=captureAuthReturn(location,history);
@@ -6008,35 +6059,53 @@ async function boot(){
     try{
      recoveryContext=await inspectRecoveryToken(auth,callback);
      renderLogin('',{mode:'reset'});
-    }catch{recoveryContext=null;renderLogin('The recovery link is invalid or expired. Request a new link.',{mode:'forgot'});}
+    }catch(err){
+     recoveryContext=null;
+     renderLogin(err?.status===0||err?.status>=500?
+      'Recovery verification is temporarily unavailable. Reopen your recovery link when service returns.':
+      'The recovery link is invalid or expired. Request a new link.',
+      {mode:'forgot'});
+    }
    }else if(callback.kind==='confirmation'){
-    renderLogin('',{mode:'login',notice:'Email verification completed. Workspace access still requires administrator approval. Sign in only after your account is admitted.'});
+    renderLogin('',{mode:'login',notice:
+     'Email verification completed. Workspace access still requires administrator approval. Sign in only after your account is admitted.'});
    }else{
     renderLogin('The authentication link is invalid or expired.',{mode:'forgot'});
    }
+   outcome='UNAUTHENTICATED';
    return;
   }
   if(['#/register','#/forgot-password','#/reset-password'].includes(location.hash)){
-   renderLogin(location.hash==='#/reset-password'?'Your recovery link is unavailable or expired. Request a new link.':'');
+   renderLogin(location.hash==='#/reset-password'?
+    'Your recovery link is unavailable or expired. Request a new link.':'');
+   outcome='UNAUTHENTICATED';
    return;
   }
   if(await auth.restore()){
-    state.user=auth.session.user;
-    setInitializationPhase('authorization');
-    try{
-      await refreshWorkspace();
-      setInitializationPhase('workspace');
-      await onRoute();
-    }catch(err){
-      if(err instanceof ApiError&&err.status===403){
-        root.innerHTML=`<div class="access-denied"><div class="denied-panel"><img class="brand-mark csp-u059" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/><h1>Workspace access unavailable</h1>
-        <p>${e(errorMessage(err))} Contact your administrator to activate your existing profile or workspace membership.</p>
-        <button class="secondary" data-action="logout">Sign out</button></div></div>`;
-      }else{await auth.signOut();renderLogin('Your session could not be restored. Please sign in again.');}
-    }
-  }else renderLogin();
- }catch{renderLogin('Unable to initialize session. Please try signing in.');}
- finally{finishInitialization();}
+   state.user=auth.session.user;
+   setInitializationPhase('authorization');
+   await refreshWorkspace();
+   setInitializationPhase('workspace');
+   await onRoute();
+   outcome='AUTHENTICATED';
+  }else{
+   renderLogin();
+   outcome='UNAUTHENTICATED';
+  }
+ }catch(err){
+  if(err?.status===401&&!auth.isSignedIn){
+   state.context=null;
+   renderLogin('Your session has expired. Sign in again.');
+   outcome='UNAUTHENTICATED';
+  }else{
+   renderBootstrapFailure(err);
+   outcome='RECOVERABLE_ERROR';
+  }
+ }finally{
+  window.__APSYNTRA_STARTUP?.resolve(outcome);
+  finishInitialization();
+  startupBusy=false;
+ }
 }
 startSelectExperience(document.body);
 startActionMenuExperience(document.body);
