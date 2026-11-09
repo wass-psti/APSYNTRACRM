@@ -101,7 +101,7 @@ test('HTML and status from untrusted board records are escaped',()=>{
 });
 
 test('unfinished tabs are navigation-ready without offering unauthorized writes',()=>{
- for(const section of FUELTRACK_TABS.slice(1)){
+ for(const section of FUELTRACK_TABS.filter(section=>section.key!=='dashboard'&&section.key!=='analytics')){
   const html=renderFuelTrackV3Application({detail:fixture(),section:section.key});
   assert.match(html,/not enabled|not yet integrated|will be connected|require|need verified/i);
   assert.doesNotMatch(html,/<form\b|type="submit"/i);
@@ -117,4 +117,15 @@ test('APSYNTRA board routes preserve existing Board items while adding FuelTrack
  assert.match(app,/state\.fuelTrackSection=requested==='fueltrack'/);
  assert.match(app,/boardGrid\(state\.board/);
  assert.match(index,/fueltrack-v3-application\.css/);
+});
+
+test('Analytics is rendered by the signed application integration, not fabricated fallback data',async()=>{
+ const {renderFuelTrackAnalytics}=await import('../fueltrack-v3-analytics.js');
+ const html=renderFuelTrackV3Application({
+  detail:fixture(),section:'analytics',analyticsRenderer:renderFuelTrackAnalytics,
+  analyticsView:'odometer',analyticsRange:'week',analyticsMetric:'volume'
+ });
+ assert.match(html,/Odometer Monitoring/);
+ assert.match(html,/No verified vehicle rankings/);
+ assert.doesNotMatch(html,/NEXT FRONTEND MILESTONE/);
 });

@@ -78,3 +78,38 @@
 @media(max-width:760px){#app .ft3-app-header{align-items:flex-start;flex-direction:column}#app .ft3-app-identity{flex-wrap:wrap}#app .ft3-app-body{padding:16px 12px}#app .ft3-dashboard-head{align-items:flex-start;flex-direction:column}#app .ft3-dashboard-grid{grid-template-columns:1fr}#app .ft3-app-tabs{padding:0 8px}#app .ft3-app-tab{padding:12px 10px}}
 @media(max-width:420px){#app .ft3-metric-grid{grid-template-columns:1fr}#app .ft3-metric{min-height:125px}#app .ft3-dashboard-head h2{font-size:24px}}
 @media(prefers-reduced-motion:reduce){#app .ft3-app *{scroll-behavior:auto;transition:none}}
+
+/* CP-FT3-02 Analytics: navigation follows the supplied reference, data stays authoritative. */
+#app .ft3-analytics .ft3-dashboard-head{margin-bottom:10px}
+#app .ft3-analytics-range,#app .ft3-analytics-metric-filter,#app .ft3-analytics-section-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#app .ft3-analytics-range{margin:9px 0 16px}
+#app .ft3-analytics-metric-filter{justify-content:flex-end;margin:0 0 14px}
+#app .ft3-analytics-chip{display:inline-flex;align-items:center;justify-content:center;min-height:32px;border:1px solid #dbe7ea;border-radius:999px;padding:6px 12px;text-decoration:none;color:#687f87;background:#f2f7f9;font-size:11px;font-weight:650}
+#app .ft3-analytics-chip.is-active{background:#fff;color:#237d7b;border-color:#a5cbd0;box-shadow:0 2px 6px #235b6010}
+#app .ft3-analytics-chip:hover{background:#e6f3f2}
+#app .ft3-analytics-chip:focus-visible,#app .ft3-analytics-section-tab:focus-visible{outline:2px solid #159e9b;outline-offset:2px}
+#app .ft3-analytics-summary .ft3-analytics-stat{display:flex;flex-direction:column;min-height:139px;border:1px solid #d4e2e8;border-radius:17px;padding:18px;background:linear-gradient(135deg,#f0f8f9,#edf4f7);gap:12px;min-width:0}
+#app .ft3-analytics-stat>span{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#6f848a}
+#app .ft3-analytics-stat>strong{font-size:25px;letter-spacing:-.025em;font-weight:800;color:#162831;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#app .ft3-analytics-stat>small{font-size:10px;color:#81959b;line-height:1.4}
+#app .ft3-analytics-overview>.ft3-analytics-panel{margin-bottom:18px}
+#app .ft3-analytics-chart-wrap{padding:17px 19px}
+#app .ft3-analytics-chart{display:block;width:100%;height:auto;max-height:280px;overflow:visible}
+#app .ft3-analytics-gridline{stroke:#d6e5e9;stroke-dasharray:3 5;stroke-width:1}
+#app .ft3-analytics-axis{font-size:11px;fill:#81959e}
+#app .ft3-analytics-trend-path{fill:none;stroke:#20a99e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+#app .ft3-analytics-dot{fill:#fff;stroke:#18a39b;stroke-width:2}
+#app .ft3-analytics-chart-note,#app .ft3-analytics-footnote{font-size:11px;color:#789098;line-height:1.5}
+#app .ft3-analytics-footnote{padding:0 18px 10px}
+#app .ft3-analytics-chart-note{margin:8px 0 0;text-align:right}
+#app .ft3-analytics-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:15px;margin-bottom:21px}
+#app .ft3-analytics-void{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-height:220px;text-align:center;padding:22px 28px}
+#app .ft3-analytics-void strong{color:#465f6a;font-size:13px}
+#app .ft3-analytics-void p{color:#82949a;font-size:12px;line-height:1.65;max-width:430px;margin:0}
+#app .ft3-analytics-section-nav{padding:10px;gap:5px;margin:18px 0 13px;border:1px solid #e4edef;border-radius:14px;background:#f0f6f8;overflow-x:auto;flex-wrap:nowrap}
+#app .ft3-analytics-section-tab{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;text-decoration:none;border:1px solid transparent;border-radius:999px;padding:8px 12px;color:#677f88;font-size:11px;font-weight:700;min-height:34px}
+#app .ft3-analytics-section-tab:hover{background:#e6f0f2;color:#2c7577}
+#app .ft3-analytics-section-tab.is-active{background:#fff;border-color:#8bb8be;color:#1a6d70}
+#app .ft3-analytics-detail .ft3-panel{min-height:285px}
+@media(max-width:800px){#app .ft3-analytics-grid{grid-template-columns:1fr}#app .ft3-analytics-section-nav{scrollbar-width:thin}#app .ft3-analytics-stat>strong{font-size:21px}}
+@media(max-width:540px){#app .ft3-analytics-chip{padding:6px 9px}#app .ft3-analytics-void{min-height:175px;padding:15px}#app .ft3-analytics-metric-filter{justify-content:flex-start}}
