@@ -86,3 +86,4 @@
  font:700 13px/1.4 Inter,system-ui,sans-serif;min-height:44px}
 .aps-init-retry:focus-visible{outline:3px solid white;outline-offset:3px}
 .aps-init[data-phase="fatal"] .aps-init-track:before{animation:none;display:none}
+.aps-init[data-phase="fatal"] .aps-init-orb-fallback{animation:none}
