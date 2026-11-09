@@ -258,3 +258,55 @@
 #app .ft3-approvals-queue li small{display:block;color:#718691}
 @media(max-width:850px){#app .ft3-approvals-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){#app .ft3-approvals{padding:17px 12px 30px}#app .ft3-approvals-metrics{grid-template-columns:1fr}}
+
+
+/* LightFuels signed-only reference layout */
+#app .ft3-light{padding:23px 20px 36px;min-height:480px;color:#263d46}
+#app .ft3-light-head{display:flex;align-items:start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+#app .ft3-light-head h2{margin:0 0 5px;font-size:25px;font-weight:650;letter-spacing:-.035em}
+#app .ft3-light-head p{margin:0;color:#70858e;font-size:11px}
+#app .ft3-light-head button{padding:9px 13px;border:1px solid #d5e2e7;background:#f7fbfc;border-radius:11px;font:inherit;cursor:pointer}
+#app .ft3-light-head button:focus-visible{outline:2px solid #109a98;outline-offset:2px}
+#app .ft3-light-reminder{margin:20px 0 15px;padding:15px 18px;border:1px solid #91d4fb;border-radius:18px;background:#e7f4fc}
+#app .ft3-light-reminder strong{font-size:11px;color:#218fc0;text-transform:uppercase;letter-spacing:.025em}
+#app .ft3-light-reminder p{font-size:12px;margin:6px 0 0;line-height:1.55}
+#app .ft3-light-warning{border:1px solid #f4bfc3;color:#c34e55;border-radius:12px;padding:11px 14px;background:#fcf3f5}
+#app .ft3-light-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #d3e0e6;border-radius:19px;overflow:hidden;background:#f0f7f9}
+#app .ft3-light-metric{padding:16px 17px;display:flex;flex-direction:column;gap:7px;border-right:1px solid #d2e0e4}
+#app .ft3-light-metric:last-child{border-right:0}
+#app .ft3-light-metric small{font-size:11px;color:#677e87}
+#app .ft3-light-metric strong{font-size:23px;color:#20343c;font-weight:720}
+#app .ft3-light-filters{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:19px 0}
+#app .ft3-light-filters label{font-size:11px;color:#718590}
+#app .ft3-light-filters input{border:1px solid #d1dfe5;border-radius:11px;background:#f7fbfc;padding:9px 12px;font:inherit;min-width:190px}
+#app .ft3-light-filters button{border:1px solid #d1e4e7;padding:7px 11px;border-radius:99px;background:#f0f6f8;color:#557780;font:inherit}
+#app .ft3-light-filters :disabled{cursor:not-allowed;opacity:.55}
+#app .ft3-light-unavailable{padding:35px 23px;border:1px solid #d5e3e8;background:#f4f9fa;border-radius:17px;text-align:center;color:#657e89;line-height:1.65}
+#app .ft3-light-queue{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#app .ft3-light-card{border:1px solid #d0e1e5;border-left:3px solid #e45a61;background:#edf6f8;border-radius:18px;padding:16px;min-width:0}
+#app .ft3-light-card-top{display:flex;justify-content:space-between;gap:9px;align-items:center}
+#app .ft3-light-card-top strong{overflow-wrap:anywhere}
+#app .ft3-light-card-top span{color:#108bb5;font-size:10px}
+#app .ft3-light-card p{font-size:11px;color:#617b86}
+#app .ft3-light-card small{font-size:10px;color:#108d89}
+#app .ft3-light-card button{margin-top:8px;border:1px solid #d1e3e6;border-radius:10px;padding:8px 12px;opacity:.55;cursor:not-allowed}
+#app .ft3-light-completed{margin-top:25px;border:1px solid #d7e3e7;border-radius:19px;padding:18px;background:#f0f7f9}
+#app .ft3-light-completed h3{font-size:14px;margin:0 0 3px}
+#app .ft3-light-completed>p{font-size:11px;color:#738892;margin:0 0 12px}
+#app .ft3-light-completed-empty{padding:13px 0}
+#app .ft3-light-table-scroll{overflow-x:auto}
+#app .ft3-light-table-scroll table{width:100%;border-collapse:collapse;min-width:410px}
+#app .ft3-light-table-scroll th,#app .ft3-light-table-scroll td{padding:10px;border-bottom:1px solid #d7e4e8;text-align:left;font-size:11px}
+#app .ft3-light-guide{margin-top:20px;border:1px solid #d3e3e5;border-radius:18px;padding:15px;background:#f5fafb}
+#app .ft3-light-guide summary{cursor:pointer;font-weight:670}
+#app .ft3-light-guide summary:focus-visible{outline:2px solid #119e98;outline-offset:3px}
+#app .ft3-light-guide-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding-top:16px}
+#app .ft3-light-guide-steps section{border:1px solid #d9e7e9;border-radius:13px;padding:13px}
+#app .ft3-light-guide-steps h3{font-size:13px}
+#app .ft3-light-guide-steps p{line-height:1.5}
+#app .ft3-light-guide-steps button{border-radius:10px;border:1px solid #d3e0e4;padding:9px;margin-top:10px;opacity:.6}
+#app .ft3-light-field-grid{display:grid;gap:11px}
+#app .ft3-light-field-grid label{display:flex;flex-direction:column;gap:5px;font-size:11px}
+#app .ft3-light-field-grid input{border:1px solid #d3e0e4;border-radius:9px;padding:8px;max-width:100%}
+@media(max-width:850px){#app .ft3-light-queue{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){#app .ft3-light{padding:17px 12px}#app .ft3-light-queue,#app .ft3-light-guide-steps{grid-template-columns:1fr}#app .ft3-light-metric{padding:12px}#app .ft3-light-metric strong{font-size:19px}}
