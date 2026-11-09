@@ -53,10 +53,10 @@ function workflowGuide(){
  '<button type="button" disabled>Mark as Refueling Done — unavailable</button></section>'+
  '<section><h3>2. Enter Refueling & Receipt Details</h3>'+
  '<p>Actual amount, optional invoice or receipt number, fuel quantity and optional receipt photo are required by the reference workflow.</p>'+
- '<div class="ft3-light-field-grid"><label>Actual Amount (₱)<input type="number" min="0.01" step="0.01" placeholder="0.00" disabled></label>'+
- '<label>Invoice / Receipt Number<input type="text" placeholder="INV-XXXX" disabled></label>'+
- '<label>Fuel Quantity (Liters)<input type="number" min="0.01" step="0.01" placeholder="0" disabled></label>'+
- '<label>Receipt Photo<input type="file" accept="image/*" disabled></label></div>'+
+ '<div class="ft3-light-field-grid"><label>Actual Amount (₱)<input id="ft3-light-actual-amount" name="ft3-light-actual-amount" type="number" min="0.01" step="0.01" placeholder="0.00" disabled></label>'+
+ '<label>Invoice / Receipt Number<input id="ft3-light-invoice" name="ft3-light-invoice" type="text" placeholder="INV-XXXX" disabled></label>'+
+ '<label>Fuel Quantity (Liters)<input id="ft3-light-quantity" name="ft3-light-quantity" type="number" min="0.01" step="0.01" placeholder="0" disabled></label>'+
+ '<label>Receipt Photo<input id="ft3-light-photo" name="ft3-light-photo" type="file" accept="image/*" disabled></label></div>'+
  '<button type="button" disabled>Save & Complete — unavailable</button></section></div></details>';
 }
 export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceId=null}={}){
