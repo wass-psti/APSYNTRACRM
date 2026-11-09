@@ -67,33 +67,68 @@ function escapeHtml(value){
  }[c]));
 }
 let activePreviewUrl=null;
-let hydrationSequence=0;
+const avatarHydrationTokens=new WeakMap();
+let avatarHydrationCounter=0;
 function releasePreview(){
  if(activePreviewUrl){URL.revokeObjectURL(activePreviewUrl);activePreviewUrl=null;}
 }
 export function stopAvatarPreview(){releasePreview();}
+
+/** Shared avatar contents for every profile surface; callers may bind another
+ * authorized user's stable object path and UUID without copying profile data. */
+export function avatarImageMarkup(initials,{path,userId}={}){
+ const reference=path&&userId?
+  ' data-avatar-path="'+escapeHtml(path)+'" data-avatar-user-id="'+escapeHtml(userId)+'"':'';
+ return '<span data-avatar-initials aria-hidden="true">'+escapeHtml(initials||'U')+'</span>'+
+  '<img data-avatar-current alt="" hidden'+reference+' />';
+}
+
+/** Hydrate all avatar nodes in a rendered surface. The initials stay visible
+ * until the image has loaded successfully; failed/expired URLs fall back cleanly. */
 export async function mountAvatarImages(container,client,path,userId){
- const sequence=++hydrationSequence;
  const nodes=[...(container?.querySelectorAll?.('img[data-avatar-current]')||[])];
+ const pending=[];
  for(const img of nodes){
-  img.hidden=true;
-  img.removeAttribute('src');
+  const token=++avatarHydrationCounter;
+  avatarHydrationTokens.set(img,token);
+  img.onload=null;img.onerror=null;
+  img.hidden=true;img.removeAttribute('src');
   const fallback=img.parentElement?.querySelector('[data-avatar-initials]');
   if(fallback)fallback.hidden=false;
+  const avatarPath=img.dataset?.avatarPath||path;
+  const avatarUserId=img.dataset?.avatarUserId||userId;
+  if(!avatarPath||!client||!avatarUserId)continue;
+  const isCurrent=()=>avatarHydrationTokens.get(img)===token&&
+   img.isConnected!==false&&container?.isConnected!==false;
+  pending.push((async()=>{
+   try{
+    const url=await client.signedUrl(avatarPath,avatarUserId);
+    if(!isCurrent())return;
+    img.referrerPolicy='no-referrer';
+    img.onload=()=>{
+     if(!isCurrent())return;
+     img.hidden=false;
+     if(fallback)fallback.hidden=true;
+    };
+    img.onerror=()=>{
+     if(!isCurrent())return;
+     img.hidden=true;
+     img.removeAttribute('src');
+     if(fallback)fallback.hidden=false;
+    };
+    img.src=url;
+    if(img.complete){
+     if(img.naturalWidth>0)img.onload?.();
+     else img.onerror?.();
+    }
+   }catch{
+    if(!isCurrent())return;
+    img.hidden=true;img.removeAttribute('src');
+    if(fallback)fallback.hidden=false;
+   }
+  })());
  }
- if(!path||!client||!userId)return;
- try{
-  const url=await client.signedUrl(path,userId);
-  if(sequence!==hydrationSequence||!container?.isConnected)return;
-  for(const img of nodes){
-   if(!img.isConnected)continue;
-   img.src=url;img.referrerPolicy='no-referrer';img.hidden=false;
-   const fallback=img.parentElement?.querySelector('[data-avatar-initials]');
-   if(fallback)fallback.hidden=true;
-  }
- }catch{
-  // Keep the initials fallback; avatar availability must not block the CRM.
- }
+ await Promise.all(pending);
 }
 export function avatarPreviewMarkup(initials){
  const fallback=escapeHtml(initials||'U');
