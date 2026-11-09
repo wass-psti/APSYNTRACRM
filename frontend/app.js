@@ -921,6 +921,7 @@ function settingsPage(){
   <p class="muted">Navigation TTFB ${report.ttfbMs??'—'} ms; DOM ready ${report.domReadyMs??'—'} ms; load ${report.loadMs??'—'} ms. These are browser navigation timings, not signed backend RPC timings or proof of a stable 120 FPS.</p>
   <p class="muted">${report.longTasks?.supported?`Long tasks (50 ms or more) during sampling: ${report.longTasks.count}; total ${report.longTasks.totalMs} ms; maximum ${report.longTasks.maxMs} ms.`:'Long Tasks API unavailable in this browser.'} This is not a full CPU trace.</p>
   ${report.startup?.phases?.length?`<p class="muted">Signed startup after JavaScript entry: ${report.startup.totalMs} ms (entry observed ${report.startup.entryFromNavigationMs} ms after navigation; signed route ready at ${report.startup.signedReadyFromNavigationMs} ms). ${report.startup.phases.map(step=>`${e(step.phase)} ${step.durationMs} ms`).join('; ')}. Each phase includes its awaited network and JavaScript work; not server-only RPC processing time or HTML/module download.</p>`:'<p class="muted">Signed startup phases unavailable in this tab. Reload while signed in and measure again.</p>'}`:''}
+  ${report?.startup?.reads?.length?`<p class="muted">Workspace signed RPC read durations (network-inclusive; not server-only): ${report.startup.reads.map(read=>`${e(read.operation)} ${read.durationMs} ms`).join('; ')}. Reads are instrumented after the verified session; board and role reads overlap. These durations are not additive.</p>`:''}
   </div></section>`;
  return `<div class="aps-settings"><section class="page-head settings-hero settings-entrance" aria-labelledby="settings-title"><div class="settings-hero-copy"><span class="label-top"><span class="settings-hero-dot" aria-hidden="true"></span>Workspace / Account</span><h1 id="settings-title">Account & security<span class="settings-heading-stop">.</span></h1><p>Your verified user identity and session preferences.</p></div><span class="settings-hero-status">${settingsIcon('shield')}<span>Verified workspace account</span></span><svg class="settings-hero-decoration" viewBox="0 0 420 200" fill="none" aria-hidden="true" focusable="false"><circle cx="355" cy="0" r="120" stroke="currentColor" stroke-opacity=".16"/><circle cx="355" cy="0" r="193" stroke="currentColor" stroke-opacity=".09"/><path d="M105 230C201 70 334 93 446 146" stroke="currentColor" stroke-opacity=".16"/></svg></section>
  <div class="settings-grid">${performancePanel}<section class="panel settings-profile-panel settings-entrance" aria-labelledby="settings-profile-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('user')}</span><h3 id="settings-profile-heading">Profile information</h3></div><span class="settings-auth-provider">Supabase Auth</span></div>
@@ -1456,7 +1457,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
 async function refreshWorkspace(){
  boardCacheChannel.stop();db.invalidateBoardCache();
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
- const incomingContext=await db.context();
+ const incomingContext=await startupCriticalPath.measure('workspace-context',()=>db.context());
  state.context=mergeProfileAvatarContext(state.context,incomingContext);
  boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
@@ -1478,8 +1479,8 @@ async function refreshWorkspace(){
  // before committing either result; a denied board read remains fatal.
  const signedId=state.context?.user_id,signedWorkspace=state.context?.workspace_id;
  const {boards,bootstrapVerified}=await readWorkspaceStartup({
-  listBoards:()=>db.boards('active'),
-  verifyBootstrap:()=>roleConfig.bootstrapVerified(),
+  listBoards:()=>startupCriticalPath.measure('board-list',()=>db.boards('active')),
+  verifyBootstrap:()=>startupCriticalPath.measure('bootstrap-role',()=>roleConfig.bootstrapVerified()),
   isCurrent:()=>auth.isSignedIn&&auth.userId===signedId&&
     state.context?.user_id===signedId&&state.context?.workspace_id===signedWorkspace
  });

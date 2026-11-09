@@ -5,6 +5,25 @@ import {sampleBrowserFrames} from '../../performance-profile.js';
 import {createStartupCriticalPath} from '../../performance-critical-path.js';
 import {readWorkspaceStartup} from '../../workspace-startup-read.js';
 window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
+ measuredWorkspace:async()=>{
+  const path=createStartupCriticalPath();
+  path.begin();path.phase('workspace-authorization');
+  await path.measure('workspace-context',async()=>{
+   await new Promise(resolve=>setTimeout(resolve,80));
+   return {user_id:'synthetic-not-reported',workspace_id:'synthetic-not-reported'};
+  });
+  const result=await readWorkspaceStartup({
+   listBoards:()=>path.measure('board-list',async()=>{
+    await new Promise(resolve=>setTimeout(resolve,60));return [{id:'not-reported'}];
+   }),
+   verifyBootstrap:()=>path.measure('bootstrap-role',async()=>{
+    await new Promise(resolve=>setTimeout(resolve,130));return true;
+   }),
+   isCurrent:()=>true
+  });
+  path.phase('authorized-route');path.end({authenticated:true});
+  return {report:path.snapshot(),count:result.boards.length,bootstrap:result.bootstrapVerified};
+ },
  concurrentWorkspace:async()=>{
   let starts=[],scopeValid=true;
   const begin=performance.now();

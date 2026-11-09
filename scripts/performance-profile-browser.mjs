@@ -104,6 +104,20 @@ async function run(){
   assert.equal(critical.signedReadyFromNavigationMs,120);
   assert.deepEqual(critical.phases.map(x=>x.phase),
    ['session-restore','workspace-authorization','authorized-route']);
+  const isolated=await page.evaluate('performanceAcceptance.measuredWorkspace()');
+  assert.equal(isolated.count,1);
+  assert.equal(isolated.bootstrap,true);
+  assert.deepEqual(isolated.report.reads.map(x=>x.operation),
+    ['workspace-context','board-list','bootstrap-role']);
+  const [contextRead,boardRead,roleRead]=isolated.report.reads;
+  assert.ok(contextRead.durationMs>=65&&contextRead.durationMs<500);
+  assert.ok(boardRead.durationMs>=45&&boardRead.durationMs<500);
+  assert.ok(roleRead.durationMs>=110&&roleRead.durationMs<700);
+  assert.ok(boardRead.startMs>=contextRead.endMs&&roleRead.startMs>=contextRead.endMs);
+  assert.ok(Math.abs(boardRead.startMs-roleRead.startMs)<60,
+   'board and role starts must overlap after a fresh context check');
+  assert.doesNotMatch(JSON.stringify(isolated.report),/synthetic-not-reported|not-reported|user_id|workspace_id/);
+  console.log('BROWSER_WORKSPACE_RPC_TIMING_PASS: network-inclusive numeric-only context/list/role boundaries');
   const parallel=await page.evaluate('performanceAcceptance.concurrentWorkspace()');
   assert.deepEqual(parallel.starts,['boards','role']);
   assert.equal(parallel.authorizedBoards,1);

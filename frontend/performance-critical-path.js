@@ -3,10 +3,11 @@
  * module executes. They do not imply browser navigation or server-only latency.
  */
 const PHASES=Object.freeze(['session-restore','workspace-authorization','authorized-route']);
+const OPERATIONS=Object.freeze(['workspace-context','board-list','bootstrap-role']);
 const round=number=>Number.isFinite(number)?Math.round(number*100)/100:null;
 export function createStartupCriticalPath({clock=()=>globalThis.performance?.now?.()}={}){
- let previous=null,current=null,entry=null,active=false,complete=false;
- const steps=[];
+ let previous=null,current=null,entry=null,active=false,complete=false,epoch=0;
+ const steps=[],operations=new Map();
  const now=()=>{const value=clock();return Number.isFinite(value)&&value>=0?value:null;};
  const record=boundary=>{
   const end=now();
@@ -15,7 +16,24 @@ export function createStartupCriticalPath({clock=()=>globalThis.performance?.now
   previous=end;current=boundary;
  };
  return Object.freeze({
-  begin(){steps.length=0;previous=now();entry=previous;current=PHASES[0];active=previous!==null;complete=false;},
+  begin(){epoch++;steps.length=0;operations.clear();previous=now();entry=previous;current=PHASES[0];active=previous!==null;complete=false;},
+  async measure(operation,action){
+   if(typeof action!=='function')throw Error('Invalid signed startup read');
+   // Unknown operations still execute, but never enter diagnostic records.
+   const shouldMeasure=active&&!complete&&current==='workspace-authorization'&&
+    OPERATIONS.includes(operation)&&!operations.has(operation);
+   const generation=epoch,start=shouldMeasure?now():null;
+   if(shouldMeasure)operations.set(operation,null);
+   try{return await action();}
+   finally{
+    if(shouldMeasure&&generation===epoch&&active&&!complete){
+     const end=now();
+     operations.set(operation,start!==null&&end!==null&&end>=start?
+      Object.freeze({operation,durationMs:round(end-start),
+       startMs:round(start-entry),endMs:round(end-entry)}):null);
+    }
+   }
+  },
   phase(phase){
    if(!active||complete||!PHASES.includes(phase)||
       PHASES.indexOf(phase)!==PHASES.indexOf(current)+1)return;
@@ -24,15 +42,17 @@ export function createStartupCriticalPath({clock=()=>globalThis.performance?.now
   end({authenticated=false}={}){
    if(!active||complete)return;
    record(null);complete=true;active=false;
-   if(!authenticated)steps.length=0;
+   if(!authenticated){steps.length=0;operations.clear();}
   },
-  clear(){steps.length=0;active=false;complete=false;previous=null;current=null;entry=null;},
+  clear(){epoch++;steps.length=0;operations.clear();active=false;complete=false;previous=null;current=null;entry=null;},
   snapshot(){
    if(!complete||!steps.length)return null;
    const phases=steps.map(step=>({...step}));
    const totalMs=round(phases.reduce((sum,x)=>sum+x.durationMs,0));
+   const reads=OPERATIONS.map(operation=>operations.get(operation)).filter(Boolean)
+    .map(read=>({...read}));
    return {phases,totalMs,entryFromNavigationMs:round(entry),
-    signedReadyFromNavigationMs:round(previous)};
+    signedReadyFromNavigationMs:round(previous),reads};
   }
  });
 }
