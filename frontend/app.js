@@ -100,6 +100,7 @@ import {loadBoardCollaboration,renderBoardCollaboration} from './board-collabora
 import {BoardPreferenceStore} from './board-preferences-idb.js';
 import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
+import {readWorkspaceStartup} from './workspace-startup-read.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board-presentation.js';
 import {runTwelveBoardQa} from './board-operational-qa.js';
@@ -1472,11 +1473,20 @@ async function refreshWorkspace(){
    state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;
    state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.ttRunId++;state.ttAttendance=null;state.ttClockPending=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  }
- state.boards=await db.boards('active');
+ // Both signed reads depend on the freshly validated access context, not
+ // on each other. Parallelize only after context and recheck identity/scope
+ // before committing either result; a denied board read remains fatal.
+ const signedId=state.context?.user_id,signedWorkspace=state.context?.workspace_id;
+ const {boards,bootstrapVerified}=await readWorkspaceStartup({
+  listBoards:()=>db.boards('active'),
+  verifyBootstrap:()=>roleConfig.bootstrapVerified(),
+  isCurrent:()=>auth.isSignedIn&&auth.userId===signedId&&
+    state.context?.user_id===signedId&&state.context?.workspace_id===signedWorkspace
+ });
+ state.boards=boards;
  state.user=auth.session?.user;
- // Verified server RPC is the ONLY entry gate. A profile role or email is never sufficient.
- try{state.roleVerified=await roleConfig.bootstrapVerified();}
- catch{state.roleVerified=false;}
+ // This role check is still signed and server-authoritative, never cached.
+ state.roleVerified=bootstrapVerified;
  if(!state.roleVerified){state.roleData=null;state.roleError='';state.userRoleData=null;state.ttTeam=null;state.ttTeamRunId++;state.ttTeamError='';}
 }
 async function loadUserRoleManagement(){
