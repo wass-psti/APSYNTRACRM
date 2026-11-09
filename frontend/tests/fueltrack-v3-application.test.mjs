@@ -101,7 +101,7 @@ test('HTML and status from untrusted board records are escaped',()=>{
 });
 
 test('unfinished tabs are navigation-ready without offering unauthorized writes',()=>{
- for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests','new-request','approvals'].includes(section.key))){
+ for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests','new-request','approvals','lightfuels'].includes(section.key))){
   const html=renderFuelTrackV3Application({detail:fixture(),section:section.key});
   assert.match(html,/not enabled|not yet integrated|will be connected|require|need verified/i);
   assert.doesNotMatch(html,/<form\b|type="submit"/i);
@@ -199,4 +199,15 @@ test('Approvals reference is mounted while decision statistics fail closed',()=>
  assert.match(html,/data-action="refresh-board"/);
  assert.doesNotMatch(html,/Delegate|Delegation/);
  assert.doesNotMatch(html,/data-action="ft3-approve"|data-action="ft3-reject"/);
+});
+
+test('LightFuels route has reference sections but never infers transactional queue from board items',()=>{
+ const html=renderFuelTrackV3Application({detail:fixture(),section:'lightfuels'});
+ for(const title of ['LightFuels','Fuel attendant reminder','Active Queue',
+  'Session Done','Total Processed','Recently Completed','Refueling workflow requirements',
+  'Mark as Refueling Done','Enter Refueling & Receipt Details'])
+  assert.ok(html.includes(title),title);
+ assert.match(html,/data-action="refresh-board"/);
+ assert.match(html,/signed LightFuels queue and refueling workflow are not connected/);
+ assert.doesNotMatch(html,/8 in queue|257 processed|All clear!|data-action="ft3-refuel/);
 });
