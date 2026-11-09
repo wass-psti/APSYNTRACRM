@@ -118,7 +118,10 @@ async function run(){
    '--user-data-dir='+tmp,'--remote-debugging-port=0','about:blank'
   ],{stdio:'ignore'});
   const active=join(tmp,'DevToolsActivePort');
-  await until(()=>existsSync(active));
+  // Hosted Chromium cold-start can exceed six seconds under CI load.
+  try{await until(()=>existsSync(active),{attempts:250,delay:100});}
+  catch{throw Object.assign(new Error('Chromium launch did not open DevToolsActivePort; exit code '+String(browser.exitCode)),
+   {code:'CHROME_STARTUP_TIMEOUT'});}
   const debugPort=Number(readFileSync(active,'utf8').split('\n')[0]);
   const base='http://127.0.0.1:'+debugPort;
   const fixture='http://127.0.0.1:'+port+'/frontend/tests/fixtures/board-cache-two-tab.html';
@@ -204,4 +207,5 @@ async function run(){
   try{rmSync(tmp,{recursive:true,force:true,maxRetries:5,retryDelay:100});}catch{}
  }
 }
-run().catch(error=>{console.error('BROWSER_TWO_TAB_FAILED:',error.message);process.exitCode=1;});
+run().catch(error=>{console.error('BROWSER_TWO_TAB_FAILED:',error.message);
+ process.exitCode=error.code==='CHROME_STARTUP_TIMEOUT'?75:1;});

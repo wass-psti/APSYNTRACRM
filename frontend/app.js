@@ -6581,4 +6581,7 @@ startActionMenuExperience(document.body);
 startSearchExperience(document.body);
 startInputExperience(document.body);
 startMetricsExperience(document.body);
-boot();
+// Register public static caching only after the signed startup promise settles.
+// A worker/module failure cannot block initialization or make startup fatal.
+void boot().then(()=>import('./static-cache-registration.js').then(
+ module=>module.registerStaticCache()).catch(()=>{})).catch(()=>{});

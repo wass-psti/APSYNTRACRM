@@ -115,3 +115,26 @@ test('install does not prefetch any assets or signed data',async()=>{
  assert.equal(h.requests.length,0);
  assert.equal(h.stores.size,0);
 });
+
+test('retirement mode unregisters only owned worker and purges namespaced static caches',async()=>{
+ const deletes=[],removed=[],scope=origin+'/APSYNTRACRM/';
+ const navigatorRef={serviceWorker:{getRegistration:async()=>({
+  active:{scriptURL:scope+'service-worker.js'},unregister:async()=>{removed.push(scope);return true}
+ })}};
+ const cacheStorage={keys:async()=>['apsyntra-crm-public-static-v1-20261109','other-app-cache'],
+  delete:async key=>{deletes.push(key);return true}};
+ assert.equal(await registerStaticCache({navigatorRef,cacheStorage,enabled:false,
+  locationRef:{origin,protocol:'https:',pathname:'/APSYNTRACRM/'}}),false);
+ assert.deepEqual(removed,[scope]);
+ assert.deepEqual(deletes,['apsyntra-crm-public-static-v1-20261109']);
+});
+
+test('worker bootstrap is optional and occurs only after application initialization',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
+ const finished=app.indexOf('finishInitialization();');
+ const registered=app.indexOf("import('./static-cache-registration.js')");
+ assert.ok(finished>=0&&registered>finished);
+ assert.match(app,/module=>module\.registerStaticCache\(\)\)\.catch\(\(\)=>\{\}\)/);
+ assert.doesNotMatch(html,/static-cache-bootstrap/);
+});
