@@ -98,7 +98,9 @@ async function run(){
   ],{stdio:'ignore'});
   const active=join(tmp,'DevToolsActivePort');
   // Shared hosted Chromium runners can need more than six seconds to start.
-  await until(()=>existsSync(active),{attempts:250,delay:100});
+  try{await until(()=>existsSync(active),{attempts:250,delay:100});}
+  catch{throw Object.assign(new Error('Chromium launch did not open DevToolsActivePort; exit code '+String(browser.exitCode)),
+   {code:'CHROME_STARTUP_TIMEOUT'});}
   const debugPort=Number(readFileSync(active,'utf8').split('\n')[0]);
   const base='http://127.0.0.1:'+debugPort;
   const fixture='http://127.0.0.1:'+port+'/frontend/tests/fixtures/static-cache-browser.html';
@@ -154,4 +156,5 @@ async function run(){
   try{rmSync(tmp,{recursive:true,force:true,maxRetries:5,retryDelay:100})}catch{}
  }
 }
-run().catch(error=>{console.error(error);process.exitCode=1});
+run().catch(error=>{console.error(error.message);
+ process.exitCode=error.code==='CHROME_STARTUP_TIMEOUT'?75:1});
