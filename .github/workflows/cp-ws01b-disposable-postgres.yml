@@ -55,6 +55,7 @@ on:
       - 'scripts/ws01-activate04-disjoint-role-denial-canary.test.mjs'
       - 'scripts/ws01-activate04-actor-boundary.test.mjs'
       - 'sql/tests/cp-ws-activate04-disposable-actor-boundary-candidate.sql'
+      - 'sql/tests/cp-ws-activate04-private-delegation-boundary.sql'
       - 'sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql'
       - 'sql/tests/cp-ws-activate04-original-domain-role-subset.sql'
       - 'scripts/ws01-activate04-synthetic-dependencies.test.mjs'
