@@ -38,6 +38,7 @@ download sql/cp-ws01b-lifecycle-contract-candidate.sql
 download sql/cp-ws01c-b3-create-contract-candidate.sql
 download sql/cp-ws01b-session-cutover-candidate.sql
 download sql/tests/cp-ws01b-disposable-acceptance.sql
+download sql/tests/cp-ws-activate04-original-domain-role-subset.sql
 download scripts/ws01-activate04-concurrent-cas-disposable.sh
 node "$WORK/scripts/ws01-h3-private-source-guard.mjs" \
  "--full-live-private-dir=$SOURCE_DIR" >/dev/null || deny ORIGINAL_SOURCE_HASH_DRIFT
@@ -52,7 +53,7 @@ psql -X -q -h /tmp -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABAS
 apply() {
  psql -X -q -h /tmp -U postgres -d workspace_disposable -v ON_ERROR_STOP=1 \
  -f "/public/$1" >/tmp/step.out 2>/tmp/step.err || {
- echo "CP_WS_ACTIVATE04_REPLAY_BLOCKED: DISPOSABLE_SQL_STAGE_FAILED"; exit 2; }
+ echo "CP_WS_ACTIVATE04_REPLAY_BLOCKED: DISPOSABLE_SQL_STAGE_FAILED $1"; head -n 5 /tmp/step.err; head -n 3 /tmp/step.out; exit 2; }
 }
 apply sql/tests/cp-ws01b-disposable-setup.sql
 apply sql/tests/cp-ws-activate04-74-caller-synthetic-dependencies.sql
@@ -78,6 +79,8 @@ fi
 echo CP_WS_ACTIVATE04_ORIGINAL_SOURCE_74_COMPILE_PASS
 apply sql/cp-ws01c-b3-create-contract-candidate.sql
 apply sql/cp-ws01b-session-cutover-candidate.sql
+apply sql/tests/cp-ws-activate04-original-domain-role-subset.sql
+echo CP_WS_ACTIVATE04_ORIGINAL_DOMAIN_ROLE_SUBSET_PASS
 apply sql/tests/cp-ws01b-disposable-acceptance.sql
 echo CP_WS_ACTIVATE04_ORIGINAL_SOURCE_SIGNED_ACCEPTANCE_PASS
 export PGHOST=127.0.0.1 PGUSER=postgres PGDATABASE=workspace_disposable
