@@ -22,6 +22,9 @@ export const TL03_WORKFLOW_DECISION_ENABLED=false;
 // Operational recording, completion and reopening are a separate signed
 // migration dependency. Never activate merely from deployed UI source.
 export const TL03_WORKFLOW_OPERATIONAL_ENABLED=false;
+// Independent signed electronic-PDF stage events require the separately
+// authorized backend candidate and real two-account negative acceptance.
+export const TL03_PDF_STAGE_ENABLED=false;
 const TYPES=new Set(['esi','packing','delivery','payment','quotation','po']);
 const STATES=new Set(['draft','submitted','under-review','revision-required',
  'approved','rejected','completed','cancelled']);
@@ -254,6 +257,44 @@ export class TradeLinkDomainClient{
         Date.parse(response.rows.at(-1).updatedAt))))
     deny('Invalid authorized TradeLink server page response.',409);
   return response;
+ }
+ async recordPdfStage({documentId,expectedRevision,stage}={}){
+  if(!TL03_PDF_STAGE_ENABLED)
+   deny('Electronic PDF stage recording awaits signed backend activation.',503);
+  if(!validUuid(documentId)||!Number.isSafeInteger(expectedRevision)||
+    expectedRevision<1||!['primary','secondary'].includes(stage))
+   deny('Invalid TradeLink electronic PDF stage request.',400);
+  const session=await this.session();
+  const result=await this.api.rpc('tl03_record_pdf_approval_stage',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+   p_expected_revision:expectedRevision,p_stage:stage});
+  if(!result||result.documentId!==documentId||
+    result.workspaceId!==session.workspaceId||
+    result.revision!==expectedRevision||result.stage!==stage||
+    result.actorId!==session.actorId||!validUuid(result.eventId)||
+    !validUuid(result.boardItemId)||typeof result.recordedAt!=='string'||
+    !Number.isFinite(Date.parse(result.recordedAt)))
+   deny('Signed PDF stage receipt mismatch.',409);
+  return result;
+ }
+ async pdfStages({documentId}={}){
+  if(!TL03_PDF_STAGE_ENABLED)
+   deny('Electronic PDF stage records await signed backend activation.',503);
+  if(!validUuid(documentId))deny('Invalid TradeLink document ID.',400);
+  const session=await this.session();
+  const result=await this.api.rpc('tl03_pdf_approval_stages',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId});
+  if(!result||result.documentId!==documentId||
+    result.workspaceId!==session.workspaceId||
+    !Number.isSafeInteger(result.revision)||result.revision<1||
+    !Array.isArray(result.stages)||result.stages.length>2||
+    result.stages.some((stage,index)=>!validUuid(stage?.eventId)||
+      !validUuid(stage?.actorId)||!['primary','secondary'].includes(stage.stage)||
+      stage.stage!==(index===0?'primary':'secondary')||
+      stage.revision!==result.revision||
+      typeof stage.recordedAt!=='string'||!Number.isFinite(Date.parse(stage.recordedAt))))
+   deny('Signed PDF stage list mismatch.',409);
+  return result;
  }
  async submit({documentId,expectedRevision,documentType,fromState='draft'}={}){
   if(!TL03_WORKFLOW_SUBMIT_ENABLED)
