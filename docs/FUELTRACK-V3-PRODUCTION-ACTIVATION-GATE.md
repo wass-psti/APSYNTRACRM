@@ -110,3 +110,15 @@ another Supabase project or disrupting production; verify 24-hour objectives;
 then execute the two reviewed migrations through the approved migration
 mechanism, followed by real signed-user runtime acceptance and release
 verification. Do not use synthetic JWTs or production fixture users.
+
+## November 10 — Provider physical recovery verification
+
+The owner directed autonomous work on the remaining recovery and activation milestone while retaining the no-new-Supabase-project and no-production-disruption constraints. The read-only CLI physical backup inventory returned seven completed physical backups; latest 2026-11-08 17:17:15 UTC, PITR disabled and WAL-G infrastructure enabled. That does not establish the 24-hour RPO/RTO.
+
+Live Storage metadata showed five account-avatar objects (114,010 bytes) and zero work-board-files objects; remaining private buckets were empty. These observations do not establish an independent continuously recoverable Storage backup.
+
+The fail-closed, on-demand script scripts/fueltrack-v3-provider-backup-gate.mjs and its synthetic-data unit tests were added. The formal provider feasibility inquiry is staged at docs/FUELTRACK-V3-PROVIDER-RECOVERY-INQUIRY-20261110.md; no ticket submission or official provider response is claimed.
+
+Supabase's standard provider restore choices are a new project or an in-place restore. Both conflict with current constraints. The November 9 local database and Storage rehearsals remain independently useful but do not establish provider-hosted physical recovery assurance. No production SQL migrations or Storage modifications were applied.
+
+**NO-GO** until Supabase confirms a supported safe provider restore verification method and the mandatory 24-hour RPO/RTO plus Storage-byte recovery can be rehearsed, or the owner separately authorizes changes to the incompatible constraints.

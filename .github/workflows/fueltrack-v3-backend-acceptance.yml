@@ -7,6 +7,7 @@ on:
       - 'sql/tests/fueltrack-v3-*.sql'
       - 'scripts/fueltrack-v3-backend-disposable.sh'
       - 'scripts/fueltrack-v3-signed-read-acceptance*.mjs'
+      - 'scripts/fueltrack-v3-provider-backup-gate*.mjs'
       - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
   workflow_dispatch:
 
@@ -27,3 +28,5 @@ jobs:
         run: ./scripts/fueltrack-v3-backend-disposable.sh
       - name: Verify signed read-only acceptance contract without live credentials
         run: node --test scripts/fueltrack-v3-signed-read-acceptance.test.mjs
+      - name: Verify provider backup release gate remains fail-closed
+        run: node --test scripts/fueltrack-v3-provider-backup-gate.test.mjs
