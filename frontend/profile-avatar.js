@@ -40,7 +40,7 @@ export async function prepareAvatarImage(file,{positionX=50,positionY=50,zoom=1}
   });
   if(!bitmap.naturalWidth||!bitmap.naturalHeight
    ||bitmap.naturalWidth>8192||bitmap.naturalHeight>8192
-   ||bitmap.naturalWidth*bitmap.naturalHeight>36000000)
+   ||bitmap.naturalWidth*bitmap.naturalHeight>16000000)
    throw new Error('Image dimensions exceed the supported limit.');
   const canvas=document.createElement('canvas');
   canvas.width=AVATAR_OUTPUT_SIZE;canvas.height=AVATAR_OUTPUT_SIZE;
@@ -154,7 +154,11 @@ export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}
  const update=async()=>{
   const version=++sequence;
   if(!selected)return;
-  previewReady=false;save.disabled=true;status.textContent='Preparing local preview…';
+  previewReady=false;save.disabled=true;
+  releasePreview();image.hidden=true;image.removeAttribute('src');
+  if(currentImage&&!currentImage.hidden)initials.hidden=true;
+  else initials.hidden=false;
+  status.textContent='Preparing local preview…';
   try{
    const blob=await prepareAvatarImage(selected,{
     zoom:Number(sliders[0].value)/100,
