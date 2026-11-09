@@ -43,7 +43,7 @@ const card=(r,actionEnabled=false)=>'<article class="ft3-light-card"><div class=
  esc(r.requestor)+'</strong><span>'+esc(r.type==='vehicle'?'Vehicle':'Container')+'</span></div>'+
  '<p>'+esc(r.reference)+'</p><small>'+esc(r.status)+'</small>'+
  '<p class="ft3-light-created">Created '+esc(r.createdAt)+'</p>'+
- (actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0?(r.status==='Awaiting Refueling'?'<button type="button" data-action="ft3-mark-refueled" data-id="'+esc(r.id)+'">Mark as Refueling Done</button>':'<form class="ft3-light-receipt-form" data-ft3-receipt="'+esc(r.id)+'"><label>Actual Amount (₱) <input name="amount" type="number" min="0.01" step="0.01" required></label><label>Fuel Quantity (Liters) <input name="liters" type="number" min="0.001" step="0.001" required></label><label>Receipt Number (optional) <input name="receiptNumber" type="text" maxlength="120"></label><button type="submit">Save & Complete</button></form>'):'<button type="button" disabled title="Signed refueling transition unavailable">Process — unavailable</button>')+'</article>';
+ (actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0?(r.status==='Awaiting Refueling'?'<button type="button" data-action="ft3-mark-refueled" data-id="'+esc(r.id)+'">Mark as Refueling Done</button>':'<form class="ft3-light-receipt-form" data-ft3-receipt="'+esc(r.id)+'"><label>Actual Amount (₱) <input name="amount" type="number" min="0.01" step="0.01" required></label><label>Fuel Quantity (Liters) <input name="liters" type="number" min="0.001" step="0.001" required></label><label>Receipt Number (optional) <input name="receiptNumber" type="text" maxlength="120"></label><label>Receipt Photo (optional, private) <input name="receiptPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label><button type="submit">Save & Complete</button></form>'):'<button type="button" disabled title="Signed refueling transition unavailable">Process — unavailable</button>')+'</article>';
 function workflowGuide(){
  return '<details class="ft3-light-guide"><summary>Refueling workflow requirements</summary>'+
  '<div class="ft3-light-guide-steps">'+
@@ -58,7 +58,7 @@ function workflowGuide(){
  '<label>Receipt Photo<input id="ft3-light-photo" name="ft3-light-photo" type="file" accept="image/*" disabled></label></div>'+
  '<button type="button" disabled>Save & Complete — unavailable</button></section></div></details>';
 }
-export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceId=null,actionEnabled=false}={}){
+export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceId=null,actionEnabled=false,receiptLink=null}={}){
  const model=fuelTrackLightFuelsModel({snapshot,boardId,workspaceId});
  return '<section class="ft3-light" aria-labelledby="ft3-light-heading">'+
  '<header class="ft3-light-head"><div><h2 id="ft3-light-heading">LightFuels</h2>'+
@@ -84,9 +84,13 @@ export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceI
   '<p class="ft3-light-unavailable" role="status">The signed LightFuels queue and refueling workflow are not connected. No request or completion totals are inferred from Board items, and no refueling operation was attempted.</p>')+
  '<section class="ft3-light-completed"><h3>Recently Completed</h3><p>Latest fuel transactions</p>'+
  (model&&model.recent.length?'<div class="ft3-light-table-scroll"><table><thead><tr>'+
- '<th scope="col">Requestor</th><th scope="col">Vehicle / Container</th><th scope="col">Date</th></tr></thead><tbody>'+
+ '<th scope="col">Requestor</th><th scope="col">Vehicle / Container</th><th scope="col">Date</th><th scope="col">Receipt</th></tr></thead><tbody>'+
  model.recent.map(r=>'<tr><td>'+esc(r.requestor)+'</td><td>'+esc(r.reference)+
- '</td><td>'+esc(r.completedAt)+'</td></tr>').join('')+'</tbody></table></div>':
+ '</td><td>'+esc(r.completedAt)+'</td><td>'+(
+  actionEnabled?(receiptLink?.requestId===r.id&&receiptLink.expiresAt>Date.now()?
+   '<a href="'+esc(receiptLink.href)+'" target="_blank" rel="noopener noreferrer">Open private receipt</a>':
+   '<button type="button" data-action="ft3-view-receipt" data-id="'+esc(r.id)+'">Prepare receipt link</button>'):
+   '—')+'</td></tr>').join('')+'</tbody></table></div>':
  '<p class="ft3-light-completed-empty">'+(model?'No completed records in the verified response.':
  'Completed records unavailable without a signed service.')+'</p>')+'</section>'+
  workflowGuide()+'</section>';

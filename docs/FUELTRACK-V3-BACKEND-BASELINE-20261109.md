@@ -47,13 +47,87 @@ Run using only an isolated PostgreSQL 16 container:
 
 Pass result: `FT3_BACKEND_CORE_ACCEPTANCE_PASS`. Covers idempotency, owner reads, role denial, invalid details, cross-workspace denial, signed-out denial, stale updates, allowed transitions, immutable audit, and Analytics.
 
+## Next increment: transactional Board identity + private receipt Storage (staged)
+
+Migration **`20261109235500_fueltrack_v3_board_receipts.sql`** depends on
+`20261109115106_fueltrack_v3_backend_core.sql`.
+
+- The signed `fueltrack_v3_submit` transaction creates one real Board item
+  via existing `wm_add_board_item` and assigns `board_item_id` to its request.
+  Replaying its idempotency key reuses the same item. A missing Board group
+  aborts the entire transaction; no orphan request is committed.
+- The Board item's managed `notes` projection contains the request UUID
+  and current workflow state. A compare-and-swap trigger updates that
+  projection in the *same transaction* as approval, refueling, or completion.
+  If the item is archived/removed or its managed note was changed externally,
+  the transition fails rather than silently overwriting user content.
+- Linked Board item deletion is restricted by FK. Board user-customizable
+  Status columns are not overwritten or assigned invented label IDs.
+- Private file uploads use the existing `work-board-files` bucket, with
+  `{boardId}/{boardItemId}/{objectUuid}.{jpg|png|webp}` as the only accepted
+  object key. The Storage policy verifies a real member-accessible Board item.
+- `fueltrack_v3_receipt_prepare` checks signed Admin, edit grant, linked item,
+  refueling state, and absence of existing receipt; it returns the actual Board
+  item and existing private bucket.
+- `fueltrack_v3_attach_receipt` verifies signed caller, actual `storage.objects`
+  owner, MIME, extension, size (max 5 MiB), request state and exact object path.
+  It invokes existing `wm_register_board_item_file` and creates the single
+  FuelTrack receipt link atomically. Replaying an already-registered path for
+  the same uploader returns the existing file ID; another receipt is denied.
+- `fueltrack_v3_receipt_read` returns only authorized metadata. The frontend
+  requests a 5-minute signed URL on explicit user action. It does not create
+  public links, use a service-role key, or store Storage tokens persistently.
+- The existing LightFuels Save & Complete form accepts one optional private
+  JPEG/PNG/WebP receipt image. A failed upload/registration does not falsely
+  complete the transaction. A previously stored receipt is preserved on retry.
+
+### Isolated verification
+
+Run `./scripts/fueltrack-v3-backend-disposable.sh`. It creates temporary
+PostgreSQL 16 containers, exercises both migrations, core and new contract
+acceptance, and deletes the containers. The tests cover idempotency, mutable
+Board-state projection, registered private receipt, size/MIME mismatch,
+wrong role, cross-workspace and signed-out denial, immutable core audit,
+migration reapplication, and the **legacy data preflight**.
+
+The preflight **intentionally blocks** the new migration before schema writes
+if the earlier core was independently activated with unlinked request records.
+Those rows require an authorized, audited migration/reconciliation before
+this migration can be deployed. No production records have been modified.
+
+### Security limits and deliberate non-goals
+
+- The existing private `work-board-files` Storage RLS uses Board membership
+  and Board item access. Therefore, an already-authorized Board viewer may
+  access registered receipts through existing Board file paths, even if they
+  do not have FuelTrack Admin role. Narrower receipt-only Storage policies
+  would change production permissions and require a separate risk review.
+- Existing Board file deletion policies may permit authorized file owners or
+  managers to delete the underlying Storage object. The request link/metadata
+  is protected by foreign keys, but the object itself is not immutable. An
+  explicit retention policy would be additional production authorization.
+- No production schema, RLS, Storage policy, account, Board item, or receipt
+  has been changed. No browser signed-session acceptance is claimed.
+- The New Fuel Request's preparatory receipt-photo button remains disabled;
+  the implemented private image path is the LightFuels completed-refueling
+  receipt workflow. Full historical paging, signed production acceptance,
+  and any requested early-photo workflow remain separate work.
+
 ## Activation still required
 
-1. Review and separately authorize the production schema deployment; apply using the existing migration policy, never ad-hoc production SQL execution.
-2. Run signed Admin/User/foreign-workspace/revoked-session runtime acceptance against the deployed functions.
-3. Connect the existing seven views and controls to `FuelTrackV3DomainClient`, without redesign; preserve the current fallback only until signed backend readiness is verified. UI actions must stay disabled on denied/unavailable reads.
-4. Integrate receipt images through the existing private Supabase Storage with separately reviewed path and RLS restrictions; this migration deliberately stores no unauthenticated upload paths.
-5. Verify existing Board integration and determine whether an authoritative Board-item projection is required. There is currently no verified transaction-to-Board synchronization contract in this increment.
-6. Verify end-to-end persistence across logout/refresh and dashboard/analytics correctness before calling the feature production-ready.
+1. Obtain separate authorization for the existing project's production schema
+   changes; apply both migrations through approved policy after confirming
+   no unlinked legacy fuel requests.
+2. Perform genuine signed Admin/User/foreign-workspace/revoked-session
+   acceptance for submission, Board projection, receipt image registration,
+   retrieval and receipt completion.
+3. Verify private Board Storage read/delete permissions align with intended
+   retention and recipient visibility; change production Storage policies
+   only with explicit permission approval.
+4. Verify Board UI and all seven sections across refresh/logout, with no
+   drift between a request and its linked Board item.
+5. Extend 200-row read pagination and any reference-specific interaction
+   not included in the existing backend transaction contracts.
 
-**Do not** infer production readiness from a passing disposable database or frontend test.
+**Do not** infer production readiness from passing disposable database or
+frontend tests.

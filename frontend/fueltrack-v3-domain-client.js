@@ -99,6 +99,47 @@ export class FuelTrackV3DomainClient {
   return requireWrite(await this.call('fueltrack_v3_mark_refueled',
    {p_board_id:this.boardId,p_request_id:requestId,p_expected_revision:expectedRevision}));
  }
+ async receiptPrepare({requestId}={}){
+  this.assertSigned();requireUuid(requestId,'request');
+  const result=await this.call('fueltrack_v3_receipt_prepare',
+   {p_board_id:this.boardId,p_request_id:requestId});
+  if(!result||result.status!=='VERIFIED_RECEIPT_PREPARE'||
+     result.requestId!==requestId||result.boardId!==this.boardId||
+     result.workspaceId!==this.workspaceId||!isUuid(result.boardItemId)||
+     result.bucket!=='work-board-files')
+   throw new Error('Invalid signed receipt preparation');
+  return result;
+ }
+ async receiptRead({requestId}={}){
+  this.assertSigned();requireUuid(requestId,'request');
+  const result=await this.call('fueltrack_v3_receipt_read',
+   {p_board_id:this.boardId,p_request_id:requestId});
+  if(!result||result.requestId!==requestId||
+   !['VERIFIED_RECEIPT','NO_RECEIPT'].includes(result.status))
+   throw new Error('Invalid signed receipt record');
+  if(result.status==='VERIFIED_RECEIPT'&&
+    (!isUuid(result.boardItemId)||!isUuid(result.fileId)||
+     typeof result.storagePath!=='string'||
+     !result.storagePath.startsWith(this.boardId+'/'+result.boardItemId+'/')))
+   throw new Error('Mismatched receipt Board identity');
+  return result;
+ }
+ async receiptRegister({requestId,path,fileName,mimeType,sizeBytes}={}){
+  this.assertSigned();requireUuid(requestId,'request');
+  if(typeof path!=='string'||typeof fileName!=='string'||
+    typeof mimeType!=='string'||!Number.isSafeInteger(sizeBytes))
+   throw new TypeError('Invalid receipt object metadata');
+  const result=await this.call('fueltrack_v3_attach_receipt',{
+   p_board_id:this.boardId,p_request_id:requestId,p_storage_path:path,
+   p_file_name:fileName,p_mime_type:mimeType,p_size_bytes:sizeBytes
+  });
+  if(!result||result.status!=='VERIFIED_RECEIPT'||
+   result.requestId!==requestId||!isUuid(result.boardItemId)||
+   !isUuid(result.fileId)||result.storagePath!==path||
+   !path.startsWith(this.boardId+'/'+result.boardItemId+'/'))
+   throw new Error('Invalid signed receipt registration');
+  return result;
+ }
  async complete({requestId,expectedRevision,actualAmount,fuelLiters,receiptNumber=null}={}){
   this.assertSigned();requireUuid(requestId,'request');
   if(!revision(expectedRevision)||typeof actualAmount!=='number'||!Number.isFinite(actualAmount)||
