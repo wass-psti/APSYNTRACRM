@@ -59,16 +59,16 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
     lineDescription:'Packed item',lineQuantity:'2',lineUnit:'box'},
    delivery:{customerName:'Recipient',referenceNumber:'SO-7',
     lineDescription:'Delivered item',lineQuantity:'1',lineUnit:'pc',
-    checkedBy:'QC',deliveredBy:'Logistics'},
+    checkedBy:'dsenagan@watchdogautomation.com.ph',deliveredBy:'rogang@watchdogautomation.com.ph'},
    payment:{customerName:'Payor',paymentParticulars:'Received on account',
-    cashAmount:'25',receivedBy:'Cashier',verifiedBy:'Verifier'},
-   esi:{customerName:'Invoice client',customerTin:'TIN-001',verifiedBy:'Finance',approvedBy:'Manager',
+    cashAmount:'25',receivedBy:'msenagan@watchdogautomation.com.ph',verifiedBy:'asenagan@watchdogautomation.com.ph'},
+   esi:{customerName:'Invoice client',customerTin:'TIN-001',verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
     lineDescription:'Goods',lineQuantity:'2',lineUnitPrice:'150'},
    quotation:{customerName:'Prospective client',customerEmail:'client@example.com',
-    validity:'30 days',deliveryCommitment:'Within 14 days',paymentTerms:'Net 30',approvedBy:'Manager',
+    validity:'30 days',deliveryCommitment:'Within 14 days',paymentTerms:'Net 30',approvedBy:'asenagan@watchdogautomation.com.ph',
     lineDescription:'Service',lineQuantity:'2',lineUnitPrice:'150'},
    po:{customerName:'Supplier',targetDeliveryDate:'2026-12-01',paymentTerms:'Net 30',
-    verifiedBy:'Account manager',approvedBy:'Final manager',
+    verifiedBy:'aacsenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
     lineDescription:'Materials',lineQuantity:'2',lineUnitPrice:'150'}
   };
   const valid=parseTradeLinkDraftForm(fields({
@@ -112,7 +112,7 @@ test('form parser accepts only bounded source Draft fields and never asserts per
  const draft=parseTradeLinkDraftForm(fields({documentType:'quotation',documentNumber:'Q-100',
   currency:'PHP',vatType:'12',customerName:'Sample customer',referenceNumber:'REF-7',
   customerEmail:'customer@example.com',validity:'30 days',deliveryCommitment:'Within 14 days',
-  paymentTerms:'Net 30',approvedBy:'Manager',
+  paymentTerms:'Net 30',approvedBy:'asenagan@watchdogautomation.com.ph',
   lineDescription:'Sample item',lineQuantity:'2',lineUnitPrice:'150.25',lineUnit:'pc',
   remarks:'Local only'}),{lineId:()=> 'line-001'});
  assert.deepEqual(draft.items,[{id:'line-001',kind:'item',description:'Sample item',
@@ -165,13 +165,13 @@ test('Delivery Receipt local readiness validates QC, logistics and optional seri
  const sample={documentType:'delivery',documentNumber:'DR-001',
   customerName:'Recipient',referenceNumber:'SO-002',
   lineDescription:'Machine',lineQuantity:'1',lineUnit:'unit',
-  lineSerialNumber:'ASSET-123',checkedBy:'QC officer',deliveredBy:'Logistics officer',
+  lineSerialNumber:'ASSET-123',checkedBy:'dsenagan@watchdogautomation.com.ph',deliveredBy:'rogang@watchdogautomation.com.ph',
   receivedBy:'Receiver'};
  const draft=parseTradeLinkDraftForm(fields(sample),{lineId:()=> 'item-2'});
  assert.equal(draft.items[0].serialNumber,'ASSET-123');
  assert.equal(draft.items[0].unitPrice,0);
- assert.equal(draft.checkedBy,'QC officer');
- assert.equal(draft.deliveredBy,'Logistics officer');
+ assert.equal(draft.checkedBy,'dsenagan@watchdogautomation.com.ph');
+ assert.equal(draft.deliveredBy,'rogang@watchdogautomation.com.ph');
  for(const variant of [
   {checkedBy:''},{deliveredBy:''},{customerName:''},
   {referenceNumber:''},{lineQuantity:'0'},{lineSerialNumber:'X'.repeat(121)}
@@ -196,7 +196,7 @@ test('Payment AR local readiness enforces positive cash or cheque and responsibi
  assert.match(html,/data-action="tradelink-draft-submit"/);
  const sample={documentType:'payment',documentNumber:'AR-001',customerName:'Payor',
   paymentParticulars:'Partial invoice settlement',cashAmount:'250.75',
-  receivedBy:'Cashier',verifiedBy:'Finance'};
+  receivedBy:'msenagan@watchdogautomation.com.ph',verifiedBy:'asenagan@watchdogautomation.com.ph'};
  const cash=parseTradeLinkDraftForm(fields(sample));
  assert.equal(cash.cashAmount,250.75);
  assert.equal(cash.paymentParticulars,'Partial invoice settlement');
@@ -235,7 +235,7 @@ test('Electronic SI preview validates client identity, priced line and intended 
  assert.match(html,/Verified By \(Finance Team\)/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  const base={documentType:'esi',documentNumber:'SI-001',customerName:'Client',
-  customerTin:'TIN-123',verifiedBy:'Finance',approvedBy:'Manager',
+  customerTin:'TIN-123',verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
   lineDescription:'Invoiced goods',lineQuantity:'1',lineUnitPrice:'100'};
  const draft=parseTradeLinkDraftForm(fields(base),{lineId:()=> 'si-line'});
  assert.equal(draft.customerTin,'TIN-123');
@@ -278,8 +278,8 @@ test('Supplier PO preview requires priced items, terms and intended reviewers',(
  assert.match(html,/Reviewed By \(Account Manager\)/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  const base={documentType:'po',documentNumber:'PO-001',customerName:'Supplier',
-  targetDeliveryDate:'2026-12-15',paymentTerms:'Net 15',verifiedBy:'Account manager',
-  approvedBy:'Final manager',poNumber:'V-PO-111',
+  targetDeliveryDate:'2026-12-15',paymentTerms:'Net 15',verifiedBy:'aacsenagan@watchdogautomation.com.ph',
+  approvedBy:'asenagan@watchdogautomation.com.ph',poNumber:'V-PO-111',
   lineDescription:'Parts',lineQuantity:'2',lineUnitPrice:'50'};
  const draft=parseTradeLinkDraftForm(fields(base),{lineId:()=> 'po-line'});
  assert.equal(draft.targetDeliveryDate,'2026-12-15');
@@ -656,23 +656,23 @@ test('six TradeLink modules render bounded hidden local document previews only',
 test('local summary uses parsed source fields per module and never asserts approval',()=>{
  const cases=[
   {documentType:'esi',documentNumber:'SI-001',customerName:'Client',currency:'PHP',vatType:'12',
-   customerTin:'TIN-001',verifiedBy:'Finance person',approvedBy:'Manager',
+   customerTin:'TIN-001',verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
    items:[{kind:'item',id:'1',description:'Product',quantity:2,unitPrice:50}]},
   {documentType:'packing',documentNumber:'PL-001',customerName:'Consignee',
    referenceNumber:'SO-001',items:[{kind:'item',id:'1',description:'Box',quantity:3,unitPrice:0,unit:'box'}]},
   {documentType:'delivery',documentNumber:'DR-001',customerName:'Receiver',
-   referenceNumber:'SO-001',checkedBy:'QC',deliveredBy:'Logistics',
+   referenceNumber:'SO-001',checkedBy:'dsenagan@watchdogautomation.com.ph',deliveredBy:'rogang@watchdogautomation.com.ph',
    items:[{kind:'item',id:'1',description:'Device',quantity:1,unitPrice:0,serialNumber:'ABC-1'}]},
   {documentType:'payment',documentNumber:'AR-001',customerName:'Payor',currency:'EUR',
    paymentParticulars:'Received funds',cashAmount:20,chequeAmount:0,
-   receivedBy:'Receiver',verifiedBy:'Verifier'},
+   receivedBy:'msenagan@watchdogautomation.com.ph',verifiedBy:'asenagan@watchdogautomation.com.ph'},
   {documentType:'quotation',documentNumber:'Q-001',customerName:'Prospect',currency:'USD',
    customerEmail:'qa@example.com',validity:'30 days',paymentTerms:'Net 30',
-   approvedBy:'Manager',vatType:'zero',
+   approvedBy:'asenagan@watchdogautomation.com.ph',vatType:'zero',
    items:[{kind:'item',id:'1',description:'Service',quantity:1,unitPrice:100}]},
   {documentType:'po',documentNumber:'PO-001',customerName:'Supplier',currency:'PHP',
-   paymentTerms:'Net 30',targetDeliveryDate:'2026-12-01',verifiedBy:'Account manager',
-   approvedBy:'Manager',vatType:'zero',
+   paymentTerms:'Net 30',targetDeliveryDate:'2026-12-01',verifiedBy:'aacsenagan@watchdogautomation.com.ph',
+   approvedBy:'asenagan@watchdogautomation.com.ph',vatType:'zero',
    items:[{kind:'item',id:'1',description:'Parts',quantity:2,unitPrice:125}]}
  ];
  const expectedLabels={
