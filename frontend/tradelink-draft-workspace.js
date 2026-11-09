@@ -614,6 +614,22 @@ function commercialSuggestionLists(type){
    values.map(value=>'<option value="'+escape(value)+'"></option>').join('')+
    '</datalist>').join('')+'</div>';
 }
+/** Contextual document guidance is presentation-only and never a server verdict. */
+export const TRADELINK_MODULE_GUIDANCE=Object.freeze({
+ esi:Object.freeze({heading:'Electronic Sales Invoice',detail:'Capture invoice client identity, taxable items, prices, and finance verification details.',boundary:'Financial figures are a local calculation until an authorized Draft is saved.'}),
+ packing:Object.freeze({heading:'Packing List',detail:'Record physical item quantities and shipment references without inventing inventory movement.',boundary:'This Draft does not confirm packaging, dispatch, or delivery.'}),
+ delivery:Object.freeze({heading:'Delivery Receipt',detail:'Describe received or delivered items and serial identifiers with QC and logistics responsibility.',boundary:'Assignee text does not record a quality-control check or confirm delivery.'}),
+ payment:Object.freeze({heading:'Payment Acknowledgement',detail:'Describe the payment instrument, particulars, and intended receipt and verification responsibility.',boundary:'Entering an amount does not receive money or certify a settled receivable.'}),
+ quotation:Object.freeze({heading:'Quotation',detail:'Prepare priced items, client contact details, validity, delivery commitment, and payment terms.',boundary:'Commercial terms are editable suggestions. No approval or PDF is issued by local validation.'}),
+ po:Object.freeze({heading:'Purchase Order',detail:'Record supplier identity, purchased items, target delivery, and negotiated payment conditions.',boundary:'Saving a Draft does not authorize a purchase or trigger supplier fulfillment.'})
+});
+function renderModuleGuidance(type){
+ const guide=TRADELINK_MODULE_GUIDANCE[type];
+ return guide?'<aside class="tl-reference-module-guidance" role="note" aria-label="'+
+  escape(guide.heading)+' drafting guidance"><strong>'+escape(guide.heading)+
+  ' drafting guide</strong><p>'+escape(guide.detail)+'</p><small>'+
+  escape(guide.boundary)+'</small></aside>':'';
+}
 function referenceDraftTabs(type){
  const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/';
  return '<nav class="tl-reference-document-tabs" aria-label="TradeLink document modules">'+
@@ -716,6 +732,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
   '<div class="tl-reference-editor-content">'+referenceDraftTabs(type)+
+  renderModuleGuidance(type)+
   '<form data-tradelink-draft-form>'+
    // Retain existing module form control for source contract/tests. The
    // horizontal tab links are the visible accessible module switcher.
@@ -1279,10 +1296,13 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
    'Private document attachments require signed file-level authorization. ':
    'Secure attachment uploads remain unavailable pending backend activation. ')+
   'Board status does not change the document workflow state.</p>'+
-  '<div class="tl-panel-heading"><h3>Authorized documents</h3>'+
+  '<div class="tl-panel-heading tl-reference-repository-actions"><h3>Authorized documents</h3>'+
+   '<div class="tl-reference-repository-buttons">'+
+   (canManage&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="#/boards/'+TRADELINK_BOARD_ID+
+    '/tradelink/drafts/quotation">Create new Draft</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
    (!TL03_DOMAIN_READS_ENABLED||!canManage||view.busy?' disabled':'')+
-   '>Refresh documents</button></div>'+
+   '>Refresh documents</button></div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
   renderTradeLinkDraftList(rows,view,canManage,{readOnly:true})+

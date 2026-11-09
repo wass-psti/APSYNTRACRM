@@ -623,3 +623,39 @@
   grid-column:auto;
  }
 }
+
+/* Phase 3C: document-specific guidance and authorized repository actions. */
+.tl-reference-portal .tl-reference-module-guidance{
+ margin:14px 0 22px;padding:14px 18px;border:1px solid #dbe5f6;
+ border-left:3px solid #315de6;border-radius:8px;background:#f8fbff;
+ color:#31415f;
+}
+.tl-reference-portal .tl-reference-module-guidance strong{
+ display:block;font-size:12px;font-weight:750;color:#203a75;
+}
+.tl-reference-portal .tl-reference-module-guidance p{
+ margin:6px 0 4px;font-size:12px;line-height:1.6;
+}
+.tl-reference-portal .tl-reference-module-guidance small{
+ display:block;color:#64748b;font-size:11px;line-height:1.55;
+}
+.tl-reference-portal .tl-reference-repository-actions{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ flex-wrap:wrap;
+}
+.tl-reference-portal .tl-reference-repository-actions h3{margin:0}
+.tl-reference-portal .tl-reference-repository-buttons{
+ display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+}
+.tl-reference-portal .tl-reference-repository-buttons>a.primary{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:38px;padding:8px 15px;text-decoration:none;border-radius:8px;
+ background:#315de6;color:#fff;font-size:12px;font-weight:700;
+}
+.tl-reference-portal .tl-reference-repository-buttons>a.primary:hover{
+ background:#244dc5;
+}
+@media(max-width:620px){
+ .tl-reference-portal .tl-reference-repository-buttons{width:100%}
+ .tl-reference-portal .tl-reference-repository-buttons>*{flex:1 1 auto}
+}
