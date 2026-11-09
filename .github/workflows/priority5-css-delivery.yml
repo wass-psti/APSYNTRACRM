@@ -1,0 +1,54 @@
+name: APSYNTRA Priority 5 CSS Delivery and Chromium Profiling
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'frontend/*.css'
+      - 'frontend/tests/priority5-style-delivery.test.mjs'
+      - 'scripts/priority5-*.mjs'
+      - 'scripts/build-priority5-styles.mjs'
+      - 'scripts/pages-smoke.mjs'
+      - '.github/workflows/priority5-css-delivery.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'frontend/*.css'
+      - 'frontend/tests/priority5-style-delivery.test.mjs'
+      - 'scripts/priority5-*.mjs'
+      - 'scripts/build-priority5-styles.mjs'
+      - 'scripts/pages-smoke.mjs'
+      - '.github/workflows/priority5-css-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  css-delivery:
+    name: Bundle integrity and real Chromium stylesheet equivalence
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify deterministic CSS bundle and unchanged CSP
+        run: |
+          node scripts/build-priority5-styles.mjs --check
+          node --test frontend/tests/priority5-style-delivery.test.mjs
+      - name: Compare source and bundled style cascade in isolated Chromium
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chrome/Chromium unavailable'; exit 1; }
+          set +e
+          CHROME_BIN="$BROWSER" node scripts/priority5-style-browser.mjs
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then exit 0; fi
+          if [ "$code" -ne 75 ]; then exit "$code"; fi
+          echo 'Hosted Chromium launch unavailable; retrying once with a fresh profile.'
+          sleep 2
+          CHROME_BIN="$BROWSER" node scripts/priority5-style-browser.mjs

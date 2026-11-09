@@ -119,7 +119,10 @@ test('CSS scope, responsive rules and reduced-motion behavior are bounded to Tra
  const index=readFileSync('index.html','utf8');
  const app=readFileSync('frontend/tradelink-application.js','utf8');
  const draftSource=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(index,/tradelink-application\.css"\/>[\s\S]*tradelink-reference-ui\.css"\/>/);
+ const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
+ assert.ok(index.includes('frontend/apsyntra-styles.bundle.css'));
+ assert.ok(manifest.indexOf('frontend/tradelink-application.css')<
+  manifest.indexOf('frontend/tradelink-reference-ui.css'));
  assert.match(css,/\.aps-tradelink-app\.tl-reference-portal/);
  assert.match(css,/\.tl-reference-portal \.tl-reference-topbar/);
  assert.match(css,/\.tl-reference-portal \.tl-app-nav\{\s*display:flex;flex-direction:row/);

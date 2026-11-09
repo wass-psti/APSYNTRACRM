@@ -21,6 +21,7 @@ const action=readFileSync('frontend/action-menu-experience.js','utf8');
 const actionCSS=readFileSync('frontend/action-menu-experience.css','utf8');
 const overlay=readFileSync('frontend/foreground-overlay.js','utf8');
 const index=readFileSync('index.html','utf8');
+const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 
 test('six existing 24x24 UI icon families maintain square proportions after responsive width overrides',()=>{
@@ -39,7 +40,8 @@ test('six existing 24x24 UI icon families maintain square proportions after resp
   assert.ok(markup.includes('aria-hidden="true"'),label+' accessible decoration');
   assert.ok(markup.includes('focusable="false"'),label+' focus');
   assert.match(markup,new RegExp('class="'+klass+'"'),label+' class');
-  assert.ok(index.includes('frontend/'+path.split('/').at(-1)),label+' stylesheet included');
+  assert.ok(index.includes('frontend/apsyntra-styles.bundle.css')&&
+   manifest.includes('frontend/'+path.split('/').at(-1)),label+' stylesheet bundled');
   assert.ok(smoke.includes(path),label+' deployment integrity');
  }
 });
