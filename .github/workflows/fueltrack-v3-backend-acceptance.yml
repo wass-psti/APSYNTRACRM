@@ -1,0 +1,26 @@
+name: FuelTrack v3 Disposable Backend Acceptance
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261109115106_fueltrack_v3_backend_core.sql'
+      - 'supabase/migrations/20261109235500_fueltrack_v3_board_receipts.sql'
+      - 'sql/tests/fueltrack-v3-*.sql'
+      - 'scripts/fueltrack-v3-backend-disposable.sh'
+      - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-postgres:
+    name: Isolated PostgreSQL contract, denial and migration checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Verify Shell Syntax
+        run: bash -n scripts/fueltrack-v3-backend-disposable.sh
+      - name: Verify Board and Receipt database transactions
+        run: ./scripts/fueltrack-v3-backend-disposable.sh
