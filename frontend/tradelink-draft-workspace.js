@@ -1343,7 +1343,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
    (!TL03_DOMAIN_READS_ENABLED||!canManage||view.busy?' disabled':'')+
    '>Refresh</button>'+
-   '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink">Dashboard</a>'+
+
    '</div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+

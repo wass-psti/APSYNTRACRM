@@ -22,7 +22,7 @@ test('source-defined six commercial modules and eight workflow states remain sep
 });
 test('TradeLink activity route and navigation are scoped to the existing managed board',()=>{
  assert.equal(normalizeTradeLinkSection('activity'),'activity');
- assert.equal(normalizeTradeLinkSection('recovery'),'overview');
+ assert.equal(normalizeTradeLinkSection('recovery'),'drafts');
  const html=renderTradeLinkApplication({detail,workspaceId:ws,section:'activity',
   activity:{events:[],busy:false,error:''}});
  assert.match(html,/data-tl-section="activity"/);

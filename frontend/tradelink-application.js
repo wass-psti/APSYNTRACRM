@@ -44,7 +44,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const modules=new Set(TRADELINK_SOURCE_MODULES.map(m=>m.key));
 export function normalizeTradeLinkSection(value){
- return value==='documents'||value==='activity'||value==='drafts'||modules.has(value)?value:'overview';
+ return value==='documents'||value==='activity'||value==='drafts'||modules.has(value)?value:'drafts';
 }
 export function tradeLinkBoardSummary(detail){
  if(!isTradeLinkBoard(detail?.board))return null;
@@ -98,19 +98,17 @@ function renderModule(m){
 }
 /** Reference-led TradeLink portal is presentation-only.
  * Links preserve the existing signed-board routes and disabled domain gates. */
-export function renderTradeLinkApplication({detail,section='overview',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false}={}){
+export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false}={}){
  if(!isTradeLinkBoard(detail?.board)||
      typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
  const current=normalizeTradeLinkSection(section);
- const sum=tradeLinkBoardSummary(detail);
  const m=TRADELINK_SOURCE_MODULES.find(x=>x.key===current);
  const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink';
- const activeNav=(key)=>current===key?' active':'';
  const currentAttr=key=>current===key?' aria-current="page"':'';
  return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'">'+
   '<header class="tl-reference-topbar" aria-label="TradeLink portal">'+
-   '<a class="tl-reference-brand" href="'+base+'" aria-label="TradeLink overview">'+
+   '<a class="tl-reference-brand" href="'+base+'/drafts/quotation" aria-label="TradeLink Create New">'+
     '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
     '<span><strong>TradeLink</strong><small>PORTAL</small></span></a>'+
    '<nav class="tl-reference-portal-links" aria-label="TradeLink actions">'+
@@ -131,29 +129,9 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
      '</div></details>'+
    '</nav>'+
   '</header>'+
-  (current==='overview'?
-   '<div class="tl-reference-overview">'+
-    '<header class="tl-app-hero"><p class="tl-eyebrow">APSYNTRA CRM / TradeLink</p>'+
-     '<h2>Commercial operations</h2>'+
-     '<p>Six TradeLink document modules within the existing signed APSYNTRA workspace.</p>'+
-     '<span class="tl-hero-status">Signed Draft operations</span>'+
-    '</header>'+
-    '<div class="tl-stat-grid">'+
-     summaryCard('Authorized board records',sum.activeBoardItems,'Current signed board response')+
-     summaryCard('Document modules',TRADELINK_SOURCE_MODULES.length,'Defined by uploaded source')+
-     summaryCard('Configured board fields',sum.operationalColumns+' / 5','Five supported typed columns')+
-     summaryCard('Draft persistence','Enabled','Signed server authorization required')+
-    '</div></div>':'')+
   '<div class="tl-app-layout">'+
    '<div class="tl-app-main">'+
-    (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage):current==='activity'?renderTradeLinkActivity(activity||{}):
-      '<section class="tl-content-panel"><p class="tl-eyebrow">TradeLink application</p><h2>Source-aligned workspace</h2>'+
-       '<p class="muted">Open a document module to review its source-defined business purpose and submission requirements. Authorized Board Items can be inspected without creating duplicate records.</p>'+
-       '<div class="tl-overview-tiles">'+TRADELINK_SOURCE_MODULES.map(entry=>
-        '<a href="'+base+'/drafts/'+entry.key+
-        '" class="tl-overview-tile"><strong>'+esc(entry.label)+'</strong><span>'+esc(entry.purpose)+'</span></a>').join('')+'</div>'+
-       '<a class="secondary" href="'+base+'/documents">All Documents</a>'+
-       '</section>')+
+    (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage):current==='activity'?renderTradeLinkActivity(activity||{}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}))+
    '</div></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network
