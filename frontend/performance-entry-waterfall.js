@@ -5,7 +5,7 @@
  */
 const round=value=>Number.isFinite(value)?Math.round(value*100)/100:null;
 const number=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0?value:null;
-const empty=()=>({count:0,decodedBytes:0,latestEndMs:null,latestStartMs:null});
+const empty=()=>({count:0,decodedBytes:0,latestEndMs:null,latestStartMs:null,latestResponseStartMs:null,latestResponseDurationMs:null});
 export function summarizeEntryWaterfall({
  performanceRef=globalThis.performance,
  origin=globalThis.location?.origin,
@@ -36,13 +36,21 @@ export function summarizeEntryWaterfall({
   // 0 means unknown on some browsers, not proof of zero transfer.
   const bytes=number(record.decodedBodySize);
   if(bytes!==null)group.decodedBytes+=Math.min(bytes,5_000_000);
-  group.latestEndMs=Math.max(group.latestEndMs??0,end);
+  // Describe the *same* last-completing resource without retaining its URL.
+  // Latest request start alone can belong to a different resource.
+  if(group.latestEndMs===null||end>group.latestEndMs){
+   group.latestEndMs=end;
+   group.latestResponseStartMs=start;
+   group.latestResponseDurationMs=end-start;
+  }
   group.latestStartMs=Math.max(group.latestStartMs??0,start);
  }
  for(const group of Object.values(groups)){
   group.decodedBytes=Math.round(group.decodedBytes);
   group.latestEndMs=round(group.latestEndMs);
   group.latestStartMs=round(group.latestStartMs);
+  group.latestResponseStartMs=round(group.latestResponseStartMs);
+  group.latestResponseDurationMs=round(group.latestResponseDurationMs);
  }
  const lastResourceEnd=Math.max(0,...Object.values(groups).map(x=>x.latestEndMs??0));
  return {entryMs:round(cutoff),resourceCount:Object.values(groups).reduce((n,x)=>n+x.count,0),
