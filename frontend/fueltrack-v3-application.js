@@ -5,6 +5,7 @@
 import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js';
 import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js';
 import {renderFuelTrackLightFuels} from './fueltrack-v3-lightfuels.js';
+import {renderFuelTrackActivity} from './fueltrack-v3-activity.js';
 export const FUELTRACK_V3_ID='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const MARKER='[APSYNTRA:MODULE:fueltrack:v1]';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -180,7 +181,7 @@ function placeholder(section){
   '<h2>'+h(title)+'</h2><p>'+h(description)+'</p>'+
   '<a href="'+fuelTrackHref('dashboard')+'" class="ft3-soft-action">Return to Dashboard</a></section>';
 }
-export function renderFuelTrackV3Application({detail,section='dashboard',actorName='Member',analyticsRenderer=null,analyticsView='fuel-price',analyticsRange='all',analyticsMetric='both',requestsRenderer=null,requestsFilters=null}={}){
+export function renderFuelTrackV3Application({detail,section='dashboard',actorName='Member',analyticsRenderer=null,analyticsView='fuel-price',analyticsRange='all',analyticsMetric='both',requestsRenderer=null,requestsFilters=null,activity=null}={}){
  const model=fuelTrackDashboardModel(detail);
  if(!model)return '<section class="ft3-unavailable" role="alert">'+
   'FuelTrack+ v3 dashboard is unavailable for this board or session.</section>';
@@ -196,6 +197,6 @@ export function renderFuelTrackV3Application({detail,section='dashboard',actorNa
   '<div class="ft3-app-identity"><span>'+h(actorName)+'</span>'+
   '<span class="ft3-app-mode">Signed board data · Read-only dashboard</span></div></header>'+
   '<nav class="ft3-app-tabs" aria-label="FuelTrack application sections">'+navigation+'</nav>'+
-  '<div class="ft3-app-body">'+(view==='dashboard'?dashboard(model):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):view==='new-request'?renderFuelTrackNewRequest():view==='approvals'?renderFuelTrackApprovals():view==='lightfuels'?renderFuelTrackLightFuels():placeholder(view))+
+  '<div class="ft3-app-body">'+(view==='dashboard'?dashboard(model):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):view==='new-request'?renderFuelTrackNewRequest():view==='approvals'?renderFuelTrackApprovals():view==='lightfuels'?renderFuelTrackLightFuels():view==='activity'?renderFuelTrackActivity(activity||{}):placeholder(view))+
   '</div></section>';
 }
