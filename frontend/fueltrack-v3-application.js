@@ -2,6 +2,7 @@
  * Read-only until a dedicated fuel operations contract is activated.
  * Never substitute the Monday.com reference screenshot's 271 transactions.
  */
+import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js';
 export const FUELTRACK_V3_ID='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const MARKER='[APSYNTRA:MODULE:fueltrack:v1]';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -193,6 +194,6 @@ export function renderFuelTrackV3Application({detail,section='dashboard',actorNa
   '<div class="ft3-app-identity"><span>'+h(actorName)+'</span>'+
   '<span class="ft3-app-mode">Signed board data · Read-only dashboard</span></div></header>'+
   '<nav class="ft3-app-tabs" aria-label="FuelTrack application sections">'+navigation+'</nav>'+
-  '<div class="ft3-app-body">'+(view==='dashboard'?dashboard(model):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):placeholder(view))+
+  '<div class="ft3-app-body">'+(view==='dashboard'?dashboard(model):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):view==='new-request'?renderFuelTrackNewRequest():placeholder(view))+
   '</div></section>';
 }

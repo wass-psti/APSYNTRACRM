@@ -101,7 +101,7 @@ test('HTML and status from untrusted board records are escaped',()=>{
 });
 
 test('unfinished tabs are navigation-ready without offering unauthorized writes',()=>{
- for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests'].includes(section.key))){
+ for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests','new-request'].includes(section.key))){
   const html=renderFuelTrackV3Application({detail:fixture(),section:section.key});
   assert.match(html,/not enabled|not yet integrated|will be connected|require|need verified/i);
   assert.doesNotMatch(html,/<form\b|type="submit"/i);
@@ -146,4 +146,22 @@ test('All Requests is mounted inside the signed FuelTrack application shell',asy
  assert.match(app,/fuelTrackRequestReady\(\)/);
  assert.match(app,/case 'ft3-request-expand'/);
  assert.match(app,/db\.allowed\(boardId,'view'\)/);
+});
+
+test('New Fuel Request exposes two distinct reference modes without fabricated catalogs or writes',()=>{
+ const html=renderFuelTrackV3Application({detail:fixture(),section:'new-request'});
+ assert.match(html,/Select Refuel Type/);
+ assert.match(html,/Vehicle Fuel/);
+ assert.match(html,/Container Refill/);
+ for(const field of ['Plate Number','Vehicle Owner','Odometer Reading',
+  'Origin','Destination','Distance (km)','Number of Containers','Responsible Person',
+  'Purpose','Receipt Photo'])assert.ok(html.includes(field),field);
+ assert.match(html,/id="ft3-mode-vehicle" value="vehicle" checked/);
+ assert.match(html,/id="ft3-mode-container" value="container"/);
+ for(const id of ['ft3-plate','ft3-owner','ft3-quantity','ft3-responsible']){
+  assert.match(html,new RegExp('<select id="'+id+'"[^>]* disabled'));
+ }
+ assert.match(html,/<button[^>]*disabled[^>]*>Submit for Approval — unavailable<\/button>/);
+ assert.match(html,/no request will be saved or submitted/i);
+ assert.doesNotMatch(html,/<form\b|data-action=".*submit|\bfetch\(/i);
 });
