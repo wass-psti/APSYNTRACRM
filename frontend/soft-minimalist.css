@@ -3261,3 +3261,175 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
     gap:6px;
   }
 }
+
+
+/* CP-SECURITY-UNIFIED-02 — Access Acceptance visual consolidation.
+ * Keep every existing signed test, action, safety notice and result container.
+ * The principal checklist and appended independently rendered panels share
+ * one borderless, separator-led surface. No backend or behavior changes.
+ */
+#app .aps-security-shell{background:var(--sm-surface)}
+#app .aps-security-shell>.main-content{
+ width:100%;
+ max-width:1160px;
+ margin-inline:auto;
+ padding:clamp(20px,2.8vw,36px) clamp(18px,3vw,42px) 72px;
+}
+#app .aps-security-shell>.main-content>.aps-security{margin:0}
+#app .aps-security-shell .aps-security .security-hero{
+ min-height:0;
+ margin:0;
+ padding:6px 0 26px;
+ border:0;
+ border-bottom:1px solid var(--sm-border);
+ border-radius:0;
+ background:transparent;
+ box-shadow:none;
+}
+#app .aps-security-shell .aps-security .security-hero-insignia{display:none}
+#app .aps-security-shell .aps-security .security-hero h1{
+ margin:9px 0 8px;
+ font-size:clamp(27px,2.8vw,35px);
+ letter-spacing:-.035em;
+ font-weight:750;
+}
+#app .aps-security-shell .aps-security .security-hero p{
+ color:var(--sm-sub);
+ max-width:760px;
+}
+#app .aps-security-shell .aps-security>.security-check-panel,
+#app .aps-security-shell>.main-content>.panel{
+ display:block;
+ min-width:0;
+ overflow:visible;
+ width:100%;
+ margin:0;
+ padding:0;
+ border:0;
+ border-bottom:1px solid var(--sm-border);
+ border-radius:0;
+ background:transparent;
+ box-shadow:none;
+ transition:none;
+}
+#app .aps-security-shell .aps-security>.security-check-panel:focus-within{
+ border-color:var(--sm-border);
+ box-shadow:none;
+}
+#app .aps-security-shell .aps-security .security-panel-header,
+#app .aps-security-shell>.main-content>.panel>.panel-header{
+ display:flex;
+ align-items:center;
+ gap:13px;
+ min-height:0;
+ margin:0;
+ padding:24px 0 10px;
+ border:0;
+ border-radius:0;
+ background:transparent;
+}
+#app .aps-security-shell .aps-security .security-panel-header:before{
+ width:29px;
+ height:29px;
+ border-radius:var(--sm-radius-xs);
+ background:var(--sm-accent-soft);
+ color:var(--sm-accent-hover);
+ font-size:10px;
+ font-weight:740;
+}
+#app .aps-security-shell .aps-security .security-panel-header h2,
+#app .aps-security-shell>.main-content>.panel>.panel-header h2,
+#app .aps-security-shell>.main-content>.panel>h3{
+ margin:0;
+ font-size:15px;
+ line-height:1.45;
+ font-weight:740;
+ letter-spacing:-.015em;
+ color:var(--sm-ink);
+}
+#app .aps-security-shell>.main-content>.panel>h3{
+ padding:24px 0 10px;
+}
+#app .aps-security-shell .aps-security>.security-check-panel>.panel-body,
+#app .aps-security-shell>.main-content>.panel>.panel-body{
+ padding:0 0 22px;
+ color:var(--sm-text);
+}
+#app .aps-security-shell>.main-content>.panel>p.muted{
+ margin:0 0 15px;
+}
+#app .aps-security-shell .aps-security>.security-check-panel>.panel-body>p.muted,
+#app .aps-security-shell>.main-content>.panel :is(.muted,.csp-u033){
+ color:var(--sm-sub);
+ line-height:1.65;
+}
+#app .aps-security-shell .aps-security>.security-check-panel>.panel-body>.note{
+ padding:12px 15px;
+ margin:10px 0 16px;
+ border:0;
+ border-left:2px solid var(--sm-accent);
+ border-radius:0;
+ background:var(--sm-surface-raised);
+}
+#app .aps-security-shell .aps-security>.security-check-panel>.panel-body>.note.security-note{
+ border-left:2px solid var(--sm-warning);
+ background:var(--sm-warning-soft);
+}
+#app .aps-security-shell .aps-security .security-check-panel .panel-body>button.primary,
+#app .aps-security-shell>.main-content>.panel button.primary{
+ box-shadow:none;
+ background:var(--sm-accent);
+ border-color:var(--sm-accent);
+}
+#app .aps-security-shell .aps-security .security-check-panel .panel-body>button:hover:not(:disabled),
+#app .aps-security-shell>.main-content>.panel button:hover:not(:disabled){
+ box-shadow:none;
+ transform:none;
+}
+#app .aps-security-shell .aps-security .security-check-panel .csp-u053{
+ margin-top:18px;
+ padding-top:17px;
+ border-top:1px solid var(--sm-border);
+}
+#app .aps-security-shell .aps-security .security-check-panel .table-scroll{
+ border:1px solid var(--sm-border);
+ border-radius:var(--sm-radius-control);
+}
+#app .aps-security-shell .aps-security .security-boundary-note{
+ margin:22px 0 26px;
+ padding:14px 17px;
+ border:0;
+ border-left:3px solid var(--sm-warning);
+ border-radius:0;
+ background:var(--sm-warning-soft);
+ box-shadow:none;
+}
+#app .aps-security-shell>.main-content>.panel .table-scroll{
+ max-width:100%;
+ overflow-x:auto;
+}
+#app .aps-security-shell :is(.aps-security,.panel) :is(button,input,select,textarea,a):focus-visible{
+ outline:2px solid var(--sm-accent);
+ outline-offset:3px;
+}
+@media(max-width:650px){
+ #app .aps-security-shell>.main-content{padding:18px 16px 56px}
+ #app .aps-security-shell .aps-security .security-hero{padding:3px 0 20px}
+ #app .aps-security-shell .aps-security .security-panel-header,
+ #app .aps-security-shell>.main-content>.panel>.panel-header{padding:22px 0 10px}
+ #app .aps-security-shell .aps-security>.security-check-panel>.panel-body,
+ #app .aps-security-shell>.main-content>.panel>.panel-body{padding:0 0 20px}
+ #app .aps-security-shell>.main-content>.panel{padding:0}
+ #app .aps-security-shell .aps-security .security-check-panel .panel-body>button{
+  width:100%;
+  min-height:42px;
+ }
+ #app .aps-security-shell .aps-security .security-boundary-note{padding:13px 14px}
+}
+@media(prefers-contrast:more){
+ #app .aps-security-shell .aps-security>.security-check-panel,
+ #app .aps-security-shell>.main-content>.panel,
+ #app .aps-security-shell .aps-security .security-hero{
+  border-bottom-color:var(--sm-border-strong);
+ }
+}
