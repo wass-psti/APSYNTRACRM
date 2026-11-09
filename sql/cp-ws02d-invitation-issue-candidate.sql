@@ -68,6 +68,15 @@ BEGIN
    'schemaVersion',1,'invitationId',v_prior.id,
    'idempotent',true,'tokenAvailable',false,'state',v_prior.state);
  END IF;
+ -- Prevent a second live invitation to the same exact email and workspace,
+ -- regardless of which authorized owner initiated it or whether that request
+ -- uses a fresh idempotency UUID. The workspace row lock above serializes
+ -- concurrent issuers; an unchanged request ID was already handled above.
+ IF EXISTS(SELECT 1 FROM private.ws02d_invitations i
+  WHERE i.workspace_id=p_workspace AND i.recipient_email=v_email
+   AND i.state='pending' AND i.expires_at>now())
+ THEN RAISE EXCEPTION 'Pending invitation already exists'
+  USING ERRCODE='42501'; END IF;
  -- Actor profile row lock serializes issuance and quotas for an actor.
  -- Quotas are scoped to the signed actor and authoritative workspace; they
  -- include finalized invitations to prevent reissue/revoke quota evasion.

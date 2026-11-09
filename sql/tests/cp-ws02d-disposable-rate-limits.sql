@@ -66,6 +66,13 @@ BEGIN
    ('22222222-2222-4222-8222-'||pg_catalog.lpad(n::text,12,'0'))::uuid);
   IF r->>'idempotent'<>'false' THEN
    RAISE EXCEPTION 'Recipient quota prematurely denied first two'; END IF;
+  -- Distinct pending invitations are forbidden. First revoke through the
+  -- signed contract, then verify its finalized history still counts toward
+  -- the daily recipient quota rather than allowing unlimited reissues.
+  IF n=1 THEN
+   IF (private.ws02d_revoke((r->>'invitationId')::uuid))->>'state'<>'revoked'
+   THEN RAISE EXCEPTION 'First invitation revocation not recorded'; END IF;
+  END IF;
  END LOOP;
  BEGIN
   PERFORM private.ws02d_issue(
@@ -75,7 +82,7 @@ BEGIN
   RAISE EXCEPTION 'Recipient daily quota bypassed' USING ERRCODE='P9999';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  IF (SELECT count(*) FROM private.ws02d_invitations)<>7
-  OR (SELECT count(*) FROM private.ws02d_invitation_events)<>7
+  OR (SELECT count(*) FROM private.ws02d_invitation_events)<>8
  THEN RAISE EXCEPTION 'Recipient quota denial changed records'; END IF;
 END $recipient_quota$;
 ROLLBACK;
