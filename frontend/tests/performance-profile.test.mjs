@@ -64,3 +64,16 @@ test('signed UI runs only a user-initiated finite sample without storing results
  assert.doesNotMatch(source,/fetch\(|indexedDB|localStorage|sessionStorage|sendBeacon|WebSocket|XMLHttpRequest|setInterval/);
  assert.doesNotMatch(source,/access_token|refresh_token|workspace_id|email/);
 });
+
+test('performance action checks current server bootstrap role before sampling',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const start=app.indexOf("case 'profile-rendering':{");
+ const end=app.indexOf("case 'retry-startup':{",start);
+ assert.ok(start>0&&end>start);
+ const handler=app.slice(start,end);
+ assert.match(handler,/state\.roleVerified!==true\|\|state\.performanceBusy/);
+ assert.match(handler,/await roleConfig\.bootstrapVerified\(\)\.catch\(\(\)=>false\)/);
+ assert.ok(handler.indexOf('await roleConfig.bootstrapVerified()')<handler.indexOf('sampleBrowserFrames('));
+ assert.match(handler,/if\(!bootstrap\)\{/);
+ assert.match(handler,/state\.roleVerified!==true\|\|actor!==auth\.userId/);
+});
