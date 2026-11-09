@@ -4,9 +4,13 @@
 set -euo pipefail
 umask 077
 deny() { echo "CP_WS_ACTIVATE04_REPLAY_BLOCKED: $1" >&2; exit 1; }
-[[ ($# == 2 || ($# == 3 && "$3" == "--check-disjoint-roles")) && "$1" == /* && "$2" =~ ^[a-f0-9]{40}$ ]] || deny USAGE
+[[ ($# == 2 || ($# == 3 && ("$3" == "--check-disjoint-roles" || "$3" == "--candidate-actor-boundary"))) && "$1" == /* && "$2" =~ ^[a-f0-9]{40}$ ]] || deny USAGE
 DISJOINT_CANARY=0
-if [[ $# == 3 ]]; then DISJOINT_CANARY=1; fi
+ACTOR_BOUNDARY=0
+if [[ $# == 3 ]]; then
+ DISJOINT_CANARY=1
+ if [[ "$3" == "--candidate-actor-boundary" ]]; then ACTOR_BOUNDARY=1; fi
+fi
 SOURCE_DIR="$1"
 COMMIT="$2"
 [[ -d "$SOURCE_DIR" && ! -L "$SOURCE_DIR" ]] || deny PROTECTED_SOURCE_DIRECTORY_ABSENT
@@ -42,6 +46,8 @@ download sql/cp-ws01b-session-cutover-candidate.sql
 download sql/tests/cp-ws01b-disposable-acceptance.sql
 download sql/tests/cp-ws-activate04-original-domain-role-subset.sql
 download sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql
+download sql/tests/cp-ws-activate04-disposable-actor-boundary-candidate.sql
+download sql/tests/cp-ws-activate04-private-delegation-boundary.sql
 download scripts/ws01-activate04-concurrent-cas-disposable.sh
 node "$WORK/scripts/ws01-h3-private-source-guard.mjs" \
  "--full-live-private-dir=$SOURCE_DIR" >/dev/null || deny ORIGINAL_SOURCE_HASH_DRIFT
@@ -82,6 +88,12 @@ fi
 echo CP_WS_ACTIVATE04_ORIGINAL_SOURCE_74_COMPILE_PASS
 apply sql/cp-ws01c-b3-create-contract-candidate.sql
 apply sql/cp-ws01b-session-cutover-candidate.sql
+if [ "${WS01_ACTOR_BOUNDARY:-0}" = 1 ]; then
+ apply sql/tests/cp-ws-activate04-disposable-actor-boundary-candidate.sql
+ echo CP_WS_ACTIVATE04_DISPOSABLE_ACTOR_BOUNDARY_INSTALLED
+ apply sql/tests/cp-ws-activate04-private-delegation-boundary.sql
+ echo CP_WS_ACTIVATE04_PRIVATE_TRUSTED_DELEGATION_PASS
+fi
 if [ "${WS01_RUN_DISJOINT_CANARY:-0}" = 1 ]; then
  echo CP_WS_ACTIVATE04_DISJOINT_ROLE_CANARY_STARTED
  apply sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql
@@ -103,6 +115,7 @@ chmod 600 "$WORK/replay.sh"
  --tmpfs /tmp:rw,exec,nosuid,size=256m --tmpfs /run:rw,nosuid,size=16m \
  --security-opt no-new-privileges \
  --env "WS01_RUN_DISJOINT_CANARY=$DISJOINT_CANARY" \
+ --env "WS01_ACTOR_BOUNDARY=$ACTOR_BOUNDARY" \
  --mount "type=bind,source=$SOURCE_DIR,target=/protected,readonly" \
  --mount "type=bind,source=$WORK,target=/public,readonly" \
  --entrypoint /bin/sh public.ecr.aws/supabase/postgres:17.11.0.004 \

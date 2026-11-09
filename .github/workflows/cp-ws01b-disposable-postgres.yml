@@ -53,6 +53,9 @@ on:
       - 'scripts/ws01-activate04-owner-source-signed-replay.test.mjs'
       - 'scripts/ws01-activate04-original-domain-role-subset.test.mjs'
       - 'scripts/ws01-activate04-disjoint-role-denial-canary.test.mjs'
+      - 'scripts/ws01-activate04-actor-boundary.test.mjs'
+      - 'sql/tests/cp-ws-activate04-disposable-actor-boundary-candidate.sql'
+      - 'sql/tests/cp-ws-activate04-private-delegation-boundary.sql'
       - 'sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql'
       - 'sql/tests/cp-ws-activate04-original-domain-role-subset.sql'
       - 'scripts/ws01-activate04-synthetic-dependencies.test.mjs'
@@ -127,6 +130,7 @@ jobs:
           node --test scripts/ws01-activate04-owner-source-signed-replay.test.mjs
           node --test scripts/ws01-activate04-original-domain-role-subset.test.mjs
           node --test scripts/ws01-activate04-disjoint-role-denial-canary.test.mjs
+          node --test scripts/ws01-activate04-actor-boundary.test.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
       - name: Execute real disposable Auth/session SQL with synthetic identity and mocked GoTrue user
