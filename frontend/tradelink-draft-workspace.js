@@ -139,9 +139,9 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
  };
  const descriptions=lineValues('lineDescription'),quantities=lineValues('lineQuantity'),
   prices=lineValues('lineUnitPrice'),units=lineValues('lineUnit'),
-  ids=lineValues('lineId'),serials=lineValues('lineSerialNumber');
+  ids=lineValues('lineId'),serials=lineValues('lineSerialNumber'),kinds=lineValues('lineKind');
  const count=Math.max(descriptions.length,quantities.length,prices.length,
-  units.length,ids.length,serials.length);
+  units.length,ids.length,serials.length,kinds.length);
  const anyLine=[...descriptions,...quantities,...prices,...units,...ids,...serials]
   .some(Boolean);
  if(physical||priced||anyLine){
@@ -150,19 +150,26 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
   for(let index=0;index<count;index++){
    const description=descriptions[index]||'',quantity=quantities[index]||'',
     unitPrice=physical?'':prices[index]||'',unit=units[index]||'';
-   if(!description||!quantity||(!physical&&!unitPrice))
+   const kind=kinds[index]||'item';
+   if(!['item','note'].includes(kind))
+    throw new ApiError('Invalid Draft line kind.',400);
+   if(!description||description.length>2000||(kind==='item'&&
+      (!quantity||(!physical&&!unitPrice))))
     throw new ApiError('Line item requires description, quantity and unit price where applicable.',400);
+   if(kind==='note'&&(quantity||unitPrice||unit))
+    throw new ApiError('A document note cannot contain quantity, price or unit.',400);
    const q=Number(quantity),price=physical?0:Number(unitPrice);
-   if(!Number.isFinite(q)||!Number.isFinite(price)||q<0||price<0||
+   if(kind==='item'&&(!Number.isFinite(q)||!Number.isFinite(price)||q<0||price<0||
       q>1000000000||price>1000000000||((physical||priced)&&q===0)||
-      (priced&&price===0))
+      (priced&&price===0)))
     throw new ApiError('Invalid Draft line quantity or unit price.',400);
    const id=ids[index]||lineId(index);
    if(typeof id!=='string'||!id||id.length>120)
     throw new ApiError('Could not create a valid line-item identifier.',400);
-   const item={id,kind:'item',description,quantity:q,unitPrice:price,
-    ...(unit?{unit}:{})};
-   if(type==='delivery'){
+   const item=kind==='note'?{id,kind:'note',description}:
+    {id,kind:'item',description,quantity:q,unitPrice:price,
+     ...(unit?{unit}:{})};
+   if(type==='delivery'&&kind==='item'){
     const serial=serials[index]||'';
     if(serial.length>120)throw new ApiError('Invalid serial or asset number.',400);
     if(serial)item.serialNumber=serial;
@@ -347,13 +354,15 @@ export function calculateTradeLinkDraftLocalAmounts(fields){
  if(!['esi','quotation','po'].includes(value('documentType')))return null;
  const rows=name=>(typeof fields.getAll==='function'?
   fields.getAll(name):[fields.get(name)]).map(v=>String(v??'').trim());
- const quantities=rows('lineQuantity'),prices=rows('lineUnitPrice');
+ const quantities=rows('lineQuantity'),prices=rows('lineUnitPrice'),
+  kinds=rows('lineKind');
  const count=Math.max(quantities.length,prices.length);
  const currency=value('currency'),vatType=value('vatType');
  if(count<1||count>100||!currencies.includes(currency)||
     !TRADELINK_VAT_CODES.includes(vatType))return null;
  const items=[];
  for(let i=0;i<count;i++){
+  if(kinds[i]==='note')continue;
   const q=quantities[i]||'',p=prices[i]||'';
   if(!/^\d+(?:\.\d+)?$/.test(q)||!/^\d+(?:\.\d+)?$/.test(p))return null;
   const quantity=Number(q),unitPrice=Number(p);
@@ -362,6 +371,7 @@ export function calculateTradeLinkDraftLocalAmounts(fields){
    return null;
   items.push({kind:'item',quantity,unitPrice});
  }
+ if(!items.length)return null;
  const method=value('discountType')||'percentage';
  if(!['percentage','fixed'].includes(method))return null;
  const rawDiscount=value('discountValue'),rawRate=value('exchangeRate');
@@ -440,7 +450,8 @@ function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines=[line]
   getAll:name=>name==='lineQuantity'?
     (lines.length>1?lines.map(x=>String(x.quantity??'')):[value('lineQuantity')]):
    name==='lineUnitPrice'?
-    (lines.length>1?lines.map(x=>String(x.unitPrice??'')):[value('lineUnitPrice')]):[]});
+    (lines.length>1?lines.map(x=>String(x.unitPrice??'')):[value('lineUnitPrice')]):
+   name==='lineKind'?lines.map(x=>x.kind||'item'):[]});
  const unit=currencyUnit(value('currency'));
  const display=key=>initial&&initial[key]!==null?formatTradeLinkAmount(initial[key]):'—';
  return '<section class="tl-draft-finance" data-tradelink-draft-finance '+
@@ -660,23 +671,64 @@ function referenceDocumentHeader(type,editing,canSave=false){
   '</header>'+
   '</div>';
 }
+/** Compact source-matched Items editor; notes have no quantity or financial value. */
+export function tradeLinkLineAmount(row){
+ if(row?.kind==='note')return null;
+ const q=Number(row?.quantity),p=Number(row?.unitPrice);
+ return Number.isFinite(q)&&Number.isFinite(p)&&q>=0&&p>=0?
+  q*p:null;
+}
+export function updateTradeLinkLineRowTotals(form){
+ if(!form?.querySelectorAll)return;
+ const currency=currencyUnit(form.querySelector('[name="currency"]')?.value);
+ for(const row of form.querySelectorAll('[data-tradelink-line-item]')){
+  const target=row.querySelector('[data-tradelink-line-total]');
+  if(!target)continue;
+  const kind=row.querySelector('[name="lineKind"]')?.value||'item';
+  const rawQuantity=row.querySelector('[name="lineQuantity"]')?.value||'';
+  const rawPrice=row.querySelector('[name="lineUnitPrice"]')?.value||'';
+  const amount=rawQuantity!==''&&rawPrice!==''?
+   tradeLinkLineAmount({kind,quantity:rawQuantity,unitPrice:rawPrice}):null;
+  target.textContent=amount===null?'—':
+   formatTradeLinkAmount(amount)+' '+currency;
+ }
+}
 /** Render one existing or newly added item; all untrusted fields are escaped. */
 export function renderTradeLinkDraftLineItem(item={},type='quotation',currency='PHP',index=0){
  const physical=type==='packing'||type==='delivery',priced=['esi','quotation','po'].includes(type);
+ const note=item.kind==='note';
+ const label=(note?'Note ':'Item ')+String(index+1);
  const req=(physical||priced)?' required':'';
- const label='Item '+String(index+1);
- return '<div class="tl-reference-line-item" data-tradelink-line-item>'+
-  '<div class="tl-panel-heading"><strong>'+escape(label)+'</strong>'+
-   '<button type="button" class="secondary" data-action="tradelink-draft-remove-line" aria-label="Remove '+
-    escape(label)+'">Remove item</button></div>'+
-  field('Description','lineDescription',item.description??'','maxlength="2000"'+req)+
-  field('Quantity','lineQuantity',item.quantity??'',
-   'type="number" min="0" max="1000000000" step="any"'+req)+
-  (physical?'':moneyField('Unit price','lineUnitPrice',item.unitPrice??'',currency,
-    'type="number" min="0" max="1000000000" step="any"'+(priced?' required':'')))+
-  field('Unit','lineUnit',item.unit??'','maxlength="120"')+
-  (type==='delivery'?field('Serial / asset number (optional)','lineSerialNumber',
+ const desc=escape(item.description??'');
+ const quantity=item.quantity??(note?'':'1'),unitPrice=item.unitPrice??'';
+ return '<div class="tl-reference-line-item'+(note?' tl-reference-note-row':'')+'" data-tradelink-line-item>'+
+  '<div class="tl-ref-item-handle" draggable="true" title="Drag to reorder" aria-hidden="true">⠿</div>'+
+  '<span class="tl-ref-item-index" aria-label="'+escape(label)+'">'+escape(index+1)+'</span>'+
+  '<label class="tl-draft-field tl-ref-item-description"><span class="sr-only">'+escape(label)+' description</span>'+
+   '<textarea name="lineDescription" maxlength="2000" rows="2" placeholder="'+(note?'Enter item note…':'Enter material description…')+'" required>'+desc+'</textarea></label>'+
+  (note?
+   '<input type="hidden" name="lineQuantity" value="">'+
+   (physical?'':'<input type="hidden" name="lineUnitPrice" value="">')+
+   '<input type="hidden" name="lineUnit" value="">':
+   '<label class="tl-draft-field tl-ref-item-quantity"><span class="sr-only">'+escape(label)+' quantity</span>'+
+    '<input name="lineQuantity" type="number" min="0" max="1000000000" step="any" value="'+escape(quantity)+'" placeholder="Qty"'+req+'></label>'+
+   (physical?'':
+    '<label class="tl-draft-field tl-ref-item-price"><span class="sr-only">'+escape(label)+' unit price ('+escape(currency)+')</span>'+
+    '<input name="lineUnitPrice" type="number" min="0" max="1000000000" step="any" value="'+escape(unitPrice)+'" placeholder="Unit price"'+(priced?' required':'')+'></label>')+
+   '<label class="tl-draft-field tl-ref-item-unit"><span class="sr-only">'+escape(label)+' unit</span>'+
+    '<input name="lineUnit" value="'+escape(item.unit??'')+'" maxlength="120" placeholder="Unit"></label>')+
+  (type==='delivery'&&note?'<input type="hidden" name="lineSerialNumber" value="">':'')+
+  (type==='delivery'&&!note?field('Serial / asset no.','lineSerialNumber',
     item.serialNumber??'','maxlength="120"'):'')+
+  (priced&&!note?'<output class="tl-ref-item-total" data-tradelink-line-total aria-label="Line amount">'+
+   (tradeLinkLineAmount(item)===null?'—':escape(formatTradeLinkAmount(tradeLinkLineAmount(item)))+' '+escape(currency))+'</output>':'')+
+  '<div class="tl-ref-item-actions">'+
+   '<button type="button" data-action="tradelink-draft-move-line" data-direction="up" aria-label="Move '+escape(label)+' up" title="Move up">↑</button>'+
+   '<button type="button" data-action="tradelink-draft-move-line" data-direction="down" aria-label="Move '+escape(label)+' down" title="Move down">↓</button>'+
+   '<button type="button" data-action="tradelink-draft-add-line" aria-label="Add item after '+escape(label)+'" title="Add item">＋</button>'+
+   '<button type="button" data-action="tradelink-draft-remove-line" aria-label="Remove item '+escape(index+1)+'" title="Remove item" class="tl-ref-item-delete">♲</button>'+
+  '</div>'+
+  '<input type="hidden" name="lineKind" value="'+(note?'note':'item')+'">'+
   '<input type="hidden" name="lineId" value="'+escape(item.id??'')+'">'+
   '</div>';
 }
@@ -685,7 +737,7 @@ export function snapshotTradeLinkDraftLineItems(form){
  if(!form?.querySelectorAll)return [];
  return [...form.querySelectorAll('[data-tradelink-line-item]')].map(row=>{
   const get=name=>row.querySelector('[name="'+name+'"]')?.value??'';
-  return {id:get('lineId'),description:get('lineDescription'),
+  return {id:get('lineId'),kind:get('lineKind')||'item',description:get('lineDescription'),
    quantity:get('lineQuantity'),unitPrice:get('lineUnitPrice'),
    unit:get('lineUnit'),serialNumber:get('lineSerialNumber')};
  });
@@ -808,15 +860,17 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '</fieldset>'+
     '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
     '<fieldset class="tl-draft-lines tl-reference-items"><legend>Items</legend>'+
-     '<p class="tl-reference-items-note">'+
-      (physical?'Physical shipment item (required for local readiness)':
-       priced?'Priced line item (required for local readiness)':'Single line item (optional)')+
-      '. Add up to 100 items to the same Draft revision.</p>'+
+     '<div class="tl-ref-items-toolbar">'+
+      '<button type="button" class="tl-ref-sourcing" disabled title="Sourcing Board integration requires an authorized read contract">Add from Sourcing Board · pending integration</button>'+
+      '<button type="button" class="tl-ref-add-blank" data-action="tradelink-draft-add-line"'+
+       (lines.length>=100?' disabled':'')+'>＋ Add Blank</button>'+
+      '<button type="button" class="tl-ref-add-note" data-action="tradelink-draft-add-note"'+
+       (lines.length>=100?' disabled':'')+'>Add Note</button></div>'+
+     '<div class="tl-reference-items-note">'+(physical?'Physical shipment item (required for local readiness). ':'')+
+      'Up to 100 items and notes per Draft. Reorder by dragging or use the arrow controls.</div>'+
      '<div data-tradelink-draft-line-items>'+
       lines.map((item,index)=>renderTradeLinkDraftLineItem(item,type,inputUnit,index)).join('')+
      '</div>'+
-     '<button type="button" class="secondary" data-action="tradelink-draft-add-line"'+
-      (lines.length>=100?' disabled':'')+'>Add item</button>'+
     '</fieldset>'+
     (type==='delivery'?
      '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Delivery responsibility · preview only</legend>'+

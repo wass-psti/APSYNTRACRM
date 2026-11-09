@@ -551,7 +551,7 @@ test('Draft financial rows expose correct ISO currency units and explicit PHP de
   assert.match(html,/aria-describedby="tl-draft-fx-help"/);
   assert.match(html,/No external exchange-rate lookup occurs/);
   assert.match(html,/aria-live="polite" aria-atomic="true"/);
-  assert.match(html,/data-tradelink-draft-money-currency>USD<\/span>/);
+  assert.match(html,/Item 1 unit price \(USD\)/);
   assert.match(html,/data-tradelink-draft-amount="total">90\.00/);
   assert.match(html,/data-tradelink-draft-amount="phpEquivalent">5,400\.00/);
  }
