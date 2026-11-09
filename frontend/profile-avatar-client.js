@@ -106,8 +106,12 @@ export class ProfileAvatarClient{
   });
   const signed=data?.signedURL||data?.signedUrl;
   if(typeof signed!=='string'||!signed)throw new Error('Profile picture URL was not returned.');
-  const url=new URL(signed,this.baseUrl);
-  if(url.origin!==new URL(this.baseUrl).origin||!url.pathname.includes('/storage/v1/object/sign/'))
+  const base=new URL(this.baseUrl);
+  let url=new URL(signed,this.baseUrl);
+  if(url.pathname.startsWith('/object/sign/')){
+   url=new URL('/storage/v1'+url.pathname+url.search,base);
+  }
+  if(url.origin!==base.origin||!url.pathname.startsWith('/storage/v1/object/sign/'))
    throw new Error('Profile picture URL failed origin validation.');
   this.signedUrlCache.set(safe,{url:url.href,expiresAt:this.clock()+3500000});
   return url.href;
