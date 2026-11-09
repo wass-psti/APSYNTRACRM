@@ -3433,3 +3433,103 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   border-bottom-color:var(--sm-border-strong);
  }
 }
+
+
+/* CP-SECURITY-RECOVERY-BUTTONS-01 — normalize legacy recovery controls.
+ * CSS only: preserve existing data-action handlers and security gates.
+ */
+#app .aps-security-shell>.main-content>.panel:is(
+ [aria-label="B2 signed QA fixture"],
+ [aria-label="B4 signed recovery preflight"],
+ [aria-label="Column recovery signed denial acceptance"]
+) button[data-action]{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ vertical-align:middle;
+ max-width:100%;
+ min-height:42px;
+ margin:0 8px 8px 0;
+ padding:10px 15px;
+ border:1px solid var(--sm-border-strong);
+ border-radius:var(--sm-radius-control);
+ background:var(--sm-surface);
+ color:var(--sm-text);
+ font:inherit;
+ font-size:12px;
+ line-height:1.45;
+ font-weight:690;
+ text-align:center;
+ white-space:normal;
+ cursor:pointer;
+ box-shadow:none;
+ transition:background-color var(--sm-fast),border-color var(--sm-fast),color var(--sm-fast);
+}
+#app .aps-security-shell>.main-content>.panel:is(
+ [aria-label="B2 signed QA fixture"],
+ [aria-label="B4 signed recovery preflight"],
+ [aria-label="Column recovery signed denial acceptance"]
+) button[data-action]:hover:not(:disabled){
+ background:var(--sm-surface-soft);
+ border-color:var(--sm-accent);
+ color:var(--sm-ink);
+ transform:none;
+ box-shadow:none;
+}
+#app .aps-security-shell>.main-content>.panel:is(
+ [aria-label="B2 signed QA fixture"],
+ [aria-label="B4 signed recovery preflight"],
+ [aria-label="Column recovery signed denial acceptance"]
+) button[data-action]:focus-visible{
+ outline:2px solid var(--sm-accent);
+ outline-offset:3px;
+}
+#app .aps-security-shell>.main-content>.panel:is(
+ [aria-label="B2 signed QA fixture"],
+ [aria-label="B4 signed recovery preflight"],
+ [aria-label="Column recovery signed denial acceptance"]
+) button[data-action]:disabled{
+ opacity:.55;
+ cursor:not-allowed;
+}
+#app .aps-security-shell>.main-content>.panel button:is(
+ [data-action="security-b4-qa-preflight"],
+ [data-action="security-col-delete-denial-run"]
+){
+ background:var(--sm-accent);
+ border-color:var(--sm-accent);
+ color:#fff;
+}
+#app .aps-security-shell>.main-content>.panel button:is(
+ [data-action="security-b4-qa-preflight"],
+ [data-action="security-col-delete-denial-run"]
+):hover:not(:disabled){
+ background:var(--sm-accent-hover);
+ border-color:var(--sm-accent-hover);
+ color:#fff;
+}
+/* Fixture creation writes authorized QA data; distinguish it visually. */
+#app .aps-security-shell>.main-content>.panel button[data-action="security-b2-qa-create"]{
+ color:var(--sm-warning);
+ border-color:var(--sm-border-strong);
+ background:var(--sm-warning-soft);
+}
+#app .aps-security-shell>.main-content>.panel button[data-action="security-b2-qa-create"]:hover:not(:disabled){
+ color:var(--sm-warning);
+ border-color:var(--sm-warning);
+ background:var(--sm-warning-soft);
+}
+@media(max-width:650px){
+ #app .aps-security-shell>.main-content>.panel:is(
+  [aria-label="B2 signed QA fixture"],
+  [aria-label="B4 signed recovery preflight"],
+  [aria-label="Column recovery signed denial acceptance"]
+ ) button[data-action]{width:100%;margin-right:0}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-security-shell>.main-content>.panel:is(
+  [aria-label="B2 signed QA fixture"],
+  [aria-label="B4 signed recovery preflight"],
+  [aria-label="Column recovery signed denial acceptance"]
+ ) button[data-action]{transition:none}
+}
