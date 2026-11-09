@@ -1216,3 +1216,10 @@
 .tl-reference-portal .tl-reference-workflow-disclaimer {
  margin:0;color:#6d7788;font-size:11px;line-height:1.6;
 }
+
+.tl-reference-portal .tl-reference-pdf-stage{margin-top:11px}
+.tl-reference-portal .tl-reference-pdf-stage .tl-reference-assigned-account{
+ font-size:12px;line-height:1.6;color:#315277;overflow-wrap:anywhere;
+ padding:7px 10px;border-radius:8px;background:#f2f6ff;
+}
+.tl-reference-portal .tl-reference-pdf-stage [hidden]{display:none!important}

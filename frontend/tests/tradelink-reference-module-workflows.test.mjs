@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderTradeLinkDraftWorkspace,initialTradeLinkDraftView,TRADELINK_MODULE_ACCOUNT_OPTIONS,validateTradeLinkModuleAccountAssignments} from '../tradelink-draft-workspace.js';
@@ -41,7 +42,7 @@ test('Supplier PO Account Manager is defaulted but editable; timestamp cannot fo
  assert.match(html,/Reviewed By \(Account Manager\)/);
  assert.match(html,/value="aacsenagan@watchdogautomation.com.ph" selected/);
  assert.match(html,/aacsenagan@watchdogautomation.com.ph/);
- assert.match(html,/id="tl-po-review-time"[^>]*disabled/);
+ assert.match(html,/id="tl-pdf-time-verifiedBy"[^>]*disabled/);
  assert.match(html,/Use Time Now<\/button>/);
  const edited=render('po',{verifiedBy:'dsenagan@watchdogautomation.com.ph'});
  assert.match(edited,/value="dsenagan@watchdogautomation.com.ph" selected/);
@@ -97,4 +98,37 @@ test('saved legacy human-readable names remain visible but disabled, never silen
  assert.match(html,/value="Angelica Anne Camille Señagan" selected disabled/);
  assert.match(html,/select an authorized account/);
  assert.throws(()=>validateTradeLinkModuleAccountAssignments({documentType:'po',verifiedBy:'Angelica Anne Camille Señagan',approvedBy:'asenagan@watchdogautomation.com.ph'}));
+});
+
+test('each assigned module responsibility has an independent, inactive PDF time control',()=>{
+ for(const [type,fields] of Object.entries(TRADELINK_MODULE_ACCOUNT_OPTIONS)){
+  const html=render(type);
+  const stages=[...html.matchAll(/data-tl-pdf-stage="([^"]+)"/g)].map(m=>m[1]);
+  assert.deepEqual(stages,Object.keys(fields),type);
+  assert.equal((html.match(/data-tl-pdf-time-control/g)||[]).length,stages.length,type);
+  assert.equal((html.match(/aria-disabled="true" data-tl-pdf-time-control/g)||[]).length,stages.length,type);
+  for(const key of stages)assert.match(html,new RegExp('id="tl-pdf-time-'+key+'"[^>]*disabled'));
+  assert.match(html,/No local timestamp is an approval/);
+ }
+ const packing=render('packing');
+ assert.doesNotMatch(packing,/data-tl-pdf-time-control|data-tl-pdf-stage/);
+ const quotation=render('quotation');
+ assert.match(quotation,/data-tl-review-stage="primary"/);
+ assert.match(quotation,/data-tl-review-stage="secondary"/);
+});
+test('selected account is shown, unselected control hidden, legacy names cannot authorize approval',()=>{
+ const chosen=render('esi',{verifiedBy:'msenagan@watchdogautomation.com.ph'});
+ assert.match(chosen,/Assigned account: msenagan@watchdogautomation.com.ph/);
+ assert.match(chosen,/data-tl-pdf-time-control[^>]*>Use Time Now/);
+ const blank=render('esi');
+ assert.match(blank,/data-tl-pdf-time-control[^>]*hidden>Use Time Now/);
+ const legacy=render('delivery',{checkedBy:'Legacy Person'});
+ assert.match(legacy,/previously saved; select an authorized account/);
+ assert.match(legacy,/data-tl-pdf-time-control[^>]*hidden>Use Time Now/);
+});
+test('live selector updates only a local responsibility label; no approval action activated',()=>{
+ const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(source,/responsible\.textContent=account/);
+ assert.match(source,/control\.disabled=true/);
+ assert.doesNotMatch(source,/data-tl-pdf-time-control.*data-action="tradelink-document-approve"/);
 });
