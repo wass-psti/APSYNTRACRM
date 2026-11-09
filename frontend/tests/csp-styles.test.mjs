@@ -18,7 +18,7 @@ test('temporary annotation-only CSS exception preserves other CSP protections',(
  assert.deepEqual(directives['script-src'],["'self'",'https://unpkg.com']);
  assert.deepEqual(directives['default-src'],["'self'"]);
  assert.deepEqual(directives['object-src'],["'none'"]);
- assert.deepEqual(directives['img-src'],["'self'",'data:','blob:','https://tile.openstreetmap.org']);
+ assert.deepEqual(directives['img-src'],["'self'",'data:','blob:','https://tile.openstreetmap.org','https://jtlusodorfnyzgyuewkz.supabase.co']);
  assert.deepEqual(directives['font-src'],["'self'"]);
  assert.deepEqual(directives['worker-src'],["'self'"]);
  assert.deepEqual(directives['frame-src'],["'none'"]);
