@@ -195,6 +195,15 @@ async function run(){
   assert.match(empty.empty,/No matching items/);
   const restored=await v.evaluate('virtualAcceptance.filter("")');
   assert.equal(restored.visibleTotal,600);
+  const repeatFirst=await v.evaluate('virtualAcceptance.profileFilter("Record 0555")');
+  const repeatSecond=await v.evaluate('virtualAcceptance.profileFilter("Record 0555")');
+  assert.equal(repeatFirst.replacements,1,'a new filter must render the matching rows');
+  assert.equal(repeatSecond.replacements,0,'repeated filter must remain a DOM no-op');
+  assert.equal(repeatSecond.visibleTotal,1);
+  const distinct=await v.evaluate('virtualAcceptance.profileFilter("Record 0100")');
+  assert.equal(distinct.replacements,1,'a changed filter must still update the rendered table');
+  assert.equal(distinct.visibleTotal,1);
+  console.log('PROFILE_BOARD_FILTER: '+JSON.stringify({repeat:repeatSecond,changed:distinct})+' (synthetic 600 rows)');
   console.log('BROWSER_VIRTUAL_ROWS_PASS: 600 loaded items; bounded DOM, natural scroll, local search, empty state');
  }finally{
   for(const page of pages)page.close();

@@ -47,6 +47,19 @@ window.virtualAcceptance={stats,
   return stats();
  },
  filter:async query=>{filterBoardWindows(query);await settle();return stats();},
+ profileFilter:async query=>{
+  const tbody=document.querySelector('table[data-board-virtual] tbody');
+  let replacements=0;
+  const observer=new MutationObserver(mutations=>{for(const mutation of mutations){
+   if(mutation.type==='childList'&&mutation.target===tbody)replacements++;
+  }});
+  observer.observe(tbody,{childList:true});
+  const began=performance.now();
+  filterBoardWindows(query);
+  const elapsedMs=performance.now()-began;
+  await settle();observer.disconnect();
+  return {elapsedMs,replacements,count:stats().count,visibleTotal:stats().visibleTotal};
+ },
  reset:async()=>{mount();await settle();return stats();}
 };
 </script></body></html>

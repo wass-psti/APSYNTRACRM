@@ -19,7 +19,8 @@ export function boardWindowSlice(total,top=0,viewport=900){
 }
 export function registerBoardWindow(groupId,rows,renderRows,colspan){
  if(rows.length<BOARD_WINDOW_THRESHOLD)return null;
- const model={groupId,rows,filtered:rows,renderRows,colspan,start:-1,end:-1};
+ const model={groupId,rows,filtered:rows,renderRows,colspan,start:-1,end:-1,
+  lastQuery:'',searchIndex:rows.map(row=>String(row.search||'').toLocaleLowerCase())};
  models.set(groupId,model);
  return renderWindow(model,0,900);
 }
@@ -133,8 +134,12 @@ export function mountBoardWindows(root,onUpdate=()=>{}){
 export function filterBoardWindows(query=''){
  const needle=String(query).toLocaleLowerCase().trim();
  for(const {table,model} of mounted){
-  model.filtered=needle?model.rows.filter(row=>
-   (row.search||'').toLocaleLowerCase().includes(needle)):model.rows;
+  // A repeated query is a no-op: preserve DOM focus/selection and avoid a
+  // second full tbody reconstruction during initial board rendering.
+  if(model.lastQuery===needle)continue;
+  model.lastQuery=needle;
+  model.filtered=needle?model.rows.filter((row,index)=>
+   model.searchIndex[index].includes(needle)):model.rows;
   table.setAttribute('aria-rowcount',String(model.filtered.length+1));
   updateTable(model,table,{force:true,resetView:true});
  }
