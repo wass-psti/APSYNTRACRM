@@ -6070,12 +6070,12 @@ function syncTradeLinkFinanceInput(event){
  return true;
 }
 root.addEventListener('change',event=>{
+ if(syncTradeLinkFinanceInput(event))return;
  if(['ft3-request-from','ft3-request-to'].includes(event.target.id)&&fuelTrackRequestReady()){
   const key=event.target.id==='ft3-request-from'?'from':'to';
   updateFuelTrackRequestFilters({[key]:String(event.target.value).slice(0,10),limit:25,expandedId:null});
   return;
  }
- if(syncTradeLinkFinanceInput(event))return;
  if(event.target?.matches?.('[data-tl-select-document],[data-tl-select-all]')){
   if(!tradeLinkAuthorizedListRoute()||!state.boardManage||
      state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return;
