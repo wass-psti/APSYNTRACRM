@@ -5,7 +5,7 @@
 ## Dependencies and blocking checks
 
 1. Inspect production schema drift for `private.tl03_can_manage`, `private.tl03_deny_event_change`, `public.tradelink_documents`, and `public.work_board_items`. Candidate deployment is a separate protected database change.
-2. **Role mismatch:** `private.tl03_can_manage(uuid)` currently requires effective module `General Manager` and board `manage`. This may deny nominated Finance, QC, and Logistics staff even when their verified emails match. Define and separately authorize a least-privilege, signed-session, workspace-scoped PDF approver capability before runtime activation; do not grant General Manager merely to pass approval tests. Approval must not confer draft edits, Board management, or other permissions.
+2. **Least-privilege candidate implemented (not deployed):** `private.tl03_can_pdf_approve(uuid)` requires an active signed session, Board view access, active workspace and enabled TradeLink module role. The stage RPC independently matches the authenticated, email-confirmed actor to the saved assignment and module allowlist. The existing General Manager-only document management guard is unchanged. Confirm the exact module-role policy for real Finance, QC, Logistics and Management users before production activation.
 3. Confirm submitted workflow transitions and their signed, revision-locked backend are actually deployed and pass genuine HTTPS signed-user tests. The repository's workflow feature gates remain disabled.
 4. Test on an isolated nonproduction PostgreSQL environment using real schema and disposable signed accounts: correct primary/secondary event; primary alone; secondary without primary; wrong/foreign/revoked/unconfirmed accounts; denied roles; stale/archived/edited revision; concurrent double submission; multi-workspace isolation; immutable audit; and loss of session mid-request.
 5. Confirm module-specific dropdown assignments persist as canonical emails in signed `DocumentRecord.content`; do not silently reinterpret legacy display names or unverified account nominations.
@@ -25,4 +25,4 @@
 
 ## Acceptance status
 
-The tests here are source-contract tests, not PostgreSQL integration tests or a signed-user acceptance rehearsal. Do not interpret passing Node tests, repository merge, or static PDF preview as backend deployment, successful electronic approval, or issuance readiness.
+CP-TL-PDF03 additionally runs the candidate in an isolated disposable PostgreSQL 17 GitHub Actions job with synthetic authenticated identities, stage ordering, duplicate/stale denial, module role separation, RLS and revoked-session checks. This is **not** a genuine Supabase signed HTTPS acceptance or production deployment. Additional concurrency, revision-change, and end-to-end approval issuance verification remain pending; no approval or PDF issuance feature flags are enabled.
