@@ -114,11 +114,12 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
     '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
     '<span><strong>TradeLink</strong><small>PORTAL</small></span></a>'+
    '<nav class="tl-reference-portal-links" aria-label="TradeLink actions">'+
-    '<a class="tl-reference-create'+(current==='drafts'?' active':'')+'" href="'+base+'/drafts/quotation">'+
+    '<span class="tl-reference-active-indicator" aria-hidden="true"></span>'+
+    '<a data-tl-tab="create" class="tl-reference-create'+(current==='drafts'?' active':'')+'"'+currentAttr('drafts')+' href="'+base+'/drafts/quotation">'+
      '<span aria-hidden="true">＋</span> Create New</a>'+
-    '<a href="'+base+'/documents"'+currentAttr('documents')+'>'+
+    '<a data-tl-tab="documents" href="'+base+'/documents"'+currentAttr('documents')+'>'+
      '<span aria-hidden="true">☷</span> All Documents</a>'+
-    '<details class="tl-reference-manual"><summary>User Manual</summary>'+
+    '<details class="tl-reference-manual"><summary data-tl-tab="manual">User Manual</summary>'+
      '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink document guide</strong>'+
       '<p>Choose a document module, complete its required fields, then select Save Draft. '+
       'The same signed server record appears in All Documents and its linked Board. '+
@@ -170,4 +171,57 @@ export function filterTradeLinkRenderedRows(container,query){
  const count=container.querySelector('[data-tradelink-count]');
  if(count)count.textContent=visible+' board record'+(visible===1?'':'s');
  return visible;
+}
+
+// Preserve the active-tab geometry across APSYNTRA shell rerenders. The nav is
+// destroyed and recreated on routes; a normal CSS transition alone cannot
+// interpolate between old and new DOM nodes.
+let previousTradeLinkTab=null;
+function tradeLinkTabGeometry(nav,target){
+ const rect=target.getBoundingClientRect(), parent=nav.getBoundingClientRect();
+ return {left:rect.left-parent.left+nav.scrollLeft,
+  top:rect.top-parent.top+nav.scrollTop,width:rect.width,height:rect.height};
+}
+function tradeLinkSelectedTab(nav){
+ return nav.querySelector('.tl-reference-manual[open] > summary')||
+  nav.querySelector(':scope > a[data-tl-tab][aria-current="page"]');
+}
+export function captureTradeLinkTabMotion(container){
+ const nav=container?.querySelector('.tl-reference-portal-links');
+ const selected=nav&&tradeLinkSelectedTab(nav);
+ if(selected){
+  previousTradeLinkTab={key:selected.dataset.tlTab,
+   geometry:tradeLinkTabGeometry(nav,selected)};
+ }
+}
+export function mountTradeLinkTabMotion(container){
+ const nav=container?.querySelector('.tl-reference-portal-links');
+ if(!nav)return;
+ const indicator=nav.querySelector('.tl-reference-active-indicator');
+ const reduced=()=>typeof matchMedia==='function'&&
+  matchMedia('(prefers-reduced-motion: reduce)').matches;
+ function activate(animate=true){
+  const selected=tradeLinkSelectedTab(nav);
+  for(const tab of nav.querySelectorAll('[data-tl-tab]'))
+   tab.classList.toggle('is-highlighted',tab===selected);
+  indicator.getAnimations?.().forEach(animation=>animation.cancel());
+  if(!selected){indicator.hidden=true;return;}
+  const key=selected.dataset.tlTab;
+  const next=tradeLinkTabGeometry(nav,selected);
+  const prev=previousTradeLinkTab;
+  indicator.hidden=false;
+  Object.assign(indicator.style,Object.fromEntries(
+   Object.entries(next).map(([property,value])=>[property,value+'px'])));
+  if(animate&&!reduced()&&prev&&prev.key!==key&&
+   typeof indicator.animate==='function'){
+   indicator.animate([prev.geometry,next].map(geometry=>Object.fromEntries(
+    Object.entries(geometry).map(([property,value])=>[property,value+'px']))),{
+    duration:280,easing:'cubic-bezier(0.22, 1, 0.36, 1)'});
+  }
+  previousTradeLinkTab={key,geometry:next};
+ }
+ activate();
+ const manual=nav.querySelector('.tl-reference-manual');
+ manual?.addEventListener('toggle',()=>activate());
+ nav.addEventListener('scroll',()=>activate(false),{passive:true});
 }

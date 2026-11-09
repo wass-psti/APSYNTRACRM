@@ -31,7 +31,7 @@ import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
-import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows} from './tradelink-application.js';
+import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-application.js';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
  closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js';
 import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
@@ -933,6 +933,7 @@ function preserveTimeTrackerLogExpansion(){
 function render(){
  if(!state.context){closeTradeLinkSavedDocumentOutput();renderLogin();return;}
  preserveTimeTrackerLogExpansion();
+ captureTradeLinkTabMotion(root);
  if(state.view==='board')shell(boardPage());
  else if(state.view==='acceptance')shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy,nativeResult:state.nativeAcceptance,nativeRunning:state.nativeBusy}));
  else if(state.view==='foundation')shell(renderFoundation({
@@ -947,6 +948,7 @@ function render(){
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
+ mountTradeLinkTabMotion(root);
  if(state.view==='settings')mountAvatarPreview(root,{
   client:profileAvatarClient,
   userId:state.context.user_id,
