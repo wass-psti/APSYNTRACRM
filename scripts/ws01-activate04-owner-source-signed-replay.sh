@@ -10,7 +10,7 @@ COMMIT="$2"
 [[ -d "$SOURCE_DIR" && ! -L "$SOURCE_DIR" ]] || deny PROTECTED_SOURCE_DIRECTORY_ABSENT
 [[ "$(stat -f '%Lp' "$SOURCE_DIR")" == 700 ]] || deny PROTECTED_DIRECTORY_MODE
 [[ "$(find "$SOURCE_DIR" -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')" == 74 ]] || deny SOURCE_FILE_COUNT
-[[ -z "$PGHOST" && -z "$PGDATABASE" && -z "$PGPASSWORD" ]] || deny PRODUCTION_DB_ENV_PRESENT
+if env | grep -Eq '^(PGHOST|PGDATABASE|PGPASSWORD)='; then deny PRODUCTION_DB_ENV_PRESENT; fi
 command -v node >/dev/null || deny NODE_MISSING
 command -v curl >/dev/null || deny CURL_MISSING
 DOCKER="$(command -v docker || true)"
