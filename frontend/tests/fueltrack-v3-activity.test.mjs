@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {fuelTrackActivityModel,renderFuelTrackActivity,fuelTrackActivityCsv,FUELTRACK_ACTIVITY_MAX} from '../fueltrack-v3-activity.js';
 const board='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const workspace='11111111-1111-4111-8111-111111111111';
-const now=new Date('2026-11-09T12:00:00Z');
-const a={event_id:'evt-1',event_type:'request_approved',occurred_at:'2026-11-09T10:00:00Z',
+const now=new Date('2026-11-11T12:00:00Z');
+const a={event_id:'evt-1',event_type:'request_approved',occurred_at:'2026-11-11T10:00:00Z',
  actor_name:'Alex',title:'Approved request',message:'Vehicle GBA 8424',request_id:'r-1'};
-const b={event_id:'evt-2',event_type:'refueling_completed',occurred_at:'2026-11-07T00:00:00Z',
+const b={event_id:'evt-2',event_type:'refueling_completed',occurred_at:'2026-11-09T00:00:00Z',
  actor_name:'Chris',title:'Completed refueling',message:'Another vehicle',request_id:'r-2'};
 const base={status:'VERIFIED_READ',boardId:board,workspaceId:workspace,events:[a,b]};
 const args=(snapshot,filters={})=>({snapshot,boardId:board,workspaceId:workspace,filters,now});
