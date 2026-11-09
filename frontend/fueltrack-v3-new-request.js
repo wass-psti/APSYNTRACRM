@@ -57,3 +57,44 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message=''}=
  '<button type="submit" class="ft3-new-submit"'+(!enabled||busy?' disabled':'')+' aria-describedby="ft3-new-catalog-note">'+(busy?'Submitting…':enabled?'Submit for Approval':'Submit for Approval — unavailable')+'</button>'+
  '</form></section>';
 }
+
+/** Convert the unchanged input controls to the strictly typed RPC payload.
+ * Never accept actor IDs, roles, statuses, or audit fields from this form.
+ */
+export function fuelTrackNewRequestPayload(form){
+ if(!form||typeof form.querySelector!=='function')throw new TypeError('Invalid fuel request form');
+ const val=id=>String(form.querySelector('#'+id)?.value??'').trim();
+ const kind=form.querySelector('[name="ft3-fuel-mode"]:checked')?.value;
+ const purpose=kind==='vehicle'?val('ft3-purpose'):val('ft3-container-purpose');
+ if(purpose.length<10||purpose.length>500)
+  throw new TypeError('Purpose must contain 10–500 characters.');
+ if(kind==='vehicle'){
+  const plate=val('ft3-plate'),owner=val('ft3-owner'),
+   origin=val('ft3-origin'),destination=val('ft3-destination');
+  if(!FUELTRACK_PLATE_OPTIONS.includes(plate)||!FUELTRACK_PERSON_OPTIONS.includes(owner)||
+     !origin||!destination||origin.length>240||destination.length>240)
+   throw new TypeError('Complete all required vehicle and trip details.');
+  const details={plate,owner,origin,destination,purpose};
+  for(const [field,key,max] of [['ft3-odometer','odometer',1000000000],
+   ['ft3-distance','distance',10000000]]){
+   const raw=val(field);
+   if(raw){
+    const number=Number(raw);
+    if(!Number.isFinite(number)||number<0||number>max)
+     throw new TypeError('Invalid '+key);
+    details[key]=number;
+   }
+  }
+  return {kind,details};
+ }
+ if(kind==='container'){
+  const value=val('ft3-quantity');
+  const raw=value==='custom'?val('ft3-custom-count'):value;
+  const containerCount=Number(raw),responsiblePerson=val('ft3-responsible');
+  if(!raw||!Number.isSafeInteger(containerCount)||containerCount<1||
+     containerCount>10000||!FUELTRACK_PERSON_OPTIONS.includes(responsiblePerson))
+   throw new TypeError('Select a valid container quantity and responsible person.');
+  return {kind,details:{containerCount,responsiblePerson,purpose}};
+ }
+ throw new TypeError('Select a fuel request type.');
+}
