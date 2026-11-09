@@ -15,6 +15,20 @@ export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},a
     (allowCustom&&(((c.column_key||'').startsWith('custom:')||
       (c.column_key||'').startsWith('custom_'))&&
       !restricted.has(String(c.name||'').trim().toLowerCase())))));
+ // The existing FuelTrack+ v3 board is a protected domain projection, not an
+ // ordinary mutable board. Prepare the Monday-style Item / Status / Date view
+ // by reusing its authoritative Event Date column. Source lineage, fuel metrics,
+ // reconciliation and pump references remain stored and protected; no migration
+ // or lossy field deletion is required before the domain app is integrated.
+ // Fail closed to the ordinary domain grid if the expected date contract drifts.
+ const fueltrack=detail?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
+  module?.key==='fueltrack'&&
+  String(detail.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
+ const eventDate=columns.find(c=>c.name==='Event Date'&&c.data_type==='date');
+ if(fueltrack&&eventDate){
+  return [{key:'record',title:'Item'},{key:'status',title:'Status'},
+   {key:'col:'+eventDate.id,title:'Date'}];
+ }
  return [{key:'record',title:primaryTitle},{key:'status',title:'Status'},
   ...columns.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name}))];
 }
