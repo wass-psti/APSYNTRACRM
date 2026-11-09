@@ -46,13 +46,17 @@ const server=createServer(async(req,res)=>{
  const allowStatic=new Set([
   '/frontend/tests/fixtures/board-cache-two-tab.html',
   '/frontend/data.js','/frontend/session.js','/frontend/config.js',
-  '/frontend/board-cache-channel.js'
+  '/frontend/board-cache-channel.js',
+  '/frontend/tests/fixtures/board-virtual-browser.html',
+  '/frontend/board-presentation.js','/frontend/board-window.js',
+  '/frontend/styles.css'
  ]);
  const file=resolve(root,'.'+pathname);
  if(!allowStatic.has(pathname)||!existsSync(file)){
   res.statusCode=404;res.end('not found');return;
  }
- res.setHeader('Content-Type',extname(file)==='.js'?'text/javascript; charset=utf-8':'text/html; charset=utf-8');
+ res.setHeader('Content-Type',extname(file)==='.js'?'text/javascript; charset=utf-8':
+  extname(file)==='.css'?'text/css; charset=utf-8':'text/html; charset=utf-8');
  res.end(readFileSync(file));
 });
 function chromePath(){
@@ -118,14 +122,14 @@ async function run(){
   const debugPort=Number(readFileSync(active,'utf8').split('\n')[0]);
   const base='http://127.0.0.1:'+debugPort;
   const fixture='http://127.0.0.1:'+port+'/frontend/tests/fixtures/board-cache-two-tab.html';
-  async function openTab(){
-   const response=await fetch(base+'/json/new?'+encodeURIComponent(fixture),{method:'PUT',signal:AbortSignal.timeout(5000)});
+  async function openTab(href=fixture,ready='window.acceptance'){
+   const response=await fetch(base+'/json/new?'+encodeURIComponent(href),{method:'PUT',signal:AbortSignal.timeout(5000)});
    assert.equal(response.ok,true);
    const target=await response.json();
    const page=new Page(target.webSocketDebuggerUrl);
    await page.ready;
    await page.call('Runtime.enable');
-   try{await until(()=>page.evaluate('Boolean(window.acceptance)'));}
+   try{await until(()=>page.evaluate('Boolean('+ready+')'));}
    catch(error){console.error('PAGE_DEBUG',await page.evaluate('({url:location.href,ready:document.readyState,html:document.body.innerText})'));throw error;}
    pages.push(page);return page;
   }
@@ -164,6 +168,31 @@ async function run(){
   console.log('BROWSER_PERMISSION_PASS: foreign workspace and revoked view denied; view permission rechecked per navigation');
   console.log('BROWSER_PERFORMANCE_PASS: direct_reads=5 cached_reads=1 reduction=80% (synthetic fixture, not production latency)');
   console.log('BROWSER_SYNC_PASS: second tab independently fetched updated board after mutation');
+  const virtualUrl='http://127.0.0.1:'+port+'/frontend/tests/fixtures/board-virtual-browser.html';
+  const v=await openTab(virtualUrl,'window.virtualAcceptance');
+  const first=await v.evaluate('virtualAcceptance.stats()');
+  assert.ok(first.count>0&&first.count<=64,'initial DOM window bounded');
+  assert.equal(first.visibleTotal,600);
+  assert.ok(first.tableHeight>=30000,'spacers must preserve natural page scroll height');
+  const keyboard=await v.evaluate('virtualAcceptance.keyboard(false)');
+  assert.equal(keyboard.focusRow,50,'Tab from last rendered row must focus next virtual record');
+  const reverse=await v.evaluate('virtualAcceptance.keyboard(true)');
+  assert.ok(reverse.focusRow>1&&reverse.focusRow<keyboard.focusRow,
+   'Shift+Tab from first rendered row must reach previous virtual record');
+  const scrolled=await v.evaluate('virtualAcceptance.scroll(16000)');
+  assert.ok(scrolled.count>0&&scrolled.count<=64,'scrolled DOM window bounded');
+  assert.notEqual(scrolled.first,first.first,'scroll must recycle visible rows');
+  assert.ok(scrolled.spacerHeight>0);
+  const filtered=await v.evaluate('virtualAcceptance.filter("Record 0555")');
+  assert.equal(filtered.visibleTotal,1,'search all loaded rows, not mounted DOM');
+  assert.equal(filtered.count,1);
+  assert.equal(filtered.queryFound,true);
+  const empty=await v.evaluate('virtualAcceptance.filter("not-an-item")');
+  assert.equal(empty.visibleTotal,0);
+  assert.match(empty.empty,/No matching items/);
+  const restored=await v.evaluate('virtualAcceptance.filter("")');
+  assert.equal(restored.visibleTotal,600);
+  console.log('BROWSER_VIRTUAL_ROWS_PASS: 600 loaded items; bounded DOM, natural scroll, local search, empty state');
  }finally{
   for(const page of pages)page.close();
   if(browser){

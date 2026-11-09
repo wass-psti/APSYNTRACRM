@@ -4,6 +4,13 @@ on:
     paths:
       - 'frontend/data.js'
       - 'frontend/board-cache-channel.js'
+      - 'frontend/board-window.js'
+      - 'frontend/board-grid.js'
+      - 'frontend/board-presentation.js'
+      - 'frontend/app.js'
+      - 'frontend/styles.css'
+      - 'frontend/tests/board-window.test.mjs'
+      - 'frontend/tests/fixtures/board-virtual-browser.html'
       - 'frontend/tests/fixtures/board-cache-two-tab.html'
       - 'frontend/tests/board-cache-channel.test.mjs'
       - 'frontend/tests/board-session-cache.test.mjs'
@@ -14,6 +21,13 @@ on:
     paths:
       - 'frontend/data.js'
       - 'frontend/board-cache-channel.js'
+      - 'frontend/board-window.js'
+      - 'frontend/board-grid.js'
+      - 'frontend/board-presentation.js'
+      - 'frontend/app.js'
+      - 'frontend/styles.css'
+      - 'frontend/tests/board-window.test.mjs'
+      - 'frontend/tests/fixtures/board-virtual-browser.html'
       - 'frontend/tests/fixtures/board-cache-two-tab.html'
       - 'frontend/tests/board-cache-channel.test.mjs'
       - 'frontend/tests/board-session-cache.test.mjs'
@@ -35,8 +49,8 @@ jobs:
         with:
           node-version: '22'
       - name: Verify source-level cache isolation and request boundaries
-        run: node --test frontend/tests/board-cache-channel.test.mjs frontend/tests/board-session-cache.test.mjs
-      - name: Verify actual two-tab browser behavior without production credentials
+        run: node --test frontend/tests/board-cache-channel.test.mjs frontend/tests/board-session-cache.test.mjs frontend/tests/board-window.test.mjs
+      - name: Verify real two-tab sync and 600-row virtual window without production credentials
         run: |
           set -euo pipefail
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"

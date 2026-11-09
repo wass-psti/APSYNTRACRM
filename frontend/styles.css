@@ -1869,3 +1869,8 @@
 /* CP-BOARD-INLINE-01: small contextual forms stay in the board overlay. */
 .modal .field[hidden]{display:none!important}
 .modal[aria-modal="true"] :focus-visible{outline:2px solid #247af0;outline-offset:2px}
+
+/* Priority 2: bounded natural-page-scroll board table windows. */
+.board-table-custom[data-board-virtual] tbody tr:not(.board-virtual-spacer){height:52px}
+.board-table-custom[data-board-virtual] tbody tr:not(.board-virtual-spacer) td{height:52px;max-height:52px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.board-table-custom .board-virtual-spacer td{padding:0!important;border:0!important;line-height:0!important;background:transparent!important;pointer-events:none}
