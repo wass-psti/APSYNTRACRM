@@ -64,7 +64,7 @@ test('authorized listing shows server update time and preview shows creation tim
  const view={...authorizedView,rows:[{...listed,updatedAt}],
   documentPreview:{documentId:id,record:{...saved,created_at:'2026-11-07T01:00:00Z'}}};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
- assert.ok(html.includes('<time datetime="'+updatedAt+'">'+updatedAt+'</time>'));
+ assert.ok(html.includes('<time datetime="'+updatedAt+'">Nov 08, 2026</time>'));
  assert.match(html,/<option value="updatedAt"[^>]*>Last updated<\/option>/);
  assert.match(html,/<dt>Created<\/dt><dd>2026-11-07T01:00:00Z<\/dd>/);
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:false});

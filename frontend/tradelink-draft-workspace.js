@@ -891,6 +891,18 @@ export function normalizeTradeLinkDraftListFilters(input={}){
   sortDirection:matchAllowed(draftSortDirections,f.sortDirection,'asc')
  };
 }
+const tradeLinkDocumentLabel=value=>typeLabels.find(([id])=>id===value)?.[1]||String(value||'—');
+const tradeLinkWorkflowLabel=value=>({
+ draft:'Draft',submitted:'Submitted','under-review':'Under Review',
+ 'revision-required':'Revision Required',approved:'Approved',rejected:'Rejected',
+ completed:'Completed',cancelled:'Cancelled'
+})[value]||String(value||'—');
+function renderTradeLinkWorkflowBadge(value,archived){
+ const status=String(value||'draft');
+ return '<span class="tl-doc-status tl-doc-status--'+escape(status)+'">'+
+  escape(tradeLinkWorkflowLabel(status))+'</span>'+
+  (archived?'<span class="tl-doc-status tl-doc-status--archived">Archived</span>':'');
+}
 function tradeLinkDraftRowMatches(row,filters){
  if(!row||typeof row!=='object')return false;
  if(!typeLabels.some(([id])=>id===row.documentType))return false;
@@ -925,7 +937,9 @@ function tradeLinkTimestamp(value){
 }
 function renderTradeLinkTimestamp(value){
  if(tradeLinkTimestamp(value)===null)return '—';
- return '<time datetime="'+escape(value)+'">'+escape(value)+'</time>';
+ const display=new Intl.DateTimeFormat('en-PH',{year:'numeric',month:'short',day:'2-digit',
+  timeZone:'UTC'}).format(new Date(value));
+ return '<time datetime="'+escape(value)+'">'+escape(display)+'</time>';
 }
 /** Search only the bounded current server-authorized page. No remote search. */
 export function filterTradeLinkDraftAuthorizedRows(rows,input={}){
@@ -935,6 +949,17 @@ export function filterTradeLinkDraftAuthorizedRows(rows,input={}){
   tradeLinkDraftRowMatches(row,filters)),filters);
 }
 /** Update native controls and visible rows of the signed listing, never its data. */
+/** Date control is strictly local to the current authenticated response.
+ * It filters LAST UPDATED, never the document issue date or unseen server pages.
+ */
+export function tradeLinkUpdatedDateMatches(timestamp,start='',end=''){
+ if(!start&&!end)return true;
+ const value=tradeLinkTimestamp(timestamp);
+ if(value===null)return false;
+ const day=new Date(value).toISOString().slice(0,10);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return false;
+ return (!start||day>=start)&&(!end||day<=end);
+}
 export function updateTradeLinkDraftListUI(container,input={}){
  if(!container?.querySelectorAll||!container?.querySelector)return 0;
  const filters=normalizeTradeLinkDraftListFilters(input);
@@ -947,8 +972,13 @@ export function updateTradeLinkDraftListUI(container,input={}){
    workflowState:row.dataset?.workflowState,
    archived:row.dataset?.archived==='true'
   };
-  const matches=tradeLinkDraftRowMatches(record,filters);
-  row.hidden=!matches;if(matches)count++;
+  const start=container.querySelector('[data-tl-updated-start]')?.value||'';
+  const end=container.querySelector('[data-tl-updated-end]')?.value||'';
+  const matches=tradeLinkDraftRowMatches(record,filters)&&
+   tradeLinkUpdatedDateMatches(row.dataset?.updatedAt,start,end);
+  row.hidden=!matches;
+  if(!matches){const selection=row.querySelector?.('[data-tl-select-document]');if(selection)selection.checked=false;}
+  if(matches)count++;
  }
  const body=container.querySelector('[data-tradelink-domain-list-body]');
  if(body&&typeof body.appendChild==='function'){
@@ -1058,12 +1088,25 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
     'placeholder="'+(page?'Search all authorized documents':'Search this authorized page')+
     '" value="'+escape(filters.query)+'" '+
     'data-tradelink-domain-filter aria-describedby="tl-draft-search-scope"'+disabledAttr+'></label>'+
-   filterSelect('documentType','Document module',draftListTypes,filters.documentType)+
    filterSelect('workflowState','Workflow state',draftListStates,filters.workflowState)+
+  '</div>'+
+  (readOnly?'<div class="tl-reference-document-datebar" aria-label="Filter visible response by last updated date">'+
+   '<span class="tl-date-label">Updated date (UTC · current page only)</span>'+
+   '<label for="tl-doc-updated-start"><span class="sr-only">Updated from</span><input id="tl-doc-updated-start" type="date" data-tl-updated-start'+disabledAttr+'></label>'+
+   '<span>to</span>'+
+   '<label for="tl-doc-updated-end"><span class="sr-only">Updated through</span><input id="tl-doc-updated-end" type="date" data-tl-updated-end'+disabledAttr+'></label>'+
+   '<div class="tl-reference-date-presets">'+
+   [['today','Today'],['week','This Week'],['month','This Month'],['30','Last 30 Days'],['clear','Clear']].map(([key,label])=>
+    '<button type="button" data-action="tradelink-documents-date" data-range="'+key+'"'+disabledAttr+'>'+label+'</button>').join('')+
+   '</div>'+
+   '<button type="button" class="tl-ref-apply-filter" data-action="tradelink-documents-apply-dates"'+disabledAttr+'>Apply Filters</button></div>':'')+
+  '<details class="tl-ref-advanced-filters"><summary>More filters and sorting</summary>'+
+   '<div class="tl-ref-advanced-filter-grid">'+
+   filterSelect('documentType','Document module',draftListTypes,filters.documentType)+
    filterSelect('archiveMode','Archive status',draftArchiveModes,filters.archiveMode)+
    filterSelect('sortBy','Sort by',draftSortFields,filters.sortBy)+
    filterSelect('sortDirection','Sort order',draftSortDirections,filters.sortDirection)+
-  '</div>'+
+   '</div></details>'+
   (page?
    '<div class="tl-draft-pagination-controls" aria-label="Authorized document search">'+
     '<button type="button" class="secondary" data-action="tradelink-documents-search"'+
@@ -1080,27 +1123,38 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
       'Search and filters apply only to the current signed, authorized response '+
       '(maximum 50 records). They do not query other workspaces or fetch additional pages.')+
    '</p>'+
-  '<p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
+  '<div class="tl-ref-selection-row"><p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
    displayed.length+' of '+records.length+' authorized records in this response</p>'+
+   (readOnly?'<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">0 selected</span>'+
+    '<button type="button" data-action="tradelink-documents-clear-selection">Clear selection</button></div>':'')+
+   '</div>'+
   (records.length?
    '<div class="tl-records-scroll"><table class="tl-records-table">'+
     '<caption>'+(readOnly?'Authorized TradeLink documents':'Authorized TradeLink Draft records')+
      ' in current response</caption>'+
-    '<thead><tr><th scope="col">Document</th><th scope="col">Module</th>'+
-    '<th scope="col">Revision</th><th scope="col">State</th><th scope="col">Last updated</th>'+
-    '<th scope="col">Actions</th>'+
+    '<thead><tr><th scope="col"><input id="tl-select-visible-documents" type="checkbox" data-tl-select-all aria-label="Select all visible documents" /></th>'+
+    '<th scope="col">No.</th><th scope="col">Document</th><th scope="col">Module</th>'+
+    '<th scope="col">Last updated</th><th scope="col">Workflow Status</th>'+
+    '<th scope="col">Rev. No.</th><th scope="col">Actions</th>'+
     '</tr></thead><tbody data-tradelink-domain-list-body>'+
-    ordered.map(row=>{
+    ordered.map((row,index)=>{
      const match=tradeLinkDraftRowMatches(row,applied);
      return '<tr data-tradelink-domain-record data-document-number="'+
       escape(row.documentNumber)+'" data-document-type="'+escape(row.documentType)+
       '" data-workflow-state="'+escape(row.workflowState)+'" data-revision="'+
       escape(row.revision)+'" data-updated-at="'+escape(tradeLinkTimestamp(row.updatedAt)===null?'':row.updatedAt)+'" data-archived="'+
       (row.archived===true?'true':'false')+'"'+(match?'':' hidden')+'>'+
-      '<td>'+escape(row.documentNumber)+'</td><td>'+escape(row.documentType)+
-      '</td><td>'+escape(row.revision)+'</td><td>'+escape(row.workflowState)+
-      (row.archived?' · Archived':'')+'</td><td>'+renderTradeLinkTimestamp(row.updatedAt)+'</td>'+
-      (readOnly?'<td><button type="button" class="secondary" '+
+      '<td><input id="tl-select-'+escape(row.documentId)+'" type="checkbox" data-tl-select-document aria-label="Select document '+escape(row.documentNumber)+'" /></td>'+
+      '<td class="tl-ref-row-number">'+escape(index+1)+'</td>'+
+      '<td class="tl-ref-doc-number">'+escape(row.documentNumber)+'</td>'+
+      '<td>'+escape(tradeLinkDocumentLabel(row.documentType))+'</td>'+
+      '<td>'+renderTradeLinkTimestamp(row.updatedAt)+'</td>'+
+      '<td>'+renderTradeLinkWorkflowBadge(row.workflowState,row.archived)+'</td>'+
+      '<td><span class="tl-ref-revision">'+escape(row.revision)+'</span></td>'+
+      (readOnly?'<td class="tl-ref-actions-cell">'+
+       '<button type="button" class="tl-ref-row-action-trigger" popovertarget="tl-doc-menu-'+escape(row.documentId)+'" aria-label="Actions for '+escape(row.documentNumber)+'" title="Document actions">⋯</button>'+
+       '<div popover="auto" data-tradelink-action-menu id="tl-doc-menu-'+escape(row.documentId)+'" class="tl-ref-actions-menu">'+
+       '<button type="button" class="secondary" '+
        'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
        '">Preview saved</button> '+
        '<button type="button" class="secondary" data-action="tradelink-document-print" '+
@@ -1164,7 +1218,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
          (row.archived?'tradelink-draft-restore':'tradelink-draft-archive')+
          '" data-id="'+escape(row.documentId)+'">'+
          (row.archived?'Restore':'Archive')+'</button>':'')+
-       '</td>':'<td>'+
+       '</div></td>':'<td>'+
       '<button type="button" class="secondary" data-action="tradelink-draft-open" data-id="'+escape(row.documentId)+'">Read</button> '+
       '<button type="button" class="secondary" data-action="tradelink-draft-archive" data-id="'+escape(row.documentId)+'"'+
        (!canManage||!TL03_DOMAIN_WRITES_ENABLED||row.archived||row.workflowState!=='draft'?' disabled':'')+'>Archive</button> '+
@@ -1280,15 +1334,17 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   catch{selectedPreview='';}
  }
  return '<section class="tl-content-panel tl-document-repository" aria-labelledby="tl-domain-repository-title">'+
-  '<div class="tl-panel-heading"><div><h2 id="tl-domain-repository-title">All Documents</h2></div></div>'+
-  '<div class="tl-panel-heading tl-reference-repository-actions"><span class="tl-reference-repository-count">'+
-    escape(rows.length)+' document'+(rows.length===1?'':'s')+' in this response</span>'+
+  '<div class="tl-panel-heading tl-reference-repository-actions">'+
+   '<h2 id="tl-domain-repository-title">All Documents <span class="tl-ref-count-badge">'+
+    escape(rows.length)+'</span></h2>'+
    '<div class="tl-reference-repository-buttons">'+
    (canManage&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="#/boards/'+TRADELINK_BOARD_ID+
     '/tradelink/drafts/quotation">Create New Document</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
    (!TL03_DOMAIN_READS_ENABLED||!canManage||view.busy?' disabled':'')+
-   '>Refresh</button></div></div>'+
+   '>Refresh</button>'+
+   '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink">Dashboard</a>'+
+   '</div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
   renderTradeLinkDraftList(rows,view,canManage,{readOnly:true})+

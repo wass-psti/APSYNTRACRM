@@ -4058,6 +4058,47 @@ async function action(name,button){
   }
   break;
  }
+ case 'tradelink-documents-clear-selection':{
+  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+     !state.boardManage||state.tradeLinkDraft?.status!=='AUTHORIZED_READ')break;
+  const panel=button.closest('[data-tradelink-domain-list]');
+  for(const checkbox of panel?.querySelectorAll('[data-tl-select-document]')||[])
+   checkbox.checked=false;
+  updateTradeLinkDocumentSelection(panel);
+  break;
+ }
+ case 'tradelink-documents-date':
+ case 'tradelink-documents-apply-dates':{
+  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+     !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+     state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)break;
+  const panel=button.closest('[data-tradelink-domain-list]');
+  const start=panel?.querySelector('[data-tl-updated-start]');
+  const end=panel?.querySelector('[data-tl-updated-end]');
+  if(!start||!end)break;
+  if(name==='tradelink-documents-date'){
+   const today=new Date();
+   const utcToday=new Date(Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate()));
+   const fmt=date=>date.toISOString().slice(0,10);
+   const range=button.dataset.range;
+   const from=new Date(utcToday);
+   if(range==='week')from.setUTCDate(utcToday.getUTCDate()-((utcToday.getUTCDay()+6)%7));
+   else if(range==='month')from.setUTCDate(1);
+   else if(range==='30')from.setUTCDate(utcToday.getUTCDate()-29);
+   else if(range!=='today'&&range!=='clear')break;
+   start.value=range==='clear'?'':fmt(from);
+   end.value=range==='clear'?'':fmt(utcToday);
+  }
+  if(start.value&&end.value&&start.value>end.value){
+   start.setCustomValidity('Start date must be before end date.');
+   start.reportValidity();break;
+  }
+  start.setCustomValidity('');
+  updateTradeLinkDraftListUI(panel,state.tradeLinkDraft.listPage?.server?
+   state.tradeLinkDraft.listPage.appliedFilters:state.tradeLinkDraft.listFilters);
+  updateTradeLinkDocumentSelection(panel);
+  break;
+ }
  case 'tradelink-documents-module':{
   if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
      !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
@@ -5715,6 +5756,21 @@ root.addEventListener('click',event=>{
  * No browser storage, network requests or persistent document semantics.
  */
 
+function updateTradeLinkDocumentSelection(panel){
+ if(!panel||!tradeLinkAuthorizedListRoute()||!state.boardManage||
+    state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return;
+ const visible=[...panel.querySelectorAll('[data-tradelink-domain-record]')]
+   .filter(row=>!row.hidden);
+ const inputs=visible.map(row=>row.querySelector('[data-tl-select-document]')).filter(Boolean);
+ const selected=inputs.filter(input=>input.checked).length;
+ const heading=panel.querySelector('[data-tl-selected-count]');
+ if(heading)heading.textContent=selected+' selected';
+ const selectAll=panel.querySelector('[data-tl-select-all]');
+ if(selectAll){
+  selectAll.checked=inputs.length>0&&selected===inputs.length;
+  selectAll.indeterminate=selected>0&&selected<inputs.length;
+ }
+}
 function captureTradeLinkDraftListFilters(event){
  const control=event.target?.closest?.('[data-tradelink-domain-filter]');
  const container=control?.closest?.('[data-tradelink-domain-list]');
@@ -5730,6 +5786,7 @@ function captureTradeLinkDraftListFilters(event){
  state.tradeLinkDraft.listFilters=filters;
  if(!state.tradeLinkDraft.listPage?.server)
   updateTradeLinkDraftListUI(container,filters);
+ updateTradeLinkDocumentSelection(container);
  return true;
 }
 function captureTradeLinkDraftFields(event){
@@ -5772,6 +5829,20 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(event.target?.matches?.('[data-tl-select-document],[data-tl-select-all]')){
+  if(!tradeLinkAuthorizedListRoute()||!state.boardManage||
+     state.tradeLinkDraft?.status!=='AUTHORIZED_READ')return;
+  const panel=event.target.closest('[data-tradelink-domain-list]');
+  if(event.target.matches('[data-tl-select-all]')){
+   for(const row of panel?.querySelectorAll('[data-tradelink-domain-record]')||[]){
+    if(row.hidden)continue;
+    const checkbox=row.querySelector('[data-tl-select-document]');
+    if(checkbox)checkbox.checked=event.target.checked;
+   }
+  }
+  updateTradeLinkDocumentSelection(panel);
+  return;
+ }
  if(captureTradeLinkDraftListFilters(event))return;
  if(captureTradeLinkDraftFields(event)){
   // Never transfer the previous module's customer, financial, or reviewer inputs.
