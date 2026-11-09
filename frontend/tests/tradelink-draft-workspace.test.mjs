@@ -159,7 +159,7 @@ test('Delivery Receipt local readiness validates QC, logistics and optional seri
   detail,workspaceId:workspace,view:initialTradeLinkDraftView('delivery'),canManage:true});
  for(const name of ['checkedBy','deliveredBy','receivedBy','lineSerialNumber'])
   assert.ok(html.includes('name="'+name+'"'),name);
- assert.match(html,/Delivery responsibility · preview only/);
+ assert.match(html,/Delivery Tracking/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/name="lineUnitPrice"/);
  const sample={documentType:'delivery',documentNumber:'DR-001',
@@ -232,7 +232,7 @@ test('Electronic SI preview validates client identity, priced line and intended 
   detail,workspaceId:workspace,view:initialTradeLinkDraftView('esi'),canManage:true});
  for(const name of ['customerTin','verifiedBy','approvedBy','lineUnitPrice'])
   assert.ok(html.includes('name="'+name+'"'),name);
- assert.match(html,/Electronic SI readiness · preview only/);
+ assert.match(html,/Verified By \(Finance Team\)/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  const base={documentType:'esi',documentNumber:'SI-001',customerName:'Client',
   customerTin:'TIN-123',verifiedBy:'Finance',approvedBy:'Manager',
@@ -275,7 +275,7 @@ test('Supplier PO preview requires priced items, terms and intended reviewers',(
   detail,workspaceId:workspace,view:initialTradeLinkDraftView('po'),canManage:true});
  for(const name of ['poNumber','targetDeliveryDate','paymentTerms','verifiedBy','approvedBy','lineUnitPrice'])
   assert.ok(html.includes('name="'+name+'"'),name);
- assert.match(html,/Supplier PO readiness · preview only/);
+ assert.match(html,/Reviewed By \(Account Manager\)/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  const base={documentType:'po',documentNumber:'PO-001',customerName:'Supplier',
   targetDeliveryDate:'2026-12-15',paymentTerms:'Net 15',verifiedBy:'Account manager',

@@ -329,20 +329,80 @@ function moneyField(label,name,val,currency,attrs){
   ' (<span data-tradelink-draft-money-currency>'+escape(currency)+'</span>)</span>'+
   '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+'></label>';
 }
-function renderCommercialReadiness(type,fieldValue,data){
- const input=(label,name,attrs='maxlength="5000" required')=>
-  field(label,name,fieldValue(name,data[name]||''),attrs);
- const note='<p class="muted">Readiness is local only. Reviewer and approver names do not assign roles, grant approval, or submit a workflow.</p>';
- // All existing supported commercial contact and terms inputs now sit in
- // Client Information, as the uploaded reference shows. Reviewer inputs stay
- // in the final source-defined readiness section; no inputs are duplicated.
- if(type==='esi')return '<fieldset class="tl-draft-lines"><legend>Electronic SI readiness · preview only</legend>'+
-  input('Intended finance verifier','verifiedBy')+
-  input('Intended management approver','approvedBy')+'</fieldset>'+note;
- if(type==='quotation')return '';
- if(type==='po')return '<fieldset class="tl-draft-lines"><legend>Supplier PO readiness · preview only</legend>'+
-  input('Intended Account Manager reviewer','verifiedBy')+
-  input('Intended final approver','approvedBy')+'</fieldset>'+note;
+/** Source-reference personnel suggestions are proposed names, not authenticated
+ * directory membership or approval authority. Never infer a signed identity. */
+const referencePeople=Object.freeze({
+ finance:Object.freeze(['Melanie P. Señagan','Jonerey Torino','Daniela C. Cabanas']),
+ management:Object.freeze(['Alex P. Señagan','Dionny P. Señagan','Amalia P. Señagan']),
+ qc:Object.freeze(['Dionny P. Señagan','Alex P. Señagan','Amalia P. Señagan']),
+ logistics:Object.freeze(['Rodulfo Ogang, Jr','Jerome L. Nuñez','Prospero C. Pajulas',
+  'Daniela C. Cabanas','Alex P. Señagan']),
+ administrators:Object.freeze(['Alex P. Señagan']),
+ accountManagers:Object.freeze(['Alex P. Señagan','Angelica Anne Camille Señagan',
+  'Chris Emmanuel Q. Rama','Prospero C. Pajulas','Dionny P. Señagan'])
+});
+function referencePersonField(label,name,value,people,placeholder,{required=false}={}){
+ const current=String(value??'');
+ const known=people.includes(current);
+ return '<div class="tl-reference-assignment-field"><label for="tl-ref-person-'+escape(name)+'">'+escape(label)+'</label>'+
+  '<select id="tl-ref-person-'+escape(name)+'" name="'+escape(name)+'"'+(required?' required':'')+'>'+
+   '<option value="">'+escape(placeholder)+'</option>'+
+   (current&&!known?'<option value="'+escape(current)+'" selected>'+escape(current)+'</option>':'')+
+   people.map(person=>'<option value="'+escape(person)+'"'+(person===current?' selected':'')+'>'+escape(person)+'</option>').join('')+
+  '</select></div>';
+}
+function referenceCreator(actorName){
+ return '<div class="tl-reference-approval-creator"><span aria-hidden="true">♙</span><div>'+
+  '<strong>Created By</strong> <span class="tl-reference-approval-chip">Auto-captured on save</span>'+
+  '<p>'+(actorName?escape(actorName):'Current authenticated user')+'</p>'+
+  '<small>Signed server identity and timestamp are captured on successful save.</small>'+
+  '</div></div>';
+}
+function renderReferenceModuleWorkflow(type,fieldValue,data,actorName){
+ if(type==='packing'||type==='quotation')return '';
+ const value=name=>fieldValue(name,data[name]||'');
+ const person=(label,name,list,placeholder,required=false)=>
+  referencePersonField(label,name,value(name),list,placeholder,{required});
+ const help='<p class="tl-reference-workflow-disclaimer">Proposed personnel assignments only. Selecting a name does not verify an account, grant permissions, confirm delivery or record an approval.</p>';
+ const group=(title,content)=>'<div class="tl-reference-approval-stage">'+
+  '<h5>'+title+'</h5>'+content+'</div>';
+ if(type==='esi')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Electronic SI verification and approval">'+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  group('Verified By (Finance Team)',
+   person('Finance team member','verifiedBy',referencePeople.finance,'Select finance team member...',true))+
+  group('Approved By (Management)',
+   person('Management approver','approvedBy',referencePeople.management,'Select management member...',true))+
+  help+'</section>';
+ if(type==='delivery')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Delivery tracking">'+
+  '<h4>Delivery Tracking</h4>'+referenceCreator(actorName)+
+  group('Checked By (Quality Control)',
+   person('QC personnel','checkedBy',referencePeople.qc,'Select QC personnel...',true))+
+  group('Delivered By (Logistics)',
+   person('Logistics personnel','deliveredBy',referencePeople.logistics,'Select logistics personnel...',true))+
+  '<div class="tl-reference-assignment-field"><label for="tl-ref-delivery-received">Received By (optional)</label>'+
+  '<input id="tl-ref-delivery-received" name="receivedBy" maxlength="5000" value="'+escape(value('receivedBy'))+'" placeholder="Recipient acknowledgement"></div>'+
+  help+'</section>';
+ if(type==='payment')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Payment acknowledgement">'+
+  '<h4>Payment Acknowledgement</h4>'+referenceCreator(actorName)+
+  group('Payment Received By (Finance)',
+   person('Finance team member','receivedBy',referencePeople.finance,'Select finance team member...',true))+
+  group('Verified By (Administration)',
+   person('Administrator','verifiedBy',referencePeople.administrators,'Select admin...',true))+
+  help+'</section>';
+ if(type==='po')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Supplier purchase order verification and approval">'+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  group('Reviewed By (Account Manager)',
+   referencePersonField('Account Manager','verifiedBy',
+    value('verifiedBy')||'Angelica Anne Camille Señagan',
+    referencePeople.accountManagers,'Select account manager...',{required:true})+
+   '<small>Suggested default reviewer: Angelica Anne Camille Señagan (aacsenagan@watchdogautomation.com.ph). This selection is editable.</small>'+
+   '<label for="tl-po-review-time">Review Date &amp; Time</label>'+
+   '<div class="tl-reference-approval-timestamp"><input id="tl-po-review-time" aria-label="Purchase order review timestamp" placeholder="Available after signed Account Manager review" disabled>'+
+   '<button type="button" disabled aria-disabled="true" title="Requires signed, role-authorized Account Manager review and server audit">Use Time Now</button></div>'+
+   '<small>The timestamp is recorded only by an authorized signed server review; changing the proposed reviewer never records approval.</small>')+
+  group('Approved By (Management)',
+   person('Management approver','approvedBy',referencePeople.management,'Select management member...',true))+
+  help+'</section>';
  return '';
 }
 
@@ -949,9 +1009,6 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       inputUnit,'type="number" min="0" max="1000000000000" step="any"')+
      field('Bank name (for cheque)','bankName',fieldValue('bankName',data.bankName||''),'maxlength="5000"')+
      field('Cheque number (for cheque)','chequeNumber',fieldValue('chequeNumber',data.chequeNumber||''),'maxlength="5000"')+
-     field('Received by (signed account email)','receivedBy',
-      fieldValue('receivedBy',data.receivedBy||''),'maxlength="254" required')+
-     field('Verified by','verifiedBy',fieldValue('verifiedBy',data.verifiedBy||''),'maxlength="5000" required')+
     '</fieldset>'+
     '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
     '<fieldset class="tl-draft-lines tl-reference-items"><legend>Items</legend>'+
@@ -967,17 +1024,6 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       lines.map((item,index)=>renderTradeLinkDraftLineItem(item,type,inputUnit,index)).join('')+
      '</div>'+
     '</fieldset>'+
-    (type==='delivery'?
-     '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Delivery responsibility · preview only</legend>'+
-      field('QC assignee (signed account email)','checkedBy',
-       fieldValue('checkedBy',data.checkedBy||''),
-       'maxlength="254" required')+
-      field('Logistics assignee (signed account email)','deliveredBy',
-       fieldValue('deliveredBy',data.deliveredBy||''),
-       'maxlength="254" required')+
-      field('Received by (optional)','receivedBy',fieldValue('receivedBy',data.receivedBy||''),
-       'maxlength="5000"')+
-     '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines):'')+
    '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
@@ -988,20 +1034,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<small>These notes are part of the local validation preview. No PDF, approval or document is generated.</small>'+
     '</label></section>'+
    (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,actorEmail,editing):
-   (type!=='packing'?
-    '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Workflow account assignments</legend>'+
-     '<p class="muted">Reviewer email must match a verified signed APSYNTRA CRM account. '+
-      'Names alone never grant review permission; this form does not assign system roles.</p>'+
-     (['quotation','delivery'].includes(type)?
-      field('Intended reviewer (optional)','verifiedBy',
-       fieldValue('verifiedBy',data.verifiedBy||''),'maxlength="5000"'):'')+
-     field('Assigned reviewer account email (optional)','verifiedByEmail',
-      fieldValue('verifiedByEmail',data.verifiedByEmail||''),'type="email" maxlength="254"')+
-     (['esi','quotation','po'].includes(type)?
-      field('Assigned approver account email (optional)','approvedByEmail',
-       fieldValue('approvedByEmail',data.approvedByEmail||''),'type="email" maxlength="254"'):'')+
-    '</fieldset>':''))+
-   (renderCommercialReadiness(type,fieldValue,data))+
+    renderReferenceModuleWorkflow(type,fieldValue,data,actorName))+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
