@@ -1,6 +1,6 @@
 import {syncFuelTrans} from './fueltrans-native.js';
 import {AuthClient,ApiError} from './session.js';
-import {avatarPreviewMarkup,mountAvatarPreview} from './profile-avatar.js';
+import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
@@ -213,6 +213,7 @@ function stopAuthVisuals(){
  authVisualController=null;
 }
 function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
+ stopAvatarPreview();
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
  syncFuelTrans({container:null});
@@ -941,6 +942,7 @@ function render(){
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  if(state.view==='settings')mountAvatarPreview(root);
+ else stopAvatarPreview();
  else shell(overview());
  syncFuelTrans({container:state.view==='board'&&state.tab==='fueltrans'?root.querySelector('#fueltrans-native-host'):null,auth,api:db,boardId:state.boardId,workspaceId:state.context?.workspace_id,userId:state.context?.user_id,route:location.hash.split('/').slice(4).join('/')||'dashboard'});
  if(state.view==='board'&&state.tab==='items')syncBoardSelectionUi();
