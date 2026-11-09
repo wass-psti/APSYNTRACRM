@@ -29,7 +29,19 @@ INSERT INTO public.tradelink_documents
  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
 
 SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','cccccccc-cccc-4ccc-8ccc-cccccccccccc',true);
+SELECT set_config('request.jwt.claim.session_id','33333333-3333-4333-8333-333333333333',true);
+DO $order_denial$
+BEGIN
+ BEGIN
+  PERFORM public.tl03_record_pdf_approval_stage(
+   '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
+   '66666666-6666-4666-8666-666666666666',3,'secondary');
+  RAISE EXCEPTION 'Secondary without primary accepted';
+ EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL; END;
+END $order_denial$;
 SELECT set_config('request.jwt.claim.sub','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',true);
+
 SELECT set_config('request.jwt.claim.session_id','22222222-2222-4222-8222-222222222222',true);
 DO $primary$
 DECLARE board uuid:='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
@@ -37,10 +49,6 @@ DECLARE board uuid:='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
 BEGIN
  IF NOT private.tl03_can_pdf_approve(board) OR private.tl03_can_manage(board)
  THEN RAISE EXCEPTION 'Narrow reviewer capability grants manager privilege'; END IF;
- BEGIN
-  PERFORM public.tl03_record_pdf_approval_stage(board,doc,3,'secondary');
-  RAISE EXCEPTION 'Secondary before primary accepted';
- EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL; END;
  r:=public.tl03_record_pdf_approval_stage(board,doc,3,'primary');
  IF r->>'stage'<>'primary' OR r->>'actorEmail'<>'aacsenagan@watchdogautomation.com.ph'
  OR r->>'actorId'<>'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
