@@ -684,3 +684,35 @@
 .tl-reference-portal .tl-reference-document-filter-tabs>button:focus-visible{
  outline:2px solid #315de6;outline-offset:2px;
 }
+
+
+/* Shared active-tab indicator; shell rerenders are animated by bounded FLIP
+   geometry, while other TradeLink navigation remains unchanged. */
+.tl-reference-portal .tl-reference-portal-links{
+ position:relative;isolation:isolate;
+}
+.tl-reference-portal .tl-reference-active-indicator{
+ position:absolute;z-index:0;pointer-events:none;
+ background:#fff;border:1px solid #e5e9f0;border-radius:9px;
+ box-shadow:0 2px 7px rgba(25,35,60,.11);
+}
+.tl-reference-portal .tl-reference-active-indicator[hidden]{display:none}
+.tl-reference-portal .tl-reference-portal-links>a,
+.tl-reference-portal .tl-reference-manual{
+ position:relative;z-index:1;
+}
+.tl-reference-portal .tl-reference-portal-links .tl-reference-create{
+ background:transparent;border-color:transparent;box-shadow:none;
+}
+.tl-reference-portal .tl-reference-portal-links :is(a,summary).is-highlighted{
+ color:#174abd;font-weight:750;
+}
+.tl-reference-portal .tl-reference-portal-links :is(a,summary).is-highlighted:hover{
+ background:transparent;
+}
+.tl-reference-portal .tl-reference-portal-links>a[aria-current="page"]{
+ background:transparent;
+}
+@media(prefers-reduced-motion:reduce){
+ .tl-reference-portal .tl-reference-active-indicator{animation:none!important;transition:none!important}
+}
