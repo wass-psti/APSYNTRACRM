@@ -60,3 +60,53 @@ Decision required before activation:
   necessitates separately authorized Storage policy changes and isolation tests.
 
 This PR neither changes production policies nor creates a second bucket.
+
+
+## November 10, 2026 — Option A selected, production migration authorized
+
+The owner explicitly selected **Option A**: preserve the existing private
+`work-board-files` Board-viewer read and authorized owner/manager deletion
+rights. No new Storage bucket or narrower Storage policies are authorized or
+required for this release. The owner also authorized deploying the two
+reviewed FuelTrack migrations to the existing production project **subject
+to the previously binding recovery prerequisite**. This authorization
+does not waive the whole-Workspace 24-hour RPO, 24-hour RTO, or mandatory
+rehearsal requirements.
+
+### Production-shaped local migration rehearsal
+
+Verified on November 10 against an **isolated network-disabled PostgreSQL
+17** container. Source: prior November 9 locally archived production schema
+and data exports. No new Supabase project or production writes. Do not
+commit or redistribute the source exports.
+
+- Restored schema and data successfully; production-shaped inventory
+  included 41 profile records, 76 Board records and the single expected
+  FuelTrack Board group.
+- Applied `20261109115106_fueltrack_v3_backend_core.sql`: **PASS**.
+- Applied `20261109235500_fueltrack_v3_board_receipts.sql`: **PASS**.
+- Confirmed three FuelTrack tables have RLS enabled; direct table SELECT
+  and INSERT by `authenticated` were denied; FuelTrack submission RPC
+  executable by `authenticated` and not by `anon`.
+- New tables were empty (0 fuel requests, 0 receipts) on the local restored
+  snapshot. The isolation container was removed after testing.
+- Earlier synthetic transaction, Board synchronization, receipt-denial
+  and migration-repeat tests remain passing in the disposable acceptance
+  workflow.
+
+**Limitations:** The restored snapshot is from November 9, not a
+November 10 physical provider backup. The previous local recovery rehearsal
+proved logical database and private Storage-object recovery, not hosted
+physical-backup isolation or the provider's real restore time. The existing
+recovery record confirms PITR disabled and that hosted 24-hour RTO/Storage
+RPO have not been established. These are release-blocking prerequisites
+for the user's whole-project recovery policy, not grounds to fabricate a
+GO decision.
+
+**Deployment classification: AUTHORIZED BUT BLOCKED.** Production DDL has
+not run. Next actions: secure official provider restore feasibility and
+perform the required isolation/Storage recovery rehearsal without creating
+another Supabase project or disrupting production; verify 24-hour objectives;
+then execute the two reviewed migrations through the approved migration
+mechanism, followed by real signed-user runtime acceptance and release
+verification. Do not use synthetic JWTs or production fixture users.
