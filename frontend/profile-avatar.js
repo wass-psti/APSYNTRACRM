@@ -77,6 +77,7 @@ export async function mountAvatarImages(container,client,path,userId){
  const nodes=[...(container?.querySelectorAll?.('img[data-avatar-current]')||[])];
  for(const img of nodes){
   img.hidden=true;
+  img.removeAttribute('src');
   const fallback=img.parentElement?.querySelector('[data-avatar-initials]');
   if(fallback)fallback.hidden=false;
  }
