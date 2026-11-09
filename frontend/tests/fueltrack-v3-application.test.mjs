@@ -159,9 +159,32 @@ test('New Fuel Request exposes two distinct reference modes without fabricated c
  assert.match(html,/id="ft3-mode-vehicle" value="vehicle" checked/);
  assert.match(html,/id="ft3-mode-container" value="container"/);
  for(const id of ['ft3-plate','ft3-owner','ft3-quantity','ft3-responsible']){
-  assert.match(html,new RegExp('<select id="'+id+'"[^>]* disabled'));
+  assert.match(html,new RegExp('<select id="'+id+'"[^>]*aria-required="true"'));
+  assert.doesNotMatch(html,new RegExp('<select id="'+id+'"[^>]* disabled'));
  }
+ assert.match(html,/id="ft3-custom-count"/);
+ assert.match(html,/value="custom">Custom number of containers/);
  assert.match(html,/<button[^>]*disabled[^>]*>Submit for Approval — unavailable<\/button>/);
- assert.match(html,/no request will be saved or submitted/i);
+ assert.match(html,/no request will be saved/i);
  assert.doesNotMatch(html,/<form\b|data-action=".*submit|\bfetch\(/i);
+});
+
+test('supplied FuelTrack reference options preserve exact distinct labels and reuse personnel options',async()=>{
+ const {FUELTRACK_PLATE_OPTIONS,FUELTRACK_PERSON_OPTIONS,FUELTRACK_CONTAINER_OPTIONS}=
+  await import('../fueltrack-v3-reference-options.js');
+ assert.equal(FUELTRACK_PLATE_OPTIONS.length,38);
+ assert.equal(FUELTRACK_PERSON_OPTIONS.length,38);
+ assert.equal(new Set(FUELTRACK_PLATE_OPTIONS).size,38);
+ assert.equal(new Set(FUELTRACK_PERSON_OPTIONS).size,38);
+ assert.ok(FUELTRACK_PLATE_OPTIONS.includes('G41 000'));
+ assert.ok(FUELTRACK_PLATE_OPTIONS.includes('G41 OOO'));
+ assert.ok(FUELTRACK_PERSON_OPTIONS.includes('Lex Mariun B. Señagan'));
+ assert.deepEqual(FUELTRACK_CONTAINER_OPTIONS,[1,2,3,4,5,6,7,8,9,10]);
+ const html=renderFuelTrackV3Application({detail:fixture(),section:'new-request'});
+ for(const person of FUELTRACK_PERSON_OPTIONS){
+  const safe=person.replaceAll('&','&amp;').replaceAll('<','&lt;')
+   .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+  assert.equal(html.split('>'+safe+'</option>').length-1,2);
+ }
+ for(const plate of FUELTRACK_PLATE_OPTIONS)assert.ok(html.includes('>'+plate+'</option>'));
 });
