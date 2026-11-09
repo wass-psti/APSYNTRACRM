@@ -95,11 +95,52 @@ BEGIN
    has_table_privilege('authenticated','private.tradelink_pdf_approval_events','DELETE')
  THEN RAISE EXCEPTION 'Private approval table accidentally exposed'; END IF;
 END $grants$;
+-- Confirmed identity and module assignment remain independently required.
+-- Change the synthetic primary actor only within this rolled-back transaction.
+RESET ROLE;
+UPDATE auth.users SET email_confirmed_at=NULL
+ WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',true);
+SELECT set_config('request.jwt.claim.session_id','22222222-2222-4222-8222-222222222222',true);
+DO $unconfirmed$
+BEGIN
+ BEGIN
+  PERFORM public.tl03_record_pdf_approval_stage(
+   '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
+   '66666666-6666-4666-8666-666666666666',3,'primary');
+  RAISE EXCEPTION 'Unconfirmed signed account accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $unconfirmed$;
+RESET ROLE;
+UPDATE auth.users SET email_confirmed_at=now()
+ WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+UPDATE public.module_role_assignments SET enabled=false
+ WHERE user_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' AND module_id='tradelink';
+SET LOCAL ROLE authenticated;
+DO $module_denial$
+BEGIN
+ IF private.tl03_can_pdf_approve(
+   '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88')
+ THEN RAISE EXCEPTION 'Disabled TradeLink module role passed reviewer guard'; END IF;
+ BEGIN
+  PERFORM public.tl03_pdf_approval_stages(
+   '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
+   '66666666-6666-4666-8666-666666666666');
+  RAISE EXCEPTION 'Disabled module role read approval events';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $module_denial$;
+RESET ROLE;
+UPDATE public.module_role_assignments SET enabled=true
+ WHERE user_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' AND module_id='tradelink';
+SET LOCAL ROLE authenticated;
 -- A signed session that is revoked loses all approval privileges immediately.
 RESET ROLE;
 UPDATE auth.sessions SET not_after=now()-interval '5 minutes'
  WHERE id='33333333-3333-4333-8333-333333333333';
 SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','cccccccc-cccc-4ccc-8ccc-cccccccccccc',true);
+SELECT set_config('request.jwt.claim.session_id','33333333-3333-4333-8333-333333333333',true);
 DO $revoked$
 BEGIN
  BEGIN
