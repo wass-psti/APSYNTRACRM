@@ -170,25 +170,29 @@ async function run(){
    await page.call('Page.navigate',{url:'http://127.0.0.1:'+port+'/menu-fixture?width='+width});
    await until(()=>page.evaluate('window.__menuReady===true'),120);
    for(const kind of ['board-actions-menu','board-group-actions','board-card-actions']){
-    const report=await page.evaluate(`(async()=>{
+    await page.evaluate(`document.querySelector('.${kind}').open=true`);
+    await until(()=>page.evaluate(`(()=>{
      const details=document.querySelector('.${kind}');
-     details.open=true;
-     await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
+     const menu=details?.querySelector('[role="menu"]');
+     return menu?.matches(':popover-open')&&
+      !menu.classList.contains('aps-foreground-pending');
+    })()`),120);
+    const report=await page.evaluate(`(()=>{
+     const details=document.querySelector('.${kind}');
      const menu=details.querySelector('[role="menu"]');
      const rect=menu.getBoundingClientRect();
      const trigger=details.querySelector('summary').getBoundingClientRect();
      const x=Math.min(window.innerWidth-15,Math.max(15,rect.left+Math.min(30,rect.width/2)));
      const y=Math.min(window.innerHeight-15,Math.max(15,rect.top+Math.min(30,rect.height/2)));
      const hit=document.elementFromPoint(x,y);
-     const report={popover:menu.matches(':popover-open'),pending:menu.classList.contains('aps-foreground-pending'),
-      menuVisible:rect.width>120&&rect.height>35&&rect.left>=-1&&rect.right<=window.innerWidth+1&&
-      rect.top>=-1&&rect.bottom<=window.innerHeight+1,
+     return {popover:menu.matches(':popover-open'),
+      pending:menu.classList.contains('aps-foreground-pending'),
+      menuVisible:rect.width>120&&rect.height>35&&rect.left>=-1&&
+      rect.right<=window.innerWidth+1&&rect.top>=-1&&rect.bottom<=window.innerHeight+1,
       atop:menu===hit||menu.contains(hit),triggerTop:trigger.top,
       rect:{left:Math.round(rect.left),top:Math.round(rect.top),right:Math.round(rect.right)}};
-     details.open=false;
-     await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
-     return report;
     })()`);
+    await page.evaluate(`document.querySelector('.${kind}').open=false`);
     assert.equal(report.popover,true,kind+' must use browser top layer at '+width+'px');
     assert.equal(report.pending,false,kind+' placement must resolve at '+width+'px');
     assert.equal(report.menuVisible,true,kind+' must remain inside viewport at '+width+'px');
@@ -201,7 +205,7 @@ async function run(){
    width:768,height:840,deviceScaleFactor:1,mobile:false});
   await page.call('Page.navigate',{url:'http://127.0.0.1:'+port+'/menu-fixture?dialog'});
   await until(()=>page.evaluate('window.__menuReady===true'),120);
-  const dialog=await page.evaluate(`(async()=>{
+  await page.evaluate(`(()=>{
    const root=document.querySelector('#app');
    const modal=document.createElement('div');
    modal.className='modal-backdrop';
@@ -210,17 +214,23 @@ async function run(){
     '<button type="button" data-action="group-inline-edit">Edit</button>'+
     '<button type="button" data-action="group-delete">Delete</button></div></details></div>';
    root.append(modal);
-   await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
-   const details=modal.querySelector('details');
-   details.open=true;
-   await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
+   modal.querySelector('details').open=true;
+  })()`);
+  await until(()=>page.evaluate(`(()=>{
+   const menu=document.querySelector('.modal-backdrop [role="menu"]');
+   return menu?.matches(':popover-open')&&
+    !menu.classList.contains('aps-foreground-pending');
+  })()`),120);
+  const dialog=await page.evaluate(`(()=>{
+   const details=document.querySelector('.modal-backdrop details');
    const menu=details.querySelector('[role="menu"]'),box=menu.getBoundingClientRect();
    const point=document.elementFromPoint(box.left+Math.min(35,box.width/2),
-     box.top+Math.min(30,box.height/2));
-   const safe={open:menu.matches(':popover-open'),atop:menu===point||menu.contains(point),
-    within:box.top>=0&&box.left>=0&&box.bottom<=window.innerHeight&&box.right<=window.innerWidth};
-   details.open=false;modal.remove();return safe;
+    box.top+Math.min(30,box.height/2));
+   return {open:menu.matches(':popover-open'),atop:menu===point||menu.contains(point),
+    within:box.top>=0&&box.left>=0&&box.bottom<=window.innerHeight&&
+     box.right<=window.innerWidth};
   })()`);
+  await page.evaluate(`document.querySelector('.modal-backdrop').remove()`);
   assert.deepEqual(dialog,{open:true,atop:true,within:true},
    'dialog action menu must appear above modal backdrop without clipping');
   console.log('DROPDOWN_DIALOG_PASS: menu paints above modal backdrop and remains in viewport');
