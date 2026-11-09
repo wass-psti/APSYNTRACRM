@@ -6,8 +6,11 @@ export class ApiError extends Error {
   constructor(message,status=0,code=''){ super(message);this.name='ApiError';this.status=status;this.code=code; }
 }
 export class AuthClient {
-  constructor({fetchImpl=globalThis.fetch?.bind(globalThis),storage=globalThis.sessionStorage,clock=()=>Date.now()}={}){
+  constructor({fetchImpl=globalThis.fetch?.bind(globalThis),storage=globalThis.sessionStorage,
+    clock=()=>Date.now(),requestTimeoutMs=12000}={}){
     this.fetchImpl=fetchImpl;this.storage=storage;this.clock=clock;this.session=null;this.refreshing=null;this.onExpired=()=>{};
+    this.requestTimeoutMs=Number.isInteger(requestTimeoutMs)&&requestTimeoutMs>=10&&requestTimeoutMs<=30000?
+      requestTimeoutMs:12000;
   }
   get isSignedIn(){return !!this.session?.access_token;}
   get userId(){return this.session?.user?.id??null;}
@@ -21,26 +24,48 @@ export class AuthClient {
   }
   clear(){this.session=null;this.storage?.removeItem(STORE_KEY);}
   async call(path,{method='GET',body,accessToken,signal}={}){
-    let response;
+    if(signal?.aborted)throw new ApiError('Request timed out before confirmation.',0,'REQUEST_TIMEOUT');
+    const controller=new AbortController();
+    const abort=()=>controller.abort();
+    signal?.addEventListener('abort',abort,{once:true});
+    let deadlineId,timedOut=false;
+    // Bound both network and body parsing. A hung provider or non-abortable
+    // response cannot leave the startup auth/workspace gate unresolved forever.
+    const deadline=new Promise((_,reject)=>{
+      deadlineId=setTimeout(()=>{
+        timedOut=true;controller.abort();
+        reject(new ApiError('The service did not respond. Check your connection and retry.',0,'REQUEST_TIMEOUT'));
+      },this.requestTimeoutMs);
+    });
     try{
-      response=await this.fetchImpl(SUPABASE_URL+path,{
+      const response=await Promise.race([this.fetchImpl(SUPABASE_URL+path,{
         method,mode:'cors',redirect:'error',cache:'no-store',
         headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json',
            ...(accessToken?{Authorization:'Bearer '+accessToken}:{})},
-        ...(body===undefined?{}:{body:JSON.stringify(body)}),signal
-      });
-    }catch{
-      if(signal?.aborted)throw new ApiError('Request timed out before confirmation.',0,'REQUEST_TIMEOUT');
-      throw new ApiError('Network unavailable. Verify your internet connection and retry.');
+        ...(body===undefined?{}:{body:JSON.stringify(body)}),
+        signal:controller.signal
+      }),deadline]);
+      let data;
+      try{data=await Promise.race([response.json(),deadline]);}
+      catch(error){
+        if(error?.code==='REQUEST_TIMEOUT'||timedOut)throw error;
+        data=null;
+      }
+      if(!response.ok){
+        const errorMessage=isObject(data)?(data.msg||data.message||data.error_description||data.error):null;
+        throw new ApiError(typeof errorMessage==='string'?errorMessage:'Request failed ('+response.status+')',
+          response.status,isObject(data)?String(data.code||data.error_code||''):'');
+      }
+      return data;
+    }catch(error){
+      if(error instanceof ApiError)throw error;
+      if(timedOut)throw new ApiError('The service did not respond. Check your connection and retry.',0,'REQUEST_TIMEOUT');
+      if(signal?.aborted)throw new ApiError('Request was cancelled.',0,'REQUEST_ABORTED');
+      throw new ApiError('Network unavailable. Verify your internet connection and retry.',0,'NETWORK_UNAVAILABLE');
+    }finally{
+      clearTimeout(deadlineId);
+      signal?.removeEventListener('abort',abort);
     }
-    let data;
-    try{data=await response.json();}catch{data=null;}
-    if(!response.ok){
-      const errorMessage=isObject(data)?(data.msg||data.message||data.error_description||data.error):null;
-      throw new ApiError(typeof errorMessage==='string'?errorMessage:'Request failed ('+response.status+')',
-       response.status,isObject(data)?String(data.code||data.error_code||''):'');
-    }
-    return data;
   }
   async signIn(email,password){
     if(!email?.trim()||!password)throw new ApiError('Enter your email and password.');
@@ -48,7 +73,13 @@ export class AuthClient {
       method:'POST',body:{email:email.trim(),password}
     });
     this.save(data);
-    try{await this.getVerifiedUser();}catch(err){this.clear();throw err;}
+    try{await this.getVerifiedUser();}
+    catch(err){
+      // Bad credentials/revoked tokens invalidate a session. An offline or
+      // timed-out *verification* does not revoke the freshly issued tokens.
+      if([400,401,403].includes(err?.status))this.clear();
+      throw err;
+    }
     return this.session.user;
   }
   async getVerifiedUser(){
@@ -63,14 +94,25 @@ export class AuthClient {
   async restore(){
     const raw=this.storage?.getItem(STORE_KEY);
     if(!raw)return false;
+    let previous;
     try{
-      const previous=JSON.parse(raw);
+      previous=JSON.parse(raw);
       if(!isObject(previous)||!isObject(previous.user)
+         ||typeof previous.user.id!=='string'
          ||typeof previous.access_token!=='string'||typeof previous.refresh_token!=='string'
          ||!Number.isFinite(previous.expires_at))throw Error('invalid');
-      this.session=previous;
-      await this.getVerifiedUser();return true;
     }catch{this.clear();return false;}
+    this.session=previous;
+    try{
+      await this.getVerifiedUser();return true;
+    }catch(error){
+      if([400,401,403].includes(error?.status)){
+        this.clear();return false;
+      }
+      // Network outage, timeouts, 5xx and 429 are indeterminate; preserve the
+      // original secure session for an explicit same-page recovery attempt.
+      throw error;
+    }
   }
   async refresh(){
     if(!this.session)throw new ApiError('Session expired.',401);
