@@ -46,6 +46,10 @@ INSERT INTO public.module_role_assignments
  ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','order-intake','MANAGER',true,
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now(),now()),
  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','order-intake','VIEWER',false,
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now(),now()),
+ ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','material-request-hub','VIEWER',false,
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now(),now()),
+ ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','material-request-hub','MANAGER',true,
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now(),now());
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','cccccccc-cccc-4ccc-8ccc-cccccccccccc',true);
@@ -58,6 +62,18 @@ BEGIN
  IF public.has_module_access('order-intake','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
     IS DISTINCT FROM FALSE
  THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_DISABLED_FOREIGN_ROLE_ALLOWED'; END IF;
+ -- Independent negative controls: own disabled assignment and an enabled
+ -- assignment owned exclusively by another signed principal.
+ IF public.has_module_access('material-request-hub',auth.uid())
+   IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_SAME_PRINCIPAL_DISABLED_ROLE_ALLOWED'; END IF;
+ IF public.has_module_access('material-request-hub',
+     'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
+   IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_FOREIGN_ENABLED_ROLE_ALLOWED'; END IF;
+ IF public.has_module_access('never-assigned-module',auth.uid())
+   IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_ABSENT_ROLE_ALLOWED'; END IF;
  ctx:=public.wm_auth_access_context();
  IF ctx IS NULL THEN RAISE EXCEPTION 'ORIGINAL_ACCESS_CONTEXT_MISSING'; END IF;
 END $allowed$;
