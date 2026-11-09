@@ -1,11 +1,14 @@
 /** Authorized typed board-grid presentation. No domain records are synthesized. */
 import {moduleByBoardName} from './board-manifest.js';
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
+import {fuelTrackV3GridColumns} from './fueltrack-v3-board-layout.js';
 import {boardTable} from './board-presentation.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
  const tradeLink=tradeLinkGridColumns(detail);
  if(tradeLink)return tradeLink;
+ const fuelTrack=fuelTrackV3GridColumns(detail);
+ if(fuelTrack)return fuelTrack;
  const module=moduleByBoardName(detail?.board?.name);
  const allowed=module?new Set(module.fields.map(f=>f.name)):null;
  const restricted=module?new Set(module.restricted.map(n=>n.trim().toLowerCase())):null;
