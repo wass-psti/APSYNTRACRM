@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Board caching two-tab synthetic acceptance</title></head><body>
+<p>Isolated synthetic signed-session browser test. No production credentials or APIs.</p>
+<script type="module">
+import {DomainApi} from '../../data.js';
+import {BoardCacheChannel} from '../../board-cache-channel.js';
+const BOARD='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
+let context=null,identity=null,auth=null,api=null,channel=null;
+const activity={updates:[],errors:[],serverReads:0,lastBoard:null};
+function scope(userId,workspaceId){return {userId,workspaceId};}
+function setup(userId,workspaceId,token='synthetic-token'){
+ channel?.stop();
+ identity=scope(userId,workspaceId);
+ auth={userId,accessToken:token,isSignedIn:true,
+  authorized:async (path,{body}={})=>{
+   const response=await fetch('/fixture/rpc/'+path.split('/').at(-1),{
+    method:'POST',headers:{'Content-Type':'application/json',
+     'X-Synthetic-User':auth.userId,'X-Synthetic-Workspace':identity.workspaceId},
+    body:JSON.stringify(body||{})});
+   if(!response.ok)throw Error('signed fixture denied '+response.status);
+   return response.json();
+  }};
+ api=new DomainApi(auth);
+ channel=new BoardCacheChannel({auth,onInvalidate:({boardId,revision})=>{
+  if(!api.invalidateBoardCache(boardId,{revision}))return;
+  activity.updates.push({boardId,revision});
+  if(!boardId||boardId===BOARD)void navigate().catch(error=>activity.errors.push(error.message));
+ }});
+ channel.start(identity);
+ api.onBoardMutation=({boardId,revision})=>channel.publish(boardId,revision);
+ activity.updates=[];activity.errors=[];activity.lastBoard=null;
+ return true;
+}
+async function navigate(){
+ const [board,allowed]=await Promise.all([
+  api.boardCached(BOARD,identity),api.allowed(BOARD,'view')
+ ]);
+ if(!allowed)throw Error('signed view denied');
+ activity.lastBoard=board;
+ return board;
+}
+async function directRead(){return api.board(BOARD);}
+async function mutate(){return api.rpc('wm_board_group_cas',{p_board_id:BOARD,p_action:'rename'});}
+function stats(){return {...activity,revision:activity.lastBoard?.board?.updated_at||null,
+  data:activity.lastBoard?.board?.name||null};}
+function signOut(){channel?.stop();api?.invalidateBoardCache();auth.isSignedIn=false;return true;}
+window.acceptance={setup,navigate,directRead,mutate,stats,signOut,scope:()=>identity};
+</script></body></html>
