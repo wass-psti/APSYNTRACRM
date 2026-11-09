@@ -2,5 +2,13 @@
 <body><h1>Isolated finite frame sample</h1><p>No signed application or production data.</p>
 <script type="module">
 import {sampleBrowserFrames} from '../../performance-profile.js';
-window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000})};
+import {createStartupCriticalPath} from '../../performance-critical-path.js';
+window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
+ criticalPath:()=>{
+  let now=0;
+  const phases=createStartupCriticalPath({clock:()=>now});
+  phases.begin();now=40;phases.phase('workspace-authorization');
+  now=100;phases.phase('authorized-route');now=120;
+  phases.end({authenticated:true});return phases.snapshot();
+ }};
 </script></body></html>

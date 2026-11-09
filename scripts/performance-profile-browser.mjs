@@ -8,7 +8,7 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'..');
 const allow=new Set(['/frontend/tests/fixtures/performance-profile-browser.html',
- '/frontend/performance-profile.js']);
+ '/frontend/performance-profile.js','/frontend/performance-critical-path.js']);
 const server=createServer((req,res)=>{
  const url=new URL(req.url,'http://127.0.0.1');
  if(!allow.has(url.pathname)){res.writeHead(404);res.end('not found');return;}
@@ -94,6 +94,17 @@ async function run(){
   assert.ok(measured.p50Ms>0&&measured.p95Ms>=measured.p50Ms);
   assert.ok(measured.durationMs===1000);
   assert.ok(!('url' in measured)&&!('userId' in measured));
+  assert.ok(measured.longTasks&&typeof measured.longTasks.supported==='boolean'&&
+   Number.isFinite(measured.longTasks.count));
+  assert.ok(measured.longTasks.maxMs>=0&&measured.longTasks.totalMs>=0);
+  const critical=await page.evaluate('performanceAcceptance.criticalPath()');
+  assert.equal(critical.totalMs,120);
+  assert.equal(critical.entryFromNavigationMs,0);
+  assert.equal(critical.signedReadyFromNavigationMs,120);
+  assert.deepEqual(critical.phases.map(x=>x.phase),
+   ['session-restore','workspace-authorization','authorized-route']);
+  console.log('BROWSER_STARTUP_PHASE_PASS: fixed-phase numeric timeline; no private fields');
+  console.log('BROWSER_LONG_TASK_PASS: finite opt-in observer summary without attribution');
   console.log('BROWSER_LOCAL_FRAME_PROFILE_PASS: finite 1s real Chromium RAF sample, no identity or URL');
 
  }finally{
