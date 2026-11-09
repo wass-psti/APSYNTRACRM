@@ -58,6 +58,25 @@ export class DomainApi {
    throw new ApiError('Group name must contain 1–120 characters.');
   return this.rpc('wm_update_board_group',{p_group_id:requireUuid(groupId),p_title:title.trim()});
  }
+ /** Signed group rename with optimistic concurrency and a validated receipt.
+  * No legacy unchecked write, privilege fallback or blind retry.
+  */
+ async updateGroupCas(boardId,group,title){
+  const bid=requireUuid(boardId),gid=requireUuid(group?.id);
+  const clean=typeof title==='string'?title.trim():'';
+  if(clean.length<1||clean.length>120)throw new ApiError('Group name must contain 1–120 characters.',400);
+  if(group?.board_id!==bid||typeof group.updated_at!=='string'||
+    !Number.isFinite(Date.parse(group.updated_at)))
+   throw new ApiError('Group identity or revision is unavailable. Reload the board.',409);
+  const response=await this.rpc('wm_board_group_cas',{
+   p_board_id:bid,p_group_id:gid,p_expected_updated_at:group.updated_at,
+   p_action:'rename',p_title:clean
+  });
+  if(response?.boardId!==bid||response?.groupId!==gid||response?.action!=='rename'||
+    typeof response.updatedAt!=='string'||!Number.isFinite(Date.parse(response.updatedAt)))
+   throw new ApiError('Group rename receipt is uncertain. Reload before retrying.',409);
+  return response;
+ }
  async addItem(boardId,groupId,title){return this.rpc('wm_add_board_item',{
    p_board_id:requireUuid(boardId),p_group_id:requireUuid(groupId),p_title:title.trim()
  });}
