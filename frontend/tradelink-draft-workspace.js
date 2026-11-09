@@ -370,6 +370,21 @@ function referencePersonField(label,name,value,people,placeholder,{required=fals
    people.map(person=>'<option value="'+escape(person)+'"'+(person===current?' selected':'')+'>'+escape(person)+'</option>').join('')+
   '</select></div>';
 }
+/** UI only: no local timestamp or PDF approval can authorize a document. */
+function referenceAssignedPdfStage(field,value,label){
+ const account=String(value??'').trim();
+ const message=account?
+  'Assigned account: '+account+'. Only this signed-in account may perform the '+label+' step after PDF approval is activated.':
+  'Select an account to assign responsibility for '+label+'.';
+ return '<div class="tl-reference-pdf-stage" data-tl-pdf-stage="'+escape(field)+'">'+
+  '<p class="tl-reference-assigned-account" data-tl-pdf-assignee aria-live="polite">'+escape(message)+'</p>'+
+  '<label for="tl-pdf-time-'+escape(field)+'">Review Date &amp; Time</label>'+
+  '<div class="tl-reference-approval-timestamp">'+
+  '<input id="tl-pdf-time-'+escape(field)+'" disabled placeholder="Pending signed electronic PDF approval" aria-label="'+escape(label)+' timestamp">'+
+  '<button type="button" disabled aria-disabled="true" data-tl-pdf-time-control title="Electronic PDF approval is not activated; timestamp requires an authorized signed server event"'+(account?'':' hidden')+'>Use Time Now</button></div>'+
+  '<small>Available only after the PDF template and server-side approval flow are activated. No local timestamp is an approval.</small>'+
+  '</div>';
+}
 function referenceCreator(actorName){
  return '<div class="tl-reference-approval-creator"><span aria-hidden="true">♙</span><div>'+
   '<strong>Created By</strong> <span class="tl-reference-approval-chip">Auto-captured on save</span>'+
@@ -381,7 +396,8 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName){
  if(type==='packing'||type==='quotation')return '';
  const value=name=>fieldValue(name,data[name]||'');
  const person=(label,name,placeholder,required=false)=>
-  referencePersonField(label,name,value(name),TRADELINK_MODULE_ACCOUNT_OPTIONS[type][name],placeholder,{required});
+  referencePersonField(label,name,value(name),TRADELINK_MODULE_ACCOUNT_OPTIONS[type][name],placeholder,{required})+
+  referenceAssignedPdfStage(name,TRADELINK_MODULE_ACCOUNT_OPTIONS[type][name].includes(value(name))?value(name):'',label);
  const help='<p class="tl-reference-workflow-disclaimer">Proposed account assignments only. Selecting an email does not verify the account, grant permissions, confirm delivery or record an approval.</p>';
  const group=(title,content)=>'<div class="tl-reference-approval-stage">'+
   '<h5>'+title+'</h5>'+content+'</div>';
@@ -415,10 +431,7 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName){
     value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph',
     TRADELINK_MODULE_ACCOUNT_OPTIONS.po.verifiedBy,'Select account manager...',{required:true})+
    '<small>Suggested default reviewer: aacsenagan@watchdogautomation.com.ph. This selection is editable.</small>'+
-   '<label for="tl-po-review-time">Review Date &amp; Time</label>'+
-   '<div class="tl-reference-approval-timestamp"><input id="tl-po-review-time" aria-label="Purchase order review timestamp" placeholder="Available after signed Account Manager review" disabled>'+
-   '<button type="button" disabled aria-disabled="true" title="Requires signed, role-authorized Account Manager review and server audit">Use Time Now</button></div>'+
-   '<small>The timestamp is recorded only by an authorized signed server review; changing the proposed reviewer never records approval.</small>')+
+   referenceAssignedPdfStage('verifiedBy',TRADELINK_MODULE_ACCOUNT_OPTIONS.po.verifiedBy.includes(value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph')?(value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph'):'','Account Manager review'))+
   group('Approved By (Management)',
    person('Management approver','approvedBy','Select management member...',true))+
   help+'</section>';

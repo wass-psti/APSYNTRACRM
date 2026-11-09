@@ -5937,6 +5937,21 @@ root.addEventListener('change',event=>{
  }
  if(captureTradeLinkDraftListFilters(event))return;
  if(captureTradeLinkDraftFields(event)){
+  // Keep PDF approval responsibility visibly tied to the exact nominated
+  // account. This does not unlock a button, create a timestamp, or grant RBAC.
+  const selected=event.target?.matches?.('[data-tradelink-draft-form] .tl-reference-assignment-field select')?
+   event.target:null;
+  if(selected){
+   const stage=selected.closest('.tl-reference-approval-stage');
+   const assignment=stage?.querySelector('[data-tl-pdf-stage="'+selected.name+'"]');
+   const responsible=assignment?.querySelector('[data-tl-pdf-assignee]');
+   const control=assignment?.querySelector('[data-tl-pdf-time-control]');
+   const account=selected.value.trim();
+   if(responsible)responsible.textContent=account?
+    'Assigned account: '+account+'. Only this signed-in account may perform this step after PDF approval is activated.':
+    'Select an account to assign responsibility for this step.';
+   if(control){control.hidden=!account;control.disabled=true;control.setAttribute('aria-disabled','true');}
+  }
   // Never transfer the previous module's customer, financial, or reviewer inputs.
   if(event.target?.matches?.('[data-tradelink-draft-form] select[name="documentType"]')){
    state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft,event.target.value);
