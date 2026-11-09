@@ -127,6 +127,7 @@ test('expanded details use verified Board item fields and never infer lifecycle'
  assert.match(html,/P-01/);
  assert.match(html,/Bring assigned fuel equipment/);
  assert.match(html,/approval history are not provided/i);
+ assert.match(html,/class="ft3-request-row" data-action="ft3-request-expand"/);
  assert.match(html,/aria-expanded="true"/);
  assert.doesNotMatch(html,/Origin|Destination|Owner|Odometer reading|Invalid Date/);
 });
