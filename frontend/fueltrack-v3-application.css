@@ -39,8 +39,13 @@
 #app .ft3-empty{min-height:176px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;line-height:1.6}
 #app .ft3-empty strong{font-size:13px;color:#506773}
 #app .ft3-empty p{color:#82949a;font-size:11px;max-width:360px}
-#app .ft3-status-track{height:12px;border-radius:20px;overflow:hidden;display:flex;background:#e1ecee;margin:18px}
+#app .ft3-status-track{display:block;height:12px;width:calc(100% - 36px);border-radius:20px;overflow:hidden;background:#e1ecee;margin:18px}
 #app .ft3-status-segment{height:100%;min-width:0}
+#app .ft3-status-segment.ft3-status-done{fill:#38a874}
+#app .ft3-status-segment.ft3-status-approved{fill:#229e95}
+#app .ft3-status-segment.ft3-status-pending{fill:#30abdc}
+#app .ft3-status-segment.ft3-status-rejected{fill:#e45c65}
+#app .ft3-status-segment.ft3-status-other{fill:#8b99aa}
 #app .ft3-status-done,#app .ft3-dot-done{background:#38a874}
 #app .ft3-status-approved,#app .ft3-dot-approved{background:#229e95}
 #app .ft3-status-pending,#app .ft3-dot-pending{background:#30abdc}
