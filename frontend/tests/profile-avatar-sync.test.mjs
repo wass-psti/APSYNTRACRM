@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {avatarImageMarkup,mountAvatarImages} from '../profile-avatar.js';
+import {avatarImageMarkup,mountAvatarImages,mergeProfileAvatarContext} from '../profile-avatar.js';
 
 const USER='11111111-1111-4111-8111-111111111111';
 const PATH=USER+'/22222222-2222-4222-8222-222222222222.webp';
@@ -42,8 +42,9 @@ test('avatar keeps initials visible until the signed image loads',async()=>{
  const client={signedUrl:async(path,userId)=>{
   assert.equal(path,PATH);assert.equal(userId,USER);return 'https://storage.example/signed.webp';
  }};
- await mountAvatarImages(containerFor(img),client,PATH,USER);
+ const hydration=await mountAvatarImages(containerFor(img),client,PATH,USER);
  await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(hydration,{attempted:1,loaded:1,failed:0,stale:0});
  assert.equal(img.hidden,false);
  assert.equal(img.src,'https://storage.example/signed.webp');
  assert.equal(img.referrerPolicy,'no-referrer');
@@ -53,8 +54,9 @@ test('avatar keeps initials visible until the signed image loads',async()=>{
 test('failed image loads retain initials instead of showing a broken image',async()=>{
  const {img,fallback}=fakeAvatar({load:'failure'});
  const client={signedUrl:async()=> 'https://storage.example/expired.webp'};
- await mountAvatarImages(containerFor(img),client,PATH,USER);
+ const hydration=await mountAvatarImages(containerFor(img),client,PATH,USER);
  await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(hydration,{attempted:1,loaded:0,failed:1,stale:0});
  assert.equal(img.hidden,true);
  assert.equal(img.src,'');
  assert.equal(fallback.hidden,false);
@@ -90,4 +92,27 @@ test('stale signed URL responses cannot overwrite a newer avatar hydration',asyn
  await new Promise(resolve=>setImmediate(resolve));
  assert.equal(img.src,'https://storage.example/new.webp');
  assert.equal(img.hidden,false);
+});
+
+
+test('newer locally confirmed avatar survives an older in-flight workspace context',()=>{
+ const previous={user_id:USER,workspace_id:'workspace-a',profile:{avatar_path:PATH,updated_at:'2026-11-09T03:16:57.438Z'}};
+ const stale={user_id:USER,workspace_id:'workspace-a',profile:{avatar_path:null,updated_at:'2026-11-09T03:16:55.000Z'}};
+ const merged=mergeProfileAvatarContext(previous,stale);
+ assert.equal(merged.profile.avatar_path,PATH);
+ assert.equal(merged.profile.updated_at,previous.profile.updated_at);
+ assert.equal(merged.workspace_id,'workspace-a');
+});
+
+test('newer authoritative profile context replaces the previously rendered avatar',()=>{
+ const previous={user_id:USER,workspace_id:'workspace-a',profile:{avatar_path:PATH,updated_at:'2026-11-09T03:16:57.438Z'}};
+ const nextPath=USER+'/55555555-5555-4555-8555-555555555555.webp';
+ const fresh={user_id:USER,workspace_id:'workspace-a',profile:{avatar_path:nextPath,updated_at:'2026-11-09T03:18:00.000Z'}};
+ assert.equal(mergeProfileAvatarContext(previous,fresh).profile.avatar_path,nextPath);
+});
+
+test('avatar context is never merged across authenticated identities',()=>{
+ const previous={user_id:USER,profile:{avatar_path:PATH,updated_at:'2026-11-09T03:16:57.438Z'}};
+ const foreign={user_id:'33333333-3333-4333-8333-333333333333',profile:{avatar_path:null,updated_at:'2026-11-09T03:16:55.000Z'}};
+ assert.equal(mergeProfileAvatarContext(previous,foreign),foreign);
 });
