@@ -2,16 +2,20 @@
  * Presentation-only until signed personnel/vehicle catalogs and an authoritative
  * request transaction/approval contract are available. No network or storage writes.
  */
+import {FUELTRACK_PLATE_OPTIONS,FUELTRACK_PERSON_OPTIONS,FUELTRACK_CONTAINER_OPTIONS} from './fueltrack-v3-reference-options.js';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const input=(id,label,{type='text',placeholder='',required=false,min=null,step=null,maxlength=null}={})=>
  '<label class="ft3-new-field" for="'+id+'"><span>'+h(label)+(required?' <b aria-label="required">*</b>':'')+'</span>'+
  '<input id="'+id+'" name="'+id+'" type="'+type+'" placeholder="'+h(placeholder)+'"'+
  (min!==null?' min="'+h(min)+'"':'')+(step!==null?' step="'+h(step)+'"':'')+
  (maxlength!==null?' maxlength="'+h(maxlength)+'"':'')+' autocomplete="off"></label>';
-const select=(id,label,placeholder)=>
+const select=(id,label,placeholder,options)=>
  '<label class="ft3-new-field" for="'+id+'"><span>'+h(label)+' <b aria-label="required">*</b></span>'+
- '<select id="'+id+'" name="'+id+'" disabled aria-describedby="ft3-new-catalog-note">'+
- '<option value="">'+h(placeholder)+'</option></select></label>';
+ '<select id="'+id+'" name="'+id+'" aria-required="true">'+
+ '<option value="" selected disabled>'+h(placeholder)+'</option>'+
+ options.map(value=>'<option value="'+h(value)+'">'+h(value)+'</option>').join('')+
+ (id==='ft3-quantity'?'<option value="custom">Custom number of containers</option>':'')+
+ '</select></label>';
 const textArea=()=>'<label class="ft3-new-field ft3-new-wide" for="ft3-purpose"><span>Purpose <b aria-label="required">*</b></span>'+
  '<textarea id="ft3-purpose" name="purpose" rows="4" maxlength="500" placeholder="Describe the purpose of this fuel request"></textarea></label>';
 const section=(number,title,body)=>'<section class="ft3-new-panel"><h3><span class="ft3-new-index">'+number+'</span>'+h(title)+'</h3>'+
@@ -26,24 +30,25 @@ export function renderFuelTrackNewRequest(){
  '<button type="button" disabled aria-describedby="ft3-new-catalog-note">Capture Receipt / Photo — unavailable</button></div>');
  return '<section class="ft3-new-request" aria-labelledby="ft3-new-title">'+
  '<header class="ft3-new-title"><h2 id="ft3-new-title">New Fuel Request</h2>'+
- '<p>Choose a refuel type and prepare request details. Submission remains unavailable until the signed request service and reference lists are verified.</p></header>'+
+ '<p>Choose a refuel type and prepare request details. You can prepare the request using the supplied options. Submission is unavailable until the signed request service is verified.</p></header>'+
  '<div class="ft3-new-progress" aria-label="Request steps"><span>Vehicle / Container Details</span><span>Trip Information</span><span>Justification</span></div>'+
  '<div class="ft3-new-composer">'+
  '<div class="ft3-new-panel ft3-new-type" role="group" aria-label="Select Refuel Type"><h3>Select Refuel Type</h3>'+
  '<div class="ft3-new-options">'+mode('vehicle','Vehicle Fuel','Cars, trucks, motorcycles','⛽')+
  mode('container','Container Refill','Drums, canisters, tanks','⬡')+'</div></div>'+
- '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">Vehicle, personnel and container option lists are not yet verified in the central backend. These selectors are disabled; no request will be saved or submitted.</p>'+
+ '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">These dropdown values are provided reference labels, not verified backend identities. Submission and receipt upload remain unavailable; no request will be saved.</p>'+
  '<div class="ft3-new-vehicle">'+
- section(1,'Vehicle Details',select('ft3-plate','Plate Number','Select plate number')+
- select('ft3-owner','Vehicle Owner','Select owner')+
+ section(1,'Vehicle Details',select('ft3-plate','Plate Number','Select plate number',FUELTRACK_PLATE_OPTIONS)+
+ select('ft3-owner','Vehicle Owner','Select owner',FUELTRACK_PERSON_OPTIONS)+
  input('ft3-odometer','Odometer Reading',{type:'number',placeholder:'Current mileage',min:0,step:'any'}))+
  section(2,'Trip Information',input('ft3-origin','Origin',{placeholder:'Starting location',required:true,maxlength:240})+
  input('ft3-destination','Destination',{placeholder:'Ending location',required:true,maxlength:240})+
  input('ft3-distance','Distance (km)',{type:'number',min:0,step:'any',placeholder:'0'}))+
  purpose+'</div>'+
  '<div class="ft3-new-container">'+
- section(1,'Container Details',select('ft3-quantity','Number of Containers','Select quantity')+
- select('ft3-responsible','Responsible Person','Select person'))+
+ section(1,'Container Details',select('ft3-quantity','Number of Containers','Select quantity',FUELTRACK_CONTAINER_OPTIONS)+
+ '<label class="ft3-new-field ft3-new-custom-count" for="ft3-custom-count"><span>Custom number of containers</span><input id="ft3-custom-count" name="customCount" type="number" min="1" max="10000" step="1" inputmode="numeric" placeholder="Enter quantity"></label>'+
+ select('ft3-responsible','Responsible Person','Select person',FUELTRACK_PERSON_OPTIONS))+
  section(3,'Justification','<label class="ft3-new-field ft3-new-wide" for="ft3-container-purpose"><span>Purpose <b aria-label="required">*</b></span>'+
  '<textarea id="ft3-container-purpose" maxlength="500" rows="4" placeholder="Describe the purpose of this fuel request"></textarea></label>'+
  '<div class="ft3-new-field ft3-new-wide"><span>Receipt Photo (Optional)</span>'+
