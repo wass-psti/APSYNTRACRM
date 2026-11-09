@@ -290,7 +290,7 @@ function sidebar(){
   </div>
   <div class="side-bottom">
    <div class="profile">
-    <span class="avatar" aria-hidden="true">`+e(initials(name()))+`</span>
+    <span class="avatar sidebar-profile-avatar" aria-hidden="true"><span data-avatar-initials aria-hidden="true">`+e(initials(name()))+`</span><img data-avatar-current alt="" hidden /></span>
     <div class="sidebar-profile-text"><div class="name">`+e(name())+`</div>
      <div class="role">`+e(state.context?.profile?.platform_role||'Team member')+`</div>
     </div>
