@@ -1165,12 +1165,14 @@
  display:block;font-size:12px;font-weight:600;color:#d18800;
  margin-top:9px;
 }
-.tl-reference-portal .tl-reference-approval-stage input{
+.tl-reference-portal .tl-reference-approval-stage input,
+.tl-reference-portal .tl-reference-approval-stage select{
  box-sizing:border-box;width:100%;min-height:37px;
  border:1px solid #e1e5ed;border-radius:9px;
  padding:9px 11px;background:#fff;color:#1c2430;font-size:12px;
 }
-.tl-reference-portal .tl-reference-approval-stage input:focus-visible{
+.tl-reference-portal .tl-reference-approval-stage input:focus-visible,
+.tl-reference-portal .tl-reference-approval-stage select:focus-visible{
  outline:2px solid #2a62eb;outline-offset:2px;
 }
 .tl-reference-portal .tl-reference-approval-timestamp{
