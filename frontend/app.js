@@ -1,6 +1,6 @@
 import {syncFuelTrans} from './fueltrans-native.js';
 import {AuthClient,ApiError} from './session.js';
-import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview} from './profile-avatar.js';
+import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview,mergeProfileAvatarContext} from './profile-avatar.js';
 import {ProfileAvatarClient} from './profile-avatar-client.js';
 import {mountAvatarImages} from './profile-avatar.js';
 
@@ -158,7 +158,7 @@ const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const state={context:null,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
+const state={context:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
   view:'overview',boardId:null,tab:'items',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -175,6 +175,7 @@ let approvedRouteHash=location.hash||routeHome;
 let rejectedRouteHash=null;
 let modal=null;
 let routeSerial=0;
+let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
 function stopTimeTrackerClock(){
  if(ttClockTimer!==null){clearInterval(ttClockTimer);ttClockTimer=null;}
@@ -414,7 +415,7 @@ function shell(body){
  maintainTimeTrackerClock();
  mountTimeTrackerPixi(root);
  updatePlatformSyncIndicator(platformSync.lastStatus);
- void mountAvatarImages(root,profileAvatarClient,state.context?.profile?.avatar_path,state.context?.user_id);
+ avatarHydrationPromise=mountAvatarImages(root,profileAvatarClient,state.context?.profile?.avatar_path,state.context?.user_id);
  void mountSignedTimeTrackerMaps();
 }
 function animateTabContent(selector){
@@ -950,9 +951,18 @@ function render(){
   client:profileAvatarClient,
   userId:state.context.user_id,
   currentPath:state.context.profile?.avatar_path||null,
-  onSaved:({path,cleanupPending})=>{
+  onBusyChange:busy=>{state.avatarMutationBusy=busy;},
+  onSaved:async({path,updatedAt,cleanupPending})=>{
    state.context.profile.avatar_path=path;
+   if(updatedAt)state.context.profile.updated_at=updatedAt;
    render();
+   if(path){
+    const hydration=await avatarHydrationPromise;
+    if(hydration.attempted===0||hydration.failed>0||hydration.loaded===0){
+     toast('Profile picture saved, but the image could not be displayed. Retry loading your profile.',true);
+     return;
+    }
+   }
    toast(cleanupPending?
     'Profile picture saved, but the previous image could not be deleted.':
     path?'Profile picture saved.':'Profile picture removed.');
@@ -1191,7 +1201,7 @@ function updatePlatformSyncIndicator(status){
  */
 function platformSyncEditInProgress(){
  const focused=document.activeElement;
- return !!(modal?.isConnected||state.ttBusy||state.ttClockPending||
+ return !!(modal?.isConnected||state.avatarMutationBusy||state.ttBusy||state.ttClockPending||
   state.inlineCell||state.inlineCellBusy||state.inlineAddBusy||
   state.groupEditId||state.groupEditBusy||state.userRoleBusy||state.roleBusy||
   state.ttOtModalOpen||state.loading||state.loadingIssues||
@@ -1249,8 +1259,9 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  if(!boards.some(board=>board.id===boardId)&&view==='board'){
   platformSync.stop();state.board=null;location.hash='#/boards';return false;
  }
+ if(platformSyncEditInProgress())return false;
  const changedBoards=JSON.stringify(state.boards)!==JSON.stringify(boards);
- state.boards=boards;state.context=current;state.user=auth.session?.user;
+ state.boards=boards;state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
  if(roleChanged||sensitive){
   const verified=await roleConfig.bootstrapVerified().catch(()=>false);
   if(!isCurrent())return false;
@@ -1329,7 +1340,8 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
 
 async function refreshWorkspace(){
  const priorIdentity=state.context?.user_id,priorWorkspace=state.context?.workspace_id;
- state.context=await db.context();
+ const incomingContext=await db.context();
+ state.context=mergeProfileAvatarContext(state.context,incomingContext);
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
    state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;
    state.tradeLinkDraft=initialTradeLinkDraftView();
