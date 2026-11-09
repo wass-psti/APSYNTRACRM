@@ -53,7 +53,7 @@ psql -X -q -h /tmp -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABAS
 apply() {
  psql -X -q -h /tmp -U postgres -d workspace_disposable -v ON_ERROR_STOP=1 \
  -f "/public/$1" >/tmp/step.out 2>/tmp/step.err || {
- echo "CP_WS_ACTIVATE04_REPLAY_BLOCKED: DISPOSABLE_SQL_STAGE_FAILED"; sed -n '/ERROR:/p' /tmp/step.err | head -n 1; exit 2; }
+ echo "CP_WS_ACTIVATE04_REPLAY_BLOCKED: DISPOSABLE_SQL_STAGE_FAILED $1"; head -n 5 /tmp/step.err; head -n 3 /tmp/step.out; exit 2; }
 }
 apply sql/tests/cp-ws01b-disposable-setup.sql
 apply sql/tests/cp-ws-activate04-74-caller-synthetic-dependencies.sql
