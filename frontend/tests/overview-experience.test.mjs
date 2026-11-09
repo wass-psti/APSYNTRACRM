@@ -106,3 +106,28 @@ test('mounted overview components remain stationary on entry and refresh',()=>{
  const source=readFileSync('frontend/overview-visuals.js','utf8');
  assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
 });
+
+test('Workspace essentials is rendered only after verified bootstrap authority',()=>{
+ // Execute only the pure Overview renderer with inert view dependencies.
+ // Profile roles must never substitute for the verified bootstrap RPC gate.
+ const render=new Function('state','name','e','overviewIcon','boardCard','empty',
+  view+'\nreturn overview();');
+ const makeState=roleVerified=>({
+  roleVerified,boards:[],context:{profile:{platform_role:'admin_general_manager'}}
+ });
+ const deps=[()=> 'Example User',String,v=>`<i>${v}</i>`,()=>'',()=>'<div>Empty board</div>'];
+ for(const flag of [false,undefined,null,0]){
+  const markup=render(makeState(flag),...deps);
+  assert.doesNotMatch(markup,/Workspace essentials|overview-essentials|Supabase Auth connected|Native issue transactions/);
+  assert.match(markup,/Your boards/);
+  assert.match(markup,/Active boards/);
+  assert.match(markup,/New board/);
+ }
+ const verified=render(makeState(true),...deps);
+ assert.match(verified,/Workspace essentials/);
+ assert.match(verified,/Supabase Auth connected/);
+ assert.match(verified,/Board permissions are centralized/);
+ assert.match(verified,/Native issue transactions/);
+ assert.match(app,/roleConfig\.bootstrapVerified\(\)/);
+ assert.match(app,/if\(roleChanged\|\|sensitive\)/);
+});

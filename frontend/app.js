@@ -508,7 +508,7 @@ function overview(){
   '<div class="card-grid overview-board-grid overview-entrance">'+recent.map(boardCard).join('')+'</div>':
   '<div class="panel overview-empty">'+empty('Start with your first board',
    'Create a board to organize tasks and updates.',
-   '<button class="primary" data-action="new-board">＋ Create board</button>')+'</div>')+`
+   '<button class="primary" data-action="new-board">＋ Create board</button>')+'</div>')+(state.roleVerified===true?`
  <div class="section-header overview-section-heading overview-essentials-heading overview-entrance">
   <div class="overview-heading-copy"><span class="overview-section-eyebrow">FOUNDATION</span><h2 class="section-title">Workspace essentials</h2></div>
  </div>
@@ -530,7 +530,7 @@ function overview(){
     <span class="overview-essentials-indicator" aria-hidden="true">`+overviewIcon('check')+`</span>
    </div>
   </div>
- </section>
+ </section>`:'')+`
  </div>`;
 }
 function boardsPage(){
