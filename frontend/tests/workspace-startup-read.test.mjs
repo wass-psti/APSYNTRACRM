@@ -60,9 +60,9 @@ test('synthetic 300ms board and 700ms role reads overlap with no extra network c
 test('application keeps authoritative context read before overlapping the independent reads',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const scope=app.slice(app.indexOf('async function refreshWorkspace(){'),app.indexOf('async function loadUserRoleManagement(){'));
- assert.ok(scope.indexOf('await db.context()')<scope.indexOf('await readWorkspaceStartup('));
- assert.match(scope,/listBoards:\(\)=>db\.boards\('active'\)/);
- assert.match(scope,/verifyBootstrap:\(\)=>roleConfig\.bootstrapVerified\(\)/);
+ assert.ok(scope.indexOf("await startupCriticalPath.measure('workspace-context',()=>db.context())")<scope.indexOf('await readWorkspaceStartup('));
+ assert.match(scope,/listBoards:\(\)=>startupCriticalPath\.measure\('board-list',\(\)=>db\.boards\('active'\)\)/);
+ assert.match(scope,/verifyBootstrap:\(\)=>startupCriticalPath\.measure\('bootstrap-role',\(\)=>roleConfig\.bootstrapVerified\(\)\)/);
  assert.match(scope,/isCurrent:\(\)=>auth\.isSignedIn&&auth\.userId===signedId/);
  assert.ok(scope.indexOf('state.boards=boards')>scope.indexOf('await readWorkspaceStartup('));
  assert.doesNotMatch(readFileSync('frontend/workspace-startup-read.js','utf8'),
