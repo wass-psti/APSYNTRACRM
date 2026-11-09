@@ -87,3 +87,20 @@ This establishes local historical snapshot recoverability and measured
 partial restore time. Provider physical backup recovery, a continuing
 24-hour database/Storage RPO, and full hosted 24-hour RTO remain unverified.
 NO-GO and the recovery-policy decision remain unchanged.
+
+## November 10 — On-demand physical cadence vs local Storage snapshot RPO
+
+New one-shot observation tool scripts/ft3-rpo-observation.mjs verifies the
+archived checksum manifest, computes backup inventory completion intervals,
+and measures ages of local SQL/Storage files. A real Supabase CLI inventory
+returned eight completed physical backups, newest 2026-11-09 17:17:15 UTC,
+latest age 0.77 hours and maximum observed completed-backup interval
+24.03 hours. The local independent archive had SQL/Storage oldest file
+birth ages approximately 12.70/12.73 hours. The five archived Storage
+objects' combined 114,010 bytes matched the separate live metadata
+count/size, but no live-byte checksum comparison was performed.
+
+Only one independent historical local snapshot is available; local birth
+timestamps do not certify a live recovery point or a sustained 24-hour
+backup schedule. The tool always returns NO-GO without changing production.
+See docs/FUELTRACK-V3-ROLLING-RPO-OBSERVATION-20261110.md.

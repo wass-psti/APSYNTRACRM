@@ -10,6 +10,7 @@ on:
       - 'scripts/fueltrack-v3-provider-backup-gate*.mjs'
       - 'scripts/ft3-recovery-archive-audit*.mjs'
       - 'scripts/ft3-recovery-rto-rehearsal*.mjs'
+      - 'scripts/ft3-rpo-observation*.mjs'
       - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
   workflow_dispatch:
 
@@ -36,3 +37,5 @@ jobs:
         run: node --test scripts/ft3-recovery-archive-audit.test.mjs
       - name: Verify local recovery timing and production release gate
         run: node --test scripts/ft3-recovery-rto-rehearsal.test.mjs
+      - name: Verify rolling RPO observations never certify production recovery
+        run: node --test scripts/ft3-rpo-observation.test.mjs
