@@ -4462,6 +4462,14 @@ async function action(name,button){
   if(state.view!=='board'||state.tab!=='fueltrack'||state.fuelTrackSection!=='activity'||
      state.boardId!==FUELTRACK_V3_ID||!auth.isSignedIn||state.fuelTrackActivityBusy||
      state.context?.user_id!==auth.userId)break;
+  // Re-read permissions and the event page before exporting sensitive audit data.
+  // A revoked role or changed workspace cannot export an older cached snapshot.
+  const exportSeq=routeSerial,exportUser=auth.userId,exportWorkspace=state.context?.workspace_id;
+  await loadFuelTrackActivity(exportSeq);
+  if(exportSeq!==routeSerial||!auth.isSignedIn||auth.userId!==exportUser||
+     state.context?.workspace_id!==exportWorkspace||state.context?.user_id!==exportUser||
+     state.boardId!==FUELTRACK_V3_ID||state.fuelTrackSection!=='activity'||
+     !state.fuelTrackActivity||state.fuelTrackActivityBusy||state.fuelTrackActivityError)break;
   const model=fuelTrackActivityModel({snapshot:state.fuelTrackActivity,boardId:state.boardId,
    workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters});
   const csv=fuelTrackActivityCsv(model);if(!csv)break;
