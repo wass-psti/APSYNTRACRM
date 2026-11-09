@@ -88,7 +88,7 @@ test('group inline rename uses audited existing RPC, validates and does not invo
  assert.match(app,/async function saveGroupInline/);
  assert.match(app,/await auth\.getVerifiedUser/);
  assert.match(app,/original\.updated_at!==group\.updated_at/);
- assert.match(app,/await db\.updateGroup\(id,title\)/);
+ assert.match(app,/await db\.updateGroupCas\(boardId,original,title\)/);
  assert.doesNotMatch(app,/db\.deleteGroup|wm_delete_board_group/);
 });
 test('search and bulk event handlers are connected and hidden elements remain hidden',()=>{
