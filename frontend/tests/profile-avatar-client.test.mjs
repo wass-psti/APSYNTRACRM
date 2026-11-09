@@ -33,7 +33,7 @@ test('upload uses immutable per-user WebP object paths and signed session header
  assert.equal(calls[0].options.method,'POST');
  assert.equal(calls[0].options.headers.Authorization,'Bearer signed-session');
  assert.equal(calls[0].options.headers['Content-Type'],'image/webp');
- assert.equal(calls[0].options.headers['x-upsert'],undefined);
+ assert.equal(calls[0].options.headers['x-upsert'],'false');
  assert.equal(calls[0].options.body,blob);
 });
 
@@ -70,4 +70,13 @@ test('signed URLs are normalized under the configured Storage API origin and cac
 test('foreign-origin signed URLs are rejected',async()=>{
  const {client}=harness({signedURL:'https://attacker.example/object/sign/account-avatars/'+OLD+'?token=x'});
  await assert.rejects(()=>client.signedUrl(OLD,U),/origin validation/);
+});
+
+
+test('avatar mutations fail closed when caller user ID differs from the signed session',async()=>{
+ const {client,calls}=harness();
+ const foreign='33333333-3333-4333-8333-333333333333';
+ await assert.rejects(()=>client.upload(new Blob(['x'],{type:'image/webp'}),foreign),/signed-in account/);
+ await assert.rejects(()=>client.remove(foreign,foreign+'/22222222-2222-4222-8222-222222222222.webp'),/signed-in account/);
+ assert.equal(calls.length,0);
 });
