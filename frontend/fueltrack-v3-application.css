@@ -178,3 +178,8 @@
 #app .ft3-request-footer button:hover{background:#deeff1}
 @media(max-width:1000px){#app .ft3-request-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#app .ft3-request-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){#app .ft3-request-stats{grid-template-columns:1fr}#app .ft3-request-detail-grid{grid-template-columns:1fr}#app .ft3-request-controls input[type=date]{flex:1 1 140px}}
+
+#app .ft3-request-quick-dates{display:flex;flex-wrap:wrap;gap:6px;margin:-8px 0 17px}
+#app .ft3-request-quick-dates button{border:1px solid #d3e5e8;border-radius:20px;background:#f2f8f9;color:#5b7985;padding:5px 9px;font:inherit;font-size:10px;cursor:pointer}
+#app .ft3-request-quick-dates button:hover{background:#e3f3f3;border-color:#a6cfd1}
+#app .ft3-request-quick-dates button:focus-visible{outline:2px solid #299d9b;outline-offset:2px}
