@@ -1,4 +1,4 @@
-import {syncFuelTrans} from './fueltrans-native.js';
+import {syncFuelTrans} from './fueltrans-lazy.js';
 import {AuthClient,ApiError} from './session.js';
 import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview,mergeProfileAvatarContext} from './profile-avatar.js';
 import {ProfileAvatarClient} from './profile-avatar-client.js';
@@ -72,7 +72,6 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
-import {openBoardImportWizard} from './board-import-ui.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
@@ -103,7 +102,6 @@ import {createStartupCriticalPath} from './performance-critical-path.js';
 import {readWorkspaceStartup} from './workspace-startup-read.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board-presentation.js';
-import {runTwelveBoardQa} from './board-operational-qa.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
 import {renderSecurityAcceptance} from './board-security-ui.js';
 import {mountSecurityMotion,stopSecurityMotion} from './security-experience.js';
@@ -3816,6 +3814,9 @@ async function action(name,button){
   if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit))
    throw new ApiError('Import is limited to signed ordinary-board editors.',403);
   const selected=state.boardId;
+  const {openBoardImportWizard}=await import('./board-import-ui.js');
+  if(state.boardId!==selected||!auth.isSignedIn||!canManuallyEditBoard(state.board?.board,state.edit))
+   throw new ApiError('Board access changed before import opened.',403);
   await openBoardImportWizard({api:db,auth,boardId:selected,onComplete:async receipt=>{
    if(state.boardId===selected){await loadBoard(selected,'items');toast('Imported '+receipt.created+' items; updated '+receipt.updated+'.');}
   }});
@@ -5470,6 +5471,7 @@ async function action(name,button){
          throw new ApiError('Type RUN 12 BOARD CHECKS exactly.');
        state.foundationTesting=true;state.foundationTestResult=null;state.foundationLog=[];render();
        try{
+         const {runTwelveBoardQa}=await import('./board-operational-qa.js');
          state.foundationTestResult=await runTwelveBoardQa(db,{
           context:state.context,onProgress:entry=>{
            state.foundationLog.push(entry.boardName+': '+entry.status);render();
