@@ -4,7 +4,9 @@
 set -euo pipefail
 umask 077
 deny() { echo "CP_WS_ACTIVATE04_REPLAY_BLOCKED: $1" >&2; exit 1; }
-[[ $# == 2 && "$1" == /* && "$2" =~ ^[a-f0-9]{40}$ ]] || deny USAGE
+[[ ($# == 2 || ($# == 3 && "$3" == "--check-disjoint-roles")) && "$1" == /* && "$2" =~ ^[a-f0-9]{40}$ ]] || deny USAGE
+DISJOINT_CANARY=0
+if [[ $# == 3 ]]; then DISJOINT_CANARY=1; fi
 SOURCE_DIR="$1"
 COMMIT="$2"
 [[ -d "$SOURCE_DIR" && ! -L "$SOURCE_DIR" ]] || deny PROTECTED_SOURCE_DIRECTORY_ABSENT
@@ -39,6 +41,7 @@ download sql/cp-ws01c-b3-create-contract-candidate.sql
 download sql/cp-ws01b-session-cutover-candidate.sql
 download sql/tests/cp-ws01b-disposable-acceptance.sql
 download sql/tests/cp-ws-activate04-original-domain-role-subset.sql
+download sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql
 download scripts/ws01-activate04-concurrent-cas-disposable.sh
 node "$WORK/scripts/ws01-h3-private-source-guard.mjs" \
  "--full-live-private-dir=$SOURCE_DIR" >/dev/null || deny ORIGINAL_SOURCE_HASH_DRIFT
@@ -89,11 +92,17 @@ bash /public/scripts/ws01-activate04-concurrent-cas-disposable.sh >/tmp/cas.out 
 grep -qx CP_WS_ACTIVATE04_CONCURRENT_CAS_ISOLATED_PASS /tmp/cas.out || {
  echo CP_WS_ACTIVATE04_REPLAY_BLOCKED: CAS_RECEIPT; exit 2; }
 echo CP_WS_ACTIVATE04_ORIGINAL_SOURCE_CONCURRENT_CAS_PASS
+if [ "${WS01_RUN_DISJOINT_CANARY:-0}" = 1 ]; then
+ echo CP_WS_ACTIVATE04_DISJOINT_ROLE_CANARY_STARTED
+ apply sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql
+ echo CP_WS_ACTIVATE04_DISJOINT_ROLE_DENIAL_PASS
+fi
 RUNNER
 chmod 600 "$WORK/replay.sh"
 "$DOCKER" run --rm --network none --read-only \
  --tmpfs /tmp:rw,exec,nosuid,size=256m --tmpfs /run:rw,nosuid,size=16m \
  --security-opt no-new-privileges \
+ --env "WS01_RUN_DISJOINT_CANARY=$DISJOINT_CANARY" \
  --mount "type=bind,source=$SOURCE_DIR,target=/protected,readonly" \
  --mount "type=bind,source=$WORK,target=/public,readonly" \
  --entrypoint /bin/sh public.ecr.aws/supabase/postgres:17.11.0.004 \
