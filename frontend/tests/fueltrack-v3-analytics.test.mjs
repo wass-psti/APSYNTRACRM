@@ -125,3 +125,24 @@ test('app route parser carries five analytics categories, date range and metric 
  assert.match(app,/state\.fuelTrackAnalyticsMetric=normalizeFuelTrackAnalyticsMetric\(parts\[6\]\)/);
  assert.match(app,/analyticsRenderer:renderFuelTrackAnalytics/);
 });
+
+test('Analytics reference sections keep their expected table columns with zero fabricated rows',()=>{
+ const d=fixture();
+ const expected={
+  efficiency:['Vehicle','Actual km/L','Target km/L','Difference'],
+  frequency:['Requestor','Vehicle','Trips','Avg. Gap','Dates'],
+  odometer:['Vehicle','Readings','Total Km','Avg Km / Refuel','Km/L']
+ };
+ for(const [view,labels] of Object.entries(expected)){
+  const html=renderFuelTrackAnalytics({detail:d,view});
+  for(const label of labels)assert.ok(html.includes('<th scope="col">'+label+'</th>'),view+' '+label);
+  assert.match(html,/No verified records available/);
+  assert.doesNotMatch(html,/<tbody><tr><td>[^<]+<\/td><td>/);
+ }
+ const price=renderFuelTrackAnalytics({detail:d,view:'fuel-price'});
+ assert.match(price,/ft3-analytics-price-space/);
+ assert.match(price,/Fuel price history unavailable/);
+ const requestors=renderFuelTrackAnalytics({detail:d,view:'requestors'});
+ assert.match(requestors,/ft3-analytics-ranking-empty/);
+ assert.match(requestors,/No ranked requestors/);
+});
