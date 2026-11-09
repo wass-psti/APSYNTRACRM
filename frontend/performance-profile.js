@@ -1,3 +1,4 @@
+import {summarizeLongTasks} from './performance-critical-path.js';
 /** Explicit, finite, read-only local performance sample.
  * No URLs, credentials, account identifiers, record data, RPC payloads,
  * telemetry transmission, persistent storage or background observers.
@@ -29,21 +30,26 @@ export function sampleBrowserFrames({
  durationMs=5000,requestFrame=globalThis.requestAnimationFrame?.bind(globalThis),
  cancelFrame=globalThis.cancelAnimationFrame?.bind(globalThis),
  documentRef=globalThis.document,performanceRef=globalThis.performance,
- signal
+ observerClass=globalThis.PerformanceObserver,signal
 }={}){
  if(!requestFrame||!cancelFrame||documentRef?.hidden||signal?.aborted)
   return Promise.resolve({status:'UNAVAILABLE',reason:'No visible supported browser tab'});
  const duration=Math.max(1000,Math.min(10000,Number(durationMs)||5000));
  const navigation=publicNavigationSnapshot(performanceRef);
  return new Promise(resolve=>{
-  const intervals=[];let last=null,start=null,handle=null,settled=false;
+  const intervals=[],longDurations=[];
+  let last=null,start=null,handle=null,settled=false,observer=null,watchdog=null;
+  let longTaskSupported=false;
   const finish=(status,reason=null)=>{
    if(settled)return;
    settled=true;
    if(handle!==null)cancelFrame(handle);
+   if(watchdog!==null)clearTimeout(watchdog);
+   observer?.disconnect();
    documentRef?.removeEventListener?.('visibilitychange',onVisibility);
    signal?.removeEventListener?.('abort',onAbort);
    resolve({status,reason,...navigation,...summarizeFrameIntervals(intervals),
+    longTasks:{supported:longTaskSupported,...summarizeLongTasks(longDurations)},
     durationMs:status==='COMPLETE'?duration:null});
   };
   const onVisibility=()=>{if(documentRef?.hidden)finish('CANCELLED','Tab hidden');};
@@ -57,6 +63,23 @@ export function sampleBrowserFrames({
    if(time-start>=duration){finish('COMPLETE');return;}
    handle=requestFrame(tick);
   };
+  // The observer is installed only for this five-second requested sample.
+  // No buffered historic entries, attribution, URLs or event names are read.
+  try{
+   if(observerClass?.supportedEntryTypes?.includes('longtask')){
+    observer=new observerClass(list=>{
+     for(const entry of list.getEntries()){
+      if(longDurations.length>=128)break;
+      const duration=entry.duration;
+      if(Number.isFinite(duration)&&duration>=50)longDurations.push(duration);
+     }
+    });
+    observer.observe({type:'longtask',buffered:false});
+    longTaskSupported=true;
+   }
+  }catch{observer?.disconnect();observer=null;longTaskSupported=false;}
+  // Defend against a frozen RAF when visibilitychange is not dispatched.
+  watchdog=setTimeout(()=>finish('CANCELLED','Sampling deadline exceeded'),duration+1500);
   signal?.addEventListener?.('abort',onAbort,{once:true});
   documentRef?.addEventListener?.('visibilitychange',onVisibility);
   handle=requestFrame(tick);
