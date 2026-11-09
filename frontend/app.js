@@ -688,6 +688,8 @@ function groupHeading(group,count){
   state.board?.groups||[],state.board?.items||[]);
  const managedDelete=managedEmpty&&MANAGED_TT_GROUP_DELETE_ENABLED&&state.boardManage;
  const title=e(group.title||'Group');
+ // A reference-only heading must never become the editable persisted value.
+ const displayTitle=e(fuelTrackGroupDisplay(state.board?.board,group).title||'Group');
  if(editing)return '<div class="group-heading board-group-editing" data-group-id="'+id+'">'+
   '<form class="board-group-inline-form" data-group-inline-form="'+id+'">'+
   '<label class="sr-only" for="group-title-'+id+'">Group name</label>'+
@@ -695,8 +697,8 @@ function groupHeading(group,count){
   '<button type="submit" class="primary"'+(state.groupEditBusy?' disabled':'')+'>Save</button>'+
   '<button type="button" class="secondary" data-action="group-inline-cancel"'+(state.groupEditBusy?' disabled':'')+'>Cancel</button>'+
   '</form></div>';
- return '<div class="group-heading" data-group-id="'+id+'"><h3>'+title+'</h3><small>'+count+' items</small>'+
-  (state.edit?'<details class="board-group-actions"><summary aria-label="Actions for '+title+
+ return '<div class="group-heading" data-group-id="'+id+'"><h3>'+displayTitle+'</h3><small>'+count+' items</small>'+
+  (state.edit?'<details class="board-group-actions"><summary aria-label="Actions for '+displayTitle+
    '" title="Group actions">⋮</summary><div class="board-group-actions-list">'+
    '<button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
    '<button type="button" data-action="group-select-visible" data-id="'+id+'">Select visible records</button>'+
@@ -848,7 +850,7 @@ function boardPage(){
  <button type="button" class="secondary" data-action="bulk-actions" ${canRequestBulk(b)||bulkReadyFor(b)?'':'disabled title="Bulk changes require an authorized ordinary board and 1–50 records"'}>Bulk actions…</button>
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
  <span class="muted">${!canBulkEditBoard(b)?'Protected application records: selection and export only; domain-specific bulk writes require separate server authorization.':bulkReadyFor(b)?'Max 50 records per atomic batch.':'Bulk actions verify this signed session before changes; unsupported field edits and multi-delete are unavailable.'}</span></div>
- ${shownGroups.length?shownGroups.map(g=>`${groupHeading(fuelTrackGroupDisplay(b,g),groupedItems.get(g.id)?.length||0)}
+ ${shownGroups.length?shownGroups.map(g=>`${groupHeading(g,groupedItems.get(g.id)?.length||0)}
  ${moduleKey==='timetracker'&&String(g.title||'').trim().toLowerCase()==='main group'?
   renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
    boardColumns:state.board.columns||[],boardValues:state.board.values||[],
