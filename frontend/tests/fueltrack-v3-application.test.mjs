@@ -101,7 +101,7 @@ test('HTML and status from untrusted board records are escaped',()=>{
 });
 
 test('unfinished tabs are navigation-ready without offering unauthorized writes',()=>{
- for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests','new-request','approvals','lightfuels'].includes(section.key))){
+ for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests','new-request','approvals','lightfuels','activity'].includes(section.key))){
   const html=renderFuelTrackV3Application({detail:fixture(),section:section.key});
   assert.match(html,/not enabled|not yet integrated|will be connected|require|need verified/i);
   assert.doesNotMatch(html,/<form\b|type="submit"/i);
@@ -210,4 +210,20 @@ test('LightFuels route has reference sections but never infers transactional que
  assert.match(html,/data-action="refresh-board"/);
  assert.match(html,/signed LightFuels queue and refueling workflow are not connected/);
  assert.doesNotMatch(html,/8 in queue|257 processed|All clear!|data-action="ft3-refuel/);
+});
+
+test('Activity route renders signed audit reference and no fabricated Monday event totals',()=>{
+ const html=renderFuelTrackV3Application({detail:fixture(),section:'activity'});
+ for(const field of ['Today’s Pulse','Hourly Activity','Submitted','Approved',
+   'Rejected','Completed','Search activity','Audit Export'])
+  assert.ok(html.includes(field),field);
+ assert.match(html,/ft3-activity-refresh/);
+ assert.match(html,/signed FuelTrack module Admin session is required/i);
+ assert.doesNotMatch(html,/30 events tracked|5 approved|25 completed|3 events today/);
+ assert.match(html,/data-action="ft3-activity-export" disabled/);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/db\.rpc\('list_module_activity'/);
+ assert.match(app,/p_module_id:'fueltrack-plus'/);
+ assert.match(app,/p_limit:250/);
+ assert.match(app,/case 'ft3-activity-export'/);
 });

@@ -310,3 +310,67 @@
 #app .ft3-light-field-grid input{border:1px solid #d3e0e4;border-radius:9px;padding:8px;max-width:100%}
 @media(max-width:850px){#app .ft3-light-queue{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){#app .ft3-light{padding:17px 12px}#app .ft3-light-queue,#app .ft3-light-guide-steps{grid-template-columns:1fr}#app .ft3-light-metric{padding:12px}#app .ft3-light-metric strong{font-size:19px}}
+
+
+/* FuelTrack+ activity — signed, bounded audit history */
+#app .ft3-activity{padding:24px 20px 36px;color:#263d46;min-height:460px}
+#app .ft3-activity-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+#app .ft3-activity-head h2{font-size:26px;font-weight:650;letter-spacing:-.04em;margin:0 0 5px}
+#app .ft3-activity-head p{margin:0;color:#728993;font-size:11px}
+#app .ft3-activity-actions{display:flex;gap:8px}
+#app .ft3-activity-actions button{border:1px solid #d2e1e6;border-radius:12px;background:#f8fbfc;padding:9px 14px;font:inherit}
+#app .ft3-activity-actions button:disabled{opacity:.55;cursor:not-allowed}
+#app .ft3-activity :is(button,input):focus-visible{outline:2px solid #099c99;outline-offset:2px}
+#app .ft3-activity-pulse{margin-top:19px;border:1px solid #d5e3e8;border-radius:18px;overflow:hidden;background:#f0f7f9}
+#app .ft3-activity-pulse h3{padding:12px 15px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid #d5e3e8;margin:0}
+#app .ft3-activity-pulse h3 small{font-size:10px;color:#798d97;letter-spacing:0;text-transform:none;margin-left:9px;font-weight:400}
+#app .ft3-activity-pulse>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+#app .ft3-activity-pulse-card{display:flex;flex-direction:column;gap:8px;padding:15px;border-right:1px solid #d5e3e8}
+#app .ft3-activity-pulse-card:last-child{border-right:0}
+#app .ft3-activity-pulse-card span{font-size:11px;color:#667e86}
+#app .ft3-activity-pulse-card strong{font-size:19px;font-weight:670}
+#app .ft3-activity-search-label{display:block;color:#647a84;font-size:11px;margin:17px 0 5px}
+#app #ft3-activity-search{width:100%;padding:10px 13px;border:1px solid #d2e2e6;border-radius:12px;background:#f4fafb;font:inherit}
+#app .ft3-activity-filters{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}
+#app .ft3-activity-filters button{border:1px solid #d1e0e5;border-radius:99px;background:#f1f7f9;padding:9px 13px;color:#617a84;font:inherit;font-size:11px}
+#app .ft3-activity-filters button.is-active{border-color:#87ccc9;color:#0e8784;background:#e4f5f4}
+#app .ft3-activity-filters span{padding-left:4px}
+#app .ft3-activity-hours{background:#f1f7f9;border:1px solid #d5e3e8;border-radius:18px;padding:14px;margin-top:15px}
+#app .ft3-activity-hours h3{margin:0 0 9px;font-size:11px;font-weight:550}
+#app .ft3-activity-hours h3 small{font-size:10px;font-weight:400;color:#7d8e97}
+#app .ft3-activity-hour-bars{display:flex;align-items:end;gap:3px;height:52px;border-bottom:1px solid #d2e2e5}
+#app .ft3-activity-hour-bars span{flex:1;min-width:2px;max-height:100%;background:#29afa8;border-radius:3px 3px 0 0}
+#app .ft3-activity-hours>p{display:flex;justify-content:space-between;margin:5px 0 0;color:#81939b;font-size:10px}
+#app .ft3-activity-group{margin-top:22px}
+#app .ft3-activity-group h3{border-bottom:1px solid #d9e5e8;font-size:11px;letter-spacing:.03em;color:#70838c;padding-bottom:9px}
+#app .ft3-activity-group h3 small{float:right}
+#app .ft3-activity-group ol{list-style:none;margin:0;padding:0 0 0 13px;border-left:1px solid #ccdfdf}
+#app .ft3-activity-entry{position:relative;padding:10px 0 10px 12px}
+#app .ft3-activity-event{width:100%;text-align:left;background:transparent;border:0;display:flex;gap:12px;align-items:center;padding:7px;font:inherit;color:inherit}
+#app .ft3-activity-dot{color:#179d97;font-size:22px}
+#app .ft3-activity-summary{flex:1;min-width:0}
+#app .ft3-activity-summary strong{font-size:12px}
+#app .ft3-activity-kind{color:#0e9c98;font-size:10px;margin-left:6px}
+#app .ft3-activity-summary small{display:block;color:#647e88;font-size:11px;margin-top:4px;overflow-wrap:anywhere}
+#app .ft3-activity-event time{color:#7b9098;font-size:10px}
+#app .ft3-activity-detail{margin:6px 20px;padding:15px;border:1px solid #d5e3e7;border-radius:12px;background:#f5fafb}
+#app .ft3-activity-detail dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+#app .ft3-activity-detail dt{font-size:9px;color:#7b9099;text-transform:uppercase}
+#app .ft3-activity-detail dd{margin:5px 0 0;overflow-wrap:anywhere;font-size:11px}
+#app .ft3-activity-unavailable,#app .ft3-activity-error{padding:20px;border:1px solid #d3e2e6;border-radius:14px;text-align:center;color:#617e87;margin-top:22px;background:#f5f9fa}
+#app .ft3-activity-error{color:#b33f50;border-color:#f0cbd0}
+#app .ft3-activity-footnote{font-size:10px;color:#7a8d97;margin-top:21px}
+@media(max-width:640px){#app .ft3-activity{padding:18px 12px}#app .ft3-activity-pulse>div{grid-template-columns:repeat(2,minmax(0,1fr))}#app .ft3-activity-detail dl{grid-template-columns:1fr}#app .ft3-activity-event{flex-wrap:wrap}#app .ft3-activity-event time{margin-left:35px}}
+
+/* CSP-safe activity density buckets */
+#app .ft3-activity-hour-bars .ft3-hour-height-0{height:2%}
+#app .ft3-activity-hour-bars .ft3-hour-height-1{height:10%}
+#app .ft3-activity-hour-bars .ft3-hour-height-2{height:20%}
+#app .ft3-activity-hour-bars .ft3-hour-height-3{height:30%}
+#app .ft3-activity-hour-bars .ft3-hour-height-4{height:40%}
+#app .ft3-activity-hour-bars .ft3-hour-height-5{height:50%}
+#app .ft3-activity-hour-bars .ft3-hour-height-6{height:60%}
+#app .ft3-activity-hour-bars .ft3-hour-height-7{height:70%}
+#app .ft3-activity-hour-bars .ft3-hour-height-8{height:80%}
+#app .ft3-activity-hour-bars .ft3-hour-height-9{height:90%}
+#app .ft3-activity-hour-bars .ft3-hour-height-10{height:100%}
