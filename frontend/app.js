@@ -5222,11 +5222,18 @@ async function action(name,button){
   break;
  }
 case 'group-inline-edit':{
+ // Open immediately during the originating user gesture. Waiting for a second
+ // permission RPC here can leave the menu dismissed with no visible editor.
+ // state.edit was obtained from signed board authorization; saveGroupInline
+ // independently revalidates identity, board revision and server permissions.
  if(!activeBoardLayout()||!state.edit||state.groupEditBusy)return;
- if(!state.board.groups?.some(g=>g.id===button.dataset.id))return;
- if(!await db.allowed(state.boardId,'edit'))throw new ApiError('Group editing not permitted.',403);
- state.groupEditId=button.dataset.id;render();
- root.querySelector('[data-group-inline-form] input')?.focus();break;
+ const groupId=button.dataset.id;
+ if(!state.board.groups?.some(g=>g.id===groupId))return;
+ state.groupEditId=groupId;
+ render();
+ const editor=root.querySelector('[data-group-inline-form="'+groupId+'"] input');
+ editor?.focus();editor?.select();
+ break;
 }
 case 'group-inline-cancel':{if(!state.groupEditBusy){state.groupEditId=null;render();}break;}
 case 'group-select-visible':{
