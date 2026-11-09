@@ -14,6 +14,10 @@ function responseMessage(data,status){
  const message=data?.message||data?.error||data?.msg;
  return typeof message==='string'?message:'Profile picture request failed ('+status+').';
 }
+function assertActor(auth,userId){
+ if(!UUID.test(userId)||auth.userId!==userId)
+  throw new Error('Profile picture changes are limited to your signed-in account.');
+}
 
 export class ProfileAvatarClient{
  constructor({auth,fetchImpl=globalThis.fetch?.bind(globalThis),baseUrl=SUPABASE_URL,apiKey=SUPABASE_PUBLISHABLE_KEY,clock=()=>Date.now()}={}){
@@ -27,7 +31,9 @@ export class ProfileAvatarClient{
   const execute=async token=>{
    const headers={apikey:this.apiKey,Authorization:'Bearer '+token};
    if(contentType)headers['Content-Type']=contentType;
-   if(method==='POST'&&path.startsWith('/storage/v1/object/'))headers['cache-control']='3600';
+   if(method==='POST'&&path.startsWith('/storage/v1/object/account-avatars/')){
+    headers['cache-control']='3600';headers['x-upsert']='false';
+   }
    const response=await this.fetchImpl(this.baseUrl+path,{
     method,mode:'cors',redirect:'error',cache:'no-store',headers,
     ...(body===undefined?{}:{body})
@@ -46,7 +52,8 @@ export class ProfileAvatarClient{
   return result.data;
  }
  async upload(blob,userId){
-  if(!UUID.test(userId)||!(blob instanceof Blob)||blob.type!=='image/webp'||blob.size<1||blob.size>MAX_AVATAR_BYTES)
+  assertActor(this.auth,userId);
+  if(!(blob instanceof Blob)||blob.type!=='image/webp'||blob.size<1||blob.size>MAX_AVATAR_BYTES)
    throw new Error('Prepared profile picture is invalid or exceeds 400 KB.');
   const path=userId.toLowerCase()+'/'+crypto.randomUUID()+'.webp';
   const encoded=path.split('/').map(encodeURIComponent).join('/');
@@ -64,6 +71,7 @@ export class ProfileAvatarClient{
   return result;
  }
  async removeObject(path,userId){
+  assertActor(this.auth,userId);
   const safe=checkedPath(path,userId);
   await this.request('/storage/v1/object/'+BUCKET,{
    method:'DELETE',body:JSON.stringify({prefixes:[safe]})
@@ -87,6 +95,7 @@ export class ProfileAvatarClient{
   }
  }
  async remove(userId,expectedPath){
+  assertActor(this.auth,userId);
   const oldPath=checkedPath(expectedPath,userId);
   await this.updateReference(null,oldPath);
   try{
