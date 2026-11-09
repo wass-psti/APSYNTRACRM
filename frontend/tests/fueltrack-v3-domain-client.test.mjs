@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {FuelTrackV3DomainClient} from '../fueltrack-v3-domain-client.js';
+import {DomainApi} from '../data.js';
 const board='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const workspace='11111111-1111-4111-8111-111111111111';
 const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -72,4 +73,17 @@ test('a signed session invalidated during a pending read rejects the response',a
   auth:localAuth,workspaceId:workspace,boardId:board
  });
  await assert.rejects(c.read(),/signed session required/);
+});
+
+test('FuelTrack signed reads preserve Board cache and successful writes invalidate it',async()=>{
+ const calls=[];
+ const domain=new DomainApi({authorized:async(url)=>{calls.push(url);return {ok:true};}});
+ domain.boardReadCache.set(board,{value:{board:{updated_at:'2026-11-09T00:00:00Z'}}});
+ await domain.rpc('fueltrack_v3_read',{p_board_id:board,p_limit:50});
+ await domain.rpc('fueltrack_v3_analytics',{p_board_id:board,p_days:30});
+ await domain.rpc('fueltrack_v3_audit_read',{p_board_id:board,p_limit:20});
+ assert.equal(domain.boardReadCache.has(board),true);
+ await domain.rpc('fueltrack_v3_submit',{p_board_id:board});
+ assert.equal(domain.boardReadCache.has(board),false);
+ assert.equal(calls.length,4);
 });
