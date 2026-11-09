@@ -172,6 +172,12 @@ function analyticsOverview(model,metric){
      'Verified vehicle-level baseline and transaction history are required.'))+
   '</div></div>';
 }
+function analyticsEmptyTable(columns,reason){
+ return '<div class="ft3-analytics-data-scroll"><table class="ft3-analytics-data-table"><thead><tr>'+
+  columns.map(c=>'<th scope="col">'+esc(c)+'</th>').join('')+'</tr></thead>'+
+  '<tbody><tr><td colspan="'+columns.length+'">'+
+  emptyState('No verified records available',reason)+'</td></tr></tbody></table></div>';
+}
 function analysisDetail(model,view){
  const entries={
   'fuel-price':['Fuel Price','Historical price per liter',model.unavailable.cost],
@@ -181,9 +187,17 @@ function analysisDetail(model,view){
   odometer:['Odometer Monitoring','Mileage, fuel efficiency and chronological readings',model.unavailable.odometer]
  };
  const [title,desc,reason]=entries[view];
- return analyticsPanel(title,desc,
-  emptyState('Awaiting verified '+title.toLowerCase()+' data',reason)+
-  '<p class="ft3-analytics-footnote">No reference screenshot records, fabricated vehicles, requester identities or mileage have been imported.</p>');
+ const content={
+  'fuel-price':'<div class="ft3-analytics-price-space">'+
+   emptyState('Fuel price history unavailable',reason)+'</div>',
+  efficiency:analyticsEmptyTable(['Vehicle','Actual km/L','Target km/L','Difference'],reason),
+  frequency:analyticsEmptyTable(['Requestor','Vehicle','Trips','Avg. Gap','Dates'],reason),
+  requestors:'<div class="ft3-analytics-ranking-empty">'+
+   emptyState('No ranked requestors',reason)+'</div>',
+  odometer:analyticsEmptyTable(['Vehicle','Readings','Total Km','Avg Km / Refuel','Km/L'],reason)
+ };
+ return analyticsPanel(title,desc,content[view]+
+  '<p class="ft3-analytics-footnote">Reference screenshots guide layout only. No vehicle, requester, mileage or pricing data were fabricated.</p>');
 }
 export function renderFuelTrackAnalytics({detail,view='fuel-price',range='all',metric='both'}={}){
  const model=fuelTrackAnalyticsModel(detail,{range});

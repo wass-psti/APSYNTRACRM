@@ -113,3 +113,15 @@
 #app .ft3-analytics-detail .ft3-panel{min-height:285px}
 @media(max-width:800px){#app .ft3-analytics-grid{grid-template-columns:1fr}#app .ft3-analytics-section-nav{scrollbar-width:thin}#app .ft3-analytics-stat>strong{font-size:21px}}
 @media(max-width:540px){#app .ft3-analytics-chip{padding:6px 9px}#app .ft3-analytics-void{min-height:175px;padding:15px}#app .ft3-analytics-metric-filter{justify-content:flex-start}}
+
+/* Read-only structured analytics tables retain source reference hierarchy. */
+#app .ft3-analytics-data-scroll{overflow:auto;max-height:500px}
+#app .ft3-analytics-data-table{width:100%;border-collapse:collapse;font-size:11px}
+#app .ft3-analytics-data-table th{background:#eaf3f5;color:#728993;font-size:10px;letter-spacing:.05em;text-transform:uppercase;text-align:left;white-space:nowrap;font-weight:750}
+#app .ft3-analytics-data-table th,#app .ft3-analytics-data-table td{padding:12px 15px;border-bottom:1px solid #dbe8ec}
+#app .ft3-analytics-data-table td{padding:0}
+#app .ft3-analytics-data-table .ft3-analytics-void{min-height:190px}
+#app .ft3-analytics-price-space{min-height:235px;display:flex;justify-content:center;align-items:center;background:linear-gradient(180deg,#f0f7f9,#eef5f8)}
+#app .ft3-analytics-price-space .ft3-analytics-void{max-width:520px}
+#app .ft3-analytics-ranking-empty{min-height:245px;display:flex;align-items:center;justify-content:center}
+#app .ft3-analytics-ranking-empty .ft3-analytics-void{max-width:520px}

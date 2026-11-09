@@ -101,7 +101,7 @@ test('financial/vehicle/requester/mileage views never infer protected data from 
  d.values=[value(A,DATE,'2026-11-09'),value(A,LITERS,10)];
  for(const view of FUELTRACK_ANALYTICS_VIEWS){
   const html=renderFuelTrackAnalytics({detail:d,view:view.key});
-  assert.match(html,/Awaiting verified/);
+  assert.match(html,/No verified records available|No ranked requestors|Fuel price history unavailable/);
   assert.doesNotMatch(html,/Vehicle A - Requester Jane|200km|₱1000/);
   assert.doesNotMatch(html,/<form|data-action="save|style="/);
  }
@@ -124,4 +124,25 @@ test('app route parser carries five analytics categories, date range and metric 
  assert.match(app,/state\.fuelTrackAnalyticsRange=normalizeFuelTrackAnalyticsRange\(parts\[5\]\)/);
  assert.match(app,/state\.fuelTrackAnalyticsMetric=normalizeFuelTrackAnalyticsMetric\(parts\[6\]\)/);
  assert.match(app,/analyticsRenderer:renderFuelTrackAnalytics/);
+});
+
+test('Analytics reference sections keep their expected table columns with zero fabricated rows',()=>{
+ const d=fixture();
+ const expected={
+  efficiency:['Vehicle','Actual km/L','Target km/L','Difference'],
+  frequency:['Requestor','Vehicle','Trips','Avg. Gap','Dates'],
+  odometer:['Vehicle','Readings','Total Km','Avg Km / Refuel','Km/L']
+ };
+ for(const [view,labels] of Object.entries(expected)){
+  const html=renderFuelTrackAnalytics({detail:d,view});
+  for(const label of labels)assert.ok(html.includes('<th scope="col">'+label+'</th>'),view+' '+label);
+  assert.match(html,/No verified records available/);
+  assert.doesNotMatch(html,/<tbody><tr><td>[^<]+<\/td><td>/);
+ }
+ const price=renderFuelTrackAnalytics({detail:d,view:'fuel-price'});
+ assert.match(price,/ft3-analytics-price-space/);
+ assert.match(price,/Fuel price history unavailable/);
+ const requestors=renderFuelTrackAnalytics({detail:d,view:'requestors'});
+ assert.match(requestors,/ft3-analytics-ranking-empty/);
+ assert.match(requestors,/No ranked requestors/);
 });
