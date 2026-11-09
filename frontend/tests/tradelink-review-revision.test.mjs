@@ -108,7 +108,8 @@ test('verified reviewer identity is persisted as a Draft field, not a free-text 
  assert.match(html,/Revision Required/);
  assert.match(html,/name="verifiedByEmail"/);
  assert.match(html,/name="approvedByEmail"/);
- assert.match(html,/value="reviewer@example\.test"/);
+ assert.match(html,/value="aacsenagan@watchdogautomation\.com\.ph"/);
+ assert.match(html,/value="asenagan@watchdogautomation\.com\.ph" selected/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
 });
 test('All Documents actions remain authorization-gated for signed submitted/revision states',()=>{

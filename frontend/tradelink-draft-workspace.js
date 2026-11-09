@@ -304,7 +304,7 @@ export class TradeLinkDraftWorkspace{
  }
  async save({documentId,expectedRevision=0,draft,workflowState='draft'}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
-  const payload=validateTradeLinkDraftEnvelope(draft);
+  const payload=validateTradeLinkDraftEnvelope(applyQuotationApprovalHierarchy(draft));
   const id=documentId||globalThis.crypto?.randomUUID?.();
   const operation=expectedRevision===0?'create':'update';
   return this.client.commit({documentId:id,expectedRevision,operation,
@@ -346,12 +346,33 @@ function renderCommercialReadiness(type,fieldValue,data){
  return '';
 }
 
+/** Fixed Quotation routing policy. The backend must separately enforce this policy
+ * before review/approval transitions can be treated as activated. */
+export const QUOTATION_APPROVAL_HIERARCHY=Object.freeze({
+ primary:Object.freeze({label:'Sales Supervisor',email:'aacsenagan@watchdogautomation.com.ph'}),
+ secondaryOptions:Object.freeze([
+  'asenagan@watchdogautomation.com.ph',
+  'dsenagan@watchdogautomation.com.ph',
+  'amsenagan@watchdogautomation.com.ph'
+ ])
+});
+/** Canonicalize the fixed first-stage reviewer, and reject unauthorized second-stage
+ * nominees at the signed Draft-save boundary. Actual review and approval
+ * authorization continues to be enforced by the backend. */
+export function applyQuotationApprovalHierarchy(draft){
+ if(draft?.documentType!=='quotation')return draft;
+ const email=String(draft.approvedByEmail||QUOTATION_APPROVAL_HIERARCHY.secondaryOptions[0]).trim().toLowerCase();
+ if(!QUOTATION_APPROVAL_HIERARCHY.secondaryOptions.includes(email))
+  throw new ApiError('Select an authorized Quotation management approver.',400);
+ return {...draft,verifiedBy:QUOTATION_APPROVAL_HIERARCHY.primary.label,
+  verifiedByEmail:QUOTATION_APPROVAL_HIERARCHY.primary.email,
+  approvedBy:'Management',approvedByEmail:email};
+}
 /** Source-matched quotation approval presentation. Assignment is NOT authorization. */
 function renderQuotationVerification(fieldValue,data,actorName=''){
- const reviewer=fieldValue('verifiedBy',data.verifiedBy||'');
- const approver=fieldValue('approvedBy',data.approvedBy||'');
- const reviewerEmail=fieldValue('verifiedByEmail',data.verifiedByEmail||'');
- const approverEmail=fieldValue('approvedByEmail',data.approvedByEmail||'');
+ const {primary,secondaryOptions}=QUOTATION_APPROVAL_HIERARCHY;
+ const selected=fieldValue('approvedByEmail',data.approvedByEmail||secondaryOptions[0]);
+ const safeSelected=secondaryOptions.includes(selected)?selected:secondaryOptions[0];
  return '<section class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
   '<h4 id="tl-quotation-approval-heading">Verification &amp; Approval Workflow</h4>'+
   '<div class="tl-reference-approval-creator">'+
@@ -361,27 +382,25 @@ function renderQuotationVerification(fieldValue,data,actorName=''){
    '<small>Identity and time are recorded by the signed server on successful save.</small>'+
   '</div></div>'+
   '<div class="tl-reference-approval-stage">'+
-   '<label for="tl-quote-reviewer">Reviewed By (Sales Supervisor)</label>'+
-   '<input id="tl-quote-reviewer" name="verifiedBy" value="'+escape(reviewer)+'" '+
-    'maxlength="5000" placeholder="Enter intended Sales Supervisor">'+
-   '<small>Reviewer selection is a proposed assignment, not a verified review.</small>'+
-   '<label for="tl-quote-reviewer-email">Reviewer signed account email (optional)</label>'+
-   '<input id="tl-quote-reviewer-email" name="verifiedByEmail" value="'+escape(reviewerEmail)+'" '+
-    'type="email" maxlength="254" autocomplete="off" placeholder="reviewer@example.com">'+
-   '<label>Review Date &amp; Time</label>'+
+   '<label for="tl-quote-reviewer-email">Primary approver — Sales Supervisor</label>'+
+   '<input id="tl-quote-reviewer-email" name="verifiedByEmail" value="'+escape(primary.email)+'" '+
+    'type="email" maxlength="254" readonly required aria-describedby="tl-quote-primary-note">'+
+   '<input type="hidden" name="verifiedBy" value="'+escape(primary.label)+'">'+
+   '<small id="tl-quote-primary-note">Permanent first-stage reviewer. Account verification and permission checks occur on the server.</small>'+
+   '<label for="tl-quote-review-time">Review Date &amp; Time</label>'+
    '<div class="tl-reference-approval-timestamp">'+
     '<input id="tl-quote-review-time" aria-label="Review date and time" placeholder="Available after authorized review" disabled>'+
     '<button type="button" disabled title="Only the authorized reviewer may record a review">Use Time Now</button></div>'+
-   '<small>The server will record the actual review time when review activation and permissions allow.</small>'+
+   '<small>The signed review operation records the actual review time when activated.</small>'+
   '</div>'+
   '<div class="tl-reference-approval-stage">'+
-   '<label for="tl-quote-approver">Approved By (Management)</label>'+
-   '<input id="tl-quote-approver" name="approvedBy" value="'+escape(approver)+'" '+
-    'maxlength="5000" required placeholder="Enter intended management approver">'+
-   '<small>Approver is proposed only. No approval or role change is performed.</small>'+
-   '<label for="tl-quote-approver-email">Management signed account email (optional)</label>'+
-   '<input id="tl-quote-approver-email" name="approvedByEmail" value="'+escape(approverEmail)+'" '+
-    'type="email" maxlength="254" autocomplete="off" placeholder="approver@example.com">'+
+   '<label for="tl-quote-approver-email">Secondary approver — Management</label>'+
+   '<select id="tl-quote-approver-email" name="approvedByEmail" required aria-describedby="tl-quote-secondary-note">'+
+     secondaryOptions.map(email=>'<option value="'+escape(email)+'"'+
+      (email===safeSelected?' selected':'')+'>'+escape(email)+'</option>').join('')+
+   '</select>'+
+   '<input type="hidden" name="approvedBy" value="Management">'+
+   '<small id="tl-quote-secondary-note">Second-stage approval follows a verified primary review; these assignments do not grant permissions.</small>'+
   '</div></section>';
 }
 /** One unsaved priced line; reuse the authoritative source calculation formula. */
