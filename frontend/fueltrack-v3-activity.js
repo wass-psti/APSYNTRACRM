@@ -115,8 +115,8 @@ export function renderFuelTrackActivity({snapshot=null,boardId=null,workspaceId=
  link('completed','Completed',model?model.counts.completed:'—',model?.type)+'</div>'+
  '<div class="ft3-activity-hours"><h3>Hourly Activity <small>Today · loaded page</small></h3>'+
  '<div class="ft3-activity-hour-bars" aria-label="Events per hour today">'+
- (model?model.hours.map((value,i)=>'<span title="'+i+':00 · '+value+' event(s)" style="height:'+
- Math.max(2,Math.round(value/max*100))+'%"></span>').join(''):'<p>—</p>')+'</div>'+
+ (model?model.hours.map((value,i)=>'<span title="'+i+':00 · '+value+' event(s)" class="ft3-hour-height-'+
+ Math.max(0,Math.min(10,Math.round(value/max*10)))+'"></span>').join(''):'<p>—</p>')+'</div>'+
  '<p>00 <span>06</span><span>12</span><span>18</span><span>23</span></p></div>'+
  (!model?'<p class="ft3-activity-unavailable" role="status">'+
  'A signed FuelTrack module Admin session is required to load its authoritative activity stream. No audit records or totals are inferred from Board items.</p>':
