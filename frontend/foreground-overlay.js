@@ -75,8 +75,13 @@ function currentViewport(win){
 function getPlacementSheet(doc){
  const sheets=Array.from(doc?.styleSheets||[]);
  for(const sheet of sheets){
-  const href=String(sheet?.href||'');
-  if(!/\/frontend\/foreground-overlay\.css(?:\?.*)?$/.test(href))continue;
+  // Priority 5 combines foreground-overlay.css into the same-origin bundle.
+  // The old name-only lookup silently disabled the browser top layer, allowing
+  // the board toolbar and cards to paint over an otherwise open action menu.
+  let url;
+  try{url=new URL(String(sheet?.href||''),doc.baseURI);}catch{continue;}
+  if(url.origin!==doc.defaultView?.location?.origin||
+     !/^\/(?:APSYNTRACRM\/)?frontend\/(?:foreground-overlay|apsyntra-styles\.bundle)\.css$/.test(url.pathname))continue;
   try{
    if(sheet.cssRules&&typeof sheet.insertRule==='function'&&
       typeof sheet.deleteRule==='function')return sheet;
