@@ -1434,6 +1434,14 @@ async function refreshFoundation(){
  state.foundationError='';
 }
 async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
+ // Reuse the already authorized TradeLink board only for intra-application
+ // navigation in the same signed user/workspace context. Never cache grants
+ // across sessions, workspace changes, board switches, or initial loading.
+ const reuseTradeLinkBoard=tab==='tradelink'&&state.tab==='tradelink'&&
+  state.view==='board'&&!state.loading&&!state.error&&
+  state.boardId===boardId&&state.board?.board?.id===boardId&&
+  state.board.board.workspace_id===state.context?.workspace_id&&
+  state.context?.user_id===auth.userId&&auth.isSignedIn;
  if(state.bulk02Access?.boardId!==boardId)clearBulkActivation();
  const seq=++routeSerial;
  state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=tab==='items'?{status:'LOADING'}:null;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
@@ -1445,6 +1453,19 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
  // load the current signed list and be verified by the server before editing.
  if(tab==='tradelink'&&state.tradeLinkSection==='drafts'&&validUuid(draftEditId))
   state.tradeLinkDraft.editRequestId=draftEditId;
+ if(reuseTradeLinkBoard){
+  // Route state is local. List, edit, and activity data still use their
+  // signed APIs below, never a stale or fabricated authorized document.
+  state.error=null;
+  state.tradeLinkActivityError='';
+  render();
+  if(state.tradeLinkSection==='activity'&&state.board?.board?.id===TRADELINK_BOARD_ID)
+   await loadTradeLinkActivity(seq);
+  if(['drafts','documents'].includes(state.tradeLinkSection)&&
+     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
+   await loadTradeLinkDrafts(seq);
+  return;
+ }
  state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
