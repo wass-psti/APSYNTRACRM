@@ -129,9 +129,9 @@ test('no verified print for mismatched, stale, cross-workspace or malformed sign
 test('archived and non-Draft states show actual state without fabricated approval',()=>{
  const approved={...base,workflow_state:'approved'};
  const html=renderTradeLinkSavedDocumentOutput(approved,workspace,id);
- assert.match(html,/>APPROVED</);
+ assert.match(html,/WORKFLOW APPROVED · PDF NOT ISSUED/);
  assert.doesNotMatch(html,/DRAFT — not approved/);
- assert.match(html,/not a digital signature/);
+ assert.match(html,/not a signed PDF/);
  const archived={...base,archived_at:stamp,workflow_state:'completed'};
  assert.match(renderTradeLinkSavedDocumentOutput(archived,workspace,id),/ARCHIVED · COMPLETED/);
 });
