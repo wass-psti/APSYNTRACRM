@@ -96,7 +96,9 @@ async function run(){
    '--no-sandbox','--disable-dev-shm-usage',
    '--user-data-dir='+tmp,'--remote-debugging-port=0','about:blank'
   ],{stdio:'ignore'});
-  const active=join(tmp,'DevToolsActivePort');await until(()=>existsSync(active));
+  const active=join(tmp,'DevToolsActivePort');
+  // Shared hosted Chromium runners can need more than six seconds to start.
+  await until(()=>existsSync(active),{attempts:250,delay:100});
   const debugPort=Number(readFileSync(active,'utf8').split('\n')[0]);
   const base='http://127.0.0.1:'+debugPort;
   const fixture='http://127.0.0.1:'+port+'/frontend/tests/fixtures/static-cache-browser.html';

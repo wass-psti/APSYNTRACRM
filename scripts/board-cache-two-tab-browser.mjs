@@ -118,7 +118,8 @@ async function run(){
    '--user-data-dir='+tmp,'--remote-debugging-port=0','about:blank'
   ],{stdio:'ignore'});
   const active=join(tmp,'DevToolsActivePort');
-  await until(()=>existsSync(active));
+  // Hosted Chromium cold-start can exceed six seconds under CI load.
+  await until(()=>existsSync(active),{attempts:250,delay:100});
   const debugPort=Number(readFileSync(active,'utf8').split('\n')[0]);
   const base='http://127.0.0.1:'+debugPort;
   const fixture='http://127.0.0.1:'+port+'/frontend/tests/fixtures/board-cache-two-tab.html';
