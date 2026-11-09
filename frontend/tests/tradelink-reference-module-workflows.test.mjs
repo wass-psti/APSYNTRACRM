@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {renderTradeLinkDraftWorkspace,initialTradeLinkDraftView} from '../tradelink-draft-workspace.js';
+import {renderTradeLinkDraftWorkspace,initialTradeLinkDraftView,TRADELINK_MODULE_ACCOUNT_OPTIONS,validateTradeLinkModuleAccountAssignments} from '../tradelink-draft-workspace.js';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 const workspaceId='00000000-0000-4000-8000-000000000001';
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspaceId,name:'TradeLink',description:'[APSYNTRA:MODULE:tradelink:v1]',status:'active'},groups:[],items:[],columns:[]};
@@ -12,7 +12,7 @@ test('module-specific workflow after terms; packing has no workflow',()=>{
   assert.ok(html.includes(title));
   assert.match(html,/Created By/);
   assert.match(html,/Signed User/);
-  assert.match(html,/Proposed personnel assignments only/);
+  assert.match(html,/Proposed account assignments only/);
   assert.doesNotMatch(html,/Workflow account assignments|readiness · preview only/);
  }
  const packing=render('packing');
@@ -21,13 +21,13 @@ test('module-specific workflow after terms; packing has no workflow',()=>{
 });
 test('ESI finance and management lists preserve exactly one field per contract',()=>{
  const html=render('esi');
- for(const person of ['Melanie P. Señagan','Jonerey Torino','Daniela C. Cabanas','Alex P. Señagan','Dionny P. Señagan','Amalia P. Señagan'])assert.ok(html.includes(person),person);
+ for(const person of [...TRADELINK_MODULE_ACCOUNT_OPTIONS.esi.verifiedBy,...TRADELINK_MODULE_ACCOUNT_OPTIONS.esi.approvedBy])assert.ok(html.includes(person),person);
  for(const name of ['verifiedBy','approvedBy'])assert.equal(html.split('name="'+name+'"').length-1,1);
 });
 test('delivery QC and logistics roles preserve recipient and source terms order',()=>{
  const html=render('delivery');
  for(const name of ['checkedBy','deliveredBy','receivedBy'])assert.equal(html.split('name="'+name+'"').length-1,1);
- for(const person of ['Jerome L. Nuñez','Prospero C. Pajulas','Daniela C. Cabanas'])assert.ok(html.includes(person),person);
+ for(const person of TRADELINK_MODULE_ACCOUNT_OPTIONS.delivery.deliveredBy)assert.ok(html.includes(person),person);
  assert.ok(html.indexOf('tl-reference-terms')<html.indexOf('Delivery Tracking'));
 });
 test('Payment AR finance receiver and admin verifier are not duplicated',()=>{
@@ -39,16 +39,62 @@ test('Payment AR finance receiver and admin verifier are not duplicated',()=>{
 test('Supplier PO Account Manager is defaulted but editable; timestamp cannot forge audit',()=>{
  const html=render('po');
  assert.match(html,/Reviewed By \(Account Manager\)/);
- assert.match(html,/value="Angelica Anne Camille Señagan" selected/);
+ assert.match(html,/value="aacsenagan@watchdogautomation.com.ph" selected/);
  assert.match(html,/aacsenagan@watchdogautomation.com.ph/);
  assert.match(html,/id="tl-po-review-time"[^>]*disabled/);
  assert.match(html,/Use Time Now<\/button>/);
- const edited=render('po',{verifiedBy:'Dionny P. Señagan'});
- assert.match(edited,/value="Dionny P. Señagan" selected/);
- assert.doesNotMatch(edited,/value="Angelica Anne Camille Señagan" selected/);
+ const edited=render('po',{verifiedBy:'dsenagan@watchdogautomation.com.ph'});
+ assert.match(edited,/value="dsenagan@watchdogautomation.com.ph" selected/);
+ assert.doesNotMatch(edited,/value="aacsenagan@watchdogautomation.com.ph" selected/);
 });
 test('untrusted stored proposed personnel is escaped',()=>{
  const html=render('delivery',{checkedBy:'<img src=x onerror=alert(1)>'});
  assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
+ assert.match(html,/selected disabled/);
  assert.doesNotMatch(html,/<img src=x/);
+});
+
+test('exact account dropdown sets match the provided lists, without extra choices',()=>{
+ const domain='@watchdogautomation.com.ph';
+ const expected={
+  esi:{verifiedBy:['msenagan','jtorino','dcabanas'],approvedBy:['asenagan','dsenagan','amsenagan']},
+  delivery:{checkedBy:['dsenagan','asenagan','amsenagan'],deliveredBy:['rogang','jnunez','ppajulas','dcabanas','asenagan']},
+  payment:{receivedBy:['msenagan'],verifiedBy:['asenagan']},
+  po:{verifiedBy:['asenagan','aacsenagan','cerama','ppajulas','dsenagan'],approvedBy:['asenagan','dsenagan','amsenagan']}
+ };
+ for(const [type,fields] of Object.entries(expected)){
+  const html=render(type);
+  for(const [key,shortNames] of Object.entries(fields)){
+   const options=shortNames.map(n=>n+domain);
+   assert.deepEqual(TRADELINK_MODULE_ACCOUNT_OPTIONS[type][key],options);
+   const start=html.indexOf('name="'+key+'"');
+   assert.ok(start>0,type+':'+key);
+   const open=html.lastIndexOf('<select',start);
+   const close=html.indexOf('</select>',start);
+   assert.ok(open>=0&&close>start,type+':'+key);
+   const select=html.slice(open,close);
+   const values=[...select.matchAll(/<option value="([^"]+)"/g)].map(m=>m[1]).filter(Boolean);
+   assert.deepEqual(values,options,type+':'+key);
+  }
+ }
+});
+test('new account nominations reject out-of-list values and normalize case',()=>{
+ const valid={documentType:'esi',verifiedBy:'MSENAGAN@WATCHDOGAUTOMATION.COM.PH',approvedBy:'asenagan@watchdogautomation.com.ph'};
+ const normalized=validateTradeLinkModuleAccountAssignments(valid);
+ assert.equal(normalized.verifiedBy,'msenagan@watchdogautomation.com.ph');
+ for(const type of Object.keys(TRADELINK_MODULE_ACCOUNT_OPTIONS)){
+  for(const [key,options] of Object.entries(TRADELINK_MODULE_ACCOUNT_OPTIONS[type])){
+   const complete={documentType:type,...Object.fromEntries(Object.entries(TRADELINK_MODULE_ACCOUNT_OPTIONS[type]).map(([field,list])=>[field,list[0]]))};
+   complete[key]='outsider@example.com';
+   assert.throws(()=>validateTradeLinkModuleAccountAssignments(complete),/Select a listed TradeLink/);
+   complete[key]=options.at(-1);
+   assert.doesNotThrow(()=>validateTradeLinkModuleAccountAssignments(complete));
+  }
+ }
+});
+test('saved legacy human-readable names remain visible but disabled, never silently reassigned',()=>{
+ const html=render('po',{verifiedBy:'Angelica Anne Camille Señagan'});
+ assert.match(html,/value="Angelica Anne Camille Señagan" selected disabled/);
+ assert.match(html,/select an authorized account/);
+ assert.throws(()=>validateTradeLinkModuleAccountAssignments({documentType:'po',verifiedBy:'Angelica Anne Camille Señagan',approvedBy:'asenagan@watchdogautomation.com.ph'}));
 });

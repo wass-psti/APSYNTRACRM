@@ -9,21 +9,21 @@ const fields=data=>({
  getAll:key=>data[key]==null?[]:[data[key]]
 });
 const moduleInputs={
- esi:{customerName:'Invoice client',customerTin:'TIN-001',verifiedBy:'Finance',approvedBy:'Manager',
+ esi:{customerName:'Invoice client',customerTin:'TIN-001',verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
   currency:'USD',exchangeRate:'58',lineDescription:'Goods',lineQuantity:'2',lineUnitPrice:'150'},
  quotation:{customerName:'Prospective client',customerEmail:'client@example.com',
   validity:'30 days',deliveryCommitment:'Within 14 days',paymentTerms:'Net 30',
-  approvedBy:'Manager',lineDescription:'Service',lineQuantity:'2',lineUnitPrice:'150'},
+  approvedBy:'asenagan@watchdogautomation.com.ph',lineDescription:'Service',lineQuantity:'2',lineUnitPrice:'150'},
  packing:{customerName:'Consignee',referenceNumber:'SO-7',
   lineDescription:'Packed item',lineQuantity:'2',lineUnit:'box'},
  delivery:{customerName:'Recipient',referenceNumber:'SO-7',
   lineDescription:'Delivered item',lineQuantity:'1',lineUnit:'pc',
-  lineSerialNumber:'A-00012',checkedBy:'QC',deliveredBy:'Logistics'},
+  lineSerialNumber:'A-00012',checkedBy:'dsenagan@watchdogautomation.com.ph',deliveredBy:'rogang@watchdogautomation.com.ph'},
  payment:{customerName:'Payor',paymentParticulars:'Received on account',
   cashAmount:'25',chequeAmount:'400',bankName:'Bank',chequeNumber:'CHEQUE-01',
-  receivedBy:'Cashier',verifiedBy:'Verifier'},
+  receivedBy:'msenagan@watchdogautomation.com.ph',verifiedBy:'asenagan@watchdogautomation.com.ph'},
  po:{customerName:'Supplier',targetDeliveryDate:'2026-12-01',paymentTerms:'Net 30',
-  verifiedBy:'Account manager',approvedBy:'Final manager',
+  verifiedBy:'aacsenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
   lineDescription:'Materials',lineQuantity:'2',lineUnitPrice:'150'}
 };
 const sortedJson=value=>Array.isArray(value)?value.map(sortedJson):

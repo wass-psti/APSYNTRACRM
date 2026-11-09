@@ -237,7 +237,7 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
     throw new ApiError('Invalid supplier PO delivery date.',400);
   }
  }
- return validateTradeLinkDraftEnvelope(draft);
+ return validateTradeLinkDraftEnvelope(validateTradeLinkModuleAccountAssignments(draft));
 }
 /**
  * Keep the exact payload (including line ID) for ambiguous create retries.
@@ -329,25 +329,44 @@ function moneyField(label,name,val,currency,attrs){
   ' (<span data-tradelink-draft-money-currency>'+escape(currency)+'</span>)</span>'+
   '<input name="'+escape(name)+'" value="'+escape(val)+'" '+attrs+'></label>';
 }
-/** Source-reference personnel suggestions are proposed names, not authenticated
- * directory membership or approval authority. Never infer a signed identity. */
-const referencePeople=Object.freeze({
- finance:Object.freeze(['Melanie P. Señagan','Jonerey Torino','Daniela C. Cabanas']),
- management:Object.freeze(['Alex P. Señagan','Dionny P. Señagan','Amalia P. Señagan']),
- qc:Object.freeze(['Dionny P. Señagan','Alex P. Señagan','Amalia P. Señagan']),
- logistics:Object.freeze(['Rodulfo Ogang, Jr','Jerome L. Nuñez','Prospero C. Pajulas',
-  'Daniela C. Cabanas','Alex P. Señagan']),
- administrators:Object.freeze(['Alex P. Señagan']),
- accountManagers:Object.freeze(['Alex P. Señagan','Angelica Anne Camille Señagan',
-  'Chris Emmanuel Q. Rama','Prospero C. Pajulas','Dionny P. Señagan'])
+/** Explicit UI nomination lists. These emails are account identifiers,
+ * not signed authorization or verified directory/role membership. */
+export const TRADELINK_MODULE_ACCOUNT_OPTIONS=Object.freeze({
+ esi:Object.freeze({
+  verifiedBy:Object.freeze(['msenagan@watchdogautomation.com.ph','jtorino@watchdogautomation.com.ph','dcabanas@watchdogautomation.com.ph']),
+  approvedBy:Object.freeze(['asenagan@watchdogautomation.com.ph','dsenagan@watchdogautomation.com.ph','amsenagan@watchdogautomation.com.ph'])
+ }),
+ delivery:Object.freeze({
+  checkedBy:Object.freeze(['dsenagan@watchdogautomation.com.ph','asenagan@watchdogautomation.com.ph','amsenagan@watchdogautomation.com.ph']),
+  deliveredBy:Object.freeze(['rogang@watchdogautomation.com.ph','jnunez@watchdogautomation.com.ph','ppajulas@watchdogautomation.com.ph','dcabanas@watchdogautomation.com.ph','asenagan@watchdogautomation.com.ph'])
+ }),
+ payment:Object.freeze({
+  receivedBy:Object.freeze(['msenagan@watchdogautomation.com.ph']),
+  verifiedBy:Object.freeze(['asenagan@watchdogautomation.com.ph'])
+ }),
+ po:Object.freeze({
+  verifiedBy:Object.freeze(['asenagan@watchdogautomation.com.ph','aacsenagan@watchdogautomation.com.ph','cerama@watchdogautomation.com.ph','ppajulas@watchdogautomation.com.ph','dsenagan@watchdogautomation.com.ph']),
+  approvedBy:Object.freeze(['asenagan@watchdogautomation.com.ph','dsenagan@watchdogautomation.com.ph','amsenagan@watchdogautomation.com.ph'])
+ })
 });
+export function validateTradeLinkModuleAccountAssignments(draft){
+ const allowed=TRADELINK_MODULE_ACCOUNT_OPTIONS[draft?.documentType];
+ if(!allowed)return draft;
+ for(const [field,options] of Object.entries(allowed)){
+  const value=String(draft[field]??'').trim().toLowerCase();
+  if(!options.includes(value))
+   throw new ApiError('Select a listed TradeLink '+field+' account.',400);
+  draft[field]=value;
+ }
+ return draft;
+}
 function referencePersonField(label,name,value,people,placeholder,{required=false}={}){
- const current=String(value??'');
+ const current=String(value??'').trim();
  const known=people.includes(current);
  return '<div class="tl-reference-assignment-field"><label for="tl-ref-person-'+escape(name)+'">'+escape(label)+'</label>'+
   '<select id="tl-ref-person-'+escape(name)+'" name="'+escape(name)+'"'+(required?' required':'')+'>'+
    '<option value="">'+escape(placeholder)+'</option>'+
-   (current&&!known?'<option value="'+escape(current)+'" selected>'+escape(current)+'</option>':'')+
+   (current&&!known?'<option value="'+escape(current)+'" selected disabled>'+escape(current)+' (previously saved; select an authorized account)</option>':'')+
    people.map(person=>'<option value="'+escape(person)+'"'+(person===current?' selected':'')+'>'+escape(person)+'</option>').join('')+
   '</select></div>';
 }
@@ -361,47 +380,47 @@ function referenceCreator(actorName){
 function renderReferenceModuleWorkflow(type,fieldValue,data,actorName){
  if(type==='packing'||type==='quotation')return '';
  const value=name=>fieldValue(name,data[name]||'');
- const person=(label,name,list,placeholder,required=false)=>
-  referencePersonField(label,name,value(name),list,placeholder,{required});
- const help='<p class="tl-reference-workflow-disclaimer">Proposed personnel assignments only. Selecting a name does not verify an account, grant permissions, confirm delivery or record an approval.</p>';
+ const person=(label,name,placeholder,required=false)=>
+  referencePersonField(label,name,value(name),TRADELINK_MODULE_ACCOUNT_OPTIONS[type][name],placeholder,{required});
+ const help='<p class="tl-reference-workflow-disclaimer">Proposed account assignments only. Selecting an email does not verify the account, grant permissions, confirm delivery or record an approval.</p>';
  const group=(title,content)=>'<div class="tl-reference-approval-stage">'+
   '<h5>'+title+'</h5>'+content+'</div>';
  if(type==='esi')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Electronic SI verification and approval">'+
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
   group('Verified By (Finance Team)',
-   person('Finance team member','verifiedBy',referencePeople.finance,'Select finance team member...',true))+
+   person('Finance team member','verifiedBy','Select finance team member...',true))+
   group('Approved By (Management)',
-   person('Management approver','approvedBy',referencePeople.management,'Select management member...',true))+
+   person('Management approver','approvedBy','Select management member...',true))+
   help+'</section>';
  if(type==='delivery')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Delivery tracking">'+
   '<h4>Delivery Tracking</h4>'+referenceCreator(actorName)+
   group('Checked By (Quality Control)',
-   person('QC personnel','checkedBy',referencePeople.qc,'Select QC personnel...',true))+
+   person('QC personnel','checkedBy','Select QC personnel...',true))+
   group('Delivered By (Logistics)',
-   person('Logistics personnel','deliveredBy',referencePeople.logistics,'Select logistics personnel...',true))+
+   person('Logistics personnel','deliveredBy','Select logistics personnel...',true))+
   '<div class="tl-reference-assignment-field"><label for="tl-ref-delivery-received">Received By (optional)</label>'+
   '<input id="tl-ref-delivery-received" name="receivedBy" maxlength="5000" value="'+escape(value('receivedBy'))+'" placeholder="Recipient acknowledgement"></div>'+
   help+'</section>';
  if(type==='payment')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Payment acknowledgement">'+
   '<h4>Payment Acknowledgement</h4>'+referenceCreator(actorName)+
   group('Payment Received By (Finance)',
-   person('Finance team member','receivedBy',referencePeople.finance,'Select finance team member...',true))+
+   person('Finance team member','receivedBy','Select finance team member...',true))+
   group('Verified By (Administration)',
-   person('Administrator','verifiedBy',referencePeople.administrators,'Select admin...',true))+
+   person('Administrator','verifiedBy','Select admin...',true))+
   help+'</section>';
  if(type==='po')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Supplier purchase order verification and approval">'+
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
   group('Reviewed By (Account Manager)',
    referencePersonField('Account Manager','verifiedBy',
-    value('verifiedBy')||'Angelica Anne Camille Señagan',
-    referencePeople.accountManagers,'Select account manager...',{required:true})+
-   '<small>Suggested default reviewer: Angelica Anne Camille Señagan (aacsenagan@watchdogautomation.com.ph). This selection is editable.</small>'+
+    value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph',
+    TRADELINK_MODULE_ACCOUNT_OPTIONS.po.verifiedBy,'Select account manager...',{required:true})+
+   '<small>Suggested default reviewer: aacsenagan@watchdogautomation.com.ph. This selection is editable.</small>'+
    '<label for="tl-po-review-time">Review Date &amp; Time</label>'+
    '<div class="tl-reference-approval-timestamp"><input id="tl-po-review-time" aria-label="Purchase order review timestamp" placeholder="Available after signed Account Manager review" disabled>'+
    '<button type="button" disabled aria-disabled="true" title="Requires signed, role-authorized Account Manager review and server audit">Use Time Now</button></div>'+
    '<small>The timestamp is recorded only by an authorized signed server review; changing the proposed reviewer never records approval.</small>')+
   group('Approved By (Management)',
-   person('Management approver','approvedBy',referencePeople.management,'Select management member...',true))+
+   person('Management approver','approvedBy','Select management member...',true))+
   help+'</section>';
  return '';
 }
