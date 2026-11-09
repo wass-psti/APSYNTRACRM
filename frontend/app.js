@@ -954,7 +954,7 @@ function render(){
    state.context.profile.avatar_path=path;
    render();
    toast(cleanupPending?
-    'Profile picture updated; previous image cleanup is pending.':
+    'Profile picture saved, but the previous image could not be deleted.':
     path?'Profile picture saved.':'Profile picture removed.');
   }
  });
