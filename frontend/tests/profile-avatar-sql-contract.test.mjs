@@ -32,7 +32,7 @@ test('avatar reads are operation-limited and require an active shared workspace'
 });
 
 test('profile reference updates are self-only, CAS protected and upload-verified',()=>{
- assert.match(sql,/function public\.set_own_profile_avatar\(\s*p_avatar_path text,\s*p_expected_avatar_path text\)/);
+ assert.match(sql,/function public\.set_own_profile_avatar\(\s*p_avatar_path text,\s*p_expected_avatar_path text\s*\)/);
  assert.match(sql,/object_row\.owner_id = v_actor::text/);
  assert.match(sql,/avatar_path is not distinct from p_expected_avatar_path/);
  assert.match(sql,/revoke all on function public\.set_own_profile_avatar\(text, text\) from public, anon/);
