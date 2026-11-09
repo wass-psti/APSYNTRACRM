@@ -112,12 +112,19 @@ function statusPanel(model){
   ['rejected','Rejected'],['other','Other']];
  const nonzero=order.filter(([k])=>model.status[k]>0);
  const scale=model.count||1;
+ let offset=0;
+ const segments=nonzero.map(([k])=>{
+  const width=1000*model.status[k]/scale,x=offset;
+  offset+=width;
+  return '<rect class="ft3-status-segment ft3-status-'+k+
+   '" x="'+x.toFixed(3)+'" y="0" width="'+width.toFixed(3)+
+   '" height="12"><title>'+h(k)+': '+model.status[k]+'</title></rect>';
+ }).join('');
  return panel('Status Overview','Statuses from authorized board records',
-  '<div class="ft3-status-track" aria-label="Status distribution">'+
-  (nonzero.length?nonzero.map(([k])=>'<span class="ft3-status-segment ft3-status-'+k+
-   '" style="width:'+(100*model.status[k]/scale).toFixed(3)+'%" title="'+
-   h(k)+': '+model.status[k]+'"></span>').join(''):'<span class="ft3-status-empty"></span>')+
-  '</div><div class="ft3-status-list">'+order.map(([k,label])=>
+  '<svg class="ft3-status-track" role="img" aria-label="Status distribution" '+
+  'viewBox="0 0 1000 12" preserveAspectRatio="none">'+
+  '<rect x="0" y="0" width="1000" height="12" rx="6" fill="#e1ecee"></rect>'+
+  segments+'</svg><div class="ft3-status-list">'+order.map(([k,label])=>
   '<div class="ft3-status-row"><span class="ft3-dot ft3-dot-'+k+
    '"></span><span>'+label+'</span><strong>'+model.status[k]+
    '</strong><small>'+(model.count?Math.round(model.status[k]*100/model.count):0)+'%</small></div>').join('')+
