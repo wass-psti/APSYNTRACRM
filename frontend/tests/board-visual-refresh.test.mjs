@@ -9,7 +9,8 @@ const base=readFileSync('frontend/styles.css','utf8');
 
 test('visual refresh loads last and remains scoped to signed board routes',()=>{
  const link='frontend/board-visual-refresh.css';
- assert.match(page,new RegExp('<link rel="stylesheet" href="\\./'+link.replace(/\\./g,'\\.')+'"\\s*\\/?>'));
+ assert.ok(page.includes('frontend/apsyntra-styles.bundle.css'));
+ assert.ok(readFileSync('scripts/priority5-style-manifest.mjs','utf8').includes(link));
  assert.ok(page.indexOf(link)>page.indexOf('frontend/time-tracker-gps.css'));
  assert.match(app,/classList\.toggle\('aps-board-shell',state\.view==='board'\)/);
  assert.match(css,/#app \.aps-board-shell \.page-head/);
