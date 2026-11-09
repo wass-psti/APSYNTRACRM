@@ -720,8 +720,10 @@ export function renderTradeLinkDraftLineItem(item={},type='quotation',currency='
    (physical?'':
     '<label class="tl-draft-field tl-ref-item-price"><span class="sr-only">'+escape(label)+' unit price ('+escape(currency)+')</span>'+
     '<input name="lineUnitPrice" type="number" min="0" max="1000000000" step="any" value="'+escape(unitPrice)+'" placeholder="Unit price"'+(priced?' required':'')+'></label>')+
-   '<label class="tl-draft-field tl-ref-item-unit"><span class="sr-only">'+escape(label)+' unit</span>'+
-    '<input name="lineUnit" value="'+escape(item.unit??'')+'" maxlength="120" placeholder="Unit"></label>')+
+   (physical?
+    '<label class="tl-draft-field tl-ref-item-unit"><span class="sr-only">'+escape(label)+' unit</span>'+
+     '<input name="lineUnit" value="'+escape(item.unit??'')+'" maxlength="120" placeholder="Unit"></label>':
+    '<input type="hidden" name="lineUnit" value="'+escape(item.unit??'')+'">'))+
   (type==='delivery'&&note?'<input type="hidden" name="lineSerialNumber" value="">':'')+
   (type==='delivery'&&!note?field('Serial / asset no.','lineSerialNumber',
     item.serialNumber??'','maxlength="120"'):'')+
@@ -865,7 +867,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '<p class="muted">Payment amounts are unsaved estimates. This form does not receive or verify funds.</p>':
     '<fieldset class="tl-draft-lines tl-reference-items"><legend>Items</legend>'+
      '<div class="tl-ref-items-toolbar">'+
-      '<button type="button" class="tl-ref-sourcing" disabled title="Sourcing Board integration requires an authorized read contract">Add from Sourcing Board · pending integration</button>'+
+
       '<button type="button" class="tl-ref-add-blank" data-action="tradelink-draft-add-line"'+
        (lines.length>=100?' disabled':'')+'>＋ Add Blank</button>'+
       '<button type="button" class="tl-ref-add-note" data-action="tradelink-draft-add-note"'+
