@@ -67,10 +67,8 @@ BEGIN
  IF public.has_module_access('material-request-hub',auth.uid())
    IS DISTINCT FROM FALSE
  THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_SAME_PRINCIPAL_DISABLED_ROLE_ALLOWED'; END IF;
- IF public.has_module_access('material-request-hub',
-     'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
-   IS DISTINCT FROM FALSE
- THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_FOREIGN_ENABLED_ROLE_ALLOWED'; END IF;
+ -- Caller C belongs to BOTH workspaces: do not treat another principal as
+ -- a foreign-workspace denial for this caller. A disjoint-member test follows.
  IF public.has_module_access('never-assigned-module',auth.uid())
    IS DISTINCT FROM FALSE
  THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_ABSENT_ROLE_ALLOWED'; END IF;
@@ -84,6 +82,22 @@ BEGIN
  IF has_table_privilege('authenticated','public.module_role_assignments','SELECT')
  THEN RAISE EXCEPTION 'DOMAIN_ROLE_TABLE_READ_LEAK'; END IF;
 END $table_priv$;
+-- Caller A belongs only to workspace 1; user B belongs only to workspace 2.
+-- This independently tests cross-workspace p_user_id lookups.
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',true);
+SELECT set_config('request.jwt.claim.session_id','aaaaaaaa-0000-4000-8000-000000000001',true);
+DO $disjoint$
+BEGIN
+ IF public.current_workspace_id(auth.uid()) IS DISTINCT FROM
+   '00000000-0000-4000-8000-000000000001'::uuid
+ THEN RAISE EXCEPTION 'DISJOINT_ACTOR_SCOPE_INVALID'; END IF;
+ IF public.current_workspace_id('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') IS DISTINCT FROM
+   '00000000-0000-4000-8000-000000000002'::uuid
+ THEN RAISE EXCEPTION 'DISJOINT_TARGET_SCOPE_INVALID'; END IF;
+ IF public.has_module_access('material-request-hub',
+   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_DISJOINT_FOREIGN_ROLE_EXPOSED'; END IF;
+END $disjoint$;
 RESET ROLE;
 ROLLBACK;
 SELECT 'CP_WS_ACTIVATE04_ORIGINAL_DOMAIN_ROLE_SUBSET_PASS' AS result;
