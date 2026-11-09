@@ -1,8 +1,7 @@
 import {syncFuelTrans} from './fueltrans-native.js';
 import {AuthClient,ApiError} from './session.js';
-import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview} from './profile-avatar.js';
+import {avatarImageMarkup,avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview,mountAvatarImages} from './profile-avatar.js';
 import {ProfileAvatarClient} from './profile-avatar-client.js';
-import {mountAvatarImages} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
@@ -290,7 +289,7 @@ function sidebar(){
   </div>
   <div class="side-bottom">
    <div class="profile">
-    <span class="avatar" aria-hidden="true">`+e(initials(name()))+`</span>
+    <span class="avatar sidebar-profile-avatar" aria-hidden="true">`+avatarImageMarkup(initials(name()))+`</span>
     <div class="sidebar-profile-text"><div class="name">`+e(name())+`</div>
      <div class="role">`+e(state.context?.profile?.platform_role||'Team member')+`</div>
     </div>
@@ -375,7 +374,7 @@ function shell(body){
    }
   }
   existing.querySelector('.breadcrumb strong').textContent=crumb;
-  existing.querySelector('.top-avatar').innerHTML='<span data-avatar-initials aria-hidden="true">'+e(initials(name()))+'</span><img data-avatar-current alt="" hidden />';
+  existing.querySelector('.top-avatar').innerHTML=avatarImageMarkup(initials(name()));
   existing.querySelector('.main-content').innerHTML=body;
   if(scrollPositions)restoreBoardGroupScroll(existing.querySelector('.main-content'),scrollPositions);
  }else{
@@ -854,7 +853,7 @@ function settingsPage(){
  const p=state.context.profile;
  return `<div class="aps-settings"><section class="page-head settings-hero settings-entrance" aria-labelledby="settings-title"><div class="settings-hero-copy"><span class="label-top"><span class="settings-hero-dot" aria-hidden="true"></span>Workspace / Account</span><h1 id="settings-title">Account & security<span class="settings-heading-stop">.</span></h1><p>Your verified user identity and session preferences.</p></div><span class="settings-hero-status">${settingsIcon('shield')}<span>Verified workspace account</span></span><svg class="settings-hero-decoration" viewBox="0 0 420 200" fill="none" aria-hidden="true" focusable="false"><circle cx="355" cy="0" r="120" stroke="currentColor" stroke-opacity=".16"/><circle cx="355" cy="0" r="193" stroke="currentColor" stroke-opacity=".09"/><path d="M105 230C201 70 334 93 446 146" stroke="currentColor" stroke-opacity=".16"/></svg></section>
  <div class="settings-grid"><section class="panel settings-profile-panel settings-entrance" aria-labelledby="settings-profile-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('user')}</span><h3 id="settings-profile-heading">Profile information</h3></div><span class="settings-auth-provider">Supabase Auth</span></div>
- <div class="panel-body settings-panel-body"><div class="profile settings-profile-identity"><span class="avatar csp-u044 settings-profile-avatar" aria-hidden="true"><span data-avatar-initials>${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></span>
+ <div class="panel-body settings-panel-body"><div class="profile settings-profile-identity"><span class="avatar csp-u044 settings-profile-avatar" aria-hidden="true">${avatarImageMarkup(initials(name()))}</span>
  <div class="settings-profile-copy"><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
  ${avatarPreviewMarkup(initials(name()))}
  <section class="settings-profile-editor" aria-labelledby="settings-display-name-title">
