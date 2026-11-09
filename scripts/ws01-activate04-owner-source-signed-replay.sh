@@ -82,6 +82,11 @@ fi
 echo CP_WS_ACTIVATE04_ORIGINAL_SOURCE_74_COMPILE_PASS
 apply sql/cp-ws01c-b3-create-contract-candidate.sql
 apply sql/cp-ws01b-session-cutover-candidate.sql
+if [ "${WS01_RUN_DISJOINT_CANARY:-0}" = 1 ]; then
+ echo CP_WS_ACTIVATE04_DISJOINT_ROLE_CANARY_STARTED
+ apply sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql
+ echo CP_WS_ACTIVATE04_DISJOINT_ROLE_DENIAL_PASS
+fi
 apply sql/tests/cp-ws-activate04-original-domain-role-subset.sql
 echo CP_WS_ACTIVATE04_ORIGINAL_DOMAIN_ROLE_SUBSET_PASS
 apply sql/tests/cp-ws01b-disposable-acceptance.sql
@@ -92,11 +97,6 @@ bash /public/scripts/ws01-activate04-concurrent-cas-disposable.sh >/tmp/cas.out 
 grep -qx CP_WS_ACTIVATE04_CONCURRENT_CAS_ISOLATED_PASS /tmp/cas.out || {
  echo CP_WS_ACTIVATE04_REPLAY_BLOCKED: CAS_RECEIPT; exit 2; }
 echo CP_WS_ACTIVATE04_ORIGINAL_SOURCE_CONCURRENT_CAS_PASS
-if [ "${WS01_RUN_DISJOINT_CANARY:-0}" = 1 ]; then
- echo CP_WS_ACTIVATE04_DISJOINT_ROLE_CANARY_STARTED
- apply sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql
- echo CP_WS_ACTIVATE04_DISJOINT_ROLE_DENIAL_PASS
-fi
 RUNNER
 chmod 600 "$WORK/replay.sh"
 "$DOCKER" run --rm --network none --read-only \
