@@ -87,7 +87,9 @@ async function run(){
    method:'PUT',signal:AbortSignal.timeout(5000)})).json();
   page=new Page(target.webSocketDebuggerUrl);await page.ready;
   await page.call('Runtime.enable');
-  await until(()=>page.evaluate('document.readyState=== "complete"'));
+  // about:blank can report complete before the requested test page commits.
+  // Wait for the exact loopback fixture document, not a stale initial target.
+  await until(()=>page.evaluate("location.pathname==='/frontend/tests/fixtures/board-preferences-browser.html'&&document.readyState==='complete'"));
   const test=await page.evaluate(`(async()=>{
    const mod=await import('/frontend/board-preferences-idb.js');
    const {BoardPreferenceStore,PREFERENCE_DB,PREFERENCE_TTL_MS,
