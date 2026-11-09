@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const sql=readFileSync('sql/cp-profile-avatar-storage-activation.sql','utf8').toLowerCase();
+const sql=(readFileSync('sql/cp-profile-avatar-storage-activation.sql','utf8')+'\\n'+
+ readFileSync('sql/cp-profile-avatar-active-upload-guard.sql','utf8')).toLowerCase();
 
 test('avatar bucket is private, WebP-only and bounded at the Storage layer',()=>{
  assert.match(sql,/\('account-avatars',\s*'account-avatars',\s*false,\s*400000,\s*array\['image\/webp'\]/);
@@ -18,6 +19,7 @@ test('avatar objects use immutable owner-prefixed UUID WebP paths',()=>{
  assert.match(sql,/owner_id = \(select auth\.uid\(\)::text\)/);
  assert.match(sql,/cardinality\(storage\.foldername\(name\)\) = 1/);
  assert.match(sql,/storage\.filename\(name\) ~ '\^\[0-9a-f\]/);
+ assert.match(sql,/active_profile\.status = 'active'/);
  assert.doesNotMatch(sql,/create policy[^;]+for update/i);
 });
 
