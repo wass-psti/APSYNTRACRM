@@ -2,7 +2,7 @@
  * Fuel-event Board rows are not approval decisions. Only a future explicitly
  * authorized approval read contract may provide the verified snapshot.
  */
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;':'&quot;',"'":'&#39;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const metric=(value,label,icon)=>'<article class="ft3-approval-metric"><span aria-hidden="true">'+icon+'</span><div><strong>'+esc(value)+'</strong><small>'+esc(label)+'</small></div></article>';
 const blocked='<p class="ft3-approval-unavailable" role="status">Approval statistics and pending requests are unavailable until the signed FuelTrack approval service is connected. No decision or delegation was attempted.</p>';
 /** Contract: opaque read receipt must be VERIFIED_READ, workspace/board scoped,
