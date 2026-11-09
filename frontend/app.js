@@ -216,9 +216,9 @@ function stopAuthVisuals(){
  authVisualController=null;
 }
 function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
- stopAvatarPreview();
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
+ stopAvatarPreview();
  syncFuelTrans({container:null});
  stopAuthVisuals();
  stopSidebarSelection();
@@ -414,8 +414,8 @@ function shell(body){
  maintainTimeTrackerClock();
  mountTimeTrackerPixi(root);
  updatePlatformSyncIndicator(platformSync.lastStatus);
- void mountSignedTimeTrackerMaps();
  void mountAvatarImages(root,profileAvatarClient,state.context?.profile?.avatar_path,state.context?.user_id);
+ void mountSignedTimeTrackerMaps();
 }
 function animateTabContent(selector){
  if(document.hidden||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
