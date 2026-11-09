@@ -114,7 +114,7 @@ export function renderTradeLinkApplication({detail,section='overview',workspaceI
     '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
     '<span><strong>TradeLink</strong><small>PORTAL</small></span></a>'+
    '<nav class="tl-reference-portal-links" aria-label="TradeLink actions">'+
-    '<span class="tl-reference-active-indicator" aria-hidden="true"></span>'+
+    '<span class="tl-reference-active-indicator" aria-hidden="true" hidden></span>'+
     '<a data-tl-tab="create" class="tl-reference-create'+(current==='drafts'?' active':'')+'"'+currentAttr('drafts')+' href="'+base+'/drafts/quotation">'+
      '<span aria-hidden="true">＋</span> Create New</a>'+
     '<a data-tl-tab="documents" href="'+base+'/documents"'+currentAttr('documents')+'>'+
@@ -205,7 +205,7 @@ export function mountTradeLinkTabMotion(container){
   for(const tab of nav.querySelectorAll('[data-tl-tab]'))
    tab.classList.toggle('is-highlighted',tab===selected);
   indicator.getAnimations?.().forEach(animation=>animation.cancel());
-  if(!selected){indicator.hidden=true;return;}
+  if(!selected){indicator.hidden=true;nav.removeAttribute('data-motion-ready');return;}
   const key=selected.dataset.tlTab;
   const next=tradeLinkTabGeometry(nav,selected);
   const prev=previousTradeLinkTab;
@@ -219,6 +219,7 @@ export function mountTradeLinkTabMotion(container){
     duration:280,easing:'cubic-bezier(0.22, 1, 0.36, 1)'});
   }
   previousTradeLinkTab={key,geometry:next};
+  nav.dataset.motionReady='true';
  }
  activate();
  const manual=nav.querySelector('.tl-reference-manual');

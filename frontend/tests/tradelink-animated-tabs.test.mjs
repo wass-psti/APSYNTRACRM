@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {renderTradeLinkApplication,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from '../tradelink-application.js';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 
@@ -25,7 +26,8 @@ function fixture(initial='create'){
  const indicator={style:{},hidden:true,
   getAnimations:()=>[],
   animate:(frames,options)=>{animations.push({frames,options});}};
- const nav={scrollLeft:0,scrollTop:0,listeners:{},
+ const nav={scrollLeft:0,scrollTop:0,listeners:{},dataset:{},
+  removeAttribute(name){if(name==='data-motion-ready')delete this.dataset.motionReady;},
   getBoundingClientRect:()=>({left:10,top:10}),
   addEventListener(name,callback){this.listeners[name]=callback;}};
  const tabs=['create','documents','manual'].map((key,i)=>({
@@ -81,4 +83,18 @@ test('reduced motion disables animation without removing active-tab indication',
   if(before===undefined)delete globalThis.matchMedia;
   else globalThis.matchMedia=before;
  }
+});
+
+test('route-selected All Documents has stable fallback and Create New is not highlighted',()=>{
+ const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'documents'});
+ assert.match(html,/data-tl-tab="documents"[^>]+aria-current="page"/);
+ assert.doesNotMatch(html,/data-tl-tab="create"[^>]+aria-current="page"/);
+ assert.match(html,/tl-reference-active-indicator" aria-hidden="true" hidden/);
+ const css=readFileSync(new URL('../tradelink-reference-ui.css',import.meta.url),'utf8');
+ assert.match(css,/\.tl-reference-create:not\(\[aria-current="page"\]\)/);
+ assert.match(css,/\.tl-reference-portal-links:not\(\[data-motion-ready="true"\]\) > a\[aria-current="page"\]/);
+ const nav=fixture('documents');
+ mountTradeLinkTabMotion(nav.container);
+ assert.equal(nav.nav.dataset.motionReady,'true');
+ assert.deepEqual(nav.tabs.map(tab=>tab.classList.last[1]),[false,true,false]);
 });

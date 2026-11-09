@@ -716,3 +716,20 @@
 @media(prefers-reduced-motion:reduce){
  .tl-reference-portal .tl-reference-active-indicator{animation:none!important;transition:none!important}
 }
+
+/* Route state owns selection, regardless of animation initialization.
+   Suppress the historic permanent Create New emphasis on other routes. */
+.tl-reference-portal .tl-reference-portal-links .tl-reference-create:not([aria-current="page"]){
+ background:transparent;color:#717481;border-color:transparent;
+ box-shadow:none;font-weight:520;
+}
+.tl-reference-portal .tl-reference-portal-links:not([data-motion-ready="true"]) > a[aria-current="page"]{
+ background:#fff;border:1px solid #e5e9f0;
+ box-shadow:0 2px 7px rgba(25,35,60,.11);color:#174abd;font-weight:750;
+}
+.tl-reference-portal .tl-reference-portal-links[data-motion-ready="true"] > a[aria-current="page"]{
+ color:#174abd;font-weight:750;
+}
+.tl-reference-portal .tl-reference-portal-links:not([data-motion-ready="true"]) > .tl-reference-active-indicator{
+ display:none;
+}
