@@ -1190,3 +1190,29 @@
  .tl-reference-portal .tl-reference-approval-creator{padding:13px}
  .tl-reference-portal .tl-reference-approval-chip{margin:6px 0 0}
 }
+
+/* Source-matched, module-specific responsibility panels.
+   These are proposed assignees, not approval events. */
+.tl-reference-portal .tl-reference-module-approval {
+ gap:16px;
+}
+.tl-reference-portal .tl-reference-module-approval .tl-reference-approval-stage h5 {
+ font-size:12px;font-weight:650;color:#ce9100;margin:6px 0 3px;
+}
+.tl-reference-portal .tl-reference-assignment-field {
+ display:flex;flex-direction:column;gap:7px;min-width:0;
+}
+.tl-reference-portal .tl-reference-assignment-field label {
+ font-size:11px;color:#697287;font-weight:550;
+}
+.tl-reference-portal .tl-reference-assignment-field :is(select,input) {
+ width:100%;box-sizing:border-box;min-height:38px;border:1px solid #dfe4eb;
+ border-radius:9px;padding:8px 11px;font:inherit;font-size:12px;
+ color:#202838;background:#fff;
+}
+.tl-reference-portal .tl-reference-assignment-field :is(select,input):focus-visible {
+ outline:2px solid #2b60ed;outline-offset:2px;
+}
+.tl-reference-portal .tl-reference-workflow-disclaimer {
+ margin:0;color:#6d7788;font-size:11px;line-height:1.6;
+}

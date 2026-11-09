@@ -26,5 +26,5 @@ test('Quotation shows terms before final approval and two independent review tim
 test('non-quotation workflows retain existing sections and no fake secondary verification control',()=>{
  const html=render('esi');
  assert.doesNotMatch(html,/tl-quote-secondary-review-time/);
- assert.match(html,/Workflow account assignments/);
+ assert.match(html,/Verification &amp; Approval Workflow/);
 });
