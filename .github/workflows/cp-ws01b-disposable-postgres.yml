@@ -204,6 +204,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-b3-delivery-receipt-candidate.sql
       - name: Verify provider accepted, uncertain, replay, foreign actor and expired session
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-delivery-receipt-acceptance.sql
+      - name: Stage signed-provider event ledger with no browser grants
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-d-provider-event-ledger-candidate.sql
+      - name: Verify provider webhook correlation, monotonic delivery and replay denial
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-d-provider-event-ledger-disposable.sql
       - name: Stage private additive workspace permission ceiling
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws02d-permission-ceiling-candidate.sql
       - name: Verify viewer-write denial, admin gating and workspace scope
