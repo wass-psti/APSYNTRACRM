@@ -78,15 +78,16 @@ test('reference row markup provides controls, escaping, and note price isolation
  assert.match(physical,/name="lineSerialNumber" value=""/);
 });
 
-test('new and saved Draft editors have reference toolbar; sourcing remains nonoperative',()=>{
+test('new and saved Draft editors use only requested Items toolbar controls',()=>{
  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:ws,
   view:initialTradeLinkDraftView('quotation'),canManage:true});
  assert.match(html,/data-action="tradelink-draft-add-line"/);
  assert.match(html,/Add Blank/);
  assert.match(html,/data-action="tradelink-draft-add-note"/);
  assert.match(html,/Add Note/);
- assert.match(html,/Add from Sourcing Board · pending integration/);
- assert.match(html,/class="tl-ref-sourcing" disabled/);
+ assert.doesNotMatch(html,/Add from Sourcing Board/);
+ assert.doesNotMatch(html,/tl-ref-sourcing/);
+ assert.doesNotMatch(html,/tl-ref-item-unit/);
  assert.match(html,/data-tradelink-draft-finance/);
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/case 'tradelink-draft-add-note':/);
@@ -126,4 +127,19 @@ test('source-aligned totals replace the legacy card and keep one VAT input',()=>
  const other=renderTradeLinkDraftWorkspace({detail,workspaceId:ws,view:foreign,canManage:true});
  assert.match(other,/data-tradelink-draft-exchange>/);
  assert.match(other,/PHP equivalent \(PHP\)/);
+});
+
+test('live item edits import the line-total updater and preserve physical unit controls',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels/);
+ assert.match(app,/updateTradeLinkLineRowTotals\(form\)/);
+ for(const module of ['quotation','esi','po']){
+  const row=renderTradeLinkDraftLineItem({kind:'item',unit:'pc'},module,'PHP',0);
+  assert.doesNotMatch(row,/tl-ref-item-unit/);
+  assert.match(row,/type="hidden" name="lineUnit" value="pc"/);
+ }
+ for(const module of ['packing','delivery']){
+  const row=renderTradeLinkDraftLineItem({kind:'item',unit:'pc'},module,'PHP',0);
+  assert.match(row,/tl-ref-item-unit/);
+ }
 });

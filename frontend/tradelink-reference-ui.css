@@ -942,12 +942,6 @@
 .tl-reference-portal .tl-ref-items-toolbar .tl-ref-add-blank{
  background:#17191f;border-color:#17191f;color:#fff;
 }
-.tl-reference-portal .tl-ref-items-toolbar .tl-ref-sourcing{
- border-color:#bbd7ff;color:#2459c6;background:#fff;
-}
-.tl-reference-portal .tl-ref-items-toolbar .tl-ref-sourcing:disabled{
- opacity:.6;cursor:not-allowed;
-}
 .tl-reference-portal .tl-ref-items-toolbar button:not(:disabled):hover{filter:brightness(.95)}
 .tl-reference-portal .tl-reference-items-note{
  margin:0 0 13px!important;font-size:11px!important;color:#768196;
