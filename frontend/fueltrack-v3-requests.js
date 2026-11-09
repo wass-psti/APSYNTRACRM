@@ -225,3 +225,20 @@ export function renderFuelTrackRequests({detail,filters={}}={}){
   '</section><p class="ft3-request-data-note">Source: current authorized FuelTrack+ v3 board records. The screenshots are layout references; requester, vehicle, approval and trip histories require separate backend integration.</p>'+
   '</section>';
 }
+
+/** Export only already-authorized board projection values; neutralize CSV formulas. */
+export function fuelTrackRequestsCsv(model){
+ if(!model)return '';
+ const cell=v=>{
+  let value=String(v??'');
+  // Excel/LibreOffice formula injection and control characters.
+  value=value.replace(/[\u0000-\u001f\u007f]/g,' ');
+  if(/^[\s]*[=+\-@]/.test(value))value="'"+value;
+  return '"'+value.replace(/"/g,'""')+'"';
+ };
+ const headers=['Request','Fuel event ref','Pump ref','Status','Event date','Quantity liters','Reconciliation'];
+ const records=model.rows.map(r=>[
+  r.title,r.reference,r.pump,r.status,r.date,r.quantity,r.reconcile
+ ]);
+ return [headers,...records].map(row=>row.map(cell).join(',')).join('\r\n');
+}
