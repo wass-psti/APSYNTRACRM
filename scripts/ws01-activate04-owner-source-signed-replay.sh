@@ -47,6 +47,7 @@ download sql/tests/cp-ws01b-disposable-acceptance.sql
 download sql/tests/cp-ws-activate04-original-domain-role-subset.sql
 download sql/tests/cp-ws-activate04-disjoint-role-denial-canary.sql
 download sql/tests/cp-ws-activate04-disposable-actor-boundary-candidate.sql
+download sql/tests/cp-ws-activate04-private-delegation-boundary.sql
 download scripts/ws01-activate04-concurrent-cas-disposable.sh
 node "$WORK/scripts/ws01-h3-private-source-guard.mjs" \
  "--full-live-private-dir=$SOURCE_DIR" >/dev/null || deny ORIGINAL_SOURCE_HASH_DRIFT
@@ -90,6 +91,8 @@ apply sql/cp-ws01b-session-cutover-candidate.sql
 if [ "${WS01_ACTOR_BOUNDARY:-0}" = 1 ]; then
  apply sql/tests/cp-ws-activate04-disposable-actor-boundary-candidate.sql
  echo CP_WS_ACTIVATE04_DISPOSABLE_ACTOR_BOUNDARY_INSTALLED
+ apply sql/tests/cp-ws-activate04-private-delegation-boundary.sql
+ echo CP_WS_ACTIVATE04_PRIVATE_TRUSTED_DELEGATION_PASS
 fi
 if [ "${WS01_RUN_DISJOINT_CANARY:-0}" = 1 ]; then
  echo CP_WS_ACTIVATE04_DISJOINT_ROLE_CANARY_STARTED
