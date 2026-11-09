@@ -32,7 +32,7 @@ import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
-import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
+import {boardGrid,boardItemsComplete,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-application.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
 import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,fuelTrackRequestsCsv,fuelTrackRequestQuickDates,FUELTRACK_REQUEST_FILTER_DEFAULTS} from './fueltrack-v3-requests.js';
@@ -77,6 +77,7 @@ import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
 import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
+import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board-window.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
@@ -182,7 +183,7 @@ const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
-const state={context:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
+const state={context:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
   view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -363,6 +364,7 @@ async function mountSignedTimeTrackerMaps(){
  const configs=timeTrackerSignedMapConfigs();
  if(configs.length)await mountTimeTrackerMaps(root,configs);
 }
+let boardItemFilterScope='';
 let shellIdentity=null;
 let shellSidebarSignature=null;
 let shellRoute=null;
@@ -654,7 +656,8 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
   summaries:groupColumnSummaries({items,columns,detail}),
-  addColumn:minimal&&state.boardManage,minimal});
+  addColumn:minimal&&state.boardManage,minimal,
+  virtualize:boardItemsComplete(detail)});
 }
 
 function bulkReadyFor(board){
@@ -795,6 +798,7 @@ function boardPage(){
  });
  if(!state.board)return renderBoardLoadingError(state.error);
  const b=state.board.board;
+ if(state.boardItemSearchBoard!==b.id){state.boardItemSearch='';state.boardItemSearchBoard=b.id;}
  const items=Array.isArray(state.board.items)?state.board.items:[];
  itemSelection.bind([state.context?.user_id,state.context?.workspace_id,state.boardId].join('|'),items.filter(i=>!i.archived_at).map(i=>i.id));
  const groups=Array.isArray(state.board.groups)?state.board.groups:[];
@@ -865,7 +869,7 @@ function boardPage(){
 
  ${state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},draftView:state.tradeLinkDraft,canManage:state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
- <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter items…" /></div>
+ <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
  ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
@@ -978,6 +982,12 @@ function preserveTimeTrackerLogExpansion(){
   .map(el=>el.dataset.recordId).filter(id=>allowed.has(id)).slice(0,30);
 }
 function render(){
+ resetBoardWindows();
+ const filterScope=[state.context?.user_id,state.context?.workspace_id,state.boardId].join('|');
+ if(filterScope!==boardItemFilterScope){
+  state.boardItemSearch='';state.boardItemSearchBoard=null;
+  boardItemFilterScope=filterScope;
+ }
  if(!state.context){closeTradeLinkSavedDocumentOutput();renderLogin();return;}
  preserveTimeTrackerLogExpansion();
  captureTradeLinkTabMotion(root);
@@ -1023,7 +1033,11 @@ function render(){
  });
  else stopAvatarPreview();
  syncFuelTrans({container:state.view==='board'&&state.tab==='fueltrans'?root.querySelector('#fueltrans-native-host'):null,auth,api:db,boardId:state.boardId,workspaceId:state.context?.workspace_id,userId:state.context?.user_id,route:location.hash.split('/').slice(4).join('/')||'dashboard'});
- if(state.view==='board'&&state.tab==='items')syncBoardSelectionUi();
+ if(state.view==='board'&&state.tab==='items'){
+  mountBoardWindows(root,syncBoardSelectionUi);
+  applyBoardItemFilter(state.boardItemSearch);
+  syncBoardSelectionUi();
+ }
  if(state.context&&auth.isSignedIn)platformSync.start({
   userId:state.context.user_id,workspaceId:state.context.workspace_id,
   priorityBoardId:state.view==='board'?state.boardId:null,
@@ -1053,6 +1067,25 @@ async function authorizeBoardCardAction(id){
   throw new ApiError('Board management permission required.',403);
  return board;
 }
+function visibleGroupSelectionIds(groupId){
+ const virtual=visibleBoardWindowIds(groupId);
+ if(virtual)return virtual;
+ return [...root.querySelectorAll('table[data-group-id="'+groupId+'"] [data-board-select-item]')]
+  .filter(input=>!input.closest('tr')?.hidden).map(input=>input.dataset.boardSelectItem);
+}
+function visibleSelectionOrder(){
+ return [...root.querySelectorAll('table[data-group-id]')].flatMap(table=>
+  visibleGroupSelectionIds(table.dataset.groupId));
+}
+function applyBoardItemFilter(query){
+ const needle=String(query||'').toLocaleLowerCase().trim();
+ filterBoardWindows(needle);
+ for(const table of root.querySelectorAll('table[data-group-id]:not([data-board-virtual])')){
+  for(const row of table.querySelectorAll('tbody tr[data-searchable]')){
+   row.hidden=!row.dataset.searchable.toLocaleLowerCase().includes(needle);
+  }
+ }
+}
 function syncBoardSelectionUi(){
  if(state.view!=='board'||state.tab!=='items')return;
  for(const input of root.querySelectorAll('[data-board-select-item]')){
@@ -1060,8 +1093,7 @@ function syncBoardSelectionUi(){
   input.checked=selected;input.closest('tr')?.classList.toggle('board-row-selected',selected);
  }
  for(const checkbox of root.querySelectorAll('[data-board-select-all]')){
-  const rows=[...root.querySelectorAll('table[data-group-id="'+checkbox.dataset.boardSelectAll+'"] [data-board-select-item]')]
-   .filter(el=>!el.closest('tr')?.hidden);
+  const rows=visibleGroupSelectionIds(checkbox.dataset.boardSelectAll).map(id=>({dataset:{boardSelectItem:id}}));
   checkbox.checked=rows.length>0&&rows.every(el=>itemSelection.has(el.dataset.boardSelectItem));
   checkbox.indeterminate=rows.some(el=>itemSelection.has(el.dataset.boardSelectItem))&&!checkbox.checked;
  }
@@ -5379,8 +5411,7 @@ case 'group-inline-edit':{
 case 'group-inline-cancel':{if(!state.groupEditBusy){state.groupEditId=null;render();}break;}
 case 'group-select-visible':{
  if(!activeBoardLayout())return;
- const visible=[...root.querySelectorAll('table[data-group-id="'+button.dataset.id+'"] [data-board-select-item]')]
-  .filter(input=>!input.closest('tr')?.hidden).map(input=>input.dataset.boardSelectItem);
+ const visible=visibleGroupSelectionIds(button.dataset.id);
  itemSelection.selectVisible(visible);syncBoardSelectionUi();break;
 }
 case 'row01-prepare':
@@ -6117,16 +6148,14 @@ root.addEventListener('change',event=>{
  }
  if(event.target.matches('[data-board-select-item]')&&activeBoardLayout()){
   const input=event.target;
-  const order=[...root.querySelectorAll('[data-board-select-item]')]
-   .filter(el=>!el.closest('tr')?.hidden).map(el=>el.dataset.boardSelectItem);
+  const order=visibleSelectionOrder();
   itemSelection.toggle(input.dataset.boardSelectItem,input.checked,{
    shift:input.dataset.shiftSelect==='true',ordered:order});
   delete input.dataset.shiftSelect;syncBoardSelectionUi();return;
  }
  if(event.target.matches('[data-board-select-all]')&&activeBoardLayout()){
   const input=event.target;
-  const visible=[...root.querySelectorAll('table[data-group-id="'+input.dataset.boardSelectAll+'"] [data-board-select-item]')]
-   .filter(el=>!el.closest('tr')?.hidden).map(el=>el.dataset.boardSelectItem);
+  const visible=visibleGroupSelectionIds(input.dataset.boardSelectAll);
   itemSelection.selectVisible(visible,{checked:input.checked});syncBoardSelectionUi();return;
  }
  if(event.target.matches('[data-board-column-toggle]')){
@@ -6396,6 +6425,12 @@ root.addEventListener('input',event=>{
   state.ttReportFilters={...state.ttReportFilters,
    search:String(event.target.value).slice(0,120)};
   applyTimeTrackerReportSearch(root,state.ttReportFilters.search);
+  return;
+ }
+ if(event.target.id==='search-board-items'&&state.view==='board'&&state.tab==='items'){
+  state.boardItemSearch=String(event.target.value).slice(0,160);
+  applyBoardItemFilter(state.boardItemSearch);
+  syncBoardSelectionUi();
   return;
  }
  if(!event.target.matches('.search-input'))return;

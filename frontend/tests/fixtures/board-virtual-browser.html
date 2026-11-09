@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Isolated board virtual window test</title>
+<link rel="stylesheet" href="/frontend/styles.css"></head><body>
+<h1>Board virtualization synthetic local fixture</h1>
+<div id="fixture-table"></div>
+<script type="module">
+import {boardTable} from '../../board-presentation.js';
+import {mountBoardWindows,resetBoardWindows,filterBoardWindows,visibleBoardWindowIds} from '../../board-window.js';
+const id=n=>'00000000-0000-4000-8000-'+String(n+1).padStart(12,'0');
+const rows=Array.from({length:600},(_,i)=>({
+ itemId:id(i),search:'Record '+String(i).padStart(4,'0'),
+ cells:{record:'Record '+String(i).padStart(4,'0'),status:'Ready'}
+}));
+const columns=[{key:'record',title:'Item'},{key:'status',title:'Status'}];
+const mount=()=>{
+ resetBoardWindows();
+ document.querySelector('#fixture-table').innerHTML=boardTable({columns,rows,groupId:'fixture',
+  selection:{enabled:true,selected:new Set([id(2)])}});
+ mountBoardWindows(document);
+};
+const settle=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+const stats=()=>({
+ count:document.querySelectorAll('tr[data-bulk-row]').length,
+ first:document.querySelector('tr[data-bulk-row]')?.dataset.bulkRow||null,
+ visibleTotal:visibleBoardWindowIds('fixture')?.length??null,
+ tableHeight:Math.round(document.querySelector('table')?.getBoundingClientRect().height||0),
+ spacerHeight:Math.round([...document.querySelectorAll('.board-virtual-spacer')]
+  .reduce((sum,row)=>sum+row.getBoundingClientRect().height,0)),
+ selected:document.querySelectorAll('input[data-board-select-item]:checked').length,
+ viewportY:window.scrollY,
+ focusRow:Number(document.activeElement?.closest('tr[aria-rowindex]')?.getAttribute('aria-rowindex')||0),
+ queryFound:document.querySelector('table')?.textContent?.includes('Record 0555')||false,
+ empty:document.querySelector('tbody .board-empty-row')?.textContent||null
+});
+mount();
+window.virtualAcceptance={stats,
+ scroll:async y=>{window.scrollTo(0,y);await settle();return stats();},
+ keyboard:async reverse=>{
+  const tbody=document.querySelector('table[data-board-virtual] tbody');
+  const rows=[...tbody.querySelectorAll('tr[aria-rowindex]')];
+  const edge=reverse?rows[0]:rows.at(-1);
+  const inputs=[...edge.querySelectorAll('input,button')];
+  const control=reverse?inputs[0]:inputs.at(-1);
+  control.focus();
+  control.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',shiftKey:reverse,bubbles:true,cancelable:true}));
+  await settle();
+  return stats();
+ },
+ filter:async query=>{filterBoardWindows(query);await settle();return stats();},
+ reset:async()=>{mount();await settle();return stats();}
+};
+</script></body></html>

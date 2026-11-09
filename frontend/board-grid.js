@@ -3,6 +3,13 @@ import {moduleByBoardName} from './board-manifest.js';
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
 import {boardTable} from './board-presentation.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export function boardItemsComplete(detail){
+ const paging=detail?.pagination||detail?.page||{};
+ if(detail?.has_more===true||paging.has_more===true||
+    detail?.next_cursor||paging.next_cursor||paging.nextCursor)return false;
+ const total=detail?.total_count??paging.total_count??paging.total;
+ return total==null||Number(total)<=Number(detail?.items?.length||0);
+}
 export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
  const tradeLink=tradeLinkGridColumns(detail);
  if(tradeLink)return tradeLink;
@@ -66,7 +73,8 @@ export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record'
   return {itemId:item.archived_at?null:item.id,search:String(item.title||'').toLowerCase(),cells};
  });
  let html=boardTable({columns,rows,layout,groupId:groupId||'ungrouped',
-  empty:'No items in this group yet',selection,footer,summaries});
+  empty:'No items in this group yet',selection,footer,summaries,
+  virtualize:boardItemsComplete(detail)});
  // Internal data-flow details belong in administrator diagnostics, not the board UI.
  return html;
 }
