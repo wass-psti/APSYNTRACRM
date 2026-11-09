@@ -1,32 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {fuelTrackGroupDisplay} from '../board-grid.js';
 
 const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const begin=source.indexOf('function groupHeading(group,count){');
 const end=source.indexOf('\nfunction row01AcceptancePanel(',begin);
 const heading=source.slice(begin,end);
 
-test('FuelTrack reference label is display-only; inline edit uses persisted group title',()=>{
+test('FuelTrack displayed heading and inline edit use the same persisted group title',()=>{
  assert.ok(begin>=0&&end>begin,'groupHeading source must exist');
  assert.match(heading,/const title=e\(group\.title\|\|'Group'\)/);
- assert.match(heading,/const displayTitle=e\(fuelTrackGroupDisplay\(state\.board\?\.board,group\)\.title\|\|'Group'\)/);
+ assert.match(heading,/const displayTitle=title;/);
  assert.match(heading,/if\(editing\)return[\s\S]*?value="'\+title\+'/);
  assert.match(heading,/return '<div class="group-heading"[\s\S]*?<h3>'\+displayTitle\+'/);
  assert.match(source,/groupHeading\(g,groupedItems\.get\(g\.id\)\?\.length\|\|0\)/);
  assert.doesNotMatch(source,/groupHeading\(fuelTrackGroupDisplay\(b,g\)/);
 });
 
-test('FuelTrack label projection never changes the authoritative group object',()=>{
+test('FuelTrack Main group remains displayable and is not rewritten by client aliases',()=>{
  const board={id:'7af78b3f-67bf-4600-9aa1-9006d19d486e',name:'FuelTrack+ v3',
   description:'[APSYNTRA:MODULE:fueltrack:v1] Fuel operations and reconciliation records.'};
- const persisted={id:'180e7ed3-08e8-451a-bc46-fd5b9e54e366',title:'Main group',
-  updated_at:'2026-11-09T00:00:00Z'};
- assert.equal(fuelTrackGroupDisplay(board,persisted).title,'Group Title');
- assert.equal(persisted.title,'Main group');
- const renamed={...persisted,title:'January deliveries'};
- assert.equal(fuelTrackGroupDisplay(board,renamed),renamed);
+ const group={id:'180e7ed3-08e8-451a-bc46-fd5b9e54e366',title:'Main group'};
+ assert.equal(board.name,'FuelTrack+ v3');
+ assert.equal(group.title,'Main group');
+ assert.match(heading,/const displayTitle=title;/);
+ assert.doesNotMatch(source,/fuelTrackGroupDisplay/);
 });
 
 test('inline rename retains signed editing checks and authoritative server update',()=>{
@@ -95,5 +93,5 @@ test('FuelTrack heading provides a direct inline edit button outside the floatin
  assert.match(heading,/data-action="group-inline-edit"/);
  assert.match(heading,/aria-label="Edit name inline for /);
  assert.match(heading,/state\.edit&&state\.board\?\.board\?\.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'/);
- assert.match(heading,/const displayTitle=e\(fuelTrackGroupDisplay/);
+ assert.match(heading,/const displayTitle=title;/);
 });

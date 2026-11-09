@@ -31,7 +31,7 @@ import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
-import {boardGrid,boardGridColumns,prepareBoardGrid,fuelTrackGroupDisplay} from './board-grid.js';
+import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-application.js';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
@@ -687,9 +687,9 @@ function groupHeading(group,count){
  const managedEmpty=canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
   state.board?.groups||[],state.board?.items||[]);
  const managedDelete=managedEmpty&&MANAGED_TT_GROUP_DELETE_ENABLED&&state.boardManage;
+ // The saved group title is the sole source for both display and editing.
  const title=e(group.title||'Group');
- // A reference-only heading must never become the editable persisted value.
- const displayTitle=e(fuelTrackGroupDisplay(state.board?.board,group).title||'Group');
+ const displayTitle=title;
  const fuelTrackEditable=state.edit&&state.board?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
   state.board?.board?.name==='FuelTrack+ v3'&&
   String(state.board.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {boardGridColumns,prepareBoardGrid,boardGrid,fuelTrackGroupDisplay} from '../board-grid.js';
+import {readFileSync} from 'node:fs';
+import {boardGridColumns,prepareBoardGrid,boardGrid} from '../board-grid.js';
 import {BOARD_MODULES,boardColumns,boardDescription} from '../board-manifest.js';
 
 const ID='7af78b3f-67bf-4600-9aa1-9006d19d486e';
@@ -59,14 +60,13 @@ test('missing or mistyped Event Date fails closed to the existing domain grid',(
  assert.equal(boardGridColumns(detail).length,10);
 });
 
-test('default group adopts reference heading without changing persisted group data',()=>{
+test('group headings must display the exact persisted name, including Main group',()=>{
  const detail=fixture(),group={id:'180e7ed3-08e8-451a-bc46-fd5b9e54e366',title:'Main group'};
- const displayed=fuelTrackGroupDisplay(detail.board,group);
- assert.equal(displayed.title,'Group Title');
- assert.equal(displayed.id,group.id);
- assert.equal(group.title,'Main group','the authoritative group name is untouched');
- const renamed={...group,title:'January deliveries'};
- assert.equal(fuelTrackGroupDisplay(detail.board,renamed),renamed);
- const foreign={...detail.board,id:'11111111-1111-4111-8111-111111111111'};
- assert.equal(fuelTrackGroupDisplay(foreign,group),group);
+ assert.equal(detail.board.id,ID);
+ assert.equal(group.title,'Main group');
+ const grid=readFileSync(new URL('../board-grid.js',import.meta.url),'utf8');
+ assert.doesNotMatch(grid,/title:'Group Title'/);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/const displayTitle=title;/);
+ assert.doesNotMatch(app,/fuelTrackGroupDisplay/);
 });

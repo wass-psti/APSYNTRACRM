@@ -3,17 +3,6 @@ import {moduleByBoardName} from './board-manifest.js';
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
 import {boardTable} from './board-presentation.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-/** Display-only default heading for the empty reference group.
- * Underlying signed group identity, title and domain records are unchanged. */
-export function fuelTrackGroupDisplay(board,group){
- if(board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
-  board?.name==='FuelTrack+ v3'&&
-  String(board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]')&&
-  group?.title==='Main group')
-  return {...group,title:'Group Title'};
- return group;
-}
-
 export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
  const tradeLink=tradeLinkGridColumns(detail);
  if(tradeLink)return tradeLink;
