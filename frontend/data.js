@@ -5,6 +5,13 @@ export function requireUuid(v){if(!validUuid(v))throw new ApiError('Invalid boar
 function encodeQuery(input){return new URLSearchParams(input).toString();}
 // Board-affecting writes only. Read RPCs must never broadcast invalidations:
 // doing so could trigger infinite cross-tab read / broadcast cycles.
+// Only verified read-only RPCs may preserve cached board snapshots.
+// Unknown RPCs remain conservative: invalidate locally before execution.
+const BOARD_READ_RPC=new Set([
+ 'wm_get_board','wm_auth_access_context','work_board_access','wm_list_boards',
+ 'wm_board_ui_read','wm_list_board_events','wm_list_board_events_page',
+ 'tl03_documents_page'
+]);
 const BOARD_MUTATION_RPC=/^(?:wm_(?:add_|create_|delete_|set_|update_|import_|managed_board_delete|ws01_(?:config_update|create|select)|board_(?:bulk_mutate|card_mutate|group_cas|schema_mutate|ui_save))|huly_sb06_transact|tl03_(?:document_(?:commit|decide|operate|review|submit)|attachment_(?:finish|prepare|remove)|record_pdf_approval_stage)|timetracker_(?:attendance_commit|ot_(?:submit|decide))|apsyntra_(?:crm_platform_role_set|role_manage_user_access|role_configuration_propose))$/;
 
 export class DomainApi {
@@ -82,14 +89,18 @@ export class DomainApi {
  }
  rpc(name,args={},options={}){
    if(!/^[a-z][a-z0-9_]+$/.test(name))throw new ApiError('Invalid operation.');
-   if(!['wm_get_board','wm_auth_access_context','work_board_access','wm_list_boards','wm_board_ui_read'].includes(name))
-     this.invalidateBoardCache();
    const mutates=BOARD_MUTATION_RPC.test(name);
+   const knownRead=BOARD_READ_RPC.has(name);
+   // Unknown calls may mutate: preserve the original fail-closed behavior.
+   if(!mutates&&!knownRead)this.invalidateBoardCache();
    const request=this.auth.authorized('/rest/v1/rpc/'+name,{method:'POST',body:args,...options});
    if(!mutates)return request;
    return Promise.resolve(request).then(result=>{
+    // Commit-time invalidation avoids evicting valid snapshots on denied writes.
+    // A missing board identifier invalidates all boards rather than guessing.
+    const boardId=validUuid(args?.p_board_id)?args.p_board_id:null;
+    this.invalidateBoardCache(boardId);
     try{
-     const boardId=validUuid(args?.p_board_id)?args.p_board_id:null;
      const revision=typeof result?.board?.updated_at==='string'?
       result.board.updated_at:null;
      this.onBoardMutation?.({boardId,revision});

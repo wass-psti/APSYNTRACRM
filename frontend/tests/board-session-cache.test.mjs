@@ -102,3 +102,41 @@ test('cache retains at most eight active board snapshots and no persistent stora
  const source=readFileSync(new URL('../data.js',import.meta.url),'utf8');
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|caches\.open/);
 });
+
+test('read-only event and document queries preserve cached board snapshots',async()=>{
+ const {api,calls}=fixture();
+ await api.boardCached(boardId,scope);
+ await api.rpc('wm_list_board_events',{p_board_id:boardId});
+ await api.rpc('wm_list_board_events_page',{p_board_id:boardId});
+ await api.rpc('tl03_documents_page',{p_board_id:boardId});
+ await api.boardCached(boardId,scope);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,1);
+});
+test('successful scoped mutation invalidates only its board, preserving other boards',async()=>{
+ const second='00000000-0000-4000-8000-000000000009';
+ const {api,calls}=fixture({reply:(path,options)=>path.endsWith('/wm_get_board')?
+  {board:{id:options.body.p_board_id,workspace_id:workspace}}:true});
+ await api.boardCached(boardId,scope);
+ await api.boardCached(second,scope);
+ await api.rpc('wm_board_group_cas',{p_board_id:boardId});
+ await api.boardCached(second,scope);
+ await api.boardCached(boardId,scope);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,3);
+});
+test('denied known mutations do not evict authorized board cache',async()=>{
+ const {api,calls}=fixture({reply:(path)=>{
+  if(path.endsWith('/wm_board_group_cas'))throw Error('permission denied');
+  return board;
+ }});
+ await api.boardCached(boardId,scope);
+ await assert.rejects(()=>api.rpc('wm_board_group_cas',{p_board_id:boardId}),/denied/);
+ await api.boardCached(boardId,scope);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,1);
+});
+test('unknown RPC remains conservative and invalidates cached snapshots',async()=>{
+ const {api,calls}=fixture();
+ await api.boardCached(boardId,scope);
+ await api.rpc('future_unknown_rpc',{p_board_id:boardId});
+ await api.boardCached(boardId,scope);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,2);
+});
