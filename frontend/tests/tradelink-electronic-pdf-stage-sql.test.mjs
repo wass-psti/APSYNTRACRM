@@ -6,7 +6,7 @@ test('signed PDF stage candidate stays source-only and has locked revision/accou
  for(const pattern of [
   /NON-DEPLOYED/,/DO NOT/i,/BEGIN;/,/COMMIT;/,
   /ENABLE ROW LEVEL SECURITY/,/tl03_pdf_approval_append_only/,/private\.tl03_deny_event_change/,/REVOKE ALL ON private\.tradelink_pdf_approval_events/,
-  /private\.tl03_can_manage\(p_board_id\)/,/auth\.uid\(\)/,
+  /private\.tl03_can_pdf_approve\(p_board_id\)/,/private\.wm_board_config_session_active\(\)/,/public\.work_board_access\(p_board_id,'view'\)/,/public\.module_role_for\('tradelink',actor\)/,/auth\.uid\(\)/,
   /email_confirmed_at IS NOT NULL/,/FOR UPDATE/,
   /d\.revision IS DISTINCT FROM p_expected_revision/,
   /d\.workspace_id IS DISTINCT FROM public\.current_workspace_id\(actor\)/,

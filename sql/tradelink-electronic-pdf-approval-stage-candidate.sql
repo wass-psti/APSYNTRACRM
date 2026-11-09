@@ -9,6 +9,10 @@ BEGIN
     OR to_regclass('public.work_board_items') IS NULL
     OR to_regprocedure('private.tl03_can_manage(uuid)') IS NULL
     OR to_regprocedure('private.tl03_deny_event_change()') IS NULL
+    OR to_regprocedure('private.wm_board_config_session_active()') IS NULL
+    OR to_regprocedure('public.module_role_for(text,uuid)') IS NULL
+    OR to_regprocedure('public.work_board_access(uuid,text)') IS NULL
+    OR to_regprocedure('private.tl03_can_pdf_approve(uuid)') IS NOT NULL
     OR to_regclass('private.tradelink_pdf_approval_events') IS NOT NULL
     OR to_regprocedure('public.tl03_record_pdf_approval_stage(uuid,uuid,bigint,text)') IS NOT NULL
     OR to_regprocedure('public.tl03_pdf_approval_stages(uuid,uuid)') IS NOT NULL
@@ -37,6 +41,29 @@ CREATE TRIGGER tl03_pdf_approval_append_only
 ALTER TABLE private.tradelink_pdf_approval_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON private.tradelink_pdf_approval_events FROM PUBLIC,anon,authenticated;
 
+-- Separate, narrow reviewer capability. A nominated user needs an active,
+-- workspace-scoped signed session, TradeLink board VIEW membership and an
+-- enabled TradeLink module role. This does not grant document edit/management.
+CREATE FUNCTION private.tl03_can_pdf_approve(p_board_id uuid)
+ RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $pdf_access$
+DECLARE actor uuid:=auth.uid();
+BEGIN
+ IF actor IS NULL OR p_board_id IS DISTINCT FROM
+  '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid
+  OR NOT private.wm_board_config_session_active()
+ THEN RETURN FALSE; END IF;
+ RETURN coalesce(public.work_board_access(p_board_id,'view'),FALSE)
+  AND public.module_role_for('tradelink',actor) IS NOT NULL
+  AND EXISTS(SELECT 1 FROM public.work_boards b
+   WHERE b.id=p_board_id AND b.name='TradeLink' AND b.status='active'
+    AND b.archived_at IS NULL AND b.trashed_at IS NULL
+    AND b.workspace_id=public.current_workspace_id(actor)
+    AND b.description LIKE '[APSYNTRA:MODULE:tradelink:v1]%');
+END $pdf_access$;
+REVOKE ALL ON FUNCTION private.tl03_can_pdf_approve(uuid)
+ FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION private.tl03_can_pdf_approve(uuid) TO authenticated;
+
 -- Actor binding and order are enforced inside one row-locking transaction.
 -- `recorded_at` is server generated, never supplied by the browser.
 CREATE FUNCTION private.tl03_record_pdf_approval_stage(
@@ -50,7 +77,7 @@ DECLARE
  event_row private.tradelink_pdf_approval_events%rowtype;
  primary_nominee text; secondary_nominee text;
 BEGIN
- IF actor IS NULL OR private.tl03_can_manage(p_board_id) IS DISTINCT FROM TRUE THEN
+ IF actor IS NULL OR private.tl03_can_pdf_approve(p_board_id) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Signed TradeLink authorization required' USING ERRCODE='42501'; END IF;
  IF p_document_id IS NULL OR p_expected_revision IS NULL OR
    p_expected_revision<1 OR p_stage NOT IN ('primary','secondary') OR p_stage IS NULL
@@ -180,7 +207,7 @@ CREATE FUNCTION private.tl03_pdf_approval_stages(
 DECLARE actor uuid:=auth.uid(); d public.tradelink_documents%rowtype;
  stages jsonb;
 BEGIN
- IF actor IS NULL OR private.tl03_can_manage(p_board_id) IS DISTINCT FROM TRUE THEN
+ IF actor IS NULL OR private.tl03_can_pdf_approve(p_board_id) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Signed TradeLink scope required' USING ERRCODE='42501'; END IF;
  SELECT * INTO d FROM public.tradelink_documents
   WHERE id=p_document_id AND board_id=p_board_id;
