@@ -18,6 +18,7 @@ BEGIN;
 -- These changes are scoped to the uncommitted disposable transaction.
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS platform_role text;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS revision bigint DEFAULT 1;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 -- Match known production entrypoint grants for these three original functions.
 REVOKE ALL ON FUNCTION public.has_module_access(text,uuid),
   public.module_role_for(text,uuid),public.wm_auth_access_context()
