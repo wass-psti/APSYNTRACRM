@@ -1,5 +1,7 @@
 import {syncFuelTrans} from './fueltrans-native.js';
 import {AuthClient,ApiError} from './session.js';
+import {avatarPreviewMarkup,mountAvatarPreview} from './profile-avatar.js';
+
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
@@ -849,6 +851,7 @@ function settingsPage(){
  <div class="settings-grid"><section class="panel settings-profile-panel settings-entrance" aria-labelledby="settings-profile-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('user')}</span><h3 id="settings-profile-heading">Profile information</h3></div><span class="settings-auth-provider">Supabase Auth</span></div>
  <div class="panel-body settings-panel-body"><div class="profile settings-profile-identity"><span class="avatar csp-u044 settings-profile-avatar" aria-hidden="true">${e(initials(name()))}</span>
  <div class="settings-profile-copy"><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
+ ${avatarPreviewMarkup(initials(name()))}
  <section class="settings-profile-editor" aria-labelledby="settings-display-name-title">
   <div class="settings-profile-editor-head"><div><h4 id="settings-display-name-title">Display name</h4><p>Choose how your name appears throughout APSYNTRA CRM.</p></div>
    <button type="button" class="secondary settings-name-edit" data-action="profile-name-edit">Edit</button></div>
@@ -937,6 +940,7 @@ function render(){
  else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.roleVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,busy:state.userRoleBusy,error:state.userRoleError}));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
+ if(state.view==='settings')mountAvatarPreview(root);
  else shell(overview());
  syncFuelTrans({container:state.view==='board'&&state.tab==='fueltrans'?root.querySelector('#fueltrans-native-host'):null,auth,api:db,boardId:state.boardId,workspaceId:state.context?.workspace_id,userId:state.context?.user_id,route:location.hash.split('/').slice(4).join('/')||'dashboard'});
  if(state.view==='board'&&state.tab==='items')syncBoardSelectionUi();
