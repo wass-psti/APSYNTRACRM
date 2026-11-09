@@ -299,3 +299,37 @@
  .ws02-invite-launch{transition:none}
  .ws02-invite-launch:hover{transform:none}
 }
+
+/* CP-WS-02D/D: the recipient's signed, token-free review page. */
+#app .ws02d-acceptance{
+ max-width:720px;margin:0 auto;padding:clamp(24px,4vw,48px) 0;
+ color:var(--sm-ink);
+}
+#app .ws02d-accept-eyebrow{
+ margin:0 0 10px;font-size:11px;font-weight:750;
+ letter-spacing:.1em;text-transform:uppercase;color:var(--sm-accent);
+}
+#app .ws02d-acceptance h1{
+ margin:0 0 20px;font-size:clamp(25px,2.7vw,34px);
+ font-weight:750;letter-spacing:-.03em;
+}
+#app .ws02d-accept-message{
+ margin:0 0 19px;padding:15px 0;
+ border-top:1px solid var(--sm-border);
+ border-bottom:1px solid var(--sm-border);line-height:1.65;
+}
+#app .ws02d-accept-note{margin:0 0 22px;line-height:1.65;color:var(--sm-sub)}
+#app .ws02d-accept-actions{display:flex;gap:10px;flex-wrap:wrap}
+#app .ws02d-accept-actions :is(button,a){
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:42px;padding:10px 16px;border-radius:var(--sm-radius-control);
+ font-size:12px;font-weight:700;text-decoration:none;
+}
+#app .ws02d-accept-actions button:disabled{cursor:not-allowed;opacity:.5}
+#app .ws02d-accept-actions :is(button,a):focus-visible{
+ outline:2px solid var(--sm-accent);outline-offset:3px;
+}
+@media(max-width:650px){
+ #app .ws02d-acceptance{padding:20px 0}
+ #app .ws02d-accept-actions :is(button,a){width:100%}
+}
