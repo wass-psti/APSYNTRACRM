@@ -209,5 +209,5 @@ test('LightFuels route has reference sections but never infers transactional que
   assert.ok(html.includes(title),title);
  assert.match(html,/data-action="refresh-board"/);
  assert.match(html,/signed LightFuels queue and refueling workflow are not connected/);
- assert.doesNotMatch(html,/8 in queue|257 processed|All clear!|data-action=".*refuel/);
+ assert.doesNotMatch(html,/8 in queue|257 processed|All clear!|data-action="ft3-refuel/);
 });
