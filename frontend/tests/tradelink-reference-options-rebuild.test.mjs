@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {initialTradeLinkDraftView,renderTradeLinkDraftWorkspace,
  TRADELINK_COMMERCIAL_SUGGESTIONS} from '../tradelink-draft-workspace.js';
@@ -35,4 +36,16 @@ test('suggestions are not enabled workflow, company, or monetary actions',()=>{
  assert.doesNotMatch(html,/data-action="tradelink-upload-logo"/);
  assert.match(html,/PDF generation requires an authorized workflow/);
  assert.match(html,/No PDF, approval or document is generated/);
+});
+
+test('All Documents retains scrollable authorized results and responsive filters',()=>{
+ const css=readFileSync('frontend/tradelink-reference-ui.css','utf8');
+ assert.match(css,/CP-TL-REBUILD-03B: All Documents/);
+ assert.match(css,/\.tl-reference-portal \.tl-document-repository \.tl-records-scroll\{[\s\S]*?overflow-x:auto/);
+ assert.match(css,/\.tl-reference-portal \.tl-document-repository \.tl-draft-list-filters\{/);
+ assert.match(css,/@media\(max-width:460px\)/);
+ const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
+ assert.match(source,/renderTradeLinkDraftList\(rows,view,canManage,\{readOnly:true\}\)/);
+ assert.match(source,/data-action="tradelink-documents-refresh"/);
+ assert.match(source,/data-action="tradelink-document-open"/);
 });

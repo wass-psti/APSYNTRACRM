@@ -547,3 +547,79 @@
 @media(prefers-reduced-motion:reduce){
  .tl-reference-portal .tl-overview-tile{transition:none}
 }
+
+/* CP-TL-REBUILD-03B: All Documents — compact filter strip and scannable
+   signed records. UI-only, retaining server-authorized result boundaries. */
+.tl-reference-portal .tl-document-repository{
+ padding:clamp(18px,2vw,28px);
+}
+.tl-reference-portal .tl-document-repository>.tl-panel-heading:first-child{
+ padding-bottom:18px;border-bottom:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+ grid-template-columns:minmax(210px,2fr) repeat(3,minmax(115px,1fr));
+ gap:10px;margin:18px 0 14px;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field{
+ min-width:0;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field>span{
+ font-size:11px;color:#64748b;font-weight:650;
+}
+.tl-reference-portal .tl-document-repository .tl-draft-pagination-controls{
+ display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+ padding-block:10px;border-block:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-document-repository .tl-records-scroll{
+ overflow-x:auto;overscroll-behavior-x:contain;
+ border:1px solid var(--tl-ref-line);border-radius:10px;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table{
+ min-width:900px;width:100%;border-collapse:collapse;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table th{
+ background:#f7f9fc;color:#596579;font-size:11px;
+ letter-spacing:0;font-weight:700;white-space:nowrap;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table td,
+.tl-reference-portal .tl-document-repository .tl-records-table th{
+ padding:12px 14px;border-bottom:1px solid var(--tl-ref-line);
+ text-align:left;vertical-align:middle;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table tbody tr:hover{
+ background:#f8faff;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table td:first-child{
+ font-weight:700;color:#27364d;
+}
+.tl-reference-portal .tl-document-repository .tl-records-table td:last-child{
+ min-width:260px;
+}
+.tl-reference-portal .tl-document-repository :is(button,a):focus-visible{
+ outline:2px solid #315de6;outline-offset:2px;
+}
+@media(max-width:1120px){
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+ }
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field:first-child{
+  grid-column:1/-1;
+ }
+}
+@media(max-width:680px){
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field:first-child{
+  grid-column:1/-1;
+ }
+ .tl-reference-portal .tl-document-repository .tl-records-table{min-width:780px}
+}
+@media(max-width:460px){
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters{
+  grid-template-columns:minmax(0,1fr);
+ }
+ .tl-reference-portal .tl-document-repository .tl-draft-list-filters .tl-draft-field:first-child{
+  grid-column:auto;
+ }
+}
