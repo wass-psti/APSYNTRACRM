@@ -2487,7 +2487,9 @@ async function loadFuelTrackActivity(seq=routeSerial){
  try{
   if(await db.allowed(FUELTRACK_V3_ID,'view')!==true)throw new ApiError('FuelTrack activity access denied.',403);
   if(!same())return;
-  const rows=await db.rpc('list_module_activity',{p_module_id:'fueltrack-plus',p_before_sequence:null,p_limit:250});
+  const rows=state.fuelTrackBackend?.snapshot?.role==='Admin'?
+   (await new FuelTrackV3DomainClient({api:db,auth,boardId:FUELTRACK_V3_ID,workspaceId}).audit({limit:200})).events:
+   await db.rpc('list_module_activity',{p_module_id:'fueltrack-plus',p_before_sequence:null,p_limit:250});
   if(!same())return;
   if(!Array.isArray(rows))throw new ApiError('Unexpected FuelTrack activity response.',502);
   const snapshot={status:'VERIFIED_READ',boardId:FUELTRACK_V3_ID,workspaceId,events:rows};
