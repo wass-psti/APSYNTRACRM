@@ -2630,14 +2630,6 @@ async function onRoute(){
     parts[2]==='tradelink'&&state.boards.some(b=>b.id===parts[1]&&
       moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
     defaultFuelTrans?'fueltrans':defaultClock?'attendance':'items';
-  // Opening the TradeLink application must land in the real Create New editor.
-  // Canonicalize only the bare entry URL; preserve documents, saved edits,
-  // module deep links and activity without creating an extra history entry.
-  if(requested==='tradelink'&&!parts[3]){
-   const canonical='#/boards/'+parts[1]+'/tradelink/drafts/quotation';
-   history.replaceState(null,'',location.pathname+location.search+canonical);
-   parts.splice(3,0,'drafts','quotation');
-  }
   // TradeLink has no overview landing page. Canonicalize legacy entry URLs
   // without adding a history entry or changing authentication/board scope.
   // Keep explicit documents, activity, draft and edit deep links unchanged.
