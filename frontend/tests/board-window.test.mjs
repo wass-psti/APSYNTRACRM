@@ -57,3 +57,11 @@ test('Priority 2 integrates scoped local filtering, group selection and lifecycl
  assert.doesNotMatch(readFileSync(new URL('../board-window.js',import.meta.url),'utf8'),
   /localStorage|sessionStorage|indexedDB|caches\.open/);
 });
+
+test('Priority 5 avoids unchanged-query DOM reconstruction and normalizes searchable rows once',()=>{
+ const source=readFileSync(new URL('../board-window.js',import.meta.url),'utf8');
+ assert.match(source,/lastQuery:''/);
+ assert.match(source,/searchIndex:rows\.map\(row=>String\(row\.search\|\|''\)\.toLocaleLowerCase\(\)\)/);
+ assert.match(source,/if\(model\.lastQuery===needle\)continue/);
+ assert.match(source,/model\.searchIndex\[index\]\.includes\(needle\)/);
+});
