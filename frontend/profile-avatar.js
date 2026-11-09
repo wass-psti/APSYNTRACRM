@@ -71,7 +71,7 @@ let hydrationSequence=0;
 function releasePreview(){
  if(activePreviewUrl){URL.revokeObjectURL(activePreviewUrl);activePreviewUrl=null;}
 }
-export function stopAvatarPreview(){releasePreview();hydrationSequence++;}
+export function stopAvatarPreview(){releasePreview();}
 export async function mountAvatarImages(container,client,path,userId){
  const sequence=++hydrationSequence;
  const nodes=[...(container?.querySelectorAll?.('img[data-avatar-current]')||[])];
@@ -135,7 +135,6 @@ export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}
  const sliders=[...crop.querySelectorAll('input[type="range"]')];
  let selected=null,sequence=0,busy=false,previewReady=false;
  remove.hidden=!currentPath;
- void mountAvatarImages(container,client,currentPath,userId);
  const setBusy=value=>{
   busy=value;
   for(const control of [input,clear,save,remove,...sliders])if(control)control.disabled=value;
