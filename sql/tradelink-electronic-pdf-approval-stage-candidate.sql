@@ -52,7 +52,7 @@ BEGIN
   '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid
   OR NOT private.wm_board_config_session_active()
  THEN RETURN FALSE; END IF;
- RETURN pg_catalog.coalesce(public.work_board_access(p_board_id,'view'),FALSE)
+ RETURN coalesce(public.work_board_access(p_board_id,'view'),FALSE)
   AND public.module_role_for('tradelink',actor) IS NOT NULL
   AND EXISTS(SELECT 1 FROM public.work_boards b
    WHERE b.id=p_board_id AND b.name='TradeLink' AND b.status='active'
