@@ -125,3 +125,56 @@
 #app .ft3-analytics-price-space .ft3-analytics-void{max-width:520px}
 #app .ft3-analytics-ranking-empty{min-height:245px;display:flex;align-items:center;justify-content:center}
 #app .ft3-analytics-ranking-empty .ft3-analytics-void{max-width:520px}
+
+/* CP-FT3-03 — Authorized All Requests. Scoped to FuelTrack UI. */
+#app .ft3-requests{min-width:0}
+#app .ft3-request-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+#app .ft3-request-stat{display:flex;align-items:center;gap:12px;border:1px solid #d8e6ea;border-radius:16px;background:#eff7f9;padding:15px;min-width:0}
+#app .ft3-request-stat-icon{flex:none;display:grid;place-items:center;width:35px;height:35px;border-radius:12px;color:#149d9b;background:#ddf0ef;font-size:18px}
+#app .ft3-request-stat strong{display:block;color:#1c333f;font-size:18px;font-variant-numeric:tabular-nums}
+#app .ft3-request-stat small{display:block;color:#647f87;font-size:11px}
+#app .ft3-request-stat-detail{display:block;margin-top:2px;color:#93a4aa;font-size:10px}
+#app .ft3-request-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+#app .ft3-request-filter{display:inline-flex;align-items:center;gap:9px;border:1px solid #d0dfe4;background:#f1f8fa;border-radius:30px;padding:8px 12px;color:#617a83;font:inherit;font-size:11px;cursor:pointer}
+#app .ft3-request-filter.is-active{background:#fff;border-color:#91c9c6;box-shadow:0 2px 6px #1b7f7c14;color:#217e7e}
+#app .ft3-request-filter strong{font-weight:750;font-size:11px;font-variant-numeric:tabular-nums}
+#app .ft3-request-filter:hover{background:#eaf5f4}
+#app .ft3-request-controls{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-bottom:17px}
+#app .ft3-request-controls label:not(.ft3-request-search-label){color:#6f8790;font-size:10px;font-weight:700}
+#app .ft3-request-search-label{position:absolute;clip:rect(0 0 0 0);width:1px;height:1px;overflow:hidden;white-space:nowrap}
+#app #ft3-request-search{flex:1 1 250px;min-width:150px}
+#app .ft3-request-controls input{border:1px solid #d2e1e7;border-radius:10px;background:#fff;color:#34505d;padding:9px 11px;height:39px;max-width:100%;font:inherit;font-size:11px}
+#app .ft3-request-controls input[type=date]{width:146px}
+#app .ft3-request-controls input:focus-visible,#app .ft3-request-filter:focus-visible,#app .ft3-request-expand:focus-visible,#app .ft3-request-chevron:focus-visible{outline:2px solid #299d9b;outline-offset:2px}
+#app .ft3-request-invalid{padding:10px 14px;border-radius:9px;background:#fff2ef;color:#9b5348;font-size:11px}
+#app .ft3-request-count{font-size:11px;color:#779097;white-space:nowrap}
+#app .ft3-request-table-scroll{overflow-x:auto;max-height:620px;overflow-y:auto;overscroll-behavior:contain}
+#app .ft3-request-table{width:100%;min-width:760px;border-collapse:collapse;font-size:11px}
+#app .ft3-request-table thead{position:sticky;top:0;z-index:1;background:#eaf3f6}
+#app .ft3-request-table th{padding:12px 14px;text-align:left;text-transform:uppercase;letter-spacing:.04em;color:#738a94;font-size:10px;font-weight:750;border-bottom:1px solid #d9e6ea;white-space:nowrap}
+#app .ft3-request-table td{padding:11px 14px;border-bottom:1px solid #dfeaed;color:#5f7783;vertical-align:middle}
+#app .ft3-request-row:hover{background:#eaf4f5}
+#app .ft3-request-expand{display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:3px;text-align:left;color:inherit;font:inherit;cursor:pointer;min-width:0}
+#app .ft3-request-person{flex:none;display:grid;place-items:center;background:#e0f4fa;border:1px solid #cae6eb;color:#1899b9;border-radius:50%;width:30px;height:30px;font-size:15px}
+#app .ft3-request-heading{font-weight:700;color:#263e4a;overflow-wrap:anywhere}
+#app .ft3-request-heading small{display:block;font-size:10px;color:#8ba0a6;font-weight:500;margin-top:2px}
+#app .ft3-request-type{display:inline-flex;background:#def5f6;border:1px solid #bce4e5;border-radius:20px;color:#1a9cac;padding:4px 9px;white-space:nowrap}
+#app .ft3-request-chevron{border:1px solid transparent;background:transparent;border-radius:7px;padding:5px 9px;cursor:pointer;color:#698592;font-size:16px}
+#app .ft3-request-chevron:hover{border-color:#c3d8de;background:#e8f4f5}
+#app .ft3-request-detail-row{background:#f1f9fa}
+#app .ft3-request-detail-row td{padding:0 14px 20px}
+#app .ft3-request-detail{border-top:1px solid #d6e5e9;padding:14px 4px 0}
+#app .ft3-request-detail h4{margin:8px 0 11px;font-size:10px;color:#718a91;letter-spacing:.06em;text-transform:uppercase}
+#app .ft3-request-detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:18px}
+#app .ft3-request-field{border:1px solid #d8e7e9;background:#f4f9fa;border-radius:12px;min-width:0;padding:11px}
+#app .ft3-request-field small{display:block;color:#859da3;font-size:9px;text-transform:uppercase;margin-bottom:6px}
+#app .ft3-request-field strong{font-size:11px;color:#314d58;overflow-wrap:anywhere;font-weight:700;white-space:pre-wrap}
+#app .ft3-request-data-note{color:#7f939b;font-size:11px;line-height:1.65;padding:4px 0}
+#app .ft3-request-notes{padding:12px;border:1px solid #cfe5e4;border-radius:12px;background:#eaf6f4;margin-bottom:12px}
+#app .ft3-request-notes strong{color:#2d7f7c;font-size:10px}
+#app .ft3-request-notes p{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0;color:#3e6670}
+#app .ft3-request-footer{display:flex;justify-content:center;padding:0;background:#eaf5f7;border-top:1px solid #d8e6ea}
+#app .ft3-request-footer button{border:0;background:transparent;color:#456b78;font:inherit;padding:15px 25px;cursor:pointer;width:100%;font-size:11px}
+#app .ft3-request-footer button:hover{background:#deeff1}
+@media(max-width:1000px){#app .ft3-request-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#app .ft3-request-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){#app .ft3-request-stats{grid-template-columns:1fr}#app .ft3-request-detail-grid{grid-template-columns:1fr}#app .ft3-request-controls input[type=date]{flex:1 1 140px}}
