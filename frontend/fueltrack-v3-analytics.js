@@ -4,7 +4,7 @@
  */
 import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,fuelTrackHref} from './fueltrack-v3-application.js';
 
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;':'&quot;',"'":'&#39;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const numberFormat=new Intl.NumberFormat('en-PH',{maximumFractionDigits:2});
 const validRanges=['all','six-months','month','week'];
 export const FUELTRACK_ANALYTICS_VIEWS=Object.freeze([
