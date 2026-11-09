@@ -49,6 +49,8 @@ on:
       - 'scripts/ws01c-g4c-verify-dependents.mjs'
       - 'scripts/ws01-h3-private-source-guard.mjs'
       - 'scripts/ws01-h3-private-source-guard.test.mjs'
+      - 'scripts/ws01-activate04-owner-source-signed-replay.sh'
+      - 'scripts/ws01-activate04-owner-source-signed-replay.test.mjs'
       - 'scripts/ws01-activate04-synthetic-dependencies.test.mjs'
       - 'sql/tests/cp-ws-activate04-74-caller-synthetic-dependencies.sql'
       - 'scripts/ws01-activate04-concurrent-cas-disposable.sh'
@@ -118,6 +120,7 @@ jobs:
           node --test scripts/ws01-h3-private-source-guard.test.mjs
           node --test scripts/ws01-activate04-acquire-protected-sources.test.mjs
           node --test scripts/ws01-activate04-synthetic-dependencies.test.mjs
+          node --test scripts/ws01-activate04-owner-source-signed-replay.test.mjs
       - name: Install synthetic users, sessions and workspace fixture
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-setup.sql
       - name: Execute real disposable Auth/session SQL with synthetic identity and mocked GoTrue user
