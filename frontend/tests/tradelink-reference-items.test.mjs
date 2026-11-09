@@ -108,3 +108,22 @@ test('line amounts update through textContent only and do not mutate persistence
  updateTradeLinkLineRowTotals(form);
  assert.equal(text,'30.00 PHP');
 });
+
+
+test('source-aligned totals replace the legacy card and keep one VAT input',()=>{
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:ws,
+  view:initialTradeLinkDraftView('quotation'),canManage:true});
+ assert.match(html,/tl-draft-finance tl-reference-totals/);
+ assert.match(html,/Subtotal After Discount:/);
+ assert.match(html,/TOTAL:/);
+ assert.match(html,/Discount:/);
+ assert.match(html,/data-tradelink-draft-exchange hidden/);
+ assert.equal((html.match(/name="vatType"/g)||[]).length,1);
+ assert.equal((html.match(/name="discountType"/g)||[]).length,1);
+ assert.doesNotMatch(html,/Local commercial estimate/);
+ assert.doesNotMatch(html,/One priced item using the source discount/);
+ const foreign={...initialTradeLinkDraftView('quotation'),formValues:{documentType:'quotation',currency:'USD'}};
+ const other=renderTradeLinkDraftWorkspace({detail,workspaceId:ws,view:foreign,canManage:true});
+ assert.match(other,/data-tradelink-draft-exchange>/);
+ assert.match(other,/PHP equivalent \(PHP\)/);
+});

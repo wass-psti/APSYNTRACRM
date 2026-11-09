@@ -413,6 +413,12 @@ export function updateTradeLinkDraftLocalAmounts(form){
  const unit=currencyUnit(fields.get('currency'));
  const fxBase=panel.querySelector('[data-tradelink-draft-fx-base]');
  if(fxBase)fxBase.textContent=unit;
+ const exchange=panel.querySelector('[data-tradelink-draft-exchange]');
+ if(exchange)exchange.hidden=unit==='PHP';
+ const vatLabel=panel.querySelector('[data-tradelink-draft-vat-rate]');
+ if(vatLabel)vatLabel.textContent=fields.get('vatType')==='12'?'12%':
+  fields.get('vatType')==='zero'?'0%':fields.get('vatType')==='exempt'?'Exempt':
+  fields.get('vatType').startsWith('15_')?'15%':'—';
  for(const name of ['subtotal','discount','taxable','vat','total']){
   const label=panel.querySelector('[data-tradelink-draft-denomination="'+name+'"]');
   if(label)label.textContent=unit;
@@ -454,45 +460,44 @@ function renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines=[line]
    name==='lineKind'?lines.map(x=>x.kind||'item'):[]});
  const unit=currencyUnit(value('currency'));
  const display=key=>initial&&initial[key]!==null?formatTradeLinkAmount(initial[key]):'—';
- return '<section class="tl-draft-finance" data-tradelink-draft-finance '+
-  'aria-label="Source-aligned local commercial estimate">'+
-  '<h4>Local commercial estimate</h4>'+
-  '<p class="muted">One priced item using the source discount, VAT and currency rules. '+
-  'All amounts remain unsaved. No exchange rate or approval is inferred.</p>'+
-  '<div class="tl-draft-finance-inputs">'+
-   '<label class="tl-draft-field"><span>Discount method</span>'+
-    '<select name="discountType" aria-describedby="tl-draft-discount-help">'+
-    options([['percentage','Percentage'],['fixed','Fixed amount']],value('discountType'))+
-   '</select></label>'+
-   field('Discount value','discountValue',value('discountValue'),
-    'type="number" min="0" max="1000000000000" step="any" aria-describedby="tl-draft-discount-help"')+
-   '<label class="tl-draft-field"><span>PHP conversion rate (PHP per 1 '+
-    '<span data-tradelink-draft-fx-base>'+escape(unit)+'</span>)</span>'+
-    '<input name="exchangeRate" value="'+escape(value('exchangeRate'))+
-    '" type="number" min="0" max="1000000000000" step="any" '+
-    'aria-describedby="tl-draft-fx-help"></label>'+
-  '</div>'+
-  '<p id="tl-draft-discount-help" class="tl-draft-help">Percentage: 0–100. '+
-   'Fixed discount: amount in the selected currency.</p>'+
-  '<p id="tl-draft-fx-help" class="tl-draft-help">Optional for non-PHP currencies. '+
-   'Enter the number of Philippine pesos for one unit of the selected currency. '+
-   'Ignored for PHP. No external exchange-rate lookup occurs.</p>'+
-  '<dl class="tl-draft-finance-results">'+
-  [['subtotal','Subtotal'],['discount','Discount'],['taxable','Taxable'],
-   ['vat','VAT'],['total','Total'],['phpEquivalent','PHP equivalent']].map(([key,label])=>
-   '<div><dt>'+label+(key==='phpEquivalent'?' (PHP)':
-    ' (<span data-tradelink-draft-denomination="'+key+'">'+escape(unit)+'</span>)')+
-   '</dt><dd data-tradelink-draft-amount="'+key+'">'+
-    display(key)+'</dd></div>').join('')+
-  '</dl><p class="muted">Currency: <span data-tradelink-draft-amount-currency>'+
-  escape(initial?.currency||'—')+'</span></p>'+
-  '<p data-tradelink-draft-finance-status role="status" aria-live="polite" aria-atomic="true">'+
-  (initial?(initial.currency!=='PHP'&&initial.phpEquivalent===null?
-   'Selected-currency estimate only. Enter a positive PHP exchange rate for conversion. Nothing saved.':
-   'Unsaved estimate only. Validate the Draft separately; nothing was transmitted.'):
-   'Enter valid positive quantity, price, discount, currency and VAT to preview amounts.')+
-  '</p><p class="muted">Local estimate only · no Draft save, payment, transaction or approval.</p>'+
-  '</section>';
+ return '<section class="tl-draft-finance tl-reference-totals" data-tradelink-draft-finance '+
+  'aria-label="Document totals · unsaved preview">'+
+  '<div class="tl-reference-totals-right">'+
+   '<dl class="tl-draft-finance-results">'+
+    '<div class="tl-ref-total-subtotal"><dt>Subtotal:</dt><dd data-tradelink-draft-amount="subtotal">'+display('subtotal')+'</dd></div>'+
+    '<div class="tl-ref-total-discount"><dt><label for="tl-reference-discount-input">Discount:</label></dt><dd class="tl-ref-total-discount-fields">'+
+     '<select name="discountType" aria-label="Discount method" aria-describedby="tl-draft-discount-help">'+
+      options([['percentage','Percentage (%)'],['fixed','Fixed amount']],value('discountType'))+'</select>'+
+     '<input id="tl-reference-discount-input" name="discountValue" value="'+escape(value('discountValue'))+'" '+
+      'type="number" min="0" max="1000000000000" step="any" aria-describedby="tl-draft-discount-help">'+
+     '<output data-tradelink-draft-amount="discount">'+display('discount')+'</output></dd></div>'+
+    '<div class="tl-ref-total-taxable"><dt>Subtotal After Discount:</dt><dd data-tradelink-draft-amount="taxable">'+display('taxable')+'</dd></div>'+
+    '<div class="tl-ref-total-vat"><dt><label for="tl-reference-vat">VAT (<span data-tradelink-draft-vat-rate>'+escape(value('vatType'))+'</span>):</label></dt><dd>'+
+     '<select id="tl-reference-vat" name="vatType" aria-label="VAT treatment">'+
+      options(vatCodes,value('vatType'))+'</select>'+
+     '<output data-tradelink-draft-amount="vat">'+display('vat')+'</output></dd></div>'+
+    '<div class="tl-ref-total-grand"><dt>TOTAL:</dt><dd data-tradelink-draft-amount="total">'+display('total')+'</dd></div>'+
+   '</dl>'+
+   '<div class="tl-reference-totals-exchange" data-tradelink-draft-exchange'+
+     (unit==='PHP'?' hidden':'')+'>'+
+    '<label for="tl-reference-fx">PHP conversion rate (PHP per 1 '+
+     '<span data-tradelink-draft-fx-base>'+escape(unit)+'</span>)</label>'+
+    '<input id="tl-reference-fx" name="exchangeRate" value="'+escape(value('exchangeRate'))+'" '+
+     'type="number" min="0" max="1000000000000" step="any" aria-describedby="tl-draft-fx-help">'+
+    '<small id="tl-draft-fx-help">Enter a rate manually; no exchange-rate lookup occurs.</small>'+
+    '<div class="tl-ref-total-php"><span>PHP equivalent (PHP)</span>'+
+     '<output data-tradelink-draft-amount="phpEquivalent">'+display('phpEquivalent')+'</output></div>'+
+   '</div>'+
+   '<p class="tl-reference-totals-help" id="tl-draft-discount-help">Percentage: 0–100; fixed discount in the selected currency.</p>'+
+   '<p class="tl-reference-totals-status" data-tradelink-draft-finance-status role="status" aria-live="polite" aria-atomic="true">'+
+    (initial?'Unsaved calculation preview.':'Complete quantities and prices to preview totals.')+'</p>'+
+   '<span class="tl-reference-totals-sr">Currency: <span data-tradelink-draft-amount-currency>'+escape(unit)+'</span> '+
+    '<span data-tradelink-draft-denomination="subtotal">'+escape(unit)+'</span>'+
+    '<span data-tradelink-draft-denomination="discount">'+escape(unit)+'</span>'+
+    '<span data-tradelink-draft-denomination="taxable">'+escape(unit)+'</span>'+
+    '<span data-tradelink-draft-denomination="vat">'+escape(unit)+'</span>'+
+    '<span data-tradelink-draft-denomination="total">'+escape(unit)+'</span></span>'+
+  '</div></section>';
 }
 
 /** Explicitly bounded, source-module-specific, unsaved document summary fields. */
@@ -840,8 +845,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       '<select name="currency" aria-describedby="tl-reference-currency-help">'+
        options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select>'+
       '<small id="tl-reference-currency-help">ISO currency code for the unsaved Draft. Currency conversion is never inferred.</small></label>'+
-     (physical||payment?'':'<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
-      options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>')+
+
     '</div>'+
    '</section>'+commercialSuggestionLists(type)+
    (payment?

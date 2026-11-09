@@ -1041,3 +1041,94 @@
  .tl-reference-portal .tl-ref-items-toolbar button,
  .tl-reference-portal .tl-ref-item-actions button{transition:none}
 }
+
+/* Full-width Items totals strip, matching the source TradeLink document layout.
+   The arithmetic and authoritative Draft payload remain unchanged. */
+.tl-reference-portal .tl-draft-finance.tl-reference-totals{
+ display:flex;justify-content:flex-end;width:100%;max-width:none;
+ min-height:240px;margin:12px 0 28px;padding:16px 18px;
+ background:#f8f9fb;border:1px solid #e3e6ed;border-radius:9px;
+ box-shadow:none;
+}
+.tl-reference-portal .tl-reference-totals-right{
+ width:min(100%,370px);margin-left:auto;min-width:0;
+}
+.tl-reference-portal .tl-reference-totals .tl-draft-finance-results{
+ display:grid;grid-template-columns:minmax(0,1fr);
+ gap:0;margin:0;
+}
+.tl-reference-portal .tl-reference-totals .tl-draft-finance-results>div,
+.tl-reference-portal .tl-reference-totals .tl-draft-finance-results>div:nth-last-child(2){
+ display:flex;justify-content:space-between;align-items:center;
+ gap:12px;min-width:0;padding:7px 0;border:0;
+ background:transparent;border-radius:0;
+}
+.tl-reference-portal .tl-reference-totals .tl-draft-finance-results dt{
+ font-size:12px;color:#252a35;font-weight:500;white-space:nowrap;
+}
+.tl-reference-portal .tl-reference-totals .tl-draft-finance-results dd{
+ margin:0;font-size:12px;font-weight:650;color:#17191e;
+ font-variant-numeric:tabular-nums;
+}
+.tl-reference-portal .tl-reference-totals .tl-ref-total-discount{
+ display:grid!important;grid-template-columns:minmax(0,1fr);
+ gap:7px!important;padding:10px 12px!important;border:1px solid #e3e6ef!important;
+ border-radius:9px!important;background:#f1f2f5!important;
+}
+.tl-reference-portal .tl-ref-total-discount-fields{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;
+ gap:7px;align-items:center;
+}
+.tl-reference-portal .tl-ref-total-discount-fields select{
+ grid-column:1/-1;justify-self:end;max-width:160px;
+}
+.tl-reference-portal .tl-reference-totals select,
+.tl-reference-portal .tl-reference-totals input{
+ min-height:33px;border:1px solid #dce1e9;border-radius:8px;
+ background:#fff;color:#262b37;font-size:12px;min-width:0;
+ padding:6px 9px;box-shadow:none;
+}
+.tl-reference-portal .tl-ref-total-discount-fields input{width:100%}
+.tl-reference-portal .tl-ref-total-discount-fields output{
+ min-width:72px;text-align:right;color:#dc5c12;font-weight:750;
+}
+.tl-reference-portal .tl-ref-total-vat dd{
+ display:flex;gap:8px;align-items:center;justify-content:flex-end;
+}
+.tl-reference-portal .tl-ref-total-vat select{max-width:160px}
+.tl-reference-portal .tl-ref-total-vat output{min-width:70px;text-align:right}
+.tl-reference-portal .tl-reference-totals .tl-draft-finance-results>.tl-ref-total-grand{
+ padding:12px 0 4px;border-top:1px solid #dfe3ea;
+}
+.tl-reference-portal .tl-reference-totals .tl-ref-total-grand dt,
+.tl-reference-portal .tl-reference-totals .tl-ref-total-grand dd{
+ font-size:17px;font-weight:800;color:#11141b;
+}
+.tl-reference-portal .tl-reference-totals-exchange{
+ margin-top:12px;padding-top:9px;border-top:1px solid #e1e5eb;
+ display:grid;gap:5px;font-size:11px;color:#626d81;
+}
+.tl-reference-portal .tl-reference-totals-exchange[hidden]{display:none}
+.tl-reference-portal .tl-reference-totals-exchange input{width:100%}
+.tl-reference-portal .tl-ref-total-php{
+ display:flex;justify-content:space-between;gap:10px;margin-top:5px;
+}
+.tl-reference-portal .tl-ref-total-php output{font-weight:700;color:#141720}
+.tl-reference-portal .tl-reference-totals-help,
+.tl-reference-portal .tl-reference-totals-status{
+ margin:6px 0 0;font-size:10px;line-height:1.4;color:#788193;
+}
+.tl-reference-portal .tl-reference-totals-sr{
+ position:absolute;width:1px;height:1px;overflow:hidden;
+ clip-path:inset(50%);white-space:nowrap;
+}
+.tl-reference-portal .tl-reference-totals select:focus-visible,
+.tl-reference-portal .tl-reference-totals input:focus-visible{
+ outline:2px solid #2b61ed;outline-offset:2px;
+}
+@media(max-width:650px){
+ .tl-reference-portal .tl-draft-finance.tl-reference-totals{
+  padding:13px;min-height:0;
+ }
+ .tl-reference-portal .tl-reference-totals-right{width:100%}
+}
