@@ -25,7 +25,7 @@ export function fuelTrackLightFuelsModel({snapshot=null,boardId=null,workspaceId
  const ids=[...snapshot.queue,...snapshot.recent].map(r=>r.id);
  if(new Set(ids).size!==ids.length)return null;
  const queue=snapshot.queue.map(r=>Object.freeze({
-   id:r.id,requestor:r.requestor,type:r.type,status:r.status,
+   id:r.id,requestor:r.requestor,type:r.type,status:r.status,revision:r.revision,
    reference:r.reference,createdAt:r.createdAt
  }));
  const recent=snapshot.recent.map(r=>Object.freeze({
@@ -39,12 +39,11 @@ export function fuelTrackLightFuelsModel({snapshot=null,boardId=null,workspaceId
 }
 const metric=(label,value)=>'<div class="ft3-light-metric"><small>'+esc(label)+
  '</small><strong>'+esc(value)+'</strong></div>';
-const card=r=>'<article class="ft3-light-card"><div class="ft3-light-card-top"><strong>'+
+const card=(r,actionEnabled=false)=>'<article class="ft3-light-card"><div class="ft3-light-card-top"><strong>'+
  esc(r.requestor)+'</strong><span>'+esc(r.type==='vehicle'?'Vehicle':'Container')+'</span></div>'+
  '<p>'+esc(r.reference)+'</p><small>'+esc(r.status)+'</small>'+
  '<p class="ft3-light-created">Created '+esc(r.createdAt)+'</p>'+
- '<button type="button" disabled title="Signed refueling transition unavailable">'+
- 'Process — unavailable</button></article>';
+ (actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0?(r.status==='Awaiting Refueling'?'<button type="button" data-action="ft3-mark-refueled" data-id="'+esc(r.id)+'">Mark as Refueling Done</button>':'<form class="ft3-light-receipt-form" data-ft3-receipt="'+esc(r.id)+'"><label>Actual Amount (₱) <input name="amount" type="number" min="0.01" step="0.01" required></label><label>Fuel Quantity (Liters) <input name="liters" type="number" min="0.001" step="0.001" required></label><label>Receipt Number (optional) <input name="receiptNumber" type="text" maxlength="120"></label><button type="submit">Save & Complete</button></form>'):'<button type="button" disabled title="Signed refueling transition unavailable">Process — unavailable</button>')+'</article>';
 function workflowGuide(){
  return '<details class="ft3-light-guide"><summary>Refueling workflow requirements</summary>'+
  '<div class="ft3-light-guide-steps">'+
@@ -59,7 +58,7 @@ function workflowGuide(){
  '<label>Receipt Photo<input id="ft3-light-photo" name="ft3-light-photo" type="file" accept="image/*" disabled></label></div>'+
  '<button type="button" disabled>Save & Complete — unavailable</button></section></div></details>';
 }
-export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceId=null}={}){
+export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceId=null,actionEnabled=false}={}){
  const model=fuelTrackLightFuelsModel({snapshot,boardId,workspaceId});
  return '<section class="ft3-light" aria-labelledby="ft3-light-heading">'+
  '<header class="ft3-light-head"><div><h2 id="ft3-light-heading">LightFuels</h2>'+
@@ -80,7 +79,7 @@ export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceI
  '<button type="button" disabled>Container</button></div>'+
  (model?(model.activeCount===0?
   '<div class="ft3-light-empty"><h3>Queue clear</h3><p>No requests awaiting refueling.</p></div>':
-  '<div class="ft3-light-queue">'+model.queue.map(card).join('')+
+  '<div class="ft3-light-queue">'+model.queue.map(r=>card(r,actionEnabled)).join('')+
   (model.activeCount>model.queue.length?'<p>More queue records require a signed paginated response.</p>':'')+'</div>'):
   '<p class="ft3-light-unavailable" role="status">The signed LightFuels queue and refueling workflow are not connected. No request or completion totals are inferred from Board items, and no refueling operation was attempted.</p>')+
  '<section class="ft3-light-completed"><h3>Recently Completed</h3><p>Latest fuel transactions</p>'+
