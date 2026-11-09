@@ -10,6 +10,13 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
 const fmt=new Intl.NumberFormat('en-PH',{maximumFractionDigits:2});
 const dateFmt=new Intl.DateTimeFormat('en-PH',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
 const DATE_RE=/^\d{4}-\d{2}-\d{2}$/;
+const MANILA_DAY=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'});
+function manilaDay(instant){
+ const d=new Date(instant);
+ if(!Number.isFinite(d.getTime()))return null;
+ const parts=Object.fromEntries(MANILA_DAY.formatToParts(d).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+ return parts.year+'-'+parts.month+'-'+parts.day;
+}
 const STATUS_LABELS=Object.freeze([
  {key:'all',label:'All'}, {key:'done',label:'Done'}, {key:'pending',label:'Pending'},
  {key:'approved',label:'Approved'}, {key:'rejected',label:'Rejected'}, {key:'other',label:'Other'}
@@ -22,12 +29,13 @@ export const FUELTRACK_REQUEST_FILTER_DEFAULTS=Object.freeze({
 export function fuelTrackRequestQuickDates(period,now=new Date()){
  const d=new Date(now);
  if(!Number.isFinite(d.getTime()))return null;
- const y=d.getUTCFullYear(),m=d.getUTCMonth();
- const today=d.toISOString().slice(0,10);
+ const today=manilaDay(d);
+ const [y,m1,day]=today.split('-').map(Number),m=m1-1;
  const first=day=>new Date(day).toISOString().slice(0,10);
  if(period==='today')return {from:today,to:today};
  if(period==='week'){
-  const start=new Date(Date.UTC(y,m,d.getUTCDate()-(d.getUTCDay()+6)%7));
+  const localDay=new Date(Date.UTC(y,m,day));
+  const start=new Date(Date.UTC(y,m,day-(localDay.getUTCDay()+6)%7));
   return {from:first(start),to:today};
  }
  if(period==='month')return {from:first(new Date(Date.UTC(y,m,1))),to:today};
@@ -110,7 +118,7 @@ export function fuelTrackRequestsModel(detail,filters={},now=new Date()){
    id:item.id,title,status:String(item.status||'Unspecified'),
    category:fuelTrackRequestStatus(item.status),
    created:created?.toISOString()||null,
-   createdDay:created?.toISOString().slice(0,10)||null,
+   createdDay:created?manilaDay(created):null,
    date:recorded,
    reference:field(get(item,columns.reference)),
    quantity:field(get(item,columns.quantity)),
@@ -121,7 +129,7 @@ export function fuelTrackRequestsModel(detail,filters={},now=new Date()){
  });
  const counts={all:rows.length,done:0,pending:0,approved:0,rejected:0,other:0};
  for(const row of rows)counts[row.category]++;
- const day=Number.isFinite(new Date(now).getTime())?new Date(now).toISOString().slice(0,10):null;
+ const day=manilaDay(now);
  const startWeek=day?(()=>{
   const dt=new Date(day+'T00:00:00Z');
   dt.setUTCDate(dt.getUTCDate()-(dt.getUTCDay()+6)%7);
