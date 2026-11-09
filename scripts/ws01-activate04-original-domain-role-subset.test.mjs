@@ -22,6 +22,7 @@ test('original source entrypoint checks assert enabled and disabled role outcome
  assert.match(sql,/IS DISTINCT FROM FALSE/);
  assert.match(sql,/public\.wm_auth_access_context\(\)/);
  assert.match(sql,/ORIGINAL_ACCESS_CONTEXT_MISSING/);
+
  assert.match(sql,/DOMAIN_ROLE_TABLE_READ_LEAK/);
  assert.match(sql,/has_function_privilege\('anon'/);
  assert.match(sql,/has_function_privilege\('authenticated'/);
