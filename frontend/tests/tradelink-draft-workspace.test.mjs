@@ -424,8 +424,10 @@ test('commercial estimate exists only for the three priced module forms and is n
   if(expected){
    for(const key of ['subtotal','discount','taxable','vat','total','phpEquivalent'])
     assert.ok(html.includes('data-tradelink-draft-amount="'+key+'"'),key);
-   assert.match(html,/No exchange rate or approval is inferred/);
-   assert.match(html,/Local estimate only · no Draft save, payment, transaction or approval/);
+   assert.match(html,/aria-label="Document totals · unsaved preview"/);
+   assert.match(html,/Subtotal After Discount:/);
+   assert.match(html,/data-tradelink-draft-exchange hidden/);
+   assert.doesNotMatch(html,/Local commercial estimate/);
   }
   assert.match(html,/data-action="tradelink-draft-submit"/);
  }
@@ -549,7 +551,7 @@ test('Draft financial rows expose correct ISO currency units and explicit PHP de
   assert.match(html,/data-tradelink-draft-fx-base>USD<\/span>/);
   assert.match(html,/aria-describedby="tl-draft-discount-help"/);
   assert.match(html,/aria-describedby="tl-draft-fx-help"/);
-  assert.match(html,/No external exchange-rate lookup occurs/);
+  assert.match(html,/no exchange-rate lookup occurs/);
   assert.match(html,/aria-live="polite" aria-atomic="true"/);
   assert.match(html,/Item 1 unit price \(USD\)/);
   assert.match(html,/data-tradelink-draft-amount="total">90\.00/);
