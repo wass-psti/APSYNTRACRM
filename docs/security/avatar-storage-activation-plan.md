@@ -1,6 +1,6 @@
 # APSYNTRA CRM — Profile Picture Storage and Security Record
 
-**Current state:** The production database and private avatar bucket are activated. The frontend upload, save, replace, remove, and current-user image hydration paths are implemented. GitHub frontend regression validation is running for the latest commit; genuine signed-user upload and cross-user denial acceptance is still pending.
+**Current state:** The production database and private avatar bucket are activated. The frontend upload, save, replace, remove, and current-user image hydration paths are implemented. GitHub frontend validation passed 1,281 / 1,281 tests and GitHub Pages deployment succeeded on the latest avatar implementation commit. Genuine signed-user upload and cross-user denial acceptance is still pending.
 
 **Project:** Existing WatchdogWorkspace (jtlusodorfnyzgyuewkz, Supabase project WatchdogWorkspace). No new Supabase project was created.
 
@@ -13,11 +13,11 @@
 
 ## Applied production migration
 
-Migration: cp_profile_avatar_storage_activation_20261109
+Migrations: cp_profile_avatar_storage_activation_20261109 and cp_profile_avatar_active_upload_guard_20261109
 
 1. Added nullable public.profiles.avatar_path with a database check requiring the path to be <profile UUID>/<object UUID>.webp.
 2. Created the private account-avatars bucket with a 400,000-byte limit and image/webp as the only allowed MIME type.
-3. Added an authenticated insert policy limited to the caller's own UUID folder, object owner, one-level path, and UUID WebP filename.
+3. Added an authenticated insert policy limited to an active signed-in profile, the caller's own UUID folder, object owner, one-level path, and UUID WebP filename. The follow-up active-upload guard migration enforces the profile status at the Storage boundary.
 4. Added an authenticated delete policy limited to objects owned by the caller in the caller's UUID folder. No object update/upsert policy exists.
 5. Added a read policy restricted to authenticated object download / authenticated-info operations; object listing is not allowed by that policy. The owner and active users who share at least one active workspace may read the image. Anonymous access is not granted.
 6. Added private.profile_avatar_can_read(uuid) as a fixed-search-path security-definer predicate for active same-workspace visibility.
