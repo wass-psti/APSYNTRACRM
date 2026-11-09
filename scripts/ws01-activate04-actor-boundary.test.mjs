@@ -5,6 +5,7 @@ import {spawnSync} from 'node:child_process';
 
 const sql=readFileSync(new URL('../sql/tests/cp-ws-activate04-disposable-actor-boundary-candidate.sql',import.meta.url),'utf8');
 const runner=readFileSync(new URL('./ws01-activate04-owner-source-signed-replay.sh',import.meta.url),'utf8');
+const delegation=readFileSync(new URL('../sql/tests/cp-ws-activate04-private-delegation-boundary.sql',import.meta.url),'utf8');
 
 test('experimental actor boundary is fail-closed to disposable PG17 and exact original source',()=>{
  assert.match(sql,/current_database\(\)<>'workspace_disposable'/);
@@ -31,4 +32,15 @@ test('owner runner separates original red canary and candidate regression mode',
  assert.match(runner,/--network none --read-only/);
  const result=spawnSync('bash',['-n',new URL('./ws01-activate04-owner-source-signed-replay.sh',import.meta.url).pathname],{encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);
+});
+
+test('private delegated original remains available only to trusted roles',()=>{
+ assert.match(delegation,/current_database\(\)<>'workspace_disposable'/);
+ assert.match(delegation,/private\.ws01_legacy_has_module_access\('material-request-hub'/);
+ assert.match(delegation,/public\.has_module_access\('material-request-hub'/);
+ assert.match(delegation,/PUBLIC_FOREIGN_ROLE_LOOKUP_STILL_EXPOSED/);
+ assert.match(delegation,/AUTHENTICATED_CAN_DIRECTLY_EXECUTE_LEGACY_LOOKUP/);
+ assert.match(delegation,/^ROLLBACK;$/m);
+ assert.doesNotMatch(delegation,/\bCOMMIT;/);
+ assert.match(runner,/cp-ws-activate04-private-delegation-boundary\.sql/);
 });
