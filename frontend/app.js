@@ -690,6 +690,9 @@ function groupHeading(group,count){
  const title=e(group.title||'Group');
  // A reference-only heading must never become the editable persisted value.
  const displayTitle=e(fuelTrackGroupDisplay(state.board?.board,group).title||'Group');
+ const fuelTrackEditable=state.edit&&state.board?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
+  state.board?.board?.name==='FuelTrack+ v3'&&
+  String(state.board.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
  if(editing)return '<div class="group-heading board-group-editing" data-group-id="'+id+'">'+
   '<form class="board-group-inline-form" data-group-inline-form="'+id+'">'+
   '<label class="sr-only" for="group-title-'+id+'">Group name</label>'+
@@ -697,7 +700,9 @@ function groupHeading(group,count){
   '<button type="submit" class="primary"'+(state.groupEditBusy?' disabled':'')+'>Save</button>'+
   '<button type="button" class="secondary" data-action="group-inline-cancel"'+(state.groupEditBusy?' disabled':'')+'>Cancel</button>'+
   '</form></div>';
- return '<div class="group-heading" data-group-id="'+id+'"><h3>'+displayTitle+'</h3><small>'+count+' items</small>'+
+ return '<div class="group-heading" data-group-id="'+id+'"><h3>'+displayTitle+'</h3>'+
+  (fuelTrackEditable?'<button type="button" class="board-group-rename-trigger" data-action="group-inline-edit" data-id="'+id+'" aria-label="Edit name inline for '+displayTitle+'" title="Edit name inline">✎ <span>Edit name</span></button>':'')+
+  '<small>'+count+' items</small>'+
   (state.edit?'<details class="board-group-actions"><summary aria-label="Actions for '+displayTitle+
    '" title="Group actions">⋮</summary><div class="board-group-actions-list">'+
    '<button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
@@ -1190,8 +1195,15 @@ async function saveGroupInline(form){
     !original||original.updated_at!==group.updated_at||original.title!==group.title)
    throw new ApiError('Group changed since opening. Refresh before editing.',409);
   if(!await db.allowed(boardId,'edit'))throw new ApiError('Group editing is not permitted.',403);
-  if(bulkReadyFor(fresh.board))await boardBulkClient.group(fresh.board,original,'rename',{title});
-  else await db.updateGroup(id,title);
+  // Use the signed, revision-protected group writer for every board type.
+  // The older updateGroup RPC is not a compare-and-swap operation.
+  await db.updateGroupCas(boardId,original,title);
+  if(state.boardId!==boardId||state.context?.user_id!==identity||
+    state.context?.workspace_id!==workspace)return;
+  const confirmed=await db.board(boardId);
+  const saved=confirmed.groups?.find(g=>g.id===id);
+  if(saved?.title!==title)throw new ApiError(
+   'The group rename could not be verified. Reload this board before trying again.',409);
   state.groupEditId=null;await loadBoard(boardId,'items');toast('Group renamed.');
  }finally{state.groupEditBusy=false;}
 }
