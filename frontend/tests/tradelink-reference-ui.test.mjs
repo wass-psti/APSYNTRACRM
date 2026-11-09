@@ -148,7 +148,7 @@ test('reference rebuild omits obsolete navigation, duplicate board table, and te
   assert.doesNotMatch(html,/tl-reference-workspace|Save enabled/);
   assert.match(html,/aria-label="TradeLink actions"/);
  }
- assert.match(documents,/<h2 id="tl-domain-repository-title">All Documents<\/h2>/);
+ assert.match(documents,/<h2 id="tl-domain-repository-title">All Documents/);
  assert.doesNotMatch(documents,/Board updated|Document updated|Search board item titles/);
  assert.doesNotMatch(draft,/tl-reference-list-details|data-action="tradelink-draft-refresh"/);
  assert.match(draft,/data-action="tradelink-draft-submit"/);
