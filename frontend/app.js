@@ -3941,7 +3941,8 @@ async function action(name,button){
   }
   break;
  }
- case 'tradelink-draft-add-line':{
+ case 'tradelink-draft-add-line':
+ case 'tradelink-draft-add-note':{
   if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||
     state.tradeLinkDraft.pendingCreateId)break;
   const form=root.querySelector('[data-tradelink-draft-form]');
@@ -3951,11 +3952,39 @@ async function action(name,button){
   if(!container||!rows||rows.length>=100||
      !['esi','packing','delivery','quotation','po'].includes(module))break;
   const currency=form.querySelector('[name="currency"]')?.value||'PHP';
-  container.insertAdjacentHTML('beforeend',
-   renderTradeLinkDraftLineItem({},module,currency,rows.length));
-  const item=container.lastElementChild;
+  const kind=name==='tradelink-draft-add-note'?'note':'item';
+  const next=renderTradeLinkDraftLineItem({kind},module,currency,rows.length);
+  const current=button.closest('[data-tradelink-line-item]');
+  if(current&&current.parentElement===container)current.insertAdjacentHTML('afterend',next);
+  else container.insertAdjacentHTML('beforeend',next);
+  const item=current?.nextElementSibling||container.lastElementChild;
+  for(const [index,row] of [...container.querySelectorAll('[data-tradelink-line-item]')].entries()){
+   const label=row.querySelector('.tl-ref-item-index');
+   if(label)label.textContent=String(index+1);
+  }
   captureTradeLinkDraftFields({target:item?.querySelector('[name="lineDescription"]')});
   item?.querySelector('[name="lineDescription"]')?.focus({preventScroll:true});
+  break;
+ }
+ case 'tradelink-draft-move-line':{
+  if(!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||
+    state.tradeLinkDraft.pendingCreateId)break;
+  const form=root.querySelector('[data-tradelink-draft-form]');
+  const item=button.closest('[data-tradelink-line-item]');
+  const container=item?.parentElement;
+  if(!form||!item||!container?.matches('[data-tradelink-draft-line-items]'))break;
+  const direction=button.dataset.direction;
+  const neighbor=direction==='up'?item.previousElementSibling:
+   direction==='down'?item.nextElementSibling:null;
+  if(!neighbor?.matches('[data-tradelink-line-item]'))break;
+  if(direction==='up')container.insertBefore(item,neighbor);
+  else container.insertBefore(neighbor,item);
+  for(const [index,row] of [...container.querySelectorAll('[data-tradelink-line-item]')].entries()){
+   const label=row.querySelector('.tl-ref-item-index');
+   if(label)label.textContent=String(index+1);
+  }
+  captureTradeLinkDraftFields({target:item.querySelector('[name="lineDescription"]')});
+  button.focus({preventScroll:true});
   break;
  }
  case 'tradelink-draft-remove-line':{
@@ -3967,8 +3996,15 @@ async function action(name,button){
   if(!form||!item||!container?.matches('[data-tradelink-draft-line-items]'))break;
   const rows=[...container.querySelectorAll('[data-tradelink-line-item]')];
   if(rows.length>1)item.remove();
-  else for(const input of item.querySelectorAll('input')){
-   if(input.name!=='lineId')input.value='';
+  else{
+   const module=form.querySelector('[name="documentType"]')?.value||'quotation';
+   const currency=form.querySelector('[name="currency"]')?.value||'PHP';
+   item.insertAdjacentHTML('afterend',renderTradeLinkDraftLineItem({},module,currency,0));
+   item.remove();
+  }
+  for(const [index,row] of [...container.querySelectorAll('[data-tradelink-line-item]')].entries()){
+   const label=row.querySelector('.tl-ref-item-index');
+   if(label)label.textContent=String(index+1);
   }
   const remaining=container.querySelector('[name="lineDescription"]');
   if(remaining)captureTradeLinkDraftFields({target:remaining});
@@ -5843,6 +5879,7 @@ function captureTradeLinkDraftFields(event){
  updateTradeLinkDraftLocalSummary(form);
  updateTradeLinkDraftInputCurrencyLabels(form);
  updateTradeLinkDraftLocalAmounts(form);
+ updateTradeLinkLineRowTotals(form);
  // A previous successful preview must never remain authoritative after edits.
  const status=form.querySelector('[data-tradelink-draft-preview-status]');
  if(status&&status.dataset.validation!=='pending'){
@@ -6080,6 +6117,40 @@ root.addEventListener('submit',event=>{
   Promise.resolve(submitTimeTrackerAction(event.target,kind)).catch(notice);
  }
 });
+// Reorder only within the signed, currently displayed Draft editor.
+let tradeLinkDraggedLine=null;
+root.addEventListener('dragstart',event=>{
+ const row=event.target?.closest?.('[data-tradelink-line-item]');
+ if(!row||!tradeLinkDraftRoute()||state.tradeLinkDraft.busy||
+    state.tradeLinkDraft.pendingCreateId)return;
+ tradeLinkDraggedLine=row;
+ event.dataTransfer?.setData('text/plain','tradelink-line');
+ if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
+});
+root.addEventListener('dragover',event=>{
+ const row=event.target?.closest?.('[data-tradelink-line-item]');
+ if(row&&tradeLinkDraggedLine&&row!==tradeLinkDraggedLine&&
+    row.parentElement===tradeLinkDraggedLine.parentElement)
+  event.preventDefault();
+});
+root.addEventListener('drop',event=>{
+ const row=event.target?.closest?.('[data-tradelink-line-item]');
+ const dragged=tradeLinkDraggedLine;
+ tradeLinkDraggedLine=null;
+ if(!row||!dragged||row===dragged||!tradeLinkDraftRoute()||
+    state.tradeLinkDraft.busy||state.tradeLinkDraft.pendingCreateId||
+    row.parentElement!==dragged.parentElement)return;
+ event.preventDefault();
+ const container=row.parentElement,form=row.closest('[data-tradelink-draft-form]');
+ const before=dragged.compareDocumentPosition(row)&Node.DOCUMENT_POSITION_FOLLOWING;
+ container.insertBefore(dragged,before?row.nextSibling:row);
+ for(const [index,item] of [...container.querySelectorAll('[data-tradelink-line-item]')].entries()){
+  const label=item.querySelector('.tl-ref-item-index');
+  if(label)label.textContent=String(index+1);
+ }
+ if(form)captureTradeLinkDraftFields({target:dragged.querySelector('[name="lineDescription"]')});
+});
+root.addEventListener('dragend',()=>{tradeLinkDraggedLine=null;});
 root.addEventListener('input',event=>{
  if(syncTradeLinkFinanceInput(event))return;
  if(captureTradeLinkDraftListFilters(event))return;
