@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Local performance profile acceptance</title></head>
+<body><h1>Isolated finite frame sample</h1><p>No signed application or production data.</p>
+<script type="module">
+import {sampleBrowserFrames} from '../../performance-profile.js';
+window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000})};
+</script></body></html>
