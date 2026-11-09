@@ -25,7 +25,7 @@ test('TradeLink activity route and navigation are scoped to the existing managed
  assert.equal(normalizeTradeLinkSection('recovery'),'overview');
  const html=renderTradeLinkApplication({detail,workspaceId:ws,section:'activity',
   activity:{events:[],busy:false,error:''}});
- assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/activity"/);
+ assert.match(html,/data-tl-section="activity"/);
  assert.match(html,/Signed board audit/);
  assert.doesNotMatch(html,/data-action="tradelink-activity-refresh" disabled/);
  const denied=renderTradeLinkApplication({detail,workspaceId:

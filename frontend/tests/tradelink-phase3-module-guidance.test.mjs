@@ -30,7 +30,7 @@ test('All Documents create shortcut is permission-bound, never a save claim',()=
   view,canManage:true});
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view,canManage:false});
- assert.match(allowed,/Create new Draft/);
+ assert.match(allowed,/Create New Document/);
  assert.match(allowed,/\/tradelink\/drafts\/quotation/);
  assert.match(allowed,/data-action="tradelink-documents-refresh"/);
  assert.doesNotMatch(denied,/Create new Draft/);

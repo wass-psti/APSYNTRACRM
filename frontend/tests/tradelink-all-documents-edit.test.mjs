@@ -103,36 +103,18 @@ test('verified preview offers Edit this Draft, but not when its revision is stal
  assert.doesNotMatch(stale,/Edit this Draft/);
 });
 
-test('Board projection distinguishes signed document revision time from Board item time',()=>{
+test('All Documents no longer duplicates Board projection and stays signed',()=>{
  const documentTime='2026-11-08T04:44:39.383119+00:00';
- const itemTime='2026-11-08T02:22:55.295983+00:00';
- const current={...authorizedView,rows:[
-  {...listed,revision:3,updatedAt:documentTime,boardItemId:item}]};
- const detailWithOldBoardTime={...detail,
-  items:[{...detail.items[0],updated_at:itemTime}]};
- const html=renderTradeLinkApplication({detail:detailWithOldBoardTime,
-  workspaceId:workspace,section:'documents',draftView:current,canManage:true});
- assert.match(html,/<th scope="col">Board updated<\/th>/);
- assert.match(html,/<th scope="col">Document updated<\/th>/);
- assert.match(html,/<td>2026-11-08T02:22:55.295983\+00:00<\/td>/);
- assert.match(html,/<td data-tradelink-document-updated>2026-11-08T04:44:39.383119\+00:00<\/td>/);
- assert.match(html,/data-tradelink-board-edit/);
- const denied=renderTradeLinkApplication({detail:detailWithOldBoardTime,
-  workspaceId:workspace,section:'documents',draftView:current,canManage:false});
- assert.doesNotMatch(denied,/data-tradelink-document-updated>2026-/);
-});
-
-test('Board projection edits precisely the matching server-linked Draft, not arbitrary items',()=>{
+ const current={...authorizedView,rows:[{...listed,revision:3,updatedAt:documentTime}]};
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,
-  section:'documents',draftView:authorizedView,canManage:true});
- assert.match(html,/data-tradelink-board-edit/);
+  section:'documents',draftView:current,canManage:true});
+ assert.match(html,/All Documents/);
+ assert.match(html,/data-tradelink-domain-record/);
  assert.match(html,/data-tradelink-document-edit/);
- assert.match(html,/Open document/);
- assert.ok(html.includes(editPath));
- const unrelated={...detail,items:[{...detail.items[0],id:archivedItem}]};
- const missing=renderTradeLinkApplication({detail:unrelated,workspaceId:workspace,
-  section:'documents',draftView:authorizedView,canManage:true});
- assert.doesNotMatch(missing,/data-tradelink-board-edit/);
+ assert.doesNotMatch(html,/Board updated|Authorized board projection|data-tradelink-board-edit/);
+ const denied=renderTradeLinkApplication({detail,workspaceId:workspace,
+  section:'documents',draftView:current,canManage:false});
+ assert.doesNotMatch(denied,/data-tradelink-domain-record|data-tradelink-document-edit/);
 });
 
 test('denied manager, foreign workspace, and non-Draft statuses offer no Edit',()=>{
@@ -163,7 +145,7 @@ test('direct edit reload cannot expose an unrelated blank Draft form',()=>{
   view:{...authorizedView,editRequestId:id,mode:'edit',
    selected:{documentId:id,record:saved}},canManage:true});
  assert.match(loaded,/data-tradelink-draft-form/);
- assert.match(loaded,/Save revision/);
+ assert.match(loaded,/Save Draft/);
  assert.match(loaded,/Back to All Documents/);
  assert.match(loaded,/Q-QA-20261108-01/);
  assert.match(loaded,/value="item-a"/);

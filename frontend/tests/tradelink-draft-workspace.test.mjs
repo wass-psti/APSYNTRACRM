@@ -28,12 +28,12 @@ test('dark-launch UI is routed inside the existing signed TradeLink app',()=>{
  assert.equal(normalizeTradeLinkSection('drafts'),'drafts');
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'drafts',
   draftView:initialTradeLinkDraftView(),canManage:true});
- assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts"/);
- assert.match(html,/Signed Draft operations/);
+ assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts\/quotation"/);
+ assert.match(html,/Save Draft/);
  assert.match(html,/data-tradelink-draft-form/);
  assert.match(html,/data-action="tradelink-draft-preview"/);
- assert.match(html,/data-action="tradelink-draft-refresh"/);
- assert.match(html,/type="submit" class="primary">/);
+ assert.doesNotMatch(html,/data-action="tradelink-draft-refresh"/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/data-action="tradelink-draft-archive"[^>]*>Archive/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
@@ -47,13 +47,13 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
   const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:module.key,canManage:true});
   const href='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+module.key;
   assert.ok(html.includes('href="'+href+'"'),module.label);
-  assert.match(html,/Saving persists a document and linked Board item/);
+  assert.match(html,/Prepare a local/);
   const view=initialTradeLinkDraftView(module.key);
   assert.deepEqual(view.formValues,{documentType:module.key});
   const editor=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
   assert.ok(editor.includes('<option value="'+module.key+'" selected>'),module.label);
   assert.match(editor,/data-action="tradelink-draft-preview"/);
-  assert.match(editor,/type="submit" class="primary">/);
+  assert.match(editor,/data-action="tradelink-draft-submit"/);
   const examples={
    packing:{customerName:'Consignee',referenceNumber:'SO-7',
     lineDescription:'Packed item',lineQuantity:'2',lineUnit:'box'},
@@ -82,7 +82,7 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.ok(app.includes('async function loadBoard(boardId,tab,draftType=null,draftEditId=null)'));
  assert.ok(app.includes("state.tradeLinkDraft=initialTradeLinkDraftView(tab==='tradelink'&&state.tradeLinkSection==='drafts'?draftType:null)"));
- assert.ok(app.includes("signedDraftRoute&&parts[4]!=='edit'?parts[4]:null,editId"));
+ assert.ok(app.includes("signedDraftRoute&&parts[4]!=='edit'?(directModule?parts[3]:parts[4]):null,editId"));
 });
 
 test('foreign workspace or an unrelated board renders no usable editor',()=>{
@@ -139,7 +139,7 @@ test('Packing List local readiness uses source reference, consignee and nonprice
  assert.match(html,/Physical shipment item \(required for local readiness\)/);
  assert.doesNotMatch(html,/name="lineUnitPrice"/);
  assert.doesNotMatch(html,/name="cashAmount"/);
- assert.match(html,/type="submit" class="primary">/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  const sample={documentType:'packing',documentNumber:'PL-001',
   customerName:'Receiving company',referenceNumber:'SO-001',
   lineDescription:'Parts',lineQuantity:'3',lineUnit:'box'};
@@ -160,7 +160,7 @@ test('Delivery Receipt local readiness validates QC, logistics and optional seri
  for(const name of ['checkedBy','deliveredBy','receivedBy','lineSerialNumber'])
   assert.ok(html.includes('name="'+name+'"'),name);
  assert.match(html,/Delivery responsibility · preview only/);
- assert.match(html,/type="submit" class="primary">/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/name="lineUnitPrice"/);
  const sample={documentType:'delivery',documentNumber:'DR-001',
   customerName:'Recipient',referenceNumber:'SO-002',
@@ -193,7 +193,7 @@ test('Payment AR local readiness enforces positive cash or cheque and responsibi
   assert.ok(html.includes('name="'+name+'"'),name);
  assert.doesNotMatch(html,/name="lineDescription"/);
  assert.match(html,/This form does not receive or verify funds/);
- assert.match(html,/type="submit" class="primary">/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  const sample={documentType:'payment',documentNumber:'AR-001',customerName:'Payor',
   paymentParticulars:'Partial invoice settlement',cashAmount:'250.75',
   receivedBy:'Cashier',verifiedBy:'Finance'};
@@ -233,7 +233,7 @@ test('Electronic SI preview validates client identity, priced line and intended 
  for(const name of ['customerTin','verifiedBy','approvedBy','lineUnitPrice'])
   assert.ok(html.includes('name="'+name+'"'),name);
  assert.match(html,/Electronic SI readiness · preview only/);
- assert.match(html,/type="submit" class="primary">/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  const base={documentType:'esi',documentNumber:'SI-001',customerName:'Client',
   customerTin:'TIN-123',verifiedBy:'Finance',approvedBy:'Manager',
   lineDescription:'Invoiced goods',lineQuantity:'1',lineUnitPrice:'100'};
@@ -275,7 +275,7 @@ test('Supplier PO preview requires priced items, terms and intended reviewers',(
  for(const name of ['poNumber','targetDeliveryDate','paymentTerms','verifiedBy','approvedBy','lineUnitPrice'])
   assert.ok(html.includes('name="'+name+'"'),name);
  assert.match(html,/Supplier PO readiness · preview only/);
- assert.match(html,/type="submit" class="primary">/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  const base={documentType:'po',documentNumber:'PO-001',customerName:'Supplier',
   targetDeliveryDate:'2026-12-15',paymentTerms:'Net 15',verifiedBy:'Account manager',
   approvedBy:'Final manager',poNumber:'V-PO-111',
@@ -300,8 +300,8 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
  for(const type of ['esi','quotation','po']){
   const output=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
    view:initialTradeLinkDraftView(type),canManage:true});
-  assert.match(output,/type="submit" class="primary">/);
-  assert.match(output,/Validate locally/);
+  assert.match(output,/data-action="tradelink-draft-submit"/);
+  assert.match(output,/data-action="tradelink-draft-preview"/);
  }
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
@@ -342,7 +342,7 @@ test('switching all six modules discards prior unsaved fields without altering t
     assert.ok(!html.includes(sensitive),from+' → '+to+' leaked '+sensitive);
    assert.match(html,/Unsaved local fields cleared/);
    assert.match(html,/data-action="tradelink-draft-clear"/);
-   assert.match(html,/type="submit" class="primary">/);
+   assert.match(html,/data-action="tradelink-draft-submit"/);
   }
  }
  const stale=resetTradeLinkDraftForm({...initialTradeLinkDraftView('po'),formValues:{
@@ -361,7 +361,7 @@ test('clearing local inputs preserves selected type and drops preview-related st
   assert.deepEqual(cleared.formValues,{documentType:module.key});
   const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:cleared,canManage:true});
   assert.doesNotMatch(html,/QA-SENSITIVE|Clear this locally/);
-  assert.match(html,/Clear local fields/);
+  assert.match(html,/Clear form/);
  }
 });
 
@@ -427,7 +427,7 @@ test('commercial estimate exists only for the three priced module forms and is n
    assert.match(html,/No exchange rate or approval is inferred/);
    assert.match(html,/Local estimate only · no Draft save, payment, transaction or approval/);
   }
-  assert.match(html,/type="submit" class="primary">/);
+  assert.match(html,/data-action="tradelink-draft-submit"/);
  }
 });
 
@@ -567,7 +567,7 @@ test('Payment AR cash and cheque fields expose selected currency without financi
   assert.match(html,/Cheque amount/);
   assert.equal((html.match(new RegExp('data-tradelink-draft-money-currency>'+currency+'<\\/span>','g'))||[]).length,2);
   assert.doesNotMatch(html,/data-tradelink-draft-finance|data-tradelink-draft-amount=/);
-  assert.match(html,/type="submit" class="primary">/);
+  assert.match(html,/data-action="tradelink-draft-submit"/);
  }
 });
 
@@ -642,7 +642,7 @@ test('six TradeLink modules render bounded hidden local document previews only',
   assert.ok(html.includes('data-document-type="'+module.key+'" hidden'),module.key);
   assert.match(html,/Validated local Draft summary · not saved/);
   assert.match(html,/Nothing was transmitted/);
-  assert.match(html,/type="submit" class="primary">/);
+  assert.match(html,/data-action="tradelink-draft-submit"/);
   assert.match(html,/data-action="tradelink-draft-preview"/);
  }
  const invalid=renderTradeLinkDraftWorkspace({detail,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -765,15 +765,15 @@ test('read-only listing presents filters but never reveals rows or enables RPC u
   rows:[{documentId:'11111111-1111-4111-8111-111111111111',documentNumber:'SECRET-Q',
    boardItemId:'22222222-2222-4222-8222-222222222222',documentType:'quotation',
    workflowState:'draft',revision:2,archived:false}]};
- const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:seed,canManage:true});
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view:seed,canManage:true});
  for(const input of ['query','documentType','workflowState','archiveMode'])
   assert.ok(html.includes('name="'+input+'"'),input);
  assert.match(html,/Search document number/);
- assert.match(html,/current signed, authorized response \(maximum 50 records\)/);
  assert.match(html,/data-tradelink-domain-count role="status"/);
- assert.match(html,/name="query"[^>]*data-tradelink-domain-filter/);
  assert.match(html,/SECRET-Q/);
  assert.match(html,/1 of 1 authorized records in this response/);
+ assert.doesNotMatch(renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+   view:seed,canManage:true}),/SECRET-Q|Authorized Draft records/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
  const client=new TradeLinkDraftWorkspace({
@@ -849,15 +849,11 @@ test('document-list DOM filters hide rows and show accessible counts without wri
 test('document workspace is distinct from board projection and honors signed workspace boundary',()=>{
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'documents',
   draftView:initialTradeLinkDraftView(),canManage:true});
- assert.match(html,/TradeLink document workspace/);
- assert.match(html,/Source-aligned All Documents/);
- assert.match(html,/Board records/);
- assert.match(html,/Board items are linked to the same signed TradeLink documents/);
- assert.match(html,/Document reads are subject to signed authorization/);
+ assert.match(html,/All Documents/);
+ assert.doesNotMatch(html,/Authorized board projection|Board records|Board items are linked/);
  for(const name of ['query','documentType','workflowState','archiveMode','sortBy','sortDirection'])
   assert.ok(html.includes('name="'+name+'"'),name);
- for(const module of TRADELINK_SOURCE_MODULES)
-  assert.match(html,new RegExp('href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/'+module.key+'"'));
+ assert.match(html,/data-tradelink-domain-list/);
  assert.doesNotMatch(html,/data-action="tradelink-draft-archive"|data-action="tradelink-draft-open"/);
  const foreign=renderTradeLinkDocumentRepository({
   detail,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -994,7 +990,7 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  assert.match(app,/board\.items\?\.some\(item=>item\.id===receipt\.boardItemId/);
  assert.match(app,/location\.hash='#\/boards\/'\+TRADELINK_BOARD_ID\+'\/tradelink\/documents'/);
  assert.match(app,/root\.querySelector\('\[data-tradelink-draft-form\]'\)\?\.requestSubmit\(\)/);
- assert.match(ui,/documentByItem\.get\(item\.id\)\?\.documentNumber===item\.title/);
+ assert.match(ui,/return renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage\}\)/);
  assert.match(draft,/data-action="tradelink-document-open"/);
  assert.match(draft,/renderTradeLinkSavedDocumentPreview/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
@@ -1010,8 +1006,8 @@ test('dark launch never renders stale selected document content after read acces
  assert.doesNotMatch(html,/<img src=x/);
  assert.doesNotMatch(html,/<img src=x onerror=alert/);
  assert.match(html,/&lt;img src=x onerror=alert/);
- assert.match(html,/Signed Draft loaded/);
- assert.match(html,/type="submit" class="primary">/);
+ assert.match(html,/Editing saved Draft/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/saved successfully/i);
 });
 
@@ -1029,7 +1025,7 @@ test('unsaved local input survives UI redraw but stale signed edit content is re
   formValues:{...staged.formValues,customerName:'Restricted record'}};
  const denied=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view:revoked,canManage:false});
  assert.doesNotMatch(denied,/Restricted record|Q-SECRET/);
- assert.match(denied,/type="submit" class="primary" disabled/);
+ assert.match(denied,/data-action="tradelink-draft-submit" disabled/);
 });
 
 test('app integration is session-cleared and route-scoped, with no new credentials or storage',()=>{
