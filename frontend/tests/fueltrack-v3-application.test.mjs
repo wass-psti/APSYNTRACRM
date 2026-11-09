@@ -101,7 +101,7 @@ test('HTML and status from untrusted board records are escaped',()=>{
 });
 
 test('unfinished tabs are navigation-ready without offering unauthorized writes',()=>{
- for(const section of FUELTRACK_TABS.filter(section=>section.key!=='dashboard'&&section.key!=='analytics')){
+ for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests'].includes(section.key))){
   const html=renderFuelTrackV3Application({detail:fixture(),section:section.key});
   assert.match(html,/not enabled|not yet integrated|will be connected|require|need verified/i);
   assert.doesNotMatch(html,/<form\b|type="submit"/i);
@@ -128,4 +128,22 @@ test('Analytics is rendered by the signed application integration, not fabricate
  assert.match(html,/Odometer Monitoring/);
  assert.match(html,/No verified vehicle rankings/);
  assert.doesNotMatch(html,/NEXT FRONTEND MILESTONE/);
+});
+
+test('All Requests is mounted inside the signed FuelTrack application shell',async()=>{
+ const {renderFuelTrackRequests}=await import('../fueltrack-v3-requests.js');
+ const html=renderFuelTrackV3Application({
+  detail:fixture(),section:'requests',
+  requestsRenderer:renderFuelTrackRequests,requestsFilters:{status:'done'}
+ });
+ assert.match(html,/All Requests/);
+ assert.match(html,/Request Log/);
+ assert.match(html,/ft3-request-filter/);
+ assert.doesNotMatch(html,/NEXT FRONTEND MILESTONE/);
+ assert.equal((html.match(/class="ft3-app-tab(?: is-active)?"/g)||[]).length,7);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/requestsRenderer:renderFuelTrackRequests/);
+ assert.match(app,/fuelTrackRequestReady\(\)/);
+ assert.match(app,/case 'ft3-request-expand'/);
+ assert.match(app,/db\.allowed\(boardId,'view'\)/);
 });
