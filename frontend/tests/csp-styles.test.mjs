@@ -37,7 +37,7 @@ test('frontend generated markup never uses blocked inline styles or CSSOM inject
    // CP-CRM-OVERLAY-03: single, audited exception for a measured, numeric
    // rule in an existing same-origin stylesheet. Never a style attribute.
    assert.match(source,/getPlacementSheet\(doc\)/);
-   assert.ok(source.includes('foreground-overlay\\.css'));
+   assert.match(source,/foreground-overlay\|apsyntra-styles/);
    assert.match(source,/calculateActionMenuPlacement\(anchor,before,viewport\)/);
    assert.match(source,/Number\.isFinite/);
    assert.match(source,/sheet\.insertRule\(/);

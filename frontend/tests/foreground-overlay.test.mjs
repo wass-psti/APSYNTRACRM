@@ -19,10 +19,11 @@ function classSet(){
   remove:(...names)=>names.forEach(name=>data.delete(name)),
   contains:name=>data.has(name)};
 }
-function fixture({supported=true,cssom=true}={}){
+function fixture({supported=true,cssom=true,
+ href='https://wass-psti.github.io/APSYNTRACRM/frontend/foreground-overlay.css'}={}){
  const rules=[],pending=[];
  const sheet={
-  href:'https://wass-psti.github.io/APSYNTRACRM/frontend/foreground-overlay.css',
+  href,
   cssRules:rules,
   insertRule(text,index){
    const values=new Map();
@@ -42,6 +43,7 @@ function fixture({supported=true,cssom=true}={}){
     key==='top'&&value==='anchor(bottom)';
   }},
   innerWidth:1100,innerHeight:820,
+  location:{origin:'https://wass-psti.github.io'},
   requestAnimationFrame:callback=>{pending.push(callback);return pending.length;},
   cancelAnimationFrame:()=>{},
   addEventListener:(name,fn)=>listeners.set('window:'+name,fn),
@@ -49,6 +51,7 @@ function fixture({supported=true,cssom=true}={}){
  };
  const document={
   defaultView:window,
+  baseURI:'https://wass-psti.github.io/APSYNTRACRM/',
   styleSheets:cssom?[sheet]:[],
   createElement:()=>({showPopover(){}}),
   addEventListener:(name,fn)=>listeners.set('document:'+name,fn),
@@ -350,4 +353,25 @@ test('top-left geometry failure triggers cleanup without exposing detached menu'
  assert.equal(m.f.open,false);
  assert.equal(m.f.rules.length,0);
  assert.doesNotThrow(done);
+});
+
+test('Priority 5 bundled CSS restores top-layer action menus without weakening same-origin checks',()=>{
+ const bundle=fixture({href:'https://wass-psti.github.io/APSYNTRACRM/frontend/apsyntra-styles.bundle.css?v=1'});
+ const stop=showForegroundPopover(bundle.menu,bundle.trigger,{kind:'action'});
+ assert.equal(typeof stop,'function');
+ bundle.flush();
+ assert.equal(bundle.open,true);
+ assert.equal(bundle.menu.classList.contains('aps-foreground-pending'),false);
+ assert.equal(bundle.rules.length,1);
+ assert.match(bundle.rules[0].cssText,/position:fixed!important/);
+ stop();assert.equal(bundle.rules.length,0);
+ for(const href of [
+  'https://evil.example/APSYNTRACRM/frontend/apsyntra-styles.bundle.css',
+  'https://wass-psti.github.io/another/frontend/apsyntra-styles.bundle.css',
+  'https://wass-psti.github.io/APSYNTRACRM/frontend/user-data.css'
+ ]){
+  const excluded=fixture({href});
+  assert.equal(showForegroundPopover(excluded.menu,excluded.trigger,{kind:'action'}),null);
+  assert.equal(excluded.rules.length,0);
+ }
 });
