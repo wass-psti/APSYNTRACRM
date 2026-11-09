@@ -36,7 +36,7 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message=''}=
  '<div class="ft3-new-panel ft3-new-type" role="group" aria-label="Select Refuel Type"><h3>Select Refuel Type</h3>'+
  '<div class="ft3-new-options">'+mode('vehicle','Vehicle Fuel','Cars, trucks, motorcycles','⛽')+
  mode('container','Container Refill','Drums, canisters, tanks','⬡')+'</div></div>'+
- '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">'+(enabled?'Signed request service available. Receipt photo upload remains unavailable.':'These dropdown values are reference labels; submission and receipt upload remain unavailable.')+'</p>'+ (message?'<p class="ft3-new-boundary" role="status">'+h(message)+'</p>':'')+
+ '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">'+(enabled?'Signed request service available. Receipt photo upload remains unavailable.':'These dropdown values are reference labels; submission and receipt upload remain unavailable. No request will be saved.')+'</p>'+ (message?'<p class="ft3-new-boundary" role="status">'+h(message)+'</p>':'')+
  '<div class="ft3-new-vehicle">'+
  section(1,'Vehicle Details',select('ft3-plate','Plate Number','Select plate number',FUELTRACK_PLATE_OPTIONS)+
  select('ft3-owner','Vehicle Owner','Select owner',FUELTRACK_PERSON_OPTIONS)+
