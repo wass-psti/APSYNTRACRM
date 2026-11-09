@@ -57,16 +57,19 @@ test('mutating RPC invalidates snapshots, but read-only Board UI RPC does not',a
  await api.boardCached(boardId,scope);
  assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,3);
 });
-test('inflight invalidation never reinstates stale cached data',async()=>{
+test('inflight invalidation re-fetches before returning; stale version never renders',async()=>{
  let finish;let calls=0;
+ const updated={...board,board:{...board.board,updated_at:'2026-11-09T11:00:00Z'}};
  const {api}=fixture({reply:async()=>{
   calls++;if(calls===1)return new Promise(resolve=>{finish=()=>resolve(board);});
-  return board;
+  return updated;
  }});
  const request=api.boardCached(boardId,scope);
  api.invalidateBoardCache();
- finish();await request;
- await api.boardCached(boardId,scope);
+ finish();
+ const result=await request;
+ assert.equal(result.board.updated_at,updated.board.updated_at);
+ assert.deepEqual(await api.boardCached(boardId,scope),updated);
  assert.equal(calls,2);
 });
 test('failed or foreign board responses cannot poison cache',async()=>{
@@ -85,8 +88,9 @@ test('integration requires a signed view check and invalidates across lifecycle 
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(source,/db\.boardCached\(boardId,/);
  assert.match(source,/db\.allowed\(boardId,'view'\)/);
- assert.match(source,/onInvalidate:async event=>\{\s*db\.invalidateBoardCache\(\)/);
- assert.match(source,/auth\.onExpired=\(\)=>\{db\.invalidateBoardCache\(\)/);
+ assert.match(source,/onInvalidate:async event=>\{/);
+ assert.match(source,/for\(const id of event.boardIds\)db\.invalidateBoardCache\(id\)/);
+ assert.match(source,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\);db\.invalidateBoardCache\(\)/);
 });
 
 test('cache retains at most eight active board snapshots and no persistent storage',async()=>{

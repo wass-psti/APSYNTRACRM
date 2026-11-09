@@ -3,40 +3,66 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 export function validUuid(v){return typeof v==='string'&&uuid.test(v);}
 export function requireUuid(v){if(!validUuid(v))throw new ApiError('Invalid board or workspace identifier.');return v;}
 function encodeQuery(input){return new URLSearchParams(input).toString();}
+// Board-affecting writes only. Read RPCs must never broadcast invalidations:
+// doing so could trigger infinite cross-tab read / broadcast cycles.
+const BOARD_MUTATION_RPC=/^(?:wm_(?:add_|create_|delete_|set_|update_|import_|managed_board_delete|ws01_(?:config_update|create|select)|board_(?:bulk_mutate|card_mutate|group_cas|schema_mutate|ui_save))|huly_sb06_transact|tl03_(?:document_(?:commit|decide|operate|review|submit)|attachment_(?:finish|prepare|remove)|record_pdf_approval_stage)|timetracker_(?:attendance_commit|ot_(?:submit|decide))|apsyntra_(?:crm_platform_role_set|role_manage_user_access|role_configuration_propose))$/;
+
 export class DomainApi {
  constructor(auth){
   this.auth=auth;
   this.boardReadCache=new Map();
   this.boardReadGeneration=0;
+  this.onBoardMutation=null;
  }
- invalidateBoardCache(boardId=null){
+ invalidateBoardCache(boardId=null,{revision=null}={}){
+  if(boardId!==null){
+   if(!validUuid(boardId))return false;
+   const prior=this.boardReadCache.get(boardId);
+   const cachedRevision=prior?.value?.board?.updated_at;
+   // Strictly older board revisions cannot invalidate a newer snapshot.
+   // Equality still invalidates: item edits may not advance board.updated_at.
+   if(typeof revision==='string'&&typeof cachedRevision==='string'&&
+      Number.isFinite(Date.parse(revision))&&Number.isFinite(Date.parse(cachedRevision))&&
+      Date.parse(revision)<Date.parse(cachedRevision))return false;
+  }
   this.boardReadGeneration++;
   if(boardId===null)this.boardReadCache.clear();
   else this.boardReadCache.delete(boardId);
+  return true;
  }
  /** Only already-authorized board payloads, bounded by a signed identity +
   * workspace + access-token generation. Never cache permissions or failures.
   * Server-side view authorization is always rechecked by the route caller.
   */
- async boardCached(boardId,{userId,workspaceId,maxAgeMs=8000}={}){
+ async boardCached(boardId,{userId,workspaceId,maxAgeMs=8000,retryInvalidated=true}={}){
   requireUuid(boardId);requireUuid(userId);requireUuid(workspaceId);
   const token=this.auth?.accessToken;
   if(!token||this.auth?.userId!==userId)
    throw new ApiError('Signed board cache scope is unavailable.',403);
+  const finish=async (promise,entry)=>{
+   const detail=await promise;
+   if(this.auth?.userId!==userId||this.auth?.accessToken!==token)
+    throw new ApiError('Signed board session changed during loading.',403);
+   if(this.boardReadCache.get(boardId)!==entry){
+    if(retryInvalidated)return this.boardCached(boardId,{
+     userId,workspaceId,maxAgeMs,retryInvalidated:false});
+    throw new ApiError('Board changed during loading. Reload to reconcile.',409);
+   }
+   return structuredClone(detail);
+  };
   const previous=this.boardReadCache.get(boardId);
   const now=Date.now();
   if(previous&&(previous.userId!==userId||previous.workspaceId!==workspaceId||
     previous.token!==token||previous.expiresAt<=now))this.boardReadCache.delete(boardId);
   else if(previous){
-   if(previous.pending)return structuredClone(await previous.pending);
+   if(previous.pending)return finish(previous.pending,previous);
    return structuredClone(previous.value);
   }
-  const generation=this.boardReadGeneration;
   const entry={userId,workspaceId,token,expiresAt:now+maxAgeMs,pending:null,value:null};
   const pending=this.board(boardId).then(detail=>{
    if(detail?.board?.id!==boardId||detail.board.workspace_id!==workspaceId)
     throw new ApiError('Board response workspace mismatch.',403);
-   if(this.boardReadGeneration===generation&&this.boardReadCache.get(boardId)===entry&&
+   if(this.boardReadCache.get(boardId)===entry&&
      this.auth?.userId===userId&&this.auth?.accessToken===token){
     entry.value=detail;
     entry.pending=null;
@@ -52,13 +78,24 @@ export class DomainApi {
   if(this.boardReadCache.size>=8)
    this.boardReadCache.delete(this.boardReadCache.keys().next().value);
   this.boardReadCache.set(boardId,entry);
-  return structuredClone(await pending);
+  return finish(pending,entry);
  }
  rpc(name,args={},options={}){
    if(!/^[a-z][a-z0-9_]+$/.test(name))throw new ApiError('Invalid operation.');
    if(!['wm_get_board','wm_auth_access_context','work_board_access','wm_list_boards','wm_board_ui_read'].includes(name))
      this.invalidateBoardCache();
-   return this.auth.authorized('/rest/v1/rpc/'+name,{method:'POST',body:args,...options});
+   const mutates=BOARD_MUTATION_RPC.test(name);
+   const request=this.auth.authorized('/rest/v1/rpc/'+name,{method:'POST',body:args,...options});
+   if(!mutates)return request;
+   return Promise.resolve(request).then(result=>{
+    try{
+     const boardId=validUuid(args?.p_board_id)?args.p_board_id:null;
+     const revision=typeof result?.board?.updated_at==='string'?
+      result.board.updated_at:null;
+     this.onBoardMutation?.({boardId,revision});
+    }catch{/* A cross-tab hint must never affect a signed mutation receipt. */}
+    return result;
+   });
  }
  async context(){
    const ctx=await this.rpc('wm_auth_access_context');
