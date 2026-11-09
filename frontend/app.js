@@ -924,7 +924,7 @@ function settingsPage(){
   ${report?.startup?.reads?.length?`<p class="muted">Workspace signed RPC read durations (network-inclusive; not server-only): ${report.startup.reads.map(read=>`${e(read.operation)} ${read.durationMs} ms`).join('; ')}. Reads are instrumented after the verified session; board and role reads overlap. These durations are not additive.</p>`:''}
   </div></section>`;
  return `<div class="aps-settings"><section class="page-head settings-hero settings-entrance" aria-labelledby="settings-title"><div class="settings-hero-copy"><span class="label-top"><span class="settings-hero-dot" aria-hidden="true"></span>Workspace / Account</span><h1 id="settings-title">Account & security<span class="settings-heading-stop">.</span></h1><p>Your verified user identity and session preferences.</p></div><span class="settings-hero-status">${settingsIcon('shield')}<span>Verified workspace account</span></span><svg class="settings-hero-decoration" viewBox="0 0 420 200" fill="none" aria-hidden="true" focusable="false"><circle cx="355" cy="0" r="120" stroke="currentColor" stroke-opacity=".16"/><circle cx="355" cy="0" r="193" stroke="currentColor" stroke-opacity=".09"/><path d="M105 230C201 70 334 93 446 146" stroke="currentColor" stroke-opacity=".16"/></svg></section>
- <div class="settings-grid">${performancePanel}<section class="panel settings-profile-panel settings-entrance" aria-labelledby="settings-profile-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('user')}</span><h3 id="settings-profile-heading">Profile information</h3></div><span class="settings-auth-provider">Supabase Auth</span></div>
+ <div class="settings-grid">${state.roleVerified===true?performancePanel:''}<section class="panel settings-profile-panel settings-entrance" aria-labelledby="settings-profile-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('user')}</span><h3 id="settings-profile-heading">Profile information</h3></div><span class="settings-auth-provider">Supabase Auth</span></div>
  <div class="panel-body settings-panel-body"><div class="profile settings-profile-identity"><span class="avatar csp-u044 settings-profile-avatar" aria-hidden="true"><span data-avatar-initials>${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></span>
  <div class="settings-profile-copy"><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
  ${avatarPreviewMarkup(initials(name()))}
@@ -1382,6 +1382,10 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   const verified=await roleConfig.bootstrapVerified().catch(()=>false);
   if(!isCurrent())return false;
   if(verified!==state.roleVerified){
+   if(!verified){
+    performanceProfileAbort?.abort();performanceProfileAbort=null;
+    state.performanceReport=null;state.performanceBusy=false;
+   }
    state.roleVerified=verified;state.roleData=null;state.userRoleData=null;
    if(!verified&&['role-configuration','user-role-management','foundation','acceptance'].includes(view)){
     platformSync.stop();location.hash='#/overview';return false;
@@ -3685,16 +3689,27 @@ async function action(name,button){
   break;
  }
  case 'profile-rendering':{
-  if(state.performanceBusy||!auth.isSignedIn||
+  // Bootstrap-only, including direct dispatch from a stale DOM control.
+  if(state.roleVerified!==true||state.performanceBusy||!auth.isSignedIn||
      auth.userId!==state.context?.user_id||!state.context?.workspace_id)break;
   const actor=auth.userId,workspace=state.context.workspace_id;
+  const bootstrap=await roleConfig.bootstrapVerified().catch(()=>false);
+  if(!bootstrap){
+   if(actor===auth.userId&&workspace===state.context?.workspace_id){
+    state.roleVerified=false;state.performanceReport=null;
+    if(state.view==='settings')render();
+   }
+   break;
+  }
+  if(state.roleVerified!==true||!auth.isSignedIn||
+     actor!==auth.userId||workspace!==state.context?.workspace_id)break;
   const controller=new AbortController();
   performanceProfileAbort=controller;
   state.performanceBusy=true;state.performanceReport=null;
   if(state.view==='settings')render();
   try{
    const profile=await sampleBrowserFrames({signal:controller.signal});
-   if(!auth.isSignedIn||actor!==auth.userId||
+   if(!auth.isSignedIn||state.roleVerified!==true||actor!==auth.userId||
       workspace!==state.context?.workspace_id||controller.signal.aborted)break;
    if(profile.status==='COMPLETE'){
     const startup=startupCriticalPath.snapshot();
@@ -3706,7 +3721,7 @@ async function action(name,button){
   finally{
    if(performanceProfileAbort===controller)performanceProfileAbort=null;
    state.performanceBusy=false;
-   if(state.view==='settings'&&auth.isSignedIn&&actor===auth.userId&&
+   if(state.view==='settings'&&auth.isSignedIn&&state.roleVerified===true&&actor===auth.userId&&
       workspace===state.context?.workspace_id)render();
   }
   break;
