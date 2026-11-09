@@ -401,6 +401,11 @@ function renderQuotationVerification(fieldValue,data,actorName=''){
    '</select>'+
    '<input type="hidden" name="approvedBy" value="Management">'+
    '<small id="tl-quote-secondary-note">Second-stage approval follows a verified primary review; these assignments do not grant permissions.</small>'+
+   '<label for="tl-quote-secondary-review-time">Review Date &amp; Time</label>'+
+   '<div class="tl-reference-approval-timestamp">'+
+    '<input id="tl-quote-secondary-review-time" aria-label="Secondary review date and time" placeholder="Available after authorized secondary review" disabled>'+
+    '<button type="button" disabled title="Requires independently verified Management reviewer action">Use Time Now</button></div>'+
+   '<small>Management verification is independent of the Sales Supervisor review. Its timestamp requires a separate signed server event.</small>'+
   '</div></section>';
 }
 /** One unsaved priced line; reuse the authoritative source calculation formula. */
@@ -947,6 +952,13 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines):'')+
+   '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
+    '<label class="tl-draft-field"><span>Document notes and terms · local preview</span>'+
+     '<textarea name="remarks" maxlength="5000" rows="5" '+
+      'placeholder="Enter local document remarks or terms">'+
+       escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
+     '<small>These notes are part of the local validation preview. No PDF, approval or document is generated.</small>'+
+    '</label></section>'+
    (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName):
    (type!=='packing'?
     '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Workflow account assignments</legend>'+
@@ -961,13 +973,6 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       field('Assigned approver account email (optional)','approvedByEmail',
        fieldValue('approvedByEmail',data.approvedByEmail||''),'type="email" maxlength="254"'):'')+
     '</fieldset>':''))+
-   '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
-    '<label class="tl-draft-field"><span>Document notes and terms · local preview</span>'+
-     '<textarea name="remarks" maxlength="5000" rows="5" '+
-      'placeholder="Enter local document remarks or terms">'+
-       escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
-     '<small>These notes are part of the local validation preview. No PDF, approval or document is generated.</small>'+
-    '</label></section>'+
    (renderCommercialReadiness(type,fieldValue,data))+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
