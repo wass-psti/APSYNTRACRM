@@ -52,3 +52,57 @@ export function projectFuelTrackLightFuels(snapshot){
   completedToday:Number(summary.completedToday),overdueCount:Number(summary.overdueCount),
   queue,recent};
 }
+
+const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const php=v=>Number.isFinite(Number(v))&&Number(v)>=0?
+ new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'}).format(Number(v)):'—';
+const metric=(label,value)=>'<article class="ft3-metric"><div class="ft3-metric-label"><span>'+
+ h(label)+'</span></div><strong>'+h(value)+'</strong></article>';
+const statusLabel={submitted:'Submitted',approved:'Approved',rejected:'Rejected',
+ refueling_done:'Refueling Done',completed:'Completed'};
+/** Uses the native card/table design and only authoritative transaction records. */
+export function renderFuelTrackSignedDashboard(snapshot){
+ if(!snapshot)return '<p class="ft3-approval-unavailable">Signed FuelTrack data unavailable.</p>';
+ const s=snapshot.summary;
+ return '<section class="ft3-dashboard"><p class="ft3-new-boundary">Verified FuelTrack operations</p>'+
+ '<div class="ft3-metrics">'+metric('Total Requests',s.total)+
+ metric('Pending Approvals',s.submitted)+metric('Approved',s.approved)+
+ metric('Completed',s.completed)+metric('Completed Liters',s.totalLiters??'—')+
+ metric('Completed Spending',php(s.totalAmount))+'</div>'+
+ renderFuelTrackSignedRequests(snapshot,true)+'</section>';
+}
+export function renderFuelTrackSignedRequests(snapshot,compact=false){
+ if(!snapshot)return '<p class="ft3-approval-unavailable">Signed requests unavailable.</p>';
+ const rows=snapshot.rows;
+ return '<section class="ft3-panel ft3-signed-requests"><header class="ft3-panel-head"><div><h3>'+
+ (compact?'Recent Fuel Requests':'All Requests')+'</h3><p>'+
+ rows.length+' latest authorized records; '+snapshot.summary.total+
+ ' total</p></div></header>'+
+ (rows.length?'<div class="ft3-recent-scroll"><table class="ft3-recent-table"><thead><tr>'+
+ '<th scope="col">Requestor</th><th scope="col">Vehicle / Container</th>'+
+ '<th scope="col">Status</th><th scope="col">Submitted</th></tr></thead><tbody>'+
+ rows.slice(0,compact?15:200).map(r=>'<tr><td>'+h(r.requestor_name)+'</td><td>'+
+ h(reference(r))+'</td><td>'+h(statusLabel[r.state])+'</td><td>'+
+ h(r.created_at)+'</td></tr>').join('')+'</tbody></table></div>':
+ '<p class="ft3-approval-unavailable">No fuel requests in the authorized records.</p>')+
+ (rows.length>=200&&!compact?'<p>Older records require an authorized server pagination cursor.</p>':'')+
+ '</section>';
+}
+export function renderFuelTrackSignedAnalytics(snapshot){
+ if(!snapshot||snapshot.status!=='VERIFIED_READ'||!Array.isArray(snapshot.daily))
+ return '<p class="ft3-approval-unavailable">Signed analytics unavailable.</p>';
+ const rows=snapshot.daily;
+ if(rows.length>365||rows.some(r=>!r||typeof r.day!=='string'||
+  !validCount(r.transactions)||!Number.isFinite(Number(r.amount))||
+  !Number.isFinite(Number(r.liters))))
+ return '<p class="ft3-approval-unavailable">Invalid signed analytics response.</p>';
+ return '<section class="ft3-panel ft3-signed-analytics"><header class="ft3-panel-head">'+
+ '<div><h3>Fuel Analytics</h3><p>Completed refueling transactions · Manila-local calendar</p></div></header>'+
+ (rows.length?'<div class="ft3-recent-scroll"><table class="ft3-recent-table"><thead>'+
+ '<tr><th scope="col">Date</th><th scope="col">Transactions</th>'+
+ '<th scope="col">Liters</th><th scope="col">Amount</th></tr></thead><tbody>'+
+ rows.map(r=>'<tr><td>'+h(r.day)+'</td><td>'+h(r.transactions)+'</td><td>'+
+ h(r.liters)+'</td><td>'+h(php(r.amount))+'</td></tr>').join('')+
+ '</tbody></table></div>':
+ '<p class="ft3-approval-unavailable">No completed refueling transactions in this period.</p>')+'</section>';
+}
