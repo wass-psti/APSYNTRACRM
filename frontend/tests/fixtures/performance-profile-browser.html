@@ -3,7 +3,24 @@
 <script type="module">
 import {sampleBrowserFrames} from '../../performance-profile.js';
 import {createStartupCriticalPath} from '../../performance-critical-path.js';
+import {readWorkspaceStartup} from '../../workspace-startup-read.js';
 window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
+ concurrentWorkspace:async()=>{
+  let starts=[],scopeValid=true;
+  const begin=performance.now();
+  const authorized=await readWorkspaceStartup({
+   listBoards:async()=>{starts.push('boards');await new Promise(resolve=>setTimeout(resolve,100));return [{id:'synthetic'}]},
+   verifyBootstrap:async()=>{starts.push('role');await new Promise(resolve=>setTimeout(resolve,250));return true},
+   isCurrent:()=>scopeValid
+  });
+  const elapsed=performance.now()-begin;
+  scopeValid=false;
+  let denied=false;
+  try{await readWorkspaceStartup({listBoards:async()=>[],verifyBootstrap:async()=>true,isCurrent:()=>scopeValid});}
+  catch{denied=true;}
+  return {starts,elapsed,authorizedBoards:authorized.boards.length,
+   bootstrapVerified:authorized.bootstrapVerified,denied};
+ },
  criticalPath:()=>{
   let now=0;
   const phases=createStartupCriticalPath({clock:()=>now});

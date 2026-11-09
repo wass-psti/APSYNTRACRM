@@ -8,7 +8,8 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'..');
 const allow=new Set(['/frontend/tests/fixtures/performance-profile-browser.html',
- '/frontend/performance-profile.js','/frontend/performance-critical-path.js']);
+ '/frontend/performance-profile.js','/frontend/performance-critical-path.js',
+ '/frontend/workspace-startup-read.js']);
 const server=createServer((req,res)=>{
  const url=new URL(req.url,'http://127.0.0.1');
  if(!allow.has(url.pathname)){res.writeHead(404);res.end('not found');return;}
@@ -103,6 +104,14 @@ async function run(){
   assert.equal(critical.signedReadyFromNavigationMs,120);
   assert.deepEqual(critical.phases.map(x=>x.phase),
    ['session-restore','workspace-authorization','authorized-route']);
+  const parallel=await page.evaluate('performanceAcceptance.concurrentWorkspace()');
+  assert.deepEqual(parallel.starts,['boards','role']);
+  assert.equal(parallel.authorizedBoards,1);
+  assert.equal(parallel.bootstrapVerified,true);
+  assert.equal(parallel.denied,true);
+  assert.ok(parallel.elapsed>=230&&parallel.elapsed<800,
+   'synthetic overlapping 100ms/250ms reads must have bounded makespan');
+  console.log('BROWSER_WORKSPACE_PARALLEL_PASS: independent signed-read scheduling, scope denial, no extra request');
   console.log('BROWSER_STARTUP_PHASE_PASS: fixed-phase numeric timeline; no private fields');
   console.log('BROWSER_LONG_TASK_PASS: finite opt-in observer summary without attribution');
   console.log('BROWSER_LOCAL_FRAME_PROFILE_PASS: finite 1s real Chromium RAF sample, no identity or URL');
