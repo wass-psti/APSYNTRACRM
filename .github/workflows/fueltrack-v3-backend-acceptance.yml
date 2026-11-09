@@ -6,6 +6,7 @@ on:
       - 'supabase/migrations/20261109235500_fueltrack_v3_board_receipts.sql'
       - 'sql/tests/fueltrack-v3-*.sql'
       - 'scripts/fueltrack-v3-backend-disposable.sh'
+      - 'scripts/fueltrack-v3-signed-read-acceptance*.mjs'
       - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
   workflow_dispatch:
 
@@ -24,3 +25,5 @@ jobs:
         run: bash -n scripts/fueltrack-v3-backend-disposable.sh
       - name: Verify Board and Receipt database transactions
         run: ./scripts/fueltrack-v3-backend-disposable.sh
+      - name: Verify signed read-only acceptance contract without live credentials
+        run: node --test scripts/fueltrack-v3-signed-read-acceptance.test.mjs
