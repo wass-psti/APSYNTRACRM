@@ -104,7 +104,11 @@ export function createTrustedInvitationHttpBoundary({
 
   try{
    const result=await submitTrustedWorkspaceInvitation(draft,{
-    deliveryEnabled:true,sendEmail,recordDeliveryOutcome,
+    deliveryEnabled:true,sendEmail,
+    // Bind delivery audit to THIS verified request actor, never module state.
+    recordDeliveryOutcome:receipt=>recordDeliveryOutcome(Object.freeze({
+     id:actor.id,sessionId:actor.sessionId
+    }),receipt),
     issueForSignedActor:args=>issueForAuthorizedActor(Object.freeze({
      id:actor.id,sessionId:actor.sessionId
     }),args)

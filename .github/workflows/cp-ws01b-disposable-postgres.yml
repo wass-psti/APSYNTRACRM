@@ -244,6 +244,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-independent-domain-ceiling-disposable.sql
       - name: Validate all 24 remaining deployed domain source fingerprints and ceiling-only changes
         run: node scripts/ws02d-b3-source-check.mjs --check
+      - name: Verify WS02D production ceiling composition preserves the dedicated FuelTrack rewrite
+        run: node scripts/ws02d-d-compose-production-ceilings.mjs --check
       - name: Reproduce 24 remaining domain sources in disposable PG17
         run: |
           set -euo pipefail
