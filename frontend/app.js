@@ -6,6 +6,7 @@ import {mountAvatarImages} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
+import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
 import {validateAccessRequest} from './request-access.js';
@@ -142,6 +143,7 @@ const auth=new AuthClient();
 const db=new DomainApi(auth);
 const profileAvatarClient=new ProfileAvatarClient({auth});
 const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
+const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
 const platformSync=new PlatformSync({
  auth,api:db,url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY,
  onStatus:updatePlatformSyncIndicator,onInvalidate:reconcilePlatformSync
@@ -3524,6 +3526,8 @@ async function action(name,button){
    openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()},
     {lifecycle:workspaceLifecycleClient,onOpenCurrent:()=>{location.hash='#/overview';},
      configurationEnabled:WS01_CONFIGURATION_ENABLED,
+     invitationEnabled:WS02D_INVITE_CLIENT_ENABLED,
+     sendInvitation:request=>workspaceInvitationClient.send(request),
      switchingEnabled:WS01_SWITCHING_ENABLED,
      onWorkspaceSwitched:()=>{
       // Reload only after a verified server-side scope change. The fresh app
@@ -3537,7 +3541,7 @@ async function action(name,button){
    if(!auth.isSignedIn||!state.context?.workspace_id)break;
    openWorkspaceInvitationDialog({
     id:state.context.workspace_id,name:workspaceName()
-   });
+   },{enabled:WS02D_INVITE_CLIENT_ENABLED,sendInvitation:request=>workspaceInvitationClient.send(request)});
    break;
  }
  case 'platform-sync-verify':{await platformSync.syncNow('manual',[]);break;}

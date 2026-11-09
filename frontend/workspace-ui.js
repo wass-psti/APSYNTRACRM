@@ -547,7 +547,9 @@ function openMenu(catalog,options={}){
   if(command==='retry')options.selectorSession?.load?.();
   if(command==='browse')openBrowse(read(),options);
   if(command==='create')openCreate(read(),options);
-  if(command==='invite')openInvites(read().rows.find(row=>row.active));
+  if(command==='invite')openInvites(read().rows.find(row=>row.active),{
+   enabled:options.invitationEnabled,sendInvitation:options.sendInvitation
+  });
  });
  input.focus();
 }
@@ -714,7 +716,7 @@ function openCreate(catalog,options={}){
  });
  field.focus();
 }
-function inviteContent(current){
+function inviteContent(current,{enabled=false}={}){
  const title=escape(current.name);
  return '<section class="ws02-invite-card" role="dialog" aria-modal="true"'+
   ' aria-labelledby="ws02-invite-title" aria-describedby="ws02-invite-description">'+
@@ -742,20 +744,25 @@ function inviteContent(current){
   '<button type="button" data-ws02-context="work">Track and manage work</button>'+
   '<button type="button" data-ws02-context="team">Collaborate with your team</button>'+
   '<button type="button" data-ws02-context="project">Coordinate a project</button></div></div>'+
-  '<p class="ws02-invite-safety">Invitation sending is not activated yet. Only authorized workspace owners '+
-  'or delegated workspace administrators will be able to send invitations after '+
-  'the signed server-side invitation and role contracts pass acceptance.</p>'+
+  '<p class="ws02-invite-safety">'+(enabled?
+   'Invitation sending is restricted to the Member role and independently authorized by the signed server.':
+   'Invitation sending is not activated yet. Only authorized workspace owners '+
+   'or delegated workspace administrators will be able to send invitations after '+
+   'the signed server-side invitation and role contracts pass acceptance.')+'</p>'+
   '<p class="ws02-invite-feedback" role="status" aria-live="polite"></p>'+
   '<footer class="ws02-invite-footer">'+
   '<button type="button" class="ws02-secondary" data-ws01-close>Cancel</button>'+
   '<button type="submit" class="ws02-secondary">Review invitation</button>'+
-  '<button type="button" class="ws02-send" disabled aria-describedby="ws02-invite-description">'+
-  'Send invites — pending activation</button></footer></form></section>';
+  '<button type="button" class="ws02-send" data-ws02-action="send" '+
+  (enabled?'':'disabled ')+ 'aria-describedby="ws02-invite-description">'+
+  (enabled?'Send Member invitation':'Send invites — pending activation')+
+  '</button></footer></form></section>';
 }
-function openInvites(current){
+function openInvites(current,options={}){
  const row=workspaceFromSignedContext(current);
  if(!row)return;
- const layer=panel(inviteContent(row),'invite');
+ const enabled=options.enabled===true&&typeof options.sendInvitation==='function';
+ const layer=panel(inviteContent(row,{enabled}),'invite');
  const form=layer.querySelector('#ws02-invite-preview');
  const description=layer.querySelector('[data-ws02-role-description]');
  const messages={
@@ -778,6 +785,48 @@ function openInvites(current){
    field.value=contexts[key];field.focus();
   }
  });
+ let busy=false,completed=false,requestId='',requestDraft='';
+ const draft=()=>{
+  const data=new FormData(form);
+  return validateWorkspaceInvitationDraft({
+   emails:data.get('emails'),role:data.get('role'),message:data.get('message')
+  });
+ };
+ form.querySelector('[data-ws02-action="send"]').addEventListener('click',async()=>{
+  if(!enabled||busy||completed||!layer.isConnected||activeOverlay!==layer)return;
+  const result=draft();
+  const feedback=form.querySelector('.ws02-invite-feedback');
+  if(!result.valid){feedback.textContent=result.reason;return;}
+  if(result.recipients.length!==1||result.role!=='member'){
+   feedback.textContent='Only one Member invitation is supported by the current signed delivery contract.';
+   return;
+  }
+  const fingerprint=JSON.stringify([row.id,...result.recipients,result.role,result.message]);
+  if(requestDraft!==fingerprint){
+   requestId=globalThis.crypto?.randomUUID?.()||'';requestDraft=fingerprint;
+  }
+  if(!validUuid(requestId)){feedback.textContent='Secure request ID unavailable. No invitation was submitted.';return;}
+  busy=true;
+  const button=form.querySelector('[data-ws02-action="send"]');
+  button.disabled=true;feedback.textContent='Requesting signed invitation authorization…';
+  try{
+   const receipt=await options.sendInvitation({workspaceId:row.id,
+    requestId,email:result.recipients[0],role:'member',message:result.message});
+   if(activeOverlay!==layer||!layer.isConnected)return;
+   if(!validUuid(receipt?.invitationId)||!['delivery-submitted','already-issued'].includes(receipt?.state))
+    throw Error('Unconfirmed server receipt');
+   completed=true;
+   feedback.textContent=receipt.state==='delivery-submitted'?
+    'The trusted delivery service accepted this invitation. Membership starts only after recipient acceptance.':
+    'This request was already issued; no new email was sent. Contact an administrator for delivery reconciliation.';
+  }catch{
+   if(activeOverlay!==layer||!layer.isConnected)return;
+   feedback.textContent='Invitation delivery was not confirmed. Do not start another request until an administrator reconciles this attempt.';
+  }finally{
+   busy=false;
+   if(activeOverlay===layer&&layer.isConnected)button.disabled=completed;
+  }
+ });
  form.addEventListener('submit',event=>{
   event.preventDefault();
   const data=new FormData(form);
@@ -790,11 +839,11 @@ function openInvites(current){
  });
  form.querySelector('#ws02-invite-emails').focus();
 }
-export function openWorkspaceInvitationDialog(current){
+export function openWorkspaceInvitationDialog(current,options={}){
  const row=workspaceFromSignedContext(current);
  if(!row)return;
  returnFocus=document.activeElement;
- openInvites(row);
+ openInvites(row,options);
 }
 export function openWorkspaceSelector(current,options={}){
  if(activeOverlay){closeWorkspacePanels();return;}
