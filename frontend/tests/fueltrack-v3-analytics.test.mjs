@@ -101,7 +101,7 @@ test('financial/vehicle/requester/mileage views never infer protected data from 
  d.values=[value(A,DATE,'2026-11-09'),value(A,LITERS,10)];
  for(const view of FUELTRACK_ANALYTICS_VIEWS){
   const html=renderFuelTrackAnalytics({detail:d,view:view.key});
-  assert.match(html,/Awaiting verified/);
+  assert.match(html,/No verified records available|No ranked requestors|Fuel price history unavailable/);
   assert.doesNotMatch(html,/Vehicle A - Requester Jane|200km|₱1000/);
   assert.doesNotMatch(html,/<form|data-action="save|style="/);
  }
