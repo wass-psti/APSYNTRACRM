@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'..');
 const allow=new Set(['/frontend/tests/fixtures/performance-profile-browser.html',
  '/frontend/performance-profile.js','/frontend/performance-critical-path.js',
- '/frontend/workspace-startup-read.js']);
+ '/frontend/workspace-startup-read.js','/frontend/performance-entry-waterfall.js']);
 const server=createServer((req,res)=>{
  const url=new URL(req.url,'http://127.0.0.1');
  if(!allow.has(url.pathname)){res.writeHead(404);res.end('not found');return;}
@@ -98,6 +98,14 @@ async function run(){
   assert.ok(measured.longTasks&&typeof measured.longTasks.supported==='boolean'&&
    Number.isFinite(measured.longTasks.count));
   assert.ok(measured.longTasks.maxMs>=0&&measured.longTasks.totalMs>=0);
+  const waterfall=await page.evaluate('performanceAcceptance.waterfall()');
+  assert.equal(waterfall.entryMs,250);
+  assert.equal(waterfall.resourceCount,3);
+  assert.equal(waterfall.groups.javascript.count,2);
+  assert.equal(waterfall.groups.stylesheet.count,1);
+  assert.equal(waterfall.afterLatestPublicResourceMs,40);
+  assert.doesNotMatch(JSON.stringify(waterfall),/secret|must-not-leak|private|token|app\.js/);
+  console.log('BROWSER_ENTRY_WATERFALL_PASS: bounded numeric-only public resource timing');
   const critical=await page.evaluate('performanceAcceptance.criticalPath()');
   assert.equal(critical.totalMs,120);
   assert.equal(critical.entryFromNavigationMs,0);

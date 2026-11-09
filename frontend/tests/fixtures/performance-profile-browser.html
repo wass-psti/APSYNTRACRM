@@ -4,7 +4,19 @@
 import {sampleBrowserFrames} from '../../performance-profile.js';
 import {createStartupCriticalPath} from '../../performance-critical-path.js';
 import {readWorkspaceStartup} from '../../workspace-startup-read.js';
+import {summarizeEntryWaterfall} from '../../performance-entry-waterfall.js';
 window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
+ waterfall:()=>{
+  const origin=location.origin;
+  const records=[
+   {name:origin+'/frontend/app.js?secret=must-not-leak',startTime:30,responseEnd:180,decodedBodySize:400},
+   {name:origin+'/frontend/profile.js',startTime:40,responseEnd:210,decodedBodySize:200},
+   {name:origin+'/frontend/apsyntra-styles.bundle.css',startTime:20,responseEnd:100,decodedBodySize:500},
+   {name:origin+'/private/token.js',startTime:20,responseEnd:190,decodedBodySize:700},
+   {name:'https://private.invalid/frontend/leak.js',startTime:20,responseEnd:160,decodedBodySize:1000}
+  ];
+  return summarizeEntryWaterfall({origin,entryMs:250,performanceRef:{getEntriesByType:()=>records}});
+ },
  measuredWorkspace:async()=>{
   const path=createStartupCriticalPath();
   path.begin();path.phase('workspace-authorization');
