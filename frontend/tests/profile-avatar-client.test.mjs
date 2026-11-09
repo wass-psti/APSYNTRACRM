@@ -7,13 +7,13 @@ const OLD=U+'/22222222-2222-4222-8222-222222222222.webp';
 const response=(data,status=200)=>new Response(JSON.stringify(data),{
  status,headers:{'Content-Type':'application/json'}
 });
-function harness({signedURL='/object/sign/account-avatars/'+OLD+'?token=abc'}={}){
+function harness({signedURL='/object/sign/account-avatars/'+OLD+'?token=abc',rpcResult=null}={}){
  const calls=[],rpc=[];
  const auth={
   userId:U,
   token:async()=>'signed-session',
   refresh:async()=>'refreshed-session',
-  authorized:async(path,options)=>{rpc.push({path,options});return {avatar_path:options.body.p_avatar_path,updated_at:'2026-11-09T00:00:00Z'};}
+  authorized:async(path,options)=>{rpc.push({path,options});return rpcResult||{avatar_path:options.body.p_avatar_path,updated_at:'2026-11-09T00:00:00Z'};}
  };
  const fetchImpl=async(url,options)=>{
   calls.push({url,options});
@@ -43,6 +43,7 @@ test('save updates only the caller-owned reference and cleans the previous objec
  const result=await client.save(blob,U,OLD);
  assert.equal(result.path.split('/')[0],U);
  assert.equal(result.cleanupPending,false);
+ assert.equal(result.updatedAt,'2026-11-09T00:00:00Z');
  assert.equal(rpc.length,1);
  assert.equal(rpc[0].path,'/rest/v1/rpc/set_own_profile_avatar');
  assert.deepEqual(rpc[0].options.body,{p_avatar_path:result.path,p_expected_avatar_path:OLD});
@@ -79,4 +80,15 @@ test('avatar mutations fail closed when caller user ID differs from the signed s
  await assert.rejects(()=>client.upload(new Blob(['x'],{type:'image/webp'}),foreign),/signed-in account/);
  await assert.rejects(()=>client.remove(foreign,foreign+'/22222222-2222-4222-8222-222222222222.webp'),/signed-in account/);
  assert.equal(calls.length,0);
+});
+
+
+test('ambiguous avatar reference responses preserve the uploaded object',async()=>{
+ const {client,calls}=harness({rpcResult:{avatar_path:OLD,updated_at:'2026-11-09T00:00:00Z'}});
+ const blob=new Blob(['webp-binary'],{type:'image/webp'});
+ await assert.rejects(()=>client.save(blob,U,null),/reference could not be confirmed/);
+ // The profile update response is inconsistent, so deleting the new object
+ // could break a committed reference. Preserve it for reconciliation.
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].options.method,'POST');
 });
