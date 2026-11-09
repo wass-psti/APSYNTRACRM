@@ -6343,6 +6343,7 @@ root.addEventListener('drop',event=>{
 });
 root.addEventListener('dragend',()=>{tradeLinkDraggedLine=null;});
 root.addEventListener('input',event=>{
+ if(syncTradeLinkFinanceInput(event))return;
  if(event.target.id==='ft3-request-search'&&fuelTrackRequestReady()){
   const pos=event.target.selectionStart;
   updateFuelTrackRequestFilters({search:String(event.target.value).slice(0,120),limit:25,expandedId:null});
@@ -6350,7 +6351,6 @@ root.addEventListener('input',event=>{
   if(control){control.focus();if(pos!==null)control.setSelectionRange(pos,pos);}
   return;
  }
- if(syncTradeLinkFinanceInput(event))return;
  if(captureTradeLinkDraftListFilters(event))return;
  if(captureTradeLinkDraftFields(event))return;
  if(event.target.matches('[data-tradelink-search]')&&
