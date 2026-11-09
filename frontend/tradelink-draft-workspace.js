@@ -368,11 +368,39 @@ export function applyQuotationApprovalHierarchy(draft){
   verifiedByEmail:QUOTATION_APPROVAL_HIERARCHY.primary.email,
   approvedBy:'Management',approvedByEmail:email};
 }
+/** Presentation-only eligibility. A matching email never authorizes an RPC:
+ * server-enforced stage membership, document status and audit must also pass. */
+export function quotationReviewControlEligibility({
+ actorEmail='',secondaryEmail='',documentSaved=false,
+ primaryReviewAvailable=TL03_WORKFLOW_REVIEW_ENABLED,
+ secondaryDecisionAvailable=TL03_WORKFLOW_DECISION_ENABLED
+}={}){
+ const actor=String(actorEmail||'').trim().toLowerCase();
+ const selected=String(secondaryEmail||'').trim().toLowerCase();
+ const primaryAssigned=actor!==''&&actor===QUOTATION_APPROVAL_HIERARCHY.primary.email;
+ const secondaryAssigned=actor!==''&&actor===selected&&
+  QUOTATION_APPROVAL_HIERARCHY.secondaryOptions.includes(selected);
+ return {
+  primaryAssigned,secondaryAssigned,
+  // Deliberately do not activate from an email match: the existing review/decision
+  // RPCs have not been verified as separate timestamp events for this form.
+  primaryEnabled:false,secondaryEnabled:false,
+  primaryReason:!primaryAssigned?'Available only to the assigned Sales Supervisor.':
+   !documentSaved?'Save the quotation before recording a signed review.':
+   !primaryReviewAvailable?'Signed Sales Supervisor review is not activated.':
+   'Independent signed timestamp recording is pending verification.',
+  secondaryReason:!secondaryAssigned?'Available only to the selected Management approver.':
+   !documentSaved?'Save the quotation before recording a signed review.':
+   !secondaryDecisionAvailable?'Signed Management approval is not activated.':
+   'Independent signed timestamp recording is pending verification.'
+ };
+}
 /** Source-matched quotation approval presentation. Assignment is NOT authorization. */
-function renderQuotationVerification(fieldValue,data,actorName=''){
+function renderQuotationVerification(fieldValue,data,actorName='',actorEmail='',documentSaved=false){
  const {primary,secondaryOptions}=QUOTATION_APPROVAL_HIERARCHY;
  const selected=fieldValue('approvedByEmail',data.approvedByEmail||secondaryOptions[0]);
  const safeSelected=secondaryOptions.includes(selected)?selected:secondaryOptions[0];
+ const eligibility=quotationReviewControlEligibility({actorEmail,secondaryEmail:safeSelected,documentSaved});
  return '<section class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
   '<h4 id="tl-quotation-approval-heading">Verification &amp; Approval Workflow</h4>'+
   '<div class="tl-reference-approval-creator">'+
@@ -390,7 +418,7 @@ function renderQuotationVerification(fieldValue,data,actorName=''){
    '<label for="tl-quote-review-time">Review Date &amp; Time</label>'+
    '<div class="tl-reference-approval-timestamp">'+
     '<input id="tl-quote-review-time" aria-label="Review date and time" placeholder="Available after authorized review" disabled>'+
-    '<button type="button" disabled title="Only the authorized reviewer may record a review">Use Time Now</button></div>'+
+    '<button type="button" disabled title="'+escape(eligibility.primaryReason)+'" aria-disabled="true" data-tl-review-stage="primary">Use Time Now</button></div>'+
    '<small>The signed review operation records the actual review time when activated.</small>'+
   '</div>'+
   '<div class="tl-reference-approval-stage">'+
@@ -404,7 +432,7 @@ function renderQuotationVerification(fieldValue,data,actorName=''){
    '<label for="tl-quote-secondary-review-time">Review Date &amp; Time</label>'+
    '<div class="tl-reference-approval-timestamp">'+
     '<input id="tl-quote-secondary-review-time" aria-label="Secondary review date and time" placeholder="Available after authorized secondary review" disabled>'+
-    '<button type="button" disabled title="Requires independently verified Management reviewer action">Use Time Now</button></div>'+
+    '<button type="button" disabled title="'+escape(eligibility.secondaryReason)+'" aria-disabled="true" data-tl-review-stage="secondary">Use Time Now</button></div>'+
    '<small>Management verification is independent of the Sales Supervisor review. Its timestamp requires a separate signed server event.</small>'+
   '</div></section>';
 }
@@ -810,7 +838,7 @@ export function snapshotTradeLinkDraftLineItems(form){
    unit:get('lineUnit'),serialNumber:get('lineSerialNumber')};
  });
 }
-function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName=''){
+function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail=''){
  const editing=mode==='edit'&&
   ['draft','revision-required'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
@@ -959,7 +987,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
      '<small>These notes are part of the local validation preview. No PDF, approval or document is generated.</small>'+
     '</label></section>'+
-   (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName):
+   (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,actorEmail,editing):
    (type!=='packing'?
     '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Workflow account assignments</legend>'+
      '<p class="muted">Reviewer email must match a verified signed APSYNTRA CRM account. '+
@@ -1487,7 +1515,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   (linked&&canManage?renderTradeLinkSavedWorkflowHistory(selection?.events):'')+
   '</section>';
 }
-export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,actorName=''}={}){
+export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,actorName='',actorEmail=''}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
    detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="tl-draft-panel">Signed TradeLink workspace unavailable.</section>';
@@ -1504,6 +1532,6 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
     '/tradelink/documents">Back to All Documents</a></section>':
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
-   view.error||'',view.message||'',view.lineDrafts,actorName))+
+   view.error||'',view.message||'',view.lineDrafts,actorName,actorEmail))+
   '</div>';
 }
