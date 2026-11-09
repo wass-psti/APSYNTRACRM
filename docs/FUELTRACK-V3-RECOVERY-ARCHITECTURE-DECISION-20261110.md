@@ -104,3 +104,18 @@ Only one independent historical local snapshot is available; local birth
 timestamps do not certify a live recovery point or a sustained 24-hour
 backup schedule. The tool always returns NO-GO without changing production.
 See docs/FUELTRACK-V3-ROLLING-RPO-OBSERVATION-20261110.md.
+
+## November 10 — Verified retention evidence versus retention enforcement
+
+A new one-shot local gate checks independently retained logical database
+and private Storage sets, SHA-256 integrity, combined RPO capture-age and
+cadence gaps. It never deletes files, schedules backups or contacts Supabase.
+A proposed seven-daily-set history is for testability, NOT an approved
+retention period. The binding requirements remain 24-hour RPO/RTO and the
+mandatory full recovery rehearsal. The existing independent local archive
+contains only one verified capture, about 12.86 hours old at inspection.
+
+No recurring retention, remote immutable backup, physical provider restore,
+or hosted 24-hour RTO is verified. No alternate architecture is approved.
+The implementation and pending decision are recorded in
+docs/FUELTRACK-V3-RETENTION-ARCHITECTURE-APPROVAL-20261110.md.
