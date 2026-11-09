@@ -339,14 +339,51 @@ function renderCommercialReadiness(type,fieldValue,data){
  if(type==='esi')return '<fieldset class="tl-draft-lines"><legend>Electronic SI readiness · preview only</legend>'+
   input('Intended finance verifier','verifiedBy')+
   input('Intended management approver','approvedBy')+'</fieldset>'+note;
- if(type==='quotation')return '<fieldset class="tl-draft-lines"><legend>Quotation readiness · preview only</legend>'+
-  input('Intended approver','approvedBy')+'</fieldset>'+note;
+ if(type==='quotation')return '';
  if(type==='po')return '<fieldset class="tl-draft-lines"><legend>Supplier PO readiness · preview only</legend>'+
   input('Intended Account Manager reviewer','verifiedBy')+
   input('Intended final approver','approvedBy')+'</fieldset>'+note;
  return '';
 }
 
+/** Source-matched quotation approval presentation. Assignment is NOT authorization. */
+function renderQuotationVerification(fieldValue,data,actorName=''){
+ const reviewer=fieldValue('verifiedBy',data.verifiedBy||'');
+ const approver=fieldValue('approvedBy',data.approvedBy||'');
+ const reviewerEmail=fieldValue('verifiedByEmail',data.verifiedByEmail||'');
+ const approverEmail=fieldValue('approvedByEmail',data.approvedByEmail||'');
+ return '<section class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
+  '<h4 id="tl-quotation-approval-heading">Verification &amp; Approval Workflow</h4>'+
+  '<div class="tl-reference-approval-creator">'+
+   '<span aria-hidden="true">♙</span><div><strong>Created By</strong> '+
+   '<span class="tl-reference-approval-chip">Auto-captured on save</span>'+
+   '<p>'+(actorName?escape(actorName):'Current authenticated user')+'</p>'+
+   '<small>Identity and time are recorded by the signed server on successful save.</small>'+
+  '</div></div>'+
+  '<div class="tl-reference-approval-stage">'+
+   '<label for="tl-quote-reviewer">Reviewed By (Sales Supervisor)</label>'+
+   '<input id="tl-quote-reviewer" name="verifiedBy" value="'+escape(reviewer)+'" '+
+    'maxlength="5000" placeholder="Enter intended Sales Supervisor">'+
+   '<small>Reviewer selection is a proposed assignment, not a verified review.</small>'+
+   '<label for="tl-quote-reviewer-email">Reviewer signed account email (optional)</label>'+
+   '<input id="tl-quote-reviewer-email" name="verifiedByEmail" value="'+escape(reviewerEmail)+'" '+
+    'type="email" maxlength="254" autocomplete="off" placeholder="reviewer@example.com">'+
+   '<label>Review Date &amp; Time</label>'+
+   '<div class="tl-reference-approval-timestamp">'+
+    '<input id="tl-quote-review-time" aria-label="Review date and time" placeholder="Available after authorized review" disabled>'+
+    '<button type="button" disabled title="Only the authorized reviewer may record a review">Use Time Now</button></div>'+
+   '<small>The server will record the actual review time when review activation and permissions allow.</small>'+
+  '</div>'+
+  '<div class="tl-reference-approval-stage">'+
+   '<label for="tl-quote-approver">Approved By (Management)</label>'+
+   '<input id="tl-quote-approver" name="approvedBy" value="'+escape(approver)+'" '+
+    'maxlength="5000" required placeholder="Enter intended management approver">'+
+   '<small>Approver is proposed only. No approval or role change is performed.</small>'+
+   '<label for="tl-quote-approver-email">Management signed account email (optional)</label>'+
+   '<input id="tl-quote-approver-email" name="approvedByEmail" value="'+escape(approverEmail)+'" '+
+    'type="email" maxlength="254" autocomplete="off" placeholder="approver@example.com">'+
+  '</div></section>';
+}
 /** One unsaved priced line; reuse the authoritative source calculation formula. */
 export function calculateTradeLinkDraftLocalAmounts(fields){
  if(!fields||typeof fields.get!=='function')return null;
@@ -749,7 +786,7 @@ export function snapshotTradeLinkDraftLineItems(form){
    unit:get('lineUnit'),serialNumber:get('lineSerialNumber')};
  });
 }
-function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null){
+function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName=''){
  const editing=mode==='edit'&&
   ['draft','revision-required'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
@@ -891,6 +928,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '</fieldset>':'')+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines):'')+
+   (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName):
    (type!=='packing'?
     '<fieldset class="tl-draft-lines tl-reference-workflow-fields"><legend>Workflow account assignments</legend>'+
      '<p class="muted">Reviewer email must match a verified signed APSYNTRA CRM account. '+
@@ -903,7 +941,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      (['esi','quotation','po'].includes(type)?
       field('Assigned approver account email (optional)','approvedByEmail',
        fieldValue('approvedByEmail',data.approvedByEmail||''),'type="email" maxlength="254"'):'')+
-    '</fieldset>':'')+
+    '</fieldset>':''))+
    '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
     '<label class="tl-draft-field"><span>Document notes and terms · local preview</span>'+
      '<textarea name="remarks" maxlength="5000" rows="5" '+
@@ -1425,7 +1463,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
   (linked&&canManage?renderTradeLinkSavedWorkflowHistory(selection?.events):'')+
   '</section>';
 }
-export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false}={}){
+export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,actorName=''}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
    detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="tl-draft-panel">Signed TradeLink workspace unavailable.</section>';
@@ -1442,6 +1480,6 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
     '/tradelink/documents">Back to All Documents</a></section>':
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
-   view.error||'',view.message||'',view.lineDrafts))+
+   view.error||'',view.message||'',view.lineDrafts,actorName))+
   '</div>';
 }

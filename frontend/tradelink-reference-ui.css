@@ -1126,3 +1126,65 @@
  }
  .tl-reference-portal .tl-reference-totals-right{width:100%}
 }
+
+/* Quotation-specific source reference verification and approval presentation. */
+.tl-reference-portal .tl-reference-approval{
+ border-top:1px solid #e4e8ee;padding:25px 0 20px;margin:10px 0 24px;
+ display:grid;gap:16px;max-width:none;
+}
+.tl-reference-portal .tl-reference-approval h4{
+ font-size:13px;color:#141922;font-weight:750;margin:0 0 2px;
+}
+.tl-reference-portal .tl-reference-approval-creator{
+ display:flex;gap:14px;align-items:center;padding:17px 20px;
+ border:1px solid #e2e6ee;background:#f8f9fb;border-radius:13px;
+ color:#19202a;
+}
+.tl-reference-portal .tl-reference-approval-creator>span{
+ font-size:23px;width:24px;flex:none;
+}
+.tl-reference-portal .tl-reference-approval-creator strong{
+ font-size:13px;font-weight:750;
+}
+.tl-reference-portal .tl-reference-approval-chip{
+ display:inline-block;margin-left:8px;padding:3px 9px;border-radius:99px;
+ color:#087144;background:#dcf7e7;font-size:10px;font-weight:650;
+}
+.tl-reference-portal .tl-reference-approval-creator p{
+ margin:7px 0 4px;color:#181d27;font-size:13px;
+}
+.tl-reference-portal .tl-reference-approval-creator small,
+.tl-reference-portal .tl-reference-approval-stage small{
+ display:block;color:#747e90;font-size:11px;line-height:1.55;
+}
+.tl-reference-portal .tl-reference-approval-stage{
+ display:grid;grid-template-columns:minmax(0,1fr);gap:7px;
+ padding:0 0 14px;border-bottom:1px solid #edf0f4;
+}
+.tl-reference-portal .tl-reference-approval-stage label{
+ display:block;font-size:12px;font-weight:600;color:#d18800;
+ margin-top:9px;
+}
+.tl-reference-portal .tl-reference-approval-stage input{
+ box-sizing:border-box;width:100%;min-height:37px;
+ border:1px solid #e1e5ed;border-radius:9px;
+ padding:9px 11px;background:#fff;color:#1c2430;font-size:12px;
+}
+.tl-reference-portal .tl-reference-approval-stage input:focus-visible{
+ outline:2px solid #2a62eb;outline-offset:2px;
+}
+.tl-reference-portal .tl-reference-approval-timestamp{
+ display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+}
+.tl-reference-portal .tl-reference-approval-timestamp input{
+ width:min(100%,260px);flex:1 1 210px;
+}
+.tl-reference-portal .tl-reference-approval-timestamp button{
+ border:1px solid #e4e7ed;border-radius:9px;padding:9px 13px;
+ color:#8a95a2;background:#f5f7f8;font:inherit;font-size:12px;
+}
+.tl-reference-portal .tl-reference-approval-stage :disabled{cursor:not-allowed;opacity:.75}
+@media(max-width:600px){
+ .tl-reference-portal .tl-reference-approval-creator{padding:13px}
+ .tl-reference-portal .tl-reference-approval-chip{margin:6px 0 0}
+}

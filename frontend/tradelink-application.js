@@ -98,7 +98,7 @@ function renderModule(m){
 }
 /** Reference-led TradeLink portal is presentation-only.
  * Links preserve the existing signed-board routes and disabled domain gates. */
-export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false}={}){
+export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false,actorName=''}={}){
  if(!isTradeLinkBoard(detail?.board)||
      typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
@@ -131,7 +131,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
   '</header>'+
   '<div class="tl-app-layout">'+
    '<div class="tl-app-main">'+
-    (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage):current==='activity'?renderTradeLinkActivity(activity||{}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage}))+
+    (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage):current==='activity'?renderTradeLinkActivity(activity||{}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName}))+
    '</div></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network

@@ -251,7 +251,8 @@ test('Quotation preview validates client contact and source commercial terms wit
   detail,workspaceId:workspace,view:initialTradeLinkDraftView('quotation'),canManage:true});
  for(const name of ['customerEmail','customerPhone','validity','deliveryCommitment','paymentTerms','approvedBy'])
   assert.ok(html.includes('name="'+name+'"'),name);
- assert.match(html,/Quotation readiness · preview only/);
+ assert.match(html,/Verification &amp; Approval Workflow/);
+ assert.doesNotMatch(html,/Quotation readiness · preview only|Workflow account assignments/);
  const base={documentType:'quotation',documentNumber:'Q-001',customerName:'Prospect',
   customerEmail:'contact@example.com',validity:'30 days',deliveryCommitment:'4 weeks',
   paymentTerms:'Net 30',approvedBy:'Reviewer',
