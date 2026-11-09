@@ -160,6 +160,7 @@ test('startup code preserves signed backend RBAC and provides same-page recovery
  assert.match(app,/await auth\.restore\(\)/);
  assert.match(app,/await refreshWorkspace\(\)/);
  assert.match(app,/await onRoute\(\)/);
+ assert.match(app,/state\.context\?\.user_id!==auth\.userId/);
  assert.match(app,/window\.__APSYNTRA_STARTUP\?\.resolve\(outcome\)/);
  assert.match(app,/renderBootstrapFailure\(err\)/);
  assert.doesNotMatch(app,/catch\(err\)\{await auth\.signOut\(\);state\.context=null;renderLogin/);

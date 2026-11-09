@@ -6087,6 +6087,11 @@ async function boot(){
    await refreshWorkspace();
    setInitializationPhase('workspace');
    await onRoute();
+   // A revoked/switching session during an async route cannot be classified
+   // as authenticated solely because its earlier context RPC had passed.
+   if(!auth.isSignedIn||state.context?.user_id!==auth.userId||
+     !state.context?.workspace_id)
+    throw new ApiError('Session or workspace changed during startup.',401);
    outcome='AUTHENTICATED';
   }else{
    renderLogin();
