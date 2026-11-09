@@ -787,7 +787,7 @@ function boardPage(){
     label:'▤ Board items <span class="csp-u060">('+items.length+')</span>'},
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
-  ...(moduleKey==='tradelink'?[{key:'tradelink',href:'#/boards/'+b.id+'/tradelink',
+  ...(moduleKey==='tradelink'?[{key:'tradelink',href:'#/boards/'+b.id+'/tradelink/drafts/quotation',
     label:'▤ TradeLink application'}]:[]),
   ...(moduleKey==='fueltrans'?[{key:'fueltrans',href:'#/boards/'+b.id+'/fueltrans',label:'FuelTrans application'}]:[]),
   ...(moduleKey==='frt'?[{key:'finance',href:'#/boards/'+b.id+'/finance',
@@ -2630,6 +2630,22 @@ async function onRoute(){
     parts[2]==='tradelink'&&state.boards.some(b=>b.id===parts[1]&&
       moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
     defaultFuelTrans?'fueltrans':defaultClock?'attendance':'items';
+  // Opening the TradeLink application must land in the real Create New editor.
+  // Canonicalize only the bare entry URL; preserve documents, saved edits,
+  // module deep links and activity without creating an extra history entry.
+  if(requested==='tradelink'&&!parts[3]){
+   const canonical='#/boards/'+parts[1]+'/tradelink/drafts/quotation';
+   history.replaceState(null,'',location.pathname+location.search+canonical);
+   parts.splice(3,0,'drafts','quotation');
+  }
+  // TradeLink has no overview landing page. Canonicalize legacy entry URLs
+  // without adding a history entry or changing authentication/board scope.
+  // Keep explicit documents, activity, draft and edit deep links unchanged.
+  if(requested==='tradelink'&&(!parts[3]||parts[3]==='overview')){
+   const canonical='#/boards/'+parts[1]+'/tradelink/drafts/quotation';
+   history.replaceState(null,'',location.pathname+location.search+canonical);
+   parts.splice(3,parts.length-3,'drafts','quotation');
+  }
   // Legacy direct module URLs resolve to the same functional editor, never
   // the historical reference/instruction page.
   const directModule=requested==='tradelink'&&

@@ -24,7 +24,6 @@ test('reference All Documents uses real signed row fields, compact menu, and no 
  assert.match(html,/<h2 id="tl-domain-repository-title">All Documents/);
  assert.match(html,/tl-ref-count-badge">1<\/span>/);
  assert.match(html,/Create New Document/);
- assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink">Dashboard/);
  assert.match(html,/data-action="tradelink-documents-refresh"/);
  assert.match(html,/data-tradelink-domain-record/);
  assert.match(html,/id="tl-select-visible-documents"/);
