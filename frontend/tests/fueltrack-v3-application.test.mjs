@@ -161,7 +161,7 @@ test('New Fuel Request exposes two distinct reference modes without fabricated c
  for(const id of ['ft3-plate','ft3-owner','ft3-quantity','ft3-responsible']){
   assert.match(html,new RegExp('<select id="'+id+'"[^>]* disabled'));
  }
- assert.match(html,/Submit for Approval — unavailable" disabled/);
+ assert.match(html,/<button[^>]*disabled[^>]*>Submit for Approval — unavailable<\/button>/);
  assert.match(html,/no request will be saved or submitted/i);
- assert.doesNotMatch(html,/<form\\b|data-action=".*submit|\\bfetch\\(/i);
+ assert.doesNotMatch(html,/<form\b|data-action=".*submit|\bfetch\(/i);
 });
