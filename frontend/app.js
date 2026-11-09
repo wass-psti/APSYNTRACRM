@@ -7,6 +7,7 @@ import {mountAvatarImages} from './profile-avatar.js';
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
+import {WorkspaceInvitationAcceptanceClient,WS02D_ACCEPTANCE_ENABLED,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
 import {validateAccessRequest} from './request-access.js';
@@ -144,6 +145,7 @@ const db=new DomainApi(auth);
 const profileAvatarClient=new ProfileAvatarClient({auth});
 const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
 const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
+const workspaceInvitationAcceptanceClient=new WorkspaceInvitationAcceptanceClient({auth,api:db});
 const platformSync=new PlatformSync({
  auth,api:db,url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY,
  onStatus:updatePlatformSyncIndicator,onInvalidate:reconcilePlatformSync
@@ -175,6 +177,9 @@ const routeHome='#/overview';
 const unsavedTradeLinkWarning='You have unsaved TradeLink Draft changes. Leave this page and discard them?';
 let approvedRouteHash=location.hash||routeHome;
 let rejectedRouteHash=null;
+let pendingInvitation=null;
+let invitationAcceptanceBusy=false;
+let invitationAcceptanceStatus='';
 let modal=null;
 let routeSerial=0;
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
@@ -343,7 +348,7 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':'Settings';
+ const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
  const sidebarSignature=JSON.stringify([state.roleVerified,name(),
   state.context?.profile?.platform_role,workspaceName(),
@@ -947,6 +952,10 @@ function render(){
  else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,ci07Result:state.ci07Result,ci07Busy:state.ci07Busy,sec14Result:state.sec14Result,sec14Busy:state.sec14Busy,sec14DenialResult:state.sec14DenialResult,sec14DenialBusy:state.sec14DenialBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards,sec10IsBootstrap:state.roleVerified===true,effectiveAccessResult:state.effectiveAccessResult,effectiveAccessBusy:state.effectiveAccessBusy,sec10BoardsError:state.securityBoardsError})+renderTradeLinkStageAAcceptance({busy:state.tl03ReadBusy,report:state.tl03ReadResult})+renderTradeLinkSessionRevocation({armed:state.tl03RevokeArmed,report:state.tl03RevokedReport})+renderWs01B2SignedAcceptance({busy:state.ws01B2Busy,report:state.ws01B2Result})+renderWs02dB3SignedPreflight({busy:state.ws02dB3Busy,report:state.ws02dB3Report})+renderWs02dB3DeployedHttpsAcceptance({busy:state.ws02dB3HttpsBusy,result:state.ws02dB3HttpsReport})+renderWs02dB3ForeignRlsDenial({busy:state.ws02dB3RlsBusy,result:state.ws02dB3RlsReport,hasFixture:hasWs02dB3ForeignRlsFixture()})+renderWs02dB3LocalRevocation({armed:state.ws02dB3RevokeArmed,report:state.ws02dB3RevokedReport})+renderB2SignedQaFixture({busy:state.b2QaBusy,result:state.b2QaReport})+renderB4SignedRecoveryPreflight({busy:state.b4QaBusy,report:state.b4QaReport})+renderPhaseBSignedDenial({busy:state.phaseBDenialBusy,report:state.phaseBDenialReport}));
  else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.roleVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
  else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.roleVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,busy:state.userRoleBusy,error:state.userRoleError}));
+ else if(state.view==='invitation')shell(renderInvitationAcceptance({
+  pending:pendingInvitation,enabled:WS02D_ACCEPTANCE_ENABLED,
+  busy:invitationAcceptanceBusy,status:invitationAcceptanceStatus
+ }));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
@@ -2605,6 +2614,10 @@ async function onRoute(){
  if(!state.context)return;
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
+ if(parts[0]==='invitations'&&parts[1]==='accept'){
+  state.view='invitation';render();return;
+ }
+ if(pendingInvitation){pendingInvitation=null;invitationAcceptanceStatus='';}
  if(parts[0]==='boards'&&validUuid(parts[1])){
   const defaultClock=!parts[2]&&state.boards.some(b=>
     b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
@@ -2763,7 +2776,7 @@ async function login(form){
    // Preserve only the volatile B3 row reference through the same-tab auth handoff.
    const returnToB3=state.ws02dB3HandoffPending&&hasWs02dB3ForeignRlsFixture();
    state.ws02dB3HandoffPending=false;
-   location.hash=returnToB3?'#/security':routeHome;
+   location.hash=returnToB3?'#/security':pendingInvitation?.status==='ready'?'#/invitations/accept':routeHome;
    await onRoute();
    toast(returnToB3?'Signed in. In B3, click Step 2 only to test the foreign row.':
     'Successfully signed in.');
@@ -3503,6 +3516,7 @@ async function action(name,button){
     }
     if(isB3LocalRevoke&&(!state.ws02dB3RevokeArmed||state.view!=='security'||
        !auth.isSignedIn||!state.context))break;
+    pendingInvitation=null;invitationAcceptanceStatus='';
     startupRecoveryActive=false;
     closeWorkspacePanels();clearBulkActivation();platformSync.stop();
     let revoked=null;
@@ -3536,6 +3550,18 @@ async function action(name,button){
       location.reload();
      }});
    break;
+ }
+ case 'ws02d-accept-invitation':{
+  if(!WS02D_ACCEPTANCE_ENABLED||invitationAcceptanceBusy||
+     pendingInvitation?.status!=='ready'||!auth.isSignedIn||!state.context)return;
+  invitationAcceptanceBusy=true;render();
+  try{
+   await workspaceInvitationAcceptanceClient.accept(pendingInvitation.token);
+   pendingInvitation=null;invitationAcceptanceStatus='accepted';
+  }catch{
+   pendingInvitation=null;invitationAcceptanceStatus='unconfirmed';
+  }finally{invitationAcceptanceBusy=false;render();}
+  break;
  }
  case 'ws02-open-invites':{
    if(!auth.isSignedIn||!state.context?.workspace_id)break;
@@ -6120,6 +6146,9 @@ window.addEventListener('offline',()=>platformSync.network(false));
 // Authentication expiry remains authoritative: a revoked session is never
 // retained merely because an unsaved editor was open.
 window.addEventListener('hashchange',()=>{
+ // Scrub newly pasted invitation links even after the app has initialized.
+ const incomingInvitation=captureInvitationLink(location,history);
+ if(incomingInvitation){pendingInvitation=incomingInvitation;invitationAcceptanceStatus='';}
  const nextHash=location.hash||routeHome;
  if(rejectedRouteHash===nextHash){
   rejectedRouteHash=null;return; // Cancelled navigation restored its old URL.
@@ -6135,6 +6164,7 @@ window.addEventListener('hashchange',()=>{
  if(nextHash!==approvedRouteHash&&tradeLinkDraftRoute()&&
    tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft)&&
    !confirm(unsavedTradeLinkWarning)){
+  pendingInvitation=null;invitationAcceptanceStatus='';
   rejectedRouteHash=approvedRouteHash;
   location.replace(approvedRouteHash);
   return;
@@ -6157,7 +6187,7 @@ window.addEventListener('keydown',event=>{if(event.key==='Escape'){
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  if(startupBusy)return;
  startupBusy=true;
@@ -6191,6 +6221,10 @@ async function boot(){
    outcome='UNAUTHENTICATED';
    return;
   }
+  if(!pendingInvitation){
+   pendingInvitation=captureInvitationLink(location,history);
+   if(pendingInvitation)approvedRouteHash=location.hash;
+  }
   if(['#/register','#/forgot-password','#/reset-password'].includes(location.hash)){
    renderLogin(location.hash==='#/reset-password'?
     'Your recovery link is unavailable or expired. Request a new link.':'');
@@ -6210,7 +6244,9 @@ async function boot(){
     throw new ApiError('Session or workspace changed during startup.',401);
    outcome='AUTHENTICATED';
   }else{
-   renderLogin();
+   renderLogin(pendingInvitation?.status==='ready'?
+    'Sign in with the email address that received the workspace invitation.':
+    '');
    outcome='UNAUTHENTICATED';
   }
  }catch(err){

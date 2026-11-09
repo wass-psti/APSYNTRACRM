@@ -149,7 +149,7 @@ test('B3 guided handoff uses only local sign-out, returns to Security, and never
  assert.match(app,/if\(isB3RlsHandoff\)\{[\s\S]*?hasWs02dB3ForeignRlsFixture\(\)/);
  assert.match(app,/state\.ws02dB3HandoffPending=true;\s*await auth\.signOut\(\{scope:'local'\}\)/);
  assert.match(app,/returnToB3=state\.ws02dB3HandoffPending&&hasWs02dB3ForeignRlsFixture\(\)/);
- assert.match(app,/location\.hash=returnToB3\?'#\/security':routeHome/);
+ assert.match(app,/location\.hash=returnToB3\?'#\/security':pendingInvitation\?\.status==='ready'\?'#\/invitations\/accept':routeHome/);
  assert.match(app,/clearWs02dB3ForeignRlsFixture\(\)/);
  assert.doesNotMatch(app,/ws02dB3HandoffPending=true;[\s\S]{0,250}(?:localStorage|sessionStorage|navigator\.clipboard)/);
 });
