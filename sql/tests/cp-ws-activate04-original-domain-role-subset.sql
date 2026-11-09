@@ -19,6 +19,11 @@ BEGIN;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS platform_role text;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS revision bigint DEFAULT 1;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+-- Metadata-only dependency for original access-context aggregation.
+CREATE TABLE public.material_tracker_memberships(
+ workspace_id uuid, user_id uuid, role text, enabled boolean, status text,
+ assigned_by uuid, created_at timestamptz, updated_at timestamptz
+);
 -- Match known production entrypoint grants for these three original functions.
 REVOKE ALL ON FUNCTION public.has_module_access(text,uuid),
   public.module_role_for(text,uuid),public.wm_auth_access_context()
