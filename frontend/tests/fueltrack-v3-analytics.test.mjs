@@ -76,7 +76,7 @@ test('monthly consumption is aggregated only from signed board date and quantity
 });
 test('date filters operate on actual Event Date; no title-derived dates',()=>{
  const d=fixture([make(A,'old 2026','Done'),make(B,'new 2026','Completed')]);
- d.values=[value(A,DATE,'2026-03-05'),value(B,DATE,'2026-11-08'),
+ d.values=[value(A,DATE,'2026-03-05'),value(B,DATE,'2026-11-09'),
   value(A,LITERS,10),value(B,LITERS,20)];
  const now=new Date('2026-11-09T10:00:00Z');
  assert.equal(fuelTrackAnalyticsModel(d,{range:'all',now}).requestCount,2);
