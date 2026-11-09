@@ -93,6 +93,7 @@ let activePreviewUrl=null;
 function releasePreview(){
  if(activePreviewUrl){URL.revokeObjectURL(activePreviewUrl);activePreviewUrl=null;}
 }
+export function stopAvatarPreview(){releasePreview();}
 export function mountAvatarPreview(container){
  releasePreview();
  const section=container?.querySelector('.settings-avatar-editor');
