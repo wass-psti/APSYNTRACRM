@@ -224,3 +224,37 @@
 /* Reveal custom container count only for the explicitly selected option. */
 #app .ft3-new-custom-count{display:none}
 #app .ft3-new-container:has(#ft3-quantity option[value="custom"]:checked) .ft3-new-custom-count{display:flex}
+
+
+/* FuelTrack+ approvals: native reference layout, no inferred decision data. */
+#app .ft3-approvals{min-height:480px;padding:24px 20px 45px;color:#263943}
+#app .ft3-approvals-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:19px}
+#app .ft3-approvals-heading h2{font-size:25px;letter-spacing:-.035em;font-weight:650;margin:0 0 8px}
+#app .ft3-approvals-heading p{color:#6d828a;font-size:11px;margin:0}
+#app .ft3-approvals-actions{display:flex;gap:8px;flex-wrap:wrap}
+#app .ft3-approvals-actions button{border:1px solid #d1dee3;background:#f8fbfc;color:#2d4654;padding:9px 13px;border-radius:12px;font:inherit;cursor:pointer}
+#app .ft3-approvals-actions button:disabled{opacity:.58;cursor:not-allowed}
+#app .ft3-approvals-actions button:focus-visible{outline:2px solid #0f9793;outline-offset:2px}
+#app .ft3-approvals-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+#app .ft3-approval-metric{display:flex;gap:12px;align-items:center;min-width:0;background:#edf5f6;border:1px solid #d7e5e9;border-radius:19px;padding:15px}
+#app .ft3-approval-metric:nth-child(2){background:#f7f2f4}
+#app .ft3-approval-metric:nth-child(4){background:#eaf5fa}
+#app .ft3-approval-metric>span{font-size:20px;color:#139e99}
+#app .ft3-approval-metric strong{font-size:17px;display:block;color:#263943}
+#app .ft3-approval-metric small{font-size:10px;color:#6b828a;display:block;margin-top:3px}
+#app .ft3-approvals-sort{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:19px}
+#app .ft3-approvals-sort span{color:#647f88;font-size:11px}
+#app .ft3-approvals-sort button{border:1px solid transparent;border-radius:99px;background:transparent;padding:6px 9px;color:#61767e;font:inherit;font-size:11px}
+#app .ft3-approvals-sort button:disabled{cursor:not-allowed;opacity:.65}
+#app .ft3-approvals-empty{text-align:center;padding:74px 12px 34px}
+#app .ft3-approvals-empty>span{font-size:38px;color:#91a8b1}
+#app .ft3-approvals-empty h3{margin:13px 0 4px;font-size:16px}
+#app .ft3-approvals-empty p{margin:0;color:#6c828a}
+#app .ft3-approval-unavailable{border:1px solid #d8e5e9;border-radius:16px;background:#f4f9fa;color:#627984;margin:44px auto;padding:20px;max-width:660px;line-height:1.65;text-align:center}
+#app .ft3-approvals-queue{margin-top:22px;border:1px solid #dae5e9;border-radius:18px;padding:22px}
+#app .ft3-approvals-queue h3{font-size:16px;margin:0 0 7px}
+#app .ft3-approvals-queue ul{padding-left:19px}
+#app .ft3-approvals-queue li{margin:10px 0}
+#app .ft3-approvals-queue li small{display:block;color:#718691}
+@media(max-width:850px){#app .ft3-approvals-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){#app .ft3-approvals{padding:17px 12px 30px}#app .ft3-approvals-metrics{grid-template-columns:1fr}}
