@@ -56,7 +56,7 @@ test('general workspace selector loads authorized member discovery without enabl
  assert.match(source,/data-ws01-note/);
  assert.match(source,/Authorized workspaces/);
  assert.match(source,/resultsMarkup\(read\(\),'all',input\.value,options\)/);
- assert.match(source,/openInvites\(read\(\)\.rows\.find\(row=>row\.active\)\)/);
+ assert.match(source,/openInvites\(read\(\)\.rows\.find\(row=>row\.active\),\{/);
  assert.match(source,/Workspace switching is not yet activated/);
  assert.match(source,/session\.status='error'/);
  assert.doesNotMatch(source,/WS01_SWITCHING_ENABLED=true/);
@@ -356,16 +356,16 @@ test('invitation review accepts distinct emails and strictly workspace-local rol
  ])assert.equal(validateWorkspaceInvitationDraft(bad).valid,false,JSON.stringify(bad).slice(0,140));
 });
 
-test('invitation panel previews draft only, never sends email or creates memberships',()=>{
+test('invitation panel remains preview-only in production, with staged explicit-send branch',()=>{
  const module=readFileSync('frontend/workspace-ui.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  const css=readFileSync('frontend/workspace-ui.css','utf8');
- assert.match(module,/function inviteContent\(current\)/);
+ assert.match(module,/function inviteContent\(current,\{enabled=false\}=\{\}\)/);
  assert.match(module,/role="dialog" aria-modal="true"/);
  assert.match(module,/ws02-invite-title/);
  for(const part of ['name="emails"','name="role"','name="message"',
   'value="admin"','value="member"','value="viewer"',
-  'Send invites — pending activation','disabled aria-describedby',
+  'Send invites — pending activation','data-ws02-action=\"send\"',
   'data-ws02-context','No invitations were sent'])
   assert.ok(module.includes(part),part);
  assert.doesNotMatch(module,/\.rpc\(['"](?:wm_ws02_invite|wm_invite_workspace|wm_ws01_invite)/);
@@ -458,7 +458,7 @@ test('workspace controls are actionable for verified rows and fail closed for un
  assert.match(source,/WS01_SWITCHING_ENABLED=false/);
  assert.doesNotMatch(source,/WS02_INVITATIONS_ENABLED/);
  assert.match(source,/Send invites — pending activation/);
- assert.match(source,/disabled aria-describedby/);
+ assert.match(source,/\(enabled\?'':'disabled '\)/);
 });
 
 
