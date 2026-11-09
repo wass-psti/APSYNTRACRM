@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {
  WS01_DISCOVERY_ENABLED,WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED,
  workspaceCatalog,visibleWorkspaces,normalizeServerWorkspaceCatalog,workspaceDetailsFor,validateWorkspaceProposal,assessWorkspaceCreationReadiness,submitWorkspaceCreation,renderWorkspaceSwitcher,
- validateWorkspaceInvitationDraft,renderWorkspaceInviteLaunch
+ validateWorkspaceInvitationDraft,validateDirectEmailInvitation,renderWorkspaceInviteLaunch
 } from '../workspace-ui.js';
 
 const signedWorkspace='00000000-0000-4000-8000-000000000001';
@@ -356,6 +356,19 @@ test('invitation review accepts distinct emails and strictly workspace-local rol
  ])assert.equal(validateWorkspaceInvitationDraft(bad).valid,false,JSON.stringify(bad).slice(0,140));
 });
 
+test('direct email validation accepts one exact normalized recipient without user ID',()=>{
+ const valid=validateDirectEmailInvitation({email:'  PERSON@Example.com  ',message:'  Join us.  '});
+ assert.deepEqual(valid,{valid:true,email:'person@example.com',role:'member',
+  message:'Join us.',recipients:['person@example.com']});
+ assert.equal(Object.isFrozen(valid),true);
+ assert.equal(Object.isFrozen(valid.recipients),true);
+ for(const email of ['', 'first@example.com,second@example.com',
+  'first@example.com;second@example.com','bad-address','name @example.com',
+  'name@example.com\nother@example.com', '<person@example.com>'])
+  assert.equal(validateDirectEmailInvitation({email}).valid,false,email);
+ assert.equal(validateDirectEmailInvitation({email:'valid@example.com',message:'X'.repeat(501)}).valid,false);
+});
+
 test('invitation panel remains preview-only in production, with staged explicit-send branch',()=>{
  const module=readFileSync('frontend/workspace-ui.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
@@ -363,15 +376,17 @@ test('invitation panel remains preview-only in production, with staged explicit-
  assert.match(module,/function inviteContent\(current,\{enabled=false\}=\{\}\)/);
  assert.match(module,/role="dialog" aria-modal="true"/);
  assert.match(module,/ws02-invite-title/);
- for(const part of ['name="emails"','name="role"','name="message"',
-  'value="admin"','value="member"','value="viewer"',
+ for(const part of ['name="email"','type="email"','name="role"','name="message"',
+  'value="member"',
   'Send invites — pending activation','data-ws02-action=\"send\"',
-  'data-ws02-context','No invitations were sent'])
+  'data-ws02-context','No invitation was sent'])
   assert.ok(module.includes(part),part);
  assert.doesNotMatch(module,/\.rpc\(['"](?:wm_ws02_invite|wm_invite_workspace|wm_ws01_invite)/);
  assert.doesNotMatch(module,/fetch\(['"]\/auth\/v1\/invite|fetch\(['"]\/rest\/v1\/rpc/);
  assert.match(app,/renderWorkspaceInviteLaunch\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
  assert.match(module,/data-action="ws02-open-invites"/);
+ assert.doesNotMatch(module,/name=\"emails\" rows=/);
+ assert.match(module,/validateDirectEmailInvitation/);
  assert.match(app,/case 'ws02-open-invites':/);
  assert.match(app,/openWorkspaceInvitationDialog\(\{/);
  assert.match(css,/\.ws02-invite-card/);

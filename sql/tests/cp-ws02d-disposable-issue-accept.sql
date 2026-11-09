@@ -51,6 +51,13 @@ BEGIN
  THEN RAISE EXCEPTION 'Retry issued second token'; END IF;
  BEGIN
   PERFORM private.ws02d_issue('00000000-0000-4000-8000-000000000001',
+   'RECIPIENT@example.invalid','member',
+   '11111111-1111-4111-8111-111111111199');
+  RAISE EXCEPTION 'Second pending invite issued for same recipient'
+   USING ERRCODE='P9999';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM private.ws02d_issue('00000000-0000-4000-8000-000000000001',
    'viewer@example.invalid','viewer',
    '11111111-1111-4111-8111-111111111102');
   RAISE EXCEPTION 'Advanced viewer role issued while blocked'

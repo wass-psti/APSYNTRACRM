@@ -180,6 +180,20 @@ export function validateWorkspaceInvitationDraft({emails='',role='member',messag
   return {valid:false,reason:'Keep the optional message within 500 readable characters.'};
  return Object.freeze({valid:true,recipients:Object.freeze(recipients),role,message:clean});
 }
+/** A single exact-address invitation, with no user-ID lookup or account creation.
+ * Keep legacy draft parsing for its existing tests, but the issuance UI always
+ * uses this one-recipient, role-ceiling-compatible contract.
+ */
+export function validateDirectEmailInvitation({email='',message=''}={}){
+ const value=typeof email==='string'?email.trim():'';
+ if(!value||/[\s,;<>]/.test(value)||value.length>254)
+  return Object.freeze({valid:false,reason:'Enter one complete email address.'});
+ const result=validateWorkspaceInvitationDraft({emails:value,role:'member',message});
+ if(!result.valid||result.recipients.length!==1)
+  return Object.freeze({valid:false,reason:result.reason||'Enter one complete email address.'});
+ return Object.freeze({valid:true,email:result.recipients[0].toLowerCase(),
+  role:'member',message:result.message,recipients:Object.freeze([result.recipients[0].toLowerCase()])});
+}
 export function renderWorkspaceInviteLaunch(current,{placement='sidebar'}={}){
  const row=workspaceFromSignedContext(current);
  if(!row)return '';
@@ -724,19 +738,18 @@ function inviteContent(current,{enabled=false}={}){
   '<h2 id="ws02-invite-title">Invite to '+title+'</h2></div>'+
   '<button type="button" data-ws01-close aria-label="Close invitations">×</button></header>'+
   '<p id="ws02-invite-description" class="ws02-invite-subtitle">Invite collaborators to this workspace. '+
-  'Roles below apply only within this workspace, never to the entire APSYNTRA CRM platform.</p>'+
+  'This invitation grants workspace Member access only after the recipient signs in and accepts. '+
+  'Platform and board permissions remain controlled by authorized User Role Management.</p>'+
   '<form id="ws02-invite-preview" novalidate>'+
   '<div class="ws02-invite-fields"><div class="ws02-invite-addresses">'+
-  '<label for="ws02-invite-emails">Invite with email</label>'+
-  '<textarea id="ws02-invite-emails" name="emails" rows="2" maxlength="1500" '+
-   'placeholder="name@example.com, colleague@example.com" autocomplete="off" required></textarea>'+
-  '<small>Enter up to 10 email addresses, separated by commas.</small></div>'+
+  '<label for="ws02-invite-email">Recipient email address</label>'+
+  '<input id="ws02-invite-email" name="email" type="email" maxlength="254" '+
+   'placeholder="name@example.com" autocomplete="email" inputmode="email" spellcheck="false" required>'+
+  '<small>Enter the exact email address. An existing account is reused when the recipient accepts.</small></div>'+
   '<div class="ws02-invite-role"><label for="ws02-invite-role">Workspace role</label>'+
-  '<select id="ws02-invite-role" name="role">'+
-  '<option value="member" selected>Member</option>'+
-  '<option value="admin">Admin</option>'+
-  '<option value="viewer">Viewer</option></select>'+
-  '<small data-ws02-role-description>Collaborate within assigned workspace permissions.</small></div></div>'+
+  '<input id="ws02-invite-role" type="text" value="Member" disabled aria-describedby="ws02-invite-role-note">'+
+  '<input type="hidden" name="role" value="member">'+
+  '<small id="ws02-invite-role-note">Further platform or board roles require independent administrator approval.</small></div></div>'+
   '<label for="ws02-invite-message">Add a custom message <span>(optional)</span></label>'+
   '<textarea name="message" id="ws02-invite-message" rows="3" maxlength="500"'+
   ' placeholder="Tell your team what they will work on together"></textarea>'+
@@ -764,20 +777,11 @@ function openInvites(current,options={}){
  const enabled=options.enabled===true&&typeof options.sendInvitation==='function';
  const layer=panel(inviteContent(row,{enabled}),'invite');
  const form=layer.querySelector('#ws02-invite-preview');
- const description=layer.querySelector('[data-ws02-role-description]');
- const messages={
-  admin:'Workspace administration preview only; cannot change platform roles.',
-  member:'Collaborate within assigned workspace permissions.',
-  viewer:'Read-only workspace access after server-side permission enforcement.'
- };
  const contexts={
   work:'Join us to track and manage work in our workspace.',
   team:'Join our workspace to collaborate with the team.',
   project:'Join our workspace to coordinate the project together.'
  };
- form.querySelector('#ws02-invite-role').addEventListener('change',event=>{
-  description.textContent=messages[event.target.value]||'Unknown workspace role.';
- });
  form.addEventListener('click',event=>{
   const key=event.target.closest('[data-ws02-context]')?.dataset.ws02Context;
   if(key&&Object.hasOwn(contexts,key)){
@@ -788,8 +792,8 @@ function openInvites(current,options={}){
  let busy=false,completed=false,requestId='',requestDraft='';
  const draft=()=>{
   const data=new FormData(form);
-  return validateWorkspaceInvitationDraft({
-   emails:data.get('emails'),role:data.get('role'),message:data.get('message')
+  return validateDirectEmailInvitation({
+   email:data.get('email'),message:data.get('message')
   });
  };
  form.querySelector('[data-ws02-action="send"]').addEventListener('click',async()=>{
@@ -797,11 +801,7 @@ function openInvites(current,options={}){
   const result=draft();
   const feedback=form.querySelector('.ws02-invite-feedback');
   if(!result.valid){feedback.textContent=result.reason;return;}
-  if(result.recipients.length!==1||result.role!=='member'){
-   feedback.textContent='Only one Member invitation is supported by the current signed delivery contract.';
-   return;
-  }
-  const fingerprint=JSON.stringify([row.id,...result.recipients,result.role,result.message]);
+  const fingerprint=JSON.stringify([row.id,result.email,'member',result.message]);
   if(requestDraft!==fingerprint){
    requestId=globalThis.crypto?.randomUUID?.()||'';requestDraft=fingerprint;
   }
@@ -811,7 +811,7 @@ function openInvites(current,options={}){
   button.disabled=true;feedback.textContent='Requesting signed invitation authorization…';
   try{
    const receipt=await options.sendInvitation({workspaceId:row.id,
-    requestId,email:result.recipients[0],role:'member',message:result.message});
+    requestId,email:result.email,role:'member',message:result.message});
    if(activeOverlay!==layer||!layer.isConnected)return;
    if(!validUuid(receipt?.invitationId)||!['delivery-submitted','already-issued'].includes(receipt?.state))
     throw Error('Unconfirmed server receipt');
@@ -830,14 +830,15 @@ function openInvites(current,options={}){
  form.addEventListener('submit',event=>{
   event.preventDefault();
   const data=new FormData(form);
-  const result=validateWorkspaceInvitationDraft({
-   emails:data.get('emails'),role:data.get('role'),message:data.get('message')
+  const result=validateDirectEmailInvitation({
+   email:data.get('email'),message:data.get('message')
   });
   form.querySelector('.ws02-invite-feedback').textContent=!result.valid?result.reason:
-   result.recipients.length+' recipient(s) validated for the '+result.role+
-   ' workspace role. No invitations were sent. Secure invitation delivery remains pending activation.';
+   'Exact email address validated for workspace Member access. No invitation was sent. '+
+   (enabled?'Select Send Member invitation to request signed delivery.':
+   'Secure invitation delivery remains pending activation.');
  });
- form.querySelector('#ws02-invite-emails').focus();
+ form.querySelector('#ws02-invite-email').focus();
 }
 export function openWorkspaceInvitationDialog(current,options={}){
  const row=workspaceFromSignedContext(current);
