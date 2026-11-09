@@ -77,7 +77,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   ])
  ];
  const state=row.archived_at?'ARCHIVED · '+row.workflow_state.toUpperCase():
-  row.workflow_state.toUpperCase();
+  row.workflow_state==='approved'?'WORKFLOW APPROVED · PDF NOT ISSUED':row.workflow_state.toUpperCase();
  const lineTotal=item=>item.kind==='item'&&priced?
   money(item.quantity*item.unitPrice,currency):'—';
  const amounts=priced?calculateTradeLinkAmounts(data):null;
@@ -122,7 +122,7 @@ export function renderTradeLinkSavedDocumentOutput(record,workspaceId,documentId
   '</dl></section>';
  const note=row.workflow_state==='draft'||row.workflow_state==='revision-required'?
   'DRAFT — not approved or issued by printing.':row.workflow_state==='approved'?
-  'Saved approved workflow state. This print view is not a digital signature.':
+  'Workflow approved. Electronic PDF approval and issuance have NOT been verified; this print view is not a signed PDF.':
   'Saved workflow status shown as recorded; printing does not change status.';
  return '<article class="tl-print-paper" data-tradelink-signed-output '+
   'aria-labelledby="tl-print-document-title">'+
