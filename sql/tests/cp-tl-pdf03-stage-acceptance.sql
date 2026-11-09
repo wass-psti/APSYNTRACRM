@@ -86,6 +86,36 @@ BEGIN
    r->'stages'->0->>'stage'<>'primary' OR r->'stages'->1->>'stage'<>'secondary'
  THEN RAISE EXCEPTION 'Two-stage independent signed read mismatch'; END IF;
 END $secondary$;
+-- A subsequent authoritative revision invalidates visible approval evidence,
+-- without deleting historical append-only events from the audit store.
+RESET ROLE;
+UPDATE public.tradelink_documents SET revision=4,
+ content=pg_catalog.jsonb_set(content,'{approvedByEmail}',
+   '"dsenagan@watchdogautomation.com.ph"'::jsonb),
+ updated_at=pg_catalog.clock_timestamp()
+ WHERE id='66666666-6666-4666-8666-666666666666' AND revision=3;
+SET LOCAL ROLE authenticated;
+DO $revision_denial$
+DECLARE board uuid:='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
+ doc uuid:='66666666-6666-4666-8666-666666666666'; r jsonb;
+BEGIN
+ r:=public.tl03_pdf_approval_stages(board,doc);
+ IF (r->>'revision')::bigint<>4 OR jsonb_array_length(r->'stages')<>0
+ THEN RAISE EXCEPTION 'Previous revision approval events reused'; END IF;
+ BEGIN
+  PERFORM public.tl03_record_pdf_approval_stage(board,doc,3,'secondary');
+  RAISE EXCEPTION 'Previous revision approval event accepted';
+ EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL; END;
+END $revision_denial$;
+RESET ROLE;
+DO $audit_history$
+BEGIN
+ IF (SELECT count(*) FROM private.tradelink_pdf_approval_events
+   WHERE document_id='66666666-6666-4666-8666-666666666666'
+   AND document_revision=3)<>2
+ THEN RAISE EXCEPTION 'Historical immutable approvals lost on revision update'; END IF;
+END $audit_history$;
+SET LOCAL ROLE authenticated;
 -- RLS denies direct DML/read of the private table under non-owner identity.
 DO $grants$
 BEGIN

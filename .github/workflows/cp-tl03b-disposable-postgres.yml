@@ -144,6 +144,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tradelink-electronic-pdf-approval-stage-candidate.sql
       - name: Test exact signed approvers, order, duplication, revision, narrow role and session denial
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-pdf03-stage-acceptance.sql
+      - name: Verify independent signed concurrent approval attempts in isolated PostgreSQL
+        run: bash scripts/cp-tl-pdf04-concurrent-approval.sh
       - name: Create synthetic Storage metadata fixture (no real Storage API calls)
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-attachment-storage-fixture.sql
       - name: Install signed TradeLink attachment contract in isolated PostgreSQL
