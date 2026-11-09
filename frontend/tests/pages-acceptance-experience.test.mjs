@@ -25,7 +25,7 @@ test('five annotated regions are routed and visually scoped to Pages acceptance'
  assert.match(app,/classList\.toggle\('aps-pages-shell',state\.view==='acceptance'\)/);
  assert.match(app,/mountPagesAcceptanceMotion\(root\.querySelector\('\.aps-pages-acceptance'\),state\.view\)/);
  assert.match(app,/stopPagesAcceptanceMotion\(\)/);
- assert.match(app,/else if\(state\.view==='acceptance'\)shell\(renderPagesAcceptance\(/);
+ assert.match(app,/else if\(state\.view==='acceptance'&&state\.roleVerified===true\)shell\(renderPagesAcceptance\(/);
  assert.ok(html.includes('frontend/pages-acceptance-experience.css'));
  for(const asset of ['frontend/pages-acceptance-experience.css','frontend/pages-acceptance-visuals.js'])
   assert.ok(smoke.includes("'"+asset+"'"),asset);

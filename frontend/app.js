@@ -253,13 +253,13 @@ function sidebar(){
  const recent=state.boards.slice(0,6);
  const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
   sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
-  sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation')+
+  (state.roleVerified===true?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
   sidebarNav('#/security','Access acceptance','security',state.view==='security')+
   (state.roleVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
    sidebarNav('#/role-configuration','Role Configuration','roles',state.view==='role-configuration')+
    sidebarNav('#/user-role-management','User Role Management','users',state.view==='user-role-management'):'')+
   sidebarNav('#/settings','Settings','settings',state.view==='settings')+
-  sidebarNav('#/acceptance','Pages acceptance','acceptance',state.view==='acceptance');
+  (state.roleVerified===true?sidebarNav('#/acceptance','Pages acceptance','acceptance',state.view==='acceptance'):'');
  return `<aside class="sidebar aps-sidebar" aria-label="Workspace sidebar">
   <div class="sidebar-brand-wrap">
    <a href="#/overview" class="brand" aria-label="APSYNTRA CRM — Go to overview" title="Go to overview">
@@ -935,12 +935,12 @@ function render(){
  preserveTimeTrackerLogExpansion();
  captureTradeLinkTabMotion(root);
  if(state.view==='board')shell(boardPage());
- else if(state.view==='acceptance')shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy,nativeResult:state.nativeAcceptance,nativeRunning:state.nativeBusy}));
- else if(state.view==='foundation')shell(renderFoundation({
+ else if(state.view==='acceptance'&&state.roleVerified===true)shell(renderPagesAcceptance({qaBoard:state.boards.find(b=>b.name===QA_BOARD_NAME),result:state.pagesAcceptance,running:state.pagesBusy,nativeResult:state.nativeAcceptance,nativeRunning:state.nativeBusy}));
+ else if(state.view==='foundation'&&state.roleVerified===true)shell(renderFoundation({
    rows:state.foundationRows,loading:state.foundationBusy,provisioning:state.provisionBusy,
    testing:state.foundationTesting,testResult:state.foundationTestResult,
    log:state.foundationLog,error:state.foundationError,
-   canProvision:state.context?.profile?.platform_role==='admin_general_manager'
+   canProvision:state.roleVerified===true&&state.context?.profile?.platform_role==='admin_general_manager'
  }));
  else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,ci07Result:state.ci07Result,ci07Busy:state.ci07Busy,sec14Result:state.sec14Result,sec14Busy:state.sec14Busy,sec14DenialResult:state.sec14DenialResult,sec14DenialBusy:state.sec14DenialBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards,sec10IsBootstrap:state.roleVerified===true,effectiveAccessResult:state.effectiveAccessResult,effectiveAccessBusy:state.effectiveAccessBusy,sec10BoardsError:state.securityBoardsError})+renderTradeLinkStageAAcceptance({busy:state.tl03ReadBusy,report:state.tl03ReadResult})+renderTradeLinkSessionRevocation({armed:state.tl03RevokeArmed,report:state.tl03RevokedReport})+renderWs01B2SignedAcceptance({busy:state.ws01B2Busy,report:state.ws01B2Result})+renderWs02dB3SignedPreflight({busy:state.ws02dB3Busy,report:state.ws02dB3Report})+renderWs02dB3DeployedHttpsAcceptance({busy:state.ws02dB3HttpsBusy,result:state.ws02dB3HttpsReport})+renderWs02dB3ForeignRlsDenial({busy:state.ws02dB3RlsBusy,result:state.ws02dB3RlsReport,hasFixture:hasWs02dB3ForeignRlsFixture()})+renderWs02dB3LocalRevocation({armed:state.ws02dB3RevokeArmed,report:state.ws02dB3RevokedReport})+renderB2SignedQaFixture({busy:state.b2QaBusy,result:state.b2QaReport})+renderB4SignedRecoveryPreflight({busy:state.b4QaBusy,report:state.b4QaReport})+renderPhaseBSignedDenial({busy:state.phaseBDenialBusy,report:state.phaseBDenialReport}));
  else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.roleVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
@@ -1269,7 +1269,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   if(!isCurrent())return false;
   if(verified!==state.roleVerified){
    state.roleVerified=verified;state.roleData=null;state.userRoleData=null;
-   if(!verified&&(view==='role-configuration'||view==='user-role-management')){
+   if(!verified&&['role-configuration','user-role-management','foundation','acceptance'].includes(view)){
     platformSync.stop();location.hash='#/overview';return false;
    }
   }
@@ -2629,7 +2629,7 @@ async function onRoute(){
   return;
  }
  routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
- if(state.view==='role-configuration'||state.view==='user-role-management'){
+ if(['role-configuration','user-role-management','foundation','acceptance'].includes(state.view)){
    // Recheck current server authority on EVERY entry, including direct URL visits.
    try{state.roleVerified=await roleConfig.bootstrapVerified();}
    catch{state.roleVerified=false;}
@@ -4971,6 +4971,7 @@ async function action(name,button){
    break;
  }
  case 'foundation-refresh':{
+   if(state.roleVerified!==true)return;
    if(state.foundationBusy||state.provisionBusy)return;
    state.foundationBusy=true;state.foundationError='';render();
    try{await refreshFoundation();}catch(err){state.foundationError=errorMessage(err);notice(err);}
@@ -4978,6 +4979,7 @@ async function action(name,button){
    break;
  }
  case 'foundation-provision':{
+   if(state.roleVerified!==true)return;
    if(state.provisionBusy||state.context?.profile?.platform_role!=='admin_general_manager')return;
    openModal('Provision twelve dedicated boards',
      input('Type PROVISION 12 BOARDS to confirm','ack')+
@@ -5001,6 +5003,7 @@ async function action(name,button){
    break;
  }
  case 'foundation-operational-test':{
+   if(state.roleVerified!==true)return;
    if(state.foundationTesting||state.context?.profile?.platform_role!=='admin_general_manager')return;
    openModal('Verify all twelve dedicated boards',
      input('Type RUN 12 BOARD CHECKS','ack')+
@@ -5413,6 +5416,7 @@ case 'new-group':{
    break;
  }
  case 'run-pages-acceptance':{
+   if(state.roleVerified!==true)return;
    if(state.pagesBusy)return;
    const qa=state.boards.find(b=>b.name===QA_BOARD_NAME);
    if(!qa){toast('Create an isolated APSYNTRA QA board first.',true);return;}
@@ -5430,6 +5434,7 @@ case 'new-group':{
    break;
  }
  case 'run-native-acceptance':{
+   if(state.roleVerified!==true)return;
    if(state.nativeBusy)return;
    const qa=state.boards.find(b=>b.name===QA_BOARD_NAME);
    if(!qa){toast('An isolated APSYNTRA QA board is required.',true);return;}
