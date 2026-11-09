@@ -184,3 +184,39 @@
 #app .ft3-request-quick-dates button{border:1px solid #d3e5e8;border-radius:20px;background:#f2f8f9;color:#5b7985;padding:5px 9px;font:inherit;font-size:10px;cursor:pointer}
 #app .ft3-request-quick-dates button:hover{background:#e3f3f3;border-color:#a6cfd1}
 #app .ft3-request-quick-dates button:focus-visible{outline:2px solid #299d9b;outline-offset:2px}
+
+
+/* FuelTrack+ new request — separate reference view, no unverified writes. */
+#app .ft3-new-request{max-width:790px;margin:0 auto;padding:25px 15px 36px;color:#293e46}
+#app .ft3-new-title h2{font-size:25px;font-weight:650;letter-spacing:-.04em;margin:0 0 5px}
+#app .ft3-new-title p{font-size:12px;line-height:1.55;color:#687f89;margin:0 0 20px}
+#app .ft3-new-progress{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;padding:14px 17px;background:#f2f8fa;border:1px solid #d5e3e8;border-radius:18px;font-size:11px;color:#617982;margin-bottom:22px}
+#app .ft3-new-composer{display:flex;flex-direction:column;gap:18px}
+#app .ft3-new-panel{border:1px solid #d3e1e5;border-radius:21px;background:#eef6f8;padding:19px;box-shadow:0 2px 3px #1d4b5010}
+#app .ft3-new-panel h3{display:flex;gap:10px;align-items:center;font-weight:680;font-size:14px;margin:0 0 20px}
+#app .ft3-new-index{display:inline-grid;place-items:center;border-radius:50%;width:24px;height:24px;background:#dceff0;color:#158b87;font-size:11px}
+#app .ft3-new-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#app .ft3-new-option{display:block;cursor:pointer;position:relative}
+#app .ft3-new-option input{position:absolute;top:14px;left:14px;accent-color:#0c9a93;width:16px;height:16px}
+#app .ft3-new-option-body{border:2px solid #cfdee2;border-radius:20px;padding:23px 12px;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;background:#f2f8fa}
+#app .ft3-new-option-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#e0eef0;color:#1b8f8b;font-size:23px}
+#app .ft3-new-option strong{font-size:13px}
+#app .ft3-new-option small{font-size:11px;color:#71878f}
+#app .ft3-new-option input:checked+.ft3-new-option-body{background:#e1f2f2;border-color:#0b9c96;color:#098b84}
+#app .ft3-new-option input:focus-visible+.ft3-new-option-body{outline:3px solid #238fbb;outline-offset:3px}
+#app .ft3-new-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 14px}
+#app .ft3-new-field{min-width:0;display:flex;flex-direction:column;gap:8px;font-size:12px}
+#app .ft3-new-field>span{font-weight:600}
+#app .ft3-new-field b{color:#d4474d}
+#app .ft3-new-field input,#app .ft3-new-field select,#app .ft3-new-field textarea,#app .ft3-new-field button{width:100%;border:1px solid #cbdfe2;background:#f5fafb;border-radius:12px;padding:10px 12px;font:inherit;color:#284653;min-height:38px}
+#app .ft3-new-field :is(input,select,textarea):focus-visible{outline:2px solid #148f8b;outline-offset:2px}
+#app .ft3-new-field :disabled{opacity:.7;cursor:not-allowed}
+#app .ft3-new-wide{grid-column:1/-1}
+#app .ft3-new-field textarea{resize:vertical;min-height:110px}
+#app .ft3-new-boundary{font-size:11px;line-height:1.55;border-left:3px solid #bc8b39;padding:9px 12px;background:#fcf6e9;color:#6f5a36;margin:0;border-radius:4px}
+#app .ft3-new-vehicle,#app .ft3-new-container{display:flex;flex-direction:column;gap:18px}
+#app .ft3-new-container{display:none}
+#app .ft3-new-composer:has(#ft3-mode-container:checked) .ft3-new-vehicle{display:none}
+#app .ft3-new-composer:has(#ft3-mode-container:checked) .ft3-new-container{display:flex}
+#app .ft3-new-submit{width:100%;border:0;border-radius:13px;min-height:46px;background:#a1d5ce;color:#fff;font:inherit;font-weight:700;cursor:not-allowed}
+@media(max-width:640px){#app .ft3-new-request{padding:20px 12px}#app .ft3-new-options,#app .ft3-new-fields{grid-template-columns:1fr}#app .ft3-new-option-body{min-height:115px}#app .ft3-new-progress{flex-direction:column;gap:6px}}
