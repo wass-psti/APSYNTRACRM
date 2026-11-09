@@ -3261,3 +3261,38 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
     gap:6px;
   }
 }
+
+
+/* CP-AVATAR-SYNC-01: use one image/fallback contract on every current-user
+ * avatar surface. The shared hydration routine controls visibility only after
+ * the browser confirms that the signed image has loaded successfully. */
+#app .side-bottom .profile>.sidebar-profile-avatar,
+#app .topbar .top-avatar,
+#app .aps-settings .settings-profile-avatar{
+ position:relative;
+ overflow:hidden;
+}
+#app .side-bottom .profile>.sidebar-profile-avatar [data-avatar-initials],
+#app .topbar .top-avatar [data-avatar-initials],
+#app .aps-settings .settings-profile-avatar [data-avatar-initials]{
+ display:grid;
+ place-items:center;
+ width:100%;
+ height:100%;
+}
+#app .side-bottom .profile>.sidebar-profile-avatar img[data-avatar-current],
+#app .topbar .top-avatar img[data-avatar-current],
+#app .aps-settings .settings-profile-avatar img[data-avatar-current]{
+ position:absolute;
+ inset:0;
+ display:block;
+ width:100%;
+ height:100%;
+ object-fit:cover;
+ border-radius:inherit;
+}
+#app .side-bottom .profile>.sidebar-profile-avatar img[data-avatar-current][hidden],
+#app .topbar .top-avatar img[data-avatar-current][hidden],
+#app .aps-settings .settings-profile-avatar img[data-avatar-current][hidden]{
+ display:none!important;
+}
