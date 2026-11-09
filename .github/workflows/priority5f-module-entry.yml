@@ -1,0 +1,56 @@
+name: APSYNTRA Priority 5F Module Entry and Chromium Acceptance
+on:
+  pull_request:
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/fueltrans-lazy.js'
+      - 'frontend/tests/fueltrans-lazy.test.mjs'
+      - 'frontend/tests/priority5f-entry.test.mjs'
+      - 'scripts/priority5f-module-graph.mjs'
+      - 'scripts/priority5f-module-browser.mjs'
+      - 'scripts/pages-smoke.mjs'
+      - '.github/workflows/priority5f-module-entry.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/fueltrans-lazy.js'
+      - 'frontend/tests/fueltrans-lazy.test.mjs'
+      - 'frontend/tests/priority5f-entry.test.mjs'
+      - 'scripts/priority5f-module-graph.mjs'
+      - 'scripts/priority5f-module-browser.mjs'
+      - 'scripts/pages-smoke.mjs'
+      - '.github/workflows/priority5f-module-entry.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-entry:
+    name: Module graph, protected feature activation and real Chromium startup
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify bounded static graph and fail-closed feature lifecycle
+        run: |
+          node scripts/priority5f-module-graph.mjs
+          node --test frontend/tests/priority5f-entry.test.mjs frontend/tests/fueltrans-lazy.test.mjs frontend/tests/startup-recovery.test.mjs frontend/tests/board-import.test.mjs frontend/tests/board-operational-qa.test.mjs
+      - name: Verify real Chromium public entry with and without optional feature dependencies
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chrome/Chromium unavailable'; exit 1; }
+          set +e
+          CHROME_BIN="$BROWSER" node scripts/priority5f-module-browser.mjs
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then exit 0; fi
+          if [ "$code" -ne 75 ]; then exit "$code"; fi
+          echo 'Chrome launch unavailable, retrying exactly once with an isolated profile.'
+          sleep 2
+          CHROME_BIN="$BROWSER" node scripts/priority5f-module-browser.mjs
