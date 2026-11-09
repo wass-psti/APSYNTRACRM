@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  FUELTRACK_REQUEST_FILTER_DEFAULTS,FUELTRACK_REQUEST_PAGE_SIZE,
- fuelTrackRequestStatus,validFuelTrackDate,fuelTrackRequestsModel,
+ fuelTrackRequestStatus,validFuelTrackDate,fuelTrackRequestQuickDates,fuelTrackRequestsModel,
  fuelTrackRequestsSummary,fuelTrackRequestsCsv,renderFuelTrackRequests
 } from '../fueltrack-v3-requests.js';
 import {FUELTRACK_V3_ID} from '../fueltrack-v3-application.js';
@@ -165,4 +165,26 @@ test('invalid and foreign values never appear in per-row metadata',()=>{
  assert.match(html,/REAL REFERENCE/);
  assert.doesNotMatch(html,/FOREIGN RECORD/);
  assert.deepEqual(FUELTRACK_REQUEST_FILTER_DEFAULTS.status,'all');
+});
+
+test('quick date shortcuts follow Manila calendar across UTC midnight',()=>{
+ const utc=new Date('2026-11-08T18:15:00Z');
+ assert.deepEqual(fuelTrackRequestQuickDates('today',utc),{from:'2026-11-09',to:'2026-11-09'});
+ assert.deepEqual(fuelTrackRequestQuickDates('week',utc),{from:'2026-11-09',to:'2026-11-09'});
+ assert.deepEqual(fuelTrackRequestQuickDates('month',utc),{from:'2026-11-01',to:'2026-11-09'});
+ assert.deepEqual(fuelTrackRequestQuickDates('last-month',utc),{from:'2026-10-01',to:'2026-10-31'});
+ assert.equal(fuelTrackRequestQuickDates('unknown',utc),null);
+ const d=detail([item(A,'PH Monday','Done','2026-11-08T18:10:00Z')]);
+ const m=fuelTrackRequestsModel(d,{},utc);
+ assert.equal(m.today,1);
+ assert.equal(m.week,1);
+ const html=renderFuelTrackRequests({detail:d});
+ assert.match(html,/data-action="ft3-request-period"/);
+});
+test('request search is scoped to identity and workspace across app route changes',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/nextFuelTrackScope/);
+ assert.match(app,/fuelTrackRequestScope!==nextFuelTrackScope/);
+ assert.match(app,/state\.fuelTrackRequestFilters=\{\.\.\.FUELTRACK_REQUEST_FILTER_DEFAULTS\}/);
+ assert.match(app,/case 'ft3-request-period'/);
 });
