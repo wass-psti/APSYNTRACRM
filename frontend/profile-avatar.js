@@ -191,7 +191,7 @@ export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}
    currentPath=result.path;
    if(typeof onSaved==='function')onSaved({path:result.path,cleanupPending:result.cleanupPending});
    status.textContent=result.cleanupPending?
-    'Profile picture saved. The previous image is queued for cleanup.':
+    'Profile picture saved. The previous image could not be deleted.':
     'Profile picture saved.';
    reset();
   }catch(error){
@@ -208,7 +208,7 @@ export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}
    if(typeof onSaved==='function')onSaved({path:null,cleanupPending:result.cleanupPending});
    reset();
    status.textContent=result.cleanupPending?
-    'Profile picture removed from your account. The old image is queued for cleanup.':
+    'Profile picture removed from your account, but the old image could not be deleted.':
     'Profile picture removed.';
   }catch(error){
    status.textContent=error?.message||'Unable to remove the profile picture.';
