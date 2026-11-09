@@ -361,3 +361,21 @@
     transition: none;
   }
 }
+
+/* FuelTrack group title: an explicit, keyboard-accessible edit entry point.
+ * It does not depend on a floating action-menu opening or remaining mounted. */
+#app .aps-board-shell .board-group-rename-trigger{
+ display:inline-flex;align-items:center;gap:5px;flex:none;
+ border:1px solid #dce5f3;background:#f8faff;color:#4f5f93;
+ border-radius:7px;padding:5px 9px;font:inherit;font-size:11px;
+ font-weight:700;line-height:1.25;cursor:pointer;
+}
+#app .aps-board-shell .board-group-rename-trigger:hover{
+ border-color:#aab9e9;background:#eef2ff;color:#4059a5;
+}
+#app .aps-board-shell .board-group-rename-trigger:focus-visible{
+ outline:2px solid #4e64d6;outline-offset:2px;
+}
+@media(max-width:560px){
+ #app .aps-board-shell .board-group-rename-trigger span{display:none}
+}
