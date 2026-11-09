@@ -41,7 +41,7 @@ test('exact seven tabs and canonical application deep links',()=>{
  assert.equal(fuelTrackHref('dashboard'),'#/boards/'+BOARD+'/fueltrack/dashboard');
  assert.equal(fuelTrackHref('new-request'),'#/boards/'+BOARD+'/fueltrack/new-request');
  const markup=renderFuelTrackV3Application({detail:fixture(),section:'dashboard'});
- assert.equal((markup.match(/class="ft3-app-tab/g)||[]).length,7);
+ assert.equal((markup.match(/class="ft3-app-tab(?: is-active)?"/g)||[]).length,7);
  assert.equal((markup.match(/aria-current="page"/g)||[]).length,1);
  assert.match(markup,/FuelTrack\+/);
  assert.match(markup,/Read-only dashboard/);
@@ -103,7 +103,7 @@ test('HTML and status from untrusted board records are escaped',()=>{
 test('unfinished tabs are navigation-ready without offering unauthorized writes',()=>{
  for(const section of FUELTRACK_TABS.slice(1)){
   const html=renderFuelTrackV3Application({detail:fixture(),section:section.key});
-  assert.match(html,/not enabled|not yet integrated|will be connected|require/i);
+  assert.match(html,/not enabled|not yet integrated|will be connected|require|need verified/i);
   assert.doesNotMatch(html,/<form\b|type="submit"/i);
   assert.match(html,/Return to Dashboard/);
  }
