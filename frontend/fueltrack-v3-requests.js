@@ -185,7 +185,7 @@ function expandedRow(row,columns){
 }
 function rowMarkup(row,expanded){
  const open=expanded===row.id;
- return '<tr class="ft3-request-row"><td><button type="button" class="ft3-request-expand" data-action="ft3-request-expand" data-id="'+esc(row.id)+
+ return '<tr class="ft3-request-row" data-action="ft3-request-expand" data-id="'+esc(row.id)+'"><td><button type="button" class="ft3-request-expand" data-action="ft3-request-expand" data-id="'+esc(row.id)+
   '" aria-label="'+(open?'Collapse':'Expand')+' request '+esc(row.title)+'" aria-expanded="'+open+'">'+
   '<span class="ft3-request-person">◈</span><span class="ft3-request-heading">'+esc(row.title)+
   '<small>'+esc(row.reference||'Fuel event reference unavailable')+'</small></span></button></td>'+
