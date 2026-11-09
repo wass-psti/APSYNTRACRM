@@ -48,7 +48,8 @@ function build(overrides={}){
   assert.match(message.text,/#\/invitations\/accept\//);
   return {accepted:true,providerMessageId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'};
  };
- const recordDeliveryOutcome=async receipt=>{
+ const recordDeliveryOutcome=async(verified,receipt)=>{
+  assert.deepEqual(verified,{id:actor.id,sessionId:actor.sessionId});
   calls.recorded++;
   assert.equal(receipt.invitationId,invitationId);
   assert.ok(['provider-accepted','delivery-uncertain'].includes(receipt.state));
@@ -171,5 +172,44 @@ test('database and provider errors produce uniform denial without secret exposur
   assert.equal(serialized.includes(inviteToken),false);
   assert.equal(serialized.includes(draft.email),false);
   assert.deepEqual(JSON.parse(serialized),{state:'denied'});
+ }
+});
+
+test('concurrent invitation delivery records are bound to their own verified actor',async()=>{
+ const actors=[
+  {id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',sessionId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'},
+  {id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',sessionId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd'}
+ ];
+ const audit=[];
+ const tokens=['firstfirstfirst.jwtpayloadfirst.signaturesignature',
+               'secondsecond.jwtpayloadsecond.signaturesignature'];
+ const handler=createTrustedInvitationHttpBoundary({enabled:true,
+  verifySignedActor:async token=>{
+   const idx=tokens.indexOf(token);
+   if(idx<0)throw Error('Denied');
+   return {...actors[idx],active:true,verified:true};
+  },
+  issueForAuthorizedActor:async (verified,request)=>{
+   await Promise.resolve();
+   return {schemaVersion:1,invitationId:verified.id,token:verified.id+'.'+'cd'.repeat(32),
+    state:'pending',idempotent:false,tokenAvailable:true};
+  },
+  sendEmail:async email=>({accepted:true,providerMessageId:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'}),
+  recordDeliveryOutcome:async (verified,receipt)=>{
+   audit.push({actor:verified.id,session:verified.sessionId,invitation:receipt.invitationId});
+   return {persisted:true};
+  }
+ });
+ const requests=tokens.map((token,i)=>new Request(url,{method:'POST',headers:{
+  origin,authorization:'Bearer '+token,'content-type':'application/json'
+ },body:JSON.stringify({...draft,requestId:actors[i].id})}));
+ const results=await Promise.all(requests.map(r=>handler(r)));
+ assert.deepEqual(results.map(r=>r.status),[202,202]);
+ assert.equal(audit.length,2);
+ for(const entry of audit){
+  const actor=actors.find(a=>a.id===entry.invitation);
+  assert.ok(actor);
+  assert.equal(entry.actor,actor.id);
+  assert.equal(entry.session,actor.sessionId);
  }
 });
