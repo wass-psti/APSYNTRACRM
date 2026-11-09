@@ -361,3 +361,16 @@
 #app .ft3-activity-error{color:#b33f50;border-color:#f0cbd0}
 #app .ft3-activity-footnote{font-size:10px;color:#7a8d97;margin-top:21px}
 @media(max-width:640px){#app .ft3-activity{padding:18px 12px}#app .ft3-activity-pulse>div{grid-template-columns:repeat(2,minmax(0,1fr))}#app .ft3-activity-detail dl{grid-template-columns:1fr}#app .ft3-activity-event{flex-wrap:wrap}#app .ft3-activity-event time{margin-left:35px}}
+
+/* CSP-safe activity density buckets */
+#app .ft3-activity-hour-bars .ft3-hour-height-0{height:2%}
+#app .ft3-activity-hour-bars .ft3-hour-height-1{height:10%}
+#app .ft3-activity-hour-bars .ft3-hour-height-2{height:20%}
+#app .ft3-activity-hour-bars .ft3-hour-height-3{height:30%}
+#app .ft3-activity-hour-bars .ft3-hour-height-4{height:40%}
+#app .ft3-activity-hour-bars .ft3-hour-height-5{height:50%}
+#app .ft3-activity-hour-bars .ft3-hour-height-6{height:60%}
+#app .ft3-activity-hour-bars .ft3-hour-height-7{height:70%}
+#app .ft3-activity-hour-bars .ft3-hour-height-8{height:80%}
+#app .ft3-activity-hour-bars .ft3-hour-height-9{height:90%}
+#app .ft3-activity-hour-bars .ft3-hour-height-10{height:100%}
