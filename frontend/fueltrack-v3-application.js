@@ -6,7 +6,7 @@ import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js';
 import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js';
 import {renderFuelTrackLightFuels} from './fueltrack-v3-lightfuels.js';
 import {renderFuelTrackActivity} from './fueltrack-v3-activity.js';
-import {verifyFuelTrackBackendSnapshot,projectFuelTrackApprovals,projectFuelTrackLightFuels} from './fueltrack-v3-backend-projections.js';
+import {verifyFuelTrackBackendSnapshot,projectFuelTrackApprovals,projectFuelTrackLightFuels,renderFuelTrackSignedDashboard,renderFuelTrackSignedRequests,renderFuelTrackSignedAnalytics} from './fueltrack-v3-backend-projections.js';
 export const FUELTRACK_V3_ID='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const MARKER='[APSYNTRA:MODULE:fueltrack:v1]';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -201,6 +201,6 @@ export function renderFuelTrackV3Application({detail,section='dashboard',actorNa
   '<div class="ft3-app-identity"><span>'+h(actorName)+'</span>'+
   '<span class="ft3-app-mode">Signed board data · Read-only dashboard</span></div></header>'+
   '<nav class="ft3-app-tabs" aria-label="FuelTrack application sections">'+navigation+'</nav>'+
-  '<div class="ft3-app-body">'+(view==='dashboard'?dashboard(model):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):view==='new-request'?renderFuelTrackNewRequest():view==='approvals'?renderFuelTrackApprovals({snapshot:approvals,boardId:detail.board.id,workspaceId:detail.board.workspace_id}):view==='lightfuels'?renderFuelTrackLightFuels({snapshot:light,boardId:detail.board.id,workspaceId:detail.board.workspace_id}):view==='activity'?renderFuelTrackActivity(activity||{}):placeholder(view))+
+  '<div class="ft3-app-body">'+(view==='dashboard'&&signed?renderFuelTrackSignedDashboard(signed):view==='dashboard'?dashboard(model):view==='analytics'&&signed?renderFuelTrackSignedAnalytics(backend?.analytics):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&signed?renderFuelTrackSignedRequests(signed):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):view==='new-request'?renderFuelTrackNewRequest():view==='approvals'?renderFuelTrackApprovals({snapshot:approvals,boardId:detail.board.id,workspaceId:detail.board.workspace_id}):view==='lightfuels'?renderFuelTrackLightFuels({snapshot:light,boardId:detail.board.id,workspaceId:detail.board.workspace_id}):view==='activity'?renderFuelTrackActivity(activity||{}):placeholder(view))+
   '</div></section>';
 }
