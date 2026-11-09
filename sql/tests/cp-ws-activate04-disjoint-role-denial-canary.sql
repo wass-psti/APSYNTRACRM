@@ -1,0 +1,103 @@
+-- CP-WS-ACTIVATE-04 protected ORIGINAL domain caller subset (not synthetic proxies).
+-- Owner-host isolated PostgreSQL 17 workspace_disposable only.
+-- The domain-role sample is not a substitute for all 73 source caller paths.
+\set ON_ERROR_STOP on
+DO $gate$
+BEGIN
+ IF current_database()<>'workspace_disposable'
+  OR current_setting('server_version_num')::int<170000
+  OR to_regprocedure('public.has_module_access(text,uuid)') IS NULL
+  OR to_regprocedure('public.module_role_for(text,uuid)') IS NULL
+  OR to_regprocedure('public.wm_auth_access_context()') IS NULL
+  OR to_regprocedure('public.wm_ws01_select(uuid,uuid)') IS NULL
+ THEN RAISE EXCEPTION 'CP_WS_ACTIVATE04_DOMAIN_OWNER_DISPOSABLE_ONLY'
+  USING ERRCODE='42501'; END IF;
+END $gate$;
+BEGIN;
+-- The source replay depends on profile columns absent from the earliest B1 fixture.
+-- These changes are scoped to the uncommitted disposable transaction.
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS platform_role text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS revision bigint DEFAULT 1;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+-- Metadata-only dependency for original access-context aggregation.
+CREATE TABLE public.material_tracker_memberships(
+ workspace_id uuid, user_id uuid, role text, enabled boolean, status text,
+ assigned_by uuid, created_at timestamptz, updated_at timestamptz
+);
+-- Match known production entrypoint grants for these three original functions.
+REVOKE ALL ON FUNCTION public.has_module_access(text,uuid),
+  public.module_role_for(text,uuid),public.wm_auth_access_context()
+ FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.has_module_access(text,uuid),
+  public.wm_auth_access_context() TO authenticated;
+DO $acl$
+BEGIN
+ IF has_function_privilege('anon','public.has_module_access(text,uuid)','EXECUTE')
+  OR has_function_privilege('anon','public.wm_auth_access_context()','EXECUTE')
+  OR has_function_privilege('anon','public.module_role_for(text,uuid)','EXECUTE')
+  OR has_function_privilege('authenticated','public.module_role_for(text,uuid)','EXECUTE')
+ THEN RAISE EXCEPTION 'ORIGINAL_ENTRYPOINT_EXECUTE_GRANT_LEAK'; END IF;
+END $acl$;
+-- Synthetic user C is a signed member of both workspaces; B belongs only to foreign.
+-- Real original has_module_access reads module_role_assignments, not a proxy.
+INSERT INTO public.module_role_assignments
+ (user_id,module_id,role,enabled,assigned_by,created_at,updated_at)
+ VALUES
+ ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','order-intake','MANAGER',true,
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now(),now()),
+ ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','order-intake','VIEWER',false,
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now(),now()),
+ ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','material-request-hub','VIEWER',false,
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now(),now()),
+ ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','material-request-hub','MANAGER',true,
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',now(),now());
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','cccccccc-cccc-4ccc-8ccc-cccccccccccc',true);
+SELECT set_config('request.jwt.claim.session_id','cccccccc-0000-4000-8000-000000000001',true);
+DO $allowed$
+DECLARE ctx jsonb;
+BEGIN
+ IF public.has_module_access('order-intake',auth.uid()) IS DISTINCT FROM TRUE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_ROLE_ASSIGNED_MEMBER_NOT_ALLOWED'; END IF;
+ IF public.has_module_access('order-intake','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
+    IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_DISABLED_FOREIGN_ROLE_ALLOWED'; END IF;
+ -- Independent negative controls: own disabled assignment and an enabled
+ -- assignment owned exclusively by another signed principal.
+ IF public.has_module_access('material-request-hub',auth.uid())
+   IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_SAME_PRINCIPAL_DISABLED_ROLE_ALLOWED'; END IF;
+ -- Caller C belongs to BOTH workspaces: do not treat another principal as
+ -- a foreign-workspace denial for this caller. A disjoint-member test follows.
+ IF public.has_module_access('never-assigned-module',auth.uid())
+   IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_ABSENT_ROLE_ALLOWED'; END IF;
+ ctx:=public.wm_auth_access_context();
+ IF ctx IS NULL THEN RAISE EXCEPTION 'ORIGINAL_ACCESS_CONTEXT_MISSING'; END IF;
+END $allowed$;
+-- Suppression of directly selected foreign-domain table data is independent of
+-- role-function success. Neither privileges nor synthetic stubs establish RLS.
+DO $table_priv$
+BEGIN
+ IF has_table_privilege('authenticated','public.module_role_assignments','SELECT')
+ THEN RAISE EXCEPTION 'DOMAIN_ROLE_TABLE_READ_LEAK'; END IF;
+END $table_priv$;
+-- Caller A belongs only to workspace 1; user B belongs only to workspace 2.
+-- This independently tests cross-workspace p_user_id lookups.
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',true);
+SELECT set_config('request.jwt.claim.session_id','aaaaaaaa-0000-4000-8000-000000000001',true);
+DO $disjoint$
+BEGIN
+ IF public.current_workspace_id(auth.uid()) IS DISTINCT FROM
+   '00000000-0000-4000-8000-000000000001'::uuid
+ THEN RAISE EXCEPTION 'DISJOINT_ACTOR_SCOPE_INVALID'; END IF;
+ IF public.current_workspace_id('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') IS DISTINCT FROM
+   '00000000-0000-4000-8000-000000000002'::uuid
+ THEN RAISE EXCEPTION 'DISJOINT_TARGET_SCOPE_INVALID'; END IF;
+ IF public.has_module_access('material-request-hub',
+   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'ORIGINAL_DOMAIN_DISJOINT_FOREIGN_ROLE_EXPOSED'; END IF;
+END $disjoint$;
+RESET ROLE;
+ROLLBACK;
+SELECT 'CP_WS_ACTIVATE04_ORIGINAL_DOMAIN_ROLE_SUBSET_PASS' AS result;
