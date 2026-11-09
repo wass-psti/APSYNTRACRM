@@ -101,7 +101,7 @@ test('HTML and status from untrusted board records are escaped',()=>{
 });
 
 test('unfinished tabs are navigation-ready without offering unauthorized writes',()=>{
- for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests','new-request'].includes(section.key))){
+ for(const section of FUELTRACK_TABS.filter(section=>!['dashboard','analytics','requests','new-request','approvals'].includes(section.key))){
   const html=renderFuelTrackV3Application({detail:fixture(),section:section.key});
   assert.match(html,/not enabled|not yet integrated|will be connected|require|need verified/i);
   assert.doesNotMatch(html,/<form\b|type="submit"/i);
@@ -187,4 +187,16 @@ test('supplied FuelTrack reference options preserve exact distinct labels and re
   assert.equal(html.split('>'+safe+'</option>').length-1,2);
  }
  for(const plate of FUELTRACK_PLATE_OPTIONS)assert.ok(html.includes('>'+plate+'</option>'));
+});
+
+test('Approvals reference is mounted while decision statistics fail closed',()=>{
+ const html=renderFuelTrackV3Application({detail:fixture(),section:'approvals'});
+ for(const label of ['Approved today','Rejected today','Decisions today','Approval rate',
+  'Newest','Oldest','Urgency','Name','Delegate','Refresh'])
+  assert.ok(html.includes(label),label);
+ assert.match(html,/Approval statistics and pending requests are unavailable/);
+ assert.doesNotMatch(html,/All clear!|100%|0 pending review/);
+ assert.match(html,/data-action="refresh-board"/);
+ assert.match(html,/Delegate — unavailable<\/button>/);
+ assert.doesNotMatch(html,/data-action="ft3-approve"|data-action="ft3-reject"/);
 });
