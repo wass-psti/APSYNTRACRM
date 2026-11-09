@@ -2405,6 +2405,43 @@ async function changeTradeLinkDraftState(documentId,operation){
 /** Optional signed FuelTrack RPC read. Until the migration is activated,
  * missing endpoints never enable mutations or fabricate transactional data.
  */
+/** Perform only server-authorized FuelTrack transitions with current signed revision. */
+async function mutateFuelTrackBackend(operation,requestId,{reason=null,amount=null,liters=null,receiptNumber=null}={}){
+ const user=state.context?.user_id,ws=state.context?.workspace_id,seq=routeSerial;
+ const expectedSection=operation==='decide'?'approvals':'lightfuels';
+ const same=()=>seq===routeSerial&&auth.isSignedIn&&auth.userId===user&&
+  state.context?.user_id===user&&state.context?.workspace_id===ws&&
+  state.view==='board'&&state.tab==='fueltrack'&&state.fuelTrackSection===expectedSection&&
+  state.boardId===FUELTRACK_V3_ID&&state.board?.board?.workspace_id===ws;
+ const snapshot=state.fuelTrackBackend?.snapshot;
+ if(!same()||state.edit!==true||state.fuelTrackBackendBusy||
+  !snapshot||snapshot.role!=='Admin')return;
+ const record=snapshot.rows?.find(r=>r.id===requestId);
+ if(!record||!Number.isSafeInteger(Number(record.revision))||Number(record.revision)<1)return;
+ if(operation==='decide'&&record.state!=='submitted')return;
+ if(operation==='mark'&&record.state!=='approved')return;
+ if(operation==='complete'&&record.state!=='refueling_done')return;
+ const client=new FuelTrackV3DomainClient({api:db,auth,boardId:FUELTRACK_V3_ID,workspaceId:ws});
+ state.fuelTrackBackendBusy=true;
+ try{
+  const params={requestId,expectedRevision:Number(record.revision)};
+  if(operation==='decide')await client.decide({...params,decision:reason===null?'approved':'rejected',reason});
+  else if(operation==='mark')await client.markRefueled(params);
+  else if(operation==='complete')await client.complete({...params,actualAmount:amount,fuelLiters:liters,receiptNumber});
+  if(!same())return;
+  const next=await client.read({limit:200});
+  if(!same())return;
+  state.fuelTrackBackend={snapshot:next,analytics:null};
+  state.fuelTrackBackendError='';
+  render();toast('FuelTrack transaction saved.');
+ }catch(err){
+  if(same()){
+   state.fuelTrackBackendError=errorMessage(err);
+   toast('FuelTrack could not confirm this transaction. Refresh before retrying.');
+  }
+ }finally{if(same())state.fuelTrackBackendBusy=false;}
+}
+
 async function loadFuelTrackBackend(seq=routeSerial){
  const userId=state.context?.user_id,ws=state.context?.workspace_id;
  const same=()=>seq===routeSerial&&auth.isSignedIn&&auth.userId===userId&&
@@ -4475,6 +4512,24 @@ async function action(name,button){
   await changeTradeLinkDraftState(button.dataset.id,
    name==='tradelink-draft-archive'?'archive':'restore');break;
  }
+ case 'ft3-approve':
+ case 'ft3-reject':{
+  if(state.fuelTrackSection!=='approvals')break;
+  const id=button.dataset.id;
+  if(!validUuid(id))break;
+  if(name==='ft3-reject'){
+   const reason=root.querySelector('#ft3-reason-'+id)?.value?.trim()||'';
+   if(!reason||reason.length>1000){toast('Enter a rejection reason.');break;}
+   await mutateFuelTrackBackend('decide',id,{reason});
+  }else await mutateFuelTrackBackend('decide',id);
+  break;
+ }
+ case 'ft3-mark-refueled':{
+  const id=button.dataset.id;
+  if(validUuid(id)&&state.fuelTrackSection==='lightfuels')
+   await mutateFuelTrackBackend('mark',id);
+  break;
+ }
  case 'ft3-activity-refresh':{
   if(state.view==='board'&&state.tab==='fueltrack'&&state.boardId===FUELTRACK_V3_ID&&
      state.fuelTrackSection==='activity')await loadFuelTrackActivity(routeSerial);
@@ -6392,6 +6447,21 @@ root.addEventListener('change',event=>{
  }
 });
 root.addEventListener('submit',event=>{
+ if(event.target.matches('[data-ft3-receipt]')){
+  event.preventDefault();
+  const form=event.target,requestId=form.dataset.ft3Receipt;
+  if(!validUuid(requestId)||state.fuelTrackSection!=='lightfuels')return;
+  const amount=Number(form.elements.namedItem('amount')?.value);
+  const liters=Number(form.elements.namedItem('liters')?.value);
+  const receiptNumber=String(form.elements.namedItem('receiptNumber')?.value||'').trim();
+  if(!Number.isFinite(amount)||amount<=0||!Number.isFinite(liters)||liters<=0||
+     receiptNumber.length>120){toast('Enter valid amount and fuel quantity.');return;}
+  Promise.resolve(mutateFuelTrackBackend('complete',requestId,{
+   amount,liters,receiptNumber:receiptNumber||null
+  })).catch(()=>{});
+  return;
+ }
+
  if(event.target.id==='ft3-new-request-form'){
   event.preventDefault();
   const form=event.target,button=form.querySelector('.ft3-new-submit');
