@@ -31,7 +31,7 @@ export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId
  return '<section class="ft3-approvals" aria-labelledby="ft3-approvals-heading">'+
  '<header class="ft3-approvals-heading"><div><h2 id="ft3-approvals-heading">Approvals</h2>'+
  '<p>'+(model?esc(model.pendingCount)+' pending review':'Pending review unavailable')+'</p></div>'+
- '<div class="ft3-approvals-actions"><button type="button" disabled title="Delegation needs an authorized backend workflow">Delegate — unavailable</button>'+
+ '<div class="ft3-approvals-actions">'+
  '<button type="button" data-action="refresh-board">↻ Refresh</button></div></header>'+
  '<div class="ft3-approvals-metrics" aria-label="Verified approval statistics">'+
  metric(model?model.approvedToday:'—','Approved today','✓')+

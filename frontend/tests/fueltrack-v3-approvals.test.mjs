@@ -11,7 +11,7 @@ test('unknown approval data shows no fabricated empty queue or percentages',()=>
  assert.match(html,/Approval statistics and pending requests are unavailable/);
  assert.doesNotMatch(html,/All clear!|100%|0 pending review/);
  assert.match(html,/data-action="refresh-board"/);
- assert.match(html,/disabled[^>]*>Delegate — unavailable/);
+ assert.doesNotMatch(html,/Delegate|Delegation/);
 });
 test('verified empty queue alone renders reference empty-state and exact daily totals',()=>{
  const html=renderFuelTrackApprovals(args(base));
