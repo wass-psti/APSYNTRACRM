@@ -31,3 +31,32 @@
 - Mandatory recovery rehearsal and live RPO/RTO assurance have not been established here.
 
 **Release decision: NO-GO** for production activation pending explicit schema authorization, permission visibility decision, provider recovery prerequisites, and genuine signed runtime acceptance.
+
+## Non-mutating signed runtime acceptance runner
+
+Run scripts/fueltrack-v3-signed-read-acceptance.mjs using existing authorized
+session credentials supplied at invocation time through FT3_SUPABASE_URL,
+FT3_PUBLISHABLE_KEY, FT3_ACCESS_TOKEN, FT3_WORKSPACE_ID and optionally
+FT3_EXPECTED_ROLE. Never commit, paste or log signed access tokens in a repo.
+The runner targets only the existing WatchdogWorkspace project and the exact
+FuelTrack Board, verifies the Auth user, reads scoped requests and analytics,
+verifies the immutable audit role, and checks wrong Board and anonymous access
+denial. It performs no writes, file uploads or migrations. Use both genuine
+Admin and User sessions for complete role coverage.
+
+The local unit test scripts/fueltrack-v3-signed-read-acceptance.test.mjs
+uses synthetic tokens with mocked responses, and its success is not a live
+signed-user proof. Unavailable RPCs explicitly fail acceptance.
+
+## Receipt privacy decision required
+
+Current private Board Storage allows members with Board view access to read
+receipt files, and permitted owners/managers may delete the underlying bytes.
+Private does not mean FuelTrack Admin-only.
+
+Decision required before activation:
+- Preserve existing Board-viewer receipt access and current deletion rights; or
+- Require FuelTrack Admin-only visibility and stronger retention, which
+  necessitates separately authorized Storage policy changes and isolation tests.
+
+This PR neither changes production policies nor creates a second bucket.
