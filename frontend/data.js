@@ -4,9 +4,60 @@ export function validUuid(v){return typeof v==='string'&&uuid.test(v);}
 export function requireUuid(v){if(!validUuid(v))throw new ApiError('Invalid board or workspace identifier.');return v;}
 function encodeQuery(input){return new URLSearchParams(input).toString();}
 export class DomainApi {
- constructor(auth){this.auth=auth;}
+ constructor(auth){
+  this.auth=auth;
+  this.boardReadCache=new Map();
+  this.boardReadGeneration=0;
+ }
+ invalidateBoardCache(boardId=null){
+  this.boardReadGeneration++;
+  if(boardId===null)this.boardReadCache.clear();
+  else this.boardReadCache.delete(boardId);
+ }
+ /** Only already-authorized board payloads, bounded by a signed identity +
+  * workspace + access-token generation. Never cache permissions or failures.
+  * Server-side view authorization is always rechecked by the route caller.
+  */
+ async boardCached(boardId,{userId,workspaceId,maxAgeMs=8000}={}){
+  requireUuid(boardId);requireUuid(userId);requireUuid(workspaceId);
+  const token=this.auth?.accessToken;
+  if(!token||this.auth?.userId!==userId)
+   throw new ApiError('Signed board cache scope is unavailable.',403);
+  const previous=this.boardReadCache.get(boardId);
+  const now=Date.now();
+  if(previous&&(previous.userId!==userId||previous.workspaceId!==workspaceId||
+    previous.token!==token||previous.expiresAt<=now))this.boardReadCache.delete(boardId);
+  else if(previous){
+   if(previous.pending)return structuredClone(await previous.pending);
+   return structuredClone(previous.value);
+  }
+  const generation=this.boardReadGeneration;
+  const entry={userId,workspaceId,token,expiresAt:now+maxAgeMs,pending:null,value:null};
+  const pending=this.board(boardId).then(detail=>{
+   if(detail?.board?.id!==boardId||detail.board.workspace_id!==workspaceId)
+    throw new ApiError('Board response workspace mismatch.',403);
+   if(this.boardReadGeneration===generation&&this.boardReadCache.get(boardId)===entry&&
+     this.auth?.userId===userId&&this.auth?.accessToken===token){
+    entry.value=detail;
+    entry.pending=null;
+    entry.expiresAt=Date.now()+maxAgeMs;
+   }
+   return detail;
+  }).catch(error=>{
+   if(this.boardReadCache.get(boardId)===entry)this.boardReadCache.delete(boardId);
+   throw error;
+  });
+  entry.pending=pending;
+  // Keep the cache in memory only, with a small fixed number of boards.
+  if(this.boardReadCache.size>=8)
+   this.boardReadCache.delete(this.boardReadCache.keys().next().value);
+  this.boardReadCache.set(boardId,entry);
+  return structuredClone(await pending);
+ }
  rpc(name,args={},options={}){
    if(!/^[a-z][a-z0-9_]+$/.test(name))throw new ApiError('Invalid operation.');
+   if(!['wm_get_board','wm_auth_access_context','work_board_access','wm_list_boards','wm_board_ui_read'].includes(name))
+     this.invalidateBoardCache();
    return this.auth.authorized('/rest/v1/rpc/'+name,{method:'POST',body:args,...options});
  }
  async context(){
