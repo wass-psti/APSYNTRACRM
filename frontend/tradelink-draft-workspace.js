@@ -1054,6 +1054,10 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
   '>'+options(values,value)+'</select></label>';
  return '<section data-tradelink-domain-list aria-label="'+(readOnly?
   'Read-only TradeLink document repository':'Authorized TradeLink Draft listing')+'">'+
+  (readOnly?'<nav class="tl-reference-document-filter-tabs" aria-label="Filter documents by module">'+
+   draftListTypes.map(([id,label])=>'<button type="button" data-action="tradelink-documents-module" '+
+    'data-module="'+escape(id)+'"'+(filters.documentType===id?' aria-current="true"':'')+
+    disabledAttr+'>'+escape(label)+'</button>').join('')+'</nav>':'')+
   '<div class="tl-draft-list-filters" role="search" aria-label="Search authorized TradeLink Draft records">'+
    '<label class="tl-draft-field"><span>Search document number</span>'+
     '<input name="query" type="search" maxlength="120" autocomplete="off" '+

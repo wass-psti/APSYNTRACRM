@@ -4035,6 +4035,23 @@ async function action(name,button){
   }
   break;
  }
+ case 'tradelink-documents-module':{
+  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+     !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+     state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)break;
+  const selected=normalizeTradeLinkDraftListFilters({
+   ...state.tradeLinkDraft.listFilters,documentType:button.dataset.module
+  });
+  state.tradeLinkDraft.listFilters=selected;
+  if(state.tradeLinkDraft.listPage?.server){
+   await loadTradeLinkDrafts(routeSerial,{
+    cursor:null,history:[],pageIndex:0,filters:selected
+   });
+  }else{
+   render();
+  }
+  break;
+ }
  case 'tradelink-documents-search':{
   if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'&&
     state.tradeLinkDraft.listPage?.server)

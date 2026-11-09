@@ -659,3 +659,28 @@
  .tl-reference-portal .tl-reference-repository-buttons{width:100%}
  .tl-reference-portal .tl-reference-repository-buttons>*{flex:1 1 auto}
 }
+
+/* Phase 3D: accessible type tabs, backed by existing signed filters. */
+.tl-reference-portal .tl-reference-document-filter-tabs{
+ display:flex;align-items:center;gap:4px;max-width:100%;
+ overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;
+ padding:0 0 8px;margin:14px 0 4px;
+ border-bottom:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button{
+ flex:0 0 auto;min-height:38px;padding:8px 13px;
+ color:#677286;background:transparent;border:0;border-radius:7px;
+ font-size:12px;font-weight:600;cursor:pointer;
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button:hover{
+ background:#f1f5fb;color:#263c6b;
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button[aria-current="true"]{
+ background:#edf2ff;color:#2347b8;
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button:disabled{
+ opacity:.55;cursor:not-allowed;
+}
+.tl-reference-portal .tl-reference-document-filter-tabs>button:focus-visible{
+ outline:2px solid #315de6;outline-offset:2px;
+}
