@@ -56,3 +56,18 @@ Storage continuing 24-hour recoverability: PENDING.
 Production schema changes: NONE.
 Option A receipt privacy and migrations: AUTHORIZED.
 Production deployment: NO-GO.
+
+## November 10 nonproduction archive integrity increment
+
+The optional independently managed logical+Storage recovery alternative
+now has an on-demand SHA-256 integrity tool at
+scripts/ft3-recovery-archive-audit.mjs. Local verification passed on four
+SQL exports and five actual private Storage objects (13,209,995 bytes).
+The manifest was created with owner-only file permissions and was kept
+outside GitHub. Eight unit tests passed. See
+docs/FUELTRACK-V3-OFFLINE-RECOVERY-ARCHIVE-AUDIT-20261110.md.
+
+This adds local integrity assurance, not continuous backup retention,
+24-hour RPO, hosted 24-hour RTO, or a provider physical restoration. It
+does not change the selected NO-GO fallback or authorize recovery
+architecture option D. No production data or permissions changed.

@@ -8,6 +8,7 @@ on:
       - 'scripts/fueltrack-v3-backend-disposable.sh'
       - 'scripts/fueltrack-v3-signed-read-acceptance*.mjs'
       - 'scripts/fueltrack-v3-provider-backup-gate*.mjs'
+      - 'scripts/ft3-recovery-archive-audit*.mjs'
       - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
   workflow_dispatch:
 
@@ -30,3 +31,5 @@ jobs:
         run: node --test scripts/fueltrack-v3-signed-read-acceptance.test.mjs
       - name: Verify provider backup release gate remains fail-closed
         run: node --test scripts/fueltrack-v3-provider-backup-gate.test.mjs
+      - name: Verify offline database and private Storage archive integrity gates
+        run: node --test scripts/ft3-recovery-archive-audit.test.mjs
