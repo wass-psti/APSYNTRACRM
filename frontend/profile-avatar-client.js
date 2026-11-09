@@ -83,26 +83,41 @@ export class ProfileAvatarClient{
   const nextPath=await this.upload(blob,userId);
   try{
    const result=await this.updateReference(nextPath,oldPath);
+   if(result?.avatar_path!==nextPath||typeof result?.updated_at!=='string'){
+    // A successful HTTP response with an unexpected body is ambiguous. Keep
+    // the uploaded object rather than risk deleting an object now referenced
+    // by the authoritative profile row.
+    throw new Error('The profile picture upload completed, but its saved reference could not be confirmed. Refresh your account before retrying.');
+   }
    let cleanupPending=false;
    if(oldPath&&oldPath!==nextPath){
     try{await this.removeObject(oldPath,userId);}
     catch{cleanupPending=true;}
    }
-   return {path:nextPath,updatedAt:result?.updated_at??null,cleanupPending};
+   return {path:nextPath,updatedAt:result.updated_at,cleanupPending};
   }catch(error){
-   try{await this.removeObject(nextPath,userId);}catch{}
+   const status=Number(error?.status);
+   const definitiveRejection=Number.isInteger(status)&&status>=400&&status<500&&status!==408&&status!==429;
+   if(definitiveRejection){
+    try{await this.removeObject(nextPath,userId);}catch{}
+   }
+   // Network errors and server failures can happen after Postgres commits.
+   // Preserve the object on ambiguous outcomes so the profile never points
+   // to an object that this client has just deleted.
    throw error;
   }
  }
  async remove(userId,expectedPath){
   assertActor(this.auth,userId);
   const oldPath=checkedPath(expectedPath,userId);
-  await this.updateReference(null,oldPath);
+  const result=await this.updateReference(null,oldPath);
+  if(result?.avatar_path!==null||typeof result?.updated_at!=='string')
+   throw new Error('The profile picture removal could not be confirmed. Refresh your account before retrying.');
   try{
    await this.removeObject(oldPath,userId);
-   return {path:null,cleanupPending:false};
+   return {path:null,updatedAt:result.updated_at,cleanupPending:false};
   }catch{
-   return {path:null,cleanupPending:true};
+   return {path:null,updatedAt:result.updated_at,cleanupPending:true};
   }
  }
  async signedUrl(path,userId){
