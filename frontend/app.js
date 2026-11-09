@@ -99,6 +99,7 @@ import {loadBoardCollaboration,renderBoardCollaboration} from './board-collabora
 import {BoardPreferenceStore} from './board-preferences-idb.js';
 import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
+import {summarizeEntryWaterfall} from './performance-entry-waterfall.js';
 import {readWorkspaceStartup} from './workspace-startup-read.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board-presentation.js';
@@ -919,6 +920,7 @@ function settingsPage(){
   <p class="muted">Navigation TTFB ${report.ttfbMs??'—'} ms; DOM ready ${report.domReadyMs??'—'} ms; load ${report.loadMs??'—'} ms. These are browser navigation timings, not signed backend RPC timings or proof of a stable 120 FPS.</p>
   <p class="muted">${report.longTasks?.supported?`Long tasks (50 ms or more) during sampling: ${report.longTasks.count}; total ${report.longTasks.totalMs} ms; maximum ${report.longTasks.maxMs} ms.`:'Long Tasks API unavailable in this browser.'} This is not a full CPU trace.</p>
   ${report.startup?.phases?.length?`<p class="muted">Signed startup after JavaScript entry: ${report.startup.totalMs} ms (entry observed ${report.startup.entryFromNavigationMs} ms after navigation; signed route ready at ${report.startup.signedReadyFromNavigationMs} ms). ${report.startup.phases.map(step=>`${e(step.phase)} ${step.durationMs} ms`).join('; ')}. Each phase includes its awaited network and JavaScript work; not server-only RPC processing time or HTML/module download.</p>`:'<p class="muted">Signed startup phases unavailable in this tab. Reload while signed in and measure again.</p>'}`:''}
+  ${report?.entryWaterfall?`<p class="muted">Navigation-to-entry public resource waterfall (same-origin, completed before entry): ${report.entryWaterfall.entryMs} ms to JavaScript entry; ${report.entryWaterfall.groups.javascript.count} JavaScript assets (${report.entryWaterfall.groups.javascript.decodedBytes} decoded bytes; last response ${report.entryWaterfall.groups.javascript.latestEndMs??'—'} ms); ${report.entryWaterfall.groups.stylesheet.count} CSS assets (${report.entryWaterfall.groups.stylesheet.decodedBytes} decoded bytes; last response ${report.entryWaterfall.groups.stylesheet.latestEndMs??'—'} ms); ${report.entryWaterfall.groups.other.count} other public assets; residual after latest public asset response ${report.entryWaterfall.afterLatestPublicResourceMs??'—'} ms. Residual is not proof of parse, execution or scheduling time; 0 decoded bytes can mean unavailable browser reporting. No URLs, account data or RPC requests collected.</p>`:''}
   ${report?.startup?.reads?.length?`<p class="muted">Workspace signed RPC read durations (network-inclusive; not server-only): ${report.startup.reads.map(read=>`${e(read.operation)} ${read.durationMs} ms`).join('; ')}. Reads are instrumented after the verified session; board and role reads overlap. These durations are not additive.</p>`:''}
   </div></section>`;
  return `<div class="aps-settings"><section class="page-head settings-hero settings-entrance" aria-labelledby="settings-title"><div class="settings-hero-copy"><span class="label-top"><span class="settings-hero-dot" aria-hidden="true"></span>Workspace / Account</span><h1 id="settings-title">Account & security<span class="settings-heading-stop">.</span></h1><p>Your verified user identity and session preferences.</p></div><span class="settings-hero-status">${settingsIcon('shield')}<span>Verified workspace account</span></span><svg class="settings-hero-decoration" viewBox="0 0 420 200" fill="none" aria-hidden="true" focusable="false"><circle cx="355" cy="0" r="120" stroke="currentColor" stroke-opacity=".16"/><circle cx="355" cy="0" r="193" stroke="currentColor" stroke-opacity=".09"/><path d="M105 230C201 70 334 93 446 146" stroke="currentColor" stroke-opacity=".16"/></svg></section>
@@ -3695,7 +3697,9 @@ async function action(name,button){
    if(!auth.isSignedIn||actor!==auth.userId||
       workspace!==state.context?.workspace_id||controller.signal.aborted)break;
    if(profile.status==='COMPLETE'){
-    state.performanceReport={...profile,startup:startupCriticalPath.snapshot()};
+    const startup=startupCriticalPath.snapshot();
+    state.performanceReport={...profile,startup,
+     entryWaterfall:startup?summarizeEntryWaterfall({entryMs:startup.entryFromNavigationMs}):null};
     toast('Local frame sample complete. Review results in Account settings.');
    }else toast('Performance sampling unavailable or interrupted.',true);
   }catch{toast('Browser performance sampling was unavailable.',true);}
