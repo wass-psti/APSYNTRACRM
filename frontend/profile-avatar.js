@@ -1,19 +1,16 @@
-/** Profile picture preparation for the existing WatchdogWorkspace identity.
- * No network calls. Authoritative storage and record updates require their
- * separate signed, per-user backend contract before activation.
- */
+/** Profile picture selection, crop preview and signed persistence UI. */
 export const AVATAR_MAX_SOURCE_BYTES=5*1024*1024;
 export const AVATAR_OUTPUT_SIZE=256;
 const types=Object.freeze({
-  'image/jpeg':'jpeg',
-  'image/png':'png',
-  'image/webp':'webp'
+ 'image/jpeg':'jpeg',
+ 'image/png':'png',
+ 'image/webp':'webp'
 });
 function mimeFromHeader(bytes){
  if(bytes.length>=3&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)return 'image/jpeg';
  if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n))return 'image/png';
  if(bytes.length>=12&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'
-   &&String.fromCharCode(...bytes.slice(8,12))==='WEBP')return 'image/webp';
+  &&String.fromCharCode(...bytes.slice(8,12))==='WEBP')return 'image/webp';
  return null;
 }
 export async function inspectAvatarFile(file){
@@ -59,65 +56,106 @@ export async function prepareAvatarImage(file,{positionX=50,positionY=50,zoom=1}
    'image/webp',.86
   ));
   if(blob.size===0||blob.size>400000)
-   throw new Error('The prepared profile picture is too large.');
+   throw new Error('The prepared profile picture exceeds the 400 KB limit.');
   return blob;
- }finally{
-  URL.revokeObjectURL(url);
- }
+ }finally{URL.revokeObjectURL(url);}
 }
 
-/** Presentation-only editor until a verified, user-scoped avatar Storage and
- * canonical profile-reference contract exists. No network or DB writes. */
+function escapeHtml(value){
+ return String(value??'').replace(/[&<>"']/g,c=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+ }[c]));
+}
+let activePreviewUrl=null;
+let hydrationSequence=0;
+function releasePreview(){
+ if(activePreviewUrl){URL.revokeObjectURL(activePreviewUrl);activePreviewUrl=null;}
+}
+export function stopAvatarPreview(){releasePreview();hydrationSequence++;}
+export async function mountAvatarImages(container,client,path,userId){
+ const sequence=++hydrationSequence;
+ const nodes=[...(container?.querySelectorAll?.('img[data-avatar-current]')||[])];
+ for(const img of nodes){
+  img.hidden=true;
+  const fallback=img.parentElement?.querySelector('[data-avatar-initials]');
+  if(fallback)fallback.hidden=false;
+ }
+ if(!path||!client||!userId)return;
+ try{
+  const url=await client.signedUrl(path,userId);
+  if(sequence!==hydrationSequence||!container?.isConnected)return;
+  for(const img of nodes){
+   if(!img.isConnected)continue;
+   img.src=url;img.referrerPolicy='no-referrer';img.hidden=false;
+   const fallback=img.parentElement?.querySelector('[data-avatar-initials]');
+   if(fallback)fallback.hidden=true;
+  }
+ }catch{
+  // Keep the initials fallback; avatar availability must not block the CRM.
+ }
+}
 export function avatarPreviewMarkup(initials){
- const fallback=String(initials||'U').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const fallback=escapeHtml(initials||'U');
  return '<section class="settings-avatar-editor" aria-labelledby="settings-avatar-heading">'+
   '<div class="settings-avatar-editor-head"><div><h4 id="settings-avatar-heading">Profile picture</h4>'+
-  '<p>Preview and position your photo before secure avatar storage is activated.</p></div></div>'+
+  '<p>Choose a photo, adjust its crop, and save it to your account.</p></div></div>'+
   '<div class="settings-avatar-layout"><div class="settings-avatar-preview" aria-label="Profile picture preview">'+
   '<span data-avatar-initials aria-hidden="true">'+fallback+'</span>'+
+  '<img data-avatar-current alt="" hidden />'+
   '<img data-avatar-image alt="Selected profile picture preview" hidden /></div>'+
   '<div class="settings-avatar-controls"><label for="settings-avatar-file" class="settings-avatar-file-label">Choose a photo</label>'+
   '<input id="settings-avatar-file" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="settings-avatar-guidance"/>'+
-  '<small id="settings-avatar-guidance">JPEG, PNG or WebP · Up to 5 MB · Cropped to a square.</small>'+
+  '<small id="settings-avatar-guidance">JPEG, PNG or WebP · Up to 5 MB · Saved as a 256 × 256 WebP image.</small>'+
   '<div class="settings-avatar-crop" data-avatar-crop hidden>'+
   '<label for="settings-avatar-zoom">Zoom</label><input id="settings-avatar-zoom" type="range" min="100" max="300" value="100" step="10"/>'+
   '<label for="settings-avatar-pos-x">Horizontal position</label><input id="settings-avatar-pos-x" type="range" min="0" max="100" value="50" step="5"/>'+
   '<label for="settings-avatar-pos-y">Vertical position</label><input id="settings-avatar-pos-y" type="range" min="0" max="100" value="50" step="5"/>'+
-  '</div><button type="button" class="secondary" data-avatar-clear hidden>Discard preview</button>'+
-  '</div></div>'+
+  '</div><div class="settings-avatar-actions">'+
+  '<button type="button" class="primary" data-avatar-save disabled>Save profile picture</button>'+
+  '<button type="button" class="secondary" data-avatar-clear hidden>Discard preview</button>'+
+  '<button type="button" class="secondary" data-avatar-remove hidden>Remove photo</button>'+
+  '</div></div></div>'+
   '<p class="settings-avatar-status" data-avatar-status role="status" aria-live="polite"></p>'+
-  '<p class="settings-avatar-gate">Photo saving and removal are not active yet. A private user-owned Storage bucket and server-verified profile reference are required first. No photo is uploaded by this preview.</p>'+
+  '<p class="settings-avatar-gate">Photos are private. Only you and active members of a shared workspace can view your profile picture. Profile changes remain separate from account roles and permissions.</p>'+
   '</section>';
 }
-let activePreviewUrl=null;
-function releasePreview(){
- if(activePreviewUrl){URL.revokeObjectURL(activePreviewUrl);activePreviewUrl=null;}
-}
-export function stopAvatarPreview(){releasePreview();}
-export function mountAvatarPreview(container){
+export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}={}){
  releasePreview();
  const section=container?.querySelector('.settings-avatar-editor');
  if(!section)return;
  const input=section.querySelector('#settings-avatar-file');
  const image=section.querySelector('[data-avatar-image]');
+ const currentImage=section.querySelector('[data-avatar-current]');
  const initials=section.querySelector('[data-avatar-initials]');
  const status=section.querySelector('[data-avatar-status]');
  const crop=section.querySelector('[data-avatar-crop]');
  const clear=section.querySelector('[data-avatar-clear]');
+ const save=section.querySelector('[data-avatar-save]');
+ const remove=section.querySelector('[data-avatar-remove]');
  const sliders=[...crop.querySelectorAll('input[type="range"]')];
- let selected=null,sequence=0;
+ let selected=null,sequence=0,busy=false,previewReady=false;
+ remove.hidden=!currentPath;
+ void mountAvatarImages(container,client,currentPath,userId);
+ const setBusy=value=>{
+  busy=value;
+  for(const control of [input,clear,save,remove,...sliders])if(control)control.disabled=value;
+  section.setAttribute('aria-busy',value?'true':'false');
+ };
+ const restoreCurrent=()=>{
+  image.hidden=true;image.removeAttribute('src');
+  if(currentImage&&!currentImage.hidden)initials.hidden=true;
+  else initials.hidden=false;
+ };
  const reset=()=>{
-  sequence++;
-  selected=null;releasePreview();
-  input.value='';
-  crop.hidden=true;clear.hidden=true;image.hidden=true;
-  image.removeAttribute('src');initials.hidden=false;status.textContent='';
+  sequence++;selected=null;previewReady=false;releasePreview();
+  input.value='';crop.hidden=true;clear.hidden=true;save.disabled=true;
+  restoreCurrent();status.textContent='';
   for(const slider of sliders)slider.value=slider.id==='settings-avatar-zoom'?'100':'50';
  };
  const update=async()=>{
   const version=++sequence;
   if(!selected)return;
-  status.textContent='Preparing local preview…';
+  previewReady=false;save.disabled=true;status.textContent='Preparing local preview…';
   try{
    const blob=await prepareAvatarImage(selected,{
     zoom:Number(sliders[0].value)/100,
@@ -125,12 +163,10 @@ export function mountAvatarPreview(container){
     positionY:Number(sliders[2].value)
    });
    if(version!==sequence||!section.isConnected)return;
-   const url=URL.createObjectURL(blob);
-   releasePreview();
-   activePreviewUrl=url;
-   image.src=url;image.hidden=false;initials.hidden=true;
-   crop.hidden=false;clear.hidden=false;
-   status.textContent='Preview ready. Nothing has been uploaded or saved.';
+   const url=URL.createObjectURL(blob);releasePreview();activePreviewUrl=url;
+   image.src=url;image.hidden=false;currentImage.hidden=true;initials.hidden=true;
+   crop.hidden=false;clear.hidden=false;save.disabled=false;previewReady=true;
+   status.textContent='Preview ready. Save to apply this picture to your account.';
   }catch(error){
    if(version!==sequence||!section.isConnected)return;
    status.textContent=error?.message||'Unable to preview this picture.';
@@ -143,4 +179,40 @@ export function mountAvatarPreview(container){
  });
  for(const slider of sliders)slider.addEventListener('change',()=>void update());
  clear.addEventListener('click',()=>{reset();input.focus();});
+ save.addEventListener('click',async()=>{
+  if(busy||!previewReady||!selected||!client||!userId)return;
+  setBusy(true);status.textContent='Uploading and saving your profile picture…';
+  try{
+   const blob=await prepareAvatarImage(selected,{
+    zoom:Number(sliders[0].value)/100,
+    positionX:Number(sliders[1].value),
+    positionY:Number(sliders[2].value)
+   });
+   const result=await client.save(blob,userId,currentPath||null);
+   currentPath=result.path;
+   if(typeof onSaved==='function')onSaved({path:result.path,cleanupPending:result.cleanupPending});
+   status.textContent=result.cleanupPending?
+    'Profile picture saved. The previous image is queued for cleanup.':
+    'Profile picture saved.';
+   reset();
+  }catch(error){
+   status.textContent=error?.message||'Unable to save the profile picture.';
+  }finally{if(section.isConnected)setBusy(false);}
+ });
+ remove.addEventListener('click',async()=>{
+  if(busy||!currentPath||!client||!userId)return;
+  if(!globalThis.confirm?.('Remove your current profile picture?'))return;
+  setBusy(true);status.textContent='Removing your profile picture…';
+  try{
+   const result=await client.remove(userId,currentPath);
+   currentPath=null;remove.hidden=true;
+   if(typeof onSaved==='function')onSaved({path:null,cleanupPending:result.cleanupPending});
+   reset();
+   status.textContent=result.cleanupPending?
+    'Profile picture removed from your account. The old image is queued for cleanup.':
+    'Profile picture removed.';
+  }catch(error){
+   status.textContent=error?.message||'Unable to remove the profile picture.';
+  }finally{if(section.isConnected)setBusy(false);}
+ });
 }
