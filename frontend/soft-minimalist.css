@@ -4224,3 +4224,133 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   border-color:var(--sm-border-strong);
  }
 }
+
+
+/* CP-PAGES-UNIFIED-02 — visual-only Pages Acceptance consolidation.
+ * Signed QA actions, eligibility, audit and failure reports are unchanged. */
+#app .aps-pages-shell{background:var(--sm-surface)}
+#app .aps-pages-shell>.main-content{
+ width:100%;max-width:1160px;min-width:0;margin-inline:auto;
+ padding:clamp(20px,2.8vw,36px) clamp(18px,3vw,42px) 72px;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-hero{
+ min-height:0;margin:0 0 8px;padding:6px 0 25px;
+ border:0;border-bottom:1px solid var(--sm-border);border-radius:0;
+ background:transparent;box-shadow:none;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-hero-emblem{display:none}
+#app .aps-pages-shell .aps-pages-acceptance .pages-hero h1{
+ margin:9px 0 8px;color:var(--sm-ink);
+ font-size:clamp(27px,2.8vw,35px);font-weight:750;letter-spacing:-.035em;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-hero p{max-width:730px;color:var(--sm-sub)}
+#app .aps-pages-shell .aps-pages-acceptance .pages-hero-tags{gap:10px;margin-top:15px}
+#app .aps-pages-shell .aps-pages-acceptance .pages-hero-tags>span{
+ padding:5px 0;border:0;border-radius:0;background:transparent;
+ color:var(--sm-sub);font-size:11px;font-weight:650;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-backend-panel{
+ overflow:visible;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-panel-header{
+ min-height:0;margin:0;padding:25px 0 17px;border:0;background:transparent;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-backend-icon{
+ width:34px;height:34px;border-radius:var(--sm-radius-xs);
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-panel-header h2{
+ color:var(--sm-ink);font-size:16px;font-weight:740;letter-spacing:-.015em;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-stage-tag{
+ padding:7px 11px;border:0;background:var(--sm-success-soft);
+ color:var(--sm-success);font-weight:680;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-panel-body{padding:0}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ align-items:start;gap:0;border-top:1px solid var(--sm-border);
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-grid:has(>.pages-test-card:only-child){
+ grid-template-columns:minmax(0,1fr);
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-card{
+ min-width:0;display:flex;flex-direction:column;gap:0;
+ margin:0;padding:24px;border:0;border-bottom:1px solid var(--sm-border);
+ border-radius:0;background:transparent;box-shadow:none;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-card:first-child{padding-left:0}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-card+.pages-test-card{
+ padding-right:0;border-left:1px solid var(--sm-border);
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-card:only-child{padding-right:0}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-header{gap:12px;margin-bottom:15px}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-card-icon{
+ width:34px;height:34px;border-radius:var(--sm-radius-xs);
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-test-header h3{
+ color:var(--sm-ink);font-size:15px;font-weight:740;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-write-warning,
+#app .aps-pages-shell .aps-pages-acceptance .pages-qa-missing{
+ margin:0 0 16px;padding:13px 15px;border:0;
+ border-left:3px solid var(--sm-warning);border-radius:0;
+ background:var(--sm-warning-soft);
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-board-scope{
+ padding:12px 0;border:0;border-top:1px solid var(--sm-border);
+ border-bottom:1px solid var(--sm-border);border-radius:0;background:transparent;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-native-facts{margin:0 0 17px}
+#app .aps-pages-shell .aps-pages-acceptance .pages-native-facts>span{
+ padding:6px 9px;border:0;background:var(--sm-surface-soft);
+ color:var(--sm-text);font-size:10px;
+}
+#app .aps-pages-shell .aps-pages-acceptance :is(.pages-run-primary,.pages-run-secondary,.pages-open-boards){
+ min-height:42px;padding:10px 15px;margin-top:8px;
+ border-radius:var(--sm-radius-control);font-size:12px;font-weight:700;
+ box-shadow:none;transition:background-color var(--sm-fast),border-color var(--sm-fast),color var(--sm-fast);
+}
+#app .aps-pages-shell .aps-pages-acceptance :is(.pages-run-primary,.pages-run-secondary,.pages-open-boards):hover:not(:disabled){
+ transform:none;box-shadow:none;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-results{gap:0;margin:0}
+#app .aps-pages-shell .aps-pages-acceptance .pages-result-card{
+ padding:24px 0;margin:0;border:0;border-bottom:1px solid var(--sm-border);
+ border-radius:0;background:transparent;box-shadow:none;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-result-card h3{
+ color:var(--sm-ink);font-size:15px;font-weight:740;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-result-step{
+ padding:12px 0;margin:0;border:0;border-bottom:1px solid var(--sm-border);
+ border-radius:0;background:transparent;
+}
+#app .aps-pages-shell .aps-pages-acceptance .pages-result-note{
+ padding:13px 15px;border:0;border-left:2px solid var(--sm-accent);
+ border-radius:0;background:var(--sm-accent-soft);
+}
+@media(max-width:900px){
+ #app .aps-pages-shell .aps-pages-acceptance .pages-test-grid{
+  grid-template-columns:minmax(0,1fr);
+ }
+ #app .aps-pages-shell .aps-pages-acceptance .pages-test-card,
+ #app .aps-pages-shell .aps-pages-acceptance .pages-test-card+.pages-test-card{
+  padding:22px 0;border-left:0;border-bottom:1px solid var(--sm-border);
+ }
+}
+@media(max-width:650px){
+ #app .aps-pages-shell>.main-content{padding:18px 16px 56px}
+ #app .aps-pages-shell .aps-pages-acceptance .pages-hero{
+  min-height:0;padding:3px 0 20px;
+ }
+ #app .aps-pages-shell .aps-pages-acceptance .pages-panel-header{padding:22px 0 15px}
+ #app .aps-pages-shell .aps-pages-acceptance .pages-stage-tag{margin:0}
+ #app .aps-pages-shell .aps-pages-acceptance .pages-test-card,
+ #app .aps-pages-shell .aps-pages-acceptance .pages-test-card+.pages-test-card{padding:20px 0}
+ #app .aps-pages-shell .aps-pages-acceptance :is(.pages-run-primary,.pages-run-secondary,.pages-open-boards){
+  width:100%;align-self:stretch;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-pages-shell .aps-pages-acceptance :is(.pages-run-primary,.pages-run-secondary,.pages-open-boards){transition:none}
+}
