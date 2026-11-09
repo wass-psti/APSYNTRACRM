@@ -24,7 +24,7 @@ const mode=(id,title,subtitle,icon)=>
  '<label class="ft3-new-option" for="ft3-mode-'+id+'">'+
  '<input type="radio" name="ft3-fuel-mode" id="ft3-mode-'+id+'" value="'+id+'"'+(id==='vehicle'?' checked':'')+'>'+
  '<span class="ft3-new-option-body"><span class="ft3-new-option-icon" aria-hidden="true">'+icon+'</span><strong>'+title+'</strong><small>'+subtitle+'</small></span></label>';
-export function renderFuelTrackNewRequest(){
+export function renderFuelTrackNewRequest({enabled=false,busy=false,message=''}={}){
  const purpose=section(3,'Justification',textArea()+
  '<div class="ft3-new-field ft3-new-wide"><span>Receipt Photo (Optional)</span>'+
  '<button type="button" disabled aria-describedby="ft3-new-catalog-note">Capture Receipt / Photo — unavailable</button></div>');
@@ -32,11 +32,11 @@ export function renderFuelTrackNewRequest(){
  '<header class="ft3-new-title"><h2 id="ft3-new-title">New Fuel Request</h2>'+
  '<p>Choose a refuel type and prepare request details. You can prepare the request using the supplied options. Submission is unavailable until the signed request service is verified.</p></header>'+
  '<div class="ft3-new-progress" aria-label="Request steps"><span>Vehicle / Container Details</span><span>Trip Information</span><span>Justification</span></div>'+
- '<div class="ft3-new-composer">'+
+ '<form id="ft3-new-request-form" class="ft3-new-composer">'+
  '<div class="ft3-new-panel ft3-new-type" role="group" aria-label="Select Refuel Type"><h3>Select Refuel Type</h3>'+
  '<div class="ft3-new-options">'+mode('vehicle','Vehicle Fuel','Cars, trucks, motorcycles','⛽')+
  mode('container','Container Refill','Drums, canisters, tanks','⬡')+'</div></div>'+
- '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">These dropdown values are provided reference labels, not verified backend identities. Submission and receipt upload remain unavailable; no request will be saved.</p>'+
+ '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">'+(enabled?'Signed request service available. Receipt photo upload remains unavailable.':'These dropdown values are reference labels; submission and receipt upload remain unavailable.')+'</p>'+ (message?'<p class="ft3-new-boundary" role="status">'+h(message)+'</p>':'')+
  '<div class="ft3-new-vehicle">'+
  section(1,'Vehicle Details',select('ft3-plate','Plate Number','Select plate number',FUELTRACK_PLATE_OPTIONS)+
  select('ft3-owner','Vehicle Owner','Select owner',FUELTRACK_PERSON_OPTIONS)+
@@ -50,10 +50,10 @@ export function renderFuelTrackNewRequest(){
  '<label class="ft3-new-field ft3-new-custom-count" for="ft3-custom-count"><span>Custom number of containers</span><input id="ft3-custom-count" name="customCount" type="number" min="1" max="10000" step="1" inputmode="numeric" placeholder="Enter quantity"></label>'+
  select('ft3-responsible','Responsible Person','Select person',FUELTRACK_PERSON_OPTIONS))+
  section(3,'Justification','<label class="ft3-new-field ft3-new-wide" for="ft3-container-purpose"><span>Purpose <b aria-label="required">*</b></span>'+
- '<textarea id="ft3-container-purpose" maxlength="500" rows="4" placeholder="Describe the purpose of this fuel request"></textarea></label>'+
+ '<textarea id="ft3-container-purpose" name="containerPurpose" maxlength="500" rows="4" placeholder="Describe the purpose of this fuel request"></textarea></label>'+
  '<div class="ft3-new-field ft3-new-wide"><span>Receipt Photo (Optional)</span>'+
  '<button type="button" disabled>Capture Receipt / Photo — unavailable</button></div>')+
  '</div>'+
- '<button type="button" class="ft3-new-submit" disabled aria-describedby="ft3-new-catalog-note">Submit for Approval — unavailable</button>'+
- '</div></section>';
+ '<button type="submit" class="ft3-new-submit"'+(!enabled||busy?' disabled':'')+' aria-describedby="ft3-new-catalog-note">'+(busy?'Submitting…':enabled?'Submit for Approval':'Submit for Approval — unavailable')+'</button>'+
+ '</form></section>';
 }
