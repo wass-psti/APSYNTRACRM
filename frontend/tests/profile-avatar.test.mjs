@@ -30,14 +30,16 @@ test('photo validator enforces bounded source size',async()=>{
  await assert.rejects(()=>inspectAvatarFile(file([137,80,78,71,13,10,26,10],'image/png',AVATAR_MAX_SOURCE_BYTES)),/smaller than 5 MB/);
 });
 
-test('profile preview has accessible control labels, safe text and an explicit persistence gate',()=>{
+test('profile editor has accessible save and crop controls with safe text',()=>{
  const html=avatarPreviewMarkup('<script>alert(1)</script>');
  assert.match(html,/id="settings-avatar-file"/);
  assert.match(html,/id="settings-avatar-zoom"/);
  assert.match(html,/id="settings-avatar-pos-x"/);
  assert.match(html,/id="settings-avatar-pos-y"/);
  assert.match(html,/role="status"/);
- assert.match(html,/Photo saving and removal are not active yet/);
+ assert.match(html,/Save profile picture/);
+ assert.match(html,/Remove photo/);
+ assert.match(html,/Only you and active members of a shared workspace can view/);
  assert.match(html,/&lt;script&gt;/);
  assert.doesNotMatch(html,/<script>/);
  const source=readFileSync('frontend/profile-avatar.js','utf8');
