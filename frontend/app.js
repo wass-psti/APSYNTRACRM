@@ -2433,6 +2433,7 @@ async function mutateFuelTrackBackend(operation,requestId,{reason=null,amount=nu
   if(!same())return;
   state.fuelTrackBackend={snapshot:next,analytics:null};
   state.fuelTrackBackendError='';
+  state.fuelTrackBackendBusy=false;
   render();toast('FuelTrack transaction saved.');
  }catch(err){
   if(same()){
@@ -2462,7 +2463,7 @@ async function loadFuelTrackBackend(seq=routeSerial){
   if(!same())return;
   let analytics=null;
   if(state.fuelTrackSection==='analytics'){
-   analytics=await client.analytics({days:365});
+   analytics=await client.analytics({days:({'week':7,'month':30,'six-months':180,'all':365}[state.fuelTrackAnalyticsRange]||365)});
    if(!same())return;
   }
   state.fuelTrackBackend={snapshot,analytics};
