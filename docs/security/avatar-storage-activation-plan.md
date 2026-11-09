@@ -1,44 +1,58 @@
-# APSYNTRA CRM — Avatar Storage Activation and Security Decision
+# APSYNTRA CRM — Profile Picture Storage and Security Record
 
-**Status:** Frontend image selection, validation and crop preview implemented. Production avatar persistence is **BLOCKED** pending explicit authorization for database and Storage policy changes, isolated denial checks, and genuine signed-user acceptance.
+**Current state:** The production database and private avatar bucket are activated. The frontend upload, save, replace, remove, and current-user image hydration paths are implemented. GitHub frontend regression validation is running for the latest commit; genuine signed-user upload and cross-user denial acceptance is still pending.
 
-**Existing project:** WatchdogWorkspace (`jtlusodorfnyzgyuewkz`). **No new Supabase project** is proposed.
+**Project:** Existing WatchdogWorkspace (jtlusodorfnyzgyuewkz, Supabase project WatchdogWorkspace). No new Supabase project was created.
 
-## Verified current inventory (read-only, 2026-11-09)
+## Verified pre-migration inventory
 
-- The canonical `public.profiles` table contains `id`, `email`, `display_name`, `platform_role`, `status`, and timestamps, **but no avatar path**.
-- The deployed `public.update_own_profile(p_display_name text)` function supports signed, self-only name changes. Do not replace it or overload its authorization duties merely to add an avatar.
-- There is no dedicated avatar bucket. Existing buckets contain restricted business attachments and must not store profile images.
-- Four live `fueltrans_crm_evidence_*` policies contain conditional `ELSE true` branches for buckets other than `fueltrans-evidence`, but catalog inspection confirms all four are **RESTRICTIVE**, not permissive. They combine with applicable permissive policies using AND and therefore do not grant cross-bucket access. Preserve them unchanged.
+- public.profiles contained identity, display-name, role, status, and timestamp fields but no avatar reference.
+- public.update_own_profile(p_display_name text) was already the signed self-service display-name contract. It was preserved unchanged.
+- No dedicated profile avatar bucket existed.
+- Four fueltrans_crm_evidence_* Storage policies contained conditional ELSE true branches, but live catalog inspection confirmed all four are RESTRICTIVE policies. They do not grant access to other buckets. They were preserved unchanged; no unnecessary policy remediation was performed.
 
-## Hold point
+## Applied production migration
 
-The user authorized avatar activation. The four restrictive FuelTrans policies are preserved unchanged. A dedicated avatar bucket and bucket-specific permissive policies are being added; existing permissive policies remain bucket-scoped. No broad Storage policy is introduced.
+Migration: cp_profile_avatar_storage_activation_20261109
 
-## Proposed minimal backend contract (not deployed)
+1. Added nullable public.profiles.avatar_path with a database check requiring the path to be <profile UUID>/<object UUID>.webp.
+2. Created the private account-avatars bucket with a 400,000-byte limit and image/webp as the only allowed MIME type.
+3. Added an authenticated insert policy limited to the caller's own UUID folder, object owner, one-level path, and UUID WebP filename.
+4. Added an authenticated delete policy limited to objects owned by the caller in the caller's UUID folder. No object update/upsert policy exists.
+5. Added a read policy restricted to authenticated object download / authenticated-info operations; object listing is not allowed by that policy. The owner and active users who share at least one active workspace may read the image. Anonymous access is not granted.
+6. Added private.profile_avatar_can_read(uuid) as a fixed-search-path security-definer predicate for active same-workspace visibility.
+7. Added public.set_own_profile_avatar(p_avatar_path text, p_expected_avatar_path text). It validates caller-owned object existence, path shape, active account status, and the expected prior path before updating only the caller's avatar reference and updated_at. The compare-and-swap condition prevents stale concurrent updates.
+8. Extended public.wm_auth_access_context() to include only the signed caller's avatar_path, preserving the existing module assignment projection and workspace authority.
 
-1. Inspect all existing `storage.objects` policies and grants. Preserve the four restrictive FuelTrans policies; verify the new avatar policy is the only permissive policy matching the new bucket.
-2. Add a nullable `avatar_path` reference to the existing `public.profiles` record (no duplicate profile table), with a path format restricted to `<auth.uid()>/<random-id>.webp`; ensure the authenticated user cannot change `id`, role, account status, email, or memberships through this contract.
-3. Create a dedicated **private** `account-avatars` bucket, with upload limits at the bucket boundary (WebP only; e.g. 400 KB) in addition to client-side checks. File preparation re-encodes JPEG/PNG/WebP source to a square 256×256 WebP, stripping submitted metadata. The Storage backend must verify actual content types and reject malformed images.
-4. Define narrowly scoped `storage.objects` policies. Inserts require a signed active user, `bucket_id='account-avatars'`, `owner_id=auth.uid()::text`, and a path beginning with the authenticated user's UUID; replacements are new immutable names, never cross-user upserts. DELETE is limited to objects actually owned by the caller and may be further restricted to superseded objects. Enforce read authorization based on the intended audience (self-only or currently authorized coworkers sharing a workspace), preferably without public URLs or unrestricted listing.
-5. Use a signed self-only profile update contract with explicit ownership and path-validation rules; update only the user's avatar reference and timestamp. Require concurrency protection (revision or optimistic expected-old-reference) so delayed uploads cannot overwrite a later choice.
-6. Upload a new object first; update the profile pointer only after upload success; clean up the newly uploaded orphan if the pointer update fails. After successful pointer update, remove the old avatar only when it is confirmed unreferenced, with a retryable cleanup path.
-7. Provide a read contract suitable for app header, Settings, board assignments, member listings, and supported integrated apps; preserve fallback initials and avoid treating a remote avatar URL as executable HTML.
-8. Keep all admin-managed permissions and workspaces separate from profile customization. Maintain any applicable existing audit requirements.
+## Frontend implementation
 
-## Required acceptance before production activation
+- JPEG, PNG and WebP source images only; file signature is checked and source size is capped at 5 MB.
+- Browser decode and square crop produce a 256×256 WebP image; source metadata is not copied into the generated image.
+- Zoom and horizontal / vertical positioning are available in Account Settings.
+- The client uploads a new immutable UUID object, updates the profile pointer through the authenticated RPC, then attempts to delete the previous object. If the pointer update fails, it attempts to remove the new orphan.
+- Remove clears the profile reference through the same compare-and-swap RPC before attempting object deletion.
+- Current-user avatar images in Account Settings and the APSYNTRA CRM topbar use short-lived signed URLs. Initials remain the fallback.
+- No service-role key or privileged credential is shipped to the browser.
 
-- Signed user can upload, crop, save, refresh, log out/in, replace, and remove their own avatar; correct database pointer and Storage object survive sessions.
-- Foreign user cannot upload, replace, delete, or obtain a protected image outside allowed workspace visibility; anon access denied.
-- A revoked/expired signed session cannot mutate avatar content or metadata.
-- MIME spoofing, SVG, corrupt images, dimensions/size limits, malformed path, other-user path, stale revision, concurrent saves, and interrupted uploads fail safely.
-- Existing FuelTrans, FRT, Material Request Hub, Toolbox, and Tool Traceability attachment operations remain authorized where expected and denied otherwise, before and after any Storage-policy change.
-- Verify actual access using signed HTTP / Postgres acceptance evidence; frontend CI and Pages deployment alone do not satisfy backend acceptance.
+**Cleanup limitation:** If Storage deletion of an old or orphaned object fails after the profile reference has changed, the new profile state remains authoritative and the UI reports the cleanup failure. There is no background cleanup worker or persistent cleanup queue in this increment; no such automation is claimed.
 
-## Current frontend safety boundary
+## Live database verification performed
 
-`frontend/profile-avatar.js` provides local JPEG/PNG/WebP signature detection, a 5-MB input cap, image dimension checks, 256px square WebP encoding, zoom, positioning, and ephemeral preview using browser blob URLs. The Settings UI explicitly says the preview **does not upload or save**. No avatar upload endpoint, privileged key, or production Storage write is shipped.
+- Bucket configuration returned public=false, file_size_limit=400000, allowed_mime_types=['image/webp'].
+- New bucket object count was zero immediately after migration.
+- The three avatar Storage policies were present for authenticated INSERT, SELECT, and DELETE. No avatar UPDATE policy was added.
+- The four FuelTrans cross-bucket policies remained RESTRICTIVE and unchanged.
+- The signed access-context function includes avatar_path.
+- The avatar setter has authenticated execute permission and no public/anon execute grant.
 
-## Authorization and activation record
+These checks verify database configuration and policy definitions. They do not substitute for real signed HTTP tests with two distinct users.
 
-The user explicitly authorized controlled remediation and avatar activation in the existing WatchdogWorkspace project. Read-only catalog inspection showed the four suspected FuelTrans policies are restrictive, so they were not modified. The additive migration `cp_profile_avatar_storage_activation_20261109` has been applied: it adds the self-owned profile reference, private bucket, bucket-specific Storage policies, shared-active-workspace read helper, compare-and-swap profile RPC, and avatar path in the signed access-context RPC. The frontend upload/save/remove integration and genuine signed-user acceptance remain in progress.
+## Remaining signed-user acceptance
+
+1. Sign in as an active user. Upload a supported photo, save, refresh, and verify it remains visible in Settings and the topbar.
+2. Replace the image and remove it. Confirm the profile pointer and corresponding Storage object state.
+3. Use a second active user in the same workspace to verify image retrieval succeeds. Use a user outside the workspace and an anonymous request to verify denial.
+4. Verify wrong-owner folder uploads/deletes, listing, unsupported MIME, oversized objects, expired/revoked sessions, stale expected-path updates, and malformed paths are denied.
+5. Reconfirm existing FuelTrans, FRT, Material Request Hub, Toolbox Issues, and Tool Traceability attachment operations remain unchanged.
+
+The feature is not declared fully accepted until these real signed-user checks pass.
