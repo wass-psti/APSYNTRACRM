@@ -139,6 +139,8 @@ RESET ROLE;
 UPDATE auth.sessions SET not_after=now()-interval '5 minutes'
  WHERE id='33333333-3333-4333-8333-333333333333';
 SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','cccccccc-cccc-4ccc-8ccc-cccccccccccc',true);
+SELECT set_config('request.jwt.claim.session_id','33333333-3333-4333-8333-333333333333',true);
 DO $revoked$
 BEGIN
  BEGIN
