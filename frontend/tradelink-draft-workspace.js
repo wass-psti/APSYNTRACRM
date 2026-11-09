@@ -592,6 +592,28 @@ const referenceTitles=Object.freeze({
 const referencePrefixes=Object.freeze({
  esi:'ESI-',packing:'PL-',delivery:'DR-',payment:'AR-',quotation:'Q-',po:'PO-'
 });
+/** Screenshot-derived suggestions, not server-managed records or workflow states.
+ * Native datalists permit the user's custom text without changing the domain schema. */
+export const TRADELINK_COMMERCIAL_SUGGESTIONS=Object.freeze({
+ paymentTerms:Object.freeze([
+  'Due on Receipt','COD (Cash on Delivery)','15 Days PDC','30 Days PDC',
+  '50% DP-Balance upon completion','Advance payment prior to delivery',
+  'Installment plans','30 Days Net','45 Days Net','60 Days Net','90 Days Net'
+ ]),
+ validity:Object.freeze(['15 Days','30 Days','60 Days','120 Days','6 Months','1 Year']),
+ deliveryCommitment:Object.freeze([
+  '3 Days (in Stock)','4 Weeks','6 Weeks','8 Weeks','12 Weeks',
+  '16 Weeks','20 Weeks','24 Weeks'
+ ])
+});
+function commercialSuggestionLists(type){
+ if(type!=='quotation'&&type!=='po')return '';
+ return '<div class="tl-reference-suggestion-lists">'+
+  Object.entries(TRADELINK_COMMERCIAL_SUGGESTIONS).map(([name,values])=>
+   '<datalist id="tl-suggest-'+name+'">'+
+   values.map(value=>'<option value="'+escape(value)+'"></option>').join('')+
+   '</datalist>').join('')+'</div>';
+}
 function referenceDraftTabs(type){
  const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/';
  return '<nav class="tl-reference-document-tabs" aria-label="TradeLink document modules">'+
@@ -735,19 +757,19 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       field('Client phone (or email)','customerPhone',fieldValue('customerPhone',data.customerPhone||''),
        'maxlength="5000"')+
       field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
-       'maxlength="5000" required')+
+       'maxlength="5000" list="tl-suggest-paymentTerms" required')+
       field('Offer validity','validity',fieldValue('validity',data.validity||''),
-       'maxlength="5000" required')+
+       'maxlength="5000" list="tl-suggest-validity" required')+
       field('Delivery commitment','deliveryCommitment',
        fieldValue('deliveryCommitment',data.deliveryCommitment||''),
-       'maxlength="5000" required'):'')+
+       'maxlength="5000" list="tl-suggest-deliveryCommitment" required'):'')+
      (type==='po'?
       field('Supplier PO number (optional)','poNumber',fieldValue('poNumber',data.poNumber||''),
        'maxlength="5000"')+
       field('Target delivery date','targetDeliveryDate',
        fieldValue('targetDeliveryDate',data.targetDeliveryDate||''),'type="date" required')+
       field('Payment terms','paymentTerms',fieldValue('paymentTerms',data.paymentTerms||''),
-       'maxlength="5000" required'):'')+
+       'maxlength="5000" list="tl-suggest-paymentTerms" required'):'')+
      '<label class="tl-draft-field tl-reference-currency-field"><span>Currency</span>'+
       '<select name="currency" aria-describedby="tl-reference-currency-help">'+
        options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select>'+
@@ -755,7 +777,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      (physical||payment?'':'<label class="tl-draft-field"><span>VAT</span><select name="vatType">'+
       options(vatCodes,fieldValue('vatType',data.vatType||'12'))+'</select></label>')+
     '</div>'+
-   '</section>'+
+   '</section>'+commercialSuggestionLists(type)+
    (payment?
     '<fieldset class="tl-draft-lines tl-reference-payment"><legend>Form of Payment</legend>'+
      field('Payment particulars','paymentParticulars',fieldValue('paymentParticulars',data.paymentParticulars||''),
