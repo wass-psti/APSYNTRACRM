@@ -51,7 +51,7 @@ BEGIN
  INSERT INTO pg_temp.ws02d_test_token VALUES
   ('revoked',r->>'token',(r->>'invitationId')::uuid);
  r:=private.ws02d_issue('00000000-0000-4000-8000-000000000001',
-  'invited-third@example.invalid','member',
+  'expired-invite@example.invalid','member',
   '22222222-2222-4222-8222-222222222204');
  INSERT INTO pg_temp.ws02d_test_token VALUES
   ('expired',r->>'token',(r->>'invitationId')::uuid);
