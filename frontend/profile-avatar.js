@@ -74,6 +74,25 @@ function releasePreview(){
 }
 export function stopAvatarPreview(){releasePreview();}
 
+/** Keep a newer locally confirmed avatar reference when a background context
+ * request began before the avatar mutation committed. Never merge across users.
+ */
+export function mergeProfileAvatarContext(previous,next){
+ if(!previous||!next||previous.user_id!==next.user_id)return next;
+ const previousUpdated=Date.parse(previous.profile?.updated_at||'');
+ const nextUpdated=Date.parse(next.profile?.updated_at||'');
+ if(!Number.isFinite(previousUpdated)||!Number.isFinite(nextUpdated)||previousUpdated<=nextUpdated)
+  return next;
+ return {
+  ...next,
+  profile:{
+   ...next.profile,
+   avatar_path:previous.profile?.avatar_path??null,
+   updated_at:previous.profile?.updated_at??next.profile?.updated_at
+  }
+ };
+}
+
 /** Shared avatar contents for every profile surface; callers may bind another
  * authorized user's stable object path and UUID without copying profile data. */
 export function avatarImageMarkup(initials,{path,userId}={}){
@@ -85,9 +104,10 @@ export function avatarImageMarkup(initials,{path,userId}={}){
 
 /** Hydrate all avatar nodes in a rendered surface. The initials stay visible
  * until the image has loaded successfully; failed/expired URLs fall back cleanly. */
-export async function mountAvatarImages(container,client,path,userId){
+export async function mountAvatarImages(container,client,path,userId,{loadTimeoutMs=12000}={}){
  const nodes=[...(container?.querySelectorAll?.('img[data-avatar-current]')||[])];
  const pending=[];
+ const result={attempted:0,loaded:0,failed:0,stale:0};
  for(const img of nodes){
   const token=++avatarHydrationCounter;
   avatarHydrationTokens.set(img,token);
@@ -98,37 +118,50 @@ export async function mountAvatarImages(container,client,path,userId){
   const avatarPath=img.dataset?.avatarPath||path;
   const avatarUserId=img.dataset?.avatarUserId||userId;
   if(!avatarPath||!client||!avatarUserId)continue;
+  result.attempted++;
   const isCurrent=()=>avatarHydrationTokens.get(img)===token&&
    img.isConnected!==false&&container?.isConnected!==false;
   pending.push((async()=>{
    try{
     const url=await client.signedUrl(avatarPath,avatarUserId);
-    if(!isCurrent())return;
-    img.referrerPolicy='no-referrer';
-    img.onload=()=>{
-     if(!isCurrent())return;
-     img.hidden=false;
-     if(fallback)fallback.hidden=true;
-    };
-    img.onerror=()=>{
-     if(!isCurrent())return;
-     img.hidden=true;
-     img.removeAttribute('src');
-     if(fallback)fallback.hidden=false;
-    };
-    img.src=url;
-    if(img.complete){
-     if(img.naturalWidth>0)img.onload?.();
-     else img.onerror?.();
-    }
+    if(!isCurrent()){result.stale++;return;}
+    await new Promise(resolve=>{
+     let settled=false;
+     const finish=loaded=>{
+      if(settled)return;
+      settled=true;
+      clearTimeout(timeout);
+      img.onload=null;img.onerror=null;
+      if(!isCurrent()){result.stale++;resolve(false);return;}
+      if(loaded){
+       img.hidden=false;
+       if(fallback)fallback.hidden=true;
+       result.loaded++;
+      }else{
+       img.hidden=true;
+       img.removeAttribute('src');
+       if(fallback)fallback.hidden=false;
+       result.failed++;
+      }
+      resolve(loaded);
+     };
+     const timeout=setTimeout(()=>finish(false),loadTimeoutMs);
+     img.referrerPolicy='no-referrer';
+     img.onload=()=>finish(img.naturalWidth>0);
+     img.onerror=()=>finish(false);
+     img.src=url;
+     if(img.complete)queueMicrotask(()=>finish(img.naturalWidth>0));
+    });
    }catch{
-    if(!isCurrent())return;
+    if(!isCurrent()){result.stale++;return;}
     img.hidden=true;img.removeAttribute('src');
     if(fallback)fallback.hidden=false;
+    result.failed++;
    }
   })());
  }
  await Promise.all(pending);
+ return result;
 }
 export function avatarPreviewMarkup(initials){
  const fallback=escapeHtml(initials||'U');
@@ -155,7 +188,7 @@ export function avatarPreviewMarkup(initials){
   '<p class="settings-avatar-gate">Photos are private. Only you and active members of a shared workspace can view your profile picture. Profile changes remain separate from account roles and permissions.</p>'+
   '</section>';
 }
-export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}={}){
+export function mountAvatarPreview(container,{client,userId,currentPath,onSaved,onBusyChange}={}){
  releasePreview();
  const section=container?.querySelector('.settings-avatar-editor');
  if(!section)return;
@@ -173,6 +206,7 @@ export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}
  remove.hidden=!currentPath;
  const setBusy=value=>{
   busy=value;
+  if(typeof onBusyChange==='function')onBusyChange(value);
   for(const control of [input,clear,save,remove,...sliders])if(control)control.disabled=value;
   section.setAttribute('aria-busy',value?'true':'false');
  };
@@ -229,14 +263,14 @@ export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}
    });
    const result=await client.save(blob,userId,currentPath||null);
    currentPath=result.path;
-   if(typeof onSaved==='function')onSaved({path:result.path,cleanupPending:result.cleanupPending});
+   if(typeof onSaved==='function')await onSaved({path:result.path,updatedAt:result.updatedAt,cleanupPending:result.cleanupPending});
    status.textContent=result.cleanupPending?
     'Profile picture saved. The previous image could not be deleted.':
     'Profile picture saved.';
    reset();
   }catch(error){
    status.textContent=error?.message||'Unable to save the profile picture.';
-  }finally{if(section.isConnected)setBusy(false);}
+  }finally{setBusy(false);}
  });
  remove.addEventListener('click',async()=>{
   if(busy||!currentPath||!client||!userId)return;
@@ -245,13 +279,13 @@ export function mountAvatarPreview(container,{client,userId,currentPath,onSaved}
   try{
    const result=await client.remove(userId,currentPath);
    currentPath=null;remove.hidden=true;
-   if(typeof onSaved==='function')onSaved({path:null,cleanupPending:result.cleanupPending});
+   if(typeof onSaved==='function')await onSaved({path:null,updatedAt:result.updatedAt,cleanupPending:result.cleanupPending});
    reset();
    status.textContent=result.cleanupPending?
     'Profile picture removed from your account, but the old image could not be deleted.':
     'Profile picture removed.';
   }catch(error){
    status.textContent=error?.message||'Unable to remove the profile picture.';
-  }finally{if(section.isConnected)setBusy(false);}
+  }finally{setBusy(false);}
  });
 }
