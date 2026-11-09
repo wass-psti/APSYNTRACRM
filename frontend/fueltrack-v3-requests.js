@@ -19,6 +19,24 @@ export const FUELTRACK_REQUEST_FILTER_DEFAULTS=Object.freeze({
  search:'',status:'all',from:'',to:'',sort:'newest',limit:FUELTRACK_REQUEST_PAGE_SIZE,
  expandedId:null
 });
+export function fuelTrackRequestQuickDates(period,now=new Date()){
+ const d=new Date(now);
+ if(!Number.isFinite(d.getTime()))return null;
+ const y=d.getUTCFullYear(),m=d.getUTCMonth();
+ const today=d.toISOString().slice(0,10);
+ const first=day=>new Date(day).toISOString().slice(0,10);
+ if(period==='today')return {from:today,to:today};
+ if(period==='week'){
+  const start=new Date(Date.UTC(y,m,d.getUTCDate()-(d.getUTCDay()+6)%7));
+  return {from:first(start),to:today};
+ }
+ if(period==='month')return {from:first(new Date(Date.UTC(y,m,1))),to:today};
+ if(period==='last-month')return {
+  from:first(new Date(Date.UTC(y,m-1,1))),
+  to:first(new Date(Date.UTC(y,m,0)))
+ };
+ return null;
+}
 export function fuelTrackRequestStatus(value){
  const s=String(value??'').toLowerCase().trim().replace(/[_ -]+/g,' ');
  if(['done','completed'].includes(s))return 'done';
@@ -208,6 +226,10 @@ export function renderFuelTrackRequests({detail,filters={}}={}){
   '<button type="button" class="ft3-soft-action" data-action="ft3-request-sort" aria-label="Sort requests '+(f.sort==='newest'?'oldest first':'newest first')+'">'+
   (f.sort==='newest'?'↓ Newest first':'↑ Oldest first')+'</button>'+
   '<button type="button" class="ft3-soft-action" data-action="ft3-request-clear">Clear filters</button></div>'+
+  '<div class="ft3-request-quick-dates" aria-label="Quick event date ranges">'+
+  [['today','Today'],['week','This Week'],['month','This Month'],['last-month','Last Month']].map(([key,label])=>
+   '<button type="button" data-action="ft3-request-period" data-period="'+key+'">'+label+'</button>').join('')+
+  '</div>'+
   (model.invalidRange?'<p role="alert" class="ft3-request-invalid">The starting date must not be after the ending date.</p>':'')+
   '<section class="ft3-panel ft3-request-log"><header class="ft3-panel-head"><div><h3>Request Log</h3>'+
   '<p>Use the expand button to review available signed record fields</p></div>'+
