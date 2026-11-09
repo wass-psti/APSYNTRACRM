@@ -3804,3 +3804,270 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   border-bottom-color:var(--sm-border-strong);
  }
 }
+
+
+/* CP-OVERVIEW-UNIFIED-02 — same unified enterprise presentation as Settings,
+ * Access Acceptance and Foundation. Scoped to Overview; no JS or data changes.
+ */
+#app .aps-overview-shell{background:var(--sm-surface)}
+#app .aps-overview-shell>.main-content{
+ width:100%;
+ max-width:1160px;
+ min-width:0;
+ margin-inline:auto;
+ padding:clamp(20px,2.8vw,36px) clamp(18px,3vw,42px) 72px;
+}
+#app .aps-overview-shell .aps-overview .overview-hero{
+ min-height:0;
+ margin:0 0 15px;
+ padding:6px 0 26px;
+ border:0;
+ border-bottom:1px solid var(--sm-border);
+ border-radius:0;
+ background:transparent;
+ box-shadow:none;
+}
+#app .aps-overview-shell .aps-overview .overview-hero-art{display:none}
+#app .aps-overview-shell .aps-overview .overview-hero h1{
+ margin:9px 0 8px;
+ color:var(--sm-ink);
+ font-size:clamp(27px,2.8vw,35px);
+ letter-spacing:-.035em;
+ font-weight:750;
+}
+#app .aps-overview-shell .aps-overview .overview-hero p{
+ max-width:700px;
+ color:var(--sm-sub);
+}
+#app .aps-overview-shell .aps-overview .overview-hero .head-actions button{
+ min-height:42px;
+ padding:10px 15px;
+ border-radius:var(--sm-radius-control);
+ font-size:12px;
+ font-weight:700;
+ box-shadow:none;
+ backdrop-filter:none;
+ transition:background-color var(--sm-fast),border-color var(--sm-fast),color var(--sm-fast);
+}
+#app .aps-overview-shell .aps-overview .overview-hero .overview-refresh{
+ color:var(--sm-text);
+ background:var(--sm-surface);
+ border:1px solid var(--sm-border-strong);
+}
+#app .aps-overview-shell .aps-overview .overview-hero .overview-refresh:hover:not(:disabled){
+ color:var(--sm-ink);
+ background:var(--sm-surface-soft);
+ border-color:var(--sm-accent);
+}
+#app .aps-overview-shell .aps-overview .overview-hero .overview-create{
+ color:#fff;
+ background:var(--sm-accent);
+ border:1px solid var(--sm-accent);
+}
+#app .aps-overview-shell .aps-overview .overview-hero .overview-create:hover:not(:disabled){
+ color:#fff;
+ background:var(--sm-accent-hover);
+ border-color:var(--sm-accent-hover);
+}
+#app .aps-overview-shell .aps-overview .overview-hero .head-actions button:hover:not(:disabled){
+ transform:none;
+ box-shadow:none;
+}
+#app .aps-overview-shell .aps-overview .overview-hero button:focus-visible{
+ outline:2px solid var(--sm-accent);
+ outline-offset:3px;
+}
+#app .aps-overview-shell .aps-overview .overview-stat-grid{
+ display:grid;
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:0;
+ margin:0 0 8px;
+ padding:13px 0 19px;
+ border-bottom:1px solid var(--sm-border);
+}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card{
+ min-width:0;
+ min-height:0;
+ margin:0;
+ padding:10px 18px;
+ border:0;
+ border-radius:0;
+ background:transparent;
+ box-shadow:none;
+ transition:none;
+}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card:first-child{padding-left:0}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card+.stat-card{
+ border-left:1px solid var(--sm-border);
+}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card::before{content:none}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card:hover{
+ background:transparent;
+ border-color:var(--sm-border);
+ transform:none;
+ box-shadow:none;
+}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-icon{
+ width:29px;
+ height:29px;
+ border-radius:var(--sm-radius-xs);
+}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-label{
+ color:var(--sm-sub);
+ font-size:11.5px;
+}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-value,
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card:nth-child(n+3) .stat-value{
+ margin:9px 0 5px;
+ font-size:clamp(18px,2.4vw,30px);
+ letter-spacing:-.035em;
+ line-height:1.24;
+ font-weight:740;
+ overflow-wrap:anywhere;
+}
+#app .aps-overview-shell .aps-overview .overview-stat-grid .stat-footer{
+ color:var(--sm-sub);
+ font-size:10.5px;
+}
+#app .aps-overview-shell .aps-overview .overview-section-heading{
+ margin:24px 0 12px;
+ gap:12px;
+}
+#app .aps-overview-shell .aps-overview .overview-section-heading .section-title{
+ font-size:17px;
+ letter-spacing:-.025em;
+ font-weight:740;
+}
+#app .aps-overview-shell .aps-overview .overview-section-heading .inline-link:hover{
+ color:var(--sm-accent-hover);
+ transform:none;
+}
+#app .aps-overview-shell .aps-overview .overview-empty{
+ padding:28px 18px;
+ border:0;
+ border-top:1px solid var(--sm-border);
+ border-bottom:1px solid var(--sm-border);
+ border-radius:0;
+ background:transparent;
+ box-shadow:none;
+}
+#app .aps-overview-shell .aps-overview .overview-board-grid{
+ gap:12px;
+}
+#app .aps-overview-shell .aps-overview .overview-board-grid .board-card{
+ min-height:0;
+ padding:17px;
+ border:1px solid var(--sm-border);
+ border-radius:var(--sm-radius-control);
+ background:var(--sm-surface);
+ box-shadow:none;
+ transition:border-color var(--sm-fast),background-color var(--sm-fast);
+}
+#app .aps-overview-shell .aps-overview .overview-board-grid .board-card:before{content:none}
+#app .aps-overview-shell .aps-overview .overview-board-grid .board-card:hover,
+#app .aps-overview-shell .aps-overview .overview-board-grid .board-card:focus-within{
+ border-color:var(--sm-border-strong);
+ box-shadow:none;
+ transform:none;
+}
+#app .aps-overview-shell .aps-overview .overview-board-grid .board-card h3{
+ color:var(--sm-ink);
+ font-weight:730;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials-heading{margin-top:26px}
+#app .aps-overview-shell .aps-overview .overview-essentials{
+ border:0;
+ border-top:1px solid var(--sm-border);
+ border-bottom:1px solid var(--sm-border);
+ border-radius:0;
+ background:transparent;
+ box-shadow:none;
+ overflow:visible;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .panel-body{
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ padding:14px 0;
+ gap:0;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item{
+ min-width:0;
+ padding:13px 17px;
+ border-bottom:0;
+ border-right:1px solid var(--sm-border);
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item:first-child{padding-left:0}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item:last-child{border-right:0}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item b{
+ font-size:12px;
+ font-weight:720;
+}
+#app .aps-overview-shell .aps-overview .overview-essentials .activity-item small{
+ font-size:11px;
+ line-height:1.6;
+}
+@media(max-width:850px){
+ #app .aps-overview-shell .aps-overview .overview-stat-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  row-gap:10px;
+ }
+ #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card{
+  padding:12px 16px;
+ }
+ #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card:nth-child(odd){
+  padding-left:0;
+  border-left:0;
+ }
+ #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card:nth-child(even){
+  border-left:1px solid var(--sm-border);
+ }
+ #app .aps-overview-shell .aps-overview .overview-essentials .panel-body{
+  grid-template-columns:minmax(0,1fr);
+  padding:3px 0;
+ }
+ #app .aps-overview-shell .aps-overview .overview-essentials .activity-item{
+  padding:14px 0;
+  border-right:0;
+  border-bottom:1px solid var(--sm-border);
+ }
+ #app .aps-overview-shell .aps-overview .overview-essentials .activity-item:last-child{
+  border-bottom:0;
+ }
+}
+@media(max-width:650px){
+ #app .aps-overview-shell>.main-content{padding:18px 16px 56px}
+ #app .aps-overview-shell .aps-overview .overview-hero{
+  padding:3px 0 20px;
+  gap:14px;
+ }
+ #app .aps-overview-shell .aps-overview .overview-hero .head-actions{
+  width:100%;
+  display:flex;
+  flex-wrap:wrap;
+ }
+ #app .aps-overview-shell .aps-overview .overview-hero .head-actions button{
+  flex:1 1 130px;
+ }
+ #app .aps-overview-shell .aps-overview .overview-stat-grid{
+  padding:10px 0 15px;
+ }
+ #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card{min-height:0;padding:12px}
+ #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card:nth-child(odd){padding-left:0}
+ #app .aps-overview-shell .aps-overview .overview-section-heading{margin:22px 0 12px}
+ #app .aps-overview-shell .aps-overview .overview-empty{padding:22px 0}
+}
+@media(max-width:395px){
+ #app .aps-overview-shell .aps-overview .overview-stat-grid{grid-template-columns:minmax(0,1fr)}
+ #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card,
+ #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card:nth-child(even){
+  padding:12px 0;
+  border-left:0;
+  border-bottom:1px solid var(--sm-border);
+ }
+ #app .aps-overview-shell .aps-overview .overview-stat-grid .stat-card:last-child{border-bottom:0}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-overview-shell .aps-overview :is(.overview-refresh,.overview-create,.board-card){
+  transition:none;
+ }
+}
