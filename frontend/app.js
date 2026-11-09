@@ -1,6 +1,8 @@
 import {syncFuelTrans} from './fueltrans-native.js';
 import {AuthClient,ApiError} from './session.js';
 import {avatarPreviewMarkup,mountAvatarPreview,stopAvatarPreview} from './profile-avatar.js';
+import {ProfileAvatarClient} from './profile-avatar-client.js';
+import {mountAvatarImages} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
@@ -138,6 +140,7 @@ const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'
 const root=document.getElementById('app');
 const auth=new AuthClient();
 const db=new DomainApi(auth);
+const profileAvatarClient=new ProfileAvatarClient({auth});
 const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
 const platformSync=new PlatformSync({
  auth,api:db,url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY,
@@ -372,13 +375,13 @@ function shell(body){
    }
   }
   existing.querySelector('.breadcrumb strong').textContent=crumb;
-  existing.querySelector('.top-avatar').textContent=initials(name());
+  existing.querySelector('.top-avatar').innerHTML='<span data-avatar-initials aria-hidden="true">'+e(initials(name()))+'</span><img data-avatar-current alt="" hidden />';
   existing.querySelector('.main-content').innerHTML=body;
   if(scrollPositions)restoreBoardGroupScroll(existing.querySelector('.main-content'),scrollPositions);
  }else{
   root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div><button type="button" class="ws01-topbar-launch" data-action="ws01-open" aria-label="Browse authorized workspaces">Workspaces ▾</button>
- <div class="top-actions">${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings">${e(initials(name()))}</a></div></header>
+ <div class="top-actions">${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings"><span data-avatar-initials aria-hidden="true">${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  }
  const previousRoute=shellRoute;
@@ -412,6 +415,7 @@ function shell(body){
  mountTimeTrackerPixi(root);
  updatePlatformSyncIndicator(platformSync.lastStatus);
  void mountSignedTimeTrackerMaps();
+ void mountAvatarImages(root,profileAvatarClient,state.context?.profile?.avatar_path,state.context?.user_id);
 }
 function animateTabContent(selector){
  if(document.hidden||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
@@ -850,7 +854,7 @@ function settingsPage(){
  const p=state.context.profile;
  return `<div class="aps-settings"><section class="page-head settings-hero settings-entrance" aria-labelledby="settings-title"><div class="settings-hero-copy"><span class="label-top"><span class="settings-hero-dot" aria-hidden="true"></span>Workspace / Account</span><h1 id="settings-title">Account & security<span class="settings-heading-stop">.</span></h1><p>Your verified user identity and session preferences.</p></div><span class="settings-hero-status">${settingsIcon('shield')}<span>Verified workspace account</span></span><svg class="settings-hero-decoration" viewBox="0 0 420 200" fill="none" aria-hidden="true" focusable="false"><circle cx="355" cy="0" r="120" stroke="currentColor" stroke-opacity=".16"/><circle cx="355" cy="0" r="193" stroke="currentColor" stroke-opacity=".09"/><path d="M105 230C201 70 334 93 446 146" stroke="currentColor" stroke-opacity=".16"/></svg></section>
  <div class="settings-grid"><section class="panel settings-profile-panel settings-entrance" aria-labelledby="settings-profile-heading"><div class="panel-header settings-panel-header"><div class="settings-panel-title"><span aria-hidden="true">${settingsIcon('user')}</span><h3 id="settings-profile-heading">Profile information</h3></div><span class="settings-auth-provider">Supabase Auth</span></div>
- <div class="panel-body settings-panel-body"><div class="profile settings-profile-identity"><span class="avatar csp-u044 settings-profile-avatar" aria-hidden="true">${e(initials(name()))}</span>
+ <div class="panel-body settings-panel-body"><div class="profile settings-profile-identity"><span class="avatar csp-u044 settings-profile-avatar" aria-hidden="true"><span data-avatar-initials>${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></span>
  <div class="settings-profile-copy"><div class="name csp-u040" >${e(name())}</div><div class="role">${e(p.platform_role||'Member')}</div></div></div>
  ${avatarPreviewMarkup(initials(name()))}
  <section class="settings-profile-editor" aria-labelledby="settings-display-name-title">
@@ -941,9 +945,20 @@ function render(){
  else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.roleVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,busy:state.userRoleBusy,error:state.userRoleError}));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='settings')shell(settingsPage());
- if(state.view==='settings')mountAvatarPreview(root);
- else stopAvatarPreview();
  else shell(overview());
+ if(state.view==='settings')mountAvatarPreview(root,{
+  client:profileAvatarClient,
+  userId:state.context.user_id,
+  currentPath:state.context.profile?.avatar_path||null,
+  onSaved:({path,cleanupPending})=>{
+   state.context.profile.avatar_path=path;
+   render();
+   toast(cleanupPending?
+    'Profile picture updated; previous image cleanup is pending.':
+    path?'Profile picture saved.':'Profile picture removed.');
+  }
+ });
+ else stopAvatarPreview();
  syncFuelTrans({container:state.view==='board'&&state.tab==='fueltrans'?root.querySelector('#fueltrans-native-host'):null,auth,api:db,boardId:state.boardId,workspaceId:state.context?.workspace_id,userId:state.context?.user_id,route:location.hash.split('/').slice(4).join('/')||'dashboard'});
  if(state.view==='board'&&state.tab==='items')syncBoardSelectionUi();
  if(state.context&&auth.isSignedIn)platformSync.start({
