@@ -177,7 +177,7 @@ function placeholder(section){
   '<h2>'+h(title)+'</h2><p>'+h(description)+'</p>'+
   '<a href="'+fuelTrackHref('dashboard')+'" class="ft3-soft-action">Return to Dashboard</a></section>';
 }
-export function renderFuelTrackV3Application({detail,section='dashboard',actorName='Member',analyticsRenderer=null,analyticsView='fuel-price',analyticsRange='all',analyticsMetric='both'}={}){
+export function renderFuelTrackV3Application({detail,section='dashboard',actorName='Member',analyticsRenderer=null,analyticsView='fuel-price',analyticsRange='all',analyticsMetric='both',requestsRenderer=null,requestsFilters=null}={}){
  const model=fuelTrackDashboardModel(detail);
  if(!model)return '<section class="ft3-unavailable" role="alert">'+
   'FuelTrack+ v3 dashboard is unavailable for this board or session.</section>';
@@ -193,6 +193,6 @@ export function renderFuelTrackV3Application({detail,section='dashboard',actorNa
   '<div class="ft3-app-identity"><span>'+h(actorName)+'</span>'+
   '<span class="ft3-app-mode">Signed board data · Read-only dashboard</span></div></header>'+
   '<nav class="ft3-app-tabs" aria-label="FuelTrack application sections">'+navigation+'</nav>'+
-  '<div class="ft3-app-body">'+(view==='dashboard'?dashboard(model):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):placeholder(view))+
+  '<div class="ft3-app-body">'+(view==='dashboard'?dashboard(model):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):placeholder(view))+
   '</div></section>';
 }
