@@ -32,7 +32,7 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message=''}=
  '<header class="ft3-new-title"><h2 id="ft3-new-title">New Fuel Request</h2>'+
  '<p>Choose a refuel type and prepare request details. You can prepare the request using the supplied options. Submission is unavailable until the signed request service is verified.</p></header>'+
  '<div class="ft3-new-progress" aria-label="Request steps"><span>Vehicle / Container Details</span><span>Trip Information</span><span>Justification</span></div>'+
- '<form id="ft3-new-request-form" class="ft3-new-composer">'+
+ (enabled?'<form id="ft3-new-request-form" class="ft3-new-composer">':'<div class="ft3-new-composer">')+
  '<div class="ft3-new-panel ft3-new-type" role="group" aria-label="Select Refuel Type"><h3>Select Refuel Type</h3>'+
  '<div class="ft3-new-options">'+mode('vehicle','Vehicle Fuel','Cars, trucks, motorcycles','⛽')+
  mode('container','Container Refill','Drums, canisters, tanks','⬡')+'</div></div>'+
@@ -55,7 +55,7 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message=''}=
  '<button type="button" disabled>Capture Receipt / Photo — unavailable</button></div>')+
  '</div>'+
  '<button type="submit" class="ft3-new-submit"'+(!enabled||busy?' disabled':'')+' aria-describedby="ft3-new-catalog-note">'+(busy?'Submitting…':enabled?'Submit for Approval':'Submit for Approval — unavailable')+'</button>'+
- '</form></section>';
+ (enabled?'</form>':'</div>')+'</section>';
 }
 
 /** Convert the unchanged input controls to the strictly typed RPC payload.
