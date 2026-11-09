@@ -100,7 +100,8 @@ declare v_count integer;
 begin
  if p_kind not in ('vehicle','container') or jsonb_typeof(p)<>'object' or
     pg_catalog.octet_length(p::text)>8192 then return false; end if;
- if nullif(pg_catalog.btrim(coalesce(p->>'purpose','')),'') is null or
+ if jsonb_typeof(p->'purpose')<>'string' or
+    nullif(pg_catalog.btrim(coalesce(p->>'purpose','')),'') is null or
     pg_catalog.char_length(p->>'purpose')>500 then return false; end if;
  -- Never persist caller-supplied identity, role, status, audit, or extra keys.
  if exists (
@@ -113,7 +114,9 @@ begin
    )
  ) then return false; end if;
  if p_kind='vehicle' then
-  if nullif(pg_catalog.btrim(coalesce(p->>'plate','')),'') is null or
+  if jsonb_typeof(p->'plate')<>'string' or jsonb_typeof(p->'owner')<>'string' or
+     jsonb_typeof(p->'origin')<>'string' or jsonb_typeof(p->'destination')<>'string' or
+     nullif(pg_catalog.btrim(coalesce(p->>'plate','')),'') is null or
      nullif(pg_catalog.btrim(coalesce(p->>'owner','')),'') is null or
      nullif(pg_catalog.btrim(coalesce(p->>'origin','')),'') is null or
      nullif(pg_catalog.btrim(coalesce(p->>'destination','')),'') is null or
@@ -125,7 +128,8 @@ begin
   if p ? 'distance' and (jsonb_typeof(p->'distance')<>'number' or
      ((p->>'distance')::numeric<0 or (p->>'distance')::numeric>10000000)) then return false; end if;
  else
-  if nullif(pg_catalog.btrim(coalesce(p->>'responsiblePerson','')),'') is null or
+  if jsonb_typeof(p->'responsiblePerson')<>'string' or
+     nullif(pg_catalog.btrim(coalesce(p->>'responsiblePerson','')),'') is null or
      pg_catalog.char_length(p->>'responsiblePerson')>150 or
      jsonb_typeof(p->'containerCount')<>'number' then return false; end if;
   v_count:=(p->>'containerCount')::integer;
@@ -183,10 +187,12 @@ begin
   raise exception 'Invalid page size' using errcode='22023'; end if;
  select coalesce(jsonb_agg(to_jsonb(t) order by t.created_at desc),'[]'::jsonb)
  into v_rows from (
-   select r.id,r.kind,r.details,r.state,r.revision,r.requested_by,r.created_at,
-     r.updated_at,r.decided_at,r.refueled_at,r.completed_at,r.actual_amount,
+   select r.id,r.kind,r.details,r.state,r.revision,r.requested_by,
+     coalesce(p.display_name,p.email,'Unknown requester') as requestor_name,
+     r.created_at,r.updated_at,r.decided_at,r.refueled_at,r.completed_at,r.actual_amount,
      r.fuel_liters,r.receipt_number
    from public.fueltrack_v3_requests r
+   left join public.profiles p on p.id=r.requested_by
    where r.workspace_id=v_ws and r.board_id=p_board_id and (v_admin or r.requested_by=v_user)
    order by r.created_at desc,r.id desc limit p_limit
  ) t;
@@ -201,6 +207,8 @@ begin
   'activeQueue',count(*) filter(where state in ('approved','refueling_done')),
   'overdueCount',count(*) filter(where state='approved'
     and created_at < now()-interval '24 hours'),
+  'decisionsToday',count(*) filter(where decided_at at time zone 'Asia/Manila' >=
+    date_trunc('day',now() at time zone 'Asia/Manila')),
   'approvedToday',count(*) filter(where decided_at at time zone 'Asia/Manila' >=
     date_trunc('day',now() at time zone 'Asia/Manila') and rejection_reason is null),
   'rejectedToday',count(*) filter(where decided_at at time zone 'Asia/Manila' >=

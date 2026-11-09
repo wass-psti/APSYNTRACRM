@@ -45,6 +45,15 @@ begin
     "purpose":"Refuel vehicle","requested_by":"attacker"}'::jsonb);
  exception when invalid_parameter_value then denied:=true;end;
  if not denied then raise exception 'SPOOFED_REQUESTOR_PAYLOAD_ALLOWED';end if;
+ denied:=false;
+ begin perform public.fueltrack_v3_submit(b,pg_catalog.gen_random_uuid(),'vehicle',
+  '{"plate":"GAN 8289","owner":123,"origin":"Office","destination":"Depot","purpose":"Refuel vehicle"}'::jsonb);
+ exception when invalid_parameter_value then denied:=true;end;
+ if not denied then raise exception 'WRONG_OWNER_TYPE_ALLOWED';end if;
+ denied:=false;
+ begin perform count(*) from public.fueltrack_v3_requests;
+ exception when insufficient_privilege then denied:=true;end;
+ if not denied then raise exception 'DIRECT_TABLE_READ_ALLOWED';end if;
 end $$;
 reset role;
 set role authenticated;
