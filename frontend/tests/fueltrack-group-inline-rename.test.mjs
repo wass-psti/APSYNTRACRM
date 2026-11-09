@@ -41,7 +41,7 @@ test('inline rename retains signed editing checks and authoritative server updat
  assert.match(source,/async function saveGroupInline\(form\)[\s\S]*?db\.allowed\(boardId,'edit'\)/);
  assert.match(source,/async function saveGroupInline\(form\)[\s\S]*?auth\.getVerifiedUser\(\),fresh=await db\.board\(boardId\)/);
  assert.match(source,/async function saveGroupInline\(form\)[\s\S]*?original\.updated_at!==group\.updated_at/);
- assert.match(source,/async function saveGroupInline\(form\)[\s\S]*?db\.updateGroup\(id,title\)/);
+ assert.match(source,/async function saveGroupInline\(form\)[\s\S]*?db\.updateGroupCas\(boardId,original,title\)/);
 });
 
 test('group action opens an inline editor on the same user gesture',async()=>{
@@ -88,4 +88,12 @@ test('viewer and invalid group cannot enter the inline editor',async()=>{
   await open(state,{dataset:{id:groupId}},()=>true,()=>{throw Error('Must not render');},root);
   assert.equal(state.groupEditId,undefined);
  }
+});
+
+test('FuelTrack heading provides a direct inline edit button outside the floating menu',()=>{
+ assert.match(heading,/fuelTrackEditable\?'<button type="button" class="board-group-rename-trigger"/);
+ assert.match(heading,/data-action="group-inline-edit"/);
+ assert.match(heading,/aria-label="Edit name inline for /);
+ assert.match(heading,/state\.edit&&state\.board\?\.board\?\.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'/);
+ assert.match(heading,/const displayTitle=e\(fuelTrackGroupDisplay/);
 });
