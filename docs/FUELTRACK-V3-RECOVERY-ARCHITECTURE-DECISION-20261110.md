@@ -71,3 +71,19 @@ This adds local integrity assurance, not continuous backup retention,
 24-hour RPO, hosted 24-hour RTO, or a provider physical restoration. It
 does not change the selected NO-GO fallback or authorize recovery
 architecture option D. No production data or permissions changed.
+
+## November 10 — Measured offline logical and private Storage recovery
+
+The on-demand runner scripts/ft3-recovery-rto-rehearsal.mjs verifies the
+historical private archive, restores PostgreSQL and copies/checks real
+private Storage bytes inside local, isolated disposable infrastructure.
+Observed successful elapsed times: 4.87 seconds, 6.45 seconds and final
+recorded 8.43 seconds. Five Storage files and expected archived record
+counts were verified. Only a private evidence JSON file remains on the
+authorized Mac (owner-only mode 0600); recovery containers were removed.
+
+See docs/FUELTRACK-V3-RECOVERY-RPO-RTO-REHEARSAL-20261110.md.
+This establishes local historical snapshot recoverability and measured
+partial restore time. Provider physical backup recovery, a continuing
+24-hour database/Storage RPO, and full hosted 24-hour RTO remain unverified.
+NO-GO and the recovery-policy decision remain unchanged.
