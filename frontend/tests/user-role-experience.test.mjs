@@ -13,14 +13,14 @@ const target='11111111-1111-4111-8111-111111111111';
 const protectedId='22222222-2222-4222-8222-222222222222';
 const boardId='33333333-3333-4333-8333-333333333333';
 const data={
- users:[{id:target,name:'Ordinary employee',email:'member@example.invalid',platformRole:'employee',protected:false},
-  {id:protectedId,name:'Protected administrator',email:'bootstrap@example.invalid',platformRole:'admin_general_manager',protected:true}],
+ users:[{id:target,name:'Ordinary employee',email:'member@example.invalid',platformRole:'employee',protected:false,activeWorkspaceCount:1},
+  {id:protectedId,name:'Protected administrator',email:'bootstrap@example.invalid',platformRole:'admin_general_manager',protected:true,activeWorkspaceCount:1}],
  modules:[],
  moduleAssignments:[{userId:target,moduleId:'time-tracker',role:'Employee',enabled:true}],
  boards:[{id:boardId,name:'QA board'}],
  boardAssignments:[{userId:target,boardId,role:'editor'}],
  crmPlatformRoles:[{userId:target,effectiveRole:'employee',assignedRole:null}],
- crmPlatformUnavailable:false
+ crmPlatformUnavailable:false,workspaceScopeCountsAvailable:true,workspaceScopedMrhAvailable:true
 };
 
 test('unverified and loading routes do not leak protected user data and close wrappers',()=>{
@@ -157,4 +157,23 @@ test('mounted user-role-management components remain stationary on entry and ref
  assert.equal(animations,0,'no mount-time animations');
  const source=readFileSync('frontend/user-role-visuals.js','utf8');
  assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|requestAnimationFrame\s*\(/);
+});
+
+test('multi-workspace target keeps MRH and board roles scoped while blocking global application roles',()=>{
+ const multi={...data,users:data.users.map(u=>u.id===target?{...u,activeWorkspaceCount:2}:u)};
+ const output=renderUserRoleManagement({verified:true,data:multi,selectedUserId:target});
+ assert.match(output,/This account has 2 active workspace memberships/);
+ for(const moduleId of Object.keys(MODULE_ROLE_OPTIONS)){
+  const button=output.match(new RegExp('data-action="user-role-edit-module" data-user-id="'+target+'" data-resource="'+moduleId+'"[^>]*'));
+  assert.ok(button,moduleId);
+  if(moduleId==='material-request-hub')assert.doesNotMatch(button[0],/disabled/);
+  else assert.match(button[0],/disabled/,moduleId);
+ }
+ assert.ok(output.includes('data-action="user-role-edit-board" data-user-id="'+target+'" data-resource="'+boardId+'" >'));
+});
+test('MRH assignment fails closed until the scoped backend contract is installed',()=>{
+ const pending={...data,workspaceScopedMrhAvailable:false};
+ const output=renderUserRoleManagement({verified:true,data:pending,selectedUserId:target});
+ assert.match(output,/Workspace-scoped Material Request Hub role management is not yet confirmed/);
+ assert.ok(new RegExp('data-action="user-role-edit-module" data-user-id="'+target+'" data-resource="material-request-hub"[^>]*disabled').test(output));
 });

@@ -5348,6 +5348,16 @@ async function action(name,button){
    const resourceId=button.dataset.resource,userId=button.dataset.userId;
    const user=state.userRoleData.users.find(u=>u.id===userId&&!u.protected&&u.platformRole!=='admin_general_manager');
    if(!user||userId!==state.userRoleSelected)throw new ApiError('Protected or stale target.',403);
+   if(scope==='module'){
+     const workspaceCount=user.activeWorkspaceCount;
+     if(!Number.isInteger(workspaceCount)||workspaceCount<1)
+       throw new ApiError('The backend has not verified this account’s active workspace scope. Refresh role assignments before changing an application role.',409);
+     if(resourceId==='material-request-hub'&&
+        state.userRoleData.workspaceScopedMrhAvailable!==true)
+       throw new ApiError('Workspace-scoped Material Request Hub role management is not installed yet. No role was changed.',409);
+     if(resourceId!=='material-request-hub'&&workspaceCount>1)
+       throw new ApiError('This application role is shared across the user’s active workspaces. It cannot be changed from a single-workspace screen.',409);
+   }
    const record=scope==='module'?
       state.userRoleData.moduleAssignments.find(r=>r.userId===userId&&r.moduleId===resourceId):
       state.userRoleData.boardAssignments.find(r=>r.userId===userId&&r.boardId===resourceId);

@@ -31,6 +31,11 @@ export class UserRoleManagementClient {
   if(d?.bootstrapVerified!==true||d.workspaceId!==workspaceId||
    !['users','modules','moduleAssignments','boards','boardAssignments'].every(x=>Array.isArray(d[x])))
    throw Error('Invalid server-authorized role management result');
+  const workspaceScopeCountsAvailable=d.users.every(u=>
+    Number.isInteger(u.activeWorkspaceCount)&&u.activeWorkspaceCount>=1);
+  const workspaceScopedMrhAvailable=d.roleManagementContract===
+    'cp-rc03-workspace-scoped-mrh-v1'&&workspaceScopeCountsAvailable;
+  const scopeMetadata={workspaceScopeCountsAvailable,workspaceScopedMrhAvailable};
   let crm;
   try {
    crm=await this.api.rpc('apsyntra_crm_platform_role_snapshot',{p_workspace_id:workspaceId});
@@ -39,7 +44,7 @@ export class UserRoleManagementClient {
    // read-only compatibility view. Never treat 401/403/other 404 as missing,
    // and never infer, fabricate, or permit assignment of CRM platform roles.
    if(error?.status===404&&error?.code==='PGRST202')
-    return {...d,crmPlatformRoles:[],crmPlatformUnavailable:true};
+    return {...d,...scopeMetadata,crmPlatformRoles:[],crmPlatformUnavailable:true};
    throw error;
   }
   if(crm?.bootstrapVerified!==true||crm.workspaceId!==workspaceId||
@@ -47,7 +52,7 @@ export class UserRoleManagementClient {
       APSYNTRA_CRM_PLATFORM_ROLES.includes(r.effectiveRole)&&
       (r.assignedRole===null||APSYNTRA_CRM_PLATFORM_ROLES.includes(r.assignedRole))))
     throw Error('Invalid server-authorized CRM platform-role snapshot');
-  return {...d,crmPlatformRoles:crm.roles,crmPlatformUnavailable:false};
+  return {...d,...scopeMetadata,crmPlatformRoles:crm.roles,crmPlatformUnavailable:false};
  }
  async mutate({workspaceId,userId,scope,resourceId,role,enabled,expectedUpdatedAt=null}){
   if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
@@ -105,10 +110,15 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  data.users.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===u?.id?'selected':'')+'>'+esc(x.name||x.email)+' — '+esc(x.platformRole)+(x.protected?' (protected)':'')+'</option>').join('')+
  '</select></div></section>';
  if(!u)return html+'<p class="muted">No active members.</p></div>';
+ const activeWorkspaceCount=Number.isInteger(u.activeWorkspaceCount)?
+  u.activeWorkspaceCount:null;
+ const globalModuleRoleBlocked=activeWorkspaceCount===null||activeWorkspaceCount>1;
  html+='<section class="panel user-role-selected-panel user-role-entrance" aria-label="Selected user authorization"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>'+esc(u.platformRole)+'</span></div>'+
  '<div class="panel-body">'+(u.protected||['admin_general_manager'].includes(u.platformRole)?
  '<div class="note security-note user-role-protected">Protected administrator — role modifications are intentionally disabled.</div>':
- '<div class="note user-role-helper">Select a module or board below to update this user’s actual role. The next dialog requires explicit confirmation.</div>')+
+ '<div class="note user-role-helper">Select an application or board below to update this user’s actual role. Changes require explicit confirmation.</div>')+
+ (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Material Request Hub uses a separate workspace-scoped role record; board access is also workspace-scoped.</div>':'')+
+ (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
  const locked=!!u.protected||u.platformRole==='admin_general_manager'||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
@@ -131,8 +141,8 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const status=a?.enabled?'Active: '+a.role:a?'Disabled: '+a.role:'Unassigned';
   const note=delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
   html+='<tr><td><strong>'+esc(name)+'</strong></td><td>'+esc(status)+'</td><td>'+esc(note)+'</td><td>'+
-   '<button class="secondary" data-action="user-role-edit-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+(locked||!opt.length||(id==='toolbox-issues'&&!a?.enabled)?'disabled':'')+'>Assign / change</button> '+
-   (a?.enabled?'<button class="secondary" data-action="user-role-revoke-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+(locked?'disabled':'')+'>Revoke</button>':'')+
+   '<button class="secondary" data-action="user-role-edit-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+(locked||!opt.length||(globalModuleRoleBlocked&&id!=='material-request-hub')||(id==='material-request-hub'&&!data.workspaceScopedMrhAvailable)||(id==='toolbox-issues'&&!a?.enabled)?'disabled':'')+'>Assign / change</button> '+
+   (a?.enabled?'<button class="secondary" data-action="user-role-revoke-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+(locked||(globalModuleRoleBlocked&&id!=='material-request-hub')||(id==='material-request-hub'&&!data.workspaceScopedMrhAvailable)?'disabled':'')+'>Revoke</button>':'')+
   '</td></tr>';
  }
  html+='</tbody></table></div></div>';

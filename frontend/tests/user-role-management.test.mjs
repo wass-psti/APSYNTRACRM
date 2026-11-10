@@ -32,3 +32,31 @@ test('client delegates role operations to one authoritative RPC and verifies res
  assert.deepEqual(calls.map(x=>x[0]),['apsyntra_role_manage_user_access']);
  assert.equal(calls[0][1].p_enabled,false);
 });
+
+test('snapshot exposes workspace-scoped MRH contract and authoritative active workspace counts',async()=>{
+ const calls=[];
+ const api={rpc:async(name,args)=>{
+  calls.push([name,args]);
+  if(name==='apsyntra_role_user_management_snapshot')return {
+   workspaceId:w,bootstrapVerified:true,roleManagementContract:'cp-rc03-workspace-scoped-mrh-v1',
+   users:[{id:u,activeWorkspaceCount:2}],modules:[],moduleAssignments:[],boards:[],boardAssignments:[]
+  };
+  if(name==='apsyntra_crm_platform_role_snapshot')return {
+   workspaceId:w,bootstrapVerified:true,roles:[{userId:u,effectiveRole:'employee',assignedRole:null}]
+  };
+  throw Error('unexpected rpc '+name);
+ }};
+ const snapshot=await new UserRoleManagementClient(api).snapshot(w);
+ assert.equal(snapshot.workspaceScopedMrhAvailable,true);
+ assert.equal(snapshot.workspaceScopeCountsAvailable,true);
+ assert.equal(snapshot.users[0].activeWorkspaceCount,2);
+ assert.deepEqual(calls.map(x=>x[0]),['apsyntra_role_user_management_snapshot','apsyntra_crm_platform_role_snapshot']);
+});
+test('snapshot without CP-RC03 contract or trustworthy workspace counts fails closed for MRH',async()=>{
+ const api={rpc:async(name)=>name==='apsyntra_role_user_management_snapshot'?{
+  workspaceId:w,bootstrapVerified:true,users:[{id:u}],modules:[],moduleAssignments:[],boards:[],boardAssignments:[]
+ }:{workspaceId:w,bootstrapVerified:true,roles:[{userId:u,effectiveRole:'employee',assignedRole:null}]}};
+ const snapshot=await new UserRoleManagementClient(api).snapshot(w);
+ assert.equal(snapshot.workspaceScopedMrhAvailable,false);
+ assert.equal(snapshot.workspaceScopeCountsAvailable,false);
+});
