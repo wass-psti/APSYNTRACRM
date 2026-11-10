@@ -90,11 +90,11 @@ export function planMaterialSourcingSchema(detail){
    boardId:board.id,groupName:MATERIAL_SOURCING_GROUP.title,noWrites:true,
    additions:[],restricted:[],conflicts});
  return Object.freeze({
-  status:conflicts.length?'BLOCKED_CONFLICT':
-   restricted.length?'BLOCKED_FIELD_AUTHORIZATION':'SCHEMA_MATCH',
+  status:conflicts.length?'BLOCKED_CONFLICT':'BLOCKED_FIELD_AUTHORIZATION',
   boardId:board.id,groupName:MATERIAL_SOURCING_GROUP.title,
   groupId:MATERIAL_SOURCING_GROUP.id,
   primaryLabel:MATERIAL_SOURCING_PRIMARY_LABEL,
+  // Presence of all fields cannot prove their read permissions: always fail closed.
   existingCount:current.length,
   projectedCount:current.length+additions.length+restricted.length,
   additions:Object.freeze(additions),restricted:Object.freeze(restricted),
