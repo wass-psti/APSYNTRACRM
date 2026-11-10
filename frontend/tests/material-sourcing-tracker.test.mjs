@@ -71,7 +71,7 @@ test('tracker is its own explicit signed board route, scoped to this board',()=>
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/parts\[2\]==='sourcing'&&parts\[1\]===MATERIAL_SOURCING_BOARD_ID/);
  assert.match(app,/key:'sourcing',href:'#\/boards\/'/);
- assert.match(app,/renderMaterialSourcingTracker\(state\.board,state\.mrhTrackerFilters,new Date\(\),\{canCreate:state\.edit===true\}\)/);
+ assert.match(app,/renderMaterialSourcingTracker\(state\.board,state\.mrhTrackerFilters,new Date\(\),\{canCreate:state\.edit===true,view:state\.mrhAddView\?'add':'list'\}\)/);
  assert.match(app,/state\.mrhTrackerScope!==mrhScope/);
  assert.doesNotMatch(app,/materialTrackerRows\(.*localStorage/);
 });

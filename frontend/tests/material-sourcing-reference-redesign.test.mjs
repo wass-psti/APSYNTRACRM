@@ -18,7 +18,7 @@ test('reference visual hierarchy is implemented without copying Monday productio
    'mrh-tracker-ratebar','mrh-tracker-viewtabs','mrh-table-panel','mrh-group-row'])
   assert.match(html,new RegExp(section),section);
  for(const label of ['Material Sourcing','Procurement tracking','Key metrics','Total materials',
-   'Total buying','Materials by source','All items','Bulk Import','Part number','Created',
+   'Total buying','Materials by source','All items','Part number','Created',
    'Source Type','RFQ Ref No','Main group','Nov 10, 2026'])
   assert.ok(html.includes(label),label);
  assert.doesNotMatch(html,/₱152\.9M|₱64\.89|₱72\.20|ENGINEERING SERVICES|LRD10|Chris Emmanuel/);
@@ -34,11 +34,11 @@ test('metrics never synthesize financial totals, supplier values or exchange rat
  assert.doesNotMatch(html,/Selling price|Cost by source|USD Rate|EUR Rate/);
 });
 test('Add Material action only appears when authorized editor option is explicit',()=>{
- assert.doesNotMatch(render(),/data-action="mrh-new-part"/);
- assert.doesNotMatch(render({canCreate:false}),/data-action="mrh-new-part"/);
- assert.match(render({canCreate:true}),/data-action="mrh-new-part"/);
+ assert.doesNotMatch(render(),/data-action="mrh-add-view"/);
+ assert.doesNotMatch(render({canCreate:false}),/data-action="mrh-add-view"/);
+ assert.match(render({canCreate:true}),/data-action="mrh-add-view"/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(app,/renderMaterialSourcingTracker\(state\.board,state\.mrhTrackerFilters,new Date\(\),\{canCreate:state\.edit===true\}\)/);
+ assert.match(app,/renderMaterialSourcingTracker\(state\.board,state\.mrhTrackerFilters,new Date\(\),\{canCreate:state\.edit===true,view:state\.mrhAddView\?'add':'list'\}\)/);
 });
 test('part number remains actionable; group and column headings keep table semantics',()=>{
  const html=render();
