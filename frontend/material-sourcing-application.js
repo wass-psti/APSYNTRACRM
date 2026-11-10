@@ -167,7 +167,7 @@ export async function createMaterialSourcingPart({api,auth,workspaceId,partNumbe
      group.id===groupId&&group.title==='Main group'))
   deny('Original Material Sourcing board or Main group changed.',409);
  if(!auth.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
- await authorize({...input,edit:true});
+ await authorize({api,auth,workspaceId,boardId,itemId,edit:true});
  // The existing server RPC additionally checks current signed board edit access
  // and group ownership, and records an audit event.
  const savedId=await api.addItem(boardId,groupId,title);
