@@ -255,6 +255,8 @@ function stopAuthVisuals(){
  authVisualController=null;
 }
 function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
+ // Clear detached protected item values on every signed-out transition.
+ hideModal();
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
  stopAvatarPreview();
@@ -1005,6 +1007,13 @@ function preserveTimeTrackerLogExpansion(){
   .map(el=>el.dataset.recordId).filter(id=>allowed.has(id)).slice(0,30);
 }
 function render(){
+ // Protected Material Sourcing item details cannot survive a session, board,
+ // or workspace transition, even when the enclosing drawer remains mounted.
+ if(modal?.querySelector('[data-mrh-private-host]')&&
+    (!auth.isSignedIn||state.view!=='board'||
+     state.boardId!==MATERIAL_SOURCING_BOARD_ID||
+     state.context?.user_id!==modal.dataset.mrhActor||
+     state.context?.workspace_id!==modal.dataset.mrhWorkspace))hideModal();
  resetBoardWindows();
  const filterScope=[state.context?.user_id,state.context?.workspace_id,state.boardId].join('|');
  if(filterScope!==boardItemFilterScope){
@@ -3279,6 +3288,8 @@ async function openBoardItemDetails(itemId){
  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
  const privateHost=modal.querySelector('[data-mrh-private-host]');
  if(privateHost){
+  modal.dataset.mrhActor=snapshot.userId;
+  modal.dataset.mrhWorkspace=snapshot.workspaceId;
   const itemDialog=modal;
   const input={api:db,auth,boardId:snapshot.boardId,
    workspaceId:snapshot.workspaceId,itemId};
