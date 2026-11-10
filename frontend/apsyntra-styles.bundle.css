@@ -2110,6 +2110,137 @@
 .mrh-tracker-controls .mrh-export-csv{border:1px solid #dce4f0;border-radius:9px;background:#f4f7fd;color:#526b92;white-space:nowrap;font-size:.73rem;font-weight:650;padding:10px 12px;cursor:pointer}
 .mrh-tracker-controls .mrh-export-csv:hover,.mrh-tracker-controls .mrh-export-csv:focus-visible{border-color:#6c79e3;background:#edf0ff}
 
+/* MRH procurement UI refinement: measured spacing and content-width-responsive
+   composition. No change to signed projection, editor permissions or controls. */
+.mrh-tracker{
+  border:1px solid #d8e1ef;
+  border-radius:16px;
+  box-shadow:0 14px 36px rgba(30,50,85,.065);
+}
+.mrh-tracker-head{
+  padding:23px clamp(20px,2.8vw,35px);
+  border-bottom:1px solid #dde5f3;
+  min-height:105px;
+}
+.mrh-tracker-identity{gap:14px}
+.mrh-tracker-logo{
+  width:48px;height:48px;
+  border:1px solid #e2e5ff;
+  background:#f0f1ff;
+  font-size:24px;
+  border-radius:13px;
+}
+.mrh-tracker-head .label-top{font-size:.65rem;letter-spacing:.115em}
+.mrh-tracker-head h2{font-size:clamp(1.45rem,2vw,1.8rem);letter-spacing:-.035em}
+.mrh-tracker-head p{font-size:.87rem;line-height:1.5}
+.mrh-head-tools button{
+  background:#fff;
+  min-height:38px;
+  padding:9px 13px;
+  transition:background-color .16s ease,border-color .16s ease;
+}
+.mrh-head-tools button:hover{background:#f4f6ff;border-color:#bfc9e8}
+.mrh-tracker-body{
+  container-type:inline-size;
+  padding:clamp(18px,2.2vw,28px);
+  gap:19px;
+  background:#f3f6fc;
+}
+.mrh-section-heading{letter-spacing:.1em}
+.mrh-tracker-stats{
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:12px;
+}
+.mrh-tracker-stats>.mrh-kpi-card{
+  min-width:0;
+  min-height:138px;
+  padding:16px;
+  border-radius:13px;
+  border-color:#e0e7f2;
+  box-shadow:0 2px 8px rgba(26,49,86,.025);
+  background:#fff;
+}
+.mrh-kpi-top{gap:8px;align-items:center;flex-wrap:nowrap}
+.mrh-tracker-stats .mrh-kpi-top>span:last-child{
+  font-size:.76rem;
+  line-height:1.3;
+}
+.mrh-kpi-icon{
+  width:29px;height:29px;border-radius:9px;
+}
+.mrh-tracker-stats>.mrh-kpi-card>strong{font-size:clamp(1.35rem,2vw,1.75rem)}
+.mrh-tracker-stats>.mrh-kpi-protected>strong{font-size:1.04rem;letter-spacing:0}
+.mrh-tracker-stats>.mrh-kpi-card>small{line-height:1.45}
+.mrh-tracker-stats>.mrh-breakdown{gap:17px;justify-content:flex-start;padding:16px}
+.mrh-breakdown-labels{gap:8px}
+.mrh-breakdown-labels>strong{letter-spacing:.06em;line-height:1.35;white-space:normal}
+.mrh-breakdown-labels>div{font-variant-numeric:tabular-nums;gap:7px}
+.mrh-breakdown-labels>div b{min-width:14px;text-align:right}
+.mrh-tracker-ratebar{
+  background:#edf2fb;
+  border:1px solid #dfe7f4;
+  min-height:40px;
+  border-radius:9px;
+  padding:10px 14px;
+}
+.mrh-tracker-viewtabs{gap:5px;margin:0}
+.mrh-tracker-viewtabs>*{padding:9px 12px}
+.mrh-table-panel{
+  border:1px solid #dee5f1;
+  border-top:2px solid #6472ed;
+  border-radius:13px;
+  box-shadow:0 3px 12px rgba(28,46,82,.025);
+}
+.mrh-tracker-controls{gap:10px;padding:12px 13px;background:#fff}
+.mrh-tracker-controls input[type=search],
+.mrh-tracker-controls select{
+  background:#f8faff;
+  border-color:#e0e6f0;
+  min-height:40px;
+}
+.mrh-tracker-overdue{background:#f8faff;min-height:40px}
+.mrh-tracker-table-scroll{scrollbar-color:#b8c4d9 #f2f5fa;scrollbar-width:thin}
+.mrh-tracker-table{font-size:.8rem}
+.mrh-tracker-table th,.mrh-tracker-table td{padding:13px 14px}
+.mrh-tracker-table thead th{background:#f1f5fb}
+.mrh-tracker-table .mrh-group-row th{
+  background:#eeeffe;
+  border-left-color:#5d68e5;
+  padding:11px 14px;
+}
+.mrh-tracker-table tbody tr:not(.mrh-group-row){transition:background-color .14s ease}
+.mrh-tracker-table tbody tr:not(.mrh-group-row):focus-within{background:#f2f5ff}
+.mrh-part-link{border-radius:3px}
+.mrh-tracker-note{font-size:.74rem;line-height:1.5;color:#72829b}
+
+/* Container queries follow available board width, not the browser viewport.
+   This prevents six cramped cards inside the persistent CRM sidebar. */
+@container (max-width:1130px){
+ .mrh-tracker-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .mrh-tracker-stats>.mrh-kpi-protected{grid-column:span 2}
+ .mrh-tracker-stats>.mrh-breakdown{grid-column:span 2}
+}
+@container (max-width:690px){
+ .mrh-tracker-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .mrh-tracker-stats>.mrh-kpi-protected{grid-column:span 1}
+ .mrh-tracker-stats>.mrh-breakdown{grid-column:span 2}
+ .mrh-tracker-stats>.mrh-kpi-card{min-height:120px;padding:13px}
+ .mrh-breakdown-ring{height:80px;width:80px}
+ .mrh-tracker-ratebar{align-items:flex-start}
+ .mrh-rate-note{flex-basis:100%}
+}
+@container (max-width:440px){
+ .mrh-tracker-stats>.mrh-kpi-protected{grid-column:span 2}
+ .mrh-tracker-controls .mrh-search-field{flex:1 1 100%}
+ .mrh-tracker-controls .mrh-source-filter{flex:1 1 120px}
+ .mrh-tracker-overdue{padding:0 9px}
+ .mrh-tracker-head{gap:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .mrh-tracker-head button,
+ .mrh-tracker-table tbody tr:not(.mrh-group-row){transition:none}
+}
+
 /* frontend/auth-experience.css */
 /* APSYNTRA CRM / AUTH02 — intentionally scoped to the login route.
    No inline style attributes, CSSOM injection, font downloads or route-wide overrides. */
