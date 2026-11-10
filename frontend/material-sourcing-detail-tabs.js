@@ -29,7 +29,8 @@ export function renderMaterialSourcingPublicOverview(row,{groupTitle='Main group
    field('Part number',safe.partNumber)+field('Source type',safe.source,{badge:true})+
    field('RFQ Ref No',safe.rfq,{wide:true})+
    field('Material description',safe.description,{wide:true})+
-   field('Brand',safe.brand)+field('Quantity',safe.quantity))+
+   field('Brand',safe.brand)+field('Quantity',safe.quantity)+
+   field('Created',safe.created))+
   section('Supplier & Schedule','▧',
    field('Date required',safe.due)+field('Leadtime (weeks)',safe.lead)+
    field('Board group',groupTitle,{wide:true}))+
@@ -45,12 +46,27 @@ export function renderMaterialSourcingDetailTabs(summaryHtml){
   '<section id="mrh-detail-panel-details" role="tabpanel" aria-labelledby="mrh-detail-tab-details" data-mrh-detail-panel="details">'+
    summaryHtml+
    '<div data-mrh-private-host role="region" aria-label="Protected Material Sourcing details">'+
-   '<p role="status" class="muted">Checking restricted sourcing access…</p></div></section>'+
+   '<p role="status" class="muted">Loading available material details…</p></div></section>'+
   '<section id="mrh-detail-panel-tasks" role="tabpanel" aria-labelledby="mrh-detail-tab-tasks" data-mrh-detail-panel="tasks" hidden>'+
    '<div data-mrh-board-tasks>'+renderMaterialSourcingTasksUnavailable()+'</div></section>'+
   '<section id="mrh-detail-panel-activity" role="tabpanel" aria-labelledby="mrh-detail-tab-activity" data-mrh-detail-panel="activity" hidden>'+
    '<div data-mrh-item-activity role="status" aria-live="polite">Open Activity to load the signed item audit trail.</div></section>';
 }
+/** Reference-aligned section structure for sessions without a protected
+ * sourcing result. Do not request/guess private values or add new role gates. */
+export function renderMaterialSourcingUnavailableDetails(){
+ const field=(label)=>'<div class="mrh-detail-field mrh-detail-restricted-field">'+
+  '<dt>'+escape(label)+'</dt><dd><span class="mrh-detail-value-unavailable">Not available</span></dd></div>';
+ const section=(title,icon,labels)=>'<section class="mrh-detail-section mrh-detail-unavailable-section">'+
+  '<h3><span aria-hidden="true">'+icon+'</span>'+escape(title)+'</h3>'+
+  '<dl class="mrh-detail-field-grid">'+labels.map(field).join('')+'</dl></section>';
+ return '<div class="mrh-detail-unavailable" aria-label="Additional material information">'+
+  section('Pricing & Cost','₱',['Buying price','Currency','Shipping cost','Shipping currency'])+
+  section('Calculated Totals','▤',['Total buying','Landed cost'])+
+  section('Logistics','▧',['Vendor details'])+
+  '<p class="mrh-detail-availability-note" role="status">These values are not available in the current item response. Public material details remain visible above.</p></div>';
+}
+
 export function renderMaterialSourcingTasksUnavailable(){
  return '<section class="mrh-item-task-status" aria-label="Material Sourcing tasks">'+
   '<h3>Tasks</h3><p role="status">Board-item task integration is not activated.</p>'+

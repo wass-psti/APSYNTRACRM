@@ -76,7 +76,7 @@ import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMateria
 import {parseMaterialAddForm} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
-import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
+import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
@@ -3523,7 +3523,7 @@ async function openBoardItemDetails(itemId){
     if(!current())return;
     values=null;
     if(editToggle)editToggle.hidden=true;
-    privateHost.innerHTML='<p class="muted" role="status">Restricted sourcing fields unavailable for this session. No protected values have been displayed.</p>';
+    privateHost.innerHTML=renderMaterialSourcingUnavailableDetails();
    }
   };
   itemDialog.addEventListener('submit',async event=>{
