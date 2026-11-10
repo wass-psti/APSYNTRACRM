@@ -149,3 +149,14 @@ a preferred strict retention candidate; Cloudflare R2 lock rules are a
 configurable alternative. No account, bucket, retention duration, cost,
 credential or key-custody arrangement is approved. No provider state is
 attested or altered. See the offsite provider preflight report.
+
+## November 10 — AWS S3 Compliance Object Lock deployable blueprint (NOT ACTIVATED)
+
+Added a non-deployed CloudFormation template with required account-specific
+bucket, retention and IAM trust-principal inputs. It defines versioning,
+Compliance Object Lock, nonpublic SSE AES256 bucket, TLS-only bucket policy,
+upload-only and recovery-read-only IAM roles. No cloud deployment, IAM
+credentials, AWS resources, retention activation or costs have been
+authorized or incurred by this implementation. Nine local contract
+tests cover least privilege and fail-closed retention configuration.
+See docs/FUELTRACK-V3-AWS-S3-OBJECT-LOCK-TEMPLATE-20261110.md.

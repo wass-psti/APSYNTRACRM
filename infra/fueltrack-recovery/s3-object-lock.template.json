@@ -1,0 +1,267 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "NON-DEPLOYED WatchdogWorkspace recovery S3 Compliance Object Lock. Requires separate explicit AWS, retention, IAM and cost authorization.",
+  "Parameters": {
+    "ApprovedBucketName": {
+      "Type": "String",
+      "MinLength": 3,
+      "MaxLength": 63,
+      "AllowedPattern": "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+      "Description": "Approved globally unique private bucket"
+    },
+    "ApprovedRetentionDays": {
+      "Type": "Number",
+      "MinValue": 2,
+      "MaxValue": 3650,
+      "Description": "Explicitly approved irreversible Compliance retention duration, no default"
+    },
+    "ApprovedWriterPrincipalArn": {
+      "Type": "String",
+      "AllowedPattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$",
+      "Description": "Existing authorized AWS IAM writer trust principal"
+    },
+    "ApprovedRestorePrincipalArn": {
+      "Type": "String",
+      "AllowedPattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$",
+      "Description": "Separate existing authorized restore trust principal"
+    }
+  },
+  "Resources": {
+    "RecoveryBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketName": {
+          "Ref": "ApprovedBucketName"
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "ObjectLockEnabled": true,
+        "ObjectLockConfiguration": {
+          "ObjectLockEnabled": "Enabled",
+          "Rule": {
+            "DefaultRetention": {
+              "Mode": "COMPLIANCE",
+              "Days": {
+                "Ref": "ApprovedRetentionDays"
+              }
+            }
+          }
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Purpose",
+            "Value": "WatchdogWorkspace-Recovery"
+          }
+        ]
+      }
+    },
+    "RecoveryBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "RecoveryBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DenyNonTLS",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "RecoveryBucket",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "RecoveryBucket",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "UploadRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Description": "Append-only encrypted backup uploader; no read, delete or retention management.",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Ref": "ApprovedWriterPrincipalArn"
+                }
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "AppendOnlyEncryptedUpload",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:PutObject",
+                    "s3:AbortMultipartUpload"
+                  ],
+                  "Resource": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        {
+                          "Fn::GetAtt": [
+                            "RecoveryBucket",
+                            "Arn"
+                          ]
+                        },
+                        "/*"
+                      ]
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "RestoreRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Description": "Read-only recovery role; no write, deletion or retention changes.",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Ref": "ApprovedRestorePrincipalArn"
+                }
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "ReadOnlyRecovery",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:GetObjectVersion"
+                  ],
+                  "Resource": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        {
+                          "Fn::GetAtt": [
+                            "RecoveryBucket",
+                            "Arn"
+                          ]
+                        },
+                        "/*"
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:ListBucketVersions"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "RecoveryBucket",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "RecoveryBucketName": {
+      "Value": {
+        "Ref": "RecoveryBucket"
+      }
+    },
+    "UploadRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "UploadRole",
+          "Arn"
+        ]
+      }
+    },
+    "RestoreRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "RestoreRole",
+          "Arn"
+        ]
+      }
+    }
+  }
+}
