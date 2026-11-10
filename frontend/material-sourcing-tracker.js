@@ -3,6 +3,7 @@
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,
  isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
 import {boardItemsComplete} from './board-grid.js';
+import {renderMaterialSourcingAddMaterial} from './material-sourcing-add-material.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fields=['Source Type','Material description','Brand','RFQ Ref No','Date required','Leadtime in Weeks'];
@@ -93,6 +94,17 @@ export function renderMaterialSourcingTracker(detail,filters=MATERIAL_TRACKER_DE
  const locals=count('Local'),imports=count('Import'),unknown=all.length-locals-imports;
  const overdue=all.filter(row=>row.overdue).length;
  const canCreate=options.canCreate===true;
+ if(options.view==='add'){
+  return '<section class="mrh-tracker mrh-add-app" aria-label="Material Sourcing application">'+
+   '<header class="mrh-tracker-head"><div class="mrh-tracker-identity">'+
+    '<span class="mrh-tracker-logo" aria-hidden="true">◈</span><div>'+
+    '<span class="label-top">Material Request Hub / Procurement workspace</span>'+
+    '<h2>Material Sourcing</h2><p>Procurement tracking &amp; material management</p></div></div></header>'+
+   '<div class="mrh-add-canvas"><nav class="mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
+    '<button type="button" data-action="mrh-show-items">All items</button>'+
+    (canCreate?'<span class="mrh-active-view" aria-current="page">Add Material</span>':'')+
+    '</nav>'+renderMaterialSourcingAddMaterial(detail,{canCreate})+'</div></section>';
+ }
  const displayed=row=>{
   const item=(detail.items||[]).find(i=>i.id===row.id);
   const source=row.source?'<span class="mrh-source '+row.source.toLowerCase()+'"><span aria-hidden="true">●</span> '+esc(row.source)+'</span>':'<span class="mrh-cell-missing">—</span>';
@@ -128,8 +140,7 @@ export function renderMaterialSourcingTracker(detail,filters=MATERIAL_TRACKER_DE
     '<span>Exchange rates &amp; landed costs</span><span class="mrh-rate-note">Available in authorized protected item details when configured</span></div>'+
    '<nav class="mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
     '<span class="mrh-active-view" aria-current="page">All items</span>'+
-    (canCreate?'<button type="button" data-action="mrh-new-part">＋ Add Material</button>':'')+
-    '<span class="mrh-view-unavailable" title="Bulk import is not active for protected material records">Bulk Import · Not available</span>'+
+    (canCreate?'<button type="button" data-action="mrh-add-view">＋ Add Material</button>':'')+
    '</nav>'+
    '<div class="mrh-table-panel">'+
     '<div class="mrh-tracker-controls"><label class="mrh-search-field">'+
