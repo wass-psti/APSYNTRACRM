@@ -21,7 +21,7 @@ export function renderMaterialSourcingDetailTabs(summaryHtml){
    '<div data-mrh-private-host role="region" aria-label="Protected Material Sourcing details">'+
    '<p role="status" class="muted">Checking restricted sourcing access…</p></div></section>'+
   '<section id="mrh-detail-panel-tasks" role="tabpanel" aria-labelledby="mrh-detail-tab-tasks" data-mrh-detail-panel="tasks" hidden>'+
-   renderMaterialSourcingTasksUnavailable()+'</section>'+
+   '<div data-mrh-board-tasks>'+renderMaterialSourcingTasksUnavailable()+'</div></section>'+
   '<section id="mrh-detail-panel-activity" role="tabpanel" aria-labelledby="mrh-detail-tab-activity" data-mrh-detail-panel="activity" hidden>'+
    '<div data-mrh-item-activity role="status" aria-live="polite">Open Activity to load the signed item audit trail.</div></section>';
 }
