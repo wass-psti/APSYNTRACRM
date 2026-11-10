@@ -3294,7 +3294,7 @@ async function openBoardMembers(){
  modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-members-title">'+
   '<div class="modal-head"><h2 id="board-members-title">Who can access this board?</h2>'+
   '<button type="button" data-dismiss class="modal-close" aria-label="Close board members">×</button></div>'+
-  '<p class="muted">Explicit board members from the signed board response. An administrator or other user may have effective access through separate rules. This list is not an exhaustive access audit.</p>'+
+  '<p class="muted">Explicit board members from the signed board response. An administrator or other user may have effective access through separate rules. This list is not an exhaustive access audit. New invitations require a verified server-side same-workspace and role-ceiling contract.</p>'+
   renderBoardPeople(people)+renderMentionDraft(people)+
   '<div data-col01-directory-results>'+renderBoardInvitableDirectory(directory)+'</div></section>';
  document.body.append(modal);
