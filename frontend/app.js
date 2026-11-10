@@ -4544,7 +4544,7 @@ async function action(name,button){
    if(!same())break;
    const client=new FuelTrackV3DomainClient({api:db,auth,
     boardId:FUELTRACK_V3_ID,workspaceId});
-   const report=await runFuelTrackSignedPreflight({client,api:db,boardId:FUELTRACK_V3_ID});
+   const report=await runFuelTrackSignedPreflight({client,api:db,boardId:FUELTRACK_V3_ID,isCurrent:same});
    if(same())state.fuelTrackPreflight=report;
   }catch(err){
    if(same())state.fuelTrackPreflight={status:'PREFLIGHT_BLOCKED',message:errorMessage(err)};
