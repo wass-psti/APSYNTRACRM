@@ -12577,6 +12577,49 @@
 @media(max-width:520px){#app .ft3-refuel-dialog-header,#app .ft3-refuel-dialog-body{padding:18px}#app .ft3-refuel-dialog-header h2{font-size:19px}#app .ft3-refuel-dialog-footer button{flex:1}#app .ft3-refuel-upload-copy{min-width:0}}
 @media(prefers-reduced-motion:reduce){#app .ft3-refuel-input-wrap{transition:none}}
 
+/* FuelTrack completed transactions: scan-friendly history, signed receipt actions. */
+#app .ft3-light-completed{padding:0;overflow:hidden;border:1px solid #dbe7eb;background:#fff;border-radius:19px;box-shadow:0 8px 24px rgba(27,70,83,.055)}
+#app .ft3-light-history-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:22px 23px 18px;background:linear-gradient(120deg,#f9fcfd,#f3f9fa);border-bottom:1px solid #e4edf0}
+#app .ft3-light-history-eyebrow{font-size:10px;font-weight:750;letter-spacing:.11em;color:#388d92}
+#app .ft3-light-history-head h3{font-size:18px;letter-spacing:-.025em;color:#263e4a;margin:6px 0 4px;font-weight:750}
+#app .ft3-light-history-head p{margin:0;color:#758c96;font-size:11px}
+#app .ft3-light-history-count{padding:8px 12px;border-radius:99px;background:#eaf7f2;border:1px solid #cce9dc;color:#277c64;font-size:11px;font-weight:750;white-space:nowrap}
+#app .ft3-light-table-scroll{overflow-x:auto;scrollbar-width:thin}
+#app .ft3-light-history-table{min-width:630px;width:100%;border-collapse:collapse}
+#app .ft3-light-history-table th{background:#fff;text-transform:uppercase;letter-spacing:.075em;font-size:10px;color:#81959e;font-weight:700;padding:14px 18px;border-bottom:1px solid #e5ecef;white-space:nowrap}
+#app .ft3-light-history-table td{padding:16px 18px;border-bottom:1px solid #edf1f3;color:#465f6b;font-size:11px;vertical-align:middle}
+#app .ft3-light-history-row:last-child td{border-bottom:0}
+#app .ft3-light-history-row:hover{background:#fafdfd}
+#app .ft3-light-history-person{display:flex;align-items:center;gap:10px;min-width:150px}
+#app .ft3-light-history-avatar{width:33px;height:33px;flex:none;display:grid;place-items:center;background:#e1f6ee;border-radius:11px;color:#14896e;font-size:13px;font-weight:750}
+#app .ft3-light-history-person strong{display:block;font-size:12px;color:#2b4754;font-weight:720;overflow-wrap:anywhere}
+#app .ft3-light-history-person small{display:block;margin-top:4px;color:#879aa2;font-size:10px}
+#app .ft3-light-history-reference{display:inline-block;padding:7px 10px;background:#eef5f8;border-radius:8px;color:#3e667a;font-weight:700;overflow-wrap:anywhere}
+#app .ft3-light-history-table time{color:#506f7d;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#app .ft3-light-history-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:165px}
+#app .ft3-light-history-action{display:inline-flex;align-items:center;justify-content:center;min-height:34px;box-sizing:border-box;padding:8px 11px;border:1px solid #d4e4e9;border-radius:9px;background:#fff;color:#436775;font:inherit;font-weight:720;font-size:10px;line-height:1.25;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color .15s ease,border-color .15s ease}
+#app .ft3-light-history-action.is-primary{background:#ebf8f6;border-color:#b7e2dc;color:#167a73}
+#app .ft3-light-history-action:hover{background:#e4f5f5;border-color:#a9dcd8}
+#app .ft3-light-history-action:focus-visible{outline:2px solid #0c9897;outline-offset:2px}
+#app .ft3-light-history-unavailable{font-size:11px;color:#8296a0}
+#app .ft3-light-completed-empty{display:flex;align-items:center;justify-content:center;gap:12px;padding:30px 16px;color:#748b95}
+#app .ft3-light-completed-empty>span{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#ebf6f2;color:#2d9477}
+#app .ft3-light-completed-empty p{margin:0;font-size:12px}
+@media(max-width:670px){
+ #app .ft3-light-history-head{padding:17px}
+ #app .ft3-light-history-table{min-width:0}
+ #app .ft3-light-history-table thead{display:none}
+ #app .ft3-light-history-table tbody{display:grid;gap:12px;padding:14px}
+ #app .ft3-light-history-row{display:grid;border:1px solid #e1eaee;border-radius:13px;background:#fff;padding:13px}
+ #app .ft3-light-history-row td{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:8px 0;border:0;text-align:right}
+ #app .ft3-light-history-row td::before{content:attr(data-label);font-size:10px;font-weight:720;color:#8499a2;text-align:left}
+ #app .ft3-light-history-row td:first-child::before{display:none}
+ #app .ft3-light-history-row td:first-child{justify-content:flex-start;border-bottom:1px solid #edf1f3;padding-bottom:12px;text-align:left}
+ #app .ft3-light-history-actions{justify-content:flex-end;min-width:0}
+ #app .ft3-light-history-table time{white-space:normal}
+}
+@media(prefers-reduced-motion:reduce){#app .ft3-light-history-action{transition:none}}
+
 /* frontend/tradelink-application.css */
 /* TradeLink source-aligned application shell. Scoped to avoid board/TimeTracker regressions. */
 .aps-tradelink-app{--tl-ink:var(--ink,#20263b);--tl-line:var(--line,#e8ebf2);--tl-accent:var(--purple,#5d61e8);color:var(--tl-ink);display:grid;gap:19px;min-width:0}

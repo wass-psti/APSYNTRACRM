@@ -63,6 +63,22 @@ const card=(r,actionEnabled=false)=>{
   '<p class="ft3-light-action-note" role="status">Signed Admin access and a current request revision are required to process this request.</p>')+
  '</article>';
 };
+const completedRow=(r,actionEnabled,receiptLink)=>{
+ const ready=receiptLink?.requestId===r.id&&receiptLink.expiresAt>Date.now()&&
+  typeof receiptLink.href==='string'&&/^https:\/\//.test(receiptLink.href);
+ return '<tr class="ft3-light-history-row"><td data-label="Requestor"><div class="ft3-light-history-person">'+
+ '<span class="ft3-light-history-avatar" aria-hidden="true">✓</span>'+
+ '<div><strong>'+esc(r.requestor)+'</strong><small>Fuel transaction</small></div></div></td>'+
+ '<td data-label="Vehicle / Container"><span class="ft3-light-history-reference">'+esc(r.reference)+'</span></td>'+
+ '<td data-label="Completed"><time datetime="'+esc(r.completedAt)+'">'+esc(displayDate(r.completedAt))+'</time></td>'+
+ '<td data-label="Receipt"><div class="ft3-light-history-actions">'+
+ (actionEnabled?(ready?
+  '<a class="ft3-light-history-action is-primary" href="'+esc(receiptLink.href)+'" target="_blank" rel="noopener noreferrer" aria-label="Open private receipt for '+esc(r.requestor)+'">Open receipt</a>':
+  '<button type="button" class="ft3-light-history-action is-primary" data-action="ft3-view-receipt" data-id="'+esc(r.id)+'">Get receipt link</button>')+
+  '<button type="button" class="ft3-light-history-action" data-action="ft3-verify-receipt" data-id="'+esc(r.id)+'">Verify file</button>':
+  '<span class="ft3-light-history-unavailable">Admin access required</span>')+
+ '</div></td></tr>';
+};
 function workflowGuide(){
  return '<details class="ft3-light-guide"><summary>Refueling workflow requirements</summary>'+
  '<div class="ft3-light-guide-steps">'+
@@ -95,18 +111,20 @@ export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceI
   '<div class="ft3-light-queue-head"><div><span>ACTIVE REQUESTS</span><h3>Refueling queue</h3></div><strong>'+esc(model.activeCount)+' awaiting processing</strong></div><div class="ft3-light-queue">'+model.queue.map(r=>card(r,actionEnabled)).join('')+
   (model.activeCount>model.queue.length?'<p>More queue records require a signed paginated response.</p>':'')+'</div>'):
   '<p class="ft3-light-unavailable" role="status">The signed LightFuels queue and refueling workflow are not connected. No request or completion totals are inferred from Board items, and no refueling operation was attempted.</p>')+
- '<section class="ft3-light-completed"><h3>Recently Completed</h3><p>Latest fuel transactions</p>'+
- (model&&model.recent.length?'<div class="ft3-light-table-scroll"><table><thead><tr>'+
- '<th scope="col">Requestor</th><th scope="col">Vehicle / Container</th><th scope="col">Date</th><th scope="col">Receipt</th></tr></thead><tbody>'+
- model.recent.map(r=>'<tr><td>'+esc(r.requestor)+'</td><td>'+esc(r.reference)+
- '</td><td>'+esc(r.completedAt)+'</td><td>'+(
-  actionEnabled?(receiptLink?.requestId===r.id&&receiptLink.expiresAt>Date.now()?
-   '<a href="'+esc(receiptLink.href)+'" target="_blank" rel="noopener noreferrer">Open private receipt</a>':
-   '<button type="button" data-action="ft3-view-receipt" data-id="'+esc(r.id)+'">Prepare receipt link</button>')+
-   '<button type="button" data-action="ft3-verify-receipt" data-id="'+esc(r.id)+'">Verify private receipt bytes</button>':
-   '—')+'</td></tr>').join('')+'</tbody></table></div>':
- '<p class="ft3-light-completed-empty">'+(model?'No completed records in the verified response.':
- 'Completed records unavailable without a signed service.')+'</p>')+'</section>'+
+ '<section class="ft3-light-completed" aria-labelledby="ft3-light-history-title">'+
+ '<header class="ft3-light-history-head"><div><span class="ft3-light-history-eyebrow">TRANSACTION HISTORY</span>'+
+ '<h3 id="ft3-light-history-title">Recently Completed</h3>'+
+ '<p>Latest verified fuel transactions</p></div>'+
+ (model?'<span class="ft3-light-history-count">'+esc(model.processedCount)+' processed</span>':'')+
+ '</header>'+
+ (model&&model.recent.length?'<div class="ft3-light-table-scroll"><table class="ft3-light-history-table">'+
+ '<thead><tr><th scope="col">Requestor</th><th scope="col">Vehicle / Container</th>'+
+ '<th scope="col">Completed</th><th scope="col">Receipt</th></tr></thead><tbody>'+
+ model.recent.map(r=>completedRow(r,actionEnabled,receiptLink)).join('')+
+ '</tbody></table></div>':
+ '<div class="ft3-light-completed-empty"><span aria-hidden="true">✓</span><p>'+
+ (model?'No completed transactions in the verified response.':
+ 'Completed records unavailable without a signed service.')+'</p></div>')+'</section>'+
  workflowGuide()+'</section>';
 }
 

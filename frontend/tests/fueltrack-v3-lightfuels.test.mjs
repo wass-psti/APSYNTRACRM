@@ -130,3 +130,31 @@ test('refueling details refinement preserves required numeric fields and private
  assert.match(html,/type="submit" class="ft3-refuel-primary"/);
  assert.match(html,/data-action="ft3-refuel-cancel"/);
 });
+
+test('completed history presents readable dates, responsive semantics and signed receipt controls',()=>{
+ const id='55555555-5555-4555-8555-555555555555';
+ const completed={id,requestor:'<svg onload=alert(1)>',reference:'G42 80H',
+  completedAt:'2026-11-10T17:37:12Z'};
+ const snap={...baseline,processedCount:1,recent:[completed]};
+ const active=renderFuelTrackLightFuels({...args(snap),actionEnabled:true});
+ assert.match(active,/class="ft3-light-history-table"/);
+ assert.match(active,/class="ft3-light-history-row"/);
+ assert.match(active,/data-label="Completed"/);
+ assert.match(active,/Nov 11, 2026/);
+ assert.match(active,/datetime="2026-11-10T17:37:12Z"/);
+ assert.match(active,/&lt;svg onload=alert\(1\)&gt;/);
+ assert.doesNotMatch(active,/<svg onload/);
+ assert.match(active,/data-action="ft3-view-receipt"/);
+ assert.match(active,/data-action="ft3-verify-receipt"/);
+ assert.doesNotMatch(active,/Open receipt/);
+ const blocked=renderFuelTrackLightFuels({...args(snap),actionEnabled:false});
+ assert.match(blocked,/Admin access required/);
+ assert.doesNotMatch(blocked,/data-action="ft3-view-receipt"|data-action="ft3-verify-receipt"/);
+ const link=renderFuelTrackLightFuels({...args(snap),actionEnabled:true,receiptLink:{
+  requestId:id,expiresAt:Date.now()+60000,href:'https://example.com/private-signed-receipt'
+ }});
+ assert.match(link,/Open receipt/);
+ assert.match(link,/rel="noopener noreferrer"/);
+ assert.doesNotMatch(link,/data-action="ft3-view-receipt"/);
+ assert.match(link,/data-action="ft3-verify-receipt"/);
+});

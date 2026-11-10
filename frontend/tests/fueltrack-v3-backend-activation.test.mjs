@@ -100,7 +100,7 @@ test('existing completed records offer explicit nonmutating signed receipt byte 
  const active=renderFuelTrackLightFuels({snapshot:data,boardId:board,workspaceId:workspace,
   actionEnabled:true});
  assert.match(active,/data-action="ft3-verify-receipt"/);
- assert.match(active,/Verify private receipt bytes/);
+ assert.match(active,/Verify file/);
  const denied=renderFuelTrackLightFuels({snapshot:data,boardId:board,workspaceId:workspace});
  assert.doesNotMatch(denied,/data-action="ft3-verify-receipt"/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
