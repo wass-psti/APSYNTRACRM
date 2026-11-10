@@ -154,8 +154,26 @@ synthetic JWTs, or production fixtures.
 - CSS bundle consistency after mainline integration: 41 source files, 835,837 bytes, up to date.
 - git diff --check: PASS.
 
-The frontend workflow now includes this feature branch in its push trigger.
-GitHub-hosted checks for the new commit are pending until the push completes.
+The frontend workflow includes this feature branch in its push trigger.
+GitHub Actions workflow #1173 completed SUCCESS after mainline integration:
+frontend, disposable PostgreSQL, disposable collaboration PostgreSQL and
+disposable overtime PostgreSQL all passed. The main-only live-pages deployment
+job was skipped, as expected for a feature branch.
+
+## Mainline integration
+
+The feature branch was integrated with mainline commit 4cafe53 (Material
+Request Hub tracker and Priority 5 updates). The only merge conflict was
+frontend/app.js. The resolution preserved both the mainline Material Tracker
+route/state and FuelTrack backend/preflight state/renderer. The merged
+frontend suite passed 1,608 tests. PR #185 is conflict-free
+(GitHub mergeable_state=clean) but remains open and draft. No production
+release or merge into main was performed.
+
+GitHub branch-protection inspection returned HTTP 403
+(Resource not accessible by integration). Required branch rules therefore
+could not be independently verified through the current GitHub connection;
+no claim of verified branch protection is made.
 
 ## Classification
 
