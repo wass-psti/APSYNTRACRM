@@ -6464,14 +6464,16 @@ function syncTradeLinkFinanceInput(event){
  return true;
 }
 root.addEventListener('change',event=>{
+ if(syncTradeLinkFinanceInput(event))return;
  if(state.view==='board'&&state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)&&
     ['mrh-tracker-source','mrh-tracker-overdue'].includes(event.target.id)){
   state.mrhTrackerFilters={...state.mrhTrackerFilters,
    ...(event.target.id==='mrh-tracker-source'?{source:['all','Local','Import'].includes(event.target.value)?event.target.value:'all'}:
     {overdue:event.target.checked===true})};
-  render();return;
+  const current=root.querySelector('.mrh-tracker');
+  if(current)current.outerHTML=renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters);
+  return;
  }
- if(syncTradeLinkFinanceInput(event))return;
  if(['ft3-request-from','ft3-request-to'].includes(event.target.id)&&fuelTrackRequestReady()){
   const key=event.target.id==='ft3-request-from'?'from':'to';
   updateFuelTrackRequestFilters({[key]:String(event.target.value).slice(0,10),limit:25,expandedId:null});
@@ -6742,16 +6744,17 @@ root.addEventListener('drop',event=>{
 });
 root.addEventListener('dragend',()=>{tradeLinkDraggedLine=null;});
 root.addEventListener('input',event=>{
+ if(syncTradeLinkFinanceInput(event))return;
  if(event.target.id==='mrh-tracker-search'&&state.view==='board'&&
     state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)){
   const position=event.target.selectionStart;
   state.mrhTrackerFilters={...state.mrhTrackerFilters,search:String(event.target.value).slice(0,120)};
-  render();
+  const current=root.querySelector('.mrh-tracker');
+  if(current)current.outerHTML=renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters);
   const input=root.querySelector('#mrh-tracker-search');
   if(input){input.focus({preventScroll:true});if(position!=null)input.setSelectionRange(position,position);}
   return;
  }
- if(syncTradeLinkFinanceInput(event))return;
  if(event.target.id==='ft3-activity-search'&&state.view==='board'&&
     state.tab==='fueltrack'&&state.fuelTrackSection==='activity'&&
     state.boardId===FUELTRACK_V3_ID&&state.fuelTrackActivity&&auth.isSignedIn){
