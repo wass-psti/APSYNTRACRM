@@ -99,9 +99,31 @@ export function openBoardSharePreview(options={}){
  const priorFocus=document.activeElement;
  const overlay=document.createElement('div');
  overlay.className='board-share-stage-overlay';
- overlay.style.cssText='position:fixed;inset:0;z-index:5000;background:rgba(17,24,39,.65);display:grid;place-items:center;padding:16px';
- overlay.innerHTML='<div style="background:#fff;color:#1d2440;max-width:580px;width:100%;max-height:90vh;overflow:auto;border-radius:16px;padding:24px;box-shadow:0 18px 45px rgba(0,0,0,.22)">'+
- renderBoardSharePreview(options)+'</div>';
+ // style-src-attr 'none' forbids style="..." attributes. The existing
+ // APSYNTRA CSP permits inline <style> blocks; this is fixed author CSS only.
+ const css=document.createElement('style');
+ css.textContent=`
+ .board-share-stage-overlay{position:fixed;inset:0;z-index:5000;
+  background:rgba(17,24,39,.65);display:grid;place-items:center;padding:16px}
+ .board-share-stage-frame{background:#fff;color:#1d2440;max-width:580px;
+  width:100%;max-height:90vh;overflow:auto;border-radius:16px;
+  padding:24px;box-shadow:0 18px 45px rgba(0,0,0,.22)}
+ .board-share-stage-heading{display:flex;align-items:center;
+  justify-content:space-between;gap:12px}
+ .board-share-stage-heading h2{font-size:1.25rem;margin:0}
+ .board-share-stage dl{display:grid;grid-template-columns:140px 1fr;gap:10px 18px}
+ .board-share-stage dt{font-weight:600}
+ .board-share-stage dd{margin:0}
+ .board-share-stage button{border:1px solid #c8cbdf;border-radius:10px;
+  padding:10px 14px;background:#f4f5fb;color:#252940;cursor:pointer}
+ .board-share-stage button:disabled{opacity:.65;cursor:not-allowed}
+ .board-share-stage-note{font-size:.9rem;line-height:1.55}
+ `;
+ overlay.append(css);
+ const frame=document.createElement('div');
+ frame.className='board-share-stage-frame';
+ frame.innerHTML=renderBoardSharePreview(options);
+ overlay.append(frame);
  const close=event=>{
   if(event.target===overlay||event.target.closest?.('[data-board-share-close]'))closeBoardSharePreview();
  };
