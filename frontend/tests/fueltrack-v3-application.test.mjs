@@ -273,3 +273,30 @@ test('Activity route renders signed audit reference and no fabricated Monday eve
  assert.match(app,/p_limit:250/);
  assert.match(app,/case 'ft3-activity-export'/);
 });
+
+test('signed LightFuels mounts two-step refueling dialog only for Admin and valid current states',()=>{
+ const id='55555555-5555-4555-8555-555555555555';
+ const summary={total:1,submitted:0,approved:1,rejected:0,refuelingDone:0,completed:0,
+  approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:0,
+  activeQueue:1,completedToday:0,overdueCount:0};
+ const record={id,kind:'vehicle',details:{plate:'GAN 8289'},state:'approved',
+  revision:3,requestor_name:'Requester',created_at:'2026-11-10T16:50:14Z'};
+ const snapshot={status:'VERIFIED_READ',boardId:BOARD,workspaceId:W,role:'Admin',
+  rows:[record],summary};
+ const dialog={id,stage:'confirm'};
+ const confirm=renderFuelTrackV3Application({detail:fixture(),section:'lightfuels',
+  backend:{snapshot,refuelingDialog:dialog}});
+ assert.match(confirm,/role="dialog" aria-modal="true"/);
+ assert.match(confirm,/data-action="ft3-refuel-confirm"/);
+ assert.doesNotMatch(confirm,/data-ft3-receipt=/);
+ const next={...snapshot,rows:[{...record,state:'refueling_done',revision:4}],
+  summary:{...summary,approved:0,refuelingDone:1}};
+ const detail=renderFuelTrackV3Application({detail:fixture(),section:'lightfuels',
+  backend:{snapshot:next,refuelingDialog:{id,stage:'details'}}});
+ assert.match(detail,/id="ft3-refuel-details-form"/);
+ assert.match(detail,/Capture Receipt \/ Photo/);
+ assert.match(detail,/Save & Complete/);
+ const user=renderFuelTrackV3Application({detail:fixture(),section:'lightfuels',
+  backend:{snapshot:{...snapshot,role:'User'},refuelingDialog:dialog}});
+ assert.doesNotMatch(user,/role="dialog" aria-modal="true"/);
+});
