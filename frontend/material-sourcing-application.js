@@ -148,3 +148,34 @@ export function renderProtectedSourcingEditor(cells,{editing=true}={}){
   '<p class="muted">PHP equivalents, landed-cost totals, and VAT calculations remain disabled pending confirmed financial rules.</p>'+
   '</section>';
 }
+
+/** Add a real part number to the original Main group, never a demo fixture. */
+export async function createMaterialSourcingPart({api,auth,workspaceId,partNumber}){
+ const boardId=MATERIAL_SOURCING_BOARD_ID;
+ const groupId='21566a87-b287-4a61-b521-bb233956e09e';
+ const itemId='00000000-0000-4000-8000-000000000000';
+ const title=String(partNumber??'').trim();
+ if(!title||title.length>240)deny('Part number must contain 1–240 characters.',400);
+ if(typeof api?.addItem!=='function'||typeof api?.board!=='function')
+  deny('Signed board creation is unavailable.');
+ const actor=await authorize({
+  api,auth,workspaceId,boardId,itemId,edit:true
+ });
+ const detail=await api.board(boardId);
+ if(detail?.board?.id!==boardId||detail?.board?.workspace_id!==workspaceId||
+    detail.board.status!=='active'||!detail.groups?.some(group=>
+     group.id===groupId&&group.title==='Main group'))
+  deny('Original Material Sourcing board or Main group changed.',409);
+ if(!auth.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
+ // The existing server RPC additionally checks current signed board edit access
+ // and group ownership, and records an audit event.
+ const savedId=await api.addItem(boardId,groupId,title);
+ if(!UUID.test(savedId||''))deny('Creation receipt uncertain. Refresh before retrying.',409);
+ if(!auth.isSignedIn||auth.userId!==actor)
+  deny('Creation completed but the signed context changed. Refresh the board.',409);
+ const fresh=await api.board(boardId);
+ if(fresh?.board?.workspace_id!==workspaceId||
+    !fresh.items?.some(row=>row.id===savedId&&row.group_id===groupId&&row.title===title))
+  deny('Part creation could not be verified. Refresh before retrying.',409);
+ return Object.freeze({itemId:savedId,partNumber:title});
+}
