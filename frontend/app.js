@@ -74,6 +74,7 @@ import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} fr
 import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
 import {parseMaterialAddForm} from './material-sourcing-add-material.js';
+import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
 import {renderMaterialSourcingDetailTabs,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
@@ -5027,6 +5028,30 @@ async function action(name,button){
   toast('Exported '+rows.length+' visible material records (public fields only).');
   break;
  }
+ case 'mrh-activate-public':{
+  if(state.view!=='board'||state.tab!=='sourcing'||!state.mrhAddView||
+     !isMaterialTrackerBoard(state.board)||state.mrhAddBusy)break;
+  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context?.workspace_id};
+  state.mrhAddBusy=true;
+  const trigger=button;trigger.disabled=true;
+  try{
+   const result=await activateApprovedPublicSourcingColumns({
+    api:db,auth,acknowledgement:MATERIAL_SOURCING_ACTIVATION_ACK
+   });
+   if(!boardHistoryAuthorized(snapshot))break;
+   db.invalidateBoardCache();
+   await loadBoard(snapshot.boardId,'sourcing');
+   state.mrhAddView=true;
+   render();
+   toast(result.created.length+' sourcing columns activated; original Main group preserved.');
+  }catch(error){
+   if(boardHistoryAuthorized(snapshot))notice(error);
+  }finally{
+   state.mrhAddBusy=false;
+   if(trigger.isConnected)trigger.disabled=false;
+  }
+  break;
+ }
  case 'mrh-add-view':
  case 'mrh-show-items':{
   if(state.view!=='board'||state.tab!=='sourcing'||!isMaterialTrackerBoard(state.board))break;
@@ -6944,41 +6969,40 @@ root.addEventListener('submit',event=>{
    plan=parseMaterialAddForm(state.board,new FormData(form));
   }catch(err){if(status)status.textContent=errorMessage(err);return;}
   state.mrhAddBusy=true;button.disabled=true;button.textContent='Saving material…';
-  let created=null;
+  let uncertain=false;
+  const requestId=form.dataset.mrhRequestId||
+   (globalThis.crypto?.randomUUID?.()||'');
+  if(!requestId){
+   state.mrhAddBusy=false;button.disabled=false;
+   if(status)status.textContent='Secure request ID unavailable. Reload and retry.';
+   return;
+  }
+  form.dataset.mrhRequestId=requestId;
   Promise.resolve().then(async()=>{
    if(!authorized())throw new ApiError('Signed material workspace changed.',403);
-   created=await createMaterialSourcingPart({api:db,auth,workspaceId:snapshot.workspaceId,partNumber:plan.partNumber});
-   if(!authorized())throw new ApiError('Material was created but session changed; reload before editing.',409);
-   for(const field of plan.ordinary){
-    await db.setBoardCellCas(created.itemId,field.columnId,field.value,null);
-    if(!authorized())throw new ApiError('Material created; session changed while saving fields.',409);
-   }
-   for(const field of plan.protectedValues){
-    await writeProtectedSourcingField({api:db,auth,boardId:snapshot.boardId,
-     workspaceId:snapshot.workspaceId,itemId:created.itemId,
-     fieldName:field.name,value:field.value,expectedRevision:null});
-    if(!authorized())throw new ApiError('Material created; session changed while saving protected fields.',409);
-   }
+   const created=await createMaterialSourcingAtomic({
+    api:db,auth,workspaceId:snapshot.workspaceId,requestId,plan
+   });
+   if(!authorized())return;
    db.invalidateBoardCache();
    state.mrhAddView=false;
    await loadBoard(snapshot.boardId,'sourcing');
-   if(boardHistoryAuthorized(snapshot))toast('Material created and saved in Main group.');
-  }).catch(err=>{
+   if(boardHistoryAuthorized(snapshot))
+    toast('Material '+created.partNumber+' and all requested fields saved in Main group.');
+  }).catch(error=>{
    if(!authorized())return;
-   if(status)status.textContent=created?
-    'Material '+created.partNumber+' was created, but some details could not be verified. Open its details after refreshing; do not resubmit. '+errorMessage(err):
-    errorMessage(err);
-   if(created){
-    button.textContent='Created — verify item details';
-    // Partial writes are not safe to retry with another create request.
-    button.disabled=true;
-   }else{
-    button.textContent='＋ Add Material';
-    button.disabled=false;
-   }
+   uncertain=true;
+   if(status)status.textContent=
+    'Creation status needs verification. Refresh the board before trying again. '+
+    errorMessage(error);
+   // Retain same idempotency key, and never generate another item through this form.
+   button.disabled=true;
+   button.textContent='Refresh to verify material';
   }).finally(()=>{
    state.mrhAddBusy=false;
-   if(authorized()&&!created){button.disabled=false;button.textContent='＋ Add Material';}
+   if(authorized()&&!uncertain&&form.isConnected){
+    button.disabled=false;button.textContent='＋ Add Material';
+   }
   });
   return;
  }

@@ -39,20 +39,23 @@ test('pre-validation creates only intended field writes and never guesses missin
  assert.throws(()=>parseMaterialAddForm(detail,draft({partNumber:'X',buying:'-4'})),/nonnegative/);
  assert.throws(()=>parseMaterialAddForm(detail,draft({partNumber:''})),/required/);
 });
-test('submit pipeline prevalidates before any creation and prevents blind duplicate retries',()=>{
+test('submit uses one idempotent atomic RPC instead of partial multi-step writes',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const start=app.indexOf("if(event.target.id==='mrh-add-material-form')");
- const section=app.slice(start,start+3300);
+ const section=app.slice(start,start+2900);
  assert.ok(start>0);
  assert.match(section,/plan=parseMaterialAddForm\(state\.board,new FormData\(form\)\)/);
- assert.ok(section.indexOf('plan=parseMaterialAddForm')<section.indexOf('created=await createMaterialSourcingPart'));
- assert.match(section,/db\.setBoardCellCas\(created\.itemId,field\.columnId,field\.value,null\)/);
- assert.match(section,/writeProtectedSourcingField\(/);
- assert.match(section,/do not resubmit/);
+ assert.ok(section.indexOf('plan=parseMaterialAddForm')<
+   section.indexOf('createMaterialSourcingAtomic'));
+ assert.match(section,/requestId=form\.dataset\.mrhRequestId/);
+ assert.match(section,/form\.dataset\.mrhRequestId=requestId/);
+ assert.match(section,/createMaterialSourcingAtomic\(/);
+ assert.doesNotMatch(section,/db\.setBoardCellCas|writeProtectedSourcingField/);
+ assert.match(section,/button\.disabled=true/);
+ assert.match(app,/case 'mrh-activate-public'/);
  assert.match(app,/case 'mrh-add-view'/);
  assert.match(app,/case 'mrh-show-items'/);
- assert.match(app,/state\.mrhAddView=name==='mrh-add-view'/);
- assert.doesNotMatch(app,/state\.mrhAddView=action==='mrh-add-view'/);
+ assert.match(app,/activateApprovedPublicSourcingColumns/);
 });
 test('form view does not replace protected details or task contract',()=>{
  const html=renderMaterialSourcingTracker(detail,{},new Date(),{canCreate:true,view:'list'});
@@ -62,4 +65,28 @@ test('form view does not replace protected details or task contract',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/case 'board-item-detail'/);
  assert.match(app,/readMaterialBoardItemTasks\(input\)/);
+});
+
+test('all six approved public fields become enabled from signed custom columns',()=>{
+ const fields=[
+  ['Source Type','dropdown'],['Brand','text'],['Material description','long_text'],
+  ['RFQ Ref No','text'],['Date required','date'],['Leadtime in Weeks','number']
+ ];
+ const activated={...detail,columns:[...detail.columns,
+  ...fields.map(([name,data_type],i)=>({
+   id:'column-'+i,name,data_type,column_key:'custom:approved-'+i,
+   system_key:null,visible:true
+  }))]};
+ const html=renderMaterialSourcingAddMaterial(activated,{canCreate:true});
+ assert.doesNotMatch(html,/Column not activated|Enable missing fields/);
+ assert.match(html,/name="sourceType"[^>]*required/);
+ assert.match(html,/name="description"[^>]*required/);
+ const plan=parseMaterialAddForm(activated,draft({
+  partNumber:'PART-101',sourceType:'Local',brand:'Acme',
+  description:'Material specification',rfq:'RFQ-1',
+  due:'2026-11-21',lead:'4',quantity:'3'
+ }));
+ assert.equal(plan.ordinary.length,7);
+ assert.deepEqual(plan.ordinary.find(f=>f.name==='Source Type').value,'Local');
+ assert.deepEqual(plan.ordinary.find(f=>f.name==='Quantity').value,3);
 });
