@@ -68,6 +68,7 @@ import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
+import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
@@ -256,6 +257,8 @@ function stopAuthVisuals(){
 function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
+ // Clear detached protected item values on every signed-out transition.
+ hideModal();
  stopAvatarPreview();
  syncFuelTrans({container:null});
  stopAuthVisuals();
@@ -865,6 +868,7 @@ function boardPage(){
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
  <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ ${isMaterialSourcingBoard(b)&&state.edit&&state.tab==='items'?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
@@ -1003,6 +1007,13 @@ function preserveTimeTrackerLogExpansion(){
   .map(el=>el.dataset.recordId).filter(id=>allowed.has(id)).slice(0,30);
 }
 function render(){
+ // Protected Material Sourcing item details cannot survive a session, board,
+ // or workspace transition, even when the enclosing drawer remains mounted.
+ if(modal?.querySelector('[data-mrh-private-host]')&&
+    (!auth.isSignedIn||state.view!=='board'||
+     state.boardId!==MATERIAL_SOURCING_BOARD_ID||
+     state.context?.user_id!==modal.dataset.mrhActor||
+     state.context?.workspace_id!==modal.dataset.mrhWorkspace))hideModal();
  resetBoardWindows();
  const filterScope=[state.context?.user_id,state.context?.workspace_id,state.boardId].join('|');
  if(filterScope!==boardItemFilterScope){
@@ -3270,9 +3281,61 @@ async function openBoardItemDetails(itemId){
   '<p class="muted">Read-only item details from the signed board response.</p>'+
   boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
   renderBoardCollaboration(collaboration)+
+  (isMaterialSourcingBoard(state.board?.board)?
+   '<div data-mrh-private-host role="region" aria-label="Protected Material Sourcing details"><p class="muted">Checking restricted sourcing access…</p></div>':'')+
   '</aside>';
  document.body.append(modal);
  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
+ const privateHost=modal.querySelector('[data-mrh-private-host]');
+ if(privateHost){
+  modal.dataset.mrhActor=snapshot.userId;
+  modal.dataset.mrhWorkspace=snapshot.workspaceId;
+  const itemDialog=modal;
+  const input={api:db,auth,boardId:snapshot.boardId,
+   workspaceId:snapshot.workspaceId,itemId};
+  const current=()=>modal===itemDialog&&boardHistoryAuthorized(snapshot)&&
+   auth.isSignedIn&&auth.userId===snapshot.userId;
+  let values=null,busy=false;
+  const refresh=async()=>{
+   try{
+    const result=await readProtectedSourcingItem(input);
+    if(!current())return;
+    values=result;
+    privateHost.innerHTML=renderProtectedSourcingEditor(result);
+   }catch{
+    if(!current())return;
+    values=null;
+    privateHost.innerHTML='<p class="muted" role="status">Restricted sourcing fields unavailable for this session. No protected values have been displayed.</p>';
+   }
+  };
+  itemDialog.addEventListener('submit',async event=>{
+   const form=event.target.closest('[data-mrh-private-field]');
+   if(!form||!current()||busy)return;
+   event.preventDefault();
+   const fieldName=form.dataset.mrhPrivateField;
+   const stored=values?.[fieldName];
+   const submit=form.querySelector('[type="submit"]');
+   const status=privateHost.querySelector('[data-mrh-private-status]');
+   if(!submit||!status)return;
+   submit.disabled=true;busy=true;status.textContent='Saving…';
+   try{
+    await writeProtectedSourcingField({...input,fieldName,
+     value:new FormData(form).get('value'),expectedRevision:stored?.revision??null});
+    if(!current())return;
+    await refresh();
+    if(current()){
+     const nextStatus=privateHost.querySelector('[data-mrh-private-status]');
+     if(nextStatus)nextStatus.textContent='Saved and reloaded from the protected server.';
+    }
+   }catch{
+    if(current())status.textContent='Update not confirmed. Refresh the item and review your permissions or the current field revision before retrying.';
+   }finally{
+    busy=false;
+    if(submit.isConnected)submit.disabled=false;
+   }
+  });
+  void refresh();
+ }
  modal.querySelector('[data-dismiss]')?.focus();
 }
 async function openBoardMembers(){
@@ -4578,6 +4641,25 @@ async function action(name,button){
   contextualColumnCreate();break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
+ case 'mrh-new-part':{
+  if(!isMaterialSourcingBoard(state.board?.board)||!state.edit||
+     state.tab!=='items'||!activeBoardLayout())break;
+  const snapshot={boardId:state.boardId,userId:auth.userId,
+   workspaceId:state.context?.workspace_id};
+  openModal('New Material Sourcing part',
+   input('Part number','partNumber'),
+   async fd=>{
+    if(!boardHistoryAuthorized(snapshot))throw new ApiError('Board context changed.',403);
+    const created=await createMaterialSourcingPart({
+     api:db,auth,workspaceId:snapshot.workspaceId,
+     partNumber:fd.get('partNumber')
+    });
+    if(!boardHistoryAuthorized(snapshot))return;
+    await loadBoard(snapshot.boardId,'items');
+    toast('Part number '+created.partNumber+' created in Main group.');
+   },{submitLabel:'Create part'});
+  break;
+ }
  case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;

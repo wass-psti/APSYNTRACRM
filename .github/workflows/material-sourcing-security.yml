@@ -33,8 +33,9 @@ jobs:
       - name: Verify controlled signed CAS, deny-by-default fields and group preservation
         run: |
           node --check frontend/material-sourcing-controlled-activation.js
+          node --check frontend/material-sourcing-application.js
           node --check frontend/board-grid.js
-          node --test frontend/tests/material-sourcing-controlled-activation.test.mjs frontend/tests/material-sourcing-schema-plan.test.mjs frontend/tests/board-structure-admin.test.mjs
+          node --test frontend/tests/material-sourcing-controlled-activation.test.mjs frontend/tests/material-sourcing-schema-plan.test.mjs frontend/tests/material-sourcing-application.test.mjs frontend/tests/board-structure-admin.test.mjs
   postgres-denial:
     runs-on: ubuntu-latest
     timeout-minutes: 8
