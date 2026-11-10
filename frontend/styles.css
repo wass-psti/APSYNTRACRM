@@ -2342,3 +2342,181 @@
 .mrh-add-activation-note button:hover{background:#f6f7ff}
 .mrh-add-activation-note button:focus-visible{outline:2px solid #5967e4;outline-offset:2px}
 .mrh-add-activation-note button:disabled{opacity:.6;cursor:wait}
+
+/* Material Sourcing — reference-aligned item detail slide-over.
+ * All styling is scoped to MRH; other board item drawers are unaffected. */
+.board-detail-backdrop:has(.mrh-detail-drawer){padding:0;background:rgba(13,23,44,.58)}
+.mrh-detail-drawer{
+ --mrh-drawer-ink:#182b49;
+ --mrh-drawer-muted:#6a7c99;
+ width:min(495px,100vw);
+ min-width:0;
+ max-width:100vw;
+ height:100dvh;
+ padding:0;
+ overflow:hidden;
+ background:#f2f5fb;
+ color:var(--mrh-drawer-ink);
+ box-shadow:-16px 0 48px rgba(16,30,60,.24)
+}
+.mrh-detail-drawer .board-item-drawer-header{
+ padding:22px 23px 9px;
+ background:#f9fbff;
+ flex:none
+}
+.mrh-detail-drawer .board-item-drawer-header .label-top{
+ color:#63739f;font-size:.62rem;letter-spacing:.105em
+}
+.mrh-detail-drawer .modal-close{
+ color:#536681;border-radius:9px;
+ width:35px;height:35px;display:grid;place-items:center;
+ font-size:22px;cursor:pointer
+}
+.mrh-detail-drawer .modal-close:hover{background:#e9effb}
+.mrh-detail-identity{
+ flex:none;display:flex;align-items:flex-start;justify-content:space-between;
+ flex-wrap:wrap;gap:8px;padding:0 23px 19px;background:#f9fbff;
+ border-bottom:1px solid #dce5f1
+}
+.mrh-detail-drawer .mrh-detail-identity h2{
+ margin:0;color:#152642;font-size:1.4rem;font-weight:780;
+ letter-spacing:-.035em;line-height:1.25
+}
+.mrh-detail-group-pill{
+ color:#525fd3;background:#e9ebff;font-size:.72rem;font-weight:720;
+ padding:5px 10px;border-radius:16px;max-width:100%;
+ overflow-wrap:anywhere
+}
+.mrh-detail-scroll{
+ flex:1 1 auto;min-height:0;overflow-y:auto;
+ scrollbar-color:#b7c4d7 #eef2f9;scrollbar-width:thin;
+ overscroll-behavior-y:contain
+}
+.mrh-detail-drawer .mrh-detail-tabs{
+ position:sticky;top:0;z-index:2;
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:7px;margin:0;padding:9px 13px;
+ border-bottom:1px solid #dce5f1;background:#f7f9fe
+}
+.mrh-detail-drawer .mrh-detail-tabs button{
+ min-height:37px;padding:9px 5px;
+ border:1px solid transparent;border-radius:9px;
+ font-size:.79rem;font-weight:690;color:#657693;
+ background:transparent;transition:background-color .14s,border-color .14s
+}
+.mrh-detail-drawer .mrh-detail-tabs button:hover{background:#ecf0fa}
+.mrh-detail-drawer .mrh-detail-tabs button[aria-selected="true"]{
+ color:#293e70;border-color:#dbe3f0;background:white;
+ box-shadow:0 2px 5px rgba(26,44,78,.065)
+}
+.mrh-detail-drawer [data-mrh-detail-panel]{padding:0 0 20px}
+.mrh-detail-section,.mrh-private-section{
+ padding:22px 23px;border-bottom:1px solid #dce5f1
+}
+.mrh-detail-section h3,.mrh-private-section h3{
+ display:flex;align-items:center;gap:8px;
+ margin:0 0 17px;color:#515fe8;
+ text-transform:uppercase;letter-spacing:.09em;font-size:.72rem;font-weight:800
+}
+.mrh-detail-section h3>span,.mrh-private-section h3>span{
+ font-size:1rem;line-height:1;color:#6b70ed
+}
+.mrh-detail-field-grid,.mrh-private-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ column-gap:18px;row-gap:17px;margin:0
+}
+.mrh-detail-field,.mrh-sourcing-field{
+ margin:0;padding:0 0 0 11px;
+ border-left:2px solid #dbe2f5;min-width:0
+}
+.mrh-detail-field-wide{grid-column:1/-1}
+.mrh-detail-field dt,.mrh-sourcing-value strong{
+ font-size:.68rem;letter-spacing:.073em;text-transform:uppercase;
+ font-weight:790;color:#8191ac;line-height:1.35
+}
+.mrh-detail-field dd,.mrh-sourcing-value p{
+ display:block;margin:6px 0 0;font-size:.83rem;
+ font-weight:620;color:#1d2d48;line-height:1.5;
+ overflow-wrap:anywhere;white-space:pre-wrap
+}
+.mrh-detail-source{
+ display:inline-flex;align-items:center;padding:4px 9px;
+ border-radius:13px;font-size:.76rem;font-weight:720
+}
+.mrh-detail-source.local{color:#087a5b;background:#dff4ea}
+.mrh-detail-source.import{color:#2063b0;background:#e2effc}
+.mrh-detail-drawer .mrh-sourcing-editor{
+ padding:0;margin:0;border:0;border-radius:0;background:transparent
+}
+.mrh-detail-drawer .mrh-private-section{padding-top:23px}
+.mrh-detail-drawer .mrh-sourcing-field{
+ display:block;min-width:0;border-bottom:0;
+}
+.mrh-detail-drawer .mrh-sourcing-value{min-width:0}
+.mrh-detail-drawer .mrh-sourcing-value p{font-variant-numeric:tabular-nums}
+.mrh-detail-drawer .mrh-sourcing-field form{
+ display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;margin-top:9px
+}
+.mrh-detail-drawer .mrh-sourcing-field input,
+.mrh-detail-drawer .mrh-sourcing-field select{
+ min-height:39px;min-width:100px;width:100%;
+ border:1px solid #d6deec;border-radius:9px;padding:9px 10px;
+ font-size:.8rem;color:#223451;background:#fff
+}
+.mrh-detail-drawer .mrh-sourcing-field form button{
+ margin-left:auto;min-height:33px;border-radius:8px;padding:6px 13px
+}
+.mrh-detail-drawer [data-mrh-private-status]{
+ min-height:0;padding:0 23px;
+ color:#566e94;font-size:.76rem
+}
+.mrh-detail-drawer [data-mrh-private-status]:empty{display:none}
+.mrh-calculated-section p{
+ font-size:.81rem;line-height:1.55;color:#687a96;
+ margin:0;border:1px solid #dfe6f2;background:#f8faff;
+ border-radius:11px;padding:12px
+}
+.mrh-private-edit-note{
+ margin:15px 23px;font-size:.75rem;color:#657794;line-height:1.5
+}
+.mrh-detail-footer{
+ flex:none;display:flex;gap:9px;align-items:center;flex-wrap:wrap;
+ padding:12px 20px max(12px,env(safe-area-inset-bottom));
+ background:#f9fbff;border-top:1px solid #dbe4f2;
+ box-shadow:0 -6px 20px rgba(31,47,85,.04)
+}
+.mrh-detail-footer button{
+ border-radius:10px;padding:9px 14px;font-size:.8rem;
+ min-height:38px;font-weight:700
+}
+.mrh-detail-footer button[hidden]{display:none}
+.mrh-detail-footer .primary{background:#5a59e9;color:white}
+.mrh-detail-footer .secondary{margin-left:auto}
+.mrh-detail-drawer .mrh-item-tasks-active,
+.mrh-detail-drawer .mrh-item-activity-history,
+.mrh-detail-drawer .mrh-item-task-status{
+ padding:24px 22px
+}
+.mrh-detail-drawer .mrh-item-tasks-active li{
+ background:#fff;border:1px solid #dee5f1;padding:13px;border-radius:12px
+}
+.mrh-detail-drawer .mrh-item-tasks-active form input,
+.mrh-detail-drawer .mrh-item-tasks-active form select{
+ background:#fff;min-height:38px
+}
+.mrh-detail-drawer .mrh-item-activity-history li{
+ border:1px solid #dfe5f1;background:#fff;border-radius:11px
+}
+@media(max-width:540px){
+ .mrh-detail-drawer{width:100vw}
+ .mrh-detail-drawer .board-item-drawer-header{padding:17px 17px 9px}
+ .mrh-detail-identity{padding:0 17px 16px}
+ .mrh-detail-section,.mrh-private-section{padding:19px 17px}
+ .mrh-detail-field-grid,.mrh-private-grid{column-gap:10px}
+}
+@media(max-width:350px){
+ .mrh-detail-field-grid,.mrh-private-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){
+ .mrh-detail-drawer .mrh-detail-tabs button{transition:none}
+}
