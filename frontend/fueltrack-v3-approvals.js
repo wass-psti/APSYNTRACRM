@@ -4,6 +4,32 @@
  */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const metric=(value,label,icon)=>'<article class="ft3-approval-metric"><span aria-hidden="true">'+icon+'</span><div><strong>'+esc(value)+'</strong><small>'+esc(label)+'</small></div></article>';
+const approvalDate=value=>new Intl.DateTimeFormat('en-PH',{
+ month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',
+ timeZone:'Asia/Manila',hour12:true
+}).format(new Date(value));
+const approvalCard=(r,index,actionEnabled)=>{
+ const canAct=actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0;
+ return '<li class="ft3-approval-card"><article aria-label="Request awaiting approval">'+
+  '<div class="ft3-approval-card-top"><div class="ft3-approval-identity">'+
+  '<span class="ft3-approval-card-index" aria-hidden="true">'+String(index+1).padStart(2,'0')+'</span>'+
+  '<div class="ft3-approval-card-title"><span class="ft3-approval-eyebrow">Fuel request · Awaiting review</span>'+
+  '<h4>'+esc(r.title)+'</h4></div></div>'+
+  '<span class="ft3-approval-status"><span aria-hidden="true">●</span> Pending approval</span></div>'+
+  '<div class="ft3-approval-card-details"><div><span>Submitted</span><strong>'+
+  esc(approvalDate(r.createdAt))+'</strong></div>'+
+  '<div><span>Workflow</span><strong>Approval review</strong></div></div>'+
+  (canAct?'<div class="ft3-approval-decision">'+
+   '<button class="ft3-approval-accept" type="button" data-action="ft3-approve" data-id="'+esc(r.id)+'">'+
+   '<span aria-hidden="true">✓</span> Approve request</button>'+
+   '<label class="ft3-approval-reason" for="ft3-reason-'+esc(r.id)+'">'+
+   '<span>Reason for rejection</span>'+
+   '<input id="ft3-reason-'+esc(r.id)+'" maxlength="1000" placeholder="Required when rejecting" autocomplete="off"></label>'+
+   '<button class="ft3-approval-reject" type="button" data-action="ft3-reject" data-id="'+esc(r.id)+'">'+
+   '<span aria-hidden="true">×</span> Reject</button></div>':
+   '<p class="ft3-approval-readonly">Decision actions are unavailable for this request.</p>')+
+  '</article></li>';
+};
 const blocked='<p class="ft3-approval-unavailable" role="status">Approval statistics and pending requests are unavailable until the signed FuelTrack approval service is connected. No decision or delegation was attempted.</p>';
 /** Contract: opaque read receipt must be VERIFIED_READ, workspace/board scoped,
  * and counts must be server-computed integers. Never derive from Board status.
@@ -43,9 +69,13 @@ export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId
  '<button type="button" disabled>Urgency</button><button type="button" disabled>Name</button></div>'+
  (model?(model.pendingCount===0?
   '<div class="ft3-approvals-empty"><span aria-hidden="true">▤</span><h3>All clear!</h3><p>No pending requests to review.</p></div>':
-  '<div class="ft3-approvals-queue" role="status"><h3>'+esc(model.pendingCount)+' pending requests</h3>'+
-  (actionEnabled?'':'<p>Review actions are unavailable until the signed decision contract is activated.</p>')+
-  '<ul>'+model.pending.map(r=>'<li><strong>'+esc(r.title)+'</strong><small>'+esc(r.createdAt)+'</small>'+(actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0?'<div class="ft3-approval-decision"><button type="button" data-action="ft3-approve" data-id="'+esc(r.id)+'">Approve</button><label>Rejection reason <input id="ft3-reason-'+esc(r.id)+'" maxlength="1000" placeholder="Reason required"></label><button type="button" data-action="ft3-reject" data-id="'+esc(r.id)+'">Reject</button></div>':'')+'</li>').join('')+'</ul>'+
+  '<div class="ft3-approvals-queue" role="region" aria-label="Pending approval requests">'+
+  '<div class="ft3-approvals-queue-heading"><div><span class="ft3-approval-queue-label">REVIEW QUEUE</span>'+
+  '<h3>Awaiting your decision</h3>'+
+  '<p>'+esc(model.pendingCount)+' request'+(model.pendingCount===1?'':'s')+' pending approval</p></div>'+
+  '<span class="ft3-approval-queue-count">'+esc(model.pendingCount)+' pending</span></div>'+
+  (actionEnabled?'':'<p class="ft3-approval-readonly">Review actions are unavailable until the signed decision contract is activated.</p>')+
+  '<ul class="ft3-approval-cards">'+model.pending.map((r,i)=>approvalCard(r,i,actionEnabled)).join('')+'</ul>'+
   (model.pendingCount>model.pending.length?'<p>Additional requests require a signed paginated response.</p>':'')+'</div>'):blocked)+
  '</section>';
 }
