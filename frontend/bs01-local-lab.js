@@ -66,6 +66,10 @@ async function displayBoards(){
    try{
     await api('/api/policy',{method:'POST',
      body:{boardId:board.id,mode:selector.value,expectedRevision:board.revision}});
+    if(store.issued?.boardId===board.id&&selector.value!=='guest_shareable'){
+     store.issued=null;$('#issued-panel').hidden=true;$('#no-link').hidden=false;
+     $('#issued-url').value='';
+    }
     notify('Privacy policy changed for '+board.name);
     await displayBoards();await displayEvents();
    }catch(e){notify(e.message,true);await displayBoards();}
