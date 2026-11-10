@@ -68,7 +68,7 @@ import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
-import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor} from './material-sourcing-application.js';
+import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
@@ -866,6 +866,7 @@ function boardPage(){
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
  <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ ${isMaterialSourcingBoard(b)&&state.edit&&state.tab==='items'?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
@@ -4629,6 +4630,25 @@ async function action(name,button){
   contextualColumnCreate();break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
+ case 'mrh-new-part':{
+  if(!isMaterialSourcingBoard(state.board?.board)||!state.edit||
+     state.tab!=='items'||!activeBoardLayout())break;
+  const snapshot={boardId:state.boardId,userId:auth.userId,
+   workspaceId:state.context?.workspace_id};
+  openModal('New Material Sourcing part',
+   input('Part number','partNumber','',true),
+   async fd=>{
+    if(!boardHistoryAuthorized(snapshot))throw new ApiError('Board context changed.',403);
+    const created=await createMaterialSourcingPart({
+     api:db,auth,workspaceId:snapshot.workspaceId,
+     partNumber:fd.get('partNumber')
+    });
+    if(!boardHistoryAuthorized(snapshot))return;
+    await loadBoard(snapshot.boardId,'items');
+    toast('Part number '+created.partNumber+' created in Main group.');
+   },{submitLabel:'Create part'});
+  break;
+ }
  case 'board-item-detail':{await openBoardItemDetails(button.dataset.id);break;}
  case 'board-layout-reset':{
   const current=activeBoardLayout();if(!current)return;
