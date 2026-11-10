@@ -138,14 +138,24 @@ export function renderFuelTrackRefuelingDialog({snapshot=null,boardId=null,works
  '<span class="'+(receipt?'is-current':'')+'">Processed</span></div>'+
  (receipt?'<div class="ft3-refuel-confirmation is-done" role="status">✓ Refueling completed — enter the final transaction details.</div>'+
  '<form id="ft3-refuel-details-form" class="ft3-light-receipt-form" data-ft3-receipt="'+esc(r.id)+'">'+
- '<label>Actual Amount (₱) <span aria-hidden="true">*</span><input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label>'+
+ '<div class="ft3-refuel-field"><label for="ft3-refuel-amount">Actual Amount <span class="ft3-refuel-required" aria-label="required">*</span></label>'+
+ '<div class="ft3-refuel-input-wrap"><span class="ft3-refuel-unit" aria-hidden="true">₱</span>'+
+ '<input id="ft3-refuel-amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></div>'+
+ '<small>Enter the actual cost of this refueling.</small></div>'+
  '<div class="ft3-refuel-quick" aria-label="Suggested amounts">'+[500,1000,1500,2000,2500,3000].map(n=>
  '<button type="button" data-action="ft3-refuel-amount" data-value="'+n+'">₱'+n.toLocaleString('en-PH')+'</button>').join('')+'</div>'+
- '<label>Invoice / Receipt Number <input name="receiptNumber" type="text" maxlength="120" placeholder="INV-XXXX" autocomplete="off"></label>'+
- '<label>Fuel Quantity (Liters) <span aria-hidden="true">*</span><input name="liters" type="number" min="0.001" step="0.001" inputmode="decimal" placeholder="0" required></label>'+
+ '<div class="ft3-refuel-field"><label for="ft3-refuel-receipt-number">Invoice / Receipt Number <span class="ft3-refuel-optional">Optional</span></label>'+
+ '<input id="ft3-refuel-receipt-number" name="receiptNumber" type="text" maxlength="120" placeholder="e.g. INV-2026-001" autocomplete="off"></div>'+
+ '<div class="ft3-refuel-field"><label for="ft3-refuel-liters">Fuel Quantity <span class="ft3-refuel-required" aria-label="required">*</span></label>'+
+ '<div class="ft3-refuel-input-wrap"><input id="ft3-refuel-liters" name="liters" type="number" min="0.001" step="0.001" inputmode="decimal" placeholder="0.000" required>'+
+ '<span class="ft3-refuel-unit" aria-hidden="true">L</span></div>'+
+ '<small>Actual fuel dispensed, in liters.</small></div>'+
  '<div class="ft3-refuel-quick" aria-label="Suggested quantities">'+[5,10,15,20,25,50].map(n=>
  '<button type="button" data-action="ft3-refuel-liters" data-value="'+n+'">'+n+'L</button>').join('')+'</div>'+
- '<label class="ft3-refuel-file">Capture Receipt / Photo (optional, private)<input name="receiptPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>'+
+ '<div class="ft3-refuel-field ft3-refuel-upload"><label for="ft3-refuel-photo">Receipt / Photo <span class="ft3-refuel-optional">Optional · Private</span></label>'+
+ '<div class="ft3-refuel-upload-surface"><span class="ft3-refuel-upload-icon" aria-hidden="true">▧</span>'+
+ '<div class="ft3-refuel-upload-copy"><strong>Attach receipt image</strong><small>JPG, PNG or WebP · up to 5 MB</small></div>'+
+ '<input id="ft3-refuel-photo" name="receiptPhoto" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose a private receipt image"></div></div>'+
  '<footer class="ft3-refuel-dialog-footer"><button type="button" data-action="ft3-refuel-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
  '<button type="submit" class="ft3-refuel-primary"'+(busy?' disabled':'')+'>'+(busy?'Saving…':'✓ Save & Complete')+'</button></footer></form>':
  '<div class="ft3-refuel-confirmation">Confirm that this vehicle or container has actually been refueled. The final receipt fields will open once the signed transaction is saved.</div>'+

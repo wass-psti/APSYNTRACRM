@@ -294,7 +294,7 @@ test('signed LightFuels mounts two-step refueling dialog only for Admin and vali
  const detail=renderFuelTrackV3Application({detail:fixture(),section:'lightfuels',
   backend:{snapshot:next,refuelingDialog:{id,stage:'details'}}});
  assert.match(detail,/id="ft3-refuel-details-form"/);
- assert.match(detail,/Capture Receipt \/ Photo/);
+ assert.match(detail,/Receipt \/ Photo/);
  assert.match(detail,/Save & Complete/);
  const user=renderFuelTrackV3Application({detail:fixture(),section:'lightfuels',
   backend:{snapshot:{...snapshot,role:'User'},refuelingDialog:dialog}});
