@@ -1,5 +1,6 @@
 /** Authorized typed board-grid presentation. No domain records are synthesized. */
 import {moduleByBoardName} from './board-manifest.js';
+import {isMaterialSourcingRestrictedColumn} from './material-sourcing-schema-plan.js';
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
 import {boardTable} from './board-presentation.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -18,6 +19,7 @@ export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},a
  const restricted=module?new Set(module.restricted.map(n=>n.trim().toLowerCase())):null;
  const columns=(Array.isArray(detail?.columns)?detail.columns:[])
   .filter(c=>c.visible!==false&&c.system_key==null&&
+   !isMaterialSourcingRestrictedColumn(detail?.board,c)&&
    (!allowed||allowed.has(c.name)||
     (allowCustom&&(((c.column_key||'').startsWith('custom:')||
       (c.column_key||'').startsWith('custom_'))&&
