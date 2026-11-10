@@ -3,7 +3,7 @@
  * storage, or persistent reporting. Derived finance values are not edited.
  */
 import {ApiError,} from './session.js';
-import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_ADDITIONS} from './material-sourcing-schema-plan.js';
+import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,MATERIAL_SOURCING_ADDITIONS} from './material-sourcing-schema-plan.js';
 
 const PRIVATE_FIELDS=Object.freeze(MATERIAL_SOURCING_ADDITIONS
  .filter(field=>field.exposure==='restricted'&&!field.derived)
@@ -152,7 +152,7 @@ export function renderProtectedSourcingEditor(cells,{editing=true}={}){
 /** Add a real part number to the original Main group, never a demo fixture. */
 export async function createMaterialSourcingPart({api,auth,workspaceId,partNumber}){
  const boardId=MATERIAL_SOURCING_BOARD_ID;
- const groupId='21566a87-b287-4a61-b521-bb233956e09e';
+ const groupId=MATERIAL_SOURCING_GROUP.id;
  const itemId='00000000-0000-4000-8000-000000000000';
  const title=String(partNumber??'').trim();
  if(!title||title.length>240)deny('Part number must contain 1–240 characters.',400);
@@ -167,6 +167,7 @@ export async function createMaterialSourcingPart({api,auth,workspaceId,partNumbe
      group.id===groupId&&group.title==='Main group'))
   deny('Original Material Sourcing board or Main group changed.',409);
  if(!auth.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
+ await authorize({...input,edit:true});
  // The existing server RPC additionally checks current signed board edit access
  // and group ownership, and records an audit event.
  const savedId=await api.addItem(boardId,groupId,title);
