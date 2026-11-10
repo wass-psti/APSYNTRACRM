@@ -162,7 +162,7 @@ test('part creation denied without module ADMIN, wrong group, or empty title',as
 });
 test('new part UI is limited to signed material board and uses no reference data fixtures',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(source,/isMaterialSourcingBoard\(b\)&&state\.edit&&state\.tab==='items'/);
+ assert.match(source,/isMaterialSourcingBoard\(b\)&&state\.edit&&\['items','sourcing'\]\.includes\(state\.tab\)/);
  assert.match(source,/data-action="mrh-new-part"/);
  assert.match(source,/createMaterialSourcingPart\(\{/);
  assert.match(source,/input\('Part number','partNumber'\)/);
