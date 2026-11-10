@@ -7,6 +7,8 @@ on:
       - 'frontend/board-share.js'
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
+      - 'frontend/board-column-hover.css'
+      - 'frontend/tests/board-column-hover.test.mjs'
       - 'index.html'
       - 'frontend/tests/board-people.test.mjs'
       - 'frontend/app.js'
@@ -23,6 +25,8 @@ on:
       - 'frontend/board-share.js'
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
+      - 'frontend/board-column-hover.css'
+      - 'frontend/tests/board-column-hover.test.mjs'
       - 'index.html'
       - 'frontend/tests/board-people.test.mjs'
       - 'frontend/app.js'
@@ -56,7 +60,7 @@ jobs:
           node --check frontend/bs01-local-lab.js
       - name: BS01 fail-closed source and boundary tests
         run: |
-          node --test frontend/tests/board-share.test.mjs frontend/tests/board-share-phase2.test.mjs frontend/tests/board-people.test.mjs frontend/tests/board-activity-ui.test.mjs frontend/tests/board-col01-readers.test.mjs frontend/tests/board-collaboration.test.mjs server/tests/bs01-policy-http-boundary.test.mjs server/tests/bs01-local-lab.test.mjs
+          node --test frontend/tests/board-presentation.test.mjs frontend/tests/board-column-hover.test.mjs frontend/tests/board-share.test.mjs frontend/tests/board-share-phase2.test.mjs frontend/tests/board-people.test.mjs frontend/tests/board-activity-ui.test.mjs frontend/tests/board-col01-readers.test.mjs frontend/tests/board-collaboration.test.mjs server/tests/bs01-policy-http-boundary.test.mjs server/tests/bs01-local-lab.test.mjs
       - name: Explain scope
         run: |
           echo "BS01 lab is an isolated loopback simulator; no real invitations, Supabase calls or SQL activation."
