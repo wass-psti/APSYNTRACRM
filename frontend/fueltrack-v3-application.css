@@ -492,3 +492,47 @@
 #app .ft3-refuel-dialog .ft3-light-receipt-form .ft3-refuel-dialog-footer{margin-top:8px}
 @media(max-width:520px){#app .ft3-refuel-overlay{padding:10px}#app .ft3-refuel-dialog{border-radius:17px;max-height:94vh}#app .ft3-refuel-dialog-header,#app .ft3-refuel-dialog-body{padding:17px}#app .ft3-refuel-dialog-header h2{font-size:18px}}
 @media(prefers-reduced-motion:reduce){#app .ft3-refuel-overlay{backdrop-filter:none}}
+
+/* Refueling form refinement: calm hierarchy, native inputs, clear units and file selection. */
+#app .ft3-refuel-overlay{background:rgba(17,35,45,.57);backdrop-filter:blur(5px)}
+#app .ft3-refuel-dialog{width:min(100%,510px);background:#fff;border-color:#d9e5e9;border-radius:20px;box-shadow:0 28px 85px rgba(10,32,43,.25)}
+#app .ft3-refuel-dialog-header{background:#f8fbfc;padding:24px 26px 21px}
+#app .ft3-refuel-dialog-header h2{font-size:22px;line-height:1.3;margin-top:8px}
+#app .ft3-refuel-dialog-header p{font-size:12px;line-height:1.5}
+#app .ft3-refuel-dialog-body{padding:22px 26px 24px}
+#app .ft3-refuel-person{background:#f2f8f9;border-color:#e1edf0}
+#app .ft3-refuel-person strong{font-size:13px}
+#app .ft3-refuel-progress{margin:20px 0 22px}
+#app .ft3-refuel-progress span{font-size:10px;line-height:1.4}
+#app .ft3-refuel-confirmation{font-size:12px;line-height:1.6}
+#app .ft3-refuel-dialog .ft3-light-receipt-form{gap:15px;margin-top:22px}
+#app .ft3-refuel-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+#app .ft3-refuel-field>label{display:flex;align-items:center;gap:6px;color:#294550;font-size:12px;font-weight:720}
+#app .ft3-refuel-required{color:#d45155;font-weight:800}
+#app .ft3-refuel-optional{font-size:10px;font-weight:550;color:#78909a;margin-left:auto}
+#app .ft3-refuel-field>small{font-size:10px;color:#81939b;line-height:1.35}
+#app .ft3-refuel-dialog .ft3-refuel-field>input,
+#app .ft3-refuel-dialog .ft3-refuel-input-wrap{min-height:45px;border:1px solid #d6e4e9;border-radius:11px;background:#f9fbfc}
+#app .ft3-refuel-dialog .ft3-refuel-field>input{box-sizing:border-box;padding:10px 13px;font-size:13px}
+#app .ft3-refuel-input-wrap{display:flex;align-items:center;overflow:hidden;transition:border-color .15s ease,box-shadow .15s ease}
+#app .ft3-refuel-input-wrap:focus-within{border-color:#139f9a;box-shadow:0 0 0 3px rgba(20,153,150,.12)}
+#app .ft3-refuel-dialog .ft3-refuel-input-wrap input{flex:1;min-width:0;width:100%;border:0!important;box-shadow:none!important;outline:0!important;background:transparent;min-height:43px;padding:9px 12px;font-size:14px;color:#24424e;font-variant-numeric:tabular-nums}
+#app .ft3-refuel-unit{flex:none;padding:0 12px;color:#64808b;font-size:13px;font-weight:750}
+#app .ft3-refuel-dialog input[type=number]{appearance:textfield;-moz-appearance:textfield}
+#app .ft3-refuel-dialog input[type=number]::-webkit-inner-spin-button,
+#app .ft3-refuel-dialog input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+#app .ft3-refuel-quick{gap:7px;margin-top:-6px}
+#app .ft3-refuel-quick button{border-radius:8px;min-height:32px;padding:7px 11px;background:#f1f6f7;border-color:#dfeaed;color:#4a6a78;font-size:11px}
+#app .ft3-refuel-quick button:hover{background:#e0f2f1;border-color:#b7dbd9;color:#167c79}
+#app .ft3-refuel-upload-surface{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px dashed #bdd5de;background:#f8fbfc;border-radius:13px;padding:13px}
+#app .ft3-refuel-upload-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:#e6f4f5;color:#167f83;font-size:19px}
+#app .ft3-refuel-upload-copy{flex:1;min-width:130px}
+#app .ft3-refuel-upload-copy strong{display:block;color:#35505b;font-size:12px;font-weight:720}
+#app .ft3-refuel-upload-copy small{display:block;margin-top:4px;color:#7b939d;font-size:10px}
+#app .ft3-refuel-dialog .ft3-refuel-upload-surface input{flex-basis:100%;width:100%;min-width:0;padding:7px;border:0;min-height:0;background:transparent;font-size:11px;color:#5e7883}
+#app .ft3-refuel-dialog input[type=file]::file-selector-button{margin-right:10px;border:1px solid #c7dde4;border-radius:8px;background:#fff;padding:8px 11px;color:#236e7b;font:inherit;font-weight:700;cursor:pointer}
+#app .ft3-refuel-dialog .ft3-light-receipt-form .ft3-refuel-dialog-footer{border-top:1px solid #edf1f3;margin-top:5px;padding-top:17px}
+#app .ft3-refuel-dialog-footer button{min-height:42px;font-size:12px;padding:11px 19px}
+#app .ft3-refuel-dialog-footer .ft3-refuel-primary{box-shadow:0 4px 12px rgba(7,142,135,.15)}
+@media(max-width:520px){#app .ft3-refuel-dialog-header,#app .ft3-refuel-dialog-body{padding:18px}#app .ft3-refuel-dialog-header h2{font-size:19px}#app .ft3-refuel-dialog-footer button{flex:1}#app .ft3-refuel-upload-copy{min-width:0}}
+@media(prefers-reduced-motion:reduce){#app .ft3-refuel-input-wrap{transition:none}}

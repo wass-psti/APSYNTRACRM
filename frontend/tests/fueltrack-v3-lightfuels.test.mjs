@@ -114,3 +114,19 @@ test('two-stage modal requires signed request stage and scopes actions',()=>{
  assert.equal(renderFuelTrackRefuelingDialog({...args(done),dialog:{id:'foreign',stage:'details'}}),'');
  assert.equal(renderFuelTrackRefuelingDialog({...args({...done,workspaceId:'other'}),dialog:{id,stage:'details'}}),'');
 });
+
+test('refueling details refinement preserves required numeric fields and private receipt selection',()=>{
+ const id='55555555-5555-4555-8555-555555555555';
+ const request={id,requestor:'Signed Driver',reference:'G42 80H',type:'vehicle',
+  status:'Refueling Done',createdAt:'2026-11-10T16:50:14Z',revision:4};
+ const html=renderFuelTrackRefuelingDialog({...args({...baseline,activeCount:1,queue:[request]}),
+  dialog:{id,stage:'details'}});
+ assert.match(html,/class="ft3-refuel-input-wrap"/);
+ assert.match(html,/aria-hidden="true">₱</);
+ assert.match(html,/id="ft3-refuel-amount" name="amount" type="number"[^>]*required/);
+ assert.match(html,/id="ft3-refuel-liters" name="liters" type="number"[^>]*required/);
+ assert.match(html,/id="ft3-refuel-photo" name="receiptPhoto" type="file"/);
+ assert.match(html,/name="receiptPhoto" type="file" accept="image\/jpeg,image\/png,image\/webp"/);
+ assert.match(html,/type="submit" class="ft3-refuel-primary"/);
+ assert.match(html,/data-action="ft3-refuel-cancel"/);
+});
