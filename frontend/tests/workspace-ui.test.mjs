@@ -13,7 +13,7 @@ const current={id:signedWorkspace,name:'Work Management'};
 test('workspace catalog admits only the current signed context; no unverified discovery',()=>{
  assert.equal(WS01_DISCOVERY_ENABLED,true);
  assert.equal(WS01_CREATION_ENABLED,true);
- assert.equal(WS01_SWITCHING_ENABLED,false);
+ assert.equal(WS01_SWITCHING_ENABLED,true);
  const result=workspaceCatalog(current);
  assert.equal(result.status,'CURRENT_WORKSPACE_ONLY');
  assert.equal(result.rows.length,1);
@@ -47,7 +47,7 @@ test('unverified or forged foreign workspace entries never render',()=>{
  const injected={...c,rows:[...c.rows,{id:foreignWorkspace,name:'Secret',relation:'owner'}]};
  assert.deepEqual(visibleWorkspaces(injected).map(x=>x.id),[signedWorkspace]);
 });
-test('general workspace selector loads authorized member discovery without enabling switching',()=>{
+test('general workspace selector uses authorized member discovery and signed server switching',()=>{
  const source=readFileSync('frontend/workspace-ui.js','utf8');
  assert.match(source,/WS01_DISCOVERY_ENABLED=true/);
  assert.match(source,/options\.lifecycle\.discover\(\)/);
@@ -59,7 +59,7 @@ test('general workspace selector loads authorized member discovery without enabl
  assert.match(source,/openInvites\(read\(\)\.rows\.find\(row=>row\.active\),\{/);
  assert.match(source,/Workspace switching is not yet activated/);
  assert.match(source,/session\.status='error'/);
- assert.doesNotMatch(source,/WS01_SWITCHING_ENABLED=true/);
+ assert.match(source,/WS01_SWITCHING_ENABLED=true/);
  assert.match(source,/await lifecycle\.select\(workspaceId,expectedWorkspaceId\)/);
  assert.match(source,/options\.switchingEnabled===true/);
 });
@@ -405,7 +405,7 @@ test('workspace selector uses signed catalog counts and permits a read-only retr
  assert.match(source,/if\(session\.status==='loading'&&session\.started\)return/);
  assert.match(source,/data-ws01-feedback/);
  assert.match(css,/\.ws01-retry:focus-visible/);
- assert.doesNotMatch(source,/WS01_SWITCHING_ENABLED=true/);
+ assert.match(source,/WS01_SWITCHING_ENABLED=true/);
 });
 test('frontend entrypoint refreshes workspace-related module assets together',()=>{
  const app=readFileSync('frontend/app.js','utf8');
@@ -470,7 +470,7 @@ test('workspace controls are actionable for verified rows and fail closed for un
  assert.match(app,/onOpenCurrent:\(\)=>\{location\.hash='#\/overview';\}/);
  assert.match(css,/\.ws01-entry-button:focus-visible/);
  assert.match(css,/\.ws01-details-card/);
- assert.match(source,/WS01_SWITCHING_ENABLED=false/);
+ assert.match(source,/WS01_SWITCHING_ENABLED=true/);
  assert.doesNotMatch(source,/WS02_INVITATIONS_ENABLED/);
  assert.match(source,/Send invites — pending activation/);
  assert.match(source,/\(enabled\?'':'disabled '\)/);

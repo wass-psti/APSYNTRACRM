@@ -121,6 +121,11 @@ export function expectedFullCallerSources(manifest,g4b,g4c) {
  const evolution=sources.get(evolutionSignature);
  ensure(evolution?.source_sha256==='5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d',
    'FULL_SOURCE_EVOLUTION_BASELINE_DRIFT');
+ // Preserve the historical identity of the independently observed signed
+ // access-context evolution. This does not approve its runtime behavior.
+ ensure(sources.get('public.wm_auth_access_context()')?.source_sha256===
+  '7b60bbc93690cbdf34c9db2e7c541e1a563a385aeeae75642fb1c2e6e7eb49d7',
+  'FULL_SOURCE_CONTEXT_BASELINE_DRIFT');
  return [...sources.values()].sort((a,b)=>a.signature.localeCompare(b.signature));
 }
 
@@ -159,16 +164,21 @@ export function verifyCompletePrivateSourceBundle({directory,sources,repo=repoRo
   ensure(st.size>0&&st.size<=256*1024,'INVALID_SOURCE_SIZE');
   const source=declared.get(filename),observed=sha256(readFileSync(path));
   if(observed!==source.source_sha256) {
-   ensure(allowDocumentedLiveEvolution &&
+   const documentedTradeLink=
      source.signature==='private.tl03_commit(p_board_id uuid, p_document_id uuid, p_expected_revision bigint, p_operation text, p_data jsonb)' &&
      source.source_sha256==='5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d' &&
-     observed==='08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618',
+     observed==='08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618';
+   const documentedContext=
+     source.signature==='public.wm_auth_access_context()' &&
+     source.source_sha256==='7b60bbc93690cbdf34c9db2e7c541e1a563a385aeeae75642fb1c2e6e7eb49d7' &&
+     observed==='b73a1b4e3bb10f8412405cea38a95c870ca26d45dc8d60154f91957b1fcd376b';
+   ensure(allowDocumentedLiveEvolution && (documentedTradeLink||documentedContext),
      'FULL_SOURCE_FINGERPRINT_MISMATCH');
    documented++;
   }
  }
  return Object.freeze({verifiedOriginals:74,originalCallers:73,
-  executionPerformed:false,documentedLiveEvolutionAccepted:documented===1});
+  executionPerformed:false,documentedLiveEvolutionAccepted:documented>0});
 }
 
 // Build a read-only, metadata-only live drift probe from the pinned inventories.
@@ -209,13 +219,21 @@ export function generateLiveCatalogFingerprintSql(manifest,g4b,g4c) {
  ensure(knownEntry?.hash===knownHistoricalHash &&
    knownEntry.authExecute===false && knownEntry.securityDefiner===true,
    'DOCUMENTED_EVOLUTION_HISTORICAL_BASELINE_DRIFT');
+ const contextSignature='public.wm_auth_access_context()';
+ const contextHistoricalHash='7b60bbc93690cbdf34c9db2e7c541e1a563a385aeeae75642fb1c2e6e7eb49d7';
+ const contextLiveHash='b73a1b4e3bb10f8412405cea38a95c870ca26d45dc8d60154f91957b1fcd376b';
+ const contextEntry=entries.get(contextSignature);
+ ensure(contextEntry?.hash===contextHistoricalHash &&
+   contextEntry.authExecute===true && contextEntry.securityDefiner===true &&
+   contextEntry.anonExecute===null,
+   'DOCUMENTED_CONTEXT_HISTORICAL_BASELINE_DRIFT');
  const literal=value=>"'"+value.replaceAll("'","''")+"'";
  const bool=value=>value===null||value===undefined?'NULL':value?'true':'false';
  const rows=[...entries].sort(([a],[b])=>a.localeCompare(b))
   .map(([signature,record])=>'('+
     [literal(signature),literal(record.hash),bool(record.securityDefiner),
       bool(record.authExecute),bool(record.anonExecute),
-      signature===knownSignature?literal(knownLiveHash):'NULL'].join(',')+')')
+      signature===knownSignature?literal(knownLiveHash):signature===contextSignature?literal(contextLiveHash):'NULL'].join(',')+')')
   .join(',\n ');
  return `-- CP-WS-ACTIVATE-04 read-only historical baseline comparison.
 -- Compare catalog SHA-256, SECURITY DEFINER and direct EXECUTE grants.

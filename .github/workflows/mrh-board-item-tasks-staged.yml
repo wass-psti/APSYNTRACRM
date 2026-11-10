@@ -6,6 +6,10 @@ on:
       - 'sql/tests/mrh-board-item-tasks-disposable.sql'
       - 'sql/tests/mrh-board-item-tasks-production-readiness-readonly.sql'
       - 'frontend/tests/mrh-board-task-production-gate.test.mjs'
+      - 'frontend/tests/mrh-board-task-live-activation-evidence.test.mjs'
+      - 'sql/tests/mrh-board-item-tasks-production-postflight-readonly.sql'
+      - 'sql/mrh-board-item-tasks-PRODUCTION-ACTIVATED-20261110.sql'
+      - 'sql/mrh-board-item-tasks-RPC-CONTAINMENT-NO-DATA-LOSS.sql'
       - 'frontend/material-sourcing-board-tasks.js'
       - 'frontend/material-sourcing-application.js'
       - 'frontend/material-sourcing-detail-tabs.js'
@@ -18,6 +22,10 @@ on:
       - 'sql/tests/mrh-board-item-tasks-disposable.sql'
       - 'sql/tests/mrh-board-item-tasks-production-readiness-readonly.sql'
       - 'frontend/tests/mrh-board-task-production-gate.test.mjs'
+      - 'frontend/tests/mrh-board-task-live-activation-evidence.test.mjs'
+      - 'sql/tests/mrh-board-item-tasks-production-postflight-readonly.sql'
+      - 'sql/mrh-board-item-tasks-PRODUCTION-ACTIVATED-20261110.sql'
+      - 'sql/mrh-board-item-tasks-RPC-CONTAINMENT-NO-DATA-LOSS.sql'
       - 'frontend/material-sourcing-board-tasks.js'
       - 'frontend/material-sourcing-application.js'
       - 'frontend/material-sourcing-detail-tabs.js'
@@ -41,7 +49,7 @@ jobs:
           node --check frontend/app.js
           node --check frontend/material-sourcing-board-tasks.js
           node --check frontend/material-sourcing-application.js
-          node --test frontend/tests/material-sourcing-board-tasks.test.mjs frontend/tests/material-sourcing-application.test.mjs frontend/tests/material-sourcing-detail-tabs.test.mjs frontend/tests/mrh-board-task-production-gate.test.mjs
+          node --test frontend/tests/material-sourcing-board-tasks.test.mjs frontend/tests/material-sourcing-application.test.mjs frontend/tests/material-sourcing-detail-tabs.test.mjs frontend/tests/mrh-board-task-production-gate.test.mjs frontend/tests/mrh-board-task-live-activation-evidence.test.mjs
       - name: Isolated PostgreSQL 17 CAS, RLS, denial and audit
         run: |
           set -euo pipefail

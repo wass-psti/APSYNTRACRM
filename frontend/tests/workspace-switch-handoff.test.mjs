@@ -20,8 +20,8 @@ const receipt=()=>({
  workspaceId:shared,previousWorkspaceId:primary,switched:true
 });
 
-test('production workspace switch remains disabled without the approved backend',()=>{
- assert.equal(WS01_SWITCHING_ENABLED,false);
+test('staged workspace switching binds to signed server selection without local scope changes',()=>{
+ assert.equal(WS01_SWITCHING_ENABLED,true);
  const ui=readFileSync('frontend/workspace-ui.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(ui,/data-ws01-action="select"/);
@@ -32,7 +32,8 @@ test('production workspace switch remains disabled without the approved backend'
  assert.match(app,/switchingEnabled:WS01_SWITCHING_ENABLED/);
  assert.match(app,/onWorkspaceSwitched:\(\)=>\{/);
  assert.match(app,/location\.reload\(\)/);
- assert.doesNotMatch(app,/WS01_SWITCHING_ENABLED=true/);
+ assert.match(ui,/WS01_SWITCHING_ENABLED=true/);
+ assert.match(app,/switchingEnabled:WS01_SWITCHING_ENABLED/);
 });
 
 test('fresh signed catalog must be checked before CAS RPC and reload receipt',async()=>{
