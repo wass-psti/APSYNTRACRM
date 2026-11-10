@@ -58,3 +58,55 @@ A genuine user with two active memberships must select one and verify that
 server context, authorized Boards and modules change after reload, then
 switch back. Foreign workspace, stale CAS, expired session and revoked
 membership actions must fail closed. Only then declare production acceptance.
+
+## CP-WS01-PROTECTED-SIGNED-CUTOVER — fresh live preflight (2026-11-10)
+
+**Release NO-GO: no production mutation.** The user explicitly requested the
+protected switching cutover; technical acceptance remains mandatory because
+current_workspace_id is a shared authorization boundary.
+
+Fresh read-only production catalog checks:
+
+- wm_ws01_select(uuid,uuid) absent; ws01_prune_session_choices() absent.
+- Private session-choice and flags tables present, selection_enabled=false,
+  with **zero active choice rows**.
+- 43 active workspace memberships across 41 distinct users; two accounts
+  have multiple active workspace memberships.
+- The existing user associated with the requested Work Management invitation
+  has active memberships in both Main Workspace and Work Management.
+- Current production resolver SHA-256 is
+  17495f42a737de0e59f6ca4b2b36f6f02bd0647e08b0db9a358a9eac48e75e92.
+- All **74** expected protected function definitions exist. Comparing live
+  SHA-256 fingerprints with the committed H3/G4B/G4C manifest returned
+  **72 exact matches, two changed definitions, zero missing**:
+  - public.wm_auth_access_context():
+    live b73a1b4e3bb10f8412405cea38a95c870ca26d45dc8d60154f91957b1fcd376b
+    versus pinned 7b60bbc93690cbdf34c9db2e7c541e1a563a385aeeae75642fb1c2e6e7eb49d7.
+  - private.tl03_commit(...):
+    live 08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618
+    versus historical
+    5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d.
+    The TradeLink evolution was previously documented; its live source
+    still needs execution evidence under the proposed resolver.
+- Additional source search found 65 functions currently referencing the
+  shared workspace resolver; this is not an exhaustive substitute for the
+  73-unique-caller protected dependency inventory.
+- Browser inspection shows the existing Employee signed into APSYNTRA CRM
+  with the disabled switch control. Connected browser inspection is
+  read-only; the authorized local Chromium active tab was unrelated and
+  contained no APSYNTRA session, so **no signed RPC acceptance was executed
+  in this increment**.
+
+The earlier owner-led readiness review explicitly requires **source-faithful
+execution of 73 affected caller paths in protected isolated PostgreSQL 17**
+(including actual role-delegation behavior and denied/expired/revoked-session
+outcomes) plus a demonstrable database **and Storage** recovery rehearsal
+against RPO/RTO 24h. The available synthetic disposable SQL tests and
+source fingerprints do not satisfy those runtime/recovery gates.
+
+The migration has **not** been applied: no changes to
+public.current_workspace_id, grant/EXECUTE state, lifecycle flags, active
+workspace choices, role or membership rows, or frontend deployment.
+PR #206 must remain draft. Next execution must reconcile both live changed
+definitions, run protected source-faithful caller and recovery acceptance,
+then perform the controlled signed cutover and release only if those gates pass.
