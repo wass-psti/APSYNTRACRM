@@ -119,3 +119,15 @@ No recurring retention, remote immutable backup, physical provider restore,
 or hosted 24-hour RTO is verified. No alternate architecture is approved.
 The implementation and pending decision are recorded in
 docs/FUELTRACK-V3-RETENTION-ARCHITECTURE-APPROVAL-20261110.md.
+
+## November 10 — Atomic local recovery-set staging
+
+Implemented scripts/ft3-recovery-set-stage.mjs with SHA-256 revalidation,
+owner-only local staging, all-or-nothing directory publication, overwrite
+refusal and provenance that prevents copied historical sets being counted
+as new independent backups or offsite retention. Seven synthetic security
+and integrity tests passed. See the recovery set staging report.
+
+No offsite destination, storage budget, recurring cadence, live production
+export, provider physical restore exception or alternate retention policy
+was approved. The binding recovery NO-GO remains unchanged.

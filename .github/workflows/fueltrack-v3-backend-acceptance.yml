@@ -12,6 +12,7 @@ on:
       - 'scripts/ft3-recovery-rto-rehearsal*.mjs'
       - 'scripts/ft3-rpo-observation*.mjs'
       - 'scripts/ft3-recovery-retention-gate*.mjs'
+      - 'scripts/ft3-recovery-set-stage*.mjs'
       - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
   workflow_dispatch:
 
@@ -42,3 +43,5 @@ jobs:
         run: node --test scripts/ft3-rpo-observation.test.mjs
       - name: Verify retention cadence and offsite assurance checks remain fail closed
         run: node --test scripts/ft3-recovery-retention-gate.test.mjs
+      - name: Verify atomic local recovery set staging and tamper denials
+        run: node --test scripts/ft3-recovery-set-stage.test.mjs
