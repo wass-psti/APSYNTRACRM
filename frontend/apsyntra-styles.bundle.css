@@ -12273,14 +12273,39 @@
 #app .ft3-light-filters button{border:1px solid #d1e4e7;padding:7px 11px;border-radius:99px;background:#f0f6f8;color:#557780;font:inherit}
 #app .ft3-light-filters :disabled{cursor:not-allowed;opacity:.55}
 #app .ft3-light-unavailable{padding:35px 23px;border:1px solid #d5e3e8;background:#f4f9fa;border-radius:17px;text-align:center;color:#657e89;line-height:1.65}
-#app .ft3-light-queue{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-#app .ft3-light-card{border:1px solid #d0e1e5;border-left:3px solid #e45a61;background:#edf6f8;border-radius:18px;padding:16px;min-width:0}
-#app .ft3-light-card-top{display:flex;justify-content:space-between;gap:9px;align-items:center}
-#app .ft3-light-card-top strong{overflow-wrap:anywhere}
-#app .ft3-light-card-top span{color:#108bb5;font-size:10px}
-#app .ft3-light-card p{font-size:11px;color:#617b86}
-#app .ft3-light-card small{font-size:10px;color:#108d89}
-#app .ft3-light-card button{margin-top:8px;border:1px solid #d1e3e6;border-radius:10px;padding:8px 12px;opacity:.55;cursor:not-allowed}
+#app .ft3-light-queue-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:24px 0 13px}
+#app .ft3-light-queue-head span{font-size:10px;color:#59828d;letter-spacing:.11em;font-weight:750}
+#app .ft3-light-queue-head h3{margin:4px 0 0;font-size:17px;font-weight:750;color:#263c47}
+#app .ft3-light-queue-head strong{border:1px solid #e6d9ab;background:#fff7df;color:#896b24;padding:8px 12px;border-radius:99px;font-size:11px}
+#app .ft3-light-queue{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;align-items:start}
+#app .ft3-light-card{min-width:0;border:1px solid #d5e4e8;border-radius:19px;background:#fff;box-shadow:0 8px 24px rgba(31,73,83,.06);padding:18px}
+#app .ft3-light-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#app .ft3-light-card-person{display:flex;gap:11px;align-items:center;min-width:0}
+#app .ft3-light-card-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:13px;background:#e4f4f4;color:#117f82;font-size:18px}
+#app .ft3-light-card-overline{display:block;font-size:10px;color:#8497a0;font-weight:700;letter-spacing:.09em}
+#app .ft3-light-card-person h3{font-size:14px;color:#263d48;font-weight:750;margin:4px 0 0;overflow-wrap:anywhere}
+#app .ft3-light-card-type{border:1px solid #d5e9f7;background:#edf8ff;color:#287fba;border-radius:99px;padding:7px 10px;font-size:10px;font-weight:750}
+#app .ft3-light-card-info{margin:16px 0;padding:13px 15px;border:1px solid #edf1f2;background:#f8fbfc;border-radius:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#app .ft3-light-card-info div{display:flex;flex-direction:column;gap:5px;min-width:0}
+#app .ft3-light-card-info span{font-size:10px;color:#83969f}
+#app .ft3-light-card-info strong{font-size:11px;color:#344e5b;font-weight:650;overflow-wrap:anywhere}
+#app .ft3-light-card-status{padding-bottom:15px;border-bottom:1px solid #eef1f2}
+#app .ft3-light-state{display:inline-flex;gap:7px;align-items:center;font-size:10px;font-weight:750;background:#e6f7f3;border:1px solid #bfe5d9;color:#167a6b;border-radius:99px;padding:7px 11px}
+#app .ft3-light-state.is-awaiting{background:#fff6e5;border-color:#f1ddaa;color:#946d20}
+#app .ft3-light-state>span{font-size:8px}
+#app .ft3-light-card button{font:inherit;min-height:42px;border-radius:11px;padding:10px 14px;cursor:pointer;font-weight:750;transition:background-color .15s ease,border-color .15s ease}
+#app .ft3-light-card button:disabled{opacity:.55;cursor:not-allowed}
+#app .ft3-light-card button:focus-visible{outline:2px solid #098b88;outline-offset:2px}
+#app .ft3-light-mark,#app .ft3-light-complete{margin-top:15px;width:100%;background:#078c85;border:1px solid #078c85;color:white;font-size:12px}
+#app .ft3-light-mark:hover:not(:disabled),#app .ft3-light-complete:hover:not(:disabled){background:#067b75}
+#app .ft3-light-action-note{color:#7a8790;font-size:11px;line-height:1.55;margin:14px 0 0}
+#app .ft3-light-receipt-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
+#app .ft3-light-receipt-form h4{grid-column:1/-1;font-size:13px;margin:0 0 2px;color:#29414d}
+#app .ft3-light-receipt-form label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:650;color:#5f7b87;min-width:0}
+#app .ft3-light-receipt-form input{width:100%;min-height:38px;box-sizing:border-box;border-radius:9px;border:1px solid #d7e3e8;padding:8px 10px;font:inherit;color:#29414d;background:white}
+#app .ft3-light-receipt-form .ft3-light-complete{grid-column:1/-1}
+@media(max-width:850px){#app .ft3-light-queue{grid-template-columns:1fr}}
+@media(max-width:520px){#app .ft3-light-card-info,#app .ft3-light-receipt-form{grid-template-columns:1fr}}
 #app .ft3-light-completed{margin-top:25px;border:1px solid #d7e3e7;border-radius:19px;padding:18px;background:#f0f7f9}
 #app .ft3-light-completed h3{font-size:14px;margin:0 0 3px}
 #app .ft3-light-completed>p{font-size:11px;color:#738892;margin:0 0 12px}
@@ -12368,6 +12393,18 @@
 
 #app .ft3-new-retry{display:block;margin:10px auto 0;border:1px solid #a5cfd0;border-radius:10px;padding:10px 16px;background:#f5fafb;color:#126d72;font:inherit;font-weight:650;cursor:pointer}
 #app .ft3-new-retry:focus-visible{outline:2px solid #1774a4;outline-offset:2px}
+
+/* LightFuels review workspace: elevate real signed data, not inactive controls. */
+#app .ft3-light{background:linear-gradient(155deg,#f9fcfd 0%,#f1f8f9 100%);border-radius:19px}
+#app .ft3-light-head h2{font-size:27px;font-weight:760;letter-spacing:-.04em}
+#app .ft3-light-reminder{position:relative;background:#eaf5fa;border:1px solid #a9dbe9;border-left:4px solid #168cbb;border-radius:15px;margin:20px 0;padding:16px 18px}
+#app .ft3-light-reminder strong{color:#247b9e}
+#app .ft3-light-metrics{box-shadow:0 6px 20px rgba(33,76,93,.035)}
+#app .ft3-light-metric strong{font-size:26px;font-weight:760}
+#app .ft3-light-completed{background:#fff;box-shadow:0 6px 19px rgba(30,66,81,.04)}
+#app .ft3-light-guide{background:#fff}
+#app .ft3-light-guide-steps p{font-size:12px;color:#657c88}
+@media(prefers-reduced-motion:reduce){#app .ft3-light-card button{transition:none}}
 
 /* frontend/tradelink-application.css */
 /* TradeLink source-aligned application shell. Scoped to avoid board/TimeTracker regressions. */

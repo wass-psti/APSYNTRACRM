@@ -39,24 +39,45 @@ export function fuelTrackLightFuelsModel({snapshot=null,boardId=null,workspaceId
 }
 const metric=(label,value)=>'<div class="ft3-light-metric"><small>'+esc(label)+
  '</small><strong>'+esc(value)+'</strong></div>';
-const card=(r,actionEnabled=false)=>'<article class="ft3-light-card"><div class="ft3-light-card-top"><strong>'+
- esc(r.requestor)+'</strong><span>'+esc(r.type==='vehicle'?'Vehicle':'Container')+'</span></div>'+
- '<p>'+esc(r.reference)+'</p><small>'+esc(r.status)+'</small>'+
- '<p class="ft3-light-created">Created '+esc(r.createdAt)+'</p>'+
- (actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0?(r.status==='Awaiting Refueling'?'<button type="button" data-action="ft3-mark-refueled" data-id="'+esc(r.id)+'">Mark as Refueling Done</button>':'<form class="ft3-light-receipt-form" data-ft3-receipt="'+esc(r.id)+'"><label>Actual Amount (₱) <input name="amount" type="number" min="0.01" step="0.01" required></label><label>Fuel Quantity (Liters) <input name="liters" type="number" min="0.001" step="0.001" required></label><label>Receipt Number (optional) <input name="receiptNumber" type="text" maxlength="120"></label><label>Receipt Photo (optional, private) <input name="receiptPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label><button type="submit">Save & Complete</button></form>'):'<button type="button" disabled title="Signed refueling transition unavailable">Process — unavailable</button>')+'</article>';
+const displayDate=value=>new Intl.DateTimeFormat('en-PH',{
+ timeZone:'Asia/Manila',month:'short',day:'numeric',year:'numeric',
+ hour:'numeric',minute:'2-digit',hour12:true
+}).format(new Date(value));
+const card=(r,actionEnabled=false)=>{
+ const canAct=actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0;
+ const awaiting=r.status==='Awaiting Refueling';
+ return '<article class="ft3-light-card" aria-label="Refueling request">'+
+ '<div class="ft3-light-card-top"><div class="ft3-light-card-person">'+
+ '<span class="ft3-light-card-icon" aria-hidden="true">'+(r.type==='vehicle'?'⛽':'▣')+'</span>'+
+ '<div><span class="ft3-light-card-overline">FUEL REQUEST</span><h3>'+esc(r.requestor)+'</h3></div></div>'+
+ '<span class="ft3-light-card-type">'+esc(r.type==='vehicle'?'Vehicle':'Container')+'</span></div>'+
+ '<div class="ft3-light-card-info"><div><span>Reference</span><strong>'+esc(r.reference)+'</strong></div>'+
+ '<div><span>Submitted</span><strong>'+esc(displayDate(r.createdAt))+'</strong></div></div>'+
+ '<div class="ft3-light-card-status"><span class="ft3-light-state'+(awaiting?' is-awaiting':'')+'">'+
+ '<span aria-hidden="true">●</span> '+esc(r.status)+'</span></div>'+
+ (canAct?(awaiting?
+  '<button class="ft3-light-mark" type="button" data-action="ft3-mark-refueled" data-id="'+esc(r.id)+'">'+
+  '<span aria-hidden="true">✓</span> Mark as Refueling Done</button>':
+  '<form class="ft3-light-receipt-form" data-ft3-receipt="'+esc(r.id)+'">'+
+  '<h4>Complete refueling record</h4>'+
+  '<label>Actual Amount (₱) <input name="amount" type="number" min="0.01" step="0.01" required></label>'+
+  '<label>Fuel Quantity (Liters) <input name="liters" type="number" min="0.001" step="0.001" required></label>'+
+  '<label>Receipt Number (optional) <input name="receiptNumber" type="text" maxlength="120"></label>'+
+  '<label>Receipt Photo (optional, private) <input name="receiptPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>'+
+  '<button class="ft3-light-complete" type="submit">Save & Complete</button></form>'):
+  '<p class="ft3-light-action-note" role="status">Signed Admin access and a current request revision are required to process this request.</p>')+
+ '</article>';
+};
 function workflowGuide(){
  return '<details class="ft3-light-guide"><summary>Refueling workflow requirements</summary>'+
  '<div class="ft3-light-guide-steps">'+
  '<section><h3>1. Mark as Refueling Done</h3>'+
  '<p>Confirm physical refueling is complete. This transition requires an authorized, audited server operation.</p>'+
- '<button type="button" disabled>Mark as Refueling Done — unavailable</button></section>'+
+ '</section>'+
  '<section><h3>2. Enter Refueling & Receipt Details</h3>'+
  '<p>Actual amount, optional invoice or receipt number, fuel quantity and optional receipt photo are required by the reference workflow.</p>'+
- '<div class="ft3-light-field-grid"><label>Actual Amount (₱)<input id="ft3-light-actual-amount" name="ft3-light-actual-amount" type="number" min="0.01" step="0.01" placeholder="0.00" disabled></label>'+
- '<label>Invoice / Receipt Number<input id="ft3-light-invoice" name="ft3-light-invoice" type="text" placeholder="INV-XXXX" disabled></label>'+
- '<label>Fuel Quantity (Liters)<input id="ft3-light-quantity" name="ft3-light-quantity" type="number" min="0.01" step="0.01" placeholder="0" disabled></label>'+
- '<label>Receipt Photo<input id="ft3-light-photo" name="ft3-light-photo" type="file" accept="image/*" disabled></label></div>'+
- '<button type="button" disabled>Save & Complete — unavailable</button></section></div></details>';
+ '<p>Complete the signed form inside the Refueling Done request card. Private receipt uploads are attached to the verified Board request.</p>'+
+ '</section></div></details>';
 }
 export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceId=null,actionEnabled=false,receiptLink=null}={}){
  const model=fuelTrackLightFuelsModel({snapshot,boardId,workspaceId});
@@ -73,13 +94,10 @@ export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceI
  metric('Active Queue',model?model.activeCount:'—')+
  metric('Session Done',model?model.completedToday:'—')+
  metric('Total Processed',model?model.processedCount:'—')+'</div>'+
- '<div class="ft3-light-filters"><label for="ft3-light-search">Search queue</label>'+
- '<input id="ft3-light-search" type="search" placeholder="Search queue..." disabled>'+
- '<button type="button" disabled>All</button><button type="button" disabled>Vehicle</button>'+
- '<button type="button" disabled>Container</button></div>'+
+
  (model?(model.activeCount===0?
   '<div class="ft3-light-empty"><h3>Queue clear</h3><p>No requests awaiting refueling.</p></div>':
-  '<div class="ft3-light-queue">'+model.queue.map(r=>card(r,actionEnabled)).join('')+
+  '<div class="ft3-light-queue-head"><div><span>ACTIVE REQUESTS</span><h3>Refueling queue</h3></div><strong>'+esc(model.activeCount)+' awaiting processing</strong></div><div class="ft3-light-queue">'+model.queue.map(r=>card(r,actionEnabled)).join('')+
   (model.activeCount>model.queue.length?'<p>More queue records require a signed paginated response.</p>':'')+'</div>'):
   '<p class="ft3-light-unavailable" role="status">The signed LightFuels queue and refueling workflow are not connected. No request or completion totals are inferred from Board items, and no refueling operation was attempted.</p>')+
  '<section class="ft3-light-completed"><h3>Recently Completed</h3><p>Latest fuel transactions</p>'+
