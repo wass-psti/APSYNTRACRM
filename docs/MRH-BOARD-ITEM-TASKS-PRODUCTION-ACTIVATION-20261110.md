@@ -1,3 +1,18 @@
+# Current release status — supersedes historical readiness decision
+
+**Live task schema activation: VERIFIED on November 10, 2026.**
+The existing Supabase project recorded migration 20261110062757 named mrh_board_item_tasks_activation_20261110. The guarded activation SQL is archived at sql/mrh-board-item-tasks-PRODUCTION-ACTIVATED-20261110.sql, and the no-data-loss containment script at sql/mrh-board-item-tasks-RPC-CONTAINMENT-NO-DATA-LOSS.sql.
+
+Current project-wide recovery policy: docs/RECOVERY-POLICY-RETIREMENT-20261110.md retires mandatory RPO/RTO and restore rehearsal; existing backups and security controls remain in effect. Historical recovery NO-GO remarks below were correct for the earlier baseline but are **not current requirements**.
+
+Executed production postflight: PRODUCTION_TASK_SCHEMA_ACTIVATION_PASS__SIGNED_ITEM_TRANSACTION_PENDING. Verified both signed task RPCs, SECURITY DEFINER ownership, denied anonymous execution, forced private RLS, no direct authenticated table grants, five FK constraints, original Main group ID/title/position, and eight original columns.
+
+The production board and new task table still contain zero records; no sample material, task, commercial field, role or workspace membership was created or changed. Authentic signed task creation/update/CAS/reload, audit and non-ADMIN/revoked/foreign-workspace denial remain PENDING because no legitimate persisted material item exists. This is not a failure of the installed schema.
+
+Containment script was successfully tested against a disposable PostgreSQL 17 instance; it removes task RPC EXECUTE access without deleting stored tasks. Do not execute containment except for a verified incident.
+
+---
+
 # Material Request Hub — Production Task Activation Readiness
 
 2026-11-10. Decision: **NO-GO for live DDL and genuine task-write acceptance** pending recovery proof and a legitimate persisted sourcing item.
