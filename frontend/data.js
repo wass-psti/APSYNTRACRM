@@ -10,9 +10,11 @@ function encodeQuery(input){return new URLSearchParams(input).toString();}
 const BOARD_READ_RPC=new Set([
  'wm_get_board','wm_auth_access_context','work_board_access','wm_list_boards',
  'wm_board_ui_read','wm_list_board_events','wm_list_board_events_page',
- 'tl03_documents_page'
+ 'tl03_documents_page',
+ 'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
+ 'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read'
 ]);
-const BOARD_MUTATION_RPC=/^(?:wm_(?:add_|create_|delete_|set_|update_|import_|managed_board_delete|ws01_(?:config_update|create|select)|board_(?:bulk_mutate|card_mutate|group_cas|schema_mutate|ui_save))|huly_sb06_transact|tl03_(?:document_(?:commit|decide|operate|review|submit)|attachment_(?:finish|prepare|remove)|record_pdf_approval_stage)|timetracker_(?:attendance_commit|ot_(?:submit|decide))|apsyntra_(?:crm_platform_role_set|role_manage_user_access|role_configuration_propose))$/;
+const BOARD_MUTATION_RPC=/^(?:wm_(?:add_|create_|delete_|set_|update_|import_|managed_board_delete|ws01_(?:config_update|create|select)|board_(?:bulk_mutate|card_mutate|group_cas|schema_mutate|ui_save))|huly_sb06_transact|tl03_(?:document_(?:commit|decide|operate|review|submit)|attachment_(?:finish|prepare|remove)|record_pdf_approval_stage)|timetracker_(?:attendance_commit|ot_(?:submit|decide))|apsyntra_(?:crm_platform_role_set|role_manage_user_access|role_configuration_propose)|fueltrack_v3_(?:submit|decide|mark_refueled|complete|attach_receipt))$/;
 
 export class DomainApi {
  constructor(auth){
