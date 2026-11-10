@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile}
+import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile,verifyFuelTrackReceiptSignature}
  from '../fueltrack-v3-receipt-storage.js';
 import {FuelTrackV3DomainClient} from '../fueltrack-v3-domain-client.js';
 const board='7af78b3f-67bf-4600-9aa1-9006d19d486e';
@@ -31,6 +31,33 @@ test('receipt image validation rejects oversized, empty, unsupported, and malfor
  assert.throws(()=>validFuelTrackReceiptFile(new Blob([],{type:'image/png'})),/Receipt must/);
  assert.throws(()=>validFuelTrackReceiptFile(new Blob(['abc'],{type:'application/pdf'})),/Receipt must/);
  assert.throws(()=>validFuelTrackReceiptFile({type:'image/jpeg',size:5242881,arrayBuffer:async()=>{}}),/Receipt must/);
+});
+test('receipt byte signature matches JPEG, PNG and WebP metadata',async()=>{
+ const png=new Blob([new Uint8Array([137,80,78,71,13,10,26,10])],{type:'image/png'});
+ const webp=new Blob([new Uint8Array([82,73,70,70,4,0,0,0,87,69,66,80])],{type:'image/webp'});
+ for(const candidate of [file,png,webp])
+  assert.equal((await verifyFuelTrackReceiptSignature(candidate)).sizeBytes,candidate.size);
+});
+test('mismatched content, truncated headers, and forged byte counts are rejected',async()=>{
+ for(const candidate of [
+  new Blob(['not an image'],{type:'image/jpeg'}),
+  new Blob([new Uint8Array([137,80,78,71])],{type:'image/png'}),
+  new Blob([new Uint8Array([82,73,70,70,0,0,0,0,0,0,0,0])],{type:'image/webp'}),
+  {type:'image/jpeg',size:9,arrayBuffer:async()=>new Uint8Array([255,216,255,217]).buffer}
+ ])await assert.rejects(verifyFuelTrackReceiptSignature(candidate),/Receipt/);
+});
+test('forged JPEG MIME fails before receipt preparation or Storage upload',async()=>{
+ let prepare=0,upload=0;
+ const client=new FuelTrackV3ReceiptStorageClient({
+  auth:auth(),boardId:board,workspaceId:ws,baseUrl:'https://test.supabase.co',
+  apiKey:'public-anon-key',
+  api:{rpc:async()=>{prepare++;return {};}},
+  fetchImpl:async()=>{upload++;return {ok:true};}
+ });
+ await assert.rejects(client.uploadAndRegister(req,
+  new Blob(['payload'],{type:'image/jpeg'})),/Receipt image content/);
+ assert.equal(prepare,0);
+ assert.equal(upload,0);
 });
 test('upload path is derived from signed request-to-Board item link, never a request ID folder',async()=>{
  requests.length=0;const network=[];

@@ -18,6 +18,24 @@ export function validFuelTrackReceiptFile(file){
    throw new TypeError('Receipt must be a JPEG, PNG or WebP image of at most 5 MB.');
  return {mimeType:file.type,extension:BY_TYPE[file.type],sizeBytes:file.size};
 }
+/** Verify actual bytes before uploading; browser MIME metadata is untrusted.
+ * The backend remains authoritative for storage authorization and ownership.
+ */
+export async function verifyFuelTrackReceiptSignature(file){
+ const {mimeType,sizeBytes}=validFuelTrackReceiptFile(file);
+ const bytes=new Uint8Array(await file.arrayBuffer());
+ if(bytes.byteLength!==sizeBytes)
+  throw new TypeError('Receipt bytes do not match the declared file size.');
+ const starts=prefix=>prefix.every((value,index)=>bytes[index]===value);
+ const valid=mimeType==='image/jpeg'?
+  bytes.length>=4&&starts([0xff,0xd8,0xff]):
+  mimeType==='image/png'?
+  bytes.length>=8&&starts([137,80,78,71,13,10,26,10]):
+  bytes.length>=12&&starts([82,73,70,70])&&
+    [87,69,66,80].every((value,index)=>bytes[8+index]===value);
+ if(!valid)throw new TypeError('Receipt image content does not match its declared file type.');
+ return {mimeType,sizeBytes};
+}
 export class FuelTrackV3ReceiptStorageClient {
  constructor({auth,api,boardId,workspaceId,fetchImpl=globalThis.fetch?.bind(globalThis),
   baseUrl=SUPABASE_URL,apiKey=SUPABASE_PUBLISHABLE_KEY}={}){
@@ -72,6 +90,7 @@ export class FuelTrackV3ReceiptStorageClient {
  async uploadAndRegister(requestId,file){
   const checked=validFuelTrackReceiptFile(file);
   if(!UUID.test(requestId)||!this.auth.isSignedIn)throw new TypeError('Signed request is required.');
+  await verifyFuelTrackReceiptSignature(file);
   const actor=this.auth.userId;
   const intent=await this.domain.receiptPrepare({requestId});
   if(!this.auth.isSignedIn||this.auth.userId!==actor)
