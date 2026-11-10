@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { buildReadOnlyAcquisitionSql,validateAcquiredRows,
- persistVerifiedSourceBundle } from './ws01-activate04-acquire-protected-sources.mjs';
+ persistVerifiedSourceBundle,classifyDocumentedLiveEvolution } from './ws01-activate04-acquire-protected-sources.mjs';
 
 const hash=v=>createHash('sha256').update(v).digest('hex');
 function sample() {
@@ -84,4 +84,25 @@ test('CLI requires configured database and never echoes SQL or private paths',()
  assert.notEqual(child.status,0);
  assert.match(child.stderr,/CP_WS_ACTIVATE04_ACQUISITION_BLOCKED: DATABASE_CONNECTION_NOT_CONFIGURED/);
  assert.doesNotMatch(child.stderr,/private\.synthetic_|nonexistent|CREATE FUNCTION|password|service_role/i);
+});
+
+test('exact live source evolution classification preserves historical provenance and ACLs',()=>{
+ const old={
+  signature:'public.wm_auth_access_context()',
+  historical:'7b60bbc93690cbdf34c9db2e7c541e1a563a385aeeae75642fb1c2e6e7eb49d7',
+  observed:'b73a1b4e3bb10f8412405cea38a95c870ca26d45dc8d60154f91957b1fcd376b',
+  owner:'postgres',definer:'t',auth:'t',anon:'f'
+ };
+ assert.equal(classifyDocumentedLiveEvolution(old),'SIGNED_CONTEXT_LIVE_EVOLUTION');
+ const tl={
+  signature:'private.tl03_commit(p_board_id uuid, p_document_id uuid, p_expected_revision bigint, p_operation text, p_data jsonb)',
+  historical:'5fb4ac5d256746444786826d8128abdcfa5c54ecbe145aff5fd55fa25a89119d',
+  observed:'08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618',
+  owner:'postgres',definer:'t',auth:'t',anon:'f'
+ };
+ assert.equal(classifyDocumentedLiveEvolution(tl),'TRADELINK_LIVE_EVOLUTION');
+ for(const field of ['signature','historical','observed','owner','definer','auth','anon']){
+  assert.equal(classifyDocumentedLiveEvolution({...old,[field]:'untrusted'}),null,field);
+  assert.equal(classifyDocumentedLiveEvolution({...tl,[field]:'untrusted'}),null,field);
+ }
 });

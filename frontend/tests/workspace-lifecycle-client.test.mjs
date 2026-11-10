@@ -42,7 +42,7 @@ test('workspace selection receipt requires exact target, previous scope and chan
   {schemaVersion:1,workspaceId:foreign,previousWorkspaceId:primary,switched:'true'}
  ])assert.throws(()=>normalizeWorkspaceSelectionReceipt(invalid,foreign,primary));
 });
-test('discovery fails closed on mismatched signed identity and switching remains disabled',async()=>{
+test('discovery and selection fail closed on mismatched signed identity',async()=>{
  let rpcCalls=0;
  const client=new WorkspaceLifecycleClient({
   auth:{userId:actor,getVerifiedUser:async()=>({id:foreign})},
@@ -53,7 +53,7 @@ test('discovery fails closed on mismatched signed identity and switching remains
  await assert.rejects(client.create({
   name:'New',privacy:'closed',requestId:foreign
  }),/Signed workspace identity changed/);
- await assert.rejects(client.select(foreign,primary),/not activated/);
+ await assert.rejects(client.select(foreign,primary),/Signed workspace identity changed/);
  assert.equal(rpcCalls,0);
 });
 
