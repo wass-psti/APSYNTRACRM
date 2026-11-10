@@ -4636,7 +4636,7 @@ async function action(name,button){
   const snapshot={boardId:state.boardId,userId:auth.userId,
    workspaceId:state.context?.workspace_id};
   openModal('New Material Sourcing part',
-   input('Part number','partNumber','',true),
+   input('Part number','partNumber'),
    async fd=>{
     if(!boardHistoryAuthorized(snapshot))throw new ApiError('Board context changed.',403);
     const created=await createMaterialSourcingPart({
