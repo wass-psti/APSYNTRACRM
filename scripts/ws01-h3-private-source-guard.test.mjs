@@ -132,6 +132,8 @@ test('live source catalog probe is read-only, deterministic and returns only has
  assert.match(sql,/unexplained_drift/);
  assert.match(sql,/DOCUMENTED_LIVE_EVOLUTION__RUNTIME_UNVERIFIED/);
  assert.match(sql,/08da27924332a9cd8290ff6e7e379308567e6f26f1ae5e6ac443c412489ac618/);
+ assert.match(sql,/b73a1b4e3bb10f8412405cea38a95c870ca26d45dc8d60154f91957b1fcd376b/);
+ assert.match(sql,/7b60bbc93690cbdf34c9db2e7c541e1a563a385aeeae75642fb1c2e6e7eb49d7/);
  assert.match(sql,/pg_catalog\.has_function_privilege\('authenticated',p\.oid,'EXECUTE'\)/);
  assert.match(sql,/pg_catalog\.has_function_privilege\('anon',p\.oid,'EXECUTE'\)/);
  assert.match(sql,/count\(\*\) FILTER \(WHERE permission_drift\)/);
