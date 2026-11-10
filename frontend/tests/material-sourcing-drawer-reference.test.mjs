@@ -34,7 +34,7 @@ test('protected fields default read-only with explicit edit control',()=>{
   'Vendor Details':{value:'Supplier',revision:1}};
  const view=renderProtectedSourcingEditor(record);
  assert.match(view,/Pricing &amp; Cost|Pricing & Cost/);
- assert.match(view,/Supplier details/);
+ assert.match(view,/Logistics/);
  assert.match(view,/Calculated totals/);
  assert.doesNotMatch(view,/data-mrh-private-field/);
  assert.match(view,/Not calculated/);
