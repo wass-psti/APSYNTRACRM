@@ -1874,3 +1874,16 @@
 .board-table-custom[data-board-virtual] tbody tr:not(.board-virtual-spacer){height:52px}
 .board-table-custom[data-board-virtual] tbody tr:not(.board-virtual-spacer) td{height:52px;max-height:52px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .board-table-custom .board-virtual-spacer td{padding:0!important;border:0!important;line-height:0!important;background:transparent!important;pointer-events:none}
+
+
+/* Material Sourcing — private, item-scoped detail editor. */
+.mrh-sourcing-editor{margin-top:1.2rem;padding:1rem;border:1px solid var(--border,#d9dde5);border-radius:12px}
+.mrh-sourcing-editor h3{margin:0 0 .55rem;font-size:1.02rem}
+.mrh-sourcing-field{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:.8rem;align-items:center;padding:.7rem 0;border-bottom:1px solid var(--border,#d9dde5)}
+.mrh-sourcing-field:last-of-type{border-bottom:0}
+.mrh-sourcing-field strong{overflow-wrap:anywhere}
+.mrh-sourcing-field .muted{margin:.25rem 0 0;overflow-wrap:anywhere}
+.mrh-sourcing-field form{display:flex;gap:.4rem;min-width:0}
+.mrh-sourcing-field input,.mrh-sourcing-field select{flex:1;min-width:0}
+.mrh-sourcing-editor [data-mrh-private-status]{min-height:1.2rem;margin:.3rem 0;font-size:.88rem}
+@media(max-width:720px){.mrh-sourcing-field{grid-template-columns:1fr}.mrh-sourcing-field form{width:100%}}
