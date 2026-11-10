@@ -11823,6 +11823,11 @@
 #app .ft3-app-brand small{display:block;color:#74888d;margin-top:3px;font-size:10px;font-weight:550}
 #app .ft3-app-identity{display:flex;align-items:center;gap:12px;color:#647982;font-size:11px;min-width:0}
 #app .ft3-app-mode{border:1px solid #d5e9e7;border-radius:999px;background:#e9f8f4;color:#267c70;padding:6px 10px;white-space:normal}
+#app .ft3-preflight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 20px;background:#f1f8fa;font-size:11px;color:#476a75}
+#app .ft3-preflight button{font:inherit;font-weight:700;border:1px solid #aacbd2;background:#fff;border-radius:9px;padding:8px 12px;color:#245e70;cursor:pointer}
+#app .ft3-preflight button:disabled{opacity:.65;cursor:not-allowed}
+#app .ft3-preflight button:focus-visible{outline:2px solid #167c98;outline-offset:2px}
+#app .ft3-preflight [role="alert"]{color:#994022}
 #app .ft3-app-tabs{display:flex;align-items:center;gap:2px;overflow-x:auto;border-bottom:1px solid #d9e5e9;padding:0 18px;background:#f1f8fa;scrollbar-width:thin}
 #app .ft3-app-tab{color:#637983;display:inline-flex;align-items:center;gap:7px;text-decoration:none;padding:13px 12px;white-space:nowrap;border-bottom:2px solid transparent;font-size:12px;font-weight:650;min-height:43px}
 #app .ft3-app-tab:hover{background:#eaf2f4;color:#1e6566}
@@ -12033,7 +12038,14 @@
 #app .ft3-new-container{display:none}
 #app .ft3-new-composer:has(#ft3-mode-container:checked) .ft3-new-vehicle{display:none}
 #app .ft3-new-composer:has(#ft3-mode-container:checked) .ft3-new-container{display:flex}
-#app .ft3-new-submit{width:100%;border:0;border-radius:13px;min-height:46px;background:#a1d5ce;color:#fff;font:inherit;font-weight:700;cursor:not-allowed}
+#app .ft3-new-submit{width:100%;border:0;border-radius:13px;min-height:46px;background:#0e918d;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+#app .ft3-new-submit:disabled{background:#a1d5ce;cursor:not-allowed}
+#app .ft3-new-submit:not(:disabled):hover{background:#087a77}
+#app .ft3-new-submit:focus-visible{outline:2px solid #1774a4;outline-offset:2px}
+#app .ft3-new-receipt-info p{margin:0;color:#56717d;line-height:1.55}
+#app .ft3-receipt-action{display:inline-flex;align-items:center;justify-content:center;border:1px solid #a5cfd0;padding:10px 14px;border-radius:12px;background:#f5fafb;color:#126d72;text-decoration:none;font-weight:650}
+#app .ft3-receipt-action:hover{background:#e3f3f3}
+#app .ft3-receipt-action:focus-visible{outline:2px solid #1774a4;outline-offset:2px}
 @media(max-width:640px){#app .ft3-new-request{padding:20px 12px}#app .ft3-new-options,#app .ft3-new-fields{grid-template-columns:1fr}#app .ft3-new-option-body{min-height:115px}#app .ft3-new-progress{flex-direction:column;gap:6px}}
 
 /* Reveal custom container count only for the explicitly selected option. */
@@ -12189,6 +12201,9 @@
 #app .ft3-activity-hour-bars .ft3-hour-height-8{height:80%}
 #app .ft3-activity-hour-bars .ft3-hour-height-9{height:90%}
 #app .ft3-activity-hour-bars .ft3-hour-height-10{height:100%}
+
+#app .ft3-new-retry{display:block;margin:10px auto 0;border:1px solid #a5cfd0;border-radius:10px;padding:10px 16px;background:#f5fafb;color:#126d72;font:inherit;font-weight:650;cursor:pointer}
+#app .ft3-new-retry:focus-visible{outline:2px solid #1774a4;outline-offset:2px}
 
 /* frontend/tradelink-application.css */
 /* TradeLink source-aligned application shell. Scoped to avoid board/TimeTracker regressions. */

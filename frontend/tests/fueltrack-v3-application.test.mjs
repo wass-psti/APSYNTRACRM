@@ -44,9 +44,25 @@ test('exact seven tabs and canonical application deep links',()=>{
  assert.equal((markup.match(/class="ft3-app-tab(?: is-active)?"/g)||[]).length,7);
  assert.equal((markup.match(/aria-current="page"/g)||[]).length,1);
  assert.match(markup,/FuelTrack\+/);
- assert.match(markup,/Read-only dashboard/);
+ assert.match(markup,/Board-only fallback · FuelTrack transaction access unverified/);
 });
 
+test('FuelTrack header distinguishes verified signed, loading, denial and Board fallback',()=>{
+ const detail=fixture();
+ const base=renderFuelTrackV3Application({detail});
+ assert.match(base,/Board-only fallback · FuelTrack transaction access unverified/);
+ const loading=renderFuelTrackV3Application({detail,backend:{busy:true}});
+ assert.match(loading,/Checking signed FuelTrack access/);
+ const denied=renderFuelTrackV3Application({detail,backend:{error:'Access denied'}});
+ assert.match(denied,/Signed FuelTrack service unavailable/);
+ assert.doesNotMatch(denied,/Verified signed FuelTrack operations/);
+ const snapshot={status:'VERIFIED_READ',boardId:BOARD,workspaceId:W,
+  role:'Admin',rows:[],summary:{total:0,submitted:0,approved:0,rejected:0,
+   refuelingDone:0,completed:0}};
+ const verified=renderFuelTrackV3Application({detail,backend:{snapshot}});
+ assert.match(verified,/Verified signed FuelTrack operations · Admin/);
+ assert.doesNotMatch(verified,/Board-only fallback/);
+});
 test('empty database stays empty and never borrows the 271 screenshot requests',()=>{
  const model=fuelTrackDashboardModel(fixture());
  assert.equal(model.count,0);
@@ -164,11 +180,41 @@ test('New Fuel Request exposes two distinct reference modes without fabricated c
  }
  assert.match(html,/id="ft3-custom-count"/);
  assert.match(html,/value="custom">Custom number of containers/);
- assert.match(html,/<button[^>]*disabled[^>]*>Submit for Approval — unavailable<\/button>/);
- assert.match(html,/no request will be saved/i);
- assert.doesNotMatch(html,/<form\b|data-action=".*submit|\bfetch\(/i);
+ assert.match(html,/<button[^>]*disabled[^>]*>Submit for Approval — connect signed service first<\/button>/);
+ assert.match(html,/Requests cannot be saved until the connection succeeds/i);
+ assert.match(html,/data-action="ft3-retry-backend"/);
+ assert.doesNotMatch(html,/<form\b|data-action="[^"]*submit|\bfetch\(/i);
 });
 
+test('FuelTrack module roles enable domain workflows without generic Board edit permission',()=>{
+ const summary={total:1,submitted:1,approved:0,rejected:0,refuelingDone:0,completed:0,
+  approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:1,
+  activeQueue:1,completedToday:0,overdueCount:0};
+ const request={id:'55555555-5555-4555-8555-555555555555',kind:'vehicle',
+  details:{plate:'GAN 8289'},state:'submitted',revision:1,
+  requestor_name:'Requester',created_at:'2026-11-10T00:00:00Z'};
+ const userSnapshot={status:'VERIFIED_READ',boardId:BOARD,workspaceId:W,
+  role:'User',rows:[request],summary};
+ const userForm=renderFuelTrackV3Application({detail:fixture(),section:'new-request',
+  backend:{snapshot:userSnapshot,editable:false}});
+ assert.match(userForm,/id="ft3-new-request-form"/);
+ assert.match(userForm,/<button type="submit" class="ft3-new-submit" aria-describedby/);
+ assert.doesNotMatch(userForm,/Submit for Approval — unavailable/);
+ const adminSnapshot={...userSnapshot,role:'Admin',rows:[{...request,state:'submitted'}]};
+ const approvals=renderFuelTrackV3Application({detail:fixture(),section:'approvals',
+  backend:{snapshot:adminSnapshot,editable:false}});
+ assert.match(approvals,/data-action="ft3-approve"/);
+ assert.match(approvals,/data-action="ft3-reject"/);
+ const refueled={...adminSnapshot,rows:[{...request,state:'approved'}],
+  summary:{...summary,submitted:0,approved:1,pendingCount:0}};
+ const light=renderFuelTrackV3Application({detail:fixture(),section:'lightfuels',
+  backend:{snapshot:refueled,editable:false}});
+ assert.match(light,/data-action="ft3-mark-refueled"/);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.doesNotMatch(app,/state\.edit!==true\|\|state\.fuelTrackBackendBusy/);
+ assert.doesNotMatch(app,/state\.edit!==true\|\|snapshot\?\.role/);
+ assert.match(app,/case 'ft3-retry-backend'/);
+});
 test('supplied FuelTrack reference options preserve exact distinct labels and reuse personnel options',async()=>{
  const {FUELTRACK_PLATE_OPTIONS,FUELTRACK_PERSON_OPTIONS,FUELTRACK_CONTAINER_OPTIONS}=
   await import('../fueltrack-v3-reference-options.js');

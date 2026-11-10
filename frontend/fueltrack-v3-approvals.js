@@ -23,9 +23,9 @@ export function fuelTrackApprovalModel({snapshot=null,boardId=null,workspaceId=n
  if(new Set(ids).size!==ids.length)return null;
  return Object.freeze({approvedToday:snapshot.approvedToday,rejectedToday:snapshot.rejectedToday,
   decisionsToday:snapshot.decisionsToday,pendingCount:snapshot.pendingCount,
-  pending:Object.freeze(snapshot.pending.map(r=>Object.freeze({id:r.id,title:r.title,createdAt:r.createdAt})))});
+  pending:Object.freeze(snapshot.pending.map(r=>Object.freeze({id:r.id,title:r.title,createdAt:r.createdAt,revision:r.revision})))});
 }
-export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId=null}={}){
+export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId=null,actionEnabled=false}={}){
  const model=fuelTrackApprovalModel({snapshot,boardId,workspaceId});
  const rate=model&&model.decisionsToday>0?Math.round(model.approvedToday/model.decisionsToday*100)+'%':'—';
  return '<section class="ft3-approvals" aria-labelledby="ft3-approvals-heading">'+
@@ -44,8 +44,8 @@ export function renderFuelTrackApprovals({snapshot=null,boardId=null,workspaceId
  (model?(model.pendingCount===0?
   '<div class="ft3-approvals-empty"><span aria-hidden="true">▤</span><h3>All clear!</h3><p>No pending requests to review.</p></div>':
   '<div class="ft3-approvals-queue" role="status"><h3>'+esc(model.pendingCount)+' pending requests</h3>'+
-  '<p>Review actions are unavailable until the signed decision contract is activated.</p>'+
-  '<ul>'+model.pending.map(r=>'<li><strong>'+esc(r.title)+'</strong><small>'+esc(r.createdAt)+'</small></li>').join('')+'</ul>'+
+  (actionEnabled?'':'<p>Review actions are unavailable until the signed decision contract is activated.</p>')+
+  '<ul>'+model.pending.map(r=>'<li><strong>'+esc(r.title)+'</strong><small>'+esc(r.createdAt)+'</small>'+(actionEnabled&&Number.isSafeInteger(r.revision)&&r.revision>0?'<div class="ft3-approval-decision"><button type="button" data-action="ft3-approve" data-id="'+esc(r.id)+'">Approve</button><label>Rejection reason <input id="ft3-reason-'+esc(r.id)+'" maxlength="1000" placeholder="Reason required"></label><button type="button" data-action="ft3-reject" data-id="'+esc(r.id)+'">Reject</button></div>':'')+'</li>').join('')+'</ul>'+
   (model.pendingCount>model.pending.length?'<p>Additional requests require a signed paginated response.</p>':'')+'</div>'):blocked)+
  '</section>';
 }

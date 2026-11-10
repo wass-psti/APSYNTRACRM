@@ -1,0 +1,46 @@
+name: FuelTrack v3 Disposable Backend Acceptance
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261110021141_fueltrack_v3_backend_core.sql'
+      - 'supabase/migrations/20261110021200_fueltrack_v3_board_receipts.sql'
+      - 'supabase/migrations/20261110163848_fueltrack_v3_module_scoped_workflows.sql'
+      - 'sql/tests/fueltrack-v3-*.sql'
+      - 'scripts/fueltrack-v3-backend-disposable.sh'
+      - 'scripts/fueltrack-v3-signed-read-acceptance*.mjs'
+      - 'scripts/fueltrack-v3-provider-backup-gate*.mjs'
+      - 'scripts/ft3-recovery-archive-audit*.mjs'
+      - 'scripts/ft3-recovery-rto-rehearsal*.mjs'
+      - 'scripts/ft3-rpo-observation*.mjs'
+      - 'scripts/ft3-recovery-retention-gate*.mjs'
+      - 'scripts/ft3-recovery-set-stage*.mjs'
+      - 'scripts/ft3-backup-crypto*.mjs'
+      - 'scripts/ft3-offsite-policy-preflight*.mjs'
+      - 'scripts/ft3-s3-infrastructure-contract.test.mjs'
+      - 'scripts/ft3-encrypted-recovery-bundle*.mjs'
+      - 'infra/fueltrack-recovery/s3-object-lock.template.json'
+      - 'config/production-release-policy.json'
+      - 'scripts/ft3-release-readiness*.mjs'
+      - 'docs/FUELTRACK-V3-PRODUCTION-ACTIVATION-GATE.md'
+      - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-postgres:
+    name: Isolated PostgreSQL contract, denial and migration checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Verify Shell Syntax
+        run: bash -n scripts/fueltrack-v3-backend-disposable.sh
+      - name: Verify Board and Receipt database transactions
+        run: ./scripts/fueltrack-v3-backend-disposable.sh
+      - name: Verify signed read-only acceptance contract without live credentials
+        run: node --test scripts/fueltrack-v3-signed-read-acceptance.test.mjs
+      - name: Verify current production release policy and signed acceptance gates
+        run: node --test scripts/ft3-release-readiness.test.mjs

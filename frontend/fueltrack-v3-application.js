@@ -6,6 +6,7 @@ import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js';
 import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js';
 import {renderFuelTrackLightFuels} from './fueltrack-v3-lightfuels.js';
 import {renderFuelTrackActivity} from './fueltrack-v3-activity.js';
+import {verifyFuelTrackBackendSnapshot,projectFuelTrackApprovals,projectFuelTrackLightFuels,renderFuelTrackSignedDashboard,renderFuelTrackSignedRequests,renderFuelTrackSignedAnalytics} from './fueltrack-v3-backend-projections.js';
 export const FUELTRACK_V3_ID='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const MARKER='[APSYNTRA:MODULE:fueltrack:v1]';
 const h=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -181,11 +182,18 @@ function placeholder(section){
   '<h2>'+h(title)+'</h2><p>'+h(description)+'</p>'+
   '<a href="'+fuelTrackHref('dashboard')+'" class="ft3-soft-action">Return to Dashboard</a></section>';
 }
-export function renderFuelTrackV3Application({detail,section='dashboard',actorName='Member',analyticsRenderer=null,analyticsView='fuel-price',analyticsRange='all',analyticsMetric='both',requestsRenderer=null,requestsFilters=null,activity=null}={}){
+export function renderFuelTrackV3Application({detail,section='dashboard',actorName='Member',analyticsRenderer=null,analyticsView='fuel-price',analyticsRange='all',analyticsMetric='both',requestsRenderer=null,requestsFilters=null,activity=null,backend=null}={}){
  const model=fuelTrackDashboardModel(detail);
  if(!model)return '<section class="ft3-unavailable" role="alert">'+
   'FuelTrack+ v3 dashboard is unavailable for this board or session.</section>';
  const view=normalizeFuelTrackSection(section);
+ const signed=verifyFuelTrackBackendSnapshot(backend?.snapshot,detail.board.id,detail.board.workspace_id);
+ const approvals=signed?projectFuelTrackApprovals(signed):null;
+ const light=signed?projectFuelTrackLightFuels(signed):null;
+ const modeLabel=signed?'Verified signed FuelTrack operations · '+signed.role:
+  backend?.busy?'Checking signed FuelTrack access…':
+  backend?.error?'Signed FuelTrack service unavailable':
+  'Board-only fallback · FuelTrack transaction access unverified';
  const navigation=FUELTRACK_TABS.map(t=>'<a class="ft3-app-tab'+
   (view===t.key?' is-active':'')+'" href="'+fuelTrackHref(t.key)+'"'+
   (view===t.key?' aria-current="page"':'')+'><span aria-hidden="true">'+t.icon+'</span>'+
@@ -195,8 +203,18 @@ export function renderFuelTrackV3Application({detail,section='dashboard',actorNa
   '<span class="ft3-app-logo" aria-hidden="true">◈</span>'+
   '<div><strong>FuelTrack+</strong><small>Fuel Control · APSYNTRA CRM</small></div></div>'+
   '<div class="ft3-app-identity"><span>'+h(actorName)+'</span>'+
-  '<span class="ft3-app-mode">Signed board data · Read-only dashboard</span></div></header>'+
+  '<span class="ft3-app-mode" role="status">'+h(modeLabel)+'</span></div></header>'+
+  '<div class="ft3-preflight"><button type="button" data-action="ft3-signed-preflight"'+
+  (backend?.preflightBusy||backend?.busy?' disabled':'')+
+  '>Verify signed FuelTrack access (read-only)</button>'+
+  (backend?.preflightBusy?'<span role="status">Checking signed RPC access…</span>':
+   backend?.preflight?.status==='READ_ONLY_PREFLIGHT_PASS'?
+   '<span role="status">Signed read checks passed · '+h(backend.preflight.role)+
+   ' · '+h(backend.preflight.checks.join(', '))+'</span>':
+   backend?.preflight?.status==='PREFLIGHT_BLOCKED'?
+   '<span role="alert">Signed read checks blocked: '+h(backend.preflight.message)+'</span>':'')+
+  '</div>'+
   '<nav class="ft3-app-tabs" aria-label="FuelTrack application sections">'+navigation+'</nav>'+
-  '<div class="ft3-app-body">'+(view==='dashboard'?dashboard(model):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):view==='new-request'?renderFuelTrackNewRequest():view==='approvals'?renderFuelTrackApprovals():view==='lightfuels'?renderFuelTrackLightFuels():view==='activity'?renderFuelTrackActivity(activity||{}):placeholder(view))+
+  '<div class="ft3-app-body">'+(backend?.error?'<p class="ft3-new-boundary" role="alert">'+h(backend.error)+'</p>':'')+(view==='dashboard'&&signed?renderFuelTrackSignedDashboard(signed):view==='dashboard'?dashboard(model):view==='analytics'&&signed?renderFuelTrackSignedAnalytics(backend?.analytics):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&signed?renderFuelTrackSignedRequests(signed):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):view==='new-request'?renderFuelTrackNewRequest({enabled:!!signed,busy:backend?.busy===true,message:backend?.message||'',receiptHref:signed?.role==='Admin'?fuelTrackHref('lightfuels'):null}):view==='approvals'?renderFuelTrackApprovals({snapshot:approvals,boardId:detail.board.id,workspaceId:detail.board.workspace_id,actionEnabled:!!approvals&&signed?.role==='Admin'&&!backend?.busy}):view==='lightfuels'?renderFuelTrackLightFuels({snapshot:light,boardId:detail.board.id,workspaceId:detail.board.workspace_id,actionEnabled:!!light&&signed?.role==='Admin'&&!backend?.busy,receiptLink:backend?.receiptLink||null}):view==='activity'?renderFuelTrackActivity(activity||{}):placeholder(view))+
   '</div></section>';
 }
