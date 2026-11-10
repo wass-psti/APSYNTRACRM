@@ -102,7 +102,7 @@ test('non-admin writes and mismatched receipts fail closed',async()=>{
 });
 test('drawer escapes untrusted fields and never emits derived-field editors',()=>{
  const html=renderProtectedSourcingEditor({'Vendor Details':{
-  value:'<img src=x onerror=alert(1)>',revision:1}});
+  value:'<img src=x onerror=alert(1)>',revision:1}},{editing:true});
  assert.ok(!html.includes('<img'));
  assert.match(html,/&lt;img/);
  assert.match(html,/data-mrh-private-field="Vendor Details"/);

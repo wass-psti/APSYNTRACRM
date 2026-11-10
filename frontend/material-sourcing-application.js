@@ -135,10 +135,14 @@ export async function writeProtectedSourcingField({
   deny('The sourcing write receipt is invalid; refresh before retrying.',409);
  return Object.freeze({fieldName,revision:result.revision});
 }
-export function renderProtectedSourcingEditor(cells,{editing=true}={}){
- const fields=PRIVATE_FIELDS.map(field=>{
+export function renderProtectedSourcingEditor(cells,{editing=false}={}){
+ const labels=Object.freeze({
+  'Buying Price':'Buying price','Currency':'Currency','Shipping Cost':'Shipping cost',
+  'Shipping Cost Currency':'Shipping currency','Vendor Details':'Vendor details'
+ });
+ const renderField=field=>{
   const cell=cells?.[field.name],raw=cell?.value;
-  const rendered=raw===undefined?'Not set':String(raw);
+  const rendered=raw===undefined||raw===null||raw===''?'—':String(raw);
   const control=field.options?
    '<select name="value" required aria-label="'+escape(field.name)+'">'+
    '<option value="">Select currency</option>'+
@@ -147,20 +151,26 @@ export function renderProtectedSourcingEditor(cells,{editing=true}={}){
    '<input name="value" required maxlength="'+(field.type==='number'?20:2000)+
    '" '+(field.type==='number'?'inputmode="decimal" type="text"':'type="text"')+
    ' value="'+escape(raw===undefined?'':String(raw))+'" aria-label="'+escape(field.name)+'" />';
-  return '<div class="mrh-sourcing-field"><div><strong>'+escape(field.name)+
-   '</strong><p class="muted">'+escape(rendered)+'</p></div>'+
+  return '<div class="mrh-sourcing-field"><div class="mrh-sourcing-value">'+
+   '<strong>'+escape(labels[field.name]||field.name)+'</strong>'+
+   '<p>'+escape(rendered)+'</p></div>'+
    (editing?'<form data-mrh-private-field="'+escape(field.name)+'">'+
     '<label class="sr-only">Update '+escape(field.name)+'</label>'+control+
     '<button class="secondary" type="submit">Save</button>'+
     '</form>':'')+'</div>';
- }).join('');
- return '<section class="mrh-sourcing-editor" aria-label="Restricted Material Sourcing fields">'+
-  '<h3>Material Sourcing — protected commercial details</h3>'+
-  '<p class="muted">Only verified Material Request Hub administrators can view and edit these fields. Changes are saved individually with revision checks. Values are not copied into ordinary board cells.</p>'+
+ };
+ const named=name=>PRIVATE_FIELDS.find(field=>field.name===name);
+ const section=(title,icon,fields)=>
+  '<section class="mrh-private-section"><h3><span aria-hidden="true">'+icon+'</span>'+title+'</h3>'+
+   '<div class="mrh-private-grid">'+fields.map(name=>renderField(named(name))).join('')+'</div></section>';
+ return '<div class="mrh-sourcing-editor" aria-label="Protected Material Sourcing details">'+
   '<div role="status" aria-live="polite" data-mrh-private-status></div>'+
-  fields+
-  '<p class="muted">PHP equivalents, landed-cost totals, and VAT calculations remain disabled pending confirmed financial rules.</p>'+
-  '</section>';
+  section('Pricing & Cost','₱',['Buying Price','Currency','Shipping Cost','Shipping Cost Currency'])+
+  section('Supplier details','▧',['Vendor Details'])+
+  '<section class="mrh-private-section mrh-calculated-section"><h3><span aria-hidden="true">▤</span>Calculated totals</h3>'+
+  '<p>Not calculated — verified exchange rates and approved landed-cost rules are not configured.</p></section>'+
+  (editing?'<p class="mrh-private-edit-note">Save each protected value individually. Revision checks prevent overwriting newer changes.</p>':'')+
+  '</div>';
 }
 
 /** Add a real part number to the original Main group, never a demo fixture. */

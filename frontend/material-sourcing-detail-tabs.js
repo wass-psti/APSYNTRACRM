@@ -10,6 +10,32 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({
 }[char]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const MATERIAL_SOURCING_DETAIL_TABS=Object.freeze(['details','tasks','activity']);
+/** Render the verified, public item projection rather than generic board metadata.
+ * Commercial values are intentionally excluded and loaded by the separate signed
+ * protected-field RPC. No figures, foreign items, or exchange rates are inferred. */
+export function renderMaterialSourcingPublicOverview(row,{groupTitle='Main group'}={}){
+ const safe=row&&typeof row==='object'?row:{};
+ const val=value=>value===null||value===undefined||String(value)===''?'—':escape(value);
+ const field=(name,value,{wide=false,badge=false}={})=>
+  '<div class="mrh-detail-field'+(wide?' mrh-detail-field-wide':'')+'">'+
+  '<dt>'+escape(name)+'</dt><dd>'+
+  (badge&&value?'<span class="mrh-detail-source '+(value==='Local'?'local':value==='Import'?'import':'')+'">'+val(value)+'</span>':val(value))+
+  '</dd></div>';
+ const section=(title,icon,fields)=>
+  '<section class="mrh-detail-section"><h3><span aria-hidden="true">'+icon+'</span>'+title+'</h3>'+
+  '<dl class="mrh-detail-field-grid">'+fields+'</dl></section>';
+ return '<div class="mrh-detail-public" aria-label="Public Material Sourcing fields">'+
+  section('Identification','◇',
+   field('Part number',safe.partNumber)+field('Source type',safe.source,{badge:true})+
+   field('RFQ Ref No',safe.rfq,{wide:true})+
+   field('Material description',safe.description,{wide:true})+
+   field('Brand',safe.brand)+field('Quantity',safe.quantity))+
+  section('Supplier & Schedule','▧',
+   field('Date required',safe.due)+field('Leadtime (weeks)',safe.lead)+
+   field('Board group',groupTitle,{wide:true}))+
+  '</div>';
+}
+
 export function renderMaterialSourcingDetailTabs(summaryHtml){
  return '<div class="mrh-detail-tabs" role="tablist" aria-label="Material Sourcing item sections">'+
   MATERIAL_SOURCING_DETAIL_TABS.map((tab,index)=>

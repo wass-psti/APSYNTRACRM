@@ -76,7 +76,7 @@ import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMateria
 import {parseMaterialAddForm} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
-import {renderMaterialSourcingDetailTabs,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
+import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
@@ -3386,19 +3386,27 @@ async function openBoardItemDetails(itemId){
  const restricted=!!moduleByBoardName(state.board.board.name);
  const group=state.board.groups?.find(x=>x.id===item.group_id);
  const sourcing=isMaterialSourcingBoard(state.board?.board);
+ const sourcingPublic=sourcing?materialTrackerRows(state.board).find(row=>row.id===itemId):null;
  const collaboration=sourcing?null:await loadBoardCollaboration(db,itemId).catch(()=>({status:'ERROR'}));
  if(!boardHistoryAuthorized(snapshot))return;
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-detail-backdrop';
- modal.innerHTML='<aside class="board-item-drawer" role="dialog" aria-modal="true" aria-labelledby="board-detail-title">'+
-  '<div class="board-item-drawer-header"><span class="label-top">APSYNTRA CRM / Board item</span>'+
+ modal.innerHTML='<aside class="board-item-drawer'+(sourcing?' mrh-detail-drawer':'')+
+  '" role="dialog" aria-modal="true" aria-labelledby="board-detail-title">'+
+  '<div class="board-item-drawer-header"><span class="label-top">'+
+  (sourcing?'MATERIAL REQUEST HUB / MATERIAL SOURCING':'APSYNTRA CRM / Board item')+'</span>'+
   '<button type="button" class="modal-close" data-dismiss aria-label="Close item details">×</button></div>'+
-  '<h2 id="board-detail-title">'+e(item.title||'Untitled')+'</h2>'+
-  '<p class="muted">Read-only item details from the signed board response.</p>'+
-  (sourcing?renderMaterialSourcingDetailTabs(
-   boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})):
-   boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
-   renderBoardCollaboration(collaboration))+
+  '<div class="mrh-detail-identity"><h2 id="board-detail-title">'+e(item.title||'Untitled')+'</h2>'+
+   (sourcing?'<span class="mrh-detail-group-pill">'+e(group?.title||'Main group')+'</span>':'')+'</div>'+
+  (sourcing?'<div class="mrh-detail-scroll">'+
+   renderMaterialSourcingDetailTabs(renderMaterialSourcingPublicOverview(sourcingPublic,{
+    groupTitle:group?.title||'Main group'}))+
+   '</div><div class="mrh-detail-footer">'+
+    '<button type="button" class="primary" data-mrh-editor-toggle hidden>Edit protected fields</button>'+
+    '<button type="button" class="secondary" data-dismiss>Close</button></div>':
+   '<p class="muted">Read-only item details from the signed board response.</p>'+
+    boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
+    renderBoardCollaboration(collaboration))+
   '</aside>';
  document.body.append(modal);
  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
@@ -3496,16 +3504,25 @@ async function openBoardItemDetails(itemId){
     }
    }
   });
-  let values=null,busy=false;
+  let values=null,busy=false,editing=false;
+  const editToggle=itemDialog.querySelector('[data-mrh-editor-toggle]');
+  editToggle?.addEventListener('click',()=>{
+   if(!current()||busy||!values)return;
+   editing=!editing;
+   editToggle.textContent=editing?'Done editing':'Edit protected fields';
+   privateHost.innerHTML=renderProtectedSourcingEditor(values,{editing});
+  });
   const refresh=async()=>{
    try{
     const result=await readProtectedSourcingItem(input);
     if(!current())return;
     values=result;
-    privateHost.innerHTML=renderProtectedSourcingEditor(result);
+    privateHost.innerHTML=renderProtectedSourcingEditor(result,{editing});
+    if(editToggle)editToggle.hidden=false;
    }catch{
     if(!current())return;
     values=null;
+    if(editToggle)editToggle.hidden=true;
     privateHost.innerHTML='<p class="muted" role="status">Restricted sourcing fields unavailable for this session. No protected values have been displayed.</p>';
    }
   };
