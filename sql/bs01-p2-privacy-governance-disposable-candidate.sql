@@ -202,6 +202,78 @@ END $revoke$;
 REVOKE ALL ON FUNCTION private.bs01_revoke_guest(uuid,uuid)
  FROM PUBLIC,anon,authenticated;
 
--- Link issue/redeem and guest read are additionally hardened in the
--- same *separately reviewed* P2 script below. No production activation.
+-- Link issuance and redemption are rechecked at the write boundary.
+-- Even an accidentally permissive caller cannot issue for a protected app.
+-- This is defense in depth, not a substitute for an authenticated issuer.
+CREATE FUNCTION private.bs01_link_policy_gate()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $gate$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM private.bs01_flags f
+   WHERE f.id IS TRUE AND f.enabled IS TRUE)
+  OR NOT private.bs01_external_share_eligible(NEW.board_id)
+  OR NOT EXISTS(SELECT 1 FROM private.bs01_board_policies p
+   WHERE p.board_id=NEW.board_id AND p.mode='guest_shareable'
+    AND p.reviewed_by IS NOT NULL AND p.reviewed_at IS NOT NULL)
+ THEN RAISE EXCEPTION 'Resource not approved for external sharing'
+   USING ERRCODE='42501'; END IF;
+ RETURN NEW;
+END $gate$;
+REVOKE ALL ON FUNCTION private.bs01_link_policy_gate()
+ FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER bs01_before_issue_guard
+ BEFORE INSERT ON private.bs01_links FOR EACH ROW
+ EXECUTE FUNCTION private.bs01_link_policy_gate();
+
+CREATE FUNCTION private.bs01_grant_policy_gate()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $gate$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM private.bs01_flags f
+   WHERE f.id IS TRUE AND f.enabled IS TRUE)
+  OR NOT private.bs01_external_share_eligible(NEW.board_id)
+  OR NOT EXISTS(SELECT 1 FROM private.bs01_board_policies p
+   WHERE p.board_id=NEW.board_id AND p.mode='guest_shareable'
+    AND p.reviewed_by IS NOT NULL AND p.reviewed_at IS NOT NULL)
+  OR NOT EXISTS(SELECT 1 FROM private.bs01_links l
+   WHERE l.id=NEW.invitation_id AND l.board_id=NEW.board_id
+    AND l.revoked_at IS NULL AND l.redeemed_by IS NULL
+    AND l.expires_at>now())
+ THEN RAISE EXCEPTION 'Guest redemption denied by resource policy'
+   USING ERRCODE='42501'; END IF;
+ RETURN NEW;
+END $gate$;
+REVOKE ALL ON FUNCTION private.bs01_grant_policy_gate()
+ FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER bs01_before_guest_grant_guard
+ BEFORE INSERT ON private.bs01_guest_grants FOR EACH ROW
+ EXECUTE FUNCTION private.bs01_grant_policy_gate();
+
+-- Standalone app and QA fixtures remain unreadable to guests, regardless of
+-- a previously redeemed grant or a mistaken guest_read_enabled flag.
+-- No expansion of generic work_board_access or independent module RPCs.
+CREATE OR REPLACE FUNCTION private.bs01_guest_read_allowed(p_board uuid)
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $read$
+DECLARE actor uuid;
+BEGIN
+ BEGIN actor:=private.bs01_signed_actor();
+ EXCEPTION WHEN OTHERS THEN RETURN false; END;
+ IF actor IS NULL OR NOT private.bs01_external_share_eligible(p_board)
+ THEN RETURN false; END IF;
+ RETURN EXISTS(
+  SELECT 1 FROM private.bs01_guest_grants g
+  JOIN private.bs01_links i ON i.id=g.invitation_id
+  JOIN private.bs01_board_policies p ON p.board_id=g.board_id
+  JOIN public.work_boards b ON b.id=g.board_id
+  JOIN private.bs01_flags f ON f.id IS TRUE
+  WHERE g.board_id=p_board AND g.user_id=actor AND g.revoked_at IS NULL
+    AND i.redeemed_by=actor AND i.revoked_at IS NULL
+    AND p.mode='guest_shareable' AND p.reviewed_by IS NOT NULL
+    AND p.reviewed_at IS NOT NULL AND b.status='active'
+    AND b.archived_at IS NULL AND b.trashed_at IS NULL
+    AND f.enabled IS TRUE AND f.guest_read_enabled IS TRUE);
+END $read$;
+REVOKE ALL ON FUNCTION private.bs01_guest_read_allowed(uuid)
+ FROM PUBLIC,anon,authenticated;
+
+-- No changes to existing internal board ACLs, Auth trigger, Storage policies,
+-- or any module RPC; all P2 functions remain private/ungranted.
 COMMIT;
