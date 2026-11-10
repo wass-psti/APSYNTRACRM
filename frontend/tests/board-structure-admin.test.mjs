@@ -265,7 +265,9 @@ test('board structure modal uses one keyboard-accessible scroll region below fix
  assert.match(section,/board-history-modal board-structure-modal/);
  assert.match(section,/class="modal-head"/);
  assert.match(section,/class="board-structure-scroll" role="region" aria-label="Board structure form" tabindex="0"/);
- assert.match(section,/renderBoardStructureAdmin\(detail,settings,\{canManage,availableTabs\}\)\+'<\/div><\/section>'/);
+ assert.match(section,/renderBoardStructureAdmin\(detail,settings,\{canManage,availableTabs\}\)\+/);
+ assert.match(section,/\(offerPublicSourcing\?.*data-mrh-activate-public/s);
+ assert.match(section,/'<\/div><\/section>';/);
  assert.match(css,/\.board-history-modal\{max-height:min\(85vh,850px\);overflow:hidden;display:flex;flex-direction:column\}/);
  assert.match(css,/\.board-structure-modal>\.modal-head\{flex:0 0 auto\}/);
  assert.match(css,/\.board-structure-modal>\.board-structure-scroll\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*overscroll-behavior-y:contain/);

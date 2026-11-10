@@ -67,6 +67,8 @@ import {runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialRepor
 import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
+import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
+import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
@@ -3491,6 +3493,10 @@ async function openBoardStructure(){
  const settings=state.boardUi||await boardStructureClient.read(snapshot.boardId);
  const canManage=BOARD_STRUCTURE_ADMIN_ENABLED&&
   await db.allowed(snapshot.boardId,'manage');
+ const sourcingPlan=snapshot.boardId===MATERIAL_SOURCING_BOARD_ID?
+  planMaterialSourcingSchema(detail):null;
+ const offerPublicSourcing=canManage&&sourcingPlan?.status==='BLOCKED_FIELD_AUTHORIZATION'&&
+  sourcingPlan.additions.length>0;
  if(!boardHistoryAuthorized(snapshot))return;
  hideModal();modal=document.createElement('div');
  const view=modal;
@@ -3500,7 +3506,13 @@ async function openBoardStructure(){
   '<div class="modal-head"><h2 id="board-structure-title">Board structure &amp; views</h2>'+
   '<button type="button" data-dismiss class="modal-close" aria-label="Close settings">×</button></div>'+
   '<div class="board-structure-scroll" role="region" aria-label="Board structure form" tabindex="0">'+
-  renderBoardStructureAdmin(detail,settings,{canManage,availableTabs})+'</div></section>';
+  renderBoardStructureAdmin(detail,settings,{canManage,availableTabs})+
+  (offerPublicSourcing?'<section class="panel panel-body" aria-label="Material Sourcing public schema activation">'+
+   '<h3>Material Sourcing — public columns</h3>'+
+   '<p class="muted">Add only '+sourcingPlan.additions.length+
+   ' non-sensitive sourcing columns using signed board management. The Main group, original columns, and restricted financial fields are preserved.</p>'+
+   '<button type="button" class="secondary" data-mrh-activate-public>Activate public sourcing columns</button></section>':'')+
+  '</div></section>';
  document.body.append(view);
  const authorized=()=>view===modal&&boardHistoryAuthorized(snapshot);
  const syncColumnPicker=()=>{
@@ -3599,6 +3611,25 @@ async function openBoardStructure(){
    return;
   }
   if(!authorized()||!canManage||!BOARD_STRUCTURE_ADMIN_ENABLED)return;
+  const sourcingButton=event.target.closest('[data-mrh-activate-public]');
+  if(sourcingButton){
+   if(sourcingButton.disabled||snapshot.boardId!==MATERIAL_SOURCING_BOARD_ID||
+      !offerPublicSourcing)return;
+   const phrase=window.prompt('This adds only non-sensitive Material Sourcing columns, preserving Main group and existing columns. Restricted prices, vendors and requester data are NOT activated. Type ACTIVATE SOURCING COLUMNS to continue:');
+   if(phrase!=='ACTIVATE SOURCING COLUMNS')return;
+   sourcingButton.disabled=true;
+   try{
+    const result=await activateApprovedPublicSourcingColumns({
+     api:db,auth,acknowledgement:MATERIAL_SOURCING_ACTIVATION_ACK
+    });
+    if(!authorized())return;
+    hideModal();
+    await loadBoard(snapshot.boardId,state.tab);
+    toast(result.created.length+' public Material Sourcing columns verified. Restricted fields remain protected.');
+   }catch(err){if(authorized())notice(err);}
+   finally{if(sourcingButton.isConnected)sourcingButton.disabled=false;}
+   return;
+  }
   const virtualToggle=event.target.closest('[data-structure-virtual-toggle]');
   if(virtualToggle){
    const columnKey=virtualToggle.dataset.structureVirtualToggle;
