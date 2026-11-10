@@ -257,9 +257,9 @@ function stopAuthVisuals(){
 function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
- state.mrhReadiness=null;
  // Clear detached protected item values on every signed-out transition.
  hideModal();
+ state.mrhReadiness=null;
  stopAvatarPreview();
  syncFuelTrans({container:null});
  stopAuthVisuals();
