@@ -31,6 +31,8 @@ export function materialTrackerRows(detail,{today=new Date()}={}){
   typeof item.id==='string'&&typeof item.title==='string').map(item=>{
   const source=get(item,'Source Type'),due=dateValue(get(item,'Date required'));
   return Object.freeze({id:item.id,partNumber:item.title,source:['Local','Import'].includes(source)?source:'',
+   created:typeof item.created_at==='string'&&!Number.isNaN(Date.parse(item.created_at))?
+    item.created_at.slice(0,10):'',
    description:get(item,'Material description'),brand:get(item,'Brand'),
    quantity:get(item,'Quantity'),rfq:get(item,'RFQ Ref No'),due,
    lead:get(item,'Leadtime in Weeks'),overdue:!!due&&due<current});
@@ -42,6 +44,18 @@ export function filterMaterialTrackerRows(rows,filters={}){
  return rows.filter(row=>(source==='all'||row.source===source)&&
   (!filters.overdue||row.overdue)&&(!query||
   [row.partNumber,row.description,row.brand,row.rfq].some(v=>v.toLocaleLowerCase().includes(query))));
+}
+/** CSV export uses only the approved public rows; spreadsheet formulas are inert. */
+export function materialTrackerPublicCsv(rows){
+ const headers=['Part number','Created','Source Type','RFQ Ref No','Material description','Brand','Quantity','Date required','Lead (weeks)'];
+ const safeCell=value=>{
+  const raw=String(value??'');
+  const safe=/^[\s\u0000-\u001f]*[=+@-]/.test(raw)?"'"+raw:raw;
+  return '"'+safe.replace(/"/g,'""')+'"';
+ };
+ return [headers,...rows.map(row=>[row.partNumber,row.created,row.source,row.rfq,
+  row.description,row.brand,row.quantity,row.due,row.lead])]
+  .map(row=>row.map(safeCell).join(',')).join('\r\n')+'\r\n';
 }
 const visibleDate=value=>{
  if(typeof value!=='string'||!Number.isFinite(Date.parse(value)))return '';
@@ -126,6 +140,7 @@ export function renderMaterialSourcingTracker(detail,filters=MATERIAL_TRACKER_DE
       '<option value="'+value+'"'+(filters.source===value?' selected':'')+'>'+label+'</option>').join('')+'</select></label>'+
     '<label class="mrh-tracker-overdue"><input type="checkbox" id="mrh-tracker-overdue"'+(filters.overdue?' checked':'')+'>'+
      ' Overdue <span class="mrh-overdue-count">'+overdue+'</span></label>'+
+    '<button type="button" class="mrh-export-csv" data-action="mrh-export-csv" title="Export only visible public material fields">⇩ Export CSV</button>'+
     '<span class="mrh-loaded-count" role="status" aria-live="polite">'+rows.length+' of '+all.length+' loaded</span></div>'+
     '<div class="mrh-tracker-table-scroll" role="region" aria-label="Horizontally scrollable materials table" tabindex="0">'+
      '<table class="mrh-tracker-table"><thead><tr>'+

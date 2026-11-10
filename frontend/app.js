@@ -72,7 +72,7 @@ import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
-import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard} from './material-sourcing-tracker.js';
+import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
 import {renderMaterialSourcingDetailTabs,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
@@ -4970,6 +4970,22 @@ async function action(name,button){
   contextualColumnCreate();break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
+ case 'mrh-export-csv':{
+  if(state.view!=='board'||state.tab!=='sourcing'||
+     !isMaterialTrackerBoard(state.board)||!auth.isSignedIn||
+     state.board?.board?.workspace_id!==state.context?.workspace_id||
+     state.context?.user_id!==auth.userId)return;
+  const rows=filterMaterialTrackerRows(materialTrackerRows(state.board),state.mrhTrackerFilters);
+  const csv=materialTrackerPublicCsv(rows);
+  const url=URL.createObjectURL(new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
+  const anchor=document.createElement('a');
+  anchor.href=url;
+  anchor.download='material-sourcing-public-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(anchor);anchor.click();anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Exported '+rows.length+' visible material records (public fields only).');
+  break;
+ }
  case 'mrh-new-part':{
   if(!isMaterialSourcingBoard(state.board?.board)||!state.edit||
      !['items','sourcing'].includes(state.tab)||!activeBoardLayout())break;
