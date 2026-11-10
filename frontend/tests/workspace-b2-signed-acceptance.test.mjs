@@ -84,6 +84,6 @@ test('Access acceptance is signed-only; read-only member discovery is UI enabled
  assert.match(ui,/options\.lifecycle\.discover\(\)/);
  assert.match(ui,/result\?\.status!=='SIGNED_MEMBER_DISCOVERY'/);
  assert.match(ui,/WS01_CREATION_ENABLED=true/);
- assert.match(ui,/WS01_SWITCHING_ENABLED=false/);
+ assert.match(ui,/WS01_SWITCHING_ENABLED=true/);
  assert.match(smoke,/frontend\/workspace-b2-signed-acceptance\.js/);
 });

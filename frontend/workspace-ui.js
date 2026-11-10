@@ -7,7 +7,7 @@ import {validUuid} from './data.js';
 
 export const WS01_DISCOVERY_ENABLED=true;
 export const WS01_CREATION_ENABLED=true;
-export const WS01_SWITCHING_ENABLED=false;
+export const WS01_SWITCHING_ENABLED=true;
 const INVITE_ROLES=new Set(['admin','member','viewer']);
 const TABS=new Set(['all','recent','owner','member','collaborator']);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({

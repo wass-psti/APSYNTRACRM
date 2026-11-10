@@ -5,11 +5,13 @@ concurrency:
 
 on:
   push:
-    branches: [main, feature/ws01c-b3-controlled-workspace-creation]
+    branches: [main, feature/ws01c-b3-controlled-workspace-creation, feat/ws01-signed-workspace-switch-20261110]
     paths:
       - '.github/workflows/cp-ws01b-disposable-postgres.yml'
       - 'sql/cp-ws01-discovery-activation-candidate.sql'
       - 'sql/cp-ws01b-*.sql'
+      - 'sql/cp-ws01-switch-*.sql'
+      - 'sql/tests/cp-ws01-switch-*.sql'
       - 'sql/cp-ws01c-*.sql'
       - 'sql/cp-ws01-config-update-dormant-candidate.sql'
       - 'sql/tests/cp-ws01c-b3-controlled-activation-disposable.sql'
@@ -36,6 +38,8 @@ on:
       - 'server/tests/ws02d-*.test.mjs'
   pull_request:
     paths:
+      - 'sql/cp-ws01-switch-*.sql'
+      - 'sql/tests/cp-ws01-switch-*.sql'
       - '.github/workflows/cp-ws01b-disposable-postgres.yml'
       - 'sql/tests/cp-ws01c-b3-dormant-production-postinstall-readonly.sql'
       - 'sql/cp-ws01c-b3-reviewed-production-activation-20261106.sql'
@@ -216,6 +220,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f sql/cp-ws01b-session-cutover-candidate.sql
       - name: Verify default-deny grants and preactivation signed reads
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-preactivation.sql
+      - name: Verify reversible signed workspace switch activation in isolated PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01-switch-activation-disposable.sql
       - name: Accept disposable owner creation, privacy, CAS, revocation and isolation
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws01b-disposable-acceptance.sql
       - name: Prove real simultaneous signed selection CAS under GoTrue row contention (disposable only)
