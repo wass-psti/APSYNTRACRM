@@ -16,6 +16,7 @@ on:
       - 'scripts/ft3-backup-crypto*.mjs'
       - 'scripts/ft3-offsite-policy-preflight*.mjs'
       - 'scripts/ft3-s3-infrastructure-contract.test.mjs'
+      - 'scripts/ft3-encrypted-recovery-bundle*.mjs'
       - 'infra/fueltrack-recovery/s3-object-lock.template.json'
       - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
   workflow_dispatch:
@@ -55,3 +56,5 @@ jobs:
         run: node --test scripts/ft3-offsite-policy-preflight.test.mjs
       - name: Verify nondeployed S3 Compliance/IAM infrastructure template
         run: node --test scripts/ft3-s3-infrastructure-contract.test.mjs
+      - name: Verify authenticated encrypted SQL and private Storage recovery bundle
+        run: node --test scripts/ft3-encrypted-recovery-bundle.test.mjs

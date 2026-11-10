@@ -160,3 +160,13 @@ credentials, AWS resources, retention activation or costs have been
 authorized or incurred by this implementation. Nine local contract
 tests cover least privilege and fail-closed retention configuration.
 See docs/FUELTRACK-V3-AWS-S3-OBJECT-LOCK-TEMPLATE-20261110.md.
+
+## November 10 — Encrypted recovery bundle integration (nonproduction)
+
+Integrated prior local staging, verified SQL/private Storage manifests,
+AES-256-GCM encryption, authenticated decryption and complete roundtrip
+recovery verification into one on-demand local command. Six synthetic
+integration tests passed. The implementation packages a historical
+snapshot only: no AWS transfer, live database capture, scheduled backup,
+provider physical restore or production 24-hour RPO/RTO assurance exists.
+See docs/FUELTRACK-V3-ENCRYPTED-RECOVERY-BUNDLE-20261110.md.
