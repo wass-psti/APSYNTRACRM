@@ -27,4 +27,8 @@ Run ./scripts/fueltrack-v3-backend-disposable.sh and the frontend Node test suit
 
 ## Production status
 
-This is a source-controlled forward migration. It has NOT been applied to the production Supabase project in this implementation increment. Production activation and signed live acceptance remain separate release evidence; do not infer them from disposable PostgreSQL tests.
+The forward-only migration was applied to the existing production Supabase project and recorded as version 20261110163848 (fueltrack_v3_module_scoped_workflows). Read-only postflight verified the Board-view-only guard, private Storage policies, authenticated RPC grant, anonymous submit denial, private internal helper grants, denied direct request-table reads, private bucket, and zero production request/receipt/audit rows.
+
+PR #185 merged as f32ac922564af6e33235a98122f03c1a4493823f. GitHub Pages build/deploy run 42857947071 and frontend validation run 42857956956 completed successfully. Live CDN checks confirmed the new-request signed retry control, its handler, the LightFuels receipt route, and both CSS source and bundle are deployed.
+
+Genuine signed User submission, signed Admin approval/refueling, actual private receipt upload/download, and live unauthorized/foreign-workspace denial remain runtime acceptance items. They have not been inferred from disposable PostgreSQL tests or deployment success.
