@@ -44,9 +44,25 @@ test('exact seven tabs and canonical application deep links',()=>{
  assert.equal((markup.match(/class="ft3-app-tab(?: is-active)?"/g)||[]).length,7);
  assert.equal((markup.match(/aria-current="page"/g)||[]).length,1);
  assert.match(markup,/FuelTrack\+/);
- assert.match(markup,/Read-only dashboard/);
+ assert.match(markup,/Board-only fallback · FuelTrack transaction access unverified/);
 });
 
+test('FuelTrack header distinguishes verified signed, loading, denial and Board fallback',()=>{
+ const detail=fixture();
+ const base=renderFuelTrackV3Application({detail});
+ assert.match(base,/Board-only fallback · FuelTrack transaction access unverified/);
+ const loading=renderFuelTrackV3Application({detail,backend:{busy:true}});
+ assert.match(loading,/Checking signed FuelTrack access/);
+ const denied=renderFuelTrackV3Application({detail,backend:{error:'Access denied'}});
+ assert.match(denied,/Signed FuelTrack service unavailable/);
+ assert.doesNotMatch(denied,/Verified signed FuelTrack operations/);
+ const snapshot={status:'VERIFIED_READ',boardId:BOARD,workspaceId:W,
+  role:'Admin',rows:[],summary:{total:0,submitted:0,approved:0,rejected:0,
+   refuelingDone:0,completed:0}};
+ const verified=renderFuelTrackV3Application({detail,backend:{snapshot}});
+ assert.match(verified,/Verified signed FuelTrack operations · Admin/);
+ assert.doesNotMatch(verified,/Board-only fallback/);
+});
 test('empty database stays empty and never borrows the 271 screenshot requests',()=>{
  const model=fuelTrackDashboardModel(fixture());
  assert.equal(model.count,0);

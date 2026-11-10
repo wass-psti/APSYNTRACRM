@@ -190,6 +190,10 @@ export function renderFuelTrackV3Application({detail,section='dashboard',actorNa
  const signed=verifyFuelTrackBackendSnapshot(backend?.snapshot,detail.board.id,detail.board.workspace_id);
  const approvals=signed?projectFuelTrackApprovals(signed):null;
  const light=signed?projectFuelTrackLightFuels(signed):null;
+ const modeLabel=signed?'Verified signed FuelTrack operations · '+signed.role:
+  backend?.busy?'Checking signed FuelTrack access…':
+  backend?.error?'Signed FuelTrack service unavailable':
+  'Board-only fallback · FuelTrack transaction access unverified';
  const navigation=FUELTRACK_TABS.map(t=>'<a class="ft3-app-tab'+
   (view===t.key?' is-active':'')+'" href="'+fuelTrackHref(t.key)+'"'+
   (view===t.key?' aria-current="page"':'')+'><span aria-hidden="true">'+t.icon+'</span>'+
@@ -199,7 +203,7 @@ export function renderFuelTrackV3Application({detail,section='dashboard',actorNa
   '<span class="ft3-app-logo" aria-hidden="true">◈</span>'+
   '<div><strong>FuelTrack+</strong><small>Fuel Control · APSYNTRA CRM</small></div></div>'+
   '<div class="ft3-app-identity"><span>'+h(actorName)+'</span>'+
-  '<span class="ft3-app-mode">Signed board data · Read-only dashboard</span></div></header>'+
+  '<span class="ft3-app-mode" role="status">'+h(modeLabel)+'</span></div></header>'+
   '<nav class="ft3-app-tabs" aria-label="FuelTrack application sections">'+navigation+'</nav>'+
   '<div class="ft3-app-body">'+(backend?.error?'<p class="ft3-new-boundary" role="alert">'+h(backend.error)+'</p>':'')+(view==='dashboard'&&signed?renderFuelTrackSignedDashboard(signed):view==='dashboard'?dashboard(model):view==='analytics'&&signed?renderFuelTrackSignedAnalytics(backend?.analytics):view==='analytics'&&typeof analyticsRenderer==='function'?analyticsRenderer({detail,view:analyticsView,range:analyticsRange,metric:analyticsMetric}):view==='requests'&&signed?renderFuelTrackSignedRequests(signed):view==='requests'&&typeof requestsRenderer==='function'?requestsRenderer({detail,filters:requestsFilters}):view==='new-request'?renderFuelTrackNewRequest({enabled:!!signed&&backend?.editable===true,busy:backend?.busy===true,message:backend?.message||'',receiptHref:signed?.role==='Admin'?fuelTrackHref('lightfuels'):null}):view==='approvals'?renderFuelTrackApprovals({snapshot:approvals,boardId:detail.board.id,workspaceId:detail.board.workspace_id,actionEnabled:!!approvals&&backend?.editable===true&&!backend?.busy}):view==='lightfuels'?renderFuelTrackLightFuels({snapshot:light,boardId:detail.board.id,workspaceId:detail.board.workspace_id,actionEnabled:!!light&&backend?.editable===true&&!backend?.busy,receiptLink:backend?.receiptLink||null}):view==='activity'?renderFuelTrackActivity(activity||{}):placeholder(view))+
   '</div></section>';
