@@ -19,6 +19,7 @@ import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-vi
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
+import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 import {PlatformSync} from './platform-sync.js';
 import {APP_NAME} from './config.js';
@@ -862,7 +863,7 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
@@ -3828,7 +3829,15 @@ async function action(name,button){
  }
  case 'platform-sync-verify':{await platformSync.syncNow('manual',[]);break;}
  case 'refresh':{try{await refreshWorkspace();render();toast('Workspace refreshed.')}catch(err){notice(err);}break;}
- case 'board-activity':{await openBoardActivity();break;}
+ case 'board-share-preview':{
+    if(!auth.isSignedIn||!state.context||!state.board?.board||!state.boardId)break;
+    const board=state.board.board;
+    if(board.id!==state.boardId||board.workspace_id!==state.context.workspace_id)break;
+    openBoardSharePreview({board,moduleKey:moduleByBoardName(board.name)?.key||null,
+      workspaceId:state.context.workspace_id,manage:state.boardManage===true});
+    break;
+  }
+  case 'board-activity':{await openBoardActivity();break;}
  case 'board-import':{
   if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit))
    throw new ApiError('Import is limited to signed ordinary-board editors.',403);
