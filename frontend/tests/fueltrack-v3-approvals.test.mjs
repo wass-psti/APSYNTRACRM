@@ -38,3 +38,32 @@ test('verified pending rows escape untrusted content and never expose mutation c
  assert.doesNotMatch(html,/<img|data-action="ft3-approve"/);
  assert.match(html,/Review actions are unavailable/);
 });
+
+test('verified signed Admin sees distinct accessible cards and scoped decision actions',()=>{
+ const snapshot={...base,pendingCount:2,pending:[
+  {id:'55555555-5555-4555-8555-555555555551',title:'G42 80H — Requester',
+   createdAt:'2026-11-10T16:50:14.76496+00:00',revision:1},
+  {id:'55555555-5555-4555-8555-555555555552',title:'Container refill',
+   createdAt:'2026-11-10T16:51:00Z',revision:2}
+ ]};
+ const html=renderFuelTrackApprovals({...args(snapshot),actionEnabled:true});
+ assert.match(html,/aria-label="Pending approval requests"/);
+ assert.match(html,/Awaiting your decision/);
+ assert.equal((html.match(/class="ft3-approval-card"/g)||[]).length,2);
+ assert.equal((html.match(/data-action="ft3-approve"/g)||[]).length,2);
+ assert.equal((html.match(/data-action="ft3-reject"/g)||[]).length,2);
+ assert.match(html,/Nov 11, 2026/);
+ assert.match(html,/for="ft3-reason-55555555-5555-4555-8555-555555555551"/);
+ assert.match(html,/class="ft3-approval-status"/);
+ assert.doesNotMatch(html,/2026-11-10T16:50:14/);
+});
+
+test('a pending request without a verified revision has no decision buttons',()=>{
+ const snapshot={...base,pendingCount:1,pending:[
+  {id:'55555555-5555-4555-8555-555555555553',
+   title:'Unknown revision',createdAt:'2026-11-10T00:00:00Z'}
+ ]};
+ const html=renderFuelTrackApprovals({...args(snapshot),actionEnabled:true});
+ assert.match(html,/Decision actions are unavailable for this request/);
+ assert.doesNotMatch(html,/data-action="ft3-approve"|data-action="ft3-reject"/);
+});
