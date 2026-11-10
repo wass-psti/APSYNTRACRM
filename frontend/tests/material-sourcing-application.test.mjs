@@ -170,7 +170,7 @@ test('new part UI is limited to signed material board and uses no reference data
 
 test('protected item DOM clears after sign-out and workspace or board changes',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(source,/function renderLogin\([\s\S]*?\{\n \/\/ Clear detached protected item values on every signed-out transition\.\n hideModal\(\);/);
+ assert.match(source,/function renderLogin\([\s\S]*?stopTimeTrackerPixi\(\);\n \/\/ Clear detached protected item values on every signed-out transition\.\n hideModal\(\);/);
  assert.match(source,/modal\?\.querySelector\('\[data-mrh-private-host\]'\)/);
  assert.match(source,/state\.context\?\.workspace_id!==modal\.dataset\.mrhWorkspace/);
  assert.match(source,/modal\.dataset\.mrhActor=snapshot\.userId/);
