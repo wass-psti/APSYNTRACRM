@@ -8,6 +8,11 @@
 #app .ft3-app-brand small{display:block;color:#74888d;margin-top:3px;font-size:10px;font-weight:550}
 #app .ft3-app-identity{display:flex;align-items:center;gap:12px;color:#647982;font-size:11px;min-width:0}
 #app .ft3-app-mode{border:1px solid #d5e9e7;border-radius:999px;background:#e9f8f4;color:#267c70;padding:6px 10px;white-space:normal}
+#app .ft3-preflight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 20px;background:#f1f8fa;font-size:11px;color:#476a75}
+#app .ft3-preflight button{font:inherit;font-weight:700;border:1px solid #aacbd2;background:#fff;border-radius:9px;padding:8px 12px;color:#245e70;cursor:pointer}
+#app .ft3-preflight button:disabled{opacity:.65;cursor:not-allowed}
+#app .ft3-preflight button:focus-visible{outline:2px solid #167c98;outline-offset:2px}
+#app .ft3-preflight [role="alert"]{color:#994022}
 #app .ft3-app-tabs{display:flex;align-items:center;gap:2px;overflow-x:auto;border-bottom:1px solid #d9e5e9;padding:0 18px;background:#f1f8fa;scrollbar-width:thin}
 #app .ft3-app-tab{color:#637983;display:inline-flex;align-items:center;gap:7px;text-decoration:none;padding:13px 12px;white-space:nowrap;border-bottom:2px solid transparent;font-size:12px;font-weight:650;min-height:43px}
 #app .ft3-app-tab:hover{background:#eaf2f4;color:#1e6566}
