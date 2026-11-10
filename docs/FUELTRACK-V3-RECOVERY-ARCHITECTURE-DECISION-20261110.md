@@ -140,3 +140,12 @@ activate any offsite destination, immutable retention, live production
 export, recurring capture or credential/key custody infrastructure. No
 architecture-policy exception is authorized. See
 docs/FUELTRACK-V3-BACKUP-ENCRYPTION-PREFLIGHT-20261110.md.
+
+## November 10 — Provider-neutral offsite configuration preflight
+
+An offline preflight for a separately approved offsite destination plan is
+implemented with twelve disposable tests. AWS S3 Object Lock COMPLIANCE is
+a preferred strict retention candidate; Cloudflare R2 lock rules are a
+configurable alternative. No account, bucket, retention duration, cost,
+credential or key-custody arrangement is approved. No provider state is
+attested or altered. See the offsite provider preflight report.

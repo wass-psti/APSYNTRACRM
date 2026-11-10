@@ -14,6 +14,7 @@ on:
       - 'scripts/ft3-recovery-retention-gate*.mjs'
       - 'scripts/ft3-recovery-set-stage*.mjs'
       - 'scripts/ft3-backup-crypto*.mjs'
+      - 'scripts/ft3-offsite-policy-preflight*.mjs'
       - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
   workflow_dispatch:
 
@@ -48,3 +49,5 @@ jobs:
         run: node --test scripts/ft3-recovery-set-stage.test.mjs
       - name: Verify local authenticated backup encryption and tamper rejection
         run: node --test scripts/ft3-backup-crypto.test.mjs
+      - name: Verify offsite provider retention preflight rejects unsafe plans
+        run: node --test scripts/ft3-offsite-policy-preflight.test.mjs
