@@ -11,7 +11,7 @@ import {activateApprovedPublicSourcingColumns,
 const USER='11111111-1111-4111-8111-111111111111';
 const WS='22222222-2222-4222-8222-222222222222';
 const uuid=n=>'33333333-3333-4333-8333-'+String(n).padStart(12,'0');
-function fixture({permission=true,groupName='Main group',wrongWorkspace=false,failWrite=false}={}){
+function fixture({permission=true,groupName='Main group',wrongWorkspace=false,failWrite=false,moduleRole='ADMIN'}={}){
  const columns=MATERIAL_SOURCING_EXISTING.map((f,i)=>({
   id:uuid(i+1),name:f.name,data_type:f.type,position:i,
   column_key:'col_'+i,system_key:null,visible:true
@@ -31,6 +31,8 @@ function fixture({permission=true,groupName='Main group',wrongWorkspace=false,fa
   }),
   rpc:async(name,args)=>{
    calls.push(['rpc',name,args]);
+   if(name==='material_request_hub_bootstrap')
+    return {workspaceId:WS,role:moduleRole};
    assert.equal(name,'wm_board_schema_mutate');
    if(failWrite)throw Object.assign(new Error('Simulated denied write'),{status:403});
    assert.equal(args.p_action,'create');
@@ -61,13 +63,13 @@ test('authorized activation creates only ordinary fields via authoritative CAS',
  const expected=MATERIAL_SOURCING_ADDITIONS.filter(x=>x.exposure==='ordinary');
  assert.equal(result.status,'PUBLIC_COLUMNS_VERIFIED');
  assert.deepEqual(result.created,expected.map(x=>x.name));
- assert.equal(f.calls.filter(x=>x[0]==='rpc').length,expected.length);
+ assert.equal(f.calls.filter(x=>x[0]==='rpc'&&x[1]==='wm_board_schema_mutate').length,expected.length);
  assert.equal(f.columns.length,8+expected.length);
  assert.equal(result.groupName,'Main group');
  assert.equal(f.columns.some(c=>c.name==='Selling Price (VAT-EX)'),false);
  assert.equal(f.columns.some(c=>c.name==='Requestor'),false);
  assert.equal(f.columns.some(c=>c.name==='PHP Equivalent'),false);
- const sourceType=f.calls.find(c=>c[0]==='rpc'&&c[2].p_name==='Source Type');
+ const sourceType=f.calls.find(c=>c[0]==='rpc'&&c[1]==='wm_board_schema_mutate'&&c[2].p_name==='Source Type');
  assert.deepEqual(sourceType[2].p_config,{options:['Local','Import']});
  const again=await activateApprovedPublicSourcingColumns({
   ...f,acknowledgement:MATERIAL_SOURCING_ACTIVATION_ACK
@@ -76,12 +78,12 @@ test('authorized activation creates only ordinary fields via authoritative CAS',
  assert.equal(f.columns.length,8+expected.length);
 });
 test('denied manager and incorrect authoritative workspace cannot mutate',async()=>{
- for(const flags of [{permission:false},{wrongWorkspace:true},{groupName:'Engineering Services'}]){
+ for(const flags of [{permission:false},{wrongWorkspace:true},{groupName:'Engineering Services'},{moduleRole:'VIEWER'}]){
   const f=fixture(flags);
   await assert.rejects(()=>activateApprovedPublicSourcingColumns({
    ...f,acknowledgement:MATERIAL_SOURCING_ACTIVATION_ACK
   }));
-  assert.equal(f.calls.some(x=>x[0]==='rpc'),false);
+  assert.equal(f.calls.some(x=>x[0]==='rpc'&&x[1]==='wm_board_schema_mutate'),false);
  }
 });
 test('denied write is not blindly retried',async()=>{
@@ -89,7 +91,7 @@ test('denied write is not blindly retried',async()=>{
  await assert.rejects(()=>activateApprovedPublicSourcingColumns({
   ...f,acknowledgement:MATERIAL_SOURCING_ACTIVATION_ACK
  }));
- assert.equal(f.calls.filter(x=>x[0]==='rpc').length,1);
+ assert.equal(f.calls.filter(x=>x[0]==='rpc'&&x[1]==='wm_board_schema_mutate').length,1);
  assert.equal(f.columns.length,8);
 });
 test('generic board UI never displays restricted sourcing column, even with allowCustom',()=>{
@@ -126,4 +128,13 @@ test('private SQL candidate never relaxes generic board read permissions',()=>{
  assert.doesNotMatch(sql,/create or replace function public\.wm_get_board|alter table public\.work_board_item_values|grant (?:select|all) on private\.mrh_sourcing_sensitive_cells to authenticated/i);
  for(const field of MATERIAL_SOURCING_ADDITIONS.filter(x=>x.derived))
   assert.ok(!sql.includes("'"+field.name+"'"),'computed field must be excluded: '+field.name);
+});
+
+test('module bootstrap must confirm role, and not general board manage alone',async()=>{
+ const f=fixture({moduleRole:'REQUESTOR'});
+ await assert.rejects(()=>activateApprovedPublicSourcingColumns({
+  ...f,acknowledgement:MATERIAL_SOURCING_ACTIVATION_ACK
+ }),/ADMIN membership/);
+ assert.equal(f.columns.length,8);
+ assert.equal(f.calls.filter(x=>x[1]==='wm_board_schema_mutate').length,0);
 });
