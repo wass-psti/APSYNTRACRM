@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {renderFuelTrackNewRequest,fuelTrackNewRequestPayload} from '../fueltrack-v3-new-request.js';
 import {FUELTRACK_PLATE_OPTIONS,FUELTRACK_PERSON_OPTIONS} from '../fueltrack-v3-reference-options.js';
 import {renderFuelTrackApprovals} from '../fueltrack-v3-approvals.js';
-import {renderFuelTrackLightFuels} from '../fueltrack-v3-lightfuels.js';
+import {renderFuelTrackLightFuels,renderFuelTrackRefuelingDialog} from '../fueltrack-v3-lightfuels.js';
 import {verifyFuelTrackBackendSnapshot,projectFuelTrackApprovals,projectFuelTrackLightFuels}
  from '../fueltrack-v3-backend-projections.js';
 const board='7af78b3f-67bf-4600-9aa1-9006d19d486e';
@@ -85,8 +85,11 @@ test('refueling transitions permit mark first and receipt details second',()=>{
  const next=projectFuelTrackLightFuels(verifyFuelTrackBackendSnapshot(refueled,board,workspace));
  const html=renderFuelTrackLightFuels({snapshot:next,boardId:board,workspaceId:workspace,
   actionEnabled:true});
- assert.match(html,/data-ft3-receipt=/);
- assert.match(html,/Save & Complete/);
+ assert.match(html,/data-action="ft3-open-receipt"/);
+ const dialog=renderFuelTrackRefuelingDialog({snapshot:next,boardId:board,workspaceId:workspace,
+  dialog:{id,stage:'details'}});
+ assert.match(dialog,/data-ft3-receipt=/);
+ assert.match(dialog,/Save & Complete/);
  assert.doesNotMatch(html,/data-action="ft3-mark-refueled"/);
 });
 
@@ -97,7 +100,7 @@ test('existing completed records offer explicit nonmutating signed receipt byte 
  const active=renderFuelTrackLightFuels({snapshot:data,boardId:board,workspaceId:workspace,
   actionEnabled:true});
  assert.match(active,/data-action="ft3-verify-receipt"/);
- assert.match(active,/Verify private receipt bytes/);
+ assert.match(active,/Verify file/);
  const denied=renderFuelTrackLightFuels({snapshot:data,boardId:board,workspaceId:workspace});
  assert.doesNotMatch(denied,/data-action="ft3-verify-receipt"/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
