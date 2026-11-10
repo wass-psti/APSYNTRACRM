@@ -185,6 +185,34 @@ test('New Fuel Request exposes two distinct reference modes without fabricated c
  assert.doesNotMatch(html,/<form\b|data-action="[^"]*submit|\bfetch\(/i);
 });
 
+test('FuelTrack module roles enable domain workflows without generic Board edit permission',()=>{
+ const summary={total:1,submitted:1,approved:0,rejected:0,refuelingDone:0,completed:0,
+  approvedToday:0,rejectedToday:0,decisionsToday:0,pendingCount:1,
+  activeQueue:1,completedToday:0,overdueCount:0};
+ const request={id:'55555555-5555-4555-8555-555555555555',kind:'vehicle',
+  details:{plate:'GAN 8289'},state:'submitted',revision:1,
+  requestor_name:'Requester',created_at:'2026-11-10T00:00:00Z'};
+ const userSnapshot={status:'VERIFIED_READ',boardId:BOARD,workspaceId:W,
+  role:'User',rows:[request],summary};
+ const userForm=renderFuelTrackV3Application({detail:fixture(),section:'new-request',
+  backend:{snapshot:userSnapshot,editable:false}});
+ assert.match(userForm,/id="ft3-new-request-form"/);
+ assert.match(userForm,/<button type="submit" class="ft3-new-submit" aria-describedby/);
+ assert.doesNotMatch(userForm,/Submit for Approval — unavailable/);
+ const adminSnapshot={...userSnapshot,role:'Admin',rows:[{...request,state:'submitted'}]};
+ const approvals=renderFuelTrackV3Application({detail:fixture(),section:'approvals',
+  backend:{snapshot:adminSnapshot,editable:false}});
+ assert.match(approvals,/data-action="ft3-approve"/);
+ assert.match(approvals,/data-action="ft3-reject"/);
+ const refueled={...adminSnapshot,rows:[{...request,state:'approved'}],
+  summary:{...summary,submitted:0,approved:1,pendingCount:0}};
+ const light=renderFuelTrackV3Application({detail:fixture(),section:'lightfuels',
+  backend:{snapshot:refueled,editable:false}});
+ assert.match(light,/data-action="ft3-mark-refueled"/);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.doesNotMatch(app,/state\.edit!==true\|\|state\.fuelTrackBackendBusy/);
+ assert.doesNotMatch(app,/state\.edit!==true\|\|snapshot\?\.role/);
+});
 test('supplied FuelTrack reference options preserve exact distinct labels and reuse personnel options',async()=>{
  const {FUELTRACK_PLATE_OPTIONS,FUELTRACK_PERSON_OPTIONS,FUELTRACK_CONTAINER_OPTIONS}=
   await import('../fueltrack-v3-reference-options.js');

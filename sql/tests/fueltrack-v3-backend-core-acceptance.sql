@@ -4,11 +4,20 @@ select set_config('request.jwt.claim.sub','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 do $$
 declare b uuid:='7af78b3f-67bf-4600-9aa1-9006d19d486e';
  k uuid:='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
- r jsonb; rr jsonb; rid uuid; denied boolean;
+ r jsonb; rr jsonb; rid uuid; iid uuid; denied boolean;
 begin
+ if not public.work_board_access(b,'view') or public.work_board_access(b,'edit') then
+  raise exception 'USER_BOARD_VIEW_ONLY_FIXTURE_INVALID';
+ end if;
+ denied:=false;
+ begin
+  perform public.wm_add_board_item(b,'dddddddd-dddd-4ddd-8ddd-eeeeeeeeeeee','Generic item');
+ exception when insufficient_privilege then denied:=true; end;
+ if not denied then raise exception 'USER_GENERIC_BOARD_EDIT_ALLOWED';end if;
  r:=public.fueltrack_v3_submit(b,k,'vehicle',
   '{"plate":"GAN 8289","owner":"Person A","origin":"Office","destination":"Depot","purpose":"Refuel vehicle","distance":8}'::jsonb);
- rid:=(r->>'id')::uuid;
+ rid:=(r->>'id')::uuid;iid:=(r->>'boardItemId')::uuid;
+ if iid is null then raise exception 'MODULE_SUBMIT_BOARD_PROJECTION_MISSING';end if;
  if r->>'state'<>'submitted' or r->>'idempotent'<>'false' then raise exception 'CREATE_FAILED';end if;
  rr:=public.fueltrack_v3_submit(b,k,'vehicle',
   '{"plate":"GAN 8289","owner":"Person A","origin":"Office","destination":"Depot","purpose":"Refuel vehicle","distance":8}'::jsonb);
@@ -22,6 +31,21 @@ begin
  rr:=public.fueltrack_v3_read(b,10);
  if (rr->'summary'->>'total')::integer<>1 or jsonb_array_length(rr->'rows')<>1 then
   raise exception 'READ_OWN_FAILED';end if;
+ denied:=false;
+ begin
+  perform public.fueltrack_v3_add_board_item(
+   b,'dddddddd-dddd-4ddd-8ddd-eeeeeeeeeeee','Direct helper call');
+ exception when insufficient_privilege then denied:=true;end;
+ if not denied then raise exception 'MODULE_BOARD_HELPER_EXPOSED';end if;
+ denied:=false;
+ begin
+  insert into storage.objects(bucket_id,name,owner_id,metadata) values(
+   'work-board-files',b::text||'/'||iid::text||
+   '/f0000000-0000-4000-8000-000000000002.jpg',auth.uid()::text,
+   '{"mimetype":"image/jpeg","size":512}'::jsonb
+  );
+ exception when insufficient_privilege then denied:=true;end;
+ if not denied then raise exception 'USER_RECEIPT_STORAGE_UPLOAD_ALLOWED';end if;
  denied:=false;
  begin perform public.fueltrack_v3_decide(b,rid,1,'approved');
  exception when insufficient_privilege then denied:=true;end;
@@ -62,6 +86,14 @@ do $$
 declare b uuid:='7af78b3f-67bf-4600-9aa1-9006d19d486e';
  rid uuid; rr jsonb; denied boolean;
 begin
+ if not public.work_board_access(b,'view') or public.work_board_access(b,'edit') then
+  raise exception 'ADMIN_BOARD_VIEW_ONLY_FIXTURE_INVALID';
+ end if;
+ denied:=false;
+ begin
+  perform public.wm_add_board_item(b,'dddddddd-dddd-4ddd-8ddd-eeeeeeeeeeee','Generic item');
+ exception when insufficient_privilege then denied:=true; end;
+ if not denied then raise exception 'ADMIN_GENERIC_BOARD_EDIT_ALLOWED';end if;
  rr:=public.fueltrack_v3_read(b,100);
  rid:=(rr->'rows'->0->>'id')::uuid;
  if rid is null then raise exception 'ADMIN_READ_FAILED';end if;

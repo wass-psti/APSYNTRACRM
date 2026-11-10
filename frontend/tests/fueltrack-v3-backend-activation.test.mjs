@@ -21,7 +21,7 @@ function fakeForm(kind,fields){
  return {querySelector(selector){return selector==='[name="ft3-fuel-mode"]:checked'?
   {value:kind}:{value:fields[selector.slice(1)]??''};}};
 }
-test('request submit is disabled without verified backend, but available to signed editor',()=>{
+test('request submit is disabled without verified backend, but available to signed module members',()=>{
  const blocked=renderFuelTrackNewRequest();
  const enabled=renderFuelTrackNewRequest({enabled:true});
  assert.match(blocked,/class="ft3-new-submit" disabled/);

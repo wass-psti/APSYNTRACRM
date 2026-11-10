@@ -9,14 +9,22 @@ insert into public.profiles(id,display_name,email) values
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Admin Tester','admin@example.test'),
  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','User Tester','user@example.test');
 create table public.work_boards(id uuid primary key,workspace_id uuid not null,
- name text not null,description text not null,status text not null);
+ name text not null,description text not null,status text not null,
+ updated_at timestamptz not null default now(),updated_by uuid);
+create table public.work_board_columns(
+ id uuid primary key,board_id uuid not null,system_key text,data_type text,
+ config jsonb not null default '{}'::jsonb,position integer not null default 0);
+create table public.work_board_events(
+ id uuid primary key default pg_catalog.gen_random_uuid(),board_id uuid not null,
+ actor_id uuid,event_type text not null,message text not null,
+ entity_type text,entity_id text,payload jsonb not null default '{}'::jsonb);
 create table public.work_board_groups(
  id uuid primary key,board_id uuid not null,title text not null,position int not null default 0);
 create table public.work_board_items(
  id uuid primary key default pg_catalog.gen_random_uuid(),
  board_id uuid not null,group_id uuid not null,
  title text not null,status text not null default 'not_started',
- notes text not null default '',archived_at timestamptz,
+ notes text not null default '',position integer not null default 0,archived_at timestamptz,
  created_by uuid not null,updated_by uuid not null,
  updated_at timestamptz default now()
 );
@@ -56,7 +64,16 @@ create function public.module_role_for(p_module_id text,p_user_id uuid)
 create function public.work_board_access(p_board_id uuid,p_required text)
  returns boolean language sql stable as $$
  select p_board_id='7af78b3f-67bf-4600-9aa1-9006d19d486e'::uuid
- and p_required in ('view','edit') $$;
+ and p_required='view' $$;
+create function public.work_board_log(
+ p_board_id uuid,p_type text,p_message text,p_entity_type text default null,
+ p_entity_id text default null,p_payload jsonb default '{}'::jsonb
+) returns void language plpgsql security definer as $$
+begin
+ insert into public.work_board_events(board_id,actor_id,event_type,message,entity_type,entity_id,payload)
+ values(p_board_id,auth.uid(),p_type,left(coalesce(p_message,''),500),
+  p_entity_type,p_entity_id,coalesce(p_payload,'{}'::jsonb));
+end; $$;
 create function public.append_module_activity(
  p_module_id text,p_event_id text,p_event_type text,p_title text,
  p_message text,p_request_id text,p_payload jsonb)
@@ -67,7 +84,7 @@ create function public.append_module_activity(
  values(p_event_id,p_event_type,p_request_id);
  return jsonb_build_object('id',p_event_id);
  end; $$;
-insert into public.work_boards values
+insert into public.work_boards(id,workspace_id,name,description,status) values
  ('7af78b3f-67bf-4600-9aa1-9006d19d486e',
  '11111111-1111-4111-8111-111111111111',
  'FuelTrack+ v3','[APSYNTRA:MODULE:fueltrack:v1] native','active');
@@ -106,7 +123,40 @@ end;$$;
 -- Disposable fixture inspection grants only; never production policy.
 grant select,update on public.work_board_items to authenticated;
 grant select on public.work_board_item_files to authenticated;
-grant select,insert on storage.objects to authenticated;
+grant select,insert,delete on storage.objects to authenticated;
+alter table storage.objects enable row level security;
+create policy "wm board files insert" on storage.objects
+ for insert to authenticated with check (
+  bucket_id='work-board-files' and owner_id=auth.uid()::text
+  and case when split_part(name,'/',1) ~* '^[0-9a-f-]{36}$'
+   and split_part(name,'/',2) ~* '^[0-9a-f-]{36}$'
+  then public.work_board_access(split_part(name,'/',1)::uuid,'view')
+   and public.work_board_access(split_part(name,'/',1)::uuid,'edit')
+   and exists(select 1 from public.work_board_items i
+    where i.id=split_part(name,'/',2)::uuid and i.board_id=split_part(name,'/',1)::uuid)
+  else false end
+ );
+create policy "wm board files read" on storage.objects
+ for select to authenticated using (
+  bucket_id='work-board-files'
+  and case when split_part(name,'/',1) ~* '^[0-9a-f-]{36}$'
+   and split_part(name,'/',2) ~* '^[0-9a-f-]{36}$'
+  then public.work_board_access(split_part(name,'/',1)::uuid,'view')
+   and exists(select 1 from public.work_board_items i
+    where i.id=split_part(name,'/',2)::uuid and i.board_id=split_part(name,'/',1)::uuid)
+  else false end
+ );
+create policy "wm board files delete" on storage.objects
+ for delete to authenticated using (
+  bucket_id='work-board-files' and owner_id=auth.uid()::text
+  and case when split_part(name,'/',1) ~* '^[0-9a-f-]{36}$'
+   and split_part(name,'/',2) ~* '^[0-9a-f-]{36}$'
+  then public.work_board_access(split_part(name,'/',1)::uuid,'view')
+   and public.work_board_access(split_part(name,'/',1)::uuid,'edit')
+   and exists(select 1 from public.work_board_items i
+    where i.id=split_part(name,'/',2)::uuid and i.board_id=split_part(name,'/',1)::uuid)
+  else false end
+ );
 grant usage on schema storage to authenticated;
 grant usage on schema auth to authenticated;
 grant execute on function auth.uid() to authenticated;

@@ -1,5 +1,5 @@
 /** FuelTrack+ v3 request composition surface.
- * Submission is gated by a verified signed backend snapshot and Board edit access.
+ * Submission is gated by a verified signed FuelTrack snapshot and Board view access.
  * Private receipt attachments are restricted to the later refueling lifecycle.
  */
 import {FUELTRACK_PLATE_OPTIONS,FUELTRACK_PERSON_OPTIONS,FUELTRACK_CONTAINER_OPTIONS} from './fueltrack-v3-reference-options.js';
@@ -41,7 +41,7 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message='',r
  '<div class="ft3-new-panel ft3-new-type" role="group" aria-label="Select Refuel Type"><h3>Select Refuel Type</h3>'+
  '<div class="ft3-new-options">'+mode('vehicle','Vehicle Fuel','Cars, trucks, motorcycles','⛽')+
  mode('container','Container Refill','Drums, canisters, tanks','⬡')+'</div></div>'+
- '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">'+(enabled?'Signed submission available. Vehicle and person choices are reference labels, not verified catalog identities.':'Submission requires a verified signed request service and permission to edit this Board. No request will be saved.')+'</p>'+ (message?'<p class="ft3-new-boundary" role="status">'+h(message)+'</p>':'')+
+ '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">'+(enabled?'Signed submission available. Vehicle and person choices are reference labels, not verified catalog identities.':'Submission requires a verified signed FuelTrack role and access to this Board. No request will be saved.')+'</p>'+ (message?'<p class="ft3-new-boundary" role="status">'+h(message)+'</p>':'')+
  '<div class="ft3-new-vehicle">'+
  section(1,'Vehicle Details',select('ft3-plate','Plate Number','Select plate number',FUELTRACK_PLATE_OPTIONS)+
  select('ft3-owner','Vehicle Owner','Select owner',FUELTRACK_PERSON_OPTIONS)+

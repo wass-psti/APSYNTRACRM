@@ -6,6 +6,9 @@ do $$
 declare b uuid:='7af78b3f-67bf-4600-9aa1-9006d19d486e';
  r jsonb; rr jsonb; rid uuid; iid uuid; prior integer; denied boolean:=false;
 begin
+ if not public.work_board_access(b,'view') or public.work_board_access(b,'edit') then
+  raise exception 'USER_BOARD_VIEW_ONLY_FIXTURE_INVALID';
+ end if;
  select count(*) into prior from public.work_board_items;
  r:=public.fueltrack_v3_submit(b,'88888888-8888-4888-8888-888888888888',
  'vehicle','{"plate":"GBA 8424","owner":"Person B","origin":"Office","destination":"Depot","purpose":"Required transport fuel"}'::jsonb);
@@ -31,8 +34,16 @@ set role authenticated;
 select set_config('request.jwt.claim.sub','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',false);
 do $$
 declare b uuid:='7af78b3f-67bf-4600-9aa1-9006d19d486e';
- r jsonb; rid uuid; iid uuid; path text; rr jsonb; denied boolean;
+ r jsonb; rid uuid; iid uuid; path text; rr jsonb; denied boolean; v_deleted integer;
 begin
+ if not public.work_board_access(b,'view') or public.work_board_access(b,'edit') then
+  raise exception 'ADMIN_BOARD_VIEW_ONLY_FIXTURE_INVALID';
+ end if;
+ denied:=false;
+ begin
+  perform public.wm_add_board_item(b,'dddddddd-dddd-4ddd-8ddd-eeeeeeeeeeee','Generic item');
+ exception when insufficient_privilege then denied:=true;end;
+ if not denied then raise exception 'ADMIN_GENERIC_BOARD_EDIT_ALLOWED';end if;
  r:=public.fueltrack_v3_read(b,200);
  select (row->>'id')::uuid,(row->>'board_item_id')::uuid into rid,iid
  from jsonb_array_elements(r->'rows') as row
@@ -56,6 +67,28 @@ begin
  iid:=(rr->>'boardItemId')::uuid;
  if rr->>'status'<>'VERIFIED_RECEIPT_PREPARE' or iid is null then
   raise exception 'RECEIPT_PREPARE_FAILED';end if;
+ if not public.fueltrack_v3_receipt_storage_upload_allowed(
+  b::text||'/'||iid::text||'/f0000000-0000-4000-8000-000000000001.jpg',
+  '{"mimetype":"image/jpeg","size":512}'::jsonb
+ ) then raise exception 'ADMIN_VIEWER_RECEIPT_UPLOAD_NOT_AUTHORIZED';end if;
+ if public.fueltrack_v3_receipt_storage_upload_allowed(
+  b::text||'/'||iid::text||'/f0000000-0000-4000-8000-000000000003.jpg',
+  '{"mimetype":"image/jpeg","size":5242881}'::jsonb
+ ) or public.fueltrack_v3_receipt_storage_upload_allowed(
+  b::text||'/'||iid::text||'/f0000000-0000-4000-8000-000000000004.jpg',
+  '{"mimetype":"image/png","size":512}'::jsonb
+ ) then raise exception 'INVALID_RECEIPT_STORAGE_METADATA_ALLOWED';end if;
+ insert into storage.objects(bucket_id,name,owner_id,metadata) values
+  ('work-board-files',b::text||'/'||iid::text||'/f0000000-0000-4000-8000-000000000001.jpg',
+   auth.uid()::text,'{"mimetype":"image/jpeg","size":512}'::jsonb);
+ if not public.fueltrack_v3_receipt_storage_upload_allowed(
+  b::text||'/'||iid::text||'/f0000000-0000-4000-8000-000000000001.jpg',
+  '{"mimetype":"image/jpeg","size":512}'::jsonb
+ ) then raise exception 'ORPHAN_PREDICATE_FALSE_AFTER_INSERT';end if;
+ delete from storage.objects where bucket_id='work-board-files'
+  and name=b::text||'/'||iid::text||'/f0000000-0000-4000-8000-000000000001.jpg';
+ get diagnostics v_deleted=row_count;
+ if v_deleted<>1 then raise exception 'FUELTRACK_ORPHAN_CLEANUP_FAILED';end if;
  if not exists
   (select 1 from public.work_board_items where id=iid and
    notes='FuelTrack v3 request: '||rid::text||E'\nState: refueling_done')
@@ -67,6 +100,15 @@ begin
  if not denied then raise exception 'MISSING_STORAGE_OBJECT_ALLOWED';end if;
  insert into storage.objects(bucket_id,name,owner_id,metadata) values
   ('work-board-files',path,auth.uid()::text,'{"mimetype":"image/jpeg","size":512}'::jsonb);
+ denied:=false;
+ begin perform public.fueltrack_v3_register_board_item_file(
+  b,iid,path,'receipt.jpg','image/jpeg',512);
+ exception when insufficient_privilege then denied:=true;end;
+ if not denied then raise exception 'FUELTRACK_FILE_HELPER_EXPOSED';end if;
+ denied:=false;
+ begin perform public.wm_register_board_item_file(iid,path,'receipt.jpg','image/jpeg',512);
+ exception when insufficient_privilege then denied:=true;end;
+ if not denied then raise exception 'ADMIN_GENERIC_BOARD_FILE_EDIT_ALLOWED';end if;
  denied:=false;
  begin perform public.fueltrack_v3_attach_receipt(b,rid,path,'receipt.jpg','image/png',512);
  exception when invalid_parameter_value then denied:=true;end;
@@ -84,6 +126,9 @@ begin
  if r->>'status'<>'VERIFIED_RECEIPT' or
   not exists(select 1 from public.work_board_item_files where storage_path=path)
  then raise exception 'RECEIPT_ATTACH_FAILED';end if;
+ delete from storage.objects where bucket_id='work-board-files' and name=path;
+ get diagnostics v_deleted=row_count;
+ if v_deleted<>0 then raise exception 'REGISTERED_RECEIPT_DELETION_BYPASSED';end if;
  rr:=public.fueltrack_v3_attach_receipt(b,rid,path,'receipt.jpg','image/jpeg',512);
  if rr->>'idempotent'<>'true' or rr->>'fileId'<>r->>'fileId' then
   raise exception 'RECEIPT_REPLAY_FAILED';end if;
