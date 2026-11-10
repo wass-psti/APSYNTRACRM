@@ -28,6 +28,20 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $elig
   SELECT 1 FROM public.work_boards b
   WHERE b.id=p_board AND b.status='active'
     AND b.archived_at IS NULL AND b.trashed_at IS NULL
+    -- Stable module board identities resist a rename/description bypass.
+    AND b.id NOT IN (
+     'b520cefe-6abb-446a-abec-ae5589329a99'::uuid,
+     '47df2cdc-503a-4a22-a35c-06f72be5c56b'::uuid,
+     'e761b849-f144-4ad2-a418-af9e68b5cc58'::uuid,
+     'f36da8fe-8d9d-4629-9938-12533cb3ca39'::uuid,
+     '7af78b3f-67bf-4600-9aa1-9006d19d486e'::uuid,
+     '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88'::uuid,
+     '46bf4ee7-368a-4c35-842c-8593ea1f6ac3'::uuid,
+     'd045708b-6e36-4f0a-92fc-f0b8baf93de3'::uuid,
+     'd1593528-36a6-4644-82f9-58873d3c136b'::uuid,
+     '8219a2a9-be85-479e-af0c-e4a399495f58'::uuid,
+     '991d8263-fc7d-49f0-9207-387edd51d299'::uuid,
+     '617c4c0f-e343-4b3b-8456-50d47dcbaf99'::uuid)
     AND b.description NOT LIKE '[APSYNTRA:MODULE:%'
     AND pg_catalog.lower(pg_catalog.btrim(b.name)) NOT IN
      ('fueltrans standalone','tool traceability','toolbox issues',
