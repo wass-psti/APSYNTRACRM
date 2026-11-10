@@ -34,6 +34,7 @@ import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardItemsComplete,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-application.js';
+import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
 import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,fuelTrackRequestsCsv,fuelTrackRequestQuickDates,FUELTRACK_REQUEST_FILTER_DEFAULTS} from './fueltrack-v3-requests.js';
 import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js';
@@ -5139,7 +5140,33 @@ async function action(name,button){
   }
   root.querySelector('[data-board-tab="'+key+'"]')?.focus();break;
  }
-  case 'ft3-request-status':{
+  case 'ft3-signed-request-status':
+ case 'ft3-signed-request-sort':
+ case 'ft3-signed-request-more':
+ case 'ft3-signed-request-clear':
+ case 'ft3-signed-request-expand':{
+  if(state.view!=='board'||state.tab!=='fueltrack'||state.fuelTrackSection!=='requests'||
+   !verifyFuelTrackBackendSnapshot(state.fuelTrackBackend?.snapshot,state.boardId,state.context?.workspace_id))break;
+  const f=state.fuelTrackRequestFilters;
+  if(name==='ft3-signed-request-status'){
+   const selected=button.dataset.status;
+   if(!['all','submitted','approved','refueling_done','completed','rejected'].includes(selected))break;
+   updateFuelTrackRequestFilters({status:selected,expandedId:null,limit:25});
+  }else if(name==='ft3-signed-request-sort'){
+   updateFuelTrackRequestFilters({sort:f.sort==='newest'?'oldest':'newest',expandedId:null});
+  }else if(name==='ft3-signed-request-more'){
+   updateFuelTrackRequestFilters({limit:Math.min(200,Number(f.limit||25)+25)});
+  }else if(name==='ft3-signed-request-clear'){
+   updateFuelTrackRequestFilters({...FUELTRACK_REQUEST_FILTER_DEFAULTS});
+  }else{
+   const id=button.dataset.id;
+   if(!state.fuelTrackBackend.snapshot.rows.some(r=>r.id===id))break;
+   updateFuelTrackRequestFilters({expandedId:f.expandedId===id?null:id});
+   root.querySelector('[data-action="ft3-signed-request-expand"][data-id="'+id+'"]')?.focus();
+  }
+  break;
+ }
+ case 'ft3-request-status':{
    if(!fuelTrackRequestReady())return;
    const status=button.dataset.status;
    if(!['all','done','pending','approved','rejected','other'].includes(status))return;
@@ -7217,6 +7244,15 @@ root.addEventListener('input',event=>{
   render();
   const next=document.getElementById('ft3-activity-search');
   if(next){next.focus();if(position!=null)next.setSelectionRange(position,position);}
+  return;
+ }
+ if(event.target.id==='ft3-signed-request-search'&&
+  state.view==='board'&&state.tab==='fueltrack'&&state.fuelTrackSection==='requests'&&
+  verifyFuelTrackBackendSnapshot(state.fuelTrackBackend?.snapshot,state.boardId,state.context?.workspace_id)){
+  const pos=event.target.selectionStart;
+  updateFuelTrackRequestFilters({search:String(event.target.value).slice(0,120),limit:25,expandedId:null});
+  const field=root.querySelector('#ft3-signed-request-search');
+  if(field){field.focus();if(pos!=null)field.setSelectionRange(pos,pos);}
   return;
  }
  if(event.target.id==='ft3-request-search'&&fuelTrackRequestReady()){
