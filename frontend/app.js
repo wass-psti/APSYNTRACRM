@@ -69,6 +69,7 @@ import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-st
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard} from './material-sourcing-tracker.js';
+import {renderMaterialSourcingDetailTabs,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart,inspectMaterialSourcingSignedReadiness} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
@@ -876,7 +877,7 @@ function boardPage(){
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
  <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${isMaterialSourcingBoard(b)&&state.tab==='items'?'<button class="secondary" data-action="mrh-check-readiness">Verify signed sourcing readiness</button>':''}
- ${isMaterialSourcingBoard(b)&&state.edit&&state.tab==='items'?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
+ ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
  ${mrhReadiness?'<section class="panel panel-body" role="status" aria-live="polite" aria-label="Material Sourcing signed readiness">'+
@@ -3289,7 +3290,8 @@ async function openBoardItemDetails(itemId){
  if(!item)return;
  const restricted=!!moduleByBoardName(state.board.board.name);
  const group=state.board.groups?.find(x=>x.id===item.group_id);
- const collaboration=await loadBoardCollaboration(db,itemId).catch(()=>({status:'ERROR'}));
+ const sourcing=isMaterialSourcingBoard(state.board?.board);
+ const collaboration=sourcing?null:await loadBoardCollaboration(db,itemId).catch(()=>({status:'ERROR'}));
  if(!boardHistoryAuthorized(snapshot))return;
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-detail-backdrop';
@@ -3298,10 +3300,10 @@ async function openBoardItemDetails(itemId){
   '<button type="button" class="modal-close" data-dismiss aria-label="Close item details">×</button></div>'+
   '<h2 id="board-detail-title">'+e(item.title||'Untitled')+'</h2>'+
   '<p class="muted">Read-only item details from the signed board response.</p>'+
-  boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
-  renderBoardCollaboration(collaboration)+
-  (isMaterialSourcingBoard(state.board?.board)?
-   '<div data-mrh-private-host role="region" aria-label="Protected Material Sourcing details"><p class="muted">Checking restricted sourcing access…</p></div>':'')+
+  (sourcing?renderMaterialSourcingDetailTabs(
+   boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})):
+   boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
+   renderBoardCollaboration(collaboration))+
   '</aside>';
  document.body.append(modal);
  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
@@ -3314,6 +3316,32 @@ async function openBoardItemDetails(itemId){
    workspaceId:snapshot.workspaceId,itemId};
   const current=()=>modal===itemDialog&&boardHistoryAuthorized(snapshot)&&
    auth.isSignedIn&&auth.userId===snapshot.userId;
+  let activityRequested=false;
+  itemDialog.addEventListener('click',async event=>{
+   const button=event.target.closest('[data-mrh-detail-tab]');
+   if(!button||!current())return;
+   const tab=button.dataset.mrhDetailTab;
+   if(!selectMaterialSourcingDetailTab(itemDialog,tab))return;
+   if(tab!=='activity'||activityRequested)return;
+   activityRequested=true;
+   const target=itemDialog.querySelector('[data-mrh-item-activity]');
+   if(!target)return;
+   target.textContent='Loading signed item activity…';
+   try{
+    const rows=await db.boardEvents(snapshot.boardId,200);
+    if(!current())return;
+    const allowed=await db.allowed(snapshot.boardId,'view');
+    if(!current())return;
+    if(!allowed)throw new ApiError('Item activity access denied.',403);
+    target.innerHTML=renderMaterialSourcingItemActivity(
+     materialSourcingItemAuditRows(rows,itemId));
+   }catch{
+    if(current()){
+     target.textContent='Item activity unavailable for this session. No unrelated board events were shown.';
+     activityRequested=false;
+    }
+   }
+  });
   let values=null,busy=false;
   const refresh=async()=>{
    try{
@@ -4726,9 +4754,9 @@ async function action(name,button){
  }
  case 'mrh-new-part':{
   if(!isMaterialSourcingBoard(state.board?.board)||!state.edit||
-     state.tab!=='items'||!activeBoardLayout())break;
+     !['items','sourcing'].includes(state.tab)||!activeBoardLayout())break;
   const snapshot={boardId:state.boardId,userId:auth.userId,
-   workspaceId:state.context?.workspace_id};
+   workspaceId:state.context?.workspace_id,tab:state.tab};
   openModal('New Material Sourcing part',
    input('Part number','partNumber'),
    async fd=>{
@@ -4738,8 +4766,12 @@ async function action(name,button){
      partNumber:fd.get('partNumber')
     });
     if(!boardHistoryAuthorized(snapshot))return;
-    await loadBoard(snapshot.boardId,'items');
-    toast('Part number '+created.partNumber+' created in Main group.');
+    db.invalidateBoardCache();
+    await loadBoard(snapshot.boardId,snapshot.tab);
+    if(!boardHistoryAuthorized(snapshot)||state.tab!==snapshot.tab)return;
+    toast('Part number '+created.partNumber+' created and reloaded in Main group.');
+    if(state.board?.items?.some(row=>row.id===created.itemId))
+     await openBoardItemDetails(created.itemId);
    },{submitLabel:'Create part'});
   break;
  }
