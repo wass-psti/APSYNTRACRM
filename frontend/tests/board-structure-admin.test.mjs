@@ -265,11 +265,45 @@ test('board structure modal uses one keyboard-accessible scroll region below fix
  assert.match(section,/board-history-modal board-structure-modal/);
  assert.match(section,/class="modal-head"/);
  assert.match(section,/class="board-structure-scroll" role="region" aria-label="Board structure form" tabindex="0"/);
- assert.match(section,/renderBoardStructureAdmin\(detail,settings,\{canManage,availableTabs\}\)\+'<\/div><\/section>'/);
+ assert.match(section,/renderBoardStructureAdmin\(detail,settings,\{canManage,availableTabs\}\)\+/);
+ assert.match(section,/\(offerPublicSourcing\?.*data-mrh-activate-public/s);
+ assert.match(section,/'<\/div><\/section>';/);
  assert.match(css,/\.board-history-modal\{max-height:min\(85vh,850px\);overflow:hidden;display:flex;flex-direction:column\}/);
  assert.match(css,/\.board-structure-modal>\.modal-head\{flex:0 0 auto\}/);
  assert.match(css,/\.board-structure-modal>\.board-structure-scroll\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*overscroll-behavior-y:contain/);
  assert.match(css,/\.board-structure-modal>\.board-structure-scroll:focus-visible\{/);
  assert.match(css,/\.board-structure-modal \.board-member-list\{[^}]*max-height:none;overflow:visible/);
  assert.doesNotMatch(section,/preventDefault\(\).*wheel|touchmove/);
+});
+
+test('board settings action opens a visible dialog before asynchronous signed reads',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf('async function openBoardStructure(){');
+ const end=app.indexOf('\nasync function action(',start);
+ assert.ok(start>=0&&end>start);
+ const section=app.slice(start,end);
+ const pending=section.indexOf('document.body.append(pending);');
+ const settings=section.indexOf('boardStructureClient.read(snapshot.boardId)');
+ const manage=section.indexOf("db.allowed(snapshot.boardId,'manage')");
+ const finalDialog=section.indexOf("view.innerHTML='<section");
+ assert.ok(pending>0&&settings>pending&&manage>pending&&finalDialog>settings,
+  'open a dialog before signed API awaits and render authorized controls only afterward');
+ assert.match(section,/data-board-structure-loading/);
+ assert.match(section,/role="status" aria-live="polite"/);
+ assert.match(section,/data-board-structure-retry/);
+ assert.match(section,/Board settings could not be loaded/);
+ assert.match(section,/if\(!current\(\)\)return;/);
+ assert.match(section,/state\.boardUi\?\.status==='VERIFIED_READ'/);
+ assert.match(section,/e\(errorMessage\(err\)\)/);
+ assert.match(section,/event\.key==='Escape'/);
+});
+test('settings loading and errors cannot activate unauthorized mutations',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf('async function openBoardStructure(){');
+ const end=app.indexOf('\nasync function action(',start);
+ const section=app.slice(start,end);
+ const pending=section.slice(0,section.indexOf('hideModal();modal=document.createElement(\'div\');\n const view=modal;'));
+ assert.doesNotMatch(pending,/data-structure-save|data-mrh-activate-public|data-structure-delete/);
+ assert.match(section,/const offerPublicSourcing=canManage&&/);
+ assert.match(section,/if\(!authorized\(\)\|\|!canManage\|\|!BOARD_STRUCTURE_ADMIN_ENABLED\)return;/);
 });

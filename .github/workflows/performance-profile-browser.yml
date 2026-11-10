@@ -3,6 +3,12 @@ on:
   pull_request:
     paths:
       - 'frontend/performance-profile.js'
+      - 'frontend/performance-critical-path.js'
+      - 'frontend/performance-entry-waterfall.js'
+      - 'frontend/tests/performance-entry-waterfall.test.mjs'
+      - 'frontend/workspace-startup-read.js'
+      - 'frontend/tests/workspace-startup-read.test.mjs'
+      - 'frontend/tests/performance-critical-path.test.mjs'
       - 'frontend/tests/performance-profile.test.mjs'
       - 'frontend/tests/fixtures/performance-profile-browser.html'
       - 'frontend/app.js'
@@ -12,6 +18,12 @@ on:
     branches: [main]
     paths:
       - 'frontend/performance-profile.js'
+      - 'frontend/performance-critical-path.js'
+      - 'frontend/performance-entry-waterfall.js'
+      - 'frontend/tests/performance-entry-waterfall.test.mjs'
+      - 'frontend/workspace-startup-read.js'
+      - 'frontend/tests/workspace-startup-read.test.mjs'
+      - 'frontend/tests/performance-critical-path.test.mjs'
       - 'frontend/tests/performance-profile.test.mjs'
       - 'frontend/tests/fixtures/performance-profile-browser.html'
       - 'frontend/app.js'
@@ -33,7 +45,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify bounded local sampling, cancellation and privacy constraints
-        run: node --test frontend/tests/performance-profile.test.mjs frontend/tests/settings-experience.test.mjs
+        run: node --test frontend/tests/performance-profile.test.mjs frontend/tests/performance-critical-path.test.mjs frontend/tests/performance-entry-waterfall.test.mjs frontend/tests/workspace-startup-read.test.mjs frontend/tests/settings-experience.test.mjs
       - name: Verify actual finite Chromium frame sample without credentials
         run: |
           set -euo pipefail

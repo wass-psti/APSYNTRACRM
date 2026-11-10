@@ -2,5 +2,61 @@
 <body><h1>Isolated finite frame sample</h1><p>No signed application or production data.</p>
 <script type="module">
 import {sampleBrowserFrames} from '../../performance-profile.js';
-window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000})};
+import {createStartupCriticalPath} from '../../performance-critical-path.js';
+import {readWorkspaceStartup} from '../../workspace-startup-read.js';
+import {summarizeEntryWaterfall} from '../../performance-entry-waterfall.js';
+window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
+ waterfall:()=>{
+  const origin=location.origin;
+  const records=[
+   {name:origin+'/frontend/app.js?secret=must-not-leak',startTime:30,responseEnd:180,decodedBodySize:400},
+   {name:origin+'/frontend/profile.js',startTime:40,responseEnd:210,decodedBodySize:200},
+   {name:origin+'/frontend/apsyntra-styles.bundle.css',startTime:20,responseEnd:100,decodedBodySize:500},
+   {name:origin+'/private/token.js',startTime:20,responseEnd:190,decodedBodySize:700},
+   {name:'https://private.invalid/frontend/leak.js',startTime:20,responseEnd:160,decodedBodySize:1000}
+  ];
+  return summarizeEntryWaterfall({origin,entryMs:250,performanceRef:{getEntriesByType:()=>records}});
+ },
+ measuredWorkspace:async()=>{
+  const path=createStartupCriticalPath();
+  path.begin();path.phase('workspace-authorization');
+  await path.measure('workspace-context',async()=>{
+   await new Promise(resolve=>setTimeout(resolve,80));
+   return {user_id:'synthetic-not-reported',workspace_id:'synthetic-not-reported'};
+  });
+  const result=await readWorkspaceStartup({
+   listBoards:()=>path.measure('board-list',async()=>{
+    await new Promise(resolve=>setTimeout(resolve,60));return [{id:'not-reported'}];
+   }),
+   verifyBootstrap:()=>path.measure('bootstrap-role',async()=>{
+    await new Promise(resolve=>setTimeout(resolve,130));return true;
+   }),
+   isCurrent:()=>true
+  });
+  path.phase('authorized-route');path.end({authenticated:true});
+  return {report:path.snapshot(),count:result.boards.length,bootstrap:result.bootstrapVerified};
+ },
+ concurrentWorkspace:async()=>{
+  let starts=[],scopeValid=true;
+  const begin=performance.now();
+  const authorized=await readWorkspaceStartup({
+   listBoards:async()=>{starts.push('boards');await new Promise(resolve=>setTimeout(resolve,100));return [{id:'synthetic'}]},
+   verifyBootstrap:async()=>{starts.push('role');await new Promise(resolve=>setTimeout(resolve,250));return true},
+   isCurrent:()=>scopeValid
+  });
+  const elapsed=performance.now()-begin;
+  scopeValid=false;
+  let denied=false;
+  try{await readWorkspaceStartup({listBoards:async()=>[],verifyBootstrap:async()=>true,isCurrent:()=>scopeValid});}
+  catch{denied=true;}
+  return {starts,elapsed,authorizedBoards:authorized.boards.length,
+   bootstrapVerified:authorized.bootstrapVerified,denied};
+ },
+ criticalPath:()=>{
+  let now=0;
+  const phases=createStartupCriticalPath({clock:()=>now});
+  phases.begin();now=40;phases.phase('workspace-authorization');
+  now=100;phases.phase('authorized-route');now=120;
+  phases.end({authenticated:true});return phases.snapshot();
+ }};
 </script></body></html>

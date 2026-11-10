@@ -143,7 +143,7 @@ synthetic JWTs, or production fixtures.
 
 ## Local verification in this increment
 
-- Full frontend regression: 1,530/1,530 PASS.
+- Full frontend regression after mainline integration: 1,608/1,608 PASS.
 - Focused FuelTrack signed-preflight tests: 7/7 PASS.
 - FuelTrack signed-runner and release-readiness tests: 16/16 PASS.
 - Disposable PostgreSQL FuelTrack backend/Board/receipt acceptance:
@@ -151,7 +151,7 @@ synthetic JWTs, or production fixtures.
 - All shipped frontend JavaScript syntax checks: PASS.
 - GitHub Pages source/CSP/public-key validation: PASS.
 - Legacy FRT read-consumer guard: PASS.
-- CSS bundle consistency: 41 source files, 832,335 bytes, up to date.
+- CSS bundle consistency after mainline integration: 41 source files, 835,837 bytes, up to date.
 - git diff --check: PASS.
 
 The frontend workflow now includes this feature branch in its push trigger.

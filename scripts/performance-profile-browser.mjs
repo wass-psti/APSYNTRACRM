@@ -8,7 +8,8 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'..');
 const allow=new Set(['/frontend/tests/fixtures/performance-profile-browser.html',
- '/frontend/performance-profile.js']);
+ '/frontend/performance-profile.js','/frontend/performance-critical-path.js',
+ '/frontend/workspace-startup-read.js','/frontend/performance-entry-waterfall.js']);
 const server=createServer((req,res)=>{
  const url=new URL(req.url,'http://127.0.0.1');
  if(!allow.has(url.pathname)){res.writeHead(404);res.end('not found');return;}
@@ -94,6 +95,47 @@ async function run(){
   assert.ok(measured.p50Ms>0&&measured.p95Ms>=measured.p50Ms);
   assert.ok(measured.durationMs===1000);
   assert.ok(!('url' in measured)&&!('userId' in measured));
+  assert.ok(measured.longTasks&&typeof measured.longTasks.supported==='boolean'&&
+   Number.isFinite(measured.longTasks.count));
+  assert.ok(measured.longTasks.maxMs>=0&&measured.longTasks.totalMs>=0);
+  const waterfall=await page.evaluate('performanceAcceptance.waterfall()');
+  assert.equal(waterfall.entryMs,250);
+  assert.equal(waterfall.resourceCount,3);
+  assert.equal(waterfall.groups.javascript.count,2);
+  assert.equal(waterfall.groups.stylesheet.count,1);
+  assert.equal(waterfall.afterLatestPublicResourceMs,40);
+  assert.doesNotMatch(JSON.stringify(waterfall),/secret|must-not-leak|private|token|app\.js/);
+  console.log('BROWSER_ENTRY_WATERFALL_PASS: bounded numeric-only public resource timing');
+  const critical=await page.evaluate('performanceAcceptance.criticalPath()');
+  assert.equal(critical.totalMs,120);
+  assert.equal(critical.entryFromNavigationMs,0);
+  assert.equal(critical.signedReadyFromNavigationMs,120);
+  assert.deepEqual(critical.phases.map(x=>x.phase),
+   ['session-restore','workspace-authorization','authorized-route']);
+  const isolated=await page.evaluate('performanceAcceptance.measuredWorkspace()');
+  assert.equal(isolated.count,1);
+  assert.equal(isolated.bootstrap,true);
+  assert.deepEqual(isolated.report.reads.map(x=>x.operation),
+    ['workspace-context','board-list','bootstrap-role']);
+  const [contextRead,boardRead,roleRead]=isolated.report.reads;
+  assert.ok(contextRead.durationMs>=65&&contextRead.durationMs<500);
+  assert.ok(boardRead.durationMs>=45&&boardRead.durationMs<500);
+  assert.ok(roleRead.durationMs>=110&&roleRead.durationMs<700);
+  assert.ok(boardRead.startMs>=contextRead.endMs&&roleRead.startMs>=contextRead.endMs);
+  assert.ok(Math.abs(boardRead.startMs-roleRead.startMs)<60,
+   'board and role starts must overlap after a fresh context check');
+  assert.doesNotMatch(JSON.stringify(isolated.report),/synthetic-not-reported|not-reported|user_id|workspace_id/);
+  console.log('BROWSER_WORKSPACE_RPC_TIMING_PASS: network-inclusive numeric-only context/list/role boundaries');
+  const parallel=await page.evaluate('performanceAcceptance.concurrentWorkspace()');
+  assert.deepEqual(parallel.starts,['boards','role']);
+  assert.equal(parallel.authorizedBoards,1);
+  assert.equal(parallel.bootstrapVerified,true);
+  assert.equal(parallel.denied,true);
+  assert.ok(parallel.elapsed>=230&&parallel.elapsed<800,
+   'synthetic overlapping 100ms/250ms reads must have bounded makespan');
+  console.log('BROWSER_WORKSPACE_PARALLEL_PASS: independent signed-read scheduling, scope denial, no extra request');
+  console.log('BROWSER_STARTUP_PHASE_PASS: fixed-phase numeric timeline; no private fields');
+  console.log('BROWSER_LONG_TASK_PASS: finite opt-in observer summary without attribution');
   console.log('BROWSER_LOCAL_FRAME_PROFILE_PASS: finite 1s real Chromium RAF sample, no identity or URL');
 
  }finally{

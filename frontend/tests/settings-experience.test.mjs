@@ -209,5 +209,17 @@ test('unverified role hides bootstrap-only session controls without suppressing 
  assert.match(page,/settings-new-password/);
  assert.match(page,/settings-confirm-password/);
  assert.doesNotMatch(page,/settings-session-panel|data-action="copy-token"|data-action="verify-backend"/);
+ assert.doesNotMatch(page,/settings-performance-panel|data-action="profile-rendering"|On-demand browser performance/);
  assert.equal(count(page,/class="panel settings-profile-panel/g),1);
+});
+
+test('only verified bootstrap administrators see the performance profiler',()=>{
+ const allowed=render({roleVerified:true});
+ assert.match(allowed,/settings-performance-panel/);
+ assert.match(allowed,/data-action="profile-rendering"/);
+ for(const roleVerified of [false,null,undefined]){
+  const page=render({roleVerified});
+  assert.doesNotMatch(page,/settings-performance-panel|data-action="profile-rendering"/);
+  assert.match(page,/Profile information/);
+ }
 });
