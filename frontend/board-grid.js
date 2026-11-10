@@ -1,6 +1,6 @@
 /** Authorized typed board-grid presentation. No domain records are synthesized. */
 import {moduleByBoardName} from './board-manifest.js';
-import {MATERIAL_SOURCING_PRIMARY_LABEL,isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
+import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_PRIMARY_LABEL,isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
 import {boardTable} from './board-presentation.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -39,7 +39,7 @@ export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},a
   return [{key:'record',title:'Item'},{key:'status',title:'Status'},
    {key:'col:'+eventDate.id,title:'Date'}];
  }
- return [{key:'record',title:detail?.board?.id==='617c4c0f-e343-4b3b-8456-50d47dcbaf99'&&
+ return [{key:'record',title:detail?.board?.id===MATERIAL_SOURCING_BOARD_ID&&
    detail?.board?.name==='Material Request Hub'&&detail?.board?.status==='active'?
    MATERIAL_SOURCING_PRIMARY_LABEL:primaryTitle},{key:'status',title:'Status'},
   ...columns.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name}))];
