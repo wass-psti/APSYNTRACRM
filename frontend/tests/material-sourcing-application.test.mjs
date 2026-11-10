@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {
  materialSourcingProtectedFields,isMaterialSourcingBoard,
  normalizeProtectedSourcingRead,parseProtectedSourcingValue,
- readProtectedSourcingItem,writeProtectedSourcingField,
+ readProtectedSourcingItem,writeProtectedSourcingField,createMaterialSourcingPart,
  renderProtectedSourcingEditor
 } from '../material-sourcing-application.js';
 import {MATERIAL_SOURCING_BOARD_ID} from '../material-sourcing-schema-plan.js';
@@ -122,4 +122,48 @@ test('app mounts protected editor only on material board items',()=>{
  assert.match(part,/modal===itemDialog&&boardHistoryAuthorized\(snapshot\)/);
  assert.match(part,/if\(!current\(\)\)return/);
  assert.doesNotMatch(part,/localStorage|sessionStorage|console\.log/);
+});
+
+test('part creation uses original Main group and rechecks signed module ADMIN',async()=>{
+ const f=fixture();
+ const newId='55555555-5555-4555-8555-555555555555';
+ let created=false;
+ f.api.board=async()=>({
+  board:{id:MATERIAL_SOURCING_BOARD_ID,workspace_id:workspace,status:'active'},
+  groups:[{id:'21566a87-b287-4a61-b521-bb233956e09e',title:'Main group'}],
+  items:created?[{id:newId,group_id:'21566a87-b287-4a61-b521-bb233956e09e',title:'LRD10'}]:[]
+ });
+ f.api.addItem=async(boardId,groupId,title)=>{
+  assert.equal(boardId,MATERIAL_SOURCING_BOARD_ID);
+  assert.equal(groupId,'21566a87-b287-4a61-b521-bb233956e09e');
+  assert.equal(title,'LRD10');
+  created=true;return newId;
+ };
+ const result=await createMaterialSourcingPart({
+  api:f.api,auth:f.auth,workspaceId:workspace,partNumber:' LRD10 '
+ });
+ assert.deepEqual(result,{itemId:newId,partNumber:'LRD10'});
+ assert.equal(created,true);
+ assert.equal(f.calls.filter(x=>x[1]==='material_request_hub_bootstrap').length,2);
+});
+test('part creation denied without module ADMIN, wrong group, or empty title',async()=>{
+ for(const flags of [{role:'VIEWER'},{permission:false}]){
+  const f=fixture(flags);let writes=0;
+  f.api.addItem=async()=>{writes++;return item;};
+  await assert.rejects(()=>createMaterialSourcingPart({
+   api:f.api,auth:f.auth,workspaceId:workspace,partNumber:'LRD10'
+  }));
+  assert.equal(writes,0);
+ }
+ const f=fixture();
+ await assert.rejects(()=>createMaterialSourcingPart({
+  api:f.api,auth:f.auth,workspaceId:workspace,partNumber:''
+ }));
+});
+test('new part UI is limited to signed material board and uses no reference data fixtures',()=>{
+ const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(source,/isMaterialSourcingBoard\(b\)&&state\.edit&&state\.tab==='items'/);
+ assert.match(source,/data-action="mrh-new-part"/);
+ assert.match(source,/createMaterialSourcingPart\(\{/);
+ assert.match(source,/input\('Part number','partNumber'\)/);
 });
