@@ -4814,6 +4814,12 @@ async function action(name,button){
   await changeTradeLinkDraftState(button.dataset.id,
    name==='tradelink-draft-archive'?'archive':'restore');break;
  }
+ case 'ft3-retry-backend':{
+  if(state.view==='board'&&state.tab==='fueltrack'&&state.boardId===FUELTRACK_V3_ID&&
+   state.fuelTrackSection==='new-request'&&!state.fuelTrackBackendBusy)
+   await loadFuelTrackBackend(routeSerial);
+  break;
+ }
  case 'ft3-signed-preflight':{
   const userId=state.context?.user_id,workspaceId=state.context?.workspace_id,seq=routeSerial;
   const same=()=>seq===routeSerial&&auth.isSignedIn&&auth.userId===userId&&

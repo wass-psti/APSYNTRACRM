@@ -30,14 +30,15 @@ test('request submit is disabled without verified backend, but available to sign
 });
 test('new request directs signed Admin to real post-refueling receipt workflow without false capture',()=>{
  const admin=renderFuelTrackNewRequest({enabled:true,receiptHref:'#/boards/board/fueltrack/lightfuels'});
- assert.match(admin,/Go to LightFuels receipt upload/);
+ assert.match(admin,/Capture Receipt \/ Photo in LightFuels/);
  assert.match(admin,/approved and marked Refueling Done/);
  assert.doesNotMatch(admin,/Capture Receipt \/ Photo — unavailable/);
  const user=renderFuelTrackNewRequest({enabled:true});
  assert.doesNotMatch(user,/ft3-receipt-action/);
  const blocked=renderFuelTrackNewRequest();
  assert.doesNotMatch(blocked,/Go to LightFuels receipt upload/);
- assert.match(blocked,/No request will be saved/);
+ assert.match(blocked,/Requests cannot be saved until the connection succeeds/);
+ assert.match(blocked,/Retry signed FuelTrack connection/);
 });
 test('vehicle input payload is strictly bounded to authorized form controls',()=>{
  const fields={

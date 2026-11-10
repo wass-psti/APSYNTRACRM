@@ -180,8 +180,9 @@ test('New Fuel Request exposes two distinct reference modes without fabricated c
  }
  assert.match(html,/id="ft3-custom-count"/);
  assert.match(html,/value="custom">Custom number of containers/);
- assert.match(html,/<button[^>]*disabled[^>]*>Submit for Approval — unavailable<\/button>/);
- assert.match(html,/no request will be saved/i);
+ assert.match(html,/<button[^>]*disabled[^>]*>Submit for Approval — connect signed service first<\/button>/);
+ assert.match(html,/Requests cannot be saved until the connection succeeds/i);
+ assert.match(html,/data-action="ft3-retry-backend"/);
  assert.doesNotMatch(html,/<form\b|data-action="[^"]*submit|\bfetch\(/i);
 });
 
@@ -212,6 +213,7 @@ test('FuelTrack module roles enable domain workflows without generic Board edit 
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.doesNotMatch(app,/state\.edit!==true\|\|state\.fuelTrackBackendBusy/);
  assert.doesNotMatch(app,/state\.edit!==true\|\|snapshot\?\.role/);
+ assert.match(app,/case 'ft3-retry-backend'/);
 });
 test('supplied FuelTrack reference options preserve exact distinct labels and reuse personnel options',async()=>{
  const {FUELTRACK_PLATE_OPTIONS,FUELTRACK_PERSON_OPTIONS,FUELTRACK_CONTAINER_OPTIONS}=

@@ -30,7 +30,7 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message='',r
  const receipt=()=>'<div class="ft3-new-field ft3-new-wide ft3-new-receipt-info">'+
  '<span>Receipt Photo (Optional — after refueling)</span>'+
  '<p>Submit this fuel request first. Once approved and marked Refueling Done, an authorized Admin can upload the private receipt in LightFuels.</p>'+
- (enabled&&receiptHref?'<a class="ft3-receipt-action" href="'+h(receiptHref)+'">Go to LightFuels receipt upload</a>':'')+
+ (enabled&&receiptHref?'<a class="ft3-receipt-action" href="'+h(receiptHref)+'">Capture Receipt / Photo in LightFuels</a>':'')+
  '</div>';
  const purpose=section(3,'Justification',textArea()+receipt());
  return '<section class="ft3-new-request" aria-labelledby="ft3-new-title">'+
@@ -41,7 +41,7 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message='',r
  '<div class="ft3-new-panel ft3-new-type" role="group" aria-label="Select Refuel Type"><h3>Select Refuel Type</h3>'+
  '<div class="ft3-new-options">'+mode('vehicle','Vehicle Fuel','Cars, trucks, motorcycles','⛽')+
  mode('container','Container Refill','Drums, canisters, tanks','⬡')+'</div></div>'+
- '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">'+(enabled?'Signed submission available. Vehicle and person choices are reference labels, not verified catalog identities.':'Submission requires a verified signed FuelTrack role and access to this Board. No request will be saved.')+'</p>'+ (message?'<p class="ft3-new-boundary" role="status">'+h(message)+'</p>':'')+
+ '<p class="ft3-new-boundary" id="ft3-new-catalog-note" role="status">'+(enabled?'Signed submission available. Vehicle and person choices are reference labels, not verified catalog identities.':'Signed FuelTrack access could not be verified. Requests cannot be saved until the connection succeeds.')+'</p>'+ (message?'<p class="ft3-new-boundary" role="status">'+h(message)+'</p>':'')+
  '<div class="ft3-new-vehicle">'+
  section(1,'Vehicle Details',select('ft3-plate','Plate Number','Select plate number',FUELTRACK_PLATE_OPTIONS)+
  select('ft3-owner','Vehicle Owner','Select owner',FUELTRACK_PERSON_OPTIONS)+
@@ -58,7 +58,7 @@ export function renderFuelTrackNewRequest({enabled=false,busy=false,message='',r
  '<textarea id="ft3-container-purpose" name="containerPurpose" maxlength="500" rows="4" placeholder="Describe the purpose of this fuel request"></textarea></label>'+
  receipt())+
  '</div>'+
- '<button type="submit" class="ft3-new-submit"'+(!enabled||busy?' disabled':'')+' aria-describedby="ft3-new-catalog-note">'+(busy?'Submitting…':enabled?'Submit for Approval':'Submit for Approval — unavailable')+'</button>'+
+ '<button type="submit" class="ft3-new-submit"'+(!enabled||busy?' disabled':'')+' aria-describedby="ft3-new-catalog-note">'+(busy?'Submitting…':enabled?'Submit for Approval':'Submit for Approval — connect signed service first')+'</button>'+(!enabled?'<button type="button" class="ft3-new-retry" data-action="ft3-retry-backend"'+(busy?' disabled':'')+'>Retry signed FuelTrack connection</button>':'')+
  (enabled?'</form>':'</div>')+'</section>';
 }
 

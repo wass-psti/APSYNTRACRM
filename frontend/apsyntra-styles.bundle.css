@@ -12039,6 +12039,9 @@
 #app .ft3-activity-hour-bars .ft3-hour-height-9{height:90%}
 #app .ft3-activity-hour-bars .ft3-hour-height-10{height:100%}
 
+#app .ft3-new-retry{display:block;margin:10px auto 0;border:1px solid #a5cfd0;border-radius:10px;padding:10px 16px;background:#f5fafb;color:#126d72;font:inherit;font-weight:650;cursor:pointer}
+#app .ft3-new-retry:focus-visible{outline:2px solid #1774a4;outline-offset:2px}
+
 /* frontend/tradelink-application.css */
 /* TradeLink source-aligned application shell. Scoped to avoid board/TimeTracker regressions. */
 .aps-tradelink-app{--tl-ink:var(--ink,#20263b);--tl-line:var(--line,#e8ebf2);--tl-accent:var(--purple,#5d61e8);color:var(--tl-ink);display:grid;gap:19px;min-width:0}
