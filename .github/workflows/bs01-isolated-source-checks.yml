@@ -6,6 +6,8 @@ on:
     paths:
       - 'frontend/board-share.js'
       - 'frontend/board-people.js'
+      - 'frontend/board-people.css'
+      - 'index.html'
       - 'frontend/tests/board-people.test.mjs'
       - 'frontend/app.js'
       - 'frontend/tests/board-share*.test.mjs'
@@ -20,6 +22,8 @@ on:
     paths:
       - 'frontend/board-share.js'
       - 'frontend/board-people.js'
+      - 'frontend/board-people.css'
+      - 'index.html'
       - 'frontend/tests/board-people.test.mjs'
       - 'frontend/app.js'
       - 'frontend/tests/board-share*.test.mjs'
