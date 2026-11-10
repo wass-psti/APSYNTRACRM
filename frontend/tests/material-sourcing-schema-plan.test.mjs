@@ -78,3 +78,15 @@ test('no remote mutations, hidden domain data or calculation logic included',()=
  assert.equal(MATERIAL_SOURCING_ADDITIONS.find(x=>x.name==='Source Type').options.join(','),'Local,Import');
  assert.equal(MATERIAL_SOURCING_ADDITIONS.find(x=>x.name==='Currency').options.join(','),'PHP,USD,EUR');
 });
+
+test('even preexisting restricted fields do not constitute field-level authorization',()=>{
+ const base=snapshot();
+ for(const field of MATERIAL_SOURCING_ADDITIONS)base.columns.push({
+  id:UUID,name:field.name,data_type:field.type
+ });
+ const plan=planMaterialSourcingSchema(base);
+ assert.equal(plan.projectedCount,30);
+ assert.equal(plan.additions.length,0);
+ assert.equal(plan.restricted.length,0);
+ assert.equal(plan.status,'BLOCKED_FIELD_AUTHORIZATION');
+});
