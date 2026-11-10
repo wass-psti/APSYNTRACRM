@@ -31,6 +31,7 @@ test('six ordinary sourcing columns render without optional board customization'
  for(const field of MATERIAL_SOURCING_ADDITIONS.filter(x=>x.exposure==='restricted'))
   assert.ok(!titles.includes(field.name),field.name);
  assert.equal(titles.length,2+8+6);
+ assert.equal(titles[0],'Part number');
 });
 test('restricted fields cannot enter generic table even with customization enabled',()=>{
  const prepared=prepareBoardGrid(detail,{allowCustom:true});
@@ -58,4 +59,11 @@ test('ordinary reference columns require exact name/type and are never synthesiz
  for(const f of MATERIAL_SOURCING_ADDITIONS.filter(x=>x.exposure==='ordinary'))
   assert.equal(names.includes(f.name),false);
  assert.equal(names.length,2+original.length);
+});
+
+test('primary source field stays intact and unrelated boards retain their titles',()=>{
+ const other=boardGridColumns({...detail,board:{...board,id:uuid(999),name:'Other board'}},{primaryTitle:'Custom record title'});
+ assert.equal(other[0].title,'Custom record title');
+ assert.equal(detail.columns[0].name,'Source Record ID');
+ assert.equal(detail.groups[0].title,'Main group');
 });
