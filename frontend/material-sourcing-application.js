@@ -3,7 +3,7 @@
  * storage, or persistent reporting. Derived finance values are not edited.
  */
 import {ApiError,} from './session.js';
-import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,MATERIAL_SOURCING_ADDITIONS} from './material-sourcing-schema-plan.js';
+import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,MATERIAL_SOURCING_EXISTING,MATERIAL_SOURCING_ADDITIONS,isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
 
 const PRIVATE_FIELDS=Object.freeze(MATERIAL_SOURCING_ADDITIONS
  .filter(field=>field.exposure==='restricted'&&!field.derived)
@@ -179,4 +179,69 @@ export async function createMaterialSourcingPart({api,auth,workspaceId,partNumbe
     !fresh.items?.some(row=>row.id===savedId&&row.group_id===groupId&&row.title===title))
   deny('Part creation could not be verified. Refresh before retrying.',409);
  return Object.freeze({itemId:savedId,partNumber:title});
+}
+
+/** On-demand, read-only genuine signed production readiness inspection.
+ * Returns bounded nonsecret statuses only. No automatically created fixtures,
+ * no sensitive values, no account names, no retained reports.
+ */
+export async function inspectMaterialSourcingSignedReadiness({api,auth}={}){
+ if(!auth?.isSignedIn||!auth?.userId||!api?.context||!api?.board||
+    !api?.allowed||!api?.rpc||!auth?.getVerifiedUser)
+  deny('Verified Material Sourcing session required.');
+ const userId=auth.userId;
+ const verified=await auth.getVerifiedUser();
+ const context=await api.context();
+ if(!auth.isSignedIn||auth.userId!==userId||verified?.id!==userId||
+    context?.user_id!==userId||context?.profile?.status!=='active'||
+    !UUID.test(context?.workspace_id||''))
+  deny('Current signed identity or workspace is unavailable.');
+ const workspaceId=context.workspace_id;
+ const boardId=MATERIAL_SOURCING_BOARD_ID;
+ const boardAllowed=await api.allowed(boardId,'view')===true;
+ if(!boardAllowed)deny('Material Request Hub board access denied.');
+ const detail=await api.board(boardId);
+ if(!isMaterialSourcingBoard(detail.board)||
+    detail.board.workspace_id!==workspaceId||
+    !detail.groups?.some(group=>group.id===MATERIAL_SOURCING_GROUP.id&&
+      group.title===MATERIAL_SOURCING_GROUP.title))
+  deny('Material Sourcing board or Main group changed.',409);
+ const role=await api.rpc('material_request_hub_bootstrap',{p_workspace_id:workspaceId});
+ if(role?.workspaceId!==workspaceId||role.role!=='ADMIN')
+  deny('Active Material Request Hub ADMIN access required.');
+ const currentColumns=Array.isArray(detail.columns)?detail.columns:[];
+ const publicFields=MATERIAL_SOURCING_ADDITIONS.filter(f=>f.exposure==='ordinary');
+ const verifiedFields=publicFields.filter(field=>currentColumns.some(column=>
+  isApprovedPublicMaterialSourcingColumn(detail.board,column)&&
+  column.name.trim().toLowerCase()===field.name.toLowerCase()));
+ const existing=MATERIAL_SOURCING_EXISTING.every(field=>
+  currentColumns.some(column=>column.name===field.name&&column.data_type===field.type));
+ const items=Array.isArray(detail.items)?detail.items.filter(item=>
+  UUID.test(item.id||'')&&item.group_id===MATERIAL_SOURCING_GROUP.id&&
+  !item.archived_at):[];
+ let privateRead='NO_PERSISTED_ITEM';
+ // Test actual private RPC only against a real, authorized persisted item.
+ if(items.length){
+  await readProtectedSourcingItem({
+   api,auth,boardId,workspaceId,itemId:items[0].id
+  });
+  privateRead='SIGNED_READ_VERIFIED';
+ }
+ const finalContext=await api.context();
+ if(!auth.isSignedIn||auth.userId!==userId||
+    finalContext?.user_id!==userId||finalContext?.workspace_id!==workspaceId)
+  deny('Signed sourcing scope changed during readiness inspection.');
+ return Object.freeze({
+  status:existing?'SIGNED_READINESS_VERIFIED':'SCHEMA_DRIFT',
+  originalGroup:'VERIFIED',
+  originalColumns:existing?'VERIFIED':'DRIFT',
+  publicColumnsVerified:verifiedFields.length,
+  publicColumnsExpected:publicFields.length,
+  signedDomainAdmin:'VERIFIED',
+  privateRead,
+  itemCount:items.length,
+  writesPerformed:0,
+  productionWriteAcceptance:'NOT_EXECUTED',
+  crossRoleDenial:'NOT_EXECUTED'
+ });
 }
