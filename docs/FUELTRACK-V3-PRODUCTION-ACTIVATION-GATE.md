@@ -1,5 +1,24 @@
 # FuelTrack+ v3 — Controlled Production Activation
 
+## Current status — November 11, 2026
+
+**Supersedes the pre-release baseline and remaining-work checklist below.** The following is the current source-of-truth disposition:
+
+- Production migrations 20261110021141, 20261110021200 and 20261110163848 are applied to the existing WatchdogWorkspace Supabase project.
+- The module-scoped workflow policy is active: FuelTrack User/Admin domain actions require signed workspace/module access and Board view; Admin-only transitions and receipt operations remain Admin-only. Generic Board edit rights are unchanged.
+- PR #185 merged as f32ac922564af6e33235a98122f03c1a4493823f.
+- GitHub Pages deployment run 42857947071 and frontend validation run 42857956956 passed. The subsequent documentation-only main commit is ebcf33cbed673c7e1543a132f2eb915d2576b647.
+- Live CDN verification confirmed the signed retry control, retry handler, LightFuels receipt route and CSS assets.
+- Production FuelTrack request/receipt/audit counts remained 0/0/0 during read-only postflight.
+- **Still pending:** genuine signed User request submission, signed Admin approval/refueling, actual private receipt upload/download and live negative authorization acceptance. Deployment success and disposable tests do not prove these transactions.
+
+The original sections below are retained as the November 10 pre-release decision record. Their statements that migrations were not applied, PR #185 was draft, or release was blocked by the old recovery checklist are historical and are not the current state. The retired recovery-provider/RPO/RTO requirements are not prerequisites to application functionality.
+
+Next execution: CP-FT3-LIVE-TRANSACTION-ACCEPTANCE. Use the deployed existing-session read-only verification control first, then perform the real business workflow with existing authorized accounts and legitimate business data. Do not create synthetic production users or records.
+
+---
+
+
 **Effective policy: November 10, 2026 — Recovery policy retirement AUTHORIZED.**
 Current authority: config/production-release-policy.json and docs/RECOVERY-POLICY-RETIREMENT-20261110.md.
 

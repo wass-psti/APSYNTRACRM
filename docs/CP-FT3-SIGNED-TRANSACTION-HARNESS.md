@@ -1,7 +1,6 @@
 # CP-FT3 — Same-session signed acceptance preflight
 
-Status: **IMPLEMENTED-UNVERIFIED in production**. This is a read-only
-prerequisite, not transaction or release acceptance.
+Status: **DEPLOYED; read-only signed acceptance still requires execution in the existing browser session.** This is a prerequisite, not transaction acceptance.
 
 ## Use
 
@@ -38,5 +37,4 @@ authorization), verify:
 5. Protected PR checks, approved merge, GitHub Pages deployed asset hashes, and
    authenticated browser regression.
 
-Nothing in this report constitutes proof of steps 1–5 or authorizes a protected
-merge. The UI is on feature branch PR #185 until the actual release.
+Nothing in this report constitutes proof of steps 1–4. PR #185 has merged and the frontend is deployed; the remaining work is live signed transaction acceptance, not another implementation or approval cycle.
