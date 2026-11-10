@@ -97,6 +97,7 @@ import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
  loadBoardAuditCursorPage,renderBoardAuditCursorPage} from './board-col01-readers.js';
 import {loadBoardCollaboration,renderBoardCollaboration} from './board-collaboration.js';
+import {normalizeBoardPeople,filterBoardPeople,renderBoardPeople,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board-people.js';
 import {BoardPreferenceStore} from './board-preferences-idb.js';
 import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
@@ -863,7 +864,7 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button><button type="button" class="secondary" data-action="board-members">♙ People</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Who can access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
@@ -3277,26 +3278,49 @@ async function openBoardItemDetails(itemId){
 async function openBoardMembers(){
  if(!activeBoardLayout())return;
  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
- const detail=await db.board(snapshot.boardId);
+ // Never infer board authorization from the existence of a client-side list.
+ if(!(await db.allowed(snapshot.boardId,'view'))||!boardHistoryAuthorized(snapshot))return;
+ let detail;
+ try{detail=await db.board(snapshot.boardId);}
+ catch{return;}
  if(!boardHistoryAuthorized(snapshot)||detail.board?.workspace_id!==snapshot.workspaceId)return;
- // The existing signed board RPC returns only this board's membership.
- const members=Array.isArray(detail.members)?detail.members:[];
+ const people=normalizeBoardPeople(detail,{
+  boardId:snapshot.boardId,workspaceId:snapshot.workspaceId});
  const directory=await loadBoardInvitableDirectory(db,snapshot.boardId)
   .catch(()=>({status:'ERROR'}));
  if(!boardHistoryAuthorized(snapshot))return;
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-history-backdrop';
  modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-members-title">'+
-  '<div class="modal-head"><h2 id="board-members-title">Board members</h2>'+
+  '<div class="modal-head"><h2 id="board-members-title">Who can access this board?</h2>'+
   '<button type="button" data-dismiss class="modal-close" aria-label="Close board members">×</button></div>'+
-  '<p class="muted">Existing authorized membership. New invitations require a verified server-side same-workspace and role-ceiling contract.</p>'+
-  '<div class="board-member-list">'+(members.length?members.map(row=>
-    '<div class="board-member"><strong>'+e(row.display_name||'Registered user')+'</strong>'+
-    '<span>'+e(row.role||'Member')+'</span></div>').join(''):
-    '<p>No board membership records were returned.</p>')+'</div>'+
+  '<p class="muted">Explicit board members from the signed board response. An administrator or other user may have effective access through separate rules. This list is not an exhaustive access audit.</p>'+
+  renderBoardPeople(people)+renderMentionDraft(people)+
   '<div data-col01-directory-results>'+renderBoardInvitableDirectory(directory)+'</div></section>';
  document.body.append(modal);
  const view=modal;
+ const editor=view.querySelector('#bs02-mention-editor');
+ const options=view.querySelector('[data-bs02-mention-options]');
+ const suggestions=()=>{
+  if(!editor||!options||view!==modal||!boardHistoryAuthorized(snapshot))return;
+  options.innerHTML=renderMentionOptions(
+   mentionCandidates(people,editor.value,editor.selectionStart));
+ };
+ view.addEventListener('input',event=>{
+  if(view!==modal||!boardHistoryAuthorized(snapshot))return;
+  if(event.target.id==='bs02-people-search'){
+   const query=event.target.value.slice(0,120);
+   const host=view.querySelector('.bs02-people [data-bs02-people-results]');
+   if(host){
+    const html=renderBoardPeople(people,{query});
+    const parsed=document.createElement('div');parsed.innerHTML=html;
+    const candidate=parsed.querySelector('[data-bs02-people-results]');
+    host.replaceChildren(...(candidate?[...candidate.childNodes]:[]));
+   }
+  }
+  if(event.target===editor)suggestions();
+ });
+ view.addEventListener('keyup',event=>{if(event.target===editor)suggestions();});
  view.addEventListener('submit',async event=>{
   if(!event.target.matches('[data-col01-directory-search]'))return;
   event.preventDefault();
@@ -3309,7 +3333,31 @@ async function openBoardMembers(){
   const host=view.querySelector('[data-col01-directory-results]');
   if(host)host.innerHTML=renderBoardInvitableDirectory(result);
  });
- view.addEventListener('click',event=>{if(event.target===view||event.target.closest('[data-dismiss]'))hideModal();});
+ view.addEventListener('click',async event=>{
+  if(event.target===view||event.target.closest('[data-dismiss]')){hideModal();return;}
+  if(!boardHistoryAuthorized(snapshot)||view!==modal)return;
+  const mention=event.target.closest('[data-bs02-mention-id]');
+  if(mention&&editor){
+   const person=people.people.find(p=>p.id===mention.dataset.bs02MentionId);
+   if(!person)return;
+   const inserted=insertMention(editor.value,editor.selectionStart,person);
+   if(!inserted)return;
+   editor.value=inserted.text;
+   editor.focus();editor.setSelectionRange(inserted.cursor,inserted.cursor);
+   if(options)options.replaceChildren();
+   return;
+  }
+  const member=event.target.closest('[data-bs02-copy-name]');
+  const copy=event.target.closest('[data-bs02-copy-draft]');
+  if(!member&&!copy)return;
+  const person=member&&people.people.find(p=>p.id===member.dataset.bs02CopyName);
+  if(member&&!person)return;
+  const value=member?'@'+person.name:editor?.value||'';
+  if(!value||!navigator.clipboard?.writeText)return;
+  try{await navigator.clipboard.writeText(value);
+   if(boardHistoryAuthorized(snapshot))toast('Local '+(member?'name reference':'draft')+' copied. No notification was sent.');
+  }catch{if(boardHistoryAuthorized(snapshot))toast('Clipboard unavailable; select and copy the text manually.');}
+ });
  view.querySelector('[data-dismiss]')?.focus();
 }
 
