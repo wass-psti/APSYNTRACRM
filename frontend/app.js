@@ -37,7 +37,7 @@ import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
 import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,fuelTrackRequestsCsv,fuelTrackRequestQuickDates,FUELTRACK_REQUEST_FILTER_DEFAULTS} from './fueltrack-v3-requests.js';
 import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js';
-import {FuelTrackV3DomainClient} from './fueltrack-v3-domain-client.js';
+import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-domain-client.js';
 import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js';
 import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile} from './fueltrack-v3-receipt-storage.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
@@ -6529,6 +6529,7 @@ root.addEventListener('submit',event=>{
    if(!same())return;
    const snapshot=await client.read({limit:200});
    if(!same())return;
+   verifyFuelTrackSubmission(result,snapshot);
    state.fuelTrackBackend={snapshot,analytics:null};
    state.fuelTrackPendingSubmission=null;
    form.reset();

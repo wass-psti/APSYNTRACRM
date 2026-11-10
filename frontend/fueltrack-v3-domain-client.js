@@ -27,6 +27,18 @@ function requireWrite(result){
   throw new Error('Invalid FuelTrack v3 mutation response');
  return result;
 }
+/** Reconcile submission with a fresh signed read before reporting success.
+ * An unverified read is an ambiguous commit; callers retain their client key.
+ */
+export function verifyFuelTrackSubmission(result,snapshot){
+ if(!result||!isUuid(result.id)||!revision(Number(result.revision))||
+    !snapshot||snapshot.status!=='VERIFIED_READ'||!Array.isArray(snapshot.rows))
+  throw new Error('Fuel request submission could not be reconciled. Refresh before retrying.');
+ const row=snapshot.rows.find(r=>r.id===result.id);
+ if(!row||row.state!==result.state||Number(row.revision)!==Number(result.revision))
+  throw new Error('Fuel request submission could not be reconciled. Refresh before retrying.');
+ return row;
+}
 export class FuelTrackV3DomainClient {
  constructor({api,auth,workspaceId,boardId}={}){
   if(!api||typeof api.rpc!=='function'||!auth||typeof auth.isSignedIn!=='boolean')

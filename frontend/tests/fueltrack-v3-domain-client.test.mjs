@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FuelTrackV3DomainClient} from '../fueltrack-v3-domain-client.js';
+import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from '../fueltrack-v3-domain-client.js';
 import {DomainApi} from '../data.js';
 const board='7af78b3f-67bf-4600-9aa1-9006d19d486e';
 const workspace='11111111-1111-4111-8111-111111111111';
@@ -86,4 +86,14 @@ test('FuelTrack signed reads preserve Board cache and successful writes invalida
  await domain.rpc('fueltrack_v3_submit',{p_board_id:board});
  assert.equal(domain.boardReadCache.has(board),false);
  assert.equal(calls.length,4);
+});
+
+test('signed submit postflight refuses missing or mismatched authoritative row',()=>{
+ const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ const result={id,state:'submitted',revision:1};
+ const valid={status:'VERIFIED_READ',rows:[{id,state:'submitted',revision:1}]};
+ assert.equal(verifyFuelTrackSubmission(result,valid).id,id);
+ assert.throws(()=>verifyFuelTrackSubmission(result,{...valid,rows:[]}),/reconciled/);
+ assert.throws(()=>verifyFuelTrackSubmission(result,{...valid,rows:[{id,state:'approved',revision:2}]}),/reconciled/);
+ assert.throws(()=>verifyFuelTrackSubmission(result,{...valid,status:'UNKNOWN'}),/reconciled/);
 });

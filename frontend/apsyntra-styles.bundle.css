@@ -11803,7 +11803,14 @@
 #app .ft3-new-container{display:none}
 #app .ft3-new-composer:has(#ft3-mode-container:checked) .ft3-new-vehicle{display:none}
 #app .ft3-new-composer:has(#ft3-mode-container:checked) .ft3-new-container{display:flex}
-#app .ft3-new-submit{width:100%;border:0;border-radius:13px;min-height:46px;background:#a1d5ce;color:#fff;font:inherit;font-weight:700;cursor:not-allowed}
+#app .ft3-new-submit{width:100%;border:0;border-radius:13px;min-height:46px;background:#0e918d;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+#app .ft3-new-submit:disabled{background:#a1d5ce;cursor:not-allowed}
+#app .ft3-new-submit:not(:disabled):hover{background:#087a77}
+#app .ft3-new-submit:focus-visible{outline:2px solid #1774a4;outline-offset:2px}
+#app .ft3-new-receipt-info p{margin:0;color:#56717d;line-height:1.55}
+#app .ft3-receipt-action{display:inline-flex;align-items:center;justify-content:center;border:1px solid #a5cfd0;padding:10px 14px;border-radius:12px;background:#f5fafb;color:#126d72;text-decoration:none;font-weight:650}
+#app .ft3-receipt-action:hover{background:#e3f3f3}
+#app .ft3-receipt-action:focus-visible{outline:2px solid #1774a4;outline-offset:2px}
 @media(max-width:640px){#app .ft3-new-request{padding:20px 12px}#app .ft3-new-options,#app .ft3-new-fields{grid-template-columns:1fr}#app .ft3-new-option-body{min-height:115px}#app .ft3-new-progress{flex-direction:column;gap:6px}}
 
 /* Reveal custom container count only for the explicitly selected option. */
