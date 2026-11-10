@@ -1,0 +1,51 @@
+name: CP-RC03 Workspace-Scoped MRH Role Management
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/user-role-management.js'
+      - 'frontend/tests/user-role-*.test.mjs'
+      - 'frontend/tests/cp-rc03-workspace-scoped-mrh-role.test.mjs'
+      - 'sql/cp-rc03-workspace-scoped-mrh-role-management.sql'
+      - 'sql/cp-rc03-workspace-scoped-mrh-role-management-rollback.sql'
+      - 'sql/tests/cp-rc03-*.sql'
+      - 'scripts/cp-rc03-mrh-role-disposable-acceptance.sh'
+      - 'docs/CP-RC03-WORKSPACE-SCOPED-MRH-ROLE-MANAGEMENT-20261110.md'
+      - '.github/workflows/cp-rc03-mrh-workspace-scoped-roles.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/user-role-management.js'
+      - 'frontend/tests/user-role-*.test.mjs'
+      - 'frontend/tests/cp-rc03-workspace-scoped-mrh-role.test.mjs'
+      - 'sql/cp-rc03-workspace-scoped-mrh-role-management.sql'
+      - 'sql/cp-rc03-workspace-scoped-mrh-role-management-rollback.sql'
+      - 'sql/tests/cp-rc03-*.sql'
+      - 'scripts/cp-rc03-mrh-role-disposable-acceptance.sh'
+      - 'docs/CP-RC03-WORKSPACE-SCOPED-MRH-ROLE-MANAGEMENT-20261110.md'
+      - '.github/workflows/cp-rc03-mrh-workspace-scoped-roles.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pg17-and-ui-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify role-management UI and contracts
+        run: >-
+          node --test
+          frontend/tests/user-role-management.test.mjs
+          frontend/tests/user-role-experience.test.mjs
+          frontend/tests/cp-rc03-workspace-scoped-mrh-role.test.mjs
+      - name: Run PostgreSQL 17 isolated role transaction acceptance
+        run: bash scripts/cp-rc03-mrh-role-disposable-acceptance.sh
+      - name: Validate patch
+        run: git diff --check
