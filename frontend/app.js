@@ -71,7 +71,7 @@ import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard} from './material-sourcing-tracker.js';
 import {renderMaterialSourcingDetailTabs,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
-import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart,inspectMaterialSourcingSignedReadiness} from './material-sourcing-application.js';
+import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
@@ -262,7 +262,6 @@ function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopTimeTrackerPixi();
  // Clear detached protected item values on every signed-out transition.
  hideModal();
- state.mrhReadiness=null;
  stopAvatarPreview();
  syncFuelTrans({container:null});
  stopAuthVisuals();
@@ -841,10 +840,6 @@ function boardPage(){
  const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record';
  const columnLabels=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{};
  const allowCustom=BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ';
- const mrhReadiness=isMaterialSourcingBoard(b)&&
-  state.mrhReadiness?.actor===state.context?.user_id&&
-  state.mrhReadiness?.workspace===state.context?.workspace_id&&
-  state.mrhReadiness?.boardId===b.id?state.mrhReadiness.report:null;
  const tabSpecs=[
   ...(isMaterialTrackerBoard(state.board)?[{key:'sourcing',href:'#/boards/'+b.id+'/sourcing',label:'◇ Material Tracker'}]:[]),
   {key:'items',href:'#/boards/'+b.id+(moduleKey==='fueltrans'?'/items':moduleKey==='timetracker'?'/items':''),
@@ -877,17 +872,9 @@ function boardPage(){
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
  <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
- ${isMaterialSourcingBoard(b)&&['items','sourcing'].includes(state.tab)?'<button class="secondary" data-action="mrh-check-readiness">Verify signed sourcing readiness</button>':''}
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
- ${mrhReadiness?'<section class="panel panel-body" role="status" aria-live="polite" aria-label="Material Sourcing signed readiness">'+
-  '<strong>Signed Material Sourcing readiness</strong><p>Original group: '+e(mrhReadiness.originalGroup)+
-  '; original eight columns: '+e(mrhReadiness.originalColumns)+
-  '; ordinary sourcing columns: '+mrhReadiness.publicColumnsVerified+'/'+mrhReadiness.publicColumnsExpected+
-  '; domain administrator access: '+e(mrhReadiness.signedDomainAdmin)+
-  '; private item read: '+e(mrhReadiness.privateRead)+
-  '; production write acceptance: NOT EXECUTED; other-role denial: NOT EXECUTED. No changes were made.</p></section>':''}
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
  ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
   '<a role="tab" draggable="'+(canReorderTabs?'true':'false')+'" data-board-tab="'+e(t.key)+'" aria-selected="'+(state.tab===t.key)+
@@ -4793,25 +4780,6 @@ async function action(name,button){
   contextualColumnCreate();break;
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
- case 'mrh-check-readiness':{
-  if(!isMaterialSourcingBoard(state.board?.board)||
-     !['items','sourcing'].includes(state.tab)||!activeBoardLayout())break;
-  const snapshot={boardId:state.boardId,userId:auth.userId,
-   workspaceId:state.context?.workspace_id};
-  state.mrhReadiness=null;
-  try{
-   const report=await inspectMaterialSourcingSignedReadiness({api:db,auth});
-   if(!boardHistoryAuthorized(snapshot))break;
-   state.mrhReadiness={actor:snapshot.userId,workspace:snapshot.workspaceId,
-    boardId:snapshot.boardId,report};
-   render();
-  }catch(err){
-   if(boardHistoryAuthorized(snapshot)){
-    toast('Signed sourcing readiness not verified. No protected values or changes were exposed.',true);
-   }
-  }
-  break;
- }
  case 'mrh-new-part':{
   if(!isMaterialSourcingBoard(state.board?.board)||!state.edit||
      !['items','sourcing'].includes(state.tab)||!activeBoardLayout())break;

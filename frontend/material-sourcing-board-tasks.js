@@ -4,7 +4,7 @@
  */
 import {ApiError} from './session.js';
 import {MATERIAL_SOURCING_BOARD_ID} from './material-sourcing-schema-plan.js';
-import {authorizeMaterialSourcingItem} from './material-sourcing-application.js';
+import {authorizeMaterialSourcingItem,revalidateMaterialSourcingSession} from './material-sourcing-application.js';
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const statuses=Object.freeze(['not_started','working_on_it','done']);
@@ -22,11 +22,11 @@ function normalizeTask(raw){
 }
 export async function readMaterialBoardItemTasks(options){
  guard(options);
- await authorizeMaterialSourcingItem(options);
+ const actor=await authorizeMaterialSourcingItem(options);
  const payload=await options.api.rpc('mrh_board_item_tasks_read',{
   p_board_id:options.boardId,p_item_id:options.itemId
  });
- await authorizeMaterialSourcingItem(options);
+ await revalidateMaterialSourcingSession(options,actor);
  if(!payload||!Array.isArray(payload.tasks)||payload.tasks.length>100)
   throw new ApiError('Invalid signed Material Sourcing tasks response.',502);
  const ids=new Set();
@@ -44,12 +44,12 @@ export async function saveMaterialBoardItemTask(options,{id=null,title,status='n
  const name=String(title??'').trim();
  if(!name||name.length>240||!statuses.includes(status))
   throw new ApiError('Enter a task name and valid status.',400);
- await authorizeMaterialSourcingItem({...options,edit:true});
+ const actor=await authorizeMaterialSourcingItem({...options,edit:true});
  const result=await options.api.rpc('mrh_board_item_tasks_write',{
   p_board_id:options.boardId,p_item_id:options.itemId,p_task_id:id,
   p_title:name,p_status:status,p_expected_revision:revision
  });
- await authorizeMaterialSourcingItem({...options,edit:true});
+ await revalidateMaterialSourcingSession(options,actor);
  const saved=normalizeTask(result);
  if(id!==null&&(saved.id!==id||saved.revision!==revision+1)||
     id===null&&saved.revision!==1)
