@@ -46,6 +46,20 @@ export async function authorizeMaterialSourcingItem({api,auth,workspaceId,boardI
  return userId;
 }
 
+/** Fast post-RPC session verification. The RPC already enforces module role,
+ * item scope and board permissions, so don't repeat expensive role preflights. */
+export async function revalidateMaterialSourcingSession({api,auth,workspaceId},actor){
+ if(!auth?.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
+ const verified=await auth.getVerifiedUser();
+ if(!auth.isSignedIn||auth.userId!==actor||verified?.id!==actor)
+  deny('Sourcing session changed.');
+ const context=await api.context();
+ if(!auth.isSignedIn||auth.userId!==actor||context?.user_id!==actor||
+    context?.workspace_id!==workspaceId||context?.profile?.status!=='active')
+  deny('Sourcing workspace or session changed.');
+ return actor;
+}
+
 export function normalizeProtectedSourcingRead(payload){
  if(!payload||typeof payload!=='object'||Array.isArray(payload))
   deny('Invalid protected sourcing response.',502);
@@ -99,8 +113,8 @@ export async function readProtectedSourcingItem({api,auth,boardId,workspaceId,it
   p_board_id:boardId,p_item_id:itemId
  });
  if(!auth.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
- // Authorization is rechecked after the await, including workspace switching.
- await authorizeMaterialSourcingItem(input);
+ // Server RPC enforces protected scope; recheck identity and workspace.
+ await revalidateMaterialSourcingSession(input,actor);
  return normalizeProtectedSourcingRead(raw);
 }
 export async function writeProtectedSourcingField({
@@ -115,7 +129,7 @@ export async function writeProtectedSourcingField({
   p_board_id:boardId,p_item_id:itemId,p_field_name:fieldName,
   p_value:parsed,p_expected_revision:expectedRevision
  });
- if(!auth.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
+ await revalidateMaterialSourcingSession(input,actor);
  if(result?.field_name!==fieldName||!Number.isSafeInteger(result?.revision)||
     result.revision!==(expectedRevision===null?1:expectedRevision+1))
   deny('The sourcing write receipt is invalid; refresh before retrying.',409);

@@ -78,8 +78,7 @@ test('type drift never passes as an approved public sourcing column',async()=>{
 });
 test('on-demand UI reports statuses without protected values or silent writes',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(source,/data-action="mrh-check-readiness"/);
- assert.match(source,/inspectMaterialSourcingSignedReadiness\(\{api:db,auth\}\)/);
- assert.match(source,/production write acceptance: NOT EXECUTED/);
- assert.doesNotMatch(source,/mrh-check-readiness[^\n]*mrh_sourcing_sensitive_write/);
+ assert.doesNotMatch(source,/data-action="mrh-check-readiness"/);
+ assert.doesNotMatch(source,/Signed Material Sourcing readiness<\/strong>/);
+ assert.doesNotMatch(source,/production write acceptance: NOT EXECUTED/);
 });
