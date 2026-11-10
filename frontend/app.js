@@ -3127,7 +3127,7 @@ function activeBoardLayout(){
     state.board?.board?.id!==state.boardId||
     state.board?.board?.workspace_id!==state.context?.workspace_id)return null;
  const moduleKey=moduleByBoardName(state.board.board.name)?.key;
- const tabs=['items','issues',...(moduleKey==='frt'?['finance']:[]),
+ const tabs=['items','issues',...(isMaterialTrackerBoard(state.board)?['sourcing']:[]),...(moduleKey==='frt'?['finance']:[]),
   ...(moduleKey==='fueltrans'?['fueltrans']:[]),...(moduleKey==='timetracker'?['attendance']:[])];
  const minimal=isItemOnlyBoard(state.board,state.boardUi);
  const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board,{minimal,hiddenVirtual:state.boardUi?.hiddenVirtual})).map(c=>c.key);
