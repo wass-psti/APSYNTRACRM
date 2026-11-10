@@ -18,10 +18,10 @@ test('TradeLink production activation inspection is SELECT-only and Board-scoped
  assert.doesNotMatch(sql,/\b(INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|TRUNCATE|GRANT|REVOKE|CALL)\s+(INTO|FROM|TABLE|FUNCTION|POLICY|SCHEMA|ROLE|ON)/i);
  assert.doesNotMatch(sql,/auth\.users|auth\.sessions|storage\.objects|request\.jwt\.claim|service_role|pg_sleep/);
 });
-test('TradeLink activation handoff preserves required production and recovery gates',()=>{
+test('TradeLink activation preserves signed security gates without retired recovery targets',()=>{
  const doc=readFileSync('docs/TRADELINK-CONTROLLED-ACTIVATION-20261109.md','utf8');
  for(const required of [
-  'NO-GO','24-hour RPO','24-hour RTO','tradelink-document-submit-candidate.sql',
+  'NO-GO','recovery-policy retirement','tradelink-document-submit-candidate.sql',
   'tradelink-document-review-revision-candidate.sql',
   'tradelink-document-decision-candidate.sql',
   'tradelink-document-operational-candidate.sql',
@@ -32,6 +32,10 @@ test('TradeLink activation handoff preserves required production and recovery ga
   assert.ok(doc.toLowerCase().includes(required.toLowerCase()),
    'Missing controlled acceptance prerequisite: '+required);
  }
+ const currentPolicy=JSON.parse(readFileSync('config/production-release-policy.json','utf8'));
+ assert.equal(currentPolicy.recovery.mandatoryRecoveryRehearsal,false);
+ assert.equal(currentPolicy.recovery.mandatoryRpoHours,null);
+ assert.equal(currentPolicy.recovery.mandatoryRtoHours,null);
  const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
  for(const gate of ['TL03_WORKFLOW_SUBMIT_ENABLED','TL03_WORKFLOW_REVIEW_ENABLED',
   'TL03_WORKFLOW_DECISION_ENABLED','TL03_WORKFLOW_OPERATIONAL_ENABLED'])

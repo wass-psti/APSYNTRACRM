@@ -1,3 +1,10 @@
+> **Superseded recovery policy — 2026-11-10:** The owner retired mandatory
+> 24-hour RPO/RTO, disaster-recovery rehearsal and AWS/offsite backup
+> release gates across WatchdogWorkspace/APSYNTRA CRM. References below
+> to their mandatory status are historical only. Existing backups,
+> authentication, RBAC/RLS, audit and signed acceptance remain required.
+> See [current owner decision](RECOVERY-POLICY-RETIREMENT-20261110.md).
+
 # CP-BOARD-COL01 — Independent review request and controlled production activation/rollback
 
 **Status: REVIEW REQUEST PREPARED — NO-GO / NOT ACTIVATED.** This is an engineering runbook and reviewer checklist, **not an independent security signoff**, production permission-change approval, or authority to execute SQL.

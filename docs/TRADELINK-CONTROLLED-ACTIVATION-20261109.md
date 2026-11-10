@@ -1,3 +1,8 @@
+**Current release policy (2026-11-10):** The owner retired mandatory RPO,
+RTO and disaster-recovery rehearsal for all WatchdogWorkspace applications.
+Existing Supabase backups and security controls remain. See
+docs/RECOVERY-POLICY-RETIREMENT-20261110.md.
+
 # TradeLink — Controlled Backend Activation and Signed-User Acceptance
 
 Scope: existing APSYNTRA CRM TradeLink Board and the single existing
@@ -21,15 +26,13 @@ sql/tests/cp-tl03-activation-readonly-gate.sql
 
 ## Activation sequence and prohibitions
 
-1. Demonstrate a genuine, isolated, restorable backup for the current
-   WatchdogWorkspace database, Auth records and actual Storage file bytes.
-   Verify the binding 24-hour RPO and 24-hour RTO independently. Previous synthetic PG17 exercises
-   are insufficient; no production in-place restore or second Supabase project
-   may be created as a workaround. Obtain authoritative provider response
-   or a verified alternative compatible with existing constraints.
+1. Apply the November 10 owner-approved recovery-policy retirement:
+   24-hour RPO/RTO and mandatory restore rehearsal are NOT release gates.
+   Preserve existing Supabase backups and data protection controls.
+   Verify current production schema/permissions using read-only preflight.
 2. Obtain exact-scope approval covering production SQL changes, new private
    Storage bucket and security policies, as distinct from ordinary source
-   development. Reconfirm restore evidence immediately before deployment.
+   development. Reconfirm current Board/RPC/role/Storage scope immediately before deployment.
 3. Capture the current state, affected function and audit-constraint
    fingerprints, grants, Board/document/audit counts, and a rollback plan.
 4. Apply candidates only with their guarded pre/postflight checks, in order:
@@ -81,7 +84,7 @@ Sources:
 | Source implementation and isolated tests | VERIFIED |
 | Current Draft RPC and Board integrity | VERIFIED |
 | Production read-only activation inventory | VERIFIED |
-| Whole-project independently rehearsed recovery within 24h | BLOCKED |
+| Retired project recovery policy (RPO/RTO/rehearsal) | NOT APPLICABLE |
 | Search/workflow/attachment SQL installation | PENDING |
 | Dedicated private TradeLink bucket | PENDING |
 | Signed positive, denied and binary-transfer acceptance | PENDING |
@@ -89,5 +92,5 @@ Sources:
 | Production-ready TradeLink end-to-end | BLOCKED |
 
 Decision: NO-GO for production permission changes and new attachment files
-until provider recovery and exact-scope authorization are verifiable. Preserve
+until exact-scope authorization, signed security acceptance and Storage permissions are verifiable. Preserve
 working Draft creation, editing, Board integration and document printing.

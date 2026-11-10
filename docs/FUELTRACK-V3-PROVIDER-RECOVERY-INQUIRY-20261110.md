@@ -1,3 +1,10 @@
+> **Superseded recovery policy — 2026-11-10:** The owner retired mandatory
+> 24-hour RPO/RTO, disaster-recovery rehearsal and AWS/offsite backup
+> release gates across WatchdogWorkspace/APSYNTRA CRM. References below
+> to their mandatory status are historical only. Existing backups,
+> authentication, RBAC/RLS, audit and signed acceptance remain required.
+> See [current owner decision](RECOVERY-POLICY-RETIREMENT-20261110.md).
+
 # FuelTrack+ v3 — Supabase Provider Recovery Inquiry
 
 **Existing project:** WatchdogWorkspace, ref jtlusodorfnyzgyuewkz, ap-southeast-2, PostgreSQL 17.

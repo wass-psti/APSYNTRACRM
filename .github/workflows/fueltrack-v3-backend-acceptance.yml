@@ -18,6 +18,9 @@ on:
       - 'scripts/ft3-s3-infrastructure-contract.test.mjs'
       - 'scripts/ft3-encrypted-recovery-bundle*.mjs'
       - 'infra/fueltrack-recovery/s3-object-lock.template.json'
+      - 'config/production-release-policy.json'
+      - 'scripts/ft3-release-readiness*.mjs'
+      - 'docs/FUELTRACK-V3-PRODUCTION-ACTIVATION-GATE.md'
       - '.github/workflows/fueltrack-v3-backend-acceptance.yml'
   workflow_dispatch:
 
@@ -38,23 +41,5 @@ jobs:
         run: ./scripts/fueltrack-v3-backend-disposable.sh
       - name: Verify signed read-only acceptance contract without live credentials
         run: node --test scripts/fueltrack-v3-signed-read-acceptance.test.mjs
-      - name: Verify provider backup release gate remains fail-closed
-        run: node --test scripts/fueltrack-v3-provider-backup-gate.test.mjs
-      - name: Verify offline database and private Storage archive integrity gates
-        run: node --test scripts/ft3-recovery-archive-audit.test.mjs
-      - name: Verify local recovery timing and production release gate
-        run: node --test scripts/ft3-recovery-rto-rehearsal.test.mjs
-      - name: Verify rolling RPO observations never certify production recovery
-        run: node --test scripts/ft3-rpo-observation.test.mjs
-      - name: Verify retention cadence and offsite assurance checks remain fail closed
-        run: node --test scripts/ft3-recovery-retention-gate.test.mjs
-      - name: Verify atomic local recovery set staging and tamper denials
-        run: node --test scripts/ft3-recovery-set-stage.test.mjs
-      - name: Verify local authenticated backup encryption and tamper rejection
-        run: node --test scripts/ft3-backup-crypto.test.mjs
-      - name: Verify offsite provider retention preflight rejects unsafe plans
-        run: node --test scripts/ft3-offsite-policy-preflight.test.mjs
-      - name: Verify nondeployed S3 Compliance/IAM infrastructure template
-        run: node --test scripts/ft3-s3-infrastructure-contract.test.mjs
-      - name: Verify authenticated encrypted SQL and private Storage recovery bundle
-        run: node --test scripts/ft3-encrypted-recovery-bundle.test.mjs
+      - name: Verify current production release policy and signed acceptance gates
+        run: node --test scripts/ft3-release-readiness.test.mjs

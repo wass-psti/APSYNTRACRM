@@ -1,3 +1,10 @@
+**Current policy supersession (2026-11-10):** Project-wide mandatory
+24-hour RPO, 24-hour RTO and recovery rehearsal were retired by explicit
+owner authorization. The historical provider recovery notes below describe
+past evidence, not present release prerequisites. Preserve existing Supabase
+backups, security, RBAC/RLS, rollback and real signed runtime acceptance.
+See docs/RECOVERY-POLICY-RETIREMENT-20261110.md.
+
 # TradeLink — Current operations and release status
 
 **Updated:** 2026-11-08 (Asia/Manila). **Project:** APSYNTRA CRM, existing shared WatchdogWorkspace Supabase. This is the single active TradeLink release-status summary. Historical checkpoint evidence remains in Git history and merged PRs.
@@ -27,22 +34,25 @@ The guarded Draft and document/Board integration code already exists. `sql/cp-tl
 - **Draft activation (2026-11-08):** The project owner explicitly authorized the two existing authenticated Draft commit grants and one genuine signed-user QA document. The exact existing two-grant SQL candidate was executed in WatchdogWorkspace. Live catalog verification confirms both authenticated EXECUTE grants enabled, anonymous access denied, read/list preserved, direct table mutations denied, and zero document/Board/audit records immediately after activation. The new frontend release enables both the signed read and signed write switches. **Real signed-user save, Board and All Documents acceptance is still pending.**
 - **Review:** The project owner waived the optional independent review for the source candidate ([issue #75](https://github.com/wass-psti/APSYNTRACRM/issues/75)); this was not an independent security attestation or an authorization to apply SQL.
 
-## Practical recovery constraints
+## Recovery policy — updated November 10, 2026
 
-The owner specified whole-project **RPO <= 24 hours** and **RTO <= 24 hours**, and **requires a demonstrated genuine restore rehearsal with no waiver**. They also restricted this work to the existing single Supabase project. These are targets, not verified recovery metrics.
-
-The provider last reported **8 completed physical backups** (latest `2026-11-07T17:18:39.359Z`, or November 8 at 1:18 AM PHT), with WAL-G enabled and **PITR disabled**. Daily snapshots do not prove a worst-case 24-hour RPO or measured RTO. The last aggregate Storage inspection found seven private buckets and zero object-metadata rows; database backups **do not include actual Storage file bodies**. A provider in-place restore disrupts the shared production project. No supported isolated physical restore was verified without creating another project. The isolated synthetic `pg_dump`/`pg_restore` [test PR #81](https://github.com/wass-psti/APSYNTRACRM/pull/81) is regression evidence **not a real physical-backup restoration**.
-
-This is **one real unresolved recovery limitation**, not a reason to create more approval/checkpoint documents. Do not fabricate a restoration or a waiver. Provider confirmation of a viable rehearsal path or explicit owner revision of constraints must precede any risky restore. See [Supabase backups](https://supabase.com/docs/guides/platform/backups).
+Mandatory project-wide 24-hour RPO/RTO and provider recovery rehearsal are
+RETIRED, and AWS backup infrastructure is not a deployment dependency.
+Existing Supabase backups remain available where enabled. No new project,
+production restore or Storage deletion is authorized. Continue checking
+actual signed permissions, migration safety, existing recovery/rollback
+procedures, and durable document/Board/audit behavior.
 
 ## Direct path to working TradeLink documents
 
-1. Keep the unresolved actual-backup restoration limitation visible. The owner-approved narrow Draft permission change is not evidence of whole-project recoverability. No provider restore, recovery export or broader security change is authorized here.
-2. When a viable recovery decision and a **separate exact-scope production SQL approval** exist, execute only the reviewed 11-function session hardening with fresh source/owner/ACL preflight, a controlled operator/window and positive/negative signed-session checks. The candidate uses `psql` directives; do not paste it unchanged into the SQL editor.
+1. Use the owner-approved recovery-policy retirement; do not hold TradeLink
+   release for numerical RPO/RTO or provider restore rehearsal. Preserve
+   existing backups and maintain current security, rollback and authorization.
+2. When a **separate exact-scope production SQL approval** exists, execute only the reviewed 11-function session hardening with fresh source/owner/ACL preflight, a controlled operator/window and positive/negative signed-session checks. The candidate uses `psql` directives; do not paste it unchanged into the SQL editor.
 3. The exact two authenticated Draft write grants have now been applied under the owner-approved scope, with the existing narrow revoke-only script retained for containment. The frontend write activation is source controlled. Only one separately authorized signed Draft QA save/edit/refresh is in scope; broader permissions and workflow transitions are not authorized.
 4. Run **one end-to-end genuine authorized acceptance**: save/retry/update → persisted Draft → correctly linked Board item → All Documents → refresh/reopen, plus denied employee, foreign-workspace and revoked access. Fix any functional defects directly rather than inventing more milestone gates.
 
-**Current status (2026-11-08): The two commit EXECUTE grants are verified live, and this release enables user-facing signed Draft writes. Genuine production save/reopen/Board/All Documents acceptance remains PENDING.** Passing CI or listing backups does not prove functional runtime acceptance or the previously required restore rehearsal.
+**Current status (2026-11-08): The two commit EXECUTE grants are verified live, and this release enables user-facing signed Draft writes. Genuine production save/reopen/Board/All Documents acceptance remains PENDING.** Passing CI or listing backups does not prove functional runtime acceptance or any separate application security acceptance.
 
 ## Signed saved-document output (TradeLink only)
 
@@ -120,6 +130,6 @@ objects and zero attachment events. It refuses data loss or unseen drift.
 Populated rollback, physical Storage cleanup, expired upload reconciliation,
 content/malware scanning, Storage-file backup and a provider-backed restore
 rehearsal remain separate requirements. The existing whole-project
-24-hour RPO and RTO targets and mandatory rehearsal remain binding; these
-synthetic tests do not demonstrate them. New Storage permissions/production
+24-hour RPO/RTO targets and mandatory recovery rehearsal have been
+retired by the owner; these synthetic tests do not prove runtime acceptance. New Storage permissions/production
 migration require separately scoped authorization and live signed acceptance.
