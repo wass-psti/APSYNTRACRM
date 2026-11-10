@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "effectiveDate": "2026-11-10",
+  "ownerDecision": "Explicit project-wide recovery policy retirement",
+  "scope": ["WatchdogWorkspace", "APSYNTRA CRM", "FuelTrack+ v3", "all centrally integrated boards"],
+  "recovery": {
+    "mandatoryRpoHours": null,
+    "mandatoryRtoHours": null,
+    "mandatoryRecoveryRehearsal": false,
+    "mandatoryIndependentOffsiteBackups": false,
+    "awsInfrastructureRequired": false,
+    "existingSupabaseBackupsPreserved": true,
+    "noBackupDeletionAuthorized": true
+  },
+  "fuelTrackActivation": {
+    "requiresAuthorizedExistingProject": true,
+    "requiresPreflightAndMigrationIntegrity": true,
+    "requiresExistingSignedAuthorization": true,
+    "requiresWorkspaceAndBoardIsolation": true,
+    "requiresReceiptPrivacyOptionA": true,
+    "requiresGenuineSignedRuntimeAcceptance": true,
+    "requiresAuditAndPersistence": true,
+    "requiresProtectedBranchAndDeploymentVerification": true
+  }
+}
