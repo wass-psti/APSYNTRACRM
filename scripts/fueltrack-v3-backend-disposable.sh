@@ -26,12 +26,12 @@ start "$primary"
 apply "$primary" sql/tests/fueltrack-v3-backend-core-fixture.sql
 apply "$primary" supabase/migrations/20261110021141_fueltrack_v3_backend_core.sql
 apply "$primary" supabase/migrations/20261110021200_fueltrack_v3_board_receipts.sql
-apply "$primary" supabase/migrations/20261111001400_fueltrack_v3_module_scoped_workflows.sql
+apply "$primary" supabase/migrations/20261110163848_fueltrack_v3_module_scoped_workflows.sql
 apply "$primary" sql/tests/fueltrack-v3-backend-core-acceptance.sql
 apply "$primary" sql/tests/fueltrack-v3-board-receipt-acceptance.sql
 # Reapply after records exist; all links are nonnull and migrations are repeat-safe.
 apply "$primary" supabase/migrations/20261110021200_fueltrack_v3_board_receipts.sql
-apply "$primary" supabase/migrations/20261111001400_fueltrack_v3_module_scoped_workflows.sql
+apply "$primary" supabase/migrations/20261110163848_fueltrack_v3_module_scoped_workflows.sql
 echo 'PASS: module-scoped workflows, Board links, private receipts, denials and migration reapplication'
 echo '== FUELTRACK: legacy unlinked-row preflight must fail before schema write =='
 start "$legacy"

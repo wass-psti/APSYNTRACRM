@@ -12,7 +12,7 @@ FuelTrack domain workflows use the existing signed workspace identity and FuelTr
 
 ## Implementation
 
-The forward-only migration 20261111001400_fueltrack_v3_module_scoped_workflows.sql:
+The forward-only migration 20261110163848_fueltrack_v3_module_scoped_workflows.sql:
 
 1. Changes the internal FuelTrack guard to require Board view, not generic Board edit, while retaining module role checks and Admin-only operations.
 2. Adds private, non-callable-by-clients helpers for creating the FuelTrack Board projection and registering its receipt file metadata. These preserve Board position/status defaults, Board event logging, workspace scope, request linkage, and transactional behavior without granting generic Board edit rights.
