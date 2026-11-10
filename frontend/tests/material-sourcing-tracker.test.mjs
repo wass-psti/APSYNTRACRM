@@ -61,7 +61,7 @@ test('malicious item or field content is HTML-escaped',()=>{
 test('empty verified board and partial paging avoid fabricated metric assertions',()=>{
  const empty={...detail,items:[],values:[]};
  const html=renderMaterialSourcingTracker(empty,{},today);
- assert.match(html,/Total materials<\/span><strong>0/);
+ assert.match(html,/Total materials<\/span><\/div><strong>0/);
  assert.match(html,/No matching materials/);
  assert.doesNotMatch(html,/LRD10/);
  const partial=renderMaterialSourcingTracker({...detail,has_more:true},{},today);
@@ -71,7 +71,7 @@ test('tracker is its own explicit signed board route, scoped to this board',()=>
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/parts\[2\]==='sourcing'&&parts\[1\]===MATERIAL_SOURCING_BOARD_ID/);
  assert.match(app,/key:'sourcing',href:'#\/boards\/'/);
- assert.match(app,/renderMaterialSourcingTracker\(state\.board,state\.mrhTrackerFilters\)/);
+ assert.match(app,/renderMaterialSourcingTracker\(state\.board,state\.mrhTrackerFilters,new Date\(\),\{canCreate:state\.edit===true\}\)/);
  assert.match(app,/state\.mrhTrackerScope!==mrhScope/);
  assert.doesNotMatch(app,/materialTrackerRows\(.*localStorage/);
 });
