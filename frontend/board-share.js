@@ -77,6 +77,9 @@ export function renderBoardSharePreview({board,moduleKey=null,workspaceId,manage
   '<p role="status" class="board-share-stage-note">'+escapeHtml(readiness.reason)+'</p>'+
   '<p class="board-share-stage-note">Existing internal permissions are unchanged. No invitation link or guest access has been created.</p>'+
   '<button type="button" disabled>Copy guest invitation link — pending backend approval</button>'+
+  (typeof location!=='undefined'&&['127.0.0.1','localhost'].includes(location.hostname)?
+   '<p class="board-share-stage-note">Local testing: the invitation lab uses sample boards and simulated users only, never this CRM board or Supabase records.</p>'+
+   '<button type="button" data-board-share-lab>Open local invitation lab (demo only)</button>':'')+
   '<button type="button" data-board-share-close>Close</button></section>';
 }
 
@@ -125,6 +128,12 @@ export function openBoardSharePreview(options={}){
  frame.innerHTML=renderBoardSharePreview(options);
  overlay.append(frame);
  const close=event=>{
+  if(event.target.closest?.('[data-board-share-lab]')){
+   // Strict loopback-only demo navigation; never generates a production token.
+   if(['127.0.0.1','localhost'].includes(location.hostname))
+    window.open('http://127.0.0.1:8765/','_blank','noopener,noreferrer');
+   return;
+  }
   if(event.target===overlay||event.target.closest?.('[data-board-share-close]'))closeBoardSharePreview();
  };
  const keyHandler=event=>{
