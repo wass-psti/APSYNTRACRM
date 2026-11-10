@@ -5,6 +5,7 @@ on:
       - feat/board-scoped-guest-invites-20261110
     paths:
       - 'frontend/board-share.js'
+      - 'frontend/board-share-clean.css'
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
       - 'frontend/board-column-hover.css'
@@ -23,6 +24,7 @@ on:
   pull_request:
     paths:
       - 'frontend/board-share.js'
+      - 'frontend/board-share-clean.css'
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
       - 'frontend/board-column-hover.css'
