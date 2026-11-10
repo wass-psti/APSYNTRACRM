@@ -2107,6 +2107,9 @@
  .mrh-tracker-controls .mrh-source-filter{flex:1 1 120px}
 }
 
+.mrh-tracker-controls .mrh-export-csv{border:1px solid #dce4f0;border-radius:9px;background:#f4f7fd;color:#526b92;white-space:nowrap;font-size:.73rem;font-weight:650;padding:10px 12px;cursor:pointer}
+.mrh-tracker-controls .mrh-export-csv:hover,.mrh-tracker-controls .mrh-export-csv:focus-visible{border-color:#6c79e3;background:#edf0ff}
+
 /* frontend/auth-experience.css */
 /* APSYNTRA CRM / AUTH02 — intentionally scoped to the login route.
    No inline style attributes, CSSOM injection, font downloads or route-wide overrides. */
