@@ -1,7 +1,6 @@
-/** APSYNTRA Board Share 01 — interface and permission-safe preview.
- * External sharing is NOT activated by this module.
- * Backend grants and application-specific data access are mandatory before
- * any invitation link can be generated or redeemed.
+/** BS01 — compact, fail-closed Share & Access experience.
+ * Presentation only. This module NEVER issues links or mutates Supabase
+ * records, policy flags, authentication, board memberships or permissions.
  */
 import {validUuid} from './data.js';
 
@@ -11,7 +10,7 @@ export const BOARD_PRIVACY_MODES=Object.freeze([
  Object.freeze({value:'workspace_restricted',label:'Workspace restricted',description:'Existing signed workspace and resource permissions still apply; guest invitations are disabled.'}),
  Object.freeze({value:'guest_shareable',label:'Guest shareable',description:'Requires an approved server policy and guest-scoped authorization before a link can be issued.'})
 ]);
-/** Conservative examples, not the authoritative server application policy. */
+/** Conservative examples only. Server authority must separately approve each app. */
 export const SENSITIVE_MODULE_DEFAULTS=Object.freeze(new Set([
  'frt','evaluation','timetracker','charter','aims'
 ]));
@@ -22,10 +21,9 @@ const denyState=Object.freeze({
  state:'UNAVAILABLE',externalSharing:'unknown',guestLinksEnabled:false,
  mayIssue:false,source:'NO_VERIFIED_SERVER_POLICY'
 });
+const labelForMode=mode=>BOARD_PRIVACY_MODES.find(m=>m.value===mode)?.label||'Unverified';
 
-/** Only a verified server receipt can describe a resource's actual sharing policy.
- * Rendering a local role badge or guessing from the module name never authorizes.
- */
+/** Signed, exact-board policy receipts only; client state never grants access. */
 export function normalizeBoardSharePolicy(raw,{boardId,workspaceId}={}){
  if(!validUuid(boardId)||!validUuid(workspaceId)||raw?.schemaVersion!==1||
     raw.boardId!==boardId||raw.workspaceId!==workspaceId||
@@ -57,30 +55,64 @@ export function boardShareReadiness({board,workspaceId,manage=false,policy=null}
  return Object.freeze({allowed:true,reason:'Server authorization must still be rechecked on issuance.'});
 }
 
-export function renderBoardSharePreview({board,moduleKey=null,workspaceId,manage=false,policy=null}={}){
+/** A count from the verified direct-member snapshot, NOT effective access. */
+export function renderBoardSharePreview({board,moduleKey=null,workspaceId,manage=false,
+ policy=null,assignedMemberCount=null}={}){
  const readiness=boardShareReadiness({board,workspaceId,manage,policy});
- const title=escapeHtml(board?.name||'Unknown board');
+ const title=escapeHtml(board?.name||'Board');
  const protectedModule=SENSITIVE_MODULE_DEFAULTS.has(moduleKey);
+ const signed=policy?.state==='VERIFIED_POLICY';
+ const mode=signed?labelForMode(policy.externalSharing):'Not verified';
+ const status=protectedModule?'Protected app':signed?mode:'Guest links off';
  const description=protectedModule?
-  'This module may contain restricted operational or personal data. External sharing requires independent field-level approval.':
-  'No app or board becomes guest-accessible merely because a link control is visible.';
+  'This application requires separate security review before any external sharing.':
+  'Only authorized users can access board data. Guest links are not active.';
+ const count=Number.isSafeInteger(assignedMemberCount)&&
+   assignedMemberCount>=0&&assignedMemberCount<=300?
+   assignedMemberCount:null;
+ const memberCaption=count===null?'View assigned board members':
+  count+' assigned board member'+(count===1?'':'s');
+ const local=typeof location!=='undefined'&&
+  ['127.0.0.1','localhost'].includes(location.hostname);
  return '<section class="board-share-stage" role="dialog" aria-modal="true" '+
   'aria-labelledby="board-share-stage-heading" data-board-share-preview>'+
-  '<header class="board-share-stage-heading"><h2 id="board-share-stage-heading">Share &amp; access · '+title+'</h2>'+
-  '<button type="button" data-board-share-close aria-label="Close board sharing">×</button></header>'+
-  '<p>'+escapeHtml(description)+'</p>'+
-  '<dl><dt>External sharing</dt><dd>'+
-   (policy?.state==='VERIFIED_POLICY'?escapeHtml(policy.externalSharing.replaceAll('_',' ')):
-    'Not verified — sharing unavailable')+'</dd>'+
-  '<dt>Link permissions</dt><dd>Viewer only (proposed)</dd>'+
-  '<dt>Link lifetime</dt><dd>24 hours (proposed)</dd></dl>'+
-  '<p role="status" class="board-share-stage-note">'+escapeHtml(readiness.reason)+'</p>'+
-  '<p class="board-share-stage-note">Existing internal permissions are unchanged. No invitation link or guest access has been created.</p>'+
-  '<button type="button" disabled>Copy guest invitation link — pending backend approval</button>'+
-  (typeof location!=='undefined'&&['127.0.0.1','localhost'].includes(location.hostname)?
-   '<p class="board-share-stage-note">Local testing: the invitation lab uses sample boards and simulated users only, never this CRM board or Supabase records.</p>'+
-   '<button type="button" data-board-share-lab>Open local invitation lab (demo only)</button>':'')+
-  '<button type="button" data-board-share-close>Close</button></section>';
+  '<header class="board-share-stage-heading">'+
+   '<div class="board-share-stage-title"><h2 id="board-share-stage-heading">Share &amp; access</h2>'+
+    '<p class="board-share-stage-board">'+title+'</p></div>'+
+   '<button type="button" class="board-share-stage-close" data-board-share-close aria-label="Close sharing panel">×</button>'+
+  '</header>'+
+  '<div class="board-share-stage-section">'+
+   '<div class="board-share-stage-row">'+
+    '<div class="board-share-stage-icon" aria-hidden="true">♧</div>'+
+    '<div class="board-share-stage-copy"><strong>Board privacy</strong>'+
+     '<p>'+escapeHtml(description)+'</p></div>'+
+    '<span class="board-share-stage-pill" aria-label="Sharing policy status">'+escapeHtml(status)+'</span>'+
+   '</div>'+
+   (signed?'<p class="board-share-stage-caption">Signed sharing policy: '+escapeHtml(mode)+'</p>':'')+
+  '</div>'+
+  '<div class="board-share-stage-section">'+
+   '<div class="board-share-stage-row">'+
+    '<div class="board-share-stage-icon" aria-hidden="true">♙</div>'+
+    '<div class="board-share-stage-copy"><strong>People with access</strong>'+
+     '<p>'+escapeHtml(memberCaption)+'</p></div>'+
+    '<button type="button" class="board-share-stage-secondary" data-board-share-people>View people</button>'+
+   '</div>'+
+   '<p class="board-share-stage-caption">Assigned members only; inherited administrator access may not appear.</p>'+
+  '</div>'+
+  '<div class="board-share-stage-section">'+
+   '<div class="board-share-stage-row">'+
+    '<div class="board-share-stage-icon" aria-hidden="true">↗</div>'+
+    '<div class="board-share-stage-copy"><strong>Invitation link</strong>'+
+     '<p>Invite someone to this board only.</p></div>'+
+   '</div>'+
+   '<button type="button" class="board-share-stage-primary" disabled>Copy invitation link</button>'+
+   '<p class="board-share-stage-caption" role="status">'+escapeHtml(readiness.reason)+'</p>'+
+  '</div>'+
+  (local?'<details class="board-share-stage-dev"><summary>Local development tools</summary>'+
+    '<p>Use sample boards and simulated users. No Supabase records are shared.</p>'+
+    '<button type="button" data-board-share-lab>Open invitation lab (demo)</button>'+
+   '</details>':'')+
+ '</section>';
 }
 
 let activeOverlay=null;
@@ -93,8 +125,8 @@ export function closeBoardSharePreview(){
  if(priorFocus?.isConnected)priorFocus.focus();
 }
 
-/** DOM-only preview. No database read/write or token persistence.
- * Inject a verified policy in a later controlled increment, not client role guesses.
+/** DOM-only viewer: open actual People dialog via existing signed route.
+ * No new RPC or copy-link endpoint is introduced.
  */
 export function openBoardSharePreview(options={}){
  if(typeof document==='undefined'||!document.body)return null;
@@ -102,50 +134,36 @@ export function openBoardSharePreview(options={}){
  const priorFocus=document.activeElement;
  const overlay=document.createElement('div');
  overlay.className='board-share-stage-overlay';
- // style-src-attr 'none' forbids style="..." attributes. The existing
- // APSYNTRA CSP permits inline <style> blocks; this is fixed author CSS only.
- const css=document.createElement('style');
- css.textContent=`
- .board-share-stage-overlay{position:fixed;inset:0;z-index:5000;
-  background:rgba(17,24,39,.65);display:grid;place-items:center;padding:16px}
- .board-share-stage-frame{background:#fff;color:#1d2440;max-width:580px;
-  width:100%;max-height:90vh;overflow:auto;border-radius:16px;
-  padding:24px;box-shadow:0 18px 45px rgba(0,0,0,.22)}
- .board-share-stage-heading{display:flex;align-items:center;
-  justify-content:space-between;gap:12px}
- .board-share-stage-heading h2{font-size:1.25rem;margin:0}
- .board-share-stage dl{display:grid;grid-template-columns:140px 1fr;gap:10px 18px}
- .board-share-stage dt{font-weight:600}
- .board-share-stage dd{margin:0}
- .board-share-stage button{border:1px solid #c8cbdf;border-radius:10px;
-  padding:10px 14px;background:#f4f5fb;color:#252940;cursor:pointer}
- .board-share-stage button:disabled{opacity:.65;cursor:not-allowed}
- .board-share-stage-note{font-size:.9rem;line-height:1.55}
- `;
- overlay.append(css);
  const frame=document.createElement('div');
  frame.className='board-share-stage-frame';
  frame.innerHTML=renderBoardSharePreview(options);
  overlay.append(frame);
- const close=event=>{
+ const click=event=>{
+  if(event.target.closest?.('[data-board-share-people]')){
+   closeBoardSharePreview();
+   document.querySelector('#app .page-head [data-action="board-members"]')?.click();
+   return;
+  }
   if(event.target.closest?.('[data-board-share-lab]')){
-   // Strict loopback-only demo navigation; never generates a production token.
-   if(['127.0.0.1','localhost'].includes(location.hostname))
+   if(typeof location!=='undefined'&&
+    ['127.0.0.1','localhost'].includes(location.hostname))
     window.open('http://127.0.0.1:8765/','_blank','noopener,noreferrer');
    return;
   }
-  if(event.target===overlay||event.target.closest?.('[data-board-share-close]'))closeBoardSharePreview();
+  if(event.target===overlay||event.target.closest?.('[data-board-share-close]'))
+   closeBoardSharePreview();
  };
  const keyHandler=event=>{
   if(event.key==='Escape'){event.preventDefault();closeBoardSharePreview();return;}
   if(event.key!=='Tab')return;
-  const elements=[...overlay.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled)')];
-  if(elements.length===0){event.preventDefault();return;}
+  const elements=[...overlay.querySelectorAll(
+   'button:not(:disabled),summary,a[href],input:not(:disabled)')];
+  if(!elements.length){event.preventDefault();return;}
   const first=elements[0],last=elements.at(-1);
   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
  };
- overlay.addEventListener('click',close);
+ overlay.addEventListener('click',click);
  document.addEventListener('keydown',keyHandler);
  document.body.append(overlay);
  activeOverlay={node:overlay,priorFocus,keyHandler};
