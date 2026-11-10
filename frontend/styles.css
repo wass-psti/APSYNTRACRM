@@ -2329,3 +2329,16 @@
 @media (prefers-reduced-motion:reduce){
  .mrh-add-field input,.mrh-add-field select,.mrh-add-field textarea{transition:none}
 }
+
+
+/* Already-authorized one-click sourcing column activation in Add Material. */
+.mrh-add-activation-note{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mrh-add-activation-note>span{flex:1 1 190px}
+.mrh-add-activation-note button{
+ border:1px solid #cbd4ee;border-radius:9px;
+ background:#fff;color:#4f5dc8;padding:8px 12px;
+ font-size:.77rem;font-weight:730;cursor:pointer
+}
+.mrh-add-activation-note button:hover{background:#f6f7ff}
+.mrh-add-activation-note button:focus-visible{outline:2px solid #5967e4;outline-offset:2px}
+.mrh-add-activation-note button:disabled{opacity:.6;cursor:wait}

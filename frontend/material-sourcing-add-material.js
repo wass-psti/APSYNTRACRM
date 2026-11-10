@@ -90,7 +90,9 @@ export function renderMaterialSourcingAddMaterial(detail,{canCreate=false}={}){
      control('Date required','due',{type:'date',disabled:!enabled('due')})+
      control('RFQ Ref No','rfq',{placeholder:'Reference number',wide:true,disabled:!enabled('rfq')})+
     '</div></div>'+
-   (missing.length?'<p class="mrh-add-activation-note" role="note">Some public sourcing columns have not been activated. Their inputs are disabled; entered values will never be silently discarded.</p>':'')+
+   (missing.length?'<div class="mrh-add-activation-note" role="note">'+
+    '<span>'+missing.length+' public sourcing fields need activation. This uses the existing signed board schema workflow.</span>'+
+    '<button type="button" class="secondary" data-action="mrh-activate-public">Enable missing fields</button></div>':'')+
    '<footer class="mrh-add-actions"><button type="submit" class="primary" data-mrh-add-submit>＋ Add Material</button>'+
     '<button type="button" class="secondary" data-action="mrh-show-items">Cancel</button>'+
     '<p role="status" aria-live="polite" data-mrh-add-status></p></footer>'+
