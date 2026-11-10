@@ -12811,6 +12811,82 @@
 }
 @media(prefers-reduced-motion:reduce){#app .ft3-light-history-action{transition:none}}
 
+/* Signed FuelTrack dashboard, analytics and requests reuse the original enterprise layout. */
+#app .ft3-signed-rich{min-width:0}
+#app .ft3-signed-rich .ft3-metric-grid{margin:19px 0}
+#app .ft3-signed-rich .ft3-metric{min-height:125px;background:linear-gradient(140deg,#f6fbfc,#e9f4f7);border:1px solid #d9e8ec;border-radius:16px;padding:17px}
+#app .ft3-signed-rich .ft3-panel{background:#fff;border-radius:17px;box-shadow:0 6px 18px rgba(32,72,82,.035)}
+#app .ft3-signed-rich .ft3-panel-head{background:#f7fbfc}
+#app .ft3-signed-workflow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:20px}
+#app .ft3-signed-workflow>div{min-height:80px;padding:15px;background:#eff7f8;border:1px solid #e0edef;border-radius:12px;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+#app .ft3-signed-workflow span{font-size:11px;color:#718994;font-weight:600}
+#app .ft3-signed-workflow strong{font-size:24px;line-height:1;color:#29424d;font-variant-numeric:tabular-nums}
+#app .ft3-signed-rich .ft3-status-segment.ft3-status-submitted{fill:#e5a848}
+#app .ft3-signed-rich .ft3-status-segment.ft3-status-approved{fill:#33a4b9}
+#app .ft3-signed-rich .ft3-status-segment.ft3-status-refueling_done{fill:#33a6a0}
+#app .ft3-signed-rich .ft3-status-segment.ft3-status-completed{fill:#2eac73}
+#app .ft3-signed-rich .ft3-status-segment.ft3-status-rejected{fill:#d16a74}
+#app .ft3-signed-rich .ft3-dot-submitted{background:#e5a848}
+#app .ft3-signed-rich .ft3-dot-refueling_done{background:#33a6a0}
+#app .ft3-signed-rich .ft3-dot-completed{background:#2eac73}
+#app .ft3-signed-rich .ft3-dot-rejected{background:#d16a74}
+#app .ft3-signed-rich .ft3-status-pill{font-size:10px;padding:7px 10px;font-weight:700;white-space:nowrap}
+#app .ft3-signed-status-submitted{background:#fff3da!important;color:#956714!important}
+#app .ft3-signed-status-approved{background:#e4f4fb!important;color:#277a99!important}
+#app .ft3-signed-status-refueling_done{background:#e3f5f1!important;color:#208177!important}
+#app .ft3-signed-status-completed{background:#e5f6ec!important;color:#208258!important}
+#app .ft3-signed-status-rejected{background:#fce9e9!important;color:#a94555!important}
+#app .ft3-signed-rich .ft3-recent-table time{white-space:nowrap;font-variant-numeric:tabular-nums;font-size:11px}
+#app .ft3-signed-rich .ft3-request-table-scroll{overflow-x:auto}
+#app .ft3-signed-rich .ft3-request-table{min-width:650px}
+#app .ft3-signed-rich .ft3-request-row>td{vertical-align:middle}
+#app .ft3-signed-subtitle{display:block;font-size:10px;color:#78929b;margin-top:5px}
+#app .ft3-signed-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0}
+#app .ft3-signed-controls label{font-size:11px;color:#587784;font-weight:700}
+#app .ft3-signed-controls input{flex:1;min-width:190px;min-height:39px;padding:10px 13px;background:#fff;border:1px solid #d6e4e8;border-radius:10px;font:inherit;font-size:12px}
+#app .ft3-signed-controls input:focus-visible{outline:2px solid #159e98;outline-offset:2px}
+#app .ft3-signed-rich .ft3-request-filter.is-active{background:#e1f4f2;color:#087c78;border-color:#9cd6d0}
+#app .ft3-signed-rich .ft3-request-stat{background:#f5fafb;border:1px solid #dfeaed}
+#app .ft3-signed-rich .ft3-request-detail-row td{background:#f8fbfc}
+#app .ft3-signed-rich .ft3-request-detail{border:0}
+#app .ft3-signed-rich .ft3-analytics-summary{margin:18px 0}
+#app .ft3-signed-rich .ft3-analytics-metric-filter{margin:17px 0}
+#app .ft3-signed-bars{display:flex;gap:8px;align-items:end;justify-content:center;min-height:230px;padding:30px 20px 18px;overflow-x:auto}
+#app .ft3-signed-bar{position:relative;flex:1;min-width:20px;max-width:55px;display:flex;align-items:center;flex-direction:column;gap:9px}
+#app .ft3-signed-bar-track{position:relative;width:100%;height:174px;background:#eaf2f5;border-radius:9px 9px 3px 3px;overflow:hidden}
+#app .ft3-signed-bar-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(#34b9ad,#0f8c8a);border-radius:8px 8px 3px 3px}
+#app .ft3-signed-bar small{font-size:9px;white-space:nowrap;color:#7c949d}
+#app .ft3-signed-bar-tip{position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;color:#516f7b;opacity:0;pointer-events:none}
+#app .ft3-signed-bar:hover .ft3-signed-bar-tip{opacity:1}
+#app .ft3-signed-rich .ft3-analytics-grid{margin:18px 0}
+#app .ft3-signed-rich .ft3-analytics-section-nav{margin-top:18px}
+#app .ft3-signed-rich .ft3-analytics-footnote{margin:12px 0}
+@media(max-width:850px){#app .ft3-signed-rich .ft3-dashboard-grid{grid-template-columns:1fr}}
+@media(max-width:560px){#app .ft3-signed-workflow{grid-template-columns:1fr 1fr;padding:12px}#app .ft3-signed-rich .ft3-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#app .ft3-signed-controls input{flex-basis:100%}#app .ft3-signed-rich .ft3-recent-table{min-width:560px}}
+@media(prefers-reduced-motion:reduce){#app .ft3-signed-bar-fill{transition:none}}
+
+/* CSP-compatible chart heights: no generated inline styles. */
+#app .ft3-signed-bar-height-1{height:5%}
+#app .ft3-signed-bar-height-2{height:10%}
+#app .ft3-signed-bar-height-3{height:15%}
+#app .ft3-signed-bar-height-4{height:20%}
+#app .ft3-signed-bar-height-5{height:25%}
+#app .ft3-signed-bar-height-6{height:30%}
+#app .ft3-signed-bar-height-7{height:35%}
+#app .ft3-signed-bar-height-8{height:40%}
+#app .ft3-signed-bar-height-9{height:45%}
+#app .ft3-signed-bar-height-10{height:50%}
+#app .ft3-signed-bar-height-11{height:55%}
+#app .ft3-signed-bar-height-12{height:60%}
+#app .ft3-signed-bar-height-13{height:65%}
+#app .ft3-signed-bar-height-14{height:70%}
+#app .ft3-signed-bar-height-15{height:75%}
+#app .ft3-signed-bar-height-16{height:80%}
+#app .ft3-signed-bar-height-17{height:85%}
+#app .ft3-signed-bar-height-18{height:90%}
+#app .ft3-signed-bar-height-19{height:95%}
+#app .ft3-signed-bar-height-20{height:100%}
+
 /* frontend/tradelink-application.css */
 /* TradeLink source-aligned application shell. Scoped to avoid board/TimeTracker regressions. */
 .aps-tradelink-app{--tl-ink:var(--ink,#20263b);--tl-line:var(--line,#e8ebf2);--tl-accent:var(--purple,#5d61e8);color:var(--tl-ink);display:grid;gap:19px;min-width:0}
