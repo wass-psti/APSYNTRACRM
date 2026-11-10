@@ -22,14 +22,14 @@ test('public details always have reference identification and schedule fields',(
 
 test('ordinary viewer sees complete detail structure without protected values or controls',()=>{
  const html=renderMaterialSourcingUnavailableDetails();
- for(const label of ['Pricing & Cost','Calculated Totals','Logistics',
+ for(const label of ['Pricing &amp; Cost','Calculated Totals','Logistics',
   'Buying price','Currency','Shipping cost','Shipping currency',
   'Landed cost','Vendor details','Not available']){
   assert.ok(html.includes(label),label);
  }
  assert.doesNotMatch(html,/data-mrh-private-field|name="value"|SECRET_|role="alert"/);
  assert.match(html,/Public material details remain visible/);
- assert.ok(html.indexOf('Pricing & Cost')<html.indexOf('Calculated Totals'));
+ assert.ok(html.indexOf('Pricing &amp; Cost')<html.indexOf('Calculated Totals'));
  assert.ok(html.indexOf('Calculated Totals')<html.indexOf('Logistics'));
 });
 
