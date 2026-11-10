@@ -101,3 +101,12 @@ export function planMaterialSourcingSchema(detail){
   conflicts:Object.freeze(conflicts),noWrites:true
  });
 }
+
+/** UI defense in depth only. Server-origin responses MUST NOT carry sensitive
+ * sourcing values until the separate field-protected RPC is activated.
+ */
+export function isMaterialSourcingRestrictedColumn(board,column){
+ return board?.id===MATERIAL_SOURCING_BOARD_ID&&
+  MATERIAL_SOURCING_ADDITIONS.some(field=>field.exposure==='restricted'&&
+   normal(field.name)===normal(column?.name));
+}
