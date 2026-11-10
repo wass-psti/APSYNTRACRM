@@ -1,0 +1,52 @@
+name: Material Request Hub Board-Item Tasks Staged Security
+on:
+  pull_request:
+    paths:
+      - 'sql/mrh-board-item-tasks-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/tests/mrh-board-item-tasks-disposable.sql'
+      - 'frontend/material-sourcing-board-tasks.js'
+      - 'frontend/material-sourcing-application.js'
+      - 'frontend/material-sourcing-detail-tabs.js'
+      - 'frontend/tests/material-sourcing-board-tasks.test.mjs'
+      - '.github/workflows/mrh-board-item-tasks-staged.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sql/mrh-board-item-tasks-CANDIDATE-NOT-APPLIED.sql'
+      - 'sql/tests/mrh-board-item-tasks-disposable.sql'
+      - 'frontend/material-sourcing-board-tasks.js'
+      - 'frontend/material-sourcing-application.js'
+      - 'frontend/material-sourcing-detail-tabs.js'
+      - 'frontend/tests/material-sourcing-board-tasks.test.mjs'
+      - '.github/workflows/mrh-board-item-tasks-staged.yml'
+permissions:
+  contents: read
+jobs:
+  disposable-task-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Frontend signed task contract regression
+        run: |
+          node --check frontend/app.js
+          node --check frontend/material-sourcing-board-tasks.js
+          node --check frontend/material-sourcing-application.js
+          node --test frontend/tests/material-sourcing-board-tasks.test.mjs frontend/tests/material-sourcing-application.test.mjs frontend/tests/material-sourcing-detail-tabs.test.mjs
+      - name: Isolated PostgreSQL 17 CAS, RLS, denial and audit
+        run: |
+          set -euo pipefail
+          NAME="mrh-task-test-${GITHUB_RUN_ID}"
+          docker run --rm -d --name "$NAME" -e POSTGRES_PASSWORD=isolatedtest postgres@sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dffe9b4087be98292cdd3b4f >/dev/null
+          trap 'docker rm -f "$NAME" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          docker cp sql/mrh-board-item-tasks-CANDIDATE-NOT-APPLIED.sql "$NAME:/tmp/mrh-task-candidate.sql"
+          docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -q < sql/tests/mrh-board-item-tasks-disposable.sql

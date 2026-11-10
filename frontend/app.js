@@ -70,6 +70,7 @@ import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} fr
 import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard} from './material-sourcing-tracker.js';
 import {renderMaterialSourcingDetailTabs,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
+import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart,inspectMaterialSourcingSignedReadiness} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
@@ -3316,12 +3317,71 @@ async function openBoardItemDetails(itemId){
    workspaceId:snapshot.workspaceId,itemId};
   const current=()=>modal===itemDialog&&boardHistoryAuthorized(snapshot)&&
    auth.isSignedIn&&auth.userId===snapshot.userId;
-  let activityRequested=false;
+  let activityRequested=false,taskRequested=false,taskBusy=false;
+  const taskHost=itemDialog.querySelector('[data-mrh-board-tasks]');
+  const refreshTasks=async()=>{
+   if(!taskHost||!current())return false;
+   taskHost.textContent='Checking signed board-item task authorization…';
+   try{
+    const tasks=await readMaterialBoardItemTasks(input);
+    if(!current())return;
+    const editable=await db.allowed(snapshot.boardId,'edit');
+    if(!current())return;
+    taskHost.innerHTML=renderMaterialBoardItemTasks(tasks,{editable:editable===true});
+    return true;
+   }catch{
+    if(current()){
+     taskRequested=false;
+     taskHost.innerHTML='<p role="status">Signed board-item tasks are not activated or are unavailable for this session. No task changes were made.</p>';
+    }
+    return false;
+   }
+  };
+  itemDialog.addEventListener('submit',async event=>{
+   const form=event.target.closest('[data-mrh-board-task]');
+   if(!form)return;
+   event.preventDefault();
+   if(!current()||taskBusy)return;
+   const taskId=form.dataset.taskId||null;
+   const revision=taskId?Number(form.dataset.revision):null;
+   const data=new FormData(form);
+   taskBusy=true;
+   let confirmed=false;
+   form.querySelectorAll('button').forEach(b=>b.disabled=true);
+   const status=taskHost?.querySelector('[data-mrh-task-status]');
+   if(status)status.textContent='Saving task…';
+   try{
+    await saveMaterialBoardItemTask(input,{
+     id:taskId,title:data.get('title'),status:data.get('status'),revision
+    });
+    if(!current())return;
+    if(!await refreshTasks())throw new ApiError('Task reload not verified.',409);
+    confirmed=true;
+    if(current()){
+     const next=taskHost?.querySelector('[data-mrh-task-status]');
+     if(next)next.textContent='Task saved and reloaded from the authoritative server.';
+    }
+   }catch{
+    if(current()){
+     const next=taskHost?.querySelector('[data-mrh-task-status]');
+     if(next)next.textContent='Task write not confirmed. Close and reopen this item before attempting another write.';
+     taskRequested=false;
+     form.querySelectorAll('button,input,select').forEach(control=>control.disabled=true);
+    }
+   }finally{
+    taskBusy=false;
+    if(confirmed&&form.isConnected)form.querySelectorAll('button').forEach(b=>b.disabled=false);
+   }
+  });
   itemDialog.addEventListener('click',async event=>{
    const button=event.target.closest('[data-mrh-detail-tab]');
    if(!button||!current())return;
    const tab=button.dataset.mrhDetailTab;
    if(!selectMaterialSourcingDetailTab(itemDialog,tab))return;
+   if(tab==='tasks'){
+    if(!taskRequested){taskRequested=true;await refreshTasks();}
+    return;
+   }
    if(tab!=='activity'||activityRequested)return;
    activityRequested=true;
    const target=itemDialog.querySelector('[data-mrh-item-activity]');
