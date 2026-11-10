@@ -3746,6 +3746,7 @@ async function action(name,button){
  case 'security-ws02d-b3-revoke-run':
  case 'security-ws02d-b3-rls-handoff':
   case 'logout':{
+  closeBoardSharePreview();
   startupCriticalPath.clear();
   performanceProfileAbort?.abort();performanceProfileAbort=null;
   state.performanceBusy=false;state.performanceReport=null;
@@ -6645,6 +6646,7 @@ window.addEventListener('offline',()=>platformSync.network(false));
 // Authentication expiry remains authoritative: a revoked session is never
 // retained merely because an unsaved editor was open.
 window.addEventListener('hashchange',()=>{
+ closeBoardSharePreview();
  // Scrub newly pasted invitation links even after the app has initialized.
  const incomingInvitation=captureInvitationLink(location,history);
  if(incomingInvitation){pendingInvitation=incomingInvitation;invitationAcceptanceStatus='';}
@@ -6671,6 +6673,7 @@ window.addEventListener('hashchange',()=>{
  approvedRouteHash=nextHash;
  onRoute().catch(notice);
 });
+window.addEventListener('pagehide',closeBoardSharePreview);
 window.addEventListener('pagehide',closeTradeLinkSavedDocumentOutput);
 window.addEventListener('beforeunload',event=>{
  if(state.context&&tradeLinkDraftRoute()&&
