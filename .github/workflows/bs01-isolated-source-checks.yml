@@ -1,0 +1,45 @@
+name: BS01 board-sharing isolated source checks
+on:
+  push:
+    branches:
+      - feat/board-scoped-guest-invites-20261110
+    paths:
+      - 'frontend/board-share.js'
+      - 'frontend/app.js'
+      - 'frontend/tests/board-share*.test.mjs'
+      - 'server/bs01-policy-http-boundary.mjs'
+      - 'server/tests/bs01-policy-http-boundary.test.mjs'
+      - 'sql/bs01-*.sql'
+      - '.github/workflows/bs01-isolated-source-checks.yml'
+  pull_request:
+    paths:
+      - 'frontend/board-share.js'
+      - 'frontend/app.js'
+      - 'frontend/tests/board-share*.test.mjs'
+      - 'server/bs01-policy-http-boundary.mjs'
+      - 'server/tests/bs01-policy-http-boundary.test.mjs'
+      - 'sql/bs01-*.sql'
+      - '.github/workflows/bs01-isolated-source-checks.yml'
+permissions:
+  contents: read
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: |
+          node --check frontend/app.js
+          node --check frontend/board-share.js
+          node --check server/bs01-policy-http-boundary.mjs
+      - name: BS01 fail-closed source and boundary tests
+        run: |
+          node --test frontend/tests/board-share.test.mjs frontend/tests/board-share-phase2.test.mjs server/tests/bs01-policy-http-boundary.test.mjs
+      - name: Explain scope
+        run: |
+          echo "This CI does not install or activate SQL, auth or invitation routes."
+          echo "Production and genuine GoTrue/PostgreSQL acceptance remain separate."
