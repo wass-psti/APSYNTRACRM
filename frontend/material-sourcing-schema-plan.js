@@ -110,3 +110,19 @@ export function isMaterialSourcingRestrictedColumn(board,column){
   MATERIAL_SOURCING_ADDITIONS.some(field=>field.exposure==='restricted'&&
    normal(field.name)===normal(column?.name));
 }
+
+/** Permit only a schema-verified ordinary sourcing field in the shared board
+ * grid, even when optional board customization has not been configured.
+ * Never grant sensitive or formula fields ordinary board visibility.
+ */
+export function isApprovedPublicMaterialSourcingColumn(board,column){
+ if(board?.id!==MATERIAL_SOURCING_BOARD_ID||
+    board?.name!=='Material Request Hub'||board?.status!=='active'||
+    column?.visible===false||column?.system_key!=null||
+    typeof column?.column_key!=='string'||
+    !/^custom[:_]/.test(column.column_key))return false;
+ return MATERIAL_SOURCING_ADDITIONS.some(field=>
+  field.exposure==='ordinary'&&!field.derived&&
+  normal(field.name)===normal(column.name)&&
+  field.type===column.data_type);
+}
