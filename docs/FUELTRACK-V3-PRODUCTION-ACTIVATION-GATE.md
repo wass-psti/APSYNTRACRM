@@ -94,3 +94,11 @@ and audit/Board-link triggers are verified. Private receipt Storage policy
 Option A was preserved. Initial request/receipt/audit counts: 0/0/0.
 **Signed Admin/User and binary receipt acceptance is still PENDING.**
 See docs/FUELTRACK-V3-SIGNED-PRODUCTION-ACTIVATION-20261110.md.
+
+## November 10 — Live anonymous REST denial evidence
+
+Production Supabase REST denied anonymous request read, receipt metadata
+read, and receipt preparation (HTTP 401, SQLSTATE 42501 for all three).
+No live signed Admin/User session was available in the acceptance shell
+or connected browser integration, so this is NOT signed positive or
+role-denial acceptance. See the signed production activation record.

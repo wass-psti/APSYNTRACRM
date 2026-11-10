@@ -94,7 +94,36 @@ export async function runFuelTrackSignedReadAcceptance({env=process.env,fetchImp
   {apikey:cfg.headers.apikey,'Content-Type':'application/json'});
  assert([401,403,404].includes(unsigned.status),'Anonymous read was not denied.');
  results.push('ANONYMOUS_DENIED');
- // No mutation or receipt URL generation is performed.
+ // Real signed, no-write probes. Unknown request IDs must disclose neither
+ // private receipt metadata nor permission to upload a receipt. Never use
+ // an existing production request or create a Storage object here.
+ const unknownRequest='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+ const unavailableReceipt=await rpc('fueltrack_v3_receipt_read',{
+  p_board_id:cfg.board,p_request_id:unknownRequest
+ });
+ assert([401,403,404].includes(unavailableReceipt.status),
+  'Unknown request receipt metadata unexpectedly disclosed (HTTP '+unavailableReceipt.status+').');
+ results.push('UNKNOWN_RECEIPT_DENIED');
+ const receiptPrepare=await rpc('fueltrack_v3_receipt_prepare',{
+  p_board_id:cfg.board,p_request_id:unknownRequest
+ });
+ assert([401,403,404].includes(receiptPrepare.status),
+  'Unknown request receipt upload preparation unexpectedly authorized (HTTP '+receiptPrepare.status+').');
+ results.push('UNKNOWN_RECEIPT_PREPARE_DENIED');
+ const foreignReceipt=await rpc('fueltrack_v3_receipt_read',{
+  p_board_id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  p_request_id:unknownRequest
+ });
+ assert([401,403,404].includes(foreignReceipt.status),
+  'Wrong Board receipt metadata unexpectedly disclosed (HTTP '+foreignReceipt.status+').');
+ results.push('WRONG_BOARD_RECEIPT_DENIED');
+ const unsignedReceipt=await rpc('fueltrack_v3_receipt_read',{
+  p_board_id:cfg.board,p_request_id:unknownRequest
+ },{apikey:cfg.headers.apikey,'Content-Type':'application/json'});
+ assert([401,403,404].includes(unsignedReceipt.status),
+  'Anonymous receipt metadata unexpectedly disclosed (HTTP '+unsignedReceipt.status+').');
+ results.push('ANONYMOUS_RECEIPT_DENIED');
+ // No domain mutations, Storage writes, or signed URL creation performed.
  return {status:'READ_ONLY_ACCEPTANCE_PASS',checks:results};
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===resolve(process.argv[1])){

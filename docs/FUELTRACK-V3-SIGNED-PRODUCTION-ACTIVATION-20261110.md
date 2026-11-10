@@ -87,3 +87,31 @@ Database catalog/grant/RLS/trigger preflight: VERIFIED.
 Option A private bucket policy unchanged: VERIFIED.
 Signed Admin/User lifecycle, receipts and browser: PENDING.
 Full production functionality / final acceptance: NOT YET VERIFIED.
+
+## November 10 — Additional live anonymous REST denials
+
+Using the existing public application configuration and **without a bearer
+session token**, one-shot real Supabase REST requests returned:
+- fueltrack_v3_read (exact Board, limit 1): HTTP 401, SQLSTATE 42501.
+- fueltrack_v3_receipt_read (exact Board, nonexistent UUID):
+  HTTP 401, SQLSTATE 42501.
+- fueltrack_v3_receipt_prepare (exact Board, nonexistent UUID):
+  HTTP 401, SQLSTATE 42501.
+
+No writes, signed Storage URLs, or user accounts were created. This
+verifies anonymous rejection for these API paths in the production
+environment, not signed Admin/User access or role-revocation behavior.
+
+The non-mutating signed acceptance runner now additionally checks that
+unknown-request receipt metadata, unknown-request upload preparation,
+wrong-Board receipt reads and anonymous receipt metadata are denied.
+Synthetic tests exercise both Admin and User mock sessions and explicit
+failures when receipt endpoints leak data or incorrectly authorize
+preparation. The production runner still requires an actual existing
+signed session supplied securely at runtime and does **not** capture
+credentials or issue fake JWTs.
+
+**Final current gate:** signed Admin/User, actual private receipt binary
+upload/retrieval, request lifecycle persistence and deployed browser
+verification remain PENDING. Draft PR #185 must not be merged solely on
+schema and synthetic test results.
