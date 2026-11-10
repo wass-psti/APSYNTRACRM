@@ -29,7 +29,7 @@ test('all 12 existing integrated application boards are pinned by id',()=>{
  '47df2cdc-503a-4a22-a35c-06f72be5c56b',
  'e761b849-f144-4ad2-a418-af9e68b5cc58',
  'f36da8fe-8d9d-4629-9938-12533cb3ca39',
- '7af78b3f-67bf-4600-9aa1-906d19d486e'.replace('906d','90e'),
+ '7af78b3f-67bf-4600-9aa1-9006d19d486e',
  '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
  '46bf4ee7-368a-4c35-842c-8593ea1f6ac3',
  'd045708b-6e36-4f0a-92fc-f0b8baf93de3',
