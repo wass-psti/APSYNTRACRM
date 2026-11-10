@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>APSYNTRA — Board Invitation Lab (DEMO ONLY)</title>
+<link rel="stylesheet" href="/bs01-local-lab.css">
+<script type="module" src="/bs01-local-lab.js"></script>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">A</span><div><strong>APSYNTRA CRM</strong><small>Board invitation development lab</small></div></div>
+  <span class="warning">LOCAL DEMO — NO PRODUCTION DATA</span>
+</header>
+<main>
+ <section class="intro">
+  <div class="eyebrow">BS01 · Guest Sharing Test Environment</div>
+  <h1>Private by default. Shared by invitation.</h1>
+  <p>Test one-board invitation links, expiration, access restriction and revocation with simulated users and sample data. This lab never connects to Supabase or changes your real CRM.</p>
+ </section>
+ <section id="identity-panel" class="card">
+  <h2>1. Choose a simulated identity</h2>
+  <p class="muted">These identities exist only in this local server's memory. No password, email or Supabase account is created.</p>
+  <form id="login-form" autocomplete="off">
+   <label>Simulated role <select name="role" id="role" required><option value="owner">Board manager</option><option value="guest">External guest</option></select></label>
+   <label>Demo email <input id="email" name="email" type="email" required placeholder="owner@example.test" value="owner@example.test"></label>
+   <button class="primary" type="submit">Enter demo session</button>
+  </form>
+  <div id="identity-status" aria-live="polite"></div>
+ </section>
+ <section id="owner-panel" class="card" hidden>
+  <h2>2. Board & app privacy</h2>
+  <p class="muted">Demo HR and application resources cannot be shared. Make a demo project board Guest Shareable before issuing a link.</p>
+  <div id="board-list"></div>
+  <h2>3. Issued invitation link</h2>
+  <div id="issued-panel" class="subcard" hidden>
+   <label>Invitation URL <input readonly id="issued-url" aria-label="Generated demo invitation URL"></label>
+   <div class="row"><button id="copy-link" class="primary" type="button">Copy link</button><button id="revoke-link" type="button">Revoke this invitation</button></div>
+   <p class="muted">One redemption maximum · 24-hour expiry · revocable · demonstration board only</p>
+  </div>
+  <div id="no-link" class="muted">No demonstration link issued yet.</div>
+  <h2>4. Audit activity</h2>
+  <div id="events" class="log"></div>
+ </section>
+ <section id="guest-panel" class="card" hidden>
+  <h2>2. Redeem a demo invitation</h2>
+  <p class="muted">Use a copied link from the manager session. Opening a link selects this guest flow; you must still accept explicitly.</p>
+  <form id="redeem-form" autocomplete="off">
+   <label>Invitation token <input name="token" type="password" required id="guest-token" placeholder="Paste the token or open the copied link"></label>
+   <button class="primary" type="submit">Accept invitation</button>
+  </form>
+  <h2>3. Access only the shared board</h2>
+  <div id="guest-access" class="subcard"><p class="muted">You have not accepted an invitation.</p></div>
+ </section>
+ <section class="card footnote">
+  <strong>Security boundary</strong>
+  <p>This is a functional **simulator**, not a production service or a real account invitation. For real invitations, APSYNTRA still requires the approved Supabase database migration, signed-auth Edge endpoints, new-user registration hardening, field-level redaction and multi-application permission tests.</p>
+  <p>Restarting the local Node server clears all demo sessions, links and grants. Never expose port 8765 to your network or internet.</p>
+ </section>
+ <div role="status" id="notice" aria-live="polite" class="notice" hidden></div>
+</main>
+</body>
+</html>
