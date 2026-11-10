@@ -49,6 +49,10 @@ export async function activateApprovedPublicSourcingColumns({
    deny('Workspace or membership changed during schema activation.');
   if(await api.allowed(MATERIAL_SOURCING_BOARD_ID,'manage')!==true)
    deny('Authoritative board manager access is required.');
+  // General board management is insufficient for scoped Material Sourcing activation.
+  const moduleAccess=await api.rpc('material_request_hub_bootstrap',{p_workspace_id:workspace});
+  if(moduleAccess?.workspaceId!==workspace||moduleAccess.role!=='ADMIN')
+   deny('Active Material Request Hub ADMIN membership is required.');
  };
  const client=new BoardStructureClient(api),created=[];
  await assertCurrent();
