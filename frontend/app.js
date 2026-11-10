@@ -68,6 +68,7 @@ import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
+import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
@@ -3270,9 +3271,59 @@ async function openBoardItemDetails(itemId){
   '<p class="muted">Read-only item details from the signed board response.</p>'+
   boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
   renderBoardCollaboration(collaboration)+
+  (isMaterialSourcingBoard(state.board?.board)?
+   '<div data-mrh-private-host role="region" aria-label="Protected Material Sourcing details"><p class="muted">Checking restricted sourcing access…</p></div>':'')+
   '</aside>';
  document.body.append(modal);
  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
+ const privateHost=modal.querySelector('[data-mrh-private-host]');
+ if(privateHost){
+  const itemDialog=modal;
+  const input={api:db,auth,boardId:snapshot.boardId,
+   workspaceId:snapshot.workspaceId,itemId};
+  const current=()=>modal===itemDialog&&boardHistoryAuthorized(snapshot)&&
+   auth.isSignedIn&&auth.userId===snapshot.userId;
+  let values=null,busy=false;
+  const refresh=async()=>{
+   try{
+    const result=await readProtectedSourcingItem(input);
+    if(!current())return;
+    values=result;
+    privateHost.innerHTML=renderProtectedSourcingEditor(result);
+   }catch{
+    if(!current())return;
+    values=null;
+    privateHost.innerHTML='<p class="muted" role="status">Restricted sourcing fields unavailable for this session. No protected values have been displayed.</p>';
+   }
+  };
+  itemDialog.addEventListener('submit',async event=>{
+   const form=event.target.closest('[data-mrh-private-field]');
+   if(!form||!current()||busy)return;
+   event.preventDefault();
+   const fieldName=form.dataset.mrhPrivateField;
+   const stored=values?.[fieldName];
+   const submit=form.querySelector('[type="submit"]');
+   const status=privateHost.querySelector('[data-mrh-private-status]');
+   if(!submit||!status)return;
+   submit.disabled=true;busy=true;status.textContent='Saving…';
+   try{
+    await writeProtectedSourcingField({...input,fieldName,
+     value:new FormData(form).get('value'),expectedRevision:stored?.revision??null});
+    if(!current())return;
+    await refresh();
+    if(current()){
+     const nextStatus=privateHost.querySelector('[data-mrh-private-status]');
+     if(nextStatus)nextStatus.textContent='Saved and reloaded from the protected server.';
+    }
+   }catch{
+    if(current())status.textContent='Update not confirmed. Refresh the item and review your permissions or the current field revision before retrying.';
+   }finally{
+    busy=false;
+    if(submit.isConnected)submit.disabled=false;
+   }
+  });
+  void refresh();
+ }
  modal.querySelector('[data-dismiss]')?.focus();
 }
 async function openBoardMembers(){
