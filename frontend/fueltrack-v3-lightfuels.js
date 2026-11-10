@@ -58,13 +58,8 @@ const card=(r,actionEnabled=false)=>{
  (canAct?(awaiting?
   '<button class="ft3-light-mark" type="button" data-action="ft3-mark-refueled" data-id="'+esc(r.id)+'">'+
   '<span aria-hidden="true">✓</span> Mark as Refueling Done</button>':
-  '<form class="ft3-light-receipt-form" data-ft3-receipt="'+esc(r.id)+'">'+
-  '<h4>Complete refueling record</h4>'+
-  '<label>Actual Amount (₱) <input name="amount" type="number" min="0.01" step="0.01" required></label>'+
-  '<label>Fuel Quantity (Liters) <input name="liters" type="number" min="0.001" step="0.001" required></label>'+
-  '<label>Receipt Number (optional) <input name="receiptNumber" type="text" maxlength="120"></label>'+
-  '<label>Receipt Photo (optional, private) <input name="receiptPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>'+
-  '<button class="ft3-light-complete" type="submit">Save & Complete</button></form>'):
+  '<button class="ft3-light-mark" type="button" data-action="ft3-open-receipt" data-id="'+esc(r.id)+'">'+
+  'Enter Refueling & Receipt Details</button>'):
   '<p class="ft3-light-action-note" role="status">Signed Admin access and a current request revision are required to process this request.</p>')+
  '</article>';
 };
@@ -113,4 +108,48 @@ export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceI
  '<p class="ft3-light-completed-empty">'+(model?'No completed records in the verified response.':
  'Completed records unavailable without a signed service.')+'</p>')+'</section>'+
  workflowGuide()+'</section>';
+}
+
+
+/** Signed, in-memory, two-step refueling dialog; request mutations remain in app.js.
+ * A modal is never rendered from reference-only Board rows or an unverified role.
+ */
+export function renderFuelTrackRefuelingDialog({snapshot=null,boardId=null,workspaceId=null,dialog=null,busy=false}={}){
+ const model=fuelTrackLightFuelsModel({snapshot,boardId,workspaceId});
+ if(!model||!dialog||!['confirm','details'].includes(dialog.stage))return '';
+ const r=model.queue.find(item=>item.id===dialog.id);
+ const step=dialog.stage==='confirm'?1:2;
+ if(!r||!Number.isSafeInteger(r.revision)||r.revision<1||
+  (step===1&&r.status!=='Awaiting Refueling')||
+  (step===2&&r.status!=='Refueling Done'))return '';
+ const receipt=step===2;
+ return '<div class="ft3-refuel-overlay" data-ft3-refuel-overlay>'+
+ '<section class="ft3-refuel-dialog" role="dialog" aria-modal="true" aria-labelledby="ft3-refuel-title" aria-describedby="ft3-refuel-subtitle" tabindex="-1">'+
+ '<header class="ft3-refuel-dialog-header"><div><span class="ft3-refuel-kicker">FUELTRACK+ · LIGHTFUELS</span>'+
+ '<h2 id="ft3-refuel-title">'+(receipt?'Enter Refueling & Receipt Details':'Mark as Refueling Done')+'</h2>'+
+ '<p id="ft3-refuel-subtitle">Step '+step+' of 2 — '+(receipt?'record final transaction details':'confirm the physical refueling')+'</p></div>'+
+ '<button type="button" class="ft3-refuel-close" data-action="ft3-refuel-cancel" aria-label="Close refueling dialog"'+(busy?' disabled':'')+'>×</button></header>'+
+ '<div class="ft3-refuel-dialog-body">'+
+ '<div class="ft3-refuel-person"><span class="ft3-refuel-person-icon" aria-hidden="true">'+(r.type==='vehicle'?'⛽':'▣')+'</span>'+
+ '<div><strong>'+esc(r.requestor)+'</strong><small>'+esc(r.reference)+' · '+esc(r.type==='vehicle'?'Vehicle':'Container')+'</small></div></div>'+
+ '<div class="ft3-refuel-progress" aria-label="Refueling workflow progress">'+
+ '<span class="is-complete">Pending</span><span class="is-complete">Awaiting Refueling</span>'+
+ '<span class="'+(receipt?'is-complete':'is-current')+'">Refueling Done</span>'+
+ '<span class="'+(receipt?'is-current':'')+'">Processed</span></div>'+
+ (receipt?'<div class="ft3-refuel-confirmation is-done" role="status">✓ Refueling completed — enter the final transaction details.</div>'+
+ '<form id="ft3-refuel-details-form" class="ft3-light-receipt-form" data-ft3-receipt="'+esc(r.id)+'">'+
+ '<label>Actual Amount (₱) <span aria-hidden="true">*</span><input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label>'+
+ '<div class="ft3-refuel-quick" aria-label="Suggested amounts">'+[500,1000,1500,2000,2500,3000].map(n=>
+ '<button type="button" data-action="ft3-refuel-amount" data-value="'+n+'">₱'+n.toLocaleString('en-PH')+'</button>').join('')+'</div>'+
+ '<label>Invoice / Receipt Number <input name="receiptNumber" type="text" maxlength="120" placeholder="INV-XXXX" autocomplete="off"></label>'+
+ '<label>Fuel Quantity (Liters) <span aria-hidden="true">*</span><input name="liters" type="number" min="0.001" step="0.001" inputmode="decimal" placeholder="0" required></label>'+
+ '<div class="ft3-refuel-quick" aria-label="Suggested quantities">'+[5,10,15,20,25,50].map(n=>
+ '<button type="button" data-action="ft3-refuel-liters" data-value="'+n+'">'+n+'L</button>').join('')+'</div>'+
+ '<label class="ft3-refuel-file">Capture Receipt / Photo (optional, private)<input name="receiptPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>'+
+ '<footer class="ft3-refuel-dialog-footer"><button type="button" data-action="ft3-refuel-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
+ '<button type="submit" class="ft3-refuel-primary"'+(busy?' disabled':'')+'>'+(busy?'Saving…':'✓ Save & Complete')+'</button></footer></form>':
+ '<div class="ft3-refuel-confirmation">Confirm that this vehicle or container has actually been refueled. The final receipt fields will open once the signed transaction is saved.</div>'+
+ '<div class="ft3-refuel-dialog-footer"><button type="button" data-action="ft3-refuel-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
+ '<button type="button" class="ft3-refuel-primary" data-action="ft3-refuel-confirm"'+(busy?' disabled':'')+'>'+(busy?'Saving…':'✓ Mark as Refueling Done')+'</button></div>')+
+ '</div></section></div>';
 }
