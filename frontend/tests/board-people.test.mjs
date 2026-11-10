@@ -78,7 +78,7 @@ test('valid @ queries filter exact board membership and insert plain text refere
  const matches=mentionCandidates(result,input,input.length);
  assert.deepEqual(matches.map(p=>p.id),[first]);
  const output=insertMention(input,input.length,matches[0]);
- assert.deepEqual(output,{text:'Please review @Alex Rivera ',cursor:26,userId:first});
+ assert.deepEqual(output,{text:'Please review @Alex Rivera ',cursor:27,userId:first});
  assert.equal(mentionQuery('no mention',10),null);
  assert.equal(mentionQuery('mail test@example.com',21),null);
  assert.equal(insertMention('plain text',10,matches[0]),null);
