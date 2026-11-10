@@ -52,7 +52,8 @@ test('foreign guest, tampered link, stale policy and insufficient role denied',(
  const link=core.issue(owner,{boardId:A,recipientEmail:'another@example.test'});
  rejects(()=>core.accept(guest,link.token),'invalid_or_expired');
  const other=core.enter({role:'guest',email:'another@example.test'}).session;
- rejects(()=>core.accept(other,link.token.slice(0,-1)+'0'),'invalid_or_expired');
+ const altered=link.token.slice(0,-1)+(link.token.endsWith('0')?'1':'0');
+ rejects(()=>core.accept(other,altered),'invalid_or_expired');
  rejects(()=>core.setPolicy(guest,{boardId:A,mode:'private',expectedRevision:2}),
   'authentication_required');
  rejects(()=>core.setPolicy(owner,{boardId:A,mode:'private',expectedRevision:1}),
