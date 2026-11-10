@@ -24,17 +24,17 @@ apply() {
 echo '== FUELTRACK: disposable signed and Board/Storage acceptance =='
 start "$primary"
 apply "$primary" sql/tests/fueltrack-v3-backend-core-fixture.sql
-apply "$primary" supabase/migrations/20261109115106_fueltrack_v3_backend_core.sql
-apply "$primary" supabase/migrations/20261109235500_fueltrack_v3_board_receipts.sql
+apply "$primary" supabase/migrations/20261110021141_fueltrack_v3_backend_core.sql
+apply "$primary" supabase/migrations/20261110021200_fueltrack_v3_board_receipts.sql
 apply "$primary" sql/tests/fueltrack-v3-backend-core-acceptance.sql
 apply "$primary" sql/tests/fueltrack-v3-board-receipt-acceptance.sql
 # Reapply after records exist; all links are nonnull and migrations are repeat-safe.
-apply "$primary" supabase/migrations/20261109235500_fueltrack_v3_board_receipts.sql
+apply "$primary" supabase/migrations/20261110021200_fueltrack_v3_board_receipts.sql
 echo 'PASS: core contracts, Board links, receipt registration, security denials, and reapplication'
 echo '== FUELTRACK: legacy unlinked-row preflight must fail before schema write =='
 start "$legacy"
 apply "$legacy" sql/tests/fueltrack-v3-backend-core-fixture.sql
-apply "$legacy" supabase/migrations/20261109115106_fueltrack_v3_backend_core.sql
+apply "$legacy" supabase/migrations/20261110021141_fueltrack_v3_backend_core.sql
 docker exec -i "$legacy" psql -X -v ON_ERROR_STOP=1 -U postgres -d ft3check >/dev/null <<'SQL'
 set role authenticated;
 select set_config('request.jwt.claim.sub','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',false);
@@ -43,7 +43,7 @@ select public.fueltrack_v3_submit(
  '88888888-8888-4888-8888-888888888888','vehicle',
  '{"plate":"GAN 8289","owner":"Person B","origin":"Office","destination":"Depot","purpose":"Legacy request for preflight"}'::jsonb);
 SQL
-if docker exec -i "$legacy" psql -X -v ON_ERROR_STOP=1 -U postgres -d ft3check  < supabase/migrations/20261109235500_fueltrack_v3_board_receipts.sql  > /tmp/ft3-legacy-preflight-$$.log 2>&1; then
+if docker exec -i "$legacy" psql -X -v ON_ERROR_STOP=1 -U postgres -d ft3check  < supabase/migrations/20261110021200_fueltrack_v3_board_receipts.sql  > /tmp/ft3-legacy-preflight-$$.log 2>&1; then
  echo 'FAILED: unlinked requests unexpectedly passed migration preflight' >&2
  exit 1
 fi

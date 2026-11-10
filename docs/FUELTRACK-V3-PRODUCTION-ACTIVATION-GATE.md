@@ -32,8 +32,8 @@ verification and authorized operational ownership. No backup was deleted.
    Preserve existing provider backup capabilities where available, but no
    recovery rehearsal or numerical RPO/RTO is a release requirement.
 2. Controlled schema rollout: apply already approved core migration
-   20261109115106_fueltrack_v3_backend_core.sql, followed by Board/receipt
-   migration 20261109235500_fueltrack_v3_board_receipts.sql, only through
+   20261110021141_fueltrack_v3_backend_core.sql, followed by Board/receipt
+   migration 20261110021200_fueltrack_v3_board_receipts.sql, only through
    established safe production migration process. No disposable fixtures.
 3. Genuine Admin/User signed acceptance: submission/retry/CAS, approval,
    refueling/completion, Board links, receipt register/read, persistence
@@ -80,3 +80,17 @@ docs/historical/FUELTRACK-V3-PRODUCTION-ACTIVATION-GATE-PRE-RETIREMENT-20261110.
 
 This verifies release prerequisites and identifies missing runtime
 deployment, not a production migration failure or signed acceptance.
+
+
+## November 10 — Production schema deployment completed
+
+The existing owner-authorized migrations were applied successfully through
+the connected Supabase migration API. Actual provider migration versions
+are 20261110021141 (fueltrack_v3_backend_core) and 20261110021200
+(fueltrack_v3_board_receipts); all source SQL bytes are unchanged.
+Three tables have RLS enabled and direct client table access revoked.
+Anonymous FuelTrack RPC EXECUTE is denied; authenticated public RPC grants
+and audit/Board-link triggers are verified. Private receipt Storage policy
+Option A was preserved. Initial request/receipt/audit counts: 0/0/0.
+**Signed Admin/User and binary receipt acceptance is still PENDING.**
+See docs/FUELTRACK-V3-SIGNED-PRODUCTION-ACTIVATION-20261110.md.

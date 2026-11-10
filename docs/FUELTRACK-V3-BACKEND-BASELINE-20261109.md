@@ -42,15 +42,15 @@ The current frontend continues to use its existing reads/disabled controls until
 Run using only an isolated PostgreSQL 16 container:
 
 1. `sql/tests/fueltrack-v3-backend-core-fixture.sql`
-2. `supabase/migrations/20261109115106_fueltrack_v3_backend_core.sql`
+2. `supabase/migrations/20261110021141_fueltrack_v3_backend_core.sql`
 3. `sql/tests/fueltrack-v3-backend-core-acceptance.sql`
 
 Pass result: `FT3_BACKEND_CORE_ACCEPTANCE_PASS`. Covers idempotency, owner reads, role denial, invalid details, cross-workspace denial, signed-out denial, stale updates, allowed transitions, immutable audit, and Analytics.
 
 ## Next increment: transactional Board identity + private receipt Storage (staged)
 
-Migration **`20261109235500_fueltrack_v3_board_receipts.sql`** depends on
-`20261109115106_fueltrack_v3_backend_core.sql`.
+Migration **`20261110021200_fueltrack_v3_board_receipts.sql`** depends on
+`20261110021141_fueltrack_v3_backend_core.sql`.
 
 - The signed `fueltrack_v3_submit` transaction creates one real Board item
   via existing `wm_add_board_item` and assigns `board_item_id` to its request.
@@ -131,3 +131,13 @@ this migration can be deployed. No production records have been modified.
 
 **Do not** infer production readiness from passing disposable database or
 frontend tests.
+
+
+## November 10 live production migration alignment
+
+Owner-authorized migrations have now been applied via Supabase migration
+API; provider-assigned versions are 20261110021141 and 20261110021200.
+The two SQL bodies are unchanged; the source filenames were aligned to
+applied migration history. Live RLS/RPC catalog verified; genuine signed
+Admin/User and private Storage functional acceptance remains pending.
+See docs/FUELTRACK-V3-SIGNED-PRODUCTION-ACTIVATION-20261110.md.

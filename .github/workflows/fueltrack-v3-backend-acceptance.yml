@@ -2,8 +2,8 @@ name: FuelTrack v3 Disposable Backend Acceptance
 on:
   pull_request:
     paths:
-      - 'supabase/migrations/20261109115106_fueltrack_v3_backend_core.sql'
-      - 'supabase/migrations/20261109235500_fueltrack_v3_board_receipts.sql'
+      - 'supabase/migrations/20261110021141_fueltrack_v3_backend_core.sql'
+      - 'supabase/migrations/20261110021200_fueltrack_v3_board_receipts.sql'
       - 'sql/tests/fueltrack-v3-*.sql'
       - 'scripts/fueltrack-v3-backend-disposable.sh'
       - 'scripts/fueltrack-v3-signed-read-acceptance*.mjs'
