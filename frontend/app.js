@@ -876,7 +876,7 @@ function boardPage(){
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
  <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
- ${isMaterialSourcingBoard(b)&&state.tab==='items'?'<button class="secondary" data-action="mrh-check-readiness">Verify signed sourcing readiness</button>':''}
+ ${isMaterialSourcingBoard(b)&&['items','sourcing'].includes(state.tab)?'<button class="secondary" data-action="mrh-check-readiness">Verify signed sourcing readiness</button>':''}
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
@@ -4734,8 +4734,8 @@ async function action(name,button){
  }
  case 'tt-board-gps':{try{await openTimeTrackerBoardProjectedGps();}catch(err){notice(err);}break;}
  case 'mrh-check-readiness':{
-  if(!isMaterialSourcingBoard(state.board?.board)||state.tab!=='items'||
-     !activeBoardLayout())break;
+  if(!isMaterialSourcingBoard(state.board?.board)||
+     !['items','sourcing'].includes(state.tab)||!activeBoardLayout())break;
   const snapshot={boardId:state.boardId,userId:auth.userId,
    workspaceId:state.context?.workspace_id};
   state.mrhReadiness=null;
@@ -4769,9 +4769,7 @@ async function action(name,button){
     db.invalidateBoardCache();
     await loadBoard(snapshot.boardId,snapshot.tab);
     if(!boardHistoryAuthorized(snapshot)||state.tab!==snapshot.tab)return;
-    toast('Part number '+created.partNumber+' created and reloaded in Main group.');
-    if(state.board?.items?.some(row=>row.id===created.itemId))
-     await openBoardItemDetails(created.itemId);
+    toast('Part number '+created.partNumber+' created and reloaded in Main group. Select the part number for protected details.');
    },{submitLabel:'Create part'});
   break;
  }
