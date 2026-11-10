@@ -3556,7 +3556,10 @@ function contextualColumnCreate(){
  },{submitLabel:'Add column'});
 }
 async function openBoardStructure(){
- if(!activeBoardLayout())return;
+ if(!activeBoardLayout()){
+  toast('Board settings require a verified signed board. Refresh the board and retry.',true);
+  return;
+ }
  const snapshot={boardId:state.boardId,userId:auth.userId,
   workspaceId:state.context.workspace_id};
  const detail=state.board;
@@ -3566,14 +3569,56 @@ async function openBoardStructure(){
   ...(moduleKey==='frt'?[{key:'finance',title:'FRT finance'}]:[]),
   ...(moduleKey==='timetracker'?[{key:'attendance',title:'TimeTracker attendance'}]:[])
  ];
- const settings=state.boardUi||await boardStructureClient.read(snapshot.boardId);
- const canManage=BOARD_STRUCTURE_ADMIN_ENABLED&&
-  await db.allowed(snapshot.boardId,'manage');
+ // Show a real dialog before awaiting any signed RPC. The previous code
+ // waited for both reads while the action menu closed, leaving no UI.
+ hideModal();modal=document.createElement('div');
+ const pending=modal;
+ pending.className='modal-backdrop board-history-backdrop';
+ pending.innerHTML='<section class="modal board-history-modal board-structure-modal" role="dialog" '+
+  'aria-modal="true" aria-labelledby="board-structure-title">'+
+  '<div class="modal-head"><h2 id="board-structure-title">Board structure &amp; views</h2>'+
+  '<button type="button" data-dismiss class="modal-close" aria-label="Close settings">×</button></div>'+
+  '<div class="board-structure-scroll" role="region" aria-label="Board settings loading state" tabindex="0">'+
+  '<p role="status" aria-live="polite" data-board-structure-loading>Checking signed board settings and permissions…</p>'+
+  '</div></section>';
+ document.body.append(pending);
+ pending.querySelector('[data-dismiss]')?.focus();
+ const current=()=>modal===pending&&boardHistoryAuthorized(snapshot);
+ pending.addEventListener('click',event=>{
+  if(event.target===pending||event.target.closest('[data-dismiss]')){
+   if(modal===pending)hideModal();
+  }else if(event.target.closest('[data-board-structure-retry]')&&current()){
+   void openBoardStructure();
+  }
+ });
+ pending.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&modal===pending){
+   event.preventDefault();hideModal();
+  }
+ });
+ let settings,canManage;
+ try{
+  [settings,canManage]=await Promise.all([
+   state.boardUi?.status==='VERIFIED_READ'?
+    Promise.resolve(state.boardUi):boardStructureClient.read(snapshot.boardId),
+   BOARD_STRUCTURE_ADMIN_ENABLED?db.allowed(snapshot.boardId,'manage'):Promise.resolve(false)
+  ]);
+ }catch(err){
+  if(!current())return;
+  const content=pending.querySelector('[data-board-structure-loading]');
+  if(content){
+   content.setAttribute('role','alert');
+   content.innerHTML='<strong>Board settings could not be loaded.</strong> '+
+    '<span>'+e(errorMessage(err))+'</span> '+
+    '<button type="button" class="secondary" data-board-structure-retry>Retry</button>';
+  }
+  return;
+ }
+ if(!current())return;
  const sourcingPlan=snapshot.boardId===MATERIAL_SOURCING_BOARD_ID?
   planMaterialSourcingSchema(detail):null;
  const offerPublicSourcing=canManage&&sourcingPlan?.status==='BLOCKED_FIELD_AUTHORIZATION'&&
   sourcingPlan.additions.length>0;
- if(!boardHistoryAuthorized(snapshot))return;
  hideModal();modal=document.createElement('div');
  const view=modal;
  view.className='modal-backdrop board-history-backdrop';
