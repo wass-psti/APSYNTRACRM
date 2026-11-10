@@ -1,18 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {showEngineeringDiagnostics} from '../engineering-diagnostics-visibility.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const sidebarSource=app.slice(app.indexOf('function sidebar(){'),
  app.indexOf('/** Signed session-local basemap opt-in.'));
-const renderSidebar=new Function('state','sidebarNav','renderWorkspaceSwitcher',
+const renderSidebar=new Function('state','location','showEngineeringDiagnostics','sidebarNav','renderWorkspaceSwitcher',
  'renderWorkspaceInviteLaunch','workspaceName','name','initials','e','sidebarIcon',
  sidebarSource+'\nreturn sidebar();');
 const nav=(href,label)=>`<a href="${href}">${label}</a>`;
-const render=({roleVerified,platform_role='employee'})=>renderSidebar(
+const render=({roleVerified,platform_role='employee',search=''})=>renderSidebar(
  {roleVerified,boards:[],view:'overview',boardId:null,
   context:{user_id:'test-user',workspace_id:'test-workspace',profile:{platform_role}}},
- nav,()=>'',()=>'',()=> 'Test workspace',()=> 'Test user',()=> 'TU',String,()=>''
+ {search},showEngineeringDiagnostics,nav,()=>'',()=>'',()=> 'Test workspace',()=> 'Test user',()=> 'TU',String,()=>''
 );
 
 test('Foundation and Pages Acceptance links require server-verified bootstrap status',()=>{
@@ -23,9 +24,14 @@ test('Foundation and Pages Acceptance links require server-verified bootstrap st
   assert.match(html,/#\/boards/);
   assert.match(html,/#\/settings/);
  }
- const bootstrap=render({roleVerified:true});
+ const regularBootstrap=render({roleVerified:true});
+ assert.doesNotMatch(regularBootstrap,/#\/foundation|#\/acceptance|#\/security/);
+ const bootstrap=render({roleVerified:true,search:'?diagnostics=1'});
  assert.match(bootstrap, /href="#\/foundation"/);
  assert.match(bootstrap, /href="#\/acceptance"/);
+ assert.match(bootstrap, /href="#\/security"/);
+ const forged=render({roleVerified:false,search:'?diagnostics=1'});
+ assert.doesNotMatch(forged,/#\/foundation|#\/acceptance|#\/security/);
 });
 
 test('direct routes use the authoritative bootstrap verification RPC before rendering',()=>{

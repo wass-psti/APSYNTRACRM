@@ -69,6 +69,7 @@ import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-st
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard} from './material-sourcing-tracker.js';
+import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
 import {renderMaterialSourcingDetailTabs,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
@@ -292,17 +293,18 @@ function sidebarNav(href,label,icon,active,{count=null}={}){
   '<span class="nav-label">'+e(label)+'</span>'+badge+'</a>';
 }
 function sidebar(){
+ const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  const currentBoard=state.boardId;
  const recent=state.boards.slice(0,6);
  const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
   sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
-  (state.roleVerified===true?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
-  sidebarNav('#/security','Access acceptance','security',state.view==='security')+
+  (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
+  (engineeringUi?sidebarNav('#/security','Access acceptance','security',state.view==='security'):'')+
   (state.roleVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
    sidebarNav('#/role-configuration','Role Configuration','roles',state.view==='role-configuration')+
    sidebarNav('#/user-role-management','User Role Management','users',state.view==='user-role-management'):'')+
   sidebarNav('#/settings','Settings','settings',state.view==='settings')+
-  (state.roleVerified===true?sidebarNav('#/acceptance','Pages acceptance','acceptance',state.view==='acceptance'):'');
+  (engineeringUi?sidebarNav('#/acceptance','Pages acceptance','acceptance',state.view==='acceptance'):'');
  return `<aside class="sidebar aps-sidebar" aria-label="Workspace sidebar">
   <div class="sidebar-brand-wrap">
    <a href="#/overview" class="brand" aria-label="APSYNTRA CRM — Go to overview" title="Go to overview">
@@ -806,6 +808,7 @@ function issuesPage(){
  `<div class="panel">${empty('No issues yet','No active APSYNTRA Issues were found for this board.',canEdit?'<button class="primary" data-action="new-issue">＋ Create first issue</button>':'')}</div>`}`;
 }
 function boardPage(){
+ const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  if(state.loading)return renderBoardLoading({
   hidden:document.hidden,
   lowPower:navigator.connection?.saveData===true||
@@ -871,7 +874,7 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button><button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button><button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
@@ -892,11 +895,11 @@ function boardPage(){
   ${moduleKey==='timetracker'&&TT_BOARD_GPS_PROJECTION_ENABLED&&(state.roleVerified===true||state.ttBoardGpsEligible===true)?'<button type="button" class="secondary" data-action="tt-board-gps">Restricted attendance GPS</button>':''}
  ${state.edit&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-import">⇧ Import CSV/XLSX</button>':''}
  ${state.edit?'<button class="secondary" data-action="new-group">＋ Add group</button>':''}
-  ${state.edit&&canBulkEditBoard(b)?'<button type="button" class="secondary" data-action="bulk02-verify" '+(state.bulk02Busy?'disabled':'')+'>'+(
+  ${engineeringUi&&state.edit&&canBulkEditBoard(b)?'<button type="button" class="secondary" data-action="bulk02-verify" '+(state.bulk02Busy?'disabled':'')+'>'+(
    state.bulk02Busy?'Checking signed permissions…':bulkReadyFor(b)?'✓ Bulk access verified':'Verify signed bulk access')+'</button>':''}
   ${hiddenGroups.length?'<button type="button" class="secondary" data-action="group-show-hidden">Show '+hiddenGroups.length+' hidden empty group'+(hiddenGroups.length===1?'':'s')+' (this browser)</button>':''}</div>
   ${moduleKey==='tradelink'?'<p class="muted" role="note">Files is reserved for a secured attachment workflow. Uploads are not enabled yet.</p>':''}
-  ${state.bulk02Result&&state.bulk02Result.boardId===b.id?
+  ${engineeringUi&&state.bulk02Result&&state.bulk02Result.boardId===b.id?
    '<div class="board-bulk-probe-summary" role="status" aria-live="polite">Signed bulk authorization: '+e(state.bulk02Result.status)+
    ' — '+state.bulk02Result.checks.filter(x=>x.status==='PASS').length+' / '+state.bulk02Result.checks.length+
    ' checks. '+(state.bulk02Result.ready?'Mutations enabled for this verified board and session.':'No bulk writes enabled. Review account permissions or unavailable evidence.')+
@@ -904,7 +907,7 @@ function boardPage(){
     state.bulk02Result.checks.map(x=>'<p><strong>'+e(x.id)+' — '+e(x.status)+':</strong> '+e(x.detail)+'</p>').join('')+
     '<p>Still pending: real authorized disposable-board writes, revoked/expired sessions and cross-workspace browser acceptance.</p></details>'+
     '<button type="button" class="secondary" data-action="bulk02-copy-report">Copy nonsecret check report</button></div>':''}
-  ${row01AcceptancePanel(b)}
+  ${engineeringUi?row01AcceptancePanel(b):''}
   <div class="board-bulk-toolbar" id="board-bulk-toolbar" role="region" aria-label="Selected board records" ${itemSelection.size?'':'hidden'}><strong id="board-selected-count">${itemSelection.size} selected</strong><button type="button" class="secondary" data-action="bulk-export">Export selected CSV</button><button type="button" class="secondary" data-action="bulk-clear">Clear selection</button>
  <button type="button" class="secondary" data-action="bulk-actions" ${canRequestBulk(b)||bulkReadyFor(b)?'':'disabled title="Bulk changes require an authorized ordinary board and 1–50 records"'}>Bulk actions…</button>
  <button type="button" class="secondary board-delete-one" data-action="delete-selected-item" ${itemSelection.size>0&&state.edit&&canManuallyEditBoard(b,true)?'':'disabled title="Select an editable ordinary-board item"'}>${itemSelection.size>1?'Delete one of '+itemSelection.size+'…':'Delete item'}</button>
