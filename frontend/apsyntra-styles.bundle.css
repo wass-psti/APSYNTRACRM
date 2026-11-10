@@ -1890,6 +1890,34 @@
 .mrh-sourcing-editor [data-mrh-private-status]{min-height:1.2rem;margin:.3rem 0;font-size:.88rem}
 @media(max-width:720px){.mrh-sourcing-field{grid-template-columns:1fr}.mrh-sourcing-field form{width:100%}}
 
+/* Material Request Hub: public-only tracker, separate from protected board details */
+.mrh-tracker{padding:clamp(12px,2vw,24px);border:1px solid var(--border,#d6dce7);border-radius:15px;background:var(--panel,#fff);display:grid;gap:16px}
+.mrh-tracker-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.mrh-tracker-head h2{font-size:1.35rem;margin:.2rem 0}
+.mrh-tracker-head p{margin:.2rem 0;color:var(--muted,#64748b)}
+.mrh-tracker-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.mrh-tracker-stats>div{border:1px solid var(--border,#d6dce7);background:var(--surface,#f8fafc);border-radius:10px;padding:12px;display:grid;gap:5px}
+.mrh-tracker-stats span{font-size:.82rem;color:var(--muted,#64748b)}
+.mrh-tracker-stats strong{font-size:1.3rem;font-variant-numeric:tabular-nums}
+.mrh-tracker-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mrh-tracker-controls label:first-child{flex:1;min-width:min(100%,240px)}
+.mrh-tracker-controls input[type=search]{width:100%}
+.mrh-tracker-controls input,.mrh-tracker-controls select{padding:9px 11px;border:1px solid var(--border,#d6dce7);border-radius:9px;color:inherit;background:var(--panel,#fff)}
+.mrh-tracker-overdue{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.mrh-tracker-table-scroll{overflow:auto;max-width:100%;border:1px solid var(--border,#d6dce7);border-radius:10px}
+.mrh-tracker-table{border-collapse:collapse;min-width:1000px;width:100%;font-size:.89rem}
+.mrh-tracker-table th,.mrh-tracker-table td{text-align:left;padding:12px;vertical-align:middle;border-bottom:1px solid var(--border,#e2e8f0)}
+.mrh-tracker-table th{position:sticky;top:0;background:var(--surface,#f8fafc);font-weight:600;white-space:nowrap;z-index:1}
+.mrh-tracker-table tr:last-child td{border-bottom:0}
+.mrh-part-link{background:none;border:0;padding:0;color:inherit;font-weight:650;text-align:left;cursor:pointer}
+.mrh-part-link:hover,.mrh-part-link:focus-visible{text-decoration:underline}
+.mrh-source{display:inline-flex;border-radius:20px;padding:3px 10px;font-size:.77rem;font-weight:650}
+.mrh-source.local{color:#075c45;background:#d5f8e9}.mrh-source.import{color:#174fa8;background:#dceaff}
+.mrh-overdue-label{display:inline-block;color:#b42318;font-size:.75rem;font-weight:650}
+.mrh-tracker-empty{text-align:center!important;color:var(--muted,#64748b);padding:24px!important}
+.mrh-tracker-note{margin:0}
+@media(max-width:720px){.mrh-tracker-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.mrh-tracker-controls>label{flex:1 1 150px}}
+
 /* frontend/auth-experience.css */
 /* APSYNTRA CRM / AUTH02 — intentionally scoped to the login route.
    No inline style attributes, CSSOM injection, font downloads or route-wide overrides. */
