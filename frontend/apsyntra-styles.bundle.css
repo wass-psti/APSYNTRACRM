@@ -1934,6 +1934,16 @@
 .mrh-item-activity-history time{font-size:.82rem;color:#68758d}
 @media(max-width:620px){.mrh-item-activity-history li{flex-direction:column;gap:5px}}
 
+/* MRH board-item task forms appear only after successful signed RPC verification. */
+.mrh-item-tasks-active{display:grid;gap:12px;padding:14px 0}
+.mrh-item-tasks-active h3{margin:0}
+.mrh-item-tasks-active ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.mrh-item-tasks-active li{border:1px solid var(--border,#d7dee9);border-radius:10px;padding:10px}
+.mrh-item-tasks-active form{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.mrh-item-tasks-active form label{display:grid;gap:4px;font-size:.8rem;font-weight:650;flex:1 1 150px;min-width:0}
+.mrh-item-tasks-active form input,.mrh-item-tasks-active form select{width:100%;min-width:0;padding:9px 10px;border:1px solid var(--border,#d7dee9);border-radius:8px;background:var(--panel,#fff);color:inherit}
+.mrh-item-tasks-active [data-mrh-task-status]{min-height:1.1rem;font-size:.85rem}
+
 /* frontend/auth-experience.css */
 /* APSYNTRA CRM / AUTH02 — intentionally scoped to the login route.
    No inline style attributes, CSSOM injection, font downloads or route-wide overrides. */

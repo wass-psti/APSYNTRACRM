@@ -26,7 +26,7 @@ function validContext({api,auth,workspaceId,boardId,itemId}){
     !api?.context||!api?.allowed||!api?.rpc)
   deny('Signed sourcing context is unavailable.');
 }
-async function authorize({api,auth,workspaceId,boardId,itemId,edit=false}){
+export async function authorizeMaterialSourcingItem({api,auth,workspaceId,boardId,itemId,edit=false}){
  validContext({api,auth,workspaceId,boardId,itemId});
  const userId=auth.userId;
  const verified=await auth.getVerifiedUser();
@@ -94,20 +94,20 @@ export function parseProtectedSourcingValue(fieldName,raw){
 
 export async function readProtectedSourcingItem({api,auth,boardId,workspaceId,itemId}){
  const input={api,auth,boardId,workspaceId,itemId};
- const actor=await authorize(input);
+ const actor=await authorizeMaterialSourcingItem(input);
  const raw=await api.rpc('mrh_sourcing_sensitive_read',{
   p_board_id:boardId,p_item_id:itemId
  });
  if(!auth.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
  // Authorization is rechecked after the await, including workspace switching.
- await authorize(input);
+ await authorizeMaterialSourcingItem(input);
  return normalizeProtectedSourcingRead(raw);
 }
 export async function writeProtectedSourcingField({
  api,auth,boardId,workspaceId,itemId,fieldName,value,expectedRevision=null
 }){
  const input={api,auth,boardId,workspaceId,itemId};
- const actor=await authorize({...input,edit:true});
+ const actor=await authorizeMaterialSourcingItem({...input,edit:true});
  const parsed=parseProtectedSourcingValue(fieldName,value);
  if(expectedRevision!==null&&(!Number.isSafeInteger(expectedRevision)||expectedRevision<1))
   deny('Refresh the sourcing field before editing.',409);
@@ -158,7 +158,7 @@ export async function createMaterialSourcingPart({api,auth,workspaceId,partNumbe
  if(!title||title.length>240)deny('Part number must contain 1–240 characters.',400);
  if(typeof api?.addItem!=='function'||typeof api?.board!=='function')
   deny('Signed board creation is unavailable.');
- const actor=await authorize({
+ const actor=await authorizeMaterialSourcingItem({
   api,auth,workspaceId,boardId,itemId,edit:true
  });
  const detail=await api.board(boardId);
@@ -167,7 +167,7 @@ export async function createMaterialSourcingPart({api,auth,workspaceId,partNumbe
      group.id===groupId&&group.title==='Main group'))
   deny('Original Material Sourcing board or Main group changed.',409);
  if(!auth.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
- await authorize({api,auth,workspaceId,boardId,itemId,edit:true});
+ await authorizeMaterialSourcingItem({api,auth,workspaceId,boardId,itemId,edit:true});
  // The existing server RPC additionally checks current signed board edit access
  // and group ownership, and records an audit event.
  const savedId=await api.addItem(boardId,groupId,title);
