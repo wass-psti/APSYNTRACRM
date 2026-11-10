@@ -38,12 +38,13 @@ export async function verifyFuelTrackReceiptSignature(file){
 }
 export class FuelTrackV3ReceiptStorageClient {
  constructor({auth,api,boardId,workspaceId,fetchImpl=globalThis.fetch?.bind(globalThis),
+  decodeImage=globalThis.createImageBitmap?.bind(globalThis),
   baseUrl=SUPABASE_URL,apiKey=SUPABASE_PUBLISHABLE_KEY}={}){
   if(!auth||typeof auth.token!=='function'||typeof auth.refresh!=='function'||
     !auth.isSignedIn||typeof fetchImpl!=='function')throw new TypeError('Signed Storage session required');
   this.domain=new FuelTrackV3DomainClient({api,auth,boardId,workspaceId});
   this.auth=auth;this.fetchImpl=fetchImpl;this.boardId=boardId;this.workspaceId=workspaceId;
-  this.apiKey=apiKey;this.baseUrl=baseUrl.replace(/\/$/,'');
+  this.apiKey=apiKey;this.baseUrl=baseUrl.replace(/\/$/,'');this.decodeImage=decodeImage;
  }
  async boundedFetch(url,options){
   const controller=new AbortController();
@@ -146,6 +147,92 @@ export class FuelTrackV3ReceiptStorageClient {
   if(url.pathname!=='/storage/v1/object/sign/'+bucket+'/'+encode(path))
    throw new Error('Untrusted receipt URL path.');
   return url.href;
+ }
+
+
+ /** Verify an existing private receipt's bytes with an explicit, signed,
+  * nonmutating GET. No secret, signed URL or image content leaves this method.
+  */
+ async verifyPrivateReceiptBinary(requestId){
+  if(!UUID.test(requestId)||!this.auth.isSignedIn)
+   throw new TypeError('Signed request is required.');
+  const actor=this.auth.userId;
+  const ensureSigned=()=>{
+   if(!this.auth.isSignedIn||this.auth.userId!==actor)
+    throw new Error('Signed identity changed during private receipt verification.');
+  };
+  const url=await this.signedUrl(requestId);
+  ensureSigned();
+  if(!url)throw new Error('Registered private receipt does not exist.');
+  // signedUrl has validated provider origin and the exact Board/object path.
+  const pathname=new URL(url).pathname;
+  const ext=pathname.match(/\.(jpg|jpeg|png|webp)$/i)?.[1]?.toLowerCase();
+  const mimeType=ext==='jpg'||ext==='jpeg'?'image/jpeg':
+   ext==='png'?'image/png':ext==='webp'?'image/webp':null;
+  if(!mimeType)throw new Error('Registered receipt path has no supported image extension.');
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),25000);
+  let reader;
+  try{
+   const response=await this.fetchImpl(url,{
+    method:'GET',mode:'cors',redirect:'error',cache:'no-store',
+    credentials:'omit',signal:controller.signal
+   });
+   ensureSigned();
+   if(!response.ok)throw new Error('Private receipt download denied ('+response.status+').');
+   const declaredType=response.headers?.get?.('content-type')?.split(';')[0]?.trim()?.toLowerCase();
+   if(declaredType&&declaredType!=='application/octet-stream'&&declaredType!==mimeType)
+    throw new Error('Private receipt response content type mismatch.');
+   const headerLength=response.headers?.get?.('content-length');
+   if(headerLength!==null&&headerLength!==undefined&&
+      (!/^\d+$/.test(headerLength)||Number(headerLength)>MAX_BYTES||Number(headerLength)<1))
+    throw new Error('Private receipt response size is invalid.');
+   if(typeof response.body?.getReader!=='function')
+    throw new Error('Private receipt streaming response unavailable.');
+   reader=response.body.getReader();
+   let size=0;
+   const chunks=[];
+   while(true){
+    const part=await reader.read();
+    ensureSigned();
+    if(part.done)break;
+    if(!(part.value instanceof Uint8Array)||part.value.byteLength===0)
+     throw new Error('Private receipt stream contains invalid data.');
+    size+=part.value.byteLength;
+    if(size>MAX_BYTES)throw new Error('Private receipt response size exceeds 5 MB.');
+    chunks.push(part.value);
+   }
+   if(size<1)throw new Error('Private receipt response is empty.');
+   if(headerLength!==null&&headerLength!==undefined&&Number(headerLength)!==size)
+    throw new Error('Private receipt response size mismatch.');
+   const bytes=new Uint8Array(size);
+   let offset=0;
+   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+   await verifyFuelTrackReceiptSignature({
+    size,type:mimeType,arrayBuffer:async()=>bytes.buffer
+   });
+   // A magic-byte match alone does not establish a usable image. Require a
+   // real platform decoder before reporting a verified binary receipt.
+   if(typeof this.decodeImage!=='function')
+    throw new Error('Private receipt image decoding is unavailable.');
+   let image;
+   try{
+    image=await this.decodeImage(new Blob([bytes],{type:mimeType}));
+    ensureSigned();
+    if(!image||!Number.isSafeInteger(image.width)||!Number.isSafeInteger(image.height)||
+       image.width<1||image.height<1||image.width*image.height>50000000)
+     throw new Error('Private receipt image dimensions are invalid.');
+   }finally{image?.close?.();}
+   ensureSigned();
+   return Object.freeze({status:'VERIFIED_PRIVATE_RECEIPT_BINARY',mimeType,bytes:size});
+  }catch(error){
+   if(controller.signal.aborted)
+    throw new Error('Private receipt verification timed out; refresh before retrying.');
+   throw error;
+  }finally{
+   clearTimeout(timeout);
+   if(reader)try{await reader.cancel();}catch{/* No server-side cleanup is needed. */}
+  }
  }
 
 }

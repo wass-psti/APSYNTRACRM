@@ -144,3 +144,122 @@ test('signed receipt URL origin swapping is rejected',async()=>{
  });
  await assert.rejects(client.signedUrl(req),/Untrusted receipt URL origin/);
 });
+
+test('existing private receipt binary round-trip verifies actual bytes without exporting content or signed URL',async()=>{
+ const path=board+'/'+item+'/f0000000-0000-4000-8000-000000000000.jpg';
+ const calls=[];
+ const client=new FuelTrackV3ReceiptStorageClient({
+  auth:auth(),boardId:board,workspaceId:ws,
+  api:{rpc:async(name)=>{assert.equal(name,'fueltrack_v3_receipt_read');
+   return {status:'VERIFIED_RECEIPT',requestId:req,boardItemId:item,
+    fileId:'77777777-7777-4777-8777-777777777777',storagePath:path};}},
+  baseUrl:'https://project.supabase.co',
+  decodeImage:async()=>({width:1200,height:900,close(){}}),
+  fetchImpl:async(url,opts)=>{
+   calls.push({url,opts});
+   if(opts.method==='POST')return Response.json({
+    signedURL:'/object/sign/work-board-files/'+path+'?token=short-lived-synthetic'
+   });
+   if(opts.method==='GET')return new Response(new Uint8Array([255,216,255,217]),
+    {headers:{'Content-Type':'image/jpeg','Content-Length':'4'}});
+   throw new Error('Unexpected network method');
+  }
+ });
+ const result=await client.verifyPrivateReceiptBinary(req);
+ assert.deepEqual(result,{status:'VERIFIED_PRIVATE_RECEIPT_BINARY',mimeType:'image/jpeg',
+  bytes:4});
+ assert.equal(calls.length,2);
+ assert.equal(calls[1].opts.method,'GET');
+ assert.equal(calls[1].opts.credentials,'omit');
+ assert.equal(calls[1].opts.headers,undefined);
+ assert.equal(JSON.stringify(result).includes('token='),false);
+ assert.equal(JSON.stringify(result).includes('signedURL'),false);
+});
+
+test('private receipt binary verification fails closed on spoofed bytes, oversized response, wrong MIME or changed signed identity',async()=>{
+ const path=board+'/'+item+'/f0000000-0000-4000-8000-000000000000.jpg';
+ const build=(signed,body,headers={})=>new FuelTrackV3ReceiptStorageClient({
+  auth:signed,boardId:board,workspaceId:ws,
+  api:{rpc:async()=>({status:'VERIFIED_RECEIPT',requestId:req,boardItemId:item,
+   fileId:'77777777-7777-4777-8777-777777777777',storagePath:path})},
+  baseUrl:'https://project.supabase.co',
+  decodeImage:async()=>({width:1200,height:900,close(){}}),
+  fetchImpl:async(_,opts)=>{
+   if(opts.method==='POST')return Response.json({
+    signedURL:'/object/sign/work-board-files/'+path+'?token=short-lived-synthetic'
+   });
+   return new Response(body,{headers});
+  }
+ });
+ await assert.rejects(build(auth(),new Uint8Array([0,0,0,0]),
+  {'Content-Type':'image/jpeg'}).verifyPrivateReceiptBinary(req),/content/);
+ await assert.rejects(build(auth(),new Uint8Array([255,216,255,217]),
+  {'Content-Type':'image/png'}).verifyPrivateReceiptBinary(req),/type/);
+ await assert.rejects(build(auth(),new Uint8Array([255,216,255,217]),
+  {'Content-Length':'5242881'}).verifyPrivateReceiptBinary(req),/size/);
+ const signed=auth();
+ const changed=new FuelTrackV3ReceiptStorageClient({
+  auth:signed,boardId:board,workspaceId:ws,
+  api:{rpc:async()=>({status:'VERIFIED_RECEIPT',requestId:req,boardItemId:item,
+   fileId:'77777777-7777-4777-8777-777777777777',storagePath:path})},
+  baseUrl:'https://project.supabase.co',
+  decodeImage:async()=>({width:1200,height:900,close(){}}),
+  fetchImpl:async(_,opts)=>{
+   if(opts.method==='POST')return Response.json({
+    signedURL:'/object/sign/work-board-files/'+path+'?token=short-lived-synthetic'
+   });
+   signed.isSignedIn=false;
+   return new Response(new Uint8Array([255,216,255,217]),{
+    headers:{'Content-Type':'image/jpeg'}});
+  }
+ });
+ await assert.rejects(changed.verifyPrivateReceiptBinary(req),/identity/);
+});
+
+test('signed receipt retrieval denied by Storage must not report verified binary',async()=>{
+ const path=board+'/'+item+'/f0000000-0000-4000-8000-000000000000.jpg';
+ const client=new FuelTrackV3ReceiptStorageClient({
+  auth:auth(),boardId:board,workspaceId:ws,
+  api:{rpc:async()=>({status:'VERIFIED_RECEIPT',requestId:req,boardItemId:item,
+   fileId:'77777777-7777-4777-8777-777777777777',storagePath:path})},
+  baseUrl:'https://project.supabase.co',
+  fetchImpl:async(_,opts)=>opts.method==='POST'?
+   Response.json({signedURL:'/object/sign/work-board-files/'+path+'?token=fake'}):
+   new Response('Denied',{status:403})
+ });
+ await assert.rejects(client.verifyPrivateReceiptBinary(req),/download denied \(403\)/);
+});
+
+test('unregistered receipt cannot trigger any private signed download',async()=>{
+ let count=0;
+ const client=new FuelTrackV3ReceiptStorageClient({
+  auth:auth(),boardId:board,workspaceId:ws,
+  api:{rpc:async()=>({status:'NO_RECEIPT',requestId:req})},
+  baseUrl:'https://project.supabase.co',
+  fetchImpl:async()=>{count++;throw new Error('Unexpected Storage access');}
+ });
+ await assert.rejects(client.verifyPrivateReceiptBinary(req),/does not exist/);
+ assert.equal(count,0);
+});
+
+test('private receipt binary verification also requires browser image decoding, not only magic bytes',async()=>{
+ const path=board+'/'+item+'/f0000000-0000-4000-8000-000000000000.jpg';
+ let attempted=0;
+ const client=new FuelTrackV3ReceiptStorageClient({
+  auth:auth(),boardId:board,workspaceId:ws,
+  api:{rpc:async()=>({status:'VERIFIED_RECEIPT',requestId:req,boardItemId:item,
+   fileId:'77777777-7777-4777-8777-777777777777',storagePath:path})},
+  baseUrl:'https://project.supabase.co',
+  decodeImage:async blob=>{
+   attempted++;
+   assert.equal(blob.type,'image/jpeg');
+   throw new Error('Image decoder rejected malformed JPEG');
+  },
+  fetchImpl:async(_,opts)=>opts.method==='POST'?
+   Response.json({signedURL:'/object/sign/work-board-files/'+path+'?token=fake'}):
+   new Response(new Uint8Array([255,216,255,217]),{
+    headers:{'Content-Type':'image/jpeg'}})
+ });
+ await assert.rejects(client.verifyPrivateReceiptBinary(req),/decoder rejected/);
+ assert.equal(attempted,1);
+});

@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderFuelTrackNewRequest,fuelTrackNewRequestPayload} from '../fueltrack-v3-new-request.js';
@@ -86,4 +87,19 @@ test('refueling transitions permit mark first and receipt details second',()=>{
  assert.match(html,/data-ft3-receipt=/);
  assert.match(html,/Save & Complete/);
  assert.doesNotMatch(html,/data-action="ft3-mark-refueled"/);
+});
+
+test('existing completed records offer explicit nonmutating signed receipt byte verification only to Admin editor',()=>{
+ const completed={...snapshot,rows:[{...row,state:'completed',completed_at:'2026-11-10T04:00:00Z'}],
+  summary:{...summary,submitted:0,completed:1,pendingCount:0,activeQueue:0}};
+ const data=projectFuelTrackLightFuels(verifyFuelTrackBackendSnapshot(completed,board,workspace));
+ const active=renderFuelTrackLightFuels({snapshot:data,boardId:board,workspaceId:workspace,
+  actionEnabled:true});
+ assert.match(active,/data-action="ft3-verify-receipt"/);
+ assert.match(active,/Verify private receipt bytes/);
+ const denied=renderFuelTrackLightFuels({snapshot:data,boardId:board,workspaceId:workspace});
+ assert.doesNotMatch(denied,/data-action="ft3-verify-receipt"/);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/case 'ft3-verify-receipt'/);
+ assert.match(app,/verifyPrivateReceiptBinary\(requestId\)/);
 });

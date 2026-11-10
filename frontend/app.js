@@ -4781,6 +4781,30 @@ async function action(name,button){
   }catch(err){if(same())toast(errorMessage(err));}
   break;
  }
+ case 'ft3-verify-receipt':{
+  const requestId=button.dataset.id;
+  const actor=state.context?.user_id,ws=state.context?.workspace_id,seq=routeSerial;
+  const same=()=>seq===routeSerial&&auth.isSignedIn&&auth.userId===actor&&
+   state.context?.user_id===actor&&state.context?.workspace_id===ws&&
+   state.view==='board'&&state.tab==='fueltrack'&&state.fuelTrackSection==='lightfuels'&&
+   state.boardId===FUELTRACK_V3_ID&&state.board?.board?.workspace_id===ws;
+  const snapshot=state.fuelTrackBackend?.snapshot;
+  if(!same()||!validUuid(requestId)||state.fuelTrackBackendBusy||
+     state.edit!==true||snapshot?.role!=='Admin'||
+     !snapshot.rows?.some(r=>r.id===requestId&&r.state==='completed'))break;
+  state.fuelTrackBackendBusy=true;render();
+  try{
+   const client=new FuelTrackV3ReceiptStorageClient({api:db,auth,
+    boardId:FUELTRACK_V3_ID,workspaceId:ws});
+   const proof=await client.verifyPrivateReceiptBinary(requestId);
+   if(same())toast('Private receipt verified: '+proof.mimeType+' · '+proof.bytes+' bytes.');
+  }catch(err){
+   if(same())toast('Private receipt could not be verified: '+errorMessage(err));
+  }finally{
+   if(same()){state.fuelTrackBackendBusy=false;render();}
+  }
+  break;
+ }
  case 'ft3-mark-refueled':{
   const id=button.dataset.id;
   if(validUuid(id)&&state.fuelTrackSection==='lightfuels')

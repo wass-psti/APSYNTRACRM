@@ -89,7 +89,8 @@ export function renderFuelTrackLightFuels({snapshot=null,boardId=null,workspaceI
  '</td><td>'+esc(r.completedAt)+'</td><td>'+(
   actionEnabled?(receiptLink?.requestId===r.id&&receiptLink.expiresAt>Date.now()?
    '<a href="'+esc(receiptLink.href)+'" target="_blank" rel="noopener noreferrer">Open private receipt</a>':
-   '<button type="button" data-action="ft3-view-receipt" data-id="'+esc(r.id)+'">Prepare receipt link</button>'):
+   '<button type="button" data-action="ft3-view-receipt" data-id="'+esc(r.id)+'">Prepare receipt link</button>')+
+   '<button type="button" data-action="ft3-verify-receipt" data-id="'+esc(r.id)+'">Verify private receipt bytes</button>':
    '—')+'</td></tr>').join('')+'</tbody></table></div>':
  '<p class="ft3-light-completed-empty">'+(model?'No completed records in the verified response.':
  'Completed records unavailable without a signed service.')+'</p>')+'</section>'+
