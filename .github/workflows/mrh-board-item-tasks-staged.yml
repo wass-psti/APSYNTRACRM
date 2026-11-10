@@ -4,6 +4,8 @@ on:
     paths:
       - 'sql/mrh-board-item-tasks-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/tests/mrh-board-item-tasks-disposable.sql'
+      - 'sql/tests/mrh-board-item-tasks-production-readiness-readonly.sql'
+      - 'frontend/tests/mrh-board-task-production-gate.test.mjs'
       - 'frontend/material-sourcing-board-tasks.js'
       - 'frontend/material-sourcing-application.js'
       - 'frontend/material-sourcing-detail-tabs.js'
@@ -14,6 +16,8 @@ on:
     paths:
       - 'sql/mrh-board-item-tasks-CANDIDATE-NOT-APPLIED.sql'
       - 'sql/tests/mrh-board-item-tasks-disposable.sql'
+      - 'sql/tests/mrh-board-item-tasks-production-readiness-readonly.sql'
+      - 'frontend/tests/mrh-board-task-production-gate.test.mjs'
       - 'frontend/material-sourcing-board-tasks.js'
       - 'frontend/material-sourcing-application.js'
       - 'frontend/material-sourcing-detail-tabs.js'
@@ -37,7 +41,7 @@ jobs:
           node --check frontend/app.js
           node --check frontend/material-sourcing-board-tasks.js
           node --check frontend/material-sourcing-application.js
-          node --test frontend/tests/material-sourcing-board-tasks.test.mjs frontend/tests/material-sourcing-application.test.mjs frontend/tests/material-sourcing-detail-tabs.test.mjs
+          node --test frontend/tests/material-sourcing-board-tasks.test.mjs frontend/tests/material-sourcing-application.test.mjs frontend/tests/material-sourcing-detail-tabs.test.mjs frontend/tests/mrh-board-task-production-gate.test.mjs
       - name: Isolated PostgreSQL 17 CAS, RLS, denial and audit
         run: |
           set -euo pipefail
