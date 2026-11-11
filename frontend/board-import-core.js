@@ -10,6 +10,8 @@ import {detectMondayCheckboxMarkers,mondayCheckboxCell} from './monday-import-co
 import {cmp02Validate} from './board-typed-cmp02.js';
 import {normalizeTextDate} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 export const IMPORT_CONTRACT='m143-v1';
+export const IMPORT_EXTENDED_CONTRACT='m143-v2';
+export const EXTENDED_REF_KEY='__aps_extended_ref_v1';
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
 ]);
@@ -262,7 +264,7 @@ function autoTitle(headers){
  const exact=['item','name','title','item name','record'];
  return headers.find(h=>exact.includes(key(h)))||headers[0];
 }
-export function initialImportMappings(sheet,detail,{canCreate=false}={}){
+export function initialImportMappings(sheet,detail,{canCreate=false,extendedReferences=false}={}){
  const columns=availableImportColumns(detail),primary=autoTitle(sheet.headers),used=new Set();
  return sheet.headers.map((source,i)=>{
   const sourceValues=sheet.rows.map(r=>r[i]);
@@ -274,7 +276,7 @@ export function initialImportMappings(sheet,detail,{canCreate=false}={}){
    try{
     if(column.type==='checkbox'&&detectMondayCheckboxMarkers(sheet,source))
      mondayCheckboxCell(raw);
-    else valueAsType(raw,column.type,column.config);
+    else valueAsType(raw,column.type,column.config,extendedReferences);
     return true;
    }catch{return false;}
   }));
@@ -310,7 +312,7 @@ function validDate(raw){
  const d=new Date(raw+'T00:00:00Z');
  return !Number.isNaN(d.valueOf())&&d.toISOString().slice(0,10)===raw;
 }
-function valueAsType(raw,type,config={}){
+function valueAsType(raw,type,config={},extendedReferences=false){
  const text=clean(raw);
  if(!text)return null;
  if(['phone','rating','percentage'].includes(type)){
@@ -363,10 +365,16 @@ function valueAsType(raw,type,config={}){
   return found;
  }
  const limit=type==='long_text'?5000:type==='email'?320:type==='url'?2000:1000;
- if(text.length>limit)deny('A '+type+' cell exceeds '+limit+' characters.');
+ if(text.length>limit){
+  if(extendedReferences&&['text','long_text','url'].includes(type)&&
+     text.length<=65536&&(!['url'].includes(type)||/^https?:\/\/[^\s]+$/i.test(text)))
+   return {[EXTENDED_REF_KEY]:text};
+  deny('A '+type+' cell exceeds '+limit+' characters.');
+ }
  return text;
 }
-export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumns=false}={}){
+export function buildImportPlan({sheet,detail,mappings,group,matches,
+ allowColumns=false,extendedReferences=false}={}){
  if(!detail?.board||!Array.isArray(sheet?.headers)||!Array.isArray(sheet?.rows)||
   !Array.isArray(mappings)||mappings.length!==sheet.headers.length)
   deny('Import preview is incomplete.');
@@ -468,7 +476,7 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    const raw=sourceRow[byHeader.get(source)];
    let value;
    try{value=mondayCheckboxes.has(source)?
-    mondayCheckboxCell(raw):valueAsType(raw,col.type,col.config);}
+    mondayCheckboxCell(raw):valueAsType(raw,col.type,col.config,extendedReferences);}
    catch(error){
     const original=String(raw??'').slice(0,96);
     deny(origin+' · column "'+source+'" · value "'+original+'": '+error.message,
@@ -505,11 +513,14 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    }else previewNew++;
   }else previewNew++;
   rows.push(row);
-  readbackRows.push({title,values,outcome,itemId,baselineValues});
+  const readbackValues=Object.fromEntries(Object.entries(values).map(([source,value])=>
+   [source,value&&typeof value==='object'&&Object.hasOwn(value,EXTENDED_REF_KEY)?
+    value[EXTENDED_REF_KEY]:value]));
+  readbackRows.push({title,values:readbackValues,outcome,itemId,baselineValues});
  }
  if(rows.length<1||rows.length>20000)deny('Import requires 1–20,000 data rows.');
  return {boardId:board.id,workspaceId:board.workspace_id,boardRevision:board.updated_at,
-  payload:{contract:IMPORT_CONTRACT,group:destination,
+  payload:{contract:extendedReferences?IMPORT_EXTENDED_CONTRACT:IMPORT_CONTRACT,group:destination,
    // The atomic writer accepts 30 *active* source mappings. Excluded source
    // columns never need to be transmitted; they remain visible in the wizard
    // and cannot be excluded without an explicit user decision.
@@ -553,7 +564,8 @@ export async function executeBoardImport({api,auth,plan}={}){
   deny('Active signed board session could not be verified.',403);
  let receipt;
  try{
-  receipt=await api.rpc('wm_import_board_wizard_atomic',{
+  receipt=await api.rpc(plan.payload.contract===IMPORT_EXTENDED_CONTRACT?
+   'wm_import_board_wizard_extended_atomic':'wm_import_board_wizard_atomic',{
    p_board_id:plan.boardId,p_expected_updated_at:plan.boardRevision,p_payload:plan.payload
   });
  }catch(error){

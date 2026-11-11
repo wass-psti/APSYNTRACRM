@@ -57,6 +57,7 @@ test('domain interface uses existing authoritative RPC names',async()=>{
   if(path.endsWith('work_board_access'))return true;
   return [];
  }});
+ api.extendedRefsSupported=false; // Legacy backend fixture, no optional ref RPC.
  assert.equal((await api.context()).workspace_id,W);
  assert.equal((await api.boards())[0].name,'CRM Board');
  assert.equal((await api.board(B)).board.id,B);

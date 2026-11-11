@@ -26,7 +26,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
   behavior:'add-new',matchColumnId:'item',allowColumns:manage,manage,busy:false,
   complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,
-  omittedRowsConfirmed:false,formulaWarningsConfirmed:false,importProgress:null};
+  omittedRowsConfirmed:false,formulaWarningsConfirmed:false,importProgress:null,
+  extendedReferences:api.extendedRefsSupported===true,
+  resumeCheckpoint:null};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -47,7 +49,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   return buildImportPlan({sheet:{...sheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
    formulaWarningsConfirmed:state.formulaWarningsConfirmed},detail,mappings:state.mappings,
    group:group(),matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
-   allowColumns:state.allowColumns});
+   allowColumns:state.allowColumns,extendedReferences:state.extendedReferences});
  };
  function top(){
   return '<header class="aps-import-head"><strong>Import file</strong>'+
@@ -262,9 +264,14 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      (readiness().pendingSkips.length?'>Resolve '+readiness().pendingSkips.length+' unmapped columns':'>Next: Handle matches')+'</button>'):'')+
    (state.step===3?(state.uncertain?
     '<button class="secondary" data-imp="close">Close and verify the board</button>':
-    '<button class="primary" data-imp="import"'+
-    (!state.plan||!state.confirmed||state.busy?' disabled':'')+'>'+
-    (state.busy?'Importing…':'Import Now')+'</button>'):'')+
+    (state.resumeCheckpoint?
+     '<button class="primary" data-imp="resume"'+(state.busy?' disabled':'')+
+     '>Resume after '+state.resumeCheckpoint.completed+' verified rows</button>':
+     state.importProgress?.completed?
+      '<button class="secondary" data-imp="close">Close and reconcile imported rows</button>':
+      '<button class="primary" data-imp="import"'+
+      (!state.plan||!state.confirmed||state.busy?' disabled':'')+'>'+
+      (state.busy?'Importing…':'Import Now')+'</button>')):'')+
    (state.step===4?'<button class="primary" data-imp="close">Done</button>':'')+
    '</footer></div>';
   const body=overlay.querySelector('.aps-import-body');
@@ -338,27 +345,32 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    if(failure.uncertain)state.uncertain=true;
   }finally{state.busy=false;render();}
  }
- async function doImport(){
-  if(state.busy||state.uncertain||!state.confirmed||!state.plan)return;
+ async function doImport(resume=false){
+  if(state.busy||state.uncertain||!state.confirmed||!state.plan||
+     (resume&&!state.resumeCheckpoint)||
+     (!resume&&state.importProgress?.completed))return;
   state.busy=true;state.error='';render();
   let phase='preflight';
   try{
-   const plan=computePlan();
+   const plan=resume?state.plan:computePlan();
    phase='record-write';
    const receipt=await executeBoardImportBatched({api,auth,detail,
     sheet:{...sheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
      formulaWarningsConfirmed:state.formulaWarningsConfirmed},
     mappings:state.mappings,group:group(),
     matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
-    allowColumns:state.allowColumns,approvedPlan:plan,
-    onProgress:progress=>{state.importProgress=progress;render();}});
-   state.complete=receipt;state.step=4;
+    allowColumns:state.allowColumns,extendedReferences:state.extendedReferences,
+    approvedPlan:plan,
+    resumeFrom:resume?state.resumeCheckpoint:null,
+    onProgress:progress=>{state.importProgress=progress;state.resumeCheckpoint=null;render();}});
+   state.resumeCheckpoint=null;state.complete=receipt;state.step=4;
    try{await onComplete(receipt);}catch{
     state.error='Import committed, but the board refresh failed. Refresh the board before starting another import.';
    }
   }catch(error){
    const failure=normalizeImportFailure(error,phase);
    state.uncertain=failure.uncertain;
+   state.resumeCheckpoint=error?.importBatchResume||null;
    const progress=error?.importBatchProgress;
    state.error=progress?
     ('Import stopped after '+progress.completed+' of '+progress.totalRows+
@@ -394,6 +406,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    render();return;
   }
   if(action==='import')void doImport();
+  if(action==='resume')void doImport(true);
  });
  overlay.addEventListener('click',event=>{
   if(state.busy||state.uncertain)return;
@@ -427,7 +440,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  overlay.addEventListener('change',event=>{
   const el=event.target;
   if(el.id==='aps-import-file-input'){if(el.files?.[0])void readFile(el.files[0]);return;}
-  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage});state.allowColumns=state.manage;state.omittedRowsConfirmed=false;state.formulaWarningsConfirmed=false;state.confirmed=false;state.error='';render();return;}
+  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage,
+    extendedReferences:state.extendedReferences});state.allowColumns=state.manage;state.omittedRowsConfirmed=false;state.formulaWarningsConfirmed=false;state.confirmed=false;state.error='';render();return;}
   if(el.dataset.impChoiceName!=null){
    const index=Number(el.dataset.impChoiceName);
    state.mappings[index].name=el.value.trim();
