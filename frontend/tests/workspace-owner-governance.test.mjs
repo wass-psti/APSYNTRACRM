@@ -125,5 +125,5 @@ test('empty workspace overview already renders an empty-state without dummy boar
  assert.match(ui,/Open workspace/);
  assert.match(ui,/newWorkspaceId=result\.receipt\?\.workspaceId/);
  assert.match(ui,/requestSignedWorkspaceSwitch/);
- assert.match(ui,/location/);
+ assert.match(ui,/requestSignedWorkspaceSwitch\(/);
 });
