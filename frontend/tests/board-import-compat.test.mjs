@@ -78,6 +78,68 @@ function workbookEntries(){
   {name:'xl/worksheets/sheet2.xml',xml:contactsSheet}
  ];
 }
+function mondayExportEntries(){
+ const inline=(address,value,style=0)=>
+  '<c r="'+address+'" t="inlineStr"'+(style?' s="'+style+'"':'')+
+  '><is><t>'+value+'</t></is></c>';
+ const number=(address,value,style=0)=>
+  '<c r="'+address+'" t="n"'+(style?' s="'+style+'"':'')+
+  '><v>'+value+'</v></c>';
+ const row=(n,cells)=>'<row r="'+n+'">'+cells.join('')+'</row>';
+ const headers=['Name','Subitems','Work description','Date encoded','Person',
+  'Status','Timeline - Start','Timeline - End','Rating','Item ID (auto generated)'];
+ const headerRow=n=>row(n,headers.map((value,i)=>inline(String.fromCharCode(65+i)+n,value)));
+ const worksheet='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+  '<sheetData>'+
+  row(1,[inline('A1','I.T Daily Activities - Done')])+
+  row(2,[inline('A2','FY 2026')])+
+  headerRow(3)+
+  row(4,[
+   inline('A4','CMWD Quick Meeting'),inline('B4',''),
+   inline('C4','Quick customer service meeting.'),inline('D4','2026-01-27 03:36:15 UTC'),
+   inline('E4','Example Person'),inline('F4','Done'),
+   number('G4','46049.0',1),number('H4','46049.0',1),
+   inline('I4',''),number('J4','11105624914')
+  ])+
+  row(5,[
+   inline('A5','Troubleshooting Laptop'),inline('B5',''),
+   inline('C5','Troubleshooting and repair.'),inline('D5','2026-01-28 03:45:05 UTC'),
+   inline('E5','Example Person'),inline('F5','Done'),
+   number('G5','46050.0',1),number('H5','46050.0',1),
+   inline('I5',''),number('J5','11105669912')
+  ])+
+  row(6,[inline('A6','Cancelled')])+
+  headerRow(7)+
+  '</sheetData></worksheet>';
+ const workbook='<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '+
+  'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+  '<workbookPr date1904="false"/><sheets><sheet sheetId="1" '+
+  'name="i-t-daily-activities" r:id="rId1"/></sheets></workbook>';
+ const relationships='<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+  '<Relationship Target="worksheets/sheet1.xml" '+
+  'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Id="rId1"/>'+
+  '<Relationship Target="styles.xml" '+
+  'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Id="rId2"/>'+
+  '<Relationship Target="theme/theme1.xml" '+
+  'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Id="rId3"/>'+
+  '</Relationships>';
+ const styles='<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+  '<numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy-mm-dd"/></numFmts>'+
+  '<cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="164"/></cellXfs></styleSheet>';
+ return [
+  {name:'[Content_Types].xml',xml:'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>'},
+  {name:'_rels/.rels',xml:'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>'},
+  {name:'xl/worksheets/sheet1.xml',xml:worksheet},
+  {name:'xl/worksheets/_rels/sheet1.xml.rels',xml:'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>'},
+  {name:'xl/workbook.xml',xml:workbook},
+  {name:'xl/theme/theme1.xml',xml:'<theme xmlns="http://schemas.openxmlformats.org/drawingml/2006/main"/>'},
+  {name:'xl/styles.xml',xml:styles},
+  {name:'xl/_rels/workbook.xml.rels',xml:relationships},
+  {name:'docProps/core.xml',xml:'<coreProperties xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"/>'},
+  {name:'docProps/app.xml',xml:'<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"/>'}
+ ].map(entry=>({...entry,zip64:true}));
+}
+
 // Browser DOMParser stand-in for this controlled, no-entity OOXML fixture only.
 function minimalXmlDom(source){
  function childrenOf(node){
