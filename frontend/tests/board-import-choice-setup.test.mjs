@@ -63,8 +63,9 @@ test('choice setup rejects ambiguous and unsafe labels without backend calls',()
  assert.deepEqual(choiceCreationPreview({sheet,source:'Status',type:'status',
   name:'Imported Status',detail:{...detail,columns:[{name:'STATUS'}]}}).name,
   'Imported Status');
- assert.throws(()=>importChoiceLabels({...sheet,rows:[['A','=HYPERLINK()']]},'Status'),
-  /Formula-like option/);
+ assert.deepEqual(importChoiceLabels({...sheet,rows:[
+  ['A','=HYPERLINK()'],['B','@team'],['C','-pending']
+ ]},'Status'),['=HYPERLINK()','@team','-pending']);
  assert.throws(()=>importChoiceLabels({...sheet,rows:[['A','x'.repeat(81)]]},'Status'),
   /row 2.*exceeds 80/);
  assert.throws(()=>importChoiceLabels({...sheet,rows:[['A','']]},'Status'),
