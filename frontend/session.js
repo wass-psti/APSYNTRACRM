@@ -45,10 +45,37 @@ export class AuthClient {
         ...(body===undefined?{}:{body:JSON.stringify(body)}),
         signal:controller.signal
       }),deadline]);
-      let data;
-      try{data=await Promise.race([response.json(),deadline]);}
-      catch(error){
+      let data=null;
+      try{
+        // Read the body once as text so a malformed successful response is
+        // distinguishable from an empty/204 response. Previously response.json()
+        // failures were silently converted to null, hiding the original token
+        // error from atomic import receipt handling.
+        const bodyPromise=typeof response.text==='function'?
+          response.text():Promise.resolve(response.json()).then(value=>JSON.stringify(value));
+        const raw=await Promise.race([bodyPromise,deadline]);
+        if(typeof raw==='string'&&raw.trim()){
+          try{data=JSON.parse(raw);}
+          catch(cause){
+            if(response.ok){
+              const error=new ApiError(
+                'The service returned an invalid JSON response.',
+                response.status,'INVALID_JSON_RESPONSE');
+              error.cause=cause;
+              throw error;
+            }
+          }
+        }
+      }catch(error){
         if(error?.code==='REQUEST_TIMEOUT'||timedOut)throw error;
+        if(error instanceof ApiError)throw error;
+        if(response.ok){
+          const invalid=new ApiError(
+            'The service returned an invalid JSON response.',
+            response.status,'INVALID_JSON_RESPONSE');
+          invalid.cause=error;
+          throw invalid;
+        }
         data=null;
       }
       if(!response.ok){

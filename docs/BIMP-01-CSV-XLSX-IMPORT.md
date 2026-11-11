@@ -110,3 +110,14 @@ The browser importer never evaluates Excel formulas. When a formula has a cached
 - Ordinary validation and known backend errors retain their original actionable messages. Existing `importOutcomeUncertain` and `schemaOutcomeUncertain` classifications are preserved.
 - Deployed import modules and their direct dependencies passed `node --check`; the live workbook preview was able to load and render. This confirms the current deployed import modules are syntactically valid, but does not identify the original user's exact failing stage.
 - No schema, RPC, RLS, role, permission, or unrelated application changes.
+
+
+### CP-BIMP-09 — Atomic response decoding and import outcome classification
+
+- Reproduced a response-transport defect in `frontend/session.js`: successful HTTP response JSON parse failures were swallowed and converted to `null`. The atomic import layer therefore lost the original response-decoding error and could only report a malformed receipt.
+- The shared response reader now reads the response body once as text and parses JSON explicitly. Valid JSON and empty/204 responses preserve their previous return contract. Malformed non-success responses retain their HTTP failure classification without exposing response bodies.
+- A malformed successful response now raises `ApiError` with `code: INVALID_JSON_RESPONSE`, the original parse exception as `cause`, and the successful HTTP status. Response contents are not copied into the error message or logs.
+- The atomic import client carries this response-decoding classification into its existing uncertain-write outcome. The UI therefore instructs the user to inspect the destination board before retrying; the client never repeats the atomic write.
+- Added transport tests for valid JSON, malformed successful JSON, empty/204 responses, malformed error responses, and JSON-only test doubles. Added an end-to-end client contract test proving that a malformed successful atomic response triggers exactly one atomic request and is classified as uncertain.
+- No SQL, RPC, database, storage, authentication policy, role, permission, workspace, or unrelated application changes. No production records were modified.
+- Browser write/refresh acceptance remains pending until a dedicated ordinary nonproduction board can be used without touching operational records.

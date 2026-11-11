@@ -16,10 +16,16 @@ export const CREATABLE_IMPORT_TYPES=Object.freeze([
 const creatable=new Set(CREATABLE_IMPORT_TYPES);
 const allowedTypes=new Set([...creatable,'status','dropdown','phone','rating','percentage']);
 const deny=(msg,status=400)=>{throw new ApiError(msg,status);};
-const uncertainImport=()=>{
+const uncertainImport=(cause=null)=>{
+ const decoding=cause?.code==='INVALID_JSON_RESPONSE';
  const error=new ApiError(
-  'Import outcome is uncertain. Do not retry this request. Close the wizard, refresh the board, and check its activity log before starting a new import.',409);
+  'Import outcome is uncertain.'+(decoding?' The server returned an invalid JSON response.':'')+
+  ' Do not retry this request. Close the wizard, refresh the board, and check its activity log before starting a new import.',409);
  error.importOutcomeUncertain=true;
+ if(cause){
+  error.cause=cause;
+  if(decoding)error.code=cause.code;
+ }
  throw error;
 };
 const clean=s=>String(s??'').trim();
@@ -361,7 +367,7 @@ export async function executeBoardImport({api,auth,plan}={}){
   // An authorization/validation/CAS rejection is atomic and safe to correct.
   // A connection failure or HTTP 5xx may happen AFTER the server committed.
   const status=Number(error?.status);
-  if(!Number.isInteger(status)||status<400||status>=500)uncertainImport();
+  if(!Number.isInteger(status)||status<400||status>=500)uncertainImport(error);
   throw error;
  }
  if(!receipt||!['created','updated','skipped','columnsCreated','groupsCreated'].every(k=>
