@@ -96,11 +96,35 @@ test('duplicate headers, duplicate match keys and ambiguous destination keys rej
  assert.throws(()=>buildImportPlan({sheet,detail:multiple,mappings:existingMaps,group,
   matches:{behavior:'skip',matchColumnId:'item'}}),/ambiguous/);
 });
-test('formula-like cells and invalid typed values reject before persistence',()=>{
- const formula={...sheet,rows:[['=cmd','25','no']]};
- assert.throws(()=>buildImportPlan({sheet:formula,detail,mappings:existingMaps,group}),/formula-like/);
+test('formula-looking values remain literal text and invalid typed values still reject',()=>{
+ const literal={headers:['Name','Notes'],rows:[
+  ['=cmd','+prefix'],['@handle','- pending'],['-123','@mention']
+ ]};
+ const mappings=[
+  {source:'Name',action:'item'},
+  {source:'Notes',action:'create',columnType:'long_text',name:'Notes'}
+ ];
+ const plan=buildImportPlan({sheet:literal,detail,mappings,group,allowColumns:true});
+ assert.deepEqual(plan.payload.rows.map(row=>row.title),['=cmd','@handle','-123']);
+ assert.deepEqual(plan.payload.rows.map(row=>row.values.Notes),[
+  '+prefix','- pending','@mention'
+ ]);
  const bad={...sheet,rows:[['Alice','not-a-number','no']]};
  assert.throws(()=>buildImportPlan({sheet:bad,detail,mappings:existingMaps,group}),/invalid value/);
+});
+test('formatted currency, grouped decimals, parentheses negatives and scientific notation import as numbers',()=>{
+ const data={headers:['Name','Deal Value (VAT-EX)'],rows:[
+  ['Alpha','₱ 1,234.50'],['Beta','(USD 2,000.00)'],['Gamma','1.2e3'],['Delta','1.234,56']
+ ]};
+ assert.equal(inferImportType('Deal Value (VAT-EX)',data.rows.map(row=>row[1])),'number');
+ const mappings=[
+  {source:'Name',action:'item'},
+  {source:'Deal Value (VAT-EX)',action:'create',columnType:'number',name:'Deal Value'}
+ ];
+ const plan=buildImportPlan({sheet:data,detail,mappings,group,allowColumns:true});
+ assert.deepEqual(plan.payload.rows.map(row=>row.values['Deal Value']),[
+  1234.5,-2000,1200,1234.56
+ ]);
 });
 test('mapped date rejection identifies real Excel worksheet, row, header and original value',()=>{
  const report={
