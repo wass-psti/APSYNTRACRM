@@ -64,6 +64,12 @@ test('number and date conversion accepts common export formats without guessing 
  assert.throws(()=>buildImportPlan({sheet:ambiguous,detail,mappings:dateMaps,group,allowColumns:true}),
   /unambiguous day\/month or month\/day date/);
 });
+test('board import core and parser pin the shared date normalizer to a versioned module URL',()=>{
+ const coreSource=readFileSync(new URL('../board-import-core.js',import.meta.url),'utf8');
+ const parserSource=readFileSync(new URL('../board-import-parse.js',import.meta.url),'utf8');
+ assert.match(coreSource,/excel-date-normalization\\.js\\?v=cp-bimp-06-utc-20261111/);
+ assert.match(parserSource,/excel-date-normalization\\.js\\?v=cp-bimp-06-utc-20261111/);
+});
 test('Monday.com UTC Date encoded timestamps map to their source calendar date',()=>{
  const timestamps={headers:['Name','Date encoded'],rows:[
   ['Alpha','2026-01-27 03:36:15 UTC'],
