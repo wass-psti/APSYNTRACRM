@@ -331,7 +331,11 @@ function detailsContent(row,{canSwitch=false}={}){
   (row.active?'<button type="button" class="ws01-details-primary" data-ws01-action="open-current">Open current workspace</button>':
    (canSwitch?'<button type="button" class="ws01-details-primary" data-ws01-action="select">Switch workspace</button>':
    '<button type="button" disabled title="Workspace switching is not activated">Switch workspace — unavailable</button>'))+
-  '</div>'+(canSwitch?'<p class="ws01-config-feedback" data-ws01-switch-feedback role="status" aria-live="polite"></p>':'')+'</section>';
+  '</div>'+
+  (row.relation==='owner'?
+   '<p class="ws01-details-note">Ownership: you are the recorded workspace owner.</p>'+
+   '<button type="button" class="ws01-secondary" disabled title="Requires reviewed signed transfer API">Transfer workspace ownership — pending activation</button>':'')+
+  (canSwitch?'<p class="ws01-config-feedback" data-ws01-switch-feedback role="status" aria-live="polite"></p>':'')+'</section>';
 }
 /** A configuration becomes editable only after a fresh signed read receipt.
  * Until server activation, keep the existing owner draft validation behavior. */
