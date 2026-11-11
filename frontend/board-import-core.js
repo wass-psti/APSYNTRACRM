@@ -57,14 +57,15 @@ function parseImportNumber(raw){
  if(value.startsWith('(')&&value.endsWith(')')){
   negative=true;value=value.slice(1,-1);
  }
- const currencies='USD|PHP|EUR|GBP|JPY|CAD|AUD|CNY|INR|SGD|HKD';
- value=value.replace(new RegExp('^(?:'+currencies+')','i'),'')
-  .replace(new RegExp('(?:'+currencies+')$','i'),'');
+ const currencyCode=/^(?:USD|PHP|EUR|GBP|JPY|CAD|AUD|CNY|INR|SGD|HKD)/i;
+ const currencySuffix=/(?:USD|PHP|EUR|GBP|JPY|CAD|AUD|CNY|INR|SGD|HKD)$/i;
+ value=value.replace(currencyCode,'').replace(currencySuffix,'');
  value=value.replace(/^\p{Sc}/u,'').replace(/\p{Sc}$/u,'');
  let sign='';
  if(/^[+-]/.test(value)){sign=value[0];value=value.slice(1);}
- value=value.replace(new RegExp('^(?:'+currencies+')','i'),'')
-  .replace(new RegExp('(?:'+currencies+')
+ value=value.replace(currencyCode,'').replace(currencySuffix,'');
+ value=value.replace(/^\p{Sc}/u,'').replace(/\p{Sc}$/u,'');
+ if(value.startsWith('.'))value='0'+value;
  const exponentMatch=value.match(/([eE][+-]?\d+)$/);
  const exponent=exponentMatch?.[1]||'';
  if(exponent)value=value.slice(0,-exponent.length);
