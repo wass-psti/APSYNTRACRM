@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {normalizeBoardActivity,filterBoardActivity,pageBoardActivity,
- renderBoardActivityResults,boardItemSummary,BOARD_ACTIVITY_PAGE_SIZE} from '../board-activity-ui.js';
+ renderBoardActivityResults,renderBoardActivityActorAvatar,boardItemSummary,BOARD_ACTIVITY_PAGE_SIZE} from '../board-activity-ui.js';
 import {boardGrid} from '../board-grid.js';
 const events=[
  {id:9,event_type:'item.updated',message:'Status to Done',actor_name:'Alex',actor_id:'a',
@@ -51,6 +51,54 @@ test('activity rendering escapes backend-controlled text and exposes functional 
  assert.doesNotMatch(ui.html,/<script>|<img src=/);
  assert.match(ui.html,/&lt;script&gt;/);
  assert.equal(ui.total,1);
+});
+test('activity history shows actor circles with initials and optional verified private photos',()=>{
+ const actor='33333333-3333-4333-8333-333333333333';
+ const path=actor+'/44444444-4444-4444-8444-444444444444.webp';
+ const raw={id:31,event_type:'item.updated',actor_id:actor,
+  actor_name:'Blair Santos',message:'Status changed',
+  created_at:'2026-11-11T00:10:00Z'};
+ const events=normalizeBoardActivity([raw]);
+ const html=renderBoardActivityResults(events,{avatarPaths:new Map([[actor,path]])}).html;
+ assert.match(html,/board-activity-event/);
+ assert.match(html,/board-activity-actor-avatar/);
+ assert.match(html,/data-avatar-path="/);
+ assert.match(html,/data-avatar-user-id="/);
+ assert.match(html,/Blair Santos/);
+ assert.match(html,/BS<\/span>/);
+ assert.match(html,/Status changed/);
+ assert.match(html,/board-activity-actor-avatar/);
+ // Names alone do not authorize an image and never produce a remote URL.
+ const unknown=renderBoardActivityResults(events).html;
+ assert.doesNotMatch(unknown,/data-avatar-path=/);
+ assert.match(unknown,/data-avatar-initials/);
+ const other='55555555-5555-4555-8555-555555555555';
+ const forged=renderBoardActivityResults(events,{avatarPaths:new Map([[actor,
+  other+'/44444444-4444-4444-8444-444444444444.webp']])}).html;
+ assert.doesNotMatch(forged,/data-avatar-path=/);
+ assert.doesNotMatch(forged,/https?:\/\//);
+});
+test('activity actor avatar is non-interactive and escapes malicious names',()=>{
+ const markup=renderBoardActivityActorAvatar('not-a-uuid','<svg onload=alert(1)>');
+ assert.match(markup,/aria-hidden="true"/);
+ assert.doesNotMatch(markup,/<svg|onload="/);
+ assert.doesNotMatch(markup,/data-avatar-path=/);
+ const html=renderBoardActivityResults(normalizeBoardActivity([{
+  id:1,actor_name:'<svg onload=alert(1)>',actor_id:'not-a-uuid',
+  event_type:'item.created',created_at:'2026-11-11T00:10:00Z'
+ }])).html;
+ assert.match(html,/&lt;svg/);
+ assert.doesNotMatch(html,/<svg|onload="/);
+});
+test('avatar source is the signed board snapshot, no additional profile directory read',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/const signedPeople=normalizeBoardPeople\(state\.board/);
+ assert.match(app,/const actorAvatars=new Map\(\)/);
+ assert.match(app,/avatarPaths:actorAvatars/);
+ assert.match(app,/mountAvatarImages\(host,profileAvatarClient,null,null\)/);
+ assert.match(readFileSync('index.html','utf8'),/frontend\/board-activity-avatars\.css/);
+ assert.doesNotMatch(readFileSync('frontend/board-activity-ui.js','utf8'),
+  /fetch\(|\.rpc\(|\.authorized\(/);
 });
 test('item drawer hides restricted fields and escapes notes',()=>{
  const row={title:'<svg onload=alert(1)>',status:'working',notes:'<script>attack</script>',
