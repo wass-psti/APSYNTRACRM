@@ -22,7 +22,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     ctx.profile?.status!=='active'||!edit||!canManuallyEditBoard(detail.board,true))
   throw new ApiError('Only signed ordinary-board editors can import records.',403);
  const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
-  behavior:'add-new',matchColumnId:'item',allowColumns:false,manage,busy:false,
+  behavior:'add-new',matchColumnId:'item',allowColumns:manage,manage,busy:false,
   complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,choiceConsent:{}};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
@@ -108,11 +108,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      '" data-imp-choice-name="'+i+'" maxlength="80" value="'+esc(m.name||m.source)+'"></label>'+
      (proposed?'<p>Labels ('+proposed.labels.length+'): '+
       proposed.labels.map(esc).join(' · ')+'</p>'+
-      '<label class="aps-import-choice-consent"><input type="checkbox" name="imp-choice-consent-'+i+
-      '" data-imp-choice-consent="'+i+'"'+(state.choiceConsent[i]?' checked':'')+
-      ' /> Create this column now. It will remain if I cancel or the later import fails.</label>'+
-      '<button type="button" class="secondary" data-imp-choice-create="'+i+'"'+
-      (!state.choiceConsent[i]?' disabled':'')+'>Create configured '+esc(m.choiceType)+' column</button>':
+      '<p>This creates the configured board column now. It remains available if you cancel the later record import.</p>'+
+      '<button type="button" class="secondary" data-imp-choice-create="'+i+'">Create configured '+esc(m.choiceType)+' column</button>':
       '<p class="aps-import-error" role="alert">'+esc(error)+'</p>')+
      '</div>';
    }
@@ -134,7 +131,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    return (m.action==='create'?m.columnType:column?.type)==='checkbox'&&
     detectMondayCheckboxMarkers(s,m.source);
   });
-  const gate=readiness(),choicePending=gate.pendingChoices;
+  const gate=readiness(),choicePending=gate.pendingChoices,pendingSkips=gate.pendingSkips;
   const skippedChoices=state.mappings.filter(m=>m.action==='skip'&&
    (m.type==='status'||m.type==='dropdown'));
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
@@ -143,13 +140,19 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    '<div class="aps-import-controls">'+(state.file.sheets.length>1?'<label>Worksheet<select name="imp-sheet" data-imp-sheet>'+state.file.sheets.map((x,i)=>choice(i,x.name,i===state.sheet)).join('')+'</select></label>':'')+'<label>Add items to<select name="imp-group" data-imp-group>'+groupChoices+
    '</select></label>'+(state.group==='create'?'<label>New group name<input name="imp-group-name" maxlength="120" data-imp-group-name value="'+esc(state.groupName)+'"></label>':'')+
    '<label>Unmapped columns<select name="imp-default" data-imp-default>'+choice('skip',"Don't import",true)+
-   (state.manage?choice('create','Create columns after approval',false):'')+'</select></label></div>'+
+   (state.manage?choice('create','Create columns on import',false):'')+'</select></label></div>'+
    '<div class="aps-import-mapping">'+header+mapping+'</div>'+
    (mondayCheckboxSources.length?
     '<p role="status" class="aps-import-checkbox-note">monday.com checkbox pattern detected in '+
     mondayCheckboxSources.map(m=>esc(m.source)).join(', ')+
     ': "v" will import as checked (true), and empty cells as unchecked (false).'+
     ' Generic blank cells in other columns remain empty.</p>':'')+
+   (pendingSkips.length?'<div class="aps-import-resolve" role="region" aria-label="Unmapped column decisions">'+
+    '<h3>'+pendingSkips.length+' unmapped source column'+(pendingSkips.length===1?' needs':'s need')+' a decision</h3>'+
+    '<p>Choose an existing board column above, or confirm that the source values should be excluded. Nothing is silently discarded.</p>'+
+    pendingSkips.map(({index,source,type})=>'<div class="aps-import-resolve-row"><strong>'+esc(source)+' ('+esc(type)+')</strong>'+
+     '<button type="button" class="secondary" data-imp-confirm-skip="'+index+'">Confirm exclude</button></div>').join('')+
+    '</div>':'')+
    (choicePending.length?'<div class="aps-import-resolve" role="region" aria-label="Required choice-column decisions">'+
     '<h3>'+choicePending.length+' Status/Dropdown decision'+(choicePending.length===1?'':'s')+
     ' required before continuing</h3>'+
@@ -268,6 +271,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    if(!overlay.isConnected)return;
    state.file=parsed;state.sheet=0;
    state.mappings=initialImportMappings(parsed.sheets[0],detail,{canCreate:state.manage});
+   state.allowColumns=state.manage;
    state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
    state.step=2;state.allowColumns=false;state.choiceConsent={};
   }catch(error){state.error=String(error.message||error);}
@@ -281,15 +285,15 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   if(value==='item'){
    state.mappings=state.mappings.map((a,i)=>i!==index&&a.action==='item'?
     {...a,action:'skip'}:a);
-   state.mappings[index]={...m,action:'item'};
+   state.mappings[index]={...m,action:'item',requiresDecision:false};
   }else if(value==='create')state.mappings[index]={...m,action:'create',
    name:m.name||m.source,columnType:CREATABLE_IMPORT_TYPES.includes(m.type)?m.type:'unsupported'};
   else if(value==='setup:status'||value==='setup:dropdown')
    state.mappings[index]={...m,action:'configure',
     name:m.name||m.source,choiceType:value.slice(6)};
-  else if(value==='skip')state.mappings[index]={...m,action:'skip'};
+  else if(value==='skip')state.mappings[index]={...m,action:'skip',requiresDecision:false};
   else if(value.startsWith('existing:'))state.mappings[index]={...m,
-   action:'existing',columnId:value.slice(9)};
+   action:'existing',columnId:value.slice(9),requiresDecision:false};
   // Unrelated, already-approved ordinary columns retain their consent.
   if(proposalSignature(state.mappings)!==before)state.allowColumns=false;
  }
@@ -300,7 +304,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    target?.querySelector('[data-imp-map]'))?.focus?.({preventScroll:true});
  }
  async function createChoice(index){
-  if(state.busy||state.uncertain||!state.manage||!state.choiceConsent[index])return;
+  if(state.busy||state.uncertain||!state.manage)return;
   const mapping=state.mappings[index];
   if(!mapping||mapping.action!=='configure')return;
   state.busy=true;state.error='';state.notice='';render();
@@ -349,12 +353,13 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    else{state.allowColumns=true;state.error='';}render();return;
   }
   if(action==='decline-columns'){
-   state.mappings=state.mappings.map(m=>m.action==='create'?{...m,action:'skip'}:m);
-   state.allowColumns=false;render();return;
+   state.mappings=state.mappings.map(m=>m.action==='create'?{...m,action:'skip',requiresDecision:false}:m);
+   state.allowColumns=state.manage;render();return;
   }
   if(action==='next'){
    state.error='';
    const gate=readiness();
+   if(gate.pendingSkips.length){state.error='Map or explicitly confirm exclusion for every unmapped source column.';render();return;}
    if(gate.pendingChoices.length){focusChoice(gate.pendingChoices[0].index);return;}
    try{
     if(gate.awaitingColumnApproval)
@@ -367,13 +372,21 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  });
  overlay.addEventListener('click',event=>{
   if(state.busy||state.uncertain)return;
-  const button=event.target.closest('[data-imp-choice-create], [data-imp-review-choice], [data-imp-skip-choice]');
+  const button=event.target.closest('[data-imp-choice-create], [data-imp-review-choice], [data-imp-skip-choice], [data-imp-confirm-skip]');
   if(!button)return;
   if(button.dataset.impChoiceCreate!=null){
    void createChoice(Number(button.dataset.impChoiceCreate));return;
   }
   if(button.dataset.impReviewChoice!=null){
    focusChoice(Number(button.dataset.impReviewChoice));return;
+  }
+  if(button.dataset.impConfirmSkip!=null){
+   const index=Number(button.dataset.impConfirmSkip),mapping=state.mappings[index];
+   if(mapping?.action==='skip'&&mapping.requiresDecision===true){
+    state.mappings=state.mappings.map((m,i)=>i===index?{...m,requiresDecision:false}:m);
+    state.confirmed=false;state.error='';state.notice='Confirmed exclusion of '+mapping.source+' values.';render();
+   }
+   return;
   }
   if(button.dataset.impSkipChoice!=null){
    const index=Number(button.dataset.impSkipChoice);
@@ -387,7 +400,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  overlay.addEventListener('change',event=>{
   const el=event.target;
   if(el.id==='aps-import-file-input'){if(el.files?.[0])void readFile(el.files[0]);return;}
-  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage});state.allowColumns=false;state.choiceConsent={};state.confirmed=false;state.error='';render();return;}
+  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage});state.allowColumns=state.manage;state.choiceConsent={};state.confirmed=false;state.error='';render();return;}
   if(el.dataset.impChoiceConsent!=null){
    state.choiceConsent[Number(el.dataset.impChoiceConsent)]=el.checked;
    render();return;
