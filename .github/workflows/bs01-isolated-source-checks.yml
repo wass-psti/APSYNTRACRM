@@ -5,6 +5,8 @@ on:
       - feat/board-scoped-guest-invites-20261110
     paths:
       - 'frontend/board-share.js'
+      - 'frontend/resource-email-invitations.js'
+      - 'frontend/tests/resource-email-invitations.test.mjs'
       - 'frontend/board-share-clean.css'
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
@@ -24,6 +26,8 @@ on:
   pull_request:
     paths:
       - 'frontend/board-share.js'
+      - 'frontend/resource-email-invitations.js'
+      - 'frontend/tests/resource-email-invitations.test.mjs'
       - 'frontend/board-share-clean.css'
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
@@ -55,6 +59,7 @@ jobs:
         run: |
           node --check frontend/app.js
           node --check frontend/board-share.js
+          node --check frontend/resource-email-invitations.js
           node --check frontend/board-people.js
           node --check server/bs01-policy-http-boundary.mjs
           node --check server/bs01-local-sandbox-core.mjs
@@ -62,7 +67,7 @@ jobs:
           node --check frontend/bs01-local-lab.js
       - name: BS01 fail-closed source and boundary tests
         run: |
-          node --test frontend/tests/board-presentation.test.mjs frontend/tests/board-column-hover.test.mjs frontend/tests/board-share.test.mjs frontend/tests/board-share-phase2.test.mjs frontend/tests/board-people.test.mjs frontend/tests/board-activity-ui.test.mjs frontend/tests/board-col01-readers.test.mjs frontend/tests/board-collaboration.test.mjs server/tests/bs01-policy-http-boundary.test.mjs server/tests/bs01-local-lab.test.mjs
+          node --test frontend/tests/resource-email-invitations.test.mjs frontend/tests/board-presentation.test.mjs frontend/tests/board-column-hover.test.mjs frontend/tests/board-share.test.mjs frontend/tests/board-share-phase2.test.mjs frontend/tests/board-people.test.mjs frontend/tests/board-activity-ui.test.mjs frontend/tests/board-col01-readers.test.mjs frontend/tests/board-collaboration.test.mjs server/tests/bs01-policy-http-boundary.test.mjs server/tests/bs01-local-lab.test.mjs
       - name: Explain scope
         run: |
           echo "BS01 lab is an isolated loopback simulator; no real invitations, Supabase calls or SQL activation."
