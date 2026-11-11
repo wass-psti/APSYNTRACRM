@@ -143,9 +143,9 @@ function valueAsType(raw,type,config={}){
   catch(error){deny(error.message);}
  }
  if(type==='number'){
-  if(!/^-?\d+(?:\.\d+)?$/.test(text)||!Number.isFinite(Number(text)))
-   deny('A number cell contains an invalid value: '+text.slice(0,60));
-  return Number(text);
+  const number=parseImportNumber(text);
+  if(number===null)deny('A number cell contains an invalid value: '+text.slice(0,60));
+  return number;
  }
  if(type==='checkbox'){
   if(/^(true|yes|1)$/i.test(text))return true;
@@ -154,8 +154,9 @@ function valueAsType(raw,type,config={}){
  }
  forbidFormula(text);
  if(type==='date'){
-  if(!validDate(text))deny('Date cells must contain valid YYYY-MM-DD dates.');
-  return text;
+  const date=normalizeImportDate(text);
+  if(!date)deny('Date cells must contain a valid ISO, YYYY/MM/DD, or unambiguous day/month or month/day date.');
+  return date;
  }
  if(type==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text))
   deny('Invalid email in imported data.');
@@ -164,9 +165,11 @@ function valueAsType(raw,type,config={}){
  if(type==='people'&&!validUuid(text))deny('People cells require an existing member UUID.');
  if(type==='timeline'){
   const parts=text.split(/\s*\.\.\s*/);
-  if(parts.length!==2||!validDate(parts[0])||!validDate(parts[1])||parts[0]>parts[1])
-   deny('Timeline cells must use YYYY-MM-DD..YYYY-MM-DD.');
-  return {start:parts[0],end:parts[1]};
+  const start=parts.length===2?normalizeImportDate(parts[0]):null;
+  const end=parts.length===2?normalizeImportDate(parts[1]):null;
+  if(!start||!end||start>end)
+   deny('Timeline cells must contain two valid dates in YYYY-MM-DD..YYYY-MM-DD or an unambiguous supported date format.');
+  return {start,end};
  }
  if(type==='status'){
   const options=Array.isArray(config.labels)?config.labels:[];
