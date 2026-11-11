@@ -1,8 +1,7 @@
-/** Import mapping gate: ordinary-column consent and configured choice setup are
- * separate authorized operations. Never convert an unresolved choice into a
- * generic column or silently skip its source values.
+/** Import readiness: distinguish board-manager schema capability from unresolved
+ * Status/Dropdown configuration. The final import review confirms exact changes.
  */
-export function importMappingReadiness(mappings,allowColumns=false){
+export function importMappingReadiness(mappings,canCreateColumns=false){
  const list=Array.isArray(mappings)?mappings:[];
  const pendingChoices=list.flatMap((mapping,index)=>
   mapping?.action==='configure'?
@@ -13,9 +12,9 @@ export function importMappingReadiness(mappings,allowColumns=false){
  return {
   pendingChoices,
   proposedCount:newColumns.length,
-  awaitingColumnApproval:newColumns.length>0&&!allowColumns,
+  requiresColumnPermission:newColumns.length>0&&!canCreateColumns,
   skipped,
-  ready:pendingChoices.length===0&&(newColumns.length===0||allowColumns)
+  ready:pendingChoices.length===0&&(newColumns.length===0||canCreateColumns)
  };
 }
 export function skipPendingImportChoice(mappings,index){
