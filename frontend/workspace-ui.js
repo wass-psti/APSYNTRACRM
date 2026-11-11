@@ -4,6 +4,7 @@
  * No fabricated memberships, independent auth or browser-persisted scope.
  */
 import {validUuid} from './data.js';
+import {canCreateOrganizationalWorkspace,WS03_RESTRICTED_CREATION_ENABLED,WS03_OWNERSHIP_TRANSFER_ENABLED} from './workspace-authority.js';
 
 export const WS01_DISCOVERY_ENABLED=true;
 export const WS01_CREATION_ENABLED=true;
@@ -303,7 +304,7 @@ export async function requestSignedWorkspaceSwitch({lifecycle,workspaceId,expect
   throw Error('Authoritative workspace selection could not be verified.');
  return receipt;
 }
-function detailsContent(row,{canSwitch=false}={}){
+function detailsContent(row,{canSwitch=false,canTransfer=false}={}){
  const name=escape(row.name);
  return '<section class="ws01-details-card" role="dialog" aria-modal="true"'+
   ' aria-labelledby="ws01-details-title">'+
@@ -319,6 +320,10 @@ function detailsContent(row,{canSwitch=false}={}){
    'You can inspect this authorized membership, but changing the active workspace requires the separate signed switching contract.'))+'</p>'+
   '<div class="ws01-details-actions"><button type="button" data-ws01-action="back">Back to workspaces</button>'+
   '<button type="button" data-ws01-action="configure">Configuration</button>'+
+  (row.active&&(row.relation==='owner'||canTransfer)?
+   '<button type="button" data-ws01-action="transfer-owner"'+
+    (canTransfer?'':' disabled title="Server-authorized ownership transfer is not activated"')+
+    '>Transfer ownership</button>':'')+
   (row.active?'<button type="button" class="ws01-details-primary" data-ws01-action="open-current">Open current workspace</button>':
    (canSwitch?'<button type="button" class="ws01-details-primary" data-ws01-action="select">Switch workspace</button>':
    '<button type="button" disabled title="Workspace switching is not activated">Switch workspace — unavailable</button>'))+
@@ -363,7 +368,16 @@ function openDetails(catalog,workspaceId,options={}){
  // activation also requires the reviewed signed selection RPC and DB flag.
  const canSwitch=switchingUiReady(options)&&!row.active&&
   row.verifiedScope==='SIGNED_MEMBER_RPC';
- const layer=panel(detailsContent(row,{canSwitch}),'details');
+ const signedItAdmin=options.selectorSession?.creationAuthority?.status==='SIGNED_CREATION_AUTHORITY'&&
+  options.selectorSession.creationAuthority.basis==='it_admin'&&
+  options.selectorSession.creationAuthority.allowed===true;
+ const canTransfer=WS03_OWNERSHIP_TRANSFER_ENABLED&&row.active&&
+  row.verifiedScope==='SIGNED_MEMBER_RPC'&&
+  (row.relation==='owner'||signedItAdmin)&&
+  typeof options.authorityClient?.readTransferCandidates==='function'&&
+  typeof options.authorityClient?.transferOwnership==='function'&&
+  typeof options.authorityClient?.verifyOwnershipTransfer==='function';
+ const layer=panel(detailsContent(row,{canSwitch,canTransfer}),'details');
  let selecting=false;
  layer.addEventListener('click',async event=>{
   const action=event.target.closest('[data-ws01-action]')?.dataset.ws01Action;
@@ -402,6 +416,7 @@ function openDetails(catalog,workspaceId,options={}){
   }
   if(action==='back')openBrowse(options.selectorSession?.catalog||catalog,options);
   if(action==='configure')openConfiguration(catalog,row.id,options);
+  if(action==='transfer-owner'&&canTransfer)openOwnershipTransfer(catalog,row.id,options);
   if(action==='open-current'&&row.active){
    closeWorkspacePanels();
    options.onOpenCurrent?.();
@@ -409,6 +424,133 @@ function openDetails(catalog,workspaceId,options={}){
  });
  layer.querySelector('[data-ws01-action="back"]').focus();
 }
+function ownerTransferContent(row,{directory=null,loading=false,error='',done=false}={}){
+ const allowed=directory?.status==='VERIFIED_TRANSFER_CANDIDATES'&&
+  directory.workspaceId===row.id;
+ const choices=allowed?directory.members:[];
+ return '<section class="ws01-details-card ws03-owner-transfer" role="dialog" aria-modal="true"'+
+  ' aria-labelledby="ws03-transfer-title">'+
+  '<header class="ws01-details-heading"><h2 id="ws03-transfer-title">Transfer workspace ownership</h2>'+
+   '<button type="button" class="ws01-close" data-ws01-close aria-label="Close transfer dialog">×</button></header>'+
+  '<p class="ws01-details-description">Select a verified member of '+
+   escape(row.name)+'. The current owner will become a member after the server confirms the transfer.</p>'+
+  '<form id="ws03-owner-transfer-form" novalidate>'+
+   '<label for="ws03-owner-target">New owner</label>'+
+   '<select id="ws03-owner-target" name="target" required '+(allowed&&!done?'':'disabled')+'>'+
+    '<option value="">Choose an existing member</option>'+
+    choices.map(person=>'<option value="'+person.id+'">'+escape(person.name)+'</option>').join('')+
+   '</select>'+
+   '<label for="ws03-owner-confirmation">Type TRANSFER to confirm</label>'+
+   '<input id="ws03-owner-confirmation" name="confirmation" type="text" '+
+    'autocomplete="off" maxlength="8" placeholder="TRANSFER" '+(allowed&&!done?'':'disabled')+' />'+
+   '<p class="ws01-details-note">Ownership transfers require current-owner verification, an active target member, an audit record, and a fresh server read. Application ownership is managed separately.</p>'+
+   '<p class="ws01-config-feedback" role="status" aria-live="polite">'+
+    escape(error||(loading?'Checking authorized workspace members…':done?
+    'Workspace owner transfer verified.':'No transfer was performed.'))+'</p>'+
+   '<div class="ws01-details-actions">'+
+    '<button type="button" data-ws01-action="back-details">Back</button>'+
+    '<button type="submit" class="ws01-details-primary" '+(allowed&&choices.length&&!done?'':'disabled')+
+    '>Confirm transfer</button>'+
+   '</div>'+
+  '</form></section>';
+}
+function openOwnershipTransfer(catalog,workspaceId,options={}){
+ const row=workspaceDetailsFor(catalog,workspaceId);
+ if(!row||!row.active||row.verifiedScope!=='SIGNED_MEMBER_RPC'||
+    !WS03_OWNERSHIP_TRANSFER_ENABLED||
+    typeof options.authorityClient?.readTransferCandidates!=='function'||
+    typeof options.authorityClient?.transferOwnership!=='function'||
+    typeof options.authorityClient?.verifyOwnershipTransfer!=='function')return;
+ const layer=panel(ownerTransferContent(row,{loading:true}),'transfer');
+ let directory=null,busy=false,requestId=null,lastTarget=null;
+ const isCurrent=()=>activeOverlay===layer&&layer.isConnected;
+ const render=(opts={})=>{
+  if(!isCurrent())return;
+  layer.firstElementChild.outerHTML=ownerTransferContent(row,{
+   directory,...opts
+  });
+ };
+ void (async()=>{
+  try{
+   const value=await options.authorityClient.readTransferCandidates(workspaceId);
+   if(!isCurrent())return;
+   if(value?.status!=='VERIFIED_TRANSFER_CANDIDATES'||value.workspaceId!==workspaceId)
+    throw Error('Unverified transfer candidate list');
+   directory=value;render();
+  }catch{
+   directory=null;
+   render({error:'No verified transfer candidates are available. Ownership has not changed.'});
+  }
+ })();
+ layer.addEventListener('click',event=>{
+  if(event.target.closest('[data-ws01-action="back-details"]')&&!busy)
+   openDetails(options.selectorSession?.catalog||catalog,workspaceId,options);
+ });
+ layer.addEventListener('submit',async event=>{
+  if(event.target.id!=='ws03-owner-transfer-form')return;
+  event.preventDefault();
+  if(busy||!directory||directory.status!=='VERIFIED_TRANSFER_CANDIDATES')return;
+  const form=event.target,data=new FormData(form);
+  const target=String(data.get('target')||'');
+  const confirmation=String(data.get('confirmation')||'');
+  const feedback=form.querySelector('.ws01-config-feedback');
+  if(confirmation!=='TRANSFER'||!directory.members.some(m=>m.id===target)){
+   feedback.textContent='Choose a verified member and type TRANSFER exactly.';
+   return;
+  }
+  if(lastTarget!==target){requestId=null;lastTarget=target;}
+  if(!requestId)requestId=globalThis.crypto?.randomUUID?.();
+  if(!validUuid(requestId)){
+   feedback.textContent='A secure transfer request ID could not be created.';
+   return;
+  }
+  busy=true;
+  const submit=form.querySelector('[type="submit"]');
+  submit.disabled=true;
+  form.querySelector('#ws03-owner-target').disabled=true;
+  form.querySelector('#ws03-owner-confirmation').disabled=true;
+  feedback.textContent='Requesting verified ownership transfer…';
+  try{
+   const receipt=await options.authorityClient.transferOwnership({
+    workspaceId,resourceKind:'workspace',targetUserId:target,
+    expectedOwnerId:directory.currentOwnerId,requestId
+   });
+   if(receipt?.transferred!==true||receipt.targetUserId!==target)
+    throw Error('Unverified transfer receipt');
+   // The former owner may no longer read transfer candidates, so verify
+   // the exact actor-bound request ledger rather than privileged people data.
+   const after=await options.authorityClient.verifyOwnershipTransfer({
+    workspaceId,requestId,targetUserId:target
+   });
+   if(after?.verified!==true||after.targetUserId!==target)
+    throw Error('Transfer requires independent signed verification');
+   if(!isCurrent())return;
+   render({done:true});
+   void options.selectorSession?.load?.();
+  }catch{
+   if(!isCurrent())return;
+   // A request can commit before the network returns. Check the signed
+   // actor-bound transfer ledger before offering a same-ID retry.
+   try{
+    const committed=await options.authorityClient.verifyOwnershipTransfer({
+     workspaceId,requestId,targetUserId:target
+    });
+    if(committed?.verified===true&&isCurrent()){
+     render({done:true});
+     void options.selectorSession?.load?.();
+     return;
+    }
+   }catch{} // Only an exact signed receipt proves committed ownership.
+   if(!isCurrent())return;
+   // Preserve requestId for the exact same target to avoid duplicate writes.
+   feedback.textContent='Transfer status could not be confirmed. Reload the authorized workspace and retry this exact request only if still needed.';
+   submit.disabled=false;
+   form.querySelector('#ws03-owner-target').disabled=false;
+   form.querySelector('#ws03-owner-confirmation').disabled=false;
+  }finally{busy=false;}
+ });
+}
+
 function openConfiguration(catalog,workspaceId,options={}){
  const row=workspaceDetailsFor(catalog,workspaceId);
  if(!row)return;
@@ -526,6 +668,12 @@ function currentFootnote(catalog,options={}){
  return '<div data-ws01-feedback><p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>'+
   (status==='error'?'<button type="button" class="ws01-retry" data-ws01-action="retry">Retry authorized workspace discovery</button>':'')+'</div>';
 }
+function workspaceCreateAllowed(options={}){
+ return WS01_CREATION_ENABLED&&
+  canCreateOrganizationalWorkspace(options.selectorSession?.creationAuthority,{
+   enabled:WS03_RESTRICTED_CREATION_ENABLED
+  });
+}
 function menuContent(catalog,options={}){
  return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Browse workspaces">'+
   '<header class="ws01-menu-heading"><strong>Workspaces</strong>'+
@@ -535,7 +683,9 @@ function menuContent(catalog,options={}){
   '<p class="ws01-eyebrow">Authorized workspaces · '+visibleWorkspaces(catalog).length+'</p>'+
   '<div data-ws01-results>'+resultsMarkup(catalog,'all','',options)+'</div>'+
   '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
-  '<button type="button" data-ws01-action="create">Add workspace</button>'+
+  '<button type="button" data-ws01-action="create"'+
+   (workspaceCreateAllowed(options)?'':' disabled title="Workspace creation requires verified IT Admin or organizational owner authorization"')+
+   '>Add workspace</button>'+
   '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
   currentFootnote(catalog,options)+'</section>';
 }
@@ -579,7 +729,9 @@ function browseContent(catalog,options={}){
   '<div class="ws01-browser-body"><nav class="ws01-browser-tabs" aria-label="Workspace categories">'+
   tabs.map(([id,label])=>'<button type="button" data-ws01-filter="'+id+
    '" aria-pressed="'+(id==='all')+'">'+escape(label)+'</button>').join('')+
-  '<button type="button" data-ws01-action="create" class="ws01-add-button">+ Add workspace</button></nav>'+
+  '<button type="button" data-ws01-action="create" class="ws01-add-button"'+
+   (workspaceCreateAllowed(options)?'':' disabled title="Only authorized IT Admins and organizational owners can create workspaces"')+
+   '>+ Add workspace</button></nav>'+
   '<div class="ws01-browser-results"><h3 data-ws01-title>All workspaces</h3>'+
   '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','',options)+'</div>'+
   currentFootnote(catalog,options)+'</div></div></section>';
@@ -647,7 +799,7 @@ function createContent({enabled=WS01_CREATION_ENABLED}={}){
 }
 function openCreate(catalog,options={}){
  const {lifecycle,selectorSession}=options;
- const enabled=WS01_CREATION_ENABLED&&typeof lifecycle?.create==='function';
+ const enabled=workspaceCreateAllowed(options)&&typeof lifecycle?.create==='function';
  const layer=panel(createContent({enabled}),'create');
  const form=layer.querySelector('#ws01-proposal');
  const feedback=layer.querySelector('.ws01-form-feedback');
@@ -713,6 +865,36 @@ function openCreate(catalog,options={}){
    // Refresh only through the signed membership endpoint after server receipt.
    // A newly created workspace is never silently made active.
    void selectorSession?.load?.();
+   if(switchingUiReady(options)){
+    const open=document.createElement('button');
+    open.type='button';
+    open.className='ws01-primary';
+    open.textContent='Open new workspace';
+    open.addEventListener('click',async()=>{
+     if(open.disabled)return;
+     open.disabled=true;
+     feedback.textContent='Verifying new workspace membership and active session…';
+     try{
+      const catalog=await lifecycle.discover();
+      const target=catalog?.rows?.find(row=>
+       row.id===result.receipt.workspaceId&&
+       row.relation==='owner'&&row.verifiedScope==='SIGNED_MEMBER_RPC');
+      const current=catalog?.rows?.find(row=>
+       row.active===true&&row.verifiedScope==='SIGNED_MEMBER_RPC');
+      if(catalog?.status!=='SIGNED_MEMBER_DISCOVERY'||!target||!current||
+         current.id===target.id)throw Error('New workspace is not ready for a verified switch.');
+      await requestSignedWorkspaceSwitch({
+       lifecycle,workspaceId:target.id,expectedWorkspaceId:current.id
+      });
+      closeWorkspacePanels();
+      options.onWorkspaceSwitched();
+     }catch{
+      feedback.textContent='Workspace was created, but switching is not yet verified. It remains available in the authorized workspace list.';
+      open.disabled=false;
+     }
+    });
+    form.querySelector('.ws01-create-footer').prepend(open);
+   }
    const browse=document.createElement('button');
    browse.type='button';
    browse.textContent='Browse authorized workspaces';
@@ -848,7 +1030,7 @@ export function openWorkspaceInvitationDialog(current,options={}){
 }
 export function openWorkspaceSelector(current,options={}){
  if(activeOverlay){closeWorkspacePanels();return;}
- const session={catalog:workspaceCatalog(current),status:'loading',refresh:null,load:null};
+ const session={catalog:workspaceCatalog(current),status:'loading',refresh:null,load:null,creationAuthority:null};
  returnFocus=document.activeElement;
  openMenu(session.catalog,{...options,selectorSession:session});
  // Never substitute a global workspace count for the caller's signed
@@ -874,6 +1056,20 @@ export function openWorkspaceSelector(current,options={}){
   }
   session.refresh?.();
  };
+ // Role/status is verified on the server, not inferred from personal workspace
+ // ownership, profile labels, or a browser-managed role switcher.
+ session.loadAuthority=async()=>{
+  if(!WS03_RESTRICTED_CREATION_ENABLED||
+     typeof options.authorityClient?.readCreatorAuthority!=='function')return;
+  try{session.creationAuthority=await options.authorityClient.readCreatorAuthority();}
+  catch{session.creationAuthority=null;}
+  if(activeOverlay?.isConnected){
+   for(const button of activeOverlay.querySelectorAll('[data-ws01-action="create"]')){
+    button.disabled=!workspaceCreateAllowed({...options,selectorSession:session});
+   }
+  }
+ };
  // Read-only signed RPC, no cross-user cache and no implicit workspace switch.
  void session.load();
+ void session.loadAuthority();
 }

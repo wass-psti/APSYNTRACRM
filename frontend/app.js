@@ -6,6 +6,7 @@ import {mountAvatarImages} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
+import {WorkspaceAuthorityClient} from './workspace-authority.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
 import {WorkspaceInvitationAcceptanceClient,WS02D_ACCEPTANCE_ENABLED,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
@@ -19,6 +20,8 @@ import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-vi
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
+import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
+import {normalizeSignedBoardCandidates} from './workspace-board-groups.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 import {PlatformSync} from './platform-sync.js';
 import {APP_NAME} from './config.js';
@@ -110,6 +113,7 @@ import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
  loadBoardAuditCursorPage,renderBoardAuditCursorPage} from './board-col01-readers.js';
 import {loadBoardCollaboration,renderBoardCollaboration} from './board-collaboration.js';
+import {normalizeBoardPeople,renderBoardPeople,renderMentionDraft,mentionCandidates,insertMention,renderMentionOptions} from './board-people.js';
 import {BoardPreferenceStore} from './board-preferences-idb.js';
 import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
@@ -178,6 +182,7 @@ const boardCacheChannel=new BoardCacheChannel({auth,onInvalidate:({boardId,revis
 db.onBoardMutation=({boardId,revision})=>boardCacheChannel.publish(boardId,revision);
 const profileAvatarClient=new ProfileAvatarClient({auth});
 const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
+const workspaceAuthorityClient=new WorkspaceAuthorityClient({auth,api:db});
 const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
 const workspaceInvitationAcceptanceClient=new WorkspaceInvitationAcceptanceClient({auth,api:db});
 const platformSync=new PlatformSync({
@@ -881,7 +886,7 @@ function boardPage(){
 
  return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
- <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
+ <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button><button type="button" class="secondary" data-action="board-members">♙ People</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
  ${state.edit&&state.tab==='items'&&canManuallyEditBoard(b,true)?'<button class="primary" data-action="new-item">＋ Add item</button>':''}
  </div></div>
@@ -3302,13 +3307,16 @@ function redrawBoardHistory({focus=false}={}){
   host.innerHTML=renderBoardColumnRecoveryList(boardHistory.recoveries)+
    renderBoardAuditCursorPage(result,{
    pageIndex:boardHistory.index,busy:boardHistory.busy,error:boardHistory.error,
-   cachedNext:boardHistory.index<boardHistory.pages.length-1
+   cachedNext:boardHistory.index<boardHistory.pages.length-1,
+   avatarPaths:boardHistory.avatarPaths
   });
+  void mountAvatarImages(host,profileAvatarClient,null,null);
   return;
  }
  const results=renderBoardActivityResults(boardHistory.rows,boardHistory);
  boardHistory.page=results.page;
  host.innerHTML=renderBoardColumnRecoveryList(boardHistory.recoveries)+results.html;
+ void mountAvatarImages(host,profileAvatarClient,null,null);
  if(focus){
   const search=host.querySelector('#board-activity-search');
   search?.focus();search?.setSelectionRange(search.value.length,search.value.length);
@@ -3327,9 +3335,19 @@ async function openBoardActivity(){
   await loadBoardAuditCursorPage(db,snapshot.boardId):
   await db.boardEvents(snapshot.boardId,100);
  if(!boardHistoryAuthorized(snapshot))return;
+ const signedPeople=normalizeBoardPeople(state.board,{
+  boardId:snapshot.boardId,workspaceId:snapshot.workspaceId});
+ const actorAvatars=new Map();
+ if(signedPeople.status==='SIGNED_MEMBERSHIP'){
+  for(const person of signedPeople.people)
+   if(person.avatarPath)actorAvatars.set(person.id,person.avatarPath);
+ }
+ if(snapshot.userId===state.context?.user_id&&
+    typeof state.context?.profile?.avatar_path==='string')
+  actorAvatars.set(snapshot.userId,state.context.profile.avatar_path);
  boardHistory=cursorMode?
-  {...snapshot,recoveries,mode:'cursor',pages:[events],index:0,busy:false,error:''}:
-  {...snapshot,recoveries,rows:normalizeBoardActivity(events),limit:100,
+  {...snapshot,recoveries,avatarPaths:actorAvatars,mode:'cursor',pages:[events],index:0,busy:false,error:''}:
+  {...snapshot,recoveries,avatarPaths:actorAvatars,rows:normalizeBoardActivity(events),limit:100,
    search:'',type:'all',actor:'all',page:0,busy:false,error:''};
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-history-backdrop';
@@ -3615,26 +3633,55 @@ async function openBoardItemDetails(itemId){
 async function openBoardMembers(){
  if(!activeBoardLayout())return;
  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
- const detail=await db.board(snapshot.boardId);
+ // Never infer board authorization from the existence of a client-side list.
+ if(!(await db.allowed(snapshot.boardId,'view'))||!boardHistoryAuthorized(snapshot))return;
+ let detail;
+ try{detail=await db.board(snapshot.boardId);}
+ catch{return;}
  if(!boardHistoryAuthorized(snapshot)||detail.board?.workspace_id!==snapshot.workspaceId)return;
- // The existing signed board RPC returns only this board's membership.
- const members=Array.isArray(detail.members)?detail.members:[];
+ const people=normalizeBoardPeople(detail,{
+  boardId:snapshot.boardId,workspaceId:snapshot.workspaceId});
  const directory=await loadBoardInvitableDirectory(db,snapshot.boardId)
   .catch(()=>({status:'ERROR'}));
  if(!boardHistoryAuthorized(snapshot))return;
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-history-backdrop';
  modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-members-title">'+
-  '<div class="modal-head"><h2 id="board-members-title">Board members</h2>'+
+  '<div class="modal-head"><h2 id="board-members-title">Who can access this board?</h2>'+
   '<button type="button" data-dismiss class="modal-close" aria-label="Close board members">×</button></div>'+
-  '<p class="muted">Existing authorized membership. New invitations require a verified server-side same-workspace and role-ceiling contract.</p>'+
-  '<div class="board-member-list">'+(members.length?members.map(row=>
-    '<div class="board-member"><strong>'+e(row.display_name||'Registered user')+'</strong>'+
-    '<span>'+e(row.role||'Member')+'</span></div>').join(''):
-    '<p>No board membership records were returned.</p>')+'</div>'+
-  '<div data-col01-directory-results>'+renderBoardInvitableDirectory(directory)+'</div></section>';
+  '<p class="bs02-people-compact-note">Hover or focus an avatar to see the member’s full name and role. Select an avatar to copy @name.</p>'+
+  renderBoardPeople(people)+
+  '<details class="bs02-tools"><summary>More board tools</summary><div class="bs02-tools-body">'+
+   renderMentionDraft(people)+
+   '<div data-col01-directory-results>'+renderBoardInvitableDirectory(directory)+'</div>'+
+  '</div></details></section>';
  document.body.append(modal);
  const view=modal;
+ // Existing signed avatar URL flow; no new profile directory or broad reads.
+ void mountAvatarImages(view,profileAvatarClient,null,null);
+ const editor=view.querySelector('#bs02-mention-editor');
+ const options=view.querySelector('[data-bs02-mention-options]');
+ const suggestions=()=>{
+  if(!editor||!options||view!==modal||!boardHistoryAuthorized(snapshot))return;
+  options.innerHTML=renderMentionOptions(
+   mentionCandidates(people,editor.value,editor.selectionStart));
+ };
+ view.addEventListener('input',event=>{
+  if(view!==modal||!boardHistoryAuthorized(snapshot))return;
+  if(event.target.id==='bs02-people-search'){
+   const query=event.target.value.slice(0,120);
+   const host=view.querySelector('.bs02-people [data-bs02-people-results]');
+   if(host){
+    const html=renderBoardPeople(people,{query});
+    const parsed=document.createElement('div');parsed.innerHTML=html;
+    const candidate=parsed.querySelector('[data-bs02-people-results]');
+    host.replaceChildren(...(candidate?[...candidate.childNodes]:[]));
+    void mountAvatarImages(host,profileAvatarClient,null,null);
+   }
+  }
+  if(event.target===editor)suggestions();
+ });
+ view.addEventListener('keyup',event=>{if(event.target===editor)suggestions();});
  view.addEventListener('submit',async event=>{
   if(!event.target.matches('[data-col01-directory-search]'))return;
   event.preventDefault();
@@ -3647,7 +3694,31 @@ async function openBoardMembers(){
   const host=view.querySelector('[data-col01-directory-results]');
   if(host)host.innerHTML=renderBoardInvitableDirectory(result);
  });
- view.addEventListener('click',event=>{if(event.target===view||event.target.closest('[data-dismiss]'))hideModal();});
+ view.addEventListener('click',async event=>{
+  if(event.target===view||event.target.closest('[data-dismiss]')){hideModal();return;}
+  if(!boardHistoryAuthorized(snapshot)||view!==modal)return;
+  const mention=event.target.closest('[data-bs02-mention-id]');
+  if(mention&&editor){
+   const person=people.people.find(p=>p.id===mention.dataset.bs02MentionId);
+   if(!person)return;
+   const inserted=insertMention(editor.value,editor.selectionStart,person);
+   if(!inserted)return;
+   editor.value=inserted.text;
+   editor.focus();editor.setSelectionRange(inserted.cursor,inserted.cursor);
+   if(options)options.replaceChildren();
+   return;
+  }
+  const member=event.target.closest('[data-bs02-copy-name]');
+  const copy=event.target.closest('[data-bs02-copy-draft]');
+  if(!member&&!copy)return;
+  const person=member&&people.people.find(p=>p.id===member.dataset.bs02CopyName);
+  if(member&&!person)return;
+  const value=member?'@'+person.name:editor?.value||'';
+  if(!value||!navigator.clipboard?.writeText)return;
+  try{await navigator.clipboard.writeText(value);
+   if(boardHistoryAuthorized(snapshot))toast('Local '+(member?'name reference':'draft')+' copied. No notification was sent.');
+  }catch{if(boardHistoryAuthorized(snapshot))toast('Clipboard unavailable; select and copy the text manually.');}
+ });
  view.querySelector('[data-dismiss]')?.focus();
 }
 
@@ -4208,6 +4279,7 @@ async function action(name,button){
    if(!auth.isSignedIn||!state.context)break;
    openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()},
     {lifecycle:workspaceLifecycleClient,onOpenCurrent:()=>{location.hash='#/overview';},
+     authorityClient:workspaceAuthorityClient,
      configurationEnabled:WS01_CONFIGURATION_ENABLED,
      invitationEnabled:WS02D_INVITE_CLIENT_ENABLED,
      sendInvitation:request=>workspaceInvitationClient.send(request),
@@ -5085,6 +5157,36 @@ async function action(name,button){
   if(state.boardId===TRADELINK_BOARD_ID&&state.view==='board'&&
      state.tab==='tradelink'&&state.tradeLinkSection==='activity'&&
      !state.tradeLinkActivityBusy)await loadTradeLinkActivity(routeSerial);
+  break;
+ }
+ case 'board-share-preview':{
+  if(!auth.isSignedIn||!state.context||!state.board?.board||!state.boardId)break;
+  const board=state.board.board;
+  const workspaceId=state.context.workspace_id,boardId=state.boardId,userId=auth.userId;
+  if(board.id!==boardId||board.workspace_id!==workspaceId)break;
+  const manage=state.boardManage===true;
+  let rawDirectory={status:'LOCKED',users:[]};
+  if(manage){
+   try{rawDirectory=await loadBoardInvitableDirectory(db,boardId);}
+   catch{rawDirectory={status:'ERROR',users:[]};}
+  }
+  if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
+     state.context?.workspace_id!==workspaceId||state.view!=='board')break;
+  const peopleDirectory=normalizeSignedBoardCandidates({
+   ...rawDirectory,boardId,workspaceId,manage
+  },{boardId,workspaceId});
+  openBoardSharePreview({
+   board,moduleKey:moduleByBoardName(board.name)?.key||null,
+   workspaceId,manage,peopleDirectory,
+   onInviteWorkspace:()=>{
+    if(!auth.isSignedIn||auth.userId!==userId||
+       state.context?.workspace_id!==workspaceId)return;
+    openWorkspaceInvitationDialog({id:workspaceId,name:workspaceName()},{
+     enabled:WS02D_INVITE_CLIENT_ENABLED,
+     sendInvitation:request=>workspaceInvitationClient.send(request)
+    });
+   }
+  });
   break;
  }
  case 'board-members':{await openBoardMembers();break;}
@@ -7461,6 +7563,7 @@ window.addEventListener('offline',()=>platformSync.network(false));
 // Authentication expiry remains authoritative: a revoked session is never
 // retained merely because an unsaved editor was open.
 window.addEventListener('hashchange',()=>{
+ closeBoardSharePreview();
  // Scrub newly pasted invitation links even after the app has initialized.
  const incomingInvitation=captureInvitationLink(location,history);
  if(incomingInvitation){pendingInvitation=incomingInvitation;invitationAcceptanceStatus='';}

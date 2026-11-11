@@ -1,0 +1,57 @@
+name: WS03 workspace ownership and board-sharing integration
+
+on:
+  push:
+    branches:
+      - feat/ws03-workspace-owner-board-invites-20261111
+  pull_request:
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/workspace-ui.js'
+      - 'frontend/workspace-authority.js'
+      - 'frontend/application-ownership.js'
+      - 'frontend/workspace-board-groups.js'
+      - 'frontend/board-people.js'
+      - 'frontend/board-share.js'
+      - 'frontend/board-activity-ui.js'
+      - 'frontend/board-col01-readers.js'
+      - 'frontend/tests/ws03-*.test.mjs'
+      - 'frontend/tests/board-people.test.mjs'
+      - 'frontend/tests/board-share.test.mjs'
+      - 'frontend/tests/workspace-board-groups.test.mjs'
+      - 'sql/ws03-*.sql'
+      - 'scripts/priority5-style-manifest.mjs'
+      - 'frontend/apsyntra-styles.bundle.css'
+      - '.github/workflows/ws03-main-integration-checks.yml'
+permissions:
+  contents: read
+jobs:
+  safety-and-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source syntax
+        run: |
+          node --check frontend/app.js
+          node --check frontend/workspace-ui.js
+          node --check frontend/workspace-authority.js
+          node --check frontend/application-ownership.js
+          node --check frontend/workspace-board-groups.js
+          node --check frontend/board-people.js
+          node --check frontend/board-share.js
+          node --check frontend/board-activity-ui.js
+          node --check frontend/board-col01-readers.js
+      - name: Main and prior-board regressions
+        run: |
+          node --test frontend/tests/ws03-application-ownership.test.mjs frontend/tests/ws03-workspace-authority.test.mjs frontend/tests/ws03-activity-workspace-empty.test.mjs frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs frontend/tests/workspace-switch-controlled-activation.test.mjs frontend/tests/workspace-board-groups.test.mjs frontend/tests/board-people.test.mjs frontend/tests/board-share.test.mjs frontend/tests/resource-email-invitations.test.mjs frontend/tests/board-column-hover.test.mjs frontend/tests/board-activity-ui.test.mjs frontend/tests/board-col01-readers.test.mjs
+      - name: Deterministic CSS and one stylesheet
+        run: |
+          node scripts/build-priority5-styles.mjs --check
+          node --test frontend/tests/priority5-style-delivery.test.mjs
+      - name: Confirm external invitations and ownership writes remain closed
+        run: |
+          node --input-type=module -e "import {WS03_RESTRICTED_CREATION_ENABLED,WS03_OWNERSHIP_TRANSFER_ENABLED} from './frontend/workspace-authority.js';import {BOARD_GROUP_ACCESS_ENABLED} from './frontend/workspace-board-groups.js';import {RESOURCE_EMAIL_INVITES_ENABLED} from './frontend/resource-email-invitations.js';import {WS03_APP_OWNER_TRANSFER_ENABLED} from './frontend/application-ownership.js';if(WS03_APP_OWNER_TRANSFER_ENABLED||WS03_RESTRICTED_CREATION_ENABLED||WS03_OWNERSHIP_TRANSFER_ENABLED||BOARD_GROUP_ACCESS_ENABLED||RESOURCE_EMAIL_INVITES_ENABLED)process.exit(1)"
