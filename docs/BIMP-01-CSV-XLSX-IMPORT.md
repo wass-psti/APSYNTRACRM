@@ -1,12 +1,12 @@
 # BIMP-01 — CSV/XLSX board import scope and acceptance
 
-Date: 2026-11-05
+Date: 2026-11-11
 
 ## Implemented
 
-The approved ordinary-board import flow follows upload → map columns → handle matches → import. Screenshot-based interface supports drop/browse, CSV and XLSX, multi-sheet selection, mapped existing columns, deliberate Allow/Decline for missing columns, group selection, Add new / Skip / Update matching and final Import Now confirmation.
+The approved ordinary-board import flow follows upload → map columns → handle matches → import. The interface supports drop/browse, CSV and XLSX, multi-sheet selection, mapped existing columns, a final confirmation that explicitly lists any new columns and group to create, group selection, Add new / Skip / Update matching and final Import Now confirmation.
 
-- Parser: frontend/board-import-parse.js. UTF-8/UTF-16 CSV reader, basic dialect detection, quoted data, browser XLSX ZIP/XML reading, no formula evaluation, 8 MB upload, 5,000-row/30-column, and 24 MB aggregate uncompressed OOXML limits. Supports ZIP64 extended-information extra field `0x0001` for per-entry 64-bit sizes and offsets when resolved values remain within those limits; validates local headers against central-directory metadata. Rejects ZIP64 end-of-central-directory records and multi-disk archives, which are outside the bounded 8 MB import format. Individual entries are not rejected solely for compression ratio or an arbitrary 4 MB per-entry threshold.
+- Parser: frontend/board-import-parse.js. UTF-8, Windows-1252, UTF-16LE and UTF-16BE CSV decoding (including BOM-less UTF-16 detection), delimiter detection, quoted/multiline data, browser XLSX ZIP/XML reading, no formula evaluation, 8 MB upload, 5,000 rows and 30 mapped source columns. Required OOXML parts are bounded to 24 MB per entry and 64 MB aggregate; unreferenced package media does not consume the XML expansion budget. ZIP64 extended-information extra field `0x0001` and ZIP64 end-of-central-directory records/locators are supported with bounds, consistency, CRC and local-header validation. Multi-disk archives remain unsupported.
 - Core: frontend/board-import-core.js. Column type inference, schema preflight, signed identity and workspace validation, type conversion, unique mapping, duplicate analysis and one atomic backend call.
 - UI: frontend/board-import-ui.js and frontend/board-import.css.
 - Integration: frontend/app.js, index.html.
@@ -46,3 +46,11 @@ See GitHub Actions on final HEAD for automated test results. A successful Pages 
 ### Formula-cell import behavior
 
 The browser importer never evaluates Excel formulas. When a formula has a cached value, the cached value is imported. When the workbook omits the cached value entirely, the row is retained and the affected cell is imported as blank; the worksheet preview displays a warning with the affected cell addresses and column labels. Formula cells with spreadsheet error values and external-workbook formulas remain rejected. This avoids blocking otherwise valid Monday.com exports while making unavailable formula results explicit rather than inventing values.
+
+
+### Import compatibility and workflow refinements
+
+- CSV values beginning with `=`, `+`, `@`, or `-` are preserved as literal text. The importer stores text values; it does not evaluate CSV formulas. XLSX formula cells likewise use cached results only, and missing cached results remain blank with a visible warning.
+- Numeric inference and conversion accept plain numbers, scientific notation, common currency symbols/codes, grouped thousands, comma-decimal values, and parenthesized negatives when the grouping/decimal pattern is unambiguous.
+- The separate “Allow creation” click for ordinary columns was removed. A manager's selected column additions are listed in the final import review and are created only by the same atomic import commit after the final confirmation. Users can skip all proposed columns before continuing. The existing board-manage requirement for schema creation is unchanged.
+- New-group creation is also listed in the final confirmation and remains part of the atomic import transaction.
