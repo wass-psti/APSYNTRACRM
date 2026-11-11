@@ -8,7 +8,8 @@ import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
 import {importMappingReadiness,skipPendingImportChoice,
  matchConfiguredImportChoice,reassignImportItemMapping} from './board-import-readiness.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
- buildImportPlan,executeBoardImport} from './board-import-core.js';
+ buildImportPlan} from './board-import-core.js';
+import {executeBoardImportBatched,IMPORT_BATCH_SIZE} from './board-import-batches.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const choice=(id,label,selected)=>'<option value="'+esc(id)+'"'+(selected?' selected':'')+'>'+esc(label)+'</option>';
@@ -25,7 +26,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
   behavior:'add-new',matchColumnId:'item',allowColumns:manage,manage,busy:false,
   complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,
-  omittedRowsConfirmed:false,formulaWarningsConfirmed:false};
+  omittedRowsConfirmed:false,formulaWarningsConfirmed:false,importProgress:null};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -59,7 +60,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   return '<div class="aps-import-center"><div class="aps-import-drop" data-imp-drop>'+
    '<input type="file" id="aps-import-file-input" accept=".csv,.xlsx" hidden />'+
    '<button type="button" class="primary" data-imp="browse">Browse</button>'+
-   '<h2>or drag and drop your file</h2><p>CSV and XLSX supported · Maximum 8 MB · 5,000 rows</p>'+
+   '<h2>or drag and drop your file</h2><p>CSV and XLSX supported · Maximum 8 MB · 20,000 source rows (1,000-row verified batches)</p>'+
    '</div></div>';
  }
  function mapStep(){
@@ -217,7 +218,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     ' new columns · '+result.preview.rowCount+' rows</p>'+
     (readiness().skipped.length?'<p>Excluded source columns: '+
      readiness().skipped.map(esc).join(', ')+'. Their values will not be imported.</p>':'')+
-    '<p>The server will atomically validate and commit this import against the current board revision.</p>'+
+    '<p>'+(result.preview.rowCount>IMPORT_BATCH_SIZE?
+     'This workbook will be imported in '+Math.ceil(result.preview.rowCount/IMPORT_BATCH_SIZE)+
+     ' sequential batches of up to '+IMPORT_BATCH_SIZE+' records. Each batch is atomic and independently verified; earlier batches remain committed if a later batch fails.':
+     'The server will atomically validate and commit this import against the current board revision.')+'</p>'+
     '<label class="aps-import-final-check"><input type="checkbox" name="imp-confirm" data-imp-confirm'+
     (state.confirmed?' checked':'')+' /> I have reviewed the mapping and the selected duplicate behavior.</label>'+
     '</div>':'')+'</section>';
@@ -240,6 +244,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    '<main class="aps-import-body" tabindex="-1">'+(state.step===1?upload():state.step===2?mapStep():
    state.step===3?matchStep():resultStep())+
    (state.notice?'<p class="aps-import-notice" role="status">'+esc(state.notice)+'</p>':'')+
+   (state.importProgress?'<p class="aps-import-notice" role="status">Verified '+
+    state.importProgress.completed+' of '+state.importProgress.rows+' rows across '+
+    state.importProgress.batch+' of '+state.importProgress.total+' batches.</p>':'')+
    (state.error?'<p class="aps-import-error" role="alert">'+esc(state.error)+'</p>':'')+
    '</main><footer class="aps-import-footer">'+
    (state.step>1&&state.step<4?'<button class="secondary" data-imp="back"'+
@@ -338,7 +345,13 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   try{
    const plan=computePlan();
    phase='record-write';
-   const receipt=await executeBoardImport({api,auth,plan});
+   const receipt=await executeBoardImportBatched({api,auth,detail,
+    sheet:{...sheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
+     formulaWarningsConfirmed:state.formulaWarningsConfirmed},
+    mappings:state.mappings,group:group(),
+    matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
+    allowColumns:state.allowColumns,approvedPlan:plan,
+    onProgress:progress=>{state.importProgress=progress;render();}});
    state.complete=receipt;state.step=4;
    try{await onComplete(receipt);}catch{
     state.error='Import committed, but the board refresh failed. Refresh the board before starting another import.';
@@ -346,7 +359,12 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   }catch(error){
    const failure=normalizeImportFailure(error,phase);
    state.uncertain=failure.uncertain;
-   state.error=failure.message;
+   const progress=error?.importBatchProgress;
+   state.error=progress?
+    ('Import stopped after '+progress.completed+' of '+progress.totalRows+
+     ' rows were verified. '+(progress.outcomeUncertain?
+      'The most recent batch may also have committed; do not resubmit before reconciling the board. ':
+      'Previously verified batches remain committed. ')+failure.message):failure.message;
   }finally{state.busy=false;render();}
  }
  overlay.addEventListener('click',event=>{
