@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {normalizeBoardActivity,filterBoardActivity,pageBoardActivity,
- renderBoardActivityResults,boardItemSummary,BOARD_ACTIVITY_PAGE_SIZE} from '../board-activity-ui.js';
+ renderBoardActivityResults,renderBoardActivityActorAvatar,boardItemSummary,BOARD_ACTIVITY_PAGE_SIZE} from '../board-activity-ui.js';
 import {boardGrid} from '../board-grid.js';
 const events=[
  {id:9,event_type:'item.updated',message:'Status to Done',actor_name:'Alex',actor_id:'a',
@@ -52,6 +52,35 @@ test('activity rendering escapes backend-controlled text and exposes functional 
  assert.match(ui.html,/&lt;script&gt;/);
  assert.equal(ui.total,1);
 });
+test('activity avatars are signed-actor scoped and safely fall back to initials',()=>{
+ const actor='33333333-3333-4333-8333-333333333333';
+ const asset=actor+'/44444444-4444-4444-8444-444444444444.webp';
+ const rows=normalizeBoardActivity([{id:50,actor_id:actor,actor_name:'Jamie Cruz',
+  event_type:'item.updated',message:'Updated',created_at:'2026-11-11T00:10:00Z'}]);
+ const html=renderBoardActivityResults(rows,{
+  avatarPaths:new Map([[actor,asset]])
+ }).html;
+ assert.match(html,/board-activity-actor-avatar/);
+ assert.match(html,/data-avatar-path=/);
+ assert.match(html,/data-avatar-user-id=/);
+ assert.match(html,/JC<\/span>/);
+ const other='55555555-5555-4555-8555-555555555555';
+ const mismatched=renderBoardActivityResults(rows,{
+  avatarPaths:new Map([[actor,other+'/44444444-4444-4444-8444-444444444444.webp']])
+ }).html;
+ assert.doesNotMatch(mismatched,/data-avatar-path=/);
+ assert.match(mismatched,/JC<\/span>/);
+ assert.doesNotMatch(renderBoardActivityActorAvatar('invalid','<svg onload=alert(1)>'),/<svg|onload="/);
+});
+test('signed activity photo enrichment adds no broad profile requests',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/normalizeBoardPeople\(state\.board/);
+ assert.match(app,/avatarPaths:actorAvatars/);
+ assert.match(app,/mountAvatarImages\(host,profileAvatarClient,null,null\)/);
+ const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
+ assert.match(manifest,/frontend\/board-activity-avatars\.css/);
+ assert.match(manifest,/frontend\/board-column-hover\.css/);
+});
 test('item drawer hides restricted fields and escapes notes',()=>{
  const row={title:'<svg onload=alert(1)>',status:'working',notes:'<script>attack</script>',
   assignee_id:'private user',due_date:'2026-11-03'};
@@ -82,6 +111,7 @@ test('application preserves identity checks, signed RPCs and disallows client-on
  assert.match(app,/case 'board-members'/);
  assert.match(app,/boardItemSummary\(item,/);
  assert.match(app,/await db\.allowed\(snapshot\.boardId,'view'\)/);
- assert.match(app,/New invitations require a verified server-side same-workspace/);
+ assert.match(app,/renderBoardPeople\(people\)/);
+ assert.match(app,/normalizeBoardPeople\(detail/);
  assert.doesNotMatch(app,/Build with Vibe|monday\.com/);
 });

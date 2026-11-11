@@ -1,4 +1,7 @@
 /** Read-only projection of existing signed Work Management events. */
+import {validUuid} from './data.js';
+import {verifiedBoardAvatarPath} from './board-people.js';
+import {avatarImageMarkup} from './profile-avatar.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MAX_EVENTS=200;
 export const BOARD_ACTIVITY_PAGE_SIZE=25;
@@ -37,10 +40,23 @@ export function pageBoardActivity(rows,page=0,pageSize=BOARD_ACTIVITY_PAGE_SIZE)
  const current=Math.min(pages-1,Math.max(0,Math.floor(page)||0));
  return {rows:rows.slice(current*size,(current+1)*size),page:current,pages,total:rows.length};
 }
+/** No broad profile directory reads. Reuse exact-user avatar paths already
+ * available from the signed board or the authenticated user's own profile.
+ */
+export function renderBoardActivityActorAvatar(actorId,actorName,avatarPaths=null){
+ const id=typeof actorId==='string'&&validUuid(actorId)?actorId:null;
+ const source=id&&avatarPaths instanceof Map?avatarPaths.get(id):null;
+ const path=id?verifiedBoardAvatarPath(source,id):null;
+ const name=String(actorName||'Recorded user').trim();
+ const letters=name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase().slice(0,4)||'?';
+ return '<span class="board-activity-actor-avatar" aria-hidden="true">'+
+  avatarImageMarkup(letters,{path,userId:path?id:null})+'</span>';
+}
+
 const selectOptions=(values,selected)=>values.map(([v,label])=>
  '<option value="'+esc(v)+'"'+(v===selected?' selected':'')+'>'+esc(label)+'</option>').join('');
 export function renderBoardActivityResults(events,{search='',type='all',actor='all',page=0,
- limit=100,busy=false,error=''}={}){
+ limit=100,busy=false,error='',avatarPaths=null}={}){
  const rows=filterBoardActivity(events,{search,type,actor});
  const pageInfo=pageBoardActivity(rows,page);
  const types=[['all','All activities'],...[...new Set(events.map(x=>x.eventType))].sort().map(x=>[x,x])];
@@ -57,11 +73,13 @@ export function renderBoardActivityResults(events,{search='',type='all',actor='a
   '<p class="board-activity-count" role="status">'+pageInfo.total+
   ' matching events from the latest '+events.length+' authorized records</p>'+
   '<div class="board-history-list">'+(pageInfo.rows.map(row=>
-   '<article class="board-history-entry"><div class="board-history-entry-head"><strong>'+esc(row.eventType)+
+   '<article class="board-history-entry board-activity-event">'+
+   renderBoardActivityActorAvatar(row.actorId,row.actorName,avatarPaths)+
+   '<div class="board-activity-event-body"><div class="board-history-entry-head"><strong>'+esc(row.eventType)+
    '</strong><time datetime="'+esc(row.createdAt)+'">'+esc(row.createdAt?new Date(row.createdAt).toLocaleString('en-PH'):'Time unavailable')+'</time></div>'+
    (row.message?'<p>'+esc(row.message)+'</p>':'')+
    '<small>'+esc(row.actorName)+(row.entityType?' · '+esc(row.entityType):'')+
-   (row.entityId?' · '+esc(row.entityId):'')+'</small></article>').join('')||
+   (row.entityId?' · '+esc(row.entityId):'')+'</small></div></article>').join('')||
    '<p class="board-activity-empty">No events match these filters.</p>')+'</div>'+
   '<nav class="board-activity-pagination" aria-label="Board activity pages">'+
    '<button type="button" data-board-history-action="previous"'+(pageInfo.page===0?' disabled':'')+'>Previous</button>'+

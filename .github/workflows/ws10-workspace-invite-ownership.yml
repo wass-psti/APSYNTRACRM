@@ -1,0 +1,46 @@
+name: WS10 Workspace Owner + Board Invite Main Integration
+
+on:
+  push:
+    branches:
+      - feat/ws10-creator-owner-invite-main-20261111
+  pull_request:
+    paths:
+      - 'frontend/ws10-ownership.js'
+      - 'frontend/workspace-ui.js'
+      - 'frontend/app.js'
+      - 'frontend/board-*.js'
+      - 'frontend/workspace-board-groups.js'
+      - 'frontend/tests/ws10-ownership.test.mjs'
+      - 'frontend/tests/workspace-ui.test.mjs'
+      - 'frontend/tests/board-people.test.mjs'
+      - 'sql/ws10-*.sql'
+      - 'index.html'
+      - '.github/workflows/ws10-workspace-invite-ownership.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax safety
+        run: |
+          node --check frontend/app.js
+          node --check frontend/workspace-ui.js
+          node --check frontend/ws10-ownership.js
+          node --check frontend/board-share.js
+          node --check frontend/board-people.js
+          node --check frontend/workspace-board-groups.js
+      - name: Workspace, board, role and invitation regressions
+        run: |
+          node --test frontend/tests/ws10-ownership.test.mjs frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs frontend/tests/workspace-switch-handoff.test.mjs frontend/tests/workspace-board-groups.test.mjs frontend/tests/resource-email-invitations.test.mjs frontend/tests/board-share.test.mjs frontend/tests/board-people.test.mjs frontend/tests/board-activity-ui.test.mjs frontend/tests/board-col01-readers.test.mjs
+      - name: Protected activation stays disabled
+        run: |
+          node --input-type=module -e "import {WS10_CREATOR_POLICY_ACTIVE,WS10_OWNERSHIP_TRANSFER_ACTIVE} from './frontend/ws10-ownership.js';import {BOARD_GROUP_ACCESS_ENABLED} from './frontend/workspace-board-groups.js';import {WS02D_INVITE_CLIENT_ENABLED} from './frontend/workspace-invitation-client.js';if(WS10_CREATOR_POLICY_ACTIVE||WS10_OWNERSHIP_TRANSFER_ACTIVE||BOARD_GROUP_ACCESS_ENABLED||WS02D_INVITE_CLIENT_ENABLED)process.exit(1);"
