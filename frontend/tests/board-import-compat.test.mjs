@@ -294,6 +294,10 @@ test('XLSX: ZIP64 per-entry sizes require valid central and local extra metadata
  missing[0].zip64CentralExtra=false;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(missing)),
   /ZIP64 XLSX entry is missing required size metadata/);
+ const missingLocal=workbookEntries().map(entry=>({...entry,zip64:true}));
+ missingLocal[0].zip64LocalExtra=false;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(missingLocal)),
+  /ZIP64 XLSX entry is missing required size metadata/);
  const mismatch=workbookEntries().map(entry=>({...entry,zip64:true}));
  mismatch[0].zip64LocalRawSize=Buffer.byteLength(mismatch[0].xml)+1;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(mismatch)),
