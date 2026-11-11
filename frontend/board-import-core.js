@@ -413,6 +413,8 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
   }
  }
  if(!primary)deny('Map exactly one title column.');
+ if(normalized.filter(mapping=>mapping.action!=='skip').length>30)
+  deny('The atomic import contract supports at most 30 mapped source columns. Map compatible sources into the available destinations or explicitly exclude the others.');
  if((detail.columns||[]).length+proposed.length>30)deny('Board maximum is 30 physical columns.');
  const destination=group?.action==='existing'&&validUuid(group.groupId)&&
   (detail.groups||[]).some(g=>g.id===group.groupId)?
@@ -505,9 +507,13 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
   rows.push(row);
   readbackRows.push({title,values,outcome,itemId,baselineValues});
  }
- if(rows.length<1||rows.length>5000)deny('Import requires 1–5,000 data rows.');
+ if(rows.length<1||rows.length>20000)deny('Import requires 1–20,000 data rows.');
  return {boardId:board.id,workspaceId:board.workspace_id,boardRevision:board.updated_at,
-  payload:{contract:IMPORT_CONTRACT,group:destination,mappings:normalized,
+  payload:{contract:IMPORT_CONTRACT,group:destination,
+   // The atomic writer accepts 30 *active* source mappings. Excluded source
+   // columns never need to be transmitted; they remain visible in the wizard
+   // and cannot be excluded without an explicit user decision.
+   mappings:normalized.filter(mapping=>mapping.action!=='skip'),
    newColumns:proposed,rows,matches:{behavior,matchColumnId:matchId}},
   readback:{group:destination,baselineGroupIds:(detail.groups||[]).map(group=>group.id),
    baselineColumnIds:(detail.columns||[]).map(column=>column.id),

@@ -5,7 +5,7 @@ concurrency:
 
 on:
   push:
-    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac, fix/cp-frt-sec06-rpc-rollout-compatibility, feature/cp-frt-sec07-signed-activation-gate, feature/cp-frt-sec09-signed-authorization-acceptance, feature/cp-frt-sec10-transition-revocation-acceptance, fix/cp-frt-sec10-session-eligibility-feedback, feat/fueltrack-backend-core-20261109, fix/cp-frt-sec11-signed-effective-permissions, fix/cp-frt-sec11-board-refresh-reconcile, fix/annotate-temporary-csp-styles, feature/cp-frt-sec10-nonprod-live-acceptance, feat/cp-ft3-functional-closure-20261111, fix/cp-ft3-idempotent-receipt-retry-20261111, fix/board-import-valid-xlsx-compression-20261111, fix/board-import-monday-zip64-entry-metadata-20261111, fix/board-import-uncached-formula-cells-20261111, fix/cp-bimp-04-import-flow-20261111, fix/cp-bimp-05-item-remap-explicit-skip-20261111, fix/board-import-utc-timestamp-values-20261111, fix/board-import-date-normalizer-cache-bust-20261111, fix/board-import-long-description-inference-20261111, fix/cp-bimp-06-invalid-token-import-recovery-20261111, feat/cp-bimp-11-existing-board-compatibility-20261111, feat/cp-bimp-12-cross-config-20261111]
+    branches: [main, feature/cp-role-configuration-bootstrap, feature/cp-rc02-live-user-role-management, fix/form-field-identifiers, security/cp-frt-sec03-frontend-signed-acceptance, feature/cp-frt-sec04-signed-ui-acceptance, feature/cp-frt-sec06-crm-platform-rbac, fix/cp-frt-sec06-rpc-rollout-compatibility, feature/cp-frt-sec07-signed-activation-gate, feature/cp-frt-sec09-signed-authorization-acceptance, feature/cp-frt-sec10-transition-revocation-acceptance, fix/cp-frt-sec10-session-eligibility-feedback, feat/fueltrack-backend-core-20261109, fix/cp-frt-sec11-signed-effective-permissions, fix/cp-frt-sec11-board-refresh-reconcile, fix/annotate-temporary-csp-styles, feature/cp-frt-sec10-nonprod-live-acceptance, feat/cp-ft3-functional-closure-20261111, fix/cp-ft3-idempotent-receipt-retry-20261111, fix/board-import-valid-xlsx-compression-20261111, fix/board-import-monday-zip64-entry-metadata-20261111, fix/board-import-uncached-formula-cells-20261111, fix/cp-bimp-04-import-flow-20261111, fix/cp-bimp-05-item-remap-explicit-skip-20261111, fix/board-import-utc-timestamp-values-20261111, fix/board-import-date-normalizer-cache-bust-20261111, fix/board-import-long-description-inference-20261111, fix/cp-bimp-06-invalid-token-import-recovery-20261111, feat/cp-bimp-11-existing-board-compatibility-20261111, feat/cp-bimp-12-cross-config-20261111, feat/cp-bimp-13-bounded-import-20261112]
     paths:
       - "index.html"
       - ".nojekyll"
@@ -22,6 +22,7 @@ on:
       - "docs/BIMP-01-CSV-XLSX-IMPORT.md"
       - "docs/CP-BIMP-11-EXISTING-BOARD-COMPATIBILITY.md"
       - "docs/CP-BIMP-12-FINDINGS-CROSS-CONFIG-ACCEPTANCE.md"
+      - "docs/CP-BIMP-13-BOUNDED-IMPORT-ACCEPTANCE.md"
       - "sql/cp-board-collab01-*.sql"
       - "sql/tests/cp-board-collab01-*.sql"
       - "sql/cp-frt-sec06-*.sql"

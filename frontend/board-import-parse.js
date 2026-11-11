@@ -3,7 +3,8 @@ import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-
 // Source workbook width is independent of the 30 physical-column ceiling
 // enforced when a destination board creates columns. Allow wide exports to
 // map or explicitly exclude their excess source columns.
-const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=256,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
+const MAX_BYTES=8*1024*1024,MAX_ROWS=20000,MAX_COLUMNS=256,
+ MAX_SOURCE_CELL_LENGTH=65536,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
 const invalid=message=>{throw new Error(message);};
 export function validateImportSheet(headers,rows){
  if(!Array.isArray(headers)||headers.length<1||headers.length>MAX_COLUMNS)
@@ -12,10 +13,10 @@ export function validateImportSheet(headers,rows){
  if(names.some(x=>!x||x.length>240)||new Set(names.map(x=>x.toLocaleLowerCase())).size!==names.length)
   invalid('File headers must be nonempty, unique, and at most 240 characters.');
  if(!Array.isArray(rows)||rows.length<1||rows.length>MAX_ROWS)
-  invalid('Import requires 1–5,000 data rows.');
+  invalid('Import requires 1–20,000 data rows.');
  for(const row of rows){
   if(!Array.isArray(row)||row.length>MAX_COLUMNS)invalid('Invalid spreadsheet row width.');
-  if(row.some(x=>String(x??'').length>5000))invalid('An imported cell exceeds 5,000 characters.');
+  if(row.some(x=>String(x??'').length>MAX_SOURCE_CELL_LENGTH))invalid('A source cell exceeds 65,536 characters.');
  }
  return {headers:names,rows};
 }
@@ -32,7 +33,7 @@ export function parseDelimited(text,delimiter){
  if(![',',';','\t'].includes(delimiter))invalid('Unsupported CSV delimiter.');
  const matrix=[],row=[];let value='',quoted=false,closed=false;
  const endCell=()=>{row.push(value);value='';closed=false;};
- const endRow=()=>{endCell();matrix.push(row.splice(0));if(matrix.length>MAX_ROWS+2)invalid('CSV exceeds 5,000 rows.');};
+ const endRow=()=>{endCell();matrix.push(row.splice(0));if(matrix.length>MAX_ROWS+2)invalid('CSV exceeds 20,000 rows.');};
  for(let i=0;i<text.length;i++){
   const c=text[i];
   if(c==='"'){
@@ -48,7 +49,7 @@ export function parseDelimited(text,delimiter){
    if(closed&&c!==' '&&c!=='\t')invalid('Unexpected content after quoted CSV field.');
    if(!closed)value+=c;
   }
-  if(value.length>5000)invalid('An imported cell exceeds 5,000 characters.');
+  if(value.length>MAX_SOURCE_CELL_LENGTH)invalid('A source cell exceeds 65,536 characters.');
   if(row.length>MAX_COLUMNS)invalid('CSV exceeds 256 source columns.');
  }
  if(quoted)invalid('CSV has an unterminated quoted field.');
@@ -431,7 +432,7 @@ function sheetRows(xml,shared,dates,date1904,sheetName){
       date1904,format,cellType:type||'n'
      });
     }
-    if(String(value).length>5000)throw Error('An imported cell exceeds 5,000 characters.');
+    if(String(value).length>MAX_SOURCE_CELL_LENGTH)throw Error('A source cell exceeds 65,536 characters.');
     values[col-1]=String(value??'');
    }catch(error){
     throw contextualError(sheetName,excelRow,address,label,raw,error.message);
@@ -443,7 +444,7 @@ function sheetRows(xml,shared,dates,date1904,sheetName){
    if(!knownHeader&&candidate)knownHeader=candidate;
   }
   if(rows.length>MAX_ROWS+70)
-   throw new Error('Worksheet "'+sheetName+'" exceeds the supported row limit.');
+   throw new Error('Worksheet "'+sheetName+'" exceeds the 20,000-row source limit.');
  }
  return splitWorksheetSections(rows,sheetName,formulaWarnings);
 }
