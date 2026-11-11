@@ -1,6 +1,6 @@
 import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
-const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
+const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30,\n MAX_ENTRY_UNCOMPRESSED_BYTES=24*1024*1024,MAX_UNCOMPRESSED_BYTES=64*1024*1024,\n MAX_ZIP_ENTRIES=2000,MAX_WORKSHEETS=100;
 const invalid=message=>{throw new Error(message);};
 export function validateImportSheet(headers,rows){
  if(!Array.isArray(headers)||headers.length<1||headers.length>MAX_COLUMNS)
@@ -65,9 +65,28 @@ export function parseDelimited(text,delimiter){
 }
 function decodedText(buffer){
  const data=new Uint8Array(buffer);
- if(data[0]===0xff&&data[1]===0xfe)return new TextDecoder('utf-16le',{fatal:true}).decode(data.subarray(2));
- if(data[0]===0xfe&&data[1]===0xff)return new TextDecoder('utf-16be',{fatal:true}).decode(data.subarray(2));
- return new TextDecoder('utf-8',{fatal:true}).decode(data);
+ if(data[0]===0xff&&data[1]===0xfe)
+  return new TextDecoder('utf-16le',{fatal:true}).decode(data.subarray(2));
+ if(data[0]===0xfe&&data[1]===0xff)
+  return new TextDecoder('utf-16be',{fatal:true}).decode(data.subarray(2));
+ // Excel can emit UTF-16 CSV without a BOM. Detect the common ASCII-heavy
+ // case by the position of NUL bytes rather than guessing from locale.
+ const sample=data.subarray(0,Math.min(data.length,4096));
+ let evenNull=0,oddNull=0,pairs=Math.floor(sample.length/2);
+ for(let i=0;i<sample.length;i++)if(sample[i]===0){
+  if(i%2)oddNull++;else evenNull++;
+ }
+ if(pairs>=4&&oddNull/pairs>0.25&&evenNull/pairs<0.05)
+  return new TextDecoder('utf-16le',{fatal:true}).decode(data);
+ if(pairs>=4&&evenNull/pairs>0.25&&oddNull/pairs<0.05)
+  return new TextDecoder('utf-16be',{fatal:true}).decode(data);
+ try{return new TextDecoder('utf-8',{fatal:true}).decode(data);}
+ catch{
+  // Windows Excel commonly exports CSV using Windows-1252. It is a
+  // deterministic single-byte fallback, not a locale-dependent guess.
+  try{return new TextDecoder('windows-1252',{fatal:true}).decode(data);}
+  catch{invalid('CSV text encoding is not supported. Save as UTF-8 CSV and retry.');}
+ }
 }
 function xmlDocument(text){
  if(/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(text))
@@ -140,18 +159,48 @@ function zipDirectory(buffer){
      p+22+le(view,p+20,2)===buffer.byteLength){eocd=p;break;}
  }
  if(eocd<0)invalid('Not a supported XLSX ZIP workbook.');
- const disk=le(view,eocd+4,2),directoryDisk=le(view,eocd+6,2),
+ let disk=le(view,eocd+4,2),directoryDisk=le(view,eocd+6,2),
   entriesOnDisk=le(view,eocd+8,2),count=le(view,eocd+10,2),
   directorySize=le(view,eocd+12,4),offset=le(view,eocd+16,4);
+ const locator=eocd-20;
+ const hasZip64Locator=locator>=0&&le(view,locator,4)===0x07064b50;
+ if(hasZip64Locator){
+  if(le(view,locator+4,4)!==0||le(view,locator+16,4)!==1)
+   invalid('Multi-disk ZIP64 XLSX archives are not supported.');
+  const zip64Offset=zip64UInt64(view,locator+8,locator).value;
+  if(zip64Offset+56>locator||le(view,zip64Offset,4)!==0x06064b50)
+   invalid('Damaged ZIP64 XLSX end-of-central-directory record.');
+  const recordSize=zip64UInt64(view,zip64Offset+4,locator).value;
+  if(recordSize<44||zip64Offset+12+recordSize>locator)
+   invalid('Invalid ZIP64 XLSX end-of-central-directory size.');
+  const zip64Disk=le(view,zip64Offset+16,4),
+   zip64DirectoryDisk=le(view,zip64Offset+20,4),
+   zip64EntriesOnDisk=zip64UInt64(view,zip64Offset+24,zip64Offset+12+recordSize).value,
+   zip64Count=zip64UInt64(view,zip64Offset+32,zip64Offset+12+recordSize).value,
+   zip64DirectorySize=zip64UInt64(view,zip64Offset+40,zip64Offset+12+recordSize).value,
+   zip64DirectoryOffset=zip64UInt64(view,zip64Offset+48,zip64Offset+12+recordSize).value;
+  if(zip64Disk||zip64DirectoryDisk||zip64EntriesOnDisk!==zip64Count)
+   invalid('Multi-disk ZIP64 XLSX archives are not supported.');
+  if(entriesOnDisk!==ZIP16_MAX&&entriesOnDisk!==zip64EntriesOnDisk||
+     count!==ZIP16_MAX&&count!==zip64Count||
+     directorySize!==ZIP32_MAX&&directorySize!==zip64DirectorySize||
+     offset!==ZIP32_MAX&&offset!==zip64DirectoryOffset)
+   invalid('ZIP64 and legacy XLSX directory metadata disagree.');
+  disk=zip64Disk;directoryDisk=zip64DirectoryDisk;
+  entriesOnDisk=zip64EntriesOnDisk;count=zip64Count;
+  directorySize=zip64DirectorySize;offset=zip64DirectoryOffset;
+ }else if(entriesOnDisk===ZIP16_MAX||count===ZIP16_MAX||
+          directorySize===ZIP32_MAX||offset===ZIP32_MAX){
+  invalid('ZIP64 XLSX end-of-central-directory locator is missing.');
+ }
  if(disk||directoryDisk||entriesOnDisk!==count)
   invalid('Multi-disk XLSX archives are not supported.');
- if(entriesOnDisk===ZIP16_MAX||count===ZIP16_MAX||
-    directorySize===ZIP32_MAX||offset===ZIP32_MAX)
-  invalid('ZIP64 end-of-central-directory records are not supported by the bounded 8 MB XLSX reader.');
- if(count>300||offset>=buffer.byteLength||offset+directorySize>eocd)
+ if(!Number.isSafeInteger(count)||!Number.isSafeInteger(directorySize)||
+    !Number.isSafeInteger(offset)||count>MAX_ZIP_ENTRIES||
+    offset>=buffer.byteLength||offset+directorySize>(hasZip64Locator?locator:eocd))
   invalid('XLSX ZIP directory exceeds the supported workbook limits.');
  const directoryEnd=offset+directorySize;
- const entries=new Map();let p=offset,total=0;
+ const entries=new Map();let p=offset;
  for(let i=0;i<count;i++){
   if(p+46>directoryEnd||le(view,p,4)!==0x02014b50)
    invalid('Damaged XLSX directory.');
@@ -179,11 +228,6 @@ function zipDirectory(buffer){
    invalid('Invalid XLSX ZIP entry sizes or offsets.');
   if(packed>MAX_BYTES)
    invalid('XLSX compressed entry exceeds the 8 MB input limit.');
-  if(raw>MAX_UNCOMPRESSED_BYTES)
-   invalid('Workbook ZIP entry exceeds the 24 MB uncompressed limit.');
-  total+=raw;
-  if(!Number.isSafeInteger(total)||total>MAX_UNCOMPRESSED_BYTES)
-   invalid('Workbook expands beyond the 24 MB uncompressed XML limit.');
   const name=new TextDecoder('utf-8',{fatal:true}).decode(bytes.subarray(p+46,p+46+nameLen));
   if(!name||name.includes('..')||name.startsWith('/')||name.includes('\\')||entries.has(name))
    invalid('Unsafe or duplicate XLSX path.');
@@ -193,11 +237,16 @@ function zipDirectory(buffer){
   p=end;
  }
  if(p!==directoryEnd)invalid('XLSX ZIP directory size does not match its entries.');
- return {entries,view,bytes,directoryOffset:offset};
+ return {entries,view,bytes,directoryOffset:offset,uncompressedTotal:0};
 }
 async function unzipEntry(zip,path){
  const info=zip.entries.get(path);
  if(!info)invalid('Workbook entry is missing: '+path);
+ if(info.raw>MAX_ENTRY_UNCOMPRESSED_BYTES)
+  invalid('Required workbook XML entry exceeds the 24 MB uncompressed limit.');
+ if(zip.uncompressedTotal+info.raw>MAX_UNCOMPRESSED_BYTES)
+  invalid('Required workbook XML expands beyond the 64 MB aggregate limit.');
+ zip.uncompressedTotal+=info.raw;
  const p=info.local,v=zip.view;
  if(p+30>zip.directoryOffset||le(v,p,4)!==0x04034b50)
   invalid('Damaged XLSX local entry.');
@@ -459,7 +508,7 @@ async function parseWorkbook(buffer){
   r.getAttribute('Id'),{target:r.getAttribute('Target'),
    type:r.getAttribute('Type'),external:r.getAttribute('TargetMode')==='External'}]));
  const sheetNodes=nodes(wb,'sheet');
- if(!sheetNodes.length||sheetNodes.length>20)invalid('Workbook must contain 1–20 worksheets.');
+ if(!sheetNodes.length||sheetNodes.length>MAX_WORKSHEETS)invalid('Workbook must contain 1–100 worksheets.');
  const dateMode=first(wb,'workbookPr')?.getAttribute('date1904');
  const offset=dateMode==='1'||dateMode==='true'?1462:0;
  const sheets=[];
