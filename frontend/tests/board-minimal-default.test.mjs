@@ -163,11 +163,12 @@ test('explicit choices validate status and dropdown labels, preserving stored ID
  assert.throws(()=>parseChoiceConfig('status','A\n'.repeat(51)),/50 unique/);
  assert.deepEqual(parseChoiceConfig('text','Anything'),{});
 });
-test('the first custom column can use accessible drag handles after Item-only mode is enabled',()=>{
+test('the first custom column has an accessible draggable header after Item-only mode is enabled',()=>{
  const html=boardTable({columns:[{key:'record',title:'Item'},
   {key:'col:'+col,title:'Score'}],minimal:true,rows:[]});
  assert.match(html,/data-column-key="col:55555555-5555-4555-8555-555555555555" draggable="true"/);
- assert.match(html,/board-column-handle/);
+ assert.match(html,/tabindex="0" aria-keyshortcuts="Alt\+Shift\+ArrowLeft Alt\+Shift\+ArrowRight"/);
+ assert.doesNotMatch(html,/board-column-handle/);
 });
 test('the deployed board creation and manager add-column actions use the signed configuration workflow',()=>{
  const app=readFileSync('frontend/app.js','utf8');
