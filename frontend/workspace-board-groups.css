@@ -1,0 +1,20 @@
+/* BS09 — board member/group picker. Uses APSYNTRA light surface and compact spacing. */
+.bs09-board-access{display:grid;gap:11px;min-width:0}
+.bs09-picker-head{display:grid;gap:3px}
+.bs09-picker-head strong{font-size:14px;color:#26314b}
+.bs09-picker-head small{font-size:11px;line-height:1.4;color:#78859b}
+.bs09-picker-tabs{display:flex;align-items:stretch;gap:5px;border-bottom:1px solid #e5e9f3}
+.bs09-picker-tabs button{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;padding:9px 17px;color:#7a849b;font-size:12px;font-weight:700;cursor:pointer}
+.bs09-picker-tabs button[aria-pressed="true"]{color:#655cb2;border-color:#655cb2}
+.bs09-board-access label{font-size:11px;font-weight:680;color:#53617d}
+.bs09-board-access input{box-sizing:border-box;display:block;width:100%;font:inherit;font-size:12px;min-width:0;padding:10px 12px;border:1px solid #d6dced;border-radius:9px;background:#fff;color:#27334c;outline-offset:2px}
+.bs09-board-access input:disabled{background:#f7f8fb;color:#94a0b3}
+.bs09-board-access input:focus-visible,.bs09-picker-tabs button:focus-visible{outline:2px solid #6560bd;outline-offset:2px}
+.bs09-access-results{display:grid;gap:5px;max-height:190px;overflow:auto}
+.bs09-access-results>p{font-size:11px;color:#7b8599;line-height:1.5;margin:2px 0}
+.bs09-access-result{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;align-items:center;border-bottom:1px solid #eff1f7;padding:8px 0}
+.bs09-access-result>span{font-size:12px;font-weight:720;overflow-wrap:anywhere}
+.bs09-access-result>small{grid-column:1;font-size:10px;color:#8290a5;overflow-wrap:anywhere}
+.bs09-access-result>button{grid-column:2;grid-row:1 / 3;border:1px solid #dfe2eb;border-radius:8px;padding:7px 9px;background:#f5f6fa;color:#959eae;font-size:11px;cursor:not-allowed}
+.bs09-access-note{font-size:10px;color:#858fa4;line-height:1.5;margin:0}
+.bs09-workspace-invite{display:block;margin:12px 0 1px;max-width:100%}
