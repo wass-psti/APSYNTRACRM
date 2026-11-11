@@ -166,7 +166,7 @@ test('XLSX: highly compressible valid OOXML remains accepted within absolute siz
  const entries=workbookEntries();
  // Normal OOXML often contains repetitive XML/whitespace. This single
  // workbook.xml entry deliberately exceeds the old arbitrary 200:1 ratio.
- entries[0].xml='\\n'.repeat(50000)+entries[0].xml;
+ entries[0].xml='\n'.repeat(50000)+entries[0].xml;
  const zip=makeZip(entries);
  assert.ok(zip.byteLength<8*1024*1024);
  const parsed=await parseWithFixtureDom(zip);
@@ -175,9 +175,24 @@ test('XLSX: highly compressible valid OOXML remains accepted within absolute siz
  assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
 });
 
+test('XLSX: unsupported compression, ZIP64 and oversized entries retain explicit rejection',async()=>{
+ const unsupported=workbookEntries();
+ unsupported[0].method=12;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(unsupported)),
+  /Unsupported XLSX compression method/);
+ const zip64=workbookEntries();
+ zip64[0].declaredSize=0xffffffff;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(zip64)),
+  /ZIP64 XLSX workbook entries/);
+ const oversized=workbookEntries();
+ oversized[0].declaredSize=4*1024*1024+1;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(oversized)),
+  /4 MB decompressed or 8 MB compressed entry limit/);
+});
+
 test('XLSX: encrypted ZIP and worksheet path traversal are rejected',async()=>{
  const parts=workbookEntries();parts[0].encrypted=true;
- await assert.rejects(()=>parseWithFixtureDom(makeZip(parts)),/Encrypted, unusually compressed/);
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(parts)),/Encrypted XLSX workbook entries/);
  const unsafe=workbookEntries();
  unsafe[1].xml=relsXml.replace('worksheets/sheet1.xml','../secret.xml');
  await assert.rejects(()=>parseWithFixtureDom(makeZip(unsafe)),/unsafe worksheet reference/);
