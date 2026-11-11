@@ -85,7 +85,7 @@ test('Monday.com UTC Date encoded timestamps map to their source calendar date',
  assert.equal(plan.payload.rows[1].values['Date encoded'],'2025-12-31');
 });
 test('long description columns infer long_text across all rows and preserve complete values',()=>{
- const longDescription='Work description '.repeat(100);
+ const longDescription=('Work description '.repeat(100)).trimEnd();
  const rows=Array.from({length:101},(_,i)=>['Record '+i,'Short description']);
  rows[100][1]=longDescription;
  const longSheet={headers:['Name','Work description'],rows};
