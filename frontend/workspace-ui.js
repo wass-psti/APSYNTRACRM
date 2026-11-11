@@ -320,7 +320,7 @@ function detailsContent(row,{canSwitch=false,canTransfer=false}={}){
    'You can inspect this authorized membership, but changing the active workspace requires the separate signed switching contract.'))+'</p>'+
   '<div class="ws01-details-actions"><button type="button" data-ws01-action="back">Back to workspaces</button>'+
   '<button type="button" data-ws01-action="configure">Configuration</button>'+
-  (row.active&&row.relation==='owner'?
+  (row.active&&(row.relation==='owner'||canTransfer)?
    '<button type="button" data-ws01-action="transfer-owner"'+
     (canTransfer?'':' disabled title="Server-authorized ownership transfer is not activated"')+
     '>Transfer ownership</button>':'')+
@@ -375,7 +375,8 @@ function openDetails(catalog,workspaceId,options={}){
   row.verifiedScope==='SIGNED_MEMBER_RPC'&&
   (row.relation==='owner'||signedItAdmin)&&
   typeof options.authorityClient?.readTransferCandidates==='function'&&
-  typeof options.authorityClient?.transferOwnership==='function';
+  typeof options.authorityClient?.transferOwnership==='function'&&
+  typeof options.authorityClient?.verifyOwnershipTransfer==='function';
  const layer=panel(detailsContent(row,{canSwitch,canTransfer}),'details');
  let selecting=false;
  layer.addEventListener('click',async event=>{
@@ -458,7 +459,8 @@ function openOwnershipTransfer(catalog,workspaceId,options={}){
  if(!row||!row.active||row.verifiedScope!=='SIGNED_MEMBER_RPC'||
     !WS03_OWNERSHIP_TRANSFER_ENABLED||
     typeof options.authorityClient?.readTransferCandidates!=='function'||
-    typeof options.authorityClient?.transferOwnership!=='function')return;
+    typeof options.authorityClient?.transferOwnership!=='function'||
+    typeof options.authorityClient?.verifyOwnershipTransfer!=='function')return;
  const layer=panel(ownerTransferContent(row,{loading:true}),'transfer');
  let directory=null,busy=false,requestId=null,lastTarget=null;
  const isCurrent=()=>activeOverlay===layer&&layer.isConnected;
@@ -515,13 +517,13 @@ function openOwnershipTransfer(catalog,workspaceId,options={}){
    });
    if(receipt?.transferred!==true||receipt.targetUserId!==target)
     throw Error('Unverified transfer receipt');
-   const after=await options.authorityClient.readTransferCandidates(workspaceId)
-    .catch(()=>null);
-   // The former owner may legitimately lose access to the transfer reader.
-   // Do not claim completion from a mutation receipt alone.
-   if(!after||after.status!=='VERIFIED_TRANSFER_CANDIDATES'||
-      after.currentOwnerId!==target)
-    throw Error('Transfer requires an independent owner verification');
+   // The former owner may no longer read transfer candidates, so verify
+   // the exact actor-bound request ledger rather than privileged people data.
+   const after=await options.authorityClient.verifyOwnershipTransfer({
+    workspaceId,requestId,targetUserId:target
+   });
+   if(after?.verified!==true||after.targetUserId!==target)
+    throw Error('Transfer requires independent signed verification');
    if(!isCurrent())return;
    render({done:true});
    void options.selectorSession?.load?.();
