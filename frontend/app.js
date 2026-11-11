@@ -20,6 +20,7 @@ import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-vi
 import {DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
+import {normalizeSignedBoardCandidates} from './workspace-board-groups.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 import {PlatformSync} from './platform-sync.js';
 import {APP_NAME} from './config.js';
@@ -5064,10 +5065,32 @@ async function action(name,button){
  case 'board-share-preview':{
   if(!auth.isSignedIn||!state.context||!state.board?.board||!state.boardId)break;
   const board=state.board.board;
-  if(board.id!==state.boardId||board.workspace_id!==state.context.workspace_id)break;
+  const workspaceId=state.context.workspace_id,boardId=state.boardId,userId=auth.userId;
+  if(board.id!==boardId||board.workspace_id!==workspaceId)break;
+  const manage=state.boardManage===true;
+  // The signed member directory is a separate, default-off backend boundary.
+  // Never infer all workspace members from the board detail or browser state.
+  let rawDirectory={status:'LOCKED',users:[]};
+  if(manage){
+   try{rawDirectory=await loadBoardInvitableDirectory(db,boardId);}
+   catch{rawDirectory={status:'ERROR',users:[]};}
+  }
+  if(!auth.isSignedIn||auth.userId!==userId||state.boardId!==boardId||
+     state.context?.workspace_id!==workspaceId||state.view!=='board')break;
+  const peopleDirectory=normalizeSignedBoardCandidates({
+   ...rawDirectory,boardId,workspaceId,manage
+  },{boardId,workspaceId});
   openBoardSharePreview({
    board,moduleKey:moduleByBoardName(board.name)?.key||null,
-   workspaceId:state.context.workspace_id,manage:state.boardManage===true
+   workspaceId,manage,peopleDirectory,
+   onInviteWorkspace:()=>{
+    if(!auth.isSignedIn||auth.userId!==userId||
+       state.context?.workspace_id!==workspaceId)return;
+    openWorkspaceInvitationDialog({id:workspaceId,name:workspaceName()},{
+     enabled:WS02D_INVITE_CLIENT_ENABLED,
+     sendInvitation:request=>workspaceInvitationClient.send(request)
+    });
+   }
   });
   break;
  }
