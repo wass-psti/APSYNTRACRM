@@ -249,6 +249,15 @@ function panel(html,kind){
  });
  return layer;
 }
+/** A creator permit is a signed server policy result, not the visible owner label.
+ * A user's personal Main Workspace must not imply global create permission.
+ */
+export function workspaceCreationUiReady(options={}){
+ const rights=options.selectorSession?.creatorRights;
+ return WS01_CREATION_ENABLED===true&&
+  rights?.status==='SIGNED_CREATOR_POLICY'&&rights.canCreate===true&&
+  typeof options.creationLifecycle?.create==='function';
+}
 function switchingUiReady(options={}){
  return options.switchingEnabled===true&&
   typeof options.lifecycle?.discover==='function'&&
@@ -535,7 +544,7 @@ function menuContent(catalog,options={}){
   '<p class="ws01-eyebrow">Authorized workspaces · '+visibleWorkspaces(catalog).length+'</p>'+
   '<div data-ws01-results>'+resultsMarkup(catalog,'all','',options)+'</div>'+
   '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
-  '<button type="button" data-ws01-action="create">Add workspace</button>'+
+  '<button type="button" data-ws01-action="create" '+(workspaceCreationUiReady(options)?'':'disabled title="Only verified IT admins or approved workspace owners may create workspaces"')+'>Add workspace</button>'+
   '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
   currentFootnote(catalog,options)+'</section>';
 }
@@ -546,6 +555,8 @@ function openMenu(catalog,options={}){
  const redraw=()=>{
   if(activeOverlay!==layer||!layer.isConnected)return;
   layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),'all',input.value,options);
+  const createButton=layer.querySelector('[data-ws01-action="create"]');
+  if(createButton)createButton.disabled=!workspaceCreationUiReady(options);
   layer.querySelector('.ws01-eyebrow').textContent='Authorized workspaces · '+visibleWorkspaces(read()).length;
   const feedback=layer.querySelector('[data-ws01-feedback]');
   if(feedback)feedback.outerHTML=currentFootnote(read(),options);
@@ -579,7 +590,7 @@ function browseContent(catalog,options={}){
   '<div class="ws01-browser-body"><nav class="ws01-browser-tabs" aria-label="Workspace categories">'+
   tabs.map(([id,label])=>'<button type="button" data-ws01-filter="'+id+
    '" aria-pressed="'+(id==='all')+'">'+escape(label)+'</button>').join('')+
-  '<button type="button" data-ws01-action="create" class="ws01-add-button">+ Add workspace</button></nav>'+
+  '<button type="button" data-ws01-action="create" class="ws01-add-button" '+(workspaceCreationUiReady(options)?'':'disabled title="Creator permission not verified"')+'>+ Add workspace</button></nav>'+
   '<div class="ws01-browser-results"><h3 data-ws01-title>All workspaces</h3>'+
   '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','',options)+'</div>'+
   currentFootnote(catalog,options)+'</div></div></section>';
@@ -592,6 +603,8 @@ function openBrowse(catalog,options={}){
  const redraw=()=>{
   if(activeOverlay!==layer||!layer.isConnected)return;
   layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),tab,input.value,options);
+  const createButton=layer.querySelector('[data-ws01-action="create"]');
+  if(createButton)createButton.disabled=!workspaceCreationUiReady(options);
   const feedback=layer.querySelector('[data-ws01-feedback]');
   if(feedback)feedback.outerHTML=currentFootnote(read(),options);
   for(const btn of layer.querySelectorAll('[data-ws01-filter]'))
@@ -646,8 +659,9 @@ function createContent({enabled=WS01_CREATION_ENABLED}={}){
   '</footer></form></section>';
 }
 function openCreate(catalog,options={}){
- const {lifecycle,selectorSession}=options;
- const enabled=WS01_CREATION_ENABLED&&typeof lifecycle?.create==='function';
+ const {selectorSession}=options;
+ const lifecycle=options.creationLifecycle;
+ const enabled=workspaceCreationUiReady(options);
  const layer=panel(createContent({enabled}),'create');
  const form=layer.querySelector('#ws01-proposal');
  const feedback=layer.querySelector('.ws01-form-feedback');
@@ -712,7 +726,23 @@ function openCreate(catalog,options={}){
    submit.textContent='Created';
    // Refresh only through the signed membership endpoint after server receipt.
    // A newly created workspace is never silently made active.
-   void selectorSession?.load?.();
+   const newWorkspaceId=result.workspaceId;
+   // Reload signed membership catalog before offering an actual switch.
+   // Never navigate to a new workspace while server context remains old.
+   await selectorSession?.load?.();
+   if(activeOverlay!==layer||!layer.isConnected)return;
+   const owned=selectorSession?.catalog?.rows?.find(item=>
+    item.id===newWorkspaceId&&item.relation==='owner'&&
+    item.verifiedScope==='SIGNED_MEMBER_RPC');
+   if(owned&&switchingUiReady(options)){
+    const open=document.createElement('button');
+    open.type='button';
+    open.className='ws01-primary';
+    open.textContent='Open workspace';
+    open.addEventListener('click',()=>openDetails(
+      selectorSession.catalog,newWorkspaceId,options));
+    form.querySelector('.ws01-create-footer').prepend(open);
+   }
    const browse=document.createElement('button');
    browse.type='button';
    browse.textContent='Browse authorized workspaces';
@@ -848,7 +878,7 @@ export function openWorkspaceInvitationDialog(current,options={}){
 }
 export function openWorkspaceSelector(current,options={}){
  if(activeOverlay){closeWorkspacePanels();return;}
- const session={catalog:workspaceCatalog(current),status:'loading',refresh:null,load:null};
+ const session={catalog:workspaceCatalog(current),status:'loading',refresh:null,load:null,creatorRights:null};
  returnFocus=document.activeElement;
  openMenu(session.catalog,{...options,selectorSession:session});
  // Never substitute a global workspace count for the caller's signed
@@ -868,6 +898,13 @@ export function openWorkspaceSelector(current,options={}){
    if(result?.status!=='SIGNED_MEMBER_DISCOVERY')throw Error('Invalid signed catalog');
    session.catalog=result;
    session.status='ready';
+   // Creator policy is a separate signed server read; never infer rights
+   // from 'owner' relation in a newly created personal workspace.
+   session.creatorRights=null;
+   if(typeof options.readCreationRights==='function'){
+    try{session.creatorRights=await options.readCreationRights();}
+    catch{session.creatorRights=null;}
+   }
   }catch{
    session.catalog=workspaceCatalog(current);
    session.status='error';
