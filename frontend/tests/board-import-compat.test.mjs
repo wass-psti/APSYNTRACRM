@@ -276,7 +276,7 @@ test('XLSX: Monday-style ZIP64 per-entry size metadata is accepted',async()=>{
 test('XLSX: sanitized Monday.com export ZIP64 package imports its 10-column activity sheet',async()=>{
  const parsed=await parseWithFixtureDom(makeZip(mondayExportEntries()));
  assert.equal(parsed.sheets.length,1);
- assert.equal(parsed.sheets[0].name,'i-t-daily-activities');
+ assert.equal(parsed.sheets[0].name,'i-t-daily-activities — FY 2026');
  assert.deepEqual(parsed.sheets[0].headers,[
   'Name','Subitems','Work description','Date encoded','Person',
   'Status','Timeline - Start','Timeline - End','Rating','Item ID (auto generated)'
@@ -314,7 +314,7 @@ test('XLSX: unsupported compression, ZIP64 directory and oversized entries remai
  zip64Directory.writeUInt16LE(0xffff,eocd+8);
  zip64Directory.writeUInt16LE(0xffff,eocd+10);
  await assert.rejects(()=>parseWithFixtureDom(zip64Directory),
-  /ZIP64 end-of-central-directory archives/);
+  /ZIP64 end-of-central-directory records/);
  const oversized=workbookEntries().map(entry=>({...entry,zip64:true}));
  oversized[0].declaredSize=24*1024*1024+1;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(oversized)),
