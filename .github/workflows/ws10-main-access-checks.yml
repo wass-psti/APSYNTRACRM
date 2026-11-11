@@ -1,0 +1,66 @@
+name: WS10 restricted workspace creator and board sharing checks
+
+on:
+  push:
+    branches:
+      - feat/ws10-workspace-ownership-invites-main-20261111
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/workspace-ui.js'
+      - 'frontend/workspace-owner-governance.js'
+      - 'frontend/workspace-board-groups.js'
+      - 'frontend/board-share.js'
+      - 'frontend/board-people.js'
+      - 'frontend/tests/workspace-owner-governance.test.mjs'
+      - 'frontend/tests/workspace-board-groups.test.mjs'
+      - 'frontend/tests/board-share.test.mjs'
+      - 'frontend/tests/board-people.test.mjs'
+      - 'frontend/tests/workspace-ui.test.mjs'
+      - 'frontend/tests/workspace-lifecycle-client.test.mjs'
+      - 'sql/ws10-restricted-workspace-ownership-CANDIDATE-NOT-APPLIED.sql'
+      - 'scripts/priority5-style-manifest.mjs'
+      - 'frontend/apsyntra-styles.bundle.css'
+      - '.github/workflows/ws10-main-access-checks.yml'
+  pull_request:
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/workspace-ui.js'
+      - 'frontend/workspace-owner-governance.js'
+      - 'frontend/workspace-board-groups.js'
+      - 'frontend/board-share.js'
+      - 'frontend/board-people.js'
+      - 'frontend/tests/workspace-owner-governance.test.mjs'
+      - 'frontend/tests/workspace-board-groups.test.mjs'
+      - 'frontend/tests/board-share.test.mjs'
+      - 'frontend/tests/board-people.test.mjs'
+      - 'sql/ws10-restricted-workspace-ownership-CANDIDATE-NOT-APPLIED.sql'
+      - '.github/workflows/ws10-main-access-checks.yml'
+permissions:
+  contents: read
+jobs:
+  source-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax checks
+        run: |
+          node --check frontend/app.js
+          node --check frontend/workspace-ui.js
+          node --check frontend/workspace-owner-governance.js
+          node --check frontend/board-share.js
+          node --check frontend/board-people.js
+          node --check frontend/workspace-board-groups.js
+      - name: Creator role, workspace and board isolation tests
+        run: |
+          node --test frontend/tests/workspace-owner-governance.test.mjs frontend/tests/workspace-ui.test.mjs frontend/tests/workspace-lifecycle-client.test.mjs frontend/tests/workspace-board-groups.test.mjs frontend/tests/board-share.test.mjs frontend/tests/board-people.test.mjs frontend/tests/resource-email-invitations.test.mjs frontend/tests/board-activity-ui.test.mjs
+      - name: Preserve single stylesheet build
+        run: |
+          node scripts/build-priority5-styles.mjs --check
+          node --test frontend/tests/priority5-style-delivery.test.mjs
+      - name: Confirm no live invitation and ownership permission activation
+        run: |
+          node --input-type=module -e "import {WS10_CREATION_AUTH_ENABLED,WS10_OWNERSHIP_TRANSFER_ENABLED} from './frontend/workspace-owner-governance.js';import {BOARD_GROUP_ACCESS_ENABLED} from './frontend/workspace-board-groups.js';import {RESOURCE_EMAIL_INVITES_ENABLED} from './frontend/resource-email-invitations.js';if(WS10_CREATION_AUTH_ENABLED||WS10_OWNERSHIP_TRANSFER_ENABLED||BOARD_GROUP_ACCESS_ENABLED||RESOURCE_EMAIL_INVITES_ENABLED)process.exit(1)"
