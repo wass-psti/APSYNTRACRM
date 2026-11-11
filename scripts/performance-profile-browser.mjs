@@ -9,7 +9,9 @@ import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'..');
 const allow=new Set(['/frontend/tests/fixtures/performance-profile-browser.html',
  '/frontend/performance-profile.js','/frontend/performance-critical-path.js',
- '/frontend/workspace-startup-read.js','/frontend/performance-entry-waterfall.js']);
+ '/frontend/workspace-startup-read.js','/frontend/performance-entry-waterfall.js',
+ '/frontend/interaction-search.js','/frontend/frame-coalescer.js',
+ '/frontend/board-column-dom.js']);
 const server=createServer((req,res)=>{
  const url=new URL(req.url,'http://127.0.0.1');
  if(!allow.has(url.pathname)){res.writeHead(404);res.end('not found');return;}
@@ -106,6 +108,32 @@ async function run(){
   assert.equal(waterfall.afterLatestPublicResourceMs,40);
   assert.doesNotMatch(JSON.stringify(waterfall),/secret|must-not-leak|private|token|app\.js/);
   console.log('BROWSER_ENTRY_WATERFALL_PASS: bounded numeric-only public resource timing');
+  const interaction=await page.evaluate('performanceAcceptance.interactionSearch()');
+  assert.equal(interaction.rows,1200);
+  assert.equal(interaction.visibleAfterClear,1200);
+  assert.equal(interaction.firstQueryVisible,120);
+  assert.equal(interaction.emptyQueryVisible,0);
+  assert.equal(interaction.stableNodes,true);
+  assert.equal(interaction.scheduledFrames,1);
+  assert.equal(interaction.coalescedValue,999);
+  console.log('BROWSER_INTERACTION_FILTER_PASS: 1,200 retained DOM rows; no node replacement; one scheduled frame');
+  console.log('BROWSER_INTERACTION_FILTER_TIMINGS_MS: '+JSON.stringify(interaction.searchDurationsMs));
+  const columnEditing=await page.evaluate('performanceAcceptance.columnEditing()');
+  assert.equal(columnEditing.tables,12);
+  assert.equal(columnEditing.patchedCells,1200);
+  assert.equal(columnEditing.hiddenCells,1200);
+  assert.equal(columnEditing.stableNodes,true);
+  assert.equal(columnEditing.targetPatched,true);
+  assert.equal(columnEditing.removed,true);
+  assert.equal(columnEditing.width,'300');
+  assert.equal(columnEditing.visibleRestoreRequiresRender,true);
+  assert.equal(columnEditing.pendingPreservesDraft,true);
+  assert.equal(columnEditing.pendingFlushRemovesColumn,true);
+  assert.equal(columnEditing.partialPatchPreservesDraft,true);
+  assert.equal(columnEditing.partialPatchFlushesAfterEdit,true);
+  assert.ok(columnEditing.patchMs>=0&&columnEditing.hideMs>=0);
+  console.log('BROWSER_COLUMN_EDITING_PASS: 1,200 targeted cells patched/removed; unaffected nodes retained');
+  console.log('BROWSER_COLUMN_EDITING_TIMINGS_MS: '+JSON.stringify({patch:columnEditing.patchMs,hide:columnEditing.hideMs}));
   const critical=await page.evaluate('performanceAcceptance.criticalPath()');
   assert.equal(critical.totalMs,120);
   assert.equal(critical.entryFromNavigationMs,0);

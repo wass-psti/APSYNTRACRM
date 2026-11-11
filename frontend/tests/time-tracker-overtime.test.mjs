@@ -112,3 +112,12 @@ test('SQL server contract is staged and enforces bootstrap decision gate and aud
  assert.match(app,/tt-ot-current/);
  assert.match(app,/TT_OT_WRITES_ACCEPTED/);
 });
+
+test('overtime search retains same-status request nodes for immediate query broadening',()=>{
+ const m=timeTrackerOtMetrics(rows,{status:'Submitted',search:'emergency'},now);
+ assert.equal(m.visible.length,1);
+ assert.equal(m.statusRows.length,1);
+ const html=renderTimeTrackerOvertime({requests:rows,filters:{status:'Submitted',search:'emergency'},now});
+ assert.match(html,/data-search-text="worker one emergency preparation and review 2026-11-02"/);
+ assert.match(html,/data-tt-ot-empty hidden/);
+});

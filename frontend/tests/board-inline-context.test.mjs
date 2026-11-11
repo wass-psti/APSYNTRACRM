@@ -95,7 +95,8 @@ test('column menus stay contextual, are keyboard reachable and never call Manage
  assert.match(app,/function contextualColumnDelete\(/);
  assert.match(app,/function contextualColumnEditor\(/);
  assert.match(app,/await verifyInlineColumnBoard\(snapshot\)/);
- assert.match(app,/await db\.rpc\('wm_board_ui_read'/);
+ assert.doesNotMatch(app.slice(app.indexOf('async function verifyInlineColumnBoard'),app.indexOf('function inlineColumnSnapshot')),/await db\.rpc\('wm_board_ui_read'|db\.allowed\(/);
+ assert.match(readFileSync('frontend/board-structure-admin.js','utf8'),/await hasManage\(this\.api,id\)/);
  assert.match(app,/await boardStructureClient\.mutate\(fresh/);
  assert.match(app,/boardStructureClient\.save\(fresh/);
  assert.match(app,/confirmInlineColumnDelete/);

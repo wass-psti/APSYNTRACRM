@@ -96,8 +96,8 @@ import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
 import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
-import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board-window.js';
-import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
+import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds,updateBoardWindowRow} from './board-window.js';
+import {canManuallyEditBoard,genericBoardColumns,createBoardRenderIndex,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
 import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
@@ -150,6 +150,9 @@ import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAU
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
+import {applySearchVisibility} from './interaction-search.js';
+import {createFrameCoalescer} from './frame-coalescer.js';
+import {patchBoardColumnDom} from './board-column-dom.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
@@ -231,6 +234,7 @@ let pendingInvitation=null;
 let invitationAcceptanceBusy=false;
 let invitationAcceptanceStatus='';
 let modal=null;
+let inlineCellPreflight=null;
 let routeSerial=0;
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
@@ -646,50 +650,246 @@ function boardsPage(){
     state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')+'</div>')+`
  </div>`;
 }
-function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={}){
+function boardCellContent(item,key,detail=state.board,index=null){
+ if(key==='record')return e(item.title||'Untitled');
+ if(key==='status')return '<span class="status '+statusClass(item.status)+'">'+e(item.status||'Planned')+'</span>';
+ if(key==='owner')return item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned';
+ if(key==='due')return e(displayDate(item.due_date));
+ const renderIndex=index||createBoardRenderIndex(detail);
+ const definition=cellColumn(detail,key,renderIndex);
+ const value=expectedCellValue(detail,item,key,renderIndex.valuesByItem);
+ const status=definition?.data_type==='status'?configuredStatus(value,definition.config):null;
+ return status?'<span class="board-configured-status '+statusColorClass(status.color)+'">'+
+  e(status.label)+'</span>':e(visibleValue(value,definition?.data_type,definition?.config));
+}
+function boardCellTriggerMarkup(item,key,detail=state.board,index=null){
+ const renderIndex=index||(key.startsWith('col:')?createBoardRenderIndex(detail):null);
+ const definition=cellColumn(detail,key,renderIndex);
+ const writable=canManuallyEditBoard(detail?.board,state.edit)&&
+  (!definition?.virtual||canBulkEditBoard(detail?.board));
+ return editableCellButton({key,item,detail,writable,cellContent:boardCellContent(item,key,detail,renderIndex)});
+}
+function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',
+ detail=state.board,columnLabels={},preparedColumns=null,renderIndex=null){
  const minimal=isItemOnlyBoard(detail,state.boardUi);
- const columns=genericBoardColumns(detail,{primaryTitle,columnLabels,minimal,
+ const columns=preparedColumns||genericBoardColumns(detail,{primaryTitle,columnLabels,minimal,
   hiddenVirtual:state.boardUi?.hiddenVirtual});
+ const index=renderIndex||createBoardRenderIndex(detail);
+ const customColumns=columns.filter(column=>column.key.startsWith('col:'));
  const writable=canManuallyEditBoard(detail?.board,allowEdit);
+ const editableStatusKeys=columns.filter(column=>{
+  const definition=cellColumn(detail,column.key,index);
+  return definition?.data_type==='status'&&(!definition.virtual||canBulkEditBoard(detail?.board));
+ }).map(column=>column.key);
  const rows=items.map(item=>{
   const editable=writable&&!item.archived_at,cell={};
   const display=(key,content)=>{
    if(state.inlineCell?.itemId===item.id&&state.inlineCell?.key===key)
     return renderInlineCellEditor({item,key,detail,members:detail?.members||[]});
+   const definition=cellColumn(detail,key,index);
    return editableCellButton({key,item,detail,
-    writable:editable&&(!cellColumn(detail,key)?.virtual||canBulkEditBoard(detail?.board)),
+    writable:editable&&(!definition?.virtual||canBulkEditBoard(detail?.board)),
     cellContent:content});
   };
   cell.record='<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(item.id)+'" aria-label="Open '+e(item.title||'Untitled')+' details">▥</button> '+
-   display('record',e(item.title||'Untitled'));
-  cell.status=display('status','<span class="status '+statusClass(item.status)+'">'+e(item.status||'Planned')+'</span>');
-  cell.owner=display('owner',item.assignee_id?e(String(item.assignee_id).slice(0,8))+'…':'Unassigned');
-  cell.due=display('due',e(displayDate(item.due_date)));
-  for(const column of columns.filter(c=>c.key.startsWith('col:'))){
-   const def=cellColumn(detail,column.key);
-   const value=expectedCellValue(detail,item,column.key);
-   const status=def?.data_type==='status'?configuredStatus(value,def.config):null;
-   const formatted=status?
-    '<span class="board-configured-status '+statusColorClass(status.color)+'">'+
-     e(status.label)+'</span>':
-    e(visibleValue(value,def?.data_type,def?.config));
-   cell[column.key]=display(column.key,formatted);
-  }
+   display('record',boardCellContent(item,'record',detail,index));
+  cell.status=display('status',boardCellContent(item,'status',detail,index));
+  cell.owner=display('owner',boardCellContent(item,'owner',detail,index));
+  cell.due=display('due',boardCellContent(item,'due',detail,index));
+  for(const column of customColumns)
+   cell[column.key]=display(column.key,boardCellContent(item,column.key,detail,index));
   cell.actions=editable?'<button class="icon-button" data-action="edit-item" data-id="'+
    e(item.id)+'" title="Edit item name inline">✎ Edit</button>':'';
-  const statusKeys=editable?columns.filter(c=>{
-   const def=cellColumn(detail,c.key);
-   return def?.data_type==='status'&&(!def.virtual||canBulkEditBoard(detail?.board));
-  }).map(c=>c.key):[];
   return {itemId:item.archived_at?null:item.id,search:String(item.title||'').toLowerCase(),
-   cells:cell,statusKeys};
+   cells:cell,statusKeys:editable?editableStatusKeys:[]};
  });
  return boardTable({columns,rows,layout,groupId,
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
-  summaries:groupColumnSummaries({items,columns,detail}),
+  summaries:groupColumnSummaries({items,columns,detail,valueIndex:index.valuesByItem,
+   columnIndex:index.columnsById}),
   addColumn:minimal&&state.boardManage,minimal,
   virtualize:boardItemsComplete(detail)});
+}
+function findBoardCellNode(itemId,key){
+ for(const cell of root.querySelectorAll('td[data-board-cell-item-id]'))
+  if(cell.dataset.boardCellItemId===itemId&&cell.dataset.boardCellKey===key)return cell;
+ return null;
+}
+function mountInlineCellEditor(item,key){
+ const cell=findBoardCellNode(item.id,key);
+ const trigger=cell?.querySelector('.board-inline-cell-trigger');
+ if(!cell||!trigger)return null;
+ const template=document.createElement('template');
+ template.innerHTML=renderInlineCellEditor({item,key,detail:state.board,members:state.board?.members||[]});
+ const form=template.content.firstElementChild;
+ if(!form)return null;
+ trigger.hidden=true;
+ trigger.after(form);
+ const editor=form.querySelector('input:not([type="checkbox"]),select,textarea,input[type="checkbox"]');
+ editor?.focus({preventScroll:true});
+ const definition=cellColumn(state.board,key);
+ if(definition?.data_type==='status'&&editor?.tagName==='SELECT'){
+  try{editor.showPicker?.();}catch{/* Native picker can require a fresh gesture; focus remains usable. */}
+ }
+ return {cell,trigger,form};
+}
+let pendingBoardColumnDomPatch=null;
+function closeInlineCellEditor(stateCell=state.inlineCell,{focus=false}={}){
+ if(!stateCell)return;
+ const cell=findBoardCellNode(stateCell.itemId,stateCell.key);
+ cell?.querySelector('[data-inline-cell-form]')?.remove();
+ const trigger=cell?.querySelector('.board-inline-cell-trigger');
+ if(trigger){trigger.hidden=false;if(focus)trigger.focus({preventScroll:true});}
+ flushPendingBoardColumnDomPatch();
+}
+function patchBoardCellDom(item,key,renderIndex=null){
+ const cell=findBoardCellNode(item.id,key);
+ const current=cell?.querySelector('.board-inline-cell-trigger');
+ if(!cell)return false;
+ const template=document.createElement('template');
+ template.innerHTML=boardCellTriggerMarkup(item,key,state.board,renderIndex);
+ const next=template.content.firstElementChild;
+ if(!next)return false;
+ if(current)current.replaceWith(next);
+ else cell.querySelector('[data-inline-cell-form]')?.before(next);
+ cell.querySelector('[data-inline-cell-form]')?.remove();
+ if(key==='record'){
+  const row=cell.closest('tr[data-searchable]');
+  if(row){
+   row.dataset.searchable=String(item.title||'').toLocaleLowerCase();
+   if(!row.closest('table[data-board-virtual]')){
+    const needle=String(state.boardItemSearch||'').toLocaleLowerCase().trim();
+    row.hidden=!row.dataset.searchable.includes(needle);
+   }
+  }
+ }
+ next.focus({preventScroll:true});
+ flushPendingBoardColumnDomPatch();
+ return true;
+}
+function applyBoardCellValue(item,key,value){
+ if(key==='record'){item.title=value;return;}
+ if(key==='status'){item.status=value;return;}
+ if(key==='owner'){item.assignee_id=value;return;}
+ if(key==='due'){item.due_date=value;return;}
+ if(!key.startsWith('col:'))return;
+ if(!Array.isArray(state.board.values))state.board.values=[];
+ const columnId=key.slice(4);
+ const existing=state.board.values.find(entry=>entry.item_id===item.id&&entry.column_id===columnId);
+ if(existing)existing.value=value;
+ else state.board.values.push({item_id:item.id,column_id:columnId,value});
+}
+function updateBoardGroupSummary(groupId,renderIndex=null){
+ const detail=state.board;if(!detail)return;
+ const knownGroups=new Set((detail.groups||[]).map(group=>group.id));
+ const items=groupId==='ungrouped'?
+  (detail.items||[]).filter(item=>!knownGroups.has(item.group_id)):
+  (detail.items||[]).filter(item=>item.group_id===groupId);
+ const minimal=isItemOnlyBoard(detail,state.boardUi);
+ const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record';
+ const columnLabels=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{};
+ const columns=genericBoardColumns(detail,{primaryTitle,columnLabels,minimal,
+  hiddenVirtual:state.boardUi?.hiddenVirtual});
+ const index=renderIndex||createBoardRenderIndex(detail);
+ const summary=groupColumnSummaries({items,columns,detail,valueIndex:index.valuesByItem,
+  columnIndex:index.columnsById});
+ let table=null;
+ for(const candidate of root.querySelectorAll('table[data-group-id]'))
+  if(candidate.dataset.groupId===groupId){table=candidate;break;}
+ for(const cell of table?.querySelectorAll('[data-board-summary-key]')||[])
+  cell.textContent=summary[cell.dataset.boardSummaryKey]??'—';
+}
+
+function currentOrdinaryBoardColumns(){
+ if(!state.board)return [];
+ return genericBoardColumns(state.board,{
+  primaryTitle:state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record',
+  columnLabels:state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{},
+  minimal:isItemOnlyBoard(state.board,state.boardUi),
+  hiddenVirtual:state.boardUi?.hiddenVirtual
+ });
+}
+function refreshBoardColumnMenu(){
+ const current=root.querySelector('.board-column-menu'),layout=activeBoardLayout();
+ if(!current||!layout)return;
+ const wasOpen=current.open,template=document.createElement('template');
+ template.innerHTML=boardColumnMenu(currentOrdinaryBoardColumns(),layout.pref);
+ const next=template.content.firstElementChild;
+ if(!next)return;
+ next.open=wasOpen;current.replaceWith(next);
+}
+function patchBoardColumn(key,{renderCells=true,refreshMenu=true}={}){
+ if(!state.board||state.tab!=='items'||moduleByBoardName(state.board.board?.name))return false;
+ const column=currentOrdinaryBoardColumns().find(entry=>entry.key===key);
+ const visible=!!column;
+ if(!visible&&root.querySelector('[data-inline-cell-form]')){
+  pendingBoardColumnDomPatch={key,boardId:state.boardId};return true;
+ }
+ renderCells=renderCells&&visible;
+ const index=renderCells?createBoardRenderIndex(state.board):null;
+ const itemsById=renderCells?new Map((state.board.items||[]).map(item=>[item.id,item])):null;
+ const result=patchBoardColumnDom(root,{
+  key,title:column?.title||key,visible,
+  renderCell:itemId=>{
+   if(!renderCells)return null;
+   const item=itemsById.get(itemId);if(!item)return null;
+   const template=document.createElement('template');
+   template.innerHTML=boardCellTriggerMarkup(item,key,state.board,index);
+   return template.content.firstElementChild||template.content.firstChild||null;
+  }
+ });
+ if(result.status==='pending'||result.status==='partial'){
+  pendingBoardColumnDomPatch={key,boardId:state.boardId};
+  if(refreshMenu&&result.status==='partial')refreshBoardColumnMenu();
+  return true;
+ }
+ if(result.status!=='patched'){
+  if(result.status==='invalid')return false;
+  if(result.status==='missing'&&visible&&activeBoardLayout()?.pref.hidden.includes(key)){
+   if(refreshMenu)refreshBoardColumnMenu();
+   return true;
+  }
+  if(root.querySelector('[data-inline-cell-form]')){pendingBoardColumnDomPatch=key;return true;}
+  render();return true;
+ }
+ if(refreshMenu)refreshBoardColumnMenu();
+ return true;
+}
+function flushPendingBoardColumnDomPatch(){
+ const pending=pendingBoardColumnDomPatch;
+ if(!pending)return;
+ if(pending.boardId!==state.boardId){pendingBoardColumnDomPatch=null;return;}
+ if(root.querySelector('[data-inline-cell-form]'))return;
+ pendingBoardColumnDomPatch=null;
+ patchBoardColumn(pending.key);
+}
+function patchBoardColumnHeaders(){
+ const columns=currentOrdinaryBoardColumns();
+ let complete=true;
+ for(const column of columns){
+  if(column.key==='record'||column.key.startsWith('col:'))
+   if(root.querySelector('thead th[data-column-key="'+column.key+'"]'))
+    complete=patchBoardColumn(column.key,{renderCells:false,refreshMenu:false})&&complete;
+ }
+ if(complete)refreshBoardColumnMenu();
+ return complete;
+}
+async function readBackBoardColumnMutation(snapshot,receipt){
+ if(!boardHistoryAuthorized(snapshot))return null;
+ const fresh=await db.board(snapshot.boardId);
+ if(!boardHistoryAuthorized(snapshot)||fresh?.board?.id!==snapshot.boardId||
+    fresh?.board?.workspace_id!==snapshot.workspaceId)
+  return null;
+ const received=Date.parse(receipt?.updated_at||'');
+ const current=Date.parse(fresh.board.updated_at||'');
+ if(!Number.isFinite(received)||!Number.isFinite(current)||current<received)
+  throw new ApiError('The saved column revision could not be reconciled. Refresh the board before continuing.',409);
+ if(['create','update'].includes(receipt?.action)&&
+    !fresh.columns?.some(column=>column.id===receipt.column_id))
+  throw new ApiError('The saved column was not present in the authoritative board readback.',409);
+ state.board=fresh;
+ return fresh;
 }
 
 function bulkReadyFor(board){
@@ -876,6 +1076,7 @@ function boardPage(){
  const columns=moduleKey?boardGridColumns(state.board,{primaryTitle,columnLabels,allowCustom}):
   genericBoardColumns(state.board,{primaryTitle,columnLabels,minimal,
    hiddenVirtual:state.boardUi?.hiddenVirtual});
+ const renderIndex=state.tab==='items'&&!moduleKey?createBoardRenderIndex(state.board):null;
  const layout=loadBoardLayout(state.context,b.id,tabSpecs.map(t=>t.key),columns.map(c=>c.key),boardPreferences);
  if(minimal)layout.columns=itemOnlyColumnKeys(columns,state.boardUi);
  const tabLookup=new Map(tabSpecs.map(t=>[t.key,t]));
@@ -883,7 +1084,7 @@ function boardPage(){
   layout.tabs.map(k=>tabLookup.get(k)).filter(Boolean),state.boardUi);
  const canReorderTabs=moduleKey!=='timetracker'||(state.boardManage&&
   state.boardUi?.status==='VERIFIED_READ'&&!state.tabMoveBusy);
- // One render-local value index for all application-managed board groups.
+ // One render-local value index for all ordinary board groups.
  const preparedGrid=moduleKey&&state.tab==='items'?
   prepareBoardGrid(state.board,{primaryTitle,columnLabels,allowCustom}):null;
 
@@ -932,9 +1133,9 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
    boardColumns:state.board.columns||[],boardValues:state.board.values||[],
    projection:state.ttBoardAttendance,userId:state.context?.user_id,
    workspaceId:state.context?.workspace_id,boardId:b.id}):
-  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
+  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,columns,renderIndex)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}`;
+ ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,columns,renderIndex)}`:''}`}`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -1189,17 +1390,6 @@ async function applySelectedBulk(action,status=null){
  toast(receipt.applied+' board records changed atomically.');
  return receipt;
 }
-function preserveInlineScroll(){
- const top=window.scrollY,positions=[...root.querySelectorAll('.board-group-scroll')].map(node=>
-  ({id:node.querySelector('table[data-group-id]')?.dataset.groupId,left:node.scrollLeft}));
- render();
- for(const pos of positions){
-  const table=[...root.querySelectorAll('table[data-group-id]')]
-   .find(x=>x.dataset.groupId===pos.id);
-  if(table?.parentElement)table.parentElement.scrollLeft=pos.left;
- }
- window.scrollTo(0,top);
-}
 async function verifyOrdinaryItemWrite(boardId,groupId=null){
  const actor=await auth.getVerifiedUser(),ctx=await db.context();
  const fresh=await db.board(boardId);
@@ -1239,31 +1429,43 @@ async function addBoardRowInline(form){
 }
 async function startBoardInlineEdit(itemId,key){
  if(!validUuid(itemId)||!activeBoardLayout()||
-  !canManuallyEditBoard(state.board?.board,state.edit))return;
+  !canManuallyEditBoard(state.board?.board,state.edit)||state.inlineCellBusy)return;
  const boardId=state.boardId,item=state.board.items?.find(x=>x.id===itemId);
  const col=cellColumn(state.board,key);
  if(!item||item.archived_at||!col)return;
  if(col.virtual&&!await ensureSignedBulkReady(state.board.board))return;
- // Opening a select is a local, nonmutating UI action. Keep the same signed
- // preflight for normal fields, but open a physical status picker synchronously
- // during its user gesture; showPicker requires transient browser activation.
- if(col.data_type!=='status'||col.virtual)await verifyOrdinaryItemWrite(boardId);
- if(state.boardId!==boardId)return;
- state.inlineCell={boardId,itemId,key,expected:expectedCellValue(state.board,item,key)};
- preserveInlineScroll();
- const editor=root.querySelector('[data-inline-cell-form] input,[data-inline-cell-form] select,[data-inline-cell-form] textarea');
- editor?.focus();
- if(col.data_type==='status'&&editor?.tagName==='SELECT'){
-  try{editor.showPicker?.();}catch{/* Native picker may require a fresh gesture; focus remains usable. */}
+ if(state.inlineCell){
+  closeInlineCellEditor(state.inlineCell);
+  state.inlineCell=null;inlineCellPreflight=null;
  }
- if(col.data_type==='status'&&!col.virtual){
-  try{await verifyOrdinaryItemWrite(boardId);}
-  catch(error){
-   if(state.inlineCell?.boardId===boardId&&state.inlineCell?.itemId===itemId){
-    state.inlineCell=null;preserveInlineScroll();
-   }
+ if(state.boardId!==boardId)return;
+ const stateCell={boardId,itemId,key,
+  expected:expectedCellValue(state.board,item,key)};
+ state.inlineCell=stateCell;
+ const mounted=mountInlineCellEditor(item,key);
+ if(!mounted){state.inlineCell=null;return;}
+ // Keep the existing signed actor/context/board/edit preflight, but do not make
+ // a user wait for several network reads before the local editor appears.
+ // Save still performs its own fresh authorization and compare-and-swap checks.
+ const submit=mounted.form.querySelector('button[type=submit]');
+ if(submit){submit.disabled=true;submit.textContent='Checking…';}
+ const promise=verifyOrdinaryItemWrite(boardId);
+ inlineCellPreflight={stateCell,promise};
+ try{
+  await promise;
+  if(state.inlineCell!==stateCell)return;
+  const currentForm=findBoardCellNode(itemId,key)?.querySelector('[data-inline-cell-form]');
+  const currentSubmit=currentForm?.querySelector('button[type=submit]');
+  if(currentSubmit){currentSubmit.disabled=false;currentSubmit.textContent='Save';}
+ }catch(error){
+  if(state.inlineCell===stateCell){
+   closeInlineCellEditor(stateCell,{focus:true});
+   state.inlineCell=null;
    throw error;
   }
+  return;
+ }finally{
+  if(inlineCellPreflight?.stateCell===stateCell)inlineCellPreflight=null;
  }
 }
 async function saveBoardInlineCell(form){
@@ -1271,9 +1473,13 @@ async function saveBoardInlineCell(form){
  if(!stateCell||state.inlineCellBusy||!activeBoardLayout()||
   stateCell.boardId!==boardId||form.dataset.inlineCellForm!==stateCell.itemId||
   form.dataset.columnKey!==stateCell.key)return;
+ if(inlineCellPreflight?.stateCell===stateCell){
+  try{await inlineCellPreflight.promise;}catch{return;}
+ }
  const col=cellColumn(state.board,stateCell.key),value=parseCellForm(col,new FormData(form));
  if(JSON.stringify(value)===JSON.stringify(stateCell.expected)){
-  state.inlineCell=null;preserveInlineScroll();return;
+  closeInlineCellEditor(stateCell,{focus:true});
+  state.inlineCell=null;inlineCellPreflight=null;return;
  }
  state.inlineCellBusy=true;
  const button=form.querySelector('button[type=submit]');
@@ -1290,10 +1496,39 @@ async function saveBoardInlineCell(form){
    if(!bulkReadyFor(fresh.board))throw new ApiError('Verify signed bulk access before editing status.',403);
    await boardBulkClient.apply(fresh.board,'status',[item],{status:value});
   }else await db.setBoardCellCas(item.id,col.id,value,stateCell.expected);
-  state.inlineCell=null;
-  if(state.boardId===boardId){await loadBoard(boardId,'items');toast('Cell saved.');}
+  // The signed CAS receipt is authoritative. Reconcile only the changed cell
+  // in local state and the retained virtual row model; do not reload the board.
+  if(state.inlineCell===stateCell&&state.boardId===boardId&&
+     state.board?.board?.id===boardId&&state.context?.user_id===auth.userId){
+   const current=state.board.items?.find(entry=>entry.id===stateCell.itemId);
+   if(current){
+    applyBoardCellValue(current,stateCell.key,value);
+    const currentIndex=createBoardRenderIndex(state.board);
+    const triggerMarkup=boardCellTriggerMarkup(current,stateCell.key,state.board,currentIndex);
+    const rowMarkup=stateCell.key==='record'?
+     '<button class="board-item-open" type="button" data-action="board-item-detail" data-id="'+e(current.id)+'" aria-label="Open '+e(current.title||'Untitled')+' details">▥</button> '+triggerMarkup:
+     triggerMarkup;
+    const knownGroup=(state.board.groups||[]).some(group=>group.id===current.group_id);
+    const groupId=knownGroup?current.group_id:'ungrouped';
+    patchBoardCellDom(current,stateCell.key,currentIndex);
+    const windowUpdated=updateBoardWindowRow(groupId,current.id,row=>{
+     row.cells[stateCell.key]=rowMarkup;
+     if(stateCell.key==='record')row.search=String(current.title||'').toLowerCase();
+    });
+    const visibleIds=windowUpdated?visibleBoardWindowIds(groupId):null;
+    const visibleCell=findBoardCellNode(current.id,stateCell.key);
+    if(visibleIds?.includes(current.id))
+     visibleCell?.querySelector('.board-inline-cell-trigger')?.focus({preventScroll:true});
+    else if((visibleIds&&!visibleIds.includes(current.id))||visibleCell?.closest('tr')?.hidden)
+     root.querySelector('#search-board-items')?.focus({preventScroll:true});
+    updateBoardGroupSummary(groupId,currentIndex);
+   }
+   state.inlineCellBusy=false;
+   state.inlineCell=null;inlineCellPreflight=null;
+   toast('Cell saved.');
+  }
  }finally{
-  state.inlineCellBusy=false;
+  if(state.inlineCell===stateCell)state.inlineCellBusy=false;
   if(button?.isConnected){button.disabled=false;button.textContent='Save';}
  }
 }
@@ -1618,7 +1853,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
  if(state.mrhTrackerScope!==mrhScope){state.mrhTrackerScope=mrhScope;
   state.mrhTrackerFilters={...MATERIAL_TRACKER_DEFAULT_FILTERS};state.mrhAddView=false;state.mrhAddBusy=false;}
  const seq=++routeSerial;
- state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=tab==='items'?{status:'LOADING'}:null;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
+ state.groupEditId=null;state.groupEditBusy=false;state.inlineCell=null;inlineCellPreflight=null;state.inlineCellBusy=false;state.ttBoardGpsEligible=false;state.ttBoardAttendance=tab==='items'?{status:'LOADING'}:null;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';
  if(state.boardId!==boardId||state.tab!=='attendance'){
   state.ttView='clock';state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};
  }
@@ -3855,21 +4090,19 @@ async function verifyInlineColumnBoard(snapshot){
     state.boardId!==snapshot.boardId||state.context?.user_id!==snapshot.userId||
     state.context?.workspace_id!==snapshot.workspaceId)
   throw new ApiError('Board context or manager permission changed.',403);
- const [user,ctx,fresh,allowed]=await Promise.all([
-  auth.getVerifiedUser(),db.context(),db.board(snapshot.boardId),
-  db.allowed(snapshot.boardId,'manage')
+ const [user,ctx,fresh]=await Promise.all([
+  auth.getVerifiedUser(),db.context(),db.board(snapshot.boardId)
  ]);
  if(user?.id!==snapshot.userId||ctx?.user_id!==snapshot.userId||
     ctx?.profile?.status!=='active'||ctx?.workspace_id!==snapshot.workspaceId||
-    allowed!==true||!canManuallyEditBoard(fresh?.board,true)||
+    !canManuallyEditBoard(fresh?.board,true)||
     fresh?.board?.id!==snapshot.boardId||
     fresh?.board?.workspace_id!==snapshot.workspaceId)
-  throw new ApiError('Signed board manager authorization is no longer valid.',403);
+  throw new ApiError('Signed board context is no longer valid.',403);
  if(fresh.board.updated_at!==snapshot.boardRevision)
   throw new ApiError('Board columns changed since this menu was opened. Refresh and review.',409);
- const session=await db.rpc('wm_board_ui_read',{p_board_id:snapshot.boardId});
- if(session?.board_id!==snapshot.boardId)
-  throw new ApiError('Active signed board session is required.',403);
+ // The subsequent writer performs the authoritative MANAGE + active-session
+ // checks itself. Avoid duplicate work_board_access and wm_board_ui_read RPCs.
  return fresh;
 }
 function inlineColumnSnapshot(){
@@ -3887,9 +4120,11 @@ function contextualColumnEditor(key){
    async fd=>{
     const fresh=await verifyInlineColumnBoard(snapshot);
     const settings=await boardStructureClient.read(snapshot.boardId);
-    await boardStructureClient.save(fresh,{...settings,
+    const saved=await boardStructureClient.save(fresh,{...settings,
      primaryLabel:String(fd.get('primaryLabel')||'')});
-    await loadBoard(snapshot.boardId,'items');
+    if(!boardHistoryAuthorized(snapshot))return;
+    state.boardUi=saved;
+    if(!patchBoardColumnHeaders())render();
    });
   return;
  }
@@ -3914,9 +4149,11 @@ function contextualColumnEditor(key){
   const config=['status','dropdown'].includes(update.type)?
    parseChoiceConfig(update.type,fd.get('options'),sameType?target.config:{}):
    sameType?target.config:{};
-  await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
+  const receipt=await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
    name:update.name,type:update.type,config,visible:update.visible});
-  await loadBoard(snapshot.boardId,'items');
+  const updated=await readBackBoardColumnMutation(snapshot,receipt);
+  if(!updated)return;
+  if(!patchBoardColumn(key))render();
  });
 }
 function contextualColumnDelete(key){
@@ -3978,9 +4215,9 @@ function contextualColumnCreate(){
   const fresh=await verifyInlineColumnBoard(snapshot);
   const selection=resolveColumnTypeSelection(String(fd.get('type')||'text'),
    fd.get('options'));
-  await boardStructureClient.mutate(fresh,{action:'create',name:String(fd.get('name')||''),
+  const receipt=await boardStructureClient.mutate(fresh,{action:'create',name:String(fd.get('name')||''),
    type:selection.type,config:parseChoiceConfig(selection.type,selection.options)});
-  await loadBoard(snapshot.boardId,'items');
+  if(await readBackBoardColumnMutation(snapshot,receipt))render();
  },{submitLabel:'Add column'});
 }
 async function openBoardStructure(){
@@ -4130,14 +4367,21 @@ async function openBoardStructure(){
     const columnLabels=Object.fromEntries(describeBoardColumns(detail)
      .filter(col=>col.kind==='custom').map(col=>
       [col.id,String(fd.get('columnLabel:'+col.id)||col.name||'').trim()]));
-    await boardStructureClient.save(detail,{
+    const saved=await boardStructureClient.save(detail,{
      ...settings,primaryLabel:String(fd.get('primaryLabel')||''),
      tabs,columnLabels
     });
+    if(!authorized())return;
+    const tabsChanged=JSON.stringify(settings.tabs)!==JSON.stringify(saved.tabs);
+    state.boardUi=saved;
+    hideModal();
+    if(tabsChanged||!patchBoardColumnHeaders())render();
+    toast('Board configuration saved.');
+    return;
    }else if(form.dataset.structureForm==='create'){
     const selection=resolveColumnTypeSelection(String(fd.get('type')||'text'),
      fd.get('options'));
-    await boardStructureClient.mutate(detail,{
+    const receipt=await boardStructureClient.mutate(detail,{
      action:'create',name:String(fd.get('name')||''),
      type:selection.type,
      config:['phone','rating','percentage'].includes(selection.type)?
@@ -4145,9 +4389,11 @@ async function openBoardStructure(){
        max:fd.get('ratingMax'),decimals:fd.get('percentageDecimals')
       }):parseChoiceConfig(selection.type,selection.options)
     });
+    const updated=await readBackBoardColumnMutation(snapshot,receipt);
+    if(!updated)return;
    }else return;
    if(!authorized())return;
-   hideModal();await loadBoard(snapshot.boardId,state.tab);
+   hideModal();render();
    toast('Board configuration saved.');
   }catch(err){
    if(authorized())notice(err);
@@ -4220,12 +4466,15 @@ async function openBoardStructure(){
     (column.visible?'checked ':'')+'/> Visible on board</label></div>',
     async fd=>{
      if(!boardHistoryAuthorized(snapshot))throw new ApiError('Board context changed.',403);
-     await boardStructureClient.mutate(detail,{action:'update',columnId:column.id,
+     const nextVisible=fd.has('visible');
+     const receipt=await boardStructureClient.mutate(detail,{action:'update',columnId:column.id,
       name:String(fd.get('name')||''),type:String(fd.get('type')||''),
       config:parseChoiceConfig(String(fd.get('type')||''),fd.get('options'),
        String(fd.get('type')||'')===column.type?column.config:{}),
-      visible:fd.has('visible')});
-     await loadBoard(snapshot.boardId,state.tab);
+      visible:nextVisible});
+     const updated=await readBackBoardColumnMutation(snapshot,receipt);
+     if(!updated)return;
+     if(!patchBoardColumn('col:'+column.id))render();
     });
   }else{
    const confirmation=window.prompt('Deleting '+column.name+
@@ -4368,7 +4617,7 @@ async function action(name,button){
       state.ws02dB3HandoffPending=true;
       await auth.signOut({scope:'local'});
     }
-    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff)await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
+    state.row01Busy=false;state.row01Result=null;state.inlineCell=null;inlineCellPreflight=null;state.inlineAddBusy=false;state.inlineCellBusy=false;if(!isB3LocalRevoke&&!isTl03LocalRevoke&&!isB3RlsHandoff)await auth.signOut();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};boardCacheChannel.stop();db.invalidateBoardCache();state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.tl03ReadRunId++;state.tl03ReadBusy=false;state.tl03ReadResult=null;state.context=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.ws02dB3RevokeArmed=false;state.ws02dB3RevokedReport=revoked;state.b2QaRunId++;state.b2QaBusy=false;state.b2QaReport=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];state.board=null;state.securityResult=null;state.securityProgress=[];state.securityWriteResult=null;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.frtSecurityResult=null;state.sec07Result=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;location.hash='#/login';state.tl03RevokeArmed=false;state.tl03RevokedReport=isTl03LocalRevoke?state.tl03RevokedReport:null;renderLogin();toast(isB3RlsHandoff?'Local sign-out complete. Sign in as another existing user in another workspace; then click B3 Step 2 without refreshing.':
      isTl03LocalRevoke?'Signed out of this session only. TradeLink revocation: '+(state.tl03RevokedReport?.status||'BLOCKED')+'.':
      isB3LocalRevoke?'Signed out of this session only. B3 revocation: '+(revoked?.status||'BLOCKED')+'.':'Signed out successfully.');break;}
  case 'ws01-open':{
@@ -6725,7 +6974,10 @@ case 'new-group':{
   await startBoardInlineEdit(button.dataset.itemId,button.dataset.columnKey);break;
  }
  case 'inline-cell-cancel':{
-  if(!state.inlineCellBusy){state.inlineCell=null;preserveInlineScroll();}
+  if(!state.inlineCellBusy){
+   const current=state.inlineCell;closeInlineCellEditor(current,{focus:true});
+   state.inlineCell=null;inlineCellPreflight=null;
+  }
   break;
  }
  case 'native-new-issue':{
@@ -6907,6 +7159,25 @@ function openBoardColumnContext(trigger){
  node.querySelector('[role="menuitem"]')?.focus();
 }
 let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;
+const boardResizeFrames=createFrameCoalescer({
+ requestFrame:callback=>requestAnimationFrame(callback),
+ cancelFrame:handle=>cancelAnimationFrame(handle),
+ apply:width=>{
+  if(!boardResize)return;
+  const current=boardResize;
+  current.col.setAttribute('width',String(width));
+  current.table.setAttribute('width',String(current.tableWidth+width-current.start));
+  current.current=width;
+ }
+});
+function cancelBoardResize(){
+ boardResizeFrames.cancel();
+ if(boardResize){
+  boardResize.col.setAttribute('width',String(boardResize.start));
+  boardResize.table.setAttribute('width',String(boardResize.tableWidth));
+ }
+ boardResize=null;
+}
 /** Save one authoritative, CAS-checked custom-column order for a signed Item-only board. */
 async function persistItemOnlyColumnOrder(keys){
  if(state.columnOrderBusy||!state.boardManage||
@@ -7013,8 +7284,10 @@ root.addEventListener('pointerdown',event=>{
   const table=resize.closest('table.board-table-custom');
   const col=table?.querySelector('col[data-column-key="'+resize.dataset.columnKey+'"]');
   if(!col||!th)return;
+  const start=col.width?Number(col.getAttribute('width')):th.getBoundingClientRect().width;
+  const tableWidth=Number(table.getAttribute('width'))||table.getBoundingClientRect().width;
   boardResize={pointerId:event.pointerId,x:event.clientX,key:resize.dataset.columnKey,
-   col,table,start:col.width?Number(col.getAttribute('width')):th.offsetWidth};
+   col,table,start,current:start,tableWidth};
   resize.setPointerCapture?.(event.pointerId);event.preventDefault();return;
  }
  // Native drag is for mouse/trackpad; pointer reorder supports touch and pen.
@@ -7033,19 +7306,16 @@ root.addEventListener('pointerdown',event=>{
 });
 window.addEventListener('pointermove',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
-  const width=columnWidth(boardResize.start+event.clientX-boardResize.x);
-  const previous=Number(boardResize.col.getAttribute('width'))||boardResize.start;
-  boardResize.col.setAttribute('width',String(width));
-  const total=Number(boardResize.table.getAttribute('width'))||boardResize.table.offsetWidth;
-  boardResize.table.setAttribute('width',String(total+width-previous));
+  boardResizeFrames.schedule(columnWidth(boardResize.start+event.clientX-boardResize.x));
   return;
  }
 });
 window.addEventListener('pointerup',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
-  const {key,col}=boardResize;
-  const width=columnWidth(col.getAttribute('width'));
-  persistBoardLayout(p=>({...p,widths:{...p.widths,[key]:width}}));
+  const current=boardResize;
+  boardResizeFrames.flush();
+  const width=columnWidth(current.current);
+  persistBoardLayout(p=>({...p,widths:{...p.widths,[current.key]:width}}));
   boardResize=null;return;
  }
  if(boardTouch&&event.pointerId===boardTouch.pointerId){
@@ -7059,7 +7329,7 @@ window.addEventListener('pointerup',event=>{
   }).catch(notice);
  }
 });
-window.addEventListener('pointercancel',()=>{boardResize=null;boardTouch=null;});
+window.addEventListener('pointercancel',()=>{cancelBoardResize();boardTouch=null;});
 document.addEventListener('pointerdown',event=>{
  if(boardColumnMenuNode?.isConnected&&
     !boardColumnMenuNode.contains(event.target)&&
@@ -7637,12 +7907,10 @@ root.addEventListener('input',event=>{
  if(event.target.id==='ft3-activity-search'&&state.view==='board'&&
     state.tab==='fueltrack'&&state.fuelTrackSection==='activity'&&
     state.boardId===FUELTRACK_V3_ID&&state.fuelTrackActivity&&auth.isSignedIn){
-  const position=event.target.selectionStart;
-  state.fuelTrackActivityFilters={...state.fuelTrackActivityFilters,
-   query:String(event.target.value).slice(0,120),expandedId:null};
-  render();
-  const next=document.getElementById('ft3-activity-search');
-  if(next){next.focus();if(position!=null)next.setSelectionRange(position,position);}
+  const query=String(event.target.value).slice(0,120);
+  state.fuelTrackActivityFilters={...state.fuelTrackActivityFilters,query};
+  applySearchVisibility(root,{selector:'.ft3-activity-entry',query,
+   groupSelector:'.ft3-activity-group',emptySelector:'[data-ft3-activity-empty]'});
   return;
  }
  if(event.target.id==='ft3-signed-request-search'&&
@@ -7672,20 +7940,20 @@ root.addEventListener('input',event=>{
  if(event.target.id==='tt-team-search'&&state.view==='board'&&state.ttView==='team'&&
     state.roleVerified===true&&state.ttTeam&&
     state.ttAttendance?.status==='VERIFIED_READ'){
-  state.ttTeamFilters={...state.ttTeamFilters,search:String(event.target.value).slice(0,120)};
-  const focus=event.target.selectionStart;
-  render();
-  const field=root.querySelector('#tt-team-search');
-  if(field){field.focus();field.setSelectionRange(focus,focus);}
+  const query=String(event.target.value).slice(0,120);
+  state.ttTeamFilters={...state.ttTeamFilters,search:query};
+  const result=applySearchVisibility(root,{selector:'.tt-team-member',query,
+   emptySelector:'[data-tt-team-empty]'});
+  const count=root.querySelector('[data-tt-team-count]');
+  if(count)count.textContent=result.visible+' of '+result.total+' members';
   return;
  }
  if(event.target.id==='tt-ot-search'&&state.view==='board'&&state.ttView==='ot'&&
     state.ttAttendance?.status==='VERIFIED_READ'){
-  state.ttOtFilters={...state.ttOtFilters,search:String(event.target.value).slice(0,120)};
-  const focus=event.target.selectionStart;
-  render();
-  const field=root.querySelector('#tt-ot-search');
-  if(field){field.focus();field.setSelectionRange(focus,focus);}
+  const query=String(event.target.value).slice(0,120);
+  state.ttOtFilters={...state.ttOtFilters,search:query};
+  applySearchVisibility(root,{selector:'.tt-ot-request',query,
+   emptySelector:'[data-tt-ot-empty]'});
   return;
  }
  if(event.target.id==='tt-overview-search'&&state.view==='board'&&state.ttView==='overview'&&
@@ -7794,11 +8062,14 @@ window.addEventListener('keydown',event=>{
  if(event.key==='Escape'){
  closeBoardCardMenus();hideModal();
   for(const menu of root.querySelectorAll('.board-group-actions[open]'))menu.open=false;
-  if(state.inlineCell&&!state.inlineCellBusy){state.inlineCell=null;preserveInlineScroll();}
+  if(state.inlineCell&&!state.inlineCellBusy){
+   const current=state.inlineCell;closeInlineCellEditor(current,{focus:true});
+   state.inlineCell=null;inlineCellPreflight=null;
+  }
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;inlineCellPreflight=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  if(startupBusy)return;
  startupBusy=true;

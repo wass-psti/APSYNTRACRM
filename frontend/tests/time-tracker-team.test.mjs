@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {TT_TEAM_ROLES} from '../time-tracker-team.js';
+import {TT_TEAM_ROLES,filterTimeTrackerTeam} from '../time-tracker-team.js';
 test('TimeTracker team role list is restricted',()=>assert.equal(TT_TEAM_ROLES.length,7));
 import {projectTimeTrackerTeamDirectory} from '../time-tracker-team.js';
 test('Missing signed Team snapshot is denied',()=>assert.throws(()=>projectTimeTrackerTeamDirectory(null,{}),/bootstrap Team directory contract/));
@@ -53,4 +53,19 @@ test('fresh bootstrap RPC is necessary even when module role is administrative',
  const board='46bf4ee7-368a-4c35-842c-8593ea1f6ac3';
  await assert.rejects(()=>setup(false).teamDirectory(board),/Bootstrap Team Directory/);
  assert.equal((await setup(true).teamDirectory(board)).members.length,1);
+});
+
+test('team search keeps role-filtered member nodes rendered for instant broadening',()=>{
+ const access={userId:teamActor,workspaceId:teamWs,bootstrapTeamEligible:true};
+ const data=projectTimeTrackerTeamDirectory({...teamFixture,users:[
+  ...teamFixture.users,{id:'10000000-0000-4000-8000-000000000012',displayName:'Other Worker',email:'worker@example.test',status:'active'}
+ ]},{workspaceId:teamWs,actorId:teamActor});
+ const narrow=filterTimeTrackerTeam(data,{search:'other worker'});
+ assert.equal(narrow.members.length,1);
+ assert.equal(narrow.roleMembers.length,2);
+ const html=renderTimeTrackerTeam({directory:data,access,filters:{search:'other worker'}});
+ assert.match(html,/Other Worker/);
+ assert.match(html,/data-search-text="other worker worker@example\.test unassigned unassigned"/);
+ assert.match(html,/data-search-text="example\s+system admin system admin" hidden/);
+ assert.match(html,/data-tt-team-empty hidden/);
 });

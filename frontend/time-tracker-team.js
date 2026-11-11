@@ -41,7 +41,9 @@ export function projectTimeTrackerTeamDirectory(snapshot,{workspaceId,actorId}={
   members.push(Object.freeze({
    id:u.id,name:text(u.displayName||'Workforce member',100),
    email:text(u.email||'',180),status:normalizeStatus(u.status),
-   role,bootstrapProtected:u.bootstrapProtected===true
+   role,bootstrapProtected:u.bootstrapProtected===true,
+   searchText:[text(u.displayName||'Workforce member',100),text(u.email||'',180),role,roleName(role)]
+    .join(' ').toLocaleLowerCase()
   }));
  }
  if(!seen.has(actorId))throw Error('Signed bootstrap identity missing from workspace');
@@ -57,13 +59,12 @@ export function filterTimeTrackerTeam(data,{search='',role='All',layout='list'}=
  const selected=role==='All'||role==='Unassigned'||TT_TEAM_ROLES.includes(role)?
   role:'All';
  const query=text(search,120).trim().toLocaleLowerCase();
- const members=data.members.filter(m=>
-  (selected==='All'||m.role===selected)&&
-  (!query||[m.name,m.email,m.role,roleName(m.role)].some(v=>
-   v.toLocaleLowerCase().includes(query))));
+ const roleMembers=data.members.filter(m=>selected==='All'||m.role===selected);
+ const members=roleMembers.filter(m=>!query||
+  (m.searchText||[m.name,m.email,m.role,roleName(m.role)].join(' ').toLocaleLowerCase()).includes(query));
  return Object.freeze({
   selected,layout:layout==='grid'?'grid':'list',
-  members:Object.freeze(members),search:query
+  members:Object.freeze(members),roleMembers:Object.freeze(roleMembers),search:query
  });
 }
 export function timeTrackerTeamSummary(data){
@@ -77,9 +78,11 @@ export function timeTrackerTeamSummary(data){
   admins:data.members.filter(m=>m.status==='Active'&&adminRoles.has(m.role)).length
  });
 }
-function memberCard(m,layout){
+function memberCard(m,layout,query=''){
+ const searchText=m.searchText||[m.name,m.email,m.role,roleName(m.role)].join(' ').toLocaleLowerCase();
+ const hidden=query&&!searchText.includes(query);
  const statusClass=m.status==='Active'?'active':m.status==='Deactivated'?'deactivated':'unknown';
- return '<article class="tt-team-member tt-team-'+layout+'">'+
+ return '<article class="tt-team-member tt-team-'+layout+'" data-search-text="'+esc(searchText)+'"'+(hidden?' hidden':'')+'>'+
   '<div class="tt-team-avatar" aria-hidden="true">'+esc(acronym(m.name))+'</div>'+
   '<div class="tt-team-member-main"><strong>'+esc(m.name)+'</strong>'+
    '<span class="tt-team-role tt-team-role-'+
@@ -106,7 +109,7 @@ export function renderTimeTrackerTeam({
   '<button type="button" data-action="tt-team-refresh"'+
    (loading?' disabled':'')+' aria-label="Refresh Team Directory">↻</button>'+
   '<button type="button" data-action="tt-team-export"'+
-   (!valid||loading||!state.members.length?' disabled':'')+
+   (!valid||loading||!state.roleMembers.length?' disabled':'')+
    ' aria-label="Export authorized Team Directory CSV">↓</button></div>';
  // No Team identities or totals are rendered in the decorative scene.
  // Unverified bootstrap claims retain the restricted, scene-free fallback.
@@ -158,11 +161,11 @@ export function renderTimeTrackerTeam({
    '<div class="tt-team-filters" role="group" aria-label="Filter Team by TimeTracker role">'+
     filterRoles.map(role=>'<button type="button" data-action="tt-team-role" data-role="'+esc(role)+
      '" aria-pressed="'+(state.selected===role)+'">'+esc(roleName(role))+'</button>').join('')+'</div>'+
-   '<div class="tt-team-section-title"><strong>MEMBER LIST</strong><span>'+
-     state.members.length+' of '+summary.total+' members</span></div>'+
-   (state.members.length?'<div class="tt-team-members tt-team-members-'+state.layout+'">'+
-     state.members.map(m=>memberCard(m,state.layout)).join('')+'</div>':
-     '<p class="tt-team-empty">No authorized workspace members match your filters.</p>')+
+   '<div class="tt-team-section-title"><strong>MEMBER LIST</strong><span data-tt-team-count>'+
+     state.members.length+' of '+state.roleMembers.length+' members</span></div>'+
+   (state.roleMembers.length?'<div class="tt-team-members tt-team-members-'+state.layout+'">'+
+     state.roleMembers.map(m=>memberCard(m,state.layout,state.search)).join('')+'</div>':'')+
+   '<p class="tt-team-empty" data-tt-team-empty'+(state.members.length?' hidden':'')+'>No authorized workspace members match your filters.</p>'+
    '<p class="tt-team-footnote">Only verified bootstrap administrators can view this workspace directory. TimeTracker role assignments originate from centralized role management; member changes must be made there. Email, status, and counts reflect the signed workspace snapshot, not screenshot sample data.</p>')+
  '</section>';
 }

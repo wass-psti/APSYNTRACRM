@@ -75,7 +75,8 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
  const renderRows=(batch,offset=0)=>batch.map((row,index)=>'<tr data-searchable="'+esc(row.search||'')+'"'+
    (selection?.enabled&&row.itemId?' data-bulk-row="'+esc(row.itemId)+'"':'')+
    ' aria-rowindex="'+(offset+index+2)+'">'+
-   visible.map((k,i)=>'<td'+(i===0?' class="board-frozen-column"':row.statusKeys?.includes(k)?' class="board-status-click-cell"':'')+'>'+
+   visible.map((k,i)=>'<td'+(i===0?' class="board-frozen-column"':row.statusKeys?.includes(k)?' class="board-status-click-cell"':'')+
+    (row.itemId?' data-board-cell-item-id="'+esc(row.itemId)+'" data-board-cell-key="'+esc(k)+'"':'')+'>'+
     (i===0&&selection?.enabled&&row.itemId?'<input id="board-row-select-'+esc(row.itemId)+'" name="board-row-select-'+esc(row.itemId)+'" type="checkbox" class="board-row-select" data-board-select-item="'+esc(row.itemId)+'" aria-label="Select this record"'+(selection.selected?.has(row.itemId)?' checked':'')+' />':'')+
     String(row.cells?.[k]??'—')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>').join('');
  const windowed=virtualize?registerBoardWindow(groupId,rows,renderRows,visible.length+(addColumn?1:0)):null;
@@ -101,7 +102,7 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
   (footer||summaries?'<tfoot class="board-footer">'+
    (footer?'<tr class="board-add-item-row"><td colspan="'+(visible.length+(addColumn?1:0))+'">'+footer+'</td></tr>':'')+
    (summaries?'<tr class="board-column-summaries">'+visible.map(k=>
-    '<td'+(k==='record'?' class="board-frozen-column"':'')+' aria-label="'+esc(lookup.get(k)?.title||k)+' summary">'+esc(summaries[k]??'—')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>':'')+
+    '<td'+(k==='record'?' class="board-frozen-column"':'')+' data-board-summary-key="'+esc(k)+'" aria-label="'+esc(lookup.get(k)?.title||k)+' summary">'+esc(summaries[k]??'—')+'</td>').join('')+(addColumn?'<td class="board-add-column-spacer"></td>':'')+'</tr>':'')+
   '</tfoot>':'')+
   '</table></div></div>';
 }

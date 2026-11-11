@@ -54,7 +54,8 @@ export function projectTimeTrackerOtRows(rows=[]){
   end:String(r.end||'').slice(0,5),
   durationMinutes:Number.isInteger(r.durationMinutes)&&r.durationMinutes>=0&&
    r.durationMinutes<=360?r.durationMinutes:null,
-  task:String(r.task||'').slice(0,500)
+  task:String(r.task||'').slice(0,500),
+  searchText:[String(r.name||'Signed employee'),String(r.task||''),r.date].join(' ').toLocaleLowerCase()
  }));
 }
 export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
@@ -66,12 +67,12 @@ export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
  const minutes=approved.reduce((n,r)=>n+(r.durationMinutes||0),0);
  const status=['Submitted','Approved','Rejected'].includes(opts.status)?opts.status:'Submitted';
  const query=String(opts.search||'').toLowerCase().trim().slice(0,120);
- const visible=all.filter(r=>r.status===status&&(!query||
-  [r.name,r.task,r.date].some(v=>String(v).toLowerCase().includes(query))));
- visible.sort((a,b)=>opts.sort==='oldest'?a.date.localeCompare(b.date):b.date.localeCompare(a.date));
+ const statusRows=all.filter(r=>r.status===status);
+ statusRows.sort((a,b)=>opts.sort==='oldest'?a.date.localeCompare(b.date):b.date.localeCompare(a.date));
+ const visible=statusRows.filter(r=>!query||r.searchText.includes(query));
  const owners=new Map();
  for(const r of all)owners.set(r.name,(owners.get(r.name)||0)+1);
- return {week,all,visible,approvedMinutes:minutes,submitted:submitted.length,
+ return {week,all,statusRows,visible,search:query,approvedMinutes:minutes,submitted:submitted.length,
   approved:approved.length,rejected:rejected.length,
   approvalRate:approved.length+rejected.length?
    Math.round(100*approved.length/(approved.length+rejected.length)):null,
@@ -80,7 +81,8 @@ export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
   owners:[...owners].sort((a,b)=>b[1]-a[1]).slice(0,5)};
 }
 const metric=(name,value)=>'<div><strong>'+esc(value)+'</strong><span>'+esc(name)+'</span></div>';
-const row=(r,bootstrap=false)=>'<details class="tt-ot-request"><summary>'+
+const row=(r,bootstrap=false,query='')=>'<details class="tt-ot-request" data-search-text="'+esc(r.searchText||[r.name,r.task,r.date].join(' ').toLowerCase())+'"'+
+ (query&&!r.searchText.includes(query)?' hidden':'')+'><summary>'+
  '<span>'+esc(r.name)+'</span><span>'+esc(fmt(r.date))+'</span>'+
  '<strong>'+esc(minutesLabel(r.durationMinutes))+'</strong>'+
  '<span class="tt-ot-pill tt-ot-'+r.status.toLowerCase()+'">'+
@@ -180,11 +182,12 @@ export function renderTimeTrackerOvertime({
  '<div class="tt-ot-search"><label for="tt-ot-search">Search requests</label>'+
  '<input id="tt-ot-search" type="search" maxlength="120" placeholder="Search employee or reason…" value="'+esc(opts.search)+'">'+
  '<button type="button" data-action="tt-ot-sort">Date '+(opts.sort==='oldest'?'↑':'↓')+'</button></div>'+
- (m.visible.length?'<div class="tt-ot-row-head"><span>Employee</span><span>Date</span>'+
+ (m.statusRows.length?'<div class="tt-ot-row-head"><span>Employee</span><span>Date</span>'+
  '<span>Duration</span><span>Status</span><span>Details</span></div>'+
- m.visible.map(r=>row(r,access?.bootstrapApprover===true)).join(''):'<div class="tt-ot-empty"><span>◷</span>'+
+ m.statusRows.map(r=>row(r,access?.bootstrapApprover===true,m.search)).join(''):'')+
+ '<div class="tt-ot-empty" data-tt-ot-empty'+(m.visible.length?' hidden':'')+'><span>◷</span>'+
  '<strong>No matching requests</strong><p>Try a different week, search or status.</p>'+
- '<button type="button" data-action="tt-ot-open">＋ Submit a request</button></div>')+
+ '<button type="button" data-action="tt-ot-open">＋ Submit a request</button></div>'+
  '<p class="tt-ot-note">'+(access?.bootstrapApprover===true?
   'Bootstrap administrator identity verified. ':'')+
  'Only bootstrap administrators may approve or reject. Live writes remain gated until server RPC acceptance.</p>'+
