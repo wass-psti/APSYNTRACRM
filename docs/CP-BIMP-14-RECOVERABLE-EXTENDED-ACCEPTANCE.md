@@ -22,6 +22,15 @@ Builds on CP-BIMP-13 PR #254, not yet deployed. No writes to existing production
 ## Current verification and gate
 
 - Existing frontend import/board tests, including synthetic 7,200-character reference persistence/readback, signed read rejection, compatibility with an unextended backend, definite-batch-resume, mismatched board-state denial and uncertain-response nonretry.
-- PostgreSQL 17 disposable CI applies the m143-v2 candidate and performs a signed extended-reference write/read/denial. This is a staged *candidate* for acceptance, **not** a production migration authorization.
+- PostgreSQL 17 disposable CI verifies m143-v2 signed extended-reference write/read, cross-workspace/viewer/revoked-session denial, direct-table grant denial, and subsequent ordinary-cell edit cleanup. This is a staged *candidate*, **not** a production migration authorization.
 - Genuine signed-browser acceptance against the new build and a dedicated ordinary nonproduction board remains pending. The available signed tab runs the deployed `main` frontend against a recovery test fixture and cannot validate the unmerged branch. Do not write into operational boards or the unrelated fixture.
 - Deployment of the new persistent storage table/function is a material production schema change and is not authorized by this checkpoint; separate explicit approval is required before applying it to production.
+
+## Verified automated results
+
+- Focused import suite: 95 PASS; board extended read suite: 3 PASS.
+- Complete frontend suite: **1,817 PASS**, 0 failed.
+- **170** frontend module syntax checks, CSS bundle consistency, Pages source policy and SEC14 source guard: PASS.
+- Synthetic Chromium two-tab cache, authorization-denial and 600-row virtual-window acceptance: PASS.
+- Five GitHub Actions checks (frontend, three disposable DB workflows and BIMP-02 isolated signed PostgreSQL): PASS before the last extension to the SQL negative tests; rerun pending.
+- Live Pages deployment and Supabase Preview are skipped by existing workflow conditions. No production database changes were applied.

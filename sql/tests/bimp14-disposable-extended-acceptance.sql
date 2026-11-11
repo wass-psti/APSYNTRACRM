@@ -7,6 +7,8 @@ DECLARE
  grp uuid := '60000000-0000-4000-8000-000000000001';
  owner_id uuid := '20000000-0000-4000-8000-000000000001';
  owner_session uuid := '70000000-0000-4000-8000-000000000001';
+ editor_id uuid := '20000000-0000-4000-8000-000000000002';
+ editor_session uuid := '70000000-0000-4000-8000-000000000002';
  viewer_id uuid := '20000000-0000-4000-8000-000000000003';
  viewer_session uuid := '70000000-0000-4000-8000-000000000003';
  ref_col uuid := '65000000-0000-4000-8000-000000000002';
@@ -17,6 +19,11 @@ DECLARE
  imported_item_id uuid;
  got jsonb;
 BEGIN
+ IF has_table_privilege('authenticated',
+    'public.work_board_import_extended_refs','select') OR
+    has_table_privilege('anon','public.work_board_import_extended_refs','select') THEN
+   RAISE EXCEPTION 'Extended references must not grant direct table reads';
+ END IF;
  IF has_function_privilege('anon',
   'public.wm_import_board_wizard_extended_atomic(uuid,timestamptz,jsonb)','execute')
  OR NOT has_function_privilege('authenticated',
@@ -62,5 +69,24 @@ BEGIN
   RAISE EXCEPTION 'UNEXPECTED: viewer import succeeded';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
- RAISE NOTICE 'CP-BIMP-14 extended 7200+ character reference persisted exactly; signed read and denied mutations PASS';
+ -- A previously revoked/expired signed session cannot invoke m143-v2.
+ PERFORM set_config('request.jwt.claim.sub',editor_id::text,false);
+ PERFORM set_config('request.jwt.claim.session_id',editor_session::text,false);
+ BEGIN
+  PERFORM public.wm_import_board_wizard_extended_atomic(board,expected_at,payload);
+  RAISE EXCEPTION 'UNEXPECTED: revoked extended import succeeded';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ -- A subsequent ordinary edit supersedes the auxiliary reference exactly.
+ PERFORM set_config('request.jwt.claim.sub',owner_id::text,false);
+ PERFORM set_config('request.jwt.claim.session_id',owner_session::text,false);
+ PERFORM public.wm_set_board_cell(imported_item_id,ref_col,to_jsonb('short replacement'::text));
+ IF EXISTS (SELECT 1 FROM public.work_board_import_extended_refs r
+   WHERE r.item_id=imported_item_id AND r.column_id=ref_col) OR
+   (SELECT v.value#>>'{}' FROM public.work_board_item_values v
+    WHERE v.item_id=imported_item_id AND v.column_id=ref_col)
+     IS DISTINCT FROM 'short replacement' THEN
+  RAISE EXCEPTION 'Normal cell edit failed to retire superseded extended content';
+ END IF;
+ RAISE NOTICE 'CP-BIMP-14 7200+ character persistence, signed read/denial, and subsequent edit cleanup PASS';
 END $cp_bimp14$;
