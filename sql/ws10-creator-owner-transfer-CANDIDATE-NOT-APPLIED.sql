@@ -167,6 +167,42 @@ BEGIN
   'idempotent',false,'active',false);
 END $create$;
 
+-- Dedicated read-only creator-role receipt. A normal CRM admin role does
+-- not imply IT Administrator. The approved IT creator roster is private and
+-- may be changed only by a separately authorized security administrator.
+CREATE FUNCTION public.wm_ws10_creator_access()
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $read$
+DECLARE v_actor uuid:=auth.uid();
+ v_workspace uuid;
+ v_it_admin boolean;
+ v_owner boolean;
+ v_allowed boolean;
+BEGIN
+ PERFORM private.ws01_signed_actor_session();
+ v_workspace:=public.current_workspace_id(v_actor);
+ IF v_workspace IS NULL OR NOT EXISTS(
+  SELECT 1 FROM public.workspace_members m
+   WHERE m.user_id=v_actor AND m.workspace_id=v_workspace AND m.active IS TRUE
+ ) THEN RAISE EXCEPTION 'Creator scope not authorized' USING ERRCODE='42501'; END IF;
+ SELECT EXISTS(
+  SELECT 1 FROM private.ws10_it_admin_creator a WHERE a.user_id=v_actor
+ ) INTO v_it_admin;
+ SELECT EXISTS(
+  SELECT 1 FROM private.ws01_member_roles r
+   WHERE r.workspace_id=v_workspace AND r.user_id=v_actor
+    AND r.relation='owner'
+ ) INTO v_owner;
+ v_allowed:=private.ws10_workspace_creator_allowed(v_actor);
+ RETURN pg_catalog.jsonb_build_object('schemaVersion',1,
+  'userId',v_actor,'workspaceId',v_workspace,
+  'role',CASE WHEN v_it_admin THEN 'it-admin'
+    WHEN v_owner THEN 'owner' ELSE 'none' END,
+  'canCreateWorkspace',v_allowed,'source','SIGNED_CREATOR_POLICY');
+END $read$;
+REVOKE ALL ON FUNCTION public.wm_ws10_creator_access()
+ FROM PUBLIC,anon,authenticated;
+-- No authenticated EXECUTE until source-locked review and test.
+
 -- The transferred owner must already be a verified active member of this
 -- exact workspace; owner and approved IT Admin who is a workspace member
 -- are the only eligible transfer actors.
