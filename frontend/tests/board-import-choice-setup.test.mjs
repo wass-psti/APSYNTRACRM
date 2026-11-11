@@ -141,7 +141,7 @@ test('definitive schema CAS denial is distinct from an uncertain server outcome'
   api,auth,boardId,detail,sheet,source:'Status',type:'status',name:'Status'
  }),error=>error.status===409&&error.schemaOutcomeUncertain!==true);
 });
-test('UI has manager-only choice setup with explicit warning, consent, and no automatic import submission',()=>{
+test('UI integrates manager-only choice setup with a direct explicit create action',()=>{
  const ui=readFileSync('frontend/board-import-ui.js','utf8');
  assert.match(ui,/Configure new Status/);
  assert.match(ui,/Configure new Dropdown/);
