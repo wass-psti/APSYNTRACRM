@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {
  WS03_RESTRICTED_CREATION_ENABLED,WS03_OWNERSHIP_TRANSFER_ENABLED,
  normalizeWorkspaceCreatorAuthority,canCreateOrganizationalWorkspace,
- validateOwnershipTransfer,WorkspaceAuthorityClient
+ normalizeOwnerTransferCandidates,validateOwnershipTransfer,WorkspaceAuthorityClient
 } from '../workspace-authority.js';
 import {WS01_CREATION_ENABLED,WS01_SWITCHING_ENABLED} from '../workspace-ui.js';
 
@@ -55,6 +55,65 @@ test('personal Main Workspace owner title alone does not grant create',()=>{
   allowed:true,basis:'it_admin'
  },{enabled:true}),false);
  assert.equal(canCreateOrganizationalWorkspace(null,{enabled:true}),false);
+});
+test('exact workspace transfer candidate parser denies forged roles and foreign users',()=>{
+ const raw={schemaVersion:1,workspaceId:workspace,actorId:user,
+  authorized:true,currentOwnerId:owner,members:[
+   {id:user,name:'Test Employee',verified:true}
+  ]};
+ const good=normalizeOwnerTransferCandidates(raw,{
+  userId:user,workspaceId:workspace
+ });
+ assert.equal(good.status,'VERIFIED_TRANSFER_CANDIDATES');
+ assert.deepEqual(good.members.map(x=>x.name),['Test Employee']);
+ for(const bad of [
+  null,{...raw,workspaceId:user},{...raw,actorId:owner},
+  {...raw,authorized:false},
+  {...raw,currentOwnerId:'invalid'},
+  {...raw,members:[...raw.members,...raw.members]},
+  {...raw,members:[{...raw.members[0],verified:false}]},
+  {...raw,members:[{...raw.members[0],name:'<img onerror=alert(1)>'}]},
+  {...raw,members:[{...raw.members[0],id:owner}]}
+ ]){
+  assert.equal(normalizeOwnerTransferCandidates(bad,{
+   userId:user,workspaceId:workspace
+  }).status,'UNAVAILABLE');
+ }
+});
+test('signed post-transfer verification is actor- and request-scoped',async()=>{
+ const auth={userId:user,getVerifiedUser:async()=>({id:user})};
+ let calls=[];
+ const api={context:async()=>({
+  user_id:user,workspace_id:workspace,profile:{status:'active'}
+ }),rpc:async(name,args)=>{
+  calls.push([name,args]);
+  if(name==='wm_ws03_transfer_candidates')return {
+   schemaVersion:1,workspaceId:workspace,actorId:user,authorized:true,
+   currentOwnerId:owner,members:[{id:user,name:'Test Employee',verified:true}]
+  };
+  return {schemaVersion:1,workspaceId:workspace,
+   actorId:user,requestId,targetUserId:user,currentOwnerId:user,
+   transferred:true};
+ }};
+ const client=new WorkspaceAuthorityClient({auth,api,transferEnabled:true});
+ assert.equal((await client.readTransferCandidates(workspace)).status,'VERIFIED_TRANSFER_CANDIDATES');
+ assert.equal((await client.verifyOwnershipTransfer({
+  workspaceId:workspace,requestId,targetUserId:user
+ })).verified,true);
+ assert.equal(calls.length,2);
+ assert.equal(calls[0][0],'wm_ws03_transfer_candidates');
+ assert.equal(calls[1][0],'wm_ws03_verify_transfer');
+ assert.deepEqual(calls[1][1],{p_workspace_id:workspace,p_request_id:requestId});
+ const forged=new WorkspaceAuthorityClient({auth,api:{
+  ...api,rpc:async()=>({
+   schemaVersion:1,workspaceId:workspace,
+   actorId:user,requestId,targetUserId:user,currentOwnerId:owner,
+   transferred:true
+  })
+ },transferEnabled:true});
+ await assert.rejects(forged.verifyOwnershipTransfer({
+  workspaceId:workspace,requestId,targetUserId:user
+ }),/verification failed/i);
 });
 test('workspace owner transfer is typed and requires expected owner and target',()=>{
  const valid=validateOwnershipTransfer({
@@ -127,7 +186,9 @@ test('backend candidates deny by default and require explicit creator roster',()
   'p_target_user_id',
   'email_confirmed_at IS NOT NULL',
   "p_resource_kind IS DISTINCT FROM 'workspace'",
-  'REVOKE ALL ON FUNCTION public.wm_ws03_transfer_ownership'
+  'REVOKE ALL ON FUNCTION public.wm_ws03_transfer_ownership',
+  'REVOKE ALL ON FUNCTION public.wm_ws03_verify_transfer',
+  'CREATE FUNCTION public.wm_ws03_transfer_candidates'
  ])assert.ok(transfer.includes(token),token);
  assert.doesNotMatch(transfer,/GRANT EXECUTE ON FUNCTION/i);
 });
