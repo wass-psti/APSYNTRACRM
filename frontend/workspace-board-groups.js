@@ -177,6 +177,8 @@ export function renderBoardAccessChoices({people=unavailable,groups=null,tab='pe
      '<p>No matching workspace '+(which==='people'?'members':'groups')+'.</p>'):
     '<p>'+message+'</p>')+
   '</div>'+
+  (which==='groups'?'<button type="button" class="bs09-group-create" disabled '+
+   'aria-label="Create a workspace group (not activated)">+ Create group</button>':'')+
   '<p class="bs09-access-note">Workspace membership alone does not grant board access.'+
    ' Access changes remain disabled until server-side permissions are verified.</p>'+
  '</section>';
