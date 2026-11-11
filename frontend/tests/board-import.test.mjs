@@ -50,7 +50,7 @@ test('number and date conversion accepts common export formats without guessing 
  assert.equal(inferImportType('Date Updated',['01/02/2026']),'date');
  const numeric={...sheet,headers:['Name','Amount'],rows:[['Alpha','$1,234.50'],['Beta','₱2,500.00']]};
  const numericMaps=[{source:'Name',action:'item'},
-  {source:'Amount',action:'create',columnType:'number',name:'Amount'}];
+  {source:'Amount',action:'create',columnType:'number',name:'Imported Amount'}];
  const numericPlan=buildImportPlan({sheet:numeric,detail,mappings:numericMaps,group,allowColumns:true});
  assert.equal(numericPlan.payload.rows[0].values.Amount,1234.5);
  assert.equal(numericPlan.payload.rows[1].values.Amount,2500);
