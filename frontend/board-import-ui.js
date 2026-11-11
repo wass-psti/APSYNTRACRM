@@ -139,7 +139,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    (m.type==='status'||m.type==='dropdown'));
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
    '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+
-   sourceInfo+
+   sourceInfo+formulaWarningInfo+
    '<div class="aps-import-controls">'+(state.file.sheets.length>1?'<label>Worksheet<select name="imp-sheet" data-imp-sheet>'+state.file.sheets.map((x,i)=>choice(i,x.name,i===state.sheet)).join('')+'</select></label>':'')+'<label>Add items to<select name="imp-group" data-imp-group>'+groupChoices+
    '</select></label>'+(state.group==='create'?'<label>New group name<input name="imp-group-name" maxlength="120" data-imp-group-name value="'+esc(state.groupName)+'"></label>':'')+
    '<label>Unmapped columns<select name="imp-default" data-imp-default>'+choice('skip',"Don't import",true)+
