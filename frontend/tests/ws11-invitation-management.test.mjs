@@ -67,7 +67,7 @@ test('signed manager listing and revocation require trustworthy server receipts'
   assert.equal(rejected.calls.length,0);
  }
 });
-test('board invite picker exposes viewer grants only behind verified signed gate',()=>{
+test('board invite picker exposes viewer grants only behind verified signed gate',async()=>{
  assert.equal(BOARD_GROUP_ACCESS_ENABLED,false);
  const people=normalizeSignedBoardCandidates({status:'VERIFIED_READ',boardId:other,
   workspaceId:ws,manage:true,users:[
