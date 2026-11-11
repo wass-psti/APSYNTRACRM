@@ -724,6 +724,36 @@ function openCreate(catalog,options={}){
    // Refresh only through the signed membership endpoint after server receipt.
    // A newly created workspace is never silently made active.
    void selectorSession?.load?.();
+   if(switchingUiReady(options)){
+    const open=document.createElement('button');
+    open.type='button';
+    open.className='ws01-primary';
+    open.textContent='Open new workspace';
+    open.addEventListener('click',async()=>{
+     if(open.disabled)return;
+     open.disabled=true;
+     feedback.textContent='Verifying new workspace membership and active session…';
+     try{
+      const catalog=await lifecycle.discover();
+      const target=catalog?.rows?.find(row=>
+       row.id===result.receipt.workspaceId&&
+       row.relation==='owner'&&row.verifiedScope==='SIGNED_MEMBER_RPC');
+      const current=catalog?.rows?.find(row=>
+       row.active===true&&row.verifiedScope==='SIGNED_MEMBER_RPC');
+      if(catalog?.status!=='SIGNED_MEMBER_DISCOVERY'||!target||!current||
+         current.id===target.id)throw Error('New workspace is not ready for a verified switch.');
+      await requestSignedWorkspaceSwitch({
+       lifecycle,workspaceId:target.id,expectedWorkspaceId:current.id
+      });
+      closeWorkspacePanels();
+      options.onWorkspaceSwitched();
+     }catch{
+      feedback.textContent='Workspace was created, but switching is not yet verified. It remains available in the authorized workspace list.';
+      open.disabled=false;
+     }
+    });
+    form.querySelector('.ws01-create-footer').prepend(open);
+   }
    const browse=document.createElement('button');
    browse.type='button';
    browse.textContent='Browse authorized workspaces';
