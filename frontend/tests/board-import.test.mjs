@@ -238,8 +238,20 @@ test('authorized import checks server-side active session before one atomic writ
  const calls=[];
  const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
  const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const persisted={...detail,
+  items:[
+   {id:'66666666-6666-4666-8666-666666666661',board_id:boardId,group_id:groupId,
+    title:'Alice',status:'not_started',archived_at:null},
+   {id:'66666666-6666-4666-8666-666666666662',board_id:boardId,group_id:groupId,
+    title:'Bob',status:'not_started',archived_at:null}
+  ],
+  values:[
+   {item_id:'66666666-6666-4666-8666-666666666661',column_id:colId,value:25},
+   {item_id:'66666666-6666-4666-8666-666666666662',column_id:colId,value:31}
+  ]};
+ let boardReads=0;
  const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
-  board:async()=>detail,allowed:async()=>true,
+  board:async()=>++boardReads===1?detail:persisted,allowed:async()=>true,
   rpc:async(name,args)=>{
    calls.push({name,args});
    if(name==='wm_board_ui_read')return {board_id:boardId,revision:0};
@@ -252,6 +264,159 @@ test('authorized import checks server-side active session before one atomic writ
  assert.deepEqual(calls[0].args,{p_board_id:boardId});
  assert.equal(calls[1].name,'wm_import_board_wizard_atomic');
  assert.equal(calls[1].args.p_expected_updated_at,now);
+ assert.equal(calls[1].args.p_payload.contract,'m143-v1');
+ assert.equal(Object.hasOwn(calls[1].args.p_payload,'readback'),false,
+  'client-only verification metadata never changes the RPC contract');
+ assert.equal(boardReads,2,'a fresh authoritative board read follows the atomic write');
+});
+
+test('atomic CSV/XLSX-style plan verifies newly created group, typed column and persisted cells',async()=>{
+ const importSheet={headers:['Name','Amount','Flag','Date'],rows:[
+  ['CSV marker','125.5','yes','2026-11-12'],
+  ['XLSX marker','0','no','2026-11-13']
+ ]};
+ const mappings=[{source:'Name',action:'item'},
+  {source:'Amount',action:'create',name:'Import Amount',columnType:'number'},
+  {source:'Flag',action:'create',name:'Import Flag',columnType:'checkbox'},
+  {source:'Date',action:'create',name:'Import Date',columnType:'date'}];
+ const plan=buildImportPlan({sheet:importSheet,detail,mappings,
+  group:{action:'create',name:'CP-BIMP-10 Verification'},allowColumns:true});
+ const groupId2='77777777-7777-4777-8777-777777777771';
+ const amountId='77777777-7777-4777-8777-777777777772';
+ const flagId='77777777-7777-4777-8777-777777777773';
+ const dateId='77777777-7777-4777-8777-777777777774';
+ const item1='77777777-7777-4777-8777-777777777775';
+ const item2='77777777-7777-4777-8777-777777777776';
+ const persisted={...detail,
+  groups:[...detail.groups,{id:groupId2,title:'CP-BIMP-10 Verification'}],
+  columns:[...detail.columns,
+   {id:amountId,name:'Import Amount',data_type:'number',column_key:'custom:import-amount',system_key:null,config:{}},
+   {id:flagId,name:'Import Flag',data_type:'checkbox',column_key:'custom:import-flag',system_key:null,config:{}},
+   {id:dateId,name:'Import Date',data_type:'date',column_key:'custom:import-date',system_key:null,config:{}}
+  ],
+  items:[
+   {id:item1,board_id:boardId,group_id:groupId2,title:'CSV marker',status:'not_started',archived_at:null},
+   {id:item2,board_id:boardId,group_id:groupId2,title:'XLSX marker',status:'not_started',archived_at:null}
+  ],
+  values:[
+   {item_id:item1,column_id:amountId,value:125.5},
+   {item_id:item1,column_id:flagId,value:true},
+   {item_id:item1,column_id:dateId,value:'2026-11-12'},
+   {item_id:item2,column_id:amountId,value:0},
+   {item_id:item2,column_id:flagId,value:false},
+   {item_id:item2,column_id:dateId,value:'2026-11-13'}
+  ]
+ };
+ let reads=0,writes=0;
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>++reads===1?detail:persisted,allowed:async()=>true,
+  rpc:async name=>{
+   if(name==='wm_board_ui_read')return {board_id:boardId};
+   writes++;return {created:2,updated:0,skipped:0,columnsCreated:3,groupsCreated:1};
+  }};
+ const receipt=await executeBoardImport({api,auth,plan});
+ assert.deepEqual(receipt,{created:2,updated:0,skipped:0,columnsCreated:3,groupsCreated:1});
+ assert.equal(reads,2);
+ assert.equal(writes,1);
+});
+
+test('update and skip modes verify exact persisted values without changing skipped rows',async()=>{
+ const existingId='88888888-8888-4888-8888-888888888881';
+ const baseline={...detail,
+  items:[{id:existingId,board_id:boardId,group_id:groupId,title:'Alice',
+   status:'not_started',updated_at:now,archived_at:null}],
+  values:[{item_id:existingId,column_id:colId,value:10}]
+ };
+ const importSheet={headers:['Name','Amount'],rows:[['Alice','25'],['Bob','31']]};
+ const mappings=[{source:'Name',action:'item'},
+  {source:'Amount',action:'existing',columnId:colId}];
+ for(const behavior of ['update','skip']){
+  const plan=buildImportPlan({sheet:importSheet,detail:baseline,mappings,group,
+   matches:{behavior,matchColumnId:'item'}});
+  const bobId='88888888-8888-4888-8888-888888888882';
+  const expectedUpdate=behavior==='update';
+  const persisted={...baseline,
+   items:expectedUpdate?baseline.items:[...baseline.items,
+    {id:bobId,board_id:boardId,group_id:groupId,title:'Bob',status:'not_started',archived_at:null}],
+   values:expectedUpdate?[
+    {item_id:existingId,column_id:colId,value:25}
+   ]:[...baseline.values,{item_id:bobId,column_id:colId,value:31}]
+  };
+  let reads=0,writes=0;
+  const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+  const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+   board:async()=>++reads===1?baseline:persisted,allowed:async()=>true,
+   rpc:async name=>{
+    if(name==='wm_board_ui_read')return {board_id:boardId};
+    writes++;return expectedUpdate?
+     {created:0,updated:1,skipped:1,columnsCreated:0,groupsCreated:0}:
+     {created:1,updated:0,skipped:1,columnsCreated:0,groupsCreated:0};
+   }};
+  const receipt=await executeBoardImport({api,auth,plan});
+  assert.equal(receipt.updated,expectedUpdate?1:0);
+  assert.equal(receipt.created,expectedUpdate?0:1);
+  assert.equal(receipt.skipped,1);
+  assert.equal(reads,2);
+  assert.equal(writes,1);
+ }
+});
+
+test('blank mapped cells in update mode preserve existing persisted values',async()=>{
+ const existingId='99999999-9999-4999-8999-999999999991';
+ const baseline={...detail,
+  items:[{id:existingId,board_id:boardId,group_id:groupId,title:'Keep Amount',
+   status:'not_started',updated_at:now,archived_at:null}],
+  values:[{item_id:existingId,column_id:colId,value:88}]
+ };
+ const blankSheet={headers:['Name','Amount'],rows:[['Keep Amount','']]};
+ const plan=buildImportPlan({sheet:blankSheet,detail:baseline,
+  mappings:[{source:'Name',action:'item'},
+   {source:'Amount',action:'existing',columnId:colId}],group,
+  matches:{behavior:'update',matchColumnId:'item'}});
+ const persisted={...baseline,
+  items:[{...baseline.items[0],updated_at:'2026-11-11T10:00:00Z'}]
+ };
+ let reads=0;
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>++reads===1?baseline:persisted,allowed:async()=>true,
+  rpc:async name=>name==='wm_board_ui_read'?{board_id:boardId}:
+   {created:0,updated:1,skipped:0,columnsCreated:0,groupsCreated:0}};
+ const receipt=await executeBoardImport({api,auth,plan});
+ assert.equal(receipt.updated,1);
+ assert.equal(persisted.values[0].value,88);
+ assert.equal(reads,2);
+});
+
+test('preview baseline drift is rejected before the atomic write even if board revision is unchanged',async()=>{
+ const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
+ const changed={...detail,items:[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
+  board_id:boardId,group_id:groupId,title:'Concurrent row',archived_at:null}]};
+ let writes=0;
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>changed,allowed:async()=>true,
+  rpc:async()=>{writes++;return {created:2,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};}};
+ await assert.rejects(()=>executeBoardImport({api,auth,plan}),/Board data changed after import preview/);
+ assert.equal(writes,0);
+});
+
+test('committed import with missing persisted item is uncertain and never retried',async()=>{
+ const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ let writes=0,reads=0;
+ const api={context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  board:async()=>++reads===1?detail:{...detail,items:[],values:[]},allowed:async()=>true,
+  rpc:async name=>{
+   if(name==='wm_board_ui_read')return {board_id:boardId};
+   writes++;return {created:2,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};
+  }};
+ await assert.rejects(()=>executeBoardImport({api,auth,plan}),error=>
+  error.importOutcomeUncertain===true&&error.code==='IMPORT_READBACK_MISMATCH'&&
+  /Do not retry/.test(error.message));
+ assert.equal(writes,1);
+ assert.equal(reads,2);
 });
 test('expired, revoked, and mismatched signed-session preflights reject without import writes',async()=>{
  const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group});
@@ -325,9 +490,14 @@ test('signed workspace, permissions and stale revisions fail without any write',
 test('UI and entrypoint are wired without bypassing the domain restriction',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const ui=readFileSync('frontend/board-import-ui.js','utf8');
+ const data=readFileSync('frontend/data.js','utf8');
  const html=readFileSync('index.html','utf8');
  assert.match(app,/data-action="board-import"/);
  assert.match(app,/openBoardImportWizard/);
+ assert.match(app,/onComplete:async receipt=>\{\s*if\(state\.boardId===selected\)\{await loadBoard\(selected,'items'\);/,
+  'successful imports reload the selected board through the authoritative board loader');
+ assert.ok(data.includes('wm_(?:add_|create_|delete_|set_|update_|import_'),
+  'the atomic import RPC invalidates the in-memory board snapshot');
  assert.match(ui,/will be created together with the imported records/);
  assert.match(ui,/Confirm exclude/);
  assert.match(ui,/reassignImportItemMapping\(state\.mappings,index\)/);

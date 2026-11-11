@@ -18,16 +18,141 @@ const allowedTypes=new Set([...creatable,'status','dropdown','phone','rating','p
 const deny=(msg,status=400)=>{throw new ApiError(msg,status);};
 const uncertainImport=(cause=null)=>{
  const decoding=cause?.code==='INVALID_JSON_RESPONSE';
+ const mismatch=cause?.code==='IMPORT_READBACK_MISMATCH';
+ const detail=decoding?' The server returned an invalid JSON response.':
+  mismatch?' The authoritative board readback did not match the import receipt.':
+  cause?' The committed import could not be verified from the authoritative board readback.':'';
  const error=new ApiError(
-  'Import outcome is uncertain.'+(decoding?' The server returned an invalid JSON response.':'')+
+  'Import outcome is uncertain.'+detail+
   ' Do not retry this request. Close the wizard, refresh the board, and check its activity log before starting a new import.',409);
  error.importOutcomeUncertain=true;
  if(cause){
   error.cause=cause;
-  if(decoding)error.code=cause.code;
+  if(decoding||mismatch)error.code=cause.code;
  }
  throw error;
 };
+const sameIds=(actual,expected)=>{
+ if(!Array.isArray(actual)||!Array.isArray(expected)||actual.length!==expected.length)return false;
+ const expectedSet=new Set(expected),actualSet=new Set(actual);
+ return expectedSet.size===expected.length&&actualSet.size===actual.length&&
+  actual.every(id=>expectedSet.has(id));
+};
+const equalValue=(a,b)=>{
+ if(Object.is(a,b))return true;
+ if(a===null||b===null||typeof a!=='object'||typeof b!=='object')return false;
+ if(Array.isArray(a)||Array.isArray(b))
+  return Array.isArray(a)&&Array.isArray(b)&&a.length===b.length&&a.every((v,i)=>equalValue(v,b[i]));
+ const ak=Object.keys(a).sort(),bk=Object.keys(b).sort();
+ return ak.length===bk.length&&ak.every((key,i)=>key===bk[i]&&equalValue(a[key],b[key]));
+};
+const cellIndex=detail=>{
+ const values=new Map(),duplicates=new Set();
+ for(const cell of detail.values||[]){
+  const key=cell.item_id+':'+cell.column_id;
+  if(values.has(key))duplicates.add(key);
+  else values.set(key,cell.value);
+ }
+ return {values,duplicates};
+};
+const readCell=(item,column,index)=>{
+ if(column.system_key==='status')return item.status??null;
+ const key=item.id+':'+column.id;
+ if(index.duplicates.has(key))
+  throw new ApiError('Duplicate cell rows in authoritative import readback.',409,'IMPORT_READBACK_MISMATCH');
+ return index.values.get(key)??null;
+};
+const mappedColumns=(plan,before,after)=>{
+ const result=new Map();
+ for(const mapping of plan.payload.mappings){
+  if(mapping.action==='skip'||mapping.action==='item')continue;
+  let column;
+  if(mapping.action==='existing'){
+   column=(after.columns||[]).find(candidate=>candidate.id===mapping.columnId);
+   const original=(before.columns||[]).find(candidate=>candidate.id===mapping.columnId);
+   if(!column||!original||column.name!==original.name||
+      column.data_type!==original.data_type||column.system_key!==original.system_key||
+      !equalValue(column.config||{},original.config||{}))
+    throw new ApiError('An existing mapped column changed during import.',409,'IMPORT_READBACK_MISMATCH');
+  }else if(mapping.action==='create'){
+   const candidates=(after.columns||[]).filter(candidate=>candidate.id&&
+    !plan.readback.baselineColumnIds.includes(candidate.id)&&
+    candidate.name===mapping.name&&candidate.data_type===mapping.columnType);
+   if(candidates.length!==1||!equalValue(candidates[0].config||{},{}))
+    throw new ApiError('A newly created mapped column was not uniquely persisted.',409,'IMPORT_READBACK_MISMATCH');
+   column=candidates[0];
+  }
+  if(!column)throw new ApiError('A mapped import column is missing after commit.',409,'IMPORT_READBACK_MISMATCH');
+  result.set(mapping.source,column);
+ }
+ return result;
+};
+function verifyImportReadback(plan,before,after){
+ const snapshot=plan?.readback;
+ if(!snapshot||after?.board?.id!==plan.boardId||
+    after.board.workspace_id!==plan.workspaceId||after.board.status!=='active'||
+    !Array.isArray(after.groups)||!Array.isArray(after.columns)||
+    !Array.isArray(after.items)||!Array.isArray(after.values))
+  throw new ApiError('The authoritative board response is incomplete or out of scope.',409,'IMPORT_READBACK_MISMATCH');
+ let groupId;
+ if(snapshot.group.action==='existing'){
+  groupId=snapshot.group.groupId;
+  if(!(after.groups||[]).some(group=>group.id===groupId))
+   throw new ApiError('The destination group is missing after import.',409,'IMPORT_READBACK_MISMATCH');
+ }else{
+  const groups=after.groups.filter(group=>!snapshot.baselineGroupIds.includes(group.id)&&
+   group.title===snapshot.group.name);
+  if(groups.length!==1)
+   throw new ApiError('The imported destination group was not uniquely persisted.',409,'IMPORT_READBACK_MISMATCH');
+  groupId=groups[0].id;
+ }
+ const columns=mappedColumns(plan,before,after),cells=cellIndex(after);
+ const baselineItems=new Set(snapshot.baselineItemIds);
+ const newItems=after.items.filter(item=>!item.archived_at&&item.group_id===groupId&&!baselineItems.has(item.id));
+ const createdRows=snapshot.rows.filter(row=>row.outcome==='create');
+ if(newItems.length!==createdRows.length)
+  throw new ApiError('The number of newly persisted items does not match the import plan.',409,'IMPORT_READBACK_MISMATCH');
+ const candidatesByTitle=new Map();
+ for(const item of newItems){
+  const list=candidatesByTitle.get(item.title)||[];list.push(item);candidatesByTitle.set(item.title,list);
+ }
+ const valuesMatch=(item,row)=>Object.entries(row.values).every(([source,expected])=>{
+  const column=columns.get(source);
+  return !!column&&equalValue(readCell(item,column,cells),expected);
+ });
+ for(const row of createdRows){
+  const candidates=candidatesByTitle.get(row.title)||[];
+  const index=candidates.findIndex(item=>valuesMatch(item,row));
+  if(index<0)
+   throw new ApiError('An imported item or one of its mapped values is missing after commit.',409,'IMPORT_READBACK_MISMATCH');
+  candidates.splice(index,1);
+ }
+ for(const row of snapshot.rows){
+  if(row.outcome==='update'){
+   const item=after.items.find(candidate=>candidate.id===row.itemId&&
+    !candidate.archived_at&&candidate.group_id===groupId&&candidate.title===row.title);
+   if(!item||!valuesMatch(item,row))
+    throw new ApiError('An updated item or one of its mapped values is missing after commit.',409,'IMPORT_READBACK_MISMATCH');
+   for(const [source,expected] of Object.entries(row.baselineValues||{})){
+    if(Object.hasOwn(row.values,source))continue;
+    const column=columns.get(source);
+    if(column&&!equalValue(readCell(item,column,cells),expected))
+     throw new ApiError('An empty imported cell unexpectedly overwrote an existing value.',409,'IMPORT_READBACK_MISMATCH');
+   }
+  }else if(row.outcome==='skip'&&row.itemId){
+   const item=after.items.find(candidate=>candidate.id===row.itemId&&
+    !candidate.archived_at&&candidate.group_id===groupId);
+   if(!item||item.title!==row.title)
+    throw new ApiError('A skipped existing item changed during import.',409,'IMPORT_READBACK_MISMATCH');
+   for(const [source,expected] of Object.entries(row.baselineValues||{})){
+    const column=columns.get(source);
+    if(column&&!equalValue(readCell(item,column,cells),expected))
+     throw new ApiError('A skipped existing cell changed during import.',409,'IMPORT_READBACK_MISMATCH');
+   }
+  }
+ }
+ return true;
+}
 const clean=s=>String(s??'').trim();
 const key=s=>clean(s).toLocaleLowerCase();
 const matchText=s=>key(s);
@@ -286,7 +411,7 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    else itemMatches.set(k,item);
   }
  }
- const rows=[];let previewExisting=0,previewNew=0,previewSkipped=0;
+ const rows=[],readbackRows=[];let previewExisting=0,previewNew=0,previewSkipped=0;
  const byHeader=new Map(sheet.headers.map((h,i)=>[h,i]));
  // A marker-only source is a verified monday.com checkbox text convention:
  // "v" is checked and a blank is unchecked, unlike generic missing cells.
@@ -313,6 +438,7 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    if(value!==null)values[source]=value;
   }
   const row={title,values};
+  let outcome='create',itemId=null,baselineValues={};
   if(behavior!=='add-new'){
    const candidate=matchSource===primary?title:values[matchSource];
    const k=matchText(candidate);
@@ -324,16 +450,33 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    if(existing&&behavior==='update'){
     if(!existing.updated_at)deny('Existing item revision unavailable.',409);
     row.expected_item_updated_at=existing.updated_at;
-    previewExisting++;
-   }else if(existing&&behavior==='skip'||!existing&&behavior==='update')previewSkipped++;
-   else previewNew++;
+    previewExisting++;outcome='update';itemId=existing.id;
+    for(const [source,column] of refMap){
+     if(column.id&&!Object.hasOwn(values,source))baselineValues[source]=
+      column.system_key==='status'?existing.status??null:stored.get(existing.id+':'+column.id)??null;
+    }
+   }else if(existing&&behavior==='skip'){
+    previewSkipped++;outcome='skip';itemId=existing.id;
+    for(const [source,column] of refMap){
+     if(column.id)baselineValues[source]=column.system_key==='status'?
+      existing.status??null:stored.get(existing.id+':'+column.id)??null;
+    }
+   }else if(!existing&&behavior==='update'){
+    previewSkipped++;outcome='skip';
+   }else previewNew++;
   }else previewNew++;
   rows.push(row);
+  readbackRows.push({title,values,outcome,itemId,baselineValues});
  }
  if(rows.length<1||rows.length>5000)deny('Import requires 1–5,000 data rows.');
  return {boardId:board.id,workspaceId:board.workspace_id,boardRevision:board.updated_at,
   payload:{contract:IMPORT_CONTRACT,group:destination,mappings:normalized,
    newColumns:proposed,rows,matches:{behavior,matchColumnId:matchId}},
+  readback:{group:destination,baselineGroupIds:(detail.groups||[]).map(group=>group.id),
+   baselineColumnIds:(detail.columns||[]).map(column=>column.id),
+   baselineItemIds:(detail.items||[]).filter(item=>!item.archived_at&&
+    (destination.action==='existing'?item.group_id===destination.groupId:false)).map(item=>item.id),
+   rows:readbackRows},
   preview:{newItems:previewNew,updatedItems:previewExisting,skippedItems:previewSkipped,
    newColumns:proposed.length,rowCount:rows.length}};
 }
@@ -349,6 +492,13 @@ export async function executeBoardImport({api,auth,plan}={}){
   !canManuallyEditBoard(detail.board,true)||
   detail.board.updated_at!==plan.boardRevision)
   deny('Board changed after preview. Reload before importing.',409);
+ if(!plan.readback||
+  !sameIds((detail.groups||[]).map(group=>group.id),plan.readback.baselineGroupIds)||
+  !sameIds((detail.columns||[]).map(column=>column.id),plan.readback.baselineColumnIds)||
+  !sameIds((detail.items||[]).filter(item=>!item.archived_at&&
+   (plan.payload.group.action==='existing'?item.group_id===plan.payload.group.groupId:false)).map(item=>item.id),
+   plan.readback.baselineItemIds))
+  deny('Board data changed after import preview. Reload before importing.',409);
  if(!await api.allowed(plan.boardId,'edit'))deny('Board edit access required.',403);
  if(plan.payload.newColumns.length&&!await api.allowed(plan.boardId,'manage'))
   deny('Board manage access required to create columns.',403);
@@ -372,16 +522,27 @@ export async function executeBoardImport({api,auth,plan}={}){
  }
  if(!receipt||!['created','updated','skipped','columnsCreated','groupsCreated'].every(k=>
     Number.isSafeInteger(receipt[k])&&receipt[k]>=0)||
-   receipt.created+receipt.updated+receipt.skipped!==plan.preview.rowCount)
+   receipt.created!==plan.preview.newItems||
+   receipt.updated!==plan.preview.updatedItems||
+   receipt.skipped!==plan.preview.skippedItems||
+   receipt.columnsCreated!==plan.preview.newColumns||
+   receipt.groupsCreated!==(plan.payload.group.action==='create'?1:0))
   uncertainImport();
  try{
-  const after=await api.context();
-  if(after.user_id!==ctx.user_id||after.workspace_id!==ctx.workspace_id)
-   uncertainImport();
- }catch{
-  // A verified writer receipt must never be converted into a retryable error
-  // merely because the post-commit identity refresh failed.
-  uncertainImport();
+  const afterContext=await api.context();
+  if(afterContext.user_id!==ctx.user_id||afterContext.workspace_id!==ctx.workspace_id||
+     afterContext.profile?.status!=='active')uncertainImport();
+  // wm_get_board is a fresh authoritative RPC read (not the in-memory board cache).
+  // Verify persisted items, mapped cells, created columns/groups and skipped values
+  // before the UI reports success or asks the user to refresh.
+  const persisted=await api.board(plan.boardId);
+  verifyImportReadback(plan,detail,persisted);
+  const finalContext=await api.context();
+  if(finalContext.user_id!==ctx.user_id||finalContext.workspace_id!==ctx.workspace_id||
+     finalContext.profile?.status!=='active')uncertainImport();
+ }catch(error){
+  if(error?.importOutcomeUncertain===true)throw error;
+  uncertainImport(error);
  }
  return receipt;
 }
