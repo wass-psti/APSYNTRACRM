@@ -68,13 +68,16 @@ test('share preview escapes untrusted board names and creates no link',()=>{
  });
  assert.match(html,/&lt;img/);
  assert.doesNotMatch(html,/<img|href=|data-action=".*issue"/);
- assert.match(html,/disabled>Copy invitation link/);
+ assert.match(html,/disabled>Send invitation/);
+ assert.match(html,/type="email"/);
+ assert.match(html,/Invite by email/);
+ assert.doesNotMatch(html,/Copy invitation link|data-board-share-lab[^>]*href/);
  assert.match(html,/requires separate security review/);
  assert.match(html,/data-board-share-people/);
  assert.match(html,/People with access/);
  assert.match(html,/Board privacy/);
  assert.doesNotMatch(html,/data-action=".*issue"|data-action=".*enable"/);
- assert.doesNotMatch(html,/<select|<input/);
+ assert.doesNotMatch(html,/<select/);
 });
 
 test('integration preserves existing Work Management backend, auth and invite flags',()=>{
