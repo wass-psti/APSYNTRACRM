@@ -529,9 +529,21 @@ function openOwnershipTransfer(catalog,workspaceId,options={}){
    void options.selectorSession?.load?.();
   }catch{
    if(!isCurrent())return;
-   // A timeout or failed post-read may occur after a committed transfer.
-   // Preserve the request ID for idempotent retry of exactly this target.
-   feedback.textContent='Transfer status is unconfirmed. Refresh the signed workspace directory before repeating this exact request.';
+   // A request can commit before the network returns. Check the signed
+   // actor-bound transfer ledger before offering a same-ID retry.
+   try{
+    const committed=await options.authorityClient.verifyOwnershipTransfer({
+     workspaceId,requestId,targetUserId:target
+    });
+    if(committed?.verified===true&&isCurrent()){
+     render({done:true});
+     void options.selectorSession?.load?.();
+     return;
+    }
+   }catch{} // Only an exact signed receipt proves committed ownership.
+   if(!isCurrent())return;
+   // Preserve requestId for the exact same target to avoid duplicate writes.
+   feedback.textContent='Transfer status could not be confirmed. Reload the authorized workspace and retry this exact request only if still needed.';
    submit.disabled=false;
    form.querySelector('#ws03-owner-target').disabled=false;
    form.querySelector('#ws03-owner-confirmation').disabled=false;
