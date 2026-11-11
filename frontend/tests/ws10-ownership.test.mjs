@@ -141,5 +141,5 @@ test('creator UI uses verified catalog, offers signed open-workspace, never chan
  assert.match(ui,/requestSignedWorkspaceSwitch/);
  assert.match(ui,/A newly created workspace is never silently made active/i);
  assert.match(ui,/Transfer workspace ownership — pending activation/);
- assert.match(readFileSync('frontend/app.js','utf8'),/signedUserId:auth\.userId/);
+ assert.match(readFileSync('frontend/app.js','utf8'),/signedUserId:actor,creatorReceipt/);
 });
