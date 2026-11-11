@@ -11,6 +11,8 @@ WITH signatures(name,signature) AS(
  ('workspace_creator_authority','public.wm_ws03_creator_eligibility()'),
  ('workspace_owner_transfer',
   'public.wm_ws03_transfer_ownership(uuid,text,uuid,uuid,uuid,uuid)'),
+ ('owner_transfer_candidates','public.wm_ws03_transfer_candidates(uuid)'),
+ ('owner_transfer_verify','public.wm_ws03_verify_transfer(uuid,uuid)'),
  ('board_get','public.wm_get_board(uuid)'),
  ('board_list','public.wm_list_boards()')
 ),fn AS (
