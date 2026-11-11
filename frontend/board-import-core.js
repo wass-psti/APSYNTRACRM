@@ -8,7 +8,7 @@ import {isProtectedBoard} from './board-card-lifecycle.js';
 import {moduleByBoardName} from './board-manifest.js';
 import {detectMondayCheckboxMarkers,mondayCheckboxCell} from './monday-import-compat.js';
 import {cmp02Validate} from './board-typed-cmp02.js';
-import {normalizeTextDate} from './excel-date-normalization.js';
+import {normalizeTextDate} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 export const IMPORT_CONTRACT='m143-v1';
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
