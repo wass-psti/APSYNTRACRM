@@ -4,6 +4,7 @@
  * No fabricated memberships, independent auth or browser-persisted scope.
  */
 import {validUuid} from './data.js';
+import {workspaceCreatorUiAllowed} from './ws10-ownership.js';
 
 export const WS01_DISCOVERY_ENABLED=true;
 export const WS01_CREATION_ENABLED=true;
@@ -613,14 +614,14 @@ function openBrowse(catalog,options={}){
  });
  input.focus();
 }
-function createContent({enabled=WS01_CREATION_ENABLED}={}){
+function createContent({enabled=WS01_CREATION_ENABLED,restrictedReason=''}={}){
  const active=enabled===true;
  return '<section class="ws01-create-card" role="dialog" aria-modal="true"'+
   ' aria-labelledby="ws01-create-title" aria-describedby="ws01-create-description">'+
   '<header class="ws01-create-heading"><div><h2 id="ws01-create-title">Add new workspace</h2>'+
   '<p class="ws01-create-subtitle" id="ws01-create-description">'+
    (active?'Create a workspace with your existing verified account. New workspaces are not automatically selected.':
-    'Workspace creation is not activated. You can validate a draft, but nothing will be saved.')+
+    'Workspace creation is restricted to approved IT Admins and workspace owners. Nothing will be saved until the signed server policy is active.')+
    '</p></div>'+
   '<button type="button" class="ws01-close" data-ws01-close aria-label="Close create workspace">×</button></header>'+
   '<div class="ws01-create-symbol" aria-hidden="true">N</div>'+
@@ -638,7 +639,7 @@ function createContent({enabled=WS01_CREATION_ENABLED}={}){
    'and workspace isolation remain mandatory.</p>'+
   '<p class="ws01-create-state">'+(active?
    'Creation requires a valid signed session and explicit server authorization.':
-   'Creation unavailable — pending authorized backend activation.')+'</p>'+
+   'Creation unavailable — '+escape(restrictedReason||'pending authorized backend activation')+'.')+'</p>'+
   '<p class="ws01-form-feedback" role="status" aria-live="polite" aria-atomic="true"></p>'+
   '<footer class="ws01-create-footer">'+
    '<button type="button" class="ws01-create-cancel" data-ws01-close>Cancel</button>'+
@@ -647,8 +648,15 @@ function createContent({enabled=WS01_CREATION_ENABLED}={}){
 }
 function openCreate(catalog,options={}){
  const {lifecycle,selectorSession}=options;
- const enabled=WS01_CREATION_ENABLED&&typeof lifecycle?.create==='function';
- const layer=panel(createContent({enabled}),'create');
+ const current=selectorSession?.catalog||catalog;
+ const activeRow=current?.rows?.find(row=>row.active===true);
+ const creatorPolicy=workspaceCreatorUiAllowed({
+  catalog:current,workspaceId:activeRow?.id,userId:options.signedUserId,
+  adminReceipt:options.creatorReceipt
+ });
+ const enabled=WS01_CREATION_ENABLED&&creatorPolicy.allowed&&
+   typeof lifecycle?.create==='function';
+ const layer=panel(createContent({enabled,restrictedReason:creatorPolicy.reason}),'create');
  const form=layer.querySelector('#ws01-proposal');
  const feedback=layer.querySelector('.ws01-form-feedback');
  const field=form.querySelector('#ws01-name');
