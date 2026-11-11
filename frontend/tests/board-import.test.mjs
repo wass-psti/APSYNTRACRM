@@ -85,6 +85,19 @@ test('unmapped source columns require an explicit mapping or exclusion decision'
   {...m,action:'existing',columnId:colId,requiresDecision:false}:m);
  assert.deepEqual(importMappingReadiness(mapped).pendingSkips,[]);
 });
+test('omitted worksheet rows and uncached formula blanks require explicit acknowledgement',()=>{
+ const mappings=existingMaps.map(m=>({...m}));
+ const report={...sheet,omittedRows:[623],formulaWarnings:[
+  {row:622,cell:'I622',column:'Deal Value (VAT-EX)'}
+ ]};
+ assert.throws(()=>buildImportPlan({sheet:report,detail,mappings,group}),
+  /Confirm whether to exclude the worksheet summary rows/);
+ assert.throws(()=>buildImportPlan({sheet:{...report,omittedRowsConfirmed:true},
+  detail,mappings,group}),/Confirm that uncached formula cells will be imported as blank/);
+ const plan=buildImportPlan({sheet:{...report,omittedRowsConfirmed:true,
+  formulaWarningsConfirmed:true},detail,mappings,group});
+ assert.equal(plan.preview.rowCount,2);
+});
 test('declined mapping changes never create a board column',()=>{
  const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group,allowColumns:false});
  assert.deepEqual(plan.payload.newColumns,[]);
