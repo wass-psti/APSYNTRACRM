@@ -150,6 +150,6 @@ test('UI integrates manager-only choice setup with a direct explicit create acti
  assert.match(ui,/data-imp-choice-create/);
  assert.match(ui,/data-imp-choice-name/);
  assert.match(ui,/provisionImportChoiceColumn/);
- assert.match(ui,/schemaOutcomeUncertain/);
+ assert.match(ui,/normalizeImportFailure\(error,'schema-write'\)/);
  assert.match(ui,/state\.allowColumns=state\.manage/);
 });
