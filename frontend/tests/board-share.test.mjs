@@ -93,20 +93,12 @@ test('integration preserves existing Work Management backend, auth and invite fl
   /REGISTRATION_ADMISSION_ENABLED=false/);
 });
 
-test('disposable schema is private, explicitly off and does not grant browser execution',()=>{
- const schema=readFileSync('sql/bs01-board-guest-sharing-disposable-candidate.sql','utf8');
- assert.match(schema,/current_database\(\)<>'workspace_disposable'/);
- assert.match(schema,/enabled boolean NOT NULL DEFAULT false/);
- assert.match(schema,/guest_read_enabled boolean NOT NULL DEFAULT false/);
- assert.match(schema,/mode text NOT NULL DEFAULT 'private'/);
- assert.match(schema,/role text NOT NULL DEFAULT 'viewer'/);
- assert.match(schema,/extensions\.digest/);
- assert.match(schema,/FOR UPDATE/);
- assert.match(schema,/workspaceMembershipGranted',false/);
- assert.doesNotMatch(schema,/\bGRANT\s+(?:EXECUTE|SELECT|UPDATE|INSERT|DELETE)\s+ON\s+/i);
- for(const name of ['bs01_issue_link','bs01_redeem_link','bs01_guest_read_allowed',
-  'bs01_revoke_link','bs01_signed_actor'])
-  assert.match(schema,new RegExp('REVOKE ALL ON FUNCTION private\\.'+name));
- assert.doesNotMatch(schema,/\b(?:INSERT|UPDATE|DELETE)\s+(?:INTO\s+)?public\.workspace_members\b/i);
- assert.doesNotMatch(schema,/\b(?:INSERT|UPDATE|DELETE)\s+(?:INTO\s+)?public\.work_board_members\b/i);
+test('main-based integration does not activate or import disposable invitation SQL',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const ui=readFileSync('frontend/board-share.js','utf8');
+ assert.match(ui,/data-board-share-email-form/);
+ assert.doesNotMatch(ui,/functions\/v1\/resource-email-invite/);
+ assert.doesNotMatch(app,/wm_add_board_member\(/);
+ assert.match(app,/renderBoardPeople\(people\)/);
+ assert.match(app,/closeBoardSharePreview\(\)/);
 });
