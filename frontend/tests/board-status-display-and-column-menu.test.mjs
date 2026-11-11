@@ -144,20 +144,18 @@ test('existing status writes keep signed preflight, revision CAS, and backend au
  assert.match(css,/\.board-column-more:focus-visible/);
 });
 
-test('status-cell click invokes the native picker during the user gesture with secure write checks',()=>{
+test('status-cell click opens the native picker synchronously before background signed preflight',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const start=app.indexOf('async function startBoardInlineEdit(');
- const end=app.indexOf('async function saveBoardInlineCell(',start);
- assert.ok(start>=0&&end>start);
- const handler=app.slice(start,end);
- assert.match(handler,/if\(col\.virtual&&!await ensureSignedBulkReady/);
- assert.match(handler,/editor\.showPicker\?\.\(\)/);
- assert.match(handler,/editor\?\.focus\(\)/);
- assert.ok(handler.indexOf('editor.showPicker?.()')<
-  handler.indexOf('if(col.data_type===\'status\'&&!col.virtual)'),
-  'native picker must open before the physical-status read-only preflight await');
- assert.match(handler,/await verifyOrdinaryItemWrite\(boardId\)/);
- const save=app.slice(end,app.indexOf('async function saveGroupInline(',end));
+ const start=app.slice(app.indexOf('async function startBoardInlineEdit('),app.indexOf('async function saveBoardInlineCell('));
+ const mount=app.slice(app.indexOf('function mountInlineCellEditor('),app.indexOf('function closeInlineCellEditor('));
+ assert.match(start,/if\(col\.virtual&&!await ensureSignedBulkReady/);
+ assert.match(mount,/editor\.showPicker\?\.\(\)/);
+ assert.match(mount,/editor\?\.focus\(\{preventScroll:true\}\)/);
+ assert.ok(start.indexOf('mountInlineCellEditor(item,key)')<start.indexOf('const promise=verifyOrdinaryItemWrite(boardId)'),
+  'local editor and native picker must mount before signed network preflight');
+ assert.match(start,/const promise=verifyOrdinaryItemWrite\(boardId\)/);
+ assert.match(start,/submit\.disabled=true/);
+ const save=app.slice(app.indexOf('async function saveBoardInlineCell('),app.indexOf('async function saveGroupInline('));
  assert.match(save,/await verifyOrdinaryItemWrite\(boardId\)/);
  assert.match(save,/await db\.setBoardCellCas\(item\.id,col\.id,value,stateCell\.expected\)/);
 });

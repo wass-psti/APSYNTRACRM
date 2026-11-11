@@ -31,18 +31,39 @@ export function genericBoardColumns(detail,{primaryTitle='Record',columnLabels={
  return [...base,...custom.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name})),
   ...(minimal||hidden.has('actions')?[]:[{key:'actions',title:'Actions'}])];
 }
-export function cellColumn(detail,key){
+/** Build one render-local lookup for the current authorized board snapshot.
+ * The index is discarded with the render; it is not a permission or data cache.
+ */
+export function createBoardRenderIndex(detail){
+ const valuesByItem=new Map();
+ for(const entry of Array.isArray(detail?.values)?detail.values:[]){
+  if(!entry||typeof entry.item_id!=='string'||typeof entry.column_id!=='string')continue;
+  let columns=valuesByItem.get(entry.item_id);
+  if(!columns){columns=new Map();valuesByItem.set(entry.item_id,columns);}
+  // Match Array.find's existing first-value behavior if malformed duplicate
+  // rows ever reach the client; the database uniqueness contract remains authoritative.
+  if(!columns.has(entry.column_id))columns.set(entry.column_id,entry.value);
+ }
+ const columnsById=new Map(),columnsBySystemKey=new Map();
+ for(const column of Array.isArray(detail?.columns)?detail.columns:[]){
+  if(typeof column?.id==='string'&&!columnsById.has(column.id))columnsById.set(column.id,column);
+  if(typeof column?.system_key==='string'&&!columnsBySystemKey.has(column.system_key))
+   columnsBySystemKey.set(column.system_key,column);
+ }
+ return {valuesByItem,columnsById,columnsBySystemKey};
+}
+export function cellColumn(detail,key,index=null){
  const cols=Array.isArray(detail?.columns)?detail.columns:[];
  if(key==='record')return {id:null,name:'Record',data_type:'text',system_key:'title',required:true,config:{}};
  if(key.startsWith('col:')){
-  const c=cols.find(col=>col.id===key.slice(4)&&col.system_key==null&&
-   col.visible!==false&&TYPES.has(col.data_type));
-  return c||null;
+  const id=key.slice(4),column=index?.columnsById?.get(id)||cols.find(col=>col.id===id);
+  return column&&column.system_key==null&&column.visible!==false&&TYPES.has(column.data_type)?
+   column:null;
  }
  const system={status:'status',owner:'assignee',due:'due_date'}[key];
  if(!system)return null;
- const real=cols.find(c=>c.system_key===system&&
-  c.visible!==false&&TYPES.has(c.data_type))||null;
+ const column=index?.columnsBySystemKey?.get(system)||cols.find(c=>c.system_key===system);
+ const real=column&&column.visible!==false&&TYPES.has(column.data_type)?column:null;
  if(real)return real;
  // Standard ordinary boards can lack a physical status column. Their signed,
  // revision-guarded status edits use CP-BOARD-BULK02, never the title CAS path.
@@ -54,12 +75,13 @@ export function cellColumn(detail,key){
    {id:'done',label:'Done'}]}};
  return null;
 }
-export function expectedCellValue(detail,item,key){
+export function expectedCellValue(detail,item,key,index=null){
  if(key==='record')return item.title;
  if(key==='status')return item.status??null;
  if(key==='owner')return item.assignee_id??null;
  if(key==='due')return item.due_date??null;
  if(key.startsWith('col:')){
+  if(index instanceof Map)return index.get(item.id)?.get(key.slice(4))??null;
   const found=(detail?.values||[]).find(v=>v.item_id===item.id&&v.column_id===key.slice(4));
   return found?.value??null;
  }
@@ -227,7 +249,7 @@ export function renderGroupAddRow({groupId,enabled=false,busy=false,domain=false
    'placeholder="+ Add item" aria-label="Add item to this group" autocomplete="off"'+(busy?' disabled':'')+' />'+
   '<button class="board-inline-add-submit" type="submit"'+(busy?' disabled':'')+'>Add item</button></form>';
 }
-export function groupColumnSummaries({items=[],columns=[],detail}={}){
+export function groupColumnSummaries({items=[],columns=[],detail,valueIndex=null,columnIndex=null}={}){
  const cells={record:items.length+' item'+(items.length===1?'':'s')};
  const active=items.filter(x=>!x.archived_at);
  const statuses=new Map();
@@ -237,11 +259,15 @@ export function groupColumnSummaries({items=[],columns=[],detail}={}){
  cells.owner=new Set(active.map(x=>x.assignee_id).filter(Boolean)).size+' assigned';
  const dates=active.map(x=>x.due_date).filter(Boolean).sort();
  cells.due=dates.length?'Next '+dates[0]:'—';
- const lookup=new Map((detail?.values||[]).map(v=>[v.item_id+':'+v.column_id,v.value]));
- for(const c of columns.filter(c=>c.key?.startsWith('col:'))){
-  const id=c.key.slice(4),col=(detail?.columns||[]).find(x=>x.id===id);
+ const indexed=valueIndex instanceof Map;
+ const lookup=indexed?valueIndex:new Map((detail?.values||[]).map(v=>[v.item_id+':'+v.column_id,v.value]));
+ const sourceColumns=columns.filter(c=>c.key?.startsWith('col:'));
+ const definitions=columnIndex||new Map((detail?.columns||[]).map(x=>[x.id,x]));
+ for(const c of sourceColumns){
+  const id=c.key.slice(4),col=definitions.get(id);
   if(!col)continue;
-  const vals=active.map(x=>lookup.get(x.id+':'+id)).filter(v=>v!=null);
+  const vals=active.map(x=>indexed?lookup.get(x.id)?.get(id):lookup.get(x.id+':'+id))
+   .filter(v=>v!=null);
   if(col.data_type==='number'){
    const nums=vals.filter(x=>typeof x==='number'&&Number.isFinite(x));
    cells[c.key]=nums.length?'Σ '+Number(nums.reduce((a,b)=>a+b,0).toFixed(2)):'—';

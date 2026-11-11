@@ -1667,11 +1667,12 @@
  cursor:text;border-radius:5px;padding:3px 4px;max-width:100%;white-space:normal}
 .board-inline-cell-trigger:hover{background:#edf0ff}
 .board-inline-cell-trigger:focus-visible{outline:2px solid #6478e9;outline-offset:1px}
+.board-inline-cell-trigger[hidden]{display:none}
 .board-inline-pencil{font-size:11px;color:#767ff2;opacity:0}
 .board-inline-cell-trigger:hover .board-inline-pencil,
 .board-inline-cell-trigger:focus-visible .board-inline-pencil{opacity:1}
-.board-inline-cell-form{display:flex;flex-direction:column;gap:5px;min-width:135px;max-width:100%;
- padding:3px}
+.board-inline-cell-form{display:flex;flex-direction:column;gap:5px;min-width:0;width:100%;max-width:100%;
+ box-sizing:border-box;padding:3px}
 .board-inline-cell-form input,.board-inline-cell-form textarea,.board-inline-cell-form select{
  box-sizing:border-box;width:100%;min-width:0;font:inherit;font-size:12px;
  color:#273152;background:#fff;border:1px solid #bdc9ea;border-radius:6px;padding:7px 8px}
@@ -1685,7 +1686,7 @@
 .board-inline-boolean input{width:16px}
 @media(max-width:620px){
  .board-inline-add-form{min-width:250px}
- .board-inline-cell-form{min-width:105px}
+ .board-inline-cell-form{min-width:0}
 }
 @media(prefers-reduced-motion:reduce){
  .board-inline-add-form *, .board-inline-cell-form *{transition:none!important}
