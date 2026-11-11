@@ -42,7 +42,7 @@ function parseImportNumber(value){
   const parts=text.split(decimal);
   if(parts.length!==2||!/^\d{1,3}(?:[.,]\d{3})+$/.test(parts[0].replace(/^[+-]/,''))||
      !/^\d+$/.test(parts[1]))return null;
-  text=parts[0].replaceAll(group,'').replace(decimal,'.')+parts[1].replace(/^$/,'');
+  text=parts[0].replaceAll(group,'')+'.'+parts[1];
  }else if(comma>=0){
   const parts=text.split(',');
   if(parts.length>2){
