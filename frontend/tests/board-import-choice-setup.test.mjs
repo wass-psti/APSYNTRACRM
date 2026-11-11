@@ -145,8 +145,9 @@ test('UI integrates manager-only choice setup with a direct explicit create acti
  const ui=readFileSync('frontend/board-import-ui.js','utf8');
  assert.match(ui,/Configure new Status/);
  assert.match(ui,/Configure new Dropdown/);
- assert.match(ui,/will remain if I cancel or the later import fails/);
- assert.match(ui,/data-imp-choice-consent/);
+ assert.match(ui,/remains available if you cancel the later record import/);
+ assert.doesNotMatch(ui,/data-imp-choice-consent/);
+ assert.match(ui,/data-imp-choice-create/);
  assert.match(ui,/data-imp-choice-name/);
  assert.match(ui,/provisionImportChoiceColumn/);
  assert.match(ui,/schemaOutcomeUncertain/);
