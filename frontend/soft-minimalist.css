@@ -4354,3 +4354,119 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 @media(prefers-reduced-motion:reduce){
  #app .aps-pages-shell .aps-pages-acceptance :is(.pages-run-primary,.pages-run-secondary,.pages-open-boards){transition:none}
 }
+
+/* BS03 — contextual column header controls (Monday-like, accessible).
+ * Bundled at the end of soft-minimalist.css. Does not alter board actions,
+ * database access, column commands, or user presentation preferences.
+ * Keyboard users can Tab to an invisible control, which becomes visible on focus.
+ */
+#app .aps-board-shell .board-table-custom thead th > .board-column-more,
+#app .aps-board-shell .board-table-custom thead th > .board-column-resize,
+#app .aps-board-shell .board-table-custom thead th > .board-column-handle {
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  float:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  padding:0;
+  margin:0;
+  background:transparent;
+  color:#7785a0;
+  border:1px solid transparent;
+  border-radius:7px;
+  box-shadow:none;
+  font-size:13px;
+  line-height:1;
+  z-index:5;
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-more {
+  right:24px;
+  width:29px;
+  min-width:29px;
+  height:29px;
+  min-height:29px;
+  cursor:pointer;
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-handle {
+  right:53px;
+  width:20px;
+  min-width:20px;
+  height:29px;
+  min-height:29px;
+  cursor:grab;
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-resize {
+  right:0;
+  width:22px;
+  min-width:22px;
+  height:29px;
+  min-height:29px;
+  cursor:col-resize;
+  touch-action:none;
+}
+/* Titles stay in place; only the controls change visibility. */
+#app .aps-board-shell .board-table-custom thead th > .board-heading-label {
+  max-width:calc(100% - 62px);
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-more:is(:hover,:focus-visible,[aria-expanded="true"]),
+#app .aps-board-shell .board-table-custom thead th > .board-column-handle:is(:hover,:focus-visible),
+#app .aps-board-shell .board-table-custom thead th > .board-column-resize:is(:hover,:focus-visible){
+  color:#4d62bc;
+  border-color:#d4dff7;
+  background:#eaf0ff;
+  box-shadow:none;
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-more[aria-expanded="true"]{
+  color:#475dc1;
+  border-color:#bfcdf5;
+  background:#e8eeff;
+}
+#app .aps-board-shell .board-table-custom thead th > :is(.board-column-more,.board-column-handle,.board-column-resize):focus-visible{
+  opacity:1;
+  pointer-events:auto;
+  outline:2px solid #526ae2;
+  outline-offset:1px;
+}
+
+/* Desktop: the header reads like a clean table until the user interacts.
+ * Opacity (not visibility:hidden/display:none) preserves keyboard tabbing.
+ */
+@media (hover:hover) and (pointer:fine){
+  #app .aps-board-shell .board-table-custom thead th > :is(.board-column-more,.board-column-handle,.board-column-resize){
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .12s ease,color .12s ease,background-color .12s ease;
+  }
+  #app .aps-board-shell .board-table-custom thead th:is(:hover,:focus-within) > :is(.board-column-more,.board-column-handle,.board-column-resize),
+  #app .aps-board-shell .board-table-custom thead th > .board-column-more[aria-expanded="true"]{
+    opacity:1;
+    pointer-events:auto;
+  }
+}
+/* Touch devices have no dependable hover and must retain discoverable controls. */
+@media (hover:none), (pointer:coarse){
+  #app .aps-board-shell .board-table-custom thead th > .board-column-more{
+    opacity:1;
+    pointer-events:auto;
+    right:26px;
+    width:33px;
+    min-width:33px;
+    height:34px;
+    min-height:34px;
+  }
+  #app .aps-board-shell .board-table-custom thead th > :is(.board-column-resize,.board-column-handle){
+    opacity:1;
+    pointer-events:auto;
+  }
+  #app .aps-board-shell .board-table-custom thead th > .board-heading-label{
+    max-width:calc(100% - 67px);
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  #app .aps-board-shell .board-table-custom thead th > :is(.board-column-more,.board-column-handle,.board-column-resize){
+    transition:none;
+  }
+}
