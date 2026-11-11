@@ -24,10 +24,7 @@ const uncertainImport=()=>{
 const clean=s=>String(s??'').trim();
 const key=s=>clean(s).toLocaleLowerCase();
 const matchText=s=>key(s);
-const forbidFormula=s=>{
- if(/^[=+@]/.test(s)||/^-(?!\d+(?:\.\d+)?$)/.test(s))
-  deny('Spreadsheet formula-like text is not accepted. Replace it with literal data.');
-};
+
 export function inferImportType(header,values=[]){
  const label=key(header),sample=values.map(clean).filter(Boolean).slice(0,100);
  if(label==='status'||label==='priority')return 'status';
@@ -41,7 +38,7 @@ export function inferImportType(header,values=[]){
  if(!sample.length)return 'text';
  if(sample.every(x=>/^(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)%$/.test(x)))return 'percentage';
  if(sample.every(x=>/^(true|false|yes|no|0|1)$/i.test(x)))return 'checkbox';
- if(sample.every(x=>/^-?\d+(?:\.\d+)?$/.test(x)))return 'number';
+ if(sample.every(x=>parseImportNumber(x)!==null))return 'number';
  if(sample.every(x=>/^\d{4}-\d\d-\d\d$/.test(x)))return 'date';
  if(sample.every(x=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))return 'email';
  if(sample.every(x=>/^https?:\/\/\S+$/i.test(x)))return 'url';
@@ -54,48 +51,49 @@ export function availableImportColumns(detail){
   .map(c=>({id:c.id,name:c.name,type:c.data_type,system_key:c.system_key||null,config:c.config||{}}));
 }
 function parseImportNumber(raw){
- let value=String(raw??'').trim().replace(/[\\s\\u00a0\\u202f]/g,'');
+ let value=String(raw??'').trim().replace(/[\s\u00a0\u202f]/g,'');
  if(!value)return null;
  let negative=false;
  if(value.startsWith('(')&&value.endsWith(')')){
   negative=true;value=value.slice(1,-1);
  }
- const currency=/^(?:USD|PHP|EUR|GBP|JPY|CAD|AUD|CNY|INR|SGD|HKD)/i;
- value=value.replace(currency,'').replace(/(?:USD|PHP|EUR|GBP|JPY|CAD|AUD|CNY|INR|SGD|HKD)$/i,'');
- value=value.replace(/^\\p{Sc}/u,'').replace(/\\p{Sc}$/u,'');
+ const currencies='USD|PHP|EUR|GBP|JPY|CAD|AUD|CNY|INR|SGD|HKD';
+ value=value.replace(new RegExp('^(?:'+currencies+')','i'),'')
+  .replace(new RegExp('(?:'+currencies+')$','i'),'');
+ value=value.replace(/^\p{Sc}/u,'').replace(/\p{Sc}$/u,'');
  let sign='';
  if(/^[+-]/.test(value)){sign=value[0];value=value.slice(1);}
- const exponentMatch=value.match(/([eE][+-]?\\d+)$/);
+ const exponentMatch=value.match(/([eE][+-]?\d+)$/);
  const exponent=exponentMatch?.[1]||'';
  if(exponent)value=value.slice(0,-exponent.length);
- if(!value||!/^\\d[\\d.,]*$/.test(value))return null;
+ if(!value||!/^\d[\d.,]*$/.test(value))return null;
  const comma=value.lastIndexOf(','),dot=value.lastIndexOf('.');
  let integer=value,fraction='',decimal='';
  const validGrouped=part=>{
   const chunks=part.split(/[.,]/);
   return chunks.length>1&&chunks[0].length>=1&&chunks[0].length<=3&&
-   chunks.slice(1).every(chunk=>chunk.length===3&&/^\\d+$/.test(chunk));
+   chunks.slice(1).every(chunk=>chunk.length===3&&/^\d+$/.test(chunk));
  };
  if(comma>=0&&dot>=0){
   decimal=comma>dot?',':'.';
   const group=decimal===','?'.':',';
   const parts=value.split(decimal);
-  if(parts.length!==2||!/^\\d+$/.test(parts[1]))return null;
+  if(parts.length!==2||!/^\d+$/.test(parts[1]))return null;
   integer=parts[0];fraction=parts[1];
   if(integer.includes(group)&&!validGrouped(integer))return null;
   integer=integer.split(group).join('');
  }else if(comma>=0){
   if(validGrouped(value))integer=value.replace(/,/g,'');
-  else if(value.split(',').length===2&&/^\\d+$/.test(value.split(',')[1])){
+  else if(value.split(',').length===2&&/^\d+$/.test(value.split(',')[1])){
    [integer,fraction]=value.split(',');decimal=',';
   }else return null;
  }else if(dot>=0){
-  if(validGrouped(value))integer=value.replace(/\\./g,'');
-  else if(value.split('.').length===2&&/^\\d+$/.test(value.split('.')[1])){
+  if(validGrouped(value))integer=value.replace(/\./g,'');
+  else if(value.split('.').length===2&&/^\d+$/.test(value.split('.')[1])){
    [integer,fraction]=value.split('.');decimal='.';
   }else return null;
  }
- if(!/^\\d+$/.test(integer)||decimal&&!/^\\d+$/.test(fraction))return null;
+ if(!/^\d+$/.test(integer)||decimal&&!/^\d+$/.test(fraction))return null;
  const parsed=Number((negative?'-':sign)+integer+(decimal?'.'+fraction:'')+exponent);
  return Number.isFinite(parsed)?parsed:null;
 }
@@ -135,16 +133,15 @@ function valueAsType(raw,type,config={}){
   catch(error){deny(error.message);}
  }
  if(type==='number'){
-  if(!/^-?\d+(?:\.\d+)?$/.test(text)||!Number.isFinite(Number(text)))
-   deny('A number cell contains an invalid value: '+text.slice(0,60));
-  return Number(text);
+  const parsed=parseImportNumber(text);
+  if(parsed===null)deny('A number cell contains an invalid value: '+text.slice(0,60));
+  return parsed;
  }
  if(type==='checkbox'){
   if(/^(true|yes|1)$/i.test(text))return true;
   if(/^(false|no|0)$/i.test(text))return false;
   deny('A checkbox accepts only yes/no, true/false or 1/0.');
  }
- forbidFormula(text);
  if(type==='date'){
   if(!validDate(text))deny('Date cells must contain valid YYYY-MM-DD dates.');
   return text;
