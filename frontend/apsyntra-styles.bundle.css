@@ -20038,6 +20038,7 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 .board-share-stage-permission strong{color:#5c6287;font-weight:700}
 .board-share-stage-form .board-share-stage-primary{margin-top:0}
 @media(max-width:420px){.board-share-stage-permission{align-items:flex-start;flex-direction:column;gap:4px}}
+
 /* frontend/workspace-board-groups.css */
 /* BS09 — board member/group picker. Uses APSYNTRA light surface and compact spacing. */
 .bs09-board-access{display:grid;gap:11px;min-width:0}
