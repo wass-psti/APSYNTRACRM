@@ -62,7 +62,7 @@ test('number and date conversion accepts common export formats without guessing 
  assert.equal(datePlan.payload.rows[1].values['Date Updated'],'2026-02-13');
  const ambiguous={...dates,rows:[['Alpha','01/02/2026']]};
  assert.throws(()=>buildImportPlan({sheet:ambiguous,detail,mappings:dateMaps,group,allowColumns:true}),
-  /unambiguous supported date format/);
+  /unambiguous day\/month or month\/day date/);
 });
 test('manager receives missing-column proposal; editor sees no auto-creation',()=>{
  const editor=initialImportMappings(sheet,detail);
@@ -169,7 +169,7 @@ test('mapped date rejection identifies real Excel worksheet, row, header and ori
   error=>/Worksheet "live identification status"/.test(error.message)&&
    /row 20/.test(error.message)&&/column "Date Updated"/.test(error.message)&&
    /2026-07-09 to 2026-08-18/.test(error.message)&&
-   /YYYY-MM-DD/.test(error.message));
+   /valid ISO, YYYY\/MM\/DD/.test(error.message));
 });
 test('protected application boards cannot be mutated through the generic importer',()=>{
  const restricted={...detail,board:{...detail.board,name:'TimeTracker Attendance'}};
