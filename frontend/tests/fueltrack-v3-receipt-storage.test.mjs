@@ -107,7 +107,7 @@ test('ambiguous registration retry reuses the same private object across new cli
   }
   if(options.method==='GET'){
    downloads++;
-   assert.match(url,/\\/storage\\/v1\\/object\\/authenticated\\/work-board-files\\//);
+   assert.ok(url.includes('/storage/v1/object/authenticated/work-board-files/'));
    assert.equal(options.credentials,'omit');
    return new Response(await file.arrayBuffer(),{
     headers:{'Content-Type':'image/jpeg','Content-Length':String(file.size)}
