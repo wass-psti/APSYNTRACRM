@@ -566,7 +566,10 @@ function openMenu(catalog,options={}){
   if(command==='browse')openBrowse(read(),options);
   if(command==='create')openCreate(read(),options);
   if(command==='invite')openInvites(read().rows.find(row=>row.active),{
-   enabled:options.invitationEnabled,sendInvitation:options.sendInvitation
+   enabled:options.invitationEnabled,sendInvitation:options.sendInvitation,
+   managementEnabled:options.managementEnabled,
+   listInvitations:options.listInvitations,
+   revokeInvitation:options.revokeInvitation
   });
  });
  input.focus();
@@ -809,7 +812,12 @@ function inviteContent(current,{enabled=false}={}){
   '<button type="button" class="ws02-send" data-ws02-action="send" '+
   (enabled?'':'disabled ')+ 'aria-describedby="ws02-invite-description">'+
   (enabled?'Send Member invitation':'Send invites — pending activation')+
-  '</button></footer></form></section>';
+  '</button></footer></form>'+
+  '<section class="ws11-manage" aria-label="Workspace invitation history">'+
+  '<div class="ws11-manage-heading"><h3>Invited members</h3>'+
+  '<button type="button" data-ws11-refresh disabled>Refresh</button></div>'+
+  '<p class="ws11-manage-feedback" role="status">Invitation status is available only to verified workspace administrators after server activation.</p>'+
+  '<div class="ws11-invite-list" aria-live="polite"></div></section></section>';
 }
 function openInvites(current,options={}){
  const row=workspaceFromSignedContext(current);
@@ -817,6 +825,82 @@ function openInvites(current,options={}){
  const enabled=options.enabled===true&&typeof options.sendInvitation==='function';
  const layer=panel(inviteContent(row,{enabled}),'invite');
  const form=layer.querySelector('#ws02-invite-preview');
+ const canManage=options.managementEnabled===true&&
+  typeof options.listInvitations==='function'&&
+  typeof options.revokeInvitation==='function';
+ let managementBusy=false;
+ const manageFeedback=layer.querySelector('.ws11-manage-feedback');
+ const manageList=layer.querySelector('.ws11-invite-list');
+ const refresh=layer.querySelector('[data-ws11-refresh]');
+ refresh.disabled=!canManage;
+ const draw=listing=>{
+  if(!listing||listing.status!=='SIGNED_MANAGER_LIST'||listing.workspaceId!==row.id){
+   manageList.replaceChildren();return;
+  }
+  const nodes=listing.invitations.map(invitation=>{
+   const article=document.createElement('article');
+   article.className='ws11-invite-row';
+   const detail=document.createElement('div'),email=document.createElement('strong');
+   const meta=document.createElement('small');
+   email.textContent=invitation.email;
+   meta.textContent=invitation.state+' · Member · '+new Date(invitation.issuedAt).toLocaleDateString();
+   detail.append(email,meta);article.append(detail);
+   if(invitation.state==='pending'){
+    const revoke=document.createElement('button');
+    revoke.type='button';revoke.dataset.ws11Revoke=invitation.id;
+    revoke.textContent='Revoke';article.append(revoke);
+   }
+   return article;
+  });
+  manageList.replaceChildren(...nodes);
+  manageFeedback.textContent=nodes.length?
+   'Status is verified from the signed workspace invitation service.':
+   'No invitations are recorded for this workspace.';
+ };
+ const load=async()=>{
+  if(!canManage||managementBusy||!layer.isConnected||activeOverlay!==layer)return;
+  managementBusy=true;refresh.disabled=true;
+  manageFeedback.textContent='Checking signed invitation status…';
+  try{
+   const listing=await options.listInvitations(row.id);
+   if(activeOverlay===layer&&layer.isConnected)draw(listing);
+  }catch{
+   if(activeOverlay===layer&&layer.isConnected){
+    manageList.replaceChildren();
+    manageFeedback.textContent='Invitation status cannot be verified. No records are displayed.';
+   }
+  }finally{
+   managementBusy=false;
+   if(activeOverlay===layer&&layer.isConnected)refresh.disabled=!canManage;
+  }
+ };
+ refresh.addEventListener('click',()=>{void load();});
+ manageList.addEventListener('click',async event=>{
+  const inviteId=event.target.closest('[data-ws11-revoke]')?.dataset.ws11Revoke;
+  if(!canManage||managementBusy||!validUuid(inviteId)||!layer.isConnected||
+   activeOverlay!==layer)return;
+  const requestId=globalThis.crypto?.randomUUID?.();
+  if(!validUuid(requestId))return;
+  managementBusy=true;refresh.disabled=true;
+  const target=event.target.closest('[data-ws11-revoke]');
+  target.disabled=true;
+  manageFeedback.textContent='Requesting verified invitation revocation…';
+  try{
+   const receipt=await options.revokeInvitation({workspaceId:row.id,invitationId:inviteId,requestId});
+   if(activeOverlay!==layer||!layer.isConnected)return;
+   if(receipt?.state!=='revoked'||receipt?.invitationId!==inviteId)throw Error('Unverified');
+   manageFeedback.textContent='Revoked. Refreshing signed invitation status…';
+  }catch{
+   if(activeOverlay!==layer||!layer.isConnected)return;
+   manageFeedback.textContent='Revocation outcome is unconfirmed. Refresh and reconcile before retrying.';
+  }finally{
+   managementBusy=false;
+   if(activeOverlay===layer&&layer.isConnected)refresh.disabled=!canManage;
+  }
+  // A fresh server read, never an optimistic local membership or status mutation.
+  void load();
+ });
+ if(canManage)void load();
  const contexts={
   work:'Join us to track and manage work in our workspace.',
   team:'Join our workspace to collaborate with the team.',

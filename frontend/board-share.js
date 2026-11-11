@@ -58,7 +58,8 @@ export function boardShareReadiness({board,workspaceId,manage=false,policy=null}
 
 /** A count from the verified direct-member snapshot, NOT effective access. */
 export function renderBoardSharePreview({board,moduleKey=null,workspaceId,manage=false,
- policy=null,assignedMemberCount=null,peopleDirectory=null,groupsDirectory=null}={}){
+ policy=null,assignedMemberCount=null,peopleDirectory=null,groupsDirectory=null,
+ accessEnabled=false}={}){
  const title=escapeHtml(board?.name||'Board');
  const protectedModule=SENSITIVE_MODULE_DEFAULTS.has(moduleKey);
  const signed=policy?.state==='VERIFIED_POLICY';
@@ -104,7 +105,8 @@ export function renderBoardSharePreview({board,moduleKey=null,workspaceId,manage
   '</div>'+
   '<div class="board-share-stage-section">'+
    (groupEditor?
-    renderBoardAccessChoices({people:candidateDirectory,groups:candidateGroups}):
+    renderBoardAccessChoices({people:candidateDirectory,groups:candidateGroups,
+     enabled:accessEnabled===true}):
     '<p class="board-share-stage-caption">Only authorized board managers may assign people or groups. Sensitive applications need a separate permission review.</p>')+
   '</div>'+
   '<div class="board-share-stage-section">'+
@@ -163,7 +165,7 @@ export function openBoardSharePreview(options={}){
   const section=document.createElement('div');
   section.innerHTML=renderBoardAccessChoices({
    people:options.peopleDirectory,groups:options.groupsDirectory,
-   tab:selectedTab,query:searchTerm
+   tab:selectedTab,query:searchTerm,enabled:options.accessEnabled===true
   });
   const next=section.querySelector('.bs09-board-access');
   if(next)host.replaceWith(next);
@@ -175,7 +177,36 @@ export function openBoardSharePreview(options={}){
   const field=overlay.querySelector('#bs09-access-search');
   if(field){field.focus();field.setSelectionRange(searchTerm.length,searchTerm.length);}
  });
- const click=event=>{
+ let assigning=false;
+ const click=async event=>{
+  const assign=event.target.closest?.('[data-bs09-assign]');
+  if(assign){
+   if(assigning||options.accessEnabled!==true||
+      typeof options.onAssignBoard!=='function'||!options.manage||
+      options.moduleKey||!options.peopleDirectory||
+      options.peopleDirectory.status!=='VERIFIED_SIGNED_CANDIDATES')return;
+   const person=options.peopleDirectory.members.find(row=>row.id===assign.dataset.bs09Assign);
+   // Direct board grants are restricted to verified, existing workspace members.
+   if(!person||person.boardRole)return;
+   assigning=true;assign.disabled=true;
+   const status=overlay.querySelector('.bs09-access-note');
+   if(status)status.textContent='Submitting signed board access transaction…';
+   try{
+    await options.onAssignBoard(person.id);
+    if(!overlay.isConnected)return;
+    if(typeof options.onRefreshDirectory==='function'){
+     const updated=await options.onRefreshDirectory();
+     if(!overlay.isConnected||updated?.status!=='VERIFIED_SIGNED_CANDIDATES')
+      throw Error('Board grant verification is unavailable');
+     options.peopleDirectory=updated;
+    }
+    renderPicker();
+   }catch{
+    if(overlay.isConnected&&status)status.textContent=
+     'Board access change could not be verified. Refresh and reconcile before retrying.';
+   }finally{assigning=false;}
+   return;
+  }
   const tab=event.target.closest?.('[data-bs09-tab]')?.dataset.bs09Tab;
   if(tab==='people'||tab==='groups'){
    selectedTab=tab;searchTerm='';renderPicker();return;

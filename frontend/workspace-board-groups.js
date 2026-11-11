@@ -141,7 +141,10 @@ export class BoardGroupAccessClient{
  }
 }
 
-export function renderBoardAccessChoices({people=unavailable,groups=null,tab='people',query=''}={}){
+export function renderBoardAccessChoices({
+ people=unavailable,groups=null,tab='people',query='',
+ enabled=BOARD_GROUP_ACCESS_ENABLED
+}={}){
  const which=tab==='groups'?'groups':'people';
  const q=typeof query==='string'?query.trim().toLocaleLowerCase().slice(0,120):'';
  const validPeople=people?.status==='VERIFIED_SIGNED_CANDIDATES';
@@ -171,7 +174,10 @@ export function renderBoardAccessChoices({people=unavailable,groups=null,tab='pe
      '<small>'+(which==='people'?escape(row.email)+' · '+
        escape(row.boardRole||'Not on this board'):
        row.memberCount+' workspace member'+(row.memberCount===1?'':'s'))+'</small>'+
-     '<button type="button" disabled data-bs09-assign="'+row.id+'">'+
+     '<button type="button" '+
+      ((enabled&&((which==='people'&&!row.boardRole)||
+       (which==='groups'&&!row.assignedToBoard)))?'':'disabled ')+
+      'data-bs09-assign="'+row.id+'">'+
       (which==='groups'&&row.assignedToBoard||which==='people'&&row.boardRole?
        'Assigned':'Add viewer')+'</button></div>').join(''):
      '<p>No matching workspace '+(which==='people'?'members':'groups')+'.</p>'):
@@ -180,6 +186,7 @@ export function renderBoardAccessChoices({people=unavailable,groups=null,tab='pe
   (which==='groups'?'<button type="button" class="bs09-group-create" disabled '+
    'aria-label="Create a workspace group (not activated)">+ Create group</button>':'')+
   '<p class="bs09-access-note">Workspace membership alone does not grant board access.'+
-   ' Access changes remain disabled until server-side permissions are verified.</p>'+
+   (enabled?' Changes require a signed board-manager transaction and verification.':
+   ' Access changes remain disabled until server-side permissions are verified.')+'</p>'+
  '</section>';
 }
