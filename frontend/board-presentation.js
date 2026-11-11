@@ -86,10 +86,9 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
   ' width="'+tableWidth+'">'+
   '<colgroup>'+visible.map(k=>'<col data-column-key="'+esc(k)+'" width="'+pref.widths[k]+'">').join('')+(addColumn?'<col width="150">':'')+'</colgroup>'+
   '<thead><tr>'+cells.map((c,i)=>'<th scope="col" data-column-key="'+esc(c.key)+'" draggable="'+(i>1||(minimal&&i>0))+'"'+
-    (i===0?' class="board-frozen-column"':'')+'>'+
+    (i===0?' class="board-frozen-column"':'')+
+    (i>1||(minimal&&i>0)?' tabindex="0" aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight" title="Drag column to reorder; Alt+Shift+Left/Right to move"':'')+'>'+
    '<span class="board-heading-label">'+(i===0&&selection?.enabled?'<input id="board-select-all-'+esc(groupId)+'" name="board-select-all-'+esc(groupId)+'" type="checkbox" class="board-select-all" data-board-select-all="'+esc(groupId)+'" aria-label="Select visible eligible items in this group" />':'')+esc(c.title)+'</span>'+
-   (i>1||(minimal&&i>0)?'<button type="button" class="board-column-handle" data-column-key="'+esc(c.key)+'" '+
-    'aria-label="Drag to reorder '+esc(c.title)+' column" title="Drag to reorder">⠿</button>':'')+
    '<button type="button" class="board-column-more" data-action="board-column-context" '+
     'data-column-key="'+esc(c.key)+'" aria-label="Column options for '+esc(c.title)+'" '+
     'aria-haspopup="menu" aria-expanded="false" title="Column options">⋮</button>'+
