@@ -5,6 +5,7 @@
  * Mentions are local text drafts ONLY: no update write or notification.
  */
 import {validUuid} from './data.js';
+import {avatarImageMarkup} from './profile-avatar.js';
 
 const MAX_PEOPLE=300,MAX_NAME=180;
 const ROLES=new Set(['owner','editor','viewer']);
@@ -14,6 +15,11 @@ const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const fail=()=>({status:'UNVERIFIED',people:[],isCompleteAccessList:false});
 const safeName=v=>typeof v==='string'&&v.trim().length>0&&v.length<=MAX_NAME?v.trim():null;
+// Only a verified member's own avatar object path, never an external image URL.
+const AVATAR_PATH=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$/i;
+const avatarPath=(value,userId)=>typeof value==='string'&&AVATAR_PATH.test(value)&&
+ value.split('/')[0].toLowerCase()===userId.toLowerCase()?value:null;
+const initials=name=>name.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase();
 
 /** Fail closed on missing or mismatched board membership data.
  * Member records are not collected from a workspace-wide directory.
@@ -31,7 +37,7 @@ export function normalizeBoardPeople(detail,{boardId,workspaceId}={}){
   const name=safeName(row.display_name)||safeName(row.name);
   if(!name)return fail();
   seen.add(id);
-  people.push(Object.freeze({id,name,role:row.role}));
+  people.push(Object.freeze({id,name,role:row.role,avatarPath:avatarPath(row.avatar_path,id)}));
  }
  people.sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
  return Object.freeze({status:'SIGNED_MEMBERSHIP',people,
@@ -47,23 +53,36 @@ export function renderBoardPeople(result,{query=''}={}){
  if(result?.status!=='SIGNED_MEMBERSHIP')
   return '<p role="status" class="muted">Board membership could not be verified from the signed response. No names are displayed.</p>';
  const people=filterBoardPeople(result,query);
+ const count=result.people.length;
  return '<section class="bs02-people" aria-label="People assigned to this board">'+
-  '<label for="bs02-people-search">Find a board member</label>'+
-  '<input id="bs02-people-search" type="search" maxlength="120" autocomplete="off" '+
-   'placeholder="Search by name or role" value="'+escapeHtml(query)+'">'+
-  '<p class="muted" role="status">'+result.people.length+' explicitly assigned board member(s). '+
-   'This is not an exhaustive access audit: workspace administrators and other effective permissions may not appear.</p>'+
-  '<div data-bs02-people-results class="board-member-list">'+
+  '<header class="bs02-people-heading">'+
+   '<div><h3>Assigned members</h3><p class="bs02-people-subtitle">People directly assigned to this board.</p></div>'+
+   '<span class="bs02-people-count" aria-label="'+count+' assigned members">'+count+'</span>'+
+  '</header>'+
+  (count>8?
+   '<label for="bs02-people-search" class="bs02-search-label">Find a member</label>'+
+   '<input id="bs02-people-search" type="search" maxlength="120" autocomplete="off" '+
+    'placeholder="Search by name or role" value="'+escapeHtml(query)+'">':'')+
+  '<div data-bs02-people-results class="bs02-avatar-grid" aria-label="Assigned board members">'+
   (people.length?people.map(p=>
-   '<div class="board-member"><span aria-hidden="true" class="bs02-person-avatar">'+
-    escapeHtml(p.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())+
-   '</span><strong>'+escapeHtml(p.name)+'</strong>'+
-   '<span>'+escapeHtml(p.role)+'</span>'+
-   '<button type="button" class="secondary" data-bs02-copy-name="'+p.id+
-   '" aria-label="Copy name reference for '+escapeHtml(p.name)+'">Copy @name</button></div>'
-  ).join(''):'<p class="muted">No assigned members match this search.</p>')+
-  '</div></section>';
+   '<div class="bs02-avatar-slot">'+
+    '<button type="button" class="bs02-avatar-chip" data-bs02-copy-name="'+p.id+'" '+
+      'aria-label="'+escapeHtml(p.name)+', '+escapeHtml(p.role)+'. Copy @name" '+
+      'title="'+escapeHtml(p.name)+' · '+escapeHtml(p.role)+'">'+
+     '<span class="bs02-person-avatar" aria-hidden="true">'+
+      avatarImageMarkup(initials(p.name),{path:p.avatarPath,userId:p.avatarPath?p.id:null})+
+     '</span>'+
+     '<span class="bs02-avatar-tooltip" aria-hidden="true"><strong>'+
+      escapeHtml(p.name)+'</strong><small>'+escapeHtml(p.role)+
+      ' · Click to copy @name</small></span>'+
+    '</button>'+
+   '</div>'
+  ).join(''):'<p class="bs02-people-empty">No assigned members match this search.</p>')+
+  '</div>'+
+  '<p class="bs02-people-footnote">Other users may have access through separate administrator or workspace policies. This is not an exhaustive access audit.</p>'+
+  '</section>';
 }
+
 export function mentionQuery(text,cursor){
  if(typeof text!=='string'||text.length>8000||
     !Number.isInteger(cursor)||cursor<0||cursor>text.length)return null;
