@@ -120,7 +120,7 @@ test('empty workspace overview already renders an empty-state without dummy boar
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/Start with your first board/);
  assert.match(app,/Create a board to organize tasks and updates/);
- assert.match(app,/receipt\.workspaceId/); // board creation receipt remains source-bound elsewhere
+ assert.match(app,/onWorkspaceSwitched:\(\)=>\{/); // current signed context must be reloaded
  const ui=readFileSync('frontend/workspace-ui.js','utf8');
  assert.match(ui,/Open workspace/);
  assert.match(ui,/newWorkspaceId=result\.receipt\?\.workspaceId/);
