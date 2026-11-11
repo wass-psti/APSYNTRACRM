@@ -20137,3 +20137,155 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 .bs09-access-note{font-size:10px;color:#858fa4;line-height:1.5;margin:0}
 .bs09-workspace-invite{display:block;margin:12px 0 1px;max-width:100%}
 .bs09-group-create{border:1px solid #d6dbec;border-radius:9px;padding:9px 12px;background:#f7f8fb;color:#929bad;font:inherit;font-size:11px;font-weight:650;text-align:center;cursor:not-allowed}
+
+/* frontend/board-activity-avatars.css */
+/* BS07 — compact read-only activity actor avatars. No new data reads. */
+.board-history-list .board-activity-event{
+ display:grid;grid-template-columns:38px minmax(0,1fr);align-items:start;
+ column-gap:11px;padding:13px 6px;min-width:0
+}
+.board-activity-event-body{min-width:0;display:grid;gap:4px}
+.board-activity-event-body .board-history-entry-head{
+ display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+ gap:6px 12px;min-width:0
+}
+.board-activity-event-body .board-history-entry-head strong{overflow-wrap:anywhere}
+.board-activity-event-body .board-history-entry-head time{
+ color:#78849a;font-size:11px;white-space:nowrap
+}
+.board-activity-event-body p{margin:0;line-height:1.45;overflow-wrap:anywhere}
+.board-activity-event-body>small{
+ color:#8390a5;display:block;font-size:11px;overflow-wrap:anywhere
+}
+.board-activity-actor-avatar{
+ display:inline-grid;place-items:center;position:relative;flex:none;
+ width:36px;height:36px;box-sizing:border-box;border-radius:50%;
+ background:#eeecff;color:#5751a2;border:1px solid #e0dff4;
+ font-weight:760;font-size:11px;line-height:1;overflow:hidden
+}
+.board-activity-actor-avatar img[data-avatar-current]{
+ position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%
+}
+.board-activity-actor-avatar img[data-avatar-current][hidden]{display:none}
+@media(max-width:540px){
+ .board-history-list .board-activity-event{grid-template-columns:34px minmax(0,1fr);column-gap:9px}
+ .board-activity-actor-avatar{width:32px;height:32px;font-size:10px}
+ .board-activity-event-body .board-history-entry-head time{white-space:normal}
+}
+
+/* frontend/board-column-hover.css */
+/* BS03 — contextual column header controls (Monday-like, accessible).
+ * Loaded AFTER apsyntra-styles.bundle.css. Does not alter board actions,
+ * database access, column commands, or user presentation preferences.
+ * Keyboard users can Tab to an invisible control, which becomes visible on focus.
+ */
+#app .aps-board-shell .board-table-custom thead th > .board-column-more,
+#app .aps-board-shell .board-table-custom thead th > .board-column-resize,
+#app .aps-board-shell .board-table-custom thead th > .board-column-handle {
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  float:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  padding:0;
+  margin:0;
+  background:transparent;
+  color:#7785a0;
+  border:1px solid transparent;
+  border-radius:7px;
+  box-shadow:none;
+  font-size:13px;
+  line-height:1;
+  z-index:5;
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-more {
+  right:24px;
+  width:29px;
+  min-width:29px;
+  height:29px;
+  min-height:29px;
+  cursor:pointer;
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-handle {
+  right:53px;
+  width:20px;
+  min-width:20px;
+  height:29px;
+  min-height:29px;
+  cursor:grab;
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-resize {
+  right:0;
+  width:22px;
+  min-width:22px;
+  height:29px;
+  min-height:29px;
+  cursor:col-resize;
+  touch-action:none;
+}
+/* Titles stay in place; only the controls change visibility. */
+#app .aps-board-shell .board-table-custom thead th > .board-heading-label {
+  max-width:calc(100% - 62px);
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-more:is(:hover,:focus-visible,[aria-expanded="true"]),
+#app .aps-board-shell .board-table-custom thead th > .board-column-handle:is(:hover,:focus-visible),
+#app .aps-board-shell .board-table-custom thead th > .board-column-resize:is(:hover,:focus-visible){
+  color:#4d62bc;
+  border-color:#d4dff7;
+  background:#eaf0ff;
+  box-shadow:none;
+}
+#app .aps-board-shell .board-table-custom thead th > .board-column-more[aria-expanded="true"]{
+  color:#475dc1;
+  border-color:#bfcdf5;
+  background:#e8eeff;
+}
+#app .aps-board-shell .board-table-custom thead th > :is(.board-column-more,.board-column-handle,.board-column-resize):focus-visible{
+  opacity:1;
+  pointer-events:auto;
+  outline:2px solid #526ae2;
+  outline-offset:1px;
+}
+
+/* Desktop: the header reads like a clean table until the user interacts.
+ * Opacity (not visibility:hidden/display:none) preserves keyboard tabbing.
+ */
+@media (hover:hover) and (pointer:fine){
+  #app .aps-board-shell .board-table-custom thead th > :is(.board-column-more,.board-column-handle,.board-column-resize){
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .12s ease,color .12s ease,background-color .12s ease;
+  }
+  #app .aps-board-shell .board-table-custom thead th:is(:hover,:focus-within) > :is(.board-column-more,.board-column-handle,.board-column-resize),
+  #app .aps-board-shell .board-table-custom thead th > .board-column-more[aria-expanded="true"]{
+    opacity:1;
+    pointer-events:auto;
+  }
+}
+/* Touch devices have no dependable hover and must retain discoverable controls. */
+@media (hover:none), (pointer:coarse){
+  #app .aps-board-shell .board-table-custom thead th > .board-column-more{
+    opacity:1;
+    pointer-events:auto;
+    right:26px;
+    width:33px;
+    min-width:33px;
+    height:34px;
+    min-height:34px;
+  }
+  #app .aps-board-shell .board-table-custom thead th > :is(.board-column-resize,.board-column-handle){
+    opacity:1;
+    pointer-events:auto;
+  }
+  #app .aps-board-shell .board-table-custom thead th > .board-heading-label{
+    max-width:calc(100% - 67px);
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  #app .aps-board-shell .board-table-custom thead th > :is(.board-column-more,.board-column-handle,.board-column-resize){
+    transition:none;
+  }
+}
