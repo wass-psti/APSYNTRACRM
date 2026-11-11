@@ -22,7 +22,10 @@ const normalize=source=>normalizeBoardPeople(source,{boardId,workspaceId});
 test('mentions remain a local text draft: no posts, notifications or network calls',()=>{
  assert.equal(BOARD_MENTION_WRITES_ENABLED,false);
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/renderBoardPeople\(people\)\+renderMentionDraft\(people\)/);
+ assert.match(app,/renderBoardPeople\(people\)\+/);
+ assert.match(app,/renderMentionDraft\(people\)\+/);
+ assert.match(app,/class="bs02-tools"/);
+ assert.match(app,/mountAvatarImages\(view,profileAvatarClient,null,null\)/);
  assert.match(app,/mentionCandidates\(people,editor\.value,editor\.selectionStart\)/);
  assert.match(app,/case 'board-members'/);
  assert.match(app,/data-action="board-members">♙ People/);
@@ -37,6 +40,10 @@ test('only exact signed-board explicit members are displayed',()=>{
  assert.deepEqual(filterBoardPeople(result,'Blair').map(p=>p.id),[second]);
  assert.deepEqual(filterBoardPeople(result,'owner').map(p=>p.id),[first]);
  assert.match(renderBoardPeople(result),/not an exhaustive access audit/);
+ assert.match(renderBoardPeople(result),/bs02-avatar-chip/);
+ assert.match(renderBoardPeople(result),/Alex Rivera · owner/);
+ assert.match(renderBoardPeople(result),/aria-label="Alex Rivera, owner\. Copy @name"/);
+ assert.doesNotMatch(renderBoardPeople(result),/id="bs02-people-search"/);
  assert.doesNotMatch(renderBoardPeople(result),/workspace directory/);
 });
 test('tampered, unauthorized-looking or mismatched member snapshots fail closed',()=>{
@@ -71,6 +78,35 @@ test('member display escapes arbitrary profile names, including mention options'
  const mentionHtml=renderMentionOptions(result.people);
  assert.match(mentionHtml,/&lt;img/);
  assert.doesNotMatch(mentionHtml,/<img/);
+});
+test('avatar paths are restricted to a signed member and an exact private path',()=>{
+ const good=first.toLowerCase()+'/55555555-5555-4555-8555-555555555555.webp';
+ const rows=[
+  {...detail.members[0],avatar_path:good},
+  {...detail.members[1],avatar_path:'https://attacker.example/avatar.png'}
+ ];
+ const result=normalize({...detail,members:rows});
+ assert.equal(result.people[0].avatarPath,good);
+ assert.equal(result.people[1].avatarPath,null);
+ const html=renderBoardPeople(result);
+ assert.match(html,/data-avatar-path=/);
+ assert.match(html,/data-avatar-user-id=/);
+ assert.doesNotMatch(html,/attacker\.example/);
+ const forged=normalize({...detail,members:[
+  {...detail.members[0],avatar_path:second+'/55555555-5555-4555-8555-555555555555.webp'}
+ ]});
+ assert.equal(forged.people[0].avatarPath,null);
+});
+test('avatar tray labels and names escape untrusted profiles and search stays bounded',()=>{
+ const result=normalize(detail);
+ assert.match(renderBoardPeople(result),/aria-label="People assigned to this board"/);
+ const many=normalize({...detail,members:Array.from({length:10},(_,i)=>({
+  user_id:'00000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),
+  display_name:'Person '+i,role:'viewer'
+ }))});
+ assert.match(renderBoardPeople(many),/id="bs02-people-search"/);
+ assert.match(renderBoardPeople(many,{query:'<img src=x onerror=1>'}),/&lt;img/);
+ assert.doesNotMatch(renderBoardPeople(many,{query:'<img src=x onerror=1>'}),/<img src=x/);
 });
 test('valid @ queries filter exact board membership and insert plain text references',()=>{
  const result=normalize(detail);
