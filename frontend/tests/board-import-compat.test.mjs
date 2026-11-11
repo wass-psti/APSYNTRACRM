@@ -162,6 +162,19 @@ test('XLSX: malicious understated inflated size is rejected while streaming',asy
  const parts=workbookEntries();parts[0].declaredSize=2;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(parts)),/expands beyond its declared/);
 });
+test('XLSX: highly compressible valid OOXML remains accepted within absolute size limits',async()=>{
+ const entries=workbookEntries();
+ // Normal OOXML often contains repetitive XML/whitespace. This single
+ // workbook.xml entry deliberately exceeds the old arbitrary 200:1 ratio.
+ entries[0].xml='\\n'.repeat(50000)+entries[0].xml;
+ const zip=makeZip(entries);
+ assert.ok(zip.byteLength<8*1024*1024);
+ const parsed=await parseWithFixtureDom(zip);
+ assert.equal(parsed.sheets.length,1);
+ assert.deepEqual(parsed.sheets[0].headers,['Name','Score']);
+ assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
+});
+
 test('XLSX: encrypted ZIP and worksheet path traversal are rejected',async()=>{
  const parts=workbookEntries();parts[0].encrypted=true;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(parts)),/Encrypted, unusually compressed/);
