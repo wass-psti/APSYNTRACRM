@@ -41,7 +41,9 @@ test('only exact signed-board explicit members are displayed',()=>{
  assert.deepEqual(filterBoardPeople(result,'owner').map(p=>p.id),[first]);
  assert.match(renderBoardPeople(result),/not an exhaustive access audit/);
  assert.match(renderBoardPeople(result),/bs02-avatar-chip/);
- assert.match(renderBoardPeople(result),/Alex Rivera · owner/);
+ assert.match(renderBoardPeople(result),/bs02-avatar-tooltip/);
+ assert.match(renderBoardPeople(result),/<strong>Alex Rivera<\/strong><small>owner/);
+ assert.doesNotMatch(renderBoardPeople(result),/title="Alex Rivera/);
  assert.match(renderBoardPeople(result),/aria-label="Alex Rivera, owner\. Copy @name"/);
  assert.doesNotMatch(renderBoardPeople(result),/id="bs02-people-search"/);
  assert.doesNotMatch(renderBoardPeople(result),/workspace directory/);
