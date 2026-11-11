@@ -1,0 +1,37 @@
+/* BS04 — clean, compact board Share & Access (presentation only). */
+.board-share-stage-overlay{position:fixed;inset:0;z-index:5000;background:#18223c9e;display:grid;place-items:center;padding:18px}
+.board-share-stage-frame{width:min(100%,490px);max-height:min(88dvh,760px);overflow-y:auto;border-radius:18px;background:#fff;color:#25314d;box-shadow:0 22px 64px #0c163548}
+.board-share-stage{padding:24px 25px 22px}
+.board-share-stage-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:19px}
+.board-share-stage-title h2{font-size:20px;line-height:1.3;letter-spacing:-.035em;margin:0 0 5px}
+.board-share-stage-board{font-size:13px;color:#78829a;margin:0;overflow-wrap:anywhere}
+.board-share-stage-close{display:grid;place-items:center;flex:none;width:34px;height:34px;border:1px solid #e1e5ef;border-radius:9px;background:#f9faff;color:#647089;cursor:pointer;font-size:21px;line-height:1}
+.board-share-stage-section{padding:17px 0;border-top:1px solid #e7ebf3}
+.board-share-stage-row{display:flex;align-items:center;gap:12px;min-width:0}
+.board-share-stage-icon{display:grid;place-items:center;flex:none;width:37px;height:37px;background:#f0efff;color:#645dae;border-radius:11px;font-size:19px}
+.board-share-stage-copy{flex:1;min-width:0}
+.board-share-stage-copy strong{font-size:14px;font-weight:720}
+.board-share-stage-copy p{margin:4px 0 0;color:#758098;font-size:12px;line-height:1.5}
+.board-share-stage-pill{flex:none;max-width:130px;text-align:center;border-radius:20px;padding:7px 10px;color:#685b9c;background:#f0edff;font-size:11px;font-weight:720}
+.board-share-stage button{font-family:inherit}
+.board-share-stage-secondary{flex:none;background:#fff;color:#5750a0;border:1px solid #d6d9eb;padding:9px 12px;border-radius:9px;font-weight:650;cursor:pointer;font-size:12px}
+.board-share-stage-primary{width:100%;margin-top:15px;background:#6961b2;border:1px solid #6961b2;color:#fff;padding:12px 14px;border-radius:9px;font-size:13px;font-weight:720}
+.board-share-stage-primary:disabled{background:#f4f5f9;border-color:#e5e8f2;color:#8b94a6;cursor:not-allowed}
+.board-share-stage-caption{font-size:11px;line-height:1.55;color:#8992a5;margin:10px 0 0}
+.board-share-stage-dev{border-top:1px solid #e7ebf3;padding-top:13px;color:#78829a;font-size:12px}
+.board-share-stage-dev>summary{cursor:pointer;font-weight:650}
+.board-share-stage-dev p{margin:9px 0;line-height:1.55}
+.board-share-stage-dev button{background:#fff;border:1px solid #dce1f0;border-radius:8px;padding:9px 11px;color:#565f83;cursor:pointer}
+.board-share-stage button:focus-visible,.board-share-stage summary:focus-visible{outline:2px solid #6065d4;outline-offset:2px}
+@media(max-width:540px){.board-share-stage{padding:19px 18px}.board-share-stage-row{flex-wrap:wrap}.board-share-stage-pill{margin-left:49px}.board-share-stage-secondary{margin-left:auto}}
+
+/* BS05: recipient-only invitation form, no public links or live sending. */
+.board-share-stage-form{display:grid;gap:10px;margin-top:15px}
+.board-share-stage-form label{font-size:12px;font-weight:720;color:#47536c}
+.board-share-stage-form input{font:inherit;font-size:13px;min-width:0;width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #d5dbeb;border-radius:9px;color:#26304b;background:#fff;outline-offset:2px}
+.board-share-stage-form input:disabled{color:#8b94a6;background:#f7f8fb;cursor:not-allowed}
+.board-share-stage-form input:focus-visible{outline:2px solid #6961b2}
+.board-share-stage-permission{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;color:#7a859b;font-size:12px}
+.board-share-stage-permission strong{color:#5c6287;font-weight:700}
+.board-share-stage-form .board-share-stage-primary{margin-top:0}
+@media(max-width:420px){.board-share-stage-permission{align-items:flex-start;flex-direction:column;gap:4px}}
