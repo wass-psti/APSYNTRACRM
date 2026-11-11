@@ -167,7 +167,11 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    proposed.push({source,name,type,config:{}});
    refMap.set(source,{name,type,config:{}});
    normalized.push({source,action,name,columnType:type});
-  }else{\n   if(mapping.requiresDecision===true)\n    deny('Choose a destination or explicitly confirm exclusion for source column "'+source+'".');\n   normalized.push({source,action});\n  }
+  }else{
+   if(mapping.requiresDecision===true)
+    deny('Choose a destination or explicitly confirm exclusion for source column "'+source+'".');
+   normalized.push({source,action});
+  }
  }
  if(!primary)deny('Map exactly one title column.');
  if((detail.columns||[]).length+proposed.length>30)deny('Board maximum is 30 physical columns.');
