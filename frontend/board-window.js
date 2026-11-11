@@ -20,7 +20,8 @@ export function boardWindowSlice(total,top=0,viewport=900){
 export function registerBoardWindow(groupId,rows,renderRows,colspan){
  if(rows.length<BOARD_WINDOW_THRESHOLD)return null;
  const model={groupId,rows,filtered:rows,renderRows,colspan,start:-1,end:-1,
-  lastQuery:'',searchIndex:rows.map(row=>String(row.search||'').toLocaleLowerCase())};
+  lastQuery:'',rowIndex:new Map(rows.map((row,index)=>[row.itemId,index]).filter(([id])=>id)),
+  searchIndex:rows.map(row=>String(row.search||'').toLocaleLowerCase())};
  models.set(groupId,model);
  return renderWindow(model,0,900);
 }
@@ -47,6 +48,26 @@ export function visibleBoardWindowIds(groupId){
  const model=models.get(groupId);
  if(!model)return null;
  return model.filtered.map(row=>row.itemId).filter(Boolean);
+}
+/** Update the retained row model after a confirmed local CAS write.
+ * The next virtual window reuses the new cell markup instead of stale HTML.
+ */
+export function updateBoardWindowRow(groupId,itemId,update){
+ const model=models.get(groupId),index=model?.rowIndex.get(itemId);
+ if(!model||index===undefined||typeof update!=='function')return false;
+ const row=model.rows[index],previousSearch=String(row.search||'').toLocaleLowerCase();
+ update(row);
+ const nextSearch=String(row.search||'').toLocaleLowerCase();
+ model.searchIndex[index]=nextSearch;
+ if(model.lastQuery){
+  model.filtered=model.rows.filter((entry,entryIndex)=>
+   model.searchIndex[entryIndex].includes(model.lastQuery));
+ }
+ if(previousSearch!==nextSearch&&model.lastQuery){
+  const pair=mounted.find(entry=>entry.model===model&&entry.table.isConnected);
+  if(pair)updateTable(model,pair.table,{force:true});
+ }
+ return true;
 }
 export function allBoardWindowIds(){
  return [...models.values()].flatMap(model=>model.filtered.map(row=>row.itemId).filter(Boolean));
