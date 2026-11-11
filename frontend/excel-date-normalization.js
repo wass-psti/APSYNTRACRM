@@ -5,7 +5,8 @@
  */
 const DAY_MS=86400000;
 const ISO_DATE=/^(\d{4})-(\d{2})-(\d{2})$/;
-const ISO_DATETIME=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z)?$/;
+// Monday.com exports may append the explicit UTC marker instead of ISO's Z.
+const ISO_DATETIME=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(?:Z|\s+UTC)?$/i;
 const fail=reason=>{throw new Error(reason);};
 function calendarDate(year,month,day){
  const dt=new Date(0);

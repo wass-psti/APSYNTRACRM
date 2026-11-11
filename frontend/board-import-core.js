@@ -8,6 +8,7 @@ import {isProtectedBoard} from './board-card-lifecycle.js';
 import {moduleByBoardName} from './board-manifest.js';
 import {detectMondayCheckboxMarkers,mondayCheckboxCell} from './monday-import-compat.js';
 import {cmp02Validate} from './board-typed-cmp02.js';
+import {normalizeTextDate} from './excel-date-normalization.js';
 export const IMPORT_CONTRACT='m143-v1';
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
@@ -65,6 +66,13 @@ function parseImportNumber(value){
 function normalizeImportDate(value){
  const text=clean(value);
  if(validDate(text))return text;
+ // Monday.com "Date encoded" exports use "YYYY-MM-DD HH:mm:ss UTC".
+ // Date columns preserve the source calendar date; they do not invent a
+ // time component or shift the day through the viewer's local timezone.
+ try{
+  const timestamp=normalizeTextDate(text,{dateTime:true});
+  if(timestamp)return timestamp.slice(0,10);
+ }catch{/* Continue with the explicit slash-date formats below. */}
  let match=text.match(/^(\d{4})[/.](\d{1,2})[/.](\d{1,2})$/);
  if(match){
   const iso=match[1]+'-'+match[2].padStart(2,'0')+'-'+match[3].padStart(2,'0');

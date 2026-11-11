@@ -45,6 +45,12 @@ test('ISO text dates accept valid calendar values and reject invalid or ambiguou
  assert.equal(normalizeTextDate('2026-07-09'),'2026-07-09');
  assert.equal(normalizeTextDate('2026-07-09 23:59:59.125',{dateTime:true}),
   '2026-07-09T23:59:59.125Z');
+ assert.equal(normalizeTextDate('2026-01-27 03:36:15 UTC',{dateTime:true}),
+  '2026-01-27T03:36:15Z');
+ assert.equal(normalizeTextDate('2026-01-27T03:36:15Z',{dateTime:true}),
+  '2026-01-27T03:36:15Z');
+ assert.equal(normalizeTextDate('2026-01-27 03:36:15 utc',{dateTime:true}),
+  '2026-01-27T03:36:15Z');
  assert.throws(()=>normalizeTextDate('2026-02-29'),/Calendar date is invalid/);
  assert.throws(()=>normalizeTextDate('2026-13-01'),/Calendar date is invalid/);
  assert.throws(()=>normalizeTextDate('07/09/2026'),/date ranges and locale-dependent/);
