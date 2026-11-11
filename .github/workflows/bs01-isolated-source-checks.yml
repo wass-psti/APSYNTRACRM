@@ -10,6 +10,9 @@ on:
       - 'frontend/board-share-clean.css'
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
+      - 'frontend/board-activity-ui.js'
+      - 'frontend/board-activity-avatars.css'
+      - 'frontend/board-col01-readers.js'
       - 'frontend/board-column-hover.css'
       - 'frontend/tests/board-column-hover.test.mjs'
       - 'index.html'
@@ -34,6 +37,9 @@ on:
       - 'frontend/board-share-clean.css'
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
+      - 'frontend/board-activity-ui.js'
+      - 'frontend/board-activity-avatars.css'
+      - 'frontend/board-col01-readers.js'
       - 'frontend/board-column-hover.css'
       - 'frontend/tests/board-column-hover.test.mjs'
       - 'index.html'
@@ -67,6 +73,8 @@ jobs:
           node --check frontend/board-share.js
           node --check frontend/resource-email-invitations.js
           node --check frontend/board-people.js
+          node --check frontend/board-activity-ui.js
+          node --check frontend/board-col01-readers.js
           node --check server/bs01-policy-http-boundary.mjs
           node --check server/bs05-resource-email-invite-boundary.mjs
           node --check server/bs01-local-sandbox-core.mjs
