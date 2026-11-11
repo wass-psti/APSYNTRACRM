@@ -73,3 +73,13 @@ The browser importer never evaluates Excel formulas. When a formula has a cached
 - The selected new Item source is marked as the active title mapping and does not remain unresolved.
 - Added regression coverage for the mapping transition, readiness result, planner denial before acknowledgement, and successful plan construction after explicit exclusion.
 - No changes to authentication, RBAC, workspace policy, RLS, database schema, import RPC, or other application areas.
+
+
+### CP-BIMP-06 — Monday.com UTC timestamp compatibility
+
+- Reproduced the import blocker with the actual `I.T Daily Activities - Done.xlsx` workbook.
+- The parser correctly reads the workbook, but its `Date encoded` values use the explicit `YYYY-MM-DD HH:mm:ss UTC` format, which the date-column normalizer did not previously recognize.
+- Date-only board fields now accept valid ISO timestamps with an explicit `UTC` or `Z` marker and preserve the source calendar date. The timestamp is not shifted through the browser's local timezone.
+- Invalid calendar dates and invalid time components continue to be rejected.
+- Regression coverage verifies type inference, UTC normalization, and import-plan construction for the exported values.
+- No changes to the import RPC, database schema, authentication, roles, permissions, or workspace policy.
