@@ -46,3 +46,12 @@ See GitHub Actions on final HEAD for automated test results. A successful Pages 
 ### Formula-cell import behavior
 
 The browser importer never evaluates Excel formulas. When a formula has a cached value, the cached value is imported. When the workbook omits the cached value entirely, the row is retained and the affected cell is imported as blank; the worksheet preview displays a warning with the affected cell addresses and column labels. Formula cells with spreadsheet error values and external-workbook formulas remain rejected. This avoids blocking otherwise valid Monday.com exports while making unavailable formula results explicit rather than inventing values.
+
+
+## CP-BIMP-04 — Mapping completeness and integrated column setup
+
+- Every source column that defaults to an unmapped/skip state is marked unresolved. The mapping screen lists these columns and requires the user either to map them to a destination or explicitly confirm exclusion. The import planner rejects any unresolved skip marker, so the UI cannot silently drop source data.
+- Changing which source column is the Item title marks the previously selected title column unresolved until mapped or explicitly excluded.
+- A manager's existing board-management capability enables proposing ordinary new columns. The redundant separate Allow creation click was removed: the final Import Now review/confirmation submits the proposed columns and rows together through the existing atomic import contract. The backend's existing manage check remains authoritative. Non-managers can still map existing columns or explicitly exclude source columns.
+- Status/Dropdown setup remains in the same import wizard. A single explicit Create configured column action performs the existing audited, revision-checked schema operation; the redundant consent checkbox was removed. The configured column remains if the later record import is cancelled, and this is disclosed before the action.
+- No database schema, RPC, role, permission, workspace, RLS, or Storage changes.
