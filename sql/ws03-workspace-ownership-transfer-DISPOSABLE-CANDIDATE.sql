@@ -214,5 +214,42 @@ END $read$;
 REVOKE ALL ON FUNCTION public.wm_ws03_transfer_candidates(uuid)
  FROM PUBLIC,anon,authenticated;
 
+-- Former owner retains read-only access to the outcome of their exact
+-- request; this avoids falsely showing "failed" when ownership was committed
+-- and the former owner correctly lost permission to list transfer candidates.
+CREATE FUNCTION public.wm_ws03_verify_transfer(
+ p_workspace_id uuid,p_request_id uuid
+) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path='' AS $verify$
+DECLARE
+ v_actor uuid:=auth.uid();v_request record;v_owner uuid;
+BEGIN
+ PERFORM private.ws01_signed_actor_session();
+ IF p_workspace_id IS NULL OR p_request_id IS NULL
+  OR public.current_workspace_id(v_actor) IS DISTINCT FROM p_workspace_id
+  OR NOT EXISTS(
+    SELECT 1 FROM public.workspace_members wm
+     WHERE wm.workspace_id=p_workspace_id AND wm.user_id=v_actor
+      AND wm.active IS TRUE
+  ) THEN
+  RAISE EXCEPTION 'Transfer verification denied' USING ERRCODE='42501';
+ END IF;
+ SELECT * INTO v_request FROM private.ws03_owner_transfer_requests
+ WHERE workspace_id=p_workspace_id AND actor_id=v_actor
+  AND request_id=p_request_id;
+ IF NOT FOUND THEN
+  RAISE EXCEPTION 'Transfer request not found' USING ERRCODE='42501';
+ END IF;
+ SELECT r.user_id INTO v_owner
+ FROM private.ws01_member_roles r
+ WHERE r.workspace_id=p_workspace_id AND r.relation='owner';
+ RETURN jsonb_build_object('schemaVersion',1,'workspaceId',p_workspace_id,
+  'actorId',v_actor,'requestId',p_request_id,
+  'targetUserId',v_request.target_user_id,'currentOwnerId',v_owner,
+  'transferred',v_owner IS NOT DISTINCT FROM v_request.target_user_id);
+END $verify$;
+REVOKE ALL ON FUNCTION public.wm_ws03_verify_transfer(uuid,uuid)
+ FROM PUBLIC,anon,authenticated;
+
 -- No roles, functions or private tables have been granted to a client.
 COMMIT;
