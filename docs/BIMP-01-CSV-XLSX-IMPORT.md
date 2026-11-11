@@ -83,3 +83,11 @@ The browser importer never evaluates Excel formulas. When a formula has a cached
 - Invalid calendar dates and invalid time components continue to be rejected.
 - Regression coverage verifies type inference, UTC normalization, and import-plan construction for the exported values.
 - No changes to the import RPC, database schema, authentication, roles, permissions, or workspace policy.
+
+
+### CP-BIMP-07 — Date-normalizer module cache correction
+
+- Live Chromium acceptance showed that an already-cached unversioned `excel-date-normalization.js` module remained active after the corrected asset was deployed.
+- The board-import parser and import planner now import the shared normalizer through a versioned module URL so an updated date contract cannot be masked by an older browser module-cache entry.
+- Added regression coverage that keeps both import paths on the same versioned dependency.
+- This is a frontend module-cache correction only; no service worker, global cache policy, database, API, or permission changes.
