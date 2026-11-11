@@ -588,3 +588,11 @@ test('CP-BIMP-12 reported UTC date and plain-text columns retain their intended 
   ['2025-10-12','2026-05-13']);
  assert.equal(plan.payload.rows[0].values.Validate,'Click to Validate');
 });
+
+
+test('CP-BIMP-12 empty workbook is a no-op notice, not a failed mutation',()=>{
+ const ui=readFileSync(new URL('../board-import-ui.js',import.meta.url),'utf8');
+ assert.match(ui,/workbook contains no importable item rows/);
+ assert.match(ui,/No records or columns were changed/);
+ assert.match(ui,/state.notice=.*no importable item rows/i);
+});

@@ -10,7 +10,7 @@ The user-provided Google Doc was retrieved successfully using its public text-ex
 
 | Category | Reports | Interpretation |
 |---|---:|---|
-| Workbook has no populated importable worksheet | 81 | Legitimate no-data outcome; never invent records |
+| Workbook has no populated importable worksheet | 81 | Legitimate no-data outcome; now shown as a neutral no-op notice, never invent records |
 | Existing Status option mismatch | 45 | Primary cross-board import defect addressed by existing-column Status augmentation |
 | Date/timestamp conversion | 20 | Current ISO/UTC normalizer accepts reported valid timestamp shapes; new regression confirms retention of calendar date |
 | Physical destination-column limit | 14 | Genuine 30-column database contract; source workbook width must not be capped at the same value |
@@ -28,7 +28,8 @@ The user-provided Google Doc was retrieved successfully using its public text-ex
 2. **Data-wide source parsing.** CSV and XLSX readers now allow up to 256 source columns. This resolves the reported sparse formatted AE cell failures and lets a user explicitly map or exclude additional source fields. The independent 30 physical-column destination contract is untouched. No source column is silently skipped.
 3. **Literal cell data.** Text-cell values beginning with formula-like characters remain inert strings and are no longer blocked just because they begin with `@`, `-`, `+`, or `=`. The XLSX parser continues to reject spreadsheet error cells and unsafe external formula references, and it never evaluates formulas. The Item title validation still rejects formula-like titles; CSV export paths remain responsible for formula neutralization.
 4. **Timestamp conversion.** Added regression scenarios for valid `YYYY-MM-DDTHH:mm:ssZ` and `YYYY-MM-DD HH:mm:ss UTC` values on dedicated-board date columns. The existing canonical normalizer correctly preserves the source calendar day; no redundant date-parser rewrite was needed.
-5. **Cross-configuration regression.** Added synthetic frontend cases for existing legacy Status, wide workbook, literal text, and timestamp/text type distinction. The dedicated disposable PostgreSQL 17 import scenario now extends a legacy Status label palette and imports into that Status field alongside a hidden legacy text field and current custom numeric field, then checks persistence and audit.
+5. **Empty workbook state.** An XLSX containing no populated importable worksheet now produces a neutral informational message, clearly explaining no board records or columns changed, rather than presenting the no-data condition as an import failure.
+6. **Cross-configuration regression.** Added synthetic frontend cases for existing legacy Status, wide workbook, literal text, and timestamp/text type distinction. The dedicated disposable PostgreSQL 17 import scenario now extends a legacy Status label palette and imports into that Status field alongside a hidden legacy text field and current custom numeric field, then checks persistence and audit.
 
 ## Boundaries and outstanding acceptance
 
@@ -40,7 +41,7 @@ The user-provided Google Doc was retrieved successfully using its public text-ex
 
 ## Verification
 
-- Focused import frontend tests: **75 passed, 0 failed**.
-- Full frontend suite: **1,797 passed, 0 failed**; **169** shipped frontend modules pass syntax checking. CSS delivery, Pages-first source validation and existing SEC14 source guard all pass.
+- Focused import frontend tests: **76 passed, 0 failed**.
+- Full frontend suite: **1,798 passed, 0 failed**; **169** shipped frontend modules pass syntax checking. CSS delivery, Pages-first source validation and existing SEC14 source guard all pass.
 - Disposable PostgreSQL signed import tests: pending CI against this branch (fixture now tests Status label augmentation and stored values).
 - Live browser write/refresh/reopen: pending suitable ordinary QA board.

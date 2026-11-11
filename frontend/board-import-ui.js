@@ -283,8 +283,11 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    state.allowColumns=state.manage;
    state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
    state.step=2;state.allowColumns=state.manage;
-  }catch(error){state.error=normalizeImportFailure(error,'file-read').message;}
-  finally{state.busy=false;render();}
+  }catch(error){
+   if(/Workbook contains no populated worksheets to import\./.test(String(error?.message||''))){
+    state.notice='This workbook contains no importable item rows. No records or columns were changed. Select a workbook with populated items to continue.';
+   }else state.error=normalizeImportFailure(error,'file-read').message;
+  }finally{state.busy=false;render();}
  }
  function adjustMapping(index,value){
   const m=state.mappings[index];
