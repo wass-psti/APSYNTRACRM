@@ -11,6 +11,10 @@ on:
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
       - 'frontend/resource-email-invitations.js'
+      - 'frontend/workspace-board-groups.js'
+      - 'frontend/workspace-board-groups.css'
+      - 'frontend/tests/workspace-board-groups.test.mjs'
+      - 'sql/bs09-workspace-board-access-groups-candidate.sql'
       - 'frontend/tests/board-people.test.mjs'
       - 'frontend/tests/board-share.test.mjs'
       - 'frontend/tests/resource-email-invitations.test.mjs'
@@ -26,6 +30,10 @@ on:
       - 'frontend/board-people.js'
       - 'frontend/board-people.css'
       - 'frontend/resource-email-invitations.js'
+      - 'frontend/workspace-board-groups.js'
+      - 'frontend/workspace-board-groups.css'
+      - 'frontend/tests/workspace-board-groups.test.mjs'
+      - 'sql/bs09-workspace-board-access-groups-candidate.sql'
       - 'frontend/tests/board-people.test.mjs'
       - 'frontend/tests/board-share.test.mjs'
       - 'frontend/tests/resource-email-invitations.test.mjs'
@@ -51,9 +59,10 @@ jobs:
           node --check frontend/board-share.js
           node --check frontend/resource-email-invitations.js
           node --check frontend/board-people.js
+          node --check frontend/workspace-board-groups.js
       - name: Invitation and board regression tests
         run: |
-          node --test frontend/tests/board-share.test.mjs frontend/tests/resource-email-invitations.test.mjs frontend/tests/board-people.test.mjs frontend/tests/board-activity-ui.test.mjs frontend/tests/board-col01-readers.test.mjs frontend/tests/board-collaboration.test.mjs
+          node --test frontend/tests/workspace-board-groups.test.mjs frontend/tests/board-share.test.mjs frontend/tests/resource-email-invitations.test.mjs frontend/tests/board-people.test.mjs frontend/tests/board-activity-ui.test.mjs frontend/tests/board-col01-readers.test.mjs frontend/tests/board-collaboration.test.mjs
       - name: Confirm fail-closed status
         run: |
           node --input-type=module -e "import {RESOURCE_EMAIL_INVITES_ENABLED} from './frontend/resource-email-invitations.js';import {BOARD_SHARE_LINKS_ENABLED} from './frontend/board-share.js';if(RESOURCE_EMAIL_INVITES_ENABLED||BOARD_SHARE_LINKS_ENABLED)process.exit(1);"
