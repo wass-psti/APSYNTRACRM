@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {parseDelimited,parseImportFile} from '../board-import-parse.js';
 import {inferImportType,initialImportMappings,buildImportPlan,
  executeBoardImport,availableImportColumns} from '../board-import-core.js';
+import {importMappingReadiness} from '../board-import-readiness.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const actor='33333333-3333-4333-8333-333333333333';
@@ -235,8 +236,9 @@ test('UI and entrypoint are wired without bypassing the domain restriction',()=>
  const html=readFileSync('index.html','utf8');
  assert.match(app,/data-action="board-import"/);
  assert.match(app,/openBoardImportWizard/);
- assert.match(ui,/Allow creation/);
- assert.match(ui,/Decline and skip columns/);
+ assert.match(ui,/will be created together with the imported records/);
+ assert.match(ui,/Confirm exclude/);
+ assert.doesNotMatch(ui,/aps-import-choice-consent/);
  assert.match(ui,/Import Now/);
  assert.match(ui,/state\.uncertain/);
  assert.match(ui,/Close and verify the board/);
