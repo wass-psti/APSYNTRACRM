@@ -70,6 +70,13 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const sourceInfo=s.worksheet?
    '<p class="aps-import-source-info" role="status">Source: '+esc(s.worksheet)+
    sourceRange+skipped+' · '+s.rows.length+' importable records</p>':'';
+  const formulaWarnings=s.formulaWarnings||[];
+  const formulaWarningInfo=formulaWarnings.length?
+   '<p class="aps-import-formula-note" role="status"><strong>'+formulaWarnings.length+
+   ' formula cell'+(formulaWarnings.length===1?' has':'s have')+
+   ' no cached result and will be imported as blank.</strong> APSYNTRA does not calculate Excel formulas. Review: '+
+   formulaWarnings.slice(0,5).map(w=>esc(w.cell)+(w.column?' ('+esc(w.column)+')':'')).join(', ')+
+   (formulaWarnings.length>5?' and '+(formulaWarnings.length-5)+' more.':'.')+'</p>':'';
   const groupChoices=choice('create','New group',state.group==='create')+
    (detail.groups||[]).map(g=>choice(g.id,g.title,state.group===g.id)).join('');
   const header='<div class="aps-import-map-grid aps-import-map-heading"><span>'+
