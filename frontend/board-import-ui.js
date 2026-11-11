@@ -35,8 +35,6 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const sheet=()=>state.file?.sheets[state.sheet];
  const missing=()=>state.mappings.filter(m=>m.action==='create');
  const readiness=()=>importMappingReadiness(state.mappings,state.allowColumns);
- const proposalSignature=mappings=>JSON.stringify(mappings.filter(m=>m.action==='create')
-  .map(m=>[m.source,m.name||m.source,m.columnType||m.type]));
  const group=()=>state.group==='create'?
   {action:'create',name:state.groupName}:
   {action:'existing',groupId:state.group};
@@ -273,7 +271,6 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  function adjustMapping(index,value){
   const m=state.mappings[index];
   if(!m)return;
-  const before=proposalSignature(state.mappings);
   state.confirmed=false;state.notice='';state.error='';
   if(value==='item'){
    state.mappings=state.mappings.map((a,i)=>i!==index&&a.action==='item'?
@@ -287,7 +284,6 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   else if(value==='skip')state.mappings[index]={...m,action:'skip',requiresDecision:false};
   else if(value.startsWith('existing:'))state.mappings[index]={...m,
    action:'existing',columnId:value.slice(9),requiresDecision:false};
-  // Unrelated, already-approved ordinary columns retain their consent.
   state.allowColumns=state.manage;
  }
  function focusChoice(index){
@@ -339,14 +335,6 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    const pending=readiness().pendingChoices[0];
    if(pending)focusChoice(pending.index);
    return;
-  }
-  if(action==='allow-columns'){
-   if(!state.manage){state.error='Board management permission required.';}
-   else{state.allowColumns=true;state.error='';}render();return;
-  }
-  if(action==='decline-columns'){
-   state.mappings=state.mappings.map(m=>m.action==='create'?{...m,action:'skip',requiresDecision:false}:m);
-   state.allowColumns=state.manage;render();return;
   }
   if(action==='next'){
    state.error='';
