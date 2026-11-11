@@ -164,7 +164,9 @@ export function renderProtectedSourcingEditor(cells,{editing=false}={}){
   '<section class="mrh-private-section"><h3><span aria-hidden="true">'+icon+'</span>'+title+'</h3>'+
    '<div class="mrh-private-grid">'+fields.map(name=>renderField(named(name))).join('')+'</div></section>';
  return '<div class="mrh-sourcing-editor" aria-label="Protected Material Sourcing details">'+
-  '<div role="status" aria-live="polite" data-mrh-private-status></div>'+
+  '<div role="status" aria-live="polite" data-mrh-private-status>'+
+   (Object.keys(cells||{}).length===0?'No protected values entered yet. Use Edit protected fields to add values.':'')+
+   '</div>'+
   section('Pricing & Cost','₱',['Buying Price','Currency'])+
   '<section class="mrh-private-section mrh-calculated-section"><h3><span aria-hidden="true">▤</span>Calculated totals</h3>'+
   '<p>Not calculated — verified exchange rates and approved landed-cost rules are not configured.</p></section>'+

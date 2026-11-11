@@ -77,7 +77,7 @@ import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMateria
 import {parseMaterialAddForm} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
-import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
+import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,classifyMaterialSourcingDetailError,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
@@ -3563,17 +3563,25 @@ async function openBoardItemDetails(itemId){
   const refresh=async()=>{
    try{
     const result=await readProtectedSourcingItem(input);
-    if(!current())return;
+    if(!current())return false;
     values=result;
     privateHost.innerHTML=renderProtectedSourcingEditor(result,{editing});
     if(editToggle)editToggle.hidden=false;
-   }catch{
-    if(!current())return;
+    return true;
+   }catch(error){
+    if(!current())return false;
     values=null;
     if(editToggle)editToggle.hidden=true;
-    privateHost.innerHTML=renderMaterialSourcingUnavailableDetails();
+    privateHost.innerHTML=renderMaterialSourcingUnavailableDetails({
+     reason:classifyMaterialSourcingDetailError(error)});
+    return false;
    }
   };
+  itemDialog.addEventListener('click',event=>{
+   if(!event.target.closest('[data-mrh-details-retry]')||!current()||busy)return;
+   privateHost.innerHTML='<p role="status" class="muted">Reloading material details…</p>';
+   void refresh();
+  });
   itemDialog.addEventListener('submit',async event=>{
    const form=event.target.closest('[data-mrh-private-field]');
    if(!form||!current()||busy)return;
@@ -3588,7 +3596,7 @@ async function openBoardItemDetails(itemId){
     await writeProtectedSourcingField({...input,fieldName,
      value:new FormData(form).get('value'),expectedRevision:stored?.revision??null});
     if(!current())return;
-    await refresh();
+    if(!await refresh())throw new ApiError('Protected field reload not verified.',409);
     if(current()){
      const nextStatus=privateHost.querySelector('[data-mrh-private-status]');
      if(nextStatus)nextStatus.textContent='Saved and reloaded from the protected server.';

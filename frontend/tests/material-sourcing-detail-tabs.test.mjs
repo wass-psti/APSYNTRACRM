@@ -16,13 +16,13 @@ test('details, tasks, activity tabs are semantic and private details remain isol
  assert.match(html,/data-mrh-private-host/);
  assert.match(html,/Verified summary/);
  assert.match(html,/data-mrh-detail-panel="activity" hidden/);
- assert.match(html,/Board-item task integration is not activated/);
+ assert.match(html,/Select Tasks to load this item’s current task list./);
  assert.doesNotMatch(html,/data-action="create-task"|data-action="delete-task"/);
 });
 test('legacy task model cannot be presented as persisted board item tasks',()=>{
  const html=renderMaterialSourcingTasksUnavailable();
- assert.match(html,/separate material record model/);
- assert.match(html,/No verified mapping/);
+ assert.match(html,/Select Tasks to load this item’s current task list/);
+ assert.doesNotMatch(html,/not activated|No verified mapping/);
  assert.doesNotMatch(html,/Task added|Task created successfully/);
 });
 test('audit is strict item-scoped; strips private values, messages and actors',()=>{
