@@ -33,9 +33,9 @@ test('metrics never synthesize financial totals, supplier values or exchange rat
  assert.match(html,/Main group \(unchanged\)/);
  assert.doesNotMatch(html,/Selling price|Cost by source|USD Rate|EUR Rate/);
 });
-test('Add Material action only appears when authorized editor option is explicit',()=>{
- assert.doesNotMatch(render(),/data-action="mrh-add-view"/);
- assert.doesNotMatch(render({canCreate:false}),/data-action="mrh-add-view"/);
+test('Add Material navigation remains visible to all board viewers while form creation stays gated',()=>{
+ assert.match(render(),/data-action="mrh-add-view"/);
+ assert.match(render({canCreate:false}),/data-action="mrh-add-view"/);
  assert.match(render({canCreate:true}),/data-action="mrh-add-view"/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/renderMaterialSourcingTracker\(state\.board,state\.mrhTrackerFilters,new Date\(\),\{canCreate:state\.edit===true,view:state\.mrhAddView\?'add':'list'\}\)/);

@@ -5314,7 +5314,8 @@ async function action(name,button){
  case 'mrh-add-view':
  case 'mrh-show-items':{
   if(state.view!=='board'||state.tab!=='sourcing'||!isMaterialTrackerBoard(state.board))break;
-  if(name==='mrh-add-view'&&!state.edit)break;
+  // All signed board viewers can navigate to Add Material; only authorized
+  // editors receive the active create form and server mutation contract.
   if(state.mrhAddBusy)break;
   state.mrhAddView=name==='mrh-add-view';
   render();
