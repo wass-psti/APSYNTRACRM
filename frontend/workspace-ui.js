@@ -726,7 +726,7 @@ function openCreate(catalog,options={}){
    submit.textContent='Created';
    // Refresh only through the signed membership endpoint after server receipt.
    // A newly created workspace is never silently made active.
-   const newWorkspaceId=result.workspaceId;
+   const newWorkspaceId=result.receipt?.workspaceId;
    // Reload signed membership catalog before offering an actual switch.
    // Never navigate to a new workspace while server context remains old.
    await selectorSession?.load?.();
