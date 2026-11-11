@@ -39,6 +39,7 @@ Added tests for:
 - Status source values mapping to an existing same-name text destination when values are valid for that target.
 - Completely empty Status sources mapping to an existing hidden Status column without creating a new column or requiring option configuration.
 - Empty Status sources with no existing target being proposed as an ordinary text column rather than an unconfigurable choice column.
+- Disposable PostgreSQL 17 import acceptance now includes a hidden legacy `col_*` destination, maps it by its physical column ID, and verifies both imported cell values persist without creating a duplicate column. The BIMP workflow runs on pull requests touching import code or fixtures.
 - Existing atomic import tests for CSV, XLSX, ZIP64, dates, long text, formula behavior, duplicate matching, atomic receipts, readback and safe uncertain outcomes.
 
 ## Scope boundaries
@@ -57,7 +58,7 @@ Added tests for:
 - CSS bundle consistency: 45 files / 911,493 bytes current.
 - Pages source validation: PASS.
 - SEC14 source guard: PASS (263 first-party runtime files); external deployed clients and legacy permission retirement remain outside this checkpoint.
-- GitHub Actions on final code/workflow HEAD: frontend PASS; disposable PostgreSQL PASS; disposable collaboration PostgreSQL PASS; disposable OT PostgreSQL PASS. Live Pages and Supabase Preview skipped by existing workflow conditions.
+- GitHub Actions: frontend PASS; disposable PostgreSQL PASS; disposable collaboration PostgreSQL PASS; disposable OT PostgreSQL PASS. The additional BIMP-02 legacy-column disposable import job is now enabled for this PR and awaits its run. Live Pages and Supabase Preview are skipped by existing workflow conditions.
 - Added the CP-BIMP-11 branch and its acceptance documents to the existing frontend validation workflow filters so the same full frontend and disposable PostgreSQL regression jobs run on this implementation branch and documentation changes.
 - Genuine signed-browser import against an existing dedicated board: pending. The currently open browser tab is a recovery QA fixture, not an approved import target.
 - User-provided Google Doc findings: pending Google Drive connection. The Google Drive connector was suggested but is not yet connected; no content from that document is represented as reviewed here.

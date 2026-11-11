@@ -4,6 +4,15 @@ concurrency:
   cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/bimp02-disposable-import.yml'
+      - 'sql/bimp02-session-enforcement-candidate.sql'
+      - 'sql/tests/bimp02-*.sql'
+      - 'sql/cp-board-config01-staged-authorization-v2.sql'
+      - 'sql/tests/cp-board-config01-disposable-*.sql'
+      - 'frontend/board-import-*.js'
+      - 'frontend/tests/board-import*.test.mjs'
   push:
     branches: [main]
     paths:

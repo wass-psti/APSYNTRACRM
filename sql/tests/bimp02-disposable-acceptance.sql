@@ -7,6 +7,7 @@ DECLARE
  foreign_board uuid := '30000000-0000-4000-8000-000000000002';
  grp uuid := '60000000-0000-4000-8000-000000000001';
  amount uuid := '65000000-0000-4000-8000-000000000001';
+ legacy_ref uuid := '65000000-0000-4000-8000-000000000002';
  owner_id uuid := '20000000-0000-4000-8000-000000000001';
  editor_id uuid := '20000000-0000-4000-8000-000000000002';
  viewer_id uuid := '20000000-0000-4000-8000-000000000003';
@@ -40,12 +41,13 @@ BEGIN
  'mappings',jsonb_build_array(
  jsonb_build_object('source','Name','action','item'),
  jsonb_build_object('source','Amount','action','existing','columnId',amount),
+ jsonb_build_object('source','Legacy Ref','action','existing','columnId',legacy_ref),
  jsonb_build_object('source','Flag','action','create','name','Flag','columnType','checkbox')),
  'newColumns',jsonb_build_array(
  jsonb_build_object('source','Flag','name','Flag','type','checkbox','config','{}'::jsonb)),
  'rows',jsonb_build_array(
- jsonb_build_object('title','Import Alpha','values',jsonb_build_object('Amount',20,'Flag',true)),
- jsonb_build_object('title','Import Beta','values',jsonb_build_object('Amount',30,'Flag',false))));
+ jsonb_build_object('title','Import Alpha','values',jsonb_build_object('Amount',20,'Legacy Ref','REF-A','Flag',true)),
+ jsonb_build_object('title','Import Beta','values',jsonb_build_object('Amount',30,'Legacy Ref','REF-B','Flag',false))));
  receipt:=public.wm_import_board_wizard_atomic(board,expected_at,payload);
  IF receipt->>'created'<>'2' OR receipt->>'columnsCreated'<>'1'
  THEN RAISE EXCEPTION 'Import receipt mismatch for first atomic insert: %',receipt; END IF;
@@ -53,12 +55,16 @@ BEGIN
  IF flag_col IS NULL OR
  (SELECT count(*) FROM public.work_board_items WHERE board_id=board AND group_id=grp
  AND title IN ('Import Alpha','Import Beta'))<>2 OR
- (SELECT count(*) FROM public.work_board_item_values WHERE column_id=flag_col)<>2
- THEN RAISE EXCEPTION 'Read-after-write/reload persistence mismatch'; END IF;
+ (SELECT count(*) FROM public.work_board_item_values WHERE column_id=flag_col)<>2 OR
+ (SELECT count(*) FROM public.work_board_item_values WHERE column_id=legacy_ref)<>2 OR
+ (SELECT count(*) FROM public.work_board_item_values WHERE column_id=legacy_ref AND
+  value IN ('"REF-A"'::jsonb,'"REF-B"'::jsonb))<>2 OR
+ (SELECT visible FROM public.work_board_columns WHERE id=legacy_ref) IS DISTINCT FROM false
+ THEN RAISE EXCEPTION 'Read-after-write/reload persistence mismatch for custom or hidden legacy columns'; END IF;
  IF (SELECT count(*) FROM public.work_board_events WHERE board_id=board
  AND event_type='items.imported.wizard')<>1
  THEN RAISE EXCEPTION 'Atomic import audit evidence missing'; END IF;
- RAISE NOTICE 'BIMP02 manager insert, typed cells, persistence and audit PASS';
+ RAISE NOTICE 'BIMP02 manager insert, typed cells, hidden col_* persistence and audit PASS';
 
  -- No new columns: signed editor must be allowed to skip existing matches.
  PERFORM set_config('request.jwt.claim.sub',editor_id::text,false);
