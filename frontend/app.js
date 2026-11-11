@@ -34,6 +34,7 @@ import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardItemsComplete,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-application.js';
+import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
 import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,fuelTrackRequestsCsv,fuelTrackRequestQuickDates,FUELTRACK_REQUEST_FILTER_DEFAULTS} from './fueltrack-v3-requests.js';
 import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js';
@@ -2454,6 +2455,53 @@ async function changeTradeLinkDraftState(documentId,operation){
  * missing endpoints never enable mutations or fabricate transactional data.
  */
 /** Perform only server-authorized FuelTrack transitions with current signed revision. */
+/**
+ * Attach a real receipt to an already completed FuelTrack request when its
+ * original completion did not include a receipt. This surfaces the existing
+ * signed Admin receipt RPCs; it does not change roles, grants or server policy.
+ */
+async function attachFuelTrackReceipt(requestId,file){
+ const actor=state.context?.user_id,workspaceId=state.context?.workspace_id,seq=routeSerial;
+ const same=()=>seq===routeSerial&&auth.isSignedIn&&auth.userId===actor&&
+  state.context?.user_id===actor&&state.context?.workspace_id===workspaceId&&
+  state.view==='board'&&state.tab==='fueltrack'&&state.fuelTrackSection==='lightfuels'&&
+  state.boardId===FUELTRACK_V3_ID&&state.board?.board?.workspace_id===workspaceId;
+ const snapshot=state.fuelTrackBackend?.snapshot;
+ if(!same()||!validUuid(requestId)||state.fuelTrackBackendBusy||
+    snapshot?.role!=='Admin'||
+    !snapshot.rows?.some(row=>row.id===requestId&&row.state==='completed'))return;
+ try{validFuelTrackReceiptFile(file);}
+ catch(error){toast(errorMessage(error));return;}
+ state.fuelTrackBackendBusy=true;
+ render();
+ let registered=false;
+ try{
+  const storage=new FuelTrackV3ReceiptStorageClient({api:db,auth,
+   boardId:FUELTRACK_V3_ID,workspaceId});
+  const existing=await storage.read(requestId);
+  if(!same())return;
+  if(existing.status==='VERIFIED_RECEIPT'){
+   toast('A private receipt is already registered. Use Get receipt link or Verify file.');
+   return;
+  }
+  if(existing.status!=='NO_RECEIPT')
+   throw new Error('Receipt status could not be verified. Refresh before retrying.');
+  await storage.uploadAndRegister(requestId,file);
+  registered=true;
+  if(!same())return;
+  const proof=await storage.verifyPrivateReceiptBinary(requestId);
+  if(!same())return;
+  state.fuelTrackReceiptLink=null;
+  toast('Private receipt uploaded and verified: '+proof.mimeType+' · '+proof.bytes+' bytes.');
+ }catch(error){
+  if(same())toast(registered?
+   'Receipt registered, but private binary verification failed: '+errorMessage(error):
+   'Private receipt attachment failed: '+errorMessage(error));
+ }finally{
+  if(same()){state.fuelTrackBackendBusy=false;render();}
+ }
+}
+
 async function mutateFuelTrackBackend(operation,requestId,{reason=null,amount=null,liters=null,receiptNumber=null,receiptFile=null}={}){
  const user=state.context?.user_id,ws=state.context?.workspace_id,seq=routeSerial;
  const expectedSection=operation==='decide'?'approvals':'lightfuels';
@@ -4876,6 +4924,31 @@ async function action(name,button){
   }else await mutateFuelTrackBackend('decide',id);
   break;
  }
+ case 'ft3-attach-receipt':{
+  const requestId=button.dataset.id;
+  const actor=state.context?.user_id,workspaceId=state.context?.workspace_id;
+  const snapshot=state.fuelTrackBackend?.snapshot;
+  if(!validUuid(requestId)||!auth.isSignedIn||auth.userId!==actor||
+     state.context?.user_id!==actor||state.context?.workspace_id!==workspaceId||
+     state.view!=='board'||state.tab!=='fueltrack'||state.fuelTrackSection!=='lightfuels'||
+     state.boardId!==FUELTRACK_V3_ID||state.board?.board?.workspace_id!==workspaceId||
+     state.fuelTrackBackendBusy||snapshot?.role!=='Admin'||
+     !snapshot.rows?.some(row=>row.id===requestId&&row.state==='completed'))break;
+  const input=document.createElement('input');
+  input.type='file';
+  input.accept='image/jpeg,image/png,image/webp';
+  input.setAttribute('aria-label','Choose a private FuelTrack receipt image');
+  input.hidden=true;
+  input.addEventListener('change',()=>{
+   const file=input.files?.[0]||null;
+   input.remove();
+   if(file)attachFuelTrackReceipt(requestId,file).catch(notice);
+  },{once:true});
+  input.addEventListener('cancel',()=>input.remove(),{once:true});
+  document.body.append(input);
+  input.click();
+  break;
+ }
  case 'ft3-view-receipt':{
   const requestId=button.dataset.id;
   const userId=state.context?.user_id,workspaceId=state.context?.workspace_id;
@@ -5189,7 +5262,33 @@ async function action(name,button){
   }
   root.querySelector('[data-board-tab="'+key+'"]')?.focus();break;
  }
-  case 'ft3-request-status':{
+  case 'ft3-signed-request-status':
+ case 'ft3-signed-request-sort':
+ case 'ft3-signed-request-more':
+ case 'ft3-signed-request-clear':
+ case 'ft3-signed-request-expand':{
+  if(state.view!=='board'||state.tab!=='fueltrack'||state.fuelTrackSection!=='requests'||
+   !verifyFuelTrackBackendSnapshot(state.fuelTrackBackend?.snapshot,state.boardId,state.context?.workspace_id))break;
+  const f=state.fuelTrackRequestFilters;
+  if(name==='ft3-signed-request-status'){
+   const selected=button.dataset.status;
+   if(!['all','submitted','approved','refueling_done','completed','rejected'].includes(selected))break;
+   updateFuelTrackRequestFilters({status:selected,expandedId:null,limit:25});
+  }else if(name==='ft3-signed-request-sort'){
+   updateFuelTrackRequestFilters({sort:f.sort==='newest'?'oldest':'newest',expandedId:null});
+  }else if(name==='ft3-signed-request-more'){
+   updateFuelTrackRequestFilters({limit:Math.min(200,Number(f.limit||25)+25)});
+  }else if(name==='ft3-signed-request-clear'){
+   updateFuelTrackRequestFilters({...FUELTRACK_REQUEST_FILTER_DEFAULTS});
+  }else{
+   const id=button.dataset.id;
+   if(!state.fuelTrackBackend.snapshot.rows.some(r=>r.id===id))break;
+   updateFuelTrackRequestFilters({expandedId:f.expandedId===id?null:id});
+   root.querySelector('[data-action="ft3-signed-request-expand"][data-id="'+id+'"]')?.focus();
+  }
+  break;
+ }
+ case 'ft3-request-status':{
    if(!fuelTrackRequestReady())return;
    const status=button.dataset.status;
    if(!['all','done','pending','approved','rejected','other'].includes(status))return;
@@ -7266,6 +7365,15 @@ root.addEventListener('input',event=>{
   render();
   const next=document.getElementById('ft3-activity-search');
   if(next){next.focus();if(position!=null)next.setSelectionRange(position,position);}
+  return;
+ }
+ if(event.target.id==='ft3-signed-request-search'&&
+  state.view==='board'&&state.tab==='fueltrack'&&state.fuelTrackSection==='requests'&&
+  verifyFuelTrackBackendSnapshot(state.fuelTrackBackend?.snapshot,state.boardId,state.context?.workspace_id)){
+  const pos=event.target.selectionStart;
+  updateFuelTrackRequestFilters({search:String(event.target.value).slice(0,120),limit:25,expandedId:null});
+  const field=root.querySelector('#ft3-signed-request-search');
+  if(field){field.focus();if(pos!=null)field.setSelectionRange(pos,pos);}
   return;
  }
  if(event.target.id==='ft3-request-search'&&fuelTrackRequestReady()){

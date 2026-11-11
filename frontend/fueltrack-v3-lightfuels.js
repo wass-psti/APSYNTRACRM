@@ -72,9 +72,10 @@ const completedRow=(r,actionEnabled,receiptLink)=>{
  '<td data-label="Vehicle / Container"><span class="ft3-light-history-reference">'+esc(r.reference)+'</span></td>'+
  '<td data-label="Completed"><time datetime="'+esc(r.completedAt)+'">'+esc(displayDate(r.completedAt))+'</time></td>'+
  '<td data-label="Receipt"><div class="ft3-light-history-actions">'+
- (actionEnabled?(ready?
-  '<a class="ft3-light-history-action is-primary" href="'+esc(receiptLink.href)+'" target="_blank" rel="noopener noreferrer" aria-label="Open private receipt for '+esc(r.requestor)+'">Open receipt</a>':
-  '<button type="button" class="ft3-light-history-action is-primary" data-action="ft3-view-receipt" data-id="'+esc(r.id)+'">Get receipt link</button>')+
+ (actionEnabled?'<button type="button" class="ft3-light-history-action" data-action="ft3-attach-receipt" data-id="'+esc(r.id)+'">Attach receipt if missing</button>'+
+  (ready?
+   '<a class="ft3-light-history-action is-primary" href="'+esc(receiptLink.href)+'" target="_blank" rel="noopener noreferrer" aria-label="Open private receipt for '+esc(r.requestor)+'">Open receipt</a>':
+   '<button type="button" class="ft3-light-history-action is-primary" data-action="ft3-view-receipt" data-id="'+esc(r.id)+'">Get receipt link</button>')+
   '<button type="button" class="ft3-light-history-action" data-action="ft3-verify-receipt" data-id="'+esc(r.id)+'">Verify file</button>':
   '<span class="ft3-light-history-unavailable">Admin access required</span>')+
  '</div></td></tr>';
