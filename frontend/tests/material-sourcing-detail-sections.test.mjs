@@ -24,7 +24,7 @@ test('ordinary viewer sees complete detail structure without protected values or
  const html=renderMaterialSourcingUnavailableDetails();
  for(const label of ['Pricing &amp; Cost','Calculated Totals','Logistics',
   'Buying price','Currency','Shipping cost','Shipping currency',
-  'Landed cost','Vendor details','Not available']){
+  'Landed cost','Vendor details','Unavailable']){
   assert.ok(html.includes(label),label);
  }
  assert.doesNotMatch(html,/data-mrh-private-field|name="value"|SECRET_|role="alert"/);
@@ -49,7 +49,7 @@ test('item drawer falls back gracefully without adding authorization checkpoints
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const open=app.slice(app.indexOf('async function openBoardItemDetails('),
   app.indexOf('async function openBoardMembers('));
- assert.match(open,/renderMaterialSourcingUnavailableDetails\(\)/);
+ assert.match(open,/renderMaterialSourcingUnavailableDetails\(\{/);
  assert.match(open,/readProtectedSourcingItem\(input\)/);
  assert.match(open,/renderMaterialBoardItemTasks/);
  assert.match(open,/renderMaterialSourcingItemActivity/);

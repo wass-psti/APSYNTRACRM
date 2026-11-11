@@ -54,9 +54,21 @@ export function renderMaterialSourcingDetailTabs(summaryHtml){
 }
 /** Reference-aligned section structure for sessions without a protected
  * sourcing result. Do not request/guess private values or add new role gates. */
-export function renderMaterialSourcingUnavailableDetails(){
+/** Meaningful display state, not an access decision; server RPCs remain authoritative. */
+export function classifyMaterialSourcingDetailError(error){
+ const status=Number(error?.status)||0;
+ if(status===401||status===403||error?.code==='42501')
+  return 'restricted';
+ if(status===0||status===408||status===429||status>=500)
+  return 'retry';
+ return 'unavailable';
+}
+export function renderMaterialSourcingUnavailableDetails({reason='unavailable'}={}){
+
+ const state=['restricted','retry','empty'].includes(reason)?reason:'unavailable';
+ const placeholder=state==='restricted'?'Restricted':state==='empty'?'Not entered':'Unavailable';
  const field=(label)=>'<div class="mrh-detail-field mrh-detail-restricted-field">'+
-  '<dt>'+escape(label)+'</dt><dd><span class="mrh-detail-value-unavailable">Not available</span></dd></div>';
+  '<dt>'+escape(label)+'</dt><dd><span class="mrh-detail-value-unavailable">'+placeholder+'</span></dd></div>';
  const section=(title,icon,labels)=>'<section class="mrh-detail-section mrh-detail-unavailable-section">'+
   '<h3><span aria-hidden="true">'+icon+'</span>'+escape(title)+'</h3>'+
   '<dl class="mrh-detail-field-grid">'+labels.map(field).join('')+'</dl></section>';
@@ -64,15 +76,19 @@ export function renderMaterialSourcingUnavailableDetails(){
   section('Pricing & Cost','₱',['Buying price','Currency','Shipping cost','Shipping currency'])+
   section('Calculated Totals','▤',['Total buying','Landed cost'])+
   section('Logistics','▧',['Vendor details'])+
-  '<p class="mrh-detail-availability-note" role="status">These values are not available in the current item response. Public material details remain visible above.</p></div>';
+  '<p class="mrh-detail-availability-note" role="status">'+
+  (state==='restricted'?'Additional commercial fields are restricted for this session. Public material details remain visible above.':
+   state==='retry'?'Additional details could not be loaded. Refresh the item to retry; saved values have not been changed.':
+   state==='empty'?'No protected values have been entered for this material.':
+   'Additional material details are unavailable. Public material details remain visible above.')+
+  '</p>'+
+  (state==='retry'||state==='unavailable'?'<button type="button" class="secondary" data-mrh-details-retry>Retry loading details</button>':'')+
+  '</div>';
 }
 
 export function renderMaterialSourcingTasksUnavailable(){
  return '<section class="mrh-item-task-status" aria-label="Material Sourcing tasks">'+
-  '<h3>Tasks</h3><p role="status">Board-item task integration is not activated.</p>'+
-  '<p class="muted">The existing Material Tracker task service belongs to a separate material record model. '+
-  'No verified mapping to APSYNTRA board items exists, so tasks cannot safely be read or created here. '+
-  'Nothing has been saved.</p></section>';
+  '<h3>Tasks</h3><p role="status">Select Tasks to load this item’s current task list.</p></section>';
 }
 export function selectMaterialSourcingDetailTab(dialog,tab){
  if(!MATERIAL_SOURCING_DETAIL_TABS.includes(tab)||!dialog?.querySelectorAll)return false;
