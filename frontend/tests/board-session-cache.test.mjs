@@ -15,7 +15,11 @@ function fixture({reply=()=>board}={}){
   calls.push({path,body:options?.body});
   return reply(path,options);
  }};
- return {api:new DomainApi(auth),auth,calls};
+ const api=new DomainApi(auth);
+ // This fixture represents the pre-m143-v2 backend, which does not expose
+ // the new optional extended-reference read RPC.
+ api.extendedRefsSupported=false;
+ return {api,auth,calls};
 }
 test('cache coalesces simultaneous scoped board loads and independently returns data',async()=>{
  let release;

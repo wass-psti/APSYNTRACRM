@@ -9,7 +9,7 @@ const actor='33333333-3333-4333-8333-333333333333';
 const groupId='44444444-4444-4444-8444-444444444444';
 const columnId='55555555-5555-4555-8555-555555555555';
 const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
-function fixture({count=1011,failBatch=0}={}){
+function fixture({count=1011,failBatch=0,failStatus=503}={}){
  const columns=[{id:columnId,name:'Reference',data_type:'text',
   system_key:null,column_key:'col_ref',config:{}}];
  const detail={board:{id:boardId,name:'Imported QA',workspace_id:workspace,
@@ -24,7 +24,7 @@ function fixture({count=1011,failBatch=0}={}){
    if(name==='wm_board_ui_read')return {board_id:boardId};
    assert.equal(name,'wm_import_board_wizard_atomic');
    calls++;
-   if(calls===failBatch){const err=new Error('Transient network error');err.status=503;throw err;}
+   if(calls===failBatch){const err=new Error('Simulated rejection');err.status=failStatus;throw err;}
    assert.equal(args.p_expected_updated_at,current.board.updated_at);
    assert.ok(args.p_payload.rows.length<=1000);
    const first=current.items.length;
@@ -46,7 +46,8 @@ function fixture({count=1011,failBatch=0}={}){
  const group={action:'existing',groupId},matches={behavior:'add-new',matchColumnId:'item'};
  const approvedPlan=buildImportPlan({sheet,detail,mappings,group,matches});
  return {api,sheet,detail,mappings,group,matches,approvedPlan,
-  get calls(){return calls;},get reads(){return reads;},get current(){return structuredClone(current);}};
+  get calls(){return calls;},get reads(){return reads;},get current(){return structuredClone(current);},
+  mutateUnsafeForTest(fn){fn(current);}};
 }
 test('CP-BIMP-13 1,011 rows are committed through three atomic RPCs with verified persistence',async()=>{
  const f=fixture(),progress=[];
@@ -207,4 +208,90 @@ test('CP-BIMP-13 5,001 records cross the real atomic row ceiling in six verified
  assert.equal(after.items.length,5001);
  assert.equal(after.values.length,5001);
  assert.equal(after.values.at(-1).value,'REF-5001');
+});
+
+
+test('CP-BIMP-14 resumes after a definite 409 without repeating 500 persisted items',async()=>{
+ const f=fixture({count:1011,failBatch:2,failStatus:409});
+ let checkpoint;
+ await assert.rejects(()=>executeBoardImportBatched({...f,auth,batchSize:500}),error=>{
+  assert.equal(error.importBatchProgress.completed,500);
+  assert.equal(error.importBatchProgress.outcomeUncertain,false);
+  assert.ok(error.importBatchResume);
+  checkpoint=error.importBatchResume;
+  return true;
+ });
+ assert.equal(f.current.items.length,500);
+ const result=await executeBoardImportBatched({...f,auth,batchSize:500,
+  resumeFrom:checkpoint});
+ assert.equal(result.created,1011);
+ assert.equal(result.rowsProcessed,1011);
+ assert.equal(f.current.items.length,1011);
+ assert.equal(f.current.items[0].title,'Batch item 1');
+ assert.equal(f.current.items.at(-1).title,'Batch item 1011');
+ assert.equal(f.calls,4); // 500 success, 409, then two continuation batches
+});
+
+test('CP-BIMP-14 rejects resume when authoritative board state drifted after checkpoint',async()=>{
+ const f=fixture({failBatch:2,failStatus:409});
+ let checkpoint;
+ await assert.rejects(()=>executeBoardImportBatched({...f,auth,batchSize:500}),error=>{
+  checkpoint=error.importBatchResume;return !!checkpoint;
+ });
+ // A contemporaneous authorized editor changes an existing cell, with or
+ // without a board revision bump. The importer must not overwrite it.
+ f.mutateUnsafeForTest(current=>{current.values[0].value='CHANGED';});
+ await assert.rejects(()=>executeBoardImportBatched({...f,auth,batchSize:500,
+  resumeFrom:checkpoint}),/board changed/i);
+ assert.equal(f.calls,2);
+});
+
+test('CP-BIMP-14 never offers a safe resume checkpoint for an uncertain network batch',async()=>{
+ const f=fixture({failBatch:2,failStatus:503});
+ await assert.rejects(()=>executeBoardImportBatched({...f,auth,batchSize:500}),error=>{
+  assert.equal(error.importOutcomeUncertain,true);
+  assert.equal(error.importBatchResume,undefined);
+  return true;
+ });
+});
+
+test('CP-BIMP-14 m143-v2 stores a 7,200-character reference without truncation and verifies refreshed readback',async()=>{
+ const refId='88888888-8888-4888-8888-888888888888';
+ const large='https://example.invalid/docs/'+ 'Q'.repeat(7200);
+ const detail={board:{id:boardId,name:'Extended QA',workspace_id:workspace,
+  status:'active',updated_at:'2026-11-12T00:00:00.000Z'},
+  groups:[{id:groupId,title:'QA'}],columns:[{id:refId,name:'File Links',
+   data_type:'long_text',column_key:'col_file_links',system_key:null,config:{}}],
+  items:[],values:[]};
+ const sheet={headers:['Name','File Links'],rows:[['Extended file reference',large]]};
+ const mappings=initialImportMappings(sheet,detail,{extendedReferences:true});
+ assert.equal(mappings[1].action,'existing');
+ const group={action:'existing',groupId},matches={behavior:'add-new',matchColumnId:'item'};
+ const approvedPlan=buildImportPlan({sheet,detail,mappings,group,matches,
+  extendedReferences:true});
+ assert.equal(approvedPlan.payload.contract,'m143-v2');
+ assert.equal(approvedPlan.payload.rows[0].values['File Links'].__aps_extended_ref_v1,large);
+ assert.equal(approvedPlan.readback.rows[0].values['File Links'],large);
+ let current=structuredClone(detail),writes=0;
+ const api={context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async()=>true,board:async()=>structuredClone(current),
+  rpc:async(name,args)=>{
+   if(name==='wm_board_ui_read')return {board_id:boardId};
+   assert.equal(name,'wm_import_board_wizard_extended_atomic');
+   writes++;
+   const itemId='99999999-9999-4999-8999-999999999999';
+   current.items.push({id:itemId,board_id:boardId,group_id:groupId,
+    title:'Extended file reference',archived_at:null});
+   current.values.push({item_id:itemId,column_id:refId,value:large});
+   current.board.updated_at='2026-11-12T00:00:01.000Z';
+   return {created:1,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};
+  }};
+ const receipt=await executeBoardImportBatched({api,auth,detail,sheet,mappings,group,
+  matches,extendedReferences:true,approvedPlan});
+ assert.equal(writes,1);
+ assert.equal(receipt.created,1);
+ assert.equal((await api.board(boardId)).values[0].value,large);
+ // An old backend cannot be forced to persist the value using m143-v1.
+ assert.throws(()=>buildImportPlan({sheet,detail,mappings,group,matches}),
+  /long_text cell exceeds 5000 characters/);
 });

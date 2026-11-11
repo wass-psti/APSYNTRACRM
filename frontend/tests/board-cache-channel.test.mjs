@@ -77,6 +77,7 @@ test('strictly older authoritative board version hints cannot evict a newer snap
   reads++;return {board:{id:boardId,workspace_id:workspace,updated_at:'2026-11-09T10:00:00Z'}};
  }};
  const api=new DomainApi(auth);
+ api.extendedRefsSupported=false; // Legacy board-only API fixture.
  await api.boardCached(boardId,scope);
  assert.equal(api.invalidateBoardCache(boardId,{revision:'2026-11-09T09:00:00Z'}),false);
  await api.boardCached(boardId,scope);

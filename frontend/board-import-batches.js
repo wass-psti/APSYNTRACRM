@@ -12,6 +12,23 @@ const sum=(a,b)=>({
  groupsCreated:a.groupsCreated+b.groupsCreated
 });
 const blank=()=>({created:0,updated:0,skipped:0,columnsCreated:0,groupsCreated:0});
+// Checkpoint is deliberately in-memory only: it is bound to the exact reviewed
+// workbook/plan and signed board snapshot. No source data or personal cells
+// are copied into localStorage or an unaudited server-side queue.
+function boardFingerprint(detail){
+ if(!detail?.board?.id||!detail?.board?.workspace_id)fail('Board readback is incomplete.');
+ const sorted=(values,key)=>[...(values||[])].sort((a,b)=>key(a).localeCompare(key(b)));
+ return JSON.stringify({board:detail.board,
+  groups:sorted(detail.groups,x=>x.id),
+  columns:sorted(detail.columns,x=>x.id),
+  items:sorted(detail.items,x=>x.id),
+  values:sorted(detail.values,x=>x.item_id+':'+x.column_id)});
+}
+function safeCheckpoint({approvedPlan,detail,mappings,group,completed,receipt,batchSize}){
+ return {approvedPlan,boardId:detail.board.id,workspaceId:detail.board.workspace_id,
+  fingerprint:boardFingerprint(detail),detail,mappings,group,
+  completed,receipt:{...receipt},batchSize};
+}
 
 function nextMappings(mappings,before,after){
  const originalIds=new Set((before.columns||[]).map(column=>column.id));
@@ -34,11 +51,12 @@ function nextGroup(group,before,after){
 }
 
 export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
- group,matches,allowColumns=false,approvedPlan,onProgress=()=>{},batchSize=IMPORT_BATCH_SIZE}={}){
+ group,matches,allowColumns=false,extendedReferences=false,approvedPlan,onProgress=()=>{},
+ batchSize=IMPORT_BATCH_SIZE,resumeFrom=null}={}){
  if(!approvedPlan||!sheet?.rows?.length||!Array.isArray(mappings)||
     !Number.isInteger(batchSize)||batchSize<1||batchSize>5000)
   throw new ApiError('Reviewed import plan and a valid batch size are required.',400);
- const original=buildImportPlan({sheet,detail,mappings,group,matches,allowColumns});
+ const original=buildImportPlan({sheet,detail,mappings,group,matches,allowColumns,extendedReferences});
  if(original.boardId!==approvedPlan.boardId||
     original.boardRevision!==approvedPlan.boardRevision||
     JSON.stringify(original.payload)!==JSON.stringify(approvedPlan.payload))
@@ -46,7 +64,28 @@ export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
  const total=Math.ceil(sheet.rows.length/batchSize);
  let currentDetail=detail,currentMappings=mappings,currentGroup=group;
  let receipt=blank(),completed=0;
- for(let batch=0;batch<total;batch++){
+ if(resumeFrom){
+  if(resumeFrom.approvedPlan!==approvedPlan||
+     resumeFrom.boardId!==approvedPlan.boardId||
+     resumeFrom.workspaceId!==approvedPlan.workspaceId||
+     resumeFrom.batchSize!==batchSize||
+     !Number.isInteger(resumeFrom.completed)||
+     resumeFrom.completed<=0||resumeFrom.completed>=sheet.rows.length||
+     resumeFrom.completed%batchSize!==0)
+   fail('This resume checkpoint does not match the original reviewed workbook or batch boundaries.');
+  const signed=await auth?.getVerifiedUser?.(),ctx=await api?.context?.();
+  if(signed?.id!==auth?.userId||ctx?.user_id!==signed.id||
+     ctx?.workspace_id!==approvedPlan.workspaceId||ctx?.profile?.status!=='active')
+   fail('The signed user or active workspace changed. Re-review the import.');
+  const fresh=await api.board(approvedPlan.boardId);
+  if(boardFingerprint(fresh)!==resumeFrom.fingerprint)
+   fail('The board changed after the last verified batch. Re-review before resuming.');
+  currentDetail=fresh;currentMappings=resumeFrom.mappings;
+  currentGroup=resumeFrom.group;receipt={...resumeFrom.receipt};
+  completed=resumeFrom.completed;
+ }
+ let checkpoint=resumeFrom;
+ for(let batch=completed/batchSize;batch<total;batch++){
   const start=batch*batchSize,end=Math.min(sheet.rows.length,start+batchSize);
   try{
    const part={...sheet,rows:sheet.rows.slice(start,end),
@@ -57,7 +96,7 @@ export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
     formulaWarningsConfirmed:true};
    const plan=buildImportPlan({sheet:part,detail:currentDetail,
     mappings:currentMappings,group:currentGroup,matches,
-    allowColumns:batch===0&&allowColumns});
+    allowColumns:batch===0&&allowColumns,extendedReferences});
    // Cross-batch outcome must match what the user approved for the whole file.
    const expected=approvedPlan.readback.rows.slice(start,end).map(row=>row.outcome);
    const actual=plan.readback.rows.map(row=>row.outcome);
@@ -81,6 +120,9 @@ export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
     error.importOutcomeUncertain=true;error.cause=cause;throw error;
    }
    currentMappings=updatedMappings;currentGroup=updatedGroup;currentDetail=after;
+   checkpoint=completed<sheet.rows.length?safeCheckpoint({
+    approvedPlan,detail:currentDetail,mappings:currentMappings,group:currentGroup,
+    completed,receipt,batchSize}):null;
    // Visual progress feedback must never turn a verified commit into a retry.
    try{onProgress({batch:batch+1,total,completed,rows:sheet.rows.length,receipt:{...receipt}});}
    catch{/* Rendering failure does not change the committed import state. */}
@@ -88,6 +130,10 @@ export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
    error.importBatchProgress={completed,totalRows:sheet.rows.length,
     committedBatches:batch,receipt:{...receipt},
     outcomeUncertain:error.importOutcomeUncertain===true};
+   // Only a definitively rejected batch can be resumed. A transport failure
+   // may already have committed its entire transaction and is never retried.
+   if(!error.importOutcomeUncertain&&checkpoint)
+    error.importBatchResume=checkpoint;
    throw error;
   }
  }
