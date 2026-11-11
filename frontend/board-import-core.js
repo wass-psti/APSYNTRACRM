@@ -135,6 +135,10 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
  if(!detail?.board||!Array.isArray(sheet?.headers)||!Array.isArray(sheet?.rows)||
   !Array.isArray(mappings)||mappings.length!==sheet.headers.length)
   deny('Import preview is incomplete.');
+ if(sheet.omittedRows?.length&&sheet.omittedRowsConfirmed!==true)
+  deny('Confirm whether to exclude the worksheet summary rows before importing.');
+ if(sheet.formulaWarnings?.length&&sheet.formulaWarningsConfirmed!==true)
+  deny('Confirm that uncached formula cells will be imported as blank before continuing.');
  const board=detail.board;
  if(!canManuallyEditBoard(board,true)||isProtectedBoard(board)||moduleByBoardName(board.name))
   deny('Application-owned or protected boards require their domain-specific import workflow.',403);
