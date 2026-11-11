@@ -218,8 +218,21 @@ test('XLSX: cached formulas are read as values, while unsupported formulas, dupl
  assert.equal(parsed.sheets[0].rows[0][1],'4');
  const missing=workbookEntries();
  missing[3].xml=contactsSheet.replace('<v>12.5</v>','<f>2+2</f>');
- await assert.rejects(()=>parseWithFixtureDom(makeZip(missing)),
-  /Worksheet "Contacts".*row 2.*B2.*no supported cached result/);
+ const parsedMissing=await parseWithFixtureDom(makeZip(missing));
+ assert.equal(parsedMissing.sheets[0].rows[0][1],'');
+ assert.deepEqual(parsedMissing.sheets[0].formulaWarnings,[
+  {row:2,cell:'B2',column:'Score'}
+ ]);
+ const emptyCache=workbookEntries();
+ emptyCache[3].xml=contactsSheet.replace('<v>12.5</v>','<f>IF(1=0,1,"")</f><v></v>');
+ const parsedEmpty=await parseWithFixtureDom(makeZip(emptyCache));
+ assert.equal(parsedEmpty.sheets[0].rows[0][1],'');
+ assert.deepEqual(parsedEmpty.sheets[0].formulaWarnings,[]);
+ const formulaError=workbookEntries();
+ formulaError[3].xml=contactsSheet.replace('<v>12.5</v>','<f>1/0</f><v>#DIV/0!</v>')
+  .replace('r="B2" t="n"','r="B2" t="e"');
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(formulaError)),
+  /Spreadsheet error cells cannot be imported/);
  const external=workbookEntries();
  external[3].xml=contactsSheet.replace('<v>12.5</v>','<f>[1]Other!A1</f><v>4</v>');
  await assert.rejects(()=>parseWithFixtureDom(makeZip(external)),
