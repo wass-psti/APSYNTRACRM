@@ -47,3 +47,20 @@ test('creation receipt navigates only through signed selection, not local scope'
  assert.match(app,/state\.boards\.length/);
  assert.match(app,/Start with your first board/);
 });
+
+test('ownership UI requires verified target, typed confirmation and ledger verification',()=>{
+ const ui=readFileSync('frontend/workspace-ui.js','utf8');
+ for(const expr of [
+  /Transfer workspace ownership/,
+  /verified member of/,
+  /data-ws01-action="transfer-owner"/,
+  /WS03_OWNERSHIP_TRANSFER_ENABLED&&row\.active/,
+  /confirmation!=='TRANSFER'/,
+  /authorityClient\.readTransferCandidates\(workspaceId\)/,
+  /authorityClient\.verifyOwnershipTransfer\(\{/,
+  /after\?\.verified!==true/,
+  /requestId=globalThis\.crypto\?\.randomUUID/,
+  /signedItAdmin/
+ ])assert.match(ui,expr);
+ assert.doesNotMatch(ui,/localStorage\.setItem\(['"]workspaceOwner/);
+});
