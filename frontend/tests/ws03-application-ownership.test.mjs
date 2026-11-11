@@ -9,7 +9,7 @@ const actor='22222222-2222-4222-8222-222222222222';
 const owner='33333333-3333-4333-8333-333333333333';
 const target='44444444-4444-4444-8444-444444444444';
 const requestId='55555555-5555-4555-8555-555555555555';
-const signed={schemaVersion:1,workspaceId,actorId:actor,authorized:true,
+const signed={schemaVersion:1,workspaceId:workspace,actorId:actor,authorized:true,
  apps:[{moduleId:'material-request-hub',ownerUserId:owner,
   canTransfer:true,transferAuthority:'owner'}]};
 test('apps are independently authorized and the transfer transport stays off',()=>{
