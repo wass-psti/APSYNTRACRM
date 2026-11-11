@@ -292,6 +292,7 @@ test('UI and entrypoint are wired without bypassing the domain restriction',()=>
  assert.match(app,/openBoardImportWizard/);
  assert.match(ui,/will be created together with the imported records/);
  assert.match(ui,/Confirm exclude/);
+ assert.match(ui,/reassignImportItemMapping\(state\.mappings,index\)/);
  assert.doesNotMatch(ui,/aps-import-choice-consent/);
  assert.match(ui,/Import Now/);
  assert.match(ui,/state\.uncertain/);
