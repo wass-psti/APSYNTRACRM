@@ -28,7 +28,7 @@ test('screenshot regression: three ordinary approvals do not silently approve mi
  const gate=importMappingReadiness(mappings,true);
  assert.equal(gate.proposedCount,3);
  assert.deepEqual(gate.pendingChoices,[{index:1,source:'Status',type:'status'}]);
- assert.equal(gate.awaitingColumnApproval,false);
+ assert.equal(gate.requiresColumnPermission,false);
  assert.equal(gate.ready,false);
  assert.throws(()=>buildImportPlan({sheet,detail,mappings,group,allowColumns:true}),
   /Invalid or repeated column mapping/);
@@ -37,7 +37,7 @@ test('deliberate Skip Status preserves the three ordinary approvals and excludes
  const proposed=initialImportMappings(sheet,detail,{canCreate:true});
  const skipped=skipPendingImportChoice(proposed,1);
  assert.deepEqual(importMappingReadiness(skipped,true),{
-  pendingChoices:[],proposedCount:3,awaitingColumnApproval:false,
+  pendingChoices:[],proposedCount:3,requiresColumnPermission:false,
   skipped:['Status'],ready:true
  });
  assert.equal(skipped[1].action,'skip');
@@ -67,7 +67,7 @@ test('configured Status is mapped by verified column ID; second-stage ordinary c
     {id:'status-active',name:'Active',active:true},
     {id:'status-pending',name:'Pending',active:true}]}}]};
  assert.deepEqual(importMappingReadiness(mapped,false),{
-  pendingChoices:[],proposedCount:3,awaitingColumnApproval:true,
+  pendingChoices:[],proposedCount:3,requiresColumnPermission:true,
   skipped:[],ready:false
  });
  assert.throws(()=>buildImportPlan({sheet,detail:persisted,mappings:mapped,
