@@ -34,6 +34,45 @@ export function workspaceCreatorUiAllowed({
   reason:deployed!==true?'Restricted workspace creation requires a reviewed server-side role policy.':
    eligibility.reason});
 }
+/** Dedicated signed IT Admin capability receipt, not an unverified
+ * platform-role label. The endpoint is disabled in production until review.
+ */
+export function normalizeCreatorAccessReceipt(raw,{userId,workspaceId}={}){
+ if(raw?.schemaVersion!==1||raw.userId!==userId||
+    raw.workspaceId!==workspaceId||!validUuid(userId)||!validUuid(workspaceId)||
+    raw.source!=='SIGNED_CREATOR_POLICY'||
+    !['it-admin','owner','none'].includes(raw.role)||
+    typeof raw.canCreateWorkspace!=='boolean')return null;
+ return Object.freeze({schemaVersion:1,userId,workspaceId,
+  source:'SIGNED_CREATOR_POLICY',role:raw.role,
+  canCreateWorkspace:raw.canCreateWorkspace});
+}
+export class CreatorAccessClient{
+ constructor({auth,api,enabled=WS10_CREATOR_POLICY_ACTIVE}={}){
+  this.auth=auth;this.api=api;this.enabled=enabled===true;
+ }
+ async read(){
+  if(!this.enabled)deny('Workspace creator policy not activated.',503);
+  if(typeof this.auth?.getVerifiedUser!=='function'||
+     typeof this.api?.context!=='function'||
+     typeof this.api?.rpc!=='function')deny('Signed creator policy unavailable.',503);
+  const user=await this.auth.getVerifiedUser();
+  const context=await this.api.context();
+  if(!validUuid(user?.id)||this.auth.userId!==user.id||
+     context?.user_id!==user.id||!validUuid(context?.workspace_id)||
+     context?.profile?.status!=='active')deny('Signed creator policy context invalid.',403);
+  let response;
+  try{response=await this.api.rpc('wm_ws10_creator_access',{});}
+  catch{deny('Creator policy not verified.',403);}
+  const receipt=normalizeCreatorAccessReceipt(response,{
+   userId:user.id,workspaceId:context.workspace_id});
+  if(!receipt)deny('Creator access response invalid.',409);
+  const current=await this.api.context();
+  if(current?.user_id!==user.id||current?.workspace_id!==context.workspace_id)
+   deny('Creator policy context changed.',409);
+  return receipt;
+ }
+}
 export function validateOwnershipTransfer(raw={}){
  const {kind,workspaceId,resourceId=null,targetUserId,requestId}=raw;
  if(!validUuid(workspaceId)||!validUuid(targetUserId)||!validUuid(requestId)||
