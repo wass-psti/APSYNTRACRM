@@ -3128,8 +3128,10 @@ function redrawBoardHistory({focus=false}={}){
   host.innerHTML=renderBoardColumnRecoveryList(boardHistory.recoveries)+
    renderBoardAuditCursorPage(result,{
    pageIndex:boardHistory.index,busy:boardHistory.busy,error:boardHistory.error,
-   cachedNext:boardHistory.index<boardHistory.pages.length-1
+   cachedNext:boardHistory.index<boardHistory.pages.length-1,
+   avatarPaths:boardHistory.avatarPaths
   });
+  void mountAvatarImages(host,profileAvatarClient,null,null);
   return;
  }
  const results=renderBoardActivityResults(boardHistory.rows,boardHistory);
