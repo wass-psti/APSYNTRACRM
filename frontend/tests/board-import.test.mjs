@@ -67,6 +67,23 @@ test('no new columns unless the approved plan explicitly includes them',()=>{
  assert.equal(plan.preview.newItems,2);
  assert.equal(plan.boardRevision,now);
 });
+test('unmapped source columns require an explicit mapping or exclusion decision',()=>{
+ const editorMappings=initialImportMappings(sheet,detail);
+ assert.equal(editorMappings[2].action,'skip');
+ assert.equal(editorMappings[2].requiresDecision,true);
+ const gate=importMappingReadiness(editorMappings);
+ assert.deepEqual(gate.pendingSkips,[{index:2,source:'Checked',type:'checkbox'}]);
+ assert.equal(gate.ready,false);
+ assert.throws(()=>buildImportPlan({sheet,detail,mappings:editorMappings,group}),
+  /explicitly confirm exclusion/);
+ const explicitlyExcluded=editorMappings.map((m,i)=>i===2?{...m,requiresDecision:false}:m);
+ assert.deepEqual(importMappingReadiness(explicitlyExcluded).pendingSkips,[]);
+ const plan=buildImportPlan({sheet,detail,mappings:explicitlyExcluded,group});
+ assert.deepEqual(plan.payload.rows[0].values,{Amount:25});
+ const mapped=editorMappings.map((m,i)=>i===2?
+  {...m,action:'existing',columnId:colId,requiresDecision:false}:m);
+ assert.deepEqual(importMappingReadiness(mapped).pendingSkips,[]);
+});
 test('declined mapping changes never create a board column',()=>{
  const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group,allowColumns:false});
  assert.deepEqual(plan.payload.newColumns,[]);
