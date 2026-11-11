@@ -79,6 +79,84 @@ test('upload path is derived from signed request-to-Board item link, never a req
  assert.equal(requests[1].args.p_size_bytes,4);
  assert.equal(requests[1].args.p_storage_path.startsWith(board+'/'+item+'/'),true);
 });
+test('ambiguous registration retry reuses the same private object across new client instances',async()=>{
+ let uploads=0,downloads=0,registrations=0;
+ const paths=[];
+ const retryApi={rpc:async(name,args)=>{
+  if(name==='fueltrack_v3_receipt_prepare')return {
+   status:'VERIFIED_RECEIPT_PREPARE',boardId:board,workspaceId:ws,
+   requestId:req,boardItemId:item,bucket:'work-board-files'
+  };
+  if(name==='fueltrack_v3_attach_receipt'){
+   registrations++;
+   if(registrations===1)throw new Error('Temporary registration transport failure');
+   return {status:'VERIFIED_RECEIPT',requestId:req,boardItemId:item,
+    fileId:'77777777-7777-4777-8777-777777777777',storagePath:args.p_storage_path,
+    idempotent:false};
+  }
+  throw new Error('Unexpected RPC '+name);
+ }};
+ const network=async(url,options)=>{
+  const prefix='/storage/v1/object/work-board-files/';
+  if(options.method==='POST'){
+   uploads++;
+   paths.push(decodeURIComponent(url.slice(url.indexOf(prefix)+prefix.length)));
+   if(uploads===1)return new Response(null,{status:200});
+   return Response.json({code:'ResourceAlreadyExists',
+    message:'The specified resource already exists'},{status:409});
+  }
+  if(options.method==='GET'){
+   downloads++;
+   assert.ok(url.includes('/storage/v1/object/authenticated/work-board-files/'));
+   assert.equal(options.credentials,'omit');
+   return new Response(await file.arrayBuffer(),{
+    headers:{'Content-Type':'image/jpeg','Content-Length':String(file.size)}
+   });
+  }
+  throw new Error('Unexpected Storage method '+options.method);
+ };
+ const create=()=>new FuelTrackV3ReceiptStorageClient({
+  auth:auth(),api:retryApi,boardId:board,workspaceId:ws,
+  baseUrl:'https://project.supabase.co',apiKey:'public-anon-key',fetchImpl:network
+ });
+ await assert.rejects(create().uploadAndRegister(req,file),/Temporary registration transport failure/);
+ const result=await create().uploadAndRegister(req,file);
+ assert.equal(result.status,'VERIFIED_RECEIPT');
+ assert.equal(uploads,2);
+ assert.equal(downloads,1);
+ assert.equal(registrations,2);
+ assert.equal(paths[0],paths[1]);
+ assert.equal(paths[0].startsWith(board+'/'+item+'/'),true);
+});
+
+test('existing deterministic object with different bytes is never overwritten or registered',async()=>{
+ let registrations=0,downloads=0;
+ const retryApi={rpc:async(name,args)=>{
+  if(name==='fueltrack_v3_receipt_prepare')return {
+   status:'VERIFIED_RECEIPT_PREPARE',boardId:board,workspaceId:ws,
+   requestId:req,boardItemId:item,bucket:'work-board-files'
+  };
+  if(name==='fueltrack_v3_attach_receipt'){registrations++;return {};}
+  throw new Error('Unexpected RPC '+name);
+ }};
+ const client=new FuelTrackV3ReceiptStorageClient({
+  auth:auth(),api:retryApi,boardId:board,workspaceId:ws,
+  baseUrl:'https://project.supabase.co',apiKey:'public-anon-key',
+  fetchImpl:async(url,options)=>{
+   if(options.method==='POST')return Response.json({
+    code:'ResourceAlreadyExists',message:'The specified resource already exists'
+   },{status:409});
+   downloads++;
+   return new Response(new Uint8Array([255,216,255,0]),{
+    headers:{'Content-Type':'image/jpeg','Content-Length':'4'}
+   });
+  }
+ });
+ await assert.rejects(client.uploadAndRegister(req,file),/differs from the selected file/);
+ assert.equal(downloads,1);
+ assert.equal(registrations,0);
+});
+
 test('invalid signed receipt-prepare reply prevents an upload',async()=>{
  let calls=0;
  const signed=auth();
