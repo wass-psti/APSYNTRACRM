@@ -6,6 +6,7 @@ import {mountAvatarImages} from './profile-avatar.js';
 
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
+import {WorkspaceOwnerGovernanceClient,WS10_CREATION_AUTH_ENABLED} from './workspace-owner-governance.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
 import {WorkspaceInvitationAcceptanceClient,WS02D_ACCEPTANCE_ENABLED,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
@@ -181,6 +182,7 @@ const boardCacheChannel=new BoardCacheChannel({auth,onInvalidate:({boardId,revis
 db.onBoardMutation=({boardId,revision})=>boardCacheChannel.publish(boardId,revision);
 const profileAvatarClient=new ProfileAvatarClient({auth});
 const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
+const workspaceOwnerGovernance=new WorkspaceOwnerGovernanceClient({auth,api:db});
 const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
 const workspaceInvitationAcceptanceClient=new WorkspaceInvitationAcceptanceClient({auth,api:db});
 const platformSync=new PlatformSync({
@@ -4263,7 +4265,10 @@ async function action(name,button){
  case 'ws01-open':{
    if(!auth.isSignedIn||!state.context)break;
    openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()},
-    {lifecycle:workspaceLifecycleClient,onOpenCurrent:()=>{location.hash='#/overview';},
+    {lifecycle:workspaceLifecycleClient,
+     creationLifecycle:workspaceOwnerGovernance,
+     readCreationRights:()=>workspaceOwnerGovernance.readiness(),
+     onOpenCurrent:()=>{location.hash='#/overview';},
      configurationEnabled:WS01_CONFIGURATION_ENABLED,
      invitationEnabled:WS02D_INVITE_CLIENT_ENABLED,
      sendInvitation:request=>workspaceInvitationClient.send(request),
