@@ -20268,6 +20268,48 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   #app .aps-board-shell .board-tab-slot > .tab{transition:none}
 }
 
+/* WS11 — signed invitation status panel. Never present a local draft as sent. */
+#app .ws11-manage,.ws01-overlay .ws11-manage{
+  border-top:1px solid #e1e5f0;padding:15px 22px 18px;
+  min-width:0;
+}
+#app .ws11-manage-heading,.ws01-overlay .ws11-manage-heading{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+#app .ws11-manage-heading h3,.ws01-overlay .ws11-manage-heading h3{
+  margin:0;font-size:14px;font-weight:750;color:#253451;
+}
+#app .ws11-manage-heading button,.ws01-overlay .ws11-manage-heading button,
+#app .ws11-invite-row button,.ws01-overlay .ws11-invite-row button{
+  min-height:29px;padding:5px 10px;border:1px solid #d5dcec;
+  background:#fff;color:#475476;border-radius:7px;cursor:pointer;
+}
+#app .ws11-manage button:disabled,.ws01-overlay .ws11-manage button:disabled{
+  opacity:.55;cursor:not-allowed;
+}
+#app .ws11-manage-feedback,.ws01-overlay .ws11-manage-feedback{
+  color:#69758d;font-size:12px;line-height:1.5;
+}
+#app .ws11-invite-list,.ws01-overlay .ws11-invite-list{
+  max-height:210px;overflow-y:auto;overscroll-behavior-y:contain;
+}
+#app .ws11-invite-row,.ws01-overlay .ws11-invite-row{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:9px 0;border-bottom:1px solid #edf0f6;
+}
+#app .ws11-invite-row div,.ws01-overlay .ws11-invite-row div{
+  display:flex;flex-direction:column;min-width:0;
+}
+#app .ws11-invite-row strong,.ws01-overlay .ws11-invite-row strong{
+  overflow-wrap:anywhere;font-size:12px;font-weight:650;color:#263554;
+}
+#app .ws11-invite-row small,.ws01-overlay .ws11-invite-row small{
+  font-size:11px;color:#7a8497;
+}
+@media(max-width:600px){
+  .ws01-overlay .ws11-manage{padding:12px 14px}
+}
+
 /* frontend/fueltrans-native.css */
 @media print{
  body:has(#fueltrans-native-host) .sidebar,

@@ -7,6 +7,7 @@ import {mountAvatarImages} from './profile-avatar.js';
 import {renderWorkspaceSwitcher,renderWorkspaceInviteLaunch,openWorkspaceSelector,openWorkspaceInvitationDialog,closeWorkspacePanels,WS01_SWITCHING_ENABLED} from './workspace-ui.js?v=ws01-controls-20261106';
 import {WorkspaceLifecycleClient,WS01_CONFIGURATION_ENABLED} from './workspace-lifecycle-client.js';
 import {WorkspaceInvitationClient,WS02D_INVITE_CLIENT_ENABLED} from './workspace-invitation-client.js';
+import {WorkspaceInvitationManagementClient,WS11_INVITATION_MANAGEMENT_ENABLED} from './workspace-invitation-management.js';
 import {WorkspaceInvitationAcceptanceClient,WS02D_ACCEPTANCE_ENABLED,captureInvitationLink,renderInvitationAcceptance} from './workspace-invitation-acceptance.js';
 import {startInitialization,setInitializationPhase,finishInitialization} from './initialization-core.js';
 import {renderAuthMarkup} from './auth-markup.js';
@@ -20,7 +21,8 @@ import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-vi
 import {DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
-import {normalizeSignedBoardCandidates} from './workspace-board-groups.js';
+import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
+ BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 import {PlatformSync} from './platform-sync.js';
@@ -183,6 +185,8 @@ db.onBoardMutation=({boardId,revision})=>boardCacheChannel.publish(boardId,revis
 const profileAvatarClient=new ProfileAvatarClient({auth});
 const workspaceLifecycleClient=new WorkspaceLifecycleClient({auth,api:db});
 const workspaceInvitationClient=new WorkspaceInvitationClient({auth,api:db});
+const workspaceInvitationManagementClient=new WorkspaceInvitationManagementClient({auth,api:db});
+const boardGroupAccessClient=new BoardGroupAccessClient({auth,api:db});
 const workspaceInvitationAcceptanceClient=new WorkspaceInvitationAcceptanceClient({auth,api:db});
 const platformSync=new PlatformSync({
  auth,api:db,url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY,
@@ -4306,6 +4310,9 @@ async function action(name,button){
      configurationEnabled:WS01_CONFIGURATION_ENABLED,
      invitationEnabled:WS02D_INVITE_CLIENT_ENABLED,
      sendInvitation:request=>workspaceInvitationClient.send(request),
+     managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
+     listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
+     revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request),
      switchingEnabled:WS01_SWITCHING_ENABLED,
      onWorkspaceSwitched:()=>{
       // Reload only after a verified server-side scope change. The fresh app
@@ -4331,7 +4338,13 @@ async function action(name,button){
    if(!auth.isSignedIn||!state.context?.workspace_id)break;
    openWorkspaceInvitationDialog({
     id:state.context.workspace_id,name:workspaceName()
-   },{enabled:WS02D_INVITE_CLIENT_ENABLED,sendInvitation:request=>workspaceInvitationClient.send(request)});
+   },{
+     enabled:WS02D_INVITE_CLIENT_ENABLED,
+     sendInvitation:request=>workspaceInvitationClient.send(request),
+     managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
+     listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
+     revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request)
+   });
    break;
  }
  case 'platform-sync-verify':{await platformSync.syncNow('manual',[]);break;}
@@ -5199,12 +5212,37 @@ async function action(name,button){
   openBoardSharePreview({
    board,moduleKey:moduleByBoardName(board.name)?.key||null,
    workspaceId,manage,peopleDirectory,
+   accessEnabled:BOARD_GROUP_ACCESS_ENABLED&&manage,
+   onAssignBoard:async memberId=>{
+    if(!BOARD_GROUP_ACCESS_ENABLED||!manage||!auth.isSignedIn||
+       auth.userId!==userId||state.boardId!==boardId||
+       state.context?.workspace_id!==workspaceId)throw new ApiError('Board scope changed.',403);
+    if(await db.allowed(boardId,'manage')!==true)
+     throw new ApiError('Board management permission changed.',403);
+    const member=peopleDirectory.members.find(p=>p.id===memberId&&!p.boardRole);
+    if(!member)throw new ApiError('Select an unassigned verified workspace member.',403);
+    return boardGroupAccessClient.changeBoardAccess({
+     workspaceId,boardId,subjectType:'member',subjectId:memberId,
+     requestId:globalThis.crypto.randomUUID(),action:'grant',role:'viewer'
+    });
+   },
+   onRefreshDirectory:async()=>{
+    if(!auth.isSignedIn||auth.userId!==userId||
+       state.boardId!==boardId||state.context?.workspace_id!==workspaceId)
+     throw new ApiError('Board changed.',403);
+    const fresh=await loadBoardInvitableDirectory(db,boardId);
+    return normalizeSignedBoardCandidates({...fresh,boardId,workspaceId,manage},
+     {boardId,workspaceId});
+   },
    onInviteWorkspace:()=>{
     if(!auth.isSignedIn||auth.userId!==userId||
        state.context?.workspace_id!==workspaceId)return;
     openWorkspaceInvitationDialog({id:workspaceId,name:workspaceName()},{
      enabled:WS02D_INVITE_CLIENT_ENABLED,
-     sendInvitation:request=>workspaceInvitationClient.send(request)
+     sendInvitation:request=>workspaceInvitationClient.send(request),
+     managementEnabled:WS11_INVITATION_MANAGEMENT_ENABLED,
+     listInvitations:workspaceId=>workspaceInvitationManagementClient.list(workspaceId),
+     revokeInvitation:request=>workspaceInvitationManagementClient.revoke(request)
     });
    }
   });
