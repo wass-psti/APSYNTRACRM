@@ -21,6 +21,7 @@ import {DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
 import {normalizeSignedBoardCandidates} from './workspace-board-groups.js';
+import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 import {PlatformSync} from './platform-sync.js';
 import {APP_NAME} from './config.js';
@@ -4262,8 +4263,16 @@ async function action(name,button){
      isB3LocalRevoke?'Signed out of this session only. B3 revocation: '+(revoked?.status||'BLOCKED')+'.':'Signed out successfully.');break;}
  case 'ws01-open':{
    if(!auth.isSignedIn||!state.context)break;
-   openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()},
-    {lifecycle:workspaceLifecycleClient,signedUserId:auth.userId,onOpenCurrent:()=>{location.hash='#/overview';},
+   const actor=auth.userId,workspaceId=state.context.workspace_id;
+   let creatorReceipt=null;
+   if(WS10_CREATOR_POLICY_ACTIVE){
+    try{creatorReceipt=await new CreatorAccessClient({auth,api:db}).read();}
+    catch{creatorReceipt=null;}
+   }
+   if(!auth.isSignedIn||auth.userId!==actor||
+      state.context?.workspace_id!==workspaceId)break;
+   openWorkspaceSelector({id:workspaceId,name:workspaceName()},
+    {lifecycle:workspaceLifecycleClient,signedUserId:actor,creatorReceipt,onOpenCurrent:()=>{location.hash='#/overview';},
      configurationEnabled:WS01_CONFIGURATION_ENABLED,
      invitationEnabled:WS02D_INVITE_CLIENT_ENABLED,
      sendInvitation:request=>workspaceInvitationClient.send(request),
