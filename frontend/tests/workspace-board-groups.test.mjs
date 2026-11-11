@@ -105,6 +105,7 @@ test('picker has People and Groups tabs, narrow private data, disabled mutations
  assert.match(html,/Workspace membership alone does not grant board access/);
  const second=renderBoardAccessChoices({people,groups:signedGroups,tab:'groups'});
  assert.match(second,/Clients/);
+ assert.match(second,/disabled aria-label="Create a workspace group/);
  assert.doesNotMatch(second,/pat@example.test/);
  assert.match(renderBoardAccessChoices({}),/directory requires approved server access/);
  assert.doesNotMatch(renderBoardAccessChoices({}),/pat@example.test/);
