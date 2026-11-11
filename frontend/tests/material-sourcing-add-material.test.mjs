@@ -58,6 +58,19 @@ test('submit uses one idempotent atomic RPC instead of partial multi-step writes
  assert.match(app,/case 'mrh-show-items'/);
  assert.match(app,/activateApprovedPublicSourcingColumns/);
 });
+test('creation success requires a reloaded Main group row before opening synchronized details',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const start=app.indexOf("if(event.target.id==='mrh-add-material-form')");
+ const section=app.slice(start,start+3600);
+ assert.match(section,/await loadBoard\(snapshot\.boardId,'sourcing'\)/);
+ assert.match(section,/item\.id===created\.itemId/);
+ assert.match(section,/item\.group_id===MATERIAL_SOURCING_GROUP\.id/);
+ assert.match(section,/item\.title===created\.partNumber/);
+ assert.match(section,/if\(!reloaded\)/);
+ assert.match(section,/await openBoardItemDetails\(created\.itemId\)/);
+ assert.ok(section.indexOf('if(!reloaded)')<section.indexOf('await openBoardItemDetails(created.itemId)'));
+ assert.ok(section.indexOf('await openBoardItemDetails(created.itemId)')<section.indexOf("toast('Material '+created.partNumber+' saved and reloaded"));
+});
 test('form view does not replace protected details or task contract',()=>{
  const html=renderMaterialSourcingTracker(detail,{},new Date(),{canCreate:true,view:'list'});
  assert.match(html,/All items/);

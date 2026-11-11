@@ -77,7 +77,7 @@ import {runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialRepor
 import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
-import {MATERIAL_SOURCING_BOARD_ID,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
+import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
 import {parseMaterialAddForm} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
@@ -7305,8 +7305,16 @@ root.addEventListener('submit',event=>{
    db.invalidateBoardCache();
    state.mrhAddView=false;
    await loadBoard(snapshot.boardId,'sourcing');
-   if(boardHistoryAuthorized(snapshot))
-    toast('Material '+created.partNumber+' and all requested fields saved in Main group.');
+   if(!boardHistoryAuthorized(snapshot)||state.tab!=='sourcing')return;
+   const reloaded=state.board?.items?.find(item=>item.id===created.itemId&&
+    item.group_id===MATERIAL_SOURCING_GROUP.id&&item.title===created.partNumber);
+   if(!reloaded){
+    toast('Material saved, but its board row is not loaded yet. Refresh Material Sourcing to verify.');
+    return;
+   }
+   await openBoardItemDetails(created.itemId);
+   if(boardHistoryAuthorized(snapshot)&&state.tab==='sourcing')
+    toast('Material '+created.partNumber+' saved and reloaded in Main group.');
   }).catch(error=>{
    if(!authorized())return;
    uncertain=true;
