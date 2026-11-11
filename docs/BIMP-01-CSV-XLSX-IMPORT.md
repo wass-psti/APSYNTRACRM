@@ -100,3 +100,13 @@ The browser importer never evaluates Excel formulas. When a formula has a cached
 - The existing 5,000-character long-text limit remains enforced; values are preserved without truncation.
 - Added regression coverage for long values appearing after row 100, full-value preservation, and the 5,000-character boundary.
 - No import RPC, database schema, authentication, roles, permissions, or workspace policy changes.
+
+### CP-BIMP-06 — Invalid-token failure classification and safe recovery
+
+- Added an import-scoped error normalizer that distinguishes workbook decoding, choice-column schema writes, and atomic record writes.
+- A token/JSON decoding error while reading a workbook is reported as a retryable file-read failure and explicitly states that no board changes were made.
+- A token/JSON decoding error after a Status/Dropdown schema write is treated as an indeterminate write outcome. The UI instructs the user to refresh and inspect the board columns before retrying.
+- A token/JSON decoding error after the atomic record-import request is treated as an indeterminate commit outcome. The UI instructs the user to refresh and inspect the destination group before retrying, preventing blind duplicate submission.
+- Ordinary validation and known backend errors retain their original actionable messages. Existing `importOutcomeUncertain` and `schemaOutcomeUncertain` classifications are preserved.
+- Deployed import modules and their direct dependencies passed `node --check`; the live workbook preview was able to load and render. This confirms the current deployed import modules are syntactically valid, but does not identify the original user's exact failing stage.
+- No schema, RPC, RLS, role, permission, or unrelated application changes.
