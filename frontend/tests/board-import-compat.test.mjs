@@ -200,13 +200,13 @@ async function parseWithFixtureDom(bytes){
 }
 const LF=String.fromCharCode(10),CRLF=String.fromCharCode(13,10);
 test('CSV: Windows-1252 and BOM-less UTF-16 encodings are decoded without losing text',async()=>{
- const windows1252=Buffer.from('Name,Note\\nCaf\\xe9,Cr\\xe8me','binary');
+ const windows1252=Buffer.from('Name,Note\nCaf\xe9,Cr\xe8me','binary');
  const cp=await parseImportFile(new File([windows1252],'legacy.csv'));
  assert.deepEqual(cp.sheets[0].rows,[['Café','Crème']]);
- const utf16le=Buffer.from('Name,Note\\nAlice,Café','utf16le');
+ const utf16le=Buffer.from('Name,Note\nAlice,Café','utf16le');
  const le=await parseImportFile(new File([utf16le],'utf16le.csv'));
  assert.deepEqual(le.sheets[0].rows,[['Alice','Café']]);
- const utf16be=Buffer.from('Name,Note\\nAlice,Café','utf16le');
+ const utf16be=Buffer.from('Name,Note\nAlice,Café','utf16le');
  for(let i=0;i<utf16be.length;i+=2){
   const byte=utf16be[i];utf16be[i]=utf16be[i+1];utf16be[i+1]=byte;
  }
