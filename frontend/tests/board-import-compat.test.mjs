@@ -424,3 +424,8 @@ test('1904-date workbook flag adjusts true numeric serials only',async()=>{
  const parsed=await parseWithFixtureDom(makeZip(entries));
  assert.equal(parsed.sheets[0].rows[0][2],'1904-01-01');
 });
+
+test('board import wizard module parses and can load in an isolated ES module runtime',async()=>{
+ const module=await import('../board-import-ui.js');
+ assert.equal(typeof module.openBoardImportWizard,'function');
+});

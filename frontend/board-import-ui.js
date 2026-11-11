@@ -23,7 +23,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   throw new ApiError('Only signed ordinary-board editors can import records.',403);
  const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
   behavior:'add-new',matchColumnId:'item',allowColumns:manage,manage,busy:false,
-  complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,\n  omittedRowsConfirmed:false,formulaWarningsConfirmed:false};
+  complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,
+  omittedRowsConfirmed:false,formulaWarningsConfirmed:false};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -41,7 +42,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const computePlan=()=>{
   if(readiness().pendingChoices.length)
    throw new Error('Finish or explicitly skip each pending Status/Dropdown setup before proceeding.');
-  return buildImportPlan({sheet:{...sheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,\n   formulaWarningsConfirmed:state.formulaWarningsConfirmed},detail,mappings:state.mappings,
+  return buildImportPlan({sheet:{...sheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
+   formulaWarningsConfirmed:state.formulaWarningsConfirmed},detail,mappings:state.mappings,
    group:group(),matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
    allowColumns:state.allowColumns});
  };
@@ -74,7 +76,18 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    ' formula cell'+(formulaWarnings.length===1?' has':'s have')+
    ' no cached result and will be imported as blank.</strong> APSYNTRA does not calculate Excel formulas. Review: '+
    formulaWarnings.slice(0,5).map(w=>esc(w.cell)+(w.column?' ('+esc(w.column)+')':'')).join(', ')+
-   (formulaWarnings.length>5?' and '+(formulaWarnings.length-5)+' more.':'.')+'</p>':'';\n  const formulaAcknowledgement=formulaWarnings.length?\n   '<button type=\"button\" class=\"secondary\" data-imp-confirm-formulas>'+\n   (state.formulaWarningsConfirmed?'Confirmed: import unavailable formula results as blank':\n    'Confirm blank values for '+formulaWarnings.length+' uncached formula cells')+'</button>':'';\n  const omittedRows=s.omittedRows||[];\n  const omittedRowsAcknowledgement=omittedRows.length?\n   '<div class=\"aps-import-resolve\" role=\"group\" aria-label=\"Worksheet summary rows\">'+\n   '<p>'+omittedRows.length+' non-record summary/footer row'+(omittedRows.length===1?'':'s')+\n   ' have no Item title and cannot become board items. Source rows: '+omittedRows.join(', ')+'.</p>'+\n   '<button type=\"button\" class=\"secondary\" data-imp-confirm-omitted>'+\n   (state.omittedRowsConfirmed?'Confirmed: exclude these summary rows':'Confirm exclusion of summary rows')+'</button></div>':'';
+   (formulaWarnings.length>5?' and '+(formulaWarnings.length-5)+' more.':'.')+'</p>':'';
+  const formulaAcknowledgement=formulaWarnings.length?
+   '<button type=\"button\" class=\"secondary\" data-imp-confirm-formulas>'+
+   (state.formulaWarningsConfirmed?'Confirmed: import unavailable formula results as blank':
+    'Confirm blank values for '+formulaWarnings.length+' uncached formula cells')+'</button>':'';
+  const omittedRows=s.omittedRows||[];
+  const omittedRowsAcknowledgement=omittedRows.length?
+   '<div class=\"aps-import-resolve\" role=\"group\" aria-label=\"Worksheet summary rows\">'+
+   '<p>'+omittedRows.length+' non-record summary/footer row'+(omittedRows.length===1?'':'s')+
+   ' have no Item title and cannot become board items. Source rows: '+omittedRows.join(', ')+'.</p>'+
+   '<button type=\"button\" class=\"secondary\" data-imp-confirm-omitted>'+
+   (state.omittedRowsConfirmed?'Confirmed: exclude these summary rows':'Confirm exclusion of summary rows')+'</button></div>':'';
   const groupChoices=choice('create','New group',state.group==='create')+
    (detail.groups||[]).map(g=>choice(g.id,g.title,state.group===g.id)).join('');
   const header='<div class="aps-import-map-grid aps-import-map-heading"><span>'+
@@ -337,7 +350,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   if(action==='next'){
    state.error='';
    const gate=readiness();
-   if(gate.pendingSkips.length){state.error='Map or explicitly confirm exclusion for every unmapped source column.';render();overlay.querySelector('[data-imp-confirm-skip]')?.focus();return;}\n   if((sheet().omittedRows||[]).length&&!state.omittedRowsConfirmed){state.error='Confirm exclusion of worksheet summary/footer rows before continuing.';render();overlay.querySelector('[data-imp-confirm-omitted]')?.focus();return;}\n   if((sheet().formulaWarnings||[]).length&&!state.formulaWarningsConfirmed){state.error='Confirm that formula cells without cached results will import as blank.';render();overlay.querySelector('[data-imp-confirm-formulas]')?.focus();return;}
+   if(gate.pendingSkips.length){state.error='Map or explicitly confirm exclusion for every unmapped source column.';render();overlay.querySelector('[data-imp-confirm-skip]')?.focus();return;}
+   if((sheet().omittedRows||[]).length&&!state.omittedRowsConfirmed){state.error='Confirm exclusion of worksheet summary/footer rows before continuing.';render();overlay.querySelector('[data-imp-confirm-omitted]')?.focus();return;}
+   if((sheet().formulaWarnings||[]).length&&!state.formulaWarningsConfirmed){state.error='Confirm that formula cells without cached results will import as blank.';render();overlay.querySelector('[data-imp-confirm-formulas]')?.focus();return;}
    if(gate.pendingChoices.length){focusChoice(gate.pendingChoices[0].index);return;}
    try{
     if(gate.awaitingColumnApproval)
@@ -358,7 +373,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   if(button.dataset.impReviewChoice!=null){
    focusChoice(Number(button.dataset.impReviewChoice));return;
   }
-  if(button.dataset.impConfirmFormulas!=null){state.formulaWarningsConfirmed=true;state.confirmed=false;state.error='';state.notice='Confirmed: uncached formula cells will import as blank.';render();return;}\n  if(button.dataset.impConfirmOmitted!=null){state.omittedRowsConfirmed=true;state.confirmed=false;state.error='';state.notice='Confirmed: summary/footer rows will be excluded.';render();return;}\n  if(button.dataset.impConfirmSkip!=null){
+  if(button.dataset.impConfirmFormulas!=null){state.formulaWarningsConfirmed=true;state.confirmed=false;state.error='';state.notice='Confirmed: uncached formula cells will import as blank.';render();return;}
+  if(button.dataset.impConfirmOmitted!=null){state.omittedRowsConfirmed=true;state.confirmed=false;state.error='';state.notice='Confirmed: summary/footer rows will be excluded.';render();return;}
+  if(button.dataset.impConfirmSkip!=null){
    const index=Number(button.dataset.impConfirmSkip),mapping=state.mappings[index];
    if(mapping?.action==='skip'&&mapping.requiresDecision===true){
     state.mappings=state.mappings.map((m,i)=>i===index?{...m,requiresDecision:false}:m);

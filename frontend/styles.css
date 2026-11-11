@@ -2454,7 +2454,7 @@
 }
 .mrh-detail-drawer .mrh-sourcing-value{min-width:0}
 .mrh-detail-drawer .mrh-sourcing-value p{font-variant-numeric:tabular-nums}
-.mrh-detail-drawer .mrh-sourcing-field form{
+.mrh-detail-drawer .mrh-sourcing-field .mrh-private-input{
  display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;margin-top:9px
 }
 .mrh-detail-drawer .mrh-sourcing-field input,
@@ -2462,9 +2462,6 @@
  min-height:39px;min-width:100px;width:100%;
  border:1px solid #d6deec;border-radius:9px;padding:9px 10px;
  font-size:.8rem;color:#223451;background:#fff
-}
-.mrh-detail-drawer .mrh-sourcing-field form button{
- margin-left:auto;min-height:33px;border-radius:8px;padding:6px 13px
 }
 .mrh-detail-drawer [data-mrh-private-status]{
  min-height:0;padding:0 23px;
@@ -2491,6 +2488,11 @@
 }
 .mrh-detail-footer button[hidden]{display:none}
 .mrh-detail-footer .primary{background:#5a59e9;color:white}
+.mrh-detail-footer .mrh-save-feedback{
+ flex:1 1 100%;order:3;font-size:.75rem;line-height:1.45;color:#506487
+}
+.mrh-detail-footer .mrh-save-feedback:empty{display:none}
+.mrh-detail-footer [data-mrh-save-all][disabled]{opacity:.65;cursor:wait}
 .mrh-detail-footer .secondary{margin-left:auto}
 .mrh-detail-drawer .mrh-item-tasks-active,
 .mrh-detail-drawer .mrh-item-activity-history,
