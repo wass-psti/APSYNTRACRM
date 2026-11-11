@@ -9,6 +9,7 @@ import {parseDelimited,parseImportFile} from '../board-import-parse.js';
 
 const u16=n=>{const b=Buffer.alloc(2);b.writeUInt16LE(n);return b;};
 const u32=n=>{const b=Buffer.alloc(4);b.writeUInt32LE(n>>>0);return b;};
+const u64=n=>{const b=Buffer.alloc(8);b.writeBigUInt64LE(BigInt(n));return b;};
 function crc32(bytes){
  let crc=0xffffffff;
  for(const byte of bytes){
@@ -16,6 +17,9 @@ function crc32(bytes){
   for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);
  }
  return (crc^0xffffffff)>>>0;
+}
+function zip64Extra(raw,packed){
+ return Buffer.concat([u16(1),u16(16),u64(raw),u64(packed)]);
 }
 function makeZip(entries){
  const local=[],central=[];
@@ -28,15 +32,26 @@ function makeZip(entries){
   const crc=entry.invalidCrc?crc32(raw)^0x0000ffff:crc32(raw);
   const rawSize=entry.declaredSize??raw.length;
   const flags=entry.encrypted?1:0;
+  const zip64=entry.zip64===true,version=zip64?45:20;
+  const localExtra=zip64&&entry.zip64LocalExtra!==false?
+   zip64Extra(entry.zip64LocalRawSize??rawSize,entry.zip64LocalPackedSize??packed.length):
+   Buffer.alloc(0);
+  const centralExtra=zip64&&entry.zip64CentralExtra!==false?
+   zip64Extra(entry.zip64CentralRawSize??rawSize,entry.zip64CentralPackedSize??packed.length):
+   Buffer.alloc(0);
+  const localRaw=zip64?0xffffffff:rawSize;
+  const localPacked=zip64?0xffffffff:packed.length;
+  const centralRaw=zip64?0xffffffff:rawSize;
+  const centralPacked=zip64?0xffffffff:packed.length;
   const l=Buffer.concat([
-   u32(0x04034b50),u16(20),u16(flags),u16(method),u16(0),u16(0),
-   u32(crc),u32(packed.length),u32(rawSize),u16(name.length),u16(0),
-   name,packed
+   u32(0x04034b50),u16(version),u16(flags),u16(method),u16(0),u16(0),
+   u32(crc),u32(localPacked),u32(localRaw),u16(name.length),u16(localExtra.length),
+   name,localExtra,packed
   ]);
   const c=Buffer.concat([
-   u32(0x02014b50),u16(20),u16(20),u16(flags),u16(method),u16(0),u16(0),
-   u32(crc),u32(packed.length),u32(rawSize),u16(name.length),u16(0),
-   u16(0),u16(0),u16(0),u32(0),u32(at),name
+   u32(0x02014b50),u16(version),u16(version),u16(flags),u16(method),u16(0),u16(0),
+   u32(crc),u32(centralPacked),u32(centralRaw),u16(name.length),u16(centralExtra.length),
+   u16(0),u16(0),u16(0),u32(0),u32(at),name,centralExtra
   ]);
   local.push(l);central.push(c);at+=l.length;
  }
