@@ -17,6 +17,18 @@ Users reported that CSV/XLSX imports succeeded against newly created test boards
 - Nonblank Status/Dropdown source values continue to use existing configured choices or the existing explicit audited choice-configuration flow. This checkpoint does not add a new RPC or change the status writer.
 - Existing atomic m143-v1 import, preview revision checks, value conversion, source-column completeness, duplicate behavior, readback verification, and uncertain-outcome handling are unchanged.
 
+## Read-only production schema evidence
+
+A read-only aggregate query against the existing APSYNTRACRM Supabase project confirmed the legacy-key mismatch is present in the live board inventory:
+
+- 12 active boards contain legacy `col_*` physical data columns.
+- Those boards contain 96 such columns: 12 date, 20 number, 24 status, and 40 text columns.
+- All 24 legacy Status columns inspected have configured labels; none are missing labels.
+- No board records, cell values, memberships, or private field contents were selected. No production data was modified.
+- The currently open browser tab is `CP-BOARD-COL-DELETE QA Signed Fixture`, with one custom text column; it is not representative of the dedicated legacy boards and is not a safe write-acceptance target.
+
+This independently confirms the old `custom*`-only filter was excluding real destination columns. The blank Status screenshot is a separate source-inference defect, not evidence that live Status columns lack configured labels.
+
 ## Regression coverage
 
 Added tests for:
