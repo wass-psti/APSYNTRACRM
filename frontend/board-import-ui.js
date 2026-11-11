@@ -5,7 +5,7 @@ import {parseImportFile} from './board-import-parse.js';
 import {choiceCreationPreview,provisionImportChoiceColumn} from './board-import-choice-setup.js';
 import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
 import {importMappingReadiness,skipPendingImportChoice,
- matchConfiguredImportChoice} from './board-import-readiness.js';
+ matchConfiguredImportChoice,reassignImportItemMapping} from './board-import-readiness.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
  buildImportPlan,executeBoardImport} from './board-import-core.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
@@ -273,9 +273,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   if(!m)return;
   state.confirmed=false;state.notice='';state.error='';
   if(value==='item'){
-   state.mappings=state.mappings.map((a,i)=>i!==index&&a.action==='item'?
-    {...a,action:'skip'}:a);
-   state.mappings[index]={...m,action:'item',requiresDecision:false};
+   state.mappings=reassignImportItemMapping(state.mappings,index);
   }else if(value==='create')state.mappings[index]={...m,action:'create',
    name:m.name||m.source,columnType:CREATABLE_IMPORT_TYPES.includes(m.type)?m.type:'unsupported'};
   else if(value==='setup:status'||value==='setup:dropdown')
