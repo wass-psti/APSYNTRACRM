@@ -6,8 +6,8 @@
  */
 import {validUuid} from './data.js';
 import {ApiError} from './session.js';
-import {normalizeWorkspaceCreationReceipt,WS01_CREATION_ENABLED}
- from './workspace-lifecycle-client.js';
+import {normalizeWorkspaceCreationReceipt} from './workspace-lifecycle-client.js';
+import {WS01_CREATION_ENABLED} from './workspace-ui.js';
 
 export const WS10_CREATION_AUTH_ENABLED=false;
 export const WS10_OWNERSHIP_TRANSFER_ENABLED=false;
