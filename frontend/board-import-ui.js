@@ -70,6 +70,13 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const sourceInfo=s.worksheet?
    '<p class="aps-import-source-info" role="status">Source: '+esc(s.worksheet)+
    sourceRange+skipped+' · '+s.rows.length+' importable records</p>':'';
+  const formulaWarnings=s.formulaWarnings||[];
+  const formulaWarningInfo=formulaWarnings.length?
+   '<p class="aps-import-formula-note" role="status"><strong>'+formulaWarnings.length+
+   ' formula cell'+(formulaWarnings.length===1?' has':'s have')+
+   ' no cached result and will be imported as blank.</strong> APSYNTRA does not calculate Excel formulas. Review: '+
+   formulaWarnings.slice(0,5).map(w=>esc(w.cell)+(w.column?' ('+esc(w.column)+')':'')).join(', ')+
+   (formulaWarnings.length>5?' and '+(formulaWarnings.length-5)+' more.':'.')+'</p>':'';
   const groupChoices=choice('create','New group',state.group==='create')+
    (detail.groups||[]).map(g=>choice(g.id,g.title,state.group===g.id)).join('');
   const header='<div class="aps-import-map-grid aps-import-map-heading"><span>'+
@@ -132,7 +139,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    (m.type==='status'||m.type==='dropdown'));
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
    '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+
-   sourceInfo+
+   sourceInfo+formulaWarningInfo+
    '<div class="aps-import-controls">'+(state.file.sheets.length>1?'<label>Worksheet<select name="imp-sheet" data-imp-sheet>'+state.file.sheets.map((x,i)=>choice(i,x.name,i===state.sheet)).join('')+'</select></label>':'')+'<label>Add items to<select name="imp-group" data-imp-group>'+groupChoices+
    '</select></label>'+(state.group==='create'?'<label>New group name<input name="imp-group-name" maxlength="120" data-imp-group-name value="'+esc(state.groupName)+'"></label>':'')+
    '<label>Unmapped columns<select name="imp-default" data-imp-default>'+choice('skip',"Don't import",true)+

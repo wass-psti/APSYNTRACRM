@@ -311,7 +311,7 @@ function rowLabel(entry){
  return present.length===1&&String(entry.values[0]??'').trim()?
   String(entry.values[0]).trim():null;
 }
-export function splitWorksheetSections(entries,sheetName){
+export function splitWorksheetSections(entries,sheetName,formulaWarnings=[]){
  if(!Array.isArray(entries)||entries.length===0)return [];
  const firstHeader=entries.findIndex(entry=>headerCandidate(entry.values));
  if(firstHeader<0)return [];
@@ -324,9 +324,11 @@ export function splitWorksheetSections(entries,sheetName){
    const display=label?sheetName+' — '+label:
     (tables.length?sheetName+' — Section '+(tables.length+1):sheetName);
    const checked=validateImportSheet(current.headers,current.rows);
+   const importedRowNumbers=new Set(current.rowNumbers);
    tables.push({...checked,name:display,worksheet:sheetName,
     headerRow:current.headerRow,rowNumbers:current.rowNumbers,
-    omittedRows:current.omittedRows});
+    omittedRows:current.omittedRows,
+    formulaWarnings:formulaWarnings.filter(w=>importedRowNumbers.has(w.row))});
   }
  };
  for(let i=firstHeader;i<entries.length;i++){
@@ -373,7 +375,7 @@ export function splitWorksheetSections(entries,sheetName){
 function sheetRows(xml,shared,dates,date1904,sheetName){
  const sheetData=first(xml,'sheetData');
  if(!sheetData)return [];
- const rows=[];
+ const rows=[],formulaWarnings=[];
  let fallbackRow=0,knownHeader=null;
  for(const r of nodes(sheetData,'row')){
   const excelRow=Number(r.getAttribute('r'))||++fallbackRow;
@@ -392,24 +394,28 @@ function sheetRows(xml,shared,dates,date1904,sheetName){
    const format=dates[styleIndex]||null;
    const cached=first(cell,'v');
    const f=first(cell,'f');
-   let raw=cached?.textContent||'';
-   if(type==='inlineStr')raw=nodes(first(cell,'is')||cell,'t').map(x=>x.textContent||'').join('');
-   else if(type==='s'){
-    const idx=Number(raw);
-    if(!Number.isSafeInteger(idx)||idx<0||idx>=shared.length)
-     throw contextualError(sheetName,excelRow,address,knownHeader?.[col-1],raw,
-      'Invalid shared string index.');
-    raw=shared[idx];
-   }
    const label=knownHeader?.[col-1]||'';
-   if(f&&(!cached||type==='e'))
-    throw contextualError(sheetName,excelRow,address,label,raw,
-     'Formula has no supported cached result. Recalculate in Excel and save a values-only copy.');
+   let raw=cached?.textContent||'';
    if(f&&String(f.textContent||'').includes('['))
     throw contextualError(sheetName,excelRow,address,label,raw,
      'External workbook formulas are not supported.');
    if(type==='e')throw contextualError(sheetName,excelRow,address,label,raw,
     'Spreadsheet error cells cannot be imported.');
+   if(f&&!cached){
+    // The browser parser deliberately does not evaluate formulas. If the
+    // workbook omitted the cached result, preserve the row and import this
+    // cell as blank while exposing a visible warning in the mapping step.
+    formulaWarnings.push({row:excelRow,cell:address,column:label});
+    raw='';
+   }else if(type==='inlineStr')
+    raw=nodes(first(cell,'is')||cell,'t').map(x=>x.textContent||'').join('');
+   else if(type==='s'){
+    const idx=Number(raw);
+    if(!Number.isSafeInteger(idx)||idx<0||idx>=shared.length)
+     throw contextualError(sheetName,excelRow,address,label,raw,
+      'Invalid shared string index.');
+    raw=shared[idx];
+   }
    try{
     let value=raw;
     if(type==='b'){
@@ -436,7 +442,7 @@ function sheetRows(xml,shared,dates,date1904,sheetName){
   if(rows.length>MAX_ROWS+70)
    throw new Error('Worksheet "'+sheetName+'" exceeds the supported row limit.');
  }
- return splitWorksheetSections(rows,sheetName);
+ return splitWorksheetSections(rows,sheetName,formulaWarnings);
 }
 async function parseWorkbook(buffer){
  const zip=zipDirectory(buffer);

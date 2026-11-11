@@ -41,3 +41,8 @@ The previous WatchdogWorkspace GitHub source repository returned NOT_FOUND; code
 - Production-ready: NOT VERIFIED.
 
 See GitHub Actions on final HEAD for automated test results. A successful Pages build is not production acceptance.
+
+
+### Formula-cell import behavior
+
+The browser importer never evaluates Excel formulas. When a formula has a cached value, the cached value is imported. When the workbook omits the cached value entirely, the row is retained and the affected cell is imported as blank; the worksheet preview displays a warning with the affected cell addresses and column labels. Formula cells with spreadsheet error values and external-workbook formulas remain rejected. This avoids blocking otherwise valid Monday.com exports while making unavailable formula results explicit rather than inventing values.
