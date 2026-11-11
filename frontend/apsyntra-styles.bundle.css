@@ -3579,6 +3579,22 @@
  #app .ws02d-accept-actions :is(button,a){width:100%}
 }
 
+/* WS03: verified, minimal workspace ownership transfer form. */
+.ws03-owner-transfer{max-width:min(540px,95vw)}
+.ws03-owner-transfer form select,.ws03-owner-transfer form input{
+ box-sizing:border-box;width:100%;min-width:0;min-height:42px;
+ border:1px solid #d2d9eb;border-radius:10px;padding:10px 12px;
+ background:var(--panel,#fff);color:inherit;font:inherit;font-size:13px
+}
+.ws03-owner-transfer form select:focus-visible,.ws03-owner-transfer form input:focus-visible{
+ outline:2px solid #6666d4;outline-offset:2px
+}
+.ws03-owner-transfer form select:disabled,.ws03-owner-transfer form input:disabled{
+ opacity:.7;background:#f4f6fa;cursor:not-allowed
+}
+.ws03-owner-transfer .ws01-details-actions{margin-top:7px}
+.ws03-owner-transfer .ws01-config-feedback{overflow-wrap:anywhere}
+
 /* frontend/overview-experience.css */
 /* CP-OVERVIEW-VIS01 — scoped to the signed overview only.
    No runtime style attributes, external assets, perpetual GPU loops or global card changes. */
