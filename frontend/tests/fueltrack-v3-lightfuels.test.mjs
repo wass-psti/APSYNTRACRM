@@ -144,12 +144,14 @@ test('completed history presents readable dates, responsive semantics and signed
  assert.match(active,/datetime="2026-11-10T17:37:12Z"/);
  assert.match(active,/&lt;svg onload=alert\(1\)&gt;/);
  assert.doesNotMatch(active,/<svg onload/);
+ assert.match(active,/data-action="ft3-attach-receipt"/);
+ assert.match(active,/Attach receipt if missing/);
  assert.match(active,/data-action="ft3-view-receipt"/);
  assert.match(active,/data-action="ft3-verify-receipt"/);
  assert.doesNotMatch(active,/Open receipt/);
  const blocked=renderFuelTrackLightFuels({...args(snap),actionEnabled:false});
  assert.match(blocked,/Admin access required/);
- assert.doesNotMatch(blocked,/data-action="ft3-view-receipt"|data-action="ft3-verify-receipt"/);
+ assert.doesNotMatch(blocked,/data-action="ft3-attach-receipt"|data-action="ft3-view-receipt"|data-action="ft3-verify-receipt"/);
  const link=renderFuelTrackLightFuels({...args(snap),actionEnabled:true,receiptLink:{
   requestId:id,expiresAt:Date.now()+60000,href:'https://example.com/private-signed-receipt'
  }});
@@ -157,4 +159,17 @@ test('completed history presents readable dates, responsive semantics and signed
  assert.match(link,/rel="noopener noreferrer"/);
  assert.doesNotMatch(link,/data-action="ft3-view-receipt"/);
  assert.match(link,/data-action="ft3-verify-receipt"/);
+});
+
+test('completed receipt attachment reuses existing signed Admin RPCs and never overwrites a registered receipt',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/case 'ft3-attach-receipt':/);
+ assert.match(app,/snapshot\?\.role!=='Admin'/);
+ assert.match(app,/row\.state==='completed'/);
+ assert.match(app,/existing\.status==='VERIFIED_RECEIPT'/);
+ assert.match(app,/existing\.status!=='NO_RECEIPT'/);
+ assert.match(app,/storage\.uploadAndRegister\(requestId,file\)/);
+ assert.match(app,/storage\.verifyPrivateReceiptBinary\(requestId\)/);
+ assert.match(app,/Receipt registered, but private binary verification failed/);
 });

@@ -2455,6 +2455,53 @@ async function changeTradeLinkDraftState(documentId,operation){
  * missing endpoints never enable mutations or fabricate transactional data.
  */
 /** Perform only server-authorized FuelTrack transitions with current signed revision. */
+/**
+ * Attach a real receipt to an already completed FuelTrack request when its
+ * original completion did not include a receipt. This surfaces the existing
+ * signed Admin receipt RPCs; it does not change roles, grants or server policy.
+ */
+async function attachFuelTrackReceipt(requestId,file){
+ const actor=state.context?.user_id,workspaceId=state.context?.workspace_id,seq=routeSerial;
+ const same=()=>seq===routeSerial&&auth.isSignedIn&&auth.userId===actor&&
+  state.context?.user_id===actor&&state.context?.workspace_id===workspaceId&&
+  state.view==='board'&&state.tab==='fueltrack'&&state.fuelTrackSection==='lightfuels'&&
+  state.boardId===FUELTRACK_V3_ID&&state.board?.board?.workspace_id===workspaceId;
+ const snapshot=state.fuelTrackBackend?.snapshot;
+ if(!same()||!validUuid(requestId)||state.fuelTrackBackendBusy||
+    snapshot?.role!=='Admin'||
+    !snapshot.rows?.some(row=>row.id===requestId&&row.state==='completed'))return;
+ try{validFuelTrackReceiptFile(file);}
+ catch(error){toast(errorMessage(error));return;}
+ state.fuelTrackBackendBusy=true;
+ render();
+ let registered=false;
+ try{
+  const storage=new FuelTrackV3ReceiptStorageClient({api:db,auth,
+   boardId:FUELTRACK_V3_ID,workspaceId});
+  const existing=await storage.read(requestId);
+  if(!same())return;
+  if(existing.status==='VERIFIED_RECEIPT'){
+   toast('A private receipt is already registered. Use Get receipt link or Verify file.');
+   return;
+  }
+  if(existing.status!=='NO_RECEIPT')
+   throw new Error('Receipt status could not be verified. Refresh before retrying.');
+  await storage.uploadAndRegister(requestId,file);
+  registered=true;
+  if(!same())return;
+  const proof=await storage.verifyPrivateReceiptBinary(requestId);
+  if(!same())return;
+  state.fuelTrackReceiptLink=null;
+  toast('Private receipt uploaded and verified: '+proof.mimeType+' · '+proof.bytes+' bytes.');
+ }catch(error){
+  if(same())toast(registered?
+   'Receipt registered, but private binary verification failed: '+errorMessage(error):
+   'Private receipt attachment failed: '+errorMessage(error));
+ }finally{
+  if(same()){state.fuelTrackBackendBusy=false;render();}
+ }
+}
+
 async function mutateFuelTrackBackend(operation,requestId,{reason=null,amount=null,liters=null,receiptNumber=null,receiptFile=null}={}){
  const user=state.context?.user_id,ws=state.context?.workspace_id,seq=routeSerial;
  const expectedSection=operation==='decide'?'approvals':'lightfuels';
@@ -4867,6 +4914,31 @@ async function action(name,button){
    if(!reason||reason.length>1000){toast('Enter a rejection reason.');break;}
    await mutateFuelTrackBackend('decide',id,{reason});
   }else await mutateFuelTrackBackend('decide',id);
+  break;
+ }
+ case 'ft3-attach-receipt':{
+  const requestId=button.dataset.id;
+  const actor=state.context?.user_id,workspaceId=state.context?.workspace_id;
+  const snapshot=state.fuelTrackBackend?.snapshot;
+  if(!validUuid(requestId)||!auth.isSignedIn||auth.userId!==actor||
+     state.context?.user_id!==actor||state.context?.workspace_id!==workspaceId||
+     state.view!=='board'||state.tab!=='fueltrack'||state.fuelTrackSection!=='lightfuels'||
+     state.boardId!==FUELTRACK_V3_ID||state.board?.board?.workspace_id!==workspaceId||
+     state.fuelTrackBackendBusy||snapshot?.role!=='Admin'||
+     !snapshot.rows?.some(row=>row.id===requestId&&row.state==='completed'))break;
+  const input=document.createElement('input');
+  input.type='file';
+  input.accept='image/jpeg,image/png,image/webp';
+  input.setAttribute('aria-label','Choose a private FuelTrack receipt image');
+  input.hidden=true;
+  input.addEventListener('change',()=>{
+   const file=input.files?.[0]||null;
+   input.remove();
+   if(file)attachFuelTrackReceipt(requestId,file).catch(notice);
+  },{once:true});
+  input.addEventListener('cancel',()=>input.remove(),{once:true});
+  document.body.append(input);
+  input.click();
   break;
  }
  case 'ft3-view-receipt':{
