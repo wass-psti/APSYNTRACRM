@@ -129,6 +129,30 @@ test('ambiguous registration retry reuses the same private object across new cli
  assert.equal(paths[0].startsWith(board+'/'+item+'/'),true);
 });
 
+test('session change before conflict recovery prevents authenticated object reads',async()=>{
+ const signed=auth();
+ let reads=0;
+ const retryApi={rpc:async(name)=>name==='fueltrack_v3_receipt_prepare'?{
+  status:'VERIFIED_RECEIPT_PREPARE',boardId:board,workspaceId:ws,
+  requestId:req,boardItemId:item,bucket:'work-board-files'
+ }:{}};
+ const client=new FuelTrackV3ReceiptStorageClient({
+  auth:signed,api:retryApi,boardId:board,workspaceId:ws,
+  baseUrl:'https://project.supabase.co',apiKey:'public-anon-key',
+  fetchImpl:async(url,options)=>{
+   if(options.method==='POST'){
+    signed.isSignedIn=false;
+    return Response.json({code:'ResourceAlreadyExists',
+     message:'The specified resource already exists'},{status:409});
+   }
+   reads++;
+   throw new Error('Stale identity must not issue a read');
+  }
+ });
+ await assert.rejects(client.uploadAndRegister(req,file),/Signed identity changed before verifying/);
+ assert.equal(reads,0);
+});
+
 test('existing deterministic object with different bytes is never overwritten or registered',async()=>{
  let registrations=0,downloads=0;
  const retryApi={rpc:async(name,args)=>{
