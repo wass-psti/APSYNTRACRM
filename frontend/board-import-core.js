@@ -91,7 +91,7 @@ function normalizeImportDate(value){
  return null;
 }
 export function inferImportType(header,values=[]){
- const label=key(header),sample=values.map(clean).filter(Boolean).slice(0,100);
+ const label=key(header),all=values.map(clean).filter(Boolean),sample=all.slice(0,100);
  if(label==='status'||label==='priority')return 'status';
  if(label.includes('checkbox')||label.startsWith('is '))return 'checkbox';
  if(label.includes('date')||label.endsWith(' at'))return 'date';
@@ -100,6 +100,8 @@ export function inferImportType(header,values=[]){
  if(label.includes('percentage')||label.endsWith(' percent')||label.endsWith(' %'))return 'percentage';
  if(label.includes('email'))return 'email';
  if(label.includes('url')||label.includes('website'))return 'url';
+ // Scan the entire source column: long descriptions can appear after the first 100 rows.
+ if(all.some(value=>value.length>1000))return 'long_text';
  if(!sample.length)return 'text';
  if(sample.every(x=>/^(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)%$/.test(x)))return 'percentage';
  if(sample.every(x=>/^(true|false|yes|no|0|1)$/i.test(x)))return 'checkbox';

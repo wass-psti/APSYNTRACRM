@@ -84,6 +84,24 @@ test('Monday.com UTC Date encoded timestamps map to their source calendar date',
  assert.equal(plan.payload.rows[0].values['Date encoded'],'2026-01-27');
  assert.equal(plan.payload.rows[1].values['Date encoded'],'2025-12-31');
 });
+test('long description columns infer long_text across all rows and preserve complete values',()=>{
+ const longDescription=('Work description '.repeat(100)).trimEnd();
+ const rows=Array.from({length:101},(_,i)=>['Record '+i,'Short description']);
+ rows[100][1]=longDescription;
+ const longSheet={headers:['Name','Work description'],rows};
+ assert.equal(inferImportType('Work description',rows.map(row=>row[1])),'long_text');
+ const mappings=initialImportMappings(longSheet,detail,{canCreate:true});
+ assert.equal(mappings[1].action,'create');
+ assert.equal(mappings[1].columnType,'long_text');
+ const plan=buildImportPlan({sheet:longSheet,detail,mappings,group,allowColumns:true});
+ assert.equal(plan.payload.newColumns[0].type,'long_text');
+ assert.equal(plan.payload.rows[100].values['Work description'],longDescription);
+ const maxLength='x'.repeat(5000);
+ const maxSheet={headers:['Name','Work description'],rows:[['Maximum',maxLength]]};
+ const maxMappings=initialImportMappings(maxSheet,detail,{canCreate:true});
+ const maxPlan=buildImportPlan({sheet:maxSheet,detail,mappings:maxMappings,group,allowColumns:true});
+ assert.equal(maxPlan.payload.rows[0].values['Work description'],maxLength);
+});
 test('manager receives missing-column proposal; editor sees no auto-creation',()=>{
  const editor=initialImportMappings(sheet,detail);
  assert.equal(editor[2].action,'skip');
