@@ -4278,7 +4278,8 @@ async function action(name,button){
  case 'ws01-open':{
    if(!auth.isSignedIn||!state.context)break;
    openWorkspaceSelector({id:state.context.workspace_id,name:workspaceName()},
-    {lifecycle:workspaceLifecycleClient,authorityClient:workspaceAuthorityClient,onOpenCurrent:()=>{location.hash='#/overview';},
+    {lifecycle:workspaceLifecycleClient,onOpenCurrent:()=>{location.hash='#/overview';},
+     authorityClient:workspaceAuthorityClient,
      configurationEnabled:WS01_CONFIGURATION_ENABLED,
      invitationEnabled:WS02D_INVITE_CLIENT_ENABLED,
      sendInvitation:request=>workspaceInvitationClient.send(request),
