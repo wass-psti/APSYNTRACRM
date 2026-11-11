@@ -1,6 +1,8 @@
 import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
-const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30,\n MAX_ENTRY_UNCOMPRESSED_BYTES=24*1024*1024,MAX_UNCOMPRESSED_BYTES=64*1024*1024,\n MAX_ZIP_ENTRIES=2000,MAX_WORKSHEETS=100;
+const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30,
+ MAX_ENTRY_UNCOMPRESSED_BYTES=24*1024*1024,MAX_UNCOMPRESSED_BYTES=64*1024*1024,
+ MAX_ZIP_ENTRIES=2000,MAX_WORKSHEETS=100;
 const invalid=message=>{throw new Error(message);};
 export function validateImportSheet(headers,rows){
  if(!Array.isArray(headers)||headers.length<1||headers.length>MAX_COLUMNS)
