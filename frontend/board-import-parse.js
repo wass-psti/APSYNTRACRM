@@ -1,4 +1,4 @@
-import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js';
+import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
 const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
 const invalid=message=>{throw new Error(message);};
