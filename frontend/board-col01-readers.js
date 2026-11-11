@@ -1,6 +1,7 @@
 /** CP-BOARD-COL01 prepared signed readers. Disabled until security acceptance. */
 import {ApiError} from './session.js';
 import {validUuid} from './data.js';
+import {renderBoardActivityActorAvatar} from './board-activity-ui.js';
 export const BOARD_COL01_DIRECTORY_ENABLED=false;
 export const BOARD_COL01_AUDIT_CURSOR_ENABLED=false;
 export const BOARD_COL01_AUDIT_MAX_PAGES=20;
@@ -131,7 +132,7 @@ export async function loadBoardAuditCursorPage(api,id,
   nextCursor:hasMore?rows[rows.length-1].id:null};
 }
 export function renderBoardAuditCursorPage(result,
- {pageIndex=0,busy=false,error='',cachedNext=false}={}){
+ {pageIndex=0,busy=false,error='',cachedNext=false,avatarPaths=null}={}){
  if(result?.status!=='VERIFIED_READ')
   return '<p class="muted" role="status">Cursor audit history awaits security acceptance.</p>';
  const events=result.rows;
@@ -142,13 +143,15 @@ export function renderBoardAuditCursorPage(result,
    ' authorized events on this server page</p>'+
   '<div class="board-history-list">'+
    (events.length?events.map(row=>
-    '<article class="board-history-entry"><div class="board-history-entry-head"><strong>'+
+    '<article class="board-history-entry board-activity-event">'+
+    renderBoardActivityActorAvatar(row.actorId,row.actorName,avatarPaths)+
+    '<div class="board-activity-event-body"><div class="board-history-entry-head"><strong>'+
      esc(row.eventType)+'</strong><time datetime="'+esc(row.createdAt)+'">'+
      esc(shownDate(row.createdAt))+'</time></div>'+
     (row.message?'<p>'+esc(row.message)+'</p>':'')+
     '<small>'+esc(row.actorName||'Recorded user')+
     (row.entityType?' · '+esc(row.entityType):'')+
-    (row.entityId?' · '+esc(row.entityId):'')+'</small></article>'
+    (row.entityId?' · '+esc(row.entityId):'')+'</small></div></article>'
    ).join(''):'<p class="board-activity-empty">No authorized events on this page.</p>')+
   '</div><nav class="board-activity-pagination" aria-label="Server audit pages">'+
    '<button type="button" data-board-history-action="cursor-previous"'+
