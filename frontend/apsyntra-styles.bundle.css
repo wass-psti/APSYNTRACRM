@@ -20104,6 +20104,170 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   #app .aps-board-shell .board-table-custom thead th > :is(.board-column-more,.board-column-resize){transition:none}
 }
 
+/* APSYNTRA board hierarchy — flat, Monday-inspired workspace/board/view presentation.
+ * UI only. The signed board, existing views, CAS writes, and group scrolling are unchanged.
+ * Keep the data table visibly bounded; remove decorative nested cards above it.
+ */
+#app .aps-board-shell .main-content{
+  padding-top:clamp(14px,2vw,26px);
+}
+#app .aps-board-shell .page-head{
+  isolation:auto;
+  min-height:0;
+  padding:4px 0 17px;
+  margin-bottom:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  align-items:center;
+  gap:16px;
+}
+#app .aps-board-shell .page-head::before{content:none}
+#app .aps-board-shell .page-head .label-top{
+  color:var(--sm-sub);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.075em;
+}
+#app .aps-board-shell .page-head h1{
+  color:var(--sm-ink);
+  font-size:clamp(27px,2.4vw,34px);
+  line-height:1.16;
+  letter-spacing:-.03em;
+  margin:6px 0;
+}
+#app .aps-board-shell .page-head p{
+  color:var(--sm-sub);
+  margin:0;
+}
+#app .aps-board-shell .page-head .head-actions{
+  flex-wrap:wrap;
+  row-gap:6px;
+  column-gap:7px;
+}
+#app .aps-board-shell .page-head .head-actions > :is(.secondary,.primary),
+#app .aps-board-shell .page-head .board-actions-menu > summary{
+  min-height:34px;
+  padding:7px 11px;
+  border-radius:7px;
+}
+#app .aps-board-shell .tabs.board-draggable-tabs{
+  min-height:45px;
+  box-sizing:border-box;
+  align-items:flex-end;
+  gap:clamp(10px,1.7vw,23px);
+  margin:0 0 17px;
+  padding:0 2px;
+  border:0;
+  border-bottom:1px solid var(--sm-border-strong,#d9dfeb);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  scroll-padding-inline:8px;
+}
+#app .aps-board-shell .board-tab-slot{
+  min-height:43px;
+  padding:0;
+  gap:0;
+}
+#app .aps-board-shell .board-tab-slot > .tab,
+#app .aps-board-shell .board-tab-slot > .tab:hover,
+#app .aps-board-shell .board-tab-slot > .tab.active,
+#app .aps-board-shell .board-tab-slot > .tab[aria-selected="true"],
+#app .aps-board-shell .board-tab-slot > .tab.active:hover{
+  min-height:43px;
+  box-sizing:border-box;
+  margin:0;
+  padding:10px 3px 11px;
+  border:0;
+  border-bottom:3px solid transparent;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  color:var(--sm-text);
+  font-size:12px;
+  font-weight:660;
+  line-height:1.35;
+  transition:color .15s ease,border-color .15s ease;
+}
+#app .aps-board-shell .board-tab-slot > .tab:hover{
+  color:var(--sm-accent-hover);
+}
+#app .aps-board-shell .board-tab-slot > .tab.active,
+#app .aps-board-shell .board-tab-slot > .tab[aria-selected="true"],
+#app .aps-board-shell .board-tab-slot > .tab[aria-current="page"],
+#app .aps-board-shell .board-tab-slot > .tab.active:hover{
+  color:var(--sm-accent-hover);
+  border-bottom-color:var(--sm-accent);
+  font-weight:800;
+  background:transparent;
+  box-shadow:none;
+}
+#app .aps-board-shell .board-tab-slot > .tab[aria-current="page"] .csp-u060{
+  color:inherit;
+}
+#app .aps-board-shell .toolbar.board-customize-toolbar{
+  min-height:0;
+  padding:4px 0 12px;
+  margin:0 0 14px;
+  gap:10px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+#app .aps-board-shell .group-heading{
+  min-height:40px;
+  padding:7px 0 9px;
+  margin:14px 0 4px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+#app .aps-board-shell .group-heading::before{
+  height:26px;
+  width:4px;
+  background:var(--sm-accent);
+}
+#app .aps-board-shell .group-heading h3{
+  font-size:14px;
+  color:var(--sm-accent-hover);
+}
+#app .aps-board-shell .panel.board-group-panel{
+  border:1px solid var(--sm-border);
+  border-left:3px solid var(--sm-accent);
+  border-radius:5px;
+  background:var(--sm-surface);
+  box-shadow:none;
+}
+#app .aps-board-shell .board-group-scroll{
+  border-radius:0;
+}
+#app .aps-sidebar .sidebar-recent-link.active[aria-current="page"]{
+  border-color:var(--sm-border-strong,#d8deef);
+  background:var(--sm-accent-soft);
+  font-weight:800;
+}
+@media(max-width:780px){
+  #app .aps-board-shell .page-head{
+    align-items:flex-start;
+    flex-wrap:wrap;
+    padding:6px 0 12px;
+  }
+  #app .aps-board-shell .page-head .head-actions{
+    flex:1 1 100%;
+    justify-content:flex-start;
+  }
+  #app .aps-board-shell .tabs.board-draggable-tabs{
+    gap:14px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #app .aps-board-shell .board-tab-slot > .tab{transition:none}
+}
+
 /* frontend/fueltrans-native.css */
 @media print{
  body:has(#fueltrans-native-host) .sidebar,

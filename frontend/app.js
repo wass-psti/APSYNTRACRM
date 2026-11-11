@@ -883,7 +883,7 @@ function boardPage(){
  const preparedGrid=moduleKey&&state.tab==='items'?
   prepareBoardGrid(state.board,{primaryTitle,columnLabels,allowCustom}):null;
 
- return `<div class="page-head"><div><span class="label-top">Workspace / Boards / ${e(b.name)}</span>
+ return `<div class="page-head"><div><span class="label-top">Workspace / ${e(workspaceName())} / Board</span>
  <h1>${e(b.name)}</h1><p>${e(publicBoardDescription(b))}</p></div>
  <div class="head-actions"><button class="secondary" data-action="board-activity">◷ Activity</button><button type="button" class="secondary" data-action="board-share-preview">↗ Share &amp; access</button><button type="button" class="secondary" data-action="board-members">♙ People</button><details class="board-actions-menu"><summary>Board options</summary><div class="board-actions-popover"><button type="button" data-action="board-members">Members &amp; access</button><button type="button" data-action="board-structure">Advanced board settings &amp; views</button>${engineeringUi?'<button type="button" data-action="profile-rendering">Profile board rendering (5 seconds)</button>':''}<button type="button" data-action="board-layout-reset">Reset board layout</button><button type="button" data-action="refresh-board">Refresh board</button></div></details><button class="secondary" data-action="refresh-board">↻ Refresh</button>
  ${isMaterialSourcingBoard(b)&&state.edit&&['items','sourcing'].includes(state.tab)?'<button class="primary" data-action="mrh-new-part">＋ New part number</button>':''}
@@ -893,6 +893,7 @@ function boardPage(){
  ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
   '<a role="tab" draggable="'+(canReorderTabs?'true':'false')+'" data-board-tab="'+e(t.key)+'" aria-selected="'+(state.tab===t.key)+
   '" class="tab '+(state.tab===t.key?'active':'')+'" href="'+e(t.href)+'"'+
+  (state.tab===t.key?' aria-current="page"':'')+
   (canReorderTabs?' aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight" title="Drag to reorder; Alt+Shift+Left/Right to move"':'')+
   '>'+t.label+'</a></div>').join('')}</div>
 
