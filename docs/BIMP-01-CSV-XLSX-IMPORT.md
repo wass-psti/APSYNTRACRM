@@ -91,3 +91,12 @@ The browser importer never evaluates Excel formulas. When a formula has a cached
 - The board-import parser and import planner now import the shared normalizer through a versioned module URL so an updated date contract cannot be masked by an older browser module-cache entry.
 - Added regression coverage that keeps both import paths on the same versioned dependency.
 - This is a frontend module-cache correction only; no service worker, global cache policy, database, API, or permission changes.
+
+
+### CP-BIMP-08 — Full-column long-description inference
+
+- Live workbook acceptance found a `Work description` value longer than the standard 1,000-character text-column limit.
+- Import type inference now scans the full source column and selects the existing `long_text` type whenever any nonblank source value exceeds 1,000 characters.
+- The existing 5,000-character long-text limit remains enforced; values are preserved without truncation.
+- Added regression coverage for long values appearing after row 100, full-value preservation, and the 5,000-character boundary.
+- No import RPC, database schema, authentication, roles, permissions, or workspace policy changes.
