@@ -23,7 +23,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   throw new ApiError('Only signed ordinary-board editors can import records.',403);
  const state={step:1,file:null,sheet:0,mappings:[],group:'create',groupName:'Imported items',
   behavior:'add-new',matchColumnId:'item',allowColumns:manage,manage,busy:false,
-  complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,\n  omittedRowsConfirmed:false,formulaWarningsConfirmed:false,choiceConsent:{}};
+  complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,\n  omittedRowsConfirmed:false,formulaWarningsConfirmed:false};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -266,7 +266,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    state.mappings=initialImportMappings(parsed.sheets[0],detail,{canCreate:state.manage});
    state.allowColumns=state.manage;
    state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
-   state.step=2;state.allowColumns=state.manage;state.choiceConsent={};
+   state.step=2;state.allowColumns=state.manage;
   }catch(error){state.error=String(error.message||error);}
   finally{state.busy=false;render();}
  }
@@ -274,7 +274,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const m=state.mappings[index];
   if(!m)return;
   const before=proposalSignature(state.mappings);
-  state.confirmed=false;state.choiceConsent={};state.notice='';state.error='';
+  state.confirmed=false;state.notice='';state.error='';
   if(value==='item'){
    state.mappings=state.mappings.map((a,i)=>i!==index&&a.action==='item'?
     {...a,action:'skip'}:a);
@@ -293,8 +293,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  function focusChoice(index){
   const target=overlay.querySelector('[data-imp-map-row="'+index+'"]');
   target?.scrollIntoView?.({block:'center',behavior:'auto'});
-  (target?.querySelector('[data-imp-choice-consent]')||
-   target?.querySelector('[data-imp-map]'))?.focus?.({preventScroll:true});
+  target?.querySelector('[data-imp-map]')?.focus?.({preventScroll:true});
  }
  async function createChoice(index){
   if(state.busy||state.uncertain||!state.manage)return;
@@ -307,7 +306,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     type:mapping.choiceType,name:mapping.name||mapping.source});
    detail=result.detail;
    state.mappings=matchConfiguredImportChoice(state.mappings,index,result.columnId);
-   state.allowColumns=state.manage;state.choiceConsent={};state.confirmed=false;
+   state.allowColumns=state.manage;state.confirmed=false;
    state.notice='Configured '+mapping.choiceType+' column created. Review and approve the remaining ordinary columns before importing.';
   }catch(error){
    state.error=String(error.message||error);
@@ -385,7 +384,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    const index=Number(button.dataset.impSkipChoice);
    const source=state.mappings[index]?.source;
    state.mappings=skipPendingImportChoice(state.mappings,index);
-   state.choiceConsent={};state.confirmed=false;state.error='';
+   state.confirmed=false;state.error='';
    state.notice='Excluded '+source+' values from this import. The remaining approved ordinary columns are unchanged.';
    render();
   }
@@ -393,22 +392,18 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  overlay.addEventListener('change',event=>{
   const el=event.target;
   if(el.id==='aps-import-file-input'){if(el.files?.[0])void readFile(el.files[0]);return;}
-  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage});state.allowColumns=state.manage;state.omittedRowsConfirmed=false;state.formulaWarningsConfirmed=false;state.choiceConsent={};state.confirmed=false;state.error='';render();return;}
-  if(el.dataset.impChoiceConsent!=null){
-   state.choiceConsent[Number(el.dataset.impChoiceConsent)]=el.checked;
-   render();return;
-  }
+  if(el.dataset.impSheet!=null){state.sheet=Number(el.value);state.mappings=initialImportMappings(sheet(),detail,{canCreate:state.manage});state.allowColumns=state.manage;state.omittedRowsConfirmed=false;state.formulaWarningsConfirmed=false;state.confirmed=false;state.error='';render();return;}
   if(el.dataset.impChoiceName!=null){
    const index=Number(el.dataset.impChoiceName);
    state.mappings[index].name=el.value.trim();
-   state.choiceConsent={};state.confirmed=false;render();return;
+   state.confirmed=false;render();return;
   }
   if(el.dataset.impMap!=null){adjustMapping(Number(el.dataset.impMap),el.value);render();return;}
   if(el.dataset.impGroup!=null){state.group=el.value;state.confirmed=false;render();return;}
   if(el.dataset.impDefault!=null&&el.value==='create'){
    state.mappings=state.mappings.map(m=>m.action==='skip'&&CREATABLE_IMPORT_TYPES.includes(m.type)?
     {...m,action:'create',name:m.source,columnType:m.type}:m);
-   state.allowColumns=state.manage;state.choiceConsent={};render();return;
+   state.allowColumns=state.manage;render();return;
   }
   if(el.name==='imp-behavior'){state.behavior=el.value;state.confirmed=false;render();return;}
   if(el.dataset.impMatch!=null){state.matchColumnId=el.value;state.confirmed=false;render();return;}
@@ -419,11 +414,11 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   if(el.dataset.impGroupName!=null){state.groupName=el.value;state.confirmed=false;return;}
   if(el.dataset.impChoiceName!=null){
    state.mappings[Number(el.dataset.impChoiceName)].name=el.value;
-   state.choiceConsent={};state.confirmed=false;return;
+   state.confirmed=false;return;
   }
   if(el.dataset.impName!=null){
    state.mappings[Number(el.dataset.impName)].name=el.value;
-   state.allowColumns=state.manage;state.choiceConsent={};state.confirmed=false;return;
+   state.allowColumns=state.manage;state.confirmed=false;return;
   }
   if(el.dataset.impType!=null){
    state.mappings[Number(el.dataset.impType)].columnType=el.value;
