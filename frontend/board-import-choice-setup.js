@@ -20,9 +20,6 @@ export function importChoiceLabels(sheet,source){
   const line=sheet.rowNumbers?.[i]??i+2;
   if(value.length>80)fail('Worksheet "'+(sheet.worksheet||sheet.name||'CSV')+
    '" · row '+line+' · column "'+source+'": Option label exceeds 80 characters.');
-  if(/^[=+@]/.test(value)||/^-(?!\d)/.test(value))
-   fail('Worksheet "'+(sheet.worksheet||sheet.name||'CSV')+
-   '" · row '+line+' · column "'+source+'": Formula-like option labels are not accepted.');
   if(!seen.has(norm(value))){
    if(labels.length>=50)fail('Choice columns support at most 50 distinct labels.');
    seen.add(norm(value));labels.push(value);
