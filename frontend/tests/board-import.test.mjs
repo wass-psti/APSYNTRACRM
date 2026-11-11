@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {parseDelimited,parseImportFile} from '../board-import-parse.js';
 import {inferImportType,initialImportMappings,buildImportPlan,
  executeBoardImport,availableImportColumns} from '../board-import-core.js';
+import {importMappingReadiness} from '../board-import-readiness.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const actor='33333333-3333-4333-8333-333333333333';
@@ -43,6 +44,26 @@ test('source type detection and exact existing-column reuse are stable',()=>{
  assert.equal(mappings[2].action,'skip');
  assert.equal(availableImportColumns(detail).length,1);
 });
+test('number and date conversion accepts common export formats without guessing ambiguous dates',()=>{
+ assert.equal(inferImportType('Deal Value',['$1,234.50','₱2,500.00']),'number');
+ assert.equal(inferImportType('Date Updated',['02/13/2026','13/02/2026']),'date');
+ assert.equal(inferImportType('Date Updated',['01/02/2026']),'date');
+ const numeric={...sheet,headers:['Name','Amount'],rows:[['Alpha','$1,234.50'],['Beta','₱2,500.00']]};
+ const numericMaps=[{source:'Name',action:'item'},
+  {source:'Amount',action:'create',columnType:'number',name:'Imported Amount'}];
+ const numericPlan=buildImportPlan({sheet:numeric,detail,mappings:numericMaps,group,allowColumns:true});
+ assert.equal(numericPlan.payload.rows[0].values.Amount,1234.5);
+ assert.equal(numericPlan.payload.rows[1].values.Amount,2500);
+ const dates={...sheet,headers:['Name','Date Updated'],rows:[['Alpha','02/13/2026'],['Beta','13/02/2026']]};
+ const dateMaps=[{source:'Name',action:'item'},
+  {source:'Date Updated',action:'create',columnType:'date',name:'Date Updated'}];
+ const datePlan=buildImportPlan({sheet:dates,detail,mappings:dateMaps,group,allowColumns:true});
+ assert.equal(datePlan.payload.rows[0].values['Date Updated'],'2026-02-13');
+ assert.equal(datePlan.payload.rows[1].values['Date Updated'],'2026-02-13');
+ const ambiguous={...dates,rows:[['Alpha','01/02/2026']]};
+ assert.throws(()=>buildImportPlan({sheet:ambiguous,detail,mappings:dateMaps,group,allowColumns:true}),
+  /unambiguous day\/month or month\/day date/);
+});
 test('manager receives missing-column proposal; editor sees no auto-creation',()=>{
  const editor=initialImportMappings(sheet,detail);
  assert.equal(editor[2].action,'skip');
@@ -66,6 +87,36 @@ test('no new columns unless the approved plan explicitly includes them',()=>{
  assert.equal(plan.payload.rows[0].values.Checked,true);
  assert.equal(plan.preview.newItems,2);
  assert.equal(plan.boardRevision,now);
+});
+test('unmapped source columns require an explicit mapping or exclusion decision',()=>{
+ const editorMappings=initialImportMappings(sheet,detail);
+ assert.equal(editorMappings[2].action,'skip');
+ assert.equal(editorMappings[2].requiresDecision,true);
+ const gate=importMappingReadiness(editorMappings);
+ assert.deepEqual(gate.pendingSkips,[{index:2,source:'Checked',type:'checkbox'}]);
+ assert.equal(gate.ready,false);
+ assert.throws(()=>buildImportPlan({sheet,detail,mappings:editorMappings,group}),
+  /explicitly confirm exclusion/);
+ const explicitlyExcluded=editorMappings.map((m,i)=>i===2?{...m,requiresDecision:false}:m);
+ assert.deepEqual(importMappingReadiness(explicitlyExcluded).pendingSkips,[]);
+ const plan=buildImportPlan({sheet,detail,mappings:explicitlyExcluded,group});
+ assert.deepEqual(plan.payload.rows[0].values,{Amount:25});
+ const mapped=editorMappings.map((m,i)=>i===2?
+  {...m,action:'existing',columnId:colId,requiresDecision:false}:m);
+ assert.deepEqual(importMappingReadiness(mapped).pendingSkips,[]);
+});
+test('omitted worksheet rows and uncached formula blanks require explicit acknowledgement',()=>{
+ const mappings=existingMaps.map(m=>({...m}));
+ const report={...sheet,omittedRows:[623],formulaWarnings:[
+  {row:622,cell:'I622',column:'Deal Value (VAT-EX)'}
+ ]};
+ assert.throws(()=>buildImportPlan({sheet:report,detail,mappings,group}),
+  /Confirm whether to exclude the worksheet summary rows/);
+ assert.throws(()=>buildImportPlan({sheet:{...report,omittedRowsConfirmed:true},
+  detail,mappings,group}),/Confirm that uncached formula cells will be imported as blank/);
+ const plan=buildImportPlan({sheet:{...report,omittedRowsConfirmed:true,
+  formulaWarningsConfirmed:true},detail,mappings,group});
+ assert.equal(plan.preview.rowCount,2);
 });
 test('declined mapping changes never create a board column',()=>{
  const plan=buildImportPlan({sheet,detail,mappings:existingMaps,group,allowColumns:false});
@@ -118,7 +169,7 @@ test('mapped date rejection identifies real Excel worksheet, row, header and ori
   error=>/Worksheet "live identification status"/.test(error.message)&&
    /row 20/.test(error.message)&&/column "Date Updated"/.test(error.message)&&
    /2026-07-09 to 2026-08-18/.test(error.message)&&
-   /YYYY-MM-DD/.test(error.message));
+   /valid ISO, YYYY\/MM\/DD/.test(error.message));
 });
 test('protected application boards cannot be mutated through the generic importer',()=>{
  const restricted={...detail,board:{...detail.board,name:'TimeTracker Attendance'}};
@@ -218,8 +269,9 @@ test('UI and entrypoint are wired without bypassing the domain restriction',()=>
  const html=readFileSync('index.html','utf8');
  assert.match(app,/data-action="board-import"/);
  assert.match(app,/openBoardImportWizard/);
- assert.match(ui,/Allow creation/);
- assert.match(ui,/Decline and skip columns/);
+ assert.match(ui,/will be created together with the imported records/);
+ assert.match(ui,/Confirm exclude/);
+ assert.doesNotMatch(ui,/aps-import-choice-consent/);
  assert.match(ui,/Import Now/);
  assert.match(ui,/state\.uncertain/);
  assert.match(ui,/Close and verify the board/);

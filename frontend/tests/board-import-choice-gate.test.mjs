@@ -37,7 +37,7 @@ test('deliberate Skip Status preserves the three ordinary approvals and excludes
  const proposed=initialImportMappings(sheet,detail,{canCreate:true});
  const skipped=skipPendingImportChoice(proposed,1);
  assert.deepEqual(importMappingReadiness(skipped,true),{
-  pendingChoices:[],proposedCount:3,awaitingColumnApproval:false,
+  pendingChoices:[],pendingSkips:[],proposedCount:3,awaitingColumnApproval:false,
   skipped:['Status'],ready:true
  });
  assert.equal(skipped[1].action,'skip');
@@ -67,7 +67,7 @@ test('configured Status is mapped by verified column ID; second-stage ordinary c
     {id:'status-active',name:'Active',active:true},
     {id:'status-pending',name:'Pending',active:true}]}}]};
  assert.deepEqual(importMappingReadiness(mapped,false),{
-  pendingChoices:[],proposedCount:3,awaitingColumnApproval:true,
+  pendingChoices:[],pendingSkips:[],proposedCount:3,awaitingColumnApproval:true,
   skipped:[],ready:false
  });
  assert.throws(()=>buildImportPlan({sheet,detail:persisted,mappings:mapped,
@@ -91,7 +91,9 @@ test('the mapping UI exposes resolve and skip controls instead of a dead-end Nex
  assert.match(ui,/matchConfiguredImportChoice/);
  assert.match(ui,/readiness\(\)\.pendingChoices\.length/);
  assert.match(ui,/target\?\.scrollIntoView/);
- assert.match(ui,/proposalSignature\(state\.mappings\)!==before/);
+ assert.match(ui,/pendingSkips/);
+ assert.match(ui,/data-imp-confirm-skip/);
+ assert.doesNotMatch(ui,/aps-import-choice-consent/);
  assert.match(ui,/data-imp="review-choice"/);
  assert.match(css,/\.aps-import-resolve/);
  assert.match(css,/\.aps-import-notice/);

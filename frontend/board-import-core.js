@@ -28,6 +28,60 @@ const forbidFormula=s=>{
  if(/^[=+@]/.test(s)||/^-(?!\d+(?:\.\d+)?$)/.test(s))
   deny('Spreadsheet formula-like text is not accepted. Replace it with literal data.');
 };
+function parseImportNumber(value){
+ let text=clean(value);
+ if(!text)return null;
+ let negative=false;
+ if(/^\(.*\)$/.test(text)){negative=true;text=text.slice(1,-1).trim();}
+ text=text.replace(/^(?:USD|PHP|EUR|GBP|JPY)\s*/i,'')
+  .replace(/[₱$€£¥₹]/g,'').replace(/\s/g,'');
+ if(!/^[+-]?[\d.,]+$/.test(text))return null;
+ const comma=text.lastIndexOf(','),dot=text.lastIndexOf('.');
+ if(comma>=0&&dot>=0){
+  const decimal=comma>dot?',':'.',group=decimal===','?'.':',';
+  const parts=text.split(decimal);
+  if(parts.length!==2||!/^\d{1,3}(?:[.,]\d{3})+$/.test(parts[0].replace(/^[+-]/,''))||
+     !/^\d+$/.test(parts[1]))return null;
+  text=parts[0].replaceAll(group,'')+'.'+parts[1];
+ }else if(comma>=0){
+  const parts=text.split(',');
+  if(parts.length>2){
+   if(!/^\d{1,3}$/.test(parts[0].replace(/^[+-]/,''))||parts.slice(1).some(p=>!/^\d{3}$/.test(p)))return null;
+   text=parts.join('');
+  }else if(parts[1].length===3){
+   text=parts.join('');
+  }else if(parts[1].length>=1&&parts[1].length<=2){
+   text=parts[0]+'.'+parts[1];
+  }else return null;
+ }else if((text.match(/\./g)||[]).length>1){
+  const parts=text.split('.');
+  if(!/^\d{1,3}$/.test(parts[0].replace(/^[+-]/,''))||parts.slice(1).some(p=>!/^\d{3}$/.test(p)))return null;
+  text=parts.join('');
+ }
+ const number=Number(text);
+ if(!Number.isFinite(number))return null;
+ return negative?-Math.abs(number):number;
+}
+function normalizeImportDate(value){
+ const text=clean(value);
+ if(validDate(text))return text;
+ let match=text.match(/^(\d{4})[/.](\d{1,2})[/.](\d{1,2})$/);
+ if(match){
+  const iso=match[1]+'-'+match[2].padStart(2,'0')+'-'+match[3].padStart(2,'0');
+  return validDate(iso)?iso:null;
+ }
+ match=text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+ if(match){
+  const a=Number(match[1]),b=Number(match[2]),year=match[3];
+  let month,day;
+  if(a>12&&b>=1&&b<=12){day=a;month=b;}
+  else if(b>12&&a>=1&&a<=12){month=a;day=b;}
+  else return null;
+  const iso=year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  return validDate(iso)?iso:null;
+ }
+ return null;
+}
 export function inferImportType(header,values=[]){
  const label=key(header),sample=values.map(clean).filter(Boolean).slice(0,100);
  if(label==='status'||label==='priority')return 'status';
@@ -41,8 +95,8 @@ export function inferImportType(header,values=[]){
  if(!sample.length)return 'text';
  if(sample.every(x=>/^(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)%$/.test(x)))return 'percentage';
  if(sample.every(x=>/^(true|false|yes|no|0|1)$/i.test(x)))return 'checkbox';
- if(sample.every(x=>/^-?\d+(?:\.\d+)?$/.test(x)))return 'number';
- if(sample.every(x=>/^\d{4}-\d\d-\d\d$/.test(x)))return 'date';
+ if(sample.every(x=>parseImportNumber(x)!==null))return 'number';
+ if(sample.every(x=>normalizeImportDate(x)!==null))return 'date';
  if(sample.every(x=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))return 'email';
  if(sample.every(x=>/^https?:\/\/\S+$/i.test(x)))return 'url';
  return 'text';
@@ -89,9 +143,9 @@ function valueAsType(raw,type,config={}){
   catch(error){deny(error.message);}
  }
  if(type==='number'){
-  if(!/^-?\d+(?:\.\d+)?$/.test(text)||!Number.isFinite(Number(text)))
-   deny('A number cell contains an invalid value: '+text.slice(0,60));
-  return Number(text);
+  const number=parseImportNumber(text);
+  if(number===null)deny('A number cell contains an invalid value: '+text.slice(0,60));
+  return number;
  }
  if(type==='checkbox'){
   if(/^(true|yes|1)$/i.test(text))return true;
@@ -100,8 +154,9 @@ function valueAsType(raw,type,config={}){
  }
  forbidFormula(text);
  if(type==='date'){
-  if(!validDate(text))deny('Date cells must contain valid YYYY-MM-DD dates.');
-  return text;
+  const date=normalizeImportDate(text);
+  if(!date)deny('Date cells must contain a valid ISO, YYYY/MM/DD, or unambiguous day/month or month/day date.');
+  return date;
  }
  if(type==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text))
   deny('Invalid email in imported data.');
@@ -110,9 +165,11 @@ function valueAsType(raw,type,config={}){
  if(type==='people'&&!validUuid(text))deny('People cells require an existing member UUID.');
  if(type==='timeline'){
   const parts=text.split(/\s*\.\.\s*/);
-  if(parts.length!==2||!validDate(parts[0])||!validDate(parts[1])||parts[0]>parts[1])
-   deny('Timeline cells must use YYYY-MM-DD..YYYY-MM-DD.');
-  return {start:parts[0],end:parts[1]};
+  const start=parts.length===2?normalizeImportDate(parts[0]):null;
+  const end=parts.length===2?normalizeImportDate(parts[1]):null;
+  if(!start||!end||start>end)
+   deny('Timeline cells must contain two valid dates in YYYY-MM-DD..YYYY-MM-DD or an unambiguous supported date format.');
+  return {start,end};
  }
  if(type==='status'){
   const options=Array.isArray(config.labels)?config.labels:[];
@@ -135,6 +192,10 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
  if(!detail?.board||!Array.isArray(sheet?.headers)||!Array.isArray(sheet?.rows)||
   !Array.isArray(mappings)||mappings.length!==sheet.headers.length)
   deny('Import preview is incomplete.');
+ if(sheet.omittedRows?.length&&sheet.omittedRowsConfirmed!==true)
+  deny('Confirm whether to exclude the worksheet summary rows before importing.');
+ if(sheet.formulaWarnings?.length&&sheet.formulaWarningsConfirmed!==true)
+  deny('Confirm that uncached formula cells will be imported as blank before continuing.');
  const board=detail.board;
  if(!canManuallyEditBoard(board,true)||isProtectedBoard(board)||moduleByBoardName(board.name))
   deny('Application-owned or protected boards require their domain-specific import workflow.',403);
@@ -167,7 +228,11 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    proposed.push({source,name,type,config:{}});
    refMap.set(source,{name,type,config:{}});
    normalized.push({source,action,name,columnType:type});
-  }else normalized.push({source,action});
+  }else{
+   if(mapping.requiresDecision===true)
+    deny('Choose a destination or explicitly confirm exclusion for source column "'+source+'".');
+   normalized.push({source,action});
+  }
  }
  if(!primary)deny('Map exactly one title column.');
  if((detail.columns||[]).length+proposed.length>30)deny('Board maximum is 30 physical columns.');

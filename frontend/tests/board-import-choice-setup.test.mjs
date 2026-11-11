@@ -141,14 +141,15 @@ test('definitive schema CAS denial is distinct from an uncertain server outcome'
   api,auth,boardId,detail,sheet,source:'Status',type:'status',name:'Status'
  }),error=>error.status===409&&error.schemaOutcomeUncertain!==true);
 });
-test('UI has manager-only choice setup with explicit warning, consent, and no automatic import submission',()=>{
+test('UI integrates manager-only choice setup with a direct explicit create action',()=>{
  const ui=readFileSync('frontend/board-import-ui.js','utf8');
  assert.match(ui,/Configure new Status/);
  assert.match(ui,/Configure new Dropdown/);
- assert.match(ui,/will remain if I cancel or the later import fails/);
- assert.match(ui,/data-imp-choice-consent/);
+ assert.match(ui,/remains available if you cancel the later record import/);
+ assert.doesNotMatch(ui,/data-imp-choice-consent/);
+ assert.match(ui,/data-imp-choice-create/);
  assert.match(ui,/data-imp-choice-name/);
  assert.match(ui,/provisionImportChoiceColumn/);
  assert.match(ui,/schemaOutcomeUncertain/);
- assert.match(ui,/state\.allowColumns=false;state\.choiceConsent=\{\}/);
+ assert.match(ui,/state\.allowColumns=state\.manage/);
 });
