@@ -111,17 +111,21 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    if(m.action==='configure'){
     let proposed=null,error='';
     try{proposed=choiceCreationPreview({sheet:s,source:m.source,
-     type:m.choiceType,name:m.name,detail});}
+     type:m.choiceType,name:m.name,detail,existingColumnId:m.existingColumnId});}
     catch(err){error=String(err.message||err);}
     choiceSetup='<div class="aps-import-choice-config" role="group" aria-label="Choice column approval">'+
      '<p>Configured '+esc(m.choiceType)+
      '. This is a separate audited schema operation before record import.</p>'+
-     '<label>New column name<input name="imp-choice-name-'+i+
-     '" data-imp-choice-name="'+i+'" maxlength="80" value="'+esc(m.name||m.source)+'"></label>'+
+     (m.existingColumnId?'<p>Existing column: <strong>'+esc(m.name||m.source)+'</strong></p>':
+      '<label>New column name<input name="imp-choice-name-'+i+
+      '" data-imp-choice-name="'+i+'" maxlength="80" value="'+esc(m.name||m.source)+'"></label>')+
      (proposed?'<p>Labels ('+proposed.labels.length+'): '+
       proposed.labels.map(esc).join(' · ')+'</p>'+
-      '<p>This creates the configured board column now. It remains available if you cancel the later record import.</p>'+
-      '<button type="button" class="secondary" data-imp-choice-create="'+i+'">Create configured '+esc(m.choiceType)+' column</button>':
+      (m.existingColumnId?
+       '<p>'+proposed.added.length+' missing Status label(s) will be added and '+proposed.reactivated.length+' inactive label(s) will be reactivated. Existing IDs and saved values are preserved; this configuration remains if you cancel import.</p>':
+       '<p>This creates the configured board column now. It remains available if you cancel the later record import.</p>')+
+      '<button type="button" class="secondary" data-imp-choice-create="'+i+'">'+
+       (m.existingColumnId?'Add missing Status labels':'Create configured '+esc(m.choiceType)+' column')+'</button>':
       '<p class="aps-import-error" role="alert">'+esc(error)+'</p>')+
      '</div>';
    }
@@ -279,8 +283,11 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    state.allowColumns=state.manage;
    state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
    state.step=2;state.allowColumns=state.manage;
-  }catch(error){state.error=normalizeImportFailure(error,'file-read').message;}
-  finally{state.busy=false;render();}
+  }catch(error){
+   if(/Workbook contains no populated worksheets to import\./.test(String(error?.message||''))){
+    state.notice='This workbook contains no importable item rows. No records or columns were changed. Select a workbook with populated items to continue.';
+   }else state.error=normalizeImportFailure(error,'file-read').message;
+  }finally{state.busy=false;render();}
  }
  function adjustMapping(index,value){
   const m=state.mappings[index];
@@ -311,11 +318,13 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   try{
    const result=await provisionImportChoiceColumn({api,auth,boardId,
     detail,sheet:sheet(),source:mapping.source,
-    type:mapping.choiceType,name:mapping.name||mapping.source});
+    type:mapping.choiceType,name:mapping.name||mapping.source,
+    existingColumnId:mapping.existingColumnId});
    detail=result.detail;
    state.mappings=matchConfiguredImportChoice(state.mappings,index,result.columnId);
    state.allowColumns=state.manage;state.confirmed=false;
-   state.notice='Configured '+mapping.choiceType+' column created. Review and approve the remaining ordinary columns before importing.';
+   state.notice=result.existing?'Existing Status labels updated. Review the mappings before importing.':
+    'Configured '+mapping.choiceType+' column created. Review the remaining ordinary columns before importing.';
   }catch(error){
    const failure=normalizeImportFailure(error,'schema-write');
    state.error=failure.message;
