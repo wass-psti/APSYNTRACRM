@@ -10,6 +10,34 @@ const BY_TYPE=Object.freeze({'image/jpeg':'jpg','image/png':'png','image/webp':'
 const MAX_BYTES=5*1024*1024;
 const bucket='work-board-files';
 const encode=path=>path.split('/').map(encodeURIComponent).join('/');
+/** Stable, Board-scoped object identity makes a retry address the same object
+ * even after a page refresh or a new client instance. It is not an auth token.
+ */
+async function stableReceiptObjectId(boardId,boardItemId,requestId){
+ const crypto=globalThis.crypto;
+ if(!crypto?.subtle||typeof crypto.subtle.digest!=='function'||typeof TextEncoder!=='function')
+  throw new Error('Deterministic receipt retry identifiers are unavailable.');
+ const input=new TextEncoder().encode(
+  'fueltrack-v3-receipt-v1\\0'+boardId+'\\0'+boardItemId+'\\0'+requestId
+ );
+ const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',input));
+ const bytes=digest.slice(0,16);
+ // UUIDv8 custom identifier derived from SHA-256; version and variant bits
+ // keep the value within the existing UUID contract.
+ bytes[6]=(bytes[6]&0x0f)|0x80;
+ bytes[8]=(bytes[8]&0x3f)|0x80;
+ const hex=Array.from(bytes,value=>value.toString(16).padStart(2,'0')).join('');
+ return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+
+  hex.slice(16,20)+'-'+hex.slice(20);
+}
+const isAlreadyExists=error=>{
+ const code=String(error?.code||'').toLowerCase();
+ return Number(error?.status)===409||
+  (Number(error?.status)===400&&(
+   ['resourcealreadyexists','keyalreadyexists','already_exists'].includes(code)||
+   /asset already exists|resource already exists/i.test(String(error?.message||''))
+  ));
+};
 export function validFuelTrackReceiptFile(file){
  if(!file||typeof file!=='object'||typeof file.size!=='number'||
     !Number.isSafeInteger(file.size)||file.size<1||file.size>MAX_BYTES||
@@ -62,6 +90,58 @@ export class FuelTrackV3ReceiptStorageClient {
    return response;
   }finally{clearTimeout(timeout);}
  }
+ async verifyExistingUpload(path,file,mimeType,token){
+  const actor=this.auth.userId;
+  const expected=new Uint8Array(await file.arrayBuffer());
+  if(expected.byteLength!==file.size||expected.byteLength<1||expected.byteLength>MAX_BYTES)
+   throw new Error('Existing private receipt size does not match the selected file.');
+  const read=async accessToken=>{
+   const response=await this.boundedFetch(
+    this.baseUrl+'/storage/v1/object/authenticated/'+bucket+'/'+encode(path),{
+     method:'GET',mode:'cors',redirect:'error',cache:'no-store',credentials:'omit',
+     headers:{apikey:this.apiKey,Authorization:'Bearer '+accessToken}
+    });
+   if(!response.ok){
+    const error=new Error('Existing private receipt could not be verified ('+response.status+').');
+    error.status=response.status;throw error;
+   }
+   const declared=response.headers?.get?.('content-type')?.split(';')[0]?.trim()?.toLowerCase();
+   if(declared&&declared!=='application/octet-stream'&&declared!==mimeType)
+    throw new Error('Existing private receipt content type does not match the selected file.');
+   const length=response.headers?.get?.('content-length');
+   if(length!==null&&length!==undefined&&
+      (!/^\\d+$/.test(length)||Number(length)!==expected.byteLength))
+    throw new Error('Existing private receipt size does not match the selected file.');
+   const reader=response.body?.getReader?.();
+   if(!reader)throw new Error('Existing private receipt stream is unavailable.');
+   let offset=0;
+   try{
+    while(true){
+     const part=await reader.read();
+     if(part.done)break;
+     if(!(part.value instanceof Uint8Array)||part.value.byteLength===0)
+      throw new Error('Existing private receipt stream contains invalid data.');
+     if(offset+part.value.byteLength>expected.byteLength)
+      throw new Error('An existing receipt object differs from the selected file.');
+     for(let i=0;i<part.value.byteLength;i++){
+      if(part.value[i]!==expected[offset+i])
+       throw new Error('An existing receipt object differs from the selected file.');
+     }
+     offset+=part.value.byteLength;
+    }
+   }finally{try{await reader.cancel();}catch{}}
+   if(offset!==expected.byteLength)
+    throw new Error('Existing private receipt size does not match the selected file.');
+   if(!this.auth.isSignedIn||this.auth.userId!==actor)
+    throw new Error('Signed identity changed while verifying the existing receipt upload.');
+   return true;
+  };
+  try{return await read(token);}
+  catch(error){
+   if(error?.status!==401)throw error;
+   return read(await this.auth.refresh());
+  }
+ }
  async uploadRequest(path,file,mimeType){
   const actor=this.auth.userId;
   const request=async(token)=>{
@@ -74,16 +154,25 @@ export class FuelTrackV3ReceiptStorageClient {
     let detail=null;try{detail=await response.json();}catch{}
     const err=new Error(typeof detail?.message==='string'?detail.message:
      'Private receipt upload rejected ('+response.status+').');
-    err.status=response.status;throw err;
+    err.status=response.status;
+    err.code=typeof detail?.code==='string'?detail.code:null;
+    throw err;
    }
    return response;
   };
   let token=await this.auth.token();
   try{await request(token);}
   catch(error){
-   if(error?.status!==401)throw error;
-   token=await this.auth.refresh();
-   await request(token);
+   if(error?.status===401){
+    token=await this.auth.refresh();
+    try{await request(token);}
+    catch(retryError){
+     if(!isAlreadyExists(retryError))throw retryError;
+     await this.verifyExistingUpload(path,file,mimeType,token);
+    }
+   }else if(isAlreadyExists(error)){
+    await this.verifyExistingUpload(path,file,mimeType,token);
+   }else throw error;
   }
   if(!this.auth.isSignedIn||this.auth.userId!==actor)
    throw new Error('Signed identity changed during receipt upload.');
@@ -96,8 +185,8 @@ export class FuelTrackV3ReceiptStorageClient {
   const intent=await this.domain.receiptPrepare({requestId});
   if(!this.auth.isSignedIn||this.auth.userId!==actor)
    throw new Error('Signed identity changed before receipt upload.');
-  const objectId=globalThis.crypto?.randomUUID?.();
-  if(!UUID.test(objectId||''))throw new Error('Secure receipt object identifiers unavailable.');
+  const objectId=await stableReceiptObjectId(this.boardId,intent.boardItemId,requestId);
+  if(!UUID.test(objectId))throw new Error('Secure receipt object identifiers unavailable.');
   const path=this.boardId+'/'+intent.boardItemId+'/'+objectId+'.'+checked.extension;
   // The stored name is a fixed canonical leaf, independent of caller file names.
   const fileName='receipt.'+checked.extension;
