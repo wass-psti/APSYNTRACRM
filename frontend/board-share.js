@@ -3,7 +3,7 @@
  * records, policy flags, authentication, board memberships or permissions.
  */
 import {validUuid} from './data.js';
-import {resourceEmailInviteReadiness,normalizeRecipientEmail} from './resource-email-invitations.js';
+import {renderBoardAccessChoices} from './workspace-board-groups.js';
 
 export const BOARD_SHARE_LINKS_ENABLED=false;
 export const BOARD_PRIVACY_MODES=Object.freeze([
@@ -58,21 +58,23 @@ export function boardShareReadiness({board,workspaceId,manage=false,policy=null}
 
 /** A count from the verified direct-member snapshot, NOT effective access. */
 export function renderBoardSharePreview({board,moduleKey=null,workspaceId,manage=false,
- policy=null,assignedMemberCount=null}={}){
+ policy=null,assignedMemberCount=null,peopleDirectory=null,groupsDirectory=null}={}){
  const title=escapeHtml(board?.name||'Board');
  const protectedModule=SENSITIVE_MODULE_DEFAULTS.has(moduleKey);
  const signed=policy?.state==='VERIFIED_POLICY';
  const mode=signed?labelForMode(policy.externalSharing):'Not verified';
- const status=protectedModule?'Protected app':signed?mode:'Guest links off';
+ const status=protectedModule?'Protected app':signed?mode:'Board restricted';
  const description=protectedModule?
   'This application requires separate security review before any external sharing.':
-  'Only authorized users can access board data. Guest links are not active.';
+  'Workspace membership alone does not grant access to this board.';
  const count=Number.isSafeInteger(assignedMemberCount)&&
    assignedMemberCount>=0&&assignedMemberCount<=300?
    assignedMemberCount:null;
  const memberCaption=count===null?'View assigned board members':
   count+' assigned board member'+(count===1?'':'s');
- const emailReadiness=resourceEmailInviteReadiness({board,workspaceId,manage,moduleKey});
+ const groupEditor=manage===true&&!protectedModule;
+ const candidateDirectory=groupEditor?peopleDirectory:null;
+ const candidateGroups=groupEditor?groupsDirectory:null;
  const local=typeof location!=='undefined'&&
   ['127.0.0.1','localhost'].includes(location.hostname);
  return '<section class="board-share-stage" role="dialog" aria-modal="true" '+
@@ -101,26 +103,18 @@ export function renderBoardSharePreview({board,moduleKey=null,workspaceId,manage
    '<p class="board-share-stage-caption">Assigned members only; inherited administrator access may not appear.</p>'+
   '</div>'+
   '<div class="board-share-stage-section">'+
+   (groupEditor?
+    renderBoardAccessChoices({people:candidateDirectory,groups:candidateGroups}):
+    '<p class="board-share-stage-caption">Only authorized board managers may assign people or groups. Sensitive applications need a separate permission review.</p>')+
+  '</div>'+
+  '<div class="board-share-stage-section">'+
    '<div class="board-share-stage-row">'+
     '<div class="board-share-stage-icon" aria-hidden="true">✉</div>'+
-    '<div class="board-share-stage-copy"><strong>Invite by email</strong>'+
-     '<p>Only the named recipient can accept after email verification.</p></div>'+
+    '<div class="board-share-stage-copy"><strong>Invite someone new</strong>'+
+     '<p>A workspace owner can invite an email. After verification and acceptance, the person can be added to a board.</p></div>'+
    '</div>'+
-   '<form data-board-share-email-form class="board-share-stage-form" novalidate>'+
-    '<label for="board-share-recipient">Recipient email</label>'+
-    '<input id="board-share-recipient" type="email" name="recipient" autocomplete="off" '+
-      'inputmode="email" spellcheck="false" maxlength="254" '+
-      'placeholder="client@example.com" '+(emailReadiness.allowed?'required':'disabled')+'>'+
-    '<div class="board-share-stage-permission">'+
-     '<span>Access level</span><strong>Viewer · '+(moduleKey?'Application':'Board')+' only</strong>'+
-    '</div>'+
-    '<button type="submit" class="board-share-stage-primary" '+
-      (emailReadiness.allowed?'':'disabled')+'>Send invitation</button>'+
-   '</form>'+
-   '<p class="board-share-stage-caption" data-board-share-feedback role="status">'+
-    escapeHtml(emailReadiness.reason)+'</p>'+
-   '<p class="board-share-stage-caption">No public invite links. '+ 
-    'Guests do not automatically join the company workspace.</p>'+
+   '<button type="button" class="board-share-stage-secondary bs09-workspace-invite" data-board-share-workspace-invite>Open workspace invitations</button>'+
+   '<p class="board-share-stage-caption">Invitation is not account verification or board access. No public links or automatic board grants.</p>'+
   '</div>'+
   (local?'<details class="board-share-stage-dev"><summary>Local development tools</summary>'+
     '<p>Use sample boards and simulated users. No Supabase records are shared.</p>'+
@@ -152,19 +146,35 @@ export function openBoardSharePreview(options={}){
  frame.className='board-share-stage-frame';
  frame.innerHTML=renderBoardSharePreview(options);
  overlay.append(frame);
- const form=overlay.querySelector('[data-board-share-email-form]');
- const formSubmit=event=>{
-  event.preventDefault();
-  const feedback=overlay.querySelector('[data-board-share-feedback]');
-  if(!form||!feedback)return;
-  const email=normalizeRecipientEmail(form.querySelector('[name="recipient"]')?.value);
-  if(!email){feedback.textContent='Enter one valid email address.';return;}
-  // No client-only invitation is ever considered sent. Server integration
-  // requires independent admission, RLS, RPC and delivery approval.
-  feedback.textContent='Invitations are not activated. No email was sent.';
+ let selectedTab='people',searchTerm='';
+ const renderPicker=()=>{
+  const host=overlay.querySelector('.bs09-board-access');
+  if(!host)return;
+  const section=document.createElement('div');
+  section.innerHTML=renderBoardAccessChoices({
+   people:options.peopleDirectory,groups:options.groupsDirectory,
+   tab:selectedTab,query:searchTerm
+  });
+  const next=section.querySelector('.bs09-board-access');
+  if(next)host.replaceWith(next);
  };
- form?.addEventListener('submit',formSubmit);
+ overlay.addEventListener('input',event=>{
+  if(event.target?.id!=='bs09-access-search')return;
+  searchTerm=event.target.value.slice(0,120);
+  renderPicker();
+  const field=overlay.querySelector('#bs09-access-search');
+  if(field){field.focus();field.setSelectionRange(searchTerm.length,searchTerm.length);}
+ });
  const click=event=>{
+  const tab=event.target.closest?.('[data-bs09-tab]')?.dataset.bs09Tab;
+  if(tab==='people'||tab==='groups'){
+   selectedTab=tab;searchTerm='';renderPicker();return;
+  }
+  if(event.target.closest?.('[data-board-share-workspace-invite]')){
+   closeBoardSharePreview();
+   if(typeof options.onInviteWorkspace==='function')options.onInviteWorkspace();
+   return;
+  }
   if(event.target.closest?.('[data-board-share-people]')){
    closeBoardSharePreview();
    document.querySelector('#app .page-head [data-action="board-members"]')?.click();
