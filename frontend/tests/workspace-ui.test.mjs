@@ -231,7 +231,9 @@ test('signed create UI is enabled with guarded server-denial and idempotency bra
  assert.match(module,/Create workspace/);
  assert.match(module,/Validate draft/);
  assert.match(app,/new WorkspaceLifecycleClient\(\{auth,api:db\}\)/);
- assert.match(app,/lifecycle:workspaceLifecycleClient,onOpenCurrent:/);
+ assert.match(app,/lifecycle:workspaceLifecycleClient/);
+ assert.match(app,/creationLifecycle:workspaceOwnerGovernance/);
+ assert.match(app,/readCreationRights:\(\)=>workspaceOwnerGovernance.readiness\(\)/);
  assert.doesNotMatch(module,/fetch\(|localStorage|sessionStorage/);
 });
 
@@ -254,7 +256,8 @@ test('integration is limited to authorized workspace context and never executes 
  assert.match(module,/WS01_CREATION_ENABLED=true/);
  assert.match(module,/No workspace was created/);
  assert.match(app,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
- assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\s*\{lifecycle:workspaceLifecycleClient,onOpenCurrent:/);
+ assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\s*\{lifecycle:workspaceLifecycleClient/);
+ assert.match(app,/creationLifecycle:workspaceOwnerGovernance/);
  assert.match(app,/closeWorkspacePanels\(\);clearBulkActivation\(\)/);
  assert.match(index,/frontend\/workspace-ui\.css/);
  assert.match(smoke,/frontend\/workspace-ui\.js/);
@@ -465,7 +468,8 @@ test('workspace controls are actionable for verified rows and fail closed for un
  assert.match(source,/Validate settings draft/);
  assert.match(source,/No changes were saved/);
  assert.match(source,/Switch workspace — unavailable/);
- assert.match(source,/void selectorSession\?\.load\?\.\(\)/);
+ assert.match(source,/await selectorSession\?\.load\?\.\(\)/);
+ assert.match(source,/newWorkspaceId=result\.receipt\?\.workspaceId/);
  assert.match(source,/Browse authorized workspaces/);
  assert.match(app,/onOpenCurrent:\(\)=>\{location\.hash='#\/overview';\}/);
  assert.match(css,/\.ws01-entry-button:focus-visible/);
