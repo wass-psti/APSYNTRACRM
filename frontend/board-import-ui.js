@@ -170,17 +170,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    (skippedChoices.length?'<p class="aps-import-excluded" role="status">Not importing values from: '+
     skippedChoices.map(m=>esc(m.source)).join(', ')+
     '. You can restore these mappings before importing.</p>':'')+
-   (newCols.length?'<div class="aps-import-permission" role="group" aria-label="Confirm new columns">'+
+   (newCols.length?'<div class="aps-import-permission" role="status">'+
     '<h3>'+newCols.length+' proposed column'+(newCols.length===1?'':'s')+'</h3>'+
-    '<p>Creating columns changes this board for everyone. You must authorize these exact mappings.</p>'+
     '<p>'+newCols.map(m=>esc(m.name||m.source)+' ('+esc(m.columnType||m.type)+')').join(' · ')+'</p>'+
-    '<div class="aps-import-choice"><button type="button" class="primary" data-imp="allow-columns"'+(state.allowColumns?' disabled':'')+'>Allow creation</button>'+
-    '<button type="button" class="secondary" data-imp="decline-columns">Decline and skip columns</button>'+
-    '</div>'+(state.allowColumns?'<strong role="status">'+
-     newCols.length+' ordinary column'+(newCols.length===1?'':'s')+
-     ' approved for the import preview.'+
-     (choicePending.length?' Resolve the separate Status/Dropdown setup above before continuing.':'')+
-     '</strong>':'')+
+    '<p>These columns will be created together with the imported records when you confirm Import Now.</p>'+
     '</div>':'')+'</section>';
  }
  function matchStep(){
@@ -295,7 +288,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   else if(value.startsWith('existing:'))state.mappings[index]={...m,
    action:'existing',columnId:value.slice(9),requiresDecision:false};
   // Unrelated, already-approved ordinary columns retain their consent.
-  if(proposalSignature(state.mappings)!==before)state.allowColumns=false;
+  state.allowColumns=state.manage;
  }
  function focusChoice(index){
   const target=overlay.querySelector('[data-imp-map-row="'+index+'"]');
