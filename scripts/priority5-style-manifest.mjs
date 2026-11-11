@@ -40,6 +40,8 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/platform-sync.css",
  "frontend/foreground-overlay.css",
  "frontend/soft-minimalist.css",
- "frontend/fueltrans-native.css"
+ "frontend/fueltrans-native.css",
+ "frontend/board-people.css",
+ "frontend/board-share-clean.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
