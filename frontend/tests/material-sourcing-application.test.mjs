@@ -22,7 +22,7 @@ function fixture({role='ADMIN',permission=true,mutateContext=false,logoutAfterRe
   rpc:async(name,args)=>{
    calls.push(['rpc',name,args]);
    if(name==='material_request_hub_bootstrap')return {workspaceId:workspace,role};
-   if(name==='mrh_sourcing_sensitive_read'){
+   if(name==='mrh_sourcing_board_viewer_read'){
     if(logoutAfterRead)auth.isSignedIn=false;
     return {'Buying Price':{value:123.45,revision:2},'Currency':{value:'PHP',revision:1}};
    }
@@ -44,19 +44,26 @@ test('protected field schema stays within private vault allowlist',()=>{
  assert.equal(isMaterialSourcingBoard({id:MATERIAL_SOURCING_BOARD_ID,
   name:'Material Request Hub',status:'archived'}),false);
 });
-test('signed ADMIN reads protected RPC without putting values into generic board',async()=>{
+test('signed board viewer reads commercial RPC without putting values into generic board',async()=>{
  const f=fixture();
  const fields=await readProtectedSourcingItem({...context,...f});
  assert.deepEqual({...fields['Buying Price']},{value:123.45,revision:2});
  assert.equal(fields.Currency.value,'PHP');
- assert.ok(f.calls.some(x=>x[1]==='mrh_sourcing_sensitive_read'));
+ assert.ok(f.calls.some(x=>x[1]==='mrh_sourcing_board_viewer_read'));
  assert.ok(!f.calls.some(x=>x[1]==='wm_get_board'||x[1]==='wm_set_board_cell_if_current'));
 });
-test('non-ADMIN, denied board and foreign workspace fail before protected read',async()=>{
- for(const options of [{role:'REQUESTOR'},{role:'VIEWER'},{permission:false},{mutateContext:true}]){
+test('non-ADMIN board viewers read, but denied board and foreign workspace cannot',async()=>{
+ for(const role of ['REQUESTOR','VIEWER']){
+  const f=fixture({role});
+  const values=await readProtectedSourcingItem({...context,...f});
+  assert.equal(values['Buying Price'].value,123.45);
+  assert.ok(f.calls.some(x=>x[1]==='mrh_sourcing_board_viewer_read'));
+  assert.ok(!f.calls.some(x=>x[1]==='material_request_hub_bootstrap'));
+ }
+ for(const options of [{permission:false},{mutateContext:true}]){
   const f=fixture(options);
   await assert.rejects(()=>readProtectedSourcingItem({...context,...f}));
-  assert.ok(!f.calls.some(x=>x[1]==='mrh_sourcing_sensitive_read'));
+  assert.ok(!f.calls.some(x=>x[1]==='mrh_sourcing_board_viewer_read'));
  }
 });
 test('session revoked after network response drops data',async()=>{

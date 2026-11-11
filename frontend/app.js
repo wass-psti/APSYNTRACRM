@@ -3584,8 +3584,24 @@ async function openBoardItemDetails(itemId){
     const result=await readProtectedSourcingItem(input);
     if(!current())return false;
     values=result;
+    // The new signed read RPC is available to board viewers. Keep editing
+    // separate: only the existing ADMIN-scoped write contract permits it.
+    const editAllowed=await db.allowed(snapshot.boardId,'edit').catch(()=>false);
+    let canProtectedEdit=false;
+    if(editAllowed===true){
+     try{
+      const role=await db.rpc('material_request_hub_bootstrap',{
+       p_workspace_id:snapshot.workspaceId});
+      canProtectedEdit=role?.workspaceId===snapshot.workspaceId&&role?.role==='ADMIN';
+     }catch{}
+    }
+    if(!current())return false;
+    editing=editing&&canProtectedEdit;
     privateHost.innerHTML=renderProtectedSourcingEditor(result,{editing});
-    if(editToggle)editToggle.hidden=false;
+    if(editToggle){
+     editToggle.hidden=!canProtectedEdit;
+     editToggle.textContent=editing?'Done editing':'Edit protected fields';
+    }
     return true;
    }catch(error){
     if(!current())return false;

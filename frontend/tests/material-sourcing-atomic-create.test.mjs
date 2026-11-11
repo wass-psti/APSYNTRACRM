@@ -22,7 +22,7 @@ function fixture({role='ADMIN',switchWorkspace=false,foreignValue=false,anonymou
    calls.push([name,args]);
    if(name==='material_request_hub_bootstrap')return {workspaceId:workspace,role};
    if(name==='mrh_create_material_atomic')return {item_id:invalidReceipt?'invalid':item,request_id:request,created:true};
-   if(name==='mrh_sourcing_sensitive_read')return {'Buying Price':{value:12,revision:1}};
+   if(name==='mrh_sourcing_board_viewer_read')return {'Buying Price':{value:12,revision:1}};
    throw new Error('Unexpected '+name);
   },
   board:async()=>{reads++;return {

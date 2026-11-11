@@ -32,7 +32,7 @@ function fixture({role='ADMIN',hasItem=false,wrongWorkspace=false,denied=false,g
   rpc:async(name)=>{
    calls.push(name);
    if(name==='material_request_hub_bootstrap')return {workspaceId:workspace,role};
-   if(name==='mrh_sourcing_sensitive_read')
+   if(name==='mrh_sourcing_board_viewer_read')
     return {'Buying Price':{value:123,revision:1}};
    throw Error('Unexpected RPC');
   }
@@ -59,7 +59,7 @@ test('six trusted ordinary columns and persisted item can be validated without v
  assert.equal(report.publicColumnsVerified,6);
  assert.equal(report.privateRead,'SIGNED_READ_VERIFIED');
  assert.equal(report.itemCount,1);
- assert.ok(f.calls.includes('mrh_sourcing_sensitive_read'));
+ assert.ok(f.calls.includes('mrh_sourcing_board_viewer_read'));
  assert.ok(!JSON.stringify(report).includes('Buying Price'));
  assert.ok(!JSON.stringify(report).includes('123'));
 });
@@ -68,7 +68,7 @@ test('a wrong group, foreign workspace, denied role, and board denial stop priva
   {wrongWorkspace:true},{groupTitle:'Engineering Services'}]){
   const f=fixture({...options,hasItem:true});
   await assert.rejects(()=>inspectMaterialSourcingSignedReadiness(f));
-  assert.ok(!f.calls.includes('mrh_sourcing_sensitive_read'));
+  assert.ok(!f.calls.includes('mrh_sourcing_board_viewer_read'));
  }
 });
 test('type drift never passes as an approved public sourcing column',async()=>{
