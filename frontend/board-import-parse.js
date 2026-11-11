@@ -81,6 +81,49 @@ const nodes=(parent,name)=>Array.from(parent.getElementsByTagNameNS('*',name));
 const first=(parent,name)=>nodes(parent,name)[0]||null;
 const textNode=(parent,name)=>first(parent,name)?.textContent||'';
 const le=(view,pos,n)=>n===2?view.getUint16(pos,true):view.getUint32(pos,true);
+const ZIP32_MAX=0xffffffff,ZIP16_MAX=0xffff;
+function zip64UInt64(view,position,end){
+ if(position+8>end)invalid('ZIP64 XLSX entry is missing required size metadata.');
+ const low=le(view,position,4),high=le(view,position+4,4);
+ const value=high*0x100000000+low;
+ if(!Number.isSafeInteger(value))
+  invalid('ZIP64 XLSX entry size exceeds the supported numeric range.');
+ return {value,next:position+8};
+}
+/** Read ZIP extra fields without trusting their declared lengths.
+ * ZIP64 values are present only for corresponding legacy fields set to
+ * their all-ones sentinel, in specification-defined order.
+ */
+function zip64Extra(view,start,length,needed={},allowMissing=false){
+ const end=start+length;
+ if(start<0||length<0||end>view.byteLength)invalid('Damaged XLSX ZIP extra field.');
+ let p=start,values=null;
+ while(p<end){
+  if(p+4>end)invalid('Damaged XLSX ZIP extra field.');
+  const id=le(view,p,2),size=le(view,p+2,2);p+=4;
+  if(p+size>end)invalid('Damaged XLSX ZIP extra field.');
+  if(id===0x0001){
+   if(values)invalid('Duplicate ZIP64 XLSX entry metadata.');
+   let q=p;const fieldEnd=p+size;values={};
+   const read64=key=>{
+    const result=zip64UInt64(view,q,fieldEnd);
+    values[key]=result.value;q=result.next;
+   };
+   if(needed.raw)read64('raw');
+   if(needed.packed)read64('packed');
+   if(needed.localOffset)read64('localOffset');
+   if(needed.diskStart){
+    if(q+4>fieldEnd)invalid('ZIP64 XLSX entry is missing its disk metadata.');
+    values.diskStart=le(view,q,4);q+=4;
+   }
+   if(q!==fieldEnd)invalid('Unexpected ZIP64 XLSX entry metadata.');
+  }
+  p+=size;
+ }
+ if(Object.values(needed).some(Boolean)&&!values&&!allowMissing)
+  invalid('ZIP64 XLSX entry is missing required size metadata.');
+ return values||{};
+}
 function zipCrc32(data){
  let crc=0xffffffff;
  for(const byte of data){
@@ -93,44 +136,100 @@ function zipDirectory(buffer){
  const view=new DataView(buffer),bytes=new Uint8Array(buffer);
  let eocd=-1;
  for(let p=buffer.byteLength-22;p>=Math.max(0,buffer.byteLength-65557);p--){
-  if(le(view,p,4)===0x06054b50){eocd=p;break;}
+  if(le(view,p,4)===0x06054b50&&
+     p+22+le(view,p+20,2)===buffer.byteLength){eocd=p;break;}
  }
- if(eocd<0||le(view,eocd+4,2)||le(view,eocd+6,2))invalid('Not a supported XLSX ZIP workbook.');
- const count=le(view,eocd+10,2),offset=le(view,eocd+16,4);
- if(count===0xffff||offset===0xffffffff||count>300||offset>=buffer.byteLength)
-  invalid('Unsupported ZIP64 workbook or oversized ZIP directory.');
+ if(eocd<0)invalid('Not a supported XLSX ZIP workbook.');
+ const disk=le(view,eocd+4,2),directoryDisk=le(view,eocd+6,2),
+  entriesOnDisk=le(view,eocd+8,2),count=le(view,eocd+10,2),
+  directorySize=le(view,eocd+12,4),offset=le(view,eocd+16,4);
+ if(disk||directoryDisk||entriesOnDisk!==count)
+  invalid('Multi-disk XLSX archives are not supported.');
+ if(entriesOnDisk===ZIP16_MAX||count===ZIP16_MAX||
+    directorySize===ZIP32_MAX||offset===ZIP32_MAX)
+  invalid('ZIP64 end-of-central-directory records are not supported by the bounded 8 MB XLSX reader.');
+ if(count>300||offset>=buffer.byteLength||offset+directorySize>eocd)
+  invalid('XLSX ZIP directory exceeds the supported workbook limits.');
+ const directoryEnd=offset+directorySize;
  const entries=new Map();let p=offset,total=0;
  for(let i=0;i<count;i++){
-  if(p+46>buffer.byteLength||le(view,p,4)!==0x02014b50)invalid('Damaged XLSX directory.');
+  if(p+46>directoryEnd||le(view,p,4)!==0x02014b50)
+   invalid('Damaged XLSX directory.');
   const flags=le(view,p+8,2),method=le(view,p+10,2),
-   crc=le(view,p+16,4),packed=le(view,p+20,4),raw=le(view,p+24,4);
-  const nameLen=le(view,p+28,2),extra=le(view,p+30,2),comment=le(view,p+32,2),local=le(view,p+42,4);
-  if(flags&1)invalid('Encrypted XLSX workbook entries are not supported.');
+   crc=le(view,p+16,4),packed32=le(view,p+20,4),raw32=le(view,p+24,4);
+  const nameLen=le(view,p+28,2),extra=le(view,p+30,2),
+   comment=le(view,p+32,2),diskStart32=le(view,p+34,2),
+   local32=le(view,p+42,4);
+  const end=p+46+nameLen+extra+comment;
+  if(end>directoryEnd)invalid('Damaged XLSX entry name or extra data.');
+  if(flags&0x2041)invalid('Encrypted XLSX workbook entries are not supported.');
   if(![0,8].includes(method))invalid('Unsupported XLSX compression method.');
-  if(raw===0xffffffff||packed===0xffffffff)
-   invalid('ZIP64 XLSX workbook entries are not supported.');
+  const needed={
+   raw:raw32===ZIP32_MAX,packed:packed32===ZIP32_MAX,
+   localOffset:local32===ZIP32_MAX,diskStart:diskStart32===ZIP16_MAX
+  };
+  const zip64=zip64Extra(view,p+46+nameLen,extra,needed);
+  const raw=needed.raw?zip64.raw:raw32;
+  const packed=needed.packed?zip64.packed:packed32;
+  const local=needed.localOffset?zip64.localOffset:local32;
+  const diskStart=needed.diskStart?zip64.diskStart:diskStart32;
+  if(diskStart!==0)invalid('Multi-disk XLSX entries are not supported.');
+  if(!Number.isSafeInteger(raw)||!Number.isSafeInteger(packed)||
+     !Number.isSafeInteger(local)||raw<0||packed<0||local<0)
+   invalid('Invalid XLSX ZIP entry sizes or offsets.');
   if(packed>MAX_BYTES)
    invalid('XLSX compressed entry exceeds the 8 MB input limit.');
+  if(raw>MAX_UNCOMPRESSED_BYTES)
+   invalid('Workbook ZIP entry exceeds the 24 MB uncompressed limit.');
   total+=raw;
-  if(total>MAX_UNCOMPRESSED_BYTES)
+  if(!Number.isSafeInteger(total)||total>MAX_UNCOMPRESSED_BYTES)
    invalid('Workbook expands beyond the 24 MB uncompressed XML limit.');
-  const end=p+46+nameLen+extra+comment;
-  if(end>buffer.byteLength)invalid('Damaged XLSX entry name.');
   const name=new TextDecoder('utf-8',{fatal:true}).decode(bytes.subarray(p+46,p+46+nameLen));
-  if(name.includes('..')||name.startsWith('/')||name.includes('\\')||entries.has(name))
+  if(!name||name.includes('..')||name.startsWith('/')||name.includes('\\')||entries.has(name))
    invalid('Unsafe or duplicate XLSX path.');
-  entries.set(name,{method,packed,raw,local,crc});
+  if(local>=offset||local+30>offset)
+   invalid('XLSX local entry points outside the data section.');
+  entries.set(name,{name,flags,method,packed,raw,local,crc});
   p=end;
  }
- return {entries,view,bytes};
+ if(p!==directoryEnd)invalid('XLSX ZIP directory size does not match its entries.');
+ return {entries,view,bytes,directoryOffset:offset};
 }
 async function unzipEntry(zip,path){
  const info=zip.entries.get(path);
  if(!info)invalid('Workbook entry is missing: '+path);
  const p=info.local,v=zip.view;
- if(p+30>v.byteLength||le(v,p,4)!==0x04034b50)invalid('Damaged XLSX local entry.');
- const at=p+30+le(v,p+26,2)+le(v,p+28,2);
- if(at+info.packed>v.byteLength)invalid('Truncated XLSX entry.');
+ if(p+30>zip.directoryOffset||le(v,p,4)!==0x04034b50)
+  invalid('Damaged XLSX local entry.');
+ const localFlags=le(v,p+6,2),localMethod=le(v,p+8,2),
+  localCrc=le(v,p+14,4),localPacked32=le(v,p+18,4),
+  localRaw32=le(v,p+22,4),nameLen=le(v,p+26,2),extraLen=le(v,p+28,2);
+ if(localFlags!==info.flags||localMethod!==info.method||localFlags&0x2041)
+  invalid('XLSX local entry metadata does not match its directory record.');
+ const nameStart=p+30,nameEnd=nameStart+nameLen,extraStart=nameEnd,
+  extraEnd=extraStart+extraLen,at=extraEnd;
+ if(extraEnd>zip.directoryOffset||at+info.packed>zip.directoryOffset)
+  invalid('Truncated or overlapping XLSX entry data.');
+ const localName=new TextDecoder('utf-8',{fatal:true}).decode(zip.bytes.subarray(nameStart,nameEnd));
+ if(localName!==info.name)invalid('XLSX local and directory entry names do not match.');
+ const localNeeded={
+  raw:localRaw32===ZIP32_MAX,packed:localPacked32===ZIP32_MAX
+ };
+ const localZip64=zip64Extra(v,extraStart,extraLen,localNeeded,
+  Boolean(localFlags&0x0008));
+ const localRaw=localNeeded.raw?localZip64.raw:localRaw32;
+ const localPacked=localNeeded.packed?localZip64.packed:localPacked32;
+ if(!(localFlags&0x0008)){
+  if(localCrc!==info.crc||localRaw!==info.raw||localPacked!==info.packed)
+   invalid('XLSX local entry sizes or checksum do not match its directory record.');
+ }else{
+  if(localCrc!==0&&localCrc!==info.crc)
+   invalid('XLSX local entry checksum does not match its directory record.');
+  if(localRaw!=null&&localRaw!==0&&localRaw!==info.raw)
+   invalid('XLSX local entry size does not match its directory record.');
+  if(localPacked!=null&&localPacked!==0&&localPacked!==info.packed)
+   invalid('XLSX local compressed size does not match its directory record.');
+ }
  let data=zip.bytes.slice(at,at+info.packed);
  if(info.method===8){
   if(typeof DecompressionStream==='undefined')
@@ -138,8 +237,8 @@ async function unzipEntry(zip,path){
   let stream;
   try{stream=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));}
   catch{invalid('XLSX decompression requires a browser supporting deflate-raw.');}
-  // Do not trust central-directory size claims enough to use Response.arrayBuffer:
-  // a dishonest ZIP stream could expand well past the 4 MB per-entry limit.
+  // The declared size is already bounded by the aggregate 24 MB budget.
+  // Streaming still rejects dishonest size claims before allocating more data.
   const reader=stream.getReader(),expanded=new Uint8Array(info.raw);
   let written=0;
   try{

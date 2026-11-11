@@ -9,6 +9,7 @@ import {parseDelimited,parseImportFile} from '../board-import-parse.js';
 
 const u16=n=>{const b=Buffer.alloc(2);b.writeUInt16LE(n);return b;};
 const u32=n=>{const b=Buffer.alloc(4);b.writeUInt32LE(n>>>0);return b;};
+const u64=n=>{const b=Buffer.alloc(8);b.writeBigUInt64LE(BigInt(n));return b;};
 function crc32(bytes){
  let crc=0xffffffff;
  for(const byte of bytes){
@@ -16,6 +17,9 @@ function crc32(bytes){
   for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);
  }
  return (crc^0xffffffff)>>>0;
+}
+function zip64Extra(raw,packed){
+ return Buffer.concat([u16(1),u16(16),u64(raw),u64(packed)]);
 }
 function makeZip(entries){
  const local=[],central=[];
@@ -28,15 +32,26 @@ function makeZip(entries){
   const crc=entry.invalidCrc?crc32(raw)^0x0000ffff:crc32(raw);
   const rawSize=entry.declaredSize??raw.length;
   const flags=entry.encrypted?1:0;
+  const zip64=entry.zip64===true,version=zip64?45:20;
+  const localExtra=zip64&&entry.zip64LocalExtra!==false?
+   zip64Extra(entry.zip64LocalRawSize??rawSize,entry.zip64LocalPackedSize??packed.length):
+   Buffer.alloc(0);
+  const centralExtra=zip64&&entry.zip64CentralExtra!==false?
+   zip64Extra(entry.zip64CentralRawSize??rawSize,entry.zip64CentralPackedSize??packed.length):
+   Buffer.alloc(0);
+  const localRaw=zip64?0xffffffff:rawSize;
+  const localPacked=zip64?0xffffffff:packed.length;
+  const centralRaw=zip64?0xffffffff:rawSize;
+  const centralPacked=zip64?0xffffffff:packed.length;
   const l=Buffer.concat([
-   u32(0x04034b50),u16(20),u16(flags),u16(method),u16(0),u16(0),
-   u32(crc),u32(packed.length),u32(rawSize),u16(name.length),u16(0),
-   name,packed
+   u32(0x04034b50),u16(version),u16(flags),u16(method),u16(0),u16(0),
+   u32(crc),u32(localPacked),u32(localRaw),u16(name.length),u16(localExtra.length),
+   name,localExtra,packed
   ]);
   const c=Buffer.concat([
-   u32(0x02014b50),u16(20),u16(20),u16(flags),u16(method),u16(0),u16(0),
-   u32(crc),u32(packed.length),u32(rawSize),u16(name.length),u16(0),
-   u16(0),u16(0),u16(0),u32(0),u32(at),name
+   u32(0x02014b50),u16(version),u16(version),u16(flags),u16(method),u16(0),u16(0),
+   u32(crc),u32(centralPacked),u32(centralRaw),u16(name.length),u16(centralExtra.length),
+   u16(0),u16(0),u16(0),u32(0),u32(at),name,centralExtra
   ]);
   local.push(l);central.push(c);at+=l.length;
  }
@@ -63,6 +78,68 @@ function workbookEntries(){
   {name:'xl/worksheets/sheet2.xml',xml:contactsSheet}
  ];
 }
+function mondayExportEntries(){
+ const inline=(address,value,style=0)=>
+  '<c r="'+address+'" t="inlineStr"'+(style?' s="'+style+'"':'')+
+  '><is><t>'+value+'</t></is></c>';
+ const number=(address,value,style=0)=>
+  '<c r="'+address+'" t="n"'+(style?' s="'+style+'"':'')+
+  '><v>'+value+'</v></c>';
+ const row=(n,cells)=>'<row r="'+n+'">'+cells.join('')+'</row>';
+ const headers=['Name','Subitems','Work description','Date encoded','Person',
+  'Status','Timeline - Start','Timeline - End','Rating','Item ID (auto generated)'];
+ const headerRow=n=>row(n,headers.map((value,i)=>inline(String.fromCharCode(65+i)+n,value)));
+ const worksheet='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+  '<sheetData>'+
+  row(1,[inline('A1','I.T Daily Activities - Done')])+
+  row(2,[inline('A2','FY 2026')])+
+  headerRow(3)+
+  row(4,[
+   inline('A4','CMWD Quick Meeting'),inline('B4',''),
+   inline('C4','Quick customer service meeting.'),inline('D4','2026-01-27 03:36:15 UTC'),
+   inline('E4','Example Person'),inline('F4','Done'),
+   number('G4','46049.0',1),number('H4','46049.0',1),
+   inline('I4',''),number('J4','11105624914')
+  ])+
+  row(5,[
+   inline('A5','Troubleshooting Laptop'),inline('B5',''),
+   inline('C5','Troubleshooting and repair.'),inline('D5','2026-01-28 03:45:05 UTC'),
+   inline('E5','Example Person'),inline('F5','Done'),
+   number('G5','46050.0',1),number('H5','46050.0',1),
+   inline('I5',''),number('J5','11105669912')
+  ])+
+  row(6,[inline('A6','Cancelled')])+
+  headerRow(7)+
+  '</sheetData></worksheet>';
+ const workbook='<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '+
+  'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+  '<workbookPr date1904="false"/><sheets><sheet sheetId="1" '+
+  'name="i-t-daily-activities" r:id="rId1"/></sheets></workbook>';
+ const relationships='<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+  '<Relationship Target="worksheets/sheet1.xml" '+
+  'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Id="rId1"/>'+
+  '<Relationship Target="styles.xml" '+
+  'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Id="rId2"/>'+
+  '<Relationship Target="theme/theme1.xml" '+
+  'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Id="rId3"/>'+
+  '</Relationships>';
+ const styles='<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+  '<numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy-mm-dd"/></numFmts>'+
+  '<cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="164"/></cellXfs></styleSheet>';
+ return [
+  {name:'[Content_Types].xml',xml:'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>'},
+  {name:'_rels/.rels',xml:'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>'},
+  {name:'xl/worksheets/sheet1.xml',xml:worksheet},
+  {name:'xl/worksheets/_rels/sheet1.xml.rels',xml:'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>'},
+  {name:'xl/workbook.xml',xml:workbook},
+  {name:'xl/theme/theme1.xml',xml:'<theme xmlns="http://schemas.openxmlformats.org/drawingml/2006/main"/>'},
+  {name:'xl/styles.xml',xml:styles},
+  {name:'xl/_rels/workbook.xml.rels',xml:relationships},
+  {name:'docProps/core.xml',xml:'<coreProperties xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"/>'},
+  {name:'docProps/app.xml',xml:'<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"/>'}
+ ].map(entry=>({...entry,zip64:true}));
+}
+
 // Browser DOMParser stand-in for this controlled, no-entity OOXML fixture only.
 function minimalXmlDom(source){
  function childrenOf(node){
@@ -187,19 +264,61 @@ test('XLSX: highly compressible valid OOXML remains accepted within absolute siz
  assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
 });
 
-test('XLSX: unsupported compression, ZIP64 and oversized entries retain explicit rejection',async()=>{
+test('XLSX: Monday-style ZIP64 per-entry size metadata is accepted',async()=>{
+ const entries=workbookEntries().map(entry=>({...entry,zip64:true}));
+ const parsed=await parseWithFixtureDom(makeZip(entries));
+ assert.equal(parsed.sheets.length,1);
+ assert.equal(parsed.sheets[0].name,'Contacts');
+ assert.deepEqual(parsed.sheets[0].headers,['Name','Score']);
+ assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
+});
+
+test('XLSX: sanitized Monday.com export ZIP64 package imports its 10-column activity sheet',async()=>{
+ const parsed=await parseWithFixtureDom(makeZip(mondayExportEntries()));
+ assert.equal(parsed.sheets.length,1);
+ assert.equal(parsed.sheets[0].name,'i-t-daily-activities — FY 2026');
+ assert.deepEqual(parsed.sheets[0].headers,[
+  'Name','Subitems','Work description','Date encoded','Person',
+  'Status','Timeline - Start','Timeline - End','Rating','Item ID (auto generated)'
+ ]);
+ assert.equal(parsed.sheets[0].rows.length,2);
+ assert.equal(parsed.sheets[0].rows[0][0],'CMWD Quick Meeting');
+ assert.equal(parsed.sheets[0].rows[0][6],'2026-01-27');
+ assert.equal(parsed.sheets[0].rows[0][9],'11105624914');
+ assert.equal(parsed.sheets[0].rows[1][0],'Troubleshooting Laptop');
+ assert.deepEqual(parsed.sheets[0].rowNumbers,[4,5]);
+});
+
+test('XLSX: ZIP64 per-entry sizes require valid central and local extra metadata',async()=>{
+ const missing=workbookEntries().map(entry=>({...entry,zip64:true}));
+ missing[0].zip64CentralExtra=false;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(missing)),
+  /ZIP64 XLSX entry is missing required size metadata/);
+ const missingLocal=workbookEntries().map(entry=>({...entry,zip64:true}));
+ missingLocal[0].zip64LocalExtra=false;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(missingLocal)),
+  /ZIP64 XLSX entry is missing required size metadata/);
+ const mismatch=workbookEntries().map(entry=>({...entry,zip64:true}));
+ mismatch[0].zip64LocalRawSize=Buffer.byteLength(mismatch[0].xml)+1;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(mismatch)),
+  /local entry sizes or checksum do not match/);
+});
+
+test('XLSX: unsupported compression, ZIP64 directory and oversized entries remain rejected',async()=>{
  const unsupported=workbookEntries();
  unsupported[0].method=12;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(unsupported)),
   /Unsupported XLSX compression method/);
- const zip64=workbookEntries();
- zip64[0].declaredSize=0xffffffff;
- await assert.rejects(()=>parseWithFixtureDom(makeZip(zip64)),
-  /ZIP64 XLSX workbook entries/);
- const oversized=workbookEntries();
+ const zip64Directory=makeZip(workbookEntries());
+ const eocd=zip64Directory.length-22;
+ zip64Directory.writeUInt16LE(0xffff,eocd+8);
+ zip64Directory.writeUInt16LE(0xffff,eocd+10);
+ await assert.rejects(()=>parseWithFixtureDom(zip64Directory),
+  /ZIP64 end-of-central-directory records/);
+ const oversized=workbookEntries().map(entry=>({...entry,zip64:true}));
  oversized[0].declaredSize=24*1024*1024+1;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(oversized)),
-  /24 MB uncompressed XML limit/);
+  /24 MB uncompressed limit/);
 });
 
 test('XLSX: encrypted ZIP and worksheet path traversal are rejected',async()=>{
