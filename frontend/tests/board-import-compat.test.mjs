@@ -273,6 +273,22 @@ test('XLSX: Monday-style ZIP64 per-entry size metadata is accepted',async()=>{
  assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
 });
 
+test('XLSX: sanitized Monday.com export ZIP64 package imports its 10-column activity sheet',async()=>{
+ const parsed=await parseWithFixtureDom(makeZip(mondayExportEntries()));
+ assert.equal(parsed.sheets.length,1);
+ assert.equal(parsed.sheets[0].name,'i-t-daily-activities');
+ assert.deepEqual(parsed.sheets[0].headers,[
+  'Name','Subitems','Work description','Date encoded','Person',
+  'Status','Timeline - Start','Timeline - End','Rating','Item ID (auto generated)'
+ ]);
+ assert.equal(parsed.sheets[0].rows.length,2);
+ assert.equal(parsed.sheets[0].rows[0][0],'CMWD Quick Meeting');
+ assert.equal(parsed.sheets[0].rows[0][6],'2026-01-27');
+ assert.equal(parsed.sheets[0].rows[0][9],'11105624914');
+ assert.equal(parsed.sheets[0].rows[1][0],'Troubleshooting Laptop');
+ assert.deepEqual(parsed.sheets[0].rowNumbers,[4,5]);
+});
+
 test('XLSX: ZIP64 per-entry sizes require valid central and local extra metadata',async()=>{
  const missing=workbookEntries().map(entry=>({...entry,zip64:true}));
  missing[0].zip64CentralExtra=false;
