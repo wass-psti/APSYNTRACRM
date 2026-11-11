@@ -25,7 +25,8 @@ test('required signing and Main group are unchanged and non-edit users have no i
  assert.match(renderMaterialSourcingAddMaterial(detail,{canCreate:true}),/Original group is preserved/);
  const html=renderMaterialSourcingTracker(detail,{},new Date(),{canCreate:false,view:'add'});
  assert.doesNotMatch(html,/data-mrh-add-submit|id="mrh-add-partNumber"/);
- assert.match(html,/not available for this account/);
+ assert.match(html,/creation is not enabled for its current board permissions/);
+ assert.match(html,/data-action="mrh-show-items"/);
 });
 test('pre-validation creates only intended field writes and never guesses missing columns',()=>{
  assert.deepEqual({...materialAddPublicColumns(detail)},{quantity:'qty-col'});

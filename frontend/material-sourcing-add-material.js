@@ -59,7 +59,10 @@ export function renderMaterialSourcingAddMaterial(detail,{canCreate=false}={}){
  detail.board.name==='Material Request Hub'&&detail.board.status==='active'&&
  detail.groups?.some(g=>g.id===MATERIAL_SOURCING_GROUP.id&&g.title===MATERIAL_SOURCING_GROUP.title);
  if(!valid)return '<section role="alert">Original Material Sourcing group unavailable.</section>';
- if(!canCreate)return '<section class="mrh-add-unavailable" role="status">Material creation is not available for this account.</section>';
+ if(!canCreate)return '<section class="mrh-add-unavailable" role="status">'+
+  '<h3>Add Material</h3><p>This account can view materials, but material creation is not enabled for its current board permissions.</p>'+
+  '<p>Use an account with existing Material Request Hub creation access, or ask a workspace administrator to review board editing access.</p>'+
+  '<button type="button" class="secondary" data-action="mrh-show-items">Back to all items</button></section>';
  const columns=materialAddPublicColumns(detail);
  const enabled=name=>!!columns[name];
  const missing=['sourceType','brand','description','lead','due','rfq'].filter(key=>!enabled(key));

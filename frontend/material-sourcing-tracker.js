@@ -102,7 +102,7 @@ export function renderMaterialSourcingTracker(detail,filters=MATERIAL_TRACKER_DE
     '<h2>Material Sourcing</h2><p>Procurement tracking &amp; material management</p></div></div></header>'+
    '<div class="mrh-add-canvas"><nav class="mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
     '<button type="button" data-action="mrh-show-items">All items</button>'+
-    (canCreate?'<span class="mrh-active-view" aria-current="page">Add Material</span>':'')+
+    '<span class="mrh-active-view" aria-current="page">Add Material</span>'+
     '</nav>'+renderMaterialSourcingAddMaterial(detail,{canCreate})+'</div></section>';
  }
  const displayed=row=>{
@@ -140,7 +140,7 @@ export function renderMaterialSourcingTracker(detail,filters=MATERIAL_TRACKER_DE
     '<span>Exchange rates &amp; landed costs</span><span class="mrh-rate-note">Available in authorized protected item details when configured</span></div>'+
    '<nav class="mrh-tracker-viewtabs" aria-label="Material Tracker views">'+
     '<span class="mrh-active-view" aria-current="page">All items</span>'+
-    (canCreate?'<button type="button" data-action="mrh-add-view">＋ Add Material</button>':'')+
+    '<button type="button" data-action="mrh-add-view">＋ Add Material</button>'+
    '</nav>'+
    '<div class="mrh-table-panel">'+
     '<div class="mrh-tracker-controls"><label class="mrh-search-field">'+
