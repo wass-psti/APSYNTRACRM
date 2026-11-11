@@ -231,7 +231,7 @@ test('signed create UI is enabled with guarded server-denial and idempotency bra
  assert.match(module,/Create workspace/);
  assert.match(module,/Validate draft/);
  assert.match(app,/new WorkspaceLifecycleClient\(\{auth,api:db\}\)/);
- assert.match(app,/lifecycle:workspaceLifecycleClient,signedUserId:auth.userId,onOpenCurrent:/);
+ assert.match(app,/lifecycle:workspaceLifecycleClient,signedUserId:actor,creatorReceipt,onOpenCurrent:/);
  assert.doesNotMatch(module,/fetch\(|localStorage|sessionStorage/);
 });
 
@@ -254,7 +254,7 @@ test('integration is limited to authorized workspace context and never executes 
  assert.match(module,/WS01_CREATION_ENABLED=true/);
  assert.match(module,/No workspace was created/);
  assert.match(app,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
- assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\s*\{lifecycle:workspaceLifecycleClient,signedUserId:auth.userId,onOpenCurrent:/);
+ assert.match(app,/openWorkspaceSelector\(\{id:workspaceId,name:workspaceName\(\)\},\s*\{lifecycle:workspaceLifecycleClient,signedUserId:actor,creatorReceipt,onOpenCurrent:/);
  assert.match(app,/closeWorkspacePanels\(\);clearBulkActivation\(\)/);
  assert.match(index,/frontend\/workspace-ui\.css/);
  assert.match(smoke,/frontend\/workspace-ui\.js/);
