@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {
  WS10_CREATOR_POLICY_ACTIVE,WS10_OWNERSHIP_TRANSFER_ACTIVE,
  creatorEligibilityFromSignedCatalog,workspaceCreatorUiAllowed,
+ normalizeCreatorAccessReceipt,CreatorAccessClient,
  validateOwnershipTransfer,OwnershipTransferClient
 } from '../ws10-ownership.js';
 const actor='11111111-1111-4111-8111-111111111111';
@@ -45,6 +46,27 @@ test('owner and IT Admin are blocked until protected server policy is active',()
  assert.equal(workspaceCreatorUiAllowed({
   catalog:base,workspaceId:workspace,userId:actor,deployed:true
  }).allowed,true);
+});
+test('creator capability receipt requires exact signed actor, workspace and origin',async()=>{
+ const receipt={schemaVersion:1,userId:actor,workspaceId:workspace,
+  source:'SIGNED_CREATOR_POLICY',role:'it-admin',canCreateWorkspace:true};
+ assert.deepEqual(normalizeCreatorAccessReceipt(receipt,{userId:actor,workspaceId:workspace}),receipt);
+ for(const invalid of [
+  {...receipt,userId:target},{...receipt,workspaceId:target},
+  {...receipt,source:'LOCAL'},{...receipt,role:'platform_admin'},
+  {...receipt,canCreateWorkspace:'true'}
+ ])assert.equal(normalizeCreatorAccessReceipt(invalid,{userId:actor,workspaceId:workspace}),null);
+ let calls=0;
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={context:async()=>({user_id:actor,workspace_id:workspace,
+  profile:{status:'active'}}),rpc:async(name)=>{
+  calls++;assert.equal(name,'wm_ws10_creator_access');return receipt;
+ }};
+ await assert.rejects(new CreatorAccessClient({auth,api}).read(),/not activated/);
+ assert.equal(calls,0);
+ const read=await new CreatorAccessClient({auth,api,enabled:true}).read();
+ assert.equal(read.canCreateWorkspace,true);
+ assert.equal(calls,1);
 });
 test('ownership transfers require exact signed target and resource kind',()=>{
  assert.deepEqual(validateOwnershipTransfer({
