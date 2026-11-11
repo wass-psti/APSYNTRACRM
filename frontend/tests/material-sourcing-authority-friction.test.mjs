@@ -20,7 +20,7 @@ function client({role='ADMIN',switchWorkspace=false,revoke=false}={}){
    if(revoke){auth.isSignedIn=false}
    if(name==='mrh_board_item_tasks_read')return {tasks:[{id:task,title:'Recorded',status:'done',revision:2}]};
    if(name==='mrh_board_item_tasks_write')return {id:task,title:args.p_title,status:args.p_status,revision:3};
-   if(name==='mrh_sourcing_sensitive_read')return {'Buying Price':{value:5,revision:1}};
+   if(name==='mrh_sourcing_board_viewer_read')return {'Buying Price':{value:5,revision:1}};
    throw new Error('Unexpected RPC: '+name);
   }
  };
@@ -41,11 +41,11 @@ test('task write also performs one role preflight and retains revision CAS',asyn
  assert.equal(result.revision,3);
  assert.equal(f.stats().bootstrap,1);
 });
-test('protected sourcing fields use one role preflight and preserve values',async()=>{
+test('protected sourcing read uses signed board VIEW without module role bootstrap',async()=>{
  const f=client();
  const result=await readProtectedSourcingItem(f.options);
  assert.equal(result['Buying Price'].value,5);
- assert.equal(f.stats().bootstrap,1);
+ assert.equal(f.stats().bootstrap,0);
 });
 test('session revocation or workspace switching after RPC drops task and protected values',async()=>{
  for(const flags of [{revoke:true},{switchWorkspace:true}]){

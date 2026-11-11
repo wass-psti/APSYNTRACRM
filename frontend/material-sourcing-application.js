@@ -26,6 +26,25 @@ function validContext({api,auth,workspaceId,boardId,itemId}){
     !api?.context||!api?.allowed||!api?.rpc)
   deny('Signed sourcing context is unavailable.');
 }
+/** The user-approved commercial read policy follows existing signed board VIEW.
+ * The separate server RPC validates active workspace membership/item scope.
+ * Existing protected writes and task operations retain their ADMIN checks. */
+export async function authorizeMaterialSourcingViewer(input){
+ validContext(input);
+ const {api,auth,workspaceId,boardId}=input;
+ const actor=auth.userId;
+ const verified=await auth.getVerifiedUser();
+ if(!auth.isSignedIn||auth.userId!==actor||verified?.id!==actor)
+  deny('Sourcing session changed.');
+ const context=await api.context();
+ if(!auth.isSignedIn||auth.userId!==actor||
+    context?.user_id!==actor||context?.workspace_id!==workspaceId||
+    context?.profile?.status!=='active')
+  deny('Sourcing workspace access denied.');
+ if(await api.allowed(boardId,'view')!==true)
+  deny('Sourcing board permission denied.');
+ return actor;
+}
 export async function authorizeMaterialSourcingItem({api,auth,workspaceId,boardId,itemId,edit=false}){
  validContext({api,auth,workspaceId,boardId,itemId});
  const userId=auth.userId;
@@ -108,8 +127,8 @@ export function parseProtectedSourcingValue(fieldName,raw){
 
 export async function readProtectedSourcingItem({api,auth,boardId,workspaceId,itemId}){
  const input={api,auth,boardId,workspaceId,itemId};
- const actor=await authorizeMaterialSourcingItem(input);
- const raw=await api.rpc('mrh_sourcing_sensitive_read',{
+ const actor=await authorizeMaterialSourcingViewer(input);
+ const raw=await api.rpc('mrh_sourcing_board_viewer_read',{
   p_board_id:boardId,p_item_id:itemId
  });
  if(!auth.isSignedIn||auth.userId!==actor)deny('Sourcing session changed.');
