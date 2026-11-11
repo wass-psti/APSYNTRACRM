@@ -121,3 +121,8 @@ The browser importer never evaluates Excel formulas. When a formula has a cached
 - Added transport tests for valid JSON, malformed successful JSON, empty/204 responses, malformed error responses, and JSON-only test doubles. Added an end-to-end client contract test proving that a malformed successful atomic response triggers exactly one atomic request and is classified as uncertain.
 - No SQL, RPC, database, storage, authentication policy, role, permission, workspace, or unrelated application changes. No production records were modified.
 - Browser write/refresh acceptance remains pending until a dedicated ordinary nonproduction board can be used without touching operational records.
+
+
+### CP-BIMP-10 — Authoritative post-write readback
+
+The signed importer now validates its atomic receipt against the reviewed preview, then performs a fresh signed `wm_get_board` read before reporting success. It verifies created/updated/skipped counts, group and column creation, persisted item titles, mapped cell values, and preservation of skipped values. The existing app completion callback then reloads the board after the mutation RPC has invalidated its cached snapshot. A mismatched or unavailable post-write readback is treated as an uncertain committed outcome and cannot be blindly retried. See [CP-BIMP-10 acceptance notes](./CP-BIMP-10-IMPORT-ROUNDTRIP-ACCEPTANCE.md) for the remaining genuine browser and refresh acceptance boundary.
