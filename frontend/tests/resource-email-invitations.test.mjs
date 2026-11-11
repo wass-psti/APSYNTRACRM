@@ -66,18 +66,19 @@ test('readiness denies unauthorized, protected app, and unapproved policy',()=>{
   board,workspaceId,manage:true,enabled:true,approvedPolicy:true
  }).allowed,true);
 });
-test('share panel has email, not copy-link; protected board cannot invite',()=>{
+test('workspace-first share panel does not directly send board invitation emails',()=>{
  const normal=renderBoardSharePreview({board:{...board,name:'Project'},
   workspaceId,manage:true});
  const protectedApp=renderBoardSharePreview({board:{...board,name:'HR'},
   workspaceId,manage:true,moduleKey:'evaluation'});
  for(const html of [normal,protectedApp]){
-  assert.match(html,/Invite by email/);
-  assert.match(html,/type="email"/);
-  assert.match(html,/disabled>Send invitation/);
-  assert.doesNotMatch(html,/Copy invitation link|name="password"/);
+  assert.match(html,/Invite someone new/);
+  assert.match(html,/Open workspace invitations/);
+  assert.doesNotMatch(html,/Copy invitation link|name="password"|data-board-share-email-form/);
  }
- assert.match(protectedApp,/Application invitations require a separate role/);
+ assert.match(normal,/data-bs09-tab="people"/);
+ assert.match(normal,/data-bs09-tab="groups"/);
+ assert.match(protectedApp,/Sensitive applications need a separate permission review/);
 });
 test('strict receipt binds target and email and gives no token',()=>{
  const validated=validateResourceInviteRequest(invite);
