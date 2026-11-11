@@ -79,7 +79,7 @@ test('signed activity photo enrichment adds no broad profile requests',()=>{
  assert.match(app,/mountAvatarImages\(host,profileAvatarClient,null,null\)/);
  const manifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
  assert.match(manifest,/frontend\/board-activity-avatars\.css/);
- assert.match(readFileSync('frontend/soft-minimalist.css','utf8'),/BS03 — contextual column header controls/);
+ assert.match(readFileSync('frontend/soft-minimalist.css','utf8'),/BS03 — contextual drag surfaces and accessible column actions/);
 });
 test('item drawer hides restricted fields and escapes notes',()=>{
  const row={title:'<svg onload=alert(1)>',status:'working',notes:'<script>attack</script>',

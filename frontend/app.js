@@ -892,11 +892,9 @@ function boardPage(){
  <div class="tabs board-draggable-tabs" role="tablist" aria-label="Board views">
  ${tabOrder.map(t=>'<div class="board-tab-slot" data-board-tab-slot="'+e(t.key)+'">'+
   '<a role="tab" draggable="'+(canReorderTabs?'true':'false')+'" data-board-tab="'+e(t.key)+'" aria-selected="'+(state.tab===t.key)+
-  '" class="tab '+(state.tab===t.key?'active':'')+'" href="'+e(t.href)+'">'+t.label+'</a>'+
-  (canReorderTabs?'<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
-  '" data-direction="-1" aria-label="Move '+e(t.key)+' tab left" title="Move tab left">‹</button>':'')+
-  (canReorderTabs?'<button type="button" class="board-tab-reorder" data-action="board-tab-move" data-key="'+e(t.key)+
-  '" data-direction="1" aria-label="Move '+e(t.key)+' tab right" title="Move tab right">›</button>':'')+'</div>').join('')}</div>
+  '" class="tab '+(state.tab===t.key?'active':'')+'" href="'+e(t.href)+'"'+
+  (canReorderTabs?' aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight" title="Drag to reorder; Alt+Shift+Left/Right to move"':'')+
+  '>'+t.label+'</a></div>').join('')}</div>
 
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},draftView:state.tradeLinkDraft,canManage:state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
@@ -6851,7 +6849,8 @@ async function moveBoardPresentation(kind,from,to){
  render();return true;
 }
 root.addEventListener('dragstart',event=>{
- if(event.target.closest('.board-column-more,.board-column-resize')){
+ // Interactive header controls must never start a column drag.
+ if(event.target.closest('.board-column-more,.board-column-resize,input,textarea,select,[contenteditable]')){
   event.preventDefault();return;
  }
  if(!activeBoardLayout())return;
@@ -6904,15 +6903,17 @@ root.addEventListener('pointerdown',event=>{
  }
  // Native drag is for mouse/trackpad; pointer reorder supports touch and pen.
  if(event.pointerType==='mouse')return;
- const tab=event.target.closest('[data-board-tab]');
- const handle=event.target.closest('button.board-column-handle');
- if(!tab&&!handle)return;
- const kind=tab?'tab':'column';
+ if(event.target.closest('button,input,textarea,select,[contenteditable]'))return;
+ const tab=event.target.closest('[data-board-tab][draggable="true"]');
+ const th=event.target.closest('th[data-column-key][draggable="true"]');
+ if(!tab&&!th)return;
+ const kind=tab?'tab':'column',element=tab||th;
+ const key=element.dataset[kind==='tab'?'boardTab':'columnKey'];
  if(kind==='tab'&&isManagedTimeTrackerBoard(state.board?.board)&&
     (!state.boardManage||state.boardUi?.status!=='VERIFIED_READ'||state.tabMoveBusy))return;
- const element=tab||handle.closest('th[data-column-key]');
- boardTouch={kind,key:element.dataset[kind==='tab'?'boardTab':'columnKey'],
-  x:event.clientX,y:event.clientY,pointerId:event.pointerId};
+ if(kind==='column'&&(BOARD_REQUIRED_COLUMNS.includes(key)||
+    (isItemOnlyBoard(state.board,state.boardUi)&&!state.boardManage)))return;
+ boardTouch={kind,key,x:event.clientX,y:event.clientY,pointerId:event.pointerId};
 });
 window.addEventListener('pointermove',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
@@ -6949,6 +6950,35 @@ document.addEventListener('pointerdown',event=>{
     !event.target.closest('.board-column-more'))
   closeBoardColumnContext();
 },true);
+// No reorder arrows or grip icons: the focused tab/header remains keyboard movable.
+root.addEventListener('keydown',event=>{
+ if(!event.altKey||!event.shiftKey||event.ctrlKey||event.metaKey||
+    !['ArrowLeft','ArrowRight'].includes(event.key)||!activeBoardLayout())return;
+ const tab=event.target.closest('[data-board-tab][draggable="true"]');
+ const th=event.target.matches('th[data-column-key][draggable="true"]')?event.target:null;
+ if(!tab&&!th)return;
+ const kind=tab?'tab':'column',key=(tab||th).dataset[kind==='tab'?'boardTab':'columnKey'];
+ const layout=activeBoardLayout();
+ if(kind==='tab'&&isManagedTimeTrackerBoard(state.board?.board)&&
+   (!state.boardManage||state.boardUi?.status!=='VERIFIED_READ'||state.tabMoveBusy))return;
+ if(kind==='column'&&(BOARD_REQUIRED_COLUMNS.includes(key)||
+   (isItemOnlyBoard(state.board,state.boardUi)&&!state.boardManage)))return;
+ const keys=kind==='column'?
+   layout.pref.columns.filter(k=>!BOARD_REQUIRED_COLUMNS.includes(k)):
+   isManagedTimeTrackerBoard(state.board?.board)?
+     [...(state.boardUi?.tabs||[]).filter(t=>t.visible).map(t=>t.key),
+      ...['items','issues','attendance'].filter(k=>!(state.boardUi?.tabs||[]).some(t=>t.key===k))]:
+     layout.tabs;
+ const index=keys.indexOf(key),to=keys[index+(event.key==='ArrowLeft'?-1:1)];
+ if(index<0||!to)return;
+ event.preventDefault();
+ void moveBoardPresentation(kind,key,to).then(moved=>{
+  if(!moved)return;
+  const selector=kind==='tab'?'[data-board-tab="'+key+'"]':
+    'th[data-column-key="'+key+'"][draggable="true"]';
+  root.querySelector(selector)?.focus();
+ }).catch(notice);
+});
 document.addEventListener('keydown',event=>{
  if(!boardColumnMenuNode?.isConnected)return;
  if(event.key==='Escape'){
