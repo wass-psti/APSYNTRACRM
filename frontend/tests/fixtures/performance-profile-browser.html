@@ -7,6 +7,7 @@ import {readWorkspaceStartup} from '../../workspace-startup-read.js';
 import {summarizeEntryWaterfall} from '../../performance-entry-waterfall.js';
 import {applySearchVisibility} from '../../interaction-search.js';
 import {createFrameCoalescer} from '../../frame-coalescer.js';
+import {patchBoardColumnDom} from '../../board-column-dom.js';
 window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
  waterfall:()=>{
   const origin=location.origin;
@@ -83,6 +84,115 @@ window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
    emptyQueryVisible:0,stableNodes:stable,searchDurationsMs:timings.map(v=>Math.round(v*100)/100),
    scheduledFrames:coalesced.length,coalescedValue:coalesced[0]};
   host.remove();return report;
+ },
+ columnEditing:()=>{
+  const host=document.createElement('div');host.id='column-editing-benchmark';
+  for(let groupIndex=0;groupIndex<12;groupIndex++){
+   const table=document.createElement('table');table.dataset.groupId='group-'+groupIndex;
+   table.setAttribute('width','500');
+   const colgroup=document.createElement('colgroup');
+   for(const [key,width] of [['record',100],['col:11111111-1111-4111-8111-111111111111',200],['col:22222222-2222-4222-8222-222222222222',200]]){
+    const col=document.createElement('col');col.dataset.columnKey=key;col.setAttribute('width',String(width));colgroup.append(col);
+   }
+   table.append(colgroup);
+   const head=document.createElement('thead'),header=document.createElement('tr');
+   for(const [key,label] of [['record','Item'],['col:11111111-1111-4111-8111-111111111111','Before'],['col:22222222-2222-4222-8222-222222222222','Unaffected']]){
+    const th=document.createElement('th');th.dataset.columnKey=key;
+    const span=document.createElement('span');span.className='board-heading-label';span.textContent=label;th.append(span);
+    const more=document.createElement('button');more.className='board-column-more';th.append(more);
+    const resize=document.createElement('button');resize.className='board-column-resize';th.append(resize);
+    header.append(th);
+   }
+   head.append(header);table.append(head);
+   const body=document.createElement('tbody');
+   for(let rowIndex=0;rowIndex<100;rowIndex++){
+    const itemId='item-'+groupIndex+'-'+rowIndex,tr=document.createElement('tr');
+    for(const key of ['record','col:11111111-1111-4111-8111-111111111111','col:22222222-2222-4222-8222-222222222222']){
+     const td=document.createElement('td');td.dataset.boardCellItemId=itemId;td.dataset.boardCellKey=key;
+     if(key==='record'){
+      const select=document.createElement('input');select.type='checkbox';select.className='board-row-select';td.append(select);
+      const detail=document.createElement('button');detail.className='board-item-open';detail.textContent='Details';td.append(detail);
+      const trigger=document.createElement('button');trigger.className='board-inline-cell-trigger';trigger.textContent='Item '+itemId;td.append(trigger);
+     }else if(key==='col:11111111-1111-4111-8111-111111111111'){
+      const trigger=document.createElement('button');trigger.className='board-inline-cell-trigger';trigger.textContent='Value '+itemId;td.append(trigger);
+     }else td.textContent='Value '+itemId;
+     tr.append(td);
+    }
+    body.append(tr);
+   }
+   table.append(body);
+   const foot=document.createElement('tfoot'),summary=document.createElement('tr'),summaryCell=document.createElement('td');
+   summaryCell.dataset.boardSummaryKey='col:11111111-1111-4111-8111-111111111111';summary.append(summaryCell);foot.append(summary);table.append(foot);
+   host.append(table);
+  }
+  document.body.append(host);
+  const key='col:11111111-1111-4111-8111-111111111111';
+  const firstUnchanged=host.querySelector('td[data-board-cell-key="record"]');
+  const recordSelection=firstUnchanged.querySelector('.board-row-select');
+  const recordDetail=firstUnchanged.querySelector('.board-item-open');
+  const firstTarget=host.querySelector('td[data-board-cell-key="'+key+'"]');
+  const firstOther=host.querySelector('td[data-board-cell-key="col:22222222-2222-4222-8222-222222222222"]');
+  const timings=[],begin=performance.now();
+  const updated=patchBoardColumnDom(host,{key,title:'Renamed field',visible:true,renderCell:itemId=>{
+   const button=document.createElement('button');button.textContent='Updated '+itemId;button.dataset.updated='true';return button;
+  }});
+  timings.push(performance.now()-begin);
+  const stable=firstUnchanged===host.querySelector('td[data-board-cell-key="record"]')&&
+   recordSelection===firstUnchanged.querySelector('.board-row-select')&&
+   recordDetail===firstUnchanged.querySelector('.board-item-open')&&
+   firstOther===host.querySelector('td[data-board-cell-key="col:22222222-2222-4222-8222-222222222222"]');
+  const targetPatched=firstTarget.querySelector('[data-updated="true"]')?.textContent==='Updated item-0-0';
+  const hideStart=performance.now();
+  const hidden=patchBoardColumnDom(host,{key,title:'Renamed field',visible:false});
+  timings.push(performance.now()-hideStart);
+  const removed=!host.querySelector('thead th[data-column-key="'+key+'"]')&&
+   !host.querySelector('td[data-board-cell-key="'+key+'"]')&&
+   !host.querySelector('col[data-column-key="'+key+'"]');
+  const width=host.querySelector('table').getAttribute('width');
+  const missing=patchBoardColumnDom(host,{key,title:'Renamed field',visible:true});
+  const pendingHost=document.createElement('div'),pendingTable=document.createElement('table');
+  pendingTable.dataset.groupId='pending';
+  const pendingHead=document.createElement('thead'),pendingRow=document.createElement('tr'),pendingTh=document.createElement('th');
+  pendingTh.dataset.columnKey=key;pendingRow.append(pendingTh);pendingHead.append(pendingRow);pendingTable.append(pendingHead);
+  const pendingBody=document.createElement('tbody'),pendingTr=document.createElement('tr'),pendingTd=document.createElement('td');
+  pendingTd.dataset.boardCellKey=key;pendingTd.dataset.boardCellItemId='pending-item';
+  const pendingForm=document.createElement('form');pendingForm.dataset.inlineCellForm='true';pendingTd.append(pendingForm);
+  pendingTr.append(pendingTd);pendingBody.append(pendingTr);pendingTable.append(pendingBody);pendingHost.append(pendingTable);
+  const pending=patchBoardColumnDom(pendingHost,{key,title:'Pending',visible:false});
+  const draftPreserved=pendingTd.querySelector('[data-inline-cell-form]')===pendingForm&&
+   !!pendingHost.querySelector('thead th[data-column-key="'+key+'"]');
+  pendingForm.remove();
+  const afterEdit=patchBoardColumnDom(pendingHost,{key,title:'Pending',visible:false});
+  const hiddenAfterEdit=!pendingHost.querySelector('thead th[data-column-key="'+key+'"]');
+  const partialHost=document.createElement('div'),partialTable=document.createElement('table');
+  partialTable.dataset.groupId='partial';
+  const partialHead=document.createElement('thead'),partialHeader=document.createElement('tr'),partialTh=document.createElement('th');
+  partialTh.dataset.columnKey=key;const partialLabel=document.createElement('span');partialLabel.className='board-heading-label';partialTh.append(partialLabel);partialHeader.append(partialTh);partialHead.append(partialHeader);partialTable.append(partialHead);
+  const partialBody=document.createElement('tbody'),partialRow=document.createElement('tr'),partialCell=document.createElement('td');
+  partialCell.dataset.boardCellKey=key;partialCell.dataset.boardCellItemId='partial-item';
+  const partialTrigger=document.createElement('button');partialTrigger.className='board-inline-cell-trigger';partialTrigger.textContent='Before';partialCell.append(partialTrigger);
+  const partialForm=document.createElement('form');partialForm.dataset.inlineCellForm='true';partialCell.append(partialForm);
+  partialRow.append(partialCell);partialBody.append(partialRow);partialTable.append(partialBody);partialHost.append(partialTable);
+  const partial=patchBoardColumnDom(partialHost,{key,title:'After',visible:true,renderCell:()=>{
+   const button=document.createElement('button');button.className='board-inline-cell-trigger';button.textContent='After';return button;
+  }});
+  const partialDraftPreserved=partialCell.querySelector('[data-inline-cell-form]')===partialForm&&
+   partialCell.querySelector('.board-inline-cell-trigger')===partialTrigger&&
+   partialLabel.textContent==='After';
+  partialForm.remove();
+  const partialFlush=patchBoardColumnDom(partialHost,{key,title:'After',visible:true,renderCell:()=>{
+   const button=document.createElement('button');button.className='board-inline-cell-trigger';button.textContent='After';return button;
+  }});
+  const partialUpdated=partialCell.querySelector('.board-inline-cell-trigger')?.textContent==='After';
+  host.remove();pendingHost.remove();partialHost.remove();
+  return {tables:updated.tables,patchedCells:updated.cells,hiddenCells:hidden.cells,
+   stableNodes:stable,targetPatched,headerTitle:updated.status==='patched',
+   removed,width,visibleRestoreRequiresRender:missing.status==='missing',
+   pendingPreservesDraft:pending.status==='pending'&&draftPreserved,
+   pendingFlushRemovesColumn:afterEdit.status==='patched'&&hiddenAfterEdit,
+   partialPatchPreservesDraft:partial.status==='partial'&&partialDraftPreserved,
+   partialPatchFlushesAfterEdit:partialFlush.status==='patched'&&partialUpdated,
+   patchMs:Math.round(timings[0]*100)/100,hideMs:Math.round(timings[1]*100)/100};
  },
  criticalPath:()=>{
   let now=0;

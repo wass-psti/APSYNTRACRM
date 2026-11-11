@@ -152,6 +152,7 @@ import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED} from './time-tracker-overti
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
 import {applySearchVisibility} from './interaction-search.js';
 import {createFrameCoalescer} from './frame-coalescer.js';
+import {patchBoardColumnDom} from './board-column-dom.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
@@ -733,12 +734,14 @@ function mountInlineCellEditor(item,key){
  }
  return {cell,trigger,form};
 }
+let pendingBoardColumnDomPatch=null;
 function closeInlineCellEditor(stateCell=state.inlineCell,{focus=false}={}){
  if(!stateCell)return;
  const cell=findBoardCellNode(stateCell.itemId,stateCell.key);
  cell?.querySelector('[data-inline-cell-form]')?.remove();
  const trigger=cell?.querySelector('.board-inline-cell-trigger');
  if(trigger){trigger.hidden=false;if(focus)trigger.focus({preventScroll:true});}
+ flushPendingBoardColumnDomPatch();
 }
 function patchBoardCellDom(item,key,renderIndex=null){
  const cell=findBoardCellNode(item.id,key);
@@ -762,6 +765,7 @@ function patchBoardCellDom(item,key,renderIndex=null){
   }
  }
  next.focus({preventScroll:true});
+ flushPendingBoardColumnDomPatch();
  return true;
 }
 function applyBoardCellValue(item,key,value){
@@ -795,6 +799,97 @@ function updateBoardGroupSummary(groupId,renderIndex=null){
   if(candidate.dataset.groupId===groupId){table=candidate;break;}
  for(const cell of table?.querySelectorAll('[data-board-summary-key]')||[])
   cell.textContent=summary[cell.dataset.boardSummaryKey]??'—';
+}
+
+function currentOrdinaryBoardColumns(){
+ if(!state.board)return [];
+ return genericBoardColumns(state.board,{
+  primaryTitle:state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record',
+  columnLabels:state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{},
+  minimal:isItemOnlyBoard(state.board,state.boardUi),
+  hiddenVirtual:state.boardUi?.hiddenVirtual
+ });
+}
+function refreshBoardColumnMenu(){
+ const current=root.querySelector('.board-column-menu'),layout=activeBoardLayout();
+ if(!current||!layout)return;
+ const wasOpen=current.open,template=document.createElement('template');
+ template.innerHTML=boardColumnMenu(currentOrdinaryBoardColumns(),layout.pref);
+ const next=template.content.firstElementChild;
+ if(!next)return;
+ next.open=wasOpen;current.replaceWith(next);
+}
+function patchBoardColumn(key,{renderCells=true,refreshMenu=true}={}){
+ if(!state.board||state.tab!=='items'||moduleByBoardName(state.board.board?.name))return false;
+ const column=currentOrdinaryBoardColumns().find(entry=>entry.key===key);
+ const visible=!!column;
+ if(!visible&&root.querySelector('[data-inline-cell-form]')){
+  pendingBoardColumnDomPatch={key,boardId:state.boardId};return true;
+ }
+ renderCells=renderCells&&visible;
+ const index=renderCells?createBoardRenderIndex(state.board):null;
+ const itemsById=renderCells?new Map((state.board.items||[]).map(item=>[item.id,item])):null;
+ const result=patchBoardColumnDom(root,{
+  key,title:column?.title||key,visible,
+  renderCell:itemId=>{
+   if(!renderCells)return null;
+   const item=itemsById.get(itemId);if(!item)return null;
+   const template=document.createElement('template');
+   template.innerHTML=boardCellTriggerMarkup(item,key,state.board,index);
+   return template.content.firstElementChild||template.content.firstChild||null;
+  }
+ });
+ if(result.status==='pending'||result.status==='partial'){
+  pendingBoardColumnDomPatch={key,boardId:state.boardId};
+  if(refreshMenu&&result.status==='partial')refreshBoardColumnMenu();
+  return true;
+ }
+ if(result.status!=='patched'){
+  if(result.status==='invalid')return false;
+  if(result.status==='missing'&&visible&&activeBoardLayout()?.pref.hidden.includes(key)){
+   if(refreshMenu)refreshBoardColumnMenu();
+   return true;
+  }
+  if(root.querySelector('[data-inline-cell-form]')){pendingBoardColumnDomPatch=key;return true;}
+  render();return true;
+ }
+ if(refreshMenu)refreshBoardColumnMenu();
+ return true;
+}
+function flushPendingBoardColumnDomPatch(){
+ const pending=pendingBoardColumnDomPatch;
+ if(!pending)return;
+ if(pending.boardId!==state.boardId){pendingBoardColumnDomPatch=null;return;}
+ if(root.querySelector('[data-inline-cell-form]'))return;
+ pendingBoardColumnDomPatch=null;
+ patchBoardColumn(pending.key);
+}
+function patchBoardColumnHeaders(){
+ const columns=currentOrdinaryBoardColumns();
+ let complete=true;
+ for(const column of columns){
+  if(column.key==='record'||column.key.startsWith('col:'))
+   if(root.querySelector('thead th[data-column-key="'+column.key+'"]'))
+    complete=patchBoardColumn(column.key,{renderCells:false,refreshMenu:false})&&complete;
+ }
+ if(complete)refreshBoardColumnMenu();
+ return complete;
+}
+async function readBackBoardColumnMutation(snapshot,receipt){
+ if(!boardHistoryAuthorized(snapshot))return null;
+ const fresh=await db.board(snapshot.boardId);
+ if(!boardHistoryAuthorized(snapshot)||fresh?.board?.id!==snapshot.boardId||
+    fresh?.board?.workspace_id!==snapshot.workspaceId)
+  return null;
+ const received=Date.parse(receipt?.updated_at||'');
+ const current=Date.parse(fresh.board.updated_at||'');
+ if(!Number.isFinite(received)||!Number.isFinite(current)||current<received)
+  throw new ApiError('The saved column revision could not be reconciled. Refresh the board before continuing.',409);
+ if(['create','update'].includes(receipt?.action)&&
+    !fresh.columns?.some(column=>column.id===receipt.column_id))
+  throw new ApiError('The saved column was not present in the authoritative board readback.',409);
+ state.board=fresh;
+ return fresh;
 }
 
 function bulkReadyFor(board){
@@ -3995,21 +4090,19 @@ async function verifyInlineColumnBoard(snapshot){
     state.boardId!==snapshot.boardId||state.context?.user_id!==snapshot.userId||
     state.context?.workspace_id!==snapshot.workspaceId)
   throw new ApiError('Board context or manager permission changed.',403);
- const [user,ctx,fresh,allowed]=await Promise.all([
-  auth.getVerifiedUser(),db.context(),db.board(snapshot.boardId),
-  db.allowed(snapshot.boardId,'manage')
+ const [user,ctx,fresh]=await Promise.all([
+  auth.getVerifiedUser(),db.context(),db.board(snapshot.boardId)
  ]);
  if(user?.id!==snapshot.userId||ctx?.user_id!==snapshot.userId||
     ctx?.profile?.status!=='active'||ctx?.workspace_id!==snapshot.workspaceId||
-    allowed!==true||!canManuallyEditBoard(fresh?.board,true)||
+    !canManuallyEditBoard(fresh?.board,true)||
     fresh?.board?.id!==snapshot.boardId||
     fresh?.board?.workspace_id!==snapshot.workspaceId)
-  throw new ApiError('Signed board manager authorization is no longer valid.',403);
+  throw new ApiError('Signed board context is no longer valid.',403);
  if(fresh.board.updated_at!==snapshot.boardRevision)
   throw new ApiError('Board columns changed since this menu was opened. Refresh and review.',409);
- const session=await db.rpc('wm_board_ui_read',{p_board_id:snapshot.boardId});
- if(session?.board_id!==snapshot.boardId)
-  throw new ApiError('Active signed board session is required.',403);
+ // The subsequent writer performs the authoritative MANAGE + active-session
+ // checks itself. Avoid duplicate work_board_access and wm_board_ui_read RPCs.
  return fresh;
 }
 function inlineColumnSnapshot(){
@@ -4027,9 +4120,11 @@ function contextualColumnEditor(key){
    async fd=>{
     const fresh=await verifyInlineColumnBoard(snapshot);
     const settings=await boardStructureClient.read(snapshot.boardId);
-    await boardStructureClient.save(fresh,{...settings,
+    const saved=await boardStructureClient.save(fresh,{...settings,
      primaryLabel:String(fd.get('primaryLabel')||'')});
-    await loadBoard(snapshot.boardId,'items');
+    if(!boardHistoryAuthorized(snapshot))return;
+    state.boardUi=saved;
+    if(!patchBoardColumnHeaders())render();
    });
   return;
  }
@@ -4054,9 +4149,11 @@ function contextualColumnEditor(key){
   const config=['status','dropdown'].includes(update.type)?
    parseChoiceConfig(update.type,fd.get('options'),sameType?target.config:{}):
    sameType?target.config:{};
-  await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
+  const receipt=await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
    name:update.name,type:update.type,config,visible:update.visible});
-  await loadBoard(snapshot.boardId,'items');
+  const updated=await readBackBoardColumnMutation(snapshot,receipt);
+  if(!updated)return;
+  if(!patchBoardColumn(key))render();
  });
 }
 function contextualColumnDelete(key){
@@ -4118,9 +4215,9 @@ function contextualColumnCreate(){
   const fresh=await verifyInlineColumnBoard(snapshot);
   const selection=resolveColumnTypeSelection(String(fd.get('type')||'text'),
    fd.get('options'));
-  await boardStructureClient.mutate(fresh,{action:'create',name:String(fd.get('name')||''),
+  const receipt=await boardStructureClient.mutate(fresh,{action:'create',name:String(fd.get('name')||''),
    type:selection.type,config:parseChoiceConfig(selection.type,selection.options)});
-  await loadBoard(snapshot.boardId,'items');
+  if(await readBackBoardColumnMutation(snapshot,receipt))render();
  },{submitLabel:'Add column'});
 }
 async function openBoardStructure(){
@@ -4270,14 +4367,21 @@ async function openBoardStructure(){
     const columnLabels=Object.fromEntries(describeBoardColumns(detail)
      .filter(col=>col.kind==='custom').map(col=>
       [col.id,String(fd.get('columnLabel:'+col.id)||col.name||'').trim()]));
-    await boardStructureClient.save(detail,{
+    const saved=await boardStructureClient.save(detail,{
      ...settings,primaryLabel:String(fd.get('primaryLabel')||''),
      tabs,columnLabels
     });
+    if(!authorized())return;
+    const tabsChanged=JSON.stringify(settings.tabs)!==JSON.stringify(saved.tabs);
+    state.boardUi=saved;
+    hideModal();
+    if(tabsChanged||!patchBoardColumnHeaders())render();
+    toast('Board configuration saved.');
+    return;
    }else if(form.dataset.structureForm==='create'){
     const selection=resolveColumnTypeSelection(String(fd.get('type')||'text'),
      fd.get('options'));
-    await boardStructureClient.mutate(detail,{
+    const receipt=await boardStructureClient.mutate(detail,{
      action:'create',name:String(fd.get('name')||''),
      type:selection.type,
      config:['phone','rating','percentage'].includes(selection.type)?
@@ -4285,9 +4389,11 @@ async function openBoardStructure(){
        max:fd.get('ratingMax'),decimals:fd.get('percentageDecimals')
       }):parseChoiceConfig(selection.type,selection.options)
     });
+    const updated=await readBackBoardColumnMutation(snapshot,receipt);
+    if(!updated)return;
    }else return;
    if(!authorized())return;
-   hideModal();await loadBoard(snapshot.boardId,state.tab);
+   hideModal();render();
    toast('Board configuration saved.');
   }catch(err){
    if(authorized())notice(err);
@@ -4360,12 +4466,15 @@ async function openBoardStructure(){
     (column.visible?'checked ':'')+'/> Visible on board</label></div>',
     async fd=>{
      if(!boardHistoryAuthorized(snapshot))throw new ApiError('Board context changed.',403);
-     await boardStructureClient.mutate(detail,{action:'update',columnId:column.id,
+     const nextVisible=fd.has('visible');
+     const receipt=await boardStructureClient.mutate(detail,{action:'update',columnId:column.id,
       name:String(fd.get('name')||''),type:String(fd.get('type')||''),
       config:parseChoiceConfig(String(fd.get('type')||''),fd.get('options'),
        String(fd.get('type')||'')===column.type?column.config:{}),
-      visible:fd.has('visible')});
-     await loadBoard(snapshot.boardId,state.tab);
+      visible:nextVisible});
+     const updated=await readBackBoardColumnMutation(snapshot,receipt);
+     if(!updated)return;
+     if(!patchBoardColumn('col:'+column.id))render();
     });
   }else{
    const confirmation=window.prompt('Deleting '+column.name+
