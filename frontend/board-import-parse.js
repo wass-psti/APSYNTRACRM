@@ -163,11 +163,13 @@ function zipDirectory(buffer){
   entriesOnDisk=le(view,eocd+8,2),count=le(view,eocd+10,2),
   directorySize=le(view,eocd+12,4),offset=le(view,eocd+16,4);
  const locator=eocd-20;
+ let zip64RecordOffset=null;
  const hasZip64Locator=locator>=0&&le(view,locator,4)===0x07064b50;
  if(hasZip64Locator){
   if(le(view,locator+4,4)!==0||le(view,locator+16,4)!==1)
    invalid('Multi-disk ZIP64 XLSX archives are not supported.');
   const zip64Offset=zip64UInt64(view,locator+8,locator).value;
+  zip64RecordOffset=zip64Offset;
   if(zip64Offset+56>locator||le(view,zip64Offset,4)!==0x06064b50)
    invalid('Damaged ZIP64 XLSX end-of-central-directory record.');
   const recordSize=zip64UInt64(view,zip64Offset+4,locator).value;
@@ -197,7 +199,7 @@ function zipDirectory(buffer){
   invalid('Multi-disk XLSX archives are not supported.');
  if(!Number.isSafeInteger(count)||!Number.isSafeInteger(directorySize)||
     !Number.isSafeInteger(offset)||count>MAX_ZIP_ENTRIES||
-    offset>=buffer.byteLength||offset+directorySize>(hasZip64Locator?locator:eocd))
+    offset>=buffer.byteLength||offset+directorySize>(hasZip64Locator?zip64RecordOffset:eocd))
   invalid('XLSX ZIP directory exceeds the supported workbook limits.');
  const directoryEnd=offset+directorySize;
  const entries=new Map();let p=offset;
