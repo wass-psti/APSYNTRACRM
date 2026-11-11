@@ -28,6 +28,60 @@ const forbidFormula=s=>{
  if(/^[=+@]/.test(s)||/^-(?!\d+(?:\.\d+)?$)/.test(s))
   deny('Spreadsheet formula-like text is not accepted. Replace it with literal data.');
 };
+function parseImportNumber(value){
+ let text=clean(value);
+ if(!text)return null;
+ let negative=false;
+ if(/^\(.*\)$/.test(text)){negative=true;text=text.slice(1,-1).trim();}
+ text=text.replace(/^(?:USD|PHP|EUR|GBP|JPY)\s*/i,'')
+  .replace(/[₱$€£¥₹]/g,'').replace(/\s/g,'');
+ if(!/^[+-]?[\d.,]+$/.test(text))return null;
+ const comma=text.lastIndexOf(','),dot=text.lastIndexOf('.');
+ if(comma>=0&&dot>=0){
+  const decimal=comma>dot?',':'.',group=decimal===','?'.':',';
+  const parts=text.split(decimal);
+  if(parts.length!==2||!/^\d{1,3}(?:[.,]\d{3})+$/.test(parts[0].replace(/^[+-]/,''))||
+     !/^\d+$/.test(parts[1]))return null;
+  text=parts[0].replaceAll(group,'').replace(decimal,'.')+parts[1].replace(/^$/,'');
+ }else if(comma>=0){
+  const parts=text.split(',');
+  if(parts.length>2){
+   if(!/^\d{1,3}$/.test(parts[0].replace(/^[+-]/,''))||parts.slice(1).some(p=>!/^\d{3}$/.test(p)))return null;
+   text=parts.join('');
+  }else if(parts[1].length===3){
+   text=parts.join('');
+  }else if(parts[1].length>=1&&parts[1].length<=2){
+   text=parts[0]+'.'+parts[1];
+  }else return null;
+ }else if((text.match(/\./g)||[]).length>1){
+  const parts=text.split('.');
+  if(!/^\d{1,3}$/.test(parts[0].replace(/^[+-]/,''))||parts.slice(1).some(p=>!/^\d{3}$/.test(p)))return null;
+  text=parts.join('');
+ }
+ const number=Number(text);
+ if(!Number.isFinite(number))return null;
+ return negative?-Math.abs(number):number;
+}
+function normalizeImportDate(value){
+ const text=clean(value);
+ if(validDate(text))return text;
+ let match=text.match(/^(\d{4})[/.](\d{1,2})[/.](\d{1,2})$/);
+ if(match){
+  const iso=match[1]+'-'+match[2].padStart(2,'0')+'-'+match[3].padStart(2,'0');
+  return validDate(iso)?iso:null;
+ }
+ match=text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+ if(match){
+  const a=Number(match[1]),b=Number(match[2]),year=match[3];
+  let month,day;
+  if(a>12&&b>=1&&b<=12){day=a;month=b;}
+  else if(b>12&&a>=1&&a<=12){month=a;day=b;}
+  else return null;
+  const iso=year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  return validDate(iso)?iso:null;
+ }
+ return null;
+}
 export function inferImportType(header,values=[]){
  const label=key(header),sample=values.map(clean).filter(Boolean).slice(0,100);
  if(label==='status'||label==='priority')return 'status';
