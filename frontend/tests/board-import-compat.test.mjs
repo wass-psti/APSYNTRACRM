@@ -21,6 +21,23 @@ function crc32(bytes){
 function zip64Extra(raw,packed){
  return Buffer.concat([u16(1),u16(16),u64(raw),u64(packed)]);
 }
+function makeZip64End(buffer){
+ const eocd=buffer.length-22;
+ const entries=buffer.readUInt16LE(eocd+10);
+ const directorySize=buffer.readUInt32LE(eocd+12);
+ const directoryOffset=buffer.readUInt32LE(eocd+16);
+ const record=Buffer.concat([
+  u32(0x06064b50),u64(44),u16(45),u16(45),u32(0),u32(0),
+  u64(entries),u64(entries),u64(directorySize),u64(directoryOffset)
+ ]);
+ const locator=Buffer.concat([u32(0x07064b50),u32(0),u64(eocd),u32(1)]);
+ const legacy=Buffer.from(buffer.subarray(eocd));
+ legacy.writeUInt16LE(0xffff,8);
+ legacy.writeUInt16LE(0xffff,10);
+ legacy.writeUInt32LE(0xffffffff,12);
+ legacy.writeUInt32LE(0xffffffff,16);
+ return Buffer.concat([buffer.subarray(0,eocd),record,locator,legacy]);
+}
 function makeZip(entries){
  const local=[],central=[];
  let at=0;
@@ -182,6 +199,20 @@ async function parseWithFixtureDom(bytes){
  }
 }
 const LF=String.fromCharCode(10),CRLF=String.fromCharCode(13,10);
+test('CSV: Windows-1252 and BOM-less UTF-16 encodings are decoded without losing text',async()=>{
+ const windows1252=Buffer.from('Name,Note\\nCaf\\xe9,Cr\\xe8me','binary');
+ const cp=await parseImportFile(new File([windows1252],'legacy.csv'));
+ assert.deepEqual(cp.sheets[0].rows,[['Café','Crème']]);
+ const utf16le=Buffer.from('Name,Note\\nAlice,Café','utf16le');
+ const le=await parseImportFile(new File([utf16le],'utf16le.csv'));
+ assert.deepEqual(le.sheets[0].rows,[['Alice','Café']]);
+ const utf16be=Buffer.from('Name,Note\\nAlice,Café','utf16le');
+ for(let i=0;i<utf16be.length;i+=2){
+  const byte=utf16be[i];utf16be[i]=utf16be[i+1];utf16be[i+1]=byte;
+ }
+ const be=await parseImportFile(new File([utf16be],'utf16be.csv'));
+ assert.deepEqual(be.sheets[0].rows,[['Alice','Café']]);
+});
 test('CSV: semicolon, quoted multiline fields, UTF-16LE BOM, and short rows',async()=>{
  const csv=parseDelimited(['Name;Note;Value','"A, B";"first'+CRLF+'second";8','C;yes',''].join(CRLF));
  assert.deepEqual(csv.headers,['Name','Note','Value']);
@@ -317,21 +348,30 @@ test('XLSX: ZIP64 per-entry sizes require valid central and local extra metadata
   /local entry sizes or checksum do not match/);
 });
 
-test('XLSX: unsupported compression, ZIP64 directory and oversized entries remain rejected',async()=>{
+test('XLSX: ZIP64 end-of-central-directory metadata is supported and validated',async()=>{
  const unsupported=workbookEntries();
  unsupported[0].method=12;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(unsupported)),
   /Unsupported XLSX compression method/);
- const zip64Directory=makeZip(workbookEntries());
- const eocd=zip64Directory.length-22;
- zip64Directory.writeUInt16LE(0xffff,eocd+8);
- zip64Directory.writeUInt16LE(0xffff,eocd+10);
- await assert.rejects(()=>parseWithFixtureDom(zip64Directory),
-  /ZIP64 end-of-central-directory records/);
+ const zip64Directory=makeZip64End(makeZip(workbookEntries()));
+ const parsed=await parseWithFixtureDom(zip64Directory);
+ assert.equal(parsed.sheets[0].name,'Contacts');
+ assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
+ const damaged=Buffer.from(zip64Directory);
+ const locator=damaged.length-22-20;
+ damaged.writeUInt32LE(0,locator+8);
+ await assert.rejects(()=>parseWithFixtureDom(damaged),/Damaged ZIP64 XLSX end-of-central-directory/);
  const oversized=workbookEntries().map(entry=>({...entry,zip64:true}));
  oversized[0].declaredSize=24*1024*1024+1;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(oversized)),
   /24 MB uncompressed limit/);
+});
+test('XLSX: unused package media does not consume the parsed XML expansion budget',async()=>{
+ const entries=[...workbookEntries(),{
+  name:'xl/media/unused-image.png',xml:'x'.repeat(25*1024*1024),method:8
+ }];
+ const parsed=await parseWithFixtureDom(makeZip(entries));
+ assert.equal(parsed.sheets[0].rows.length,2);
 });
 
 test('XLSX: encrypted ZIP and worksheet path traversal are rejected',async()=>{
