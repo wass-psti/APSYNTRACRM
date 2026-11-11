@@ -4,6 +4,7 @@
  * No fabricated memberships, independent auth or browser-persisted scope.
  */
 import {validUuid} from './data.js';
+import {workspaceCreatorUiAllowed} from './ws10-ownership.js';
 
 export const WS01_DISCOVERY_ENABLED=true;
 export const WS01_CREATION_ENABLED=true;
@@ -317,6 +318,9 @@ function detailsContent(row,{canSwitch=false}={}){
    'This is your current server-selected workspace.':
    (canSwitch?'This signed membership can be selected. The server will recheck access and reload the active workspace.':
    'You can inspect this authorized membership, but changing the active workspace requires the separate signed switching contract.'))+'</p>'+
+  (row.relation==='owner'?
+   '<p class="ws01-details-note">Ownership transfers will be limited to the current owner or a server-approved IT Admin. The recipient must already be a verified workspace member.</p>'+
+   '<button type="button" disabled title="Ownership transfer requires approved signed backend">Transfer workspace ownership — pending activation</button>':'')+
   '<div class="ws01-details-actions"><button type="button" data-ws01-action="back">Back to workspaces</button>'+
   '<button type="button" data-ws01-action="configure">Configuration</button>'+
   (row.active?'<button type="button" class="ws01-details-primary" data-ws01-action="open-current">Open current workspace</button>':
@@ -613,14 +617,14 @@ function openBrowse(catalog,options={}){
  });
  input.focus();
 }
-function createContent({enabled=WS01_CREATION_ENABLED}={}){
+function createContent({enabled=WS01_CREATION_ENABLED,restrictedReason=''}={}){
  const active=enabled===true;
  return '<section class="ws01-create-card" role="dialog" aria-modal="true"'+
   ' aria-labelledby="ws01-create-title" aria-describedby="ws01-create-description">'+
   '<header class="ws01-create-heading"><div><h2 id="ws01-create-title">Add new workspace</h2>'+
   '<p class="ws01-create-subtitle" id="ws01-create-description">'+
    (active?'Create a workspace with your existing verified account. New workspaces are not automatically selected.':
-    'Workspace creation is not activated. You can validate a draft, but nothing will be saved.')+
+    'Workspace creation is restricted to approved IT Admins and workspace owners. Nothing will be saved until the signed server policy is active.')+
    '</p></div>'+
   '<button type="button" class="ws01-close" data-ws01-close aria-label="Close create workspace">×</button></header>'+
   '<div class="ws01-create-symbol" aria-hidden="true">N</div>'+
@@ -638,7 +642,7 @@ function createContent({enabled=WS01_CREATION_ENABLED}={}){
    'and workspace isolation remain mandatory.</p>'+
   '<p class="ws01-create-state">'+(active?
    'Creation requires a valid signed session and explicit server authorization.':
-   'Creation unavailable — pending authorized backend activation.')+'</p>'+
+   'Creation unavailable — '+escape(restrictedReason||'pending authorized backend activation')+'.')+'</p>'+
   '<p class="ws01-form-feedback" role="status" aria-live="polite" aria-atomic="true"></p>'+
   '<footer class="ws01-create-footer">'+
    '<button type="button" class="ws01-create-cancel" data-ws01-close>Cancel</button>'+
@@ -647,8 +651,15 @@ function createContent({enabled=WS01_CREATION_ENABLED}={}){
 }
 function openCreate(catalog,options={}){
  const {lifecycle,selectorSession}=options;
- const enabled=WS01_CREATION_ENABLED&&typeof lifecycle?.create==='function';
- const layer=panel(createContent({enabled}),'create');
+ const current=selectorSession?.catalog||catalog;
+ const activeRow=current?.rows?.find(row=>row.active===true);
+ const creatorPolicy=workspaceCreatorUiAllowed({
+  catalog:current,workspaceId:activeRow?.id,userId:options.signedUserId,
+  adminReceipt:options.creatorReceipt
+ });
+ const enabled=WS01_CREATION_ENABLED&&creatorPolicy.allowed&&
+   typeof lifecycle?.create==='function';
+ const layer=panel(createContent({enabled,restrictedReason:creatorPolicy.reason}),'create');
  const form=layer.querySelector('#ws01-proposal');
  const feedback=layer.querySelector('.ws01-form-feedback');
  const field=form.querySelector('#ws01-name');
@@ -717,7 +728,36 @@ function openCreate(catalog,options={}){
    browse.type='button';
    browse.textContent='Browse authorized workspaces';
    browse.addEventListener('click',()=>openBrowse(selectorSession?.catalog||catalog,options));
-   form.querySelector('.ws01-create-footer').prepend(browse);
+   const open=document.createElement('button');
+   open.type='button';
+   open.textContent='Open new workspace';
+   // Only authoritative session selection may enter a newly created
+   // workspace. The creation receipt deliberately reports active:false.
+   const ready=switchingUiReady(options)&&validUuid(result.receipt.workspaceId);
+   open.disabled=!ready;
+   if(!ready)open.title='Signed workspace switching is not active.';
+   open.addEventListener('click',async()=>{
+    if(!ready||open.disabled||!validUuid(result.receipt.workspaceId))return;
+    open.disabled=true;
+    feedback.textContent='Verifying ownership and switching your signed workspace…';
+    try{
+     const verified=await lifecycle.discover();
+     const target=verified?.rows?.find(row=>
+      row.id===result.receipt.workspaceId&&row.relation==='owner'&&
+      row.verifiedScope==='SIGNED_MEMBER_RPC'&&row.active===false);
+     const current=verified?.rows?.find(row=>
+      row.active===true&&row.verifiedScope==='SIGNED_MEMBER_RPC');
+     if(!target||!current)throw Error('New workspace not verified in signed catalog');
+     await requestSignedWorkspaceSwitch({
+      lifecycle,workspaceId:target.id,expectedWorkspaceId:current.id
+     });
+     options.onWorkspaceSwitched?.();
+    }catch{
+     feedback.textContent='Workspace created, but verified switching is unavailable. No workspace was changed.';
+     open.disabled=false;
+    }
+   });
+   form.querySelector('.ws01-create-footer').prepend(open,browse);
   }else if(result.status==='REQUEST_CONFLICT'){
    requestId=null;requestDraft=null;
   }

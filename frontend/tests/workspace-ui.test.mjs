@@ -120,13 +120,13 @@ test('workspace creation readiness does not override the server authorization bo
 test('create modal explains blocked lifecycle and defaults privacy closed without misleading save action',()=>{
  const module=readFileSync('frontend/workspace-ui.js','utf8');
  const css=readFileSync('frontend/workspace-ui.css','utf8');
- assert.match(module,/function createContent\(\{enabled=WS01_CREATION_ENABLED\}=\{\}\)/);
+ assert.match(module,/function createContent\(\{enabled=WS01_CREATION_ENABLED,restrictedReason/);
  assert.match(module,/aria-labelledby="ws01-create-title" aria-describedby="ws01-create-description/);
  assert.match(module,/id="ws01-proposal" novalidate/);
  assert.match(module,/name="privacy" value="closed" checked/);
  assert.match(module,/name="privacy" value="open"/);
  assert.match(module,/Open is workspace metadata only/);
- assert.match(module,/Creation unavailable — pending authorized backend activation/);
+ assert.match(module,/Creation unavailable — /);
  assert.match(module,/type="submit" class="ws01-primary"/);
  assert.match(module,/active\?'Create workspace':'Validate draft'/);
  assert.match(module,/if\(!enabled\)\{/);
@@ -220,7 +220,7 @@ test('signed create UI is enabled with guarded server-denial and idempotency bra
  const module=readFileSync('frontend/workspace-ui.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(module,/WS01_CREATION_ENABLED=true/);
- assert.match(module,/function createContent\(\{enabled=WS01_CREATION_ENABLED\}=\{\}\)/);
+ assert.match(module,/function createContent\(\{enabled=WS01_CREATION_ENABLED,restrictedReason/);
  assert.match(module,/if\(!enabled\)\{/);
  assert.match(module,/await submitWorkspaceCreation\(\{proposal:validated/);
  assert.match(module,/globalThis\.crypto\?\.randomUUID\?\.\(\)/);
@@ -231,7 +231,7 @@ test('signed create UI is enabled with guarded server-denial and idempotency bra
  assert.match(module,/Create workspace/);
  assert.match(module,/Validate draft/);
  assert.match(app,/new WorkspaceLifecycleClient\(\{auth,api:db\}\)/);
- assert.match(app,/lifecycle:workspaceLifecycleClient,onOpenCurrent:/);
+ assert.match(app,/lifecycle:workspaceLifecycleClient,signedUserId:actor,creatorReceipt,onOpenCurrent:/);
  assert.doesNotMatch(module,/fetch\(|localStorage|sessionStorage/);
 });
 
@@ -254,7 +254,7 @@ test('integration is limited to authorized workspace context and never executes 
  assert.match(module,/WS01_CREATION_ENABLED=true/);
  assert.match(module,/No workspace was created/);
  assert.match(app,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
- assert.match(app,/openWorkspaceSelector\(\{id:state\.context\.workspace_id,name:workspaceName\(\)\},\s*\{lifecycle:workspaceLifecycleClient,onOpenCurrent:/);
+ assert.match(app,/openWorkspaceSelector\(\{id:workspaceId,name:workspaceName\(\)\},\s*\{lifecycle:workspaceLifecycleClient,signedUserId:actor,creatorReceipt,onOpenCurrent:/);
  assert.match(app,/closeWorkspacePanels\(\);clearBulkActivation\(\)/);
  assert.match(index,/frontend\/workspace-ui\.css/);
  assert.match(smoke,/frontend\/workspace-ui\.js/);

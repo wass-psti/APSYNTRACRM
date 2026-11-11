@@ -152,12 +152,12 @@ async function run(){
    trials[variant].push(snapshot);
   }
   const base=trials.baseline,optimized=trials.optimized;
-  assert.ok(base.every(x=>x.count===41),'baseline stylesheet count must be 41');
+  assert.ok(base.every(x=>x.count===STYLE_SOURCES.length),'baseline stylesheet count must match manifest');
   assert.ok(optimized.every(x=>x.count===1),'bundled stylesheet count must be 1');
   for(let i=0;i<base.length;i++)assert.deepEqual(optimized[i].styles,base[i].styles,
    'Computed CSS must not change after bundling');
   const times=values=>values.map(x=>x.loadMs);
-  console.log('CSS_PROFILE: '+JSON.stringify({baseline:{requests:41,decodedBytes:base[0].bytes,
+  console.log('CSS_PROFILE: '+JSON.stringify({baseline:{requests:STYLE_SOURCES.length,decodedBytes:base[0].bytes,
    loadMs:times(base)},bundled:{requests:1,decodedBytes:optimized[0].bytes,
    loadMs:times(optimized)},samples:base.length,representativeElements:Object.keys(base[0].styles).length}));
   console.log('CSS_CASCADE_PASS: identical computed style for representative elements across three isolated trials');
