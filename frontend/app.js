@@ -3307,13 +3307,16 @@ function redrawBoardHistory({focus=false}={}){
   host.innerHTML=renderBoardColumnRecoveryList(boardHistory.recoveries)+
    renderBoardAuditCursorPage(result,{
    pageIndex:boardHistory.index,busy:boardHistory.busy,error:boardHistory.error,
-   cachedNext:boardHistory.index<boardHistory.pages.length-1
+   cachedNext:boardHistory.index<boardHistory.pages.length-1,
+   avatarPaths:boardHistory.avatarPaths
   });
+  void mountAvatarImages(host,profileAvatarClient,null,null);
   return;
  }
  const results=renderBoardActivityResults(boardHistory.rows,boardHistory);
  boardHistory.page=results.page;
  host.innerHTML=renderBoardColumnRecoveryList(boardHistory.recoveries)+results.html;
+ void mountAvatarImages(host,profileAvatarClient,null,null);
  if(focus){
   const search=host.querySelector('#board-activity-search');
   search?.focus();search?.setSelectionRange(search.value.length,search.value.length);
@@ -3332,9 +3335,19 @@ async function openBoardActivity(){
   await loadBoardAuditCursorPage(db,snapshot.boardId):
   await db.boardEvents(snapshot.boardId,100);
  if(!boardHistoryAuthorized(snapshot))return;
+ const signedPeople=normalizeBoardPeople(state.board,{
+  boardId:snapshot.boardId,workspaceId:snapshot.workspaceId});
+ const actorAvatars=new Map();
+ if(signedPeople.status==='SIGNED_MEMBERSHIP'){
+  for(const person of signedPeople.people)
+   if(person.avatarPath)actorAvatars.set(person.id,person.avatarPath);
+ }
+ if(snapshot.userId===state.context?.user_id&&
+    typeof state.context?.profile?.avatar_path==='string')
+  actorAvatars.set(snapshot.userId,state.context.profile.avatar_path);
  boardHistory=cursorMode?
-  {...snapshot,recoveries,mode:'cursor',pages:[events],index:0,busy:false,error:''}:
-  {...snapshot,recoveries,rows:normalizeBoardActivity(events),limit:100,
+  {...snapshot,recoveries,avatarPaths:actorAvatars,mode:'cursor',pages:[events],index:0,busy:false,error:''}:
+  {...snapshot,recoveries,avatarPaths:actorAvatars,rows:normalizeBoardActivity(events),limit:100,
    search:'',type:'all',actor:'all',page:0,busy:false,error:''};
  hideModal();modal=document.createElement('div');
  modal.className='modal-backdrop board-history-backdrop';
