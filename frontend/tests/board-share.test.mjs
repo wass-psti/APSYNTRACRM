@@ -68,9 +68,10 @@ test('share preview escapes untrusted board names and creates no link',()=>{
  });
  assert.match(html,/&lt;img/);
  assert.doesNotMatch(html,/<img|href=|data-action=".*issue"/);
- assert.match(html,/disabled>Send invitation/);
- assert.match(html,/type="email"/);
- assert.match(html,/Invite by email/);
+ assert.match(html,/Invite someone new/);
+ assert.match(html,/data-board-share-workspace-invite/);
+ assert.match(html,/Open workspace invitations/);
+ assert.doesNotMatch(html,/type="email"/);
  assert.doesNotMatch(html,/Copy invitation link|data-board-share-lab[^>]*href/);
  assert.match(html,/requires separate security review/);
  assert.match(html,/data-board-share-people/);
@@ -96,7 +97,9 @@ test('integration preserves existing Work Management backend, auth and invite fl
 test('main-based integration does not activate or import disposable invitation SQL',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const ui=readFileSync('frontend/board-share.js','utf8');
- assert.match(ui,/data-board-share-email-form/);
+ assert.match(ui,/renderBoardAccessChoices/);
+ assert.match(ui,/data-bs09-tab/);
+ assert.match(ui,/data-board-share-workspace-invite/);
  assert.doesNotMatch(ui,/functions\/v1\/resource-email-invite/);
  assert.doesNotMatch(app,/wm_add_board_member\(/);
  assert.match(app,/renderBoardPeople\(people\)/);
