@@ -162,6 +162,18 @@ test('XLSX: malicious understated inflated size is rejected while streaming',asy
  const parts=workbookEntries();parts[0].declaredSize=2;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(parts)),/expands beyond its declared/);
 });
+test('XLSX: valid stored OOXML entry above 4 MB is accepted below file and aggregate limits',async()=>{
+ const entries=workbookEntries();
+ entries[0].method=0;
+ entries[0].xml='\\n'.repeat(4*1024*1024+1024)+entries[0].xml;
+ const zip=makeZip(entries);
+ assert.ok(zip.byteLength<8*1024*1024);
+ const parsed=await parseWithFixtureDom(zip);
+ assert.equal(parsed.sheets.length,1);
+ assert.deepEqual(parsed.sheets[0].headers,['Name','Score']);
+ assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
+});
+
 test('XLSX: highly compressible valid OOXML remains accepted within absolute size limits',async()=>{
  const entries=workbookEntries();
  // Normal OOXML often contains repetitive XML/whitespace. This single
@@ -185,9 +197,9 @@ test('XLSX: unsupported compression, ZIP64 and oversized entries retain explicit
  await assert.rejects(()=>parseWithFixtureDom(makeZip(zip64)),
   /ZIP64 XLSX workbook entries/);
  const oversized=workbookEntries();
- oversized[0].declaredSize=4*1024*1024+1;
+ oversized[0].declaredSize=24*1024*1024+1;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(oversized)),
-  /4 MB decompressed or 8 MB compressed entry limit/);
+  /24 MB uncompressed XML limit/);
 });
 
 test('XLSX: encrypted ZIP and worksheet path traversal are rejected',async()=>{
