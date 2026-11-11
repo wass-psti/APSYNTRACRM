@@ -2,6 +2,7 @@
 import {ApiError} from './session.js';
 import {canManuallyEditBoard} from './board-inline-items.js';
 import {parseImportFile} from './board-import-parse.js';
+import {normalizeImportFailure} from './board-import-errors.js';
 import {choiceCreationPreview,provisionImportChoiceColumn} from './board-import-choice-setup.js';
 import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
 import {importMappingReadiness,skipPendingImportChoice,
@@ -278,7 +279,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    state.allowColumns=state.manage;
    state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
    state.step=2;state.allowColumns=state.manage;
-  }catch(error){state.error=String(error.message||error);}
+  }catch(error){state.error=normalizeImportFailure(error,'file-read').message;}
   finally{state.busy=false;render();}
  }
  function adjustMapping(index,value){
@@ -316,23 +317,27 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    state.allowColumns=state.manage;state.confirmed=false;
    state.notice='Configured '+mapping.choiceType+' column created. Review and approve the remaining ordinary columns before importing.';
   }catch(error){
-   state.error=String(error.message||error);
-   if(error?.schemaOutcomeUncertain===true)state.uncertain=true;
+   const failure=normalizeImportFailure(error,'schema-write');
+   state.error=failure.message;
+   if(failure.uncertain)state.uncertain=true;
   }finally{state.busy=false;render();}
  }
  async function doImport(){
   if(state.busy||state.uncertain||!state.confirmed||!state.plan)return;
   state.busy=true;state.error='';render();
+  let phase='preflight';
   try{
    const plan=computePlan();
+   phase='record-write';
    const receipt=await executeBoardImport({api,auth,plan});
    state.complete=receipt;state.step=4;
    try{await onComplete(receipt);}catch{
     state.error='Import committed, but the board refresh failed. Refresh the board before starting another import.';
    }
   }catch(error){
-   state.uncertain=error?.importOutcomeUncertain===true;
-   state.error=String(error.message||error);
+   const failure=normalizeImportFailure(error,phase);
+   state.uncertain=failure.uncertain;
+   state.error=failure.message;
   }finally{state.busy=false;render();}
  }
  overlay.addEventListener('click',event=>{
