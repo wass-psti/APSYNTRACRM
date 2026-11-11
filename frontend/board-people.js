@@ -17,7 +17,7 @@ const fail=()=>({status:'UNVERIFIED',people:[],isCompleteAccessList:false});
 const safeName=v=>typeof v==='string'&&v.trim().length>0&&v.length<=MAX_NAME?v.trim():null;
 // Only a verified member's own avatar object path, never an external image URL.
 const AVATAR_PATH=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$/i;
-const avatarPath=(value,userId)=>typeof value==='string'&&AVATAR_PATH.test(value)&&
+export const verifiedBoardAvatarPath=(value,userId)=>typeof value==='string'&&AVATAR_PATH.test(value)&&
  value.split('/')[0].toLowerCase()===userId.toLowerCase()?value:null;
 const initials=name=>name.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase();
 
@@ -37,7 +37,7 @@ export function normalizeBoardPeople(detail,{boardId,workspaceId}={}){
   const name=safeName(row.display_name)||safeName(row.name);
   if(!name)return fail();
   seen.add(id);
-  people.push(Object.freeze({id,name,role:row.role,avatarPath:avatarPath(row.avatar_path,id)}));
+  people.push(Object.freeze({id,name,role:row.role,avatarPath:verifiedBoardAvatarPath(row.avatar_path,id)}));
  }
  people.sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
  return Object.freeze({status:'SIGNED_MEMBERSHIP',people,
@@ -68,7 +68,7 @@ export function renderBoardPeople(result,{query=''}={}){
    '<div class="bs02-avatar-slot">'+
     '<button type="button" class="bs02-avatar-chip" data-bs02-copy-name="'+p.id+'" '+
       'aria-label="'+escapeHtml(p.name)+', '+escapeHtml(p.role)+'. Copy @name" '+
-      'title="'+escapeHtml(p.name)+' · '+escapeHtml(p.role)+'">'+
+      '>'+
      '<span class="bs02-person-avatar" aria-hidden="true">'+
       avatarImageMarkup(initials(p.name),{path:p.avatarPath,userId:p.avatarPath?p.id:null})+
      '</span>'+
