@@ -65,3 +65,11 @@ The browser importer never evaluates Excel formulas. When a formula has a cached
 - Worksheet footer/summary rows that have no Item title are surfaced with their Excel row numbers and require explicit exclusion acknowledgement. Formula cells without cached results are surfaced and require acknowledgement that those cells will be imported blank. The planner enforces both acknowledgements.
 - Numeric conversion now accepts common currency symbols/codes and grouped decimal values, including 1,234.50, 1.234,50, $1,234.50, and ₱2,500.00. Date conversion accepts ISO and YYYY/MM/DD, plus unambiguous day/month or month/day formats; ambiguous dates are rejected rather than guessed.
 - The existing backend's m143-v1 supported create types remain the source of truth: text, long_text, number, date, people, checkbox, timeline, email, and url. No RPC, SQL, database schema, RLS, Storage, role, or permission changes were made.
+
+### CP-BIMP-05 — Item title reassignment correction
+
+- Corrected a remaining transition defect in the Map columns step: when a user assigns a different source column as the Item title, the previous Item source is now marked as an unresolved exclusion (requiresDecision: true).
+- The previous title source therefore appears in the unresolved-column decision list, and buildImportPlan rejects the plan until the user maps that source elsewhere or explicitly confirms exclusion.
+- The selected new Item source is marked as the active title mapping and does not remain unresolved.
+- Added regression coverage for the mapping transition, readiness result, planner denial before acknowledgement, and successful plan construction after explicit exclusion.
+- No changes to authentication, RBAC, workspace policy, RLS, database schema, import RPC, or other application areas.
