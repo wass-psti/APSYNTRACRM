@@ -114,7 +114,7 @@ test('formula-looking values remain literal text and invalid typed values still 
 });
 test('formatted currency, grouped decimals, parentheses negatives and scientific notation import as numbers',()=>{
  const data={headers:['Name','Deal Value (VAT-EX)'],rows:[
-  ['Alpha','₱ 1,234.50'],['Beta','(USD 2,000.00)'],['Gamma','1.2e3'],['Delta','1.234,56']
+  ['Alpha','₱ 1,234.50'],['Beta','(USD 2,000.00)'],['Gamma','1.2e3'],['Delta','1.234,56'],['Epsilon','-₱ 1,234.50'],['Zeta','1.234']
  ]};
  assert.equal(inferImportType('Deal Value (VAT-EX)',data.rows.map(row=>row[1])),'number');
  const mappings=[
@@ -123,7 +123,7 @@ test('formatted currency, grouped decimals, parentheses negatives and scientific
  ];
  const plan=buildImportPlan({sheet:data,detail,mappings,group,allowColumns:true});
  assert.deepEqual(plan.payload.rows.map(row=>row.values['Deal Value']),[
-  1234.5,-2000,1200,1234.56
+  1234.5,-2000,1200,1234.56,-1234.5,1.234
  ]);
 });
 test('mapped date rejection identifies real Excel worksheet, row, header and original value',()=>{
