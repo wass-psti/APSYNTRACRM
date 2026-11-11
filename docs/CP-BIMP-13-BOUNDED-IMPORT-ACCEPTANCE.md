@@ -24,8 +24,8 @@ A lossless persisted-file-reference solution would require a supported source-to
 
 ## Acceptance status
 
-- Focused import tests: **87 passed / 0 failed**. Includes full-file late-row denial, 5,001 CSV/XLSX rows, wide source mappings with explicit skip, new group/column reuse, readback persistence, indeterminate second batch, oversized source text preservation/rejection and inert progress-callback failure.
-- Full frontend test suite: **1,809 passed / 0 failed**. Syntax: **170** frontend modules passed. CSS bundle, Pages source policy, SEC14 source guard and git diff validation: PASS.
+- Focused import tests: **88 passed / 0 failed**. Includes full-file late-row denial, 5,001 CSV/XLSX source rows and a 5,001-row six-batch in-memory persistence simulation, wide source mappings with explicit skip, new group/column reuse, readback persistence, indeterminate second batch, oversized source text preservation/rejection and inert progress-callback failure.
+- Full frontend test suite: **1,810 passed / 0 failed**. Syntax: **170** frontend modules passed. CSS bundle, Pages source policy, SEC14 source guard and git diff validation: PASS.
 - Disposable signed PostgreSQL CI continues exercising the unmodified atomic writer; synthetic batch-service tests verify the coordinator's multi-request behavior. GitHub branch CI initially passed frontend and three disposable PostgreSQL jobs; the BIMP-02 signed-claim PostgreSQL acceptance also passed. The final expanded XLSX fixture is being reverified.
 - Actual signed-browser import and refresh persistence against the **new CP-BIMP-13 build** remain pending. The only open signed UI tab is the *deployed* CRM, not this unmerged branch, and currently shows an unrelated board-column-delete recovery fixture. No QA write against this recovery board or production operational records has been performed.
 - Imports spanning multiple batches are **not globally atomic**. Every batch is atomic, but already committed batches persist when a later batch fails. Recovery must explicitly reconcile the committed prefix before resuming.

@@ -26,7 +26,7 @@ function fixture({count=1011,failBatch=0}={}){
    calls++;
    if(calls===failBatch){const err=new Error('Transient network error');err.status=503;throw err;}
    assert.equal(args.p_expected_updated_at,current.board.updated_at);
-   assert.ok(args.p_payload.rows.length<=500);
+   assert.ok(args.p_payload.rows.length<=1000);
    const first=current.items.length;
    for(const [i,row] of args.p_payload.rows.entries()){
     const id=String(first+i+1).padStart(12,'0');
@@ -194,4 +194,17 @@ test('CP-BIMP-13 oversized file references are reported before write rather than
   return true;
  });
  assert.equal(f.calls,0);
+});
+
+test('CP-BIMP-13 5,001 records cross the real atomic row ceiling in six verified writes',async()=>{
+ const f=fixture({count:5001});
+ const result=await executeBoardImportBatched({...f,auth,batchSize:1000});
+ assert.equal(f.calls,6);
+ assert.equal(result.created,5001);
+ assert.equal(result.rowsProcessed,5001);
+ assert.equal(result.batches,6);
+ const after=await f.api.board(boardId);
+ assert.equal(after.items.length,5001);
+ assert.equal(after.values.length,5001);
+ assert.equal(after.values.at(-1).value,'REF-5001');
 });
