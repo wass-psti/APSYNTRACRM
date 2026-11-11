@@ -236,7 +236,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      '>Review '+readiness().pendingChoices.length+' Status/Dropdown setup'+
      (readiness().pendingChoices.length===1?'':'s')+'</button>':
      '<button class="primary" data-imp="next"'+(state.busy?' disabled':'')+
-     '>Next: Handle matches</button>'):'')+
+     (readiness().pendingSkips.length?'>Resolve '+readiness().pendingSkips.length+' unmapped columns':'>Next: Handle matches')+'</button>'):'')+
    (state.step===3?(state.uncertain?
     '<button class="secondary" data-imp="close">Close and verify the board</button>':
     '<button class="primary" data-imp="import"'+
@@ -352,7 +352,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   if(action==='next'){
    state.error='';
    const gate=readiness();
-   if(gate.pendingSkips.length){state.error='Map or explicitly confirm exclusion for every unmapped source column.';render();return;}
+   if(gate.pendingSkips.length){state.error='Map or explicitly confirm exclusion for every unmapped source column.';render();overlay.querySelector('[data-imp-confirm-skip]')?.focus();return;}
    if(gate.pendingChoices.length){focusChoice(gate.pendingChoices[0].index);return;}
    try{
     if(gate.awaitingColumnApproval)
