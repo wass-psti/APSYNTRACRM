@@ -53,6 +53,52 @@ export function availableImportColumns(detail){
   (c.system_key==='status'||String(c.column_key||'').startsWith('custom')))
   .map(c=>({id:c.id,name:c.name,type:c.data_type,system_key:c.system_key||null,config:c.config||{}}));
 }
+function parseImportNumber(raw){
+ let value=String(raw??'').trim().replace(/[\\s\\u00a0\\u202f]/g,'');
+ if(!value)return null;
+ let negative=false;
+ if(value.startsWith('(')&&value.endsWith(')')){
+  negative=true;value=value.slice(1,-1);
+ }
+ const currency=/^(?:USD|PHP|EUR|GBP|JPY|CAD|AUD|CNY|INR|SGD|HKD)/i;
+ value=value.replace(currency,'').replace(/(?:USD|PHP|EUR|GBP|JPY|CAD|AUD|CNY|INR|SGD|HKD)$/i,'');
+ value=value.replace(/^\\p{Sc}/u,'').replace(/\\p{Sc}$/u,'');
+ let sign='';
+ if(/^[+-]/.test(value)){sign=value[0];value=value.slice(1);}
+ const exponentMatch=value.match(/([eE][+-]?\\d+)$/);
+ const exponent=exponentMatch?.[1]||'';
+ if(exponent)value=value.slice(0,-exponent.length);
+ if(!value||!/^\\d[\\d.,]*$/.test(value))return null;
+ const comma=value.lastIndexOf(','),dot=value.lastIndexOf('.');
+ let integer=value,fraction='',decimal='';
+ const validGrouped=part=>{
+  const chunks=part.split(/[.,]/);
+  return chunks.length>1&&chunks[0].length>=1&&chunks[0].length<=3&&
+   chunks.slice(1).every(chunk=>chunk.length===3&&/^\\d+$/.test(chunk));
+ };
+ if(comma>=0&&dot>=0){
+  decimal=comma>dot?',':'.';
+  const group=decimal===','?'.':',';
+  const parts=value.split(decimal);
+  if(parts.length!==2||!/^\\d+$/.test(parts[1]))return null;
+  integer=parts[0];fraction=parts[1];
+  if(integer.includes(group)&&!validGrouped(integer))return null;
+  integer=integer.split(group).join('');
+ }else if(comma>=0){
+  if(validGrouped(value))integer=value.replace(/,/g,'');
+  else if(value.split(',').length===2&&/^\\d+$/.test(value.split(',')[1])){
+   [integer,fraction]=value.split(',');decimal=',';
+  }else return null;
+ }else if(dot>=0){
+  if(validGrouped(value))integer=value.replace(/\\./g,'');
+  else if(value.split('.').length===2&&/^\\d+$/.test(value.split('.')[1])){
+   [integer,fraction]=value.split('.');decimal='.';
+  }else return null;
+ }
+ if(!/^\\d+$/.test(integer)||decimal&&!/^\\d+$/.test(fraction))return null;
+ const parsed=Number((negative?'-':sign)+integer+(decimal?'.'+fraction:'')+exponent);
+ return Number.isFinite(parsed)?parsed:null;
+}
 function autoTitle(headers){
  const exact=['item','name','title','item name','record'];
  return headers.find(h=>exact.includes(key(h)))||headers[0];
@@ -217,7 +263,6 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
   const title=clean(sourceRow[byHeader.get(primary)]);
   if(!title||title.length>240)
    deny(origin+' · column "'+primary+'": Item title must have 1–240 characters.');
-  forbidFormula(title);
   const values={};
   for(const [source,col] of refMap){
    const raw=sourceRow[byHeader.get(source)];
