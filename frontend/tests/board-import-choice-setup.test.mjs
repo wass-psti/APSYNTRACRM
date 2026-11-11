@@ -151,5 +151,5 @@ test('UI has manager-only choice setup with explicit warning, consent, and no au
  assert.match(ui,/data-imp-choice-name/);
  assert.match(ui,/provisionImportChoiceColumn/);
  assert.match(ui,/schemaOutcomeUncertain/);
- assert.match(ui,/state\.allowColumns=false;state\.choiceConsent=\{\}/);
+ assert.match(ui,/state\\.canCreateColumns=state\\.manage;state\\.choiceConsent=\\{\\}/);
 });
