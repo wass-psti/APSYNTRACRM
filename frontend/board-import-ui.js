@@ -348,7 +348,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   }
 if(action==='decline-columns'){
    state.mappings=state.mappings.map(m=>m.action==='create'?{...m,action:'skip'}:m);
-   state.canCreateColumns=false;render();return;
+   render();return;
   }
   if(action==='next'){
    state.error='';
