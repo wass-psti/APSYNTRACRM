@@ -118,6 +118,24 @@ export class WorkspaceAuthorityClient{
    deny('Signed workspace changed.',409);
   return receipt;
  }
+ async verifyOwnershipTransfer({workspaceId,requestId,targetUserId}={}){
+  if(!this.transferEnabled)deny('Owner transfer verification not activated.',503);
+  if(!validUuid(workspaceId)||!validUuid(requestId)||!validUuid(targetUserId))
+   deny('Invalid verification reference.',400);
+  const actor=await this.#actor();
+  if(actor.workspaceId!==workspaceId)deny('Workspace changed.',403);
+  const receipt=await this.api.rpc('wm_ws03_verify_transfer',{
+   p_workspace_id:workspaceId,p_request_id:requestId
+  });
+  const after=await this.#actor();
+  if(after.userId!==actor.userId||after.workspaceId!==actor.workspaceId||
+     receipt?.schemaVersion!==1||receipt.actorId!==actor.userId||
+     receipt.workspaceId!==workspaceId||receipt.requestId!==requestId||
+     receipt.targetUserId!==targetUserId||
+     receipt.currentOwnerId!==targetUserId||receipt.transferred!==true)
+   deny('Ownership transfer verification failed.',409);
+  return Object.freeze({verified:true,workspaceId,targetUserId,requestId});
+ }
  async transferOwnership(raw){
   if(!this.transferEnabled)
    deny('Owner transfers are not yet activated.',503);
