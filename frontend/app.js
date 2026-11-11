@@ -3294,11 +3294,16 @@ async function openBoardMembers(){
  modal.innerHTML='<section class="modal board-history-modal" role="dialog" aria-modal="true" aria-labelledby="board-members-title">'+
   '<div class="modal-head"><h2 id="board-members-title">Who can access this board?</h2>'+
   '<button type="button" data-dismiss class="modal-close" aria-label="Close board members">×</button></div>'+
-  '<p class="muted">Explicit board members from the signed board response. An administrator or other user may have effective access through separate rules. This list is not an exhaustive access audit. New invitations require a verified server-side same-workspace and role-ceiling contract.</p>'+
-  renderBoardPeople(people)+renderMentionDraft(people)+
-  '<div data-col01-directory-results>'+renderBoardInvitableDirectory(directory)+'</div></section>';
+  '<p class="bs02-people-compact-note">Hover or focus an avatar to see the member’s full name and role. Select an avatar to copy @name.</p>'+
+  renderBoardPeople(people)+
+  '<details class="bs02-tools"><summary>More board tools</summary><div class="bs02-tools-body">'+
+   renderMentionDraft(people)+
+   '<div data-col01-directory-results>'+renderBoardInvitableDirectory(directory)+'</div>'+
+  '</div></details></section>';
  document.body.append(modal);
  const view=modal;
+ // Existing signed avatar URL flow; no new profile directory or broad reads.
+ void mountAvatarImages(view,profileAvatarClient,null,null);
  const editor=view.querySelector('#bs02-mention-editor');
  const options=view.querySelector('[data-bs02-mention-options]');
  const suggestions=()=>{
@@ -3316,6 +3321,7 @@ async function openBoardMembers(){
     const parsed=document.createElement('div');parsed.innerHTML=html;
     const candidate=parsed.querySelector('[data-bs02-people-results]');
     host.replaceChildren(...(candidate?[...candidate.childNodes]:[]));
+    void mountAvatarImages(host,profileAvatarClient,null,null);
    }
   }
   if(event.target===editor)suggestions();
