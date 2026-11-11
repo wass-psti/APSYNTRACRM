@@ -64,6 +64,20 @@ test('number and date conversion accepts common export formats without guessing 
  assert.throws(()=>buildImportPlan({sheet:ambiguous,detail,mappings:dateMaps,group,allowColumns:true}),
   /unambiguous day\/month or month\/day date/);
 });
+test('Monday.com UTC Date encoded timestamps map to their source calendar date',()=>{
+ const timestamps={headers:['Name','Date encoded'],rows:[
+  ['Alpha','2026-01-27 03:36:15 UTC'],
+  ['Beta','2025-12-31T23:59:59Z']
+ ]};
+ assert.equal(inferImportType('Date encoded',timestamps.rows.map(r=>r[1])),'date');
+ const mappings=[
+  {source:'Name',action:'item',type:'text'},
+  {source:'Date encoded',action:'create',columnType:'date',name:'Date encoded',type:'date'}
+ ];
+ const plan=buildImportPlan({sheet:timestamps,detail,mappings,group,allowColumns:true});
+ assert.equal(plan.payload.rows[0].values['Date encoded'],'2026-01-27');
+ assert.equal(plan.payload.rows[1].values['Date encoded'],'2025-12-31');
+});
 test('manager receives missing-column proposal; editor sees no auto-creation',()=>{
  const editor=initialImportMappings(sheet,detail);
  assert.equal(editor[2].action,'skip');
