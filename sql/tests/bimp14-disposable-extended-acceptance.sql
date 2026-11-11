@@ -14,7 +14,7 @@ DECLARE
  payload jsonb;
  receipt jsonb;
  big_ref text := 'https://example.invalid/reference/' || repeat('Z',7200);
- item_id uuid;
+ imported_item_id uuid;
  got jsonb;
 BEGIN
  IF has_function_privilege('anon',
@@ -38,11 +38,11 @@ BEGIN
     jsonb_build_object('__aps_extended_ref_v1',big_ref)))));
  receipt:=public.wm_import_board_wizard_extended_atomic(board,expected_at,payload);
  IF receipt->>'created'<>'1' THEN RAISE EXCEPTION 'Extended reference import receipt mismatch: %',receipt; END IF;
- SELECT i.id INTO item_id FROM public.work_board_items i
+ SELECT i.id INTO imported_item_id FROM public.work_board_items i
   WHERE i.board_id=board AND i.title='Extended reference QA';
- IF item_id IS NULL OR
+ IF imported_item_id IS NULL OR
     (SELECT r.content FROM public.work_board_import_extended_refs r
-       WHERE r.item_id=item_id AND r.column_id=ref_col) IS DISTINCT FROM big_ref THEN
+       WHERE r.item_id=imported_item_id AND r.column_id=ref_col) IS DISTINCT FROM big_ref THEN
   RAISE EXCEPTION 'Extended reference content did not persist exactly';
  END IF;
  got:=public.wm_import_extended_refs_read(board);

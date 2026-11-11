@@ -83,7 +83,7 @@ declare
   new_type text;
   created_column uuid;
   item_name text;
-  item_id uuid;
+  v_import_item_id uuid;
   version_expected timestamptz;
   matches_found integer;
   position_new integer;
@@ -260,7 +260,7 @@ begin
         raise exception 'Imported values contain an unmapped column' using errcode='22023';
       end if;
     end loop;
-    item_id := null;
+    v_import_item_id := null;
     if behavior <> 'add-new' then
       if match_column_id = 'item' then match_value := lower(btrim(item_name));
       else match_value := lower(btrim(coalesce(row_values->match_source #>> '{}',''))); end if;
@@ -268,17 +268,17 @@ begin
       if match_value = any(known_keys) then raise exception 'Ambiguous repeated source match value' using errcode='PT409'; end if;
       known_keys := array_append(known_keys,match_value);
       if match_column_id='item' then
-        select count(*),min(i.id::text)::uuid into matches_found,item_id
+        select count(*),min(i.id::text)::uuid into matches_found,v_import_item_id
           from public.work_board_items i
           where i.board_id=p_board_id and i.group_id=target_group and i.archived_at is null
             and lower(btrim(i.title))=match_value;
       elsif match_system_key='status' then
-        select count(*),min(i.id::text)::uuid into matches_found,item_id
+        select count(*),min(i.id::text)::uuid into matches_found,v_import_item_id
           from public.work_board_items i
           where i.board_id=p_board_id and i.group_id=target_group and i.archived_at is null
             and lower(btrim(coalesce(i.status,'')))=match_value;
       else
-        select count(*),min(i.id::text)::uuid into matches_found,item_id
+        select count(*),min(i.id::text)::uuid into matches_found,v_import_item_id
           from public.work_board_items i join public.work_board_item_values v on v.item_id=i.id and v.column_id=match_target
           where i.board_id=p_board_id and i.group_id=target_group and i.archived_at is null
             and lower(btrim(coalesce(v.value#>>'{}','')))=match_value;
@@ -291,31 +291,31 @@ begin
     end if;
 
     if behavior='update' then
-      if item_id is null then raise exception 'Expected a unique matching Item' using errcode='PT409'; end if;
+      if v_import_item_id is null then raise exception 'Expected a unique matching Item' using errcode='PT409'; end if;
       if nullif(record_row->>'expected_item_updated_at','') is null then
         raise exception 'Update requires the current Item version from reviewed preview' using errcode='PT409';
       end if;
       begin version_expected := (record_row->>'expected_item_updated_at')::timestamptz;
       exception when others then raise exception 'Invalid expected Item version' using errcode='22023'; end;
       if not exists(select 1 from public.work_board_items
-         where id=item_id and board_id=p_board_id and updated_at=version_expected and archived_at is null) then
+         where id=v_import_item_id and board_id=p_board_id and updated_at=version_expected and archived_at is null) then
         raise exception 'An Item changed after preview; revalidate the import' using errcode='PT409';
       end if;
       if exists(select 1 from public.work_board_items
         where board_id=p_board_id and group_id=target_group and archived_at is null
-        and id<>item_id and lower(btrim(title))=lower(btrim(item_name))) then
+        and id<>v_import_item_id and lower(btrim(title))=lower(btrim(item_name))) then
         raise exception 'Update would collide with an existing Item title' using errcode='PT409';
       end if;
       update public.work_board_items
          set title=item_name,updated_by=actor,updated_at=clock_timestamp()
-       where id=item_id;
+       where id=v_import_item_id;
       updated_items := updated_items+1;
     else
       select coalesce(max(position),-1)+1 into position_new from public.work_board_items
         where board_id=p_board_id and group_id=target_group and archived_at is null;
       insert into public.work_board_items(board_id,group_id,title,position,created_by,updated_by)
       values(p_board_id,target_group,item_name,position_new,actor,actor)
-      returning id into item_id;
+      returning id into v_import_item_id;
       created_items := created_items+1;
     end if;
     -- Empty imported cells preserve existing values on update (non-destructive).
@@ -347,17 +347,17 @@ begin
             using errcode='22023';
         end if;
         delete from public.work_board_item_values v
-          where v.item_id=item_id and v.column_id=source_column_id;
+          where v.item_id=v_import_item_id and v.column_id=source_column_id;
         insert into public.work_board_import_extended_refs(
           board_id,item_id,column_id,content,updated_by)
-        values (p_board_id,item_id,source_column_id,extended_text,actor)
+        values (p_board_id,v_import_item_id,source_column_id,extended_text,actor)
         on conflict(item_id,column_id) do update set
           content=excluded.content,updated_by=excluded.updated_by,
           updated_at=clock_timestamp();
       else
         delete from public.work_board_import_extended_refs r
-          where r.item_id=item_id and r.column_id=source_column_id;
-        perform public.wm_set_board_cell(item_id,source_column_id,mapped_value);
+          where r.item_id=v_import_item_id and r.column_id=source_column_id;
+        perform public.wm_set_board_cell(v_import_item_id,source_column_id,mapped_value);
       end if;
     end loop;
   end loop;
