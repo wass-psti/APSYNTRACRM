@@ -1,10 +1,13 @@
 import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
-const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
+// Source workbook width is independent of the 30 physical-column ceiling
+// enforced when a destination board creates columns. Allow wide exports to
+// map or explicitly exclude their excess source columns.
+const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=256,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
 const invalid=message=>{throw new Error(message);};
 export function validateImportSheet(headers,rows){
  if(!Array.isArray(headers)||headers.length<1||headers.length>MAX_COLUMNS)
-  invalid('Import requires 1–30 header columns.');
+  invalid('Import requires 1–256 source header columns.');
  const names=headers.map(x=>String(x??'').trim());
  if(names.some(x=>!x||x.length>240)||new Set(names.map(x=>x.toLocaleLowerCase())).size!==names.length)
   invalid('File headers must be nonempty, unique, and at most 240 characters.');
@@ -46,7 +49,7 @@ export function parseDelimited(text,delimiter){
    if(!closed)value+=c;
   }
   if(value.length>5000)invalid('An imported cell exceeds 5,000 characters.');
-  if(row.length>MAX_COLUMNS)invalid('CSV exceeds 30 columns.');
+  if(row.length>MAX_COLUMNS)invalid('CSV exceeds 256 source columns.');
  }
  if(quoted)invalid('CSV has an unterminated quoted field.');
  if(value||row.length||(!text.endsWith('\n')&&!text.endsWith('\r')))endRow();

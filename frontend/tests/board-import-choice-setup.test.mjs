@@ -153,3 +153,58 @@ test('UI integrates manager-only choice setup with a direct explicit create acti
  assert.match(ui,/normalizeImportFailure\(error,'schema-write'\)/);
  assert.match(ui,/state\.allowColumns=state\.manage/);
 });
+
+test('CP-BIMP-12 extends matching existing Status without new column or loss of option IDs',async()=>{
+ const existingId='66666666-6666-4666-8666-666666666666';
+ const current={id:existingId,name:'Status',data_type:'status',column_key:'col_status',
+  system_key:null,visible:true,config:{labels:[
+   {id:'legacy_active',name:'Active',color:'#4f7df3',active:true},
+   {id:'legacy_closed',name:'Closed',color:'#7f8a9a',active:true}],
+   default_label_id:'legacy_active'}};
+ const dedicated={...detail,columns:[current]};
+ const source={headers:['Name','Status'],rows:[['A','Active'],['B','Pending'],['C','Closed']],
+  worksheet:'deals',rowNumbers:[3,4,5]};
+ const maps=initialImportMappings(source,dedicated,{canCreate:true});
+ assert.equal(maps[1].action,'configure');
+ assert.equal(maps[1].existingColumnId,existingId);
+ const preview=choiceCreationPreview({sheet:source,source:'Status',type:'status',
+  name:'Status',detail:dedicated,existingColumnId:existingId});
+ assert.deepEqual(preview.added,['Pending']);
+ const calls=[];let reads=0,updated;
+ const api={
+  context:async()=>({user_id:ownerId,workspace_id:workspaceId,profile:{status:'active'}}),
+  board:async()=>++reads===1?dedicated:updated,
+  allowed:async()=>true,
+  rpc:async(name,args)=>{
+   calls.push({name,args});
+   if(name==='wm_board_ui_read')return {board_id:boardId};
+   if(name!=='wm_set_board_status_labels')throw Error('Unexpected RPC '+name);
+   updated={...dedicated,board:{...detail.board,updated_at:'2026-11-05T08:00:03Z'},
+    columns:[{...current,config:{labels:args.p_labels,default_label_id:'legacy_active'}}]};
+   return {labels:args.p_labels,default_label_id:'legacy_active'};
+  }
+ };
+ const result=await provisionImportChoiceColumn({api,auth,boardId,detail:dedicated,
+  sheet:source,source:'Status',type:'status',name:'Status',existingColumnId:existingId});
+ assert.equal(result.existing,true);
+ assert.equal(result.columnId,existingId);
+ assert.deepEqual(calls.map(x=>x.name),['wm_board_ui_read','wm_set_board_status_labels']);
+ assert.equal(calls[1].args.p_labels.find(x=>x.name==='Active').id,'legacy_active');
+ assert.equal(calls[1].args.p_labels.find(x=>x.name==='Closed').id,'legacy_closed');
+ assert.ok(calls[1].args.p_labels.some(x=>x.name==='Pending'));
+ assert.equal(updated.columns.length,1);
+ const ready=initialImportMappings(source,updated,{canCreate:true});
+ assert.equal(ready[1].action,'existing');
+ const plan=buildImportPlan({sheet:source,detail:updated,mappings:ready,
+  group:{action:'existing',groupId}});
+ assert.equal(plan.payload.newColumns.length,0);
+ assert.deepEqual(plan.payload.rows.map(row=>row.values.Status),[
+  'legacy_active',calls[1].args.p_labels.find(x=>x.name==='Pending').id,'legacy_closed']);
+});
+
+test('CP-BIMP-12 Status setup rejects a conflicting target without calling the server',async()=>{
+ const id='66666666-6666-4666-8666-666666666666';
+ const invalid={...detail,columns:[{id,name:'Status',data_type:'text',system_key:null}]};
+ assert.throws(()=>choiceCreationPreview({sheet,source:'Status',type:'status',
+  name:'Status',detail:invalid,existingColumnId:id}),/unavailable/);
+});

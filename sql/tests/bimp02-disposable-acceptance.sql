@@ -8,6 +8,7 @@ DECLARE
  grp uuid := '60000000-0000-4000-8000-000000000001';
  amount uuid := '65000000-0000-4000-8000-000000000001';
  legacy_ref uuid := '65000000-0000-4000-8000-000000000002';
+ status_col uuid := '65000000-0000-4000-8000-000000000003';
  owner_id uuid := '20000000-0000-4000-8000-000000000001';
  editor_id uuid := '20000000-0000-4000-8000-000000000002';
  viewer_id uuid := '20000000-0000-4000-8000-000000000003';
@@ -33,6 +34,17 @@ BEGIN
  PERFORM set_config('request.jwt.claim.sub',owner_id::text,false);
  PERFORM set_config('request.jwt.claim.session_id',owner_session::text,false);
 
+ -- Extend existing legacy Status options in place, retaining stable IDs.
+ -- This is an isolated DB exercise of the same signed Status writer used by
+ -- the client; the existing user's Status values are never cleared.
+ PERFORM public.wm_set_board_status_labels(status_col,
+  '[{"id":"import_open","name":"Open","color":"#4f7df3","active":true},
+    {"id":"import_pending","name":"Pending","color":"#7f8a9a","active":true}]'::jsonb,
+  'import_open');
+ IF (SELECT config->>'default_label_id' FROM public.work_board_columns WHERE id=status_col)
+   IS DISTINCT FROM 'import_open' THEN
+  RAISE EXCEPTION 'Existing Status palette default was lost';
+ END IF;
  -- First import: manager explicitly approves a new checkbox column.
  SELECT updated_at INTO expected_at FROM public.work_boards WHERE id=board;
  payload:=jsonb_build_object(
@@ -42,12 +54,13 @@ BEGIN
  jsonb_build_object('source','Name','action','item'),
  jsonb_build_object('source','Amount','action','existing','columnId',amount),
  jsonb_build_object('source','Legacy Ref','action','existing','columnId',legacy_ref),
+ jsonb_build_object('source','Status','action','existing','columnId',status_col),
  jsonb_build_object('source','Flag','action','create','name','Flag','columnType','checkbox')),
  'newColumns',jsonb_build_array(
  jsonb_build_object('source','Flag','name','Flag','type','checkbox','config','{}'::jsonb)),
  'rows',jsonb_build_array(
- jsonb_build_object('title','Import Alpha','values',jsonb_build_object('Amount',20,'Legacy Ref','REF-A','Flag',true)),
- jsonb_build_object('title','Import Beta','values',jsonb_build_object('Amount',30,'Legacy Ref','REF-B','Flag',false))));
+ jsonb_build_object('title','Import Alpha','values',jsonb_build_object('Amount',20,'Legacy Ref','REF-A','Status','import_open','Flag',true)),
+ jsonb_build_object('title','Import Beta','values',jsonb_build_object('Amount',30,'Legacy Ref','REF-B','Status','import_pending','Flag',false))));
  receipt:=public.wm_import_board_wizard_atomic(board,expected_at,payload);
  IF receipt->>'created'<>'2' OR receipt->>'columnsCreated'<>'1'
  THEN RAISE EXCEPTION 'Import receipt mismatch for first atomic insert: %',receipt; END IF;
@@ -59,12 +72,14 @@ BEGIN
  (SELECT count(*) FROM public.work_board_item_values WHERE column_id=legacy_ref)<>2 OR
  (SELECT count(*) FROM public.work_board_item_values WHERE column_id=legacy_ref AND
   value IN ('"REF-A"'::jsonb,'"REF-B"'::jsonb))<>2 OR
+ (SELECT count(*) FROM public.work_board_item_values WHERE column_id=status_col AND
+  value IN ('"import_open"'::jsonb,'"import_pending"'::jsonb))<>2 OR
  (SELECT visible FROM public.work_board_columns WHERE id=legacy_ref) IS DISTINCT FROM false
  THEN RAISE EXCEPTION 'Read-after-write/reload persistence mismatch for custom or hidden legacy columns'; END IF;
  IF (SELECT count(*) FROM public.work_board_events WHERE board_id=board
  AND event_type='items.imported.wizard')<>1
  THEN RAISE EXCEPTION 'Atomic import audit evidence missing'; END IF;
- RAISE NOTICE 'BIMP02 manager insert, typed cells, hidden col_* persistence and audit PASS';
+ RAISE NOTICE 'BIMP02 existing Status palette extension, hidden col_* persistence, and audit PASS';
 
  -- No new columns: signed editor must be allowed to skip existing matches.
  PERFORM set_config('request.jwt.claim.sub',editor_id::text,false);

@@ -286,6 +286,16 @@ export function initialImportMappings(sheet,detail,{canCreate=false}={}){
    return {source,action:'existing',columnId:target.id,type,
     detectedType:type,targetType:target.type,hidden:!target.visible};
   }
+  // A dedicated board can have a same-name Status column whose palette is
+  // missing source labels. Offer to extend that *existing* column rather
+  // than falsely claiming the source cannot be imported or duplicating it.
+  // The current server supports in-place Status label changes, not Dropdown.
+  const missingStatus=named.length===1&&named[0].type==='status'&&
+   sourceValues.some(value=>clean(value))?named[0]:null;
+  if(canCreate&&missingStatus){
+   return {source,action:'configure',type,choiceType:'status',
+    name:missingStatus.name,existingColumnId:missingStatus.id,requiresDecision:true};
+  }
   if(canCreate&&(type==='status'||type==='dropdown')&&
      !columns.some(c=>key(c.name)===key(source)))
    return {source,action:'configure',type,choiceType:type,name:source,requiresDecision:true};
@@ -317,7 +327,10 @@ function valueAsType(raw,type,config={}){
   if(/^(false|no|0)$/i.test(text))return false;
   deny('A checkbox accepts only yes/no, true/false or 1/0.');
  }
- forbidFormula(text);
+ // Literal worksheet/CSV cell text is inert board data. Excel formula cells
+ // are handled separately by the XLSX parser (cached values or warnings).
+ // Do not reject passwords, mentions, negative durations or other text merely
+ // because their first character resembles spreadsheet formula syntax.
  if(type==='date'){
   const date=normalizeImportDate(text);
   if(!date)deny('Date cells must contain a valid ISO, YYYY/MM/DD, or unambiguous day/month or month/day date.');

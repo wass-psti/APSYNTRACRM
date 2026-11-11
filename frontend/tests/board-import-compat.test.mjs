@@ -429,3 +429,22 @@ test('board import wizard module parses and can load in an isolated ES module ru
  const module=await import('../board-import-ui.js');
  assert.equal(typeof module.openBoardImportWizard,'function');
 });
+
+test('CP-BIMP-12 wide workbook accepts empty formatted AE cells outside destination column limit',async()=>{
+ const entries=workbookEntries();
+ entries[3].xml=contactsSheet.replace('<row r="3">',
+  '<row r="3"><c r="AE3" s="0" t="inlineStr"><is><t></t></is></c>');
+ const parsed=await parseWithFixtureDom(makeZip(entries));
+ assert.equal(parsed.sheets.length,1);
+ assert.deepEqual(parsed.sheets[0].headers,['Name','Score']);
+ assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
+});
+
+test('CP-BIMP-12 extra CSV source columns can be mapped or explicitly excluded',()=>{
+ const headers=['Name',...Array.from({length:35},(_,i)=>'Field '+(i+1))];
+ const csv=headers.join(',')+'\n'+['Alpha',...headers.slice(1).map((_,i)=>String(i))].join(',')+'\n';
+ const parsed=parseDelimited(csv);
+ assert.equal(parsed.headers.length,36);
+ assert.equal(parsed.rows.length,1);
+ assert.equal(parsed.rows[0][35],'34');
+});

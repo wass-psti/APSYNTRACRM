@@ -555,3 +555,36 @@ test('same-name existing text column is reused when Status source values are pla
  const plan=buildImportPlan({sheet:source,detail:board,mappings,group});
  assert.deepEqual(plan.payload.rows.map(row=>row.values.Status),['Active','Pending']);
 });
+
+test('CP-BIMP-12 preserves literal prefixes in text cells without evaluating spreadsheet formulas',()=>{
+ const id='88888888-8888-4888-8888-888888888888';
+ const board={...detail,columns:[...detail.columns,{id,name:'Message Content',data_type:'text',
+  column_key:'custom:message',system_key:null,config:{}}]};
+ const source={headers:['Name','Message Content'],rows:[
+  ['Alpha','@Team please review'],['Beta','-45m'],['Gamma','=2+2']]};
+ const mappings=initialImportMappings(source,board);
+ assert.equal(mappings[1].action,'existing');
+ const plan=buildImportPlan({sheet:source,detail:board,mappings,group});
+ assert.deepEqual(plan.payload.rows.map(x=>x.values['Message Content']),[
+  '@Team please review','-45m','=2+2']);
+ assert.throws(()=>buildImportPlan({sheet:{...source,rows:[['=SUM(1,1)','Safe']]},
+  detail:board,mappings,group}),/formula-like/);
+});
+
+test('CP-BIMP-12 reported UTC date and plain-text columns retain their intended types',()=>{
+ const dateId='88888888-8888-4888-8888-888888888888';
+ const textId='99999999-9999-4999-8999-999999999999';
+ const board={...detail,columns:[...detail.columns,
+  {id:dateId,name:'Expected Close Date',data_type:'date',column_key:'col_expected_close',
+   system_key:null,config:{}},
+  {id:textId,name:'Validate',data_type:'text',column_key:'col_validate',system_key:null,config:{}}]};
+ const source={headers:['Name','Expected Close Date','Validate'],rows:[
+  ['A','2025-10-12T13:14:00Z','Click to Validate'],
+  ['B','2026-05-13 23:12:40 UTC','Click to Validate']]};
+ const mappings=initialImportMappings(source,board);
+ assert.deepEqual(mappings.map(x=>x.action),['item','existing','existing']);
+ const plan=buildImportPlan({sheet:source,detail:board,mappings,group});
+ assert.deepEqual(plan.payload.rows.map(x=>x.values['Expected Close Date']),
+  ['2025-10-12','2026-05-13']);
+ assert.equal(plan.payload.rows[0].values.Validate,'Click to Validate');
+});
