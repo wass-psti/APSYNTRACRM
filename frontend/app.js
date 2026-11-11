@@ -150,6 +150,8 @@ import {filterTimeTrackerReportRows,applyTimeTrackerReportSearch,TT_REPORT_DEFAU
 import {timeTrackerCalendarMonth,shiftTimeTrackerCalendarMonth} from './time-tracker-calendar.js';
 import {TT_OT_DEFAULT_FILTERS,TT_OT_WRITES_ACCEPTED} from './time-tracker-overtime.js';
 import {timeTrackerMyHoursWeek} from './time-tracker-my-hours.js';
+import {applySearchVisibility} from './interaction-search.js';
+import {createFrameCoalescer} from './frame-coalescer.js';
 import {timeTrackerTeamCsv,TT_TEAM_ROLES} from './time-tracker-team.js';
 import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
@@ -7048,6 +7050,25 @@ function openBoardColumnContext(trigger){
  node.querySelector('[role="menuitem"]')?.focus();
 }
 let boardDrag=null,boardResize=null,boardTouch=null,boardSuppressedClick=false;
+const boardResizeFrames=createFrameCoalescer({
+ requestFrame:callback=>requestAnimationFrame(callback),
+ cancelFrame:handle=>cancelAnimationFrame(handle),
+ apply:width=>{
+  if(!boardResize)return;
+  const current=boardResize;
+  current.col.setAttribute('width',String(width));
+  current.table.setAttribute('width',String(current.tableWidth+width-current.start));
+  current.current=width;
+ }
+});
+function cancelBoardResize(){
+ boardResizeFrames.cancel();
+ if(boardResize){
+  boardResize.col.setAttribute('width',String(boardResize.start));
+  boardResize.table.setAttribute('width',String(boardResize.tableWidth));
+ }
+ boardResize=null;
+}
 /** Save one authoritative, CAS-checked custom-column order for a signed Item-only board. */
 async function persistItemOnlyColumnOrder(keys){
  if(state.columnOrderBusy||!state.boardManage||
@@ -7154,8 +7175,10 @@ root.addEventListener('pointerdown',event=>{
   const table=resize.closest('table.board-table-custom');
   const col=table?.querySelector('col[data-column-key="'+resize.dataset.columnKey+'"]');
   if(!col||!th)return;
+  const start=col.width?Number(col.getAttribute('width')):th.getBoundingClientRect().width;
+  const tableWidth=Number(table.getAttribute('width'))||table.getBoundingClientRect().width;
   boardResize={pointerId:event.pointerId,x:event.clientX,key:resize.dataset.columnKey,
-   col,table,start:col.width?Number(col.getAttribute('width')):th.offsetWidth};
+   col,table,start,current:start,tableWidth};
   resize.setPointerCapture?.(event.pointerId);event.preventDefault();return;
  }
  // Native drag is for mouse/trackpad; pointer reorder supports touch and pen.
@@ -7174,19 +7197,16 @@ root.addEventListener('pointerdown',event=>{
 });
 window.addEventListener('pointermove',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
-  const width=columnWidth(boardResize.start+event.clientX-boardResize.x);
-  const previous=Number(boardResize.col.getAttribute('width'))||boardResize.start;
-  boardResize.col.setAttribute('width',String(width));
-  const total=Number(boardResize.table.getAttribute('width'))||boardResize.table.offsetWidth;
-  boardResize.table.setAttribute('width',String(total+width-previous));
+  boardResizeFrames.schedule(columnWidth(boardResize.start+event.clientX-boardResize.x));
   return;
  }
 });
 window.addEventListener('pointerup',event=>{
  if(boardResize&&event.pointerId===boardResize.pointerId){
-  const {key,col}=boardResize;
-  const width=columnWidth(col.getAttribute('width'));
-  persistBoardLayout(p=>({...p,widths:{...p.widths,[key]:width}}));
+  const current=boardResize;
+  boardResizeFrames.flush();
+  const width=columnWidth(current.current);
+  persistBoardLayout(p=>({...p,widths:{...p.widths,[current.key]:width}}));
   boardResize=null;return;
  }
  if(boardTouch&&event.pointerId===boardTouch.pointerId){
@@ -7200,7 +7220,7 @@ window.addEventListener('pointerup',event=>{
   }).catch(notice);
  }
 });
-window.addEventListener('pointercancel',()=>{boardResize=null;boardTouch=null;});
+window.addEventListener('pointercancel',()=>{cancelBoardResize();boardTouch=null;});
 document.addEventListener('pointerdown',event=>{
  if(boardColumnMenuNode?.isConnected&&
     !boardColumnMenuNode.contains(event.target)&&
@@ -7778,12 +7798,10 @@ root.addEventListener('input',event=>{
  if(event.target.id==='ft3-activity-search'&&state.view==='board'&&
     state.tab==='fueltrack'&&state.fuelTrackSection==='activity'&&
     state.boardId===FUELTRACK_V3_ID&&state.fuelTrackActivity&&auth.isSignedIn){
-  const position=event.target.selectionStart;
-  state.fuelTrackActivityFilters={...state.fuelTrackActivityFilters,
-   query:String(event.target.value).slice(0,120),expandedId:null};
-  render();
-  const next=document.getElementById('ft3-activity-search');
-  if(next){next.focus();if(position!=null)next.setSelectionRange(position,position);}
+  const query=String(event.target.value).slice(0,120);
+  state.fuelTrackActivityFilters={...state.fuelTrackActivityFilters,query};
+  applySearchVisibility(root,{selector:'.ft3-activity-entry',query,
+   groupSelector:'.ft3-activity-group',emptySelector:'[data-ft3-activity-empty]'});
   return;
  }
  if(event.target.id==='ft3-signed-request-search'&&
@@ -7813,20 +7831,20 @@ root.addEventListener('input',event=>{
  if(event.target.id==='tt-team-search'&&state.view==='board'&&state.ttView==='team'&&
     state.roleVerified===true&&state.ttTeam&&
     state.ttAttendance?.status==='VERIFIED_READ'){
-  state.ttTeamFilters={...state.ttTeamFilters,search:String(event.target.value).slice(0,120)};
-  const focus=event.target.selectionStart;
-  render();
-  const field=root.querySelector('#tt-team-search');
-  if(field){field.focus();field.setSelectionRange(focus,focus);}
+  const query=String(event.target.value).slice(0,120);
+  state.ttTeamFilters={...state.ttTeamFilters,search:query};
+  const result=applySearchVisibility(root,{selector:'.tt-team-member',query,
+   emptySelector:'[data-tt-team-empty]'});
+  const count=root.querySelector('[data-tt-team-count]');
+  if(count)count.textContent=result.visible+' of '+result.total+' members';
   return;
  }
  if(event.target.id==='tt-ot-search'&&state.view==='board'&&state.ttView==='ot'&&
     state.ttAttendance?.status==='VERIFIED_READ'){
-  state.ttOtFilters={...state.ttOtFilters,search:String(event.target.value).slice(0,120)};
-  const focus=event.target.selectionStart;
-  render();
-  const field=root.querySelector('#tt-ot-search');
-  if(field){field.focus();field.setSelectionRange(focus,focus);}
+  const query=String(event.target.value).slice(0,120);
+  state.ttOtFilters={...state.ttOtFilters,search:query};
+  applySearchVisibility(root,{selector:'.tt-ot-request',query,
+   emptySelector:'[data-tt-ot-empty]'});
   return;
  }
  if(event.target.id==='tt-overview-search'&&state.view==='board'&&state.ttView==='overview'&&

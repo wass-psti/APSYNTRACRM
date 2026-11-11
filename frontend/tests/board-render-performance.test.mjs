@@ -119,3 +119,34 @@ test('title edits reconcile both virtual and ordinary board search rows without 
  assert.match(save,/visibleIds&&!visibleIds\.includes\(current\.id\)/);
  assert.match(save,/search-board-items.*focus\(\{preventScroll:true\}\)/);
 });
+
+test('high-frequency search handlers update rendered rows without rebuilding the application shell',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const start=app.indexOf("if(event.target.id==='ft3-activity-search'");
+ const team=app.indexOf("if(event.target.id==='tt-team-search'");
+ const overtime=app.indexOf("if(event.target.id==='tt-ot-search'");
+ const next=app.indexOf("if(event.target.id==='tt-overview-search'");
+ const activity=app.slice(start,team),directory=app.slice(team,overtime),ot=app.slice(overtime,next);
+ for(const handler of [activity,directory,ot]){
+  assert.match(handler,/applySearchVisibility\(root/);
+  assert.doesNotMatch(handler,/\brender\(\)/);
+ }
+ assert.match(activity,/data-ft3-activity-empty/);
+ assert.match(directory,/data-tt-team-count/);
+ assert.match(ot,/data-tt-ot-empty/);
+});
+
+test('column resize batches pointer movement and performs no layout reads in the move handler',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const start=app.indexOf("window.addEventListener('pointermove'");
+ const end=app.indexOf("window.addEventListener('pointerup'",start);
+ const move=app.slice(start,end);
+ assert.match(move,/boardResizeFrames\.schedule/);
+ assert.doesNotMatch(move,/offsetWidth|getBoundingClientRect|\.width\b|\.getAttribute/);
+ const down=app.slice(app.indexOf("root.addEventListener('pointerdown'"),start);
+ assert.match(down,/getBoundingClientRect\(\)/);
+ assert.match(down,/tableWidth/);
+ const up=app.slice(end,app.indexOf("window.addEventListener('pointercancel'",end));
+ assert.match(up,/boardResizeFrames\.flush\(\)/);
+ assert.match(up,/persistBoardLayout/);
+});
