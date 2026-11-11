@@ -85,20 +85,12 @@ BEGIN
   USING ERRCODE='42501'; END IF;
  IF public.current_workspace_id(v_actor) IS DISTINCT FROM p_workspace_id
  THEN RAISE EXCEPTION 'Workspace selection changed' USING ERRCODE='42501'; END IF;
- -- A global IT administrator must still have active membership in this
- -- authoritative workspace. No cross-workspace hidden override is introduced.
+ -- Even a former owner must retain active membership before verifying
+ -- the outcome of their own exact request. Workspace scope is never bypassed.
  IF NOT EXISTS(
   SELECT 1 FROM public.workspace_members wm
   WHERE wm.workspace_id=p_workspace_id AND wm.user_id=v_actor AND wm.active
- ) OR NOT EXISTS(
-  SELECT 1 FROM private.ws01_member_roles r
-   WHERE r.workspace_id=p_workspace_id AND r.user_id=v_actor
-    AND r.relation='owner'
-  UNION ALL
-  SELECT 1 FROM private.ws03_creator_authorities a
-   WHERE a.user_id=v_actor AND a.enabled IS TRUE AND a.authority='it_admin'
- )
- THEN RAISE EXCEPTION 'Workspace owner or IT administrator required'
+ ) THEN RAISE EXCEPTION 'Active workspace membership required'
    USING ERRCODE='42501'; END IF;
  PERFORM pg_catalog.pg_advisory_xact_lock(
    pg_catalog.hashtextextended(p_workspace_id::text||':workspace-owner',0));
@@ -114,6 +106,18 @@ BEGIN
     'workspaceId',p_workspace_id,'resourceKind','workspace',
     'targetUserId',p_target_user_id,'idempotent',true);
  END IF;
+ -- Authorization must be freshly evaluated for any NEW transfer. An exact
+ -- actor-bound idempotent replay above is read-only and cannot reopen a grant.
+ IF NOT EXISTS(
+  SELECT 1 FROM private.ws01_member_roles r
+   WHERE r.workspace_id=p_workspace_id AND r.user_id=v_actor
+    AND r.relation='owner'
+  UNION ALL
+  SELECT 1 FROM private.ws03_creator_authorities a
+   WHERE a.user_id=v_actor AND a.enabled IS TRUE AND a.authority='it_admin'
+ )
+ THEN RAISE EXCEPTION 'Workspace owner or IT administrator required'
+   USING ERRCODE='42501'; END IF;
  IF NOT EXISTS(
   SELECT 1 FROM public.workspace_members m JOIN public.profiles p
    ON p.id=m.user_id JOIN auth.users u ON u.id=m.user_id
