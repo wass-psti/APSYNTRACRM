@@ -202,19 +202,41 @@ test('XLSX: highly compressible valid OOXML remains accepted within absolute siz
  assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
 });
 
-test('XLSX: unsupported compression, ZIP64 and oversized entries retain explicit rejection',async()=>{
+test('XLSX: Monday-style ZIP64 per-entry size metadata is accepted',async()=>{
+ const entries=workbookEntries().map(entry=>({...entry,zip64:true}));
+ const parsed=await parseWithFixtureDom(makeZip(entries));
+ assert.equal(parsed.sheets.length,1);
+ assert.equal(parsed.sheets[0].name,'Contacts');
+ assert.deepEqual(parsed.sheets[0].headers,['Name','Score']);
+ assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
+});
+
+test('XLSX: ZIP64 per-entry sizes require valid central and local extra metadata',async()=>{
+ const missing=workbookEntries().map(entry=>({...entry,zip64:true}));
+ missing[0].zip64CentralExtra=false;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(missing)),
+  /ZIP64 XLSX entry is missing required size metadata/);
+ const mismatch=workbookEntries().map(entry=>({...entry,zip64:true}));
+ mismatch[0].zip64LocalRawSize=Buffer.byteLength(mismatch[0].xml)+1;
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(mismatch)),
+  /local entry sizes or checksum do not match/);
+});
+
+test('XLSX: unsupported compression, ZIP64 directory and oversized entries remain rejected',async()=>{
  const unsupported=workbookEntries();
  unsupported[0].method=12;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(unsupported)),
   /Unsupported XLSX compression method/);
- const zip64=workbookEntries();
- zip64[0].declaredSize=0xffffffff;
- await assert.rejects(()=>parseWithFixtureDom(makeZip(zip64)),
-  /ZIP64 XLSX workbook entries/);
- const oversized=workbookEntries();
+ const zip64Directory=makeZip(workbookEntries());
+ const eocd=zip64Directory.length-22;
+ zip64Directory.writeUInt16LE(0xffff,eocd+8);
+ zip64Directory.writeUInt16LE(0xffff,eocd+10);
+ await assert.rejects(()=>parseWithFixtureDom(zip64Directory),
+  /ZIP64 end-of-central-directory archives/);
+ const oversized=workbookEntries().map(entry=>({...entry,zip64:true}));
  oversized[0].declaredSize=24*1024*1024+1;
  await assert.rejects(()=>parseWithFixtureDom(makeZip(oversized)),
-  /24 MB uncompressed XML limit/);
+  /24 MB uncompressed limit/);
 });
 
 test('XLSX: encrypted ZIP and worksheet path traversal are rejected',async()=>{
