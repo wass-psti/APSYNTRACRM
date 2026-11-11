@@ -105,9 +105,12 @@ function zipDirectory(buffer){
   const flags=le(view,p+8,2),method=le(view,p+10,2),
    crc=le(view,p+16,4),packed=le(view,p+20,4),raw=le(view,p+24,4);
   const nameLen=le(view,p+28,2),extra=le(view,p+30,2),comment=le(view,p+32,2),local=le(view,p+42,4);
-  if(flags&1||![0,8].includes(method)||raw===0xffffffff||
-   packed===0xffffffff||raw>4*1024*1024||packed>MAX_BYTES||
-   (packed>0&&raw>packed*200))invalid('Encrypted, unusually compressed or oversized workbook entry.');
+  if(flags&1)invalid('Encrypted XLSX workbook entries are not supported.');
+  if(![0,8].includes(method))invalid('Unsupported XLSX compression method.');
+  if(raw===0xffffffff||packed===0xffffffff)
+   invalid('ZIP64 XLSX workbook entries are not supported.');
+  if(raw>4*1024*1024||packed>MAX_BYTES)
+   invalid('XLSX workbook entry exceeds the 4 MB decompressed or 8 MB compressed entry limit.');
   total+=raw;if(total>24*1024*1024)invalid('Workbook expands beyond the safe XML limit.');
   const end=p+46+nameLen+extra+comment;
   if(end>buffer.byteLength)invalid('Damaged XLSX entry name.');
