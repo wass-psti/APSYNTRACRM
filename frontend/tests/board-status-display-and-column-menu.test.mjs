@@ -125,7 +125,7 @@ test('header menu actions are wired with manager-only edits and safe width confi
  assert.match(app,/closeBoardColumnContext\(\{restoreFocus:true\}\)/);
  assert.match(app,/event\.key==='Escape'/);
  assert.match(app,/event\.key==='ArrowDown'/);
- assert.match(app,/if\(event\.target\.closest\('\.board-column-more,\.board-column-resize'\)\)/);
+ assert.match(app,/event\.target\.closest\('\.board-column-more,\.board-column-resize,input,textarea,select,\[contenteditable\]'\)/);
  assert.match(app,/boardColumnMenuNode\.contains\(document\.activeElement\)/);
  assert.doesNotMatch(app,/wm_delete_board_column\(/);
 });
