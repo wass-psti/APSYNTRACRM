@@ -116,6 +116,11 @@ export function renderBoardSharePreview({board,moduleKey=null,workspaceId,manage
    '<button type="button" class="board-share-stage-secondary bs09-workspace-invite" data-board-share-workspace-invite>Open workspace invitations</button>'+
    '<p class="board-share-stage-caption">Invitation is not account verification or board access. No public links or automatic board grants.</p>'+
   '</div>'+
+  (moduleKey&&manage?
+   '<details class="board-share-stage-dev"><summary>Application ownership</summary>'+
+    '<p>Ownership transfer requires a verified IT administrator or current application owner, an eligible recipient, and a separately reviewed application permission contract.</p>'+
+    '<button type="button" disabled>Transfer application ownership — pending activation</button>'+
+   '</details>':'')+
   (local?'<details class="board-share-stage-dev"><summary>Local development tools</summary>'+
     '<p>Use sample boards and simulated users. No Supabase records are shared.</p>'+
     '<button type="button" data-board-share-lab>Open invitation lab (demo)</button>'+
