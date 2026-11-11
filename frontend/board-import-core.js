@@ -90,7 +90,7 @@ function parseImportNumber(raw){
    [integer,fraction]=value.split(',');decimal=',';
   }else return null;
  }else if(dot>=0){
-  if(validGrouped(value))integer=value.replace(/\./g,'');
+  if(value.split('.').length>2&&validGrouped(value))integer=value.replace(/\./g,'');
   else if(value.split('.').length===2&&/^\d+$/.test(value.split('.')[1])){
    [integer,fraction]=value.split('.');decimal='.';
   }else return null;
