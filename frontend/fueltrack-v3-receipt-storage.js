@@ -13,12 +13,13 @@ const encode=path=>path.split('/').map(encodeURIComponent).join('/');
 /** Stable, Board-scoped object identity makes a retry address the same object
  * even after a page refresh or a new client instance. It is not an auth token.
  */
-async function stableReceiptObjectId(boardId,boardItemId,requestId){
+async function stableReceiptObjectId(boardId,boardItemId,requestId,actorId){
  const crypto=globalThis.crypto;
+ if(!UUID.test(actorId||''))throw new TypeError('Signed receipt owner identity required.');
  if(!crypto?.subtle||typeof crypto.subtle.digest!=='function'||typeof TextEncoder!=='function')
   throw new Error('Deterministic receipt retry identifiers are unavailable.');
  const input=new TextEncoder().encode(
-  'fueltrack-v3-receipt-v1\\0'+boardId+'\\0'+boardItemId+'\\0'+requestId
+  'fueltrack-v3-receipt-v1|'+boardId+'|'+boardItemId+'|'+requestId+'|'+actorId
  );
  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',input));
  const bytes=digest.slice(0,16);
@@ -96,28 +97,36 @@ export class FuelTrackV3ReceiptStorageClient {
   if(expected.byteLength!==file.size||expected.byteLength<1||expected.byteLength>MAX_BYTES)
    throw new Error('Existing private receipt size does not match the selected file.');
   const read=async accessToken=>{
-   const response=await this.boundedFetch(
-    this.baseUrl+'/storage/v1/object/authenticated/'+bucket+'/'+encode(path),{
-     method:'GET',mode:'cors',redirect:'error',cache:'no-store',credentials:'omit',
-     headers:{apikey:this.apiKey,Authorization:'Bearer '+accessToken}
-    });
-   if(!response.ok){
-    const error=new Error('Existing private receipt could not be verified ('+response.status+').');
-    error.status=response.status;throw error;
-   }
-   const declared=response.headers?.get?.('content-type')?.split(';')[0]?.trim()?.toLowerCase();
-   if(declared&&declared!=='application/octet-stream'&&declared!==mimeType)
-    throw new Error('Existing private receipt content type does not match the selected file.');
-   const length=response.headers?.get?.('content-length');
-   if(length!==null&&length!==undefined&&
-      (!/^\\d+$/.test(length)||Number(length)!==expected.byteLength))
-    throw new Error('Existing private receipt size does not match the selected file.');
-   const reader=response.body?.getReader?.();
-   if(!reader)throw new Error('Existing private receipt stream is unavailable.');
-   let offset=0;
+   const controller=new AbortController();
+   const timeout=setTimeout(()=>controller.abort(),25000);
+   let reader;
    try{
+    const response=await this.fetchImpl(
+     this.baseUrl+'/storage/v1/object/authenticated/'+bucket+'/'+encode(path),{
+      method:'GET',mode:'cors',redirect:'error',cache:'no-store',credentials:'omit',
+      headers:{apikey:this.apiKey,Authorization:'Bearer '+accessToken},
+      signal:controller.signal
+     });
+    if(!response.ok){
+     const error=new Error('Existing private receipt could not be verified ('+response.status+').');
+     error.status=response.status;throw error;
+    }
+    const declared=response.headers?.get?.('content-type')?.split(';')[0]?.trim()?.toLowerCase();
+    if(declared&&declared!=='application/octet-stream'&&declared!==mimeType)
+     throw new Error('Existing private receipt content type does not match the selected file.');
+    const length=response.headers?.get?.('content-length');
+    if(length!==null&&length!==undefined&&
+       (!/^[0-9]+$/.test(length)||Number(length)!==expected.byteLength))
+     throw new Error('Existing private receipt size does not match the selected file.');
+    reader=response.body?.getReader?.();
+    if(!reader)throw new Error('Existing private receipt stream is unavailable.');
+    let offset=0;
     while(true){
      const part=await reader.read();
+     if(controller.signal.aborted)
+      throw new Error('Existing private receipt verification timed out; refresh before retrying.');
+     if(!this.auth.isSignedIn||this.auth.userId!==actor)
+      throw new Error('Signed identity changed while verifying the existing receipt upload.');
      if(part.done)break;
      if(!(part.value instanceof Uint8Array)||part.value.byteLength===0)
       throw new Error('Existing private receipt stream contains invalid data.');
@@ -129,12 +138,19 @@ export class FuelTrackV3ReceiptStorageClient {
      }
      offset+=part.value.byteLength;
     }
-   }finally{try{await reader.cancel();}catch{}}
-   if(offset!==expected.byteLength)
-    throw new Error('Existing private receipt size does not match the selected file.');
-   if(!this.auth.isSignedIn||this.auth.userId!==actor)
-    throw new Error('Signed identity changed while verifying the existing receipt upload.');
-   return true;
+    if(offset!==expected.byteLength)
+     throw new Error('Existing private receipt size does not match the selected file.');
+    if(!this.auth.isSignedIn||this.auth.userId!==actor)
+     throw new Error('Signed identity changed while verifying the existing receipt upload.');
+    return true;
+   }catch(error){
+    if(controller.signal.aborted)
+     throw new Error('Existing private receipt verification timed out; refresh before retrying.');
+    throw error;
+   }finally{
+    clearTimeout(timeout);
+    if(reader)try{await reader.cancel();}catch{}
+   }
   };
   try{return await read(token);}
   catch(error){
@@ -185,7 +201,7 @@ export class FuelTrackV3ReceiptStorageClient {
   const intent=await this.domain.receiptPrepare({requestId});
   if(!this.auth.isSignedIn||this.auth.userId!==actor)
    throw new Error('Signed identity changed before receipt upload.');
-  const objectId=await stableReceiptObjectId(this.boardId,intent.boardItemId,requestId);
+  const objectId=await stableReceiptObjectId(this.boardId,intent.boardItemId,requestId,actor);
   if(!UUID.test(objectId))throw new Error('Secure receipt object identifiers unavailable.');
   const path=this.boardId+'/'+intent.boardItemId+'/'+objectId+'.'+checked.extension;
   // The stored name is a fixed canonical leaf, independent of caller file names.
