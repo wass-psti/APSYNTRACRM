@@ -4,6 +4,7 @@
  * No fabricated memberships, independent auth or browser-persisted scope.
  */
 import {validUuid} from './data.js';
+import {canCreateOrganizationalWorkspace,WS03_RESTRICTED_CREATION_ENABLED} from './workspace-authority.js';
 
 export const WS01_DISCOVERY_ENABLED=true;
 export const WS01_CREATION_ENABLED=true;
@@ -526,6 +527,12 @@ function currentFootnote(catalog,options={}){
  return '<div data-ws01-feedback><p class="ws01-note" data-ws01-note role="status">'+escape(message)+'</p>'+
   (status==='error'?'<button type="button" class="ws01-retry" data-ws01-action="retry">Retry authorized workspace discovery</button>':'')+'</div>';
 }
+function workspaceCreateAllowed(options={}){
+ return WS01_CREATION_ENABLED&&
+  canCreateOrganizationalWorkspace(options.selectorSession?.creationAuthority,{
+   enabled:WS03_RESTRICTED_CREATION_ENABLED
+  });
+}
 function menuContent(catalog,options={}){
  return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Browse workspaces">'+
   '<header class="ws01-menu-heading"><strong>Workspaces</strong>'+
@@ -535,7 +542,9 @@ function menuContent(catalog,options={}){
   '<p class="ws01-eyebrow">Authorized workspaces · '+visibleWorkspaces(catalog).length+'</p>'+
   '<div data-ws01-results>'+resultsMarkup(catalog,'all','',options)+'</div>'+
   '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
-  '<button type="button" data-ws01-action="create">Add workspace</button>'+
+  '<button type="button" data-ws01-action="create"'+
+   (workspaceCreateAllowed(options)?'':' disabled title="Workspace creation requires verified IT Admin or organizational owner authorization"')+
+   '>Add workspace</button>'+
   '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
   currentFootnote(catalog,options)+'</section>';
 }
@@ -579,7 +588,9 @@ function browseContent(catalog,options={}){
   '<div class="ws01-browser-body"><nav class="ws01-browser-tabs" aria-label="Workspace categories">'+
   tabs.map(([id,label])=>'<button type="button" data-ws01-filter="'+id+
    '" aria-pressed="'+(id==='all')+'">'+escape(label)+'</button>').join('')+
-  '<button type="button" data-ws01-action="create" class="ws01-add-button">+ Add workspace</button></nav>'+
+  '<button type="button" data-ws01-action="create" class="ws01-add-button"'+
+   (workspaceCreateAllowed(options)?'':' disabled title="Only authorized IT Admins and organizational owners can create workspaces"')+
+   '>+ Add workspace</button></nav>'+
   '<div class="ws01-browser-results"><h3 data-ws01-title>All workspaces</h3>'+
   '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','',options)+'</div>'+
   currentFootnote(catalog,options)+'</div></div></section>';
@@ -647,7 +658,7 @@ function createContent({enabled=WS01_CREATION_ENABLED}={}){
 }
 function openCreate(catalog,options={}){
  const {lifecycle,selectorSession}=options;
- const enabled=WS01_CREATION_ENABLED&&typeof lifecycle?.create==='function';
+ const enabled=workspaceCreateAllowed(options)&&typeof lifecycle?.create==='function';
  const layer=panel(createContent({enabled}),'create');
  const form=layer.querySelector('#ws01-proposal');
  const feedback=layer.querySelector('.ws01-form-feedback');
@@ -848,7 +859,7 @@ export function openWorkspaceInvitationDialog(current,options={}){
 }
 export function openWorkspaceSelector(current,options={}){
  if(activeOverlay){closeWorkspacePanels();return;}
- const session={catalog:workspaceCatalog(current),status:'loading',refresh:null,load:null};
+ const session={catalog:workspaceCatalog(current),status:'loading',refresh:null,load:null,creationAuthority:null};
  returnFocus=document.activeElement;
  openMenu(session.catalog,{...options,selectorSession:session});
  // Never substitute a global workspace count for the caller's signed
@@ -874,6 +885,20 @@ export function openWorkspaceSelector(current,options={}){
   }
   session.refresh?.();
  };
+ // Role/status is verified on the server, not inferred from personal workspace
+ // ownership, profile labels, or a browser-managed role switcher.
+ session.loadAuthority=async()=>{
+  if(!WS03_RESTRICTED_CREATION_ENABLED||
+     typeof options.authorityClient?.readCreatorAuthority!=='function')return;
+  try{session.creationAuthority=await options.authorityClient.readCreatorAuthority();}
+  catch{session.creationAuthority=null;}
+  if(activeOverlay?.isConnected){
+   for(const button of activeOverlay.querySelectorAll('[data-ws01-action="create"]')){
+    button.disabled=!workspaceCreateAllowed({...options,selectorSession:session});
+   }
+  }
+ };
  // Read-only signed RPC, no cross-user cache and no implicit workspace switch.
  void session.load();
+ void session.loadAuthority();
 }
