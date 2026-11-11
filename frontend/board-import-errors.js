@@ -4,7 +4,8 @@
  */
 const tokenFailure=error=>{
  const message=String(error?.message||error||'');
- return error instanceof SyntaxError||error?.name==='SyntaxError'||
+ return error?.code==='INVALID_JSON_RESPONSE'||
+  error instanceof SyntaxError||error?.name==='SyntaxError'||
   /invalid or unexpected token|unexpected token|unexpected end of json input/i.test(message);
 };
 export function normalizeImportFailure(error,phase='preflight'){
