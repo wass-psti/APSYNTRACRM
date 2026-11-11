@@ -97,6 +97,8 @@ export class FuelTrackV3ReceiptStorageClient {
   if(expected.byteLength!==file.size||expected.byteLength<1||expected.byteLength>MAX_BYTES)
    throw new Error('Existing private receipt size does not match the selected file.');
   const read=async accessToken=>{
+   if(!this.auth.isSignedIn||this.auth.userId!==actor)
+    throw new Error('Signed identity changed before verifying the existing receipt upload.');
    const controller=new AbortController();
    const timeout=setTimeout(()=>controller.abort(),25000);
    let reader;
@@ -107,6 +109,8 @@ export class FuelTrackV3ReceiptStorageClient {
       headers:{apikey:this.apiKey,Authorization:'Bearer '+accessToken},
       signal:controller.signal
      });
+    if(!this.auth.isSignedIn||this.auth.userId!==actor)
+     throw new Error('Signed identity changed while verifying the existing receipt upload.');
     if(!response.ok){
      const error=new Error('Existing private receipt could not be verified ('+response.status+').');
      error.status=response.status;throw error;
