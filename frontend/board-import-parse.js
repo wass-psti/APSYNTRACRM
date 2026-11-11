@@ -147,7 +147,7 @@ function zipDirectory(buffer){
   invalid('Multi-disk XLSX archives are not supported.');
  if(entriesOnDisk===ZIP16_MAX||count===ZIP16_MAX||
     directorySize===ZIP32_MAX||offset===ZIP32_MAX)
-  invalid('ZIP64 end-of-central-directory archives exceed the supported 8 MB workbook format.');
+  invalid('ZIP64 end-of-central-directory records are not supported by the bounded 8 MB XLSX reader.');
  if(count>300||offset>=buffer.byteLength||offset+directorySize>eocd)
   invalid('XLSX ZIP directory exceeds the supported workbook limits.');
  const directoryEnd=offset+directorySize;
@@ -185,7 +185,7 @@ function zipDirectory(buffer){
   if(!Number.isSafeInteger(total)||total>MAX_UNCOMPRESSED_BYTES)
    invalid('Workbook expands beyond the 24 MB uncompressed XML limit.');
   const name=new TextDecoder('utf-8',{fatal:true}).decode(bytes.subarray(p+46,p+46+nameLen));
-  if(!name||name.includes('..')||name.startsWith('/')||name.includes('\\\\')||entries.has(name))
+  if(!name||name.includes('..')||name.startsWith('/')||name.includes('\\')||entries.has(name))
    invalid('Unsafe or duplicate XLSX path.');
   if(local>=offset||local+30>offset)
    invalid('XLSX local entry points outside the data section.');
