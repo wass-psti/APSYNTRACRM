@@ -44,6 +44,26 @@ test('source type detection and exact existing-column reuse are stable',()=>{
  assert.equal(mappings[2].action,'skip');
  assert.equal(availableImportColumns(detail).length,1);
 });
+test('number and date conversion accepts common export formats without guessing ambiguous dates',()=>{
+ assert.equal(inferImportType('Deal Value',['$1,234.50','₱2,500.00']),'number');
+ assert.equal(inferImportType('Date Updated',['02/13/2026','13/02/2026']),'date');
+ assert.equal(inferImportType('Date Updated',['01/02/2026']),'text');
+ const numeric={...sheet,headers:['Name','Amount'],rows:[['Alpha','$1,234.50'],['Beta','₱2,500.00']]};
+ const numericMaps=[{source:'Name',action:'item'},
+  {source:'Amount',action:'create',columnType:'number',name:'Amount'}];
+ const numericPlan=buildImportPlan({sheet:numeric,detail,mappings:numericMaps,group,allowColumns:true});
+ assert.equal(numericPlan.payload.rows[0].values.Amount,1234.5);
+ assert.equal(numericPlan.payload.rows[1].values.Amount,2500);
+ const dates={...sheet,headers:['Name','Date Updated'],rows:[['Alpha','02/13/2026'],['Beta','13/02/2026']]};
+ const dateMaps=[{source:'Name',action:'item'},
+  {source:'Date Updated',action:'create',columnType:'date',name:'Date Updated'}];
+ const datePlan=buildImportPlan({sheet:dates,detail,mappings:dateMaps,group,allowColumns:true});
+ assert.equal(datePlan.payload.rows[0].values['Date Updated'],'2026-02-13');
+ assert.equal(datePlan.payload.rows[1].values['Date Updated'],'2026-02-13');
+ const ambiguous={...dates,rows:[['Alpha','01/02/2026']]};
+ assert.throws(()=>buildImportPlan({sheet:ambiguous,detail,mappings:dateMaps,group,allowColumns:true}),
+  /unambiguous supported date format/);
+});
 test('manager receives missing-column proposal; editor sees no auto-creation',()=>{
  const editor=initialImportMappings(sheet,detail);
  assert.equal(editor[2].action,'skip');
