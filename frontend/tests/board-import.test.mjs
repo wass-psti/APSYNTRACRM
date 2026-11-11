@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {parseDelimited,parseImportFile} from '../board-import-parse.js';
 import {inferImportType,initialImportMappings,buildImportPlan,
  executeBoardImport,availableImportColumns} from '../board-import-core.js';
-import {importMappingReadiness} from '../board-import-readiness.js';
+import {importMappingReadiness,reassignImportItemMapping} from '../board-import-readiness.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const actor='33333333-3333-4333-8333-333333333333';
@@ -104,6 +104,27 @@ test('unmapped source columns require an explicit mapping or exclusion decision'
  const mapped=editorMappings.map((m,i)=>i===2?
   {...m,action:'existing',columnId:colId,requiresDecision:false}:m);
  assert.deepEqual(importMappingReadiness(mapped).pendingSkips,[]);
+});
+test('reassigning the Item title column keeps the previous title source unresolved',()=>{
+ const original=[
+  {source:'Name',action:'item',type:'text'},
+  {source:'Alternate title',action:'skip',type:'text',requiresDecision:true},
+  {source:'Amount',action:'existing',columnId:colId,type:'number'}
+ ];
+ const remapped=reassignImportItemMapping(original,1);
+ assert.deepEqual(remapped[0],{source:'Name',action:'skip',type:'text',requiresDecision:true});
+ assert.deepEqual(remapped[1],{source:'Alternate title',action:'item',type:'text',requiresDecision:false});
+ assert.deepEqual(importMappingReadiness(remapped).pendingSkips,
+  [{index:0,source:'Name',type:'text'}]);
+ const remapSheet={headers:['Name','Alternate title','Amount'],
+  rows:[['Old title','New title','25']]};
+ assert.throws(()=>buildImportPlan({sheet:remapSheet,detail,mappings:remapped,group}),
+  /explicitly confirm exclusion/);
+ const acknowledged=remapped.map((mapping,index)=>index===0?
+  {...mapping,requiresDecision:false}:mapping);
+ const plan=buildImportPlan({sheet:remapSheet,detail,mappings:acknowledged,group});
+ assert.equal(plan.payload.rows[0].title,'New title');
+ assert.deepEqual(plan.payload.rows[0].values,{Amount:25});
 });
 test('omitted worksheet rows and uncached formula blanks require explicit acknowledgement',()=>{
  const mappings=existingMaps.map(m=>({...m}));
