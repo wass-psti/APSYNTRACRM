@@ -154,5 +154,65 @@ BEGIN
 END $transfer$;
 REVOKE ALL ON FUNCTION public.wm_ws03_transfer_ownership(
  uuid,text,uuid,uuid,uuid,uuid) FROM PUBLIC,anon,authenticated;
+-- Signed, strictly workspace-scoped eligibility reader. This function does
+-- not disclose addresses or membership lists to unauthorized callers.
+CREATE FUNCTION public.wm_ws03_transfer_candidates(
+ p_workspace_id uuid
+) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path='' AS $read$
+DECLARE
+ v_actor uuid:=auth.uid();v_owner uuid;v_count integer;v_people jsonb;
+BEGIN
+ PERFORM private.ws01_signed_actor_session();
+ IF p_workspace_id IS NULL OR
+    public.current_workspace_id(v_actor) IS DISTINCT FROM p_workspace_id
+ OR NOT EXISTS(
+    SELECT 1 FROM private.ws03_creator_flags
+     WHERE id IS TRUE AND owner_transfer_enabled IS TRUE
+ ) OR NOT EXISTS(
+    SELECT 1 FROM public.workspace_members
+     WHERE workspace_id=p_workspace_id AND user_id=v_actor AND active
+ ) OR NOT EXISTS(
+    SELECT 1 FROM private.ws01_member_roles r
+     WHERE r.workspace_id=p_workspace_id AND r.user_id=v_actor
+       AND r.relation='owner'
+    UNION ALL
+    SELECT 1 FROM private.ws03_creator_authorities a
+     WHERE a.user_id=v_actor AND a.enabled IS TRUE AND a.authority='it_admin'
+ )
+ THEN RAISE EXCEPTION 'Ownership candidates denied' USING ERRCODE='42501';
+ END IF;
+ SELECT r.user_id INTO v_owner FROM private.ws01_member_roles r
+ WHERE r.workspace_id=p_workspace_id AND r.relation='owner';
+ IF v_owner IS NULL THEN RAISE EXCEPTION 'Owner missing' USING ERRCODE='42501'; END IF;
+ SELECT count(*)::integer INTO v_count
+ FROM public.workspace_members wm
+ JOIN public.profiles p ON p.id=wm.user_id
+ JOIN auth.users u ON u.id=wm.user_id
+ WHERE wm.workspace_id=p_workspace_id AND wm.user_id<>v_owner
+  AND wm.active IS TRUE AND p.status='active'
+  AND u.email_confirmed_at IS NOT NULL AND u.is_anonymous IS FALSE;
+ IF v_count>100 THEN
+  RAISE EXCEPTION 'Too many eligible members for transfer selection'
+    USING ERRCODE='54000';
+ END IF;
+ SELECT coalesce(jsonb_agg(jsonb_build_object(
+   'id',wm.user_id,'name',p.display_name,'verified',true)
+   ORDER BY p.display_name),'[]'::jsonb)
+ INTO v_people
+ FROM public.workspace_members wm
+ JOIN public.profiles p ON p.id=wm.user_id
+ JOIN auth.users u ON u.id=wm.user_id
+ WHERE wm.workspace_id=p_workspace_id AND wm.user_id<>v_owner
+  AND wm.active IS TRUE AND p.status='active'
+  AND p.display_name IS NOT NULL AND length(btrim(p.display_name))>0
+  AND u.email_confirmed_at IS NOT NULL AND u.is_anonymous IS FALSE;
+ RETURN jsonb_build_object('schemaVersion',1,'workspaceId',p_workspace_id,
+  'actorId',v_actor,'currentOwnerId',v_owner,
+  'authorized',true,'members',v_people);
+END $read$;
+REVOKE ALL ON FUNCTION public.wm_ws03_transfer_candidates(uuid)
+ FROM PUBLIC,anon,authenticated;
+
 -- No roles, functions or private tables have been granted to a client.
 COMMIT;
