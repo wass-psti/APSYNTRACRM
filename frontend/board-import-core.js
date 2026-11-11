@@ -95,8 +95,8 @@ export function inferImportType(header,values=[]){
  if(!sample.length)return 'text';
  if(sample.every(x=>/^(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)%$/.test(x)))return 'percentage';
  if(sample.every(x=>/^(true|false|yes|no|0|1)$/i.test(x)))return 'checkbox';
- if(sample.every(x=>/^-?\d+(?:\.\d+)?$/.test(x)))return 'number';
- if(sample.every(x=>/^\d{4}-\d\d-\d\d$/.test(x)))return 'date';
+ if(sample.every(x=>parseImportNumber(x)!==null))return 'number';
+ if(sample.every(x=>normalizeImportDate(x)!==null))return 'date';
  if(sample.every(x=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))return 'email';
  if(sample.every(x=>/^https?:\/\/\S+$/i.test(x)))return 'url';
  return 'text';
