@@ -45,6 +45,7 @@ Added tests for:
 - CSS bundle consistency: 45 files / 911,493 bytes current.
 - Pages source validation: PASS.
 - SEC14 source guard: PASS (263 first-party runtime files); external deployed clients and legacy permission retirement remain outside this checkpoint.
+- Added the CP-BIMP-11 branch to the existing frontend validation workflow allowlist so the same full frontend and disposable PostgreSQL regression jobs run on this implementation branch.
 - Genuine signed-browser import against an existing dedicated board: pending. The currently open browser tab is a recovery QA fixture, not an approved import target.
 - User-provided Google Doc findings: pending Google Drive connection. The Google Drive connector was suggested but is not yet connected; no content from that document is represented as reviewed here.
 
