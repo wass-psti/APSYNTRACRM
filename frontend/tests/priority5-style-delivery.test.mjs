@@ -5,8 +5,8 @@ import {STYLE_SOURCES,STYLE_BUNDLE} from '../../scripts/priority5-style-manifest
 import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const index=readFileSync('index.html','utf8');
 const source=readFileSync(STYLE_BUNDLE,'utf8');
-test('Priority 5 merges 41 blocking CSS requests into one exact-order source bundle',()=>{
- assert.equal(STYLE_SOURCES.length,41);
+test('Priority 5 merges 43 blocking CSS requests into one exact-order source bundle',()=>{
+ assert.equal(STYLE_SOURCES.length,43);
  assert.equal(new Set(STYLE_SOURCES).size,STYLE_SOURCES.length);
  assert.equal((index.match(/<link rel="stylesheet"/g)||[]).length,1);
  assert.match(index,/href="\.\/frontend\/apsyntra-styles\.bundle\.css"/);
