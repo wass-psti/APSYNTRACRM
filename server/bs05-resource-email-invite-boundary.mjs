@@ -5,7 +5,7 @@
  * in JSON or infer authorization from frontend role indicators.
  */
 const ORIGIN='https://wass-psti.github.io';
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL=/^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/u;
 const MODULE=/^[a-z][a-z0-9_-]{1,63}$/;
 const MAX_BODY=1024;
