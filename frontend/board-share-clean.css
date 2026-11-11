@@ -24,3 +24,14 @@
 .board-share-stage-dev button{background:#fff;border:1px solid #dce1f0;border-radius:8px;padding:9px 11px;color:#565f83;cursor:pointer}
 .board-share-stage button:focus-visible,.board-share-stage summary:focus-visible{outline:2px solid #6065d4;outline-offset:2px}
 @media(max-width:540px){.board-share-stage{padding:19px 18px}.board-share-stage-row{flex-wrap:wrap}.board-share-stage-pill{margin-left:49px}.board-share-stage-secondary{margin-left:auto}}
+
+/* BS05: recipient-only invitation form, no public links or live sending. */
+.board-share-stage-form{display:grid;gap:10px;margin-top:15px}
+.board-share-stage-form label{font-size:12px;font-weight:720;color:#47536c}
+.board-share-stage-form input{font:inherit;font-size:13px;min-width:0;width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #d5dbeb;border-radius:9px;color:#26304b;background:#fff;outline-offset:2px}
+.board-share-stage-form input:disabled{color:#8b94a6;background:#f7f8fb;cursor:not-allowed}
+.board-share-stage-form input:focus-visible{outline:2px solid #6961b2}
+.board-share-stage-permission{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;color:#7a859b;font-size:12px}
+.board-share-stage-permission strong{color:#5c6287;font-weight:700}
+.board-share-stage-form .board-share-stage-primary{margin-top:0}
+@media(max-width:420px){.board-share-stage-permission{align-items:flex-start;flex-direction:column;gap:4px}}
