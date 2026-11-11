@@ -9,7 +9,7 @@ export function importMappingReadiness(mappings,allowColumns=false){
    [{index,source:String(mapping.source||''),type:mapping.choiceType==='dropdown'?
      'dropdown':'status'}]:[]);
  const newColumns=list.filter(mapping=>mapping?.action==='create');
- const skipped=list.filter(mapping=>mapping?.action==='skip').map(x=>String(x.source||''));
+ const pendingSkips=list.flatMap((mapping,index)=>mapping?.action==='skip'&&mapping.requiresDecision===true?\n  [{index,source:String(mapping.source||''),type:String(mapping.type||'text')}]:[]);\n const skipped=list.filter(mapping=>mapping?.action==='skip').map(x=>String(x.source||''));
  return {
   pendingChoices,
   proposedCount:newColumns.length,
