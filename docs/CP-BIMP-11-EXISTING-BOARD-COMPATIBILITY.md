@@ -58,7 +58,7 @@ Added tests for:
 - CSS bundle consistency: 45 files / 911,493 bytes current.
 - Pages source validation: PASS.
 - SEC14 source guard: PASS (263 first-party runtime files); external deployed clients and legacy permission retirement remain outside this checkpoint.
-- GitHub Actions: frontend PASS; disposable PostgreSQL PASS; disposable collaboration PostgreSQL PASS; disposable OT PostgreSQL PASS. The additional BIMP-02 legacy-column disposable import job is now enabled for this PR and awaits its run. Live Pages and Supabase Preview are skipped by existing workflow conditions.
+- GitHub Actions: frontend PASS; disposable PostgreSQL PASS; disposable collaboration PostgreSQL PASS; disposable OT PostgreSQL PASS; BIMP-02 disposable signed-import acceptance PASS. Its PostgreSQL 17 fixture imported two records into both a visible `custom:*` number column and a hidden legacy `col_*` text column, then verified the exact persisted values, audit receipt, and existing RBAC/revocation contracts. Live Pages and Supabase Preview are skipped by existing workflow conditions.
 - Added the CP-BIMP-11 branch and its acceptance documents to the existing frontend validation workflow filters so the same full frontend and disposable PostgreSQL regression jobs run on this implementation branch and documentation changes.
 - Genuine signed-browser import against an existing dedicated board: pending. The currently open browser tab is a recovery QA fixture, not an approved import target.
 - User-provided Google Doc findings: pending Google Drive connection. The Google Drive connector was suggested but is not yet connected; no content from that document is represented as reviewed here.
