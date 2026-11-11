@@ -29,3 +29,15 @@ export function matchConfiguredImportChoice(mappings,index,columnId){
  return mappings.map((m,i)=>i===index?{...m,action:'existing',columnId,
   type:m.choiceType,requiresDecision:false}:m);
 }
+
+/** Reassign the Item title source without silently discarding the previous title column. */
+export function reassignImportItemMapping(mappings,index){
+ if(!Array.isArray(mappings)||!Number.isInteger(index)||index<0||index>=mappings.length)
+  throw new Error('A valid source column is required for the Item mapping.');
+ return mappings.map((mapping,i)=>{
+  if(i===index)return {...mapping,action:'item',requiresDecision:false};
+  if(mapping?.action==='item')
+   return {...mapping,action:'skip',requiresDecision:true};
+  return mapping;
+ });
+}
