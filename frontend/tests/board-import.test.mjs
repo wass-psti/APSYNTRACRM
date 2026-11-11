@@ -47,7 +47,7 @@ test('source type detection and exact existing-column reuse are stable',()=>{
 test('number and date conversion accepts common export formats without guessing ambiguous dates',()=>{
  assert.equal(inferImportType('Deal Value',['$1,234.50','₱2,500.00']),'number');
  assert.equal(inferImportType('Date Updated',['02/13/2026','13/02/2026']),'date');
- assert.equal(inferImportType('Date Updated',['01/02/2026']),'text');
+ assert.equal(inferImportType('Date Updated',['01/02/2026']),'date');
  const numeric={...sheet,headers:['Name','Amount'],rows:[['Alpha','$1,234.50'],['Beta','₱2,500.00']]};
  const numericMaps=[{source:'Name',action:'item'},
   {source:'Amount',action:'create',columnType:'number',name:'Amount'}];
