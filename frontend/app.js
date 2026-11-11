@@ -84,7 +84,7 @@ import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
 import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,classifyMaterialSourcingDetailError,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
-import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
+import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,planProtectedSourcingChanges,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
  applyBoardViewSettings,renderBoardStructureAdmin,describeBoardColumns,parseChoiceConfig,columnOptionLines,
@@ -3472,7 +3472,9 @@ async function openBoardItemDetails(itemId){
    renderMaterialSourcingDetailTabs(renderMaterialSourcingPublicOverview(sourcingPublic,{
     groupTitle:group?.title||'Main group'}))+
    '</div><div class="mrh-detail-footer">'+
-    '<button type="button" class="primary" data-mrh-editor-toggle hidden>Edit protected fields</button>'+
+    '<button type="button" class="primary" data-mrh-save-all hidden>Save changes</button>'+
+    '<span class="mrh-save-feedback" role="status" aria-live="polite" data-mrh-save-feedback></span>'+
+    '<button type="button" class="secondary" data-mrh-editor-toggle hidden>Edit protected fields</button>'+
     '<button type="button" class="secondary" data-dismiss>Close</button></div>':
    '<p class="muted">Read-only item details from the signed board response.</p>'+
     boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
@@ -3574,21 +3576,62 @@ async function openBoardItemDetails(itemId){
     }
    }
   });
-  let values=null,busy=false,editing=false;
+  let values=null,busy=false,editing=false,needsReopen=false;
   const editToggle=itemDialog.querySelector('[data-mrh-editor-toggle]');
+  const saveAll=itemDialog.querySelector('[data-mrh-save-all]');
+  const statusMessage=message=>{
+   const status=privateHost.querySelector('[data-mrh-private-status]');
+   if(status)status.textContent=message;
+   const feedback=itemDialog.querySelector('[data-mrh-save-feedback]');
+   if(feedback)feedback.textContent=message;
+  };
+  const controls=()=>[...privateHost.querySelectorAll('[data-mrh-private-field]')];
+  const rawDraft=()=>Object.fromEntries(controls().map(host=>[
+   host.dataset.mrhPrivateField,host.querySelector('[name="value"]')?.value??''
+  ]));
+  const pendingChanges=()=>planProtectedSourcingChanges(values,rawDraft());
+  const updateDisplay=records=>{
+   for(const host of controls()){
+    const field=host.dataset.mrhPrivateField;
+    const cell=records?.[field];
+    const output=host.closest('.mrh-sourcing-field')?.querySelector('[data-mrh-private-value]');
+    if(output)output.textContent=cell?.value===undefined?'—':String(cell.value);
+   }
+  };
+  const updateButtons=()=>{
+   if(!saveAll)return;
+   saveAll.hidden=!editing;
+   saveAll.disabled=busy||needsReopen;
+   if(editToggle)editToggle.disabled=busy||needsReopen;
+   for(const host of controls()){
+    const field=host.querySelector('[name="value"]');
+    if(field)field.disabled=busy||needsReopen;
+   }
+  };
   editToggle?.addEventListener('click',()=>{
    if(!current()||busy||!values)return;
+   if(editing){
+    try{
+     if(pendingChanges().length){
+      statusMessage('Unsaved edits retained. Save changes before leaving edit mode.');
+      return;
+     }
+    }catch{
+     statusMessage('Correct the pending values or restore the saved values before leaving edit mode.');
+     return;
+    }
+   }
    editing=!editing;
    editToggle.textContent=editing?'Done editing':'Edit protected fields';
    privateHost.innerHTML=renderProtectedSourcingEditor(values,{editing});
+   updateButtons();
   });
   const refresh=async()=>{
    try{
     const result=await readProtectedSourcingItem(input);
     if(!current())return false;
     values=result;
-    // The new signed read RPC is available to board viewers. Keep editing
-    // separate: only the existing ADMIN-scoped write contract permits it.
+    needsReopen=false;
     const editAllowed=await db.allowed(snapshot.boardId,'edit').catch(()=>false);
     let canProtectedEdit=false;
     if(editAllowed===true){
@@ -3605,11 +3648,13 @@ async function openBoardItemDetails(itemId){
      editToggle.hidden=!canProtectedEdit;
      editToggle.textContent=editing?'Done editing':'Edit protected fields';
     }
+    updateButtons();
     return true;
    }catch(error){
     if(!current())return false;
     values=null;
     if(editToggle)editToggle.hidden=true;
+    if(saveAll)saveAll.hidden=true;
     privateHost.innerHTML=renderMaterialSourcingUnavailableDetails({
      reason:classifyMaterialSourcingDetailError(error)});
     return false;
@@ -3620,30 +3665,61 @@ async function openBoardItemDetails(itemId){
    privateHost.innerHTML='<p role="status" class="muted">Reloading material details…</p>';
    void refresh();
   });
-  itemDialog.addEventListener('submit',async event=>{
-   const form=event.target.closest('[data-mrh-private-field]');
-   if(!form||!current()||busy)return;
-   event.preventDefault();
-   const fieldName=form.dataset.mrhPrivateField;
-   const stored=values?.[fieldName];
-   const submit=form.querySelector('[type="submit"]');
-   const status=privateHost.querySelector('[data-mrh-private-status]');
-   if(!submit||!status)return;
-   submit.disabled=true;busy=true;status.textContent='Saving…';
+  // Keep the fields mounted throughout saving: no page, board or drawer refresh.
+  saveAll?.addEventListener('click',async()=>{
+   if(!current()||busy||!editing||!values)return;
+   let changes;
+   try{changes=pendingChanges();}
+   catch(error){statusMessage(errorMessage(error));return;}
+   if(!changes.length){statusMessage('No changes to save.');return;}
+   busy=true;updateButtons();
+   const originalDraft=rawDraft();
+   statusMessage('Saving '+changes.length+' pending change'+(changes.length===1?'':'s')+'…');
+   let completed=0;
    try{
-    await writeProtectedSourcingField({...input,fieldName,
-     value:new FormData(form).get('value'),expectedRevision:stored?.revision??null});
-    if(!current())return;
-    if(!await refresh())throw new ApiError('Protected field reload not verified.',409);
-    if(current()){
-     const nextStatus=privateHost.querySelector('[data-mrh-private-status]');
-     if(nextStatus)nextStatus.textContent='Saved and reloaded from the protected server.';
+    for(const change of changes){
+     const receipt=await writeProtectedSourcingField({...input,
+      fieldName:change.fieldName,value:change.value,
+      expectedRevision:change.expectedRevision});
+     if(!current())return;
+     values={...values,[change.fieldName]:{
+      value:change.value,revision:receipt.revision}};
+     completed++;
     }
-   }catch{
-    if(current())status.textContent='Update not confirmed. Refresh the item and review your permissions or the current field revision before retrying.';
+    // One post-save authoritative read, no input replacement or focus loss.
+    const persisted=await readProtectedSourcingItem(input);
+    if(!current())return;
+    if(changes.some(change=>persisted?.[change.fieldName]?.value!==change.value))
+     throw new ApiError('Saved values could not be verified.',409);
+    values=persisted;
+    updateDisplay(values);
+    statusMessage(changes.length+' change'+(changes.length===1?'':'s')+
+     ' saved and verified. Continue editing or select Done editing.');
+   }catch(error){
+    if(!current())return;
+    // A later write or verification may fail after earlier fields committed.
+    // Reconcile revisions without replacing any input or discarding the draft.
+    try{
+     const persisted=await readProtectedSourcingItem(input);
+     if(!current())return;
+     values=persisted;
+     updateDisplay(values);
+     const unresolved=Object.entries(originalDraft).filter(([name,raw])=>{
+      try{return planProtectedSourcingChanges(persisted,{[name]:raw}).length>0;}
+      catch{return true;}
+     }).length;
+     statusMessage(unresolved?
+      'Some changes were not saved ('+unresolved+' pending). Your edits are retained; review the values and retry Save changes. '+errorMessage(error):
+      'All values match the server, but confirmation was interrupted. Your edits are retained.');
+    }catch{
+     statusMessage('Save was not fully verified ('+completed+'/'+changes.length+
+      ' acknowledged). Your edits are retained. Reopen details to reconcile before another attempt.');
+     // An unknown commit outcome cannot safely be retried with stale revisions.
+     needsReopen=true;
+     return;
+    }
    }finally{
-    busy=false;
-    if(submit.isConnected)submit.disabled=false;
+    busy=false;updateButtons();
    }
   });
   void refresh();

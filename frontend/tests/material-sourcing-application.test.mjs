@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  materialSourcingProtectedFields,isMaterialSourcingBoard,
- normalizeProtectedSourcingRead,parseProtectedSourcingValue,
+ normalizeProtectedSourcingRead,parseProtectedSourcingValue,planProtectedSourcingChanges,
  readProtectedSourcingItem,writeProtectedSourcingField,createMaterialSourcingPart,
  renderProtectedSourcingEditor
 } from '../material-sourcing-application.js';
@@ -87,6 +87,21 @@ test('strict edit parsing rejects unsupported, negative or malformed values',()=
  assert.throws(()=>parseProtectedSourcingValue('Vendor Details',''));
  assert.throws(()=>parseProtectedSourcingValue('Requestor','not-a-uuid'));
 });
+test('centralized editor validates all changed values, preserving per-field revisions',()=>{
+ const cells={'Buying Price':{value:1,revision:4},'Currency':{value:'PHP',revision:2},
+  'Vendor Details':{value:'Original',revision:7},'Shipping Cost':{value:1,revision:1}};
+ const plan=planProtectedSourcingChanges(cells,{
+  'Buying Price':'1.00','Currency':'PHP','Vendor Details':'Revised vendor',
+  'Shipping Cost':'2'});
+ assert.deepEqual(plan,[
+  {fieldName:'Vendor Details',value:'Revised vendor',expectedRevision:7},
+  {fieldName:'Shipping Cost',value:2,expectedRevision:1}
+ ]);
+ assert.throws(()=>planProtectedSourcingChanges(cells,{
+  'Vendor Details':'New vendor','Shipping Cost':'-5'}),/nonnegative/);
+ assert.throws(()=>planProtectedSourcingChanges(cells,{'PHP Equivalent':'7'}),/Unsupported/);
+ assert.deepEqual(planProtectedSourcingChanges(cells,{'Currency':'PHP'}),[]);
+});
 test('signed ADMIN writes one field with authoritative revision CAS',async()=>{
  const f=fixture();
  const result=await writeProtectedSourcingField({...context,...f,
@@ -113,6 +128,7 @@ test('drawer escapes untrusted fields and never emits derived-field editors',()=
  assert.ok(!html.includes('<img'));
  assert.match(html,/&lt;img/);
  assert.match(html,/data-mrh-private-field="Vendor Details"/);
+ assert.doesNotMatch(html,/<button[^>]*type="submit"[^>]*>Save<\/button>/);
  assert.doesNotMatch(html,/data-mrh-private-field="PHP Equivalent"/);
  assert.doesNotMatch(html,/data-mrh-private-field="Total Cost \(VAT-IN\)"/);
  const viewer=renderProtectedSourcingEditor({}, {editing:false});
@@ -125,7 +141,7 @@ test('app mounts protected editor only on material board items',()=>{
  const part=source.slice(begin,end);
  assert.match(part,/isMaterialSourcingBoard\(state\.board\?\.board\)/);
  assert.match(part,/readProtectedSourcingItem\(input\)/);
- assert.match(part,/writeProtectedSourcingField\(\{\.\.\.input,fieldName/);
+ assert.match(part,/writeProtectedSourcingField\(\{\.\.\.input,/);
  assert.match(part,/modal===itemDialog&&boardHistoryAuthorized\(snapshot\)/);
  assert.match(part,/if\(!current\(\)\)return/);
  assert.doesNotMatch(part,/localStorage|sessionStorage|console\.log/);

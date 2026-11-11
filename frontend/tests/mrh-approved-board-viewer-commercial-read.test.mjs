@@ -55,5 +55,5 @@ test('drawer displays read values but hides editing unless confirmed ADMIN and E
  assert.match(part,/canProtectedEdit=role\?\.workspaceId===snapshot\.workspaceId&&role\?\.role==='ADMIN'/);
  assert.match(part,/editToggle\.hidden=!canProtectedEdit/);
  assert.match(part,/renderProtectedSourcingEditor\(result,\{editing\}\)/);
- assert.match(part,/writeProtectedSourcingField\(\{\.\.\.input,fieldName/);
+ assert.match(part,/writeProtectedSourcingField\(\{\.\.\.input,/);
 });

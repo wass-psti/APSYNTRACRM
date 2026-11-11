@@ -154,6 +154,20 @@ export async function writeProtectedSourcingField({
   deny('The sourcing write receipt is invalid; refresh before retrying.',409);
  return Object.freeze({fieldName,revision:result.revision});
 }
+/** Validate the complete draft before any write; exclude unchanged cells. */
+export function planProtectedSourcingChanges(cells,rawFields){
+ const changes=[];
+ for(const [name,raw] of Object.entries(rawFields||{})){
+  const previous=cells?.[name];
+  if(!FIELD_BY_NAME.has(name))deny('Unsupported protected sourcing field.',400);
+  if(String(raw??'').trim()===String(previous?.value??''))continue;
+  const value=parseProtectedSourcingValue(name,raw);
+  if(value===previous?.value)continue;
+  changes.push(Object.freeze({fieldName:name,value,
+   expectedRevision:previous?.revision??null}));
+ }
+ return Object.freeze(changes);
+}
 export function renderProtectedSourcingEditor(cells,{editing=false}={}){
  const labels=Object.freeze({
   'Buying Price':'Buying price','Currency':'Currency','Shipping Cost':'Shipping cost',
@@ -172,11 +186,10 @@ export function renderProtectedSourcingEditor(cells,{editing=false}={}){
    ' value="'+escape(raw===undefined?'':String(raw))+'" aria-label="'+escape(field.name)+'" />';
   return '<div class="mrh-sourcing-field"><div class="mrh-sourcing-value">'+
    '<strong>'+escape(labels[field.name]||field.name)+'</strong>'+
-   '<p>'+escape(rendered)+'</p></div>'+
-   (editing?'<form data-mrh-private-field="'+escape(field.name)+'">'+
+   '<p data-mrh-private-value>'+escape(rendered)+'</p></div>'+
+   (editing?'<div class="mrh-private-input" data-mrh-private-field="'+escape(field.name)+'">'+
     '<label class="sr-only">Update '+escape(field.name)+'</label>'+control+
-    '<button class="secondary" type="submit">Save</button>'+
-    '</form>':'')+'</div>';
+    '</div>':'')+'</div>';
  };
  const named=name=>PRIVATE_FIELDS.find(field=>field.name===name);
  const section=(title,icon,fields)=>
@@ -190,7 +203,7 @@ export function renderProtectedSourcingEditor(cells,{editing=false}={}){
   '<section class="mrh-private-section mrh-calculated-section"><h3><span aria-hidden="true">▤</span>Calculated totals</h3>'+
   '<p>Not calculated — verified exchange rates and approved landed-cost rules are not configured.</p></section>'+
   section('Logistics','▧',['Vendor Details','Shipping Cost','Shipping Cost Currency'])+
-  (editing?'<p class="mrh-private-edit-note">Save each protected value individually. Revision checks prevent overwriting newer changes.</p>':'')+
+  (editing?'<p class="mrh-private-edit-note">Save all pending changes together. Each field retains its existing revision check.</p>':'')+
   '</div>';
 }
 
