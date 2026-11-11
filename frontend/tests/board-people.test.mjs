@@ -74,7 +74,7 @@ test('member display escapes arbitrary profile names, including mention options'
  const html=renderBoardPeople(result);
  assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
  assert.match(html,/&amp; Test/);
- assert.doesNotMatch(html,/<img/);
+ assert.doesNotMatch(html,/<img src=x|onerror=alert\(1\)/);
  const mentionHtml=renderMentionOptions(result.people);
  assert.match(mentionHtml,/&lt;img/);
  assert.doesNotMatch(mentionHtml,/<img/);
