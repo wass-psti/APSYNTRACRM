@@ -38,6 +38,29 @@ export function canCreateOrganizationalWorkspace(authority,{
   authority.allowed===true&&['it_admin','organization_owner'].includes(authority.basis);
 }
 
+/** Only a live, signed, owner-authorized server directory can enumerate
+ * eligible transfer targets. Never present stale or workspace-foreign users.
+ */
+export function normalizeOwnerTransferCandidates(raw,{userId,workspaceId}={}){
+ const fallback=Object.freeze({status:'UNAVAILABLE',members:[],currentOwnerId:null});
+ if(!validUuid(userId)||!validUuid(workspaceId)||raw?.schemaVersion!==1||
+    raw.actorId!==userId||raw.workspaceId!==workspaceId||
+    raw.authorized!==true||!validUuid(raw.currentOwnerId)||
+    !Array.isArray(raw.members)||raw.members.length>100)return fallback;
+ const seen=new Set(),members=[];
+ for(const row of raw.members){
+  if(!validUuid(row?.id)||seen.has(row.id)||row.id===raw.currentOwnerId||
+     typeof row.name!=='string'||row.name.trim().length<1||
+     row.name.length>120||/[\u0000-\u001f\u007f<>]/.test(row.name)||
+     row.verified!==true)return fallback;
+  seen.add(row.id);
+  members.push(Object.freeze({id:row.id,name:row.name.trim()}));
+ }
+ return Object.freeze({status:'VERIFIED_TRANSFER_CANDIDATES',
+  workspaceId,actorId:userId,currentOwnerId:raw.currentOwnerId,
+  members:Object.freeze(members)});
+}
+
 export function validateOwnershipTransfer({
  workspaceId,resourceKind='workspace',resourceId=null,
  targetUserId,requestId,expectedOwnerId
@@ -45,20 +68,19 @@ export function validateOwnershipTransfer({
  if(!validUuid(workspaceId)||!validUuid(targetUserId)||
     !validUuid(expectedOwnerId)||!validUuid(requestId)||
     targetUserId===expectedOwnerId||
-    !['workspace','board','application'].includes(resourceKind))return null;
+    resourceKind!=='workspace')return null;
  if(resourceKind==='workspace'&&resourceId!==null)return null;
- if(resourceKind==='board'&&!validUuid(resourceId))return null;
- // Apps are independently owned by their module backend. Never accept a
- // synthetic module owner transfer before a module-specific authority map.
- if(resourceKind==='application')return null;
+ // Board and module ownership require dedicated domain-specific APIs.
  return Object.freeze({workspaceId,resourceKind,
   ...(resourceKind==='board'?{resourceId}:{}),
   targetUserId,requestId,expectedOwnerId});
 }
 
 export class WorkspaceAuthorityClient{
- constructor({auth,api,enabled=WS03_RESTRICTED_CREATION_ENABLED}={}){
+ constructor({auth,api,enabled=WS03_RESTRICTED_CREATION_ENABLED,
+  transferEnabled=WS03_OWNERSHIP_TRANSFER_ENABLED}={}){
   this.auth=auth;this.api=api;this.enabled=enabled===true;
+  this.transferEnabled=transferEnabled===true;
  }
  async #actor(){
   if(typeof this.auth?.getVerifiedUser!=='function'||
@@ -82,8 +104,22 @@ export class WorkspaceAuthorityClient{
    return unauthorized;
   return receipt;
  }
+ async readTransferCandidates(workspaceId){
+  if(!this.transferEnabled)deny('Ownership transfer is not activated.',503);
+  if(!validUuid(workspaceId))deny('Invalid workspace ID.',400);
+  const actor=await this.#actor();
+  if(actor.workspaceId!==workspaceId)deny('Inactive workspace.',403);
+  const raw=await this.api.rpc('wm_ws03_transfer_candidates',{
+   p_workspace_id:workspaceId
+  });
+  const receipt=normalizeOwnerTransferCandidates(raw,actor);
+  const after=await this.#actor();
+  if(after.userId!==actor.userId||after.workspaceId!==actor.workspaceId)
+   deny('Signed workspace changed.',409);
+  return receipt;
+ }
  async transferOwnership(raw){
-  if(!WS03_OWNERSHIP_TRANSFER_ENABLED)
+  if(!this.transferEnabled)
    deny('Owner transfers are not yet activated.',503);
   const request=validateOwnershipTransfer(raw);
   if(!request)deny('Invalid ownership transfer request.',400);
