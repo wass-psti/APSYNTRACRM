@@ -6,7 +6,7 @@ Date: 2026-11-05
 
 The approved ordinary-board import flow follows upload → map columns → handle matches → import. Screenshot-based interface supports drop/browse, CSV and XLSX, multi-sheet selection, mapped existing columns, deliberate Allow/Decline for missing columns, group selection, Add new / Skip / Update matching and final Import Now confirmation.
 
-- Parser: frontend/board-import-parse.js. UTF-8/UTF-16 CSV reader, basic dialect detection, quoted data, browser XLSX ZIP/XML reading, no formula evaluation, strict 8 MB/5,000-row/30-column limits.
+- Parser: frontend/board-import-parse.js. UTF-8/UTF-16 CSV reader, basic dialect detection, quoted data, browser XLSX ZIP/XML reading, no formula evaluation, 8 MB upload, 5,000-row/30-column, and 24 MB aggregate uncompressed OOXML limits. Individual ZIP entries are not rejected solely for a high compression ratio or a 4 MB per-entry threshold; decompression remains streamed and bounded by the aggregate limit.
 - Core: frontend/board-import-core.js. Column type inference, schema preflight, signed identity and workspace validation, type conversion, unique mapping, duplicate analysis and one atomic backend call.
 - UI: frontend/board-import-ui.js and frontend/board-import.css.
 - Integration: frontend/app.js, index.html.
