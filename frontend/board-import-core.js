@@ -223,6 +223,11 @@ function normalizeImportDate(value){
 }
 export function inferImportType(header,values=[]){
  const label=key(header),all=values.map(clean).filter(Boolean),sample=all.slice(0,100);
+ // An entirely empty source column has no evidence for a choice schema.
+ // Treat it as text so it can map to an existing same-name column (including
+ // Status) or be created as an ordinary empty text column without requiring
+ // impossible option setup.
+ if(!all.length)return 'text';
  if(label==='status'||label==='priority')return 'status';
  if(label.includes('checkbox')||label.startsWith('is '))return 'checkbox';
  if(label.includes('date')||label.endsWith(' at'))return 'date';
@@ -243,10 +248,15 @@ export function inferImportType(header,values=[]){
  return 'text';
 }
 export function availableImportColumns(detail){
- return (detail?.columns||[]).filter(c=>validUuid(c.id)&&c.visible!==false&&
+ // Import targets are physical board data columns, not just the newer
+ // custom:* columns. Dedicated/legacy board creation also uses col_* keys.
+ // Visibility is presentation metadata: hidden columns remain valid storage
+ // targets and must not disappear from the import mapping catalogue.
+ return (detail?.columns||[]).filter(c=>validUuid(c.id)&&
   allowedTypes.has(c.data_type)&&(c.system_key==null||c.system_key==='status')&&
-  (c.system_key==='status'||String(c.column_key||'').startsWith('custom')))
-  .map(c=>({id:c.id,name:c.name,type:c.data_type,system_key:c.system_key||null,config:c.config||{}}));
+  typeof c.column_key==='string'&&c.column_key.trim().length>0)
+  .map(c=>({id:c.id,name:c.name,type:c.data_type,system_key:c.system_key||null,
+   config:c.config||{},visible:c.visible!==false,columnKey:c.column_key}));
 }
 function autoTitle(headers){
  const exact=['item','name','title','item name','record'];
@@ -255,12 +265,26 @@ function autoTitle(headers){
 export function initialImportMappings(sheet,detail,{canCreate=false}={}){
  const columns=availableImportColumns(detail),primary=autoTitle(sheet.headers),used=new Set();
  return sheet.headers.map((source,i)=>{
-  const type=inferImportType(source,sheet.rows.map(r=>r[i]));
+  const sourceValues=sheet.rows.map(r=>r[i]);
+  const type=inferImportType(source,sourceValues);
   if(source===primary)return {source,action:'item',type:'text'};
-  const matches=columns.filter(c=>key(c.name)===key(source)&&c.type===type&&!used.has(c.id));
-  if(matches.length===1){
-   used.add(matches[0].id);
-   return {source,action:'existing',columnId:matches[0].id,type};
+  const named=columns.filter(c=>key(c.name)===key(source)&&!used.has(c.id));
+  const compatible=named.filter(column=>sourceValues.every(raw=>{
+   if(!clean(raw))return true;
+   try{
+    if(column.type==='checkbox'&&detectMondayCheckboxMarkers(sheet,source))
+     mondayCheckboxCell(raw);
+    else valueAsType(raw,column.type,column.config);
+    return true;
+   }catch{return false;}
+  }));
+  const exact=compatible.filter(c=>c.type===type);
+  const target=exact.length===1?exact[0]:
+   exact.length===0&&compatible.length===1?compatible[0]:null;
+  if(target){
+   used.add(target.id);
+   return {source,action:'existing',columnId:target.id,type,
+    detectedType:type,targetType:target.type,hidden:!target.visible};
   }
   if(canCreate&&(type==='status'||type==='dropdown')&&
      !columns.some(c=>key(c.name)===key(source)))

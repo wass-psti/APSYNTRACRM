@@ -96,7 +96,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const mapping=state.mappings.map((m,i)=>{
    const opts=[choice('skip',"Don't import column",m.action==='skip'),
     choice('item','Item (main title)',m.action==='item'),
-    ...columns.map(c=>choice('existing:'+c.id,c.name+' · '+c.type,
+    ...columns.map(c=>choice('existing:'+c.id,c.name+' · '+c.type+(c.visible===false?' · hidden':''),
      m.action==='existing'&&m.columnId===c.id))];
    if(state.manage){
     if(CREATABLE_IMPORT_TYPES.includes(m.type)||m.action==='create')
