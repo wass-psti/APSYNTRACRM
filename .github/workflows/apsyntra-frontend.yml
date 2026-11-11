@@ -19,6 +19,8 @@ on:
       - "docs/CP-FRT-SEC14-LEGACY-RPC-CONSUMER-COMPATIBILITY.md"
       - "docs/PAGES-OPERATIONS.md"
       - "frontend/**"
+      - "docs/BIMP-01-CSV-XLSX-IMPORT.md"
+      - "docs/CP-BIMP-11-EXISTING-BOARD-COMPATIBILITY.md"
       - "sql/cp-board-collab01-*.sql"
       - "sql/tests/cp-board-collab01-*.sql"
       - "sql/cp-frt-sec06-*.sql"
