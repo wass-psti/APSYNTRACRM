@@ -165,7 +165,7 @@ test('XLSX: malicious understated inflated size is rejected while streaming',asy
 test('XLSX: valid stored OOXML entry above 4 MB is accepted below file and aggregate limits',async()=>{
  const entries=workbookEntries();
  entries[0].method=0;
- entries[0].xml='\\n'.repeat(4*1024*1024+1024)+entries[0].xml;
+ entries[0].xml='\n'.repeat(4*1024*1024+1024)+entries[0].xml;
  const zip=makeZip(entries);
  assert.ok(zip.byteLength<8*1024*1024);
  const parsed=await parseWithFixtureDom(zip);
