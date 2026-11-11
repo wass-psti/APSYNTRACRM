@@ -1,6 +1,6 @@
 import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
-const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30;
+const MAX_BYTES=8*1024*1024,MAX_ROWS=5000,MAX_COLUMNS=30,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
 const invalid=message=>{throw new Error(message);};
 export function validateImportSheet(headers,rows){
  if(!Array.isArray(headers)||headers.length<1||headers.length>MAX_COLUMNS)
@@ -109,9 +109,11 @@ function zipDirectory(buffer){
   if(![0,8].includes(method))invalid('Unsupported XLSX compression method.');
   if(raw===0xffffffff||packed===0xffffffff)
    invalid('ZIP64 XLSX workbook entries are not supported.');
-  if(raw>4*1024*1024||packed>MAX_BYTES)
-   invalid('XLSX workbook entry exceeds the 4 MB decompressed or 8 MB compressed entry limit.');
-  total+=raw;if(total>24*1024*1024)invalid('Workbook expands beyond the safe XML limit.');
+  if(packed>MAX_BYTES)
+   invalid('XLSX compressed entry exceeds the 8 MB input limit.');
+  total+=raw;
+  if(total>MAX_UNCOMPRESSED_BYTES)
+   invalid('Workbook expands beyond the 24 MB uncompressed XML limit.');
   const end=p+46+nameLen+extra+comment;
   if(end>buffer.byteLength)invalid('Damaged XLSX entry name.');
   const name=new TextDecoder('utf-8',{fatal:true}).decode(bytes.subarray(p+46,p+46+nameLen));
