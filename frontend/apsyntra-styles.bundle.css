@@ -20076,7 +20076,6 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 @media(prefers-reduced-motion:reduce){.bs02-avatar-tooltip{transition:none}}
 @media(max-width:600px){.bs02-avatar-grid{gap:8px}.bs02-avatar-tooltip{min-width:130px;max-width:170px}}
 
-
 /* frontend/board-share-clean.css */
 /* BS04 — clean, compact board Share & Access (presentation only). */
 .board-share-stage-overlay{position:fixed;inset:0;z-index:5000;background:#18223c9e;display:grid;place-items:center;padding:18px}
@@ -20115,7 +20114,6 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 .board-share-stage-permission strong{color:#5c6287;font-weight:700}
 .board-share-stage-form .board-share-stage-primary{margin-top:0}
 @media(max-width:420px){.board-share-stage-permission{align-items:flex-start;flex-direction:column;gap:4px}}
-
 
 /* frontend/workspace-board-groups.css */
 /* BS09 — board member/group picker. Uses APSYNTRA light surface and compact spacing. */
