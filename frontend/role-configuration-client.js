@@ -19,9 +19,9 @@ export class RoleConfigurationClient {
  async snapshot(workspaceId){
   if(!uuid.test(workspaceId||''))throw Error('Invalid workspace identifier');
   const result=await this.api.rpc('apsyntra_role_configuration_snapshot',{p_workspace_id:workspaceId});
-  if(result?.bootstrapVerified!==true||result.workspaceId!==workspaceId||result.mode!=='staged_only'||
+  if(result?.adminVerified!==true||result.workspaceId!==workspaceId||result.mode!=='staged_only'||
      !['roles','users','assignments','boards','proposals','audit'].every(k=>Array.isArray(result[k])))
-   throw Error('Unexpected verified role configuration response');
+   throw Error('Unexpected CRM Admin role configuration response');
   return result;
  }
  async propose(workspaceId,operation,payload){

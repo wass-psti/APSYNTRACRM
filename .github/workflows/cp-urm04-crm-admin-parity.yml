@@ -1,9 +1,22 @@
-name: CP-URM-04 CRM Administrator parity (staged)
+name: CP-URM-04B CRM Administrator capability parity
 on:
   pull_request:
     paths:
       - 'sql/cp-urm04-*'
       - 'sql/tests/cp-urm04-*'
+      - 'sql/tests/cp-urm04b-*'
+      - 'sql/cp-urm04b-rollback.sql'
+      - 'docs/CP-URM-04B-CRM-ADMIN-CAPABILITY-PARITY-20261112.md'
+      - 'supabase/migrations/*cp_urm04b*'
+      - 'scripts/cp-urm04b-*'
+      - 'frontend/user-role-management.js'
+      - 'frontend/time-tracker-native.js'
+      - 'frontend/tests/user-role-management.test.mjs'
+      - 'frontend/tests/user-role-experience.test.mjs'
+      - 'frontend/tests/time-tracker-team.test.mjs'
+      - 'frontend/tests/role-configuration-client.test.mjs'
+      - 'frontend/tests/crm-platform-rbac.test.mjs'
+
       - 'scripts/cp-urm04-*'
       - 'frontend/app.js'
       - 'frontend/data.js'
@@ -25,6 +38,6 @@ jobs:
         with:
           node-version: '22'
       - name: Validate frontend signed admin-tier and protected bootstrap identity contracts
-        run: node --test frontend/tests/cp-urm04-admin-parity.test.mjs
+        run: node --test frontend/tests/*.test.mjs
       - name: Validate PostgreSQL 17 effective Admin, workspace isolation, revocation and non-admin denial
-        run: bash scripts/cp-urm04-disposable-admin-parity.sh
+        run: bash scripts/cp-urm04b-disposable-admin-parity.sh

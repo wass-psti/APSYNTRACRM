@@ -45,7 +45,7 @@ test('fresh bootstrap RPC is necessary even when module role is administrative',
     if(name==='list_module_directory')return [
      {id:teamActor,status:'active',module_role:'System Admin',display_name:'Example'}];
     if(name==='apsyntra_role_is_bootstrap')return allowed;
-    if(name==='apsyntra_role_configuration_snapshot')return teamFixture;
+    if(name==='timetracker_team_directory_snapshot')return teamFixture;
     throw Error('Unsupported RPC');
    }
   }

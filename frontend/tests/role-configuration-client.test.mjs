@@ -8,7 +8,7 @@ test('unverified bootstrap cannot be assumed from profile or a username',async()
  assert.deepEqual(calls,['apsyntra_role_is_bootstrap']);
 });
 test('snapshot requires server-verified scoped response, not guessed data',async()=>{
- const client=new RoleConfigurationClient({rpc:async()=>({bootstrapVerified:true,workspaceId:W,mode:'staged_only',
+ const client=new RoleConfigurationClient({rpc:async()=>({adminVerified:true,bootstrapVerified:false,workspaceId:W,mode:'staged_only',
  roles:[],users:[],assignments:[],boards:[],proposals:[],audit:[]})});
  assert.equal((await client.snapshot(W)).mode,'staged_only');
  await assert.rejects(()=>client.snapshot('wrong'));

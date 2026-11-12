@@ -8,7 +8,7 @@ test('catalog permits all twelve distinct modules without overriding specialized
  assert.ok(MODULE_ROLE_OPTIONS['tool-traceability'].includes('LOGISTICS'));
 });
 test('all user rows are escaped and bootstrap users are protected',()=>{
- const data={workspaceId:w,bootstrapVerified:true,
+ const data={workspaceId:w,adminVerified:true,bootstrapVerified:false,
  users:[{id:u,name:'<script>X</script>',email:'x@example.com',platformRole:'admin_general_manager',protected:true}],
  modules:[],moduleAssignments:[],boardAssignments:[],boards:[{id:w,name:'Board'}]};
  const h=renderUserRoleManagement({verified:true,data,selectedUserId:u});
@@ -38,11 +38,11 @@ test('snapshot exposes workspace-scoped MRH contract and authoritative active wo
  const api={rpc:async(name,args)=>{
   calls.push([name,args]);
   if(name==='apsyntra_role_user_management_snapshot')return {
-   workspaceId:w,bootstrapVerified:true,roleManagementContract:'cp-rc03-workspace-scoped-mrh-v1',
+   workspaceId:w,adminVerified:true,bootstrapVerified:false,roleManagementContract:'cp-rc03-workspace-scoped-mrh-v1',
    users:[{id:u,activeWorkspaceCount:2}],modules:[],moduleAssignments:[],boards:[],boardAssignments:[]
   };
   if(name==='apsyntra_crm_platform_role_snapshot')return {
-   workspaceId:w,bootstrapVerified:true,roles:[{userId:u,effectiveRole:'employee',assignedRole:null}]
+   workspaceId:w,adminVerified:true,bootstrapVerified:false,roles:[{userId:u,effectiveRole:'employee',assignedRole:null}]
   };
   throw Error('unexpected rpc '+name);
  }};
@@ -54,8 +54,8 @@ test('snapshot exposes workspace-scoped MRH contract and authoritative active wo
 });
 test('snapshot without CP-RC03 contract or trustworthy workspace counts fails closed for MRH',async()=>{
  const api={rpc:async(name)=>name==='apsyntra_role_user_management_snapshot'?{
-  workspaceId:w,bootstrapVerified:true,users:[{id:u}],modules:[],moduleAssignments:[],boards:[],boardAssignments:[]
- }:{workspaceId:w,bootstrapVerified:true,roles:[{userId:u,effectiveRole:'employee',assignedRole:null}]}};
+  workspaceId:w,adminVerified:true,bootstrapVerified:false,users:[{id:u}],modules:[],moduleAssignments:[],boards:[],boardAssignments:[]
+ }:{workspaceId:w,adminVerified:true,bootstrapVerified:false,roles:[{userId:u,effectiveRole:'employee',assignedRole:null}]}};
  const snapshot=await new UserRoleManagementClient(api).snapshot(w);
  assert.equal(snapshot.workspaceScopedMrhAvailable,false);
  assert.equal(snapshot.workspaceScopeCountsAvailable,false);
