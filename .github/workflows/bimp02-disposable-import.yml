@@ -10,6 +10,7 @@ on:
       - 'sql/bimp02-session-enforcement-candidate.sql'
       - 'sql/bimp14-extended-references-DISPOSABLE-CANDIDATE.sql'
       - 'sql/tests/bimp14-*.sql'
+      - 'sql/tests/bimp20b-*.sql'
       - 'sql/tests/bimp02-*.sql'
       - 'sql/cp-board-config01-staged-authorization-v2.sql'
       - 'sql/tests/cp-board-config01-disposable-*.sql'
@@ -22,6 +23,7 @@ on:
       - 'sql/bimp02-session-enforcement-candidate.sql'
       - 'sql/bimp14-extended-references-DISPOSABLE-CANDIDATE.sql'
       - 'sql/tests/bimp14-*.sql'
+      - 'sql/tests/bimp20b-*.sql'
       - 'sql/tests/bimp02-*.sql'
       - 'sql/cp-board-config01-staged-authorization-v2.sql'
       - 'sql/tests/cp-board-config01-disposable-*.sql'
@@ -87,3 +89,5 @@ jobs:
             -f sql/tests/bimp02-disposable-acceptance.sql \
             -f sql/tests/bimp02-disposable-negative.sql \
             -f sql/tests/bimp14-disposable-extended-acceptance.sql
+      - name: Run real 617-row extended-import PostgreSQL performance and readback acceptance
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/bimp20b-disposable-617-performance.sql
