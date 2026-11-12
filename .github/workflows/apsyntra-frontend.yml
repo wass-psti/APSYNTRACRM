@@ -136,6 +136,8 @@ jobs:
             -f sql/cp-frt-sec14-board-safe-read-contracts.sql \
             -f sql/cp-frt-sec14-legacy-summary-list-cutover.sql \
             -f sql/tests/cp-frt-sec14-safe-board-disposable.sql \
+            -f sql/cp-frt-sec14-executive-dashboard-safe-analytics.sql \
+            -f sql/tests/cp-frt-sec14-executive-dashboard-safe-analytics-disposable.sql \
             -f sql/cp-frt-board03-date-cas-CANDIDATE.sql \
             -f sql/tests/cp-frt-board03-date-cas-disposable.sql \
             -f sql/tests/cp-frt-board03b-disposable-profile-compat.sql \
