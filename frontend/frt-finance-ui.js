@@ -84,7 +84,7 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   '<div><h2>Fund Release Tracker</h2><p>Complete workflow from request to liquidation</p></div></div>'+
   '<div class="frt-ref-toolbar"><span class="frt-ref-pill" title="Signed FRT company">▣ '+
   escape(result.companyCode)+'</span><span class="frt-ref-company-name">'+escape(selectedCompany?.name||'')+'</span>'+
-  '<button class="frt-ref-action is-primary" type="button" data-action="frt-ui-dialog" data-frt-section="new" title="Preview the new request form; submission is not active">＋ New Fund Request</button>'+
+  '<button class="frt-ref-action is-primary" type="button" data-action="frt-ui-dialog" data-frt-section="new" title="Create an authorized fund request">＋ New Fund Request</button>'+
   '<button class="frt-ref-action" type="button" disabled title="Bulk fund-request import is not connected">⇧ Bulk Import</button>'+
   '<button class="frt-ref-action" type="button" data-action="frt-ui-dialog" data-frt-section="activity" title="View the activity-log panel">⌁ Activity Log</button>'+
   '<button class="frt-ref-action" type="button" data-action="frt-ui-dialog" data-frt-section="archive" title="View the archive-storage panel">▤ Archive Storage</button>'+
@@ -106,7 +106,7 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   escape(result.role)+'</span></header><div class="frt-ref-filters"><label for="frt-status-filter">Status</label>'+
   '<select id="frt-status-filter" aria-label="Filter FRT requests by status"><option value="all">All statuses</option>'+
   statuses.map(s=>'<option value="'+escape(s)+'"'+(filter===s?' selected':'')+'>'+escape(friendlyStatus(s))+'</option>').join('')+
-  '</select><span>Financial amounts, requester identities and filing records are not in this signed projection.</span></div>'+
+  '</select><span>Financial amounts and requester identities are not in this signed projection.</span></div>'+
   '<div class="frt-ref-table-scroll"><table class="frt-ref-table"><thead><tr><th>Request Name</th><th>Amount</th><th>Voucher</th><th>Status</th>'+
   '<th>Liquidation</th><th>BPI BizLink</th><th>Date</th><th>Requestor</th><th>Actions</th></tr></thead><tbody>';
  html+=shown.map(r=>{
@@ -114,7 +114,7 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   const requestId=escape(r.requestId||'');
   return '<tr><td class="frt-ref-request-name">'+escape(r.title)+'</td><td class="frt-ref-private">—</td>'+
    '<td class="frt-ref-voucher">'+escape(r.voucher)+'</td><td><span class="frt-ref-status is-'+statusTone(r.status)+'">'+
-   escape(friendlyStatus(r.status))+'</span></td><td>—</td><td><span class="frt-ref-filing" title="Filing state is unavailable until a verified signed filing contract is connected">Not available</span></td>'+
+   escape(friendlyStatus(r.status))+'</span></td><td>—</td><td><button type="button" class="frt-ref-filing '+(r.filingStatus==='FILED'?'is-filed':'is-unfiled')+'" data-action="frt-filing-toggle" data-request-id="'+requestId+'" title="Click to update filing status">'+(r.filingStatus==='FILED'?'✓ Filed':'Not Filed')+'</button></td>'+
    '<td>'+escape(r.dateNeeded)+'</td><td class="frt-ref-private">—</td><td><div class="frt-ref-row-actions">'+
    (typeof r.requestId==='string'?'<button type="button" title="Discussion" aria-label="Discussion for '+escape(r.title)+'" data-action="frt-ui-dialog" data-frt-section="discussion" data-request-id="'+requestId+'">▣</button>':'')+
    (typeof r.requestId==='string'?'<button type="button" title="View request details" aria-label="View '+escape(r.title)+
@@ -129,7 +129,7 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
    '<button type="button" disabled title="Financial records cannot be deleted using an unverified contract">Delete Request</button></div></details></div></td></tr>';
  }).join('')||'<tr><td colspan="9" class="frt-ref-empty">No requests found for this company.</td></tr>';
  html+='</tbody></table></div><footer class="frt-ref-table-footer">'+
-  'Showing authorized recent requests. Filing changes default to Not Filed only after the signed filing backend is implemented. '+
+  'Showing authorized recent requests. New requests begin with Not Filed. '+
   'No approval, archive, comment or upload operation is simulated.</footer></section>';
  if(detailBusy){
   html+='<div class="panel"><div class="panel-body">Retrieving signed FRT request details…</div></div>';

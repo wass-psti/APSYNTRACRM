@@ -142,6 +142,7 @@ import {runSEC14SignedRead,sanitizeSEC14SignedRead} from './frt-sec14-signed-acc
 import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-signed-denials.js';
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
+import {createSignedFRTRequest,updateSignedFRTFiling} from './frt-filing-workflow.js';
 import {renderFRTBoardSignedSnapshot} from './frt-board-signed-snapshot.js';
 import {updateFRTRequestDate} from './frt-board-date-edit.js';
 import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
@@ -6579,6 +6580,32 @@ async function action(name,button){
     },{submitLabel:'Save date',successMessage:'FRT request date saved and refreshed.'});
    break;
  }
+ case 'frt-filing-toggle':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
+      state.frtFinance?.status!=='PASS')return;
+   const requestId=String(button?.dataset?.requestId||'');
+   const row=state.frtFinance.requests.find(r=>r.requestId===requestId);
+   if(!row||!['NOT_FILED','FILED'].includes(row.filingStatus))return;
+   const expectedStatus=row.filingStatus,nextStatus=expectedStatus==='NOT_FILED'?'FILED':'NOT_FILED';
+   const workspaceId=state.context?.workspace_id,companyCode=state.frtFinance.companyCode,
+    role=state.frtFinance.role,boardId=state.boardId,actor=auth.userId,seq=routeSerial;
+   openModal('Update request filing status',
+    '<p class="note">'+e(row.title)+' — '+e(row.voucher)+'</p>'+
+    '<p>Change filing status from <strong>'+e(expectedStatus==='FILED'?'Filed':'Not Filed')+
+    '</strong> to <strong>'+e(nextStatus==='FILED'?'Filed':'Not Filed')+'?</strong></p>',
+    async()=>{
+     if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+       auth.userId!==actor||state.context?.workspace_id!==workspaceId||
+       state.frtFinance?.companyCode!==companyCode||state.frtFinance.role!==role)
+      throw new ApiError('FRT view changed. Reopen filing status.',409);
+     await updateSignedFRTFiling({auth,api:db,workspaceId,companyCode,role,
+      requestId,expectedStatus,nextStatus,
+      listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
+     await loadFRTFinance(companyCode);
+    },{submitLabel:'Save filing status',
+       successMessage:'Filing status saved and verified.'});
+   break;
+ }
  case 'frt-ui-dialog':{
    if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
       state.frtFinance?.status!=='PASS')return;
@@ -6592,12 +6619,16 @@ async function action(name,button){
    let title='',body='';
    if(section==='new'){
     title='New Fund Request';
-    body='<p class="note">Frontend form preview for '+e(company.name)+
-     ' ('+e(companyCode)+'). No request is submitted or saved by this panel.</p>'+
+    body='<p class="note">Submit a signed fund request under '+e(company.name)+
+     ' ('+e(companyCode)+'). Filing begins as Not Filed.</p>'+
      input('Fund Request Name','requestName')+
+     input('Department','department')+
+     input('Fund Source','fundSource')+
      input('Date Needed','dateNeeded','','date')+
-     '<div class="field"><label>Filing status</label><strong>Not Filed</strong></div>'+
-     '<p class="muted">The initial filing status will be Not Filed after the signed creation and filing contracts are integrated. The current finance API cannot persist this form.</p>';
+     input('Description','description')+
+     input('Expense Category','category')+
+     input('Expense Amount','amount','','text')+
+     '<div class="field"><label>Filing status</label><strong>Not Filed</strong></div>';
    }else if(section==='activity'){
     title='Activity Log';
     body='<p class="note">Signed activity history for '+e(company.name)+'</p>'+
@@ -6613,7 +6644,27 @@ async function action(name,button){
      '<div class="field"><label for="frt-discussion-preview">Add Comment</label>'+
      '<textarea id="frt-discussion-preview" rows="3" disabled placeholder="Posting is unavailable until signed comments are integrated"></textarea></div>';
    }else return;
-   openModal(title,body,async()=>{}, {submitLabel:'Not connected',submitDisabled:true});
+   if(section==='new'){
+    const workspaceId=state.context?.workspace_id,boardId=state.boardId;
+    const actor=auth.userId,role=state.frtFinance.role,seq=routeSerial;
+    openModal(title,body,async form=>{
+     if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+       auth.userId!==actor||state.context?.workspace_id!==workspaceId||
+       state.frtFinance?.companyCode!==companyCode||state.frtFinance.role!==role)
+      throw new ApiError('FRT company or session changed. Reopen request creation.',409);
+     await createSignedFRTRequest({auth,api:db,workspaceId,companyCode,role,
+      data:{title:String(form.get('requestName')||''),
+       department:String(form.get('department')||''),
+       fundSource:String(form.get('fundSource')||''),
+       description:String(form.get('description')||''),
+       dateNeeded:String(form.get('dateNeeded')||''),
+       category:String(form.get('category')||''),
+       amount:String(form.get('amount')||'')}});
+     await loadFRTFinance(companyCode);
+    },{submitLabel:'Submit Fund Request',
+     successMessage:'Fund request saved with Not Filed status.'});
+   }else openModal(title,body,async()=>{},
+     {submitLabel:'Not connected',submitDisabled:true});
    break;
  }
  case 'frt-finance-action':{
