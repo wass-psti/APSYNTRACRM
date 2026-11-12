@@ -128,6 +128,21 @@ test('custom add/update/delete use one guarded signed CAS RPC only',async()=>{
  assert.equal(s.calls.at(-1)[1].p_column_id,custom);
  assert.equal(s.calls.some(c=>c[0]==='wm_delete_board_column'),false);
 });
+test('contextual signed preflight avoids duplicate manage read but keeps server CAS',async()=>{
+ const s=spy({manage:false}),client=new BoardStructureClient(s.api);
+ // The contextual caller has already completed signed manager and revision checks.
+ // Even if a local permission lookup now denies, only the authoritative RPC
+ // can decide whether the write commits; this path never alters RPC payloads.
+ const updated=await client.mutate(detail,{action:'update',columnId:custom,
+  name:'Supervisor note 2',type:'text',config:{}},
+  {verifiedManagerPreflight:true});
+ assert.equal(updated.action,'update');
+ assert.deepEqual(s.calls.map(call=>call[0]),['wm_board_schema_mutate']);
+ assert.equal(s.calls[0][1].p_expected_updated_at,detail.board.updated_at);
+ const source=readFileSync('frontend/app.js','utf8');
+ assert.match(source,/const fresh=await verifyInlineColumnBoard\(snapshot\)/);
+ assert.match(source,/visible:update.visible\},\s*\{verifiedManagerPreflight:true\}/);
+});
 test('malformed signed settings fail closed instead of faking persistence',async()=>{
  for(const bad of [
   {...raw,board_id:other},{...raw,revision:-1},

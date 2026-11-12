@@ -198,10 +198,13 @@ export class BoardStructureClient{
  }
  async mutate(detail,{action,columnId=null,name='',type='text',
    config={},visible=true,confirmation=''}={},
-   {enabled=BOARD_STRUCTURE_ADMIN_ENABLED}={}){
+   {enabled=BOARD_STRUCTURE_ADMIN_ENABLED,verifiedManagerPreflight=false}={}){
   const id=boardId(detail?.board?.id);
   if(enabled!==true)throw new ApiError('Board structure activation is pending.',403);
-  await hasManage(this.api,id);
+  // The contextual editor has just verified signed identity, board/workspace,
+  // manager permission, and CAS revision. Avoid a redundant client RPC there.
+  // The mutation RPC still enforces authoritative permissions and revision CAS.
+  if(!verifiedManagerPreflight)await hasManage(this.api,id);
   if(!['create','update','delete'].includes(action))fail('Unsupported column action.');
   if(!TYPES.has(type))fail('Unsupported column type.');
   const columns=describeBoardColumns(detail);
