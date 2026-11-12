@@ -131,6 +131,14 @@ BEGIN
   RAISE EXCEPTION 'Anonymous caller passed CRM Admin scope';
  EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
 
+ -- Existing Tool Traceability module administrators retain their prior direct RPC access.
+ PERFORM set_config('request.jwt.claim.sub','66666666-6666-4666-8666-666666666666',true);
+ IF public.apsyntra_role_is_bootstrap() OR public.apsyntra_role_is_admin()
+ THEN RAISE EXCEPTION 'Synthetic Tool Traceability module admin fixture unexpectedly has CRM Admin'; END IF;
+ IF NOT private.tool_traceability_is_admin(v_workspace)
+ THEN RAISE EXCEPTION 'Existing Tool Traceability module admin predicate was lost'; END IF;
+ PERFORM public.tool_traceability_admin_set_role(v_workspace,v_inherited,'USER',true);
+
  -- The designated bootstrap identity retains its separate Team Directory capability.
  PERFORM set_config('request.jwt.claim.sub',v_bootstrap::text,true);
  IF NOT public.apsyntra_role_is_bootstrap() OR NOT public.apsyntra_role_is_admin()
