@@ -1,7 +1,7 @@
 # CP-FRT-EXEC-01 — Executive Dashboard Integration
 
-Date: 2026-11-12  
-Repository: `wass-psti/APSYNTRACRM`  
+Date: 2026-11-12
+Repository: `wass-psti/APSYNTRACRM`
 Branch: `cp-frt-exec-01`
 
 ## Implemented
