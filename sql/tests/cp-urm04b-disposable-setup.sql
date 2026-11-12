@@ -201,7 +201,7 @@ BEGIN
  PERFORM public.apsyntra_role_require_scope(p_workspace_id);
  IF p_target_user_id IS NULL OR p_target_user_id=v_actor OR p_scope NOT IN ('module','board')
     OR p_scope IS NULL OR p_resource_id IS NULL OR p_enabled IS NULL OR p_role IS NULL
-    OR EXISTS(SELECT 1 FROM public.apsyntra_role_bootstrap_identities b WHERE b.user_id=p_target_user_id)
+    OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities WHERE user_id=p_target_user_id)
     OR public.is_platform_admin(p_target_user_id)
  THEN RAISE EXCEPTION 'Protected, self, or invalid role target' USING ERRCODE='42501'; END IF;
  IF NOT EXISTS(SELECT 1 FROM public.workspace_members m JOIN public.profiles p ON p.id=m.user_id
