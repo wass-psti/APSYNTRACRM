@@ -1596,7 +1596,11 @@ async function applyCrmPlatformRole({userId,role,expectedUpdatedAt}){
  await userRoleManager.setCrmPlatformRole({
    workspaceId:ctx.workspace_id,userId,role,expectedUpdatedAt});
  await loadUserRoleManagement();
- toast('APSYNTRA CRM platform role updated and audited.');
+ const persisted=state.userRoleData.crmPlatformRoles?.find(r=>r.userId===userId);
+ if(!persisted||persisted.assignedRole!==role||
+    (role!==null&&persisted.effectiveRole!==role))
+   throw new ApiError('The CRM role write was acknowledged, but its refreshed assignment could not be verified. Refresh assignments and inspect the current role before attempting another change.',409);
+ toast('APSYNTRA CRM platform role updated and verified. WatchdogWorkspace identity is unchanged.');
  render();
 }
 async function loadRoleConfiguration(){

@@ -128,3 +128,34 @@ test('frontend writes only after verified Auth/bootstrap context and explicit co
  assert.match(app,/await auth\.getVerifiedUser\(\)/);
  assert.match(app,/await userRoleManager\.setCrmPlatformRole/);
 });
+
+test('CP-URM-ROLE-FIX: saved CRM admin is visible while inherited employee identity stays distinct',()=>{
+ const data=result('admin');
+ const html=renderUserRoleManagement({verified:true,data,selectedUserId:target});
+ assert.match(html,/Existing Account — CRM admin \(explicit\) · Identity employee/);
+ assert.match(html,/Current CRM role \/ identity/);
+ assert.match(html,/Inherited WatchdogWorkspace role/);
+ assert.match(html,/Admin here does not grant bootstrap administration/);
+ assert.doesNotMatch(html,/Existing Account — employee<\/option>/);
+});
+
+test('CP-URM-ROLE-FIX: explicit role result must acknowledge requested role',async()=>{
+ const client=new UserRoleManagementClient({rpc:async()=>({effective:true,
+  workspaceId:workspace,targetUserId:target,scope:'crm-platform',effectiveRole:'employee'})});
+ await assert.rejects(()=>client.setCrmPlatformRole({workspaceId:workspace,
+  userId:target,role:'admin'}),/acknowledgement invalid/);
+});
+
+test('CP-URM-ROLE-FIX: no override preserves inherited account identity',()=>{
+ const data=result('employee');data.crmPlatformRoles[0].assignedRole=null;
+ const html=renderUserRoleManagement({verified:true,data,selectedUserId:target});
+ assert.match(html,/CRM employee \(inherited\) · Identity employee/);
+});
+
+test('CP-URM-ROLE-FIX: visible success requires server readback to match the assigned CRM role',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/const persisted=state\.userRoleData\.crmPlatformRoles\?\.find\(r=>r\.userId===userId\)/);
+ assert.match(app,/persisted\.assignedRole!==role/);
+ assert.match(app,/persisted\.effectiveRole!==role/);
+ assert.match(app,/refreshed assignment could not be verified/);
+});

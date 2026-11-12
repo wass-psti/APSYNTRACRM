@@ -82,13 +82,22 @@ export class UserRoleManagementClient {
   });
   if(r?.effective!==true||r.workspaceId!==workspaceId||
    r.targetUserId!==userId||r.scope!=='crm-platform'||
-   !APSYNTRA_CRM_PLATFORM_ROLES.includes(r.effectiveRole))
+   !APSYNTRA_CRM_PLATFORM_ROLES.includes(r.effectiveRole)||
+   (role!==null&&r.effectiveRole!==role))
    throw Error('Backend CRM platform role acknowledgement invalid');
   return r;
  }
 }
 function selected(data,id){
  return data?.users?.find(u=>u.id===id)||null;
+}
+// CRM workspace tier and inherited identity are separate source-of-truth fields.
+// Display both so a correctly persisted tier is never disguised as employee.
+function accountRoleLabel(data,user){
+ const crm=data.crmPlatformRoles?.find(r=>r.userId===user.id);
+ if(data.crmPlatformUnavailable||!crm)return user.platformRole;
+ return 'CRM '+crm.effectiveRole+(crm.assignedRole?' (explicit)':' (inherited)')+
+  ' · Identity '+user.platformRole;
 }
 export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,busy=false,error=''}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
@@ -107,14 +116,14 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  ].map(([k,v,icon])=>'<div class="stat-card user-role-stat-card user-role-stat-'+icon+'"><span class="user-role-stat-icon" aria-hidden="true">'+roleConfigurationIcon(icon)+'</span><span class="stat-label">'+esc(k)+'</span><strong class="stat-value">'+Number(v)+'</strong></div>').join('')+'</section>';
  html+='<section class="panel user-role-selection-panel user-role-entrance" aria-labelledby="user-role-select-title"><div class="panel-header"><h3 id="user-role-select-title">Select user</h3><span>Workspace scoped</span></div>'+
  '<div class="panel-body"><label for="managed-user">Existing account</label><select id="managed-user" class="search-input user-role-account-select" data-action="user-role-select">'+
- data.users.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===u?.id?'selected':'')+'>'+esc(x.name||x.email)+' — '+esc(x.platformRole)+(x.protected?' (protected)':'')+'</option>').join('')+
+ data.users.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===u?.id?'selected':'')+'>'+esc(x.name||x.email)+' — '+esc(accountRoleLabel(data,x))+(x.protected?' (protected)':'')+'</option>').join('')+
  '</select></div></section>';
  if(!u)return html+'<p class="muted">No active members.</p></div>';
  const activeWorkspaceCount=Number.isInteger(u.activeWorkspaceCount)?
   u.activeWorkspaceCount:null;
  const globalModuleRoleBlocked=activeWorkspaceCount===null||activeWorkspaceCount>1;
- html+='<section class="panel user-role-selected-panel user-role-entrance" aria-label="Selected user authorization"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>'+esc(u.platformRole)+'</span></div>'+
- '<div class="panel-body">'+(u.protected||['admin_general_manager'].includes(u.platformRole)?
+ html+='<section class="panel user-role-selected-panel user-role-entrance" aria-label="Selected user authorization"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>'+esc(accountRoleLabel(data,u))+'</span></div>'+
+ '<div class="panel-body"><div class="settings-detail user-role-effective-summary"><label>Current CRM role / identity</label><strong>'+esc(accountRoleLabel(data,u))+'</strong></div>'+(u.protected||['admin_general_manager'].includes(u.platformRole)?
  '<div class="note security-note user-role-protected">Protected administrator — role modifications are intentionally disabled.</div>':
  '<div class="note user-role-helper">Select an application or board below to update this user’s actual role. Changes require explicit confirmation.</div>')+
  (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Material Request Hub uses a separate workspace-scoped role record; board access is also workspace-scoped.</div>':'')+
@@ -123,7 +132,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  const locked=!!u.protected||u.platformRole==='admin_general_manager'||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
  html+='<div class="section-header user-role-section-header user-role-entrance"><strong>APSYNTRA CRM Platform Role</strong></div>'+
- '<div class="note security-note user-role-ceiling-note">This is the CRM-wide authorization ceiling, separate from WatchdogWorkspace identity, application assignments and board membership. Changes cannot grant module roles or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
+ '<div class="note security-note user-role-ceiling-note">This is the CRM-wide authorization ceiling. CRM tier assignments are workspace-specific, not changes to the inherited WatchdogWorkspace account role. Admin here does not grant bootstrap administration, module assignments or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
  '<div class="panel user-role-platform-panel"><div class="panel-body"><div class="settings-detail"><label>Inherited WatchdogWorkspace role</label><strong>'+
  esc(u.platformRole)+'</strong></div><div class="settings-detail"><label>CRM platform role</label><strong>'+
  esc(data.crmPlatformUnavailable?'Unavailable — backend migration pending':crm?.effectiveRole||'Unverified')+(data.crmPlatformUnavailable?'':crm?.assignedRole?' (explicit)':' (inherited)')+
