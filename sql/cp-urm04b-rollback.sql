@@ -51,18 +51,11 @@ BEGIN
  EXECUTE v_definition;
 
  v_definition:=pg_get_functiondef('public.apsyntra_crm_platform_role_set(uuid,uuid,text,timestamptz)'::regprocedure);
- IF position($old$   OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities b
-              WHERE b.user_id=p_target_user_id)
- THEN RAISE EXCEPTION 'Protected or invalid CRM platform role target'$old$ IN v_definition)=0
+ v_definition:=regexp_replace(v_definition,
+  $pattern$(OR EXISTS \\(SELECT 1 FROM public\\.apsyntra_role_bootstrap_identities b\\s+WHERE b\\.user_id=p_target_user_id\\))\\s+THEN$pattern$,
+  $replacement$\\1 OR public.is_platform_admin(p_target_user_id) THEN$replacement$);
+ IF position('OR public.is_platform_admin(p_target_user_id)' IN v_definition)=0
  THEN RAISE EXCEPTION 'Unexpected CRM role target during rollback'; END IF;
- v_definition:=replace(v_definition,
-  $old$   OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities b
-              WHERE b.user_id=p_target_user_id)
- THEN RAISE EXCEPTION 'Protected or invalid CRM platform role target'$old$,
-  $new$   OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities b
-              WHERE b.user_id=p_target_user_id)
-   OR public.is_platform_admin(p_target_user_id)
- THEN RAISE EXCEPTION 'Protected or invalid CRM platform role target'$new$);
  EXECUTE v_definition;
 END;
 $restore_target_guards$;
