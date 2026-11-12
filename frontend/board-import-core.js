@@ -271,15 +271,23 @@ export function initialImportMappings(sheet,detail,{canCreate=false,extendedRefe
   const type=inferImportType(source,sourceValues);
   if(source===primary)return {source,action:'item',type:'text'};
   const named=columns.filter(c=>key(c.name)===key(source)&&!used.has(c.id));
-  const compatible=named.filter(column=>sourceValues.every(raw=>{
-   if(!clean(raw))return true;
-   try{
-    if(column.type==='checkbox'&&detectMondayCheckboxMarkers(sheet,source))
-     mondayCheckboxCell(raw);
-    else valueAsType(raw,column.type,column.config,extendedReferences);
-    return true;
-   }catch{return false;}
-  }));
+  const mondayMarkers=named.some(column=>column.type==='checkbox')&&
+   detectMondayCheckboxMarkers(sheet,source);
+  // Preserve the first incompatible worksheet row for the mapping wizard.
+  // Never embed the raw rejected cell: imported worksheets can contain private
+  // documents, passwords and other sensitive content.
+  const targetChecks=named.map(column=>{
+   let invalidIndex=-1;
+   for(let n=0;n<sourceValues.length;n++){
+    if(!clean(sourceValues[n]))continue;
+    try{
+     if(column.type==='checkbox'&&mondayMarkers)mondayCheckboxCell(sourceValues[n]);
+     else valueAsType(sourceValues[n],column.type,column.config,extendedReferences);
+    }catch{invalidIndex=n;break;}
+   }
+   return {column,invalidIndex};
+  });
+  const compatible=targetChecks.filter(x=>x.invalidIndex<0).map(x=>x.column);
   const exact=compatible.filter(c=>c.type===type);
   const target=exact.length===1?exact[0]:
    exact.length===0&&compatible.length===1?compatible[0]:null;
@@ -304,7 +312,15 @@ export function initialImportMappings(sheet,detail,{canCreate=false,extendedRefe
   if(canCreate&&creatable.has(type)&&!columns.some(c=>key(c.name)===key(source))){
    return {source,action:'create',type,columnType:type,name:source,requiresDecision:true};
   }
-  return {source,action:'skip',type,proposed:type,requiresDecision:true};
+  const conflict=targetChecks.length?{
+   destinationTypes:[...new Set(targetChecks.map(x=>x.column.type))],
+   reason:compatible.length>1?'ambiguous':
+    targetChecks.some(x=>x.invalidIndex>=0)?'incompatible':'unresolved',
+   row:targetChecks.filter(x=>x.invalidIndex>=0).map(x=>
+    sheet.rowNumbers?.[x.invalidIndex]??x.invalidIndex+2).sort((a,b)=>a-b)[0]??null
+  }:null;
+  return {source,action:'skip',type,proposed:type,requiresDecision:true,
+   ...(conflict?{conflict}:{})};
  });
 }
 function validDate(raw){

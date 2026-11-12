@@ -148,6 +148,12 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     esc(s.rows.find(r=>String(r[i]??'').trim())?.[i]??'—').slice(0,100)+'</small></div>'+
     '<div><label class="sr-only" for="imp-map-'+i+'">Map '+esc(m.source)+'</label>'+
     '<select id="imp-map-'+i+'" data-imp-map="'+i+'">'+opts.join('')+'</select>'+
+    (m.action==='skip'&&m.conflict?
+     '<p class="aps-import-notice" role="status">A same-name board column exists ('+
+      esc(m.conflict.destinationTypes.join(', '))+'), but its data is '+
+      (m.conflict.reason==='ambiguous'?'ambiguous':'not fully compatible')+
+      (m.conflict.row?' at worksheet row '+esc(m.conflict.row):'')+
+      '. Select a compatible destination or explicitly exclude this source; no data will be silently discarded.</p>':'')+
     (m.action==='create'?'<div class="aps-import-proposed">'+
      '<label>New column name<input name="imp-column-name-'+i+'" data-imp-name="'+i+'" maxlength="80" value="'+esc(m.name||m.source)+'"></label>'+
      '<label>Column type<select name="imp-column-type-'+i+'" data-imp-type="'+i+'">'+
