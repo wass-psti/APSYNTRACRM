@@ -21,5 +21,7 @@ apply(){ psql -X -q -h /tmp -U postgres -d postgres -v ON_ERROR_STOP=1 -f "$1"; 
 apply /source-sql/tests/cp-urm04b-disposable-setup.sql
 apply /source-migrations/20261112113703_cp_urm04b_crm_admin_capability_parity_20261112.sql
 apply /source-sql/tests/cp-urm04b-admin-parity-acceptance.sql
+apply /source-sql/cp-urm04b-rollback.sql
+apply /source-sql/tests/cp-urm04b-rollback-acceptance.sql
 '
 echo CP_URM04B_POSTGRES17_ADMIN_PARITY_PASS
