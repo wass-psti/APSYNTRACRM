@@ -150,7 +150,7 @@ test('populated column dialog provides a reversible action, not a dead-end block
  assert.match(app,/boardStructureClient\.mutate\(fresh,\{action:'delete'/);
  assert.match(app,/boardColumnOperationalRecovery\.restore\(fresh,entry\)/);
  assert.match(app,/renderBoardColumnRecoveryList\(boardHistory\.recoveries\)/);
- assert.match(inline,/\.filter\(x=>x.column_id===columnId\)\.length/);
+ assert.match(inline,/if\(value.column_id===columnId\)count\+\+/);
 });
 
 test('specific backend deletion failures have accurate, actionable classifications',()=>{

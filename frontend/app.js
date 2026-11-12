@@ -4024,9 +4024,12 @@ async function verifyInlineColumnBoard(snapshot){
     state.boardId!==snapshot.boardId||state.context?.user_id!==snapshot.userId||
     state.context?.workspace_id!==snapshot.workspaceId)
   throw new ApiError('Board context or manager permission changed.',403);
- const [user,ctx,fresh,allowed]=await Promise.all([
+ // Independent signed reads may overlap. The same identity, permission,
+ // revision and workspace checks still gate every subsequent mutation.
+ const [user,ctx,fresh,allowed,session]=await Promise.all([
   auth.getVerifiedUser(),db.context(),db.board(snapshot.boardId),
-  db.allowed(snapshot.boardId,'manage')
+  db.allowed(snapshot.boardId,'manage'),
+  db.rpc('wm_board_ui_read',{p_board_id:snapshot.boardId})
  ]);
  if(user?.id!==snapshot.userId||ctx?.user_id!==snapshot.userId||
     ctx?.profile?.status!=='active'||ctx?.workspace_id!==snapshot.workspaceId||
@@ -4036,7 +4039,6 @@ async function verifyInlineColumnBoard(snapshot){
   throw new ApiError('Signed board manager authorization is no longer valid.',403);
  if(fresh.board.updated_at!==snapshot.boardRevision)
   throw new ApiError('Board columns changed since this menu was opened. Refresh and review.',409);
- const session=await db.rpc('wm_board_ui_read',{p_board_id:snapshot.boardId});
  if(session?.board_id!==snapshot.boardId)
   throw new ApiError('Active signed board session is required.',403);
  return fresh;
