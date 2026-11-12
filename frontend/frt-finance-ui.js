@@ -118,7 +118,7 @@ function renderFRTExecutiveDashboard(result){
     renderCategoryBreakdown(analytics)+'</section>'+
    '<section class="frt-exec-panel frt-exec-panel-wide"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Request creation month versus liquidation submission month</p></div></header>'+
     renderMonthlyTrend(analytics)+'</section>'+
-  '</div><p class="frt-exec-disclosure">Requested totals use active, non-archived fund requests. Spent totals use submitted liquidation records. Category totals use requested line items. Monthly requested values are grouped by request creation date; spent values by liquidation submission date. Budget utilization and the 90% warning remain unavailable until an authoritative company budget source exists.</p>'+
+  '</div><p class="frt-exec-disclosure">Requested totals use active, non-archived fund requests. Spent totals use the latest currently saved submitted liquidation record per request; resubmission replaces the prior snapshot. This is not a historical revision ledger or a verified bank-transfer total. Category totals use requested line items. Monthly requested values are grouped by request creation date; spent values by liquidation submission date. Budget utilization and the 90% warning remain unavailable until an authoritative company budget source exists.</p>'+
   '</section>';
 }
 function renderFRTOpexAnalytics(result){
@@ -131,7 +131,7 @@ function renderFRTOpexAnalytics(result){
     renderCategoryBreakdown(analytics)+'</section>'+
    '<section class="frt-exec-panel"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Company-scoped monthly amounts</p></div></header>'+
     renderMonthlyTrend(analytics)+'</section>'+
-  '</div><p class="frt-exec-disclosure">Category amounts represent requested line items, not categorized liquidation spend. Monthly requested amounts are grouped by request creation date; spent amounts by submitted liquidation date. No individual request or vendor details are returned.</p></section>';
+  '</div><p class="frt-exec-disclosure">Category amounts represent requested line items, not categorized liquidation spend. Monthly requested amounts are grouped by request creation date; spent amounts by the latest saved liquidation submission date. A resubmission replaces the prior liquidation snapshot, so this is not a historical revision ledger or proof of bank transfer. No individual request or vendor details are returned.</p></section>';
 }
 function renderFRTManual(result){
  return '<section class="frt-exec-dashboard" aria-label="Fund Released Tracker user manual">'+
