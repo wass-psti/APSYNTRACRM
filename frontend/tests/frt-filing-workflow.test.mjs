@@ -8,7 +8,8 @@ const request='33333333-3333-4333-8333-333333333333';
 const data={title:'New signed FRT request',department:'Operations',fundSource:'Company funds',
  description:'For needed company supplies',dateNeeded:'2026-11-20',category:'Supplies',amount:'1200.25'};
 function fixture({deny=false,wrongContext=false,wrongCompany=false,
- stale=false,missingReceipt=false,readMismatch=false}={}){
+ stale=false,missingReceipt=false,readMismatch=false,
+ uncertainCreate=false,readErrorAfterCreate=false}={}){
  const calls=[];let filing='NOT_FILED',created=false;
  const auth={userId:user,async getVerifiedUser(){return{id:user};}};
  const api={async context(){return {user_id:user,workspace_id:wrongContext?request:workspace,
@@ -18,11 +19,15 @@ function fixture({deny=false,wrongContext=false,wrongCompany=false,
    enabled:true,status:'active',role:'GENERAL_MANAGER'},companies:[{code:wrongCompany?'OTHER':'WASS',name:'WASS'}]};
   if(name==='frt_create_request'){
    if(deny)throw Object.assign(Error('Server denied'),{status:403});
+   if(uncertainCreate)throw Object.assign(Error('Network timeout'),{status:503});
    created=true;
    return missingReceipt?{}:{id:request,workspace_id:workspace,requestor_id:user,
     title:data.title,filing_status:'NOT_FILED'};
   }
-  if(name==='frt_board_list_safe')return [{id:request,filing_status:readMismatch?'FILED':filing}];
+  if(name==='frt_board_list_safe'){
+   if(readErrorAfterCreate)throw Object.assign(Error('Network unavailable'),{status:503});
+   return [{id:request,filing_status:readMismatch?'FILED':filing}];
+  }
   if(name==='frt_set_request_filing_status'){
    if(deny)throw Object.assign(Error('Server denied'),{status:403});
    if(!stale)filing=args.p_next_status;
@@ -67,6 +72,16 @@ test('denied or uncertain creation never retries the transaction',async()=>{
  for(const options of [{deny:true},{missingReceipt:true}]){
   const f=fixture(options);
   await assert.rejects(()=>createSignedFRTRequest({...scope(f),data}));
+  assert.equal(f.calls.filter(x=>x.name==='frt_create_request').length,1);
+ }
+});
+test('ambiguous create and failed post-save readback disable resubmission and never retry',async()=>{
+ for(const options of [{uncertainCreate:true},{readErrorAfterCreate:true},{missingReceipt:true}]){
+  const f=fixture(options);
+  await assert.rejects(()=>createSignedFRTRequest({...scope(f),data}),err=>{
+   assert.equal(err.schemaOutcomeUncertain,true);
+   return true;
+  });
   assert.equal(f.calls.filter(x=>x.name==='frt_create_request').length,1);
  }
 });
