@@ -15,15 +15,15 @@ function fixture(bootstrap=true,{missing=false,leak=false,invalidSnapshot=false}
    if(name==='apsyntra_role_is_bootstrap')return bootstrap;
    if(name==='apsyntra_role_user_management_snapshot'){
     if(!bootstrap)throw err();
-    return {workspaceId:WS,bootstrapVerified:true,
+    return {workspaceId:WS,adminVerified:true,bootstrapVerified:true,
      users:[{id:USER,platformRole:'employee'}],modules:[],
      moduleAssignments:[],boards:[],boardAssignments:[]};
    }
    if(name==='apsyntra_crm_platform_role_snapshot'){
     if(missing)throw err(404,'PGRST202');
-    if(!bootstrap&&leak)return {workspaceId:WS,bootstrapVerified:true,roles:[]};
+    if(!bootstrap&&leak)return {workspaceId:WS,adminVerified:true,bootstrapVerified:true,roles:[]};
     if(!bootstrap||args.p_workspace_id!==WS)throw err();
-    return {workspaceId:WS,bootstrapVerified:true,roles:[{
+    return {workspaceId:WS,adminVerified:true,bootstrapVerified:true,roles:[{
      userId:USER,effectiveRole:invalidSnapshot?'admin':'employee',
      inheritedRole:'employee',assignedRole:null,updatedAt:null}]};
    }
