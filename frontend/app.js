@@ -76,6 +76,7 @@ import {runB4SignedRecoveryPreflight,renderB4SignedRecoveryPreflight,sanitizeB4S
 import {runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialReport} from './board-col-delete-phase-b-signed-denial.js';
 import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-state.js';
+import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board-background-update.js';
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
@@ -901,6 +902,7 @@ function boardPage(){
   (canReorderTabs?' aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight" title="Drag to reorder; Alt+Shift+Left/Right to move"':'')+
   '>'+t.label+'</a></div>').join('')}</div>
 
+<div data-board-live-content>
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},draftView:state.tradeLinkDraft,canManage:state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
@@ -934,7 +936,7 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
    workspaceId:state.context?.workspace_id,boardId:b.id}):
   moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}`;
+ ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}</div>`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -1234,6 +1236,7 @@ async function addBoardRowInline(form){
   }
  }finally{
   state.inlineAddBusy=false;
+  flushVisibleBoardContent({afterLocalSave:true});
   if(button?.isConnected){button.disabled=false;button.textContent='Add item';}
  }
 }
@@ -1294,6 +1297,7 @@ async function saveBoardInlineCell(form){
   if(state.boardId===boardId){await loadBoard(boardId,'items');toast('Cell saved.');}
  }finally{
   state.inlineCellBusy=false;
+  flushVisibleBoardContent({afterLocalSave:true});
   if(button?.isConnected){button.disabled=false;button.textContent='Save';}
  }
 }
@@ -1323,7 +1327,7 @@ async function saveGroupInline(form){
   if(saved?.title!==title)throw new ApiError(
    'The group rename could not be verified. Reload this board before trying again.',409);
   state.groupEditId=null;await loadBoard(boardId,'items');toast('Group renamed.');
- }finally{state.groupEditBusy=false;}
+ }finally{state.groupEditBusy=false;flushVisibleBoardContent({afterLocalSave:true});}
 }
 
 /** Status is patched in-place; a heartbeat never triggers a page render. */
@@ -1370,6 +1374,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  if(!state.context||state.context.user_id!==userId||
   state.context.workspace_id!==workspaceId||!auth.isSignedIn)return false;
  const serial=routeSerial,view=state.view,tab=state.tab,boardId=state.boardId;
+ const quietReadAtStart=visibleBoardRefreshSerial;
  const isCurrent=()=>auth.isSignedIn&&state.context?.user_id===userId&&
   state.context?.workspace_id===workspaceId&&serial===routeSerial&&
   state.view===view&&state.tab===tab&&state.boardId===boardId;
@@ -1444,7 +1449,8 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
    }
    throw error;
   }
-  if(!isCurrent()||platformSyncEditInProgress())return false;
+  if(!isCurrent()||platformSyncEditInProgress()||
+     quietReadAtStart!==visibleBoardRefreshSerial)return false;
   if(detail?.board?.id!==boardId||detail.board.workspace_id!==workspaceId)
    return false;
   const changed=JSON.stringify(state.board)!==JSON.stringify(detail);
@@ -1477,7 +1483,10 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   if(tab==='finance'&&moduleByBoardName(detail.board.name)?.key==='frt')
    state.frtFinance=await loadFRTFinanceReadOnly({auth,api:db,companyCode:null});
   if(!isCurrent()||platformSyncEditInProgress())return false;
-  if(changed||changedBoards||reason!=='broadcast'||tab!=='items')render();
+  if(changed||changedBoards||reason!=='broadcast'||tab!=='items'){
+   if(['items','sourcing'].includes(tab))deferVisibleBoardContent();
+   else render();
+  }
   return true;
  }
  if(view==='user-role-management'&&state.roleVerified===true)
@@ -1589,7 +1598,90 @@ async function refreshFoundation(){
  state.foundationRows=await inspectFoundation(db,{context,boards:state.boards});
  state.foundationError='';
 }
+let visibleBoardRefreshSerial=0;
+let pendingBoardContent=null;
+function deferVisibleBoardContent(){
+ if(!state.board||!['items','sourcing'].includes(state.tab))return;
+ pendingBoardContent={boardId:state.boardId,tab:state.tab,
+  actor:state.context?.user_id,workspace:state.context?.workspace_id,
+  routeSerial};
+ flushVisibleBoardContent();
+}
+function flushVisibleBoardContent({afterLocalSave=false}={}){
+ const pending=pendingBoardContent;
+ if(!pending)return false;
+ if(!auth.isSignedIn||state.view!=='board'||state.loading||
+    pending.routeSerial!==routeSerial||pending.boardId!==state.boardId||
+    pending.tab!==state.tab||pending.actor!==auth.userId||
+    pending.actor!==state.context?.user_id||
+    pending.workspace!==state.context?.workspace_id){
+  pendingBoardContent=null;return false;
+ }
+ const focused=document.activeElement;
+ const focusedEditor=focused?.closest?.('[data-board-live-content] input,'+
+  '[data-board-live-content] textarea,[data-board-live-content] select,'+
+  '[data-board-live-content] [contenteditable="true"]');
+ if(modal?.isConnected||state.inlineCell||state.inlineCellBusy||
+    state.inlineAddBusy||state.groupEditId||state.groupEditBusy||
+    state.mrhAddBusy||state.mrhAddView&&state.tab==='sourcing'||state.ttBusy||
+    root.querySelector('[data-board-live-content] details[open],'+
+     '[data-board-live-content] :popover-open')||
+    (!afterLocalSave&&focusedEditor))return false;
+ const updated=replaceVisibleBoardContent(root,boardPage(),{
+  onMounted:()=>{
+   if(state.tab==='items'){
+    mountBoardWindows(root,syncBoardSelectionUi);
+    applyBoardItemFilter(state.boardItemSearch);
+    syncBoardSelectionUi();
+   }
+  }
+ });
+ pendingBoardContent=null;
+ if(!updated)render();
+ return true;
+}
+/** Routine same-board updates never replace the signed board with a loader.
+ * The server still verifies view and edit/manage access on each read.
+ */
+async function refreshVisibleBoard(boardId,tab){
+ const identity=state.context?.user_id,workspace=state.context?.workspace_id,
+  seq=routeSerial,refresh=++visibleBoardRefreshSerial;
+ const current=()=>refresh===visibleBoardRefreshSerial&&seq===routeSerial&&
+  canRetainVisibleBoard(state,{boardId,tab,userId:identity,signed:auth.isSignedIn})&&
+  state.context?.workspace_id===workspace;
+ try{
+  const [detail,view,edit,manage,boardUi]=await Promise.all([
+   db.board(boardId),db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
+   db.allowed(boardId,'manage'),boardStructureClient.read(boardId)
+  ]);
+  if(!current())return false;
+  if(!view||detail?.board?.id!==boardId||
+     detail.board.workspace_id!==workspace){
+   state.board=null;state.boardUi=null;state.edit=false;state.boardManage=false;
+   location.hash='#/boards';return false;
+  }
+  const changed=JSON.stringify(state.board)!==JSON.stringify(detail)||
+   JSON.stringify(state.boardUi)!==JSON.stringify(boardUi)||
+   state.edit!==edit||state.boardManage!==manage;
+  state.board=detail;state.boardUi=boardUi;state.edit=edit;state.boardManage=manage;
+  if(changed)deferVisibleBoardContent();
+  return true;
+ }catch(error){
+  if(!current())return false;
+  if([401,403,404].includes(Number(error?.status))||error?.code==='42501'){
+   state.board=null;state.boardUi=null;state.edit=false;state.boardManage=false;
+   location.hash='#/boards';return false;
+  }
+  // A temporary network failure must not clear an already rendered board.
+  toast('Board sync could not complete. Your board remains available; retry Refresh.',true);
+  return false;
+ }
+}
 async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
+ if(canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn}))
+  return refreshVisibleBoard(boardId,tab);
+ // Initial load, another board, or another tab still uses the original loader.
+ pendingBoardContent=null;
  boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
  // Reuse the already authorized TradeLink board only for intra-application
  // navigation in the same signed user/workspace context. Never cache grants
@@ -3187,7 +3279,7 @@ async function login(form){
  }
  finally{state.authBusy=false;}
 }
-function hideModal(){if(modal){modal.remove();modal=null;}}
+function hideModal(){if(modal){modal.remove();modal=null;}flushVisibleBoardContent();}
 function openModal(title,fields,submit,{submitLabel='Save changes',submitDisabled=false}={}){
  const previousFocus=document.activeElement;
  hideModal();
@@ -7207,6 +7299,16 @@ root.addEventListener('click',event=>{
  }
 },true);
 
+document.addEventListener('focusout',()=>{
+ if(pendingBoardContent)setTimeout(()=>flushVisibleBoardContent(),0);
+},true);
+document.addEventListener('click',()=>{
+ if(pendingBoardContent)setTimeout(()=>flushVisibleBoardContent(),0);
+});
+document.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&pendingBoardContent)
+  setTimeout(()=>flushVisibleBoardContent(),0);
+});
 document.addEventListener('click',event=>{
  const active=event.target.closest?.('.board-card-actions')||null;
  closeBoardCardMenus(active);
