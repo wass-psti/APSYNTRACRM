@@ -35,11 +35,9 @@ function fixture({denied=false,wrongMember=false,stale=false,badCount=false,
    if(name==='frt_board_dashboard_safe'){
     return {total_requests:badCount?'1':1,pending:1,in_progress:0,
      completed:0,pending_liquidation_count:0,total_amount:100000,
-     released:999999,monthly_trend:[],top_categories:[]};
+     released:999999,...analyticsData,company_code:args.p_company};
    }
    if(name==='frt_board_list_safe')return rows;
-   if(name==='frt_board_financial_analytics_safe')
-    return {...analyticsData,company_code:args.p_company};
    throw Error('Unexpected RPC '+name);
   }
  };
@@ -54,7 +52,7 @@ test('authorized FRT board integration reads only signed domain RPCs and removes
  assert.equal(report.summary.total_requests,1);
  assert.equal(report.requests.length,1);
  assert.deepEqual(f.calls.filter(x=>typeof x==='object').map(x=>x.name),
-   ['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe','frt_board_financial_analytics_safe']);
+   ['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
  assert.ok(!f.calls.some(x=>typeof x==='object'&&/create|update|delete|admin_set|request_action/i.test(x.name)));
  assert.equal(report.writesAttempted,0);
  const out=JSON.stringify(report);
@@ -163,7 +161,7 @@ test('SEC14 safe dashboard/list never downgrade to financial-data-bearing legacy
  const response=await loadFRTFinanceReadOnly(f);
  assert.equal(response.status,'PASS');
  assert.equal(response.requests.length,1);
- assert.deepEqual(requested,['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe','frt_board_financial_analytics_safe']);
+ assert.deepEqual(requested,['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
  assert.equal(response.writesAttempted,0);
 });
 
@@ -209,11 +207,14 @@ test('financial aggregates use only the signed selected company and expose aggre
  assert.doesNotMatch(JSON.stringify(r.analytics),/requestId|voucher|recipient|bank|vendor|invoice|requestor/i);
 });
 
-test('missing analytics RPC preserves existing signed Fund Tracker availability',async()=>{
+test('older signed dashboard projections preserve tracker availability without aggregate fields',async()=>{
  const f=fixture(),original=f.api.rpc.bind(f.api);
  f.api.rpc=async(name,args)=>{
-  if(name==='frt_board_financial_analytics_safe')
-   throw Object.assign(Error('new aggregate RPC not deployed'),{code:'PGRST202'});
+  if(name==='frt_board_dashboard_safe'){
+   const dashboard=await original(name,args);
+   return Object.fromEntries(Object.entries(dashboard).filter(([key])=>
+    !['company_code','requested_total','spent_total','top_categories','monthly_trend'].includes(key)));
+  }
   return original(name,args);
  };
  const r=await loadFRTFinanceReadOnly(f);
