@@ -5,6 +5,11 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 const companyPattern=/^[A-Za-z0-9_-]{1,32}$/;
 const states=new Set(['NOT_FILED','FILED']);
 function fail(message,status=400){throw new ApiError(message,status);}
+function uncertain(message){
+ const error=new ApiError(message,409);
+ error.schemaOutcomeUncertain=true;
+ return error;
+}
 async function context({auth,api,workspaceId,companyCode,role}){
  if(!auth||!api||!uuid.test(workspaceId||'')||!companyPattern.test(companyCode||''))
   fail('Valid signed FRT workspace and company are required.',403);
@@ -46,19 +51,28 @@ export async function createSignedFRTRequest({auth,api,workspaceId,companyCode,r
  const actor=await context({auth,api,workspaceId,companyCode,role});
  await ensureSameActor({auth,api,workspaceId,actorId:actor});
  // A single write only. On ambiguous network failure, never reissue a create.
- const row=await api.rpc('frt_create_request',{p_workspace_id:workspaceId,
-  p_payload:{...payload,company:companyCode}});
+ let row;
+ try{
+  row=await api.rpc('frt_create_request',{p_workspace_id:workspaceId,
+   p_payload:{...payload,company:companyCode}});
+ }catch(error){
+  if([400,401,403,404,409,422].includes(Number(error?.status)))throw error;
+  throw uncertain('Request creation may have succeeded. Refresh before submitting again.');
+ }
  if(!uuid.test(row?.id||'')||row.workspace_id!==workspaceId||
     row.requestor_id!==actor||row.title!==payload.title||
     row.filing_status!=='NOT_FILED'){
-  const err=new ApiError('FRT creation outcome is uncertain. Refresh requests before trying again.',409);
-  err.schemaOutcomeUncertain=true;throw err;
+  throw uncertain('FRT creation outcome is uncertain. Refresh requests before trying again.');
  }
- const list=await api.rpc('frt_board_list_safe',{
-  p_workspace_id:workspaceId,p_company:companyCode,p_search:''});
+ let list;
+ try{
+  list=await api.rpc('frt_board_list_safe',{
+   p_workspace_id:workspaceId,p_company:companyCode,p_search:''});
+ }catch{
+  throw uncertain('Request saved but readback is unavailable. Refresh before submitting again.');
+ }
  if(!Array.isArray(list)||!list.some(r=>r.id===row.id&&r.filing_status==='NOT_FILED')){
-  const err=new ApiError('Created request was not verified in the signed list. Refresh before retrying.',409);
-  err.schemaOutcomeUncertain=true;throw err;
+  throw uncertain('Created request was not verified in the signed list. Refresh before retrying.');
  }
  return {status:'SAVED',requestId:row.id,filingStatus:'NOT_FILED'};
 }
