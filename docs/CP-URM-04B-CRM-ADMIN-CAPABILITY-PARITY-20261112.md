@@ -1,7 +1,7 @@
 # CP-URM-04B — CRM Administrator Capability Parity
 
 **Date:** 2026-11-12  
-**Status:** Implementation staged; PostgreSQL acceptance pending  
+**Status:** Implementation and disposable PostgreSQL acceptance verified; production activation pending  
 **Scope:** CRM role administration, central application-role assignment entry points, and bootstrap identity separation.
 
 ## Authorization contract
@@ -47,8 +47,9 @@
 
 ## Evidence
 
-- Frontend regression: 1,986 tests passed in the latest completed run.
-- PostgreSQL 17 migration acceptance: pending latest run.
+- Frontend regression: 1,986/1,986 tests passed.
+- PostgreSQL 17 migration acceptance: PASS, including CRM Admin positive access, bootstrap identity protection, non-admin denial, workspace isolation, revocation, FRT/Tool Traceability role-assignment parity, and preserved module-admin access.
+- PostgreSQL 17 rollback acceptance: PASS; bootstrap-only guard and inherited-admin target lock restored, while existing Tool Traceability module-admin access remained available.
 - Production migration: not yet applied.
 - Frontend production deployment: not yet performed.
 - Signed production runtime acceptance: pending.
