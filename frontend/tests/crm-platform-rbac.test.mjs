@@ -9,7 +9,7 @@ import {renderRoleConfiguration} from '../role-configuration-ui.js';
 const workspace='00000000-0000-4000-8000-000000000001';
 const target='11111111-1111-4111-8111-111111111111';
 const result=(role='viewer')=>({
- workspaceId:workspace,bootstrapVerified:true,
+ workspaceId:workspace,adminVerified:true,bootstrapVerified:false,
  users:[{id:target,name:'Existing Account',email:'member@example.org',platformRole:'employee',protected:false}],
  modules:[],moduleAssignments:[],boards:[],boardAssignments:[],
  crmPlatformRoles:[{userId:target,inheritedRole:'employee',effectiveRole:role,
@@ -42,8 +42,8 @@ test('single central signed client queries authoritative platform and existing r
  const client=new UserRoleManagementClient({rpc:async(name)=>{
   rpc.push(name);
   if(name==='apsyntra_crm_platform_role_snapshot')return {
-   workspaceId:workspace,bootstrapVerified:true,roles:result().crmPlatformRoles};
-  return {workspaceId:workspace,bootstrapVerified:true,users:result().users,modules:[],
+   workspaceId:workspace,adminVerified:true,bootstrapVerified:false,roles:result().crmPlatformRoles};
+  return {workspaceId:workspace,adminVerified:true,bootstrapVerified:false,users:result().users,modules:[],
    moduleAssignments:[],boards:[],boardAssignments:[]};
  }});
  const snapshot=await client.snapshot(workspace);
@@ -55,8 +55,8 @@ test('single central signed client queries authoritative platform and existing r
 test('invalid or untrusted CRM role snapshots reject before use',async()=>{
  const client=new UserRoleManagementClient({rpc:async(name)=>{
   if(name==='apsyntra_crm_platform_role_snapshot')
-   return {workspaceId:workspace,bootstrapVerified:false,roles:[]};
-  return {workspaceId:workspace,bootstrapVerified:true,users:[],modules:[],
+   return {workspaceId:workspace,adminVerified:false,bootstrapVerified:false,roles:[]};
+  return {workspaceId:workspace,adminVerified:true,bootstrapVerified:false,users:[],modules:[],
    moduleAssignments:[],boards:[],boardAssignments:[]};
  }});
  await assert.rejects(()=>client.snapshot(workspace),/Invalid server-authorized/);
@@ -90,7 +90,7 @@ test('invalid role, invalid user, stale clock and role escalation text never rea
   workspaceId:workspace,userId:target,role:'viewer',expectedUpdatedAt:'not-date'}),/Invalid CRM/);
 });
 
-test('authoritative backend reuses Auth bootstrap guard, role audit and workspace-scoped table',()=>{
+test('authoritative backend reuses CRM Admin guard, exact bootstrap identity protection, audit and workspace-scoped table',()=>{
  const migration=readFileSync('sql/cp-frt-sec06-crm-platform-role-cap.sql','utf8');
  const frt=readFileSync('sql/cp-frt-sec06-domain-role-ceiling.sql','utf8');
  for(const required of ['public.apsyntra_role_require_scope(p_workspace_id)',
