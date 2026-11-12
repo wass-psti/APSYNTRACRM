@@ -93,6 +93,11 @@ BEGIN
     j->'top_categories'->0->>'category'<>'Office Supplies' OR
     (j->'top_categories'->0->>'requested_amount')::numeric<>60000.00 OR
     jsonb_array_length(j->'monthly_trend')<>6 OR
+    (j->'monthly_trend'->3->>'requested_amount')::numeric<>84215.50 OR
+    (j->'monthly_trend'->4->>'requested_amount')::numeric<>15000.00 OR
+    (j->'monthly_trend'->4->>'spent_amount')::numeric<>20000.00 OR
+    (j->'monthly_trend'->5->>'requested_amount')::numeric<>6000.00 OR
+    (j->'monthly_trend'->5->>'spent_amount')::numeric<>12000.00 OR
     j::text LIKE '%SECRET%' OR j::text LIKE '%Disposable request%' OR
     j::text LIKE '%requestor%' OR j::text LIKE '%recipient%' OR
     j::text LIKE '%bank%' OR j::text LIKE '%invoice%' THEN
