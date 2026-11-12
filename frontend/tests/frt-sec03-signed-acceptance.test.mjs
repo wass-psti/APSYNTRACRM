@@ -22,17 +22,17 @@ function fixture(bootstrap,{leakLegacy=false}={}){
    }
    if(name==='apsyntra_role_configuration_snapshot'){
     if(!bootstrap||args.p_workspace_id!==WORKSPACE)throw denied();
-    return {bootstrapVerified:true,workspaceId:WORKSPACE,mode:'staged_only',
+    return {adminVerified:true,bootstrapVerified:true,workspaceId:WORKSPACE,mode:'staged_only',
      roles:[],users:[],assignments:[],boards:[],proposals:[],audit:[]};
    }
    if(name==='apsyntra_role_user_management_snapshot'){
     if(!bootstrap)throw denied();
-    return {bootstrapVerified:true,workspaceId:WORKSPACE,
+    return {adminVerified:true,bootstrapVerified:true,workspaceId:WORKSPACE,
      users:[],modules:[],moduleAssignments:[],boards:[],boardAssignments:[]};
    }
    if(name==='apsyntra_crm_platform_role_snapshot'){
     if(!bootstrap||args.p_workspace_id!==WORKSPACE)throw denied();
-    return {bootstrapVerified:true,workspaceId:WORKSPACE,roles:[]};
+    return {adminVerified:true,bootstrapVerified:true,workspaceId:WORKSPACE,roles:[]};
    }
    if(name==='frt_bootstrap'&&bootstrap)
     return {membership:{user_id:USER,role:'GENERAL_MANAGER'},companies:[]};
