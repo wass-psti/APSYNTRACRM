@@ -101,6 +101,8 @@ BEGIN
   RAISE EXCEPTION 'Employee passed CRM Admin scope';
  EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
 
+ -- Remove the explicit test override to verify inherited admin classification independently.
+ DELETE FROM public.apsyntra_crm_platform_roles WHERE workspace_id=v_workspace AND user_id=v_inherited;
  -- The non-bootstrap inherited admin has effective CRM Admin, but not bootstrap.
  PERFORM set_config('request.jwt.claim.sub',v_inherited::text,true);
  IF public.apsyntra_role_is_bootstrap() OR NOT public.apsyntra_role_is_admin()
