@@ -55,7 +55,7 @@ import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
  from './tradelink-attachments.js';
 import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftForm,parseTradeLinkDraftForm,
  tradeLinkDraftValidationMessage,tradeLinkDraftReady,tradeLinkDraftSaveFailureMessage,
- tradeLinkDraftHasUnsavedChanges,
+ tradeLinkDraftHasUnsavedChanges,reconcileTradeLinkSavedListing,
  prepareTradeLinkDraftCommand,
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
@@ -1832,6 +1832,10 @@ function tradeLinkAuthorizedListRoute(){
 function tradeLinkDraftRoute(){
  return tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='drafts';
 }
+// Server-wide TradeLink search is optional. A missing RPC is a capability
+// fact for the current loaded application, not a reason to retry a 404 on
+// every All Documents refresh. Reload after a backend activation to recheck.
+let tradeLinkDocumentsPageRpcUnavailable=false;
 async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  if(!tradeLinkAuthorizedListRoute()||!TL03_DOMAIN_READS_ENABLED||
   state.tradeLinkDraft.busy)return;
@@ -1845,17 +1849,22 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  try{
   let result;
   if(documents){
-   try{
-    result=await tradeLinkDraftWorkspace.searchPage({
-     filters,cursor:pageRequest?.cursor??null});
-    if(result.listPage){
-     result.listPage={...result.listPage,history:pageRequest?.history??[],
-      pageIndex:pageRequest?.pageIndex??0};
+   if(!tradeLinkDocumentsPageRpcUnavailable){
+    try{
+     result=await tradeLinkDraftWorkspace.searchPage({
+      filters,cursor:pageRequest?.cursor??null});
+     if(result.listPage){
+      result.listPage={...result.listPage,history:pageRequest?.history??[],
+       pageIndex:pageRequest?.pageIndex??0};
+     }
+    }catch(err){
+     // An absent RPC is not evidence of an empty repository. Cache only
+     // confirmed missing-function errors; never swallow a signed denial.
+     if(err?.code!=='PGRST202'&&err?.code!=='42883')throw err;
+     if(same())tradeLinkDocumentsPageRpcUnavailable=true;
     }
-   }catch(err){
-    // An absent, not-yet-approved RPC is not evidence of an empty repository.
-    // Continue with the original bounded signed list and its truthful scope.
-    if(err?.code!=='PGRST202'&&err?.code!=='42883')throw err;
+   }
+   if(!result){
     result=await tradeLinkDraftWorkspace.list();
     result.listPage=null;
     result.message='Server-wide search is not activated. Showing the current signed 50-record response.';
@@ -2177,16 +2186,16 @@ async function commitTradeLinkDraft(form){
    record.content?.documentType!==draft.documentType||
    !tradeLinkSavedDraftMatches(record,draft)||
    record.workflow_state!==workflowState||
-   list.status!=='AUTHORIZED_READ'||
-   !list.rows.some(row=>row.documentId===documentId&&
-    row.boardItemId===receipt.boardItemId&&row.revision===receipt.revision)||
    board?.board?.workspace_id!==ws||
    !board.items?.some(item=>item.id===receipt.boardItemId&&
     item.title===draft.documentNumber))
    throw new ApiError('Saved document/Board projection verification incomplete.',409);
+  // The original signed list is bounded to 50. Its absence is not proof
+  // that an exactly read and Board-verified saved document was not committed.
+  const verifiedList=reconcileTradeLinkSavedListing(list,record,receipt);
   state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
-   status:'AUTHORIZED_READ',rows:list.rows,
+   status:'AUTHORIZED_READ',rows:verifiedList.rows,
    message:'Saved Draft '+receipt.revision+' confirmed in TradeLink, Board items and All Documents.'};
   toast('Saved Draft. Document and Board item verified.');
   location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
