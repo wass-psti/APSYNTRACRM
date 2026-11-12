@@ -20,7 +20,7 @@ DECLARE
   '66666666-aaaa-4666-8666-666666666666'::uuid
  ];
  typ text; doc_id uuid; details jsonb; payload jsonb; revised jsonb;
- receipt jsonb; saved jsonb; board_item uuid; idx integer;
+ receipt jsonb; saved jsonb; listing jsonb; board_item uuid; idx integer;
 BEGIN
  FOR idx IN 1..6 LOOP
   typ:=types[idx];doc_id:=identifiers[idx];
@@ -76,12 +76,50 @@ BEGIN
    PERFORM public.tl03_document_commit(board,doc_id,1,'update',revised);
    RAISE EXCEPTION 'Stale update accepted for %',typ;
   EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL; END;
+  -- The All Documents response must point to the same authoritative Board item.
+  listing:=public.tl03_documents_list(board,50);
+  IF (SELECT count(*) FROM pg_catalog.jsonb_array_elements(listing) entry
+     WHERE entry->>'documentId'=doc_id::text
+      AND entry->>'boardItemId'=board_item::text
+      AND entry->>'documentType'=typ
+      AND entry->>'documentNumber'=payload->>'documentNumber'
+      AND (entry->>'revision')::integer=2
+      AND entry->>'workflowState'='draft' AND entry->>'archived'='false')<>1
+  THEN RAISE EXCEPTION 'All Documents mismatch after signed update for %',typ; END IF;
+  receipt:=public.tl03_document_commit(board,doc_id,2,'archive',NULL);
+  IF (receipt->>'revision')::integer<>3
+    OR NOT EXISTS(SELECT 1 FROM public.work_board_items i
+      WHERE i.id=board_item AND i.archived_at IS NOT NULL)
+    OR (SELECT count(*) FROM pg_catalog.jsonb_array_elements(
+       public.tl03_documents_list(board,50)) entry
+       WHERE entry->>'documentId'=doc_id::text
+       AND entry->>'archived'='true' AND (entry->>'revision')::integer=3)<>1
+  THEN RAISE EXCEPTION 'Archive, Board and All Documents parity failed for %',typ; END IF;
+  receipt:=public.tl03_document_commit(board,doc_id,3,'restore',NULL);
+  saved:=public.tl03_document_read(board,doc_id);
+  IF (receipt->>'revision')::integer<>4
+    OR saved->'content' IS DISTINCT FROM revised
+    OR saved->>'board_item_id' IS DISTINCT FROM board_item::text
+    OR NOT EXISTS(SELECT 1 FROM public.work_board_items i
+      JOIN public.tradelink_documents d ON d.board_item_id=i.id
+      WHERE d.id=doc_id AND i.id=board_item AND i.archived_at IS NULL
+       AND i.updated_at=d.updated_at AND i.updated_by=d.updated_by)
+    OR (SELECT count(*) FROM pg_catalog.jsonb_array_elements(
+       public.tl03_documents_list(board,50)) entry
+       WHERE entry->>'documentId'=doc_id::text
+       AND entry->>'boardItemId'=board_item::text
+       AND entry->>'archived'='false' AND (entry->>'revision')::integer=4)<>1
+    OR (SELECT count(*) FROM public.tradelink_document_events
+        WHERE document_id=doc_id)<>4
+  THEN RAISE EXCEPTION 'Restore, signed read, Board and listing parity failed for %',typ; END IF;
  END LOOP;
- IF (SELECT count(*) FROM public.tradelink_documents WHERE board_id=board)<>6
+ listing:=public.tl03_documents_list(board,50);
+ IF pg_catalog.jsonb_array_length(listing)<>6
+  OR (SELECT count(*) FROM public.tradelink_documents WHERE board_id=board)<>6
   OR (SELECT count(*) FROM public.work_board_items WHERE board_id=board)<>6
-  OR (SELECT count(*) FROM public.tradelink_document_events WHERE board_id=board)<>12
+  OR (SELECT count(*) FROM public.tradelink_document_events WHERE board_id=board)<>24
  THEN RAISE EXCEPTION 'Six-module test created duplicates or unexpected audit history'; END IF;
- RAISE NOTICE 'Six TradeLink modules signed create/read/idempotent/update/CAS/Board/audit PASS';
+ RAISE NOTICE 'Six TradeLink modules signed create/read/retry/update/CAS/archive/restore/Board/All Documents/audit PASS';
 END $six_module$;
 RESET ROLE;
 ROLLBACK;
