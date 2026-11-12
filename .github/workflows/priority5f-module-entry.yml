@@ -9,6 +9,8 @@ on:
       - 'scripts/priority5f-module-graph.mjs'
       - 'scripts/priority5f-module-browser.mjs'
       - 'scripts/group-action-menu-browser.mjs'
+      - 'scripts/board-background-update-browser.mjs'
+      - 'frontend/board-background-update.js'
       - 'frontend/action-menu-experience.js'
       - 'scripts/pages-smoke.mjs'
       - '.github/workflows/priority5f-module-entry.yml'
@@ -22,6 +24,8 @@ on:
       - 'scripts/priority5f-module-graph.mjs'
       - 'scripts/priority5f-module-browser.mjs'
       - 'scripts/group-action-menu-browser.mjs'
+      - 'scripts/board-background-update-browser.mjs'
+      - 'frontend/board-background-update.js'
       - 'frontend/action-menu-experience.js'
       - 'scripts/pages-smoke.mjs'
       - '.github/workflows/priority5f-module-entry.yml'
@@ -64,3 +68,9 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$BROWSER" || { echo 'BLOCKED: Chrome/Chromium unavailable'; exit 1; }
           CHROME_BIN="$BROWSER" node scripts/group-action-menu-browser.mjs
+      - name: Verify live board fragment updates in isolated Chromium
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chrome/Chromium unavailable'; exit 1; }
+          CHROME_BIN="$BROWSER" node scripts/board-background-update-browser.mjs
