@@ -25,7 +25,8 @@ function installCandidate(db){
   readFileSync('sql/cp-frt-sec14-board-safe-read-contracts.sql','utf8'),
   readFileSync('sql/tests/cp-frt-board03b-disposable-profile-compat.sql','utf8'),
   readFileSync('sql/cp-frt-board03-date-cas-CANDIDATE.sql','utf8'),
-  readFileSync('sql/cp-frt-board03b-person-assignment-CANDIDATE.sql','utf8')];
+  readFileSync('sql/cp-frt-board03b-person-assignment-CANDIDATE.sql','utf8'),
+  readFileSync('sql/cp-frt-filing01-CANDIDATE.sql','utf8')];
  const dir=mkdtempSync(join(tmpdir(),'frt03d-'));
  try{
   const file=join(dir,'isolated-extension.sql');
@@ -75,13 +76,21 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
   const creation=await member.rpc('frt_create_request',{
    p_workspace_id:workspace,p_payload:payload});
   qaId=creation?.id;
-  requireTrue(uuid.test(qaId||'')&&creation?.title===payload.title,
+  requireTrue(uuid.test(qaId||'')&&creation?.filing_status==='NOT_FILED'&&creation?.title===payload.title,
    'SIGNED_QA_CREATE_FAILED');
   phase='SIGNED_LIST';
   const listed=await member.rpc('frt_board_list_safe',{
    p_workspace_id:workspace,p_company:'WAO',p_search:''});
   requireTrue(Array.isArray(listed)&&listed.some(r=>r.id===qaId),
    'QA_REQUEST_NOT_LISTED');
+  requireTrue(listed.some(r=>r.id===qaId&&r.filing_status==='NOT_FILED'),
+   'FILING01_SIGNED_CREATION_DEFAULT_NOT_FILED');
+  phase='FILING_CAS';
+  const filingAck=await member.rpc('frt_set_request_filing_status',{
+   p_workspace_id:workspace,p_request_id:qaId,p_company:'WAO',
+   p_expected_status:'NOT_FILED',p_next_status:'FILED'});
+  requireTrue(filingAck?.ok===true&&filingAck.filingStatus==='FILED',
+   'FILING01_SIGNED_NOT_FILED_TO_FILED_FAILED');
   phase='DATE_CAS';
   const dateAck=await member.rpc('frt_update_request_date_cas',{
    p_workspace_id:workspace,p_request_id:qaId,
@@ -108,7 +117,7 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
    p_workspace_id:workspace,p_company:'WAO',p_search:''});
   requireTrue(detail?.date_needed==='2026-11-20'&&
    assignee?.assigneeId===actorIds.member&&
-   refreshed.some(r=>r.id===qaId&&r.date_needed==='2026-11-20'),
+   refreshed.some(r=>r.id===qaId&&r.date_needed==='2026-11-20'&&r.filing_status==='FILED'),
    'GOTRUE_FRESH_LOGIN_PERSISTENCE_FAILED');
   phase='DENIALS';
   const beforeStale=Number(query(db,`SELECT count(*) FROM public.frt_audit_logs WHERE fund_request_id='${qaId}'`));
@@ -120,6 +129,10 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
    p_workspace_id:workspace,p_request_id:qaId,
    p_expected_assignee_id:null,p_assignee_id:actorIds.member}),
    'SIGNED_STALE_PERSON_ACCEPTED');
+  await staleDenial(()=>member.rpc('frt_set_request_filing_status',{
+   p_workspace_id:workspace,p_request_id:qaId,p_company:'WAO',
+   p_expected_status:'NOT_FILED',p_next_status:'FILED'}),
+   'FILING01_STALE_WRITE_ACCEPTED');
   const postStaleDate=await member.rpc('frt_restricted_request_detail',{p_workspace_id:workspace,p_request_id:qaId});
   const postStalePerson=await member.rpc('frt_request_assignment',{p_workspace_id:workspace,p_request_id:qaId});
   requireTrue(postStaleDate?.date_needed==='2026-11-20'&&
@@ -136,11 +149,24 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
    p_workspace_id:workspace,p_request_id:qaId,
    p_expected_date:'2026-11-20',p_next_date:'2026-11-23'}),
    'FOREIGN_WORKSPACE_DATE_WRITE_ACCEPTED');
+  await denial(()=>outsider.rpc('frt_set_request_filing_status',{
+   p_workspace_id:workspace,p_request_id:qaId,p_company:'WAO',
+   p_expected_status:'FILED',p_next_status:'NOT_FILED'}),
+   'FILING01_FOREIGN_MEMBER_WRITE_ACCEPTED');
   await denial(()=>outsider.rpc('frt_assign_request_person',{
    p_workspace_id:workspace,p_request_id:qaId,
    p_expected_assignee_id:actorIds.member,p_assignee_id:null}),
    'FOREIGN_WORKSPACE_PERSON_WRITE_ACCEPTED');
+  const currentFiled=await member.rpc('frt_board_list_safe',{
+   p_workspace_id:workspace,p_company:'WAO',p_search:''});
+  requireTrue(currentFiled.some(r=>r.id===qaId&&r.filing_status==='FILED'),
+   'FILING01_REJECTED_WRITE_CHANGED_STATE');
   phase='RESTORE';
+  const restoredFiling=await member.rpc('frt_set_request_filing_status',{
+   p_workspace_id:workspace,p_request_id:qaId,p_company:'WAO',
+   p_expected_status:'FILED',p_next_status:'NOT_FILED'});
+  requireTrue(restoredFiling?.ok===true&&restoredFiling.filingStatus==='NOT_FILED',
+   'FILING01_RESTORE_FAILED');
   const restoredPerson=await member.rpc('frt_assign_request_person',{
    p_workspace_id:workspace,p_request_id:qaId,
    p_expected_assignee_id:actorIds.member,p_assignee_id:null});
@@ -155,9 +181,12 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
    'assigned',(SELECT count(*) FROM public.frt_requests WHERE id='${qaId}' AND assignee_id IS NOT NULL),
    'dateRestored',(SELECT count(*) FROM public.frt_requests WHERE id='${qaId}' AND date_needed='2026-11-15'),
    'dateAudit',(SELECT count(*) FROM public.frt_audit_logs WHERE fund_request_id='${qaId}' AND action='REQUEST_DATE_CORRECTED'),
-   'personAudit',(SELECT count(*) FROM public.frt_audit_logs WHERE fund_request_id='${qaId}' AND action='REQUEST_PERSON_ASSIGNED'))::text;`));
+   'personAudit',(SELECT count(*) FROM public.frt_audit_logs WHERE fund_request_id='${qaId}' AND action='REQUEST_PERSON_ASSIGNED'),
+   'filingAudit',(SELECT count(*) FROM public.frt_audit_logs WHERE fund_request_id='${qaId}' AND action='REQUEST_FILING_STATUS_CHANGED'),
+   'filingRestored',(SELECT count(*) FROM public.frt_requests WHERE id='${qaId}' AND filing_status='NOT_FILED'))::text;`));
   requireTrue(state.qaRequests===1&&state.assigned===0&&state.dateRestored===1&&
-   state.dateAudit===2&&state.personAudit===2,'QA_FINAL_AUDIT_OR_RESTORE_INVALID');
+   state.dateAudit===2&&state.personAudit===2&&state.filingAudit===2&&state.filingRestored===1,
+   'QA_FINAL_AUDIT_OR_RESTORE_INVALID');
   // CI-only hard cleanup with verified exact fixture identity; the entire
   // disposable Supabase stack is independently destroyed by the workflow.
   phase='CLEANUP';
@@ -170,12 +199,14 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
   request AS (DELETE FROM public.frt_requests WHERE id IN (SELECT id FROM fixture) RETURNING id)
   SELECT json_build_object('requests',(SELECT count(*) FROM request),
    'lines',(SELECT count(*) FROM lines),'audits',(SELECT count(*) FROM audit))::text;`));
-  requireTrue(cleaned.requests===1&&cleaned.lines===1&&cleaned.audits===5,
+  requireTrue(cleaned.requests===1&&cleaned.lines===1&&cleaned.audits===7,
    'QA_FIXTURE_CLEANUP_INVALID');
   qaId=null;
   return {checkpoint:'CP-FRT-BOARD-03D',status:'PASS',
    realGoTrueSessions:3,signedCreate:1,updatedDate:1,updatedPerson:1,
    freshLoginPersistence:'PASS',staleWriteDenials:2,foreignWorkspaceDenials:4,
+   filingDefault:'NOT_FILED',filingCAS:'PASS',filingReadAfterFreshLogin:'PASS',
+   filingStaleDenial:'PASS',filingForeignDenial:'PASS',filingAudit:'PASS',
    restoredValues:'PASS',exactFixtureCleanup:'PASS',
    productionTouched:false,privateDataIncluded:false};
  }catch(error){

@@ -8,7 +8,7 @@ const report={status:'PASS',role:'GENERAL_MANAGER',companyCode:'WASS',
  {code:'WASS',name:'Watchdog Automation Sales & Services'},
  {code:'PSTI',name:'PLC Systems Technik, Inc.'}],
  summary:{total_requests:40,pending:9,in_progress:18,completed:13,pending_liquidation_count:7},
- requests:[{requestId:id,title:'Operating Supplies',voucher:'DV-WASS-202611-009',status:'PENDING_APPROVAL',dateNeeded:'2026-11-13'}]};
+ requests:[{requestId:id,title:'Operating Supplies',voucher:'DV-WASS-202611-009',status:'PENDING_APPROVAL',dateNeeded:'2026-11-13',filingStatus:'NOT_FILED'}]};
 test('reference sections render actual verified signed KPIs, chart labels, title and company selector',()=>{
  const html=renderFRTFinanceReadOnly({result:report});
  for(const value of ['Select Your Company','Executive Dashboard','OPEX Analytics','User Manual',
@@ -30,7 +30,8 @@ test('no private unverified finance data, filing status, archive list or audit r
  for(const secret of ['923812','Never Public','Private Requestor','Secret Event'])
   assert.ok(!html.includes(secret),secret);
  assert.match(html,/BPI BizLink/);
- assert.match(html,/Not available/);
+ assert.match(html,/✓ Filed/);
+ assert.match(html,/data-action="frt-filing-toggle"/);
  assert.match(html,/data-frt-section="new"/);
  assert.match(html,/data-frt-section="archive"/);
  assert.match(html,/data-frt-section="activity"/);
@@ -76,7 +77,9 @@ test('reference-only dialogs retain disabled backend submission and signed membe
  assert.match(app,/case 'frt-ui-dialog':/);
  assert.match(app,/state\.frtFinance\?\.status!=='PASS'/);
  assert.match(app,/state\.frtFinance\.requests\.find\(r=>r\.requestId===requestId\)/);
- assert.match(app,/submitLabel:'Not connected',submitDisabled:true/);
+ assert.match(app,/submitLabel:'Submit Fund Request'/);
+ assert.match(app,/createSignedFRTRequest/);
+ assert.match(app,/updateSignedFRTFiling/);
  assert.match(app,/Filing status<\/label><strong>Not Filed<\/strong>/);
- assert.match(app,/The current finance API cannot persist this form/);
+ assert.match(app,/case 'frt-filing-toggle':/);
 });

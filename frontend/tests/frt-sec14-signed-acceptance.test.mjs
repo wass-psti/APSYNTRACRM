@@ -36,7 +36,7 @@ function fixture({hasRequest=false,denied=false,changed=false,invalid=false,
     in_progress:0,completed:0,pending_liquidation_count:0};
    if(name==='frt_board_list_safe')return visible?[{
     id,company_code:args.p_company,voucher_no:'FRT-01',
-    title:'Approved visibility',status:'PENDING_APPROVAL',date_needed:'2026-11-15'
+    title:'Approved visibility',status:'PENDING_APPROVAL',date_needed:'2026-11-15',filing_status:'NOT_FILED'
    }]:[];
    if(name==='frt_restricted_request_detail')return {
     id,workspace_id:ws,company_code:secondOnly?'WASS':'PSTI',

@@ -12360,6 +12360,10 @@
 @media(max-width:570px){#app .frt-ref{padding:10px;border-radius:12px}#app .frt-ref-company{padding:14px}#app .frt-ref-company-switch{width:100%}#app .frt-ref-company-choice{flex:1}#app .frt-ref-nav>*{padding:9px 10px;font-size:10px}#app .frt-ref-hero{padding:14px}#app .frt-ref-hero-title h2{font-size:18px}#app .frt-ref-toolbar{gap:6px}#app .frt-ref-action{font-size:10px;padding:7px 9px}#app .frt-ref-metrics{gap:8px}#app .frt-ref-metric{padding:12px}#app .frt-ref-metric strong{font-size:24px}}
 @media(prefers-reduced-motion:reduce){#app .frt-ref-action{transition:none}}
 
+#app .frt-ref-table button.frt-ref-filing{border:1px solid #c6d2e4;border-radius:6px;background:#eef1f6;color:#657186;padding:6px 9px;font-size:10px;font-weight:750;cursor:pointer;white-space:nowrap;min-height:29px}
+#app .frt-ref-table button.frt-ref-filing.is-filed{background:#dbf7e9;color:#218a54;border-color:#a3e3c1}
+#app .frt-ref-table button.frt-ref-filing:hover{filter:brightness(.97)}
+
 /* frontend/fueltrack-v3-application.css */
 /* CP-FT3-01 — FuelTrack+ v3 native dashboard, scoped to authorized board app. */
 #app .ft3-app{color:#27394a;background:#f6fafb;border:1px solid #d7e4e8;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px #163b4811;margin:16px 0 28px;font-size:13px}

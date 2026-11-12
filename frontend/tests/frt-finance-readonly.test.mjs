@@ -9,7 +9,7 @@ const record='33333333-3333-4333-8333-333333333333';
 function fixture({denied=false,wrongMember=false,stale=false,badCount=false,
  companies=[{code:'PSTI',name:'Process Solutions Technology Inc.'},{code:'WASS',name:'Watchdog'}],
  rows=[{id:record,voucher_no:'FRT-01',title:'Operational request',
- status:'PENDING_APPROVAL',date_needed:'2026-11-02',company_code:'PSTI',
+ status:'PENDING_APPROVAL',date_needed:'2026-11-02',filing_status:'NOT_FILED',company_code:'PSTI',
  total_amount:10000,requestor:'private person',requestor_email:'secret@example.org'}]}={}){
  const calls=[];let verifications=0;
  const auth={userId:user,async getVerifiedUser(){verifications++;return {
@@ -54,7 +54,7 @@ test('authorized FRT board integration reads only signed domain RPCs and removes
  assert.doesNotMatch(out,/secret@example|requestor|total_amount|100000|999999|amount|attachments/i);
  assert.deepEqual(report.requests[0],{
   requestId:record,voucher:'FRT-01',title:'Operational request',status:'PENDING_APPROVAL',
-  dateNeeded:'2026-11-02'
+  dateNeeded:'2026-11-02',filingStatus:'NOT_FILED'
  });
 });
 test('company selection must match a signed FRT bootstrap company before data calls',async()=>{
@@ -144,7 +144,7 @@ test('SEC14 safe dashboard/list never downgrade to financial-data-bearing legacy
   };
   if(name==='frt_board_list_safe')return [{
    id:record,company_code:'PSTI',voucher_no:'SAFE-1',
-   title:'Approved visibility',status:'PENDING_APPROVAL',date_needed:'2026-11-02'
+   title:'Approved visibility',status:'PENDING_APPROVAL',date_needed:'2026-11-02',filing_status:'NOT_FILED'
   }];
   if(name==='frt_bootstrap')return original(name,args);
   throw Error('Forbidden legacy financial RPC: '+name);

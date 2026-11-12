@@ -20,6 +20,9 @@ test('acceptance performs real GoTrue sign-in, independent fresh session and bot
  assert.match(source,/frt_create_request/);
  assert.match(source,/frt_update_request_date_cas/);
  assert.match(source,/frt_assign_request_person/);
+ assert.match(source,/frt_set_request_filing_status/);
+ assert.match(source,/FILING01_STALE_WRITE_ACCEPTED/);
+ assert.match(source,/FILING01_FOREIGN_MEMBER_WRITE_ACCEPTED/);
  assert.match(source,/frt_restricted_request_detail/);
  assert.match(source,/frt_request_assignment/);
  assert.match(source,/FOREIGN_WORKSPACE_DATE_WRITE_ACCEPTED/);

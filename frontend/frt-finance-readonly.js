@@ -61,11 +61,12 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
    if(!uuid.test(item?.id||'')||
       !short(item?.voucher_no,100)&&item?.voucher_no!==null||
       !short(item?.title,250)||!short(item?.status,70)||
-      !validDate(item?.date_needed)||item?.company_code!==selected)
+      !validDate(item?.date_needed)||!['NOT_FILED','FILED'].includes(item?.filing_status)||
+      item?.company_code!==selected)
     return denied('FRT_REQUEST_ROW_CONTRACT_INVALID');
    if(requests.length<100)requests.push({
     requestId:item.id,voucher:item.voucher_no||'—',title:item.title,status:item.status,
-    dateNeeded:item.date_needed||'—'
+    dateNeeded:item.date_needed||'—',filingStatus:item.filing_status
    });
   }
   const second=await auth.getVerifiedUser();
