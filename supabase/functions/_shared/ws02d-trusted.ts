@@ -121,11 +121,30 @@ async function trustedSql(actor: VerifiedActor, route: Route, body: ObjectMap): 
       rows = await tx`SELECT private.ws02d_issue(
         ${body.workspaceId}::uuid, ${body.email}::text,
         'member'::text, ${body.requestId}::uuid) AS receipt`;
+      const issue = rows[0]?.receipt;
+      if (!dataObject(issue) || !userId(issue.invitationId))
+        return fail(503, 'Invalid issuance receipt');
+      // Atomic issue + delivery-ledger preparation: rollback both on failure.
+      const prepared = await tx`SELECT private.ws02d_delivery_prepare(
+        ${body.workspaceId}::uuid, ${issue.invitationId}::uuid,
+        ${body.requestId}::uuid) AS receipt`;
+      const preparation = prepared[0]?.receipt;
+      if (!dataObject(preparation)) return fail(503, 'Invalid delivery state');
+      return { ...issue, deliveryState: preparation.deliveryState,
+        providerEmailId: preparation.providerEmailId };
     } else if (route === 'accept') {
       rows = await tx`SELECT private.ws02d_accept(${body.token}::text) AS receipt`;
     } else if (route === 'manage' && body.operation === 'list') {
       rows = await tx`SELECT private.ws11_list_invitations(
         ${body.workspaceId}::uuid) AS receipt`;
+      const listing = rows[0]?.receipt;
+      if (!dataObject(listing)) return fail(503, 'Invalid listing receipt');
+      const deliveries = await tx`SELECT private.ws02d_delivery_list(
+        ${body.workspaceId}::uuid) AS receipt`;
+      const delivery = deliveries[0]?.receipt;
+      if (!dataObject(delivery) || !Array.isArray(delivery.delivery))
+        return fail(503, 'Invalid delivery listing');
+      return { ...listing, delivery: delivery.delivery };
     } else if (route === 'manage' && body.operation === 'revoke') {
       rows = await tx`SELECT private.ws11_revoke_invitation(
         ${body.workspaceId}::uuid, ${body.invitationId}::uuid) AS receipt`;
@@ -177,44 +196,96 @@ function validate(route: Route, input: unknown): ObjectMap {
   return { workspaceId: r.workspaceId, boardId: r.boardId, subjectId: r.subjectId,
     requestId: r.requestId, action: r.action };
 }
-async function deliver(request: ObjectMap, receipt: ObjectMap) {
+/**
+ * Record only a provider API outcome, never the acceptance token.
+ * Recording uses the same verified caller + live session as issuance.
+ */
+async function recordDelivery(
+  actor: VerifiedActor, workspaceId: unknown, invitationId: unknown,
+  outcome: 'submitted' | 'uncertain' | 'rejected', providerId: string | null,
+): Promise<ObjectMap> {
+  const sql = db();
+  const rows = await sql.begin(async tx => {
+    await tx`SELECT pg_catalog.set_config('request.jwt.claims', ${JSON.stringify(actor.claims)}, true)`;
+    await tx`SELECT private.ws01_signed_actor_session()`;
+    return await tx`SELECT private.ws02d_delivery_record(
+      ${workspaceId}::uuid, ${invitationId}::uuid,
+      ${outcome}::text, ${providerId}::text) AS receipt`;
+  });
+  const receipt = rows[0]?.receipt;
+  if (!dataObject(receipt)) return fail(503, 'Invalid delivery record');
+  return receipt;
+}
+
+/**
+ * One provider submission per issued token. No resend on uncertain timeout,
+ * even when the original caller repeats the same request ID. Provider
+ * idempotency protects its own limited time window, not the full lifetime.
+ */
+async function deliver(
+  actor: VerifiedActor, request: ObjectMap, receipt: ObjectMap,
+): Promise<ObjectMap> {
   const apiKey = Deno.env.get('RESEND_API_KEY');
   const from = Deno.env.get('APSYNTRA_INVITE_FROM');
   const appUrl = Deno.env.get('APSYNTRA_INVITE_APP_URL') ||
     'https://wass-psti.github.io/APSYNTRACRM/';
   if (!apiKey || !from || !appUrl.startsWith('https://'))
     return fail(503, 'Mail delivery not configured');
-  if (receipt.idempotent === true) return fail(409, 'Invitation already issued; reconcile status');
-  if (receipt.state !== 'pending' || typeof receipt.token !== 'string' ||
-      !TOKEN.test(receipt.token) || !userId(receipt.invitationId))
+  if (!userId(receipt.invitationId)) return fail(503, 'Invalid invitation reference');
+
+  // Replay is read-only. Tokens are never returned twice by the SQL issuer.
+  // A subsequent manager listing exposes the recorded delivery state.
+  if (receipt.idempotent === true) {
+    return { invitationId: receipt.invitationId, state: 'already-issued' };
+  }
+  if (receipt.state !== 'pending' || receipt.deliveryState !== 'prepared' ||
+      typeof receipt.token !== 'string' || !TOKEN.test(receipt.token))
     return fail(503, 'Invalid invitation issuance receipt');
+
   const href = appUrl.replace(/#.*$/, '') +
     '#/invitations/accept/' + receipt.token;
   const msg = typeof request.message === 'string' && request.message ?
     '\nMessage from inviter: ' + request.message + '\n' : '';
-  // Never log the token or return it to the browser.
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + apiKey,
-      'Content-Type': 'application/json',
-      'Idempotency-Key': 'apsyntra-ws02d-' + receipt.invitationId,
-    },
-    body: JSON.stringify({
-      from, to: [request.email], subject: 'APSYNTRA CRM workspace invitation',
-      text: 'You have been invited to join a workspace in APSYNTRA CRM.\n' +
-        'Sign in with this exact email address, then accept within 24 hours.\n' +
-        msg + '\nInvitation: ' + href + '\n\nIf unexpected, ignore this message.',
-    }),
-    signal: AbortSignal.timeout(15000),
-  }).catch(() => null);
-  if (!response || !response.ok)
-    return fail(409, 'Invitation delivery outcome uncertain; reconcile before retrying');
-  let provider: unknown;
-  try { provider = await response.json(); } catch { /* no receipt */ }
-  if (!dataObject(provider) || typeof provider.id !== 'string')
-    return fail(409, 'Invitation delivery receipt unavailable; reconcile');
-  return { invitationId: receipt.invitationId, state: 'delivery-submitted' };
+  let response: Response | null = null;
+  try {
+    response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'apsyntra-ws02d-' + receipt.invitationId,
+      },
+      body: JSON.stringify({
+        from, to: [request.email], subject: 'APSYNTRA CRM workspace invitation',
+        text: 'You have been invited to join a workspace in APSYNTRA CRM.\n' +
+          'Sign in with this exact email address, then accept within 24 hours.\n' +
+          msg + '\nInvitation: ' + href +
+          '\n\nIf unexpected, ignore this message.',
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch { /* timeout/network = uncertain; never retry automatically */ }
+
+  if (response?.ok) {
+    let provider: unknown;
+    try { provider = await response.json(); } catch { /* uncertainty */ }
+    if (dataObject(provider) && typeof provider.id === 'string' &&
+        /^[A-Za-z0-9_-]{1,128}$/.test(provider.id)) {
+      await recordDelivery(actor, request.workspaceId, receipt.invitationId,
+        'submitted', provider.id);
+      // HTTP provider acceptance, not verified recipient inbox delivery.
+      return { invitationId: receipt.invitationId, state: 'delivery-submitted' };
+    }
+  }
+
+  // Only a definitive provider rejection can be marked rejected. Transient
+  // provider failures and absent receipts remain uncertain, never resent.
+  const outcome = response && response.status >= 400 &&
+    response.status < 500 && response.status !== 408 && response.status !== 429
+    ? 'rejected' : 'uncertain';
+  await recordDelivery(actor, request.workspaceId, receipt.invitationId,
+    outcome, null);
+  return fail(409, 'Invitation delivery requires reconciliation; do not retry');
 }
 function status(error: unknown): RouteError {
   if (error instanceof RouteError) return error;
@@ -253,7 +324,7 @@ export function serveInvitationRoute(route: Route) {
         return fail(503, 'Mail delivery not configured');
       const actor = await verifyUser(req);
       const receipt = await trustedSql(actor, route, body);
-      if (route === 'invite') return respond(req, 200, await deliver(body, receipt));
+      if (route === 'invite') return respond(req, 200, await deliver(actor, body, receipt));
       // Never return bearer secrets or raw SQL error details.
       return respond(req, 200, receipt);
     } catch (error) {
