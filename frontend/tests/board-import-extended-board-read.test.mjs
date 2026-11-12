@@ -39,3 +39,44 @@ test('CP-BIMP-14 denied extended reads never fall back to an incomplete board',a
  };
  await assert.rejects(()=>api.board(board),/Access denied/);
 });
+
+test('same-board refresh starts independent signed board and extended-reference reads concurrently',async()=>{
+ const api=new DomainApi({});
+ let releaseBoard,releaseRefs;
+ const boardGate=new Promise(resolve=>{releaseBoard=resolve;});
+ const refsGate=new Promise(resolve=>{releaseRefs=resolve;});
+ const started=[];
+ api.rpc=(name)=>{
+  started.push(name);
+  return name==='wm_get_board'?boardGate:refsGate;
+ };
+ const pending=api.board(board,{parallelExtendedRefs:true});
+ assert.deepEqual(started,['wm_import_extended_refs_read','wm_get_board']);
+ releaseRefs([{item_id:item,column_id:column,value:'https://example.invalid/parallel'}]);
+ releaseBoard(structuredClone(shell));
+ const result=await pending;
+ assert.equal(result.values[0].value,'https://example.invalid/parallel');
+ assert.equal(api.extendedRefsSupported,true);
+});
+test('parallel refresh preserves denied optional-reference reads and legacy absence behavior',async()=>{
+ const denied=new DomainApi({});
+ denied.rpc=async name=>{
+  if(name==='wm_get_board')return structuredClone(shell);
+  throw Object.assign(new Error('Access denied'),{status:403});
+ };
+ await assert.rejects(()=>denied.board(board,{parallelExtendedRefs:true}),/Access denied/);
+ const legacy=new DomainApi({});let refCalls=0;
+ legacy.rpc=async name=>{
+  if(name==='wm_get_board')return structuredClone(shell);
+  refCalls++;throw Object.assign(new Error('RPC unavailable'),{status:404,code:'PGRST202'});
+ };
+ assert.deepEqual((await legacy.board(board,{parallelExtendedRefs:true})).values,[]);
+ assert.deepEqual((await legacy.board(board,{parallelExtendedRefs:true})).values,[]);
+ assert.equal(refCalls,1);
+});
+test('parallel refresh preserves no-board denial rather than accepting reference data',async()=>{
+ const api=new DomainApi({});
+ api.rpc=async name=>name==='wm_get_board'?null:
+  [{item_id:item,column_id:column,value:'https://example.invalid/'}];
+ await assert.rejects(()=>api.board(board,{parallelExtendedRefs:true}),/not found or is unavailable/);
+});

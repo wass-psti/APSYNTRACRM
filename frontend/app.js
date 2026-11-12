@@ -1657,7 +1657,7 @@ async function refreshVisibleBoard(boardId,tab){
   state.context?.workspace_id===workspace;
  try{
   const [detail,view,edit,manage,boardUi]=await Promise.all([
-   db.board(boardId),db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
+   db.board(boardId,{parallelExtendedRefs:true}),db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
    db.allowed(boardId,'manage'),boardStructureClient.read(boardId)
   ]);
   if(!current())return false;

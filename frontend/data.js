@@ -123,12 +123,22 @@ export class DomainApi {
    if(!Array.isArray(data))throw new ApiError('Unexpected board list response.');
    return data;
  }
- async board(boardId){
-   const data=await this.rpc('wm_get_board',{p_board_id:requireUuid(boardId)});
+ async board(boardId,{parallelExtendedRefs=false}={}){
+   requireUuid(boardId);
+   // On a same-board signed refresh, both read RPCs independently enforce
+   // database access. Start the optional reference read alongside the board
+   // read, not after it, to eliminate one network round trip.
+   const refsPending=parallelExtendedRefs&&this.extendedRefsSupported!==false?
+    this.rpc('wm_import_extended_refs_read',{p_board_id:boardId})
+     .then(value=>({value}),error=>({error})):null;
+   const data=await this.rpc('wm_get_board',{p_board_id:boardId});
    if(!data?.board)throw new ApiError('Board was not found or is unavailable.',404);
    if(this.extendedRefsSupported!==false){
     try{
-     const refs=await this.rpc('wm_import_extended_refs_read',{p_board_id:boardId});
+     const outcome=refsPending?await refsPending:null;
+     if(outcome?.error)throw outcome.error;
+     const refs=outcome?outcome.value:
+      await this.rpc('wm_import_extended_refs_read',{p_board_id:boardId});
      if(!Array.isArray(refs))throw new ApiError('Extended reference read response is invalid.',409);
      if(!Array.isArray(data.values))throw new ApiError('Board values are unavailable.',409);
      const keys=new Set(data.values.map(v=>v.item_id+':'+v.column_id));
