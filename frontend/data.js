@@ -11,6 +11,7 @@ const BOARD_READ_RPC=new Set([
  'wm_get_board','wm_auth_access_context','work_board_access','wm_list_boards',
  'wm_board_ui_read','wm_list_board_events','wm_list_board_events_page',
  'wm_import_extended_refs_read',
+ 'apsyntra_crm_my_effective_access',
  'tl03_documents_page',
  'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
  'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read'

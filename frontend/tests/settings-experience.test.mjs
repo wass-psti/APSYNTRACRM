@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from '../settings-visuals.js';
 import {avatarPreviewMarkup} from '../profile-avatar.js';
+import {signedCrmRoleLabel,signedCrmIdentityLabel} from '../crm-role-context.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/settings-experience.css','utf8');
@@ -29,6 +30,7 @@ function render(overrides={}){
  const name=()=>overrides.displayName??'Example Operator';
  const fn=runInNewContext('('+functionSource+')',{
   state,e:escaped,name,initials:()=> 'EO',avatarPreviewMarkup,
+  signedCrmRoleLabel,signedCrmIdentityLabel,
   workspaceName:()=>overrides.workspaceName??'Test Workspace',
   settingsIcon,summarizeAcceptance:items=>({
    total:items.length,passed:items.filter(item=>item.status==='pass').length
@@ -68,7 +70,7 @@ test('profile preserves authoritative identity fields, user ID and signed worksp
  assert.match(page,/Test Workspace/);
  assert.match(page,/employee/);
  assert.match(page,/class="status done">active<\/span>/);
- assert.equal(count(page,/class="settings-detail(?:\s|")/g),5); // four profile fields plus one session authentication field
+ assert.equal(count(page,/class="settings-detail(?:\s|")/g),7); // six profile fields plus one session authentication field
  assert.equal(count(page,/class="panel settings-profile-panel/g),1);
  assert.equal(count(page,/class="panel settings-session-panel/g),1);
 });

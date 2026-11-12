@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from '../overview-visuals.js';
+import {signedCrmRoleLabel,signedCrmIdentityLabel} from '../crm-role-context.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/overview-experience.css','utf8');
@@ -27,7 +28,7 @@ test('overview is isolated from signed sidebar and other board views',()=>{
 test('all four metrics remain based on authoritative signed board and role state',()=>{
  assert.match(view,/state\.boards\.reduce\(\(a,b\)=>a\+\(Number\(b\.item_count\)\|\|0\),0\)/);
  assert.match(view,/state\.boards\.length/);
- assert.match(view,/state\.context\?\.profile\?\.platform_role\|\|'Member'/);
+ assert.match(view,/signedCrmRoleLabel\(state\.crmRoleSnapshot,state\.context\)/);
  for(const label of ['Active boards','Board items','Workspace status','Your access']){
   assert.ok(view.includes(label),label);
  }
@@ -111,19 +112,20 @@ test('Workspace essentials is rendered only after verified bootstrap authority',
  // Execute only the pure Overview renderer with inert view dependencies.
  // Profile roles must never substitute for the verified bootstrap RPC gate.
  const render=new Function('state','name','e','overviewIcon','boardCard','empty',
+  'signedCrmRoleLabel','signedCrmIdentityLabel',
   view+'\nreturn overview();');
  const makeState=roleVerified=>({
   roleVerified,boards:[],context:{profile:{platform_role:'admin_general_manager'}}
  });
  const deps=[()=> 'Example User',String,v=>`<i>${v}</i>`,()=>'',()=>'<div>Empty board</div>'];
  for(const flag of [false,undefined,null,0]){
-  const markup=render(makeState(flag),...deps);
+  const markup=render(makeState(flag),...deps,signedCrmRoleLabel,signedCrmIdentityLabel);
   assert.doesNotMatch(markup,/Workspace essentials|overview-essentials|Supabase Auth connected|Native issue transactions/);
   assert.match(markup,/Your boards/);
   assert.match(markup,/Active boards/);
   assert.match(markup,/New board/);
  }
- const verified=render(makeState(true),...deps);
+ const verified=render(makeState(true),...deps,signedCrmRoleLabel,signedCrmIdentityLabel);
  assert.match(verified,/Workspace essentials/);
  assert.match(verified,/Supabase Auth connected/);
  assert.match(verified,/Board permissions are centralized/);
