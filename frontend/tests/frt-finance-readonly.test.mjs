@@ -201,7 +201,7 @@ test('financial aggregates use only the signed selected company and expose aggre
    month,requestedAmount:'1000.00',spentAmount:'250.00'
   }))
  });
- const call=f.calls.find(x=>typeof x==='object'&&x.name==='frt_board_financial_analytics_safe');
+ const call=f.calls.find(x=>typeof x==='object'&&x.name==='frt_board_dashboard_safe');
  assert.deepEqual(call.args,{p_workspace_id:ws,p_company:'PSTI'});
  assert.equal(r.writesAttempted,0);
  assert.doesNotMatch(JSON.stringify(r.analytics),/requestId|voucher|recipient|bank|vendor|invoice|requestor/i);
