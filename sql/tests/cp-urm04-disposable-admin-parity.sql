@@ -1,5 +1,10 @@
 -- Test against disposable CP-RC03 fixture, never production accounts.
 \set ON_ERROR_STOP on
+-- Real Supabase installs both API roles; the minimal RC03 fixture omits them.
+DO $$BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon NOLOGIN; END IF;
+ IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+END$$;
 CREATE TABLE public.apsyntra_crm_platform_roles (
  workspace_id uuid NOT NULL,user_id uuid NOT NULL,role text NOT NULL,
  PRIMARY KEY(workspace_id,user_id));
