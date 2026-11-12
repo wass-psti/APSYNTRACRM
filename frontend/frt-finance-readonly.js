@@ -1,7 +1,7 @@
-/** CP-FRT-SEC12: signed FRT board finance snapshot. READ ONLY.
+/** CP-FRT-SEC12 / EXEC-02: signed FRT board projection. READ ONLY.
  * Uses existing Supabase RPCs and the existing FRT domain session/role guard.
- * Sensitive amounts, requestor identities, attachments and raw payloads
- * intentionally do not cross this component's output boundary.
+ * Financial data crosses only as company-scoped aggregates; individual request
+ * amounts, requester identities, banking data and raw row payloads stay excluded.
  */
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const roles=new Set(['GENERAL_MANAGER','FINANCE_MANAGER','FINANCE_APPROVER','REQUESTOR']);
