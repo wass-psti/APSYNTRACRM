@@ -4,63 +4,133 @@ const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const count=v=>Number.isSafeInteger(v)&&v>=0?String(v):'—';
 import {frtActionSpec} from './frt-board-domain-actions.js';
+const editRoles=new Set(['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER']);
+const statusTone=value=>{
+ const v=String(value||'').toUpperCase();
+ if(['CLOSED','DONE','COMPLETED','APPROVED'].includes(v))return 'completed';
+ if(v.includes('PENDING'))return 'pending';
+ if(['REJECTED','BLOCKED'].includes(v))return 'blocked';
+ return 'working';
+};
+const friendlyStatus=value=>String(value||'—').replaceAll('_',' ').toLowerCase().replace(/^./,c=>c.toUpperCase());
+const clamp=n=>Math.max(0,Math.min(100,Number(n)||0));
+function chartDonut(summary){
+ const values=[summary?.completed||0,summary?.in_progress||0,summary?.pending||0];
+ const sum=values.reduce((a,b)=>a+b,0);
+ const total=Math.max(sum,summary?.total_requests||0,1);
+ let offset=0;
+ const arcs=values.map((value,i)=>{
+  const span=clamp(100*value/total);
+  const circle='<circle cx="60" cy="60" r="43" fill="none" stroke="'+
+   ['#f0a7a5','#a8c7e4','#b6e4c6'][i]+'" stroke-width="18" stroke-dasharray="'+
+   span.toFixed(2)+' '+(100-span).toFixed(2)+'" stroke-dashoffset="'+(-offset).toFixed(2)+
+   '" pathLength="100" transform="rotate(-90 60 60)"/>';
+  offset+=span;return circle;
+ }).join('');
+ return '<svg class="frt-ref-donut" viewBox="0 0 120 120" role="img" aria-label="Request distribution: '+
+  values[0]+' completed, '+values[1]+' in progress, '+values[2]+' pending approval">'+
+  '<circle cx="60" cy="60" r="43" fill="none" stroke="#e7ebf2" stroke-width="18"/>'+arcs+
+  '<text x="60" y="64" text-anchor="middle" class="frt-ref-donut-center">'+count(summary?.total_requests)+'</text></svg>';
+}
+function chartBars(summary){
+ const values=[summary?.completed||0,summary?.in_progress||0,summary?.pending||0];
+ const max=Math.max(1,...values);
+ const bars=values.map((value,i)=>{
+  const x=58+i*105,height=Math.round(111*value/max);
+  return '<rect x="'+x+'" y="'+(144-height)+'" width="64" height="'+height+
+    '" rx="5" fill="'+['#f0a7a5','#a7c6e5','#b6e4c6'][i]+'"/>'+
+    '<text x="'+(x+32)+'" y="'+(137-height)+'" text-anchor="middle" class="frt-ref-chart-number">'+value+'</text>';
+ }).join('');
+ return '<svg viewBox="0 0 370 182" class="frt-ref-bars" role="img" aria-label="Request status comparison: '+
+  values[0]+' completed, '+values[1]+' in progress, '+values[2]+' pending approval">'+
+  '<path d="M38 30H360 M38 58H360 M38 86H360 M38 114H360 M38 144H360" stroke="#e9edf4" fill="none"/>'+bars+
+  '<text x="90" y="165" text-anchor="middle">Completed</text><text x="195" y="165" text-anchor="middle">In progress</text>'+
+  '<text x="300" y="165" text-anchor="middle">Pending</text></svg>';
+}
 export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null,statusFilter='all'}={}){
- let html='<div class="page-head"><div><span class="label-top">Fund Released Tracker / Domain</span>'+
-  '<h2>Financial requests</h2><p>Authoritative signed Supabase FRT snapshot. '+
-  'No amounts, bank details or requester identities are displayed. '+
-  'Date corrections use the existing signed FRT backend.</p></div>'+
-  '<div class="head-actions"><button class="secondary" data-action="frt-finance-refresh" '+
-  (busy?'disabled':'')+'>'+(busy?'Loading…':'↻ Refresh FRT')+'</button></div></div>';
- if(busy)return html+'<div class="panel"><div class="panel-body">Verifying FRT finance access…</div></div>';
- if(!result)return html+'<div class="panel"><div class="panel-body">Select this view to read your authorized finance summary.</div></div>';
+ let html='<section class="frt-ref" aria-label="Fund Released Tracker application">'+
+  '<header class="frt-ref-company"><div class="frt-ref-company-identity"><span class="frt-ref-icon" aria-hidden="true">▣</span>'+
+  '<div><strong>Select Your Company</strong><small>Authorized company scope for requests and documents</small></div></div>';
+ if(result?.status==='PASS'&&result.companies?.length){
+  html+='<div class="frt-ref-company-switch" role="group" aria-label="Select authorized FRT company">'+
+   result.companies.map(c=>'<button type="button" class="frt-ref-company-choice '+
+    (c.code===result.companyCode?'is-active':'')+'" data-action="frt-finance-company" data-code="'+
+    escape(c.code)+'" title="'+escape(c.name)+'" '+(busy?'disabled':'')+'>'+escape(c.code)+
+    (c.code===result.companyCode?' <span aria-hidden="true">✓</span>':'')+'</button>').join('')+'</div>';
+ }
+ html+='</header><nav class="frt-ref-nav" aria-label="Fund Tracker sections">'+
+  '<span class="frt-ref-nav-active" aria-current="page">▤ &nbsp; Fund Tracker</span>'+
+  '<span class="frt-ref-nav-label">▦ &nbsp; Executive Dashboard</span>'+
+  '<span class="frt-ref-nav-label">◫ &nbsp; OPEX Analytics</span>'+
+  '<span class="frt-ref-nav-label">▤ &nbsp; User Manual</span></nav>';
+ if(busy)return html+'<div class="frt-ref-loading" role="status">Loading verified financial requests…</div></section>';
+ if(!result)return html+'<div class="frt-ref-loading">Select this view to read your authorized financial requests.</div></section>';
  if(result.status!=='PASS'){
   const reason=/^[A-Z0-9_]{1,65}$/.test(result.reason||'')?result.reason:'FRT_ACCESS_NOT_VERIFIED';
-  return html+'<div class="panel"><div class="panel-body"><div class="note">FRT finance data is unavailable: '+
-   escape(reason)+'. No financial records or permissions were changed.</div></div></div>';
+  return html+'<div class="frt-ref-loading" role="status">FRT finance data is unavailable: '+
+   escape(reason)+'. No records or permissions were changed.</div></section>';
  }
- html+='<div class="panel"><div class="panel-header"><h3>Authorized FRT role</h3>'+
-  '<span>'+escape(result.role)+'</span></div><div class="panel-body">';
- if(!result.companies?.length)return html+'<p class="muted">No FRT companies are configured for this workspace.</p></div></div>';
- html+='<div class="toolbar"><div class="segmented" aria-label="Select authorized FRT company">'+
-  result.companies.map(c=>'<button type="button" class="segment '+
-   (c.code===result.companyCode?'active':'')+'" data-action="frt-finance-company" data-code="'+
-   escape(c.code)+'" title="'+escape(c.name)+'">'+escape(c.code)+'</button>').join('')+
-  '</div></div><p class="muted">Company: '+
-  escape(result.companies.find(c=>c.code===result.companyCode)?.name||'Unknown')+'</p></div></div>';
- const totals=[['Requests','total_requests'],['Pending approval','pending'],
-  ['In progress','in_progress'],['Completed','completed'],
-  ['Pending liquidation','pending_liquidation_count']];
- const statuses=[...new Set((result.requests||[]).map(r=>r.status))].sort();
+ if(!result.companies?.length)return html+'<div class="frt-ref-loading">No FRT companies configured for this workspace.</div></section>';
+ const summary=result.summary||{};
+ const rows=Array.isArray(result.requests)?result.requests:[];
+ const statuses=[...new Set(rows.map(r=>r.status))].sort();
  const filter=statusFilter==='all'||statuses.includes(statusFilter)?statusFilter:'all';
- html+='<div class="toolbar" aria-label="FRT request filtering"><label for="frt-status-filter">Status</label>'+
-  '<select id="frt-status-filter" aria-label="Filter FRT requests by status">'+
-  '<option value="all">All statuses</option>'+statuses.map(s=>'<option value="'+escape(s)+'"'+
-   (filter===s?' selected':'')+'>'+escape(s.replaceAll('_',' ').toLowerCase())+'</option>').join('')+
-   '</select></div>';
- html+='<div class="stat-grid" aria-label="Authorized FRT request counts">'+
-  totals.map(([label,key])=>'<div class="stat-card"><div class="stat-label">'+label+
-   '</div><div class="stat-value">'+count(result.summary?.[key])+'</div></div>').join('')+
-  '</div><div class="panel"><div class="panel-header"><h3>Recent FRT requests</h3>'+
-  '<span>Signed requests · up to 100 entries displayed</span></div><div class="table-scroll"><table class="board-table">'+
-  '<thead><tr><th>Voucher</th><th>Request</th><th>Status</th><th>Date needed</th><th>Details</th></tr></thead><tbody>';
- html+=(result.requests||[]).filter(r=>filter==='all'||r.status===filter).map(r=>'<tr><td>'+escape(r.voucher)+'</td>'+
-  '<td>'+escape(r.title)+'</td><td>'+escape(r.status)+'</td><td>'+
-  escape(r.dateNeeded)+(typeof r.requestId==='string'&&
-   ['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER'].includes(result.role)?
-   ' <button type="button" class="secondary" data-action="frt-date-edit" data-request-id="'+
-    escape(r.requestId)+'" aria-label="Edit date needed for '+escape(r.title)+'">Edit date</button>':'')+'</td><td>'+
-  (typeof r.requestId==='string'?
-    (['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER'].includes(result.role)?
-     '<button type="button" class="secondary" data-action="frt-person-edit" data-request-id="'+
-      escape(r.requestId)+'" aria-label="Assign person for '+escape(r.title)+'">Person</button> ':'')+
-    '<button type="button" class="secondary" data-action="frt-finance-detail" data-request-id="'+
-    escape(r.requestId)+'" '+(detailBusy?'disabled':'')+'>'+
-    (r.requestId===selectedRequestId?'Selected':'View details')+'</button>':
-    '—')+'</td></tr>').join('')||
-  '<tr><td colspan="5" class="muted">No requests found for this company.</td></tr>';
- html+='</tbody></table></div></div><p class="muted">Backend returns at most 500 recent requests; '+
-  'the first 100 are displayed. Monetary values, banking fields, files, '+
-  'requestor identities, person assignment, attachment upload, QR files and approval actions are not modified here.</p>';
+ const shown=rows.filter(r=>filter==='all'||r.status===filter);
+ const selectedCompany=result.companies.find(c=>c.code===result.companyCode);
+ html+='<div class="frt-ref-deadlines" role="status"><span class="frt-ref-warning" aria-hidden="true">△</span>'+
+  '<div><strong>Pending Liquidation</strong><small>Signed request workflow summary; overdue deadlines are not provided by this API</small></div>'+
+  '<b>'+count(summary.pending_liquidation_count)+' pending</b></div>';
+ html+='<div class="frt-ref-hero"><div class="frt-ref-hero-title"><span class="frt-ref-icon" aria-hidden="true">▣</span>'+
+  '<div><h2>Fund Release Tracker</h2><p>Complete workflow from request to liquidation</p></div></div>'+
+  '<div class="frt-ref-toolbar"><span class="frt-ref-pill" title="Signed FRT company">▣ '+
+  escape(result.companyCode)+'</span><span class="frt-ref-company-name">'+escape(selectedCompany?.name||'')+'</span>'+
+  '<button class="frt-ref-action is-primary" type="button" data-action="frt-ui-dialog" data-frt-section="new" title="Preview the new request form; submission is not active">＋ New Fund Request</button>'+
+  '<button class="frt-ref-action" type="button" disabled title="Bulk fund-request import is not connected">⇧ Bulk Import</button>'+
+  '<button class="frt-ref-action" type="button" data-action="frt-ui-dialog" data-frt-section="activity" title="View the activity-log panel">⌁ Activity Log</button>'+
+  '<button class="frt-ref-action" type="button" data-action="frt-ui-dialog" data-frt-section="archive" title="View the archive-storage panel">▤ Archive Storage</button>'+
+  '<button class="frt-ref-action" type="button" disabled title="Domain export is not connected in this phase">⇩ Export</button>'+
+  '<button class="frt-ref-action frt-ref-refresh" type="button" data-action="frt-finance-refresh" '+
+   (busy?'disabled':'')+' aria-label="Refresh Fund Released Tracker">↻ Refresh</button></div></div>';
+ const metrics=[['Total Requests','total_requests','violet','▥'],['Completed','completed','teal','✓'],
+  ['In Progress','in_progress','orange','◷'],['Pending Approval','pending','rose','!']];
+ html+='<div class="frt-ref-metrics">'+metrics.map(([label,key,tone,icon])=>
+  '<article class="frt-ref-metric frt-ref-'+tone+'"><div><span>'+label+'</span><strong>'+count(summary[key])+ '</strong></div>'+
+  '<span class="frt-ref-metric-icon" aria-hidden="true">'+icon+'</span></article>').join('')+'</div>';
+ html+='<div class="frt-ref-analytics"><section class="frt-ref-chart"><header><strong>Status Distribution</strong>'+
+  '<small>Verified domain status counts</small></header>'+chartDonut(summary)+
+  '<div class="frt-ref-legend"><span><i class="frt-ref-dot is-complete"></i>Completed</span>'+
+  '<span><i class="frt-ref-dot is-progress"></i>In progress</span><span><i class="frt-ref-dot is-pending"></i>Pending approval</span></div></section>'+
+  '<section class="frt-ref-chart"><header><strong>Request Overview</strong><small>Status comparison</small></header>'+chartBars(summary)+'</section></div>';
+ html+='<section class="frt-ref-table-card"><header class="frt-ref-table-heading"><div><h3>Fund Requests</h3><small>'+count(summary.total_requests)+
+  ' requests in '+escape(result.companyCode)+' · '+rows.length+' recent requests displayed</small></div><span class="frt-ref-role">'+
+  escape(result.role)+'</span></header><div class="frt-ref-filters"><label for="frt-status-filter">Status</label>'+
+  '<select id="frt-status-filter" aria-label="Filter FRT requests by status"><option value="all">All statuses</option>'+
+  statuses.map(s=>'<option value="'+escape(s)+'"'+(filter===s?' selected':'')+'>'+escape(friendlyStatus(s))+'</option>').join('')+
+  '</select><span>Financial amounts, requester identities and filing records are not in this signed projection.</span></div>'+
+  '<div class="frt-ref-table-scroll"><table class="frt-ref-table"><thead><tr><th>Request Name</th><th>Amount</th><th>Voucher</th><th>Status</th>'+
+  '<th>Liquidation</th><th>BPI BizLink</th><th>Date</th><th>Requestor</th><th>Actions</th></tr></thead><tbody>';
+ html+=shown.map(r=>{
+  const canEdit=editRoles.has(result.role)&&typeof r.requestId==='string';
+  const requestId=escape(r.requestId||'');
+  return '<tr><td class="frt-ref-request-name">'+escape(r.title)+'</td><td class="frt-ref-private">—</td>'+
+   '<td class="frt-ref-voucher">'+escape(r.voucher)+'</td><td><span class="frt-ref-status is-'+statusTone(r.status)+'">'+
+   escape(friendlyStatus(r.status))+'</span></td><td>—</td><td><span class="frt-ref-filing" title="Filing state is unavailable until a verified signed filing contract is connected">Not available</span></td>'+
+   '<td>'+escape(r.dateNeeded)+'</td><td class="frt-ref-private">—</td><td><div class="frt-ref-row-actions">'+
+   (typeof r.requestId==='string'?'<button type="button" title="Discussion" aria-label="Discussion for '+escape(r.title)+'" data-action="frt-ui-dialog" data-frt-section="discussion" data-request-id="'+requestId+'">▣</button>':'')+
+   (typeof r.requestId==='string'?'<button type="button" title="View request details" aria-label="View '+escape(r.title)+
+    ' details" data-action="frt-finance-detail" data-request-id="'+requestId+'" '+(detailBusy?'disabled':'')+'>▤</button>':'')+
+   (canEdit?'<button type="button" title="Edit date" data-action="frt-date-edit" data-request-id="'+requestId+'">◷</button>'+
+    '<button type="button" title="Assign person" data-action="frt-person-edit" data-request-id="'+requestId+'">♙</button>':'')+
+   '<details class="frt-ref-more"><summary aria-label="Request actions">⋮</summary><div class="frt-ref-more-menu">'+
+   (typeof r.requestId==='string'?'<button type="button" data-action="frt-finance-detail" data-request-id="'+requestId+'">View Details</button>':'')+
+   '<button type="button" disabled title="Requires a verified repeat-request contract">Repeat This Request</button>'+
+   '<button type="button" disabled title="Requires a verified edit-request contract">Edit Request</button>'+
+   '<button type="button" disabled title="Requires verified archive retrieval and lifecycle controls">Archive Request</button>'+
+   '<button type="button" disabled title="Financial records cannot be deleted using an unverified contract">Delete Request</button></div></details></div></td></tr>';
+ }).join('')||'<tr><td colspan="9" class="frt-ref-empty">No requests found for this company.</td></tr>';
+ html+='</tbody></table></div><footer class="frt-ref-table-footer">'+
+  'Showing authorized recent requests. Filing changes default to Not Filed only after the signed filing backend is implemented. '+
+  'No approval, archive, comment or upload operation is simulated.</footer></section>';
  if(detailBusy){
   html+='<div class="panel"><div class="panel-body">Retrieving signed FRT request details…</div></div>';
  }else if(detailResult?.status==='PASS'&&detailResult.detail){
@@ -93,5 +163,5 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   html+='<div class="panel"><div class="panel-body"><div class="note">Request details unavailable: '+
    escape(reason)+'. No request was modified.</div></div></div>';
  }
- return html;
+ return html+'</section>';
 }
