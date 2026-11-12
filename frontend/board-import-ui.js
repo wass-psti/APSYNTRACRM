@@ -10,6 +10,8 @@ import {importMappingReadiness,skipPendingImportChoice,
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
  buildImportPlan} from './board-import-core.js';
 import {executeBoardImportBatched,IMPORT_BATCH_SIZE} from './board-import-batches.js';
+import {readImportRecovery,clearImportRecovery,sealImportRecovery,
+ importDigest,verifyImportRecovery} from './board-import-durable.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const choice=(id,label,selected)=>'<option value="'+esc(id)+'"'+(selected?' selected':'')+'>'+esc(label)+'</option>';
@@ -28,7 +30,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   complete:null,error:'',notice:'',confirmed:false,plan:null,uncertain:false,renderedStep:0,
   omittedRowsConfirmed:false,formulaWarningsConfirmed:false,importProgress:null,
   extendedReferences:api.extendedRefsSupported===true,
-  resumeCheckpoint:null};
+  resumeCheckpoint:null,recoveryMarker:readImportRecovery({userId:actor.id,boardId}),
+  recoveryMode:false,recoverySourceDigest:null,recoveryOffset:0,
+  originalReceipt:null,executionPlan:null};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -43,10 +47,14 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const group=()=>state.group==='create'?
   {action:'create',name:state.groupName}:
   {action:'existing',groupId:state.group};
+ const recoverSheet=()=>state.recoveryMode?{...sheet(),
+  rows:sheet().rows.slice(state.recoveryOffset),
+  rowNumbers:sheet().rowNumbers?.slice(state.recoveryOffset),
+  omittedRowsConfirmed:true,formulaWarningsConfirmed:true}:sheet();
  const computePlan=()=>{
   if(readiness().pendingChoices.length)
    throw new Error('Finish or explicitly skip each pending Status/Dropdown setup before proceeding.');
-  return buildImportPlan({sheet:{...sheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
+  return buildImportPlan({sheet:{...recoverSheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
    formulaWarningsConfirmed:state.formulaWarningsConfirmed},detail,mappings:state.mappings,
    group:group(),matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
    allowColumns:state.allowColumns,extendedReferences:state.extendedReferences});
@@ -63,6 +71,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    '<input type="file" id="aps-import-file-input" accept=".csv,.xlsx" hidden />'+
    '<button type="button" class="primary" data-imp="browse">Browse</button>'+
    '<h2>or drag and drop your file</h2><p>CSV and XLSX supported · Maximum 8 MB · 20,000 source rows (1,000-row verified batches)</p>'+
+   (state.recoveryMarker?'<p>Previous import: '+state.recoveryMarker.completed+
+    ' of '+state.recoveryMarker.rows+' rows verified. Select the same workbook to continue.</p>'+
+    '<button type="button" class="secondary" data-imp="clear-recovery">Discard recovery marker</button>':'')+
    '</div></div>';
  }
  function mapStep(){
@@ -101,7 +112,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     choice('item','Item (main title)',m.action==='item'),
     ...columns.map(c=>choice('existing:'+c.id,c.name+' · '+c.type+(c.visible===false?' · hidden':''),
      m.action==='existing'&&m.columnId===c.id))];
-   if(state.manage){
+   if(state.manage&&!state.recoveryMode){
     if(CREATABLE_IMPORT_TYPES.includes(m.type)||m.action==='create')
      opts.push(choice('create','Create new column…',m.action==='create'));
     opts.push(choice('setup:status','Configure new Status…',
@@ -200,14 +211,19 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    ['text','email','url','dropdown','status'].includes(c.type)&&
    state.mappings.some(m=>m.action==='existing'&&m.columnId===c.id));
   let result=null,validation='';
-  try{result=computePlan();state.plan=result;}catch(error){validation=String(error.message||error);state.plan=null;}
+  try{result=state.busy?state.executionPlan||state.plan:computePlan();
+   if(!state.busy)state.plan=result;
+  }catch(error){validation=String(error.message||error);if(!state.busy)state.plan=null;}
   const radio=(id,title,description)=>'<label class="aps-import-match '+(state.behavior===id?'selected':'')+'">'+
    '<input type="radio" name="imp-behavior" value="'+id+'"'+(state.behavior===id?' checked':'')+' />'+
    '<span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>';
   const matchSelect='<label>Matched by<select name="imp-match" data-imp-match>'+
    choice('item','Item title',state.matchColumnId==='item')+
    cols.map(c=>choice(c.id,c.name,state.matchColumnId===c.id)).join('')+'</select></label>';
-  return '<section class="aps-import-match-screen"><h2>Set duplicate behavior</h2>'+
+  return '<section class="aps-import-match-screen"><h2>'+
+   (state.recoveryMode?'Review remaining rows':'Set duplicate behavior')+'</h2>'+
+   (state.recoveryMode?'<p>Previously verified '+state.recoveryMarker.completed+
+    ' of '+state.recoveryMarker.rows+' rows. Only remaining rows can be submitted.</p>':'')+
    '<p>Choose how rows in this file match records in the destination Group.</p>'+
    radio('add-new','Add as new items','Create every row; existing records are never changed.')+
    radio('skip','Skip','Do not import rows matching an existing record.')+
@@ -271,7 +287,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
       '<button class="secondary" data-imp="close">Close and reconcile imported rows</button>':
       '<button class="primary" data-imp="import"'+
       (!state.plan||!state.confirmed||state.busy?' disabled':'')+'>'+
-      (state.busy?'Importing…':'Import Now')+'</button>')):'')+
+      (state.busy?'Importing…':state.recoveryMode?'Verify and resume remaining rows':'Import Now')+'</button>')):'')+
    (state.step===4?'<button class="primary" data-imp="close">Done</button>':'')+
    '</footer></div>';
   const body=overlay.querySelector('.aps-import-body');
@@ -292,11 +308,30 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   try{
    const parsed=await parseImportFile(file);
    if(!overlay.isConnected)return;
-   state.file=parsed;state.sheet=0;state.omittedRowsConfirmed=false;state.formulaWarningsConfirmed=false;
-   state.mappings=initialImportMappings(parsed.sheets[0],detail,{canCreate:state.manage});
-   state.allowColumns=state.manage;
+   const marker=state.recoveryMarker;
+   const candidate=marker?.worksheetIndex;
+   if(marker){
+    if(!Number.isInteger(candidate)||!parsed.sheets[candidate]||
+       await importDigest(parsed.sheets[candidate])!==marker.sourceDigest)
+     throw new ApiError('This workbook differs from the previous import. Reselect the original source or explicitly discard the recovery marker.',409);
+   }
+   state.file=parsed;state.sheet=marker?candidate:0;
+   state.recoveryMode=!!marker;
+   state.recoverySourceDigest=marker?.sourceDigest||null;
+   state.recoveryOffset=marker?.completed||0;
+   state.originalReceipt=marker?.receipt||null;
+   state.omittedRowsConfirmed=!!marker;state.formulaWarningsConfirmed=!!marker;
+   if(marker){
+    state.group=marker.groupId;state.behavior=marker.behavior;
+    state.matchColumnId=marker.matchColumnId;
+    state.notice='Source verified. Review the remaining '+
+     (marker.rows-marker.completed)+' rows and mapping before continuing.';
+   }
+   state.mappings=initialImportMappings(parsed.sheets[state.sheet],detail,{
+    canCreate:state.manage&&!marker,extendedReferences:state.extendedReferences});
+   state.allowColumns=state.manage&&!marker;
    state.groupName=('Imported '+parsed.name.replace(/\.(xlsx|csv)$/i,'')).slice(0,120);
-   state.step=2;state.allowColumns=state.manage;
+   state.step=2;state.allowColumns=state.manage&&!marker;
   }catch(error){
    if(/Workbook contains no populated worksheets to import\./.test(String(error?.message||''))){
     state.notice='This workbook contains no importable item rows. No records or columns were changed. Select a workbook with populated items to continue.';
@@ -317,7 +352,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   else if(value==='skip')state.mappings[index]={...m,action:'skip',requiresDecision:false};
   else if(value.startsWith('existing:'))state.mappings[index]={...m,
    action:'existing',columnId:value.slice(9),requiresDecision:false};
-  state.allowColumns=state.manage;
+  state.allowColumns=state.manage&&!state.recoveryMode;
  }
  function focusChoice(index){
   const target=overlay.querySelector('[data-imp-map-row="'+index+'"]');
@@ -352,24 +387,54 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   state.busy=true;state.error='';render();
   let phase='preflight';
   try{
-   const plan=resume?state.plan:computePlan();
+   const plan=resume?state.executionPlan:computePlan();
+   if(!resume)state.executionPlan=plan;
+   const recovering=state.recoveryMode;
+   if(recovering&&!resume){
+    await verifyImportRecovery({marker:state.recoveryMarker,fullSheet:sheet(),
+     worksheetIndex:state.sheet,detail,mappings:state.mappings,group:group(),
+     matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
+     userId:actor.id,workspaceId:ctx.workspace_id,
+     extendedReferences:state.extendedReferences});
+   }
    phase='record-write';
+   const startingOffset=recovering?state.recoveryOffset:0;
+   const earlierReceipt=recovering?state.originalReceipt:null;
    const receipt=await executeBoardImportBatched({api,auth,detail,
-    sheet:{...sheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
+    sheet:{...recoverSheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
      formulaWarningsConfirmed:state.formulaWarningsConfirmed},
     mappings:state.mappings,group:group(),
     matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
     allowColumns:state.allowColumns,extendedReferences:state.extendedReferences,
     approvedPlan:plan,
     resumeFrom:resume?state.resumeCheckpoint:null,
-    onProgress:progress=>{state.importProgress=progress;state.resumeCheckpoint=null;render();}});
-   state.resumeCheckpoint=null;state.complete=receipt;state.step=4;
-   try{await onComplete(receipt);}catch{
+    onCheckpoint:async checkpoint=>{
+     state.recoveryMarker=await sealImportRecovery({checkpoint,
+      fullSheet:sheet(),worksheetIndex:state.sheet,userId:actor.id,
+      matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
+      extendedReferences:state.extendedReferences,
+      completedOffset:startingOffset,sourceDigest:state.recoverySourceDigest,
+      priorReceipt:earlierReceipt});
+    },
+    onProgress:progress=>{
+     state.importProgress={...progress,completed:progress.completed+startingOffset,
+      rows:sheet().rows.length};state.resumeCheckpoint=null;render();
+    }});
+   clearImportRecovery({userId:actor.id,boardId});state.recoveryMarker=null;
+   state.resumeCheckpoint=null;
+   const totalReceipt=earlierReceipt?Object.fromEntries(
+    ['created','updated','skipped','columnsCreated','groupsCreated'].map(k=>
+     [k,(earlierReceipt[k]||0)+(receipt[k]||0)])):receipt;
+   state.complete=totalReceipt;state.step=4;
+   try{await onComplete(totalReceipt);}catch{
     state.error='Import committed, but the board refresh failed. Refresh the board before starting another import.';
    }
   }catch(error){
    const failure=normalizeImportFailure(error,phase);
    state.uncertain=failure.uncertain;
+   if(failure.uncertain){
+    clearImportRecovery({userId:actor.id,boardId});state.recoveryMarker=null;
+   }
    state.resumeCheckpoint=error?.importBatchResume||null;
    const progress=error?.importBatchProgress;
    state.error=progress?
@@ -384,6 +449,12 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const button=event.target.closest('[data-imp]');if(!button||state.busy)return;
   const action=button.dataset.imp;
   if(action==='close'){close();return;}
+  if(action==='clear-recovery'){
+   clearImportRecovery({userId:actor.id,boardId});
+   state.recoveryMarker=null;state.recoveryMode=false;
+   state.notice='Recovery marker discarded. Re-upload to start a new import.';
+   render();return;
+  }
   if(action==='browse'){overlay.querySelector('#aps-import-file-input')?.click();return;}
   if(action==='back'){state.step--;state.error='';state.notice='';state.confirmed=false;render();return;}
   if(action==='review-choice'){
