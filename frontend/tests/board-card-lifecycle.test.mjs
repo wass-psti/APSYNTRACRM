@@ -108,6 +108,7 @@ test('board card markup uses one stretched link and independent menu, preserving
  assert.match(card,/return '<article class="board-card"/);
  assert.match(card,/class="board-card-actions"/);
  assert.match(card,/class="board-card-main"/);
+ assert.match(card,/Move to Trash<\/button>/);
  assert.match(card,/class="board-symbol '/);
  assert.doesNotMatch(card,/class="board-card-symbol-link"/);
  assert.match(card,/aria-label="Open '/);
@@ -125,12 +126,30 @@ test('board card markup uses one stretched link and independent menu, preserving
  assert.match(css,/\.board-card-actions-list\{/);
 });
 
-test('activated board menu preserves reversible confirmation and server authorization',()=>{
+test('reversible board deletion is a two-click confirmation without retyping',()=>{
  assert.equal(BOARD_CARD_LIFECYCLE_ENABLED,true);
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/submitLabel:'Move board to trash'/);
- assert.match(app,/await boardCardLifecycle\.trash\(board,String\(fd\.get\('confirm'\)\|\|''\)\)/);
+ const trash=app.slice(app.indexOf("case 'board-card-trash':"),app.indexOf("case 'board-card-restore':"));
+ assert.match(trash,/openModal\('Move board to Trash'/);
+ assert.match(trash,/Move '\+e\(board\.name\)\+' to Trash/);
+ assert.match(trash,/await boardCardLifecycle\.trash\(board,board\.name\)/);
+ assert.match(trash,/submitLabel:'Move to Trash',destructive:true/);
+ assert.match(trash,/successMessage:'Board moved to Trash/);
+ assert.match(trash,/Restore the board from Trash|restore the board from Trash/);
+ assert.doesNotMatch(trash,/name=\"confirm\"|fd\.get\('confirm'\)|Type .*to confirm/);
  assert.match(app,/await db\.allowed\(id,'manage'\)/);
  assert.match(app,/closeBoardCardMenus\(\);hideModal\(\)/);
  assert.doesNotMatch(app,/wm_delete_board_permanently/);
+});
+
+test('shared modal gives destructive actions safe initial focus and specific completion text',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const modal=app.slice(app.indexOf('function openModal('),app.indexOf('const input=('));
+ assert.match(modal,/destructive=false/);
+ assert.match(modal,/destructive\?view\.querySelector\('\.modal-actions \[data-dismiss\]'\)/);
+ assert.match(modal,/if\(successMessage\)toast\(successMessage\)/);
+ assert.match(modal,/button\.disabled=true/);
+ assert.match(modal,/if\(event\.key==='Escape'\)/);
+ assert.match(modal,/closeAndRestore\(\)/);
+ assert.match(app,/submitLabel:'Create board',successMessage:'Board created\.'/);
 });

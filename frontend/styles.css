@@ -2539,3 +2539,10 @@
 .board-table .board-primary-label-input{width:min(155px,100%);min-width:72px;
  box-sizing:border-box;padding:4px 5px;border:1px solid #6d83cf;border-radius:5px;
  font:inherit;color:inherit;background:var(--surface,#fff)}
+
+/* Destructive but recoverable board actions: clear distinction, keyboard-safe dialog. */
+.modal-actions .board-modal-danger{border:1px solid #aa394a;background:#bb4052;color:#fff;
+ border-radius:9px;padding:10px 16px;font:inherit;font-weight:650;cursor:pointer}
+.modal-actions .board-modal-danger:hover{background:#a93749}
+.modal-actions .board-modal-danger:focus-visible{outline:3px solid #bd6373;outline-offset:2px}
+.modal-actions .board-modal-danger:disabled{opacity:.65;cursor:wait}

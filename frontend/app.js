@@ -501,7 +501,7 @@ function boardCard(board,index){
       '<button type="button" data-action="board-card-restore" data-id="'+e(board.id)+'">Restore board</button>':
       '<button type="button" data-action="board-card-edit" data-id="'+e(board.id)+'">Edit board</button>'+
       (board.status==='archived'?'<button type="button" data-action="board-card-restore" data-id="'+e(board.id)+'">Restore board</button>':'')+
-      '<button type="button" class="board-card-danger" data-action="board-card-trash" data-id="'+e(board.id)+'">Delete board · Move to trash</button>'):
+      '<button type="button" class="board-card-danger" data-action="board-card-trash" data-id="'+e(board.id)+'">Move to Trash</button>'):
    '<p class="board-card-actions-info">'+
     e(status==='PROTECTED'?'Application-managed board. Editing and deletion are protected.':
       'Only authorized board managers can edit or delete this board.')+'</p>')+
@@ -3295,7 +3295,8 @@ async function login(form){
  finally{state.authBusy=false;}
 }
 function hideModal(){if(modal){modal.remove();modal=null;}flushVisibleBoardContent();}
-function openModal(title,fields,submit,{submitLabel='Save changes',submitDisabled=false}={}){
+function openModal(title,fields,submit,{submitLabel='Save changes',submitDisabled=false,
+ successMessage='Changes saved.',destructive=false}={}){
  const previousFocus=document.activeElement;
  hideModal();
  modal=document.createElement('div');modal.className='modal-backdrop';modal.setAttribute('role','presentation');
@@ -3303,7 +3304,7 @@ function openModal(title,fields,submit,{submitLabel='Save changes',submitDisable
  modal.innerHTML=`<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal-head"><h2 id="modal-title">${e(title)}</h2><button type="button" class="modal-close" data-dismiss aria-label="Close dialog">×</button></div>
   <form id="modal-form">${fields}<div class="modal-actions"><button class="secondary" type="button" data-dismiss>Cancel</button>
-  <button class="primary" type="submit"${submitDisabled?' disabled':''}>${e(submitLabel)}</button></div></form></section>`;
+  <button class="${destructive?'board-modal-danger':'primary'}" type="submit"${submitDisabled?' disabled':''}>${e(submitLabel)}</button></div></form></section>`;
  document.body.append(modal);
  const closeAndRestore=()=>{
   if(modal!==view)return;
@@ -3338,7 +3339,7 @@ function openModal(title,fields,submit,{submitLabel='Save changes',submitDisable
   button.disabled=true;button.textContent='Saving…';
   try{
    await submit(new FormData(event.currentTarget));
-   if(modal===view){closeAndRestore();toast('Changes saved.');}
+   if(modal===view){closeAndRestore();if(successMessage)toast(successMessage);}
   }catch(err){
    notice(err);
    if(button.isConnected){
@@ -3351,7 +3352,9 @@ function openModal(title,fields,submit,{submitLabel='Save changes',submitDisable
    }
   }
  });
- view.querySelector('input,select,textarea')?.focus();
+ // Destructive confirmation defaults to Cancel, never the destructive submit.
+ (destructive?view.querySelector('.modal-actions [data-dismiss]'):
+  view.querySelector('input,select,textarea')||view.querySelector('.modal-actions [data-dismiss]'))?.focus();
 }
 const input=(label,key,value='',type='text',required=true)=>
  `<div class="field"><label for="modal-${e(key)}">${e(label)}</label><input id="modal-${e(key)}" name="${e(key)}" type="${e(type)}" value="${e(value)}" ${required?'required':''} maxlength="180"/></div>`;
@@ -6694,7 +6697,7 @@ async function action(name,button){
      const id=await createItemOnlyBoard({api:db,structure:boardStructureClient,auth,
       name:title,description:String(fd.get('description')||'')});
      await refreshWorkspace();location.hash='#/boards/'+id;await onRoute();
-   });break;
+   },{submitLabel:'Create board',successMessage:'Board created.'});break;
  }
  case 'active-boards':{state.showArchived=false;state.showTrash=false;render();break;}
  case 'archived-boards':{state.showArchived=true;state.showTrash=false;try{state.archived=await db.boards('archived');}catch(err){notice(err);}render();break;}
@@ -6722,20 +6725,22 @@ async function action(name,button){
  case 'board-card-trash':{
   const board=await authorizeBoardCardAction(button.dataset.id);
   closeBoardCardMenus();
-  openModal('Delete board — '+board.name,
-   '<div class="note security-note">Move this exact board to recoverable Trash? '+
-   'Its '+(Number(board.item_count)||0)+' active items, columns, groups, files, audit history and members remain stored. '+
-   'It will disappear from Active and Archived. Restore it from Trash when needed. '+
-   'Permanent deletion is not offered.</div>'+
-   '<div class="field"><label for="modal-board-confirm">Type '+e(board.name)+' to confirm</label>'+
-   '<input id="modal-board-confirm" name="confirm" required autocomplete="off" maxlength="120" /></div>',
-   async fd=>{
+  openModal('Move board to Trash',
+   '<div class="note security-note" role="note">'+
+   '<p><strong>Move '+e(board.name)+' to Trash?</strong></p>'+
+   '<p>This board will disappear from Active and Archived. '+
+   'Its '+(Number(board.item_count)||0)+' active items, columns, groups, files, members and audit history remain stored.</p>'+
+   '<p>You can restore the board from Trash. Permanent deletion is not offered.</p></div>',
+   async()=>{
     state.boardLifecycleBusy=true;
     try{
-     await boardCardLifecycle.trash(board,String(fd.get('confirm')||''));
+     // An explicit click replaces manual retyping. The existing server still
+     // verifies the exact board name, signed manage access, and board revision.
+     await boardCardLifecycle.trash(board,board.name);
      await refreshBoardCardLists();render();
     }finally{state.boardLifecycleBusy=false;}
-   },{submitLabel:'Move board to trash'});
+   },{submitLabel:'Move to Trash',destructive:true,
+     successMessage:'Board moved to Trash. Restore it from Trash when needed.'});
   break;
  }
  case 'board-card-restore':{
