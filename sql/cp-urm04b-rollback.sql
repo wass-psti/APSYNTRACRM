@@ -42,15 +42,12 @@ DO $restore_target_guards$
 DECLARE v_definition text;
 BEGIN
  v_definition:=pg_get_functiondef('public.apsyntra_role_manage_user_access(uuid,uuid,text,text,text,boolean,timestamptz)'::regprocedure);
- IF position($old$    OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities WHERE user_id=p_target_user_id)
- THEN RAISE EXCEPTION 'Protected, self, or invalid role target'$old$ IN v_definition)=0
+ IF position($old$OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities WHERE user_id=p_target_user_id)$old$ IN v_definition)=0
  THEN RAISE EXCEPTION 'Unexpected central role target during rollback'; END IF;
  v_definition:=replace(v_definition,
-  $old$    OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities WHERE user_id=p_target_user_id)
- THEN RAISE EXCEPTION 'Protected, self, or invalid role target'$old$,
-  $new$    OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities WHERE user_id=p_target_user_id)
-    OR public.is_platform_admin(p_target_user_id)
- THEN RAISE EXCEPTION 'Protected, self, or invalid role target'$new$);
+  $old$OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities WHERE user_id=p_target_user_id)$old$,
+  $new$OR EXISTS (SELECT 1 FROM public.apsyntra_role_bootstrap_identities WHERE user_id=p_target_user_id)
+    OR public.is_platform_admin(p_target_user_id)$new$);
  EXECUTE v_definition;
 
  v_definition:=pg_get_functiondef('public.apsyntra_crm_platform_role_set(uuid,uuid,text,timestamptz)'::regprocedure);
