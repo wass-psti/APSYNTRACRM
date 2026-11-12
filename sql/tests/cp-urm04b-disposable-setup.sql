@@ -39,7 +39,7 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $fn$ SELECT public.is_platform_admin(auth.uid()) $fn$;
 CREATE OR REPLACE FUNCTION private.frt_has_role(p_workspace_id uuid, VARIADIC p_roles text[])
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $ SELECT public.is_platform_admin(auth.uid()) $;
+AS $fn$ SELECT public.is_platform_admin(auth.uid()) $fn$;
 CREATE TABLE public.tool_traceability_bootstrap_admins09(workspace_id uuid,user_id uuid,PRIMARY KEY(workspace_id,user_id));
 INSERT INTO public.tool_traceability_bootstrap_admins09 VALUES
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','00000000-0000-4000-8000-000000000001'),
