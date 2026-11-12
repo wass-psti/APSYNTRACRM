@@ -12428,6 +12428,47 @@
 .frt-wizard-page [data-frt-qr-file]:disabled{opacity:.6}
 .frt-wizard-page [data-frt-upload-qr],.frt-wizard-page [data-frt-preview-qr]{align-self:flex-start;border:1px solid #c7d5eb;background:#f7faff;color:#375da3;font-size:11px}
 
+/* CP-FRT-EXEC-01 — responsive executive and OPEX dashboard presentation. */
+#app .frt-ref-nav-button{border:0;background:transparent;font:inherit;cursor:pointer;transition:background-color .14s ease,color .14s ease}
+#app .frt-ref-nav-button:hover:not(.frt-ref-nav-active){background:#edf2fb;color:#354b70}
+#app .frt-exec-dashboard{display:grid;gap:17px;margin:0 0 8px}
+#app .frt-exec-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:20px 22px;background:#f9fbfe;border:1px solid #dce5f1;border-top:3px solid #6872ef;border-radius:15px;box-shadow:0 7px 20px #273b5b0e}
+#app .frt-exec-eyebrow{display:block;color:#6b78a0;font-size:9px;font-weight:800;letter-spacing:.12em}
+#app .frt-exec-heading h2{margin:7px 0 4px;color:#263a61;font-size:clamp(20px,2.4vw,26px);font-weight:820;letter-spacing:-.035em}
+#app .frt-exec-heading p{margin:0;color:#6d7d96;font-size:11px;line-height:1.5}
+#app .frt-exec-source{align-self:center;padding:7px 10px;border:1px solid #dce5f1;border-radius:8px;background:#f3f7fd;color:#657795;font-size:10px;font-weight:700}
+#app .frt-exec-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+#app .frt-exec-kpi{display:flex;align-items:flex-start;justify-content:space-between;gap:9px;min-width:0;min-height:126px;padding:15px 16px;background:#fff;border:1px solid #dce5f1;border-top:3px solid #6872ef;border-radius:13px;box-shadow:0 5px 15px #1f34540b}
+#app .frt-exec-kpi>div{display:grid;gap:8px;min-width:0}
+#app .frt-exec-kpi>div>span{text-transform:uppercase;letter-spacing:.065em;color:#69778e;font-size:9px;font-weight:800}
+#app .frt-exec-kpi strong{color:#263751;font-size:25px;line-height:1.1;font-weight:830;font-variant-numeric:tabular-nums}
+#app .frt-exec-kpi small{color:#8592a6;font-size:9px;line-height:1.45}
+#app .frt-exec-kpi>i{display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;border-radius:9px;background:#6c67e9;color:white;font-style:normal;font-size:15px}
+#app .frt-exec-teal{border-top-color:#28b6a7;background:#f8fcfb}#app .frt-exec-teal>i{background:#1cae9d}
+#app .frt-exec-blue{border-top-color:#5894e7;background:#f8fbff}#app .frt-exec-blue>i{background:#4b8fe2}
+#app .frt-exec-rose{border-top-color:#ed8296;background:#fffafb}#app .frt-exec-rose>i{background:#e36d86}
+#app .frt-exec-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;align-items:stretch}
+#app .frt-exec-panel{min-width:0;overflow:hidden;border:1px solid #dce5f1;border-radius:14px;background:#fbfcff;box-shadow:0 6px 18px #1f34540b}
+#app .frt-exec-panel-wide{grid-column:1/-1}
+#app .frt-exec-panel>header{display:flex;align-items:center;justify-content:space-between;min-height:62px;padding:14px 17px;border-bottom:1px solid #e7ecf4}
+#app .frt-exec-panel>header h3{margin:0;color:#293b5b;font-size:12px;font-weight:800}
+#app .frt-exec-panel>header p{margin:4px 0 0;color:#8996a9;font-size:9px}
+#app .frt-exec-panel .frt-ref-donut{margin-top:8px}
+#app .frt-exec-panel .frt-ref-legend{padding-bottom:16px}
+#app .frt-exec-panel .frt-ref-legend b{color:#4b5f7e;font-variant-numeric:tabular-nums}
+#app .frt-exec-empty{display:grid;align-content:center;justify-items:center;gap:8px;min-height:210px;padding:25px;text-align:center;background:linear-gradient(180deg,#fbfcff,#f6f8fc)}
+#app .frt-exec-empty strong{color:#536783;font-size:12px;font-weight:800}
+#app .frt-exec-empty p{max-width:420px;margin:0;color:#8996a9;font-size:10px;line-height:1.6}
+#app .frt-exec-disclosure{margin:0;padding:11px 14px;border:1px solid #e1e7f0;border-radius:10px;background:#f7f9fc;color:#77869b;font-size:9px;line-height:1.6}
+#app .frt-exec-manual{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#app .frt-exec-manual article{padding:17px;border:1px solid #dce5f1;border-radius:12px;background:#fff}
+#app .frt-exec-manual h3{margin:0 0 8px;color:#344a70;font-size:11px}
+#app .frt-exec-manual p{margin:0;color:#77869b;font-size:10px;line-height:1.65}
+@media(max-width:980px){#app .frt-exec-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){#app .frt-exec-grid{grid-template-columns:1fr}#app .frt-exec-panel-wide{grid-column:auto}#app .frt-exec-manual{grid-template-columns:1fr}#app .frt-exec-heading{padding:16px}}
+@media(max-width:430px){#app .frt-exec-kpis{grid-template-columns:1fr}#app .frt-exec-kpi{min-height:100px}#app .frt-exec-kpi strong{font-size:22px}#app .frt-ref-nav{justify-content:flex-start;width:100%}}
+@media(prefers-reduced-motion:reduce){#app .frt-ref-nav-button{transition:none}}
+
 /* frontend/fueltrack-v3-application.css */
 /* CP-FT3-01 — FuelTrack+ v3 native dashboard, scoped to authorized board app. */
 #app .ft3-app{color:#27394a;background:#f6fafb;border:1px solid #d7e4e8;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px #163b4811;margin:16px 0 28px;font-size:13px}

@@ -47,7 +47,54 @@ function chartBars(summary){
   '<text x="90" y="165" text-anchor="middle">Completed</text><text x="195" y="165" text-anchor="middle">In progress</text>'+
   '<text x="300" y="165" text-anchor="middle">Pending</text></svg>';
 }
-export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null,statusFilter='all'}={}){
+function renderFRTExecutiveDashboard(result){
+ const summary=result.summary||{};
+ const metrics=[
+  ['Requested','—','Financial amount is not supplied by the current signed finance projection','violet','▤'],
+  ['Liquidated','—','Liquidated amount is not supplied by the current signed finance projection','teal','✓'],
+  ['Budget Utilization','—','Cannot calculate without verified budget and release totals','blue','◷'],
+  ['Pending Liquidation',count(summary.pending_liquidation_count),'Verified company-scoped request count','rose','!']
+ ];
+ return '<section class="frt-exec-dashboard" aria-label="Executive Dashboard for '+escape(result.companyCode)+'">'+
+  '<header class="frt-exec-heading"><div><span class="frt-exec-eyebrow">'+escape(result.companyCode)+' / FINANCIAL OVERVIEW</span>'+
+  '<h2>Executive Dashboard</h2><p>Company-scoped fund request performance and workflow health.</p></div>'+
+  '<span class="frt-exec-source">Signed company projection</span></header>'+
+  '<div class="frt-exec-kpis">'+metrics.map(([label,value,note,tone,icon])=>
+   '<article class="frt-exec-kpi frt-exec-'+tone+'"><div><span>'+label+'</span><strong>'+value+'</strong><small>'+note+'</small></div>'+
+   '<i aria-hidden="true">'+icon+'</i></article>').join('')+'</div>'+
+  '<div class="frt-exec-grid">'+
+   '<section class="frt-exec-panel"><header><div><h3>Request Status Pipeline</h3><p>Verified workflow counts for '+escape(result.companyCode)+'</p></div></header>'+
+    chartDonut(summary)+'<div class="frt-ref-legend"><span><i class="frt-ref-dot is-complete"></i>Completed <b>'+count(summary.completed)+'</b></span>'+
+    '<span><i class="frt-ref-dot is-progress"></i>In progress <b>'+count(summary.in_progress)+'</b></span>'+
+    '<span><i class="frt-ref-dot is-pending"></i>Pending approval <b>'+count(summary.pending)+'</b></span></div></section>'+
+   '<section class="frt-exec-panel"><header><div><h3>Top 5 Expense Categories</h3><p>Highest requested spending areas</p></div></header>'+
+    '<div class="frt-exec-empty"><strong>Category breakdown unavailable</strong><p>Expense-category totals are not supplied by the current signed finance projection.</p></div></section>'+
+   '<section class="frt-exec-panel frt-exec-panel-wide"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Monthly financial comparison</p></div></header>'+
+    '<div class="frt-exec-empty"><strong>Six-month trend unavailable</strong><p>Monthly requested and spent amounts are not supplied by the current signed finance projection.</p></div></section>'+
+  '</div><p class="frt-exec-disclosure">Financial totals, expense categories and monthly amounts are not available in this signed read projection. They are shown as unavailable rather than estimated or fabricated. The 90% budget warning is evaluated only when verified utilization data exists.</p>'+
+  '</section>';
+}
+function renderFRTOpexAnalytics(result){
+ return '<section class="frt-exec-dashboard" aria-label="OPEX Analytics for '+escape(result.companyCode)+'">'+
+  '<header class="frt-exec-heading"><div><span class="frt-exec-eyebrow">'+escape(result.companyCode)+' / OPERATING EXPENDITURE</span>'+
+  '<h2>OPEX Analytics</h2><p>Expense categories and monthly requested-versus-spent performance.</p></div></header>'+
+  '<div class="frt-exec-grid">'+
+   '<section class="frt-exec-panel"><header><div><h3>Top 5 Expense Categories</h3><p>Company-scoped expense ranking</p></div></header>'+
+    '<div class="frt-exec-empty"><strong>Category breakdown unavailable</strong><p>Expense-category totals are not supplied by the current signed finance projection.</p></div></section>'+
+   '<section class="frt-exec-panel"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Monthly financial comparison</p></div></header>'+
+    '<div class="frt-exec-empty"><strong>Trend data unavailable</strong><p>The six-month requested-versus-spent series is not supplied by the current signed finance projection.</p></div></section>'+
+  '</div><p class="frt-exec-disclosure">No financial amounts or category totals are inferred from request titles, status counts or dates.</p></section>';
+}
+function renderFRTManual(result){
+ return '<section class="frt-exec-dashboard" aria-label="Fund Released Tracker user manual">'+
+  '<header class="frt-exec-heading"><div><span class="frt-exec-eyebrow">'+escape(result.companyCode)+' / HELP</span>'+
+  '<h2>Fund Released Tracker — User Manual</h2><p>How to navigate the company-scoped finance views.</p></div></header>'+
+  '<div class="frt-exec-manual"><article><h3>1. Select a company</h3><p>Use the company selector above to switch between companies available in your signed FRT workspace. Each view refreshes against the selected company.</p></article>'+
+  '<article><h3>2. Review the Fund Tracker</h3><p>Open Fund Tracker to view the signed request list, status filters and existing request actions.</p></article>'+
+  '<article><h3>3. Review Executive Dashboard and OPEX Analytics</h3><p>These views summarize the signed request status projection. Financial totals, expense categories and monthly amounts remain marked unavailable until the signed data contract supplies them.</p></article></div></section>';
+}
+export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null,statusFilter='all',view='tracker'}={}){
+ const selectedView=['tracker','executive','opex','manual'].includes(view)?view:'tracker';
  let html='<section class="frt-ref" aria-label="Fund Released Tracker application">'+
   '<header class="frt-ref-company"><div class="frt-ref-company-identity"><span class="frt-ref-icon" aria-hidden="true">▣</span>'+
   '<div><strong>Select Your Company</strong><small>Authorized company scope for requests and documents</small></div></div>';
@@ -59,10 +106,12 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
     (c.code===result.companyCode?' <span aria-hidden="true">✓</span>':'')+'</button>').join('')+'</div>';
  }
  html+='</header><nav class="frt-ref-nav" aria-label="Fund Tracker sections">'+
-  '<span class="frt-ref-nav-active" aria-current="page">▤ &nbsp; Fund Tracker</span>'+
-  '<span class="frt-ref-nav-label">▦ &nbsp; Executive Dashboard</span>'+
-  '<span class="frt-ref-nav-label">◫ &nbsp; OPEX Analytics</span>'+
-  '<span class="frt-ref-nav-label">▤ &nbsp; User Manual</span></nav>';
+  [['tracker','▤ &nbsp; Fund Tracker'],['executive','▦ &nbsp; Executive Dashboard'],
+   ['opex','◫ &nbsp; OPEX Analytics'],['manual','▤ &nbsp; User Manual']].map(([key,label])=>
+    '<button type="button" class="frt-ref-nav-button '+
+    (selectedView===key?'frt-ref-nav-active':'')+'" data-action="frt-finance-view" data-view="'+key+'"'+
+    (selectedView===key?' aria-current="page"':'')+'>'+label+'</button>').join('')+
+  '</nav>';
  if(busy)return html+'<div class="frt-ref-loading" role="status">Loading verified financial requests…</div></section>';
  if(!result)return html+'<div class="frt-ref-loading">Select this view to read your authorized financial requests.</div></section>';
  if(result.status!=='PASS'){
@@ -77,6 +126,9 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
  const filter=statusFilter==='all'||statuses.includes(statusFilter)?statusFilter:'all';
  const shown=rows.filter(r=>filter==='all'||r.status===filter);
  const selectedCompany=result.companies.find(c=>c.code===result.companyCode);
+ if(selectedView==='executive')return html+renderFRTExecutiveDashboard(result)+'</section>';
+ if(selectedView==='opex')return html+renderFRTOpexAnalytics(result)+'</section>';
+ if(selectedView==='manual')return html+renderFRTManual(result)+'</section>';
  html+='<div class="frt-ref-deadlines" role="status"><span class="frt-ref-warning" aria-hidden="true">△</span>'+
   '<div><strong>Pending Liquidation</strong><small>Signed request workflow summary; overdue deadlines are not provided by this API</small></div>'+
   '<b>'+count(summary.pending_liquidation_count)+' pending</b></div>';
