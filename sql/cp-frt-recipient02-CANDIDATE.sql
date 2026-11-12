@@ -46,6 +46,7 @@ BEGIN
  FROM (SELECT sr.* FROM public.frt_saved_recipients sr
   JOIN public.frt_companies c ON c.id=sr.company_id AND c.workspace_id=sr.workspace_id
   WHERE sr.workspace_id=p_workspace_id AND c.code=p_company
+   AND sr.created_by=auth.uid()
   ORDER BY sr.created_at DESC,sr.id DESC LIMIT 200) r;
  RETURN v_rows;
 END $fn$;

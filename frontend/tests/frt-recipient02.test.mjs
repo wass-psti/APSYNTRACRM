@@ -135,5 +135,6 @@ test('candidate has no new bucket or policy changes; signed RPC and table RLS ar
  for(const term of ['ENABLE ROW LEVEL SECURITY','REVOKE ALL ON TABLE public.frt_saved_recipients',
  'private.frt_has_membership(p_workspace_id)','frt_list_saved_recipients',
  'frt_save_recipient','frt_set_recipient_qr','storage.objects'])assert.ok(sql.includes(term),term);
+ assert.match(sql,/AND sr\.created_by=auth\.uid\(\)/);
  assert.doesNotMatch(sql,/CREATE POLICY|UPDATE storage\.buckets|INSERT INTO storage\.buckets/i);
 });

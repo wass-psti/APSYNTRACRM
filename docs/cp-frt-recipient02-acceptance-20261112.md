@@ -11,9 +11,9 @@ Date: 2026-11-12. Scope: the existing WatchdogWorkspace FRT, current Supabase pr
 
 ## Proposed additive recipient contract — production activation pending
 
-`sql/cp-frt-recipient02-CANDIDATE.sql` creates a workspace+company scoped private saved-recipient address book with recipient name, account holder, bank, account number, optional QR object path, creator and timestamps. The table is RLS-enabled and directly denied to `anon` and `authenticated`; access is only via three signed RPCs:
+`sql/cp-frt-recipient02-CANDIDATE.sql` creates a workspace+company+creator scoped private saved-recipient address book with recipient name, account holder, bank, account number, optional QR object path, creator and timestamps. The table is RLS-enabled and directly denied to `anon` and `authenticated`; access is only via three signed RPCs:
 
-- `frt_list_saved_recipients` lists at most 200 records for a specific signed workspace/company FRT member, with QR references but no downloadable public link.
+- `frt_list_saved_recipients` lists at most 200 creator-owned records for a specific signed workspace/company FRT member, with QR references but no downloadable public link.
 - `frt_save_recipient` creates a saved account only in an existing authorized company. Requires bounded, nonblank details; returns just the new ID, not secrets via a broad table grant.
 - `frt_set_recipient_qr` atomically registers an explicitly uploaded image for an existing saved recipient owned by the signed user. It validates the exact workspace/recipient path, private bucket, authenticated owner, stored image MIME type and expected previous path. Stale/mismatched writes fail. It does not change the existing Storage membership policies.
 
