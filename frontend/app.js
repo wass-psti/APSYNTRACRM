@@ -885,7 +885,7 @@ function boardPage(){
     label:'▤ TradeLink application'}]:[]),
   ...(moduleKey==='fueltrans'?[{key:'fueltrans',href:'#/boards/'+b.id+'/fueltrans',label:'FuelTrans application'}]:[]),
   ...(moduleKey==='frt'?[{key:'finance',href:'#/boards/'+b.id+'/finance',
-    label:'▣ FRT finance (read-only)'}]:[]),
+    label:'▣ Fund Tracker'}]:[]),
   ...(moduleKey==='timetracker'?[{key:'attendance',href:'#/boards/'+b.id+'/attendance',
     label:'◷ TimeTracker attendance'}]:[])
  ];
@@ -6577,6 +6577,43 @@ async function action(name,button){
       listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
      await loadFRTFinance(companyCode);
     },{submitLabel:'Save date',successMessage:'FRT request date saved and refreshed.'});
+   break;
+ }
+ case 'frt-ui-dialog':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
+      state.frtFinance?.status!=='PASS')return;
+   const section=String(button?.dataset?.frtSection||'');
+   const companyCode=state.frtFinance.companyCode;
+   const company=state.frtFinance.companies.find(c=>c.code===companyCode);
+   if(!company)return;
+   const requestId=String(button?.dataset?.requestId||'');
+   const selected=state.frtFinance.requests.find(r=>r.requestId===requestId);
+   if(section==='discussion'&&!selected)return;
+   let title='',body='';
+   if(section==='new'){
+    title='New Fund Request';
+    body='<p class="note">Frontend form preview for '+e(company.name)+
+     ' ('+e(companyCode)+'). No request is submitted or saved by this panel.</p>'+
+     input('Fund Request Name','requestName')+
+     input('Date Needed','dateNeeded','','date')+
+     '<div class="field"><label>Filing status</label><strong>Not Filed</strong></div>'+
+     '<p class="muted">The initial filing status will be Not Filed after the signed creation and filing contracts are integrated. The current finance API cannot persist this form.</p>';
+   }else if(section==='activity'){
+    title='Activity Log';
+    body='<p class="note">Signed activity history for '+e(company.name)+'</p>'+
+     '<p class="muted">The current safe FRT endpoint does not provide auditable activity records. No events are fabricated or retrieved through a broad privileged API.</p>';
+   }else if(section==='archive'){
+    title='Archive Storage';
+    body='<p class="note">Archived requests are kept separate from active Fund Requests.</p>'+
+     '<p class="muted">The current signed FRT read endpoint does not list archived requests. Recovery and permanent deletion are unavailable until verified server contracts exist.</p>';
+   }else if(section==='discussion'){
+    title='Discussion';
+    body='<p class="note">'+e(selected.title)+'</p>'+
+     '<p class="muted">Signed comments and attachment discussions are not exposed by the current FRT API. No historical messages or attachments are fabricated.</p>'+
+     '<div class="field"><label for="frt-discussion-preview">Add Comment</label>'+
+     '<textarea id="frt-discussion-preview" rows="3" disabled placeholder="Posting is unavailable until signed comments are integrated"></textarea></div>';
+   }else return;
+   openModal(title,body,async()=>{}, {submitLabel:'Not connected',submitDisabled:true});
    break;
  }
  case 'frt-finance-action':{
