@@ -43,6 +43,15 @@ async function denial(job,code){
  try{await job();}catch(error){denied=error instanceof HttpStatusError&&error.status>=400&&error.status<500;}
  requireTrue(denied,code);
 }
+async function staleDenial(job,code){
+ let refused=false;
+ try{await job();}catch(error){
+  // PostgREST can map PostgreSQL 40001 serialization failures to HTTP 500;
+  // the unchanged-read and audit assertions below are mandatory.
+  refused=error instanceof HttpStatusError&&error.status>=400&&error.status<600;
+ }
+ requireTrue(refused,code);
+}
 async function signedAcceptance({config,db,fetcher,actorIds}){
  let phase='CANDIDATE_INSTALL';
  try{installCandidate(db);}catch(error){
@@ -102,14 +111,21 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
    refreshed.some(r=>r.id===qaId&&r.date_needed==='2026-11-20'),
    'GOTRUE_FRESH_LOGIN_PERSISTENCE_FAILED');
   phase='DENIALS';
-  await denial(()=>member.rpc('frt_update_request_date_cas',{
+  const beforeStale=Number(query(db,`SELECT count(*) FROM public.frt_audit_logs WHERE fund_request_id='${qaId}'`));
+  await staleDenial(()=>member.rpc('frt_update_request_date_cas',{
    p_workspace_id:workspace,p_request_id:qaId,
    p_expected_date:'2026-11-15',p_next_date:'2026-11-22'}),
    'SIGNED_STALE_DATE_ACCEPTED');
-  await denial(()=>member.rpc('frt_assign_request_person',{
+  await staleDenial(()=>member.rpc('frt_assign_request_person',{
    p_workspace_id:workspace,p_request_id:qaId,
    p_expected_assignee_id:null,p_assignee_id:actorIds.member}),
    'SIGNED_STALE_PERSON_ACCEPTED');
+  const postStaleDate=await member.rpc('frt_restricted_request_detail',{p_workspace_id:workspace,p_request_id:qaId});
+  const postStalePerson=await member.rpc('frt_request_assignment',{p_workspace_id:workspace,p_request_id:qaId});
+  requireTrue(postStaleDate?.date_needed==='2026-11-20'&&
+   postStalePerson?.assigneeId===actorIds.member&&
+   Number(query(db,`SELECT count(*) FROM public.frt_audit_logs WHERE fund_request_id='${qaId}'`))===beforeStale,
+   'STALE_WRITE_CHANGED_PERSISTED_STATE');
   await denial(()=>outsider.rpc('frt_restricted_request_detail',{
    p_workspace_id:workspace,p_request_id:qaId}),
    'FOREIGN_WORKSPACE_DETAIL_ACCEPTED');
