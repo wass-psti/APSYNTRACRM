@@ -89,19 +89,18 @@ DECLARE v_definition text;
 BEGIN
  v_definition:=pg_get_functiondef('public.frt_admin_set_role(uuid,uuid,text)'::regprocedure);
  IF position($old$DECLARE v_admin uuid:=(SELECT auth.uid());$old$ IN v_definition)=0
- OR position($old$IF p_user_id IS NULL OR p_user_id=v_admin
- OR EXISTS(SELECT 1 FROM public.apsyntra_role_bootstrap_identities b WHERE b.user_id=p_user_id)$old$ IN v_definition)=0
- THEN RAISE EXCEPTION 'Unexpected FRT setter during rollback'; END IF;
- v_definition:=replace(v_definition,$old$DECLARE v_admin uuid:=(SELECT auth.uid());$old$,
+ THEN RAISE EXCEPTION 'Unexpected FRT setter declaration during rollback'; END IF;
+ v_definition:=replace(v_definition,
+  $old$DECLARE v_admin uuid:=(SELECT auth.uid());$old$,
   $new$DECLARE v_admin uuid:=(SELECT auth.uid()); v_email text;$new$);
+ v_definition:=regexp_replace(v_definition,
+  $pattern$IF p_user_id IS NULL OR p_user_id=v_admin\s+OR EXISTS$pattern$,
+  $replacement$IF p_user_id IS NULL OR p_user_id=v_admin OR public.is_platform_admin(p_user_id) OR EXISTS$replacement$);
+ IF position('public.is_platform_admin(p_user_id)' IN v_definition)=0
+ THEN RAISE EXCEPTION 'FRT inherited-admin target lock not restored'; END IF;
  v_definition:=replace(v_definition,
-  $old$IF p_user_id IS NULL OR p_user_id=v_admin
- OR EXISTS(SELECT 1 FROM public.apsyntra_role_bootstrap_identities b WHERE b.user_id=p_user_id)$old$,
-  $new$IF p_user_id IS NULL OR p_user_id=v_admin OR public.is_platform_admin(p_user_id)
- OR EXISTS(SELECT 1 FROM public.apsyntra_role_bootstrap_identities b WHERE b.user_id=p_user_id)$new$);
- v_definition:=replace(v_definition,
-  $old$ THEN RAISE EXCEPTION 'Protected or self target cannot be modified through FRT' USING errcode='42501'; END IF;$old$,
-  $new$ THEN RAISE EXCEPTION 'Protected or self target cannot be modified through FRT' USING errcode='42501'; END IF;
+  $old$THEN RAISE EXCEPTION 'Protected or self target cannot be modified through FRT' USING errcode='42501'; END IF;$old$,
+  $new$THEN RAISE EXCEPTION 'Protected or self target cannot be modified through FRT' USING errcode='42501'; END IF;
  SELECT lower(p.email) INTO v_email FROM public.profiles p
  JOIN public.workspace_members wm ON wm.user_id=p.id AND wm.workspace_id=p_workspace_id AND wm.active=true
  WHERE p.id=v_admin AND p.status='active' AND p.platform_role='admin_general_manager';
