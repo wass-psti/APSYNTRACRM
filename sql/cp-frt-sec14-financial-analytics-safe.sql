@@ -51,9 +51,7 @@ BEGIN
  SELECT c.id INTO v_company_id
  FROM public.frt_companies AS c
  WHERE c.workspace_id=p_workspace_id AND c.code=p_company;
- IF v_company_id IS NULL THEN
-  RAISE EXCEPTION 'FRT company unavailable' USING ERRCODE='42501';
- END IF;
+ -- An unknown company retains the existing safe dashboard's zero-result behavior.
 
  -- Existing nonmonetary workflow metrics.
  SELECT jsonb_build_object(
