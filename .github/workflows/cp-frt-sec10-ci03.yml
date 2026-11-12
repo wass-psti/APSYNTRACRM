@@ -1,10 +1,12 @@
-name: CP-FRT-SEC10 CI03 Signed Finance Domain Acceptance
+name: CP-FRT-SEC10 CI03 Signed Finance Domain and FRT03D QA Acceptance
 on:
   push:
     branches: [main, feature/cp-frt-sec10-ci03-finance]
     paths:
       - ".github/workflows/cp-frt-sec10-ci03.yml"
       - "scripts/cp-frt-sec10-ci03.mjs"
+      - "scripts/cp-frt-board03d-gotrue-acceptance.mjs"
+      - "frontend/tests/cp-frt-board03d-gotrue.test.mjs"
       - "sql/tests/cp-frt-sec10-ci03-native-finance.sql"
       - "scripts/cp-frt-sec10-ci02.mjs"
       - "scripts/cp-frt-sec10-nonprod-acceptance.mjs"
@@ -26,7 +28,7 @@ jobs:
         with:
           node-version: "22"
       - name: Validate finance CI safeguards and schema preservation
-        run: node --test frontend/tests/cp-frt-sec10-ci03.test.mjs
+        run: node --test frontend/tests/cp-frt-sec10-ci03.test.mjs frontend/tests/cp-frt-board03d-gotrue.test.mjs
       - uses: supabase/setup-cli@v1
         with:
           version: 2.121.0
@@ -52,9 +54,10 @@ jobs:
         env:
           CI: "true"
           SEC10_CI03: EPHEMERAL_ONLY
+          FRT03D_EPHEMERAL: "YES"
         run: |
           set -eu
-          node scripts/cp-frt-sec10-ci03.mjs --env-file "$RUNNER_TEMP/sec10-ci02-stack.env"
+          node scripts/cp-frt-board03d-gotrue-acceptance.mjs --env-file "$RUNNER_TEMP/sec10-ci02-stack.env"
       - name: Destroy CI-only stack and transient connection material
         if: always()
         env:
