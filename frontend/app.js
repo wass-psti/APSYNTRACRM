@@ -96,7 +96,7 @@ import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './boa
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
-import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
+import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,BoardColumnOperationalRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
 import {planBoardColumnRemoval} from './board-column-removal-plan.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board-window.js';
@@ -202,6 +202,7 @@ const platformSync=new PlatformSync({
 });
 const boardStructureClient=new BoardStructureClient(db);
 const boardColumnRecovery=new BoardColumnRecoveryClient(db);
+const boardColumnOperationalRecovery=new BoardColumnOperationalRecoveryClient(db);
 const boardCardLifecycle=new BoardCardLifecycleClient(db);
 const itemSelection=new BoardItemSelection();
 const boardPreferences=new BoardPreferenceStore();
@@ -3430,9 +3431,14 @@ async function openBoardActivity(){
  if(!activeBoardLayout())return;
  const snapshot={boardId:state.boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
  let recoveries=[];
- if(isQaBoardRecoveryInterfaceAllowed(state.board)&&state.boardManage){
-  try{recoveries=await boardColumnRecovery.list(snapshot.boardId);}
-  catch{toast('Column recovery list is unavailable; no data changed.',true);}
+ if(state.boardManage){
+  try{
+   const available=await boardColumnOperationalRecovery.available(snapshot.boardId);
+   recoveries=available.entries;
+  }catch{
+   // Activity and its filters must remain functional when recovery is offline.
+   recoveries=[];
+  }
  }
  const cursorMode=BOARD_COL01_AUDIT_CURSOR_ENABLED;
  const events=cursorMode?
@@ -3468,7 +3474,7 @@ async function openBoardActivity(){
   const action=event.target.closest('[data-board-history-action]')?.dataset.boardHistoryAction;
   if(!action||!boardHistoryAuthorized(boardHistory)||boardHistory.busy)return;
   if(action==='restore-column'){
-   if(!isQaBoardRecoveryInterfaceAllowed(state.board)||!state.boardManage)return;
+   if(!state.boardManage)return;
    const current=boardHistory;
    const entry=current.recoveries?.find(x=>x.deletionId===
      event.target.closest('[data-board-history-action]')?.dataset.id);
@@ -3477,7 +3483,7 @@ async function openBoardActivity(){
    try{
     const fresh=await verifyInlineColumnBoard({...current,
      boardRevision:state.board?.board?.updated_at});
-    await boardColumnRecovery.restore(fresh,entry);
+    await boardColumnOperationalRecovery.restore(fresh,entry);
     if(boardHistory!==current||!boardHistoryAuthorized(current))return;
     hideModal();boardHistory=null;
     await loadBoard(current.boardId,'items');
@@ -4082,15 +4088,28 @@ function contextualColumnEditor(key){
   await loadBoard(snapshot.boardId,'items');
  });
 }
-function contextualColumnDelete(key){
+async function contextualColumnDelete(key){
  const snapshot=inlineColumnSnapshot();
  if(!snapshot||!state.boardManage)return;
  const column=resolveInlineColumn(state.board,key,{canManage:true});
  if(column.kind==='primary')
   throw new ApiError('The required Item column cannot be deleted.',403);
  const storedCount=columnStoredValueCount(state.board,column.id);
- const plan=planBoardColumnRemoval({storedCount,
-  recoveryReady:canStartB4QaRecoveryDeletion(state.board,column)});
+ // The currently installed server remains default-off and QA scoped.
+ // A signed server response, never an expired browser flag, determines whether
+ // a recoverable action is offered. Server deletion still independently denies
+ // missing activation, scoped access and incompatible board revisions.
+ let recoveryReady=false;
+ if(storedCount>0){
+  try{
+   const capability=await boardColumnOperationalRecovery.available(snapshot.boardId);
+   if(!boardHistoryAuthorized(snapshot))return;
+   recoveryReady=capability.ready;
+  }catch{
+   // Preserve the reversible hide action if the recovery service is unavailable.
+  }
+ }
+ const plan=planBoardColumnRemoval({storedCount,recoveryReady});
  const summary=plan.kind==='hide-preserve'?
   'This column contains '+storedCount+' stored cell row'+(storedCount===1?'':'s')+
   '. To avoid deleting saved data, remove it from your board view instead. '+
@@ -4124,7 +4143,7 @@ function contextualColumnDelete(key){
    }
    const confirmation=confirmInlineColumnDelete(target,String(fd.get('confirmation')||''));
    if(plan.kind==='delete-recoverable'){
-    await boardColumnRecovery.delete(fresh,target,confirmation);
+    await boardColumnOperationalRecovery.delete(fresh,target,confirmation);
    }else{
     try{
      await boardStructureClient.mutate(fresh,{action:'delete',columnId:target.id,
@@ -5637,7 +5656,7 @@ async function action(name,button){
   const key=button.dataset.key,layout=activeBoardLayout();
   closeBoardColumnContext();
   if(!layout?.columns.includes(key)||!state.boardManage||!key.startsWith('col:'))return;
-  contextualColumnDelete(key);break;
+  await contextualColumnDelete(key);break;
  }
  case 'board-column-hide':{
   const key=button.dataset.key,layout=activeBoardLayout();
