@@ -134,9 +134,9 @@ jobs:
             -f sql/tests/cp-frt-sec14-production-additive-disposable.sql \
             -f sql/cp-frt-sec14-restricted-details-action-access.sql \
             -f sql/cp-frt-sec14-board-safe-read-contracts.sql \
+            -f sql/cp-frt-sec14-financial-analytics-safe.sql \
             -f sql/cp-frt-sec14-legacy-summary-list-cutover.sql \
             -f sql/tests/cp-frt-sec14-safe-board-disposable.sql \
-            -f sql/cp-frt-sec14-financial-analytics-safe.sql \
             -f sql/tests/cp-frt-sec14-financial-analytics-disposable.sql \
             -f sql/cp-frt-board03-date-cas-CANDIDATE.sql \
             -f sql/tests/cp-frt-board03-date-cas-disposable.sql \
