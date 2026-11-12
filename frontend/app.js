@@ -6964,7 +6964,7 @@ async function action(name,button){
    state.frtFinanceDetail=null;state.frtFinanceDetailId=null;render();break;
  }
  case 'frt-finance-section':{
-   if(state.tab!=='finance'||!auth.isSignedIn)return;
+   if(state.tab!=='finance'||!auth.isSignedIn||state.frtFinanceBusy)return;
    const section=String(button?.dataset?.section||'');
    if(section!=='tracker'&&section!=='executive')return;
    state.frtFinanceSection=section;
