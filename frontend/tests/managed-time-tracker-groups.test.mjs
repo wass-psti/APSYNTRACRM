@@ -131,8 +131,8 @@ test('TimeTracker view-hiding and staged explicit delete are wired without gener
  assert.match(app,/MANAGED_TT_GROUP_DELETE_ENABLED/);
  assert.match(app,/canSafelyHideEmptyTimeTrackerGroup/);
  assert.match(app,/deleteEmptyManagedTimeTrackerGroup\(/);
- assert.match(app,/Remove empty group from view \(reversible\)/);
- assert.match(app,/Permanent deletion — approval required/);
+ assert.match(app,/Hide empty group \(reversible\)/);
+ assert.doesNotMatch(app,/Delete group — protected|Permanent deletion — approval required/);
 });
 
 test('only the exact verified redundant empty TimeTracker secondary group is auto-suppressed',()=>{

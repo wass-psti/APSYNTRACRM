@@ -130,7 +130,9 @@ test('browser acceptance remains token-free with a scoped, session-only runtime 
  assert.ok(logout,'Logout handler must exist');
  assert.match(logout,/closeWorkspacePanels\(\);clearBulkActivation\(\)/);
  assert.match(app,/access\.boardId===board\?\.id/);
- assert.match(app,/state\.bulk02Access\?\.canManage/);
+ assert.match(app,/canManage:result\.canManage/);
+ // Empty group deletion uses the already-installed CAS endpoint independently.
+ assert.match(app,/await db\.deleteEmptyGroupCas\(boardId,candidate\)/);
  assert.match(source,/p_rows:\[\]/);
  assert.match(source,/p_expected_updated_at:null/);
  assert.doesNotMatch(source,/access_token|refresh_token|navigator\.clipboard|localStorage/);
