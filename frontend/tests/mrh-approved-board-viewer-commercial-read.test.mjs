@@ -53,7 +53,8 @@ test('drawer displays read values but hides editing unless confirmed ADMIN and E
  const part=app.slice(app.indexOf('async function openBoardItemDetails('),app.indexOf('async function openBoardMembers('));
  assert.match(part,/const editAllowed=await db\.allowed\(snapshot\.boardId,'edit'\)/);
  assert.match(part,/canProtectedEdit=role\?\.workspaceId===snapshot\.workspaceId&&role\?\.role==='ADMIN'/);
- assert.match(part,/editToggle\.hidden=!canProtectedEdit/);
- assert.match(part,/renderProtectedSourcingEditor\(result,\{editing\}\)/);
+ assert.match(part,/editToggle\.hidden=!\(canPublicEdit\|\|canProtectedEdit\)/);
+ assert.match(part,/canPublicEdit=editAllowed===true/);
+ assert.match(part,/renderProtectedSourcingEditor\(result,\{editing:editing&&canProtectedEdit\}\)/);
  assert.match(part,/writeProtectedSourcingField\(\{\.\.\.input,/);
 });

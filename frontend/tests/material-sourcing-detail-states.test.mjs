@@ -36,7 +36,7 @@ test('authorized empty response is different from a denied response',()=>{
 test('drawer checks post-save reload before claiming success',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const part=source.slice(source.indexOf('async function openBoardItemDetails('),source.indexOf('async function openBoardMembers('));
- assert.match(part,/const persisted=await readProtectedSourcingItem\(input\)/);
+ assert.match(part,/readProtectedSourcingItem\(input\),db\.board\(snapshot\.boardId\)/);
  assert.match(part,/Saved values could not be verified/);
  assert.match(part,/updateDisplay\(values\)/);
  assert.match(part,/classifyMaterialSourcingDetailError\(error\)/);
@@ -54,7 +54,7 @@ test('central Save changes keeps inputs mounted, reconciles receipts, and never 
  assert.match(part,/data-mrh-save-feedback/);
  assert.match(part,/planProtectedSourcingChanges\(values,rawDraft\(\)\)/);
  assert.match(save,/writeProtectedSourcingField\(\{\.\.\.input,/);
- assert.match(save,/const persisted=await readProtectedSourcingItem\(input\)/);
+ assert.match(save,/readProtectedSourcingItem\(input\),db\.board\(snapshot\.boardId\)/);
  assert.match(save,/updateDisplay\(values\)/);
  assert.match(save,/Your edits are retained/);
  assert.doesNotMatch(save,/await loadBoard\(|window\.location\.reload|privateHost\.innerHTML=renderProtectedSourcingEditor/);
