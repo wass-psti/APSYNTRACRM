@@ -1,5 +1,7 @@
 -- Execute only in isolated PostgreSQL 17 after signed FRT SEC14 fixture.
 \set ON_ERROR_STOP on
+-- Keep all acceptance writes and their audit records isolated from later SEC14 fixtures.
+BEGIN;
 DO $grants$
 BEGIN
  IF has_function_privilege('anon',
@@ -50,3 +52,4 @@ BEGIN
  END IF;
  RAISE NOTICE 'FRT03_DISPOSABLE_DATE_CAS_PASS';
 END $post$;
+ROLLBACK;
