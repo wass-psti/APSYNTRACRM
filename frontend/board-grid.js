@@ -1,6 +1,6 @@
 /** Authorized typed board-grid presentation. No domain records are synthesized. */
 import {moduleByBoardName} from './board-manifest.js';
-import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_PRIMARY_LABEL,isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
+import {isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
 import {boardTable} from './board-presentation.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -11,9 +11,9 @@ export function boardItemsComplete(detail){
  const total=detail?.total_count??paging.total_count??paging.total;
  return total==null||Number(total)<=Number(detail?.items?.length||0);
 }
-export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
+export function boardGridColumns(detail,{primaryTitle=null,columnLabels={},allowCustom=false}={}){
  const tradeLink=tradeLinkGridColumns(detail);
- if(tradeLink)return tradeLink;
+ if(tradeLink)return tradeLink.map(c=>c.key==='record'?{...c,title:primaryTitle??'Item'}:c);
  const module=moduleByBoardName(detail?.board?.name);
  const allowed=module?new Set(module.fields.map(f=>f.name)):null;
  const restricted=module?new Set(module.restricted.map(n=>n.trim().toLowerCase())):null;
@@ -36,18 +36,16 @@ export function boardGridColumns(detail,{primaryTitle='Record',columnLabels={},a
   String(detail.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
  const eventDate=columns.find(c=>c.name==='Event Date'&&c.data_type==='date');
  if(fueltrack&&eventDate){
-  return [{key:'record',title:'Item'},{key:'status',title:'Status'},
+  return [{key:'record',title:primaryTitle??'Item'},{key:'status',title:'Status'},
    {key:'col:'+eventDate.id,title:'Date'}];
  }
- return [{key:'record',title:detail?.board?.id===MATERIAL_SOURCING_BOARD_ID&&
-   detail?.board?.name==='Material Request Hub'&&detail?.board?.status==='active'?
-   MATERIAL_SOURCING_PRIMARY_LABEL:primaryTitle},{key:'status',title:'Status'},
+ return [{key:'record',title:primaryTitle??'Record'},{key:'status',title:'Status'},
   ...columns.map(c=>({key:'col:'+c.id,title:columnLabels[c.id]||c.name}))];
 }
 /** Prepare authorized, visible board fields once per board render.
  * Kept render-local: no cross-session cache or stale authorization state.
  */
-export function prepareBoardGrid(detail,{primaryTitle='Record',columnLabels={},allowCustom=false}={}){
+export function prepareBoardGrid(detail,{primaryTitle=null,columnLabels={},allowCustom=false}={}){
  const columns=boardGridColumns(detail,{primaryTitle,columnLabels,allowCustom});
  const allowedIds=new Set(columns.filter(c=>c.key.startsWith('col:')).map(c=>c.key.slice(4)));
  const visibleColumns=(Array.isArray(detail?.columns)?detail.columns:[])
@@ -56,7 +54,7 @@ export function prepareBoardGrid(detail,{primaryTitle='Record',columnLabels={},a
  const lookup=new Map(values.map(v=>[v.item_id+':'+v.column_id,v.value]));
  return {columns,visibleColumns,lookup};
 }
-export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record',columnLabels={},allowCustom=false,selection=null,footer='',summaries=null,prepared=null,groupItems=null}={}){
+export function boardGrid(detail,{groupId=null,layout=null,primaryTitle=null,columnLabels={},allowCustom=false,selection=null,footer='',summaries=null,prepared=null,groupItems=null,primaryEditable=false}={}){
  const items=Array.isArray(detail?.items)?detail.items:[];
  const {columns,visibleColumns,lookup}=prepared||
   prepareBoardGrid(detail,{primaryTitle,columnLabels,allowCustom});
@@ -79,7 +77,7 @@ export function boardGrid(detail,{groupId=null,layout=null,primaryTitle='Record'
  });
  let html=boardTable({columns,rows,layout,groupId:groupId||'ungrouped',
   empty:'No items in this group yet',selection,footer,summaries,
-  virtualize:boardItemsComplete(detail)});
+  virtualize:boardItemsComplete(detail),primaryEditable});
  // Internal data-flow details belong in administrator diagnostics, not the board UI.
  return html;
 }

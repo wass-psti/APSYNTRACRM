@@ -31,7 +31,9 @@ test('six ordinary sourcing columns render without optional board customization'
  for(const field of MATERIAL_SOURCING_ADDITIONS.filter(x=>x.exposure==='restricted'))
   assert.ok(!titles.includes(field.name),field.name);
  assert.equal(titles.length,2+8+6);
- assert.equal(titles[0],'Part number');
+ assert.equal(titles[0],'Record');
+ assert.equal(boardGridColumns(detail,{primaryTitle:'Part number'})[0].title,'Part number');
+ assert.equal(boardGridColumns(detail,{primaryTitle:'Supplier reference'})[0].title,'Supplier reference');
 });
 test('restricted fields cannot enter generic table even with customization enabled',()=>{
  const prepared=prepareBoardGrid(detail,{allowCustom:true});

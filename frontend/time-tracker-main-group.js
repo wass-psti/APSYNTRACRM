@@ -28,7 +28,8 @@ export const TIMETRACKER_MAIN_GROUP_HEADINGS=headings;
  */
 export function renderTimeTrackerMainGroup({
  groupId,groupItems=[],boardColumns=[],boardValues=[],
- projection=null,userId=null,workspaceId=null,boardId=null
+ projection=null,userId=null,workspaceId=null,boardId=null,
+ primaryTitle=null,primaryEditable=false
 }={}){
  const identityMatched=projection?.userId===userId&&
   projection.workspaceId===workspaceId&&projection.boardId===boardId;
@@ -88,7 +89,8 @@ export function renderTimeTrackerMainGroup({
   '<div class="table-scroll board-group-scroll" role="region" tabindex="0" '+
   'aria-label="TimeTracker Main Group employee attendance table">'+
   '<table class="board-table tt-main-attendance-table" data-group-id="'+esc(groupId||'ungrouped')+'">'+
-  '<thead><tr>'+headings.map(heading=>'<th scope="col">'+esc(heading)+'</th>').join('')+'</tr></thead>'+
+  '<thead><tr>'+headings.map((heading,index)=>'<th scope="col"'+(index===0&&primaryEditable?' data-column-key="record"':'')+'>'+
+   (index===0&&primaryEditable?'<button type="button" class="board-primary-label-button" data-action="board-primary-label-edit" aria-label="Rename primary column '+esc(primaryTitle??heading)+'" title="Click to rename primary column">'+esc(primaryTitle??heading)+'</button>':esc(index===0?primaryTitle??heading:heading))+'</th>').join('')+'</tr></thead>'+
   '<tbody>'+(tableRows||'<tr><td colspan="7" class="tt-main-empty" role="status">'+
    esc(message)+'</td></tr>')+'</tbody></table></div>'+
   remaining+'</div>';

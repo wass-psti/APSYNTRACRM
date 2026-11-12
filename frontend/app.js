@@ -650,7 +650,7 @@ function boardsPage(){
     state.boardSearch?'Try another search term or clear the search.':state.showTrash?'Moved boards can be restored here.':state.showArchived?'You have no archived boards in this workspace.':'Only boards allowed by your organization appear here.','')+'</div>')+`
  </div>`;
 }
-function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={}){
+function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle='Record',detail=state.board,columnLabels={},primaryEditable=false){
  const minimal=isItemOnlyBoard(detail,state.boardUi);
  const columns=genericBoardColumns(detail,{primaryTitle,columnLabels,minimal,
   hiddenVirtual:state.boardUi?.hiddenVirtual});
@@ -693,7 +693,7 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
   summaries:groupColumnSummaries({items,columns,detail}),
   addColumn:minimal&&state.boardManage,minimal,
-  virtualize:boardItemsComplete(detail)});
+  virtualize:boardItemsComplete(detail),primaryEditable});
 }
 
 function bulkReadyFor(board){
@@ -858,7 +858,9 @@ function boardPage(){
   !hiddenGroups.includes(g)&&!redundantGroups.includes(g));
  const moduleKey=moduleByBoardName(b.name)?.key;
  const minimal=isItemOnlyBoard(state.board,state.boardUi);
- const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Record';
+ const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Item';
+ const primaryEditable=state.boardManage===true&&state.boardUi?.status==='VERIFIED_READ'&&
+  state.tab==='items'&&BOARD_STRUCTURE_ADMIN_ENABLED;
  const columnLabels=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.columnLabels:{};
  const allowCustom=BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ';
  const tabSpecs=[
@@ -935,10 +937,12 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
   renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
    boardColumns:state.board.columns||[],boardValues:state.board.values||[],
    projection:state.ttBoardAttendance,userId:state.context?.user_id,
-   workspaceId:state.context?.workspace_id,boardId:b.id}):
-  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels)}`).join(''):
+   workspaceId:state.context?.workspace_id,boardId:b.id,
+   primaryTitle:state.boardUi?.status==='VERIFIED_READ'&&state.boardUi.revision>0?
+    primaryTitle:'Employee',primaryEditable}):
+  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable,footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids}}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels)}`:''}`}</div>`;
+ ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}</div>`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -4048,20 +4052,87 @@ function inlineColumnSnapshot(){
  return {boardId:state.boardId,userId:state.context.user_id,
   workspaceId:state.context.workspace_id,boardRevision:state.board.board.updated_at};
 }
+/** Inline label save uses the existing signed board UI revision CAS. */
+async function savePrimaryHeaderLabel(label,origin){
+ const text=String(label??'').trim();
+ if(!text||text.length>80)
+  throw new ApiError('Primary column name must contain 1–80 characters.',400);
+ const sameScope=()=>auth.isSignedIn&&state.view==='board'&&
+  state.boardId===origin.boardId&&state.context?.workspace_id===origin.workspaceId&&
+  auth.userId===origin.userId&&state.boardManage===true;
+ if(!sameScope())throw new ApiError('Board session changed. Reload before saving.',403);
+ const [actor,context,settings,canManage]=await Promise.all([
+  auth.getVerifiedUser(),db.context(),boardStructureClient.read(origin.boardId),
+  db.allowed(origin.boardId,'manage')
+ ]);
+ if(!sameScope()||actor?.id!==origin.userId||context?.user_id!==origin.userId||
+   context.workspace_id!==origin.workspaceId||context.profile?.status!=='active'||
+   canManage!==true||settings.status!=='VERIFIED_READ')
+  throw new ApiError('Signed board management session changed.',403);
+ if(settings.revision!==origin.revision)
+  throw new ApiError('Column label was updated elsewhere. Refresh and retry.',409);
+ if(settings.primaryLabel===text&&origin.displayedLabel===text)return settings;
+ const fresh=await db.board(origin.boardId);
+ if(!sameScope()||fresh.board?.workspace_id!==origin.workspaceId||
+    fresh.board.id!==origin.boardId||fresh.board.status!=='active')
+  throw new ApiError('Board workspace or lifecycle changed.',403);
+ const saved=await boardStructureClient.save(fresh,{...settings,primaryLabel:text});
+ if(!sameScope())return saved;
+ const verified=await boardStructureClient.read(origin.boardId);
+ if(!sameScope()||verified.primaryLabel!==text||verified.revision!==saved.revision)
+  throw new ApiError('Column rename result could not be verified. Refresh the board.',409);
+ state.boardUi=verified;
+ // No full board reload or row mutation: existing board data remains mounted.
+ deferVisibleBoardContent();
+ return verified;
+}
+function beginPrimaryHeaderEdit(button){
+ if(!button?.isConnected||!state.boardManage||
+    state.boardUi?.status!=='VERIFIED_READ'||state.tab!=='items'||
+    !BOARD_STRUCTURE_ADMIN_ENABLED)return;
+ const th=button.closest('th[data-column-key="record"]');
+ if(!th||root.querySelector('[data-board-primary-label-editor]'))return;
+ const previous=button.textContent.trim();
+ const origin={boardId:state.boardId,userId:auth.userId,
+  workspaceId:state.context?.workspace_id,revision:state.boardUi.revision,
+  displayedLabel:previous};
+ const input=document.createElement('input');
+ input.type='text';input.maxLength=80;input.value=previous;
+ input.className='board-primary-label-input';
+ input.setAttribute('data-board-primary-label-editor','');
+ input.setAttribute('aria-label','Primary column name');
+ const restore=()=>{if(input.isConnected)input.replaceWith(button);};
+ let busy=false,cancelled=false;
+ const commit=async()=>{
+  if(busy||cancelled||!input.isConnected)return;
+  const next=input.value.trim();
+  if(next===previous){restore();return;}
+  busy=true;input.disabled=true;
+  try{
+   await savePrimaryHeaderLabel(next,origin);
+   restore();
+   // Once focused editor is removed, apply any deferred content replacement.
+   flushVisibleBoardContent({afterLocalSave:true});
+   toast('Primary column renamed.');
+  }catch(error){
+   if(input.isConnected){input.disabled=false;input.focus();input.select();}
+   notice(error);
+  }finally{busy=false;}
+ };
+ input.addEventListener('keydown',event=>{
+  if(event.key==='Enter'){event.preventDefault();void commit();}
+  else if(event.key==='Escape'){event.preventDefault();cancelled=true;restore();}
+ });
+ // Blur saves the value, with Escape offering a non-mutating cancellation.
+ input.addEventListener('blur',()=>{if(!cancelled&&!busy)void commit();});
+ button.replaceWith(input);input.focus();input.select();
+}
 function contextualColumnEditor(key){
  const snapshot=inlineColumnSnapshot();
  if(!snapshot||!state.boardManage)return;
  const column=resolveInlineColumn(state.board,key,{canManage:state.boardManage});
  if(column.kind==='primary'){
-  openModal('Rename Item column',
-   input('Main title column label','primaryLabel',state.boardUi?.primaryLabel||'Item'),
-   async fd=>{
-    const fresh=await verifyInlineColumnBoard(snapshot);
-    const settings=await boardStructureClient.read(snapshot.boardId);
-    await boardStructureClient.save(fresh,{...settings,
-     primaryLabel:String(fd.get('primaryLabel')||'')});
-    await loadBoard(snapshot.boardId,'items');
-   });
+  beginPrimaryHeaderEdit(root.querySelector('th[data-column-key="record"] .board-primary-label-button'));
   return;
  }
  const storedCount=columnStoredValueCount(state.board,column.id);
@@ -5627,6 +5698,7 @@ async function action(name,button){
   const current=activeBoardLayout();if(!current)return;
   resetBoardLayout(state.context,state.boardId,boardPreferences);render();break;
  }
+ case 'board-primary-label-edit':{beginPrimaryHeaderEdit(button);break;}
  case 'board-column-context':{
   openBoardColumnContext(button);break;
  }
@@ -5653,7 +5725,10 @@ async function action(name,button){
   const key=button.dataset.key,layout=activeBoardLayout();
   closeBoardColumnContext();
   if(!layout?.columns.includes(key)||!state.boardManage)return;
-  contextualColumnEditor(key);break;
+  if(key==='record'){
+   beginPrimaryHeaderEdit(root.querySelector('th[data-column-key="record"] .board-primary-label-button'));
+  }else contextualColumnEditor(key);
+  break;
  }
  case 'board-column-delete-custom':{
   const key=button.dataset.key,layout=activeBoardLayout();
@@ -7114,7 +7189,7 @@ function openBoardColumnContext(trigger){
  node.innerHTML=make('board-column-set-width','Set width…')+
   make('board-column-reset-width','Reset width')+
   (!BOARD_REQUIRED_COLUMNS.includes(key)?make('board-column-hide','Hide from my board view'):'')+
-  (manageable?make('board-column-manage',key==='record'?'Rename Item column…':
+  (manageable?make('board-column-manage',key==='record'?'Rename primary column inline…':
    'Configure column here…'):'')+
   (editableCustom?make('board-column-delete-custom','Delete column here…'):'');
  root.append(node);
