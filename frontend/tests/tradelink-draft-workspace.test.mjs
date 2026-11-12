@@ -974,7 +974,7 @@ test('dark-launch source list and Board cannot expose forged saved documents or 
  const html=renderTradeLinkApplication({detail:signedBoard,section:'documents',
   workspaceId:workspace,draftView:view,canManage:true});
  assert.match(html,/data-tradelink-saved-preview/);
- assert.match(html,/tradelink-document-open/);
+ assert.match(html,/Preview\/Edit/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
  assert.equal(TL03_DOMAIN_WRITES_ENABLED,true);
 });

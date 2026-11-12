@@ -5,7 +5,7 @@ import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {renderTradeLinkApplication} from '../tradelink-application.js';
 import {initialTradeLinkDraftView,renderTradeLinkDocumentRepository,
  renderTradeLinkDraftWorkspace,tradeLinkDraftEditHref,
- filterTradeLinkDraftAuthorizedRows,updateTradeLinkDraftListUI} from '../tradelink-draft-workspace.js';
+ filterTradeLinkDraftAuthorizedRows,updateTradeLinkDraftListUI,prepareTradeLinkDraftCommand} from '../tradelink-draft-workspace.js';
 import {TradeLinkDomainClient} from '../tradelink-domain-client.js';
 import {ApiError} from '../session.js';
 
@@ -80,7 +80,7 @@ test('All Documents exposes signed edit, archive and restore for the matching Dr
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:authorizedView,canManage:true});
  assert.match(html,/Authorized TradeLink documents/);
- assert.match(html,/Edit Draft/);
+ assert.match(html,/Preview\/Edit/);
  assert.match(html,/Preview saved/);
  assert.match(html,/data-action="tradelink-draft-archive"/);
  assert.match(html,/data-action="tradelink-draft-restore"/);
@@ -89,7 +89,7 @@ test('All Documents exposes signed edit, archive and restore for the matching Dr
  assert.doesNotMatch(html,/drafts\/edit\/9be2aeba/);
 });
 
-test('verified preview offers Edit this Draft, but not when its revision is stale',()=>{
+test('legacy saved preview offers Edit this Draft only when its revision is current',()=>{
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:{...authorizedView,documentPreview:{documentId:id,record:saved}},canManage:true});
  assert.match(html,/data-tradelink-saved-preview/);
@@ -145,7 +145,7 @@ test('direct edit reload cannot expose an unrelated blank Draft form',()=>{
   view:{...authorizedView,editRequestId:id,mode:'edit',
    selected:{documentId:id,record:saved}},canManage:true});
  assert.match(loaded,/data-tradelink-draft-form/);
- assert.match(loaded,/Save Draft/);
+ assert.match(loaded,/Save Changes/);
  assert.match(loaded,/Back to All Documents/);
  assert.match(loaded,/Q-QA-20261108-01/);
  assert.match(loaded,/value="item-a"/);
@@ -230,4 +230,110 @@ test('Delivery editing has exactly one serial field per real item',()=>{
  assert.equal((html.match(/name="lineSerialNumber"/g)||[]).length,1);
  assert.equal((html.match(/<fieldset\b/g)||[]).length,
   (html.match(/<\/fieldset>/g)||[]).length);
+});
+
+
+test('Preview/Edit routes to the shared saved-document editor and replaces the separate Edit Draft action',()=>{
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
+  view:authorizedView,canManage:true});
+ assert.match(html,new RegExp('data-tradelink-document-edit href="'+editPath.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'">Preview/Edit</a>'));
+ assert.doesNotMatch(html,/Edit Draft/);
+ const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(source,/async function openTradeLinkDraft\(documentId\)/);
+ assert.match(source,/record\.content\?\.documentType!==record\.document_type/);
+ assert.match(source,/record\.content\?\.documentNumber!==record\.document_number/);
+});
+
+test('editing a saved Draft preserves document ID, expected revision, and existing line IDs',()=>{
+ const formValues={documentType:'quotation',documentNumber:saved.document_number,
+  customerName:saved.content.customerName,customerEmail:'client@example.invalid',
+  customerPhone:'09170000000',validity:saved.content.validity,
+  deliveryCommitment:saved.content.deliveryCommitment,paymentTerms:saved.content.paymentTerms,
+  currency:'PHP',vatType:'12',discountType:'percentage',discountValue:'',exchangeRate:'',
+  remarks:'Existing terms',verifiedByEmail:'aacsenagan@watchdogautomation.com.ph',
+  approvedByEmail:'asenagan@watchdogautomation.com.ph',verifiedBy:'Sales Supervisor',
+  approvedBy:'Management',lineDescription:'Pump',lineQuantity:'2',lineUnitPrice:'100',
+  lineUnit:'piece',lineKind:'item',lineId:'item-a'};
+ const fields={get:key=>formValues[key]??'',getAll:key=>
+  ['lineDescription','lineQuantity','lineUnitPrice','lineUnit','lineKind','lineId']
+   .includes(key)?[formValues[key]??'']:[formValues[key]??'']};
+ const command=prepareTradeLinkDraftCommand({...initialTradeLinkDraftView(),mode:'edit',
+  selected:{documentId:id,record:saved}},fields,
+  {documentId:()=>{throw new Error('Edit must not allocate a new ID');},lineId:()=> 'new-line'});
+ assert.equal(command.documentId,id);
+ assert.equal(command.expectedRevision,saved.revision);
+ assert.equal(command.draft.documentNumber,saved.document_number);
+ assert.equal(command.draft.items[0].id,'item-a');
+ assert.equal(command.pendingCreateDraft,null);
+});
+
+test('all six saved document types hydrate the shared Create New form with their saved fields',()=>{
+ const modules={
+  esi:{documentNumber:'ESI-HYDRATE-01',customerName:'ESI Client',referenceNumber:'INV-01',
+   customerTin:'TIN-01',verifiedBy:'msenagan@watchdogautomation.com.ph',
+   approvedBy:'asenagan@watchdogautomation.com.ph',currency:'PHP',vatType:'12',
+   discountType:'percentage',discountValue:5,exchangeRate:1,remarks:'ESI terms',
+   items:[{id:'esi-line',kind:'item',description:'ESI Pump',quantity:2,unitPrice:10,unit:'pcs'}]},
+  packing:{documentNumber:'PL-HYDRATE-01',customerName:'Consignee',referenceNumber:'SO-01',
+   remarks:'Packing terms',items:[{id:'packing-line',kind:'item',description:'Packed item',quantity:3,unit:'box'}]},
+  delivery:{documentNumber:'DR-HYDRATE-01',customerName:'Recipient',referenceNumber:'DR-REF',
+   checkedBy:'dsenagan@watchdogautomation.com.ph',deliveredBy:'rogang@watchdogautomation.com.ph',
+   receivedBy:'Recipient Acknowledgement',remarks:'Delivery terms',
+   items:[{id:'delivery-line',kind:'item',description:'Delivered item',quantity:1,unit:'pcs',serialNumber:'SER-123'}]},
+  payment:{documentNumber:'AR-HYDRATE-01',customerName:'Payor',paymentParticulars:'Bank transfer',
+   cashAmount:100,chequeAmount:50,bankName:'QA Bank',chequeNumber:'CHK-01',
+   receivedBy:'msenagan@watchdogautomation.com.ph',verifiedBy:'asenagan@watchdogautomation.com.ph',remarks:'Payment terms'},
+  quotation:{...saved.content,documentNumber:'Q-HYDRATE-01',customerName:'Quote Client',
+   customerEmail:'quote@example.invalid',customerPhone:'09170000001',validity:'45 days',
+   deliveryCommitment:'6 weeks',paymentTerms:'Net 45',
+   verifiedByEmail:'aacsenagan@watchdogautomation.com.ph',
+   approvedByEmail:'asenagan@watchdogautomation.com.ph',approvedBy:'Management',
+   verifiedBy:'Sales Supervisor',remarks:'Quote terms',
+   items:[{id:'quote-line',kind:'item',description:'Quoted pump',quantity:4,unitPrice:25,unit:'unit'}]},
+  po:{documentNumber:'PO-HYDRATE-01',customerName:'Supplier',poNumber:'SUP-PO-01',
+   targetDeliveryDate:'2026-12-01',paymentTerms:'Net 30',
+   verifiedBy:'asenagan@watchdogautomation.com.ph',
+   approvedBy:'asenagan@watchdogautomation.com.ph',currency:'PHP',vatType:'zero',
+   discountType:'fixed',discountValue:10,exchangeRate:1,remarks:'PO terms',
+   items:[{id:'po-line',kind:'item',description:'Purchased valve',quantity:5,unitPrice:20,unit:'pcs'}]}
+ };
+ for(const [type,content] of Object.entries(modules)){
+  content.documentType=type;
+  const documentId='aaaaaaaa-aaaa-4aaa-8aaa-'+({esi:'aaaaaaaaaaa1',packing:'aaaaaaaaaaa2',delivery:'aaaaaaaaaaa3',payment:'aaaaaaaaaaa4',quotation:'aaaaaaaaaaa5',po:'aaaaaaaaaaa6'}[type]);
+  const record={id:documentId,board_id:TRADELINK_BOARD_ID,workspace_id:workspace,
+   board_item_id:item,document_type:type,document_number:content.documentNumber,
+   workflow_state:'draft',revision:4,archived_at:null,content};
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,canManage:true,
+   view:{...initialTradeLinkDraftView(),mode:'edit',selected:{documentId,record}}});
+  assert.match(html,/<form data-tradelink-draft-form/ ,type);
+  assert.match(html,/Editing saved Draft/,type);
+  assert.match(html,new RegExp('value="'+content.documentNumber+'"'),type);
+  assert.match(html,/Save Changes/,type);
+  assert.match(html,/Saved revision 4 loaded\. Changes remain local until Save Changes\./,type);
+  assert.match(html,new RegExp('name="documentType" value="'+type+'"'),type);
+  if(content.items?.length){
+   assert.match(html,new RegExp('value="'+content.items[0].id+'"'),type);
+   assert.ok(html.includes(content.items[0].description),type);
+  }
+  for(const key of ['customerName','referenceNumber','customerTin','customerEmail',
+   'customerPhone','validity','deliveryCommitment','paymentTerms','poNumber',
+   'targetDeliveryDate','paymentParticulars','cashAmount','chequeAmount','bankName',
+   'chequeNumber','receivedBy','checkedBy','deliveredBy','verifiedBy','approvedBy',
+   'remarks','discountValue','exchangeRate']){
+   if(Object.hasOwn(content,key))assert.ok(html.includes(String(content[key])),type+' '+key);
+  }
+ }
+});
+
+
+test('edit command cannot fall back to a new create when its saved record is missing or mismatched',()=>{
+ const fields={get:key=>({documentType:'quotation',documentNumber:'Q-EDIT-01',
+  customerName:'Existing client'}[key]??''),getAll:key=>({
+  lineDescription:[],lineQuantity:[],lineUnitPrice:[],lineUnit:[],lineId:[],lineSerialNumber:[],lineKind:[]
+ }[key]??[])};
+ assert.throws(()=>prepareTradeLinkDraftCommand({...initialTradeLinkDraftView(),mode:'edit'},fields),
+  /must be loaded and verified/);
+ assert.throws(()=>prepareTradeLinkDraftCommand({...initialTradeLinkDraftView(),mode:'edit',
+  selected:{documentId:id,record:{...saved,id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'}}},fields),
+  /must be loaded and verified/);
 });

@@ -255,8 +255,13 @@ export function prepareTradeLinkDraftCommand(view,fields,{
  lineId=()=>globalThis.crypto?.randomUUID?.()
 }={}){
  const selected=view?.mode==='edit'?view.selected:null;
+ if(view?.mode==='edit'&&(!selected||!validUuid(selected.documentId)||
+    selected.record?.id!==selected.documentId||
+    !validUuid(selected.record?.board_item_id)))
+  throw new ApiError('The saved Draft must be loaded and verified before editing.',409);
  const expectedRevision=selected?.record?.revision??0;
- if(!Number.isSafeInteger(expectedRevision)||expectedRevision<0)
+ if(!Number.isSafeInteger(expectedRevision)||
+    (selected?expectedRevision<1:expectedRevision!==0))
   throw new ApiError('Invalid saved Draft revision.',409);
  const pending=view?.pendingCreateDraft;
  const draft=parseTradeLinkDraftForm(fields,{
@@ -891,7 +896,7 @@ function referenceDocumentHeader(type,editing,canSave=false){
     '<button type="button" class="tl-reference-primary" data-action="tradelink-draft-preview">Preview</button>'+
     '<button type="button" class="tl-reference-save" data-action="tradelink-draft-submit"'+
      (canSave?'':' disabled title="Production Draft writes are not activated"')+
-     '>Save Draft</button>'+
+     '>'+(editing?'Save Changes':'Save Draft')+'</button>'+
    '</div>'+
   '</header>'+
   '</div>';
@@ -1066,7 +1071,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      '<label class="tl-draft-field tl-reference-currency-field"><span>Currency</span>'+
       '<select name="currency" aria-describedby="tl-reference-currency-help">'+
        options(currencies.map(v=>[v,v]),fieldValue('currency',data.currency||'PHP'))+'</select>'+
-      '<small id="tl-reference-currency-help">ISO currency code for the unsaved Draft. Currency conversion is never inferred.</small></label>'+
+      '<small id="tl-reference-currency-help">ISO currency code saved with this Draft revision. Currency conversion is never inferred.</small></label>'+
 
     '</div>'+
    '</section>'+commercialSuggestionLists(type)+
@@ -1098,7 +1103,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines):'')+
    '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
-    '<label class="tl-draft-field"><span>Document notes and terms · local preview</span>'+
+    '<label class="tl-draft-field"><span>Document notes and terms</span>'+
      '<textarea name="remarks" maxlength="5000" rows="5" '+
       'placeholder="Enter local document remarks or terms">'+
        escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
@@ -1109,9 +1114,11 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
-    (type==='quotation'?
-     'Not saved. Save Draft can preserve incomplete Quotation details; Preview checks submission readiness.':
-     'Not saved. Complete required fields before saving.')+'</p>'+
+    (editing?'Saved revision '+escape(row?.revision??'—')+
+     ' loaded. Changes remain local until Save Changes.':
+     type==='quotation'?
+      'Not saved. Save Draft can preserve incomplete Quotation details; Preview checks submission readiness.':
+      'Not saved. Complete required fields before saving.')+'</p>'+
    renderTradeLinkDraftLocalSummary(type)+
   '</form></div></section>';
 }
@@ -1410,9 +1417,14 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
       (readOnly?'<td class="tl-ref-actions-cell">'+
        '<button type="button" class="tl-ref-row-action-trigger" popovertarget="tl-doc-menu-'+escape(row.documentId)+'" aria-label="Actions for '+escape(row.documentNumber)+'" title="Document actions">⋯</button>'+
        '<div popover="auto" data-tradelink-action-menu id="tl-doc-menu-'+escape(row.documentId)+'" class="tl-ref-actions-menu">'+
-       '<button type="button" class="secondary" '+
-       'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
-       '">Preview saved</button> '+
+       (canManage&&TL03_DOMAIN_WRITES_ENABLED&&!row.archived&&
+        ['draft','revision-required'].includes(row.workflowState)&&
+        tradeLinkDraftEditHref(row.documentId)?
+        '<a class="secondary" data-tradelink-document-edit href="'+
+         escape(tradeLinkDraftEditHref(row.documentId))+'">Preview/Edit</a> ':
+        '<button type="button" class="secondary" '+
+         'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
+         '">Preview saved</button> ')+
        '<button type="button" class="secondary" data-action="tradelink-document-print" '+
         'data-id="'+escape(row.documentId)+'"'+(view.busy?' disabled':'')+
         '>Print / Save PDF</button> '+
@@ -1464,11 +1476,6 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
         ['approved','rejected','completed','cancelled'].includes(row.workflowState)?
         '<button type="button" class="secondary" data-action="tradelink-operational-reopen" '+
          'data-id="'+escape(row.documentId)+'">Reopen to Draft</button> ':'')+
-       (canManage&&TL03_DOMAIN_WRITES_ENABLED&&
-        ['draft','revision-required'].includes(row.workflowState)&&
-        !row.archived&&tradeLinkDraftEditHref(row.documentId)?
-        '<a class="secondary" data-tradelink-document-edit href="'+
-        escape(tradeLinkDraftEditHref(row.documentId))+'">Edit Draft</a> ':'')+
        (canManage&&TL03_DOMAIN_WRITES_ENABLED&&row.workflowState==='draft'?
         '<button type="button" class="secondary" data-action="'+
          (row.archived?'tradelink-draft-restore':'tradelink-draft-archive')+

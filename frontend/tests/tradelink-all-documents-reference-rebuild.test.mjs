@@ -32,7 +32,7 @@ test('reference All Documents uses real signed row fields, compact menu, and no 
  assert.match(html,/data-action="tradelink-documents-clear-selection"/);
  assert.match(html,/data-tradelink-action-menu/);
  assert.match(html,/popovertarget="tl-doc-menu-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"/);
- assert.match(html,/data-action="tradelink-document-open"/);
+ assert.match(html,/Preview\/Edit/);
  assert.match(html,/data-action="tradelink-document-print"/);
  assert.match(html,/data-action="tradelink-draft-archive"/);
  assert.match(html,/data-tradelink-document-edit/);
