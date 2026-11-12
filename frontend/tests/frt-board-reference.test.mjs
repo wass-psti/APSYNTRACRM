@@ -75,7 +75,7 @@ test('board UI distinguishes source-mapped versus unavailable fields with no FRT
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/isFRTBoardReference\(b\)/);
  assert.match(app,/FRT_REFERENCE_STATUS_LABELS\.join/);
- assert.match(app,/not yet mapped to persistent FRT backend fields/);
+ assert.match(app,/separate board mirror does not store FRT person assignments or private attachments\/QR files/);
  const grid=readFileSync(new URL('../board-grid.js',import.meta.url),'utf8');
  assert.doesNotMatch(grid,/frt_request_action|frt_admin_users/);
 });
