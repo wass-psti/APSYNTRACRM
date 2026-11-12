@@ -9,7 +9,7 @@ import {importMappingReadiness,skipPendingImportChoice,
  matchConfiguredImportChoice,reassignImportItemMapping} from './board-import-readiness.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
  buildImportPlan} from './board-import-core.js';
-import {executeBoardImportBatched,IMPORT_BATCH_SIZE} from './board-import-batches.js';
+import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize} from './board-import-batches.js';
 import {readImportRecovery,clearImportRecovery,sealImportRecovery,
  importDigest,verifyImportRecovery} from './board-import-durable.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
@@ -70,7 +70,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   return '<div class="aps-import-center"><div class="aps-import-drop" data-imp-drop>'+
    '<input type="file" id="aps-import-file-input" accept=".csv,.xlsx" hidden />'+
    '<button type="button" class="primary" data-imp="browse">Browse</button>'+
-   '<h2>or drag and drop your file</h2><p>CSV and XLSX supported · Maximum 8 MB · 20,000 source rows ('+IMPORT_BATCH_SIZE+'-row verified batches)</p>'+
+   '<h2>or drag and drop your file</h2><p>CSV and XLSX supported · Maximum 8 MB · 20,000 source rows (adaptive verified batches, up to '+IMPORT_BATCH_SIZE+' rows)</p>'+
    (state.recoveryMarker?'<p>Previous import: '+state.recoveryMarker.completed+
     ' of '+state.recoveryMarker.rows+' rows verified. Select the same workbook to continue.</p>'+
     '<button type="button" class="secondary" data-imp="clear-recovery">Discard recovery marker</button>':'')+
@@ -244,9 +244,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     ' new columns · '+result.preview.rowCount+' rows</p>'+
     (readiness().skipped.length?'<p>Excluded source columns: '+
      readiness().skipped.map(esc).join(', ')+'. Their values will not be imported.</p>':'')+
-    '<p>'+(result.preview.rowCount>IMPORT_BATCH_SIZE?
-     'This workbook will be imported in '+Math.ceil(result.preview.rowCount/IMPORT_BATCH_SIZE)+
-     ' sequential batches of up to '+IMPORT_BATCH_SIZE+' records. Each batch is atomic and independently verified; earlier batches remain committed if a later batch fails.':
+    '<p>'+(result.preview.rowCount>importBatchSize(result,{extendedReferences:state.extendedReferences})?
+     'This workbook will be imported in '+Math.ceil(result.preview.rowCount/importBatchSize(result,{extendedReferences:state.extendedReferences}))+
+     ' sequential batches of up to '+importBatchSize(result,{extendedReferences:state.extendedReferences})+' records. Each batch is atomic and independently verified; earlier batches remain committed if a later batch fails.':
      'The server will atomically validate and commit this import against the current board revision.')+'</p>'+
     '<label class="aps-import-final-check"><input type="checkbox" name="imp-confirm" data-imp-confirm'+
     (state.confirmed?' checked':'')+' /> I have reviewed the mapping and the selected duplicate behavior.</label>'+

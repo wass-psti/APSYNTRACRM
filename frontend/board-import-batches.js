@@ -7,6 +7,27 @@ import {ApiError} from './session.js';
 // Keep ordinary import transactions small enough for the existing signed
 // HTTP request deadline. A 617-row file must not become one long ambiguous write.
 export const IMPORT_BATCH_SIZE=200;
+// The m143-v2 stored procedure processes mapped cells individually and
+// recalculates item position per inserted row. Production 500/statement-timeout
+// evidence makes a fixed row count insufficient for wide/extended imports.
+// Budget by the *heaviest reviewed row*, not an average that hides late rows.
+export const EXTENDED_IMPORT_CELL_BUDGET=400;
+export const EXTENDED_IMPORT_PAYLOAD_BUDGET=256*1024;
+export function importBatchSize(plan,{extendedReferences=false}={}){
+ if(!extendedReferences)return IMPORT_BATCH_SIZE;
+ const rows=plan?.payload?.rows;
+ if(!Array.isArray(rows)||!rows.length)return IMPORT_BATCH_SIZE;
+ let maxCells=1,maxBytes=1;
+ const encoder=new TextEncoder();
+ for(const row of rows){
+  maxCells=Math.max(maxCells,Object.keys(row?.values||{}).length);
+  // PostgreSQL/HTTP transport sizes are UTF-8 bytes, not JS code units.
+  maxBytes=Math.max(maxBytes,encoder.encode(JSON.stringify(row)).byteLength);
+ }
+ return Math.max(1,Math.min(IMPORT_BATCH_SIZE,
+  Math.floor(EXTENDED_IMPORT_CELL_BUDGET/maxCells),
+  Math.floor(EXTENDED_IMPORT_PAYLOAD_BUDGET/maxBytes)));
+}
 const fail=message=>{throw new ApiError(message,409);};
 const sum=(a,b)=>({
  created:a.created+b.created,updated:a.updated+b.updated,
@@ -54,7 +75,8 @@ function nextGroup(group,before,after){
 
 export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
  group,matches,allowColumns=false,extendedReferences=false,approvedPlan,onProgress=()=>{},
- batchSize=IMPORT_BATCH_SIZE,resumeFrom=null,onCheckpoint=()=>{}}={}){
+ batchSize=null,resumeFrom=null,onCheckpoint=()=>{}}={}){
+ batchSize ??= importBatchSize(approvedPlan,{extendedReferences});
  if(!approvedPlan||!sheet?.rows?.length||!Array.isArray(mappings)||
     !Number.isInteger(batchSize)||batchSize<1||batchSize>5000)
   throw new ApiError('Reviewed import plan and a valid batch size are required.',400);

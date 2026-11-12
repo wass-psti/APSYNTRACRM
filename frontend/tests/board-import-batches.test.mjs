@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildImportPlan,initialImportMappings} from '../board-import-core.js';
-import {executeBoardImportBatched,IMPORT_BATCH_SIZE} from '../board-import-batches.js';
+import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize,EXTENDED_IMPORT_CELL_BUDGET,EXTENDED_IMPORT_PAYLOAD_BUDGET} from '../board-import-batches.js';
 import {parseDelimited} from '../board-import-parse.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';
@@ -356,4 +356,105 @@ test('CP-BIMP-19: persistent readback failure stays uncertain and never replays 
  });
  assert.equal(f.calls,1);
  assert.equal(f.current.items.length,200);
+});
+
+// CP-BIMP-20: fully isolated m143-v2 API simulation, no production writes.
+// A 617-row wide workbook includes an actual long reference on every row.
+function extended617Fixture({failWrite=0}={}){
+ const cols=Array.from({length:6},(_,i)=>({
+  id:'88888888-8888-4888-8888-'+String(i+1).padStart(12,'0'),
+  name:i===0?'Document URL':'Field '+i,
+  data_type:i===0?'long_text':'text',
+  column_key:'col_'+i,system_key:null,config:{}}));
+ const detail={board:{id:boardId,name:'Isolated extended import QA',
+  workspace_id:workspace,status:'active',updated_at:'2026-11-12T00:00:00.000Z'},
+  groups:[{id:groupId,title:'QA'}],columns:cols,items:[],values:[]};
+ const headers=['Name',...cols.map(c=>c.name)];
+ const long='https://example.invalid/docs/'+'R'.repeat(7200);
+ const rows=Array.from({length:617},(_,i)=>[
+  'Row '+(i+1),long+'-'+i,...Array.from({length:5},(_,j)=>'Value '+i+'-'+j)]);
+ const sheet={headers,rows};
+ const mappings=initialImportMappings(sheet,detail,{extendedReferences:true});
+ const group={action:'existing',groupId};
+ const matches={behavior:'add-new',matchColumnId:'item'};
+ const approvedPlan=buildImportPlan({sheet,detail,mappings,group,matches,extendedReferences:true});
+ let current=structuredClone(detail),calls=0,maxPayload=0,maxCells=0;
+ const api={
+  context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async()=>true,
+  board:async()=>structuredClone(current),
+  rpc:async(name,args)=>{
+   if(name==='wm_board_ui_read')return {board_id:boardId};
+   assert.equal(name,'wm_import_board_wizard_extended_atomic');
+   calls++;
+   if(calls===failWrite){const error=new Error('Simulated server failure');error.status=503;throw error;}
+   const payload=args.p_payload;
+   assert.equal(payload.contract,'m143-v2');
+   assert.equal(args.p_expected_updated_at,current.board.updated_at);
+   maxPayload=Math.max(maxPayload,JSON.stringify(payload.rows).length);
+   maxCells=Math.max(maxCells,payload.rows.length*cols.length);
+   for(const row of payload.rows){
+    const index=current.items.length+1;
+    const id='99999999-9999-4999-8999-'+String(index).padStart(12,'0');
+    current.items.push({id,board_id:boardId,group_id:groupId,
+     title:row.title,archived_at:null});
+    for(const c of cols){
+     const value=row.values[c.name];
+     current.values.push({item_id:id,column_id:c.id,
+      value:value?.__aps_extended_ref_v1??value});
+    }
+   }
+   current.board.updated_at=new Date(Date.parse(current.board.updated_at)+1000).toISOString();
+   return {created:payload.rows.length,updated:0,skipped:0,
+    columnsCreated:0,groupsCreated:0};
+  }
+ };
+ return {api,auth,detail,sheet,mappings,group,matches,approvedPlan,extendedReferences:true,
+  get calls(){return calls;},get current(){return structuredClone(current);},
+  get maxPayload(){return maxPayload;},get maxCells(){return maxCells;}};
+}
+
+test('CP-BIMP-20 isolated m143-v2 617-row six-column long-reference round-trip is complete',async()=>{
+ const f=extended617Fixture(),progress=[];
+ const size=importBatchSize(f.approvedPlan,{extendedReferences:true});
+ assert.ok(size<IMPORT_BATCH_SIZE);
+ assert.ok(size*6<=EXTENDED_IMPORT_CELL_BUDGET);
+ const result=await executeBoardImportBatched({...f,onProgress:x=>progress.push(x)});
+ assert.equal(result.created,617);
+ assert.equal(result.rowsProcessed,617);
+ assert.equal(result.batches,Math.ceil(617/size));
+ assert.equal(f.calls,result.batches);
+ assert.equal(f.current.items.length,617);
+ assert.equal(f.current.values.length,617*6);
+ assert.ok(f.maxCells<=EXTENDED_IMPORT_CELL_BUDGET);
+ assert.ok(f.maxPayload<=EXTENDED_IMPORT_PAYLOAD_BUDGET+150);
+ assert.equal(f.current.values[0].value,f.sheet.rows[0][1]);
+ assert.equal(f.current.values.at(-6).value,f.sheet.rows.at(-1)[1]);
+ assert.equal(progress.at(-1).completed,617);
+ assert.deepEqual(progress.map(x=>x.completed),
+  Array.from({length:result.batches},(_,i)=>Math.min(617,(i+1)*size)));
+});
+
+test('CP-BIMP-20 an uncertain extended-import batch is never automatically resubmitted',async()=>{
+ const f=extended617Fixture({failWrite:2});
+ const size=importBatchSize(f.approvedPlan,{extendedReferences:true});
+ await assert.rejects(()=>executeBoardImportBatched(f),error=>{
+  assert.equal(error.importOutcomeUncertain,true);
+  assert.equal(error.importBatchProgress.completed,size);
+  assert.equal(error.importBatchProgress.totalRows,617);
+  assert.equal(error.importBatchResume,undefined);
+  return true;
+ });
+ assert.equal(f.calls,2);
+ assert.equal(f.current.items.length,size);
+});
+
+test('CP-BIMP-20 an ordinary m143-v1 import keeps the 200-row budget',()=>{
+ const f=extended617Fixture();
+ assert.equal(importBatchSize(f.approvedPlan,{extendedReferences:false}),IMPORT_BATCH_SIZE);
+});
+
+test('CP-BIMP-20 extended payload budget counts UTF-8 bytes, not string code units',()=>{
+ const plan={payload:{rows:[{title:'Unicode',values:{Notes:'🎯'.repeat(110000)}}]}};
+ assert.equal(importBatchSize(plan,{extendedReferences:true}),1);
 });
