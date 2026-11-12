@@ -121,7 +121,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
      '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink document guide</strong>'+
       '<p>Choose a document module, complete its required fields, then select Save Draft. '+
       'The same signed server record appears in All Documents and its linked Board. '+
-      'Open a saved Draft and select Edit Draft to save an authorized revision. '+
+      'Open a saved Draft with Preview/Edit to save a revision on the same document. '+
       'Archive and Restore are reversible Draft actions. All Documents can print '+
       'a freshly verified saved revision or use the browser Save as PDF option. '+
       'Workflow submission/review/approval needs separately activated server functions; '+

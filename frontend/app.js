@@ -1951,6 +1951,8 @@ async function openTradeLinkDraft(documentId){
    state.context.workspace_id!==ws)return;
   if(!record||!['draft','revision-required'].includes(record.workflow_state)||
    record.archived_at!==null||
+   record.content?.documentType!==record.document_type||
+   record.content?.documentNumber!==record.document_number||
    record.revision!==listed.revision||
    record.board_item_id!==listed.boardItemId||
    record.document_number!==listed.documentNumber||

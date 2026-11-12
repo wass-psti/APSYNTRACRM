@@ -153,7 +153,7 @@ test('signed list/read uses authoritative RPC and can be reloaded in a new sessi
   draftView:{...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
    rows:[listed],documentPreview:{documentId:docId,record:row}},canManage:true});
  assert.match(html,/All Documents/);
- assert.match(html,/Preview saved/);
+ assert.match(html,/Preview\/Edit/);
  assert.match(html,/data-tradelink-saved-preview/);
  assert.match(html,/Q-2026-01/);
 });

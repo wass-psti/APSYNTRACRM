@@ -120,10 +120,10 @@ test('All Documents actions remain authorization-gated for signed submitted/revi
    workflowState:'revision-required',revision:5}]};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
  assert.doesNotMatch(html,/data-action="tradelink-document-review"|data-action="tradelink-document-request-revision"/);
- assert.match(html,/Edit Draft/);
+ assert.match(html,/Preview\/Edit/);
  assert.match(html,/Submit \(pending activation\)/);
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:false});
- assert.doesNotMatch(denied,/Q-REVIEW-99|Edit Draft|data-action="tradelink-document-review"/);
+ assert.doesNotMatch(denied,/Q-REVIEW-99|Preview\/Edit|data-action="tradelink-document-review"/);
 });
 test('SQL source keeps exact signed actor matching, scopes, immutable audit, old grants and pinning',()=>{
  const candidate=readFileSync('sql/tradelink-document-review-revision-candidate.sql','utf8');
