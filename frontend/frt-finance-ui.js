@@ -3,6 +3,7 @@ const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
 const count=v=>Number.isSafeInteger(v)&&v>=0?String(v):'—';
+import {frtActionSpec} from './frt-board-domain-actions.js';
 export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null,statusFilter='all'}={}){
  let html='<div class="page-head"><div><span class="label-top">Fund Released Tracker / Domain</span>'+
   '<h2>Financial requests</h2><p>Authoritative signed Supabase FRT snapshot. '+
@@ -73,12 +74,16 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
     ).join('')+'</div><h3>Financial workflow contract</h3>'+
     '<p class="muted">Informational role-and-state assessment only. Candidate does not mean the server has authorized execution. '+
     'Every actual operation requires the existing FRT backend permission, session and lifecycle checks. '+
-    'No workflow actions are executable here.</p>'+
+    'Choose a candidate action to review its consequences and explicitly confirm it. '+
+    'The server determines whether it is permitted.</p>'+
     '<div class="table-scroll"><table class="board-table"><thead>'+
     '<tr><th>Existing backend action</th><th>Role and request state</th><th>Execution authority</th></tr>'+
     '</thead><tbody>'+d.workflow.map(w=>'<tr><td>'+escape(w.label)+'</td><td>'+
-      (w.candidate?'Candidate (not authorized)':'Not eligible by role/state')+
-      '</td><td>Not verified — read-only</td></tr>').join('')+
+      (w.candidate?'Candidate — requires server authorization':'Not eligible by role/state')+
+      '</td><td>'+(w.candidate&&frtActionSpec(w.code)&&selectedRequestId?
+       '<button type="button" class="secondary" data-action="frt-finance-action" data-request-id="'+
+        escape(selectedRequestId)+'" data-frt-action="'+escape(w.code)+'">Review '+escape(w.label)+'</button>':
+       'Unavailable for this request')+'</td></tr>').join('')+
     '</tbody></table></div></div></section>';
  }else if(detailResult?.status==='BLOCKED'){
   const reason=/^[A-Z0-9_]{1,70}$/.test(detailResult.reason||'')?detailResult.reason:'FRT_DETAIL_NOT_VERIFIED';

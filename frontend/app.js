@@ -141,6 +141,7 @@ import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-sign
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {updateFRTRequestDate} from './frt-board-date-edit.js';
+import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
 import {isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
@@ -6518,6 +6519,38 @@ async function action(name,button){
       listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
      await loadFRTFinance(companyCode);
     },{submitLabel:'Save date',successMessage:'FRT request date saved and refreshed.'});
+   break;
+ }
+ case 'frt-finance-action':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||state.frtFinanceDetailBusy||
+      state.frtFinance?.status!=='PASS'||state.frtFinanceDetail?.status!=='PASS'||
+      !auth.isSignedIn)return;
+   const requestId=String(button?.dataset?.requestId||'');
+   const code=String(button?.dataset?.frtAction||''),spec=frtActionSpec(code);
+   const existing=state.frtFinanceDetail;
+   if(!spec||requestId!==state.frtFinanceDetailId||
+      !state.frtFinance.requests.some(r=>r.requestId===requestId)||
+      !existing.detail.workflow.some(w=>w.code===code&&w.candidate))return;
+   const companyCode=state.frtFinance.companyCode,role=state.frtFinance.role;
+   const workspaceId=state.context?.workspace_id,boardId=state.boardId;
+   const userId=auth.userId,seq=routeSerial;
+   const fields='<p class="note">'+e(spec.label)+' on '+e(existing.detail.title)+
+     ' ('+e(existing.detail.voucher)+'). This changes a financial request, '+
+     'and cannot be treated as a cosmetic board status.</p>'+
+     (spec.payload==='reason'?input('Reason','reason'):
+      spec.payload==='reference'?input('Verification reference (optional)','reference','','text',false):'');
+   openModal('Confirm FRT financial action',fields,async form=>{
+    if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+       auth.userId!==userId||state.context?.workspace_id!==workspaceId||
+       state.frtFinanceDetailId!==requestId||state.frtFinanceDetail!==existing)
+     throw new ApiError('Request view changed. Reopen action confirmation.',409);
+    await executeFRTDomainAction({auth,api:db,requestId,workspaceId,
+     companyCode,role,existingDetail:existing,action:code,
+     reason:String(form.get('reason')||''),reference:String(form.get('reference')||''),
+     allowedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
+    await loadFRTFinance(companyCode);
+   },{submitLabel:'Confirm '+spec.label,destructive:true,
+     successMessage:'FRT action acknowledged by the server. Request list refreshed.'});
    break;
  }
  case 'frt-finance-detail':{
