@@ -12363,6 +12363,62 @@
 #app .frt-ref-table button.frt-ref-filing{border:1px solid #c6d2e4;border-radius:6px;background:#eef1f6;color:#657186;padding:6px 9px;font-size:10px;font-weight:750;cursor:pointer;white-space:nowrap;min-height:29px}
 #app .frt-ref-table button.frt-ref-filing.is-filed{background:#dbf7e9;color:#218a54;border-color:#a3e3c1}
 #app .frt-ref-table button.frt-ref-filing:hover{filter:brightness(.97)}
+/* FRT New Fund Request: three-step, reference-aligned signed form. */
+.frt-wizard-backdrop{background:#11172d99;backdrop-filter:blur(7px)}
+.frt-wizard-backdrop .frt-wizard-modal{position:relative;width:min(610px,100%);max-width:610px;height:min(578px,92dvh);max-height:92dvh;border-radius:13px;background:#f8fbfe;border-top:3px solid #49c9ef;padding:0;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 26px 90px #0e1e4059;color:#283346}
+.frt-wizard-modal .modal-head{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;padding:20px 21px 3px 64px;position:relative;margin:0;border:0}
+.frt-wizard-modal .modal-head:before{content:'▤';position:absolute;left:21px;top:20px;display:grid;place-items:center;width:35px;height:35px;border-radius:10px;background:linear-gradient(135deg,#4473f8,#0d9cda);box-shadow:0 5px 13px #396def4d;color:white;font-size:21px}
+.frt-wizard-modal .modal-head h2{font-size:17px;font-weight:800;color:#202938;letter-spacing:-.025em}
+.frt-wizard-modal .modal-close{align-self:flex-start;color:#596275;padding:0 5px;font-size:21px}
+.frt-wizard-modal #modal-form{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.frt-wizard-intro{padding:0 20px 8px 64px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.frt-wizard-intro p{margin:0;font-size:11px;color:#68788c}
+.frt-wizard-status{font-size:10px;font-weight:700;color:#168859;background:#dcf4e7;border-radius:15px;padding:4px 8px;white-space:nowrap}
+.frt-wizard-steps{display:flex;align-items:center;flex:0 0 auto;gap:36px;padding:13px 24px 18px;background:#f8fbfe}
+.frt-wizard-steps>div{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;min-width:66px;color:#9aa6ba;font-size:9px;text-transform:uppercase;letter-spacing:.025em}
+.frt-wizard-steps>div:not(:last-child):after{content:'';position:absolute;top:16px;left:calc(100% + 5px);width:35px;height:2px;background:#dae2ee}
+.frt-wizard-steps>div span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:2px solid #dae1ed;background:#f4f6fa;color:#8790a4;font-size:13px;font-weight:700}
+.frt-wizard-steps>div.is-active span{background:#2c62e9;border-color:#2c62e9;color:#fff;box-shadow:0 4px 12px #3265e64d}
+.frt-wizard-steps>div.is-active strong{color:#285ad0}
+.frt-wizard-steps>div.is-complete span{background:#20c779;border-color:#20c779;color:#fff}
+.frt-wizard-steps>div.is-complete span:after{content:'✓';position:absolute;color:#fff;font-size:15px;background:#20c779}
+.frt-wizard-steps>div.is-complete strong{color:#0da86b}
+.frt-wizard-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;background:#eaf0f7;border-top:1px solid #e3e9f2;padding:17px 21px 24px;scrollbar-color:#b7c0d0 transparent;scrollbar-width:thin}
+.frt-wizard-page[hidden],.frt-wizard-modal .modal-actions button[hidden]{display:none!important}
+.frt-wizard-page{min-height:100%;display:flex;flex-direction:column;gap:14px}
+.frt-wizard-page .frt-wizard-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.frt-wizard-field{display:flex;flex-direction:column;gap:8px;min-width:0}
+.frt-wizard-field label{color:#424b5d;font-size:12px;font-weight:700}
+.frt-wizard-field label b{color:#4358b6}
+.frt-wizard-field label small{font-size:10px;color:#8b96a7;font-weight:400;margin-left:6px}
+.frt-wizard-field input,.frt-wizard-field select,.frt-wizard-field textarea{background:#f4f6fa;border:1px solid #d7deea;border-radius:10px;color:#29374e;min-height:43px;padding:11px 13px;font-size:12px;min-width:0;width:100%;outline:none;transition:border-color .13s,box-shadow .13s}
+.frt-wizard-field textarea{min-height:100px;resize:vertical}
+.frt-wizard-field input:focus,.frt-wizard-field select:focus,.frt-wizard-field textarea:focus{border-color:#688afa;box-shadow:0 0 0 3px #6285f224;background:white}
+.frt-wizard-field input:disabled,.frt-wizard-field select:disabled{background:#edf1f6;color:#9aa7b8;cursor:not-allowed}
+.frt-wizard-field input::placeholder,.frt-wizard-field textarea::placeholder{color:#9da7b5}
+.frt-wizard-field>small{font-size:10px;color:#8a96a8;line-height:1.5}
+.frt-wizard-expenses{border:1px solid #d9e0ec;background:#f7fafe;border-radius:13px;margin:0;padding:15px 16px 13px;min-width:0}
+.frt-wizard-expenses legend{font-size:12px;font-weight:800;color:#2a3447;padding:0 9px}
+.frt-wizard-expense{border:1px solid #dfe4ee;background:#f2f4f9;border-radius:11px;padding:12px 13px;margin-bottom:10px}
+.frt-wizard-expense-heading{display:flex;align-items:center;gap:8px;margin-bottom:13px;font-size:11px;color:#4c586a}
+.frt-wizard-index{display:grid;place-items:center;background:#3477f9;border-radius:50%;color:white;font-size:10px;font-weight:800;width:22px;height:22px}
+.frt-wizard-remove{margin-left:auto;border:0;background:transparent;color:#bb4b60;font-size:11px;cursor:pointer}
+.frt-wizard-expenses .frt-wizard-add{background:transparent;color:#638fe9;border:1px dashed #bdd1f6;border-radius:8px;width:100%;padding:9px;cursor:pointer;font-size:12px}
+.frt-wizard-expenses .frt-wizard-add:hover{background:#ebf3ff}
+.frt-wizard-helper{background:#fff0d9;border-left:3px solid #f4aa5a;border-radius:7px;padding:11px;color:#906245;font-size:10px;line-height:1.55;margin:2px 0 0}
+.frt-wizard-section-lead{margin:0 0 3px;color:#48576f;font-size:11px;font-weight:650}
+.frt-wizard-divider{border-top:1px solid #d9e1ec;margin:1px 0}
+.frt-wizard-optional-note{font-size:11px;color:#8794a8;border:1px dashed #cdd6e4;background:#f0f3f8;border-radius:9px;padding:13px}
+.frt-wizard-upload{width:184px;height:79px;border:2px dashed #d5dce8;background:#f2f5f9;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#9ca8ba;font-size:20px;cursor:not-allowed}
+.frt-wizard-upload span{font-size:10px}
+.frt-wizard-counter{display:none}
+.frt-wizard-modal .modal-actions{margin:0;flex:0 0 auto;padding:13px 20px;background:#fbfcff;box-shadow:0 -2px 8px #1a344211;display:flex;align-items:center;justify-content:flex-end;gap:9px;border-top:1px solid #e2e8f1}
+.frt-wizard-modal .modal-actions button{min-height:36px;border-radius:8px;padding:8px 15px;font-size:12px}
+.frt-wizard-modal .modal-actions [data-dismiss]{margin-right:auto;border:0;background:transparent;color:#657084}
+.frt-wizard-modal .modal-actions .frt-wizard-next{background:#4b83eb;border-color:#4b83eb;min-width:118px}
+.frt-wizard-modal .modal-actions button[type=submit]{background:#77caa1;border-color:#77caa1;min-width:136px}
+@media(max-width:620px){.frt-wizard-backdrop{padding:9px}.frt-wizard-backdrop .frt-wizard-modal{height:min(650px,94dvh);max-height:94dvh}.frt-wizard-steps{gap:15px;justify-content:space-between;padding:13px 12px 15px}.frt-wizard-steps>div:not(:last-child):after{width:15px}.frt-wizard-scroll{padding:15px 12px}.frt-wizard-page .frt-wizard-grid{grid-template-columns:1fr}.frt-wizard-intro{flex-wrap:wrap}.frt-wizard-modal .modal-actions{padding:10px 12px}}
+@media(prefers-reduced-motion:reduce){.frt-wizard-field input,.frt-wizard-field select,.frt-wizard-field textarea{transition:none}}
 
 /* frontend/fueltrack-v3-application.css */
 /* CP-FT3-01 — FuelTrack+ v3 native dashboard, scoped to authorized board app. */
