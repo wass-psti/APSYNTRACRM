@@ -118,7 +118,7 @@ BEGIN
  END IF;
  blocked:=false;
  BEGIN
-  PERFORM public.frt_executive_dashboard_safe(w,'NOT_A_COMPANY');
+  PERFORM public.frt_executive_dashboard_safe(w,'NOT A COMPANY');
  EXCEPTION WHEN SQLSTATE '22023' THEN blocked:=true;
  END;
  IF NOT blocked THEN
