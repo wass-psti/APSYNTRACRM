@@ -61,6 +61,7 @@ jobs:
             -f sql/cp-board-col-delete-operational-scope-CANDIDATE.sql \
             -f sql/cp-board-col-delete-operational-activation-CANDIDATE.sql \
             -f sql/tests/cp-board-col-delete-operational-disposable-acceptance.sql \
+            -f sql/cp-board-col-delete-operational-emergency-pause-CANDIDATE.sql \
             -c 'ROLLBACK' \
             -f sql/tests/cp-board-col-delete-phase-b-qa-scope-reset.sql \
             -f sql/tests/cp-board-col-delete-recoverable-reset.sql \
