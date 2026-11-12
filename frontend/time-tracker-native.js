@@ -226,7 +226,7 @@ export class TimeTrackerNativeClient{
   const access=await this.access(boardId);
   const bootstrap=await this.api.rpc('apsyntra_role_is_bootstrap');
   if(bootstrap!==true)deny('Bootstrap Team Directory authorization required');
-  const response=await this.api.rpc('apsyntra_role_configuration_snapshot',{
+  const response=await this.api.rpc('timetracker_team_directory_snapshot',{
    p_workspace_id:access.workspaceId
   });
   const directory=projectTimeTrackerTeamDirectory(response,{
