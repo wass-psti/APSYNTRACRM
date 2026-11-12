@@ -18,11 +18,11 @@ BEGIN
  BEGIN PERFORM public.apsyntra_role_require_scope(v_workspace);
   RAISE EXCEPTION 'CRM Admin retained central administration after rollback';
  EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+ PERFORM set_config('request.jwt.claim.sub',v_bootstrap::text,true);
+ PERFORM public.apsyntra_role_require_scope(v_workspace);
  v_data:=public.apsyntra_role_user_management_snapshot(v_workspace);
  IF v_data ? 'adminVerified' OR v_data->>'bootstrapVerified'<>'true'
  THEN RAISE EXCEPTION 'Legacy snapshot contract not restored: %',v_data; END IF;
- PERFORM set_config('request.jwt.claim.sub',v_bootstrap::text,true);
- PERFORM public.apsyntra_role_require_scope(v_workspace);
  BEGIN
   PERFORM public.apsyntra_crm_platform_role_set(v_workspace,v_inherited,'employee',NULL);
   RAISE EXCEPTION 'Inherited platform admin target lock was not restored';
