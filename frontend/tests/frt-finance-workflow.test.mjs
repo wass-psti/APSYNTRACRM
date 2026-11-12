@@ -151,7 +151,7 @@ test('workflow candidates mirror server role/state constraints but never authori
  assert.ok(r.detail.workflow.find(x=>x.code==='archive').candidate);
  assert.ok(r.detail.workflow.every(x=>x.authority==='NOT_VERIFIED_FOR_EXECUTION'));
 });
-test('SEC13 detail UI renders escaped fields and informational non-executable workflow rows',()=>{
+test('FRT detail UI renders escaped fields and explicit server-confirmed workflow controls',()=>{
  const report=projectFRTRequestDetail({...base,title:'<img onerror=alert(1)>',
   voucher_no:'<script>Bad</script>'},{
    requestId:id,companyCode,workspaceId:ws,role:'FINANCE_APPROVER'
@@ -167,8 +167,8 @@ test('SEC13 detail UI renders escaped fields and informational non-executable wo
  });
  assert.match(html,/data-action="frt-finance-detail"/);
  assert.match(html,/data-action="frt-finance-detail-close"/);
- assert.match(html,/Candidate \(not authorized\)/);
- assert.match(html,/Not verified — read-only/);
+ assert.match(html,/Candidate — requires server authorization/);
+ assert.match(html,/data-action="frt-finance-action"/);
  assert.match(html,/&lt;img onerror/);
  assert.match(html,/&lt;script&gt;/);
  assert.match(html,/&lt;svg onload/);
