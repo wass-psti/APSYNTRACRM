@@ -190,16 +190,21 @@ export class TradeLinkDomainClient{
  async session(){
   if(!this.api?.context||!this.api?.board||!this.api?.allowed||!this.api?.rpc||
     !this.auth?.getVerifiedUser)deny('Signed TradeLink domain API unavailable.');
-  const actor=await this.auth.getVerifiedUser();
-  const context=await this.api.context();
+  // Each request uses the existing signed transport and independently enforces
+  // server-side access. Overlap reads rather than serializing four round trips.
+  // No document operation runs until every identity, workspace and permission
+  // check below succeeds; the mutation RPC remains authoritative as before.
+  const [actor,context,detail,canManage]=await Promise.all([
+   this.auth.getVerifiedUser(),this.api.context(),
+   this.api.board(TRADELINK_BOARD_ID),
+   this.api.allowed(TRADELINK_BOARD_ID,'manage')
+  ]);
   if(!validUuid(actor?.id)||actor.id!==this.auth.userId||
     context?.user_id!==actor.id||context?.profile?.status!=='active'||
     !validUuid(context.workspace_id))
    deny('TradeLink signed identity or workspace changed.');
-  const detail=await this.api.board(TRADELINK_BOARD_ID);
   if(!isTradeLinkBoard(detail?.board)||
-     detail.board.workspace_id!==context.workspace_id||
-     await this.api.allowed(TRADELINK_BOARD_ID,'manage')!==true)
+     detail.board.workspace_id!==context.workspace_id||canManage!==true)
    deny('TradeLink board manager scope required.');
   // Server additionally requires a live auth.sessions row and an effective
   // General Manager module role beneath the centralized platform ceiling.
