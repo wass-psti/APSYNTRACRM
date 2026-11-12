@@ -95,7 +95,7 @@ test('Executive Dashboard renders signed company-scoped counts and truthful fina
  const html=renderFRTFinanceReadOnly({result:report,view:'executive'});
  for(const value of ['Executive Dashboard','Requested','Liquidated','Budget Utilization',
   'Pending Liquidation','Request Status Pipeline','Top 5 Expense Categories',
-  'Requested vs. Spent — Last 6 Months','not supplied by the current signed finance projection',
+  'Requested vs. Spent — Last 6 Months','1,234,567.89','frt-exec-month-row',
   'frt-exec-grid','data-view="executive"'])assert.ok(html.includes(value),value);
  assert.match(html,/Pending Liquidation[\s\S]*?7/);
  assert.match(html,/13 completed[\s\S]*?18 in progress[\s\S]*?9 pending approval/);
@@ -106,7 +106,7 @@ test('OPEX and User Manual navigation are functional views without fabricated fi
  const opex=renderFRTFinanceReadOnly({result:report,view:'opex'});
  assert.match(opex,/OPEX Analytics/);
  assert.match(opex,/Top 5 Expense Categories/);
- assert.match(opex,/six-month requested-versus-spent series is not supplied/i);
+ assert.match(opex,/frt-exec-month-row/);\n assert.match(opex,/750,000\\.00/);
  const manual=renderFRTFinanceReadOnly({result:report,view:'manual'});
  assert.match(manual,/Fund Released Tracker — User Manual/);
  assert.match(manual,/company selector/);
