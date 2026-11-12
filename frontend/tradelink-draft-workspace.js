@@ -260,6 +260,36 @@ export function prepareTradeLinkDraftCommand(view,fields,{
  return {documentId:id,expectedRevision,draft,
   pendingCreateDraft:selected?null:pending||draft};
 }
+/** Reconcile a saved record against the authoritative signed bounded list.
+ * A signed 50-row list is not guaranteed to contain every record. An exact
+ * signed read and matching Board item are already checked by the caller;
+ * preserve that verified record in the current All Documents window rather
+ * than presenting a successful commit as failed solely due to pagination.
+ */
+export function reconcileTradeLinkSavedListing(list,record,receipt){
+ if(list?.status!=='AUTHORIZED_READ'||!Array.isArray(list.rows)||
+    !record||record.id!==receipt?.documentId||
+    record.board_item_id!==receipt?.boardItemId||
+    record.revision!==receipt?.revision||
+    !['draft','revision-required'].includes(record.workflow_state)||
+    record.archived_at!==null||
+    typeof record.document_number!=='string'||
+    typeof record.updated_at!=='string'||
+    !Number.isFinite(Date.parse(record.updated_at)))
+  throw new ApiError('Signed TradeLink document listing reconciliation failed.',409);
+ const summary={documentId:record.id,boardItemId:record.board_item_id,
+  documentNumber:record.document_number,documentType:record.document_type,
+  workflowState:record.workflow_state,revision:record.revision,
+  archived:false,updatedAt:record.updated_at};
+ const existing=list.rows.find(row=>row.documentId===record.id);
+ if(existing&&(existing.boardItemId!==record.board_item_id||
+    existing.documentType!==record.document_type||
+    existing.documentNumber!==record.document_number))
+  throw new ApiError('Signed TradeLink document listing conflicts with saved record.',409);
+ return {...list,rows:[summary,...list.rows.filter(row=>
+   row.documentId!==record.id)].slice(0,50)};
+}
+
 export class TradeLinkDraftWorkspace{
  constructor({auth,api}={}){this.client=new TradeLinkDomainClient({auth,api});}
  async list(){
