@@ -33,7 +33,7 @@ test('workspace and recent board lists use existing authorized state only',()=>{
  assert.match(sidebar,/href="#\/boards\/'\+e\(b\.id\)/);
  assert.match(sidebar,/e\(title\)/);
  assert.match(sidebar,/e\(name\(\)\)/);
- assert.match(sidebar,/e\(state\.context\?\.profile\?\.platform_role/);
+ assert.match(sidebar,/e\(signedCrmRoleLabel\(state\.crmRoleSnapshot,state\.context\)\)/);
  assert.match(sidebar,/data-action="logout"/);
  assert.doesNotMatch(sidebar,/(?:fetch|XMLHttpRequest|setItem|localStorage)\s*\(/);
 });
