@@ -145,7 +145,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    }
    return '<div class="aps-import-map-grid aps-import-map-row" data-imp-map-row="'+i+'"><div><b>'+
     esc(m.source)+'</b><small>Detected: '+esc(suggest)+'</small><small>Example: '+
-    esc(s.rows.find(r=>String(r[i]??'').trim())?.[i]??'—').slice(0,100)+'</small></div>'+
+    (m.action==='skip'&&m.conflict?'Value omitted for incompatible source':
+     esc(s.rows.find(r=>String(r[i]??'').trim())?.[i]??'—').slice(0,100))+
+    '</small></div>'+
     '<div><label class="sr-only" for="imp-map-'+i+'">Map '+esc(m.source)+'</label>'+
     '<select id="imp-map-'+i+'" data-imp-map="'+i+'">'+opts.join('')+'</select>'+
     (m.action==='skip'&&m.conflict?
