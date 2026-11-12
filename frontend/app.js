@@ -142,6 +142,7 @@ import {runSEC14SignedRead,sanitizeSEC14SignedRead} from './frt-sec14-signed-acc
 import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-signed-denials.js';
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
+import {renderFRTBoardSignedSnapshot} from './frt-board-signed-snapshot.js';
 import {updateFRTRequestDate} from './frt-board-date-edit.js';
 import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
 import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
@@ -928,10 +929,11 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
   ${engineeringUi&&state.edit&&canBulkEditBoard(b)?'<button type="button" class="secondary" data-action="bulk02-verify" '+(state.bulk02Busy?'disabled':'')+'>'+(
    state.bulk02Busy?'Checking signed permissions…':bulkReadyFor(b)?'✓ Bulk access verified':'Verify signed bulk access')+'</button>':''}
   ${hiddenGroups.length?'<button type="button" class="secondary" data-action="group-show-hidden">Show '+hiddenGroups.length+' hidden empty group'+(hiddenGroups.length===1?'':'s')+' (this browser)</button>':''}</div>
+  ${isFRTBoardReference(b)?renderFRTBoardSignedSnapshot(state.frtFinance,{busy:state.frtFinanceBusy,boardId:b.id}):''}
   ${isFRTBoardReference(b)?'<div class="note" role="note" aria-label="Fund Released Tracker board mapping">'+
    (frtReferenceColumns(state.board)?'Fund Released Tracker board preview: Status uses the existing Approval Status field and Date uses Request Date. ':
     'Fund Released Tracker reference layout is pending verified source-column mapping.')+
-   'Person, Attachments, and Account QR Code are not yet mapped to persistent FRT backend fields. '+
+   'The separate board mirror does not store FRT person assignments or private attachments/QR files. '+
    'Existing source lineage, release, and finance data remain unchanged. '+
    'Monday.com reference status labels (not activated as board actions): '+e(FRT_REFERENCE_STATUS_LABELS.join(' · '))+'. '+
    '<a href="#/boards/'+e(b.id)+'/finance">Open signed FRT requests and date editing</a></div>':''}
@@ -1503,8 +1505,11 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
     }else state.ttBoardAttendance={status:'RESTRICTED'};
    }
   }
-  if(tab==='finance'&&moduleByBoardName(detail.board.name)?.key==='frt')
-   state.frtFinance=await loadFRTFinanceReadOnly({auth,api:db,companyCode:null});
+  if(['items','finance'].includes(tab)&&moduleByBoardName(detail.board.name)?.key==='frt'){
+   const selected=state.frtFinance?.status==='PASS'?state.frtFinance.companyCode:null;
+   const signed=await loadFRTFinanceReadOnly({auth,api:db,companyCode:selected});
+   if(isCurrent())state.frtFinance=signed;
+  }
   if(!isCurrent()||platformSyncEditInProgress())return false;
   if(changed||changedBoards||reason!=='broadcast'||tab!=='items'){
    if(['items','sourcing'].includes(tab))deferVisibleBoardContent();
@@ -1843,6 +1848,16 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
   await loadTradeLinkDrafts(seq);
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')await loadTimeTracker(seq);
  if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt')await loadFRTFinance(null,seq);
+ if(tab==='items'&&moduleByBoardName(state.board.board?.name)?.key==='frt'){
+  const identity=state.context?.user_id,workspace=state.context?.workspace_id;
+  state.frtFinanceBusy=true;render();
+  try{
+   const signed=await loadFRTFinanceReadOnly({auth,api:db,companyCode:null});
+   if(seq===routeSerial&&state.tab==='items'&&auth.isSignedIn&&
+      state.context?.user_id===identity&&state.context?.workspace_id===workspace)
+    state.frtFinance=signed;
+  }finally{if(seq===routeSerial){state.frtFinanceBusy=false;render();}}
+ }
 }
 /** CP-TL-03D: authority and route bound Draft UI, never browser persistence. */
 function tradeLinkAuthorizedListRoute(){
