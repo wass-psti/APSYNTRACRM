@@ -148,3 +148,21 @@ BEGIN
  END IF;
 END;
 $no_direct_access$;
+
+-- Remove only this test's exact synthetic rows so downstream disposable
+-- acceptance fixtures observe their original baseline.
+DELETE FROM public.frt_liquidations
+ WHERE workspace_id='00000000-0000-4000-8000-000000000001'
+ AND fund_request_id IN (
+  '10000000-0000-4000-8000-000000000003',
+  '10000000-0000-4000-8000-000000000004');
+DELETE FROM public.frt_request_items
+ WHERE workspace_id='00000000-0000-4000-8000-000000000001'
+ AND fund_request_id IN (
+  '10000000-0000-4000-8000-000000000003',
+  '10000000-0000-4000-8000-000000000004');
+DELETE FROM public.frt_requests
+ WHERE workspace_id='00000000-0000-4000-8000-000000000001'
+ AND id IN (
+  '10000000-0000-4000-8000-000000000003',
+  '10000000-0000-4000-8000-000000000004');
