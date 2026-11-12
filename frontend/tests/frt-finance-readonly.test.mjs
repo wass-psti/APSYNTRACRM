@@ -7,6 +7,11 @@ const user='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const record='33333333-3333-4333-8333-333333333333';
 function fixture({denied=false,wrongMember=false,stale=false,badCount=false,
+ analyticsData={requested_total:'10000.00',spent_total:'2500.00',
+  top_categories:[{category:'Supplies',requested_amount:'7000.00'}],
+  monthly_trend:['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11'].map(month=>({
+   month,requested_amount:'1000.00',spent_amount:'250.00'
+  }))},
  companies=[{code:'PSTI',name:'Process Solutions Technology Inc.'},{code:'WASS',name:'Watchdog'}],
  rows=[{id:record,voucher_no:'FRT-01',title:'Operational request',
  status:'PENDING_APPROVAL',date_needed:'2026-11-02',filing_status:'NOT_FILED',company_code:'PSTI',
@@ -33,6 +38,8 @@ function fixture({denied=false,wrongMember=false,stale=false,badCount=false,
      released:999999,monthly_trend:[],top_categories:[]};
    }
    if(name==='frt_board_list_safe')return rows;
+   if(name==='frt_board_financial_analytics_safe')
+    return {...analyticsData,company_code:args.p_company};
    throw Error('Unexpected RPC '+name);
   }
  };
@@ -47,11 +54,11 @@ test('authorized FRT board integration reads only signed domain RPCs and removes
  assert.equal(report.summary.total_requests,1);
  assert.equal(report.requests.length,1);
  assert.deepEqual(f.calls.filter(x=>typeof x==='object').map(x=>x.name),
-   ['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
+   ['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe','frt_board_financial_analytics_safe']);
  assert.ok(!f.calls.some(x=>typeof x==='object'&&/create|update|delete|admin_set|request_action/i.test(x.name)));
  assert.equal(report.writesAttempted,0);
  const out=JSON.stringify(report);
- assert.doesNotMatch(out,/secret@example|requestor|total_amount|100000|999999|amount|attachments/i);
+ assert.doesNotMatch(out,/secret@example|requestor|total_amount|attachments/i);\n assert.equal(report.analytics.requestedTotal,'10000.00');\n assert.equal(report.analytics.spentTotal,'2500.00');\n assert.equal(report.analytics.topCategories[0].requestedAmount,'7000.00');\n assert.equal(report.analytics.monthlyTrend.length,6);
  assert.deepEqual(report.requests[0],{
   requestId:record,voucher:'FRT-01',title:'Operational request',status:'PENDING_APPROVAL',
   dateNeeded:'2026-11-02',filingStatus:'NOT_FILED'
@@ -152,7 +159,7 @@ test('SEC14 safe dashboard/list never downgrade to financial-data-bearing legacy
  const response=await loadFRTFinanceReadOnly(f);
  assert.equal(response.status,'PASS');
  assert.equal(response.requests.length,1);
- assert.deepEqual(requested,['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
+ assert.deepEqual(requested,['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe','frt_board_financial_analytics_safe']);
  assert.equal(response.writesAttempted,0);
 });
 
@@ -177,4 +184,65 @@ test('SEC14 production board entry always requests server-restricted reads',()=>
  assert.equal(matches.length,1);
  assert.doesNotMatch(readFileSync(new URL('../frt-finance-readonly.js',import.meta.url),'utf8'),
   /frt_list_requests|frt_dashboard|secureContracts/);
+});
+
+
+test('financial aggregates use only the signed selected company and expose aggregate fields',async()=>{
+ const f=fixture();
+ const r=await loadFRTFinanceReadOnly(f);
+ assert.equal(r.status,'PASS');
+ assert.equal(r.analyticsStatus,'PASS');
+ assert.deepEqual(r.analytics,{
+  companyCode:'PSTI',requestedTotal:'10000.00',spentTotal:'2500.00',
+  topCategories:[{category:'Supplies',requestedAmount:'7000.00'}],
+  monthlyTrend:['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11'].map(month=>({
+   month,requestedAmount:'1000.00',spentAmount:'250.00'
+  }))
+ });
+ const call=f.calls.find(x=>typeof x==='object'&&x.name==='frt_board_financial_analytics_safe');
+ assert.deepEqual(call.args,{p_workspace_id:ws,p_company:'PSTI'});
+ assert.equal(r.writesAttempted,0);
+ assert.doesNotMatch(JSON.stringify(r.analytics),/requestId|voucher|recipient|bank|vendor|invoice|requestor/i);
+});
+
+test('missing analytics RPC preserves existing signed Fund Tracker availability',async()=>{
+ const f=fixture(),original=f.api.rpc.bind(f.api);
+ f.api.rpc=async(name,args)=>{
+  if(name==='frt_board_financial_analytics_safe')
+   throw Object.assign(Error('new aggregate RPC not deployed'),{code:'PGRST202'});
+  return original(name,args);
+ };
+ const r=await loadFRTFinanceReadOnly(f);
+ assert.equal(r.status,'PASS');
+ assert.equal(r.analytics,null);
+ assert.equal(r.analyticsStatus,'UNAVAILABLE');
+ assert.equal(r.requests.length,1);
+ assert.equal(r.summary.total_requests,1);
+});
+
+test('invalid financial aggregates remain unavailable without blocking request reads',async()=>{
+ const f=fixture({analyticsData:{
+  requested_total:'100000.00',spent_total:'2500.00',
+  top_categories:[{category:'<script>',requested_amount:'7000.00'}],
+  monthly_trend:['2026-06','2026-07','2026-08','2026-10','2026-11','2026-12'].map(month=>({
+   month,requested_amount:'1000.00',spent_amount:'250.00'
+  }))
+ }});
+ const r=await loadFRTFinanceReadOnly(f);
+ assert.equal(r.status,'PASS');
+ assert.equal(r.analytics,null);
+ assert.equal(r.analyticsStatus,'INVALID_CONTRACT');
+});
+
+test('financial analytics company mismatch and malformed money are rejected',async()=>{
+ const f=fixture({analyticsData:{
+  requested_total:'NaN',spent_total:'-1.00',top_categories:[],
+  monthly_trend:['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11'].map(month=>({
+   month,requested_amount:'1.00',spent_amount:'0.00'
+  }))
+ }});
+ const r=await loadFRTFinanceReadOnly(f);
+ assert.equal(r.status,'PASS');
+ assert.equal(r.analytics,null);
+ assert.equal(r.analyticsStatus,'INVALID_CONTRACT');
 });
