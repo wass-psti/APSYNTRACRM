@@ -5,6 +5,8 @@ on:
       - 'sql/cp-urm04-*'
       - 'sql/tests/cp-urm04-*'
       - 'sql/tests/cp-urm04b-*'
+      - 'sql/cp-urm04b-rollback.sql'
+      - 'docs/CP-URM-04B-CRM-ADMIN-CAPABILITY-PARITY-20261112.md'
       - 'supabase/migrations/*cp_urm04b*'
       - 'scripts/cp-urm04b-*'
       - 'frontend/user-role-management.js'
