@@ -18,6 +18,7 @@ DECLARE
  big_ref text := 'https://example.invalid/reference/' || repeat('Z',7200);
  imported_item_id uuid;
  got jsonb;
+ rejected_oversized boolean := false;
 BEGIN
  IF has_table_privilege('authenticated',
     'public.work_board_import_extended_refs','select') OR
@@ -88,5 +89,24 @@ BEGIN
      IS DISTINCT FROM 'short replacement' THEN
   RAISE EXCEPTION 'Normal cell edit failed to retire superseded extended content';
  END IF;
- RAISE NOTICE 'CP-BIMP-14 7200+ character persistence, signed read/denial, and subsequent edit cleanup PASS';
+ -- Reject content past the 65,536-character storage contract atomically.
+ -- This is a disposable-only test. A rejected import must leave no new item.
+ SELECT updated_at INTO expected_at FROM public.work_boards WHERE id=board;
+ payload:=jsonb_set(payload,'{rows,0,title}',to_jsonb('Extended overflow QA'::text));
+ payload:=jsonb_set(payload,'{rows,0,values,Legacy Ref,__aps_extended_ref_v1}',
+  to_jsonb('https://example.invalid/' || repeat('Z',65537)));
+ BEGIN
+  PERFORM public.wm_import_board_wizard_extended_atomic(board,expected_at,payload);
+ EXCEPTION WHEN SQLSTATE '22023' THEN rejected_oversized:=true;
+ END;
+ IF NOT rejected_oversized THEN
+  RAISE EXCEPTION 'Extended reference beyond the storage limit was not rejected';
+ END IF;
+ IF EXISTS (SELECT 1 FROM public.work_board_items i
+   WHERE i.board_id=board AND i.title='Extended overflow QA') OR
+   EXISTS (SELECT 1 FROM public.work_board_import_extended_refs r
+     WHERE r.board_id=board AND char_length(r.content)>65536) THEN
+  RAISE EXCEPTION 'An oversized, rejected import left partial records';
+ END IF;
+ RAISE NOTICE 'CP-BIMP-17 oversized reference rejection is atomic; existing reference and signed denial PASS';
 END $cp_bimp14$;
