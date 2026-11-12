@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from '../workspace-relation-context.js';
+import {workspaceEntryRoleBadge} from '../workspace-ui.js';
 const userId='11111111-1111-4111-8111-111111111111';
 const workspaceId='22222222-2222-4222-8222-222222222222';
 const other='33333333-3333-4333-8333-333333333333';
@@ -31,7 +32,7 @@ test('unverified or malformed membership never implies ownership',()=>{
 });
 test('signed workspace picker never labels an owner as Member',()=>{
  const source=readFileSync('frontend/workspace-ui.js','utf8');
- assert.match(source,/escape\(row\.relation\[0\]\.toUpperCase\(\)\+row\.relation\.slice\(1\)\)/);
+ assert.match(source,/escape\(workspaceEntryRoleBadge\(row,options\)\)/);
  assert.doesNotMatch(source, /row\.active\?'Current':'Member'/);
 });
 test('CRM admin or workspace owner labels do not alter bootstrap permission checks',()=>{
@@ -42,4 +43,17 @@ test('CRM admin or workspace owner labels do not alter bootstrap permission chec
  assert.match(app,/workspaceRelationReadGeneration/);
  assert.match(app,/auth\.accessToken!==token/);
  assert.match(app,/workspaceRelationLabel\(state\.workspaceRelationSnapshot,state\.context\)/);
+});
+
+test('active Work Management Member and CRM Admin remain distinguishable in the picker',()=>{
+ const row={id:workspaceId,active:true,relation:'member'};
+ const receipt={userId,workspaceId,effectiveRole:'admin'};
+ assert.equal(workspaceEntryRoleBadge(row,{signedUserId:userId,activeCrmRole:receipt}),
+  'Current · Member · CRM Admin');
+ assert.equal(workspaceEntryRoleBadge({...row,id:other,active:false},
+  {signedUserId:userId,activeCrmRole:receipt}),'Member');
+ assert.equal(workspaceEntryRoleBadge(row,{signedUserId:other,activeCrmRole:receipt}),
+  'Current · Member');
+ assert.equal(workspaceEntryRoleBadge({...row,relation:'owner'},
+  {signedUserId:userId,activeCrmRole:receipt}),'Current · Owner · CRM Admin');
 });
