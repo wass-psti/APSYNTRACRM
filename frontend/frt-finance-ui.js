@@ -60,8 +60,8 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
     (c.code===result.companyCode?' <span aria-hidden="true">✓</span>':'')+'</button>').join('')+'</div>';
  }
  html+='</header><nav class="frt-ref-nav" aria-label="Fund Tracker sections">'+
-  '<button type="button" class="'+(section==='tracker'?'frt-ref-nav-active':'frt-ref-nav-label')+'" data-action="frt-finance-section" data-section="tracker" '+(section==='tracker'?'aria-current="page"':'')+'>▤ &nbsp; Fund Tracker</button>'+
-  '<button type="button" class="'+(section==='executive'?'frt-ref-nav-active':'frt-ref-nav-label')+'" data-action="frt-finance-section" data-section="executive" '+(section==='executive'?'aria-current="page"':'')+'>▦ &nbsp; Executive Dashboard</button>'+
+  '<button type="button" class="'+(section==='tracker'?'frt-ref-nav-active':'frt-ref-nav-label')+'" data-action="frt-finance-section" data-section="tracker" '+(busy?'disabled':'')+' '+(section==='tracker'?'aria-current="page"':'')+'>▤ &nbsp; Fund Tracker</button>'+
+  '<button type="button" class="'+(section==='executive'?'frt-ref-nav-active':'frt-ref-nav-label')+'" data-action="frt-finance-section" data-section="executive" '+(busy?'disabled':'')+' '+(section==='executive'?'aria-current="page"':'')+'>▦ &nbsp; Executive Dashboard</button>'+
   '<span class="frt-ref-nav-label" title="OPEX reporting is outside this implementation">◫ &nbsp; OPEX Analytics</span>'+
   '<span class="frt-ref-nav-label" title="User Manual is outside this implementation">▤ &nbsp; User Manual</span></nav>';
  if(busy)return html+'<div class="frt-ref-loading" role="status">Loading verified financial requests…</div></section>';
