@@ -60,7 +60,7 @@ BEGIN
       'public.frt_board_dashboard_safe(uuid,text)','EXECUTE') OR
     has_function_privilege('anon',
       'public.frt_board_dashboard_safe(uuid,text)','EXECUTE') OR
-    has_function_privilege('authenticated','public.frt_requests','SELECT') OR
+    has_table_privilege('authenticated','public.frt_requests','SELECT') OR
     has_table_privilege('authenticated','public.frt_request_items','SELECT') OR
     has_table_privilege('authenticated','public.frt_liquidations','SELECT') THEN
   RAISE EXCEPTION 'EXEC-02 function/table privilege boundary incorrect';
