@@ -88,6 +88,8 @@ test('live mismatched Qty. checkbox vs numeric source is an explained, explicit 
  const ui=readFileSync(new URL('../board-import-ui.js',import.meta.url),'utf8');
  assert.match(ui,/same-name board column exists/);
  assert.match(ui,/worksheet row/);
+ assert.match(ui,/Value omitted for incompatible source/);
+ assert.match(ui,/m\.action==='skip'&&m\.conflict\?'Value omitted/);
  assert.doesNotMatch(JSON.stringify(mappings),/Synthetic Line/);
 });
 
