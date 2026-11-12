@@ -12,7 +12,7 @@ test('reference wizard exposes 3 semantic stages and only authorized escaped com
  const html=renderFRTRequestWizard({companies:[...companies,{code:'INVALID<script>',name:'Unsafe'}],selectedCompany:'WASS'});
  for(const text of ['New Fund Request','Basic Info','Recipient','Details','Company Account',
   'Fund Source Account','Date Needed','Expense Categories','Add Category','Check #',
-  'Payee / Supplier','Selected Saved Account','Account Name','Bank','Account Number',
+  'Payee / Supplier','Select Saved Account','Account Name','Bank','Account Number',
   'QR Code','Expense Description','Order / Project No.','On Behalf Of','Not Filed'])
   if(text!=='New Fund Request')assert.ok(html.includes(text),text);
  assert.match(html,/value="WASS" selected/);
@@ -24,10 +24,10 @@ test('reference wizard exposes 3 semantic stages and only authorized escaped com
 });
 test('no false saved-account or QR upload persistence is advertised',()=>{
  const html=renderFRTRequestWizard({companies,selectedCompany:'WAO'});
- assert.match(html,/Saved accounts not connected/);
- assert.match(html,/QR upload not connected/);
+ assert.match(html,/Loading saved accounts/);
+ assert.match(html,/data-frt-upload-qr disabled/);
  assert.match(html,/Proxy submission not connected/);
- assert.doesNotMatch(html,/type="file"/);
+ assert.match(html,/type="file"[^>]+disabled/);
 });
 test('form payload maps every category and supported optional field, excluding unsupported controls',()=>{
  const fd=new FormData();

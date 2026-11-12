@@ -144,6 +144,9 @@ jobs:
             -f sql/tests/cp-frt-board03c-signed-refresh-isolation-disposable.sql \
             -f sql/cp-frt-filing01-CANDIDATE.sql \
             -f sql/tests/cp-frt-filing01-disposable.sql \
+            -f sql/tests/cp-frt-recipient02-storage-fixture.sql \
+            -f sql/cp-frt-recipient02-CANDIDATE.sql \
+            -f sql/tests/cp-frt-recipient02-disposable.sql \
             -f sql/tests/cp-frt-sec14-retirement-disposable-preflight.sql \
             -f sql/cp-frt-sec14-legacy-read-grant-retirement-candidate.sql \
             -f sql/cp-frt-sec14-legacy-read-grant-retirement-candidate.sql \
