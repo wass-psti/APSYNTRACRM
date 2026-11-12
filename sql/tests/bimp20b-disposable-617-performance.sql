@@ -83,6 +83,18 @@ BEGIN
    RAISE EXCEPTION 'CP-BIMP-20B mismatched atomic receipt at row %: %',idx,receipt;
   END IF;
   total_imported:=total_imported+(receipt->>'created')::int;
+  -- Each RPC call must be independently committed before the next one starts.
+  -- This DO block runs at top level under psql autocommit, so PostgreSQL
+  -- permits transaction boundaries inside it. A later failed call cannot undo
+  -- an earlier batch; the subsequent SELECTs are actual durable readback.
+  COMMIT;
+  IF (SELECT count(*) FROM public.work_board_items WHERE board_id=bid
+     AND title LIKE 'CP-BIMP-20B Row %')<>total_imported OR
+     (SELECT count(*) FROM public.work_board_import_extended_refs r
+      JOIN public.work_board_items i ON i.id=r.item_id WHERE r.board_id=bid
+       AND i.title LIKE 'CP-BIMP-20B Row %')<>total_imported THEN
+   RAISE EXCEPTION 'Batch %-% failed readback after separate commit',idx,batch_end;
+  END IF;
   RAISE NOTICE 'CP-BIMP-20B actual PG17 transaction rows %-%: % ms, receipt created %',
    idx,batch_end,batch_ms,receipt->>'created';
   -- Existing production logs report ~8-second statement timeouts.
