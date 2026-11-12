@@ -97,7 +97,7 @@ function renderFRTExecutiveDashboard(result){
  const metrics=[
   ['Requested',analytics?formatAmount(analytics.requestedTotal):'—',
    analytics?'Total requested across active company records':'Signed aggregate data unavailable','violet','▤'],
-  ['Liquidated',analytics?formatAmount(analytics.spentTotal):'—',
+  ['Spent',analytics?formatAmount(analytics.spentTotal):'—',
    analytics?'Submitted liquidation totals for this company':'Signed aggregate data unavailable','teal','✓'],
   ['Budget Utilization','—','No authoritative company budget source is present in the current FRT schema','blue','◷'],
   ['Pending Liquidation',count(summary.pending_liquidation_count),'Verified company-scoped request count','rose','!']
