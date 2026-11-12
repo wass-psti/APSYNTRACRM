@@ -144,6 +144,8 @@ import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {createSignedFRTRequest,updateSignedFRTFiling} from './frt-filing-workflow.js';
 import {renderFRTRequestWizard,enhanceFRTRequestWizard,collectFRTWizardRequest} from './frt-request-wizard.js';
+import {FRTRecipientClient} from './frt-recipient-client.js';
+import {mountFRTRecipientUI} from './frt-recipient-ui.js';
 import {renderFRTBoardSignedSnapshot} from './frt-board-signed-snapshot.js';
 import {updateFRTRequestDate} from './frt-board-date-edit.js';
 import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
@@ -6842,6 +6844,12 @@ async function action(name,button){
     },{submitLabel:'Submit Fund Request',
      successMessage:'Fund request saved with Not Filed status.'});
     enhanceFRTRequestWizard(modal);
+    const recipientClient=new FRTRecipientClient({auth,api:db});
+    void mountFRTRecipientUI(modal,{client:recipientClient,scope:()=>({
+     workspaceId:state.context?.workspace_id,
+     companyCode:modal?.querySelector('[name=companyCode]')?.value||'',
+     role:state.frtFinance?.role
+    })});
    }else openModal(title,body,async()=>{},
      {submitLabel:'Not connected',submitDisabled:true});
    break;

@@ -32,15 +32,19 @@ export function renderFRTRequestWizard({companies=[],selectedCompany=''}={}){
  <section class="frt-wizard-page" data-frt-step="2" aria-label="Recipient" hidden>
  <p class="frt-wizard-section-lead">Configure payment recipient</p>
  ${field('Payee / Supplier','recipientName',{placeholder:'Search or type payee name'})}
- <div class="frt-wizard-field"><label>Selected Saved Account</label>
- <select id="frt-saved-account-disabled" disabled aria-label="Saved account selection unavailable"><option>Saved accounts not connected</option></select></div>
+ <div class="frt-wizard-field"><label for="frt-wizard-saved-recipient">Select Saved Account</label>
+ <select id="frt-wizard-saved-recipient" data-frt-saved-recipient disabled><option value="">Loading saved accounts…</option></select></div>
  <div class="frt-wizard-divider"></div>
- <div class="frt-wizard-grid"><div class="frt-wizard-field"><label for="frt-account-holder-disabled">Account Name</label><input id="frt-account-holder-disabled" disabled placeholder="Saved account holder not connected" /></div>
+ <div class="frt-wizard-grid">${field('Account Name','recipientAccountName',{placeholder:'Account holder for saved account'})}
  ${field('Bank','recipientBank',{placeholder:'Bank name (optional)'})}</div>
  ${field('Account Number','recipientAccount',{placeholder:'Account number (optional)'})}
- <div class="frt-wizard-field"><label>QR Code <small>Optional</small></label>
- <div class="frt-wizard-upload" aria-disabled="true">⇧<span>QR upload not connected</span></div></div>
- <p class="frt-wizard-helper">Recipient name, bank and account number can be submitted through the existing signed request API. Saved-account lookup, account-holder metadata and QR storage are not connected.</p>
+ <div class="frt-wizard-recipient-actions"><button type="button" class="secondary" data-frt-save-recipient disabled>Save Recipient Account</button>
+ <span data-frt-recipient-status role="status" aria-live="polite">Checking saved-account availability…</span></div>
+ <div class="frt-wizard-field"><label for="frt-wizard-qr-file">QR Code <small>Optional · private PNG, JPEG or WebP, up to 3 MB</small></label>
+ <input id="frt-wizard-qr-file" type="file" accept="image/png,image/jpeg,image/webp" data-frt-qr-file disabled />
+ <button type="button" class="secondary" data-frt-upload-qr disabled>Upload QR to saved recipient</button>
+ <button type="button" class="secondary" data-frt-preview-qr disabled>View private QR</button></div>
+ <p class="frt-wizard-helper">Choose or save a recipient account before attaching a QR. The QR is private and belongs to the saved recipient; the signed request stores recipient, bank and account details.</p>
  </section>
  <section class="frt-wizard-page" data-frt-step="3" aria-label="Details" hidden>
  <p class="frt-wizard-section-lead">Add description and references</p>

@@ -12420,6 +12420,14 @@
 @media(max-width:620px){.frt-wizard-backdrop{padding:9px}.frt-wizard-backdrop .frt-wizard-modal{height:min(650px,94dvh);max-height:94dvh}.frt-wizard-steps{gap:15px;justify-content:space-between;padding:13px 12px 15px}.frt-wizard-steps>div:not(:last-child):after{width:15px}.frt-wizard-scroll{padding:15px 12px}.frt-wizard-page .frt-wizard-grid{grid-template-columns:1fr}.frt-wizard-intro{flex-wrap:wrap}.frt-wizard-modal .modal-actions{padding:10px 12px}}
 @media(prefers-reduced-motion:reduce){.frt-wizard-field input,.frt-wizard-field select,.frt-wizard-field textarea{transition:none}}
 
+.frt-wizard-recipient-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.frt-wizard-recipient-actions button{border-color:#bcd0ed;background:#f3f7ff;color:#3060b3;font-weight:750}
+.frt-wizard-recipient-actions button:disabled,.frt-wizard-page [data-frt-upload-qr]:disabled,.frt-wizard-page [data-frt-preview-qr]:disabled{opacity:.6;cursor:not-allowed}
+.frt-wizard-recipient-actions [role=status]{font-size:10px;color:#6c7b95;flex:1;line-height:1.4;min-width:130px}
+.frt-wizard-page [data-frt-qr-file]{font-size:11px;background:#f5f7fb;padding:10px}
+.frt-wizard-page [data-frt-qr-file]:disabled{opacity:.6}
+.frt-wizard-page [data-frt-upload-qr],.frt-wizard-page [data-frt-preview-qr]{align-self:flex-start;border:1px solid #c7d5eb;background:#f7faff;color:#375da3;font-size:11px}
+
 /* frontend/fueltrack-v3-application.css */
 /* CP-FT3-01 — FuelTrack+ v3 native dashboard, scoped to authorized board app. */
 #app .ft3-app{color:#27394a;background:#f6fafb;border:1px solid #d7e4e8;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px #163b4811;margin:16px 0 28px;font-size:13px}
