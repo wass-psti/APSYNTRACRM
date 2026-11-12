@@ -52,6 +52,6 @@ test('source integrates feature-only dynamic imports and preserves signed access
  assert.doesNotMatch(app,/from '\.\/board-operational-qa\.js'/);
  assert.match(app,/const \{openBoardImportWizard\}=await import\('\.\/board-import-ui\.js'\)/);
  assert.match(app,/const \{runTwelveBoardQa\}=await import\('\.\/board-operational-qa\.js'\)/);
- assert.match(app,/if\(state\.boardId!==selected\|\|!auth\.isSignedIn/);
+ assert.match(app,/if\(state\.boardId!==selected\|\|routeBoard\(\)!==selected\|\|/);
  assert.match(app,/syncFuelTrans\(\{container:null\}\)/);
 });

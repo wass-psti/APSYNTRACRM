@@ -45,6 +45,27 @@ VALUES ('65000000-0000-4000-8000-000000000001',
  'Amount','number',0,'20000000-0000-4000-8000-000000000001',
  '20000000-0000-4000-8000-000000000001');
 
+-- Legacy/dedicated-board physical field: import must resolve this by its real
+-- column ID even though it uses col_* rather than custom:* and is hidden.
+INSERT INTO public.work_board_columns(id,board_id,column_key,name,data_type,
+ system_key,position,visible,created_by,updated_by)
+VALUES ('65000000-0000-4000-8000-000000000002',
+ '30000000-0000-4000-8000-000000000003','col_import_reference',
+ 'Legacy Ref','text',NULL,1,false,
+ '20000000-0000-4000-8000-000000000001',
+ '20000000-0000-4000-8000-000000000001');
+
+-- Dedicated-board Status metadata whose original label palette is incomplete.
+-- This uses the existing audited Status-label writer; no new production RPC.
+INSERT INTO public.work_board_columns(id,board_id,column_key,name,data_type,
+ system_key,position,visible,config,created_by,updated_by)
+VALUES ('65000000-0000-4000-8000-000000000003',
+ '30000000-0000-4000-8000-000000000003','col_legacy_status',
+ 'Status','status',NULL,2,true,
+ '{"labels":[{"id":"import_open","name":"Open","color":"#4f7df3","active":true}],"default_label_id":"import_open"}'::jsonb,
+ '20000000-0000-4000-8000-000000000001',
+ '20000000-0000-4000-8000-000000000001');
+
 -- Restore genuine write behavior in the disposable fixture. The config fixture's
 -- original legacy column writer is intentionally a NULL stub for grants testing.
 CREATE OR REPLACE FUNCTION public.wm_add_board_group(p_board_id uuid,p_title text)

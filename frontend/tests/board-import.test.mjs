@@ -508,3 +508,100 @@ test('UI and entrypoint are wired without bypassing the domain restriction',()=>
  assert.match(ui,/Handle matches/);
  assert.match(html,/board-import\.css/);
 });
+
+test('legacy col_ and hidden physical columns remain available import targets',()=>{
+ const ui=readFileSync(new URL('../board-import-ui.js',import.meta.url),'utf8');
+ assert.match(ui,/c\.visible===false\?' · hidden'/);
+ const legacyId='66666666-6666-4666-8666-666666666666';
+ const hiddenId='77777777-7777-4777-8777-777777777777';
+ const excludedId='88888888-8888-4888-8888-888888888888';
+ const board={...detail,columns:[
+  {id:legacyId,name:'Attendance Ref',data_type:'text',column_key:'col_attendance_ref',
+   system_key:null,visible:true,config:{}},
+  {id:hiddenId,name:'Hidden Notes',data_type:'long_text',column_key:'custom:hidden-notes',
+   system_key:null,visible:false,config:{}},
+  {id:excludedId,name:'Owner',data_type:'people',column_key:'col_owner',
+   system_key:'assignee',visible:true,config:{}},
+  {id:colId,name:'Title',data_type:'text',column_key:'title',
+   system_key:'title',visible:true,config:{}}
+ ]};
+ const available=availableImportColumns(board);
+ assert.deepEqual(available.map(c=>c.id),[legacyId,hiddenId]);
+ assert.equal(available.find(c=>c.id===hiddenId).visible,false);
+ const source={headers:['Name','Attendance Ref','Hidden Notes'],rows:[
+  ['Alpha','REF-1','private note']
+ ]};
+ const mappings=initialImportMappings(source,board);
+ assert.deepEqual(mappings.map(m=>m.action),['item','existing','existing']);
+ assert.equal(mappings[1].columnId,legacyId);
+ assert.equal(mappings[2].columnId,hiddenId);
+ assert.equal(mappings[2].hidden,true);
+ const plan=buildImportPlan({sheet:source,detail:board,mappings,group,allowColumns:false});
+ assert.equal(plan.payload.newColumns.length,0);
+ assert.equal(plan.payload.rows[0].values['Attendance Ref'],'REF-1');
+ assert.equal(plan.payload.rows[0].values['Hidden Notes'],'private note');
+});
+
+test('same-name existing text column is reused when Status source values are plain labels',()=>{
+ const textStatusId='99999999-9999-4999-8999-999999999999';
+ const board={...detail,columns:[{id:textStatusId,name:'Status',data_type:'text',
+  column_key:'col_status',system_key:null,visible:true,config:{}}]};
+ const source={headers:['Name','Status'],rows:[['Alpha','Active'],['Beta','Pending']]};
+ const mappings=initialImportMappings(source,board);
+ assert.equal(mappings[1].action,'existing');
+ assert.equal(mappings[1].columnId,textStatusId);
+ assert.equal(mappings[1].type,'status');
+ assert.equal(mappings[1].targetType,'text');
+ const plan=buildImportPlan({sheet:source,detail:board,mappings,group});
+ assert.deepEqual(plan.payload.rows.map(row=>row.values.Status),['Active','Pending']);
+});
+
+test('CP-BIMP-12 preserves literal prefixes in text cells without evaluating spreadsheet formulas',()=>{
+ const id='88888888-8888-4888-8888-888888888888';
+ const board={...detail,columns:[...detail.columns,{id,name:'Message Content',data_type:'text',
+  column_key:'custom:message',system_key:null,config:{}}]};
+ const source={headers:['Name','Message Content'],rows:[
+  ['Alpha','@Team please review'],['Beta','-45m'],['Gamma','=2+2']]};
+ const mappings=initialImportMappings(source,board);
+ assert.equal(mappings[1].action,'existing');
+ const plan=buildImportPlan({sheet:source,detail:board,mappings,group});
+ assert.deepEqual(plan.payload.rows.map(x=>x.values['Message Content']),[
+  '@Team please review','-45m','=2+2']);
+ assert.throws(()=>buildImportPlan({sheet:{...source,rows:[['=SUM(1,1)','Safe']]},
+  detail:board,mappings,group}),/formula-like/);
+});
+
+test('CP-BIMP-12 reported UTC date and plain-text columns retain their intended types',()=>{
+ const dateId='88888888-8888-4888-8888-888888888888';
+ const textId='99999999-9999-4999-8999-999999999999';
+ const board={...detail,columns:[...detail.columns,
+  {id:dateId,name:'Expected Close Date',data_type:'date',column_key:'col_expected_close',
+   system_key:null,config:{}},
+  {id:textId,name:'Validate',data_type:'text',column_key:'col_validate',system_key:null,config:{}}]};
+ const source={headers:['Name','Expected Close Date','Validate'],rows:[
+  ['A','2025-10-12T13:14:00Z','Click to Validate'],
+  ['B','2026-05-13 23:12:40 UTC','Click to Validate']]};
+ const mappings=initialImportMappings(source,board);
+ assert.deepEqual(mappings.map(x=>x.action),['item','existing','existing']);
+ const plan=buildImportPlan({sheet:source,detail:board,mappings,group});
+ assert.deepEqual(plan.payload.rows.map(x=>x.values['Expected Close Date']),
+  ['2025-10-12','2026-05-13']);
+ assert.equal(plan.payload.rows[0].values.Validate,'Click to Validate');
+});
+
+
+test('CP-BIMP-12 empty workbook is a no-op notice, not a failed mutation',()=>{
+ const ui=readFileSync(new URL('../board-import-ui.js',import.meta.url),'utf8');
+ assert.match(ui,/workbook contains no importable item rows/);
+ assert.match(ui,/No records or columns were changed/);
+ assert.match(ui,/state.notice=.*no importable item rows/i);
+});
+
+
+test('CP-BIMP-16 import wizard stays tied to the active browser board route during navigation',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/const routeBoard=\(\)=>location\.hash\.match/);
+ assert.match(app,/if\(routeBoard\(\)!==selected\)/);
+ assert.match(app,/state\.boardId!==selected\|\|routeBoard\(\)!==selected/);
+ assert.match(app,/Board navigation is still updating/);
+});

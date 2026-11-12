@@ -10,6 +10,8 @@ import {detectMondayCheckboxMarkers,mondayCheckboxCell} from './monday-import-co
 import {cmp02Validate} from './board-typed-cmp02.js';
 import {normalizeTextDate} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 export const IMPORT_CONTRACT='m143-v1';
+export const IMPORT_EXTENDED_CONTRACT='m143-v2';
+export const EXTENDED_REF_KEY='__aps_extended_ref_v1';
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
 ]);
@@ -223,6 +225,11 @@ function normalizeImportDate(value){
 }
 export function inferImportType(header,values=[]){
  const label=key(header),all=values.map(clean).filter(Boolean),sample=all.slice(0,100);
+ // An entirely empty source column has no evidence for a choice schema.
+ // Treat it as text so it can map to an existing same-name column (including
+ // Status) or be created as an ordinary empty text column without requiring
+ // impossible option setup.
+ if(!all.length)return 'text';
  if(label==='status'||label==='priority')return 'status';
  if(label.includes('checkbox')||label.startsWith('is '))return 'checkbox';
  if(label.includes('date')||label.endsWith(' at'))return 'date';
@@ -243,24 +250,53 @@ export function inferImportType(header,values=[]){
  return 'text';
 }
 export function availableImportColumns(detail){
- return (detail?.columns||[]).filter(c=>validUuid(c.id)&&c.visible!==false&&
+ // Import targets are physical board data columns, not just the newer
+ // custom:* columns. Dedicated/legacy board creation also uses col_* keys.
+ // Visibility is presentation metadata: hidden columns remain valid storage
+ // targets and must not disappear from the import mapping catalogue.
+ return (detail?.columns||[]).filter(c=>validUuid(c.id)&&
   allowedTypes.has(c.data_type)&&(c.system_key==null||c.system_key==='status')&&
-  (c.system_key==='status'||String(c.column_key||'').startsWith('custom')))
-  .map(c=>({id:c.id,name:c.name,type:c.data_type,system_key:c.system_key||null,config:c.config||{}}));
+  typeof c.column_key==='string'&&c.column_key.trim().length>0)
+  .map(c=>({id:c.id,name:c.name,type:c.data_type,system_key:c.system_key||null,
+   config:c.config||{},visible:c.visible!==false,columnKey:c.column_key}));
 }
 function autoTitle(headers){
  const exact=['item','name','title','item name','record'];
  return headers.find(h=>exact.includes(key(h)))||headers[0];
 }
-export function initialImportMappings(sheet,detail,{canCreate=false}={}){
+export function initialImportMappings(sheet,detail,{canCreate=false,extendedReferences=false}={}){
  const columns=availableImportColumns(detail),primary=autoTitle(sheet.headers),used=new Set();
  return sheet.headers.map((source,i)=>{
-  const type=inferImportType(source,sheet.rows.map(r=>r[i]));
+  const sourceValues=sheet.rows.map(r=>r[i]);
+  const type=inferImportType(source,sourceValues);
   if(source===primary)return {source,action:'item',type:'text'};
-  const matches=columns.filter(c=>key(c.name)===key(source)&&c.type===type&&!used.has(c.id));
-  if(matches.length===1){
-   used.add(matches[0].id);
-   return {source,action:'existing',columnId:matches[0].id,type};
+  const named=columns.filter(c=>key(c.name)===key(source)&&!used.has(c.id));
+  const compatible=named.filter(column=>sourceValues.every(raw=>{
+   if(!clean(raw))return true;
+   try{
+    if(column.type==='checkbox'&&detectMondayCheckboxMarkers(sheet,source))
+     mondayCheckboxCell(raw);
+    else valueAsType(raw,column.type,column.config,extendedReferences);
+    return true;
+   }catch{return false;}
+  }));
+  const exact=compatible.filter(c=>c.type===type);
+  const target=exact.length===1?exact[0]:
+   exact.length===0&&compatible.length===1?compatible[0]:null;
+  if(target){
+   used.add(target.id);
+   return {source,action:'existing',columnId:target.id,type,
+    detectedType:type,targetType:target.type,hidden:!target.visible};
+  }
+  // A dedicated board can have a same-name Status column whose palette is
+  // missing source labels. Offer to extend that *existing* column rather
+  // than falsely claiming the source cannot be imported or duplicating it.
+  // The current server supports in-place Status label changes, not Dropdown.
+  const missingStatus=named.length===1&&named[0].type==='status'&&
+   sourceValues.some(value=>clean(value))?named[0]:null;
+  if(canCreate&&missingStatus){
+   return {source,action:'configure',type,choiceType:'status',
+    name:missingStatus.name,existingColumnId:missingStatus.id,requiresDecision:true};
   }
   if(canCreate&&(type==='status'||type==='dropdown')&&
      !columns.some(c=>key(c.name)===key(source)))
@@ -276,7 +312,7 @@ function validDate(raw){
  const d=new Date(raw+'T00:00:00Z');
  return !Number.isNaN(d.valueOf())&&d.toISOString().slice(0,10)===raw;
 }
-function valueAsType(raw,type,config={}){
+function valueAsType(raw,type,config={},extendedReferences=false){
  const text=clean(raw);
  if(!text)return null;
  if(['phone','rating','percentage'].includes(type)){
@@ -293,7 +329,10 @@ function valueAsType(raw,type,config={}){
   if(/^(false|no|0)$/i.test(text))return false;
   deny('A checkbox accepts only yes/no, true/false or 1/0.');
  }
- forbidFormula(text);
+ // Literal worksheet/CSV cell text is inert board data. Excel formula cells
+ // are handled separately by the XLSX parser (cached values or warnings).
+ // Do not reject passwords, mentions, negative durations or other text merely
+ // because their first character resembles spreadsheet formula syntax.
  if(type==='date'){
   const date=normalizeImportDate(text);
   if(!date)deny('Date cells must contain a valid ISO, YYYY/MM/DD, or unambiguous day/month or month/day date.');
@@ -326,10 +365,16 @@ function valueAsType(raw,type,config={}){
   return found;
  }
  const limit=type==='long_text'?5000:type==='email'?320:type==='url'?2000:1000;
- if(text.length>limit)deny('A '+type+' cell exceeds '+limit+' characters.');
+ if(text.length>limit){
+  if(extendedReferences&&['text','long_text','url'].includes(type)&&
+     text.length<=65536&&(!['url'].includes(type)||/^https?:\/\/[^\s]+$/i.test(text)))
+   return {[EXTENDED_REF_KEY]:text};
+  deny('A '+type+' cell exceeds '+limit+' characters.');
+ }
  return text;
 }
-export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumns=false}={}){
+export function buildImportPlan({sheet,detail,mappings,group,matches,
+ allowColumns=false,extendedReferences=false}={}){
  if(!detail?.board||!Array.isArray(sheet?.headers)||!Array.isArray(sheet?.rows)||
   !Array.isArray(mappings)||mappings.length!==sheet.headers.length)
   deny('Import preview is incomplete.');
@@ -376,6 +421,8 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
   }
  }
  if(!primary)deny('Map exactly one title column.');
+ if(normalized.filter(mapping=>mapping.action!=='skip').length>30)
+  deny('The atomic import contract supports at most 30 mapped source columns. Map compatible sources into the available destinations or explicitly exclude the others.');
  if((detail.columns||[]).length+proposed.length>30)deny('Board maximum is 30 physical columns.');
  const destination=group?.action==='existing'&&validUuid(group.groupId)&&
   (detail.groups||[]).some(g=>g.id===group.groupId)?
@@ -429,7 +476,7 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    const raw=sourceRow[byHeader.get(source)];
    let value;
    try{value=mondayCheckboxes.has(source)?
-    mondayCheckboxCell(raw):valueAsType(raw,col.type,col.config);}
+    mondayCheckboxCell(raw):valueAsType(raw,col.type,col.config,extendedReferences);}
    catch(error){
     const original=String(raw??'').slice(0,96);
     deny(origin+' · column "'+source+'" · value "'+original+'": '+error.message,
@@ -466,11 +513,18 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,allowColumn
    }else previewNew++;
   }else previewNew++;
   rows.push(row);
-  readbackRows.push({title,values,outcome,itemId,baselineValues});
+  const readbackValues=Object.fromEntries(Object.entries(values).map(([source,value])=>
+   [source,value&&typeof value==='object'&&Object.hasOwn(value,EXTENDED_REF_KEY)?
+    value[EXTENDED_REF_KEY]:value]));
+  readbackRows.push({title,values:readbackValues,outcome,itemId,baselineValues});
  }
- if(rows.length<1||rows.length>5000)deny('Import requires 1–5,000 data rows.');
+ if(rows.length<1||rows.length>20000)deny('Import requires 1–20,000 data rows.');
  return {boardId:board.id,workspaceId:board.workspace_id,boardRevision:board.updated_at,
-  payload:{contract:IMPORT_CONTRACT,group:destination,mappings:normalized,
+  payload:{contract:extendedReferences?IMPORT_EXTENDED_CONTRACT:IMPORT_CONTRACT,group:destination,
+   // The atomic writer accepts 30 *active* source mappings. Excluded source
+   // columns never need to be transmitted; they remain visible in the wizard
+   // and cannot be excluded without an explicit user decision.
+   mappings:normalized.filter(mapping=>mapping.action!=='skip'),
    newColumns:proposed,rows,matches:{behavior,matchColumnId:matchId}},
   readback:{group:destination,baselineGroupIds:(detail.groups||[]).map(group=>group.id),
    baselineColumnIds:(detail.columns||[]).map(column=>column.id),
@@ -510,7 +564,8 @@ export async function executeBoardImport({api,auth,plan}={}){
   deny('Active signed board session could not be verified.',403);
  let receipt;
  try{
-  receipt=await api.rpc('wm_import_board_wizard_atomic',{
+  receipt=await api.rpc(plan.payload.contract===IMPORT_EXTENDED_CONTRACT?
+   'wm_import_board_wizard_extended_atomic':'wm_import_board_wizard_atomic',{
    p_board_id:plan.boardId,p_expected_updated_at:plan.boardRevision,p_payload:plan.payload
   });
  }catch(error){

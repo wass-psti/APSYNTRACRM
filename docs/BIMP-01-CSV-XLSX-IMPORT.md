@@ -126,3 +126,14 @@ The browser importer never evaluates Excel formulas. When a formula has a cached
 ### CP-BIMP-10 — Authoritative post-write readback
 
 The signed importer now validates its atomic receipt against the reviewed preview, then performs a fresh signed `wm_get_board` read before reporting success. It verifies created/updated/skipped counts, group and column creation, persisted item titles, mapped cell values, and preservation of skipped values. The existing app completion callback then reloads the board after the mutation RPC has invalidated its cached snapshot. A mismatched or unavailable post-write readback is treated as an uncertain committed outcome and cannot be blindly retried. See [CP-BIMP-10 acceptance notes](./CP-BIMP-10-IMPORT-ROUNDTRIP-ACCEPTANCE.md) for the remaining genuine browser and refresh acceptance boundary.
+
+
+### CP-BIMP-11 — Existing-board compatibility and empty Status handling
+
+- Existing physical columns created through the legacy/dedicated-board `col_*` key convention are now included in the import mapping catalogue alongside `custom:*` columns.
+- Hidden physical data columns remain valid import targets and are visibly marked as hidden in the mapping selector. Protected system fields (title, assignee and due date) remain excluded from generic import.
+- Same-name destinations are matched using actual target type/configuration and full source-value convertibility. A unique compatible destination is reused instead of proposing a duplicate column.
+- A completely empty source column has no choice-type evidence and defaults to text. An existing same-name Status column can be mapped as an empty no-op; if no destination exists, the importer proposes an ordinary text column rather than requiring unavailable Status labels.
+- Existing atomic import RPC, authorization, data validation, readback, and uncertain-outcome behavior remain unchanged.
+- No SQL, RPC, schema, RLS, role, permission, workspace, or deployment policy changes.
+- See [CP-BIMP-11 implementation and acceptance notes](./CP-BIMP-11-EXISTING-BOARD-COMPATIBILITY.md).
