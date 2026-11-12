@@ -81,11 +81,17 @@ export function tradeLinkDraftSaveFailureMessage(error,{committed=false}={}){
   return 'Save confirmation was interrupted. Retry unchanged inputs to reuse the same document ID, or refresh All Documents before changing the Draft.';
  return 'Save could not be confirmed. Retry unchanged inputs to reuse the same document ID, or refresh All Documents before changing the Draft.';
 }
-export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.randomUUID?.()}={}){
+export function parseTradeLinkDraftForm(fields,{
+ lineId=()=>globalThis.crypto?.randomUUID?.(),purpose='readiness'
+}={}){
  if(!fields||typeof fields.get!=='function')
   throw new ApiError('TradeLink Draft input is missing.',400);
  const value=k=>String(fields.get(k)??'').trim();
  const type=value('documentType');
+ // The signed Draft-write API permits incomplete quotation content. The
+ // separate submission workflow enforces commercial readiness. Preserve
+ // full validation for Preview and all existing non-quotation modules.
+ const incompleteQuotationSave=type==='quotation'&&purpose==='save';
  const physical=type==='packing'||type==='delivery';
  const priced=type==='esi'||type==='quotation'||type==='po';
  const draft={documentType:type,documentNumber:value('documentNumber')};
@@ -144,7 +150,7 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
   units.length,ids.length,serials.length,kinds.length);
  const anyLine=[...descriptions,...quantities,...prices,...units,...ids,...serials]
   .some(Boolean);
- if(physical||priced||anyLine){
+ if((physical||priced)&&!incompleteQuotationSave||anyLine){
   if(count<1||count>100)throw new ApiError('Invalid Draft line-item count.',400);
   draft.items=[];
   for(let index=0;index<count;index++){
@@ -210,7 +216,7 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
  if(priced){
   // Local submission-readiness previews only: these named reviewers are
   // not authoritative identities and do not authorize workflow actions.
-  if(!draft.customerName||!draft.items?.length)
+  if(!incompleteQuotationSave&&(!draft.customerName||!draft.items?.length))
    throw new ApiError('Commercial Draft needs a customer or supplier and a priced item.',400);
   if(type==='esi'){
    for(const key of ['customerTin','verifiedBy','approvedBy'])
@@ -218,9 +224,9 @@ export function parseTradeLinkDraftForm(fields,{lineId=()=>globalThis.crypto?.ra
   }else if(type==='quotation'){
    for(const key of ['customerEmail','customerPhone','validity',
     'deliveryCommitment','paymentTerms','approvedBy'])addText(key);
-   if((!draft.customerEmail&&!draft.customerPhone)||
+   if(!incompleteQuotationSave&&((!draft.customerEmail&&!draft.customerPhone)||
      !draft.validity||!draft.deliveryCommitment||
-     !draft.paymentTerms||!draft.approvedBy)
+     !draft.paymentTerms||!draft.approvedBy))
     throw new ApiError('Quotation readiness needs client contact, validity, delivery, payment terms and an intended approver.',400);
    if(draft.customerEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.customerEmail))
     throw new ApiError('Invalid Quotation contact email.',400);
@@ -253,7 +259,10 @@ export function prepareTradeLinkDraftCommand(view,fields,{
  if(!Number.isSafeInteger(expectedRevision)||expectedRevision<0)
   throw new ApiError('Invalid saved Draft revision.',409);
  const pending=view?.pendingCreateDraft;
- const draft=parseTradeLinkDraftForm(fields,{lineId:index=>pending?.items?.[index]?.id||lineId(index)});
+ const draft=parseTradeLinkDraftForm(fields,{
+  lineId:index=>pending?.items?.[index]?.id||lineId(index),
+  purpose:'save'
+ });
  const id=selected?.documentId||view?.pendingCreateId||documentId();
  if(!selected&&pending&&JSON.stringify(pending)!==JSON.stringify(draft))
   throw new ApiError('A previous save may have succeeded. Refresh All Documents before changing this Draft.',409);
@@ -1000,7 +1009,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
   '<div class="tl-reference-editor-content">'+referenceDraftTabs(type)+
   renderModuleGuidance(type)+
-  '<form data-tradelink-draft-form>'+
+  '<form data-tradelink-draft-form'+(type==='quotation'?' novalidate':'')+'>'+
    // Retain existing module form control for source contract/tests. The
    // horizontal tab links are the visible accessible module switcher.
    '<div class="tl-reference-sr-only"><label class="tl-draft-field"><span>Document module</span>'+
@@ -1100,7 +1109,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
-    'Not saved. Complete required fields before saving.</p>'+
+    (type==='quotation'?
+     'Not saved. Save Draft can preserve incomplete Quotation details; Preview checks submission readiness.':
+     'Not saved. Complete required fields before saving.')+'</p>'+
    renderTradeLinkDraftLocalSummary(type)+
   '</form></div></section>';
 }
