@@ -140,6 +140,7 @@ import {runSEC14SignedRead,sanitizeSEC14SignedRead} from './frt-sec14-signed-acc
 import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-signed-denials.js';
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
+import {isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
@@ -919,6 +920,12 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
   ${engineeringUi&&state.edit&&canBulkEditBoard(b)?'<button type="button" class="secondary" data-action="bulk02-verify" '+(state.bulk02Busy?'disabled':'')+'>'+(
    state.bulk02Busy?'Checking signed permissions…':bulkReadyFor(b)?'✓ Bulk access verified':'Verify signed bulk access')+'</button>':''}
   ${hiddenGroups.length?'<button type="button" class="secondary" data-action="group-show-hidden">Show '+hiddenGroups.length+' hidden empty group'+(hiddenGroups.length===1?'':'s')+' (this browser)</button>':''}</div>
+  ${isFRTBoardReference(b)?'<div class="note" role="note" aria-label="Fund Released Tracker board mapping">'+
+   (frtReferenceColumns(state.board)?'Fund Released Tracker board preview: Status uses the existing Approval Status field and Date uses Request Date. ':
+    'Fund Released Tracker reference layout is pending verified source-column mapping.')+
+   'Person, Attachments, and Account QR Code are not yet mapped to persistent FRT backend fields. '+
+   'Existing source lineage, release, and finance data remain unchanged. '+
+   'Monday.com reference status labels (not activated as board actions): '+e(FRT_REFERENCE_STATUS_LABELS.join(' · '))+'.</div>':''}
   ${moduleKey==='tradelink'?'<p class="muted" role="note">Files is reserved for a secured attachment workflow. Uploads are not enabled yet.</p>':''}
   ${engineeringUi&&state.bulk02Result&&state.bulk02Result.boardId===b.id?
    '<div class="board-bulk-probe-summary" role="status" aria-live="polite">Signed bulk authorization: '+e(state.bulk02Result.status)+
@@ -4494,8 +4501,8 @@ async function openBoardStructure(){
   if(edit){
    openModal('Edit custom column',input('Column name','name',column.name)+
     select('Column type','type',BOARD_STRUCTURE_TYPES.map(t=>[t,t]),column.type)+
-    '<div class="field"><label for="modal-column-options">Choice options (Status / Dropdown only; one per line)</label>'+ 
-    '<textarea id="modal-column-options" name="options" maxlength="4100" rows="3">'+e(columnOptionLines(column))+'</textarea></div>'+ 
+    '<div class="field"><label for="modal-column-options">Choice options (Status / Dropdown only; one per line)</label>'+
+    '<textarea id="modal-column-options" name="options" maxlength="4100" rows="3">'+e(columnOptionLines(column))+'</textarea></div>'+
     '<div class="field"><label><input type="checkbox" name="visible" '+
     (column.visible?'checked ':'')+'/> Visible on board</label></div>',
     async fd=>{
