@@ -80,8 +80,14 @@ async function run(){
   const portNumber=Number(readFileSync(active,'utf8').split('\n')[0]);
   const base='http://127.0.0.1:'+portNumber;
   const url='http://127.0.0.1:'+server.address().port+path;
-  const target=await (await fetch(base+'/json/new?'+encodeURIComponent(url),{
-   method:'PUT',signal:AbortSignal.timeout(5000)})).json();
+  let target;
+  try{
+   target=await (await fetch(base+'/json/new?'+encodeURIComponent(url),{
+    method:'PUT',signal:AbortSignal.timeout(12000)})).json();
+  }catch(cause){
+   throw Object.assign(new Error('Chromium debugging endpoint was unavailable during startup'),
+    {code:'CHROME_STARTUP_TIMEOUT',cause});
+  }
   page=new Page(target.webSocketDebuggerUrl);await page.ready;
   await page.call('Runtime.enable');
   await until(()=>page.evaluate('!!window.bimp15Browser'));
@@ -133,4 +139,5 @@ async function run(){
   }
  }
 }
-run().catch(error=>{console.error(error);process.exitCode=1;});
+run().catch(error=>{console.error(error);
+ process.exitCode=error.code==='CHROME_STARTUP_TIMEOUT'?75:1;});
