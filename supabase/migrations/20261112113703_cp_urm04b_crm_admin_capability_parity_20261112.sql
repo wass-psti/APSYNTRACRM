@@ -207,7 +207,9 @@ BEGIN
   RAISE EXCEPTION 'admin required' USING ERRCODE='42501';END IF;$old$,
   $new$IF auth.uid() IS NULL THEN
   RAISE EXCEPTION 'admin required' USING ERRCODE='42501';END IF;
- PERFORM public.apsyntra_role_require_scope(p_workspace_id);$new$);
+ IF NOT private.tool_traceability_is_admin(p_workspace_id) THEN
+  PERFORM public.apsyntra_role_require_scope(p_workspace_id);
+ END IF;$new$);
  EXECUTE v_definition;
 END;
 $tool_traceability_role_assignment$;
