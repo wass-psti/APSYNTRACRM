@@ -97,6 +97,7 @@ import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete} from './board-inline-context.js';
 import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
+import {planBoardColumnRemoval} from './board-column-removal-plan.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board-window.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
@@ -4088,33 +4089,41 @@ function contextualColumnDelete(key){
  if(column.kind==='primary')
   throw new ApiError('The required Item column cannot be deleted.',403);
  const storedCount=columnStoredValueCount(state.board,column.id);
- const qaRecoveryEnabled=canStartB4QaRecoveryDeletion(state.board,column);
- const recoverable=storedCount>0&&qaRecoveryEnabled;
- const blocked=storedCount>0&&!qaRecoveryEnabled;
- const summary=blocked?
-  'This column has '+storedCount+' stored value row'+(storedCount===1?'':'s')+
-  '. It is not empty. The current server safely denies its deletion. '+
-  'Recoverable deletion requires an activated, tested private backup and restore contract. '+
-  'Nothing has been deleted; you may hide this column without losing its data.':
-  recoverable?
+ const plan=planBoardColumnRemoval({storedCount,
+  recoveryReady:canStartB4QaRecoveryDeletion(state.board,column)});
+ const summary=plan.kind==='hide-preserve'?
+  'This column contains '+storedCount+' stored cell row'+(storedCount===1?'':'s')+
+  '. To avoid deleting saved data, remove it from your board view instead. '+
+  'The column and every stored value remain unchanged and can be shown again using Columns. '+
+  'Permanent deletion with private recovery requires a separately activated server operation.':
+  plan.kind==='delete-recoverable'?
    'This column contains '+storedCount+' stored value row'+(storedCount===1?'':'s')+
-   '. Deletion will first store a private transactional recovery snapshot. '+
+   '. Deletion first stores a private transactional recovery snapshot. '+
    'Authorized managers can restore its original values from Board Activity.':
    'This custom column has zero stored value rows. '+
-   'Deletion removes only this column and records an Activity event.';
- openModal('Delete '+column.name+' column',
+   'Deletion removes the column and records an Activity event.';
+ openModal(plan.kind==='hide-preserve'?'Hide '+column.name+' column':
+   'Delete '+column.name+' column',
   '<p class="note security-note">'+e(summary)+'</p>'+
-  (blocked?'':input('Type DELETE '+column.name+' exactly','confirmation','')),
+  (plan.kind==='hide-preserve'?'':input('Type DELETE '+column.name+' exactly','confirmation','')),
   async fd=>{
    const fresh=await verifyInlineColumnBoard(snapshot);
    const target=resolveInlineColumn(fresh,key,{canManage:true});
    if(target.name!==column.name)
-    throw new ApiError('Column was renamed. Reopen deletion confirmation.',409);
+    throw new ApiError('Column was renamed. Reopen and review this action.',409);
    const valuesNow=columnStoredValueCount(fresh,target.id);
    if(valuesNow!==storedCount)
-    throw new ApiError('Stored column values changed. Refresh and review before deleting.',409);
+    throw new ApiError('Column values changed. Refresh and review before continuing.',409);
+   if(plan.kind==='hide-preserve'){
+    // The existing per-user board layout is reversible; no schema/record write.
+    if(!activeBoardLayout()?.columns.includes(key)||
+       BOARD_REQUIRED_COLUMNS.includes(key))
+     throw new ApiError('Column is no longer available in this board view.',409);
+    persistBoardLayout(p=>({...p,hidden:[...new Set([...p.hidden,key])]}));
+    render();toast('Column hidden from your view. Stored values were preserved.');return;
+   }
    const confirmation=confirmInlineColumnDelete(target,String(fd.get('confirmation')||''));
-   if(valuesNow>0){
+   if(plan.kind==='delete-recoverable'){
     await boardColumnRecovery.delete(fresh,target,confirmation);
    }else{
     try{
@@ -4123,9 +4132,7 @@ function contextualColumnDelete(key){
     }catch(error){throw explainColumnDeleteError(error);}
    }
    await loadBoard(snapshot.boardId,'items');
-  },{submitLabel:blocked?'Deletion unavailable':
-   recoverable?'Delete with recovery':'Delete empty column',
-   submitDisabled:blocked});
+  },{submitLabel:plan.submitLabel});
 }
 function contextualColumnCreate(){
  const snapshot=inlineColumnSnapshot();
