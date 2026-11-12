@@ -43,6 +43,7 @@ test('the existing signed revision-CAS contract persists the label and does not 
  assert.match(fn,/await boardStructureClient\.read\(origin\.boardId\)/);
  assert.match(fn,/verified\.primaryLabel!==text/);
  assert.match(fn,/deferVisibleBoardContent\(\)/);
+ assert.match(fn,/origin\.displayedLabel===text/);
  assert.doesNotMatch(fn,/wm_board_schema_mutate|delete.*column|db\.updateItem/);
 });
 test('header supports Enter save, Escape cancel and blur save without page loading',()=>{
@@ -84,4 +85,15 @@ test('signed primary label round-trip persists across an independent fresh setti
  assert.equal(afterReload.primaryLabel,'Asset Registry');
  assert.equal(boardGridColumns(detail,{primaryTitle:afterReload.primaryLabel})[0].title,'Asset Registry');
  assert.deepEqual(calls,['wm_board_ui_read','wm_board_ui_save','wm_board_ui_read']);
+});
+
+test('TimeTracker main group supports label-only customization without changing private attendance fields',async()=>{
+ const {renderTimeTrackerMainGroup,TIMETRACKER_MAIN_GROUP_HEADINGS} = await import('../time-tracker-main-group.js');
+ const html=renderTimeTrackerMainGroup({primaryTitle:'Staff Member',primaryEditable:true});
+ assert.match(html,/data-action="board-primary-label-edit"/);
+ assert.match(html,/>Staff Member<\/button>/);
+ assert.equal((html.match(/<th scope="col"/g)||[]).length,7);
+ assert.deepEqual(TIMETRACKER_MAIN_GROUP_HEADINGS,['Employee','Clock-In Time','Clock-In GPS',
+  'Clock-Out Time','Clock-Out GPS','Attendance Status','Working Duration']);
+ assert.doesNotMatch(renderTimeTrackerMainGroup(),/board-primary-label-edit/);
 });

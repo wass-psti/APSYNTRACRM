@@ -937,7 +937,9 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
   renderTimeTrackerMainGroup({groupId:g.id,groupItems:groupedItems.get(g.id)||[],
    boardColumns:state.board.columns||[],boardValues:state.board.values||[],
    projection:state.ttBoardAttendance,userId:state.context?.user_id,
-   workspaceId:state.context?.workspace_id,boardId:b.id}):
+   workspaceId:state.context?.workspace_id,boardId:b.id,
+   primaryTitle:state.boardUi?.status==='VERIFIED_READ'&&state.boardUi.revision>0?
+    primaryTitle:'Employee',primaryEditable}):
   moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable,footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
  ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}</div>`;
@@ -4069,7 +4071,7 @@ async function savePrimaryHeaderLabel(label,origin){
   throw new ApiError('Signed board management session changed.',403);
  if(settings.revision!==origin.revision)
   throw new ApiError('Column label was updated elsewhere. Refresh and retry.',409);
- if(settings.primaryLabel===text)return settings;
+ if(settings.primaryLabel===text&&origin.displayedLabel===text)return settings;
  const fresh=await db.board(origin.boardId);
  if(!sameScope()||fresh.board?.workspace_id!==origin.workspaceId||
     fresh.board.id!==origin.boardId||fresh.board.status!=='active')
@@ -4090,9 +4092,10 @@ function beginPrimaryHeaderEdit(button){
     !BOARD_STRUCTURE_ADMIN_ENABLED)return;
  const th=button.closest('th[data-column-key="record"]');
  if(!th||root.querySelector('[data-board-primary-label-editor]'))return;
- const previous=state.boardUi.primaryLabel;
+ const previous=button.textContent.trim();
  const origin={boardId:state.boardId,userId:auth.userId,
-  workspaceId:state.context?.workspace_id,revision:state.boardUi.revision};
+  workspaceId:state.context?.workspace_id,revision:state.boardUi.revision,
+  displayedLabel:previous};
  const input=document.createElement('input');
  input.type='text';input.maxLength=80;input.value=previous;
  input.className='board-primary-label-input';
@@ -4129,15 +4132,7 @@ function contextualColumnEditor(key){
  if(!snapshot||!state.boardManage)return;
  const column=resolveInlineColumn(state.board,key,{canManage:state.boardManage});
  if(column.kind==='primary'){
-  openModal('Rename Item column',
-   input('Main title column label','primaryLabel',state.boardUi?.primaryLabel||'Item'),
-   async fd=>{
-    const fresh=await verifyInlineColumnBoard(snapshot);
-    const settings=await boardStructureClient.read(snapshot.boardId);
-    await boardStructureClient.save(fresh,{...settings,
-     primaryLabel:String(fd.get('primaryLabel')||'')});
-    await loadBoard(snapshot.boardId,'items');
-   });
+  beginPrimaryHeaderEdit(root.querySelector('th[data-column-key="record"] .board-primary-label-button'));
   return;
  }
  const storedCount=columnStoredValueCount(state.board,column.id);

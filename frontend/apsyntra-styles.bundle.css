@@ -2533,12 +2533,12 @@
 }
 
 /* Inline primary header rename: one stable title identity on every board. */
-.board-table-custom .board-primary-label-button{border:0;background:transparent;color:inherit;
+.board-table .board-primary-label-button{border:0;background:transparent;color:inherit;
  font:inherit;font-weight:inherit;text-align:left;padding:2px 4px;border-radius:5px;
  cursor:text;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.board-table-custom .board-primary-label-button:hover{background:rgba(91,112,175,.10)}
-.board-table-custom .board-primary-label-button:focus-visible{outline:2px solid currentColor;outline-offset:1px}
-.board-table-custom .board-primary-label-input{width:min(155px,100%);min-width:72px;
+.board-table .board-primary-label-button:hover{background:rgba(91,112,175,.10)}
+.board-table .board-primary-label-button:focus-visible{outline:2px solid currentColor;outline-offset:1px}
+.board-table .board-primary-label-input{width:min(155px,100%);min-width:72px;
  box-sizing:border-box;padding:4px 5px;border:1px solid #6d83cf;border-radius:5px;
  font:inherit;color:inherit;background:var(--surface,#fff)}
 
