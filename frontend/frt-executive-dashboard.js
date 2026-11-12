@@ -32,7 +32,7 @@ function categoryChart(categories){
   categories.map(row=>{
    const width=Math.max(0,Math.min(100,amount(row.amount)/max*100));
    return '<div class="frt-exec-category-row" role="listitem"><span class="frt-exec-category-name" title="'+escape(row.category)+'">'+escape(row.category)+'</span>'+
-    '<span class="frt-exec-category-track"><i class="frt-exec-category-bar" style="width:'+width.toFixed(2)+'%"></i></span>'+
+    '<span class="frt-exec-category-track"><svg viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="14" rx="4" fill="#eaf0f8"/><rect x="0" y="0" width="'+width.toFixed(2)+'" height="14" rx="4" fill="#6485e8"/></svg></span>'+
     '<strong>'+money(row.amount)+'</strong></div>';
   }).join('')+'</div>';
 }
@@ -91,10 +91,10 @@ export function renderFRTExecutiveDashboard(result){
  const warning=utilization>90?
   '<div class="frt-exec-notice" role="alert">Budget utilization exceeds 90% — review spending controls.</div>':
   '<div class="frt-exec-notice frt-exec-notice-neutral" role="status">Financial metrics are based on the selected company’s signed FRT records.</div>';
- const legend=[['Pending Approval',count(s.pending),palette[2]],
-  ['In Progress',count(s.in_progress),palette[1]],
-  ['Completed',count(s.completed),palette[0]]].map(([label,value,color])=>
-   '<span class="frt-exec-legend-item"><i style="background:'+color+'"></i>'+label+' <b>'+value+'</b></span>').join('');
+ const legend=[['Pending Approval',count(s.pending),'blue'],
+  ['In Progress',count(s.in_progress),'orange'],
+  ['Completed',count(s.completed),'green']].map(([label,value,tone])=>
+   '<span class="frt-exec-legend-item"><i class="frt-exec-legend-dot frt-exec-legend-'+tone+'"></i>'+label+' <b>'+value+'</b></span>').join('');
  return '<section class="frt-exec" aria-label="Executive Dashboard" data-testid="frt-executive-dashboard">'+
   '<header class="frt-exec-header"><span class="frt-exec-heading-icon" aria-hidden="true">◎</span><div><h2>Executive Dashboard</h2><p>Real-time financial insights and performance metrics · '+escape(result.companyCode)+'</p></div></header>'+
   warning+'<div class="frt-exec-kpis">'+cardHtml+'</div>'+
@@ -104,7 +104,7 @@ export function renderFRTExecutiveDashboard(result){
   categoryChart(categories)+'</section></div>'+
   '<section class="frt-exec-panel frt-exec-trends"><header><h3>6-Month Financial Trends</h3><p>Requested versus actual liquidation spending</p></header>'+
   (trends.length?trendChart(trends):'<div class="frt-exec-chart-empty" role="status">No monthly trend data is available.</div>')+
-  '<div class="frt-exec-legend"><span class="frt-exec-legend-item"><i style="background:#2787d0"></i>Requested</span>'+
-  '<span class="frt-exec-legend-item"><i style="background:#f28a27"></i>Spent</span></div></section>'+
+  '<div class="frt-exec-legend"><span class="frt-exec-legend-item"><i class="frt-exec-legend-dot frt-exec-legend-blue"></i>Requested</span>'+
+  '<span class="frt-exec-legend-item"><i class="frt-exec-legend-dot frt-exec-legend-orange"></i>Spent</span></div></section>'+
   '<footer class="frt-exec-footnote">Total liquidated follows the existing FRT completed-request definition (Done / Closed). Budget utilization is total liquidated divided by total requested. Monthly spent values use submitted liquidation totals; expense categories use submitted request-item amounts. Source: signed, workspace- and company-scoped aggregate RPC. No recipient, banking, requester or request-level financial details are returned.</footer></section>';
 }
