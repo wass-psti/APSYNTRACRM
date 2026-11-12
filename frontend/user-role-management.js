@@ -28,7 +28,7 @@ export class UserRoleManagementClient {
   // Always verify the existing server-authorized workspace snapshot first. New optional
   // RPC availability must never bypass the central CRM Administrator scope guard.
   const d=await this.api.rpc('apsyntra_role_user_management_snapshot',{p_workspace_id:workspaceId});
-  if(d?.bootstrapVerified!==true||d.workspaceId!==workspaceId||
+  if(d?.adminVerified!==true||d.workspaceId!==workspaceId||
    !['users','modules','moduleAssignments','boards','boardAssignments'].every(x=>Array.isArray(d[x])))
    throw Error('Invalid server-authorized role management result');
   const workspaceScopeCountsAvailable=d.users.every(u=>
@@ -47,7 +47,7 @@ export class UserRoleManagementClient {
     return {...d,...scopeMetadata,crmPlatformRoles:[],crmPlatformUnavailable:true};
    throw error;
   }
-  if(crm?.bootstrapVerified!==true||crm.workspaceId!==workspaceId||
+  if(crm?.adminVerified!==true||crm.workspaceId!==workspaceId||
     !Array.isArray(crm.roles)||!crm.roles.every(r=>UUID.test(r.userId||'')&&
       APSYNTRA_CRM_PLATFORM_ROLES.includes(r.effectiveRole)&&
       (r.assignedRole===null||APSYNTRA_CRM_PLATFORM_ROLES.includes(r.assignedRole))))
@@ -123,13 +123,13 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   u.activeWorkspaceCount:null;
  const globalModuleRoleBlocked=activeWorkspaceCount===null||activeWorkspaceCount>1;
  html+='<section class="panel user-role-selected-panel user-role-entrance" aria-label="Selected user authorization"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>'+esc(accountRoleLabel(data,u))+'</span></div>'+
- '<div class="panel-body"><div class="settings-detail user-role-effective-summary"><label>Current CRM role / identity</label><strong>'+esc(accountRoleLabel(data,u))+'</strong></div>'+(u.protected||['admin_general_manager'].includes(u.platformRole)?
+ '<div class="panel-body"><div class="settings-detail user-role-effective-summary"><label>Current CRM role / identity</label><strong>'+esc(accountRoleLabel(data,u))+'</strong></div>'+(u.protected?
  '<div class="note security-note user-role-protected">Protected administrator — role modifications are intentionally disabled.</div>':
  '<div class="note user-role-helper">Select an application or board below to update this user’s actual role. Changes require explicit confirmation.</div>')+
  (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Material Request Hub uses a separate workspace-scoped role record; board access is also workspace-scoped.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
- const locked=!!u.protected||u.platformRole==='admin_general_manager'||busy;
+ const locked=!!u.protected||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
  html+='<div class="section-header user-role-section-header user-role-entrance"><strong>APSYNTRA CRM Platform Role</strong></div>'+
  '<div class="note security-note user-role-ceiling-note">This is the CRM-wide authorization ceiling. CRM tier assignments are workspace-specific, not changes to the inherited WatchdogWorkspace account role. Admin grants CRM administrative authority for the active workspace, not unrelated module assignments or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
