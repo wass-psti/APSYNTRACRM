@@ -4497,7 +4497,7 @@ async function action(name,button){
   const routeBoard=()=>location.hash.match(/^#\/boards\/([0-9a-f-]{36})(?:\/|$)/i)?.[1];
   if(routeBoard()!==selected)
    throw new ApiError('Board navigation is still updating. Retry import after the destination loads.',409);
-  const {openBoardImportWizard}=await import('./board-import-ui.js');
+  const {openBoardImportWizard}=await import('./board-import-ui.js?v=cp-bimp-17c-20261112');
   if(state.boardId!==selected||routeBoard()!==selected||
      !auth.isSignedIn||!canManuallyEditBoard(state.board?.board,state.edit))
    throw new ApiError('Board access changed before import opened.',403);

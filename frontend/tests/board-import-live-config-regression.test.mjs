@@ -126,3 +126,11 @@ test('extended URL reference not activated: incompatible source is surfaced with
  assert.equal(plan.payload.rows[0].values.Datasheets.__aps_extended_ref_v1,
   input.rows[0][1]);
 });
+
+
+test('CP-BIMP-17C the board import lazy module is versioned without changing the global app entrypoint',()=>{
+ const index=readFileSync('index.html','utf8');
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(index,/<script type="module" src="\.\/frontend\/app\.js"><\/script>/);
+ assert.match(app,/board-import-ui\.js\?v=cp-bimp-17c-20261112/);
+});
