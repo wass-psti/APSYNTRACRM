@@ -3,6 +3,8 @@ import {moduleByBoardName} from './board-manifest.js';
 import {isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColumn} from './material-sourcing-schema-plan.js';
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from './tradelink-board-items.js';
 import {boardTable} from './board-presentation.js';
+import {isFRTBoardReference,frtReferenceColumns,frtReferenceStatusLabel} from './frt-board-reference.js';
+import {configuredStatus} from './board-inline-items.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function boardItemsComplete(detail){
  const paging=detail?.pagination||detail?.page||{};
@@ -12,6 +14,8 @@ export function boardItemsComplete(detail){
  return total==null||Number(total)<=Number(detail?.items?.length||0);
 }
 export function boardGridColumns(detail,{primaryTitle=null,columnLabels={},allowCustom=false}={}){
+ const frt=frtReferenceColumns(detail,{primaryTitle:primaryTitle??'Item'});
+ if(frt)return frt;
  const tradeLink=tradeLinkGridColumns(detail);
  if(tradeLink)return tradeLink.map(c=>c.key==='record'?{...c,title:primaryTitle??'Item'}:c);
  const module=moduleByBoardName(detail?.board?.name);
@@ -60,10 +64,16 @@ export function boardGrid(detail,{groupId=null,layout=null,primaryTitle=null,col
   prepareBoardGrid(detail,{primaryTitle,columnLabels,allowCustom});
  const displayed=Array.isArray(groupItems)?groupItems:(groupId?items.filter(i=>i.group_id===groupId):items);
  const tradeLink=isTradeLinkBoard(detail?.board);
+ const frt=isFRTBoardReference(detail?.board)&&!!frtReferenceColumns(detail);
  const rows=displayed.map(item=>{
   const cells={record:'<button type="button" class="board-item-open" data-action="board-item-detail" data-id="'+escape(item.id)+'" aria-label="Open '+escape(item.title||'Untitled')+' details">'+escape(item.title||'Untitled')+'</button>',
    status:'<span class="status">'+escape(item.status??'—')+'</span>'};
   if(tradeLink)cells[TRADELINK_FILES_KEY]='—';
+  if(frt){
+   cells['frt:person']='<span title="Person field is not mapped to the FRT backend">Not configured</span>';
+   cells['frt:attachments']='<span title="FRT attachments are not yet mapped">Not configured</span>';
+   cells['frt:qr']='<span title="Account QR Code is not yet mapped">Not configured</span>';
+  }
   for(const col of visibleColumns){
    const value=lookup.get(item.id+':'+col.id);
    const shown=tradeLink?tradeLinkDisplayValue(col,value):value===null||value===undefined?'—':
@@ -71,7 +81,8 @@ export function boardGrid(detail,{groupId=null,layout=null,primaryTitle=null,col
     typeof value==='number'?String(value):
     typeof value==='string'?value:
     typeof value==='object'&&value&&value.start&&value.end?value.start+' – '+value.end:'—';
-   cells['col:'+col.id]=escape(shown);
+   cells['col:'+col.id]=escape(frt&&col.name==='Approval Status'?
+    frtReferenceStatusLabel(configuredStatus(value,col.config).label):shown);
   }
   return {itemId:item.archived_at?null:item.id,search:String(item.title||'').toLowerCase(),cells};
  });
