@@ -8,14 +8,16 @@ feature flag remain **OFF**. Do not merge or deploy to production without approv
 ## Implemented contract
 
 - `ws02d-invite`: verified GoTrue user, live session and owner-authorized
-  private `ws02d_issue` transaction, then provider-accepted email submission.
+  private `ws02d_issue` transaction with atomic, token-free delivery ledger preparation, then provider-accepted email submission.
   A fresh 32-byte random token is handled server-side only and sent in a
   recipient's one-use invitation link. Browser receipt has no token.
 - `ws02d-accept`: verified matching-email authenticated recipient; private
   `ws02d_accept` checks single use and expiry, then records workspace member.
   No automatic workspace switch or board grant.
 - `ws02d-manage`: workspace-scoped manager-only `list` and `revoke`,
-  using WS11 private routines.
+  using WS11 private routines. Listings additionally include manager-only
+  delivery statuses, where `submitted` means Resend HTTP submission accepted,
+  not mailbox delivery.
 - `bs09-board-access`: `change-board-access` for an **already verified
   active workspace member**, viewer grant/revoke on a single board (BS11).
   Group creation and new-recipient board invites are NOT implemented.
@@ -65,12 +67,18 @@ RLS-denied both locally and in production; verify normal signed RPC readers.
 2. Install candidate SQL **in staging only**, preserving default-off flags.
    Confirm exact function signatures, owner grants, active session checks,
    RLS, authenticated negative tests, and schema migration rollback.
-3. Harden send/delivery with a durable provider event ledger and reconciliation
-   worker: SQL issuance commits before mail provider call; a send failure or
-   timeout leaves a pending token **unrecoverable** from `ws02d_issue` alone
-   (idempotent replay intentionally does not return it). Do not claim email
-   delivery merely on provider API acceptance. Reissue requires controlled
-   revoke/replace; never auto-retry with a different request ID.
+3. A **candidate** private delivery ledger is now authored in
+   `sql/ws02d-invitation-delivery-ledger-STAGING-CANDIDATE.sql`. It atomically
+   prepares a status record in the issuance transaction, and records
+   `submitted`, `rejected`, or `uncertain` after the provider call. It
+   stores no token or acceptance URL. Idempotent replays never send a second
+   email. This is NOT yet deployed or end-to-end validated. When an Edge worker
+   dies after Resend accepts a message but before recording it, the ledger
+   remains `prepared`; that ambiguous state must be reconciled manually.
+   Before production activation, add operator recovery documentation, provider
+   webhook/status reconciliation and expired-invitation cleanup. Reissue
+   requires controlled revoke/replace and a fresh request ID; never auto-retry
+   a delivery with an unknown outcome.
 4. Validate GoTrue-authenticated POST requests to all four routes, including:
    expired/revoked token and session; wrong email; unverified account;
    workspace A/B cross-tenant attempts; duplicate request; revoked invitation;
@@ -91,3 +99,36 @@ RLS-denied both locally and in production; verify normal signed RPC readers.
 apply schema candidates to production, or merge this branch during preliminary
 review. At default settings, the new handlers respond 503 before reading
 sensitive payloads or modifying membership.
+
+
+## Local-only validation procedure (after pulling new PR commits)
+
+1. Stop the local `supabase functions serve` process. Pull the updated
+   `feat/ws02d-trusted-edge-staging` branch into the separate
+   `APSYNTRACRM-invites-test` clone, then copy the updated
+   `supabase/functions/_shared/ws02d-trusted.ts` file into the local
+   `apsyntra-baseline-sandbox` matching path. The existing four route
+   entrypoints need no changes for this pass.
+2. Open local Supabase Studio SQL Editor at `http://127.0.0.1:54323` and
+   apply ONLY the new `sql/ws02d-invitation-delivery-ledger-STAGING-CANDIDATE.sql`
+   contents to the sandbox. Do not reset the DB or use production/staging.
+3. Confirm `to_regclass('private.ws02d_invitation_delivery')` and
+   `to_regprocedure('private.ws02d_delivery_prepare(uuid,uuid,uuid)')`,
+   `to_regprocedure('private.ws02d_delivery_record(uuid,uuid,text,text)')`,
+   `to_regprocedure('private.ws02d_delivery_list(uuid)')` are non-null.
+4. Restart Edge serving. Re-run existing authorized `ws02d-manage` listing
+   using the owner JWT: `authorized=true`, previous invitations are present,
+   and `delivery=[]` is expected for invitations issued before the ledger.
+   Re-run employee cross-workspace denial: HTTP 403.
+5. Keep `private.ws02d_invitation_flags.enabled=false`. Do **not** set it
+   to true until the true email issuance/acceptance integration tests and
+   provider reconciliation have been planned and reviewed. Production remains
+   unchanged.
+
+### Deliberately excluded from this pass
+
+- Automatically resending invitation email after any provider error or timeout.
+- Declaring an email 'delivered' from provider HTTP submission alone.
+- Treating an accepted workspace invitation as a board access grant.
+- Exposing a direct browser SQL EXECUTE grant to invitation tables/functions.
+- Modifying production auth triggers, RLS, migrations or feature flags.
