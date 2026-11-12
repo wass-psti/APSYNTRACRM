@@ -47,8 +47,10 @@ import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-
 import {runFuelTrackSignedPreflight} from './fueltrack-v3-signed-preflight.js';
 import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js';
 import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile} from './fueltrack-v3-receipt-storage.js';
-import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns} from './tradelink-board-items.js';
-import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-application.js';
+import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns,
+ isTradeLinkBoard} from './tradelink-board-items.js';
+import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
+ searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-application.js';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
  closeTradeLinkSavedDocumentOutput} from './tradelink-saved-document-output.js';
 import {TradeLinkAttachmentClient,TL03_ATTACHMENTS_ENABLED}
@@ -840,7 +842,10 @@ function boardPage(){
  if(!state.board)return renderBoardLoadingError(state.error);
  const b=state.board.board;
  if(state.boardItemSearchBoard!==b.id){state.boardItemSearch='';state.boardItemSearchBoard=b.id;}
- const items=Array.isArray(state.board.items)?state.board.items:[];
+ // TradeLink Draft archives retain signed Board/audit records, but are not
+ // active Board items. Other boards keep their established archive presentation.
+ const items=isTradeLinkBoard(b)?searchTradeLinkBoardItems(state.board):
+  Array.isArray(state.board.items)?state.board.items:[];
  itemSelection.bind([state.context?.user_id,state.context?.workspace_id,state.boardId].join('|'),items.filter(i=>!i.archived_at).map(i=>i.id));
  const groups=Array.isArray(state.board.groups)?state.board.groups:[];
  // Partition once for every board type; preserve source order and ungrouped items.
