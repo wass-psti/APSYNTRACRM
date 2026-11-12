@@ -57,18 +57,18 @@ VALUES
 DO $privileges$
 BEGIN
  IF NOT has_function_privilege('authenticated',
-      'public.frt_board_financial_analytics_safe(uuid,text)','EXECUTE') OR
+      'public.frt_board_dashboard_safe(uuid,text)','EXECUTE') OR
     has_function_privilege('anon',
-      'public.frt_board_financial_analytics_safe(uuid,text)','EXECUTE') OR
+      'public.frt_board_dashboard_safe(uuid,text)','EXECUTE') OR
     has_function_privilege('authenticated','public.frt_requests','SELECT') OR
     has_table_privilege('authenticated','public.frt_request_items','SELECT') OR
     has_table_privilege('authenticated','public.frt_liquidations','SELECT') THEN
   RAISE EXCEPTION 'EXEC-02 function/table privilege boundary incorrect';
  END IF;
  IF (SELECT prosecdef FROM pg_proc
-     WHERE oid='public.frt_board_financial_analytics_safe(uuid,text)'::regprocedure) IS DISTINCT FROM true OR
+     WHERE oid='public.frt_board_dashboard_safe(uuid,text)'::regprocedure) IS DISTINCT FROM true OR
     (SELECT provolatile FROM pg_proc
-     WHERE oid='public.frt_board_financial_analytics_safe(uuid,text)'::regprocedure) IS DISTINCT FROM 's' THEN
+     WHERE oid='public.frt_board_dashboard_safe(uuid,text)'::regprocedure) IS DISTINCT FROM 's' THEN
   RAISE EXCEPTION 'EXEC-02 RPC must remain SECURITY DEFINER and STABLE';
  END IF;
 END;
@@ -85,8 +85,8 @@ BEGIN
  -- visibility; no elevated finance role is required for aggregate reads.
  PERFORM set_config('request.jwt.claim.sub',
   '00000000-0000-4000-8000-00000000000b',true);
- j:=public.frt_board_financial_analytics_safe(w,'WAO');
- IF jsonb_object_length(j)<>5 OR j->>'company_code'<>'WAO' OR
+ j:=public.frt_board_dashboard_safe(w,'WAO');
+ IF jsonb_object_length(j)<>10 OR j->>'company_code'<>'WAO' OR
     (j->>'requested_total')::numeric<>105215.50 OR
     (j->>'spent_total')::numeric<>32000.00 OR
     jsonb_array_length(j->'top_categories')<>3 OR
@@ -103,7 +103,7 @@ BEGIN
   RAISE EXCEPTION 'EXEC-02 six-month series is incomplete or duplicated';
  END IF;
  -- Other company in the same workspace returns only its own aggregates.
- j:=public.frt_board_financial_analytics_safe(w,'WASS');
+ j:=public.frt_board_dashboard_safe(w,'WASS');
  IF j->>'company_code'<>'WASS' OR
     (j->>'requested_total')::numeric<>12345.00 OR
     (j->>'spent_total')::numeric<>0 OR
@@ -114,7 +114,7 @@ BEGIN
  -- Existing GM/bootstrap role has the same aggregate read access.
  PERFORM set_config('request.jwt.claim.sub',
   '00000000-0000-4000-8000-00000000000a',true);
- j:=public.frt_board_financial_analytics_safe(w,'WAO');
+ j:=public.frt_board_dashboard_safe(w,'WAO');
  IF (j->>'requested_total')::numeric<>105215.50 THEN
   RAISE EXCEPTION 'EXEC-02 existing GM FRT membership parity failed';
  END IF;
@@ -123,7 +123,7 @@ BEGIN
   '00000000-0000-4000-8000-00000000000b',true);
  blocked:=false;
  BEGIN
-  PERFORM public.frt_board_financial_analytics_safe(
+  PERFORM public.frt_board_dashboard_safe(
    '00000000-0000-4000-8000-000000000002','WAO');
  EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
  END;
@@ -132,14 +132,14 @@ BEGIN
   '00000000-0000-4000-8000-00000000000c',true);
  blocked:=false;
  BEGIN
-  PERFORM public.frt_board_financial_analytics_safe(w,'WAO');
+  PERFORM public.frt_board_dashboard_safe(w,'WAO');
  EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
  END;
  IF NOT blocked THEN RAISE EXCEPTION 'EXEC-02 nonmember read was allowed'; END IF;
  PERFORM set_config('request.jwt.claim.sub','',true);
  blocked:=false;
  BEGIN
-  PERFORM public.frt_board_financial_analytics_safe(w,'WAO');
+  PERFORM public.frt_board_dashboard_safe(w,'WAO');
  EXCEPTION WHEN SQLSTATE '42501' THEN blocked:=true;
  END;
  IF NOT blocked THEN RAISE EXCEPTION 'EXEC-02 unsigned read was allowed'; END IF;
