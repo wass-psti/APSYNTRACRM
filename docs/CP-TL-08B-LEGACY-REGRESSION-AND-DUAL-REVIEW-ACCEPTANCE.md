@@ -43,12 +43,19 @@ Visual fixtures covered Quotation desktop/mobile, Payment desktop, Delivery desk
 - No production document was created, edited, approved, or deleted during this milestone.
 - The two reviewer accounts' real signed sessions and Board VIEW behavior have not yet been exercised end-to-end.
 
+## PR verification and release state
+
+- Draft PR #300 is open from `feat/cp-tl08-status-dual-validation-pdf`.
+- All 10 non-preview GitHub Actions checks passed, including the full frontend suite, CP-TL-03D reference UI and Chromium visual acceptance, the PostgreSQL 17/UI job, and the existing synthetic session/authorization workflows.
+- Supabase Preview was skipped because no Supabase preview branch was configured. The two migrations were separately applied to the existing project and verified through the migration ledger and function catalog.
+- The PR remains Draft; the frontend has not been merged or deployed.
+
 ## Acceptance still pending
 
 1. Use separate, genuine signed sessions for the manager and both assigned reviewers.
-2. Exercise Save → For Approval and explicit Save as Draft against an approved QA document fixture.
-3. Verify the first reviewer timestamp, second reviewer timestamp, atomic Approved transition, duplicate handling, and refresh persistence.
+2. Obtain explicit approval for a clearly labeled temporary production QA document before creating or changing production business records.
+3. Exercise Save → For Approval and explicit Save as Draft; verify the first reviewer timestamp, second reviewer timestamp, atomic Approved transition, duplicate handling, and refresh persistence.
 4. Verify the approved-only print action and subsequent status update against the refreshed saved record and Board projection.
-5. Complete PR checks, merge, deploy the frontend, and repeat the signed-user smoke test on the deployed Pages application.
+5. Merge, deploy the frontend, and repeat the signed-user smoke test on the deployed Pages application.
 
 A production document mutation is deliberately not used as a test fixture without separate approval. This preserves existing business records while the automated and visual acceptance evidence is completed.
