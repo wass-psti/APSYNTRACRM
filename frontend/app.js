@@ -4086,7 +4086,8 @@ function contextualColumnEditor(key){
    parseChoiceConfig(update.type,fd.get('options'),sameType?target.config:{}):
    sameType?target.config:{};
   await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
-   name:update.name,type:update.type,config,visible:update.visible});
+   name:update.name,type:update.type,config,visible:update.visible},
+   {verifiedManagerPreflight:true});
   await loadBoard(snapshot.boardId,'items');
  });
 }
