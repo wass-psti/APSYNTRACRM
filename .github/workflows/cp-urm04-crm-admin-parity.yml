@@ -1,4 +1,4 @@
-name: CP-URM-04 CRM Administrator parity (staged)
+name: CP-URM-04B CRM Administrator capability parity
 on:
   pull_request:
     paths:
@@ -13,15 +13,8 @@ on:
       - 'frontend/tests/user-role-experience.test.mjs'
       - 'frontend/tests/time-tracker-team.test.mjs'
       - 'frontend/tests/role-configuration-client.test.mjs'
-      - 'sql/tests/cp-urm04b-*'
-      - 'supabase/migrations/*cp_urm04b*'
-      - 'scripts/cp-urm04b-*'
-      - 'frontend/user-role-management.js'
-      - 'frontend/time-tracker-native.js'
-      - 'frontend/tests/user-role-management.test.mjs'
-      - 'frontend/tests/user-role-experience.test.mjs'
-      - 'frontend/tests/time-tracker-team.test.mjs'
-      - 'frontend/tests/role-configuration-client.test.mjs'
+      - 'frontend/tests/crm-platform-rbac.test.mjs'
+
       - 'scripts/cp-urm04-*'
       - 'frontend/app.js'
       - 'frontend/data.js'
