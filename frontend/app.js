@@ -180,7 +180,7 @@ import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-c
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {UserRoleManagementClient,renderUserRoleManagement,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
-import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel} from './crm-role-context.js';
+import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
 const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'Status'},
@@ -4816,7 +4816,9 @@ async function action(name,button){
    if(!auth.isSignedIn||auth.userId!==actor||
       state.context?.workspace_id!==workspaceId)break;
    openWorkspaceSelector({id:workspaceId,name:workspaceName()},
-    {lifecycle:workspaceLifecycleClient,signedUserId:actor,creatorReceipt,onOpenCurrent:()=>{location.hash='#/overview';},
+    {lifecycle:workspaceLifecycleClient,signedUserId:actor,creatorReceipt,
+     activeCrmRole:currentSignedCrmRole(state.crmRoleSnapshot,state.context),
+     onOpenCurrent:()=>{location.hash='#/overview';},
      configurationEnabled:WS01_CONFIGURATION_ENABLED,
      invitationEnabled:WS02D_INVITE_CLIENT_ENABLED,
      sendInvitation:request=>workspaceInvitationClient.send(request),

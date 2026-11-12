@@ -256,6 +256,15 @@ function switchingUiReady(options={}){
   typeof options.lifecycle?.select==='function'&&
   typeof options.onWorkspaceSwitched==='function';
 }
+export function workspaceEntryRoleBadge(row,options={}){
+ if(!['owner','member','collaborator'].includes(row?.relation))return '';
+ const relationship=row.relation[0].toUpperCase()+row.relation.slice(1);
+ const crm=options.activeCrmRole;
+ const effective=row.active===true&&options.signedUserId===crm?.userId&&
+  row.id===crm?.workspaceId&&['admin','supervisor','employee','viewer'].includes(crm.effectiveRole)?
+  ' · CRM '+crm.effectiveRole[0].toUpperCase()+crm.effectiveRole.slice(1):'';
+ return (row.active?'Current · ':'')+relationship+effective;
+}
 function rowMarkup(row,options={}){
  // Row interaction opens signed metadata, not an unauthorized workspace switch.
  return '<div class="ws01-entry"><button type="button" class="ws01-entry-button"'+
@@ -266,7 +275,7 @@ function rowMarkup(row,options={}){
   '<strong>'+escape(row.name)+'</strong><small>'+escape(row.relation)+
   ' · '+(row.active?'Current signed workspace':switchingUiReady(options)?
    'Signed member workspace · server-verified switching':'Signed member workspace · switching unavailable')+'</small></span>'+
-  '<span class="ws01-entry-badge">'+(row.active?'Current · ':'')+escape(row.relation[0].toUpperCase()+row.relation.slice(1))+'</span></button></div>';
+  '<span class="ws01-entry-badge">'+(row.active?'Current · ':'')+escape(workspaceEntryRoleBadge(row,options))+'</span></button></div>';
 }
 function resultsMarkup(catalog,tab,query,options={}){
  const rows=visibleWorkspaces(catalog,{tab,query});
