@@ -84,3 +84,48 @@ test('reference-only dialogs retain disabled backend submission and signed membe
  assert.match(app,/enhanceFRTRequestWizard/);
  assert.match(app,/case 'frt-filing-toggle':/);
 });
+
+test('Executive Dashboard renders signed company-scoped counts and truthful financial-data states',()=>{
+ const html=renderFRTFinanceReadOnly({result:report,view:'executive'});
+ for(const value of ['Executive Dashboard','Requested','Liquidated','Budget Utilization',
+  'Pending Liquidation','Request Status Pipeline','Top 5 Expense Categories',
+  'Requested vs. Spent — Last 6 Months','not supplied by the current signed finance projection',
+  'frt-exec-grid','data-view="executive"'])assert.ok(html.includes(value),value);
+ assert.match(html,/Pending Liquidation[\s\S]*?7/);
+ assert.match(html,/13 completed[\s\S]*?18 in progress[\s\S]*?9 pending approval/);
+ assert.doesNotMatch(html,/923812|100000|999999|\b90%\s+warning/i);
+});
+
+test('OPEX and User Manual navigation are functional views without fabricated financial charts',()=>{
+ const opex=renderFRTFinanceReadOnly({result:report,view:'opex'});
+ assert.match(opex,/OPEX Analytics/);
+ assert.match(opex,/Top 5 Expense Categories/);
+ assert.match(opex,/six-month requested-versus-spent series is not supplied/i);
+ const manual=renderFRTFinanceReadOnly({result:report,view:'manual'});
+ assert.match(manual,/Fund Released Tracker — User Manual/);
+ assert.match(manual,/company selector/);
+});
+
+test('Executive Dashboard navigation exposes accessible native buttons and preserves tracker entry',()=>{
+ const html=renderFRTFinanceReadOnly({result:report,view:'executive'});
+ assert.match(html,/data-action="frt-finance-view" data-view="tracker"/);
+ assert.match(html,/data-action="frt-finance-view" data-view="executive"[^>]*aria-current="page"/);
+ assert.match(html,/data-action="frt-finance-view" data-view="opex"/);
+ assert.match(html,/data-action="frt-finance-view" data-view="manual"/);
+});
+
+
+test('app connects the selected FRT view to local navigation state without changing finance RPCs',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/frtFinanceView:'tracker'/);
+ assert.match(app,/view:state\.frtFinanceView/);
+ assert.match(app,/case 'frt-finance-view':/);
+ assert.match(app,/state\.frtFinanceView=next/);
+ assert.match(app,/\['tracker','executive','opex','manual'\]\.includes\(next\)/);
+});
+
+test('blocked signed result never renders an executive dashboard or financial KPI values',()=>{
+ const html=renderFRTFinanceReadOnly({result:{status:'BLOCKED',reason:'FRT_ACCESS_DENIED'},view:'executive'});
+ assert.match(html,/FRT_ACCESS_DENIED/);
+ assert.doesNotMatch(html,/frt-exec-dashboard|Budget Utilization|Top 5 Expense Categories/);
+});
