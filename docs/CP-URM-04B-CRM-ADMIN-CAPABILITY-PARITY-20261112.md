@@ -1,6 +1,7 @@
 # CP-URM-04B — CRM Administrator Capability Parity
 
 **Date:** 2026-11-12  
+**Applied Supabase migration version:** `20261112121235`  
 **Status:** Implementation and disposable PostgreSQL acceptance verified; production activation pending  
 **Scope:** CRM role administration, central application-role assignment entry points, and bootstrap identity separation.
 
