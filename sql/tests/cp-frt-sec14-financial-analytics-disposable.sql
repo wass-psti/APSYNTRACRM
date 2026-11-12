@@ -95,7 +95,7 @@ BEGIN
  PERFORM set_config('request.jwt.claim.sub',
   '00000000-0000-4000-8000-00000000000b',true);
  j:=public.frt_board_dashboard_safe(w,'WAO');
- IF jsonb_object_length(j)<>10 OR j->>'company_code'<>'WAO' OR
+ IF (SELECT count(*) FROM jsonb_object_keys(j))<>10 OR j->>'company_code'<>'WAO' OR
     (j->>'requested_total')::numeric<>105215.50 OR
     (j->>'spent_total')::numeric<>32000.00 OR
     jsonb_array_length(j->'top_categories')<>3 OR
