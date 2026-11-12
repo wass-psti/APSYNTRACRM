@@ -21,9 +21,9 @@ The browser continues to call the existing signed `frt_bootstrap`, `frt_board_da
 ## Aggregate definitions
 
 - **Requested total:** Sum of `frt_requests.total_amount` for the selected workspace/company, excluding archived requests. Request status does not exclude a request.
-- **Spent total:** Sum of `frt_liquidations.total_spent` for the selected workspace/company where `submitted_at IS NOT NULL`, excluding archived requests. Unsubmitted liquidation drafts are excluded. This represents submitted liquidation spend, not a verified bank transfer.
+- **Spent total:** Sum of `frt_liquidations.total_spent` for the selected workspace/company where `submitted_at IS NOT NULL`, excluding archived requests. Unsubmitted liquidation drafts are excluded. This represents the latest currently saved submitted liquidation snapshot per request, not a verified bank transfer. Resubmission replaces the prior liquidation snapshot; the current schema does not retain a complete historical revision ledger.
 - **Top 5 categories:** Sum of `frt_request_items.amount` grouped by trimmed `category`, excluding archived requests. This is requested line-item spend, not categorized liquidation spend.
-- **Six-month trend:** Requested values grouped by request `created_at` month; spent values grouped by liquidation `submitted_at` month. Missing months are returned as zero.
+- **Six-month trend:** Requested values grouped by request `created_at` month; spent values grouped by the latest saved liquidation `submitted_at` month. Missing months are returned as zero. Because a resubmission overwrites the prior liquidation snapshot, this trend is a current-record view, not a complete historical spend ledger.
 - **Budget utilization:** Remains unavailable. No authoritative company budget field or budget source was identified. No 90% warning is fabricated.
 - **Currency:** The current FRT schema does not provide a verified currency code. Amounts are displayed as decimal values without assuming a currency symbol.
 
