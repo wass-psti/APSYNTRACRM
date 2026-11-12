@@ -25,5 +25,16 @@ The targeted frontend fix adds `purpose:'save'` to quotation Draft parsing, allo
 - Quotation full Draft creation: live signed user, persisted content and Board projection VERIFIED.
 - Server-wide pagination: live activation and signed UI VERIFIED; disposable signed keyset and denial acceptance previously PASS.
 - Four new frontend unit cases, 274 TradeLink tests and 1,853 complete frontend tests PASS.
-- Post-deployment partial quotation edit and refreshed signed persistence: pending final acceptance at the time of this report.
+- Post-deployment partial quotation edit and refreshed signed persistence: **LIVE SIGNED VERIFIED** (details below).
 - Workflow submit/review/approval, PDF and attachments remain independently unactivated, and were not bypassed or changed.
+
+## Final post-deployment signed runtime closeout — VERIFIED
+
+- PR #269 merged as `a3f453c6e6bfb6af12fd0730667561b53c1d382d`; GitHub Pages deployment and main-branch frontend validation both PASS. Independently fetched deployed source and confirmed `incompleteQuotationSave` with `purpose:'save'`.
+- Used the already-authenticated Chromium profile to reopen the exact synthetic quotation at its signed Edit Draft route. Confirmed the new quotation-only `novalidate` form, clear Draft-save guidance, and unchanged normal line item/identity.
+- Deliberately cleared `paymentTerms`, `validity`, and `deliveryCommitment`, leaving the item and document number intact. HTML `checkValidity()` was **false** due to submission-readiness fields, but the legitimate **Save Draft** action was enabled and the signed server accepted the edit. All Documents showed revision **2**, with the same document and Board item IDs.
+- Independent read-only PostgreSQL confirmed revision 2, Draft state, matching item title, omitted three commercial terms, the preserved line item and synthetic remarks, and **2 signed domain events** (create and update).
+- Reloaded the signed browser, retrieved All Documents anew, observed revision 2, and reopened the exact Draft. Fields persisted empty and Save Draft remained enabled. Clicking **Preview** still yielded `invalid` with **“Check Payment terms. Nothing saved or transmitted.”** This demonstrates readiness is enforced only when relevant, and no additional document mutation occurs during Preview.
+- This acceptance used exactly **one** existing synthetic TradeLink QA document across create and edit. No real customer, operational document, credential, module role, RLS policy, external attachment or production workflow state was modified.
+
+**Disposition:** CP-TL-FUNC-02 complete within scoped acceptance. A real greater-than-50-document signed pagination session was not run because the authorized listing has only two active records; disposable PostgreSQL tests cover actual multi-page keyset behavior. Submit/Review/Approval/Completion/PDF/Attachments remain separate unactivated functionality, not part of this release.
