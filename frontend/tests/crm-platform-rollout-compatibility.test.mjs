@@ -5,7 +5,7 @@ import {UserRoleManagementClient,renderUserRoleManagement} from '../user-role-ma
 const W='00000000-0000-4000-8000-000000000001';
 const U='11111111-1111-4111-8111-111111111111';
 const legacy=()=>({
- workspaceId:W,bootstrapVerified:true,
+ workspaceId:W,adminVerified:true,bootstrapVerified:true,
  users:[{id:U,name:'Existing member',email:'member@example.invalid',platformRole:'employee',protected:false}],
  modules:[],moduleAssignments:[],boards:[{id:W,name:'Existing board'}],boardAssignments:[]
 });
@@ -42,8 +42,8 @@ test('unauthorized legacy bootstrap snapshot cannot call or fall back to CRM sna
 
 test('a PGRST202 error is not an authorization fallback when legacy snapshot is invalid',async()=>{
  const c=new UserRoleManagementClient({rpc:async(name)=>{
-  if(name==='apsyntra_role_user_management_snapshot')return {...legacy(),bootstrapVerified:false};
-  return {workspaceId:W,bootstrapVerified:true,roles:[]};
+  if(name==='apsyntra_role_user_management_snapshot')return {...legacy(),adminVerified:false,bootstrapVerified:false};
+  return {workspaceId:W,adminVerified:true,bootstrapVerified:true,roles:[]};
  }});
  await assert.rejects(()=>c.snapshot(W),/Invalid server-authorized/);
 });
@@ -61,7 +61,7 @@ test('non-missing backend failure is not reported as a disabled CRM feature',asy
 test('valid signed CRM data remains strict, no phantom role or privilege assignment',async()=>{
  const c=new UserRoleManagementClient({rpc:async(name)=>{
   if(name==='apsyntra_role_user_management_snapshot')return legacy();
-  return {workspaceId:W,bootstrapVerified:true,roles:[{
+  return {workspaceId:W,adminVerified:true,bootstrapVerified:true,roles:[{
    userId:U,inheritedRole:'employee',effectiveRole:'viewer',
    assignedRole:'viewer',updatedAt:'2026-10-31T00:00:00Z'
   }]};
