@@ -25,9 +25,12 @@ export const TL03_WORKFLOW_OPERATIONAL_ENABLED=false;
 // Independent signed electronic-PDF stage events require the separately
 // authorized backend candidate and real two-account negative acceptance.
 export const TL03_PDF_STAGE_ENABLED=false;
+// CP-TL-08 installs independent, assigned-user review timestamps and automatic approval.
+export const TL03_DUAL_REVIEW_ENABLED=true;
 const TYPES=new Set(['esi','packing','delivery','payment','quotation','po']);
-const STATES=new Set(['draft','submitted','under-review','revision-required',
- 'approved','rejected','completed','cancelled']);
+const STATES=new Set(['draft','for-approval','submitted','under-review','revision-required',
+ 'approved','rejected','completed','cancelled','under-negotiation','expired',
+ 'on-hold','won','lost','delivered','closed']);
 const OPS=new Set(['create','update','archive','restore']);
 const deny=(message,status=403)=>{throw new ApiError(message,status);};
 export function validateTradeLinkDraftEnvelope(value){
@@ -54,7 +57,7 @@ export function normalizeTradeLinkDomainReceipt(
  if(!validUuid(expectedId)||!OPS.has(operation)||!value||typeof value!=='object'||
   value.documentId!==expectedId||!validUuid(value.boardItemId)||
   !Number.isSafeInteger(value.revision)||value.revision<1||
-  (expectedState!=='draft'&&expectedState!=='revision-required')||
+  (!['draft','for-approval','revision-required'].includes(expectedState))||
   value.state!==expectedState||value.operation!==operation||
   typeof value.idempotent!=='boolean'||
   (expectedRevision!==null&&(
@@ -210,6 +213,23 @@ export class TradeLinkDomainClient{
   // General Manager module role beneath the centralized platform ceiling.
   return {actorId:actor.id,workspaceId:context.workspace_id};
  }
+ async reviewerSession(){
+  if(!this.api?.context||!this.api?.board||!this.api?.allowed||!this.api?.rpc||
+    !this.auth?.getVerifiedUser)deny('Signed TradeLink reviewer API unavailable.');
+  const [actor,context,detail,canView]=await Promise.all([
+   this.auth.getVerifiedUser(),this.api.context(),
+   this.api.board(TRADELINK_BOARD_ID),
+   this.api.allowed(TRADELINK_BOARD_ID,'view')
+  ]);
+  if(!validUuid(actor?.id)||actor.id!==this.auth.userId||
+    context?.user_id!==actor.id||context?.profile?.status!=='active'||
+    !validUuid(context.workspace_id))
+   deny('TradeLink reviewer identity or workspace changed.');
+  if(!isTradeLinkBoard(detail?.board)||
+    detail.board.workspace_id!==context.workspace_id||canView!==true)
+   deny('TradeLink Board view access is required for assigned review.');
+  return {actorId:actor.id,workspaceId:context.workspace_id};
+ }
  async list(limit=50){
   if(!TL03_DOMAIN_READS_ENABLED)deny('TradeLink domain reads await production activation.',503);
   if(!Number.isSafeInteger(limit)||limit<1||limit>100)
@@ -262,6 +282,92 @@ export class TradeLinkDomainClient{
         Date.parse(response.rows.at(-1).updatedAt))))
     deny('Invalid authorized TradeLink server page response.',409);
   return response;
+ }
+ async assignedDocuments(limit=50){
+  if(!TL03_DUAL_REVIEW_ENABLED)deny('Assigned TradeLink review is not activated.',503);
+  if(!Number.isSafeInteger(limit)||limit<1||limit>100)
+   deny('Assigned TradeLink document limit must be 1–100.',400);
+  const session=await this.reviewerSession();
+  const rows=await this.api.rpc('tl03_assigned_documents',{
+   p_board_id:TRADELINK_BOARD_ID,p_limit:limit});
+  if(!Array.isArray(rows)||rows.length>limit||rows.some(row=>
+    !validUuid(row?.documentId)||!validUuid(row?.boardItemId)||
+    !TYPES.has(row?.documentType)||!STATES.has(row?.workflowState)||
+    typeof row?.documentNumber!=='string'||!Number.isSafeInteger(row?.revision)||
+    row.revision<1||typeof row?.primaryEmail!=='string'||
+    typeof row?.secondaryEmail!=='string'||
+    !['primary','secondary'].includes(row?.assignedStage)||
+    typeof row?.updatedAt!=='string'||!Number.isFinite(Date.parse(row.updatedAt))||
+    (row.primaryAt!==null&&row.primaryAt!==undefined&&
+     (typeof row.primaryAt!=='string'||!Number.isFinite(Date.parse(row.primaryAt))))||
+    (row.secondaryAt!==null&&row.secondaryAt!==undefined&&
+     (typeof row.secondaryAt!=='string'||!Number.isFinite(Date.parse(row.secondaryAt))))))
+   deny('Invalid signed TradeLink assigned-document response.',409);
+  return rows.map(row=>({...row,archived:row.archived===true,
+   actorId:session.actorId,workspaceId:session.workspaceId}));
+ }
+ async readAssigned(documentId){
+  if(!TL03_DUAL_REVIEW_ENABLED)deny('Assigned TradeLink document reads are not activated.',503);
+  if(!validUuid(documentId))deny('Invalid assigned TradeLink document ID.',400);
+  const {workspaceId}=await this.reviewerSession();
+  const row=await this.api.rpc('tl03_document_read_assigned',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId});
+  return row===null?null:normalizeTradeLinkDomainRow(row,workspaceId,documentId);
+ }
+ async reviewStages({documentId}={}){
+  if(!TL03_DUAL_REVIEW_ENABLED)deny('TradeLink review timestamps are not activated.',503);
+  if(!validUuid(documentId))deny('Invalid TradeLink review document ID.',400);
+  await this.reviewerSession();
+  const result=await this.api.rpc('tl03_document_review_stages',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId});
+  const validStage=value=>value===null||value&&validUuid(value.actorId)&&
+   typeof value.assignedEmail==='string'&&typeof value.recordedAt==='string'&&
+   Number.isFinite(Date.parse(value.recordedAt));
+  if(!result||result.documentId!==documentId||
+   !Number.isSafeInteger(result.revision)||result.revision<1||
+   !STATES.has(result.state)||!validStage(result.primary)||
+   !validStage(result.secondary))
+   deny('Invalid signed TradeLink review-stage response.',409);
+  return result;
+ }
+ async updateStatus({documentId,expectedRevision,targetState}={}){
+  const allowed=new Set(['submitted','under-negotiation','expired','on-hold',
+   'won','lost','cancelled','delivered','closed']);
+  if(!TL03_DOMAIN_WRITES_ENABLED||!validUuid(documentId)||
+    !Number.isSafeInteger(expectedRevision)||expectedRevision<1||
+    !allowed.has(targetState))
+   deny('Invalid TradeLink status update.',400);
+  const session=await this.session();
+  const result=await this.api.rpc('tl03_document_status_update',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+   p_expected_revision:expectedRevision,p_target_state:targetState});
+  if(!result||result.documentId!==documentId||!validUuid(result.boardItemId)||
+    result.revision!==expectedRevision||result.state!==targetState||
+    typeof result.updatedAt!=='string'||!Number.isFinite(Date.parse(result.updatedAt))||
+    typeof result.idempotent!=='boolean')
+   deny('Signed TradeLink status receipt mismatch.',409);
+  return {...result,actorId:session.actorId,workspaceId:session.workspaceId};
+ }
+ async recordReviewStage({documentId,expectedRevision,stage}={}){
+  if(!TL03_DUAL_REVIEW_ENABLED)deny('Assigned TradeLink review is not activated.',503);
+  if(!validUuid(documentId)||!Number.isSafeInteger(expectedRevision)||
+    expectedRevision<1||!['primary','secondary'].includes(stage))
+   deny('Invalid TradeLink review-stage request.',400);
+  const session=await this.reviewerSession();
+  const result=await this.api.rpc('tl03_record_review_stage',{
+   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+   p_expected_revision:expectedRevision,p_stage:stage});
+  if(!result||result.documentId!==documentId||
+   !validUuid(result.boardItemId)||result.revision!==expectedRevision||
+   result.stage!==stage||!['for-approval','approved'].includes(result.state)||
+   typeof result.recordedAt!=='string'||!Number.isFinite(Date.parse(result.recordedAt))||
+   (result.primaryAt!==null&&result.primaryAt!==undefined&&
+    (typeof result.primaryAt!=='string'||!Number.isFinite(Date.parse(result.primaryAt))))||
+   (result.secondaryAt!==null&&result.secondaryAt!==undefined&&
+    (typeof result.secondaryAt!=='string'||!Number.isFinite(Date.parse(result.secondaryAt))))||
+   typeof result.idempotent!=='boolean')
+   deny('Signed TradeLink review receipt mismatch.',409);
+  return {...result,actorId:session.actorId,workspaceId:session.workspaceId};
  }
  async recordPdfStage({documentId,expectedRevision,stage}={}){
   if(!TL03_PDF_STAGE_ENABLED)
@@ -392,7 +498,8 @@ export class TradeLinkDomainClient{
    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId});
   return row===null?null:normalizeTradeLinkDomainRow(row,workspaceId,documentId);
  }
- async commit({documentId,expectedRevision,operation,draft=null,expectedState='draft'}={}){
+ async commit({documentId,expectedRevision,operation,draft=null,
+  expectedState='draft',initialState='for-approval'}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)
    deny('TradeLink domain mutations await approved central activation.',503);
   if(!validUuid(documentId)||!OPS.has(operation)||
@@ -400,15 +507,22 @@ export class TradeLinkDomainClient{
     (operation==='create'&&expectedRevision!==0)||
     (operation!=='create'&&expectedRevision<1)||
     (['archive','restore'].includes(operation)&&draft!==null)||
-    !['draft','revision-required'].includes(expectedState)||
-    (expectedState==='revision-required'&&operation!=='update'))
+    (['create','update'].includes(operation)&&
+     !['draft','for-approval'].includes(initialState))||
+    (['archive','restore'].includes(operation)&&
+     !['draft','revision-required'].includes(expectedState)))
    deny('Invalid TradeLink revision, operation or payload.',400);
   if(operation==='create'||operation==='update')validateTradeLinkDraftEnvelope(draft);
   await this.session();
-  const receipt=await this.api.rpc('tl03_document_commit',{
-   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
-   p_expected_revision:expectedRevision,p_operation:operation,p_data:draft});
+  const receipt=operation==='create'||operation==='update'?
+   await this.api.rpc('tl03_document_save',{
+    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+    p_expected_revision:expectedRevision,p_operation:operation,
+    p_data:draft,p_initial_state:initialState
+   }):await this.api.rpc('tl03_document_commit',{
+    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+    p_expected_revision:expectedRevision,p_operation:operation,p_data:draft});
   return normalizeTradeLinkDomainReceipt(receipt,documentId,operation,
-   expectedRevision,expectedState);
+   expectedRevision,operation==='create'||operation==='update'?initialState:expectedState);
  }
 }

@@ -145,7 +145,7 @@ test('All Documents presents print action only to authorized manager, no storage
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view,canManage:true});
  assert.match(html,/data-action="tradelink-document-print"/);
- assert.match(html,/Print \/ Save PDF/);
+ assert.match(html,/Print PDF/);
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view,canManage:false});
  assert.doesNotMatch(denied,/data-action="tradelink-document-print"/);

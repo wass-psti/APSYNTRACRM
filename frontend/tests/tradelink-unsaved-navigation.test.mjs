@@ -33,7 +33,7 @@ test('explicit Clear resets local dirty state but preserves no backend record',(
 test('hash and refresh guards do not leak draft content or block signed access revocation',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(source,/state\.tradeLinkDraft\.unsavedChanges=true/);
- assert.match(source,/unsavedChanges:false,error:'',message:'Signed Draft loaded/);
+ assert.match(source,/unsavedChanges:false,error:'',message:'Signed document loaded/);
  assert.match(source,/tradeLinkDraftHasUnsavedChanges\(state\.tradeLinkDraft\)/);
  assert.match(source,/location\.replace\(approvedRouteHash\)/);
  assert.match(source,/rejectedRouteHash===nextHash/);

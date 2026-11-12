@@ -42,9 +42,10 @@ test('foreign workspace, board or unknown document states fail closed',()=>{
   board_item_id:item,document_type:'quotation',workflow_state:'draft',
   revision:1,content:draft};
  assert.equal(normalizeTradeLinkDomainRow(row,workspace,id),row);
+ assert.equal(normalizeTradeLinkDomainRow({...row,workflow_state:'for-approval'},workspace,id).workflow_state,'for-approval');
  for(const changed of [{...row,workspace_id:id},
   {...row,board_id:id},{...row,revision:-1},
-  {...row,workflow_state:'for-approval'},{...row,content:[]}])
+  {...row,workflow_state:'unknown'},{...row,content:[]}])
   assert.throws(()=>normalizeTradeLinkDomainRow(changed,workspace,id));
 });
 test('read and write operations require a complete signed authorization client',async()=>{

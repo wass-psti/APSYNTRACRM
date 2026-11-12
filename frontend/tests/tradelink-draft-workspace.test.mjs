@@ -29,9 +29,9 @@ test('dark-launch UI is routed inside the existing signed TradeLink app',()=>{
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'drafts',
   draftView:initialTradeLinkDraftView(),canManage:true});
  assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts\/quotation"/);
- assert.match(html,/Save Draft/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.match(html,/data-tradelink-draft-form/);
- assert.match(html,/data-action="tradelink-draft-preview"/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/data-action="tradelink-draft-refresh"/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/data-action="tradelink-draft-archive"[^>]*>Archive/);
@@ -47,15 +47,16 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
   const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:module.key,canManage:true});
   const href='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+module.key;
   assert.ok(html.includes('href="'+href+'"'),module.label);
-  assert.match(html,/Prepare a local/);
+  assert.match(html,/Prepare a /);
   const view=initialTradeLinkDraftView(module.key);
   assert.deepEqual(view.formValues,{documentType:module.key});
   const editor=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
   assert.ok(editor.includes('<option value="'+module.key+'" selected>'),module.label);
-  assert.match(editor,/data-action="tradelink-draft-preview"/);
+  assert.match(editor,/data-action="tradelink-draft-submit"/);
   assert.match(editor,/data-action="tradelink-draft-submit"/);
   const examples={
    packing:{customerName:'Consignee',referenceNumber:'SO-7',
+    verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
     lineDescription:'Packed item',lineQuantity:'2',lineUnit:'box'},
    delivery:{customerName:'Recipient',referenceNumber:'SO-7',
     lineDescription:'Delivered item',lineQuantity:'1',lineUnit:'pc',
@@ -142,6 +143,7 @@ test('Packing List local readiness uses source reference, consignee and nonprice
  assert.match(html,/data-action="tradelink-draft-submit"/);
  const sample={documentType:'packing',documentNumber:'PL-001',
   customerName:'Receiving company',referenceNumber:'SO-001',
+  verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
   lineDescription:'Parts',lineQuantity:'3',lineUnit:'box'};
  const draft=parseTradeLinkDraftForm(fields(sample),{lineId:()=> 'item-1'});
  assert.equal(draft.items[0].unitPrice,0);
@@ -302,7 +304,7 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
   const output=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
    view:initialTradeLinkDraftView(type),canManage:true});
   assert.match(output,/data-action="tradelink-draft-submit"/);
-  assert.match(output,/data-action="tradelink-draft-preview"/);
+  assert.match(output,/data-action="tradelink-draft-submit"/);
  }
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
@@ -646,7 +648,7 @@ test('six TradeLink modules render bounded hidden local document previews only',
   assert.match(html,/Validated local Draft summary · not saved/);
   assert.match(html,/Nothing was transmitted/);
   assert.match(html,/data-action="tradelink-draft-submit"/);
-  assert.match(html,/data-action="tradelink-draft-preview"/);
+  assert.match(html,/data-action="tradelink-draft-submit"/);
  }
  const invalid=renderTradeLinkDraftWorkspace({detail,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   view:initialTradeLinkDraftView('esi'),canManage:true});
@@ -993,7 +995,7 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  assert.match(app,/board\.items\?\.some\(item=>item\.id===receipt\.boardItemId/);
  assert.match(app,/location\.hash='#\/boards\/'\+TRADELINK_BOARD_ID\+'\/tradelink\/documents'/);
  assert.match(app,/root\.querySelector\('\[data-tradelink-draft-form\]'\)\?\.requestSubmit\(\)/);
- assert.match(ui,/return renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage\}\)/);
+ assert.match(ui,/return renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail\}\)/);
  assert.match(draft,/data-action="tradelink-document-open"/);
  assert.match(draft,/renderTradeLinkSavedDocumentPreview/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
@@ -1009,7 +1011,7 @@ test('dark launch never renders stale selected document content after read acces
  assert.doesNotMatch(html,/<img src=x/);
  assert.doesNotMatch(html,/<img src=x onerror=alert/);
  assert.match(html,/&lt;img src=x onerror=alert/);
- assert.match(html,/Editing saved Draft/);
+ assert.match(html,/Editing saved document/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/saved successfully/i);
 });

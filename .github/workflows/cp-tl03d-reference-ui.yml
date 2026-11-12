@@ -4,16 +4,26 @@ on:
     branches:
       - feature/cp-tl03d-reference-ui-20261107
     paths:
+      - 'frontend/app.js'
       - 'frontend/tradelink-application.js'
+      - 'frontend/tradelink-domain-client.js'
       - 'frontend/tradelink-draft-workspace.js'
+      - 'frontend/tests/tradelink-dual-review-approval.test.mjs'
+      - 'supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql'
+      - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
       - 'frontend/tradelink-reference-ui.css'
       - 'frontend/tests/tradelink-reference-ui.test.mjs'
       - 'index.html'
       - '.github/workflows/cp-tl03d-reference-ui.yml'
   pull_request:
     paths:
+      - 'frontend/app.js'
       - 'frontend/tradelink-application.js'
+      - 'frontend/tradelink-domain-client.js'
       - 'frontend/tradelink-draft-workspace.js'
+      - 'frontend/tests/tradelink-dual-review-approval.test.mjs'
+      - 'supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql'
+      - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
       - 'frontend/tradelink-reference-ui.css'
       - 'frontend/tests/tradelink-reference-ui.test.mjs'
       - 'index.html'

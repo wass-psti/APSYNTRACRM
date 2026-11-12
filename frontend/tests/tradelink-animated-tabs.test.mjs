@@ -10,7 +10,7 @@ const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLin
 
 test('all three navigation tabs expose a single shared animated indicator',()=>{
  for(const section of ['drafts','documents']){
-  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section});
+  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section,canManage:true});
   assert.equal((html.match(/tl-reference-active-indicator/g)||[]).length,1);
   assert.match(html,/data-tl-tab="create"/);
   assert.match(html,/data-tl-tab="documents"/);

@@ -15,6 +15,7 @@ const moduleInputs={
   validity:'30 days',deliveryCommitment:'Within 14 days',paymentTerms:'Net 30',
   approvedBy:'asenagan@watchdogautomation.com.ph',lineDescription:'Service',lineQuantity:'2',lineUnitPrice:'150'},
  packing:{customerName:'Consignee',referenceNumber:'SO-7',
+  verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph',
   lineDescription:'Packed item',lineQuantity:'2',lineUnit:'box'},
  delivery:{customerName:'Recipient',referenceNumber:'SO-7',
   lineDescription:'Delivered item',lineQuantity:'1',lineUnit:'pc',
@@ -81,7 +82,7 @@ test('signed post-commit success requires persisted content parity before showin
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const guard=source.indexOf('!tradeLinkSavedDraftMatches(record,draft)');
  const receipt=source.indexOf('const receipt=await tradeLinkDraftWorkspace.save(');
- const success=source.indexOf("toast('Saved Draft. Document and Board item verified.')");
+ const success=source.indexOf("toast('Document saved. Board item and All Documents verified.')");
  assert.ok(receipt>0&&guard>receipt&&success>guard);
  assert.match(source,/tradeLinkDraftSaveFailureMessage\(err,\{committed\}\)/);
  assert.doesNotMatch(source,/JSON\.stringify\(record\.content\)===JSON\.stringify\(draft\)/);
