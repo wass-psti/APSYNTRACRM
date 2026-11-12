@@ -10,6 +10,7 @@ function encodeQuery(input){return new URLSearchParams(input).toString();}
 const BOARD_READ_RPC=new Set([
  'wm_get_board','wm_auth_access_context','work_board_access','wm_list_boards',
  'wm_board_ui_read','wm_list_board_events','wm_list_board_events_page',
+ 'wm_import_extended_refs_read',
  'tl03_documents_page',
  'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
  'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read'
@@ -22,6 +23,7 @@ export class DomainApi {
   this.boardReadCache=new Map();
   this.boardReadGeneration=0;
   this.onBoardMutation=null;
+  this.extendedRefsSupported=null;
  }
  invalidateBoardCache(boardId=null,{revision=null}={}){
   if(boardId!==null){
@@ -124,6 +126,27 @@ export class DomainApi {
  async board(boardId){
    const data=await this.rpc('wm_get_board',{p_board_id:requireUuid(boardId)});
    if(!data?.board)throw new ApiError('Board was not found or is unavailable.',404);
+   if(this.extendedRefsSupported!==false){
+    try{
+     const refs=await this.rpc('wm_import_extended_refs_read',{p_board_id:boardId});
+     if(!Array.isArray(refs))throw new ApiError('Extended reference read response is invalid.',409);
+     if(!Array.isArray(data.values))throw new ApiError('Board values are unavailable.',409);
+     const keys=new Set(data.values.map(v=>v.item_id+':'+v.column_id));
+     for(const ref of refs){
+      if(!validUuid(ref.item_id)||!validUuid(ref.column_id)||
+         typeof ref.value!=='string'||keys.has(ref.item_id+':'+ref.column_id))
+       throw new ApiError('Extended reference conflicts with a board cell.',409);
+      keys.add(ref.item_id+':'+ref.column_id);
+      data.values.push({item_id:ref.item_id,column_id:ref.column_id,value:ref.value});
+     }
+     this.extendedRefsSupported=true;
+    }catch(error){
+     // Old production projects do not have m143-v2. Cache a missing-function
+     // capability result, but NEVER silently bypass a signed access denial.
+     if(error?.status===404||error?.code==='PGRST202')this.extendedRefsSupported=false;
+     else throw error;
+    }
+   }
    return data;
  }
  async allowed(boardId,required='view'){

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {initialImportMappings,buildImportPlan} from '../board-import-core.js';
+import {initialImportMappings,buildImportPlan,inferImportType} from '../board-import-core.js';
 import {importMappingReadiness,skipPendingImportChoice,
  matchConfiguredImportChoice} from '../board-import-readiness.js';
 
@@ -97,4 +97,22 @@ test('the mapping UI exposes resolve and skip controls instead of a dead-end Nex
  assert.match(ui,/data-imp="review-choice"/);
  assert.match(css,/\.aps-import-resolve/);
  assert.match(css,/\.aps-import-notice/);
+});
+
+test('empty Status source maps to existing Status or an ordinary text column without choice setup',()=>{
+ const statusId='55555555-5555-4555-8555-555555555555';
+ const emptySheet={headers:['Name','Status'],rows:[['Alpha',''],['Beta','  ']]};
+ assert.equal(inferImportType('Status',['','']),'text');
+ const existing={...detail,columns:[{id:statusId,name:'Status',data_type:'status',
+  column_key:'col_status',system_key:'status',visible:false,config:{labels:[]}}]};
+ const mapped=initialImportMappings(emptySheet,existing,{canCreate:true});
+ assert.equal(mapped[1].action,'existing');
+ assert.equal(mapped[1].columnId,statusId);
+ const plan=buildImportPlan({sheet:emptySheet,detail:existing,mappings:mapped,group,allowColumns:true});
+ assert.equal(plan.payload.newColumns.length,0);
+ assert.deepEqual(plan.payload.rows.map(row=>row.values),[{},{}]);
+ const noStatus=initialImportMappings(emptySheet,detail,{canCreate:true});
+ assert.equal(noStatus[1].action,'create');
+ assert.equal(noStatus[1].columnType,'text');
+ assert.equal(importMappingReadiness(noStatus,true).pendingChoices.length,0);
 });

@@ -4492,8 +4492,15 @@ async function action(name,button){
   if(!activeBoardLayout()||!canManuallyEditBoard(state.board?.board,state.edit))
    throw new ApiError('Import is limited to signed ordinary-board editors.',403);
   const selected=state.boardId;
+  // A route transition can update the browser hash before the previous
+  // toolbar is replaced. Never open an old board's import wizard over the
+  // next board; this is navigation synchronization, not a new access rule.
+  const routeBoard=()=>location.hash.match(/^#\/boards\/([0-9a-f-]{36})(?:\/|$)/i)?.[1];
+  if(routeBoard()!==selected)
+   throw new ApiError('Board navigation is still updating. Retry import after the destination loads.',409);
   const {openBoardImportWizard}=await import('./board-import-ui.js');
-  if(state.boardId!==selected||!auth.isSignedIn||!canManuallyEditBoard(state.board?.board,state.edit))
+  if(state.boardId!==selected||routeBoard()!==selected||
+     !auth.isSignedIn||!canManuallyEditBoard(state.board?.board,state.edit))
    throw new ApiError('Board access changed before import opened.',403);
   await openBoardImportWizard({api:db,auth,boardId:selected,onComplete:async receipt=>{
    if(state.boardId===selected){await loadBoard(selected,'items');toast('Imported '+receipt.created+' items; updated '+receipt.updated+'.');}

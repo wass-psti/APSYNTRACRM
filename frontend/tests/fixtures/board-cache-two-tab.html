@@ -21,6 +21,7 @@ function setup(userId,workspaceId,token='synthetic-token'){
    return response.json();
   }};
  api=new DomainApi(auth);
+ api.extendedRefsSupported=false; // This fixture intentionally serves legacy m143-v1 only.
  channel=new BoardCacheChannel({auth,onInvalidate:({boardId,revision})=>{
   if(!api.invalidateBoardCache(boardId,{revision}))return;
   activity.updates.push({boardId,revision});
