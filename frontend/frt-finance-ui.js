@@ -50,6 +50,9 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
    ' <button type="button" class="secondary" data-action="frt-date-edit" data-request-id="'+
     escape(r.requestId)+'" aria-label="Edit date needed for '+escape(r.title)+'">Edit date</button>':'')+'</td><td>'+
   (typeof r.requestId==='string'?
+    (['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER'].includes(result.role)?
+     '<button type="button" class="secondary" data-action="frt-person-edit" data-request-id="'+
+      escape(r.requestId)+'" aria-label="Assign person for '+escape(r.title)+'">Person</button> ':'')+
     '<button type="button" class="secondary" data-action="frt-finance-detail" data-request-id="'+
     escape(r.requestId)+'" '+(detailBusy?'disabled':'')+'>'+
     (r.requestId===selectedRequestId?'Selected':'View details')+'</button>':

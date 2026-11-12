@@ -17,10 +17,10 @@ const fixture=({role='FINANCE_MANAGER',stale=false,denied=false,emptyReceipt=fal
     user_id:user,workspace_id:ws,role},companies:[{code:'PSTI'}]};
    if(name==='frt_restricted_request_detail')return {id,workspace_id:ws,
     company_code:wrongCompany?'WASS':'PSTI',archived_at:null,date_needed:currentDate};
-   if(name==='frt_update_request'){
+   if(name==='frt_update_request_date_cas'){
     if(denied)throw Object.assign(Error('Denied'),{status:403});
-    if(!postMismatch)currentDate=args.p_payload.dateNeeded;
-    return emptyReceipt?{}:{ok:true};
+    if(!postMismatch)currentDate=args.p_next_date;
+    return emptyReceipt?{}:{ok:true,dateNeeded:args.p_next_date};
    }
    throw Error('unexpected RPC '+name);
   }};
@@ -38,23 +38,23 @@ test('signed FRT date edit uses existing domain RPC, one field only, then indepe
  const f=fixture();const result=await run(f);
  assert.deepEqual(result,{status:'SAVED',dateNeeded:'2026-11-15'});
  assert.deepEqual(f.calls.filter(x=>typeof x==='object').map(x=>x.name),[
-  'frt_bootstrap','frt_restricted_request_detail','frt_update_request','frt_restricted_request_detail']);
- assert.deepEqual(f.calls.find(x=>x.name==='frt_update_request').args,{
-  p_workspace_id:ws,p_request_id:id,p_payload:{dateNeeded:'2026-11-15'}});
- assert.doesNotMatch(JSON.stringify(f.calls),/service_role|amount|recipientBank|frt_request_action/);
+  'frt_bootstrap','frt_restricted_request_detail','frt_update_request_date_cas','frt_restricted_request_detail']);
+ assert.deepEqual(f.calls.find(x=>x.name==='frt_update_request_date_cas').args,{
+  p_workspace_id:ws,p_request_id:id,p_expected_date:'2026-11-12',p_next_date:'2026-11-15'});
+ assert.doesNotMatch(JSON.stringify(f.calls),/service_role|amount|recipientBank|frt_request_action|p_payload/);
 });
 test('no-op date change invokes no mutation',async()=>{
  const f=fixture();const result=await updateFRTRequestDate({...f,requestId:id,workspaceId:ws,
   companyCode:'PSTI',expectedRole:'FINANCE_MANAGER',expectedDate:'2026-11-12',
   nextDate:'2026-11-12',listedRequestIds:[id]});
  assert.equal(result.status,'UNCHANGED');
- assert.equal(f.calls.some(x=>x.name==='frt_update_request'),false);
+ assert.equal(f.calls.some(x=>x.name==='frt_update_request_date_cas'),false);
 });
 test('an existing request without a date can receive one without inventing a previous value',async()=>{
  const f=fixture();const read=f.api.rpc.bind(f.api);
  f.api.rpc=async(name,args)=>{
   const value=await read(name,args);
-  if(name==='frt_restricted_request_detail'&&!f.calls.some(x=>x.name==='frt_update_request'))
+  if(name==='frt_restricted_request_detail'&&!f.calls.some(x=>x.name==='frt_update_request_date_cas'))
    return {...value,date_needed:null};
   return value;
  };
@@ -74,13 +74,13 @@ test('unlisted request, invalid date and unauthorized role are blocked before RP
 test('expired/changed signed identity, company and member disallow writes',async()=>{
  for(const options of [{stale:true},{deniedMembership:true},{wrongCompany:true}]){
   const f=fixture(options);await assert.rejects(()=>run(f));
-  assert.equal(f.calls.some(x=>x.name==='frt_update_request'),false);
+  assert.equal(f.calls.some(x=>x.name==='frt_update_request_date_cas'),false);
  }
 });
 test('server denied, uncertain receipt, and post-write mismatch never claim success or retry',async()=>{
  for(const options of [{denied:true},{emptyReceipt:true},{postMismatch:true}]){
   const f=fixture(options);await assert.rejects(()=>run(f));
-  assert.equal(f.calls.filter(x=>x.name==='frt_update_request').length,1);
+  assert.equal(f.calls.filter(x=>x.name==='frt_update_request_date_cas').length,1);
  }
 });
 test('finance status filter is functional for signed rows; date edit appears only for existing domain editor roles',()=>{

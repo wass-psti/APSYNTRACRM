@@ -141,6 +141,7 @@ import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-sign
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {updateFRTRequestDate} from './frt-board-date-edit.js';
+import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
 import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
 import {isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
@@ -6496,6 +6497,41 @@ async function action(name,button){
      },null,2));
      toast('Nonsecret SEC07 result copied.');
    }catch{toast('Clipboard unavailable. Use the displayed result.',true);}
+   break;
+ }
+ case 'frt-person-edit':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||state.frtFinance?.status!=='PASS'||
+      !auth.isSignedIn)return;
+   const requestId=String(button?.dataset?.requestId||'');
+   const request=state.frtFinance.requests.find(r=>r.requestId===requestId);
+   if(!request||!['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER'].includes(state.frtFinance.role))return;
+   const companyCode=state.frtFinance.companyCode,role=state.frtFinance.role;
+   const workspaceId=state.context?.workspace_id,boardId=state.boardId;
+   const userId=auth.userId,seq=routeSerial;
+   const listedRequestIds=state.frtFinance.requests.map(r=>r.requestId);
+   try{
+    const snapshot=await loadFRTPersonAssignment({auth,api:db,requestId,workspaceId,
+     companyCode,role,listedRequestIds});
+    if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+       auth.userId!==userId||state.context?.workspace_id!==workspaceId)return;
+    const options='<option value="">Unassigned</option>'+snapshot.people.map(person=>
+     '<option value="'+e(person.id)+'"'+
+      (person.id===snapshot.assigneeId?' selected':'')+'>'+e(person.name)+'</option>').join('');
+    openModal('Assign FRT request person',
+     '<p class="note">'+e(request.title)+' — select an active workspace member.</p>'+
+     '<div class="field"><label for="frt-assignee">Person</label>'+
+     '<select id="frt-assignee" name="assignee">'+options+'</select></div>',async fd=>{
+      if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+         auth.userId!==userId||state.context?.workspace_id!==workspaceId||
+         state.frtFinance?.companyCode!==companyCode)
+       throw new ApiError('FRT view changed. Reopen person assignment.',409);
+      const raw=String(fd.get('assignee')||'');
+      await saveFRTPersonAssignment({auth,api:db,snapshot,
+       nextAssigneeId:raw||null,listedRequestIds:
+        state.frtFinance.requests.map(r=>r.requestId)});
+      await loadFRTFinance(companyCode);
+     },{submitLabel:'Save person',successMessage:'FRT person assignment saved and verified.'});
+   }catch(error){notice(error);}
    break;
  }
  case 'frt-date-edit':{
