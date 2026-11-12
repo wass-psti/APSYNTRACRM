@@ -1,12 +1,13 @@
-/** CP-FRT-SEC12: FRT board finance read-only UI; escape every server value. */
+/** FRT signed safe reads; only existing server-authorized date corrections mutate. */
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
 const count=v=>Number.isSafeInteger(v)&&v>=0?String(v):'—';
-export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null}={}){
+export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null,statusFilter='all'}={}){
  let html='<div class="page-head"><div><span class="label-top">Fund Released Tracker / Domain</span>'+
   '<h2>Financial requests</h2><p>Authoritative signed Supabase FRT snapshot. '+
-  'Read-only; no amounts, bank details or requester identities are displayed.</p></div>'+
+  'No amounts, bank details or requester identities are displayed. '+
+  'Date corrections use the existing signed FRT backend.</p></div>'+
   '<div class="head-actions"><button class="secondary" data-action="frt-finance-refresh" '+
   (busy?'disabled':'')+'>'+(busy?'Loading…':'↻ Refresh FRT')+'</button></div></div>';
  if(busy)return html+'<div class="panel"><div class="panel-body">Verifying FRT finance access…</div></div>';
@@ -28,15 +29,25 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
  const totals=[['Requests','total_requests'],['Pending approval','pending'],
   ['In progress','in_progress'],['Completed','completed'],
   ['Pending liquidation','pending_liquidation_count']];
+ const statuses=[...new Set((result.requests||[]).map(r=>r.status))].sort();
+ const filter=statusFilter==='all'||statuses.includes(statusFilter)?statusFilter:'all';
+ html+='<div class="toolbar" aria-label="FRT request filtering"><label for="frt-status-filter">Status</label>'+
+  '<select id="frt-status-filter" aria-label="Filter FRT requests by status">'+
+  '<option value="all">All statuses</option>'+statuses.map(s=>'<option value="'+escape(s)+'"'+
+   (filter===s?' selected':'')+'>'+escape(s.replaceAll('_',' ').toLowerCase())+'</option>').join('')+
+   '</select></div>';
  html+='<div class="stat-grid" aria-label="Authorized FRT request counts">'+
   totals.map(([label,key])=>'<div class="stat-card"><div class="stat-label">'+label+
    '</div><div class="stat-value">'+count(result.summary?.[key])+'</div></div>').join('')+
   '</div><div class="panel"><div class="panel-header"><h3>Recent FRT requests</h3>'+
-  '<span>Read-only · up to 100 entries displayed</span></div><div class="table-scroll"><table class="board-table">'+
+  '<span>Signed requests · up to 100 entries displayed</span></div><div class="table-scroll"><table class="board-table">'+
   '<thead><tr><th>Voucher</th><th>Request</th><th>Status</th><th>Date needed</th><th>Details</th></tr></thead><tbody>';
- html+=(result.requests||[]).map(r=>'<tr><td>'+escape(r.voucher)+'</td>'+
+ html+=(result.requests||[]).filter(r=>filter==='all'||r.status===filter).map(r=>'<tr><td>'+escape(r.voucher)+'</td>'+
   '<td>'+escape(r.title)+'</td><td>'+escape(r.status)+'</td><td>'+
-  escape(r.dateNeeded)+'</td><td>'+
+  escape(r.dateNeeded)+(typeof r.requestId==='string'&&
+   ['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER'].includes(result.role)?
+   ' <button type="button" class="secondary" data-action="frt-date-edit" data-request-id="'+
+    escape(r.requestId)+'" aria-label="Edit date needed for '+escape(r.title)+'">Edit date</button>':'')+'</td><td>'+
   (typeof r.requestId==='string'?
     '<button type="button" class="secondary" data-action="frt-finance-detail" data-request-id="'+
     escape(r.requestId)+'" '+(detailBusy?'disabled':'')+'>'+
@@ -45,7 +56,7 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   '<tr><td colspan="5" class="muted">No requests found for this company.</td></tr>';
  html+='</tbody></table></div></div><p class="muted">Backend returns at most 500 recent requests; '+
   'the first 100 are displayed. Monetary values, banking fields, files, '+
-  'requestor identities and finance mutations are outside this read-only view.</p>';
+  'requestor identities, person assignment, attachment upload, QR files and approval actions are not modified here.</p>';
  if(detailBusy){
   html+='<div class="panel"><div class="panel-body">Retrieving signed FRT request details…</div></div>';
  }else if(detailResult?.status==='PASS'&&detailResult.detail){
