@@ -8,10 +8,12 @@ END$$;
 
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 INSERT INTO public.profiles(id,status,display_name,email,platform_role) VALUES
- ('55555555-5555-4555-8555-555555555555','active','Non-bootstrap inherited admin','inherited@example.invalid','admin_general_manager')
+ ('55555555-5555-4555-8555-555555555555','active','Non-bootstrap inherited admin','inherited@example.invalid','admin_general_manager'),
+ ('66666666-6666-4666-8666-666666666666','active','Tool Traceability module admin','tt-admin@example.invalid','employee')
  ON CONFLICT(id) DO NOTHING;
 INSERT INTO public.workspace_members(workspace_id,user_id,active) VALUES
- ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','55555555-5555-4555-8555-555555555555',true)
+ ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','55555555-5555-4555-8555-555555555555',true),
+ ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','66666666-6666-4666-8666-666666666666',true)
  ON CONFLICT DO NOTHING;
 
 CREATE TABLE public.apsyntra_crm_platform_roles(
@@ -47,6 +49,14 @@ CREATE TABLE public.tool_traceability_memberships(
  PRIMARY KEY(workspace_id,user_id));
 CREATE TABLE public.tool_traceability_activity(
  workspace_id uuid,entity_type text,entity_id text,actor_user_id uuid,event_type text,detail jsonb);
+CREATE OR REPLACE FUNCTION private.tool_traceability_is_admin(p_workspace_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+AS $fn$ SELECT public.is_platform_admin(auth.uid()) OR EXISTS(
+ SELECT 1 FROM public.tool_traceability_memberships m
+ WHERE m.workspace_id=p_workspace_id AND m.user_id=auth.uid()
+  AND m.role='ADMIN' AND m.enabled AND m.status='active') $fn$;
+INSERT INTO public.tool_traceability_memberships(workspace_id,user_id,role,enabled,status)
+VALUES('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','66666666-6666-4666-8666-666666666666','ADMIN',true,'active');
 
 -- Snapshot stubs retain the exact legacy field contract for migration verification.
 CREATE OR REPLACE FUNCTION public.apsyntra_role_configuration_snapshot(p_workspace_id uuid)
