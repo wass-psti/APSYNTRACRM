@@ -84,17 +84,13 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
   if(!dashboard||keys.some(k=>!validCount(dashboard[k]))||
      !Array.isArray(items)||items.length>500)
    return denied('FRT_FINANCE_READ_CONTRACT_INVALID');
-  let analytics=null,analyticsStatus='UNAVAILABLE';
-  try{
-   const rawAnalytics=await api.rpc('frt_board_financial_analytics_safe',
-    {p_workspace_id:context.workspace_id,p_company:selected});
-   analytics=projectFinancialAnalytics(rawAnalytics,selected);
-   analyticsStatus=analytics?'PASS':'INVALID_CONTRACT';
-  }catch{
-   // Additive analytics must never take the existing tracker offline.
-   // No legacy financial RPC fallback is permitted.
-   analytics=null;analyticsStatus='UNAVAILABLE';
-  }
+  // Aggregate fields are additive to the existing safe dashboard RPC.
+  // Older deployed projections remain usable while aggregate fields are absent.
+  const analytics=projectFinancialAnalytics(dashboard,selected);
+  const analyticsStatus=analytics?'PASS':
+   (dashboard.company_code!==undefined||dashboard.requested_total!==undefined||
+    dashboard.spent_total!==undefined||dashboard.top_categories!==undefined||
+    dashboard.monthly_trend!==undefined)?'INVALID_CONTRACT':'UNAVAILABLE';
   const requests=[];
   for(const item of items){
    if(!uuid.test(item?.id||'')||
