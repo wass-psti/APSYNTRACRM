@@ -7,7 +7,13 @@ const report={status:'PASS',role:'GENERAL_MANAGER',companyCode:'WASS',
  companies:[{code:'WAO',name:'Watchdog Automation OPC'},
  {code:'WASS',name:'Watchdog Automation Sales & Services'},
  {code:'PSTI',name:'PLC Systems Technik, Inc.'}],
- summary:{total_requests:40,pending:9,in_progress:18,completed:13,pending_liquidation_count:7},\n analytics:{companyCode:'WASS',requestedTotal:'1234567.89',spentTotal:'456789.12',\n  topCategories:[{category:'Office Supplies',requestedAmount:'750000.00'},\n   {category:'Equipment',requestedAmount:'500000.00'}],\n  monthlyTrend:['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11'].map((month,i)=>({\n   month,requestedAmount:(100000+i*10000).toFixed(2),spentAmount:(50000+i*5000).toFixed(2)\n  }))},
+ summary:{total_requests:40,pending:9,in_progress:18,completed:13,pending_liquidation_count:7},
+ analytics:{companyCode:'WASS',requestedTotal:'1234567.89',spentTotal:'456789.12',
+  topCategories:[{category:'Office Supplies',requestedAmount:'750000.00'},
+   {category:'Equipment',requestedAmount:'500000.00'}],
+  monthlyTrend:['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11'].map((month,i)=>({
+   month,requestedAmount:(100000+i*10000).toFixed(2),spentAmount:(50000+i*5000).toFixed(2)
+  }))},
  requests:[{requestId:id,title:'Operating Supplies',voucher:'DV-WASS-202611-009',status:'PENDING_APPROVAL',dateNeeded:'2026-11-13',filingStatus:'NOT_FILED'}]};
 test('reference sections render actual verified signed KPIs, chart labels, title and company selector',()=>{
  const html=renderFRTFinanceReadOnly({result:report});
