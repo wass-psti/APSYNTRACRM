@@ -50,7 +50,7 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
   requireTrue(uuid.test(qaId||'')&&creation?.title===payload.title,
    'SIGNED_QA_CREATE_FAILED');
   const listed=await member.rpc('frt_board_list_safe',{
-   p_workspace_id:workspace,p_company_code:'WAO',p_status:''});
+   p_workspace_id:workspace,p_company:'WAO',p_search:''});
   requireTrue(Array.isArray(listed)&&listed.some(r=>r.id===qaId),
    'QA_REQUEST_NOT_LISTED');
   const dateAck=await member.rpc('frt_update_request_date_cas',{
@@ -72,7 +72,7 @@ async function signedAcceptance({config,db,fetcher,actorIds}){
   const assignee=await member.rpc('frt_request_assignment',{
    p_workspace_id:workspace,p_request_id:qaId});
   const refreshed=await member.rpc('frt_board_list_safe',{
-   p_workspace_id:workspace,p_company_code:'WAO',p_status:''});
+   p_workspace_id:workspace,p_company:'WAO',p_search:''});
   requireTrue(detail?.date_needed==='2026-11-20'&&
    assignee?.assigneeId===actorIds.member&&
    refreshed.some(r=>r.id===qaId&&r.date_needed==='2026-11-20'),
