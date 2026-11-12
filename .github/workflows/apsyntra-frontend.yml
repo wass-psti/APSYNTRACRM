@@ -56,6 +56,7 @@ on:
       - "docs/CP-FRT-SEC07-CONTROLLED-ACTIVATION.md"
       - "docs/CP-FRT-SEC09-SIGNED-AUTHORIZATION-ACCEPTANCE.md"
       - "docs/CP-FRT-SEC06-CRM-PLATFORM-RBAC.md"
+      - "docs/CP-FRT-EXECUTIVE-DASHBOARD-ANALYTICS.md"
       - "sql/cp-role-configuration-bootstrap.sql"
       - "docs/CP-ROLE-CONFIGURATION.md"
       - ".github/workflows/apsyntra-frontend.yml"
