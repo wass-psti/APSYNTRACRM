@@ -20,6 +20,13 @@ Continuation of CP-BIMP-15 following PR #255 (unmerged). Actual code recovered o
 - Recovery marker privacy: stored JSON contains neither item titles nor cell values; source/board/payload are represented only as SHA-256 digests.
 - Full frontend regression: **1,823/1,823 PASS**; frontend JavaScript syntax: **171 modules PASS**; CSS bundle, Pages source validation and SEC14 source guard: PASS. Browser fixtures and isolated PostgreSQL signed claims are separately checked by CI. Newly staged extended-reference schema is **not** production-activated.
 
+## Real Chromium disposable browser evidence
+
+- A new test at `scripts/bimp15-durable-browser.mjs` exercises the actual import wizard and CSV parser with a **synthetic signed-user API fixture**, entirely on a disposable localhost browser and fake persisted board state.
+- The browser seeds a verified first row, persists the recovery marker, reloads the page, reselects the exact CSV, follows mapping/duplicate confirmation, invokes one atomic import for the two remaining rows, and verifies that all three rows survive another browser navigation/refresh.
+- **PASS:** `BIMP15_CHROMIUM_RESTART_IMPORT_PASS` locally. CI workflow `.github/workflows/bimp15-durable-browser.yml` runs the same fixture on a clean GitHub Actions Chromium environment.
+- This is a signed-*fixture* test, not genuine authenticated Supabase staging or production acceptance.
+
 ## Runtime acceptance boundary
 
 The opened browser is authenticated to the *deployed production main frontend*, not the new CP-BIMP-15A worktree. It currently displays `CP-BOARD-COL-DELETE QA Signed Fixture`, an unrelated fixture. This tab is not a proper target for writes. Therefore a real browser upload + import + refresh against this new branch on a dedicated signed nonproduction board is **PENDING**, not verified. Disposable signed API simulations, real local Chromium DOM tests and CI cannot substitute for live authenticated end-to-end acceptance.
