@@ -32,7 +32,7 @@ function categoryChart(categories){
   categories.map(row=>{
    const width=Math.max(0,Math.min(100,amount(row.amount)/max*100));
    return '<div class="frt-exec-category-row" role="listitem"><span class="frt-exec-category-name" title="'+escape(row.category)+'">'+escape(row.category)+'</span>'+
-    '<span class="frt-exec-category-track"><svg viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="14" rx="4" fill="#eaf0f8"/><rect x="0" y="0" width="'+width.toFixed(2)+'" height="14" rx="4" fill="#6485e8"/></svg></span>'+
+    '<span class="frt-exec-category-track"><svg viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="14" rx="4" fill="#eaf0f8"/><rect class="frt-exec-category-bar" x="0" y="0" width="'+width.toFixed(2)+'" height="14" rx="4" fill="#6485e8"/></svg></span>'+
     '<strong>'+money(row.amount)+'</strong></div>';
   }).join('')+'</div>';
 }
