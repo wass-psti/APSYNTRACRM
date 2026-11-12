@@ -135,7 +135,7 @@ test('CP-URM-ROLE-FIX: saved CRM admin is visible while inherited employee ident
  assert.match(html,/Existing Account — CRM admin \(explicit\) · Identity employee/);
  assert.match(html,/Current CRM role \/ identity/);
  assert.match(html,/Inherited WatchdogWorkspace role/);
- assert.match(html,/Admin here does not grant bootstrap administration/);
+ assert.match(html,/Admin grants CRM administrative authority for the active workspace/);
  assert.doesNotMatch(html,/Existing Account — employee<\/option>/);
 });
 

@@ -1,4 +1,4 @@
-/** CP-RC01 bootstrap-only role configuration, backed by server-authorized RPC.
+/** CRM Admin role configuration, backed by server-authorized RPC.
  * All writes are proposals. This UI cannot elevate a user or alter live membership.
  */
 import {BOARD_MODULES} from './board-manifest.js';
@@ -33,9 +33,9 @@ function roles(d){
  '<button class="secondary" data-action="role-propose-edit" data-role-key="'+x(r.roleKey)+'">Propose edit</button>')+
  '</td></tr>').join('');
  const crmCatalog='<div class="section-header role-section-header role-entrance"><strong>APSYNTRA CRM platform authorization</strong></div>'+
- '<div class="note role-info-note">The CRM role tier is separate from WatchdogWorkspace identity and from the twelve application and board assignments. An explicitly assigned CRM tier sets the maximum effective permission level, but never grants an application membership, board ownership or bootstrap administration.</div>'+
+ '<div class="note role-info-note">The CRM role tier is separate from WatchdogWorkspace identity and from the twelve application and board assignments. An explicitly assigned CRM tier sets the maximum effective permission level, but never grants an application membership, board ownership or unrelated application access.</div>'+
  sectionTable(['CRM role','Ceiling','Central administration'],[
- ['Admin','Maximum CRM operational tier; existing module and board grants remain required','Bootstrap-only role management'],
+ ['Admin','Maximum CRM operational tier; existing module and board grants remain required','CRM Administrator role management'],
  ['Supervisor','Supervisory/module scope; no board manage through a CRM override','Not delegated by default'],
  ['Employee','Normal operational/module scope; no board manage through a CRM override','Not delegated'],
  ['Viewer','View-only where the domain defines a read role; blocks edit/manage','Not delegated']
@@ -105,12 +105,12 @@ function audit(d){
  sectionTable(['Event','Operation','Recorded'],history||'<tr><td colspan="3">No events recorded</td></tr>');
 }
 export function renderRoleConfiguration({verified=false,loading=false,data=null,tab='roles',error=''}={}){
- if(!verified)return '<div class="access-denied"><div class="denied-panel"><h1>Access unavailable</h1><p>This module is restricted to verified bootstrap administrators.</p></div></div>';
+ if(!verified)return '<div class="access-denied"><div class="denied-panel"><h1>Access unavailable</h1><p>This module requires verified CRM Administrator authority in the active workspace.</p></div></div>';
  let html='<div class="aps-role-configuration"><section class="page-head role-config-hero role-entrance" aria-labelledby="role-config-title"><div class="role-hero-copy"><span class="label-top"><span class="role-hero-dot" aria-hidden="true"></span> Administration / Central authorization</span>'+
  '<h1 id="role-config-title">Role Configuration<span class="role-heading-stop">.</span></h1><p>Manage centrally governed role change requests and review authoritative workspace grants.</p></div>'+
  '<button class="secondary role-refresh-button" data-action="role-refresh">'+roleConfigurationIcon('refresh')+'<span>Refresh verified data</span></button>'+
  '<svg class="role-hero-art" viewBox="0 0 420 210" aria-hidden="true" focusable="false" fill="none"><circle cx="334" cy="12" r="125" stroke="currentColor" stroke-opacity=".15"/><circle cx="334" cy="12" r="181" stroke="currentColor" stroke-opacity=".07"/><path d="M108 222C186 77 327 79 433 135" stroke="currentColor" stroke-opacity=".16"/><circle cx="257" cy="69" r="4" fill="#a9c9ff"/></svg></section>'+
- '<div class="note security-note role-staged-note role-entrance"><span class="role-note-icon" aria-hidden="true">'+roleConfigurationIcon('lock')+'</span><div>Bootstrap administrators only. <strong>Change control: STAGED ONLY</strong> — production roles, permissions, board access and memberships cannot be altered by this module until a separately approved activation release. No bootstrap identity can be assigned or revoked here.</div></div>';
+ '<div class="note security-note role-staged-note role-entrance"><span class="role-note-icon" aria-hidden="true">'+roleConfigurationIcon('lock')+'</span><div>Verified CRM Administrators only. <strong>Change control: STAGED ONLY</strong> — production roles, permissions, board access and memberships cannot be altered by this module until a separately approved activation release. No bootstrap identity can be assigned or revoked here.</div></div>';
  if(error)html+='<div class="error-banner" role="alert">'+x(error)+'</div>';
  if(loading)html+='<p class="muted">Loading verified workspace configuration…</p>';
  if(!data)return html+'</div>';

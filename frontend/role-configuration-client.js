@@ -1,4 +1,4 @@
-/** Bootstrap-only role configuration client. Server authorization is mandatory.
+/** CRM Admin role configuration client. Server authorization is mandatory.
  * Proposal persistence is NOT active authorization or a grant.
  */
 const VALID_OPERATIONS=new Set(['role.create','role.edit','role.activate','role.deactivate',
@@ -7,7 +7,13 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 export class RoleConfigurationClient {
  constructor(api){this.api=api;}
  async bootstrapVerified(){
+  // Identity classification only; not the CRM Administrator authorization tier.
   const value=await this.api.rpc('apsyntra_role_is_bootstrap');
+  return value===true;
+ }
+ async adminVerified(){
+  // Server validates signed actor, active workspace and effective CRM Admin.
+  const value=await this.api.rpc('apsyntra_role_is_admin');
   return value===true;
  }
  async snapshot(workspaceId){

@@ -37,7 +37,7 @@ test('signed workspace picker never labels an owner as Member',()=>{
 });
 test('CRM admin or workspace owner labels do not alter bootstrap permission checks',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/state\.roleVerified===true\?'<div class="side-section sidebar-nav-section">Administration/);
+ assert.match(app,/state\.adminVerified===true\?'<div class="side-section sidebar-nav-section">Administration/);
  assert.match(app,/roleConfig\.bootstrapVerified\(\)/);
  assert.match(app,/workspaceRelationSnapshot\?\.relation/);
  assert.match(app,/workspaceRelationReadGeneration/);

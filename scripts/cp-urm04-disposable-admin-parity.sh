@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+IMAGE="public.ecr.aws/supabase/postgres:17.11.0.004"
+docker info --format '{{.ServerVersion}}' >/dev/null
+docker run --rm --network none --read-only \
+ --tmpfs /tmp:rw,exec,nosuid,size=256m --tmpfs /run:rw,nosuid,size=16m \
+ --security-opt no-new-privileges \
+ --mount "type=bind,source=$ROOT/sql,target=/source-sql,readonly" \
+ --entrypoint /bin/sh "$IMAGE" -c '
+set -eu
+mkdir -p /tmp/pgdata
+chown postgres:postgres /tmp/pgdata
+su postgres -s /bin/sh -c "initdb -D /tmp/pgdata -A trust --no-sync --no-instructions >/dev/null"
+su postgres -s /bin/sh -c "pg_ctl -D /tmp/pgdata -o \"-c listen_addresses=127.0.0.1 -k /tmp\" -w start >/dev/null"
+trap '\''su postgres -s /bin/sh -c "pg_ctl -D /tmp/pgdata -m immediate -w stop >/dev/null" || true'\'' EXIT
+psql -X -q -h /tmp -U postgres -d postgres -v ON_ERROR_STOP=1 \
+ -f /source-sql/tests/cp-rc03-disposable-setup.sql
+# The SQL test includes the staged candidate via relative \ir and rolls back
+# its synthetic role changes after true PostgreSQL function execution.
+psql -X -q -h /tmp -U postgres -d postgres -v ON_ERROR_STOP=1 \
+ -f /source-sql/tests/cp-urm04-disposable-admin-parity.sql
+'
+echo CP_URM04_DISPOSABLE_POSTGRES17_ADMIN_PARITY_PASS

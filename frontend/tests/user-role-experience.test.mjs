@@ -88,7 +88,7 @@ test('verified protected administrator remains immutable in all controls',()=>{
  assert.equal((result.match(/data-action="user-role-edit-module"[^>]*disabled/g)||[]).length,12);
  assert.match(result,/data-action="user-role-edit-board"[^>]*disabled/);
  assert.doesNotMatch(result,/data-action="user-role-revert-crm-platform"/);
- assert.match(result,/Only the two verified bootstrap administrators can apply changes/);
+ assert.match(result,/Verified CRM Administrators can manage roles in their active workspace/);
  assert.match(result,/backend rejects self-promotion, protected administrators, stale updates, and cross-workspace targets/);
 });
 

@@ -55,5 +55,5 @@ test('sensitive acceptance actions are not entered by non-bootstrap sessions',()
   assert.ok(pos>0,action);
   assert.match(app.slice(pos,pos+110),/if\(state\.roleVerified!==true\)return;/);
  }
- assert.match(app,/if\(!verified&&\['role-configuration','user-role-management','foundation','acceptance'\]\.includes\(view\)\)/);
+ assert.match(app,/if\(!verified&&\['foundation','acceptance'\]\.includes\(view\)\)/);
 });
