@@ -4,6 +4,7 @@ const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const count=v=>Number.isSafeInteger(v)&&v>=0?String(v):'—';
 import {frtActionSpec} from './frt-board-domain-actions.js';
+import {renderFRTExecutiveDashboard} from './frt-executive-dashboard.js';
 const editRoles=new Set(['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER']);
 const statusTone=value=>{
  const v=String(value||'').toUpperCase();
@@ -47,7 +48,7 @@ function chartBars(summary){
   '<text x="90" y="165" text-anchor="middle">Completed</text><text x="195" y="165" text-anchor="middle">In progress</text>'+
   '<text x="300" y="165" text-anchor="middle">Pending</text></svg>';
 }
-export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null,statusFilter='all'}={}){
+export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null,statusFilter='all',section='tracker'}={}){
  let html='<section class="frt-ref" aria-label="Fund Released Tracker application">'+
   '<header class="frt-ref-company"><div class="frt-ref-company-identity"><span class="frt-ref-icon" aria-hidden="true">▣</span>'+
   '<div><strong>Select Your Company</strong><small>Authorized company scope for requests and documents</small></div></div>';
@@ -59,10 +60,10 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
     (c.code===result.companyCode?' <span aria-hidden="true">✓</span>':'')+'</button>').join('')+'</div>';
  }
  html+='</header><nav class="frt-ref-nav" aria-label="Fund Tracker sections">'+
-  '<span class="frt-ref-nav-active" aria-current="page">▤ &nbsp; Fund Tracker</span>'+
-  '<span class="frt-ref-nav-label">▦ &nbsp; Executive Dashboard</span>'+
-  '<span class="frt-ref-nav-label">◫ &nbsp; OPEX Analytics</span>'+
-  '<span class="frt-ref-nav-label">▤ &nbsp; User Manual</span></nav>';
+  '<button type="button" class="'+(section==='tracker'?'frt-ref-nav-active':'frt-ref-nav-label')+'" data-action="frt-finance-section" data-section="tracker" '+(section==='tracker'?'aria-current="page"':'')+'>▤ &nbsp; Fund Tracker</button>'+
+  '<button type="button" class="'+(section==='executive'?'frt-ref-nav-active':'frt-ref-nav-label')+'" data-action="frt-finance-section" data-section="executive" '+(section==='executive'?'aria-current="page"':'')+'>▦ &nbsp; Executive Dashboard</button>'+
+  '<span class="frt-ref-nav-label" title="OPEX reporting is outside this implementation">◫ &nbsp; OPEX Analytics</span>'+
+  '<span class="frt-ref-nav-label" title="User Manual is outside this implementation">▤ &nbsp; User Manual</span></nav>';
  if(busy)return html+'<div class="frt-ref-loading" role="status">Loading verified financial requests…</div></section>';
  if(!result)return html+'<div class="frt-ref-loading">Select this view to read your authorized financial requests.</div></section>';
  if(result.status!=='PASS'){
@@ -71,6 +72,7 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
    escape(reason)+'. No records or permissions were changed.</div></section>';
  }
  if(!result.companies?.length)return html+'<div class="frt-ref-loading">No FRT companies configured for this workspace.</div></section>';
+ if(section==='executive')return html+renderFRTExecutiveDashboard(result)+'</section>';
  const summary=result.summary||{};
  const rows=Array.isArray(result.requests)?result.requests:[];
  const statuses=[...new Set(rows.map(r=>r.status))].sort();
