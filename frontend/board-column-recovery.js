@@ -96,6 +96,19 @@ function requireReceipt(result,{boardId,action,columnId=null,count=null}){
   valueRows:result.value_rows,updatedAt:result.updated_at
  });
 }
+export function normalizeRecoverableColumnEntries(result){
+ if(!Array.isArray(result)||result.length>100||result.some(x=>
+  !validUuid(x?.deletion_id)||!validUuid(x?.column_id)||
+  typeof x?.name!=='string'||x.name.length>80||
+  !Number.isSafeInteger(x.value_rows)||x.value_rows<0||
+  typeof x.deleted_at!=='string'||!Number.isFinite(Date.parse(x.deleted_at))||
+  typeof x.restorable!=='boolean'))
+  fail('Recovery metadata from the server was invalid. No data changed.',409);
+ return result.map(x=>Object.freeze({
+  deletionId:x.deletion_id,columnId:x.column_id,name:x.name,
+  valueRows:x.value_rows,deletedAt:x.deleted_at,restorable:x.restorable
+ }));
+}
 const request=async(api,name,args,expect)=>{
  let result;
  try{result=await api.rpc(name,args);}
@@ -156,6 +169,63 @@ export class BoardColumnRecoveryClient{
   if(!validUuid(entry?.deletionId)||!validUuid(entry?.columnId)||
    entry.restorable!==true)
    fail('This recovery snapshot is not ready to restore.',409);
+  return request(this.api,'wm_restore_board_column_recoverable',{
+   p_board_id:boardId,p_deletion_id:entry.deletionId,
+   p_expected_updated_at:currentRevision(detail)
+  },{boardId,action:'restore-recoverable',columnId:entry.columnId,count:entry.valueRows});
+ }
+}
+/** Production-ready API adapter. Existing server activation, QA scope,
+ * signed manager permissions and protected-board checks remain authoritative.
+ * A successful signed metadata list is only a capability probe: it cannot
+ * activate deletion or restoration, which independently verify server flags.
+ */
+export class BoardColumnOperationalRecoveryClient{
+ constructor(api){this.api=api;}
+ async available(boardId){
+  if(!validUuid(boardId)||typeof this.api?.allowed!=='function'||
+     typeof this.api?.rpc!=='function')
+   fail('Signed board recovery API unavailable.',403);
+  if(await this.api.allowed(boardId,'manage')!==true)
+   return Object.freeze({ready:false,entries:[]});
+  try{
+   return Object.freeze({ready:true,entries:normalizeRecoverableColumnEntries(
+    await this.api.rpc('wm_list_recoverable_board_columns',{p_board_id:boardId}))});
+  }catch(error){
+   const message=String(error?.message||'');
+   if(/COL_RECOVERY_LIST_NOT_ACTIVATED|COL_QA_SCOPE_DENIED/.test(message)||
+      error?.status===401||error?.status===403||error?.status===503)
+    return Object.freeze({ready:false,entries:[]});
+   throw explainColumnDeleteError(error);
+  }
+ }
+ async delete(detail,column,confirmation){
+  const boardId=detail?.board?.id;
+  if(!validUuid(boardId)||detail?.board?.status!=='active'||
+     !column?.deletable||column.immutable||!validUuid(column.id)||
+     typeof column.name!=='string')
+   fail('Only active ordinary custom columns can be deleted.',403);
+  if(confirmation!=='DELETE '+column.name)
+   fail('Type DELETE '+column.name+' exactly to confirm.',400);
+  const rows=columnStoredValueCount(detail,column.id);
+  if(rows===0)fail('Use Delete Empty Column when no cell rows exist.',400);
+  if(await this.api.allowed(boardId,'manage')!==true)
+   fail('Signed board manager permission required.',403);
+  return request(this.api,'wm_delete_board_column_recoverable',{
+   p_board_id:boardId,p_column_id:column.id,
+   p_expected_updated_at:currentRevision(detail),
+   p_expected_value_count:rows,p_confirmation:confirmation
+  },{boardId,action:'delete-recoverable',columnId:column.id,count:rows});
+ }
+ async restore(detail,entry){
+  const boardId=detail?.board?.id;
+  if(!validUuid(boardId)||detail?.board?.status!=='active'||
+     !validUuid(entry?.deletionId)||!validUuid(entry?.columnId)||
+     entry.restorable!==true||!Number.isSafeInteger(entry.valueRows)||
+     entry.valueRows<0)
+   fail('Recovery snapshot is unavailable or incomplete.',409);
+  if(await this.api.allowed(boardId,'manage')!==true)
+   fail('Signed board manager permission required.',403);
   return request(this.api,'wm_restore_board_column_recoverable',{
    p_board_id:boardId,p_deletion_id:entry.deletionId,
    p_expected_updated_at:currentRevision(detail)
