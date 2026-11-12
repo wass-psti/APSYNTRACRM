@@ -21,7 +21,7 @@ function projectFinancialAnalytics(raw,companyCode){
  const categories=[],seen=new Set();
  for(const item of raw.top_categories){
   if(!item||typeof item.category!=='string'||!item.category.trim()||
-     item.category.length>120||!validMoney(item.requested_amount)||
+     item.category.length>180||!validMoney(item.requested_amount)||
      seen.has(item.category))return null;
   seen.add(item.category);
   categories.push({category:item.category,requestedAmount:item.requested_amount});
