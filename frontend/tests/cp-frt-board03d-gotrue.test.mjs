@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {executeFRT03D} from '../../scripts/cp-frt-board03d-gotrue-acceptance.mjs';
 const source=readFileSync('scripts/cp-frt-board03d-gotrue-acceptance.mjs','utf8');
-const workflow=readFileSync('.github/workflows/cp-frt-board03d-gotrue.yml','utf8');
+const workflow=readFileSync('.github/workflows/cp-frt-sec10-ci03.yml','utf8');
 test('signed acceptance cannot reach any network outside explicit ephemeral GitHub environment',async()=>{
  let network=0;const fetcher=async()=>{network++;throw Error('NETWORK_MUST_NOT_BE_CALLED');};
  for(const env of [{},{CI:'true',GITHUB_ACTIONS:'true',SEC10_CI03:'EPHEMERAL_ONLY'},
