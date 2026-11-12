@@ -46,3 +46,21 @@ export function confirmInlineColumnDelete(column,confirmation){
   fail('Type '+expected+' exactly to confirm deletion.',400);
  return expected;
 }
+
+/** Project only a verified, committed name-only CAS receipt into the existing
+ * signed board snapshot. A subsequent signed refresh remains authoritative.
+ * Never use this for type, visibility, or option mutations.
+ */
+export function projectConfirmedColumnRename(detail,{columnId,name,receipt,expectedRevision}={}){
+ if(!detail?.board||detail.board.updated_at!==expectedRevision||
+    receipt?.action!=='update'||receipt.board_id!==detail.board.id||
+    receipt.column_id!==columnId||!validUuid(columnId)||
+    typeof receipt.updated_at!=='string'||!Number.isFinite(Date.parse(receipt.updated_at))||
+    typeof name!=='string'||!name.trim()||name.length>80||
+    !Array.isArray(detail.columns))return null;
+ const index=detail.columns.findIndex(c=>c.id===columnId);
+ if(index<0)return null;
+ const columns=[...detail.columns];
+ columns[index]={...columns[index],name};
+ return {...detail,board:{...detail.board,updated_at:receipt.updated_at},columns};
+}

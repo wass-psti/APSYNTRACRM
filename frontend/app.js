@@ -95,6 +95,7 @@ import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,Board
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
+ projectConfirmedColumnRename,
  confirmInlineColumnDelete} from './board-inline-context.js';
 import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,BoardColumnOperationalRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board-column-recovery.js';
 import {planBoardColumnRemoval} from './board-column-removal-plan.js';
@@ -4160,10 +4161,23 @@ function contextualColumnEditor(key){
   const config=['status','dropdown'].includes(update.type)?
    parseChoiceConfig(update.type,fd.get('options'),sameType?target.config:{}):
    sameType?target.config:{};
-  await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
+  const receipt=await boardStructureClient.mutate(fresh,{action:'update',columnId:target.id,
    name:update.name,type:update.type,config,visible:update.visible},
    {verifiedManagerPreflight:true});
-  await loadBoard(snapshot.boardId,'items');
+  const nameOnly=update.type===target.type&&update.visible===target.visible&&
+   JSON.stringify(config)===JSON.stringify(target.config);
+  const projected=nameOnly&&state.boardId===snapshot.boardId&&
+   state.context?.user_id===snapshot.userId&&
+   state.context?.workspace_id===snapshot.workspaceId&&
+   projectConfirmedColumnRename(state.board,{columnId:target.id,name:update.name,
+    receipt,expectedRevision:snapshot.boardRevision});
+  if(projected){
+   state.board=projected;
+   deferVisibleBoardContent();
+   // Server-side CAS has committed. Reconcile with a complete authorized read
+   // without blocking the successful rename dialog on every board/row request.
+   void loadBoard(snapshot.boardId,'items');
+  }else await loadBoard(snapshot.boardId,'items');
  });
 }
 async function contextualColumnDelete(key){
