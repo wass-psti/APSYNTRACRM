@@ -106,7 +106,8 @@ test('OPEX and User Manual navigation are functional views without fabricated fi
  const opex=renderFRTFinanceReadOnly({result:report,view:'opex'});
  assert.match(opex,/OPEX Analytics/);
  assert.match(opex,/Top 5 Expense Categories/);
- assert.match(opex,/frt-exec-month-row/);\n assert.match(opex,/750,000\\.00/);
+ assert.match(opex,/frt-exec-month-row/);
+ assert.match(opex,/750,000\.00/);
  const manual=renderFRTFinanceReadOnly({result:report,view:'manual'});
  assert.match(manual,/Fund Released Tracker — User Manual/);
  assert.match(manual,/company selector/);
