@@ -1,5 +1,5 @@
 -- CP-FRT-EXEC-02: disposable PostgreSQL acceptance only.
--- Run after SEC14 safe-board fixtures and the EXEC-02 candidate RPC.
+-- Run after SEC14 safe-board fixtures and the EXEC-02 dashboard projection extension.
 -- All test rows and mutations are rolled back.
 \set ON_ERROR_STOP on
 BEGIN;
