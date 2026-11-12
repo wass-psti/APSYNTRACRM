@@ -4,7 +4,9 @@
 import {buildImportPlan,executeBoardImport} from './board-import-core.js';
 import {ApiError} from './session.js';
 
-export const IMPORT_BATCH_SIZE=1000;
+// Keep ordinary import transactions small enough for the existing signed
+// HTTP request deadline. A 617-row file must not become one long ambiguous write.
+export const IMPORT_BATCH_SIZE=200;
 const fail=message=>{throw new ApiError(message,409);};
 const sum=(a,b)=>({
  created:a.created+b.created,updated:a.updated+b.updated,

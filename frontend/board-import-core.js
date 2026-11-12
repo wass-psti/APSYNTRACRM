@@ -606,7 +606,18 @@ export async function executeBoardImport({api,auth,plan}={}){
   // wm_get_board is a fresh authoritative RPC read (not the in-memory board cache).
   // Verify persisted items, mapped cells, created columns/groups and skipped values
   // before the UI reports success or asks the user to refresh.
-  const persisted=await api.board(plan.boardId);
+  // A transient failure to fetch authoritative readback does NOT mean the
+  // committed writer failed. Retry only this signed, read-only request once;
+  // never invoke the atomic import RPC again after an uncertain result.
+  let persisted;
+  try{persisted=await api.board(plan.boardId);}
+  catch(readError){
+   const status=Number(readError?.status);
+   const transient=(!Number.isInteger(status)||status===0||status===408||
+     status===429||status>=500||readError?.code==='INVALID_JSON_RESPONSE');
+   if(!transient)throw readError;
+   persisted=await api.board(plan.boardId);
+  }
   verifyImportReadback(plan,detail,persisted);
   const finalContext=await api.context();
   if(finalContext.user_id!==ctx.user_id||finalContext.workspace_id!==ctx.workspace_id||
