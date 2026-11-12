@@ -93,7 +93,7 @@ test('reference-only dialogs retain disabled backend submission and signed membe
 
 test('Executive Dashboard renders signed company-scoped counts and truthful financial-data states',()=>{
  const html=renderFRTFinanceReadOnly({result:report,view:'executive'});
- for(const value of ['Executive Dashboard','Requested','Liquidated','Budget Utilization',
+ for(const value of ['Executive Dashboard','Requested','Spent','Budget Utilization',
   'Pending Liquidation','Request Status Pipeline','Top 5 Expense Categories',
   'Requested vs. Spent — Last 6 Months','1,234,567.89','frt-exec-month-row',
   'frt-exec-grid','data-view="executive"'])assert.ok(html.includes(value),value);
