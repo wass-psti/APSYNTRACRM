@@ -80,6 +80,7 @@ test('reference-only dialogs retain disabled backend submission and signed membe
  assert.match(app,/submitLabel:'Submit Fund Request'/);
  assert.match(app,/createSignedFRTRequest/);
  assert.match(app,/updateSignedFRTFiling/);
- assert.match(app,/Filing status<\/label><strong>Not Filed<\/strong>/);
+ assert.match(app,/renderFRTRequestWizard/);
+ assert.match(app,/enhanceFRTRequestWizard/);
  assert.match(app,/case 'frt-filing-toggle':/);
 });

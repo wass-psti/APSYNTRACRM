@@ -35,15 +35,35 @@ function normalizeRequest(data){
  const trim=(v,max=250)=>typeof v==='string'&&v.trim().length<=max?v.trim():'';
  const title=trim(data?.title),department=trim(data?.department),
   fundSource=trim(data?.fundSource),description=trim(data?.description,2500),
-  category=trim(data?.category),dateNeeded=data?.dateNeeded;
- const amount=Number(data?.amount);
+  dateNeeded=data?.dateNeeded;
+ const rawItems=Array.isArray(data?.items)?data.items:
+  [{category:data?.category,amount:data?.amount}];
  if(title.length<3||department.length<2||fundSource.length<2||
-   description.length<3||category.length<1||!validFRTDate(dateNeeded)||
-   !Number.isFinite(amount)||amount<=0||amount>999999999999.99||
-   !/^\d+(?:\.\d{1,2})?$/.test(String(data?.amount||'')))
-  fail('Complete the fund request, date, expense category, and positive amount.');
- return {title,department,fundSource,description,dateNeeded,
-  items:[{category,amount}]};
+   description.length<3||!validFRTDate(dateNeeded)||
+   rawItems.length<1||rawItems.length>100)
+  fail('Complete the fund request, date, and expense lines.');
+ let total=0;
+ const items=rawItems.map(item=>{
+  const itemCategory=trim(item?.category);
+  const amountString=String(item?.amount??'').trim();
+  const amount=Number(amountString);
+  if(!itemCategory||!/^\d+(?:\.\d{1,2})?$/.test(amountString)||
+     !Number.isFinite(amount)||amount<=0||amount>999999999999.99)
+   fail('Every expense item requires a category and positive amount.');
+  total+=amount;
+  return {category:itemCategory,amount};
+ });
+ if(!Number.isFinite(total)||total>999999999999.99)
+  fail('The total expense amount exceeds the supported limit.');
+ const optional={recipientName:trim(data?.recipientName),recipientBank:trim(data?.recipientBank),
+  recipientAccount:trim(data?.recipientAccount),orderIntakeNo:trim(data?.orderIntakeNo),
+  checkNo:trim(data?.checkNo)};
+ for(const [key,value] of Object.entries(optional)){
+  if(data?.[key]!==undefined&&String(data[key]??'').trim().length>180)
+   fail('Optional request details exceed the supported length.');
+ }
+ return {title,department,fundSource,description,dateNeeded,items,
+  ...Object.fromEntries(Object.entries(optional).filter(([,v])=>v!==''))};
 }
 export async function createSignedFRTRequest({auth,api,workspaceId,companyCode,role,
  data}={}){

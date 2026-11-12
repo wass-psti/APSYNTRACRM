@@ -143,6 +143,7 @@ import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-sign
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {createSignedFRTRequest,updateSignedFRTFiling} from './frt-filing-workflow.js';
+import {renderFRTRequestWizard,enhanceFRTRequestWizard,collectFRTWizardRequest} from './frt-request-wizard.js';
 import {renderFRTBoardSignedSnapshot} from './frt-board-signed-snapshot.js';
 import {updateFRTRequestDate} from './frt-board-date-edit.js';
 import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
@@ -6803,16 +6804,8 @@ async function action(name,button){
    let title='',body='';
    if(section==='new'){
     title='New Fund Request';
-    body='<p class="note">Submit a signed fund request under '+e(company.name)+
-     ' ('+e(companyCode)+'). Filing begins as Not Filed.</p>'+
-     input('Fund Request Name','requestName')+
-     input('Department','department')+
-     input('Fund Source','fundSource')+
-     input('Date Needed','dateNeeded','','date')+
-     input('Description','description')+
-     input('Expense Category','category')+
-     input('Expense Amount','amount','','text')+
-     '<div class="field"><label>Filing status</label><strong>Not Filed</strong></div>';
+    body=renderFRTRequestWizard({companies:state.frtFinance.companies,
+     selectedCompany:companyCode});
    }else if(section==='activity'){
     title='Activity Log';
     body='<p class="note">Signed activity history for '+e(company.name)+'</p>'+
@@ -6836,17 +6829,15 @@ async function action(name,button){
        auth.userId!==actor||state.context?.workspace_id!==workspaceId||
        state.frtFinance?.companyCode!==companyCode||state.frtFinance.role!==role)
       throw new ApiError('FRT company or session changed. Reopen request creation.',409);
-     await createSignedFRTRequest({auth,api:db,workspaceId,companyCode,role,
-      data:{title:String(form.get('requestName')||''),
-       department:String(form.get('department')||''),
-       fundSource:String(form.get('fundSource')||''),
-       description:String(form.get('description')||''),
-       dateNeeded:String(form.get('dateNeeded')||''),
-       category:String(form.get('category')||''),
-       amount:String(form.get('amount')||'')}});
-     await loadFRTFinance(companyCode);
+     const payload=collectFRTWizardRequest(form);
+     if(!state.frtFinance.companies.some(c=>c.code===payload.companyCode))
+      throw new ApiError('Choose an authorized FRT company.',403);
+     await createSignedFRTRequest({auth,api:db,workspaceId,
+      companyCode:payload.companyCode,role,data:payload});
+     await loadFRTFinance(payload.companyCode);
     },{submitLabel:'Submit Fund Request',
      successMessage:'Fund request saved with Not Filed status.'});
+    enhanceFRTRequestWizard(modal);
    }else openModal(title,body,async()=>{},
      {submitLabel:'Not connected',submitDisabled:true});
    break;
