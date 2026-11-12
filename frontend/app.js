@@ -3606,7 +3606,7 @@ async function openBoardItemDetails(itemId){
   const renderPublic=()=>{
    if(!publicHost)return;
    publicHost.innerHTML=renderMaterialSourcingPublicOverview(publicRow(),{
-    groupTitle:group?.title||'Main group',editing:editing&&canPublicEdit,
+    groupTitle:group?.title||'Main group',editing,
     enabledFields:publicEnabled()});
   };
   const publicSavedDisplay=()=>{
