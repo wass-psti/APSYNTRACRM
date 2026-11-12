@@ -65,7 +65,7 @@ test('no source local-first fallback, duplicated auth or privileged client crede
  const source=readFileSync('frontend/tradelink-domain-client.js','utf8');
  assert.match(source,/getVerifiedUser/);
  assert.match(source,/TRADELINK_BOARD_ID/);
- assert.match(source,/await this\.api\.allowed\(TRADELINK_BOARD_ID,'manage'\)/);
+ assert.match(source,/this\.api\.allowed\(TRADELINK_BOARD_ID,'manage'\)/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|service_role|sb_secret|fetch\(/);
 });
 
@@ -83,4 +83,39 @@ test('CAS receipts must advance by exactly one; only revision-one identical crea
   [{...first,operation:'archive',revision:2},'archive',9]
  ])assert.throws(()=>normalizeTradeLinkDomainReceipt(invalid[0],id,invalid[1],invalid[2]),/mismatch/);
  assert.throws(()=>validateTradeLinkDraftEnvelope({...draft,documentNumber:'Q-000001 '}),/Invalid/);
+});
+
+test('signed TradeLink session launches independent reads concurrently before any domain RPC',async()=>{
+ const calls=[],resolvers=new Map();
+ const gated=label=>new Promise(resolve=>{calls.push(label);resolvers.set(label,resolve);});
+ const auth={userId:id,getVerifiedUser:()=>gated('actor')};
+ const api={context:()=>gated('context'),board:()=>gated('board'),
+  allowed:()=>gated('manage'),rpc:async name=>{calls.push(name);return [];}};
+ const client=new TradeLinkDomainClient({auth,api});
+ const result=client.list();
+ assert.deepEqual(calls,['actor','context','board','manage']);
+ assert.equal(calls.includes('tl03_documents_list'),false);
+ resolvers.get('manage')(true);
+ resolvers.get('board')({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+  name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}});
+ resolvers.get('context')({user_id:id,workspace_id:workspace,profile:{status:'active'}});
+ resolvers.get('actor')({id});
+ assert.deepEqual(await result,[]);
+ assert.deepEqual(calls,['actor','context','board','manage','tl03_documents_list']);
+});
+test('concurrent signed preflight denies wrong workspace and denied manager without any document RPC',async()=>{
+ for(const override of [{workspaceId:item},{manage:false},{actorId:item},{active:false}]){
+  let calls=0;
+  const auth={userId:id,getVerifiedUser:async()=>({id:override.actorId||id})};
+  const api={context:async()=>({user_id:id,workspace_id:workspace,
+    profile:{status:override.active===false?'inactive':'active'}}),
+   board:async()=>({board:{id:TRADELINK_BOARD_ID,
+    workspace_id:override.workspaceId||workspace,name:'TradeLink',status:'active',
+    description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+   allowed:async()=>override.manage!==false,
+   rpc:async()=>{calls++;return [];}};
+  await assert.rejects(()=>new TradeLinkDomainClient({auth,api}).list(),
+   /identity or workspace changed|board manager scope required/);
+  assert.equal(calls,0);
+ }
 });
