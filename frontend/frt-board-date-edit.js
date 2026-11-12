@@ -1,5 +1,5 @@
-/** CP-FRT-BOARD-02: authoritative domain request-date edit.
- * Uses existing frt_update_request role enforcement and signed restricted reads.
+/** CP-FRT-BOARD-03B: authoritative atomic request-date edit.
+ * Uses installed frt_update_request_date_cas and signed restricted reads.
  * No finance status, person, attachment, QR or board-mirror mutation.
  */
 import {ApiError} from './session.js';
@@ -44,13 +44,13 @@ export async function updateFRTRequestDate({auth,api,requestId,workspaceId,
  if(again?.id!==actor.id||auth.userId!==actor.id||afterContext?.user_id!==actor.id||
     afterContext?.workspace_id!==workspaceId||afterContext?.profile?.status!=='active')
   throw new ApiError('FRT signed session changed before saving.',403);
- // Existing RPC provides server-side FRT role / workspace enforcement.
- // Do not retry ambiguous writes; the RPC has no updated_at CAS argument.
- const receipt=await api.rpc('frt_update_request',{
+ // The installed server RPC performs date CAS atomically and audits the write.
+ // Never fall back to the legacy unguarded frt_update_request.
+ const receipt=await api.rpc('frt_update_request_date_cas',{
   p_workspace_id:workspaceId,p_request_id:requestId,
-  p_payload:{dateNeeded:nextDate}
+  p_expected_date:expectedDate,p_next_date:nextDate
  });
- if(receipt?.ok!==true){const e=new ApiError('Date update outcome uncertain. Refresh before retrying.',409);
+ if(receipt?.ok!==true||receipt.dateNeeded!==nextDate){const e=new ApiError('Date update outcome uncertain. Refresh before retrying.',409);
   e.schemaOutcomeUncertain=true;throw e;}
  const verified=await api.rpc('frt_restricted_request_detail',{
   p_workspace_id:workspaceId,p_request_id:requestId});
