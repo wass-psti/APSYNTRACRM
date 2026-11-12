@@ -14,9 +14,9 @@ test('bulk controls remain fail-closed before genuine per-session preflight',()=
  assert.match(app,/case 'bulk-status'/);
  assert.match(app,/case 'bulk-archive'/);
  assert.match(app,/case 'group-delete-empty'/);
- assert.match(app,/state\.board\.items\?\.some\(item=>item\.group_id===group\.id\)/);
- assert.match(app,/await db\.allowed\(state\.boardId,'manage'\)/);
- assert.match(app,/await boardBulkClient\.group\(state\.board\.board,group,'delete_empty'\)/);
+ assert.match(app,/fresh\.items\?\.some\(item=>item\.group_id===candidate\.id\)/);
+ assert.match(app,/if\(!activeBoardLayout\(\)\|\|!state\.boardManage\)return/);
+ assert.match(app,/await db\.deleteEmptyGroupCas\(boardId,candidate\)/);
  assert.match(app,/await db\.updateGroupCas\(boardId,original,title\)/);
  assert.match(app,/clearBulkActivation\(\)/);
  assert.doesNotMatch(app,/db\.deleteGroup|wm_delete_board_group/);

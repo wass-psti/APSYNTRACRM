@@ -126,8 +126,8 @@ test('managed board grid removes developer explanations and retains required col
 test('group removal is reversible and permanent production deletion remains approval-gated',()=>{
  assert.equal(MANAGED_TT_GROUP_DELETE_ENABLED,false);
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/Remove empty group from view \(reversible\)/);
- assert.match(app,/Permanent deletion — approval required/);
+ assert.match(app,/Hide empty group \(reversible\)/);
+ assert.doesNotMatch(app,/Delete group — protected|Permanent deletion — approval required/);
  assert.match(app,/data-action="group-hide-empty"/);
  assert.match(app,/case 'group-hide-empty'/);
  assert.match(app,/case 'group-show-hidden'/);

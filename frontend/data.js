@@ -201,6 +201,23 @@ export class DomainApi {
    throw new ApiError('Group rename receipt is uncertain. Reload before retrying.',409);
   return response;
  }
+ /** Ordinary board empty-group deletion via the installed server CAS contract.
+  * No bulk feature flag, unsafe legacy cascading RPC, or client authority override.
+  */
+ async deleteEmptyGroupCas(boardId,group){
+  const bid=requireUuid(boardId),gid=requireUuid(group?.id);
+  if(group?.board_id!==bid||typeof group.updated_at!=='string'||
+    !Number.isFinite(Date.parse(group.updated_at)))
+   throw new ApiError('Group identity or revision is unavailable. Reload the board.',409);
+  const response=await this.rpc('wm_board_group_cas',{
+   p_board_id:bid,p_group_id:gid,p_expected_updated_at:group.updated_at,
+   p_action:'delete_empty',p_title:null
+  });
+  if(response?.boardId!==bid||response?.groupId!==gid||
+     response?.action!=='delete_empty'||response.updatedAt!==null)
+   throw new ApiError('Group delete receipt is uncertain. Reload the board before retrying.',409);
+  return response;
+ }
  async addItem(boardId,groupId,title){return this.rpc('wm_add_board_item',{
    p_board_id:requireUuid(boardId),p_group_id:requireUuid(groupId),p_title:title.trim()
  });}

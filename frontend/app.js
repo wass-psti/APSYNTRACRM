@@ -755,6 +755,8 @@ function groupHeading(group,count){
  const managedEmpty=canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
   state.board?.groups||[],state.board?.items||[]);
  const managedDelete=managedEmpty&&MANAGED_TT_GROUP_DELETE_ENABLED&&state.boardManage;
+ const ordinaryDelete=state.boardManage&&state.board?.groups?.length>1&&
+  !isProtectedBoard(state.board?.board)&&!moduleByBoardName(state.board?.board?.name);
  // The saved group title is the sole source for both display and editing.
  const title=e(group.title||'Group');
  const displayTitle=title;
@@ -775,12 +777,9 @@ function groupHeading(group,count){
    '" title="Group actions">⋮</summary><div class="board-group-actions-list">'+
    '<button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
    '<button type="button" data-action="group-select-visible" data-id="'+id+'">Select visible records</button>'+
-   (bulkReadyFor(state.board?.board)&&state.bulk02Access?.canManage?
-    '<button type="button" data-action="group-delete-empty" data-id="'+id+'">Delete empty group</button>':
-    managedDelete?'<button type="button" data-action="managed-group-delete-empty" data-id="'+id+'">Delete empty group (signed admin)</button>':
-    (managedEmpty?'<button type="button" data-action="group-hide-empty" data-id="'+id+'">Remove empty group from view (reversible)</button>':
-     '<button type="button" disabled title="This group is protected or contains records">Delete group — protected</button>'))+
-   (managedEmpty&&!managedDelete?'<button type="button" disabled title="Permanent deletion requires separate production security approval">Permanent deletion — approval required</button>':'')+
+   (ordinaryDelete?'<button type="button" data-action="group-delete-empty" data-id="'+id+'">Delete group</button>':
+    managedDelete?'<button type="button" data-action="managed-group-delete-empty" data-id="'+id+'">Delete empty group</button>':
+    managedEmpty?'<button type="button" data-action="group-hide-empty" data-id="'+id+'">Hide empty group (reversible)</button>':'')+
    '</div></details>':'')+'</div>';
 }
 function row01AcceptancePanel(board){
@@ -6748,16 +6747,39 @@ case 'managed-group-delete-empty':{
  break;
 }
 case 'group-delete-empty':{
- if(!bulkReadyFor(state.board?.board)||!state.bulk02Access?.canManage)return;
+ if(!activeBoardLayout()||!state.boardManage)return;
+ const boardId=state.boardId,board=state.board?.board;
+ if(!board||isProtectedBoard(board)||moduleByBoardName(board.name))return;
  const group=state.board.groups?.find(g=>g.id===button.dataset.id);
- if(!group||!activeBoardLayout())return;
- if(state.board.groups.length<=1||state.board.items?.some(item=>item.group_id===group.id))
-  throw new ApiError('Only a completely empty, nonfinal group can be deleted.',400);
- if(!await db.allowed(state.boardId,'manage'))
-  throw new ApiError('Group deletion requires effective board manager permission.',403);
- if(!confirm('Delete the empty group "'+group.title+'"? This cannot be undone.'))return;
- await boardBulkClient.group(state.board.board,group,'delete_empty');
- await loadBoard(state.boardId,'items');toast('Empty group deleted.');break;
+ if(!group)return;
+ // One authoritative signed board read verifies the group and all records,
+ // including archived records omitted by the displayed row count.
+ const snapshot={boardId,userId:auth.userId,workspaceId:state.context.workspace_id};
+ const fresh=await db.board(boardId);
+ if(!boardHistoryAuthorized(snapshot)||fresh.board?.id!==boardId||
+    fresh.board.workspace_id!==snapshot.workspaceId||
+    isProtectedBoard(fresh.board)||moduleByBoardName(fresh.board.name))return;
+ const candidate=fresh.groups?.find(g=>g.id===group.id);
+ if(!candidate||candidate.updated_at!==group.updated_at)
+  throw new ApiError('Group has changed. Refresh the board before deleting.',409);
+ if(fresh.groups.length<=1)
+  throw new ApiError('The last group cannot be deleted. Add another group first.',400);
+ if(fresh.items?.some(item=>item.group_id===candidate.id))
+  throw new ApiError('Group contains records, including archived records. Move or remove them before deleting the group.',409);
+ if(!confirm('Permanently delete the empty group "'+candidate.title+'"? This cannot be undone.'))return;
+ if(!boardHistoryAuthorized(snapshot))return;
+ // The server revalidates signed manage access, workspace, emptiness and revision
+ // while holding the board lock. Never call the legacy cascading delete RPC.
+ await db.deleteEmptyGroupCas(boardId,candidate);
+ if(!boardHistoryAuthorized(snapshot))return;
+ const persisted=await db.board(boardId);
+ if(!boardHistoryAuthorized(snapshot))return;
+ if(persisted.board?.workspace_id!==snapshot.workspaceId||
+    persisted.groups?.some(g=>g.id===candidate.id))
+  throw new ApiError('Delete result could not be verified. Refresh before retrying.',409);
+ await loadBoard(boardId,'items');
+ if(boardHistoryAuthorized(snapshot))toast('Group deleted and verified.');
+ break;
 }
 case 'bulk-clear':{itemSelection.clear();syncBoardSelectionUi();break;}
 case 'bulk-export':{
