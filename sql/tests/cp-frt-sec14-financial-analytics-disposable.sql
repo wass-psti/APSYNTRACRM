@@ -7,7 +7,10 @@ BEGIN;
 -- Deterministic fixture: three WAO requests, category line-items and two
 -- submitted liquidations. The existing WASS request is the isolation control.
 UPDATE public.frt_requests
-SET created_at=date_trunc('month',now())-interval '2 months'+interval '3 days'
+SET created_at=date_trunc('month',now())-interval '2 months'+interval '3 days',
+    status='IN_PROGRESS',finance_approved_by='00000000-0000-4000-8000-00000000000b',
+    finance_approved_at=date_trunc('month',now())-interval '2 months'+interval '4 days',
+    liquidation_status='SUBMITTED'
 WHERE id='10000000-0000-4000-8000-000000000001'
  AND workspace_id='00000000-0000-4000-8000-000000000001';
 
@@ -22,6 +25,12 @@ SELECT '10000000-0000-4000-8000-000000000003',c.workspace_id,c.id,
  date_trunc('month',now())-interval '1 month'+interval '3 days'
 FROM public.frt_companies c
 WHERE c.workspace_id='00000000-0000-4000-8000-000000000001' AND c.code='WAO';
+
+UPDATE public.frt_requests
+SET finance_approved_by='00000000-0000-4000-8000-00000000000b',
+    finance_approved_at=created_at+interval '1 day'
+WHERE id='10000000-0000-4000-8000-000000000003'
+ AND workspace_id='00000000-0000-4000-8000-000000000001';
 
 INSERT INTO public.frt_requests(
  id,workspace_id,company_id,requestor_id,voucher_no,title,department,
