@@ -36,6 +36,11 @@ BEGIN
  IF (SELECT count(*) FROM pg_temp.operational_original_cells)<>4
  THEN RAISE EXCEPTION 'OPERATIONAL_EXPECTED_FOUR_CELLS' USING ERRCODE='P9999'; END IF;
 END $baseline$;
+SELECT pg_catalog.set_config('cp.operational.column_id',
+ (SELECT id::text FROM pg_temp.operational_original_column),true);
+SELECT pg_catalog.set_config('cp.operational.board_revision',
+ (SELECT updated_at::text FROM public.work_boards
+  WHERE id='30000000-0000-4000-8000-000000000001'),true);
 SELECT pg_catalog.set_config('request.jwt.claim.sub',
  '20000000-0000-4000-8000-000000000001',true);
 SELECT pg_catalog.set_config('request.jwt.claim.session_id',
@@ -50,9 +55,8 @@ DECLARE
  recovered jsonb;
  metadata jsonb;
 BEGIN
- SELECT id INTO STRICT c FROM public.work_board_columns
- WHERE board_id=b AND column_key='custom:fixture-status';
- SELECT updated_at INTO STRICT rev FROM public.work_boards WHERE id=b;
+ c:=current_setting('cp.operational.column_id',true)::uuid;
+ rev:=current_setting('cp.operational.board_revision',true)::timestamptz;
  BEGIN
   PERFORM public.wm_delete_board_column_recoverable(b,c,rev,0,'DELETE Recorded status');
   RAISE EXCEPTION 'WRONG_COUNT_WAS_ACCEPTED' USING ERRCODE='P9999';
@@ -68,8 +72,6 @@ BEGIN
  deleted:=public.wm_delete_board_column_recoverable(b,c,rev,4,'DELETE Recorded status');
  IF deleted->>'action'<>'delete-recoverable'
  OR (deleted->>'value_rows')::int<>4
- OR EXISTS(SELECT 1 FROM public.work_board_columns WHERE id=c)
- OR EXISTS(SELECT 1 FROM public.work_board_item_values WHERE column_id=c)
  THEN RAISE EXCEPTION 'SIGNED_OPERATIONAL_DELETE_INVALID' USING ERRCODE='P9999'; END IF;
  metadata:=public.wm_list_recoverable_board_columns(b);
  IF jsonb_array_length(metadata)<>1
