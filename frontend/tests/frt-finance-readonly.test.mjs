@@ -58,7 +58,11 @@ test('authorized FRT board integration reads only signed domain RPCs and removes
  assert.ok(!f.calls.some(x=>typeof x==='object'&&/create|update|delete|admin_set|request_action/i.test(x.name)));
  assert.equal(report.writesAttempted,0);
  const out=JSON.stringify(report);
- assert.doesNotMatch(out,/secret@example|requestor|total_amount|attachments/i);\n assert.equal(report.analytics.requestedTotal,'10000.00');\n assert.equal(report.analytics.spentTotal,'2500.00');\n assert.equal(report.analytics.topCategories[0].requestedAmount,'7000.00');\n assert.equal(report.analytics.monthlyTrend.length,6);
+ assert.doesNotMatch(out,/secret@example|requestor|total_amount|attachments/i);
+ assert.equal(report.analytics.requestedTotal,'10000.00');
+ assert.equal(report.analytics.spentTotal,'2500.00');
+ assert.equal(report.analytics.topCategories[0].requestedAmount,'7000.00');
+ assert.equal(report.analytics.monthlyTrend.length,6);
  assert.deepEqual(report.requests[0],{
   requestId:record,voucher:'FRT-01',title:'Operational request',status:'PENDING_APPROVAL',
   dateNeeded:'2026-11-02',filingStatus:'NOT_FILED'
