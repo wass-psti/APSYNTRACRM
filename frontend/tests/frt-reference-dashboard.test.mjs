@@ -73,6 +73,8 @@ test('new scoped CSS participates in generated ordered stylesheet without extra 
  assert.match(manifest,/frontend\/frt-reference-dashboard.css/);
  assert.match(index,/frontend\/frt-reference-dashboard.css/);
  assert.match(bundle,/frontend\/frt-reference-dashboard.css/);
+ assert.match(bundle,/frt-exec-category-list/);
+ assert.match(bundle,/frt-exec-trend/);
  assert.match(css,/#app \.frt-ref/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.doesNotMatch(css,/!important\s*;\s*\}/);
