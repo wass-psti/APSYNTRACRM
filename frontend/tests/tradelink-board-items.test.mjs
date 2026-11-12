@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {searchTradeLinkBoardItems} from '../tradelink-application.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from '../board-grid.js';
 import {
  TRADELINK_BOARD_ID,TRADELINK_WORKFLOW_STATUS,TRADELINK_QUOTE_STATUS,
@@ -114,4 +115,18 @@ test('source integration uses the existing signed CAS schema mutation, not SQL o
  assert.match(smoke,/frontend\/tradelink-board-items\.js/);
  assert.doesNotMatch(readFileSync('frontend/tradelink-board-items.js','utf8'),
   /storage\.from\(|deleteBoardItem\(|wm_delete_board_column/);
+});
+
+test('archived TradeLink document-linked items are hidden only from active Board presentation',()=>{
+ const active={id:'99999999-9999-4999-8999-999999999999',title:'Active QA document',archived_at:null};
+ const archived={id:'88888888-8888-4888-8888-888888888888',title:'CP-TL-06-QA-ESI-20261112',archived_at:'2026-11-12T07:00:00Z'};
+ const detail={...fixture(),items:[archived,active]};
+ assert.deepEqual(searchTradeLinkBoardItems(detail),[active]);
+ assert.equal(detail.items.length,2,'server signed archived item and audit context are not removed');
+ const app=readFileSync('frontend/app.js','utf8');
+ const page=app.slice(app.indexOf('function boardPage(){'),app.indexOf('function settingsPage(){'));
+ assert.match(page,/const items=isTradeLinkBoard\(b\)\?searchTradeLinkBoardItems\(state\.board\):/);
+ assert.match(page,/Array\.isArray\(state\.board\.items\)\?state\.board\.items:\[\]/);
+ assert.equal(searchTradeLinkBoardItems({...detail,board:{...board,id:ws}}).length,0,
+  'helper is scoped to the exact managed TradeLink board');
 });
