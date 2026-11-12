@@ -266,7 +266,7 @@ function rowMarkup(row,options={}){
   '<strong>'+escape(row.name)+'</strong><small>'+escape(row.relation)+
   ' · '+(row.active?'Current signed workspace':switchingUiReady(options)?
    'Signed member workspace · server-verified switching':'Signed member workspace · switching unavailable')+'</small></span>'+
-  '<span class="ws01-entry-badge">'+(row.active?'Current':'Member')+'</span></button></div>';
+  '<span class="ws01-entry-badge">'+(row.active?'Current · ':'')+escape(row.relation[0].toUpperCase()+row.relation.slice(1))+'</span></button></div>';
 }
 function resultsMarkup(catalog,tab,query,options={}){
  const rows=visibleWorkspaces(catalog,{tab,query});
