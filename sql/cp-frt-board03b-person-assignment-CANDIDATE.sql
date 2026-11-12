@@ -40,16 +40,16 @@ CREATE OR REPLACE FUNCTION public.frt_request_assignment(
  p_workspace_id uuid,p_request_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
 AS $fn$
-DECLARE requestor uuid; assigned uuid; current_role text;
+DECLARE requestor uuid; assigned uuid; v_frt_role text;
 BEGIN
- current_role:=private.frt_current_role(p_workspace_id);
- IF auth.uid() IS NULL OR current_role IS NULL
+ v_frt_role:=private.frt_current_role(p_workspace_id);
+ IF auth.uid() IS NULL OR v_frt_role IS NULL
  THEN RAISE EXCEPTION 'FRT_ASSIGNMENT_READ_DENIED' USING ERRCODE='42501'; END IF;
  SELECT r.requestor_id,r.assignee_id INTO requestor,assigned
  FROM public.frt_requests r WHERE r.workspace_id=p_workspace_id
    AND r.id=p_request_id AND r.archived_at IS NULL;
  IF NOT FOUND THEN RAISE EXCEPTION 'FRT_ASSIGNMENT_REQUEST_NOT_FOUND' USING ERRCODE='P0002'; END IF;
- IF current_role='REQUESTOR' AND requestor<>auth.uid()
+ IF v_frt_role='REQUESTOR' AND requestor<>auth.uid()
  THEN RAISE EXCEPTION 'FRT_ASSIGNMENT_REQUEST_DENIED' USING ERRCODE='42501'; END IF;
  RETURN jsonb_build_object('requestId',p_request_id,'assigneeId',assigned);
 END $fn$;
