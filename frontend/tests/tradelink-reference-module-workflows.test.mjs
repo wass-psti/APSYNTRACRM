@@ -6,19 +6,22 @@ import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 const workspaceId='00000000-0000-4000-8000-000000000001';
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspaceId,name:'TradeLink',description:'[APSYNTRA:MODULE:tradelink:v1]',status:'active'},groups:[],items:[],columns:[]};
 const render=(type,values)=>renderTradeLinkDraftWorkspace({detail,workspaceId,canManage:true,actorName:'Signed User',view:{...initialTradeLinkDraftView(type),...(values?{formValues:{documentType:type,...values}}:{})}});
-test('module-specific workflow after terms; packing has no workflow',()=>{
+test('module-specific workflow after terms, including independent Packing List reviewers',()=>{
  for(const [type,title] of Object.entries({esi:'Verification &amp; Approval Workflow',delivery:'Delivery Tracking',payment:'Payment Acknowledgement',po:'Verification &amp; Approval Workflow'})){
   const html=render(type);
   assert.ok(html.indexOf('tl-reference-terms')<html.indexOf('tl-reference-module-approval'),type);
   assert.ok(html.includes(title));
   assert.match(html,/Created By/);
   assert.match(html,/Signed User/);
-  assert.match(html,/Proposed account assignments only/);
+  assert.match(html,/Assigned reviewers are validated against their existing signed TradeLink accounts/);
   assert.doesNotMatch(html,/Workflow account assignments|readiness · preview only/);
  }
  const packing=render('packing');
  assert.match(packing,/Terms &amp; Conditions/);
- assert.doesNotMatch(packing,/tl-reference-module-approval|Verification &amp; Approval Workflow|Delivery Tracking|Payment Acknowledgement/);
+ assert.match(packing,/Verification &amp; Approval Workflow/);
+ assert.match(packing,/Primary Reviewer/);
+ assert.match(packing,/Secondary Reviewer/);
+ assert.doesNotMatch(packing,/Delivery Tracking|Payment Acknowledgement/);
 });
 test('ESI finance and management lists preserve exactly one field per contract',()=>{
  const html=render('esi');
@@ -108,13 +111,19 @@ test('each assigned module responsibility has an independent, inactive PDF time 
   assert.equal((html.match(/data-tl-pdf-time-control/g)||[]).length,stages.length,type);
   assert.equal((html.match(/aria-disabled="true" data-tl-pdf-time-control/g)||[]).length,stages.length,type);
   for(const key of stages)assert.match(html,new RegExp('id="tl-pdf-time-'+key+'"[^>]*disabled'));
-  assert.match(html,/No local timestamp is an approval/);
+  assert.match(html,/The server records the signed account and actual validation time/);
  }
- const packing=render('packing');
- assert.doesNotMatch(packing,/data-tl-pdf-time-control|data-tl-pdf-stage/);
+ const packing=render('packing',{verifiedBy:'msenagan@watchdogautomation.com.ph',approvedBy:'asenagan@watchdogautomation.com.ph'});
+ assert.equal((packing.match(/data-tl-pdf-time-control/g)||[]).length,2);
+ assert.equal((packing.match(/aria-disabled="true" data-tl-pdf-time-control/g)||[]).length,2);
+ assert.match(packing,/data-tl-review-stage="primary"/);
+ assert.match(packing,/data-tl-review-stage="secondary"/);
  const quotation=render('quotation');
  assert.match(quotation,/data-tl-review-stage="primary"/);
  assert.match(quotation,/data-tl-review-stage="secondary"/);
+ const packingWorkflow=render('packing');
+ assert.match(packingWorkflow,/data-tl-review-stage="primary"/);
+ assert.match(packingWorkflow,/data-tl-review-stage="secondary"/);
 });
 test('selected account is shown, unselected control hidden, legacy names cannot authorize approval',()=>{
  const chosen=render('esi',{verifiedBy:'msenagan@watchdogautomation.com.ph'});

@@ -34,7 +34,7 @@ test('suggestions are not enabled workflow, company, or monetary actions',()=>{
  const html=render('quotation');
  assert.doesNotMatch(html,/data-action="tradelink-company-reset-counter"/);
  assert.doesNotMatch(html,/data-action="tradelink-upload-logo"/);
- assert.match(html,/PDF generation requires an authorized workflow/);
+ assert.match(html,/PDF printing is available only after both reviewers approve/);
  assert.match(html,/No PDF, approval or document is generated/);
 });
 
@@ -45,7 +45,7 @@ test('All Documents retains scrollable authorized results and responsive filters
  assert.match(css,/\.tl-reference-portal \.tl-document-repository \.tl-draft-list-filters\{/);
  assert.match(css,/@media\(max-width:460px\)/);
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(source,/renderTradeLinkDraftList\(rows,view,canManage,\{readOnly:true\}\)/);
+ assert.match(source,/renderTradeLinkDraftList\(rows,view,canManage,\{readOnly:true,canReview,actorEmail\}\)/);
  assert.match(source,/data-action="tradelink-documents-refresh"/);
  assert.match(source,/data-action="tradelink-document-open"/);
 });

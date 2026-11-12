@@ -15,10 +15,10 @@ test('Quotation shows terms before final approval and two independent review tim
  const actions=html.indexOf('class="tl-draft-actions"');
  assert.ok(terms>0&&approval>terms&&actions>approval);
  assert.equal((html.match(/>Use Time Now<\/button>/g)||[]).length,2);
- assert.match(html,/id="tl-quote-review-time"[^>]*disabled/);
- assert.match(html,/id="tl-quote-secondary-review-time"[^>]*disabled/);
- assert.match(html,/id="tl-quote-secondary-review-time" aria-label="Secondary review date and time"/);
- assert.match(html,/Management verification is independent of the Sales Supervisor review/);
+ assert.match(html,/id="tl-pdf-time-verifiedByEmail"[^>]*disabled/);
+ assert.match(html,/id="tl-pdf-time-approvedByEmail"[^>]*disabled/);
+ assert.match(html,/id="tl-pdf-time-approvedByEmail"[^>]*aria-label="Management review timestamp"/);
+ assert.match(html,/This existing management assignment does not grant roles or permissions/);
  assert.equal((html.match(/name="approvedByEmail"/g)||[]).length,1);
  assert.equal((html.match(/name="verifiedByEmail"/g)||[]).length,1);
  assert.doesNotMatch(html,/name="reviewedAt"|name="secondaryReviewedAt"/);

@@ -306,7 +306,7 @@ test('all six saved document types hydrate the shared Create New form with their
   const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,canManage:true,
    view:{...initialTradeLinkDraftView(),mode:'edit',selected:{documentId,record}}});
   assert.match(html,/<form data-tradelink-draft-form/ ,type);
-  assert.match(html,/Editing saved Draft/,type);
+  assert.match(html,/Editing saved document/,type);
   assert.match(html,new RegExp('value="'+content.documentNumber+'"'),type);
   assert.match(html,/Save Changes/,type);
   assert.match(html,/Saved revision 4 loaded\. Changes remain local until Save Changes\./,type);

@@ -43,11 +43,11 @@ test('partial quotation never suppresses malformed nonempty values or disallowed
   {purpose:'save',lineId:()=> 'l1'}));
 });
 
-test('only quotation Draft save bypasses HTML submission-readiness; Preview remains strict',()=>{
+test('only quotation Save bypasses HTML submission-readiness; other modules remain strict',()=>{
  const view=initialTradeLinkDraftView('quotation');
  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:ws,view,canManage:true});
  assert.match(html,/<form data-tradelink-draft-form novalidate>/);
- assert.match(html,/Save Draft can preserve incomplete Quotation details/);
+ assert.match(html,/Not saved\. Save creates a For Approval document; choose Draft explicitly when needed\./);
  assert.match(html,/name="paymentTerms"[^>]*required/);
  assert.match(html,/name="lineQuantity"[^>]*required/);
  for(const type of ['esi','po','packing','delivery','payment']){

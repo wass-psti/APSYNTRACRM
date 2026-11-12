@@ -10,7 +10,8 @@ import {TL03_ATTACHMENTS_ENABLED,normalizeTradeLinkAttachmentList}
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
  TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
- TL03_WORKFLOW_OPERATIONAL_ENABLED,validateTradeLinkDraftEnvelope,
+ TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
+ validateTradeLinkDraftEnvelope,
  normalizeTradeLinkDomainRow} from './tradelink-domain-client.js';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
@@ -19,6 +20,12 @@ const typeLabels=Object.freeze([
  ['payment','Payment AR'],['quotation','Quotation'],['po','PO to Suppliers']
 ]);
 const currencies=TRADELINK_CURRENCIES;
+export const TRADELINK_DOCUMENT_STATUS_OPTIONS=Object.freeze([
+ ['for-approval','For Approval'],['approved','Approved'],['submitted','Submitted'],
+ ['under-negotiation','Under Negotiation'],['expired','Expired'],['on-hold','On-hold'],
+ ['won','Won'],['lost','Lost'],['cancelled','Cancelled'],['delivered','Delivered'],
+ ['closed','Closed'],['draft','Draft']
+]);
 const currencyUnit=v=>currencies.includes(String(v))?String(v):'—';
 const vatCodes=[['12','12%'],['zero','Zero-rated'],['exempt','Exempt'],
  ['15_tkm','15% TKM'],['15_ksa','15% KSA']];
@@ -102,7 +109,7 @@ export function parseTradeLinkDraftForm(fields,{
   if(text)draft[key]=text;
  };
  for(const key of ['customerName','referenceNumber','remarks',
-  'verifiedBy','verifiedByEmail','approvedByEmail'])addText(key);
+  'verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'])addText(key);
  for(const emailKey of ['verifiedByEmail','approvedByEmail']){
   const email=draft[emailKey];
   if(email&&(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))
@@ -186,6 +193,10 @@ export function parseTradeLinkDraftForm(fields,{
  if(physical){
   if(!draft.customerName||!draft.referenceNumber)
    throw new ApiError('Shipment Draft requires consignee/recipient and source reference.',400);
+  if(type==='packing'){
+   addText('verifiedBy',{required:true});
+   addText('approvedBy',{required:true});
+  }
   if(type==='delivery'){
    addText('checkedBy',{required:true});
    addText('deliveredBy',{required:true});
@@ -212,6 +223,13 @@ export function parseTradeLinkDraftForm(fields,{
    throw new ApiError('Payment Draft needs payor, particulars, a positive amount, receiver and verifier.',400);
   if((draft.chequeAmount??0)>0&&(!draft.bankName||!draft.chequeNumber))
    throw new ApiError('Cheque Draft needs bank name and cheque number.',400);
+ }
+ if(type==='packing'){
+  for(const emailKey of ['verifiedBy','approvedBy']){
+   const email=String(draft[emailKey]||'').trim();
+   if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    throw new ApiError('Enter a valid assigned TradeLink reviewer email.',400);
+  }
  }
  if(priced){
   // Local submission-readiness previews only: these named reviewers are
@@ -285,7 +303,7 @@ export function reconcileTradeLinkSavedListing(list,record,receipt){
     !record||record.id!==receipt?.documentId||
     record.board_item_id!==receipt?.boardItemId||
     record.revision!==receipt?.revision||
-    !['draft','revision-required'].includes(record.workflow_state)||
+    !['draft','for-approval','revision-required'].includes(record.workflow_state)||
     record.archived_at!==null||
     typeof record.document_number!=='string'||
     typeof record.updated_at!=='string'||
@@ -324,6 +342,26 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
   return this.client.read(documentId);
  }
+ async assignedDocuments(limit=50){
+  if(!TL03_DUAL_REVIEW_ENABLED)disabled();
+  return this.client.assignedDocuments(limit);
+ }
+ async reviewStages(documentId){
+  if(!TL03_DUAL_REVIEW_ENABLED)disabled();
+  return this.client.reviewStages({documentId});
+ }
+ async readAssigned(documentId){
+  if(!TL03_DUAL_REVIEW_ENABLED)disabled();
+  return this.client.readAssigned(documentId);
+ }
+ async recordReviewStage(input={}){
+  if(!TL03_DUAL_REVIEW_ENABLED)disabled();
+  return this.client.recordReviewStage(input);
+ }
+ async updateStatus(input={}){
+  if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
+  return this.client.updateStatus(input);
+ }
  async submit({documentId,expectedRevision,documentType,fromState='draft'}={}){
   if(!TL03_WORKFLOW_SUBMIT_ENABLED)disabled();
   return this.client.submit({documentId,expectedRevision,documentType,fromState});
@@ -346,13 +384,13 @@ export class TradeLinkDraftWorkspace{
   return this.client.operate({
    documentId,expectedRevision,documentType,action,fromState,reason});
  }
- async save({documentId,expectedRevision=0,draft,workflowState='draft'}={}){
+ async save({documentId,expectedRevision=0,draft,initialState='for-approval'}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
   const payload=validateTradeLinkDraftEnvelope(applyQuotationApprovalHierarchy(draft));
   const id=documentId||globalThis.crypto?.randomUUID?.();
   const operation=expectedRevision===0?'create':'update';
   return this.client.commit({documentId:id,expectedRevision,operation,
-   draft:payload,expectedState:workflowState});
+   draft:payload,initialState});
  }
  async changeState({documentId,revision,operation}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
@@ -414,19 +452,36 @@ function referencePersonField(label,name,value,people,placeholder,{required=fals
    people.map(person=>'<option value="'+escape(person)+'"'+(person===current?' selected':'')+'>'+escape(person)+'</option>').join('')+
   '</select></div>';
 }
-/** UI only: no local timestamp or PDF approval can authorize a document. */
-function referenceAssignedPdfStage(field,value,label){
- const account=String(value??'').trim();
- const message=account?
-  'Assigned account: '+account+'. Only this signed-in account may perform the '+label+' step after PDF approval is activated.':
+/** Review controls are enabled only for the saved document's assigned account.
+ * The timestamp itself is always returned by the signed server operation. */
+function referenceAssignedPdfStage(field,value,label,stage,{
+ actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewedAt=null
+}={}){
+ const account=String(value??'').trim().toLowerCase();
+ const actor=String(actorEmail||'').trim().toLowerCase();
+ const canRecord=TL03_DUAL_REVIEW_ENABLED&&documentSaved&&
+  workflowState==='for-approval'&&validUuid(documentId)&&account!==''&&
+  account===actor&&!reviewedAt;
+ const message=account?'Assigned account: '+account+'.':
   'Select an account to assign responsibility for '+label+'.';
+ const shown=reviewedAt&&Number.isFinite(Date.parse(reviewedAt))?
+  new Date(reviewedAt).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'';
  return '<div class="tl-reference-pdf-stage" data-tl-pdf-stage="'+escape(field)+'">'+
   '<p class="tl-reference-assigned-account" data-tl-pdf-assignee aria-live="polite">'+escape(message)+'</p>'+
   '<label for="tl-pdf-time-'+escape(field)+'">Review Date &amp; Time</label>'+
   '<div class="tl-reference-approval-timestamp">'+
-  '<input id="tl-pdf-time-'+escape(field)+'" disabled placeholder="Pending signed electronic PDF approval" aria-label="'+escape(label)+' timestamp">'+
-  '<button type="button" disabled aria-disabled="true" data-tl-pdf-time-control title="Electronic PDF approval is not activated; timestamp requires an authorized signed server event"'+(account?'':' hidden')+'>Use Time Now</button></div>'+
-  '<small>Available only after the PDF template and server-side approval flow are activated. No local timestamp is an approval.</small>'+
+  '<input id="tl-pdf-time-'+escape(field)+'" disabled value="'+escape(shown)+'" placeholder="'+
+   (reviewedAt?'':'Not yet validated')+'" aria-label="'+escape(label)+' timestamp">'+
+  '<button type="button" '+(canRecord?'':'disabled aria-disabled="true"')+
+   ' data-tl-pdf-time-control data-tl-review-stage="'+escape(stage)+'" '+
+   'data-action="tradelink-document-review-stage" data-stage="'+escape(stage)+'" '+
+   'data-id="'+escape(documentId)+'"'+
+   ' title="'+escape(canRecord?'Record your signed validation time':
+    reviewedAt?'This review is already recorded':
+    'Only the assigned account can validate a saved For Approval document')+'"'+
+   (account?'':' hidden')+'>Use Time Now</button></div>'+
+  '<small>'+(reviewedAt?'Signed validation recorded by the assigned account.':
+   'The server records the signed account and actual validation time.')+'</small>'+
   '</div>';
 }
 function referenceCreator(actorName){
@@ -436,37 +491,48 @@ function referenceCreator(actorName){
   '<small>Signed server identity and timestamp are captured on successful save.</small>'+
   '</div></div>';
 }
-function renderReferenceModuleWorkflow(type,fieldValue,data,actorName){
- if(type==='packing'||type==='quotation')return '';
+function renderReferenceModuleWorkflow(type,fieldValue,data,actorName,reviewContext={}){
+ const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null}=reviewContext;
  const value=name=>fieldValue(name,data[name]||'');
- const person=(label,name,placeholder,required=false)=>
+ const stage=(field,stageName,label)=>referenceAssignedPdfStage(field,value(field),label,stageName,{
+  actorEmail,documentSaved,documentId,workflowState,
+  reviewedAt:reviewStages?.[stageName]?.recordedAt||null
+ });
+ const person=(label,name,placeholder,required=false,stageName='primary')=>
   referencePersonField(label,name,value(name),TRADELINK_MODULE_ACCOUNT_OPTIONS[type][name],placeholder,{required})+
-  referenceAssignedPdfStage(name,TRADELINK_MODULE_ACCOUNT_OPTIONS[type][name].includes(value(name))?value(name):'',label);
- const help='<p class="tl-reference-workflow-disclaimer">Proposed account assignments only. Selecting an email does not verify the account, grant permissions, confirm delivery or record an approval.</p>';
+  stage(name,stageName,label);
+ const help='<p class="tl-reference-workflow-disclaimer">Assigned reviewers are validated against their existing signed TradeLink accounts. Assignments do not grant roles or board permissions.</p>';
  const group=(title,content)=>'<div class="tl-reference-approval-stage">'+
   '<h5>'+title+'</h5>'+content+'</div>';
+ if(type==='packing')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Packing List verification and approval">'+
+  '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
+  group('Primary Reviewer',field('Primary reviewer email','verifiedBy',value('verifiedBy'),
+   'type="email" maxlength="254" required')+stage('verifiedBy','primary','Primary reviewer'))+
+  group('Secondary Reviewer',field('Secondary reviewer email','approvedBy',value('approvedBy'),
+   'type="email" maxlength="254" required')+stage('approvedBy','secondary','Secondary reviewer'))+
+  help+'</section>';
  if(type==='esi')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Electronic SI verification and approval">'+
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
   group('Verified By (Finance Team)',
-   person('Finance team member','verifiedBy','Select finance team member...',true))+
+   person('Finance team member','verifiedBy','Select finance team member...',true,'primary'))+
   group('Approved By (Management)',
-   person('Management approver','approvedBy','Select management member...',true))+
+   person('Management approver','approvedBy','Select management member...',true,'secondary'))+
   help+'</section>';
  if(type==='delivery')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Delivery tracking">'+
   '<h4>Delivery Tracking</h4>'+referenceCreator(actorName)+
   group('Checked By (Quality Control)',
-   person('QC personnel','checkedBy','Select QC personnel...',true))+
+   person('QC personnel','checkedBy','Select QC personnel...',true,'primary'))+
   group('Delivered By (Logistics)',
-   person('Logistics personnel','deliveredBy','Select logistics personnel...',true))+
+   person('Logistics personnel','deliveredBy','Select logistics personnel...',true,'secondary'))+
   '<div class="tl-reference-assignment-field"><label for="tl-ref-delivery-received">Received By (optional)</label>'+
   '<input id="tl-ref-delivery-received" name="receivedBy" maxlength="5000" value="'+escape(value('receivedBy'))+'" placeholder="Recipient acknowledgement"></div>'+
   help+'</section>';
  if(type==='payment')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Payment acknowledgement">'+
   '<h4>Payment Acknowledgement</h4>'+referenceCreator(actorName)+
   group('Payment Received By (Finance)',
-   person('Finance team member','receivedBy','Select finance team member...',true))+
+   person('Finance team member','receivedBy','Select finance team member...',true,'primary'))+
   group('Verified By (Administration)',
-   person('Administrator','verifiedBy','Select admin...',true))+
+   person('Administrator','verifiedBy','Select admin...',true,'secondary'))+
   help+'</section>';
  if(type==='po')return '<section class="tl-reference-approval tl-reference-module-approval" aria-label="Supplier purchase order verification and approval">'+
   '<h4>Verification &amp; Approval Workflow</h4>'+referenceCreator(actorName)+
@@ -475,9 +541,9 @@ function renderReferenceModuleWorkflow(type,fieldValue,data,actorName){
     value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph',
     TRADELINK_MODULE_ACCOUNT_OPTIONS.po.verifiedBy,'Select account manager...',{required:true})+
    '<small>Suggested default reviewer: aacsenagan@watchdogautomation.com.ph. This selection is editable.</small>'+
-   referenceAssignedPdfStage('verifiedBy',TRADELINK_MODULE_ACCOUNT_OPTIONS.po.verifiedBy.includes(value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph')?(value('verifiedBy')||'aacsenagan@watchdogautomation.com.ph'):'','Account Manager review'))+
+   stage('verifiedBy','primary','Account Manager review'))+
   group('Approved By (Management)',
-   person('Management approver','approvedBy','Select management member...',true))+
+   person('Management approver','approvedBy','Select management member...',true,'secondary'))+
   help+'</section>';
  return '';
 }
@@ -507,69 +573,65 @@ export function applyQuotationApprovalHierarchy(draft){
 /** Presentation-only eligibility. A matching email never authorizes an RPC:
  * server-enforced stage membership, document status and audit must also pass. */
 export function quotationReviewControlEligibility({
- actorEmail='',secondaryEmail='',documentSaved=false,
- primaryReviewAvailable=TL03_WORKFLOW_REVIEW_ENABLED,
- secondaryDecisionAvailable=TL03_WORKFLOW_DECISION_ENABLED
+ actorEmail='',secondaryEmail='',documentSaved=false,workflowState='draft',
+ primaryRecordedAt=null,secondaryRecordedAt=null
 }={}){
  const actor=String(actorEmail||'').trim().toLowerCase();
  const selected=String(secondaryEmail||'').trim().toLowerCase();
  const primaryAssigned=actor!==''&&actor===QUOTATION_APPROVAL_HIERARCHY.primary.email;
  const secondaryAssigned=actor!==''&&actor===selected&&
   QUOTATION_APPROVAL_HIERARCHY.secondaryOptions.includes(selected);
+ const pending=documentSaved&&workflowState==='for-approval'&&TL03_DUAL_REVIEW_ENABLED;
  return {
   primaryAssigned,secondaryAssigned,
-  // Deliberately do not activate from an email match: the existing review/decision
-  // RPCs have not been verified as separate timestamp events for this form.
-  primaryEnabled:false,secondaryEnabled:false,
+  primaryEnabled:pending&&primaryAssigned&&!primaryRecordedAt,
+  secondaryEnabled:pending&&secondaryAssigned&&!secondaryRecordedAt,
   primaryReason:!primaryAssigned?'Available only to the assigned Sales Supervisor.':
-   !documentSaved?'Save the quotation before recording a signed review.':
-   !primaryReviewAvailable?'Signed Sales Supervisor review is not activated.':
-   'Independent signed timestamp recording is pending verification.',
-  secondaryReason:!secondaryAssigned?'Available only to the selected Management approver.':
-   !documentSaved?'Save the quotation before recording a signed review.':
-   !secondaryDecisionAvailable?'Signed Management approval is not activated.':
-   'Independent signed timestamp recording is pending verification.'
+   !documentSaved?'Save the document before recording validation.':
+   workflowState!=='for-approval'?'The document must be For Approval.':
+   primaryRecordedAt?'Primary validation is already recorded.':'Record your signed validation.',
+  secondaryReason:!secondaryAssigned?'Available only to the selected Management reviewer.':
+   !documentSaved?'Save the document before recording validation.':
+   workflowState!=='for-approval'?'The document must be For Approval.':
+   secondaryRecordedAt?'Secondary validation is already recorded.':'Record your signed validation.'
  };
 }
-/** Source-matched quotation approval presentation. Assignment is NOT authorization. */
-function renderQuotationVerification(fieldValue,data,actorName='',actorEmail='',documentSaved=false){
+/** Quotation has a fixed primary Sales Supervisor and an editable existing
+ * management reviewer assignment. Each reviewer records an independent server event. */
+function renderQuotationVerification(fieldValue,data,actorName='',reviewContext={}){
+ const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null}=reviewContext;
  const {primary,secondaryOptions}=QUOTATION_APPROVAL_HIERARCHY;
  const selected=fieldValue('approvedByEmail',data.approvedByEmail||secondaryOptions[0]);
  const safeSelected=secondaryOptions.includes(selected)?selected:secondaryOptions[0];
- const eligibility=quotationReviewControlEligibility({actorEmail,secondaryEmail:safeSelected,documentSaved});
+ const eligibility=quotationReviewControlEligibility({actorEmail,secondaryEmail:safeSelected,
+  documentSaved,workflowState,primaryRecordedAt:reviewStages?.primary?.recordedAt,
+  secondaryRecordedAt:reviewStages?.secondary?.recordedAt});
  return '<section class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
   '<h4 id="tl-quotation-approval-heading">Verification &amp; Approval Workflow</h4>'+
-  '<div class="tl-reference-approval-creator">'+
-   '<span aria-hidden="true">♙</span><div><strong>Created By</strong> '+
-   '<span class="tl-reference-approval-chip">Auto-captured on save</span>'+
-   '<p>'+(actorName?escape(actorName):'Current authenticated user')+'</p>'+
-   '<small>Identity and time are recorded by the signed server on successful save.</small>'+
-  '</div></div>'+
+  '<div class="tl-reference-approval-creator"><span aria-hidden="true">♙</span><div><strong>Created By</strong> '+
+   '<span class="tl-reference-approval-chip">Auto-captured on save</span><p>'+
+   (actorName?escape(actorName):'Current authenticated user')+
+   '</p><small>Identity and time are recorded by the signed server on successful save.</small></div></div>'+
   '<div class="tl-reference-approval-stage">'+
    '<label for="tl-quote-reviewer-email">Primary approver — Sales Supervisor</label>'+
    '<input id="tl-quote-reviewer-email" name="verifiedByEmail" value="'+escape(primary.email)+'" '+
     'type="email" maxlength="254" readonly required aria-describedby="tl-quote-primary-note">'+
    '<input type="hidden" name="verifiedBy" value="'+escape(primary.label)+'">'+
-   '<small id="tl-quote-primary-note">Permanent first-stage reviewer. Account verification and permission checks occur on the server.</small>'+
-   '<label for="tl-quote-review-time">Review Date &amp; Time</label>'+
-   '<div class="tl-reference-approval-timestamp">'+
-    '<input id="tl-quote-review-time" aria-label="Review date and time" placeholder="Available after authorized review" disabled>'+
-    '<button type="button" disabled title="'+escape(eligibility.primaryReason)+'" aria-disabled="true" data-tl-review-stage="primary">Use Time Now</button></div>'+
-   '<small>The signed review operation records the actual review time when activated.</small>'+
+   '<small id="tl-quote-primary-note">Permanent first-stage reviewer. Only this assigned signed account can validate.</small>'+
+   referenceAssignedPdfStage('verifiedByEmail',primary.email,'Sales Supervisor review','primary',{
+    actorEmail,documentSaved,documentId,workflowState,
+    reviewedAt:reviewStages?.primary?.recordedAt||null})+
   '</div>'+
   '<div class="tl-reference-approval-stage">'+
    '<label for="tl-quote-approver-email">Secondary approver — Management</label>'+
    '<select id="tl-quote-approver-email" name="approvedByEmail" required aria-describedby="tl-quote-secondary-note">'+
-     secondaryOptions.map(email=>'<option value="'+escape(email)+'"'+
-      (email===safeSelected?' selected':'')+'>'+escape(email)+'</option>').join('')+
-   '</select>'+
-   '<input type="hidden" name="approvedBy" value="Management">'+
-   '<small id="tl-quote-secondary-note">Second-stage approval follows a verified primary review; these assignments do not grant permissions.</small>'+
-   '<label for="tl-quote-secondary-review-time">Review Date &amp; Time</label>'+
-   '<div class="tl-reference-approval-timestamp">'+
-    '<input id="tl-quote-secondary-review-time" aria-label="Secondary review date and time" placeholder="Available after authorized secondary review" disabled>'+
-    '<button type="button" disabled title="'+escape(eligibility.secondaryReason)+'" aria-disabled="true" data-tl-review-stage="secondary">Use Time Now</button></div>'+
-   '<small>Management verification is independent of the Sales Supervisor review. Its timestamp requires a separate signed server event.</small>'+
+    secondaryOptions.map(email=>'<option value="'+escape(email)+'"'+
+     (email===safeSelected?' selected':'')+'>'+escape(email)+'</option>').join('')+
+   '</select><input type="hidden" name="approvedBy" value="Management">'+
+   '<small id="tl-quote-secondary-note">This existing management assignment does not grant roles or permissions.</small>'+
+   referenceAssignedPdfStage('approvedByEmail',safeSelected,'Management review','secondary',{
+    actorEmail,documentSaved,documentId,workflowState,
+    reviewedAt:reviewStages?.secondary?.recordedAt||null})+
   '</div></section>';
 }
 /** One unsaved priced line; reuse the authoritative source calculation formula. */
@@ -739,7 +801,8 @@ const localSummaryRows=Object.freeze({
   ['lineUnitPrice','Unit price'],['verifiedBy','Intended finance verifier'],
   ['approvedBy','Intended management approver'],...commercialSummaryRows],
  packing:[['referenceNumber','Source reference'],['lineDescription','Physical item'],
-  ['lineQuantity','Quantity'],['lineUnit','Unit']],
+  ['lineQuantity','Quantity'],['lineUnit','Unit'],
+  ['verifiedBy','Primary reviewer'],['approvedBy','Secondary reviewer']],
  delivery:[['referenceNumber','Source reference'],['lineDescription','Delivered item'],
   ['lineQuantity','Quantity'],['lineUnit','Unit'],
   ['lineSerialNumber','Serial / asset number'],['checkedBy','QC assignee'],
@@ -878,8 +941,9 @@ function referenceDraftTabs(type){
   '<a href="'+base+escape(key)+'"'+(key===type?' class="active" aria-current="page"':'')+
   '>'+escape(key==='quotation'?'Quotations':label)+'</a>').join('')+'</nav>';
 }
-function referenceDocumentHeader(type,editing,canSave=false){
- const title=referenceTitles[type]||'TradeLink Draft';
+function referenceDocumentHeader(type,editing,canSave=false,status='for-approval',documentId=''){
+ const title=referenceTitles[type]||'TradeLink Document';
+ const approved=status==='approved'&&validUuid(documentId);
  return '<div class="tl-reference-document-topcard"><header class="tl-reference-document-heading">'+
    '<div class="tl-reference-document-title">'+
     '<span class="tl-reference-document-icon" aria-hidden="true">'+
@@ -888,18 +952,16 @@ function referenceDocumentHeader(type,editing,canSave=false){
      '<path d="M15 3v6h5M8 13h8M8 17h8"/></svg></span>'+
     '<div><h3 id="tl-draft-editor-title">'+escape(title)+'</h3>'+
      '<p class="tl-reference-draft-status">'+
-      (editing?'Editing saved Draft':'New Draft · not saved')+
+      (editing?'Editing saved document':'New document · not saved')+
      '</p></div></div>'+
    '<div class="tl-reference-document-toolbar" aria-label="Document actions">'+
     '<button type="button" class="tl-reference-tool" disabled title="Templates are not activated in APSYNTRA CRM">Templates</button>'+
-    '<button type="button" class="tl-reference-tool" disabled title="PDF generation requires an authorized workflow">Generate PDF</button>'+
-    '<button type="button" class="tl-reference-primary" data-action="tradelink-draft-preview">Preview</button>'+
+    '<button type="button" class="tl-reference-tool" '+(approved?'data-action="tradelink-document-print" data-id="'+escape(documentId)+'"':'disabled')+
+     ' title="'+(approved?'Print the verified Approved document':'PDF printing is available only after both reviewers approve')+'">Print PDF</button>'+
     '<button type="button" class="tl-reference-save" data-action="tradelink-draft-submit"'+
-     (canSave?'':' disabled title="Production Draft writes are not activated"')+
-     '>'+(editing?'Save Changes':'Save Draft')+'</button>'+
-   '</div>'+
-  '</header>'+
-  '</div>';
+     (canSave?'':' disabled title="Signed document saving is unavailable"')+
+     '>'+(editing?'Save Changes':'Save')+'</button>'+
+   '</div></header></div>';
 }
 /** Compact source-matched Items editor; notes have no quantity or financial value. */
 export function tradeLinkLineAmount(row){
@@ -974,9 +1036,9 @@ export function snapshotTradeLinkDraftLineItems(form){
    unit:get('lineUnit'),serialNumber:get('lineSerialNumber')};
  });
 }
-function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail=''){
+function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail='',reviewStages=null){
  const editing=mode==='edit'&&
-  ['draft','revision-required'].includes(row?.workflow_state)&&
+  ['draft','for-approval','revision-required'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
   (!Array.isArray(row.content.items)||row.content.items.length<=100);
  const data=editing?row.content:{};
@@ -984,6 +1046,10 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
  const writeEnabled=editing||mode==='create';
  const live=TL03_DOMAIN_WRITES_ENABLED&&canManage&&writeEnabled;
+ const workflowState=editing?row.workflow_state:'for-approval';
+ const documentId=editing?row.id:'';
+ const selectedStatus=fieldValue('documentStatus',workflowState);
+
  const type=editing?data.documentType:fieldValue('documentType','quotation');
  const physical=type==='packing'||type==='delivery';
  const payment=type==='payment';
@@ -1002,7 +1068,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const localDate=new Date().toLocaleDateString('en-US',{
   year:'numeric',month:'2-digit',day:'2-digit'});
  return '<section class="tl-draft-panel tl-reference-editor" aria-labelledby="tl-draft-editor-title">'+
-  referenceDocumentHeader(type,editing,live)+
+  referenceDocumentHeader(type,editing,live,workflowState,documentId)+
   (error?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
   (message?'<p class="tl-draft-feedback" role="status">'+escape(message)+'</p>':'')+
   (editing?'<div class="tl-draft-editor-navigation">'+
@@ -1024,9 +1090,17 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
    '<section class="tl-reference-form-section tl-reference-document-info">'+
     '<h4>Document Information</h4>'+
     '<div class="tl-reference-document-grid">'+
-     '<div class="tl-reference-static-field"><span>Status</span>'+
-      '<output>'+(editing&&row?.workflow_state==='revision-required'?
-       'Revision Required':'Draft'+(editing?'':' · Not saved'))+'</output></div>'+
+     '<label class="tl-draft-field"><span>Status</span><select name="documentStatus"'+
+      (live?'':' disabled')+' aria-describedby="tl-reference-status-help">'+
+      [...TRADELINK_DOCUMENT_STATUS_OPTIONS,
+       ...(workflowState&&!TRADELINK_DOCUMENT_STATUS_OPTIONS.some(([id])=>id===workflowState)?
+        [[workflowState,tradeLinkWorkflowLabel(workflowState)]]:[])] .map(([id,label])=>{
+       const selectable=['draft','for-approval'].includes(id)&&
+        ['draft','for-approval'].includes(workflowState);
+       const disabled=!selectable;
+       return '<option value="'+escape(id)+'"'+(id===selectedStatus?' selected':'')+
+        (disabled?' disabled':'')+'>'+escape(label)+'</option>';
+      }).join('')+'</select><small id="tl-reference-status-help">Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after both reviewers validate.</small></label>'+
      '<label class="tl-draft-field"><span>Number</span>'+
       '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+
        '" required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" '+
@@ -1109,26 +1183,30 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
      '<small>These notes are part of the local validation preview. No PDF, approval or document is generated.</small>'+
     '</label></section>'+
-   (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,actorEmail,editing):
-    renderReferenceModuleWorkflow(type,fieldValue,data,actorName))+
+   (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,{
+    actorEmail,documentSaved:editing,documentId,workflowState,reviewStages}):
+    renderReferenceModuleWorkflow(type,fieldValue,data,actorName,{
+     actorEmail,documentSaved:editing,documentId,workflowState,reviewStages}))+
    '<div class="tl-draft-actions">'+
     '<button type="button" class="secondary" data-action="tradelink-draft-clear">Clear form</button>'+
    '</div><p data-tradelink-draft-preview-status data-validation="pending" role="status" aria-live="polite" aria-atomic="true">'+
     (editing?'Saved revision '+escape(row?.revision??'—')+
      ' loaded. Changes remain local until Save Changes.':
      type==='quotation'?
-      'Not saved. Save Draft can preserve incomplete Quotation details; Preview checks submission readiness.':
-      'Not saved. Complete required fields before saving.')+'</p>'+
+      'Not saved. Save creates a For Approval document; choose Draft explicitly when needed.':
+      'Not saved. Save creates a For Approval document; choose Draft explicitly when needed.')+'</p>'+
    renderTradeLinkDraftLocalSummary(type)+
   '</form></div></section>';
 }
 
 const draftListTypes=Object.freeze([['all','All modules'],...typeLabels]);
 const draftListStates=Object.freeze([
- ['all','All workflow states'],['draft','Draft'],['submitted','Submitted'],
+ ['all','All workflow states'],['draft','Draft'],['for-approval','For Approval'],['submitted','Submitted'],
  ['under-review','Under Review'],['revision-required','Revision Required'],
  ['approved','Approved'],['rejected','Rejected'],
- ['completed','Completed'],['cancelled','Cancelled']
+ ['completed','Completed'],['cancelled','Cancelled'],
+ ['under-negotiation','Under Negotiation'],['expired','Expired'],['on-hold','On-hold'],
+ ['won','Won'],['lost','Lost'],['delivered','Delivered'],['closed','Closed']
 ]);
 const draftArchiveModes=Object.freeze([
  ['active','Active only'],['archived','Archived only'],['all','Active and archived']
@@ -1155,10 +1233,25 @@ export function normalizeTradeLinkDraftListFilters(input={}){
  };
 }
 const tradeLinkDocumentLabel=value=>typeLabels.find(([id])=>id===value)?.[1]||String(value||'—');
+const TRADELINK_POST_APPROVAL_STATUSES=Object.freeze([
+ ['submitted','Submitted'],['under-negotiation','Under Negotiation'],
+ ['expired','Expired'],['on-hold','On-hold'],['won','Won'],['lost','Lost'],
+ ['cancelled','Cancelled'],['delivered','Delivered'],['closed','Closed']
+]);
+function tradeLinkStatusUpdateTargets(current){
+ if(current==='cancelled')return [];
+ if(['draft','for-approval'].includes(current))return [
+  [current,tradeLinkWorkflowLabel(current)],['cancelled','Cancelled']
+ ];
+ if(current==='approved'||TRADELINK_POST_APPROVAL_STATUSES.some(([id])=>id===current))
+  return [[current,tradeLinkWorkflowLabel(current)],...TRADELINK_POST_APPROVAL_STATUSES.filter(([id])=>id!==current)];
+ return [];
+}
 const tradeLinkWorkflowLabel=value=>({
- draft:'Draft',submitted:'Submitted','under-review':'Under Review',
+ draft:'Draft','for-approval':'For Approval',submitted:'Submitted','under-review':'Under Review',
  'revision-required':'Revision Required',approved:'Approved',rejected:'Rejected',
- completed:'Completed',cancelled:'Cancelled'
+ completed:'Completed',cancelled:'Cancelled','under-negotiation':'Under Negotiation',
+ expired:'Expired','on-hold':'On-hold',won:'Won',lost:'Lost',delivered:'Delivered',closed:'Closed'
 })[value]||String(value||'—');
 function renderTradeLinkWorkflowBadge(value,archived){
  const status=String(value||'draft');
@@ -1326,8 +1419,8 @@ export function renderTradeLinkSavedDocumentPreview(record,workspaceId,documentI
   '<p class="muted">No local document copy was saved. Refresh the repository to '+
    'verify a newer revision.</p></section>';
 }
-function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
- const enabled=TL03_DOMAIN_READS_ENABLED&&canManage&&view.status==='AUTHORIZED_READ';
+function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=false,actorEmail=''}={}){
+ const enabled=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview)&&view.status==='AUTHORIZED_READ';
  const records=enabled?rows:[];
  const filters=normalizeTradeLinkDraftListFilters(view.listFilters);
  const page=readOnly&&enabled&&view.listPage?.server===true?view.listPage:null;
@@ -1353,7 +1446,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
     'data-tradelink-domain-filter aria-describedby="tl-draft-search-scope"'+disabledAttr+'></label>'+
    filterSelect('workflowState','Workflow state',draftListStates,filters.workflowState)+
   '</div>'+
-  (readOnly?'<div class="tl-reference-document-datebar" aria-label="Filter visible response by last updated date">'+
+  (readOnly&&!canReview?'<div class="tl-reference-document-datebar" aria-label="Filter visible response by last updated date">'+
    '<span class="tl-date-label">Updated date (UTC · current page only)</span>'+
    '<label for="tl-doc-updated-start"><span class="sr-only">Updated from</span><input id="tl-doc-updated-start" type="date" data-tl-updated-start'+disabledAttr+'></label>'+
    '<span>to</span>'+
@@ -1380,20 +1473,20 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
     '<button type="button" class="secondary" data-action="tradelink-documents-next"'+
     (!page.hasMore||view.busy?' disabled':'')+'>Next page</button></div>':'')+
   '<p id="tl-draft-search-scope" class="muted">'+
-    (page?'Signed server search and filters cover all authorized documents in this Board. '+
+    (canReview?'Only documents assigned to the signed account are shown. Review actions record the current account and server time.':page?'Signed server search and filters cover all authorized documents in this Board. '+
       'Results are paged newest-first (50 per page); Sort by applies to the visible page. '+
       'Select Search documents to apply new criteria.':
       'Search and filters apply only to the current signed, authorized response '+
       '(maximum 50 records). They do not query other workspaces or fetch additional pages.')+
    '</p>'+
   '<div class="tl-ref-selection-row"><p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
-   displayed.length+' of '+records.length+' authorized records in this response</p>'+
-   (readOnly?'<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">0 selected</span>'+
+   displayed.length+' of '+records.length+(canReview?' assigned documents':' authorized records')+' in this response</p>'+
+   (readOnly&&!canReview?'<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">0 selected</span>'+
     '<button type="button" data-action="tradelink-documents-clear-selection">Clear selection</button></div>':'')+
    '</div>'+
   (records.length?
    '<div class="tl-records-scroll"><table class="tl-records-table">'+
-    '<caption>'+(readOnly?'Authorized TradeLink documents':'Authorized TradeLink Draft records')+
+    '<caption>'+(canReview?'Documents assigned to the signed account':readOnly?'Authorized TradeLink documents':'Authorized TradeLink Draft records')+
      ' in current response</caption>'+
     '<thead><tr><th scope="col"><input id="tl-select-visible-documents" type="checkbox" data-tl-select-all aria-label="Select all visible documents" /></th>'+
     '<th scope="col">No.</th><th scope="col">Document</th><th scope="col">Module</th>'+
@@ -1414,11 +1507,31 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
       '<td>'+renderTradeLinkTimestamp(row.updatedAt)+'</td>'+
       '<td>'+renderTradeLinkWorkflowBadge(row.workflowState,row.archived)+'</td>'+
       '<td><span class="tl-ref-revision">'+escape(row.revision)+'</span></td>'+
-      (readOnly?'<td class="tl-ref-actions-cell">'+
+      (readOnly?'<td class="tl-ref-actions-cell">'+(
+       canReview?(()=>{
+        const stage=row.assignedStage;
+        const recordedAt=stage==='primary'?row.primaryAt:row.secondaryAt;
+        const formatTime=value=>value&&Number.isFinite(Date.parse(value))?
+         new Date(value).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'Pending';
+        const assignedLabel=stage==='primary'?'Primary reviewer':'Secondary reviewer';
+        return '<div class="tl-reviewer-row-actions" data-tl-reviewer-stage="'+escape(stage)+'">'+
+         '<button type="button" class="secondary" data-action="tradelink-review-document-open" '+
+          'data-id="'+escape(row.documentId)+'"'+(view.busy?' disabled':'')+
+          '>View document</button> '+
+         '<p class="tl-reviewer-stage-summary">Primary: '+escape(formatTime(row.primaryAt))+
+         '<br>Secondary: '+escape(formatTime(row.secondaryAt))+'</p>'+
+         (recordedAt?'<span class="tl-reviewer-recorded" role="status">'+escape(assignedLabel)+
+          ' validated · '+escape(formatTime(recordedAt))+'</span>':
+          row.workflowState==='for-approval'?'<button type="button" class="primary" '+
+           'data-action="tradelink-document-review-stage" data-id="'+escape(row.documentId)+'" '+
+           'data-stage="'+escape(stage)+'"'+(view.busy?' disabled':'')+
+           '>Use Time Now</button>':'<span class="muted">Validation is not available for this status.</span>')+
+         '</div>';
+       })():
        '<button type="button" class="tl-ref-row-action-trigger" popovertarget="tl-doc-menu-'+escape(row.documentId)+'" aria-label="Actions for '+escape(row.documentNumber)+'" title="Document actions">⋯</button>'+
        '<div popover="auto" data-tradelink-action-menu id="tl-doc-menu-'+escape(row.documentId)+'" class="tl-ref-actions-menu">'+
        (canManage&&TL03_DOMAIN_WRITES_ENABLED&&!row.archived&&
-        ['draft','revision-required'].includes(row.workflowState)&&
+        ['draft','for-approval','revision-required'].includes(row.workflowState)&&
         tradeLinkDraftEditHref(row.documentId)?
         '<a class="secondary" data-tradelink-document-edit href="'+
          escape(tradeLinkDraftEditHref(row.documentId))+'">Preview/Edit</a> ':
@@ -1426,9 +1539,17 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
          'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
          '">Preview saved</button> ')+
        '<button type="button" class="secondary" data-action="tradelink-document-print" '+
-        'data-id="'+escape(row.documentId)+'"'+(view.busy?' disabled':'')+
-        '>Print / Save PDF</button> '+
-       (canManage&&['draft','revision-required'].includes(row.workflowState)&&!row.archived?
+        'data-id="'+escape(row.documentId)+'"'+
+        (view.busy||row.workflowState!=='approved'?' disabled title="PDF printing is available only after approval"':'')+
+        '>Print PDF</button> '+
+       (canManage&&!row.archived&&tradeLinkStatusUpdateTargets(row.workflowState).length?
+        '<label class="tl-reference-status-action"><span>Change status</span>'+
+        '<select data-tradelink-status-select data-id="'+escape(row.documentId)+'">'+
+         options(tradeLinkStatusUpdateTargets(row.workflowState),row.workflowState)+
+        '</select></label><button type="button" class="secondary" '+
+         'data-action="tradelink-document-status-update" data-id="'+escape(row.documentId)+'" '+
+         'data-current-state="'+escape(row.workflowState)+'">Save status</button> ':'')+
+       (canManage&&['draft','for-approval','revision-required'].includes(row.workflowState)&&!row.archived?
         '<button type="button" class="secondary" data-action="tradelink-document-submit" '+
          'data-id="'+escape(row.documentId)+'"'+
          (TL03_WORKFLOW_SUBMIT_ENABLED?'':' disabled title="Submission backend not activated"')+
@@ -1481,13 +1602,14 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false}={}){
          (row.archived?'tradelink-draft-restore':'tradelink-draft-archive')+
          '" data-id="'+escape(row.documentId)+'">'+
          (row.archived?'Restore':'Archive')+'</button>':'')+
-       '</div></td>':'<td>'+
+       '</div>')+'</td>':'<td>'+
       '<button type="button" class="secondary" data-action="tradelink-draft-open" data-id="'+escape(row.documentId)+'">Read</button> '+
       '<button type="button" class="secondary" data-action="tradelink-draft-archive" data-id="'+escape(row.documentId)+'"'+
        (!canManage||!TL03_DOMAIN_WRITES_ENABLED||row.archived||row.workflowState!=='draft'?' disabled':'')+'>Archive</button> '+
       '<button type="button" class="secondary" data-action="tradelink-draft-restore" data-id="'+escape(row.documentId)+'"'+
        (!canManage||!TL03_DOMAIN_WRITES_ENABLED||!row.archived||row.workflowState!=='draft'?' disabled':'')+'>Restore</button>'+
       '</td>')+'</tr>';
+
     }).join('')+'</tbody></table></div>'+
    '<p data-tradelink-domain-no-match class="muted"'+(displayed.length?' hidden':'')+
     '>No matching records in this authorized response.</p>':
@@ -1579,11 +1701,11 @@ export function renderTradeLinkDocumentAttachments(attachments,{
   '</section>';
 }
 export function renderTradeLinkDocumentRepository({detail,workspaceId,
- view=initialTradeLinkDraftView(),canManage=false}={}){
+ view=initialTradeLinkDraftView(),canManage=false,canReview=false,actorEmail=''}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
   detail.board.workspace_id!==workspaceId)
   return '<section class="tl-content-panel" role="alert">Signed TradeLink document workspace unavailable.</section>';
- const rows=TL03_DOMAIN_READS_ENABLED&&canManage&&
+ const rows=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview)&&
   view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
  const selection=view.documentPreview;
  const linked=rows.find(item=>item.documentId===selection?.documentId&&
@@ -1598,26 +1720,27 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
  }
  return '<section class="tl-content-panel tl-document-repository" aria-labelledby="tl-domain-repository-title">'+
   '<div class="tl-panel-heading tl-reference-repository-actions">'+
-   '<h2 id="tl-domain-repository-title">All Documents <span class="tl-ref-count-badge">'+
+   '<h2 id="tl-domain-repository-title">'+(canReview?'My Assigned Documents':'All Documents')+' <span class="tl-ref-count-badge">'+
     escape(rows.length)+'</span></h2>'+
    '<div class="tl-reference-repository-buttons">'+
    (canManage&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="#/boards/'+TRADELINK_BOARD_ID+
     '/tradelink/drafts/quotation">Create New Document</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
-   (!TL03_DOMAIN_READS_ENABLED||!canManage||view.busy?' disabled':'')+
+   (!TL03_DOMAIN_READS_ENABLED||(!canManage&&!canReview)||view.busy?' disabled':'')+
    '>Refresh</button>'+
 
    '</div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
-  renderTradeLinkDraftList(rows,view,canManage,{readOnly:true})+
+  renderTradeLinkDraftList(rows,view,canManage,{readOnly:true,canReview,actorEmail})+
   (linked&&canManage&&TL03_DOMAIN_WRITES_ENABLED&&
-   ['draft','revision-required'].includes(linked.workflowState)&&!linked.archived&&
+   ['draft','for-approval','revision-required'].includes(linked.workflowState)&&!linked.archived&&
    tradeLinkDraftEditHref(linked.documentId)?
    '<p class="tl-document-edit-action"><a class="secondary" '+
    'data-tradelink-document-edit href="'+
     escape(tradeLinkDraftEditHref(linked.documentId))+
    '">Edit this Draft</a></p>':'')+
+  (selectedPreview?'<div class="tl-document-preview-close"><button type="button" class="secondary" data-action="tradelink-document-preview-close">Close document preview</button></div>':'')+
   selectedPreview+
   (linked&&canManage&&TL03_ATTACHMENTS_ENABLED?
    renderTradeLinkDocumentAttachments(selection?.attachments,{
@@ -1645,6 +1768,6 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
     '/tradelink/documents">Back to All Documents</a></section>':
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
-   view.error||'',view.message||'',view.lineDrafts,actorName,actorEmail))+
+   view.error||'',view.message||'',view.lineDrafts,actorName,actorEmail,view.reviewStages||null))+
   '</div>';
 }

@@ -24,7 +24,7 @@ test('quotation shows source-aligned verification sequence and no duplicate appr
  assert.equal((html.match(/name="approvedBy"/g)||[]).length,1);
  assert.equal((html.match(/name="approvedByEmail"/g)||[]).length,1);
  assert.doesNotMatch(html,/Workflow account assignments|Quotation readiness · preview only/);
- assert.match(html,/id="tl-quote-review-time"[^>]*disabled/);
+ assert.match(html,/id="tl-pdf-time-verifiedByEmail"[^>]*disabled/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
 });
 

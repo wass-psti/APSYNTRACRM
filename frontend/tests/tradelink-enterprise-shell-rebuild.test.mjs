@@ -16,6 +16,6 @@ test('rebuilt TradeLink shell is scoped, flat, and does not alter security contr
  assert.match(css,/@media\(max-width:620px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(app,/renderTradeLinkDraftWorkspace\(\{detail,workspaceId,view:draftView,canManage,actorName,actorEmail\}\)/);
- assert.match(app,/renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage\}\)/);
+ assert.match(app,/renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail\}\)/);
  assert.match(client,/TL03_DOMAIN_WRITES_ENABLED/);
 });

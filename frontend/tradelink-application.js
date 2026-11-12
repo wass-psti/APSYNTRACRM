@@ -75,12 +75,12 @@ function moduleLink(m,section){
   (active?' aria-current="page"':'')+'><span class="tl-module-short">'+esc(m.short)+'</span>'+
   '<span><strong>'+esc(m.label)+'</strong><small>Document module</small></span></a>';
 }
-function renderDocuments(detail,workspaceId,draftView,canManage){
+function renderDocuments(detail,workspaceId,draftView,canManage,canReview=false,actorEmail=''){
  // One authoritative document surface; linked Board items remain accessible
  // in the main APSYNTRA Board, not duplicated as a second TradeLink table.
- return renderTradeLinkDocumentRepository({detail,workspaceId,view:draftView,canManage});
+ return renderTradeLinkDocumentRepository({detail,workspaceId,view:draftView,canManage,canReview,actorEmail});
 }
-function renderModule(m){
+function renderModule(m,canManage=true){
  return '<section class="tl-content-panel" aria-labelledby="tl-module-title">'+
   '<p class="tl-eyebrow">Source-defined document module</p><h2 id="tl-module-title">'+esc(m.label)+'</h2>'+
   '<p class="tl-module-purpose">'+esc(m.purpose)+'</p>'+
@@ -91,14 +91,14 @@ function renderModule(m){
    '<div class="tl-states">'+TRADELINK_SOURCE_QUOTE_STATUSES.map(s=>'<span class="tl-state">'+esc(s)+'</span>').join('')+'</div>'+
    '<p class="muted">These stages differ from the APSYNTRA board Quote Status choices. No automatic mapping is enabled.</p>':'')+
   (['esi','quotation','po'].includes(m.key)?renderTradeLinkFinancePreview():'')+
-  '<p><a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+esc(m.key)+'">Prepare a local '+esc(m.label)+' Draft</a></p>'+
-  '<p class="muted">Opens the signed Draft editor for this module. Saving persists a document and linked Board item; workflow submission needs separate backend activation. Use All Documents to print a saved revision.</p>'+
+  (canManage?'<p><a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+esc(m.key)+'">Prepare a '+esc(m.label)+' document</a></p>':'')+
+  (canManage?'<p class="muted">Opens the signed document editor. Save defaults to For Approval; choose Draft explicitly when needed. Assigned reviewers validate independently with Use Time Now. The second validation automatically sets Approved.</p>':'<p class="muted">Assigned reviewers can open their documents from All Documents, inspect the saved content and record their own validation time.</p>')+
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
-  '<p>Signed Draft creation and editing are enabled through the existing authorized domain API. Print / Save PDF is available for saved records through All Documents. Advanced workflow transitions require their separate backend activation; secured attachments remain unavailable. Unsaved previews are never presented as persisted documents.</p></div></section>';
+  '<p>Signed document creation and editing are enabled through the existing authorized domain API. For Approval is the default saved status; the two assigned reviewers independently validate the current revision. Print PDF is available only after both validations set Approved. The official PDF template remains pending. Unsaved previews are never presented as persisted documents.</p></div></section>';
 }
 /** Reference-led TradeLink portal is presentation-only.
  * Links preserve the existing signed-board routes and disabled domain gates. */
-export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false,actorName='',actorEmail=''}={}){
+export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false,canReview=false,actorName='',actorEmail=''}={}){
  if(!isTradeLinkBoard(detail?.board)||
      typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
@@ -108,30 +108,28 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
  const currentAttr=key=>current===key?' aria-current="page"':'';
  return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'">'+
   '<header class="tl-reference-topbar" aria-label="TradeLink portal">'+
-   '<a class="tl-reference-brand" href="'+base+'/drafts/quotation" aria-label="TradeLink Create New">'+
+   '<a class="tl-reference-brand" href="'+base+(canManage?'/drafts/quotation':'/documents')+'" aria-label="TradeLink Create New">'+
     '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
     '<span><strong>TradeLink</strong><small>PORTAL</small></span></a>'+
    '<nav class="tl-reference-portal-links" aria-label="TradeLink actions">'+
     '<span class="tl-reference-active-indicator" aria-hidden="true" hidden></span>'+
-    '<a data-tl-tab="create" class="tl-reference-create'+(current==='drafts'?' active':'')+'"'+currentAttr('drafts')+' href="'+base+'/drafts/quotation">'+
-     '<span aria-hidden="true">＋</span> Create New</a>'+
+    (canManage?'<a data-tl-tab="create" class="tl-reference-create'+(current==='drafts'?' active':'')+'"'+currentAttr('drafts')+' href="'+base+'/drafts/quotation">'+
+     '<span aria-hidden="true">＋</span> Create New</a>':'')+
     '<a data-tl-tab="documents" href="'+base+'/documents"'+currentAttr('documents')+'>'+
      '<span aria-hidden="true">☷</span> All Documents</a>'+
     '<details class="tl-reference-manual"><summary data-tl-tab="manual">User Manual</summary>'+
      '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink document guide</strong>'+
-      '<p>Choose a document module, complete its required fields, then select Save Draft. '+
-      'The same signed server record appears in All Documents and its linked Board. '+
-      'Open a saved Draft with Preview/Edit to save a revision on the same document. '+
-      'Archive and Restore are reversible Draft actions. All Documents can print '+
-      'a freshly verified saved revision or use the browser Save as PDF option. '+
-      'Workflow submission/review/approval needs separately activated server functions; '+
-      'secured attachments are not yet enabled.</p>'+
+      '<p>Save defaults to For Approval. Select Draft explicitly when you want a Draft. '+
+      'Each document has two assigned reviewers; each uses Use Time Now to record an independent signed validation. '+
+      'The first validation leaves the document For Approval; the second automatically changes it to Approved. '+
+      'Only Approved documents can be printed. Other status options become available after approval, while cancellation remains available before approval. '+
+      'The official PDF template will be integrated separately when supplied.</p>'+
      '</div></details>'+
    '</nav>'+
   '</header>'+
   '<div class="tl-app-layout">'+
    '<div class="tl-app-main">'+
-    (m?renderModule(m):current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage):current==='activity'?renderTradeLinkActivity(activity||{}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail}))+
+    (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel"><h2>Assigned reviewer access</h2><p>Document creation is not available in this view. Open All Documents to inspect and validate documents assigned to your signed account.</p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail}))+
    '</div></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network

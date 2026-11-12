@@ -15,22 +15,22 @@ test('TradeLink root and legacy overview canonicalize to Create New, preserving 
 });
 test('obsolete landing widgets are removed but signed form, documents, and activity remain available',()=>{
  for(const section of [undefined,'overview','unexpected']){
-  const html=renderTradeLinkApplication({detail,workspaceId:ws,section});
+  const html=renderTradeLinkApplication({detail,workspaceId:ws,section,canManage:true});
   assert.match(html,/data-tl-section="drafts"/);
   assert.match(html,/data-tradelink-draft-form/);
   assert.match(html,/data-tl-tab="create"[^>]*aria-current="page"/);
   assert.doesNotMatch(html,/Commercial operations|Source-aligned workspace|Authorized board records|tl-reference-overview/);
  }
  assert.equal(normalizeTradeLinkSection('overview'),'drafts');
- const documents=renderTradeLinkApplication({detail,workspaceId:ws,section:'documents'});
+ const documents=renderTradeLinkApplication({detail,workspaceId:ws,section:'documents',canManage:true});
  assert.match(documents,/data-tl-section="documents"/);
  assert.match(documents,/data-tl-tab="documents"[^>]*aria-current="page"/);
  assert.doesNotMatch(documents,/Commercial operations|Source-aligned workspace/);
- const activity=renderTradeLinkApplication({detail,workspaceId:ws,section:'activity'});
+ const activity=renderTradeLinkApplication({detail,workspaceId:ws,section:'activity',canManage:true});
  assert.match(activity,/data-tl-section="activity"/);
 });
 test('TradeLink brand targets Create New and denied workspace never renders a form',()=>{
- const html=renderTradeLinkApplication({detail,workspaceId:ws});
+ const html=renderTradeLinkApplication({detail,workspaceId:ws,canManage:true});
  assert.match(html,/aria-label="TradeLink Create New"/);
  assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts\/quotation"/);
  const denied=renderTradeLinkApplication({detail,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'});

@@ -920,7 +920,7 @@ function boardPage(){
 
 <div data-board-live-content>
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId,statusFilter:state.frtStatusFilter}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},draftView:state.tradeLinkDraft,canManage:state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
+ gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
  ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
@@ -1877,7 +1877,7 @@ function tradeLinkDraftRoute(){
 let tradeLinkDocumentsPageRpcUnavailable=false;
 async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  if(!tradeLinkAuthorizedListRoute()||!TL03_DOMAIN_READS_ENABLED||
-  state.tradeLinkDraft.busy)return;
+  state.tradeLinkDraft.busy||(!state.boardManage&&state.tradeLinkSection!=='documents'))return;
  const actor=auth.userId,ws=state.context.workspace_id;
  const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
   auth.userId===actor&&state.context?.workspace_id===ws;
@@ -1887,7 +1887,12 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
  state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:''};render();
  try{
   let result;
-  if(documents){
+  if(documents&&!state.boardManage){
+   result={status:'AUTHORIZED_READ',rows:await tradeLinkDraftWorkspace.assignedDocuments(),
+    message:'Showing only documents assigned to your signed TradeLink account.'};
+   result.listPage=null;
+   result.assignedOnly=true;
+  }else if(documents){
    if(!tradeLinkDocumentsPageRpcUnavailable){
     try{
      result=await tradeLinkDraftWorkspace.searchPage({
@@ -1912,6 +1917,7 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
   if(same()){
    state.tradeLinkDraft={...state.tradeLinkDraft,...result,
     listFilters:filters,listPage:result.listPage??null,
+    assignedOnly:result.assignedOnly===true,
     documentPreview:null,busy:false};
    const target=state.tradeLinkDraft.editRequestId;
    if(target&&!state.tradeLinkDraft.selected&&tradeLinkDraftRoute()){
@@ -1922,7 +1928,7 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
       const record=await tradeLinkDraftWorkspace.read(target);
       if(!same())return;
       if(!record||record.archived_at!==null||
-       !['draft','revision-required'].includes(record.workflow_state)||
+       !['draft','for-approval','revision-required'].includes(record.workflow_state)||
        record.document_number!==record.content?.documentNumber||
        record.document_type!==record.content?.documentType)
        throw new ApiError('Saved Draft not editable.',409);
@@ -1952,7 +1958,7 @@ async function openTradeLinkDraft(documentId){
    state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
  const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
  if(!listed)return;
- if(listed.archived||!['draft','revision-required'].includes(listed.workflowState)){
+ if(listed.archived||!['draft','for-approval','revision-required'].includes(listed.workflowState)){
   if(state.tradeLinkDraft.editRequestId===documentId){
    state.tradeLinkDraft.error='This document is no longer an editable Draft. Return to All Documents.';
    render();
@@ -1962,10 +1968,13 @@ async function openTradeLinkDraft(documentId){
  const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
  state.tradeLinkDraft.busy=true;render();
  try{
-  const record=await tradeLinkDraftWorkspace.read(documentId);
+  const [record,reviewStages]=await Promise.all([
+   tradeLinkDraftWorkspace.read(documentId),
+   listed.workflowState==='for-approval'?tradeLinkDraftWorkspace.reviewStages(documentId):Promise.resolve(null)
+  ]);
   if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
    state.context.workspace_id!==ws)return;
-  if(!record||!['draft','revision-required'].includes(record.workflow_state)||
+  if(!record||!['draft','for-approval','revision-required'].includes(record.workflow_state)||
    record.archived_at!==null||
    record.content?.documentType!==record.document_type||
    record.content?.documentNumber!==record.document_number||
@@ -1975,7 +1984,7 @@ async function openTradeLinkDraft(documentId){
    record.document_type!==listed.documentType)
    throw new ApiError('Document revision or editability changed. Refresh the signed list.',409);
   state.tradeLinkDraft={...state.tradeLinkDraft,mode:'edit',
-   selected:{documentId,record},pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,unsavedChanges:false,error:'',message:'Signed Draft loaded. Unsaved edits remain local.'};
+   selected:{documentId,record},reviewStages,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,unsavedChanges:false,error:'',message:'Signed document loaded. Unsaved edits remain local.'};
  }catch{
   if(seq===routeSerial&&tradeLinkDraftRoute())state.tradeLinkDraft.error=
    'Draft read or authorization failed. Refresh the signed list.';
@@ -2140,13 +2149,49 @@ async function downloadTradeLinkAttachment(documentId,attachmentId){
   if(same()){state.tradeLinkDraft.busy=false;render();}
  }
 }
+async function openTradeLinkAssignedDocument(documentId){
+ if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+  state.boardManage||state.tradeLinkDraft?.assignedOnly!==true||
+  state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed)return;
+ const seq=routeSerial,actor=auth.userId,workspace=state.context?.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&!state.boardManage&&
+  state.context?.workspace_id===workspace&&auth.userId===actor&&auth.isSignedIn;
+ state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:'',
+  message:'Loading the document assigned to your signed account…'};render();
+ try{
+  const [record,board]=await Promise.all([
+   tradeLinkDraftWorkspace.readAssigned(documentId),db.board(TRADELINK_BOARD_ID)
+  ]);
+  if(!same())return;
+  const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
+  if(!record||record.id!==listed.documentId||record.revision!==listed.revision||
+   record.workflow_state!==listed.workflowState||record.document_type!==listed.documentType||
+   record.document_number!==listed.documentNumber||record.board_item_id!==listed.boardItemId||
+   record.archived_at!==null||board?.board?.id!==TRADELINK_BOARD_ID||
+   board.board.workspace_id!==workspace||!boardItem||
+   boardItem.title!==listed.documentNumber||
+   Date.parse(boardItem.updated_at)!==Date.parse(record.updated_at))
+   throw new ApiError('Assigned document, revision or Board projection could not be verified.',409);
+  state.board=board;
+  state.tradeLinkDraft={...state.tradeLinkDraft,
+   documentPreview:{documentId,record},
+   message:'Read-only document preview loaded from the signed TradeLink record. Review the content before validating.'};
+ }catch(error){
+  if(same())state.tradeLinkDraft.error=errorMessage(error);
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
 async function printTradeLinkDocument(documentId){
  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
   !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
   state.tradeLinkDraft.busy||
   state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
  const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
- if(!listed)return;
+ if(!listed||listed.workflowState!=='approved')return;
  const seq=routeSerial,actor=auth.userId,ws=state.context.workspace_id;
  const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
   state.tradeLinkSection==='documents'&&state.context?.workspace_id===ws&&
@@ -2160,6 +2205,7 @@ async function printTradeLinkDocument(documentId){
   if(!record||record.revision!==listed.revision||
    record.document_type!==listed.documentType||
    record.document_number!==listed.documentNumber||
+   record.workflow_state!=='approved'||
    record.workflow_state!==listed.workflowState||
    record.board_item_id!==listed.boardItemId||
    Boolean(record.archived_at)!==listed.archived||
@@ -2199,20 +2245,24 @@ async function commitTradeLinkDraft(form){
   return;
  }
  const {documentId,expectedRevision,draft}=command;
- const workflowState=state.tradeLinkDraft.selected?.record?.workflow_state??'draft';
+ const initialState=String(fields.get('documentStatus')||'for-approval');
+ if(!['draft','for-approval'].includes(initialState))
+  throw new ApiError('Choose For Approval or explicitly choose Draft. Other statuses cannot bypass dual validation.',400);
+ const workflowState=initialState;
  state.tradeLinkDraft={...state.tradeLinkDraft,
   pendingCreateId:expectedRevision===0?documentId:null,
   pendingCreateDraft:command.pendingCreateDraft,
+  reviewStages:null,
   lineDrafts:expectedRevision===0&&draft.items?.length?
    draft.items:snapshotTradeLinkDraftLineItems(form),
-  formValues,busy:true,error:'',message:'Saving Draft to the signed database…'};
+  formValues,busy:true,error:'',message:'Saving document to the signed database…'};
  render();
  let committed=false;
  try{
   // The existing server transaction atomically writes the document, Board item
   // and audit event; no second Board-item creation is permitted in the client.
   const receipt=await tradeLinkDraftWorkspace.save({
-   documentId,expectedRevision,draft,workflowState});
+   documentId,expectedRevision,draft,initialState});
   committed=true;
   if(!same())return;
   const [record,list,board]=await Promise.all([
@@ -2237,8 +2287,8 @@ async function commitTradeLinkDraft(form){
   state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
    status:'AUTHORIZED_READ',rows:verifiedList.rows,
-   message:'Saved Draft '+receipt.revision+' confirmed in TradeLink, Board items and All Documents.'};
-  toast('Saved Draft. Document and Board item verified.');
+   message:'Saved '+(workflowState==='draft'?'Draft':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
+  toast('Document saved. Board item and All Documents verified.');
   location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
  }catch(err){
   if(same()){
@@ -5220,6 +5270,61 @@ async function action(name,button){
  case 'tradelink-document-open':{
   await openTradeLinkDocument(button.dataset.id);break;
  }
+ case 'tradelink-review-document-open':{
+  await openTradeLinkAssignedDocument(button.dataset.id);break;
+ }
+ case 'tradelink-document-preview-close':{
+  if(tradeLinkAuthorizedListRoute()&&state.tradeLinkSection==='documents'&&
+     state.tradeLinkDraft.status==='AUTHORIZED_READ'){
+   state.tradeLinkDraft.documentPreview=null;render();
+  }
+  break;
+ }
+ case 'tradelink-document-status-update':{
+  if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
+     !state.boardManage||state.tradeLinkDraft.busy||
+     state.tradeLinkDraft.status!=='AUTHORIZED_READ')break;
+  const documentId=button.dataset.id;
+  const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+  const select=button.closest('[data-tradelink-action-menu]')?.querySelector(
+   '[data-tradelink-status-select][data-id="'+documentId+'"]');
+  const targetState=String(select?.value||'');
+  if(!listed||listed.archived||!targetState||targetState===listed.workflowState)break;
+  const seq=routeSerial,actor=auth.userId,workspace=state.context?.workspace_id;
+  const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+   state.tradeLinkSection==='documents'&&state.boardManage&&auth.isSignedIn&&
+   auth.userId===actor&&state.context?.workspace_id===workspace;
+  state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:'',
+   message:'Saving document status…'};render();
+  try{
+   const receipt=await tradeLinkDraftWorkspace.updateStatus({
+    documentId,expectedRevision:listed.revision,targetState});
+   if(!same())break;
+   const [record,board]=await Promise.all([
+    tradeLinkDraftWorkspace.read(documentId),db.board(TRADELINK_BOARD_ID)
+   ]);
+   if(!same())break;
+   const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
+   if(!record||record.revision!==receipt.revision||
+      record.workflow_state!==targetState||
+      Date.parse(record.updated_at)!==Date.parse(receipt.updatedAt)||
+      !boardItem||boardItem.title!==listed.documentNumber||
+      Date.parse(boardItem.updated_at)!==Date.parse(record.updated_at))
+    throw new ApiError('Status was changed, but the refreshed document/Board projection could not be verified.',409);
+   state.board=board;
+   state.tradeLinkDraft={...state.tradeLinkDraft,
+    rows:state.tradeLinkDraft.rows.map(row=>row.documentId===documentId?{
+     ...row,workflowState:targetState,updatedAt:record.updated_at
+    }:row),
+    message:'Status updated to '+targetState+'. Board synchronization verified.'};
+   toast('Document status updated.');
+  }catch(error){
+   if(same())state.tradeLinkDraft.error=errorMessage(error);
+  }finally{
+   if(same()){state.tradeLinkDraft.busy=false;render();}
+  }
+  break;
+ }
  case 'tradelink-document-print':{
   await printTradeLinkDocument(button.dataset.id);break;
  }
@@ -5256,6 +5361,85 @@ async function action(name,button){
   await mutateTradeLinkAttachment(button.dataset.documentId,{
    attachmentId:button.dataset.id,reason
   });
+  break;
+ }
+ case 'tradelink-document-review-stage':{
+  if(!TL03_DUAL_REVIEW_ENABLED||state.tradeLinkDraft.busy)break;
+  const documentId=button.dataset.id,stage=button.dataset.stage;
+  const inEditor=tradeLinkDraftRoute()&&
+   state.tradeLinkDraft.selected?.documentId===documentId;
+  const inAssignedList=tradeLinkAuthorizedListRoute()&&
+   state.tradeLinkSection==='documents'&&state.tradeLinkDraft.status==='AUTHORIZED_READ';
+  if((!inEditor&&!inAssignedList)||!['primary','secondary'].includes(stage))break;
+  const listed=inEditor?{
+   documentId,boardItemId:state.tradeLinkDraft.selected.record.board_item_id,
+   revision:state.tradeLinkDraft.selected.record.revision,
+   workflowState:state.tradeLinkDraft.selected.record.workflow_state,
+   documentNumber:state.tradeLinkDraft.selected.record.document_number,
+   archived:state.tradeLinkDraft.selected.record.archived_at!==null,
+   assignedStage:stage
+  }:state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+  if(!listed||listed.workflowState!=='for-approval'||listed.archived||
+     listed.assignedStage!==stage)break;
+  const seq=routeSerial,actor=auth.userId,workspace=state.context?.workspace_id;
+  const same=()=>seq===routeSerial&&auth.isSignedIn&&auth.userId===actor&&
+   state.context?.workspace_id===workspace&&
+   (inEditor?tradeLinkDraftRoute():tradeLinkAuthorizedListRoute()&&
+    state.tradeLinkSection==='documents');
+  state.tradeLinkDraft={...state.tradeLinkDraft,busy:true,error:'',
+   message:'Recording your assigned validation time…'};render();
+  try{
+   const receipt=await tradeLinkDraftWorkspace.recordReviewStage({
+    documentId,expectedRevision:listed.revision,stage});
+   if(!same())break;
+   if(inEditor){
+    const [record,reviewStages,board]=await Promise.all([
+     tradeLinkDraftWorkspace.read(documentId),
+     tradeLinkDraftWorkspace.reviewStages(documentId),
+     db.board(TRADELINK_BOARD_ID)
+    ]);
+    if(!same())break;
+    const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
+    if(!record||record.revision!==receipt.revision||
+       record.workflow_state!==receipt.state||!boardItem||
+       boardItem.title!==listed.documentNumber||
+       Date.parse(boardItem.updated_at)!==Date.parse(record.updated_at))
+     throw new ApiError('Review was recorded, but the refreshed document/Board projection could not be verified.',409);
+    state.board=board;
+    state.tradeLinkDraft={...state.tradeLinkDraft,
+     selected:{documentId,record},reviewStages,
+     message:receipt.state==='approved'?
+      'Both assigned reviewers have validated this document. Status is now Approved.':
+      'Your signed validation time was recorded. The document remains For Approval until the second reviewer validates.'};
+    if(receipt.state==='approved'){
+     toast('Both validations complete. Document Approved.');
+     location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
+    }else toast('Validation recorded. Awaiting the second reviewer.');
+   }else{
+    const [board,rows]=await Promise.all([
+     db.board(TRADELINK_BOARD_ID),tradeLinkDraftWorkspace.assignedDocuments()
+    ]);
+    if(!same())break;
+    const refreshed=rows.find(row=>row.documentId===documentId);
+    const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
+    if(!refreshed||refreshed.revision!==receipt.revision||
+       refreshed.workflowState!==receipt.state||!boardItem||
+       boardItem.title!==listed.documentNumber||
+       Date.parse(boardItem.updated_at)!==Date.parse(refreshed.updatedAt))
+     throw new ApiError('Review was recorded, but the refreshed Board/list projection could not be verified. Refresh before retrying.',409);
+    state.board=board;
+    state.tradeLinkDraft={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
+     assignedOnly:true,rows,message:receipt.state==='approved'?
+      'Both assigned reviewers have validated this document. Status is now Approved.':
+      'Your signed validation time was recorded. The document remains For Approval until the second reviewer validates.'};
+    toast(receipt.state==='approved'?'Both validations complete. Document Approved.':
+     'Validation recorded. Awaiting the second reviewer.');
+   }
+  }catch(error){
+   if(same())state.tradeLinkDraft.error=errorMessage(error);
+  }finally{
+   if(same()){state.tradeLinkDraft.busy=false;render();}
+  }
   break;
  }
  case 'tradelink-document-submit':{
@@ -5340,7 +5524,7 @@ async function action(name,button){
  }
  case 'tradelink-documents-module':{
   if(!tradeLinkAuthorizedListRoute()||state.tradeLinkSection!=='documents'||
-     !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+     !TL03_DOMAIN_READS_ENABLED||(!state.boardManage&&!state.tradeLinkDraft?.assignedOnly)||
      state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)break;
   const selected=normalizeTradeLinkDraftListFilters({
    ...state.tradeLinkDraft.listFilters,documentType:button.dataset.module
@@ -7700,7 +7884,7 @@ function captureTradeLinkDraftListFilters(event){
  const control=event.target?.closest?.('[data-tradelink-domain-filter]');
  const container=control?.closest?.('[data-tradelink-domain-list]');
  if(!control||!container||!tradeLinkAuthorizedListRoute()||
-  !TL03_DOMAIN_READS_ENABLED||!state.boardManage||
+  !TL03_DOMAIN_READS_ENABLED||(!state.boardManage&&!state.tradeLinkDraft?.assignedOnly)||
   state.tradeLinkDraft?.status!=='AUTHORIZED_READ'||state.tradeLinkDraft.busy)return false;
  const get=name=>container.querySelector('[data-tradelink-domain-filter][name="'+name+'"]')?.value;
  const filters=normalizeTradeLinkDraftListFilters({
@@ -7723,7 +7907,7 @@ function captureTradeLinkDraftFields(event){
   'lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
   'paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber',
   'customerTin','customerEmail','customerPhone','validity','deliveryCommitment',
-  'paymentTerms','targetDeliveryDate','poNumber','approvedBy',
+  'paymentTerms','targetDeliveryDate','poNumber','approvedBy','documentStatus',
   'discountType','discountValue','exchangeRate','remarks']){
   values[key]=String(fd.get(key)??'').slice(0,5000);
  }

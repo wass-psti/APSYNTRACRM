@@ -59,10 +59,10 @@ test('all six modules use screenshot-led document cards, accessible tabs and no 
   assert.match(html,/Client Information/);
   assert.match(html,/Terms &amp; Conditions/);
   assert.match(html,/name="documentNumber"/);
-  assert.match(html,/data-action="tradelink-draft-preview"/);
+  assert.match(html,/data-action="tradelink-draft-submit"/);
   assert.match(html,/data-action="tradelink-draft-clear"/);
-  assert.match(html,/Generate PDF<\/button>/);
-  assert.match(html,/title="PDF generation requires an authorized workflow"/);
+  assert.match(html,/Print PDF<\/button>/);
+  assert.match(html,/title="PDF printing is available only after both reviewers approve"/);
   assert.match(html,/data-action="tradelink-draft-submit"/);
   assert.match(html,/No PDF, approval or document is generated/);
   assert.equal(TL03_DOMAIN_READS_ENABLED,true);
@@ -91,7 +91,7 @@ test('disabled signed listing follows main editor and must not display synthetic
  const html=draft('quotation');
  assert.match(html,/tl-reference-document-topcard/);
  assert.doesNotMatch(html,/tl-reference-list-details/);
- assert.match(html,/Save Draft/);
+ assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(html,/data-action="tradelink-draft-refresh"/);
  assert.doesNotMatch(html,/No authorized TradeLink Draft records have been loaded/);
  assert.doesNotMatch(html,/current signed, authorized response \(maximum 50 records\)/);
@@ -106,6 +106,7 @@ test('untrusted local fields are escaped and existing draft parser remains autho
  const fields=new Map([
   ['documentType','packing'],['documentNumber','PL-LOCAL-01'],
   ['customerName','Consignee'],['referenceNumber','REF-12'],
+  ['verifiedBy','msenagan@watchdogautomation.com.ph'],['approvedBy','asenagan@watchdogautomation.com.ph'],
   ['lineDescription','Packed equipment'],['lineQuantity','2']
  ]);
  const envelope=parseTradeLinkDraftForm({get:key=>fields.get(key)||''},{lineId:()=> 'line1'});
@@ -155,7 +156,7 @@ test('reference rebuild omits obsolete navigation, duplicate board table, and te
  assert.doesNotMatch(documents,/Board updated|Document updated|Search board item titles/);
  assert.doesNotMatch(draft,/tl-reference-list-details|data-action="tradelink-draft-refresh"/);
  assert.match(draft,/data-action="tradelink-draft-submit"/);
- assert.match(draft,/data-action="tradelink-draft-preview"/);
+ assert.match(draft,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(draft,/Validate locally|Save enabled/);
  const source=readFileSync('frontend/app.js','utf8');
  assert.match(source,/const directModule=requested==='tradelink'/);
