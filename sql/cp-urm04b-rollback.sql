@@ -52,7 +52,7 @@ BEGIN
 
  v_definition:=pg_get_functiondef('public.apsyntra_crm_platform_role_set(uuid,uuid,text,timestamptz)'::regprocedure);
  v_definition:=regexp_replace(v_definition,
-  $pattern$(OR EXISTS \(SELECT 1 FROM public\.apsyntra_role_bootstrap_identities b\s+WHERE b\.user_id=p_target_user_id\\))\s+THEN$pattern$,
+  $pattern$(OR EXISTS \(SELECT 1 FROM public\.apsyntra_role_bootstrap_identities b\s+WHERE b\.user_id=p_target_user_id\))\s+THEN$pattern$,
   $replacement$\1 OR public.is_platform_admin(p_target_user_id) THEN$replacement$);
  IF position('OR public.is_platform_admin(p_target_user_id)' IN v_definition)=0
  THEN RAISE EXCEPTION 'Unexpected CRM role target during rollback'; END IF;
