@@ -211,3 +211,29 @@
 @media(max-width:680px){#app .frt-exec-grid{grid-template-columns:1fr}#app .frt-exec-panel-wide{grid-column:auto}#app .frt-exec-manual{grid-template-columns:1fr}#app .frt-exec-heading{padding:16px}}
 @media(max-width:430px){#app .frt-exec-kpis{grid-template-columns:1fr}#app .frt-exec-kpi{min-height:100px}#app .frt-exec-kpi strong{font-size:22px}#app .frt-ref-nav{justify-content:flex-start;width:100%}}
 @media(prefers-reduced-motion:reduce){#app .frt-ref-nav-button{transition:none}}
+
+/* CP-FRT-EXEC-02 — signed aggregate category and six-month trend visuals. */
+#app .frt-exec-category-list{display:grid;gap:17px;padding:20px 18px}
+#app .frt-exec-category-row{display:grid;gap:7px;min-width:0}
+#app .frt-exec-category-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#596b86;font-size:10px}
+#app .frt-exec-category-heading span{overflow-wrap:anywhere;font-weight:700}
+#app .frt-exec-category-heading b{flex:none;color:#304564;font-size:10px;font-variant-numeric:tabular-nums}
+#app .frt-exec-track{height:8px;overflow:hidden;border-radius:999px;background:#edf1f7}
+#app .frt-exec-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7774e9,#54a5dc)}
+#app .frt-exec-trend{display:grid;gap:12px;padding:16px 18px}
+#app .frt-exec-trend-legend{display:flex;justify-content:flex-end;gap:16px;color:#7a879b;font-size:9px}
+#app .frt-exec-trend-legend span{display:flex;align-items:center;gap:6px}
+#app .frt-exec-trend-legend i{width:8px;height:8px;border-radius:50%}
+#app .frt-exec-trend-legend .is-requested{background:#7774e9}
+#app .frt-exec-trend-legend .is-spent{background:#36aa9b}
+#app .frt-exec-month-row{display:grid;grid-template-columns:54px minmax(0,1fr);align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #edf1f6}
+#app .frt-exec-month-row:last-child{border-bottom:0}
+#app .frt-exec-month-label{color:#62738c;font-size:10px;font-weight:750}
+#app .frt-exec-month-series{display:grid;gap:7px;min-width:0}
+#app .frt-exec-month-series>div{display:grid;grid-template-columns:62px minmax(28px,1fr) minmax(65px,auto);align-items:center;gap:8px;min-width:0}
+#app .frt-exec-month-series small{color:#8995a7;font-size:8px}
+#app .frt-exec-month-series i{display:block;height:7px;min-width:0;border-radius:999px;background:#7774e9}
+#app .frt-exec-month-series i.is-requested{background:#7774e9}
+#app .frt-exec-month-series i.is-spent{background:#36aa9b}
+#app .frt-exec-month-series b{color:#435875;text-align:right;font-size:9px;font-weight:700;font-variant-numeric:tabular-nums}
+@media(max-width:430px){#app .frt-exec-month-row{grid-template-columns:43px minmax(0,1fr);gap:8px}#app .frt-exec-month-series>div{grid-template-columns:52px minmax(18px,1fr) minmax(54px,auto);gap:5px}#app .frt-exec-month-series b{font-size:8px}}
