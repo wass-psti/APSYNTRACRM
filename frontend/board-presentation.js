@@ -65,7 +65,7 @@ export function resetBoardLayout(context,boardId,storage=globalThis.localStorage
  try{storage.removeItem(key);return true;}catch{return false;}
 }
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function boardTable({columns=[],rows=[],empty='No persisted records',layout=null,groupId='ungrouped',selection=null,footer='',summaries=null,addColumn=false,minimal=false,virtualize=true}={}){
+export function boardTable({columns=[],rows=[],empty='No persisted records',layout=null,groupId='ungrouped',selection=null,footer='',summaries=null,addColumn=false,minimal=false,virtualize=true,primaryEditable=false}={}){
  const available=columns.map(c=>c.key);
  const pref=normalizeLayout(layout||{},[],available);
  const visible=pref.columns.filter(k=>!pref.hidden.includes(k));
@@ -88,7 +88,8 @@ export function boardTable({columns=[],rows=[],empty='No persisted records',layo
   '<thead><tr>'+cells.map((c,i)=>'<th scope="col" data-column-key="'+esc(c.key)+'" draggable="'+(i>1||(minimal&&i>0))+'"'+
     (i===0?' class="board-frozen-column"':'')+
     (i>1||(minimal&&i>0)?' tabindex="0" aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight" title="Drag column to reorder; Alt+Shift+Left/Right to move"':'')+'>'+
-   '<span class="board-heading-label">'+(i===0&&selection?.enabled?'<input id="board-select-all-'+esc(groupId)+'" name="board-select-all-'+esc(groupId)+'" type="checkbox" class="board-select-all" data-board-select-all="'+esc(groupId)+'" aria-label="Select visible eligible items in this group" />':'')+esc(c.title)+'</span>'+
+   '<span class="board-heading-label">'+(i===0&&selection?.enabled?'<input id="board-select-all-'+esc(groupId)+'" name="board-select-all-'+esc(groupId)+'" type="checkbox" class="board-select-all" data-board-select-all="'+esc(groupId)+'" aria-label="Select visible eligible items in this group" />':'')+
+   (c.key==='record'&&primaryEditable?'<button type="button" class="board-primary-label-button" data-action="board-primary-label-edit" aria-label="Rename primary column '+esc(c.title)+'" title="Click to rename primary column">'+esc(c.title)+'</button>':esc(c.title))+'</span>'+
    '<button type="button" class="board-column-more" data-action="board-column-context" '+
     'data-column-key="'+esc(c.key)+'" aria-label="Column options for '+esc(c.title)+'" '+
     'aria-haspopup="menu" aria-expanded="false" title="Column options">⋮</button>'+
