@@ -14,7 +14,8 @@ const requireTrue=(value,code)=>{if(!value)throw Error(code);};
 const query=(db,statement)=>execFileSync('psql',['-X','-A','-t','-v','ON_ERROR_STOP=1',
  '-d',db,'-c',statement],{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:45000}).trim();
 function installCandidate(db){
- const source=['sql/tests/cp-frt-board03b-disposable-profile-compat.sql',
+ const source=['sql/cp-frt-sec14-production-additive-read-activation.sql',
+  'sql/tests/cp-frt-board03b-disposable-profile-compat.sql',
   'sql/cp-frt-board03-date-cas-CANDIDATE.sql',
   'sql/cp-frt-board03b-person-assignment-CANDIDATE.sql'];
  const dir=mkdtempSync(join(tmpdir(),'frt03d-'));
