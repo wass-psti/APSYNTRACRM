@@ -105,7 +105,8 @@ test('WAI-ARIA button/menu/menuitem semantics and keyboard support are implement
  assert.match(source,/event\.preventDefault\(\);/);
  assert.match(source,/close\(true\)/);
  assert.match(source,/queueMicrotask\(/);
- assert.match(source,/details\.addEventListener\('focusout'/);
+ assert.match(source,/doc\.addEventListener\('focusin',outsideFocus,true\)/);
+ assert.doesNotMatch(source,/details\.addEventListener\('focusout'/);
  assert.match(source,/details\.addEventListener\('toggle'/);
  assert.match(source,/details\.open=false/);
 });
@@ -162,6 +163,7 @@ test('lifecycle uses one observer and no recurring timers or telemetry',()=>{
  assert.match(source,/new AbortController\(/);
  assert.match(source,/doc\.addEventListener\('pointerdown',outside,true\)/);
  assert.match(source,/doc\.removeEventListener\('pointerdown',outside,true\)/);
+ assert.match(source,/doc\.removeEventListener\('focusin',outsideFocus,true\)/);
  assert.match(source,/controller\.destroy\(\)/);
  assert.match(source,/stopPosition\?\.\(\)/);
  assert.match(source,/prefers-reduced-motion: reduce/);

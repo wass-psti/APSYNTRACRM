@@ -338,9 +338,6 @@ export function startActionMenuExperience(root=globalThis.document?.body){
    });
   },{signal:abort.signal});
   details.addEventListener('toggle',sync,{signal:abort.signal});
-  details.addEventListener('focusout',()=>queueMicrotask(()=>{
-   if(details.open&&!details.contains(doc.activeElement))close(false);
-  }),{signal:abort.signal});
   controllers.set(details,controller);
   if(details.open)sync();
  }
@@ -375,12 +372,24 @@ export function startActionMenuExperience(root=globalThis.document?.body){
     controller.close(false);
   }
  };
+ // A top-layer popover temporarily focuses <body> during pointerdown,
+ // before the menuitem receives focus. Dismissing on focusout (even in a
+ // microtask) destroys the menu before pointerup/click can select an option.
+ // One shared focusin listener observes only real focus on an outside target.
+ const outsideFocus=event=>{
+  for(const controller of controllers.values()){
+   if(controller.details.open&&!controller.details.contains(event.target))
+    controller.close(false);
+  }
+ };
  doc.addEventListener('pointerdown',outside,true);
+ doc.addEventListener('focusin',outsideFocus,true);
  scan(root);
  return ()=>{
   if(!running)return;
   running=false;observer.disconnect();
   doc.removeEventListener('pointerdown',outside,true);
+  doc.removeEventListener('focusin',outsideFocus,true);
   for(const controller of controllers.values())controller.destroy();
   controllers.clear();
  };
