@@ -5,6 +5,7 @@ import {planMaterialSourcingPublicChanges,saveMaterialSourcingPublicChange,
  verifyMaterialSourcingPublicChanges} from '../material-sourcing-public-edit.js';
 import {renderMaterialSourcingPublicOverview} from '../material-sourcing-detail-tabs.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP} from '../material-sourcing-schema-plan.js';
+import {materialAddPublicColumns} from '../material-sourcing-add-material.js';
 const id='11111111-1111-4111-8111-111111111111';
 const column=(name,type,i)=>({id:'22222222-2222-4222-8222-'+String(i).padStart(12,'0'),
  name,data_type:type,visible:true,system_key:null,column_key:'custom:'+i});
@@ -50,6 +51,26 @@ test('reloaded board verifies every public value including title and prevents fa
  assert.equal(verifyMaterialSourcingPublicChanges(board,id,changes),true);
  board.items[0].group_id='33333333-3333-4333-8333-333333333333';
  assert.equal(verifyMaterialSourcingPublicChanges(board,id,changes),false);
+});
+test('verified material edit mode renders ordinary fields with the same edit control as protected fields',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const part=app.slice(app.indexOf('async function openBoardItemDetails('),app.indexOf('async function openBoardMembers('));
+ assert.match(part,/editing=editing&&\(canPublicEdit\|\|canProtectedEdit\)/);
+ assert.match(part,/editToggle\.hidden=!\(canPublicEdit\|\|canProtectedEdit\)/);
+ assert.match(part,/renderMaterialSourcingPublicOverview\(publicRow\(\),\{/);
+ assert.match(part,/groupTitle:group\?\.title\|\|'Main group',editing,/);
+ assert.doesNotMatch(part,/editing:editing&&canPublicEdit/);
+ const board=detail();
+ // Live MRH schema has custom Source Type/Brand/etc. and a legacy Quantity column.
+ board.columns[4]={...board.columns[4],column_key:'col_dca08a7992654706b800fb45657cf0d5'};
+ const enabled=['partNumber',...Object.entries({source:'sourceType',rfq:'rfq',description:'description',
+  brand:'brand',quantity:'quantity',due:'due',lead:'lead'})
+  .filter(([,key])=>materialAddPublicColumns(board)[key]).map(([key])=>key)];
+ assert.equal(enabled.length,8);
+ const html=renderMaterialSourcingPublicOverview({partNumber:'002',source:'Local',
+  rfq:'1',description:'testing',brand:'testing',quantity:'1',due:'2026-11-11',lead:'1'},
+ {editing:true,enabledFields:enabled});
+ assert.equal((html.match(/data-mrh-public-field=/g)||[]).length,8);
 });
 test('drawer uses existing signed board CAS with one Save action and no page refresh',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
