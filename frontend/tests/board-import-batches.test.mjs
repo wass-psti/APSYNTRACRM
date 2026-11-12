@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildImportPlan,initialImportMappings} from '../board-import-core.js';
-import {executeBoardImportBatched} from '../board-import-batches.js';
+import {executeBoardImportBatched,IMPORT_BATCH_SIZE} from '../board-import-batches.js';
 import {parseDelimited} from '../board-import-parse.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';
@@ -294,4 +294,66 @@ test('CP-BIMP-14 m143-v2 stores a 7,200-character reference without truncation a
  // An old backend cannot be forced to persist the value using m143-v1.
  assert.throws(()=>buildImportPlan({sheet,detail,mappings,group,matches}),
   /long_text cell exceeds 5000 characters/);
+});
+
+// Regression for a user-reported 617-row import whose single 1,000-row
+// transaction left the entire outcome uncertain after authoritative readback.
+// Keep the reviewed workbook intact while committing and verifying small batches.
+test('CP-BIMP-19: 617 rows use bounded verified transactions instead of one 617-row write',async()=>{
+ const f=fixture({count:617}),progress=[];
+ assert.equal(IMPORT_BATCH_SIZE,200);
+ const receipt=await executeBoardImportBatched({...f,auth,
+  onProgress:value=>progress.push(value)});
+ assert.equal(f.calls,4);
+ assert.deepEqual(progress.map(x=>x.completed),[200,400,600,617]);
+ assert.equal(receipt.created,617);
+ assert.equal(receipt.rowsProcessed,617);
+ assert.equal(f.current.items.length,617);
+ assert.equal(f.current.values.length,617);
+});
+
+test('CP-BIMP-19: uncertain 617-row second batch never replays either write',async()=>{
+ const f=fixture({count:617,failBatch:2,failStatus:503});
+ await assert.rejects(()=>executeBoardImportBatched({...f,auth}),error=>{
+  assert.equal(error.importOutcomeUncertain,true);
+  assert.equal(error.importBatchProgress.completed,200);
+  assert.equal(error.importBatchProgress.totalRows,617);
+  assert.equal(error.importBatchProgress.outcomeUncertain,true);
+  return true;
+ });
+ assert.equal(f.calls,2);
+ assert.equal(f.current.items.length,200);
+});
+
+test('CP-BIMP-19: transient authoritative readback failure retries only the read, not 617-row writes',async()=>{
+ const f=fixture({count:617});
+ const originalRead=f.api.board;
+ let reads=0;
+ f.api.board=async (...args)=>{
+  reads++;
+  if(reads===2){const error=new Error('Temporary readback timeout');error.status=0;throw error;}
+  return originalRead(...args);
+ };
+ const receipt=await executeBoardImportBatched({...f,auth});
+ assert.equal(receipt.created,617);
+ assert.equal(f.calls,4,'a read retry must never resubmit the write');
+ assert.equal(f.current.items.length,617);
+});
+
+test('CP-BIMP-19: persistent readback failure stays uncertain and never replays the write',async()=>{
+ const f=fixture({count:617});
+ const originalRead=f.api.board;
+ let reads=0;
+ f.api.board=async (...args)=>{
+  reads++;
+  if(reads===2||reads===3){const error=new Error('Readback unavailable');error.status=0;throw error;}
+  return originalRead(...args);
+ };
+ await assert.rejects(()=>executeBoardImportBatched({...f,auth}),error=>{
+  assert.equal(error.importOutcomeUncertain,true);
+  assert.equal(error.importBatchProgress.completed,0);
+  return true;
+ });
+ assert.equal(f.calls,1);
+ assert.equal(f.current.items.length,200);
 });

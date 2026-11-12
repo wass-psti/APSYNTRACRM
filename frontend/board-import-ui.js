@@ -70,7 +70,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   return '<div class="aps-import-center"><div class="aps-import-drop" data-imp-drop>'+
    '<input type="file" id="aps-import-file-input" accept=".csv,.xlsx" hidden />'+
    '<button type="button" class="primary" data-imp="browse">Browse</button>'+
-   '<h2>or drag and drop your file</h2><p>CSV and XLSX supported · Maximum 8 MB · 20,000 source rows (1,000-row verified batches)</p>'+
+   '<h2>or drag and drop your file</h2><p>CSV and XLSX supported · Maximum 8 MB · 20,000 source rows ('+IMPORT_BATCH_SIZE+'-row verified batches)</p>'+
    (state.recoveryMarker?'<p>Previous import: '+state.recoveryMarker.completed+
     ' of '+state.recoveryMarker.rows+' rows verified. Select the same workbook to continue.</p>'+
     '<button type="button" class="secondary" data-imp="clear-recovery">Discard recovery marker</button>':'')+
