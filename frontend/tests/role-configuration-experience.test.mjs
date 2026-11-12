@@ -44,7 +44,7 @@ test('staged-only banner and CRM permission ceiling remain intact',()=>{
  assert.match(result,/production roles, permissions, board access and memberships cannot be altered/);
  assert.match(result,/No bootstrap identity can be assigned or revoked here/);
  assert.match(result,/The CRM role tier is separate from WatchdogWorkspace identity/);
- assert.match(result,/never grants an application membership, board ownership or bootstrap administration/);
+ assert.match(result,/never grants an application membership, board ownership or unrelated application access/);
  for(const role of ['Admin','Supervisor','Employee','Viewer']){
   assert.ok(result.includes('<td><strong>'+role+'</strong></td>'),role);
  }

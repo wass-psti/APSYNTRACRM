@@ -28,20 +28,20 @@ function fixture(bootstrap,{missingCRM=false,leak=false,switchIdentity=false,rol
    if(name==='frt_admin_users')throw error(403);
    if(name==='apsyntra_role_configuration_snapshot'){
     if(!bootstrap||args.p_workspace_id!==WS)throw error(403);
-    return {bootstrapVerified:true,workspaceId:WS,mode:'staged_only',
+    return {adminVerified:true,bootstrapVerified:true,workspaceId:WS,mode:'staged_only',
      roles:[],users:[],assignments:[],boards:[],proposals:[],audit:[]};
    }
    if(name==='apsyntra_role_user_management_snapshot'){
     if(!bootstrap)throw error(403);
-    return {workspaceId:WS,bootstrapVerified:true,
+    return {workspaceId:WS,adminVerified:true,bootstrapVerified:true,
      users:[{id:USER,platformRole:'employee'}],modules:[],moduleAssignments:[],
      boards:[],boardAssignments:[]};
    }
    if(name==='apsyntra_crm_platform_role_snapshot'){
     if(missingCRM)throw error(404,'PGRST202');
-    if(!bootstrap&&leak)return {bootstrapVerified:true,workspaceId:WS,roles:[]};
+    if(!bootstrap&&leak)return {adminVerified:true,bootstrapVerified:true,workspaceId:WS,roles:[]};
     if(!bootstrap||args.p_workspace_id!==WS)throw error(403);
-    return {bootstrapVerified:true,workspaceId:WS,roles:[{
+    return {adminVerified:true,bootstrapVerified:true,workspaceId:WS,roles:[{
      userId:USER,inheritedRole:'employee',
      effectiveRole:roleMismatch?'admin':'employee',assignedRole:null,updatedAt:null
     }]};

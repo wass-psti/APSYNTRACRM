@@ -1,4 +1,4 @@
-/** Bootstrap-only role configuration client. Server authorization is mandatory.
+/** CRM Admin role configuration client. Server authorization is mandatory.
  * Proposal persistence is NOT active authorization or a grant.
  */
 const VALID_OPERATIONS=new Set(['role.create','role.edit','role.activate','role.deactivate',
@@ -7,15 +7,21 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 export class RoleConfigurationClient {
  constructor(api){this.api=api;}
  async bootstrapVerified(){
+  // Identity classification only; not the CRM Administrator authorization tier.
   const value=await this.api.rpc('apsyntra_role_is_bootstrap');
+  return value===true;
+ }
+ async adminVerified(){
+  // Server validates signed actor, active workspace and effective CRM Admin.
+  const value=await this.api.rpc('apsyntra_role_is_admin');
   return value===true;
  }
  async snapshot(workspaceId){
   if(!uuid.test(workspaceId||''))throw Error('Invalid workspace identifier');
   const result=await this.api.rpc('apsyntra_role_configuration_snapshot',{p_workspace_id:workspaceId});
-  if(result?.bootstrapVerified!==true||result.workspaceId!==workspaceId||result.mode!=='staged_only'||
+  if(result?.adminVerified!==true||result.workspaceId!==workspaceId||result.mode!=='staged_only'||
      !['roles','users','assignments','boards','proposals','audit'].every(k=>Array.isArray(result[k])))
-   throw Error('Unexpected verified role configuration response');
+   throw Error('Unexpected CRM Admin role configuration response');
   return result;
  }
  async propose(workspaceId,operation,payload){

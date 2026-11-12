@@ -38,5 +38,5 @@ test('unapproved administration page is absent from non-bootstrap nav and direct
  assert.match(app,/state\.roleVerified===true\?/);
  assert.match(app,/if\(!state\.roleVerified\)/);
  assert.match(app,/location\.hash=routeHome;return onRoute\(\)/);
- assert.match(app,/state\.roleVerified=false;state\.roleData=null/);
+ assert.match(app,/state\.roleVerified=false;state\.adminVerified=false;state\.roleData=null/);
 });

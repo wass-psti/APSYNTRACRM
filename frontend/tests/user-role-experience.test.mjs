@@ -88,8 +88,24 @@ test('verified protected administrator remains immutable in all controls',()=>{
  assert.equal((result.match(/data-action="user-role-edit-module"[^>]*disabled/g)||[]).length,12);
  assert.match(result,/data-action="user-role-edit-board"[^>]*disabled/);
  assert.doesNotMatch(result,/data-action="user-role-revert-crm-platform"/);
- assert.match(result,/Only the two verified bootstrap administrators can apply changes/);
+ assert.match(result,/Verified CRM Administrators can manage roles in their active workspace/);
  assert.match(result,/backend rejects self-promotion, protected administrators, stale updates, and cross-workspace targets/);
+});
+
+test('non-bootstrap inherited platform admin is not locked solely by platform identity',()=>{
+ const inheritedId='55555555-5555-4555-8555-555555555555';
+ const inherited={id:inheritedId,name:'Non-bootstrap inherited admin',
+  email:'inherited-admin@example.invalid',platformRole:'admin_general_manager',
+  protected:false,activeWorkspaceCount:1};
+ const expanded={...data,users:[...data.users,inherited],
+  crmPlatformRoles:[...data.crmPlatformRoles,{userId:inheritedId,
+   inheritedRole:'admin',effectiveRole:'admin',assignedRole:null}]};
+ const result=renderUserRoleManagement({verified:true,data:expanded,selectedUserId:inheritedId});
+ assert.doesNotMatch(result,/Protected administrator — role modifications are intentionally disabled/);
+ assert.match(result,/CRM admin \(inherited\)/);
+ assert.match(result,/data-action="user-role-edit-crm-platform" data-user-id="55555555-5555-4555-8555-555555555555" >/);
+ assert.match(result,/data-action="user-role-edit-module" data-user-id="55555555-5555-4555-8555-555555555555" data-resource="time-tracker" >/);
+ assert.match(result,/data-action="user-role-edit-board" data-user-id="55555555-5555-4555-8555-555555555555"/);
 });
 
 test('ordinary account keeps editable role actions, revocation and CRM ceiling messaging',()=>{
