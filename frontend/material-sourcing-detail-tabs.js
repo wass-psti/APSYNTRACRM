@@ -13,26 +13,35 @@ export const MATERIAL_SOURCING_DETAIL_TABS=Object.freeze(['details','tasks','act
 /** Render the verified, public item projection rather than generic board metadata.
  * Commercial values are intentionally excluded and loaded by the separate signed
  * protected-field RPC. No figures, foreign items, or exchange rates are inferred. */
-export function renderMaterialSourcingPublicOverview(row,{groupTitle='Main group'}={}){
+export function renderMaterialSourcingPublicOverview(row,{groupTitle='Main group',editing=false,enabledFields=[]}={}){
  const safe=row&&typeof row==='object'?row:{};
  const val=value=>value===null||value===undefined||String(value)===''?'—':escape(value);
- const field=(name,value,{wide=false,badge=false}={})=>
-  '<div class="mrh-detail-field'+(wide?' mrh-detail-field-wide':'')+'">'+
-  '<dt>'+escape(name)+'</dt><dd>'+
-  (badge&&value?'<span class="mrh-detail-source '+(value==='Local'?'local':value==='Import'?'import':'')+'">'+val(value)+'</span>':val(value))+
-  '</dd></div>';
+ const field=(name,value,{wide=false,badge=false,key='',type='text'}={})=>{
+  const editable=editing&&key&&enabledFields.includes(key);
+  const raw=String(value??'');
+  const control=!editable?'':key==='source'?
+   '<select id="mrh-public-'+key+'" data-mrh-public-field="'+key+'" aria-label="Edit '+escape(name)+'">'+
+    ['','Local','Import'].map(v=>'<option value="'+v+'"'+(v===raw?' selected':'')+'>'+escape(v||'Select source')+'</option>').join('')+'</select>':
+   key==='description'?'<textarea id="mrh-public-'+key+'" data-mrh-public-field="'+key+'" aria-label="Edit '+escape(name)+'" maxlength="2000" rows="2">'+escape(raw)+'</textarea>':
+   '<input id="mrh-public-'+key+'" data-mrh-public-field="'+key+'" aria-label="Edit '+escape(name)+'" type="'+type+'"'+
+    (type==='number'?' min="0" step="any"':' maxlength="240"')+' value="'+escape(raw)+'">';
+  return '<div class="mrh-detail-field'+(wide?' mrh-detail-field-wide':'')+'">'+
+   '<dt>'+escape(name)+'</dt><dd data-mrh-public-value="'+escape(key)+'">'+
+   (badge&&value?'<span class="mrh-detail-source '+(value==='Local'?'local':value==='Import'?'import':'')+'">'+val(value)+'</span>':val(value))+
+   '</dd>'+control+'</div>';
+ };
  const section=(title,icon,fields)=>
   '<section class="mrh-detail-section"><h3><span aria-hidden="true">'+icon+'</span>'+title+'</h3>'+
   '<dl class="mrh-detail-field-grid">'+fields+'</dl></section>';
  return '<div class="mrh-detail-public" aria-label="Public Material Sourcing fields">'+
   section('Identification','◇',
-   field('Part number',safe.partNumber)+field('Source type',safe.source,{badge:true})+
-   field('RFQ Ref No',safe.rfq,{wide:true})+
-   field('Material description',safe.description,{wide:true})+
-   field('Brand',safe.brand)+field('Quantity',safe.quantity)+
+   field('Part number',safe.partNumber,{key:'partNumber'})+field('Source type',safe.source,{badge:true,key:'source'})+
+   field('RFQ Ref No',safe.rfq,{wide:true,key:'rfq'})+
+   field('Material description',safe.description,{wide:true,key:'description'})+
+   field('Brand',safe.brand,{key:'brand'})+field('Quantity',safe.quantity,{key:'quantity',type:'number'})+
    field('Created',safe.created))+
   section('Supplier & Schedule','▧',
-   field('Date required',safe.due)+field('Leadtime (weeks)',safe.lead)+
+   field('Date required',safe.due,{key:'due',type:'date'})+field('Leadtime (weeks)',safe.lead,{key:'lead',type:'number'})+
    field('Board group',groupTitle,{wide:true}))+
   '</div>';
 }
@@ -44,7 +53,7 @@ export function renderMaterialSourcingDetailTabs(summaryHtml){
    'aria-controls="mrh-detail-panel-'+tab+'" aria-selected="'+(index===0?'true':'false')+'" tabindex="'+(index===0?'0':'-1')+'">'+
    tab[0].toUpperCase()+tab.slice(1)+'</button>').join('')+'</div>'+
   '<section id="mrh-detail-panel-details" role="tabpanel" aria-labelledby="mrh-detail-tab-details" data-mrh-detail-panel="details">'+
-   summaryHtml+
+   '<div data-mrh-public-host>'+summaryHtml+'</div>'+
    '<div data-mrh-private-host role="region" aria-label="Protected Material Sourcing details">'+
    '<p role="status" class="muted">Loading available material details…</p></div></section>'+
   '<section id="mrh-detail-panel-tasks" role="tabpanel" aria-labelledby="mrh-detail-tab-tasks" data-mrh-detail-panel="tasks" hidden>'+

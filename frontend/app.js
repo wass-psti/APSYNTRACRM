@@ -79,11 +79,12 @@ import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board-scroll-st
 import {renderBoardLoading,renderBoardLoadingError,setBoardLoadingVisibility} from './board-loading.js';
 import {MATERIAL_SOURCING_BOARD_ID,MATERIAL_SOURCING_GROUP,planMaterialSourcingSchema} from './material-sourcing-schema-plan.js';
 import {MATERIAL_TRACKER_DEFAULT_FILTERS,renderMaterialSourcingTracker,isMaterialTrackerBoard,materialTrackerRows,filterMaterialTrackerRows,materialTrackerPublicCsv} from './material-sourcing-tracker.js';
-import {parseMaterialAddForm} from './material-sourcing-add-material.js';
+import {parseMaterialAddForm,materialAddPublicColumns} from './material-sourcing-add-material.js';
 import {createMaterialSourcingAtomic} from './material-sourcing-atomic-create.js';
 import {showEngineeringDiagnostics} from './engineering-diagnostics-visibility.js';
 import {renderMaterialSourcingDetailTabs,renderMaterialSourcingPublicOverview,renderMaterialSourcingUnavailableDetails,classifyMaterialSourcingDetailError,selectMaterialSourcingDetailTab,materialSourcingItemAuditRows,renderMaterialSourcingItemActivity} from './material-sourcing-detail-tabs.js';
 import {readMaterialBoardItemTasks,saveMaterialBoardItemTask,renderMaterialBoardItemTasks} from './material-sourcing-board-tasks.js';
+import {planMaterialSourcingPublicChanges,saveMaterialSourcingPublicChange,verifyMaterialSourcingPublicChanges} from './material-sourcing-public-edit.js';
 import {isMaterialSourcingBoard,readProtectedSourcingItem,writeProtectedSourcingField,planProtectedSourcingChanges,renderProtectedSourcingEditor,createMaterialSourcingPart} from './material-sourcing-application.js';
 import {activateApprovedPublicSourcingColumns,MATERIAL_SOURCING_ACTIVATION_ACK} from './material-sourcing-controlled-activation.js';
 import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient,
@@ -3474,7 +3475,7 @@ async function openBoardItemDetails(itemId){
    '</div><div class="mrh-detail-footer">'+
     '<button type="button" class="primary" data-mrh-save-all hidden>Save changes</button>'+
     '<span class="mrh-save-feedback" role="status" aria-live="polite" data-mrh-save-feedback></span>'+
-    '<button type="button" class="secondary" data-mrh-editor-toggle hidden>Edit protected fields</button>'+
+    '<button type="button" class="secondary" data-mrh-editor-toggle hidden>Edit material fields</button>'+
     '<button type="button" class="secondary" data-dismiss>Close</button></div>':
    '<p class="muted">Read-only item details from the signed board response.</p>'+
     boardItemSummary(item,{groupTitle:group?.title||'Ungrouped',restricted})+
@@ -3483,6 +3484,7 @@ async function openBoardItemDetails(itemId){
  document.body.append(modal);
  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
  const privateHost=modal.querySelector('[data-mrh-private-host]');
+ const publicHost=modal.querySelector('[data-mrh-public-host]');
  if(privateHost){
   modal.dataset.mrhActor=snapshot.userId;
   modal.dataset.mrhWorkspace=snapshot.workspaceId;
@@ -3577,6 +3579,7 @@ async function openBoardItemDetails(itemId){
    }
   });
   let values=null,busy=false,editing=false,needsReopen=false;
+  let publicDetail=state.board,canPublicEdit=false,canProtectedEdit=false;
   const editToggle=itemDialog.querySelector('[data-mrh-editor-toggle]');
   const saveAll=itemDialog.querySelector('[data-mrh-save-all]');
   const statusMessage=message=>{
@@ -3590,6 +3593,38 @@ async function openBoardItemDetails(itemId){
    host.dataset.mrhPrivateField,host.querySelector('[name="value"]')?.value??''
   ]));
   const pendingChanges=()=>planProtectedSourcingChanges(values,rawDraft());
+  const publicControls=()=>[...publicHost.querySelectorAll('[data-mrh-public-field]')];
+  const rawPublicDraft=()=>Object.fromEntries(publicControls().map(el=>[el.dataset.mrhPublicField,el.value]));
+  const pendingPublicChanges=()=>planMaterialSourcingPublicChanges(publicDetail,itemId,rawPublicDraft());
+  const publicRow=()=>materialTrackerRows(publicDetail).find(row=>row.id===itemId);
+  const publicEnabled=()=>{
+   const cols=materialAddPublicColumns(publicDetail);
+   return ['partNumber',...Object.entries({source:'sourceType',rfq:'rfq',description:'description',
+    brand:'brand',quantity:'quantity',due:'due',lead:'lead'})
+    .filter(([,key])=>cols[key]).map(([key])=>key)];
+  };
+  const renderPublic=()=>{
+   if(!publicHost)return;
+   publicHost.innerHTML=renderMaterialSourcingPublicOverview(publicRow(),{
+    groupTitle:group?.title||'Main group',editing:editing&&canPublicEdit,
+    enabledFields:publicEnabled()});
+  };
+  const publicSavedDisplay=()=>{
+   for(const [key,value] of Object.entries(publicRow()||{})){
+    const output=publicHost.querySelector('[data-mrh-public-value="'+key+'"]');
+    if(output){
+     // Source has a small badge in the read view; replace only its text.
+     const badge=output.querySelector('.mrh-detail-source');
+     if(badge){
+      badge.textContent=value??'—';
+      badge.className='mrh-detail-source '+(value==='Local'?'local':value==='Import'?'import':'');
+     }else output.textContent=value===null||value===undefined||value===''?'—':String(value);
+    }
+   }
+   const item=publicDetail.items?.find(i=>i.id===itemId);
+   const title=itemDialog.querySelector('#board-detail-title');
+   if(item&&title)title.textContent=item.title;
+  };
   const updateDisplay=records=>{
    for(const host of controls()){
     const field=host.dataset.mrhPrivateField;
@@ -3607,12 +3642,13 @@ async function openBoardItemDetails(itemId){
     const field=host.querySelector('[name="value"]');
     if(field)field.disabled=busy||needsReopen;
    }
+   for(const field of publicControls())field.disabled=busy||needsReopen;
   };
   editToggle?.addEventListener('click',()=>{
    if(!current()||busy||!values)return;
    if(editing){
     try{
-     if(pendingChanges().length){
+     if(pendingChanges().length||pendingPublicChanges().length){
       statusMessage('Unsaved edits retained. Save changes before leaving edit mode.');
       return;
      }
@@ -3622,8 +3658,9 @@ async function openBoardItemDetails(itemId){
     }
    }
    editing=!editing;
-   editToggle.textContent=editing?'Done editing':'Edit protected fields';
-   privateHost.innerHTML=renderProtectedSourcingEditor(values,{editing});
+   editToggle.textContent=editing?'Done editing':'Edit material fields';
+   privateHost.innerHTML=renderProtectedSourcingEditor(values,{editing:editing&&canProtectedEdit});
+   renderPublic();
    updateButtons();
   });
   const refresh=async()=>{
@@ -3631,9 +3668,14 @@ async function openBoardItemDetails(itemId){
     const result=await readProtectedSourcingItem(input);
     if(!current())return false;
     values=result;
+    const detail=await db.board(snapshot.boardId);
+    if(!current()||detail.board?.workspace_id!==snapshot.workspaceId||
+       !detail.items?.some(item=>item.id===itemId&&item.group_id===MATERIAL_SOURCING_GROUP.id))return false;
+    publicDetail=detail;
     needsReopen=false;
     const editAllowed=await db.allowed(snapshot.boardId,'edit').catch(()=>false);
-    let canProtectedEdit=false;
+    canPublicEdit=editAllowed===true;
+    canProtectedEdit=false;
     if(editAllowed===true){
      try{
       const role=await db.rpc('material_request_hub_bootstrap',{
@@ -3642,11 +3684,12 @@ async function openBoardItemDetails(itemId){
      }catch{}
     }
     if(!current())return false;
-    editing=editing&&canProtectedEdit;
-    privateHost.innerHTML=renderProtectedSourcingEditor(result,{editing});
+    editing=editing&&(canPublicEdit||canProtectedEdit);
+    privateHost.innerHTML=renderProtectedSourcingEditor(result,{editing:editing&&canProtectedEdit});
+    renderPublic();
     if(editToggle){
-     editToggle.hidden=!canProtectedEdit;
-     editToggle.textContent=editing?'Done editing':'Edit protected fields';
+     editToggle.hidden=!(canPublicEdit||canProtectedEdit);
+     editToggle.textContent=editing?'Done editing':'Edit material fields';
     }
     updateButtons();
     return true;
@@ -3668,15 +3711,23 @@ async function openBoardItemDetails(itemId){
   // Keep the fields mounted throughout saving: no page, board or drawer refresh.
   saveAll?.addEventListener('click',async()=>{
    if(!current()||busy||!editing||!values)return;
-   let changes;
-   try{changes=pendingChanges();}
-   catch(error){statusMessage(errorMessage(error));return;}
-   if(!changes.length){statusMessage('No changes to save.');return;}
+   let changes,publicChanges;
+   try{
+    changes=pendingChanges();
+    publicChanges=pendingPublicChanges();
+   }catch(error){statusMessage(errorMessage(error));return;}
+   const total=changes.length+publicChanges.length;
+   if(!total){statusMessage('No changes to save.');return;}
    busy=true;updateButtons();
-   const originalDraft=rawDraft();
-   statusMessage('Saving '+changes.length+' pending change'+(changes.length===1?'':'s')+'…');
+   const originalDraft=rawDraft(),originalPublicDraft=rawPublicDraft();
+   statusMessage('Saving '+total+' pending change'+(total===1?'':'s')+'…');
    let completed=0;
    try{
+    for(const change of publicChanges){
+     await saveMaterialSourcingPublicChange({api:db,itemId,change});
+     if(!current())return;
+     completed++;
+    }
     for(const change of changes){
      const receipt=await writeProtectedSourcingField({...input,
       fieldName:change.fieldName,value:change.value,
@@ -3687,32 +3738,43 @@ async function openBoardItemDetails(itemId){
      completed++;
     }
     // One post-save authoritative read, no input replacement or focus loss.
-    const persisted=await readProtectedSourcingItem(input);
+    const [persisted,board]=await Promise.all([
+     readProtectedSourcingItem(input),db.board(snapshot.boardId)]);
     if(!current())return;
-    if(changes.some(change=>persisted?.[change.fieldName]?.value!==change.value))
+    if(board.board?.workspace_id!==snapshot.workspaceId||
+       !verifyMaterialSourcingPublicChanges(board,itemId,publicChanges)||
+       changes.some(change=>persisted?.[change.fieldName]?.value!==change.value))
      throw new ApiError('Saved values could not be verified.',409);
-    values=persisted;
-    updateDisplay(values);
-    statusMessage(changes.length+' change'+(changes.length===1?'':'s')+
+    values=persisted;publicDetail=board;
+    if(state.boardId===snapshot.boardId)state.board=board;
+    updateDisplay(values);publicSavedDisplay();
+    statusMessage(total+' change'+(total===1?'':'s')+
      ' saved and verified. Continue editing or select Done editing.');
    }catch(error){
     if(!current())return;
     // A later write or verification may fail after earlier fields committed.
     // Reconcile revisions without replacing any input or discarding the draft.
     try{
-     const persisted=await readProtectedSourcingItem(input);
-     if(!current())return;
-     values=persisted;
-     updateDisplay(values);
-     const unresolved=Object.entries(originalDraft).filter(([name,raw])=>{
+     const [persisted,board]=await Promise.all([
+      readProtectedSourcingItem(input),db.board(snapshot.boardId)]);
+     if(!current()||board.board?.workspace_id!==snapshot.workspaceId)return;
+     values=persisted;publicDetail=board;
+     if(state.boardId===snapshot.boardId)state.board=board;
+     updateDisplay(values);publicSavedDisplay();
+     const unresolvedPrivate=Object.entries(originalDraft).filter(([name,raw])=>{
       try{return planProtectedSourcingChanges(persisted,{[name]:raw}).length>0;}
       catch{return true;}
      }).length;
+     const unresolvedPublic=(()=>{
+      try{return planMaterialSourcingPublicChanges(board,itemId,originalPublicDraft).length;}
+      catch{return Object.keys(originalPublicDraft).length;}
+     })();
+     const unresolved=unresolvedPrivate+unresolvedPublic;
      statusMessage(unresolved?
       'Some changes were not saved ('+unresolved+' pending). Your edits are retained; review the values and retry Save changes. '+errorMessage(error):
       'All values match the server, but confirmation was interrupted. Your edits are retained.');
     }catch{
-     statusMessage('Save was not fully verified ('+completed+'/'+changes.length+
+     statusMessage('Save was not fully verified ('+completed+'/'+total+
       ' acknowledged). Your edits are retained. Reopen details to reconcile before another attempt.');
      // An unknown commit outcome cannot safely be retried with stale revisions.
      needsReopen=true;
