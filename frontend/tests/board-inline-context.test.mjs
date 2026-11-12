@@ -5,7 +5,7 @@ import {ApiError} from '../session.js';
 import {BoardStructureClient} from '../board-structure-admin.js';
 import {
  resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
- confirmInlineColumnDelete
+ confirmInlineColumnDelete,projectConfirmedColumnRename
 } from '../board-inline-context.js';
 
 const boardId='11111111-1111-4111-8111-111111111111';
@@ -147,4 +147,36 @@ test('contextual dialog disables submit after an uncertain column mutation',()=>
  assert.match(app,/view\.addEventListener\('keydown'/);
  assert.match(app,/event\.key==='Escape'/);
  assert.match(app,/closeAndRestore\(\)/);
+});
+
+test('committed name-only CAS receipt projects a copy without mutating board data',()=>{
+ const receipt={action:'update',board_id:boardId,column_id:customId,
+  updated_at:'2026-11-12T10:00:00Z'};
+ const result=projectConfirmedColumnRename(detail,{columnId:customId,name:'Fast rename',
+  receipt,expectedRevision:board.updated_at});
+ assert.equal(result.columns[0].name,'Fast rename');
+ assert.equal(result.board.updated_at,receipt.updated_at);
+ assert.equal(result.columns[0].data_type,column.data_type);
+ assert.deepEqual(result.values,detail.values);
+ assert.equal(detail.columns[0].name,'Status I');
+ assert.notEqual(result.columns,detail.columns);
+ for(const invalid of [
+  {receipt:{...receipt,action:'delete'}},
+  {receipt:{...receipt,board_id:restrictedId}},
+  {receipt:{...receipt,column_id:restrictedId}},
+  {receipt:{...receipt,updated_at:'invalid'}},
+  {expectedRevision:'stale'},
+  {columnId:restrictedId}
+ ])assert.equal(projectConfirmedColumnRename(detail,{columnId:customId,
+  name:'Fast rename',receipt,expectedRevision:board.updated_at,...invalid}),null);
+});
+test('contextual rename refresh is asynchronous only after confirmed signed CAS',()=>{
+ const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const editor=source.slice(source.indexOf('function contextualColumnEditor('),
+  source.indexOf('async function contextualColumnDelete('));
+ assert.match(editor,/const receipt=await boardStructureClient\.mutate/);
+ assert.match(editor,/projectConfirmedColumnRename\(state\.board/);
+ assert.match(editor,/if\(projected\)\{/);
+ assert.match(editor,/void loadBoard\(snapshot\.boardId,'items'\)/);
+ assert.match(editor,/\}else await loadBoard\(snapshot\.boardId,'items'\)/);
 });
