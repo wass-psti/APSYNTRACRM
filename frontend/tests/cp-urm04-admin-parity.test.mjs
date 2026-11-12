@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {RoleConfigurationClient} from '../role-configuration-client.js';
 const app=readFileSync('frontend/app.js','utf8');
 const candidate=readFileSync('sql/cp-urm04-crm-admin-parity-CANDIDATE.sql','utf8');
-const migration=readFileSync('supabase/migrations/20261112113703_cp_urm04b_crm_admin_capability_parity_20261112.sql','utf8');
+const migration=readFileSync('supabase/migrations/20261112121235_cp_urm04b_crm_admin_capability_parity_20261112.sql','utf8');
 
 test('CRM Admin and designated bootstrap identity are independent verified checks',async()=>{
  const calls=[];
