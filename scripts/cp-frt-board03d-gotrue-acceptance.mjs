@@ -14,14 +14,22 @@ const requireTrue=(value,code)=>{if(!value)throw Error(code);};
 const query=(db,statement)=>execFileSync('psql',['-X','-A','-t','-v','ON_ERROR_STOP=1',
  '-d',db,'-c',statement],{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:45000}).trim();
 function installCandidate(db){
- const source=['sql/cp-frt-sec14-production-additive-read-activation.sql',
-  'sql/tests/cp-frt-board03b-disposable-profile-compat.sql',
-  'sql/cp-frt-board03-date-cas-CANDIDATE.sql',
-  'sql/cp-frt-board03b-person-assignment-CANDIDATE.sql'];
+ const canonical=readFileSync('sql/cp-frt-sec14-production-additive-read-activation.sql','utf8');
+ const start=canonical.indexOf('CREATE OR REPLACE FUNCTION public.frt_restricted_request_detail(');
+ const end=canonical.indexOf('CREATE OR REPLACE FUNCTION public.frt_board_list_safe(');
+ requireTrue(start>0&&end>start,'FRT03D_RESTRICTED_PROJECTION_SOURCE_DRIFT');
+ const detailProjection=canonical.slice(start,end);
+ requireTrue(detailProjection.includes('GRANT EXECUTE ON FUNCTION public.frt_restricted_request_detail'),
+  'FRT03D_DETAIL_GRANT_MISSING');
+ const sources=[detailProjection,
+  readFileSync('sql/cp-frt-sec14-board-safe-read-contracts.sql','utf8'),
+  readFileSync('sql/tests/cp-frt-board03b-disposable-profile-compat.sql','utf8'),
+  readFileSync('sql/cp-frt-board03-date-cas-CANDIDATE.sql','utf8'),
+  readFileSync('sql/cp-frt-board03b-person-assignment-CANDIDATE.sql','utf8')];
  const dir=mkdtempSync(join(tmpdir(),'frt03d-'));
  try{
   const file=join(dir,'isolated-extension.sql');
-  writeFileSync(file,source.map(name=>readFileSync(name,'utf8')).join('\n')+
+  writeFileSync(file,sources.join('\n')+
    "\nNOTIFY pgrst,'reload schema';\n",{mode:0o600});
   execFileSync('psql',['-X','-q','-v','ON_ERROR_STOP=1','-d',db,'-f',file],
    {encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:45000});
