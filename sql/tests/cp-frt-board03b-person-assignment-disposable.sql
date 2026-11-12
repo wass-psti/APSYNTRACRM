@@ -48,11 +48,18 @@ BEGIN
  IF NOT blocked THEN RAISE EXCEPTION 'FRT03B_FOREIGN_WRITER_ACCEPTED'; END IF;
  PERFORM set_config('request.jwt.claim.sub',actor::text,true);
  result:=public.frt_assign_request_person(w,req,actor,NULL);
- IF result->>'assigneeId' IS NOT NULL OR
- (SELECT count(*) FROM public.frt_audit_logs
- WHERE workspace_id=w AND fund_request_id=req AND action='REQUEST_PERSON_ASSIGNED')<>2
- THEN RAISE EXCEPTION 'FRT03B_UNASSIGN_OR_AUDIT_FAILED'; END IF;
+ IF result->>'assigneeId' IS NOT NULL
+ THEN RAISE EXCEPTION 'FRT03B_UNASSIGN_FAILED'; END IF;
  RAISE NOTICE 'FRT03B_PERSON_ASSIGNMENT_CAS_WORKSPACE_DENIAL_PASS';
 END $test$;
 RESET ROLE;
+-- Audit table is deliberately private to the signed role; check as test owner.
+DO $audit$
+BEGIN
+ IF (SELECT count(*) FROM public.frt_audit_logs
+ WHERE workspace_id='00000000-0000-4000-8000-000000000001'
+ AND fund_request_id='10000000-0000-4000-8000-000000000001'
+ AND action='REQUEST_PERSON_ASSIGNED')<>2
+ THEN RAISE EXCEPTION 'FRT03B_ASSIGNMENT_AUDIT_FAILED'; END IF;
+END $audit$;
 ROLLBACK;
