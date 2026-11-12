@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from '../overview-visuals.js';
 import {signedCrmRoleLabel,signedCrmIdentityLabel} from '../crm-role-context.js';
+import {workspaceRelationLabel} from '../workspace-relation-context.js';
 
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/overview-experience.css','utf8');
@@ -112,20 +113,20 @@ test('Workspace essentials is rendered only after verified bootstrap authority',
  // Execute only the pure Overview renderer with inert view dependencies.
  // Profile roles must never substitute for the verified bootstrap RPC gate.
  const render=new Function('state','name','e','overviewIcon','boardCard','empty',
-  'signedCrmRoleLabel','signedCrmIdentityLabel',
+  'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel',
   view+'\nreturn overview();');
  const makeState=roleVerified=>({
   roleVerified,boards:[],context:{profile:{platform_role:'admin_general_manager'}}
  });
  const deps=[()=> 'Example User',String,v=>`<i>${v}</i>`,()=>'',()=>'<div>Empty board</div>'];
  for(const flag of [false,undefined,null,0]){
-  const markup=render(makeState(flag),...deps,signedCrmRoleLabel,signedCrmIdentityLabel);
+  const markup=render(makeState(flag),...deps,signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel);
   assert.doesNotMatch(markup,/Workspace essentials|overview-essentials|Supabase Auth connected|Native issue transactions/);
   assert.match(markup,/Your boards/);
   assert.match(markup,/Active boards/);
   assert.match(markup,/New board/);
  }
- const verified=render(makeState(true),...deps,signedCrmRoleLabel,signedCrmIdentityLabel);
+ const verified=render(makeState(true),...deps,signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel);
  assert.match(verified,/Workspace essentials/);
  assert.match(verified,/Supabase Auth connected/);
  assert.match(verified,/Board permissions are centralized/);

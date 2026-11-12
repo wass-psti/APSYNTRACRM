@@ -181,6 +181,7 @@ import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {UserRoleManagementClient,renderUserRoleManagement,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel} from './crm-role-context.js';
+import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
 const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'Status'},
  {key:'owner',title:'Owner'},{key:'due',title:'Due date'},{key:'actions',title:'Actions'}];
@@ -229,7 +230,7 @@ const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
-const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
+const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
   view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtStatusFilter:'all',ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -346,6 +347,7 @@ function sidebar(){
    <span class="sidebar-brand-subtitle" aria-hidden="true">WORKSPACE OPERATIONS</span>
   </div>
   `+renderWorkspaceSwitcher({id:state.context?.workspace_id,name:workspaceName()})+`
+  <div class="ws01-context-relation" role="status">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+`</div>
   <div class="ws02-sidebar-action">`+renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()})+`</div>
   <div class="sidebar-nav-scroll">
    <div class="side-section sidebar-nav-section">Workspace</div>
@@ -422,7 +424,8 @@ function shell(body){
  const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
  const sidebarSignature=JSON.stringify([state.roleVerified,name(),
-  state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,workspaceName(),
+  state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
+  state.workspaceRelationSnapshot?.relation,workspaceName(),
   state.boards.slice(0,6).map(board=>[board.id,board.name]),
   state.boards.length]);
  const route=[state.view,state.boardId,state.tab].join('|');
@@ -576,7 +579,7 @@ function overview(){
    <span class="stat-icon pink">`+overviewIcon('shield')+`</span>
    <div class="stat-label">Your access</div>
    <div class="stat-value csp-u041" title="Verified CRM tier in the active workspace">`+e(signedCrmRoleLabel(state.crmRoleSnapshot,state.context))+`</div>
-   <div class="stat-footer">`+e(signedCrmIdentityLabel(state.context))+`</div>
+   <div class="stat-footer">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+` · `+e(signedCrmIdentityLabel(state.context))+`</div>
   </div>
  </section>
  <div class="section-header overview-section-heading overview-entrance">
@@ -1008,6 +1011,7 @@ function settingsPage(){
  <div class="settings-detail"><label>Workspace</label><strong>${e(workspaceName())}</strong></div>
  <div class="settings-detail"><label>Effective CRM role</label><strong>${e(signedCrmRoleLabel(state.crmRoleSnapshot,state.context))}</strong></div>
  <div class="settings-detail"><label>Inherited identity role</label><strong>${e(p.platform_role||'unverified')}</strong></div>
+ <div class="settings-detail"><label>Workspace relationship</label><strong>${e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))}</strong></div>
  <div class="settings-detail settings-detail-wide settings-detail-identifier"><label>User identifier</label><strong class="csp-u019" >${e(state.context.user_id)}</strong></div></div><form id="settings-change-password-form" autocomplete="off" class="settings-password-form" aria-labelledby="settings-password-heading">
  <div class="settings-password-heading"><span class="settings-password-icon" aria-hidden="true">${settingsIcon('lock')}</span><div><h4 id="settings-password-heading">Change password</h4><p>Update the password used to sign in to your account.</p></div></div>
  <div class="settings-password-fields">
@@ -1397,6 +1401,7 @@ function invalidateSignedSyncView(){
  boardCacheChannel.stop();db.invalidateBoardCache();
  platformSync.stop();
  crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
+ workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
  state.board=null;state.boardUi=null;state.boards=[];state.tradeLinkDraft=initialTradeLinkDraftView();
  state.ttAttendance=null;state.ttBoardAttendance=null;state.ttBoardGpsEligible=false;
  state.roleVerified=false;state.roleData=null;state.userRoleData=null;
@@ -1538,6 +1543,27 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  return true;
 }
 
+let workspaceRelationReadGeneration=0;
+async function refreshSignedWorkspaceRelation(){
+ const actor=state.context?.user_id,workspace=state.context?.workspace_id;
+ if(!actor||!workspace||!auth.isSignedIn||auth.userId!==actor)return;
+ const token=auth.accessToken,generation=++workspaceRelationReadGeneration;
+ state.workspaceRelationSnapshot=null;
+ try{
+  const catalog=await workspaceLifecycleClient.discover();
+  const relation=workspaceRelationFromCatalog(catalog,{userId:actor,workspaceId:workspace});
+  if(generation!==workspaceRelationReadGeneration||!auth.isSignedIn||
+     auth.userId!==actor||auth.accessToken!==token||
+     state.context?.user_id!==actor||state.context?.workspace_id!==workspace)return;
+  state.workspaceRelationSnapshot=relation;
+ }catch{
+  if(generation!==workspaceRelationReadGeneration||
+     state.context?.user_id!==actor||state.context?.workspace_id!==workspace)return;
+  state.workspaceRelationSnapshot=null;
+ }
+ if(generation===workspaceRelationReadGeneration&&state.context?.user_id===actor&&
+    state.context?.workspace_id===workspace&&!platformSyncEditInProgress())render();
+}
 let crmRoleReadGeneration=0;
 let crmRoleLastReadAt=0;
 async function refreshSignedCrmRole({force=false}={}){
@@ -1571,6 +1597,7 @@ async function refreshWorkspace(){
  state.context=mergeProfileAvatarContext(state.context,incomingContext);
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
   crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
+  workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
  }
  boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
@@ -1602,6 +1629,7 @@ async function refreshWorkspace(){
  // This role check is still signed and server-authoritative, never cached.
  state.roleVerified=bootstrapVerified;
  void refreshSignedCrmRole({force:true}).catch(()=>{});
+ void refreshSignedWorkspaceRelation().catch(()=>{});
  if(!state.roleVerified){state.roleData=null;state.roleError='';state.userRoleData=null;state.ttTeam=null;state.ttTeamRunId++;state.ttTeamError='';}
 }
 async function loadUserRoleManagement(){
