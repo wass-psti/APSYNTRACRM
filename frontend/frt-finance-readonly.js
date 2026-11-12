@@ -12,7 +12,7 @@ const denied=(reason)=>({status:'BLOCKED',reason,companies:[],requests:[],
  summary:null,role:'UNVERIFIED',companyCode:null,writesAttempted:0});
 const short=(value,length)=>typeof value==='string'&&value.length<=length?value:null;
 const validDate=v=>v===null||(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v));
-export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
+export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeExecutive=false}={}){
  const result=denied('UNVERIFIED_SIGNED_CONTEXT');
  if(!auth||!api)return denied('SIGNED_AUTH_AND_API_REQUIRED');
  try{
@@ -69,6 +69,37 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
     dateNeeded:item.date_needed||'—',filingStatus:item.filing_status
    });
   }
+  let executive;
+  if(includeExecutive===true){
+   executive={status:'BLOCKED',reason:'EXECUTIVE_REPORTING_NOT_ACTIVATED'};
+   try{
+    const analytics=await api.rpc('frt_executive_dashboard_safe',
+     {p_workspace_id:context.workspace_id,p_company:selected});
+    const validMoney=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=1e15;
+    const categories=analytics?.top_categories,trend=analytics?.monthly_trend;
+    const validPeriod=value=>typeof value==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+    const validCategories=Array.isArray(categories)&&categories.length<=5&&categories.every(row=>
+     typeof row?.category==='string'&&row.category.trim().length>0&&row.category.length<=80&&validMoney(row.amount));
+    const validTrend=Array.isArray(trend)&&trend.length===6&&trend.every(row=>
+     validPeriod(row?.period)&&validMoney(row?.requested)&&validMoney(row?.spent))&&
+     new Set(trend.map(row=>row.period)).size===6&&
+     trend.every((row,index)=>index===0||
+      (Number(row.period.slice(0,4))*12+Number(row.period.slice(5,7)))-
+      (Number(trend[index-1].period.slice(0,4))*12+Number(trend[index-1].period.slice(5,7)))===1);
+    if(validMoney(analytics?.total_amount)&&validMoney(analytics?.total_liquidated)&&
+       validMoney(analytics?.budget_utilization)&&validMoney(analytics?.pending_liquidation)&&
+       validCategories&&validTrend){
+     executive={status:'PASS',totalAmount:analytics.total_amount,
+      totalLiquidated:analytics.total_liquidated,budgetUtilization:analytics.budget_utilization,
+      pendingLiquidation:analytics.pending_liquidation,
+      topCategories:categories.map(row=>({category:row.category,amount:row.amount})),
+      monthlyTrend:trend.map(row=>({period:row.period,requested:row.requested,spent:row.spent}))};
+    }else executive={status:'BLOCKED',reason:'EXECUTIVE_REPORTING_CONTRACT_INVALID'};
+   }catch(error){
+    executive={status:'BLOCKED',reason:error?.code==='PGRST202'?
+     'EXECUTIVE_REPORTING_NOT_ACTIVATED':'EXECUTIVE_REPORTING_UNAVAILABLE'};
+   }
+  }
   const second=await auth.getVerifiedUser();
   const after=await api.context();
   if(second?.id!==user.id||auth.userId!==user.id||
@@ -76,6 +107,7 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
      after?.profile?.status!=='active')return denied('SIGNED_CONTEXT_CHANGED');
   return {status:'PASS',reason:null,role:membership.role,companies,companyCode:selected,
    summary:Object.fromEntries(keys.map(k=>[k,dashboard[k]])),requests,
+   ...(includeExecutive===true?{executive}:{}),
    totalVisible:items.length,visibleLimit:100,writesAttempted:0};
  }catch(err){
   return denied(err?.status===401?'SIGNED_SESSION_EXPIRED':
