@@ -8,6 +8,8 @@ on:
       - 'frontend/tests/priority5f-entry.test.mjs'
       - 'scripts/priority5f-module-graph.mjs'
       - 'scripts/priority5f-module-browser.mjs'
+      - 'scripts/group-action-menu-browser.mjs'
+      - 'frontend/action-menu-experience.js'
       - 'scripts/pages-smoke.mjs'
       - '.github/workflows/priority5f-module-entry.yml'
   push:
@@ -19,6 +21,8 @@ on:
       - 'frontend/tests/priority5f-entry.test.mjs'
       - 'scripts/priority5f-module-graph.mjs'
       - 'scripts/priority5f-module-browser.mjs'
+      - 'scripts/group-action-menu-browser.mjs'
+      - 'frontend/action-menu-experience.js'
       - 'scripts/pages-smoke.mjs'
       - '.github/workflows/priority5f-module-entry.yml'
   workflow_dispatch:
@@ -54,3 +58,9 @@ jobs:
           echo 'Chrome launch unavailable, retrying exactly once with an isolated profile.'
           sleep 2
           CHROME_BIN="$BROWSER" node scripts/priority5f-module-browser.mjs
+      - name: Verify real Chromium group menu selection and legitimate dismissal
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER" || { echo 'BLOCKED: Chrome/Chromium unavailable'; exit 1; }
+          CHROME_BIN="$BROWSER" node scripts/group-action-menu-browser.mjs
