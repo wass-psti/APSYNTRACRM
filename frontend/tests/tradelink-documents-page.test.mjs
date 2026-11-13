@@ -136,6 +136,9 @@ test('All Documents distinguishes an authorized empty result from pending, faile
  assert.match(pending,/The signed document list has not been loaded/);
  const loading=renderState({...base,busy:true});
  assert.match(loading,/Loading the signed TradeLink document list/);
+ const refreshingEmpty=renderState({...base,status:'AUTHORIZED_READ',rows:[],busy:true});
+ assert.match(refreshingEmpty,/Loading the signed TradeLink document list/);
+ assert.doesNotMatch(refreshingEmpty,/No documents are currently assigned/);
  const failed=renderState({...base,status:'READ_FAILED',error:'Signed list unavailable'});
  assert.match(failed,/Signed list unavailable/);
  assert.match(failed,/could not be loaded\. Refresh to retry/);
