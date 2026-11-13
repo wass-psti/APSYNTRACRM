@@ -24,6 +24,7 @@ export class DomainApi {
   this.auth=auth;
   this.boardReadCache=new Map();
   this.boardReadGeneration=0;
+  this.boardListRequests=new Map();
   this.onBoardMutation=null;
   this.extendedRefsSupported=null;
  }
@@ -39,6 +40,7 @@ export class DomainApi {
       Date.parse(revision)<Date.parse(cachedRevision))return false;
   }
   this.boardReadGeneration++;
+  this.boardListRequests.clear();
   if(boardId===null)this.boardReadCache.clear();
   else this.boardReadCache.delete(boardId);
   return true;
@@ -121,9 +123,27 @@ export class DomainApi {
    return ctx;
  }
  async boards(status='active'){
-   const data=await this.rpc('wm_list_boards',{p_status:status});
+   // Share only concurrent identical reads; never cache completed board lists
+   // or permission decisions across sessions, mutations or workspace changes.
+   const token=this.auth?.accessToken;
+   const userId=this.auth?.userId;
+   const generation=this.boardReadGeneration;
+   const key=JSON.stringify([status,userId,token,generation]);
+   let pending=this.boardListRequests.get(key);
+   if(!pending){
+    pending=this.rpc('wm_list_boards',{p_status:status});
+    this.boardListRequests.set(key,pending);
+    const cleanup=()=>{
+     if(this.boardListRequests.get(key)===pending)this.boardListRequests.delete(key);
+    };
+    Promise.resolve(pending).then(cleanup,cleanup);
+   }
+   const data=await pending;
+   if(this.auth?.userId!==userId||this.auth?.accessToken!==token||
+      this.boardReadGeneration!==generation)
+    throw new ApiError('Board list changed during loading. Reload to reconcile.',409);
    if(!Array.isArray(data))throw new ApiError('Unexpected board list response.');
-   return data;
+   return structuredClone(data);
  }
  async board(boardId,{parallelExtendedRefs=false,importVerification=false}={}){
    requireUuid(boardId);

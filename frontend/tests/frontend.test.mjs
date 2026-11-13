@@ -92,3 +92,35 @@ test('Huly Issue listing uses RLS-protected existing security-invoker view',asyn
  assert.match(request,/huly_sb02_documents/);
  assert.ok(request.includes('board_id=eq.')||request.includes('board_id=eq%2E')); 
 });
+
+test('concurrent board lists coalesce without sharing results or crossing mutation boundaries',async()=>{
+ let resolves=[];let calls=0;
+ const auth={userId:U,accessToken:'token-1',authorized:()=>{
+  calls++;
+  return new Promise(resolve=>resolves.push(resolve));
+ }};
+ const api=new DomainApi(auth);
+ const a=api.boards('active'),b=api.boards('active');
+ assert.equal(calls,1);
+ resolves.shift()([{id:B,name:'First'}]);
+ const [first,second]=await Promise.all([a,b]);
+ first[0].name='Mutated locally';
+ assert.equal(second[0].name,'First');
+ const c=api.boards('active');
+ assert.equal(calls,2);
+ resolves.shift()([{id:B,name:'Updated'}]);
+ assert.equal((await c)[0].name,'Updated');
+ const stale=api.boards('active');
+ api.invalidateBoardCache();
+ const fresh=api.boards('active');
+ assert.equal(calls,4);
+ resolves.shift()([{id:B,name:'Old'}]);
+ await assert.rejects(stale,/changed during loading/);
+ resolves.shift()([{id:B,name:'Fresh'}]);
+ assert.equal((await fresh)[0].name,'Fresh');
+ auth.accessToken='token-2';
+ const rotated=api.boards('active');
+ assert.equal(calls,5);
+ resolves.shift()([{id:B,name:'New token'}]);
+ assert.equal((await rotated)[0].name,'New token');
+});
