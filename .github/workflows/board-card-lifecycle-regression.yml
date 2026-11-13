@@ -1,0 +1,24 @@
+name: Board Card Lifecycle Focused Regression
+
+on:
+  pull_request:
+    paths:
+      - frontend/board-card-lifecycle.js
+      - frontend/tests/board-card-lifecycle.test.mjs
+      - .github/workflows/board-card-lifecycle-regression.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  board-card-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify board-card lifecycle contract
+        run: node --test frontend/tests/board-card-lifecycle.test.mjs
