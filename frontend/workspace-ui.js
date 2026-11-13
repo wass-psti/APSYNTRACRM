@@ -275,7 +275,7 @@ function rowMarkup(row,options={}){
   '<strong>'+escape(row.name)+'</strong><small>'+escape(row.relation)+
   ' · '+(row.active?'Current signed workspace':switchingUiReady(options)?
    'Signed member workspace · server-verified switching':'Signed member workspace · switching unavailable')+'</small></span>'+
-  '<span class="ws01-entry-badge">'+(row.active?'Current · ':'')+escape(workspaceEntryRoleBadge(row,options))+'</span></button></div>';
+  '<span class="ws01-entry-badge">'+escape(workspaceEntryRoleBadge(row,options))+'</span></button></div>';
 }
 function resultsMarkup(catalog,tab,query,options={}){
  const rows=visibleWorkspaces(catalog,{tab,query});
@@ -543,11 +543,11 @@ function menuContent(catalog,options={}){
  return '<section class="ws01-menu-card" role="dialog" aria-modal="true" aria-label="Browse workspaces">'+
   '<header class="ws01-menu-heading"><strong>Workspaces</strong>'+
   '<button class="ws01-close" type="button" data-ws01-close aria-label="Close workspace selector">×</button></header>'+
-  '<label class="ws01-sr-only" for="ws01-menu-search">Search workspaces</label>'+
-  '<input id="ws01-menu-search" type="search" placeholder="Search workspaces" autocomplete="off" maxlength="120"/>'+
+  '<label class="ws01-search-label" for="ws01-menu-search">Find a workspace</label>'+
+  '<input id="ws01-menu-search" type="search" placeholder="Search by workspace name" autocomplete="off" maxlength="120"/>'+
   '<p class="ws01-eyebrow">Authorized workspaces · '+visibleWorkspaces(catalog).length+'</p>'+
   '<div data-ws01-results>'+resultsMarkup(catalog,'all','',options)+'</div>'+
-  '<div class="ws01-menu-actions"><button type="button" data-ws01-action="browse">Browse all</button>'+
+  '<div class="ws01-menu-actions" role="group" aria-label="Workspace actions"><button type="button" data-ws01-action="browse">Browse all workspaces</button>'+
   '<button type="button" data-ws01-action="create">Add workspace</button>'+
   '<button type="button" data-ws01-action="invite">Invite members</button></div>'+
   currentFootnote(catalog,options)+'</section>';
@@ -589,14 +589,15 @@ function browseContent(catalog,options={}){
  return '<section class="ws01-browser-card" role="dialog" aria-modal="true"'+
   ' aria-labelledby="ws01-browser-title"><header class="ws01-browser-top">'+
   '<h2 id="ws01-browser-title">Browse all workspaces</h2>'+
-  '<label class="ws01-sr-only" for="ws01-browser-search">Search authorized workspaces</label>'+
-  '<input id="ws01-browser-search" type="search" placeholder="Search for a workspace" maxlength="120"/>'+
+  '<label class="ws01-search-label" for="ws01-browser-search">Search authorized workspaces</label>'+
+  '<input id="ws01-browser-search" type="search" placeholder="Search by workspace name" maxlength="120"/>'+
   '<button type="button" class="ws01-close" data-ws01-close aria-label="Close browse workspaces">×</button></header>'+
   '<div class="ws01-browser-body"><nav class="ws01-browser-tabs" aria-label="Workspace categories">'+
   tabs.map(([id,label])=>'<button type="button" data-ws01-filter="'+id+
    '" aria-pressed="'+(id==='all')+'">'+escape(label)+'</button>').join('')+
   '<button type="button" data-ws01-action="create" class="ws01-add-button">+ Add workspace</button></nav>'+
-  '<div class="ws01-browser-results"><h3 data-ws01-title>All workspaces</h3>'+
+  '<div class="ws01-browser-results"><div class="ws01-browser-results-head"><h3 data-ws01-title>All workspaces</h3>'+
+  '<span class="ws01-browser-count" data-ws01-count>'+visibleWorkspaces(catalog).length+' authorized</span></div>'+
   '<div data-ws01-results class="ws01-browser-grid">'+resultsMarkup(catalog,'all','',options)+'</div>'+
   currentFootnote(catalog,options)+'</div></div></section>';
 }
@@ -608,6 +609,8 @@ function openBrowse(catalog,options={}){
  const redraw=()=>{
   if(activeOverlay!==layer||!layer.isConnected)return;
   layer.querySelector('[data-ws01-results]').innerHTML=resultsMarkup(read(),tab,input.value,options);
+  const count=layer.querySelector('[data-ws01-count]');
+  if(count)count.textContent=visibleWorkspaces(read(),{tab,query:input.value}).length+' shown';
   const feedback=layer.querySelector('[data-ws01-feedback]');
   if(feedback)feedback.outerHTML=currentFootnote(read(),options);
   for(const btn of layer.querySelectorAll('[data-ws01-filter]'))
@@ -639,7 +642,8 @@ function createContent({enabled=WS01_CREATION_ENABLED,restrictedReason=''}={}){
     'Workspace creation is restricted to approved IT Admins and workspace owners. Nothing will be saved until the signed server policy is active.')+
    '</p></div>'+
   '<button type="button" class="ws01-close" data-ws01-close aria-label="Close create workspace">×</button></header>'+
-  '<div class="ws01-create-symbol" aria-hidden="true">N</div>'+
+  '<div class="ws01-create-intro"><div class="ws01-create-symbol" aria-hidden="true">W</div>'+
+  '<p>Choose a name and privacy preference. Your existing account and server policy determine creation access.</p></div>'+
   '<form id="ws01-proposal" novalidate>'+
   '<label for="ws01-name">Workspace name</label>'+
   '<input id="ws01-name" type="text" name="name" maxlength="80" minlength="2"'+
