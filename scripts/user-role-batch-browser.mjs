@@ -72,7 +72,14 @@ try{
     panelInside:rect.left>=-1&&rect.right<=innerWidth+1,
     reviewHeight:Math.round(review.getBoundingClientRect().height),
     modeHeights:mode.map(b=>Math.round(b.getBoundingClientRect().height)),
-    roleSelected:panel.querySelector('#user-role-batch-role')?.value};
+    roleSelected:panel.querySelector('#user-role-batch-role')?.value,
+    gridColumns:getComputedStyle(panel.querySelector('.user-role-batch-layout')).gridTemplateColumns.split(' ').length,
+    summaryPresent:!!panel.querySelector('.user-role-batch-summary'),
+    searchPresent:!!panel.querySelector('#user-role-batch-member-search'),
+    memberListInside:(()=>{
+     const list=panel.querySelector('.user-role-batch-user-list').getBoundingClientRect();
+     return list.left>=-1&&list.right<=innerWidth+1;
+    })()};
   })()`);
   assert.equal(result.overflow,false,'overflow at '+width);
   assert.equal(result.mode,2);
@@ -85,6 +92,10 @@ try{
   assert.ok(result.reviewHeight>=44);
   assert.ok(result.modeHeights.every(height=>height>=44));
   assert.equal(result.roleSelected,'editor');
+  assert.equal(result.gridColumns,width>1040?2:1);
+  assert.equal(result.summaryPresent,true);
+  assert.equal(result.searchPresent,true);
+  assert.equal(result.memberListInside,true);
   console.log('USER_ROLE_BATCH_BROWSER_PASS '+JSON.stringify(result));
  }
 }finally{
