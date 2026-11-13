@@ -1,6 +1,8 @@
--- CP-DB-PERF-01: targeted active-item count index for wm_list_boards.
--- Live EXPLAIN showed a sequential scan filtering board_id and archived_at.
--- Deploy in a controlled window: standard CREATE INDEX may briefly block writes.
+-- CP-DB-PERF-01: accelerate active item counts used by wm_list_boards.
+-- This table is approximately 13 MB as checked on 2026-11-13.
+-- Fail rather than waiting on production locks or sustaining an expensive build.
+SET LOCAL lock_timeout = '2s';
+SET LOCAL statement_timeout = '20s';
 CREATE INDEX IF NOT EXISTS work_board_items_active_board_count_idx
   ON public.work_board_items (board_id)
   WHERE archived_at IS NULL;
