@@ -19,6 +19,10 @@ on:
       - "docs/CP-FRT-SEC14-LEGACY-RPC-CONSUMER-COMPATIBILITY.md"
       - "docs/PAGES-OPERATIONS.md"
       - "frontend/**"
+      - "frontend/tests/main-workspace-owner-admin.test.mjs"
+      - "supabase/migrations/20261113110000_main_workspace_owner_crm_admin_20261113.sql"
+      - "sql/tests/cp-main-workspace-owner-admin-setup.sql"
+      - "sql/tests/cp-main-workspace-owner-admin-acceptance.sql"
       - "docs/BIMP-01-CSV-XLSX-IMPORT.md"
       - "docs/CP-BIMP-11-EXISTING-BOARD-COMPATIBILITY.md"
       - "docs/CP-BIMP-12-FINDINGS-CROSS-CONFIG-ACCEPTANCE.md"
@@ -156,6 +160,18 @@ jobs:
             -f sql/cp-frt-sec14-auto-foreign-denials.sql \
             -f sql/tests/cp-frt-sec14-auto-foreign-disposable.sql \
             -f sql/tests/cp-frt-sec14-auto-foreign-grant-drift.sql
+      - name: Verify Main Workspace owner Admin scope and workspace email isolation
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+        run: |
+          createdb main_workspace_owner_disposable
+          PGDATABASE=main_workspace_owner_disposable psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-main-workspace-owner-admin-setup.sql \
+            -f supabase/migrations/20261113110000_main_workspace_owner_crm_admin_20261113.sql \
+            -f sql/tests/cp-main-workspace-owner-admin-acceptance.sql
   disposable-collaboration-postgres:
     runs-on: ubuntu-latest
     permissions:
