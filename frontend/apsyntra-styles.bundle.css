@@ -22718,8 +22718,24 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
  font-size:20px;white-space:normal;overflow-wrap:anywhere
 }
 .ws01-overlay .ws01-browser-top .ws01-search-label{display:none}
+/* Browse search owns one icon: exclude the global enhancer and place SVG inside field. */
+.ws01-overlay .ws01-browser-search-field{
+ position:relative;min-width:0;width:100%;margin:0
+}
+.ws01-overlay .ws01-browser-search-icon{
+ position:absolute;top:50%;left:13px;transform:translateY(-50%);
+ width:19px;height:19px;z-index:1;pointer-events:none;
+ color:var(--sm-sub,#626c7d)
+}
 .ws01-overlay #ws01-browser-search{
- margin:0;width:100%;min-height:44px;padding:10px 13px
+ display:block;margin:0;width:100%;min-height:44px;
+ padding:10px 13px 10px 43px;
+ -webkit-appearance:none;appearance:none
+}
+.ws01-overlay #ws01-browser-search::-webkit-search-decoration,
+.ws01-overlay #ws01-browser-search::-webkit-search-results-button,
+.ws01-overlay #ws01-browser-search::-webkit-search-results-decoration{
+ -webkit-appearance:none;display:none
 }
 .ws01-overlay .ws01-browser-body{
  display:grid;grid-template-columns:190px minmax(0,1fr);
@@ -22859,7 +22875,7 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   padding:12px 15px;gap:9px
  }
  .ws01-overlay .ws01-browser-top h2{font-size:17px}
- .ws01-overlay #ws01-browser-search{
+ .ws01-overlay .ws01-browser-search-field{
   grid-row:2;grid-column:1/-1
  }
  .ws01-overlay .ws01-browser-body{
