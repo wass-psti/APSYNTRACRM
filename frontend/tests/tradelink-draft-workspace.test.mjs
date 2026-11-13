@@ -220,7 +220,7 @@ test('module switching updates ephemeral fields without storage, network or work
  const app=readFileSync('frontend/app.js','utf8');
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  for(const key of ['lineSerialNumber','checkedBy','deliveredBy','receivedBy','verifiedBy',
-  'paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber'])
+  'verifiedByEmail','approvedByEmail','paymentParticulars','cashAmount','chequeAmount','bankName','chequeNumber'])
   assert.match(app,new RegExp("'"+key+"'"));
  assert.match(app,/select\[name="documentType"\]/);
  assert.match(app,/if\(captureTradeLinkDraftFields\(event\)\)\{/);
@@ -309,7 +309,7 @@ test('commercial UI redraw and signed client boundaries do not persist or leak d
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  for(const key of ['customerTin','customerEmail','customerPhone','validity',
-  'deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy'])
+  'verifiedByEmail','approvedByEmail','deliveryCommitment','paymentTerms','targetDeliveryDate','poNumber','approvedBy'])
   assert.ok(app.includes("'"+key+"'"),key);
  assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|service_role|sb_secret|fetch\(/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);
