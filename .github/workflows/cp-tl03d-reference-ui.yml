@@ -13,6 +13,7 @@ on:
       - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
       - 'frontend/tradelink-reference-ui.css'
       - 'frontend/tests/tradelink-reference-ui.test.mjs'
+      - 'frontend/tests/tradelink-six-module-save-integrity.test.mjs'
       - 'index.html'
       - '.github/workflows/cp-tl03d-reference-ui.yml'
   pull_request:
@@ -26,6 +27,7 @@ on:
       - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
       - 'frontend/tradelink-reference-ui.css'
       - 'frontend/tests/tradelink-reference-ui.test.mjs'
+      - 'frontend/tests/tradelink-six-module-save-integrity.test.mjs'
       - 'index.html'
       - '.github/workflows/cp-tl03d-reference-ui.yml'
   workflow_dispatch:
@@ -52,7 +54,7 @@ jobs:
       - name: Prove reference DOM/validation/gate contracts in six Draft modules
         run: |
           set -euo pipefail
-          node --test frontend/tests/tradelink-reference-ui.test.mjs frontend/tests/tradelink-draft-workspace.test.mjs frontend/tests/tradelink-activity.test.mjs frontend/tests/tradelink-domain-client.test.mjs
+          node --test frontend/tests/tradelink-reference-ui.test.mjs frontend/tests/tradelink-draft-workspace.test.mjs frontend/tests/tradelink-activity.test.mjs frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-six-module-save-integrity.test.mjs
       - name: Full frontend regression with no production credentials
         run: node --test frontend/tests/*.test.mjs
       - name: Render isolated browser screenshots and verify geometry

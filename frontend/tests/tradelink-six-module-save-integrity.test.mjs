@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {parseTradeLinkDraftForm} from '../tradelink-draft-workspace.js';
+import {parseTradeLinkDraftForm,TradeLinkDraftWorkspace} from '../tradelink-draft-workspace.js';
+import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {tradeLinkSavedDraftMatches} from '../tradelink-domain-client.js';
 
 const fields=data=>({
@@ -86,4 +87,81 @@ test('signed post-commit success requires persisted content parity before showin
  assert.ok(receipt>0&&guard>receipt&&success>guard);
  assert.match(source,/tradeLinkDraftSaveFailureMessage\(err,\{committed\}\)/);
  assert.doesNotMatch(source,/JSON\.stringify\(record\.content\)===JSON\.stringify\(draft\)/);
+});
+
+
+test('six modules use the genuine signed manager save RPC and return revision-one receipts',async()=>{
+ const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const workspace='00000000-0000-4000-8000-000000000001';
+ const boardItems=Object.fromEntries(Object.keys(moduleInputs).map((type,index)=>[
+  type,('bbbbbbbb-bbbb-4bbb-8bbb-'+String(index+1).padStart(12,'0'))
+ ]));
+ const writes=[];
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={
+  context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+  board:async boardId=>({board:{id:boardId,workspace_id:workspace,name:'TradeLink',
+   status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async(boardId,permission)=>boardId===TRADELINK_BOARD_ID&&permission==='manage',
+  rpc:async(name,args)=>{
+   writes.push({name,args});
+   assert.equal(name,'tl03_document_save');
+   return {documentId:args.p_document_id,boardItemId:boardItems[args.p_data.documentType],
+    revision:1,state:args.p_initial_state,operation:args.p_operation,idempotent:false};
+  }
+ };
+ const service=new TradeLinkDraftWorkspace({auth,api});
+ for(const [type,input] of Object.entries(moduleInputs)){
+  const draft=parseTradeLinkDraftForm(fields({documentType:type,
+   documentNumber:'CP-TL-10A-'+type.toUpperCase(),...input}),
+   {lineId:()=>type+'-line',purpose:'save'});
+  const documentId='cccccccc-cccc-4ccc-8ccc-'+
+   String(Object.keys(moduleInputs).indexOf(type)+1).padStart(12,'0');
+  const receipt=await service.save({documentId,expectedRevision:0,draft});
+  assert.deepEqual(receipt,{documentId,boardItemId:boardItems[type],
+   revision:1,state:'for-approval',operation:'create',idempotent:false},type);
+  const write=writes.at(-1);
+  assert.equal(write.name,'tl03_document_save',type);
+  assert.equal(write.args.p_board_id,TRADELINK_BOARD_ID,type);
+  assert.equal(write.args.p_document_id,documentId,type);
+  assert.equal(write.args.p_expected_revision,0,type);
+  assert.equal(write.args.p_operation,'create',type);
+  assert.equal(write.args.p_initial_state,'for-approval',type);
+  const expected=type==='quotation'?{
+   ...draft,verifiedBy:'Sales Supervisor',
+   verifiedByEmail:'aacsenagan@watchdogautomation.com.ph',
+   approvedBy:'Management',
+   approvedByEmail:draft.approvedByEmail||'asenagan@watchdogautomation.com.ph'
+  }:draft;
+  assert.deepEqual(write.args.p_data,expected,type);
+ }
+ assert.equal(writes.length,6);
+ assert.deepEqual(writes.map(({args})=>args.p_data.documentType),
+  ['esi','quotation','packing','delivery','payment','po']);
+});
+
+test('signed manager denial prevents every six-module save RPC before any production write',async()=>{
+ const actor='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ const workspace='00000000-0000-4000-8000-000000000001';
+ let writes=0;
+ const auth={userId:actor,getVerifiedUser:async()=>({id:actor})};
+ const api={
+  context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+  board:async boardId=>({board:{id:boardId,workspace_id:workspace,name:'TradeLink',
+   status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async()=>false,
+  rpc:async()=>{writes++;throw Error('A denied manager must never reach the write RPC');}
+ };
+ const service=new TradeLinkDraftWorkspace({auth,api});
+ for(const [type,input] of Object.entries(moduleInputs)){
+  const draft=parseTradeLinkDraftForm(fields({documentType:type,
+   documentNumber:'CP-TL-10A-DENIED-'+type.toUpperCase(),...input}),
+   {lineId:()=>type+'-line',purpose:'save'});
+  await assert.rejects(()=>service.save({
+   documentId:'dddddddd-dddd-4ddd-8ddd-'+
+    String(Object.keys(moduleInputs).indexOf(type)+1).padStart(12,'0'),
+   expectedRevision:0,draft
+  }),/board manager scope required/,type);
+ }
+ assert.equal(writes,0);
 });
