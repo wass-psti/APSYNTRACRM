@@ -3292,6 +3292,208 @@
  #app .aps-sidebar .workspace-sub{color:#41506b}
 }
 
+/* CP-SIDEBAR-QOL-02: predictable icon rail, reversible navigation expansion.
+   Presentation only; workspace and route contracts remain authoritative. */
+#app .aps-sidebar .sidebar-layout-toggle{
+ position:absolute;top:30px;right:10px;z-index:2;
+ display:grid;place-items:center;width:33px;height:33px;
+ padding:0;border:1px solid #dde4f4;border-radius:10px;
+ background:#fff;color:#58678c;cursor:pointer;
+ transition:background .15s,border-color .15s,color .15s
+}
+#app .aps-sidebar .sidebar-layout-toggle:hover{
+ background:#eef1ff;border-color:#bcc6f0;color:#474fba
+}
+#app .aps-sidebar .sidebar-layout-toggle:focus-visible{
+ outline:3px solid #6067dd;outline-offset:2px
+}
+#app .aps-sidebar .sidebar-layout-toggle-glyph{
+ font-size:17px;font-weight:850;line-height:1
+}
+#app .aps-sidebar .sidebar-brand-wrap{padding-right:47px}
+#app .aps-sidebar .nav-link{min-height:44px;transition:background .15s,color .15s,border-color .15s}
+#app .aps-sidebar .nav-link:hover{transform:none}
+#app .aps-sidebar .side-section{color:#65748e}
+#app .aps-sidebar .sidebar-recent-heading{margin-top:19px}
+#app .aps-sidebar .sign-out{min-height:44px}
+#app .aps-sidebar .ws01-context-relation{
+ max-width:100%;min-width:0;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap;
+ padding-inline:17px;font-size:11px
+}
+#app .aps-sidebar .ws02-sidebar-action,
+#app .aps-sidebar .ws01-context-relation{
+ flex:none;box-sizing:border-box;max-width:100%
+}
+#app .aps-sidebar .ws02-invite-sidebar{
+ min-width:0;white-space:normal;overflow-wrap:anywhere
+}
+#app .aps-sidebar .ws02-invite-sidebar>span:last-child{
+ min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+/* A manual desktop collapse and the responsive rail share compact rules. */
+@media(min-width:811px){
+ #app .shell.sidebar-user-collapsed{
+  grid-template-columns:72px minmax(0,1fr)
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sidebar-brand-wrap{
+  padding:20px 9px 17px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .brand{
+  justify-content:center;padding:0
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .brand-mark{
+  width:37px;height:37px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .brand-text,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sidebar-brand-subtitle,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .workspace-switcher,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .side-section,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .nav-label,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .nav-count,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sidebar-profile-text,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .ws01-context-relation,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .ws02-sidebar-action,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sign-out>span:not(.sidebar-signout-icon){
+  display:none
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sidebar-layout-toggle{
+  position:static;margin:12px auto 0;width:42px;height:42px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .nav-list{
+  padding:0 8px;gap:6px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .nav-link{
+  justify-content:center;padding:6px;gap:0;min-height:46px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .nav-ico{
+  width:33px;height:33px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sidebar-svg-icon{
+  width:19px;height:19px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sidebar-recent-list{
+  margin-top:14px;padding-top:12px;border-top:1px solid #e4e9f4
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sidebar-recent-link{
+  min-height:44px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .side-bottom{
+  padding:12px 8px 15px
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .profile,
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sign-out{
+  justify-content:center
+ }
+ #app .shell.sidebar-user-collapsed .aps-sidebar .sign-out{
+  min-height:44px
+ }
+ #app .shell.sidebar-user-collapsed .ws01-topbar-launch{
+  display:inline-flex
+ }
+}
+/* The 69px auto-rail must not leak full-width workspace text or invites. */
+@media(max-width:810px){
+ #app .aps-sidebar .sidebar-brand-wrap{padding:19px 9px 13px}
+ #app .aps-sidebar .sidebar-layout-toggle{
+  position:static;width:44px;height:44px;margin:12px auto 0
+ }
+ #app .aps-sidebar .ws01-context-relation,
+ #app .aps-sidebar .ws02-sidebar-action{display:none}
+ #app .aps-sidebar .nav-list{padding-inline:8px}
+ #app .aps-sidebar .nav-link{min-height:46px}
+ #app .aps-sidebar .sign-out{min-height:44px}
+ /* Expanded rail overlays content; it does not squeeze the main viewport. */
+ #app .shell.sidebar-mobile-open .aps-sidebar{
+  position:fixed;top:0;left:0;z-index:50;
+  width:min(285px,calc(100vw - 65px));
+  height:100dvh;overflow:hidden;
+  box-shadow:14px 0 55px #1c2b5750
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .sidebar-brand-wrap{
+  padding:19px 49px 18px 18px
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .brand{
+  justify-content:flex-start;padding:0 4px
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .brand-text,
+ #app .shell.sidebar-mobile-open .aps-sidebar .sidebar-brand-subtitle,
+ #app .shell.sidebar-mobile-open .aps-sidebar .workspace-switcher,
+ #app .shell.sidebar-mobile-open .aps-sidebar .side-section,
+ #app .shell.sidebar-mobile-open .aps-sidebar .nav-label,
+ #app .shell.sidebar-mobile-open .aps-sidebar .nav-count,
+ #app .shell.sidebar-mobile-open .aps-sidebar .sidebar-profile-text,
+ #app .shell.sidebar-mobile-open .aps-sidebar .ws01-context-relation,
+ #app .shell.sidebar-mobile-open .aps-sidebar .ws02-sidebar-action,
+ #app .shell.sidebar-mobile-open .aps-sidebar .sign-out>span:not(.sidebar-signout-icon){
+  display:revert
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .sidebar-brand-subtitle{
+  display:block;padding-left:48px
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .workspace-switcher{
+  display:flex;margin:14px 11px 8px
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .ws01-context-relation{
+  display:block
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .ws02-sidebar-action{
+  display:block;padding:4px 11px 10px
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .sidebar-layout-toggle{
+  position:absolute;right:9px;top:20px;margin:0
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .side-section{
+  display:flex
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .nav-list{
+  padding-inline:11px;gap:3px
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .nav-link{
+  justify-content:flex-start;gap:10px;padding:7px 10px;min-height:44px
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .nav-label{
+  display:block
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .nav-count{
+  display:inline-flex
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .sidebar-recent-list{
+  margin-top:0;padding-top:0;border-top:0
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .side-bottom{
+  padding:13px 12px 15px
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .profile,
+ #app .shell.sidebar-mobile-open .aps-sidebar .sign-out{
+  justify-content:flex-start
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .sign-out>span:not(.sidebar-signout-icon){
+  display:inline
+ }
+ #app .shell.sidebar-mobile-open .aps-sidebar .sidebar-profile-text{
+  display:block
+ }
+}
+/* The rail must remain visible, accessible and motion-safe in all widths. */
+@media(prefers-reduced-motion:reduce){
+ #app .aps-sidebar .sidebar-layout-toggle{transition:none}
+}
+@media(max-width:810px){
+ #app .shell.sidebar-mobile-open>.main{
+  grid-column:2;min-width:0
+ }
+}
+#app .aps-sidebar .sidebar-layout-toggle .sidebar-svg-icon{
+ width:19px;height:19px;transition:transform .16s ease
+}
+#app .aps-sidebar .sidebar-layout-toggle[aria-expanded="true"] .sidebar-svg-icon{
+ transform:rotate(180deg)
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-sidebar .sidebar-layout-toggle .sidebar-svg-icon{transition:none}
+}
+
 /* frontend/workspace-ui.css */
 /* APSYNTRA workspace controls. Signed backend authorization, not styling,
    determines workspace visibility and lifecycle operation availability. */

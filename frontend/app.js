@@ -302,6 +302,7 @@ function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''
  syncFuelTrans({container:null});
  stopAuthVisuals();
  stopSidebarSelection();
+ sidebarMobileOpen=false;sidebarManualCollapsed=false;
  stopOverviewMotion();
  stopBoardCatalogMotion();
  stopFoundationMotion();
@@ -327,6 +328,23 @@ function sidebarNav(href,label,icon,active,{count=null}={}){
   '<span class="nav-ico">'+sidebarIcon(icon)+'</span>'+
   '<span class="nav-label">'+e(label)+'</span>'+badge+'</a>';
 }
+// Session-local navigation presentation. No permissions or routes are changed.
+let sidebarManualCollapsed=false;
+let sidebarMobileOpen=false;
+function syncSidebarLayout(){
+ const shellElement=root.querySelector(':scope > .shell');
+ if(!shellElement)return;
+ shellElement.classList.toggle('sidebar-user-collapsed',sidebarManualCollapsed);
+ shellElement.classList.toggle('sidebar-mobile-open',sidebarMobileOpen);
+ const toggle=shellElement.querySelector('.sidebar-layout-toggle');
+ if(toggle){
+  const mobile=window.matchMedia('(max-width:810px)').matches;
+  const expanded=mobile?sidebarMobileOpen:!sidebarManualCollapsed;
+  toggle.setAttribute('aria-expanded',String(expanded));
+  toggle.setAttribute('aria-label',expanded?'Collapse navigation':'Expand navigation');
+  toggle.setAttribute('title',expanded?'Collapse navigation':'Expand navigation');
+ }
+}
 function sidebar(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  const currentBoard=state.boardId;
@@ -338,6 +356,7 @@ function sidebar(){
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
    sidebarNav('#/role-configuration','Role Configuration','roles',state.view==='role-configuration')+
    sidebarNav('#/user-role-management','User Role Management','users',state.view==='user-role-management'):'')+
+  '<div class="side-section sidebar-nav-section">Account</div>'+
   sidebarNav('#/settings','Settings','settings',state.view==='settings')+
   (engineeringUi?sidebarNav('#/acceptance','Pages acceptance','acceptance',state.view==='acceptance'):'');
  return `<aside class="sidebar aps-sidebar" aria-label="Workspace sidebar">
@@ -347,11 +366,14 @@ function sidebar(){
     <span class="brand-text">APSYNTRA <span class="csp-u043">CRM</span></span>
    </a>
    <span class="sidebar-brand-subtitle" aria-hidden="true">WORKSPACE OPERATIONS</span>
+   <button type="button" class="sidebar-layout-toggle" data-action="sidebar-toggle"
+    aria-label="Expand navigation" title="Expand navigation" aria-expanded="false"
+    aria-controls="sidebar-navigation-content"><span aria-hidden="true" class="sidebar-layout-toggle-glyph">${sidebarIcon('chevron')}</span></button>
   </div>
   `+renderWorkspaceSwitcher({id:state.context?.workspace_id,name:workspaceName()})+`
   <div class="ws01-context-relation" role="status">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+`</div>
   <div class="ws02-sidebar-action">`+renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()})+`</div>
-  <div class="sidebar-nav-scroll">
+  <div class="sidebar-nav-scroll" id="sidebar-navigation-content">
    <div class="side-section sidebar-nav-section">Workspace</div>
    <nav class="nav-list" aria-label="Primary">`+nav+`</nav>
    <div class="side-section sidebar-recent-heading">Recent boards
@@ -468,6 +490,7 @@ function shell(body){
  <div class="top-actions">${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings"><span data-avatar-initials aria-hidden="true">${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  }
+ syncSidebarLayout();
  const previousRoute=shellRoute;
  shellIdentity=identity;
  shellSidebarSignature=sidebarSignature;
@@ -3282,6 +3305,7 @@ async function onRoute(){
  closeTradeLinkSavedDocumentOutput();
  syncFuelTrans({container:null});
  if(!state.context)return;
+ sidebarMobileOpen=false;
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
  if(parts[0]==='invitations'&&parts[1]==='accept'){
@@ -4769,6 +4793,14 @@ async function action(name,button){
       workspace===state.context?.workspace_id)render();
   }
   break;
+ }
+ case 'sidebar-toggle':{
+   if(!state.context||!auth.isSignedIn)return;
+   const mobile=window.matchMedia('(max-width:810px)').matches;
+   if(mobile)sidebarMobileOpen=!sidebarMobileOpen;
+   else sidebarManualCollapsed=!sidebarManualCollapsed;
+   syncSidebarLayout();
+   break;
  }
  case 'retry-startup':{
    if(startupBusy)break;
@@ -8740,6 +8772,13 @@ root.addEventListener('input',event=>{
 document.addEventListener('visibilitychange',()=>{
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
+});
+window.addEventListener('resize',syncSidebarLayout);
+document.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&sidebarMobileOpen){
+  sidebarMobileOpen=false;syncSidebarLayout();
+  root.querySelector('.sidebar-layout-toggle')?.focus({preventScroll:true});
+ }
 });
 window.addEventListener('online',()=>platformSync.network(true));
 window.addEventListener('offline',()=>platformSync.network(false));
