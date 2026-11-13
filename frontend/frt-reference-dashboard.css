@@ -347,3 +347,17 @@
 @media(prefers-reduced-motion:reduce){
  #app .frt-ic-primary-action,#app .frt-ic-row-action{transition:none!important}
 }
+
+/* Verified lifecycle guidance; does not enable or infer financial actions. */
+#app .frt-lifecycle{margin:0 0 17px;padding:15px;border:1px solid #dbe4f1;border-radius:12px;background:#f7faff}
+#app .frt-lifecycle>h3{margin:0 0 4px;color:#24374e;font-size:14px}
+#app .frt-lifecycle>p{margin:0 0 11px;font-size:11px;color:#65748a}
+#app .frt-lifecycle ol{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+#app .frt-lifecycle li{display:flex;flex-direction:column;gap:5px;border-left:3px solid #b9c4d5;border-radius:7px;background:white;padding:10px 12px}
+#app .frt-lifecycle li strong{color:#273850;font-size:11px}
+#app .frt-lifecycle li span{font-size:10px;color:#66758b;line-height:1.45}
+#app .frt-lifecycle li.frt-lifecycle-complete{border-color:#2aab83}
+#app .frt-lifecycle li.frt-lifecycle-attention{border-color:#d9a144}
+#app .frt-lifecycle li.frt-lifecycle-stopped{border-color:#d55e6a}
+#app .frt-lifecycle li.frt-lifecycle-in-progress{border-color:#6b85d9}
+#app .frt-lifecycle-note{font-size:11px;line-height:1.5;color:#66758b;margin:13px 0 0}

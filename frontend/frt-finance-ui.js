@@ -1,3 +1,4 @@
+import {projectFRTWorkflowProgress} from './frt-workflow-progress.js';
 /** FRT signed safe reads; only existing server-authorized date corrections mutate. */
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -296,13 +297,31 @@ function renderFRTOpexAnalytics(result){
    ' aggregates. Requested means non-archived fund requests, not an approved budget. Submitted liquidation is the latest saved liquidation snapshot, not proof of a bank payment. Category totals represent requested line items, not actual categorized spend. Budget utilization, department allocations, individual liquidation aging, and intercompany exposure require separate authorized data contracts; none are inferred from screenshots.</p>'+
   '</section>';
 }
+function renderFRTWorkflowTimeline(detail){
+ const stages=projectFRTWorkflowProgress(detail);
+ if(!stages)return '';
+ return '<section class="frt-lifecycle" aria-label="Signed fund request lifecycle">'+
+  '<h3>Request lifecycle</h3><p>Verified request state, not a bank-payment confirmation or a new approval authority.</p>'+
+  '<ol>'+stages.map(stage=>'<li class="frt-lifecycle-'+escape(stage.state)+'">'+
+   '<strong>'+escape(stage.title)+'</strong><span>'+escape(stage.detail)+'</span></li>').join('')+'</ol>'+
+  '<p class="frt-lifecycle-note">The three-day liquidation target described in the Monday.com reference cannot be calculated from this signed detail: it does not establish a verified bank disbursement timestamp. GM verification alone is not that timestamp.</p></section>';
+}
 function renderFRTManual(result){
+ const items=[
+  ['1. Create a request','Use the company selector to choose an authorized company. Open New Fund Request, complete expense categories, payee and recipient details, and provide the project purpose. Submission uses the signed central FRT writer. It starts PENDING_APPROVAL and allocates a unique voucher on creation.'],
+  ['2. Finance approval','An eligible signed finance approver reviews the authoritative request. Approval, rejection and revocation are existing audited server actions; request details show candidate actions only.'],
+  ['3. General Manager verification','After finance approval, the General Manager may record verification and an optional reference. This is not proof that BPI, UBP, GCash or BizLink executed a payment.'],
+  ['4. Submit and approve liquidation','The central backend distinguishes NOT_SUBMITTED, SUBMITTED, UNDER_REVIEW, APPROVED and RETURNED. Receipt-level entry and a signed submission UI are not yet exposed by the Fund Tracker screen. Do not enter unsupported payment claims.'],
+  ['5. Close or archive','Closing requires the existing finance/lifecycle checks and an approved liquidation. The backend supports archived state; restoration and a complete archive list require verified retrieval controls.'],
+  ['6. OPEX and intercompany','Executive and OPEX figures use signed company aggregates. The separate Risk-Aware IC ledger is document-backed and does not infer obligations from free-text fund-source names.'],
+  ['7. Safeguards and pending parity','The Monday.com example describes ten-minute duplicate checks, 24-hour autosaved drafts, bank uploads, PDF voucher editor, automated PO synchronization, notifications and a three-day post-disbursement deadline. These are not represented as active APSYNTRA controls until their safe, authoritative integrations are verified.']
+ ];
  return '<section class="frt-exec-dashboard" aria-label="Fund Released Tracker user manual">'+
   '<header class="frt-exec-heading"><div><span class="frt-exec-eyebrow">'+escape(result.companyCode)+' / HELP</span>'+
-  '<h2>Fund Released Tracker — User Manual</h2><p>How to navigate the company-scoped finance views.</p></div></header>'+
-  '<div class="frt-exec-manual"><article><h3>1. Select a company</h3><p>Use the company selector above to switch between companies available in your signed FRT workspace. Each view refreshes against the selected company.</p></article>'+
-  '<article><h3>2. Review the Fund Tracker</h3><p>Open Fund Tracker to view the signed request list, status filters and existing request actions.</p></article>'+
-  '<article><h3>3. Review Executive Dashboard and OPEX Analytics</h3><p>These views summarize the signed request status projection. Financial totals, expense categories and monthly amounts remain marked unavailable until the signed data contract supplies them.</p></article></div></section>';
+  '<h2>Fund Released Tracker — User Manual</h2><p>Signed request-to-liquidation process, adapted from the provided Monday.com workflow.</p></div></header>'+
+  '<div class="frt-exec-manual">'+items.map(([title,detail])=>'<article><h3>'+
+    escape(title)+'</h3><p>'+escape(detail)+'</p></article>').join('')+'</div>'+
+  '<p class="frt-lifecycle-note">The operational source of truth remains APSYNTRA CRM and its existing server-authorized FRT actions. The Monday.com Board SDK, storage keys and board IDs are reference material only, not application integrations.</p></section>';
 }
 export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=null,detailBusy=false,selectedRequestId=null,statusFilter='all',view='tracker'}={}){
  const selectedView=['tracker','executive','opex','manual'].includes(view)?view:'tracker';
@@ -400,7 +419,7 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   const d=detailResult.detail;
   html+='<section class="panel" aria-label="FRT request details"><div class="panel-header"><h3>Request details (read-only)</h3>'+
    '<button type="button" class="secondary" data-action="frt-finance-detail-close">Close details</button></div>'+
-   '<div class="panel-body"><div class="settings-grid">'+
+   '<div class="panel-body">'+renderFRTWorkflowTimeline(d)+'<div class="settings-grid">'+
    [['Voucher',d.voucher],['Request',d.title],['Date needed',d.dateNeeded],
     ['Request status',d.status],['Liquidation status',d.liquidationStatus],
     ['Finance approved',d.financeApproved?'Yes':'No'],
