@@ -60,3 +60,16 @@ test('snapshot without CP-RC03 contract or trustworthy workspace counts fails cl
  assert.equal(snapshot.workspaceScopedMrhAvailable,false);
  assert.equal(snapshot.workspaceScopeCountsAvailable,false);
 });
+
+test('an inherited admin_general_manager profile label does not protect a non-bootstrap CRM Admin target',()=>{
+ const data={workspaceId:w,adminVerified:true,bootstrapVerified:false,
+  users:[{id:u,name:'Delegated CRM Admin',email:'admin@example.invalid',
+   platformRole:'admin_general_manager',protected:false,activeWorkspaceCount:1}],
+  modules:[],moduleAssignments:[],boardAssignments:[],boards:[],
+  crmPlatformRoles:[{userId:u,inheritedRole:'admin',effectiveRole:'admin',
+   assignedRole:'admin',updatedAt:'2026-11-13T00:00:00Z'}]};
+ const html=renderUserRoleManagement({verified:true,data,selectedUserId:u});
+ assert.doesNotMatch(html,/Protected administrator/);
+ assert.match(html,/data-action="user-role-edit-crm-platform"/);
+ assert.doesNotMatch(html,/data-action="user-role-edit-crm-platform"[^>]*disabled/);
+});
