@@ -123,7 +123,8 @@ test('frontend writes only after verified Auth/bootstrap context and explicit co
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/case 'user-role-edit-crm-platform'/);
  assert.match(app,/case 'user-role-revert-crm-platform'/);
- assert.match(app,/APPLY CRM ROLE/);
+ assert.match(app,/submitLabel:reverting\?'Confirm CRM role revert':'Apply CRM role'/);
+ assert.doesNotMatch(app,/Type APPLY CRM ROLE|Type APPLY ROLE CHANGE/);
  assert.match(app,/await roleConfig\.bootstrapVerified\(\)/);
  assert.match(app,/await auth\.getVerifiedUser\(\)/);
  assert.match(app,/await userRoleManager\.setCrmPlatformRole/);

@@ -115,7 +115,7 @@ function accountRoleLabel(data,user){
  return 'CRM '+crm.effectiveRole+' ('+crmRoleSourceLabel(crm)+')'+
   ' · Identity '+user.platformRole;
 }
-export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error=''}={}){
+export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',boardSearch=''}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
  let html='<div class="aps-user-role-management"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / CRM Admin</span>'+
  '<h1 id="user-role-title">User Role Management<span class="user-role-heading-stop">.</span></h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
@@ -152,6 +152,11 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Toolbox Issues and Material Request Hub use separate workspace-scoped role records; board access is also workspace-scoped.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
+ const section=accessSection==='boards'?'boards':'applications';
+ html+='<nav class="user-role-access-nav" aria-label="Access configuration sections" role="group">'+
+  '<button type="button" data-action="user-role-section" data-section="applications" aria-pressed="'+(section==='applications')+'">Application access</button>'+
+  '<button type="button" data-action="user-role-section" data-section="boards" aria-pressed="'+(section==='boards')+'">Board access ('+data.boards.length.toLocaleString('en-US')+')</button></nav>'+
+  '<section class="user-role-access-section" data-role-access-section="applications" aria-label="Application access settings"'+(section==='applications'?'':' hidden')+'>';
  const locked=!!u.protected||isSelf||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
  html+='<div class="section-header user-role-section-header user-role-entrance"><strong>APSYNTRA CRM Platform Role</strong></div>'+
@@ -195,16 +200,22 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   '</td></tr>';
  }
  html+='</tbody></table></div></div>';
+ html+='</section><section class="user-role-access-section" data-role-access-section="boards" aria-label="Board access settings"'+(section==='boards'?'':' hidden')+'>';
+ const boardNeedle=String(boardSearch||'').trim().toLocaleLowerCase().slice(0,120);
+ const visibleBoardCount=data.boards.filter(board=>String(board.name||'').toLocaleLowerCase().includes(boardNeedle)).length;
+ html+='<div class="user-role-board-filter-wrap"><label for="user-role-board-filter">Find board access</label>'+
+  '<input id="user-role-board-filter" class="user-role-board-filter" type="search" placeholder="Search boards by name" aria-controls="user-role-board-table" aria-describedby="user-role-board-filter-result" value="'+esc(boardSearch)+'" autocomplete="off">'+
+  '<p id="user-role-board-filter-result" role="status" aria-live="polite" aria-atomic="true">'+visibleBoardCount.toLocaleString('en-US')+' of '+data.boards.length.toLocaleString('en-US')+' boards</p></div>';
  html+='<div class="section-header user-role-section-header"><strong>Individual board access</strong></div>'+
  '<div class="note user-role-board-note">Viewer permits reads; Editor permits reads and writes. Owner privileges cannot be granted or changed here. Backend checks are performed on every authorized board request.</div>'+
- '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll" role="region" aria-label="Board access, scroll horizontally for more columns" tabindex="0"><table class="board-table user-role-table" aria-label="Individual board access"><thead><tr><th scope="col">Board</th><th scope="col">Membership</th><th scope="col">Action</th></tr></thead><tbody>';
+ '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll" role="region" aria-label="Board access, scroll horizontally for more columns" tabindex="0"><table id="user-role-board-table" class="board-table user-role-table" aria-label="Individual board access"><thead><tr><th scope="col">Board</th><th scope="col">Membership</th><th scope="col">Action</th></tr></thead><tbody>';
  for(const board of data.boards){
   const a=data.boardAssignments.find(x=>x.userId===u.id&&x.boardId===board.id);
-  html+='<tr><td>'+esc(board.name)+'</td><td>'+esc(a?.role||'No membership')+'</td><td>'+
+  html+='<tr data-role-board-row data-board-name="'+esc(String(board.name||'').toLocaleLowerCase())+'"'+(String(board.name||'').toLocaleLowerCase().includes(boardNeedle)?'':' hidden')+'><td>'+esc(board.name)+'</td><td>'+esc(a?.role||'No membership')+'</td><td>'+
    '<button class="secondary" aria-label="Set access for '+esc(board.name)+' (board '+esc(String(board.id).slice(-8))+')" data-action="user-role-edit-board" data-user-id="'+esc(u.id)+'" data-resource="'+esc(board.id)+'" '+(locked||a?.role==='owner'?'disabled':'')+'>Set access</button> '+
    (a&&a.role!=='owner'?'<button class="secondary" aria-label="Revoke access for '+esc(board.name)+' (board '+esc(String(board.id).slice(-8))+')" data-action="user-role-revoke-board" data-user-id="'+esc(u.id)+'" data-resource="'+esc(board.id)+'" '+(locked?'disabled':'')+'>Revoke</button>':'')+
   '</td></tr>';
  }
  html+='</tbody></table></div></div><p class="muted user-role-boundary-note">'+roleConfigurationIcon('shield')+'<span>The existing backend still governs approval, export, finance and domain-specific operations separately. A board membership alone does not grant access to sensitive domain records.</span></p>';
- return html+'</div>';
+ return html+'</section></div>';
 }
