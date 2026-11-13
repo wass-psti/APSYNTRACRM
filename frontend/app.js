@@ -537,6 +537,7 @@ function empty(title,description,action=''){
 function overview(){
  const total=state.boards.reduce((a,b)=>a+(Number(b.item_count)||0),0);
  const recent=state.boards.slice(0,6);
+ const countLabel=value=>Number(value).toLocaleString('en-US');
  return `<div class="aps-overview">
  <section class="page-head overview-hero overview-entrance" aria-labelledby="overview-title">
   <div class="overview-hero-copy">
@@ -557,40 +558,41 @@ function overview(){
   </svg>
  </section>
  <section class="stat-grid overview-stat-grid overview-entrance" aria-label="Workspace statistics">
-  <div class="stat-card">
+  <div class="stat-card" role="group" aria-label="Active boards: `+countLabel(state.boards.length)+`">
    <span class="stat-icon">`+overviewIcon('grid')+`</span>
    <div class="stat-label">Active boards</div>
-   <div class="stat-value">`+state.boards.length+`</div>
+   <div class="stat-value">`+countLabel(state.boards.length)+`</div>
    <div class="stat-footer">Available to your account</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" role="group" aria-label="Board items: `+countLabel(total)+`">
    <span class="stat-icon green">`+overviewIcon('items')+`</span>
    <div class="stat-label">Board items</div>
-   <div class="stat-value">`+total+`</div>
+   <div class="stat-value">`+countLabel(total)+`</div>
    <div class="stat-footer">Across your active boards</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" role="group" aria-label="Workspace status">
    <span class="stat-icon orange">`+overviewIcon('pulse')+`</span>
    <div class="stat-label">Workspace status</div>
    <div class="stat-value csp-u042">Active</div>
    <div class="stat-footer">Access context verified</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" role="group" aria-label="Your access">
    <span class="stat-icon pink">`+overviewIcon('shield')+`</span>
    <div class="stat-label">Your access</div>
    <div class="stat-value csp-u041" title="Verified CRM tier in the active workspace">`+e(signedCrmRoleLabel(state.crmRoleSnapshot,state.context))+`</div>
    <div class="stat-footer">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+` · `+e(signedCrmIdentityLabel(state.context))+`</div>
   </div>
  </section>
+ <section class="overview-board-section" aria-labelledby="overview-boards-title">
  <div class="section-header overview-section-heading overview-entrance">
-  <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 class="section-title">Your boards</h2></div>
+  <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 id="overview-boards-title" class="section-title">Your boards</h2><p class="overview-board-count">Showing `+recent.length+` of `+countLabel(state.boards.length)+` available boards</p></div>
   <a class="inline-link" href="#/boards"><span>View all boards</span>`+overviewIcon('arrow')+`</a>
  </div>
  `+(recent.length?
   '<div class="card-grid overview-board-grid overview-entrance">'+recent.map(boardCard).join('')+'</div>':
   '<div class="panel overview-empty">'+empty('Start with your first board',
    'Create a board to organize tasks and updates.',
-   '<button class="primary" data-action="new-board">＋ Create board</button>')+'</div>')+(state.roleVerified===true?`
+   '<button class="primary" data-action="new-board">＋ Create board</button>')+'</div>')+'</section>'+(state.roleVerified===true?`
  <div class="section-header overview-section-heading overview-essentials-heading overview-entrance">
   <div class="overview-heading-copy"><span class="overview-section-eyebrow">FOUNDATION</span><h2 class="section-title">Workspace essentials</h2></div>
  </div>

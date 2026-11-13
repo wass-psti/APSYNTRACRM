@@ -4018,6 +4018,33 @@
  #app .aps-overview .overview-hero p{color:#fff}
 }
 
+
+/* CP-OVERVIEW-QOL-01 — presentation clarity, readable metadata, keyboard targets. */
+#app .aps-overview .overview-heading-copy{min-width:0}
+#app .aps-overview .overview-board-count{
+ margin:7px 0 0;color:#53627c;font-size:12px;line-height:1.5;
+ font-variant-numeric:tabular-nums
+}
+#app .aps-overview .stat-footer{font-size:11px;color:#66748e;overflow-wrap:anywhere}
+#app .aps-overview .overview-board-grid .board-card p{font-size:12px;color:#65738e}
+#app .aps-overview .overview-board-grid .board-card-footer{font-size:11px;color:#66748e}
+#app .aps-overview .overview-section-heading .inline-link{
+ min-height:44px;padding:10px 7px;font-size:12px
+}
+#app .aps-overview .overview-hero .head-actions button{min-height:44px}
+@media(max-width:650px){
+ #app .aps-overview .overview-section-heading{align-items:flex-start}
+ #app .aps-overview .overview-board-count{font-size:11px}
+ #app .aps-overview .overview-section-heading .inline-link{
+  white-space:normal;text-align:right;min-width:92px;justify-content:flex-end
+ }
+ #app .aps-overview .stat-footer{font-size:11px}
+}
+@media(max-width:360px){
+ #app .aps-overview .overview-section-heading{gap:8px}
+ #app .aps-overview .overview-hero h1{overflow-wrap:anywhere}
+}
+
 /* frontend/board-catalog-experience.css */
 /* CP-BOARDS-VIS01 — authenticated #/boards directory only.
  * Compositor-friendly transitions, no remote assets or infinite animation.
