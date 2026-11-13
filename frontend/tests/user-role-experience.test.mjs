@@ -193,3 +193,52 @@ test('MRH assignment fails closed until the scoped backend contract is installed
  assert.match(output,/Workspace-scoped Material Request Hub role management is not yet confirmed/);
  assert.ok(new RegExp('data-action="user-role-edit-module" data-user-id="'+target+'" data-resource="material-request-hub"[^>]*disabled').test(output));
 });
+
+test('signed-in owner with no other workspace members sees explicit self-assignment and empty-target guidance',()=>{
+ const owner={id:'44444444-4444-4444-8444-444444444444',name:'Workspace Owner',
+  email:'owner@example.invalid',platformRole:'employee',protected:false,activeWorkspaceCount:2};
+ const isolated={...data,users:[owner],moduleAssignments:[],boardAssignments:[],boards:[],
+  crmPlatformRoles:[{userId:owner.id,effectiveRole:'admin',assignedRole:null}]};
+ const output=renderUserRoleManagement({verified:true,data:isolated,selectedUserId:owner.id,actorUserId:owner.id});
+ assert.match(output,/The signed-in administrator cannot assign or modify roles on their own account/);
+ assert.match(output,/There are no other eligible active members in this workspace/);
+ assert.equal((output.match(/data-action="user-role-edit-module"[^>]*disabled/g)||[]).length,12);
+ assert.match(output,/data-action="user-role-edit-module"[^>]*title="Self-assignment is not permitted\."/);
+});
+
+test('default selection and single-workspace application controls remain actionable for an ordinary member',()=>{
+ const ordinary={id:'66666666-6666-4666-8666-666666666666',name:'Ordinary member',
+  email:'ordinary@example.invalid',platformRole:'employee',protected:false,activeWorkspaceCount:1};
+ const expanded={...data,users:[data.users[1],ordinary],moduleAssignments:[],boards:[],boardAssignments:[],
+  crmPlatformRoles:[{userId:ordinary.id,effectiveRole:'employee',assignedRole:null}]};
+ const output=renderUserRoleManagement({verified:true,data:expanded,selectedUserId:ordinary.id,actorUserId:'77777777-7777-4777-8777-777777777777'});
+ assert.match(output,/data-action="user-role-edit-module" data-user-id="66666666-6666-4666-8666-666666666666" data-resource="time-tracker" >/);
+ assert.doesNotMatch(output,/data-action="user-role-edit-module" data-user-id="66666666-6666-4666-8666-666666666666" data-resource="time-tracker"[^>]*disabled/);
+ assert.match(output,/data-action="user-role-edit-module" data-user-id="66666666-6666-4666-8666-666666666666" data-resource="toolbox-issues" disabled title="An existing Toolbox Issues source membership is required/);
+});
+
+test('multi-workspace target keeps workspace-scoped MRH and board controls but explains legacy application limits',()=>{
+ const multi={id:'88888888-8888-4888-8888-888888888888',name:'Multi-workspace member',
+  email:'multi@example.invalid',platformRole:'employee',protected:false,activeWorkspaceCount:2};
+ const expanded={...data,users:[multi],moduleAssignments:[],boards:[{id:boardId,name:'Scoped board'}],
+  boardAssignments:[],crmPlatformRoles:[{userId:multi.id,effectiveRole:'employee',assignedRole:null}]};
+ const output=renderUserRoleManagement({verified:true,data:expanded,selectedUserId:multi.id,actorUserId:'77777777-7777-4777-8777-777777777777'});
+ assert.match(output,/Legacy application roles are global across workspaces/);
+ assert.match(output,/data-resource="time-tracker" disabled title="This legacy application role is global/);
+ assert.match(output,/data-resource="material-request-hub" >/);
+ assert.match(output,/data-action="user-role-edit-board" data-user-id="88888888-8888-4888-8888-888888888888"/);
+ assert.doesNotMatch(output,/data-action="user-role-edit-board"[^>]*disabled/);
+});
+
+test('initial role-management render defaults away from the first protected account',()=>{
+ const protectedFirst={id:'99999999-9999-4999-8999-999999999999',name:'Bootstrap admin',
+  email:'bootstrap@example.invalid',platformRole:'admin_general_manager',protected:true,activeWorkspaceCount:1};
+ const eligible={id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',name:'Eligible member',
+  email:'eligible@example.invalid',platformRole:'employee',protected:false,activeWorkspaceCount:1};
+ const expanded={...data,users:[protectedFirst,eligible],moduleAssignments:[],boards:[],boardAssignments:[],
+  crmPlatformRoles:[{userId:eligible.id,effectiveRole:'employee',assignedRole:null}]};
+ const output=renderUserRoleManagement({verified:true,data:expanded,actorUserId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'});
+ assert.match(output,/option value="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" selected/);
+ assert.doesNotMatch(output,/Protected administrator — role modifications are intentionally disabled/);
+ assert.match(output,/data-action="user-role-edit-module" data-user-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" data-resource="time-tracker" >/);
+});
