@@ -7,6 +7,10 @@ import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRA
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
 import {TL03_ATTACHMENTS_ENABLED,normalizeTradeLinkAttachmentList}
  from './tradelink-attachments.js';
+import {TRADELINK_DEFAULT_COMPANY_PROFILE_ID,TRADELINK_COMPANY_PROFILE_OPTIONS,
+ TRADELINK_DEFAULT_TERMS,isTradeLinkCompanyProfileId,
+ tradeLinkCompanyTemplateSnapshot,tradeLinkCompanyProfileIdFromTemplateId}
+ from './tradelink-official-templates.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
  TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
@@ -95,13 +99,23 @@ export function parseTradeLinkDraftForm(fields,{
   throw new ApiError('TradeLink Draft input is missing.',400);
  const value=k=>String(fields.get(k)??'').trim();
  const type=value('documentType');
+ const companyProfileId=value('vendorId')||TRADELINK_DEFAULT_COMPANY_PROFILE_ID;
+ if(!isTradeLinkCompanyProfileId(companyProfileId))
+  throw new ApiError('Select a valid TradeLink company profile.',400);
+ const termsInput=fields.get('terms');
+ const terms=termsInput===null?TRADELINK_DEFAULT_TERMS[type]:String(termsInput).trim();
+ if(typeof terms!=='string'||terms.length>5000)
+  throw new ApiError('Invalid TradeLink document terms.',400);
+ // Company identity and visual template are revision-bound document content.
+ // The selected profile is resolved only from the bundled official directory.
+ const draft={documentType:type,documentNumber:value('documentNumber'),
+  vendorId:companyProfileId,templateId:tradeLinkCompanyTemplateSnapshot(companyProfileId).id,terms};
  // The signed Draft-write API permits incomplete quotation content. The
  // separate submission workflow enforces commercial readiness. Preserve
  // full validation for Preview and all existing non-quotation modules.
  const incompleteQuotationSave=type==='quotation'&&purpose==='save';
  const physical=type==='packing'||type==='delivery';
  const priced=type==='esi'||type==='quotation'||type==='po';
- const draft={documentType:type,documentNumber:value('documentNumber')};
  const addText=(key,{required=false}={})=>{
   const text=value(key);
   if(text.length>5000||(required&&!text))
@@ -286,6 +300,18 @@ export function prepareTradeLinkDraftCommand(view,fields,{
   lineId:index=>pending?.items?.[index]?.id||lineId(index),
   purpose:'save'
  });
+ if(selected){
+  const existingContent=selected.record.content||{};
+  const boundProfileId=existingContent.vendorId||
+   tradeLinkCompanyProfileIdFromTemplateId(existingContent.templateId)||'';
+  if(boundProfileId&&draft.vendorId!==boundProfileId)
+   throw new ApiError('A saved TradeLink document cannot be rebound to another company profile.',409);
+  if(boundProfileId){
+   draft.vendorId=boundProfileId;
+   draft.templateId=existingContent.templateId||
+    tradeLinkCompanyTemplateSnapshot(boundProfileId).id;
+  }
+ }
  const id=selected?.documentId||view?.pendingCreateId||documentId();
  if(!selected&&pending&&JSON.stringify(pending)!==JSON.stringify(draft))
   throw new ApiError('A previous save may have succeeded. Refresh All Documents before changing this Draft.',409);
@@ -1065,6 +1091,11 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const selectedStatus=fieldValue('documentStatus',workflowState);
 
  const type=editing?data.documentType:fieldValue('documentType','quotation');
+ const selectedCompanyProfileId=fieldValue('vendorId',
+  data.vendorId||tradeLinkCompanyProfileIdFromTemplateId(data.templateId)||TRADELINK_DEFAULT_COMPANY_PROFILE_ID);
+ const companyProfileLocked=editing&&Boolean(data.vendorId||data.templateId);
+ const selectedTerms=fieldValue('terms',
+  typeof data.terms==='string'?data.terms:TRADELINK_DEFAULT_TERMS[type]);
  const physical=type==='packing'||type==='delivery';
  const payment=type==='payment';
  const priced=type==='esi'||type==='quotation'||type==='po';
@@ -1125,6 +1156,11 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
       '<output>'+escape(localDate)+'</output></div>'+
      '<div class="tl-reference-static-field tl-reference-revision"><span>Revision No.</span>'+
       '<output>'+(editing?escape(row?.revision??'—'):'0 · Local preview')+'</output></div>'+
+     '<label class="tl-draft-field tl-reference-company-profile"><span>Company / legal entity</span>'+
+      '<select name="vendorId"'+(companyProfileLocked?' disabled':'')+'>'+
+      options(TRADELINK_COMPANY_PROFILE_OPTIONS,selectedCompanyProfileId)+'</select>'+
+      (companyProfileLocked?'<input type="hidden" name="vendorId" value="'+escape(selectedCompanyProfileId)+'">':'')+
+      '<small>Saved with this document revision. Existing company assignments remain unchanged.</small></label>'+
     '</div>'+
    '</section>'+
    '<section class="tl-reference-form-section tl-reference-client">'+
@@ -1190,13 +1226,18 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
     '</fieldset>'+
     (physical?'<p class="muted">Shipment items are not priced here. This preview records no delivery or inventory movement.</p>':''))+
    (priced?renderTradeLinkDraftLocalAmounts(type,fieldValue,data,line,lines):'')+
-   '<section class="tl-reference-form-section tl-reference-terms"><h4>Terms &amp; Conditions</h4>'+
-    '<label class="tl-draft-field"><span>Document notes and terms</span>'+
-     '<textarea name="remarks" maxlength="5000" rows="5" '+
-      'placeholder="Enter local document remarks or terms">'+
+   '<section class="tl-reference-form-section tl-reference-terms"><h4>Additional Notes</h4>'+
+    '<label class="tl-draft-field"><span>Document notes</span>'+
+     '<textarea name="remarks" maxlength="5000" rows="4" '+
+      'placeholder="Enter additional document notes">'+
        escape(fieldValue('remarks',data.remarks||''))+'</textarea>'+
-     '<small>These notes are part of the local validation preview. No PDF, approval or document is generated.</small>'+
+     '<small>Additional notes are saved with this document revision.</small>'+
     '</label></section>'+
+   '<details class="tl-reference-official-terms"><summary>Terms &amp; Conditions · Official TradeLink template</summary>'+
+    '<label class="tl-draft-field"><span>Document terms</span>'+
+     '<textarea name="terms" maxlength="5000" rows="12">'+escape(selectedTerms)+'</textarea>'+
+     '<small>Recovered from the original TradeLink v1.42.0 template. Changes are saved with this document revision. No PDF, approval or document is generated by changing terms locally; eligible saved records remain printable through the existing workflow.</small>'+
+    '</label></details>'+
    (type==='quotation'?renderQuotationVerification(fieldValue,data,actorName,{
     actorEmail,documentSaved:editing,documentId,workflowState,reviewStages}):
     renderReferenceModuleWorkflow(type,fieldValue,data,actorName,{
