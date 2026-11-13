@@ -480,3 +480,90 @@ test('BIMP-LARGE 6,324 and 7,607 rows commit fully, with exact progress and no d
   assert.equal(f.current.values.at(-1).value,'REF-'+count);
  }
 });
+
+test('BIMP-READBACK 750 rows complete across 15 batches without a redundant third board read',async()=>{
+ const f=fixture({count:750});
+ const seen=[];
+ const result=await executeBoardImportBatched({...f,auth,batchSize:50,
+  onProgress:progress=>seen.push(progress.completed)});
+ assert.equal(result.created,750);
+ assert.equal(result.rowsProcessed,750);
+ assert.equal(f.calls,15);
+ assert.equal(f.reads,30,'one signed preflight and one verified post-write board read per batch');
+ assert.deepEqual(seen,Array.from({length:15},(_,i)=>(i+1)*50));
+ assert.equal(new Set(f.current.items.map(item=>item.id)).size,750);
+ assert.equal(f.current.values.at(-1).value,'REF-750');
+});
+
+test('BIMP-READBACK extra third read timeout at row 750 cannot interrupt verified import',async()=>{
+ const f=fixture({count:800});
+ const source=f.api.board;
+ let reads=0;
+ f.api.board=async (...args)=>{
+  reads++;
+  if(reads===31)throw Object.assign(new Error('Redundant board read timed out'),{
+   status:0,code:'REQUEST_TIMEOUT'
+  });
+  return source(...args);
+ };
+ const verified=[];
+ // The previous implementation needed 48 reads for 16 batches and failed
+ // on the 31st. The fixed path completes the first 15 x 50 = 750 rows
+ // using only 30 board reads.
+ await assert.rejects(()=>executeBoardImportBatched({...f,auth,batchSize:50,
+  onProgress:p=>verified.push(p.completed)}),error=>{
+   assert.equal(error.importOutcomeUncertain,undefined);
+   assert.equal(error.importBatchProgress.completed,750);
+   assert.equal(error.importBatchProgress.committedBatches,15);
+   return true;
+ });
+ assert.deepEqual(verified,Array.from({length:15},(_,i)=>(i+1)*50));
+ assert.equal(f.calls,15,'no 16th write after failed read preflight');
+ assert.equal(f.current.items.length,750);
+ assert.equal(new Set(f.current.items.map(row=>row.id)).size,750);
+ assert.equal(reads,31);
+});
+
+test('BIMP-READBACK 13 mapped columns across 750 rows preserve final values without read escalation',async()=>{
+ const f=fixture({count:750});
+ const extraNames=Array.from({length:12},(_,i)=>'Extra '+String(i+1));
+ const columns=extraNames.map((name,i)=>({
+  id:'77777777-7777-4777-8777-'+String(i+1).padStart(12,'0'),
+  name,data_type:'text',column_key:'import_'+String(i),system_key:null,config:{}
+ }));
+ f.mutateUnsafeForTest(current=>current.columns.push(...columns));
+ f.sheet.headers.push(...extraNames);
+ f.sheet.rows.forEach((row,i)=>row.push(...extraNames.map((_,j)=>'CELL-'+i+'-'+j)));
+ const mappings=[{source:'Name',action:'item'},
+  {source:'Reference',action:'existing',columnId:columnId},
+  ...columns.map(col=>({source:col.name,action:'existing',columnId:col.id}))];
+ const approvedPlan=buildImportPlan({sheet:f.sheet,detail:f.current,
+  mappings,group:f.group,matches:f.matches});
+ const originalRpc=f.api.rpc;
+ f.api.rpc=async(name,args)=>{
+  const before=f.current.items.length;
+  const receipt=await originalRpc(name,args);
+  if(name==='wm_import_board_wizard_atomic'){
+   const items=f.current.items.slice(before);
+   f.mutateUnsafeForTest(current=>{
+    for(const [i,item] of items.entries()){
+     for(const col of columns)
+      current.values.push({item_id:item.id,column_id:col.id,
+       value:args.p_payload.rows[i].values[col.name]});
+    }
+   });
+  }
+  return receipt;
+ };
+ const progress=[];
+ const receipt=await executeBoardImportBatched({...f,auth,
+  detail:f.current,mappings,approvedPlan,batchSize:50,
+  onProgress:step=>progress.push(step.completed)});
+ assert.equal(receipt.created,750);
+ assert.equal(f.calls,15);
+ assert.equal(f.reads,30);
+ assert.equal(f.current.items.length,750);
+ assert.equal(f.current.values.length,750*13);
+ assert.equal(f.current.values.at(-1).value,'CELL-749-11');
+ assert.equal(progress.at(-1),750);
+});

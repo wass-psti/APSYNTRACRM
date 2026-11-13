@@ -614,14 +614,14 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,
   preview:{newItems:previewNew,updatedItems:previewExisting,skippedItems:previewSkipped,
    newColumns:proposed.length,rowCount:rows.length}};
 }
-export async function executeBoardImport({api,auth,plan}={}){
+export async function executeBoardImport({api,auth,plan,onVerifiedDetail}={}){
  if(!plan?.boardId||!plan?.payload||!api?.board||!api?.allowed||
   !api?.context||!api?.rpc||!auth?.getVerifiedUser)deny('Signed import service is unavailable.',403);
  const actor=await auth.getVerifiedUser(),ctx=await api.context();
  if(!validUuid(actor?.id)||actor.id!==ctx.user_id||actor.id!==auth.userId||
   ctx.workspace_id!==plan.workspaceId||ctx.profile?.status!=='active')
   deny('Signed identity or workspace has changed.',403);
- const detail=await api.board(plan.boardId);
+ const detail=await api.board(plan.boardId,{importVerification:true});
  if(detail.board.workspace_id!==ctx.workspace_id||
   !canManuallyEditBoard(detail.board,true)||
   detail.board.updated_at!==plan.boardRevision)
@@ -674,18 +674,21 @@ export async function executeBoardImport({api,auth,plan}={}){
   // committed writer failed. Retry only this signed, read-only request once;
   // never invoke the atomic import RPC again after an uncertain result.
   let persisted;
-  try{persisted=await api.board(plan.boardId);}
+  try{persisted=await api.board(plan.boardId,{importVerification:true});}
   catch(readError){
    const status=Number(readError?.status);
    const transient=(!Number.isInteger(status)||status===0||status===408||
      status===429||status>=500||readError?.code==='INVALID_JSON_RESPONSE');
    if(!transient)throw readError;
-   persisted=await api.board(plan.boardId);
+   persisted=await api.board(plan.boardId,{importVerification:true});
   }
   verifyImportReadback(plan,detail,persisted);
   const finalContext=await api.context();
   if(finalContext.user_id!==ctx.user_id||finalContext.workspace_id!==ctx.workspace_id||
      finalContext.profile?.status!=='active')uncertainImport();
+  // Only publish the signed, full-board read after receipt, row/cell and
+  // final-context verification. No speculative board state is reused.
+  if(typeof onVerifiedDetail==='function')onVerifiedDetail(persisted);
  }catch(error){
   if(error?.importOutcomeUncertain===true)throw error;
   uncertainImport(error);

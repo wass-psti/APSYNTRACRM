@@ -101,7 +101,7 @@ export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
   if(signed?.id!==auth?.userId||ctx?.user_id!==signed.id||
      ctx?.workspace_id!==approvedPlan.workspaceId||ctx?.profile?.status!=='active')
    fail('The signed user or active workspace changed. Re-review the import.');
-  const fresh=await api.board(approvedPlan.boardId);
+  const fresh=await api.board(approvedPlan.boardId,{importVerification:true});
   if(boardImportFingerprint(fresh)!==resumeFrom.fingerprint)
    fail('The board changed after the last verified batch. Re-review before resuming.');
   currentDetail=fresh;currentMappings=resumeFrom.mappings;
@@ -126,22 +126,32 @@ export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
    const actual=plan.readback.rows.map(row=>row.outcome);
    if(JSON.stringify(expected)!==JSON.stringify(actual))
     fail('Import duplicate outcomes changed between batches. Stop and reconcile existing records.');
-   const confirmed=await executeBoardImport({api,auth,plan});
+   let verifiedDetail=null;
+   const confirmed=await executeBoardImport({api,auth,plan,
+    onVerifiedDetail:detail=>{verifiedDetail=detail;}});
+   if(!verifiedDetail)fail('The atomic import readback did not provide a verified destination snapshot.');
    // executeBoardImport already verified the committed rows. Preserve that
    // evidence even if subsequent state retrieval is unavailable.
    receipt=sum(receipt,confirmed);completed=end;
-   // A second read is only needed to resolve new group/column IDs for the
-   // next transaction. A failed read here must never imply rollback.
+   // Publish verified progress immediately. Mapping/checkpoint failures
+   // must not leave the display one committed batch behind.
+   try{onProgress({batch:batch+1,total,completed,rows:sheet.rows.length,receipt:{...receipt}});}
+   catch{/* Presentation cannot alter authoritative receipts. */}
+   // Reuse the just-authorized, row-by-row verified full board snapshot.
+   // A redundant third full-board RPC per batch grows quadratically on
+   // 6k-8k row imports and can exhaust the service's request deadline.
    let after,updatedMappings,updatedGroup;
    try{
-    after=await api.board(plan.boardId);
+    after=verifiedDetail;
     if(after?.board?.workspace_id!==plan.workspaceId||
        after?.board?.id!==plan.boardId)fail('The committed board is no longer in the reviewed workspace.');
     updatedMappings=nextMappings(currentMappings,currentDetail,after);
     updatedGroup=nextGroup(currentGroup,currentDetail,after);
    }catch(cause){
     const error=new ApiError('A verified batch committed but its next-batch state could not be reconciled. Close the wizard and refresh the destination board before continuing.',409);
-    error.importOutcomeUncertain=true;error.cause=cause;throw error;
+    error.importOutcomeUncertain=true;
+    error.importBatchVerified=true;
+    error.cause=cause;throw error;
    }
    currentMappings=updatedMappings;currentGroup=updatedGroup;currentDetail=after;
    checkpoint=completed<sheet.rows.length?safeCheckpoint({
@@ -150,13 +160,11 @@ export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
    // Recovery marker failure cannot undo a successfully verified batch.
    // A stale marker is rejected by the fresh-board fingerprint on reentry.
    if(checkpoint)try{await onCheckpoint(checkpoint);}catch{/* No silent retry. */}
-   // Visual progress feedback must never turn a verified commit into a retry.
-   try{onProgress({batch:batch+1,total,completed,rows:sheet.rows.length,receipt:{...receipt}});}
-   catch{/* Rendering failure does not change the committed import state. */}
   }catch(error){
    error.importBatchProgress={completed,totalRows:sheet.rows.length,
     committedBatches:batch,receipt:{...receipt},
-    outcomeUncertain:error.importOutcomeUncertain===true};
+    outcomeUncertain:error.importOutcomeUncertain===true,
+    verifiedCommitted:error.importBatchVerified===true};
    // Only a definitively rejected batch can be resumed. A transport failure
    // may already have committed its entire transaction and is never retried.
    if(!error.importOutcomeUncertain&&checkpoint)

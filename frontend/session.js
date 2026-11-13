@@ -23,7 +23,7 @@ export class AuthClient {
     this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));
   }
   clear(){this.session=null;this.storage?.removeItem(STORE_KEY);}
-  async call(path,{method='GET',body,accessToken,signal}={}){
+  async call(path,{method='GET',body,accessToken,signal,readTimeoutMs}={}){
     if(signal?.aborted)throw new ApiError('Request timed out before confirmation.',0,'REQUEST_TIMEOUT');
     const controller=new AbortController();
     const abort=()=>controller.abort();
@@ -35,7 +35,10 @@ export class AuthClient {
       deadlineId=setTimeout(()=>{
         timedOut=true;controller.abort();
         reject(new ApiError('The service did not respond. Check your connection and retry.',0,'REQUEST_TIMEOUT'));
-      },this.requestTimeoutMs);
+      },method==='POST'&&
+        /^\/rest\/v1\/rpc\/(?:wm_get_board|wm_import_extended_refs_read)$/.test(path)&&
+        Number.isInteger(readTimeoutMs)&&readTimeoutMs>=this.requestTimeoutMs&&readTimeoutMs<=30000?
+        readTimeoutMs:this.requestTimeoutMs);
     });
     try{
       const response=await Promise.race([this.fetchImpl(SUPABASE_URL+path,{
