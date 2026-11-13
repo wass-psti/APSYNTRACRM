@@ -464,3 +464,23 @@ test('CP-BIMP-13 XLSX parser retains every row across the former 5,000-row limit
  assert.deepEqual(result.sheets[0].rows.at(-1),['Item 5001','Ref-5001']);
  assert.equal(result.sheets[0].rowNumbers.at(-1),5002);
 });
+
+test('BIMP-LARGE XLSX reader preserves every imported Excel row at 6,324 and 7,607 rows',async()=>{
+ for(const count of [6324,7607]){
+  const entries=workbookEntries();
+  const rows=['<row r="1"><c r="A1" t="inlineStr"><is><t>Name</t></is></c>'+
+   '<c r="B1" t="inlineStr"><is><t>Reference</t></is></c></row>'];
+  for(let i=1;i<=count;i++){
+   const n=i+1;
+   rows.push('<row r="'+n+'"><c r="A'+n+'" t="inlineStr"><is><t>Item '+i+'</t></is></c>'+
+    '<c r="B'+n+'" t="inlineStr"><is><t>REF-'+i+'</t></is></c></row>');
+  }
+  entries[3].xml='<worksheet><sheetData>'+rows.join('')+'</sheetData></worksheet>';
+  const parsed=await parseWithFixtureDom(makeZip(entries));
+  assert.equal(parsed.sheets.length,1);
+  assert.equal(parsed.sheets[0].rows.length,count);
+  assert.equal(parsed.sheets[0].rowNumbers.length,count);
+  assert.equal(parsed.sheets[0].rowNumbers.at(-1),count+1);
+  assert.deepEqual(parsed.sheets[0].rows.at(-1),['Item '+count,'REF-'+count]);
+ }
+});

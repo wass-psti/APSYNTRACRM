@@ -14,7 +14,8 @@ const original={board:{id:ids.board,workspace_id:ids.workspace,
  groups:[{id:ids.group,title:'QA'}],columns:[{id:ids.column,name:'Reference',
  data_type:'text',column_key:'col_ref',system_key:null,config:{}}],items:[],values:[]};
 const source='Name,Reference\nAlpha,A-1\nBeta,B-2\nGamma,C-3\n';
-const makeFile=()=>new File([source],'QA-Durable.csv',{type:'text/csv'});
+let sourceOverride=null;
+const makeFile=()=>new File([sourceOverride||source],'QA-Durable.csv',{type:'text/csv'});
 const clone=o=>structuredClone(o);
 const getDb=()=>JSON.parse(localStorage.getItem('__disposable_fake_db')||'null')||clone(original);
 const saveDb=o=>localStorage.setItem('__disposable_fake_db',JSON.stringify(o));
@@ -42,6 +43,21 @@ const api={extendedRefsSupported:false,
    columnsCreated:0,groupsCreated:0};
  }};
 window.bimp15Browser={
+ resetRejected(){
+  localStorage.clear();
+  saveDb(clone(original));sourceOverride='Name,Reference\nValid One,R1\nInvalid,'+
+   'Q'.repeat(1200)+'\nValid Two,R2\n';
+  rpcWrites=0;finished=null;return true;
+ },
+ configureRejected(){
+  const map=document.querySelector('[data-imp-map="1"]');
+  if(!map)return false;
+  map.value='existing:'+ids.column;
+  map.dispatchEvent(new Event('change',{bubbles:true}));
+  const group=document.querySelector('[data-imp-group]');
+  group.value=ids.group;group.dispatchEvent(new Event('change',{bubbles:true}));
+  return true;
+ },
  async seed(){
   localStorage.clear();saveDb(clone(original));
   const parsed=await parseImportFile(makeFile());

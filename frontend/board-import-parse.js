@@ -332,6 +332,7 @@ export function splitWorksheetSections(entries,sheetName,formulaWarnings=[]){
    tables.push({...checked,name:display,worksheet:sheetName,
     headerRow:current.headerRow,rowNumbers:current.rowNumbers,
     omittedRows:current.omittedRows,
+    structuralWarnings:current.structuralWarnings,
     formulaWarnings:formulaWarnings.filter(w=>importedRowNumbers.has(w.row))});
   }
  };
@@ -342,13 +343,13 @@ export function splitWorksheetSections(entries,sheetName,formulaWarnings=[]){
    if(!header)continue;
    const prev=entries[i-1],label=prev&&rowLabel(prev);
    current={headers:header,rows:[],headerRow:entry.number,
-    sectionTitle:label||'',rowNumbers:[],omittedRows:[]};
+    sectionTitle:label||'',rowNumbers:[],omittedRows:[],structuralWarnings:[]};
    continue;
   }
   if(sameHeader(values,current.headers)){
    flush();
    current={headers:[...current.headers],rows:[],headerRow:entry.number,
-    sectionTitle:sectionTitle||'',rowNumbers:[],omittedRows:[]};
+    sectionTitle:sectionTitle||'',rowNumbers:[],omittedRows:[],structuralWarnings:[]};
    sectionTitle='';
    continue;
   }
@@ -365,9 +366,15 @@ export function splitWorksheetSections(entries,sheetName,formulaWarnings=[]){
    current.omittedRows.push(entry.number);
    continue;
   }
-  if(values.slice(current.headers.length).some(x=>String(x??'').trim()))
-   throw contextualError(sheetName,entry.number,'A'+entry.number,
-    current.headers[0],values[0],'Row contains values beyond the header columns.');
+  if(values.slice(current.headers.length).some(x=>String(x??'').trim())){
+   // A different nested/subitem table cannot be represented in the active
+   // schema. Never map its shifted cells to unrelated destination columns.
+   // Record its exact source location and require explicit exclusion.
+   current.omittedRows.push(entry.number);
+   current.structuralWarnings.push({row:entry.number,
+    reason:'Row contains populated cells beyond the active table headers; review nested/subitem data separately.'});
+   continue;
+  }
   current.rows.push(Array.from({length:current.headers.length},
    (_,n)=>String(values[n]??'')));
   current.rowNumbers.push(entry.number);

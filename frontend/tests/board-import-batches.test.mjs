@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildImportPlan,initialImportMappings} from '../board-import-core.js';
-import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize,EXTENDED_IMPORT_CELL_BUDGET,EXTENDED_IMPORT_PAYLOAD_BUDGET} from '../board-import-batches.js';
+import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize,EXTENDED_IMPORT_CELL_BUDGET,EXTENDED_IMPORT_PAYLOAD_BUDGET,STANDARD_IMPORT_CELL_BUDGET} from '../board-import-batches.js';
 import {parseDelimited} from '../board-import-parse.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';
@@ -449,12 +449,34 @@ test('CP-BIMP-20 an uncertain extended-import batch is never automatically resub
  assert.equal(f.current.items.length,size);
 });
 
-test('CP-BIMP-20 an ordinary m143-v1 import keeps the 200-row budget',()=>{
+test('ordinary wide imports size transactions by cell count and UTF-8 payload as well as row count',()=>{
  const f=extended617Fixture();
- assert.equal(importBatchSize(f.approvedPlan,{extendedReferences:false}),IMPORT_BATCH_SIZE);
+ const size=importBatchSize(f.approvedPlan,{extendedReferences:false});
+ assert.ok(size<IMPORT_BATCH_SIZE);
+ assert.ok(size*6<=STANDARD_IMPORT_CELL_BUDGET);
+ assert.equal(importBatchSize(fixture({count:617}).approvedPlan,{extendedReferences:false}),IMPORT_BATCH_SIZE);
 });
 
 test('CP-BIMP-20 extended payload budget counts UTF-8 bytes, not string code units',()=>{
  const plan={payload:{rows:[{title:'Unicode',values:{Notes:'🎯'.repeat(110000)}}]}};
  assert.equal(importBatchSize(plan,{extendedReferences:true}),1);
+});
+
+test('BIMP-LARGE 6,324 and 7,607 rows commit fully, with exact progress and no duplicate writes',async()=>{
+ for(const count of [6324,7607]){
+  const f=fixture({count}),progress=[];
+  const receipt=await executeBoardImportBatched({...f,auth,
+   onProgress:status=>progress.push(status)});
+  assert.equal(receipt.created,count);
+  assert.equal(receipt.rowsProcessed,count);
+  assert.equal(receipt.batches,Math.ceil(count/IMPORT_BATCH_SIZE));
+  assert.equal(f.calls,Math.ceil(count/IMPORT_BATCH_SIZE));
+  assert.equal(progress.length,f.calls);
+  assert.equal(progress.at(-1).completed,count);
+  assert.equal(progress.at(-1).rows,count);
+  assert.equal(f.current.items.length,count);
+  assert.equal(new Set(f.current.items.map(row=>row.id)).size,count);
+  assert.equal(f.current.items.at(-1).title,'Batch item '+count);
+  assert.equal(f.current.values.at(-1).value,'REF-'+count);
+ }
 });

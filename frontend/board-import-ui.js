@@ -8,7 +8,7 @@ import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
 import {importMappingReadiness,skipPendingImportChoice,
  matchConfiguredImportChoice,reassignImportItemMapping} from './board-import-readiness.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
- buildImportPlan} from './board-import-core.js';
+ buildImportPlan,reviewImportSourceRows} from './board-import-core.js';
 import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize} from './board-import-batches.js';
 import {readImportRecovery,clearImportRecovery,sealImportRecovery,
  importDigest,verifyImportRecovery} from './board-import-durable.js';
@@ -32,7 +32,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   extendedReferences:api.extendedRefsSupported===true,
   resumeCheckpoint:null,recoveryMarker:readImportRecovery({userId:actor.id,boardId}),
   recoveryMode:false,recoverySourceDigest:null,recoveryOffset:0,
-  originalReceipt:null,executionPlan:null};
+  originalReceipt:null,executionPlan:null,rejectedAckKey:null};
  const overlay=document.createElement('div');
  overlay.className='aps-import-overlay';
  overlay.setAttribute('role','presentation');
@@ -47,13 +47,37 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const group=()=>state.group==='create'?
   {action:'create',name:state.groupName}:
   {action:'existing',groupId:state.group};
- const recoverSheet=()=>state.recoveryMode?{...sheet(),
-  rows:sheet().rows.slice(state.recoveryOffset),
-  rowNumbers:sheet().rowNumbers?.slice(state.recoveryOffset),
-  omittedRowsConfirmed:true,formulaWarningsConfirmed:true}:sheet();
- const computePlan=()=>{
+ const rowReview=()=>reviewImportSourceRows({
+  sheet:sheet(),detail,mappings:state.mappings,
+  matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
+  extendedReferences:state.extendedReferences});
+ const rejectionKey=review=>JSON.stringify({
+  worksheet:state.sheet,mappings:state.mappings,
+  behavior:state.behavior,matchColumnId:state.matchColumnId,
+  rows:review.rejected.map(entry=>entry.row)});
+ const fullImportSheet=()=>rowReview().sheet;
+ const recoverSheet=()=>{
+  const accepted=fullImportSheet();
+  return state.recoveryMode?{...accepted,
+   rows:accepted.rows.slice(state.recoveryOffset),
+   rowNumbers:accepted.rowNumbers?.slice(state.recoveryOffset),
+   omittedRowsConfirmed:true,formulaWarningsConfirmed:true}:accepted;
+ };
+ const computePlan=({requireRowAcknowledgement=true}={})=>{
   if(readiness().pendingChoices.length)
    throw new Error('Finish or explicitly skip each pending Status/Dropdown setup before proceeding.');
+  const report=rowReview();
+  if(!report.acceptedRows)
+   throw new Error('All source rows were rejected. Repair the worksheet or mapping before importing.');
+  if(state.recoveryMode){
+   const expected=state.recoveryMarker?.rejectedSourceRows||[];
+   if(JSON.stringify(expected)!==JSON.stringify(report.rejected.map(row=>row.row))||
+      report.acceptedRows!==state.recoveryMarker.rows)
+    throw new Error('The validated source-row exclusions differ from the verified recovery. Reconcile before continuing.');
+  }else if(requireRowAcknowledgement&&report.rejected.length&&
+      state.rejectedAckKey!==rejectionKey(report))
+   throw new Error('Review and explicitly confirm exclusion of '+report.rejected.length+
+    ' rejected source rows before importing.');
   return buildImportPlan({sheet:{...recoverSheet(),omittedRowsConfirmed:state.omittedRowsConfirmed,
    formulaWarningsConfirmed:state.formulaWarningsConfirmed},detail,mappings:state.mappings,
    group:group(),matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
@@ -81,7 +105,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const sourceRange=s.rowNumbers?.length?
    ' · Excel rows '+s.rowNumbers[0]+'–'+s.rowNumbers.at(-1):'';
   const skipped=s.omittedRows?.length?
-   ' · excluded report/summary rows: '+s.omittedRows.join(', '):'';
+   ' · source rows requiring exclusion: '+s.omittedRows.slice(0,25).join(', ')+
+   (s.omittedRows.length>25?' and '+(s.omittedRows.length-25)+' more':''):'';
   const sourceInfo=s.worksheet?
    '<p class="aps-import-source-info" role="status">Source: '+esc(s.worksheet)+
    sourceRange+skipped+' · '+s.rows.length+' importable records</p>':'';
@@ -99,8 +124,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const omittedRows=s.omittedRows||[];
   const omittedRowsAcknowledgement=omittedRows.length?
    '<div class=\"aps-import-resolve\" role=\"group\" aria-label=\"Worksheet summary rows\">'+
-   '<p>'+omittedRows.length+' non-record summary/footer row'+(omittedRows.length===1?'':'s')+
-   ' have no Item title and cannot become board items. Source rows: '+omittedRows.join(', ')+'.</p>'+
+   '<p>'+omittedRows.length+' summary, nested-table, or structurally incompatible row'+(omittedRows.length===1?'':'s')+
+   ' cannot become items in this table. Source rows: '+omittedRows.slice(0,25).join(', ')+
+   (omittedRows.length>25?' and '+(omittedRows.length-25)+' more':'')+
+   '. Verify these separately before exclusion.</p>'+
    '<button type=\"button\" class=\"secondary\" data-imp-confirm-omitted>'+
    (state.omittedRowsConfirmed?'Confirmed: exclude these summary rows':'Confirm exclusion of summary rows')+'</button></div>':'';
   const groupChoices=choice('create','New group',state.group==='create')+
@@ -218,7 +245,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   const cols=availableImportColumns(detail).filter(c=>
    ['text','email','url','dropdown','status'].includes(c.type)&&
    state.mappings.some(m=>m.action==='existing'&&m.columnId===c.id));
-  let result=null,validation='';
+  let result=null,validation='',report=null;
+  try{report=rowReview();}catch(error){validation=String(error.message||error);}
   try{result=state.busy?state.executionPlan||state.plan:computePlan();
    if(!state.busy)state.plan=result;
   }catch(error){validation=String(error.message||error);if(!state.busy)state.plan=null;}
@@ -237,11 +265,26 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    radio('skip','Skip','Do not import rows matching an existing record.')+
    radio('update','Update','Update matching items only; preserve empty destination cells.')+
    (state.behavior==='add-new'?'':matchSelect)+
+   (report?.rejected.length?
+    '<section class="aps-import-rejected" aria-label="Rejected worksheet records">'+
+    '<h3>'+report.rejected.length+' rejected of '+report.sourceRows+' source rows</h3>'+
+    '<p>'+report.acceptedRows+' valid rows remain. Rejected records are never imported unless corrected. Review their source row numbers and explicitly confirm exclusion before proceeding.</p>'+
+    '<div class="aps-import-rejected-list">'+
+    report.rejected.slice(0,25).map(row=>
+     '<p>Row '+esc(row.row)+' · '+esc(row.column)+': '+esc(row.reason)+'</p>').join('')+
+    (report.rejected.length>25?'<p>+'+(report.rejected.length-25)+
+     ' additional rejected rows. Download the complete local report.</p>':'')+
+    '</div><button type="button" class="secondary" data-imp="rejections-download">Download all rejected rows (CSV)</button>'+
+    '<button type="button" class="secondary" data-imp="rejections-confirm">'+
+    (state.rejectedAckKey===rejectionKey(report)?'Confirmed: exclude rejected source rows':
+     'Confirm exclusion of '+report.rejected.length+' rejected rows')+
+    '</button></section>':'')+
    (validation?'<p class="aps-import-error" role="alert">'+esc(validation)+'</p>':'')+
    (result?'<div class="aps-import-summary"><h3>Import preview</h3><p>'+
     result.preview.newItems+' new · '+result.preview.updatedItems+' updates · '+
     result.preview.skippedItems+' skipped · '+result.preview.newColumns+
-    ' new columns · '+result.preview.rowCount+' rows</p>'+
+    ' new columns · '+result.preview.rowCount+' accepted rows'+
+    (report?.rejected.length?' · '+report.rejected.length+' rejected':'')+'</p>'+
     (readiness().skipped.length?'<p>Excluded source columns: '+
      readiness().skipped.map(esc).join(', ')+'. Their values will not be imported.</p>':'')+
     '<p>'+(result.preview.rowCount>importBatchSize(result,{extendedReferences:state.extendedReferences})?
@@ -257,7 +300,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   return '<section class="aps-import-success" role="status"><h2>Import committed</h2>'+
    '<p>'+r.created+' created · '+r.updated+' updated · '+r.skipped+
    ' skipped · '+r.columnsCreated+' columns created · '+r.groupsCreated+
-   ' groups created.</p><p>Refresh and audit verification are available on your board.</p></section>';
+   ' groups created.'+
+   (rowReview().rejected.length?' '+rowReview().rejected.length+
+     ' rejected source rows explicitly excluded.':'')+
+   '</p><p>Refresh and audit verification are available on your board.</p></section>';
  }
  function render(){
   const active=overlay.contains(document.activeElement)?document.activeElement:null;
@@ -272,7 +318,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    (state.notice?'<p class="aps-import-notice" role="status">'+esc(state.notice)+'</p>':'')+
    (state.importProgress?'<p class="aps-import-notice" role="status">Verified '+
     state.importProgress.completed+' of '+state.importProgress.rows+' rows across '+
-    state.importProgress.batch+' of '+state.importProgress.total+' batches.</p>':'')+
+    state.importProgress.batch+' of '+state.importProgress.total+' batches'+
+    (rowReview().rejected.length?' ('+rowReview().rejected.length+' source rows excluded after review)':'')+'.</p>':'')+
    (state.error?'<p class="aps-import-error" role="alert">'+esc(state.error)+'</p>':'')+
    '</main><footer class="aps-import-footer">'+
    (state.step>1&&state.step<4?'<button class="secondary" data-imp="back"'+
@@ -396,11 +443,18 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   let phase='preflight';
   try{
    const plan=resume?state.executionPlan:computePlan();
+   const reviewedSource=fullImportSheet();
+   const rejectedSourceRows=rowReview().rejected.map(r=>r.row);
+   // A single atomic import needs no durable recovery hash. Avoid adding
+   // an unrelated crypto prerequisite to formerly supported small files.
+   if(!state.recoverySourceDigest&&
+      plan.payload.rows.length>importBatchSize(plan,{extendedReferences:state.extendedReferences}))
+    state.recoverySourceDigest=await importDigest(sheet());
    if(!resume)state.executionPlan=plan;
    const recovering=state.recoveryMode;
    if(recovering&&!resume){
-    await verifyImportRecovery({marker:state.recoveryMarker,fullSheet:sheet(),
-     worksheetIndex:state.sheet,detail,mappings:state.mappings,group:group(),
+    await verifyImportRecovery({marker:state.recoveryMarker,fullSheet:reviewedSource,
+     originalSource:sheet(),worksheetIndex:state.sheet,detail,mappings:state.mappings,group:group(),
      matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
      userId:actor.id,workspaceId:ctx.workspace_id,
      extendedReferences:state.extendedReferences});
@@ -418,7 +472,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     resumeFrom:resume?state.resumeCheckpoint:null,
     onCheckpoint:async checkpoint=>{
      state.recoveryMarker=await sealImportRecovery({checkpoint,
-      fullSheet:sheet(),worksheetIndex:state.sheet,userId:actor.id,
+      fullSheet:reviewedSource,worksheetIndex:state.sheet,userId:actor.id,
+      rejectedSourceRows,
       matches:{behavior:state.behavior,matchColumnId:state.matchColumnId},
       extendedReferences:state.extendedReferences,
       completedOffset:startingOffset,sourceDigest:state.recoverySourceDigest,
@@ -426,7 +481,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     },
     onProgress:progress=>{
      state.importProgress={...progress,completed:progress.completed+startingOffset,
-      rows:sheet().rows.length};state.resumeCheckpoint=null;render();
+      rows:reviewedSource.rows.length};state.resumeCheckpoint=null;render();
     }});
    clearImportRecovery({userId:actor.id,boardId});state.recoveryMarker=null;
    state.resumeCheckpoint=null;
@@ -447,7 +502,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    const progress=error?.importBatchProgress;
    state.error=progress?
     ('Import stopped after '+progress.completed+' of '+progress.totalRows+
-     ' rows were verified. '+(progress.outcomeUncertain?
+     ' approved rows were verified'+(rowReview().rejected.length?
+      '; '+rowReview().rejected.length+' source rows were excluded by review':'')+'. '+(progress.outcomeUncertain?
       'The most recent batch may also have committed; do not resubmit before reconciling the board. ':
       'Previously verified batches remain committed. ')+failure.message):failure.message;
   }finally{state.busy=false;render();}
@@ -480,9 +536,32 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    try{
     if(gate.awaitingColumnApproval)
      throw new Error('Choose Allow or Decline for the proposed ordinary columns.');
-    computePlan();state.step=3;state.confirmed=false;
+    // Even a fully rejected sheet needs a review screen with every rejection
+    // available for correction/export; it must never enable Import Now.
+    if(rowReview().acceptedRows)
+     computePlan({requireRowAcknowledgement:false});
+    state.step=3;state.confirmed=false;
    }catch(error){state.error=String(error.message||error);}
    render();return;
+  }
+  if(action==='rejections-confirm'){
+   const review=rowReview();
+   state.rejectedAckKey=rejectionKey(review);
+   state.confirmed=false;state.error='';render();return;
+  }
+  if(action==='rejections-download'){
+   const report=rowReview();
+   const quote=value=>'"'+String(value??'').replaceAll('"','""')+'"';
+   const rows=[['Source row','Column','Reason'],...report.rejected.map(r=>[
+    String(r.row),r.column,r.reason])];
+   const csv='\uFEFF'+rows.map(cells=>cells.map(value=>{
+    const safe=/^[=+@-]/.test(String(value))?"'"+value:value;
+    return quote(safe);
+   }).join(',')).join('\r\n');
+   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+   try{const link=document.createElement('a');link.href=url;link.download='board-import-rejected-rows.csv';
+    link.click();}finally{setTimeout(()=>URL.revokeObjectURL(url),5000);}
+   return;
   }
   if(action==='import')void doImport();
   if(action==='resume')void doImport(true);

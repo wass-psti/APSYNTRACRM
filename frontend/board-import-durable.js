@@ -17,7 +17,7 @@ export async function importDigest(value,crypt=globalThis.crypto){
 }
 export async function sealImportRecovery({checkpoint,fullSheet,worksheetIndex=0,
  userId,matches,extendedReferences=false,completedOffset=0,
- sourceDigest,priorReceipt=null,storage=globalThis.localStorage,
+ sourceDigest,priorReceipt=null,rejectedSourceRows=[],storage=globalThis.localStorage,
  crypt=globalThis.crypto}={}){
  const completed=completedOffset+checkpoint?.completed;
  if(!checkpoint||!fullSheet?.rows||!Number.isSafeInteger(completed)||
@@ -38,6 +38,7 @@ export async function sealImportRecovery({checkpoint,fullSheet,worksheetIndex=0,
  const marker={version:VERSION,userId,boardId:checkpoint.boardId,
   workspaceId:checkpoint.workspaceId,worksheetIndex,
   sourceDigest:sourceDigest||await importDigest(fullSheet,crypt),
+  rejectedSourceRows:[...rejectedSourceRows],
   boardDigest:await importDigest(boardImportFingerprint(checkpoint.detail),crypt),
   remainingDigest:await importDigest(plan.payload,crypt),
   completed,rows:fullSheet.rows.length,batchSize:checkpoint.batchSize,
@@ -58,7 +59,11 @@ export function readImportRecovery({storage=globalThis.localStorage,userId,board
  return marker?.version===VERSION&&marker.userId===userId&&marker.boardId===boardId&&
   typeof marker.sourceDigest==='string'&&typeof marker.boardDigest==='string'&&
   typeof marker.remainingDigest==='string'&&Number.isInteger(marker.completed)&&
-  marker.completed>0&&marker.completed<marker.rows?marker:null;
+  marker.completed>0&&marker.completed<marker.rows&&
+  (marker.rejectedSourceRows==null||(
+   Array.isArray(marker.rejectedSourceRows)&&marker.rejectedSourceRows.length<=20000&&
+   marker.rejectedSourceRows.every((row,i)=>Number.isSafeInteger(row)&&row>=1&&
+    (i===0||row>marker.rejectedSourceRows[i-1]))))?marker:null;
 }
 export function clearImportRecovery({storage=globalThis.localStorage,userId,boardId}={}){
  try{storage?.removeItem(durableRecoveryKey(userId,boardId));}
@@ -66,7 +71,7 @@ export function clearImportRecovery({storage=globalThis.localStorage,userId,boar
 }
 export async function verifyImportRecovery({marker,fullSheet,worksheetIndex,
  detail,mappings,group,matches,userId,workspaceId,extendedReferences=false,
- crypt=globalThis.crypto}={}){
+ originalSource=null,crypt=globalThis.crypto}={}){
  if(!marker||marker.userId!==userId||marker.workspaceId!==workspaceId||
   marker.boardId!==detail?.board?.id||marker.worksheetIndex!==worksheetIndex||
   marker.rows!==fullSheet?.rows?.length||marker.groupId!==group?.groupId||
@@ -74,7 +79,7 @@ export async function verifyImportRecovery({marker,fullSheet,worksheetIndex,
   marker.matchColumnId!==matches?.matchColumnId||
   marker.extendedReferences!==extendedReferences)
   deny('Recovery metadata does not match this signed board, worksheet or import setup.');
- if(await importDigest(fullSheet,crypt)!==marker.sourceDigest)
+ if(await importDigest(originalSource||fullSheet,crypt)!==marker.sourceDigest)
   deny('The source worksheet differs from the previously verified import.');
  if(await importDigest(boardImportFingerprint(detail),crypt)!==marker.boardDigest)
   deny('The destination board has changed since the verified import prefix. Reconcile before importing.');

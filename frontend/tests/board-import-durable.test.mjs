@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
-import {initialImportMappings,buildImportPlan} from '../board-import-core.js';
+import {initialImportMappings,buildImportPlan,reviewImportSourceRows} from '../board-import-core.js';
 import {executeBoardImportBatched} from '../board-import-batches.js';
 import {readImportRecovery,sealImportRecovery,verifyImportRecovery,
  clearImportRecovery,importDigest,durableRecoveryKey} from '../board-import-durable.js';
@@ -137,4 +137,48 @@ test('CP-BIMP-15A secure digest rejects missing crypto and is stable across relo
  assert.equal(a.length,64);
  assert.equal(a,await importDigest({a:1,rows:['X']},webcrypto));
  await assert.rejects(()=>importDigest({a:1},{}),/Secure workbook recovery hashing/);
+});
+
+test('BIMP-LARGE filtered recovery binds original workbook, exclusion list and exact verified prefix',async()=>{
+ const f=setup(1002),store=storage(),original=f.detail();
+ // One deliberately invalid mapped long-text cell is excluded only after review.
+ f.sheet.rows[650][1]='Z'.repeat(1500);
+ const review=reviewImportSourceRows({sheet:f.sheet,detail:original,mappings:f.mappings,matches:f.matches});
+ assert.equal(review.acceptedRows,1001);
+ assert.deepEqual(review.rejected.map(row=>row.row),[652]);
+ const approvedPlan=buildImportPlan({sheet:review.sheet,detail:original,
+  mappings:f.mappings,group:f.group,matches:f.matches});
+ let marker;
+ await assert.rejects(()=>executeBoardImportBatched({api:f.api,auth,
+  detail:original,sheet:review.sheet,mappings:f.mappings,group:f.group,
+  matches:f.matches,approvedPlan,batchSize:500,
+  onCheckpoint:async checkpoint=>{
+   marker=await sealImportRecovery({checkpoint,fullSheet:review.sheet,
+    sourceDigest:await importDigest(f.sheet,webcrypto),
+    rejectedSourceRows:review.rejected.map(row=>row.row),
+    worksheetIndex:0,userId,matches:f.matches,storage:store,crypt:webcrypto});
+  }}),error=>error.status===409);
+ assert.equal(marker.completed,500);
+ assert.equal(marker.rows,1001);
+ assert.deepEqual(marker.rejectedSourceRows,[652]);
+ assert.equal(JSON.stringify(marker).includes('ZZZZ'),false);
+ const fresh=readImportRecovery({storage:store,userId,boardId});
+ assert.equal(fresh.completed,500);
+ const verification=await verifyImportRecovery({
+  marker:fresh,originalSource:f.sheet,fullSheet:review.sheet,
+  worksheetIndex:0,detail:f.detail(),mappings:f.mappings,
+  group:f.group,matches:f.matches,userId,workspaceId,crypt:webcrypto});
+ assert.equal(verification.remainder.rows.length,501);
+ const result=await executeBoardImportBatched({api:f.api,auth,
+  detail:f.detail(),sheet:verification.remainder,mappings:f.mappings,
+  group:f.group,matches:f.matches,approvedPlan:verification.plan,batchSize:500});
+ assert.equal(result.created,501);
+ assert.equal(f.detail().items.length,1001);
+ assert.equal(new Set(f.detail().items.map(item=>item.id)).size,1001);
+ assert.equal(f.calls,4);
+ await assert.rejects(()=>verifyImportRecovery({
+  marker:fresh,originalSource:{...f.sheet,rows:f.sheet.rows.slice(0,-1)},
+  fullSheet:review.sheet,worksheetIndex:0,detail:f.detail(),
+  mappings:f.mappings,group:f.group,matches:f.matches,
+  userId,workspaceId,crypt:webcrypto}),/source worksheet differs/);
 });
