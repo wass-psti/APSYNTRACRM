@@ -1,0 +1,25 @@
+name: CP-DB-PERF-05 Effective Access Singleflight
+
+on:
+  pull_request:
+    paths:
+      - frontend/data.js
+      - frontend/app.js
+      - frontend/tests/frontend.test.mjs
+      - .github/workflows/cp-db-perf05-effective-access.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  effective-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify domain API and signed effective-access read contracts
+        run: node --test frontend/tests/frontend.test.mjs frontend/tests/signed-effective-access.test.mjs
