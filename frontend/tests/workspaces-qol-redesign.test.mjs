@@ -41,3 +41,11 @@ test('workspace creation and invitation retain fail-closed signed behavior',()=>
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.doesNotMatch(css,/url\(\s*https?:|@import/);
 });
+
+test('workspace quick search uses a single explicit icon and disables the native search glyph',()=>{
+ assert.equal((ui.match(/class="ws01-menu-search-icon"/g)||[]).length,1);
+ assert.match(ui,/class="ws01-menu-search-field"/);
+ assert.match(css,/#ws01-menu-search\{[\s\S]*?-webkit-appearance:none;appearance:none/);
+ assert.match(css,/#ws01-menu-search::-webkit-search-decoration/);
+ assert.match(css,/#ws01-menu-search::-webkit-search-results-button/);
+});
