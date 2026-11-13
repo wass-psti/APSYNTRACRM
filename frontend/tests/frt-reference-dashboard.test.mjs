@@ -107,8 +107,9 @@ test('Executive Dashboard renders signed company-scoped counts and truthful fina
 test('OPEX and User Manual navigation are functional views without fabricated financial charts',()=>{
  const opex=renderFRTFinanceReadOnly({result:report,view:'opex'});
  assert.match(opex,/OPEX Analytics/);
- assert.match(opex,/Top 5 Expense Categories/);
- assert.match(opex,/frt-exec-month-row/);
+ assert.match(opex,/Category Breakdown/);
+ assert.match(opex,/frt-opex-line-chart/);
+ assert.match(opex,/Requested vs\. Liquidated Trend/);
  assert.match(opex,/750,000\.00/);
  const manual=renderFRTFinanceReadOnly({result:report,view:'manual'});
  assert.match(manual,/Fund Released Tracker — User Manual/);
@@ -156,7 +157,8 @@ test('CP-FRT-EXEC-02 OPEX Analytics uses the same validated company aggregates',
  assert.match(html,/750,000\.00/);
  assert.match(html,/456,789\.12/);
  assert.match(html,/requested line items/i);
- assert.match(html,/liquidation submission date/);
+ assert.match(html,/latest saved liquidation snapshot/i);
+ assert.match(html,/Submitted liquidation volume by month/);
 });
 
 test('CP-FRT-EXEC-02 unavailable aggregate data preserves honest empty states',()=>{
@@ -176,4 +178,40 @@ test('CP-FRT-EXEC-02 escapes untrusted category names and formats large decimal 
  assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
  assert.match(html,/999,999,999,999,999,999,999,999\.99/);
  assert.doesNotMatch(html,/<img src=x|onerror=alert\(1\)>/);
+});
+
+test('CP-FRT-OPEX-REF-01 renders reference-led KPI, trend, category, department, pending and IC sections without fabricated budgets',()=>{
+ const html=renderFRTFinanceReadOnly({result:report,view:'opex'});
+ for(const label of ['FINANCIAL COMMAND CENTER','Total Requested','Submitted Liquidation',
+  'Budget Used','Pending Liquidations','Requested vs. Liquidated Trend',
+  'Category Breakdown','Department Performance Matrix','Burn Rate Analysis',
+  'Risk-Aware IC Matrix','Not activated','Intercompany ledger not connected',
+  'View exact monthly amounts']){
+  assert.ok(html.includes(label),label);
+ }
+ assert.match(html,/aria-label="7 pending liquidations"/);
+ assert.match(html,/aria-label="Monthly requested amounts and submitted liquidation amounts"/);
+ assert.match(html,/Company budget source not connected/);
+ assert.doesNotMatch(html,/94\.30%|31\.33M|29\.54M|>Reconciled<|>0 active loans</i);
+});
+
+test('CP-FRT-OPEX-REF-01 zero or missing financial aggregates display truthful states',()=>{
+ const missing=renderFRTFinanceReadOnly({result:{...report,analytics:null},view:'opex'});
+ assert.match(missing,/Trend unavailable/);
+ assert.match(missing,/Category breakdown unavailable/);
+ assert.doesNotMatch(missing,/>NaN<|>Infinity<|>undefined</);
+ const zero={...report,analytics:{...report.analytics,requestedTotal:'0.00',spentTotal:'0.00',
+  topCategories:[],monthlyTrend:report.analytics.monthlyTrend.map(x=>({...x,requestedAmount:'0.00',spentAmount:'0.00'}))}};
+ const html=renderFRTFinanceReadOnly({result:zero,view:'opex'});
+ assert.match(html,/polyline points="52,214\.00/);
+ assert.match(html,/No categorized request items/);
+ assert.doesNotMatch(html,/NaN|Infinity/);
+});
+
+test('CP-FRT-OPEX-REF-01 treats categories as untrusted text and keeps signed aggregate only',()=>{
+ const html=renderFRTFinanceReadOnly({result:{...report,analytics:{...report.analytics,
+  topCategories:[{category:'<svg onload=alert(1)>',requestedAmount:'42.00'}]}},view:'opex'});
+ assert.match(html,/&lt;svg onload=alert\(1\)&gt;/);
+ assert.doesNotMatch(html,/<svg onload=alert/);
+ assert.doesNotMatch(html,/recipientBank|requestor_email|requestId|voucher_no|privateToken/);
 });
