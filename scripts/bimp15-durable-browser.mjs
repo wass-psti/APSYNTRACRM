@@ -120,6 +120,30 @@ async function run(){
   assert.equal(refreshed.items,3);
   assert.equal(refreshed.marker,false);
   console.log('BIMP15_CHROMIUM_RESTART_IMPORT_PASS: 1 verified existing + 2 recovered rows, one signed-fixture atomic write; refresh persisted');
+  // Exercise the actual wizard row rejection controls, not just the pure planner.
+  assert.equal(await page.evaluate('bimp15Browser.resetRejected()'),true);
+  await page.evaluate('bimp15Browser.launch()');
+  await page.evaluate('bimp15Browser.upload()');
+  await until(()=>page.evaluate('bimp15Browser.state().text.includes("Map your file columns")'));
+  assert.equal(await page.evaluate('bimp15Browser.configureRejected()'),true);
+  await page.evaluate('bimp15Browser.click("next")');
+  await until(()=>page.evaluate('bimp15Browser.state().text.includes("rejected of 3 source rows")'));
+  const unconfirmed=await page.evaluate('({text:bimp15Browser.state().text,disabled:document.querySelector("[data-imp=import]")?.disabled})');
+  assert.match(unconfirmed.text,/1 rejected of 3 source rows/);
+  assert.match(unconfirmed.text,/Row 3/);
+  assert.equal(unconfirmed.disabled,true,'exclusion requires separate acknowledgement');
+  await page.evaluate('bimp15Browser.click("rejections-confirm")');
+  await until(()=>page.evaluate('bimp15Browser.state().text.includes("Import preview")'));
+  assert.equal(await page.evaluate('bimp15Browser.confirm()'),true);
+  await page.evaluate('bimp15Browser.click("import")');
+  await until(()=>page.evaluate('bimp15Browser.state().text.includes("Import committed")'));
+  const accepted=await page.evaluate('bimp15Browser.state()');
+  assert.equal(accepted.items,2);
+  assert.deepEqual(accepted.values,['R1','R2']);
+  assert.equal(accepted.writes,1);
+  assert.match(accepted.text,/1 rejected source row/);
+  console.log('BIMP_LARGE_CHROMIUM_REJECTION_PASS: 3 reviewed, 1 explicitly excluded, 2 persisted, no duplicate');
+
  }finally{
   page?.close();server.close();
   if(browser){

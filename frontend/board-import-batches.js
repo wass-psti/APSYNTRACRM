@@ -12,9 +12,9 @@ export const IMPORT_BATCH_SIZE=200;
 // evidence makes a fixed row count insufficient for wide/extended imports.
 // Budget by the *heaviest reviewed row*, not an average that hides late rows.
 export const EXTENDED_IMPORT_CELL_BUDGET=400;
+export const STANDARD_IMPORT_CELL_BUDGET=800;
 export const EXTENDED_IMPORT_PAYLOAD_BUDGET=256*1024;
 export function importBatchSize(plan,{extendedReferences=false}={}){
- if(!extendedReferences)return IMPORT_BATCH_SIZE;
  const rows=plan?.payload?.rows;
  if(!Array.isArray(rows)||!rows.length)return IMPORT_BATCH_SIZE;
  let maxCells=1,maxBytes=1;
@@ -25,7 +25,7 @@ export function importBatchSize(plan,{extendedReferences=false}={}){
   maxBytes=Math.max(maxBytes,encoder.encode(JSON.stringify(row)).byteLength);
  }
  return Math.max(1,Math.min(IMPORT_BATCH_SIZE,
-  Math.floor(EXTENDED_IMPORT_CELL_BUDGET/maxCells),
+  Math.floor((extendedReferences?EXTENDED_IMPORT_CELL_BUDGET:STANDARD_IMPORT_CELL_BUDGET)/maxCells),
   Math.floor(EXTENDED_IMPORT_PAYLOAD_BUDGET/maxBytes)));
 }
 const fail=message=>{throw new ApiError(message,409);};

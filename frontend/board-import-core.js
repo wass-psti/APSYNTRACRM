@@ -389,6 +389,70 @@ function valueAsType(raw,type,config={},extendedReferences=false){
  }
  return text;
 }
+/**
+ * Inspect every source row before import. Invalid mapped values are never
+ * coerced or silently discarded; callers must explicitly acknowledge the
+ * complete source-row exclusion set before committing the accepted subset.
+ * No database mutations or permission decisions occur here.
+ */
+export function reviewImportSourceRows({sheet,detail,mappings,matches,
+ extendedReferences=false}={}){
+ if(!Array.isArray(sheet?.headers)||!Array.isArray(sheet?.rows)||
+    !Array.isArray(mappings)||mappings.length!==sheet.headers.length)
+  deny('Import source and column mapping are required.');
+ const headers=new Map(sheet.headers.map((h,i)=>[h,i]));
+ const primary=mappings.find(m=>m.action==='item')?.source;
+ const cols=new Map(availableImportColumns(detail).map(c=>[c.id,c]));
+ const mapped=mappings.filter(m=>['existing','create'].includes(m.action)).map(m=>({
+  source:m.source,index:headers.get(m.source),
+  column:m.action==='existing'?cols.get(m.columnId):
+   {type:m.columnType||m.type,config:{}}
+ }));
+ const checkbox=new Set(mapped.filter(m=>m.column?.type==='checkbox'&&
+  detectMondayCheckboxMarkers(sheet,m.source)).map(m=>m.source));
+ const matchSource=matches?.behavior==='add-new'||!matches?.behavior?null:
+  matches.matchColumnId==='item'?primary:
+  mappings.find(m=>m.action==='existing'&&m.columnId===matches.matchColumnId)?.source;
+ const accepted=[],rowNumbers=[],rejected=[],seen=new Set();
+ for(let index=0;index<sheet.rows.length;index++){
+  const cells=sheet.rows[index],line=sheet.rowNumbers?.[index]??index+2;
+  let field=primary||'Item';
+  try{
+   if(!primary||!headers.has(primary))deny('Map exactly one Item title column.');
+   const title=clean(cells[headers.get(primary)]);
+   if(!title||title.length>240)deny('Item title must have 1–240 characters.');
+   forbidFormula(title);
+   const converted=new Map([[primary,title]]);
+   for(const mapping of mapped){
+    field=mapping.source;
+    if(!mapping.column)deny('The mapped destination column is unavailable.');
+    const raw=cells[mapping.index];
+    converted.set(field,checkbox.has(field)?
+     mondayCheckboxCell(raw):
+     valueAsType(raw,mapping.column.type,mapping.column.config||{},extendedReferences));
+   }
+   if(matchSource){
+    field=matchSource;
+    const value=converted.has(field)?converted.get(field):
+     cells[headers.get(field)];
+    const k=matchText(value);
+    if(!k)deny('Duplicate-match key is empty.');
+    if(seen.has(k))deny('Duplicate-match key appears twice in the source.');
+    seen.add(k);
+   }
+   accepted.push(cells);rowNumbers.push(line);
+  }catch(error){
+   // No source cell values in error reports, which may contain private data.
+   rejected.push({row:line,column:field,
+    reason:String(error?.message||'Invalid mapped value')
+     .replace(/A number cell contains an invalid value:.*/, 'A number cell contains an invalid value.')
+     .slice(0,220)});
+  }
+ }
+ return {sheet:{...sheet,rows:accepted,
+   ...(sheet.rowNumbers?{rowNumbers}:{} )},
+  sourceRows:sheet.rows.length,acceptedRows:accepted.length,rejected};
+}
 export function buildImportPlan({sheet,detail,mappings,group,matches,
  allowColumns=false,extendedReferences=false}={}){
  if(!detail?.board||!Array.isArray(sheet?.headers)||!Array.isArray(sheet?.rows)||
