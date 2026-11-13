@@ -2549,6 +2549,17 @@
 .modal-actions .board-modal-danger:focus-visible{outline:3px solid #bd6373;outline-offset:2px}
 .modal-actions .board-modal-danger:disabled{opacity:.65;cursor:wait}
 
+
+/* Retained-DOM signed result filters: CSS display rules must not override
+   hidden= when search narrows a list. Scoped to the three existing views. */
+#app .ft3-activity-group[hidden],
+#app .ft3-activity-entry[hidden],
+#app .ft3-activity-unavailable[hidden],
+#app .tt-team-member[hidden],
+#app .tt-team-empty[hidden],
+#app .tt-ot-request[hidden],
+#app .tt-ot-empty[hidden] { display:none !important; }
+
 /* frontend/auth-experience.css */
 /* APSYNTRA CRM / AUTH02 — intentionally scoped to the login route.
    No inline style attributes, CSSOM injection, font downloads or route-wide overrides. */

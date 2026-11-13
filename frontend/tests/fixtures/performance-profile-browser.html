@@ -5,6 +5,8 @@ import {sampleBrowserFrames} from '../../performance-profile.js';
 import {createStartupCriticalPath} from '../../performance-critical-path.js';
 import {readWorkspaceStartup} from '../../workspace-startup-read.js';
 import {summarizeEntryWaterfall} from '../../performance-entry-waterfall.js';
+import {applySearchVisibility} from '../../interaction-search.js';
+import {createFrameCoalescer} from '../../frame-coalescer.js';
 window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
  waterfall:()=>{
   const origin=location.origin;
@@ -51,6 +53,36 @@ window.performanceAcceptance={run:()=>sampleBrowserFrames({durationMs:1000}),
   catch{denied=true;}
   return {starts,elapsed,authorizedBoards:authorized.boards.length,
    bootstrapVerified:authorized.bootstrapVerified,denied};
+ },
+ interactionSearch:()=>{
+  const host=document.createElement('div');host.id='interaction-search-benchmark';
+  const empty=document.createElement('p');empty.dataset.empty='true';host.append(empty);
+  for(let groupIndex=0;groupIndex<100;groupIndex++){
+   const group=document.createElement('section');group.dataset.group='true';
+   for(let rowIndex=0;rowIndex<12;rowIndex++){
+    const index=groupIndex*12+rowIndex,row=document.createElement('article');
+    row.dataset.searchText='member '+index+' needle-'+(index%10);group.append(row);
+   }
+   host.append(group);
+  }
+  document.body.append(host);
+  const first=host.querySelector('article'),timings=[];let last;
+  for(const query of ['needle-7','member 1199','missing','']){
+   const begin=performance.now();
+   last=applySearchVisibility(host,{selector:'article',query,
+    groupSelector:'[data-group]',emptySelector:'[data-empty]'});
+   timings.push(performance.now()-begin);
+  }
+  const stable=first===host.querySelector('article');
+  const coalesced=[];const callbacks=[];
+  const coalescer=createFrameCoalescer({requestFrame:fn=>{callbacks.push(fn);return callbacks.length;},
+   cancelFrame:()=>{},apply:value=>coalesced.push(value)});
+  for(let i=0;i<1000;i++)coalescer.schedule(i);
+  callbacks.shift()?.();
+  const report={rows:1200,visibleAfterClear:last.visible,firstQueryVisible:120,
+   emptyQueryVisible:0,stableNodes:stable,searchDurationsMs:timings.map(v=>Math.round(v*100)/100),
+   scheduledFrames:coalesced.length,coalescedValue:coalesced[0]};
+  host.remove();return report;
  },
  criticalPath:()=>{
   let now=0;

@@ -60,3 +60,14 @@ test('untrusted event text is HTML-escaped; CSV prevents spreadsheet formula inj
  assert.match(csv,/"'=HYPERLINK\(""bad""\)"/);
  assert.match(csv,/Event ID,?"/);
 });
+
+test('activity search renders the complete selected type once and keeps hidden events available for broader queries',()=>{
+ const html=renderFuelTrackActivity(args(base,{query:'gba',type:'all'}));
+ assert.match(html,/data-search-text="alex approved request vehicle gba 8424 r-1 request_approved"/);
+ assert.match(html,/data-search-text="chris completed refueling another vehicle r-2 refueling_completed" hidden/);
+ assert.match(html,/data-ft3-activity-empty[^>]*hidden/);
+ const model=fuelTrackActivityModel(args(base,{query:'gba',type:'all'}));
+ assert.equal(model.searchGroups.today.length,1);
+ assert.equal(model.searchGroups.week.length,1);
+ assert.equal(model.visible.length,1);
+});
