@@ -19,6 +19,7 @@ test('redesigned batch interface has explicit stages, review summary, and preser
   assert.ok(html.includes(label),label);
  assert.match(html,/user-role-batch-layout/);
  assert.match(html,/class="user-role-batch-summary" aria-label="Batch review summary"/);
+ assert.match(html,/<div class="user-role-batch-main">[\s\S]*?<\/div><aside class="user-role-batch-summary"/);
  assert.match(html,/data-action="user-role-batch-review"/);
  assert.match(html,/name="userRoleBatchMember"/);
  assert.match(html,/data-action="user-role-batch-select-eligible"/);
