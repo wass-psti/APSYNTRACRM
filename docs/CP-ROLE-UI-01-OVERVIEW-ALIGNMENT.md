@@ -31,7 +31,7 @@ New role tiers, administrator permissions, policy enforcement, activation contro
 
 ## Validation records
 
-- Frontend regression: **2,070 / 2,070 PASS** on reconciled local implementation baseline.
+- Frontend regression: **2,082 / 2,082 PASS** on reconciled local implementation baseline.
 - Real Chromium: **20 / 20 PASS** (five sections at 1440px, 768px, 390px and 320px).
 - Matrix buttons: **84 / 84** remain staged only.
 - Styled workspace: CSS computed gradient, radius and panel header verified at every tested width.
