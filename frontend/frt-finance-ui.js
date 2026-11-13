@@ -29,8 +29,7 @@ function renderCategoryBreakdown(analytics){
  const maximum=analytics.topCategories.reduce((max,item)=>amountCents(item.requestedAmount)>max?amountCents(item.requestedAmount):max,0n);
  return '<div class="frt-exec-category-list" aria-label="Top requested expense categories">'+
   analytics.topCategories.map(item=>'<div class="frt-exec-category-row"><div class="frt-exec-category-heading"><span>'+
-   escape(item.category)+'</span><b>'+formatAmount(item.requestedAmount)+'</b></div><div class="frt-exec-track"><i style="width:'+
-   chartPercent(amountCents(item.requestedAmount),maximum)+'%"></i></div></div>').join('')+'</div>';
+   escape(item.category)+'</span><b>'+formatAmount(item.requestedAmount)+'</b></div><progress class="frt-exec-track" max="100" value="'+chartPercent(amountCents(item.requestedAmount),maximum)+'" aria-label="'+escape(item.category)+' requested amount"></progress></div>').join('')+'</div>';
 }
 function renderMonthlyTrend(analytics){
  if(!analytics)return '<div class="frt-exec-empty"><strong>Six-month trend unavailable</strong><p>Signed financial aggregates are not currently available. No trend values are estimated.</p></div>';
@@ -42,9 +41,8 @@ function renderMonthlyTrend(analytics){
   '<div class="frt-exec-trend-legend"><span><i class="is-requested"></i>Requested</span><span><i class="is-spent"></i>Spent</span></div>'+
   analytics.monthlyTrend.map(item=>'<div class="frt-exec-month-row"><span class="frt-exec-month-label">'+
    monthLabel(item.month)+'</span><div class="frt-exec-month-series">'+
-   '<div><small>Requested</small><i class="is-requested" style="width:'+chartPercent(amountCents(item.requestedAmount),maximum)+'%"></i><b>'+
-   formatAmount(item.requestedAmount)+'</b></div><div><small>Spent</small><i class="is-spent" style="width:'+
-   chartPercent(amountCents(item.spentAmount),maximum)+'%"></i><b>'+formatAmount(item.spentAmount)+'</b></div>'+
+   '<div><small>Requested</small><progress class="is-requested" max="100" value="'+chartPercent(amountCents(item.requestedAmount),maximum)+'" aria-label="Requested"></progress><b>'+
+   formatAmount(item.requestedAmount)+'</b></div><div><small>Spent</small><progress class="is-spent" max="100" value="'+chartPercent(amountCents(item.spentAmount),maximum)+'" aria-label="Spent"></progress><b>'+formatAmount(item.spentAmount)+'</b></div>'+
    '</div></div>').join('')+'</div>';
 }
 
@@ -126,6 +124,7 @@ function renderFRTOpexAnalytics(result){
  return '<section class="frt-exec-dashboard" aria-label="OPEX Analytics for '+escape(result.companyCode)+'">'+
   '<header class="frt-exec-heading"><div><span class="frt-exec-eyebrow">'+escape(result.companyCode)+' / OPERATING EXPENDITURE</span>'+
   '<h2>OPEX Analytics</h2><p>Requested expense categories and monthly requested-versus-spent performance.</p></div></header>'+
+  (analytics?'<div class="frt-exec-kpis"><article class="frt-exec-kpi frt-exec-violet"><div><span>Total Requested</span><strong>'+formatAmount(analytics.requestedTotal)+'</strong><small>Non-archived company requests</small></div></article><article class="frt-exec-kpi frt-exec-teal"><div><span>Total Spent</span><strong>'+formatAmount(analytics.spentTotal)+'</strong><small>Submitted liquidation snapshots</small></div></article></div>':'')+
   '<div class="frt-exec-grid">'+
    '<section class="frt-exec-panel"><header><div><h3>Top 5 Expense Categories</h3><p>Ranked by requested line-item totals</p></div></header>'+
     renderCategoryBreakdown(analytics)+'</section>'+

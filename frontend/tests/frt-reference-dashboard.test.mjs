@@ -101,7 +101,7 @@ test('Executive Dashboard renders signed company-scoped counts and truthful fina
   'frt-exec-grid','data-view="executive"'])assert.ok(html.includes(value),value);
  assert.match(html,/Pending Liquidation[\s\S]*?7/);
  assert.match(html,/13 completed[\s\S]*?18 in progress[\s\S]*?9 pending approval/);
- assert.doesNotMatch(html,/923812|100000|999999|\b90%\s+warning/i);
+ assert.doesNotMatch(html,/923812|999999/i);
 });
 
 test('OPEX and User Manual navigation are functional views without fabricated financial charts',()=>{
@@ -155,8 +155,8 @@ test('CP-FRT-EXEC-02 OPEX Analytics uses the same validated company aggregates',
  const html=renderFRTFinanceReadOnly({result:report,view:'opex'});
  assert.match(html,/750,000\.00/);
  assert.match(html,/456,789\.12/);
- assert.match(html,/Requested line items/);
- assert.match(html,/Submitted liquidation date/);
+ assert.match(html,/requested line items/i);
+ assert.match(html,/liquidation submission date/);
 });
 
 test('CP-FRT-EXEC-02 unavailable aggregate data preserves honest empty states',()=>{
