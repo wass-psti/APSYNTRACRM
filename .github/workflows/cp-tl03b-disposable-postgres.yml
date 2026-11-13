@@ -40,6 +40,7 @@ on:
       - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
       - 'supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql'
       - 'sql/tests/cp-tl08e02-retry-safe-updates-disposable.sql'
+      - 'sql/tests/cp-tl08h-virtual-review-acceptance.sql'
 
 permissions:
   contents: read
@@ -188,3 +189,17 @@ jobs:
         env:
           PGDATABASE: tradelink_retry_disposable
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl08e02-retry-safe-updates-disposable.sql
+      - name: Create isolated CP-TL-08H dual-review database
+        run: createdb --maintenance-db=postgres --username=postgres tradelink_review_disposable
+      - name: Install signed dual-review migration in isolated PostgreSQL
+        env:
+          PGDATABASE: tradelink_review_disposable
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tl03-disposable-setup.sql \
+            -f sql/cp-tl03-staged-domain.sql \
+            -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql
+      - name: Verify CP-TL-08H independent reviewers, approval, retry and denial
+        env:
+          PGDATABASE: tradelink_review_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl08h-virtual-review-acceptance.sql
