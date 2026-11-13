@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {UserRoleManagementClient,renderUserRoleManagement} from '../user-role-management.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from '../workspace-relation-context.js';
 
-const migration=readFileSync('supabase/migrations/20261113110000_main_workspace_owner_crm_admin_20261113.sql','utf8');
+const migration=readFileSync('supabase/migrations/20261113031952_main_workspace_owner_crm_admin_20261113.sql','utf8');
 const effectiveRoleSource=readFileSync('sql/cp-frt-sec06-crm-platform-role-cap.sql','utf8');
 const adminMigration=readFileSync('supabase/migrations/20261112121235_cp_urm04b_crm_admin_capability_parity_20261112.sql','utf8');
 const workspaceUi=readFileSync('frontend/workspace-ui.js','utf8');
