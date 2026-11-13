@@ -184,6 +184,18 @@ function validateObligation(payload,companies){
     (payload.kind==='LOAN'&&!payload.dueOn))
   throw new Error('Complete the intercompany details with a valid amount, date, and two different companies.');
 }
+async function readBackSignedICSnapshot({auth,api,workspaceId,scope}){
+ // The receipt acknowledges a write, not its persistence through a separate read.
+ // A failed read-back is ambiguous: never tell the operator to resubmit the write.
+ let raw;
+ try{raw=await api.rpc('frt_ic_snapshot',{p_workspace_id:workspaceId});}
+ catch{throw new Error('The financial write was acknowledged, but persistence could not be verified. Refresh the ledger before attempting another entry.');}
+ await verifyScopeUnchanged({auth,api,workspaceId,userId:scope.userId});
+ const projected=projectFRTICSnapshot(raw,workspaceId,scope.companies);
+ if(!projected)
+  throw new Error('The financial write was acknowledged, but the ledger read-back was invalid. Refresh and inspect the original reference before retrying.');
+ return projected;
+}
 export async function createFRTICObligation({auth,api,workspaceId,payload}={}){
  const scope=await verifySignedFinanceScope({auth,api,workspaceId,write:true});
  validateObligation(payload,scope.companies);
@@ -195,7 +207,13 @@ export async function createFRTICObligation({auth,api,workspaceId,payload}={}){
  if(receipt?.ok!==true||!uuid.test(receipt.id||'')||
     receipt.reference!==payload.reference.trim())
   throw new Error('The server did not return a valid intercompany creation receipt.');
- await verifyScopeUnchanged({auth,api,workspaceId,userId:scope.userId});
+ const readback=await readBackSignedICSnapshot({auth,api,workspaceId,scope});
+ const saved=readback.obligations.find(row=>row.id===receipt.id&&
+  row.reference===payload.reference.trim()&&row.kind===payload.kind&&
+  row.creditorCode===payload.creditorCode&&row.debtorCode===payload.debtorCode);
+ if(!saved||cents(saved.principalAmount)!==cents(payload.amount)||
+    saved.issuedOn!==payload.issuedOn||saved.dueOn!==(payload.dueOn||null))
+  throw new Error('The financial entry was acknowledged, but its saved record could not be confirmed. Refresh and search the reference before retrying.');
  return receipt;
 }
 export async function recordFRTICSettlement({auth,api,workspaceId,obligationId,payload}={}){
@@ -212,6 +230,9 @@ export async function recordFRTICSettlement({auth,api,workspaceId,obligationId,p
  if(receipt?.ok!==true||!uuid.test(receipt.id||'')||
     receipt.obligation_id!==obligationId||!validMoney(receipt.remaining_amount))
   throw new Error('The server did not return a valid settlement receipt.');
- await verifyScopeUnchanged({auth,api,workspaceId,userId:scope.userId});
+ const readback=await readBackSignedICSnapshot({auth,api,workspaceId,scope});
+ const saved=readback.obligations.find(row=>row.id===obligationId);
+ if(!saved||cents(saved.outstandingAmount)!==cents(receipt.remaining_amount))
+  throw new Error('The settlement was acknowledged, but its remaining balance could not be confirmed. Refresh the ledger and inspect settlement history before retrying.');
  return receipt;
 }
