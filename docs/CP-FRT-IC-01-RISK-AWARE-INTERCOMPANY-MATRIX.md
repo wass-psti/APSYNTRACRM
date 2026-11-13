@@ -126,4 +126,14 @@ These require their own source contracts and workflow decisions. The present imp
 
 ## Release state
 
-Implementation and disposable acceptance are complete. Production migration activation, GitHub merge/deployment, and live signed-user create/settlement acceptance remain pending until the release sequence is completed.
+Implementation, disposable acceptance, GitHub merge, production schema activation, and signed production read acceptance are **VERIFIED** as of November 13, 2026.
+
+- Release merge: PR #335, merge commit `b51113bfbcbf661b5b9bff4b8f1e399c0b228d90`; follow-up CI/RPC fixes: PR #337 (`dbe095d`) and PR #338 (`858ea7d`).
+- Production Supabase project: existing WatchdogWorkspace project `jtlusodorfnyzgyuewkz`.
+- Applied migration: `20261113060749` (`cp_frt_ic_01_intercompany_ledger`).
+- Production verification: two RLS-enabled ledger tables; three security-invoker public RPCs; three private security-definer implementations; authenticated RPC execution enabled; anonymous RPC execution and direct ledger-table access denied.
+- Live signed CRM finance browser: all three real FRT companies visible; reciprocal receivable/payable matrices, maturity analytics, and source-led entry form rendered; snapshot was reloaded after a hard refresh.
+- Data impact at activation: 0 obligations, 0 settlements, 0 IC audit events; existing FRT requests and liquidations unchanged. Source-backed financial entries were not fabricated.
+- Database Advisor shows `rls_enabled_no_policy` as informational for both RPC-only ledger tables; no direct table grants are provided, so their RLS posture intentionally denies direct client access.
+
+**PENDING:** Genuine production persistence acceptance requires an actual authorized, source-document-backed obligation or settlement. The entry dialog was opened and cancelled without writing. No production financial test fixtures were created. Once a genuine finance record exists, verify saved balance, refresh/reopen, audit event, settlement and both matrix sides. This is the narrow follow-on acceptance gate; do not reinterpret an empty live ledger as proof of financial write persistence.
