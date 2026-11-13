@@ -11,7 +11,7 @@ test('startup phases describe real work without invented progress or access succ
  assert.equal(initializationPhaseLabel('workspace'),'Opening authorized workspace…');
  assert.equal(initializationPhaseLabel('fake'),'Preparing frontend…');
  const app=readFileSync('frontend/app.js','utf8');
- assert.match(app,/if\(await auth\.restore\(\)\)/);
+ assert.match(app,/if\(await startupVerifiedRead\(async\(\)=>await auth\.restore\(\)\)\)/);
  assert.match(app,/setInitializationPhase\('authentication'\)/);
  assert.match(app,/setInitializationPhase\('authorization'\)/);
  assert.match(app,/await startupVerifiedRead\(async\(\)=>await refreshWorkspace\(\),\{/);
