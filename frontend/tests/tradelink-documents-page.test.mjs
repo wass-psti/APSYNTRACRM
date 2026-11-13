@@ -133,9 +133,9 @@ test('All Documents distinguishes an authorized empty result from pending, faile
  });
  const base=initialTradeLinkDraftView();
  const pending=renderState(base);
- assert.match(pending,/The signed document list has not been loaded/);
+ assert.match(pending,/<p class="muted" role="status" aria-live="polite">The signed document list has not been loaded/);
  const loading=renderState({...base,busy:true});
- assert.match(loading,/Loading the signed TradeLink document list/);
+ assert.match(loading,/<p class="muted" role="status" aria-live="polite">Loading the signed TradeLink document list/);
  const refreshingEmpty=renderState({...base,status:'AUTHORIZED_READ',rows:[],busy:true});
  assert.match(refreshingEmpty,/Loading the signed TradeLink document list/);
  assert.doesNotMatch(refreshingEmpty,/No documents are currently assigned/);
