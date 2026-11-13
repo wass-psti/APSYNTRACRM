@@ -25,6 +25,9 @@ export class BoardCardLifecycleClient{
  constructor(api,{enabled=BOARD_CARD_LIFECYCLE_ENABLED}={}){
   this.api=api;
   this.enabled=enabled;
+  // Prevent overlapping writes for one board within this client instance.
+  // Rejections are not cached; the user may refresh the revision and retry.
+  this.inFlightBoardIds=new Set();
  }
  async mutate(board,action,{name=null,description=null,confirmName=null}={}){
   if(this.enabled!==true)denied('Board lifecycle management is not activated.');
@@ -57,17 +60,24 @@ export class BoardCardLifecycleClient{
    p_action:action,p_name:action==='edit'?name:null,
    p_description:action==='edit'?description:null,
    p_confirm_name:action==='trash'?confirmName:null};
-  const receipt=await this.api.rpc('wm_board_card_mutate',args);
-  const expected=action==='trash'?'trashed':action==='restore'?'active':board.status;
-  if(!receipt||receipt.boardId!==board.id||receipt.action!==action||
-    receipt.status!==expected||!validTime(receipt.updatedAt))
-   denied('Board update receipt failed signed contract validation.');
-  const afterward=await this.api.context();
-  if(afterward.user_id!==context.user_id||
-   afterward.workspace_id!==context.workspace_id||
-   afterward.profile?.status!=='active')
-   denied('Signed workspace changed during board mutation. Refresh to reconcile.');
-  return receipt;
+  if(this.inFlightBoardIds.has(board.id))
+   throw new ApiError('Board update already in progress. Wait for its result before retrying.',409);
+  this.inFlightBoardIds.add(board.id);
+  try{
+   const receipt=await this.api.rpc('wm_board_card_mutate',args);
+   const expected=action==='trash'?'trashed':action==='restore'?'active':board.status;
+   if(!receipt||receipt.boardId!==board.id||receipt.action!==action||
+     receipt.status!==expected||!validTime(receipt.updatedAt))
+    denied('Board update receipt failed signed contract validation.');
+   const afterward=await this.api.context();
+   if(afterward.user_id!==context.user_id||
+    afterward.workspace_id!==context.workspace_id||
+    afterward.profile?.status!=='active')
+    denied('Signed workspace changed during board mutation. Refresh to reconcile.');
+   return receipt;
+  }finally{
+   this.inFlightBoardIds.delete(board.id);
+  }
  }
  edit(board,{name,description}){return this.mutate(board,'edit',{name,description});}
  trash(board,confirmName){return this.mutate(board,'trash',{confirmName});}
