@@ -142,6 +142,7 @@ import {runFRTCI07SignedRoleProbe,sanitizeFRTCI07Report} from './frt-sec10-ci07-
 import {runSEC14SignedRead,sanitizeSEC14SignedRead} from './frt-sec14-signed-acceptance.js';
 import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-signed-denials.js';
 import {loadFRTFinanceReadOnly} from './frt-finance-readonly.js';
+import {createFRTICObligation,recordFRTICSettlement} from './frt-intercompany-client.js';
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {createSignedFRTRequest,updateSignedFRTFiling} from './frt-filing-workflow.js';
 import {renderFRTRequestWizard,enhanceFRTRequestWizard,collectFRTWizardRequest} from './frt-request-wizard.js';
@@ -3264,7 +3265,7 @@ async function loadFRTFinance(companyCode=null,seq=routeSerial){
  const workspace=state.context?.workspace_id;
  state.frtFinanceBusy=true;state.frtFinance=null;state.frtFinanceDetail=null;state.frtFinanceDetailId=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailRevision++;render();
  try{
-  const result=await loadFRTFinanceReadOnly({auth,api:db,companyCode});
+  const result=await loadFRTFinanceReadOnly({auth,api:db,companyCode,includeIntercompany:state.frtFinanceView==='opex'});
   if(seq===routeSerial&&auth.isSignedIn&&state.context?.user_id===identity&&
      state.context?.workspace_id===workspace)state.frtFinance=result;
  }finally{if(seq===routeSerial){state.frtFinanceBusy=false;render();}}
@@ -7141,7 +7142,10 @@ async function action(name,button){
    state.frtFinanceView=next;
    state.frtFinanceDetailRevision++;state.frtFinanceDetail=null;
    state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;
-   render();break;
+   if(next==='opex'&&state.frtFinance?.icStatus!=='PASS')
+    await loadFRTFinance(state.frtFinance?.companyCode||null);
+   else render();
+   break;
  }
  case 'frt-finance-refresh':{
    if(state.frtFinanceBusy||state.tab!=='finance'||!auth.isSignedIn)return;
@@ -7153,6 +7157,88 @@ async function action(name,button){
    const code=String(button?.dataset?.code||'');
    if(!state.frtFinance?.companies?.some(c=>c.code===code))return;
    await loadFRTFinance(code);
+   break;
+ }
+
+ case 'frt-ic-new-obligation':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
+      state.frtFinance?.status!=='PASS'||
+      !['GENERAL_MANAGER','FINANCE_MANAGER','FINANCE_APPROVER'].includes(state.frtFinance.role)||
+      state.frtFinance?.icStatus!=='PASS')return;
+   const companies=state.frtFinance.companies||[];
+   if(companies.length<2)return;
+   const workspaceId=state.context?.workspace_id,companyCode=state.frtFinance.companyCode,
+    role=state.frtFinance.role,boardId=state.boardId,actor=auth.userId,seq=routeSerial,
+    snapshot=state.frtFinance.icSnapshot;
+   const now=new Date(),today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),
+    String(now.getDate()).padStart(2,'0')].join('-');
+   const companyOptions=companies.map(c=>'<option value="'+e(c.code)+'">'+
+    e(c.code+' — '+c.name)+'</option>').join('');
+   const debtorOptions=companies.map((c,index)=>'<option value="'+e(c.code)+'"'+
+    (index===1?' selected':'')+'>'+e(c.code+' — '+c.name)+'</option>').join('');
+   const body='<p class="note">Record an existing intercompany receivable or loan from its source document. '+
+    'This creates a ledger entry only; it does not transfer funds or certify payment.</p>'+
+    '<div class="field"><label for="frt-ic-kind">Entry type</label><select id="frt-ic-kind" name="kind" required>'+
+    '<option value="RECEIVABLE">Intercompany receivable</option><option value="LOAN">Intercompany loan</option></select></div>'+
+    '<div class="field"><label for="frt-ic-reference">Reference</label><input id="frt-ic-reference" name="reference" maxlength="80" required placeholder="Source document reference"></div>'+
+    '<div class="field"><label for="frt-ic-creditor">Creditor / Lender</label><select id="frt-ic-creditor" name="creditorCode" required>'+companyOptions+'</select></div>'+
+    '<div class="field"><label for="frt-ic-debtor">Debtor / Borrower</label><select id="frt-ic-debtor" name="debtorCode" required>'+debtorOptions+'</select></div>'+
+    '<div class="field"><label for="frt-ic-amount">Principal amount (PHP)</label><input id="frt-ic-amount" name="amount" type="number" min="0.01" step="0.01" required></div>'+
+    '<div class="field"><label for="frt-ic-issued">Issue date</label><input id="frt-ic-issued" name="issuedOn" type="date" value="'+today+'" max="'+today+'" required></div>'+
+    '<div class="field"><label for="frt-ic-due">Due / maturity date</label><input id="frt-ic-due" name="dueOn" type="date"></div>'+
+    '<div class="field"><label for="frt-ic-description">Description (optional)</label><textarea id="frt-ic-description" name="description" maxlength="500" rows="2"></textarea></div>'+
+    '<p class="muted">Loan entries require a maturity date. Receivables may have no due date. The ledger automatically presents the same outstanding amount as a creditor receivable and debtor payable.</p>';
+   openModal('New Intercompany Entry',body,async form=>{
+    if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+       auth.userId!==actor||state.context?.workspace_id!==workspaceId||
+       state.frtFinance?.companyCode!==companyCode||state.frtFinance?.role!==role||
+       state.frtFinance?.icSnapshot!==snapshot)
+     throw new ApiError('The finance view or signed session changed. Reopen the entry form.',409);
+    const payload={kind:String(form.get('kind')||''),reference:String(form.get('reference')||''),
+     creditorCode:String(form.get('creditorCode')||''),debtorCode:String(form.get('debtorCode')||''),
+     amount:String(form.get('amount')||''),issuedOn:String(form.get('issuedOn')||''),
+     dueOn:String(form.get('dueOn')||''),description:String(form.get('description')||'')};
+    await createFRTICObligation({auth,api:db,workspaceId,payload});
+    await loadFRTFinance(companyCode);
+   },{submitLabel:'Save intercompany entry',
+      successMessage:'Intercompany obligation saved and dashboard refreshed.'});
+   break;
+ }
+ case 'frt-ic-settle':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
+      state.frtFinance?.status!=='PASS'||
+      !['GENERAL_MANAGER','FINANCE_MANAGER','FINANCE_APPROVER'].includes(state.frtFinance.role)||
+      state.frtFinance?.icStatus!=='PASS')return;
+   const obligationId=String(button?.dataset?.obligationId||'');
+   const snapshot=state.frtFinance.icSnapshot;
+   const obligation=snapshot?.obligations?.find(row=>row.id===obligationId);
+   if(!obligation||!/^\d+(?:\.\d{1,2})?$/.test(obligation.outstandingAmount)||
+      Number(obligation.outstandingAmount)<=0)return;
+   const workspaceId=state.context?.workspace_id,companyCode=state.frtFinance.companyCode,
+    role=state.frtFinance.role,boardId=state.boardId,actor=auth.userId,seq=routeSerial;
+   const now=new Date(),today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),
+    String(now.getDate()).padStart(2,'0')].join('-');
+   const body='<p class="note">Record a payment already made against <strong>'+e(obligation.reference)+
+    '</strong> ('+e(obligation.creditorCode)+' receivable owed by '+e(obligation.debtorCode)+'). '+
+    'Outstanding balance: <strong>₱'+e(obligation.outstandingAmount)+'</strong>.</p>'+
+    input('Settlement amount (PHP)','amount',obligation.outstandingAmount,'number')+
+    input('Settlement date','settledOn',today,'date')+
+    input('Settlement reference','reference','','text')+
+    '<div class="field"><label for="frt-ic-settlement-notes">Notes (optional)</label><textarea id="frt-ic-settlement-notes" name="notes" maxlength="500" rows="2"></textarea></div>'+
+    '<p class="muted">The server verifies the remaining balance and prevents over-settlement. This records settlement evidence; it does not initiate a bank transfer.</p>';
+   openModal('Record Intercompany Settlement',body,async form=>{
+    if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+       auth.userId!==actor||state.context?.workspace_id!==workspaceId||
+       state.frtFinance?.companyCode!==companyCode||state.frtFinance?.role!==role||
+       state.frtFinance?.icSnapshot!==snapshot||
+       !state.frtFinance.icSnapshot.obligations.some(row=>row.id===obligationId))
+     throw new ApiError('The finance view or signed session changed. Reopen settlement entry.',409);
+    const payload={amount:String(form.get('amount')||''),settledOn:String(form.get('settledOn')||''),
+     reference:String(form.get('reference')||''),notes:String(form.get('notes')||'')};
+    await recordFRTICSettlement({auth,api:db,workspaceId,obligationId,payload});
+    await loadFRTFinance(companyCode);
+   },{submitLabel:'Record settlement',
+      successMessage:'Intercompany settlement saved and both matrix sides refreshed.'});
    break;
  }
  case 'security-sec14-readonly':{

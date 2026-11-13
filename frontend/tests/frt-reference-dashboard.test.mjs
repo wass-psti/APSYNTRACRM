@@ -185,7 +185,7 @@ test('CP-FRT-OPEX-REF-01 renders reference-led KPI, trend, category, department,
  for(const label of ['FINANCIAL COMMAND CENTER','Total Requested','Submitted Liquidation',
   'Budget Used','Pending Liquidations','Requested vs. Liquidated Trend',
   'Category Breakdown','Department Performance Matrix','Burn Rate Analysis',
-  'Risk-Aware IC Matrix','Not activated','Intercompany ledger not connected',
+  'Risk-Aware IC Matrix','Intercompany ledger unavailable',
   'View exact monthly amounts']){
   assert.ok(html.includes(label),label);
  }

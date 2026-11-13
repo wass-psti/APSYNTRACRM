@@ -66,6 +66,23 @@ test('authorized FRT board integration reads only signed domain RPCs and removes
   dateNeeded:'2026-11-02',filingStatus:'NOT_FILED'
  });
 });
+test('intercompany ledger snapshot is loaded only when the OPEX view requests it',async()=>{
+ const f=fixture();
+ const original=f.api.rpc.bind(f.api);
+ f.api.rpc=async(name,args)=>{
+  if(name==='frt_ic_snapshot'){f.calls.push({name,args});return {};}
+  return original(name,args);
+ };
+ const normal=await loadFRTFinanceReadOnly(f);
+ assert.equal(normal.status,'PASS');
+ assert.equal(normal.icStatus,'NOT_REQUESTED');
+ assert.ok(!f.calls.some(x=>typeof x==='object'&&x.name==='frt_ic_snapshot'));
+ const opex=await loadFRTFinanceReadOnly({...f,includeIntercompany:true});
+ assert.equal(opex.status,'PASS');
+ assert.equal(opex.icStatus,'INVALID_CONTRACT');
+ assert.ok(f.calls.some(x=>typeof x==='object'&&x.name==='frt_ic_snapshot'));
+});
+
 test('company selection must match a signed FRT bootstrap company before data calls',async()=>{
  const f=fixture();
  const response=await loadFRTFinanceReadOnly({...f,companyCode:'OTHER'});
@@ -136,7 +153,7 @@ test('blocked board UI never renders request content or permission-changing cont
 test('SEC12 is attached only to the existing named FRT board and keeps no finance data after logout',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/moduleByBoardName\(b\.name\)\?\.key==='frt'/);
- assert.match(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode\}\)/);
+ assert.match(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode,includeIntercompany/);
  assert.match(app,/state\.frtFinance=null;state\.frtFinanceBusy=false/);
  assert.match(app,/case 'frt-finance-company'/);
  assert.doesNotMatch(app,/service_role|secretKey|supabaseAdminClient/i);
@@ -182,7 +199,7 @@ test('SEC14 unavailable safe endpoint fails closed without a legacy fallback',as
 
 test('SEC14 production board entry always requests server-restricted reads',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- const matches=[...app.matchAll(/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode\}\)/g)];
+ const matches=[...app.matchAll(/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode,includeIntercompany/g)];
  assert.equal(matches.length,1);
  assert.doesNotMatch(readFileSync(new URL('../frt-finance-readonly.js',import.meta.url),'utf8'),
   /frt_list_requests|frt_dashboard|secureContracts/);

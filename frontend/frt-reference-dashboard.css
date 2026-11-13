@@ -284,3 +284,66 @@
 #app .frt-opex-ic .frt-exec-empty{min-height:120px;margin-top:12px;border:1px dashed #d7dfed;border-radius:9px}
 @media(max-width:760px){#app .frt-opex-dashboard .frt-exec-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:430px){#app .frt-opex-toolbar{padding:12px}#app .frt-opex-pending{align-items:flex-start}#app .frt-opex-line-chart{padding:8px}}
+
+/* CP-FRT-IC-01: bilateral intercompany ledger and maturity dashboard. */
+#app .frt-ic-dashboard{display:grid;gap:16px;padding:18px;border:1px solid #d8ccff;border-radius:16px;background:#f8faff}
+#app .frt-ic-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:0 0 14px;border-bottom:1px solid #e5defa}
+#app .frt-ic-heading h3{margin:0;font-size:19px;font-weight:750;color:#17233b}
+#app .frt-ic-heading p{margin:5px 0 0;color:#64748b;font-size:12px}
+#app .frt-ic-heading-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#app .frt-ic-balanced{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;background:#e2f8ec;color:#087443;font-size:11px;font-weight:750}
+#app .frt-ic-primary-action{border:1px solid #5145d8;border-radius:9px;background:#5145d8;color:#fff;padding:9px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+#app .frt-ic-primary-action:hover{background:#4035b7}
+#app .frt-ic-readonly-note{color:#64748b;font-size:11px}
+#app .frt-ic-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+#app .frt-ic-metric{display:grid;gap:6px;min-width:0;padding:13px;border:1px solid #dce4f0;border-radius:11px;background:#fff;box-shadow:0 1px 2px #0f172a0a}
+#app .frt-ic-metric>span{color:#66758e;font-size:10px;font-weight:750;letter-spacing:.04em;text-transform:uppercase}
+#app .frt-ic-metric>strong{color:#15243d;font-size:19px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#app .frt-ic-metric>small{color:#74829a;font-size:10px}
+#app .frt-ic-metric.is-risk>strong{color:#c24135}
+#app .frt-ic-entity-panel,#app .frt-ic-matrix-panel{min-width:0;overflow:hidden;border:1px solid #d9e1ee;border-radius:12px;background:#fff}
+#app .frt-ic-entity-panel>header,#app .frt-ic-matrix-panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #e4eaf2}
+#app .frt-ic-entity-panel h4,#app .frt-ic-matrix-panel h4{margin:0;color:#1b2942;font-size:13px;font-weight:750}
+#app .frt-ic-entity-panel header p,#app .frt-ic-matrix-panel header p{margin:4px 0 0;color:#71809a;font-size:10px}
+#app .frt-ic-matrix-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#app .frt-ic-table-scroll{width:100%;overflow:auto;overscroll-behavior-inline:contain}
+#app .frt-ic-data-table,#app .frt-ic-matrix-table{width:100%;border-collapse:collapse;min-width:560px;font-size:11px}
+#app .frt-ic-wide-table{min-width:900px}
+#app .frt-ic-data-table th,#app .frt-ic-data-table td,#app .frt-ic-matrix-table th,#app .frt-ic-matrix-table td{padding:10px 11px;border-bottom:1px solid #e8edf4;text-align:left;white-space:nowrap}
+#app .frt-ic-data-table thead th,#app .frt-ic-matrix-table thead th{background:#f0f3f8;color:#56637a;font-size:10px;font-weight:750}
+#app .frt-ic-data-table tbody th,#app .frt-ic-matrix-table tbody th{color:#26344b;font-weight:750}
+#app .frt-ic-data-table tbody tr:last-child td,#app .frt-ic-data-table tbody tr:last-child th,#app .frt-ic-matrix-table tbody tr:last-child td,#app .frt-ic-matrix-table tbody tr:last-child th{border-bottom:0}
+#app .frt-ic-data-table td{font-variant-numeric:tabular-nums}
+#app .frt-ic-data-table td small{display:block;margin-top:3px;color:#73819a;font-size:9px}
+#app .frt-ic-money{text-align:right!important;color:#174c9b;font-weight:750;font-variant-numeric:tabular-nums}
+#app .frt-ic-net{font-weight:750;font-variant-numeric:tabular-nums}
+#app .frt-ic-net.is-positive{color:#087443}
+#app .frt-ic-net.is-negative{color:#c24135}
+#app .frt-ic-matrix-table{min-width:420px}
+#app .frt-ic-matrix-table th:first-child{min-width:150px}
+#app .frt-ic-matrix-table td{text-align:right;font-variant-numeric:tabular-nums}
+#app .frt-ic-matrix-table .is-diagonal{background:#f4f6fa;color:#9aa5b5;text-align:center}
+#app .frt-ic-empty-cell{text-align:center!important;color:#77849a;padding:22px!important;white-space:normal!important}
+#app .frt-ic-risk{display:inline-flex;padding:4px 7px;border-radius:999px;background:#edf1f6;color:#56637a;font-size:9px;font-weight:750;text-transform:uppercase}
+#app .frt-ic-risk.is-overdue{background:#fee8e7;color:#b42318}
+#app .frt-ic-risk.is-due_soon{background:#fff2d7;color:#9a5b00}
+#app .frt-ic-risk.is-current{background:#e5f5ed;color:#087443}
+#app .frt-ic-risk.is-settled{background:#edf1f6;color:#667085}
+#app .frt-ic-row-action{border:1px solid #c8d6ec;border-radius:7px;background:#fff;color:#174c9b;padding:6px 8px;font:inherit;font-size:10px;font-weight:700;cursor:pointer}
+#app .frt-ic-row-action:hover{background:#edf4ff}
+#app .frt-ic-disclosure{padding:12px 14px;border:1px solid #e4eaf2;border-radius:10px;background:#f1f5fb;color:#58667d;font-size:10px;line-height:1.55}
+#app .frt-ic-disclosure strong{color:#26344b}
+#app .frt-ic-disclosure p{margin:4px 0 0}
+@media(max-width:1100px){
+ #app .frt-ic-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:760px){
+ #app .frt-ic-dashboard{padding:12px}
+ #app .frt-ic-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #app .frt-ic-matrix-grid{grid-template-columns:minmax(0,1fr)}
+ #app .frt-ic-heading-actions{width:100%;justify-content:space-between}
+ #app .frt-ic-metric>strong{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .frt-ic-primary-action,#app .frt-ic-row-action{transition:none!important}
+}
