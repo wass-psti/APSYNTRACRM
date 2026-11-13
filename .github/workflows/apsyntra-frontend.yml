@@ -47,6 +47,8 @@ on:
       - "sql/tests/cp-frt-sec11-*.sql"
       - "sql/cp-frt-sec14-*.sql"
       - "sql/tests/cp-frt-sec14-*.sql"
+      - "supabase/migrations/20261113051334_cp_frt_ic_01_intercompany_ledger.sql"
+      - "sql/tests/cp-frt-ic-01-disposable-acceptance.sql"
       - "sql/cp-tt-ot01-*.sql"
       - "sql/tests/cp-tt-ot02-*.sql"
       - "sql/cp-tt-monitor01-*.sql"
@@ -163,7 +165,9 @@ jobs:
             -f sql/tests/cp-frt-sec14-auto-foreign-ci-bootstrap.sql \
             -f sql/cp-frt-sec14-auto-foreign-denials.sql \
             -f sql/tests/cp-frt-sec14-auto-foreign-disposable.sql \
-            -f sql/tests/cp-frt-sec14-auto-foreign-grant-drift.sql
+            -f sql/tests/cp-frt-sec14-auto-foreign-grant-drift.sql \\
+            -f supabase/migrations/20261113051334_cp_frt_ic_01_intercompany_ledger.sql \\
+            -f sql/tests/cp-frt-ic-01-disposable-acceptance.sql
       - name: Verify Main Workspace owner Admin scope and workspace email isolation
         env:
           PGPASSWORD: disposable_only

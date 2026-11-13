@@ -8,6 +8,17 @@ const formatAmount=value=>{
  const [whole,fraction='']=value.split('.');
  return whole.replace(/\B(?=(\d{3})+(?!\d))/g,',')+'.'+fraction.padEnd(2,'0');
 };
+const signedAmountCents=value=>{
+ if(typeof value!=='string'||! /^-?\d{1,30}(?:\.\d{1,2})?$/.test(value))return 0n;
+ const negative=value.startsWith('-'),plain=negative?value.slice(1):value;
+ const cents=amountCents(plain);
+ return negative?-cents:cents;
+};
+const formatSignedAmount=value=>{
+ const cents=signedAmountCents(value),absolute=cents<0n?-cents:cents;
+ const decimal=(absolute/100n).toString()+'.'+(absolute%100n).toString().padStart(2,'0');
+ return (cents<0n?'-':'')+'₱'+formatAmount(decimal);
+};
 const amountCents=value=>{
  if(typeof value!=='string'||!/^\d{1,30}(?:\.\d{1,2})?$/.test(value))return 0n;
  const [whole,fraction='']=value.split('.');
@@ -156,6 +167,94 @@ function renderFRTExecutiveDashboard(result){
   '</div><p class="frt-exec-disclosure">Requested totals use active, non-archived fund requests. Spent totals use the latest currently saved submitted liquidation record per request; resubmission replaces the prior snapshot. This is not a historical revision ledger or a verified bank-transfer total. Category totals use requested line items. Monthly requested values are grouped by request creation date; spent values by liquidation submission date. Budget utilization and the 90% warning remain unavailable until an authoritative company budget source exists.</p>'+
   '</section>';
 }
+
+function renderFRTICMatrixTable(title,description,matrix,companies,rowLabel){
+ const headers=companies.map(c=>'<th scope="col">'+escape(c.code)+'</th>').join('');
+ const rows=companies.map(row=>{
+  const cells=companies.map(column=>{
+   if(row.code===column.code)return '<td class="is-diagonal">—</td>';
+   const item=matrix.find(x=>x.rowCompanyCode===row.code&&x.columnCompanyCode===column.code);
+   return '<td class="frt-ic-money">'+(item?'₱'+formatAmount(item.amount):'₱0.00')+'</td>';
+  }).join('');
+  return '<tr><th scope="row">'+escape(row.code)+'</th>'+cells+'</tr>';
+ }).join('');
+ return '<section class="frt-ic-matrix-panel"><header><div><h4>'+escape(title)+
+  '</h4><p>'+escape(description)+'</p></div></header><div class="frt-ic-table-scroll"><table class="frt-ic-matrix-table">'+
+  '<thead><tr><th scope="col">'+escape(rowLabel)+'</th>'+headers+'</tr></thead><tbody>'+rows+
+  '</tbody></table></div></section>';
+}
+function renderFRTIntercompanyMatrix(result){
+ const snapshot=result.icSnapshot;
+ const canWrite=['GENERAL_MANAGER','FINANCE_MANAGER','FINANCE_APPROVER'].includes(result.role);
+ if(!snapshot){
+  const detail=result.icStatus==='INVALID_CONTRACT'
+   ?'The signed intercompany ledger response did not match the expected contract. No balances are displayed.'
+   :'The intercompany ledger service is not available yet. Existing FRT workflows remain usable.';
+  return '<section class="frt-opex-ic frt-ic-dashboard"><header><div><h3>Risk-Aware IC Matrix</h3>'+
+   '<p>Bilateral intercompany receivables, payables and loan maturity</p></div><span>Unavailable</span></header>'+
+   renderOpexUnavailable('Intercompany ledger unavailable',detail)+'</section>';
+ }
+ const summary=snapshot.summary;
+ const metric=(label,value,note,tone='')=>'<article class="frt-ic-metric '+tone+'"><span>'+escape(label)+
+  '</span><strong>'+value+'</strong><small>'+escape(note)+'</small></article>';
+ const entityRows=snapshot.entities.map(row=>'<tr><th scope="row">'+escape(row.companyCode)+'</th>'+
+  '<td>₱'+formatAmount(row.receivables)+'</td><td>₱'+formatAmount(row.payables)+'</td>'+
+  '<td class="frt-ic-net '+(signedAmountCents(row.netPosition)>=0n?'is-positive':'is-negative')+'">'+
+  formatSignedAmount(row.netPosition)+'</td></tr>').join('');
+ const loanRows=snapshot.loans.length?snapshot.loans.map(row=>'<tr><td><strong>'+escape(row.lenderCode)+
+  '</strong></td><td>'+escape(row.borrowerCode)+'</td><td>₱'+formatAmount(row.originalAmount)+
+  '</td><td class="frt-ic-money">₱'+formatAmount(row.outstandingBalance)+'</td><td>'+escape(row.issueDate)+
+  '</td><td>'+count(row.daysOutstanding)+'</td><td>'+escape(row.maturityDate)+'</td><td><span class="frt-ic-risk is-'+
+  escape(row.riskStatus.toLowerCase())+'">'+escape(row.riskStatus.replaceAll('_',' '))+'</span></td></tr>').join(''):
+  '<tr><td colspan="8" class="frt-ic-empty-cell">No active intercompany loans.</td></tr>';
+ const obligationRows=snapshot.obligations.length?snapshot.obligations.map(row=>{
+  const settle=canWrite&&amountCents(row.outstandingAmount)>0n
+   ?'<button type="button" class="frt-ic-row-action" data-action="frt-ic-settle" data-obligation-id="'+
+    escape(row.id)+'" data-reference="'+escape(row.reference)+'">Record settlement</button>':'';
+  return '<tr><td><strong>'+escape(row.reference)+'</strong><small>'+escape(row.kind)+'</small></td>'+
+   '<td>'+escape(row.creditorCode)+'</td><td>'+escape(row.debtorCode)+'</td>'+
+   '<td>₱'+formatAmount(row.principalAmount)+'</td><td>₱'+formatAmount(row.settledAmount)+'</td>'+
+   '<td class="frt-ic-money">₱'+formatAmount(row.outstandingAmount)+'</td><td>'+escape(row.dueOn||'—')+'</td>'+
+   '<td><span class="frt-ic-risk is-'+escape(row.riskStatus.toLowerCase())+'">'+
+   escape(row.riskStatus.replaceAll('_',' '))+'</span></td><td>'+settle+'</td></tr>';
+ }).join(''):'<tr><td colspan="9" class="frt-ic-empty-cell">No intercompany obligations recorded. Add opening balances from verified source documents.</td></tr>';
+ const writeButton=canWrite?'<button type="button" class="frt-ic-primary-action" data-action="frt-ic-new-obligation">＋ New Intercompany Entry</button>':
+  '<span class="frt-ic-readonly-note">Read-only FRT access</span>';
+ return '<section class="frt-opex-ic frt-ic-dashboard" aria-label="Risk-Aware Intercompany Matrix">'+
+  '<header class="frt-ic-heading"><div><h3>Risk-Aware IC Matrix</h3>'+
+   '<p>Bilateral exposure monitor · '+snapshot.companies.map(c=>escape(c.code)).join(' · ')+
+   ' · As of '+escape(snapshot.asOfDate)+'</p></div><div class="frt-ic-heading-actions">'+
+   '<span class="frt-ic-balanced">✓ Internally balanced</span>'+writeButton+'</div></header>'+
+  '<div class="frt-ic-metrics">'+
+   metric('Total Receivables','₱'+formatAmount(summary.totalReceivables),'Outstanding creditor exposure')+
+   metric('Total Payables','₱'+formatAmount(summary.totalPayables),'Outstanding debtor obligations')+
+   metric('Net Intercompany Position','₱'+formatAmount(summary.netIntercompanyPosition),'Consolidated bilateral net')+
+   metric('Active Loans',count(summary.activeLoanCount),'₱'+formatAmount(summary.activeLoanBalance)+' outstanding')+
+   metric('Overdue Items',count(summary.overdueCount),'Past maturity date','is-risk')+
+   metric('High Exposure Pairs',count(summary.highExposurePairCount),'At or above ₱'+formatAmount(summary.exposureThreshold),'is-risk')+
+  '</div>'+
+  '<section class="frt-ic-entity-panel"><header><div><h4>Net Intercompany Position by Entity</h4>'+
+   '<p>Receivables less payables for each company</p></div></header><div class="frt-ic-table-scroll"><table class="frt-ic-data-table">'+
+   '<thead><tr><th>Entity</th><th>Total Receivables</th><th>Total Payables</th><th>Net Position</th></tr></thead><tbody>'+
+   entityRows+'</tbody></table></div></section>'+
+  '<div class="frt-ic-matrix-grid">'+
+   renderFRTICMatrixTable('Receivables Matrix (Lender Exposure)','Creditor company ↓ · Debtor company →',snapshot.receivablesMatrix,snapshot.companies,'Creditor ↓ / Debtor →')+
+   renderFRTICMatrixTable('Payables Matrix (Borrower Obligation)','Debtor company ↓ · Creditor company →',snapshot.payablesMatrix,snapshot.companies,'Debtor ↓ / Creditor →')+
+  '</div>'+
+  '<section class="frt-ic-entity-panel"><header><div><h4>Active Intercompany Loans</h4>'+
+   '<p>Outstanding principal and maturity risk</p></div></header><div class="frt-ic-table-scroll"><table class="frt-ic-data-table frt-ic-wide-table">'+
+   '<thead><tr><th>Lender</th><th>Borrower</th><th>Original Amount</th><th>Outstanding Balance</th><th>Issue Date</th><th>Days Outstanding</th><th>Maturity</th><th>Status</th></tr></thead><tbody>'+
+   loanRows+'</tbody></table></div></section>'+
+  '<section class="frt-ic-entity-panel"><header><div><h4>Intercompany Obligations &amp; Settlements</h4>'+
+   '<p>Latest '+snapshot.obligations.length+' ledger entries · record partial or full settlement against an outstanding balance</p></div></header>'+
+   '<div class="frt-ic-table-scroll"><table class="frt-ic-data-table frt-ic-wide-table">'+
+   '<thead><tr><th>Reference / Type</th><th>Creditor</th><th>Debtor</th><th>Principal</th><th>Settled</th><th>Outstanding</th><th>Due Date</th><th>Risk</th><th>Action</th></tr></thead><tbody>'+
+   obligationRows+'</tbody></table></div></section>'+
+  '<div class="frt-ic-disclosure"><strong>Ledger basis</strong><p>'+escape(snapshot.disclosure)+
+   ' Entries are recorded from source documents by an existing FRT finance role. Recording an obligation or settlement does not initiate a bank transfer, certify a payment, or confirm the counterparty’s books. High exposure threshold: ₱'+
+   formatAmount(summary.exposureThreshold)+'.</p></div></section>';
+}
+
 function renderFRTOpexAnalytics(result){
  const analytics=result.analytics;
  const summary=result.summary||{};
@@ -189,12 +288,7 @@ function renderFRTOpexAnalytics(result){
    '<p>Authorized company-scoped workflow count; private request details are not included in this aggregate.</p></div>'+
    '<strong aria-label="'+count(summary.pending_liquidation_count)+' pending liquidations">'+
    count(summary.pending_liquidation_count)+'</strong></section>'+
-  '<section class="frt-opex-ic"><header><div><h3>Risk-Aware IC Matrix</h3>'+
-   '<p>Future phase · bilateral intercompany receivables, payables and loan maturity</p></div>'+
-   '<span>Not activated</span></header>'+
-   renderOpexUnavailable('Intercompany ledger not connected',
-    'There is no validated intercompany receivables, payables, or loan maturity contract. No zero balances or reconciled status are asserted.')+
-  '</section>'+
+  renderFRTIntercompanyMatrix(result)+
   '<p class="frt-exec-disclosure">All figures are sourced from signed '+escape(result.companyCode)+
    ' aggregates. Requested means non-archived fund requests, not an approved budget. Submitted liquidation is the latest saved liquidation snapshot, not proof of a bank payment. Category totals represent requested line items, not actual categorized spend. Budget utilization, department allocations, individual liquidation aging, and intercompany exposure require separate authorized data contracts; none are inferred from screenshots.</p>'+
   '</section>';
