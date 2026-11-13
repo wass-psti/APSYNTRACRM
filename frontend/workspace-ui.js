@@ -544,7 +544,10 @@ function menuContent(catalog,options={}){
   '<header class="ws01-menu-heading"><strong>Workspaces</strong>'+
   '<button class="ws01-close" type="button" data-ws01-close aria-label="Close workspace selector">×</button></header>'+
   '<label class="ws01-search-label" for="ws01-menu-search">Find a workspace</label>'+
+  '<div class="ws01-menu-search-field">'+
+  '<svg class="ws01-menu-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>'+
   '<input id="ws01-menu-search" type="search" placeholder="Search by workspace name" autocomplete="off" maxlength="120"/>'+
+  '</div>'+
   '<p class="ws01-eyebrow">Authorized workspaces · '+visibleWorkspaces(catalog).length+'</p>'+
   '<div data-ws01-results>'+resultsMarkup(catalog,'all','',options)+'</div>'+
   '<div class="ws01-menu-actions" role="group" aria-label="Workspace actions"><button type="button" data-ws01-action="browse">Browse all workspaces</button>'+
