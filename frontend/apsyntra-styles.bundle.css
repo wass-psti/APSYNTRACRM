@@ -14734,6 +14734,10 @@
 .tl-reference-portal .tl-app-nav .tl-module-link:hover{
  color:#214fbd;background:#f4f7ff;
 }
+/* The legacy draft-shell rule hides module links; restore them in the split editor. */
+.tl-reference-portal[data-tl-section="drafts"][data-tl-can-manage="true"] .tl-app-nav .tl-module-link{
+ display:flex;
+}
 .tl-reference-portal .tl-app-nav .tl-module-link.active{
  color:#204bb2;background:#edf3ff;border-color:#dce7ff;
 }

@@ -117,7 +117,9 @@ test('split view is responsive, keyboard accessible, reduced-motion aware, and C
  assert.match(css,/grid-template-columns:minmax\(220px,260px\) minmax\(0,1fr\)/);
  assert.match(css,/\.tl-document-split-view/);
  assert.match(css,/grid-template-columns:minmax\(0,1\.15fr\) minmax\(340px,\.85fr\)/);
+ assert.match(css,/data-tl-section=\"drafts\"\]\[data-tl-can-manage=\"true\"\] \.tl-app-nav \.tl-module-link\{\s*display:flex/);
  assert.match(css,/\.tl-reference-portal \.tl-app-nav a:focus-visible/);
+ assert.match(fixture,/moduleNavVisible/);
  assert.match(fixture,/navBeforeMain/);
  assert.match(fixture,/tl-app-nav/);
  assert.doesNotMatch(fixture,/tl-reference-document-tabs/);
