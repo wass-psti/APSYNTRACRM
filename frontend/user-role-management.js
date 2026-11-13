@@ -20,7 +20,7 @@ export const MODULE_ROLE_OPTIONS=Object.freeze({
  'employee-eval':['admin','supervisor','employee'],
  'charter-navigator':['Admin','Supervisor','Employee','Viewer']
 });
-const delegatedModules=new Set(['time-tracker','fueltrack-plus','tradelink','fund-released-tracker','tool-traceability','material-request-hub']);
+const delegatedModules=new Set(['time-tracker','fueltrack-plus','tradelink','fund-released-tracker','tool-traceability','material-request-hub','toolbox-issues']);
 export class UserRoleManagementClient {
  constructor(api){this.api=api;}
  async snapshot(workspaceId){
@@ -59,7 +59,6 @@ export class UserRoleManagementClient {
     typeof enabled!=='boolean'||!['module','board'].includes(scope))throw Error('Invalid role change request');
   if(scope==='module'){
    if(!MODULE_ROLE_OPTIONS[resourceId]?.includes(role))throw Error('Unsupported application role');
-   if(resourceId==='toolbox-issues'&&enabled)throw Error('Toolbox source authorization must be reconciled before granting a central role');
   }else if(!UUID.test(resourceId||'')||!['viewer','editor'].includes(role))
     throw Error('Unsupported board role');
   const r=await this.api.rpc('apsyntra_role_manage_user_access',{
@@ -150,7 +149,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  '<div class="note security-note user-role-self">The signed-in administrator cannot assign or modify roles on their own account. Select another active workspace member.</div>':
  '<div class="note user-role-helper">Select an application or board below to update this user’s actual role. Changes require explicit confirmation.</div>')+
  (!otherAssignableMembers.length?'<div class="note security-note user-role-no-targets">There are no other eligible active members in this workspace. Self-assignment and protected administrator changes are not permitted. Add another member to this workspace before assigning application or board access.</div>':'')+
- (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Material Request Hub uses a separate workspace-scoped role record; board access is also workspace-scoped.</div>':'')+
+ (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Toolbox Issues and Material Request Hub use separate workspace-scoped role records; board access is also workspace-scoped.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
  const locked=!!u.protected||isSelf||busy;
@@ -174,17 +173,19 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const opt=MODULE_ROLE_OPTIONS[id]||[];
   const status=a?.enabled?'Active: '+a.role:a?'Disabled: '+a.role:'Unassigned';
   const note=delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
-  const editBlocked=locked||!opt.length||(globalModuleRoleBlocked&&id!=='material-request-hub')||
-   (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable)||
-   (id==='toolbox-issues'&&!a?.enabled);
+  const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues';
+  const editBlocked=locked||!opt.length||activeWorkspaceCount===null||
+   (globalModuleRoleBlocked&&!workspaceScopedModule)||
+   (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
   const editReason=busy?'Another role change is in progress.':
    u.protected?'Protected administrator accounts cannot be modified.':
    isSelf?'Self-assignment is not permitted.':
    !opt.length?'No supported role options are configured for this application.':
-   globalModuleRoleBlocked&&id!=='material-request-hub'?'This legacy application role is global and this member belongs to multiple workspaces.':
-   id==='material-request-hub'&&!data.workspaceScopedMrhAvailable?'Workspace-scoped Material Request Hub role management is not verified.':
-   id==='toolbox-issues'&&!a?.enabled?'An existing Toolbox Issues source membership is required before changing its role.':'';
-  const revokeBlocked=locked||(globalModuleRoleBlocked&&id!=='material-request-hub')||
+   activeWorkspaceCount===null?'The backend has not verified this account’s active workspace scope.':
+   globalModuleRoleBlocked&&!workspaceScopedModule?'This legacy application role is global and this member belongs to multiple workspaces.':
+   id==='material-request-hub'&&!data.workspaceScopedMrhAvailable?'Workspace-scoped Material Request Hub role management is not verified.':'';
+  const revokeBlocked=locked||activeWorkspaceCount===null||
+   (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
   html+='<tr><td><strong>'+esc(name)+'</strong></td><td>'+esc(status)+'</td><td>'+esc(note)+'</td><td>'+
    '<button class="secondary" aria-label="Assign or change '+esc(name)+' application role" data-action="user-role-edit-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+

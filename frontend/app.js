@@ -6576,7 +6576,7 @@ async function action(name,button){
      if(resourceId==='material-request-hub'&&
         state.userRoleData.workspaceScopedMrhAvailable!==true)
        throw new ApiError('Workspace-scoped Material Request Hub role management is not installed yet. No role was changed.',409);
-     if(resourceId!=='material-request-hub'&&workspaceCount>1)
+     if(!['material-request-hub','toolbox-issues'].includes(resourceId)&&workspaceCount>1)
        throw new ApiError('This application role is shared across the user’s active workspaces. It cannot be changed from a single-workspace screen.',409);
    }
    const record=scope==='module'?

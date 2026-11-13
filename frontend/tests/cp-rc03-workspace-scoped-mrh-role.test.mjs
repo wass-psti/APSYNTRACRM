@@ -50,13 +50,14 @@ test('snapshot reports verified workspace counts and authoritative MRH membershi
  assert.match(migration,/'status',mr\.status/);
 });
 
-test('UI fails closed for unknown global role scope and permits only verified scoped MRH actions',()=>{
+test('UI fails closed for unknown workspace scope and permits only verified scoped MRH and Toolbox actions',()=>{
  assert.match(client,/workspaceScopedMrhAvailable/);
  assert.match(client,/cp-rc03-workspace-scoped-mrh-v1/);
  assert.match(client,/activeWorkspaceCount/);
- assert.match(client,/globalModuleRoleBlocked&&id!=='material-request-hub'/);
+ assert.match(client,/activeWorkspaceCount===null/);
+ assert.match(client,/id==='material-request-hub'\|\|id==='toolbox-issues'/);
  assert.match(client,/id==='material-request-hub'&&!data\.workspaceScopedMrhAvailable/);
- assert.match(app,/workspaceCount>1/);
+ assert.match(app,/!\['material-request-hub','toolbox-issues'\]\.includes\(resourceId\)&&workspaceCount>1/);
  assert.match(app,/workspaceScopedMrhAvailable!==true/);
  assert.match(app,/cannot be changed from a single-workspace screen/);
 });
