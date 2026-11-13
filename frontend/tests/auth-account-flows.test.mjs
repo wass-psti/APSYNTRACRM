@@ -110,7 +110,7 @@ test('implicit recovery fragment is immediately scrubbed before verification or 
  assert.equal(replaced.includes('refresh_token'),false);
  assert.match(app,/captureAuthReturn\(location,history\)/);
  assert.ok(app.indexOf('captureAuthReturn(location,history)')<
-  app.indexOf('if(await auth.restore())'));
+  app.indexOf('if(await startupVerifiedRead(async()=>await auth.restore()))'));
  assert.match(app,/auth\.clear\(\)/);
 });
 test('token-hash recovery links and missing or malformed callbacks fail closed',()=>{
