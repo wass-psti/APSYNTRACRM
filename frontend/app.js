@@ -130,6 +130,7 @@ import {sampleBrowserFrames} from './performance-profile.js';
 import {createStartupCriticalPath} from './performance-critical-path.js';
 import {summarizeEntryWaterfall} from './performance-entry-waterfall.js';
 import {readWorkspaceStartup} from './workspace-startup-read.js';
+import {startupVerifiedRead,startupFailureDescription} from './startup-recovery-policy.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board-presentation.js';
 import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
@@ -3463,6 +3464,7 @@ async function submitRecoveryPassword(form){
 // confirms invalidation or the user explicitly signs out.
 let startupRecoveryActive=false;
 let startupBusy=false;
+let startupRecoveryStage='authentication';
 function renderBootstrapFailure(error){
  startupRecoveryActive=true;
  platformSync.stop();
@@ -3471,11 +3473,7 @@ function renderBootstrapFailure(error){
  state.board=null;
  state.roleVerified=false;
  const denied=error?.status===403;
- const description=denied?
-  'The signed account has no verified access to the requested workspace. '+
-  'Contact your administrator if your membership should be active.':
-  'The authentication or workspace service could not be verified. '+
-  'Check your network connection and retry; your existing session is preserved.';
+ const description=startupFailureDescription(error,startupRecoveryStage);
  root.innerHTML='<div class="access-denied" role="alert">'+
   '<div class="denied-panel">'+
    '<img class="brand-mark csp-u059" src="./frontend/apsyntra-logo.webp" alt="" width="37" height="37" decoding="async"/>'+
@@ -9029,6 +9027,7 @@ async function boot(){
  startupBusy=true;
  startupCriticalPath.begin();
  startupRecoveryActive=false;
+ startupRecoveryStage='authentication';
  window.__APSYNTRA_STARTUP?.begin();
  startInitialization();
  let outcome='RECOVERABLE_ERROR';
@@ -9068,11 +9067,16 @@ async function boot(){
    outcome='UNAUTHENTICATED';
    return;
   }
-  if(await auth.restore()){
+  if(await startupVerifiedRead(async()=>await auth.restore())){
    state.user=auth.session.user;
    startupCriticalPath.phase('workspace-authorization');
    setInitializationPhase('authorization');
-   await refreshWorkspace();
+   const startupUserId=auth.userId;
+   startupRecoveryStage='workspace';
+   await startupVerifiedRead(async()=>await refreshWorkspace(),{
+    canContinue:()=>auth.isSignedIn&&auth.userId===startupUserId
+   });
+   startupRecoveryStage='route';
    setInitializationPhase('workspace');
    startupCriticalPath.phase('authorized-route');
    await onRoute();
