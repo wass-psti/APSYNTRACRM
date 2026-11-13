@@ -181,6 +181,7 @@ import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-c
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
+import {planUserRoleBatch} from './user-role-batch.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
@@ -232,7 +233,7 @@ const userRoleManager=new UserRoleManagementClient(db);
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
 const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -1095,7 +1096,7 @@ function render(){
  }));
  else if(state.view==='security')shell(renderSecurityAcceptance({context:state.context,report:state.securityResult,busy:state.securityBusy,progress:state.securityProgress,writeResult:state.securityWriteResult,writeBusy:state.securityWriteBusy,frtResult:state.frtSecurityResult,frtBusy:state.frtSecurityBusy,ci07Result:state.ci07Result,ci07Busy:state.ci07Busy,sec14Result:state.sec14Result,sec14Busy:state.sec14Busy,sec14DenialResult:state.sec14DenialResult,sec14DenialBusy:state.sec14DenialBusy,sec07Result:state.sec07Result,sec07Busy:state.sec07Busy,sec09Result:state.sec09Result,sec09Busy:state.sec09Busy,sec10Result:state.sec10Result,sec10Busy:state.sec10Busy,sec10Boards:state.boards,sec10IsBootstrap:state.roleVerified===true,effectiveAccessResult:state.effectiveAccessResult,effectiveAccessBusy:state.effectiveAccessBusy,sec10BoardsError:state.securityBoardsError})+renderTradeLinkStageAAcceptance({busy:state.tl03ReadBusy,report:state.tl03ReadResult})+renderTradeLinkSessionRevocation({armed:state.tl03RevokeArmed,report:state.tl03RevokedReport})+renderWs01B2SignedAcceptance({busy:state.ws01B2Busy,report:state.ws01B2Result})+renderWs02dB3SignedPreflight({busy:state.ws02dB3Busy,report:state.ws02dB3Report})+renderWs02dB3DeployedHttpsAcceptance({busy:state.ws02dB3HttpsBusy,result:state.ws02dB3HttpsReport})+renderWs02dB3ForeignRlsDenial({busy:state.ws02dB3RlsBusy,result:state.ws02dB3RlsReport,hasFixture:hasWs02dB3ForeignRlsFixture()})+renderWs02dB3LocalRevocation({armed:state.ws02dB3RevokeArmed,report:state.ws02dB3RevokedReport})+renderB2SignedQaFixture({busy:state.b2QaBusy,result:state.b2QaReport})+renderB4SignedRecoveryPreflight({busy:state.b4QaBusy,report:state.b4QaReport})+renderPhaseBSignedDenial({busy:state.phaseBDenialBusy,report:state.phaseBDenialReport}));
  else if(state.view==='role-configuration')shell(renderRoleConfiguration({verified:state.adminVerified,loading:state.roleBusy,data:state.roleData,tab:state.roleTab,error:state.roleError}));
- else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.adminVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,actorUserId:state.context?.user_id,accessSection:state.userRoleSection,boardSearch:state.userRoleBoardSearch,busy:state.userRoleBusy,error:state.userRoleError}));
+ else if(state.view==='user-role-management')shell(renderUserRoleManagement({verified:state.adminVerified,data:state.userRoleData,selectedUserId:state.userRoleSelected,actorUserId:state.context?.user_id,accessSection:state.userRoleSection,boardSearch:state.userRoleBoardSearch,batchMode:state.userRoleBatchMode,batchSelected:state.userRoleBatchSelected,batchScope:state.userRoleBatchScope,batchResource:state.userRoleBatchResource,batchRole:state.userRoleBatchRole,batchAction:state.userRoleBatchAction,busy:state.userRoleBusy,error:state.userRoleError}));
  else if(state.view==='invitation')shell(renderInvitationAcceptance({
   pending:pendingInvitation,enabled:WS02D_ACCEPTANCE_ENABLED,
   busy:invitationAcceptanceBusy,status:invitationAcceptanceStatus
@@ -1646,9 +1647,20 @@ async function loadUserRoleManagement(){
  const ctx=await db.context();
  if(ctx.user_id!==state.context?.user_id||ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Authoritative workspace changed.',403);
  state.userRoleData=await userRoleManager.snapshot(ctx.workspace_id);
+ const batchIdentity=ctx.workspace_id+':'+ctx.user_id;
+ if(state.userRoleBatchIdentity!==batchIdentity){
+  state.userRoleBatchSelected=[];
+  state.userRoleBatchResource='';
+  state.userRoleBatchRole='';
+  state.userRoleBatchIdentity=batchIdentity;
+ }
  state.userRoleError='';
  state.userRoleSelected=selectDefaultUserRoleTarget(
   state.userRoleData.users,state.context?.user_id,state.userRoleSelected);
+ const validTargets=new Set(state.userRoleData.users.filter(user=>
+  !user.protected&&user.id!==state.context?.user_id).map(user=>user.id));
+ state.userRoleBatchSelected=state.userRoleBatchSelected.filter(id=>validTargets.has(id));
+
 }
 async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expectedUpdatedAt}){
  if(state.adminVerified!==true||!(await roleConfig.adminVerified()))throw new ApiError('CRM Administrator required.',403);
@@ -6519,6 +6531,107 @@ async function action(name,button){
   if(!['all','Late','Active','Completed'].includes(status))return;
   state.ttReportFilters={...state.ttReportFilters,status};render();break;
  }
+ case 'user-role-mode':{
+   if(!state.adminVerified||state.userRoleBusy||state.view!=='user-role-management')break;
+   const mode=button.dataset.mode;
+   if(!['individual','batch'].includes(mode))break;
+   state.userRoleBatchMode=mode==='batch';
+   render();break;
+ }
+ case 'user-role-batch-clear':{
+   if(!state.adminVerified||state.userRoleBusy||!state.userRoleBatchMode)break;
+   state.userRoleBatchSelected=[];render();break;
+ }
+ case 'user-role-batch-select-eligible':{
+   if(!state.adminVerified||state.userRoleBusy||!state.userRoleBatchMode||
+      !state.userRoleData)break;
+   const data=state.userRoleData,scope=state.userRoleBatchScope;
+   const choices=scope==='module'?ROLE_MODULE_OPTIONS:data.boards.map(b=>[b.id,b.name]);
+   const resourceId=choices.some(([id])=>id===state.userRoleBatchResource)?
+     state.userRoleBatchResource:choices[0]?.[0];
+   const roles=scope==='module'?MODULE_ROLE_OPTIONS[resourceId]||[]:['viewer','editor'];
+   const role=roles.includes(state.userRoleBatchRole)?state.userRoleBatchRole:roles[0];
+   const selected=[];
+   for(const user of data.users){
+    if(user.protected||user.id===state.context?.user_id)continue;
+    try{
+     planUserRoleBatch(data,{userIds:[user.id],actorUserId:state.context?.user_id,
+      scope,resourceId,role,enabled:state.userRoleBatchAction!=='revoke'});
+     selected.push(user.id);
+    }catch{/* Keep source permissions unchanged; only eligible members are selected. */}
+   }
+   state.userRoleBatchSelected=selected;
+   render();break;
+ }
+ case 'user-role-batch-review':{
+   if(!state.adminVerified||state.userRoleBusy||!state.userRoleData||
+      !state.userRoleBatchMode||state.view!=='user-role-management')break;
+   const snapshot=state.userRoleData;
+   const scope=state.userRoleBatchScope;
+   const choices=scope==='module'?ROLE_MODULE_OPTIONS:
+     snapshot.boards.map(board=>[board.id,board.name]);
+   const resourceId=choices.some(([id])=>id===state.userRoleBatchResource)?
+     state.userRoleBatchResource:choices[0]?.[0];
+   const roles=scope==='module'?MODULE_ROLE_OPTIONS[resourceId]||[]:['viewer','editor'];
+   const role=roles.includes(state.userRoleBatchRole)?state.userRoleBatchRole:roles[0];
+   const enabled=state.userRoleBatchAction!=='revoke';
+   const selectedIds=[...state.userRoleBatchSelected];
+   const plan=planUserRoleBatch(snapshot,{userIds:selectedIds,
+    actorUserId:state.context?.user_id,scope,resourceId,role,enabled});
+   if(!plan.operations.length){toast('No changes needed: selected users already have the requested access.');break;}
+   const resourceLabel=choices.find(([id])=>id===resourceId)?.[1]||resourceId;
+   const targets=selectedIds.map(id=>snapshot.users.find(user=>user.id===id)?.email).filter(Boolean);
+   const fields='<div class="note">Review '+plan.operations.length+' change'+
+     (plan.operations.length===1?'':'s')+' for '+e(resourceLabel)+
+     '. '+plan.unchanged.length+' unchanged account'+(plan.unchanged.length===1?'':'s')+
+     ' will be skipped. Each change is individually authorized, audited, and can succeed independently.</div>'+
+     '<div class="user-role-batch-confirm-targets"><strong>Selected accounts</strong><ul>'+
+     targets.map(email=>'<li>'+e(email)+'</li>').join('')+'</ul></div>'+
+     '<p class="muted">The first failure stops the remaining operations. Successful changes are not rolled back automatically.</p>';
+   openModal(enabled?'Review batch role assignments':'Review batch revocations',fields,async()=>{
+    // Refresh before any writes to catch changes to membership, scope, or role.
+    // Do not silently rebase a stale plan: require the operator to review again.
+    if(!state.adminVerified||state.userRoleBusy||state.userRoleData!==snapshot)
+     throw new ApiError('Role configuration changed. Review the batch again.',409);
+    const actor=await auth.getVerifiedUser(),ctx=await db.context();
+    if(actor?.id!==ctx.user_id||ctx.user_id!==state.context?.user_id||
+      ctx.workspace_id!==state.context?.workspace_id||
+      !(await roleConfig.adminVerified()))
+     throw new ApiError('Verified CRM Administrator and workspace are required.',403);
+    state.userRoleBusy=true;
+    let completed=0,failed=null;
+    try{
+     const current=await userRoleManager.snapshot(ctx.workspace_id);
+     const refreshed=planUserRoleBatch(current,{userIds:selectedIds,
+       actorUserId:ctx.user_id,scope,resourceId,role,enabled});
+     if(refreshed.operations.length!==plan.operations.length||
+       refreshed.unchanged.length!==plan.unchanged.length||
+       refreshed.operations.some((op,i)=>op.userId!==plan.operations[i].userId||
+         op.expectedUpdatedAt!==plan.operations[i].expectedUpdatedAt||
+         op.role!==plan.operations[i].role))
+      throw new ApiError('Assignments changed since review. Refresh and review the batch again.',409);
+     for(const op of plan.operations){
+      try{
+       await userRoleManager.mutate({workspaceId:ctx.workspace_id,...op});
+       completed++;
+      }catch(err){failed=err;break;}
+     }
+    }finally{
+     try{await loadUserRoleManagement();}catch(err){state.userRoleError=errorMessage(err);}
+     state.userRoleBusy=false;render();
+    }
+    if(failed){
+     // Prevent a second click from accidentally reissuing successful writes.
+     hideModal();
+     throw new ApiError(completed+' of '+plan.operations.length+
+      ' changes applied. Stopped on failure: '+errorMessage(failed)+
+      '. Refresh the current assignments before retrying.',failed.status||409);
+    }
+    toast('Batch complete: '+completed+' role change'+(completed===1?'':'s')+' applied and audited.');
+   },{submitLabel:enabled?'Apply '+plan.operations.length+' changes':'Confirm '+plan.operations.length+' revocations',
+     destructive:!enabled,successMessage:''});
+   break;
+ }
  case 'user-role-section':{
    if(!state.adminVerified||state.view!=='user-role-management')break;
    const section=button.dataset.section;
@@ -8042,6 +8155,44 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ if(state.view==='user-role-management'&&state.adminVerified&&state.userRoleBatchMode&&
+   !state.userRoleBusy&&state.userRoleData){
+  const element=event.target;
+  if(element.matches('[data-user-role-batch-member]')){
+   const eligible=state.userRoleData.users.some(u=>u.id===element.value&&
+     !u.protected&&u.id!==state.context?.user_id);
+   if(!eligible)return;
+   const ids=new Set(state.userRoleBatchSelected);
+   if(element.checked)ids.add(element.value);else ids.delete(element.value);
+   state.userRoleBatchSelected=[...ids];
+   const count=root.querySelector('.user-role-batch-count');
+   const eligibleCount=state.userRoleData.users.filter(u=>
+     !u.protected&&u.id!==state.context?.user_id).length;
+   if(count)count.textContent=ids.size+' selected of '+eligibleCount+' available workspace members';
+   const review=root.querySelector('[data-action="user-role-batch-review"]');
+   if(review){review.disabled=ids.size===0;review.textContent='Review batch changes ('+ids.size+')';}
+   const clear=root.querySelector('[data-action="user-role-batch-clear"]');
+   if(clear)clear.disabled=ids.size===0;
+   return;
+  }
+  if(element.name==='user-role-batch-scope'&&['module','board'].includes(element.value)){
+   state.userRoleBatchScope=element.value;
+   state.userRoleBatchResource='';
+   state.userRoleBatchRole='';
+   render();return;
+  }
+  if(element.id==='user-role-batch-resource'){
+   state.userRoleBatchResource=element.value;state.userRoleBatchRole='';
+   render();return;
+  }
+  if(element.id==='user-role-batch-role'){
+   state.userRoleBatchRole=element.value;render();return;
+  }
+  if(element.id==='user-role-batch-action'&&['assign','revoke'].includes(element.value)){
+   state.userRoleBatchAction=element.value;render();return;
+  }
+ }
+
  if(event.target.id==='frt-status-filter'&&state.view==='board'&&state.tab==='finance'){
   state.frtStatusFilter=String(event.target.value||'all');render();return;
  }

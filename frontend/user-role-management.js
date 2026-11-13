@@ -115,7 +115,7 @@ function accountRoleLabel(data,user){
  return 'CRM '+crm.effectiveRole+' ('+crmRoleSourceLabel(crm)+')'+
   ' · Identity '+user.platformRole;
 }
-export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',boardSearch=''}={}){
+export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign'}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
  let html='<div class="aps-user-role-management"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / CRM Admin</span>'+
  '<h1 id="user-role-title">User Role Management<span class="user-role-heading-stop">.</span></h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
@@ -131,6 +131,38 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   ['Active workspace members',data.users.length,'users'],['Application assignments',data.moduleAssignments.length,'roles'],
   ['Board memberships',data.boardAssignments.length,'boards'],['Available boards',data.boards.length,'proposals']
  ].map(([k,v,icon])=>'<div class="stat-card user-role-stat-card user-role-stat-'+icon+'"><span class="user-role-stat-icon" aria-hidden="true">'+roleConfigurationIcon(icon)+'</span><span class="stat-label">'+esc(k)+'</span><strong class="stat-value">'+Number(v)+'</strong></div>').join('')+'</section>';
+ html+='<div class="user-role-mode-nav" role="group" aria-label="Configuration workflow">'+
+  '<button type="button" data-action="user-role-mode" data-mode="individual" aria-pressed="'+(!batchMode)+'">Individual configuration</button>'+
+  '<button type="button" data-action="user-role-mode" data-mode="batch" aria-pressed="'+batchMode+'">Batch configuration</button></div>';
+ if(batchMode){
+  const allowed=data.users.filter(member=>!member.protected&&member.id!==actorUserId);
+  const resourceEntries=batchScope==='module'?ROLE_MODULE_OPTIONS:data.boards.map(board=>[board.id,board.name]);
+  const resource=resourceEntries.some(([id])=>id===batchResource)?batchResource:resourceEntries[0]?.[0]||'';
+  const roles=batchScope==='module'?MODULE_ROLE_OPTIONS[resource]||[]:['viewer','editor'];
+  const currentRole=roles.includes(batchRole)?batchRole:roles[0]||'';
+  html+='<section class="panel user-role-batch-panel" aria-label="Batch configuration">'+
+   '<div class="panel-header"><h3>Configure multiple users</h3><span>Active workspace only</span></div><div class="panel-body">'+
+   '<p class="user-role-helper">Select members, then configure one application or board role for the group. Every change uses existing authorization checks and audit history.</p>'+
+   '<fieldset class="user-role-batch-users"><legend>Choose users</legend>'+
+   '<div class="user-role-batch-user-list">'+allowed.map(member=>
+     '<label><input type="checkbox" name="userRoleBatchMember" data-user-role-batch-member value="'+esc(member.id)+'"'+(batchSelected.includes(member.id)?' checked':'')+'>'+
+     '<span>'+esc(member.name||member.email)+' <small>'+esc(member.email)+'</small></span></label>').join('')+'</div>'+
+   '<p class="user-role-batch-count" role="status" aria-live="polite">'+batchSelected.length+' selected of '+allowed.length+' available workspace members</p>'+
+   '<div class="user-role-batch-selection-actions"><button type="button" class="secondary" data-action="user-role-batch-select-eligible">Select eligible users</button>'+
+   '<button type="button" class="secondary" data-action="user-role-batch-clear"'+(batchSelected.length?'':' disabled')+'>Clear selection</button></div></fieldset>'+
+   '<div class="user-role-batch-fields"><fieldset class="user-role-batch-scope"><legend>Access type</legend>'+
+   '<label><input type="radio" name="user-role-batch-scope" value="module"'+(batchScope==='module'?' checked':'')+'> Application access</label>'+
+   '<label><input type="radio" name="user-role-batch-scope" value="board"'+(batchScope==='board'?' checked':'')+'> Board access</label></fieldset>'+
+   '<label>Application or board<select id="user-role-batch-resource">'+resourceEntries.map(([id,name])=>
+    '<option value="'+esc(id)+'"'+(id===resource?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select></label>'+
+   '<label>Role<select id="user-role-batch-role">'+roles.map(role=>
+    '<option value="'+esc(role)+'"'+(role===currentRole?' selected':'')+'>'+esc(role)+'</option>').join('')+'</select></label>'+
+   '<label>Change<select id="user-role-batch-action"><option value="assign"'+(batchAction==='assign'?' selected':'')+'>Assign or change</option><option value="revoke"'+(batchAction==='revoke'?' selected':'')+'>Revoke existing access</option></select></label></div>'+
+   '<p class="user-role-batch-hint">Review the complete target list before applying. No typed acknowledgement is required. Protected users, owner memberships and cross-workspace global roles remain restricted.</p>'+
+   '<button class="primary user-role-batch-review" type="button" data-action="user-role-batch-review"'+(batchSelected.length&&resource&&currentRole&&!busy?'':' disabled')+'>Review batch changes ('+batchSelected.length+')</button>'+
+   '</div></section></div>';
+  return html;
+ }
  html+='<section class="panel user-role-selection-panel user-role-entrance" aria-labelledby="user-role-select-title"><div class="panel-header"><h3 id="user-role-select-title">Select user</h3><span>Workspace scoped</span></div>'+
  '<div class="panel-body"><label for="managed-user">Workspace member email</label><select id="managed-user" class="search-input user-role-account-select" data-action="user-role-select" aria-label="Select a member by email address">'+
  data.users.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===u?.id?'selected':'')+'>'+esc(x.email)+'</option>').join('')+
