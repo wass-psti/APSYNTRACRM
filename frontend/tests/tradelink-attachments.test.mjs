@@ -167,7 +167,7 @@ test('source limits transport to auth JWT, private bucket, no shared-Board fallb
   /const receipt=file\?await tradeLinkAttachments\.upload/,
   /tradeLinkDraftWorkspace\.history\(documentId\)/,
   /verifyTradeLinkAttachmentCommit/,
-  /i\.updated_at===record\.updated_at/,
+  /tradeLinkBoardProjectionMatches\(i,\{[\s\S]*?boardItemId:receipt\.boardItemId,documentNumber:listed\.documentNumber/,
   /latest\.metadata\?\.attachmentId!==receipt\.attachmentId/,
   /window\.setTimeout\(\(\)=>URL\.revokeObjectURL\(url\),1000\)/
  ])assert.match(ui,pattern);

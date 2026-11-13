@@ -142,7 +142,7 @@ test('operational frontend success waits on saved document, Board and immutable 
   /const receipt=await tradeLinkDraftWorkspace\.operate/,
   /event\.metadata\?\.field!==receipt\.field/,
   /Date\.parse\(receipt\.recordedAt\)!==Date\.parse\(record\.updated_at\)/,
-  /item\.title===listed\.documentNumber&&item\.updated_at===record\.updated_at/,
+  /tradeLinkBoardProjectionMatches\(item,\{[\s\S]*?boardItemId:receipt\.boardItemId,documentNumber:listed\.documentNumber/,
   /if\(!TL03_WORKFLOW_OPERATIONAL_ENABLED\|\|!TL03_WORKFLOW_REVIEW_ENABLED/,
   /committed\?\s*'The server committed the operational action/
  ])assert.match(app,regex);
