@@ -101,7 +101,8 @@ test('a verified saved document is rendered inside the adjacent preview pane wit
 test('reviewer and activity routes retain their existing entry points without exposing the manager module editor',()=>{
  const reviewer=renderTradeLinkApplication({...base,section:'drafts',canManage:false});
  assert.doesNotMatch(reviewer,/class="tl-app-nav"|data-tl-module-nav/);
- assert.doesNotMatch(reviewer,/data-tl-tab="create"/);
+ assert.match(reviewer,/data-tl-tab="create"[^>]*aria-disabled="true"/);
+ assert.doesNotMatch(reviewer,/data-tl-tab="create"[^>]*href=/);
  assert.match(reviewer,/data-tl-tab="documents"/);
  assert.match(reviewer,/data-tl-tab="activity"/);
  const activity=renderTradeLinkApplication({...base,section:'activity'});

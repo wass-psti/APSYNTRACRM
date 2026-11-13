@@ -125,7 +125,9 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
    '<nav class="tl-reference-portal-links" aria-label="TradeLink actions">'+
     '<span class="tl-reference-active-indicator" aria-hidden="true" hidden></span>'+
     (canManage?'<a data-tl-tab="create" class="tl-reference-create'+(current==='drafts'?' active':'')+'"'+currentAttr('drafts')+' href="'+base+'/drafts/quotation">'+
-     '<span aria-hidden="true">＋</span> Create New</a>':'')+
+     '<span aria-hidden="true">＋</span> Create New</a>':
+     '<span data-tl-tab="create" class="tl-reference-create" aria-disabled="true" title="Document creation is available through the existing signed document-management capability">'+
+     '<span aria-hidden="true">＋</span> Create New</span>')+
     '<a data-tl-tab="documents" href="'+base+'/documents"'+currentAttr('documents')+'>'+
      '<span aria-hidden="true">☷</span> All Documents</a>'+
     '<a data-tl-tab="activity" href="'+base+'/activity"'+currentAttr('activity')+'>'+

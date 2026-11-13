@@ -37,3 +37,16 @@ test('TradeLink brand targets Create New and denied workspace never renders a fo
  assert.match(denied,/signed workspace access is unavailable/);
  assert.doesNotMatch(denied,/data-tradelink-draft-form/);
 });
+
+
+test('original Create New portal entry remains visible to reviewer accounts without granting document-management capability',()=>{
+ const reviewer=renderTradeLinkApplication({detail,workspaceId:ws,section:'documents',canManage:false,canReview:true});
+ assert.match(reviewer,/data-tl-tab="create"[^>]*aria-disabled="true"/);
+ assert.match(reviewer,/Create New/);
+ assert.match(reviewer,/data-tl-tab="documents"[^>]*aria-current="page"/);
+ assert.match(reviewer,/data-tl-tab="activity"/);
+ assert.match(reviewer,/data-tl-tab="manual"/);
+ assert.doesNotMatch(reviewer,/data-tl-tab="create"[^>]*href=/);
+ assert.doesNotMatch(reviewer,/data-tradelink-draft-form/);
+ assert.match(reviewer,/My Assigned Documents/);
+});
