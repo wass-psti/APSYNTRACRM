@@ -24,7 +24,7 @@ test('existing boot entry, initialization recovery and security policy are uncha
  assert.match(html,/<script src="\.\/frontend\/startup-guard\.js" defer><\/script>/);
  assert.match(html,/<script type="module" src="\.\/frontend\/app\.js"><\/script>/);
  assert.match(html,/style-src-attr 'none'/);
- assert.match(app,/if\(await auth\.restore\(\)\)/);
+ assert.match(app,/if\(await startupVerifiedRead\(async\(\)=>await auth\.restore\(\)\)\)/);
  assert.match(app,/await refreshWorkspace\(\)/);
  assert.match(app,/startupCriticalPath\.end\(\{authenticated:outcome==='AUTHENTICATED'\}\)/);
  assert.match(app,/await readWorkspaceStartup\(\{/);
