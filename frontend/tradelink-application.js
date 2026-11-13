@@ -68,12 +68,13 @@ function summaryCard(label,value,help){
   '<strong class="tl-stat-value">'+esc(value)+'</strong>'+
   '<span class="tl-stat-foot">'+esc(help)+'</span></div>';
 }
-function moduleLink(m,section){
+function moduleLink(m,activeType){
  const href='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/'+m.key;
- const active=section===m.key;
- return '<a class="tl-module-link'+(active?' active':'')+'" href="'+href+'"'+
-  (active?' aria-current="page"':'')+'><span class="tl-module-short">'+esc(m.short)+'</span>'+
-  '<span><strong>'+esc(m.label)+'</strong><small>Document module</small></span></a>';
+ const active=activeType===m.key;
+ return '<a data-tl-module-nav="'+esc(m.key)+'" class="tl-module-link'+(active?' active':'')+'" href="'+href+'"'+
+  (active?' aria-current="page"':'')+'><span class="tl-module-short" aria-hidden="true">'+esc(m.short)+'</span>'+
+  '<span class="tl-module-link-copy"><strong>'+esc(m.label)+'</strong><small>Document module</small></span>'+
+  '<span class="tl-module-chevron" aria-hidden="true">›</span></a>';
 }
 function renderDocuments(detail,workspaceId,draftView,canManage,canReview=false,actorEmail=''){
  // One authoritative document surface; linked Board items remain accessible
@@ -106,7 +107,17 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
  const m=TRADELINK_SOURCE_MODULES.find(x=>x.key===current);
  const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink';
  const currentAttr=key=>current===key?' aria-current="page"':'';
- return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'">'+
+ const requestedType=draftView?.formValues?.documentType||
+  draftView?.selected?.record?.document_type||
+  draftView?.selected?.record?.content?.documentType||'quotation';
+ const selectedType=modules.has(requestedType)?requestedType:'quotation';
+ const workspaceNavigation=current==='drafts'&&canManage?
+  '<nav class="tl-app-nav" aria-label="TradeLink document modules">'+
+   '<div class="tl-app-nav-heading"><span>TRADELINK WORKSPACE</span><strong>Document types</strong><small>Choose a document to prepare</small></div>'+
+   '<div class="tl-app-nav-links">'+
+    TRADELINK_SOURCE_MODULES.map(module=>moduleLink(module,selectedType)).join('')+
+   '</div></nav>':'';
+ return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'" data-tl-can-manage="'+(canManage?'true':'false')+'">'+
   '<header class="tl-reference-topbar" aria-label="TradeLink portal">'+
    '<a class="tl-reference-brand" href="'+base+(canManage?'/drafts/quotation':'/documents')+'" aria-label="TradeLink Create New">'+
     '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
@@ -117,6 +128,8 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
      '<span aria-hidden="true">＋</span> Create New</a>':'')+
     '<a data-tl-tab="documents" href="'+base+'/documents"'+currentAttr('documents')+'>'+
      '<span aria-hidden="true">☷</span> All Documents</a>'+
+    '<a data-tl-tab="activity" href="'+base+'/activity"'+currentAttr('activity')+'>'+
+     '<span aria-hidden="true">◷</span> Activity</a>'+
     '<details class="tl-reference-manual"><summary data-tl-tab="manual">User Manual</summary>'+
      '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink document guide</strong>'+
       '<p>Save defaults to For Approval. Select Draft explicitly when you want a Draft. '+
@@ -127,10 +140,10 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
      '</div></details>'+
    '</nav>'+
   '</header>'+
-  '<div class="tl-app-layout">'+
-   '<div class="tl-app-main">'+
-    (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel"><h2>Assigned reviewer access</h2><p>Document creation is not available in this view. Open All Documents to inspect and validate documents assigned to your signed account.</p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail}))+
-   '</div></div></div>';
+  '<div class="tl-app-layout">'+workspaceNavigation+
+   '<main class="tl-app-main">'+
+    (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel"><h2>Assigned reviewer access</h2><p>Document creation is not available in this view. Open All Documents to inspect and validate documents assigned to your signed account.</p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}))+
+   '</main></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network
  * request, privilege check bypass, cached identity or persistence mutation. */
