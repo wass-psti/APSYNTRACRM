@@ -9,6 +9,8 @@ import {setTimeout as delay} from 'node:timers/promises';
 const root=process.cwd();
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/frontend/apsyntra-styles.bundle.css"></head><body><div id="app"><button id="workspace-open">Open Workspaces</button></div><script type="module">'+
  `import {openWorkspaceSelector} from '/frontend/workspace-ui.js';
+ import {startSearchExperience} from '/frontend/search-experience.js';
+ window.stopSearchEnhancement=startSearchExperience(document.body);
  const current={id:'00000000-0000-4000-8000-000000000001',name:'Work Management'};
  const catalog={status:'SIGNED_MEMBER_DISCOVERY',rows:[
   {id:current.id,name:current.name,relation:'member',privacy:'closed',active:true,verifiedScope:'SIGNED_MEMBER_RPC'},
@@ -64,7 +66,7 @@ try{
  for(const width of [1440,768,390,320]){
   await call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<768});
   await call('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/'});
-  await wait(()=>evaluate("document.readyState==='complete' && !!window.openFixture"));
+  await wait(()=>evaluate("document.readyState==='complete' && !!window.openFixture && !!window.stopSearchEnhancement"));
   await evaluate("window.openFixture();true");
   await wait(()=>evaluate("document.querySelector('.ws01-menu-card') && document.querySelectorAll('.ws01-entry').length===2"));
   const inspect=()=>evaluate(`(()=>{
@@ -104,6 +106,10 @@ try{
     inputPaddingLeft:parseFloat(getComputedStyle(input).paddingLeft),
     iconDecorative:icon.getAttribute('aria-hidden')==='true',
     singleSvg:field.querySelectorAll('svg').length===1,
+    nativeOptOut:field.hasAttribute('data-aps-search-native'),
+    enhancerMarkCount:field.querySelectorAll('.aps-search-mark').length,
+    enhancerWrapperCount:field.querySelectorAll('.aps-search-field').length,
+    svgCount:field.querySelectorAll('svg').length,
     inputAppearance:getComputedStyle(input).appearance,
     nativeSearchDecoration:getComputedStyle(input,'::-webkit-search-decoration').display};
   })()`);
@@ -112,6 +118,10 @@ try{
   assert.equal(iconPosition.wrapperInside,true);
   assert.equal(iconPosition.iconDecorative,true);
   assert.equal(iconPosition.singleSvg,true);
+  assert.equal(iconPosition.nativeOptOut,true);
+  assert.equal(iconPosition.enhancerMarkCount,0);
+  assert.equal(iconPosition.enhancerWrapperCount,0);
+  assert.equal(iconPosition.svgCount,1);
   assert.equal(iconPosition.inputAppearance,'none');
   assert.ok(iconPosition.inputPaddingLeft>=40);
   const menuSearch=await evaluate(`(()=>{

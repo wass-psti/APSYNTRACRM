@@ -49,3 +49,10 @@ test('workspace quick search uses a single explicit icon and disables the native
  assert.match(css,/#ws01-menu-search::-webkit-search-decoration/);
  assert.match(css,/#ws01-menu-search::-webkit-search-results-button/);
 });
+
+test('workspace selector opts out of global search enhancer to prevent duplicate icons',()=>{
+ assert.match(ui,/class="ws01-menu-search-field" data-aps-search-native/);
+ const enhancer=readFileSync('frontend/search-experience.js','utf8');
+ assert.match(enhancer,/data-aps-search-native/);
+ assert.equal((ui.match(/class="ws01-menu-search-icon"/g)||[]).length,1);
+});
