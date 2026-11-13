@@ -53,7 +53,7 @@ export function fuelTrackActivityModel({snapshot=null,boardId=null,workspaceId=n
  const weekStart=new Date(Date.UTC(Number(today.slice(0,4)),Number(today.slice(5,7))-1,Number(today.slice(8))));
  weekStart.setUTCDate(weekStart.getUTCDate()-(weekStart.getUTCDay()+6)%7);
  const weekKey=weekStart.toISOString().slice(0,10);
- const groups={today:[],week:[],earlier:[]},daily={submitted:0,approved:0,rejected:0,completed:0};
+ const groups={today:[],week:[],earlier:[]},searchGroups={today:[],week:[],earlier:[]},daily={submitted:0,approved:0,rejected:0,completed:0};
  const counts={all:events.length,submitted:0,approved:0,rejected:0,completed:0};
  const hours=Array.from({length:24},()=>0);
  for(const e of events){
@@ -68,16 +68,25 @@ export function fuelTrackActivityModel({snapshot=null,boardId=null,workspaceId=n
  for(const e of visible){const d=localDay(e.at);
   groups[d===today?'today':d>=weekKey&&d<today?'week':'earlier'].push(e);
  }
- return {events:Object.freeze(events),visible:Object.freeze(visible),groups,counts,daily,hours,
+ // Render the selected type's complete bounded page once. Search then toggles
+ // existing rows, so clearing or broadening a query never needs a full redraw.
+ for(const e of events){
+  if(type!=='all'&&e.type!==type)continue;
+  const d=localDay(e.at);
+  searchGroups[d===today?'today':d>=weekKey&&d<today?'week':'earlier'].push(e);
+ }
+ return {events:Object.freeze(events),visible:Object.freeze(visible),groups,searchGroups,counts,daily,hours,
   expandedId,query,type,limit:FUELTRACK_ACTIVITY_MAX};
 }
 const pulse=(label,value)=>'<div class="ft3-activity-pulse-card"><span>'+label+'</span><strong>'+value+'</strong></div>';
 const link=(key,label,count,active)=>'<button type="button" data-action="ft3-activity-filter" data-type="'+key+
  '" aria-pressed="'+(active===key)+'" class="'+(active===key?'is-active':'')+'">'+label+
  ' <span>'+count+'</span></button>';
-function eventMarkup(e,expandedId){
+function eventMarkup(e,expandedId,query=''){
  const expanded=expandedId===e.id;
- return '<li class="ft3-activity-entry"><button type="button" class="ft3-activity-event" data-action="ft3-activity-expand" data-id="'+html(e.id)+
+ const searchText=[e.actor,e.title,e.message,e.requestId,e.eventType].join(' ').toLocaleLowerCase();
+ const hidden=query&&!searchText.includes(query);
+ return '<li class="ft3-activity-entry" data-search-text="'+html(searchText)+'"'+(hidden?' hidden':'')+'><button type="button" class="ft3-activity-event" data-action="ft3-activity-expand" data-id="'+html(e.id)+
  '" aria-expanded="'+expanded+'"><span class="ft3-activity-dot" aria-hidden="true">◉</span><span class="ft3-activity-summary"><strong>'+
  html(e.actor)+'</strong> <span class="ft3-activity-kind">'+html(e.type==='other'?e.eventType:e.type)+'</span>'+
  '<small>'+html(e.title)+'</small></span><time datetime="'+html(e.at)+'">'+html(fmt.format(new Date(e.at)))+'</time><span aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button>'+
@@ -91,9 +100,9 @@ export function renderFuelTrackActivity({snapshot=null,boardId=null,workspaceId=
  busy=false,error='',now=new Date()}={}){
  const model=fuelTrackActivityModel({snapshot,boardId,workspaceId,filters,now});
  const disabled=!model||busy;
- const rows=model?model.groups:null;
- const label=(title,items)=>items.length?'<section class="ft3-activity-group"><h3>'+title+' <small>'+items.length+
- '</small></h3><ol>'+items.map(e=>eventMarkup(e,model.expandedId)).join('')+'</ol></section>':'';
+ const rows=model?model.searchGroups:null;
+ const label=(title,items)=>items.length?'<section class="ft3-activity-group" data-ft3-activity-group><h3>'+title+' <small>'+items.length+
+ '</small></h3><ol>'+items.map(e=>eventMarkup(e,model.expandedId,model.query)).join('')+'</ol></section>':'';
  const max=model?Math.max(...model.hours,1):1;
  return '<section class="ft3-activity" aria-labelledby="ft3-activity-title"><header class="ft3-activity-head"><div>'+
  '<h2 id="ft3-activity-title">Activity</h2><p>'+(model?model.events.length+' authorized events loaded (latest '+model.limit+' maximum)':'Activity data unavailable')+
@@ -120,8 +129,9 @@ export function renderFuelTrackActivity({snapshot=null,boardId=null,workspaceId=
  '<p>00 <span>06</span><span>12</span><span>18</span><span>23</span></p></div>'+
  (!model?'<p class="ft3-activity-unavailable" role="status">'+
  'A signed FuelTrack module Admin session is required to load its authoritative activity stream. No audit records or totals are inferred from Board items.</p>':
- model.visible.length===0?'<p class="ft3-activity-unavailable" role="status">No matching events in the loaded authorized history.</p>':
- label('TODAY',rows.today)+label('THIS WEEK',rows.week)+label('EARLIER',rows.earlier))+
+ label('TODAY',rows.today)+label('THIS WEEK',rows.week)+label('EARLIER',rows.earlier)+
+ '<p class="ft3-activity-unavailable" data-ft3-activity-empty role="status"'+
+  (model.visible.length?' hidden':'')+'>No matching events in the loaded authorized history.</p>')+
  '<p class="ft3-activity-footnote">Only the latest authorized event page is shown. Older events may exist. Export contains the loaded authorized records, not a complete historical audit.</p></section>';
 }
 const cell=v=>{const s=String(v??'');const safe=/^[\s]*[=+@\-\t\r]/.test(s)?"'"+s:s;
