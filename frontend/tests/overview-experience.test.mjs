@@ -69,6 +69,25 @@ test('overview uses escaped identity and board descriptions, no mock operational
  assert.match(view,/aria-hidden="true"/);
  assert.doesNotMatch(view,/\sonclick=|\sonmouseover=|\sstyle="/);
 });
+test('overview board summary clarifies limited preview, formats signed counts and keeps paths',()=>{
+ const render=new Function('state','name','e','overviewIcon','boardCard','empty',
+  'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel',
+  view+'\nreturn overview();');
+ const boards=Array.from({length:175},(_,i)=>({id:String(i),name:'Board '+i,item_count:i===0?6212:0}));
+ const state={boards,roleVerified:false,context:{profile:{platform_role:'employee'}}};
+ const html=render(state,()=> 'Example User',String,()=>'',b=>'<article data-id="'+b.id+'"></article>',
+  ()=>'<div>Empty board</div>',signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel);
+ assert.match(html,/role="group" aria-label="Active boards: 175"/);
+ assert.match(html,/role="group" aria-label="Board items: 6,212"/);
+ assert.match(html,/Showing 6 of 175 available boards/);
+ assert.match(html,/aria-labelledby="overview-boards-title"/);
+ assert.equal((html.match(/<article data-id=/g)||[]).length,6);
+ assert.match(html,/href="#\/boards"/);
+ assert.doesNotMatch(html,/Workspace essentials/);
+ assert.match(css,/overview-board-count/);
+ assert.match(css,/overview-hero \.head-actions button\{min-height:44px/);
+ assert.match(css,/overview-board-grid \.board-card p\{font-size:12px/);
+});
 test('static SVG icons and CSS support reduced motion, focus and mobile without GPU loops',()=>{
  for(const icon of ['refresh','plus','grid','items','pulse','shield','arrow','lock','check']){
   const svg=overviewIcon(icon);
