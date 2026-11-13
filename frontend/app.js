@@ -95,6 +95,7 @@ import {BOARD_STRUCTURE_ADMIN_ENABLED,BOARD_STRUCTURE_TYPES,BoardStructureClient
  setOptionalVirtualColumnVisibility} from './board-structure-admin.js';
 import {BOARD_CARD_LIFECYCLE_ENABLED,isProtectedBoard,boardCardActionState,BoardCardLifecycleClient} from './board-card-lifecycle.js';
 import {BoardItemSelection,matchBoardSearch,exportVisibleBoardItems} from './board-bulk-selection.js';
+import {boardCatalogResultLabel} from './board-catalog-results.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board-column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  projectConfirmedColumnRename,
@@ -656,7 +657,7 @@ function boardsPage(){
     </div>
    </div>
    <div class="boards-filter-footer">
-    <p class="board-search-result" id="board-search-result" role="status" aria-live="polite">`+items.length+` matching board`+(items.length===1?'':'s')+`</p>
+    <p class="board-search-result" id="board-search-result" role="status" aria-live="polite" aria-atomic="true">`+boardCatalogResultLabel(items.length,{query:state.boardSearch,status:selectedStatus})+`</p>
     <span class="boards-selected-filter" aria-hidden="true">`+e(selectedStatus)+` boards</span>
    </div>
   </section>
@@ -8538,7 +8539,7 @@ root.addEventListener('input',event=>{
  }
  if(event.target.id==='board-search'){
   const result=root.querySelector('#board-search-result');
-  if(result)result.textContent=matched+' matching board'+(matched===1?'':'s');
+  if(result)result.textContent=boardCatalogResultLabel(matched,{query:state.boardSearch,status:state.showTrash?'Trash':state.showArchived?'Archived':'Active'});
   const hint=root.querySelector('#board-search-no-results');
   if(hint)hint.hidden=matched!==0;
  }else if(event.target.id==='search-board-items')syncBoardSelectionUi();

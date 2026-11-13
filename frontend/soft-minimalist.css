@@ -4635,3 +4635,8 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 @media(max-width:600px){
   .ws01-overlay .ws11-manage{padding:12px 14px}
 }
+
+/* CP-BOARDS-QOL-01: retain accessible My Boards targets in the active theme. */
+#app .aps-boards-shell .aps-boards .boards-status-segments .segment{
+ min-height:44px;
+}

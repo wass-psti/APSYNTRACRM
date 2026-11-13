@@ -43,6 +43,7 @@ test('all ten requested areas retain exact functional hooks and signed state',()
  assert.ok(catalog.includes('value="`+e(state.boardSearch)+`"'));
  assert.match(catalog,/id="board-search-result" role="status" aria-live="polite"/);
  assert.match(catalog,/items\.length/);
+ assert.match(catalog,/boardCatalogResultLabel\(items\.length/);
  assert.match(catalog,/class="boards-hero-decor"/);
  assert.match(app,/class="top-pill"/);
  assert.match(app,/class="avatar top-avatar"/);
@@ -59,7 +60,7 @@ test('tab filters, search and lifecycle authorization behavior remain unchanged'
  assert.match(app,/case 'trashed-boards':\{if\(!BOARD_CARD_LIFECYCLE_ENABLED\)return;/);
  assert.match(app,/if\(event\.target\.id==='board-search'\)state\.boardSearch=event\.target\.value\.slice\(0,160\)/);
  assert.match(app,/row\.hidden=!row\.dataset\.searchable/);
- assert.match(app,/if\(result\)result\.textContent=matched\+' matching board'/);
+ assert.match(app,/if\(result\)result\.textContent=boardCatalogResultLabel\(matched/);
  assert.match(app,/if\(hint\)hint\.hidden=matched!==0/);
  assert.match(catalog,/id="board-search-no-results" class="board-search-no-results" hidden/);
  assert.match(card,/boardCardActionState\(board\)/);

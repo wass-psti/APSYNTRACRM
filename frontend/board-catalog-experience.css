@@ -350,3 +350,46 @@
  #app .aps-boards .board-search-result,
  #app .aps-boards .boards-selected-filter{color:#34435e}
 }
+
+/* CP-BOARDS-QOL-01 — readability and touch accessibility, scoped to My Boards. */
+#app .aps-boards .boards-status-segments .segment{
+ min-height:44px;min-width:66px;padding:10px 14px;font-size:12px
+}
+#app .aps-boards .boards-create-button{min-height:44px}
+#app .aps-boards .boards-control-label{
+ color:#52617d;font-size:11px;letter-spacing:1.1px
+}
+#app .aps-boards .board-search-result{
+ font-size:12px;color:#485978;line-height:1.5;overflow-wrap:anywhere
+}
+#app .aps-boards .boards-selected-filter{
+ font-size:11px;color:#515da7
+}
+#app .aps-boards .boards-catalog-grid .board-card p{
+ font-size:12px;color:#5d6f8a
+}
+#app .aps-boards .boards-catalog-grid .board-card-footer{
+ font-size:11px;color:#5c6c87
+}
+#app .aps-boards .boards-catalog-grid .board-card-actions>summary{
+ min-width:44px;min-height:44px
+}
+#app .aps-boards .boards-catalog-grid .board-card-actions-list button{
+ min-height:44px
+}
+@media(max-width:650px){
+ #app .aps-boards .boards-filter-footer{
+  align-items:flex-start;flex-wrap:wrap;gap:8px
+ }
+ #app .aps-boards .boards-status-segments{
+  max-width:100%;width:100%;display:flex
+ }
+ #app .aps-boards .boards-status-segments .segment{
+  flex:1;min-width:0;padding-inline:8px
+ }
+ #app .aps-boards .boards-search-wrap{min-width:0}
+}
+@media(max-width:360px){
+ #app .aps-boards .boards-filter-panel{padding:14px 11px}
+ #app .aps-boards .boards-hero h1{overflow-wrap:anywhere}
+}
