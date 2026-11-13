@@ -102,12 +102,17 @@ try{
     iconInside:b.left>=a.left&&b.right<a.right&&b.top>=a.top&&b.bottom<=a.bottom,
     wrapperInside:c.left>=a.left-1&&c.right<=a.right+1,
     inputPaddingLeft:parseFloat(getComputedStyle(input).paddingLeft),
-    iconDecorative:icon.getAttribute('aria-hidden')==='true'};
+    iconDecorative:icon.getAttribute('aria-hidden')==='true',
+    singleSvg:field.querySelectorAll('svg').length===1,
+    inputAppearance:getComputedStyle(input).appearance,
+    nativeSearchDecoration:getComputedStyle(input,'::-webkit-search-decoration').display};
   })()`);
   assert.ok(iconPosition.centerDelta<=1,'search icon must be vertically centered within input');
   assert.equal(iconPosition.iconInside,true);
   assert.equal(iconPosition.wrapperInside,true);
   assert.equal(iconPosition.iconDecorative,true);
+  assert.equal(iconPosition.singleSvg,true);
+  assert.equal(iconPosition.inputAppearance,'none');
   assert.ok(iconPosition.inputPaddingLeft>=40);
   const menuSearch=await evaluate(`(()=>{
    const input=document.querySelector('#ws01-menu-search');

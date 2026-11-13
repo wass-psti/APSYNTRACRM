@@ -4761,9 +4761,16 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
  width:19px;height:19px;pointer-events:none;
  color:var(--sm-sub,#626c7d);z-index:1
 }
+/* Chromium/WebKit can paint a second native search glyph; the single SVG is authoritative. */
 .ws01-overlay #ws01-menu-search{
  width:100%;min-height:44px;
- padding:11px 13px 11px 43px
+ padding:11px 13px 11px 43px;
+ -webkit-appearance:none;appearance:none
+}
+.ws01-overlay #ws01-menu-search::-webkit-search-decoration,
+.ws01-overlay #ws01-menu-search::-webkit-search-results-button,
+.ws01-overlay #ws01-menu-search::-webkit-search-results-decoration{
+ -webkit-appearance:none;display:none
 }
 .ws01-overlay .ws01-eyebrow{
  margin:18px 0 9px;letter-spacing:.09em;
