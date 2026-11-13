@@ -14,7 +14,7 @@ function fixture({reply=()=>board}={}){
  const auth={userId:user,accessToken:'session-a',authorized:async(path,options)=>{
   calls.push({path,body:options?.body});
   if(path.endsWith('/wm_get_board_shell')){
-   const value=await reply('/rest/v1/rpc/wm_get_board',options);
+   const value=await reply('/rest/v1/rpc/wm_get_board_shell',options);
    return value?.board?{board:value.board,groups:value.groups||[],
     members:value.members||[],columns:value.columns||[]}:value;
   }
@@ -55,7 +55,7 @@ test('new user, workspace and access token cannot reuse an earlier board respons
  await api.boardCached(boardId,scope);
  assert.equal(calls.length,8);
 });
-test('mutating RPC invalidates snapshots, but read-only Board UI RPC does not',async()=>{
+test('mutating RPC invalidates snapshots, but Board UI and pagination reads do not',async()=>{
  const {api,calls}=fixture();
  await api.boardCached(boardId,scope);
  await api.rpc('wm_board_ui_read',{p_board_id:boardId});
@@ -129,7 +129,7 @@ test('read-only event and document queries preserve cached board snapshots',asyn
 });
 test('successful scoped mutation invalidates only its board, preserving other boards',async()=>{
  const second='00000000-0000-4000-8000-000000000009';
- const {api,calls}=fixture({reply:(path,options)=>path.endsWith('/wm_get_board')?
+ const {api,calls}=fixture({reply:(path,options)=>path.endsWith('/wm_get_board_shell')?
   {board:{id:options.body.p_board_id,workspace_id:workspace}}:true});
  await api.boardCached(boardId,scope);
  await api.boardCached(second,scope);

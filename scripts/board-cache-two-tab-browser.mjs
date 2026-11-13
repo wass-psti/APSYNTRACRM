@@ -132,7 +132,15 @@ async function run(){
   const base='http://127.0.0.1:'+debugPort;
   const fixture='http://127.0.0.1:'+port+'/frontend/tests/fixtures/board-cache-two-tab.html';
   async function openTab(href=fixture,ready='window.acceptance'){
-   const response=await fetch(base+'/json/new?'+encodeURIComponent(href),{method:'PUT',signal:AbortSignal.timeout(5000)});
+   let response;
+   try{
+    response=await fetch(base+'/json/new?'+encodeURIComponent(href),{
+     method:'PUT',signal:AbortSignal.timeout(15000)
+    });
+   }catch(error){
+    throw Object.assign(new Error('Chromium DevTools tab creation timed out: '+error.message),
+     {code:'CHROME_STARTUP_TIMEOUT'});
+   }
    assert.equal(response.ok,true);
    const target=await response.json();
    const page=new Page(target.webSocketDebuggerUrl);
