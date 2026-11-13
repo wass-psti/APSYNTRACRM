@@ -25,6 +25,7 @@ export class DomainApi {
   this.boardReadCache=new Map();
   this.boardReadGeneration=0;
   this.boardListRequests=new Map();
+  this.effectiveAccessPending=new Map();
   this.onBoardMutation=null;
   this.extendedRefsSupported=null;
  }
@@ -41,6 +42,7 @@ export class DomainApi {
   }
   this.boardReadGeneration++;
   this.boardListRequests.clear();
+  this.effectiveAccessPending.clear();
   if(boardId===null)this.boardReadCache.clear();
   else this.boardReadCache.delete(boardId);
   return true;
@@ -115,6 +117,32 @@ export class DomainApi {
     }catch{/* A cross-tab hint must never affect a signed mutation receipt. */}
     return result;
    });
+ }
+ /** Coalesce only overlapping effective-access reads. Completed permissions and
+  * failed requests are never cached; mutations and session changes invalidate
+  * reuse, while the signed backend remains the sole authorization authority.
+  */
+ async effectiveAccess(){
+   const userId=this.auth?.userId,token=this.auth?.accessToken;
+   const generation=this.boardReadGeneration;
+   if(!validUuid(userId)||!token)
+    throw new ApiError('Signed effective-access context is unavailable.',403);
+   const key=JSON.stringify([userId,token,generation]);
+   let pending=this.effectiveAccessPending.get(key);
+   if(!pending){
+    pending=Promise.resolve().then(()=>this.rpc('apsyntra_crm_my_effective_access',{}));
+    this.effectiveAccessPending.set(key,pending);
+    const cleanup=()=>{
+     if(this.effectiveAccessPending.get(key)===pending)
+      this.effectiveAccessPending.delete(key);
+    };
+    pending.then(cleanup,cleanup);
+   }
+   const data=await pending;
+   if(this.auth?.userId!==userId||this.auth?.accessToken!==token||
+      this.boardReadGeneration!==generation)
+    throw new ApiError('Signed effective-access context changed during loading.',409);
+   return structuredClone(data);
  }
  async context(){
    const ctx=await this.rpc('wm_auth_access_context');

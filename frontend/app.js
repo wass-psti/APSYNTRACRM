@@ -1613,7 +1613,7 @@ async function refreshSignedCrmRole({force=false}={}){
  const token=auth.accessToken,generation=++crmRoleReadGeneration;
  state.crmRoleSnapshot=null;
  try{
-  const raw=await db.rpc('apsyntra_crm_my_effective_access',{});
+  const raw=await db.effectiveAccess();
   const role=parseSignedCrmRole(raw,{userId:actor,workspaceId:workspace,
    identityRole:ctx.profile?.platform_role});
   if(generation!==crmRoleReadGeneration||!auth.isSignedIn||
