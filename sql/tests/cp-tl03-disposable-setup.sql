@@ -1,7 +1,21 @@
 -- CP-TL-03A: isolated PostgreSQL 17 fixture, NO production Supabase connection.
 \set ON_ERROR_STOP on
-CREATE ROLE anon NOLOGIN;
-CREATE ROLE authenticated NOLOGIN;
+DO $roles$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='anon') THEN
+  CREATE ROLE anon NOLOGIN;
+ ELSIF EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='anon'
+   AND (rolcanlogin OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) THEN
+  RAISE EXCEPTION 'Disposable anon role has unexpected capabilities';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='authenticated') THEN
+  CREATE ROLE authenticated NOLOGIN;
+ ELSIF EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='authenticated'
+   AND (rolcanlogin OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) THEN
+  RAISE EXCEPTION 'Disposable authenticated role has unexpected capabilities';
+ END IF;
+END
+$roles$;
 CREATE SCHEMA auth;
 CREATE SCHEMA private;
 GRANT USAGE ON SCHEMA private TO authenticated;
