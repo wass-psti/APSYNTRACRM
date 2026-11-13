@@ -73,9 +73,22 @@ try{
     const tabs=[...document.querySelectorAll('.role-tab-button')];
     const matrix=document.querySelector('.role-table-scroll');
     const status=document.querySelector('.role-content-mode');
+    const roleLayout=document.querySelector('.role-config-layout');
+    const sideNav=document.querySelector('.role-config-tabs');
+    const navBox=sideNav.getBoundingClientRect();
+    const contentBox=container.getBoundingClientRect();
+    const columns=getComputedStyle(roleLayout).gridTemplateColumns.split(' ');
+    const selectedTab=sideNav.querySelector('[aria-pressed="true"]');
+
     const rect=container.getBoundingClientRect();
     return {
      width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth+1,
+     columns:columns.length,sideNavVisible:navBox.width>0,
+     contentBesideNav:contentBox.left>=navBox.right-1&&Math.abs(contentBox.top-navBox.top)<3,
+     contentBelowNav:contentBox.top>=navBox.bottom-1,
+     navItemSelected:selectedTab?.getAttribute('aria-current')==='page',
+     navIcons:sideNav.querySelectorAll('.role-tab-icon svg').length,
+
      containerInside:rect.left>=-1&&rect.right<=innerWidth+1,
      containerBackground:getComputedStyle(container).backgroundImage,
      containerRadius:getComputedStyle(container).borderRadius,
@@ -93,6 +106,12 @@ try{
    })()`);
    assert.equal(result.overflow,false,'page overflow at '+width+'/'+tab);
    assert.equal(result.containerInside,true,'workspace width at '+width+'/'+tab);
+   assert.equal(result.columns,width>790?2:1,'navigation grid columns at '+width+'/'+tab);
+   assert.equal(result.navIcons,5,'all sections have icons');
+   assert.equal(result.navItemSelected,true,'selected navigation remains semantically identifiable');
+   if(width>790)assert.equal(result.contentBesideNav,true,'desktop configuration must sit right of navigation');
+   else assert.equal(result.contentBelowNav,true,'mobile navigation must precede content');
+
    assert.ok(result.containerBackground.includes('linear-gradient'),'Overview-aligned gradient should render');
    assert.equal(result.containerRadius,'17px');
    assert.equal(result.introFill,'rgb(249, 250, 255)');

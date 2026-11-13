@@ -29,7 +29,7 @@ test('five role sections share Overview-aligned workspace hierarchy without new 
   assert.equal((markup.match(/aria-pressed="true"/g)||[]).length,1);
   assert.match(markup,/Change control: STAGED ONLY/);
   assert.match(markup,/production roles, permissions, board access and memberships cannot be altered/);
-  assert.ok(markup.endsWith('</div></section></div>'));
+  assert.ok(markup.endsWith('</div></section></div></div>'));
  }
 });
 test('accessible table regions are individually named and keyboard-scrollable',()=>{
