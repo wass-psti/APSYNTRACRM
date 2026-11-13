@@ -132,11 +132,13 @@ test('frontend writes only after verified Auth/bootstrap context and explicit co
 test('CP-URM-ROLE-FIX: saved CRM admin is visible while inherited employee identity stays distinct',()=>{
  const data=result('admin');
  const html=renderUserRoleManagement({verified:true,data,selectedUserId:target});
- assert.match(html,/Existing Account — CRM admin \(explicit\) · Identity employee/);
+ assert.match(html,/<h3>Existing Account<\/h3><span>CRM admin \(explicit\) · Identity employee<\/span>/);
+ assert.match(html,/Workspace member email/);
+ assert.match(html,/<option value="11111111-1111-4111-8111-111111111111" selected>member@example\.org<\/option>/);
+ assert.doesNotMatch(html,/<option[^>]*>Existing Account/);
  assert.match(html,/Current CRM role \/ identity/);
  assert.match(html,/Inherited WatchdogWorkspace role/);
  assert.match(html,/Admin grants CRM administrative authority for the active workspace/);
- assert.doesNotMatch(html,/Existing Account — employee<\/option>/);
 });
 
 test('CP-URM-ROLE-FIX: explicit role result must acknowledge requested role',async()=>{
