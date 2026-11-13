@@ -3,6 +3,10 @@
 -- All intercompany rows and audit events are rolled back.
 \set ON_ERROR_STOP on
 BEGIN;
+-- SEC06 disposable fixture omits the private schema USAGE grant that is
+-- already present for authenticated in the existing live FRT project.
+-- This remains inside the disposable test transaction; not deployed.
+GRANT USAGE ON SCHEMA private TO authenticated;
 
 INSERT INTO public.frt_companies(workspace_id,code,name,display_order)
 VALUES ('00000000-0000-4000-8000-000000000001','PSTI','Fixture C',3);

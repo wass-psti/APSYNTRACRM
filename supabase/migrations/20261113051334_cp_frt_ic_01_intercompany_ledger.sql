@@ -399,7 +399,7 @@ BEGIN
 END;
 $fn$;
 
-CREATE FUNCTION public.frt_ic_record_settlement(
+CREATE FUNCTION private.frt_ic_record_settlement_impl(
  p_workspace_id uuid,p_obligation_id uuid,p_payload jsonb
 )
 RETURNS jsonb
