@@ -429,3 +429,31 @@
 #app .aps-auth-v2 .request-access-privacy input{margin-top:4px;flex:none;accent-color:#6469ea}
 #app .aps-auth-v2 .request-access-privacy a{color:#4c61c8;text-decoration:underline}
 #app .aps-auth-v2 .request-access-honeypot{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+/* Login QoL: comfortable pointer targets, visible keyboard focus and narrow-screen layout. */
+#app .aps-auth-v2 #login-form .eye-btn{
+ min-height:44px;min-width:56px;top:2px;right:3px;
+ color:#40527e;font-weight:700;
+}
+#app .aps-auth-v2 #login-form .password-wrap input{padding-right:76px}
+#app .aps-auth-v2 #login-form .auth-submit:focus-visible{
+ outline:3px solid #293f9b;outline-offset:3px;
+}
+#app .aps-auth-v2 #login-form .field input:focus-visible{
+ outline:2px solid #4b52d8;outline-offset:2px;
+}
+@media(max-width:540px){
+ #app .aps-auth-v2 .auth-access-links{
+  justify-content:center;gap:8px;
+ }
+ #app .aps-auth-v2 .auth-access-links a{
+  min-height:44px;padding:10px 12px;font-size:12px;
+ }
+ #app .aps-auth-v2 .auth-bottom{
+  font-size:11px;letter-spacing:0;
+ }
+}
+@media(max-width:360px){
+ #app .aps-auth-v2 .auth-left{padding-left:14px;padding-right:14px}
+ #app .aps-auth-v2 .auth-form-card{padding-left:14px;padding-right:14px}
+}

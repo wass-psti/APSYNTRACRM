@@ -45,7 +45,7 @@ test('native attendance DOM remains semantic and GPS or clock inputs unchanged',
  assert.match(markup,/class="tt-unavailable"/);
  assert.doesNotMatch(markup,/<canvas|style=|onclick=/);
  assert.match(app,/mountTimeTrackerPixi\(root\)/);
- assert.match(app,/function renderLogin\(message='',\{mode=authViewFromHash\(\),notice=''\}=\{\}\)\{\s*stopTimeTrackerClock\(\);\s*stopTimeTrackerPixi\(\);/);
+ assert.match(app,/function renderLogin\(message='',\{mode=authViewFromHash\(\),notice='',emailValue=''\}=\{\}\)\{\s*stopTimeTrackerClock\(\);\s*stopTimeTrackerPixi\(\);/);
  assert.match(app,/renderTimeTrackerNative\(\{/);
  assert.match(app,/await captureAttendanceGeo\(navigator\.geolocation\)/);
  assert.match(app,/timeTracker\.commit\(boardId/);

@@ -291,7 +291,7 @@ function stopAuthVisuals(){
  authVisualController?.destroy?.();
  authVisualController=null;
 }
-function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
+function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''}={}){
  stopTimeTrackerClock();
  stopTimeTrackerPixi();
  // Clear detached protected item values on every signed-out transition.
@@ -309,7 +309,7 @@ function renderLogin(message='',{mode=authViewFromHash(),notice=''}={}){
  stopSettingsMotion();
  stopPagesAcceptanceMotion();
  const formsubmitReturn=mode==='register'&&new URLSearchParams(location.search).get('request_access')==='received';
- root.innerHTML=renderAuthMarkup({message,notice:notice||(formsubmitReturn?
+ root.innerHTML=renderAuthMarkup({message,emailValue,notice:notice||(formsubmitReturn?
   'Returned from FormSubmit. If the provider confirmed success, the request was sent for administrator review. No account has been created.':''),mode,resetReady:mode==='reset'&&!!recoveryContext});
  if(state.tl03RevokedReport&&!auth.isSignedIn)
   root.insertAdjacentHTML('beforeend',renderTradeLinkSignedOutRevocationResult(state.tl03RevokedReport));
@@ -3453,7 +3453,7 @@ async function login(form){
      renderBootstrapFailure(err);
    }else{
      if(err?.status===401)auth.clear();
-     boardCacheChannel.stop();db.invalidateBoardCache();state.context=null;renderLogin(errorMessage(err));
+     boardCacheChannel.stop();db.invalidateBoardCache();state.context=null;renderLogin(errorMessage(err),{mode:'login',emailValue:email});
    }
  }
  finally{state.authBusy=false;}
