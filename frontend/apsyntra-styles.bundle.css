@@ -12838,6 +12838,36 @@
 #app .frt-exec-month-series progress.is-requested::-moz-progress-bar{background:#7774e9}
 #app .frt-exec-month-series progress.is-spent::-moz-progress-bar{background:#36aa9b}
 
+/* CP-FRT-OPEX-REF-01 — honest reference-led OPEX view from signed aggregates. */
+#app .frt-opex-dashboard{gap:14px}
+#app .frt-opex-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 18px;border:1px solid #dae4ef;border-radius:12px;background:#f9fbff}
+#app .frt-opex-toolbar h2{font-size:17px;color:#253956;margin:0 0 3px;font-weight:800}
+#app .frt-opex-toolbar small{color:#637895;font-size:9px;letter-spacing:.06em}
+#app .frt-opex-dashboard .frt-exec-kpi{min-height:102px;border-top:0;padding:14px}
+#app .frt-opex-dashboard .frt-exec-grid{grid-template-columns:minmax(0,1.65fr) minmax(0,1fr)}
+#app .frt-opex-line-chart{padding:12px 14px;min-width:0}
+#app .frt-opex-line-chart svg{display:block;width:100%;height:auto;max-height:280px;overflow:visible}
+#app .frt-opex-line-chart svg text{font-size:13px;fill:#71829b;font-family:inherit}
+#app .frt-opex-legend{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;color:#66758c;font-size:10px;margin-top:8px}
+#app .frt-opex-legend span{display:inline-flex;align-items:center;gap:7px}
+#app .frt-opex-dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+#app .frt-opex-dot.is-requested{background:#ee9c9e}
+#app .frt-opex-dot.is-spent{background:#91b8db}
+#app .frt-opex-values{border-top:1px solid #e2e8f1;margin-top:12px;padding:9px 5px;color:#50607a;font-size:10px}
+#app .frt-opex-values summary{cursor:pointer;font-weight:700}
+#app .frt-opex-values p{line-height:1.7;overflow-wrap:anywhere}
+#app .frt-opex-pending,#app .frt-opex-ic{padding:16px 18px;border:1px solid #e3d3c6;border-radius:12px;background:#fff9f3;color:#3b4559}
+#app .frt-opex-pending{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#app .frt-opex-pending h3,#app .frt-opex-ic h3{font-size:13px;margin:0 0 5px}
+#app .frt-opex-pending p,#app .frt-opex-ic p{font-size:10px;line-height:1.6;margin:0;color:#7d8393}
+#app .frt-opex-pending strong{padding:8px 13px;border-radius:10px;background:#eb693f;color:#fff;font-size:18px;font-variant-numeric:tabular-nums}
+#app .frt-opex-ic{background:#fafbff;border-color:#d7def0}
+#app .frt-opex-ic>header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#app .frt-opex-ic>header span{padding:6px 9px;border-radius:20px;color:#6d7397;background:#eceffc;font-size:10px;font-weight:700}
+#app .frt-opex-ic .frt-exec-empty{min-height:120px;margin-top:12px;border:1px dashed #d7dfed;border-radius:9px}
+@media(max-width:760px){#app .frt-opex-dashboard .frt-exec-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:430px){#app .frt-opex-toolbar{padding:12px}#app .frt-opex-pending{align-items:flex-start}#app .frt-opex-line-chart{padding:8px}}
+
 /* frontend/fueltrack-v3-application.css */
 /* CP-FT3-01 — FuelTrack+ v3 native dashboard, scoped to authorized board app. */
 #app .ft3-app{color:#27394a;background:#f6fafb;border:1px solid #d7e4e8;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px #163b4811;margin:16px 0 28px;font-size:13px}

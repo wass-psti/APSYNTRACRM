@@ -90,6 +90,43 @@ function chartBars(summary){
   '<text x="90" y="165" text-anchor="middle">Completed</text><text x="195" y="165" text-anchor="middle">In progress</text>'+
   '<text x="300" y="165" text-anchor="middle">Pending</text></svg>';
 }
+
+/** The OPEX reference is an aggregate read, never a source of new finance authority. */
+function renderOpexLineChart(analytics,{spentOnly=false}={}){
+ if(!analytics)return '<div class="frt-exec-empty"><strong>Trend unavailable</strong><p>The signed company financial aggregate is unavailable. No values have been estimated.</p></div>';
+ const months=analytics.monthlyTrend;
+ const amountFor=item=>spentOnly?[amountCents(item.spentAmount)]:
+  [amountCents(item.requestedAmount),amountCents(item.spentAmount)];
+ const maxima=months.flatMap(amountFor);
+ const maximum=maxima.reduce((a,b)=>a>b?a:b,0n);
+ const denominator=maximum>0n?maximum:1n;
+ const x=i=>52+i*112;
+ const y=amount=>214-Number(amount*16800n/denominator)/100;
+ const points=key=>months.map((item,i)=>x(i)+','+y(amountCents(item[key])).toFixed(2)).join(' ');
+ const grids=[0,1,2,3,4].map(i=>{
+  const yAxis=214-i*42;
+  return '<line x1="46" x2="620" y1="'+yAxis+'" y2="'+yAxis+'" stroke="#e4ebf4"/>';
+ }).join('');
+ const requested=spentOnly?'':'<polyline points="'+points('requestedAmount')+
+  '" fill="none" stroke="#ee9c9e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+ const spent='<polyline points="'+points('spentAmount')+
+  '" fill="none" stroke="#91b8db" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+ const labels=months.map((item,i)=>'<text x="'+x(i)+'" y="238" text-anchor="middle">'+escape(monthLabel(item.month))+'</text>').join('');
+ const legend=spentOnly?'':'<span><i class="frt-opex-dot is-requested"></i>Requested</span>';
+ const summary=months.map(item=>escape(monthLabel(item.month))+': requested '+formatAmount(item.requestedAmount)+
+  ', submitted liquidation '+formatAmount(item.spentAmount)).join('; ');
+ return '<div class="frt-opex-line-chart"><svg role="img" aria-label="'+escape(
+  spentOnly?'Monthly submitted liquidation amounts':'Monthly requested amounts and submitted liquidation amounts'
+ )+'" viewBox="0 0 660 255" preserveAspectRatio="xMidYMid meet">'+grids+requested+spent+labels+
+  '</svg><div class="frt-opex-legend">'+legend+
+  '<span><i class="frt-opex-dot is-spent"></i>Submitted liquidation</span></div>'+
+  '<details class="frt-opex-values"><summary>View exact monthly amounts</summary><p>'+summary+'</p></details></div>';
+}
+function renderOpexUnavailable(title,explanation){
+ return '<div class="frt-exec-empty frt-opex-source-unavailable" role="status"><strong>'+escape(title)+
+  '</strong><p>'+escape(explanation)+'</p></div>';
+}
+
 function renderFRTExecutiveDashboard(result){
  const summary=result.summary||{},analytics=result.analytics;
  const metrics=[
@@ -121,16 +158,46 @@ function renderFRTExecutiveDashboard(result){
 }
 function renderFRTOpexAnalytics(result){
  const analytics=result.analytics;
- return '<section class="frt-exec-dashboard" aria-label="OPEX Analytics for '+escape(result.companyCode)+'">'+
-  '<header class="frt-exec-heading"><div><span class="frt-exec-eyebrow">'+escape(result.companyCode)+' / OPERATING EXPENDITURE</span>'+
-  '<h2>OPEX Analytics</h2><p>Requested expense categories and monthly requested-versus-spent performance.</p></div></header>'+
-  (analytics?'<div class="frt-exec-kpis"><article class="frt-exec-kpi frt-exec-violet"><div><span>Total Requested</span><strong>'+formatAmount(analytics.requestedTotal)+'</strong><small>Non-archived company requests</small></div></article><article class="frt-exec-kpi frt-exec-teal"><div><span>Total Spent</span><strong>'+formatAmount(analytics.spentTotal)+'</strong><small>Submitted liquidation snapshots</small></div></article></div>':'')+
-  '<div class="frt-exec-grid">'+
-   '<section class="frt-exec-panel"><header><div><h3>Top 5 Expense Categories</h3><p>Ranked by requested line-item totals</p></div></header>'+
-    renderCategoryBreakdown(analytics)+'</section>'+
-   '<section class="frt-exec-panel"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Company-scoped monthly amounts</p></div></header>'+
-    renderMonthlyTrend(analytics)+'</section>'+
-  '</div><p class="frt-exec-disclosure">Category amounts represent requested line items, not categorized liquidation spend. Monthly requested amounts are grouped by request creation date; spent amounts by the latest saved liquidation submission date. A resubmission replaces the prior liquidation snapshot, so this is not a historical revision ledger or proof of bank transfer. No individual request or vendor details are returned.</p></section>';
+ const summary=result.summary||{};
+ const metrics=[
+  ['Total Requested',analytics?formatAmount(analytics.requestedTotal):'—','Active, non-archived requests'],
+  ['Submitted Liquidation',analytics?formatAmount(analytics.spentTotal):'—','Latest saved liquidation submissions'],
+  ['Budget Used','—','Company budget source not connected'],
+  ['Pending Liquidations',count(summary.pending_liquidation_count),'Verified company-scoped request count']
+ ];
+ const panel=(title,description,content,extra='')=>
+  '<section class="frt-exec-panel '+extra+'"><header><div><h3>'+escape(title)+
+  '</h3><p>'+escape(description)+'</p></div></header>'+content+'</section>';
+ return '<section class="frt-exec-dashboard frt-opex-dashboard" aria-label="OPEX Analytics for '+escape(result.companyCode)+'">'+
+  '<header class="frt-opex-toolbar"><div><h2>OPEX Analytics</h2><small>FINANCIAL COMMAND CENTER · '+escape(result.companyCode)+'</small></div>'+
+   '<span class="frt-exec-source">Signed company aggregates · Last six months</span></header>'+
+  '<div class="frt-exec-kpis">'+metrics.map(([label,value,note])=>
+   '<article class="frt-exec-kpi"><div><span>'+escape(label)+'</span><strong>'+value+
+   '</strong><small>'+escape(note)+'</small></div></article>').join('')+'</div>'+
+  '<div class="frt-exec-grid frt-opex-reference-grid">'+
+   panel('Requested vs. Liquidated Trend','Six-month company-scoped comparison · not an approved budget',
+    renderOpexLineChart(analytics),'frt-opex-chart-main')+
+   panel('Category Breakdown','Top 5 categories by requested line-item value',
+    renderCategoryBreakdown(analytics))+
+   panel('Department Performance Matrix','Budget and department expense allocations',
+    renderOpexUnavailable('Department financial allocation unavailable',
+     'The signed FRT aggregate does not provide department budgets or department-level spent totals.'))+
+   panel('Burn Rate Analysis','Submitted liquidation volume by month',
+    renderOpexLineChart(analytics,{spentOnly:true}))+
+  '</div>'+
+  '<section class="frt-opex-pending"><div><h3>Pending Liquidations</h3>'+
+   '<p>Authorized company-scoped workflow count; private request details are not included in this aggregate.</p></div>'+
+   '<strong aria-label="'+count(summary.pending_liquidation_count)+' pending liquidations">'+
+   count(summary.pending_liquidation_count)+'</strong></section>'+
+  '<section class="frt-opex-ic"><header><div><h3>Risk-Aware IC Matrix</h3>'+
+   '<p>Future phase · bilateral intercompany receivables, payables and loan maturity</p></div>'+
+   '<span>Not activated</span></header>'+
+   renderOpexUnavailable('Intercompany ledger not connected',
+    'There is no validated intercompany receivables, payables, or loan maturity contract. No zero balances or reconciled status are asserted.')+
+  '</section>'+
+  '<p class="frt-exec-disclosure">All figures are sourced from signed '+escape(result.companyCode)+
+   ' aggregates. Requested means non-archived fund requests, not an approved budget. Submitted liquidation is the latest saved liquidation snapshot, not proof of a bank payment. Category totals represent requested line items, not actual categorized spend. Budget utilization, department allocations, individual liquidation aging, and intercompany exposure require separate authorized data contracts; none are inferred from screenshots.</p>'+
+  '</section>';
 }
 function renderFRTManual(result){
  return '<section class="frt-exec-dashboard" aria-label="Fund Released Tracker user manual">'+
