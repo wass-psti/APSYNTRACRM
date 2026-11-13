@@ -8956,7 +8956,12 @@ document.addEventListener('keydown',event=>{
   root.querySelector('.sidebar-layout-toggle')?.focus({preventScroll:true});
  }
 });
-window.addEventListener('online',()=>platformSync.network(true));
+window.addEventListener('online',()=>{
+ platformSync.network(true);
+ // A real browser reconnection can recover a stalled signed startup once.
+ // No timer, polling, background agent, or automatic write replay.
+ if(startupRecoveryActive&&!startupBusy&&auth.isSignedIn)void boot();
+});
 window.addEventListener('offline',()=>platformSync.network(false));
 // Hash navigation must not silently discard locally edited Draft fields.
 // Authentication expiry remains authoritative: a revoked session is never
