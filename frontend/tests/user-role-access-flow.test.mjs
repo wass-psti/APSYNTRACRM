@@ -17,7 +17,7 @@ test('a single per-user screen switches between separate applications and boards
  for(const accessSection of ['applications','boards']){
   const html=renderUserRoleManagement({verified:true,data,selectedUserId:target,accessSection});
   assert.equal((html.match(/data-action="user-role-section"/g)||[]).length,2);
-  assert.equal((html.match(/aria-pressed="true"/g)||[]).length,1);
+  assert.equal((html.match(/data-action="user-role-section"[^>]*aria-pressed="true"/g)||[]).length,1);
   assert.match(html,/data-role-access-section="applications"/);
   assert.match(html,/data-role-access-section="boards"/);
   assert.match(html,/data-action="user-role-edit-crm-platform"/);
