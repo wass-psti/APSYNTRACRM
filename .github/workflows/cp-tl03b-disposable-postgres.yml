@@ -36,6 +36,10 @@ on:
       - 'sql/tests/cp-tl03c-*.sql'
       - 'frontend/tradelink-domain-client.js'
       - 'frontend/tests/tradelink-domain-*.test.mjs'
+      - 'supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql'
+      - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
+      - 'supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql'
+      - 'sql/tests/cp-tl08e02-retry-safe-updates-disposable.sql'
 
 permissions:
   contents: read
@@ -168,3 +172,19 @@ jobs:
         run: node --test frontend/tests/tradelink-domain-client.test.mjs frontend/tests/tradelink-domain-sql-contract.test.mjs frontend/tests/tradelink-domain-stage-b-release-boundary.test.mjs
       - name: Verify independent signed concurrent approval attempts in isolated PostgreSQL
         run: bash scripts/cp-tl-pdf04-concurrent-approval.sh
+      - name: Create isolated CP-TL-08E-02 retry database
+        run: createdb --maintenance-db=postgres --username=postgres tradelink_retry_disposable
+      - name: Install exact signed document-save migrations in isolated PostgreSQL
+        env:
+          PGDATABASE: tradelink_retry_disposable
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tl03-disposable-setup.sql \
+            -f sql/cp-tl03-staged-domain.sql \
+            -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql \
+            -f supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql \
+            -f supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql
+      - name: Verify CP-TL-08E-02 retry-safe reviewer substitution and revision integrity
+        env:
+          PGDATABASE: tradelink_retry_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl08e02-retry-safe-updates-disposable.sql
