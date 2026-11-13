@@ -8,6 +8,12 @@ const report={status:'PASS',role:'GENERAL_MANAGER',companyCode:'WASS',
  {code:'WASS',name:'Watchdog Automation Sales & Services'},
  {code:'PSTI',name:'PLC Systems Technik, Inc.'}],
  summary:{total_requests:40,pending:9,in_progress:18,completed:13,pending_liquidation_count:7},
+ analytics:{companyCode:'WASS',requestedTotal:'1234567.89',spentTotal:'456789.12',
+  topCategories:[{category:'Office Supplies',requestedAmount:'750000.00'},
+   {category:'Equipment',requestedAmount:'500000.00'}],
+  monthlyTrend:['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11'].map((month,i)=>({
+   month,requestedAmount:(100000+i*10000).toFixed(2),spentAmount:(50000+i*5000).toFixed(2)
+  }))},
  requests:[{requestId:id,title:'Operating Supplies',voucher:'DV-WASS-202611-009',status:'PENDING_APPROVAL',dateNeeded:'2026-11-13',filingStatus:'NOT_FILED'}]};
 test('reference sections render actual verified signed KPIs, chart labels, title and company selector',()=>{
  const html=renderFRTFinanceReadOnly({result:report});
@@ -67,6 +73,8 @@ test('new scoped CSS participates in generated ordered stylesheet without extra 
  assert.match(manifest,/frontend\/frt-reference-dashboard.css/);
  assert.match(index,/frontend\/frt-reference-dashboard.css/);
  assert.match(bundle,/frontend\/frt-reference-dashboard.css/);
+ assert.match(bundle,/frt-exec-category-list/);
+ assert.match(bundle,/frt-exec-trend/);
  assert.match(css,/#app \.frt-ref/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.doesNotMatch(css,/!important\s*;\s*\}/);
@@ -87,20 +95,21 @@ test('reference-only dialogs retain disabled backend submission and signed membe
 
 test('Executive Dashboard renders signed company-scoped counts and truthful financial-data states',()=>{
  const html=renderFRTFinanceReadOnly({result:report,view:'executive'});
- for(const value of ['Executive Dashboard','Requested','Liquidated','Budget Utilization',
+ for(const value of ['Executive Dashboard','Requested','Spent','Budget Utilization',
   'Pending Liquidation','Request Status Pipeline','Top 5 Expense Categories',
-  'Requested vs. Spent — Last 6 Months','not supplied by the current signed finance projection',
+  'Requested vs. Spent — Last 6 Months','1,234,567.89','frt-exec-month-row',
   'frt-exec-grid','data-view="executive"'])assert.ok(html.includes(value),value);
  assert.match(html,/Pending Liquidation[\s\S]*?7/);
  assert.match(html,/13 completed[\s\S]*?18 in progress[\s\S]*?9 pending approval/);
- assert.doesNotMatch(html,/923812|100000|999999|\b90%\s+warning/i);
+ assert.doesNotMatch(html,/923812|999999/i);
 });
 
 test('OPEX and User Manual navigation are functional views without fabricated financial charts',()=>{
  const opex=renderFRTFinanceReadOnly({result:report,view:'opex'});
  assert.match(opex,/OPEX Analytics/);
  assert.match(opex,/Top 5 Expense Categories/);
- assert.match(opex,/six-month requested-versus-spent series is not supplied/i);
+ assert.match(opex,/frt-exec-month-row/);
+ assert.match(opex,/750,000\.00/);
  const manual=renderFRTFinanceReadOnly({result:report,view:'manual'});
  assert.match(manual,/Fund Released Tracker — User Manual/);
  assert.match(manual,/company selector/);
@@ -128,4 +137,43 @@ test('blocked signed result never renders an executive dashboard or financial KP
  const html=renderFRTFinanceReadOnly({result:{status:'BLOCKED',reason:'FRT_ACCESS_DENIED'},view:'executive'});
  assert.match(html,/FRT_ACCESS_DENIED/);
  assert.doesNotMatch(html,/frt-exec-dashboard|Budget Utilization|Top 5 Expense Categories/);
+});
+
+
+test('CP-FRT-EXEC-02 Executive Dashboard renders real signed aggregate amounts and category rollups',()=>{
+ const html=renderFRTFinanceReadOnly({result:report,view:'executive'});
+ for(const value of ['1,234,567.89','456,789.12','Office Supplies','750,000.00',
+  'Equipment','500,000.00','Requested vs. Spent — Last 6 Months','Nov 26',
+  'No authoritative company budget source'])assert.ok(html.includes(value),value);
+ assert.match(html,/frt-exec-category-row/);
+ assert.match(html,/frt-exec-month-row/);
+ assert.match(html,/data-view="executive"/);
+ assert.doesNotMatch(html,/requestId|voucher_no|recipientBank|requestor_email/);
+});
+
+test('CP-FRT-EXEC-02 OPEX Analytics uses the same validated company aggregates',()=>{
+ const html=renderFRTFinanceReadOnly({result:report,view:'opex'});
+ assert.match(html,/750,000\.00/);
+ assert.match(html,/456,789\.12/);
+ assert.match(html,/requested line items/i);
+ assert.match(html,/liquidation submission date/);
+});
+
+test('CP-FRT-EXEC-02 unavailable aggregate data preserves honest empty states',()=>{
+ const html=renderFRTFinanceReadOnly({result:{...report,analytics:null},view:'executive'});
+ assert.match(html,/Category breakdown unavailable/);
+ assert.match(html,/Six-month trend unavailable/);
+ assert.match(html,/Budget Utilization/);
+ assert.match(html,/No authoritative company budget source/);
+ assert.doesNotMatch(html,/>NaN<|Infinity|undefined/);
+});
+
+test('CP-FRT-EXEC-02 escapes untrusted category names and formats large decimal strings without precision loss',()=>{
+ const html=renderFRTFinanceReadOnly({result:{...report,analytics:{
+  ...report.analytics,requestedTotal:'999999999999999999999999.99',
+  topCategories:[{category:'<img src=x onerror=alert(1)>',requestedAmount:'999999999999999999999999.99'}]
+ }},view:'executive'});
+ assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
+ assert.match(html,/999,999,999,999,999,999,999,999\.99/);
+ assert.doesNotMatch(html,/<img src=x|onerror=alert\(1\)>/);
 });

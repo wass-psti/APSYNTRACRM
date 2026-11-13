@@ -3,6 +3,49 @@ const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
 const count=v=>Number.isSafeInteger(v)&&v>=0?String(v):'—';
+const formatAmount=value=>{
+ if(typeof value!=='string'||!/^\d{1,30}(?:\.\d{1,2})?$/.test(value))return '—';
+ const [whole,fraction='']=value.split('.');
+ return whole.replace(/\B(?=(\d{3})+(?!\d))/g,',')+'.'+fraction.padEnd(2,'0');
+};
+const amountCents=value=>{
+ if(typeof value!=='string'||!/^\d{1,30}(?:\.\d{1,2})?$/.test(value))return 0n;
+ const [whole,fraction='']=value.split('.');
+ return BigInt(whole)*100n+BigInt(fraction.padEnd(2,'0'));
+};
+const chartPercent=(value,maximum)=>{
+ const max=maximum>0n?maximum:1n;
+ return Math.min(100,Number(value*10000n/max)/100).toFixed(2);
+};
+const monthLabel=value=>{
+ const [year,month]=value.split('-').map(Number);
+ return new Date(Date.UTC(year,month-1,1)).toLocaleDateString('en-PH',{
+  month:'short',year:'2-digit',timeZone:'UTC'
+ });
+};
+function renderCategoryBreakdown(analytics){
+ if(!analytics)return '<div class="frt-exec-empty"><strong>Category breakdown unavailable</strong><p>Signed financial aggregates are not currently available. The existing Fund Tracker remains usable.</p></div>';
+ if(!analytics.topCategories.length)return '<div class="frt-exec-empty"><strong>No categorized request items</strong><p>No expense-category line items were found for this company.</p></div>';
+ const maximum=analytics.topCategories.reduce((max,item)=>amountCents(item.requestedAmount)>max?amountCents(item.requestedAmount):max,0n);
+ return '<div class="frt-exec-category-list" aria-label="Top requested expense categories">'+
+  analytics.topCategories.map(item=>'<div class="frt-exec-category-row"><div class="frt-exec-category-heading"><span>'+
+   escape(item.category)+'</span><b>'+formatAmount(item.requestedAmount)+'</b></div><progress class="frt-exec-track" max="100" value="'+chartPercent(amountCents(item.requestedAmount),maximum)+'" aria-label="'+escape(item.category)+' requested amount"></progress></div>').join('')+'</div>';
+}
+function renderMonthlyTrend(analytics){
+ if(!analytics)return '<div class="frt-exec-empty"><strong>Six-month trend unavailable</strong><p>Signed financial aggregates are not currently available. No trend values are estimated.</p></div>';
+ const maximum=analytics.monthlyTrend.reduce((max,item)=>{
+  const requested=amountCents(item.requestedAmount),spent=amountCents(item.spentAmount);
+  return requested>max?(requested>spent?requested:spent):(spent>max?spent:max);
+ },0n);
+ return '<div class="frt-exec-trend" aria-label="Six-month requested and spent amounts">'+
+  '<div class="frt-exec-trend-legend"><span><i class="is-requested"></i>Requested</span><span><i class="is-spent"></i>Spent</span></div>'+
+  analytics.monthlyTrend.map(item=>'<div class="frt-exec-month-row"><span class="frt-exec-month-label">'+
+   monthLabel(item.month)+'</span><div class="frt-exec-month-series">'+
+   '<div><small>Requested</small><progress class="is-requested" max="100" value="'+chartPercent(amountCents(item.requestedAmount),maximum)+'" aria-label="Requested"></progress><b>'+
+   formatAmount(item.requestedAmount)+'</b></div><div><small>Spent</small><progress class="is-spent" max="100" value="'+chartPercent(amountCents(item.spentAmount),maximum)+'" aria-label="Spent"></progress><b>'+formatAmount(item.spentAmount)+'</b></div>'+
+   '</div></div>').join('')+'</div>';
+}
+
 import {frtActionSpec} from './frt-board-domain-actions.js';
 const editRoles=new Set(['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER']);
 const statusTone=value=>{
@@ -48,17 +91,19 @@ function chartBars(summary){
   '<text x="300" y="165" text-anchor="middle">Pending</text></svg>';
 }
 function renderFRTExecutiveDashboard(result){
- const summary=result.summary||{};
+ const summary=result.summary||{},analytics=result.analytics;
  const metrics=[
-  ['Requested','—','Financial amount is not supplied by the current signed finance projection','violet','▤'],
-  ['Liquidated','—','Liquidated amount is not supplied by the current signed finance projection','teal','✓'],
-  ['Budget Utilization','—','Cannot calculate without verified budget and release totals','blue','◷'],
+  ['Requested',analytics?formatAmount(analytics.requestedTotal):'—',
+   analytics?'Total requested across active company records':'Signed aggregate data unavailable','violet','▤'],
+  ['Spent',analytics?formatAmount(analytics.spentTotal):'—',
+   analytics?'Submitted liquidation totals for this company':'Signed aggregate data unavailable','teal','✓'],
+  ['Budget Utilization','—','No authoritative company budget source is present in the current FRT schema','blue','◷'],
   ['Pending Liquidation',count(summary.pending_liquidation_count),'Verified company-scoped request count','rose','!']
  ];
  return '<section class="frt-exec-dashboard" aria-label="Executive Dashboard for '+escape(result.companyCode)+'">'+
   '<header class="frt-exec-heading"><div><span class="frt-exec-eyebrow">'+escape(result.companyCode)+' / FINANCIAL OVERVIEW</span>'+
   '<h2>Executive Dashboard</h2><p>Company-scoped fund request performance and workflow health.</p></div>'+
-  '<span class="frt-exec-source">Signed company projection</span></header>'+
+  '<span class="frt-exec-source">Signed company aggregates</span></header>'+
   '<div class="frt-exec-kpis">'+metrics.map(([label,value,note,tone,icon])=>
    '<article class="frt-exec-kpi frt-exec-'+tone+'"><div><span>'+label+'</span><strong>'+value+'</strong><small>'+note+'</small></div>'+
    '<i aria-hidden="true">'+icon+'</i></article>').join('')+'</div>'+
@@ -67,23 +112,25 @@ function renderFRTExecutiveDashboard(result){
     chartDonut(summary)+'<div class="frt-ref-legend"><span><i class="frt-ref-dot is-complete"></i>Completed <b>'+count(summary.completed)+'</b></span>'+
     '<span><i class="frt-ref-dot is-progress"></i>In progress <b>'+count(summary.in_progress)+'</b></span>'+
     '<span><i class="frt-ref-dot is-pending"></i>Pending approval <b>'+count(summary.pending)+'</b></span></div></section>'+
-   '<section class="frt-exec-panel"><header><div><h3>Top 5 Expense Categories</h3><p>Highest requested spending areas</p></div></header>'+
-    '<div class="frt-exec-empty"><strong>Category breakdown unavailable</strong><p>Expense-category totals are not supplied by the current signed finance projection.</p></div></section>'+
-   '<section class="frt-exec-panel frt-exec-panel-wide"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Monthly financial comparison</p></div></header>'+
-    '<div class="frt-exec-empty"><strong>Six-month trend unavailable</strong><p>Monthly requested and spent amounts are not supplied by the current signed finance projection.</p></div></section>'+
-  '</div><p class="frt-exec-disclosure">Financial totals, expense categories and monthly amounts are not available in this signed read projection. They are shown as unavailable rather than estimated or fabricated. The 90% budget warning is evaluated only when verified utilization data exists.</p>'+
+   '<section class="frt-exec-panel"><header><div><h3>Top 5 Expense Categories</h3><p>Requested line-item totals · '+escape(result.companyCode)+'</p></div></header>'+
+    renderCategoryBreakdown(analytics)+'</section>'+
+   '<section class="frt-exec-panel frt-exec-panel-wide"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Request creation month versus liquidation submission month</p></div></header>'+
+    renderMonthlyTrend(analytics)+'</section>'+
+  '</div><p class="frt-exec-disclosure">Requested totals use active, non-archived fund requests. Spent totals use the latest currently saved submitted liquidation record per request; resubmission replaces the prior snapshot. This is not a historical revision ledger or a verified bank-transfer total. Category totals use requested line items. Monthly requested values are grouped by request creation date; spent values by liquidation submission date. Budget utilization and the 90% warning remain unavailable until an authoritative company budget source exists.</p>'+
   '</section>';
 }
 function renderFRTOpexAnalytics(result){
+ const analytics=result.analytics;
  return '<section class="frt-exec-dashboard" aria-label="OPEX Analytics for '+escape(result.companyCode)+'">'+
   '<header class="frt-exec-heading"><div><span class="frt-exec-eyebrow">'+escape(result.companyCode)+' / OPERATING EXPENDITURE</span>'+
-  '<h2>OPEX Analytics</h2><p>Expense categories and monthly requested-versus-spent performance.</p></div></header>'+
+  '<h2>OPEX Analytics</h2><p>Requested expense categories and monthly requested-versus-spent performance.</p></div></header>'+
+  (analytics?'<div class="frt-exec-kpis"><article class="frt-exec-kpi frt-exec-violet"><div><span>Total Requested</span><strong>'+formatAmount(analytics.requestedTotal)+'</strong><small>Non-archived company requests</small></div></article><article class="frt-exec-kpi frt-exec-teal"><div><span>Total Spent</span><strong>'+formatAmount(analytics.spentTotal)+'</strong><small>Submitted liquidation snapshots</small></div></article></div>':'')+
   '<div class="frt-exec-grid">'+
-   '<section class="frt-exec-panel"><header><div><h3>Top 5 Expense Categories</h3><p>Company-scoped expense ranking</p></div></header>'+
-    '<div class="frt-exec-empty"><strong>Category breakdown unavailable</strong><p>Expense-category totals are not supplied by the current signed finance projection.</p></div></section>'+
-   '<section class="frt-exec-panel"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Monthly financial comparison</p></div></header>'+
-    '<div class="frt-exec-empty"><strong>Trend data unavailable</strong><p>The six-month requested-versus-spent series is not supplied by the current signed finance projection.</p></div></section>'+
-  '</div><p class="frt-exec-disclosure">No financial amounts or category totals are inferred from request titles, status counts or dates.</p></section>';
+   '<section class="frt-exec-panel"><header><div><h3>Top 5 Expense Categories</h3><p>Ranked by requested line-item totals</p></div></header>'+
+    renderCategoryBreakdown(analytics)+'</section>'+
+   '<section class="frt-exec-panel"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Company-scoped monthly amounts</p></div></header>'+
+    renderMonthlyTrend(analytics)+'</section>'+
+  '</div><p class="frt-exec-disclosure">Category amounts represent requested line items, not categorized liquidation spend. Monthly requested amounts are grouped by request creation date; spent amounts by the latest saved liquidation submission date. A resubmission replaces the prior liquidation snapshot, so this is not a historical revision ledger or proof of bank transfer. No individual request or vendor details are returned.</p></section>';
 }
 function renderFRTManual(result){
  return '<section class="frt-exec-dashboard" aria-label="Fund Released Tracker user manual">'+

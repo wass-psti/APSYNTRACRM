@@ -81,11 +81,17 @@ BEGIN
  END IF;
  j := public.frt_board_dashboard_safe(w,'WAO');
  IF jsonb_typeof(j)<>'object' OR
-    (SELECT count(*) FROM jsonb_object_keys(j))<>5 OR
+    (SELECT count(*) FROM jsonb_object_keys(j))<>10 OR
     (j->>'total_requests')::integer<>1 OR
     (j->>'pending')::integer<>1 OR
-    j::text LIKE '%84215%' OR j::text LIKE '%amount%' THEN
-  RAISE EXCEPTION 'SEC14 dashboard leaked amounts or bad counts';
+    j->>'company_code'<>'WAO' OR
+    (j->>'requested_total')::numeric<>84215.50 OR
+    (j->>'spent_total')::numeric<>0 OR
+    jsonb_array_length(j->'top_categories')<>0 OR
+    jsonb_array_length(j->'monthly_trend')<>6 OR
+    j::text LIKE '%SECRET%' OR j::text LIKE '%recipient%' OR
+    j::text LIKE '%bank%' OR j::text LIKE '%department%' THEN
+  RAISE EXCEPTION 'SEC14 dashboard aggregate projection mismatch or restricted data leak: %',j;
  END IF;
  detail := public.frt_restricted_request_detail(w,r1);
  IF detail->>'id' IS DISTINCT FROM r1::text OR
