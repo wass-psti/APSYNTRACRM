@@ -82,7 +82,7 @@ test('HTML escapes receipt purpose and does not invent banking release',()=>{
  assert.doesNotMatch(html,/Bank transferred|Released amount/i);
 });
 test('migration enforces transaction, row lock, exact replay, revision and signed policy without legacy revocation',()=>{
- const sql=readFileSync(new URL('../../supabase/migrations/20261113170000_frt_wf02_signed_liquidation.sql',import.meta.url),'utf8');
+ const sql=readFileSync(new URL('../../supabase/migrations/20261113085038_frt_wf02_signed_multi_receipt_liquidation.sql',import.meta.url),'utf8');
  for(const required of ['BEGIN;','COMMIT;','FOR UPDATE','submission_key=v_key',
   "errcode='40001'",'private.frt_current_role','LIQUIDATION_SUBMITTED',
   'frt_liquidation_snapshot','frt_submit_liquidation_v2'])
