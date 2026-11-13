@@ -95,7 +95,7 @@ function renderModule(m,canManage=true){
   (canManage?'<p><a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+esc(m.key)+'">Prepare a '+esc(m.label)+' document</a></p>':'')+
   (canManage?'<p class="muted">Opens the signed document editor. Save defaults to For Approval; choose Draft explicitly when needed. Assigned reviewers validate independently with Use Time Now. The second validation automatically sets Approved.</p>':'<p class="muted">Assigned reviewers can open their documents from All Documents, inspect the saved content and record their own validation time.</p>')+
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
-  '<p>Signed document creation and editing are enabled through the existing authorized domain API. For Approval is the default saved status; the two assigned reviewers independently validate the current revision. Print PDF is available only after both validations set Approved. The official PDF template remains pending. Unsaved previews are never presented as persisted documents.</p></div></section>';
+  '<p>Signed document creation and editing are enabled through the existing authorized domain API. For Approval is the default saved status; the two assigned reviewers independently validate the current revision. Print PDF is available only after both validations set Approved. The recovered official company templates are available for all six modules. Browser Print / Save as PDF uses the saved document revision; electronic PDF issuance is separate. Unsaved previews are never presented as persisted documents.</p></div></section>';
 }
 /** Reference-led TradeLink portal is presentation-only.
  * Links preserve the existing signed-board routes and disabled domain gates. */
@@ -138,7 +138,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
       'Each document has two assigned reviewers; each uses Use Time Now to record an independent signed validation. '+
       'The first validation leaves the document For Approval; the second automatically changes it to Approved. '+
       'Only Approved documents can be printed. Other status options become available after approval, while cancellation remains available before approval. '+
-      'The official PDF template will be integrated separately when supplied.</p>'+
+      'The official v1.42.0 company templates are available for all six modules. Select the correct company/legal entity when creating a document. Existing company assignments remain fixed when revising a saved document. Use Print / Save as PDF for the saved revision; the browser print copy is not an electronically issued PDF. Older records without a company assignment use the historical Watchdog Automation Sales & Services default and show a preview warning.</p>'+
      '</div></details>'+
    '</nav>'+
   '</header>'+
