@@ -95,7 +95,7 @@ test('CAS receipts accept exact no-op and immediate replay-safe update receipts 
 });
 
 test('retry-safe production migration only accepts the immediate same-actor exact-payload replay',()=>{
- const sql=readFileSync(new URL('../../supabase/migrations/20261113070000_tradelink_retry_safe_revision_bound_updates.sql',import.meta.url),'utf8');
+ const sql=readFileSync(new URL('../../supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql',import.meta.url),'utf8');
  for(const pattern of [
   /d\.revision=p_expected_revision\+1/,
   /p_expected_revision<9223372036854775807/,
