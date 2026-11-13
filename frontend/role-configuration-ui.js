@@ -20,7 +20,7 @@ const tabs=[
  ['matrix','Permission matrix'],['workspace','Workspace access'],['audit','Change history']
 ];
 function sectionTable(headers,body){
- return '<div class="panel role-table-panel"><div class="table-scroll role-table-scroll"><table class="board-table role-data-table"><thead><tr>'+
+ return '<div class="panel role-table-panel"><div class="table-scroll role-table-scroll" tabindex="0" role="region" aria-label="Role configuration table, scroll horizontally for more columns"><table class="board-table role-data-table"><thead><tr>'+
  headers.map(h=>'<th scope="col">'+x(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div></div>';
 }
 function roles(d){
@@ -73,7 +73,7 @@ function matrix(d){
  let rows='';
  for(const module of BOARD_MODULES){
   rows+='<tr data-searchable="'+x(module.name.toLowerCase())+'"><td><strong>'+x(module.name)+'</strong></td>'+
-  actions.map(action=>'<td><button class="secondary" data-action="role-propose-permission" data-module-id="'+x(ROLE_MODULE_OPTIONS.find(m=>m[1]===module.name)?.[0]||module.key)+'" data-capability="'+action+'" title="Stage a proposal; no live change">Stage</button></td>').join('')+'</tr>';
+  actions.map(action=>'<td><button class="secondary" data-action="role-propose-permission" data-module-id="'+x(ROLE_MODULE_OPTIONS.find(m=>m[1]===module.name)?.[0]||module.key)+'" data-capability="'+action+'" aria-label="Stage '+x(action)+' proposal for '+x(module.name)+'; no live permission change" title="Stage a proposal; no live change">Stage</button></td>').join('')+'</tr>';
  }
  return '<div class="section-header"><strong>Module permission matrix</strong><span class="muted">12 modules × 7 capabilities</span></div>'+
  '<div class="note">All matrix entries are proposal controls, <strong>not effective grants</strong>. Module-specific roles remain mapped to the existing authorization system. Approval and activation are disabled until separately authorized.</div>'+
