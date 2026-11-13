@@ -41,11 +41,14 @@ const html='<!doctype html><html lang="en"><head>'+
  'const header=r(".tl-reference-topbar"),layout=r(".tl-app-layout"),'+
  'nav=r(".tl-app-nav"),main=r(".tl-app-main"),'+
  'top=r(".tl-reference-document-topcard"),editor=r(".tl-reference-editor-content");'+
+ 'const moduleLinks=[...document.querySelectorAll(".tl-app-nav .tl-module-link")];'+
+ 'const moduleNavVisible=moduleLinks.length===6&&moduleLinks.every(x=>x.getBoundingClientRect().height>0);'+
  'const navBeforeMain=!!nav&&!!main&&(innerWidth>850?nav.left+nav.width<=main.left+1:nav.bottom<=main.top+1);'+
- 'const ordered=!!header&&!!layout&&!!nav&&!!main&&!!top&&!!editor&&'+
+ 'const ordered=!!header&&!!layout&&!!nav&&!!main&&!!top&&!!editor&&moduleNavVisible&&'+
  'layout.top>=header.bottom&&navBeforeMain&&top.top>=main.top&&editor.top>=top.bottom;'+
  'h.dataset.tlHorizontalOverflow=String(overflow);'+
  'h.dataset.tlGeometryValid=String(ordered&&header.width>=300&&nav.width>0&&main.width>=300&&top.width>=300&&editor.width>=300);'+
+ 'h.dataset.tlModuleNavVisible=String(moduleNavVisible);'+
  'h.dataset.tlViewport=String(innerWidth);'+
  '});</script></body></html>';
 mkdirSync(dirname(output),{recursive:true});
