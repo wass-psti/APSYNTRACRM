@@ -91,6 +91,17 @@ export class UserRoleManagementClient {
 function selected(data,id){
  return data?.users?.find(u=>u.id===id)||null;
 }
+// Prefer an actionable member when the page first opens or a stale/protected
+// selection disappears. Preserve an explicitly selected, non-protected member;
+// multi-workspace targets remain selectable for workspace-scoped board/MRH access.
+export function selectDefaultUserRoleTarget(users,actorUserId=null,selectedUserId=null){
+ const rows=Array.isArray(users)?users:[];
+ const current=rows.find(u=>u.id===selectedUserId);
+ if(current&&!current.protected&&current.id!==actorUserId)return current.id;
+ return rows.find(u=>!u.protected&&u.id!==actorUserId&&u.activeWorkspaceCount===1)?.id
+  ??rows.find(u=>!u.protected&&u.id!==actorUserId)?.id
+  ??rows[0]?.id??null;
+}
 // CRM workspace tier and inherited identity are separate source-of-truth fields.
 // Display both so a correctly persisted tier is never disguised as employee.
 function crmRoleSourceLabel(crm){
@@ -105,7 +116,7 @@ function accountRoleLabel(data,user){
  return 'CRM '+crm.effectiveRole+' ('+crmRoleSourceLabel(crm)+')'+
   ' · Identity '+user.platformRole;
 }
-export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,busy=false,error=''}={}){
+export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error=''}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
  let html='<div class="aps-user-role-management"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / CRM Admin</span>'+
  '<h1 id="user-role-title">User Role Management<span class="user-role-heading-stop">.</span></h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
@@ -115,7 +126,8 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  if(error)html+='<div class="error-banner" role="alert">'+esc(error)+'</div>';
  if(data?.crmPlatformUnavailable)html+='<div class="note security-note" role="status">APSYNTRA CRM platform role assignments are unavailable because the required backend migration is not installed. CRM changes are disabled. Existing application and board assignments remain governed by the centralized backend.</div>';
  if(!data)return html+'<div class="panel user-role-loading"><p class="muted">Loading authorized workspace members…</p></div></div>';
- const u=selected(data,selectedUserId)||data.users[0]||null;
+ const defaultTargetId=selectDefaultUserRoleTarget(data.users,actorUserId,selectedUserId);
+ const u=selected(data,selectedUserId)||selected(data,defaultTargetId)||data.users[0]||null;
  html+='<section class="stat-grid user-role-stat-grid user-role-entrance" aria-label="User role management statistics">'+[
   ['Active workspace members',data.users.length,'users'],['Application assignments',data.moduleAssignments.length,'roles'],
   ['Board memberships',data.boardAssignments.length,'boards'],['Available boards',data.boards.length,'proposals']
@@ -127,15 +139,21 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  if(!u)return html+'<p class="muted">No active members.</p></div>';
  const activeWorkspaceCount=Number.isInteger(u.activeWorkspaceCount)?
   u.activeWorkspaceCount:null;
+ const isSelf=!!actorUserId&&u.id===actorUserId;
+ const otherAssignableMembers=data.users.filter(member=>
+  !member.protected&&member.id!==actorUserId);
  const globalModuleRoleBlocked=activeWorkspaceCount===null||activeWorkspaceCount>1;
  html+='<section class="panel user-role-selected-panel user-role-entrance" aria-label="Selected user authorization"><div class="panel-header"><h3>'+esc(u.name||u.email)+'</h3><span>'+esc(accountRoleLabel(data,u))+'</span></div>'+
  '<div class="panel-body"><div class="settings-detail user-role-effective-summary"><label>Current CRM role / identity</label><strong>'+esc(accountRoleLabel(data,u))+'</strong></div>'+(u.protected?
  '<div class="note security-note user-role-protected">Protected administrator — role modifications are intentionally disabled.</div>':
+ isSelf?
+ '<div class="note security-note user-role-self">The signed-in administrator cannot assign or modify roles on their own account. Select another active workspace member.</div>':
  '<div class="note user-role-helper">Select an application or board below to update this user’s actual role. Changes require explicit confirmation.</div>')+
+ (!otherAssignableMembers.length?'<div class="note security-note user-role-no-targets">There are no other eligible active members in this workspace. Self-assignment and protected administrator changes are not permitted. Add another member to this workspace before assigning application or board access.</div>':'')+
  (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Material Request Hub uses a separate workspace-scoped role record; board access is also workspace-scoped.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
- const locked=!!u.protected||busy;
+ const locked=!!u.protected||isSelf||busy;
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
  html+='<div class="section-header user-role-section-header user-role-entrance"><strong>APSYNTRA CRM Platform Role</strong></div>'+
  '<div class="note security-note user-role-ceiling-note">This is the CRM-wide authorization ceiling. CRM tier assignments are workspace-specific, not changes to the inherited WatchdogWorkspace account role. Admin grants CRM administrative authority for the active workspace, not unrelated module assignments or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
@@ -156,9 +174,23 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const opt=MODULE_ROLE_OPTIONS[id]||[];
   const status=a?.enabled?'Active: '+a.role:a?'Disabled: '+a.role:'Unassigned';
   const note=delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
+  const editBlocked=locked||!opt.length||(globalModuleRoleBlocked&&id!=='material-request-hub')||
+   (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable)||
+   (id==='toolbox-issues'&&!a?.enabled);
+  const editReason=busy?'Another role change is in progress.':
+   u.protected?'Protected administrator accounts cannot be modified.':
+   isSelf?'Self-assignment is not permitted.':
+   !opt.length?'No supported role options are configured for this application.':
+   globalModuleRoleBlocked&&id!=='material-request-hub'?'This legacy application role is global and this member belongs to multiple workspaces.':
+   id==='material-request-hub'&&!data.workspaceScopedMrhAvailable?'Workspace-scoped Material Request Hub role management is not verified.':
+   id==='toolbox-issues'&&!a?.enabled?'An existing Toolbox Issues source membership is required before changing its role.':'';
+  const revokeBlocked=locked||(globalModuleRoleBlocked&&id!=='material-request-hub')||
+   (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
   html+='<tr><td><strong>'+esc(name)+'</strong></td><td>'+esc(status)+'</td><td>'+esc(note)+'</td><td>'+
-   '<button class="secondary" data-action="user-role-edit-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+(locked||!opt.length||(globalModuleRoleBlocked&&id!=='material-request-hub')||(id==='material-request-hub'&&!data.workspaceScopedMrhAvailable)||(id==='toolbox-issues'&&!a?.enabled)?'disabled':'')+'>Assign / change</button> '+
-   (a?.enabled?'<button class="secondary" data-action="user-role-revoke-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+(locked||(globalModuleRoleBlocked&&id!=='material-request-hub')||(id==='material-request-hub'&&!data.workspaceScopedMrhAvailable)?'disabled':'')+'>Revoke</button>':'')+
+   '<button class="secondary" data-action="user-role-edit-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
+   (editBlocked?'disabled title="'+esc(editReason)+'"':'')+'>Assign / change</button> '+
+   (a?.enabled?'<button class="secondary" data-action="user-role-revoke-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
+    (revokeBlocked?'disabled title="'+esc(editReason||'This application role cannot be changed for the selected member.')+'"':'')+'>Revoke</button>':'')+
   '</td></tr>';
  }
  html+='</tbody></table></div></div>';
