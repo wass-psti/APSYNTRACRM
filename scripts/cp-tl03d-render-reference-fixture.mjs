@@ -38,11 +38,14 @@ const html='<!doctype html><html lang="en"><head>'+
  'const r=s=>{const x=document.querySelector(s);if(!x)return null;'+
  'const b=x.getBoundingClientRect();return {top:b.top,left:b.left,width:b.width,height:b.height,bottom:b.bottom}};'+
  'const h=document.documentElement;const overflow=Math.max(0,Math.ceil(h.scrollWidth-innerWidth));'+
- 'const header=r(".tl-reference-topbar"),top=r(".tl-reference-document-topcard"),'+
- 'editor=r(".tl-reference-editor-content"),tabs=r(".tl-reference-document-tabs");'+
- 'const ordered=!!header&&!!top&&!!editor&&!!tabs&&top.top>=header.bottom&&editor.top>=top.bottom;'+
+ 'const header=r(".tl-reference-topbar"),layout=r(".tl-app-layout"),'+
+ 'nav=r(".tl-app-nav"),main=r(".tl-app-main"),'+
+ 'top=r(".tl-reference-document-topcard"),editor=r(".tl-reference-editor-content");'+
+ 'const navBeforeMain=!!nav&&!!main&&(innerWidth>850?nav.left+nav.width<=main.left+1:nav.bottom<=main.top+1);'+
+ 'const ordered=!!header&&!!layout&&!!nav&&!!main&&!!top&&!!editor&&'+
+ 'layout.top>=header.bottom&&navBeforeMain&&top.top>=main.top&&editor.top>=top.bottom;'+
  'h.dataset.tlHorizontalOverflow=String(overflow);'+
- 'h.dataset.tlGeometryValid=String(ordered&&header.width>=300&&top.width>=300&&editor.width>=300&&tabs.width>0);'+
+ 'h.dataset.tlGeometryValid=String(ordered&&header.width>=300&&nav.width>0&&main.width>=300&&top.width>=300&&editor.width>=300);'+
  'h.dataset.tlViewport=String(innerWidth);'+
  '});</script></body></html>';
 mkdirSync(dirname(output),{recursive:true});

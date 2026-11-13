@@ -1223,3 +1223,133 @@
  padding:7px 10px;border-radius:8px;background:#f2f6ff;
 }
 .tl-reference-portal .tl-reference-pdf-stage [hidden]{display:none!important}
+
+
+/* CP-TL-SPLIT-01 — TradeLink document workspace split view.
+   Presentation only; signed routes, retrieval, and document actions remain authoritative. */
+.tl-reference-portal[data-tl-section="drafts"][data-tl-can-manage="true"] .tl-app-layout{
+ display:grid;grid-template-columns:minmax(220px,260px) minmax(0,1fr);
+ align-items:start;gap:20px;min-width:0;
+}
+.tl-reference-portal .tl-app-nav{
+ display:grid;align-content:start;gap:12px;min-width:0;padding:16px;
+ border:1px solid var(--tl-ref-line);border-radius:14px;
+ background:#fff;box-shadow:0 2px 8px #1c2c4b08;
+}
+.tl-reference-portal .tl-app-nav-heading{
+ display:grid;gap:5px;padding:2px 7px 12px;border-bottom:1px solid var(--tl-ref-line);
+}
+.tl-reference-portal .tl-app-nav-heading>span{
+ color:#8993a4;font-size:9px;font-weight:800;letter-spacing:.12em;
+}
+.tl-reference-portal .tl-app-nav-heading>strong{
+ color:#1d293b;font-size:17px;letter-spacing:-.025em;line-height:1.25;
+}
+.tl-reference-portal .tl-app-nav-heading>small{
+ color:#7b8799;font-size:10px;line-height:1.45;
+}
+.tl-reference-portal .tl-app-nav-links{display:grid;gap:4px}
+.tl-reference-portal .tl-app-nav .tl-module-link{
+ display:flex;align-items:center;gap:10px;min-width:0;min-height:42px;
+ padding:7px 9px;border:1px solid transparent;border-radius:9px;
+ color:#586579;background:transparent;text-decoration:none;
+ font-size:11px;font-weight:620;line-height:1.35;
+ transition:background .14s ease,border-color .14s ease,color .14s ease;
+}
+.tl-reference-portal .tl-app-nav .tl-module-link:hover{
+ color:#214fbd;background:#f4f7ff;
+}
+.tl-reference-portal .tl-app-nav .tl-module-link.active{
+ color:#204bb2;background:#edf3ff;border-color:#dce7ff;
+}
+.tl-reference-portal .tl-app-nav .tl-module-short{
+ display:grid;place-items:center;flex:none;width:31px;height:31px;
+ border-radius:8px;background:#f0f3f8;color:#566783;
+ font-size:9px;font-weight:800;letter-spacing:.02em;
+}
+.tl-reference-portal .tl-app-nav .tl-module-link.active .tl-module-short{
+ color:#2454c6;background:#dce8ff;
+}
+.tl-reference-portal .tl-module-link-copy{display:grid;gap:2px;min-width:0}
+.tl-reference-portal .tl-module-link-copy strong{
+ overflow:hidden;color:inherit;font-size:11px;font-weight:680;
+ text-overflow:ellipsis;white-space:nowrap;
+}
+.tl-reference-portal .tl-module-link-copy small{
+ display:block;color:#929bad;font-size:9px;font-weight:500;
+}
+.tl-reference-portal .tl-module-chevron{margin-left:auto;color:#9aa5b5;font-size:16px;line-height:1}
+.tl-reference-portal .tl-app-main{min-width:0;width:100%}
+.tl-reference-portal .tl-app-nav a:focus-visible{
+ outline:2px solid #3971ed;outline-offset:2px;
+}
+/* All Documents: keep the signed result list and its selected preview visible together. */
+.tl-reference-portal .tl-document-split-view{
+ display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);
+ align-items:start;gap:16px;min-width:0;
+}
+.tl-reference-portal .tl-document-list-pane{min-width:0}
+.tl-reference-portal .tl-document-preview-pane{
+ min-width:0;min-height:320px;padding:16px;
+ border:1px solid var(--tl-ref-line);border-radius:12px;
+ background:#fff;box-shadow:0 2px 8px #1c2c4b08;
+}
+.tl-reference-portal .tl-document-preview-empty{
+ display:grid;place-items:center;align-content:center;gap:10px;
+ min-height:285px;padding:24px;text-align:center;
+}
+.tl-reference-portal .tl-document-preview-empty-icon{
+ display:grid;place-items:center;width:46px;height:46px;
+ border:1px solid #e4eaf4;border-radius:13px;
+ background:#f5f8fd;color:#6680aa;font-size:21px;
+}
+.tl-reference-portal .tl-document-preview-empty h3{
+ margin:0;color:#25344a;font-size:14px;font-weight:700;
+}
+.tl-reference-portal .tl-document-preview-empty p{
+ max-width:290px;margin:0;color:#7b8799;font-size:11px;line-height:1.6;
+}
+.tl-reference-portal .tl-document-preview-close{
+ display:flex;justify-content:flex-end;margin-bottom:12px;
+}
+.tl-reference-portal .tl-document-preview-pane .tl-saved-document-preview,
+.tl-reference-portal .tl-document-preview-pane .tl-signed-history,
+.tl-reference-portal .tl-document-preview-pane .tl-saved-attachments{
+ min-width:0;max-width:100%;
+}
+.tl-reference-portal .tl-document-preview-pane .tl-records-scroll{max-width:100%;overflow-x:auto}
+.tl-reference-portal .tl-document-preview-pane .tl-records-table{min-width:0}
+.tl-reference-portal .tl-document-preview-pane .tl-document-edit-action{margin:0 0 10px}
+@media(max-width:1100px){
+ .tl-reference-portal .tl-document-split-view{grid-template-columns:minmax(0,1fr)}
+ .tl-reference-portal .tl-document-preview-pane{min-height:220px}
+ .tl-reference-portal .tl-document-preview-empty{min-height:180px}
+}
+@media(max-width:850px){
+ .tl-reference-portal .tl-reference-topbar{align-items:center}
+ .tl-reference-portal .tl-reference-portal-links{overflow-x:auto;flex-wrap:nowrap;max-width:100%}
+ .tl-reference-portal .tl-reference-portal-links>a{flex:none}
+ .tl-reference-portal .tl-app-layout,
+ .tl-reference-portal[data-tl-section="drafts"][data-tl-can-manage="true"] .tl-app-layout{
+  grid-template-columns:minmax(0,1fr);gap:13px;
+ }
+ .tl-reference-portal .tl-app-nav{
+  display:flex;width:100%;align-items:center;flex-wrap:nowrap;gap:7px;
+  overflow-x:auto;overscroll-behavior-x:contain;padding:9px;scrollbar-width:thin;
+ }
+ .tl-reference-portal .tl-app-nav-heading{display:none}
+ .tl-reference-portal .tl-app-nav-links{display:flex;align-items:center;flex:none;gap:5px}
+ .tl-reference-portal .tl-app-nav .tl-module-link{flex:none;min-height:37px;padding:5px 8px}
+ .tl-reference-portal .tl-module-link-copy small,.tl-reference-portal .tl-module-chevron{display:none}
+}
+@media(max-width:620px){
+ .tl-reference-portal .tl-app-layout{margin-inline:16px}
+ .tl-reference-portal .tl-app-nav{margin-inline:-2px;padding:7px}
+ .tl-reference-portal .tl-app-nav .tl-module-link{gap:6px;min-height:35px;padding:4px 7px;font-size:10px}
+ .tl-reference-portal .tl-app-nav .tl-module-short{width:25px;height:25px;font-size:8px}
+ .tl-reference-portal .tl-document-repository{padding:12px}
+ .tl-reference-portal .tl-document-preview-pane{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .tl-reference-portal .tl-app-nav .tl-module-link{transition:none}
+}

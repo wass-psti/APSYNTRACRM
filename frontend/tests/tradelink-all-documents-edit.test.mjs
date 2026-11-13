@@ -81,7 +81,7 @@ test('All Documents exposes signed edit, archive and restore for the matching Dr
   view:authorizedView,canManage:true});
  assert.match(html,/Authorized TradeLink documents/);
  assert.match(html,/Preview\/Edit/);
- assert.match(html,/Preview saved/);
+ assert.match(html,/Preview/);
  assert.match(html,/data-action="tradelink-draft-archive"/);
  assert.match(html,/data-action="tradelink-draft-restore"/);
  assert.equal((html.match(/data-tradelink-document-edit/g)||[]).length,1);

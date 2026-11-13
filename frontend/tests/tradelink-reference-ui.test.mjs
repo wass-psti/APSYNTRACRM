@@ -140,14 +140,14 @@ test('CSS scope, responsive rules and reduced-motion behavior are bounded to Tra
  assert.doesNotMatch(app,/TL03_DOMAIN_(?:READS|WRITES)_ENABLED\s*=\s*true/);
 });
 
-test('reference rebuild omits obsolete navigation, duplicate board table, and technical draft listing',()=>{
+test('reference split workspace omits duplicate board table and technical draft listing',()=>{
  const base={detail,workspaceId:signedWorkspace,canManage:true};
  const documents=renderTradeLinkApplication({...base,section:'documents',
   draftView:initialTradeLinkDraftView()});
  const draft=renderTradeLinkApplication({...base,section:'drafts',
   draftView:initialTradeLinkDraftView('quotation')});
  for(const html of [documents,draft]){
-  assert.doesNotMatch(html,/class="tl-app-nav"/);
+  assert.match(html,/<main class="tl-app-main">/);
   assert.doesNotMatch(html,/Authorized board projection|Signed Draft operations\. Uses/);
   assert.doesNotMatch(html,/tl-reference-workspace|Save enabled/);
   assert.match(html,/aria-label="TradeLink actions"/);
