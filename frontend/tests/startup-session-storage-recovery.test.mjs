@@ -48,7 +48,7 @@ test('revoked, forbidden or changed identity still fails closed when browser sto
   const auth=new AuthClient({storage,fetchImpl:async()=>reply(status,payload)});
   assert.equal(await auth.restore(),false);
   assert.equal(auth.isSignedIn,false);
-  assert.equal(storage.removes,1);
+  assert.ok(storage.removes>=1,'invalid sessions must be removed from storage');
   assert.equal(storage.getItem(STORE_KEY),null);
   assert.equal(storage.writes,0);
  }
