@@ -72,7 +72,7 @@ test('UI wiring refuses optimistic success and verifies signed workflow, Board a
  assert.match(source,/case 'tradelink-document-submit'/);
  assert.match(source,/const receipt=await tradeLinkDraftWorkspace\.submit/);
  assert.match(source,/record\.workflow_state!==receipt\.state/);
- assert.match(source,/item\.updated_at===record\.updated_at/);
+ assert.match(source,/tradeLinkBoardProjectionMatches\(item,\{[\s\S]*?boardItemId:receipt\.boardItemId,documentNumber:listed\.documentNumber/);
  assert.match(source,/if\(!TL03_WORKFLOW_SUBMIT_ENABLED/);
  assert.match(source,/committed\?\s*'The server committed a submission/);
 });

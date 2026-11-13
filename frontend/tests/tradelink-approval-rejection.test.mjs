@@ -128,7 +128,7 @@ test('source UI waits for verified signed decision, immutable audit reason and s
   /event\.metadata\?\.from!==listed\.workflowState/,
   /event\.metadata\?\.reason!==reason/,
   /event\.metadata\.decidedAt/,
-  /item\.title===listed\.documentNumber&&item\.updated_at===record\.updated_at/,
+  /tradeLinkBoardProjectionMatches\(item,\{[\s\S]*?boardItemId:receipt\.boardItemId,documentNumber:listed\.documentNumber/,
   /if\(!TL03_WORKFLOW_DECISION_ENABLED\|\|!TL03_WORKFLOW_REVIEW_ENABLED/,
   /committed\?\s*'The server committed the decision/
  ])assert.match(s,match);

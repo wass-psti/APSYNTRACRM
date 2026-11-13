@@ -65,7 +65,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
 import {TL03_DOMAIN_READS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
- tradeLinkSavedDraftMatches} from './tradelink-domain-client.js';
+ tradeLinkBoardProjectionMatches,tradeLinkSavedDraftMatches} from './tradelink-domain-client.js';
 import {runTradeLinkStageASignedReadOnly,renderTradeLinkStageAAcceptance,sanitizeTradeLinkStageAReport} from './tradelink-stage-a-signed-acceptance.js';
 import {runTradeLinkLocalSessionRevocation,renderTradeLinkSessionRevocation,renderTradeLinkSignedOutRevocationResult,sanitizeTradeLinkRevocationReport} from './tradelink-revoked-session-acceptance.js';
 import {runWs01B2SignedDiscovery,renderWs01B2SignedAcceptance,sanitizeWs01B2Report} from './workspace-b2-signed-acceptance.js';
@@ -2136,8 +2136,9 @@ async function verifyTradeLinkAttachmentCommit(documentId,listed,receipt,operati
   !list.rows?.some(r=>r.documentId===documentId&&
     r.revision===receipt.revision&&r.boardItemId===receipt.boardItemId)||
   board?.board?.workspace_id!==state.context?.workspace_id||
-  !board.items?.some(i=>i.id===receipt.boardItemId&&
-    i.title===listed.documentNumber&&i.updated_at===record.updated_at)||
+  !board.items?.some(i=>tradeLinkBoardProjectionMatches(i,{
+    boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
+    updatedAt:record.updated_at}))||
   latest?.revision!==receipt.revision||latest.operation!==operation||
   latest.metadata?.attachmentId!==receipt.attachmentId||
   visible!==(operation==='attachment-added'))
@@ -2250,9 +2251,10 @@ async function openTradeLinkAssignedDocument(documentId){
    record.workflow_state!==listed.workflowState||record.document_type!==listed.documentType||
    record.document_number!==listed.documentNumber||record.board_item_id!==listed.boardItemId||
    record.archived_at!==null||board?.board?.id!==TRADELINK_BOARD_ID||
-   board.board.workspace_id!==workspace||!boardItem||
-   boardItem.title!==listed.documentNumber||
-   Date.parse(boardItem.updated_at)!==Date.parse(record.updated_at))
+   board.board.workspace_id!==workspace||
+   !tradeLinkBoardProjectionMatches(boardItem,{
+    boardItemId:listed.boardItemId,documentNumber:listed.documentNumber,
+    updatedAt:record.updated_at}))
    throw new ApiError('Assigned document, revision or Board projection could not be verified.',409);
   state.board=board;
   state.tradeLinkDraft={...state.tradeLinkDraft,
@@ -2419,8 +2421,9 @@ async function submitTradeLinkDocument(documentId){
       row.revision===receipt.revision&&row.workflowState===receipt.state&&
       row.boardItemId===receipt.boardItemId)||
     board?.board?.workspace_id!==ws||
-    !board.items?.some(item=>item.id===receipt.boardItemId&&
-      item.title===listed.documentNumber&&item.updated_at===record.updated_at))
+    !board.items?.some(item=>tradeLinkBoardProjectionMatches(item,{
+      boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
+      updatedAt:record.updated_at})))
    throw new ApiError('TradeLink submitted state or Board verification incomplete.',409);
   state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
@@ -2491,8 +2494,9 @@ async function reviewTradeLinkDocument(documentId,action){
     events[0].metadata?.to!==receipt.state||
     (action==='request-revision'&&events[0].metadata?.reason!==reason)||
     board?.board?.workspace_id!==ws||
-    !board.items?.some(i=>i.id===receipt.boardItemId&&
-      i.title===listed.documentNumber&&i.updated_at===record.updated_at))
+    !board.items?.some(i=>tradeLinkBoardProjectionMatches(i,{
+      boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
+      updatedAt:record.updated_at})))
    throw new ApiError('Signed TradeLink review/audit synchronization incomplete.',409);
   state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
@@ -2569,8 +2573,9 @@ async function decideTradeLinkDocument(documentId,action){
    !Number.isFinite(Date.parse(event.metadata?.decidedAt))||
    Date.parse(event.metadata.decidedAt)!==Date.parse(record.updated_at)||
    board?.board?.workspace_id!==ws||
-   !board.items?.some(item=>item.id===receipt.boardItemId&&
-     item.title===listed.documentNumber&&item.updated_at===record.updated_at))
+   !board.items?.some(item=>tradeLinkBoardProjectionMatches(item,{
+     boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
+     updatedAt:record.updated_at})))
    throw new ApiError('Signed TradeLink decision/audit/Board reconciliation incomplete.',409);
   state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
@@ -2662,8 +2667,9 @@ async function operateTradeLinkDocument(documentId,action){
    Date.parse(event.metadata.at)!==Date.parse(receipt.recordedAt)||
    Date.parse(receipt.recordedAt)!==Date.parse(record.updated_at)||
    board?.board?.workspace_id!==ws||
-   !board.items?.some(item=>item.id===receipt.boardItemId&&
-     item.title===listed.documentNumber&&item.updated_at===record.updated_at))
+   !board.items?.some(item=>tradeLinkBoardProjectionMatches(item,{
+     boardItemId:receipt.boardItemId,documentNumber:listed.documentNumber,
+     updatedAt:record.updated_at})))
    throw new ApiError('Signed TradeLink operational/Board/audit reconciliation incomplete.',409);
   state.board=board;
   state.tradeLinkDraft={...initialTradeLinkDraftView(),...list,
@@ -5392,8 +5398,9 @@ async function action(name,button){
    if(!record||record.revision!==receipt.revision||
       record.workflow_state!==targetState||
       Date.parse(record.updated_at)!==Date.parse(receipt.updatedAt)||
-      !boardItem||boardItem.title!==listed.documentNumber||
-      Date.parse(boardItem.updated_at)!==Date.parse(record.updated_at))
+      !tradeLinkBoardProjectionMatches(boardItem,{
+      boardItemId:listed.boardItemId,documentNumber:listed.documentNumber,
+      updatedAt:record.updated_at}))
     throw new ApiError('Status was changed, but the refreshed document/Board projection could not be verified.',409);
    state.board=board;
    state.tradeLinkDraft={...state.tradeLinkDraft,
@@ -5485,9 +5492,10 @@ async function action(name,button){
     if(!same())break;
     const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
     if(!record||record.revision!==receipt.revision||
-       record.workflow_state!==receipt.state||!boardItem||
-       boardItem.title!==listed.documentNumber||
-       Date.parse(boardItem.updated_at)!==Date.parse(record.updated_at))
+       record.workflow_state!==receipt.state||
+       !tradeLinkBoardProjectionMatches(boardItem,{
+        boardItemId:listed.boardItemId,documentNumber:listed.documentNumber,
+        updatedAt:record.updated_at}))
      throw new ApiError('Review was recorded, but the refreshed document/Board projection could not be verified.',409);
     state.board=board;
     state.tradeLinkDraft={...state.tradeLinkDraft,
@@ -5507,9 +5515,10 @@ async function action(name,button){
     const refreshed=rows.find(row=>row.documentId===documentId);
     const boardItem=board?.items?.find(item=>item.id===listed.boardItemId);
     if(!refreshed||refreshed.revision!==receipt.revision||
-       refreshed.workflowState!==receipt.state||!boardItem||
-       boardItem.title!==listed.documentNumber||
-       Date.parse(boardItem.updated_at)!==Date.parse(refreshed.updatedAt))
+       refreshed.workflowState!==receipt.state||
+       !tradeLinkBoardProjectionMatches(boardItem,{
+        boardItemId:refreshed.boardItemId,documentNumber:refreshed.documentNumber,
+        updatedAt:refreshed.updatedAt}))
      throw new ApiError('Review was recorded, but the refreshed Board/list projection could not be verified. Refresh before retrying.',409);
     state.board=board;
     state.tradeLinkDraft={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
