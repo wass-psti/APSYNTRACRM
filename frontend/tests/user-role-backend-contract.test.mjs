@@ -35,3 +35,16 @@ test('audit records are part of same transaction and no direct client DML used',
  assert.doesNotMatch(client,/from\(['"]module_role_assignments/);
  assert.match(client,/apsyntra_role_manage_user_access/);
 });
+
+test('Toolbox assignment uses workspace-scoped source membership, not the global module shadow row',()=>{
+ const migration=readFileSync('supabase/migrations/20261113041201_cp_urm_app_toolbox_01_source_membership_role_assignment.sql','utf8');
+ assert.match(migration,/public\.toolbox_issues_memberships/);
+ assert.match(migration,/workspace_id,user_id,role,enabled,assigned_by,updated_at/);
+ assert.match(migration,/ON CONFLICT\(workspace_id,user_id\)/);
+ assert.match(migration,/p_resource_id NOT IN \('material-request-hub','toolbox-issues'\)/);
+ assert.match(migration,/p_role NOT IN \('admin','supervisor','employee','viewer'\)/);
+ assert.match(migration,/'role_changed' ELSE 'role_revoked'/);
+ assert.match(migration,/No active Toolbox Issues membership available to revoke/);
+ assert.match(migration,/a\.module_id NOT IN \('material-request-hub','toolbox-issues'\)/);
+ assert.match(migration,/ti\.workspace_id=p_workspace_id/);
+});

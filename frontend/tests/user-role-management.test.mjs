@@ -17,11 +17,18 @@ test('all user rows are escaped and bootstrap users are protected',()=>{
  assert.match(h,/disabled/);
  assert.doesNotMatch(renderUserRoleManagement({verified:false,data}),/x@example.com/);
 });
-test('client rejects unsupported privilege escalation and toolbox unverified mapping',async()=>{
- const c=new UserRoleManagementClient({rpc:async()=>{throw Error('should not call');}});
+test('client rejects unsupported privilege escalation but permits the existing Toolbox role contract',async()=>{
+ const calls=[];
+ const c=new UserRoleManagementClient({rpc:async(name,body)=>{
+  calls.push([name,body]);
+  return {effective:true,workspaceId:w,targetUserId:u,scope:'module',resourceId:'toolbox-issues'};
+ }});
  await assert.rejects(()=>c.mutate({workspaceId:w,userId:u,scope:'module',resourceId:'time-tracker',role:'bootstrap',enabled:true}));
  await assert.rejects(()=>c.mutate({workspaceId:w,userId:u,scope:'board',resourceId:w,role:'owner',enabled:true}));
- await assert.rejects(()=>c.mutate({workspaceId:w,userId:u,scope:'module',resourceId:'toolbox-issues',role:'employee',enabled:true}));
+ await c.mutate({workspaceId:w,userId:u,scope:'module',resourceId:'toolbox-issues',role:'employee',enabled:true});
+ assert.deepEqual(calls.map(x=>x[0]),['apsyntra_role_manage_user_access']);
+ assert.equal(calls[0][1].p_role,'employee');
+ assert.equal(calls[0][1].p_enabled,true);
 });
 test('client delegates role operations to one authoritative RPC and verifies response shape',async()=>{
  const calls=[];
@@ -86,4 +93,12 @@ test('default target selection skips protected and signed-in accounts and prefer
  assert.equal(selectDefaultUserRoleTarget(rows,'self','multi'),'multi');
  assert.equal(selectDefaultUserRoleTarget([{id:'self',activeWorkspaceCount:2}],'self',null),'self');
  assert.equal(selectDefaultUserRoleTarget([], 'self', null),null);
+});
+
+test('Toolbox role client rejects roles outside the authoritative source membership check constraint',async()=>{
+ const c=new UserRoleManagementClient({rpc:async()=>{throw Error('should not call');}});
+ for(const role of ['team_leader','secretary','standard','owner','Admin']){
+  await assert.rejects(()=>c.mutate({workspaceId:w,userId:u,scope:'module',
+   resourceId:'toolbox-issues',role,enabled:true}));
+ }
 });

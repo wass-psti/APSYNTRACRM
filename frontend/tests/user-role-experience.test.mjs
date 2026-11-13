@@ -182,7 +182,7 @@ test('multi-workspace target keeps MRH and board roles scoped while blocking glo
  for(const moduleId of Object.keys(MODULE_ROLE_OPTIONS)){
   const button=output.match(new RegExp('data-action="user-role-edit-module" data-user-id="'+target+'" data-resource="'+moduleId+'"[^>]*'));
   assert.ok(button,moduleId);
-  if(moduleId==='material-request-hub')assert.doesNotMatch(button[0],/disabled/);
+  if(['material-request-hub','toolbox-issues'].includes(moduleId))assert.doesNotMatch(button[0],/disabled/);
   else assert.match(button[0],/disabled/,moduleId);
  }
  assert.ok(output.includes('data-action="user-role-edit-board" data-user-id="'+target+'" data-resource="'+boardId+'" >'));
@@ -214,7 +214,8 @@ test('default selection and single-workspace application controls remain actiona
  const output=renderUserRoleManagement({verified:true,data:expanded,selectedUserId:ordinary.id,actorUserId:'77777777-7777-4777-8777-777777777777'});
  assert.match(output,/data-action="user-role-edit-module" data-user-id="66666666-6666-4666-8666-666666666666" data-resource="time-tracker" >/);
  assert.doesNotMatch(output,/data-action="user-role-edit-module" data-user-id="66666666-6666-4666-8666-666666666666" data-resource="time-tracker"[^>]*disabled/);
- assert.match(output,/data-action="user-role-edit-module" data-user-id="66666666-6666-4666-8666-666666666666" data-resource="toolbox-issues" disabled title="An existing Toolbox Issues source membership is required/);
+ assert.match(output,/data-action="user-role-edit-module" data-user-id="66666666-6666-4666-8666-666666666666" data-resource="toolbox-issues" >/);
+ assert.match(output,/data-resource="toolbox-issues"[^>]*>Assign \/ change<\/button>/);
 });
 
 test('multi-workspace target keeps workspace-scoped MRH and board controls but explains legacy application limits',()=>{
@@ -226,6 +227,7 @@ test('multi-workspace target keeps workspace-scoped MRH and board controls but e
  assert.match(output,/Legacy application roles are global across workspaces/);
  assert.match(output,/data-resource="time-tracker" disabled title="This legacy application role is global/);
  assert.match(output,/data-resource="material-request-hub" >/);
+ assert.match(output,/data-resource="toolbox-issues" >/);
  assert.match(output,/data-action="user-role-edit-board" data-user-id="88888888-8888-4888-8888-888888888888"/);
  assert.doesNotMatch(output,/data-action="user-role-edit-board"[^>]*disabled/);
 });
@@ -241,4 +243,21 @@ test('initial role-management render defaults away from the first protected acco
  assert.match(output,/option value="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" selected/);
  assert.doesNotMatch(output,/Protected administrator — role modifications are intentionally disabled/);
  assert.match(output,/data-action="user-role-edit-module" data-user-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" data-resource="time-tracker" >/);
+});
+
+test('Toolbox source membership is displayed as the effective role with change and revoke controls',()=>{
+ const source={...data,moduleAssignments:[{userId:target,moduleId:'toolbox-issues',
+  role:'supervisor',enabled:true,updatedAt:'2026-11-13T04:00:00Z'}]};
+ const output=renderUserRoleManagement({verified:true,data:source,selectedUserId:target});
+ assert.match(output,/Active: supervisor/);
+ assert.match(output,/Existing domain role handler/);
+ assert.match(output,/data-action="user-role-edit-module" data-user-id="11111111-1111-4111-8111-111111111111" data-resource="toolbox-issues" >/);
+ assert.match(output,/data-action="user-role-revoke-module" data-user-id="11111111-1111-4111-8111-111111111111" data-resource="toolbox-issues"/);
+});
+
+test('Toolbox assignment fails closed when the backend has not verified the target workspace count',()=>{
+ const unverified={...data,users:[{...data.users[0],activeWorkspaceCount:null}]};
+ const output=renderUserRoleManagement({verified:true,data:unverified,selectedUserId:target});
+ assert.match(output,/The backend has not verified this account’s active workspace scope/);
+ assert.match(output,/data-resource="toolbox-issues" disabled title="The backend has not verified this account/);
 });
