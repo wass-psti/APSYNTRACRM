@@ -7,6 +7,11 @@ import {TRADELINK_DOCUMENT_STATUS_OPTIONS} from '../tradelink-draft-workspace.js
 const root=new URL('../../',import.meta.url);
 const source=async path=>readFile(new URL(path,root),'utf8');
 
+test('application imports the dual-review capability before using reviewer actions',async()=>{
+ const app=await source('frontend/app.js');
+ assert.match(app,/import\s*\{[^}]*\bTL03_DUAL_REVIEW_ENABLED\b[^}]*\}\s*from\s*['\"]\.\/tradelink-domain-client\.js['\"]/s);
+});
+
 test('dual-review capability is enabled and all existing status labels remain present',()=>{
  assert.equal(TL03_DUAL_REVIEW_ENABLED,true);
  assert.deepEqual(TRADELINK_DOCUMENT_STATUS_OPTIONS.map(([,label])=>label),[
