@@ -168,7 +168,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  (locked||data.crmPlatformUnavailable?'disabled':'')+'>Revert to inherited role</button>':'')+
  '</div></div>';
  html+='<div class="section-header user-role-section-header"><strong>Application-specific assignments</strong></div>'+
- '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll"><table class="board-table user-role-table" aria-label="Application-specific assignments"><thead><tr><th scope="col">Application</th><th scope="col">Effective stored role</th><th scope="col">Enforcement</th><th scope="col">Action</th></tr></thead><tbody>';
+ '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll" role="region" aria-label="Application assignments, scroll horizontally for more columns" tabindex="0"><table class="board-table user-role-table" aria-label="Application-specific assignments"><thead><tr><th scope="col">Application</th><th scope="col">Effective stored role</th><th scope="col">Enforcement</th><th scope="col">Action</th></tr></thead><tbody>';
  for(const [id,name] of ROLE_MODULE_OPTIONS){
   const a=data.moduleAssignments.find(x=>x.userId===u.id&&x.moduleId===id);
   const opt=MODULE_ROLE_OPTIONS[id]||[];
@@ -187,21 +187,21 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const revokeBlocked=locked||(globalModuleRoleBlocked&&id!=='material-request-hub')||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
   html+='<tr><td><strong>'+esc(name)+'</strong></td><td>'+esc(status)+'</td><td>'+esc(note)+'</td><td>'+
-   '<button class="secondary" data-action="user-role-edit-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
+   '<button class="secondary" aria-label="Assign or change '+esc(name)+' application role" data-action="user-role-edit-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
    (editBlocked?'disabled title="'+esc(editReason)+'"':'')+'>Assign / change</button> '+
-   (a?.enabled?'<button class="secondary" data-action="user-role-revoke-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
+   (a?.enabled?'<button class="secondary" aria-label="Revoke '+esc(name)+' application role" data-action="user-role-revoke-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
     (revokeBlocked?'disabled title="'+esc(editReason||'This application role cannot be changed for the selected member.')+'"':'')+'>Revoke</button>':'')+
   '</td></tr>';
  }
  html+='</tbody></table></div></div>';
  html+='<div class="section-header user-role-section-header"><strong>Individual board access</strong></div>'+
  '<div class="note user-role-board-note">Viewer permits reads; Editor permits reads and writes. Owner privileges cannot be granted or changed here. Backend checks are performed on every authorized board request.</div>'+
- '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll"><table class="board-table user-role-table" aria-label="Individual board access"><thead><tr><th scope="col">Board</th><th scope="col">Membership</th><th scope="col">Action</th></tr></thead><tbody>';
+ '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll" role="region" aria-label="Board access, scroll horizontally for more columns" tabindex="0"><table class="board-table user-role-table" aria-label="Individual board access"><thead><tr><th scope="col">Board</th><th scope="col">Membership</th><th scope="col">Action</th></tr></thead><tbody>';
  for(const board of data.boards){
   const a=data.boardAssignments.find(x=>x.userId===u.id&&x.boardId===board.id);
   html+='<tr><td>'+esc(board.name)+'</td><td>'+esc(a?.role||'No membership')+'</td><td>'+
-   '<button class="secondary" data-action="user-role-edit-board" data-user-id="'+esc(u.id)+'" data-resource="'+esc(board.id)+'" '+(locked||a?.role==='owner'?'disabled':'')+'>Set access</button> '+
-   (a&&a.role!=='owner'?'<button class="secondary" data-action="user-role-revoke-board" data-user-id="'+esc(u.id)+'" data-resource="'+esc(board.id)+'" '+(locked?'disabled':'')+'>Revoke</button>':'')+
+   '<button class="secondary" aria-label="Set access for '+esc(board.name)+' (board '+esc(String(board.id).slice(-8))+')" data-action="user-role-edit-board" data-user-id="'+esc(u.id)+'" data-resource="'+esc(board.id)+'" '+(locked||a?.role==='owner'?'disabled':'')+'>Set access</button> '+
+   (a&&a.role!=='owner'?'<button class="secondary" aria-label="Revoke access for '+esc(board.name)+' (board '+esc(String(board.id).slice(-8))+')" data-action="user-role-revoke-board" data-user-id="'+esc(u.id)+'" data-resource="'+esc(board.id)+'" '+(locked?'disabled':'')+'>Revoke</button>':'')+
   '</td></tr>';
  }
  html+='</tbody></table></div></div><p class="muted user-role-boundary-note">'+roleConfigurationIcon('shield')+'<span>The existing backend still governs approval, export, finance and domain-specific operations separately. A board membership alone does not grant access to sensitive domain records.</span></p>';
