@@ -9,8 +9,17 @@ const roles=new Set(['GENERAL_MANAGER','FINANCE_MANAGER','FINANCE_APPROVER','REQ
 const companyPattern=/^[A-Za-z0-9_-]{1,32}$/;
 const maxName=120;
 const validCount=n=>Number.isSafeInteger(n)&&n>=0;
+export function projectFRTAging(raw,companyCode){
+ const keys=['pending_total','awaiting_bank_execution','on_track','due_soon','overdue','completed'];
+ if(!raw||raw.company_code!==companyCode||
+  raw.source!=='STAFF_RECORDED_BANK_EVIDENCE'||raw.deadline_hours!==72||
+  keys.some(k=>!validCount(raw[k]))||
+  raw.awaiting_bank_execution+raw.on_track+raw.due_soon+raw.overdue!==raw.pending_total)
+  return null;
+ return Object.fromEntries(keys.map(k=>[k,raw[k]]));
+}
 const denied=(reason)=>({status:'BLOCKED',reason,companies:[],requests:[],
- summary:null,analytics:null,analyticsStatus:'UNAVAILABLE',icSnapshot:null,icStatus:'UNAVAILABLE',role:'UNVERIFIED',companyCode:null,writesAttempted:0});
+ summary:null,analytics:null,analyticsStatus:'UNAVAILABLE',aging:null,agingStatus:'UNAVAILABLE',icSnapshot:null,icStatus:'UNAVAILABLE',role:'UNVERIFIED',companyCode:null,writesAttempted:0});
 const short=(value,length)=>typeof value==='string'&&value.length<=length?value:null;
 const validDate=v=>v===null||(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v));
 const validMoney=v=>typeof v==='string'&&/^\d{1,30}(?:\.\d{1,2})?$/.test(v);
@@ -75,7 +84,7 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeI
   if(!companyPattern.test(selected||'')||!seen.has(selected))
    return denied('UNAUTHORIZED_COMPANY_SELECTION');
 
-  const [dashboard,items,icRead]=await Promise.all([
+  const [dashboard,items,icRead,agingRead]=await Promise.all([
    api.rpc('frt_board_dashboard_safe',
     {p_workspace_id:context.workspace_id,p_company:selected}),
    api.rpc('frt_board_list_safe',
@@ -83,7 +92,10 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeI
    includeIntercompany?
     api.rpc('frt_ic_snapshot',{p_workspace_id:context.workspace_id})
      .then(raw=>({raw,available:true,skipped:false})).catch(()=>({raw:null,available:false,skipped:false})):
-    Promise.resolve({raw:null,available:false,skipped:true})
+    Promise.resolve({raw:null,available:false,skipped:true}),
+   api.rpc('frt_liquidation_aging_company',{
+    p_workspace_id:context.workspace_id,p_company:selected
+   }).then(raw=>({raw,available:true})).catch(()=>({raw:null,available:false}))
   ]);
   const keys=['total_requests','pending','in_progress','completed','pending_liquidation_count'];
   if(!dashboard||keys.some(k=>!validCount(dashboard[k]))||
@@ -92,6 +104,8 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeI
   // Aggregate fields are additive to the existing safe dashboard RPC.
   // Older deployed projections remain usable while aggregate fields are absent.
   const analytics=projectFinancialAnalytics(dashboard,selected);
+  const aging=agingRead.available?projectFRTAging(agingRead.raw,selected):null;
+  const agingStatus=aging?'PASS':agingRead.available?'INVALID_CONTRACT':'UNAVAILABLE';
   const icSnapshot=icRead.available?
    projectFRTICSnapshot(icRead.raw,context.workspace_id,companies):null;
   const icStatus=icSnapshot?'PASS':icRead.skipped?'NOT_REQUESTED':icRead.available?'INVALID_CONTRACT':'UNAVAILABLE';
@@ -119,7 +133,7 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeI
      after?.profile?.status!=='active')return denied('SIGNED_CONTEXT_CHANGED');
   return {status:'PASS',reason:null,role:membership.role,companies,companyCode:selected,
    summary:Object.fromEntries(keys.map(k=>[k,dashboard[k]])),requests,
-   analytics,analyticsStatus,icSnapshot,icStatus,
+   analytics,analyticsStatus,aging,agingStatus,icSnapshot,icStatus,
    totalVisible:items.length,visibleLimit:100,writesAttempted:0};
  }catch(err){
   return denied(err?.status===401?'SIGNED_SESSION_EXPIRED':

@@ -140,6 +140,24 @@ function renderOpexUnavailable(title,explanation){
   '</strong><p>'+escape(explanation)+'</p></div>';
 }
 
+function renderFRTLiquidationAging(result){
+ const aging=result.aging;
+ if(result.agingStatus!=='PASS'||!aging)
+  return '<section class="frt-exec-panel" aria-label="Liquidation aging"><h3>Liquidation aging</h3><p>Signed company aging is unavailable; no overdue totals are inferred from GM verification.</p></section>';
+ const labels=[
+  ['Awaiting bank execution',aging.awaiting_bank_execution],
+  ['Due after 24 hours',aging.on_track],
+  ['Due within 24 hours',aging.due_soon],
+  ['Overdue',aging.overdue],
+  ['Liquidation approved',aging.completed]
+ ];
+ return '<section class="frt-exec-panel" aria-label="Liquidation aging"><header><div><h3>Liquidation aging</h3>'+
+  '<p>Signed '+escape(result.companyCode)+' aggregate · 72 hours after recorded bank execution</p></div></header>'+
+  '<div class="settings-grid">'+labels.map(([name,value])=>'<div class="settings-detail"><label>'+
+   escape(name)+'</label><strong>'+count(value)+'</strong></div>').join('')+
+  '</div><p class="frt-exec-disclosure">Pending: '+count(aging.pending_total)+
+  '. Bank execution reflects staff-entered evidence, not bank API confirmation. Unrecorded disbursements have no computed deadline. Approved liquidation is excluded from overdue totals.</p></section>';
+}
 function renderFRTExecutiveDashboard(result){
  const summary=result.summary||{},analytics=result.analytics;
  const metrics=[
@@ -166,7 +184,7 @@ function renderFRTExecutiveDashboard(result){
     renderCategoryBreakdown(analytics)+'</section>'+
    '<section class="frt-exec-panel frt-exec-panel-wide"><header><div><h3>Requested vs. Spent — Last 6 Months</h3><p>Request creation month versus liquidation submission month</p></div></header>'+
     renderMonthlyTrend(analytics)+'</section>'+
-  '</div><p class="frt-exec-disclosure">Requested totals use active, non-archived fund requests. Spent totals use the latest currently saved submitted liquidation record per request; resubmission replaces the prior snapshot. This is not a historical revision ledger or a verified bank-transfer total. Category totals use requested line items. Monthly requested values are grouped by request creation date; spent values by liquidation submission date. Budget utilization and the 90% warning remain unavailable until an authoritative company budget source exists.</p>'+
+  '</div>'+renderFRTLiquidationAging(result)+'<p class="frt-exec-disclosure">Requested totals use active, non-archived fund requests. Spent totals use the latest currently saved submitted liquidation record per request; resubmission replaces the prior snapshot. This is not a historical revision ledger or a verified bank-transfer total. Category totals use requested line items. Monthly requested values are grouped by request creation date; spent values by liquidation submission date. Budget utilization and the 90% warning remain unavailable until an authoritative company budget source exists.</p>'+
   '</section>';
 }
 
@@ -293,9 +311,9 @@ function renderFRTOpexAnalytics(result){
    '<p>Authorized company-scoped workflow count; private request details are not included in this aggregate.</p></div>'+
    '<strong aria-label="'+count(summary.pending_liquidation_count)+' pending liquidations">'+
    count(summary.pending_liquidation_count)+'</strong></section>'+
-  renderFRTIntercompanyMatrix(result)+
+  renderFRTLiquidationAging(result)+renderFRTIntercompanyMatrix(result)+
   '<p class="frt-exec-disclosure">All figures are sourced from signed '+escape(result.companyCode)+
-   ' aggregates. Requested means non-archived fund requests, not an approved budget. Submitted liquidation is the latest saved liquidation snapshot, not proof of a bank payment. Category totals represent requested line items, not actual categorized spend. Budget utilization, department allocations, individual liquidation aging, and intercompany exposure require separate authorized data contracts; none are inferred from screenshots.</p>'+
+   ' aggregates. Requested means non-archived fund requests, not an approved budget. Submitted liquidation is the latest saved liquidation snapshot, not proof of a bank payment. Category totals represent requested line items, not actual categorized spend. Budget utilization, department allocations, individual financial row details require separate authorized data contracts; aging is provided only as signed company aggregates.</p>'+
   '</section>';
 }
 function renderFRTWorkflowTimeline(detail){
@@ -362,8 +380,8 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
  if(selectedView==='opex')return html+renderFRTOpexAnalytics(result)+'</section>';
  if(selectedView==='manual')return html+renderFRTManual(result)+'</section>';
  html+='<div class="frt-ref-deadlines" role="status"><span class="frt-ref-warning" aria-hidden="true">△</span>'+
-  '<div><strong>Pending Liquidation</strong><small>Signed request workflow summary; overdue deadlines are not provided by this API</small></div>'+
-  '<b>'+count(summary.pending_liquidation_count)+' pending</b></div>';
+  '<div><strong>Pending Liquidation</strong><small>Bank-linked aging is shown only when signed company aggregates are available</small></div>'+
+  '<b>'+count(summary.pending_liquidation_count)+' pending</b></div>'+renderFRTLiquidationAging(result);
  html+='<div class="frt-ref-hero"><div class="frt-ref-hero-title"><span class="frt-ref-icon" aria-hidden="true">▣</span>'+
   '<div><h2>Fund Release Tracker</h2><p>Complete workflow from request to liquidation</p></div></div>'+
   '<div class="frt-ref-toolbar"><span class="frt-ref-pill" title="Signed FRT company">▣ '+
