@@ -558,13 +558,25 @@ export const QUOTATION_APPROVAL_HIERARCHY=Object.freeze({
   'amsenagan@watchdogautomation.com.ph'
  ])
 });
+/** CP-TL-08E-01: one document-scoped temporary reviewer substitution.
+ * This does not expand the general Quotation reviewer list or grant account access. */
+export const CP_TL_08E_TEMP_REVIEW={
+ documentNumber:'CP-TL-08C-QA-20261112-01',
+ reviewerEmail:'lmsenagan@watchdogautomation.com.ph'
+};
+export function quotationSecondaryOptionsForDocument(documentNumber=''){
+ const base=QUOTATION_APPROVAL_HIERARCHY.secondaryOptions;
+ return String(documentNumber||'').trim().toUpperCase()===CP_TL_08E_TEMP_REVIEW.documentNumber
+  ? [...base,CP_TL_08E_TEMP_REVIEW.reviewerEmail] : base;
+}
 /** Canonicalize the fixed first-stage reviewer, and reject unauthorized second-stage
  * nominees at the signed Draft-save boundary. Actual review and approval
  * authorization continues to be enforced by the backend. */
 export function applyQuotationApprovalHierarchy(draft){
  if(draft?.documentType!=='quotation')return draft;
- const email=String(draft.approvedByEmail||QUOTATION_APPROVAL_HIERARCHY.secondaryOptions[0]).trim().toLowerCase();
- if(!QUOTATION_APPROVAL_HIERARCHY.secondaryOptions.includes(email))
+ const secondaryOptions=quotationSecondaryOptionsForDocument(draft.documentNumber);
+ const email=String(draft.approvedByEmail||secondaryOptions[0]).trim().toLowerCase();
+ if(!secondaryOptions.includes(email))
   throw new ApiError('Select an authorized Quotation management approver.',400);
  return {...draft,verifiedBy:QUOTATION_APPROVAL_HIERARCHY.primary.label,
   verifiedByEmail:QUOTATION_APPROVAL_HIERARCHY.primary.email,
@@ -574,13 +586,13 @@ export function applyQuotationApprovalHierarchy(draft){
  * server-enforced stage membership, document status and audit must also pass. */
 export function quotationReviewControlEligibility({
  actorEmail='',secondaryEmail='',documentSaved=false,workflowState='draft',
- primaryRecordedAt=null,secondaryRecordedAt=null
+ primaryRecordedAt=null,secondaryRecordedAt=null,
+ secondaryOptions=QUOTATION_APPROVAL_HIERARCHY.secondaryOptions
 }={}){
  const actor=String(actorEmail||'').trim().toLowerCase();
  const selected=String(secondaryEmail||'').trim().toLowerCase();
  const primaryAssigned=actor!==''&&actor===QUOTATION_APPROVAL_HIERARCHY.primary.email;
- const secondaryAssigned=actor!==''&&actor===selected&&
-  QUOTATION_APPROVAL_HIERARCHY.secondaryOptions.includes(selected);
+ const secondaryAssigned=actor!==''&&actor===selected&&secondaryOptions.includes(selected);
  const pending=documentSaved&&workflowState==='for-approval'&&TL03_DUAL_REVIEW_ENABLED;
  return {
   primaryAssigned,secondaryAssigned,
@@ -600,10 +612,12 @@ export function quotationReviewControlEligibility({
  * management reviewer assignment. Each reviewer records an independent server event. */
 function renderQuotationVerification(fieldValue,data,actorName='',reviewContext={}){
  const {actorEmail='',documentSaved=false,documentId='',workflowState='draft',reviewStages=null}=reviewContext;
- const {primary,secondaryOptions}=QUOTATION_APPROVAL_HIERARCHY;
- const selected=fieldValue('approvedByEmail',data.approvedByEmail||secondaryOptions[0]);
- const safeSelected=secondaryOptions.includes(selected)?selected:secondaryOptions[0];
+ const {primary}=QUOTATION_APPROVAL_HIERARCHY;
+ const secondaryOptionsForDocument=quotationSecondaryOptionsForDocument(data.documentNumber);
+ const selected=fieldValue('approvedByEmail',data.approvedByEmail||secondaryOptionsForDocument[0]);
+ const safeSelected=secondaryOptionsForDocument.includes(selected)?selected:secondaryOptionsForDocument[0];
  const eligibility=quotationReviewControlEligibility({actorEmail,secondaryEmail:safeSelected,
+  secondaryOptions:secondaryOptionsForDocument,
   documentSaved,workflowState,primaryRecordedAt:reviewStages?.primary?.recordedAt,
   secondaryRecordedAt:reviewStages?.secondary?.recordedAt});
  return '<section class="tl-reference-approval" aria-labelledby="tl-quotation-approval-heading">'+
@@ -625,7 +639,7 @@ function renderQuotationVerification(fieldValue,data,actorName='',reviewContext=
   '<div class="tl-reference-approval-stage">'+
    '<label for="tl-quote-approver-email">Secondary approver — Management</label>'+
    '<select id="tl-quote-approver-email" name="approvedByEmail" required aria-describedby="tl-quote-secondary-note">'+
-    secondaryOptions.map(email=>'<option value="'+escape(email)+'"'+
+    secondaryOptionsForDocument.map(email=>'<option value="'+escape(email)+'"'+
      (email===safeSelected?' selected':'')+'>'+escape(email)+'</option>').join('')+
    '</select><input type="hidden" name="approvedBy" value="Management">'+
    '<small id="tl-quote-secondary-note">This existing management assignment does not grant roles or permissions.</small>'+

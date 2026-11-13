@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
-import {renderTradeLinkDraftWorkspace,initialTradeLinkDraftView,parseTradeLinkDraftForm,applyQuotationApprovalHierarchy,QUOTATION_APPROVAL_HIERARCHY}
+import {renderTradeLinkDraftWorkspace,initialTradeLinkDraftView,parseTradeLinkDraftForm,
+ applyQuotationApprovalHierarchy,QUOTATION_APPROVAL_HIERARCHY,
+ quotationSecondaryOptionsForDocument,CP_TL_08E_TEMP_REVIEW}
  from '../tradelink-draft-workspace.js';
 const workspaceId='00000000-0000-4000-8000-000000000001';
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspaceId,name:'TradeLink',
@@ -78,6 +80,12 @@ test('fixed quotation hierarchy is applied to all Draft saves, including malicio
  }
  assert.throws(()=>applyQuotationApprovalHierarchy({...unsafe,approvedByEmail:'impostor@example.test'}),/authorized Quotation management approver/);
  assert.equal(unsafe.verifiedByEmail,'other@example.test');
+ const temporary={...unsafe,documentNumber:CP_TL_08E_TEMP_REVIEW.documentNumber,
+  approvedByEmail:CP_TL_08E_TEMP_REVIEW.reviewerEmail};
+ assert.equal(applyQuotationApprovalHierarchy(temporary).approvedByEmail,CP_TL_08E_TEMP_REVIEW.reviewerEmail);
+ assert.ok(quotationSecondaryOptionsForDocument(CP_TL_08E_TEMP_REVIEW.documentNumber).includes(CP_TL_08E_TEMP_REVIEW.reviewerEmail));
+ assert.ok(!quotationSecondaryOptionsForDocument('Q-UNRELATED-01').includes(CP_TL_08E_TEMP_REVIEW.reviewerEmail));
+ assert.throws(()=>applyQuotationApprovalHierarchy({...temporary,documentNumber:'Q-UNRELATED-01'}),/authorized Quotation management approver/);
  assert.equal(applyQuotationApprovalHierarchy({documentType:'esi',verifiedBy:'Finance'}).verifiedBy,'Finance');
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
  assert.match(source,/validateTradeLinkDraftEnvelope\(applyQuotationApprovalHierarchy\(draft\)\)/);
