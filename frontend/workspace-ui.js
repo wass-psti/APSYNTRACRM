@@ -593,7 +593,10 @@ function browseContent(catalog,options={}){
   ' aria-labelledby="ws01-browser-title"><header class="ws01-browser-top">'+
   '<h2 id="ws01-browser-title">Browse all workspaces</h2>'+
   '<label class="ws01-search-label" for="ws01-browser-search">Search authorized workspaces</label>'+
-  '<input id="ws01-browser-search" type="search" placeholder="Search by workspace name" maxlength="120"/>'+
+  '<div class="ws01-browser-search-field" data-aps-search-native>'+
+  '<svg class="ws01-browser-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>'+
+  '<input id="ws01-browser-search" type="search" placeholder="Search by workspace name" maxlength="120" autocomplete="off"/>'+
+  '</div>'+
   '<button type="button" class="ws01-close" data-ws01-close aria-label="Close browse workspaces">×</button></header>'+
   '<div class="ws01-browser-body"><nav class="ws01-browser-tabs" aria-label="Workspace categories">'+
   tabs.map(([id,label])=>'<button type="button" data-ws01-filter="'+id+

@@ -56,3 +56,12 @@ test('workspace selector opts out of global search enhancer to prevent duplicate
  assert.match(enhancer,/data-aps-search-native/);
  assert.equal((ui.match(/class="ws01-menu-search-icon"/g)||[]).length,1);
 });
+
+test('browse search places one icon in its own positioned field, bypassing global enhancer',()=>{
+ assert.match(ui,/class="ws01-browser-search-field" data-aps-search-native/);
+ assert.equal((ui.match(/class="ws01-browser-search-icon"/g)||[]).length,1);
+ assert.match(css,/\.ws01-browser-search-field\{[\s\S]*?position:relative/);
+ assert.match(css,/#ws01-browser-search\{[\s\S]*?padding:10px 13px 10px 43px/);
+ assert.match(css,/#ws01-browser-search::-webkit-search-decoration/);
+ assert.match(css,/\.ws01-browser-search-field\{\s*grid-row:2;grid-column:1\/-1/);
+});
