@@ -1,0 +1,65 @@
+name: CP-WS-02D/B3 RPC Privacy Disposable Acceptance
+on:
+  pull_request:
+    paths:
+      - 'sql/cp-ws02d-b3-rpc-privacy-disposable-candidate.sql'
+      - 'sql/cp-ws02d-b3-internal-helper-disposable-candidate.sql'
+      - 'sql/tests/cp-ws02d-b3-rpc-privacy-disposable.sql'
+      - 'sql/tests/cp-ws02d-b3-internal-helper-runtime.sql'
+      - '.github/workflows/cp-ws02d-b3-rpc-privacy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rpc-privacy-pg17:
+    name: Cross-principal privacy and signed self-read (PG17 only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ws02d_privacy_only
+          POSTGRES_DB: ws02d_privacy_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ws02d_privacy_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: '127.0.0.1'
+      PGPORT: '5432'
+      PGDATABASE: 'ws02d_privacy_disposable'
+      PGUSER: 'postgres'
+      PGPASSWORD: 'disposable_ws02d_privacy_only'
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client on isolated runner
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Verify disposable PostgreSQL 17 database
+        run: |
+          set -euo pipefail
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "ws02d_privacy_disposable"
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(),current_setting('server_version_num')::integer >= 170000" |
+            grep -Fx 'ws02d_privacy_disposable|t'
+      - name: Reproduce exposed old RPC and verify synthetic signed-user privacy fix
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-ws02d-b3-rpc-privacy-disposable.sql |
+            tee /tmp/ws02d-b3-rpc-privacy.log
+          grep -F 'WS02D_B3_RPC_PRIVACY_DISPOSABLE_PASS' /tmp/ws02d-b3-rpc-privacy.log
+          grep -F 'WS02D_B3_INTERNAL_HELPER_RUNTIME_PASS' /tmp/ws02d-b3-rpc-privacy.log

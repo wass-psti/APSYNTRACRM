@@ -36,7 +36,7 @@ function json(status,body,allowed){
  if(allowed){
   headers['access-control-allow-origin']=ALLOWED_ORIGIN;
   headers['access-control-allow-methods']='GET, OPTIONS';
-  headers['access-control-allow-headers']='authorization';
+  headers['access-control-allow-headers']='authorization, apikey';
  }
  return new Response(JSON.stringify(body),{status,headers});
 }
@@ -47,7 +47,8 @@ function isVerified(actor){
 }
 function scopeMatches(ctx,actor){
  return Boolean(ctx && ctx.user_id===actor.id &&
-   UUID.test(ctx.workspace_id) && ctx.profile?.status==='active');
+   UUID.test(ctx.workspace_id) && ctx.profile?.status==='active' &&
+   (!actor.workspaceId || ctx.workspace_id===actor.workspaceId));
 }
 
 /**
