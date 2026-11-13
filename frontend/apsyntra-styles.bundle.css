@@ -21477,6 +21477,329 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
  min-height:44px;
 }
 
+/* CP-WS-UX-04 — unified authorized workspace dialogs. No changes to server contracts. */
+.ws01-overlay:is(.ws01-menu,.ws01-browse,.ws01-create,.ws01-invite){
+ --workspace-ink:#253351;
+ --workspace-muted:#63738f;
+ --workspace-line:#e0e6f2;
+ --workspace-accent:#6265e4;
+ padding:clamp(10px,2.5vw,28px);
+ background:rgba(24,34,60,.43);
+ backdrop-filter:blur(4px);
+}
+.ws01-overlay :is(.ws01-menu-card,.ws01-browser-card,.ws01-create-card,.ws02-invite-card){
+ box-sizing:border-box;
+ border:1px solid #e1e6f1;
+ border-radius:18px;
+ background:#fff;
+ color:var(--workspace-ink);
+ box-shadow:0 22px 70px #15244536;
+}
+.ws01-overlay :is(.ws01-menu-card,.ws01-browser-card,.ws01-create-card,.ws02-invite-card) h2{
+ color:#263552;letter-spacing:-.025em;line-height:1.22;
+}
+.ws01-overlay :is(input[type=search],input[type=email],input[type=text],textarea){
+ box-sizing:border-box;min-width:0;
+ font-family:inherit;font-size:13px;line-height:1.45;
+ background:#fbfcff;border:1px solid #cfd8e9;border-radius:11px;
+ color:#273755;
+}
+.ws01-overlay :is(input[type=search],input[type=email],input[type=text],textarea):focus-visible{
+ outline:2px solid var(--workspace-accent);outline-offset:2px;
+ background:#fff;border-color:var(--workspace-accent);
+}
+.ws01-overlay :is(.ws01-menu-card,.ws01-browser-card,.ws01-create-card,.ws02-invite-card) button:focus-visible{
+ outline:3px solid #6269e4;outline-offset:2px;
+}
+.ws01-overlay .ws01-search-label{
+ display:block;font-size:11px;font-weight:760;color:#526381;
+ line-height:1.4;margin:0 0 8px
+}
+.ws01-overlay .ws01-entry{
+ position:relative;min-width:0;overflow:hidden;
+ border:1px solid #e2e8f3;border-radius:13px;background:#fbfcff;
+ transition:background .16s,border-color .16s,box-shadow .16s;
+}
+.ws01-overlay .ws01-entry:hover,
+.ws01-overlay .ws01-entry:focus-within{
+ background:#f5f7ff;border-color:#bdc8f1;
+ box-shadow:0 5px 16px #23316d0b;
+}
+.ws01-overlay .ws01-entry-button{
+ display:grid;grid-template-columns:42px minmax(0,1fr);
+ gap:11px 12px;align-items:center;min-width:0;
+ width:100%;min-height:88px;padding:13px;
+ text-align:left;white-space:normal;
+}
+.ws01-overlay .ws01-entry-icon{
+ width:42px;height:42px;border-radius:12px;
+ font-size:16px;grid-row:1/span 2;
+}
+.ws01-overlay .ws01-entry-copy{
+ grid-column:2;grid-row:1;min-width:0;
+ display:grid;gap:4px;align-self:center
+}
+.ws01-overlay .ws01-entry-copy strong{
+ display:block;max-width:100%;white-space:normal;
+ overflow-wrap:anywhere;font-size:13px;line-height:1.3;
+ color:#273654;font-weight:790;
+}
+.ws01-overlay .ws01-entry-copy small{
+ display:block;font-size:11px;line-height:1.4;
+ color:#667792;white-space:normal;overflow-wrap:anywhere;
+}
+.ws01-overlay .ws01-entry-badge{
+ grid-column:2;grid-row:2;
+ justify-self:start;align-self:start;
+ max-width:100%;min-width:0;
+ padding:5px 8px;border-radius:8px;
+ line-height:1.35;font-size:10px;
+ text-align:left;white-space:normal;overflow-wrap:anywhere;
+ color:#16826a;background:#e5f7f1
+}
+.ws01-overlay .ws01-empty{
+ grid-column:1/-1;padding:30px 14px;
+ background:#f8faff;border:1px dashed #d8e0f0;border-radius:12px
+}
+/* Small workspace quick selector */
+.ws01-overlay.ws01-menu{
+ align-items:flex-start;justify-content:flex-start;
+ padding:clamp(14px,4vw,38px);
+ padding-top:clamp(70px,13vh,130px);
+}
+.ws01-overlay.ws01-menu:before{content:none}
+.ws01-overlay .ws01-menu-card{
+ width:min(385px,100%);
+ max-height:calc(100dvh - 110px);padding:19px;
+ overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain
+}
+.ws01-overlay .ws01-menu-heading{
+ display:flex;align-items:center;gap:10px;
+ margin:0 0 17px;font-size:18px;font-weight:800
+}
+.ws01-overlay .ws01-menu-heading strong{flex:1}
+.ws01-overlay .ws01-close,
+.ws01-overlay [data-ws01-close]{
+ display:grid;place-items:center;width:44px;height:44px;flex:none;
+ border:1px solid transparent;border-radius:11px;
+ color:#63718b;background:transparent;font-size:22px
+}
+.ws01-overlay .ws01-close:hover,
+.ws01-overlay [data-ws01-close]:hover{
+ border-color:#dfe5f3;background:#f3f5fc;color:#414f73
+}
+.ws01-overlay #ws01-menu-search{
+ width:100%;min-height:44px;padding:11px 13px
+}
+.ws01-overlay .ws01-eyebrow{
+ margin:18px 0 9px;letter-spacing:.09em;
+ font-size:10px;color:#65718d
+}
+.ws01-overlay .ws01-menu-card [data-ws01-results]{
+ display:grid;gap:8px;
+}
+.ws01-overlay .ws01-menu-actions{
+ display:grid;gap:5px;margin-top:17px;padding-top:13px;
+ border-top:1px solid #e5e9f3
+}
+.ws01-overlay .ws01-menu-actions button{
+ min-height:43px;padding:10px 12px;
+ font-weight:720;font-size:12px;border-radius:10px
+}
+.ws01-overlay .ws01-menu-actions button:first-child{
+ color:#4752a5;background:#f0f2ff
+}
+.ws01-overlay .ws01-note{
+ margin:13px 0 0;padding:12px 13px;
+ font-size:11px;line-height:1.5;color:#61708c
+}
+/* Workspace browser: compact header, scalable results and category rail */
+.ws01-overlay .ws01-browser-card{
+ width:min(1090px,100%);height:min(780px,calc(100dvh - 36px));
+ min-height:0;overflow:hidden
+}
+.ws01-overlay .ws01-browser-top{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,300px) 44px;
+ align-items:center;gap:9px 16px;padding:18px 22px;
+ border-bottom:1px solid var(--workspace-line)
+}
+.ws01-overlay .ws01-browser-top h2{
+ font-size:20px;white-space:normal;overflow-wrap:anywhere
+}
+.ws01-overlay .ws01-browser-top .ws01-search-label{display:none}
+.ws01-overlay #ws01-browser-search{
+ margin:0;width:100%;min-height:44px;padding:10px 13px
+}
+.ws01-overlay .ws01-browser-body{
+ display:grid;grid-template-columns:190px minmax(0,1fr);
+ min-width:0;min-height:0;flex:1
+}
+.ws01-overlay .ws01-browser-tabs{
+ min-width:0;gap:4px;padding:17px 11px;
+ background:#f8f9fe;border-right:1px solid #e7eaf3;
+ overflow-y:auto
+}
+.ws01-overlay .ws01-browser-tabs button{
+ min-height:43px;max-width:100%;padding:10px 12px;
+ font-weight:690;border-radius:9px;line-height:1.35
+}
+.ws01-overlay .ws01-browser-tabs button[aria-pressed=true]{
+ background:#e8ecff;color:#424cb4;font-weight:790
+}
+.ws01-overlay .ws01-browser-tabs .ws01-add-button{
+ margin-top:13px;min-height:44px;background:#6264df;color:#fff
+}
+.ws01-overlay .ws01-browser-results{
+ min-width:0;padding:24px;overflow:auto;overscroll-behavior:contain
+}
+.ws01-overlay .ws01-browser-results-head{
+ display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:8px;margin:0 0 17px
+}
+.ws01-overlay .ws01-browser-results-head h3{
+ margin:0;font-size:20px;font-weight:820
+}
+.ws01-overlay .ws01-browser-count{
+ padding:7px 10px;border-radius:20px;background:#f0f3fc;
+ color:#5c6a87;font-size:11px;font-weight:760
+}
+.ws01-overlay .ws01-browser-grid{
+ grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));
+ gap:12px;align-content:start
+}
+.ws01-overlay .ws01-browser-grid .ws01-entry{min-height:0}
+.ws01-overlay .ws01-browser-results .ws01-note{
+ margin-top:16px
+}
+/* Creation: no oversized standalone decorative icon; emphasize the form */
+.ws01-overlay .ws01-create-card{
+ width:min(520px,100%);max-height:calc(100dvh - 28px);
+ overflow-y:auto;overscroll-behavior:contain;
+ padding:clamp(18px,3vw,29px)
+}
+.ws01-overlay .ws01-create-heading h2{
+ font-size:clamp(21px,2.7vw,26px)
+}
+.ws01-overlay .ws01-create-subtitle{
+ font-size:12px;line-height:1.55;color:#62728f
+}
+.ws01-overlay .ws01-create-intro{
+ display:flex;align-items:center;gap:12px;margin:14px 0 15px;
+ padding:11px 12px;border:1px solid #e6eaf6;
+ background:#f8faff;border-radius:12px
+}
+.ws01-overlay .ws01-create-intro .ws01-create-symbol{
+ margin:0;flex:none;width:42px;height:42px;
+ border-radius:11px;font-size:20px
+}
+.ws01-overlay .ws01-create-intro p{
+ margin:0;color:#586b88;font-size:11px;line-height:1.5
+}
+.ws01-overlay .ws01-create-card #ws01-proposal{gap:10px}
+.ws01-overlay .ws01-create-card #ws01-name{
+ min-height:46px;padding:11px 12px
+}
+.ws01-overlay .ws01-create-card fieldset{
+ display:flex;align-items:center;gap:11px
+}
+.ws01-overlay .ws01-create-card fieldset label{
+ min-height:44px;padding:9px 12px;
+ background:#f9faff;border:1px solid #e2e6f1;border-radius:10px;
+}
+.ws01-overlay .ws01-create-card fieldset label:has(input:checked){
+ background:#eeefff;border-color:#aab5ee;color:#3b45a7
+}
+.ws01-overlay .ws01-create-card .ws01-create-footer button{min-height:44px}
+.ws01-overlay .ws01-create-card .ws01-create-safety{
+ padding:12px 13px;line-height:1.55
+}
+/* Invitation: use one readable form, clear safe-review feedback and actions */
+.ws01-overlay.ws01-invite .ws02-invite-card{
+ width:min(670px,100%);max-height:calc(100dvh - 30px);
+ padding:clamp(18px,3vw,28px);
+ overflow-y:auto;overscroll-behavior:contain;
+}
+.ws01-overlay .ws02-invite-heading{
+ align-items:flex-start;gap:15px
+}
+.ws01-overlay .ws02-invite-heading h2{
+ font-size:clamp(20px,2.7vw,25px);overflow-wrap:anywhere
+}
+.ws01-overlay .ws02-invite-subtitle{
+ font-size:12px;line-height:1.6;color:#63728e;
+ margin:11px 0 18px
+}
+.ws01-overlay .ws02-invite-card form{gap:14px}
+.ws01-overlay .ws02-invite-fields{
+ grid-template-columns:minmax(0,1.45fr) minmax(0,.85fr);gap:13px
+}
+.ws01-overlay .ws02-invite-card input[type=email],
+.ws01-overlay .ws02-invite-card input[type=text]{
+ min-height:45px;padding:10px 12px
+}
+.ws01-overlay .ws02-invite-card textarea{
+ min-height:92px;padding:12px
+}
+.ws01-overlay .ws02-invite-context button{min-height:40px}
+.ws01-overlay .ws02-invite-safety{
+ line-height:1.55;font-size:11px
+}
+.ws01-overlay .ws02-invite-footer{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);
+ gap:9px;padding-top:15px
+}
+.ws01-overlay .ws02-invite-footer button{
+ min-width:0;min-height:44px;max-width:100%
+}
+.ws01-overlay .ws02-invite-footer .ws02-send{
+ grid-column:1/-1;min-height:43px
+}
+.ws01-overlay .ws11-manage{
+ border-top:1px solid #e5e9f3;margin-top:15px;padding-top:15px
+}
+@media(max-width:720px){
+ .ws01-overlay.ws01-menu{padding:10px;align-items:center;justify-content:center}
+ .ws01-overlay .ws01-menu-card{
+  max-height:calc(100dvh - 20px);padding:16px
+ }
+ .ws01-overlay .ws01-browser-card{height:calc(100dvh - 20px)}
+ .ws01-overlay .ws01-browser-top{
+  grid-template-columns:minmax(0,1fr) 44px;
+  padding:12px 15px;gap:9px
+ }
+ .ws01-overlay .ws01-browser-top h2{font-size:17px}
+ .ws01-overlay #ws01-browser-search{
+  grid-row:2;grid-column:1/-1
+ }
+ .ws01-overlay .ws01-browser-body{
+  grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)
+ }
+ .ws01-overlay .ws01-browser-tabs{
+  display:flex;flex-direction:row;align-items:center;
+  gap:5px;overflow-x:auto;overflow-y:hidden;min-width:0;
+  border-right:0;border-bottom:1px solid #e6eaf3;padding:9px 12px
+ }
+ .ws01-overlay .ws01-browser-tabs button{flex:none;white-space:nowrap}
+ .ws01-overlay .ws01-browser-tabs .ws01-add-button{margin:0}
+ .ws01-overlay .ws01-browser-results{padding:18px 15px}
+ .ws01-overlay .ws01-browser-results-head h3{font-size:18px}
+ .ws01-overlay .ws02-invite-fields{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:420px){
+ .ws01-overlay :is(.ws01-create-card,.ws02-invite-card){padding:16px}
+ .ws01-overlay .ws02-invite-footer{grid-template-columns:minmax(0,1fr)}
+ .ws01-overlay .ws02-invite-footer .ws02-send{grid-column:auto}
+ .ws01-overlay .ws01-create-intro p{font-size:10.5px}
+}
+@media(prefers-reduced-motion:reduce){
+ .ws01-overlay .ws01-entry{transition:none}
+}
+@media(prefers-contrast:more){
+ .ws01-overlay :is(.ws01-entry,.ws01-create-intro,.ws01-create-card,.ws01-browser-card,.ws01-menu-card,.ws02-invite-card){
+  border-color:#6c7891
+ }
+}
+
 /* frontend/fueltrans-native.css */
 @media print{
  body:has(#fueltrans-native-host) .sidebar,
