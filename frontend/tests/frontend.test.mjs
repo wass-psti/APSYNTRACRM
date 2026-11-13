@@ -124,3 +124,58 @@ test('concurrent board lists coalesce without sharing results or crossing mutati
  resolves.shift()([{id:B,name:'New token'}]);
  assert.equal((await rotated)[0].name,'New token');
 });
+
+test('signed effective-access reads coalesce only while in flight',async()=>{
+ let requests=[],calls=0;
+ const auth={userId:U,accessToken:'token-a',authorized:(_path)=>{
+  calls++;
+  return new Promise((resolve,reject)=>requests.push({resolve,reject}));
+ }};
+ const api=new DomainApi(auth);
+ const first=api.effectiveAccess(),second=api.effectiveAccess();
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(calls,1);
+ requests[0].resolve({workspaceId:W,boards:[{id:B,view:true}]});
+ const [a,b]=await Promise.all([first,second]);
+ a.boards[0].view=false;
+ assert.equal(b.boards[0].view,true);
+ const next=api.effectiveAccess();
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(calls,2);
+ resolveRead({workspaceId:W,boards:[]});
+ await next;
+ const stale=api.effectiveAccess();
+ await Promise.resolve();await Promise.resolve();
+ auth.accessToken='token-b';
+ const fresh=api.effectiveAccess();
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(calls,4);
+ // Each request retains the resolver created when it began.
+ // Resolve fresh first: stale identity must still reject.
+ resolveRead({workspaceId:W,boards:[]});
+ await fresh;
+ await assert.rejects(stale,/context changed during loading/);
+});
+test('effective-access failures are not cached and invalidation blocks stale reads',async()=>{
+ let requests=[],calls=0;
+ const auth={userId:U,accessToken:'token-a',authorized:()=>{
+  calls++;
+  return new Promise((resolve,reject)=>requests.push({resolve,reject}));
+ }};
+ const api=new DomainApi(auth);
+ const failed=api.effectiveAccess();
+ await Promise.resolve();await Promise.resolve();
+ requests[0].reject(new ApiError('Unavailable',503));
+ await assert.rejects(failed,/Unavailable/);
+ const retry=api.effectiveAccess();
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(calls,2);
+ api.invalidateBoardCache();
+ requests[1].resolve({workspaceId:W});
+ await assert.rejects(retry,/context changed during loading/);
+ const final=api.effectiveAccess();
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(calls,3);
+ requests[2].resolve({workspaceId:W});
+ assert.equal((await final).workspaceId,W);
+});
