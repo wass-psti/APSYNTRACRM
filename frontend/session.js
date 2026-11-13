@@ -36,7 +36,7 @@ export class AuthClient {
         timedOut=true;controller.abort();
         reject(new ApiError('The service did not respond. Check your connection and retry.',0,'REQUEST_TIMEOUT'));
       },method==='POST'&&
-        /^\/rest\/v1\/rpc\/(?:wm_get_board|wm_import_extended_refs_read)$/.test(path)&&
+        /^\/rest\/v1\/rpc\/(?:wm_get_board_shell|wm_get_board_items_page|wm_import_extended_refs_read)$/.test(path)&&
         Number.isInteger(readTimeoutMs)&&readTimeoutMs>=this.requestTimeoutMs&&readTimeoutMs<=30000?
         readTimeoutMs:this.requestTimeoutMs);
     });

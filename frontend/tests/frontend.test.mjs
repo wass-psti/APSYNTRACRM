@@ -53,7 +53,8 @@ test('domain interface uses existing authoritative RPC names',async()=>{
   calls.push({path,opts});
   if(path.endsWith('wm_auth_access_context'))return {user_id:U,workspace_id:W,profile:{status:'active'}};
   if(path.endsWith('wm_list_boards'))return [{id:B,name:'CRM Board'}];
-  if(path.endsWith('wm_get_board'))return {board:{id:B},groups:[],items:[]};
+  if(path.endsWith('wm_get_board_shell'))return {board:{id:B},groups:[],members:[],columns:[]};
+  if(path.endsWith('wm_get_board_items_page'))return {items:[],values:[],has_more:false,next_cursor:null};
   if(path.endsWith('work_board_access'))return true;
   return [];
  }});
@@ -62,7 +63,7 @@ test('domain interface uses existing authoritative RPC names',async()=>{
  assert.equal((await api.boards())[0].name,'CRM Board');
  assert.equal((await api.board(B)).board.id,B);
  assert.equal(await api.allowed(B,'edit'),true);
- assert.deepEqual(calls.map(c=>c.path.split('/').at(-1)),['wm_auth_access_context','wm_list_boards','wm_get_board','work_board_access']);
+ assert.deepEqual(calls.map(c=>c.path.split('/').at(-1)),['wm_auth_access_context','wm_list_boards','wm_get_board_shell','wm_get_board_items_page','work_board_access']);
 });
 test('invalid authorization context and board identifiers are denied',async()=>{
  const api=new DomainApi({userId:U,authorized:async()=>({user_id:U,workspace_id:W,profile:{status:'inactive'}})});

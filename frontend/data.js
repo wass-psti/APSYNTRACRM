@@ -1,5 +1,6 @@
 import {ApiError} from './session.js';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const BOARD_ITEM_PAGE_SIZE=200;
 export function validUuid(v){return typeof v==='string'&&uuid.test(v);}
 export function requireUuid(v){if(!validUuid(v))throw new ApiError('Invalid board or workspace identifier.');return v;}
 function encodeQuery(input){return new URLSearchParams(input).toString();}
@@ -8,7 +9,8 @@ function encodeQuery(input){return new URLSearchParams(input).toString();}
 // Only verified read-only RPCs may preserve cached board snapshots.
 // Unknown RPCs remain conservative: invalidate locally before execution.
 const BOARD_READ_RPC=new Set([
- 'wm_get_board','wm_auth_access_context','work_board_access','wm_list_boards',
+ 'wm_get_board_shell','wm_get_board_items_page',
+ 'wm_auth_access_context','work_board_access','wm_list_boards',
  'wm_board_ui_read','wm_list_board_events','wm_list_board_events_page',
  'wm_import_extended_refs_read',
  'apsyntra_crm_my_effective_access',
@@ -57,7 +59,13 @@ export class DomainApi {
   if(!token||this.auth?.userId!==userId)
    throw new ApiError('Signed board cache scope is unavailable.',403);
   const finish=async (promise,entry)=>{
-   const detail=await promise;
+   let detail;
+   try{detail=await promise;}
+   catch(error){
+    if(retryInvalidated&&error?.code==='BOARD_READ_INVALIDATED')
+     return this.boardCached(boardId,{userId,workspaceId,maxAgeMs,retryInvalidated:false});
+    throw error;
+   }
    if(this.auth?.userId!==userId||this.auth?.accessToken!==token)
     throw new ApiError('Signed board session changed during loading.',403);
    if(this.boardReadCache.get(boardId)!==entry){
@@ -173,44 +181,120 @@ export class DomainApi {
    if(!Array.isArray(data))throw new ApiError('Unexpected board list response.');
    return structuredClone(data);
  }
- async board(boardId,{parallelExtendedRefs=false,importVerification=false}={}){
+ async board(boardId,{includeExtendedRefs=false,importVerification=false}={}){
    requireUuid(boardId);
-   // On a same-board signed refresh, both read RPCs independently enforce
-   // database access. Start the optional reference read alongside the board
-   // read, not after it, to eliminate one network round trip.
-   const refsPending=parallelExtendedRefs&&this.extendedRefsSupported!==false?
-    this.rpc('wm_import_extended_refs_read',{p_board_id:boardId},
-      importVerification?{readTimeoutMs:30000}:{})
-     .then(value=>({value}),error=>({error})):null;
-   const data=await this.rpc('wm_get_board',{p_board_id:boardId},
-    importVerification?{readTimeoutMs:30000}:{});
-   if(!data?.board)throw new ApiError('Board was not found or is unavailable.',404);
-   if(this.extendedRefsSupported!==false){
-    try{
-     const outcome=refsPending?await refsPending:null;
-     if(outcome?.error)throw outcome.error;
-     const refs=outcome?outcome.value:
-      await this.rpc('wm_import_extended_refs_read',{p_board_id:boardId},
-       importVerification?{readTimeoutMs:30000}:{});
-     if(!Array.isArray(refs))throw new ApiError('Extended reference read response is invalid.',409);
-     if(!Array.isArray(data.values))throw new ApiError('Board values are unavailable.',409);
-     const keys=new Set(data.values.map(v=>v.item_id+':'+v.column_id));
-     for(const ref of refs){
-      if(!validUuid(ref.item_id)||!validUuid(ref.column_id)||
-         typeof ref.value!=='string'||keys.has(ref.item_id+':'+ref.column_id))
-       throw new ApiError('Extended reference conflicts with a board cell.',409);
-      keys.add(ref.item_id+':'+ref.column_id);
-      data.values.push({item_id:ref.item_id,column_id:ref.column_id,value:ref.value});
+   const includeRefs=includeExtendedRefs===true||importVerification===true;
+   const actor=this.auth?.userId;
+   const readOptions=importVerification?{readTimeoutMs:30000}:{};
+   const readSnapshot=async()=>{
+    const generation=this.boardReadGeneration;
+    // The shell and first bounded page are independent signed reads. Both
+    // server functions enforce board view access; later pages use the same
+    // signed RPC contract and a stable keyset cursor.
+    const [shell,firstPage]=await Promise.all([
+     this.rpc('wm_get_board_shell',{p_board_id:boardId},readOptions),
+     this.rpc('wm_get_board_items_page',{
+      p_board_id:boardId,p_after_position:null,p_after_id:null,
+      p_limit:BOARD_ITEM_PAGE_SIZE
+     },readOptions)
+    ]);
+    if(!shell?.board||shell.board.id!==boardId)
+     throw new ApiError('Board was not found or is unavailable.',404);
+    if(!Array.isArray(shell.groups)||!Array.isArray(shell.members)||
+       !Array.isArray(shell.columns))
+     throw new ApiError('Board shell response is incomplete.',409,'INVALID_BOARD_SHELL');
+    const columnIds=new Set(shell.columns.map(column=>column?.id).filter(validUuid));
+    const items=[],values=[],itemIds=new Set(),valueKeys=new Set();
+    let page=firstPage,cursor=null;
+    while(true){
+     if(!page||!Array.isArray(page.items)||!Array.isArray(page.values)||
+        typeof page.has_more!=='boolean')
+      throw new ApiError('Board item page response is invalid.',409,'INVALID_BOARD_PAGE');
+     if(page.items.length>BOARD_ITEM_PAGE_SIZE)
+      throw new ApiError('Board item page exceeded its requested size.',409,'INVALID_BOARD_PAGE');
+     const pageItemIds=new Set();
+     let previous=null;
+     for(const item of page.items){
+      if(!item||!validUuid(item.id)||item.board_id!==boardId||
+         !Number.isInteger(item.position)||item.position<0||
+         pageItemIds.has(item.id)||itemIds.has(item.id))
+       throw new ApiError('Board item page contains an invalid or duplicate item.',409,'INVALID_BOARD_ITEM');
+      if(previous&&(item.position<previous.position||
+         (item.position===previous.position&&item.id.localeCompare(previous.id)<=0)))
+       throw new ApiError('Board item page ordering is invalid.',409,'INVALID_BOARD_ORDER');
+      if(cursor&&(item.position<cursor.position||
+         (item.position===cursor.position&&item.id.localeCompare(cursor.id)<=0)))
+       throw new ApiError('Board item page did not advance its cursor.',409,'INVALID_BOARD_CURSOR');
+      pageItemIds.add(item.id);itemIds.add(item.id);previous=item;
      }
-     this.extendedRefsSupported=true;
-    }catch(error){
-     // Old production projects do not have m143-v2. Cache a missing-function
-     // capability result, but NEVER silently bypass a signed access denial.
-     if(error?.status===404||error?.code==='PGRST202')this.extendedRefsSupported=false;
-     else throw error;
+     for(const value of page.values){
+      if(!value||!validUuid(value.item_id)||!validUuid(value.column_id)||
+         !pageItemIds.has(value.item_id)||!columnIds.has(value.column_id)||
+         !Object.prototype.hasOwnProperty.call(value,'value'))
+       throw new ApiError('Board item page contains an invalid cell value.',409,'INVALID_BOARD_VALUE');
+      const key=value.item_id+':'+value.column_id;
+      if(valueKeys.has(key))
+       throw new ApiError('Board item pages contain a duplicate cell value.',409,'DUPLICATE_BOARD_VALUE');
+      valueKeys.add(key);values.push(value);
+     }
+     items.push(...page.items);
+     if(!page.has_more){
+      if(page.next_cursor!=null)
+       throw new ApiError('Final board item page returned an unexpected cursor.',409,'INVALID_BOARD_CURSOR');
+      break;
+     }
+     if(page.items.length!==BOARD_ITEM_PAGE_SIZE||page.items.length===0)
+      throw new ApiError('Board item page cannot advance safely.',409,'INVALID_BOARD_CURSOR');
+     const tail=page.items.at(-1),next=page.next_cursor;
+     if(!next||!Number.isInteger(next.position)||next.position<0||
+        !validUuid(next.id)||next.position!==tail.position||next.id!==tail.id)
+      throw new ApiError('Board item page returned an invalid continuation cursor.',409,'INVALID_BOARD_CURSOR');
+     if(cursor&&(next.position<cursor.position||
+        (next.position===cursor.position&&next.id.localeCompare(cursor.id)<=0)))
+      throw new ApiError('Board item pagination cursor did not advance.',409,'INVALID_BOARD_CURSOR');
+     cursor=next;
+     page=await this.rpc('wm_get_board_items_page',{
+      p_board_id:boardId,p_after_position:cursor.position,
+      p_after_id:cursor.id,p_limit:BOARD_ITEM_PAGE_SIZE
+     },readOptions);
     }
-   }
-   return data;
+    if(this.auth?.userId!==actor)
+     throw new ApiError('Signed board identity changed during loading.',403);
+    if(this.boardReadGeneration!==generation)return null;
+    const detail={...shell,items,values};
+    if(includeRefs&&this.extendedRefsSupported!==false){
+     try{
+      const refs=await this.rpc('wm_import_extended_refs_read',{p_board_id:boardId},readOptions);
+      if(!Array.isArray(refs))
+       throw new ApiError('Extended reference read response is invalid.',409);
+      for(const ref of refs){
+       if(!validUuid(ref?.item_id)||!validUuid(ref?.column_id)||
+          typeof ref.value!=='string'||!itemIds.has(ref.item_id)||
+          !columnIds.has(ref.column_id))
+        throw new ApiError('Extended reference does not match a board item and column.',409);
+       const key=ref.item_id+':'+ref.column_id;
+       if(valueKeys.has(key))
+        throw new ApiError('Extended reference conflicts with a board cell.',409);
+       valueKeys.add(key);
+       detail.values.push({item_id:ref.item_id,column_id:ref.column_id,value:ref.value});
+      }
+      this.extendedRefsSupported=true;
+     }catch(error){
+      // Older deployments may not expose the optional import-reference RPC.
+      // Only a missing function is tolerated; signed access denials propagate.
+      if(error?.status===404||error?.code==='PGRST202')this.extendedRefsSupported=false;
+      else throw error;
+     }
+    }
+    if(this.auth?.userId!==actor)
+     throw new ApiError('Signed board identity changed during loading.',403);
+    return this.boardReadGeneration===generation?detail:null;
+   };
+   // A board mutation or Realtime invalidation during multi-page retrieval
+   // makes the assembled result stale. Never return a mixed snapshot.
+   const detail=await readSnapshot();
+   if(detail)return detail;
+   throw new ApiError('Board changed while its pages were loading. Refresh and retry.',409,'BOARD_READ_INVALIDATED');
  }
  async allowed(boardId,required='view'){
    return (await this.rpc('work_board_access',{p_board_id:requireUuid(boardId),p_required:required}))===true;

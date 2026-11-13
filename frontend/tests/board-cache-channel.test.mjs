@@ -73,11 +73,17 @@ test('unsupported BroadcastChannel is a safe no-op',()=>{
 });
 test('strictly older authoritative board version hints cannot evict a newer snapshot',async()=>{
  let reads=0;
- const auth={userId:user,accessToken:'token',authorized:async()=>{
-  reads++;return {board:{id:boardId,workspace_id:workspace,updated_at:'2026-11-09T10:00:00Z'}};
+ const auth={userId:user,accessToken:'token',authorized:async(path)=>{
+  if(path.endsWith('/wm_get_board_shell')){
+   reads++;return {board:{id:boardId,workspace_id:workspace,updated_at:'2026-11-09T10:00:00Z'},
+    groups:[],members:[],columns:[]};
+  }
+  if(path.endsWith('/wm_get_board_items_page'))
+   return {items:[],values:[],has_more:false,next_cursor:null};
+  return true;
  }};
  const api=new DomainApi(auth);
- api.extendedRefsSupported=false; // Legacy board-only API fixture.
+ api.extendedRefsSupported=false; // Import references are disabled; shell and item pages remain authoritative.
  await api.boardCached(boardId,scope);
  assert.equal(api.invalidateBoardCache(boardId,{revision:'2026-11-09T09:00:00Z'}),false);
  await api.boardCached(boardId,scope);
