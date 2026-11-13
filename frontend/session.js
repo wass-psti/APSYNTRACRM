@@ -118,7 +118,13 @@ export class AuthClient {
     if(!isObject(data)||typeof data.id!=='string'||data.id!==this.session.user.id){
       this.clear();throw new ApiError('Session verification failed.',401);
     }
-    this.session.user=data;this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));
+    // Server-side identity has already been verified. Persisting updated
+    // profile metadata is a best-effort cache update, not a new auth gate.
+    // Quota/privacy storage failures must not turn a valid signed response
+    // into a full-screen "Connection interrupted" error.
+    this.session.user=data;
+    try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
+    catch{/* In-memory identity remains verified for the current tab. */}
     return data;
   }
   async restore(){
