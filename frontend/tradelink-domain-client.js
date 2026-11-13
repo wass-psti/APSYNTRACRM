@@ -62,8 +62,12 @@ export function normalizeTradeLinkDomainReceipt(
   typeof value.idempotent!=='boolean'||
   (expectedRevision!==null&&(
    !Number.isSafeInteger(expectedRevision)||expectedRevision<0||
-   (value.idempotent?(operation!=='create'||expectedRevision!==0||value.revision!==1):
-    value.revision!==expectedRevision+1))))
+   (value.idempotent?!(
+     operation==='create'&&expectedRevision===0&&value.revision===1||
+     operation==='update'&&expectedRevision>=1&&
+      Number.isSafeInteger(expectedRevision+1)&&
+      (value.revision===expectedRevision||value.revision===expectedRevision+1)
+    ):value.revision!==expectedRevision+1))))
   deny('TradeLink authoritative commit receipt mismatch.',409);
  return value;
 }

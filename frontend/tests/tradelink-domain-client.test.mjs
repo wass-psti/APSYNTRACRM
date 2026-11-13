@@ -71,21 +71,48 @@ test('no source local-first fallback, duplicated auth or privileged client crede
 });
 
 
-test('CAS receipts must advance by exactly one; only revision-one identical create may be idempotent',()=>{
+test('CAS receipts accept exact no-op and immediate replay-safe update receipts only',()=>{
  const first={documentId:id,boardItemId:item,revision:1,state:'draft',
   operation:'create',idempotent:false};
  assert.equal(normalizeTradeLinkDomainReceipt(first,id,'create',0).revision,1);
  assert.equal(normalizeTradeLinkDomainReceipt({...first,idempotent:true},id,'create',0).revision,1);
+ const noOp={documentId:id,boardItemId:item,revision:4,state:'for-approval',
+  operation:'update',idempotent:true};
+ assert.equal(normalizeTradeLinkDomainReceipt(noOp,id,'update',4,'for-approval'),noOp);
+ const replay={...noOp,revision:5};
+ assert.equal(normalizeTradeLinkDomainReceipt(replay,id,'update',4,'for-approval'),replay);
+ assert.equal(normalizeTradeLinkDomainReceipt({...replay,idempotent:false},id,'update',4,'for-approval').revision,5);
  for(const invalid of [
   [{...first,revision:3},'create',0],
   [{...first,idempotent:true,revision:2},'create',0],
-  [{...first,idempotent:true,operation:'update'},'update',1],
-  [{...first,operation:'update',revision:4},'update',1],
+  [{...noOp,revision:6},'update',4],
+  [{...noOp,revision:3},'update',4],
+  [{...noOp,operation:'archive'},'archive',4],
+  [{...replay,idempotent:false,revision:4},'update',4],
   [{...first,operation:'archive',revision:2},'archive',9]
  ])assert.throws(()=>normalizeTradeLinkDomainReceipt(invalid[0],id,invalid[1],invalid[2]),/mismatch/);
  assert.throws(()=>validateTradeLinkDraftEnvelope({...draft,documentNumber:'Q-000001 '}),/Invalid/);
 });
 
+test('retry-safe production migration only accepts the immediate same-actor exact-payload replay',()=>{
+ const sql=readFileSync(new URL('../../supabase/migrations/20261113070000_tradelink_retry_safe_revision_bound_updates.sql',import.meta.url),'utf8');
+ for(const pattern of [
+  /d\.revision=p_expected_revision\+1/,
+  /p_expected_revision<9223372036854775807/,
+  /d\.content=payload/,
+  /d\.workflow_state=p_initial_state/,
+  /e\.operation='updated'/,
+  /e\.actor_id=actor/,
+  /e\.revision=d\.revision/,
+  /e\.metadata->>'toState'=p_initial_state/,
+  /projection\.title=d\.document_number/,
+  /projection\.updated_at>=d\.updated_at/,
+  /'operation','update','idempotent',TRUE/,
+  /SET search_path='' /,
+  /has_function_privilege\('anon'/
+ ])assert.match(sql,pattern);
+ assert.doesNotMatch(sql,/GRANT (?:INSERT|UPDATE|DELETE) ON TABLE|DROP POLICY|CREATE ROLE|service_role/);
+});
 test('signed TradeLink session launches independent reads concurrently before any domain RPC',async()=>{
  const calls=[],resolvers=new Map();
  const gated=label=>new Promise(resolve=>{calls.push(label);resolvers.set(label,resolve);});
