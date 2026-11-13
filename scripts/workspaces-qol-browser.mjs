@@ -93,6 +93,22 @@ try{
   assert.equal(quick.modalInsideHeight,true);
   assert.equal(quick.rows,2);
   assert.equal(quick.badgeOverlap,false);
+  const iconPosition=await evaluate(`(()=>{
+   const input=document.querySelector('#ws01-menu-search');
+   const icon=document.querySelector('.ws01-menu-search-icon');
+   const field=document.querySelector('.ws01-menu-search-field');
+   const a=input.getBoundingClientRect(),b=icon.getBoundingClientRect(),c=field.getBoundingClientRect();
+   return {centerDelta:Math.abs((a.top+a.height/2)-(b.top+b.height/2)),
+    iconInside:b.left>=a.left&&b.right<a.right&&b.top>=a.top&&b.bottom<=a.bottom,
+    wrapperInside:c.left>=a.left-1&&c.right<=a.right+1,
+    inputPaddingLeft:parseFloat(getComputedStyle(input).paddingLeft),
+    iconDecorative:icon.getAttribute('aria-hidden')==='true'};
+  })()`);
+  assert.ok(iconPosition.centerDelta<=1,'search icon must be vertically centered within input');
+  assert.equal(iconPosition.iconInside,true);
+  assert.equal(iconPosition.wrapperInside,true);
+  assert.equal(iconPosition.iconDecorative,true);
+  assert.ok(iconPosition.inputPaddingLeft>=40);
   const menuSearch=await evaluate(`(()=>{
    const input=document.querySelector('#ws01-menu-search');
    input.value='Main';input.dispatchEvent(new Event('input',{bubbles:true}));
