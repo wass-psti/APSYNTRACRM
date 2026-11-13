@@ -43,6 +43,8 @@ export function startupFailureDescription(error,stage='authentication'){
   error?.code==='NETWORK_UNAVAILABLE'?'lost its network connection':
   error?.status===429?'was rate limited':
   Number.isInteger(error?.status)&&error.status>=500?'is temporarily unavailable':
-  'could not be completed';
+  error?.code==='INVALID_JSON_RESPONSE'?'returned an invalid server response':
+  error?.code==='REQUEST_ABORTED'?'was cancelled':
+  'encountered an unexpected client error';
  return stageLabel+' '+condition+'. Your existing signed session is preserved where valid. Retry the connection; no changes will be submitted automatically.';
 }
