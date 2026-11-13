@@ -155,6 +155,7 @@ import {updateFRTRequestDate} from './frt-board-date-edit.js';
 import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
 import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
 import {loadFRTLiquidation,submitFRTLiquidation} from './frt-liquidation.js';
+import {loadFRTBankExecution,recordFRTBankExecution} from './frt-bank-execution.js';
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
 import {isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
@@ -3291,6 +3292,11 @@ async function loadFRTFinanceDetail(requestId,seq=routeSerial){
    auth,api:db,requestId,companyCode,allowedRequestIds:ids,workspaceId:workspace,
    expectedRole:state.frtFinance.role
   });
+  if(response.status==='PASS'){
+   try{response.bankRelease=await loadFRTBankExecution({auth,api:db,workspaceId:workspace,
+    requestId,allowedRequestIds:ids});}
+   catch{response.bankReleaseError='Bank execution readback unavailable';}
+  }
   if(revision===state.frtFinanceDetailRevision&&seq===routeSerial&&
      auth.isSignedIn&&state.context?.user_id===identity&&
      state.context?.workspace_id===workspace&&
@@ -7093,6 +7099,35 @@ async function action(name,button){
     })});
    }else openModal(title,body,async()=>{},
      {submitLabel:'Not connected',submitDisabled:true});
+   break;
+ }
+ case 'frt-bank-record':{
+   if(state.tab!=='finance'||state.frtFinance?.status!=='PASS'||
+      state.frtFinanceDetail?.status!=='PASS'||!auth.isSignedIn)return;
+   const requestId=String(button?.dataset?.requestId||'');
+   if(requestId!==state.frtFinanceDetailId||
+      !state.frtFinance.requests.some(r=>r.requestId===requestId))return;
+   const ws=state.context?.workspace_id,company=state.frtFinance.companyCode;
+   const boardId=state.boardId,actor=auth.userId,seq=routeSerial;
+   const ids=state.frtFinance.requests.map(r=>r.requestId);
+   let snapshot;
+   try{snapshot=await loadFRTBankExecution({auth,api:db,workspaceId:ws,requestId,allowedRequestIds:ids});}
+   catch(error){notice(error);break;}
+   if(!snapshot.eligible||snapshot.recorded){toast('Bank execution is not eligible or was already recorded.');break;}
+   const fields='<p class="note">Record evidence of an actual bank-executed disbursement. This does not initiate a transfer or verify it with the bank. The liquidation deadline is 72 hours after the execution timestamp.</p>'+
+    input('Executing bank','bankName')+input('Bank transaction reference','transactionReference')+
+    '<div class="field"><label>Bank-executed date and time (with timezone)</label><input type="datetime-local" name="executedAt" required></div>';
+   openModal('Record bank execution evidence',fields,async form=>{
+    if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+       auth.userId!==actor||state.context?.workspace_id!==ws||
+       state.frtFinance?.companyCode!==company)
+     throw new ApiError('Financial session changed; reopen bank recording.',409);
+    await recordFRTBankExecution({auth,api:db,workspaceId:ws,requestId,allowedRequestIds:ids,
+     snapshot,bankName:String(form.get('bankName')||''),
+     transactionReference:String(form.get('transactionReference')||''),
+     executedAt:String(form.get('executedAt')||'')});
+    await loadFRTFinance(company);
+   },{submitLabel:'Record bank execution',successMessage:'Bank evidence saved and verified by signed readback.'});
    break;
  }
  case 'frt-liquidation-open':{
