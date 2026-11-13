@@ -29,7 +29,7 @@ test('verified role configuration is route scoped and unavailable without CRM Ad
  assert.match(approved,/class="page-head role-config-hero role-entrance" aria-labelledby="role-config-title"/);
  assert.match(approved,/class="note security-note role-staged-note role-entrance"/);
  assert.match(approved,/class="stat-grid role-stat-grid role-entrance"/);
- assert.match(approved,/class="row csp-u016 role-config-tabs role-entrance"/);
+ assert.match(approved,/class="role-config-layout"><nav class="role-config-tabs role-entrance"/);
  assert.match(app,/classList\.toggle\('aps-role-config-shell',state\.view==='role-configuration'\)/);
  assert.match(app,/mountRoleConfigurationMotion\(root\.querySelector\('\.aps-role-configuration'\),state\.view\)/);
  assert.match(app,/stopRoleConfigurationMotion\(\)/);

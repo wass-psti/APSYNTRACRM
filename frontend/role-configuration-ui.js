@@ -114,9 +114,18 @@ export function renderRoleConfiguration({verified=false,loading=false,data=null,
  if(error)html+='<div class="error-banner" role="alert">'+x(error)+'</div>';
  if(loading)html+='<p class="muted role-loading-state" role="status" aria-live="polite">Loading verified workspace configuration…</p>';
  if(!data)return html+'</div>';
+ html+='<div class="role-overview-caption"><div><span class="role-content-eyebrow">Workspace overview</span>'+
+  '<h2>Role management at a glance</h2></div><span class="role-overview-caption-note">Signed workspace data</span></div>';
  html+=summaryCards(data);
- html+='<nav class="row csp-u016 role-config-tabs role-entrance" aria-label="Role configuration sections" >'+
-  tabs.map(([key,label])=>'<button type="button" class="'+(tab===key?'primary':'secondary')+' role-tab-button" data-action="role-tab" data-tab="'+key+'" aria-pressed="'+(tab===key?'true':'false')+'">'+x(label)+'</button>').join('')+'</nav>';
+ const tabIcons={roles:'shield',users:'users',matrix:'boards',workspace:'boards',audit:'proposals'};
+ html+='<div class="role-config-layout"><nav class="role-config-tabs role-entrance" aria-label="Role configuration sections">'+
+  '<div class="role-nav-intro"><span class="role-content-eyebrow">Manage</span><strong>Configuration</strong>'+
+  '<small>Select a section to review proposals and authoritative data.</small></div>'+
+  tabs.map(([key,label])=>'<button type="button" class="'+(tab===key?'primary':'secondary')+' role-tab-button" data-action="role-tab" data-tab="'+key+'" aria-pressed="'+(tab===key?'true':'false')+'"'+(tab===key?' aria-current="page"':'')+'>'+
+   '<span class="role-tab-icon" aria-hidden="true">'+roleConfigurationIcon(tabIcons[key])+'</span><span class="role-tab-label">'+x(label)+'</span>'+
+   (tab===key?'<span class="role-tab-current" aria-hidden="true">Active</span>':'')+'</button>').join('')+
+  '<div class="role-nav-footer"><span class="role-nav-footer-dot" aria-hidden="true"></span>'+
+  '<span>Changes require separate authorization. This page stages proposals only.</span></div></nav>';
  const sections={
   roles:['Role catalog','Review central reference roles and prepare controlled proposals.'],
   users:['Assignments','Inspect existing workspace memberships and stage proposed assignments.'],
@@ -133,7 +142,7 @@ export function renderRoleConfiguration({verified=false,loading=false,data=null,
   '<div class="role-content-body">';
  html+=tab==='roles'?roles(data):tab==='users'?assignments(data):
  tab==='matrix'?matrix(data):tab==='workspace'?workspaces(data):audit(data);
- return html+'</div></section></div>';
+ return html+'</div></section></div></div>';
 }
 export const ROLE_MODULE_OPTIONS=BOARD_MODULES.map(m=>[{
  fueltrans:'fueltrans',tools:'tool-traceability',toolbox:'toolbox-issues',frt:'fund-released-tracker',

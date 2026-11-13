@@ -6158,6 +6158,130 @@
  }
 }
 
+/* CP-ROLE-UI-02 — visible Overview-aligned navigation workspace (no role changes). */
+#app .aps-role-configuration .role-overview-caption{
+ display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;
+ gap:10px 18px;margin:4px 0 15px;
+}
+#app .aps-role-configuration .role-overview-caption h2{
+ color:#243251;font-size:20px;line-height:1.3;font-weight:840;
+ letter-spacing:-.4px;margin:5px 0 0;
+}
+#app .aps-role-configuration .role-overview-caption-note{
+ color:#62728d;font-size:11px;font-weight:720;
+ border:1px solid #dfe5f3;background:#fff;border-radius:18px;padding:7px 11px;
+}
+#app .aps-role-configuration .role-config-layout{
+ display:grid;grid-template-columns:minmax(205px,235px) minmax(0,1fr);
+ align-items:start;gap:19px;min-width:0;
+}
+#app .aps-role-configuration .role-config-layout>.role-config-tabs{
+ display:flex;flex-direction:column;align-items:stretch;
+ position:sticky;top:18px;min-width:0;overflow:visible;
+ gap:6px;margin:0;padding:13px;
+ border:1px solid #e3e8f3;border-radius:17px;
+ background:linear-gradient(165deg,#fff,#fafbff);
+ box-shadow:0 9px 27px #2130630b;
+}
+#app .aps-role-configuration .role-nav-intro{
+ display:grid;gap:5px;padding:13px 10px 16px;
+ margin-bottom:3px;border-bottom:1px solid #e5e9f3;
+}
+#app .aps-role-configuration .role-nav-intro strong{
+ font-size:16px;font-weight:850;letter-spacing:-.3px;color:#253351;
+}
+#app .aps-role-configuration .role-nav-intro small{
+ font-size:11px;line-height:1.55;color:#75819a;
+}
+#app .aps-role-configuration .role-config-layout .role-tab-button{
+ display:flex;align-items:center;justify-content:flex-start;
+ gap:11px;width:100%;min-height:49px;min-width:0;
+ padding:10px 11px;border-radius:11px;
+ font-size:12px;text-align:left;
+}
+#app .aps-role-configuration .role-config-layout .role-tab-button.primary{
+ background:#e9ecff;color:#404bc0;border:1px solid #cbd3fc;
+ box-shadow:inset 3px 0 0 #6062e6,0 2px 8px #35408c0d;
+}
+#app .aps-role-configuration .role-config-layout .role-tab-button.secondary{
+ background:transparent;border:1px solid transparent;color:#586780;
+}
+#app .aps-role-configuration .role-config-layout .role-tab-button.secondary:hover{
+ background:#f1f3ff;color:#384780;border-color:#e4e8fa;
+}
+#app .aps-role-configuration .role-tab-icon{
+ display:grid;place-items:center;flex:none;
+ width:32px;height:32px;border-radius:10px;
+ background:#f0f2fa;color:#657398;
+}
+#app .aps-role-configuration .role-tab-button.primary .role-tab-icon{
+ background:#dce1ff;color:#4951b6;
+}
+#app .aps-role-configuration .role-tab-icon .role-icon{
+ width:17px;height:17px;
+}
+#app .aps-role-configuration .role-tab-label{
+ flex:1;min-width:0;overflow-wrap:anywhere;
+}
+#app .aps-role-configuration .role-tab-current{
+ color:#5962b6;font-size:9px;font-weight:790;
+ letter-spacing:.02em;
+}
+#app .aps-role-configuration .role-nav-footer{
+ display:flex;align-items:start;gap:8px;
+ margin-top:10px;padding:14px 9px 5px;
+ border-top:1px solid #e6eaf5;
+ color:#71809d;font-size:10px;line-height:1.6;
+}
+#app .aps-role-configuration .role-nav-footer-dot{
+ flex:none;width:7px;height:7px;margin-top:4px;
+ background:#be9b66;border-radius:50%;
+}
+#app .aps-role-configuration .role-config-layout>.role-content-workspace{
+ min-width:0;min-height:330px;
+ border-radius:17px;
+}
+#app .aps-role-configuration .role-overview-caption .role-content-eyebrow{
+ color:#626ac0;
+}
+@media(max-width:1000px){
+ #app .aps-role-configuration .role-config-layout{
+  grid-template-columns:minmax(185px,210px) minmax(0,1fr);gap:13px
+ }
+ #app .aps-role-configuration .role-config-layout>.role-config-tabs{
+  padding:9px
+ }
+}
+@media(max-width:790px){
+ #app .aps-role-configuration .role-config-layout{
+  grid-template-columns:minmax(0,1fr);gap:14px
+ }
+ #app .aps-role-configuration .role-config-layout>.role-config-tabs{
+  position:static;flex-direction:row;overflow-x:auto;overflow-y:hidden;
+  overscroll-behavior-x:contain;align-items:center;
+  flex-wrap:nowrap;padding:7px;scroll-padding-inline:12px;
+  border-radius:12px
+ }
+ #app .aps-role-configuration .role-config-layout .role-tab-button{
+  flex:none;width:auto;white-space:nowrap;padding:8px 11px;
+  min-height:44px;gap:7px
+ }
+ #app .aps-role-configuration .role-tab-label{overflow-wrap:normal}
+ #app .aps-role-configuration .role-nav-intro,
+ #app .aps-role-configuration .role-nav-footer,
+ #app .aps-role-configuration .role-tab-current{display:none}
+ #app .aps-role-configuration .role-tab-icon{
+  width:29px;height:29px
+ }
+}
+@media(max-width:390px){
+ #app .aps-role-configuration .role-overview-caption h2{font-size:17px}
+ #app .aps-role-configuration .role-overview-caption-note{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-role-configuration .role-config-layout .role-tab-button{transition:none}
+}
+
 /* frontend/user-role-experience.css */
 /* CP-USER-ROLE-VIS01 — visual-only signed User Role Management surface.
    All selectors are scoped to #/user-role-management; never override shared RBAC UI. */
