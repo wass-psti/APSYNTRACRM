@@ -115,7 +115,7 @@ function accountRoleLabel(data,user){
  return 'CRM '+crm.effectiveRole+' ('+crmRoleSourceLabel(crm)+')'+
   ' · Identity '+user.platformRole;
 }
-export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign'}={}){
+export function renderUserRoleManagement({verified=false,data=null,selectedUserId=null,actorUserId=null,busy=false,error='',accessSection='applications',boardSearch='',batchMode=false,batchSelected=[],batchScope='module',batchResource='',batchRole='viewer',batchAction='assign',batchMemberSearch=''}={}){
  if(!verified)return '<div class="access-denied">Role management unavailable</div>';
  let html='<div class="aps-user-role-management"><section class="page-head user-role-hero user-role-entrance" aria-labelledby="user-role-title"><div class="user-role-hero-copy"><span class="label-top"><span class="user-role-hero-dot" aria-hidden="true"></span>Administration / CRM Admin</span>'+
  '<h1 id="user-role-title">User Role Management<span class="user-role-heading-stop">.</span></h1><p>Manage APSYNTRA CRM platform, application and board roles from the central backend.</p></div>'+
@@ -140,17 +140,29 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const resource=resourceEntries.some(([id])=>id===batchResource)?batchResource:resourceEntries[0]?.[0]||'';
   const roles=batchScope==='module'?MODULE_ROLE_OPTIONS[resource]||[]:['viewer','editor'];
   const currentRole=roles.includes(batchRole)?batchRole:roles[0]||'';
+  const memberQuery=String(batchMemberSearch||'').trim().toLocaleLowerCase().slice(0,120);
+  const visibleMemberCount=allowed.filter(member=>
+   (String(member.name||'')+' '+String(member.email||'')).toLocaleLowerCase().includes(memberQuery)).length;
   html+='<section class="panel user-role-batch-panel" aria-label="Batch configuration">'+
-   '<div class="panel-header"><h3>Configure multiple users</h3><span>Active workspace only</span></div><div class="panel-body">'+
-   '<p class="user-role-helper">Select members, then configure one application or board role for the group. Every change uses existing authorization checks and audit history.</p>'+
-   '<fieldset class="user-role-batch-users"><legend>Choose users</legend>'+
-   '<div class="user-role-batch-user-list">'+allowed.map(member=>
-     '<label><input type="checkbox" name="userRoleBatchMember" data-user-role-batch-member value="'+esc(member.id)+'"'+(batchSelected.includes(member.id)?' checked':'')+'>'+
+   '<div class="user-role-batch-heading"><div class="user-role-batch-eyebrow">ACCESS MANAGEMENT / BATCH WORKFLOW</div>'+
+   '<div class="user-role-batch-title-row"><div><h2>Configure access for your team</h2>'+
+   '<p>One configuration, multiple members. Review every change before applying.</p></div>'+
+   '<span class="user-role-batch-workspace">Active workspace only</span></div></div>'+
+   '<div class="panel-body user-role-batch-layout">'+
+   '<div class="user-role-batch-main">'+
+   '<fieldset class="user-role-batch-users"><legend><span class="user-role-batch-step">01</span> Select members</legend>'+
+   '<div class="user-role-batch-toolbar"><label for="user-role-batch-member-search">Find workspace members</label>'+
+   '<input type="search" id="user-role-batch-member-search" name="batchMemberSearch" placeholder="Search by name or email" autocomplete="off" value="'+esc(batchMemberSearch)+'" aria-controls="user-role-batch-user-list" aria-describedby="user-role-batch-search-count">'+
+   '<span id="user-role-batch-search-count" role="status" aria-live="polite">'+visibleMemberCount+' matching</span></div>'+
+   '<div class="user-role-batch-user-list" id="user-role-batch-user-list">'+allowed.map(member=>
+     '<label data-batch-member-row data-search-name="'+esc((String(member.name||'')+' '+String(member.email||'')).toLocaleLowerCase())+'"'+
+     ((String(member.name||'')+' '+String(member.email||'')).toLocaleLowerCase().includes(memberQuery)?'':' hidden')+
+     '><input type="checkbox" name="userRoleBatchMember" data-user-role-batch-member value="'+esc(member.id)+'"'+(batchSelected.includes(member.id)?' checked':'')+'>'+
      '<span>'+esc(member.name||member.email)+' <small>'+esc(member.email)+'</small></span></label>').join('')+'</div>'+
    '<p class="user-role-batch-count" role="status" aria-live="polite">'+batchSelected.length+' selected of '+allowed.length+' available workspace members</p>'+
    '<div class="user-role-batch-selection-actions"><button type="button" class="secondary" data-action="user-role-batch-select-eligible">Select eligible users</button>'+
    '<button type="button" class="secondary" data-action="user-role-batch-clear"'+(batchSelected.length?'':' disabled')+'>Clear selection</button></div></fieldset>'+
-   '<div class="user-role-batch-fields"><fieldset class="user-role-batch-scope"><legend>Access type</legend>'+
+   '<div class="user-role-batch-fields"><fieldset class="user-role-batch-scope"><legend><span class="user-role-batch-step">02</span> Configure access</legend>'+
    '<label><input type="radio" name="user-role-batch-scope" value="module"'+(batchScope==='module'?' checked':'')+'> Application access</label>'+
    '<label><input type="radio" name="user-role-batch-scope" value="board"'+(batchScope==='board'?' checked':'')+'> Board access</label></fieldset>'+
    '<label>Application or board<select id="user-role-batch-resource">'+resourceEntries.map(([id,name])=>
@@ -158,9 +170,17 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    '<label>Role<select id="user-role-batch-role">'+roles.map(role=>
     '<option value="'+esc(role)+'"'+(role===currentRole?' selected':'')+'>'+esc(role)+'</option>').join('')+'</select></label>'+
    '<label>Change<select id="user-role-batch-action"><option value="assign"'+(batchAction==='assign'?' selected':'')+'>Assign or change</option><option value="revoke"'+(batchAction==='revoke'?' selected':'')+'>Revoke existing access</option></select></label></div>'+
-   '<p class="user-role-batch-hint">Review the complete target list before applying. No typed acknowledgement is required. Protected users, owner memberships and cross-workspace global roles remain restricted.</p>'+
+   '</div></div><aside class="user-role-batch-summary" aria-label="Batch review summary">'+
+   '<div class="user-role-batch-summary-top"><span class="user-role-batch-step">03</span><strong>Review &amp; apply</strong></div>'+
+   '<p class="user-role-batch-summary-intro">Your planned change</p>'+
+   '<dl><div><dt>Members</dt><dd id="user-role-batch-summary-count">'+batchSelected.length+' selected</dd></div>'+
+   '<div><dt>Access</dt><dd>'+(batchScope==='module'?'Application':'Board')+'</dd></div>'+
+   '<div><dt>Resource</dt><dd>'+esc(resourceEntries.find(([id])=>id===resource)?.[1]||'Not available')+'</dd></div>'+
+   '<div><dt>Role</dt><dd>'+esc(currentRole||'Not available')+'</dd></div>'+
+   '<div><dt>Operation</dt><dd>'+(batchAction==='revoke'?'Revoke existing access':'Assign / change')+'</dd></div></dl>'+
+   '<p class="user-role-batch-hint">No changes are applied until you review and confirm. Existing access safeguards and audit checks remain in force.</p>'+
    '<button class="primary user-role-batch-review" type="button" data-action="user-role-batch-review"'+(batchSelected.length&&resource&&currentRole&&!busy?'':' disabled')+'>Review batch changes ('+batchSelected.length+')</button>'+
-   '</div></section></div>';
+   '</aside></div></section></div>';
   return html;
  }
  html+='<section class="panel user-role-selection-panel user-role-entrance" aria-labelledby="user-role-select-title"><div class="panel-header"><h3 id="user-role-select-title">Select user</h3><span>Workspace scoped</span></div>'+
