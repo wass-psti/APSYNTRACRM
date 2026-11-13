@@ -22662,8 +22662,18 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
 .ws01-overlay [data-ws01-close]:hover{
  border-color:#dfe5f3;background:#f3f5fc;color:#414f73
 }
+/* Search icon stays inside the input, centered at every viewport width. */
+.ws01-overlay .ws01-menu-search-field{
+ position:relative;min-width:0;width:100%
+}
+.ws01-overlay .ws01-menu-search-icon{
+ position:absolute;left:13px;top:50%;transform:translateY(-50%);
+ width:19px;height:19px;pointer-events:none;
+ color:var(--sm-sub,#626c7d);z-index:1
+}
 .ws01-overlay #ws01-menu-search{
- width:100%;min-height:44px;padding:11px 13px
+ width:100%;min-height:44px;
+ padding:11px 13px 11px 43px
 }
 .ws01-overlay .ws01-eyebrow{
  margin:18px 0 9px;letter-spacing:.09em;
