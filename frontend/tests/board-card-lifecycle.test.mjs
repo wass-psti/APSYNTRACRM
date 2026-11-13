@@ -153,3 +153,53 @@ test('shared modal gives destructive actions safe initial focus and specific com
  assert.match(modal,/closeAndRestore\(\)/);
  assert.match(app,/submitLabel:'Create board',successMessage:'Board created\.'/);
 });
+
+test('concurrent same-board lifecycle writes submit a single mutation RPC',async()=>{
+ let resolveWrite;
+ const calls=[];
+ const api={
+  context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  allowed:async()=>true,
+  rpc:async(op,args)=>{
+   calls.push([op,args]);
+   if(calls.length===1)return new Promise(resolve=>{resolveWrite=resolve;});
+   return {boardId:args.p_board_id,action:args.p_action,status:'active',
+    updatedAt:'2026-11-03T03:41:20.000000+00:00'};
+  }
+ };
+ const client=new BoardCardLifecycleClient(api);
+ const first=client.edit(custom,{name:'A',description:'first'});
+ for(let i=0;i<10&&!resolveWrite;i++)await Promise.resolve();
+ assert.equal(typeof resolveWrite,'function');
+ await assert.rejects(
+  client.edit(custom,{name:'B',description:'second'}),
+  error=>error instanceof ApiError&&error.status===409
+ );
+ assert.equal(calls.length,1);
+ resolveWrite({boardId:id,action:'edit',status:'active',
+  updatedAt:'2026-11-03T03:41:20.000000+00:00'});
+ await first;
+ await client.edit(custom,{name:'C',description:'third'});
+ assert.equal(calls.length,2);
+});
+
+test('stale-revision 40001 is not automatically retried and does not remain locked',async()=>{
+ let attempts=0;
+ const api={
+  context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  allowed:async()=>true,
+  rpc:async(_op,args)=>{
+   attempts++;
+   if(attempts===1)throw new ApiError('Board changed; refresh before editing',409,'40001');
+   return {boardId:args.p_board_id,action:args.p_action,status:'active',
+    updatedAt:'2026-11-03T03:41:20.000000+00:00'};
+  }
+ };
+ const client=new BoardCardLifecycleClient(api);
+ await assert.rejects(client.edit(custom,{name:'A',description:''}),
+  error=>error.code==='40001');
+ assert.equal(attempts,1);
+ await client.edit({...custom,updated_at:'2026-11-03T03:41:19.000000+00:00'},
+  {name:'B',description:''});
+ assert.equal(attempts,2);
+});
