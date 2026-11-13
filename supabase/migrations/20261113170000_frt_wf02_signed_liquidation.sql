@@ -3,7 +3,8 @@
 BEGIN;
 ALTER TABLE public.frt_liquidations
  ADD COLUMN IF NOT EXISTS submission_key uuid,
- ADD COLUMN IF NOT EXISTS submission_hash text;
+ ADD COLUMN IF NOT EXISTS submission_hash text,
+ ADD COLUMN IF NOT EXISTS submission_revision timestamptz;
 ALTER TABLE public.frt_liquidation_items
  ADD COLUMN IF NOT EXISTS receipt_date date;
 
@@ -59,7 +60,8 @@ SET search_path TO 'public','private','pg_temp'
 AS $fn$
 DECLARE v_role text; r public.frt_requests; l public.frt_liquidations;
  v_item jsonb; v_total numeric(14,2):=0; v_amount numeric;
- v_items jsonb; v_key uuid; v_hash text; v_revision text; v_date date;
+ v_items jsonb; v_key uuid; v_hash text; v_revision text;
+ v_new_revision timestamptz; v_date date;
 BEGIN
  v_role:=private.frt_current_role(p_workspace_id);
  IF auth.uid() IS NULL OR v_role IS NULL THEN
@@ -102,6 +104,9 @@ BEGIN
  SELECT * INTO l FROM public.frt_liquidations
  WHERE workspace_id=p_workspace_id AND fund_request_id=p_request_id FOR UPDATE;
  IF FOUND AND l.submission_key=v_key THEN
+  IF l.submission_revision IS DISTINCT FROM l.updated_at THEN
+   RAISE EXCEPTION 'Stale liquidation revision' USING errcode='40001';
+  END IF;
   IF l.submission_hash<>v_hash THEN
    RAISE EXCEPTION 'Submission key reused with different content' USING errcode='23505';
   END IF;
@@ -115,15 +120,16 @@ BEGIN
  IF l.id IS NULL THEN
   INSERT INTO public.frt_liquidations(
    workspace_id,fund_request_id,submitted_by,submitted_at,notes,total_spent,
-   excess_or_deficit,submission_key,submission_hash
+   excess_or_deficit,submission_key,submission_hash,submission_revision
   ) VALUES (p_workspace_id,p_request_id,auth.uid(),now(),
-   NULLIF(p_payload->>'notes',''),v_total,r.total_amount-v_total,v_key,v_hash)
+   NULLIF(p_payload->>'notes',''),v_total,r.total_amount-v_total,v_key,v_hash,now())
   RETURNING * INTO l;
  ELSE
+  v_new_revision:=GREATEST(now(),l.updated_at+interval '1 microsecond');
   UPDATE public.frt_liquidations SET submitted_by=auth.uid(),submitted_at=now(),
    notes=NULLIF(p_payload->>'notes',''),total_spent=v_total,
    excess_or_deficit=r.total_amount-v_total,reviewed_by=NULL,reviewed_at=NULL,
-   updated_at=GREATEST(now(),l.updated_at+interval '1 microsecond'),
+   updated_at=v_new_revision,submission_revision=v_new_revision,
    submission_key=v_key,submission_hash=v_hash
   WHERE id=l.id RETURNING * INTO l;
   DELETE FROM public.frt_liquidation_items

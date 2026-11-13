@@ -58,6 +58,18 @@ BEGIN
  OR jsonb_array_length(snapshot->'items')<>1 THEN
   RAISE EXCEPTION 'revision overwrite readback mismatch';
  END IF;
+ -- Legacy and out-of-band writes that advance updated_at must invalidate old replay keys.
+ UPDATE public.frt_liquidations SET updated_at=updated_at+interval '1 second'
+ WHERE workspace_id=ws AND fund_request_id=req;
+ denied:=false;
+ BEGIN
+  PERFORM public.frt_submit_liquidation_v2(ws,req,
+   jsonb_build_object('items',jsonb_build_array(
+    jsonb_build_object('description','Finalized','receiptDate',CURRENT_DATE::text,'amount','60.00')),
+    'notes','Revised','submissionKey',other_key,
+    'expectedRevision',result->>'revision'));
+ EXCEPTION WHEN serialization_failure THEN denied:=true; END;
+ IF NOT denied THEN RAISE EXCEPTION 'legacy update left old idempotency key valid'; END IF;
  PERFORM set_config('request.jwt.claim.sub',outsider::text,true);
  denied:=false;
  BEGIN
