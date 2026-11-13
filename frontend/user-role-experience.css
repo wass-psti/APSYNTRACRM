@@ -400,3 +400,55 @@
  }
  #app .aps-user-role-management .user-role-section-header{min-width:0}
 }
+
+
+/* CP-URM-FLOW-01: same-page application and board access, no nested routing. */
+#app .aps-user-role-management .user-role-access-nav{
+ display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+ padding:6px;margin:22px 0 19px;border:1px solid #e2e7f4;
+ background:#f2f4fa;border-radius:13px
+}
+#app .aps-user-role-management .user-role-access-nav button{
+ flex:1 1 170px;min-height:44px;padding:10px 14px;
+ border-radius:9px;border:1px solid transparent;
+ font-size:12px;font-weight:760;color:#53627d;
+ background:transparent;cursor:pointer
+}
+#app .aps-user-role-management .user-role-access-nav button[aria-pressed="true"]{
+ color:#37439a;border-color:#c9d0fa;background:#fff;
+ box-shadow:0 2px 8px #24336913
+}
+#app .aps-user-role-management .user-role-access-nav button:focus-visible{
+ outline:3px solid #5d63dd;outline-offset:2px
+}
+#app .aps-user-role-management .user-role-access-section[hidden]{display:none!important}
+#app .aps-user-role-management .user-role-access-section{min-width:0}
+@media(max-width:650px){
+ #app .aps-user-role-management .user-role-access-nav{
+  gap:4px;padding:4px
+ }
+ #app .aps-user-role-management .user-role-access-nav button{
+  flex:1 1 115px;padding:11px 7px;font-size:11px
+ }
+}
+#app .aps-user-role-management .user-role-board-filter-wrap{
+ display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;
+ gap:8px 14px;padding:14px 16px;margin:0 0 12px;
+ border:1px solid #e2e8f4;border-radius:12px;background:#fff
+}
+#app .aps-user-role-management .user-role-board-filter-wrap label{
+ font-size:12px;font-weight:750;color:#445573;flex:0 0 100%
+}
+#app .aps-user-role-management .user-role-board-filter{
+ flex:1 1 230px;min-width:0;min-height:44px;
+ padding:10px 12px;border:1px solid #cdd6e8;border-radius:9px;
+ font-size:13px;color:#253452;background:#fff
+}
+#app .aps-user-role-management .user-role-board-filter:focus-visible{
+ outline:3px solid #626bf0;outline-offset:2px
+}
+#app .aps-user-role-management .user-role-board-filter-wrap p{
+ margin:0;min-height:24px;font-size:12px;line-height:1.5;
+ color:#586782;font-variant-numeric:tabular-nums
+}
+#app .aps-user-role-management .user-role-table tr[hidden]{display:none!important}
