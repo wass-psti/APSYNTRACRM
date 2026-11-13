@@ -139,6 +139,32 @@ try{
   assert.equal(browse.modalInsideHeight,true);
   assert.equal(browse.rows,2);
   assert.equal(browse.badgeOverlap,false);
+  const browseSearchIcon=await evaluate(`(()=>{
+   const input=document.querySelector('#ws01-browser-search');
+   const field=document.querySelector('.ws01-browser-search-field');
+   const icon=field.querySelector('.ws01-browser-search-icon');
+   const a=input.getBoundingClientRect(),b=icon.getBoundingClientRect(),c=field.getBoundingClientRect();
+   return {centerDelta:Math.abs(a.top+a.height/2-b.top-b.height/2),
+     iconInside:b.left>=a.left&&b.right<=a.right&&b.top>=a.top&&b.bottom<=a.bottom,
+     fieldInside:c.left>=a.left-1&&c.right<=a.right+1,
+     svgCount:field.querySelectorAll('svg').length,
+     enhancerMarks:field.querySelectorAll('.aps-search-mark').length,
+     enhancerWrappers:field.querySelectorAll('.aps-search-field').length,
+     nativeOptOut:field.hasAttribute('data-aps-search-native'),
+     inputAppearance:getComputedStyle(input).appearance,
+     leftPadding:parseFloat(getComputedStyle(input).paddingLeft),
+     headerInside:(()=>{const h=document.querySelector('.ws01-browser-top').getBoundingClientRect();return h.left>=-1&&h.right<=innerWidth+1;})()};
+  })()`);
+  assert.ok(browseSearchIcon.centerDelta<=1);
+  assert.equal(browseSearchIcon.iconInside,true);
+  assert.equal(browseSearchIcon.fieldInside,true);
+  assert.equal(browseSearchIcon.svgCount,1);
+  assert.equal(browseSearchIcon.enhancerMarks,0);
+  assert.equal(browseSearchIcon.enhancerWrappers,0);
+  assert.equal(browseSearchIcon.nativeOptOut,true);
+  assert.equal(browseSearchIcon.inputAppearance,'none');
+  assert.ok(browseSearchIcon.leftPadding>=40);
+  assert.equal(browseSearchIcon.headerInside,true);
   const browserFilter=await evaluate(`(()=>{
    document.querySelector('[data-ws01-filter="owner"]').click();
    const ownerCount=document.querySelectorAll('.ws01-browser-grid .ws01-entry').length;
