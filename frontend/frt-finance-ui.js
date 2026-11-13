@@ -311,7 +311,7 @@ function renderFRTManual(result){
   ['1. Create a request','Use the company selector to choose an authorized company. Open New Fund Request, complete expense categories, payee and recipient details, and provide the project purpose. Submission uses the signed central FRT writer. It starts PENDING_APPROVAL and allocates a unique voucher on creation.'],
   ['2. Finance approval','An eligible signed finance approver reviews the authoritative request. Approval, rejection and revocation are existing audited server actions; request details show candidate actions only.'],
   ['3. General Manager verification','After finance approval, the General Manager may record verification and an optional reference. This is not proof that BPI, UBP, GCash or BizLink executed a payment.'],
-  ['4. Submit and approve liquidation','The central backend distinguishes NOT_SUBMITTED, SUBMITTED, UNDER_REVIEW, APPROVED and RETURNED. Receipt-level entry and a signed submission UI are not yet exposed by the Fund Tracker screen. Do not enter unsupported payment claims.'],
+  ['4. Submit and approve liquidation','The receipt-level liquidation form uses signed authoritative RPCs when the CP-FRT-WF-02 migration is deployed. Submission and review remain separate business events; any unavailable contract returns a real error.'],
   ['5. Close or archive','Closing requires the existing finance/lifecycle checks and an approved liquidation. The backend supports archived state; restoration and a complete archive list require verified retrieval controls.'],
   ['6. OPEX and intercompany','Executive and OPEX figures use signed company aggregates. The separate Risk-Aware IC ledger is document-backed and does not infer obligations from free-text fund-source names.'],
   ['7. Safeguards and pending parity','The Monday.com example describes ten-minute duplicate checks, 24-hour autosaved drafts, bank uploads, PDF voucher editor, automated PO synchronization, notifications and a three-day post-disbursement deadline. These are not represented as active APSYNTRA controls until their safe, authoritative integrations are verified.']
@@ -417,9 +417,13 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   html+='<div class="panel"><div class="panel-body">Retrieving signed FRT request details…</div></div>';
  }else if(detailResult?.status==='PASS'&&detailResult.detail){
   const d=detailResult.detail;
-  html+='<section class="panel" aria-label="FRT request details"><div class="panel-header"><h3>Request details (read-only)</h3>'+
+  html+='<section class="panel" aria-label="FRT request details"><div class="panel-header"><h3>Request details</h3>'+
    '<button type="button" class="secondary" data-action="frt-finance-detail-close">Close details</button></div>'+
-   '<div class="panel-body">'+renderFRTWorkflowTimeline(d)+'<div class="settings-grid">'+
+   '<div class="panel-body">'+renderFRTWorkflowTimeline(d)+
+   (d.financeApproved&&!d.closed&&d.liquidationStatus!=='APPROVED'&&d.status!=='REJECTED'?
+    '<button type="button" class="primary" data-action="frt-liquidation-open" data-request-id="'+
+    escape(selectedRequestId)+'">Open signed liquidation</button>':'')+
+   '<div class="settings-grid">'+
    [['Voucher',d.voucher],['Request',d.title],['Date needed',d.dateNeeded],
     ['Request status',d.status],['Liquidation status',d.liquidationStatus],
     ['Finance approved',d.financeApproved?'Yes':'No'],

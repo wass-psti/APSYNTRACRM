@@ -154,6 +154,8 @@ import {renderFRTBoardSignedSnapshot} from './frt-board-signed-snapshot.js';
 import {updateFRTRequestDate} from './frt-board-date-edit.js';
 import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
 import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
+import {loadFRTLiquidation,submitFRTLiquidation} from './frt-liquidation.js';
+import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
 import {isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
@@ -7091,6 +7093,37 @@ async function action(name,button){
     })});
    }else openModal(title,body,async()=>{},
      {submitLabel:'Not connected',submitDisabled:true});
+   break;
+ }
+ case 'frt-liquidation-open':{
+   if(state.tab!=='finance'||!auth.isSignedIn||state.frtFinance?.status!=='PASS'||
+      state.frtFinanceDetail?.status!=='PASS')return;
+   const requestId=String(button?.dataset?.requestId||'');
+   if(requestId!==state.frtFinanceDetailId||
+      !state.frtFinanceDetail.detail.financeApproved||
+      !state.frtFinance.requests.some(r=>r.requestId===requestId))return;
+   const workspaceId=state.context?.workspace_id,companyCode=state.frtFinance.companyCode;
+   const boardId=state.boardId,actor=auth.userId,seq=routeSerial;
+   const allowedRequestIds=state.frtFinance.requests.map(r=>r.requestId);
+   let snapshot;
+   try{
+    snapshot=await loadFRTLiquidation({auth,api:db,workspaceId,requestId,allowedRequestIds});
+   }catch(error){notice(error);break;}
+   if(seq!==routeSerial||state.boardId!==boardId||auth.userId!==actor||
+      state.context?.workspace_id!==workspaceId)return;
+   if(!snapshot.eligible){toast('This request is not eligible for liquidation.');break;}
+   const submissionKey=crypto.randomUUID();
+   openModal('Submit fund liquidation',renderFRTLiquidationForm(snapshot),async()=>{
+    if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+       auth.userId!==actor||state.context?.workspace_id!==workspaceId||
+       state.frtFinance?.companyCode!==companyCode)
+     throw new ApiError('FRT session or company changed. Reopen liquidation.',409);
+    const fields=collectFRTLiquidationForm(modal);
+    await submitFRTLiquidation({auth,api:db,workspaceId,requestId,allowedRequestIds,
+     snapshot,submissionKey,...fields});
+    await loadFRTFinance(companyCode);
+   },{submitLabel:'Submit liquidation',successMessage:'Liquidation saved and verified by signed readback.'});
+   enhanceFRTLiquidationForm(modal);
    break;
  }
  case 'frt-finance-action':{
