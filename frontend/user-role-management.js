@@ -170,7 +170,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    '<label>Role<select id="user-role-batch-role">'+roles.map(role=>
     '<option value="'+esc(role)+'"'+(role===currentRole?' selected':'')+'>'+esc(role)+'</option>').join('')+'</select></label>'+
    '<label>Change<select id="user-role-batch-action"><option value="assign"'+(batchAction==='assign'?' selected':'')+'>Assign or change</option><option value="revoke"'+(batchAction==='revoke'?' selected':'')+'>Revoke existing access</option></select></label></div>'+
-   '</div></div><aside class="user-role-batch-summary" aria-label="Batch review summary">'+
+   '</div><aside class="user-role-batch-summary" aria-label="Batch review summary">'+
    '<div class="user-role-batch-summary-top"><span class="user-role-batch-step">03</span><strong>Review &amp; apply</strong></div>'+
    '<p class="user-role-batch-summary-intro">Your planned change</p>'+
    '<dl><div><dt>Members</dt><dd id="user-role-batch-summary-count">'+batchSelected.length+' selected</dd></div>'+

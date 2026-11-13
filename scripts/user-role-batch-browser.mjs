@@ -75,6 +75,18 @@ try{
     roleSelected:panel.querySelector('#user-role-batch-role')?.value,
     gridColumns:getComputedStyle(panel.querySelector('.user-role-batch-layout')).gridTemplateColumns.split(' ').length,
     summaryPresent:!!panel.querySelector('.user-role-batch-summary'),
+    gridChildren:[...panel.querySelector('.user-role-batch-layout').children].map(child=>child.className),
+    summaryIsGridChild:panel.querySelector('.user-role-batch-summary')?.parentElement===panel.querySelector('.user-role-batch-layout'),
+    desktopSummaryRight:(()=>{
+     const main=panel.querySelector('.user-role-batch-main').getBoundingClientRect();
+     const summary=panel.querySelector('.user-role-batch-summary').getBoundingClientRect();
+     return summary.left>=main.right-1 && Math.abs(summary.top-main.top)<3;
+    })(),
+    mobileSummaryBelow:(()=>{
+     const main=panel.querySelector('.user-role-batch-main').getBoundingClientRect();
+     const summary=panel.querySelector('.user-role-batch-summary').getBoundingClientRect();
+     return summary.top>=main.bottom-1 && summary.left>=-1 && summary.right<=innerWidth+1;
+    })(),
     searchPresent:!!panel.querySelector('#user-role-batch-member-search'),
     memberListInside:(()=>{
      const list=panel.querySelector('.user-role-batch-user-list').getBoundingClientRect();
@@ -94,6 +106,10 @@ try{
   assert.equal(result.roleSelected,'editor');
   assert.equal(result.gridColumns,width>1040?2:1);
   assert.equal(result.summaryPresent,true);
+  assert.deepEqual(result.gridChildren,['user-role-batch-main','user-role-batch-summary']);
+  assert.equal(result.summaryIsGridChild,true,'Review summary must be a direct grid child');
+  if(width>1040)assert.equal(result.desktopSummaryRight,true,'Desktop review summary should be on the right');
+  else assert.equal(result.mobileSummaryBelow,true,'Small-screen summary should follow configuration');
   assert.equal(result.searchPresent,true);
   assert.equal(result.memberListInside,true);
   console.log('USER_ROLE_BATCH_BROWSER_PASS '+JSON.stringify(result));
