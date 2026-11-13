@@ -14,7 +14,8 @@ test('startup phases describe real work without invented progress or access succ
  assert.match(app,/if\(await auth\.restore\(\)\)/);
  assert.match(app,/setInitializationPhase\('authentication'\)/);
  assert.match(app,/setInitializationPhase\('authorization'\)/);
- assert.match(app,/await refreshWorkspace\(\);\s*setInitializationPhase\('workspace'\)/);
+ assert.match(app,/await startupVerifiedRead\(async\(\)=>await refreshWorkspace\(\),\{/);
+ assert.match(app,/startupRecoveryStage='route';\s*setInitializationPhase\('workspace'\)/);
  assert.match(app,/finally\{\s*startupCriticalPath\.end\(\{authenticated:outcome==='AUTHENTICATED'\}\);\s*window\.__APSYNTRA_STARTUP\?\.resolve\(outcome\);\s*finishInitialization\(\);\s*startupBusy=false;\s*\}/);
  assert.ok(app.lastIndexOf('finishInitialization()')>app.lastIndexOf('await onRoute()'));
  assert.doesNotMatch(app,/await startInitialization\(/);
