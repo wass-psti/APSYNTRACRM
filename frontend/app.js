@@ -7160,6 +7160,12 @@ async function action(name,button){
    break;
  }
 
+ case 'frt-ic-retry-read':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
+      state.frtFinanceView!=='opex')return;
+   await loadFRTFinance(state.frtFinance?.companyCode||null);
+   break;
+ }
  case 'frt-ic-new-obligation':{
    if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
       state.frtFinance?.status!=='PASS'||

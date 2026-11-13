@@ -192,7 +192,10 @@ function renderFRTIntercompanyMatrix(result){
    :'The intercompany ledger service is not available yet. Existing FRT workflows remain usable.';
   return '<section class="frt-opex-ic frt-ic-dashboard"><header><div><h3>Risk-Aware IC Matrix</h3>'+
    '<p>Bilateral intercompany receivables, payables and loan maturity</p></div><span>Unavailable</span></header>'+
-   renderOpexUnavailable('Intercompany ledger unavailable',detail)+'</section>';
+   renderOpexUnavailable('Intercompany ledger unavailable',detail)+
+   '<button type="button" class="frt-ic-row-action" data-action="frt-ic-retry-read">'+
+   'Retry signed ledger read</button><p class="frt-ic-disclosure">Retry performs a read only. '+
+   'It cannot create or repeat any financial transaction.</p></section>';
  }
  const summary=snapshot.summary;
  const metric=(label,value,note,tone='')=>'<article class="frt-ic-metric '+tone+'"><span>'+escape(label)+

@@ -74,12 +74,24 @@ test('CP-FRT-IC-01 invalid or unavailable snapshot never invents exposure values
  const invalid=renderFRTFinanceReadOnly({result:{...base,icSnapshot:null,icStatus:'INVALID_CONTRACT'},view:'opex'});
  assert.match(invalid,/Intercompany ledger unavailable/);
  assert.doesNotMatch(invalid,/₱850,000|data-action="frt-ic-new-obligation"|data-action="frt-ic-settle"/);
+ assert.match(invalid,/data-action="frt-ic-retry-read"/);
+ assert.match(invalid,/Retry performs a read only/);
 });
 
 test('CP-FRT-IC-01 app binds actionable settlement controls and the existing finance modal workflow',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/case 'frt-ic-retry-read'/);
+ assert.match(app,/await loadFRTFinance\(state\.frtFinance\?\.companyCode\|\|null\)/);
  assert.match(app,/case 'frt-ic-new-obligation'/);
  assert.match(app,/case 'frt-ic-settle'/);
  assert.match(app,/!\/\^\\d\+\(\?:\\.\\d\{1,2\}\)\?\$\//);
  assert.match(app,/recordFRTICSettlement\(\{auth,api:db,workspaceId,obligationId,payload\}\)/);
+});
+
+test('CP-FRT-IC-01C transient service failures expose safe signed read recovery',()=>{
+ const unavailable=renderFRTFinanceReadOnly({result:{...base,icSnapshot:null,icStatus:'UNAVAILABLE'},view:'opex'});
+ assert.match(unavailable,/Retry signed ledger read/);
+ assert.doesNotMatch(unavailable,/data-action="frt-ic-new-obligation"|data-action="frt-ic-settle"/);
+ const healthy=renderFRTFinanceReadOnly({result:base,view:'opex'});
+ assert.doesNotMatch(healthy,/data-action="frt-ic-retry-read"/);
 });
