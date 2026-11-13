@@ -137,6 +137,24 @@ test('denied known mutations do not evict authorized board cache',async()=>{
  await api.boardCached(boardId,scope);
  assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,1);
 });
+test('concurrent bootstrap identity verification does not invalidate startup board-list reads',async()=>{
+ let releaseBoardList,markBoardListStarted;
+ const boardListStarted=new Promise(resolve=>{markBoardListStarted=resolve;});
+ const boardListGate=new Promise(resolve=>{releaseBoardList=resolve;});
+ const {api,calls}=fixture({reply:async(path)=>{
+  if(path.endsWith('/wm_list_boards')){markBoardListStarted();await boardListGate;return [];}
+  if(path.endsWith('/apsyntra_role_is_bootstrap'))return true;
+  return board;
+ }});
+ const boardsPending=api.boards('active');
+ await boardListStarted;
+ const bootstrapVerified=await api.rpc('apsyntra_role_is_bootstrap');
+ releaseBoardList();
+ assert.equal(bootstrapVerified,true);
+ assert.deepEqual(await boardsPending,[]);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_list_boards')).length,1);
+});
+
 test('unknown RPC remains conservative and invalidates cached snapshots',async()=>{
  const {api,calls}=fixture();
  await api.boardCached(boardId,scope);
