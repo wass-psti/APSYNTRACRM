@@ -125,3 +125,27 @@ test('scoped RPC does not replace existing domain read API or expose unauthentic
  assert.match(sql,/TO authenticated/);
  assert.doesNotMatch(sql,/SECURITY DEFINER|DROP TABLE|ALTER TABLE|CREATE ROLE|service_role/);
 });
+
+
+test('All Documents distinguishes an authorized empty result from pending, failed, and loading reads',()=>{
+ const renderState=(view,canReview=true)=>renderTradeLinkDocumentRepository({
+  detail,workspaceId:workspace,canManage:!canReview,canReview,view
+ });
+ const base=initialTradeLinkDraftView();
+ const pending=renderState(base);
+ assert.match(pending,/<p class="muted" role="status" aria-live="polite">The signed document list has not been loaded/);
+ const loading=renderState({...base,busy:true});
+ assert.match(loading,/<p class="muted" role="status" aria-live="polite">Loading the signed TradeLink document list/);
+ const refreshingEmpty=renderState({...base,status:'AUTHORIZED_READ',rows:[],busy:true});
+ assert.match(refreshingEmpty,/Loading the signed TradeLink document list/);
+ assert.doesNotMatch(refreshingEmpty,/No documents are currently assigned/);
+ const failed=renderState({...base,status:'READ_FAILED',error:'Signed list unavailable'});
+ assert.match(failed,/Signed list unavailable/);
+ assert.match(failed,/could not be loaded\. Refresh to retry/);
+ const empty=renderState({...base,status:'AUTHORIZED_READ',rows:[]});
+ assert.match(empty,/No documents are currently assigned to this signed account/);
+ assert.match(empty,/0 of 0 assigned documents/);
+ const managerEmpty=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
+  canManage:true,view:{...base,status:'AUTHORIZED_READ',rows:[]}});
+ assert.match(managerEmpty,/No documents were returned for this authorized repository page/);
+});

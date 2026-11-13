@@ -1670,9 +1670,11 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
     }).join('')+'</tbody></table></div>'+
    '<p data-tradelink-domain-no-match class="muted"'+(displayed.length?' hidden':'')+
     '>No matching records in this authorized response.</p>':
-   '<p class="muted">'+(enabled?
-    'No authorized TradeLink Draft records were returned for this page.':
-    'No authorized TradeLink Draft records have been loaded. Refresh the signed list.')+'</p>')+
+   '<p class="muted" role="status" aria-live="polite">'+(view.busy?'Loading the signed TradeLink document list…':
+    enabled?(canReview?'No documents are currently assigned to this signed account.':
+     'No documents were returned for this authorized repository page.'):
+    view.status==='READ_FAILED'?'The signed document list could not be loaded. Refresh to retry; no local or cached records are being shown.':
+    'The signed document list has not been loaded. Select Refresh to retrieve the current authorized records.')+'</p>')+
   '</section>';
 }
 /**

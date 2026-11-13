@@ -50,3 +50,15 @@ test('original Create New portal entry remains visible to reviewer accounts with
  assert.doesNotMatch(reviewer,/data-tradelink-draft-form/);
  assert.match(reviewer,/My Assigned Documents/);
 });
+
+
+test('Create New explains the existing manager boundary without adding employee document authority',()=>{
+ const reviewer=renderTradeLinkApplication({detail,workspaceId:ws,section:'drafts',canManage:false,canReview:true});
+ assert.match(reviewer,/data-tl-tab="create"[^>]*aria-disabled="true"/);
+ assert.match(reviewer,/Document creation requires the existing signed Board manager capability/);
+ assert.match(reviewer,/No additional permission is granted here/);
+ assert.doesNotMatch(reviewer,/data-tradelink-draft-form/);
+ const manager=renderTradeLinkApplication({detail,workspaceId:ws,section:'drafts',canManage:true});
+ assert.match(manager,/data-tradelink-draft-form/);
+ assert.match(manager,/data-action="tradelink-draft-submit"/);
+});
