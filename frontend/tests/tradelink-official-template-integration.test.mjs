@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {parseTradeLinkDraftForm,prepareTradeLinkDraftCommand,
  renderTradeLinkDraftWorkspace,initialTradeLinkDraftView}
  from '../tradelink-draft-workspace.js';
@@ -105,4 +106,14 @@ test('saved company association is locked in edit form while a legacy unbound re
   view:{...initialTradeLinkDraftView(),mode:'edit',selected:{documentId,record:legacy}},
   canManage:true});
  assert.doesNotMatch(legacyHtml,/name="vendorId" disabled/);
+});
+
+
+test('TradeLink overview and User Manual describe the recovered official templates and print boundary',()=>{
+ const app=readFileSync(new URL('../tradelink-application.js',import.meta.url),'utf8');
+ assert.doesNotMatch(app,/official PDF template remains pending|will be integrated separately when supplied/i);
+ assert.match(app,/recovered official company templates are available for all six modules/i);
+ assert.match(app,/official v1\.42\.0 company templates are available for all six modules/i);
+ assert.match(app,/browser print copy is not an electronically issued PDF/i);
+ assert.match(app,/Older records without a company assignment use the historical Watchdog Automation Sales & Services default/i);
 });
