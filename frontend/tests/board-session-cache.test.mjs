@@ -7,12 +7,19 @@ const other='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const workspace='00000000-0000-4000-8000-000000000001';
 const foreign='00000000-0000-4000-8000-000000000002';
 const boardId='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
-const board={board:{id:boardId,workspace_id:workspace},groups:[],items:[]};
+const board={board:{id:boardId,workspace_id:workspace},groups:[],members:[],columns:[],items:[],values:[]};
 const scope={userId:user,workspaceId:workspace};
 function fixture({reply=()=>board}={}){
  const calls=[];
  const auth={userId:user,accessToken:'session-a',authorized:async(path,options)=>{
   calls.push({path,body:options?.body});
+  if(path.endsWith('/wm_get_board_shell')){
+   const value=await reply('/rest/v1/rpc/wm_get_board_shell',options);
+   return value?.board?{board:value.board,groups:value.groups||[],
+    members:value.members||[],columns:value.columns||[]}:value;
+  }
+  if(path.endsWith('/wm_get_board_items_page'))
+   return {items:[],values:[],has_more:false,next_cursor:null};
   return reply(path,options);
  }};
  const api=new DomainApi(auth);
@@ -29,13 +36,13 @@ test('cache coalesces simultaneous scoped board loads and independently returns 
  const b=api.boardCached(boardId,scope);
  release();
  const [left,right]=await Promise.all([a,b]);
- assert.equal(calls.length,1);
+ assert.equal(calls.length,2);
  assert.deepEqual(left,board);
  assert.deepEqual(right,board);
  assert.notEqual(left,right);
  left.board.workspace_id=foreign;
  assert.equal((await api.boardCached(boardId,scope)).board.workspace_id,workspace);
- assert.equal(calls.length,1);
+ assert.equal(calls.length,2);
 });
 test('new user, workspace and access token cannot reuse an earlier board response',async()=>{
  const {api,auth,calls}=fixture();
@@ -46,20 +53,24 @@ test('new user, workspace and access token cannot reuse an earlier board respons
  await api.boardCached(boardId,scope);
  auth.accessToken='session-b';
  await api.boardCached(boardId,scope);
- assert.equal(calls.length,4);
+ assert.equal(calls.length,8);
 });
-test('mutating RPC invalidates snapshots, but read-only Board UI RPC does not',async()=>{
+test('mutating RPC invalidates snapshots, but Board UI and pagination reads do not',async()=>{
  const {api,calls}=fixture();
  await api.boardCached(boardId,scope);
  await api.rpc('wm_board_ui_read',{p_board_id:boardId});
+ await api.rpc('wm_get_board_shell',{p_board_id:boardId});
+ await api.rpc('wm_get_board_items_page',{
+  p_board_id:boardId,p_after_position:null,p_after_id:null,p_limit:200
+ });
  await api.boardCached(boardId,scope);
- assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,1);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board_shell')).length,2);
  await api.rpc('wm_update_board_group',{p_group_id:user,p_title:'Renamed'});
  await api.boardCached(boardId,scope);
- assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,2);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board_shell')).length,3);
  api.invalidateBoardCache();
  await api.boardCached(boardId,scope);
- assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,3);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board_shell')).length,4);
 });
 test('inflight invalidation re-fetches before returning; stale version never renders',async()=>{
  let finish;let calls=0;
@@ -114,18 +125,18 @@ test('read-only event and document queries preserve cached board snapshots',asyn
  await api.rpc('wm_list_board_events_page',{p_board_id:boardId});
  await api.rpc('tl03_documents_page',{p_board_id:boardId});
  await api.boardCached(boardId,scope);
- assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,1);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board_shell')).length,1);
 });
 test('successful scoped mutation invalidates only its board, preserving other boards',async()=>{
  const second='00000000-0000-4000-8000-000000000009';
- const {api,calls}=fixture({reply:(path,options)=>path.endsWith('/wm_get_board')?
+ const {api,calls}=fixture({reply:(path,options)=>path.endsWith('/wm_get_board_shell')?
   {board:{id:options.body.p_board_id,workspace_id:workspace}}:true});
  await api.boardCached(boardId,scope);
  await api.boardCached(second,scope);
  await api.rpc('wm_board_group_cas',{p_board_id:boardId});
  await api.boardCached(second,scope);
  await api.boardCached(boardId,scope);
- assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,3);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board_shell')).length,3);
 });
 test('denied known mutations do not evict authorized board cache',async()=>{
  const {api,calls}=fixture({reply:(path)=>{
@@ -135,7 +146,7 @@ test('denied known mutations do not evict authorized board cache',async()=>{
  await api.boardCached(boardId,scope);
  await assert.rejects(()=>api.rpc('wm_board_group_cas',{p_board_id:boardId}),/denied/);
  await api.boardCached(boardId,scope);
- assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,1);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board_shell')).length,1);
 });
 test('concurrent bootstrap identity verification does not invalidate startup board-list reads',async()=>{
  let releaseBoardList,markBoardListStarted;
@@ -160,5 +171,5 @@ test('unknown RPC remains conservative and invalidates cached snapshots',async()
  await api.boardCached(boardId,scope);
  await api.rpc('future_unknown_rpc',{p_board_id:boardId});
  await api.boardCached(boardId,scope);
- assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board')).length,2);
+ assert.equal(calls.filter(c=>c.path.endsWith('/wm_get_board_shell')).length,2);
 });

@@ -29,13 +29,19 @@ const server=createServer(async(req,res)=>{
   const allowed=user===USER&&workspace===WS;
   const action=pathname.split('/').at(-1);
   res.setHeader('Content-Type','application/json');
-  if(action==='wm_get_board')counts.boardReads++;
+  if(action==='wm_get_board_shell')counts.boardReads++;
   if(action==='work_board_access')counts.viewReads++;
   if(action==='wm_board_group_cas')counts.writes++;
-  if(!allowed||(viewRevoked&&action==='work_board_access')){
+  if(!allowed||(viewRevoked&&['work_board_access','wm_get_board_shell','wm_get_board_items_page'].includes(action))){
    res.statusCode=403;res.end(JSON.stringify({error:'signed fixture authorization denied'}));return;
   }
-  if(action==='wm_get_board')res.end(JSON.stringify({board:{id:BOARD,workspace_id:WS,updated_at:revision,name},groups:[],items:[]}));
+  if(action==='wm_get_board_shell')res.end(JSON.stringify({
+   board:{id:BOARD,workspace_id:WS,updated_at:revision,name},
+   groups:[],members:[],columns:[]
+  }));
+  else if(action==='wm_get_board_items_page')res.end(JSON.stringify({
+   items:[],values:[],has_more:false,next_cursor:null
+  }));
   else if(action==='work_board_access')res.end('true');
   else if(action==='wm_board_group_cas'){
    revision='2026-11-09T09:01:00Z';name='Changed group';
@@ -126,7 +132,15 @@ async function run(){
   const base='http://127.0.0.1:'+debugPort;
   const fixture='http://127.0.0.1:'+port+'/frontend/tests/fixtures/board-cache-two-tab.html';
   async function openTab(href=fixture,ready='window.acceptance'){
-   const response=await fetch(base+'/json/new?'+encodeURIComponent(href),{method:'PUT',signal:AbortSignal.timeout(5000)});
+   let response;
+   try{
+    response=await fetch(base+'/json/new?'+encodeURIComponent(href),{
+     method:'PUT',signal:AbortSignal.timeout(15000)
+    });
+   }catch(error){
+    throw Object.assign(new Error('Chromium DevTools tab creation timed out: '+error.message),
+     {code:'CHROME_STARTUP_TIMEOUT'});
+   }
    assert.equal(response.ok,true);
    const target=await response.json();
    const page=new Page(target.webSocketDebuggerUrl);

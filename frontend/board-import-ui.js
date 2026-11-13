@@ -20,7 +20,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  if(!api?.board||!api?.allowed||!api?.context||!auth?.getVerifiedUser)
   throw new ApiError('Signed board-import clients unavailable.',403);
  let [actor,ctx,detail,edit,manage]=await Promise.all([
-  auth.getVerifiedUser(),api.context(),api.board(boardId),
+  auth.getVerifiedUser(),api.context(),api.board(boardId,{includeExtendedRefs:true}),
   api.allowed(boardId,'edit'),api.allowed(boardId,'manage')]);
  if(actor?.id!==auth.userId||ctx.user_id!==actor.id||ctx.workspace_id!==detail.board.workspace_id||
     ctx.profile?.status!=='active'||!edit||!canManuallyEditBoard(detail.board,true))

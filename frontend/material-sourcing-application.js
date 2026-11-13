@@ -1,5 +1,5 @@
 /** Material Request Hub — signed, item-scoped protected sourcing fields.
- * Sensitive values NEVER go through wm_get_board, public board cells, local
+ * Sensitive values NEVER go through general board shell/page reads, public cells, local
  * storage, or persistent reporting. Derived finance values are not edited.
  */
 import {ApiError,} from './session.js';

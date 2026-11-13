@@ -1,5 +1,5 @@
 /** BS02 — board people / mention preparation.
- * Uses only the exact board's already-authorized signed wm_get_board detail.
+ * Uses only the exact board's already-authorized signed paginated board detail.
  * Explicit membership is NOT an exhaustive effective-access list: global
  * admins, policy overrides or independently approved guests may be absent.
  * Mentions are local text drafts ONLY: no update write or notification.

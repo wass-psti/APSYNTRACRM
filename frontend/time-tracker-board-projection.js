@@ -1,6 +1,6 @@
 /** CP-TT-GPS01 — restricted attendance board GPS overlay.
  * Source of truth: server-side TimeTracker atomic attendance commit.
- * Never merge these rows into broadly visible wm_get_board values.
+ * Never merge these rows into broadly visible general board item-page values.
  */
 import {ApiError} from './session.js';
 

@@ -667,7 +667,7 @@ export async function executeBoardImport({api,auth,plan,onVerifiedDetail}={}){
   const afterContext=await api.context();
   if(afterContext.user_id!==ctx.user_id||afterContext.workspace_id!==ctx.workspace_id||
      afterContext.profile?.status!=='active')uncertainImport();
-  // wm_get_board is a fresh authoritative RPC read (not the in-memory board cache).
+  // A fresh authoritative shell plus bounded item pages (not the in-memory board cache).
   // Verify persisted items, mapped cells, created columns/groups and skipped values
   // before the UI reports success or asks the user to refresh.
   // A transient failure to fetch authoritative readback does NOT mean the

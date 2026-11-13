@@ -1801,7 +1801,7 @@ async function refreshVisibleBoard(boardId,tab){
   state.context?.workspace_id===workspace;
  try{
   const [detail,view,edit,manage,boardUi]=await Promise.all([
-   db.board(boardId,{parallelExtendedRefs:true}),db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
+   db.board(boardId),db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
    db.allowed(boardId,'manage'),boardStructureClient.read(boardId)
   ]);
   if(!current())return false;
@@ -4253,7 +4253,7 @@ async function verifyInlineColumnBoard(snapshot){
  // revision and workspace checks still gate every subsequent mutation.
  const [user,ctx,fresh,allowed,session]=await Promise.all([
   auth.getVerifiedUser(),db.context(),
-  db.board(snapshot.boardId,{parallelExtendedRefs:true}),
+  db.board(snapshot.boardId),
   db.allowed(snapshot.boardId,'manage'),
   db.rpc('wm_board_ui_read',{p_board_id:snapshot.boardId})
  ]);
