@@ -3,13 +3,14 @@
  * Financial data crosses only as company-scoped aggregates; individual request
  * amounts, requester identities, banking data and raw row payloads stay excluded.
  */
+import {projectFRTICSnapshot} from './frt-intercompany-client.js';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const roles=new Set(['GENERAL_MANAGER','FINANCE_MANAGER','FINANCE_APPROVER','REQUESTOR']);
 const companyPattern=/^[A-Za-z0-9_-]{1,32}$/;
 const maxName=120;
 const validCount=n=>Number.isSafeInteger(n)&&n>=0;
 const denied=(reason)=>({status:'BLOCKED',reason,companies:[],requests:[],
- summary:null,analytics:null,analyticsStatus:'UNAVAILABLE',role:'UNVERIFIED',companyCode:null,writesAttempted:0});
+ summary:null,analytics:null,analyticsStatus:'UNAVAILABLE',icSnapshot:null,icStatus:'UNAVAILABLE',role:'UNVERIFIED',companyCode:null,writesAttempted:0});
 const short=(value,length)=>typeof value==='string'&&value.length<=length?value:null;
 const validDate=v=>v===null||(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v));
 const validMoney=v=>typeof v==='string'&&/^\d{1,30}(?:\.\d{1,2})?$/.test(v);
@@ -40,7 +41,7 @@ function projectFinancialAnalytics(raw,companyCode){
  return {companyCode,requestedTotal:raw.requested_total,spentTotal:raw.spent_total,
   topCategories:categories,monthlyTrend};
 }
-export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
+export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeIntercompany=false}={}){
  const result=denied('UNVERIFIED_SIGNED_CONTEXT');
  if(!auth||!api)return denied('SIGNED_AUTH_AND_API_REQUIRED');
  try{
@@ -74,11 +75,15 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
   if(!companyPattern.test(selected||'')||!seen.has(selected))
    return denied('UNAUTHORIZED_COMPANY_SELECTION');
 
-  const [dashboard,items]=await Promise.all([
+  const [dashboard,items,icRead]=await Promise.all([
    api.rpc('frt_board_dashboard_safe',
     {p_workspace_id:context.workspace_id,p_company:selected}),
    api.rpc('frt_board_list_safe',
-    {p_workspace_id:context.workspace_id,p_company:selected,p_search:''})
+    {p_workspace_id:context.workspace_id,p_company:selected,p_search:''}),
+   includeIntercompany?
+    api.rpc('frt_ic_snapshot',{p_workspace_id:context.workspace_id})
+     .then(raw=>({raw,available:true,skipped:false})).catch(()=>({raw:null,available:false,skipped:false})):
+    Promise.resolve({raw:null,available:false,skipped:true})
   ]);
   const keys=['total_requests','pending','in_progress','completed','pending_liquidation_count'];
   if(!dashboard||keys.some(k=>!validCount(dashboard[k]))||
@@ -87,6 +92,9 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
   // Aggregate fields are additive to the existing safe dashboard RPC.
   // Older deployed projections remain usable while aggregate fields are absent.
   const analytics=projectFinancialAnalytics(dashboard,selected);
+  const icSnapshot=icRead.available?
+   projectFRTICSnapshot(icRead.raw,context.workspace_id,companies):null;
+  const icStatus=icSnapshot?'PASS':icRead.skipped?'NOT_REQUESTED':icRead.available?'INVALID_CONTRACT':'UNAVAILABLE';
   const analyticsStatus=analytics?'PASS':
    (dashboard.company_code!==undefined||dashboard.requested_total!==undefined||
     dashboard.spent_total!==undefined||dashboard.top_categories!==undefined||
@@ -111,7 +119,8 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null}={}){
      after?.profile?.status!=='active')return denied('SIGNED_CONTEXT_CHANGED');
   return {status:'PASS',reason:null,role:membership.role,companies,companyCode:selected,
    summary:Object.fromEntries(keys.map(k=>[k,dashboard[k]])),requests,
-   analytics,analyticsStatus,totalVisible:items.length,visibleLimit:100,writesAttempted:0};
+   analytics,analyticsStatus,icSnapshot,icStatus,
+   totalVisible:items.length,visibleLimit:100,writesAttempted:0};
  }catch(err){
   return denied(err?.status===401?'SIGNED_SESSION_EXPIRED':
    err?.status===403?'FRT_ACCESS_DENIED':
