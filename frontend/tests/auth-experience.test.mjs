@@ -19,6 +19,22 @@ test('new login has stable credential field, submit and visibility hooks',()=>{
  assert.match(markup,/© 2026 APSYNTRA CRM/);
  assert.equal((markup.match(/id="login-form"/g)||[]).length,1);
 });
+test('failed sign-in can preserve only the escaped email, never the password',()=>{
+ const html=renderAuthMarkup({emailValue:'a"@example.com',message:'Sign-in unsuccessful'});
+ assert.match(html,/name="email" type="email"[^>]*value="a&quot;@example.com"/);
+ assert.match(html,/autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254"/);
+ assert.match(html,/name="password" type="password"[^>]*autocomplete="current-password"/);
+ assert.doesNotMatch(html,/name="password"[^>]*value=/);
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/renderLogin\(errorMessage\(err\),\{mode:'login',emailValue:email\}\)/);
+});
+test('login keyboard focus, tap targets and compact layout are present',()=>{
+ const css=readFileSync('frontend/auth-experience.css','utf8');
+ assert.match(css,/#login-form \.eye-btn\{[^}]*min-height:44px/);
+ assert.match(css,/#login-form \.auth-submit:focus-visible/);
+ assert.match(css,/#login-form \.field input:focus-visible/);
+ assert.match(css,/max-width:360px/);
+});
 test('credential errors remain escaped and announced to assistive technology',()=>{
  const html=renderAuthMarkup({
   message:'Invalid <script>alert("credential")</script> & check',year:2026
@@ -45,7 +61,7 @@ test('redesign is scoped to login, and authentication flow and expired session r
  const source=readFileSync('frontend/app.js','utf8');
  assert.match(source,/import \{renderAuthMarkup\} from '\.\/auth-markup\.js'/);
  assert.match(source,/import \{mountAuthExperience\} from '\.\/auth-experience\.js'/);
- assert.match(source,/root\.innerHTML=renderAuthMarkup\(\{message,notice:notice\|\|\(formsubmitReturn\?/);
+ assert.match(source,/root\.innerHTML=renderAuthMarkup\(\{message,emailValue,notice:notice\|\|\(formsubmitReturn\?/);
  assert.match(source,/authVisualController=mountAuthExperience\(root\.querySelector\('\.aps-auth-v2'\)\)/);
  assert.match(source,/function shell\(body\)\{\s*stopAuthVisuals\(\)/);
  assert.match(source,/if\(event\.target\.id==='login-form'\)\{event\.preventDefault\(\);login\(event\.target\)/);

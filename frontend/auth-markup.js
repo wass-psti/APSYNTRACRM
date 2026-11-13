@@ -1,19 +1,19 @@
 /**
  * Login, registration-admission and password-recovery presentation. The IDs, field names, and data-action hooks are the
  * existing signed-auth contract; no credentials are processed in this module.
- * @typedef {{message?:string,notice?:string,year?:number,mode?:string,resetReady?:boolean,requestAlias?:string,requestReceivedUrl?:string}} AuthMarkupOptions
+ * @typedef {{message?:string,notice?:string,year?:number,mode?:string,resetReady?:boolean,emailValue?:string,requestAlias?:string,requestReceivedUrl?:string}} AuthMarkupOptions
  */
 import {formSubmitAction,FORM_SUBMIT_RECIPIENT_ALIAS,REQUEST_RECEIVED_URL} from './request-access.js';
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,
  char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 /** @param {AuthMarkupOptions} options */
-export function renderAuthMarkup({message='',notice='',year=new Date().getFullYear(),mode='login',resetReady=false,requestAlias=FORM_SUBMIT_RECIPIENT_ALIAS,requestReceivedUrl=REQUEST_RECEIVED_URL}={}){
+export function renderAuthMarkup({message='',notice='',year=new Date().getFullYear(),mode='login',resetReady=false,emailValue='',requestAlias=FORM_SUBMIT_RECIPIENT_ALIAS,requestReceivedUrl=REQUEST_RECEIVED_URL}={}){
  const error=message?'<div class="login-error" role="alert">'+escapeHtml(message)+'</div>':'';
  const confirmation=notice?'<div class="auth-message" role="status">'+escapeHtml(notice)+'</div>':'';
  const loginForm=`     <form id="login-form" aria-describedby="auth-login-description">
       <div class="field">
        <label for="email">Work email</label>
-       <input id="email" name="email" type="email" placeholder="you@company.com" autocomplete="username" inputmode="email" required autofocus/>
+       <input id="email" name="email" type="email" placeholder="you@company.com" value="${escapeHtml(emailValue)}" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254" required autofocus/>
       </div>
       <div class="field">
        <label for="password">Password</label>
