@@ -142,7 +142,7 @@ test('signed effective-access reads coalesce only while in flight',async()=>{
  const next=api.effectiveAccess();
  await Promise.resolve();await Promise.resolve();
  assert.equal(calls,2);
- resolveRead({workspaceId:W,boards:[]});
+ requests[1].resolve({workspaceId:W,boards:[]});
  await next;
  const stale=api.effectiveAccess();
  await Promise.resolve();await Promise.resolve();
@@ -152,8 +152,9 @@ test('signed effective-access reads coalesce only while in flight',async()=>{
  assert.equal(calls,4);
  // Each request retains the resolver created when it began.
  // Resolve fresh first: stale identity must still reject.
- resolveRead({workspaceId:W,boards:[]});
+ requests[3].resolve({workspaceId:W,boards:[]});
  await fresh;
+ requests[2].resolve({workspaceId:W,boards:[]});
  await assert.rejects(stale,/context changed during loading/);
 });
 test('effective-access failures are not cached and invalidation blocks stale reads',async()=>{
