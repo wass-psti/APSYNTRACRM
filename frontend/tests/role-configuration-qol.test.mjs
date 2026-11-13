@@ -15,7 +15,7 @@ test('matrix proposes no new effective privileges and each action identifies its
 });
 test('role configuration tables expose scrollable accessible regions without disclosing denied data',()=>{
  const allowed=renderRoleConfiguration({verified:true,data,tab:'roles'});
- assert.match(allowed,/tabindex="0" role="region" aria-label="Role configuration table, scroll horizontally for more columns"/);
+ assert.match(allowed,/tabindex="0" role="region" aria-label="CRM platform role reference, scroll horizontally for more columns"/);
  const denied=renderRoleConfiguration({verified:false,data:{...data,users:[{email:'hidden@example.invalid'}]}});
  assert.doesNotMatch(denied,/hidden@example.invalid|role-table-scroll/);
  const css=readFileSync('frontend/role-configuration-experience.css','utf8');

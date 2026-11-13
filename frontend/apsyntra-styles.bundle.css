@@ -5907,6 +5907,257 @@
  #app .aps-role-configuration .role-info-note{font-size:12px}
 }
 
+/* CP-ROLE-UI-01 — Overview-aligned Role Configuration.
+ * Match frontend/overview-experience.css; preserve staged role actions and RBAC.
+ */
+#app .aps-role-config-shell{
+ --role-ink:#1e2a47;--role-muted:#73819e;--role-border:#e6eaf4;
+ --role-accent:#5b5de7;--role-radius:19px;
+ background:radial-gradient(ellipse 60% 25% at 82% 10%,#e8ecff58,transparent 87%),#f6f8fd
+}
+#app .aps-role-configuration{
+ color:var(--role-ink);min-width:0
+}
+#app .aps-role-configuration .role-config-hero{
+ min-height:164px;margin-bottom:22px;
+ gap:24px;border-radius:22px;
+ background:radial-gradient(ellipse 65% 150% at 100% 100%,#58529aba,transparent 83%),
+ radial-gradient(ellipse 80% 110% at 15% 0%,#3a4782 0%,transparent 75%),
+ linear-gradient(125deg,#151e45 0%,#222a5c 58%,#403a83 100%);
+ border-color:#272f72;
+ box-shadow:0 20px 42px #1f2d6b20,0 2px 6px #1b245918
+}
+#app .aps-role-configuration .role-config-hero h1{
+ font-size:clamp(25px,2.7vw,39px);letter-spacing:-1.25px;line-height:1.14
+}
+#app .aps-role-configuration .role-config-hero p{
+ color:#cbd3f1;line-height:1.6
+}
+#app .aps-role-configuration .role-refresh-button{
+ min-height:44px;border-radius:11px;padding:11px 15px;
+ background:#ffffff16;border:1px solid #c6d0ff52;backdrop-filter:blur(5px);
+ transition:background .17s,border-color .17s
+}
+#app .aps-role-configuration .role-refresh-button:hover:not(:disabled){
+ transform:none;background:#ffffff27;border-color:#d9dfff86
+}
+#app .aps-role-configuration .role-staged-note{
+ border:1px solid #e5e9f4;border-left:3px solid #b89b62;
+ border-radius:13px;
+ background:#fcfaf6;color:#5e6071;
+ padding:15px 18px;line-height:1.6
+}
+#app .aps-role-configuration .role-staged-note strong{color:#805e34}
+#app .aps-role-configuration .role-note-icon{
+ background:#f9eedc;color:#977343
+}
+#app .aps-role-configuration .role-stat-grid{
+ gap:13px;margin:0 0 23px
+}
+#app .aps-role-configuration .role-stat-card{
+ min-height:144px;padding:21px 18px 20px;
+ border:1px solid #e5e9f3;border-radius:16px;
+ background:linear-gradient(160deg,#fff 0%,#fcfcff 100%);
+ box-shadow:0 8px 25px #1e2f6710,0 1px 3px #202d5e05;
+ transition:background .17s,border-color .17s,box-shadow .17s
+}
+#app .aps-role-configuration .role-stat-card:before{
+ background:linear-gradient(90deg,#a4a4ff,transparent 92%);opacity:.6
+}
+#app .aps-role-configuration .role-stat-users:before{
+ background:linear-gradient(90deg,#65d0b9,transparent 92%)
+}
+#app .aps-role-configuration .role-stat-boards:before{
+ background:linear-gradient(90deg,#edb47f,transparent 92%)
+}
+#app .aps-role-configuration .role-stat-proposals:before{
+ background:linear-gradient(90deg,#e7a2c2,transparent 92%)
+}
+@media(hover:hover) and (pointer:fine){
+ #app .aps-role-configuration .role-stat-card:hover{
+  transform:none;border-color:#cfd7f2;box-shadow:0 12px 27px #22376613
+ }
+}
+#app .aps-role-configuration .role-stat-card .stat-label{
+ color:#7e8ba5;font-size:11px;font-weight:790;line-height:1.5
+}
+#app .aps-role-configuration .role-stat-card .stat-value{
+ color:#212e4e;font-size:29px;line-height:1.19;
+ margin:15px 0 10px;letter-spacing:-1.4px
+}
+/* Overview-like section hierarchy; scoped to this route only. */
+#app .aps-role-configuration .role-config-tabs{
+ display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+ background:#f2f4fb;border:1px solid #e4e9f4;
+ border-radius:13px;padding:6px;margin:0 0 17px;
+ box-shadow:none
+}
+#app .aps-role-configuration .role-config-tabs .role-tab-button{
+ min-height:44px;border-radius:9px;padding:10px 14px;
+ color:#5e6c85;font-size:12px;font-weight:760;
+ transition:background .16s,border-color .16s,color .16s
+}
+#app .aps-role-configuration .role-config-tabs .role-tab-button.primary{
+ border-color:#d9dffd;background:#fff;color:#4148a5;
+ box-shadow:0 2px 8px #27336911
+}
+#app .aps-role-configuration .role-config-tabs .role-tab-button.secondary:hover{
+ background:#fff;color:#414c78;transform:none
+}
+#app .aps-role-configuration .role-content-workspace{
+ min-width:0;padding:0;margin:0;
+ border:1px solid #e5e9f3;border-radius:17px;
+ background:linear-gradient(145deg,#fff 0%,#fcfdff 100%);
+ box-shadow:0 8px 25px #1e31540d;
+ overflow:hidden
+}
+#app .aps-role-configuration .role-content-heading{
+ display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:12px 20px;
+ padding:21px 24px;
+ border-bottom:1px solid #e7ebf4;background:#f9faff
+}
+#app .aps-role-configuration .role-content-heading>div{min-width:0;flex:1}
+#app .aps-role-configuration .role-content-eyebrow{
+ display:block;color:#6f7da0;
+ font-size:10px;font-weight:800;letter-spacing:.09em;
+ text-transform:uppercase;margin-bottom:5px
+}
+#app .aps-role-configuration .role-content-heading h2{
+ margin:0;color:#283652;letter-spacing:-.35px;
+ font-size:19px;line-height:1.3;font-weight:820
+}
+#app .aps-role-configuration .role-content-heading p{
+ margin:5px 0 0;color:#74809a;
+ font-size:12px;line-height:1.5;overflow-wrap:anywhere
+}
+#app .aps-role-configuration .role-content-mode{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:32px;padding:7px 11px;white-space:nowrap;
+ color:#755e38;background:#f9f1e6;border:1px solid #ebdfcd;
+ border-radius:20px;font-size:11px;font-weight:770
+}
+#app .aps-role-configuration .role-content-body{
+ min-width:0;padding:22px 24px 26px
+}
+#app .aps-role-configuration .role-content-body .role-section-header:first-child,
+#app .aps-role-configuration .role-content-body>.section-header:first-child{
+ margin-top:0
+}
+#app .aps-role-configuration .role-content-body .role-section-header strong,
+#app .aps-role-configuration .role-content-body .section-header strong{
+ color:#2b3856;font-size:15px;letter-spacing:-.2px;font-weight:820
+}
+#app .aps-role-configuration .role-content-body .note{
+ border:1px solid #e4e9f4;border-radius:11px;
+ background:#f8faff;color:#5d6d86;
+ padding:13px 15px;font-size:12px;line-height:1.65
+}
+#app .aps-role-configuration .role-content-body .role-info-note{
+ border-left:3px solid #a8afe3
+}
+#app .aps-role-configuration .role-content-body .role-hierarchy-note{
+ border-left-color:#9dc9bf;background:#f7fbfa
+}
+#app .aps-role-configuration .role-content-body .role-table-panel,
+#app .aps-role-configuration .role-content-body .panel:not(.role-table-panel){
+ border:1px solid #e5e9f3;border-radius:13px;
+ box-shadow:none;background:#fff
+}
+#app .aps-role-configuration .role-content-body .role-data-table thead{
+ background:#f8faff
+}
+#app .aps-role-configuration .role-content-body .role-data-table th{
+ color:#66758f;font-size:11px;letter-spacing:.04em;
+ padding:15px 17px;border-bottom-color:#e4e9f3
+}
+#app .aps-role-configuration .role-content-body .role-data-table td{
+ color:#4d5e79;font-size:12px;line-height:1.55;
+ padding:14px 17px
+}
+#app .aps-role-configuration .role-content-body .role-data-table td strong{
+ color:#2c3b59;font-size:12px;font-weight:800
+}
+#app .aps-role-configuration .role-content-body .role-data-table tbody tr:hover{
+ background:#f7f8ff
+}
+#app .aps-role-configuration .role-content-body :is(.role-proposal-button,.role-activation-button,.role-data-table button.secondary,.panel-body button.secondary){
+ min-height:44px;border-radius:10px;padding:10px 13px;
+ font-size:12px;font-weight:750;box-shadow:none;
+ transition:background .16s,border-color .16s,color .16s
+}
+#app .aps-role-configuration .role-content-body .role-proposal-button{
+ background:#5b5de7;color:#fff;border:1px solid #5b5de7
+}
+#app .aps-role-configuration .role-content-body .role-proposal-button:hover:not(:disabled){
+ transform:none;background:#4d50d3;border-color:#4d50d3;box-shadow:none
+}
+#app .aps-role-configuration .role-content-body .role-activation-button:hover{
+ transform:none
+}
+#app .aps-role-configuration .role-content-body input.search-input{
+ display:block;box-sizing:border-box;
+ min-height:44px;max-width:100%;width:100%;
+ margin:0 0 14px;padding:10px 13px;
+ background:#fbfcff;border:1px solid #dce2ef;
+ border-radius:10px;outline-offset:2px;
+ font-size:12px;color:#2f3f5d;
+ box-shadow:none
+}
+#app .aps-role-configuration .role-content-body .role-search-wrap input.search-input{
+ margin:0;padding-left:47px
+}
+#app .aps-role-configuration .role-content-body input.search-input:focus-visible{
+ outline:2px solid #626bf0;box-shadow:none;border-color:#626bf0
+}
+#app .aps-role-configuration .role-content-body .role-table-scroll:focus-visible{
+ outline:3px solid #626bf0;outline-offset:-3px;border-radius:10px
+}
+#app .aps-role-configuration .role-content-body .role-data-table .status{
+ max-width:100%;white-space:normal;overflow-wrap:anywhere
+}
+#app .aps-role-configuration .role-loading-state{
+ padding:18px;border:1px solid #e6eaf4;border-radius:12px;
+ background:#fff;color:#62728d;font-size:12px
+}
+@media(max-width:820px){
+ #app .aps-role-configuration .role-config-tabs{
+  flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain
+ }
+ #app .aps-role-configuration .role-config-tabs .role-tab-button{
+  flex:none;white-space:nowrap
+ }
+}
+@media(max-width:650px){
+ #app .aps-role-configuration .role-content-heading{
+  padding:18px 16px
+ }
+ #app .aps-role-configuration .role-content-heading h2{font-size:17px}
+ #app .aps-role-configuration .role-content-body{padding:17px 14px 20px}
+ #app .aps-role-configuration .role-content-body .role-section-header strong{
+  font-size:14px
+ }
+ #app .aps-role-configuration .role-content-body .role-info-note{
+  padding:13px;font-size:12px
+ }
+ #app .aps-role-configuration .role-stat-card .stat-value{font-size:25px}
+}
+@media(max-width:395px){
+ #app .aps-role-configuration .role-content-mode{white-space:normal}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-role-configuration .role-content-workspace *,
+ #app .aps-role-configuration .role-config-tabs .role-tab-button{
+  transition:none!important;animation:none!important
+ }
+}
+@media(prefers-contrast:more){
+ #app .aps-role-configuration .role-content-workspace,
+ #app .aps-role-configuration .role-content-body .role-table-panel{
+  border-color:#65748c
+ }
+}
+
 /* frontend/user-role-experience.css */
 /* CP-USER-ROLE-VIS01 — visual-only signed User Role Management surface.
    All selectors are scoped to #/user-role-management; never override shared RBAC UI. */
