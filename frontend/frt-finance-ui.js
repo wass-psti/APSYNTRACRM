@@ -59,6 +59,7 @@ function renderMonthlyTrend(analytics){
 }
 
 import {frtActionSpec} from './frt-board-domain-actions.js';
+import {describeFRTBankExecution} from './frt-bank-execution.js';
 const editRoles=new Set(['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER']);
 const statusTone=value=>{
  const v=String(value||'').toUpperCase();
@@ -304,13 +305,14 @@ function renderFRTWorkflowTimeline(detail){
   '<h3>Request lifecycle</h3><p>Verified request state, not a bank-payment confirmation or a new approval authority.</p>'+
   '<ol>'+stages.map(stage=>'<li class="frt-lifecycle-'+escape(stage.state)+'">'+
    '<strong>'+escape(stage.title)+'</strong><span>'+escape(stage.detail)+'</span></li>').join('')+'</ol>'+
-  '<p class="frt-lifecycle-note">The three-day liquidation target described in the Monday.com reference cannot be calculated from this signed detail: it does not establish a verified bank disbursement timestamp. GM verification alone is not that timestamp.</p></section>';
+  '<p class="frt-lifecycle-note">GM verification alone is not that timestamp. The liquidation deadline requires separate signed bank-execution evidence.</p></section>';
 }
 function renderFRTManual(result){
  const items=[
   ['1. Create a request','Use the company selector to choose an authorized company. Open New Fund Request, complete expense categories, payee and recipient details, and provide the project purpose. Submission uses the signed central FRT writer. It starts PENDING_APPROVAL and allocates a unique voucher on creation.'],
   ['2. Finance approval','An eligible signed finance approver reviews the authoritative request. Approval, rejection and revocation are existing audited server actions; request details show candidate actions only.'],
   ['3. General Manager verification','After finance approval, the General Manager may record verification and an optional reference. This is not proof that BPI, UBP, GCash or BizLink executed a payment.'],
+  ['3a. Bank execution evidence','An existing finance role can record the actual bank execution timestamp, bank and transaction reference after finance approval and GM verification. Three-day (72-hour) liquidation due time is derived only from that signed bank event; it is not bank-API verification.'],
   ['4. Submit and approve liquidation','The receipt-level liquidation form uses signed authoritative RPCs when the CP-FRT-WF-02 migration is deployed. Submission and review remain separate business events; any unavailable contract returns a real error.'],
   ['5. Close or archive','Closing requires the existing finance/lifecycle checks and an approved liquidation. The backend supports archived state; restoration and a complete archive list require verified retrieval controls.'],
   ['6. OPEX and intercompany','Executive and OPEX figures use signed company aggregates. The separate Risk-Aware IC ledger is document-backed and does not infer obligations from free-text fund-source names.'],
@@ -417,9 +419,22 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   html+='<div class="panel"><div class="panel-body">Retrieving signed FRT request details…</div></div>';
  }else if(detailResult?.status==='PASS'&&detailResult.detail){
   const d=detailResult.detail;
+  const bank=detailResult.bankRelease;
+  const bankInfo=bank?.recorded?
+   '<p class="frt-lifecycle-note"><strong>'+escape(describeFRTBankExecution(bank))+
+   '</strong> · Bank-executed: '+escape(bank.executedAt)+
+   ' · Due (72h): '+escape(bank.deadlineAt)+
+   ' · Bank: '+escape(bank.bankName)+
+   ' · Recorded evidence, not independently bank-verified.</p>':
+   '<p class="frt-lifecycle-note">'+escape(detailResult.bankReleaseError||
+    'No recorded bank execution; liquidation due date unavailable.')+'</p>';
+  const bankAction=bank&&!bank.recorded&&bank.eligible&&
+   editRoles.has(result.role)?
+   '<button type="button" class="secondary" data-action="frt-bank-record" data-request-id="'+
+    escape(selectedRequestId)+'">Record actual bank execution</button>':'';
   html+='<section class="panel" aria-label="FRT request details"><div class="panel-header"><h3>Request details</h3>'+
    '<button type="button" class="secondary" data-action="frt-finance-detail-close">Close details</button></div>'+
-   '<div class="panel-body">'+renderFRTWorkflowTimeline(d)+
+   '<div class="panel-body">'+renderFRTWorkflowTimeline(d)+bankInfo+bankAction+
    (d.financeApproved&&!d.closed&&d.liquidationStatus!=='APPROVED'&&d.status!=='REJECTED'?
     '<button type="button" class="primary" data-action="frt-liquidation-open" data-request-id="'+
     escape(selectedRequestId)+'">Open signed liquidation</button>':'')+
