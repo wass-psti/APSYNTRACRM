@@ -34,9 +34,12 @@ test('no effective privilege grant, bootstrap reassignment, or audit update path
  assert.doesNotMatch(sql,/INSERT INTO public\.work_board_members/);
  assert.match(app,/No production access has changed/);
 });
-test('unapproved administration page is absent from non-bootstrap nav and direct route denies',()=>{
- assert.match(app,/state\.roleVerified===true\?/);
- assert.match(app,/if\(!state\.roleVerified\)/);
- assert.match(app,/location\.hash=routeHome;return onRoute\(\)/);
+test('CRM Admin role configuration uses effective Admin while bootstrap-only controls retain identity verification',()=>{
+ assert.match(app,/state\.adminVerified===true\?/);
+ assert.match(app,/if\(view==='role-configuration'&&state\.adminVerified===true\)/);
+ assert.match(app,/case 'role-tab':\{\s*if\(!state\.adminVerified\)return;/);
+ assert.match(app,/case 'role-propose-create':\{\s*if\(!state\.adminVerified\)return;/);
+ assert.match(app,/showEngineeringDiagnostics\(location\.search,state\.roleVerified===true\)/);
+ assert.match(app,/if\(next==='team'&&state\.roleVerified!==true\)return/);
  assert.match(app,/state\.roleVerified=false;state\.adminVerified=false;state\.roleData=null/);
 });

@@ -6508,7 +6508,7 @@ async function action(name,button){
   state.ttReportFilters={...state.ttReportFilters,status};render();break;
  }
  case 'user-role-refresh':{
-   if(!state.roleVerified||state.userRoleBusy)return;
+   if(!state.adminVerified||state.userRoleBusy)return;
    state.userRoleBusy=true;render();
    try{await loadUserRoleManagement();}catch(err){state.userRoleError=errorMessage(err);notice(err);}
    finally{state.userRoleBusy=false;render();}
@@ -6516,10 +6516,10 @@ async function action(name,button){
  }
  case 'user-role-edit-crm-platform':
  case 'user-role-revert-crm-platform':{
-   if(!state.roleVerified||state.userRoleBusy||!state.userRoleData)return;
+   if(!state.adminVerified||state.userRoleBusy||!state.userRoleData)return;
    const userId=button.dataset.userId;
    const user=state.userRoleData.users.find(u=>u.id===userId&&
-     !u.protected&&u.platformRole!=='admin_general_manager');
+     !u.protected);
    if(!user||userId!==state.userRoleSelected)
      throw new ApiError('Protected or stale CRM platform role target.',403);
    const record=state.userRoleData.crmPlatformRoles?.find(r=>r.userId===userId);
@@ -6550,10 +6550,10 @@ async function action(name,button){
  case 'user-role-revoke-module':
  case 'user-role-edit-board':
  case 'user-role-revoke-board':{
-   if(!state.roleVerified||state.userRoleBusy||!state.userRoleData)return;
+   if(!state.adminVerified||state.userRoleBusy||!state.userRoleData)return;
    const scope=name.includes('module')?'module':'board';
    const resourceId=button.dataset.resource,userId=button.dataset.userId;
-   const user=state.userRoleData.users.find(u=>u.id===userId&&!u.protected&&u.platformRole!=='admin_general_manager');
+   const user=state.userRoleData.users.find(u=>u.id===userId&&!u.protected);
    if(!user||userId!==state.userRoleSelected)throw new ApiError('Protected or stale target.',403);
    if(scope==='module'){
      const workspaceCount=user.activeWorkspaceCount;
@@ -6590,7 +6590,7 @@ async function action(name,button){
    break;
  }
  case 'role-tab':{
-   if(!state.roleVerified)return;
+   if(!state.adminVerified)return;
    const tab=button.dataset.tab;
    if(['roles','users','matrix','workspace','audit'].includes(tab)&&tab!==state.roleTab){
     state.roleTab=tab;render();
@@ -6599,14 +6599,14 @@ async function action(name,button){
    break;
  }
  case 'role-refresh':{
-   if(!state.roleVerified||state.roleBusy)return;
+   if(!state.adminVerified||state.roleBusy)return;
    state.roleBusy=true;render();
    try{await loadRoleConfiguration();}catch(err){state.roleError=errorMessage(err);notice(err);}
    finally{state.roleBusy=false;render();}
    break;
  }
  case 'role-propose-create':{
-   if(!state.roleVerified)return;
+   if(!state.adminVerified)return;
    openModal('Stage a new role definition',
       input('Role key','roleKey','custom_role')+
       input('Display name','displayName','Custom Role')+
@@ -6618,7 +6618,7 @@ async function action(name,button){
       }));break;
  }
  case 'role-propose-edit':{
-   if(!state.roleVerified)return;
+   if(!state.adminVerified)return;
    const key=button.dataset.roleKey;
    const role=state.roleData?.roles?.find(r=>r.roleKey===key&&r.kind==='custom_draft');
    if(!role)throw new ApiError('Only draft custom roles may be edited.');
@@ -6632,7 +6632,7 @@ async function action(name,button){
       }));break;
  }
  case 'role-propose-activation':{
-   if(!state.roleVerified)return;
+   if(!state.adminVerified)return;
    const roles=state.roleData?.roles?.filter(r=>r.kind==='custom_draft')||[];
    if(!roles.length){toast('No custom roles are available for staging.',true);return;}
    openModal('Stage activation or deactivation',
@@ -6641,7 +6641,7 @@ async function action(name,button){
       async fd=>stageRoleProposal(String(fd.get('operation')),{roleKey:String(fd.get('roleKey'))}));break;
  }
  case 'role-propose-assign':{
-   if(!state.roleVerified)return;
+   if(!state.adminVerified)return;
    const id=button.dataset.userId;
    const user=state.roleData?.users?.find(u=>u.id===id&&!u.bootstrapProtected);
    if(!user)throw new ApiError('Protected or missing user cannot be assigned.',403);
@@ -6653,7 +6653,7 @@ async function action(name,button){
         {userId:id,moduleId:String(fd.get('moduleId')),role:String(fd.get('role')).trim()}));break;
  }
  case 'role-propose-permission':{
-   if(!state.roleVerified)return;
+   if(!state.adminVerified)return;
    const moduleId=button.dataset.moduleId,capability=button.dataset.capability;
    if(!ROLE_MODULE_OPTIONS.some(x=>x[0]===moduleId)||
       !['view','create','edit','delete','approve','export','administer'].includes(capability))
@@ -6665,7 +6665,7 @@ async function action(name,button){
        {moduleId,capability,roleKey:String(fd.get('roleKey')).trim(),enabled:fd.get('enabled')==='true'}));break;
  }
  case 'role-propose-workspace':{
-   if(!state.roleVerified)return;
+   if(!state.adminVerified)return;
    const users=state.roleData?.users?.filter(u=>!u.bootstrapProtected)||[];
    if(!users.length){toast('No eligible workspace members.',true);return;}
    openModal('Stage workspace access restriction',
@@ -8150,7 +8150,7 @@ root.addEventListener('change',event=>{
    if(!offsite)note.value='';
   }
  }
- if(event.target.id==='managed-user'&&state.roleVerified&&state.userRoleData){
+ if(event.target.id==='managed-user'&&state.adminVerified&&state.userRoleData){
   const id=event.target.value;
   if(state.userRoleData.users.some(u=>u.id===id)){
     state.userRoleSelected=id;render();

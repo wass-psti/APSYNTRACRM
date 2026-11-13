@@ -19,7 +19,7 @@ const data={
  assignments:[],audit:[]
 };
 
-test('verified role configuration redesign is route scoped and not available to nonbootstrap accounts',()=>{
+test('verified role configuration is route scoped and unavailable without CRM Admin verification',()=>{
  const denied=renderRoleConfiguration({verified:false,data:{...data,users:[{email:'secret@example.invalid'}]}});
  assert.match(denied,/Access unavailable/);
  assert.doesNotMatch(denied,/aps-role-configuration|secret@example.invalid|role-propose-create/);
