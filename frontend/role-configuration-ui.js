@@ -19,8 +19,8 @@ const tabs=[
  ['roles','Role catalog'],['users','Assignments'],
  ['matrix','Permission matrix'],['workspace','Workspace access'],['audit','Change history']
 ];
-function sectionTable(headers,body){
- return '<div class="panel role-table-panel"><div class="table-scroll role-table-scroll" tabindex="0" role="region" aria-label="Role configuration table, scroll horizontally for more columns"><table class="board-table role-data-table"><thead><tr>'+
+function sectionTable(headers,body,label='Role configuration records'){
+ return '<div class="panel role-table-panel"><div class="table-scroll role-table-scroll" tabindex="0" role="region" aria-label="'+x(label)+', scroll horizontally for more columns"><table class="board-table role-data-table" aria-label="'+x(label)+'"><thead><tr>'+
  headers.map(h=>'<th scope="col">'+x(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div></div>';
 }
 function roles(d){
@@ -40,11 +40,11 @@ function roles(d){
  ['Employee','Normal operational/module scope; no board manage through a CRM override','Not delegated'],
  ['Viewer','View-only where the domain defines a read role; blocks edit/manage','Not delegated']
  ].map(([role,ceiling,admin])=>'<tr><td><strong>'+x(role)+'</strong></td><td>'+
- x(ceiling)+'</td><td>'+x(admin)+'</td></tr>').join(''));
+ x(ceiling)+'</td><td>'+x(admin)+'</td></tr>').join(''),'CRM platform role reference');
  return crmCatalog+'<div class="section-header role-section-header role-catalog-heading"><strong>Central role catalog</strong><button class="primary role-proposal-button" data-action="role-propose-create">＋ New role proposal</button></div>'+
  '<div class="note role-info-note role-hierarchy-note">Default role hierarchy: <strong>Admin → Supervisor → Employee → Viewer</strong>. These are immutable reference definitions. New roles and revisions are staged only; live backend permissions are unchanged.</div>'+
  '<div class="role-search-wrap"><input id="search-system-roles" class="search-input csp-u057 role-search" type="search" placeholder="Search roles" aria-label="Search roles" ></div>'+
- sectionTable(['Role','Kind','State','Revision','Actions'],rows||'<tr><td colspan="5">No role definitions</td></tr>')+
+ sectionTable(['Role','Kind','State','Revision','Actions'],rows||'<tr><td colspan="5">No role definitions</td></tr>','Central role catalog')+
  '<div class="csp-u046 role-catalog-actions" ><button class="secondary role-activation-button" data-action="role-propose-activation">Propose activation / deactivation</button></div>';
 }
 function assignments(d){
@@ -64,8 +64,8 @@ function assignments(d){
    '</td></tr>';
  }).join('');
  return '<div class="section-header"><strong>Existing platform and module assignments</strong><span class="muted">Server-sourced, read-only</span></div>'+
- '<input id="search-workspace-members" class="search-input csp-u057" placeholder="Search workspace members" aria-label="Search workspace members" >'+
- sectionTable(['Account','Platform role','Actual module assignments','Proposal'],rows||'<tr><td colspan="4">No members</td></tr>')+
+ '<input id="search-workspace-members" type="search" class="search-input csp-u057" placeholder="Search workspace members" aria-label="Search workspace members" autocomplete="off">'+
+ sectionTable(['Account','Platform role','Actual module assignments','Proposal'],rows||'<tr><td colspan="4">No members</td></tr>','Workspace member role assignments')+
  '<div class="note">Effective access is still decided by the existing central backend, active workspace and module-specific guards. These records show authoritative stored assignments; pending proposals do not grant access.</div>';
 }
 function matrix(d){
@@ -77,8 +77,8 @@ function matrix(d){
  }
  return '<div class="section-header"><strong>Module permission matrix</strong><span class="muted">12 modules × 7 capabilities</span></div>'+
  '<div class="note">All matrix entries are proposal controls, <strong>not effective grants</strong>. Module-specific roles remain mapped to the existing authorization system. Approval and activation are disabled until separately authorized.</div>'+
- '<input id="filter-role-permission-modules" class="search-input csp-u057" placeholder="Filter application modules" aria-label="Filter application modules" >'+
- sectionTable(['Module',...actions],rows)+
+ '<input id="filter-role-permission-modules" type="search" class="search-input csp-u057" placeholder="Filter application modules" aria-label="Filter application modules" autocomplete="off">'+
+ sectionTable(['Module',...actions],rows,'Module permission proposal matrix')+
  '<p class="muted csp-u027" >Available role keys: '+x(roleNames.join(', '))+'</p>';
 }
 function workspaces(d){
@@ -99,10 +99,10 @@ function audit(d){
  const history=events.map(a=>'<tr><td>'+x(a.event)+'</td><td>'+x(a.detail?.operation)+'</td><td>'+x(a.recordedAt)+'</td></tr>').join('');
  return '<div class="section-header"><strong>Immutable change history</strong><span class="muted">Last 150 entries</span></div>'+
  '<div class="note">Every staged proposal produces a server-side append-only event. Updates and deletes to audit rows are blocked; audit records are not proof of approval or effective enforcement.</div>'+
- '<input id="search-role-proposals" class="search-input csp-u056" placeholder="Search proposals" aria-label="Search proposals" >'+
- sectionTable(['Requested operation','Status','Created','Request ID'],requests||'<tr><td colspan="4">No changes requested</td></tr>')+
+ '<input id="search-role-proposals" type="search" class="search-input csp-u056" placeholder="Search proposals" aria-label="Search proposals" autocomplete="off">'+
+ sectionTable(['Requested operation','Status','Created','Request ID'],requests||'<tr><td colspan="4">No changes requested</td></tr>','Staged role change proposals')+
  '<div class="section-header csp-u050" ><strong>Audit events</strong></div>'+
- sectionTable(['Event','Operation','Recorded'],history||'<tr><td colspan="3">No events recorded</td></tr>');
+ sectionTable(['Event','Operation','Recorded'],history||'<tr><td colspan="3">No events recorded</td></tr>','Append-only role audit history');
 }
 export function renderRoleConfiguration({verified=false,loading=false,data=null,tab='roles',error=''}={}){
  if(!verified)return '<div class="access-denied"><div class="denied-panel"><h1>Access unavailable</h1><p>This module requires verified CRM Administrator authority in the active workspace.</p></div></div>';
@@ -112,14 +112,28 @@ export function renderRoleConfiguration({verified=false,loading=false,data=null,
  '<svg class="role-hero-art" viewBox="0 0 420 210" aria-hidden="true" focusable="false" fill="none"><circle cx="334" cy="12" r="125" stroke="currentColor" stroke-opacity=".15"/><circle cx="334" cy="12" r="181" stroke="currentColor" stroke-opacity=".07"/><path d="M108 222C186 77 327 79 433 135" stroke="currentColor" stroke-opacity=".16"/><circle cx="257" cy="69" r="4" fill="#a9c9ff"/></svg></section>'+
  '<div class="note security-note role-staged-note role-entrance"><span class="role-note-icon" aria-hidden="true">'+roleConfigurationIcon('lock')+'</span><div>Verified CRM Administrators only. <strong>Change control: STAGED ONLY</strong> — production roles, permissions, board access and memberships cannot be altered by this module until a separately approved activation release. No bootstrap identity can be assigned or revoked here.</div></div>';
  if(error)html+='<div class="error-banner" role="alert">'+x(error)+'</div>';
- if(loading)html+='<p class="muted">Loading verified workspace configuration…</p>';
+ if(loading)html+='<p class="muted role-loading-state" role="status" aria-live="polite">Loading verified workspace configuration…</p>';
  if(!data)return html+'</div>';
  html+=summaryCards(data);
  html+='<nav class="row csp-u016 role-config-tabs role-entrance" aria-label="Role configuration sections" >'+
   tabs.map(([key,label])=>'<button type="button" class="'+(tab===key?'primary':'secondary')+' role-tab-button" data-action="role-tab" data-tab="'+key+'" aria-pressed="'+(tab===key?'true':'false')+'">'+x(label)+'</button>').join('')+'</nav>';
+ const sections={
+  roles:['Role catalog','Review central reference roles and prepare controlled proposals.'],
+  users:['Assignments','Inspect existing workspace memberships and stage proposed assignments.'],
+  matrix:['Permission matrix','Review module capabilities without changing effective grants.'],
+  workspace:['Workspace access','Inspect signed workspace policy and stage proposed restrictions.'],
+  audit:['Change history','Review staged proposals and append-only audit events.']
+ };
+ const [heading,description]=sections[tab]||sections.roles;
+ html+='<section class="role-content-workspace" aria-labelledby="role-content-heading">'+
+  '<header class="role-content-heading"><div><span class="role-content-eyebrow">Configuration workspace</span>'+
+  '<h2 id="role-content-heading">'+x(heading)+'</h2>'+
+  '<p>'+x(description)+'</p></div>'+
+  '<span class="role-content-mode" aria-label="Proposal-only mode">Proposal-only</span></header>'+
+  '<div class="role-content-body">';
  html+=tab==='roles'?roles(data):tab==='users'?assignments(data):
  tab==='matrix'?matrix(data):tab==='workspace'?workspaces(data):audit(data);
- return html+'</div>';
+ return html+'</div></section></div>';
 }
 export const ROLE_MODULE_OPTIONS=BOARD_MODULES.map(m=>[{
  fueltrans:'fueltrans',tools:'tool-traceability',toolbox:'toolbox-issues',frt:'fund-released-tracker',
