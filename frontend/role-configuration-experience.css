@@ -862,3 +862,286 @@
 @media(prefers-reduced-motion:reduce){
  #app .aps-role-configuration .role-config-layout .role-tab-button{transition:none}
 }
+
+/* CP-ROLE-MATERIAL-02 — Role Configuration shares Overview soft Material tokens.
+   Presentation-only: no role authority, staged actions, server contracts or routes. */
+#app .aps-role-config-shell{
+ --role-ink:var(--sm-ink);
+ --role-muted:var(--sm-sub);
+ --role-border:var(--sm-border);
+ --role-accent:var(--sm-accent);
+ background:var(--sm-bg);
+ color:var(--sm-ink);
+}
+#app .aps-role-config-shell>.topbar{
+ min-height:72px;background:var(--sm-surface);
+ border-bottom:1px solid var(--sm-border)
+}
+#app .aps-role-config-shell>.main-content{
+ max-width:1570px;
+ padding:clamp(18px,3vw,36px) clamp(15px,3vw,42px) 80px
+}
+#app .aps-role-configuration{
+ color:var(--sm-ink)
+}
+#app .aps-role-configuration .role-config-hero{
+ min-height:151px;padding:clamp(22px,3vw,33px);
+ margin-bottom:18px;
+ border:1px solid var(--sm-border);
+ border-radius:var(--sm-radius-panel);
+ background:var(--sm-surface);
+ box-shadow:var(--sm-shadow-card);
+ color:var(--sm-ink)
+}
+#app .aps-role-configuration .role-config-hero:after{content:none}
+#app .aps-role-configuration .role-hero-art{
+ color:var(--sm-accent);opacity:.12
+}
+#app .aps-role-configuration .role-config-hero .label-top{
+ color:var(--sm-accent-hover);
+ font-weight:760;letter-spacing:1.2px
+}
+#app .aps-role-configuration .role-hero-dot{
+ background:var(--sm-accent);
+ box-shadow:0 0 0 3px var(--sm-accent-soft)
+}
+#app .aps-role-configuration .role-config-hero h1{
+ color:var(--sm-ink);
+ font-size:clamp(25px,2.5vw,34px);
+ font-weight:760;
+ letter-spacing:-.035em;
+ margin:11px 0 8px
+}
+#app .aps-role-configuration .role-heading-stop{color:var(--sm-accent)}
+#app .aps-role-configuration .role-config-hero p{
+ color:var(--sm-sub);font-size:12.5px;
+ line-height:1.6;max-width:640px
+}
+#app .aps-role-configuration .role-refresh-button{
+ min-height:44px;
+ color:var(--sm-text);
+ background:var(--sm-surface-raised);
+ border:1px solid var(--sm-border);
+ border-radius:var(--sm-radius-control);
+ box-shadow:none;
+ backdrop-filter:none;
+ transition:background-color var(--sm-fast),border-color var(--sm-fast)
+}
+#app .aps-role-configuration .role-refresh-button:hover:not(:disabled){
+ background:var(--sm-surface-soft);
+ color:var(--sm-ink);
+ border-color:var(--sm-border-strong);
+ transform:none
+}
+#app .aps-role-configuration .role-refresh-button:focus-visible{
+ outline:2px solid var(--sm-accent);outline-offset:3px
+}
+#app .aps-role-configuration .role-staged-note{
+ border:1px solid #e7d6b6;
+ border-left:3px solid var(--sm-warning);
+ border-radius:var(--sm-radius-card);
+ background:var(--sm-warning-soft);
+ color:#715222;
+ box-shadow:none;
+ padding:15px 18px;
+ margin-bottom:21px;
+ font-size:12px;line-height:1.6
+}
+#app .aps-role-configuration .role-staged-note strong{color:#754a16}
+#app .aps-role-configuration .role-note-icon{
+ background:#f6e8cf;color:var(--sm-warning);
+ border-radius:var(--sm-radius-control)
+}
+#app .aps-role-configuration .role-stat-grid{
+ gap:14px;margin-bottom:25px
+}
+#app .aps-role-configuration .role-stat-card{
+ min-height:126px;padding:19px;
+ background:var(--sm-surface);
+ border:1px solid var(--sm-border);
+ border-radius:var(--sm-radius-card);
+ box-shadow:var(--sm-shadow-sm);
+ transition:background-color var(--sm-fast),border-color var(--sm-fast),box-shadow var(--sm-fast)
+}
+#app .aps-role-configuration .role-stat-card:before{content:none}
+#app .aps-role-configuration .role-stat-card:hover{
+ background:var(--sm-surface-raised);
+ border-color:var(--sm-border-strong);
+ box-shadow:var(--sm-shadow-card);
+ transform:none
+}
+#app .aps-role-configuration .role-stat-icon{
+ width:36px;height:36px;border-radius:var(--sm-radius-control);
+ background:var(--sm-accent-soft);
+ color:var(--sm-accent)
+}
+#app .aps-role-configuration .role-stat-users .role-stat-icon{
+ background:var(--sm-success-soft);color:var(--sm-success)
+}
+#app .aps-role-configuration .role-stat-boards .role-stat-icon{
+ background:#edf3f9;color:#476f9a
+}
+#app .aps-role-configuration .role-stat-proposals .role-stat-icon{
+ background:var(--sm-warning-soft);color:var(--sm-warning)
+}
+#app .aps-role-configuration .role-stat-card .stat-label{
+ color:var(--sm-sub);font-size:12px;font-weight:680
+}
+#app .aps-role-configuration .role-stat-card .stat-value{
+ color:var(--sm-ink);font-size:clamp(25px,2.5vw,32px);
+ font-weight:760;letter-spacing:-.035em;margin-top:17px
+}
+#app .aps-role-configuration .role-config-tabs{
+ padding:5px;gap:5px;margin-bottom:23px;
+ border:1px solid var(--sm-border);
+ border-radius:var(--sm-radius-card);
+ background:var(--sm-surface-soft);
+ box-shadow:none
+}
+#app .aps-role-configuration .role-config-tabs .role-tab-button{
+ min-height:44px;padding:10px 15px;
+ border-radius:var(--sm-radius-control);
+ font-size:12px;font-weight:720;
+ transition:background-color var(--sm-fast),color var(--sm-fast),box-shadow var(--sm-fast)
+}
+#app .aps-role-configuration .role-config-tabs .role-tab-button.secondary{
+ color:var(--sm-text);background:transparent;border-color:transparent
+}
+#app .aps-role-configuration .role-config-tabs .role-tab-button.secondary:hover{
+ color:var(--sm-ink);background:var(--sm-surface)
+}
+#app .aps-role-configuration .role-config-tabs .role-tab-button.primary{
+ color:var(--sm-accent-hover);
+ background:var(--sm-surface);
+ border:1px solid var(--sm-border-strong);
+ box-shadow:var(--sm-shadow-sm)
+}
+#app .aps-role-configuration .role-section-header,
+#app .aps-role-configuration .section-header:not(.role-section-header){
+ gap:12px;margin:23px 0 13px
+}
+#app .aps-role-configuration .role-section-header strong,
+#app .aps-role-configuration .section-header:not(.role-section-header) strong{
+ color:var(--sm-ink);
+ font-size:clamp(15px,1.4vw,18px);
+ font-weight:750;letter-spacing:-.02em
+}
+#app .aps-role-configuration .role-info-note,
+#app .aps-role-configuration>.note:not(.role-staged-note){
+ color:var(--sm-text);
+ border:1px solid var(--sm-border);
+ border-left:3px solid var(--sm-accent);
+ border-radius:var(--sm-radius-control);
+ background:var(--sm-surface-raised);
+ padding:15px 17px;
+ font-size:12px;line-height:1.65
+}
+#app .aps-role-configuration .role-hierarchy-note{
+ border-left-color:var(--sm-success);
+ background:var(--sm-success-soft)
+}
+#app .aps-role-configuration .role-hierarchy-note strong{color:var(--sm-ink)}
+#app .aps-role-configuration .role-proposal-button{
+ min-height:44px;
+ background:var(--sm-accent);
+ border-color:var(--sm-accent);
+ border-radius:var(--sm-radius-control);
+ box-shadow:none;font-size:12px;font-weight:730;
+ transition:background-color var(--sm-fast),border-color var(--sm-fast)
+}
+#app .aps-role-configuration .role-proposal-button:hover:not(:disabled){
+ transform:none;background:var(--sm-accent-hover);
+ border-color:var(--sm-accent-hover);box-shadow:none
+}
+#app .aps-role-configuration :is(.role-search,input.search-input){
+ color:var(--sm-ink);background:var(--sm-surface);
+ border:1px solid var(--sm-border-strong);
+ border-radius:var(--sm-radius-control);
+ box-shadow:none;
+ font-size:13px
+}
+#app .aps-role-configuration .role-search:focus-visible,
+#app .aps-role-configuration input.search-input:focus-visible{
+ outline:2px solid var(--sm-accent);outline-offset:2px;
+ box-shadow:var(--sm-focus)
+}
+#app .aps-role-configuration .role-table-panel,
+#app .aps-role-configuration .panel:not(.role-table-panel){
+ border:1px solid var(--sm-border);
+ border-radius:var(--sm-radius-card);
+ background:var(--sm-surface);
+ box-shadow:var(--sm-shadow-sm)
+}
+#app .aps-role-configuration .role-data-table thead{
+ background:var(--sm-surface-raised)
+}
+#app .aps-role-configuration .role-data-table th{
+ padding:14px 16px;
+ border-bottom:1px solid var(--sm-border);
+ color:var(--sm-sub);
+ font-size:11px;font-weight:720;
+ letter-spacing:.04em
+}
+#app .aps-role-configuration .role-data-table td{
+ padding:14px 16px;
+ border-bottom:1px solid var(--sm-border);
+ color:var(--sm-text);
+ font-size:12px;line-height:1.6
+}
+#app .aps-role-configuration .role-data-table tbody tr:nth-child(even){
+ background:var(--sm-surface)
+}
+#app .aps-role-configuration .role-data-table tbody tr:hover{
+ background:var(--sm-surface-raised)
+}
+#app .aps-role-configuration .role-data-table td strong{
+ color:var(--sm-ink);font-size:12px;font-weight:740
+}
+#app .aps-role-configuration .role-data-table td .csp-u020{
+ color:var(--sm-sub);font-size:11px
+}
+#app .aps-role-configuration .role-data-table td button.secondary,
+#app .aps-role-configuration .role-activation-button{
+ min-height:44px;
+ background:var(--sm-surface-raised);
+ color:var(--sm-accent-hover);
+ border:1px solid var(--sm-border);
+ border-radius:var(--sm-radius-control);
+ box-shadow:none;font-size:12px;font-weight:700;
+ transition:background-color var(--sm-fast),border-color var(--sm-fast)
+}
+#app .aps-role-configuration .role-data-table td button.secondary:hover,
+#app .aps-role-configuration .role-activation-button:hover{
+ transform:none;background:var(--sm-accent-soft);
+ border-color:var(--sm-border-strong)
+}
+#app .aps-role-configuration .panel:not(.role-table-panel) .panel-header{
+ background:var(--sm-surface-raised);
+ border-bottom:1px solid var(--sm-border)
+}
+#app .aps-role-configuration .panel:not(.role-table-panel) .settings-detail{
+ border-bottom-color:var(--sm-border)
+}
+@media(max-width:650px){
+ #app .aps-role-config-shell>.main-content{padding:20px 15px 65px}
+ #app .aps-role-configuration .role-config-hero{padding:22px 19px}
+ #app .aps-role-configuration .role-stat-card{min-height:112px;padding:16px}
+ #app .aps-role-configuration .role-stat-card .stat-value{margin-top:13px}
+ #app .aps-role-configuration .role-config-tabs{
+  flex-wrap:nowrap;overflow-x:auto;max-width:100%;
+  scroll-padding-inline:9px
+ }
+ #app .aps-role-configuration .role-config-tabs .role-tab-button{
+  flex:none;white-space:nowrap
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #app .aps-role-configuration .role-stat-card:hover{transform:none}
+}
+@media(prefers-contrast:more){
+ #app .aps-role-configuration .role-config-hero,
+ #app .aps-role-configuration .role-stat-card,
+ #app .aps-role-configuration .role-table-panel{
+  border-color:var(--sm-border-strong)
+ }
+}
