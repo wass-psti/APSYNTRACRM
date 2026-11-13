@@ -111,13 +111,18 @@ test('reviewer and activity routes retain their existing entry points without ex
 
 test('split view is responsive, keyboard accessible, reduced-motion aware, and CSS scoped to TradeLink',()=>{
  const css=readFileSync('frontend/tradelink-reference-ui.css','utf8');
+ const fixture=readFileSync('scripts/cp-tl03d-render-reference-fixture.mjs','utf8');
  assert.match(css,/CP-TL-SPLIT-01/);
  assert.match(css,/data-tl-section=\"drafts\"\]\[data-tl-can-manage=\"true\"\] \.tl-app-layout/);
  assert.match(css,/grid-template-columns:minmax\(220px,260px\) minmax\(0,1fr\)/);
  assert.match(css,/\.tl-document-split-view/);
  assert.match(css,/grid-template-columns:minmax\(0,1\.15fr\) minmax\(340px,\.85fr\)/);
  assert.match(css,/\.tl-reference-portal \.tl-app-nav a:focus-visible/);
+ assert.match(fixture,/navBeforeMain/);
+ assert.match(fixture,/tl-app-nav/);
+ assert.doesNotMatch(fixture,/tl-reference-document-tabs/);
  assert.match(css,/@media\(max-width:850px\)/);
+ assert.match(css,/data-tl-section=\"drafts\"\]\[data-tl-can-manage=\"true\"\] \.tl-app-layout\{\s*grid-template-columns:minmax\(0,1fr\)/);
  assert.match(css,/@media\(max-width:620px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(css,/\.tl-reference-portal \.tl-app-nav/);
