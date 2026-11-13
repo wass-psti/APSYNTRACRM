@@ -500,12 +500,21 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    }
    state.resumeCheckpoint=error?.importBatchResume||null;
    const progress=error?.importBatchProgress;
+   if(progress?.verifiedCommitted)
+    state.importProgress={...(state.importProgress||{}),
+     completed:progress.completed+(state.recoveryMode?state.recoveryOffset:0),
+     rows:fullImportSheet().rows.length,
+     batch:progress.committedBatches+1,total:Math.ceil(fullImportSheet().rows.length/
+      importBatchSize(state.executionPlan||state.plan,{extendedReferences:state.extendedReferences}))};
    state.error=progress?
     ('Import stopped after '+progress.completed+' of '+progress.totalRows+
      ' approved rows were verified'+(rowReview().rejected.length?
-      '; '+rowReview().rejected.length+' source rows were excluded by review':'')+'. '+(progress.outcomeUncertain?
-      'The most recent batch may also have committed; do not resubmit before reconciling the board. ':
-      'Previously verified batches remain committed. ')+failure.message):failure.message;
+      '; '+rowReview().rejected.length+' source rows were excluded by review':'')+'. '+
+      (progress.verifiedCommitted?
+       'The latest batch is verified as committed; the next-batch mapping could not be prepared. Do not resubmit it. ':
+       progress.outcomeUncertain?
+        'The most recent batch may also have committed; do not resubmit before reconciling the board. ':
+        'Previously verified batches remain committed. ')+failure.message):failure.message;
   }finally{state.busy=false;render();}
  }
  overlay.addEventListener('click',event=>{
