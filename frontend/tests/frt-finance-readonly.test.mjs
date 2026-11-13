@@ -38,6 +38,9 @@ function fixture({denied=false,wrongMember=false,stale=false,badCount=false,
      released:999999,...analyticsData,company_code:args.p_company};
    }
    if(name==='frt_board_list_safe')return rows;
+   if(name==='frt_liquidation_aging_company')return {company_code:args.p_company,
+    pending_total:0,awaiting_bank_execution:0,on_track:0,due_soon:0,overdue:0,completed:0,
+    source:'STAFF_RECORDED_BANK_EVIDENCE',deadline_hours:72};
    throw Error('Unexpected RPC '+name);
   }
  };
@@ -52,7 +55,7 @@ test('authorized FRT board integration reads only signed domain RPCs and removes
  assert.equal(report.summary.total_requests,1);
  assert.equal(report.requests.length,1);
  assert.deepEqual(f.calls.filter(x=>typeof x==='object').map(x=>x.name),
-   ['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
+   ['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe','frt_liquidation_aging_company']);
  assert.ok(!f.calls.some(x=>typeof x==='object'&&/create|update|delete|admin_set|request_action/i.test(x.name)));
  assert.equal(report.writesAttempted,0);
  const out=JSON.stringify(report);
@@ -172,13 +175,13 @@ test('SEC14 safe dashboard/list never downgrade to financial-data-bearing legacy
    id:record,company_code:'PSTI',voucher_no:'SAFE-1',
    title:'Approved visibility',status:'PENDING_APPROVAL',date_needed:'2026-11-02',filing_status:'NOT_FILED'
   }];
-  if(name==='frt_bootstrap')return original(name,args);
+  if(name==='frt_bootstrap'||name==='frt_liquidation_aging_company')return original(name,args);
   throw Error('Forbidden legacy financial RPC: '+name);
  };
  const response=await loadFRTFinanceReadOnly(f);
  assert.equal(response.status,'PASS');
  assert.equal(response.requests.length,1);
- assert.deepEqual(requested,['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe']);
+ assert.deepEqual(requested,['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe','frt_liquidation_aging_company']);
  assert.equal(response.writesAttempted,0);
 });
 

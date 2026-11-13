@@ -73,7 +73,7 @@ test('SEC14 signed existing request uses only server-restricted detail and valid
  assert.ok(r.checks.every(x=>x.status==='PASS'));
  assert.deepEqual(f.calls.filter(x=>x!=='context'),
  ['frt_bootstrap','frt_board_dashboard_safe','frt_board_list_safe',
-  'frt_bootstrap','frt_restricted_request_detail']);
+  'frt_liquidation_aging_company','frt_bootstrap','frt_restricted_request_detail']);
  assert.ok(!f.calls.some(x=>typeof x==='string'&&
    /^(frt_get_request|frt_list_requests|frt_dashboard|frt_request_action)$/.test(x)));
  const safe=sanitizeSEC14SignedRead(r);
