@@ -1,10 +1,12 @@
 # CP-DB-CPU-12 — Targeted RLS Initplan Optimization and Policy-Semantics Preservation
 
-**Date:** 2026-11-14  
-**Status:** IMPLEMENTED-UNVERIFIED — migration and regression coverage are implemented; disposable PostgreSQL 17 acceptance passed. Production migration application is pending explicit approval because it alters existing RLS policy definitions, even though the predicates and effective permissions are preserved.  
-**Repository:** `wass-psti/APSYNTRACRM`  
-**Base commit:** `d101931c39b5c2b90982717cbede4e08eb84240a`  
-**Branch:** `perf/cp-db-cpu-12-rls-initplan`
+**Date:** 2026-11-14
+**Status:** IMPLEMENTED — production migration applied to the existing Supabase project; all 20 target policies passed read-only post-activation verification and the Performance Advisor initplan finding count fell from 20 to 0. Signed-user interactive regression remains pending.
+**Repository:** `wass-psti/APSYNTRACRM`
+**Base commit:** `d101931c39b5c2b90982717cbede4e08eb84240a`
+**Merged commit:** `44e05c561acb8ed23888ffa880ebcf9bd8cbd81d`
+**Remote migration history version:** `20261114151934`
+**Migration history name:** `cp_db_cpu_12_rls_initplan_optimization`
 
 ## 1. Objective and scope
 
@@ -48,9 +50,18 @@ The current advisor reported:
 
 The 20 RLS findings were inspected individually. They cover `profiles`, `module_role_assignments`, Order Intake, Fund Released Tracker, Tool Traceability runtime tables, Watchdog board compatibility tables, and Huly transaction events. The other advisor findings are not blanket-applied; indexes are not added or dropped without a hot-query justification.
 
+### Production activation verification
+
+- Supabase migration API applied the migration successfully to the existing project `jtlusodorfnyzgyuewkz`.
+- The recorded remote migration history version is `20261114151934` with name `cp_db_cpu_12_rls_initplan_optimization`; the repository migration filename is synchronized to this exact version.
+- Read-only live policy verifier: **20 expected / 20 passing / 0 mismatches**. All expected policy identities, role targets, commands, permissive modes, and USING/WITH CHECK presence passed.
+- Supabase Performance Advisor after activation: **20 `auth_rls_initplan` findings before → 0 after**. Remaining unrelated findings: 158 unindexed foreign keys, 74 unused-index candidates, 1 duplicate index, and 1 Auth connection strategy notice.
+- Edge logs from `2026-11-14 15:19:34 UTC` to `15:30:00 UTC`: **0 requests with HTTP status >=400**. PostgreSQL logs contained no RLS/permission-related errors in the same window. One PostgreSQL error was from a read-only metadata query that referenced a non-existent `inserted_at` column; it did not originate from application traffic.
+- Signed-user functional allow/deny testing is still pending; the live policy metadata check is not a substitute for an authenticated application session test.
+
 ## 3. Implementation
 
-Migration: `supabase/migrations/20261114150000_cp_db_cpu_12_rls_initplan_optimization.sql`
+Migration: `supabase/migrations/20261114151934_cp_db_cpu_12_rls_initplan_optimization.sql`
 
 - Alters exactly the 20 advisor-identified policies.
 - Replaces row-correlated auth calls with `(SELECT auth.uid())`.
@@ -90,7 +101,7 @@ Node regression: **5/5 passed**.
 - No database-wide configuration, extension, pool-size, cache, or background-worker changes.
 - No legacy `wm_get_board` removal.
 
-## 6. Acceptance status and next gate
+## 6. Production activation and acceptance status
 
 | Requirement | Status | Evidence |
 |---|---|---|
@@ -100,7 +111,9 @@ Node regression: **5/5 passed**.
 | Static regression tests | VERIFIED | 5/5 Node tests |
 | PostgreSQL 17 syntax/application | VERIFIED | Disposable fixture |
 | Policy predicate equivalence | VERIFIED | Normalized pre/post USING and WITH CHECK comparison |
-| Production migration applied | PENDING | Requires separate approval for production RLS policy DDL |
-| Post-production advisor reduction and signed-user regression | PENDING | Run only after production activation is authorized |
+| Production migration applied | VERIFIED | Supabase migration history version `20261114151934`; name `cp_db_cpu_12_rls_initplan_optimization` |
+| Post-production policy inventory | VERIFIED | 20/20 expected policies; 0 mismatches; role targets, commands, permissive modes, and predicate presence matched |
+| Performance Advisor initplan finding reduction | VERIFIED | `auth_rls_initplan`: 20 findings before activation, 0 after activation |
+| Signed-user allow/deny regression | PENDING | Requires interactive application sessions for the affected user/workspace contexts |
 
-**Decision:** The migration is technically ready for controlled activation, but has not been applied to the existing Supabase project. The production gate is limited to approval for changing the definitions of existing RLS policies. The change is designed to preserve their effective permissions exactly.
+**Decision:** The targeted RLS initplan optimization is active in the existing Supabase project. It changed only evaluation placement of stable request-identity and workspace-context expressions; all 20 policy identities and authorization metadata passed post-activation checks. Do not treat this as complete production acceptance until signed-user allow/deny regression is performed.
