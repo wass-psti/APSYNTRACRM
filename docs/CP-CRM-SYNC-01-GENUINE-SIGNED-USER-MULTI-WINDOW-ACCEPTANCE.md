@@ -1,10 +1,12 @@
 # CP-CRM-SYNC-01 — Genuine Signed-User Multi-Window Synchronization, Live Mutation Propagation, and Cache-Coherence Acceptance
 
 **Date:** 2026-11-15
-**Status:** IMPLEMENTED — frontend regression and synthetic browser acceptance passed; production deployment and same-identity live multi-window write acceptance remain pending.
+**Status:** DEPLOYED — frontend regression, synthetic browser acceptance, GitHub Pages deployment, live asset integrity, and signed single-window focus-return acceptance passed. Same-identity live multi-window and production-write acceptance remain pending.
 **Repository:** `wass-psti/APSYNTRACRM`
 **Supabase project:** `jtlusodorfnyzgyuewkz` (existing project only)
 **Base commit:** `fb351f488a26d9d23c4bd2c82cb6e5fa07e97387`
+**Implementation PR:** [#400](https://github.com/wass-psti/APSYNTRACRM/pull/400)
+**Main commit:** `4c86519c48333ed9026504af0160226ba2c1ef16`
 **Branch:** `feat/cp-crm-sync-01-genuine-multi-window`
 
 ## 1. Scope and guardrails
@@ -123,33 +125,51 @@ The signed `wm_list_boards` contract returns `item_count`. Reconciliation compar
 | JavaScript syntax | VERIFIED | Changed files and all shipped root/FuelTrans JavaScript parsed successfully |
 | Diff integrity | VERIFIED | `git diff --check` clean |
 
-The browser fixture uses synthetic signed identities and no Supabase connection. Its request-count reduction is a fixture measurement only, not a production latency or CPU claim.
+The browser fixture uses synthetic signed identities and no Supabase connection. Its request-count reduction is a fixture measurement only, not a production latency or CPU claim. The fixture verifies actual Chromium BroadcastChannel delivery between independent pages; it is not a genuine signed production write test.
 
-## 5. Production acceptance prerequisites and limitations
+## 5. Production deployment and signed-session observation
 
-### 5.1 Authentication storage is intentionally unchanged
+### 5.1 Deployment verification
+
+- PR #400 merged to `main` as `4c86519c48333ed9026504af0160226ba2c1ef16`.
+- GitHub Actions `APSYNTRA CRM Frontend Validation` run `43620901216`: **PASS**, including disposable PostgreSQL checks, frontend contract/syntax checks, and `live-pages` source-to-CDN verification.
+- GitHub Pages deployment run `43620901167`: **SUCCESS**.
+- Main-branch `APSYNTRA Board Cache Two-Tab Browser Acceptance` run `43620901253`: **PASS**.
+- Local `scripts/pages-smoke.mjs` run with `EXPECTED_DEPLOY_SHA=4c86519c48333ed9026504af0160226ba2c1ef16`: **PASS** for all 129 listed live assets, signed Auth endpoint reachability, and anonymous native-Issue endpoint denial.
+- Additional SHA-256 comparisons for `frontend/fueltrans-native.js`, `frontend/fueltrans/app.js`, and `frontend/fueltrans/supabase-client.js`: **PASS** against the deployed main commit.
+
+### 5.2 Genuine signed single-window observation
+
+Using the existing signed employee session in Chromium (read-only):
+
+- The board catalog's signed `wm_list_boards` request returned HTTP **200**.
+- Switching focus away from Chromium and returning to the CRM without reloading caused a fresh signed `wm_list_boards` request, HTTP **200**.
+- An existing board with no view permission returned HTTP **403** for `wm_get_board_shell` and `wm_get_board_items_page`, as expected. This confirms the synchronization work did not bypass board authorization.
+- An accessible TradeLink board shell and paginated item read returned HTTP **200**.
+- No write, create, update, delete, role change, membership change, or workspace change was performed.
+
+### 5.3 Authentication storage is intentionally unchanged
 
 The existing `AuthClient` stores each tab's signed session in `sessionStorage`. Separate top-level windows do not automatically share that storage. The new cross-window channel accepts messages only when the receiver is signed in as the same user and active workspace; it does not copy tokens or relax session isolation.
 
 The two browser windows available during this implementation held different signed identities. They were not treated as a same-user multi-window pair, and no cross-user session bridge was introduced. For genuine same-user window acceptance, both windows must independently hold a valid session for the same user and workspace (for example, sign in to the second window using the same account).
 
-### 5.2 Production writes were not used as test fixtures
+### 5.4 Production writes were not used as test fixtures
 
 No production board item, document, profile, role, membership, or workspace record was mutated. The implementation and fixture tests prove that successful writes publish invalidations and failed writes do not. A genuine production signed-user write-propagation test requires explicit authorization to update a designated existing QA record or use an already-authorized nonproduction fixture.
 
-### 5.3 Remaining deployment acceptance
+### 5.5 Remaining production acceptance
 
-- Merge and verify GitHub Pages deployment of the implementation commit.
-- Verify live signed reads and focus-return reconciliation with the existing authenticated session.
 - Verify two separately authenticated windows for the same user/workspace receive fresh authoritative reads after a successful authorized mutation.
-- Verify the same event is rejected across different users/workspaces.
+- Verify the same event is rejected across different users/workspaces in the live browser pair.
 - Perform the live mutation step only against a designated QA record after explicit production-data authorization; otherwise keep it synthetic/read-only.
 
 ## 6. Acceptance decision
 
-**Implementation status:** VERIFIED locally and in the synthetic browser fixture.
-**Production deployment status:** PENDING.
+**Implementation status:** VERIFIED locally, in CI, and in the synthetic Chromium fixture.
+**Production deployment status:** VERIFIED — main commit `4c86519c48333ed9026504af0160226ba2c1ef16`.
+**Live signed single-window focus-return:** VERIFIED — fresh authoritative signed reads observed after window focus returned.
 **Same-user signed multi-window production acceptance:** PENDING — second window must independently authenticate as the same user; no session token sharing was added.
 **Production mutation propagation:** PENDING — no production record writes were performed without separate authorization.
 
-No additional database or security changes are required for this increment. The remaining gates are deployment and real-session acceptance, not further architectural work.
+No additional database or security changes are required for this increment. Remaining work is narrowly limited to same-identity live two-window acceptance and, if authorized, one controlled QA-record mutation test.
