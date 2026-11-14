@@ -9,6 +9,10 @@ const reservedNames=new Set(['APSYNTRA QA']);
 const validTime=value=>typeof value==='string'&&
  Number.isFinite(Date.parse(value))&&Date.parse(value)>0;
 const denied=message=>{throw new ApiError(message,403);};
+const sameLifecycleMetadata=(current,original)=>
+ current?.name===original?.name&&
+ String(current?.description??'')===String(original?.description??'')&&
+ current?.status===original?.status;
 
 export function isProtectedBoard(board){
  return !!board&&(reservedNames.has(String(board.name||'').trim())||
@@ -26,7 +30,8 @@ export class BoardCardLifecycleClient{
   this.api=api;
   this.enabled=enabled;
   // Prevent overlapping writes for one board within this client instance.
-  // Rejections are not cached; the user may refresh the revision and retry.
+  // The guard is acquired before asynchronous reads so duplicate clicks do
+  // not create redundant context, permission, or board-shell requests.
   this.inFlightBoardIds=new Set();
  }
  async mutate(board,action,{name=null,description=null,confirmName=null}={}){
@@ -50,21 +55,53 @@ export class BoardCardLifecycleClient{
   if(action==='restore'&&!['archived','trashed'].includes(board.status))
    throw new ApiError('Only archived or trashed boards can be restored.');
   if(typeof this.api?.context!=='function'||typeof this.api.allowed!=='function'||
-   typeof this.api.rpc!=='function')denied('Authoritative board API unavailable.');
-  const context=await this.api.context();
-  if(!validUuid(context?.user_id)||!validUuid(context?.workspace_id)||
-    context.profile?.status!=='active')denied('Active signed workspace required.');
-  if(!(await this.api.allowed(board.id,'manage')))
-   denied('Board manager authorization required.');
-  const args={p_board_id:board.id,p_expected_updated_at:board.updated_at,
-   p_action:action,p_name:action==='edit'?name:null,
-   p_description:action==='edit'?description:null,
-   p_confirm_name:action==='trash'?confirmName:null};
+   typeof this.api.rpc!=='function'||typeof this.api.board!=='function')
+   denied('Authoritative board API unavailable.');
   if(this.inFlightBoardIds.has(board.id))
    throw new ApiError('Board update already in progress. Wait for its result before retrying.',409);
   this.inFlightBoardIds.add(board.id);
   try{
-   const receipt=await this.api.rpc('wm_board_card_mutate',args);
+   const context=await this.api.context();
+   if(!validUuid(context?.user_id)||!validUuid(context?.workspace_id)||
+    context.profile?.status!=='active')denied('Active signed workspace required.');
+   if(!(await this.api.allowed(board.id,'manage')))
+    denied('Board manager authorization required.');
+
+   // Board.updated_at is a content-wide activity timestamp: ordinary cell
+   // writes also advance it. Revalidate the actual lifecycle fields so those
+   // unrelated writes do not create false metadata conflicts.
+   const readCurrentRevision=async()=>{
+    const snapshot=await this.api.board(board.id,{complete:false,includeItems:false});
+    const latest=snapshot?.board;
+    if(!latest||latest.id!==board.id||latest.workspace_id!==context.workspace_id||
+      !validTime(latest.updated_at))
+     denied('Latest signed board metadata could not be verified. Refresh and retry.');
+    if(!sameLifecycleMetadata(latest,board))
+     throw new ApiError(
+      'Board details or lifecycle state changed since this action was opened. Refresh and review the latest board before continuing.',
+      409,'BOARD_METADATA_CHANGED');
+    return latest.updated_at;
+   };
+
+   let expectedUpdatedAt=await readCurrentRevision();
+   const args={p_board_id:board.id,p_expected_updated_at:expectedUpdatedAt,
+    p_action:action,p_name:action==='edit'?name:null,
+    p_description:action==='edit'?description:null,
+    p_confirm_name:action==='trash'?confirmName:null};
+   let receipt;
+   for(let attempt=0;attempt<2;attempt++){
+    try{
+     receipt=await this.api.rpc('wm_board_card_mutate',args);
+     break;
+    }catch(error){
+     // A cell write can advance the global board timestamp between the shell
+     // read and this RPC. Refresh once, but only retry if lifecycle metadata
+     // itself is unchanged. Never retry an actual concurrent metadata edit.
+     if(attempt!==0||error?.code!=='40001')throw error;
+     expectedUpdatedAt=await readCurrentRevision();
+     args.p_expected_updated_at=expectedUpdatedAt;
+    }
+   }
    const expected=action==='trash'?'trashed':action==='restore'?'active':board.status;
    if(!receipt||receipt.boardId!==board.id||receipt.action!==action||
      receipt.status!==expected||!validTime(receipt.updatedAt))

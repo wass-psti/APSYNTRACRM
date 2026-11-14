@@ -16,12 +16,18 @@ const custom={id,name:'New Board',description:'',member_role:'owner',
 const managed={...custom,id:'30000000-0000-4000-8000-000000000003',
  name:'TimeTracker Attendance',
  description:'[APSYNTRA:MODULE:timetracker:v1] Attendance module'};
-function apiFixture({allowed=true,context=null,reply=null}={}){
+function apiFixture({allowed=true,context=null,reply=null,boardReply=null}={}){
  const calls=[];
  const ctx=context||{user_id:actor,workspace_id:ws,profile:{status:'active'}};
  return {calls,api:{
   context:async()=>{calls.push(['context']);return ctx;},
   allowed:async(board,level)=>{calls.push(['allowed',board,level]);return allowed;},
+  board:async(boardId,options)=>{
+   calls.push(['board',boardId,options]);
+   const value=typeof boardReply==='function'?await boardReply(boardId,options):
+    boardReply||{...custom,workspace_id:ws};
+   return {board:{...value,id:boardId}};
+  },
   rpc:async(op,args)=>{
    calls.push([op,args]);return reply||{
     boardId:args.p_board_id,action:args.p_action,
@@ -53,15 +59,21 @@ test('authorized manager edit sends exact CAS timestamp and bounded fields',asyn
  const client=new BoardCardLifecycleClient(fixture.api,{enabled:true});
  const receipt=await client.edit(custom,{name:'  Updated board  ',description:'A note'});
  assert.equal(receipt.action,'edit');
- assert.deepEqual(fixture.calls.map(x=>x[0]),['context','allowed','wm_board_card_mutate','context']);
+ assert.deepEqual(fixture.calls.map(x=>x[0]),['context','allowed','board','wm_board_card_mutate','context']);
  assert.equal(fixture.calls[1][2],'manage');
- assert.deepEqual(fixture.calls[2][1],{
+ assert.deepEqual(fixture.calls[2][2],{complete:false,includeItems:false});
+ assert.deepEqual(fixture.calls[3][1],{
   p_board_id:id,p_expected_updated_at:timestamp,p_action:'edit',
   p_name:'Updated board',p_description:'A note',p_confirm_name:null
  });
 });
 test('trash requires exact name, and restore retains same board identity',async()=>{
- const fixture=apiFixture();
+ let boardReads=0;
+ const fixture=apiFixture({boardReply:async()=>({
+  ...custom,workspace_id:ws,
+  status:boardReads++===0?'active':'trashed',
+  updated_at:boardReads===1?timestamp:'2026-11-03T03:41:20.000000+00:00'
+ })});
  const client=new BoardCardLifecycleClient(fixture.api,{enabled:true});
  await assert.rejects(()=>client.trash(custom,'Wrong'),ApiError);
  assert.equal(fixture.calls.length,0);
@@ -160,6 +172,7 @@ test('concurrent same-board lifecycle writes submit a single mutation RPC',async
  const api={
   context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
   allowed:async()=>true,
+  board:async(boardId)=>({board:{...custom,id:boardId,workspace_id:ws}}),
   rpc:async(op,args)=>{
    calls.push([op,args]);
    if(calls.length===1)return new Promise(resolve=>{resolveWrite=resolve;});
@@ -183,23 +196,77 @@ test('concurrent same-board lifecycle writes submit a single mutation RPC',async
  assert.equal(calls.length,2);
 });
 
-test('stale-revision 40001 is not automatically retried and does not remain locked',async()=>{
- let attempts=0;
+test('fresh metadata read uses the latest timestamp when only board content changed',async()=>{
+ const freshAt='2026-11-14T01:10:00.000000+00:00';
+ const fixture=apiFixture({boardReply:{...custom,workspace_id:ws,updated_at:freshAt}});
+ const client=new BoardCardLifecycleClient(fixture.api);
+ await client.edit(custom,{name:'Renamed',description:'Updated'});
+ const mutation=fixture.calls.find(x=>x[0]==='wm_board_card_mutate');
+ assert.equal(mutation[1].p_expected_updated_at,freshAt);
+ assert.equal(fixture.calls.filter(x=>x[0]==='board').length,1);
+});
+
+test('changed board metadata is rejected locally before lifecycle mutation',async()=>{
+ const fixture=apiFixture({boardReply:{...custom,workspace_id:ws,name:'Renamed elsewhere'}});
+ const client=new BoardCardLifecycleClient(fixture.api);
+ await assert.rejects(client.edit(custom,{name:'Overwrite',description:''}),
+  error=>error instanceof ApiError&&error.status===409&&error.code==='BOARD_METADATA_CHANGED');
+ assert.equal(fixture.calls.some(x=>x[0]==='wm_board_card_mutate'),false);
+});
+
+test('one stale timestamp conflict refreshes metadata and retries exactly once',async()=>{
+ const times=[
+  '2026-11-14T01:10:00.000000+00:00',
+  '2026-11-14T01:10:01.000000+00:00'
+ ];
+ let reads=0;
+ const writes=[];
  const api={
   context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
   allowed:async()=>true,
-  rpc:async(_op,args)=>{
-   attempts++;
-   if(attempts===1)throw new ApiError('Board changed; refresh before editing',409,'40001');
+  board:async(boardId,options)=>({board:{...custom,id:boardId,workspace_id:ws,
+   updated_at:times[Math.min(reads++,1)]}}),
+  rpc:async(op,args)=>{
+   writes.push({...args});
+   if(writes.length===1)throw new ApiError('Board changed; refresh before editing',409,'40001');
    return {boardId:args.p_board_id,action:args.p_action,status:'active',
-    updatedAt:'2026-11-03T03:41:20.000000+00:00'};
+    updatedAt:'2026-11-14T01:10:02.000000+00:00'};
   }
  };
  const client=new BoardCardLifecycleClient(api);
- await assert.rejects(client.edit(custom,{name:'A',description:''}),
+ const receipt=await client.edit(custom,{name:'Renamed',description:''});
+ assert.equal(receipt.action,'edit');
+ assert.equal(writes.length,2);
+ assert.equal(writes[0].p_expected_updated_at,times[0]);
+ assert.equal(writes[1].p_expected_updated_at,times[1]);
+});
+
+test('metadata change after a stale response blocks the retry',async()=>{
+ let reads=0,writes=0;
+ const api={
+  context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  allowed:async()=>true,
+  board:async(boardId)=>({board:{...custom,id:boardId,workspace_id:ws,
+   name:reads++===0?custom.name:'Concurrent rename'}}),
+  rpc:async()=>{writes++;throw new ApiError('Board changed; refresh before editing',409,'40001');}
+ };
+ const client=new BoardCardLifecycleClient(api);
+ await assert.rejects(client.edit(custom,{name:'Overwrite',description:''}),
+  error=>error.code==='BOARD_METADATA_CHANGED');
+ assert.equal(writes,1);
+});
+
+test('second stale response is surfaced without an unbounded retry loop',async()=>{
+ let attempts=0,reads=0;
+ const api={
+  context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+  allowed:async()=>true,
+  board:async(boardId)=>({board:{...custom,id:boardId,workspace_id:ws,
+   updated_at:'2026-11-14T01:10:0'+Math.min(reads++,1)+'.000000+00:00'}}),
+  rpc:async()=>{attempts++;throw new ApiError('Board changed; refresh before editing',409,'40001');}
+ };
+ const client=new BoardCardLifecycleClient(api);
+ await assert.rejects(client.edit(custom,{name:'Retry',description:''}),
   error=>error.code==='40001');
- assert.equal(attempts,1);
- await client.edit({...custom,updated_at:'2026-11-03T03:41:19.000000+00:00'},
-  {name:'B',description:''});
  assert.equal(attempts,2);
 });
