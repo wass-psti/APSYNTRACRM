@@ -1,7 +1,7 @@
 # CP-DB-CPU-11 — Query-Level CPU Attribution Feasibility, Instrumentation Cost Review, and Importer Contention Decision
 
 **Date:** 2026-11-14  
-**Status:** IMPLEMENTED-UNVERIFIED — live read-only database and log inspection completed; repository CI and local regression execution remain pending because Desktop Commander has no connected device.  
+**Status:** IMPLEMENTED-UNVERIFIED — live read-only database and log inspection completed; five SQL diagnostics executed successfully. Node regression tests remain unexecuted because Desktop Commander has no connected device. The existing frontend workflow does not trigger on pull requests and its push-branch allowlist excludes this CP-11 branch, so no GitHub Actions run was created.  
 **Repository:** `wass-psti/APSYNTRACRM`  
 **Supabase project:** `jtlusodorfnyzgyuewkz` (existing project only)  
 **Database:** PostgreSQL 17.6  
