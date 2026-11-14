@@ -89,18 +89,15 @@ export class BoardCardLifecycleClient{
     p_description:action==='edit'?description:null,
     p_confirm_name:action==='trash'?confirmName:null};
    let receipt;
-   for(let attempt=0;attempt<2;attempt++){
-    try{
-     receipt=await this.api.rpc('wm_board_card_mutate',args);
-     break;
-    }catch(error){
-     // A cell write can advance the global board timestamp between the shell
-     // read and this RPC. Refresh once, but only retry if lifecycle metadata
-     // itself is unchanged. Never retry an actual concurrent metadata edit.
-     if(attempt!==0||error?.code!=='40001')throw error;
-     expectedUpdatedAt=await readCurrentRevision();
-     args.p_expected_updated_at=expectedUpdatedAt;
-    }
+   try{
+    receipt=await this.api.rpc('wm_board_card_mutate',args);
+   }catch(error){
+    // A stale compare is terminal for this modal submission. Do not issue a
+    // second read/write pair: repeated retries amplified stale client loops.
+    // Normalize legacy SQLSTATE 40001 responses to the same HTTP 409 contract.
+    if(error?.code==='40001')
+     throw new ApiError('Board changed; refresh before editing.',409,'BOARD_REVISION_STALE');
+    throw error;
    }
    const expected=action==='trash'?'trashed':action==='restore'?'active':board.status;
    if(!receipt||receipt.boardId!==board.id||receipt.action!==action||

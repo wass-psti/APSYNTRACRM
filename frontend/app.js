@@ -3643,7 +3643,8 @@ function openModal(title,fields,submit,{submitLabel='Save changes',submitDisable
    notice(err);
    if(button.isConnected){
     const conflict=disableOnConflict&&
-     (err?.status===409||err?.code==='40001'||err?.code==='BOARD_METADATA_CHANGED');
+     (err?.status===409||err?.code==='40001'||
+      err?.code==='BOARD_REVISION_STALE'||err?.code==='BOARD_METADATA_CHANGED');
     if(err?.schemaOutcomeUncertain===true){
      button.disabled=true;
      button.textContent='Close and verify board';
