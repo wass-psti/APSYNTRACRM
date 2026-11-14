@@ -1,7 +1,7 @@
 # CP-DB-CPU-08 — Genuine Signed Import Acceptance and Remaining Compute Hotspot Attribution
 
 **Date:** 2026-11-14
-**Status:** PARTIAL — performance evidence collected; the one-record signed QA import is blocked by the Mac's currently signed-in account lacking membership on the designated QA board.
+**Status:** RUNTIME ACCEPTANCE VERIFIED; CPU attribution PARTIAL — the signed one-record QA import is confirmed in authoritative audit and readback; a one-hour CPU observation is captured, but query-level CPU attribution is not available.
 **Project:** Existing Supabase project `jtlusodorfnyzgyuewkz`
 **CP-07 baseline:** PR #388, merge `7422c29f15dd53f4194740c321e326fb26b62e7f`
 **CP-05 migration:** `20261114032119_cp_db_cpu_05_import_cell_read_elision`
@@ -37,13 +37,11 @@ No other cells are mapped. The existing item title is preserved. The import must
 
 ## 2. Why the signed QA import was not executed
 
-The Mac's accessible Chromium CRM tab is currently signed in as an active workspace employee whose account is not a member of `CP-BIMP-11 Import QA`. Navigating to the QA board returned `Board unavailable` / `Access denied by your workspace permissions`. The session is authenticated, but it does not have the board access needed to run the approved import.
+The earlier attempt was blocked because the Mac was signed in as an employee without QA-board membership. On runtime continuation, the browser showed the existing `Lex Mariun Señagan` CRM admin account, and signed Edge logs identified actor `8e548572-f0b7-49c8-b6e7-f504296aad10`. The signed `wm_import_board_wizard_extended_atomic` request returned HTTP 200 at `2026-11-14T05:25:49.039Z` (13:25:49 GMT+8), with 298 ms origin time.
 
-The existing QA board owner/admin account is already present in the workspace, but it is not the account currently signed in on the Mac. No account switching, credential access, role elevation, membership grant, or permission change was attempted. The original CRM board route was restored after the access check.
+The operation was already committed, so it was not repeated. The audit trail records `items.imported.wizard` with `updated=1`, `created=0`, `skipped=0`, `groups_created=0`, and `columns_created=0`, alongside one `item.cell_updated` event for the `Flag` column on `CP-BIMP-11 CSV Alpha`. The authoritative item readback confirmed `Flag=true`, the same item ID, and the administrator as updater. The board retained 13 active items, one group, and four columns.
 
-Post-check database verification confirmed that the QA board still has 13 active records, no board events since the CP-07 deployment window, and no QA item-cell updates since that time. The one approved same-value update has **not** been performed by this CP-08 session.
-
-**Resume condition:** the user signs in manually on the Mac using an existing account already authorized to manage the QA board, then leaves the CRM tab open. No new role, board membership, or permission is needed or requested.
+The CRM board content also showed `CP-BIMP-11 CSV Alpha` with `Flag: Yes`. The secure-session indicator was present; the tab reported `Connecting` while hidden, so acceptance relies on the signed HTTP request and authoritative audit/readback rather than treating a hidden-tab live indicator as connected. No duplicate import, credential access, role elevation, membership grant, or permission change was performed.
 
 ## 3. CP-07 signed request observations
 
@@ -60,9 +58,11 @@ Six additional successful extended-import RPC requests were observed from a sepa
 
 ## 4. PostgreSQL CPU dashboard limitation
 
-The Supabase Database Observability page showed CPU usage of **1.75%** at approximately 12:10 PM GMT+8. The selected 60-minute range was 11:10 AM–12:10 PM. CP-07 was deployed at approximately 12:07 PM GMT+8, leaving only about three minutes of post-deployment data in that range.
+The Supabase Database Observability page was refreshed at approximately 4:43 PM GMT+8 and showed the `Last 60 minutes` window, 3:43–4:43 PM, with CPU usage **3.82%**. The project overview at the same time rounded CPU to **3%**, with RAM 46%, disk 56%, and 17/60 connections. This is a one-hour database-wide CPU observation during ordinary signed CRM traffic, not a per-query CPU attribution.
 
-This is a useful low-CPU observation, but it is not a sustained post-deployment window and cannot establish a CP-07 CPU reduction percentage. A comparable post-deployment interval is still required.
+Within that same 60-minute interval, signed Edge logs recorded 21 successful `wm_list_boards` requests across three actors (p50 285 ms, p95 519 ms, zero errors) and 14 successful `apsyntra_crm_my_effective_access` requests across three actors (p50 210.5 ms, p95 379.7 ms, zero errors). No extended-import request occurred in that one-hour CPU window. The import itself was separately observed earlier at 298 ms Edge origin time.
+
+The earlier 1.75% reading at 12:10 PM covered a 60-minute range with only about three minutes after CP-07 deployment, so it is not a valid before/after comparator. The current 3.82% one-hour reading is a sustained system observation, but the evidence does not establish a CPU reduction percentage or prove that effective-access calls alone caused that load.
 
 ## 5. Remaining compute hotspot attribution
 
@@ -82,7 +82,7 @@ This shows that the core board/item aggregation is indexed and fast at the inspe
 
 ### `wm_import_board_wizard_extended_atomic`
 
-The importer has the highest cumulative per-call execution time among the inspected application RPCs and substantial cumulative buffer activity. It remains the strongest candidate for a controlled follow-up workload, but the cumulative statistics include pre-CP-05 calls and cannot quantify the CP-05 improvement. The six recent unrelated imports are not the approved QA test and are not used as its benchmark.
+The importer has the highest cumulative per-call execution time among the inspected application RPCs and substantial cumulative buffer activity. The prior CP-08 snapshot showed 827 calls; the runtime continuation snapshot showed 828 calls, 1,716,588.414 ms total execution, 2,073.174 ms mean, 7,774.337 ms max, 45,548,995 shared hits, and 1,822 shared reads. The single signed QA request was 298 ms at the Edge origin; the cumulative SQL mean must not be mistaken for that request's individual execution time. The one-call counter increase is consistent with the audited import, but the available aggregate statistics do not isolate its SQL CPU cost. The six unrelated import requests remain excluded from QA acceptance.
 
 ### Measurement limits
 
@@ -99,11 +99,13 @@ Consequently, the database exposes top-level elapsed execution and buffer activi
 |---|---|---|
 | Existing CP-BIMP-11 QA target identified | VERIFIED | 13 records; one group; four columns; existing Alpha / Flag=true cell |
 | Signed CRM session available on Mac | VERIFIED | Authenticated session visible |
-| Current Mac session can manage QA board | BLOCKED | Current signed account is not a QA board member; board returns access denied |
-| One-record same-value CP-05 import | PENDING | No write attempted; requires existing authorized board-owner/admin session |
-| CP-07 signed effective-access requests | VERIFIED | 28 successful signed requests; zero errors in sampled window |
-| CP-07 sustained CPU comparison | PENDING | Dashboard range includes only ~3 minutes after deployment |
-| Remaining compute candidate attributed | PARTIAL | Importer has highest per-call cumulative elapsed time; per-function CPU is unavailable |
+| Existing signed CRM admin session and QA board access | VERIFIED | Existing admin account; signed RPC and board data read succeeded |
+| One-record same-value CP-05 import | VERIFIED | One update, zero creates/skips/columns/groups; signed HTTP 200 and audit event |
+| Authoritative post-import readback | VERIFIED | Existing Alpha item; Flag=true; 13 items, one group, four columns |
+| CP-07 signed effective-access requests | VERIFIED | One-hour window: 14 successful signed requests across three actors; zero errors |
+| Sustained database CPU observation | VERIFIED | Supabase Last 60 minutes: 3.82%; dashboard-wide metric, not query-attributed |
+| Before/after CP-07 CPU reduction | PENDING | Earlier 1.75% window had only ~3 minutes after deployment |
+| Remaining compute candidate attribution | PARTIAL | Importer has highest per-call cumulative elapsed time; per-function CPU is unavailable |
 | Production schema / authority changes | NOT APPLICABLE | No DDL, grants, roles, RLS, membership, or session changes |
 
 ## 7. Read-only verification
@@ -111,3 +113,25 @@ Consequently, the database exposes top-level elapsed execution and buffer activi
 Run `sql/tests/cp-db-cpu-08-performance-attribution-readonly.sql` in the existing project to refresh the cumulative statement, table/index, and QA-board integrity observations. It contains SELECT statements only and does not reset statistics or change settings.
 
 After the authorized QA board-owner session is available, complete exactly the one-row `CP-BIMP-11 CSV Alpha` / `Flag=true` update through the existing signed import wizard, verify the authoritative item and board readback after refresh, and compare the before/after `pg_stat_statements` counters plus a comparable Supabase CPU window. Do not count unrelated import traffic as acceptance evidence.
+
+## 8. Runtime acceptance continuation — 2026-11-14
+
+The runtime continuation closed the previously blocked signed import without repeating the operation. Evidence sources: signed Supabase Edge log, `work_board_events`, `work_board_items`, `work_board_item_values`, and the refreshed CRM board page.
+
+| Measurement | Result |
+|---|---:|
+| Signed import HTTP origin | 298 ms |
+| Import event | `items.imported.wizard` |
+| Updated / created / skipped | 1 / 0 / 0 |
+| Column/group creations | 0 / 0 |
+| Post-import Flag value | `true` |
+| QA board active items / groups / columns | 13 / 1 / 4 |
+| Last-60-minute database CPU | 3.82% |
+| Last-60-minute effective-access requests | 14; p50 210.5 ms; p95 379.7 ms; 0 errors |
+| Last-60-minute board-list requests | 21; p50 285 ms; p95 519 ms; 0 errors |
+
+The import request occurred at 13:25:49 GMT+8 and is outside the later 15:43–16:43 CPU window. The one-hour CPU observation is therefore not an import load test. It is a sustained ambient database metric with signed effective-access and board-list traffic in the same window.
+
+## 9. CP-08 closure boundary
+
+The genuine signed import and its authoritative post-refresh value are verified. A one-hour database CPU observation and matching signed endpoint request profile are also verified. Query-level CPU attribution, an effective-access-only CPU isolation test, and a valid pre/post CP-07 CPU comparison remain unavailable without privileged CPU instrumentation or a controlled workload window. No instrumentation settings, extensions, statistics resets, production schema, grants, RLS, memberships, or credentials were changed to obtain this evidence.

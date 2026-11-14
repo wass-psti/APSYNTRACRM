@@ -26,3 +26,15 @@ test('CP-DB-CPU-08 diagnostic preserves cumulative stats and the exact QA fixtur
   assert.match(sql, /events_last_hour/);
   assert.match(sql, /cell_updates_last_hour/);
 });
+
+
+test('CP-DB-CPU-08 runtime evidence records one signed update and the bounded CPU window', () => {
+  const report = readFileSync('docs/CP-DB-CPU-08-SIGNED-IMPORT-AND-CPU-ATTRIBUTION.md', 'utf8');
+  assert.match(report, /items\.imported\.wizard/);
+  assert.match(report, /298 ms/);
+  assert.match(report, /Flag=true/);
+  assert.match(report, /3\.82%/);
+  assert.match(report, /Last 60 minutes/);
+  assert.match(report, /per-query CPU attribution/);
+  assert.match(report, /No duplicate import/);
+});
