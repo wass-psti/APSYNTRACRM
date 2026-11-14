@@ -202,11 +202,10 @@ const boardCacheChannel=new BoardCacheChannel({auth,onInvalidate:({boardId,revis
  if(!auth.isSignedIn||state.context?.user_id!==userId||
     state.context?.workspace_id!==workspaceId)return;
  if(!db.invalidateBoardCache(boardId,{revision}))return;
- if(state.view==='board'&&(boardId===null||boardId===state.boardId)){
-  // All visible updates and access checks still come from signed server reads.
-  void reconcilePlatformSync({boardIds:boardId?[boardId]:[],
-   reason:boardId?'broadcast':'cross-tab',userId,workspaceId}).catch(()=>{});
- }
+ // Reconcile the active CRM view, including the board catalog and overview.
+ // A board-specific event for another open board is filtered before follow-up reads.
+ void reconcilePlatformSync({boardIds:boardId?[boardId]:[],
+  reason:boardId?'broadcast':'cross-tab',userId,workspaceId}).catch(()=>{});
 }});
 db.onBoardMutation=({boardId,revision})=>boardCacheChannel.publish(boardId,revision);
 const profileAvatarClient=new ProfileAvatarClient({auth});
@@ -9038,6 +9037,12 @@ root.addEventListener('input',event=>{
 document.addEventListener('visibilitychange',()=>{
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
+});
+// Window focus is distinct from document visibility: switching between two
+// visible application windows may not emit visibilitychange in either one.
+window.addEventListener('focus',()=>platformSync.focusChanged());
+window.addEventListener('pageshow',event=>{
+ if(event.persisted)platformSync.focusChanged();
 });
 window.addEventListener('resize',syncSidebarLayout);
 document.addEventListener('keydown',event=>{

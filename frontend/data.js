@@ -72,7 +72,38 @@ const BOARD_READ_RPC=new Set([
  'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
  'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read'
 ]);
-const BOARD_MUTATION_RPC=/^(?:wm_(?:add_|create_|delete_|set_|update_|import_|managed_board_delete|ws01_(?:config_update|create|select)|board_(?:bulk_mutate|card_mutate|group_cas|schema_mutate|ui_save))|huly_sb06_transact|tl03_(?:document_(?:commit|decide|operate|review|submit)|attachment_(?:finish|prepare|remove)|record_pdf_approval_stage)|timetracker_(?:attendance_commit|ot_(?:submit|decide))|apsyntra_(?:crm_platform_role_set|role_manage_user_access|role_configuration_propose)|fueltrack_v3_(?:submit|decide|mark_refueled|complete|attach_receipt))$/;
+// Exact, reviewed write contracts only. Partial-prefix regular expressions
+// can silently miss full RPC names, preventing successful writes from
+// publishing cross-window invalidation hints.
+const BOARD_MUTATION_RPC=new Set([
+ // Core board structure, item and import writes.
+ 'wm_add_board_group','wm_add_board_item','wm_create_board','wm_create_board_configured',
+ 'wm_delete_board_item','wm_import_board_wizard_atomic','wm_managed_board_delete_empty_group',
+ 'wm_set_board_cell_if_current','wm_set_board_status_labels',
+ 'wm_update_board_group','wm_update_board_item','wm_board_bulk_mutate',
+ 'wm_board_card_mutate','wm_board_group_cas','wm_board_schema_mutate','wm_board_ui_save',
+ // Workspace lifecycle mutations.
+ 'wm_ws01_config_update','wm_ws01_create','wm_ws01_select',
+ // Collaboration and module writes rendered inside CRM board workspaces.
+ 'huly_sb06_transact',
+ 'mrh_board_item_tasks_write','mrh_create_material_atomic','mrh_sourcing_sensitive_write',
+ 'fueltrack_v3_submit','fueltrack_v3_decide',
+ 'fueltrack_v3_mark_refueled','fueltrack_v3_complete','fueltrack_v3_attach_receipt',
+ 'timetracker_attendance_commit_v2',
+ 'timetracker_ot_submit','timetracker_ot_decide',
+ 'tl03_document_commit','tl03_document_decide','tl03_document_operate',
+ 'tl03_document_review','tl03_document_submit','tl03_document_save',
+ 'tl03_document_status_update','tl03_record_review_stage',
+ 'tl03_attachment_finish','tl03_attachment_prepare','tl03_attachment_remove',
+ 'tl03_record_pdf_approval_stage',
+ // Fund Release Tracker, role and profile writes.
+ 'frt_assign_request_person','frt_create_request','frt_ic_create_obligation',
+ 'frt_ic_record_settlement','frt_record_bank_execution','frt_request_action',
+ 'frt_request_assignment','frt_save_recipient','frt_set_recipient_qr',
+ 'frt_set_request_filing_status','frt_submit_liquidation_v2','frt_update_request_date_cas',
+ 'apsyntra_crm_platform_role_set','apsyntra_crm_role_manage_user_access',
+ 'apsyntra_role_configuration_propose','update_own_profile'
+]);
 
 export class DomainApi {
  constructor(auth){
@@ -225,7 +256,7 @@ export class DomainApi {
  }
  rpc(name,args={},options={}){
    if(!/^[a-z][a-z0-9_]+$/.test(name))throw new ApiError('Invalid operation.');
-   const mutates=BOARD_MUTATION_RPC.test(name);
+   const mutates=BOARD_MUTATION_RPC.has(name);
    const knownRead=BOARD_READ_RPC.has(name);
    // Unknown calls may mutate: preserve the original fail-closed behavior.
    if(!mutates&&!knownRead)this.invalidateBoardCache();

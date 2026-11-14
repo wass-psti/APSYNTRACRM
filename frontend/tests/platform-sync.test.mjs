@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS}
+import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS}
  from '../platform-sync.js';
 
 const uid='20000000-0000-4000-8000-000000000001';
@@ -120,6 +120,51 @@ test('visibility pause closes socket and returns with fresh signed join',async()
  assert.equal(x.sockets.length,2);
  await x.join(x.sockets[1]);
  assert.equal(x.statuses.at(-1).phase,'synchronized');
+ x.ctl.stop();
+});
+test('visible window focus forces authoritative reconciliation without reconnecting the active socket',async()=>{
+ const x=fake();x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await x.wait();await x.join(x.sockets[0]);
+ const count=x.invalidations.length,socket=x.sockets[0];
+ assert.equal(x.ctl.focusChanged(),true);
+ await x.wait();
+ assert.equal(x.invalidations.length,count+1);
+ assert.equal(x.invalidations.at(-1).reason,'focus');
+ assert.equal(x.sockets.length,1);
+ assert.equal(x.ctl.focusChanged(),false,'duplicate focus events inside cooldown are coalesced');
+ x.advance(SYNC_FOCUS_COOLDOWN_MS);
+ assert.equal(x.ctl.focusChanged(),true);
+ await x.wait();
+ assert.equal(x.invalidations.length,count+2);
+ assert.equal(x.sockets[0],socket);
+ x.setVisible(false);
+ assert.equal(x.ctl.focusChanged(),false,'hidden windows do not issue focus reads');
+ x.setVisible(true);x.setOnline(false);
+ assert.equal(x.ctl.focusChanged(),false,'offline windows do not issue focus reads');
+ x.ctl.stop();
+});
+test('invalidations arriving during a signed reconciliation are queued rather than dropped',async()=>{
+ const x=fake();x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await x.wait();await x.join(x.sockets[0]);
+ let release;
+ const gate=new Promise(resolve=>{release=resolve;});
+ x.ctl.onInvalidate=async event=>{
+  x.invalidations.push(event);
+  if(event.reason==='focus')await gate;
+  return true;
+ };
+ const count=x.invalidations.length;
+ const pending=x.ctl.syncNow('focus',[]);
+ await Promise.resolve();
+ assert.equal(x.ctl.inFlight,true);
+ assert.equal(await x.ctl.syncNow('broadcast',[b1]),false);
+ assert.equal(x.ctl.queuedSync.reason,'broadcast');
+ release();await pending;await x.wait();
+ assert.equal(x.invalidations.length,count+2);
+ assert.equal(x.invalidations[count].reason,'focus');
+ assert.equal(x.invalidations[count+1].reason,'broadcast');
+ assert.deepEqual(x.invalidations.at(-1).boardIds,[b1]);
+ assert.equal(x.ctl.queuedSync,null);
  x.ctl.stop();
 });
 test('token rotation updates private channels in-band without exposing tokens in URLs',async()=>{
