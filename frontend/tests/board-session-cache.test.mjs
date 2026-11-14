@@ -7,7 +7,7 @@ const other='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const workspace='00000000-0000-4000-8000-000000000001';
 const foreign='00000000-0000-4000-8000-000000000002';
 const boardId='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
-const board={board:{id:boardId,workspace_id:workspace},groups:[],members:[],columns:[],items:[],values:[]};
+const board={board:{id:boardId,workspace_id:workspace},groups:[],members:[],columns:[],items:[],values:[],pagination:{page_size:200,has_more:false,next_cursor:null,loaded_count:0,loaded:true}};
 const scope={userId:user,workspaceId:workspace};
 function fixture({reply=()=>board}={}){
  const calls=[];
@@ -101,7 +101,7 @@ test('failed or foreign board responses cannot poison cache',async()=>{
 });
 test('integration requires a signed view check and invalidates across lifecycle boundaries',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(source,/db\.boardCached\(boardId,/);
+ assert.match(source,/db\.boardCachedThrough\(boardId,scope/);
  assert.match(source,/db\.allowed\(boardId,'view'\)/);
  assert.match(source,/onInvalidate:async event=>\{/);
  assert.match(source,/for\(const id of event.boardIds\)db\.invalidateBoardCache\(id\)/);

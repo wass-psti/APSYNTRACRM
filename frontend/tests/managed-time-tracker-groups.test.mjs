@@ -158,8 +158,8 @@ test('only the exact verified redundant empty TimeTracker secondary group is aut
 test('default suppression is scoped to board view, separate from manual browser preferences',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/isRedundantEmptyTimeTrackerGroup\(b,g,groups,items\)/);
- assert.match(app,/const redundantGroups=groups\.filter/);
- assert.match(app,/const hiddenGroups=groups\.filter\(g=>!redundantGroups\.includes\(g\)/);
+ assert.match(app,/const redundantGroups=state\.board\?\.pagination\?\.loaded!==true\|\|state\.board\?\.pagination\?\.has_more===true\?\[\]:groups\.filter/);
+ assert.match(app,/const hiddenGroups=state\.board\?\.pagination\?\.loaded!==true\|\|state\.board\?\.pagination\?\.has_more===true\?\[\]:groups\.filter/);
  assert.match(app,/const shownGroups=groups\.filter\(g=>\s*!hiddenGroups\.includes\(g\)&&!redundantGroups\.includes\(g\)\)/);
  assert.match(app,/shownGroups\.map\(g=>/);
  assert.match(app,/renderTimeTrackerMainGroup\(/);
@@ -168,7 +168,7 @@ test('default suppression is scoped to board view, separate from manual browser 
  assert.equal(MANAGED_TT_GROUP_DELETE_ENABLED,false);
  assert.match(readFileSync('scripts/pages-smoke.mjs','utf8'),
   /'frontend\/managed-time-tracker-groups\.js'/);
- const begin=app.indexOf('const redundantGroups=groups.filter');
+ const begin=app.indexOf('const redundantGroups=state.board?.pagination?.loaded!==true||state.board?.pagination?.has_more===true?[]:groups.filter');
  const end=app.indexOf('const moduleKey=',begin);
  assert.ok(begin>=0&&end>begin);
  assert.doesNotMatch(app.slice(begin,end),/\.delete\(/);

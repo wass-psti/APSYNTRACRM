@@ -20,7 +20,7 @@ import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
-import {DomainApi,validUuid} from './data.js';
+import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
 import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
@@ -39,7 +39,7 @@ import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
-import {boardGrid,boardItemsComplete,boardGridColumns,prepareBoardGrid} from './board-grid.js';
+import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-application.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
@@ -106,6 +106,7 @@ import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColu
 import {planBoardColumnRemoval} from './board-column-removal-plan.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board-window.js';
+import {mountBoardPagination,renderBoardPagination} from './board-pagination-ui.js';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
@@ -239,7 +240,7 @@ const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
-const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,issues:[],edit:false,boardManage:false,
+const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
   view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
@@ -741,9 +742,9 @@ function groupRows(items,allowEdit,layout=null,groupId='ungrouped',primaryTitle=
  return boardTable({columns,rows,layout,groupId,
   empty:'No items in this group yet',selection:{enabled:true,selected:itemSelection.ids},
   footer:renderGroupAddRow({groupId,enabled:writable,busy:state.inlineAddBusy}),
-  summaries:groupColumnSummaries({items,columns,detail}),
+  summaries:detail?.pagination?.loaded!==true||detail?.pagination?.has_more===true?null:groupColumnSummaries({items,columns,detail}),
   addColumn:minimal&&state.boardManage,minimal,
-  virtualize:boardItemsComplete(detail),primaryEditable});
+  virtualize:true,primaryEditable});
 }
 
 function bulkReadyFor(board){
@@ -805,7 +806,7 @@ function canRequestBulk(board){
 }
 function groupHeading(group,count){
  const id=e(group.id),editing=state.groupEditId===group.id;
- const managedEmpty=canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
+ const managedEmpty=state.board?.pagination?.loaded===true&&state.board?.pagination?.has_more!==true&&canSafelyHideEmptyTimeTrackerGroup(state.board?.board,group,
   state.board?.groups||[],state.board?.items||[]);
  const managedDelete=managedEmpty&&MANAGED_TT_GROUP_DELETE_ENABLED&&state.boardManage;
  const ordinaryDelete=state.boardManage&&state.board?.groups?.length>1&&
@@ -825,7 +826,7 @@ function groupHeading(group,count){
   '</form></div>';
  return '<div class="group-heading" data-group-id="'+id+'"><h3>'+displayTitle+'</h3>'+
   (fuelTrackEditable?'<button type="button" class="board-group-rename-trigger" data-action="group-inline-edit" data-id="'+id+'" aria-label="Edit name inline for '+displayTitle+'" title="Edit name inline">✎ <span>Edit name</span></button>':'')+
-  '<small>'+count+' items</small>'+
+  (state.board?.pagination?.loaded===true?'<small>'+count+(state.board.pagination.has_more===true?' loaded':'')+' items</small>':'')+
   (state.edit?'<details class="board-group-actions"><summary aria-label="Actions for '+displayTitle+
    '" title="Group actions">⋮</summary><div class="board-group-actions-list">'+
    '<button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
@@ -903,9 +904,9 @@ function boardPage(){
  // The exact, verified empty TimeTracker secondary group is omitted for all
  // signed viewers, without any DB mutation or browser-local preference.
  // Populated, renamed or archived-item-bearing groups are never suppressed.
- const redundantGroups=groups.filter(g=>
+ const redundantGroups=state.board?.pagination?.loaded!==true||state.board?.pagination?.has_more===true?[]:groups.filter(g=>
   isRedundantEmptyTimeTrackerGroup(b,g,groups,items));
- const hiddenGroups=groups.filter(g=>!redundantGroups.includes(g)&&hiddenIds.has(g.id)&&
+ const hiddenGroups=state.board?.pagination?.loaded!==true||state.board?.pagination?.has_more===true?[]:groups.filter(g=>!redundantGroups.includes(g)&&hiddenIds.has(g.id)&&
   canSafelyHideEmptyTimeTrackerGroup(b,g,groups,items));
  const shownGroups=groups.filter(g=>
   !hiddenGroups.includes(g)&&!redundantGroups.includes(g));
@@ -919,7 +920,7 @@ function boardPage(){
  const tabSpecs=[
   ...(isMaterialTrackerBoard(state.board)?[{key:'sourcing',href:'#/boards/'+b.id+'/sourcing',label:'◇ Material Tracker'}]:[]),
   {key:'items',href:'#/boards/'+b.id+(moduleKey==='fueltrans'?'/items':moduleKey==='timetracker'?'/items':''),
-    label:'▤ Board items <span class="csp-u060">('+items.length+')</span>'},
+    label:'▤ Board items'+(state.board.pagination?.loaded===true?' <span class="csp-u060">('+items.length+(state.board.pagination?.has_more?'+':'')+')</span>':'')},
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
   ...(isFuelTrackV3ApplicationBoard(b)?[{key:'fueltrack',href:fuelTrackHref('dashboard'),label:'◈ FuelTrack+ v3 app'}]:[]),
@@ -1001,9 +1002,9 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
    workspaceId:state.context?.workspace_id,boardId:b.id,
    primaryTitle:state.boardUi?.status==='VERIFIED_READ'&&state.boardUi.revision>0?
     primaryTitle:'Employee',primaryEditable}):
-  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable,footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+' records'}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable)}`).join(''):
+  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable,footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+(state.board.pagination?.has_more?' loaded':' records')}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
- ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}</div>`;
+ ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}${state.tab==='items'?renderBoardPagination(state.board.pagination,{busy:state.boardPageBusy,error:state.boardPageError}):''}</div>`;
 }
 function settingsPage(){
  const p=state.context.profile;
@@ -1107,6 +1108,7 @@ function render(){
      state.boardId!==MATERIAL_SOURCING_BOARD_ID||
      state.context?.user_id!==modal.dataset.mrhActor||
      state.context?.workspace_id!==modal.dataset.mrhWorkspace))hideModal();
+ disposeBoardPagination?.();disposeBoardPagination=null;
  resetBoardWindows();
  const filterScope=[state.context?.user_id,state.context?.workspace_id,state.boardId].join('|');
  if(filterScope!==boardItemFilterScope){
@@ -1162,6 +1164,7 @@ function render(){
   mountBoardWindows(root,syncBoardSelectionUi);
   applyBoardItemFilter(state.boardItemSearch);
   syncBoardSelectionUi();
+  mountBoardPaginationUi();
  }
  if(state.context&&auth.isSignedIn)platformSync.start({
   userId:state.context.user_id,workspaceId:state.context.workspace_id,
@@ -1513,7 +1516,9 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   let detail,edit,manage,boardUi;
   try{
    [detail,edit,manage,boardUi]=await Promise.all([
-    db.board(boardId),db.allowed(boardId,'edit'),db.allowed(boardId,'manage'),
+    readVisibleBoardSnapshot(boardId,tab,{
+     itemCount:state.board?.items?.length||BOARD_ITEM_PAGE_SIZE
+    }),db.allowed(boardId,'edit'),db.allowed(boardId,'manage'),
     boardStructureClient.read(boardId)
    ]);
   }catch(error){
@@ -1750,6 +1755,25 @@ async function refreshFoundation(){
 }
 let visibleBoardRefreshSerial=0;
 let pendingBoardContent=null;
+let disposeBoardPagination=null;
+// Generic item views hydrate progressively. These domain workspaces currently
+// compute cross-row summaries or reference validation from the complete board;
+// other module tabs need only the signed board shell and must not fetch item rows.
+async function readVisibleBoardSnapshot(boardId,tab,{itemCount=BOARD_ITEM_PAGE_SIZE}={}){
+ const scope={userId:state.context?.user_id,workspaceId:state.context?.workspace_id};
+ if(['attendance','finance','fueltrans','issues'].includes(tab))
+  return db.boardCached(boardId,{...scope,includeItems:false});
+ return db.boardCachedThrough(boardId,scope,{
+  itemCount:['sourcing','fueltrack','tradelink'].includes(tab)?
+   Infinity:Math.max(BOARD_ITEM_PAGE_SIZE,itemCount||0)
+ });
+}
+function mountBoardPaginationUi(){
+ disposeBoardPagination?.();disposeBoardPagination=null;
+ if(state.view==='board'&&state.tab==='items'&&state.board?.pagination?.has_more===true&&
+    !state.boardPageBusy&&!state.boardPageError)
+  disposeBoardPagination=mountBoardPagination(root,()=>loadMoreBoardItems());
+}
 function deferVisibleBoardContent(){
  if(!state.board||!['items','sourcing'].includes(state.tab))return;
  pendingBoardContent={boardId:state.boardId,tab:state.tab,
@@ -1783,6 +1807,7 @@ function flushVisibleBoardContent({afterLocalSave=false}={}){
     mountBoardWindows(root,syncBoardSelectionUi);
     applyBoardItemFilter(state.boardItemSearch);
     syncBoardSelectionUi();
+    mountBoardPaginationUi();
    }
   }
  });
@@ -1801,7 +1826,9 @@ async function refreshVisibleBoard(boardId,tab){
   state.context?.workspace_id===workspace;
  try{
   const [detail,view,edit,manage,boardUi]=await Promise.all([
-   db.board(boardId),db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
+   readVisibleBoardSnapshot(boardId,tab,{
+    itemCount:state.board?.items?.length||BOARD_ITEM_PAGE_SIZE
+   }),db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
    db.allowed(boardId,'manage'),boardStructureClient.read(boardId)
   ]);
   if(!current())return false;
@@ -1813,7 +1840,7 @@ async function refreshVisibleBoard(boardId,tab){
   const changed=JSON.stringify(state.board)!==JSON.stringify(detail)||
    JSON.stringify(state.boardUi)!==JSON.stringify(boardUi)||
    state.edit!==edit||state.boardManage!==manage;
-  state.board=detail;state.boardUi=boardUi;state.edit=edit;state.boardManage=manage;
+  state.board=detail;state.boardUi=boardUi;state.edit=edit;state.boardManage=manage;state.boardPageError='';
   if(changed)deferVisibleBoardContent();
   return true;
  }catch(error){
@@ -1825,6 +1852,60 @@ async function refreshVisibleBoard(boardId,tab){
   // A temporary network failure must not clear an already rendered board.
   toast('Board sync could not complete. Your board remains available; retry Refresh.',true);
   return false;
+ }
+}
+async function loadMoreBoardItems(){
+ if(state.boardPageBusy||state.view!=='board'||state.tab!=='items'||
+    state.board?.pagination?.has_more!==true||!auth.isSignedIn)return false;
+ const restoreLoadMoreFocus=document.activeElement?.dataset?.action==='board-load-more';
+ const snapshot={
+  boardId:state.boardId,userId:state.context?.user_id,
+  workspaceId:state.context?.workspace_id,route:routeSerial,
+  loadedCount:state.board.items.length
+ };
+ const current=()=>auth.isSignedIn&&auth.userId===snapshot.userId&&
+  state.context?.user_id===snapshot.userId&&
+  state.context?.workspace_id===snapshot.workspaceId&&
+  state.view==='board'&&state.tab==='items'&&state.boardId===snapshot.boardId&&
+  state.board?.board?.id===snapshot.boardId&&
+  routeSerial===snapshot.route;
+ state.boardPageBusy=true;state.boardPageError='';
+ deferVisibleBoardContent();
+ try{
+  // Rebuild only pages already viewed if the short-lived cache expired.
+  let detail=await db.boardCachedThrough(snapshot.boardId,{
+   userId:snapshot.userId,workspaceId:snapshot.workspaceId
+  },{itemCount:snapshot.loadedCount});
+  if(!current())return false;
+  if(detail.pagination?.has_more!==true){
+   state.board=detail;
+   return true;
+  }
+  detail=await db.boardNextPage(snapshot.boardId,{
+   userId:snapshot.userId,workspaceId:snapshot.workspaceId
+  });
+  if(!current())return false;
+  state.board=detail;
+  return true;
+ }catch(error){
+  if(!current())return false;
+  if([401,403,404].includes(Number(error?.status))||error?.code==='42501'){
+   state.board=null;state.boardUi=null;state.edit=false;state.boardManage=false;
+   location.hash='#/boards';
+   return false;
+  }
+  state.boardPageError=errorMessage(error);
+  return false;
+ }finally{
+  if(current()){
+   state.boardPageBusy=false;
+   deferVisibleBoardContent();
+   if(restoreLoadMoreFocus){
+    const target=root.querySelector('[data-action="board-load-more"]')||
+     root.querySelector('.board-pagination-status');
+    target?.focus?.({preventScroll:true});
+   }
+  }
  }
 }
 async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
@@ -1890,11 +1971,11 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
    await loadTradeLinkDrafts(seq);
   return;
  }
- state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.frtFinanceView='tracker';state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
+ state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true;state.board=null;state.boardUi=null;state.boardPageBusy=false;state.boardPageError='';state.boardManage=false;state.error=null;state.issues=[];state.tradeLinkActivity=null;state.tradeLinkActivityError='';state.tradeLinkActivityBusy=false;state.frtFinanceView='tracker';state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;
  render();
  try{
    const [detail,view,edit,manage,boardUi]=await Promise.all([
-    db.boardCached(boardId,{userId:state.context?.user_id,workspaceId:state.context?.workspace_id}),
+    readVisibleBoardSnapshot(boardId,tab),
     db.allowed(boardId,'view'),db.allowed(boardId,'edit'),
     db.allowed(boardId,'manage'),boardStructureClient.read(boardId)]);
    if(!view)throw new ApiError('Board view access changed.',403);
@@ -6246,7 +6327,8 @@ async function action(name,button){
    }
    break;
   }
-  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
+  case 'board-load-more':{await loadMoreBoardItems();break;}
+ case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'tt-clock-verify':{await verifyTimeTrackerClockOut();break;}
  case 'tt-refresh':{if(!state.ttBusy){const team=state.ttView==='team',gps=state.ttView==='gps',log=state.ttView==='log';await loadTimeTracker();if(team&&state.roleVerified===true&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerTeam();if(gps&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerGps();if(log&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerLogGps();}break;}
  case 'tt-tab':{
@@ -7744,7 +7826,8 @@ case 'bulk-archive':{
  await applySelectedBulk('archive');break;
 }
 case 'group-hide-empty':{
- if(!activeBoardLayout()||!isManagedTimeTrackerBoard(state.board?.board))return;
+ if(!activeBoardLayout()||!isManagedTimeTrackerBoard(state.board?.board)||
+    state.board?.pagination?.loaded!==true||state.board?.pagination?.has_more===true)return;
  const group=state.board.groups?.find(g=>g.id===button.dataset.id);
  if(!canSafelyHideEmptyTimeTrackerGroup(state.board.board,group,
      state.board.groups,state.board.items))return;
@@ -7759,7 +7842,8 @@ case 'group-show-hidden':{
  break;
 }
 case 'managed-group-delete-empty':{
- if(!MANAGED_TT_GROUP_DELETE_ENABLED||!state.boardManage||!activeBoardLayout())return;
+ if(!MANAGED_TT_GROUP_DELETE_ENABLED||!state.boardManage||!activeBoardLayout()||
+    state.board?.pagination?.loaded!==true||state.board?.pagination?.has_more===true)return;
  const board=state.board.board,group=state.board.groups?.find(g=>g.id===button.dataset.id);
  if(!canSafelyHideEmptyTimeTrackerGroup(board,group,state.board.groups,state.board.items))return;
  const confirmTitle=window.prompt('Protected TimeTracker board: permanently remove the empty nonprimary group "'+group.title+'"? Type DELETE '+group.title+' to confirm:');
