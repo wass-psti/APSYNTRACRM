@@ -1,11 +1,11 @@
 # CP-DB-CPU-11 — Query-Level CPU Attribution Feasibility, Instrumentation Cost Review, and Importer Contention Decision
 
-**Date:** 2026-11-14  
-**Status:** IMPLEMENTED-UNVERIFIED — live read-only database and log inspection completed; five SQL diagnostics executed successfully. Node regression tests remain unexecuted because Desktop Commander has no connected device. The existing frontend workflow does not trigger on pull requests and its push-branch allowlist excludes this CP-11 branch, so no GitHub Actions run was created.  
-**Repository:** `wass-psti/APSYNTRACRM`  
-**Supabase project:** `jtlusodorfnyzgyuewkz` (existing project only)  
-**Database:** PostgreSQL 17.6  
-**Branch:** `perf/cp-db-cpu-11-attribution-feasibility`
+- **Date:** 2026-11-14
+- **Status:** VERIFIED — focused CP-11 regression 5/5 passed; complete frontend suite 2,259/2,259 passed on the MacBook Pro; GitHub Actions run 43604817834 completed with all five executed jobs successful.
+- **Repository:** `wass-psti/APSYNTRACRM`
+- **Supabase project:** `jtlusodorfnyzgyuewkz` (existing project only)
+- **Database:** PostgreSQL 17.6
+- **Branch:** `perf/cp-db-cpu-11-attribution-feasibility`
 
 ## 1. Scope and guardrails
 
@@ -171,7 +171,7 @@ No importer-specific lock wait, deadlock, or current contention was demonstrated
 | Function-statistics suitability | VERIFIED | Current track_functions=none; returned counters are not current-interval evidence |
 | Importer contention assessment | VERIFIED | No blocked pairs or deadlocks; CP-10 bounded samples remain healthy |
 | Production schema/configuration/extension changes | NOT APPLICABLE | None performed |
-| Repository tests and CI | PENDING | Desktop Commander device disconnected; PR CI not yet executed |
+| Repository tests and CI | VERIFIED | Node 22.23.4 focused test 5/5; full frontend suite 2,259/2,259; GitHub Actions run 43604817834: five executed jobs successful; main-only live-pages job skipped as expected on feature branch |
 
 ## 8. Final engineering decision
 
@@ -189,8 +189,19 @@ The correct outcome is to retain the current database configuration and importer
 - Supabase [Correlated Logs, November 10, 2026](https://supabase.com/changelog/53230-correlated-logs) — requestId, traceId, and userId navigation in Studio.
 - Percona [pg_stat_monitor](https://github.com/percona/pg_stat_monitor) — startup preload and shared-memory requirement.
 
-## 10. Next step
+## 10. Final acceptance decision
 
-If the repository tests and CI pass, CP-DB-CPU-11 can close with direct per-query CPU attribution explicitly documented as a platform/instrumentation limitation, not an application defect.
+**CP-DB-CPU-11 is VERIFIED and complete.** Direct per-query CPU attribution remains a platform/instrumentation limitation, not an application defect. Final verification does not justify additional production instrumentation or importer changes.
 
 Do not automatically create CP-DB-CPU-12. Only propose another priority if a new, measurable issue appears or the user explicitly requests additional instrumentation work.
+
+## 11. Final acceptance evidence
+
+- Exact PR head commit verified locally: `f0f529c0e9775dafa1e9f2a44e65112af9981804`.
+- MacBook Pro arm64, Node.js `22.23.4`.
+- Focused CP-DB-CPU-11 regression: **5 passed, 0 failed**.
+- Complete `frontend/tests/*.test.mjs` suite: **2,259 passed, 0 failed, 0 skipped**.
+- Existing GitHub Actions workflow run `43604817834`: **5 executed jobs passed** (frontend, disposable PostgreSQL, disposable Toolbox PostgreSQL, disposable Collaboration PostgreSQL, and disposable OT PostgreSQL). The main-only live Pages job was skipped by its existing branch condition.
+- Git diff whitespace validation passed after this report reconciliation.
+- PR #393 had a clean merge state, no submitted review requirement, and the main branch reported unprotected; repository rulesets endpoint returned an empty list.
+- No production database schema, data, settings, extension, grants, roles, permissions, or RLS policies were changed.
