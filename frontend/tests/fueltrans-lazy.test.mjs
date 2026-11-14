@@ -53,7 +53,9 @@ test('embedded FuelTrans refresh preserves active editing and disposes its refre
  assert.match(native,/root\.dispatchEvent\(new Event\('apsyntra:refresh'\)\)/);
  assert.match(app,/root\.addEventListener\('apsyntra:refresh',refreshFromHost\)/);
  assert.match(app,/focused\?\.matches\?\.\('input,textarea,select,\[contenteditable="true"\]'\)/);
- assert.match(app,/control\.value!==control\.defaultValue/);
+ assert.match(app,/dirtyControlTracker\.hasDirtyControls\(\)/);
+ assert.doesNotMatch(app,/control\.value!==control\.defaultValue/);
+ assert.match(app,/dirtyControlTracker\.dispose\(\)/);
  assert.match(app,/removeEventListener\('apsyntra:refresh',refreshFromHost\)/);
  assert.match(client,/if\(method!=='GET'&&parsed\.pathname\.startsWith\('\/rest\/v1\/'\)/);
 });

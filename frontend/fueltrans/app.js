@@ -21,6 +21,7 @@ import {callTicketDeletionRpc} from './supabase-client.js';
 import {bulkDelete,recoveryPage} from './ticket-bulk24.js';
 import {projectRecovery25,permanentDelete25} from './recovery25.js';
 import {REFRESH_OPTIONS25,DEFAULT_REFRESH25,normalizeRefresh25,canAutoRefresh25,refreshLabel25,AUTO_ROUTES25} from './refresh-policy25.js';
+import {createDirtyControlTracker} from './refresh-guard.js';
 import {STATUS,CLIENTS,PRIORITIES,pageSize,escapeHTML as h,permitted,clientForMembership,canCreate,canChangeStatus,titleOf,statusOf,priorityOf,friendlyTime,validateTicketForm,createTicketRecord,buildTicketQuery,parseTotal,csvQuote} from './ticket-domain.js';
 /** Mounted into the CRM board; all state and timers die with this view. */
 export function mountFuelTrans(root,host){
@@ -74,14 +75,12 @@ function trackedTime(ticket,field){const id=String(ticket.id);visibleTimerTicket
 function refreshVisibleTimers(){for(const el of document.querySelectorAll('[data-ticket-timer]')){const t=visibleTimerTickets.get(el.dataset.ticketTimer);if(t){const field=el.dataset.timerField;el.textContent=formatDuration(projectTicketTimers(t)[field]?.ms);}}}
 // One display-only heartbeat; no network calls and no mutation of persisted clock values.
 const heartbeat=setInterval(()=>{if(!document.hidden&&!disposed)refreshVisibleTimers();},30000);
+const dirtyControlTracker=createDirtyControlTracker(root);
 const refreshFromHost=()=>{
  if(disposed||!state.active||state.busy)return;
  const focused=root.getRootNode()?.activeElement;
- const changedControl=[...root.querySelectorAll('input,textarea,select')].some(control=>{
-  if(control.type==='checkbox'||control.type==='radio')return control.checked!==control.defaultChecked;
-  return control.value!==control.defaultValue;
- });
- if(focused?.matches?.('input,textarea,select,[contenteditable="true"]')||changedControl)return;
+ if(focused?.matches?.('input,textarea,select,[contenteditable="true"]')||
+    dirtyControlTracker.hasDirtyControls())return;
  void go(state.route,{preserveNotice:true});
 };
 root.addEventListener('apsyntra:refresh',refreshFromHost);
@@ -629,6 +628,6 @@ async function sharedIssueQueue(revision){
 }
 function routeChanged(){if(state.active){let route=currentHash();if(!allowRoute(route)){location.hash='dashboard';return;}const notice=postCreateNotice;postCreateNotice=null;if(notice&&route===`ticket/${notice.ticketId}`){state.notice=notice.message;go(route,{preserveNotice:true});}else go(route);}}
 bootstrap();
-return ()=>{disposed=true;root.removeEventListener('apsyntra:refresh',refreshFromHost);++viewRevision;state.active=null;clearInterval(heartbeat);clearTimeout(autoRefreshHandle25);root.replaceChildren();};
+return ()=>{disposed=true;root.removeEventListener('apsyntra:refresh',refreshFromHost);dirtyControlTracker.dispose();++viewRevision;state.active=null;clearInterval(heartbeat);clearTimeout(autoRefreshHandle25);root.replaceChildren();};
 }
 
