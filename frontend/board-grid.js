@@ -8,6 +8,7 @@ import {configuredStatus} from './board-inline-items.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function boardItemsComplete(detail){
  const paging=detail?.pagination||detail?.page||{};
+ if(paging.loaded===false)return false;
  if(detail?.has_more===true||paging.has_more===true||
     detail?.next_cursor||paging.next_cursor||paging.nextCursor)return false;
  const total=detail?.total_count??paging.total_count??paging.total;
@@ -88,7 +89,7 @@ export function boardGrid(detail,{groupId=null,layout=null,primaryTitle=null,col
  });
  let html=boardTable({columns,rows,layout,groupId:groupId||'ungrouped',
   empty:'No items in this group yet',selection,footer,summaries,
-  virtualize:boardItemsComplete(detail),primaryEditable});
+  virtualize:true,primaryEditable});
  // Internal data-flow details belong in administrator diagnostics, not the board UI.
  return html;
 }

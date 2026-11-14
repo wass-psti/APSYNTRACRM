@@ -26,7 +26,7 @@ test('visible fragment replacement fails safely without an established host or v
 test('live refresh keeps the board and editing context while signed server reads execute',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const refresh=app.slice(app.indexOf('async function refreshVisibleBoard('),app.indexOf('async function loadBoard('));
- assert.match(refresh,/db\.board\(boardId\)/);
+ assert.match(refresh,/readVisibleBoardSnapshot\(boardId,tab/);
  assert.match(refresh,/db\.allowed\(boardId,'view'\)/);
  assert.match(refresh,/db\.allowed\(boardId,'edit'\)/);
  assert.match(refresh,/db\.allowed\(boardId,'manage'\)/);

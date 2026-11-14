@@ -2560,6 +2560,27 @@
 #app .tt-ot-request[hidden],
 #app .tt-ot-empty[hidden] { display:none !important; }
 
+/* Demand-driven board pagination: lightweight status, manual fallback and near-end sentinel. */
+#app .board-pagination{
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:9px;min-height:58px;padding:18px 12px 26px;text-align:center
+}
+#app .board-pagination-status{
+ margin:0;color:var(--muted,#718096);font-size:12px;font-weight:550
+}
+#app .board-pagination-error{
+ margin:0;color:var(--danger,#b42336);font-size:12px
+}
+#app .board-pagination .board-load-more{
+ min-width:164px;min-height:38px
+}
+#app .board-pagination .board-load-more:disabled{
+ cursor:wait;opacity:.72
+}
+#app .board-pagination-sentinel{
+ width:100%;height:1px;pointer-events:none
+}
+
 /* frontend/auth-experience.css */
 /* APSYNTRA CRM / AUTH02 — intentionally scoped to the login route.
    No inline style attributes, CSSOM injection, font downloads or route-wide overrides. */
