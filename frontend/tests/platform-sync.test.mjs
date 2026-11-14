@@ -196,3 +196,21 @@ test('frontend integration preserves signed state, edits and background-independ
  assert.match(css,/\.aps-sync-orbit/);
  assert.doesNotMatch(css,/WebGL|canvas|will-change/);
 });
+
+test('bulk import summary broadcast invalidates the authorized board once',async()=>{
+ const x=fake();
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1,b2]});
+ await x.wait();
+ await x.join(x.sockets[0]);
+ const n=x.invalidations.length;
+ x.sockets[0].emit([null,null,'realtime:board:'+b1,'broadcast',{
+  event:'board-change',
+  payload:{board_id:b1,entity:'board',entity_id:b1,item_id:null,
+   action:'BULK_IMPORT',actor_id:uid,change_count:1500}
+ }]);
+ await x.flush(250);
+ assert.equal(x.invalidations.length,n+1);
+ assert.deepEqual(x.invalidations.at(-1).boardIds,[b1]);
+ assert.equal(x.invalidations.at(-1).reason,'broadcast');
+ x.ctl.stop();
+});
