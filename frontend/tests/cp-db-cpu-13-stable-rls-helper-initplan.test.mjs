@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const migration = readFileSync(
-  'supabase/migrations/20261114153218_cp_db_cpu_13_stable_rls_helper_initplan_optimization.sql',
+  'supabase/migrations/20261114154136_cp_db_cpu_13_stable_rls_helper_initplan_optimization.sql',
   'utf8'
 );
 const executable = migration.split('\n').filter(line => !line.trimStart().startsWith('--')).join('\n');

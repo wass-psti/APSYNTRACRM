@@ -1,10 +1,12 @@
 # CP-DB-CPU-13 — Stable RLS Authorization Helper Initplan Optimization
 
 **Date:** 2026-11-14
-**Status:** IMPLEMENTED-UNVERIFIED — migration and tests are implemented; disposable PostgreSQL 17 acceptance passed. Production activation and signed-user runtime regression are pending.
+**Status:** IMPLEMENTED-UNVERIFIED — production migration applied; 13/13 live policy checks passed and the Performance Advisor initplan finding count remains zero. Post-activation scan-rate and signed-user runtime regression are pending.
 **Repository:** `wass-psti/APSYNTRACRM`
 **Base commit:** `d0f36120c231e2b0f0134c134d09522e256fc99a`
-**Branch:** `perf/cp-db-cpu-13-stable-rls-helper-initplans`
+**Merged commit:** `5eaa279eef7c16d5cb18c1623e1c5e8a46210629`
+**Remote migration history version:** `20261114154136`
+**Migration history name:** `cp_db_cpu_13_stable_rls_helper_initplan_optimization`
 
 ## 1. Objective
 
@@ -29,7 +31,7 @@ These counters are evidence of very frequent table scans, not proof that a singl
 
 ## 3. Exact scope
 
-Migration: `supabase/migrations/20261114153218_cp_db_cpu_13_stable_rls_helper_initplan_optimization.sql`
+Migration: `supabase/migrations/20261114154136_cp_db_cpu_13_stable_rls_helper_initplan_optimization.sql`
 
 Exactly 13 existing policies are altered:
 - Five Huly document/event policies.
@@ -62,6 +64,16 @@ Row-dependent `work_board_access(board_id, ...)` remains unchanged and is not ho
 - All 13 policy identities, roles, commands, permissive modes, and USING/WITH CHECK presence remained unchanged.
 - Transaction rolled back; no fixture data retained.
 
+### Production activation verification
+
+- Supabase migration API applied the migration to the existing project `jtlusodorfnyzgyuewkz`.
+- Remote migration history: version `20261114154136`, name `cp_db_cpu_13_stable_rls_helper_initplan_optimization`; repository filename is synchronized to this version.
+- Read-only live verifier: **13 expected / 13 passing / 0 mismatches**.
+- Live helper wrapper counts: **13** `current_workspace_id`, **7** `has_module_access`, **6** `is_platform_admin`.
+- Performance Advisor `auth_rls_initplan` findings remain **0** after CP-DB-CPU-12 and CP-DB-CPU-13.
+- The cumulative table scan counters have not yet been converted into a post-activation rate comparison; no CPU reduction is claimed.
+- Signed-user functional allow/deny regression remains pending.
+
 ## 6. Acceptance status
 
 | Requirement | Status | Evidence |
@@ -72,8 +84,11 @@ Row-dependent `work_board_access(board_id, ...)` remains unchanged and is not ho
 | Static regression | VERIFIED | 5/5 passed |
 | PostgreSQL 17 syntax/application | VERIFIED | Disposable fixture |
 | Predicate equivalence | VERIFIED | Normalized pre/post USING and WITH CHECK comparison |
-| Production migration | PENDING | Not applied |
-| Post-activation scan-rate and CPU comparison | PENDING | Capture same counters after representative signed traffic |
+| Production migration | VERIFIED | Supabase migration history version `20261114154136`; name `cp_db_cpu_13_stable_rls_helper_initplan_optimization` |
+| Post-activation policy inventory | VERIFIED | 13/13 policies; 0 mismatches |
+| Post-activation stable-helper wrappers | VERIFIED | 13 workspace, 7 module-access, 6 platform-admin wrappers |
+| Performance Advisor initplan findings | VERIFIED | Remain at 0 |
+| Post-activation scan-rate and CPU comparison | PENDING | Requires comparable signed traffic and a rate-based measurement window |
 | Signed-user allow/deny regression | PENDING | Requires an authenticated CRM application session |
 
-**Decision:** Ready for controlled activation after CI. Do not declare CPU reduction until post-activation scan-rate and runtime measurements are collected under comparable signed-user traffic.
+**Decision:** CP-DB-CPU-13 is active in the existing Supabase project. Policy metadata and stable-helper wrappers are verified, but CPU reduction is not yet proven. Keep the increment IMPLEMENTED-UNVERIFIED until post-activation scan-rate comparison and signed-user allow/deny regression are complete.
