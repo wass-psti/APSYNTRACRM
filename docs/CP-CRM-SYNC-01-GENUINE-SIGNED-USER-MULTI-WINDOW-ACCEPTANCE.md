@@ -1,13 +1,15 @@
 # CP-CRM-SYNC-01 — Genuine Signed-User Multi-Window Synchronization, Live Mutation Propagation, and Cache-Coherence Acceptance
 
 **Date:** 2026-11-15
-**Status:** DEPLOYED WITH FOLLOW-UP FIX — original synchronization implementation is live; a subsequent FuelTrans dirty-control refresh defect has been corrected and is awaiting its own deployment. Same-identity live multi-window and production-write acceptance remain pending.
+**Status:** DEPLOYED — original synchronization implementation and FuelTrans dirty-control follow-up are live. Frontend regression, Chromium module-entry validation, GitHub Pages deployment, and live asset integrity pass. Same-identity live multi-window and production-write acceptance remain pending.
 **Repository:** `wass-psti/APSYNTRACRM`
 **Supabase project:** `jtlusodorfnyzgyuewkz` (existing project only)
 **Base commit:** `fb351f488a26d9d23c4bd2c82cb6e5fa07e97387`
 **Implementation PR:** [#400](https://github.com/wass-psti/APSYNTRACRM/pull/400)
 **Implementation main commit:** `4c86519c48333ed9026504af0160226ba2c1ef16`
 **Deployment evidence PR:** [#401](https://github.com/wass-psti/APSYNTRACRM/pull/401)
+**FuelTrans follow-up PR:** [#402](https://github.com/wass-psti/APSYNTRACRM/pull/402)
+**Current main commit:** `e2d1a72d43fe20c9025a4ccdaa268016ff0b8a79`
 **Branch:** `feat/cp-crm-sync-01-genuine-multi-window`
 
 ## 1. Scope and guardrails
@@ -173,7 +175,15 @@ No production board item, document, profile, role, membership, or workspace reco
 
 ### 5.5 Post-merge FuelTrans guard follow-up
 
-The event-based dirty-control correction is implemented on branch `fix/cp-crm-sync-01-fueltrans-dirty-control`. Its focused tests and full frontend regression suite pass (**2,285/2,285**). It is not yet deployed in this report revision; deployment status must be updated after its pull request and Pages workflow complete.
+The event-based dirty-control correction was merged by PR #402 as main commit `e2d1a72d43fe20c9025a4ccdaa268016ff0b8a79`.
+
+- `APSYNTRA CRM Frontend Validation` run `43647693445`: **PASS**, including frontend contracts, shipped JavaScript syntax, disposable PostgreSQL checks, and `live-pages` source-to-CDN verification.
+- `APSYNTRA Priority 5F Module Entry and Chromium Acceptance` run `43647693509`: **PASS**.
+- GitHub Pages deployment run `43647692909`: **SUCCESS**.
+- `EXPECTED_DEPLOY_SHA=e2d1a72d43fe20c9025a4ccdaa268016ff0b8a79 node scripts/pages-smoke.mjs`: **PASS** for live index, static assets, signed Auth endpoint reachability, and anonymous native-Issue endpoint denial.
+- The deployed `frontend/fueltrans/refresh-guard.js` SHA-256 exactly matches the local main-commit file: `8d4264143de170a5b65898b2c44de3cff216aba99c5a448053d7a0927e43de10`.
+- The deployed FuelTrans application imports `./refresh-guard.js`.
+- Full frontend suite after the follow-up: **2,285/2,285 passed**.
 
 ### 5.6 Remaining production acceptance
 
@@ -186,7 +196,7 @@ The event-based dirty-control correction is implemented on branch `fix/cp-crm-sy
 **Original implementation status:** VERIFIED locally, in CI, and in the synthetic Chromium fixture.
 **Original production deployment status:** VERIFIED — main commit `4c86519c48333ed9026504af0160226ba2c1ef16`.
 **Live signed single-window focus-return:** VERIFIED — fresh authoritative signed reads observed after window focus returned.
-**FuelTrans select dirty-control follow-up:** IMPLEMENTED-UNVERIFIED IN PRODUCTION — 2,285 tests pass; follow-up deployment pending.
+**FuelTrans select dirty-control follow-up:** VERIFIED — PR #402 merged and deployed; 2,285 tests pass; Pages source-to-CDN and exact asset hash checks pass.
 **Same-user signed multi-window production acceptance:** PENDING — second window must independently authenticate as the same user; no session token sharing was added.
 **Production mutation propagation:** PENDING — no production record writes were performed without separate authorization.
 
