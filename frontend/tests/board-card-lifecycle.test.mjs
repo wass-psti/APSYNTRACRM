@@ -270,3 +270,20 @@ test('second stale response is surfaced without an unbounded retry loop',async()
   error=>error.code==='40001');
  assert.equal(attempts,2);
 });
+
+
+test('stale board lifecycle conflicts disable modal resubmission until the board is reopened',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const modal=app.slice(app.indexOf('function openModal('),app.indexOf('const input=('));
+ assert.match(modal,/disableOnConflict=false/);
+ assert.match(modal,/const conflict=disableOnConflict&&/);
+ assert.match(modal,/err\?\.status===409/);
+ assert.match(modal,/err\?\.code==='40001'/);
+ assert.match(modal,/err\?\.code==='BOARD_METADATA_CHANGED'/);
+ assert.match(modal,/button\.textContent='Close and verify board'/);
+ assert.match(modal,/button\.textContent='Close and refresh board'/);
+ const edit=app.slice(app.indexOf("case 'board-card-edit':"),app.indexOf("case 'board-card-trash':"));
+ const trash=app.slice(app.indexOf("case 'board-card-trash':"),app.indexOf("case 'board-card-restore':"));
+ assert.match(edit,/disableOnConflict:true/);
+ assert.match(trash,/disableOnConflict:true/);
+});

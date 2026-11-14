@@ -3595,7 +3595,7 @@ async function login(form){
 }
 function hideModal(){if(modal){modal.remove();modal=null;}flushVisibleBoardContent();}
 function openModal(title,fields,submit,{submitLabel='Save changes',submitDisabled=false,
- successMessage='Changes saved.',destructive=false}={}){
+ successMessage='Changes saved.',destructive=false,disableOnConflict=false}={}){
  const previousFocus=document.activeElement;
  hideModal();
  modal=document.createElement('div');modal.className='modal-backdrop';modal.setAttribute('role','presentation');
@@ -3642,9 +3642,14 @@ function openModal(title,fields,submit,{submitLabel='Save changes',submitDisable
   }catch(err){
    notice(err);
    if(button.isConnected){
+    const conflict=disableOnConflict&&
+     (err?.status===409||err?.code==='40001'||err?.code==='BOARD_METADATA_CHANGED');
     if(err?.schemaOutcomeUncertain===true){
      button.disabled=true;
      button.textContent='Close and verify board';
+    }else if(conflict){
+     button.disabled=true;
+     button.textContent='Close and refresh board';
     }else{
      button.disabled=false;button.textContent=submitLabel;
     }
@@ -7619,7 +7624,7 @@ async function action(name,button){
       description:String(fd.get('description')||'')});
      await refreshBoardCardLists();render();
     }finally{state.boardLifecycleBusy=false;}
-   });
+   },{disableOnConflict:true});
   break;
  }
  case 'board-card-trash':{
@@ -7639,7 +7644,7 @@ async function action(name,button){
      await boardCardLifecycle.trash(board,board.name);
      await refreshBoardCardLists();render();
     }finally{state.boardLifecycleBusy=false;}
-   },{submitLabel:'Move to Trash',destructive:true,
+   },{submitLabel:'Move to Trash',destructive:true,disableOnConflict:true,
      successMessage:'Board moved to Trash. Restore it from Trash when needed.'});
   break;
  }
