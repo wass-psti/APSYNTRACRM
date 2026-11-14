@@ -1,11 +1,13 @@
 # CP-DB-CPU-13A — Genuine Signed-User RLS Acceptance, Post-Activation CPU Attribution, Sequential-Scan Verification, and Cross-Window Cache Consistency
 
 **Date:** 2026-11-14
-**Status:** IMPLEMENTED-UNVERIFIED — frontend fixes and synthetic browser acceptance pass; production deployment, post-deployment signed-user allow/deny, and post-deployment performance comparison remain pending.
+**Status:** VERIFIED WITH LIMITATION — production deployment, signed-user board allow/deny, focus-return reconciliation, and workload-level database/scan observation passed. Direct per-query CPU attribution remains BLOCKED by existing instrumentation; no CPU reduction is claimed. A live foreign-workspace negative test is unavailable because no existing board is present outside the active workspace.
 **Repository:** `wass-psti/APSYNTRACRM`
 **Supabase project:** `jtlusodorfnyzgyuewkz` (existing project only)
 **Base commit:** `273d938c91537f574679c8119ccf5777ebfe318a`
-**Branch:** `perf/cp-db-cpu-13a-signed-window-sync`
+**Merged PR:** [#398](https://github.com/wass-psti/APSYNTRACRM/pull/398)
+**Merged commit:** `9fa302ee85c98ca919bb7f00b2df005baaaf5408`
+**Pages validation run:** `43615082558` — all jobs PASS
 
 ## 1. Scope and guardrails
 
@@ -141,7 +143,49 @@ Between `15:45:00` and `16:00:00 UTC`, Edge logs recorded one signed actor with:
 | `wm_list_boards` | 8 | 4 | 1 | 0 |
 | `apsyntra_crm_my_effective_access` | 4 | 2 | 1 | 0 |
 
-This confirms genuine signed traffic existed before the CP-DB-CPU-13A deployment. It does not, by itself, prove the returning-window focus behavior, board-level RLS allow/deny, or post-deployment performance.
+This confirms genuine signed traffic existed before the CP-DB-CPU-13A deployment. Post-deployment signed-user and focus acceptance are recorded below.
+
+### 5.6 Post-deployment signed-user acceptance and observation
+
+The main commit `9fa302ee85c98ca919bb7f00b2df005baaaf5408` passed the main-branch frontend validation workflow, including its `live-pages` asset verification job.
+
+**Genuine signed-user RLS allow/deny:**
+
+- Existing `admin_general_manager` session opened the existing nonproduction QA board `CP-BIMP-11 Import QA` (`e1071df3-1b0d-43c0-8aa0-732c09032df4`) in the current workspace.
+- Signed `work_board_access`, `wm_get_board_shell`, and `wm_get_board_items_page` requests returned HTTP **200**.
+- A separate existing `employee` session attempted to open the same board. Signed board-shell and paginated-item RPCs returned HTTP **403**, as expected for a nonmember without board-view access.
+- Both sessions were already present; no test account was created. No board records or permissions were changed.
+- The live `public.work_boards` inventory contains no rows outside the active workspace. A production foreign-workspace board denial was therefore **not attempted**; no foreign-workspace test board was created. Synthetic foreign-workspace denial remains verified by the disposable browser fixture.
+
+**Production focus-return acceptance:**
+
+- After the deployed code was loaded into the existing signed administrator session, the Chromium window was deactivated to Terminal and then reactivated without changing the CRM route or reloading the page.
+- Edge logs recorded fresh signed `wm_list_boards`, `work_board_access`, `wm_get_board_shell`, and `wm_get_board_items_page` reads during the focus-return interval (`16:27:00–16:27:13 UTC`); all administrator reads returned HTTP **200**.
+- The route remained on the same QA board throughout the focus-switch test.
+- Existing tabs using different user identities remained isolated. Cross-window invalidation continues to require the same signed user and workspace; it does not broadcast data between administrator and employee sessions.
+
+**Post-deployment database observation window:** `16:14:51.703 UTC` to `16:28:12.036 UTC` (13.339 minutes). No statistics were reset.
+
+| Table | Seq-scan delta | Approx. scans/min | Interpretation |
+|---|---:|---:|---|
+| `profiles` (1 estimated row) | +767 | 57.5 | Tiny authorization table; no index change justified |
+| `workspace_members` (4 estimated rows) | +302 | 22.6 | Tiny membership table; no index change justified |
+| `private.ws01_lifecycle_flags` (1 estimated row) | +215 | 16.1 | Tiny lifecycle table; no index change justified |
+| `work_board_items` (44,260 estimated rows) | **0** | **0** | No new sequential scans during the window; index scans increased by 2,805 |
+| `work_boards` (357 estimated rows) | +1 | 0.075 | No material scan activity |
+
+The large board-item table did not accumulate additional sequential scans during the observation window. The remaining scans are concentrated on authorization/lifecycle tables containing only 1–4 estimated rows. These counters do not justify adding indexes or changing RLS policy authority.
+
+| Top-level RPC fingerprint | Calls in window | Added elapsed time | Mean for window calls |
+|---|---:|---:|---:|
+| `wm_list_boards` | 12 | 162.99 ms | 13.58 ms |
+| `apsyntra_crm_my_effective_access` | 8 | 114.19 ms | 14.27 ms |
+| `wm_get_board_items_page` | 8 | 95.59 ms | 11.95 ms |
+| `wm_get_board_shell` | 8 | 88.71 ms | 11.09 ms |
+
+These are global `pg_stat_statements` deltas, not actor-isolated CPU measurements. Edge logs independently confirm signed requests during the same test period. The current Supabase overview shows approximately **3% CPU**, **49% RAM**, **58% disk**, and **16/60 connections**. This is a point-in-time workload observation, not proof of a CPU reduction.
+
+**Decision on attribution:** Workload-level statement elapsed-time and sequential-scan attribution is VERIFIED. Direct per-query/per-function CPU attribution remains BLOCKED because `pg_stat_statements.track=top`, `track_functions=none`, `track_io_timing=off`, and `pg_stat_kcache` is not installed. Those settings were deliberately left unchanged; no extension, instrumentation, database setting, or background monitoring was added.
 
 ## 6. Acceptance status
 
@@ -150,13 +194,14 @@ This confirms genuine signed traffic existed before the CP-DB-CPU-13A deployment
 | CP-DB-CPU-12 and CP-DB-CPU-13 migrations active | VERIFIED | Remote Supabase migration history versions `20261114151934` and `20261114154136` |
 | Stable RLS initplan findings | VERIFIED | Performance Advisor remained at 0 after CP-13 |
 | Cross-window root cause identified | VERIFIED | Mutation prefix classifier, missing focus trigger, limited active-view reconciliation, dropped in-flight events |
-| Frontend synchronization fix | VERIFIED | Implemented and all 2,273 tests pass |
+| Frontend synchronization fix | VERIFIED | Implemented and all 2,274 tests pass |
 | Synthetic two-tab browser acceptance | VERIFIED | Real Chromium BroadcastChannel and signed-scope fixture pass |
-| Production frontend deployment | PENDING | Merge and verify GitHub Pages deployment |
-| Genuine signed-user board read allow | PENDING | Use the existing authenticated CRM session and verify signed `work_board_access` / board reads |
-| Genuine signed-user foreign-workspace denial | PENDING | Use an existing foreign-workspace board with the same signed session; read-only only |
-| Post-deployment focus-switch acceptance | PENDING | Switch between existing signed CRM windows and verify fresh authoritative reads without full reload |
-| Post-deployment CPU/statement delta | PENDING | Capture same counters after the signed test window; direct per-query CPU remains instrumentation-blocked |
-| Post-deployment sequential-scan rate comparison | PENDING | Compare deltas over a documented, comparable window; do not reset statistics |
+| Production frontend deployment | VERIFIED | Main commit `9fa302ee85c98ca919bb7f00b2df005baaaf5408`; Pages validation run `43615082558` passed including live asset verification |
+| Genuine signed-user board read allow | VERIFIED | Existing admin session: `work_board_access`, `wm_get_board_shell`, and `wm_get_board_items_page` all HTTP 200 |
+| Genuine signed-user nonmember denial | VERIFIED | Existing employee session received HTTP 403 for board shell and paginated items on the same QA board |
+| Live foreign-workspace negative | BLOCKED | No existing `public.work_boards` rows outside the active workspace; no fixture board was created |
+| Post-deployment focus-switch acceptance | VERIFIED | Window deactivation/reactivation produced fresh signed workspace and board reads without changing route or reloading |
+| Post-deployment workload/statement attribution | VERIFIED | 13.339-minute `pg_stat_statements` delta and current 3% CPU dashboard point captured; per-query CPU remains BLOCKED by existing settings |
+| Post-deployment sequential-scan observation | VERIFIED | `work_board_items` had 0 new sequential scans and +2,805 index scans; remaining scans are on 1–4 row auth/lifecycle tables |
 
-**Decision:** The application-side synchronization defect is implemented and synthetically verified. Do not claim production acceptance or a CPU/sequential-scan reduction until the new frontend is deployed and the signed-user read/deny plus post-deployment observation checks are completed. No database DDL is required for this increment.
+**Decision:** CP-DB-CPU-13A is deployed and verified for signed-user allow/deny, focus-return reconciliation, and workload-level database/scan observation. The reported cache/synchronization defect is addressed without weakening user/workspace isolation. No additional database optimization or index change is justified by this window. Do not claim a CPU reduction: direct per-query CPU attribution is blocked by existing instrumentation and the dashboard reading is only a point-in-time value. The live foreign-workspace negative remains blocked solely because no foreign-workspace board exists in the production inventory. No database DDL is required; CP-DB-CPU-13A can close.
