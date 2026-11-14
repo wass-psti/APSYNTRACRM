@@ -74,6 +74,17 @@ function trackedTime(ticket,field){const id=String(ticket.id);visibleTimerTicket
 function refreshVisibleTimers(){for(const el of document.querySelectorAll('[data-ticket-timer]')){const t=visibleTimerTickets.get(el.dataset.ticketTimer);if(t){const field=el.dataset.timerField;el.textContent=formatDuration(projectTicketTimers(t)[field]?.ms);}}}
 // One display-only heartbeat; no network calls and no mutation of persisted clock values.
 const heartbeat=setInterval(()=>{if(!document.hidden&&!disposed)refreshVisibleTimers();},30000);
+const refreshFromHost=()=>{
+ if(disposed||!state.active||state.busy)return;
+ const focused=root.getRootNode()?.activeElement;
+ const changedControl=[...root.querySelectorAll('input,textarea,select')].some(control=>{
+  if(control.type==='checkbox'||control.type==='radio')return control.checked!==control.defaultChecked;
+  return control.value!==control.defaultValue;
+ });
+ if(focused?.matches?.('input,textarea,select,[contenteditable="true"]')||changedControl)return;
+ void go(state.route,{preserveNotice:true});
+};
+root.addEventListener('apsyntra:refresh',refreshFromHost);
 let state={user:null,memberships:[],active:null,route:'dashboard',tickets:[],total:0,page:0,filter:'',status:'all',archived:false,clientFilter:'all',priorityFilter:'all',systemFilter:'all',queueFrom:'',queueTo:'',queueSort:'recent',detail:null,stats:null,busy:false,notice:'',workflowPage:0,viewPage:0,workflowScope:'all',issuePage:0,reportTab:'executive',reportWindow:{from:'',to:''}};
 const val=(x)=>h(x);const knownRoutes=new Set(['dashboard','tickets','create-ticket','reports','l1-workspace','l2-dispatch','handover','notifications','admin','users','sessions','audit','report-bug','logo-files','disaster-recovery','it-issues']);
 const escAttr=val;const role=()=>state.active?.role;
@@ -618,6 +629,6 @@ async function sharedIssueQueue(revision){
 }
 function routeChanged(){if(state.active){let route=currentHash();if(!allowRoute(route)){location.hash='dashboard';return;}const notice=postCreateNotice;postCreateNotice=null;if(notice&&route===`ticket/${notice.ticketId}`){state.notice=notice.message;go(route,{preserveNotice:true});}else go(route);}}
 bootstrap();
-return ()=>{disposed=true;++viewRevision;state.active=null;clearInterval(heartbeat);clearTimeout(autoRefreshHandle25);root.replaceChildren();};
+return ()=>{disposed=true;root.removeEventListener('apsyntra:refresh',refreshFromHost);++viewRevision;state.active=null;clearInterval(heartbeat);clearTimeout(autoRefreshHandle25);root.replaceChildren();};
 }
 

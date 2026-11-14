@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {connectFuelTrans,listTickets,insertTicket} from '../fueltrans/supabase-client.js';
 const workspaceId='00000000-0000-4000-8000-000000000001',userId='actor';
-function context(edit=true){return {workspaceId,userId,boardId:'board',isCurrent:()=>true,
+function context(edit=true,onMutation=()=>{}){return {workspaceId,userId,boardId:'board',onMutation,isCurrent:()=>true,
  auth:{getVerifiedUser:async()=>({id:userId}),token:async()=>'test-token'},
  api:{rpc:async()=>true,context:async()=>({user_id:userId,workspace_id:workspaceId}),board:async()=>({board:{workspace_id:workspaceId,name:'FuelTrans Standalone'}}),allowed:async(_,permission)=>permission==='view'||edit}};}
 test('FuelTrans locks requests to current board workspace and current host lifetime',async()=>{
@@ -22,6 +22,31 @@ test('FuelTrans denies mutation for board viewers before transmission',async()=>
  const disconnect=connectFuelTrans(context(false));
  try{await assert.rejects(insertTicket({workspace_id:workspaceId}),/editing permission/);assert.equal(calls,0);}
  finally{disconnect();globalThis.fetch=original;}
+});
+test('FuelTrans publishes a content-free host invalidation only after successful writes',async()=>{
+ const original=globalThis.fetch;let mutations=0;
+ globalThis.fetch=async()=>new Response(JSON.stringify([{id:'ticket-1',workspace_id:workspaceId}]),{
+  status:201,headers:{'content-type':'application/json','content-range':'*/1'}
+ });
+ const disconnect=connectFuelTrans(context(true,()=>mutations++));
+ try{
+  const result=await insertTicket({workspace_id:workspaceId});
+  assert.equal(result.id,'ticket-1');assert.equal(mutations,1);
+ }finally{disconnect();globalThis.fetch=original;}
+});
+test('FuelTrans does not publish failed writes or ordinary reads',async()=>{
+ const original=globalThis.fetch;let mutations=0;
+ globalThis.fetch=async(url,options)=>{
+  if(options.method==='GET')return new Response('[]',{headers:{'content-type':'application/json','content-range':'*/0'}});
+  return new Response(JSON.stringify({message:'denied'}),{status:403,headers:{'content-type':'application/json'}});
+ };
+ const disconnect=connectFuelTrans(context(true,()=>mutations++));
+ try{
+  await listTickets('workspace_id=eq.'+workspaceId);
+  assert.equal(mutations,0);
+  await assert.rejects(insertTicket({workspace_id:workspaceId}),/denied/);
+  assert.equal(mutations,0);
+ }finally{disconnect();globalThis.fetch=original;}
 });
 test('FuelTrans discards a response after workspace or identity context changes',async()=>{
  const original=globalThis.fetch;const first=context();let replacement;

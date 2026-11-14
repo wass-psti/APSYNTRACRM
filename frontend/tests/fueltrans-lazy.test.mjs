@@ -44,6 +44,19 @@ test('disconnected container and rejected imports do not resurrect stale content
  assert.equal(other.textContent,'FuelTrans could not load. Reload the page to retry.');
  assert.doesNotMatch(other.textContent,/credential|private URL/);
 });
+test('embedded FuelTrans refresh preserves active editing and disposes its refresh listener',()=>{
+ const native=readFileSync('frontend/fueltrans-native.js','utf8');
+ const app=readFileSync('frontend/fueltrans/app.js','utf8');
+ const client=readFileSync('frontend/fueltrans/supabase-client.js','utf8');
+ assert.match(native,/if\(refresh\)mounted\.refresh\(\)/);
+ assert.match(native,/if\(!container\.contains\(mounted\.element\)\)container\.append\(mounted\.element\)/);
+ assert.match(native,/root\.dispatchEvent\(new Event\('apsyntra:refresh'\)\)/);
+ assert.match(app,/root\.addEventListener\('apsyntra:refresh',refreshFromHost\)/);
+ assert.match(app,/focused\?\.matches\?\.\('input,textarea,select,\[contenteditable="true"\]'\)/);
+ assert.match(app,/control\.value!==control\.defaultValue/);
+ assert.match(app,/removeEventListener\('apsyntra:refresh',refreshFromHost\)/);
+ assert.match(client,/if\(method!=='GET'&&parsed\.pathname\.startsWith\('\/rest\/v1\/'\)/);
+});
 test('source integrates feature-only dynamic imports and preserves signed access checks',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/import \{syncFuelTrans\} from '\.\/fueltrans-lazy\.js'/);

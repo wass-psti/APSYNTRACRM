@@ -1144,6 +1144,7 @@ function render(){
   onSaved:async({path,updatedAt,cleanupPending})=>{
    state.context.profile.avatar_path=path;
    if(updatedAt)state.context.profile.updated_at=updatedAt;
+   boardCacheChannel.publish(null,null);
    render();
    if(path){
     const hydration=await avatarHydrationPromise;
@@ -1158,7 +1159,10 @@ function render(){
   }
  });
  else stopAvatarPreview();
- syncFuelTrans({container:state.view==='board'&&state.tab==='fueltrans'?root.querySelector('#fueltrans-native-host'):null,auth,api:db,boardId:state.boardId,workspaceId:state.context?.workspace_id,userId:state.context?.user_id,route:location.hash.split('/').slice(4).join('/')||'dashboard'});
+ syncFuelTrans({container:state.view==='board'&&state.tab==='fueltrans'?root.querySelector('#fueltrans-native-host'):null,
+  auth,api:db,boardId:state.boardId,workspaceId:state.context?.workspace_id,
+  userId:state.context?.user_id,route:location.hash.split('/').slice(4).join('/')||'dashboard',
+  onMutation:()=>boardCacheChannel.publish(state.boardId,null)});
  if(state.view==='board'&&state.tab==='items'){
   mountBoardWindows(root,syncBoardSelectionUi);
   applyBoardItemFilter(state.boardItemSearch);
@@ -1426,6 +1430,11 @@ function platformSyncEditInProgress(){
   state.inlineCell||state.inlineCellBusy||state.inlineAddBusy||
   state.groupEditId||state.groupEditBusy||state.userRoleBusy||state.roleBusy||
   state.ttOtModalOpen||state.loading||state.loadingIssues||
+  state.fuelTrackBackendBusy||state.fuelTrackActivityBusy||
+  state.fuelTrackPendingSubmission||state.fuelTrackRefuelingDialog||
+  state.tradeLinkDraft?.busy||
+  (tradeLinkDraftRoute()&&tradeLinkDraftHasUnsavedChanges(state.tradeLinkDraft))||
+  (state.mrhAddView&&state.tab==='sourcing')||
   focused?.closest?.('input,textarea,select,[contenteditable="true"]'));
 }
 /** Revoke stale rendered data immediately when the server invalidates identity. */
@@ -1567,10 +1576,49 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
    const signed=await loadFRTFinanceReadOnly({auth,api:db,companyCode:selected});
    if(isCurrent())state.frtFinance=signed;
   }
+  // Module-owned records are not all part of the board snapshot. Refresh their
+  // signed projections explicitly so a cross-window board hint cannot leave
+  // FuelTrack or TradeLink showing an old list/activity/detail revision.
+  if(tab==='fueltrack'&&boardId===FUELTRACK_V3_ID){
+   if(!state.fuelTrackBackendBusy)await loadFuelTrackBackend(serial);
+   if(!isCurrent()||platformSyncEditInProgress())return false;
+   if(state.fuelTrackSection==='activity'&&!state.fuelTrackActivityBusy)
+    await loadFuelTrackActivity(serial);
+  }
+  if(tab==='tradelink'&&boardId===TRADELINK_BOARD_ID){
+   if(state.tradeLinkSection==='activity'&&!state.tradeLinkActivityBusy)
+    await loadTradeLinkActivity(serial);
+   else if(['drafts','documents'].includes(state.tradeLinkSection)&&
+      TL03_DOMAIN_READS_ENABLED&&!state.tradeLinkDraft.busy){
+    const selectedDraft=state.tradeLinkSection==='drafts'?
+     state.tradeLinkDraft.selected?.documentId:null;
+    const selectedDocument=state.tradeLinkSection==='documents'?
+     state.tradeLinkDraft.documentPreview?.documentId:null;
+    await loadTradeLinkDrafts(serial);
+    if(!isCurrent()||platformSyncEditInProgress())return false;
+    if(selectedDraft&&state.boardManage){
+     const latest=state.tradeLinkDraft.rows.find(row=>row.documentId===selectedDraft);
+     if(!latest||latest.archived||!['draft','for-approval','revision-required'].includes(latest.workflowState)){
+      state.tradeLinkDraft={...state.tradeLinkDraft,mode:'list',selected:null,
+       documentPreview:null,error:'The selected document is no longer an editable Draft. The signed list has been refreshed.'};
+      render();
+     }else await openTradeLinkDraft(selectedDraft);
+    }else if(selectedDocument){
+     if(state.boardManage)await openTradeLinkDocument(selectedDocument);
+     else await openTradeLinkAssignedDocument(selectedDocument);
+    }
+   }
+  }
   if(!isCurrent()||platformSyncEditInProgress())return false;
   if(changed||changedBoards||reason!=='broadcast'||tab!=='items'){
    if(['items','sourcing'].includes(tab))deferVisibleBoardContent();
-   else render();
+   else if(tab==='fueltrans'){
+    // Refresh the mounted shadow-DOM module in place. Rebuilding the parent
+    // shell here would detach focused controls and risk losing local form edits.
+    syncFuelTrans({container:root.querySelector('#fueltrans-native-host'),auth,api:db,
+     boardId,workspaceId,userId,route:location.hash.split('/').slice(4).join('/')||'dashboard',
+     refresh:true,onMutation:()=>boardCacheChannel.publish(boardId,null)});
+   }else render();
   }
   return true;
  }

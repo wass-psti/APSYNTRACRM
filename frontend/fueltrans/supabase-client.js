@@ -30,6 +30,9 @@ async function request(url,{method='GET',token=null,body,extra={},timeout=15000}
 const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeout);try{const r=await fetch(url,{method,signal:ctrl.signal,headers:{...headers(token,{'Content-Type':'application/json',...extra})},...(body!==undefined?{body:JSON.stringify(body)}:{})});let data=null;const ct=r.headers.get('content-type')||'';if(r.status!==204){const raw=await r.text();if(raw){try{data=JSON.parse(raw);}catch{data=raw;}}}
  if(!r.ok){const detail=typeof data==='object'&&data?(data.message||data.msg||data.error_description||data.error):null;const e=Error(typeof detail==='string'?detail:`Request failed (${r.status})`);e.status=r.status;throw e;}
  if(context!==host||!context.isCurrent())throw Error('FuelTrans view changed while loading.');
+ if(method!=='GET'&&parsed.pathname.startsWith('/rest/v1/')){
+  try{context.onMutation?.();}catch{/* Cross-window hints never change the write receipt. */}
+ }
  return {data,range:r.headers.get('content-range'),status:r.status};}catch(e){if(e.name==='AbortError')throw Error('Supabase request timed out.');throw e;}finally{clearTimeout(timer);}}
 export async function currentSession(required='view'){return hostSession(required);}
 export async function verifiedUser(){const s=await currentSession();if(!s)return null;const {data}=await request(`${CONFIG.url}/auth/v1/user`,{token:s.access_token});if(data?.id!==s.user.id){clearSession();throw Error('Authenticated identity mismatch.');}return data;}

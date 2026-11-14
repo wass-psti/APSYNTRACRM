@@ -101,7 +101,7 @@ const BOARD_MUTATION_RPC=new Set([
  'frt_ic_record_settlement','frt_record_bank_execution','frt_request_action',
  'frt_request_assignment','frt_save_recipient','frt_set_recipient_qr',
  'frt_set_request_filing_status','frt_submit_liquidation_v2','frt_update_request_date_cas',
- 'apsyntra_crm_platform_role_set','apsyntra_crm_role_manage_user_access',
+ 'apsyntra_crm_platform_role_set','apsyntra_role_manage_user_access',
  'apsyntra_role_configuration_propose','update_own_profile'
 ]);
 
@@ -514,14 +514,17 @@ export class DomainApi {
  async nativeTransactions(boardId,workspaceId,txes){
    if(!Array.isArray(txes)||txes.length<1||txes.length>25)
      throw new ApiError('Invalid native transaction batch.');
+   const id=requireUuid(boardId),workspace=requireUuid(workspaceId);
    const response=await this.auth.authorized('/functions/v1/apsyntra-native-issues',{
-     method:'POST',
-     body:{boardId:requireUuid(boardId),workspaceId:requireUuid(workspaceId),txes}
+     method:'POST',body:{boardId:id,workspaceId:workspace,txes}
    });
    if(!response||response.applied!==txes.length||!Array.isArray(response.receipts)
       ||response.receipts.length!==txes.length
-      ||response.receipts.some(r=>r.boardId!==boardId||r.workspaceId!==workspaceId||!Number.isSafeInteger(r.revision)||r.revision<1))
+      ||response.receipts.some(r=>r.boardId!==id||r.workspaceId!==workspace||!Number.isSafeInteger(r.revision)||r.revision<1))
      throw new ApiError('Native transaction receipt verification failed.');
+   // Publish only after every server receipt confirms the signed transaction.
+   this.invalidateBoardCache(id);
+   try{this.onBoardMutation?.({boardId:id,revision:null});}catch{}
    return response;
  }
  async commit(boardId,workspaceId,operations){
