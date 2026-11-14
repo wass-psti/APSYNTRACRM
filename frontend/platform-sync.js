@@ -9,6 +9,7 @@ const PHASES=new Set(['connecting','synchronized','synchronizing','reconnecting'
 export const SYNC_MAX_BOARD_CHANNELS=24;
 export const SYNC_POLL_INTERVAL_MS=30000;
 export const SYNC_RECONCILE_INTERVAL_MS=90000;
+export const SYNC_FOCUS_COOLDOWN_MS=3000;
 const noop=()=>{};
 export class PlatformSync {
  constructor({auth,api,url,publishableKey,WebSocketImpl=globalThis.WebSocket,
@@ -29,6 +30,7 @@ export class PlatformSync {
   this.joined=new Map();this.inFlight=false;this.heartbeatsPending=0;this.lastSyncAt=null;
   this.lastCheckAt=null;this.lastTransport='none';
   this.scope=null;this.lastStatus=null;this.boardIds=[];
+  this.lastFocusSyncAt=null;this.queuedSync=null;
  }
  status(phase,detail=''){
   if(!PHASES.has(phase))throw new Error('Invalid sync state');
@@ -70,6 +72,7 @@ export class PlatformSync {
   this.pending.clear();this.boardIds=[];this.scope=null;
   this.closeSocket();this.inFlight=false;this.lastTransport='none';
   this.lastSyncAt=null;this.lastCheckAt=null;this.attempt=0;
+  this.lastFocusSyncAt=null;this.queuedSync=null;
   this.status('offline','Not connected');
  }
  closeSocket(){
@@ -212,8 +215,17 @@ export class PlatformSync {
   if(this.lastCheckAt!==null&&this.now()-this.lastCheckAt<interval)return;
   await this.syncNow('poll',[]);
  }
+ queueSync(reason,boardIds=[]){
+  const full=reason!=='broadcast';
+  if(!this.queuedSync||full){
+   if(full)this.queuedSync={reason,boardIds:new Set()};
+   else this.queuedSync={reason,boardIds:new Set(boardIds)};
+  }
+  if(!full)for(const id of boardIds)this.queuedSync.boardIds.add(id);
+ }
  async syncNow(reason='manual',boardIds=[]){
-  if(!this.running||this.inFlight||!this.visible()||!this.online())return false;
+  if(!this.running||!this.visible()||!this.online())return false;
+  if(this.inFlight){this.queueSync(reason,boardIds);return false;}
   const gen=this.generation,scope=this.scope;
   if(!scope||!this.sameScope(scope.userId,scope.workspaceId))return false;
   this.inFlight=true;this.lastCheckAt=this.now();
@@ -235,7 +247,23 @@ export class PlatformSync {
   }catch{
    if(gen===this.generation)this.status('error','Signed refresh unavailable');
    return false;
-  }finally{if(gen===this.generation)this.inFlight=false;}
+  }finally{
+   if(gen===this.generation){
+    this.inFlight=false;
+    const queued=this.queuedSync;this.queuedSync=null;
+    if(queued&&this.running&&this.visible()&&this.online())
+     Promise.resolve().then(()=>this.syncNow(queued.reason,[...queued.boardIds]));
+   }
+  }
+ }
+ focusChanged(){
+  if(!this.running||!this.visible()||!this.online())return false;
+  const now=this.now();
+  if(this.lastFocusSyncAt!==null&&now-this.lastFocusSyncAt<SYNC_FOCUS_COOLDOWN_MS)
+   return false;
+  this.lastFocusSyncAt=now;
+  void this.syncNow('focus',[]);
+  return true;
  }
  visibilityChanged(){
   if(!this.running)return;

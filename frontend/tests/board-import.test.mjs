@@ -496,7 +496,11 @@ test('UI and entrypoint are wired without bypassing the domain restriction',()=>
  assert.match(app,/openBoardImportWizard/);
  assert.match(app,/onComplete:async receipt=>\{\s*if\(state\.boardId===selected\)\{await loadBoard\(selected,'items'\);/,
   'successful imports reload the selected board through the authoritative board loader');
- assert.ok(data.includes('wm_(?:add_|create_|delete_|set_|update_|import_'),
+ assert.match(data,/const BOARD_MUTATION_RPC=new Set\(/,
+  'board-affecting write RPCs use exact reviewed names');
+ assert.match(data,/'wm_import_board_wizard_atomic'/,
+  'the atomic import RPC is included in the mutation contract');
+ assert.match(data,/BOARD_MUTATION_RPC\.has\(name\)/,
   'the atomic import RPC invalidates the in-memory board snapshot');
  assert.match(ui,/will be created together with the imported records/);
  assert.match(ui,/Confirm exclude/);
