@@ -1,12 +1,13 @@
 # CP-CRM-SYNC-01 — Genuine Signed-User Multi-Window Synchronization, Live Mutation Propagation, and Cache-Coherence Acceptance
 
 **Date:** 2026-11-15
-**Status:** DEPLOYED — frontend regression, synthetic browser acceptance, GitHub Pages deployment, live asset integrity, and signed single-window focus-return acceptance passed. Same-identity live multi-window and production-write acceptance remain pending.
+**Status:** DEPLOYED WITH FOLLOW-UP FIX — original synchronization implementation is live; a subsequent FuelTrans dirty-control refresh defect has been corrected and is awaiting its own deployment. Same-identity live multi-window and production-write acceptance remain pending.
 **Repository:** `wass-psti/APSYNTRACRM`
 **Supabase project:** `jtlusodorfnyzgyuewkz` (existing project only)
 **Base commit:** `fb351f488a26d9d23c4bd2c82cb6e5fa07e97387`
 **Implementation PR:** [#400](https://github.com/wass-psti/APSYNTRACRM/pull/400)
-**Main commit:** `4c86519c48333ed9026504af0160226ba2c1ef16`
+**Implementation main commit:** `4c86519c48333ed9026504af0160226ba2c1ef16`
+**Deployment evidence PR:** [#401](https://github.com/wass-psti/APSYNTRACRM/pull/401)
 **Branch:** `feat/cp-crm-sync-01-genuine-multi-window`
 
 ## 1. Scope and guardrails
@@ -104,6 +105,17 @@ A successful avatar save publishes a full, content-free invalidation hint to oth
 
 The signed `wm_list_boards` contract returns `item_count`. Reconciliation compares the refreshed board-list snapshot, including `item_count`, and re-renders when the value changes. No redundant overview refresh path or database query was added.
 
+### 3.8 FuelTrans dirty-control guard correction
+
+A post-merge review found that the original FuelTrans refresh guard compared every control's `.value` with `.defaultValue`. `HTMLSelectElement` does not define `defaultValue`, so an unchanged dropdown could be treated as dirty and prevent a host-triggered refresh indefinitely while that dropdown remained mounted.
+
+- Added `frontend/fueltrans/refresh-guard.js` with an event-based `WeakSet` tracker for user `input` and `change` events.
+- Clean input, textarea, select, checkbox, and radio controls no longer block a refresh merely because they lack a meaningful HTML default-value property.
+- Actual user-edited controls continue to defer host refresh, including changed dropdowns and checkbox/radio controls.
+- Programmatic value assignment without a user interaction does not mark a control dirty.
+- Tracker listeners are removed when the embedded FuelTrans module is disposed.
+- The fix changes no authentication, authorization, persistence, API, database, or cache behavior.
+
 ## 4. Verification completed on the implementation branch
 
 | Check | Result | Evidence |
@@ -114,7 +126,8 @@ The signed `wm_list_boards` contract returns `item_count`. Reconciliation compar
 | Native Issues failure handling | VERIFIED | Rejected or malformed/foreign-scope receipts publish no success hint |
 | FuelTrans successful write propagation | VERIFIED | Successful signed write publishes one content-free host invalidation |
 | FuelTrans failed write/read behavior | VERIFIED | HTTP 403 and ordinary GET do not publish |
-| FuelTrans refresh lifecycle | VERIFIED | In-place host refresh hook; active/dirty controls protected; listener disposed |
+| FuelTrans refresh lifecycle | VERIFIED | In-place host refresh hook; focused and user-edited controls protected; listener disposed |
+| FuelTrans select dirty-state guard | VERIFIED | Event-based tracker avoids relying on nonexistent `HTMLSelectElement.defaultValue`; clean dropdowns do not block refresh; user-changed selects do |
 | FuelTrack/TradeLink reconciliation | VERIFIED | Regression assertions cover signed projection refresh and dirty-state protection |
 | Overview board counts | VERIFIED | A changed signed `item_count` is read again after cache invalidation |
 | Real Node `BroadcastChannel` | VERIFIED | Independent same-scope clients receive the actual BroadcastChannel message |
@@ -158,7 +171,11 @@ The two browser windows available during this implementation held different sign
 
 No production board item, document, profile, role, membership, or workspace record was mutated. The implementation and fixture tests prove that successful writes publish invalidations and failed writes do not. A genuine production signed-user write-propagation test requires explicit authorization to update a designated existing QA record or use an already-authorized nonproduction fixture.
 
-### 5.5 Remaining production acceptance
+### 5.5 Post-merge FuelTrans guard follow-up
+
+The event-based dirty-control correction is implemented on branch `fix/cp-crm-sync-01-fueltrans-dirty-control`. Its focused tests and full frontend regression suite pass (**2,285/2,285**). It is not yet deployed in this report revision; deployment status must be updated after its pull request and Pages workflow complete.
+
+### 5.6 Remaining production acceptance
 
 - Verify two separately authenticated windows for the same user/workspace receive fresh authoritative reads after a successful authorized mutation.
 - Verify the same event is rejected across different users/workspaces in the live browser pair.
@@ -166,9 +183,10 @@ No production board item, document, profile, role, membership, or workspace reco
 
 ## 6. Acceptance decision
 
-**Implementation status:** VERIFIED locally, in CI, and in the synthetic Chromium fixture.
-**Production deployment status:** VERIFIED — main commit `4c86519c48333ed9026504af0160226ba2c1ef16`.
+**Original implementation status:** VERIFIED locally, in CI, and in the synthetic Chromium fixture.
+**Original production deployment status:** VERIFIED — main commit `4c86519c48333ed9026504af0160226ba2c1ef16`.
 **Live signed single-window focus-return:** VERIFIED — fresh authoritative signed reads observed after window focus returned.
+**FuelTrans select dirty-control follow-up:** IMPLEMENTED-UNVERIFIED IN PRODUCTION — 2,285 tests pass; follow-up deployment pending.
 **Same-user signed multi-window production acceptance:** PENDING — second window must independently authenticate as the same user; no session token sharing was added.
 **Production mutation propagation:** PENDING — no production record writes were performed without separate authorization.
 
