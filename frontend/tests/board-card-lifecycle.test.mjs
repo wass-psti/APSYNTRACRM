@@ -214,63 +214,40 @@ test('changed board metadata is rejected locally before lifecycle mutation',asyn
  assert.equal(fixture.calls.some(x=>x[0]==='wm_board_card_mutate'),false);
 });
 
-test('one stale timestamp conflict refreshes metadata and retries exactly once',async()=>{
- const times=[
-  '2026-11-14T01:10:00.000000+00:00',
-  '2026-11-14T01:10:01.000000+00:00'
- ];
- let reads=0;
- const writes=[];
- const api={
-  context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
-  allowed:async()=>true,
-  board:async(boardId,options)=>({board:{...custom,id:boardId,workspace_id:ws,
-   updated_at:times[Math.min(reads++,1)]}}),
-  rpc:async(op,args)=>{
-   writes.push({...args});
-   if(writes.length===1)throw new ApiError('Board changed; refresh before editing',409,'40001');
-   return {boardId:args.p_board_id,action:args.p_action,status:'active',
-    updatedAt:'2026-11-14T01:10:02.000000+00:00'};
-  }
- };
- const client=new BoardCardLifecycleClient(api);
- const receipt=await client.edit(custom,{name:'Renamed',description:''});
- assert.equal(receipt.action,'edit');
- assert.equal(writes.length,2);
- assert.equal(writes[0].p_expected_updated_at,times[0]);
- assert.equal(writes[1].p_expected_updated_at,times[1]);
-});
-
-test('metadata change after a stale response blocks the retry',async()=>{
+test('stale revision conflict is terminal and does not retry the lifecycle mutation',async()=>{
  let reads=0,writes=0;
  const api={
   context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
   allowed:async()=>true,
   board:async(boardId)=>({board:{...custom,id:boardId,workspace_id:ws,
-   name:reads++===0?custom.name:'Concurrent rename'}}),
-  rpc:async()=>{writes++;throw new ApiError('Board changed; refresh before editing',409,'40001');}
+   updated_at:'2026-11-14T01:10:00.000000+00:00'}}),
+  rpc:async()=>{writes++;throw new ApiError(
+   'Board changed; refresh before editing',409,'BOARD_REVISION_STALE');}
  };
+ const originalBoard=api.board;
+ api.board=async(...args)=>{reads++;return originalBoard(...args);};
  const client=new BoardCardLifecycleClient(api);
- await assert.rejects(client.edit(custom,{name:'Overwrite',description:''}),
-  error=>error.code==='BOARD_METADATA_CHANGED');
+ await assert.rejects(client.edit(custom,{name:'Renamed',description:''}),
+  error=>error instanceof ApiError&&error.status===409&&error.code==='BOARD_REVISION_STALE');
+ assert.equal(reads,1);
  assert.equal(writes,1);
 });
 
-test('second stale response is surfaced without an unbounded retry loop',async()=>{
- let attempts=0,reads=0;
+test('legacy SQLSTATE 40001 is normalized to terminal HTTP 409 without retry',async()=>{
+ let reads=0,writes=0;
  const api={
   context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
   allowed:async()=>true,
-  board:async(boardId)=>({board:{...custom,id:boardId,workspace_id:ws,
-   updated_at:'2026-11-14T01:10:0'+Math.min(reads++,1)+'.000000+00:00'}}),
-  rpc:async()=>{attempts++;throw new ApiError('Board changed; refresh before editing',409,'40001');}
+  board:async(boardId)=>{reads++;return {board:{...custom,id:boardId,workspace_id:ws}};},
+  rpc:async()=>{writes++;throw new ApiError(
+   'Board changed; refresh before editing',500,'40001');}
  };
  const client=new BoardCardLifecycleClient(api);
- await assert.rejects(client.edit(custom,{name:'Retry',description:''}),
-  error=>error.code==='40001');
- assert.equal(attempts,2);
+ await assert.rejects(client.edit(custom,{name:'Renamed',description:''}),
+  error=>error instanceof ApiError&&error.status===409&&error.code==='BOARD_REVISION_STALE');
+ assert.equal(reads,1);
+ assert.equal(writes,1);
 });
-
 
 test('stale board lifecycle conflicts disable modal resubmission until the board is reopened',()=>{
  const app=readFileSync('frontend/app.js','utf8');
@@ -279,6 +256,7 @@ test('stale board lifecycle conflicts disable modal resubmission until the board
  assert.match(modal,/const conflict=disableOnConflict&&/);
  assert.match(modal,/err\?\.status===409/);
  assert.match(modal,/err\?\.code==='40001'/);
+ assert.match(modal,/err\?\.code==='BOARD_REVISION_STALE'/);
  assert.match(modal,/err\?\.code==='BOARD_METADATA_CHANGED'/);
  assert.match(modal,/button\.textContent='Close and verify board'/);
  assert.match(modal,/button\.textContent='Close and refresh board'/);
