@@ -1,6 +1,10 @@
 # CP-DB-CPU-05 — Import Cell Read Elision
 
-**Status:** Implemented; PR and production activation pending.
+**Status:** Deployed to the existing production project; genuine import-workload acceptance pending.
+
+**PR:** #385 (merged 2026-11-14 03:20 UTC; commit `e9b787953a87bbfe5d0b4b7acad939c49115feaf`).
+
+**Supabase migration:** `20261114032119` (`cp_db_cpu_05_import_cell_read_elision`).
 
 ## Evidence
 
