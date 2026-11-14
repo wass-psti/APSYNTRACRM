@@ -132,7 +132,7 @@ test('all reviewed board and module write RPCs publish cross-window invalidation
   'frt_record_bank_execution','frt_request_action','frt_request_assignment','frt_save_recipient',
   'frt_set_recipient_qr','frt_set_request_filing_status','frt_submit_liquidation_v2',
   'frt_update_request_date_cas','apsyntra_crm_platform_role_set',
-  'apsyntra_crm_role_manage_user_access','apsyntra_role_configuration_propose','update_own_profile'
+  'apsyntra_role_manage_user_access','apsyntra_role_configuration_propose','update_own_profile'
  ];
  const events=[];
  const auth={userId:user,accessToken:'token',authorized:async()=>({ok:true})};
@@ -141,6 +141,46 @@ test('all reviewed board and module write RPCs publish cross-window invalidation
  for(const name of writes)await api.rpc(name,{p_board_id:boardId});
  assert.equal(events.length,writes.length);
  assert.ok(events.every(event=>event.boardId===boardId&&event.revision===null));
+});
+test('native issue Edge Function writes publish only after every signed receipt is verified',async()=>{
+ const events=[];let calls=0;
+ const auth={userId:user,accessToken:'token',authorized:async(path,options)=>{
+  calls++;assert.equal(path,'/functions/v1/apsyntra-native-issues');
+  assert.equal(options.method,'POST');
+  return {applied:1,receipts:[{boardId,workspaceId:workspace,revision:7}]};
+ }};
+ const api=new DomainApi(auth);api.onBoardMutation=event=>events.push(event);
+ const result=await api.nativeTransactions(boardId,workspace,[{action:'create'}]);
+ assert.equal(result.applied,1);assert.equal(calls,1);
+ assert.deepEqual(events,[{boardId,revision:null}]);
+});
+test('native issue rejected or malformed receipts do not publish success hints',async()=>{
+ for(const response of [Error('denied'),{applied:1,receipts:[{boardId,workspaceId:foreign,revision:7}]}]){
+  const events=[];
+  const auth={userId:user,accessToken:'token',authorized:async()=>{
+   if(response instanceof Error)throw response;
+   return response;
+  }};
+  const api=new DomainApi(auth);api.onBoardMutation=event=>events.push(event);
+  await assert.rejects(()=>api.nativeTransactions(boardId,workspace,[{action:'create'}]));
+  assert.deepEqual(events,[]);
+ }
+});
+test('overview board item totals use the refreshed signed board-list snapshot',async()=>{
+ let itemCount=3,reads=0;
+ const auth={userId:user,accessToken:'token',authorized:async(path)=>{
+  assert.ok(path.endsWith('/wm_list_boards'));reads++;
+  return [{id:boardId,item_count:itemCount,workspace_id:workspace}];
+ }};
+ const api=new DomainApi(auth);
+ const first=await api.boards('active');
+ itemCount=4;api.invalidateBoardCache();
+ const second=await api.boards('active');
+ assert.equal(first[0].item_count,3);assert.equal(second[0].item_count,4);
+ assert.equal(reads,2);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/const changedBoards=JSON\.stringify\(state\.boards\)!==JSON\.stringify\(boards\)/);
+ assert.match(app,/if\(changedBoards\|\|roleChanged\|\|reason!=='broadcast'\)render\(\)/);
 });
 test('reviewed mutation and read RPC contracts remain disjoint',()=>{
  const source=readFileSync(new URL('../data.js',import.meta.url),'utf8');
@@ -153,6 +193,19 @@ test('reviewed mutation and read RPC contracts remain disjoint',()=>{
  assert.equal(writes.length,59);
  assert.equal(new Set(writes).size,writes.length);
  assert.deepEqual(writes.filter(name=>reads.has(name)),[]);
+});
+test('real BroadcastChannel transports invalidation between independent signed clients',async t=>{
+ if(typeof BroadcastChannel!=='function'){t.skip('BroadcastChannel is unavailable in this Node runtime');return;}
+ const authA={userId:user,isSignedIn:true},authB={userId:user,isSignedIn:true};
+ const sender=new BoardCacheChannel({auth:authA,sender:'node-tab-a'});
+ let resolve;const received=new Promise(done=>{resolve=done;});
+ const receiver=new BoardCacheChannel({auth:authB,sender:'node-tab-b',onInvalidate:resolve});
+ sender.start(scope);receiver.start(scope);
+ try{
+  assert.equal(sender.publish(boardId,null),true);
+  const event=await Promise.race([received,new Promise((_,reject)=>setTimeout(()=>reject(Error('BroadcastChannel delivery timeout')),500))]);
+  assert.deepEqual(event,{boardId,revision:null,...scope});
+ }finally{sender.stop();receiver.stop();}
 });
 test('read-only receipt preparation remains excluded from mutation broadcasts',async()=>{
  let events=0;
@@ -167,9 +220,20 @@ test('UI hooks source-cache invalidation into signed reconciliation and lifecycl
  assert.match(app,/onInvalidate:\(\{boardId,revision,userId,workspaceId\}\)=>\{/);
  assert.match(app,/db\.invalidateBoardCache\(boardId,\{revision\}\)/);
  assert.match(app,/reconcilePlatformSync\(\{boardIds:/);
+ assert.ok(app.includes('onMutation:()=>boardCacheChannel.publish(state.boardId,null)'));
+ assert.ok(app.includes('boardCacheChannel.publish(null,null)'));
+ assert.match(app,/container:root\.querySelector\('#fueltrans-native-host'\),auth,api:db/);
+ assert.ok(app.includes('refresh:true,onMutation:()=>boardCacheChannel.publish(boardId,null)'));
  assert.match(app,/window\.addEventListener\('focus',\(\)=>platformSync\.focusChanged\(\)\)/);
  assert.match(app,/window\.addEventListener\('pageshow',event=>\{\s*if\(event\.persisted\)platformSync\.focusChanged\(\)/);
  assert.doesNotMatch(app,/if\(state\.view==='board'&&\(boardId===null\|\|boardId===state\.boardId\)\)/);
+ assert.match(app,/if\(tab==='fueltrack'&&boardId===FUELTRACK_V3_ID\)\{[\s\S]*?await loadFuelTrackBackend\(serial\)[\s\S]*?await loadFuelTrackActivity\(serial\)/);
+ assert.match(app,/if\(tab==='tradelink'&&boardId===TRADELINK_BOARD_ID\)\{/);
+ assert.match(app,/await loadTradeLinkActivity\(serial\)/);
+ assert.match(app,/await loadTradeLinkDrafts\(serial\)/);
+ assert.match(app,/tradeLinkDraftHasUnsavedChanges\(state\.tradeLinkDraft\)/);
+ assert.match(app,/state\.fuelTrackBackendBusy\|\|state\.fuelTrackActivityBusy/);
+ assert.match(app,/state\.mrhAddView&&state\.tab==='sourcing'/);
  assert.match(app,/auth\.onExpired=\(\)=>\{boardCacheChannel\.stop\(\)/);
  assert.doesNotMatch(readFileSync(new URL('../board-cache-channel.js',import.meta.url),'utf8'),/localStorage|sessionStorage|indexedDB/);
 });
