@@ -1,7 +1,7 @@
 # CP-BOARD-IMPORT-SYNC-01 — Authoritative Board Counts and Import Reconciliation
 
 **Date:** 2026-11-15
-**Implementation status:** IMPLEMENTED and deployed to GitHub Pages; production migration applied to the existing Supabase project and verified in the migration ledger. Genuine signed-browser user validation remains pending.
+**Implementation status:** IMPLEMENTED and deployed to GitHub Pages; production migration applied and verified. Signed-browser acceptance completed for pagination, refresh, import insertion, duplicate skip, update, and invalid-row exclusion. Sign-out/sign-in was not separately exercised.
 **Scope:** Board item count accuracy, progressive page reconciliation, group totals, and import outcome reporting.
 
 ## Objectives
@@ -16,9 +16,9 @@
 
 - The existing wm_get_board_items_page(uuid, integer, uuid, integer) function uses keyset pagination and returns a maximum of 500 records per page.
 - The active board-list RPC counts non-archived records. The board item-page RPC previously returned no authoritative persisted count.
-- The two TimeTracker boards previously mistaken for active inventory are marked trashed; their record totals must not be mixed with active-board totals.
-- The audited import history examined for the relevant trashed board contains eight committed wizard receipts: 320 created, zero updated, zero skipped. This is historical evidence for that board, not proof of a separate 420-row import.
-- The database inventory did not corroborate a board total of 1,557 for the TimeTracker boards examined.
+- Two trashed boards named TimeTracker contain 320 and 4,000 records respectively; neither may be mixed into active TimeTracker board totals. The active TimeTracker System and TimeTracker Attendance boards contain 8 and 3 records respectively.
+- The 320-record trashed board has eight committed wizard receipts: 320 created, zero updated, zero skipped. The other trashed board has 80 receipts: 4,000 created, zero updated, zero skipped.
+- No board in the current database inventory has exactly 420 or 1,557 records. The legacy import event payloads retain created/updated/skipped counts but not source-row, validation, rejection, or worksheet-exclusion totals; the exact historical disposition of any 420-row source file cannot be reconstructed from those receipts. The regression test explicitly prevents 420 source rows from being reported as 420 persisted writes when only 320 are accounted for.
 - Existing indexes include board-scoped item indexes, an active-board count index, and group-position/archive indexes. This increment adds no index and no background process.
 
 ## Backend response contract
@@ -61,8 +61,24 @@ A mismatched receipt is not presented as a fully reconciled import. The UI instr
 - Production migration `cp_board_import_sync_01_authoritative_counts` was applied to the existing Supabase project. Supabase recorded migration version `20261115132051` (the repository migration filename and CI path must use this exact applied version).
 - Read-only post-activation catalog verification confirms the original RPC signature, `SECURITY DEFINER`, `postgres` owner, `search_path=public`, and ACL `{postgres=X/postgres,authenticated=X/postgres}` remain unchanged. The first-page count branch and counts payload are present.
 - The largest active board observed during read-only inspection contained 2,215 items. Its count-query plan uses `work_board_items_board_id_idx` and a bounded board-scoped bitmap heap scan; no new index or background process was added. The count aggregate runs only on the first page.
-- Genuine signed-browser testing of the deployed count labels, load-more reconciliation, and refresh behavior remains pending. No user-entered operational import was performed as part of this increment.
+- Genuine signed-browser acceptance was performed on 2026-11-15 using the dedicated nonproduction CP-BIMP-11 Import QA board (e1071df3-1b0d-43c0-8aa0-732c09032df4) under the existing verified CRM admin session.
+- Starting state: 41 persisted active records in one group. A synthetic 210-row CSV was imported into the existing Main group in two atomic batches (133 + 77); the UI reported 210 inserted, zero updated/skipped/rejected/failed, and 210 committed writes.
+- Reimporting the same 210 stable Item titles in Skip mode matched all 210, skipped all 210, and committed zero writes. The two batch receipts independently recorded 133 and 77 skips.
+- Update-mode acceptance matched one existing synthetic Item title and committed exactly one update; PostgreSQL readback confirmed its Amount value changed to 999.125.
+- Invalid-row acceptance used two source rows: one valid row was inserted, one invalid date at worksheet row 3 was rejected after explicit exclusion acknowledgement, and no rejected record was persisted. The UI reported source=2, valid=1, inserted=1, rejected=1, failed=0.
+- Final PostgreSQL readback confirmed 252 total/active records, zero archived records, and 252 records in the Main group. The 210 pagination-test titles were unique with zero duplicate-title groups; the invalid row was absent.
+- After browser refresh, the signed board displayed 200 loaded / 52 remaining / 252 total (252 active, 0 archived). Loading the next page displayed 252 loaded / 0 remaining / 252 total. This confirms the first-page reset is a loaded-depth reset, not loss of persisted rows.
+- Focused local Node test run: 106/106 board pagination, hydration, import summary, batch, and parsing tests passed. Main-branch GitHub Actions also passed frontend validation, PostgreSQL 17 authoritative-count acceptance, and live GitHub Pages asset verification. GitHub Pages deployment succeeded.
+- The signed browser session was retained throughout; a separate sign-out/sign-in cycle was not performed.
+- The Supabase Preview check remains failed because the production ledger contains 222 migration versions while this repository contains 28 migration files (206 remote versions are absent locally; 12 local versions are not in the remote ledger; 16 match). The board-count migration version 20261115132051 itself matches. Do not run migration repair, reset, or another production migration as a workaround; align the authoritative migration source/history in a separate, reviewed increment.
 
 ## Out of scope
 
 No record moves, board restores, archive changes, bulk writes, new roles, grants, access policies, test users, additional Supabase projects, scheduled jobs, telemetry, or production data repair.
+
+## Live acceptance interpretation
+
+- The former 200/320 observation is now explained by progressive hydration: 200 is the initial loaded page, while the authoritative total and remaining count describe persisted records not yet loaded. Refresh correctly restores the first page without reducing the database total.
+- The historical 420 figure is not verified as 420 committed writes. The relevant legacy board receipts substantiate 320 created records; the old event schema does not preserve enough source-row detail to allocate the remaining source rows retrospectively.
+- The 1,557 figure is not present as an authoritative board total in the current database inventory. Current board and group totals are read from the selected board's authoritative page-count contract.
+- CP-BOARD-IMPORT-SYNC-01 functional acceptance is verified for the tested signed-browser scenarios. Separate repository/production migration-history alignment and a sign-out/sign-in cycle remain outside this increment.
