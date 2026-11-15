@@ -36,7 +36,15 @@ For a live read-only version comparison with the installed CLI 2.x syntax:
 
     supabase migration list --project-ref jtlusodorfnyzgyuewkz --workdir .
 
-The GitHub Supabase Preview integration is the remaining hosted pipeline acceptance. It must report the same 222 applied versions after this branch is previewed.
+## Supabase GitHub integration status
+
+The existing project integration is configured for repository wass-psti/APSYNTRACRM, working directory ., and production branch main. Deploy-to-production is enabled. Automatic preview branching is disabled, so the Supabase Preview check on PRs is skipped and no PR preview database is created.
+
+The Supabase dashboard's latest main-branch workflow log (2026-11-15 14:02:35 UTC) confirms the historical failure was exactly: "Remote migration versions not found in local migrations directory." This branch supplies the complete 222-version source that was missing from main.
+
+Before merge, the live CLI comparison confirms all 222 versions already exist in production. Therefore merging this recovery commit should not introduce a new migration version or execute new SQL against production; the enabled integration should only reconcile the repository source against the already-applied ledger. Verify the main-branch workflow after merge.
+
+Preview-branch activation is intentionally separate. Enabling Automatic branching creates a preview database for each pull request and can incur additional compute charges. It remains disabled pending explicit cost authorization. No preview branch or new Supabase project was created as part of this recovery.
 
 ## Safety and non-goals
 
