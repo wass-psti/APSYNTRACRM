@@ -31,10 +31,10 @@ export function importBatchSize(plan,{extendedReferences=false}={}){
 const fail=message=>{throw new ApiError(message,409);};
 const sum=(a,b)=>({
  created:a.created+b.created,updated:a.updated+b.updated,
- skipped:a.skipped+b.skipped,columnsCreated:a.columnsCreated+b.columnsCreated,
- groupsCreated:a.groupsCreated+b.groupsCreated
+ skipped:a.skipped+b.skipped,duplicates:(a.duplicates||0)+(b.duplicates||0),
+ columnsCreated:a.columnsCreated+b.columnsCreated,groupsCreated:a.groupsCreated+b.groupsCreated
 });
-const blank=()=>({created:0,updated:0,skipped:0,columnsCreated:0,groupsCreated:0});
+const blank=()=>({created:0,updated:0,skipped:0,duplicates:0,columnsCreated:0,groupsCreated:0});
 // Checkpoint is deliberately in-memory only: it is bound to the exact reviewed
 // workbook/plan and signed board snapshot. No source data or personal cells
 // are copied into localStorage or an unaudited server-side queue.
@@ -132,7 +132,7 @@ export async function executeBoardImportBatched({api,auth,detail,sheet,mappings,
    if(!verifiedDetail)fail('The atomic import readback did not provide a verified destination snapshot.');
    // executeBoardImport already verified the committed rows. Preserve that
    // evidence even if subsequent state retrieval is unavailable.
-   receipt=sum(receipt,confirmed);completed=end;
+   receipt=sum(receipt,{...confirmed,duplicates:plan.preview.duplicateRows||0});completed=end;
    // Publish verified progress immediately. Mapping/checkpoint failures
    // must not leave the display one committed batch behind.
    try{onProgress({batch:batch+1,total,completed,rows:sheet.rows.length,receipt:{...receipt}});}

@@ -132,5 +132,5 @@ test('CP-BIMP-17C the board import lazy module is versioned without changing the
  const index=readFileSync('index.html','utf8');
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(index,/<script type="module" src="\.\/frontend\/app\.js"><\/script>/);
- assert.match(app,/board-import-ui\.js\?v=cp-bimp-17c-20261112/);
+ assert.match(app,/board-import-ui\.js\?v=cp-board-import-sync-01-20261115/);
 });

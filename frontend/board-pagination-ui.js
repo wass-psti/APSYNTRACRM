@@ -1,12 +1,29 @@
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[char]));
-export function renderBoardPagination(pagination,{busy=false,error=''}={}){
+export function boardPaginationStatus(pagination){
  if(!pagination||!Number.isSafeInteger(Number(pagination.loaded_count)))return '';
  const loaded=Math.max(0,Number(pagination.loaded_count));
- const more=pagination.has_more===true;
- const status=more?'Showing '+loaded+' loaded items. More items are available.':
+ const total=Number.isSafeInteger(pagination.total_count)?pagination.total_count:null;
+ if(total!==null){
+  const remaining=Number.isSafeInteger(pagination.remaining_count)?
+   pagination.remaining_count:Math.max(0,total-loaded);
+  const active=Number.isSafeInteger(pagination.active_count)?pagination.active_count:null;
+  const archived=Number.isSafeInteger(pagination.archived_count)?pagination.archived_count:null;
+  const split=active!==null&&archived!==null?
+   ' ('+active.toLocaleString('en-US')+' active, '+archived.toLocaleString('en-US')+' archived)':'';
+  return loaded.toLocaleString('en-US')+' loaded · '+
+   remaining.toLocaleString('en-US')+' remaining · '+
+   total.toLocaleString('en-US')+' total'+split;
+ }
+ return pagination.has_more===true?
+  'Showing '+loaded+' loaded items. More items are available.':
   'All available items loaded · '+loaded+' items.';
+}
+export function renderBoardPagination(pagination,{busy=false,error=''}={}){
+ if(!pagination||!Number.isSafeInteger(Number(pagination.loaded_count)))return '';
+ const more=pagination.has_more===true;
+ const status=boardPaginationStatus(pagination);
  return '<section class="board-pagination" aria-label="Board item pagination">'+
   '<p class="board-pagination-status" tabindex="-1" role="status" aria-live="polite">'+status+'</p>'+
   (error?'<p class="board-pagination-error" role="alert">'+escape(error)+'</p>':'')+

@@ -106,7 +106,7 @@ import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColu
 import {planBoardColumnRemoval} from './board-column-removal-plan.js';
 import {cmp02CreationConfig} from './board-typed-cmp02.js';
 import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board-window.js';
-import {mountBoardPagination,renderBoardPagination} from './board-pagination-ui.js';
+import {mountBoardPagination,renderBoardPagination} from './board-pagination-ui.js?v=cp-board-import-sync-01-20261115';
 import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
 import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
 import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
@@ -813,6 +813,15 @@ function groupHeading(group,count){
  // The saved group title is the sole source for both display and editing.
  const title=e(group.title||'Group');
  const displayTitle=title;
+ const persistedCount=Number.isSafeInteger(group.total_item_count)?group.total_item_count:null;
+ const activeCount=Number.isSafeInteger(group.active_item_count)?group.active_item_count:null;
+ const archivedCount=Number.isSafeInteger(group.archived_item_count)?group.archived_item_count:null;
+ const archiveSuffix=archivedCount>0?
+  ' · '+activeCount.toLocaleString('en-US')+' active · '+archivedCount.toLocaleString('en-US')+' archived':'';
+ const groupCountLabel=persistedCount===null?
+  count+(state.board?.pagination?.has_more===true?' loaded':' items'):
+  count===persistedCount?persistedCount+' items'+archiveSuffix:
+   count+' loaded / '+persistedCount+' total'+archiveSuffix;
  const fuelTrackEditable=state.edit&&state.board?.board?.id==='7af78b3f-67bf-4600-9aa1-9006d19d486e'&&
   state.board?.board?.name==='FuelTrack+ v3'&&
   String(state.board.board.description||'').startsWith('[APSYNTRA:MODULE:fueltrack:v1]');
@@ -825,7 +834,7 @@ function groupHeading(group,count){
   '</form></div>';
  return '<div class="group-heading" data-group-id="'+id+'"><h3>'+displayTitle+'</h3>'+
   (fuelTrackEditable?'<button type="button" class="board-group-rename-trigger" data-action="group-inline-edit" data-id="'+id+'" aria-label="Edit name inline for '+displayTitle+'" title="Edit name inline">✎ <span>Edit name</span></button>':'')+
-  (state.board?.pagination?.loaded===true?'<small>'+count+(state.board.pagination.has_more===true?' loaded':'')+' items</small>':'')+
+  (state.board?.pagination?.loaded===true?'<small>'+groupCountLabel+'</small>':'')+
   (state.edit?'<details class="board-group-actions"><summary aria-label="Actions for '+displayTitle+
    '" title="Group actions">⋮</summary><div class="board-group-actions-list">'+
    '<button type="button" data-action="group-inline-edit" data-id="'+id+'">Edit name inline</button>'+
@@ -910,6 +919,12 @@ function boardPage(){
  const shownGroups=groups.filter(g=>
   !hiddenGroups.includes(g)&&!redundantGroups.includes(g));
  const moduleKey=moduleByBoardName(b.name)?.key;
+ const loadedBoardItemCount=items.length.toLocaleString('en-US');
+ const persistedBoardItemCount=Number.isSafeInteger(state.board.pagination?.total_count)?
+  state.board.pagination.total_count.toLocaleString('en-US'):null;
+ const boardItemCountLabel=persistedBoardItemCount===null?
+  loadedBoardItemCount+(state.board.pagination?.has_more===true?'+':''):
+  loadedBoardItemCount+'/'+persistedBoardItemCount;
  const minimal=isItemOnlyBoard(state.board,state.boardUi);
  const primaryTitle=state.boardUi?.status==='VERIFIED_READ'?state.boardUi.primaryLabel:'Item';
  const primaryEditable=state.boardManage===true&&state.boardUi?.status==='VERIFIED_READ'&&
@@ -919,7 +934,7 @@ function boardPage(){
  const tabSpecs=[
   ...(isMaterialTrackerBoard(state.board)?[{key:'sourcing',href:'#/boards/'+b.id+'/sourcing',label:'◇ Material Tracker'}]:[]),
   {key:'items',href:'#/boards/'+b.id+(moduleKey==='fueltrans'?'/items':moduleKey==='timetracker'?'/items':''),
-    label:'▤ Board items'+(state.board.pagination?.loaded===true?' <span class="csp-u060">('+items.length+(state.board.pagination?.has_more?'+':'')+')</span>':'')},
+    label:'▤ Board items'+(state.board.pagination?.loaded===true?' <span class="csp-u060">('+boardItemCountLabel+')</span>':'')},
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
   ...(isFuelTrackV3ApplicationBoard(b)?[{key:'fueltrack',href:fuelTrackHref('dashboard'),label:'◈ FuelTrack+ v3 app'}]:[]),
@@ -1001,7 +1016,10 @@ ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSour
    workspaceId:state.context?.workspace_id,boardId:b.id,
    primaryTitle:state.boardUi?.status==='VERIFIED_READ'&&state.boardUi.revision>0?
     primaryTitle:'Employee',primaryEditable}):
-  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable,footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:groupedItems.get(g.id).length+(state.board.pagination?.has_more?' loaded':' records')}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable)}`).join(''):
+  moduleByBoardName(b.name)?boardGrid(state.board,{groupId:g.id,groupItems:groupedItems.get(g.id)||[],layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable,footer:renderGroupAddRow({groupId:g.id,domain:true}),summaries:{record:Number.isSafeInteger(g.total_item_count)?
+    (groupedItems.get(g.id).length+' loaded / '+g.total_item_count+' total'+
+     (g.archived_item_count>0?' · '+g.active_item_count+' active · '+g.archived_item_count+' archived':'')):
+    groupedItems.get(g.id).length+(state.board.pagination?.has_more?' loaded':' records')}}):groupRows(groupedItems.get(g.id)||[],state.edit,layout,g.id,primaryTitle,state.board,columnLabels,primaryEditable)}`).join(''):
  `<div class="panel">${empty('Your board is ready','Create a group to start adding and organizing items.',state.edit?'<button class="primary" data-action="new-group">＋ Add your first group</button>':'')}</div>`}
  ${ungroupedItems.length?`<div class="group-heading"><h3>Ungrouped</h3></div>${moduleByBoardName(b.name)?boardGrid({...state.board,items:ungroupedItems},{layout,primaryTitle,columnLabels,allowCustom,prepared:preparedGrid,selection:{enabled:true,selected:itemSelection.ids},primaryEditable}):groupRows(ungroupedItems,state.edit,layout,'ungrouped',primaryTitle,state.board,columnLabels,primaryEditable)}`:''}`}${state.tab==='items'?renderBoardPagination(state.board.pagination,{busy:state.boardPageBusy,error:state.boardPageError}):''}</div>`;
 }
@@ -5077,12 +5095,15 @@ async function action(name,button){
   const routeBoard=()=>location.hash.match(/^#\/boards\/([0-9a-f-]{36})(?:\/|$)/i)?.[1];
   if(routeBoard()!==selected)
    throw new ApiError('Board navigation is still updating. Retry import after the destination loads.',409);
-  const {openBoardImportWizard}=await import('./board-import-ui.js?v=cp-bimp-17c-20261112');
+  const {openBoardImportWizard}=await import('./board-import-ui.js?v=cp-board-import-sync-01-20261115');
   if(state.boardId!==selected||routeBoard()!==selected||
      !auth.isSignedIn||!canManuallyEditBoard(state.board?.board,state.edit))
    throw new ApiError('Board access changed before import opened.',403);
   await openBoardImportWizard({api:db,auth,boardId:selected,onComplete:async receipt=>{
-   if(state.boardId===selected){await loadBoard(selected,'items');toast('Imported '+receipt.created+' items; updated '+receipt.updated+'.');}
+   if(state.boardId===selected){await loadBoard(selected,'items');
+   toast(receipt.reconciled===false?
+    'Import writes committed, but row totals need reconciliation. Do not repeat the import yet.':
+    'Committed '+receipt.committedWrites+' database writes ('+receipt.created+' inserted, '+receipt.updated+' updated); '+receipt.skipped+' skipped.');}
   }});
   break;
  }

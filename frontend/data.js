@@ -8,7 +8,69 @@ function compareBoardCursor(left,right){
  if(left.position!==right.position)return left.position-right.position;
  return left.id.localeCompare(right.id);
 }
-function validateBoardItemPage(page,{boardId,columnIds,afterCursor=null,
+function validateBoardPageCounts(counts,{groupIds,pageItemCount,hasMore}={}){
+ if(counts==null)return null;
+ const integer=value=>Number.isSafeInteger(value)&&value>=0;
+ if(!counts||!integer(counts.total_count)||!integer(counts.active_count)||
+    !integer(counts.archived_count)||!Array.isArray(counts.groups)||
+    counts.active_count+counts.archived_count!==counts.total_count)
+  throw new ApiError('Board count response is invalid.',409,'INVALID_BOARD_COUNTS');
+ const seen=new Set();let total=0,active=0,archived=0;
+ for(const group of counts.groups){
+  if(!group||!validUuid(group.group_id)||
+     (groupIds&& !groupIds.has(group.group_id))||seen.has(group.group_id)||
+     !integer(group.total_count)||!integer(group.active_count)||
+     !integer(group.archived_count)||
+     group.active_count+group.archived_count!==group.total_count)
+   throw new ApiError('Board group count response is invalid.',409,'INVALID_BOARD_COUNTS');
+  seen.add(group.group_id);total+=group.total_count;
+  active+=group.active_count;archived+=group.archived_count;
+ }
+ if(total!==counts.total_count||active!==counts.active_count||
+    archived!==counts.archived_count||counts.total_count<pageItemCount||
+    (hasMore?counts.total_count<=pageItemCount:counts.total_count!==pageItemCount))
+  throw new ApiError('Board and group counts do not reconcile with the first page.',409,'BOARD_COUNT_MISMATCH');
+ return {total_count:counts.total_count,active_count:counts.active_count,
+  archived_count:counts.archived_count,groups:counts.groups.map(group=>({...group}))};
+}
+function validateLoadedBoardCounts(items,counts,{complete=false}={}){
+ if(!counts)return;
+ const actual={total_count:items.length,active_count:0,archived_count:0,groups:new Map()};
+ for(const item of items){
+  const archived=!!item.archived_at;
+  if(archived)actual.archived_count++;else actual.active_count++;
+  const group=actual.groups.get(item.group_id)||{total_count:0,active_count:0,archived_count:0};
+  group.total_count++;if(archived)group.archived_count++;else group.active_count++;
+  actual.groups.set(item.group_id,group);
+ }
+ const exceeds=(observed,expected)=>observed>expected;
+ if(exceeds(actual.total_count,counts.total_count)||
+    exceeds(actual.active_count,counts.active_count)||
+    exceeds(actual.archived_count,counts.archived_count)||
+    (complete&&(actual.total_count!==counts.total_count||
+      actual.active_count!==counts.active_count||
+      actual.archived_count!==counts.archived_count)))
+  throw new ApiError('Loaded board rows do not reconcile with authoritative active and archived totals.',409,'BOARD_COUNT_MISMATCH');
+ const expectedGroups=new Map(counts.groups.map(group=>[group.group_id,group]));
+ for(const [groupId,observed] of actual.groups){
+  const expected=expectedGroups.get(groupId);
+  if(!expected||exceeds(observed.total_count,expected.total_count)||
+     exceeds(observed.active_count,expected.active_count)||
+     exceeds(observed.archived_count,expected.archived_count)||
+     (complete&&(observed.total_count!==expected.total_count||
+       observed.active_count!==expected.active_count||
+       observed.archived_count!==expected.archived_count)))
+   throw new ApiError('Loaded group rows do not reconcile with authoritative group totals.',409,'BOARD_COUNT_MISMATCH');
+ }
+ if(complete)for(const [groupId,expected] of expectedGroups){
+  const observed=actual.groups.get(groupId)||{total_count:0,active_count:0,archived_count:0};
+  if(observed.total_count!==expected.total_count||
+     observed.active_count!==expected.active_count||
+     observed.archived_count!==expected.archived_count)
+   throw new ApiError('A completed group page does not match its authoritative totals.',409,'BOARD_COUNT_MISMATCH');
+ }
+}
+function validateBoardItemPage(page,{boardId,columnIds,groupIds,afterCursor=null,
  existingItemIds=new Set(),existingValueKeys=new Set(),pageSize=BOARD_ITEM_PAGE_SIZE}={}){
  if(!page||!Array.isArray(page.items)||!Array.isArray(page.values)||
     typeof page.has_more!=='boolean')
@@ -53,8 +115,11 @@ function validateBoardItemPage(page,{boardId,columnIds,afterCursor=null,
  }else if(page.next_cursor!=null){
   throw new ApiError('Final board item page returned an unexpected cursor.',409,'INVALID_BOARD_CURSOR');
  }
+ const counts=validateBoardPageCounts(page.counts,{
+  groupIds,pageItemCount:page.items.length,hasMore:page.has_more
+ });
  for(const id of pageItemIds)existingItemIds.add(id);
- return {items:page.items,values:page.values,hasMore:page.has_more,nextCursor};
+ return {items:page.items,values:page.values,hasMore:page.has_more,nextCursor,counts};
 }
 function encodeQuery(input){return new URLSearchParams(input).toString();}
 // Board-affecting writes only. Read RPCs must never broadcast invalidations:
@@ -235,18 +300,32 @@ export class DomainApi {
    const existingValueKeys=new Set(entry.value.values.map(value=>
     value.item_id+':'+value.column_id));
    const columnIds=new Set(entry.value.columns.map(column=>column?.id).filter(validUuid));
+   const groupIds=new Set(entry.value.groups.map(group=>group?.id).filter(validUuid));
    const parsed=validateBoardItemPage(page,{
-    boardId,columnIds,afterCursor:cursor,existingItemIds,existingValueKeys
+    boardId,columnIds,groupIds,afterCursor:cursor,existingItemIds,existingValueKeys
+   });
+   const items=[...entry.value.items,...parsed.items];
+   const loadedCount=items.length;
+   const totalCount=entry.value.pagination.total_count;
+   const remainingCount=Number.isSafeInteger(totalCount)?totalCount-loadedCount:null;
+   if(remainingCount!==null&&(remainingCount<0||
+      (parsed.hasMore?remainingCount===0:remainingCount!==0)))
+    throw new ApiError('Board pagination did not reconcile with its authoritative total. Refresh the board.',409,'BOARD_COUNT_MISMATCH');
+   if(Number.isSafeInteger(totalCount))validateLoadedBoardCounts(items,{
+    total_count:totalCount,active_count:entry.value.pagination.active_count,
+    archived_count:entry.value.pagination.archived_count,
+    groups:entry.value.pagination.group_counts
+   },{complete:!parsed.hasMore});
+   const pagination={...entry.value.pagination,
+    page_size:BOARD_ITEM_PAGE_SIZE,has_more:parsed.hasMore,
+    next_cursor:parsed.nextCursor,loaded_count:loadedCount,loaded:true};
+   if(Number.isSafeInteger(totalCount))Object.assign(pagination,{
+    loaded_active_count:items.filter(item=>!item.archived_at).length,
+    loaded_archived_count:items.filter(item=>!!item.archived_at).length,
+    remaining_count:remainingCount
    });
    const value={
-    ...entry.value,
-    items:[...entry.value.items,...parsed.items],
-    values:[...entry.value.values,...parsed.values],
-    pagination:{
-     page_size:BOARD_ITEM_PAGE_SIZE,has_more:parsed.hasMore,
-     next_cursor:parsed.nextCursor,
-     loaded_count:entry.value.items.length+parsed.items.length,loaded:true
-    }
+    ...entry.value,items,values:[...entry.value.values,...parsed.values],pagination
    };
    if(this.auth?.userId!==userId||this.auth?.accessToken!==token||
       this.boardReadGeneration!==generation||
@@ -385,14 +464,16 @@ export class DomainApi {
        !Array.isArray(shell.columns))
      throw new ApiError('Board shell response is incomplete.',409,'INVALID_BOARD_SHELL');
     const columnIds=new Set(shell.columns.map(column=>column?.id).filter(validUuid));
+    const groupIds=new Set(shell.groups.map(group=>group?.id).filter(validUuid));
     const items=[],values=[],itemIds=new Set(),valueKeys=new Set();
-    let page=firstPage,cursor=null,parsed={hasMore:false,nextCursor:null};
+    let page=firstPage,cursor=null,parsed={hasMore:false,nextCursor:null,counts:null},pageCounts=null;
     if(includeItems){
      while(true){
       parsed=validateBoardItemPage(page,{
-       boardId,columnIds,afterCursor:cursor,
+       boardId,columnIds,groupIds,afterCursor:cursor,
        existingItemIds:itemIds,existingValueKeys:valueKeys
       });
+      if(cursor===null&&parsed.counts)pageCounts=parsed.counts;
       items.push(...parsed.items);
       values.push(...parsed.values);
       if(!parsed.hasMore||!complete)break;
@@ -406,13 +487,31 @@ export class DomainApi {
     if(this.auth?.userId!==actor)
      throw new ApiError('Signed board identity changed during loading.',403);
     if(this.boardReadGeneration!==generation)return null;
-    const detail={
-     ...shell,items,values,
-     pagination:{
-      page_size:BOARD_ITEM_PAGE_SIZE,has_more:parsed.hasMore,
-      next_cursor:parsed.nextCursor,loaded_count:items.length,loaded:includeItems===true
-     }
-    };
+    if(pageCounts){
+     const remaining=pageCounts.total_count-items.length;
+     if(remaining<0||(complete&&remaining!==0)||
+        (!complete&&(parsed.hasMore?remaining===0:remaining!==0)))
+      throw new ApiError('Board hydration did not reconcile with its authoritative total. Refresh the board.',409,'BOARD_COUNT_MISMATCH');
+     validateLoadedBoardCounts(items,pageCounts,{complete:!parsed.hasMore});
+    }
+    const groupCounts=new Map((pageCounts?.groups||[]).map(group=>[group.group_id,group]));
+    const groups=pageCounts?shell.groups.map(group=>{
+     const counts=groupCounts.get(group.id)||{total_count:0,active_count:0,archived_count:0};
+     return {...group,item_count:counts.active_count,
+      archived_item_count:counts.archived_count,total_item_count:counts.total_count};
+    }):shell.groups;
+    const board=pageCounts?{...shell.board,item_count:pageCounts.active_count,
+     archived_item_count:pageCounts.archived_count,total_item_count:pageCounts.total_count}:shell.board;
+    const pagination={page_size:BOARD_ITEM_PAGE_SIZE,has_more:parsed.hasMore,
+     next_cursor:parsed.nextCursor,loaded_count:items.length,loaded:includeItems===true};
+    if(pageCounts)Object.assign(pagination,{
+     loaded_active_count:items.filter(item=>!item.archived_at).length,
+     loaded_archived_count:items.filter(item=>!!item.archived_at).length,
+     total_count:pageCounts.total_count,active_count:pageCounts.active_count,
+     archived_count:pageCounts.archived_count,group_counts:pageCounts.groups,
+     remaining_count:Math.max(0,pageCounts.total_count-items.length)
+    });
+    const detail={...shell,board,groups,items,values,pagination};
     if(includeRefs&&this.extendedRefsSupported!==false){
      try{
       const refs=await this.rpc('wm_import_extended_refs_read',{p_board_id:boardId},readOptions);

@@ -43,7 +43,7 @@ export async function sealImportRecovery({checkpoint,fullSheet,worksheetIndex=0,
   remainingDigest:await importDigest(plan.payload,crypt),
   completed,rows:fullSheet.rows.length,batchSize:checkpoint.batchSize,
   receipt:priorReceipt?Object.fromEntries(
-   ['created','updated','skipped','columnsCreated','groupsCreated'].map(k=>
+   ['created','updated','skipped','duplicates','columnsCreated','groupsCreated'].map(k=>
     [k,(priorReceipt[k]||0)+(checkpoint.receipt[k]||0)])):{...checkpoint.receipt},
   groupId:checkpoint.group.groupId,
   behavior:matches.behavior,matchColumnId:matches.matchColumnId,
