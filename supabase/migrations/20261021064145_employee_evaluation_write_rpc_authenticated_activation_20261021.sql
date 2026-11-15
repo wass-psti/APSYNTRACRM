@@ -1,0 +1,10 @@
+REVOKE ALL ON FUNCTION public.employee_evaluation_save(jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.employee_evaluation_update_employee(uuid,jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.employee_evaluation_create_employee(jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.employee_evaluation_update_settings(jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.employee_evaluation_review_transition(uuid,text,text,bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.employee_evaluation_save(jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.employee_evaluation_update_employee(uuid,jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.employee_evaluation_create_employee(jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.employee_evaluation_update_settings(jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.employee_evaluation_review_transition(uuid,text,text,bigint) TO authenticated;;

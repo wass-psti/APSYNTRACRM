@@ -50,4 +50,4 @@ $function$;
 -- CREATE OR REPLACE preserves the existing owner and EXECUTE ACL. In particular,
 -- this internal helper remains unavailable to anon/authenticated direct callers.
 NOTIFY pgrst,'reload schema';
-COMMIT;
+COMMIT;;

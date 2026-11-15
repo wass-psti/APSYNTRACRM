@@ -106,3 +106,4 @@ USING (
   AND (workspace_id = (SELECT current_workspace_id((SELECT auth.uid()))))
   AND (SELECT has_module_access('order-intake'::text, (SELECT auth.uid())))
 );
+;

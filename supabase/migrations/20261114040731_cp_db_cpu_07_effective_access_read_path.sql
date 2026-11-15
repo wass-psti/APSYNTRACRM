@@ -188,3 +188,4 @@ $function$;
 
 -- The function signature and grants are unchanged; replace body only.
 NOTIFY pgrst, 'reload schema';
+;

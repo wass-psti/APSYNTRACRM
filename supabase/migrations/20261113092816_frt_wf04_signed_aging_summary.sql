@@ -44,4 +44,4 @@ BEGIN
 END $fn$;
 REVOKE ALL ON FUNCTION public.frt_liquidation_aging_company(uuid,text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.frt_liquidation_aging_company(uuid,text) TO authenticated;
-COMMIT;
+COMMIT;;

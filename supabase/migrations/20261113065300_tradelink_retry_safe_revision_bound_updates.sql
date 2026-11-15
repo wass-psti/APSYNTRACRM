@@ -198,4 +198,4 @@ BEGIN
  THEN RAISE EXCEPTION 'CP-TL-08E-02 retry postflight failed'
   USING ERRCODE='42501'; END IF;
 END $postflight$;
-COMMIT;
+COMMIT;;

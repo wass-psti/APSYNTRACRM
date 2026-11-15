@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const sql=readFileSync(new URL('../../supabase/migrations/20261113194500_cp_db_perf06_board_list_sql.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migration-candidates/20261113194500_cp_db_perf06_board_list_sql.sql',import.meta.url),'utf8');
 test('board list keeps signed workspace and membership authorization',()=>{
  assert.match(sql,/SECURITY DEFINER/);
  assert.match(sql,/public\.current_workspace_id\(auth\.uid\(\)\)/);

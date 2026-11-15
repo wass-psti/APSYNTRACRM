@@ -728,4 +728,4 @@ BEGIN
   USING ERRCODE='42501'; END IF;
 END $postflight$;
 
-COMMIT;
+COMMIT;;

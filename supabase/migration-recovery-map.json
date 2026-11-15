@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "project_ref": "jtlusodorfnyzgyuewkz",
+  "entries": [
+    {
+      "original_filename": "20261110021141_fueltrack_v3_backend_core.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261110021141_fueltrack_v3_backend_core.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261110021200_fueltrack_v3_board_receipts.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261110021200_fueltrack_v3_board_receipts.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261110163848_fueltrack_v3_module_scoped_workflows.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261110163848_fueltrack_v3_module_scoped_workflows.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261112091535_tradelink_for_approval_dual_review.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261112091535_tradelink_for_approval_dual_review.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261112093727_tradelink_revision_required_edit_compat.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261112093727_tradelink_revision_required_edit_compat.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261112121235_cp_urm04b_crm_admin_capability_parity_20261112.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261112121235_cp_urm04b_crm_admin_capability_parity_20261112.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261113011824_frt_exec02_signed_company_financial_analytics.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113011934_frt_exec02_signed_company_financial_analytics.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261113031952_main_workspace_owner_crm_admin_20261113.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113031952_main_workspace_owner_crm_admin_20261113.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261113042607_cp_urm_app_toolbox_01_source_membership_role_assignment.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113042607_cp_urm_app_toolbox_01_source_membership_role_assignment.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261113060749_cp_frt_ic_01_intercompany_ledger.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113060749_cp_frt_ic_01_intercompany_ledger.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261113065300_tradelink_retry_safe_revision_bound_updates.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113065300_tradelink_retry_safe_revision_bound_updates.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261113085038_frt_wf02_signed_multi_receipt_liquidation.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113085038_frt_wf02_signed_multi_receipt_liquidation.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261113091401_frt_wf03_authoritative_bank_execution.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113091401_frt_wf03_authoritative_bank_execution.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261113092816_frt_wf04_signed_aging_summary.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113092816_frt_wf04_signed_aging_summary.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261113100034_cp_db_perf01_active_board_item_count.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261113100034_cp_db_perf01_active_board_item_count.sql",
+      "comparison": "production migration retained the same CREATE INDEX operation; production-ledger serialization is canonical and older comments/formatting are not retained"
+    },
+    {
+      "original_filename": "20261114013428_cp_db_cpu_04_grouped_board_counts.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114013849_cp_db_cpu_04_grouped_board_counts.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261114015931_cp_db_cpu_04_import_cell_write_coalescing.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114015931_cp_db_cpu_04_import_cell_write_coalescing.sql",
+      "comparison": "production_sql_is_canonical; local source differed only in comments/formatting or statement formatting"
+    },
+    {
+      "original_filename": "20261114021000_cp_db_cpu_04_lifecycle_prelock_cas.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114015343_cp_db_cpu_04_lifecycle_prelock_cas.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261114021600_cp_db_cpu_04_temporary_stale_attribution.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114021710_cp_db_cpu_04_temporary_stale_attribution.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261114021800_cp_db_cpu_04_remove_temporary_attribution.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114022032_cp_db_cpu_04_remove_temporary_attribution.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261114023400_cp_db_cpu_04_nonaborting_lifecycle_conflicts.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114024119_cp_db_cpu_04_nonaborting_lifecycle_conflicts.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261114024500_cp_db_cpu_04_batch_import_realtime_broadcasts.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114025451_cp_db_cpu_04_batch_import_realtime_broadcasts.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261114032119_cp_db_cpu_05_import_cell_read_elision.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114032119_cp_db_cpu_05_import_cell_read_elision.sql",
+      "comparison": "local_sql_matches_recovered_production_source_after_cli_statement_terminator_normalization"
+    },
+    {
+      "original_filename": "20261114040731_cp_db_cpu_07_effective_access_read_path.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114040731_cp_db_cpu_07_effective_access_read_path.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261114151934_cp_db_cpu_12_rls_initplan_optimization.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114151934_cp_db_cpu_12_rls_initplan_optimization.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261114154136_cp_db_cpu_13_stable_rls_helper_initplan_optimization.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261114154136_cp_db_cpu_13_stable_rls_helper_initplan_optimization.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261115132051_cp_board_import_sync_01_authoritative_counts.sql",
+      "status": "reconciled_to_production_ledger",
+      "canonical_filename": "20261115132051_cp_board_import_sync_01_authoritative_counts.sql",
+      "comparison": "same_ledger_version_recovered_from_production"
+    },
+    {
+      "original_filename": "20261113194500_cp_db_perf06_board_list_sql.sql",
+      "status": "candidate_not_in_production_ledger",
+      "preserved_at": "supabase/migration-candidates/20261113194500_cp_db_perf06_board_list_sql.sql",
+      "canonical_filename": null
+    }
+  ]
+}

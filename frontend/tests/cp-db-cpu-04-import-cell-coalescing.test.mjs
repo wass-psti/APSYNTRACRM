@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const sql=readFileSync(new URL('../../supabase/migrations/20261114020300_cp_db_cpu_04_import_cell_write_coalescing.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migrations/20261114015931_cp_db_cpu_04_import_cell_write_coalescing.sql',import.meta.url),'utf8');
 
 test('internal import cell writer preserves value validation and system/custom cell behavior',()=>{
  assert.match(sql,/CREATE OR REPLACE FUNCTION private\.wm_import_set_board_cell/);

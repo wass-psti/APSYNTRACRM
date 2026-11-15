@@ -274,3 +274,4 @@ grant execute on function public.fueltrack_v3_attach_receipt(uuid,uuid,text,text
 grant execute on function public.fueltrack_v3_receipt_read(uuid,uuid) to authenticated;
 
 grant execute on function public.fueltrack_v3_receipt_prepare(uuid,uuid) to authenticated;
+;
