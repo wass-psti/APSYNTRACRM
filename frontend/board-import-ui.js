@@ -12,6 +12,7 @@ import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
 import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize} from './board-import-batches.js';
 import {readImportRecovery,clearImportRecovery,sealImportRecovery,
  importDigest,verifyImportRecovery} from './board-import-durable.js';
+import {reconcileImportSummary} from './board-import-summary.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const choice=(id,label,selected)=>'<option value="'+esc(id)+'"'+(selected?' selected':'')+'>'+esc(label)+'</option>';
@@ -282,7 +283,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    (validation?'<p class="aps-import-error" role="alert">'+esc(validation)+'</p>':'')+
    (result?'<div class="aps-import-summary"><h3>Import preview</h3><p>'+
     result.preview.newItems+' new · '+result.preview.updatedItems+' updates · '+
-    result.preview.skippedItems+' skipped · '+result.preview.newColumns+
+    result.preview.skippedItems+' skipped · '+(result.preview.duplicateRows||0)+' existing matches · '+result.preview.newColumns+
     ' new columns · '+result.preview.rowCount+' accepted rows'+
     (report?.rejected.length?' · '+report.rejected.length+' rejected':'')+'</p>'+
     (readiness().skipped.length?'<p>Excluded source columns: '+
@@ -297,13 +298,21 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  }
  function resultStep(){
   const r=state.complete;
-  return '<section class="aps-import-success" role="status"><h2>Import committed</h2>'+
-   '<p>'+r.created+' created · '+r.updated+' updated · '+r.skipped+
-   ' skipped · '+r.columnsCreated+' columns created · '+r.groupsCreated+
-   ' groups created.'+
-   (rowReview().rejected.length?' '+rowReview().rejected.length+
-     ' rejected source rows explicitly excluded.':'')+
-   '</p><p>Refresh and audit verification are available on your board.</p></section>';
+  const reconciled=r.reconciled!==false;
+  return '<section class="aps-import-success" role="'+(reconciled?'status':'alert')+'"><h2>'+
+   (reconciled?'Import committed':'Import committed — reconciliation required')+'</h2>'+
+   '<div class="aps-import-summary"><p>Source rows: '+r.sourceRows+
+   ' · Valid rows: '+r.validRows+' · Inserted: '+r.created+' · Updated: '+r.updated+
+   ' · Skipped: '+r.skipped+' · Duplicate matches: '+r.duplicates+
+   ' · Rejected: '+r.rejectedRows+' · Excluded worksheet rows: '+r.excludedWorksheetRows+
+   ' · Failed: '+(r.failedRows===null?'Unreconciled':r.failedRows)+'</p>'+
+   '<p><strong>Committed database writes: '+r.committedWrites+'</strong> ('+
+   r.created+' inserted + '+r.updated+' updated). Skipped rows are not counted as persisted writes.</p>'+
+   (reconciled?'': '<p>Reconciliation issues: '+r.reconciliationIssues.map(esc).join(' ')+' '+
+    (r.unreconciledRows?'Unreconciled valid rows: '+r.unreconciledRows+'. ':'')+
+    'Do not repeat this import until the destination board has been refreshed and reconciled.</p>')+
+   '<p>'+r.columnsCreated+' columns created · '+r.groupsCreated+' groups created.</p></div>'+
+   '<p>Refresh and audit verification are available on your board.</p></section>';
  }
  function render(){
   const active=overlay.contains(document.activeElement)?document.activeElement:null;
@@ -443,8 +452,9 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   let phase='preflight';
   try{
    const plan=resume?state.executionPlan:computePlan();
-   const reviewedSource=fullImportSheet();
-   const rejectedSourceRows=rowReview().rejected.map(r=>r.row);
+   const sourceReport=rowReview();
+   const reviewedSource=sourceReport.sheet;
+   const rejectedSourceRows=sourceReport.rejected.map(r=>r.row);
    // A single atomic import needs no durable recovery hash. Avoid adding
    // an unrelated crypto prerequisite to formerly supported small files.
    if(!state.recoverySourceDigest&&
@@ -486,11 +496,19 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    clearImportRecovery({userId:actor.id,boardId});state.recoveryMarker=null;
    state.resumeCheckpoint=null;
    const totalReceipt=earlierReceipt?Object.fromEntries(
-    ['created','updated','skipped','columnsCreated','groupsCreated'].map(k=>
+    ['created','updated','skipped','duplicates','columnsCreated','groupsCreated'].map(k=>
      [k,(earlierReceipt[k]||0)+(receipt[k]||0)])):receipt;
-   state.complete=totalReceipt;state.step=4;
-   try{await onComplete(totalReceipt);}catch{
-    state.error='Import committed, but the board refresh failed. Refresh the board before starting another import.';
+   const excludedWorksheetRows=sheet().omittedRows?.length||0;
+   const importSummary=reconcileImportSummary({
+    sourceRows:sourceReport.sourceRows+excludedWorksheetRows,
+    validRows:sourceReport.acceptedRows,rejectedRows:sourceReport.rejected.length,
+    excludedWorksheetRows,receipt:totalReceipt
+   });
+   state.complete=importSummary;state.step=4;
+   if(!importSummary.reconciled)
+    state.error='Database writes were verified, but source-row accounting did not reconcile. Refresh the board and audit before attempting another import.';
+   try{await onComplete(importSummary);}catch{
+    state.error=(state.error?state.error+' ':'')+'The board refresh failed. Refresh the board before starting another import.';
    }
   }catch(error){
    const failure=normalizeImportFailure(error,phase);

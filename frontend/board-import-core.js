@@ -538,7 +538,7 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,
    else itemMatches.set(k,item);
   }
  }
- const rows=[],readbackRows=[];let previewExisting=0,previewNew=0,previewSkipped=0;
+ const rows=[],readbackRows=[];let previewExisting=0,previewNew=0,previewSkipped=0,previewDuplicates=0;
  const byHeader=new Map(sheet.headers.map((h,i)=>[h,i]));
  // A marker-only source is a verified monday.com checkbox text convention:
  // "v" is checked and a blank is unchecked, unlike generic missing cells.
@@ -577,13 +577,13 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,
    if(existing&&behavior==='update'){
     if(!existing.updated_at)deny('Existing item revision unavailable.',409);
     row.expected_item_updated_at=existing.updated_at;
-    previewExisting++;outcome='update';itemId=existing.id;
+    previewExisting++;previewDuplicates++;outcome='update';itemId=existing.id;
     for(const [source,column] of refMap){
      if(column.id&&!Object.hasOwn(values,source))baselineValues[source]=
       column.system_key==='status'?existing.status??null:stored.get(existing.id+':'+column.id)??null;
     }
    }else if(existing&&behavior==='skip'){
-    previewSkipped++;outcome='skip';itemId=existing.id;
+    previewSkipped++;previewDuplicates++;outcome='skip';itemId=existing.id;
     for(const [source,column] of refMap){
      if(column.id)baselineValues[source]=column.system_key==='status'?
       existing.status??null:stored.get(existing.id+':'+column.id)??null;
@@ -612,7 +612,7 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,
     (destination.action==='existing'?item.group_id===destination.groupId:false)).map(item=>item.id),
    rows:readbackRows},
   preview:{newItems:previewNew,updatedItems:previewExisting,skippedItems:previewSkipped,
-   newColumns:proposed.length,rowCount:rows.length}};
+   duplicateRows:previewDuplicates,newColumns:proposed.length,rowCount:rows.length}};
 }
 export async function executeBoardImport({api,auth,plan,onVerifiedDetail}={}){
  if(!plan?.boardId||!plan?.payload||!api?.board||!api?.allowed||

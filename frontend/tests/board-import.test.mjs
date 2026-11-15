@@ -188,10 +188,11 @@ test('duplicate Skip and Update review keys within the selected Group',()=>{
  const populated={...detail,items:[existing]};
  const skip=buildImportPlan({sheet,detail:populated,mappings:existingMaps,group,
   matches:{behavior:'skip',matchColumnId:'item'}});
- assert.deepEqual(skip.preview,{newItems:1,updatedItems:0,skippedItems:1,newColumns:0,rowCount:2});
+ assert.deepEqual(skip.preview,{newItems:1,updatedItems:0,skippedItems:1,duplicateRows:1,newColumns:0,rowCount:2});
  const update=buildImportPlan({sheet,detail:populated,mappings:existingMaps,group,
   matches:{behavior:'update',matchColumnId:'item'}});
  assert.equal(update.preview.updatedItems,1);
+ assert.equal(update.preview.duplicateRows,1);
  assert.equal(update.preview.skippedItems,1);
  assert.equal(update.payload.rows[0].expected_item_updated_at,existing.updated_at);
  assert.equal(update.payload.rows[1].expected_item_updated_at,undefined);

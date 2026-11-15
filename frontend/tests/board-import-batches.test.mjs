@@ -69,7 +69,7 @@ test('CP-BIMP-13 uncertain second batch halts; never automatically retries or cl
  await assert.rejects(()=>executeBoardImportBatched({...f,auth,batchSize:500}),error=>{
   assert.equal(error.importOutcomeUncertain,true);
   assert.deepEqual(error.importBatchProgress.receipt,{created:500,updated:0,
-   skipped:0,columnsCreated:0,groupsCreated:0});
+   skipped:0,duplicates:0,columnsCreated:0,groupsCreated:0});
   assert.equal(error.importBatchProgress.completed,500);
   assert.equal(error.importBatchProgress.outcomeUncertain,true);
   return true;
