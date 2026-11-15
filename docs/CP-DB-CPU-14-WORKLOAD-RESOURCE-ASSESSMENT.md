@@ -1,9 +1,11 @@
 # CP-DB-CPU-14 — Workload-Driven RPC Coalescing and Database Resource Assessment
 
 **Date:** 2026-11-15
-**Status:** IMPLEMENTED-UNVERIFIED — focused regression 7/7 and full frontend regression 2,292/2,292 pass; Pages source guard passes; production deployment pending.
+**Status:** VERIFIED AND DEPLOYED — focused regression 7/7, full frontend regression 2,292/2,292, post-merge CI, Pages deployment, live asset hash, and live Pages smoke all pass. No database configuration/index change was justified.
 **Repository:** `wass-psti/APSYNTRACRM`
 **Base commit:** `127c4d1229f060f1025cdab78c7c5095feefb7bd`
+**Implementation PR:** [#404](https://github.com/wass-psti/APSYNTRACRM/pull/404)
+**Merged commit:** `532dfe91a0d5987cc2c3bd789ce26e74dec68e25`
 **Supabase project:** `jtlusodorfnyzgyuewkz` (existing project only)
 
 ## 1. Objective
@@ -103,7 +105,7 @@ Read-only diagnostic artifact: `sql/tests/cp-db-cpu-14-readonly-workload-baselin
 | Application RPC temp-block attribution | VERIFIED | Read-only `pg_stat_statements` snapshot |
 | High-volume FK/index candidates ranked | VERIFIED | Catalog + table-statistics inventory |
 | No speculative DB configuration/index change | VERIFIED | No production DDL or setting change |
-| Concurrent context read coalescing | IMPLEMENTED | `DomainApi.contextPending` |
+| Concurrent context read coalescing | VERIFIED | `DomainApi.contextPending`; 7 focused tests and post-merge browser acceptance |
 | Completed context reads remain uncached | VERIFIED LOCALLY | Sequential-read regression test |
 | Invalidation and identity changes reject stale reads | VERIFIED LOCALLY | Regression tests |
 | Focused CP-14 regression | VERIFIED | 7/7 passed |
@@ -111,8 +113,10 @@ Read-only diagnostic artifact: `sql/tests/cp-db-cpu-14-readonly-workload-baselin
 | Shipped JavaScript syntax | VERIFIED | All frontend `.js` files passed `node --check` |
 | GitHub Pages source guard | VERIFIED | `scripts/verify-pages-source.mjs` PASS |
 | Git diff integrity | VERIFIED | `git diff --check` PASS |
-| Full frontend regression | PENDING | Run after implementation review |
-| Production deployment / live post-deploy comparison | PENDING | Requires merge and Pages deployment |
+| Production deployment | VERIFIED | PR #404 / commit `532dfe91`; Pages deployment run `43705464560` succeeded |
+| Live asset integrity | VERIFIED | `frontend/data.js` SHA-256 matches deployed asset exactly |
+| Live Pages smoke | VERIFIED | Expected-SHA smoke passed against `532dfe91` |
+| Live workload reduction measurement | PENDING | Requires subsequent actual signed-user traffic; no CPU reduction claimed |
 
 ## 6. Explicit non-goals
 
@@ -126,4 +130,4 @@ Read-only diagnostic artifact: `sql/tests/cp-db-cpu-14-readonly-workload-baselin
 
 ## 7. Decision
 
-CP-DB-CPU-14 implements a narrow frontend-side reduction of overlapping signed workspace-context reads and records a reproducible read-only production resource baseline. It deliberately does not claim that historical sequential scans are currently occurring at the same rate, that all same-second events are duplicates, or that CPU utilization has been reduced. Further indexes, pool changes, and configuration tuning remain unjustified until a specific hot predicate or saturation event is reproduced with a comparable time-window measurement.
+CP-DB-CPU-14 is VERIFIED AND DEPLOYED. It implements a narrow frontend-side reduction of overlapping signed workspace-context reads and records a reproducible read-only production resource baseline. It deliberately does not claim that historical sequential scans are currently occurring at the same rate, that all same-second events are duplicates, or that CPU utilization has been reduced. Further indexes, pool changes, and configuration tuning remain unjustified until a specific hot predicate or saturation event is reproduced with a comparable time-window measurement. No successor database optimization is justified by the current evidence.
