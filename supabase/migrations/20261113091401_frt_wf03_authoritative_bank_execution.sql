@@ -111,4 +111,4 @@ REVOKE ALL ON FUNCTION public.frt_bank_execution_snapshot(uuid,uuid) FROM PUBLIC
 REVOKE ALL ON FUNCTION public.frt_record_bank_execution(uuid,uuid,jsonb) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.frt_bank_execution_snapshot(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.frt_record_bank_execution(uuid,uuid,jsonb) TO authenticated;
-COMMIT;
+COMMIT;;

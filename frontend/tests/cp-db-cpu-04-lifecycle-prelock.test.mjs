@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const sql=readFileSync(new URL('../../supabase/migrations/20261114021000_cp_db_cpu_04_lifecycle_prelock_cas.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migrations/20261114015343_cp_db_cpu_04_lifecycle_prelock_cas.sql',import.meta.url),'utf8');
 const preflight=sql.indexOf('SELECT wb.updated_at');
 const preflightCompare=sql.indexOf('v_observed_updated_at IS DISTINCT FROM p_expected_updated_at');
 const rowLock=sql.indexOf('FOR UPDATE');

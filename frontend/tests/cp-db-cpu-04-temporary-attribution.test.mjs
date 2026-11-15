@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const sql=readFileSync(new URL('../../supabase/migrations/20261114021600_cp_db_cpu_04_temporary_stale_attribution.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migrations/20261114021710_cp_db_cpu_04_temporary_stale_attribution.sql',import.meta.url),'utf8');
 test('temporary attribution emits hashes only and no direct identifiers or tokens',()=>{
  assert.match(sql,/CP_DB_CPU_04_STALE_LIFECYCLE actor_hash=% session_hash=% board_hash=% action=%/);
  assert.match(sql,/pg_catalog\.md5\(auth\.uid\(\)::text\)/);

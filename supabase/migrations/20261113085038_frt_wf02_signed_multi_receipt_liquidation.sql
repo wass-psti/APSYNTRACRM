@@ -154,4 +154,4 @@ REVOKE ALL ON FUNCTION public.frt_liquidation_snapshot(uuid,uuid) FROM PUBLIC,an
 GRANT EXECUTE ON FUNCTION public.frt_liquidation_snapshot(uuid,uuid) TO authenticated;
 REVOKE ALL ON FUNCTION public.frt_submit_liquidation_v2(uuid,uuid,jsonb) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.frt_submit_liquidation_v2(uuid,uuid,jsonb) TO authenticated;
-COMMIT;
+COMMIT;;

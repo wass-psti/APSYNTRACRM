@@ -216,3 +216,4 @@ $tool_traceability_role_assignment$;
 
 NOTIFY pgrst,'reload schema';
 COMMIT;
+;

@@ -143,4 +143,4 @@ BEGIN
 
   RETURN out_json;
 END;
-$function$;
+$function$;;

@@ -1,0 +1,11 @@
+create index if not exists fueltrans_memberships_user_id_idx on public.fueltrans_memberships(user_id);
+create index if not exists fueltrans_memberships_assigned_by_idx on public.fueltrans_memberships(assigned_by) where assigned_by is not null;
+create index if not exists fueltrans_tickets_assigned_l1_idx on public.fueltrans_tickets(assigned_l1) where assigned_l1 is not null;
+create index if not exists fueltrans_tickets_assigned_l2_idx on public.fueltrans_tickets(assigned_l2) where assigned_l2 is not null;
+create index if not exists fueltrans_notifications_recipient_user_idx on public.fueltrans_notifications(recipient_user_id) where recipient_user_id is not null;
+create index if not exists fueltrans_notifications_created_by_idx on public.fueltrans_notifications(created_by);
+create index if not exists fueltrans_sessions_user_id_idx on public.fueltrans_sessions(user_id);
+create index if not exists fueltrans_sessions_terminated_by_idx on public.fueltrans_sessions(terminated_by) where terminated_by is not null;
+create index if not exists fueltrans_audit_events_actor_user_idx on public.fueltrans_audit_events(actor_user_id) where actor_user_id is not null;
+create index if not exists fueltrans_audit_events_target_user_idx on public.fueltrans_audit_events(target_user_id) where target_user_id is not null;
+create index if not exists fueltrans_user_state_user_id_idx on public.fueltrans_user_state(user_id);;

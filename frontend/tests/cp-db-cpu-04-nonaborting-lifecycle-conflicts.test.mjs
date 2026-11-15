@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const sql=readFileSync(new URL('../../supabase/migrations/20261114023400_cp_db_cpu_04_nonaborting_lifecycle_conflicts.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migrations/20261114024119_cp_db_cpu_04_nonaborting_lifecycle_conflicts.sql',import.meta.url),'utf8');
 const client=readFileSync(new URL('../board-card-lifecycle.js',import.meta.url),'utf8');
 
 test('both stale revision branches return HTTP 409 without raising a database exception',()=>{

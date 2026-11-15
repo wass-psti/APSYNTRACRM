@@ -169,4 +169,4 @@ BEGIN
  THEN RAISE EXCEPTION 'CP-TL-08B save-function security or predicate postflight failed'
   USING ERRCODE='42501'; END IF;
 END $postflight$;
-COMMIT;
+COMMIT;;

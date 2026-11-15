@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const sql=readFileSync(new URL('../../supabase/migrations/20261114021800_cp_db_cpu_04_remove_temporary_attribution.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migrations/20261114022032_cp_db_cpu_04_remove_temporary_attribution.sql',import.meta.url),'utf8');
 test('temporary hashed attribution is removed exactly once from the existing RPC',()=>{
  assert.match(sql,/public\.wm_board_card_mutate\(uuid,timestamp with time zone,text,text,text,text\)/);
  assert.match(sql,/CP_DB_CPU_04_STALE_LIFECYCLE actor_hash=/);

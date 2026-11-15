@@ -1,0 +1,1571 @@
+{
+  "schema_version": 1,
+  "project_ref": "jtlusodorfnyzgyuewkz",
+  "source": "supabase_migrations.schema_migrations.statements",
+  "recovery_method": "Supabase CLI 2.121.0 migration fetch --project-ref into isolated temporary workdir",
+  "recovered_at": "2026-11-15",
+  "remote_ledger": {
+    "migration_count": 222,
+    "distinct_versions": 222,
+    "sql_statement_count": 290,
+    "empty_statement_sets": 0,
+    "first_version": "20260917142647",
+    "last_version": "20261115132051"
+  },
+  "files": [
+    {
+      "version": "20260917142647",
+      "name": "stage_g_m46_boards_backend_data_contract_recovery",
+      "file": "20260917142647_stage_g_m46_boards_backend_data_contract_recovery.sql",
+      "bytes": 34735,
+      "sha256": "2ccef4ad4bfa4d5a9f4e7d3353f1a251f2cd96afaa97700fb4858b45803365ba"
+    },
+    {
+      "version": "20260919165239",
+      "name": "stage_g_m47_boards_table_group_item_recovery",
+      "file": "20260919165239_stage_g_m47_boards_table_group_item_recovery.sql",
+      "bytes": 44729,
+      "sha256": "09362dfacc2402f99a140071b53462af48e261bf4c18622da1e8ea6f6a45fd99"
+    },
+    {
+      "version": "20260922141400",
+      "name": "stage_g_m50_rich_item_workspace_file_recovery",
+      "file": "20260922141400_stage_g_m50_rich_item_workspace_file_recovery.sql",
+      "bytes": 49576,
+      "sha256": "98d7befbbe0d7e3094df213ccb34927ca26a0b83b1b1b3e98e5327bffeefa8ce"
+    },
+    {
+      "version": "20260924173000",
+      "name": "stage_g_m39_auth_session_access_context_corrective",
+      "file": "20260924173000_stage_g_m39_auth_session_access_context_corrective.sql",
+      "bytes": 1913,
+      "sha256": "5cfd9c8bd35a8583e68d227a69b86a1626c0e6081201627d1bf23f3cb802ae66"
+    },
+    {
+      "version": "20260924180000",
+      "name": "stage_g_m54_runtime_capability_m51_parity_corrective",
+      "file": "20260924180000_stage_g_m54_runtime_capability_m51_parity_corrective.sql",
+      "bytes": 6061,
+      "sha256": "7fbb13dbc5c9a46f3b9f1f9b0067035d97e48d2448daa5e345f4a1d29fc1adc1"
+    },
+    {
+      "version": "20260924190000",
+      "name": "stage_g_m54_production_required_rpc_parity_corrective",
+      "file": "20260924190000_stage_g_m54_production_required_rpc_parity_corrective.sql",
+      "bytes": 4176,
+      "sha256": "94b0710a2a5d5f732c2a92ce4a5dbd9bc0a1c15bb80c3bbad1271276c94d1431"
+    },
+    {
+      "version": "20260928034824",
+      "name": "fueltrans_workspace_integration",
+      "file": "20260928034824_fueltrans_workspace_integration.sql",
+      "bytes": 11736,
+      "sha256": "1ba122c128984e5c3ab38c91708e2bf206ba7ece7eddd9ec3c2a37ec52e79060"
+    },
+    {
+      "version": "20260928035728",
+      "name": "fueltrans_membership_identity",
+      "file": "20260928035728_fueltrans_membership_identity.sql",
+      "bytes": 531,
+      "sha256": "80e3e7ec34b3680971a0a49e96dcffa63787d421db5bbae0a83e0b5752283560"
+    },
+    {
+      "version": "20260928035850",
+      "name": "fueltrans_notifications",
+      "file": "20260928035850_fueltrans_notifications.sql",
+      "bytes": 1928,
+      "sha256": "4a75fda7baeec0c836c963025920dc37abac41587a0dbf3434a132d92c3b2774"
+    },
+    {
+      "version": "20260928040345",
+      "name": "fueltrans_admin_state_and_hardening",
+      "file": "20260928040345_fueltrans_admin_state_and_hardening.sql",
+      "bytes": 7900,
+      "sha256": "808540a2569d87bec259081ea180ffce63f2c6dc89c6425ca418d94b6cfaa1d5"
+    },
+    {
+      "version": "20260928041154",
+      "name": "fueltrans_performance_indexes",
+      "file": "20260928041154_fueltrans_performance_indexes.sql",
+      "bytes": 1418,
+      "sha256": "0ab846fdc9d5253b8789bc61e4aa2ca0e49838b0cc20f9b87c2aeb08bfde5caf"
+    },
+    {
+      "version": "20260928041218",
+      "name": "fueltrans_created_by_index",
+      "file": "20260928041218_fueltrans_created_by_index.sql",
+      "bytes": 134,
+      "sha256": "f4f54a51e16d3143c0bc5b8e593ab96e82d17217a55b406790fa77093042832d"
+    },
+    {
+      "version": "20260928041601",
+      "name": "fueltrans_policy_hardening",
+      "file": "20260928041601_fueltrans_policy_hardening.sql",
+      "bytes": 5521,
+      "sha256": "3f9fe455a628a81376324c2081f4122e5b00b3e4b7418120e40fbdb29321e6f6"
+    },
+    {
+      "version": "20260929005600",
+      "name": "fueltrans_workspace_contract_guard",
+      "file": "20260929005600_fueltrans_workspace_contract_guard.sql",
+      "bytes": 5997,
+      "sha256": "92e0390b771c2d9c31cbc89237e613a0a4941fc3510cb6d7d6ea878f4b5103e8"
+    },
+    {
+      "version": "20260929015312",
+      "name": "frt_workspace_integration",
+      "file": "20260929015312_frt_workspace_integration.sql",
+      "bytes": 38577,
+      "sha256": "6cd5f27191e97b022c29ecfe3669930c6b4591dfdccb02b4a28ef3ccdc7878af"
+    },
+    {
+      "version": "20260929015419",
+      "name": "frt_voucher_counter_guard",
+      "file": "20260929015419_frt_voucher_counter_guard.sql",
+      "bytes": 159,
+      "sha256": "8653d14d5bbeb5a84f56192e964ba0fdeb36a404d5a7648dd56d505fd81afc6f"
+    },
+    {
+      "version": "20260929015945",
+      "name": "frt_membership_visibility_guard",
+      "file": "20260929015945_frt_membership_visibility_guard.sql",
+      "bytes": 1046,
+      "sha256": "5181129b7f3d28b3fbf5c3dfa18d1a783a660b8c21fed4785fbe8d98a268bb95"
+    },
+    {
+      "version": "20260929020035",
+      "name": "frt_membership_policy_recursion_fix",
+      "file": "20260929020035_frt_membership_policy_recursion_fix.sql",
+      "bytes": 323,
+      "sha256": "6e9c8cc6e8199d3765725a9d3022507eafd87577273b14f9c60c9ecaa92f4a67"
+    },
+    {
+      "version": "20261003061912",
+      "name": "material_tracker_workspace_integration",
+      "file": "20261003061912_material_tracker_workspace_integration.sql",
+      "bytes": 42417,
+      "sha256": "6e36875459eab7b8ebd01f62e56145cd637e98dbd87f73702fbb61d3df1780b9"
+    },
+    {
+      "version": "20261003063134",
+      "name": "material_tracker_viewer_comment_guard",
+      "file": "20261003063134_material_tracker_viewer_comment_guard.sql",
+      "bytes": 3626,
+      "sha256": "e68666412be4b0955a0fcb4c769b76c4dd065ed99637ff6ff0c5a26784368eea"
+    },
+    {
+      "version": "20261003063657",
+      "name": "material_tracker_private_helper_guard",
+      "file": "20261003063657_material_tracker_private_helper_guard.sql",
+      "bytes": 584,
+      "sha256": "110b93cd85666e86d56c74cb2266080709de6e8694ec68ead2a8e090b8d6c59d"
+    },
+    {
+      "version": "20261003080739",
+      "name": "material_tracker_notification_write_guard",
+      "file": "20261003080739_material_tracker_notification_write_guard.sql",
+      "bytes": 1181,
+      "sha256": "600a3b9014d085fe973fb6d6226a09e7193554065c5d066daab73b46ec1a20d0"
+    },
+    {
+      "version": "20261003100132",
+      "name": "material_tracker_atomic_import",
+      "file": "20261003100132_material_tracker_atomic_import.sql",
+      "bytes": 15072,
+      "sha256": "3d658f74eb05db664841c37ab57c38116071cd00a8ee37011854a6445898b920"
+    },
+    {
+      "version": "20261003110755",
+      "name": "material_tracker_atomic_import",
+      "file": "20261003110755_material_tracker_atomic_import.sql",
+      "bytes": 11583,
+      "sha256": "f3efa022636da50e25155ef4851ef74d63945f20f0ca3fb4a7ceb5343bb3f029"
+    },
+    {
+      "version": "20261003112351",
+      "name": "material_tracker_import_forex_defaults",
+      "file": "20261003112351_material_tracker_import_forex_defaults.sql",
+      "bytes": 6415,
+      "sha256": "a18747ba382d36ff889653e291248868b21adeab719dba45e78e3587d2575399"
+    },
+    {
+      "version": "20261003115017",
+      "name": "material_tracker_atomic_file_import",
+      "file": "20261003115017_material_tracker_atomic_file_import.sql",
+      "bytes": 14311,
+      "sha256": "3aadc5caa591ea324984aed016c271a68ba222fc2419245ced85cbd841e0c801"
+    },
+    {
+      "version": "20261003115954",
+      "name": "material_tracker_import_payload_bounds",
+      "file": "20261003115954_material_tracker_import_payload_bounds.sql",
+      "bytes": 4160,
+      "sha256": "6ce9aec22dce773cf42bf24d7774498732432a2a8899c5c10f16164bf99c7b6d"
+    },
+    {
+      "version": "20261005003141",
+      "name": "material_request_hub_workspace_integration",
+      "file": "20261005003141_material_request_hub_workspace_integration.sql",
+      "bytes": 36936,
+      "sha256": "694d90241671a88a543c20183d503d4737ef791b4f92918d87a6088dc64cdb3e"
+    },
+    {
+      "version": "20261005003714",
+      "name": "material_request_hub_admin_bootstrap_fix",
+      "file": "20261005003714_material_request_hub_admin_bootstrap_fix.sql",
+      "bytes": 454,
+      "sha256": "6b36301d59278199a5761e888e2b45cab149db003e6f801e9d1703066fe51ff4"
+    },
+    {
+      "version": "20261005003916",
+      "name": "material_request_hub_aggregate_fix",
+      "file": "20261005003916_material_request_hub_aggregate_fix.sql",
+      "bytes": 1852,
+      "sha256": "99c7c232d675f1d54c85ad674dc9ed0ea5d6981d010b745bd90f2b56c56caa23"
+    },
+    {
+      "version": "20261005004113",
+      "name": "material_request_hub_list_pagination_fix",
+      "file": "20261005004113_material_request_hub_list_pagination_fix.sql",
+      "bytes": 2535,
+      "sha256": "84532cfdc3776864fba285b6999f6c5358a6c2dcdad42d59cf11e38ecc872b1e"
+    },
+    {
+      "version": "20261005004728",
+      "name": "material_request_hub_capability_alignment_fix",
+      "file": "20261005004728_material_request_hub_capability_alignment_fix.sql",
+      "bytes": 4698,
+      "sha256": "24bcd277481de09ac5edb9281686606159e8cd3d975d3e9d16172ef91a172e61"
+    },
+    {
+      "version": "20261005022740",
+      "name": "tool_traceability_workspace_integration",
+      "file": "20261005022740_tool_traceability_workspace_integration.sql",
+      "bytes": 238,
+      "sha256": "f9d04ec5655fbea8a773d09e5200320695dd97e47c7ce98143a7967a47a76c21"
+    },
+    {
+      "version": "20261005023007",
+      "name": "tool_traceability_schema_and_memberships",
+      "file": "20261005023007_tool_traceability_schema_and_memberships.sql",
+      "bytes": 6283,
+      "sha256": "4091df6924b8ffa99c1c1ffc5127993c8c6d63a9187de96d57e60b2305e4b36a"
+    },
+    {
+      "version": "20261005023113",
+      "name": "tool_traceability_helpers_and_core_rpcs",
+      "file": "20261005023113_tool_traceability_helpers_and_core_rpcs.sql",
+      "bytes": 17248,
+      "sha256": "369f069ebdb4ba5c3866bec7433b7942ce455bdd8a16a2fd570137a368a284d1"
+    },
+    {
+      "version": "20261005023150",
+      "name": "tool_traceability_request_transition_hardening",
+      "file": "20261005023150_tool_traceability_request_transition_hardening.sql",
+      "bytes": 8654,
+      "sha256": "9dad81c8927cc20eb3512759cbdda65ee6a5e66a4459e639303f5d7c76676976"
+    },
+    {
+      "version": "20261005030406",
+      "name": "tool_traceability_runtime_contract_completion",
+      "file": "20261005030406_tool_traceability_runtime_contract_completion.sql",
+      "bytes": 25510,
+      "sha256": "7d6b602c70ea72c1ba7f03b86fe96f1b1820513b0a6010595b1799d53e55b552"
+    },
+    {
+      "version": "20261005044500",
+      "name": "toolbox_issues_schema",
+      "file": "20261005044500_toolbox_issues_schema.sql",
+      "bytes": 4584,
+      "sha256": "87ebd0bef01b56d71179791a55071248b8746db1c2321d635cf2d257587b31bd"
+    },
+    {
+      "version": "20261005044554",
+      "name": "toolbox_issues_helpers",
+      "file": "20261005044554_toolbox_issues_helpers.sql",
+      "bytes": 4038,
+      "sha256": "db97db7b5d28baac5d8af46dd8a16bd34c0545aaa83ee2876f9936f03cf89c1e"
+    },
+    {
+      "version": "20261005044633",
+      "name": "toolbox_issues_bootstrap_rpc",
+      "file": "20261005044633_toolbox_issues_bootstrap_rpc.sql",
+      "bytes": 1873,
+      "sha256": "4e8ada3d63e115cd3cc85509c539165b06a6f6bd3dd409151b24092bbf0fa11e"
+    },
+    {
+      "version": "20261005044651",
+      "name": "toolbox_issues_user_role_rpcs",
+      "file": "20261005044651_toolbox_issues_user_role_rpcs.sql",
+      "bytes": 2827,
+      "sha256": "4c855effdfff1c04f84366393ec86f0ad6b52ba39c72bb6ae84a1d5f00030d99"
+    },
+    {
+      "version": "20261005044709",
+      "name": "toolbox_issues_state_rpcs",
+      "file": "20261005044709_toolbox_issues_state_rpcs.sql",
+      "bytes": 2579,
+      "sha256": "8bc42b18bbe5f8229bac52f5f38958d9ace50b7eb14b22a062fe7dd1b0018d57"
+    },
+    {
+      "version": "20261005044742",
+      "name": "toolbox_issues_issue_rpcs",
+      "file": "20261005044742_toolbox_issues_issue_rpcs.sql",
+      "bytes": 8497,
+      "sha256": "eed08875247e4d18f4bac7454dfdf4278758b06ae6dde8511a8b4324db4c8228"
+    },
+    {
+      "version": "20261005044817",
+      "name": "toolbox_issues_update_rpcs",
+      "file": "20261005044817_toolbox_issues_update_rpcs.sql",
+      "bytes": 2015,
+      "sha256": "41d10e0af41e2dfb2d7819b1a37e3dcbf1ee01d71dd51e8d7909e3fe0f411927"
+    },
+    {
+      "version": "20261005044837",
+      "name": "toolbox_issues_subitem_rpcs",
+      "file": "20261005044837_toolbox_issues_subitem_rpcs.sql",
+      "bytes": 4071,
+      "sha256": "02567cfe0365d2cdeca595ee31c6faf22d2921aabe9ffd1eaae050929f37cb09"
+    },
+    {
+      "version": "20261005044855",
+      "name": "toolbox_issues_attachment_storage",
+      "file": "20261005044855_toolbox_issues_attachment_storage.sql",
+      "bytes": 3077,
+      "sha256": "d75198192bef046ad240d8f605c4f22cb8c48145aaed8ecacbe544d2bd57b5e1"
+    },
+    {
+      "version": "20261006041529",
+      "name": "stage_i_m105_production_board_import_contract_parity",
+      "file": "20261006041529_stage_i_m105_production_board_import_contract_parity.sql",
+      "bytes": 8615,
+      "sha256": "c785809d58bba54e3d47fcdf4103ef188c38e0a2d076ca48141ca1880979dc8c"
+    },
+    {
+      "version": "20261007024207",
+      "name": "stage_i_m106_m54_runtime_capability_m105_parity_corrective",
+      "file": "20261007024207_stage_i_m106_m54_runtime_capability_m105_parity_corrective.sql",
+      "bytes": 5892,
+      "sha256": "aff7016a2f63758135daf3769c04676f43337ff49eb8ebe6108f0bc7951b1cfe"
+    },
+    {
+      "version": "20261007083936",
+      "name": "material_tracker_host_access_context_integration",
+      "file": "20261007083936_material_tracker_host_access_context_integration.sql",
+      "bytes": 2821,
+      "sha256": "48eb3d863a849707b237135f49dcb6314436f57b05795c4ba22b77ec4cb5fc22"
+    },
+    {
+      "version": "20261009072722",
+      "name": "fueltrans_issue_queue_checkpoint09",
+      "file": "20261009072722_fueltrans_issue_queue_checkpoint09.sql",
+      "bytes": 3153,
+      "sha256": "db7bef54aecbfcafc4c5dba931f2a8f1e81d15762a5a4e210279841aa56cdc0f"
+    },
+    {
+      "version": "20261009073702",
+      "name": "fueltrans_ticket_history_checkpoint10",
+      "file": "20261009073702_fueltrans_ticket_history_checkpoint10.sql",
+      "bytes": 2969,
+      "sha256": "2863e0abfaaec23d1014e4eff3ce866c3baaaaf8ba347cfdb365f23575db2e13"
+    },
+    {
+      "version": "20261009164842",
+      "name": "fueltrans_soft_delete_v1_checkpoint23",
+      "file": "20261009164842_fueltrans_soft_delete_v1_checkpoint23.sql",
+      "bytes": 5523,
+      "sha256": "42abcab8a62768c81903312e154a7c2054d1b68e3750d730476b7309ba62d016"
+    },
+    {
+      "version": "20261009170405",
+      "name": "fueltrans_deleted_ticket_page_checkpoint24",
+      "file": "20261009170405_fueltrans_deleted_ticket_page_checkpoint24.sql",
+      "bytes": 2241,
+      "sha256": "f48e83fc3ebb1ceb678e6c1acab1a3bc09eea12f65ae67f1333d4ede53ae605e"
+    },
+    {
+      "version": "20261009170412",
+      "name": "fueltrans_bulk_delete_recovery_checkpoint24",
+      "file": "20261009170412_fueltrans_bulk_delete_recovery_checkpoint24.sql",
+      "bytes": 4842,
+      "sha256": "00849b2bb4912d817f430f179c4f887a0cb3d0d979b633fb362be2bb44ef9555"
+    },
+    {
+      "version": "20261009172428",
+      "name": "fueltrans_permanent_delete_and_station_recovery_checkpoint25",
+      "file": "20261009172428_fueltrans_permanent_delete_and_station_recovery_checkpoint25.sql",
+      "bytes": 3641,
+      "sha256": "7d54bad918cf624e30da11ed3de668aef4dc3409986e822f405fd4c72bec3af8"
+    },
+    {
+      "version": "20261010004227",
+      "name": "tool_traceability_my_requests_native_cp02",
+      "file": "20261010004227_tool_traceability_my_requests_native_cp02.sql",
+      "bytes": 2499,
+      "sha256": "ad7bea1b1c2d223d76a34e04e9ac046ef732a6a9e5911236e0b8f80c967cde79"
+    },
+    {
+      "version": "20261010004732",
+      "name": "tool_traceability_get_item_overload_disambiguate_cp02",
+      "file": "20261010004732_tool_traceability_get_item_overload_disambiguate_cp02.sql",
+      "bytes": 1276,
+      "sha256": "d6c936d7e91313390b18e47fcfce43b3228d6ff27a2bcf2342c315fd8b882213"
+    },
+    {
+      "version": "20261010010519",
+      "name": "tool_traceability_partial_return_native_cp04",
+      "file": "20261010010519_tool_traceability_partial_return_native_cp04.sql",
+      "bytes": 6641,
+      "sha256": "b4e6d513e0abd5896c409ff9d4f2a2f2756a75f9d3fe5d00e76ea4db6d6c0b9d"
+    },
+    {
+      "version": "20261010011903",
+      "name": "tool_traceability_source_roster_team_assignment_native_cp05",
+      "file": "20261010011903_tool_traceability_source_roster_team_assignment_native_cp05.sql",
+      "bytes": 5682,
+      "sha256": "6685cb2eb21af4479895c5cd0000c85a483b79898f2ddf3040158cdebc5c5cac"
+    },
+    {
+      "version": "20261010013908",
+      "name": "tool_traceability_corrected_workspace_personnel_directory_cp06",
+      "file": "20261010013908_tool_traceability_corrected_workspace_personnel_directory_cp06.sql",
+      "bytes": 10039,
+      "sha256": "2dac6b342aee6e450125cccefd192fa92b70361e390b4f1f9421ef3dc6a039d7"
+    },
+    {
+      "version": "20261010014117",
+      "name": "tool_traceability_request_roster_authority_native_cp06",
+      "file": "20261010014117_tool_traceability_request_roster_authority_native_cp06.sql",
+      "bytes": 2717,
+      "sha256": "24e77680cd93391f7ec05135686f6377a4b8d3c5546906dab302d6599281418c"
+    },
+    {
+      "version": "20261010015657",
+      "name": "tool_traceability_defects_quarantine_inspection_cp07",
+      "file": "20261010015657_tool_traceability_defects_quarantine_inspection_cp07.sql",
+      "bytes": 10492,
+      "sha256": "cebffa8de5c875f0e8119a462b58f9a27e2a3c3770e945354469fe11d26b8d34"
+    },
+    {
+      "version": "20261010020916",
+      "name": "tool_traceability_two_named_module_bootstrap_admins_cp08",
+      "file": "20261010020916_tool_traceability_two_named_module_bootstrap_admins_cp08.sql",
+      "bytes": 1048,
+      "sha256": "6ea61bb5fe72cec19bb94a815231f2936616d7910df2c744a4dcb5739b5c95d1"
+    },
+    {
+      "version": "20261010021022",
+      "name": "tool_traceability_verified_private_attachments_cp08",
+      "file": "20261010021022_tool_traceability_verified_private_attachments_cp08.sql",
+      "bytes": 4959,
+      "sha256": "e84ef567a53a16f961c29e09d18034eae896599d598ec40be0d2890c609af327"
+    },
+    {
+      "version": "20261010024411",
+      "name": "tool_traceability_roles_list_and_cas_update09",
+      "file": "20261010024411_tool_traceability_roles_list_and_cas_update09.sql",
+      "bytes": 6857,
+      "sha256": "56094d19a3994b724df59131c4c2bc6b53ed4f17014526ff470529d2890d1281"
+    },
+    {
+      "version": "20261010024422",
+      "name": "tool_traceability_legacy_role_bootstrap_protection09",
+      "file": "20261010024422_tool_traceability_legacy_role_bootstrap_protection09.sql",
+      "bytes": 2732,
+      "sha256": "8f69593be18dd7fcd505efe73e0cb7031f61e7fd80eab89793ae5915793e88d7"
+    },
+    {
+      "version": "20261010024915",
+      "name": "tool_traceability_bootstrap_auth_id_guard_cp09",
+      "file": "20261010024915_tool_traceability_bootstrap_auth_id_guard_cp09.sql",
+      "bytes": 2833,
+      "sha256": "1535ed56ef09eeffce2958eac92022bf427f528453398b3b47680850c9a3daf7"
+    },
+    {
+      "version": "20261010025044",
+      "name": "tool_traceability_serialized_roles_and_legacy_audit_cp09",
+      "file": "20261010025044_tool_traceability_serialized_roles_and_legacy_audit_cp09.sql",
+      "bytes": 1790,
+      "sha256": "ab405e9ec84a13a4bf6cafe65931c7ea09e90f2090e44b94c6efd6e2a383e4c7"
+    },
+    {
+      "version": "20261010030331",
+      "name": "tool_traceability_bulk_role_atomic_compare_swap_cp10",
+      "file": "20261010030331_tool_traceability_bulk_role_atomic_compare_swap_cp10.sql",
+      "bytes": 3381,
+      "sha256": "c4362855dcfc1d98a380fbe0d51817fe5949ec382803dd4a3ba69235542c7ec8"
+    },
+    {
+      "version": "20261010143548",
+      "name": "tool_traceability_bounded_snapshot_export_cp12",
+      "file": "20261010143548_tool_traceability_bounded_snapshot_export_cp12.sql",
+      "bytes": 3034,
+      "sha256": "6d4ecaeb9bc44a241ce8ea5c79a99a934058139c38643fd267b5906eef5dc32f"
+    },
+    {
+      "version": "20261010144152",
+      "name": "tool_traceability_readonly_evidence_audit_cp13",
+      "file": "20261010144152_tool_traceability_readonly_evidence_audit_cp13.sql",
+      "bytes": 3077,
+      "sha256": "8c2119a339d88f5abbdddfc7a166622e4091d72a5598620a4e80ba892c862222"
+    },
+    {
+      "version": "20261010150638",
+      "name": "tool_traceability_activity_history_keyset_cp15",
+      "file": "20261010150638_tool_traceability_activity_history_keyset_cp15.sql",
+      "bytes": 2941,
+      "sha256": "506987c4b18e0a983d1e2579cff02893005b29b985ee8257576c09017d70a885"
+    },
+    {
+      "version": "20261010151145",
+      "name": "tool_traceability_private_notification_inbox_preferences_harden_sender_cp15",
+      "file": "20261010151145_tool_traceability_private_notification_inbox_preferences_harden_sender_cp15.sql",
+      "bytes": 6724,
+      "sha256": "e90c71d95b2e17732abc9afc3f2c7dbda680bff69151808d608828f4422b230d"
+    },
+    {
+      "version": "20261010151336",
+      "name": "tool_traceability_notification_viewer_readonly_fix_cp15",
+      "file": "20261010151336_tool_traceability_notification_viewer_readonly_fix_cp15.sql",
+      "bytes": 1007,
+      "sha256": "d229886cf899ef555e9287cf65fadf3b2d9e03f72e6e95ac94221dbbecdc0c18"
+    },
+    {
+      "version": "20261010152327",
+      "name": "tool_traceability_activity_complete_snapshot_cp16",
+      "file": "20261010152327_tool_traceability_activity_complete_snapshot_cp16.sql",
+      "bytes": 3295,
+      "sha256": "6af0360da3ff4f08e79a5fea8d03617e6e6dac89055eac5a9a37bad7cec10f3a"
+    },
+    {
+      "version": "20261010152420",
+      "name": "tool_traceability_workflow_notification_delivery_cp16",
+      "file": "20261010152420_tool_traceability_workflow_notification_delivery_cp16.sql",
+      "bytes": 6079,
+      "sha256": "404db31fad6acdb68e63be13daa98ed8db3e69d6dfcf1537f7e6e530bed0556a"
+    },
+    {
+      "version": "20261014091131",
+      "name": "cp42_toolbox_host_module_assignment_constraints",
+      "file": "20261014091131_cp42_toolbox_host_module_assignment_constraints.sql",
+      "bytes": 3526,
+      "sha256": "92f2da5660e6eadc0551ae4592624a0438971a539e89dcb76416965716f5a0ff"
+    },
+    {
+      "version": "20261015034424",
+      "name": "m14417_grouped_board_import_rpc_activation_20261015",
+      "file": "20261015034424_m14417_grouped_board_import_rpc_activation_20261015.sql",
+      "bytes": 9199,
+      "sha256": "8506cb57b9ca5cc105f831ff6fa5aa76c9913cfdd5379f5baef560a5b1030bfa"
+    },
+    {
+      "version": "20261015040211",
+      "name": "m14417_hf3_grouped_import_id_ambiguity_correction_20261015",
+      "file": "20261015040211_m14417_hf3_grouped_import_id_ambiguity_correction_20261015.sql",
+      "bytes": 9285,
+      "sha256": "894156d0ca364af177bb9a6c9a5a7feceaa94408e8cc0986728d46d8ee805fec"
+    },
+    {
+      "version": "20261019112718",
+      "name": "m195_order_intake_readonly_foundation",
+      "file": "20261019112718_m195_order_intake_readonly_foundation.sql",
+      "bytes": 4577,
+      "sha256": "f515c43b909e97e6a37a17b457c513685e698a86cb7844e99b97813924c75a5c"
+    },
+    {
+      "version": "20261020022044",
+      "name": "m19511_order_intake_create_rpc_permission_disabled",
+      "file": "20261020022044_m19511_order_intake_create_rpc_permission_disabled.sql",
+      "bytes": 5597,
+      "sha256": "5a5d02d50b9e5180723adcc176d6a0224089b27e1f23bb6b738a9a6026098628"
+    },
+    {
+      "version": "20261020031226",
+      "name": "m19514_one_time_qa_only_create_archive_rpc",
+      "file": "20261020031226_m19514_one_time_qa_only_create_archive_rpc.sql",
+      "bytes": 4269,
+      "sha256": "b49ce21d3cc9017934b836811634f9fdbdd7afaec4949d9c05e14715c4bb6815"
+    },
+    {
+      "version": "20261020035846",
+      "name": "m19515_revoke_one_time_order_intake_qa_access",
+      "file": "20261020035846_m19515_revoke_one_time_order_intake_qa_access.sql",
+      "bytes": 213,
+      "sha256": "de92b4d60a2202a8e6eb1dc4064e77f95c4785201cf233c5e7ec720f27cc343f"
+    },
+    {
+      "version": "20261020074713",
+      "name": "m19629_charter_schema_only_default_deny",
+      "file": "20261020074713_m19629_charter_schema_only_default_deny.sql",
+      "bytes": 23872,
+      "sha256": "ce70afe7e4fe9b081c1cb5af3a5356cbc7183a194110efe96e0d415117ab43eb"
+    },
+    {
+      "version": "20261020074835",
+      "name": "m19629_employee_eval_workspace_foundation_default_deny",
+      "file": "20261020074835_m19629_employee_eval_workspace_foundation_default_deny.sql",
+      "bytes": 5176,
+      "sha256": "41a59fd17b67d3fcef03032bf59848cc17783c2588ff59d9f9ba8ed081fa48fb"
+    },
+    {
+      "version": "20261020074855",
+      "name": "m19629_employee_eval_identity_link_guard",
+      "file": "20261020074855_m19629_employee_eval_identity_link_guard.sql",
+      "bytes": 1257,
+      "sha256": "0744babb67472de5d4bccc18d224ac09e4bf8ad9b6b8d549f10a4c09129c96ac"
+    },
+    {
+      "version": "20261020074915",
+      "name": "m19629_employee_eval_self_read_default_deny",
+      "file": "20261020074915_m19629_employee_eval_self_read_default_deny.sql",
+      "bytes": 1865,
+      "sha256": "4fb49ed077f6197358331a7f72e1cfce1c31ae2d5cc583b69717122076dc8391"
+    },
+    {
+      "version": "20261020075544",
+      "name": "m19632_employee_eval_authenticated_self_read_grant",
+      "file": "20261020075544_m19632_employee_eval_authenticated_self_read_grant.sql",
+      "bytes": 184,
+      "sha256": "f925eb7a3ab0c644ee2c184e13f665e86449450669700158bab4f7139e44df0a"
+    },
+    {
+      "version": "20261021061125",
+      "name": "employee_evaluation_management_read_role_scoped_20261021",
+      "file": "20261021061125_employee_evaluation_management_read_role_scoped_20261021.sql",
+      "bytes": 2747,
+      "sha256": "2d71d64ec7030202ae35b6141fb3cd68f21632860eeb245a2e8f9c64f5e4467f"
+    },
+    {
+      "version": "20261021062142",
+      "name": "charter_aggregate_scope_fix_and_authenticated_rpc_20261021",
+      "file": "20261021062142_charter_aggregate_scope_fix_and_authenticated_rpc_20261021.sql",
+      "bytes": 993,
+      "sha256": "c63e4e5a4e01491a4dd47b00d2fd051f6eba6ee30b0d40077235a85343f807d2"
+    },
+    {
+      "version": "20261021062620",
+      "name": "employee_eval_review_transition_default_deny_20261021",
+      "file": "20261021062620_employee_eval_review_transition_default_deny_20261021.sql",
+      "bytes": 3975,
+      "sha256": "1a5f59e7834caab69e41a18a0ff560c2a7f4bdba64d60393b87e8b96c68fbc99"
+    },
+    {
+      "version": "20261021063036",
+      "name": "employee_eval_settings_update_default_deny_20261021",
+      "file": "20261021063036_employee_eval_settings_update_default_deny_20261021.sql",
+      "bytes": 4734,
+      "sha256": "ffcaec310c24af85ddf45fed77415bba4425978365e6b6dab64aeaadb5b19a9a"
+    },
+    {
+      "version": "20261021063130",
+      "name": "employee_eval_create_employee_default_deny_20261021",
+      "file": "20261021063130_employee_eval_create_employee_default_deny_20261021.sql",
+      "bytes": 4088,
+      "sha256": "c5316ba522001665268b01903fbb467024cbdadb927ed488bc1773e1c27c1599"
+    },
+    {
+      "version": "20261021063536",
+      "name": "employee_eval_save_function_default_deny_20261021",
+      "file": "20261021063536_employee_eval_save_function_default_deny_20261021.sql",
+      "bytes": 6468,
+      "sha256": "4c01b766f02b6307b3d7c9c771060f7bcdac19f268f82886ef8d4302eaab0090"
+    },
+    {
+      "version": "20261021063553",
+      "name": "employee_eval_save_assignment_disambiguation_20261021",
+      "file": "20261021063553_employee_eval_save_assignment_disambiguation_20261021.sql",
+      "bytes": 589,
+      "sha256": "9190b87d3909d1dd6ddc50e2260a5f094fe5b817633a274535f651ba83d6762e"
+    },
+    {
+      "version": "20261021063631",
+      "name": "employee_eval_update_employee_function_default_deny_20261021",
+      "file": "20261021063631_employee_eval_update_employee_function_default_deny_20261021.sql",
+      "bytes": 6881,
+      "sha256": "5bb6433e1ef0fb62a129f3a9a40535f53cb81b09e5fb1f4270940bf934f31198"
+    },
+    {
+      "version": "20261021063827",
+      "name": "order_intake_admin_create_rpc_activation_20261021",
+      "file": "20261021063827_order_intake_admin_create_rpc_activation_20261021.sql",
+      "bytes": 359,
+      "sha256": "9a1c258a99a90426c10f7e8b5b3396b64260789af7c9fe7ead7c27421a9a74d0"
+    },
+    {
+      "version": "20261021064145",
+      "name": "employee_evaluation_write_rpc_authenticated_activation_20261021",
+      "file": "20261021064145_employee_evaluation_write_rpc_authenticated_activation_20261021.sql",
+      "bytes": 1030,
+      "sha256": "9b89c0c4fffb010ba97822d76777a167801f9f233f7ee58ba7d57461b8d05feb"
+    },
+    {
+      "version": "20261021064459",
+      "name": "order_intake_status_and_archive_lifecycle_default_deny_20261021",
+      "file": "20261021064459_order_intake_status_and_archive_lifecycle_default_deny_20261021.sql",
+      "bytes": 4441,
+      "sha256": "63519203101485ba268a7b63f0041b6d63a5d6dfd146d93771c8c47d1fae668a"
+    },
+    {
+      "version": "20261021064529",
+      "name": "order_intake_lifecycle_audit_contract_correction_20261021",
+      "file": "20261021064529_order_intake_lifecycle_audit_contract_correction_20261021.sql",
+      "bytes": 1803,
+      "sha256": "1771533d882fcd9e8d88843d3a93ea27414db589b625e8adcad9a44b85f9d8b6"
+    },
+    {
+      "version": "20261021064556",
+      "name": "order_intake_status_archive_authenticated_activation_20261021",
+      "file": "20261021064556_order_intake_status_archive_authenticated_activation_20261021.sql",
+      "bytes": 361,
+      "sha256": "d35c670bab67bcc71ff5e13bc4c018b097290ce15cfaf4359407279aed1bfad3"
+    },
+    {
+      "version": "20261021090124",
+      "name": "aps_aims_supabase_foundation",
+      "file": "20261021090124_aps_aims_supabase_foundation.sql",
+      "bytes": 3149,
+      "sha256": "db20ef5b6e806b98026844e3d39735cd268ae888c1862585973e03179fe9a8f9"
+    },
+    {
+      "version": "20261021091150",
+      "name": "aps_aims_admin_write_audit_guard",
+      "file": "20261021091150_aps_aims_admin_write_audit_guard.sql",
+      "bytes": 3875,
+      "sha256": "e9f6a9b69fa35fb56b20a5631b3488588cf999738aad91beebad786ea8a59bd0"
+    },
+    {
+      "version": "20261021091300",
+      "name": "aps_aims_server_resolved_workspace_default",
+      "file": "20261021091300_aps_aims_server_resolved_workspace_default.sql",
+      "bytes": 117,
+      "sha256": "9c1abce9fe00314efab3db5a880d6b6045f35df4070858011ac5eab52331f6c5"
+    },
+    {
+      "version": "20261021092832",
+      "name": "aps_aims_custody_lifecycle",
+      "file": "20261021092832_aps_aims_custody_lifecycle.sql",
+      "bytes": 4517,
+      "sha256": "25b24206a03611c243c835aa16ed51d84849bb4a5307498bb0776ddceaf3bcde"
+    },
+    {
+      "version": "20261021093326",
+      "name": "aps_aims_asset_transfer_lifecycle",
+      "file": "20261021093326_aps_aims_asset_transfer_lifecycle.sql",
+      "bytes": 2337,
+      "sha256": "d821f985829de7715e399d087351bcfa17553e5c22e3b432886960594f4e51f6"
+    },
+    {
+      "version": "20261021093814",
+      "name": "aps_aims_service_lifecycle",
+      "file": "20261021093814_aps_aims_service_lifecycle.sql",
+      "bytes": 4571,
+      "sha256": "66215c853be1420b20e9dc3ed2187a08932db6f9e74b09d1428e9a6bc40cbd9b"
+    },
+    {
+      "version": "20261021094111",
+      "name": "aps_aims_service_lifecycle_variable_fix",
+      "file": "20261021094111_aps_aims_service_lifecycle_variable_fix.sql",
+      "bytes": 4575,
+      "sha256": "3b24be4e433e9928bd1050bd20f7ed4d9e0bfbbe6a3ecb992e32996f9b69d68c"
+    },
+    {
+      "version": "20261021094934",
+      "name": "aps_aims_inventory_incident_transitions",
+      "file": "20261021094934_aps_aims_inventory_incident_transitions.sql",
+      "bytes": 2594,
+      "sha256": "e539f2e31095a09a1c3e864390fc70db45f5e5e1aebfe6577a6c1275380459d5"
+    },
+    {
+      "version": "20261021125109",
+      "name": "aps_aims_workspace_reference_guards",
+      "file": "20261021125109_aps_aims_workspace_reference_guards.sql",
+      "bytes": 2929,
+      "sha256": "14695dee2564f50ae6063bb43c5e3f9c5d20023fbd9ebb51c5d2929a50c58a03"
+    },
+    {
+      "version": "20261021152724",
+      "name": "aps_aims_admin_audit_reader",
+      "file": "20261021152724_aps_aims_admin_audit_reader.sql",
+      "bytes": 343,
+      "sha256": "c0cba07a431e1bdfbf4de10a109ecf0047073dccec84b6ee704071c810f98524"
+    },
+    {
+      "version": "20261022032750",
+      "name": "tool_traceability_self_scoped_membership_read_20261022",
+      "file": "20261022032750_tool_traceability_self_scoped_membership_read_20261022.sql",
+      "bytes": 431,
+      "sha256": "21fc25228aef48cbf66292483d1d0c9584ec5853ad81a250222fcf7ede9d0dd0"
+    },
+    {
+      "version": "20261022080839",
+      "name": "tt_partial_return_numeric_catalog_identifiers_20261022",
+      "file": "20261022080839_tt_partial_return_numeric_catalog_identifiers_20261022.sql",
+      "bytes": 885,
+      "sha256": "d59c31aa965e3af268b22ff07c6d61e66960f40d71e7d6d9b5d3447017246827"
+    },
+    {
+      "version": "20261022082426",
+      "name": "tt_inventory_versioned_stock_adjustment_20261022",
+      "file": "20261022082426_tt_inventory_versioned_stock_adjustment_20261022.sql",
+      "bytes": 2042,
+      "sha256": "ac167741095d5a045eacdecadb6424d298d1fafdba123b3d2c5225db7d9a2d5d"
+    },
+    {
+      "version": "20261022083846",
+      "name": "tt_inspection_release_numeric_ids_20261022",
+      "file": "20261022083846_tt_inspection_release_numeric_ids_20261022.sql",
+      "bytes": 558,
+      "sha256": "4fa559661b652e3b26c6cba7be96a94713a3806675f5cad5a950ef3829703694"
+    },
+    {
+      "version": "20261022084204",
+      "name": "tt_defect_report_numeric_ids_20261022",
+      "file": "20261022084204_tt_defect_report_numeric_ids_20261022.sql",
+      "bytes": 638,
+      "sha256": "6ae10947bd7308626664721ba19b059a159d810f46ce5ccf25702a7a0df3dfd2"
+    },
+    {
+      "version": "20261022093333",
+      "name": "order_intake_restore_authorized_revision_20261022",
+      "file": "20261022093333_order_intake_restore_authorized_revision_20261022.sql",
+      "bytes": 2011,
+      "sha256": "ac88fd8f59090c06430177f0f5262904f14ec4cfaef57c8d37a2677a1bedafd2"
+    },
+    {
+      "version": "20261022093930",
+      "name": "order_intake_update_details_authorized_20261022",
+      "file": "20261022093930_order_intake_update_details_authorized_20261022.sql",
+      "bytes": 5970,
+      "sha256": "6ab567d8656fdd4c05efa12ddedd4b4ac3d3e7d4edcf5828c3d857e02e3875b1"
+    },
+    {
+      "version": "20261022135010",
+      "name": "tradelink_vendor_assets_host_rpc_20261022",
+      "file": "20261022135010_tradelink_vendor_assets_host_rpc_20261022.sql",
+      "bytes": 4000,
+      "sha256": "8bccbedd5fbf27b5b70a4a46084e50570002bfe52ef2d84df98978b4d9f218a0"
+    },
+    {
+      "version": "20261023013112",
+      "name": "tradelink_attachment_reconciliation_registry",
+      "file": "20261023013112_tradelink_attachment_reconciliation_registry.sql",
+      "bytes": 4529,
+      "sha256": "e6cd7c4cfe3e712c12d6ba8244f989286c93b9d7618d545f5e52fc406895f8ef"
+    },
+    {
+      "version": "20261023013908",
+      "name": "tradelink_reconciliation_nested_reference_detection",
+      "file": "20261023013908_tradelink_reconciliation_nested_reference_detection.sql",
+      "bytes": 2304,
+      "sha256": "76b093f4dd431c6d0acbc5268416f45b05ed9ab7092ba5b6da32fb0fefe73f3b"
+    },
+    {
+      "version": "20261023014726",
+      "name": "tradelink_reconciliation_admin_readonly_list",
+      "file": "20261023014726_tradelink_reconciliation_admin_readonly_list.sql",
+      "bytes": 1383,
+      "sha256": "5074f828d7c13131199929bd839e093d11e7e72195d0b8d5a57eb8e6a9bb118b"
+    },
+    {
+      "version": "20261023015513",
+      "name": "tradelink_reconciliation_manifest_validation",
+      "file": "20261023015513_tradelink_reconciliation_manifest_validation.sql",
+      "bytes": 2751,
+      "sha256": "e4c9b260a3ab492f8897bfc60c61d9b6873fd1ec84ed617bd2968176979592f1"
+    },
+    {
+      "version": "20261023020449",
+      "name": "tradelink_reconciliation_ledger_consistency",
+      "file": "20261023020449_tradelink_reconciliation_ledger_consistency.sql",
+      "bytes": 3036,
+      "sha256": "d0fc67b77684e133f86c82b0f79e11ebb51757cf9b4bd32aa1d663992f689eb2"
+    },
+    {
+      "version": "20261023020810",
+      "name": "tradelink_reconciliation_revision_fence",
+      "file": "20261023020810_tradelink_reconciliation_revision_fence.sql",
+      "bytes": 3140,
+      "sha256": "9fe556e858851dd7412da816180ecf2fa3ad15dc1152c22d408b0e63c0059524"
+    },
+    {
+      "version": "20261023021525",
+      "name": "tradelink_attachment_cleanup_audit_gate",
+      "file": "20261023021525_tradelink_attachment_cleanup_audit_gate.sql",
+      "bytes": 2650,
+      "sha256": "4b707235e6810c6f0ed8692d18689c4e16eba5ae0a4a757e1ec266acc01228fe"
+    },
+    {
+      "version": "20261023021912",
+      "name": "tradelink_cleanup_audit_append_only_admin_read",
+      "file": "20261023021912_tradelink_cleanup_audit_append_only_admin_read.sql",
+      "bytes": 2028,
+      "sha256": "3fdd7dc25ecc1f6874a83d2cfa5477b6c12129ac6884bc5d52507a0c3b877908"
+    },
+    {
+      "version": "20261023022352",
+      "name": "tradelink_cleanup_preflight_review_only",
+      "file": "20261023022352_tradelink_cleanup_preflight_review_only.sql",
+      "bytes": 2282,
+      "sha256": "6509fef04a4eb404dba6137f3c53af2058baef0b486f569f6cdbec517351a7f1"
+    },
+    {
+      "version": "20261023022816",
+      "name": "tradelink_cleanup_reference_fence_guard",
+      "file": "20261023022816_tradelink_cleanup_reference_fence_guard.sql",
+      "bytes": 1615,
+      "sha256": "54febfdef34524fd1b1f6ea7fed020fe48d387912079fc47298e66913d61938b"
+    },
+    {
+      "version": "20261023023456",
+      "name": "tradelink_cleanup_fence_activation_release",
+      "file": "20261023023456_tradelink_cleanup_fence_activation_release.sql",
+      "bytes": 3839,
+      "sha256": "130589f67898697e1d2975f92b1bc15882962b91fe8d1fbcedae7e0a219a9234"
+    },
+    {
+      "version": "20261023032352",
+      "name": "order_intake_idempotent_create",
+      "file": "20261023032352_order_intake_idempotent_create.sql",
+      "bytes": 2319,
+      "sha256": "d9fe238c4dbd26858c78c7a04b6cc0f45d09511c05634f2f448a6059d8105510"
+    },
+    {
+      "version": "20261023053519",
+      "name": "tool_traceability_extension_deadline_server_guard_20261023",
+      "file": "20261023053519_tool_traceability_extension_deadline_server_guard_20261023.sql",
+      "bytes": 2171,
+      "sha256": "4d07b300d7d1fd29fd78a1f477c0a966a6dc99704e520862758e144a6e7b42d1"
+    },
+    {
+      "version": "20261023053533",
+      "name": "tool_traceability_generic_request_extension_guard_20261023",
+      "file": "20261023053533_tool_traceability_generic_request_extension_guard_20261023.sql",
+      "bytes": 1353,
+      "sha256": "aeb0476d8cae5dcc80cabcb7c9caf22c6adf4c5ac195cb1666cd76f718f335e0"
+    },
+    {
+      "version": "20261023053905",
+      "name": "tool_traceability_private_trigger_execute_hardening_20261023",
+      "file": "20261023053905_tool_traceability_private_trigger_execute_hardening_20261023.sql",
+      "bytes": 114,
+      "sha256": "b3dabbec0725fd6c967b5c98a18af44b6a8e93dc766701a92fd5cfd6e17a58b4"
+    },
+    {
+      "version": "20261025072441",
+      "name": "cp115_charter_admin_permission_management",
+      "file": "20261025072441_cp115_charter_admin_permission_management.sql",
+      "bytes": 4078,
+      "sha256": "187bc80c9a977e7e7b738239552cd84c433f6873786c1c982066e70f58bb7a98"
+    },
+    {
+      "version": "20261026014630",
+      "name": "cp133_central_application_roles",
+      "file": "20261026014630_cp133_central_application_roles.sql",
+      "bytes": 5280,
+      "sha256": "658298b65eafc36709472357089f2dd455747d75e0892a2021c7e61402719d0b"
+    },
+    {
+      "version": "20261026014636",
+      "name": "cp133_protect_two_bootstrap_admins",
+      "file": "20261026014636_cp133_protect_two_bootstrap_admins.sql",
+      "bytes": 2425,
+      "sha256": "43e172884945b9236bd96ab81aa1d6364ed2f87f62129484a71b9fad0cc90339"
+    },
+    {
+      "version": "20261026014641",
+      "name": "cp134_delegate_operational_roles",
+      "file": "20261026014641_cp134_delegate_operational_roles.sql",
+      "bytes": 4815,
+      "sha256": "17fc47027c5c4ffd492a733c18cc2f5e4f509105d911f0cdda90b33e1280f4a8"
+    },
+    {
+      "version": "20261026014647",
+      "name": "cp135_toolbox_revocation",
+      "file": "20261026014647_cp135_toolbox_revocation.sql",
+      "bytes": 5650,
+      "sha256": "096cfb4e74900c9fa797c8c0c8892e540b2d483bf6317c6c55164ccd5cffe403"
+    },
+    {
+      "version": "20261030014401",
+      "name": "cp_huly_sb02_isolated_supabase",
+      "file": "20261030014401_cp_huly_sb02_isolated_supabase.sql",
+      "bytes": 3190,
+      "sha256": "655ac7451b438eb3766206fcd272b0ffbeb4feeb00ce68551d19a8d70bf2eedc"
+    },
+    {
+      "version": "20261030014508",
+      "name": "cp_huly_sb02_rls_workspace_scope_fix",
+      "file": "20261030014508_cp_huly_sb02_rls_workspace_scope_fix.sql",
+      "bytes": 934,
+      "sha256": "77bf0bd3c19b49475d15b2a2a8c3232b913aba72b56146766387838ca0d616e3"
+    },
+    {
+      "version": "20261030014606",
+      "name": "cp_huly_sb02_auth_schema_privilege_fix",
+      "file": "20261030014606_cp_huly_sb02_auth_schema_privilege_fix.sql",
+      "bytes": 618,
+      "sha256": "d05e250565d0042ad4cf21efc13c1fde72bd53daedf95ecc0eb482c3b0a3d8f1"
+    },
+    {
+      "version": "20261030020355",
+      "name": "cp_huly_sb04_atomic_transactions",
+      "file": "20261030020355_cp_huly_sb04_atomic_transactions.sql",
+      "bytes": 3421,
+      "sha256": "d6d7b9592c45ce0b55048f7821180ec637b666e58868f7e4ae1bcc70c09560a2"
+    },
+    {
+      "version": "20261030023549",
+      "name": "cp_huly_sb06_domain_persistence",
+      "file": "20261030023549_cp_huly_sb06_domain_persistence.sql",
+      "bytes": 8989,
+      "sha256": "b86330c16bccab8b68f8c3e8922c6f8926b68e1b53eb817daaa45be6e3c54e05"
+    },
+    {
+      "version": "20261030025940",
+      "name": "cp_huly_sb07_event_integrity_hardening",
+      "file": "20261030025940_cp_huly_sb07_event_integrity_hardening.sql",
+      "bytes": 1649,
+      "sha256": "90a4b5b74d661014e50b88572a0d12fd6814cdff2e7edf0d39f408e998b5bbfb"
+    },
+    {
+      "version": "20261030070403",
+      "name": "cp_rc011_install_bootstrap_role_configuration",
+      "file": "20261030070403_cp_rc011_install_bootstrap_role_configuration.sql",
+      "bytes": 13459,
+      "sha256": "9984a5bca1741915888504467a66896792cba29a3742d8b81fdfd3f47ab564f7"
+    },
+    {
+      "version": "20261030080046",
+      "name": "cp_rc02_bootstrap_user_role_management",
+      "file": "20261030080046_cp_rc02_bootstrap_user_role_management.sql",
+      "bytes": 14090,
+      "sha256": "ff131bd4a19314c1a456911652563d028c01a81e3d49376394933735e507fb4d"
+    },
+    {
+      "version": "20261030080703",
+      "name": "cp_rc02_preserve_explicit_user_role_assignments",
+      "file": "20261030080703_cp_rc02_preserve_explicit_user_role_assignments.sql",
+      "bytes": 1733,
+      "sha256": "18df642e90649da4ce2cf0c00352ac73d8a1ae43607e6f753d3a432ff644bcd3"
+    },
+    {
+      "version": "20261030084905",
+      "name": "cp_frt_sec01_bootstrap_only_admin_authority",
+      "file": "20261030084905_cp_frt_sec01_bootstrap_only_admin_authority.sql",
+      "bytes": 9527,
+      "sha256": "1f8208fbfd7d5f35550290387a73bc667f78cd0027baad3f5c182b69e42b1c8a"
+    },
+    {
+      "version": "20261030085336",
+      "name": "cp_frt_sec01b_revoke_direct_legacy_role_rpc",
+      "file": "20261030085336_cp_frt_sec01b_revoke_direct_legacy_role_rpc.sql",
+      "bytes": 587,
+      "sha256": "ad8112e306b58c56972a550d857f4f5fa0e0091b9fbe22db99e11d893b5d7f5e"
+    },
+    {
+      "version": "20261030085703",
+      "name": "cp_frt_sec02_qa_only_membership_configuration_retirement",
+      "file": "20261030085703_cp_frt_sec02_qa_only_membership_configuration_retirement.sql",
+      "bytes": 3003,
+      "sha256": "9bdb249c6010ed7e7caa967702d9a89345d160e844e4da055e9a4f9cf7854a8b"
+    },
+    {
+      "version": "20261031012212",
+      "name": "cp_frt_sec08_crm_platform_role_activation",
+      "file": "20261031012212_cp_frt_sec08_crm_platform_role_activation.sql",
+      "bytes": 16653,
+      "sha256": "5e2fed221db807baf1363cd28aae1478240fb63bb5b41fc27031955a155792a9"
+    },
+    {
+      "version": "20261031012226",
+      "name": "cp_frt_sec08_frt_domain_role_ceiling",
+      "file": "20261031012226_cp_frt_sec08_frt_domain_role_ceiling.sql",
+      "bytes": 1630,
+      "sha256": "7cfd65ad9ab8ff72cef380a61d846a471edd9d34d798a1b84092c754372ab50e"
+    },
+    {
+      "version": "20261031050725",
+      "name": "cp_frt_sec11_signed_effective_access_activation",
+      "file": "20261031050725_cp_frt_sec11_signed_effective_access_activation.sql",
+      "bytes": 2540,
+      "sha256": "628c6062c3ef2d0e134d61332ea533eee72a0f31190e5856d0be549fb1438fbc"
+    },
+    {
+      "version": "20261031123241",
+      "name": "cp_frt_sec10_ci07_production_session_guard_activation",
+      "file": "20261031123241_cp_frt_sec10_ci07_production_session_guard_activation.sql",
+      "bytes": 4888,
+      "sha256": "7d86df2d9010a3165ba7c9aef69730a0a5d49c3ad42c26f1731d77634dbf3d88"
+    },
+    {
+      "version": "20261102001945",
+      "name": "cp_frt_sec14_additive_restricted_board_reads",
+      "file": "20261102001945_cp_frt_sec14_additive_restricted_board_reads.sql",
+      "bytes": 7350,
+      "sha256": "15161cfc4e7721fe1b2cb32a49934bfa8e74b1c10d1cc13d78f047f178184a16"
+    },
+    {
+      "version": "20261102125614",
+      "name": "cp_tt_gps02_server_read_redaction",
+      "file": "20261102125614_cp_tt_gps02_server_read_redaction.sql",
+      "bytes": 3089,
+      "sha256": "1e79fb485ab35390719200e05b5cf9b4c3f419088d9996f2ed82b941c472fe0c"
+    },
+    {
+      "version": "20261103024034",
+      "name": "cp_board_config01_protected_columns_views_v2",
+      "file": "20261103024034_cp_board_config01_protected_columns_views_v2.sql",
+      "bytes": 35270,
+      "sha256": "41f25fc0347d40768fbf42d1ccaa3f4c4e22d5d9d32dcddbf377350b4a1413a0"
+    },
+    {
+      "version": "20261103040912",
+      "name": "cp_board_menu01_protected_card_lifecycle",
+      "file": "20261103040912_cp_board_menu01_protected_card_lifecycle.sql",
+      "bytes": 10125,
+      "sha256": "94d31422a4dbbaaf47bc490179b62cb58d717df501fe2d4fafa355281912cb2d"
+    },
+    {
+      "version": "20261103040953",
+      "name": "cp_tt_gps01_atomic_attendance_board_projection",
+      "file": "20261103040953_cp_tt_gps01_atomic_attendance_board_projection.sql",
+      "bytes": 20768,
+      "sha256": "f14bde60e7cffc40856eb8497f178ccf7a7d8b61cfa78dc1303bf6f6ee87ecdb"
+    },
+    {
+      "version": "20261103052752",
+      "name": "cp_board_bulk02_atomic_items_and_group_cas",
+      "file": "20261103052752_cp_board_bulk02_atomic_items_and_group_cas.sql",
+      "bytes": 11766,
+      "sha256": "837294d9dfa03fedf4948d2506c3d73d8501918a969a0e48c551d6309f1a3036"
+    },
+    {
+      "version": "20261105011611",
+      "name": "cp_tl03c_stage_a_readonly_domain_activation",
+      "file": "20261105011611_cp_tl03c_stage_a_readonly_domain_activation.sql",
+      "bytes": 20816,
+      "sha256": "ff4a78ec651911ff6059c73ab05b9918ba99f3af17f3f2fe980a73828d6768de"
+    },
+    {
+      "version": "20261105043155",
+      "name": "cp_ws01c_b1_additive_private_workspace_schema",
+      "file": "20261105043155_cp_ws01c_b1_additive_private_workspace_schema.sql",
+      "bytes": 4877,
+      "sha256": "97d2af9c78a9279505ad2c5d9863c8321ff5d71035ca8a1e074aed9411db9b36"
+    },
+    {
+      "version": "20261105044441",
+      "name": "cp_ws01c_b2_signed_member_workspace_discovery",
+      "file": "20261105044441_cp_ws01c_b2_signed_member_workspace_discovery.sql",
+      "bytes": 1841,
+      "sha256": "c3591858924ec9cdec559d96cb3efed6d2de7a46411aefe81552ff8159e41685"
+    },
+    {
+      "version": "20261106002107",
+      "name": "cp_board_col_delete_phase_a_dark_launch_20261106",
+      "file": "20261106002107_cp_board_col_delete_phase_a_dark_launch_20261106.sql",
+      "bytes": 18623,
+      "sha256": "7f393ae0094ff886a8e1540c756ab2d6f07f2ae5a83dc611f5989ecdb30449a3"
+    },
+    {
+      "version": "20261106005756",
+      "name": "cp_board_col_delete_phase_b1_scoped_qa_guard_20261106",
+      "file": "20261106005756_cp_board_col_delete_phase_b1_scoped_qa_guard_20261106.sql",
+      "bytes": 8108,
+      "sha256": "14892631ca1f990e7aa9f834f993d98bec362fb92fadcd78a7b3fc53607ea961"
+    },
+    {
+      "version": "20261106090007",
+      "name": "cp_ws01c_b3_dormant_signed_create_contract_20261106",
+      "file": "20261106090007_cp_ws01c_b3_dormant_signed_create_contract_20261106.sql",
+      "bytes": 7446,
+      "sha256": "ac6a51d5e404fe66c20ca6b5e449539690c70561c412a5f45083badf18c327b0"
+    },
+    {
+      "version": "20261106092625",
+      "name": "cp_ws01c_b3_controlled_authenticated_create_activation_20261106",
+      "file": "20261106092625_cp_ws01c_b3_controlled_authenticated_create_activation_20261106.sql",
+      "bytes": 6864,
+      "sha256": "fd7d8c55cd5bffbb0797bdadfe1f5db8ffd81e94513f6e998c5d3b2fc763b9e9"
+    },
+    {
+      "version": "20261108031747",
+      "name": "ws02b_atomic_auth_trigger_provisioning_default_off",
+      "file": "20261108031747_ws02b_atomic_auth_trigger_provisioning_default_off.sql",
+      "bytes": 15242,
+      "sha256": "40203706ee9873520b589235353c3d531bf8376336bec1bf2ac63113a14ffdf1"
+    },
+    {
+      "version": "20261108065354",
+      "name": "tradelink_document_lifecycle_timestamp",
+      "file": "20261108065354_tradelink_document_lifecycle_timestamp.sql",
+      "bytes": 8867,
+      "sha256": "9e1c73268552bdb354e16033c1bbd92304e60b1ec514776d0afb766059866f06"
+    },
+    {
+      "version": "20261108065903",
+      "name": "tradelink_document_conflict_response",
+      "file": "20261108065903_tradelink_document_conflict_response.sql",
+      "bytes": 8860,
+      "sha256": "3bb5901793b4f5198443645f98f1125decb783ff556c7ea66f9b5c69ad925e3a"
+    },
+    {
+      "version": "20261108104051",
+      "name": "cp_ws_admin02_approved_only_provisioning",
+      "file": "20261108104051_cp_ws_admin02_approved_only_provisioning.sql",
+      "bytes": 6140,
+      "sha256": "930f46cb1e4712b8791064c9b1472f05e49bc46c191b5fcc6c8eb19d673a10b7"
+    },
+    {
+      "version": "20261108110839",
+      "name": "cp_ws_admin05_fix_stage_email_regex",
+      "file": "20261108110839_cp_ws_admin05_fix_stage_email_regex.sql",
+      "bytes": 1535,
+      "sha256": "e490dfab8de7e6b6ea5e497471493f44554216444812576b74e5d80ca67b8ef4"
+    },
+    {
+      "version": "20261108111446",
+      "name": "cp_ws_admin06_direct_admin_creation_trigger",
+      "file": "20261108111446_cp_ws_admin06_direct_admin_creation_trigger.sql",
+      "bytes": 1060,
+      "sha256": "fd2724bcb1a7f839e5b415b757aca041a71ba23e02ed70f5da1e737906ff4e88"
+    },
+    {
+      "version": "20261108114850",
+      "name": "cp_ws_admin07_remove_extra_provision_marker",
+      "file": "20261108114850_cp_ws_admin07_remove_extra_provision_marker.sql",
+      "bytes": 987,
+      "sha256": "0d8d65d0ffa7ac4e93719f917b71e10bb5ba5dc362d492b0d438d80cafcc415a"
+    },
+    {
+      "version": "20261108115013",
+      "name": "cp_ws_admin08_defer_email_confirmation_check",
+      "file": "20261108115013_cp_ws_admin08_defer_email_confirmation_check.sql",
+      "bytes": 894,
+      "sha256": "8ed5e63ff5008fad9008629afe79b9802165416896b56b6a662cca9561a71c3d"
+    },
+    {
+      "version": "20261108115314",
+      "name": "cp_ws_admin09_deferred_workspace_on_verification",
+      "file": "20261108115314_cp_ws_admin09_deferred_workspace_on_verification.sql",
+      "bytes": 1980,
+      "sha256": "508083285103de6034a7cb21e3cc89918a24018491b9784724853c9995422132"
+    },
+    {
+      "version": "20261108185116",
+      "name": "fueltrans_crm_board_boundary",
+      "file": "20261108185116_fueltrans_crm_board_boundary.sql",
+      "bytes": 6743,
+      "sha256": "208994c391517d295a4a10c6b49e4fb72db216664369a21bb71934854a63db8c"
+    },
+    {
+      "version": "20261109011346",
+      "name": "cp_profile_avatar_storage_activation_20261109",
+      "file": "20261109011346_cp_profile_avatar_storage_activation_20261109.sql",
+      "bytes": 8455,
+      "sha256": "a308d7cadb5b38fa2c52cb2cc46951ec68a1ceeda7377355d01352335c49ec1d"
+    },
+    {
+      "version": "20261109013033",
+      "name": "cp_profile_avatar_active_upload_guard_20261109",
+      "file": "20261109013033_cp_profile_avatar_active_upload_guard_20261109.sql",
+      "bytes": 719,
+      "sha256": "49896527f63a8c29549dbc71ceeb2b3e72b073051a844008e05521746b04d5f8"
+    },
+    {
+      "version": "20261109031057",
+      "name": "cp_profile_avatar_signed_url_read_activation_20261109",
+      "file": "20261109031057_cp_profile_avatar_signed_url_read_activation_20261109.sql",
+      "bytes": 852,
+      "sha256": "14f7cfece1c5a50db31263bcc3f3cb8e39c3561eb0bcb71e77a0a49ea4e40583"
+    },
+    {
+      "version": "20261110013556",
+      "name": "mrh_secure_sourcing_private_vault_admin_only_activation",
+      "file": "20261110013556_mrh_secure_sourcing_private_vault_admin_only_activation.sql",
+      "bytes": 7098,
+      "sha256": "4f5e98a894811c89d2c21e41cdc2a24e569c4cf336a55e3f52c68432d72dc110"
+    },
+    {
+      "version": "20261110021141",
+      "name": "fueltrack_v3_backend_core",
+      "file": "20261110021141_fueltrack_v3_backend_core.sql",
+      "bytes": 21926,
+      "sha256": "156dff2c0a8900e724677f5abc37c0be298dd93a4bee106273505718687e035a"
+    },
+    {
+      "version": "20261110021200",
+      "name": "fueltrack_v3_board_receipts",
+      "file": "20261110021200_fueltrack_v3_board_receipts.sql",
+      "bytes": 14420,
+      "sha256": "1771a7b36fb45878457f5db8b31c42c331d6425ea3d44867c7fd16a3380e9806"
+    },
+    {
+      "version": "20261110062757",
+      "name": "mrh_board_item_tasks_activation_20261110",
+      "file": "20261110062757_mrh_board_item_tasks_activation_20261110.sql",
+      "bytes": 7216,
+      "sha256": "171e51c1c9003298f484d14fccaf0229a6477512252796333167d7601e33b615"
+    },
+    {
+      "version": "20261110101331",
+      "name": "cp_rc03_workspace_scoped_mrh_role_management",
+      "file": "20261110101331_cp_rc03_workspace_scoped_mrh_role_management.sql",
+      "bytes": 14156,
+      "sha256": "8518589fb3bf8c291184acce431516fee62c98ab16f11c08c66225a54ac68346"
+    },
+    {
+      "version": "20261110155627",
+      "name": "cp_ws01_atomic_signed_workspace_selection_activation",
+      "file": "20261110155627_cp_ws01_atomic_signed_workspace_selection_activation.sql",
+      "bytes": 10952,
+      "sha256": "a580a5309aec78ed307b0fd69ee0318641450ec7ba8e47ad4e151cddc0c5a7a1"
+    },
+    {
+      "version": "20261110163848",
+      "name": "fueltrack_v3_module_scoped_workflows",
+      "file": "20261110163848_fueltrack_v3_module_scoped_workflows.sql",
+      "bytes": 17839,
+      "sha256": "ce300cdd207d3daad288be8069efbdab15625550438151e99630d495039a3f47"
+    },
+    {
+      "version": "20261110173953",
+      "name": "mrh_material_atomic_create_20261111",
+      "file": "20261110173953_mrh_material_atomic_create_20261111.sql",
+      "bytes": 7730,
+      "sha256": "5ffd771b47b1ea097f7126fb48fcd04e6d1391e061cb0fa4eeed237d3e3aa8bb"
+    },
+    {
+      "version": "20261111041157",
+      "name": "mrh_board_viewer_commercial_read_20261111",
+      "file": "20261111041157_mrh_board_viewer_commercial_read_20261111.sql",
+      "bytes": 2834,
+      "sha256": "df9598fe55a93121c7bb3a2af3126012429a4813a6eb99468deface94948f181"
+    },
+    {
+      "version": "20261112033743",
+      "name": "cp_bimp18_extended_reference_storage_activation",
+      "file": "20261112033743_cp_bimp18_extended_reference_storage_activation.sql",
+      "bytes": 21697,
+      "sha256": "6e6e2fdc4a38edf43b159f5287afe32ad247b9aaa7ce4e43c6f69ef9366ffd23"
+    },
+    {
+      "version": "20261112042602",
+      "name": "cp_tl_func_02_signed_documents_page_activation",
+      "file": "20261112042602_cp_tl_func_02_signed_documents_page_activation.sql",
+      "bytes": 4808,
+      "sha256": "b9e22d73d20f81c2924e4591d33ad76b82351b36c7bd162617c3476a30d8ca73"
+    },
+    {
+      "version": "20261112045007",
+      "name": "cp_board_col_operational_recovery_activation_20261112",
+      "file": "20261112045007_cp_board_col_operational_recovery_activation_20261112.sql",
+      "bytes": 8386,
+      "sha256": "140c1ee06196cd177880a632a3b7851dc7e143ac24d30759c07f889afb8c192d"
+    },
+    {
+      "version": "20261112065035",
+      "name": "cp_frt_board03b_atomic_date_cas_activation_20261112",
+      "file": "20261112065035_cp_frt_board03b_atomic_date_cas_activation_20261112.sql",
+      "bytes": 1732,
+      "sha256": "5bf63bade58c5a8b88d80f1fa678c848497ab8f2d3719fbbf3fb3443bf973bef"
+    },
+    {
+      "version": "20261112070117",
+      "name": "cp_frt_board03b_workspace_person_assignment_activation_verified_20261112",
+      "file": "20261112070117_cp_frt_board03b_workspace_person_assignment_activation_verified_20261112.sql",
+      "bytes": 5087,
+      "sha256": "6d04413b5603e29b99ad0ca99eb7b54a1092bb0114df48111b338dbfc6c2d085"
+    },
+    {
+      "version": "20261112091535",
+      "name": "tradelink_for_approval_dual_review",
+      "file": "20261112091535_tradelink_for_approval_dual_review.sql",
+      "bytes": 41382,
+      "sha256": "f0a7830b38eca66570cecc1f0ed153765025a04c57396daed253055779ca3864"
+    },
+    {
+      "version": "20261112091926",
+      "name": "cp_frt_filing01_signed_default_and_atomic_update_20261112",
+      "file": "20261112091926_cp_frt_filing01_signed_default_and_atomic_update_20261112.sql",
+      "bytes": 4913,
+      "sha256": "d8c5c4ebe37d65457c35af76a0425871ef8f16e464eac093344e04c43d882f26"
+    },
+    {
+      "version": "20261112093727",
+      "name": "tradelink_revision_required_edit_compat",
+      "file": "20261112093727_tradelink_revision_required_edit_compat.sql",
+      "bytes": 9604,
+      "sha256": "ecc618e4355f60a411d09cb226735253451ba8a23b5d3779b75d30d0241ebd83"
+    },
+    {
+      "version": "20261112104707",
+      "name": "cp_frt_recipient02_creator_scoped_saved_accounts_private_qr_20261112",
+      "file": "20261112104707_cp_frt_recipient02_creator_scoped_saved_accounts_private_qr_20261112.sql",
+      "bytes": 6858,
+      "sha256": "3a9c61ae2aa17dcfc7bb85026621b1a0de2790b755a20ef9ccae0d9d5e56070f"
+    },
+    {
+      "version": "20261112121235",
+      "name": "cp_urm04b_crm_admin_capability_parity_20261112",
+      "file": "20261112121235_cp_urm04b_crm_admin_capability_parity_20261112.sql",
+      "bytes": 11421,
+      "sha256": "b7e08c8e2cb2c784f6bd4098ebf4b54aae251e89bb7d3e93cc3be2406e4e6ca6"
+    },
+    {
+      "version": "20261113011934",
+      "name": "frt_exec02_signed_company_financial_analytics",
+      "file": "20261113011934_frt_exec02_signed_company_financial_analytics.sql",
+      "bytes": 6168,
+      "sha256": "99dda47ab91b423c8e00b0b35f0feb98fbd079f91a737b959809d35c64baf12a"
+    },
+    {
+      "version": "20261113031952",
+      "name": "main_workspace_owner_crm_admin_20261113",
+      "file": "20261113031952_main_workspace_owner_crm_admin_20261113.sql",
+      "bytes": 1587,
+      "sha256": "a47c48a4f0e18be0d1ae459ff40519e227dd58e46f999a73047be8e2e7ad43cf"
+    },
+    {
+      "version": "20261113042607",
+      "name": "cp_urm_app_toolbox_01_source_membership_role_assignment",
+      "file": "20261113042607_cp_urm_app_toolbox_01_source_membership_role_assignment.sql",
+      "bytes": 13490,
+      "sha256": "89f3bf6535afa5f65a887df8de2af07442ffe95c861949e328ffeb3c9d369e2d"
+    },
+    {
+      "version": "20261113060749",
+      "name": "cp_frt_ic_01_intercompany_ledger",
+      "file": "20261113060749_cp_frt_ic_01_intercompany_ledger.sql",
+      "bytes": 22070,
+      "sha256": "9642b0e6ea93522585dc6a8585bfdadd8c0a25f4ee23171c5d06f7d573c827fa"
+    },
+    {
+      "version": "20261113065300",
+      "name": "tradelink_retry_safe_revision_bound_updates",
+      "file": "20261113065300_tradelink_retry_safe_revision_bound_updates.sql",
+      "bytes": 10771,
+      "sha256": "2af02c874c927ce1908794fae73538cd000137c29df47ea39975975f5e16b57b"
+    },
+    {
+      "version": "20261113085038",
+      "name": "frt_wf02_signed_multi_receipt_liquidation",
+      "file": "20261113085038_frt_wf02_signed_multi_receipt_liquidation.sql",
+      "bytes": 8401,
+      "sha256": "38d5a637b9eb289df9268c811f3c25e53f7e6bfddced21366c77c4f4f77e8e07"
+    },
+    {
+      "version": "20261113091401",
+      "name": "frt_wf03_authoritative_bank_execution",
+      "file": "20261113091401_frt_wf03_authoritative_bank_execution.sql",
+      "bytes": 6389,
+      "sha256": "22f6ea21cd4ced88ae07d3121a3d92c5b79c3c41768a13a2307d87ae77e5ac5d"
+    },
+    {
+      "version": "20261113092816",
+      "name": "frt_wf04_signed_aging_summary",
+      "file": "20261113092816_frt_wf04_signed_aging_summary.sql",
+      "bytes": 2494,
+      "sha256": "601a4f633a0f0eac96809379beec2d36e5f762bd1d961757d329d03fedcdb495"
+    },
+    {
+      "version": "20261113100034",
+      "name": "cp_db_perf01_active_board_item_count",
+      "file": "20261113100034_cp_db_perf01_active_board_item_count.sql",
+      "bytes": 201,
+      "sha256": "2d60c227990f47b29df0fdb040dc3ceb113dc136d6d5f9f341ea93708fbfb9b4"
+    },
+    {
+      "version": "20261113112926",
+      "name": "optimize_work_board_items_board_id_lookup",
+      "file": "20261113112926_optimize_work_board_items_board_id_lookup.sql",
+      "bytes": 109,
+      "sha256": "6cd2ebf4e0b4f01da23a9199c2aadc49cc334818e5331e8fba137e9a0b60366a"
+    },
+    {
+      "version": "20261114013849",
+      "name": "cp_db_cpu_04_grouped_board_counts",
+      "file": "20261114013849_cp_db_cpu_04_grouped_board_counts.sql",
+      "bytes": 1868,
+      "sha256": "be31eeaf9a31c5764490efd62328e9170c7ff2b2538e5860b4a2e80df3c477e5"
+    },
+    {
+      "version": "20261114015343",
+      "name": "cp_db_cpu_04_lifecycle_prelock_cas",
+      "file": "20261114015343_cp_db_cpu_04_lifecycle_prelock_cas.sql",
+      "bytes": 5192,
+      "sha256": "9d57acdda6044cda64228b37bfbc24f75f3a8657a3141cd5ce0e7df4abb8f211"
+    },
+    {
+      "version": "20261114015931",
+      "name": "cp_db_cpu_04_import_cell_write_coalescing",
+      "file": "20261114015931_cp_db_cpu_04_import_cell_write_coalescing.sql",
+      "bytes": 4940,
+      "sha256": "c30aca7b39ffa1193e0ecce21784c35dab63718525fe19dea82a8df385af2828"
+    },
+    {
+      "version": "20261114021710",
+      "name": "cp_db_cpu_04_temporary_stale_attribution",
+      "file": "20261114021710_cp_db_cpu_04_temporary_stale_attribution.sql",
+      "bytes": 1530,
+      "sha256": "d2d9dd822f032e8603ca791b9b849477f3f95dc815befd55a3d012417e44f01d"
+    },
+    {
+      "version": "20261114022032",
+      "name": "cp_db_cpu_04_remove_temporary_attribution",
+      "file": "20261114022032_cp_db_cpu_04_remove_temporary_attribution.sql",
+      "bytes": 1130,
+      "sha256": "1f054946920977fd2c408008ecdee2d4b69f081fec777c8eaa591ef612d83339"
+    },
+    {
+      "version": "20261114024119",
+      "name": "cp_db_cpu_04_nonaborting_lifecycle_conflicts",
+      "file": "20261114024119_cp_db_cpu_04_nonaborting_lifecycle_conflicts.sql",
+      "bytes": 1665,
+      "sha256": "0dfbefaca0e9147091972e99c0729994e77bc9d80fee2f6fd79110dd09e1b766"
+    },
+    {
+      "version": "20261114025451",
+      "name": "cp_db_cpu_04_batch_import_realtime_broadcasts",
+      "file": "20261114025451_cp_db_cpu_04_batch_import_realtime_broadcasts.sql",
+      "bytes": 5885,
+      "sha256": "e068099852709ec37d0c372d05fdfcdab3ab1d36314e87b174ed568607d8c530"
+    },
+    {
+      "version": "20261114032119",
+      "name": "cp_db_cpu_05_import_cell_read_elision",
+      "file": "20261114032119_cp_db_cpu_05_import_cell_read_elision.sql",
+      "bytes": 10955,
+      "sha256": "524b6ec526595aadc1b27b4fc8877322d4ed19a5043423a0407f8fdcbd7df807"
+    },
+    {
+      "version": "20261114040731",
+      "name": "cp_db_cpu_07_effective_access_read_path",
+      "file": "20261114040731_cp_db_cpu_07_effective_access_read_path.sql",
+      "bytes": 6526,
+      "sha256": "35ec68afad7029ffd6d0f15cd7aef7658c9bf10829aff61261b568e2931a9edb"
+    },
+    {
+      "version": "20261114151934",
+      "name": "cp_db_cpu_12_rls_initplan_optimization",
+      "file": "20261114151934_cp_db_cpu_12_rls_initplan_optimization.sql",
+      "bytes": 5615,
+      "sha256": "d9052ec095f195ac92141a97376f3fc599160ef63a11bc22c96e18e0fa014773"
+    },
+    {
+      "version": "20261114154136",
+      "name": "cp_db_cpu_13_stable_rls_helper_initplan_optimization",
+      "file": "20261114154136_cp_db_cpu_13_stable_rls_helper_initplan_optimization.sql",
+      "bytes": 3988,
+      "sha256": "e983778503efdb3b0aae68844b9a80c09d3af57729a7858698f880e635c6885d"
+    },
+    {
+      "version": "20261115132051",
+      "name": "cp_board_import_sync_01_authoritative_counts",
+      "file": "20261115132051_cp_board_import_sync_01_authoritative_counts.sql",
+      "bytes": 4568,
+      "sha256": "4ac73bd08175d7075132f8fe0ca3bdf9990d1329b825a0453f6f8ade9c6aaf5d"
+    }
+  ]
+}

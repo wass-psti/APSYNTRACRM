@@ -1,0 +1,11 @@
+create table if not exists public.fueltrans_notifications (id uuid primary key default gen_random_uuid(), workspace_id uuid not null references public.workspaces(id) on delete cascade, recipient_user_id uuid references public.profiles(id) on delete cascade, recipient_scope text not null default 'user' check (recipient_scope in ('user','all')), ticket_id text, message text not null, created_by uuid not null references public.profiles(id) on delete cascade, created_at timestamptz not null default now(), read_at timestamptz);
+create index if not exists fueltrans_notifications_recipient_idx on public.fueltrans_notifications(workspace_id, recipient_user_id, created_at desc);
+alter table public.fueltrans_notifications enable row level security;
+revoke all on public.fueltrans_notifications from anon;
+grant select, insert, update on public.fueltrans_notifications to authenticated;
+drop policy if exists fueltrans_notifications_select on public.fueltrans_notifications;
+create policy fueltrans_notifications_select on public.fueltrans_notifications for select to authenticated using (recipient_user_id = (select auth.uid()) or recipient_scope = 'all' or private.fueltrans_current_role(workspace_id) in ('admin','fueltrans'));
+drop policy if exists fueltrans_notifications_insert on public.fueltrans_notifications;
+create policy fueltrans_notifications_insert on public.fueltrans_notifications for insert to authenticated with check (created_by = (select auth.uid()) and private.fueltrans_current_role(workspace_id) in ('admin','fueltrans','watchdog_employee','global_l1_support','local_l2_support','call_center_specialist'));
+drop policy if exists fueltrans_notifications_update on public.fueltrans_notifications;
+create policy fueltrans_notifications_update on public.fueltrans_notifications for update to authenticated using (recipient_user_id = (select auth.uid())) with check (recipient_user_id = (select auth.uid()));;

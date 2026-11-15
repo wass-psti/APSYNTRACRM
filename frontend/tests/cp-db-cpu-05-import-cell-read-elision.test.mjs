@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const sql=readFileSync(new URL('../../supabase/migrations/20261114031500_cp_db_cpu_05_import_cell_read_elision.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migrations/20261114032119_cp_db_cpu_05_import_cell_read_elision.sql',import.meta.url),'utf8');
 const helper=sql.slice(sql.indexOf('CREATE OR REPLACE FUNCTION private.wm_import_set_board_cell_cached'),sql.indexOf('REVOKE ALL ON FUNCTION'));
 const patch=sql.slice(sql.indexOf('DO $migration$'));
 

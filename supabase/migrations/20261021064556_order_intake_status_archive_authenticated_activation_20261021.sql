@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.order_intake_update_status(uuid,text,integer) TO authenticated; GRANT EXECUTE ON FUNCTION public.order_intake_archive(uuid,integer) TO authenticated; REVOKE ALL ON FUNCTION public.order_intake_update_status(uuid,text,integer) FROM PUBLIC,anon; REVOKE ALL ON FUNCTION public.order_intake_archive(uuid,integer) FROM PUBLIC,anon;;

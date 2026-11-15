@@ -1,0 +1,611 @@
+-- Work Management App v1.43.2 — Stage G M50 Rich Item Workspace & File Recovery
+-- Restores authoritative item-workspace permissions and a recoverable Supabase Storage lifecycle.
+
+begin;
+create or replace function public.wm_get_board_item_workspace(p_item_id uuid) returns jsonb
+language plpgsql stable security definer set search_path=pg_catalog,public as $$
+declare
+  bid uuid;
+  can_edit boolean;
+  can_manage boolean;
+  result jsonb;
+begin
+  select board_id into bid from public.work_board_items where id=p_item_id;
+  if bid is null or not public.work_board_access(bid,'view') then
+    raise exception 'Board access denied' using errcode='42501';
+  end if;
+  can_edit := public.work_board_access(bid,'edit');
+  can_manage := public.work_board_access(bid,'manage');
+
+  select jsonb_build_object(
+    'permissions',jsonb_build_object(
+      'can_edit',can_edit,
+      'can_comment',can_edit,
+      'can_attach',can_edit,
+      'can_manage',can_manage
+    ),
+    'updates',coalesce((select jsonb_agg(jsonb_build_object(
+      'id',u.id,'body',u.body,'created_by',u.created_by,'author_id',u.created_by,'created_at',u.created_at,'updated_at',u.updated_at,
+      'author_name',coalesce(p.display_name,p.email),'author_email',p.email,
+      'can_delete',(can_edit and (u.created_by=auth.uid() or can_manage))
+    ) order by u.created_at desc,u.id desc)
+      from public.work_board_item_updates u
+      join public.profiles p on p.id=u.created_by
+      where u.item_id=p_item_id),'[]'::jsonb),
+    'files',coalesce((select jsonb_agg(jsonb_build_object(
+      'id',f.id,'file_name',f.file_name,'mime_type',f.mime_type,'size_bytes',f.size_bytes,'storage_path',f.storage_path,
+      'created_by',f.created_by,'author_id',f.created_by,'created_at',f.created_at,
+      'author_name',coalesce(p.display_name,p.email),'author_email',p.email,
+      'can_delete',(can_edit and (f.created_by=auth.uid() or can_manage))
+    ) order by f.created_at desc,f.id desc)
+      from public.work_board_item_files f
+      join public.profiles p on p.id=f.created_by
+      where f.item_id=p_item_id),'[]'::jsonb),
+    'activity',coalesce((select jsonb_agg(jsonb_build_object(
+      'id',e.id,'event_type',e.event_type,'message',e.message,'payload',e.payload,'created_at',e.created_at,
+      'actor_id',e.actor_id,'actor_name',coalesce(p.display_name,p.email),'actor_email',p.email
+    ) order by e.id desc)
+      from public.work_board_events e
+      join public.profiles p on p.id=e.actor_id
+      where e.board_id=bid and e.entity_type='item' and e.entity_id=p_item_id::text),'[]'::jsonb)
+  ) into result;
+  return result;
+end $$;
+create or replace function public.wm_add_board_item_update(p_item_id uuid,p_body text) returns bigint
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare bid uuid; uid bigint;
+begin
+  select board_id into bid from public.work_board_items where id=p_item_id;
+  if bid is null or not public.work_board_access(bid,'edit') then
+    raise exception 'Board edit access denied' using errcode='42501';
+  end if;
+  if char_length(btrim(coalesce(p_body,''))) not between 1 and 5000 then
+    raise exception 'Update must contain 1-5000 characters';
+  end if;
+  insert into public.work_board_item_updates(board_id,item_id,body,created_by)
+  values(bid,p_item_id,btrim(p_body),auth.uid()) returning id into uid;
+  update public.work_boards set updated_at=now(),updated_by=auth.uid() where id=bid;
+  perform public.work_board_log(bid,'item.update_added','Update posted','item',p_item_id::text,jsonb_build_object('update_id',uid));
+  return uid;
+end $$;
+create or replace function public.wm_delete_board_item_update(p_update_id bigint) returns void
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare row_now public.work_board_item_updates%rowtype;
+begin
+  select * into row_now from public.work_board_item_updates where id=p_update_id;
+  if row_now.id is null then return; end if;
+  if not public.work_board_access(row_now.board_id,'edit') then
+    raise exception 'Board edit access denied' using errcode='42501';
+  end if;
+  if row_now.created_by<>auth.uid() and not public.work_board_access(row_now.board_id,'manage') then
+    raise exception 'Only the update author or board owner can delete this update' using errcode='42501';
+  end if;
+  delete from public.work_board_item_updates where id=p_update_id;
+  perform public.work_board_log(row_now.board_id,'item.update_deleted','Update deleted','item',row_now.item_id::text,jsonb_build_object('update_id',p_update_id));
+end $$;
+create or replace function public.wm_register_board_item_file(
+  p_item_id uuid,
+  p_storage_path text,
+  p_file_name text,
+  p_mime_type text,
+  p_size_bytes bigint
+) returns uuid
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare
+  bid uuid;
+  fid uuid;
+  existing public.work_board_item_files%rowtype;
+begin
+  select board_id into bid from public.work_board_items where id=p_item_id;
+  if bid is null or not public.work_board_access(bid,'edit') then
+    raise exception 'Board edit access denied' using errcode='42501';
+  end if;
+  if char_length(btrim(coalesce(p_file_name,''))) not between 1 and 240 then raise exception 'Invalid file name'; end if;
+  if coalesce(p_size_bytes,-1) not between 0 and 20971520 then raise exception 'Files must be 20 MB or smaller'; end if;
+  if p_storage_path not like bid::text||'/'||p_item_id::text||'/%' then raise exception 'Invalid file path'; end if;
+
+  if not exists(
+    select 1 from storage.objects o
+    where o.bucket_id='work-board-files'
+      and o.name=p_storage_path
+      and o.owner_id=auth.uid()::text
+  ) then
+    raise exception 'Uploaded Storage object is missing or is not owned by the current user' using errcode='42501';
+  end if;
+
+  select * into existing from public.work_board_item_files where storage_path=p_storage_path;
+  if existing.id is not null then
+    if existing.board_id=bid and existing.item_id=p_item_id and existing.created_by=auth.uid() then return existing.id; end if;
+    raise exception 'Storage object is already registered to another attachment' using errcode='23505';
+  end if;
+
+  insert into public.work_board_item_files(board_id,item_id,storage_path,file_name,mime_type,size_bytes,created_by)
+  values(bid,p_item_id,p_storage_path,btrim(p_file_name),left(coalesce(nullif(p_mime_type,''),'application/octet-stream'),160),p_size_bytes,auth.uid())
+  returning id into fid;
+  update public.work_boards set updated_at=now(),updated_by=auth.uid() where id=bid;
+  perform public.work_board_log(bid,'item.file_added','File attached','item',p_item_id::text,jsonb_build_object('file_id',fid,'file_name',btrim(p_file_name)));
+  return fid;
+end $$;
+-- Metadata finalization is intentionally idempotent. The client deletes the private
+-- Storage object first. If this transaction then fails, metadata remains visible and
+-- the user can safely retry; if another actor already finalized it, NULL is returned.
+create or replace function public.wm_delete_board_item_file(p_file_id uuid) returns text
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare row_now public.work_board_item_files%rowtype;
+begin
+  select * into row_now from public.work_board_item_files where id=p_file_id;
+  if row_now.id is null then return null; end if;
+  if not public.work_board_access(row_now.board_id,'edit') then
+    raise exception 'Board edit access denied' using errcode='42501';
+  end if;
+  if row_now.created_by<>auth.uid() and not public.work_board_access(row_now.board_id,'manage') then
+    raise exception 'Only the uploader or board owner can remove this file' using errcode='42501';
+  end if;
+  if exists(
+    select 1 from storage.objects
+    where bucket_id='work-board-files' and name=row_now.storage_path
+  ) then
+    raise exception 'Delete Storage object before finalizing metadata';
+  end if;
+  delete from public.work_board_item_files where id=p_file_id;
+  update public.work_boards set updated_at=now(),updated_by=auth.uid() where id=row_now.board_id;
+  perform public.work_board_log(row_now.board_id,'item.file_deleted','File removed','item',row_now.item_id::text,jsonb_build_object('file_id',p_file_id,'file_name',row_now.file_name));
+  return row_now.storage_path;
+end $$;
+-- Permanent item/Board deletion must not orphan private Storage objects, including
+-- objects retained after an ambiguous metadata-registration outcome.
+create or replace function public.wm_delete_board_item(p_item_id uuid) returns void
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare bid uuid; src public.work_board_items%rowtype;
+begin
+  select board_id into bid from public.work_board_items where id=p_item_id;
+  if bid is null or not public.work_board_access(bid,'edit') then raise exception 'Board edit access denied' using errcode='42501'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(bid::text,0));
+  select * into src from public.work_board_items where id=p_item_id and board_id=bid for update;
+  if src.id is null or not public.work_board_access(bid,'edit') then raise exception 'Board edit access denied' using errcode='42501'; end if;
+  if exists(select 1 from public.work_board_item_files where item_id=src.id)
+     or exists(select 1 from storage.objects where bucket_id='work-board-files' and name like bid::text||'/'||src.id::text||'/%') then
+    raise exception 'Remove item files and pending Storage objects before permanently deleting the item';
+  end if;
+  perform public.work_board_log(bid,'item.deleted','Item permanently deleted','item',src.id::text,jsonb_build_object('title',src.title,'group_id',src.group_id,'position',src.position,'archived',src.archived_at is not null));
+  delete from public.work_board_items where id=src.id;
+  if src.archived_at is null then
+    update public.work_board_items set position=position-1,updated_at=now()
+      where board_id=bid and group_id=src.group_id and archived_at is null and position>src.position;
+  end if;
+  update public.work_boards set updated_at=now(),updated_by=auth.uid() where id=bid;
+end $$;
+create or replace function public.wm_delete_board_permanently(p_board_id uuid) returns void
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare st text;
+begin
+  if not public.work_board_access(p_board_id,'manage') then raise exception 'Board management access denied' using errcode='42501'; end if;
+  select status into st from public.work_boards where id=p_board_id;
+  if st<>'trashed' then raise exception 'Only trashed boards can be permanently deleted'; end if;
+  if exists(select 1 from public.work_board_item_files where board_id=p_board_id)
+     or exists(select 1 from storage.objects where bucket_id='work-board-files' and name like p_board_id::text||'/%') then
+    raise exception 'Remove Board item files and pending Storage objects before permanently deleting the board';
+  end if;
+  delete from public.work_boards where id=p_board_id;
+end $$;
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values('work-board-files','work-board-files',false,20971520,null)
+on conflict(id) do update set public=false,file_size_limit=20971520;
+-- Storage RLS executes as the authenticated caller. Board tables intentionally remain
+-- RPC-only, so path membership crosses that boundary through a narrow internal helper
+-- rather than granting authenticated direct SELECT on work_board_items. Keep the helper
+-- outside the exposed public schema and re-check Board view access inside the definer body.
+create schema if not exists wm_internal;
+revoke all on schema wm_internal from public, anon;
+grant usage on schema wm_internal to authenticated;
+create or replace function wm_internal.work_board_item_belongs_to_board(p_item_id uuid,p_board_id uuid) returns boolean
+language sql stable security definer set search_path=pg_catalog,public as $$
+  select auth.uid() is not null
+    and public.work_board_access(p_board_id,'view')
+    and exists(
+      select 1 from public.work_board_items i
+      where i.id=p_item_id and i.board_id=p_board_id
+    );
+$$;
+revoke all on function wm_internal.work_board_item_belongs_to_board(uuid,uuid) from public, anon;
+grant execute on function wm_internal.work_board_item_belongs_to_board(uuid,uuid) to authenticated;
+drop policy if exists "wm board files read" on storage.objects;
+drop policy if exists "wm board files insert" on storage.objects;
+drop policy if exists "wm board files delete" on storage.objects;
+create policy "wm board files read" on storage.objects for select to authenticated using (
+  bucket_id='work-board-files'
+  and case
+    when split_part(name,'/',1) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+     and split_part(name,'/',2) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    then public.work_board_access(split_part(name,'/',1)::uuid,'view')
+      and wm_internal.work_board_item_belongs_to_board(split_part(name,'/',2)::uuid,split_part(name,'/',1)::uuid)
+    else false
+  end
+);
+create policy "wm board files insert" on storage.objects for insert to authenticated with check (
+  bucket_id='work-board-files'
+  and owner_id=auth.uid()::text
+  and case
+    when split_part(name,'/',1) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+     and split_part(name,'/',2) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    then public.work_board_access(split_part(name,'/',1)::uuid,'view')
+      and public.work_board_access(split_part(name,'/',1)::uuid,'edit')
+      and wm_internal.work_board_item_belongs_to_board(split_part(name,'/',2)::uuid,split_part(name,'/',1)::uuid)
+    else false
+  end
+);
+create policy "wm board files delete" on storage.objects for delete to authenticated using (
+  bucket_id='work-board-files'
+  and case
+    when split_part(name,'/',1) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+     and split_part(name,'/',2) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    then public.work_board_access(split_part(name,'/',1)::uuid,'view')
+      and public.work_board_access(split_part(name,'/',1)::uuid,'edit')
+      and wm_internal.work_board_item_belongs_to_board(split_part(name,'/',2)::uuid,split_part(name,'/',1)::uuid)
+      and (owner_id=auth.uid()::text or public.work_board_access(split_part(name,'/',1)::uuid,'manage'))
+    else false
+  end
+);
+-- M50 compatibility extension for retained M46/M47 contract attestation.
+-- Untouched predecessor RPCs may retain the historical fixed search_path=public, while
+-- M50-hardened replacements use the strictly stronger pg_catalog,public form. Missing,
+-- caller-controlled, or unrelated search_path configurations remain incompatible.
+create or replace function public.wm_board_contract_attestation() returns jsonb
+language plpgsql stable security definer set search_path='' as $m46$
+declare
+  expected jsonb := $contract${"version":"1.43.2-m46-v1","rpcs":[{"name":"wm_board_backend_capabilities","argNames":[],"argTypes":[],"defaultCount":0,"returnType":"jsonb","outputFields":[]},{"name":"wm_list_boards","argNames":["p_status"],"argTypes":["text"],"defaultCount":1,"returnType":"record","outputFields":["id:uuid","name:text","description:text","status:text","member_role:text","item_count:bigint","updated_at:timestamp with time zone","created_at:timestamp with time zone"]},{"name":"wm_get_board","argNames":["p_board_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"jsonb","outputFields":[]},{"name":"wm_create_board","argNames":["p_name","p_description"],"argTypes":["text","text"],"defaultCount":1,"returnType":"uuid","outputFields":[]},{"name":"wm_create_board_configured","argNames":["p_name","p_description","p_columns"],"argTypes":["text","text","jsonb"],"defaultCount":2,"returnType":"uuid","outputFields":[]},{"name":"wm_add_board_column","argNames":["p_board_id","p_name","p_data_type","p_config"],"argTypes":["uuid","text","text","jsonb"],"defaultCount":1,"returnType":"uuid","outputFields":[]},{"name":"wm_add_board_column_at","argNames":["p_board_id","p_name","p_data_type","p_config","p_position"],"argTypes":["uuid","text","text","jsonb","integer"],"defaultCount":2,"returnType":"uuid","outputFields":[]},{"name":"wm_duplicate_board","argNames":["p_board_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"uuid","outputFields":[]},{"name":"wm_update_board","argNames":["p_board_id","p_name","p_description"],"argTypes":["uuid","text","text"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_delete_board_permanently","argNames":["p_board_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_get_board_preferences","argNames":["p_board_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"jsonb","outputFields":[]},{"name":"wm_set_board_preferences","argNames":["p_board_id","p_preferences"],"argTypes":["uuid","jsonb"],"defaultCount":0,"returnType":"jsonb","outputFields":[]},{"name":"wm_add_board_group","argNames":["p_board_id","p_title"],"argTypes":["uuid","text"],"defaultCount":0,"returnType":"uuid","outputFields":[]},{"name":"wm_update_board_group","argNames":["p_group_id","p_title"],"argTypes":["uuid","text"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_move_board_group","argNames":["p_group_id","p_position"],"argTypes":["uuid","integer"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_delete_board_group","argNames":["p_group_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_set_board_group_accent","argNames":["p_group_id","p_accent_color"],"argTypes":["uuid","text"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_update_board_column","argNames":["p_column_id","p_name","p_config","p_visible"],"argTypes":["uuid","text","jsonb","boolean"],"defaultCount":1,"returnType":"void","outputFields":[]},{"name":"wm_change_board_column_type","argNames":["p_column_id","p_data_type","p_config","p_clear_values"],"argTypes":["uuid","text","jsonb","boolean"],"defaultCount":2,"returnType":"void","outputFields":[]},{"name":"wm_move_board_column","argNames":["p_column_id","p_position"],"argTypes":["uuid","integer"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_duplicate_board_column","argNames":["p_column_id","p_with_values"],"argTypes":["uuid","boolean"],"defaultCount":1,"returnType":"uuid","outputFields":[]},{"name":"wm_delete_board_column","argNames":["p_column_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_add_board_item","argNames":["p_board_id","p_group_id","p_title"],"argTypes":["uuid","uuid","text"],"defaultCount":0,"returnType":"uuid","outputFields":[]},{"name":"wm_update_board_item","argNames":["p_item_id","p_title","p_status","p_assignee_id","p_due_date","p_notes"],"argTypes":["uuid","text","text","uuid","date","text"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_move_board_item","argNames":["p_item_id","p_group_id","p_position","p_status"],"argTypes":["uuid","uuid","integer","text"],"defaultCount":1,"returnType":"void","outputFields":[]},{"name":"wm_duplicate_board_item","argNames":["p_item_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"uuid","outputFields":[]},{"name":"wm_delete_board_item","argNames":["p_item_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_set_board_item_archived","argNames":["p_item_id","p_archived"],"argTypes":["uuid","boolean"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_set_board_cell","argNames":["p_item_id","p_column_id","p_value"],"argTypes":["uuid","uuid","jsonb"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_set_board_status","argNames":["p_board_id","p_status"],"argTypes":["uuid","text"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_set_board_status_labels","argNames":["p_column_id","p_labels","p_default_label_id"],"argTypes":["uuid","jsonb","text"],"defaultCount":1,"returnType":"jsonb","outputFields":[]},{"name":"wm_set_board_view","argNames":["p_board_id","p_view"],"argTypes":["uuid","text"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_add_board_member","argNames":["p_board_id","p_email","p_role"],"argTypes":["uuid","text","text"],"defaultCount":1,"returnType":"void","outputFields":[]},{"name":"wm_remove_board_member","argNames":["p_board_id","p_user_id"],"argTypes":["uuid","uuid"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_get_board_item_workspace","argNames":["p_item_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"jsonb","outputFields":[]},{"name":"wm_add_board_item_update","argNames":["p_item_id","p_body"],"argTypes":["uuid","text"],"defaultCount":0,"returnType":"bigint","outputFields":[]},{"name":"wm_delete_board_item_update","argNames":["p_update_id"],"argTypes":["bigint"],"defaultCount":0,"returnType":"void","outputFields":[]},{"name":"wm_register_board_item_file","argNames":["p_item_id","p_storage_path","p_file_name","p_mime_type","p_size_bytes"],"argTypes":["uuid","text","text","text","bigint"],"defaultCount":0,"returnType":"uuid","outputFields":[]},{"name":"wm_delete_board_item_file","argNames":["p_file_id"],"argTypes":["uuid"],"defaultCount":0,"returnType":"text","outputFields":[]},{"name":"wm_list_board_events","argNames":["p_board_id","p_limit"],"argTypes":["uuid","integer"],"defaultCount":1,"returnType":"record","outputFields":["id:bigint","event_type:text","message:text","entity_type:text","entity_id:text","payload:jsonb","created_at:timestamp with time zone","actor_id:uuid","actor_name:text","actor_email:text"]}],"tables":[{"name":"work_boards","columns":[{"name":"id","udt":"uuid","nullable":"NO"},{"name":"workspace_id","udt":"uuid","nullable":"NO"},{"name":"name","udt":"text","nullable":"NO"},{"name":"description","udt":"text","nullable":"NO"},{"name":"status","udt":"text","nullable":"NO"},{"name":"created_by","udt":"uuid","nullable":"NO"},{"name":"updated_by","udt":"uuid","nullable":"NO"},{"name":"created_at","udt":"timestamptz","nullable":"NO"},{"name":"updated_at","udt":"timestamptz","nullable":"NO"},{"name":"archived_at","udt":"timestamptz","nullable":"YES"},{"name":"trashed_at","udt":"timestamptz","nullable":"YES"}],"policies":[]},{"name":"work_board_members","columns":[{"name":"board_id","udt":"uuid","nullable":"NO"},{"name":"user_id","udt":"uuid","nullable":"NO"},{"name":"role","udt":"text","nullable":"NO"},{"name":"view_mode","udt":"text","nullable":"NO"},{"name":"added_by","udt":"uuid","nullable":"YES"},{"name":"created_at","udt":"timestamptz","nullable":"NO"},{"name":"updated_at","udt":"timestamptz","nullable":"NO"},{"name":"preferences","udt":"jsonb","nullable":"NO"}],"policies":[]},{"name":"work_board_groups","columns":[{"name":"id","udt":"uuid","nullable":"NO"},{"name":"board_id","udt":"uuid","nullable":"NO"},{"name":"title","udt":"text","nullable":"NO"},{"name":"accent_color","udt":"text","nullable":"NO"},{"name":"position","udt":"int4","nullable":"NO"},{"name":"created_at","udt":"timestamptz","nullable":"NO"},{"name":"updated_at","udt":"timestamptz","nullable":"NO"}],"policies":[]},{"name":"work_board_columns","columns":[{"name":"id","udt":"uuid","nullable":"NO"},{"name":"board_id","udt":"uuid","nullable":"NO"},{"name":"column_key","udt":"text","nullable":"NO"},{"name":"name","udt":"text","nullable":"NO"},{"name":"data_type","udt":"text","nullable":"NO"},{"name":"system_key","udt":"text","nullable":"YES"},{"name":"position","udt":"int4","nullable":"NO"},{"name":"visible","udt":"bool","nullable":"NO"},{"name":"required","udt":"bool","nullable":"NO"},{"name":"config","udt":"jsonb","nullable":"NO"},{"name":"created_by","udt":"uuid","nullable":"NO"},{"name":"updated_by","udt":"uuid","nullable":"NO"},{"name":"created_at","udt":"timestamptz","nullable":"NO"},{"name":"updated_at","udt":"timestamptz","nullable":"NO"}],"policies":[]},{"name":"work_board_items","columns":[{"name":"id","udt":"uuid","nullable":"NO"},{"name":"board_id","udt":"uuid","nullable":"NO"},{"name":"group_id","udt":"uuid","nullable":"NO"},{"name":"title","udt":"text","nullable":"NO"},{"name":"status","udt":"text","nullable":"YES"},{"name":"assignee_id","udt":"uuid","nullable":"YES"},{"name":"due_date","udt":"date","nullable":"YES"},{"name":"notes","udt":"text","nullable":"NO"},{"name":"position","udt":"int4","nullable":"NO"},{"name":"archived_at","udt":"timestamptz","nullable":"YES"},{"name":"created_by","udt":"uuid","nullable":"NO"},{"name":"updated_by","udt":"uuid","nullable":"NO"},{"name":"created_at","udt":"timestamptz","nullable":"NO"},{"name":"updated_at","udt":"timestamptz","nullable":"NO"}],"policies":[]},{"name":"work_board_item_values","columns":[{"name":"item_id","udt":"uuid","nullable":"NO"},{"name":"column_id","udt":"uuid","nullable":"NO"},{"name":"value","udt":"jsonb","nullable":"YES"},{"name":"updated_by","udt":"uuid","nullable":"NO"},{"name":"updated_at","udt":"timestamptz","nullable":"NO"}],"policies":[]},{"name":"work_board_item_updates","columns":[{"name":"id","udt":"int8","nullable":"NO"},{"name":"board_id","udt":"uuid","nullable":"NO"},{"name":"item_id","udt":"uuid","nullable":"NO"},{"name":"body","udt":"text","nullable":"NO"},{"name":"created_by","udt":"uuid","nullable":"NO"},{"name":"created_at","udt":"timestamptz","nullable":"NO"},{"name":"updated_at","udt":"timestamptz","nullable":"NO"}],"policies":[]},{"name":"work_board_item_files","columns":[{"name":"id","udt":"uuid","nullable":"NO"},{"name":"board_id","udt":"uuid","nullable":"NO"},{"name":"item_id","udt":"uuid","nullable":"NO"},{"name":"storage_path","udt":"text","nullable":"NO"},{"name":"file_name","udt":"text","nullable":"NO"},{"name":"mime_type","udt":"text","nullable":"NO"},{"name":"size_bytes","udt":"int8","nullable":"NO"},{"name":"created_by","udt":"uuid","nullable":"NO"},{"name":"created_at","udt":"timestamptz","nullable":"NO"}],"policies":[]},{"name":"work_board_events","columns":[{"name":"id","udt":"int8","nullable":"NO"},{"name":"board_id","udt":"uuid","nullable":"NO"},{"name":"actor_id","udt":"uuid","nullable":"NO"},{"name":"event_type","udt":"text","nullable":"NO"},{"name":"message","udt":"text","nullable":"NO"},{"name":"entity_type","udt":"text","nullable":"YES"},{"name":"entity_id","udt":"text","nullable":"YES"},{"name":"payload","udt":"jsonb","nullable":"NO"},{"name":"created_at","udt":"timestamptz","nullable":"NO"}],"policies":[]}],"storage":{"bucket":"work-board-files","public":false,"fileSizeLimit":20971520,"policies":[{"name":"wm board files read","command":"SELECT","roles":["authenticated"],"expression":"USING","requiredFragments":["work-board-files","work_board_access","view"],"forbiddenFragments":["owner_id"]},{"name":"wm board files insert","command":"INSERT","roles":["authenticated"],"expression":"WITH CHECK","requiredFragments":["work-board-files","owner_id","auth.uid","work_board_access","view"],"forbiddenFragments":[]},{"name":"wm board files delete","command":"DELETE","roles":["authenticated"],"expression":"USING","requiredFragments":["work-board-files","owner_id","auth.uid","work_board_access","manage"],"forbiddenFragments":[]}],"allowedMimeTypes":null},"realtime":{"functions":[{"name":"work_board_realtime_topic_access","argTypes":["text"],"returnType":"boolean","securityDefiner":true,"searchPath":"","authenticatedExecute":true,"anonExecute":false},{"name":"work_board_realtime_broadcast_change","argTypes":[],"returnType":"trigger","securityDefiner":true,"searchPath":"","authenticatedExecute":false,"anonExecute":false}],"policies":[{"name":"wm_board_realtime_receive","command":"SELECT","roles":["authenticated"],"expression":"USING","requiredFragments":["broadcast","presence","work_board_realtime_topic_access","realtime.topic"],"forbiddenFragments":[]},{"name":"wm_board_realtime_presence_track","command":"INSERT","roles":["authenticated"],"expression":"WITH CHECK","requiredFragments":["presence","work_board_realtime_topic_access","realtime.topic"],"forbiddenFragments":["broadcast"]}],"triggers":[{"name":"work_boards_realtime_change","table":"work_boards","function":"work_board_realtime_broadcast_change","events":["INSERT","UPDATE","DELETE"]},{"name":"work_board_members_realtime_change","table":"work_board_members","function":"work_board_realtime_broadcast_change","events":["INSERT","UPDATE","DELETE"]},{"name":"work_board_groups_realtime_change","table":"work_board_groups","function":"work_board_realtime_broadcast_change","events":["INSERT","UPDATE","DELETE"]},{"name":"work_board_items_realtime_change","table":"work_board_items","function":"work_board_realtime_broadcast_change","events":["INSERT","UPDATE","DELETE"]},{"name":"work_board_columns_realtime_change","table":"work_board_columns","function":"work_board_realtime_broadcast_change","events":["INSERT","UPDATE","DELETE"]},{"name":"work_board_item_values_realtime_change","table":"work_board_item_values","function":"work_board_realtime_broadcast_change","events":["INSERT","UPDATE","DELETE"]},{"name":"work_board_item_updates_realtime_change","table":"work_board_item_updates","function":"work_board_realtime_broadcast_change","events":["INSERT","UPDATE","DELETE"]},{"name":"work_board_item_files_realtime_change","table":"work_board_item_files","function":"work_board_realtime_broadcast_change","events":["INSERT","UPDATE","DELETE"]}]},"dto":{"workspaceIdentityKeys":["author_id","actor_id"],"compatibilityAliases":["created_by"]},"capabilities":{"canonical_workspace_identity":true,"scoped_query_cache":true,"authoritative_file_delete":true,"live_contract_attestation":true,"private_board_realtime":true}}$contract$::jsonb;
+  rpc jsonb;
+  tbl jsonb;
+  fn jsonb;
+  pol jsonb;
+  trg jsonb;
+  fragment text;
+  p record;
+  fp record;
+  policy_row record;
+  actual_outputs jsonb;
+  policy_expression text;
+  rpc_ok_count integer := 0;
+  table_ok_count integer := 0;
+  rls_ok_count integer := 0;
+  board_table_policy_count integer := 0;
+  board_table_policy_ok_count integer := 0;
+  privilege_violations integer := 0;
+  storage_ok boolean := false;
+  storage_policy_count integer := 0;
+  realtime_function_count integer := 0;
+  realtime_policy_count integer := 0;
+  realtime_trigger_count integer := 0;
+  actual_column_count integer := 0;
+  actual_policy_count integer := 0;
+  policy_ok boolean := false;
+  function_ok boolean := false;
+  capabilities jsonb := '{}'::jsonb;
+  capabilities_ok boolean := false;
+  expected_rpc_count integer := jsonb_array_length(expected->'rpcs');
+  expected_table_count integer := jsonb_array_length(expected->'tables');
+  compatible boolean := false;
+  m47_group_order_ok boolean := false;
+  m47_active_item_order_ok boolean := false;
+  m47_mutation_security_ok boolean := false;
+  m47_order_indexes_ok boolean := false;
+begin
+  for rpc in select value from jsonb_array_elements(expected->'rpcs') loop
+    select p0.* into p
+      from pg_catalog.pg_proc p0
+      join pg_catalog.pg_namespace n on n.oid=p0.pronamespace
+     where n.nspname='public'
+       and p0.proname=rpc->>'name'
+       and p0.prokind='f'
+       and pg_catalog.oidvectortypes(p0.proargtypes)=array_to_string(array(select jsonb_array_elements_text(rpc->'argTypes')),', ')
+     order by p0.oid
+     limit 1;
+
+    if p.oid is not null then
+      select coalesce(jsonb_agg((p.proargnames[s.i]||':'||pg_catalog.format_type(p.proallargtypes[s.i],null)) order by s.i),'[]'::jsonb)
+        into actual_outputs
+        from generate_subscripts(coalesce(p.proallargtypes,'{}'::oid[]),1) as s(i)
+       where p.proargmodes[s.i] in ('o','b','t');
+
+      if coalesce(to_jsonb(p.proargnames[1:p.pronargs]),'[]'::jsonb)=rpc->'argNames'
+         and p.pronargdefaults=(rpc->>'defaultCount')::integer
+         and pg_catalog.format_type(p.prorettype,null)=rpc->>'returnType'
+         and actual_outputs=rpc->'outputFields'
+         and p.prosecdef
+         and coalesce(
+           'search_path=public'=any(p.proconfig)
+           or 'search_path=pg_catalog, public'=any(p.proconfig)
+           or 'search_path=pg_catalog,public'=any(p.proconfig),
+           false
+         )
+         and has_function_privilege('authenticated',p.oid,'EXECUTE')
+         and not has_function_privilege('anon',p.oid,'EXECUTE')
+         and 1=(select count(*) from pg_catalog.pg_proc px join pg_catalog.pg_namespace nx on nx.oid=px.pronamespace
+                  where nx.nspname='public' and px.proname=rpc->>'name' and px.prokind='f'
+                    and has_function_privilege('authenticated',px.oid,'EXECUTE'))
+      then
+        rpc_ok_count := rpc_ok_count+1;
+      end if;
+    end if;
+  end loop;
+
+  for tbl in select value from jsonb_array_elements(expected->'tables') loop
+    select count(*) into actual_column_count
+      from information_schema.columns c
+     where c.table_schema='public' and c.table_name=tbl->>'name';
+
+    if actual_column_count=jsonb_array_length(tbl->'columns')
+       and not exists(
+         select 1
+           from jsonb_array_elements(tbl->'columns') as req(column_contract)
+          where not exists(
+            select 1 from information_schema.columns c
+             where c.table_schema='public'
+               and c.table_name=tbl->>'name'
+               and c.column_name=req.column_contract->>'name'
+               and c.udt_name=req.column_contract->>'udt'
+               and c.is_nullable=req.column_contract->>'nullable'
+          )
+       )
+    then table_ok_count:=table_ok_count+1; end if;
+
+    if exists(
+      select 1 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+       where n.nspname='public' and c.relname=tbl->>'name' and c.relkind='r' and c.relrowsecurity
+    ) then rls_ok_count:=rls_ok_count+1; end if;
+
+    select count(*) into actual_policy_count
+      from pg_catalog.pg_policies pp
+     where pp.schemaname='public' and pp.tablename=tbl->>'name';
+    board_table_policy_count:=board_table_policy_count+actual_policy_count;
+    if actual_policy_count=jsonb_array_length(tbl->'policies') then
+      board_table_policy_ok_count:=board_table_policy_ok_count+1;
+    end if;
+
+    if exists(
+      select 1 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+       where n.nspname='public' and c.relname=tbl->>'name'
+         and (
+           has_table_privilege('anon',c.oid,'SELECT') or has_table_privilege('anon',c.oid,'INSERT')
+           or has_table_privilege('anon',c.oid,'UPDATE') or has_table_privilege('anon',c.oid,'DELETE')
+           or has_table_privilege('authenticated',c.oid,'SELECT') or has_table_privilege('authenticated',c.oid,'INSERT')
+           or has_table_privilege('authenticated',c.oid,'UPDATE') or has_table_privilege('authenticated',c.oid,'DELETE')
+         )
+    ) then privilege_violations:=privilege_violations+1; end if;
+  end loop;
+
+  select exists(
+    select 1 from storage.buckets b
+     where b.id=expected->'storage'->>'bucket'
+       and b.public=(expected->'storage'->>'public')::boolean
+       and b.file_size_limit=(expected->'storage'->>'fileSizeLimit')::bigint
+       and ((expected->'storage'->'allowedMimeTypes')='null'::jsonb and b.allowed_mime_types is null)
+  ) into storage_ok;
+
+  for pol in select value from jsonb_array_elements(expected->'storage'->'policies') loop
+    select pp.* into policy_row from pg_catalog.pg_policies pp
+     where pp.schemaname='storage' and pp.tablename='objects' and pp.policyname=pol->>'name' limit 1;
+    policy_ok:=policy_row.policyname is not null
+      and policy_row.cmd=pol->>'command'
+      and policy_row.roles::text[]=array(select jsonb_array_elements_text(pol->'roles'));
+    policy_expression:=case pol->>'expression' when 'USING' then policy_row.qual when 'WITH CHECK' then policy_row.with_check else null end;
+    for fragment in select jsonb_array_elements_text(pol->'requiredFragments') loop
+      if position(fragment in coalesce(policy_expression,''))=0 then policy_ok:=false; end if;
+    end loop;
+    for fragment in select jsonb_array_elements_text(pol->'forbiddenFragments') loop
+      if position(fragment in coalesce(policy_expression,''))>0 then policy_ok:=false; end if;
+    end loop;
+    if policy_ok then storage_policy_count:=storage_policy_count+1; end if;
+  end loop;
+
+  for fn in select value from jsonb_array_elements(expected->'realtime'->'functions') loop
+    select p0.* into fp
+      from pg_catalog.pg_proc p0 join pg_catalog.pg_namespace n on n.oid=p0.pronamespace
+     where n.nspname='public' and p0.proname=fn->>'name' and p0.prokind='f'
+       and pg_catalog.oidvectortypes(p0.proargtypes)=array_to_string(array(select jsonb_array_elements_text(fn->'argTypes')),', ')
+     order by p0.oid limit 1;
+    function_ok:=fp.oid is not null
+      and pg_catalog.format_type(fp.prorettype,null)=fn->>'returnType'
+      and fp.prosecdef=(fn->>'securityDefiner')::boolean
+      and coalesce((case when fn->>'searchPath'='' then 'search_path=""' else 'search_path='||(fn->>'searchPath') end)=any(fp.proconfig),false)
+      and has_function_privilege('authenticated',fp.oid,'EXECUTE')=(fn->>'authenticatedExecute')::boolean
+      and has_function_privilege('anon',fp.oid,'EXECUTE')=(fn->>'anonExecute')::boolean;
+    if function_ok then realtime_function_count:=realtime_function_count+1; end if;
+  end loop;
+
+  for pol in select value from jsonb_array_elements(expected->'realtime'->'policies') loop
+    select pp.* into policy_row from pg_catalog.pg_policies pp
+     where pp.schemaname='realtime' and pp.tablename='messages' and pp.policyname=pol->>'name' limit 1;
+    policy_ok:=policy_row.policyname is not null
+      and policy_row.cmd=pol->>'command'
+      and policy_row.roles::text[]=array(select jsonb_array_elements_text(pol->'roles'));
+    policy_expression:=case pol->>'expression' when 'USING' then policy_row.qual when 'WITH CHECK' then policy_row.with_check else null end;
+    for fragment in select jsonb_array_elements_text(pol->'requiredFragments') loop
+      if position(fragment in coalesce(policy_expression,''))=0 then policy_ok:=false; end if;
+    end loop;
+    for fragment in select jsonb_array_elements_text(pol->'forbiddenFragments') loop
+      if position(fragment in coalesce(policy_expression,''))>0 then policy_ok:=false; end if;
+    end loop;
+    if policy_ok then realtime_policy_count:=realtime_policy_count+1; end if;
+  end loop;
+
+  for trg in select value from jsonb_array_elements(expected->'realtime'->'triggers') loop
+    if exists(
+      select 1
+        from pg_catalog.pg_trigger t
+        join pg_catalog.pg_class c on c.oid=t.tgrelid
+        join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+        join pg_catalog.pg_proc f on f.oid=t.tgfoid
+        join pg_catalog.pg_namespace fn on fn.oid=f.pronamespace
+       where n.nspname='public' and c.relname=trg->>'table'
+         and t.tgname=trg->>'name' and not t.tgisinternal and t.tgenabled='O'
+         and t.tgtype=29
+         and fn.nspname='public' and f.proname=trg->>'function'
+    ) then realtime_trigger_count:=realtime_trigger_count+1; end if;
+  end loop;
+
+  begin
+    capabilities:=public.wm_board_backend_capabilities();
+    capabilities_ok:=capabilities->>'schema_version'=expected->>'version'
+      and capabilities->>'contract_digest'='2e5db3073f702cad96be3eb1d4a18b33ea039252ad4d0532dc9b6e1b3ca0da1c'
+      and not exists(
+        select 1 from jsonb_each(expected->'capabilities') as req(key,value)
+         where coalesce((capabilities->>req.key)::boolean,false)<>(req.value::text)::boolean
+      );
+  exception when others then
+    capabilities_ok:=false;
+  end;
+
+  compatible := rpc_ok_count=expected_rpc_count
+    and table_ok_count=expected_table_count
+    and rls_ok_count=expected_table_count
+    and board_table_policy_ok_count=expected_table_count
+    and board_table_policy_count=(select coalesce(sum(jsonb_array_length(value->'policies')),0)::integer from jsonb_array_elements(expected->'tables'))
+    and privilege_violations=0
+    and storage_ok
+    and storage_policy_count=jsonb_array_length(expected->'storage'->'policies')
+    and realtime_function_count=jsonb_array_length(expected->'realtime'->'functions')
+    and realtime_policy_count=jsonb_array_length(expected->'realtime'->'policies')
+    and realtime_trigger_count=jsonb_array_length(expected->'realtime'->'triggers')
+    and capabilities_ok;
+
+  select not exists(
+    select 1 from (
+      select g.position, row_number() over(partition by g.board_id order by g.position,g.id)-1 as expected_position
+      from public.work_board_groups g
+    ) q where q.position<>q.expected_position
+  ) into m47_group_order_ok;
+
+  select not exists(
+    select 1 from (
+      select i.position, row_number() over(partition by i.group_id order by i.position,i.id)-1 as expected_position
+      from public.work_board_items i
+      where i.archived_at is null
+    ) q where q.position<>q.expected_position
+  ) into m47_active_item_order_ok;
+
+  select count(*)=8 into m47_mutation_security_ok
+  from pg_catalog.pg_proc m47_proc
+  join pg_catalog.pg_namespace m47_ns on m47_ns.oid=m47_proc.pronamespace
+  where m47_ns.nspname='public' and m47_proc.prokind='f'
+    and m47_proc.proname=any(array[
+      'wm_add_board_group','wm_move_board_group','wm_delete_board_group',
+      'wm_add_board_item','wm_move_board_item','wm_duplicate_board_item',
+      'wm_delete_board_item','wm_set_board_item_archived'
+    ])
+    and m47_proc.prosecdef
+    and coalesce(
+      'search_path=public'=any(m47_proc.proconfig)
+      or 'search_path=pg_catalog, public'=any(m47_proc.proconfig)
+      or 'search_path=pg_catalog,public'=any(m47_proc.proconfig),
+      false
+    )
+    and has_function_privilege('authenticated',m47_proc.oid,'EXECUTE')
+    and not has_function_privilege('anon',m47_proc.oid,'EXECUTE');
+
+  m47_order_indexes_ok :=
+    to_regclass('public.work_board_groups_board_position_idx') is not null
+    and to_regclass('public.work_board_items_group_position_idx') is not null
+    and to_regclass('public.work_board_item_files_item_idx') is not null;
+
+  return jsonb_build_object(
+    'contract_version','1.43.2-m46-v1',
+    'contract_digest','2e5db3073f702cad96be3eb1d4a18b33ea039252ad4d0532dc9b6e1b3ca0da1c',
+    'schema_version',capabilities->>'schema_version',
+    'compatible',compatible,
+    'rpc_count',rpc_ok_count,'expected_rpc_count',expected_rpc_count,
+    'table_count',table_ok_count,'expected_table_count',expected_table_count,
+    'rls_table_count',rls_ok_count,
+    'board_table_policy_count',board_table_policy_count,
+    'board_table_policy_table_count',board_table_policy_ok_count,
+    'direct_privilege_violations',privilege_violations,
+    'storage_ok',storage_ok,'storage_policy_count',storage_policy_count,
+    'realtime_function_count',realtime_function_count,
+    'realtime_policy_count',realtime_policy_count,'realtime_trigger_count',realtime_trigger_count,
+    'capabilities_ok',capabilities_ok,
+    'm47_semantics_version','1.43.2-m47-v1',
+    'm47_group_order_ok',m47_group_order_ok,
+    'm47_active_item_order_ok',m47_active_item_order_ok,
+    'm47_mutation_security_ok',m47_mutation_security_ok,
+    'm47_order_indexes_ok',m47_order_indexes_ok,
+    'm47_compatible',compatible and m47_group_order_ok and m47_active_item_order_ok and m47_mutation_security_ok and m47_order_indexes_ok
+  );
+end $m46$;
+revoke all on function public.wm_board_contract_attestation() from public;
+grant execute on function public.wm_board_contract_attestation() to anon, authenticated;
+create or replace function public.wm_item_workspace_recovery_attestation() returns jsonb
+language plpgsql stable security definer set search_path=pg_catalog,public as $$
+declare
+  bucket_ok boolean;
+  read_policy_ok boolean;
+  insert_policy_ok boolean;
+  delete_policy_ok boolean;
+  rpc_security_ok boolean;
+  mutation_authority_ok boolean;
+  registration_ownership_ok boolean;
+  metadata_finalize_guard_ok boolean;
+  item_delete_guard_ok boolean;
+  board_delete_guard_ok boolean;
+  item_path_helper_ok boolean;
+begin
+  select exists(select 1 from storage.buckets where id='work-board-files' and public=false and file_size_limit=20971520) into bucket_ok;
+  select exists(select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='wm board files read' and qual like '%work_board_access%' and qual like '%view%' and qual like '%work_board_item_belongs_to_board%') into read_policy_ok;
+  select exists(select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='wm board files insert' and with_check like '%owner_id%' and with_check like '%work_board_access%' and with_check like '%edit%' and with_check like '%work_board_item_belongs_to_board%') into insert_policy_ok;
+  select exists(select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='wm board files delete' and qual like '%owner_id%' and qual like '%work_board_access%' and qual like '%edit%' and qual like '%manage%' and qual like '%work_board_item_belongs_to_board%') into delete_policy_ok;
+  select count(*)=5 into rpc_security_ok
+  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+  where n.nspname='public' and p.proname=any(array['wm_get_board_item_workspace','wm_add_board_item_update','wm_delete_board_item_update','wm_register_board_item_file','wm_delete_board_item_file'])
+    and p.prosecdef and coalesce('search_path=pg_catalog, public'=any(p.proconfig) or 'search_path=pg_catalog,public'=any(p.proconfig),false)
+    and has_function_privilege('authenticated',p.oid,'EXECUTE') and not has_function_privilege('anon',p.oid,'EXECUTE');
+  select pg_get_functiondef('public.wm_add_board_item_update(uuid,text)'::regprocedure) like '%work_board_access(bid,''edit'')%'
+    and pg_get_functiondef('public.wm_register_board_item_file(uuid,text,text,text,bigint)'::regprocedure) like '%work_board_access(bid,''edit'')%'
+    into mutation_authority_ok;
+  select pg_get_functiondef('public.wm_register_board_item_file(uuid,text,text,text,bigint)'::regprocedure) like '%storage.objects%'
+    and pg_get_functiondef('public.wm_register_board_item_file(uuid,text,text,text,bigint)'::regprocedure) like '%owner_id=auth.uid()::text%'
+    into registration_ownership_ok;
+  select pg_get_functiondef('public.wm_delete_board_item_file(uuid)'::regprocedure) like '%storage.objects%'
+    and pg_get_functiondef('public.wm_delete_board_item_file(uuid)'::regprocedure) like '%Delete Storage object before finalizing metadata%'
+    into metadata_finalize_guard_ok;
+  select pg_get_functiondef('public.wm_delete_board_item(uuid)'::regprocedure) like '%pending Storage objects%'
+    and pg_get_functiondef('public.wm_delete_board_item(uuid)'::regprocedure) like '%storage.objects%'
+    into item_delete_guard_ok;
+  select pg_get_functiondef('public.wm_delete_board_permanently(uuid)'::regprocedure) like '%pending Storage objects%' and pg_get_functiondef('public.wm_delete_board_permanently(uuid)'::regprocedure) like '%storage.objects%' into board_delete_guard_ok;
+  select exists(
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='wm_internal' and p.proname='work_board_item_belongs_to_board'
+      and p.prosecdef and coalesce('search_path=pg_catalog, public'=any(p.proconfig) or 'search_path=pg_catalog,public'=any(p.proconfig),false)
+      and has_schema_privilege('authenticated','wm_internal','USAGE')
+      and has_function_privilege('authenticated',p.oid,'EXECUTE')
+      and not has_function_privilege('anon',p.oid,'EXECUTE')
+  ) and not has_table_privilege('authenticated','public.work_board_items','SELECT')
+    into item_path_helper_ok;
+  return jsonb_build_object(
+    'm50_semantics_version','1.43.2-m50-v1',
+    'bucket_ok',bucket_ok,
+    'read_policy_ok',read_policy_ok,
+    'insert_policy_ok',insert_policy_ok,
+    'delete_policy_ok',delete_policy_ok,
+    'rpc_security_ok',rpc_security_ok,
+    'mutation_authority_ok',mutation_authority_ok,
+    'registration_ownership_ok',registration_ownership_ok,
+    'metadata_finalize_guard_ok',metadata_finalize_guard_ok,
+    'item_delete_guard_ok',item_delete_guard_ok,
+    'board_delete_guard_ok',board_delete_guard_ok,
+    'item_path_helper_ok',item_path_helper_ok,
+    'compatible',bucket_ok and read_policy_ok and insert_policy_ok and delete_policy_ok and rpc_security_ok and mutation_authority_ok and registration_ownership_ok and metadata_finalize_guard_ok and item_delete_guard_ok and board_delete_guard_ok and item_path_helper_ok
+  );
+end $$;
+revoke all on function public.wm_item_workspace_recovery_attestation() from public;
+grant execute on function public.wm_item_workspace_recovery_attestation() to anon, authenticated;
+revoke all on function public.wm_get_board_item_workspace(uuid) from public;
+revoke all on function public.wm_add_board_item_update(uuid,text) from public;
+revoke all on function public.wm_delete_board_item_update(bigint) from public;
+revoke all on function public.wm_register_board_item_file(uuid,text,text,text,bigint) from public;
+revoke all on function public.wm_delete_board_item_file(uuid) from public;
+grant execute on function public.wm_get_board_item_workspace(uuid) to authenticated;
+grant execute on function public.wm_add_board_item_update(uuid,text) to authenticated;
+grant execute on function public.wm_delete_board_item_update(bigint) to authenticated;
+grant execute on function public.wm_register_board_item_file(uuid,text,text,text,bigint) to authenticated;
+grant execute on function public.wm_delete_board_item_file(uuid) to authenticated;
+notify pgrst, 'reload schema';
+commit;

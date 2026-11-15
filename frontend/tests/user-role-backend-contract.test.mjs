@@ -37,7 +37,7 @@ test('audit records are part of same transaction and no direct client DML used',
 });
 
 test('Toolbox assignment uses workspace-scoped source membership, not the global module shadow row',()=>{
- const migration=readFileSync('supabase/migrations/20261113041201_cp_urm_app_toolbox_01_source_membership_role_assignment.sql','utf8');
+ const migration=readFileSync('supabase/migrations/20261113042607_cp_urm_app_toolbox_01_source_membership_role_assignment.sql','utf8');
  assert.match(migration,/public\.toolbox_issues_memberships/);
  assert.match(migration,/workspace_id,user_id,role,enabled,assigned_by,updated_at/);
  assert.match(migration,/ON CONFLICT\(workspace_id,user_id\)/);

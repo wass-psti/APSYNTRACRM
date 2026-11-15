@@ -397,3 +397,4 @@ grant execute on function public.fueltrack_v3_read(uuid,integer) to authenticate
 grant execute on function public.fueltrack_v3_decide(uuid,uuid,bigint,text,text) to authenticated;
 grant execute on function public.fueltrack_v3_mark_refueled(uuid,uuid,bigint) to authenticated;
 grant execute on function public.fueltrack_v3_complete(uuid,uuid,bigint,numeric,numeric,text) to authenticated;
+;

@@ -390,4 +390,4 @@ create policy fueltrack_v3_receipt_orphan_cleanup on storage.objects
  using (
   bucket_id='work-board-files' and owner_id=auth.uid()::text
   and public.fueltrack_v3_receipt_storage_upload_allowed(name,metadata)
- );
+ );;

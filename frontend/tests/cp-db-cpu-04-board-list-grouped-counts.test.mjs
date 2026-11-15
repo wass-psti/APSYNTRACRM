@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const sql=readFileSync(new URL('../../supabase/migrations/20261114013428_cp_db_cpu_04_grouped_board_counts.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migrations/20261114013849_cp_db_cpu_04_grouped_board_counts.sql',import.meta.url),'utf8');
 
 test('grouped board counts preserve the existing signed workspace and membership contract',()=>{
  assert.match(sql,/RETURNS TABLE\([\s\S]*item_count bigint/);

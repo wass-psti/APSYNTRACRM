@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.order_intake_create(jsonb) FROM PUBLIC, anon, authenticated; GRANT EXECUTE ON FUNCTION public.order_intake_create(jsonb) TO authenticated; REVOKE ALL ON FUNCTION public.order_intake_qa_create_once() FROM PUBLIC, anon, authenticated; REVOKE ALL ON FUNCTION public.order_intake_qa_archive_once() FROM PUBLIC, anon, authenticated;;

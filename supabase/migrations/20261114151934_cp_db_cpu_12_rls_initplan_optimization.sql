@@ -103,4 +103,4 @@ WITH CHECK (
   (actor_id = (SELECT auth.uid()))
   AND work_board_access(board_id, 'edit'::text)
   AND (workspace_id = current_workspace_id())
-);
+);;
