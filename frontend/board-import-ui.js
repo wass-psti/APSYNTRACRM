@@ -304,7 +304,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    '<div class="aps-import-summary"><p>Source rows: '+r.sourceRows+
    ' · Valid rows: '+r.validRows+' · Inserted: '+r.created+' · Updated: '+r.updated+
    ' · Skipped: '+r.skipped+' · Duplicate matches: '+r.duplicates+
-   ' · Rejected: '+r.rejectedRows+' · Excluded worksheet rows: '+r.excludedWorksheetRows+
+   ' · Rejected: '+r.rejectedRows+' rejected source row'+(r.rejectedRows===1?'':'s')+
+   ' · Excluded worksheet rows: '+r.excludedWorksheetRows+
    ' · Failed: '+(r.failedRows===null?'Unreconciled':r.failedRows)+'</p>'+
    '<p><strong>Committed database writes: '+r.committedWrites+'</strong> ('+
    r.created+' inserted + '+r.updated+' updated). Skipped rows are not counted as persisted writes.</p>'+
