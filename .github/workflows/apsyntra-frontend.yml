@@ -35,7 +35,7 @@ on:
       - "docs/CP-BIMP-15A-DURABLE-RECOVERY-ACCEPTANCE.md"
       - "docs/CP-BIMP-16-SIGNED-RELEASE-ACCEPTANCE.md"
       - "docs/CP-BIMP-17-IMPORT-COMPATIBILITY-AND-ACTIVATION-READINESS.md"
-      - "supabase/migrations/20261115113231_cp_board_import_sync_01_authoritative_counts.sql"
+      - "supabase/migrations/20261115132051_cp_board_import_sync_01_authoritative_counts.sql"
       - "sql/tests/cp-board-import-sync-01-disposable-setup.sql"
       - "sql/tests/cp-board-import-sync-01-disposable-acceptance.sql"
       - "frontend/board-import-summary.js"
@@ -361,7 +361,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-board-import-sync-01-disposable-setup.sql \
             -c "BEGIN;" \
-            -f supabase/migrations/20261115113231_cp_board_import_sync_01_authoritative_counts.sql \
+            -f supabase/migrations/20261115132051_cp_board_import_sync_01_authoritative_counts.sql \
             -c "COMMIT;" \
             -f sql/tests/cp-board-import-sync-01-disposable-acceptance.sql
 

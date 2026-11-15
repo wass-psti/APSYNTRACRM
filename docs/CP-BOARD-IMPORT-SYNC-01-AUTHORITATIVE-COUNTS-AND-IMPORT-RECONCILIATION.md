@@ -1,7 +1,7 @@
 # CP-BOARD-IMPORT-SYNC-01 — Authoritative Board Counts and Import Reconciliation
 
 **Date:** 2026-11-15
-**Implementation status:** Frontend and migration source implemented; disposable PostgreSQL CI acceptance added; production migration not applied.
+**Implementation status:** IMPLEMENTED and deployed to GitHub Pages; production migration applied to the existing Supabase project and verified in the migration ledger. Genuine signed-browser user validation remains pending.
 **Scope:** Board item count accuracy, progressive page reconciliation, group totals, and import outcome reporting.
 
 ## Objectives
@@ -56,7 +56,12 @@ A mismatched receipt is not presented as a fully reconciled import. The UI instr
 - Added unit coverage for first-page totals, multi-page hydration, archived records, group reconciliation, inconsistent counts, terminal-page mismatch, and import receipt reconciliation.
 - Added a disposable PostgreSQL 17 workflow job. It seeds synthetic rows and an existing function ACL, applies the migration inside a transaction, and verifies page boundaries, counts, group totals, fixed search path, SECURITY DEFINER, authenticated execute access, and denial for an ungranted role.
 - The production Supabase project was queried read-only for schema, existing function definition, index inventory, board statuses, and import audit evidence.
-- The production migration has NOT been applied by this increment. Production activation follows after the disposable PostgreSQL job passes and the migration is reviewed against the deployed function contract.
+- PR #406 merged to `main` as `1be665b2d9d36cefa7fa7e7fae7fb5cb344cbd7a`; GitHub Pages build/deployment completed successfully.
+- The disposable PostgreSQL 17 job passed on the merged PR, including first/continuation-page behavior, board and group reconciliation, foreign-board denial, `SECURITY DEFINER`, fixed `search_path`, and preservation of the authenticated-only execute grant.
+- Production migration `cp_board_import_sync_01_authoritative_counts` was applied to the existing Supabase project. Supabase recorded migration version `20261115132051` (the repository migration filename and CI path must use this exact applied version).
+- Read-only post-activation catalog verification confirms the original RPC signature, `SECURITY DEFINER`, `postgres` owner, `search_path=public`, and ACL `{postgres=X/postgres,authenticated=X/postgres}` remain unchanged. The first-page count branch and counts payload are present.
+- The largest active board observed during read-only inspection contained 2,215 items. Its count-query plan uses `work_board_items_board_id_idx` and a bounded board-scoped bitmap heap scan; no new index or background process was added. The count aggregate runs only on the first page.
+- Genuine signed-browser testing of the deployed count labels, load-more reconciliation, and refresh behavior remains pending. No user-entered operational import was performed as part of this increment.
 
 ## Out of scope
 
