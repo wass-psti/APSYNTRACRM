@@ -110,8 +110,10 @@ export class DomainApi {
   this.auth=auth;
   this.boardReadCache=new Map();
   this.boardReadGeneration=0;
+  this.contextReadGeneration=0;
   this.boardListRequests=new Map();
   this.effectiveAccessPending=new Map();
+  this.contextPending=new Map();
   this.onBoardMutation=null;
   this.extendedRefsSupported=null;
  }
@@ -129,7 +131,11 @@ export class DomainApi {
   this.boardReadGeneration++;
   this.boardListRequests.clear();
   this.effectiveAccessPending.clear();
-  if(boardId===null)this.boardReadCache.clear();
+  if(boardId===null){
+   this.contextReadGeneration++;
+   this.contextPending.clear();
+   this.boardReadCache.clear();
+  }
   else this.boardReadCache.delete(boardId);
   return true;
  }
@@ -302,10 +308,35 @@ export class DomainApi {
    return structuredClone(data);
  }
  async context(){
-   const ctx=await this.rpc('wm_auth_access_context');
-   if(!ctx||ctx.profile?.status!=='active'||!validUuid(ctx.workspace_id)
-      ||ctx.user_id!==this.auth.userId)throw new ApiError('Your account has no active workspace access.',403);
-   return ctx;
+   const userId=this.auth?.userId;
+   const token=this.auth?.accessToken;
+   const generation=this.contextReadGeneration;
+   // Production sessions carry both values. Legacy/test adapters without an
+   // access token retain their existing single-call behavior and are not
+   // eligible for request sharing.
+   const key=validUuid(userId)&&typeof token==='string'&&token.length>0?
+    JSON.stringify([userId,token,generation]):null;
+   let pending=key?this.contextPending.get(key):null;
+   if(!pending){
+    pending=this.rpc('wm_auth_access_context');
+    if(key){
+     this.contextPending.set(key,pending);
+     const cleanup=()=>{
+      if(this.contextPending.get(key)===pending)
+       this.contextPending.delete(key);
+     };
+     Promise.resolve(pending).then(cleanup,cleanup);
+    }
+   }
+   const ctx=await pending;
+   if(this.auth?.userId!==userId||this.contextReadGeneration!==generation)
+    throw new ApiError('Signed workspace context changed during loading.',409);
+   if(!ctx||ctx.profile?.status!=='active'||!validUuid(ctx.workspace_id)||
+      ctx.user_id!==userId)
+    throw new ApiError('Your account has no active workspace access.',403);
+   // Coalesce only overlapping reads. Every later call obtains a fresh
+   // server-authoritative context; each caller receives an isolated object.
+   return structuredClone(ctx);
  }
  async boards(status='active'){
    // Share only concurrent identical reads; never cache completed board lists
