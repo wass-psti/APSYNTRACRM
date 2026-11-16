@@ -157,6 +157,7 @@ export function collectFRTWizardRequest(formData){
   companyCode:String(formData.get('companyCode')||''),
   title:String(formData.get('requestName')||''),department:String(formData.get('department')||''),
   fundSource:String(formData.get('fundSource')||''),description:String(formData.get('description')||''),
+  requestDate:String(formData.get('requestDate')||''),
   dateNeeded:String(formData.get('dateNeeded')||''),checkNo:String(formData.get('checkNo')||''),
   orderIntakeNo:String(formData.get('orderIntakeNo')||''),
   recipientName:String(formData.get('recipientName')||''),recipientBank:String(formData.get('recipientBank')||''),
