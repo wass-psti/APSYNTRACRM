@@ -20,6 +20,7 @@ on:
       - "supabase/migrations/20261116104500_frt_wf05a_archive_recovery.sql"
       - "supabase/migrations/20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard.sql"
       - "supabase/migration-source-manifest.json"
+      - "docs/CP-FRT-WF-05-FUNCTIONAL-INTEGRATION.md"
       - "package.json"
       - "package-lock.json"
   push:
@@ -45,6 +46,7 @@ on:
       - "sql/tests/cp-frt-wf05a-*"
       - "supabase/migrations/20261116104500_frt_wf05a_archive_recovery.sql"
       - "supabase/migration-source-manifest.json"
+      - "docs/CP-FRT-WF-05-FUNCTIONAL-INTEGRATION.md"
       - "package.json"
       - "package-lock.json"
   workflow_dispatch:
@@ -52,7 +54,7 @@ permissions:
   contents: read
 jobs:
   frt-wf05a-archive:
-    name: FRT archive UI, regression and disposable PostgreSQL acceptance
+    name: FRT workflow, monthly voucher, archive and disposable PostgreSQL acceptance
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
