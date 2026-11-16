@@ -162,6 +162,8 @@ import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-perso
 import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
 import {loadFRTLiquidation,submitFRTLiquidation} from './frt-liquidation.js';
 import {loadFRTBankExecution,recordFRTBankExecution} from './frt-bank-execution.js';
+import {loadFRTComments,addFRTComment,loadFRTAuditPage,frtAuditCsv,projectFRTNotifications,loadFRTDeadlineSnapshots} from './frt-collaboration.js';
+import {renderFRTComments,renderFRTActivityEvents,renderFRTActivityFilters,renderFRTNotifications} from './frt-collaboration-ui.js';
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
@@ -4270,6 +4272,190 @@ function openModal(title,fields,submit,{submitLabel='Save changes',submitDisable
  (destructive?view.querySelector('.modal-actions [data-dismiss]'):
   view.querySelector('input,select,textarea')||view.querySelector('.modal-actions [data-dismiss]'))?.focus();
 }
+function openFRTCollabPanel(title,body){
+ const previousFocus=document.activeElement;
+ hideModal();
+ const view=document.createElement('div');
+ view.className='modal-backdrop';view.setAttribute('role','presentation');
+ view.innerHTML='<section class="modal frt-collab-panel" role="dialog" aria-modal="true" aria-labelledby="frt-collab-title">'+
+  '<div class="modal-head"><h2 id="frt-collab-title">'+e(title)+'</h2>'+
+  '<button type="button" class="modal-close" data-frt-collab-close aria-label="Close dialog">×</button></div>'+
+  '<div class="frt-collab-panel-body" data-frt-panel-body>'+body+'</div></section>';
+ modal=view;document.body.append(view);
+ const close=()=>{
+  if(modal!==view)return;
+  hideModal();
+  const target=previousFocus?.isConnected?previousFocus:root.querySelector('.head-actions button');
+  target?.focus?.();
+ };
+ view.addEventListener('click',event=>{
+  if(event.target===view||event.target.closest('[data-frt-collab-close]'))close();
+ });
+ view.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();return;}
+  if(event.key!=='Tab')return;
+  const focusable=[...view.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled])')]
+   .filter(element=>!element.hidden&&!element.closest('[hidden]'));
+  if(!focusable.length)return;
+  if(event.shiftKey&&document.activeElement===focusable[0]){
+   event.preventDefault();focusable.at(-1).focus();
+  }else if(!event.shiftKey&&document.activeElement===focusable.at(-1)){
+   event.preventDefault();focusable[0].focus();
+  }
+ });
+ view.querySelector('[data-frt-collab-close]')?.focus();
+ return view;
+}
+function frtPanelIsCurrent(view,{seq,workspaceId,boardId,userId}){
+ return modal===view&&seq===routeSerial&&state.view==='board'&&state.tab==='finance'&&
+  state.boardId===boardId&&state.context?.workspace_id===workspaceId&&
+  state.context?.user_id===userId&&auth.isSignedIn&&auth.userId===userId;
+}
+async function openFRTDiscussionDialog(requestId,request){
+ const workspaceId=state.context?.workspace_id,boardId=state.boardId;
+ const userId=auth.userId,seq=routeSerial;
+ if(!workspaceId||!userId||!state.frtFinance.requests.some(row=>row.requestId===requestId))return;
+ const view=openFRTCollabPanel('Discussion',
+  '<p class="frt-collab-intro">'+e(request.voucher)+' · '+e(request.title)+
+  '<br>Comments are saved to this fund request and appear in the request activity history.</p>'+
+  '<div data-frt-comment-thread role="region" aria-label="Request comments"><div class="frt-collab-empty">Loading discussion…</div></div>'+
+  '<form class="frt-collab-composer" data-frt-comment-form><label for="frt-comment-body">Add comment</label>'+
+  '<textarea id="frt-comment-body" name="body" maxlength="4000" required placeholder="Write a comment for this request…"></textarea>'+
+  '<div class="frt-collab-status" data-frt-comment-status role="status" aria-live="polite"></div>'+
+  '<div class="modal-actions"><button type="submit" class="primary" data-frt-comment-submit>Post comment</button></div></form>');
+ const thread=view.querySelector('[data-frt-comment-thread]');
+ const status=view.querySelector('[data-frt-comment-status]');
+ const form=view.querySelector('[data-frt-comment-form]');
+ const submit=view.querySelector('[data-frt-comment-submit]');
+ const textarea=view.querySelector('[name="body"]');
+ let busy=false;
+ const current=()=>frtPanelIsCurrent(view,{seq,workspaceId,boardId,userId});
+ const refresh=async()=>{
+  const comments=await loadFRTComments({auth,workspaceId,requestId});
+  if(!current())return false;
+  thread.innerHTML=renderFRTComments(comments,{currentUserId:userId,currentUserName:name()});
+  return true;
+ };
+ try{await refresh();}
+ catch(error){if(current()){thread.innerHTML='<div class="frt-collab-empty" role="alert">Discussion could not be loaded. '+e(error?.message||'Refresh and try again.')+'</div>';}}
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();if(busy||!current())return;
+  const body=String(textarea.value||'').trim();
+  if(!body){status.textContent='Enter a comment before posting.';status.setAttribute('role','alert');return;}
+  busy=true;submit.disabled=true;submit.textContent='Posting…';status.textContent='Saving comment…';status.setAttribute('role','status');
+  try{
+   await addFRTComment({api:db,workspaceId,requestId,body});
+   textarea.value='';
+   try{
+    await refresh();
+    if(current()){status.textContent='Comment posted and discussion refreshed.';toast('Comment posted.');}
+   }catch{
+    if(current()){status.textContent='Comment was saved. The thread could not refresh; reopen Discussion to verify it.';status.setAttribute('role','alert');}
+   }
+  }catch(error){
+   if(current()){status.textContent=error?.message||'Comment could not be posted.';status.setAttribute('role','alert');}
+  }finally{
+   busy=false;
+   if(current()){submit.disabled=false;submit.textContent='Post comment';}
+  }
+ });
+}
+function downloadFRTActivityCsv(events,requests){
+ const requestMap=new Map(requests.map(request=>[request.requestId,request]));
+ const blob=new Blob([frtAuditCsv(events,requestMap)],{type:'text/csv;charset=utf-8'});
+ const url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download='frt-activity-'+new Date().toISOString().slice(0,10)+'.csv';
+ document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
+}
+async function openFRTActivityDialog(){
+ const workspaceId=state.context?.workspace_id,boardId=state.boardId,userId=auth.userId,seq=routeSerial;
+ if(!workspaceId||!userId||state.frtFinance?.status!=='PASS')return;
+ const companies=state.frtFinance.companies;
+ const filters={companyCode:state.frtFinance.companyCode,requestId:'',action:'',search:''};
+ let offset=0,page=null,busy=false,error='';
+ const view=openFRTCollabPanel('Activity Log',
+  '<p class="frt-collab-intro">Persisted FRT audit events for the selected company. Records are shown newest first; CSV exports the current filtered page.</p>'+
+  '<div data-frt-activity-content><div class="frt-collab-empty">Loading activity…</div></div>');
+ const host=view.querySelector('[data-frt-activity-content]');
+ const current=()=>frtPanelIsCurrent(view,{seq,workspaceId,boardId,userId});
+ const render=()=>{
+  if(!current())return;
+  const requests=page?.requests||[];
+  const events=page?.events||[];
+  host.innerHTML=renderFRTActivityFilters({companies,requests,...filters})+
+   (busy?'<p class="frt-collab-status" role="status">Loading persisted activity…</p>':'')+
+   (error?'<p class="frt-collab-status" role="alert">'+e(error)+'</p>':'')+
+   renderFRTActivityEvents(events,requests,{currentUserId:userId,currentUserName:name()})+
+   '<div class="frt-collab-actions"><button type="button" class="secondary frt-collab-export" data-frt-activity-export '+(!events.length?'disabled':'')+'>Export current page CSV</button></div>'+
+   '<div class="frt-collab-pagination"><button type="button" class="secondary" data-frt-activity-prev '+(offset===0||busy?'disabled':'')+'>Previous</button>'+
+   '<span>Showing '+(events.length?offset+1:0)+'–'+(offset+events.length)+' · Page '+(Math.floor(offset/50)+1)+'</span>'+
+   '<button type="button" class="secondary" data-frt-activity-next '+(!page?.hasMore||busy?'disabled':'')+'>Next</button></div>';
+  if(busy)host.querySelectorAll('[data-frt-activity-filters] input,[data-frt-activity-filters] select,[data-frt-activity-filters] button').forEach(control=>{control.disabled=true;});
+  host.querySelector('[data-frt-activity-filters]')?.addEventListener('submit',event=>{
+   event.preventDefault();
+   const data=new FormData(event.currentTarget);
+   const nextCompany=String(data.get('companyCode')||filters.companyCode);
+   const companyChanged=nextCompany!==filters.companyCode;
+   filters.companyCode=nextCompany;
+   filters.requestId=companyChanged?'':String(data.get('requestId')||'');
+   filters.action=String(data.get('action')||'');
+   filters.search=String(data.get('search')||'').slice(0,80);
+   offset=0;void loadPage();
+  });
+  host.querySelector('[data-frt-activity-prev]')?.addEventListener('click',()=>{if(offset>=50){offset-=50;void loadPage();}});
+  host.querySelector('[data-frt-activity-next]')?.addEventListener('click',()=>{if(page?.hasMore){offset+=50;void loadPage();}});
+  host.querySelector('[data-frt-activity-export]')?.addEventListener('click',()=>downloadFRTActivityCsv(events,requests));
+ };
+ const loadPage=async()=>{
+  if(busy||!current())return;
+  busy=true;error='';render();
+  try{
+   page=await loadFRTAuditPage({auth,api:db,workspaceId,companyCode:filters.companyCode,
+    requestId:filters.requestId,action:filters.action,search:filters.search,offset,limit:50});
+   if(!current())return;
+  }catch(err){if(current())error=err?.message||'Activity could not be loaded.';}
+  finally{busy=false;if(current())render();}
+ };
+ render();await loadPage();
+}
+async function openFRTNotificationsDialog(){
+ const workspaceId=state.context?.workspace_id,boardId=state.boardId,userId=auth.userId,seq=routeSerial;
+ const companyCode=state.frtFinance?.companyCode;
+ if(!workspaceId||!userId||!companyCode||state.frtFinance?.status!=='PASS')return;
+ const view=openFRTCollabPanel('Notification Center',
+  '<p class="frt-collab-intro">Notifications are derived from persisted FRT audit events and the existing signed 72-hour bank-execution snapshots. Refresh to update; no background polling is used.</p>'+
+  '<div class="frt-collab-actions"><button type="button" class="secondary" data-frt-notification-refresh>Refresh notifications</button></div>'+
+  '<div data-frt-notification-content><div class="frt-collab-empty">Loading notifications…</div></div>');
+ const host=view.querySelector('[data-frt-notification-content]');
+ const current=()=>frtPanelIsCurrent(view,{seq,workspaceId,boardId,userId});
+ let busy=false;
+ const load=async()=>{
+  if(busy||!current())return;
+  busy=true;host.innerHTML='<div class="frt-collab-empty" role="status">Loading persisted events and liquidation deadlines…</div>';
+  try{
+   const page=await loadFRTAuditPage({auth,api:db,workspaceId,companyCode,limit:100,offset:0});
+   const snapshots=await loadFRTDeadlineSnapshots({api:db,workspaceId,requests:page.requests,concurrency:6});
+   if(!current())return;
+   const notifications=projectFRTNotifications({events:page.events,requests:page.requests,
+    bankSnapshots:snapshots.filter(item=>item.snapshot).map(item=>({requestId:item.requestId,snapshot:item.snapshot}))});
+   const failed=snapshots.filter(item=>item.error).length;
+   host.innerHTML=(page.hasMore?'<p class="frt-collab-status">Showing the latest 100 persisted request events. Older events are available in Activity Log.</p>':'')+
+    (failed?'<p class="frt-collab-status">Some request-specific deadline snapshots were unavailable and were not inferred.</p>':'')+
+    renderFRTNotifications(notifications,page.requests,{currentUserId:userId,currentUserName:name()});
+  }catch(error){
+   if(current())host.innerHTML='<div class="frt-collab-empty" role="alert">'+e(error?.message||'Notifications could not be loaded.')+'</div>';
+  }finally{busy=false;}
+ };
+ view.querySelector('[data-frt-notification-refresh]')?.addEventListener('click',()=>void load());
+ host.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-frt-notification-request]');
+  if(!button||!current())return;
+  const requestId=String(button.dataset.frtNotificationRequest||'');
+  if(!state.frtFinance.requests.some(request=>request.requestId===requestId))return;
+  hideModal();await loadFRTFinanceDetail(requestId,seq);
+ });
+ await load();
+}
 const input=(label,key,value='',type='text',required=true)=>
  `<div class="field"><label for="modal-${e(key)}">${e(label)}</label><input id="modal-${e(key)}" name="${e(key)}" type="${e(type)}" value="${e(value)}" ${required?'required':''} maxlength="180"/></div>`;
 const select=(label,key,choices,current)=>
@@ -7758,6 +7944,14 @@ async function action(name,button){
    if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
       state.frtFinance?.status!=='PASS')return;
    const section=String(button?.dataset?.frtSection||'');
+   if(section==='discussion'){
+    const requestId=String(button?.dataset?.requestId||'');
+    const request=state.frtFinance.requests.find(row=>row.requestId===requestId);
+    if(request)await openFRTDiscussionDialog(requestId,request);
+    break;
+   }
+   if(section==='activity'){await openFRTActivityDialog();break;}
+   if(section==='notifications'){await openFRTNotificationsDialog();break;}
    const companyCode=state.frtFinance.companyCode;
    const company=state.frtFinance.companies.find(c=>c.code===companyCode);
    if(!company)return;
