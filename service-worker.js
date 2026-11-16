@@ -2,7 +2,7 @@
  * Network-first by design: a new Pages deployment is never pinned behind stale JS.
  * Bump this version on worker-policy changes; cached assets remain network-revalidated.
  */
-const STATIC_CACHE='apsyntra-crm-public-static-v1-20261109';
+const STATIC_CACHE='apsyntra-crm-public-static-v1-20261116';
 const PREFIX=new URL('./',self.location.href).pathname;
 const LOGO=PREFIX+'frontend/apsyntra-logo.webp';
 const MAX_ENTRIES=96;
@@ -65,7 +65,7 @@ self.addEventListener('fetch',event=>{
  if(!eligible(request))return;
  event.respondWith((async()=>{
   try{
-   const response=await fetch(request);
+   const response=await fetch(request,{cache:'no-cache'});
    if(cacheable(request,response))event.waitUntil(save(request,response.clone()));
    return response;
   }catch(error){
