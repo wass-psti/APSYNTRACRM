@@ -348,7 +348,29 @@ const fuelTrackNativeSearchAdapter=createNativeSearchAdapter({
  getHref:()=>fuelTrackHref('requests')
 });
 
-const nativeSearchRegistry=createNativeSearchRegistry([tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter]);
+
+const fuelTransNativeSearchAdapter=createNativeSearchAdapter({
+ id:'fueltrans-tickets',applicationId:'fueltrans',name:'FuelTrans',
+ recordType:'Support ticket',
+ read:async(query,{userId,workspaceId,limit=20}={})=>{
+  const board=state.boards.find(entry=>moduleByBoardName(entry.name)?.key==='fueltrans');
+  if(!board?.id||!userId||!workspaceId)return [];
+  const context={auth,api:db,boardId:board.id,workspaceId,userId,
+   isCurrent:()=>auth.isSignedIn&&auth.userId===userId&&
+    state.context?.user_id===userId&&state.context?.workspace_id===workspaceId&&
+    state.boards.some(entry=>entry.id===board.id&&moduleByBoardName(entry.name)?.key==='fueltrans')};
+  const {searchFuelTransTickets}=await import('./fueltrans/supabase-client.js');
+  return searchFuelTransTickets(context,{query,limit});
+ },
+ getId:row=>row.id,getTitle:row=>row.ticketNumber,
+ getSubtitle:row=>[row.clientCode,row.status].filter(Boolean).join(' · '),
+ getExcerpt:row=>String(row.createdAt||'').slice(0,10),
+ getSearchFields:row=>[row.ticketNumber,row.clientCode,row.status],
+ getHref:row=>{const board=state.boards.find(entry=>moduleByBoardName(entry.name)?.key==='fueltrans');
+  return board?.id?'#/boards/'+board.id+'/fueltrans/ticket/'+encodeURIComponent(row.id):'#/boards';}
+});
+
+const nativeSearchRegistry=createNativeSearchRegistry([tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter,fuelTransNativeSearchAdapter]);
 const tradeLinkAttachments=new TradeLinkAttachmentClient({auth,api:db});
 const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});

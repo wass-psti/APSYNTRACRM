@@ -234,7 +234,7 @@ test('rejects unsafe native adapter contracts and invalid navigation destination
 test('wires TradeLink to its existing bounded signed document search and native detail route',()=>{
  const adapters=readFileSync('frontend/global-search-adapters.js','utf8');
  const tradeLink=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(app,/createNativeSearchRegistry\(\[tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter\]\)/);
+ assert.match(app,/createNativeSearchRegistry\(\[tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter,fuelTransNativeSearchAdapter\]\)/);
  assert.match(app,/tradeLinkDraftWorkspace\.searchPage\(/);
  assert.match(app,/tradeLinkDraftWorkspace\.assignedDocuments\(bounded\)/);
  assert.match(app,/applicationId==='tradelink'/);
@@ -246,6 +246,9 @@ test('wires TradeLink to its existing bounded signed document search and native 
  assert.match(app,/timeTrackerAttendanceSearchAdapter/);
  assert.match(app,/timeTrackerOvertimeSearchAdapter/);
  assert.match(app,/ttOtExpandedRequestIds/);
+ assert.match(app,/await import\('\.\/fueltrans\/supabase-client\.js'\)/);
+ assert.match(app,/searchFuelTransTickets\(context,\{query,limit\}\)/);
+ assert.match(app,/fueltrans\/ticket\/'\+encodeURIComponent\(row\.id\)/);
  assert.match(app,/nativeSearchRegistry\.search\(query/);
  assert.match(app,/Promise\.allSettled\(\[/);
  assert.match(tradeLink,/async searchPage\(\{filters=initialTradeLinkDraftListFilters\(\),cursor=null,limit=50\}/);

@@ -4,12 +4,13 @@ import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from '../config.js';
 export const CONFIG=Object.freeze({url:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY});
 let host=null;
 export function connectFuelTrans(context){host=context;return ()=>{if(host===context)host=null;};}
-async function hostSession(required='view'){
- const context=host;
- if(!context||!context.isCurrent())throw Error('Open FuelTrans from its authorized CRM board.');
+async function hostSession(required='view',context=host){
+ const mountedContext=context===host;
+ const isCurrent=()=>Boolean(context&&context.isCurrent()&&(!mountedContext||host===context));
+ if(!isCurrent())throw Error('Open FuelTrans from its authorized CRM board.')
  const user=await context.auth.getVerifiedUser();
  const [access,board,allowed,moduleAllowed]=await Promise.all([context.api.context(),context.api.board(context.boardId),context.api.allowed(context.boardId,required),context.api.rpc('has_module_access',{p_module_id:'fueltrans'})]);
- if(host!==context||!context.isCurrent()||user.id!==context.userId||access.user_id!==user.id||access.workspace_id!==context.workspaceId||board.board?.workspace_id!==context.workspaceId||board.board?.name!=='FuelTrans Standalone'||!allowed||moduleAllowed!==true)
+ if(!isCurrent()||user.id!==context.userId||access.user_id!==user.id||access.workspace_id!==context.workspaceId||board.board?.workspace_id!==context.workspaceId||board.board?.name!=='FuelTrans Standalone'||!allowed||moduleAllowed!==true)
   throw Error('FuelTrans board access changed. Reopen the board.');
  return {access_token:await context.auth.token(),user,workspaceId:context.workspaceId};
 }
@@ -18,31 +19,32 @@ const seconds=()=>Math.floor(Date.now()/1000);
 const headers=(token,extra={})=>({apikey:CONFIG.publishableKey,...(token?{Authorization:`Bearer ${token}`}:{}),Accept:'application/json',...extra});
 export function clearSession(){}
 export function restoreSession(){return null;}
-async function request(url,{method='GET',token=null,body,extra={},timeout=15000}={}){
- const context=host,parsed=new URL(url);
- if(!context||!context.isCurrent())throw Error('FuelTrans view is no longer active.');
+async function request(url,{method='GET',token=null,body,extra={},timeout=15000,context=host}={}){
+ const parsed=new URL(url),mountedContext=context===host;
+ const isCurrent=()=>Boolean(context&&context.isCurrent()&&(!mountedContext||host===context));
+ if(!isCurrent())throw Error('FuelTrans view is no longer active.');
  if(parsed.pathname.startsWith('/rest/')){
   const workspace=body?.workspace_id||body?.p_workspace_id||parsed.searchParams.get('workspace_id')?.replace(/^eq\./,'');
   if(workspace!==context.workspaceId)throw Error('FuelTrans workspace does not match the active board.');
   if(method!=='GET'&&!await context.api.allowed(context.boardId,parsed.pathname.endsWith('/fueltrans_memberships')?'manage':'edit'))throw Error('Board editing permission is required.');
-  if(context!==host||!context.isCurrent())throw Error('FuelTrans access changed.');
+  if(!isCurrent())throw Error('FuelTrans access changed.');
  }
 const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeout);try{const r=await fetch(url,{method,signal:ctrl.signal,headers:{...headers(token,{'Content-Type':'application/json',...extra})},...(body!==undefined?{body:JSON.stringify(body)}:{})});let data=null;const ct=r.headers.get('content-type')||'';if(r.status!==204){const raw=await r.text();if(raw){try{data=JSON.parse(raw);}catch{data=raw;}}}
  if(!r.ok){const detail=typeof data==='object'&&data?(data.message||data.msg||data.error_description||data.error):null;const e=Error(typeof detail==='string'?detail:`Request failed (${r.status})`);e.status=r.status;throw e;}
- if(context!==host||!context.isCurrent())throw Error('FuelTrans view changed while loading.');
+ if(!isCurrent())throw Error('FuelTrans view changed while loading.');
  if(method!=='GET'&&parsed.pathname.startsWith('/rest/v1/')){
   try{context.onMutation?.();}catch{/* Cross-window hints never change the write receipt. */}
  }
  return {data,range:r.headers.get('content-range'),status:r.status};}catch(e){if(e.name==='AbortError')throw Error('Supabase request timed out.');throw e;}finally{clearTimeout(timer);}}
-export async function currentSession(required='view'){return hostSession(required);}
+export async function currentSession(required='view',context=host){return hostSession(required,context);}
 export async function verifiedUser(){const s=await currentSession();if(!s)return null;const {data}=await request(`${CONFIG.url}/auth/v1/user`,{token:s.access_token});if(data?.id!==s.user.id){clearSession();throw Error('Authenticated identity mismatch.');}return data;}
 export async function signOut(){clearSession();}
 const ALLOWED=new Set(['fueltrans_memberships','fueltrans_tickets','fueltrans_user_state']);
-async function db(table,query,{method='GET',body,extra={}}={}){
+async function db(table,query,{method='GET',body,extra={},context=host}={}){
  if(!ALLOWED.has(table))throw Error('Disallowed table.');
- const s=await currentSession();if(!s)throw Error('Authentication required.');
+ const s=await currentSession('view',context);if(!s)throw Error('Authentication required.');
  const url=`${CONFIG.url}/rest/v1/${table}?${query}`;
- try{return await request(url,{method,body,token:s.access_token,extra});}
+ try{return await request(url,{method,body,token:s.access_token,extra,context});}
  catch(e){
   if(e.status!==401)throw e;
 
@@ -51,9 +53,9 @@ async function db(table,query,{method='GET',body,extra={}}={}){
   // Do not replay mutations: their outcome may be uncertain.
 
   if(method!=='GET')throw Error('FuelTrans session expired during a write. Refresh the page and verify the record before retrying.');
-  const renewed=await hostSession();
+  const renewed=await hostSession('view',context);
   if(renewed.user.id!==s.user.id)throw Error('Host identity changed. Reload FuelTrans before continuing.');
-  try{return await request(url,{method,body,token:renewed.access_token,extra});}
+  try{return await request(url,{method,body,token:renewed.access_token,extra,context});}
   catch(retryError){
    if(retryError.status===401){throw Error('APSYNTRA CRM session is no longer authorized. Reload the host session.');}
    throw retryError;
@@ -62,6 +64,35 @@ async function db(table,query,{method='GET',body,extra={}}={}){
 }
 export async function select(table,query){const {data}=await db(table,query);if(!Array.isArray(data))throw Error('Invalid database response.');return data;}
 export async function listTickets(query){const {data,range}=await db('fueltrans_tickets',query,{extra:{Prefer:'count=exact'}});if(!Array.isArray(data))throw Error('Invalid tickets response.');return {rows:data,totalRange:range};}
+
+/** Read-only native global-search projection. Uses the same FuelTrans host
+ * handshake, PostgREST client, table allowlist and RLS as the mounted module.
+ * The projection deliberately excludes payload, reporter identities and notes.
+ */
+export async function searchFuelTransTickets(context,{query,limit=20}={}){
+ const term=String(query||'').trim().slice(0,80);
+ if(term.length<2)return [];
+ if(!context||typeof context.isCurrent!=='function'||
+    !Number.isSafeInteger(limit)||limit<1||limit>20)
+  throw Error('Invalid FuelTrans search context.');
+ const safe=term.replace(/[%*(),.\\]/g,'').trim();
+ if(!safe)return [];
+ const params=new URLSearchParams({
+  select:'workspace_id,id,ticket_number,client_code,status,created_at,updated_at',
+  workspace_id:`eq.${context.workspaceId}`,archived:'eq.false',
+  order:'updated_at.desc,id.desc',limit:String(limit),
+  or:`(ticket_number.ilike.*${safe}*,client_code.ilike.*${safe}*)`
+ });
+ const {data}=await db('fueltrans_tickets',params.toString(),{context});
+ if(!Array.isArray(data)||data.length>limit)throw Error('Invalid FuelTrans search response.');
+ return data.filter(row=>row.workspace_id===context.workspaceId&&
+  typeof row.id==='string'&&typeof row.ticket_number==='string'&&
+  typeof row.status==='string').map(row=>({
+   id:row.id,ticketNumber:row.ticket_number,clientCode:row.client_code,
+   status:row.status,createdAt:row.created_at,updatedAt:row.updated_at
+  }));
+}
+
 export async function insertTicket(row){const {data}=await db('fueltrans_tickets','',{method:'POST',body:row,extra:{Prefer:'return=representation'}});if(!Array.isArray(data)||data.length!==1)throw Error('Ticket creation was not confirmed.');return data[0];}
 export async function countTickets(workspaceId,status){const q=new URLSearchParams({select:'id',workspace_id:`eq.${workspaceId}`,archived:'eq.false'});if(status)q.set('status',`eq.${status}`);q.set('limit','1');const {data,range}=await db('fueltrans_tickets',q.toString(),{extra:{Prefer:'count=exact'}});const m=/\/(\d+)$/.exec(range||'');if(!m)throw Error('Supabase did not return an exact count.');return Number(m[1]);}
 export async function readTicket(workspaceId,id){const q=new URLSearchParams({select:'workspace_id,id,ticket_number,client_code,created_by,assigned_l1,assigned_l2,status,archived,payload,created_at,updated_at',workspace_id:`eq.${workspaceId}`,id:`eq.${id}`,limit:'1'});const rows=await select('fueltrans_tickets',q.toString());return rows[0]||null;}
