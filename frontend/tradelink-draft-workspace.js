@@ -392,12 +392,14 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DOMAIN_READS_ENABLED)return {status:'DARK_LAUNCH',rows:[]};
   return {status:'AUTHORIZED_READ',rows:await this.client.list(50)};
  }
- async searchPage({filters=initialTradeLinkDraftListFilters(),cursor=null}={}){
+ async searchPage({filters=initialTradeLinkDraftListFilters(),cursor=null,limit=50}={}){
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
+  if(!Number.isSafeInteger(limit)||limit<1||limit>50)
+   throw new ApiError('TradeLink search limit must be 1–50.',400);
   const f=normalizeTradeLinkDraftListFilters(filters);
   const page=await this.client.searchPage({
    query:f.query,documentType:f.documentType,workflowState:f.workflowState,
-   archiveMode:f.archiveMode,cursor,limit:50});
+   archiveMode:f.archiveMode,cursor,limit});
   return {status:'AUTHORIZED_READ',rows:page.rows,
    listPage:{server:true,hasMore:page.hasMore,nextCursor:page.nextCursor,
     cursor,history:[],pageIndex:0,appliedFilters:f}};

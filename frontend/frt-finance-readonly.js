@@ -50,8 +50,59 @@ function projectFinancialAnalytics(raw,companyCode){
  return {companyCode,requestedTotal:raw.requested_total,spentTotal:raw.spent_total,
   topCategories:categories,monthlyTrend};
 }
-export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeIntercompany=false}={}){
+
+/** Read-only cross-company FRT search through the existing restricted safe-list RPC.
+ * Uses only the restricted safe-list projection; never returns amounts, banking or requester data.
+ */
+export async function searchFRTRequestsReadOnly({auth,api,query,limit=20}={}){
+ const q=typeof query==='string'?query.trim().slice(0,120):'';
+ if(q.length<2)return [];
+ if(!auth||!api||!Number.isSafeInteger(limit)||limit<1||limit>20)
+  throw new TypeError('Invalid FRT native search request');
+ const user=await auth.getVerifiedUser();
+ const context=await api.context();
+ if(!uuid.test(user?.id||'')||auth.userId!==user.id||
+    context?.user_id!==user.id||!uuid.test(context?.workspace_id||'')||
+    context?.profile?.status!=='active')throw new Error('FRT signed context unavailable');
+ const bootstrap=await api.rpc('frt_bootstrap',{p_workspace_id:context.workspace_id});
+ const membership=bootstrap?.membership;
+ if(membership?.user_id!==user.id||membership?.workspace_id!==context.workspace_id||
+    membership?.enabled!==true||membership?.status!=='active'||!roles.has(membership?.role)||
+    !Array.isArray(bootstrap?.companies)||bootstrap.companies.length>100)
+  throw new Error('FRT signed membership unavailable');
+ const companies=[],seen=new Set();
+ for(const company of bootstrap.companies){
+  if(!companyPattern.test(company?.code||'')||!short(company?.name,maxName)||seen.has(company.code))
+   throw new Error('FRT company contract invalid');
+  seen.add(company.code);companies.push(company.code);
+ }
+ const pages=await Promise.all(companies.map(companyCode=>api.rpc('frt_board_list_safe',{
+  p_workspace_id:context.workspace_id,p_company:companyCode,p_search:q
+ })));
+ const rows=[];
+ for(let i=0;i<pages.length;i++){
+  if(!Array.isArray(pages[i])||pages[i].length>100)throw new Error('FRT safe-list response invalid');
+  for(const row of pages[i]){
+   if(!uuid.test(row?.id||'')||row?.workspace_id!==context.workspace_id||
+      row?.company_code!==companies[i]||!short(row?.title,250)||
+      !short(row?.status,70)||!validDate(row?.date_needed)||
+      !short(row?.voucher_no,100)&&row?.voucher_no!==null||
+      !['NOT_FILED','FILED'].includes(row?.filing_status))
+    throw new Error('FRT safe-list row invalid');
+   rows.push({requestId:row.id,companyCode:companies[i],title:row.title,
+    voucher:row.voucher_no||'—',status:row.status,dateNeeded:row.date_needed||'—'});
+  }
+ }
+ const again=await auth.getVerifiedUser(),after=await api.context();
+ if(again?.id!==user.id||auth.userId!==user.id||after?.user_id!==user.id||
+    after?.workspace_id!==context.workspace_id||after?.profile?.status!=='active')
+  throw new Error('FRT signed context changed');
+ return rows.slice(0,limit);
+}
+
+export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeIntercompany=false,searchQuery=''}={}){
  const result=denied('UNVERIFIED_SIGNED_CONTEXT');
+ const search=typeof searchQuery==='string'?searchQuery.trim().slice(0,120):'';
  if(!auth||!api)return denied('SIGNED_AUTH_AND_API_REQUIRED');
  try{
   const user=await auth.getVerifiedUser();
@@ -88,7 +139,7 @@ export async function loadFRTFinanceReadOnly({auth,api,companyCode=null,includeI
    api.rpc('frt_board_dashboard_safe',
     {p_workspace_id:context.workspace_id,p_company:selected}),
    api.rpc('frt_board_list_safe',
-    {p_workspace_id:context.workspace_id,p_company:selected,p_search:''}),
+    {p_workspace_id:context.workspace_id,p_company:selected,p_search:search}),
    includeIntercompany?
     api.rpc('frt_ic_snapshot',{p_workspace_id:context.workspace_id})
      .then(raw=>({raw,available:true,skipped:false})).catch(()=>({raw:null,available:false,skipped:false})):

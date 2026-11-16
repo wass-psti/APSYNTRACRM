@@ -257,7 +257,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,clockPendingAction='clock-out',error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
@@ -315,7 +315,7 @@ export function renderTimeTrackerNative({
  });
  if(selected==='ot')html+=renderTimeTrackerOvertime({
   requests:result.otRequests||[],access:result.access,
-  filters:otFilters,modalOpen:otModalOpen,form:otDraft,now
+  filters:otFilters,expandedRequestIds:otExpandedRequestIds,modalOpen:otModalOpen,form:otDraft,now
  });
  html+=applicationFooter()+'</div></section>';
  return html;

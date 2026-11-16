@@ -95,6 +95,18 @@ export function buildGlobalSearchResults(query,{boards=[],modules=BOARD_MODULES,
  }
 
  for(const row of recordList){
+  if(row?.native===true&&typeof row.href==='string'&&row.href.startsWith('#/')){
+   const score=Number.isFinite(row.score)?row.score:
+    matchScore([row.title,row.subtitle,row.excerpt].join(' '),q);
+   if(score===null)continue;
+   add(result('native-record',row.title,row.subtitle,row.href,score,{
+    id:row.id,application:row.application,applicationId:row.applicationId,
+    recordType:row.recordType,recordId:row.recordId,
+    excerpt:row.excerpt||'',query:row.query||q,
+    navigationScope:row.navigationScope||'',native:true
+   }));
+   continue;
+  }
   if(!row||typeof row.board_id!=='string'||typeof row.item_id!=='string')continue;
   const score=matchScore([row.item_title,row.board_name,row.group_title,
    row.match_field,row.match_excerpt].join(' '),q)??2;
@@ -107,7 +119,7 @@ export function buildGlobalSearchResults(query,{boards=[],modules=BOARD_MODULES,
    }));
  }
 
- const typeOrder={module:0,page:1,board:2,record:3};
+ const typeOrder={module:0,page:1,board:2,'native-record':3,record:4};
  out.sort((a,b)=>a.score-b.score||(typeOrder[a.type]??9)-(typeOrder[b.type]??9)||
   a.title.localeCompare(b.title));
  return out.slice(0,Math.max(1,Math.min(GLOBAL_SEARCH_MAX_RESULTS,limit)));
@@ -204,13 +216,13 @@ export function startGlobalSearch({root=globalThis.document?.body,
    option.dataset.resultIndex=String(index);
    const icon=doc.createElement('span');icon.className='aps-global-search-option-icon';
    icon.setAttribute('aria-hidden','true');icon.textContent=
-    item.type==='record'?'▤':item.type==='board'?'▦':item.type==='module'?'◈':'↗';
+    item.type==='record'||item.type==='native-record'?'▤':item.type==='board'?'▦':item.type==='module'?'◈':'↗';
    const copy=doc.createElement('span');copy.className='aps-global-search-option-copy';
    const label=doc.createElement('strong');label.className='aps-global-search-option-title';label.textContent=item.title;
    const meta=doc.createElement('span');meta.className='aps-global-search-option-subtitle';meta.textContent=item.subtitle;
    copy.append(label,meta);
    const kind=doc.createElement('span');kind.className='aps-global-search-option-kind';
-   kind.textContent=item.type==='record'?'Record':item.type==='board'?'Board':item.type==='module'?'Module':'Page';
+   kind.textContent=item.type==='native-record'?(item.recordType||'Application record'):item.type==='record'?'Record':item.type==='board'?'Board':item.type==='module'?'Module':'Page';
    option.append(icon,copy,kind);
    if(item.excerpt){
     const excerpt=doc.createElement('span');excerpt.className='aps-global-search-option-excerpt';

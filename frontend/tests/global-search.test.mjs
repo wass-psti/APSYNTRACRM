@@ -5,6 +5,8 @@ import {
  normalizeGlobalSearchQuery,isGlobalSearchShortcut,isGlobalSearchEditableTarget,
  buildGlobalSearchResults,GLOBAL_SEARCH_MIN_QUERY,GLOBAL_SEARCH_MAX_RESULTS
 } from '../global-search.js';
+import {createNativeSearchAdapter,createNativeSearchRegistry,
+ normalizeNativeSearchResult,scoreNativeSearchResult} from '../global-search-adapters.js';
 
 const source=readFileSync('frontend/global-search.js','utf8');
 const app=readFileSync('frontend/app.js','utf8');
@@ -162,6 +164,137 @@ test('server search reuses existing workspace and board-view checks without chan
  assert.match(sql,/REVOKE ALL ON FUNCTION public\.wm_search_workspace_content\(text, integer\) FROM PUBLIC, anon/);
  assert.match(sql,/GRANT EXECUTE ON FUNCTION public\.wm_search_workspace_content\(text, integer\) TO authenticated/);
  assert.doesNotMatch(sql,/CREATE POLICY|ALTER POLICY|DROP POLICY|CREATE ROLE|ALTER ROLE|INSERT INTO|UPDATE public\.|DELETE FROM/);
+});
+
+
+test('normalizes native records into application-aware deep links and relevance scores',()=>{
+ const adapter=createNativeSearchAdapter({
+  id:'toolbox-issues',name:'Toolbox Issues',recordType:'Issue',
+  read:async()=>[],
+  getId:row=>row.id,getTitle:row=>row.title,
+  getSubtitle:row=>row.status,getExcerpt:row=>row.summary,
+  getHref:row=>'#/boards/'+row.boardId+'/items'
+ });
+ const row=normalizeNativeSearchResult(adapter,{
+  id:'issue-1',title:'Hydraulic pump leak',status:'Open',
+  summary:'Pump station 4',boardId:activeBoard.id
+ },'hydraulic pump');
+ assert.equal(row.native,true);
+ assert.equal(row.type,'native-record');
+ assert.equal(row.application,'Toolbox Issues');
+ assert.equal(row.recordId,'issue-1');
+ assert.equal(row.href,'#/boards/'+activeBoard.id+'/items');
+ assert.equal(row.score,1);
+ const merged=buildGlobalSearchResults('hydraulic pump',{
+  modules:[],boards:[],navigation:[],records:[row]
+ });
+ assert.equal(merged[0].type,'native-record');
+ assert.equal(merged[0].applicationId,'toolbox-issues');
+ assert.equal(merged[0].excerpt,'Pump station 4');
+ assert.equal(merged[0].query,'hydraulic pump');
+ assert.equal(merged[0].navigationScope,'');
+ assert.equal(scoreNativeSearchResult('hydraulic pump',['Hydraulic pump leak']),1);
+});
+
+test('runs native adapters concurrently with bounded reads, deduplication and isolated failures',async()=>{
+ let active=0,maxActive=0,seenLimits=[];
+ const make=(id,delay=0,fail=false)=>createNativeSearchAdapter({
+  id,name:id,recordType:'Record',
+  read:async(query,context)=>{
+   active++;maxActive=Math.max(maxActive,active);seenLimits.push(context.limit);
+   await new Promise(resolve=>setTimeout(resolve,delay));
+   active--;
+   if(fail)throw Error('adapter unavailable');
+   return [{id:'same-id',title:'Pump request',summary:'Hydraulic pump'}];
+  },
+  getId:r=>r.id,getTitle:r=>r.title,getSubtitle:()=>'',getExcerpt:r=>r.summary,
+  getHref:()=> '#/boards/'+activeBoard.id+'/items'
+ });
+ const registry=createNativeSearchRegistry([
+  make('one',10),make('two',10),make('broken',0,true)
+ ],{limit:30});
+ const response=await registry.search('pump',{workspaceId:'workspace'});
+ assert.ok(maxActive>1,'independent adapters should execute concurrently');
+ assert.deepEqual(seenLimits,[20,20,20]);
+ assert.equal(response.results.length,1,'same application record should be deduplicated');
+ assert.equal(response.errors.length,1);
+ assert.equal(response.errors[0].adapterId,'broken');
+ assert.deepEqual(await registry.search('x'),{results:[],errors:[]});
+});
+
+test('rejects unsafe native adapter contracts and invalid navigation destinations',()=>{
+ assert.throws(()=>createNativeSearchAdapter({id:'bad id'}),/Invalid native search adapter/);
+ const adapter=createNativeSearchAdapter({
+  id:'sample',name:'Sample',recordType:'Record',read:async()=>[],
+  getId:r=>r.id,getTitle:r=>r.title,getHref:()=> 'https://example.com'
+ });
+ assert.equal(normalizeNativeSearchResult(adapter,{id:'1',title:'Pump'},'pump'),null);
+});
+
+test('wires TradeLink to its existing bounded signed document search and native detail route',()=>{
+ const adapters=readFileSync('frontend/global-search-adapters.js','utf8');
+ const tradeLink=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
+ assert.match(app,/createNativeSearchRegistry\(\[tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter,fuelTransNativeSearchAdapter,\.\.\.remainingNativeSearchAdapters\]\)/);
+ assert.match(app,/tradeLinkDraftWorkspace\.searchPage\(/);
+ assert.match(app,/tradeLinkDraftWorkspace\.assignedDocuments\(bounded\)/);
+ assert.match(app,/applicationId==='tradelink'/);
+ assert.match(app,/openTradeLinkDocument\(selectedDocument\)/);
+ assert.match(app,/openTradeLinkAssignedDocument\(selectedDocument\)/);
+ assert.match(app,/pendingNativeSearchSelection/);
+ assert.match(app,/searchFRTRequestsReadOnly/);
+ assert.match(app,/timeTrackerSearchSnapshot/);
+ assert.match(app,/timeTrackerAttendanceSearchAdapter/);
+ assert.match(app,/timeTrackerOvertimeSearchAdapter/);
+ assert.match(app,/ttOtExpandedRequestIds/);
+ assert.match(app,/await import\('\.\/fueltrans\/supabase-client\.js'\)/);
+ assert.match(app,/searchFuelTransTickets\(context,\{query,limit\}\)/);
+ assert.match(app,/fueltrans\/ticket\/'\+encodeURIComponent\(row\.id\)/);
+ assert.match(app,/nativeSearchRegistry\.search\(query/);
+ assert.match(app,/Promise\.allSettled\(\[/);
+ assert.match(tradeLink,/async searchPage\(\{filters=initialTradeLinkDraftListFilters\(\),cursor=null,limit=50\}/);
+ assert.match(tradeLink,/limit must be 1–50/);
+ assert.match(adapters,/NATIVE_SEARCH_ADAPTER_LIMIT=20/);
+});
+
+test('binds FRT, FuelTrack+ and TimeTracker through existing signed native clients and detail views',()=>{
+ const overtime=readFileSync('frontend/time-tracker-overtime.js','utf8');
+ const fuelTrack=readFileSync('frontend/fueltrack-v3-domain-client.js','utf8');
+ const frt=readFileSync('frontend/frt-finance-readonly.js','utf8');
+ assert.match(app,/searchFRTRequestsReadOnly\(\{auth,api:db,query,limit\}\)/);
+ assert.match(frt,/api\.rpc\('frt_board_list_safe'/);
+ assert.match(app,/loadFRTFinanceDetail\(pending\.recordId,seq\)/);
+ assert.match(app,/fuelTrackSearchSnapshot=createSnapshotReader/);
+ assert.match(fuelTrack,/async read\(\{limit=100\}/);
+ assert.match(app,/fuelTrackSearchSnapshot\(\{userId,workspaceId,boardId:FUELTRACK_V3_ID\}\)/);
+ assert.match(app,/receipt_number/);
+ assert.match(app,/fuelTrackRequestFilters=\{\.\.\.FUELTRACK_REQUEST_FILTER_DEFAULTS/);
+ assert.match(app,/applicationId==='fueltrack'/);
+ assert.match(app,/timeTrackerSearchSnapshot=createSnapshotReader/);
+ assert.match(app,/timeTracker\.snapshot\(boardId\)/);
+ assert.match(app,/ttLogExpandedIds=\[pending\.recordId\]/);
+ assert.match(app,/ttOtExpandedRequestIds=\[pending\.recordId\]/);
+ assert.match(overtime,/expandedRequestIds\.includes\(r\.id\)/);
+});
+
+test('binds remaining native applications to their existing signed read APIs and exact record routes',()=>{
+ const native=readFileSync('frontend/global-search-native-apps.js','utf8');
+ for(const rpc of ['tool_traceability_list_tools','tool_traceability_list_requests','toolbox_issues_list_issues',
+  'material_request_hub_list_requests','employee_evaluation_management_snapshot','employee_evaluation_my_snapshot','fm1_list_tickets_v1','fm1_ticket_detail_v1'])
+  assert.ok(native.includes(rpc),'missing native read contract '+rpc);
+ for(const table of ['order_intake_orders','aps_aims_entities'])assert.ok(native.includes(table));
+ assert.match(native,/p_path:'\/items\/query'/);
+ assert.match(native,/p_path:'\/items\/'\+recordId/);
+ assert.match(app,/openPendingNativeSearchRecord\(parts\[1\]\)/);
+ assert.match(app,/applicationId:item\.applicationId,recordId:item\.recordId/);
+ assert.match(app,/native-search-detail-drawer/);
+ assert.match(app,/applicationId==='fm1'/);
+ assert.match(app,/openPendingNativeSearchRecord\(null\)/);
+ assert.match(native,/fm1_list_tickets_v1/);
+ assert.match(native,/fm1_ticket_detail_v1/);
+ assert.match(data,/'tool_traceability_list_tools'.*'tool_traceability_list_requests'/s);
+ assert.match(data,/'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot'/);
+ assert.match(data,/'fm1_list_tickets_v1','fm1_ticket_detail_v1'/);
+ assert.match(css,/native-search-detail-fields/);
 });
 
 test('responsive palette and exact-commit Pages asset manifests include new assets',()=>{
