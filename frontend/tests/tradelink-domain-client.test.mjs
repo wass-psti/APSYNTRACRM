@@ -269,23 +269,28 @@ test('retry-safe production migration only accepts the immediate same-actor exac
  ])assert.match(sql,pattern);
  assert.doesNotMatch(sql,/GRANT (?:INSERT|UPDATE|DELETE) ON TABLE|DROP POLICY|CREATE ROLE|service_role/);
 });
-test('signed TradeLink session launches independent reads concurrently before any domain RPC',async()=>{
+test('signed TradeLink session overlaps actor, context and manager reads then uses the shell-only board cache',async()=>{
  const calls=[],resolvers=new Map();
  const gated=label=>new Promise(resolve=>{calls.push(label);resolvers.set(label,resolve);});
  const auth={userId:id,getVerifiedUser:()=>gated('actor')};
- const api={context:()=>gated('context'),board:()=>gated('board'),
+ const api={context:()=>gated('context'),
+  boardCached:async(boardId,scope)=>{
+   calls.push('boardCached');
+   assert.equal(boardId,TRADELINK_BOARD_ID);
+   assert.deepEqual(scope,{userId:id,workspaceId:workspace,includeItems:false});
+   return {board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+    name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}};
+  },
   allowed:()=>gated('manage'),rpc:async name=>{calls.push(name);return [];}};
  const client=new TradeLinkDomainClient({auth,api});
  const result=client.list();
- assert.deepEqual(calls,['actor','context','board','manage']);
+ assert.deepEqual(calls,['actor','context','manage']);
  assert.equal(calls.includes('tl03_documents_list'),false);
  resolvers.get('manage')(true);
- resolvers.get('board')({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
-  name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}});
  resolvers.get('context')({user_id:id,workspace_id:workspace,profile:{status:'active'}});
  resolvers.get('actor')({id});
  assert.deepEqual(await result,[]);
- assert.deepEqual(calls,['actor','context','board','manage','tl03_documents_list']);
+ assert.deepEqual(calls,['actor','context','manage','boardCached','tl03_documents_list']);
 });
 test('concurrent signed preflight denies wrong workspace and denied manager without any document RPC',async()=>{
  for(const override of [{workspaceId:item},{manage:false},{actorId:item},{active:false}]){
