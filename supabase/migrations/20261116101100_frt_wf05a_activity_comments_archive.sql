@@ -168,7 +168,7 @@ AS $fn$
 DECLARE
  v_request public.frt_requests%ROWTYPE;
 BEGIN
- IF auth.uid() IS NULL OR NOT private.frt_has_role(p_workspace_id,'GENERAL_MANAGER') THEN
+ IF auth.uid() IS NULL OR private.frt_has_role(p_workspace_id,'GENERAL_MANAGER') IS NOT TRUE THEN
   RAISE EXCEPTION 'FRT restore requires the existing General Manager role'
    USING ERRCODE='42501';
  END IF;
