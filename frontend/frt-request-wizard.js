@@ -10,7 +10,7 @@ const category=(number)=>`<div class="frt-wizard-expense" data-expense-index="${
  <input id="frt-expense-category-${number}" name="expenseCategory" required maxlength="180" placeholder="Expense category" autocomplete="off"/></div>
  <div class="frt-wizard-field"><label for="frt-expense-amount-${number}">Amount (PHP) <b aria-hidden="true">*</b></label>
  <input id="frt-expense-amount-${number}" name="expenseAmount" required inputmode="decimal" placeholder="0.00" pattern="[0-9]+(\\.[0-9]{1,2})?" autocomplete="off"/></div></div></div>`;
-export function renderFRTRequestWizard({companies=[],selectedCompany=''}={}){
+export function renderFRTRequestWizard({companies=[],selectedCompany='',requestDate=''}={}){
  const options=companies.filter(c=>/^[A-Za-z0-9_-]{1,32}$/.test(c?.code||'')).map(c=>
   `<option value="${esc(c.code)}"${c.code===selectedCompany?' selected':''}>${esc(c.name||c.code)}</option>`).join('');
  return `<div class="frt-wizard-intro"><p>Set up basic request information</p><span class="frt-wizard-status">Filing status: Not Filed</span></div>
@@ -22,7 +22,9 @@ export function renderFRTRequestWizard({companies=[],selectedCompany=''}={}){
  <section class="frt-wizard-page" data-frt-step="1" aria-label="Basic Info">
  <div class="frt-wizard-grid"><div class="frt-wizard-field"><label for="frt-wizard-company">Company Account <b aria-hidden="true">*</b></label>
  <select id="frt-wizard-company" name="companyCode" required>${options}</select></div>
- ${field('Date Needed','dateNeeded',{type:'date',required:true})}</div>
+ <div class="frt-wizard-field"><label for="frt-wizard-request-date">Request Date <b aria-hidden="true">*</b></label>
+ <input id="frt-wizard-request-date" name="requestDate" type="date" required value="${esc(requestDate)}"/></div></div>
+ ${field('Date Needed','dateNeeded',{type:'date',required:true})}
  ${field('Fund Source Account','fundSource',{required:true,placeholder:'Enter the fund source'})}
  <fieldset class="frt-wizard-expenses"><legend>Expense Categories</legend><div data-frt-expenses>${category(1)}</div>
  <button type="button" class="frt-wizard-add" data-frt-add-expense>＋ Add Category</button>
@@ -131,7 +133,7 @@ export function restoreFRTWizardDraft(view,draft,{companies=[]}={}){
  const form=view?.querySelector('#modal-form');
  const host=view?.querySelector('[data-frt-expenses]');
  if(!form||!host||!Array.isArray(draft.items)||draft.items.length<1||draft.items.length>100)return false;
- const fields=['companyCode','dateNeeded','fundSource','checkNo','requestName','department',
+ const fields=['companyCode','requestDate','dateNeeded','fundSource','checkNo','requestName','department',
   'description','orderIntakeNo','recipientName','recipientBank'];
  for(const name of fields){
   const control=form.elements.namedItem(name);
