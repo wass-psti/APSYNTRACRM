@@ -181,6 +181,10 @@ test('analytics requests release stale busy state and retry the current route af
  assert.match(app,/state\.tradeLinkSection!=='analytics'\)\{/);
  assert.match(app,/state\.tradeLinkAnalytics=null;state\.tradeLinkAnalyticsError=''/);
  assert.match(app,/!state\.tradeLinkAnalytics&&!state\.tradeLinkAnalyticsError/);
+ const finalBoardLoad=app.slice(app.indexOf("if(tab==='tradelink'&&state.tradeLinkSection==='analytics'&&"),
+  app.indexOf("if(tab==='tradelink'&&['drafts','documents']",app.indexOf("if(tab==='tradelink'&&state.tradeLinkSection==='analytics'&&")));
+ assert.match(finalBoardLoad,/!state\.tradeLinkAnalyticsBusy/);
+ assert.match(finalBoardLoad,/!state\.tradeLinkAnalytics&&!state\.tradeLinkAnalyticsError/);
 });
 
 test('analytics RPC remains on the existing signed manager path with no new role or grant layer',()=>{
