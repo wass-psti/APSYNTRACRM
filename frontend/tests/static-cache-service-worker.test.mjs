@@ -15,7 +15,7 @@ const response=(body='v1',type='text/javascript',headers={})=>{
 };
 function harness(){
  const handlers=new Map(),stores=new Map(),requests=[];
- let offline=false,reply=response(),putCount=0;
+ let offline=false,reply=response(),putCount=0;const fetchOptions=[];
  const cacheStore=name=>{
   if(!stores.has(name))stores.set(name,new Map());
   const store=stores.get(name);
@@ -30,7 +30,7 @@ function harness(){
   addEventListener:(type,handler)=>handlers.set(type,handler),
   skipWaiting:async()=>true,clients:{claim:async()=>true}};
  const context={self,caches,URL,Response,Request,
-  fetch:async request=>{requests.push(request.url);if(offline)throw Error('offline');return reply.clone()}};
+  fetch:async(request,options)=>{requests.push(request.url);fetchOptions.push(options);if(offline)throw Error('offline');return reply.clone()}};
  vm.runInNewContext(readFileSync(new URL('../../service-worker.js',import.meta.url),'utf8'),context);
  const event=async(type,request)=>{
   let result,handled=false;const waits=[];
@@ -40,7 +40,7 @@ function harness(){
   await Promise.all(waits);
   return {handled,value};
  };
- return {event,stores,requests,cacheStore,
+ return {event,stores,requests,fetchOptions,cacheStore,
   setOffline:v=>offline=v,setReply:r=>reply=r,
   get puts(){return putCount}};
 }
@@ -82,6 +82,7 @@ test('only public static GET scripts/styles/logo enter the cache; never document
 test('network-first refresh, offline static fallback and no offline navigation shell',async()=>{
  const h=harness(),req=new Request(resource);
  assert.equal((await h.event('fetch',req)).value&&h.puts,1);
+ assert.equal(h.fetchOptions[0]?.cache,'no-cache','static asset fetch must revalidate the browser HTTP cache');
  h.setReply(response('v2'));
  assert.equal(await (await h.event('fetch',req)).value.text(),'v2');
  assert.equal(h.puts,2);
@@ -121,12 +122,12 @@ test('retirement mode unregisters only owned worker and purges namespaced static
  const navigatorRef={serviceWorker:{getRegistration:async()=>({
   active:{scriptURL:scope+'service-worker.js'},unregister:async()=>{removed.push(scope);return true}
  })}};
- const cacheStorage={keys:async()=>['apsyntra-crm-public-static-v1-20261109','other-app-cache'],
+ const cacheStorage={keys:async()=>['apsyntra-crm-public-static-v1-20261116','other-app-cache'],
   delete:async key=>{deletes.push(key);return true}};
  assert.equal(await registerStaticCache({navigatorRef,cacheStorage,enabled:false,
   locationRef:{origin,protocol:'https:',pathname:'/APSYNTRACRM/'}}),false);
  assert.deepEqual(removed,[scope]);
- assert.deepEqual(deletes,['apsyntra-crm-public-static-v1-20261109']);
+ assert.deepEqual(deletes,['apsyntra-crm-public-static-v1-20261116']);
 });
 
 test('worker bootstrap is optional and occurs only after application initialization',()=>{
