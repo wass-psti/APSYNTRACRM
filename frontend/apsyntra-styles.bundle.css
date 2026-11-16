@@ -14480,6 +14480,57 @@
 @media(max-width:520px){.frt-collab-panel{width:calc(100vw - 16px);max-height:90vh}.frt-collab-comment header,.frt-collab-event-main{display:grid;gap:4px}.frt-collab-pagination{flex-wrap:wrap}.frt-collab-filters{grid-template-columns:1fr}.frt-collab-filters .frt-collab-search,.frt-collab-filters button{grid-column:auto}}
 @media(prefers-reduced-motion:reduce){.frt-collab-panel *{scroll-behavior:auto!important;transition:none!important}}
 
+/* frontend/frt-voucher.css */
+/* CP-FRT-FLOW-03 — voucher document preview and output controls. */
+.modal-backdrop .frt-voucher-document{display:flex;flex-direction:column;gap:14px;min-width:0}
+.modal-backdrop .frt-voucher-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.modal-backdrop .frt-voucher-status{margin:0;color:var(--muted,#64748b);font-size:12px}
+.modal-backdrop .frt-voucher-pdf-preview{width:100%;min-height:0}
+.modal-backdrop .frt-voucher-pdf-preview iframe{display:block;width:100%;height:min(72vh,850px);border:1px solid var(--border,#d8dee8);border-radius:12px;background:#fff}
+.modal-backdrop .frt-voucher-paper{background:#fff;color:#172033;border:1px solid #dce3ec;border-radius:12px;padding:clamp(16px,3vw,30px);box-shadow:0 8px 24px rgba(15,23,42,.06);font-family:Arial,Helvetica,sans-serif}
+.modal-backdrop .frt-voucher-header{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,auto);gap:18px;align-items:start;padding-bottom:18px;border-bottom:2px solid #243b5a}
+.modal-backdrop .frt-voucher-header h2{margin:0 0 4px;color:#14213d;font-size:17px}
+.modal-backdrop .frt-voucher-header p{margin:3px 0;color:#526078;font-size:12px;overflow-wrap:anywhere}
+.modal-backdrop .frt-voucher-logo{max-width:140px;max-height:70px;object-fit:contain;object-position:left center}
+.modal-backdrop .frt-voucher-title{text-align:right;display:flex;flex-direction:column;gap:5px}
+.modal-backdrop .frt-voucher-title h1{font-size:16px;letter-spacing:.04em;margin:0;color:#14213d}
+.modal-backdrop .frt-voucher-title strong{font-size:15px;color:#1d4ed8;overflow-wrap:anywhere}
+.modal-backdrop .frt-voucher-title span{font-size:11px;color:#64748b}
+.modal-backdrop .frt-voucher-unconfigured{color:#8a5a12!important;font-size:11px!important;font-style:italic}
+.modal-backdrop .frt-voucher-section{margin-top:18px}
+.modal-backdrop .frt-voucher-section h3{font-size:12px;letter-spacing:.04em;color:#1e3a5f;margin:0 0 10px}
+.modal-backdrop .frt-voucher-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+.modal-backdrop .frt-voucher-field{min-width:0;display:flex;flex-direction:column;gap:3px}
+.modal-backdrop .frt-voucher-field span{font-size:10px;text-transform:uppercase;letter-spacing:.035em;color:#64748b}
+.modal-backdrop .frt-voucher-field strong{font-size:12px;color:#172033;overflow-wrap:anywhere;white-space:pre-wrap}
+.modal-backdrop .frt-voucher-description{margin:12px 0 0;padding:10px 12px;background:#f7f9fc;border-radius:8px;color:#334155;font-size:12px;white-space:pre-wrap}
+.modal-backdrop .frt-voucher-items{width:100%;border-collapse:collapse;font-size:12px}
+.modal-backdrop .frt-voucher-items th,.modal-backdrop .frt-voucher-items td{padding:9px 8px;border:1px solid #cbd5e1;text-align:left;vertical-align:top}
+.modal-backdrop .frt-voucher-items thead th{background:#243b5a;color:#fff;font-size:10px}
+.modal-backdrop .frt-voucher-items td p{margin:4px 0 0;color:#64748b;white-space:pre-wrap}
+.modal-backdrop .frt-voucher-items .frt-voucher-amount,.modal-backdrop .frt-voucher-items tfoot th:last-child{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.modal-backdrop .frt-voucher-items tfoot th{background:#f1f5f9;color:#14213d;font-size:12px}
+.modal-backdrop .frt-voucher-items .frt-voucher-subtotal th{background:#f8fafc;color:#334155;font-size:11px;text-align:right}
+.modal-backdrop .frt-voucher-note{font-size:10px;color:#64748b;margin:8px 0 0;line-height:1.5}
+.modal-backdrop .frt-voucher-approval-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.modal-backdrop .frt-voucher-approval{border:1px solid #dce3ec;border-radius:9px;padding:11px;min-width:0}
+.modal-backdrop .frt-voucher-approval h3{font-size:10px;color:#1e3a5f;margin:0 0 10px}
+.modal-backdrop .frt-voucher-approval p{font-size:11px;color:#64748b;margin:0}
+.modal-backdrop .frt-voucher-approval .frt-voucher-field{margin:7px 0}
+.modal-backdrop .frt-voucher-footer{margin-top:22px;padding-top:10px;border-top:1px solid #cbd5e1;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;color:#64748b;font-size:10px}
+@media(max-width:760px){
+ .modal-backdrop .frt-voucher-header{grid-template-columns:1fr}
+ .modal-backdrop .frt-voucher-title{text-align:left}
+ .modal-backdrop .frt-voucher-approval-grid{grid-template-columns:1fr}
+ .modal-backdrop .frt-voucher-grid{grid-template-columns:1fr}
+ .modal-backdrop .frt-voucher-items{font-size:10px}
+ .modal-backdrop .frt-voucher-items th,.modal-backdrop .frt-voucher-items td{padding:6px 5px}
+}
+@media print{
+ .modal-backdrop .frt-voucher-toolbar,.modal-backdrop .frt-voucher-status,.modal-backdrop .frt-voucher-pdf-preview{display:none!important}
+ .modal-backdrop .frt-voucher-paper{border:0;box-shadow:none;border-radius:0;padding:0}
+}
+
 /* frontend/fueltrack-v3-application.css */
 /* CP-FT3-01 — FuelTrack+ v3 native dashboard, scoped to authorized board app. */
 #app .ft3-app{color:#27394a;background:#f6fafb;border:1px solid #d7e4e8;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px #163b4811;margin:16px 0 28px;font-size:13px}

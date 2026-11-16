@@ -6,11 +6,12 @@ import {generateStyleBundle} from '../../scripts/build-priority5-styles.mjs';
 const index=readFileSync('index.html','utf8');
 const source=readFileSync(STYLE_BUNDLE,'utf8');
 test('Priority 5 preserves the exact-order consolidated CSS bundle',()=>{
- assert.ok(STYLE_SOURCES.length>=49);
+ assert.ok(STYLE_SOURCES.length>=50);
  assert.ok(STYLE_SOURCES.includes("frontend/global-search.css"));
  assert.ok(STYLE_SOURCES.includes("frontend/fm1-application.css"));
  assert.ok(STYLE_SOURCES.includes("frontend/time-tracker-application.css"));
  assert.ok(STYLE_SOURCES.includes("frontend/frt-collaboration.css"));
+ assert.ok(STYLE_SOURCES.includes("frontend/frt-voucher.css"));
  assert.equal(new Set(STYLE_SOURCES).size,STYLE_SOURCES.length);
  assert.equal((index.match(/<link rel="stylesheet"/g)||[]).length,1);
  assert.match(index,/href="\.\/frontend\/apsyntra-styles\.bundle\.css"/);
