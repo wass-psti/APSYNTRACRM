@@ -27,7 +27,7 @@ const escapeFilter=value=>String(value||'').replace(/[,*()\\]/g,' ').trim().slic
 async function signedScope({auth,api,getBoards,applicationId,userId,workspaceId}){
  const [user,context]=await Promise.all([auth.getVerifiedUser(),api.context()]);
  if(!user?.id||user.id!==userId||auth.userId!==userId||context?.user_id!==userId||
-    context?.workspace_id!==workspaceId||context?.profile?.status!=='active')
+    context?.workspace_id!==workspaceId)
   throw new Error('Signed native-search workspace context changed.');
  const moduleName=MODULES[applicationId];
  const board=array(getBoards()).find(item=>item?.name===moduleName&&item?.status!=='trashed');
@@ -232,7 +232,7 @@ export async function readNativeSearchRecordDetail({applicationId,recordId,navig
   throw new TypeError('Invalid native record detail request.');
  const context=await api.context(),user=await auth.getVerifiedUser();
  if(!user?.id||auth.userId!==user.id||context?.user_id!==user.id||
-    context?.workspace_id!==workspaceId||context?.profile?.status!=='active')
+    context?.workspace_id!==workspaceId)
   throw new Error('Signed native record context changed.');
  switch(applicationId){
   case 'tools':

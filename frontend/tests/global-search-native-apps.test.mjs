@@ -82,6 +82,18 @@ test('all remaining native application adapters search existing records and emit
  assert.ok(calls.filter(call=>call[0]==='rpc'&&call[1]==='material_request_hub_list_requests').length>=4);
 });
 
+test('does not add client-side role/profile gates beyond the existing signed application APIs',async()=>{
+ const {auth,api}=makeClients();
+ api.context=async()=>({user_id:user,workspace_id:workspace});
+ const adapters=createRemainingNativeSearchAdapters({auth,api,getBoards:()=>boards});
+ const tools=adapters.find(adapter=>adapter.id==='tool-traceability-tools');
+ const rows=await tools.read('pump',{userId:user,workspaceId:workspace,limit:20});
+ assert.equal(rows.length,1);
+ const detail=await readNativeSearchRecordDetail({applicationId:'tools',recordId:ids.tool,
+  navigationScope:'tools',auth,api,workspaceId:workspace});
+ assert.equal(detail.id,ids.tool);
+});
+
 test('native detail readers use the matching existing application detail contracts',async()=>{
  const {auth,api,calls}=makeClients();
  const cases=[
