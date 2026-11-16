@@ -16,6 +16,7 @@ const sidebar = readFileSync("frontend/sidebar-visuals.js", "utf8");
 const shellCss = readFileSync("frontend/time-tracker-application.css", "utf8");
 const manifest = readFileSync("scripts/priority5-style-manifest.mjs", "utf8");
 const htmlEntry = readFileSync("index.html", "utf8");
+const pagesSmoke = readFileSync("scripts/pages-smoke.mjs", "utf8");
 const moduleResolver = (name) =>
   name === "TimeTracker Attendance" ? { key: "timetracker" } : null;
 
@@ -151,6 +152,13 @@ test("FM1 design tokens, responsive layout, focus visibility and reduced motion 
   assert.match(manifest, /frontend\/time-tracker-application\.css/);
   assert.match(htmlEntry, /frontend\/time-tracker-application\.css/);
   assert.match(sidebar, /clock:'<circle cx="12" cy="12" r="9"/);
+});
+
+test("live Pages smoke verification includes the dedicated TimeTracker route and renderer assets", () => {
+  assert.match(pagesSmoke, /frontend\/time-tracker-application\.js/);
+  assert.match(pagesSmoke, /frontend\/time-tracker-ui\.js/);
+  assert.match(pagesSmoke, /frontend\/time-tracker-application\.css/);
+  assert.match(pagesSmoke, /frontend\/apsyntra-styles\.bundle\.css/);
 });
 
 test("TimeTracker stays in the existing CRM module graph without a new frontend framework", () => {

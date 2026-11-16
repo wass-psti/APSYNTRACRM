@@ -8,7 +8,9 @@ const require = createRequire(import.meta.url);
 const axeSource = require("axe-core").source;
 const executablePath =
   process.env.CHROMIUM_PATH ||
-  "/Applications/Chromium.app/Contents/MacOS/Chromium";
+  (process.platform === "darwin"
+    ? "/Applications/Chromium.app/Contents/MacOS/Chromium"
+    : chromium.executablePath());
 const baseUrl =
   process.env.TT_TEST_URL ||
   "http://127.0.0.1:5173/frontend/tests/fixtures/time-tracker-component.html";

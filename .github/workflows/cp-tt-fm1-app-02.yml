@@ -1,0 +1,84 @@
+name: CP-TT-FM1-APP-02 — TimeTracker Application Integration
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/cp-tt-fm1-app-02.yml"
+      - "frontend/app.js"
+      - "frontend/board-loading.js"
+      - "frontend/sidebar-visuals.js"
+      - "frontend/time-tracker-*.js"
+      - "frontend/time-tracker-application.css"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/tests/time-tracker-*.test.mjs"
+      - "frontend/tests/fixtures/time-tracker-component.html"
+      - "scripts/time-tracker-*.mjs"
+      - "scripts/time-tracker-live-acceptance.applescript"
+      - "scripts/pages-smoke.mjs"
+      - "scripts/priority5-style-manifest.mjs"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/CP-TT-FM1-APP-*.md"
+  push:
+    branches: [main, feat/cp-tt-fm1-app-02]
+    paths:
+      - ".github/workflows/cp-tt-fm1-app-02.yml"
+      - "frontend/app.js"
+      - "frontend/board-loading.js"
+      - "frontend/sidebar-visuals.js"
+      - "frontend/time-tracker-*.js"
+      - "frontend/time-tracker-application.css"
+      - "frontend/apsyntra-styles.bundle.css"
+      - "frontend/tests/time-tracker-*.test.mjs"
+      - "frontend/tests/fixtures/time-tracker-component.html"
+      - "scripts/time-tracker-*.mjs"
+      - "scripts/time-tracker-live-acceptance.applescript"
+      - "scripts/pages-smoke.mjs"
+      - "scripts/priority5-style-manifest.mjs"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/CP-TT-FM1-APP-*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-and-browser:
+    name: Full regression, build and browser acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify all shipped JavaScript modules
+        run: |
+          set -euo pipefail
+          for source in frontend/*.js; do node --check "$source"; done
+          node --check scripts/pages-smoke.mjs
+          node --check scripts/time-tracker-browser-acceptance.mjs
+      - name: Run complete frontend regression suite
+        run: npm test
+      - name: Verify deterministic CSS bundle and source manifest
+        run: node scripts/build-priority5-styles.mjs --check
+      - name: Verify formatting and changed-module lint
+        run: |
+          npx prettier --check frontend/time-tracker-application.js frontend/time-tracker-application.css frontend/tests/time-tracker-application.test.mjs scripts/time-tracker-browser-acceptance.mjs docs/CP-TT-FM1-APP-01.md docs/CP-TT-FM1-APP-02.md package.json .github/workflows/cp-tt-fm1-app-02.yml
+          npx eslint frontend/app.js frontend/board-loading.js frontend/sidebar-visuals.js frontend/time-tracker-ui.js frontend/time-tracker-application.js frontend/tests/time-tracker-application.test.mjs frontend/tests/time-tracker-native.test.mjs scripts/time-tracker-browser-acceptance.mjs
+      - name: Build production frontend
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify FM1 browser acceptance
+        run: npm run test:e2e
+      - name: Verify TimeTracker application views, responsive layout and WCAG 2.2 AA
+        run: npm run test:time-tracker:e2e
