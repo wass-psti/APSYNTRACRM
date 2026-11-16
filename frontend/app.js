@@ -8043,8 +8043,23 @@ async function action(name,button){
       if(warning)warning.textContent='Potential duplicate: the same company, payee and total were submitted in this browser within the last 10 minutes. Review the request, then submit again to continue.';
       throw new Error('Potential duplicate detected. Review the warning and submit again to continue.');
      }
-     await createSignedFRTRequest({auth,api:db,workspaceId,
-      companyCode:payload.companyCode,role,data:payload});
+     const creation=await createSignedFRTRequest({auth,api:db,workspaceId,
+      companyCode:payload.companyCode,role,data:payload,
+      allowPotentialDuplicate:duplicateConfirmed});
+     if(creation?.status==='DUPLICATE_WARNING'){
+      duplicateConfirmed=true;
+      const formElement=modal.querySelector('#modal-form');
+      let warning=formElement?.querySelector('[data-frt-duplicate-warning]');
+      if(!warning){
+       warning=document.createElement('p');
+       warning.className='note';
+       warning.setAttribute('role','alert');
+       warning.dataset.frtDuplicateWarning='true';
+       formElement?.insertBefore(warning,formElement.querySelector('.modal-actions'));
+      }
+      if(warning)warning.textContent='Potential duplicate: this company, payee and amount were submitted within the last 10 minutes. Review the request, then submit again to confirm the intentional duplicate.';
+      throw new Error('Potential duplicate detected. Review the warning and submit again to continue.');
+     }
      duplicateGuard.record(payload);
      draftController?.clear();
      await loadFRTFinance(payload.companyCode);
