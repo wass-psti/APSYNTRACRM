@@ -72,7 +72,8 @@ BEGIN
     OR length(trim(coalesce(p_payload->>'department',''))) NOT BETWEEN 2 AND 180
     OR length(trim(coalesce(p_payload->>'fundSource',''))) NOT BETWEEN 2 AND 180
     OR length(trim(coalesce(p_payload->>'description',''))) NOT BETWEEN 3 AND 2500
-    OR coalesce(p_payload->>'dateNeeded','') !~ '^\d{4}-\d{2}-\d{2}
+    OR coalesce(p_payload->>'dateNeeded','') !~ '^\d{4}-\d{2}-\d{2}$'
+    OR coalesce(p_payload->>'requestDate','') !~ '^\d{4}-\d{2}-\d{2}$' THEN
   RAISE EXCEPTION 'Invalid request data' USING ERRCODE='22023';
  END IF;
 
