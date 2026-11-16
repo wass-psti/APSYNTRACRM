@@ -168,23 +168,23 @@ test('All Documents wires export only to the current selected authorized rows',(
  assert.match(workspace,/data-action="tradelink-documents-export-selection" disabled/);
 });
 
-test('analytics requests release stale busy state and retry the current route after overlapping navigation',()=>{
+test('analytics requests use independent run identity and are invalidated only when leaving the view',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const start=app.indexOf('async function loadTradeLinkAnalytics(');
  const end=app.indexOf('async function loadTimeTracker(',start);
  const loader=app.slice(start,end);
  assert.match(app,/tradeLinkAnalyticsRunId:0/);
+ assert.match(loader,/const scopeSame=\(\)=>auth\.isSignedIn/);
  assert.match(loader,/const run=\+\+state\.tradeLinkAnalyticsRunId/);
+ assert.match(loader,/const same=\(\)=>run===state\.tradeLinkAnalyticsRunId&&scopeSame\(\)/);
  assert.match(loader,/if\(run===state\.tradeLinkAnalyticsRunId\)/);
  assert.match(loader,/state\.tradeLinkAnalyticsBusy=false/);
- assert.match(loader,/routeStillAnalytics&&seq!==routeSerial/);
+ assert.doesNotMatch(loader,/seq===routeSerial/);
  assert.match(app,/state\.tradeLinkSection!=='analytics'\)\{/);
+ assert.match(app,/state\.tradeLinkAnalyticsRunId\+\+;state\.tradeLinkAnalyticsBusy=false/);
  assert.match(app,/state\.tradeLinkAnalytics=null;state\.tradeLinkAnalyticsError=''/);
  assert.match(app,/!state\.tradeLinkAnalytics&&!state\.tradeLinkAnalyticsError/);
- const finalBoardLoad=app.slice(app.indexOf("if(tab==='tradelink'&&state.tradeLinkSection==='analytics'&&"),
-  app.indexOf("if(tab==='tradelink'&&['drafts','documents']",app.indexOf("if(tab==='tradelink'&&state.tradeLinkSection==='analytics'&&")));
- assert.match(finalBoardLoad,/!state\.tradeLinkAnalyticsBusy/);
- assert.match(finalBoardLoad,/!state\.tradeLinkAnalytics&&!state\.tradeLinkAnalyticsError/);
+ assert.match(app,/await loadTradeLinkAnalytics\(\)/);
 });
 
 test('analytics RPC remains on the existing signed manager path with no new role or grant layer',()=>{

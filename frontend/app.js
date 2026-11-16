@@ -1817,7 +1817,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
     await loadTradeLinkActivity(serial);
    else if(state.tradeLinkSection==='analytics'&&!state.tradeLinkAnalyticsBusy&&
       !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
-    await loadTradeLinkAnalytics(serial);
+    await loadTradeLinkAnalytics();
    else if(['drafts','documents'].includes(state.tradeLinkSection)&&
       TL03_DOMAIN_READS_ENABLED&&!state.tradeLinkDraft.busy){
     const selectedDraft=state.tradeLinkSection==='drafts'?
@@ -2268,7 +2268,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
    await loadTradeLinkActivity(seq);
   if(state.tradeLinkSection==='analytics'&&state.board?.board?.id===TRADELINK_BOARD_ID&&
      !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
-   await loadTradeLinkAnalytics(seq);
+   await loadTradeLinkAnalytics();
   if(['drafts','documents'].includes(state.tradeLinkSection)&&
      TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
    await loadTradeLinkDrafts(seq);
@@ -2352,7 +2352,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
  if(tab==='tradelink'&&state.tradeLinkSection==='analytics'&&
     state.board?.board?.id===TRADELINK_BOARD_ID&&!state.tradeLinkAnalyticsBusy&&
     !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
-  await loadTradeLinkAnalytics(seq);
+  await loadTradeLinkAnalytics();
  if(tab==='tradelink'&&['drafts','documents'].includes(state.tradeLinkSection)&&
     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkDrafts(seq);
@@ -3370,18 +3370,21 @@ async function loadTradeLinkActivity(seq=routeSerial){
   if(same()){state.tradeLinkActivity=null;state.tradeLinkActivityError=errorMessage(err);}
  }finally{if(same()){state.tradeLinkActivityBusy=false;render();}}
 }
-async function loadTradeLinkAnalytics(seq=routeSerial){
+async function loadTradeLinkAnalytics(){
  const userId=state.context?.user_id,workspaceId=state.context?.workspace_id;
- const same=()=>seq===routeSerial&&auth.isSignedIn&&
-  state.view==='board'&&state.tab==='tradelink'&&
-  state.boardId===TRADELINK_BOARD_ID&&state.tradeLinkSection==='analytics'&&
-  state.context?.user_id===userId&&state.context?.workspace_id===workspaceId&&
+ const scopeSame=()=>auth.isSignedIn&&state.view==='board'&&
+  state.tab==='tradelink'&&state.boardId===TRADELINK_BOARD_ID&&
+  state.tradeLinkSection==='analytics'&&state.context?.user_id===userId&&
+  state.context?.workspace_id===workspaceId&&
   state.board?.board?.workspace_id===workspaceId&&state.boardManage===true;
- if(!same()||state.tradeLinkAnalyticsBusy)return;
+ if(!scopeSame()||state.tradeLinkAnalyticsBusy)return;
  if(!TL03_ANALYTICS_ENABLED){
   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';render();return;
  }
+ // Request identity is separate from routeSerial: background Board refreshes
+ // may advance the global route sequence without leaving the Analytics view.
  const run=++state.tradeLinkAnalyticsRunId;
+ const same=()=>run===state.tradeLinkAnalyticsRunId&&scopeSame();
  state.tradeLinkAnalyticsBusy=true;state.tradeLinkAnalyticsError='';render();
  try{
   if(!same())return;
@@ -3393,20 +3396,11 @@ async function loadTradeLinkAnalytics(seq=routeSerial){
  }catch(err){
   if(same()){state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError=errorMessage(err);}
  }finally{
-  // A route can change while the signed read is in flight. Always release
-  // this request's busy state, but never clear a newer request's indicator.
+  // Always release this request's busy state, but never clear a newer
+  // request's indicator. Leaving Analytics invalidates this run ID.
   if(run===state.tradeLinkAnalyticsRunId){
    state.tradeLinkAnalyticsBusy=false;
-   const routeStillAnalytics=auth.isSignedIn&&state.view==='board'&&
-    state.tab==='tradelink'&&state.boardId===TRADELINK_BOARD_ID&&
-    state.tradeLinkSection==='analytics'&&state.context?.user_id===userId&&
-    state.context?.workspace_id===workspaceId&&
-    state.board?.board?.workspace_id===workspaceId&&state.boardManage===true;
    render();
-   // If an overlapping route event invalidated the original route sequence
-   // but returned to Analytics, issue one fresh read for the current route.
-   if(routeStillAnalytics&&seq!==routeSerial)
-    void loadTradeLinkAnalytics(routeSerial);
   }
  }
 }
@@ -6623,7 +6617,7 @@ async function action(name,button){
  case 'tradelink-analytics-refresh':{
   if(state.boardId===TRADELINK_BOARD_ID&&state.view==='board'&&
      state.tab==='tradelink'&&state.tradeLinkSection==='analytics'&&
-     !state.tradeLinkAnalyticsBusy)await loadTradeLinkAnalytics(routeSerial);
+     !state.tradeLinkAnalyticsBusy)await loadTradeLinkAnalytics();
   break;
  }
  case 'tradelink-activity-refresh':{
