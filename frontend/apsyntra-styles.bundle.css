@@ -4676,6 +4676,40 @@
  #app .aps-boards .boards-hero h1{overflow-wrap:anywhere}
 }
 
+/* CP-BOARD-TRASH-PERMANENT-DELETE-01: scoped Trash selection controls. */
+#app .aps-boards .boards-trash-bulk{
+ display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;
+ padding:12px 0 2px;border-top:1px solid var(--border,#e5e9f2);
+}
+#app .aps-boards .boards-trash-bulk [role="status"]{
+ margin-right:auto;color:#596782;font-size:12px;font-weight:750;
+ font-variant-numeric:tabular-nums;
+}
+#app .aps-boards .board-trash-select{
+ display:inline-flex;align-items:center;gap:6px;min-height:32px;
+ padding:5px 8px;border:1px solid #dce3f0;border-radius:8px;
+ background:#f7f9fd;color:#66738d;font-size:10px;font-weight:750;
+ cursor:pointer;user-select:none;
+}
+#app .aps-boards .board-trash-select input{
+ width:15px;height:15px;margin:0;accent-color:#6267b5;cursor:pointer;
+}
+#app .aps-boards .board-trash-select:focus-within{
+ outline:2px solid #4e64d6;outline-offset:2px;
+}
+#app .aps-boards .boards-trash-bulk button:disabled{
+ opacity:.48;cursor:not-allowed;
+}
+@media(max-width:760px){
+ #app .aps-boards .boards-trash-bulk{justify-content:flex-start}
+ #app .aps-boards .boards-trash-bulk [role="status"]{flex-basis:100%}
+}
+
+#app .aps-boards .boards-trash-bulk .board-modal-danger{border:1px solid #aa394a;background:#bb4052;
+ color:#fff;border-radius:9px;padding:10px 14px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+#app .aps-boards .boards-trash-bulk .board-modal-danger:hover:not(:disabled){background:#a93749}
+#app .aps-boards .boards-trash-bulk .board-modal-danger:focus-visible{outline:3px solid #bd6373;outline-offset:2px}
+
 /* frontend/foundation-experience.css */
 /* CP-FOUNDATION-VIS01 — isolated signed #/foundation presentation.
  * No global board, sidebar, login or protected-domain styling changes.

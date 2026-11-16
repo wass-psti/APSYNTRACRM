@@ -141,7 +141,7 @@ test('board card markup uses one stretched link and independent menu, preserving
 test('reversible board deletion is a two-click confirmation without retyping',()=>{
  assert.equal(BOARD_CARD_LIFECYCLE_ENABLED,true);
  const app=readFileSync('frontend/app.js','utf8');
- const trash=app.slice(app.indexOf("case 'board-card-trash':"),app.indexOf("case 'board-card-restore':"));
+ const trash=app.slice(app.indexOf("case 'board-card-trash':"),app.indexOf("case 'board-card-permanent-delete':"));
  assert.match(trash,/openModal\('Move board to Trash'/);
  assert.match(trash,/Move '\+e\(board\.name\)\+' to Trash/);
  assert.match(trash,/await boardCardLifecycle\.trash\(board,board\.name\)/);
@@ -151,7 +151,7 @@ test('reversible board deletion is a two-click confirmation without retyping',()
  assert.doesNotMatch(trash,/name=\"confirm\"|fd\.get\('confirm'\)|Type .*to confirm/);
  assert.match(app,/await db\.allowed\(id,'manage'\)/);
  assert.match(app,/closeBoardCardMenus\(\);hideModal\(\)/);
- assert.doesNotMatch(app,/wm_delete_board_permanently/);
+ assert.match(app,/trashPermanentDelete\.delete\(board\)/);
 });
 
 test('shared modal gives destructive actions safe initial focus and specific completion text',()=>{
@@ -261,7 +261,7 @@ test('stale board lifecycle conflicts disable modal resubmission until the board
  assert.match(modal,/button\.textContent='Close and verify board'/);
  assert.match(modal,/button\.textContent='Close and refresh board'/);
  const edit=app.slice(app.indexOf("case 'board-card-edit':"),app.indexOf("case 'board-card-trash':"));
- const trash=app.slice(app.indexOf("case 'board-card-trash':"),app.indexOf("case 'board-card-restore':"));
+ const trash=app.slice(app.indexOf("case 'board-card-trash':"),app.indexOf("case 'board-card-permanent-delete':"));
  assert.match(edit,/disableOnConflict:true/);
  assert.match(trash,/disableOnConflict:true/);
 });
