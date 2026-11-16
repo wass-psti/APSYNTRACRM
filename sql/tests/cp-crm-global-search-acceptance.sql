@@ -1,5 +1,5 @@
 BEGIN;
-\i supabase/migrations/20261116044201_cp_crm_global_search.sql
+\i supabase/migrations/20261116055059_cp_crm_global_search_02_indexed_workspace_search.sql
 COMMIT;
 
 DO $$

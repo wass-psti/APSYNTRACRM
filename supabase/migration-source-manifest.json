@@ -1577,9 +1577,9 @@
       "sha256": "83d62543c416f287029a1e47e286b1010af4b7096d65fae9bda2d18afbdc355d"
     },
     {
-      "version": "20261116044201",
-      "name": "cp_crm_global_search",
-      "file": "20261116044201_cp_crm_global_search.sql",
+      "version": "20261116055059",
+      "name": "cp_crm_global_search_02_indexed_workspace_search",
+      "file": "20261116055059_cp_crm_global_search_02_indexed_workspace_search.sql",
       "bytes": 8982,
       "sha256": "ae9a034c9782b7959fd8486b1dcde30cd3e4a43f204123788ecc4d05a7f758e6"
     }

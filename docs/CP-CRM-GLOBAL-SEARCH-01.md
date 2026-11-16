@@ -41,3 +41,10 @@ The stylesheet is added to the ordered CSS bundle. The new JavaScript and CSS as
 ## Boundaries
 
 No new workspace, board, module, role or permission model. The RPC uses the existing signed workspace identity and per-board view contract. No writes, analytics, telemetry, persistent search history or new dependencies.
+
+
+## CP-CRM-GLOBAL-SEARCH-02 production activation
+
+- Production migration recorded as `20261116055059_cp_crm_global_search_02_indexed_workspace_search` in the existing Supabase project.
+- Production indexes and the private scoped implementation are present; the public RPC is invoker-security.
+- Genuine signed-browser acceptance and Pages deployment remain pending until the updated PR is merged and deployed.
