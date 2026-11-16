@@ -23569,6 +23569,20 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   min-width: 0;
   padding: 19px;
 }
+.fm1-hold-card {
+  border-top: 1px solid var(--fm1-line);
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px 0;
+}
+.fm1-hold-card > p {
+  color: var(--fm1-muted);
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .fm1-panel-heading {
   align-items: flex-start;
 }
