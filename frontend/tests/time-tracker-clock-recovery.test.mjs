@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {captureAttendanceGeo} from '../time-tracker-native.js';
 import {renderTimeTrackerNative} from '../time-tracker-ui.js';
-import {clockOutSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from '../time-tracker-clock-recovery.js';
+import {clockOutSnapshotOutcome,clockInSnapshotOutcome,attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from '../time-tracker-clock-recovery.js';
 
 const user='20000000-0000-4000-8000-000000000001';
 const workspace='10000000-0000-4000-8000-000000000001';
@@ -137,11 +137,50 @@ test('app makes one write attempt and reconciles ambiguous clock-out without aut
  const submit=app.slice(start,end);
  assert.equal((submit.match(/timeTracker\.commit\(/g)||[]).length,1);
  assert.match(submit,/const geo=await captureAttendanceGeo/);
- assert.match(submit,/if\(actionName==='clock-out'&&commitAttempted\)/);
+ assert.match(submit,/if\(commitAttempted\)/);
  assert.match(submit,/state\.ttClockPending=context/);
  assert.match(submit,/reconcileTimeTrackerClock\(snapshot\)/);
+ assert.match(app,/async function verifyTimeTrackerAttendance\(\)/);
  assert.match(app,/case 'tt-clock-verify'/);
- assert.match(app,/clockOutSnapshotOutcome\(snapshot,pending\)/);
+ assert.match(app,/attendanceSnapshotOutcome\(snapshot,pending\)/);
  assert.match(app,/state\.ttClockPending=null/);
  assert.match(app,/state\.ttBusy=true;state\.ttError='';state\.ttSuccess='';render\(\)/);
+});
+
+
+test('Clock-In signed reconciliation confirms only a new matching session and revision',()=>{
+ const old={id:'previous-record',status:'Completed',clockIn:started,
+  clockOut:ended,location:'Office-Base Duty',department:'HR'};
+ const fresh={id:'new-record',status:'Active',clockIn:'2026-11-05T01:00:00.000Z',
+  clockOut:null,location:'Office-Base Duty',department:'HR'};
+ const before={status:'VERIFIED_READ',access:{userId:user,workspaceId:workspace,boardId:board},
+  records:[old],active:null,revision:4};
+ const after={...before,records:[fresh,old],active:fresh,revision:5};
+ const pending={action:'clock-in',userId:user,workspaceId:workspace,boardId:board,
+  baselineRevision:4,previousRecordIds:['previous-record'],location:'Office-Base Duty',
+  department:'HR'};
+ assert.equal(clockInSnapshotOutcome(after,pending),'CONFIRMED');
+ assert.equal(attendanceSnapshotOutcome(after,pending),'CONFIRMED');
+ assert.equal(clockInSnapshotOutcome(before,pending),'NOT_COMMITTED');
+ assert.equal(clockInSnapshotOutcome({...after,revision:4},pending),'UNVERIFIED');
+ assert.equal(clockInSnapshotOutcome({...after,active:null},pending),'UNVERIFIED');
+ assert.equal(clockInSnapshotOutcome({...after,records:[{...fresh,location:'Offsite (Home)'},old],
+  active:{...fresh,location:'Offsite (Home)'}},pending),'UNVERIFIED');
+ for(const changed of [
+  {access:{...after.access,userId:'foreign'}},
+  {access:{...after.access,workspaceId:'foreign'}},
+  {access:{...after.access,boardId:'foreign'}},
+  {status:'UNAVAILABLE'},
+  {records:[old],active:null,revision:5},
+  {records:[fresh,fresh,old],active:fresh,revision:5}
+ ])assert.equal(clockInSnapshotOutcome({...after,...changed},pending),'UNVERIFIED');
+});
+
+test('attendance error feedback names Clock In and Clock Out correctly',()=>{
+ assert.match(attendanceClockError({code:'TT_GEO_DENIED'},{action:'clock-in'}),
+  /No clock-in request was sent/);
+ assert.match(attendanceClockError(new Error('network'),
+  {commitAttempted:true,action:'clock-in'}),/Clock-in confirmation is uncertain/);
+ assert.match(attendanceClockError(new Error('network'),
+  {commitAttempted:true,action:'clock-out'}),/Clock-out confirmation is uncertain/);
 });

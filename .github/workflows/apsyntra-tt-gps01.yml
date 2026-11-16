@@ -1,10 +1,17 @@
 name: APSYNTRA CP-TT-GPS01 — Disposable Atomic GPS Projection
 on:
+  pull_request:
+    paths:
+      - "sql/cp-tt-gps01-*.sql"
+      - "sql/tests/cp-tt-gps01-*.sql"
+      - "scripts/cp-tt-attendance-concurrency.sh"
+      - ".github/workflows/apsyntra-tt-gps01.yml"
   push:
     branches: [main]
     paths:
       - "sql/cp-tt-gps01-*.sql"
       - "sql/tests/cp-tt-gps01-*.sql"
+      - "scripts/cp-tt-attendance-concurrency.sh"
       - ".github/workflows/apsyntra-tt-gps01.yml"
   workflow_dispatch:
 permissions:
@@ -44,6 +51,8 @@ jobs:
             -f sql/tests/cp-tt-gps01-disposable-setup.sql \
             -f sql/tests/cp-tt-gps01-live-commit-baseline.sql \
             -f sql/cp-tt-gps01-atomic-board-projection.sql \
-            -f sql/tests/cp-tt-gps01-disposable-acceptance.sql \
+            -f sql/tests/cp-tt-gps01-disposable-acceptance.sql
+          scripts/cp-tt-attendance-concurrency.sh
+          psql -v ON_ERROR_STOP=1 \
             -f sql/cp-tt-gps01-fail-closed-rollback.sql \
             -f sql/tests/cp-tt-gps01-disposable-rollback.sql

@@ -16,10 +16,10 @@ const record={
  clockOut:null,location:'Office-Base Duty',department:'Information Technology',
  creditedMs:0
 };
-function render({active=null,records=[],busy=false,clockPending=false}={}){
+function render({active=null,records=[],busy=false,clockPending=false,clockPendingAction='clock-out'}={}){
  return renderTimeTrackerNative({
   result:{status:'VERIFIED_READ',access,records,active},
-  busy,clockPending,view:'clock',now:at
+  busy,clockPending,clockPendingAction,view:'clock',now:at
  });
 }
 
@@ -125,4 +125,12 @@ test('Pixi prioritizes the Clock dashboard and preserves single-instance teardow
  assert.match(pixi,/canRunTimeTrackerPixi/);
  assert.match(app,/mountTimeTrackerPixi\(root\)/);
  assert.doesNotMatch(pixi,/\.style\.|setAttribute\(['"]style|WebAssembly|new Worker/);
+});
+
+
+test('Uncertain Clock In uses the shared verify-only recovery control',()=>{
+ const pending=render({clockPending:true,clockPendingAction:'clock-in'});
+ assert.match(pending,/Clock-in status needs verification/);
+ assert.match(pending,/data-action="tt-clock-verify"/);
+ assert.doesNotMatch(pending,/name="tt-action" value="clock-in"/);
 });

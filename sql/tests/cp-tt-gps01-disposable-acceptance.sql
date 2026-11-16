@@ -91,6 +91,10 @@ BEGIN
   OR (SELECT count(*) FROM public.work_board_items)<>v_count
   OR (SELECT count(*) FROM public.timetracker_attendance_mutation_audit)<>v_audit THEN
   RAISE EXCEPTION 'Source write or audit survived failed projection'; END IF;
+ -- Restore the disposable schema after the intentional drift/rollback test so
+ -- the subsequent independent concurrency actor can exercise a valid projection.
+ UPDATE public.work_board_columns SET name='Attendance Ref'
+  WHERE board_id=board AND name='Attendance Reference (drift)';
 
  PERFORM set_config('request.jwt.claim.sub',foreign_actor::text,false);
  PERFORM set_config('request.jwt.claim.session_id','70000000-0000-4000-8000-000000000004',false);
