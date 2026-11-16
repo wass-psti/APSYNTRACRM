@@ -36,6 +36,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/select-experience.css",
  "frontend/action-menu-experience.css",
  "frontend/search-experience.css",
+ "frontend/global-search.css",
  "frontend/input-experience.css",
  "frontend/metrics-experience.css",
  "frontend/platform-sync.css",
