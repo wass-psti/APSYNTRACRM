@@ -32,6 +32,7 @@ on:
       - "scripts/cp-frt-wf05a-archive-disposable-acceptance.sh"
       - "sql/tests/cp-frt-wf05a-*"
       - "supabase/migrations/20261116104500_frt_wf05a_archive_recovery.sql"
+      - "supabase/migration-source-manifest.json"
       - "package.json"
       - "package-lock.json"
   workflow_dispatch:
