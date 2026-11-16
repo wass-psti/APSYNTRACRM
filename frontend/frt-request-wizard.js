@@ -57,6 +57,7 @@ export function renderFRTRequestWizard({companies=[],selectedCompany=''}={}){
  <div class="frt-wizard-field"><label for="frt-on-behalf-disabled">On Behalf Of <small>Optional</small></label><input id="frt-on-behalf-disabled" disabled placeholder="Proxy submission not connected"/></div>
  <p class="frt-wizard-helper">Submitting creates one signed financial request, with the initial filing status Not Filed.</p>
  </section></div>
+ <p class="frt-wizard-helper" data-frt-draft-status role="status" aria-live="polite">Draft autosaves locally every 10 seconds for 24 hours. Bank account numbers and QR files are not stored. Duplicate warnings are browser-local.</p>
  <div class="frt-wizard-counter" role="status" aria-live="polite">Step 1 of 3 · Basic Info</div>`;
 }
 export function enhanceFRTRequestWizard(view){
@@ -70,7 +71,7 @@ export function enhanceFRTRequestWizard(view){
  const back=document.createElement('button');back.type='button';back.className='secondary frt-wizard-back';back.textContent='‹ Back';back.hidden=true;
  const next=document.createElement('button');next.type='button';next.className='primary frt-wizard-next';next.textContent='Continue ›';
  footer.insertBefore(back,submit);footer.insertBefore(next,submit);
- let step=1,entry=1;
+ let step=1,entry=Math.max(1,view.querySelectorAll('[data-frt-expenses] .frt-wizard-expense').length);
  const show=()=>{
   for(const section of view.querySelectorAll('[data-frt-step]'))section.hidden=Number(section.dataset.frtStep)!==step;
   for(const indicator of view.querySelectorAll('[data-frt-step-indicator]')){
@@ -108,7 +109,7 @@ export function enhanceFRTRequestWizard(view){
    if(!validate()||step!==1)return;
    const host=view.querySelector('[data-frt-expenses]');
    if(host.children.length>=100)return;
-   entry++;host.insertAdjacentHTML('beforeend',category(entry));
+   entry=Math.max(entry,host.children.length)+1;host.insertAdjacentHTML('beforeend',category(entry));
    host.lastElementChild.querySelector('input')?.focus();
   }
   const remove=event.target.closest('[data-frt-remove-expense]');
@@ -122,7 +123,29 @@ export function enhanceFRTRequestWizard(view){
   if(step!==3||!validate()){event.preventDefault();event.stopImmediatePropagation();}
  },true);
  show();
- return {getStep:()=>step,validate};
+ return {getStep:()=>step,setStep(nextStep){if(Number.isInteger(nextStep)&&nextStep>=1&&nextStep<=3){step=nextStep;show();}},validate};
+}
+export function restoreFRTWizardDraft(view,draft,{companies=[]}={}){
+ const allowed=new Set(companies.map(company=>company?.code).filter(code=>typeof code==='string'));
+ if(!draft||!allowed.has(draft.companyCode))return false;
+ const form=view?.querySelector('#modal-form');
+ const host=view?.querySelector('[data-frt-expenses]');
+ if(!form||!host||!Array.isArray(draft.items)||draft.items.length<1||draft.items.length>100)return false;
+ const fields=['companyCode','dateNeeded','fundSource','checkNo','requestName','department',
+  'description','orderIntakeNo','recipientName','recipientBank'];
+ for(const name of fields){
+  const control=form.elements.namedItem(name);
+  if(control&&typeof draft[name]==='string')control.value=draft[name];
+ }
+ host.innerHTML=draft.items.map((item,index)=>category(index+1)).join('');
+ for(const [index,item] of draft.items.entries()){
+  const row=host.children[index];
+  const categoryField=row?.querySelector('[name="expenseCategory"]');
+  const amountField=row?.querySelector('[name="expenseAmount"]');
+  if(categoryField)categoryField.value=String(item?.category||'');
+  if(amountField)amountField.value=String(item?.amount||'');
+ }
+ return true;
 }
 export function collectFRTWizardRequest(formData){
  const categories=formData.getAll('expenseCategory').map(v=>String(v||'').trim());
