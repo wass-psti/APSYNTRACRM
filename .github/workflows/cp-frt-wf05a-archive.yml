@@ -18,7 +18,9 @@ on:
       - "package.json"
       - "package-lock.json"
   push:
-    branches: [feat/cp-frt-wf05a-archive-recovery-20261116]
+    branches:
+      - feat/cp-frt-wf05a-archive-recovery-20261116
+      - feat/cp-frt-wf05a-archive-recovery-main-20261116
     paths:
       - ".github/workflows/cp-frt-wf05a-archive.yml"
       - "frontend/app.js"
