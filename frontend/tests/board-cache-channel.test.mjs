@@ -184,10 +184,12 @@ test('overview board item totals use the refreshed signed board-list snapshot',a
 });
 test('all native global-search read RPCs preserve cached Board snapshots',async()=>{
  const names=[
-  'tl03_documents_page','frt_bootstrap','frt_board_list_safe',
+  'tl03_documents_page','tl03_document_read','tl03_document_history','frt_bootstrap','frt_board_list_safe',
   'frt_board_dashboard_safe','frt_liquidation_aging_company',
   'frt_restricted_request_detail','frt_ic_snapshot',
   'list_module_state','timetracker_ot_snapshot','timetracker_attendance_capabilities',
+  'timetracker_board_private_snapshot','timetracker_team_directory_snapshot',
+  'timetracker_gps_snapshot','timetracker_monitor_snapshot',
   'has_module_access','list_module_directory','fueltrack_v3_read',
   'tool_traceability_list_tools','tool_traceability_list_requests',
   'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',

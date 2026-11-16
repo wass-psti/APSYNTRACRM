@@ -134,7 +134,7 @@ const BOARD_READ_RPC=new Set([
  'wm_import_extended_refs_read',
  'apsyntra_crm_my_effective_access',
  'apsyntra_role_is_admin','apsyntra_role_is_bootstrap',
- 'tl03_documents_page',
+ 'tl03_documents_page','tl03_document_read','tl03_document_history',
  'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
  'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read',
  // Existing application read contracts used by concurrent native search.
@@ -143,6 +143,8 @@ const BOARD_READ_RPC=new Set([
  'charter_dispatch',
  'has_module_access','list_module_directory','list_module_state',
  'timetracker_ot_snapshot','timetracker_attendance_capabilities',
+ 'timetracker_board_private_snapshot','timetracker_team_directory_snapshot',
+ 'timetracker_gps_snapshot','timetracker_monitor_snapshot',
  // Existing read-only native application search and detail contracts.
  'tool_traceability_list_tools','tool_traceability_list_requests','tool_traceability_list_items',
  'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',
