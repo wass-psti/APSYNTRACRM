@@ -171,6 +171,7 @@ import {startActionMenuExperience,enhanceActionContextMenu} from './action-menu-
 import {startSearchExperience} from './search-experience.js';
 import {startGlobalSearch} from './global-search.js';
 import {createNativeSearchAdapter,createNativeSearchRegistry,createSnapshotReader} from './global-search-adapters.js';
+import {createRemainingNativeSearchAdapters,readNativeSearchRecordDetail,renderNativeSearchRecordDetail} from './global-search-native-apps.js';
 import {startInputExperience} from './input-experience.js';
 import {startMetricsExperience} from './metrics-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
@@ -370,7 +371,8 @@ const fuelTransNativeSearchAdapter=createNativeSearchAdapter({
   return board?.id?'#/boards/'+board.id+'/fueltrans/ticket/'+encodeURIComponent(row.id):'#/boards';}
 });
 
-const nativeSearchRegistry=createNativeSearchRegistry([tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter,fuelTransNativeSearchAdapter]);
+const remainingNativeSearchAdapters=createRemainingNativeSearchAdapters({auth,api:db,getBoards:()=>state.boards});
+const nativeSearchRegistry=createNativeSearchRegistry([tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter,fuelTransNativeSearchAdapter,...remainingNativeSearchAdapters]);
 const tradeLinkAttachments=new TradeLinkAttachmentClient({auth,api:db});
 const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
@@ -3794,6 +3796,20 @@ function navigateGlobalSearchResult(item){
   else location.hash=target;
   return;
  }
+ if(item.native===true&&['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(item.applicationId)&&
+   item.recordId){
+  const module=BOARD_MODULES.find(entry=>entry.key===item.applicationId);
+  const board=module&&state.boards.find(entry=>entry.name===module.name&&entry.status!=='trashed');
+  if(!board?.id){notice(new Error('The application board is not available in this workspace.'));return;}
+  pendingNativeSearchSelection={applicationId:item.applicationId,recordId:item.recordId,
+   navigationScope:item.navigationScope||'',boardId:board.id,userId:auth.userId,
+   workspaceId:state.context?.workspace_id};
+  const target='#/boards/'+board.id+'/native/'+item.applicationId+'/'+encodeURIComponent(item.recordId)+
+   (item.navigationScope?'/'+encodeURIComponent(item.navigationScope):'');
+  if(location.hash===target)void onRoute().catch(error=>notice(error));
+  else location.hash=target;
+  return;
+ }
  if(item.native===true&&item.applicationId==='tradelink'&&
    item.recordId&&typeof item.recordId==='string'){
   pendingNativeSearchSelection={applicationId:'tradelink',recordId:item.recordId,
@@ -3845,6 +3861,43 @@ async function openPendingGlobalSearchItem(boardId){
  }
 }
 
+async function openPendingNativeSearchRecord(boardId){
+ const pending=pendingNativeSearchSelection;
+ if(!pending||!['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(pending.applicationId)||
+    pending.boardId!==boardId)return;
+ const serial=routeSerial,userId=pending.userId,workspaceId=pending.workspaceId;
+ const module=BOARD_MODULES.find(item=>item.key===pending.applicationId);
+ const current=()=>pendingNativeSearchSelection===pending&&serial===routeSerial&&auth.isSignedIn&&auth.userId===userId&&
+  state.context?.user_id===userId&&state.context?.workspace_id===workspaceId&&
+  state.view==='board'&&state.boardId===boardId&&state.board?.board?.id===boardId&&
+  state.board?.board?.name===module?.name;
+ if(!current()){if(pendingNativeSearchSelection===pending)pendingNativeSearchSelection=null;return;}
+ try{
+  const record=await readNativeSearchRecordDetail({applicationId:pending.applicationId,
+   recordId:pending.recordId,navigationScope:pending.navigationScope,auth,api:db,workspaceId});
+  if(!current()){if(pendingNativeSearchSelection===pending)pendingNativeSearchSelection=null;return;}
+  if(!record||typeof record!=='object'||Array.isArray(record))throw new Error('The native record is unavailable.');
+  const title=record.name||record.reference||record.po_number||record.payload?.name||
+   record.payload?.assetTag||record.employeeName||record.entity_type||record.period||'Application record';
+  const subtitle=record.status||record.requestStatus||record.approvalStatus||record.bookingStatus||'';
+  hideModal();modal=document.createElement('div');
+  modal.className='modal-backdrop native-search-detail-backdrop';
+  modal.innerHTML='<aside class="native-search-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="native-search-detail-title">'+
+   '<header class="native-search-detail-header"><div><span class="label-top">'+e(module?.name||'Application')+' / Native record</span>'+
+   '<h2 id="native-search-detail-title">'+e(title)+'</h2>'+(subtitle?'<p>'+e(subtitle)+'</p>':'')+'</div>'+
+   '<button type="button" class="modal-close" data-dismiss aria-label="Close record details">×</button></header>'+
+   '<div class="native-search-detail-scroll">'+renderNativeSearchRecordDetail(record,{escape:e})+'</div>'+
+   '<footer class="native-search-detail-footer"><span class="muted">Read-only native application record</span><button type="button" class="secondary" data-dismiss>Close</button></footer></aside>';
+  document.body.append(modal);
+  modal.addEventListener('click',event=>{if(event.target===modal||event.target.closest('[data-dismiss]'))hideModal();});
+  modal.querySelector('[data-dismiss]')?.focus();
+  if(pendingNativeSearchSelection===pending)pendingNativeSearchSelection=null;
+ }catch(error){
+  if(pendingNativeSearchSelection===pending)pendingNativeSearchSelection=null;
+  if(current())notice(error);
+ }
+}
+
 async function onRoute(){
  closeTradeLinkSavedDocumentOutput();
  syncFuelTrans({container:null});
@@ -3877,6 +3930,7 @@ async function onRoute(){
   if(defaultFuelTrans)history.replaceState(null,'','#/boards/'+parts[1]+'/fueltrans');
   const requested=parts[2]==='sourcing'&&parts[1]===MATERIAL_SOURCING_BOARD_ID?'sourcing':
     parts[2]==='issues'?'issues':
+    parts[2]==='native'?'items':
     parts[2]==='fueltrans'&&state.boards.some(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='fueltrans')?'fueltrans':
     parts[2]==='fueltrack'&&parts[1]===FUELTRACK_V3_ID&&
       state.boards.some(b=>b.id===FUELTRACK_V3_ID&&b.name==='FuelTrack+ v3')?'fueltrack':
@@ -3914,9 +3968,16 @@ async function onRoute(){
   const signedDraftRoute=requested==='tradelink'&&state.tradeLinkSection==='drafts';
   const editId=signedDraftRoute&&parts[4]==='edit'&&validUuid(parts[5])?
    parts[5]:null;
+  const nativeApp=['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(parts[3])?parts[3]:null;
+  if(parts[2]==='native'&&nativeApp&&parts[4]){
+   let recordId='';try{recordId=decodeURIComponent(parts[4]);}catch{}
+   if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:nativeApp,recordId,
+    navigationScope:parts[5]||'',boardId:parts[1],userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }
   await loadBoard(parts[1],requested,
    signedDraftRoute&&parts[4]!=='edit'?(directModule?parts[3]:parts[4]):null,editId);
   await openPendingGlobalSearchItem(parts[1]);
+  await openPendingNativeSearchRecord(parts[1]);
   return;
  }
  pendingGlobalSearchItem=null;

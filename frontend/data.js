@@ -136,7 +136,12 @@ const BOARD_READ_RPC=new Set([
  'apsyntra_role_is_admin','apsyntra_role_is_bootstrap',
  'tl03_documents_page',
  'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
- 'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read'
+ 'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read',
+ // Existing read-only native application search and detail contracts.
+ 'tool_traceability_list_tools','tool_traceability_list_requests','tool_traceability_list_items',
+ 'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',
+ 'material_request_hub_list_requests','material_request_hub_get_request',
+ 'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot'
 ]);
 // Exact, reviewed write contracts only. Partial-prefix regular expressions
 // can silently miss full RPC names, preventing successful writes from

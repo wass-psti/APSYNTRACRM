@@ -8,7 +8,7 @@
 import {normalizeGlobalSearchQuery,GLOBAL_SEARCH_MAX_RESULTS} from './global-search.js';
 
 export const NATIVE_SEARCH_QUERY_LIMIT=120;
-export const NATIVE_SEARCH_ADAPTER_LIMIT=12;
+export const NATIVE_SEARCH_ADAPTER_LIMIT=20;
 export const NATIVE_SEARCH_RESULT_LIMIT=GLOBAL_SEARCH_MAX_RESULTS;
 
 const clean=(value,max=180)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);

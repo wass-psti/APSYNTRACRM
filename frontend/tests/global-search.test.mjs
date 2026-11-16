@@ -234,7 +234,7 @@ test('rejects unsafe native adapter contracts and invalid navigation destination
 test('wires TradeLink to its existing bounded signed document search and native detail route',()=>{
  const adapters=readFileSync('frontend/global-search-adapters.js','utf8');
  const tradeLink=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(app,/createNativeSearchRegistry\(\[tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter,fuelTransNativeSearchAdapter\]\)/);
+ assert.match(app,/createNativeSearchRegistry\(\[tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter,fuelTransNativeSearchAdapter,\.\.\.remainingNativeSearchAdapters\]\)/);
  assert.match(app,/tradeLinkDraftWorkspace\.searchPage\(/);
  assert.match(app,/tradeLinkDraftWorkspace\.assignedDocuments\(bounded\)/);
  assert.match(app,/applicationId==='tradelink'/);
@@ -253,7 +253,7 @@ test('wires TradeLink to its existing bounded signed document search and native 
  assert.match(app,/Promise\.allSettled\(\[/);
  assert.match(tradeLink,/async searchPage\(\{filters=initialTradeLinkDraftListFilters\(\),cursor=null,limit=50\}/);
  assert.match(tradeLink,/limit must be 1–50/);
- assert.match(adapters,/NATIVE_SEARCH_ADAPTER_LIMIT=12/);
+ assert.match(adapters,/NATIVE_SEARCH_ADAPTER_LIMIT=20/);
 });
 
 test('binds FRT, FuelTrack+ and TimeTracker through existing signed native clients and detail views',()=>{
@@ -274,6 +274,22 @@ test('binds FRT, FuelTrack+ and TimeTracker through existing signed native clien
  assert.match(app,/ttLogExpandedIds=\[pending\.recordId\]/);
  assert.match(app,/ttOtExpandedRequestIds=\[pending\.recordId\]/);
  assert.match(overtime,/expandedRequestIds\.includes\(r\.id\)/);
+});
+
+test('binds remaining native applications to their existing signed read APIs and exact record routes',()=>{
+ const native=readFileSync('frontend/global-search-native-apps.js','utf8');
+ for(const rpc of ['tool_traceability_list_tools','tool_traceability_list_requests','toolbox_issues_list_issues',
+  'material_request_hub_list_requests','employee_evaluation_management_snapshot','employee_evaluation_my_snapshot'])
+  assert.ok(native.includes(rpc),'missing native read contract '+rpc);
+ for(const table of ['order_intake_orders','aps_aims_entities'])assert.ok(native.includes(table));
+ assert.match(native,/p_path:'\/items\/query'/);
+ assert.match(native,/p_path:'\/items\/'\+recordId/);
+ assert.match(app,/openPendingNativeSearchRecord\(parts\[1\]\)/);
+ assert.match(app,/applicationId:item\.applicationId,recordId:item\.recordId/);
+ assert.match(app,/native-search-detail-drawer/);
+ assert.match(data,/'tool_traceability_list_tools'.*'tool_traceability_list_requests'/s);
+ assert.match(data,/'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot'/);
+ assert.match(css,/native-search-detail-fields/);
 });
 
 test('responsive palette and exact-commit Pages asset manifests include new assets',()=>{
