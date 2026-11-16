@@ -35,11 +35,11 @@ function normalizeRequest(data){
  const trim=(v,max=250)=>typeof v==='string'&&v.trim().length<=max?v.trim():'';
  const title=trim(data?.title),department=trim(data?.department),
   fundSource=trim(data?.fundSource),description=trim(data?.description,2500),
-  dateNeeded=data?.dateNeeded;
+  requestDate=data?.requestDate,dateNeeded=data?.dateNeeded;
  const rawItems=Array.isArray(data?.items)?data.items:
   [{category:data?.category,amount:data?.amount}];
  if(title.length<3||department.length<2||fundSource.length<2||
-   description.length<3||!validFRTDate(dateNeeded)||
+   description.length<3||!validFRTDate(requestDate)||!validFRTDate(dateNeeded)||
    rawItems.length<1||rawItems.length>100)
   fail('Complete the fund request, date, and expense lines.');
  let total=0;
@@ -65,7 +65,7 @@ function normalizeRequest(data){
   if(data?.[key]!==undefined&&String(data[key]??'').trim().length>180)
    fail('Optional request details exceed the supported length.');
  }
- return {title,department,fundSource,description,dateNeeded,items,
+ return {title,department,fundSource,description,requestDate,dateNeeded,items,
   recipientName,recipientAccount,
   ...Object.fromEntries(Object.entries(optional).filter(([,v])=>v!==''))};
 }
