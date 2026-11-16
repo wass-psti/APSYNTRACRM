@@ -292,6 +292,7 @@ let invitationAcceptanceStatus='';
 let modal=null;
 let globalSearchController=null;
 let pendingGlobalSearchItem=null;
+let pendingNativeSearchSelection=null;
 const trashPermanentDelete=new BoardTrashPermanentDeleteClient(db);
 const trashBoardSelection=new Set();
 let routeSerial=0;
@@ -3591,6 +3592,15 @@ async function loadFRTFinanceDetail(requestId,seq=routeSerial){
 function navigateGlobalSearchResult(item){
  pendingGlobalSearchItem=null;
  if(!item)return;
+ if(item.native===true&&item.applicationId==='tradelink'&&
+   item.recordId&&typeof item.recordId==='string'){
+  pendingNativeSearchSelection={applicationId:'tradelink',recordId:item.recordId,
+   userId:auth.userId,workspaceId:state.context?.workspace_id};
+  const target='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
+  if(location.hash===target)void onRoute().catch(error=>notice(error));
+  else location.hash=target;
+  return;
+ }
  if(item.type==='record'&&validUuid(item.boardId)&&validUuid(item.itemId)){
   pendingGlobalSearchItem={boardId:item.boardId,itemId:item.itemId,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
