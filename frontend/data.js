@@ -171,6 +171,15 @@ const BOARD_MUTATION_RPC=new Set([
  'apsyntra_role_configuration_propose','update_own_profile'
 ]);
 
+// Domain writes outside the board data model must not flush unrelated board
+// snapshots or publish board mutation broadcasts.
+const NON_BOARD_DOMAIN_RPC=new Set([
+ 'fm1_service_status_v1','fm1_list_tickets_v1','fm1_ticket_detail_v1',
+ 'fm1_create_ticket_v1','fm1_transition_ticket_v1','fm1_record_milestone_v1',
+ 'fm1_record_priority_v1','fm1_request_hold_v1','fm1_validate_hold_v1',
+ 'fm1_end_hold_v1'
+]);
+
 export class DomainApi {
  constructor(auth){
   this.auth=auth;
@@ -345,7 +354,7 @@ export class DomainApi {
    const mutates=BOARD_MUTATION_RPC.has(name);
    const knownRead=BOARD_READ_RPC.has(name);
    // Unknown calls may mutate: preserve the original fail-closed behavior.
-   if(!mutates&&!knownRead)this.invalidateBoardCache();
+   if(!mutates&&!knownRead&&!NON_BOARD_DOMAIN_RPC.has(name))this.invalidateBoardCache();
    const request=this.auth.authorized('/rest/v1/rpc/'+name,{method:'POST',body:args,...options});
    if(!mutates)return request;
    return Promise.resolve(request).then(result=>{

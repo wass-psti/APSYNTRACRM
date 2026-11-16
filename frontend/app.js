@@ -1216,7 +1216,7 @@ function render(){
   busy:invitationAcceptanceBusy,status:invitationAcceptanceStatus
  }));
  else if(state.view==='boards')shell(boardsPage());
- else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id});}
+ else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id,api:db});}
  else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());

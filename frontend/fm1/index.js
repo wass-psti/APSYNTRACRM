@@ -15,3 +15,9 @@ export {
   parseFm1Intake,
   createFm1LocalDraft,
 } from "./domain/intake-schema.js";
+
+export {
+  Fm1ApiClient,
+  createFm1IdempotencyKey,
+  validateFm1Ticket,
+} from "./api-client.js";

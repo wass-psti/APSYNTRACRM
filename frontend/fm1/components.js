@@ -1,7 +1,47 @@
 import { FM1_CONTRACT, FM1_NAVIGATION, FM1_SLA_TARGETS } from "./constants.js";
 import { fm1Store } from "./state.js";
-import { listFm1Drafts, saveFm1Draft, deleteFm1Draft } from "./draft-store.js";
-import { createFm1LocalDraft, parseFm1Intake } from "./domain/intake-schema.js";
+import { listFm1Drafts, deleteFm1Draft } from "./draft-store.js";
+import { parseFm1Intake } from "./domain/intake-schema.js";
+import { Fm1ApiClient, createFm1IdempotencyKey } from "./api-client.js";
+
+const NEXT_STATUSES = Object.freeze({
+  New: ["Triaged", "Duplicate", "Cancelled"],
+  Triaged: ["Assigned", "Duplicate", "Cancelled"],
+  Assigned: ["In Progress", "Waiting", "Duplicate", "Cancelled"],
+  "In Progress": ["Waiting", "Restored", "Duplicate", "Cancelled"],
+  Waiting: ["In Progress", "Restored", "Duplicate", "Cancelled"],
+  Restored: ["Resolution Review", "Reopened", "Duplicate", "Cancelled"],
+  "Resolution Review": ["Closed", "Reopened", "Duplicate", "Cancelled"],
+  Closed: ["Reopened"],
+  Reopened: [
+    "Triaged",
+    "Assigned",
+    "In Progress",
+    "Waiting",
+    "Restored",
+    "Duplicate",
+    "Cancelled",
+  ],
+  Duplicate: [],
+  Cancelled: [],
+});
+
+const statusTone = (status) => {
+  if (["Closed", "Restored"].includes(status)) return "success";
+  if (["Cancelled", "Duplicate"].includes(status)) return "neutral";
+  if (["Waiting", "Resolution Review"].includes(status)) return "warning";
+  if (["In Progress", "Assigned"].includes(status)) return "success";
+  return "neutral";
+};
+
+const metricLabel = (metric) =>
+  ({
+    human_response: "Human response",
+    engineering_start: "Engineering start",
+    restoration: "Restoration",
+    agreed_plan: "Agreed plan",
+    public_update: "Public update",
+  })[metric] || metric;
 
 const escapeHtml = (value) =>
   String(value ?? "").replace(
@@ -79,10 +119,11 @@ class Fm1Application {
     return this.userId + "::" + this.workspaceId;
   }
 
-  constructor(root, { userId, workspaceId } = {}) {
+  constructor(root, { userId, workspaceId, api } = {}) {
     this.root = root;
     this.userId = userId || "unscoped";
     this.workspaceId = workspaceId || "unscoped";
+    this.api = api ? new Fm1ApiClient(api) : null;
     this.handleClick = this.handleClick.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.unsubscribe = null;
@@ -100,12 +141,23 @@ class Fm1Application {
         busy: false,
         notice: "",
         error: "",
+        serviceStatus: null,
+        serverTickets: [],
+        serverTotal: 0,
+        serverLoading: false,
+        serverBusy: false,
+        serverError: "",
+        selectedTicketId: null,
+        selectedTicketDetail: null,
+        pendingIntake: null,
       });
     }
     this.root.addEventListener("click", this.handleClick);
     this.root.addEventListener("submit", this.handleSubmit);
     this.unsubscribe = fm1Store.subscribe(() => this.render());
     if (!fm1Store.get().draftsLoaded) void this.hydrateDrafts();
+    if (this.api) void this.loadServerData();
+    else updateStore({ serverError: "FM1 server connection is unavailable." });
   }
 
   disconnect() {
@@ -136,21 +188,112 @@ class Fm1Application {
     }
   }
 
+  async loadServerData() {
+    if (!this.api || !this.workspaceId || this.workspaceId === "unscoped")
+      return;
+    const scopeKey = this.scopeKey;
+    const isCurrentScope = () =>
+      this.root?.isConnected === true &&
+      this.scopeKey === scopeKey &&
+      fm1Store.get().scopeKey === scopeKey;
+    updateStore({ serverLoading: true, serverError: "" });
+    try {
+      const [serviceStatus, queue] = await Promise.all([
+        this.api.serviceStatus(this.workspaceId),
+        this.api.listTickets({
+          workspaceId: this.workspaceId,
+          limit: 50,
+          offset: 0,
+        }),
+      ]);
+      if (!isCurrentScope()) return;
+      updateStore({
+        serviceStatus,
+        serverTickets: queue.items,
+        serverTotal: queue.total,
+        serverLoading: false,
+        serverError: "",
+      });
+    } catch (error) {
+      if (!isCurrentScope()) return;
+      updateStore({
+        serverLoading: false,
+        serverError:
+          error?.message || "Unable to load the FM1 incident service.",
+      });
+    }
+  }
+
+  async loadTicket(ticketId) {
+    if (!this.api || !ticketId) return;
+    const scopeKey = this.scopeKey;
+    const isCurrentScope = () =>
+      this.root?.isConnected === true &&
+      this.scopeKey === scopeKey &&
+      fm1Store.get().scopeKey === scopeKey;
+    updateStore({
+      view: "ticket-detail",
+      selectedTicketId: ticketId,
+      selectedTicketDetail: null,
+      serverLoading: true,
+      serverError: "",
+    });
+    try {
+      const detail = await this.api.ticketDetail(this.workspaceId, ticketId);
+      if (!isCurrentScope() || fm1Store.get().selectedTicketId !== ticketId)
+        return;
+      updateStore({ selectedTicketDetail: detail, serverLoading: false });
+    } catch (error) {
+      if (!isCurrentScope()) return;
+      updateStore({
+        serverLoading: false,
+        serverError: error?.message || "Unable to load this FM1 ticket.",
+      });
+    }
+  }
+
+  async refreshTicketAndQueue(ticketId) {
+    await this.loadServerData();
+    if (ticketId) await this.loadTicket(ticketId);
+  }
+
   handleClick(event) {
     const tab = event.target.closest("[data-fm1-view]");
     if (tab) {
-      updateStore({ view: tab.dataset.fm1View, notice: "", error: "" });
+      updateStore({
+        view: tab.dataset.fm1View,
+        notice: "",
+        error: "",
+        serverError: "",
+        selectedTicketId: null,
+        selectedTicketDetail: null,
+      });
       return;
     }
     const action = event.target.closest("[data-fm1-action]");
     if (!action) return;
     const kind = action.dataset.fm1Action;
     if (kind === "new-ticket") {
-      updateStore({ view: "new-ticket", notice: "", error: "" });
+      updateStore({
+        view: "new-ticket",
+        notice: "",
+        error: "",
+        serverError: "",
+      });
     } else if (kind === "back-to-tickets") {
-      updateStore({ view: "tickets", notice: "", error: "" });
+      updateStore({
+        view: "tickets",
+        notice: "",
+        error: "",
+        selectedTicketId: null,
+        selectedTicketDetail: null,
+      });
     } else if (kind === "refresh-drafts") {
       void this.hydrateDrafts();
+    } else if (kind === "refresh-server") {
+      void this.loadServerData();
+    } else if (kind === "view-ticket") {
+      void this.loadTicket(action.dataset.id);
     } else if (kind === "delete-draft") {
       void this.removeDraft(action.dataset.id);
     }
@@ -185,29 +328,14 @@ class Fm1Application {
   }
 
   async handleSubmit(event) {
-    const form = event.target.closest("[data-fm1-intake-form]");
+    const form = event.target.closest(
+      "[data-fm1-intake-form], [data-fm1-transition-form], [data-fm1-milestone-form]",
+    );
     if (!form) return;
     event.preventDefault();
     if (!form.reportValidity()) return;
-
-    const data = new FormData(form);
-    const parsed = parseFm1Intake({
-      requesterName: data.get("requesterName"),
-      callbackNumber: data.get("callbackNumber"),
-      subject: data.get("subject"),
-      description: data.get("description"),
-      priority: data.get("priority"),
-      productionImpact: data.get("productionImpact"),
-      productionStopped: data.get("productionStopped") === "on",
-      safetyConcern: data.get("safetyConcern") === "on",
-      channel: data.get("channel"),
-      assetReference: data.get("assetReference") || "",
-    });
-    if (!parsed.ok) {
-      fm1Store.setKey(
-        "error",
-        parsed.errors[0]?.message || "Check the intake details.",
-      );
+    if (!this.api) {
+      updateStore({ serverError: "FM1 server connection is unavailable." });
       return;
     }
 
@@ -216,29 +344,127 @@ class Fm1Application {
       this.root?.isConnected === true &&
       this.scopeKey === scopeKey &&
       fm1Store.get().scopeKey === scopeKey;
-    fm1Store.setKey("busy", true);
-    fm1Store.setKey("error", "");
-    fm1Store.setKey("notice", "");
-    try {
-      const draft = createFm1LocalDraft(parsed.data, { scopeKey });
-      await saveFm1Draft(draft);
-      const drafts = await listFm1Drafts(scopeKey);
-      if (!isCurrentScope()) return;
-      updateStore({
-        view: "tickets",
-        drafts,
-        busy: false,
-        error: "",
-        notice:
-          "Saved as a browser-local draft. No live incident was submitted.",
+
+    if (form.matches("[data-fm1-intake-form]")) {
+      const data = new FormData(form);
+      const parsed = parseFm1Intake({
+        requesterName: data.get("requesterName"),
+        callbackNumber: data.get("callbackNumber"),
+        subject: data.get("subject"),
+        description: data.get("description"),
+        priority: data.get("priority"),
+        productionImpact: data.get("productionImpact"),
+        productionStopped: data.get("productionStopped") === "on",
+        safetyConcern: data.get("safetyConcern") === "on",
+        channel: data.get("channel"),
+        assetReference: data.get("assetReference") || "",
       });
+      if (!parsed.ok) {
+        fm1Store.setKey(
+          "error",
+          parsed.errors[0]?.message || "Check the intake details.",
+        );
+        return;
+      }
+      const fingerprint = JSON.stringify(parsed.data);
+      const pending = fm1Store.get().pendingIntake;
+      const key =
+        pending?.fingerprint === fingerprint
+          ? pending.key
+          : createFm1IdempotencyKey();
+      updateStore({
+        pendingIntake: { key, fingerprint },
+        serverBusy: true,
+        error: "",
+        serverError: "",
+        notice: "",
+      });
+      try {
+        const receipt = await this.api.createTicket(
+          this.workspaceId,
+          parsed.data,
+          key,
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          pendingIntake: null,
+          serverBusy: false,
+          view: "ticket-detail",
+          selectedTicketId: receipt.ticket.id,
+          selectedTicketDetail: null,
+          notice:
+            "Incident recorded as " +
+            receipt.ticket.ticket_number +
+            ". SLA activation: " +
+            receipt.sla_activation_state +
+            ".",
+        });
+        await this.refreshTicketAndQueue(receipt.ticket.id);
+      } catch (error) {
+        if (!isCurrentScope()) return;
+        updateStore({
+          serverBusy: false,
+          serverError:
+            error?.message ||
+            "Ticket submission could not be confirmed. Retry using the same intake details.",
+        });
+      }
+      return;
+    }
+
+    const ticket = fm1Store.get().selectedTicketDetail?.ticket;
+    if (!ticket) {
+      updateStore({
+        serverError: "Reload the ticket before recording a change.",
+      });
+      return;
+    }
+
+    updateStore({ serverBusy: true, serverError: "", notice: "" });
+    try {
+      if (form.matches("[data-fm1-transition-form]")) {
+        const data = new FormData(form);
+        const nextStatus = String(data.get("nextStatus") || "");
+        const reason = String(data.get("reason") || "").trim();
+        const evidence =
+          String(data.get("closureSummary") || "").trim() || null;
+        await this.api.transitionTicket(
+          this.workspaceId,
+          ticket,
+          nextStatus,
+          reason,
+          nextStatus === "Closed" ? evidence : null,
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice: "Ticket status updated to " + nextStatus + ".",
+          serverBusy: false,
+        });
+      } else {
+        const data = new FormData(form);
+        const metric = String(data.get("metric") || "");
+        const evidence = String(data.get("evidence") || "").trim();
+        const clientOperator = String(data.get("clientOperator") || "").trim();
+        const humanConfirmed = data.get("humanConfirmed") === "on";
+        await this.api.recordMilestone(this.workspaceId, ticket, {
+          metric,
+          channel: String(data.get("channel") || "portal"),
+          evidence,
+          humanConfirmed,
+          clientOperator,
+        });
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice: metricLabel(metric) + " milestone recorded.",
+          serverBusy: false,
+        });
+      }
+      await this.refreshTicketAndQueue(ticket.id);
     } catch (error) {
       if (!isCurrentScope()) return;
       updateStore({
-        busy: false,
-        error:
-          error?.message ||
-          "The draft could not be saved. No incident was submitted.",
+        serverBusy: false,
+        serverError: error?.message || "The FM1 change could not be confirmed.",
       });
     }
   }
@@ -302,9 +528,9 @@ class Fm1Application {
         </section>
         <section class="fm1-panel fm1-quick-panel">
           <span class="fm1-eyebrow">INTAKE</span><h2>Record a service request</h2>
-          <p>Prepare an intake draft with impact, priority, callback and diagnostic context.</p>
-          <button type="button" class="fm1-primary-button" data-fm1-action="new-ticket">＋ New ticket intake</button>
-          <p class="fm1-muted">Drafts remain local until the server-backed ticket intake contract is connected.</p>
+          <p>Submit a service incident to the server-backed FM1 ticket queue.</p>
+          <button type="button" class="fm1-primary-button" data-fm1-action="new-ticket">＋ New ticket</button>
+          <p class="fm1-muted">The server assigns the ticket number and authoritative receipt timestamp.</p>
         </section>
       </div>
       <section class="fm1-panel">
@@ -340,25 +566,166 @@ class Fm1Application {
   }
 
   renderTickets(state) {
+    const rows = state.serverTickets
+      .map(
+        (ticket) => `<tr>
+      <td><button type="button" class="fm1-link-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">${escapeHtml(ticket.ticket_number)}</button></td>
+      <td><strong>${escapeHtml(ticket.subject)}</strong><small>${escapeHtml(ticket.requester_name)}</small></td>
+      <td>${statusBadge(ticket.priority_effective, ticket.priority_effective === "P1" ? "danger" : ticket.priority_effective === "P2" ? "warning" : "neutral")}</td>
+      <td>${statusBadge(ticket.status, statusTone(ticket.status))}</td>
+      <td>${escapeHtml(formatDate(ticket.received_at))}</td>
+      <td>${statusBadge(ticket.sla_activation_state || "NOT_ACTIVE", ticket.sla_activation_state === "ACTIVE" ? "success" : "warning")}</td>
+      <td><button type="button" class="fm1-quiet-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">Open</button></td>
+    </tr>`,
+      )
+      .join("");
     return `<section class="fm1-page-section">
-      <div class="fm1-section-heading"><div><span class="fm1-eyebrow">SERVICE DESK</span><h2>Ticket intake & queue</h2>
-        <p>Server-backed ticket records will appear here after the FM1 service contract is integrated.</p></div>
-        <button type="button" class="fm1-primary-button" data-fm1-action="new-ticket">＋ New ticket intake</button></div>
+      <div class="fm1-section-heading"><div><span class="fm1-eyebrow">SERVICE DESK</span><h2>Authoritative ticket queue</h2>
+        <p>${state.serverTotal} server ticket(s) · latest 50 loaded</p></div>
+        <div class="fm1-inline-actions"><button type="button" class="fm1-quiet-button" data-fm1-action="refresh-server" ${state.serverLoading ? "disabled" : ""}>↻ Refresh</button>
+        <button type="button" class="fm1-primary-button" data-fm1-action="new-ticket">＋ New ticket</button></div></div>
       ${state.notice ? `<p class="fm1-notice" role="status">${escapeHtml(state.notice)}</p>` : ""}
-      <div class="fm1-info-banner"><strong>Local draft workspace</strong><span>Items below are not submitted incidents. They have no server ticket ID, SLA receipt timestamp, assignment, notification, or contractual clock.</span></div>
-      ${this.renderDrafts(state.drafts)}
+      ${state.serverError ? `<p class="fm1-error" role="alert">${escapeHtml(state.serverError)}</p>` : ""}
+      ${state.serverLoading && !state.serverTickets.length ? '<div class="fm1-empty-state">Loading authoritative FM1 tickets…</div>' : ""}
+      ${
+        !state.serverLoading && !state.serverTickets.length
+          ? `<div class="fm1-empty-state"><span aria-hidden="true">▤</span>
+        <h3>No server tickets yet</h3><p>New incidents submitted from this workspace will receive an FM1 ticket number and immutable receipt event.</p>
+        <button type="button" class="fm1-primary-button" data-fm1-action="new-ticket">＋ Create first ticket</button></div>`
+          : ""
+      }
+      ${
+        state.serverTickets.length
+          ? `<div class="fm1-table-wrap"><table class="fm1-table fm1-ticket-table">
+        <thead><tr><th>Ticket</th><th>Incident</th><th>Priority</th><th>Status</th><th>Received</th><th>SLA</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`
+          : ""
+      }
+      <section class="fm1-panel fm1-local-drafts-panel">
+        <div class="fm1-panel-heading"><div><span class="fm1-eyebrow">UNSUBMITTED WORK</span><h2>Browser-local drafts</h2></div>
+          <span class="fm1-inline-note">${state.drafts.length} saved</span></div>
+        <p class="fm1-muted">Drafts remain separate from authoritative incidents and do not start SLA measurement.</p>
+        ${this.renderDrafts(state.drafts)}
+      </section>
+    </section>`;
+  }
+
+  renderTicketDetail(state) {
+    const detail = state.selectedTicketDetail;
+    if (!detail) {
+      return `<section class="fm1-page-section"><p>${state.serverLoading ? "Loading ticket details…" : "Ticket details are unavailable."}</p>
+        <button type="button" class="fm1-quiet-button" data-fm1-action="back-to-tickets">← Back to tickets</button>
+        ${state.serverError ? `<p class="fm1-error" role="alert">${escapeHtml(state.serverError)}</p>` : ""}</section>`;
+    }
+    const ticket = detail.ticket;
+    const obligations = detail.obligations
+      .map(
+        (item) => `<tr>
+      <td>${escapeHtml(metricLabel(item.metric))}${item.sequence > 1 ? " #" + item.sequence : ""}</td>
+      <td>${escapeHtml(item.priority)}</td>
+      <td>${item.due_at ? escapeHtml(formatDate(item.due_at)) : "Not calculated"}</td>
+      <td>${statusBadge(item.status, item.status === "breached" ? "danger" : item.status === "met" ? "success" : "warning")}</td>
+      <td>${escapeHtml(item.decision_state)}</td>
+    </tr>`,
+      )
+      .join("");
+    const events = detail.events
+      .map(
+        (item) => `<tr>
+      <td>${escapeHtml(formatDate(item.occurred_at))}</td>
+      <td>${escapeHtml(item.event_type)}</td>
+      <td>${escapeHtml(item.source)}</td>
+      <td>${escapeHtml(JSON.stringify(item.payload || {}))}</td>
+    </tr>`,
+      )
+      .join("");
+    const audit = detail.audit
+      .map(
+        (item) => `<tr>
+      <td>${escapeHtml(item.sequence)}</td>
+      <td>${escapeHtml(item.event_type)}</td>
+      <td><code>${escapeHtml(item.event_hash.slice(0, 16))}…</code></td>
+      <td>${item.previous_hash ? `<code>${escapeHtml(item.previous_hash.slice(0, 16))}…</code>` : "Genesis"}</td>
+    </tr>`,
+      )
+      .join("");
+    const nextStatuses = NEXT_STATUSES[ticket.status] || [];
+    return `<section class="fm1-page-section">
+      <div class="fm1-section-heading"><div><span class="fm1-eyebrow">SERVER INCIDENT · ${escapeHtml(ticket.ticket_number)}</span>
+        <h2>${escapeHtml(ticket.subject)}</h2><p>${escapeHtml(ticket.requester_name)} · Received ${escapeHtml(formatDate(ticket.received_at))}</p></div>
+        <button type="button" class="fm1-quiet-button" data-fm1-action="back-to-tickets">← Back to queue</button></div>
+      ${state.notice ? `<p class="fm1-notice" role="status">${escapeHtml(state.notice)}</p>` : ""}
+      ${state.serverError ? `<p class="fm1-error" role="alert">${escapeHtml(state.serverError)}</p>` : ""}
+      <section class="fm1-panel">
+        <div class="fm1-panel-heading"><div><span class="fm1-eyebrow">INCIDENT LIFECYCLE</span><h2>${escapeHtml(ticket.ticket_number)}</h2></div>
+          ${statusBadge(ticket.status, statusTone(ticket.status))}</div>
+        <div class="fm1-contract-grid">
+          <div><span>Priority</span><strong>${escapeHtml(ticket.priority_effective)} <small>requested ${escapeHtml(ticket.priority_requested)}</small></strong></div>
+          <div><span>Production impact</span><strong>${escapeHtml(ticket.production_impact)}</strong></div>
+          <div><span>Production stopped</span><strong>${ticket.production_stopped ? "Yes" : "No"}</strong></div>
+          <div><span>Safety concern</span><strong>${ticket.safety_concern ? "Yes" : "No"}</strong></div>
+          <div><span>Reporting channel</span><strong>${escapeHtml(ticket.reporting_channel)}</strong></div>
+          <div><span>Asset reference</span><strong>${escapeHtml(ticket.asset_reference || "Not supplied")}</strong></div>
+          <div><span>SLA activation</span><strong>${escapeHtml(ticket.sla_activation_state)}</strong></div>
+          <div><span>Revision</span><strong>${escapeHtml(ticket.revision)}</strong></div>
+        </div>
+        <p class="fm1-muted">${escapeHtml(ticket.description)}</p>
+      </section>
+      <section class="fm1-panel"><div class="fm1-panel-heading"><div><span class="fm1-eyebrow">SLA OBLIGATIONS</span><h2>Server-calculated deadlines</h2></div></div>
+        <div class="fm1-table-wrap"><table class="fm1-table"><thead><tr><th>Metric</th><th>Priority</th><th>Due</th><th>State</th><th>Calculation</th></tr></thead>
+          <tbody>${obligations || '<tr><td colspan="5">No obligations recorded.</td></tr>'}</tbody></table></div>
+      </section>
+      ${
+        nextStatuses.length
+          ? `<section class="fm1-panel"><span class="fm1-eyebrow">LIFECYCLE ACTION</span><h2>Update ticket status</h2>
+        <form class="fm1-form" data-fm1-transition-form>
+          <div class="fm1-form-grid"><label>Next status<select name="nextStatus">${nextStatuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}</select></label>
+            <label class="fm1-field-wide">Reason<input name="reason" required minlength="3" maxlength="1000" placeholder="Operational reason for this transition" /></label>
+            <label class="fm1-field-wide">Closure summary <span class="fm1-optional">Required only when closing</span><textarea name="closureSummary" minlength="8" maxlength="4000" rows="3" placeholder="Resolution and handover summary"></textarea></label></div>
+          <div class="fm1-form-footer"><p>Updates use the current server revision. Concurrent changes require a refresh before retrying.</p>
+            <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>${state.serverBusy ? "Updating…" : "Update status"}</button></div>
+        </form>
+      </section>`
+          : ""
+      }
+      ${
+        !["Closed", "Cancelled", "Duplicate"].includes(ticket.status)
+          ? `<section class="fm1-panel"><span class="fm1-eyebrow">OPERATIONAL MILESTONE</span><h2>Record verified event</h2>
+        <form class="fm1-form" data-fm1-milestone-form>
+          <div class="fm1-form-grid"><label>Milestone<select name="metric">
+            <option value="human_response">Human response</option><option value="engineering_start">Engineering start</option>
+            <option value="public_update">Public update</option><option value="restoration">Restoration</option></select></label>
+            <label>Evidence channel<select name="channel"><option value="portal">Portal</option><option value="email">Email</option><option value="telephone">Telephone</option></select></label>
+            <label class="fm1-field-wide">Evidence / work performed<textarea name="evidence" required minlength="8" maxlength="4000" rows="3" placeholder="Record the actual action and supporting evidence"></textarea></label>
+            <label>Client operator <span class="fm1-optional">Required for restoration</span><input name="clientOperator" maxlength="120" placeholder="Client operator name" /></label>
+          </div>
+          <div class="fm1-checkbox-row"><label><input type="checkbox" name="humanConfirmed" /> Human milestone confirmed by the reporting party / Client operator</label></div>
+          <div class="fm1-form-footer"><p>Server receipt time is authoritative. Backdated or unconfirmed milestones are retained for review and do not satisfy the SLA.</p>
+            <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>${state.serverBusy ? "Recording…" : "Record milestone"}</button></div>
+        </form>
+      </section>`
+          : ""
+      }
+      <section class="fm1-panel"><span class="fm1-eyebrow">IMMUTABLE EVENT HISTORY</span><h2>Incident events</h2>
+        <div class="fm1-table-wrap"><table class="fm1-table"><thead><tr><th>Occurred</th><th>Event</th><th>Source</th><th>Recorded detail</th></tr></thead>
+          <tbody>${events || '<tr><td colspan="4">No events recorded.</td></tr>'}</tbody></table></div>
+      </section>
+      <section class="fm1-panel"><span class="fm1-eyebrow">AUDIT INTEGRITY</span><h2>Append-only audit chain</h2>
+        <div class="fm1-table-wrap"><table class="fm1-table"><thead><tr><th>Sequence</th><th>Event</th><th>SHA-256</th><th>Previous hash</th></tr></thead>
+          <tbody>${audit || '<tr><td colspan="4">No audit events recorded.</td></tr>'}</tbody></table></div>
+      </section>
     </section>`;
   }
 
   renderIntake(state) {
     return `<section class="fm1-page-section">
       <div class="fm1-section-heading"><div><span class="fm1-eyebrow">RAPID INTAKE</span><h2>New service request</h2>
-        <p>Prepare the minimum incident information and save it as a local draft.</p></div>
+        <p>Submit the incident to the authoritative FM1 service record.</p></div>
         <button type="button" class="fm1-quiet-button" data-fm1-action="back-to-tickets">← Back to tickets</button></div>
       ${state.error ? `<p class="fm1-error" role="alert">${escapeHtml(state.error)}</p>` : ""}
       <form class="fm1-form" data-fm1-intake-form>
         <div class="fm1-form-context"><span>Site <strong>FM1 · ${escapeHtml(FM1_CONTRACT.location)}</strong></span>
-          <span>Receipt timestamp <strong>Assigned by server after integration</strong></span></div>
+          <span>Receipt timestamp <strong>Assigned by the server on submission</strong></span></div>
         <div class="fm1-form-grid">
           <label>Requester name<input name="requesterName" autocomplete="name" required minlength="2" maxlength="120" /></label>
           <label>Callback number<input name="callbackNumber" type="tel" autocomplete="tel" required minlength="7" maxlength="32" /></label>
@@ -382,8 +749,8 @@ class Fm1Application {
           <label><input type="checkbox" name="productionStopped" /> Production is currently stopped</label>
           <label><input type="checkbox" name="safetyConcern" /> Safe-condition concern exists</label>
         </div>
-        <div class="fm1-form-footer"><p>Saving creates a browser-local draft only. It does not send a notification, create a live ticket, or start SLA measurement.</p>
-          <button type="submit" class="fm1-primary-button" ${state.busy ? "disabled" : ""}>${state.busy ? "Saving…" : "Save local draft"}</button></div>
+        <div class="fm1-form-footer"><p>Submitting creates a server-backed incident and immutable receipt event. SLA clocks remain inactive until contract and service readiness are confirmed.</p>
+          <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>${state.serverBusy ? "Submitting…" : "Submit incident"}</button></div>
       </form>
     </section>`;
   }
@@ -436,14 +803,22 @@ class Fm1Application {
     const title =
       view === "new-ticket"
         ? "New ticket intake"
-        : FM1_NAVIGATION.find((item) => item.key === view)?.label ||
-          "FM1 Ticketing";
+        : view === "ticket-detail"
+          ? state.selectedTicketDetail?.ticket?.ticket_number ||
+            "Ticket details"
+          : FM1_NAVIGATION.find((item) => item.key === view)?.label ||
+            "FM1 Ticketing";
     this.root.innerHTML = `<section class="fm1-app" aria-label="FM1 SLA Ticketing application">
       <header class="fm1-app-header">
         <div><span class="fm1-eyebrow">WATCHDOG AUTOMATION · BIOTECH FARMS</span>
           <h1>FM1 <span>SLA Ticketing</span></h1>
           <p>Remote-support service workspace · ${escapeHtml(FM1_CONTRACT.location)}</p></div>
-        <div class="fm1-header-status">${statusBadge("Awaiting acceptance", "warning")}
+        <div class="fm1-header-status">${statusBadge(
+          state.serviceStatus?.contract_active
+            ? "SLA service active"
+            : "Awaiting acceptance",
+          state.serviceStatus?.contract_active ? "success" : "warning",
+        )}
           <span>2027 contract configuration</span></div>
       </header>
       <nav class="fm1-tabs" aria-label="FM1 application sections">
@@ -454,17 +829,20 @@ class Fm1Application {
       </div>
       ${state.notice && view !== "tickets" ? `<p class="fm1-notice" role="status">${escapeHtml(state.notice)}</p>` : ""}
       ${state.error && view !== "new-ticket" ? `<p class="fm1-error" role="alert">${escapeHtml(state.error)}</p>` : ""}
+      ${state.serverError && !["tickets", "ticket-detail"].includes(view) ? `<p class="fm1-error" role="alert">${escapeHtml(state.serverError)}</p>` : ""}
       ${
         view === "overview"
           ? this.renderOverview(state)
           : view === "tickets"
             ? this.renderTickets(state)
-            : view === "new-ticket"
-              ? this.renderIntake(state)
-              : this.renderModule(view)
+            : view === "ticket-detail"
+              ? this.renderTicketDetail(state)
+              : view === "new-ticket"
+                ? this.renderIntake(state)
+                : this.renderModule(view)
       }
       <footer class="fm1-app-footer"><span>APSYNTRA CRM · FM1 foundation</span>
-        <span>Asia/Manila (UTC+8) · Browser-local drafts only</span></footer>
+        <span>Asia/Manila (UTC+8) · Server-backed incident records</span></footer>
     </section>`;
   }
 }

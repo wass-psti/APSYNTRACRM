@@ -23959,6 +23959,69 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   }
 }
 
+/* Server-backed ticket queue and lifecycle detail */
+.fm1-inline-actions {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fm1-link-button {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--fm1-accent-dark);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fm1-link-button:hover {
+  color: var(--fm1-ink);
+}
+.fm1-link-button:focus-visible,
+.fm1-quiet-button:focus-visible,
+.fm1-primary-button:focus-visible {
+  outline: 2px solid var(--fm1-accent);
+  outline-offset: 3px;
+}
+.fm1-ticket-table {
+  min-width: 900px;
+}
+.fm1-ticket-table td strong,
+.fm1-ticket-table td small {
+  display: block;
+}
+.fm1-ticket-table td small {
+  color: var(--fm1-muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.fm1-local-drafts-panel {
+  margin-top: 18px;
+}
+.fm1-table td code {
+  font-size: 10px;
+}
+.fm1-table td {
+  max-width: 420px;
+  overflow-wrap: anywhere;
+}
+.fm1-table td:first-child {
+  max-width: none;
+}
+@container (max-width: 520px) {
+  .fm1-inline-actions {
+    width: 100%;
+  }
+  .fm1-inline-actions > button {
+    flex: 1 1 auto;
+  }
+}
+
 /* frontend/fueltrans-native.css */
 @media print{
  body:has(#fueltrans-native-host) .sidebar,

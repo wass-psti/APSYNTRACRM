@@ -8,6 +8,15 @@ let state = Object.freeze({
   busy: false,
   notice: "",
   error: "",
+  serviceStatus: null,
+  serverTickets: [],
+  serverTotal: 0,
+  serverLoading: false,
+  serverBusy: false,
+  serverError: "",
+  selectedTicketId: null,
+  selectedTicketDetail: null,
+  pendingIntake: null,
 });
 
 function notify() {
