@@ -454,6 +454,8 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   html+='<section class="panel" aria-label="FRT request details"><div class="panel-header"><h3>Request details</h3>'+
    '<button type="button" class="secondary" data-action="frt-finance-detail-close">Close details</button></div>'+
    '<div class="panel-body">'+renderFRTWorkflowTimeline(d)+bankInfo+bankAction+
+   '<div class="frt-voucher-entry"><button type="button" class="secondary" data-action="frt-voucher-open" data-request-id="'+
+    escape(selectedRequestId)+'">View Voucher</button></div>'+
    (d.financeApproved&&!d.closed&&d.liquidationStatus!=='APPROVED'&&d.status!=='REJECTED'?
     '<button type="button" class="primary" data-action="frt-liquidation-open" data-request-id="'+
     escape(selectedRequestId)+'">Open signed liquidation</button>':'')+
