@@ -67,11 +67,14 @@ export const FM1_SLA_TARGETS = Object.freeze({
 export const FM1_NAVIGATION = Object.freeze([
   { key: "overview", label: "Overview" },
   { key: "tickets", label: "Tickets" },
+  { key: "duty", label: "Duty" },
+  { key: "approvals", label: "Approvals" },
   { key: "assets", label: "Assets & I/O" },
   { key: "preventive", label: "Preventive" },
   { key: "engineering", label: "Engineering" },
   { key: "commercial", label: "Commercial" },
   { key: "reports", label: "Reports" },
+  { key: "administration", label: "Administration" },
 ]);
 
 export const FM1_DRAFT_DB = Object.freeze({

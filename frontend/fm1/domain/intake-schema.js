@@ -1,94 +1,45 @@
-const PRIORITIES = new Set(["P1", "P2", "P3", "P4"]);
-const IMPACTS = new Set(["critical", "degraded", "no-impact"]);
-const CHANNELS = new Set(["portal", "email", "telephone"]);
+import { z } from "zod";
 
-function normalizeText(value) {
-  return String(value ?? "").trim();
-}
-
-function validateText(value, { field, label, min, max, errors }) {
-  const normalized = normalizeText(value);
-  if (normalized.length < min) {
-    errors.push({
-      field,
-      message: label + " must contain at least " + min + " characters.",
-    });
-  } else if (normalized.length > max) {
-    errors.push({
-      field,
-      message: label + " must not exceed " + max + " characters.",
-    });
-  }
-  return normalized;
-}
+export const fm1IntakeSchema = z.object({
+  requesterName: z
+    .string()
+    .trim()
+    .min(2, "Requester name must contain at least 2 characters.")
+    .max(120, "Requester name must not exceed 120 characters."),
+  callbackNumber: z
+    .string()
+    .trim()
+    .min(7, "Callback number must contain at least 7 characters.")
+    .max(32, "Callback number must not exceed 32 characters."),
+  subject: z
+    .string()
+    .trim()
+    .min(4, "Subject must contain at least 4 characters.")
+    .max(160, "Subject must not exceed 160 characters."),
+  description: z
+    .string()
+    .trim()
+    .min(10, "Description must contain at least 10 characters.")
+    .max(4000, "Description must not exceed 4000 characters."),
+  priority: z.enum(["P1", "P2", "P3", "P4"]),
+  productionImpact: z.enum(["critical", "degraded", "no-impact"]),
+  productionStopped: z.boolean().default(false),
+  safetyConcern: z.boolean().default(false),
+  channel: z.enum(["portal", "email", "telephone"]),
+  assetReference: z.string().trim().max(160).default(""),
+});
 
 export function parseFm1Intake(values = {}) {
-  const errors = [];
-  const data = {
-    requesterName: validateText(values.requesterName, {
-      field: "requesterName",
-      label: "Requester name",
-      min: 2,
-      max: 120,
-      errors,
-    }),
-    callbackNumber: validateText(values.callbackNumber, {
-      field: "callbackNumber",
-      label: "Callback number",
-      min: 7,
-      max: 32,
-      errors,
-    }),
-    subject: validateText(values.subject, {
-      field: "subject",
-      label: "Subject",
-      min: 4,
-      max: 160,
-      errors,
-    }),
-    description: validateText(values.description, {
-      field: "description",
-      label: "Description",
-      min: 10,
-      max: 4000,
-      errors,
-    }),
-    priority: normalizeText(values.priority),
-    productionImpact: normalizeText(values.productionImpact),
-    productionStopped: values.productionStopped === true,
-    safetyConcern: values.safetyConcern === true,
-    channel: normalizeText(values.channel),
-    assetReference: normalizeText(values.assetReference),
+  const result = fm1IntakeSchema.safeParse(values);
+  if (result.success) return { ok: true, data: result.data, errors: [] };
+  return {
+    ok: false,
+    data: null,
+    errors: result.error.issues.map((issue) => ({
+      field: issue.path.join("."),
+      message: issue.message,
+    })),
   };
-
-  if (!PRIORITIES.has(data.priority)) {
-    errors.push({
-      field: "priority",
-      message: "Select a valid proposed priority.",
-    });
-  }
-  if (!IMPACTS.has(data.productionImpact)) {
-    errors.push({
-      field: "productionImpact",
-      message: "Select a valid production impact.",
-    });
-  }
-  if (!CHANNELS.has(data.channel)) {
-    errors.push({
-      field: "channel",
-      message: "Select a valid reporting channel.",
-    });
-  }
-  if (data.assetReference.length > 160) {
-    errors.push({
-      field: "assetReference",
-      message: "Asset reference must not exceed 160 characters.",
-    });
-  }
-
-  return errors.length
-    ? { ok: false, data: null, errors }
-    : { ok: true, data, errors: [] };
 }
 
 export function createFm1LocalDraft(

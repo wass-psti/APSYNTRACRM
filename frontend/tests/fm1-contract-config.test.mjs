@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FM1_CONTRACT, FM1_SLA_TARGETS } from "../fm1/constants.js";
+import {
+  FM1_CONTRACT,
+  FM1_SLA_TARGETS,
+  FM1_NAVIGATION,
+} from "../fm1/constants.js";
 
 test("FM1 contract baseline matches the FDS initial configuration", () => {
   assert.equal(FM1_CONTRACT.client, "BIOTECH Farms, Inc.");
@@ -28,4 +32,22 @@ test("contract and P3/P4 update targets remain inactive/proposed until acceptanc
   assert.equal(FM1_CONTRACT.executionStatus, "AWAITING_ACCEPTANCE");
   assert.equal(FM1_SLA_TARGETS.P3.publicUpdate.proposed, true);
   assert.equal(FM1_SLA_TARGETS.P4.publicUpdate.proposed, true);
+});
+
+test("FM1 navigation exposes the FDS duty, approval and administration workspaces", () => {
+  const keys = FM1_NAVIGATION.map((item) => item.key);
+  for (const key of [
+    "overview",
+    "tickets",
+    "duty",
+    "approvals",
+    "assets",
+    "preventive",
+    "engineering",
+    "commercial",
+    "reports",
+    "administration",
+  ]) {
+    assert.ok(keys.includes(key), "missing FM1 section: " + key);
+  }
 });

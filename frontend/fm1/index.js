@@ -10,4 +10,8 @@ export {
   calculateSlaDeadline,
   calculateSlaElapsed,
 } from "./domain/sla-clock.js";
-export { parseFm1Intake, createFm1LocalDraft } from "./domain/intake-schema.js";
+export {
+  fm1IntakeSchema,
+  parseFm1Intake,
+  createFm1LocalDraft,
+} from "./domain/intake-schema.js";
