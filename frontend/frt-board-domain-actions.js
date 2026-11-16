@@ -9,6 +9,7 @@ const spec=Object.freeze({
  'transfer':{label:'Confirm General Manager verification',payload:'reference'},
  'transfer/revoke':{label:'Revoke General Manager verification',payload:'reason'},
  'close':{label:'Close financial request',payload:'none'},
+ 'archive':{label:'Archive request',payload:'none'},
  'liquidation/approve':{label:'Approve submitted liquidation',payload:'none'}
 });
 export const frtActionSpec=code=>Object.prototype.hasOwnProperty.call(spec,code)?spec[code]:null;
