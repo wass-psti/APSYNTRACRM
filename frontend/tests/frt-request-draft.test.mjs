@@ -22,6 +22,7 @@ class MemoryStorage {
 
 const draft = {
   companyCode: 'WASS',
+  requestDate: '2026-11-17',
   dateNeeded: '2026-11-30',
   fundSource: 'WASS Operating Account',
   checkNo: 'CHK-100',
@@ -77,7 +78,7 @@ test('expired, malformed and unsupported drafts are discarded without throwing',
 
 test('restoration only applies a company in the signed bootstrap roster and rebuilds expense rows', () => {
   const controls = Object.fromEntries([
-    'companyCode', 'dateNeeded', 'fundSource', 'checkNo', 'requestName',
+    'companyCode', 'requestDate', 'dateNeeded', 'fundSource', 'checkNo', 'requestName',
     'department', 'description', 'orderIntakeNo', 'recipientName', 'recipientBank'
   ].map(name => [name, {value: ''}]));
   const form = {elements: {namedItem: name => controls[name] || null}};
@@ -100,6 +101,7 @@ test('restoration only applies a company in the signed bootstrap roster and rebu
 
   assert.equal(restoreFRTWizardDraft(view, draft, {companies}), true);
   assert.equal(controls.companyCode.value, 'WASS');
+  assert.equal(controls.requestDate.value, '2026-11-17');
   assert.equal(controls.requestName.value, 'November supplies');
   assert.equal(controls.recipientName.value, 'Example Supplier');
   assert.equal(host.children.length, 2);
