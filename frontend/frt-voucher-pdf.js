@@ -1,8 +1,5 @@
 /** Real A4 PDF generation for FRT vouchers. Loaded only when a user requests output. */
-import pdfMake from 'pdfmake/build/pdfmake.min.js';
-import vfs from 'pdfmake/build/vfs_fonts.js';
-
-pdfMake.addVirtualFileSystem(vfs);
+import pdfMake from './vendor/frt-pdf-engine.js';
 
 const cents=value=>{
  const raw=String(value??'0');

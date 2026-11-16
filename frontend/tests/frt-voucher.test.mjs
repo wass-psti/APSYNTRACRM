@@ -160,11 +160,16 @@ test('voucher feature uses the narrow RPC and does not introduce a new counter o
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const data=readFileSync(new URL('../data.js',import.meta.url),'utf8');
  const ui=readFileSync(new URL('../frt-finance-ui.js',import.meta.url),'utf8');
+ const pdfModule=readFileSync(new URL('../frt-voucher-pdf.js',import.meta.url),'utf8');
+ const pdfVendor=readFileSync(new URL('../vendor/frt-pdf-engine.js',import.meta.url),'utf8');
  const migration=readFileSync(new URL('../../supabase/migrations/20261116172414_frt_restricted_voucher_projection.sql',import.meta.url),'utf8');
  assert.match(app,/loadFRTVoucher/);
  assert.match(app,/data-frt-voucher-reprint/);
  assert.match(ui,/data-action="frt-voucher-open"/);
  assert.match(data,/frt_restricted_request_detail/);
+ assert.match(pdfModule,/from '\.\/vendor\/frt-pdf-engine\.js'/);
+ assert.doesNotMatch(pdfModule,/from ['\"]pdfmake\//);
+ assert.doesNotMatch(pdfVendor,/^\\s*import\\s/m);
  assert.match(migration,/private\.frt_current_role\(p_workspace_id\)/);
  assert.doesNotMatch(migration,/CREATE TABLE|CREATE FUNCTION public\\.frt_voucher_snapshot|frt_voucher_counters.*(INSERT|UPDATE)|ALTER TABLE/i);
  assert.doesNotMatch(app,/api\.rpc\('frt_get_request'/);

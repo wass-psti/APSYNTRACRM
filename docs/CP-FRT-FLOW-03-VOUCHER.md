@@ -11,7 +11,7 @@
 - Uses existing request number, company, payee, bank, department, fund source, request description, order/check reference, and expense line data.
 - Expense lines are grouped by persisted category with exact-cent subtotals and a grand total.
 - Reconciliation is checked against the persisted request total. A mismatch prevents PDF output.
-- Added real A4 PDF output using pdfmake 0.3.14 with embedded Roboto fonts, repeating company/voucher headers, repeated expense table headers, page numbering, multi-page flow, peso formatting, approval records, and bank execution evidence.
+- Added real A4 PDF output using pdfmake 0.3.14 with embedded Roboto fonts, repeating company/voucher headers, repeated expense table headers, page numbering, multi-page flow, peso formatting, approval records, and bank execution evidence. The browser engine is generated as a local ESM vendor asset by the npm predev, prebuild, and pretest lifecycle scripts; regenerate it with npm run build:frt-pdf-engine when the pinned pdfmake version changes.
 - Added PDF preview, download, print, and reprint actions in the existing request details interface.
 - Reprint performs a fresh signed read of the existing request detail and bank snapshot, then generates a fresh PDF while requiring the original voucher number to remain unchanged.
 - Added responsive voucher preview styling and focused unit/browser acceptance tests.
