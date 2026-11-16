@@ -7990,8 +7990,11 @@ async function action(name,button){
    let title='',body='';
    if(section==='new'){
     title='New Fund Request';
+    const requestClock=new Date();
+    const requestDate=[requestClock.getFullYear(),String(requestClock.getMonth()+1).padStart(2,'0'),
+     String(requestClock.getDate()).padStart(2,'0')].join('-');
     body=renderFRTRequestWizard({companies:state.frtFinance.companies,
-     selectedCompany:companyCode});
+     selectedCompany:companyCode,requestDate});
    }else if(section==='activity'){
     title='Activity Log';
     body='<p class="note">Signed activity history for '+e(company.name)+'</p>'+
