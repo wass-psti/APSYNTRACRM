@@ -1584,6 +1584,13 @@
       "sha256": "ae9a034c9782b7959fd8486b1dcde30cd3e4a43f204123788ecc4d05a7f758e6"
     },
     {
+      "version": "20261116055815",
+      "name": "cp_fm1_core_02_server_incident_sla",
+      "file": "20261116055815_cp_fm1_core_02_server_incident_sla.sql",
+      "bytes": 86552,
+      "sha256": "f4559e03a0e04af5421a5087afc275e3f4b39fd14853ffae00f72b7d0caf3625"
+    },
+    {
       "version": "20261116062331",
       "name": "cp_crm_global_search_02b_prefix_index_lookup",
       "file": "20261116062331_cp_crm_global_search_02b_prefix_index_lookup.sql",
@@ -1603,6 +1610,20 @@
       "file": "20261116070000_cp_tl_legacy_numbering_dates_aging.sql",
       "bytes": 27146,
       "sha256": "9b790874f123d5617d0465ff9b892c9a847e3a66c79975e88da238c388a96cf8"
+    },
+    {
+      "version": "20261116082518",
+      "name": "cp_fm1_core_03_operational_workflows",
+      "file": "20261116082518_cp_fm1_core_03_operational_workflows.sql",
+      "bytes": 30496,
+      "sha256": "9892ea7fe4f8e2c5969a37011def36eca45a48a2eddacbd703ebab579f58ed5b"
+    },
+    {
+      "version": "20261116092055",
+      "name": "cp_fm1_core_04_operational_ui_reporting_warnings",
+      "file": "20261116092055_cp_fm1_core_04_operational_ui_reporting_warnings.sql",
+      "bytes": 33587,
+      "sha256": "4543f4e98ad744a7febc9e8a2586aa6911e662eace12a488946b8b4e4eca4cac"
     }
   ]
 }
