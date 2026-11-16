@@ -9,15 +9,16 @@ const ws='22222222-2222-4222-8222-222222222222',
 const companies=[{code:'WASS',name:'Watchdog Automation Sales & Services'},
  {code:'WAO',name:'Watchdog Automation OPC'}];
 test('reference wizard exposes 3 semantic stages and only authorized escaped company choices',()=>{
- const html=renderFRTRequestWizard({companies:[...companies,{code:'INVALID<script>',name:'Unsafe'}],selectedCompany:'WASS'});
+ const html=renderFRTRequestWizard({companies:[...companies,{code:'INVALID<script>',name:'Unsafe'}],selectedCompany:'WASS',requestDate:'2026-11-17'});
  for(const text of ['New Fund Request','Basic Info','Recipient','Details','Company Account',
-  'Fund Source Account','Date Needed','Expense Categories','Add Category','Check #',
+  'Fund Source Account','Request Date','Date Needed','Expense Categories','Add Category','Check #',
   'Payee / Supplier','Select Saved Account','Account Name','Bank','Account Number',
   'QR Code','Expense Description','Order / Project No.','On Behalf Of','Not Filed'])
   if(text!=='New Fund Request')assert.ok(html.includes(text),text);
  assert.match(html,/value="WASS" selected/);
  assert.match(html,/data-frt-step="2"[^>]*hidden/);
  assert.match(html,/data-frt-step="3"[^>]*hidden/);
+ assert.match(html,/name="requestDate" type="date" required value="2026-11-17"/);
  assert.match(html,/name="expenseCategory" required/);
  assert.match(html,/name="expenseAmount" required/);
  assert.doesNotMatch(html,/INVALID<script>|<script>/);
@@ -32,13 +33,14 @@ test('no false saved-account or QR upload persistence is advertised',()=>{
 test('form payload maps every category and supported optional field, excluding unsupported controls',()=>{
  const fd=new FormData();
  for(const [key,value] of Object.entries({companyCode:'WASS',requestName:'November supplies',
-  department:'Operations',fundSource:'Company funds',dateNeeded:'2026-11-30',
+  department:'Operations',fundSource:'Company funds',requestDate:'2026-11-17',dateNeeded:'2026-11-30',
   description:'Project materials purchase',recipientName:'ABC Supplier',
   recipientBank:'Example Bank',recipientAccount:'123456789',
   checkNo:'CHK-101',orderIntakeNo:'OI-101'}))fd.set(key,value);
  fd.append('expenseCategory','Office supplies');fd.append('expenseAmount','180.50');
  fd.append('expenseCategory','Fuel');fd.append('expenseAmount','250');
  const data=collectFRTWizardRequest(fd);
+ assert.equal(data.requestDate,'2026-11-17');
  assert.deepEqual(data.items,[{category:'Office supplies',amount:'180.50'},
   {category:'Fuel',amount:'250'}]);
  assert.equal(data.recipientAccount,'123456789');
@@ -61,7 +63,7 @@ test('multi-expense and recipient fields reach original RPC once and verify Not 
    throw Error(name);
   }};
  const data={title:'Project expense',department:'Operations',fundSource:'Cash fund',
-  description:'Two project categories',dateNeeded:'2026-11-30',recipientName:'Supplier A',
+  description:'Two project categories',requestDate:'2026-11-17',dateNeeded:'2026-11-30',recipientName:'Supplier A',
   recipientBank:'Bank A',recipientAccount:'AC123',checkNo:'C001',orderIntakeNo:'OI002',
   items:[{category:'Materials',amount:'120.50'}, {category:'Freight',amount:'180.25'}]};
  const result=await createSignedFRTRequest({auth,api,workspaceId:ws,companyCode:'WASS',
@@ -94,7 +96,7 @@ test('server-side duplicate detection returns a warning and requires explicit re
    throw Error(name);
   }};
  const data={title:'Project expense',department:'Operations',fundSource:'Cash fund',
-  description:'Two project categories',dateNeeded:'2026-11-30',recipientName:'Supplier A',
+  description:'Two project categories',requestDate:'2026-11-17',dateNeeded:'2026-11-30',recipientName:'Supplier A',
   recipientAccount:'AC123',items:[{category:'Materials',amount:'120.50'}]};
  const warning=await createSignedFRTRequest({auth,api,workspaceId:ws,
   companyCode:'WASS',role:'GENERAL_MANAGER',data});
@@ -112,7 +114,7 @@ test('beneficiary and destination account are required before any RPC',async()=>
  const auth={userId:user,async getVerifiedUser(){return {id:user};}};
  const api={async context(){calls++;return {};},async rpc(){calls++;}};
  const base={title:'Project expense',department:'Operations',fundSource:'Cash fund',
-  description:'Two project categories',dateNeeded:'2026-11-30',
+  description:'Two project categories',requestDate:'2026-11-17',dateNeeded:'2026-11-30',
   items:[{category:'Materials',amount:'120.50'}]};
  for(const patch of [{recipientName:'',recipientAccount:'AC123'},
   {recipientName:'Supplier A',recipientAccount:''}]){
@@ -126,7 +128,7 @@ test('invalid or excessive expense rows are denied before touching RPC',async()=
  const api={async context(){return{};},async rpc(){called++;}};
  const auth={userId:user,async getVerifiedUser(){return{id:user};}};
  const base={title:'Request',department:'Finance',fundSource:'Cash',
-  description:'Office purchase',dateNeeded:'2026-11-30'};
+  description:'Office purchase',requestDate:'2026-11-17',dateNeeded:'2026-11-30'};
  for(const items of [[],[{category:'',amount:'2'}],
   [{category:'A',amount:'-2'}],[{category:'A',amount:'1.001'}],
   Array.from({length:101},()=>({category:'A',amount:'1'}))]){
