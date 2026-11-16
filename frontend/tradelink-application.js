@@ -7,6 +7,7 @@ import {isTradeLinkBoard,tradeLinkSetupStatus,TRADELINK_BOARD_ID} from './tradel
 import {renderTradeLinkActivity} from './tradelink-activity.js';
 import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
+import {renderTradeLinkAnalytics} from './tradelink-analytics.js';
 import {renderTradeLinkDraftWorkspace,renderTradeLinkDocumentRepository,
  initialTradeLinkDraftView,tradeLinkDraftEditHref} from './tradelink-draft-workspace.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from './tradelink-domain-client.js';
@@ -32,7 +33,7 @@ export const TRADELINK_SOURCE_MODULES=Object.freeze([
   readiness:'Supplier identity, priced items, purchase terms, Account Manager review, and final approval routing must be ready.'})
 ]);
 export const TRADELINK_SOURCE_WORKFLOW_STATES=Object.freeze([
- 'Draft','Submitted','Under Review','Revision Required',
+ 'Draft','Submitted','For Approval','Under Review','Revision Required',
  'Approved','Rejected','Completed','Cancelled'
 ]);
 // Original quotation commercial stages are independent of board Quote Status options.
@@ -44,7 +45,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
 }[c]));
 const modules=new Set(TRADELINK_SOURCE_MODULES.map(m=>m.key));
 export function normalizeTradeLinkSection(value){
- return value==='documents'||value==='activity'||value==='drafts'||modules.has(value)?value:'drafts';
+ return value==='documents'||value==='activity'||value==='analytics'||value==='drafts'||modules.has(value)?value:'drafts';
 }
 export function tradeLinkBoardSummary(detail){
  if(!isTradeLinkBoard(detail?.board))return null;
@@ -99,7 +100,7 @@ function renderModule(m,canManage=true){
 }
 /** Reference-led TradeLink portal is presentation-only.
  * Links preserve the existing signed-board routes and disabled domain gates. */
-export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,draftView=initialTradeLinkDraftView(),canManage=false,canReview=false,actorName='',actorEmail=''}={}){
+export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,analytics=null,analyticsBusy=false,analyticsError='',analyticsEnabled=false,draftView=initialTradeLinkDraftView(),canManage=false,canReview=false,actorName='',actorEmail=''}={}){
  if(!isTradeLinkBoard(detail?.board)||
      typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
@@ -132,19 +133,21 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
      '<span aria-hidden="true">☷</span> All Documents</a>'+
     '<a data-tl-tab="activity" href="'+base+'/activity"'+currentAttr('activity')+'>'+
      '<span aria-hidden="true">◷</span> Activity</a>'+
+    '<a data-tl-tab="analytics" href="'+base+'/analytics"'+currentAttr('analytics')+'>'+
+     '<span aria-hidden="true">▥</span> Analytics</a>'+
     '<details class="tl-reference-manual"><summary data-tl-tab="manual">User Manual</summary>'+
      '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink document guide</strong>'+
-      '<p>Save defaults to For Approval. Select Draft explicitly when you want a Draft. '+
+      '<p>Save defaults to For Approval. Select Draft explicitly when you want a Draft. The legacy Submitted intermediate stage is documented but is not active in the current backend yet. '+
       'Each document has two assigned reviewers; each uses Use Time Now to record an independent signed validation. '+
       'The first validation leaves the document For Approval; the second automatically changes it to Approved. '+
       'Only Approved documents can be printed. Other status options become available after approval, while cancellation remains available before approval. '+
-      'The official v1.42.0 company templates are available for all six modules. Select the correct company/legal entity when creating a document. Existing company assignments remain fixed when revising a saved document. Use Print / Save as PDF for the saved revision; the browser print copy is not an electronically issued PDF. Older records without a company assignment use the historical Watchdog Automation Sales & Services default and show a preview warning.</p>'+
+      'The official v1.42.0 company templates are available for all six modules. Select the correct company/legal entity when creating a document. Existing company assignments remain fixed when revising a saved document. Use Print / Save as PDF for the saved revision; the browser print copy is not an electronically issued PDF. Older records without a company assignment use the historical Watchdog Automation Sales & Services default and show a preview warning. Analytics uses signed aggregates; its aggregate RPC is staged but not activated. Aging requires invoice due dates and payment allocations.</p>'+
      '</div></details>'+
    '</nav>'+
   '</header>'+
   '<div class="tl-app-layout">'+workspaceNavigation+
    '<main class="tl-app-main">'+
-    (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>Document creation requires the existing signed Board manager capability. No additional permission is granted here. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}))+
+    (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>Document creation requires the existing signed Board manager capability. No additional permission is granted here. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):current==='analytics'?renderTradeLinkAnalytics({summary:analytics,busy:analyticsBusy,error:analyticsError,enabled:analyticsEnabled}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}))+
    '</main></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network

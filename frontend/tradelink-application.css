@@ -250,7 +250,7 @@
  .tl-print-header{flex-wrap:wrap}
 }
 @media print{
- @page{size:A4;margin:15mm 13mm}
+ @page{size:Letter;margin:13mm 12mm}
  html,body{height:auto!important;overflow:visible!important;margin:0!important;
   background:white!important;color:black!important}
  body>*:not(#tradelink-saved-print){display:none!important}
@@ -412,7 +412,7 @@
  .tl-official-approval-note{grid-column:auto}
 }
 @media print{
- @page{size:A4;margin:13mm 14mm 14mm}
+ @page{size:Letter;margin:13mm 12mm 13mm}
  #tradelink-saved-print .tl-official-paper{padding:0!important;font-size:10pt;box-shadow:none!important}
  #tradelink-saved-print .tl-official-header{break-after:avoid}
  #tradelink-saved-print .tl-official-items thead{display:table-header-group}
@@ -451,4 +451,36 @@
 .tl-official-paper.tl-official-profile-plc-systems{
  --tl-official-accent:#0b9a9d;--tl-official-table-bg:#e3f6f5;
  --tl-official-table-text:#2854a4;--tl-official-rule:#4772c7;
+}
+
+
+/* CP-TL-LEGACY-01: read-only signed analytics presentation. */
+.aps-tradelink-app .tl-analytics{display:grid;gap:20px}
+.aps-tradelink-app .tl-analytics .tl-panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.aps-tradelink-app .tl-analytics .tl-panel-heading h2{margin:2px 0 4px}
+.aps-tradelink-app .tl-analytics-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.aps-tradelink-app .tl-analytics-kpis article{display:grid;gap:7px;min-width:0;padding:14px;border:1px solid var(--tl-line);border-radius:12px;background:#fff}
+.aps-tradelink-app .tl-analytics-kpis article span{font-size:11px;color:#6d7890;font-weight:650}
+.aps-tradelink-app .tl-analytics-kpis article strong{font-size:clamp(20px,2vw,27px);line-height:1.1;color:#263b65;font-variant-numeric:tabular-nums}
+.aps-tradelink-app .tl-analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.aps-tradelink-app .tl-analytics-grid>section,.aps-tradelink-app .tl-analytics-table-section,.aps-tradelink-app .tl-analytics-aging,.aps-tradelink-app .tl-analytics-empty{min-width:0;padding:17px;border:1px solid var(--tl-line);border-radius:12px;background:#fff}
+.aps-tradelink-app .tl-analytics h3{margin:0 0 13px;font-size:14px;color:#293e68}
+.aps-tradelink-app .tl-analytics-bars{display:grid;gap:11px}
+.aps-tradelink-app .tl-analytics-bar-row{display:grid;grid-template-columns:minmax(95px,145px) minmax(55px,1fr) auto;align-items:center;gap:10px;font-size:11px}
+.aps-tradelink-app .tl-analytics-bar-row>span{overflow-wrap:anywhere;color:#59677f}
+.aps-tradelink-app .tl-analytics-bar-row>strong{font-variant-numeric:tabular-nums;color:#34476b}
+.aps-tradelink-app progress.tl-analytics-bar-track{display:block;width:100%;height:9px;overflow:hidden;border:0;border-radius:8px;background:#edf1f8;accent-color:#5578d7}
+.aps-tradelink-app progress.tl-analytics-bar-track::-webkit-progress-bar{border-radius:8px;background:#edf1f8}
+.aps-tradelink-app progress.tl-analytics-bar-track::-webkit-progress-value{border-radius:8px;background:#5578d7}
+.aps-tradelink-app .tl-analytics-aging{border-color:#eadcb9;background:#fffaf0}
+.aps-tradelink-app .tl-analytics-aging p{margin:0 0 8px;color:#755b2c;font-size:12px}
+.aps-tradelink-app .tl-analytics-aging small{color:#85714d;font-size:10px}
+.aps-tradelink-app .tl-analytics-empty{background:#f8faff}
+.aps-tradelink-app .tl-analytics-empty p{margin:8px 0 0;color:#65728b;font-size:12px}
+@media(max-width:850px){.aps-tradelink-app .tl-analytics-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){
+ .aps-tradelink-app .tl-analytics .tl-panel-heading{flex-direction:column}
+ .aps-tradelink-app .tl-analytics-grid{grid-template-columns:1fr}
+ .aps-tradelink-app .tl-analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .aps-tradelink-app .tl-analytics-bar-row{grid-template-columns:minmax(80px,105px) minmax(45px,1fr) auto;gap:7px}
 }

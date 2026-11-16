@@ -12,10 +12,11 @@ const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:ws,
  name:'TradeLink',status:'active',
  description:'[APSYNTRA:MODULE:tradelink:v1] Source-aligned commerce'},
  items:[],columns:[],groups:[],values:[]};
-test('source-defined six commercial modules and eight workflow states remain separate from board statuses',()=>{
+test('source-defined six commercial modules and nine workflow states remain separate from board statuses',()=>{
  assert.deepEqual(TRADELINK_SOURCE_MODULES.map(x=>x.key),
   ['esi','packing','delivery','payment','quotation','po']);
- assert.equal(TRADELINK_SOURCE_WORKFLOW_STATES.length,8);
+ assert.equal(TRADELINK_SOURCE_WORKFLOW_STATES.length,9);
+ assert.ok(TRADELINK_SOURCE_WORKFLOW_STATES.includes('For Approval'));
  assert.deepEqual(TRADELINK_SOURCE_QUOTE_STATUSES,
   ['Working on it','Sent','Client Review','Accepted','Declined','On Hold','Closed']);
  assert.equal(TRADELINK_ACTIVITY_LIMIT,100);
@@ -66,5 +67,5 @@ test('existing signed server RPC and session-bound route checks are required bef
  assert.match(app,/state\.context\?\.workspace_id===workspaceId/);
  assert.match(app,/seq===routeSerial&&auth\.isSignedIn/);
  assert.match(app,/case 'tradelink-activity-refresh'/);
- assert.match(app,/state\.tradeLinkActivity=null;state\.tradeLinkActivityError='';state\.tradeLinkActivityBusy=false;state\.tl03ReadRunId\+\+;state\.tl03ReadBusy=false;state\.tl03ReadResult=null;state\.context=null;/);
+ assert.match(app,/state\.tradeLinkActivity=null;state\.tradeLinkActivityError='';state\.tradeLinkActivityBusy=false;state\.tradeLinkAnalytics=null;state\.tradeLinkAnalyticsError='';state\.tradeLinkAnalyticsBusy=false;state\.tl03ReadRunId\+\+;state\.tl03ReadBusy=false;state\.tl03ReadResult=null;state\.context=null;/);
 });

@@ -324,6 +324,24 @@ export function prepareTradeLinkDraftCommand(view,fields,{
  * preserve that verified record in the current All Documents window rather
  * than presenting a successful commit as failed solely due to pagination.
  */
+export function serializeTradeLinkDocumentCsv(records){
+ if(!Array.isArray(records)||records.length>50)
+  throw new ApiError('Select no more than 50 visible TradeLink documents.',400);
+ const columns=[['documentNumber','Document Number'],['documentType','Document Type'],
+  ['workflowState','Workflow Status'],['revision','Revision'],
+  ['updatedAt','Last Updated'],['archived','Archived']];
+ const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+ const rows=records.map(row=>{
+  if(!row||typeof row.documentNumber!=='string'||
+   !typeLabels.some(([id])=>id===row.documentType)||
+   typeof row.workflowState!=='string'||!Number.isSafeInteger(row.revision)||
+   row.revision<1||typeof row.archived!=='boolean'||
+   typeof row.updatedAt!=='string'||!Number.isFinite(Date.parse(row.updatedAt)))
+   throw new ApiError('Selected TradeLink document metadata is invalid.',409);
+  return columns.map(([key])=>quote(row[key])).join(',');
+ });
+ return [columns.map(([,label])=>quote(label)).join(','),...rows].join('\r\n')+'\r\n';
+}
 export function reconcileTradeLinkSavedListing(list,record,receipt){
  if(list?.status!=='AUTHORIZED_READ'||!Array.isArray(list.rows)||
     !record||record.id!==receipt?.documentId||
@@ -350,6 +368,9 @@ export function reconcileTradeLinkSavedListing(list,record,receipt){
 
 export class TradeLinkDraftWorkspace{
  constructor({auth,api}={}){this.client=new TradeLinkDomainClient({auth,api});}
+ async analyticsSummary(period={}){
+  return this.client.analyticsSummary(period);
+ }
  async list(){
   if(!TL03_DOMAIN_READS_ENABLED)return {status:'DARK_LAUNCH',rows:[]};
   return {status:'AUTHORIZED_READ',rows:await this.client.list(50)};
@@ -1537,6 +1558,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
   '<div class="tl-ref-selection-row"><p data-tradelink-domain-count role="status" aria-live="polite" aria-atomic="true">'+
    displayed.length+' of '+records.length+(canReview?' assigned documents':' authorized records')+' in this response</p>'+
    (readOnly&&!canReview?'<div class="tl-ref-selection-controls"><span data-tl-selected-count role="status" aria-live="polite">0 selected</span>'+
+    '<button type="button" data-action="tradelink-documents-export-selection" disabled>Export selected CSV</button> '+
     '<button type="button" data-action="tradelink-documents-clear-selection">Clear selection</button></div>':'')+
    '</div>'+
   (records.length?

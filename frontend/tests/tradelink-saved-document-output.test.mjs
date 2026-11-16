@@ -234,6 +234,6 @@ test('print action reloads signed record and matching Board before mounting the 
  const css=readFileSync('frontend/tradelink-application.css','utf8');
  assert.match(css,/@media print/);
  assert.match(css,/body>\*:not\(#tradelink-saved-print\)/);
- assert.match(css,/@page\{size:A4/);
+ assert.match(css,/@page\{size:Letter/);
  assert.match(css,/tl-official-terms-page/);
 });

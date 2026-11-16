@@ -5,10 +5,14 @@
 import {ApiError,} from './session.js';
 import {validUuid} from './data.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
+import {normalizeTradeLinkAnalyticsSummary} from './tradelink-analytics.js';
 // Stage A read RPCs enforce signed-session, board and General Manager checks.
 export const TL03_DOMAIN_READS_ENABLED=true;
 // Stage B authenticated EXECUTE grants are live; server enforces session and workspace permissions.
 export const TL03_DOMAIN_WRITES_ENABLED=true;
+// The signed aggregate RPC is prepared in the CP-TL legacy integration candidate.
+// Keep UI reads off until that additive function is installed in the existing project.
+export const TL03_ANALYTICS_ENABLED=false;
 // The workflow backend adds an authenticated RPC and changes an audit CHECK.
 // Keep the Submit button disabled until that exact production candidate is
 // approved, installed, and separately verified. Existing Draft writes remain on.
@@ -248,6 +252,19 @@ export class TradeLinkDomainClient{
     detail.board.workspace_id!==context.workspace_id||canView!==true)
    deny('TradeLink Board view access is required for assigned review.');
   return {actorId:actor.id,workspaceId:context.workspace_id};
+ }
+ async analyticsSummary({from=null,to=null}={}){
+  if(!TL03_ANALYTICS_ENABLED)
+   deny('TradeLink analytics aggregate is awaiting database activation.',503);
+  const validBound=value=>value===null||typeof value==='string'&&
+   /^\d{4}-\d{2}-\d{2}T/.test(value)&&Number.isFinite(Date.parse(value));
+  if(!validBound(from)||!validBound(to)||(from&&to&&Date.parse(to)<=Date.parse(from)))
+   deny('Invalid TradeLink analytics reporting period.',400);
+  await this.session();
+  const result=await this.api.rpc('tl03_analytics_summary',{
+   p_board_id:TRADELINK_BOARD_ID,p_from:from,p_to:to});
+  try{return normalizeTradeLinkAnalyticsSummary(result);}
+  catch{deny('Invalid signed TradeLink analytics response.',409);}
  }
  async list(limit=50){
   if(!TL03_DOMAIN_READS_ENABLED)deny('TradeLink domain reads await production activation.',503);
