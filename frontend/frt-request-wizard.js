@@ -31,13 +31,13 @@ export function renderFRTRequestWizard({companies=[],selectedCompany=''}={}){
  </section>
  <section class="frt-wizard-page" data-frt-step="2" aria-label="Recipient" hidden>
  <p class="frt-wizard-section-lead">Configure payment recipient</p>
- ${field('Payee / Supplier','recipientName',{placeholder:'Search or type payee name'})}
+ ${field('Payee / Supplier','recipientName',{required:true,placeholder:'Search or type payee name'})}
  <div class="frt-wizard-field"><label for="frt-wizard-saved-recipient">Select Saved Account</label>
  <select id="frt-wizard-saved-recipient" data-frt-saved-recipient disabled><option value="">Loading saved accounts…</option></select></div>
  <div class="frt-wizard-divider"></div>
  <div class="frt-wizard-grid">${field('Account Name','recipientAccountName',{placeholder:'Account holder for saved account'})}
  ${field('Bank','recipientBank',{placeholder:'Bank name (optional)'})}</div>
- ${field('Account Number','recipientAccount',{placeholder:'Account number (optional)'})}
+ ${field('Account Number / GCash Number','recipientAccount',{required:true,placeholder:'Enter destination account or GCash number'})}
  <div class="frt-wizard-recipient-actions"><button type="button" class="secondary" data-frt-save-recipient disabled>Save Recipient Account</button>
  <span data-frt-recipient-status role="status" aria-live="polite">Checking saved-account availability…</span></div>
  <div class="frt-wizard-field"><label for="frt-wizard-qr-file">QR Code <small>Optional · private PNG, JPEG or WebP, up to 3 MB</small></label>
