@@ -1589,6 +1589,13 @@
       "file": "20261116062331_cp_crm_global_search_02b_prefix_index_lookup.sql",
       "bytes": 9429,
       "sha256": "ad401e64ea164f9f9cecec9d28ba7ae8a31fa5849712b8db98ebabdc22ae105b"
+    },
+    {
+      "version": "20261116062500",
+      "name": "cp_tl_legacy_analytics_summary",
+      "file": "20261116062500_cp_tl_legacy_analytics_summary.sql",
+      "bytes": 6014,
+      "sha256": "e459d8efe50055f29b3ae210a13a378c7637e950fb2456106b0c8dec35b78e63"
     }
   ]
 }
