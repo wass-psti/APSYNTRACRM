@@ -1,4 +1,4 @@
-name: CP-FRT-WF-05A — Archive recovery acceptance
+name: CP-FRT-WF-05 — Financial workflow acceptance
 on:
   pull_request:
     paths:
@@ -6,14 +6,19 @@ on:
       - "frontend/app.js"
       - "frontend/data.js"
       - "frontend/frt-archive*.js"
+      - "frontend/frt-request-wizard.js"
+      - "frontend/frt-filing-workflow.js"
       - "frontend/frt-board-domain-actions.js"
       - "frontend/frt-finance-ui.js"
       - "frontend/tests/board-cache-channel.test.mjs"
       - "frontend/tests/frt-archive.test.mjs"
+      - "frontend/tests/frt-request-wizard.test.mjs"
       - "frontend/tests/frt-board-domain-actions.test.mjs"
       - "scripts/cp-frt-wf05a-archive-disposable-acceptance.sh"
       - "sql/tests/cp-frt-wf05a-*"
+      - "sql/tests/cp-frt-wf05b-voucher-disposable.sql"
       - "supabase/migrations/20261116104500_frt_wf05a_archive_recovery.sql"
+      - "supabase/migrations/20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard.sql"
       - "supabase/migration-source-manifest.json"
       - "package.json"
       - "package-lock.json"
@@ -60,6 +65,8 @@ jobs:
       - name: Verify FRT module syntax
         run: |
           node --check frontend/frt-archive.js
+          node --check frontend/frt-request-wizard.js
+          node --check frontend/frt-filing-workflow.js
           node --check frontend/frt-archive-ui.js
           node --check frontend/frt-board-domain-actions.js
           node --check frontend/app.js
