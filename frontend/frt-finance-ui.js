@@ -389,6 +389,7 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
   '<button class="frt-ref-action is-primary" type="button" data-action="frt-ui-dialog" data-frt-section="new" title="Create an authorized fund request">＋ New Fund Request</button>'+
   '<button class="frt-ref-action" type="button" disabled title="Bulk fund-request import is not connected">⇧ Bulk Import</button>'+
   '<button class="frt-ref-action" type="button" data-action="frt-ui-dialog" data-frt-section="activity" title="View the activity-log panel">⌁ Activity Log</button>'+
+  '<button class="frt-ref-action" type="button" data-action="frt-ui-dialog" data-frt-section="notifications" title="View request notifications and liquidation reminders">♢ Notifications</button>'+
   '<button class="frt-ref-action" type="button" data-action="frt-ui-dialog" data-frt-section="archive" title="View the archive-storage panel">▤ Archive Storage</button>'+
   '<button class="frt-ref-action" type="button" disabled title="Domain export is not connected in this phase">⇩ Export</button>'+
   '<button class="frt-ref-action frt-ref-refresh" type="button" data-action="frt-finance-refresh" '+

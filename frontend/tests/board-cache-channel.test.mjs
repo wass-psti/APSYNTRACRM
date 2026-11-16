@@ -214,9 +214,11 @@ test('reviewed mutation and read RPC contracts remain disjoint',()=>{
  };
  const reads=new Set(names('BOARD_READ_RPC'));
  const writes=names('BOARD_MUTATION_RPC');
- assert.equal(writes.length,60);
+ assert.equal(writes.length,61);
  assert.equal(new Set(writes).size,writes.length);
  assert.deepEqual(writes.filter(name=>reads.has(name)),[]);
+ assert.ok(writes.includes('frt_add_comment'));
+ assert.ok(reads.has('frt_bank_execution_snapshot'));
 });
 test('real BroadcastChannel transports invalidation between independent signed clients',async t=>{
  if(typeof BroadcastChannel!=='function'){t.skip('BroadcastChannel is unavailable in this Node runtime');return;}

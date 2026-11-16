@@ -14443,6 +14443,43 @@
 #app .frt-lifecycle li.frt-lifecycle-in-progress{border-color:#6b85d9}
 #app .frt-lifecycle-note{font-size:11px;line-height:1.5;color:#66758b;margin:13px 0 0}
 
+/* frontend/frt-collaboration.css */
+/* Fund Release Tracker discussion, activity and notification panels. */
+.frt-collab-panel{width:min(920px,calc(100vw - 28px));max-width:920px;max-height:min(86vh,900px);overflow:auto}
+.frt-collab-panel .modal-head{position:sticky;top:0;z-index:2;background:inherit}
+.frt-collab-intro{margin:0 0 14px;color:var(--muted,#64748b);font-size:13px;line-height:1.55}
+.frt-collab-status{min-height:20px;margin:8px 0;color:var(--muted,#64748b);font-size:12px}
+.frt-collab-status[role=alert]{color:#b42318}
+.frt-collab-thread,.frt-collab-events{display:grid;gap:10px;list-style:none;padding:0;margin:0}
+.frt-collab-comment,.frt-collab-event{padding:13px 15px;border:1px solid var(--border,#dce3ed);border-radius:12px;background:var(--surface,#fff)}
+.frt-collab-comment header,.frt-collab-event-main{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.frt-collab-comment header strong,.frt-collab-event-main strong{font-size:13px;color:var(--text,#172033)}
+.frt-collab-comment time,.frt-collab-event time{font-size:11px;color:var(--muted,#64748b);white-space:nowrap}
+.frt-collab-comment p,.frt-collab-event p{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.55}
+.frt-collab-empty{padding:24px 16px;text-align:center;border:1px dashed var(--border,#dce3ed);border-radius:12px;color:var(--muted,#64748b);font-size:13px}
+.frt-collab-composer{margin-top:16px;padding-top:14px;border-top:1px solid var(--border,#dce3ed)}
+.frt-collab-composer textarea{width:100%;min-height:90px;resize:vertical}
+.frt-collab-composer .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.frt-collab-filters{display:grid;grid-template-columns:1fr 2fr 1.3fr 1.5fr auto;gap:9px;align-items:end;margin:0 0 15px}
+.frt-collab-filters label{display:grid;gap:5px;font-size:11px;font-weight:700;color:var(--muted,#64748b)}
+.frt-collab-filters input,.frt-collab-filters select{width:100%;min-width:0;min-height:38px}
+.frt-collab-filters button{min-height:38px;white-space:nowrap}
+.frt-collab-event small{display:block;margin-top:7px;color:var(--muted,#64748b);font-size:11px}
+.frt-collab-event dl{display:flex;flex-wrap:wrap;gap:6px 14px;margin:9px 0 0}
+.frt-collab-event dl div{display:flex;gap:5px;font-size:11px}
+.frt-collab-event dt{color:var(--muted,#64748b)}
+.frt-collab-event dd{margin:0;color:var(--text,#172033);overflow-wrap:anywhere}
+.frt-collab-event.is-overdue{border-color:#efb5b1;background:#fff8f7}
+.frt-collab-event.is-due-soon{border-color:#f0d39a;background:#fffdf5}
+.frt-collab-event button{margin-top:10px;min-height:32px;padding:6px 10px}
+.frt-collab-pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px}
+.frt-collab-pagination span{font-size:12px;color:var(--muted,#64748b)}
+.frt-collab-pagination button,.frt-collab-export{min-height:34px;padding:6px 10px}
+.frt-collab-actions{display:flex;justify-content:flex-end;gap:8px;margin:12px 0}
+@media(max-width:760px){.frt-collab-filters{grid-template-columns:1fr 1fr}.frt-collab-filters .frt-collab-search{grid-column:1/-1}.frt-collab-filters button{grid-column:1/-1}}
+@media(max-width:520px){.frt-collab-panel{width:calc(100vw - 16px);max-height:90vh}.frt-collab-comment header,.frt-collab-event-main{display:grid;gap:4px}.frt-collab-pagination{flex-wrap:wrap}.frt-collab-filters{grid-template-columns:1fr}.frt-collab-filters .frt-collab-search,.frt-collab-filters button{grid-column:auto}}
+@media(prefers-reduced-motion:reduce){.frt-collab-panel *{scroll-behavior:auto!important;transition:none!important}}
+
 /* frontend/fueltrack-v3-application.css */
 /* CP-FT3-01 — FuelTrack+ v3 native dashboard, scoped to authorized board app. */
 #app .ft3-app{color:#27394a;background:#f6fafb;border:1px solid #d7e4e8;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px #163b4811;margin:16px 0 28px;font-size:13px}
