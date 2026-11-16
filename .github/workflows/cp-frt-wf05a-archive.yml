@@ -35,6 +35,7 @@ on:
       - "frontend/data.js"
       - "frontend/frt-archive*.js"
       - "frontend/frt-request-wizard.js"
+      - "frontend/frt-request-draft.js"
       - "frontend/frt-filing-workflow.js"
       - "frontend/tests/frt-request-wizard.test.mjs"
       - "frontend/tests/frt-filing-workflow.test.mjs"
