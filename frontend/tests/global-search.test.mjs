@@ -103,6 +103,7 @@ test('uses textContent, bounded live queries, stale-response suppression and acc
  assert.match(source,/event\.key==='Escape'/);
  assert.match(source,/if\(active===input\)\{event\.preventDefault\(\);closeButton\.focus\(\);\}/);
  assert.match(source,/else if\(active===closeButton\)\{event\.preventDefault\(\);input\.focus\(\);\}/);
+ assert.match(source,/else if\(!restoreFocus\)doc\.activeElement\?\.blur\?\.\(\);/);
  assert.match(source,/event\.target\?\.closest\?\.\('\[role="dialog"\]\[aria-modal="true"\]:not\(\[data-global-search-layer\]\)'\)/);
  assert.match(source,/serial!==requestSerial/);
  assert.match(source,/setTimeout\(\(\)=>\{debounceHandle=null;void runSearch\(\);\},180\)/);
