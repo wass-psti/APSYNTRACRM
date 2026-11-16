@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  loadFRTComments,addFRTComment,loadFRTAuditPage,frtActorLabel,
- frtEventLabel,frtAuditDetailEntries,frtAuditCsv,projectFRTNotifications,loadFRTDeadlineSnapshots
+ frtEventLabel,frtAuditDetailEntries,frtAuditCsv,projectFRTNotifications,loadFRTDeadlineSnapshots,loadFRTAgingSummary
 } from '../frt-collaboration.js';
 const workspaceId='22222222-2222-4222-8222-222222222222';
 const requestId='11111111-1111-4111-8111-111111111111';
@@ -146,4 +146,28 @@ test('FRT collaboration UI wiring uses existing comment RPC and no new notificat
  assert.match(html,/data-frt-section="notifications"/);
  assert.doesNotMatch(app,/frt_create_notification|frt_notifications/);
  assert.doesNotMatch(app,/frt_get_request|frt_list_requests/);
+});
+
+test('liquidation aging summary reuses the existing 72-hour company RPC',async()=>{
+ const calls=[];
+ const api={rpc:async(name,args)=>{
+  calls.push({name,args});
+  return {company_code:'WASS',source:'STAFF_RECORDED_BANK_EVIDENCE',deadline_hours:72,
+   pending_total:2,awaiting_bank_execution:1,on_track:0,due_soon:1,overdue:0,completed:4};
+ }};
+ const aging=await loadFRTAgingSummary({api,workspaceId,companyCode:'WASS'});
+ assert.deepEqual(calls,[{name:'frt_liquidation_aging_company',args:{p_workspace_id:workspaceId,p_company:'WASS'}}]);
+ assert.equal(aging.pending_total,2);assert.equal(aging.due_soon,1);
+});
+
+test('liquidation aging summary rejects inconsistent or unverified backend aggregates',async()=>{
+ const api={rpc:async()=>({company_code:'WASS',source:'UNKNOWN',deadline_hours:48,
+  pending_total:2,awaiting_bank_execution:1,on_track:0,due_soon:1,overdue:0,completed:4})};
+ await assert.rejects(loadFRTAgingSummary({api,workspaceId,companyCode:'WASS'}),/summary contract is invalid/);
+});
+
+test('notification summary renders authoritative company aging counters',async()=>{
+ const {renderFRTNotificationSummary}=await import('../frt-collaboration-ui.js');
+ const html=renderFRTNotificationSummary({pending_total:3,awaiting_bank_execution:1,on_track:0,due_soon:1,overdue:1,completed:4});
+ assert.match(html,/Pending liquidation: 3/);assert.match(html,/Due within 24 hours: 1/);assert.match(html,/Overdue: 1/);
 });
