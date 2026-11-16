@@ -121,6 +121,34 @@ test('analytics retries one transient invalidated context read for the same sign
  assert.equal(rpcCalls[0].name,'tl03_analytics_summary');
 });
 
+test('analytics retries one invalidated board snapshot for the same signed user',async()=>{
+ let boardCalls=0,rpcCalls=0;
+ const summary={generatedAt:'2026-11-16T08:00:00.000Z',documentCounts:[],
+  quotationPerformance:[],quotationCommercialStatus:[],taxSummary:[],
+  aging:{available:true,reason:'No qualifying invoices.',buckets:[],
+   unallocatedReceipts:[],excessPayments:[],pendingChequeReceipts:[],excludedWithoutDueDate:0}};
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  board:async()=>{
+   boardCalls++;
+   if(boardCalls===1){
+    const error=new Error('Board changed while its pages were loading. Refresh and retry.');
+    error.status=409;error.code='BOARD_READ_INVALIDATED';throw error;
+   }
+   return {board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+    name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}};
+  },
+  allowed:async()=>true,
+  rpc:async(name)=>{rpcCalls++;assert.equal(name,'tl03_analytics_summary');return summary;}
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ const result=await client.analyticsSummary();
+ assert.deepEqual(result.documentCounts,[]);
+ assert.equal(boardCalls,2,'only the invalidated board snapshot is retried');
+ assert.equal(rpcCalls,1,'aggregate RPC is issued once after signed manager preflight');
+});
+
 test('analytics does not retry an invalidated context read after signed identity changes',async()=>{
  const changedUser='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
  let contextCalls=0,rpcCalls=0;
