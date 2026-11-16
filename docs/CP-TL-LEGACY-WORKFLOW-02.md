@@ -29,25 +29,31 @@ This starting value and prefix map are taken from the legacy application's docum
 
 ## Database and security contract
 
-- The candidate migration is additive and targets the existing TradeLink board/project only.
+- The additive migration targets the existing TradeLink board/project only and is now recorded in the production migration ledger as version `20261116070000`.
 - The public create RPC is `SECURITY INVOKER`; its private implementation is `SECURITY DEFINER` with an empty search path and the same owner as the existing private save function.
 - Execute is granted only to `authenticated`; `anon` and `PUBLIC` remain denied. The private sequence table is not granted to client roles.
 - Existing signed manager checks and the existing atomic save function remain authoritative. No client-supplied document number is trusted on create.
 - The existing analytics RPC signature and signed manager/workspace boundary are preserved. `CREATE OR REPLACE` changes only its aggregate result shape and query logic.
-- No roles, RLS policies, workspace permissions, Storage configuration, credentials, or production records are changed by this candidate.
+- No roles, RLS policies, workspace permissions, Storage configuration, credentials, or production business records were changed by this migration.
 
 ## Verification evidence
 
 - Focused TradeLink tests cover automatic numbering request/receipt, blank unassigned create numbers, date validation, due-date persistence, quotation commercial status, and analytics aging normalization/rendering.
-- The migration was applied to an isolated temporary PostgreSQL 17 container using test-only stub dependencies; it was not applied to the production Supabase project.
+- The migration was applied to an isolated temporary PostgreSQL 17 container using test-only stub dependencies before merge. A separate post-merge read-only inspection then observed the same migration recorded in the production Supabase ledger.
 - Database fixtures verified first/next numbers, stable retry, invalid calendar-date rejection, exact cash allocation, unmatched cash, pending cheques, due-date exclusion, commercial quotation status and workflow outcome.
 - Six concurrent quotation creates returned six distinct sequential numbers (`Q-011130` through `Q-011135`).
 - Analytics aging was verified against all-history data even when the selected reporting window excluded the invoice/payment records.
 
-## Not activated / remaining source parity
+## Post-merge production observation (2026-11-16)
 
-- The new migration is a candidate and has not been applied to production. `TL03_ANALYTICS_ENABLED` remains `false`; the frontend create RPC is prepared but production cannot create documents with automatic numbers until the migration is installed.
-- Genuine signed runtime create/retry, Board projection and All Documents reconciliation remain pending after controlled migration activation.
+- A read-only production inspection observed migration `20261116070000` recorded in `supabase_migrations.schema_migrations` with 17 statements, and the expected sequence table, create RPCs, analytics replacement and immutable-number trigger installed.
+- Database logs record the DDL session at `2026-11-16T08:21:14Z` as database user `postgres`. The logged application name is empty, so the available evidence does not identify the initiating actor. This implementation session did not invoke a production migration command; the execution source remains unconfirmed.
+- Post-merge read-only acceptance found zero sequence rows and three active TradeLink documents. Their existing document numbers and revisions were unchanged; no automatic number was issued.
+- ACL verification: the public create wrapper is `SECURITY INVOKER` and executable by `authenticated` only; the private creator is `SECURITY DEFINER` with an empty search path and the same owner as the existing save function; the sequence table has no `anon`/`authenticated` privileges; the trigger function is not executable by either client role.
+- `TL03_ANALYTICS_ENABLED=false` and `TL03_AUTOMATIC_NUMBERING_ENABLED=false` remain in the deployed frontend. The UI continues using the existing manual-number atomic save path and does not call the automatic-number RPC or analytics aggregate.
+- GitHub Pages live-asset verification passed for the merged main commit. Genuine signed runtime create/retry, Board projection and All Documents reconciliation remain pending until the feature flags are deliberately enabled and signed runtime acceptance is completed.
+
+## Remaining source parity
 - The legacy Submitted intermediate lifecycle state remains unimplemented/disabled; this candidate does not widen workflow transitions.
 - Dynamic QR verification and electronically issued PDF remain pending because there is no public verification endpoint or signed QR-token contract.
 - Disaster Recovery Console remains pending until a defined backup source, restore contract and rehearsal path exist.
