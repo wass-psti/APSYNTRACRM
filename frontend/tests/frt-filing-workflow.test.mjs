@@ -7,8 +7,7 @@ const workspace='22222222-2222-4222-8222-222222222222';
 const request='33333333-3333-4333-8333-333333333333';
 const data={title:'New signed FRT request',department:'Operations',fundSource:'Company funds',
  description:'For needed company supplies',requestDate:'2026-11-17',dateNeeded:'2026-11-20',
- recipientName:'Example Supplier',recipientAccount:'1234567890',
- category:'Supplies',amount:'1200.25'};
+ recipientName:'Supplier A',recipientAccount:'123456789',category:'Supplies',amount:'1200.25'};
 function fixture({deny=false,wrongContext=false,wrongCompany=false,
  stale=false,missingReceipt=false,readMismatch=false,
  uncertainCreate=false,readErrorAfterCreate=false}={}){
@@ -46,10 +45,10 @@ test('new request uses existing signed domain create exactly once and verifies N
  const call=f.calls.find(x=>x.name==='frt_create_request');
  assert.deepEqual(call.args,{p_workspace_id:workspace,p_payload:{
   company:'WASS',title:data.title,department:data.department,
-  fundSource:data.fundSource,description:data.description,requestDate:data.requestDate,
-  dateNeeded:data.dateNeeded,recipientName:data.recipientName,
-  recipientAccount:data.recipientAccount,allowPotentialDuplicate:false,
-  items:[{category:'Supplies',amount:1200.25}]}});
+  fundSource:data.fundSource,description:data.description,
+  requestDate:data.requestDate,dateNeeded:data.dateNeeded,
+  recipientName:data.recipientName,recipientAccount:data.recipientAccount,
+  items:[{category:'Supplies',amount:1200.25}],allowPotentialDuplicate:false}});
  assert.equal(f.calls.filter(x=>x.name==='frt_create_request').length,1);
  assert.equal(f.calls.filter(x=>x.name==='frt_board_list_safe').length,1);
 });
