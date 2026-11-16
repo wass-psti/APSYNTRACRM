@@ -1,12 +1,13 @@
 /**
  * APSYNTRA signed-workspace sidebar visual primitives.
  * SVG icons are constant, presentation-only markup. No untrusted SVG input.
- * @typedef {'overview'|'boards'|'ticket'|'foundation'|'security'|'roles'|'users'|'settings'|'acceptance'|'recent'|'logout'|'chevron'} SidebarIcon
+ * @typedef {'overview'|'boards'|'ticket'|'clock'|'foundation'|'security'|'roles'|'users'|'settings'|'acceptance'|'recent'|'logout'|'chevron'} SidebarIcon
  */
 const icons=Object.freeze({
  overview:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
  boards:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 10h18M9 10v10"/>',
  ticket:'<path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4V7Z"/><path d="M9 7v10" stroke-dasharray="2 2"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  foundation:'<path d="m12 2 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 17l9 5 9-5"/>',
  security:'<path d="M12 22s8-4.2 8-10V5l-8-3-8 3v7c0 5.8 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
  roles:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="9" r="2.5"/><path d="M7.5 17c.5-3 2-4.5 4.5-4.5s4 1.5 4.5 4.5"/>',

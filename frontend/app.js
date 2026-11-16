@@ -183,6 +183,7 @@ import {probeTimeTrackerMonitor} from './time-tracker-monitor.js';
 import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
+import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
 import {clockOutSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
@@ -245,7 +246,7 @@ const userRoleManager=new UserRoleManagementClient(db);
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
 const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -368,6 +369,7 @@ function sidebar(){
  const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
   sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
   sidebarNav('#/fm1','FM1 Ticketing','ticket',state.view==='fm1')+
+  sidebarNav('#/time-tracker','TimeTracker','clock',state.ttStandalone===true)+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',state.view==='security'):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
@@ -399,7 +401,7 @@ function sidebar(){
    <nav class="nav-list sidebar-recent-list" aria-label="Recent boards">`+
     (recent.map((b,i)=>{
      const title=String(b.name||'Untitled board');
-     const active=currentBoard===b.id;
+     const active=currentBoard===b.id&&!state.ttStandalone;
      const tone=['violet','teal','amber','rose','blue','indigo'][i%6];
      return '<a class="nav-link sidebar-recent-link '+(active?'active':'')+
       '" href="#/boards/'+e(b.id)+'" title="'+e(title)+'" aria-label="'+e(title)+'"'+
@@ -462,14 +464,14 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
+ const crumb=state.ttStandalone?'TimeTracker':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
- const sidebarSignature=JSON.stringify([state.roleVerified,state.adminVerified,name(),
+ const sidebarSignature=JSON.stringify([state.ttStandalone,state.roleVerified,state.adminVerified,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
   state.workspaceRelationSnapshot?.relation,workspaceName(),
   state.boards.slice(0,6).map(board=>[board.id,board.name]),
   state.boards.length]);
- const route=[state.view,state.boardId,state.tab].join('|');
+ const route=[state.view,state.boardId,state.tab,state.ttStandalone].join('|');
  // Preserve each group's horizontal position only across same-signed-view renders.
  const scrollPositions=state.view==='board'&&shellIdentity===identity&&shellRoute===route?
   captureBoardGroupScroll(root.querySelector(':scope > .shell .main-content')):null;
@@ -489,8 +491,8 @@ function shell(body){
   }else{
    for(const link of existing.querySelectorAll('.aps-sidebar a.nav-link')){
     const path=link.getAttribute('href')||'';
-    const active=state.view==='board'?
-     path==='#/boards/'+state.boardId:
+    const active=state.ttStandalone?path===TIMETRACKER_APPLICATION_ROUTE:
+     state.view==='board'?path==='#/boards/'+state.boardId:
      path==='#/'+state.view;
     link.classList.toggle('active',active);
     if(active)link.setAttribute('aria-current','page');
@@ -518,6 +520,7 @@ function shell(body){
     previousBoard[1]===String(state.boardId)&&previousBoard[2]!==state.tab)
   animateTabContent('.main-content');
  root.querySelector('.main')?.classList.toggle('aps-board-shell',state.view==='board');
+ root.querySelector('.main')?.classList.toggle('aps-time-tracker-shell',state.ttStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-fm1-shell',state.view==='fm1');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
@@ -537,7 +540,8 @@ function shell(body){
  mountSettingsMotion(root.querySelector('.aps-settings'),state.view);
  mountPagesAcceptanceMotion(root.querySelector('.aps-pages-acceptance'),state.view);
  maintainTimeTrackerClock();
- mountTimeTrackerPixi(root);
+ if(state.ttStandalone)stopTimeTrackerPixi();
+ else mountTimeTrackerPixi(root);
  updatePlatformSyncIndicator(platformSync.lastStatus);
  avatarHydrationPromise=mountAvatarImages(root,profileAvatarClient,state.context?.profile?.avatar_path,state.context?.user_id);
  void mountSignedTimeTrackerMaps();
@@ -905,15 +909,54 @@ function issuesPage(){
  <button class="icon-button danger" data-action="native-remove-issue" data-id="${e(row.document_id)}">Native remove</button></div>`:''}</article>`}).join('')}</div>`:
  `<div class="panel">${empty('No issues yet','No active APSYNTRA Issues were found for this board.',canEdit?'<button class="primary" data-action="new-issue">＋ Create first issue</button>':'')}</div>`}`;
 }
+
+function renderTimeTrackerApplication(){
+ return renderTimeTrackerNative({
+  result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,
+  error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,
+  view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,
+  reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,
+  calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,
+  otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,
+  hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,
+  hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,
+  teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,
+  teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,
+  monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,
+  monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,
+  logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',
+  logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,
+  logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,
+  logExpandedRecordIds:state.ttLogExpandedIds,
+  mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&
+   (state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),
+  mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
+  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',
+  gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,
+  gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError
+ });
+}
+function renderTimeTrackerRouteUnavailable(){
+ return '<section class="fm1-app tt-application-unavailable" aria-label="TimeTracker application">'+
+  '<header class="fm1-app-header"><div><span class="fm1-eyebrow">APSYNTRA CRM · ATTENDANCE OPERATIONS</span>'+
+  '<h1>TimeTracker <span>Attendance</span></h1><p>Timekeeping and attendance workspace</p></div></header>'+
+  '<section class="fm1-panel"><h2>Existing attendance board unavailable</h2>'+
+  '<p>The existing TimeTracker Attendance board was not found in this workspace. No board was created.</p>'+
+  '<a class="fm1-quiet-button" href="#/boards">Return to My Boards</a></section></section>';
+}
+
 function boardPage(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  if(state.loading)return renderBoardLoading({
   hidden:document.hidden,
   lowPower:navigator.connection?.saveData===true||
-   (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4)
+   (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4),
+  application:state.ttStandalone?'TimeTracker':'Board'
  });
+ if(state.ttStandalone&&!state.board)return renderBoardLoadingError(state.error,{application:'TimeTracker'});
  if(!state.board)return renderBoardLoadingError(state.error);
  const b=state.board.board;
+ if(moduleByBoardName(b.name)?.key==='timetracker')return renderTimeTrackerApplication();
  if(state.boardItemSearchBoard!==b.id){state.boardItemSearch='';state.boardItemSearchBoard=b.id;}
  // TradeLink Draft archives retain signed Board/audit records, but are not
  // active Board items. Other boards keep their established archive presentation.
@@ -1174,6 +1217,7 @@ function render(){
  }));
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id});}
+ else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
  mountTradeLinkTabMotion(root);
@@ -3570,12 +3614,24 @@ async function onRoute(){
  sidebarMobileOpen=false;
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
+ state.ttStandalone=false;
  if(parts[0]!=='fm1')fm1Module?.unmountFm1Application();
  if(parts[0]==='invitations'&&parts[1]==='accept'){
   state.view='invitation';render();return;
  }
  if(pendingInvitation){pendingInvitation=null;invitationAcceptanceStatus='';}
  if(parts[0]==='fm1')fm1Module=await import('./fm1/index.js');
+ if(parts[0]==='time-tracker'){
+  state.ttStandalone=true;
+  const attendanceBoard=findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName);
+  if(!attendanceBoard){
+   routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;
+   state.ttError='The existing TimeTracker Attendance board was not found in this workspace.';
+   state.boardId=null;state.board=null;state.view='time-tracker';render();return;
+  }
+  await loadBoard(attendanceBoard.id,'attendance');
+  return;
+ }
  if(parts[0]==='boards'&&validUuid(parts[1])){
   const defaultClock=!parts[2]&&state.boards.some(b=>
     b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
@@ -3591,6 +3647,13 @@ async function onRoute(){
     parts[2]==='tradelink'&&state.boards.some(b=>b.id===parts[1]&&
       moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
     defaultFuelTrans?'fueltrans':defaultClock?'attendance':'items';
+  const timeTrackerBoard=state.boards.find(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
+  if(timeTrackerBoard){
+   state.ttStandalone=true;
+   history.replaceState(null,'',location.pathname+location.search+TIMETRACKER_APPLICATION_ROUTE);
+   await loadBoard(parts[1],'attendance');
+   return;
+  }
   state.fuelTrackSection=requested==='fueltrack'?normalizeFuelTrackSection(parts[3]):'dashboard';
   if(state.fuelTrackSection!=='lightfuels')state.fuelTrackRefuelingDialog=null;
   state.fuelTrackAnalyticsView=normalizeFuelTrackAnalyticsView(parts[4]);
@@ -3619,7 +3682,7 @@ async function onRoute(){
   return;
  }
  pendingGlobalSearchItem=null;
- routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='fm1'?'fm1':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
+ routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='fm1'?'fm1':parts[0]==='time-tracker'?'time-tracker':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
  if(['role-configuration','user-role-management','foundation','acceptance'].includes(state.view)){
    // Independent signed server checks; bootstrap is an identity label only.
    const roleAdmin=['role-configuration','user-role-management'].includes(state.view);

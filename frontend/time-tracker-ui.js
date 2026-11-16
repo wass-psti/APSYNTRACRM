@@ -27,6 +27,18 @@ const sections=[
  ['ot','OT',true],['hours','My Hours',true],['team','Team',true],
  ['monitor','Monitor',true],['gps','GPS',true]
 ];
+const sectionMeta=Object.freeze({
+ overview:['Overview','Daily attendance activity and operational summary.'],
+ clock:['Clock','Start or end your attendance session using the existing clock workflow.'],
+ log:['Attendance Log','Review attendance history and available attendance evidence.'],
+ reports:['Reports','Review attendance summaries and export the available records.'],
+ calendar:['Calendar','Review attendance across the Philippine calendar.'],
+ ot:['Overtime','Review overtime requests and their current workflow state.'],
+ hours:['My Hours','Track credited attendance hours across your work week and month.'],
+ team:['Team','Review the available team directory and attendance context.'],
+ monitor:['Monitor','Inspect TimeTracker service and synchronization status.'],
+ gps:['GPS','Review permitted attendance location activity.']
+});
 const select=(id,values,placeholder)=>
  '<select id="'+id+'" name="'+id+'" required>'+
  '<option value="">'+esc(placeholder)+'</option>'+
@@ -79,11 +91,11 @@ export function ownAttendanceCsv(records){
 }
 
 function navigation(view,busy,bootstrapEligible=false,gpsEligible=false){
- return '<nav class="tt-navigation" aria-label="TimeTracker sections">'+
+ return '<nav class="tt-navigation fm1-tabs" aria-label="TimeTracker sections">'+
   '<div class="tt-navigation-scroll" role="tablist" aria-label="TimeTracker views">'+
   sections.filter(([key])=>(key!=='team'||bootstrapEligible===true)&&
    (key!=='gps'||gpsEligible===true)).map(([key,label,enabled])=>
-   '<button type="button" role="tab" class="tt-nav-tab'+(view===key?' is-current':'')+
+   '<button type="button" role="tab" class="tt-nav-tab fm1-tab'+(view===key?' is-current is-active':'')+
    '" aria-selected="'+(view===key)+'" data-action="tt-tab" data-target="'+key+'"'+
    (!enabled||busy?' disabled aria-disabled="true"':'')+
    (!enabled?' title="Awaiting native operational integration"':'')+
@@ -91,14 +103,28 @@ function navigation(view,busy,bootstrapEligible=false,gpsEligible=false){
   ).join('')+'</div></nav>';
 }
 function head(access){
- return '<header class="tt-app-header">'+
-  '<div class="tt-pixi-backdrop" aria-hidden="true" data-pixi="fallback"></div>'+ 
+ return '<header class="tt-app-header fm1-app-header">'+
+  '<div class="tt-pixi-backdrop" aria-hidden="true" data-pixi="fallback"></div>'+
   '<div class="tt-app-brand"><span class="tt-brand-icon" aria-hidden="true">◷</span>'+
-   '<div><h2>TimeTracker</h2><p>Attendance, scheduling &amp; team management</p></div></div>'+
-  '<div class="tt-header-actions">'+
+   '<div><span class="fm1-eyebrow">APSYNTRA CRM · ATTENDANCE OPERATIONS</span>'+
+    '<h1>TimeTracker <span>Attendance</span></h1>'+
+    '<p>Attendance, scheduling &amp; team management</p></div></div>'+
+  '<div class="tt-header-actions fm1-header-status">'+
    '<span class="tt-role-pill" title="Existing centralized TimeTracker role">'+
     esc(access?.moduleRole||'Signed access required')+'</span>'+
   '</div></header>';
+}
+function applicationHeading(view,busy){
+ const [title,description]=sectionMeta[view]||sectionMeta.clock;
+ return '<div class="fm1-page-heading tt-application-heading"><div>'+
+  '<span class="fm1-eyebrow">TIMEKEEPING WORKSPACE</span><h2>'+esc(title)+'</h2>'+
+  '<p>'+esc(description)+'</p></div>'+
+  '<button type="button" class="fm1-quiet-button tt-refresh-button" data-action="tt-refresh"'+
+  (busy?' disabled':'')+'>↻ Refresh</button></div>';
+}
+function applicationFooter(){
+ return '<footer class="fm1-app-footer tt-application-footer"><span>APSYNTRA CRM · TimeTracker Attendance</span>'+
+  '<span>Asia/Manila (UTC+8) · Existing attendance records</span></footer>';
 }
 function notifications(verified,writeReady=false){
  return '<div class="tt-notices" role="status">'+
@@ -237,15 +263,16 @@ export function renderTimeTrackerNative({
  const selected=((view==='team'&&teamEligible!==true)||
   (view==='gps'&&gpsEligible!==true))?'clock':
  ['overview','clock','log','reports','calendar','ot','hours','team','monitor','gps'].includes(view)?view:'clock';
- let html='<section class="tt-native" aria-label="TimeTracker attendance application">'+
-  head(verified?result.access:null)+notifications(verified,verified&&result.access?.attendanceWritesAccepted===true)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true);
+ let html='<section class="tt-native" aria-label="TimeTracker attendance application"><div class="fm1-app tt-application" data-tt-application-root>'+
+  head(verified?result.access:null)+navigation(selected,busy,verified&&teamEligible===true,verified&&gpsEligible===true)+
+  applicationHeading(selected,busy)+notifications(verified,verified&&result.access?.attendanceWritesAccepted===true);
  if(error)html+='<div class="tt-feedback tt-feedback-error" role="alert">'+esc(error)+'</div>';
  if(success)html+='<div class="tt-feedback tt-feedback-success" role="status">'+esc(success)+'</div>';
  if(!verified){
   html+='<div class="tt-unavailable"><p>'+(busy?
    'Checking signed TimeTracker access and attendance records…':
-   'Attendance is unavailable until signed workspace, board and module access are verified.')+
-   '</p></div></section>';
+   'Attendance is unavailable until signed workspace, board and module data are available.')+
+   '</p></div>'+applicationFooter()+'</div></section>';
   return html;
  }
  if(selected==='overview')html+=renderTimeTrackerOverview({
@@ -289,6 +316,6 @@ export function renderTimeTrackerNative({
   requests:result.otRequests||[],access:result.access,
   filters:otFilters,modalOpen:otModalOpen,form:otDraft,now
  });
- html+='</section>';
+ html+=applicationFooter()+'</div></section>';
  return html;
 }

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TimeTracker Application Fixture</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="../../apsyntra-styles.bundle.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: #f7fafb;
+      }
+      #app {
+        min-height: 100vh;
+      }
+      .main.aps-board-shell {
+        padding: 24px;
+      }
+      @media (max-width: 720px) {
+        .main.aps-board-shell {
+          padding: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <main class="main aps-board-shell aps-time-tracker-shell">
+        <div id="time-tracker-mount"></div>
+      </main>
+    </div>
+    <script type="module">
+      import { renderTimeTrackerNative } from "../../time-tracker-ui.js";
+
+      const result = {
+        status: "VERIFIED_READ",
+        access: {
+          moduleRole: "Employee",
+          attendanceWritesAccepted: false,
+        },
+        records: [],
+        active: null,
+        otRequests: [],
+      };
+      const mount = document.querySelector("#time-tracker-mount");
+      window.__timeTrackerRender = (options = {}) => {
+        mount.innerHTML = renderTimeTrackerNative({
+          result,
+          view: "clock",
+          ...options,
+        });
+      };
+      window.__timeTrackerRender();
+      window.__timeTrackerFixtureReady = true;
+    </script>
+  </body>
+</html>
