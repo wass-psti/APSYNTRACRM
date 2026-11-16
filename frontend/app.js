@@ -9639,7 +9639,18 @@ globalSearchController=startGlobalSearch({
   const archived=await db.boards('archived').catch(()=>[]);
   return [...state.boards,...archived];
  },
- searchRecords:(query)=>db.searchWorkspaceContent(query,40),
+ searchRecords:async(query)=>{
+  const [workspace,native]=await Promise.allSettled([
+   db.searchWorkspaceContent(query,40),
+   nativeSearchRegistry.search(query,{userId:state.context?.user_id,
+    workspaceId:state.context?.workspace_id})
+  ]);
+  const rows=workspace.status==='fulfilled'?[...workspace.value]:[];
+  if(native.status==='fulfilled')rows.push(...native.value.results);
+  if(workspace.status==='rejected'&&native.status==='rejected')
+   throw workspace.reason||native.reason;
+  return rows;
+ },
  navigate:navigateGlobalSearchResult,
  onError:error=>notice(error)
 });
