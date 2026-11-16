@@ -243,12 +243,14 @@ const tradeLinkNativeSearchAdapter=createNativeSearchAdapter({
  id:'tradelink',name:'TradeLink',recordType:'Commercial document',
  read:async(query,{limit=20}={})=>{
   const bounded=Math.max(1,Math.min(20,Number.isInteger(limit)?limit:20));
-  if(state.boardManage){
+  try{
    const page=await tradeLinkDraftWorkspace.searchPage({
-    filters:{query,documentType:'all',workflowState:'all',archiveMode:'all',
+    filters:{query,documentType:'all',workflowState:'all',archiveMode:'active',
      sortBy:'updatedAt',sortDirection:'desc'},limit:bounded
    });
    return page.rows;
+  }catch(error){
+   if(error?.status!==403&&error?.status!==401)throw error;
   }
   const rows=await tradeLinkDraftWorkspace.assignedDocuments(bounded);
   const terms=String(query||'').toLocaleLowerCase().split(/\s+/).filter(Boolean);
