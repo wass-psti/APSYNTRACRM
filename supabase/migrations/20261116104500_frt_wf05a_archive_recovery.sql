@@ -36,7 +36,7 @@ BEGIN
  IF v_company_id IS NULL THEN
   RAISE EXCEPTION 'FRT company unavailable' USING ERRCODE='42501';
  END IF;
- SELECT coalesce(jsonb_agg(to_jsonb(q) ORDER BY q.archived_at DESC,q.id DESC),'[]'::jsonb)
+ SELECT coalesce(jsonb_agg(to_jsonb(q) ORDER BY q.archived_at DESC,q.request_id DESC),'[]'::jsonb)
  INTO v_rows
  FROM (
   SELECT r.id AS request_id,r.voucher_no,r.title,r.status,r.liquidation_status,
