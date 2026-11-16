@@ -276,8 +276,10 @@ export class TradeLinkDomainClient{
    // A concurrent authoritative workspace refresh invalidates an overlapping
    // context read. Retry that one transient 409 once for the same signed user;
    // identity changes and all other failures remain unchanged.
-   if(error?.status!==409||
-      error?.message!=='Signed workspace context changed during loading.'||
+   const invalidatedContext=error?.status===409&&
+    error?.message==='Signed workspace context changed during loading.';
+   const invalidatedBoard=error?.status===409&&error?.code==='BOARD_READ_INVALIDATED';
+   if((!invalidatedContext&&!invalidatedBoard)||
       this.auth?.userId!==signedActorId)throw error;
    await this.session();
   }
