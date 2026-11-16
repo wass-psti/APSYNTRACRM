@@ -3352,7 +3352,7 @@ async function loadFuelTrackActivity(seq=routeSerial){
 
 async function loadTradeLinkActivity(seq=routeSerial){
  const userId=state.context?.user_id,workspaceId=state.context?.workspace_id;
- const same=()=>seq===routeSerial&&auth.isSignedIn&&
+ const same=()=>seq===routeSerial&&auth.isSignedIn&&auth.userId===userId&&
   state.view==='board'&&state.tab==='tradelink'&&
   state.boardId===TRADELINK_BOARD_ID&&state.tradeLinkSection==='activity'&&
   state.context?.user_id===userId&&state.context?.workspace_id===workspaceId&&
@@ -3397,8 +3397,8 @@ async function loadTradeLinkAnalytics(seq=routeSerial){
   // this request's busy state, but never clear a newer request's indicator.
   if(run===state.tradeLinkAnalyticsRunId){
    state.tradeLinkAnalyticsBusy=false;
-   const routeStillAnalytics=auth.isSignedIn&&state.view==='board'&&
-    state.tab==='tradelink'&&state.boardId===TRADELINK_BOARD_ID&&
+   const routeStillAnalytics=auth.isSignedIn&&auth.userId===userId&&
+    state.view==='board'&&state.tab==='tradelink'&&state.boardId===TRADELINK_BOARD_ID&&
     state.tradeLinkSection==='analytics'&&state.context?.user_id===userId&&
     state.context?.workspace_id===workspaceId&&
     state.board?.board?.workspace_id===workspaceId&&state.boardManage===true;

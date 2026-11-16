@@ -269,7 +269,18 @@ export class TradeLinkDomainClient{
    /^\d{4}-\d{2}-\d{2}T/.test(value)&&Number.isFinite(Date.parse(value));
   if(!validBound(from)||!validBound(to)||(from&&to&&Date.parse(to)<=Date.parse(from)))
    deny('Invalid TradeLink analytics reporting period.',400);
-  await this.session();
+  const signedActorId=this.auth?.userId;
+  try{
+   await this.session();
+  }catch(error){
+   // A concurrent authoritative workspace refresh invalidates an overlapping
+   // context read. Retry that one transient 409 once for the same signed user;
+   // identity changes and all other failures remain unchanged.
+   if(error?.status!==409||
+      error?.message!=='Signed workspace context changed during loading.'||
+      this.auth?.userId!==signedActorId)throw error;
+   await this.session();
+  }
   const result=await this.api.rpc('tl03_analytics_summary',{
    p_board_id:TRADELINK_BOARD_ID,p_from:from,p_to:to});
   try{return normalizeTradeLinkAnalyticsSummary(result);}
