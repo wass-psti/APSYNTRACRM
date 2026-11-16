@@ -39,19 +39,47 @@ export function normalizeNativeSearchResult(adapter,row,query){
  if(score===null)return null;
  return Object.freeze({
   id:adapter.id+':'+recordId,type:'native-record',native:true,
-  application:adapter.name,applicationId:adapter.id,
-  recordType:adapter.recordType,recordId,title,subtitle,excerpt,href,score
+  application:adapter.name,applicationId:adapter.applicationId,
+  recordType:adapter.recordType,recordId,title,subtitle,excerpt,href,score,
+  query:normalizeGlobalSearchQuery(query),
+  navigationScope:clean(adapter.getNavigationScope?.(row),100)
  });
 }
 
-export function createNativeSearchAdapter({id,name,recordType,read,getId,getTitle,
- getSubtitle=()=>'',getExcerpt=()=>'',getSearchFields=()=>[],getHref}={}){
+export function createNativeSearchAdapter({id,applicationId=id,name,recordType,read,getId,getTitle,
+ getSubtitle=()=>'',getExcerpt=()=>'',getSearchFields=()=>[],getNavigationScope=()=>'',getHref}={}){
  if(!/^[a-z][a-z0-9-]{1,39}$/.test(String(id||''))||
+  !/^[a-z][a-z0-9-]{1,39}$/.test(String(applicationId||''))||
   !clean(name,100)||!clean(recordType,80)||typeof read!=='function'||
   typeof getId!=='function'||typeof getTitle!=='function'||typeof getHref!=='function')
   throw new TypeError('Invalid native search adapter contract');
- return Object.freeze({id,name:clean(name,100),recordType:clean(recordType,80),
-  read,getId,getTitle,getSubtitle,getExcerpt,getSearchFields,getHref});
+ return Object.freeze({id,applicationId,name:clean(name,100),recordType:clean(recordType,80),
+  read,getId,getTitle,getSubtitle,getExcerpt,getSearchFields,getNavigationScope,getHref});
+}
+
+
+/** Cache a bounded native snapshot per signed workspace scope. Concurrent searches
+ * share the same in-flight read; query changes only filter the cached snapshot. */
+export function createSnapshotReader(read,{ttlMs=12000,maxEntries=4}={}){
+ if(typeof read!=='function'||!Number.isFinite(ttlMs)||ttlMs<0||
+    !Number.isInteger(maxEntries)||maxEntries<1)throw new TypeError('Invalid snapshot reader');
+ const cache=new Map();
+ return async(context={})=>{
+  const key=[context.userId||'',context.workspaceId||'',context.boardId||''].join('|');
+  const now=Date.now(),prior=cache.get(key);
+  if(prior&&(prior.promise||prior.expiresAt>now)){
+   if(prior.promise)return prior.promise;
+   return prior.value;
+  }
+  const entry={promise:Promise.resolve().then(()=>read(context))};
+  cache.delete(key);cache.set(key,entry);
+  while(cache.size>maxEntries)cache.delete(cache.keys().next().value);
+  try{
+   const value=await entry.promise;
+   if(cache.get(key)===entry)cache.set(key,{value,expiresAt:Date.now()+ttlMs});
+   return value;
+  }catch(error){if(cache.get(key)===entry)cache.delete(key);throw error;}
+ };
 }
 
 /** Executes independent read adapters concurrently; one unavailable module does not
@@ -77,7 +105,7 @@ export function createNativeSearchRegistry(adapters=[],{limit=NATIVE_SEARCH_RESU
     const item=settled[i],adapter=registered[i];
     if(item.status==='rejected'){errors.push({adapterId:adapter.id,error:item.reason});continue;}
     for(const row of item.value){
-     const key=row.href+'|'+row.recordId;
+     const key=row.href+'|'+row.recordType+'|'+row.recordId;
      if(seen.has(key))continue;
      seen.add(key);results.push(row);
     }

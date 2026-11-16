@@ -184,14 +184,16 @@ test('normalizes native records into application-aware deep links and relevance 
  assert.equal(row.application,'Toolbox Issues');
  assert.equal(row.recordId,'issue-1');
  assert.equal(row.href,'#/boards/'+activeBoard.id+'/items');
- assert.equal(row.score,3);
+ assert.equal(row.score,1);
  const merged=buildGlobalSearchResults('hydraulic pump',{
   modules:[],boards:[],navigation:[],records:[row]
  });
  assert.equal(merged[0].type,'native-record');
  assert.equal(merged[0].applicationId,'toolbox-issues');
  assert.equal(merged[0].excerpt,'Pump station 4');
- assert.equal(scoreNativeSearchResult('hydraulic pump',['Hydraulic pump leak']),2);
+ assert.equal(merged[0].query,'hydraulic pump');
+ assert.equal(merged[0].navigationScope,'');
+ assert.equal(scoreNativeSearchResult('hydraulic pump',['Hydraulic pump leak']),1);
 });
 
 test('runs native adapters concurrently with bounded reads, deduplication and isolated failures',async()=>{
@@ -232,18 +234,43 @@ test('rejects unsafe native adapter contracts and invalid navigation destination
 test('wires TradeLink to its existing bounded signed document search and native detail route',()=>{
  const adapters=readFileSync('frontend/global-search-adapters.js','utf8');
  const tradeLink=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(app,/createNativeSearchRegistry\(\[tradeLinkNativeSearchAdapter\]\)/);
+ assert.match(app,/createNativeSearchRegistry\(\[tradeLinkNativeSearchAdapter,frtNativeSearchAdapter,timeTrackerAttendanceSearchAdapter,timeTrackerOvertimeSearchAdapter,fuelTrackNativeSearchAdapter\]\)/);
  assert.match(app,/tradeLinkDraftWorkspace\.searchPage\(/);
  assert.match(app,/tradeLinkDraftWorkspace\.assignedDocuments\(bounded\)/);
  assert.match(app,/applicationId==='tradelink'/);
  assert.match(app,/openTradeLinkDocument\(selectedDocument\)/);
  assert.match(app,/openTradeLinkAssignedDocument\(selectedDocument\)/);
  assert.match(app,/pendingNativeSearchSelection/);
+ assert.match(app,/searchFRTRequestsReadOnly/);
+ assert.match(app,/timeTrackerSearchSnapshot/);
+ assert.match(app,/timeTrackerAttendanceSearchAdapter/);
+ assert.match(app,/timeTrackerOvertimeSearchAdapter/);
+ assert.match(app,/ttOtExpandedRequestIds/);
  assert.match(app,/nativeSearchRegistry\.search\(query/);
  assert.match(app,/Promise\.allSettled\(\[/);
  assert.match(tradeLink,/async searchPage\(\{filters=initialTradeLinkDraftListFilters\(\),cursor=null,limit=50\}/);
  assert.match(tradeLink,/limit must be 1–50/);
  assert.match(adapters,/NATIVE_SEARCH_ADAPTER_LIMIT=12/);
+});
+
+test('binds FRT, FuelTrack+ and TimeTracker through existing signed native clients and detail views',()=>{
+ const overtime=readFileSync('frontend/time-tracker-overtime.js','utf8');
+ const fuelTrack=readFileSync('frontend/fueltrack-v3-domain-client.js','utf8');
+ const frt=readFileSync('frontend/frt-finance-readonly.js','utf8');
+ assert.match(app,/searchFRTRequestsReadOnly\(\{auth,api:db,query,limit\}\)/);
+ assert.match(frt,/api\.rpc\('frt_board_list_safe'/);
+ assert.match(app,/loadFRTFinanceDetail\(pending\.recordId,seq\)/);
+ assert.match(app,/fuelTrackSearchSnapshot=createSnapshotReader/);
+ assert.match(fuelTrack,/async read\(\{limit=100\}/);
+ assert.match(app,/fuelTrackSearchSnapshot\(\{userId,workspaceId,boardId:FUELTRACK_V3_ID\}\)/);
+ assert.match(app,/receipt_number/);
+ assert.match(app,/fuelTrackRequestFilters=\{\.\.\.FUELTRACK_REQUEST_FILTER_DEFAULTS/);
+ assert.match(app,/applicationId==='fueltrack'/);
+ assert.match(app,/timeTrackerSearchSnapshot=createSnapshotReader/);
+ assert.match(app,/timeTracker\.snapshot\(boardId\)/);
+ assert.match(app,/ttLogExpandedIds=\[pending\.recordId\]/);
+ assert.match(app,/ttOtExpandedRequestIds=\[pending\.recordId\]/);
+ assert.match(overtime,/expandedRequestIds\.includes\(r\.id\)/);
 });
 
 test('responsive palette and exact-commit Pages asset manifests include new assets',()=>{

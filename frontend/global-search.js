@@ -102,7 +102,8 @@ export function buildGlobalSearchResults(query,{boards=[],modules=BOARD_MODULES,
    add(result('native-record',row.title,row.subtitle,row.href,score,{
     id:row.id,application:row.application,applicationId:row.applicationId,
     recordType:row.recordType,recordId:row.recordId,
-    excerpt:row.excerpt||'',native:true
+    excerpt:row.excerpt||'',query:row.query||q,
+    navigationScope:row.navigationScope||'',native:true
    }));
    continue;
   }
