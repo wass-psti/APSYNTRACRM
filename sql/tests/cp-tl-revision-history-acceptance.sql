@@ -94,7 +94,7 @@ BEGIN
   OR latest->'content'->>'remarks'<>'Second revision content'
  THEN RAISE EXCEPTION 'Pending revision 2 was incorrectly approved or altered'; END IF;
  IF public.tl03_document_revision_bundle('264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
-  '99999999-9999-4999-8999-999999999992',99)->'selected' IS NOT NULL
+  '99999999-9999-4999-8999-999999999992',99)->'selected' IS DISTINCT FROM 'null'::jsonb
  THEN RAISE EXCEPTION 'Unknown revision should not return a selected payload'; END IF;
 END $manager_read$;
 RESET ROLE;
