@@ -81,6 +81,7 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Verify FM1 browser acceptance
-        run: npm run test:e2e
+        run: |
+          CHROMIUM_PATH="$(node --input-type=module -e 'import { chromium } from "playwright"; process.stdout.write(chromium.executablePath())')" npm run test:e2e
       - name: Verify TimeTracker application views, responsive layout and WCAG 2.2 AA
         run: npm run test:time-tracker:e2e
