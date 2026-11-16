@@ -1584,9 +1584,9 @@
       "sha256": "ae9a034c9782b7959fd8486b1dcde30cd3e4a43f204123788ecc4d05a7f758e6"
     },
     {
-      "version": "20261116060000",
+      "version": "20261116062331",
       "name": "cp_crm_global_search_02b_prefix_index_lookup",
-      "file": "20261116060000_cp_crm_global_search_02b_prefix_index_lookup.sql",
+      "file": "20261116062331_cp_crm_global_search_02b_prefix_index_lookup.sql",
       "bytes": 9429,
       "sha256": "ad401e64ea164f9f9cecec9d28ba7ae8a31fa5849712b8db98ebabdc22ae105b"
     }

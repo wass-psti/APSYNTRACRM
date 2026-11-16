@@ -48,3 +48,6 @@ No new workspace, board, module, role or permission model. The RPC uses the exis
 - Production migration recorded as `20261116055059_cp_crm_global_search_02_indexed_workspace_search` in the existing Supabase project.
 - Production indexes and the private scoped implementation are present; the public RPC is invoker-security.
 - Genuine signed-browser acceptance and Pages deployment remain pending until the updated PR is merged and deployed.
+
+
+- Production prefix-index follow-up migration: `20261116062331_cp_crm_global_search_02b_prefix_index_lookup`. Live signed two-character searches incremented both B-tree prefix index scan counters; live three-or-more-character searches incremented both trigram index counters.

@@ -1,6 +1,6 @@
 BEGIN;
 \i supabase/migrations/20261116055059_cp_crm_global_search_02_indexed_workspace_search.sql
-\i supabase/migrations/20261116060000_cp_crm_global_search_02b_prefix_index_lookup.sql
+\i supabase/migrations/20261116062331_cp_crm_global_search_02b_prefix_index_lookup.sql
 COMMIT;
 
 DO $$
