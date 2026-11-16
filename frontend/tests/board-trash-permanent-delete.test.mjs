@@ -85,6 +85,18 @@ test('UI provides single and selected permanent-delete actions with explicit typ
  assert.match(css,/\.boards-trash-bulk/);
  assert.match(css,/\.board-trash-select/);
 });
+test('partial bulk failure provides an enabled Trash refresh action and never re-submits deletion',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const modal=app.slice(app.indexOf('function openModal('),app.indexOf('const input=('));
+ const bulk=app.slice(app.indexOf("case 'trash-board-bulk-permanent-delete':"),
+  app.indexOf("case 'board-card-restore':"));
+ assert.match(modal,/recoveryKind==='partial'/);
+ assert.match(modal,/feedback\.textContent=err\?\.message/);
+ assert.match(modal,/installModalRecoveryAction\(button/);
+ assert.match(bulk,/partialRecoveryLabel:'Close and refresh Trash'/);
+ assert.match(bulk,/recoveryAction:refreshBoardCardListsAfterRecovery/);
+});
+
 test('SQL requires trashed state and existing signed manage access; preserves storage and workspace records',()=>{
  const sql=readFileSync('supabase/migrations/20261116005252_cp_board_trash_permanent_delete_01.sql','utf8');
  assert.match(sql,/public\.work_board_access\(p_board_id, 'manage'\)/);

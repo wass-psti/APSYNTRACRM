@@ -249,19 +249,18 @@ test('legacy SQLSTATE 40001 is normalized to terminal HTTP 409 without retry',as
  assert.equal(writes,1);
 });
 
-test('stale board lifecycle conflicts disable modal resubmission until the board is reopened',()=>{
+test('stale board lifecycle conflicts install an enabled close-and-refresh recovery action',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const modal=app.slice(app.indexOf('function openModal('),app.indexOf('const input=('));
  assert.match(modal,/disableOnConflict=false/);
- assert.match(modal,/const conflict=disableOnConflict&&/);
- assert.match(modal,/err\?\.status===409/);
- assert.match(modal,/err\?\.code==='40001'/);
- assert.match(modal,/err\?\.code==='BOARD_REVISION_STALE'/);
- assert.match(modal,/err\?\.code==='BOARD_METADATA_CHANGED'/);
- assert.match(modal,/button\.textContent='Close and verify board'/);
- assert.match(modal,/button\.textContent='Close and refresh board'/);
+ assert.match(modal,/modalRecoveryKind\(err,\{disableOnConflict\}\)/);
+ assert.match(modal,/installModalRecoveryAction\(button/);
+ assert.match(modal,/recoveryKind==='partial'/);
+ assert.match(modal,/button\.type='submit';button\.disabled=false/);
  const edit=app.slice(app.indexOf("case 'board-card-edit':"),app.indexOf("case 'board-card-trash':"));
  const trash=app.slice(app.indexOf("case 'board-card-trash':"),app.indexOf("case 'board-card-permanent-delete':"));
  assert.match(edit,/disableOnConflict:true/);
+ assert.match(edit,/recoveryAction:refreshBoardCardListsAfterRecovery/);
  assert.match(trash,/disableOnConflict:true/);
+ assert.match(trash,/recoveryAction:refreshBoardCardListsAfterRecovery/);
 });
