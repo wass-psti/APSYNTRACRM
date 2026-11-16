@@ -132,7 +132,7 @@ test('board card markup uses one stretched link and independent menu, preserving
  assert.match(app,/await db.allowed\(id,'manage'\)/);
  assert.match(app,/state\.boardLifecycleBusy=true/);
  assert.match(app,/closeBoardCardMenus\(\);hideModal\(\)/);
- assert.match(app,/Permanent deletion is not offered/);
+ assert.match(app,/restore this board from Trash or permanently delete it there if eligible/);
  assert.match(css,/\.board-card\.board-card-menu-open\{z-index:40\}/);
  assert.match(css,/\.board-card-actions>summary:focus-visible/);
  assert.match(css,/\.board-card-actions-list\{/);
@@ -147,7 +147,7 @@ test('reversible board deletion is a two-click confirmation without retyping',()
  assert.match(trash,/await boardCardLifecycle\.trash\(board,board\.name\)/);
  assert.match(trash,/submitLabel:'Move to Trash',destructive:true/);
  assert.match(trash,/successMessage:'Board moved to Trash/);
- assert.match(trash,/Restore the board from Trash|restore the board from Trash/);
+ assert.match(trash,/restore this board from Trash or permanently delete it there if eligible/);
  assert.doesNotMatch(trash,/name=\"confirm\"|fd\.get\('confirm'\)|Type .*to confirm/);
  assert.match(app,/await db\.allowed\(id,'manage'\)/);
  assert.match(app,/closeBoardCardMenus\(\);hideModal\(\)/);
