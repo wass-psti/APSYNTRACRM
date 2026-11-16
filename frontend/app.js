@@ -162,8 +162,8 @@ import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-perso
 import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
 import {loadFRTLiquidation,submitFRTLiquidation} from './frt-liquidation.js';
 import {loadFRTBankExecution,recordFRTBankExecution} from './frt-bank-execution.js';
-import {loadFRTComments,addFRTComment,loadFRTAuditPage,frtAuditCsv,projectFRTNotifications,loadFRTDeadlineSnapshots} from './frt-collaboration.js';
-import {renderFRTComments,renderFRTActivityEvents,renderFRTActivityFilters,renderFRTNotifications} from './frt-collaboration-ui.js';
+import {loadFRTComments,addFRTComment,loadFRTAuditPage,frtAuditCsv,projectFRTNotifications,loadFRTDeadlineSnapshots,loadFRTAgingSummary} from './frt-collaboration.js';
+import {renderFRTComments,renderFRTActivityEvents,renderFRTActivityFilters,renderFRTNotifications,renderFRTNotificationSummary} from './frt-collaboration-ui.js';
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
@@ -4455,13 +4455,18 @@ async function openFRTNotificationsDialog(){
   if(busy||!current())return;
   busy=true;host.innerHTML='<div class="frt-collab-empty" role="status">Loading persisted events and liquidation deadlines…</div>';
   try{
-   const page=await loadFRTAuditPage({auth,api:db,workspaceId,companyCode,limit:100,offset:0});
+   const [page,agingResult]=await Promise.all([
+    loadFRTAuditPage({auth,api:db,workspaceId,companyCode,limit:100,offset:0}),
+    loadFRTAgingSummary({api:db,workspaceId,companyCode}).then(aging=>({aging})).catch(error=>({error}))
+   ]);
    const snapshots=await loadFRTDeadlineSnapshots({api:db,workspaceId,requests:page.requests,concurrency:6});
    if(!current())return;
    const notifications=projectFRTNotifications({events:page.events,requests:page.requests,
     bankSnapshots:snapshots.filter(item=>item.snapshot).map(item=>({requestId:item.requestId,snapshot:item.snapshot}))});
    const failed=snapshots.filter(item=>item.error).length;
-   host.innerHTML=(page.hasMore?'<p class="frt-collab-status">Showing the latest 100 persisted request events. Older events are available in Activity Log.</p>':'')+
+   host.innerHTML=(agingResult.aging?renderFRTNotificationSummary(agingResult.aging):
+    '<p class="frt-collab-status">Liquidation aging summary is temporarily unavailable.</p>')+
+    (page.hasMore?'<p class="frt-collab-status">Showing the latest 100 persisted request events. Older events are available in Activity Log.</p>':'')+
     (failed?'<p class="frt-collab-status">Some request-specific deadline snapshots were unavailable and were not inferred.</p>':'')+
     renderFRTNotifications(notifications,page.requests,{currentUserId:userId,currentUserName:name()});
   }catch(error){

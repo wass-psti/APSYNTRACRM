@@ -18,6 +18,12 @@ export function renderFRTActivityFilters({companies=[],requests=[],companyCode='
  const actions=['REQUEST_CREATED','FINANCE_APPROVED','REQUEST_REJECTED','GM_VERIFIED','BANK_EXECUTION_RECORDED','LIQUIDATION_SUBMITTED','LIQUIDATION_APPROVED','COMMENT_ADDED','FINANCE_APPROVAL_REVOKED','GM_VERIFICATION_REVOKED','REQUEST_CLOSED','REQUEST_ARCHIVED','REQUEST_FILING_STATUS_CHANGED','REQUEST_DATE_CORRECTED','REQUEST_PERSON_ASSIGNED'];
  return '<form class="frt-collab-filters" data-frt-activity-filters><label>Company<select name="companyCode">'+companies.map(company=>'<option value="'+e(company.code)+'"'+(company.code===companyCode?' selected':'')+'>'+e(company.name)+' ('+e(company.code)+')</option>').join('')+'</select></label><label>Request<select name="requestId"><option value="">All requests</option>'+requests.map(request=>'<option value="'+e(request.requestId)+'"'+(request.requestId===requestId?' selected':'')+'>'+e(request.voucher)+' · '+e(request.title)+'</option>').join('')+'</select></label><label>Action<select name="action"><option value="">All actions</option>'+actions.map(value=>'<option value="'+value+'"'+(action===value?' selected':'')+'>'+e(frtEventLabel(value))+'</option>').join('')+'</select></label><label class="frt-collab-search">Search<input name="search" type="search" maxlength="80" value="'+e(search)+'" placeholder="Action, voucher, reason…"/></label><button type="submit" class="primary">Apply filters</button></form>';
 }
+export function renderFRTNotificationSummary(aging){
+ if(!aging)return '';
+ const fields=[['Pending liquidation',aging.pending_total],['Awaiting bank execution',aging.awaiting_bank_execution],
+  ['On track',aging.on_track],['Due within 24 hours',aging.due_soon],['Overdue',aging.overdue],['Completed',aging.completed]];
+ return '<p class="frt-collab-intro">Liquidation aging — '+fields.map(([label,value])=>label+': '+Number(value).toLocaleString('en-US')).join(' · ')+'</p>';
+}
 export function renderFRTNotifications(notifications,requests,{currentUserId='',currentUserName=''}={}){
  if(!Array.isArray(notifications)||!notifications.length)return '<div class="frt-collab-empty">No request notifications or upcoming liquidation deadlines for this company.</div>';
  const requestMap=new Map(requests.map(request=>[request.requestId,request]));

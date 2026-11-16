@@ -2,25 +2,25 @@
 
 ## Implementation
 
-- Added a request Discussion panel backed by the existing \`frt_comments\` table and \`frt_add_comment\` RPC.
+- Added a request Discussion panel backed by the existing `frt_comments` table and `frt_add_comment` RPC.
 - Comment reads use a narrow PostgREST projection: comment ID, workspace ID, request ID, author user ID, body, and timestamp.
 - Successful comment writes are followed by a fresh chronological read. Repeated submits are disabled while a write is in flight.
-- Added a company- and request-filtered Activity Log backed by \`frt_audit_logs\`.
+- Added a company- and request-filtered Activity Log backed by `frt_audit_logs`.
 - Activity supports action filtering, text search across action and common audit detail fields, newest-first ordering, server-side 50-row pagination, and CSV export of the current filtered page.
 - Activity detail rendering uses an explicit allowlist of useful workflow detail fields.
-- Added a Notification Center derived from persisted request audit events and the existing \`frt_bank_execution_snapshot\` RPC.
-- Deadline reminders are generated only when the authoritative snapshot reports staff-recorded bank execution. Due-soon is within 24 hours of the existing 72-hour deadline; overdue is after that deadline.
+- Added a Notification Center derived from persisted request audit events and the existing `frt_bank_execution_snapshot` RPC.
+- The notification panel displays the authoritative company aging counters from `frt_liquidation_aging_company` and generates per-request reminders only when the authoritative snapshot reports staff-recorded bank execution. Due-soon is within 24 hours of the existing 72-hour deadline; overdue is after that deadline.
 - Notification buttons navigate to the corresponding request detail.
 - Deadline reads are bounded to six concurrent requests and only run for finance-approved requests with liquidation not already approved.
 - Added the existing read-only bank snapshot RPC to the board-cache read allowlist and the existing comment write RPC to the mutation allowlist so cache invalidation occurs after successful writes.
 
 ## Existing production contracts reused
 
-- \`frt_comments\`
-- \`frt_audit_logs\`
-- \`frt_add_comment\`
-- \`frt_board_list_safe\`
-- \`frt_bank_execution_snapshot\`
+- `frt_comments`
+- `frt_audit_logs`
+- `frt_add_comment`
+- `frt_board_list_safe`
+- `frt_bank_execution_snapshot`
 
 No new database table, RPC, migration, grant, RLS policy, role, permission, authentication framework, or notification persistence mechanism was introduced.
 
