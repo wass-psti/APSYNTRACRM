@@ -1,3 +1,4 @@
+import {projectFRTAging} from './frt-finance-readonly.js';
 /** FRT operational collaboration reads and comment writes using existing contracts. */
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const companyPattern=/^[A-Za-z0-9_-]{1,32}$/;
@@ -98,6 +99,15 @@ export async function loadFRTAuditPage({auth,api,workspaceId,companyCode,request
  const allowedIds=new Set(ids),events=rows.slice(0,limit).map(row=>validateAuditRow(row,workspaceId,allowedIds));
  return {requests,events,hasMore:rows.length>limit,offset,limit};
 }
+export async function loadFRTAgingSummary({api,workspaceId,companyCode}={}){
+ if(!uuid.test(workspaceId||'')||!companyPattern.test(companyCode||''))
+  throw fail('Invalid FRT liquidation aging scope.');
+ const raw=await api.rpc('frt_liquidation_aging_company',{p_workspace_id:workspaceId,p_company:companyCode});
+ const aging=projectFRTAging(raw,companyCode);
+ if(!aging)throw fail('FRT liquidation aging summary contract is invalid.',502,'FRT_AGING_CONTRACT_INVALID');
+ return aging;
+}
+
 export async function loadFRTDeadlineSnapshots({api,workspaceId,requests=[],concurrency=6}={}){
  if(!uuid.test(workspaceId||'')||!Array.isArray(requests)||requests.length>100||
   !Number.isSafeInteger(concurrency)||concurrency<1||concurrency>12)
