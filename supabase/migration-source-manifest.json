@@ -1626,11 +1626,11 @@
       "sha256": "0c96df198566b6047ce181e6ec56a4eb29b204e0b2405c2937a4ca7abf362161"
     },
     {
-      "version": "20261116104500",
-      "name": "frt_wf05a_archive_recovery",
-      "file": "20261116104500_frt_wf05a_archive_recovery.sql",
-      "bytes": 3449,
-      "sha256": "2a4c8ee392d55b5717c9f566e99f5da261b0cb2a897acf143caa546ae81de9b7"
+      "version": "20261117010000",
+      "name": "frt_wf05b_monthly_voucher_and_duplicate_guard",
+      "file": "20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard.sql",
+      "bytes": 7187,
+      "sha256": "4d0cdea68848777694552f8557e2a8d6a2b1356b848aceb1d6c7b46b7a5024dc"
     }
   ]
 }
