@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-NAME="cp-frt-wf05a-wf05b-$"
+NAME="cp-frt-wf05a-wf05b-$$"
 cleanup(){ docker rm -f "$NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT INT TERM
 docker run -d --rm --name "$NAME" -e POSTGRES_PASSWORD=disposable postgres:17 >/dev/null
