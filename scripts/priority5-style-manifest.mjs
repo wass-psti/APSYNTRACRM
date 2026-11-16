@@ -41,6 +41,7 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/platform-sync.css",
  "frontend/foreground-overlay.css",
  "frontend/soft-minimalist.css",
+ "frontend/fm1-application.css",
  "frontend/fueltrans-native.css",
  "frontend/board-people.css",
  "frontend/board-share-clean.css",

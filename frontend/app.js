@@ -362,6 +362,7 @@ function sidebar(){
  const recent=state.boards.slice(0,6);
  const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
   sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
+  sidebarNav('#/fm1','FM1 Ticketing','ticket',state.view==='fm1')+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',state.view==='security'):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
@@ -456,7 +457,7 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
+ const crumb=state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
  const sidebarSignature=JSON.stringify([state.roleVerified,state.adminVerified,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
@@ -513,6 +514,7 @@ function shell(body){
   animateTabContent('.main-content');
  root.querySelector('.main')?.classList.toggle('aps-board-shell',state.view==='board');
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
+ root.querySelector('.main')?.classList.toggle('aps-fm1-shell',state.view==='fm1');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
  root.querySelector('.main')?.classList.toggle('aps-foundation-shell',state.view==='foundation');
  root.querySelector('.main')?.classList.toggle('aps-security-shell',state.view==='security');
@@ -1166,6 +1168,7 @@ function render(){
   busy:invitationAcceptanceBusy,status:invitationAcceptanceStatus
  }));
  else if(state.view==='boards')shell(boardsPage());
+ else if(state.view==='fm1')shell('<fm1-application data-user-id="'+e(state.context?.user_id||'')+'" data-workspace-id="'+e(state.context?.workspace_id||'')+'"></fm1-application>');
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
  mountTradeLinkTabMotion(root);
@@ -3491,6 +3494,7 @@ async function onRoute(){
   state.view='invitation';render();return;
  }
  if(pendingInvitation){pendingInvitation=null;invitationAcceptanceStatus='';}
+ if(parts[0]==='fm1')await import('./fm1/index.js');
  if(parts[0]==='boards'&&validUuid(parts[1])){
   const defaultClock=!parts[2]&&state.boards.some(b=>
     b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
@@ -3532,7 +3536,7 @@ async function onRoute(){
    signedDraftRoute&&parts[4]!=='edit'?(directModule?parts[3]:parts[4]):null,editId);
   return;
  }
- routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
+ routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttView='clock';state.boardId=null;state.board=null;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.view=parts[0]==='boards'?'boards':parts[0]==='fm1'?'fm1':parts[0]==='settings'?'settings':parts[0]==='acceptance'?'acceptance':parts[0]==='foundation'?'foundation':parts[0]==='security'?'security':parts[0]==='role-configuration'?'role-configuration':parts[0]==='user-role-management'?'user-role-management':'overview';
  if(['role-configuration','user-role-management','foundation','acceptance'].includes(state.view)){
    // Independent signed server checks; bootstrap is an identity label only.
    const roleAdmin=['role-configuration','user-role-management'].includes(state.view);

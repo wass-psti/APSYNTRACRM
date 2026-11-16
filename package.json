@@ -1,0 +1,34 @@
+{
+  "dependencies": {
+    "nanostores": "^1.5.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "axe-core": "^4.11.0",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "playwright": "^1.56.1",
+    "prettier": "^3.10.1",
+    "vite": "^8.3.8"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test frontend/tests/*.test.mjs",
+    "check": "node --check frontend/app.js && for f in frontend/fm1/*.js frontend/fm1/domain/*.js; do node --check \"$f\" || exit 1; done",
+    "test:e2e": "node scripts/fm1-browser-acceptance.mjs",
+    "prebuild": "node scripts/build-priority5-styles.mjs",
+    "lint": "eslint frontend/fm1 frontend/tests/fm1-*.test.mjs scripts/fm1-browser-acceptance.mjs vite.config.js",
+    "format:check": "prettier --check frontend/fm1 frontend/fm1-application.css frontend/tests/fm1-*.test.mjs frontend/tests/fixtures/fm1-component.html scripts/fm1-browser-acceptance.mjs vite.config.js eslint.config.js docs/FM1-FOUNDATION-01.md",
+    "format": "prettier --write frontend/fm1 frontend/fm1-application.css frontend/tests/fm1-*.test.mjs frontend/tests/fixtures/fm1-component.html scripts/fm1-browser-acceptance.mjs vite.config.js eslint.config.js docs/FM1-FOUNDATION-01.md",
+    "test:fm1": "node --test frontend/tests/fm1-*.test.mjs"
+  },
+  "type": "module",
+  "name": "apsyntra-crm",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

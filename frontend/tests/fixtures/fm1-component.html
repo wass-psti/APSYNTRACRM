@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FM1 Component Acceptance Fixture</title>
+    <link rel="icon" href="../../apsyntra-logo.webp" type="image/webp" />
+    <link rel="stylesheet" href="../../apsyntra-styles.bundle.css" />
+  </head>
+  <body>
+    <main style="max-width: 1500px; margin: 0 auto; padding: 24px">
+      <fm1-application></fm1-application>
+    </main>
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      const app = document.querySelector("fm1-application");
+      app.setAttribute("data-user-id", params.get("user") || "fixture-user");
+      app.setAttribute(
+        "data-workspace-id",
+        params.get("workspace") || "fixture-workspace",
+      );
+      await import("../../fm1/index.js");
+    </script>
+  </body>
+</html>
