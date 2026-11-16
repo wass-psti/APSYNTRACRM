@@ -22,6 +22,7 @@ import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-vi
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
+import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board-trash-permanent-delete.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
 import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
@@ -258,6 +259,8 @@ let pendingInvitation=null;
 let invitationAcceptanceBusy=false;
 let invitationAcceptanceStatus='';
 let modal=null;
+const trashPermanentDelete=new BoardTrashPermanentDeleteClient(db);
+const trashBoardSelection=new Set();
 let routeSerial=0;
 let avatarHydrationPromise=Promise.resolve({attempted:0,loaded:0,failed:0,stale:0});
 let ttClockTimer=null;
@@ -546,7 +549,8 @@ function boardCard(board,index){
   '<div class="board-card-actions-list" role="group" aria-label="Board actions">'+
   (status==='MANAGE'?
     (board.status==='trashed'?
-      '<button type="button" data-action="board-card-restore" data-id="'+e(board.id)+'">Restore board</button>':
+      '<button type="button" data-action="board-card-restore" data-id="'+e(board.id)+'">Restore board</button>'+
+      '<button type="button" class="board-card-danger" data-action="board-card-permanent-delete" data-id="'+e(board.id)+'">Delete permanently</button>':
       '<button type="button" data-action="board-card-edit" data-id="'+e(board.id)+'">Edit board</button>'+
       (board.status==='archived'?'<button type="button" data-action="board-card-restore" data-id="'+e(board.id)+'">Restore board</button>':'')+
       '<button type="button" class="board-card-danger" data-action="board-card-trash" data-id="'+e(board.id)+'">Move to Trash</button>'):
@@ -556,7 +560,11 @@ function boardCard(board,index){
   '</div></details>':
   '<span class="board-menu" aria-label="Board management not yet activated">···</span>';
  return '<article class="board-card" data-searchable="'+e((board.name+' '+(board.description||'')).toLowerCase())+'">'+
-  '<div class="board-card-top"><span class="board-symbol '+iconColor(index)+'" aria-hidden="true">'+
+  '<div class="board-card-top">'+(board.status==='trashed'&&status==='MANAGE'?
+   '<label class="board-trash-select"><input type="checkbox" id="trash-board-select-'+e(board.id)+'" name="trash-board-select-'+e(board.id)+'" data-trash-board-select="'+e(board.id)+'" '+
+    (trashBoardSelection.has(board.id)?'checked ':'')+(state.boardLifecycleBusy?'disabled ':'')+
+    'aria-label="Select '+e(board.name)+' for permanent deletion"/><span>Select</span></label>':'')+
+   '<span class="board-symbol '+iconColor(index)+'" aria-hidden="true">'+
    e((board.name||'B').slice(0,1).toUpperCase())+'</span>'+options+'</div>'+
   '<a class="board-card-main" href="'+href+'" aria-label="Open '+e(board.name||'Untitled board')+'"><h3>'+e(board.name||'Untitled board')+'</h3>'+
   '<p>'+e(publicBoardDescription(board))+'</p>'+
@@ -691,6 +699,12 @@ function boardsPage(){
     <p class="board-search-result" id="board-search-result" role="status" aria-live="polite" aria-atomic="true">`+boardCatalogResultLabel(items.length,{query:state.boardSearch,status:selectedStatus})+`</p>
     <span class="boards-selected-filter" aria-hidden="true">`+e(selectedStatus)+` boards</span>
    </div>
+   `+(state.showTrash?'<div class="boards-trash-bulk" role="region" aria-label="Trash bulk actions">'+
+    '<span id="boards-trash-selected" role="status" aria-live="polite">'+trashBoardSelection.size+' selected</span>'+
+    '<button type="button" class="secondary" data-action="trash-board-select-visible" '+(state.boardLifecycleBusy?'disabled':'')+'>Select visible</button>'+
+    '<button type="button" class="secondary" data-action="trash-board-clear-selection" '+(!trashBoardSelection.size||state.boardLifecycleBusy?'disabled':'')+'>Clear selection</button>'+
+    '<button type="button" class="board-modal-danger" data-action="trash-board-bulk-permanent-delete" '+(!trashBoardSelection.size||state.boardLifecycleBusy?'disabled':'')+'>Delete selected permanently</button>'+
+    '</div>':'')+`
   </section>
   <p id="board-search-no-results" class="board-search-no-results" hidden>No boards match this search.</p>
   `+(items.length?
@@ -1200,6 +1214,7 @@ async function refreshBoardCardLists(){
  await refreshWorkspace();
  const [archived,trashed]=await Promise.all([db.boards('archived'),db.boards('trashed')]);
  state.archived=archived;state.trashed=trashed;
+ for(const id of trashBoardSelection)if(!trashed.some(board=>board.id===id&&eligibleTrashBoard(board)))trashBoardSelection.delete(id);
 }
 function closeBoardCardMenus(except=null){
  for(const menu of root.querySelectorAll('.board-card-actions[open]')){
@@ -1705,6 +1720,7 @@ async function refreshWorkspace(){
  const incomingContext=await startupCriticalPath.measure('workspace-context',()=>db.context());
  state.context=mergeProfileAvatarContext(state.context,incomingContext);
  if(priorIdentity!==state.context?.user_id||priorWorkspace!==state.context?.workspace_id){
+  trashBoardSelection.clear();
   crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
   workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
  }
@@ -7673,9 +7689,9 @@ async function action(name,button){
      await refreshWorkspace();location.hash='#/boards/'+id;await onRoute();
    },{submitLabel:'Create board',successMessage:'Board created.'});break;
  }
- case 'active-boards':{state.showArchived=false;state.showTrash=false;render();break;}
- case 'archived-boards':{state.showArchived=true;state.showTrash=false;try{state.archived=await db.boards('archived');}catch(err){notice(err);}render();break;}
- case 'trashed-boards':{if(!BOARD_CARD_LIFECYCLE_ENABLED)return;state.showTrash=true;state.showArchived=false;try{state.trashed=await db.boards('trashed');}catch(err){notice(err);}render();break;}
+ case 'active-boards':{trashBoardSelection.clear();state.showArchived=false;state.showTrash=false;render();break;}
+ case 'archived-boards':{trashBoardSelection.clear();state.showArchived=true;state.showTrash=false;try{state.archived=await db.boards('archived');}catch(err){notice(err);}render();break;}
+ case 'trashed-boards':{if(!BOARD_CARD_LIFECYCLE_ENABLED)return;trashBoardSelection.clear();state.showTrash=true;state.showArchived=false;try{state.trashed=await db.boards('trashed');}catch(err){notice(err);}render();break;}
  case 'board-card-edit':{
   const board=await authorizeBoardCardAction(button.dataset.id);
   closeBoardCardMenus();
@@ -7715,6 +7731,80 @@ async function action(name,button){
     }finally{state.boardLifecycleBusy=false;}
    },{submitLabel:'Move to Trash',destructive:true,disableOnConflict:true,
      successMessage:'Board moved to Trash. Restore it from Trash when needed.'});
+  break;
+ }
+ case 'board-card-permanent-delete':{
+  if(!state.showTrash)return;
+  const board=await authorizeBoardCardAction(button.dataset.id);
+  if(!eligibleTrashBoard(board))throw new ApiError('Only trashed boards can be permanently deleted.',403);
+  closeBoardCardMenus();
+  openModal('Permanently delete board',
+   '<div class="note security-note" role="note"><p><strong>'+e(board.name)+'</strong></p>'+
+   '<p>All board records and related history will be permanently removed. This cannot be undone.</p>'+
+   '<p>Boards with attached files or retained module/audit records cannot be deleted until their owning workflows resolve them.</p></div>'+
+   input('Type DELETE to confirm','confirmDelete','','text'),
+   async fd=>{
+    if(String(fd.get('confirmDelete')||'').trim()!=='DELETE')
+     throw new ApiError('Type DELETE exactly to confirm permanent deletion.',400);
+    if(!state.showTrash)throw new ApiError('Trash view changed. Reopen the action.',409);
+    state.boardLifecycleBusy=true;
+    try{
+     await trashPermanentDelete.delete(board);
+     trashBoardSelection.delete(board.id);
+     await refreshBoardCardLists();render();
+     toast('Board permanently deleted.');
+    }catch(err){
+     try{await refreshBoardCardLists();render();}catch{/* Preserve the original error. */}
+     throw err;
+    }finally{state.boardLifecycleBusy=false;}
+   },{submitLabel:'Delete permanently',destructive:true,disableOnConflict:true,successMessage:''});
+  break;
+ }
+ case 'trash-board-select-visible':{
+  if(!state.showTrash||state.boardLifecycleBusy)return;
+  const visible=state.trashed.filter(board=>eligibleTrashBoard(board)&&
+   boardCardActionState(board)==='MANAGE'&&matchBoardSearch(board,state.boardSearch));
+  if(visible.length>50||trashBoardSelection.size+visible.filter(board=>!trashBoardSelection.has(board.id)).length>50)
+   throw new ApiError('Select up to 50 boards per batch. Narrow your search first.',400);
+  for(const board of visible)trashBoardSelection.add(board.id);
+  render();break;
+ }
+ case 'trash-board-clear-selection':{
+  if(!state.showTrash||state.boardLifecycleBusy)return;
+  trashBoardSelection.clear();render();break;
+ }
+ case 'trash-board-bulk-permanent-delete':{
+  if(!state.showTrash||state.boardLifecycleBusy)return;
+  const selected=state.trashed.filter(board=>trashBoardSelection.has(board.id));
+  if(!selected.length||selected.length!==trashBoardSelection.size||selected.length>50||
+     !selected.every(board=>eligibleTrashBoard(board)&&boardCardActionState(board)==='MANAGE'))
+   throw new ApiError('Selection changed. Refresh Trash and select the boards again.',409);
+  const snapshot=selected.map(board=>({...board}));
+  openModal('Permanently delete '+snapshot.length+' boards',
+   '<div class="note security-note" role="note"><p><strong>This permanently deletes '+snapshot.length+
+   ' selected boards and their records.</strong></p><p>There is no undo. Individual deletions may succeed before a later board fails; remaining boards will not be retried automatically.</p>'+
+   '<p>Boards with attached files or retained module/audit records cannot be deleted until their owning workflows resolve them.</p>'+
+   '<ul class="trash-delete-board-list">'+snapshot.map(board=>'<li>'+e(board.name)+'</li>').join('')+'</ul></div>'+
+   '<div class="field"><label for="modal-confirm-bulk-delete">Type DELETE '+snapshot.length+' BOARDS to confirm</label>'+
+   '<input id="modal-confirm-bulk-delete" name="confirmDelete" required autocomplete="off"/></div>',
+   async fd=>{
+    if(String(fd.get('confirmDelete')||'').trim()!=='DELETE '+snapshot.length+' BOARDS')
+     throw new ApiError('Enter the exact confirmation phrase.',400);
+    if(!state.showTrash||snapshot.some(board=>!trashBoardSelection.has(board.id)))
+     throw new ApiError('Trash selection changed. Review it again.',409);
+    state.boardLifecycleBusy=true;
+    try{
+     const result=await trashPermanentDelete.deleteMany(snapshot,{
+      onDeleted:id=>trashBoardSelection.delete(id)});
+     await refreshBoardCardLists();render();
+     toast(result.deletedIds.length+' boards permanently deleted.');
+    }catch(err){
+     // The server is authoritative after partial success or transport errors.
+     try{await refreshBoardCardLists();render();}catch{/* Preserve the original failure. */}
+     throw err;
+    }finally{state.boardLifecycleBusy=false;}
+   },{submitLabel:'Delete '+snapshot.length+' permanently',destructive:true,
+     disableOnConflict:true,successMessage:''});
   break;
  }
  case 'board-card-restore':{
@@ -8523,6 +8613,26 @@ function syncTradeLinkFinanceInput(event){
 }
 root.addEventListener('change',event=>{
  if(syncTradeLinkFinanceInput(event))return;
+ const trashCheckbox=event.target.closest?.('[data-trash-board-select]');
+ if(trashCheckbox){
+  if(!state.showTrash||state.boardLifecycleBusy)return;
+  const id=trashCheckbox.dataset.trashBoardSelect;
+  const board=state.trashed.find(board=>board.id===id);
+  if(!board||!eligibleTrashBoard(board)||boardCardActionState(board)!=='MANAGE'){
+   trashCheckbox.checked=false;return;
+  }
+  if(trashCheckbox.checked){
+   if(trashBoardSelection.size>=50){trashCheckbox.checked=false;toast('Select at most 50 boards.',true);return;}
+   trashBoardSelection.add(id);
+  }else trashBoardSelection.delete(id);
+  const count=root.querySelector('#boards-trash-selected');
+  if(count)count.textContent=trashBoardSelection.size+' selected';
+  for(const action of ['trash-board-clear-selection','trash-board-bulk-permanent-delete']){
+   const button=root.querySelector('[data-action="'+action+'"]');
+   if(button)button.disabled=!trashBoardSelection.size;
+  }
+  return;
+ }
  if(state.view==='user-role-management'&&state.adminVerified&&state.userRoleBatchMode&&
    !state.userRoleBusy&&state.userRoleData){
   const element=event.target;

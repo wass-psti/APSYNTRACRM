@@ -55,8 +55,8 @@ test('all ten requested areas retain exact functional hooks and signed state',()
 test('tab filters, search and lifecycle authorization behavior remain unchanged',()=>{
  assert.match(catalog,/const items=cards\(\)\.filter\(b=>matchBoardSearch\(b,state\.boardSearch\)\)/);
  assert.match(catalog,/const active=!state\.showArchived&&!state\.showTrash/);
- assert.match(app,/case 'active-boards':\{state\.showArchived=false;state\.showTrash=false;render\(\);break;\}/);
- assert.match(app,/case 'archived-boards':\{state\.showArchived=true;state\.showTrash=false/);
+ assert.match(app,/case 'active-boards':\{trashBoardSelection\.clear\(\);state\.showArchived=false;state\.showTrash=false;render\(\);break;\}/);
+ assert.match(app,/case 'archived-boards':\{trashBoardSelection\.clear\(\);state\.showArchived=true;state\.showTrash=false/);
  assert.match(app,/case 'trashed-boards':\{if\(!BOARD_CARD_LIFECYCLE_ENABLED\)return;/);
  assert.match(app,/if\(event\.target\.id==='board-search'\)state\.boardSearch=event\.target\.value\.slice\(0,160\)/);
  assert.match(app,/row\.hidden=!row\.dataset\.searchable/);

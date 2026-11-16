@@ -15,10 +15,11 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
 const renderCard=new Function('boardCardActionState','BOARD_CARD_LIFECYCLE_ENABLED',
- 'e','iconColor','publicBoardDescription','displayDate',
+ 'e','iconColor','publicBoardDescription','displayDate','state','trashBoardSelection',
  source+';return boardCard;')(
  boardCardActionState,BOARD_CARD_LIFECYCLE_ENABLED,esc,()=> 'blue',
- board=>board.description||'Description',()=> 'Nov 4, 2026'
+ board=>board.description||'Description',()=> 'Nov 4, 2026',
+ {showTrash:false,boardLifecycleBusy:false},new Set()
 );
 const id='30000000-0000-4000-8000-000000000001';
 const board={id,name:'Contacts',description:'Team contact list',
