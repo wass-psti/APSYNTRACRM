@@ -1629,8 +1629,8 @@
       "version": "20261117010000",
       "name": "frt_wf05b_monthly_voucher_and_duplicate_guard",
       "file": "20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard.sql",
-      "bytes": 7218,
-      "sha256": "f44cf064c96f720f70005807a1e153dbeaf55074733b5f0233f9e60019f7567f"
+      "bytes": 7217,
+      "sha256": "71c30ab87708192a0333712ed52ccef115897a65011dd68b760a83b646b1ebb8"
     }
   ]
 }
