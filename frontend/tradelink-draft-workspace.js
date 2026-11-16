@@ -12,7 +12,7 @@ import {TRADELINK_DEFAULT_COMPANY_PROFILE_ID,TRADELINK_COMPANY_PROFILE_OPTIONS,
  tradeLinkCompanyTemplateSnapshot,tradeLinkCompanyProfileIdFromTemplateId}
  from './tradelink-official-templates.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
- TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
+ TL03_DOMAIN_WRITES_ENABLED,TL03_AUTOMATIC_NUMBERING_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
  validateTradeLinkDraftEnvelope,
@@ -380,7 +380,11 @@ export function reconcileTradeLinkSavedListing(list,record,receipt){
 }
 
 export class TradeLinkDraftWorkspace{
- constructor({auth,api}={}){this.client=new TradeLinkDomainClient({auth,api});}
+ constructor({auth,api,automaticNumberingEnabled=TL03_AUTOMATIC_NUMBERING_ENABLED}={}){
+  this.automaticNumberingEnabled=automaticNumberingEnabled===true;
+  this.client=new TradeLinkDomainClient({auth,api,
+   automaticNumberingEnabled:this.automaticNumberingEnabled});
+ }
  async analyticsSummary(period={}){
   return this.client.analyticsSummary(period);
  }
@@ -448,7 +452,7 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
   const operation=expectedRevision===0?'create':'update';
   const payload=validateTradeLinkDraftEnvelope(applyQuotationApprovalHierarchy(draft),
-   {allowUnassignedNumber:operation==='create'});
+   {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
   const id=documentId||globalThis.crypto?.randomUUID?.();
   return this.client.commit({documentId:id,expectedRevision,operation,
    draft:payload,initialState});
@@ -1180,9 +1184,12 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
         (disabled?' disabled':'')+'>'+escape(label)+'</option>';
       }).join('')+'</select><small id="tl-reference-status-help">Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after both reviewers validate.</small></label>'+
      '<label class="tl-draft-field"><span>Document number</span>'+
-      '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+
-       '" readonly maxlength="120" aria-describedby="tl-reference-number-help">'+
-      '<small id="tl-reference-number-help">'+(editing?'Assigned number is permanent and remains unchanged across revisions.':'Automatically assigned by the database when this document is first saved.')+'</small></label>'+
+      '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+'" '+
+       (editing||TL03_AUTOMATIC_NUMBERING_ENABLED?'readonly ':'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" ')+
+       'aria-describedby="tl-reference-number-help">'+
+      '<small id="tl-reference-number-help">'+(editing?'Assigned number is permanent and remains unchanged across revisions.':
+       TL03_AUTOMATIC_NUMBERING_ENABLED?'Automatically assigned by the database when this document is first saved.':
+       'Enter the existing source document number. Automatic numbering is staged until its additive database migration is activated.')+'</small></label>'+
      '<label class="tl-draft-field"><span>Document date</span>'+
       '<input name="date" type="date" value="'+escape(fieldValue('date',data.date||(!editing?localDateInput:'')))+'"></label>'+
      '<div class="tl-reference-static-field tl-reference-revision"><span>Revision No.</span>'+

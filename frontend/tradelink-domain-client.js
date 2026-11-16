@@ -13,6 +13,9 @@ export const TL03_DOMAIN_WRITES_ENABLED=true;
 // The signed aggregate RPC is prepared in the CP-TL legacy integration candidate.
 // Keep UI reads off until that additive function is installed in the existing project.
 export const TL03_ANALYTICS_ENABLED=false;
+// Automatic numbering requires the additive CP-TL-LEGACY-02 database migration.
+// Keep the existing manual-number create path until that migration is installed.
+export const TL03_AUTOMATIC_NUMBERING_ENABLED=false;
 // The workflow backend adds an authenticated RPC and changes an audit CHECK.
 // Keep the Submit button disabled until that exact production candidate is
 // approved, installed, and separately verified. Existing Draft writes remain on.
@@ -215,7 +218,10 @@ export function normalizeTradeLinkSignedHistory(rows,limit=25){
  return rows;
 }
 export class TradeLinkDomainClient{
- constructor({api,auth}={}){this.api=api;this.auth=auth;}
+ constructor({api,auth,automaticNumberingEnabled=TL03_AUTOMATIC_NUMBERING_ENABLED}={}){
+  this.api=api;this.auth=auth;
+  this.automaticNumberingEnabled=automaticNumberingEnabled===true;
+ }
  async session(){
   if(!this.api?.context||!this.api?.board||!this.api?.allowed||!this.api?.rpc||
     !this.auth?.getVerifiedUser)deny('Signed TradeLink domain API unavailable.');
@@ -552,13 +558,13 @@ export class TradeLinkDomainClient{
      !['draft','revision-required'].includes(expectedState)))
    deny('Invalid TradeLink revision, operation or payload.',400);
   if(operation==='create'||operation==='update')validateTradeLinkDraftEnvelope(draft,
-   {allowUnassignedNumber:operation==='create'});
+   {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
   await this.session();
-  const receipt=operation==='create'?
+  const receipt=operation==='create'&&this.automaticNumberingEnabled?
    await this.api.rpc('tl03_document_create',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
     p_data:draft,p_initial_state:initialState
-   }):operation==='update'?
+   }):['create','update'].includes(operation)?
    await this.api.rpc('tl03_document_save',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
     p_expected_revision:expectedRevision,p_operation:operation,
@@ -566,13 +572,17 @@ export class TradeLinkDomainClient{
    }):await this.api.rpc('tl03_document_commit',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
     p_expected_revision:expectedRevision,p_operation:operation,p_data:draft});
-  const normalized=normalizeTradeLinkDomainReceipt(receipt,documentId,operation,
-   expectedRevision,operation==='create'||operation==='update'?initialState:expectedState);
+  const normalized=normalizeTradeLinkDomainReceipt(
+   operation==='create'&&!this.automaticNumberingEnabled&&receipt&&typeof receipt==='object'?
+    {...receipt,documentNumber:draft.documentNumber}:receipt,
+   documentId,operation,expectedRevision,
+   operation==='create'||operation==='update'?initialState:expectedState);
   const numberPrefix={esi:'ESI-',packing:'PL-',delivery:'DR-',
    payment:'AR-',quotation:'Q-',po:'PO-'}[draft?.documentType];
-  if(operation==='create'&&(typeof normalized.documentNumber!=='string'||
-    !numberPrefix||!normalized.documentNumber.startsWith(numberPrefix)||
-    !/^[0-9]{6,}$/.test(normalized.documentNumber.slice(numberPrefix.length))))
+  if(operation==='create'&&this.automaticNumberingEnabled&&
+    (typeof normalized.documentNumber!=='string'||!numberPrefix||
+     !normalized.documentNumber.startsWith(numberPrefix)||
+     !/^[0-9]{6,}$/.test(normalized.documentNumber.slice(numberPrefix.length))))
    deny('TradeLink server-assigned document number receipt mismatch.',409);
   return normalized;
  }

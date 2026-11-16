@@ -96,11 +96,13 @@ test('automatic numbering and extended analytics remain source-only until contro
  const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
  assert.match(client,/export const TL03_ANALYTICS_ENABLED=false/);
  assert.match(client,/tl03_document_create/);
+ assert.match(client,/TL03_AUTOMATIC_NUMBERING_ENABLED=false/);
  const migration=readFileSync('supabase/migrations/20261116070000_cp_tl_legacy_numbering_dates_aging.sql','utf8');
  for(const pattern of [
   /CREATE TABLE private\.tradelink_document_sequences/,
   /FOR UPDATE/,
   /pg_advisory_xact_lock/,
+  /candidate numeric/,
   /tradelink_document_number_immutable/,
   /cannot be changed after creation/,
   /private\.tl03_save\(p_board_id,p_document_id,0,'create'/,

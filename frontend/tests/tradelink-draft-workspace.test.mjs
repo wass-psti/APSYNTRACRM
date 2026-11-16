@@ -147,11 +147,11 @@ test('new Drafts leave numbering to the server and persist real document and due
   date:'2026-11-16',dueDate:'2026-11-16',quoteStatus:'Won'}),{purpose:'save'}),/commercial status/i);
 });
 
-test('Draft form exposes automatic numbering, saved dates and separate quotation commercial status',()=>{
+test('Draft form preserves current manual numbering until activation and exposes saved dates and quotation commercial status',()=>{
  const view=initialTradeLinkDraftView('quotation');
  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
- assert.match(html,/name="documentNumber"[^>]*readonly/);
- assert.match(html,/Automatically assigned by the database when this document is first saved/);
+ assert.match(html,/name="documentNumber"[^>]*required maxlength="120" pattern=/);
+ assert.match(html,/Enter the existing source document number/);
  assert.match(html,/name="date" type="date"/);
  assert.match(html,/name="dueDate"/);
  assert.match(html,/name="quoteStatus"/);

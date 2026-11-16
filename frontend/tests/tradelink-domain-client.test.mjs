@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {
- TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED,TradeLinkDomainClient,
+ TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED,TL03_AUTOMATIC_NUMBERING_ENABLED,TradeLinkDomainClient,
  validateTradeLinkDraftEnvelope,normalizeTradeLinkDomainReceipt,
  normalizeTradeLinkDomainRow
 } from '../tradelink-domain-client.js';
@@ -63,7 +63,28 @@ test('read and write operations require a complete signed authorization client',
  assert.equal(invoked,0);
 });
 
-test('new document creation uses the atomic server-number RPC and returns the assigned number',async()=>{
+test('automatic numbering stays off until migration activation and existing create API remains available',async()=>{
+ assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
+ const calls=[];
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async()=>true,rpc:async(name,args)=>{calls.push({name,args});return {
+   documentId:id,boardItemId:item,revision:1,state:'draft',operation:'create',idempotent:false};}};
+ const client=new TradeLinkDomainClient({auth,api});
+ const receipt=await client.commit({documentId:id,expectedRevision:0,operation:'create',
+  draft:{...draft,documentNumber:'Q-011129'},initialState:'draft'});
+ assert.equal(receipt.documentNumber,'Q-011129');
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].name,'tl03_document_save');
+ assert.equal(calls[0].args.p_expected_revision,0);
+ assert.equal(calls[0].args.p_operation,'create');
+ assert.equal(calls[0].args.p_data.documentNumber,'Q-011129');
+ await assert.rejects(()=>client.commit({documentId:id,expectedRevision:0,operation:'create',
+  draft:{...draft,documentNumber:''},initialState:'draft'}),/Invalid TradeLink draft type or document number/);
+});
+
+test('activated automatic numbering uses the atomic server-number RPC and returns the assigned number',async()=>{
  const calls=[];
  const auth={userId:id,getVerifiedUser:async()=>({id})};
  const api={
@@ -77,7 +98,7 @@ test('new document creation uses the atomic server-number RPC and returns the as
     revision:1,state:'draft',operation:'create',idempotent:false};
   }
  };
- const client=new TradeLinkDomainClient({auth,api});
+ const client=new TradeLinkDomainClient({auth,api,automaticNumberingEnabled:true});
  const receipt=await client.commit({documentId:id,expectedRevision:0,operation:'create',
   draft:{...draft,documentNumber:''},initialState:'draft'});
  assert.equal(receipt.documentNumber,'Q-011130');

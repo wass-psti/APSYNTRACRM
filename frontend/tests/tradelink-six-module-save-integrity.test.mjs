@@ -112,7 +112,7 @@ test('six modules use the genuine signed manager save RPC and return revision-on
     operation:'create',idempotent:false};
   }
  };
- const service=new TradeLinkDraftWorkspace({auth,api});
+ const service=new TradeLinkDraftWorkspace({auth,api,automaticNumberingEnabled:true});
  for(const [type,input] of Object.entries(moduleInputs)){
   const draft=parseTradeLinkDraftForm(fields({documentType:type,
    documentNumber:'',...input}),

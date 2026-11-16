@@ -152,6 +152,8 @@ BEGIN
  END IF;
  RETURN NEW;
 END $guard$;
+REVOKE ALL ON FUNCTION private.tl03_guard_document_number_immutable()
+ FROM PUBLIC,anon,authenticated;
 CREATE TRIGGER tradelink_document_number_immutable
  BEFORE UPDATE OF document_number ON public.tradelink_documents
  FOR EACH ROW EXECUTE FUNCTION private.tl03_guard_document_number_immutable();
@@ -165,7 +167,8 @@ CREATE FUNCTION private.tl03_create_document(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $create$
 DECLARE
  actor uuid:=auth.uid(); actor_workspace uuid; existing public.tradelink_documents%rowtype;
- prefix text; assigned_number text; next_value bigint; payload jsonb; receipt jsonb;
+ prefix text; assigned_number text; next_value bigint; candidate numeric;
+ payload jsonb; receipt jsonb;
 BEGIN
  IF actor IS NULL OR private.tl03_can_manage(p_board_id) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Signed TradeLink document manager required' USING ERRCODE='42501'; END IF;
@@ -188,12 +191,17 @@ BEGIN
    WHEN 'esi' THEN 'ESI-' WHEN 'packing' THEN 'PL-'
    WHEN 'delivery' THEN 'DR-' WHEN 'payment' THEN 'AR-'
    WHEN 'quotation' THEN 'Q-' WHEN 'po' THEN 'PO-' END;
-  SELECT greatest(11130,coalesce(max(pg_catalog.substr(d.document_number,pg_catalog.char_length(prefix)+1)::bigint)+1,11130))
-  INTO next_value
+  SELECT greatest(11130::numeric,coalesce(max(
+   pg_catalog.substr(d.document_number,pg_catalog.char_length(prefix)+1)::numeric)+1,
+   11130::numeric))
+  INTO candidate
   FROM public.tradelink_documents d
   WHERE d.board_id=p_board_id AND d.workspace_id=actor_workspace
    AND d.document_type=p_data->>'documentType'
    AND d.document_number ~ ('^'||prefix||'[0-9]{6,}$');
+  IF candidate>9223372036854775000::numeric THEN
+   RAISE EXCEPTION 'TradeLink document number sequence exhausted' USING ERRCODE='22003'; END IF;
+  next_value:=candidate::bigint;
   INSERT INTO private.tradelink_document_sequences(
    board_id,workspace_id,document_type,next_number)
   VALUES(p_board_id,actor_workspace,p_data->>'documentType',next_value)
@@ -205,12 +213,17 @@ BEGIN
   FOR UPDATE;
   -- Reconcile with existing records on every allocation so a prior manual
   -- import cannot make the sequence move backwards.
-  SELECT greatest(next_value,coalesce(max(pg_catalog.substr(d.document_number,pg_catalog.char_length(prefix)+1)::bigint)+1,11130))
-  INTO next_value
+  SELECT greatest(next_value::numeric,coalesce(max(
+   pg_catalog.substr(d.document_number,pg_catalog.char_length(prefix)+1)::numeric)+1,
+   11130::numeric))
+  INTO candidate
   FROM public.tradelink_documents d
   WHERE d.board_id=p_board_id AND d.workspace_id=actor_workspace
    AND d.document_type=p_data->>'documentType'
    AND d.document_number ~ ('^'||prefix||'[0-9]{6,}$');
+  IF candidate>9223372036854775000::numeric THEN
+   RAISE EXCEPTION 'TradeLink document number sequence exhausted' USING ERRCODE='22003'; END IF;
+  next_value:=candidate::bigint;
   LOOP
    assigned_number:=prefix||pg_catalog.lpad(next_value::text,6,'0');
    EXIT WHEN NOT EXISTS(SELECT 1 FROM public.tradelink_documents d

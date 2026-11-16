@@ -17,10 +17,10 @@ This starting value and prefix map are taken from the legacy application's docum
 
 ## Implemented in this candidate
 
-- New documents no longer ask users to invent document numbers. The UI displays a read-only number field and requests a server-assigned number on first save.
+- New documents can use the additive server-assigned numbering RPC. The UI and client feature flag remain OFF until the migration is activated; while OFF, the existing editable-number form and original atomic save RPC remain in use so deploying the frontend alone cannot break production document creation.
 - A private sequence table is keyed by board, workspace and document type. Sequence-row locking serializes concurrent allocations; existing numbered records are reconciled before each allocation so the counter cannot move backwards after a manual import.
 - A per-document advisory transaction lock makes retries with the same stable document ID reuse the original number. The sequence increment and existing atomic TradeLink save execute in one transaction; a failed save rolls the allocation back.
-- The signed client validates the returned number's type-specific prefix before it accepts the save receipt. Existing updates continue through the established compare-and-swap save RPC and retain their assigned number.
+- The signed client validates the returned number's type-specific prefix before it accepts the save receipt when automatic numbering is activated. Existing updates continue through the established compare-and-swap save RPC and retain their assigned number.
 - Document date is now an actual persisted `date` field (new forms default to the local current date). Optional `dueDate` is persisted as an ISO calendar date; old documents without dates remain valid. The saved ESI print output already displays document date and due date.
 - Quotation commercial status is exposed separately from approval/workflow state, using the legacy values: Working on it, Sent, Client Review, Accepted, Declined, On Hold and Closed.
 - Analytics adds commercial quotation status aggregates, retains workflow outcome aggregates, and reports tax by currency/VAT treatment.

@@ -250,7 +250,7 @@ test('Stage B signed create/retry/update invoke only guarded RPC with authoritat
     state:args.p_initial_state,operation:args.p_operation,idempotent:false};
   }
  };
- const client=new TradeLinkDomainClient({api,auth});
+ const client=new TradeLinkDomainClient({api,auth,automaticNumberingEnabled:true});
  const create=await client.commit({documentId:docId,expectedRevision:0,operation:'create',
   draft:{...draft,documentNumber:''}});
  assert.equal(create.revision,1);
@@ -265,7 +265,7 @@ test('Stage B signed create/retry/update invoke only guarded RPC with authoritat
  assert.equal(calls[1].args.p_operation,'update');
  assert.deepEqual(calls.map(c=>c.args.p_initial_state),['for-approval','for-approval']);
  let deniedCalls=0;
- const noAccess=new TradeLinkDomainClient({auth,api:{...api,
+ const noAccess=new TradeLinkDomainClient({auth,automaticNumberingEnabled:true,api:{...api,
   allowed:async()=>false,rpc:async()=>{deniedCalls++;throw Error('Write must be denied');}}});
  await assert.rejects(()=>noAccess.commit({
   documentId:docId,expectedRevision:0,operation:'create',draft:{...draft,documentNumber:''}
