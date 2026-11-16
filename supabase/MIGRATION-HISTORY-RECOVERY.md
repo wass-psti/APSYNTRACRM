@@ -51,3 +51,7 @@ Preview-branch activation is intentionally separate. Enabling Automatic branchin
 This increment does not execute migration repair, db push, db pull, db reset, or any production DDL. It does not modify supabase_migrations.schema_migrations, application tables, policies, roles, grants, permissions, or user/workspace access. It creates no new Supabase project and introduces no new authorization restrictions.
 
 The production ledger remains unchanged. Future schema changes must be introduced as new, forward-only migrations with their source committed before deployment.
+
+## Forward migrations after the recovered baseline
+
+The manifest `files` array permanently records the 222-migration production recovery baseline. New, separately reviewed migrations are recorded in `forward_migrations` with their SHA-256 digests; the validator checks all committed files and forbids versions preceding the recovered ledger. This avoids rewriting the historical recovery evidence for each legitimate future deployment. CP-BOARD-TRASH-PERMANENT-DELETE-01 is the first tracked forward migration.

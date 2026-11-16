@@ -18,11 +18,14 @@ assert.equal(manifest.remote_ledger.empty_statement_sets, 0);
 assert.equal(manifest.files.length, 222);
 
 const diskFiles = readdirSync(migrationDir).filter((name) => name.endsWith('.sql')).sort();
-const manifestFiles = manifest.files.map((entry) => entry.file).sort();
-assert.deepEqual(diskFiles, manifestFiles, 'Applied migration directory must exactly match the recovered production manifest');
+const forwardMigrations = manifest.forward_migrations || [];
+const allEntries = [...manifest.files, ...forwardMigrations];
+const manifestFiles = allEntries.map((entry) => entry.file).sort();
+assert.deepEqual(diskFiles, manifestFiles, 'Applied migration directory must match the recovered baseline plus tracked forward migrations');
+for (const entry of forwardMigrations) assert.ok(entry.version > manifest.remote_ledger.last_version, 'Forward migration must follow recovered production baseline');
 
 const versions = new Set();
-for (const entry of manifest.files) {
+for (const entry of allEntries) {
   assert.match(entry.version, /^\d{14}$/);
   assert.equal(entry.file, entry.version + '_' + entry.name + '.sql');
   assert.equal(versions.has(entry.version), false, 'Duplicate migration version: ' + entry.version);
@@ -37,4 +40,4 @@ for (const entry of manifest.files) {
 
 assert.equal(manifest.files[0].version, '20260917142647');
 assert.equal(manifest.files.at(-1).version, '20261115132051');
-console.log('PASS: ' + manifest.files.length + ' production migration files match the recovered source manifest.');
+console.log('PASS: ' + manifest.files.length + ' recovered baseline and ' + forwardMigrations.length + ' forward migration files match their SHA-256 manifests.');

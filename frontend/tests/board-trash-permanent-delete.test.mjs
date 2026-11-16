@@ -86,7 +86,7 @@ test('UI provides single and selected permanent-delete actions with explicit typ
  assert.match(css,/\.board-trash-select/);
 });
 test('SQL requires trashed state and existing signed manage access; preserves storage and workspace records',()=>{
- const sql=readFileSync('supabase/migration-candidates/20261116005252_cp_board_trash_permanent_delete_01.sql','utf8');
+ const sql=readFileSync('supabase/migrations/20261116005252_cp_board_trash_permanent_delete_01.sql','utf8');
  assert.match(sql,/public\.work_board_access\(p_board_id, 'manage'\)/);
  assert.match(sql,/b\.status <> 'trashed'/);
  assert.match(sql,/private\.wm_board_is_protected\(b\.id\)/);
