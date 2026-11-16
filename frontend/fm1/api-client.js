@@ -294,6 +294,170 @@ export class Fm1ApiClient {
     });
   }
 
+  async updateTicket(workspaceId, ticket, input, key = idempotencyKey()) {
+    assertTicket(ticket);
+    if (ticket.workspace_id !== workspaceId) {
+      throw new ApiError(
+        "FM1 incident does not belong to the active workspace.",
+        409,
+        "FM1_WORKSPACE_MISMATCH",
+      );
+    }
+    const fields = {
+      requesterName: String(input.requesterName || "").trim(),
+      callbackNumber: String(input.callbackNumber || "").trim(),
+      subject: String(input.subject || "").trim(),
+      description: String(input.description || "").trim(),
+      productionImpact: String(input.productionImpact || ""),
+      productionStopped: input.productionStopped === true,
+      safetyConcern: input.safetyConcern === true,
+      assetReference: String(input.assetReference || "").trim() || null,
+    };
+    if (
+      fields.requesterName.length < 2 ||
+      fields.requesterName.length > 120 ||
+      fields.callbackNumber.length < 7 ||
+      fields.callbackNumber.length > 32 ||
+      fields.subject.length < 4 ||
+      fields.subject.length > 160 ||
+      fields.description.length < 10 ||
+      fields.description.length > 4000 ||
+      !["critical", "degraded", "no-impact"].includes(
+        fields.productionImpact,
+      ) ||
+      (fields.assetReference && fields.assetReference.length > 160)
+    ) {
+      throw new ApiError("Check the incident details and field lengths.");
+    }
+    const result = await this.api.rpc("fm1_update_ticket_v1", {
+      p_workspace_id: requireUuid(workspaceId),
+      p_ticket_id: ticket.id,
+      p_expected_revision: ticket.revision,
+      p_requester_name: fields.requesterName,
+      p_callback_number: fields.callbackNumber,
+      p_subject: fields.subject,
+      p_description: fields.description,
+      p_production_impact: fields.productionImpact,
+      p_production_stopped: fields.productionStopped,
+      p_safety_concern: fields.safetyConcern,
+      p_asset_reference: fields.assetReference,
+      p_idempotency_key: key,
+    });
+    assertObject(result, "FM1 incident update receipt is unavailable.");
+    result.ticket = assertTicket(result.ticket);
+    if (
+      result.ticket.workspace_id !== workspaceId ||
+      typeof result.idempotent_replay !== "boolean"
+    ) {
+      throw new ApiError(
+        "FM1 incident update receipt does not match this workspace.",
+        409,
+        "INVALID_FM1_UPDATE",
+      );
+    }
+    return { ...result, idempotencyKey: key };
+  }
+
+  async operationalReport(workspaceId) {
+    const result = await this.api.rpc("fm1_operational_report_v1", {
+      p_workspace_id: requireUuid(workspaceId),
+    });
+    assertObject(result, "FM1 operational report is unavailable.");
+    const arrays = [
+      "assignee_breakdown",
+      "unassigned_urgent",
+      "current_assignments",
+      "sla_active_incidents",
+      "approaching_deadlines",
+      "breached_obligations",
+      "recent_escalations",
+      "recent_lifecycle_history",
+    ];
+    if (
+      !result.metrics ||
+      !result.metrics.status_breakdown ||
+      !result.metrics.priority_breakdown ||
+      !result.metrics.assignment_breakdown ||
+      !result.metrics.obligation_breakdown ||
+      !result.metrics.milestone_breakdown ||
+      arrays.some((key) => !Array.isArray(result[key])) ||
+      !result.notification_delivery
+    ) {
+      throw new ApiError(
+        "FM1 operational report response is incomplete.",
+        409,
+        "INVALID_FM1_REPORT",
+      );
+    }
+    return result;
+  }
+
+  async deadlineWarningPolicy(workspaceId) {
+    const result = await this.api.rpc("fm1_deadline_warning_policy_v1", {
+      p_workspace_id: requireUuid(workspaceId),
+    });
+    assertObject(result, "FM1 deadline warning policy is unavailable.");
+    if (
+      result.workspace_id !== workspaceId ||
+      typeof result.enabled !== "boolean" ||
+      !["NOT_CONFIGURED", "INACTIVE", "ACTIVE"].includes(result.policy_state)
+    ) {
+      throw new ApiError(
+        "FM1 deadline warning policy response is invalid.",
+        409,
+        "INVALID_FM1_WARNING_POLICY",
+      );
+    }
+    return result;
+  }
+
+  async updateDeadlineWarningPolicy(workspaceId, policy) {
+    const seconds = (value) => {
+      if (value === null || value === undefined || value === "") return null;
+      const minutes = Number(value);
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 43200) {
+        throw new ApiError(
+          "Warning thresholds must be between 1 and 43,200 minutes.",
+        );
+      }
+      return minutes * 60;
+    };
+    const enabled = policy.enabled === true;
+    const thresholds = {
+      human: seconds(policy.humanResponseMinutes),
+      engineering: seconds(policy.engineeringStartMinutes),
+      restoration: seconds(policy.restorationMinutes),
+    };
+    if (enabled && Object.values(thresholds).every((value) => value === null)) {
+      throw new ApiError(
+        "Set at least one deadline threshold before enabling warnings.",
+      );
+    }
+    const result = await this.api.rpc("fm1_update_deadline_warning_policy_v1", {
+      p_workspace_id: requireUuid(workspaceId),
+      p_enabled: enabled,
+      p_human_response_before_seconds: thresholds.human,
+      p_engineering_start_before_seconds: thresholds.engineering,
+      p_restoration_before_seconds: thresholds.restoration,
+    });
+    assertObject(
+      result,
+      "FM1 deadline warning policy update was not confirmed.",
+    );
+    if (
+      result.workspace_id !== workspaceId ||
+      typeof result.enabled !== "boolean" ||
+      !["NOT_CONFIGURED", "INACTIVE", "ACTIVE"].includes(result.policy_state)
+    ) {
+      throw new ApiError(
+        "FM1 deadline warning policy update response is invalid.",
+        409,
+        "INVALID_FM1_WARNING_POLICY",
+      );
+    }
+    return result;
+  }
+
   async notificationInbox(workspaceId, { limit = 50, offset = 0 } = {}) {
     const result = await this.api.rpc("fm1_notification_inbox_v1", {
       p_workspace_id: requireUuid(workspaceId),

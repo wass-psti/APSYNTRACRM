@@ -144,6 +144,13 @@ class Fm1Application {
         serviceStatus: null,
         serverTickets: [],
         serverTotal: 0,
+        ticketSearch: "",
+        ticketStatus: "",
+        ticketPriority: "",
+        ticketOffset: 0,
+        operationalReport: null,
+        reportLoading: false,
+        warningPolicy: null,
         notifications: [],
         notificationUnreadTotal: 0,
         notificationLoading: false,
@@ -205,12 +212,16 @@ class Fm1Application {
       serverError: "",
     });
     try {
+      const current = fm1Store.get();
       const [serviceStatus, queue, inbox] = await Promise.all([
         this.api.serviceStatus(this.workspaceId),
         this.api.listTickets({
           workspaceId: this.workspaceId,
           limit: 50,
-          offset: 0,
+          offset: current.ticketOffset || 0,
+          search: current.ticketSearch || "",
+          status: current.ticketStatus || null,
+          priority: current.ticketPriority || null,
         }),
         this.api.notificationInbox(this.workspaceId, { limit: 50, offset: 0 }),
       ]);
@@ -232,6 +243,97 @@ class Fm1Application {
         serverLoading: false,
         serverError:
           error?.message || "Unable to load the FM1 incident service.",
+      });
+    }
+  }
+
+  async loadTicketQueue(filters = {}) {
+    if (!this.api || !this.workspaceId || this.workspaceId === "unscoped")
+      return false;
+    const current = fm1Store.get();
+    const query = {
+      search: filters.search ?? current.ticketSearch ?? "",
+      status: filters.status ?? current.ticketStatus ?? "",
+      priority: filters.priority ?? current.ticketPriority ?? "",
+      offset: Number.isInteger(filters.offset)
+        ? filters.offset
+        : (current.ticketOffset ?? 0),
+    };
+    const scopeKey = this.scopeKey;
+    const isCurrentScope = () =>
+      this.root?.isConnected === true &&
+      this.scopeKey === scopeKey &&
+      fm1Store.get().scopeKey === scopeKey;
+    updateStore({
+      serverLoading: true,
+      serverError: "",
+      ticketSearch: query.search,
+      ticketStatus: query.status,
+      ticketPriority: query.priority,
+      ticketOffset: query.offset,
+    });
+    try {
+      const queue = await this.api.listTickets({
+        workspaceId: this.workspaceId,
+        limit: 50,
+        offset: query.offset,
+        search: query.search,
+        status: query.status || null,
+        priority: query.priority || null,
+      });
+      if (!isCurrentScope()) return false;
+      updateStore({
+        serverTickets: queue.items,
+        serverTotal: queue.total,
+        ticketSearch: query.search,
+        ticketStatus: query.status,
+        ticketPriority: query.priority,
+        ticketOffset: query.offset,
+        serverLoading: false,
+        serverError: "",
+      });
+      return true;
+    } catch (error) {
+      if (!isCurrentScope()) return false;
+      updateStore({
+        serverLoading: false,
+        serverError:
+          error?.message || "Unable to retrieve the FM1 ticket queue.",
+      });
+      return false;
+    }
+  }
+
+  async loadOperationalReport() {
+    if (!this.api || !this.workspaceId || this.workspaceId === "unscoped")
+      return;
+    const scopeKey = this.scopeKey;
+    const isCurrentScope = () =>
+      this.root?.isConnected === true &&
+      this.scopeKey === scopeKey &&
+      fm1Store.get().scopeKey === scopeKey;
+    updateStore({ reportLoading: true, serverError: "" });
+    try {
+      const [operationalReport, warningPolicy, serviceStatus] =
+        await Promise.all([
+          this.api.operationalReport(this.workspaceId),
+          this.api.deadlineWarningPolicy(this.workspaceId),
+          this.api.serviceStatus(this.workspaceId),
+        ]);
+      if (!isCurrentScope()) return;
+      updateStore({
+        operationalReport,
+        warningPolicy,
+        serviceStatus,
+        reportLoading: false,
+        serverError: "",
+      });
+    } catch (error) {
+      if (!isCurrentScope()) return;
+      updateStore({
+        reportLoading: false,
+        serverError:
+          error?.message || "Unable to load FM1 operational reporting.",
       });
     }
   }
@@ -267,6 +369,9 @@ class Fm1Application {
   async refreshTicketAndQueue(ticketId) {
     await this.loadServerData();
     if (ticketId) await this.loadTicket(ticketId);
+    if (["duty", "reports"].includes(fm1Store.get().view)) {
+      await this.loadOperationalReport();
+    }
   }
 
   handleClick(event) {
@@ -280,6 +385,9 @@ class Fm1Application {
         selectedTicketId: null,
         selectedTicketDetail: null,
       });
+      if (["duty", "reports"].includes(tab.dataset.fm1View)) {
+        void this.loadOperationalReport();
+      }
       return;
     }
     const action = event.target.closest("[data-fm1-action]");
@@ -305,7 +413,27 @@ class Fm1Application {
     } else if (kind === "save-draft") {
       void this.saveCurrentDraft();
     } else if (kind === "refresh-server") {
-      void this.loadServerData();
+      if (["duty", "reports"].includes(fm1Store.get().view)) {
+        void this.loadOperationalReport();
+      } else {
+        void this.loadServerData();
+      }
+    } else if (kind === "clear-ticket-filters") {
+      void this.loadTicketQueue({
+        search: "",
+        status: "",
+        priority: "",
+        offset: 0,
+      });
+    } else if (kind === "ticket-page-prev") {
+      void this.loadTicketQueue({
+        offset: Math.max(0, (fm1Store.get().ticketOffset || 0) - 50),
+      });
+    } else if (kind === "ticket-page-next") {
+      const current = fm1Store.get();
+      if ((current.ticketOffset || 0) + 50 < current.serverTotal) {
+        void this.loadTicketQueue({ offset: (current.ticketOffset || 0) + 50 });
+      }
     } else if (kind === "view-ticket") {
       void this.loadTicket(action.dataset.id);
     } else if (kind === "open-notification-ticket") {
@@ -424,7 +552,7 @@ class Fm1Application {
 
   async handleSubmit(event) {
     const form = event.target.closest(
-      "[data-fm1-intake-form], [data-fm1-transition-form], [data-fm1-milestone-form], [data-fm1-priority-form], [data-fm1-hold-form], [data-fm1-hold-review-form], [data-fm1-hold-end-form], [data-fm1-assignment-form], [data-fm1-conversation-form]",
+      "[data-fm1-intake-form], [data-fm1-ticket-filter-form], [data-fm1-warning-policy-form], [data-fm1-edit-ticket-form], [data-fm1-transition-form], [data-fm1-milestone-form], [data-fm1-priority-form], [data-fm1-hold-form], [data-fm1-hold-review-form], [data-fm1-hold-end-form], [data-fm1-assignment-form], [data-fm1-conversation-form]",
     );
     if (!form) return;
     event.preventDefault();
@@ -507,6 +635,53 @@ class Fm1Application {
       return;
     }
 
+    if (form.matches("[data-fm1-ticket-filter-form]")) {
+      const data = new FormData(form);
+      const applied = await this.loadTicketQueue({
+        search: String(data.get("search") || "").trim(),
+        status: String(data.get("status") || ""),
+        priority: String(data.get("priority") || ""),
+        offset: 0,
+      });
+      if (applied && isCurrentScope()) {
+        updateStore({ notice: "Ticket filters applied." });
+      }
+      return;
+    }
+
+    if (form.matches("[data-fm1-warning-policy-form]")) {
+      const data = new FormData(form);
+      updateStore({ serverBusy: true, serverError: "" });
+      try {
+        const policy = await this.api.updateDeadlineWarningPolicy(
+          this.workspaceId,
+          {
+            enabled: data.get("enabled") === "on",
+            humanResponseMinutes: data.get("humanResponseMinutes") || null,
+            engineeringStartMinutes:
+              data.get("engineeringStartMinutes") || null,
+            restorationMinutes: data.get("restorationMinutes") || null,
+          },
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          warningPolicy: policy,
+          serverBusy: false,
+          notice: policy.enabled
+            ? "Approaching-deadline warning policy enabled."
+            : "Approaching-deadline warning policy saved as inactive.",
+        });
+        await this.loadOperationalReport();
+      } catch (error) {
+        if (!isCurrentScope()) return;
+        updateStore({
+          serverBusy: false,
+          serverError: error?.message || "Unable to save the warning policy.",
+        });
+      }
+      return;
+    }
+
     const ticket = fm1Store.get().selectedTicketDetail?.ticket;
     if (!ticket) {
       updateStore({
@@ -516,21 +691,23 @@ class Fm1Application {
     }
 
     const data = new FormData(form);
-    const operation = form.matches("[data-fm1-transition-form]")
-      ? "transition"
-      : form.matches("[data-fm1-milestone-form]")
-        ? "milestone"
-        : form.matches("[data-fm1-priority-form]")
-          ? "priority"
-          : form.matches("[data-fm1-hold-form]")
-            ? "hold-request"
-            : form.matches("[data-fm1-hold-review-form]")
-              ? "hold-review"
-              : form.matches("[data-fm1-assignment-form]")
-                ? "assignment"
-                : form.matches("[data-fm1-conversation-form]")
-                  ? "conversation"
-                  : "hold-end";
+    const operation = form.matches("[data-fm1-edit-ticket-form]")
+      ? "edit"
+      : form.matches("[data-fm1-transition-form]")
+        ? "transition"
+        : form.matches("[data-fm1-milestone-form]")
+          ? "milestone"
+          : form.matches("[data-fm1-priority-form]")
+            ? "priority"
+            : form.matches("[data-fm1-hold-form]")
+              ? "hold-request"
+              : form.matches("[data-fm1-hold-review-form]")
+                ? "hold-review"
+                : form.matches("[data-fm1-assignment-form]")
+                  ? "assignment"
+                  : form.matches("[data-fm1-conversation-form]")
+                    ? "conversation"
+                    : "hold-end";
     const payload = Object.fromEntries(data.entries());
     const fingerprint = JSON.stringify({
       operation,
@@ -552,7 +729,29 @@ class Fm1Application {
       submitButton.textContent = "Saving…";
     }
     try {
-      if (operation === "transition") {
+      if (operation === "edit") {
+        await this.api.updateTicket(
+          this.workspaceId,
+          ticket,
+          {
+            requesterName: String(data.get("requesterName") || ""),
+            callbackNumber: String(data.get("callbackNumber") || ""),
+            subject: String(data.get("subject") || ""),
+            description: String(data.get("description") || ""),
+            productionImpact: String(data.get("productionImpact") || ""),
+            productionStopped: data.get("productionStopped") === "on",
+            safetyConcern: data.get("safetyConcern") === "on",
+            assetReference: String(data.get("assetReference") || ""),
+          },
+          key,
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice:
+            "Incident details updated. The revision and audit history were recorded.",
+          serverBusy: false,
+        });
+      } else if (operation === "transition") {
         const nextStatus = String(data.get("nextStatus") || "");
         const reason = String(data.get("reason") || "").trim();
         const evidence =
@@ -817,6 +1016,32 @@ class Fm1Application {
   }
 
   renderTickets(state) {
+    const statuses = [
+      "New",
+      "Triaged",
+      "Assigned",
+      "In Progress",
+      "Waiting",
+      "Restored",
+      "Resolution Review",
+      "Closed",
+      "Reopened",
+      "Duplicate",
+      "Cancelled",
+    ];
+    const priorities = ["P1", "P2", "P3", "P4"];
+    const statusOptions = statuses
+      .map(
+        (value) =>
+          `<option value="${value}" ${state.ticketStatus === value ? "selected" : ""}>${value}</option>`,
+      )
+      .join("");
+    const priorityOptions = priorities
+      .map(
+        (value) =>
+          `<option value="${value}" ${state.ticketPriority === value ? "selected" : ""}>${value}</option>`,
+      )
+      .join("");
     const assignees = state.serviceStatus?.assignees || [];
     const rows = state.serverTickets
       .map((ticket) => {
@@ -824,30 +1049,52 @@ class Fm1Application {
           (member) => member.id === ticket.assigned_to,
         );
         return `<tr>
-      <td><button type="button" class="fm1-link-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">${escapeHtml(ticket.ticket_number)}</button></td>
-      <td><strong>${escapeHtml(ticket.subject)}</strong><small>${escapeHtml(ticket.requester_name)}</small></td>
-      <td>${statusBadge(ticket.priority_effective, ticket.priority_effective === "P1" ? "danger" : ticket.priority_effective === "P2" ? "warning" : "neutral")}</td>
-      <td>${statusBadge(ticket.status, statusTone(ticket.status))}</td>
-      <td>${escapeHtml(assignee?.display_name || (ticket.assigned_to ? "Former workspace member" : "Unassigned"))}</td>
-      <td>${escapeHtml(formatDate(ticket.received_at))}</td>
-      <td>${statusBadge(ticket.sla_activation_state || "NOT_ACTIVE", ticket.sla_activation_state === "ACTIVE" ? "success" : "warning")}</td>
-      <td><button type="button" class="fm1-quiet-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">Open</button></td>
-    </tr>`;
+        <td><button type="button" class="fm1-link-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">${escapeHtml(ticket.ticket_number)}</button></td>
+        <td><strong>${escapeHtml(ticket.subject)}</strong><small>${escapeHtml(ticket.requester_name)}</small></td>
+        <td>${statusBadge(ticket.priority_effective, ticket.priority_effective === "P1" ? "danger" : ticket.priority_effective === "P2" ? "warning" : "neutral")}</td>
+        <td>${statusBadge(ticket.status, statusTone(ticket.status))}</td>
+        <td>${escapeHtml(assignee?.display_name || (ticket.assigned_to ? "Former workspace member" : "Unassigned"))}</td>
+        <td>${escapeHtml(formatDate(ticket.received_at))}</td>
+        <td>${statusBadge(ticket.sla_activation_state || "NOT_ACTIVE", ticket.sla_activation_state === "ACTIVE" ? "success" : "warning")}</td>
+        <td><button type="button" class="fm1-quiet-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">Open</button></td>
+      </tr>`;
       })
       .join("");
+    const from = state.serverTotal === 0 ? 0 : state.ticketOffset + 1;
+    const to = Math.min(
+      state.ticketOffset + state.serverTickets.length,
+      state.serverTotal,
+    );
     return `<section class="fm1-page-section">
       <div class="fm1-section-heading"><div><span class="fm1-eyebrow">SERVICE DESK</span><h2>Authoritative ticket queue</h2>
-        <p>${state.serverTotal} server ticket(s) · latest 50 loaded</p></div>
+        <p>${state.serverTotal} server ticket(s) · 50 per page</p></div>
         <div class="fm1-inline-actions"><button type="button" class="fm1-quiet-button" data-fm1-action="refresh-server" ${state.serverLoading ? "disabled" : ""}>↻ Refresh</button>
         <button type="button" class="fm1-primary-button" data-fm1-action="new-ticket">＋ New ticket</button></div></div>
+      <form class="fm1-form fm1-ticket-filter-form" data-fm1-ticket-filter-form>
+        <div class="fm1-form-grid">
+          <label class="fm1-field-wide">Search ticket number, subject or requester
+            <input type="search" name="search" maxlength="160" value="${escapeHtml(state.ticketSearch || "")}" placeholder="Search FM1 tickets" />
+          </label>
+          <label>Status<select name="status"><option value="">All statuses</option>${statusOptions}</select></label>
+          <label>Priority<select name="priority"><option value="">All priorities</option>${priorityOptions}</select></label>
+        </div>
+        <div class="fm1-form-footer"><p>Search and filters are executed by the workspace-scoped server query.</p>
+          <div class="fm1-inline-actions">
+            <button type="button" class="fm1-quiet-button" data-fm1-action="clear-ticket-filters" ${state.serverLoading ? "disabled" : ""}>Clear filters</button>
+            <button type="submit" class="fm1-primary-button" ${state.serverLoading ? "disabled" : ""}>Apply filters</button>
+          </div>
+        </div>
+      </form>
       ${state.notice ? `<p class="fm1-notice" role="status">${escapeHtml(state.notice)}</p>` : ""}
       ${state.serverError ? `<p class="fm1-error" role="alert">${escapeHtml(state.serverError)}</p>` : ""}
       ${state.serverLoading && !state.serverTickets.length ? '<div class="fm1-empty-state">Loading authoritative FM1 tickets…</div>' : ""}
       ${
         !state.serverLoading && !state.serverTickets.length
           ? `<div class="fm1-empty-state"><span aria-hidden="true">▤</span>
-        <h3>No server tickets yet</h3><p>New incidents submitted from this workspace will receive an FM1 ticket number and immutable receipt event.</p>
-        <button type="button" class="fm1-primary-button" data-fm1-action="new-ticket">＋ Create first ticket</button></div>`
+        <h3>${state.serverTotal === 0 ? "No matching server tickets" : "No tickets on this page"}</h3>
+        <p>${state.ticketSearch || state.ticketStatus || state.ticketPriority ? "Adjust or clear the filters to see other incidents." : "New incidents submitted from this workspace will receive an FM1 ticket number and immutable receipt event."}</p>
+        <button type="button" class="fm1-quiet-button" data-fm1-action="clear-ticket-filters">Clear filters</button>
+        <button type="button" class="fm1-primary-button" data-fm1-action="new-ticket">＋ Create ticket</button></div>`
           : ""
       }
       ${
@@ -857,6 +1104,13 @@ class Fm1Application {
         <tbody>${rows}</tbody></table></div>`
           : ""
       }
+      <div class="fm1-pagination" aria-label="Ticket queue pagination">
+        <span>Showing ${from}–${to} of ${state.serverTotal}</span>
+        <div class="fm1-inline-actions">
+          <button type="button" class="fm1-quiet-button" data-fm1-action="ticket-page-prev" ${state.serverLoading || state.ticketOffset <= 0 ? "disabled" : ""}>Previous</button>
+          <button type="button" class="fm1-quiet-button" data-fm1-action="ticket-page-next" ${state.serverLoading || state.ticketOffset + 50 >= state.serverTotal ? "disabled" : ""}>Next</button>
+        </div>
+      </div>
       <section class="fm1-panel fm1-local-drafts-panel">
         <div class="fm1-panel-heading"><div><span class="fm1-eyebrow">UNSUBMITTED WORK</span><h2>Browser-local drafts</h2></div>
           <span class="fm1-inline-note">${state.drafts.length} saved</span></div>
@@ -927,6 +1181,30 @@ class Fm1Application {
         <button type="button" class="fm1-quiet-button" data-fm1-action="back-to-tickets">← Back to queue</button></div>
       ${state.notice ? `<p class="fm1-notice" role="status">${escapeHtml(state.notice)}</p>` : ""}
       ${state.serverError ? `<p class="fm1-error" role="alert">${escapeHtml(state.serverError)}</p>` : ""}
+      <section class="fm1-panel">
+        <div class="fm1-panel-heading"><div><span class="fm1-eyebrow">INCIDENT DETAILS</span><h2>Edit incident information</h2></div>
+          <span class="fm1-inline-note">Revision ${escapeHtml(ticket.revision)}</span></div>
+        <form class="fm1-form" data-fm1-edit-ticket-form>
+          <div class="fm1-form-grid">
+            <label>Requester name<input name="requesterName" required minlength="2" maxlength="120" value="${escapeHtml(ticket.requester_name)}" /></label>
+            <label>Callback number<input name="callbackNumber" type="tel" required minlength="7" maxlength="32" value="${escapeHtml(ticket.callback_number)}" /></label>
+            <label class="fm1-field-wide">Incident subject<input name="subject" required minlength="4" maxlength="160" value="${escapeHtml(ticket.subject)}" /></label>
+            <label>Production impact<select name="productionImpact">
+              <option value="critical" ${ticket.production_impact === "critical" ? "selected" : ""}>Critical operational impact</option>
+              <option value="degraded" ${ticket.production_impact === "degraded" ? "selected" : ""}>Production degraded</option>
+              <option value="no-impact" ${ticket.production_impact === "no-impact" ? "selected" : ""}>No production impact</option>
+            </select></label>
+            <label>Asset / station / I/O reference<input name="assetReference" maxlength="160" value="${escapeHtml(ticket.asset_reference || "")}" /></label>
+            <label class="fm1-field-wide">Incident description<textarea name="description" required minlength="10" maxlength="4000" rows="4">${escapeHtml(ticket.description)}</textarea></label>
+          </div>
+          <div class="fm1-checkbox-row">
+            <label><input type="checkbox" name="productionStopped" ${ticket.production_stopped ? "checked" : ""} /> Production is currently stopped</label>
+            <label><input type="checkbox" name="safetyConcern" ${ticket.safety_concern ? "checked" : ""} /> Safety concern exists</label>
+          </div>
+          <div class="fm1-form-footer"><p>Saving increments the server revision and appends an immutable incident-change event and audit record. Ticket number and original receipt time are preserved.</p>
+            <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>Save incident details</button></div>
+        </form>
+      </section>
       <section class="fm1-panel">
         <div class="fm1-panel-heading"><div><span class="fm1-eyebrow">INCIDENT LIFECYCLE</span><h2>${escapeHtml(ticket.ticket_number)}</h2></div>
           ${statusBadge(ticket.status, statusTone(ticket.status))}</div>
@@ -1163,38 +1441,157 @@ class Fm1Application {
     </section>`;
   }
 
-  renderDuty(state) {
-    const metrics = state.serviceStatus?.metrics || {};
-    const urgentUnassigned = state.serviceStatus?.unassigned_urgent || [];
-    const delivery = state.serviceStatus?.notification_delivery || {};
-    const escalations = (state.notifications || []).filter(
-      (item) => item.event_type === "SlaObligationBreached",
-    );
-    const roster = state.serviceStatus?.assignees || [];
+  renderReports(state) {
+    const report = state.operationalReport;
+    if (state.reportLoading && !report) {
+      return '<section class="fm1-page-section"><div class="fm1-empty-state">Loading server-aggregated FM1 reports…</div></section>';
+    }
+    if (!report) {
+      return `<section class="fm1-page-section"><div class="fm1-empty-state"><h3>Operational report unavailable</h3>
+        <p>${escapeHtml(state.serverError || "Refresh to retrieve authoritative FM1 report aggregates.")}</p>
+        <button type="button" class="fm1-primary-button" data-fm1-action="refresh-server">Retry report</button></div></section>`;
+    }
+    const metrics = report.metrics || {};
+    const breakdown = (values) =>
+      Object.entries(values || {})
+        .sort((a, b) => Number(b[1]) - Number(a[1]) || a[0].localeCompare(b[0]))
+        .map(
+          ([name, count]) =>
+            `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(name.replaceAll("_", " "))}</strong><span>${escapeHtml(count)}</span></div></article>`,
+        )
+        .join("") || '<p class="fm1-muted">No records yet.</p>';
+    const lifecycle = report.recent_lifecycle_history || [];
+    const lifecycleRows = lifecycle
+      .map(
+        (item) => `<tr>
+      <td>${escapeHtml(formatDate(item.recorded_at))}</td>
+      <td><button type="button" class="fm1-link-button" data-fm1-action="view-ticket" data-id="${escapeHtml(item.ticket_id)}">${escapeHtml(item.ticket_number)}</button></td>
+      <td>${escapeHtml(item.event_type)}</td>
+      <td>${escapeHtml(JSON.stringify(item.payload || {}))}</td>
+    </tr>`,
+      )
+      .join("");
+    const delivery = report.notification_delivery || {};
     return `<section class="fm1-page-section">
+      <div class="fm1-section-heading"><div><span class="fm1-eyebrow">SERVER-AGGREGATED REPORTING</span><h2>Incident and service operations</h2>
+        <p>All totals and distributions are calculated by PostgreSQL across this workspace.</p></div>
+        <button type="button" class="fm1-quiet-button" data-fm1-action="refresh-server" ${state.reportLoading ? "disabled" : ""}>↻ Refresh report</button></div>
       <div class="fm1-metric-grid">
-        ${metricCard({ label: "Unassigned P1 / P2", value: metrics.unassigned_p1p2 ?? urgentUnassigned.length, detail: "High-priority open incidents", symbol: "!" })}
-        ${metricCard({ label: "Workspace coverage", value: roster.length, detail: "Active CRM workspace members", symbol: "♙" })}
-        ${metricCard({ label: "Unread alerts", value: state.notificationUnreadTotal, detail: "In-app notifications", symbol: "♧" })}
-        ${metricCard({ label: "Breach escalations", value: metrics.breached_obligations ?? escalations.length, detail: "Server-recorded breached obligations", symbol: "◷" })}
+        ${metricCard({ label: "Total incidents", value: metrics.total_tickets ?? 0, detail: "All recorded workspace incidents", symbol: "▤" })}
+        ${metricCard({ label: "Open incidents", value: metrics.open_tickets ?? 0, detail: "Non-terminal lifecycle states", symbol: "◷" })}
+        ${metricCard({ label: "Closed incidents", value: metrics.closed_tickets ?? 0, detail: "Closed incident records", symbol: "✓" })}
+        ${metricCard({ label: "Unassigned P1 / P2", value: metrics.unassigned_p1p2 ?? 0, detail: "Open high-priority incidents", symbol: "!" })}
       </div>
-      <section class="fm1-panel"><span class="fm1-eyebrow">PRIORITY COVERAGE</span><h2>Unassigned P1 / P2 incidents</h2>
-        ${urgentUnassigned.length ? `<div class="fm1-draft-list">${urgentUnassigned.map((ticket) => `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(ticket.ticket_number)} · ${escapeHtml(ticket.subject)}</strong><span>${escapeHtml(ticket.priority_effective)} · ${escapeHtml(ticket.status)} · ${escapeHtml(formatDate(ticket.received_at))}</span></div><button type="button" class="fm1-quiet-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">Assign / open</button></article>`).join("")}</div>` : '<p class="fm1-muted">No unassigned P1 / P2 incidents in the loaded queue.</p>'}
+      <div class="fm1-metric-grid">
+        <section class="fm1-panel"><span class="fm1-eyebrow">LIFECYCLE</span><h3>Incident status distribution</h3>${breakdown(metrics.status_breakdown)}</section>
+        <section class="fm1-panel"><span class="fm1-eyebrow">SEVERITY</span><h3>Effective priority distribution</h3>${breakdown(metrics.priority_breakdown)}</section>
+        <section class="fm1-panel"><span class="fm1-eyebrow">RESPONSIBILITY</span><h3>Assignment distribution</h3>${breakdown(metrics.assignment_breakdown)}</section>
+        <section class="fm1-panel"><span class="fm1-eyebrow">ASSIGNEES</span><h3>Incidents by assignee</h3>${(report.assignee_breakdown || []).map((item) => `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(item.assignee_name)}</strong><span>${escapeHtml(item.ticket_count)} incident(s)</span></div></article>`).join("") || '<p class="fm1-muted">No assignment records yet.</p>'}</section>
+        <section class="fm1-panel"><span class="fm1-eyebrow">SLA</span><h3>Obligation distribution</h3>${breakdown(metrics.obligation_breakdown)}</section>
+        <section class="fm1-panel"><span class="fm1-eyebrow">MILESTONES</span><h3>Recorded operational milestones</h3>${breakdown(metrics.milestone_breakdown)}</section>
+      </div>
+      <div class="fm1-metric-grid">
+        ${metricCard({ label: "SLA breaches", value: metrics.breached_obligations ?? 0, detail: "Persisted breached obligations", symbol: "!" })}
+        ${metricCard({ label: "Approaching deadlines", value: metrics.approaching_deadlines ?? 0, detail: "Warnings generated by the configured policy", symbol: "◷" })}
+        ${metricCard({ label: "Notifications delivered", value: delivery.delivered ?? 0, detail: "Internal in-app delivery", symbol: "✓" })}
+        ${metricCard({ label: "Failed notifications", value: delivery.failed ?? 0, detail: "Internal outbox delivery failures", symbol: "↻" })}
+      </div>
+      <section class="fm1-panel"><span class="fm1-eyebrow">INCIDENT HISTORY</span><h2>Recent lifecycle events</h2>
+        <div class="fm1-table-wrap"><table class="fm1-table"><thead><tr><th>Recorded</th><th>Ticket</th><th>Event</th><th>Event detail</th></tr></thead>
+          <tbody>${lifecycleRows || '<tr><td colspan="4">No lifecycle events recorded.</td></tr>'}</tbody></table></div>
       </section>
-      <section class="fm1-panel"><span class="fm1-eyebrow">WORKSPACE COVERAGE</span><h2>Assignable CRM members</h2>
-        ${roster.map((member) => `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(member.display_name)}</strong><span>${escapeHtml(member.email || "")}</span></div></article>`).join("") || '<p class="fm1-muted">No active workspace members were returned.</p>'}
+      <p class="fm1-muted">These are operational counts, not contractual SLA compliance percentages. Contractual performance remains unreported until the relevant service decisions and calendar are established.</p>
+    </section>`;
+  }
+
+  renderDuty(state) {
+    const report = state.operationalReport;
+    if (!report && !state.reportLoading) {
+      return `<section class="fm1-page-section"><div class="fm1-empty-state"><h3>Duty data unavailable</h3>
+        <p>${escapeHtml(state.serverError || "The server did not return the operational duty report.")}</p>
+        <button type="button" class="fm1-primary-button" data-fm1-action="refresh-server">Retry duty report</button></div></section>`;
+    }
+    const metrics = report?.metrics || {};
+    const delivery = report?.notification_delivery || {};
+    const policy = state.warningPolicy || {
+      enabled: false,
+      policy_state: "NOT_CONFIGURED",
+      human_response_before_seconds: null,
+      engineering_start_before_seconds: null,
+      restoration_before_seconds: null,
+    };
+    const unassignedUrgent = report?.unassigned_urgent || [];
+    const assignments = report?.current_assignments || [];
+    const slaActive = report?.sla_active_incidents || [];
+    const approaching = report?.approaching_deadlines || [];
+    const breached = report?.breached_obligations || [];
+    const escalations = report?.recent_escalations || [];
+    const minutes = (seconds) => (seconds ? Math.round(seconds / 60) : "");
+    const incidentRow = (item, detail) => `<article class="fm1-draft-row">
+      <div class="fm1-draft-main"><strong>${escapeHtml(item.ticket_number)} · ${escapeHtml(item.subject)}</strong>
+        <span>${escapeHtml(item.priority_effective || item.priority || "")} · ${escapeHtml(item.status || item.obligation_status || "")} · ${escapeHtml(detail)}</span></div>
+      <button type="button" class="fm1-quiet-button" data-fm1-action="view-ticket" data-id="${escapeHtml(item.ticket_id || item.id)}">Open incident</button>
+    </article>`;
+    return `<section class="fm1-page-section">
+      <div class="fm1-section-heading"><div><span class="fm1-eyebrow">LIVE SERVICE OPERATIONS</span><h2>Duty dashboard</h2>
+        <p>Current assignments, active obligations, persisted warnings and internal notification delivery.</p></div>
+        <button type="button" class="fm1-quiet-button" data-fm1-action="refresh-server" ${state.reportLoading ? "disabled" : ""}>↻ Refresh duty view</button></div>
+      ${state.reportLoading && !report ? '<div class="fm1-empty-state">Loading operational duty data…</div>' : ""}
+      <div class="fm1-metric-grid">
+        ${metricCard({ label: "Unassigned P1 / P2", value: metrics.unassigned_p1p2 ?? 0, detail: "Open high-priority incidents", symbol: "!" })}
+        ${metricCard({ label: "Assigned open incidents", value: metrics.assigned_open_tickets ?? 0, detail: "Current operational ownership", symbol: "♙" })}
+        ${metricCard({ label: "SLA-active incidents", value: metrics.sla_active_tickets ?? 0, detail: "Server-confirmed active clocks", symbol: "◷" })}
+        ${metricCard({ label: "Breached obligations", value: metrics.breached_obligations ?? 0, detail: "Persisted SLA breach records", symbol: "!" })}
+      </div>
+      <section class="fm1-panel"><span class="fm1-eyebrow">UNASSIGNED PRIORITY QUEUE</span><h2>Unassigned P1 / P2 incidents</h2>
+        ${unassignedUrgent.map((item) => incidentRow(item, "Unassigned · assignment required")).join("") || '<p class="fm1-muted">No unassigned high-priority incidents.</p>'}
       </section>
-      <section class="fm1-panel"><span class="fm1-eyebrow">SLA ESCALATIONS</span><h2>Recent breach notifications</h2>
-        ${escalations.map((item) => `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(item.ticket_number)} · ${escapeHtml(item.title)}</strong><span>${escapeHtml(item.message)} · ${escapeHtml(formatDate(item.created_at))}</span></div><button type="button" class="fm1-quiet-button" data-fm1-action="open-notification-ticket" data-ticket-id="${escapeHtml(item.ticket_id)}">Open</button></article>`).join("") || '<p class="fm1-muted">No breach escalation notifications in the latest inbox page.</p>'}
+      <section class="fm1-panel"><span class="fm1-eyebrow">ASSIGNMENT COVERAGE</span><h2>Current assigned incidents</h2>
+        ${assignments.map((item) => incidentRow(item, item.assignee_name)).join("") || '<p class="fm1-muted">No active assigned incidents.</p>'}
       </section>
-      <section class="fm1-panel"><span class="fm1-eyebrow">NOTIFICATION DELIVERY</span><h2>Internal outbox status</h2>
+      <section class="fm1-panel"><span class="fm1-eyebrow">ACTIVE SLA</span><h2>SLA-active incidents</h2>
+        ${slaActive.map((item) => incidentRow(item, "SLA clock active")).join("") || '<p class="fm1-muted">No SLA-active incidents.</p>'}
+      </section>
+      <section class="fm1-panel"><span class="fm1-eyebrow">APPROACHING DEADLINES</span><h2>Persisted warning events</h2>
+        ${approaching.map((item) => incidentRow(item, metricLabel(item.metric) + " · due " + formatDate(item.due_at))).join("") || '<p class="fm1-muted">No approaching-deadline warnings. The policy may be inactive or no active obligation is within its configured threshold.</p>'}
+      </section>
+      <section class="fm1-panel"><span class="fm1-eyebrow">BREACHED OBLIGATIONS</span><h2>Overdue SLA obligations</h2>
+        ${breached.map((item) => incidentRow(item, metricLabel(item.metric) + " · breached " + formatDate(item.breached_at || item.due_at))).join("") || '<p class="fm1-muted">No breached obligations.</p>'}
+      </section>
+      <section class="fm1-panel"><span class="fm1-eyebrow">ESCALATION DELIVERY</span><h2>Recent warning and breach notifications</h2>
+        ${
+          escalations
+            .map(
+              (
+                item,
+              ) => `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(item.ticket_number)} · ${escapeHtml(item.event_type.replaceAll("Sla", "SLA "))}</strong>
+          <span>${escapeHtml(item.delivery_state)} · attempts ${escapeHtml(item.attempts)} · ${escapeHtml(item.last_error || "No delivery error")}</span></div>
+          <button type="button" class="fm1-quiet-button" data-fm1-action="view-ticket" data-id="${escapeHtml(item.ticket_id)}">Open incident</button></article>`,
+            )
+            .join("") ||
+          '<p class="fm1-muted">No recent deadline warning or breach outbox records.</p>'
+        }
         <div class="fm1-contract-grid">
           <div><span>Queued</span><strong>${escapeHtml(delivery.queued ?? 0)}</strong></div>
           <div><span>Failed / retrying</span><strong>${escapeHtml(delivery.failed ?? 0)}</strong></div>
           <div><span>Delivered</span><strong>${escapeHtml(delivery.delivered ?? 0)}</strong></div>
         </div>
       </section>
-      <p class="fm1-muted">Approaching-deadline alert thresholds and duty escalation rosters require the service calendar and operational policy to be configured. Contractual SLA clocks remain inactive until acceptance and readiness are recorded.</p>
+      <section class="fm1-panel"><span class="fm1-eyebrow">WARNING POLICY</span><h2>Approaching-deadline thresholds</h2>
+        <p class="fm1-muted">Thresholds are operational warning lead times, not contractual SLA targets. The policy starts inactive with no preset values. Configure only values established by the service team.</p>
+        <div class="fm1-panel-heading"><strong>Current state</strong>${statusBadge(policy.policy_state || "NOT_CONFIGURED", policy.enabled ? "success" : "warning")}</div>
+        <form class="fm1-form" data-fm1-warning-policy-form>
+          <div class="fm1-form-grid">
+            <label class="fm1-field-wide"><span><input type="checkbox" name="enabled" ${policy.enabled ? "checked" : ""} /> Enable approaching-deadline warnings</span></label>
+            <label>Human response warning (minutes)<input type="number" name="humanResponseMinutes" min="1" max="43200" step="1" value="${minutes(policy.human_response_before_seconds)}" placeholder="Not configured" /></label>
+            <label>Engineering start warning (minutes)<input type="number" name="engineeringStartMinutes" min="1" max="43200" step="1" value="${minutes(policy.engineering_start_before_seconds)}" placeholder="Not configured" /></label>
+            <label>Restoration warning (minutes)<input type="number" name="restorationMinutes" min="1" max="43200" step="1" value="${minutes(policy.restoration_before_seconds)}" placeholder="Not configured" /></label>
+          </div>
+          <div class="fm1-form-footer"><p>Leave an individual threshold blank to disable warnings for that obligation. At least one threshold is required when enabling the policy.</p>
+            <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>Save warning policy</button></div>
+        </form>
+      </section>
+      <p class="fm1-muted">External email, SMS, paging and customer delivery remain unconfigured. Internal notifications are delivered through the existing FM1 outbox.</p>
     </section>`;
   }
 
@@ -1286,7 +1683,9 @@ class Fm1Application {
                   ? this.renderDuty(state)
                   : view === "notifications"
                     ? this.renderNotifications(state)
-                    : this.renderModule(view)
+                    : view === "reports"
+                      ? this.renderReports(state)
+                      : this.renderModule(view)
       }
       <footer class="fm1-app-footer"><span>APSYNTRA CRM · FM1 foundation</span>
         <span>Asia/Manila (UTC+8) · Server-backed incident records</span></footer>

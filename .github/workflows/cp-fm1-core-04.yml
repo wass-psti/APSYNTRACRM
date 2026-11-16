@@ -1,0 +1,79 @@
+name: CP-FM1-CORE-04 — Operational UI, reporting and SLA warning acceptance
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/cp-fm1-core-04.yml"
+      - "frontend/data.js"
+      - "frontend/fm1/**"
+      - "frontend/fm1-application.css"
+      - "frontend/tests/fm1-*.test.mjs"
+      - "frontend/tests/fixtures/fm1-component.html"
+      - "scripts/fm1-browser-acceptance.mjs"
+      - "scripts/cp-fm1-core-04-disposable-acceptance.sh"
+      - "sql/tests/cp-fm1-core-02-*"
+      - "sql/tests/cp-fm1-core-03-*"
+      - "sql/tests/cp-fm1-core-04-*"
+      - "supabase/migrations/20261116055815_cp_fm1_core_02_server_incident_sla.sql"
+      - "supabase/migrations/20261116082518_cp_fm1_core_03_operational_workflows.sql"
+      - "supabase/migrations/20261116092055_cp_fm1_core_04_operational_ui_reporting_warnings.sql"
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches: [feat/cp-fm1-core-02-server-incident-sla-isolated]
+    paths:
+      - ".github/workflows/cp-fm1-core-04.yml"
+      - "frontend/data.js"
+      - "frontend/fm1/**"
+      - "frontend/fm1-application.css"
+      - "frontend/tests/fm1-*.test.mjs"
+      - "frontend/tests/fixtures/fm1-component.html"
+      - "scripts/fm1-browser-acceptance.mjs"
+      - "scripts/cp-fm1-core-04-disposable-acceptance.sh"
+      - "sql/tests/cp-fm1-core-02-*"
+      - "sql/tests/cp-fm1-core-03-*"
+      - "sql/tests/cp-fm1-core-04-*"
+      - "supabase/migrations/20261116055815_cp_fm1_core_02_server_incident_sla.sql"
+      - "supabase/migrations/20261116082518_cp_fm1_core_03_operational_workflows.sql"
+      - "supabase/migrations/20261116092055_cp_fm1_core_04_operational_ui_reporting_warnings.sql"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fm1-core-04:
+    name: FM1 database, frontend, build and browser acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify JavaScript syntax
+        run: npm run check
+      - name: Run complete frontend regression suite
+        run: npm test
+      - name: Run focused FM1 API, UI and domain tests
+        run: npm run test:fm1
+      - name: Run lint and formatting checks
+        run: |
+          npm run lint
+          npm run format:check
+      - name: Run disposable PostgreSQL 17 acceptance
+        run: npm run test:fm1:cp04
+      - name: Build production frontend
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run native ESM FM1 browser acceptance
+        run: |
+          CHROMIUM_PATH="$(node --input-type=module -e 'import { chromium } from "playwright"; process.stdout.write(chromium.executablePath())')" npm run test:e2e

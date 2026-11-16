@@ -51,6 +51,16 @@
         assigned_to: null,
       };
       const conversations = [];
+      const ticketEvents = [];
+      let warningPolicy = {
+        workspace_id: workspaceId,
+        enabled: false,
+        policy_state: "NOT_CONFIGURED",
+        human_response_before_seconds: null,
+        engineering_start_before_seconds: null,
+        restoration_before_seconds: null,
+        revision: 0,
+      };
       const notifications = [
         {
           id: "00000000-0000-4000-8000-000000000008",
@@ -115,20 +125,166 @@
                   total_tickets: 1,
                   open_tickets: 1,
                   p1p2_tickets: 1,
-                  unassigned_p1p2: 0,
+                  unassigned_p1p2: ticket.assigned_to ? 0 : 1,
                   sla_active_tickets: 0,
                   breached_obligations: 0,
                   approaching_deadlines: null,
                   approaching_deadline_policy: "NOT_CONFIGURED",
                 },
-                unassigned_urgent: [],
+                unassigned_urgent: ticket.assigned_to ? [] : [{ ...ticket }],
                 notification_delivery: { queued: 0, failed: 0, delivered: 0 },
                 sla_activation_state: "PENDING_ACCEPTANCE_AND_READINESS",
                 internal_notifications_enabled: true,
               };
             }
-            if (name === "fm1_list_tickets_v1")
-              return { items: [ticket], total: 1 };
+            if (name === "fm1_list_tickets_v1") {
+              const search = String(args.p_search || "").toLowerCase();
+              const matches =
+                (!search ||
+                  [
+                    ticket.ticket_number,
+                    ticket.subject,
+                    ticket.requester_name,
+                  ].some((value) =>
+                    String(value || "")
+                      .toLowerCase()
+                      .includes(search),
+                  )) &&
+                (!args.p_status || args.p_status === ticket.status) &&
+                (!args.p_priority ||
+                  args.p_priority === ticket.priority_effective);
+              const filtered = matches ? [ticket] : [];
+              return {
+                items: filtered.slice(
+                  args.p_offset,
+                  args.p_offset + args.p_limit,
+                ),
+                total:
+                  search || args.p_status || args.p_priority
+                    ? filtered.length
+                    : 51,
+                limit: args.p_limit,
+                offset: args.p_offset,
+              };
+            }
+            if (name === "fm1_operational_report_v1") {
+              return {
+                metrics: {
+                  total_tickets: 1,
+                  open_tickets: 1,
+                  closed_tickets: 0,
+                  cancelled_tickets: 0,
+                  p1p2_tickets: 1,
+                  unassigned_p1p2: ticket.assigned_to ? 0 : 1,
+                  assigned_open_tickets: ticket.assigned_to ? 1 : 0,
+                  sla_active_tickets: 0,
+                  status_breakdown: { [ticket.status]: 1 },
+                  priority_breakdown: { [ticket.priority_effective]: 1 },
+                  assignment_breakdown: {
+                    assigned: ticket.assigned_to ? 1 : 0,
+                    unassigned: ticket.assigned_to ? 0 : 1,
+                  },
+                  obligation_breakdown: {},
+                  breached_obligations: 0,
+                  milestone_breakdown: {},
+                  approaching_deadlines: 0,
+                },
+                assignee_breakdown: ticket.assigned_to
+                  ? [
+                      {
+                        assignee_id: ticket.assigned_to,
+                        assignee_name: "Fixture Assignee",
+                        ticket_count: 1,
+                      },
+                    ]
+                  : [],
+                unassigned_urgent: ticket.assigned_to ? [] : [{ ...ticket }],
+                notification_delivery: {
+                  queued: 0,
+                  failed: 0,
+                  delivered: 2,
+                  pending_configuration: 0,
+                  retrying: 0,
+                },
+                current_assignments: ticket.assigned_to
+                  ? [
+                      {
+                        id: ticket.id,
+                        ticket_id: ticket.id,
+                        ticket_number: ticket.ticket_number,
+                        subject: ticket.subject,
+                        status: ticket.status,
+                        priority_effective: ticket.priority_effective,
+                        assigned_to: ticket.assigned_to,
+                        assignee_name: "Fixture Assignee",
+                        received_at: ticket.received_at,
+                      },
+                    ]
+                  : [],
+                sla_active_incidents: [],
+                approaching_deadlines: [],
+                breached_obligations: [],
+                recent_escalations: [],
+                recent_lifecycle_history: ticketEvents.map((item) => ({
+                  ...item,
+                  ticket_id: ticket.id,
+                  ticket_number: ticket.ticket_number,
+                  subject: ticket.subject,
+                  recorded_at: new Date().toISOString(),
+                })),
+              };
+            }
+            if (name === "fm1_deadline_warning_policy_v1")
+              return { ...warningPolicy };
+            if (name === "fm1_update_deadline_warning_policy_v1") {
+              warningPolicy = {
+                workspace_id: workspaceId,
+                enabled: args.p_enabled,
+                policy_state: args.p_enabled ? "ACTIVE" : "INACTIVE",
+                human_response_before_seconds:
+                  args.p_human_response_before_seconds,
+                engineering_start_before_seconds:
+                  args.p_engineering_start_before_seconds,
+                restoration_before_seconds: args.p_restoration_before_seconds,
+                revision: warningPolicy.revision + 1,
+              };
+              return { ...warningPolicy };
+            }
+            if (name === "fm1_update_ticket_v1") {
+              if (args.p_expected_revision !== ticket.revision)
+                throw new Error(
+                  "FM1 ticket revision changed; refresh before retrying",
+                );
+              ticket = {
+                ...ticket,
+                requester_name: args.p_requester_name,
+                callback_number: args.p_callback_number,
+                subject: args.p_subject,
+                description: args.p_description,
+                production_impact: args.p_production_impact,
+                production_stopped: args.p_production_stopped,
+                safety_concern: args.p_safety_concern,
+                asset_reference: args.p_asset_reference,
+                revision: ticket.revision + 1,
+              };
+              ticketEvents.push({
+                event_id: "00000000-0000-4000-8000-000000000009",
+                event_type: "IncidentDetailsUpdated",
+                actor_id: userId,
+                occurred_at: new Date().toISOString(),
+                payload: {
+                  after: {
+                    subject: ticket.subject,
+                    requester_name: ticket.requester_name,
+                  },
+                },
+              });
+              return {
+                ticket: { ...ticket },
+                changed: true,
+                idempotent_replay: false,
+              };
+            }
             if (name === "fm1_notification_inbox_v1")
               return {
                 items: notifications.map((item) => ({ ...item })),
@@ -157,7 +313,10 @@
               return {
                 ticket: { ...ticket },
                 obligations: [],
-                events: [],
+                events: ticketEvents.map((item) => ({
+                  ...item,
+                  source: "crm",
+                })),
                 milestones: [],
                 holds: holds.map((item) => ({ ...item })),
                 audit: [],

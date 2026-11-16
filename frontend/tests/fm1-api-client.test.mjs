@@ -329,3 +329,117 @@ test("FM1 notification inbox and mark-read RPCs validate persisted delivery rece
   assert.equal(fake.calls[0].args.p_workspace_id, WORKSPACE);
   assert.equal(fake.calls[1].args.p_notification_id, KEY);
 });
+
+test("FM1 incident editing sends the current revision and normalized descriptive fields", async () => {
+  const updated = ticket({ requester_name: "Operator Two", revision: 2 });
+  const fake = fakeApi({
+    fm1_update_ticket_v1: {
+      ticket: updated,
+      idempotent_replay: false,
+      changed: true,
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  const result = await client.updateTicket(
+    WORKSPACE,
+    ticket(),
+    {
+      requesterName: " Operator Two ",
+      callbackNumber: "09171234567",
+      subject: "PLC alarm follow-up",
+      description:
+        "The production line reports intermittent PLC communication loss.",
+      productionImpact: "degraded",
+      productionStopped: true,
+      safetyConcern: false,
+      assetReference: " PLC-01 ",
+    },
+    KEY,
+  );
+  assert.equal(result.ticket.revision, 2);
+  assert.equal(fake.calls[0].name, "fm1_update_ticket_v1");
+  assert.equal(fake.calls[0].args.p_expected_revision, 1);
+  assert.equal(fake.calls[0].args.p_requester_name, "Operator Two");
+  assert.equal(fake.calls[0].args.p_asset_reference, "PLC-01");
+  assert.equal(fake.calls[0].args.p_idempotency_key, KEY);
+});
+
+test("FM1 operational report validates bounded aggregate and activity collections", async () => {
+  const fake = fakeApi({
+    fm1_operational_report_v1: {
+      metrics: {
+        total_tickets: 1,
+        open_tickets: 1,
+        closed_tickets: 0,
+        status_breakdown: { New: 1 },
+        priority_breakdown: { P2: 1 },
+        assignment_breakdown: { assigned: 0, unassigned: 1 },
+        obligation_breakdown: {},
+        milestone_breakdown: {},
+      },
+      assignee_breakdown: [],
+      unassigned_urgent: [],
+      notification_delivery: {
+        queued: 0,
+        failed: 0,
+        delivered: 0,
+        pending_configuration: 0,
+        retrying: 0,
+      },
+      current_assignments: [],
+      sla_active_incidents: [],
+      approaching_deadlines: [],
+      breached_obligations: [],
+      recent_escalations: [],
+      recent_lifecycle_history: [],
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  const result = await client.operationalReport(WORKSPACE);
+  assert.equal(result.metrics.total_tickets, 1);
+  assert.equal(fake.calls[0].args.p_workspace_id, WORKSPACE);
+});
+
+test("FM1 deadline warning policy starts not configured and converts minutes to seconds", async () => {
+  const fake = fakeApi({
+    fm1_deadline_warning_policy_v1: {
+      workspace_id: WORKSPACE,
+      enabled: false,
+      policy_state: "NOT_CONFIGURED",
+      revision: 0,
+    },
+    fm1_update_deadline_warning_policy_v1: {
+      workspace_id: WORKSPACE,
+      enabled: true,
+      policy_state: "ACTIVE",
+      human_response_before_seconds: 900,
+      engineering_start_before_seconds: 1800,
+      restoration_before_seconds: null,
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  const policy = await client.deadlineWarningPolicy(WORKSPACE);
+  assert.equal(policy.policy_state, "NOT_CONFIGURED");
+  const updated = await client.updateDeadlineWarningPolicy(WORKSPACE, {
+    enabled: true,
+    humanResponseMinutes: 15,
+    engineeringStartMinutes: 30,
+    restorationMinutes: null,
+  });
+  assert.equal(updated.policy_state, "ACTIVE");
+  assert.deepEqual(fake.calls[1].args, {
+    p_workspace_id: WORKSPACE,
+    p_enabled: true,
+    p_human_response_before_seconds: 900,
+    p_engineering_start_before_seconds: 1800,
+    p_restoration_before_seconds: null,
+  });
+});
+
+test("FM1 warning policy cannot be enabled without an explicit threshold", async () => {
+  const client = new Fm1ApiClient(fakeApi().api);
+  await assert.rejects(
+    client.updateDeadlineWarningPolicy(WORKSPACE, { enabled: true }),
+    /at least one deadline threshold/,
+  );
+});

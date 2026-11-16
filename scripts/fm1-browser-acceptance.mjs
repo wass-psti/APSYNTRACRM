@@ -257,6 +257,76 @@ try {
   await workflowPage
     .getByRole("heading", { name: "Authoritative ticket queue" })
     .waitFor();
+  await workflowPage.waitForFunction(() =>
+    document.querySelector(".fm1-ticket-table tbody tr"),
+  );
+  await checkAccessibility("FM1 server ticket queue");
+  await workflowPage.waitForFunction(() => {
+    const button = document.querySelector(
+      '[data-fm1-action="ticket-page-next"]',
+    );
+    return button && !button.disabled;
+  });
+  await workflowPage.locator('[data-fm1-action="ticket-page-next"]').click();
+  let queueCall = await workflowPage.evaluate(() =>
+    window.__fm1Calls.findLast((call) => call.name === "fm1_list_tickets_v1"),
+  );
+  assert.equal(queueCall.args.p_offset, 50);
+  await workflowPage.locator('[data-fm1-action="ticket-page-prev"]').click();
+  await workflowPage
+    .locator('[data-fm1-ticket-filter-form] input[name="search"]')
+    .fill("Browser acceptance");
+  await workflowPage
+    .locator('[data-fm1-ticket-filter-form] select[name="status"]')
+    .selectOption("In Progress");
+  await workflowPage
+    .locator('[data-fm1-ticket-filter-form] select[name="priority"]')
+    .selectOption("P2");
+  await workflowPage
+    .locator('[data-fm1-ticket-filter-form] button[type="submit"]')
+    .click();
+  await workflowPage.getByText("Ticket filters applied.").waitFor();
+  queueCall = await workflowPage.evaluate(() =>
+    window.__fm1Calls.findLast((call) => call.name === "fm1_list_tickets_v1"),
+  );
+  assert.equal(queueCall.args.p_search, "Browser acceptance");
+  assert.equal(queueCall.args.p_status, "In Progress");
+  assert.equal(queueCall.args.p_priority, "P2");
+  await workflowPage.locator('[data-fm1-action="refresh-server"]').click();
+  await workflowPage.waitForFunction(() => {
+    const call = window.__fm1Calls.findLast(
+      (item) => item.name === "fm1_list_tickets_v1",
+    );
+    return (
+      call?.args.p_search === "Browser acceptance" &&
+      call?.args.p_status === "In Progress" &&
+      call?.args.p_priority === "P2"
+    );
+  });
+  queueCall = await workflowPage.evaluate(() =>
+    window.__fm1Calls.findLast((call) => call.name === "fm1_list_tickets_v1"),
+  );
+  assert.equal(queueCall.args.p_search, "Browser acceptance");
+  await workflowPage.getByRole("button", { name: "Reports" }).click();
+  await workflowPage
+    .getByRole("heading", { name: "Incident and service operations" })
+    .waitFor();
+  await workflowPage.getByRole("button", { name: "Tickets" }).click();
+  assert.equal(
+    await workflowPage
+      .locator('[data-fm1-ticket-filter-form] input[name="search"]')
+      .inputValue(),
+    "Browser acceptance",
+  );
+  assert.equal(
+    await workflowPage
+      .locator('[data-fm1-ticket-filter-form] select[name="status"]')
+      .inputValue(),
+    "In Progress",
+  );
+  await workflowPage
+    .locator('[data-fm1-action="clear-ticket-filters"]')
+    .click();
   await workflowPage.locator('[data-fm1-action="view-ticket"]').first().click();
   await workflowPage
     .getByRole("heading", { name: "Browser acceptance incident" })
@@ -267,6 +337,32 @@ try {
   await workflowPage
     .getByRole("heading", { name: "Hold requests and review history" })
     .waitFor();
+  await checkAccessibility("FM1 incident detail and edit form");
+
+  await workflowPage
+    .locator('[data-fm1-edit-ticket-form] input[name="requesterName"]')
+    .fill("Edited Browser Operator");
+  await workflowPage
+    .locator('[data-fm1-edit-ticket-form] textarea[name="description"]')
+    .fill(
+      "Updated synthetic incident description for revision-safe editing acceptance.",
+    );
+  await workflowPage
+    .locator('[data-fm1-edit-ticket-form] button[type="submit"]')
+    .click();
+  await workflowPage
+    .getByText(/Incident details updated/)
+    .first()
+    .waitFor();
+  const editCall = await workflowPage.evaluate(() =>
+    window.__fm1Calls.findLast((call) => call.name === "fm1_update_ticket_v1"),
+  );
+  assert.equal(editCall.args.p_expected_revision, 1);
+  assert.equal(editCall.args.p_requester_name, "Edited Browser Operator");
+  assert.equal(
+    editCall.args.p_description,
+    "Updated synthetic incident description for revision-safe editing acceptance.",
+  );
 
   await workflowPage
     .locator('[data-fm1-assignment-form] select[name="assigneeId"]')
@@ -358,6 +454,86 @@ try {
     .first()
     .waitFor();
 
+  await workflowPage.getByRole("button", { name: "Reports" }).click();
+  await workflowPage
+    .getByRole("heading", { name: "Incident and service operations" })
+    .waitFor();
+  await workflowPage.getByText("Incident status distribution").waitFor();
+  await checkAccessibility("FM1 operational reports");
+  const queueCallCountBeforeReportRefresh = await workflowPage.evaluate(
+    () =>
+      window.__fm1Calls.filter((call) => call.name === "fm1_list_tickets_v1")
+        .length,
+  );
+  const reportCallCountBeforeRefresh = await workflowPage.evaluate(
+    () =>
+      window.__fm1Calls.filter(
+        (call) => call.name === "fm1_operational_report_v1",
+      ).length,
+  );
+  await workflowPage.locator('[data-fm1-action="refresh-server"]').click();
+  await workflowPage.waitForFunction(
+    (before) =>
+      window.__fm1Calls.filter(
+        (call) => call.name === "fm1_operational_report_v1",
+      ).length > before,
+    reportCallCountBeforeRefresh,
+  );
+  const queueCallCountAfterReportRefresh = await workflowPage.evaluate(
+    () =>
+      window.__fm1Calls.filter((call) => call.name === "fm1_list_tickets_v1")
+        .length,
+  );
+  assert.equal(
+    queueCallCountAfterReportRefresh,
+    queueCallCountBeforeReportRefresh,
+  );
+  const reportCall = await workflowPage.evaluate(() =>
+    window.__fm1Calls.findLast(
+      (call) => call.name === "fm1_operational_report_v1",
+    ),
+  );
+  assert.equal(
+    reportCall.args.p_workspace_id,
+    "00000000-0000-4000-8000-000000000001",
+  );
+
+  await workflowPage.getByRole("button", { name: "Duty" }).click();
+  await workflowPage.getByRole("heading", { name: "Duty dashboard" }).waitFor();
+  await workflowPage.getByText("Unassigned P1 / P2 incidents").waitFor();
+  await checkAccessibility("FM1 duty dashboard and warning policy");
+  await workflowPage
+    .locator('[data-fm1-warning-policy-form] input[name="enabled"]')
+    .check();
+  await workflowPage
+    .locator(
+      '[data-fm1-warning-policy-form] input[name="humanResponseMinutes"]',
+    )
+    .fill("15");
+  await workflowPage
+    .locator(
+      '[data-fm1-warning-policy-form] input[name="engineeringStartMinutes"]',
+    )
+    .fill("30");
+  await workflowPage
+    .locator('[data-fm1-warning-policy-form] input[name="restorationMinutes"]')
+    .fill("60");
+  await workflowPage
+    .locator('[data-fm1-warning-policy-form] button[type="submit"]')
+    .click();
+  await workflowPage
+    .getByText("Approaching-deadline warning policy enabled.")
+    .waitFor();
+  const policyCall = await workflowPage.evaluate(() =>
+    window.__fm1Calls.findLast(
+      (call) => call.name === "fm1_update_deadline_warning_policy_v1",
+    ),
+  );
+  assert.equal(policyCall.args.p_enabled, true);
+  assert.equal(policyCall.args.p_human_response_before_seconds, 900);
+  assert.equal(policyCall.args.p_engineering_start_before_seconds, 1800);
+  assert.equal(policyCall.args.p_restoration_before_seconds, 3600);
+
   await workflowPage.getByRole("button", { name: "Notifications" }).click();
   await workflowPage
     .getByRole("heading", { name: "Notification inbox" })
@@ -375,6 +551,10 @@ try {
   );
   for (const name of [
     "fm1_assign_ticket_v1",
+    "fm1_update_ticket_v1",
+    "fm1_operational_report_v1",
+    "fm1_deadline_warning_policy_v1",
+    "fm1_update_deadline_warning_policy_v1",
     "fm1_add_conversation_v1",
     "fm1_notification_inbox_v1",
     "fm1_notification_mark_read_v1",
@@ -421,7 +601,7 @@ try {
 
   console.log("FM1_BROWSER_ACCEPTANCE_PASS");
   console.log(
-    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), desktop/mobile layout, intake validation, assignment, internal/customer-update conversation capture, priority changes, dependency hold request/review/resumption, notification inbox navigation, scoped IndexedDB lifecycle, cross-user/workspace isolation and WCAG 2.2 AA axe checks passed.",
+    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), server-side ticket filters and pagination, revision-safe incident editing, server-backed reports, configurable warning policy, assignment, conversations, priority changes, dependency holds, notification inbox, scoped IndexedDB lifecycle, cross-user/workspace isolation, desktop/mobile layout and WCAG 2.2 AA axe checks passed.",
   );
 } finally {
   if (browser) await browser.close();

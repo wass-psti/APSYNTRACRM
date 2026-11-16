@@ -17,11 +17,12 @@
     "test:e2e": "node scripts/fm1-browser-acceptance.mjs",
     "prebuild": "node scripts/build-priority5-styles.mjs",
     "lint": "eslint frontend/fm1 frontend/tests/fm1-*.test.mjs scripts/fm1-browser-acceptance.mjs vite.config.js",
-    "format:check": "prettier --check frontend/fm1 frontend/fm1-application.css frontend/tests/fm1-*.test.mjs frontend/tests/fixtures/fm1-component.html scripts/fm1-browser-acceptance.mjs vite.config.js eslint.config.js docs/FM1-FOUNDATION-01.md",
-    "format": "prettier --write frontend/fm1 frontend/fm1-application.css frontend/tests/fm1-*.test.mjs frontend/tests/fixtures/fm1-component.html scripts/fm1-browser-acceptance.mjs vite.config.js eslint.config.js docs/FM1-FOUNDATION-01.md",
+    "format:check": "prettier --check frontend/fm1 frontend/fm1-application.css frontend/tests/fm1-*.test.mjs frontend/tests/fixtures/fm1-component.html scripts/fm1-browser-acceptance.mjs vite.config.js eslint.config.js docs/FM1-FOUNDATION-01.md docs/CP-FM1-CORE-04.md .github/workflows/cp-fm1-core-04.yml",
+    "format": "prettier --write frontend/fm1 frontend/fm1-application.css frontend/tests/fm1-*.test.mjs frontend/tests/fixtures/fm1-component.html scripts/fm1-browser-acceptance.mjs vite.config.js eslint.config.js docs/FM1-FOUNDATION-01.md docs/CP-FM1-CORE-04.md .github/workflows/cp-fm1-core-04.yml",
     "test:fm1": "node --test frontend/tests/fm1-*.test.mjs",
     "test:time-tracker:e2e": "node scripts/time-tracker-browser-acceptance.mjs",
-    "test:fm1:cp03": "bash scripts/cp-fm1-core-03-disposable-acceptance.sh"
+    "test:fm1:cp03": "bash scripts/cp-fm1-core-03-disposable-acceptance.sh",
+    "test:fm1:cp04": "bash scripts/cp-fm1-core-04-disposable-acceptance.sh"
   },
   "type": "module",
   "name": "apsyntra-crm",

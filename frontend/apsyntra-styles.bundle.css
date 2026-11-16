@@ -24036,6 +24036,43 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
   }
 }
 
+/* CP-FM1-CORE-04 operational queue, reporting and deadline policy */
+.fm1-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 12px 0 18px;
+  color: var(--fm1-muted);
+  font-size: 12px;
+}
+.fm1-ticket-filter-form {
+  margin: 14px 0;
+}
+.fm1-ticket-filter-form .fm1-form-grid {
+  align-items: end;
+}
+.fm1-form-grid label > span input[type="checkbox"] {
+  margin-right: 8px;
+}
+.fm1-draft-row .fm1-draft-main {
+  min-width: 0;
+}
+.fm1-draft-row .fm1-draft-main strong,
+.fm1-draft-row .fm1-draft-main span {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .fm1-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .fm1-pagination .fm1-inline-actions {
+    width: 100%;
+  }
+}
+
 /* frontend/fueltrans-native.css */
 @media print{
  body:has(#fueltrans-native-host) .sidebar,
