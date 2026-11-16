@@ -163,6 +163,8 @@ import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.j
 import {loadFRTLiquidation,submitFRTLiquidation} from './frt-liquidation.js';
 import {loadFRTBankExecution,recordFRTBankExecution} from './frt-bank-execution.js';
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
+import {loadFRTActivity,loadFRTComments,addFRTComment,loadFRTArchive,restoreFRTRequest} from './frt-operations-client.js';
+import {renderFRTActivityLog,renderFRTComments,renderFRTArchive,serializeFRTActivityCsv} from './frt-operations-ui.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
@@ -7764,25 +7766,42 @@ async function action(name,button){
    const requestId=String(button?.dataset?.requestId||'');
    const selected=state.frtFinance.requests.find(r=>r.requestId===requestId);
    if(section==='discussion'&&!selected)return;
-   let title='',body='';
+   let title='',body='',activityRows=[];
    if(section==='new'){
     title='New Fund Request';
     body=renderFRTRequestWizard({companies:state.frtFinance.companies,
      selectedCompany:companyCode});
    }else if(section==='activity'){
     title='Activity Log';
-    body='<p class="note">Signed activity history for '+e(company.name)+'</p>'+
-     '<p class="muted">The current safe FRT endpoint does not provide auditable activity records. No events are fabricated or retrieved through a broad privileged API.</p>';
+    try{
+     const activity=await loadFRTActivity({auth,api:db,
+      workspaceId:state.context?.workspace_id,companyCode});
+     activityRows=activity.events;
+     body=renderFRTActivityLog(activity);
+    }catch(error){
+     body=renderFRTActivityLog({companyCode,error:error?.message||'Activity history unavailable.'});
+    }
    }else if(section==='archive'){
     title='Archive Storage';
-    body='<p class="note">Archived requests are kept separate from active Fund Requests.</p>'+
-     '<p class="muted">The current signed FRT read endpoint does not list archived requests. Recovery and permanent deletion are unavailable until verified server contracts exist.</p>';
+    try{
+     const archive=await loadFRTArchive({auth,api:db,
+      workspaceId:state.context?.workspace_id,companyCode});
+     body=renderFRTArchive({...archive,
+      canRestore:state.frtFinance.role==='GENERAL_MANAGER'});
+    }catch(error){
+     body=renderFRTArchive({companyCode,error:error?.message||'Archive history unavailable.'});
+    }
    }else if(section==='discussion'){
     title='Discussion';
-    body='<p class="note">'+e(selected.title)+'</p>'+
-     '<p class="muted">Signed comments and attachment discussions are not exposed by the current FRT API. No historical messages or attachments are fabricated.</p>'+
-     '<div class="field"><label for="frt-discussion-preview">Add Comment</label>'+
-     '<textarea id="frt-discussion-preview" rows="3" disabled placeholder="Posting is unavailable until signed comments are integrated"></textarea></div>';
+    try{
+     const discussion=await loadFRTComments({auth,api:db,
+      workspaceId:state.context?.workspace_id,companyCode,requestId,
+      allowedRequestIds:state.frtFinance.requests.map(row=>row.requestId)});
+     body=renderFRTComments({comments:discussion.comments,requestTitle:selected.title});
+    }catch(error){
+     body=renderFRTComments({requestTitle:selected.title,
+      error:error?.message||'Discussion history unavailable.'});
+    }
    }else return;
    if(section==='new'){
     const workspaceId=state.context?.workspace_id,boardId=state.boardId;
@@ -7836,8 +7855,61 @@ async function action(name,button){
      companyCode:modal?.querySelector('[name=companyCode]')?.value||'',
      role:state.frtFinance?.role
     })});
-   }else openModal(title,body,async()=>{},
-     {submitLabel:'Not connected',submitDisabled:true});
+   }else if(section==='discussion'){
+    const workspaceId=state.context?.workspace_id,boardId=state.boardId;
+    const actor=auth.userId,role=state.frtFinance.role,seq=routeSerial;
+    const allowedRequestIds=state.frtFinance.requests.map(row=>row.requestId);
+    openModal(title,body,async form=>{
+     if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+        auth.userId!==actor||state.context?.workspace_id!==workspaceId||
+        state.frtFinance?.companyCode!==companyCode||state.frtFinance?.role!==role||
+        !state.frtFinance.requests.some(row=>row.requestId===requestId))
+      throw new ApiError('FRT company, request or signed session changed. Reopen discussion.',409);
+     await addFRTComment({auth,api:db,workspaceId,companyCode,requestId,
+      allowedRequestIds,body:String(form.get('comment')||'')});
+    },{submitLabel:'Post comment',successMessage:'Comment posted and verified by signed readback.'});
+   }else{
+    openModal(title,body,async()=>{},
+     {submitLabel:'Close',submitDisabled:true});
+    if(section==='activity'&&activityRows.length){
+     const exportButton=modal?.querySelector('[data-frt-export-activity]');
+     exportButton?.addEventListener('click',()=>{
+      const csv=serializeFRTActivityCsv(activityRows);
+      const url=URL.createObjectURL(new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
+      const link=document.createElement('a');
+      link.href=url;
+      link.download='frt-activity-'+companyCode+'-'+new Date().toISOString().slice(0,10)+'.csv';
+      document.body.appendChild(link);link.click();link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+     });
+    }
+   }
+   break;
+ }
+ case 'frt-archive-restore':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
+      state.frtFinance?.status!=='PASS'||
+      state.frtFinance?.role!=='GENERAL_MANAGER')return;
+   const requestId=String(button?.dataset?.requestId||'');
+   const workspaceId=state.context?.workspace_id,companyCode=state.frtFinance.companyCode;
+   const boardId=state.boardId,actor=auth.userId,role=state.frtFinance.role,seq=routeSerial;
+   let archive;
+   try{archive=await loadFRTArchive({auth,api:db,workspaceId,companyCode});}
+   catch(error){notice(error);break;}
+   const archived=archive.requests.find(row=>row.requestId===requestId);
+   if(!archived){toast('This request is no longer in the active company archive.');break;}
+   openModal('Restore archived request',
+    '<p class="note">'+e(archived.title)+' · '+e(archived.voucher)+'</p>'+
+    '<p>Restore this request to the active Fund Release Tracker? Its voucher, liquidation and audit history will be retained.</p>',
+    async()=>{
+     if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+        auth.userId!==actor||state.context?.workspace_id!==workspaceId||
+        state.frtFinance?.companyCode!==companyCode||state.frtFinance?.role!==role)
+      throw new ApiError('FRT company or signed session changed. Reopen archive recovery.',409);
+     await restoreFRTRequest({auth,api:db,workspaceId,companyCode,requestId});
+     await loadFRTFinance(companyCode);
+    },{submitLabel:'Restore request',
+       successMessage:'Archived request restored and active tracker refreshed.'});
    break;
  }
  case 'frt-bank-record':{
