@@ -168,6 +168,19 @@ test('All Documents wires export only to the current selected authorized rows',(
  assert.match(workspace,/data-action="tradelink-documents-export-selection" disabled/);
 });
 
+test('analytics requests release stale busy state and retry the current route after overlapping navigation',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf('async function loadTradeLinkAnalytics(');
+ const end=app.indexOf('async function loadTimeTracker(',start);
+ const loader=app.slice(start,end);
+ assert.match(app,/tradeLinkAnalyticsRunId:0/);
+ assert.match(loader,/const run=\+\+state\.tradeLinkAnalyticsRunId/);
+ assert.match(loader,/if\(run===state\.tradeLinkAnalyticsRunId\)/);
+ assert.match(loader,/state\.tradeLinkAnalyticsBusy=false/);
+ assert.match(loader,/routeStillAnalytics&&seq!==routeSerial/);
+ assert.match(app,/state\.tradeLinkSection!=='analytics'&&state\.tradeLinkAnalyticsBusy/);
+});
+
 test('analytics RPC remains on the existing signed manager path with no new role or grant layer',()=>{
  const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
  assert.match(client,/export const TL03_ANALYTICS_ENABLED=true/);
