@@ -20,7 +20,7 @@ const server=createServer((req,res)=>{
  }
  if(offline){res.statusCode=503;res.end('unavailable');return;}
  if(path==='/frontend/fixture-static.js'){
-  res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','no-cache');
+  res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=3600');
   res.end('/* version '+version+' */');return;
  }
  if(path==='/frontend/fixture-static.css'){

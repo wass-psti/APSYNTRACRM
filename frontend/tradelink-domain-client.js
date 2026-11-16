@@ -10,9 +10,12 @@ import {normalizeTradeLinkAnalyticsSummary} from './tradelink-analytics.js';
 export const TL03_DOMAIN_READS_ENABLED=true;
 // Stage B authenticated EXECUTE grants are live; server enforces session and workspace permissions.
 export const TL03_DOMAIN_WRITES_ENABLED=true;
-// The signed aggregate RPC is prepared in the CP-TL legacy integration candidate.
-// Keep UI reads off until that additive function is installed in the existing project.
-export const TL03_ANALYTICS_ENABLED=false;
+// CP-TL-LEGACY-WORKFLOW-04: the existing production aggregate RPC is installed
+// and verified. Activate only its signed, read-only analytics UI path.
+export const TL03_ANALYTICS_ENABLED=true;
+// Production automatic-number creation remains disabled pending separate
+// operational activation. Existing manual-number creation is unchanged.
+export const TL03_AUTOMATIC_NUMBERING_ENABLED=false;
 // The workflow backend adds an authenticated RPC and changes an audit CHECK.
 // Keep the Submit button disabled until that exact production candidate is
 // approved, installed, and separately verified. Existing Draft writes remain on.
@@ -37,11 +40,12 @@ const STATES=new Set(['draft','for-approval','submitted','under-review','revisio
  'on-hold','won','lost','delivered','closed']);
 const OPS=new Set(['create','update','archive','restore']);
 const deny=(message,status=403)=>{throw new ApiError(message,status);};
-export function validateTradeLinkDraftEnvelope(value){
+export function validateTradeLinkDraftEnvelope(value,{allowUnassignedNumber=false}={}){
+ const unassigned=allowUnassignedNumber===true&&value?.documentNumber==='';
  if(!value||typeof value!=='object'||Array.isArray(value)||
    !TYPES.has(value.documentType)||typeof value.documentNumber!=='string'||
-   !/^[A-Za-z0-9][A-Za-z0-9._ /-]{0,119}$/.test(value.documentNumber)||
-   value.documentNumber!==value.documentNumber.trim())
+   (!unassigned&&(!/^[A-Za-z0-9][A-Za-z0-9._ /-]{0,119}$/.test(value.documentNumber)||
+   value.documentNumber!==value.documentNumber.trim())))
   deny('Invalid TradeLink draft type or document number.',400);
  for(const blocked of ['id','workflow','status','revision','revisionNo','history',
   'createdBy','updatedBy','approvedAt','verifiedAt','attachments','createdById',
@@ -64,6 +68,8 @@ export function normalizeTradeLinkDomainReceipt(
   (!['draft','for-approval','revision-required'].includes(expectedState))||
   value.state!==expectedState||value.operation!==operation||
   typeof value.idempotent!=='boolean'||
+  (operation==='create'&&(typeof value.documentNumber!=='string'||
+   !/^(ESI-|PL-|DR-|AR-|Q-|PO-)[0-9]{6,}$/.test(value.documentNumber)))||
   (expectedRevision!==null&&(
    !Number.isSafeInteger(expectedRevision)||expectedRevision<0||
    (value.idempotent?!(
@@ -212,26 +218,42 @@ export function normalizeTradeLinkSignedHistory(rows,limit=25){
  return rows;
 }
 export class TradeLinkDomainClient{
- constructor({api,auth}={}){this.api=api;this.auth=auth;}
- async session(){
-  if(!this.api?.context||!this.api?.board||!this.api?.allowed||!this.api?.rpc||
-    !this.auth?.getVerifiedUser)deny('Signed TradeLink domain API unavailable.');
-  // Each request uses the existing signed transport and independently enforces
-  // server-side access. Overlap reads rather than serializing four round trips.
+ constructor({api,auth,automaticNumberingEnabled=TL03_AUTOMATIC_NUMBERING_ENABLED}={}){
+  this.api=api;this.auth=auth;
+  this.automaticNumberingEnabled=automaticNumberingEnabled===true;
+ }
+ async session({verifyBoard=true}={}){
+  if(!this.api?.context||(verifyBoard&&!this.api?.board&&!this.api?.boardCached)||
+    !this.api?.allowed||!this.api?.rpc||!this.auth?.getVerifiedUser)
+   deny('Signed TradeLink domain API unavailable.');
+  // Resolve the signed actor, workspace and manager decision concurrently.
+  // Document operations need only the board shell, not its item pages; reuse
+  // the existing signed board cache's bounded invalidation retry when present.
+  // Analytics delegates board/workspace validation to its authoritative RPC.
   // No document operation runs until every identity, workspace and permission
   // check below succeeds; the mutation RPC remains authoritative as before.
-  const [actor,context,detail,canManage]=await Promise.all([
+  const [actor,context,canManage]=await Promise.all([
    this.auth.getVerifiedUser(),this.api.context(),
-   this.api.board(TRADELINK_BOARD_ID),
    this.api.allowed(TRADELINK_BOARD_ID,'manage')
   ]);
   if(!validUuid(actor?.id)||actor.id!==this.auth.userId||
     context?.user_id!==actor.id||context?.profile?.status!=='active'||
     !validUuid(context.workspace_id))
    deny('TradeLink signed identity or workspace changed.');
-  if(!isTradeLinkBoard(detail?.board)||
-     detail.board.workspace_id!==context.workspace_id||canManage!==true)
+  if(verifyBoard){
+   const detail=typeof this.api.boardCached==='function'?
+    await this.api.boardCached(TRADELINK_BOARD_ID,{
+     userId:actor.id,workspaceId:context.workspace_id,includeItems:false
+    }):await this.api.board(TRADELINK_BOARD_ID);
+   if(!isTradeLinkBoard(detail?.board)||
+      detail.board.workspace_id!==context.workspace_id||canManage!==true)
+    deny('TradeLink board manager scope required.');
+  }else if(canManage!==true){
+   // The read-only analytics RPC independently verifies its board and
+   // workspace context. Retain the signed manager preflight without loading
+   // an unrelated full board snapshot before that authoritative read.
    deny('TradeLink board manager scope required.');
+  }
   // Server additionally requires a live auth.sessions row and an effective
   // General Manager module role beneath the centralized platform ceiling.
   return {actorId:actor.id,workspaceId:context.workspace_id};
@@ -260,7 +282,18 @@ export class TradeLinkDomainClient{
    /^\d{4}-\d{2}-\d{2}T/.test(value)&&Number.isFinite(Date.parse(value));
   if(!validBound(from)||!validBound(to)||(from&&to&&Date.parse(to)<=Date.parse(from)))
    deny('Invalid TradeLink analytics reporting period.',400);
-  await this.session();
+  const signedActorId=this.auth?.userId;
+  try{
+   await this.session({verifyBoard:false});
+  }catch(error){
+   // A concurrent authoritative workspace refresh can invalidate an
+   // overlapping context read. Retry that exact transient 409 once for the
+   // same signed user; identity changes and unrelated failures remain unchanged.
+   if(error?.status!==409||
+      error?.message!=='Signed workspace context changed during loading.'||
+      this.auth?.userId!==signedActorId)throw error;
+   await this.session({verifyBoard:false});
+  }
   const result=await this.api.rpc('tl03_analytics_summary',{
    p_board_id:TRADELINK_BOARD_ID,p_from:from,p_to:to});
   try{return normalizeTradeLinkAnalyticsSummary(result);}
@@ -548,9 +581,14 @@ export class TradeLinkDomainClient{
     (['archive','restore'].includes(operation)&&
      !['draft','revision-required'].includes(expectedState)))
    deny('Invalid TradeLink revision, operation or payload.',400);
-  if(operation==='create'||operation==='update')validateTradeLinkDraftEnvelope(draft);
+  if(operation==='create'||operation==='update')validateTradeLinkDraftEnvelope(draft,
+   {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
   await this.session();
-  const receipt=operation==='create'||operation==='update'?
+  const receipt=operation==='create'&&this.automaticNumberingEnabled?
+   await this.api.rpc('tl03_document_create',{
+    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
+    p_data:draft,p_initial_state:initialState
+   }):['create','update'].includes(operation)?
    await this.api.rpc('tl03_document_save',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
     p_expected_revision:expectedRevision,p_operation:operation,
@@ -558,7 +596,18 @@ export class TradeLinkDomainClient{
    }):await this.api.rpc('tl03_document_commit',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
     p_expected_revision:expectedRevision,p_operation:operation,p_data:draft});
-  return normalizeTradeLinkDomainReceipt(receipt,documentId,operation,
-   expectedRevision,operation==='create'||operation==='update'?initialState:expectedState);
+  const normalized=normalizeTradeLinkDomainReceipt(
+   operation==='create'&&!this.automaticNumberingEnabled&&receipt&&typeof receipt==='object'?
+    {...receipt,documentNumber:draft.documentNumber}:receipt,
+   documentId,operation,expectedRevision,
+   operation==='create'||operation==='update'?initialState:expectedState);
+  const numberPrefix={esi:'ESI-',packing:'PL-',delivery:'DR-',
+   payment:'AR-',quotation:'Q-',po:'PO-'}[draft?.documentType];
+  if(operation==='create'&&this.automaticNumberingEnabled&&
+    (typeof normalized.documentNumber!=='string'||!numberPrefix||
+     !normalized.documentNumber.startsWith(numberPrefix)||
+     !/^[0-9]{6,}$/.test(normalized.documentNumber.slice(numberPrefix.length))))
+   deny('TradeLink server-assigned document number receipt mismatch.',409);
+  return normalized;
  }
 }

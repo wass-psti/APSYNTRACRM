@@ -81,7 +81,8 @@ export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
   owners:[...owners].sort((a,b)=>b[1]-a[1]).slice(0,5)};
 }
 const metric=(name,value)=>'<div><strong>'+esc(value)+'</strong><span>'+esc(name)+'</span></div>';
-const row=(r,bootstrap=false,query='')=>'<details class="tt-ot-request" data-search-text="'+esc(r.searchText||[r.name,r.task,r.date].join(' ').toLowerCase())+'"'+
+const row=(r,bootstrap=false,query='',expandedRequestIds=[])=>'<details class="tt-ot-request" data-request-id="'+esc(r.id)+'" data-search-text="'+esc(r.searchText||[r.name,r.task,r.date].join(' ').toLowerCase())+'"'+
+ (expandedRequestIds.includes(r.id)?' open':'')+
  (query&&!r.searchText.includes(query)?' hidden':'')+'><summary>'+
  '<span>'+esc(r.name)+'</span><span>'+esc(fmt(r.date))+'</span>'+
  '<strong>'+esc(minutesLabel(r.durationMinutes))+'</strong>'+
@@ -119,7 +120,7 @@ function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(
  '<button type="submit"'+(!TT_OT_WRITES_ACCEPTED?' disabled':'')+'>Submit Request</button></footer></form></section></div>';
 }
 export function renderTimeTrackerOvertime({
- requests=[],access={},filters={},modalOpen=false,form={},now=new Date()
+ requests=[],access={},filters={},expandedRequestIds=[],modalOpen=false,form={},now=new Date()
 }={}){
  const opts={...TT_OT_DEFAULT_FILTERS,...filters};
  const m=timeTrackerOtMetrics(requests,opts,now);
@@ -184,7 +185,7 @@ export function renderTimeTrackerOvertime({
  '<button type="button" data-action="tt-ot-sort">Date '+(opts.sort==='oldest'?'↑':'↓')+'</button></div>'+
  (m.statusRows.length?'<div class="tt-ot-row-head"><span>Employee</span><span>Date</span>'+
  '<span>Duration</span><span>Status</span><span>Details</span></div>'+
- m.statusRows.map(r=>row(r,access?.bootstrapApprover===true,m.search)).join(''):'')+
+ m.statusRows.map(r=>row(r,access?.bootstrapApprover===true,m.search,expandedRequestIds)).join(''):'')+
  '<div class="tt-ot-empty" data-tt-ot-empty'+(m.visible.length?' hidden':'')+'><span>◷</span>'+
  '<strong>No matching requests</strong><p>Try a different week, search or status.</p>'+
  '<button type="button" data-action="tt-ot-open">＋ Submit a request</button></div>'+

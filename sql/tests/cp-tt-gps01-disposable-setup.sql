@@ -118,6 +118,13 @@ AS $raw$
 DECLARE actor uuid:=auth.uid(); old_record jsonb; new_record jsonb;
  v_revision bigint; v_id uuid; v_now text;
 BEGIN
+ -- Match the production per-workspace/per-actor transaction lock. The optional
+ -- delay is enabled only by the dedicated disposable concurrency acceptance.
+ PERFORM pg_advisory_xact_lock(hashtextextended(
+  public.current_workspace_id(actor)::text||':time-tracker:attendance:'||actor::text,0));
+ IF current_setting('app.tt_test_lock_delay',true)='on' THEN
+  PERFORM pg_sleep(0.6);
+ END IF;
  SELECT record,revision INTO old_record,v_revision
  FROM public.tt_test_attendance_source WHERE employee_id=actor FOR UPDATE;
  v_revision:=coalesce(v_revision,0)+1;

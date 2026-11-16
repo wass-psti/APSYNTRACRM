@@ -137,7 +137,7 @@ function heading(title,desc){
  return '<div class="tt-subview-head"><div><h3>'+esc(title)+'</h3><p>'+
   esc(desc)+'</p></div></div>';
 }
-function clockPage(result,busy,now,clockPending=false){
+function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-out'){
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
  const t=timeTrackerClockParts(now);
@@ -207,7 +207,8 @@ function clockPage(result,busy,now,clockPending=false){
       ((active&&active.location==='Offsite (Home)')?'':' hidden')+'>'+
       'Offsite Work Note<textarea id="tt-note" maxlength="500" rows="3" placeholder="Describe your offsite work"></textarea></label>'+
      (clockPending?
-      '<p class="tt-clock-hint" role="status">Clock-out status needs verification. A second attendance write is blocked until a fresh signed read confirms the result.</p>'+
+      '<p class="tt-clock-hint" role="status">'+(clockPendingAction==='clock-in'?'Clock-in':'Clock-out')+
+      ' status needs verification. A second attendance write is blocked until a fresh signed read confirms the result.</p>'+
       '<button class="tt-start-button" type="button" data-action="tt-clock-verify"'+
        (busy?' disabled':'')+'>Verify session status</button>':
       '<button class="tt-start-button" type="submit" name="tt-action" value="'+
@@ -256,7 +257,7 @@ function historyPage(result,period,busy,view){
 }
 
 export function renderTimeTrackerNative({
- result=null,busy=false,clockPending=false,error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
+ result=null,busy=false,clockPending=false,clockPendingAction='clock-out',error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
@@ -278,7 +279,7 @@ export function renderTimeTrackerNative({
  if(selected==='overview')html+=renderTimeTrackerOverview({
   overview:result.overview,access:result.access,now,filters:overviewFilters
  });
- if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending);
+ if(selected==='clock')html+=clockPage(result,busy,new Date(now),clockPending,clockPendingAction);
  if(selected==='log')html+=renderTimeTrackerLog({
   records:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
@@ -314,7 +315,7 @@ export function renderTimeTrackerNative({
  });
  if(selected==='ot')html+=renderTimeTrackerOvertime({
   requests:result.otRequests||[],access:result.access,
-  filters:otFilters,modalOpen:otModalOpen,form:otDraft,now
+  filters:otFilters,expandedRequestIds:otExpandedRequestIds,modalOpen:otModalOpen,form:otDraft,now
  });
  html+=applicationFooter()+'</div></section>';
  return html;

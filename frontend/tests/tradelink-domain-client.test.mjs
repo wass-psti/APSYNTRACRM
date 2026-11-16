@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {
- TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED,TradeLinkDomainClient,
+ TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED,TL03_AUTOMATIC_NUMBERING_ENABLED,TL03_ANALYTICS_ENABLED,TradeLinkDomainClient,
  validateTradeLinkDraftEnvelope,normalizeTradeLinkDomainReceipt,
  normalizeTradeLinkDomainRow
 } from '../tradelink-domain-client.js';
@@ -28,7 +28,7 @@ test('document contract matches the six source types and denies mutable server f
   assert.throws(()=>validateTradeLinkDraftEnvelope(bad));
 });
 test('server revision and item-link receipts are mandatory',()=>{
- const receipt={documentId:id,boardItemId:item,revision:1,state:'draft',
+ const receipt={documentId:id,boardItemId:item,documentNumber:'Q-011130',revision:1,state:'draft',
   operation:'create',idempotent:false};
  assert.deepEqual(normalizeTradeLinkDomainReceipt(receipt,id,'create'),receipt);
  assert.equal(normalizeTradeLinkDomainReceipt({...receipt,idempotent:true},id,'create').idempotent,true);
@@ -62,6 +62,133 @@ test('read and write operations require a complete signed authorization client',
   operation:'create',draft}),/Signed TradeLink domain API unavailable/);
  assert.equal(invoked,0);
 });
+
+test('signed analytics RPC is enabled as a read-only path while automatic numbering remains disabled',async()=>{
+ assert.equal(TL03_ANALYTICS_ENABLED,true);
+ assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
+ const calls=[];let boardCalls=0,managerChecks=0;
+ const summary={generatedAt:'2026-11-16T08:00:00.000Z',
+  documentCounts:[{documentType:'quotation',workflowState:'draft',count:3}],
+  quotationPerformance:[{workflowState:'draft',currency:'PHP',count:3,total:1000}],
+  quotationCommercialStatus:[{quoteStatus:'unspecified',currency:'PHP',count:3,total:1000}],
+  taxSummary:[],
+  aging:{available:true,reason:'Approved ESI invoices with due dates only.',
+   buckets:[],unallocatedReceipts:[],excessPayments:[],pendingChequeReceipts:[],excludedWithoutDueDate:0}};
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  board:async()=>{boardCalls++;throw new Error('Analytics must not load full board pages');},
+  allowed:async(boardId,permission)=>{managerChecks++;assert.equal(boardId,TRADELINK_BOARD_ID);assert.equal(permission,'manage');return true;},
+  rpc:async(name,args)=>{calls.push({name,args});return summary;}
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ const result=await client.analyticsSummary();
+ assert.deepEqual(result.documentCounts,summary.documentCounts);
+ assert.equal(managerChecks,1,'the existing signed manager check remains active');
+ assert.equal(boardCalls,0,'the aggregate RPC performs authoritative board/workspace validation');
+ assert.deepEqual(calls,[{name:'tl03_analytics_summary',args:{
+  p_board_id:TRADELINK_BOARD_ID,p_from:null,p_to:null}}]);
+ await assert.rejects(()=>client.analyticsSummary({from:'invalid'}),/Invalid TradeLink analytics reporting period/);
+ assert.equal(calls.length,1,'invalid period must not issue an RPC');
+});
+
+test('analytics retries one transient invalidated context read for the same signed user',async()=>{
+ let contextCalls=0,boardCalls=0;
+ const rpcCalls=[];
+ const summary={generatedAt:'2026-11-16T08:00:00.000Z',documentCounts:[],
+  quotationPerformance:[],quotationCommercialStatus:[],taxSummary:[],
+  aging:{available:true,reason:'No qualifying invoices.',buckets:[],
+   unallocatedReceipts:[],excessPayments:[],pendingChequeReceipts:[],excludedWithoutDueDate:0}};
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>{
+   contextCalls++;
+   if(contextCalls===1){
+    const error=new Error('Signed workspace context changed during loading.');
+    error.status=409;throw error;
+   }
+   return {user_id:id,workspace_id:workspace,profile:{status:'active'}};
+  },
+  board:async()=>{boardCalls++;throw new Error('Analytics must not load full board pages');},
+  allowed:async()=>true,
+  rpc:async(name,args)=>{rpcCalls.push({name,args});return summary;}
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ const result=await client.analyticsSummary();
+ assert.deepEqual(result.documentCounts,[]);
+ assert.equal(contextCalls,2,'only the invalidated context read is retried');
+ assert.equal(boardCalls,0,'the retry remains shell-free for Analytics');
+ assert.equal(rpcCalls.length,1,'the aggregate RPC is called once after session validation');
+ assert.equal(rpcCalls[0].name,'tl03_analytics_summary');
+});
+
+test('analytics does not retry an invalidated context read after signed identity changes',async()=>{
+ const changedUser='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+ let contextCalls=0,rpcCalls=0;
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>{
+   contextCalls++;
+   auth.userId=changedUser;
+   const error=new Error('Signed workspace context changed during loading.');
+   error.status=409;throw error;
+  },
+  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+   name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async()=>true,
+  rpc:async()=>{rpcCalls++;return {};}
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ await assert.rejects(()=>client.analyticsSummary(),/Signed workspace context changed during loading/);
+ assert.equal(contextCalls,1,'identity change must not be retried');
+ assert.equal(rpcCalls,0,'no aggregate read occurs after identity changes');
+});
+
+test('automatic numbering stays off until migration activation and existing create API remains available',async()=>{
+ assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
+ const calls=[];
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async()=>true,rpc:async(name,args)=>{calls.push({name,args});return {
+   documentId:id,boardItemId:item,revision:1,state:'draft',operation:'create',idempotent:false};}};
+ const client=new TradeLinkDomainClient({auth,api});
+ const receipt=await client.commit({documentId:id,expectedRevision:0,operation:'create',
+  draft:{...draft,documentNumber:'Q-011129'},initialState:'draft'});
+ assert.equal(receipt.documentNumber,'Q-011129');
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].name,'tl03_document_save');
+ assert.equal(calls[0].args.p_expected_revision,0);
+ assert.equal(calls[0].args.p_operation,'create');
+ assert.equal(calls[0].args.p_data.documentNumber,'Q-011129');
+ await assert.rejects(()=>client.commit({documentId:id,expectedRevision:0,operation:'create',
+  draft:{...draft,documentNumber:''},initialState:'draft'}),/Invalid TradeLink draft type or document number/);
+});
+
+test('activated automatic numbering uses the atomic server-number RPC and returns the assigned number',async()=>{
+ const calls=[];
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+   name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async()=>true,
+  rpc:async(name,args)=>{
+   calls.push({name,args});
+   return {documentId:id,boardItemId:item,documentNumber:'Q-011130',
+    revision:1,state:'draft',operation:'create',idempotent:false};
+  }
+ };
+ const client=new TradeLinkDomainClient({auth,api,automaticNumberingEnabled:true});
+ const receipt=await client.commit({documentId:id,expectedRevision:0,operation:'create',
+  draft:{...draft,documentNumber:''},initialState:'draft'});
+ assert.equal(receipt.documentNumber,'Q-011130');
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].name,'tl03_document_create');
+ assert.equal(calls[0].args.p_data.documentNumber,'');
+ assert.equal('p_expected_revision' in calls[0].args,false);
+});
+
 test('no source local-first fallback, duplicated auth or privileged client credentials',()=>{
  const source=readFileSync('frontend/tradelink-domain-client.js','utf8');
  assert.match(source,/getVerifiedUser/);
@@ -72,7 +199,7 @@ test('no source local-first fallback, duplicated auth or privileged client crede
 
 
 test('CAS receipts accept exact no-op and immediate replay-safe update receipts only',()=>{
- const first={documentId:id,boardItemId:item,revision:1,state:'draft',
+ const first={documentId:id,boardItemId:item,documentNumber:'Q-011130',revision:1,state:'draft',
   operation:'create',idempotent:false};
  assert.equal(normalizeTradeLinkDomainReceipt(first,id,'create',0).revision,1);
  assert.equal(normalizeTradeLinkDomainReceipt({...first,idempotent:true},id,'create',0).revision,1);
@@ -92,6 +219,8 @@ test('CAS receipts accept exact no-op and immediate replay-safe update receipts 
   [{...first,operation:'archive',revision:2},'archive',9]
  ])assert.throws(()=>normalizeTradeLinkDomainReceipt(invalid[0],id,invalid[1],invalid[2]),/mismatch/);
  assert.throws(()=>validateTradeLinkDraftEnvelope({...draft,documentNumber:'Q-000001 '}),/Invalid/);
+ assert.equal(validateTradeLinkDraftEnvelope({...draft,documentNumber:''},{allowUnassignedNumber:true}).documentNumber,'');
+ assert.throws(()=>validateTradeLinkDraftEnvelope({...draft,documentNumber:''}));
 });
 
 test('retry-safe production migration only accepts the immediate same-actor exact-payload replay',()=>{
@@ -113,23 +242,28 @@ test('retry-safe production migration only accepts the immediate same-actor exac
  ])assert.match(sql,pattern);
  assert.doesNotMatch(sql,/GRANT (?:INSERT|UPDATE|DELETE) ON TABLE|DROP POLICY|CREATE ROLE|service_role/);
 });
-test('signed TradeLink session launches independent reads concurrently before any domain RPC',async()=>{
+test('signed TradeLink session overlaps actor, context and manager reads then uses the shell-only board cache',async()=>{
  const calls=[],resolvers=new Map();
  const gated=label=>new Promise(resolve=>{calls.push(label);resolvers.set(label,resolve);});
  const auth={userId:id,getVerifiedUser:()=>gated('actor')};
- const api={context:()=>gated('context'),board:()=>gated('board'),
+ const api={context:()=>gated('context'),
+  boardCached:async(boardId,scope)=>{
+   calls.push('boardCached');
+   assert.equal(boardId,TRADELINK_BOARD_ID);
+   assert.deepEqual(scope,{userId:id,workspaceId:workspace,includeItems:false});
+   return {board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+    name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}};
+  },
   allowed:()=>gated('manage'),rpc:async name=>{calls.push(name);return [];}};
  const client=new TradeLinkDomainClient({auth,api});
  const result=client.list();
- assert.deepEqual(calls,['actor','context','board','manage']);
+ assert.deepEqual(calls,['actor','context','manage']);
  assert.equal(calls.includes('tl03_documents_list'),false);
  resolvers.get('manage')(true);
- resolvers.get('board')({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
-  name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}});
  resolvers.get('context')({user_id:id,workspace_id:workspace,profile:{status:'active'}});
  resolvers.get('actor')({id});
  assert.deepEqual(await result,[]);
- assert.deepEqual(calls,['actor','context','board','manage','tl03_documents_list']);
+ assert.deepEqual(calls,['actor','context','manage','boardCached','tl03_documents_list']);
 });
 test('concurrent signed preflight denies wrong workspace and denied manager without any document RPC',async()=>{
  for(const override of [{workspaceId:item},{manage:false},{actorId:item},{active:false}]){
