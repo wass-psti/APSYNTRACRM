@@ -497,7 +497,7 @@ export class DomainApi {
     const groupCounts=new Map((pageCounts?.groups||[]).map(group=>[group.group_id,group]));
     const groups=pageCounts?shell.groups.map(group=>{
      const counts=groupCounts.get(group.id)||{total_count:0,active_count:0,archived_count:0};
-     return {...group,item_count:counts.active_count,
+     return {...group,item_count:counts.active_count,active_item_count:counts.active_count,
       archived_item_count:counts.archived_count,total_item_count:counts.total_count};
     }):shell.groups;
     const board=pageCounts?{...shell.board,item_count:pageCounts.active_count,

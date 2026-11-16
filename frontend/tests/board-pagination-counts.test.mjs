@@ -50,6 +50,8 @@ test('first page exposes authoritative total and distinct loaded/remaining count
  assert.equal(detail.board.item_count,320);
  assert.equal(detail.board.total_item_count,320);
  assert.equal(detail.groups[0].total_item_count,320);
+ assert.equal(detail.groups[0].active_item_count,320);
+ assert.equal(detail.groups[0].archived_item_count,0);
 });
 
 test('next page reconciles to total and preserves one stable ordered dataset',async()=>{
@@ -85,6 +87,8 @@ test('board and group counts include archived records without mixing active coun
  assert.equal(detail.board.item_count,199);
  assert.equal(detail.board.archived_item_count,1);
  assert.equal(detail.groups[0].total_item_count,200);
+ assert.equal(detail.groups[0].active_item_count,199);
+ assert.equal(detail.groups[0].archived_item_count,1);
 });
 
 test('inconsistent group aggregates are rejected instead of displaying a false total',async()=>{
