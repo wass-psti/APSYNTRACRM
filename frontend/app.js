@@ -23,6 +23,7 @@ import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-vi
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
 import {BoardCacheChannel} from './board-cache-channel.js';
 import {BoardTrashPermanentDeleteClient,eligibleTrashBoard} from './board-trash-permanent-delete.js';
+import {modalRecoveryKind,installModalRecoveryAction} from './modal-recovery.js';
 import {openBoardSharePreview,closeBoardSharePreview} from './board-share.js';
 import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
@@ -1215,6 +1216,10 @@ async function refreshBoardCardLists(){
  const [archived,trashed]=await Promise.all([db.boards('archived'),db.boards('trashed')]);
  state.archived=archived;state.trashed=trashed;
  for(const id of trashBoardSelection)if(!trashed.some(board=>board.id===id&&eligibleTrashBoard(board)))trashBoardSelection.delete(id);
+}
+async function refreshBoardCardListsAfterRecovery(){
+ await refreshBoardCardLists();
+ render();
 }
 function closeBoardCardMenus(except=null){
  for(const menu of root.querySelectorAll('.board-card-actions[open]')){
@@ -3676,7 +3681,9 @@ async function login(form){
 }
 function hideModal(){if(modal){modal.remove();modal=null;}flushVisibleBoardContent();}
 function openModal(title,fields,submit,{submitLabel='Save changes',submitDisabled=false,
- successMessage='Changes saved.',destructive=false,disableOnConflict=false}={}){
+ successMessage='Changes saved.',destructive=false,disableOnConflict=false,
+ recoveryLabel='Close and refresh board',partialRecoveryLabel='Close and refresh Trash',
+ recoveryAction=null}={}){
  const previousFocus=document.activeElement;
  hideModal();
  modal=document.createElement('div');modal.className='modal-backdrop';modal.setAttribute('role','presentation');
@@ -3723,17 +3730,33 @@ function openModal(title,fields,submit,{submitLabel='Save changes',submitDisable
   }catch(err){
    notice(err);
    if(button.isConnected){
-    const conflict=disableOnConflict&&
-     (err?.status===409||err?.code==='40001'||
-      err?.code==='BOARD_REVISION_STALE'||err?.code==='BOARD_METADATA_CHANGED');
     if(err?.schemaOutcomeUncertain===true){
      button.disabled=true;
      button.textContent='Close and verify board';
-    }else if(conflict){
-     button.disabled=true;
-     button.textContent='Close and refresh board';
     }else{
-     button.disabled=false;button.textContent=submitLabel;
+     const recoveryKind=modalRecoveryKind(err,{disableOnConflict});
+     if(recoveryKind){
+      if(recoveryKind==='partial'){
+       let feedback=view.querySelector('[data-modal-feedback]');
+       if(!feedback){
+        feedback=document.createElement('div');
+        feedback.className='note security-note';
+        feedback.setAttribute('role','alert');
+        feedback.dataset.modalFeedback='true';
+        view.querySelector('form').insertBefore(feedback,view.querySelector('.modal-actions'));
+       }
+       feedback.textContent=err?.message||'The batch stopped before all boards were deleted. Refresh Trash and review the remaining selection.';
+      }
+      const label=recoveryKind==='partial'?partialRecoveryLabel:recoveryLabel;
+      installModalRecoveryAction(button,{
+       label,
+       action:()=>typeof recoveryAction==='function'?recoveryAction(err):Promise.resolve(),
+       close:closeAndRestore,
+       onError:recoveryError=>notice(recoveryError)
+      });
+     }else{
+      button.type='submit';button.disabled=false;button.textContent=submitLabel;
+     }
     }
    }
   }
@@ -7709,7 +7732,8 @@ async function action(name,button){
       description:String(fd.get('description')||'')});
      await refreshBoardCardLists();render();
     }finally{state.boardLifecycleBusy=false;}
-   },{disableOnConflict:true});
+   },{disableOnConflict:true,recoveryAction:refreshBoardCardListsAfterRecovery,
+     recoveryLabel:'Close and refresh boards'});
   break;
  }
  case 'board-card-trash':{
@@ -7730,6 +7754,8 @@ async function action(name,button){
      await refreshBoardCardLists();render();
     }finally{state.boardLifecycleBusy=false;}
    },{submitLabel:'Move to Trash',destructive:true,disableOnConflict:true,
+     recoveryAction:refreshBoardCardListsAfterRecovery,
+     recoveryLabel:'Close and refresh boards',
      successMessage:'Board moved to Trash. Restore it from Trash when needed.'});
   break;
  }
@@ -7757,7 +7783,10 @@ async function action(name,button){
      try{await refreshBoardCardLists();render();}catch{/* Preserve the original error. */}
      throw err;
     }finally{state.boardLifecycleBusy=false;}
-   },{submitLabel:'Delete permanently',destructive:true,disableOnConflict:true,successMessage:''});
+   },{submitLabel:'Delete permanently',destructive:true,disableOnConflict:true,
+     recoveryAction:refreshBoardCardListsAfterRecovery,
+     partialRecoveryLabel:'Close and refresh Trash',
+     recoveryLabel:'Close and refresh Trash',successMessage:''});
   break;
  }
  case 'trash-board-select-visible':{
@@ -7804,7 +7833,9 @@ async function action(name,button){
      throw err;
     }finally{state.boardLifecycleBusy=false;}
    },{submitLabel:'Delete '+snapshot.length+' permanently',destructive:true,
-     disableOnConflict:true,successMessage:''});
+     disableOnConflict:true,recoveryAction:refreshBoardCardListsAfterRecovery,
+     partialRecoveryLabel:'Close and refresh Trash',
+     recoveryLabel:'Close and refresh Trash',successMessage:''});
   break;
  }
  case 'board-card-restore':{
