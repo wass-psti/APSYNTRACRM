@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import { extname, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
 
@@ -15,7 +18,50 @@ const baseUrl =
 const scopeA = baseUrl + "?user=fm1-user-a&workspace=fm1-workspace-a";
 
 let devServer = null;
+let staticServer = null;
 let browser = null;
+
+async function startStaticServer() {
+  const root = resolve(process.cwd());
+  const mimeTypes = {
+    ".css": "text/css; charset=utf-8",
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".webp": "image/webp",
+  };
+  const server = createServer(async (request, response) => {
+    try {
+      const pathname = decodeURIComponent(
+        new URL(request.url, "http://127.0.0.1").pathname,
+      );
+      const filePath = resolve(root, "." + pathname);
+      if (filePath !== root && !filePath.startsWith(root + sep)) {
+        response.writeHead(403).end();
+        return;
+      }
+      const content = await readFile(filePath);
+      response.writeHead(200, {
+        "cache-control": "no-store",
+        "content-type":
+          mimeTypes[extname(filePath)] || "application/octet-stream",
+      });
+      response.end(content);
+    } catch {
+      response.writeHead(404).end("Not found");
+    }
+  });
+  await new Promise((resolveListen, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolveListen);
+  });
+  const address = server.address();
+  return {
+    server,
+    baseUrl: "http://127.0.0.1:" + address.port,
+  };
+}
 
 async function ensureViteServer() {
   try {
@@ -60,6 +106,8 @@ async function ensureViteServer() {
 
 try {
   await ensureViteServer();
+  const staticFixture = await startStaticServer();
+  staticServer = staticFixture.server;
   browser = await chromium.launch({ headless: true, executablePath });
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
@@ -192,12 +240,44 @@ try {
     "browser console/page errors: " + pageErrors.join(" | "),
   );
 
+  const staticPage = await browser.newPage({
+    viewport: { width: 1280, height: 900 },
+  });
+  const staticErrors = [];
+  staticPage.on("pageerror", (error) => staticErrors.push(error.message));
+  staticPage.on("console", (message) => {
+    if (message.type() === "error") staticErrors.push(message.text());
+  });
+  await staticPage.goto(
+    staticFixture.baseUrl +
+      "/frontend/tests/fixtures/fm1-component.html?user=static-user&workspace=static-workspace",
+    { waitUntil: "networkidle" },
+  );
+  await staticPage
+    .getByRole("heading", { name: /FM1 SLA Ticketing/ })
+    .waitFor();
+  await staticPage.getByRole("button", { name: "Tickets" }).click();
+  await staticPage
+    .getByRole("heading", { name: "Ticket intake & queue" })
+    .waitFor();
+  assert.deepEqual(
+    staticErrors,
+    [],
+    "native static ES module browser errors: " + staticErrors.join(" | "),
+  );
+  await staticPage.close();
+
   console.log("FM1_BROWSER_ACCEPTANCE_PASS");
   console.log(
-    "Desktop overview, ticket navigation, intake validation, scoped IndexedDB draft save/read/delete, cross-user/workspace isolation, 360px layout and WCAG 2.2 AA axe checks passed.",
+    "Vite and unbundled static-HTTP native ESM acceptance, desktop/mobile layout, intake validation, scoped IndexedDB lifecycle, cross-user/workspace isolation and WCAG 2.2 AA axe checks passed.",
   );
 } finally {
   if (browser) await browser.close();
+  if (staticServer?.listening) {
+    await new Promise((resolveClose, reject) =>
+      staticServer.close((error) => (error ? reject(error) : resolveClose())),
+    );
+  }
   if (devServer && devServer.exitCode === null) {
     const exited = new Promise((resolve) => devServer.once("exit", resolve));
     devServer.kill("SIGTERM");

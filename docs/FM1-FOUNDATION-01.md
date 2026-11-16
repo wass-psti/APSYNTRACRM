@@ -12,7 +12,7 @@ Branch: `feat/fm1-crm-foundation-01`
 - Added a lazily loaded native ES Module feature under `frontend/fm1/`.
 - Added reusable native Web Components: `fm1-application`, `fm1-metric-card`, and `fm1-status-badge`.
 - Added a responsive, mobile-first FM1 workspace with Overview, Tickets, Duty, Approvals, Assets & I/O, Preventive, Engineering, Commercial, Reports and Administration sections.
-- Added an FM1 intake form with HTML5 Constraint Validation and Zod schema validation.
+- Added an FM1 intake form with HTML5 Constraint Validation and dependency-free JavaScript schema validation.
 - Added IndexedDB persistence for explicitly local intake drafts, scoped to the current CRM user and workspace.
 - Added pure SLA calendar/deadline preview functions for P1–P4, including continuous P1/P2 elapsed time, Asia/Manila P3/P4 weekday support windows, synthetic holiday fixtures, permitted hold unions and preview-only result labeling.
 - Added optional Vite development/build scripts without changing the GitHub Pages production entry point; CSS bundle generation is included in the production build hook.
@@ -34,7 +34,7 @@ The 2027 Philippine holiday calendar remains unconfigured. The empty holiday lis
 
 - Production remains the existing static GitHub Pages SPA.
 - Vite is an optional local development/build tool; it does not replace the production deployment pipeline.
-- Nano Stores is the only new runtime dependency in this milestone. Intake validation combines native HTML5 Constraint Validation with a dependency-free JavaScript schema validator. Vite, Playwright, axe-core, ESLint and Prettier are development/test dependencies.
+- No new runtime dependencies are required by the FM1 browser modules. Intake validation combines native HTML5 Constraint Validation with a dependency-free JavaScript schema validator. Vite, Playwright, axe-core, ESLint and Prettier are development/test dependencies.
 - Floating UI, TanStack Table/Virtual, date-fns/date-fns-tz, Chart.js, DOMPurify, Lucide and Vitest are deferred until their respective FM1 modules need them. The existing Node test runner remains the repository-wide unit test runner. Native APIs are used where they already satisfy the requirement.
 - No new Supabase project, auth framework, role model, approval layer, migration or production data change was introduced.
 - Existing CRM session handling, routing, backend client and authorization behavior are preserved.
@@ -54,10 +54,10 @@ The FDS's Release A, B and C scope is not complete in this foundation milestone.
 
 ## Verification
 
-- FM1 unit and contract tests: 25 passing.
-- Existing repository test suite: 2,347 passing.
-- Playwright + axe-core browser acceptance: passed, including 360px viewport, local draft save/read/delete, and user/workspace scope switching.
-- Vite production-mode build: passed. FM1 is emitted as a separate lazy-loaded chunk (107.41 KB before gzip (32.54 KB gzip) after Zod integration.). The build still reports the existing large CRM entry chunk and non-module startup-guard script; those are existing shell characteristics, not FM1 chunk output.
+- FM1 unit and contract tests: 28 passing.
+- Existing repository test suite: 2,350 passing.
+- Playwright + axe-core browser acceptance: passed with both Vite and an unbundled static HTTP server, including native ES module imports, 360px viewport, local draft save/read/delete, user/workspace scope switching and WCAG 2.2 AA checks.
+- Vite production-mode build: passed. FM1 is emitted as a separate lazy-loaded chunk (28.11 KB before gzip (9.70 KB gzip) with no FM1 runtime dependencies. The build still reports the existing large CRM entry chunk and non-module startup-guard script; those are existing shell characteristics, not FM1 chunk output.
 - Generated CSS bundle verification: 47 ordered sources.
 - ESLint: passed. Prettier format check: passed.
 
@@ -73,7 +73,7 @@ The FDS's Release A, B and C scope is not complete in this foundation milestone.
 
 ## Release status
 
-The FM1 foundation was merged to main in PR #413, and the GitHub Pages deployment workflow completed successfully. The Zod dependency and remaining FDS navigation sections are being finalized in a follow-up branch. Genuine signed-session runtime acceptance and server-backed ticketing remain pending.
+The FM1 foundation was merged to main in PR #413; the FDS navigation update was merged in PR #415. The follow-up removes the external Zod and Nano Stores imports, restores the dependency-free validation and state store, and adds static-HTTP browser coverage for the GitHub Pages native ES module graph. Genuine signed-session runtime acceptance and server-backed ticketing remain pending.
 
 ## Not included in this milestone
 
