@@ -90,6 +90,10 @@ test('activity CSV quotes cells and neutralizes spreadsheet formulas',()=>{
  assert.match(csv,/"Office, supplies"/);
  assert.match(csv,/"Test ""User"""/);
 });
+test('read views preserve the existing FRT Finance role set',async()=>{
+ const f=fixture('SITE_STAFF');
+ await assert.rejects(()=>loadFRTActivity({...f,...scope}),/signed membership/);
+});
 test('invalid signed context prevents FRT activity reads',async()=>{
  const f=fixture();f.api.context=async()=>({user_id:user,workspace_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',profile:{status:'active'}});
  await assert.rejects(()=>loadFRTActivity({...f,...scope}),/signed FRT session/);
