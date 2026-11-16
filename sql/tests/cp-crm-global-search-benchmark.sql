@@ -83,3 +83,25 @@ SELECT indexrelname, pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
 FROM pg_stat_user_indexes
 WHERE schemaname='public' AND indexrelname LIKE '%search_%'
 ORDER BY indexrelname;
+
+EXPLAIN (ANALYZE,BUFFERS,TIMING OFF,SUMMARY ON)
+SELECT count(*) FROM public.work_board_items
+WHERE left(lower(coalesce(title, '') || ' ' || coalesce(notes, '') || ' ' || coalesce(status, '')),2)='zz';
+EXPLAIN (ANALYZE,BUFFERS,TIMING OFF,SUMMARY ON)
+SELECT count(*) FROM public.work_board_item_values
+WHERE left(lower(coalesce(value #>> '{}', value::text, '')),2)='zz';
+
+SELECT count(*) FROM public.wm_search_workspace_content('zz',40);
+
+DO $$
+DECLARE v_count integer; v_started timestamptz; v_elapsed interval;
+BEGIN
+  PERFORM * FROM public.wm_search_workspace_content('to',40);
+  v_started := clock_timestamp();
+  SELECT count(*) INTO v_count FROM public.wm_search_workspace_content('to',40);
+  v_elapsed := clock_timestamp()-v_started;
+  IF v_count <> 40 THEN RAISE EXCEPTION 'two-character broad prefix expected 40 bounded results, received %',v_count; END IF;
+  IF v_elapsed > interval '1500 milliseconds' THEN
+    RAISE EXCEPTION 'two-character prefix search exceeded 1500ms budget: %',v_elapsed;
+  END IF;
+END $$;
