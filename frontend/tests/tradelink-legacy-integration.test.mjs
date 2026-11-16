@@ -92,9 +92,9 @@ test('new analytics schema separates quotation commercial status and exposes bou
   buckets:[{currency:'PHP',bucket:'31-90 days',invoiceCount:1,outstanding:1}]}}));
 });
 
-test('automatic numbering and extended analytics remain source-only until controlled activation',()=>{
+test('read-only analytics is activated while automatic production numbering remains off',()=>{
  const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
- assert.match(client,/export const TL03_ANALYTICS_ENABLED=false/);
+ assert.match(client,/export const TL03_ANALYTICS_ENABLED=true/);
  assert.match(client,/tl03_document_create/);
  assert.match(client,/TL03_AUTOMATIC_NUMBERING_ENABLED=false/);
  const migration=readFileSync('supabase/migrations/20261116070000_cp_tl_legacy_numbering_dates_aging.sql','utf8');
@@ -123,6 +123,17 @@ test('analytics UI does not fabricate metrics while the aggregate RPC is inactiv
  const html=renderTradeLinkAnalytics({enabled:false});
  assert.match(html,/prepared but not activated/);
  assert.doesNotMatch(html,/0\.0%|100\.0%/);
+});
+
+test('analytics empty and failure states expose a retry without fabricating metrics',()=>{
+ const empty=renderTradeLinkAnalytics({enabled:true});
+ assert.match(empty,/No analytics response is currently loaded/);
+ assert.match(empty,/data-action=\"tradelink-analytics-refresh\"/);
+ const failed=renderTradeLinkAnalytics({enabled:true,error:'Network unavailable'});
+ assert.match(failed,/role=\"alert\"/);
+ assert.match(failed,/Network unavailable/);
+ assert.match(failed,/Retry analytics/);
+ assert.doesNotMatch(failed,/0\.0%|100\.0%/);
 });
 
 test('TradeLink analytics route is available without changing document routes',()=>{
@@ -157,9 +168,22 @@ test('All Documents wires export only to the current selected authorized rows',(
  assert.match(workspace,/data-action="tradelink-documents-export-selection" disabled/);
 });
 
-test('analytics RPC remains off until its additive migration is activated',()=>{
+test('analytics requests release stale busy state and retry the current route after overlapping navigation',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf('async function loadTradeLinkAnalytics(');
+ const end=app.indexOf('async function loadTimeTracker(',start);
+ const loader=app.slice(start,end);
+ assert.match(app,/tradeLinkAnalyticsRunId:0/);
+ assert.match(loader,/const run=\+\+state\.tradeLinkAnalyticsRunId/);
+ assert.match(loader,/if\(run===state\.tradeLinkAnalyticsRunId\)/);
+ assert.match(loader,/state\.tradeLinkAnalyticsBusy=false/);
+ assert.match(loader,/routeStillAnalytics&&seq!==routeSerial/);
+ assert.match(app,/state\.tradeLinkSection!=='analytics'&&state\.tradeLinkAnalyticsBusy/);
+});
+
+test('analytics RPC remains on the existing signed manager path with no new role or grant layer',()=>{
  const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
- assert.match(client,/export const TL03_ANALYTICS_ENABLED=false/);
+ assert.match(client,/export const TL03_ANALYTICS_ENABLED=true/);
  assert.match(client,/if\(!TL03_ANALYTICS_ENABLED\)[\s\S]*?deny\(/);
  const migration=readFileSync('supabase/migrations/20261116062500_cp_tl_legacy_analytics_summary.sql','utf8');
  assert.match(migration,/private\.tl03_can_manage\(p_board_id\)/);
