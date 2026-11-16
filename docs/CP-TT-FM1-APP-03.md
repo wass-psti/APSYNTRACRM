@@ -1,7 +1,7 @@
 # CP-TT-FM1-APP-03 — Controlled Clock-In/Clock-Out Operational Acceptance, Duplicate-Session Verification, and Attendance Lifecycle Closure
 
-**Status:** DEPLOYED-VERIFIED — disposable lifecycle/concurrency and genuine signed read-only acceptance passed; production attendance write pending separate approval
-**Base:** `main` at `c463beaa88dff35327dcbb332751f5a2aa71ed69`
+**Status:** DEPLOYED-VERIFIED — disposable lifecycle/concurrency, genuine signed runtime, and one controlled production test attendance lifecycle passed
+**Base:** `main` at `27c21f1c2ebe24ec87ba346c68ed6c3069d70836`
 **Merged PR:** [#428](https://github.com/wass-psti/APSYNTRACRM/pull/428)
 **Production commit:** `87b994759c50f37c8deb3206ded079674d7987ab`
 
@@ -17,8 +17,8 @@
 - Existing APSYNTRACRM Supabase project is healthy and remains the only project used.
 - `timetracker_attendance_capabilities`, `timetracker_attendance_commit_v2`, `timetracker_commit_attendance_raw_gps03`, and the atomic attendance projection/audit objects are installed.
 - The deployed raw attendance writer uses a transaction-scoped advisory lock keyed by workspace and actor. It rejects an additional Clock-In while an active session exists and rejects Clock-Out when no matching active record remains.
-- Existing production audit aggregate: five Clock-In and five Clock-Out events across five completed sessions. Three sessions created after the November 3 projection deployment have board projections; two sessions dated November 2 predate that deployment and are expected not to have projection rows.
-- The currently signed Chromium session was read-only verified after deployment. The dedicated `#/time-tracker` route and FM1 shell remained mounted across all ten sections; Clock was restored at the end. The Clock capability was active, the attendance state was idle, and Clock In was enabled. The browser was a secure context with the geolocation permission granted. No production attendance record, GPS coordinate, or employee history was changed or copied.
+- Pre-write production audit baseline: five Clock-In and five Clock-Out events across five completed sessions. Three sessions created after the November 3 projection deployment have board projections; two sessions dated November 2 predate that deployment and are expected not to have projection rows. The controlled test lifecycle documented below is additional to this baseline.
+- Before the controlled write, the currently signed Chromium session was read-only verified after deployment. The dedicated `#/time-tracker` route and FM1 shell remained mounted across all ten sections; Clock was restored at the end. The Clock capability was active, the attendance state was idle, and Clock In was enabled. The browser was a secure context with the geolocation permission granted.
 
 ## Implementation changes
 
@@ -55,14 +55,23 @@
 - GitHub Pages deployment: PASS for production commit `87b994759c50f37c8deb3206ded079674d7987ab`.
 - Live Pages smoke: PASS for the exact production source SHA, including TimeTracker JavaScript and CSS assets.
 - Genuine signed Chromium read-only acceptance: `READ_ONLY_SIGNED_RUNTIME_ACCEPTANCE_PASS`; all ten sections selected successfully, the FM1 shell remained mounted, generic board controls were absent, and Clock was restored.
-- Live Clock readback: signed workspace verified, signed Clock writes active, attendance idle, and Start Session enabled. Geolocation permission status was granted; no GPS coordinates were requested or captured.
-- The disposable PostgreSQL container was stopped and removed after the tests. No production database writes were used for this acceptance.
+- Pre-write live Clock readback: signed workspace verified, signed Clock writes active, attendance idle, and Start Session enabled. Browser geolocation permission was granted.
+- **Controlled production test lifecycle (2026-11-16, Asia/Manila):** after explicit user approval and confirmation that the active session was a test, one Clock-Out was submitted from the existing signed TimeTracker Clock form. No second Clock-In was created during this closeout.
+- The application confirmed: `Clock Out confirmed in your signed PostgreSQL attendance record.` The Clock view transitioned from Active to Idle, displayed one session and 0.1 credited hours, and presented the Clock-In form again.
+- Attendance Log readback returned exactly one session for the current date, with Clock-In at 4:15 PM, Clock-Out at 4:21 PM, Office-Base Duty, Information Technology, Completed status, and 0.11 hours. Expanded session evidence showed both Clock-In and Clock-Out GPS fixes recorded by browser GPS, with reported accuracy of ±35 m and ±36 m respectively. Coordinates are intentionally not copied into this report.
+- Reports readback showed the same completed session and 0.1 h. Calendar readback showed one attendance entry for November 16. My Hours readback showed the same 4:15 PM–4:21 PM completed session, 0.1 h for the week, and one weekly session.
+- Post-write Clock readback confirmed `Idle`, no active Clock-Out form, and the Clock-In form enabled. The dedicated route remained `#/time-tracker` and Clock was restored after read-only verification.
+- The record's audit projection explicitly marks GPS and timing as Recorded. Edit verification is Not verified, device evidence is Unavailable, and the audit score is N/A; these are not represented as independently verified audit/device evidence.
+- Duplicate/concurrent Clock-In and Clock-Out prevention remains verified by the disposable PostgreSQL concurrency tests, not by intentionally issuing duplicate writes against production.
+- The disposable PostgreSQL container was stopped and removed after the tests. Production write acceptance used only the single approved test session and genuine browser GPS fixes.
 
-## Remaining production operational gate
+## Final acceptance
 
-- Perform one real signed Clock-In and Clock-Out against the current production session only after separate approval for the resulting production attendance record and confirmation of the work location and department to record.
-- Verify the same record in Clock, Attendance Log, Reports, Calendar, My Hours, the authoritative attendance state, audit summary, and board projection.
-- Verify independent live GPS fixes for both actions and the resulting credited duration.
-- Do not manufacture a production employee record or substitute synthetic coordinates for a genuine device fix.
+- One approved production test Clock-In/Clock-Out lifecycle: PASS.
+- Server confirmation and signed PostgreSQL record readback: PASS.
+- No remaining active session and no duplicate session for the test: PASS.
+- Independent Clock-In and Clock-Out browser GPS fixes recorded: PASS.
+- Attendance Log, Reports, Calendar, and My Hours consistency: PASS.
+- Existing role, authorization, workspace, and eligibility behavior: unchanged.
 
-The application and code-level lifecycle are deployed and verified. Only one real production Clock-In/Clock-Out lifecycle remains pending separate approval for the attendance data change and confirmation of the location and department to record.
+The dedicated TimeTracker application, code-level lifecycle, disposable concurrency acceptance, production deployment, and one controlled genuine signed production test attendance lifecycle are verified. No further implementation milestone is required for CP-TT-FM1-APP-03.
