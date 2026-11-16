@@ -2349,7 +2349,9 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
  if(tab==='issues')await loadIssues(seq);
  if(tab==='tradelink'&&state.tradeLinkSection==='activity'&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkActivity(seq);
- if(tab==='tradelink'&&state.tradeLinkSection==='analytics'&&state.board?.board?.id===TRADELINK_BOARD_ID)
+ if(tab==='tradelink'&&state.tradeLinkSection==='analytics'&&
+    state.board?.board?.id===TRADELINK_BOARD_ID&&!state.tradeLinkAnalyticsBusy&&
+    !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
   await loadTradeLinkAnalytics(seq);
  if(tab==='tradelink'&&['drafts','documents'].includes(state.tradeLinkSection)&&
     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
