@@ -199,12 +199,12 @@ try {
   assert.equal(storedDraft?.scopeKey, "fm1-user-a::fm1-workspace-a");
 
   const replaceScope = async (userId, workspaceId) =>
-    page.locator("fm1-application").evaluate(
+    page.locator("#fm1-application-root").evaluate(
       (element, scope) => {
-        const replacement = document.createElement("fm1-application");
-        replacement.setAttribute("data-user-id", scope.userId);
-        replacement.setAttribute("data-workspace-id", scope.workspaceId);
+        const replacement = document.createElement("div");
+        replacement.id = "fm1-application-root";
         element.replaceWith(replacement);
+        window.__fm1Mount(replacement, scope);
       },
       { userId, workspaceId },
     );
@@ -250,7 +250,7 @@ try {
   });
   await staticPage.goto(
     staticFixture.baseUrl +
-      "/frontend/tests/fixtures/fm1-component.html?user=static-user&workspace=static-workspace",
+      "/frontend/tests/fixtures/fm1-component.html?user=static-user&workspace=static-workspace&disableCustomElements=true",
     { waitUntil: "networkidle" },
   );
   await staticPage
@@ -269,7 +269,7 @@ try {
 
   console.log("FM1_BROWSER_ACCEPTANCE_PASS");
   console.log(
-    "Vite and unbundled static-HTTP native ESM acceptance, desktop/mobile layout, intake validation, scoped IndexedDB lifecycle, cross-user/workspace isolation and WCAG 2.2 AA axe checks passed.",
+    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), desktop/mobile layout, intake validation, scoped IndexedDB lifecycle, cross-user/workspace isolation and WCAG 2.2 AA axe checks passed.",
   );
 } finally {
   if (browser) await browser.close();

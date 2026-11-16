@@ -9,17 +9,22 @@
   </head>
   <body>
     <main style="max-width: 1500px; margin: 0 auto; padding: 24px">
-      <fm1-application></fm1-application>
+      <div id="fm1-application-root"></div>
     </main>
     <script type="module">
       const params = new URLSearchParams(location.search);
-      const app = document.querySelector("fm1-application");
-      app.setAttribute("data-user-id", params.get("user") || "fixture-user");
-      app.setAttribute(
-        "data-workspace-id",
-        params.get("workspace") || "fixture-workspace",
-      );
-      await import("../../fm1/index.js");
+      if (params.get("disableCustomElements") === "true") {
+        Object.defineProperty(window, "customElements", {
+          configurable: true,
+          value: null,
+        });
+      }
+      const { mountFm1Application } = await import("../../fm1/index.js");
+      window.__fm1Mount = mountFm1Application;
+      mountFm1Application(document.querySelector("#fm1-application-root"), {
+        userId: params.get("user") || "fixture-user",
+        workspaceId: params.get("workspace") || "fixture-workspace",
+      });
     </script>
   </body>
 </html>

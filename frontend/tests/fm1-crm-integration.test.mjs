@@ -25,11 +25,11 @@ test("FM1 is integrated into the existing CRM sidebar and hash router", () => {
   );
   assert.match(
     app,
-    /if\(parts\[0\]==='fm1'\)await import\('\.\/fm1\/index\.js'\)/,
+    /if\(parts\[0\]==='fm1'\)fm1Module=await import\('\.\/fm1\/index\.js'\)/,
   );
   assert.match(
     app,
-    /else if\(state\.view==='fm1'\)shell\('<fm1-application data-user-id=/,
+    /else if\(state\.view==='fm1'\)\{shell\('<div id="fm1-application-root"><\/div>'\);fm1Module\?\.mountFm1Application/,
   );
   assert.match(
     app,
@@ -44,9 +44,11 @@ test("FM1 reuses the existing CRM HTML entry and loads its stylesheet", () => {
   assert.doesNotMatch(index, /fm1\/index\.html/);
 });
 
-test("FM1 UI uses native custom elements and browser-local drafts are never presented as submitted tickets", () => {
-  assert.match(components, /customElements\.define\(["']fm1-application["']/);
-  assert.match(components, /customElements\.define\(["']fm1-metric-card["']/);
+test("FM1 UI mounts through native DOM and browser-local drafts are never presented as submitted tickets", () => {
+  assert.match(components, /export function mountFm1Application/);
+  assert.match(components, /export function unmountFm1Application/);
+  assert.doesNotMatch(components, /customElements|extends HTMLElement|<fm1-/);
+  assert.match(components, /this\.root\.addEventListener\("click"/);
   assert.match(components, /data-fm1-intake-form/);
   assert.match(components, /Save local draft/);
   assert.match(components, /No live incident was submitted/);
@@ -54,7 +56,6 @@ test("FM1 UI uses native custom elements and browser-local drafts are never pres
   assert.match(schema, /submissionState: ["']NOT_SUBMITTED["']/);
   assert.match(schema, /LOCAL-DRAFT-/);
   assert.match(schema, /scopeKey/);
-  assert.match(components, /this\.getAttribute\(["']data-user-id["']\)/);
   assert.match(
     components,
     /data\.get\(["']productionStopped["']\) === ["']on["']/,
