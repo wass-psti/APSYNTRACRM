@@ -1712,8 +1712,12 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
       TL03_DOMAIN_READS_ENABLED&&!state.tradeLinkDraft.busy){
     const selectedDraft=state.tradeLinkSection==='drafts'?
      state.tradeLinkDraft.selected?.documentId:null;
+    const pendingSelection=pendingNativeSearchSelection?.applicationId==='tradelink'&&
+     pendingNativeSearchSelection.userId===auth.userId&&
+     pendingNativeSearchSelection.workspaceId===state.context?.workspace_id?
+     pendingNativeSearchSelection:null;
     const selectedDocument=state.tradeLinkSection==='documents'?
-     state.tradeLinkDraft.documentPreview?.documentId:null;
+     (pendingSelection?.recordId||state.tradeLinkDraft.documentPreview?.documentId||null):null;
     await loadTradeLinkDrafts(serial);
     if(!isCurrent()||platformSyncEditInProgress())return false;
     if(selectedDraft&&state.boardManage){
@@ -1724,8 +1728,26 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
       render();
      }else await openTradeLinkDraft(selectedDraft);
     }else if(selectedDocument){
+     if(state.boardManage&&!state.tradeLinkDraft.rows.some(row=>row.documentId===selectedDocument)){
+      try{
+       const record=await tradeLinkDraftWorkspace.read(selectedDocument);
+       if(!isCurrent()||!record||record.archived_at!==null||
+        record.board_item_id==null||record.document_number!==record.content?.documentNumber||
+        record.document_type!==record.content?.documentType)throw new ApiError('TradeLink document is unavailable.',404);
+       state.tradeLinkDraft.rows=[...state.tradeLinkDraft.rows,{
+        documentId:record.id,boardItemId:record.board_item_id,
+        documentNumber:record.document_number,documentType:record.document_type,
+        revision:record.revision,workflowState:record.workflow_state,
+        archived:false,updatedAt:record.updated_at
+       }];
+      }catch(error){
+       if(pendingSelection)pendingNativeSearchSelection=null;
+       throw error;
+      }
+     }
      if(state.boardManage)await openTradeLinkDocument(selectedDocument);
      else await openTradeLinkAssignedDocument(selectedDocument);
+     if(pendingSelection)pendingNativeSearchSelection=null;
     }
    }
   }
