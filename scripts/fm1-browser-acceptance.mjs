@@ -149,7 +149,9 @@ try {
 
   await checkAccessibility("FM1 overview");
   await page.getByRole("button", { name: "Tickets" }).click();
-  await page.getByRole("heading", { name: "Ticket intake & queue" }).waitFor();
+  await page
+    .getByRole("heading", { name: "Authoritative ticket queue" })
+    .waitFor();
   await page.locator('[data-fm1-action="new-ticket"]').first().click();
   await page.getByRole("heading", { name: "New service request" }).waitFor();
 
@@ -258,7 +260,7 @@ try {
     .waitFor();
   await staticPage.getByRole("button", { name: "Tickets" }).click();
   await staticPage
-    .getByRole("heading", { name: "Ticket intake & queue" })
+    .getByRole("heading", { name: "Authoritative ticket queue" })
     .waitFor();
   assert.deepEqual(
     staticErrors,

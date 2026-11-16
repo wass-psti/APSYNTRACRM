@@ -1,7 +1,7 @@
 import { FM1_CONTRACT, FM1_NAVIGATION, FM1_SLA_TARGETS } from "./constants.js";
 import { fm1Store } from "./state.js";
-import { listFm1Drafts, deleteFm1Draft } from "./draft-store.js";
-import { parseFm1Intake } from "./domain/intake-schema.js";
+import { listFm1Drafts, saveFm1Draft, deleteFm1Draft } from "./draft-store.js";
+import { createFm1LocalDraft, parseFm1Intake } from "./domain/intake-schema.js";
 import { Fm1ApiClient, createFm1IdempotencyKey } from "./api-client.js";
 
 const NEXT_STATUSES = Object.freeze({
@@ -290,12 +290,67 @@ class Fm1Application {
       });
     } else if (kind === "refresh-drafts") {
       void this.hydrateDrafts();
+    } else if (kind === "save-draft") {
+      void this.saveCurrentDraft();
     } else if (kind === "refresh-server") {
       void this.loadServerData();
     } else if (kind === "view-ticket") {
       void this.loadTicket(action.dataset.id);
     } else if (kind === "delete-draft") {
       void this.removeDraft(action.dataset.id);
+    }
+  }
+
+  async saveCurrentDraft() {
+    const form = this.root.querySelector("[data-fm1-intake-form]");
+    if (!form || !form.reportValidity()) return;
+    const data = new FormData(form);
+    const parsed = parseFm1Intake({
+      requesterName: data.get("requesterName"),
+      callbackNumber: data.get("callbackNumber"),
+      subject: data.get("subject"),
+      description: data.get("description"),
+      priority: data.get("priority"),
+      productionImpact: data.get("productionImpact"),
+      productionStopped: data.get("productionStopped") === "on",
+      safetyConcern: data.get("safetyConcern") === "on",
+      channel: data.get("channel"),
+      assetReference: data.get("assetReference") || "",
+    });
+    if (!parsed.ok) {
+      fm1Store.setKey(
+        "error",
+        parsed.errors[0]?.message || "Check the intake details.",
+      );
+      return;
+    }
+    const scopeKey = this.scopeKey;
+    const isCurrentScope = () =>
+      this.root?.isConnected === true &&
+      this.scopeKey === scopeKey &&
+      fm1Store.get().scopeKey === scopeKey;
+    updateStore({ busy: true, error: "", notice: "" });
+    try {
+      const draft = createFm1LocalDraft(parsed.data, { scopeKey });
+      await saveFm1Draft(draft);
+      const drafts = await listFm1Drafts(scopeKey);
+      if (!isCurrentScope()) return;
+      updateStore({
+        view: "tickets",
+        drafts,
+        busy: false,
+        error: "",
+        notice:
+          "Saved as a browser-local draft. No live incident was submitted.",
+      });
+    } catch (error) {
+      if (!isCurrentScope()) return;
+      updateStore({
+        busy: false,
+        error:
+          error?.message ||
+          "The draft could not be saved. No incident was submitted.",
+      });
     }
   }
 
@@ -750,7 +805,10 @@ class Fm1Application {
           <label><input type="checkbox" name="safetyConcern" /> Safe-condition concern exists</label>
         </div>
         <div class="fm1-form-footer"><p>Submitting creates a server-backed incident and immutable receipt event. SLA clocks remain inactive until contract and service readiness are confirmed.</p>
-          <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>${state.serverBusy ? "Submitting…" : "Submit incident"}</button></div>
+          <div class="fm1-inline-actions">
+            <button type="button" class="fm1-quiet-button" data-fm1-action="save-draft" ${state.busy ? "disabled" : ""}>${state.busy ? "Saving…" : "Save local draft"}</button>
+            <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>${state.serverBusy ? "Submitting…" : "Submit incident"}</button>
+          </div></div>
       </form>
     </section>`;
   }

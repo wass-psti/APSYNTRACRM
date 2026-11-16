@@ -57,6 +57,8 @@ test("FM1 UI mounts through native DOM and submits authoritative server-backed i
   assert.match(components, /data-fm1-intake-form/);
   assert.match(components, /new Fm1ApiClient\(api\)/);
   assert.match(components, /Submit incident/);
+  assert.match(components, /Save local draft/);
+  assert.match(components, /data-fm1-action="save-draft"/);
   assert.match(components, /data-fm1-transition-form/);
   assert.match(components, /data-fm1-milestone-form/);
   assert.match(components, /Append-only audit chain/);

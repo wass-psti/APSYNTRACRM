@@ -50,4 +50,4 @@ The runtime test creates a ticket under a simulated authenticated CRM session, v
 - External notification provider configuration and end-to-end delivery.
 - Real operational-user workflow acceptance.
 
-No production deployment or external notification was performed by the disposable verification.
+The native ESM Chromium acceptance also verifies the local-draft path remains separate from server incident submission. No production deployment or external notification was performed by the disposable verification.
