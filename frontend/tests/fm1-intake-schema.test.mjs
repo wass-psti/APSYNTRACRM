@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  fm1IntakeSchema,
   parseFm1Intake,
   createFm1LocalDraft,
 } from "../fm1/domain/intake-schema.js";
@@ -63,4 +64,12 @@ test("critical production impact and the independent production-stopped flag are
   assert.equal(result.data.productionImpact, "critical");
   assert.equal(result.data.productionStopped, true);
   assert.equal(result.data.safetyConcern, true);
+});
+
+test("the exported intake contract is a Zod schema with the expected constraints", () => {
+  assert.equal(fm1IntakeSchema.safeParse(valid).success, true);
+  assert.equal(
+    fm1IntakeSchema.safeParse({ ...valid, priority: "P5" }).success,
+    false,
+  );
 });

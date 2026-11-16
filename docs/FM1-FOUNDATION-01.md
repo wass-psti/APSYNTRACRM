@@ -54,10 +54,10 @@ The FDS's Release A, B and C scope is not complete in this foundation milestone.
 
 ## Verification
 
-- FM1 unit and contract tests: 24 passing.
-- Existing repository test suite: 2,342 passing.
+- FM1 unit and contract tests: 25 passing.
+- Existing repository test suite: 2,347 passing.
 - Playwright + axe-core browser acceptance: passed, including 360px viewport, local draft save/read/delete, and user/workspace scope switching.
-- Vite production-mode build: passed. FM1 is emitted as a separate lazy-loaded chunk (~106.4 KB before gzip). The build still reports the existing large CRM entry chunk and non-module startup-guard script; those are existing shell characteristics, not FM1 chunk output.
+- Vite production-mode build: passed. FM1 is emitted as a separate lazy-loaded chunk (107.41 KB before gzip (32.54 KB gzip) after Zod integration.). The build still reports the existing large CRM entry chunk and non-module startup-guard script; those are existing shell characteristics, not FM1 chunk output.
 - Generated CSS bundle verification: 47 ordered sources.
 - ESLint: passed. Prettier format check: passed.
 
@@ -73,7 +73,7 @@ The FDS's Release A, B and C scope is not complete in this foundation milestone.
 
 ## Release status
 
-This work remains on a feature branch. It has not been merged to main, deployed to GitHub Pages, or verified through the live signed CRM session. Production acceptance remains pending.
+The FM1 foundation was merged to main in PR #413, and the GitHub Pages deployment workflow completed successfully. The Zod dependency and remaining FDS navigation sections are being finalized in a follow-up branch. Genuine signed-session runtime acceptance and server-backed ticketing remain pending.
 
 ## Not included in this milestone
 

@@ -390,6 +390,18 @@ class Fm1Application extends HTMLElement {
 
   renderModule(view) {
     const modules = {
+      duty: [
+        "Duty dashboard",
+        "Primary and backup roster coverage, unowned P1/P2 incidents, live deadline queues, failed notification delivery and overdue public updates will be connected here.",
+      ],
+      approvals: [
+        "Approval inbox",
+        "Version-bound engineering changes, operational decisions, IT/safety reviews and commercial quotations will be presented here with their recorded evidence.",
+      ],
+      administration: [
+        "FM1 administration",
+        "Contract/calendar versions, named contacts, duty roster, approved channels, templates, retention settings and integration health will be configured here.",
+      ],
       assets: [
         "Asset & I/O register",
         "Controller, SCADA, station, equipment and I/O relationships will use the FM1 baseline. The declared 1,275-point allocation is shown for reference; actual point records remain unreconciled.",
