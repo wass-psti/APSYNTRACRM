@@ -1,5 +1,6 @@
 /** CP-FRT-WF-05A signed activity, comments and archive operations. */
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const readRoles=new Set(['GENERAL_MANAGER','FINANCE_MANAGER','FINANCE_APPROVER','REQUESTOR']);
 const fail=message=>{throw new Error(message);};
 const isTime=value=>typeof value==='string'&&value.length>0&&!Number.isNaN(Date.parse(value));
 const short=(value,max)=>typeof value==='string'&&value.length<=max;
@@ -28,7 +29,7 @@ async function signedScope({auth,api,workspaceId,companyCode}={}){
  const membership=bootstrap?.membership;
  if(membership?.user_id!==user.id||membership?.workspace_id!==workspaceId||
     membership?.enabled!==true||membership?.status!=='active'||
-    !Array.isArray(bootstrap?.companies)||
+    !readRoles.has(membership?.role)||!Array.isArray(bootstrap?.companies)||
     !bootstrap.companies.some(company=>company?.code===companyCode))
   fail('The selected FRT company is unavailable in this signed workspace.');
  return {userId:user.id,role:membership.role};
