@@ -13,7 +13,7 @@ const byKey=key=>boards.find(board=>board.key===key);
 const ids={tool:'tool-01',request:'request-01',issue:'42',material:'mrh-01',evaluation:'eval-01',charter:'charter-01',order:'order-01',aims:'aims-01',fm1:'44444444-4444-4444-8444-444444444444'};
 function makeClients(){
  const calls=[];
- const auth={userId:user,async getVerifiedUser(){return {id:user};},async authorized(path,options={}){
+ const auth={userId:user,async getVerifiedUser(){calls.push(['verified-user']);return {id:user};},async authorized(path,options={}){
   calls.push(['authorized',path,options]);
   if(path.includes('/rpc/charter_dispatch')){
    return options.body.p_path==='/items/query'?{items:[{id:ids.charter,name:'Pump charter',bookingStatus:'Confirmed',tripDate:'2026-11-20'}]}:
@@ -27,11 +27,11 @@ function makeClients(){
    [{id:ids.aims,workspace_id:workspace,entity_type:'asset',payload:{name:'Pump motor',assetTag:'PUMP-01'}}];
   throw new Error('Unexpected authorized path '+path);
  }};
- const api={async context(){return {user_id:user,workspace_id:workspace,profile:{status:'active'}};},async rpc(name,args){
+ const api={async context(){calls.push(['context']);return {user_id:user,workspace_id:workspace,profile:{status:'active'}};},async rpc(name,args){
   calls.push(['rpc',name,args]);
   switch(name){
    case 'fm1_list_tickets_v1':return {items:[{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',requester_name:'Pump Operator',priority_effective:'P1',status:'New',revision:1,received_at:'2026-11-16T08:00:00Z'}],total:1,limit:20,offset:0};
-   case 'fm1_ticket_detail_v1':return {ticket:{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',status:'New',revision:1,received_at:'2026-11-16T08:00:00Z'},obligations:[],events:[],milestones:[],holds:[],audit:[]};
+   case 'fm1_ticket_detail_v1':return {ticket:{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',status:'New',revision:1,received_at:'2026-11-16T08:00:00Z'},obligations:[],events:[],milestones:[],holds:[],audit:[],conversations:[]};
    case 'tool_traceability_list_tools':return {items:[{id:ids.tool,name:'Pump wrench',category:'Pump tools',itemType:'Tool',availability:'Available'}]};
    case 'tool_traceability_list_requests':return {items:[{id:ids.request,name:'Pump service',reference:'TRC-PUMP-01',requestStatus:'Borrowed',extensionState:'None'}]};
    case 'toolbox_issues_list_issues':return {items:[{id:ids.issue,name:'Pump vibration issue',status:'Open',date:'2026-11-16',person:[]}]};
@@ -63,6 +63,8 @@ test('all remaining native application adapters search existing records and emit
  const result=await registry.search('pump',{userId:user,workspaceId:workspace});
  assert.equal(result.errors.length,0,JSON.stringify(result.errors));
  assert.equal(result.results.length,9);
+ assert.equal(calls.filter(call=>call[0]==='context').length,1);
+ assert.equal(calls.filter(call=>call[0]==='verified-user').length,1);
  const idsSeen=new Set(result.results.map(row=>row.recordId));
  for(const id of Object.values(ids))assert.ok(idsSeen.has(id),'missing '+id);
  for(const row of result.results){

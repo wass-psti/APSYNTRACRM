@@ -29,16 +29,12 @@ const safeRows=(result)=>{
 };
 const escapeFilter=value=>String(value||'').replace(/[,*()\\]/g,' ').trim().slice(0,80);
 
-async function signedScope({auth,api,getBoards,applicationId,userId,workspaceId}){
+async function signedIdentityScope({auth,api,userId,workspaceId}){
  const [user,context]=await Promise.all([auth.getVerifiedUser(),api.context()]);
  if(!user?.id||user.id!==userId||auth.userId!==userId||context?.user_id!==userId||
     context?.workspace_id!==workspaceId)
   throw new Error('Signed native-search workspace context changed.');
- if(applicationId==='fm1')return {userId,workspaceId,boardId:null};
- const moduleName=MODULES[applicationId];
- const board=array(getBoards()).find(item=>item?.name===moduleName&&item?.status!=='trashed');
- if(!board?.id)throw new Error('The application board is not available in this workspace.');
- return {userId,workspaceId,boardId:board.id};
+ return {userId,workspaceId};
 }
 
 function postgrestQuery(table,params){
@@ -77,8 +73,28 @@ async function readAims({auth,workspaceId,query,limit}){
 
 export function createRemainingNativeSearchAdapters({auth,api,getBoards}={}){
  if(!auth||!api||typeof getBoards!=='function')throw new TypeError('Native application clients are required.');
- const scope=(applicationId,context)=>signedScope({auth,api,getBoards,applicationId,
-  userId:context.userId,workspaceId:context.workspaceId});
+ const identityScopes=new Map();
+ const identityScope=context=>{
+  const userId=context?.userId,workspaceId=context?.workspaceId;
+  if(!userId||!workspaceId)throw new Error('A signed native-search workspace scope is required.');
+  const key=userId+'|'+workspaceId;
+  let pending=identityScopes.get(key);
+  if(!pending){
+   pending=signedIdentityScope({auth,api,userId,workspaceId});
+   identityScopes.set(key,pending);
+   pending.catch(()=>{if(identityScopes.get(key)===pending)identityScopes.delete(key);});
+   while(identityScopes.size>4)identityScopes.delete(identityScopes.keys().next().value);
+  }
+  return pending;
+ };
+ const scope=async(applicationId,context)=>{
+  const identity=await identityScope(context);
+  if(applicationId==='fm1')return {...identity,boardId:null};
+  const moduleName=MODULES[applicationId];
+  const board=array(getBoards()).find(item=>item?.name===moduleName&&item?.status!=='trashed');
+  if(!board?.id)throw new Error('The application board is not available in this workspace.');
+  return {...identity,boardId:board.id};
+ };
  const tools=createNativeSearchAdapter({
   id:'tool-traceability-tools',applicationId:'tools',name:'Tool Traceability',recordType:'Tool',
   read:async(query,context={})=>{
@@ -265,7 +281,7 @@ export async function readNativeSearchRecordDetail({applicationId,recordId,navig
    if(!UUID.test(recordId))throw new TypeError('Invalid FM1 ticket identifier.');
    const detail=await api.rpc('fm1_ticket_detail_v1',{p_workspace_id:workspaceId,p_ticket_id:recordId});
    if(!detail||!validFm1Ticket(detail.ticket,workspaceId)||
-      !['obligations','events','milestones','holds','audit'].every(key=>Array.isArray(detail[key])))
+      !['obligations','events','milestones','holds','audit','conversations'].every(key=>Array.isArray(detail[key])))
     throw new Error('FM1 ticket detail response could not be verified.');
    return detail;
   }
