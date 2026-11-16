@@ -91,6 +91,58 @@ test('signed analytics RPC is enabled as a read-only path while automatic number
  assert.equal(calls.length,1,'invalid period must not issue an RPC');
 });
 
+test('analytics retries one transient invalidated context read for the same signed user',async()=>{
+ let contextCalls=0;
+ const rpcCalls=[];
+ const summary={generatedAt:'2026-11-16T08:00:00.000Z',documentCounts:[],
+  quotationPerformance:[],quotationCommercialStatus:[],taxSummary:[],
+  aging:{available:true,reason:'No qualifying invoices.',buckets:[],
+   unallocatedReceipts:[],excessPayments:[],pendingChequeReceipts:[],excludedWithoutDueDate:0}};
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>{
+   contextCalls++;
+   if(contextCalls===1){
+    const error=new Error('Signed workspace context changed during loading.');
+    error.status=409;throw error;
+   }
+   return {user_id:id,workspace_id:workspace,profile:{status:'active'}};
+  },
+  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+   name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async()=>true,
+  rpc:async(name,args)=>{rpcCalls.push({name,args});return summary;}
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ const result=await client.analyticsSummary();
+ assert.deepEqual(result.documentCounts,[]);
+ assert.equal(contextCalls,2,'only the invalidated context read is retried');
+ assert.equal(rpcCalls.length,1,'the aggregate RPC is called once after session validation');
+ assert.equal(rpcCalls[0].name,'tl03_analytics_summary');
+});
+
+test('analytics does not retry an invalidated context read after signed identity changes',async()=>{
+ const changedUser='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+ let contextCalls=0,rpcCalls=0;
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>{
+   contextCalls++;
+   auth.userId=changedUser;
+   const error=new Error('Signed workspace context changed during loading.');
+   error.status=409;throw error;
+  },
+  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+   name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async()=>true,
+  rpc:async()=>{rpcCalls++;return {};}
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ await assert.rejects(()=>client.analyticsSummary(),/Signed workspace context changed during loading/);
+ assert.equal(contextCalls,1,'identity change must not be retried');
+ assert.equal(rpcCalls,0,'no aggregate read occurs after identity changes');
+});
+
 test('automatic numbering stays off until migration activation and existing create API remains available',async()=>{
  assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
  const calls=[];
