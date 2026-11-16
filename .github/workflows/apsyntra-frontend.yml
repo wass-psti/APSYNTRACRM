@@ -20,6 +20,8 @@ on:
       - "docs/PAGES-OPERATIONS.md"
       - "frontend/**"
       - "supabase/migrations/*.sql"
+      - "sql/tests/cp-crm-global-search-*.sql"
+      - "docs/CP-CRM-GLOBAL-SEARCH-01.md"
       - "supabase/migration-candidates/**"
       - "supabase/migration-source-manifest.json"
       - "supabase/migration-recovery-map.json"
@@ -93,6 +95,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install locked frontend dependencies (FM1 validation)
+        run: npm ci --no-audit --no-fund
       - name: Verify GitHub Pages-only runtime and public credentials
         run: node scripts/verify-pages-source.mjs
       - name: Check shipped JavaScript syntax
@@ -373,8 +377,61 @@ jobs:
             -c "COMMIT;" \
             -f sql/tests/cp-board-import-sync-01-disposable-acceptance.sql
 
+  global-search-postgres:
+    name: Global search RPC acceptance (PostgreSQL 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_search_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: disposable_search_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Assert isolated PostgreSQL 17 database
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'postgres|t'
+      - name: Create disposable global-search database
+        run: createdb cp_crm_global_search_disposable
+      - name: Apply search RPC and verify workspace, board, field and role boundaries
+        env:
+          PGDATABASE: cp_crm_global_search_disposable
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-crm-global-search-setup.sql \
+            -f sql/tests/cp-crm-global-search-acceptance.sql
+      - name: Benchmark indexed global search at production-scale row counts
+        env:
+          PGDATABASE: cp_crm_global_search_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-global-search-benchmark.sql
+
   live-pages:
-    needs: [frontend, disposable-ot-postgres, disposable-collaboration-postgres, disposable-toolbox-postgres, disposable-board-import-sync-postgres]
+    needs: [frontend, disposable-ot-postgres, disposable-collaboration-postgres, disposable-toolbox-postgres, disposable-board-import-sync-postgres, global-search-postgres]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

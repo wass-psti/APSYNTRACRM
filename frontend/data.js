@@ -129,6 +129,7 @@ function encodeQuery(input){return new URLSearchParams(input).toString();}
 const BOARD_READ_RPC=new Set([
  'wm_get_board_shell','wm_get_board_items_page',
  'wm_auth_access_context','work_board_access','wm_list_boards',
+ 'wm_search_workspace_content',
  'wm_board_ui_read','wm_list_board_events','wm_list_board_events_page',
  'wm_import_extended_refs_read',
  'apsyntra_crm_my_effective_access',
@@ -416,6 +417,22 @@ export class DomainApi {
    // Coalesce only overlapping reads. Every later call obtains a fresh
    // server-authoritative context; each caller receives an isolated object.
    return structuredClone(ctx);
+ }
+ async searchWorkspaceContent(query,limit=40){
+   const clean=String(query??'').trim().slice(0,160);
+   if(clean.length<2)return [];
+   const boundedLimit=Number.isInteger(limit)?Math.max(1,Math.min(50,limit)):40;
+   const rows=await this.rpc('wm_search_workspace_content',{
+    p_query:clean,p_limit:boundedLimit
+   });
+   if(!Array.isArray(rows)||rows.some(row=>!row||
+      !validUuid(row.board_id)||!validUuid(row.item_id)||
+      typeof row.board_name!=='string'||typeof row.item_title!=='string'||
+      !['active','archived'].includes(row.board_status)||
+      typeof row.is_archived!=='boolean'||
+      typeof row.match_field!=='string'||typeof row.match_excerpt!=='string'))
+    throw new ApiError('Workspace search returned an invalid result set.',409,'INVALID_WORKSPACE_SEARCH');
+   return rows;
  }
  async boards(status='active'){
    // Share only concurrent identical reads; never cache completed board lists

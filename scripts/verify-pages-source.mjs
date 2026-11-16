@@ -9,7 +9,7 @@ assert.match(html,/frontend\/app\.js/);
 assert.match(cfg,/SUPABASE_URL.*https:\/\/jtlusodorfnyzgyuewkz\.supabase\.co/);
 assert.match(cfg,/sb_publishable_/);
 assert.ok(statSync('.nojekyll').isFile(),'Publish frontend assets without Jekyll transformations');
-const assets=['app.js','config.js','session.js','data.js','acceptance.js','pages-persistence.js','pages-acceptance-ui.js','native-client.js','native-qa.js',
+const assets=['app.js','config.js','session.js','data.js','global-search.js','acceptance.js','pages-persistence.js','pages-acceptance-ui.js','native-client.js','native-qa.js',
  'board-manifest.js','board-foundation.js','board-foundation-ui.js','board-grid.js','board-operational-qa.js','board-security-targets.js','board-negative-acceptance.js','board-security-ui.js','board-negative-write.js','role-configuration-ui.js','role-configuration-client.js','user-role-management.js'];
 for(const asset of assets){
  const text=read('frontend/'+asset);
