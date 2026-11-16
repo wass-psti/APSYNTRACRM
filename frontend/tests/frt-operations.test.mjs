@@ -56,7 +56,7 @@ test('comments use the existing signed add-comment RPC and verify the exact save
  const saved=await addFRTComment({...f,...scope,requestId:request,
   allowedRequestIds:[request],body:'Please attach the supplier invoice.'});
  assert.equal(saved.id,commentId);assert.equal(saved.isMine,true);
- assert.match(renderFRTComments({comments:f.comments,requestTitle:'Office supplies'}),/supplier invoice/);
+ assert.match(renderFRTComments({comments:[saved],requestTitle:'Office supplies'}),/supplier invoice/);
 });
 test('discussion rejects an unlisted request before a write',async()=>{
  const f=fixture();
