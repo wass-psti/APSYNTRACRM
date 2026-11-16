@@ -24,17 +24,33 @@ CREATE TABLE public.frt_memberships(
  display_name text,created_at timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY(workspace_id,user_id)
 );
+CREATE TABLE public.frt_voucher_counters(
+ workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+ company_id uuid NOT NULL REFERENCES public.frt_companies(id) ON DELETE CASCADE,
+ voucher_year integer NOT NULL,last_number integer NOT NULL DEFAULT 0 CHECK(last_number>=0),
+ PRIMARY KEY(workspace_id,company_id,voucher_year)
+);
 CREATE TABLE public.frt_requests(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
  company_id uuid NOT NULL REFERENCES public.frt_companies(id),
  requestor_id uuid NOT NULL REFERENCES auth.users(id),voucher_no text NOT NULL,
  title text NOT NULL,department text NOT NULL,fund_source text NOT NULL,
- date_needed date NOT NULL,description text NOT NULL,total_amount numeric NOT NULL CHECK(total_amount>=0),
+ recipient_name text,recipient_bank text,recipient_account text,
+ date_needed date NOT NULL,description text NOT NULL,order_intake_no text,check_no text,
+ total_amount numeric(14,2) NOT NULL CHECK(total_amount>=0),
  status text NOT NULL DEFAULT 'PENDING_APPROVAL',liquidation_status text NOT NULL DEFAULT 'NOT_SUBMITTED',
+ filing_status text NOT NULL DEFAULT 'NOT_FILED',
  archived_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),
  updated_at timestamptz NOT NULL DEFAULT now(),
  UNIQUE(workspace_id,company_id,voucher_no)
+);
+CREATE TABLE public.frt_request_items(
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+ fund_request_id uuid NOT NULL REFERENCES public.frt_requests(id) ON DELETE CASCADE,
+ category text NOT NULL,amount numeric(14,2) NOT NULL CHECK(amount>=0),
+ notes text,created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE public.frt_audit_logs(
  id bigserial PRIMARY KEY,workspace_id uuid NOT NULL REFERENCES public.workspaces(id),
@@ -46,6 +62,13 @@ RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO ''
 AS $fn$
  SELECT m.role FROM public.frt_memberships m WHERE m.workspace_id=p_workspace_id
  AND m.user_id=auth.uid() AND m.enabled=true AND m.status='active' LIMIT 1
+$fn$;
+CREATE OR REPLACE FUNCTION private.frt_has_membership(p_workspace_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO ''
+AS $fn$
+ SELECT auth.uid() IS NOT NULL AND EXISTS(
+  SELECT 1 FROM public.frt_memberships m WHERE m.workspace_id=p_workspace_id
+   AND m.user_id=auth.uid() AND m.enabled=true AND m.status='active')
 $fn$;
 CREATE OR REPLACE FUNCTION private.frt_has_role(p_workspace_id uuid,VARIADIC p_roles text[])
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO ''
@@ -78,4 +101,7 @@ $fn$;
 INSERT INTO public.workspaces(id) VALUES('00000000-0000-4000-8000-000000000001');
 INSERT INTO auth.users(id) VALUES('00000000-0000-4000-8000-000000000002');
 INSERT INTO public.frt_companies(workspace_id,code,name,display_order)
-VALUES('00000000-0000-4000-8000-000000000001','WASS','WASS',1);
+VALUES
+ ('00000000-0000-4000-8000-000000000001','WASS','WASS',1),
+ ('00000000-0000-4000-8000-000000000001','WAO','WAO',2),
+ ('00000000-0000-4000-8000-000000000001','PSTI','PSTI',3);
