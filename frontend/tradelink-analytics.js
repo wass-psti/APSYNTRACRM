@@ -126,8 +126,10 @@ export function renderTradeLinkAnalytics({summary=null,busy=false,error='',enabl
   '<div class="tl-analytics-empty" role="status"><strong>Analytics service is prepared but not activated.</strong>'+
   '<p>The signed aggregate-read database function and matching report schema must be activated before production figures can be displayed. No partial-page figures or fabricated metrics are shown.</p></div></section>';
  if(busy)return shell+'<p role="status">Loading signed TradeLink analytics…</p></section>';
- if(error)return shell+'<p role="alert">'+esc(error)+'</p></section>';
- if(!summary)return shell+'<p class="muted">Refresh analytics to retrieve the current signed summary.</p></section>';
+ if(error)return shell+'<div class="tl-analytics-empty" role="alert"><strong>Analytics could not be loaded.</strong>'+
+  '<p>'+esc(error)+'</p><button type="button" class="secondary" data-action="tradelink-analytics-refresh">Retry analytics</button></div></section>';
+ if(!summary)return shell+'<div class="tl-analytics-empty" role="status"><p>No analytics response is currently loaded.</p>'+
+  '<button type="button" class="secondary" data-action="tradelink-analytics-refresh">Load analytics</button></div></section>';
  const data=normalizeTradeLinkAnalyticsSummary(summary),metrics=summarizeTradeLinkAnalytics(data);
  const documentRows=[...new Set(data.documentCounts.map(row=>row.documentType))].map(documentType=>({
   documentType,count:data.documentCounts.filter(row=>row.documentType===documentType).reduce((sum,row)=>sum+row.count,0)}));
