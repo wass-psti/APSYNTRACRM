@@ -1679,7 +1679,8 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   if(tab==='tradelink'&&boardId===TRADELINK_BOARD_ID){
    if(state.tradeLinkSection==='activity'&&!state.tradeLinkActivityBusy)
     await loadTradeLinkActivity(serial);
-   else if(state.tradeLinkSection==='analytics'&&!state.tradeLinkAnalyticsBusy)
+   else if(state.tradeLinkSection==='analytics'&&!state.tradeLinkAnalyticsBusy&&
+      !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
     await loadTradeLinkAnalytics(serial);
    else if(['drafts','documents'].includes(state.tradeLinkSection)&&
       TL03_DOMAIN_READS_ENABLED&&!state.tradeLinkDraft.busy){
@@ -2107,7 +2108,8 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
   render();
   if(state.tradeLinkSection==='activity'&&state.board?.board?.id===TRADELINK_BOARD_ID)
    await loadTradeLinkActivity(seq);
-  if(state.tradeLinkSection==='analytics'&&state.board?.board?.id===TRADELINK_BOARD_ID)
+  if(state.tradeLinkSection==='analytics'&&state.board?.board?.id===TRADELINK_BOARD_ID&&
+     !state.tradeLinkAnalytics&&!state.tradeLinkAnalyticsError)
    await loadTradeLinkAnalytics(seq);
   if(['drafts','documents'].includes(state.tradeLinkSection)&&
      TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
@@ -3699,8 +3701,13 @@ async function onRoute(){
    ['esi','packing','delivery','payment','quotation','po'].includes(parts[3]);
   state.tradeLinkSection=directModule?'drafts':
    requested==='tradelink'?normalizeTradeLinkSection(parts[3]):'overview';
-  if(state.tradeLinkSection!=='analytics'&&state.tradeLinkAnalyticsBusy){
-   state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;
+  if(state.tradeLinkSection!=='analytics'){
+   if(state.tradeLinkAnalyticsBusy){
+    state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;
+   }
+   // Leaving Analytics invalidates its snapshot; returning to the tab performs
+   // one fresh signed read, while background board refreshes reuse the result.
+   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';
   }
   const signedDraftRoute=requested==='tradelink'&&state.tradeLinkSection==='drafts';
   const editId=signedDraftRoute&&parts[4]==='edit'&&validUuid(parts[5])?
