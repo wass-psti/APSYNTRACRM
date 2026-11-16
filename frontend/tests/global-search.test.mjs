@@ -5,6 +5,8 @@ import {
  normalizeGlobalSearchQuery,isGlobalSearchShortcut,isGlobalSearchEditableTarget,
  buildGlobalSearchResults,GLOBAL_SEARCH_MIN_QUERY,GLOBAL_SEARCH_MAX_RESULTS
 } from '../global-search.js';
+import {createNativeSearchAdapter,createNativeSearchRegistry,
+ normalizeNativeSearchResult,scoreNativeSearchResult} from '../global-search-adapters.js';
 
 const source=readFileSync('frontend/global-search.js','utf8');
 const app=readFileSync('frontend/app.js','utf8');
@@ -162,6 +164,69 @@ test('server search reuses existing workspace and board-view checks without chan
  assert.match(sql,/REVOKE ALL ON FUNCTION public\.wm_search_workspace_content\(text, integer\) FROM PUBLIC, anon/);
  assert.match(sql,/GRANT EXECUTE ON FUNCTION public\.wm_search_workspace_content\(text, integer\) TO authenticated/);
  assert.doesNotMatch(sql,/CREATE POLICY|ALTER POLICY|DROP POLICY|CREATE ROLE|ALTER ROLE|INSERT INTO|UPDATE public\.|DELETE FROM/);
+});
+
+
+test('normalizes native records into application-aware deep links and relevance scores',()=>{
+ const adapter=createNativeSearchAdapter({
+  id:'toolbox-issues',name:'Toolbox Issues',recordType:'Issue',
+  read:async()=>[],
+  getId:row=>row.id,getTitle:row=>row.title,
+  getSubtitle:row=>row.status,getExcerpt:row=>row.summary,
+  getHref:row=>'#/boards/'+row.boardId+'/items'
+ });
+ const row=normalizeNativeSearchResult(adapter,{
+  id:'issue-1',title:'Hydraulic pump leak',status:'Open',
+  summary:'Pump station 4',boardId:activeBoard.id
+ },'hydraulic pump');
+ assert.equal(row.native,true);
+ assert.equal(row.type,'native-record');
+ assert.equal(row.application,'Toolbox Issues');
+ assert.equal(row.recordId,'issue-1');
+ assert.equal(row.href,'#/boards/'+activeBoard.id+'/items');
+ assert.equal(row.score,3);
+ const merged=buildGlobalSearchResults('hydraulic pump',{
+  modules:[],boards:[],navigation:[],records:[row]
+ });
+ assert.equal(merged[0].type,'native-record');
+ assert.equal(merged[0].applicationId,'toolbox-issues');
+ assert.equal(merged[0].excerpt,'Pump station 4');
+ assert.equal(scoreNativeSearchResult('hydraulic pump',['Hydraulic pump leak']),2);
+});
+
+test('runs native adapters concurrently with bounded reads, deduplication and isolated failures',async()=>{
+ let active=0,maxActive=0,seenLimits=[];
+ const make=(id,delay=0,fail=false)=>createNativeSearchAdapter({
+  id,name:id,recordType:'Record',
+  read:async(query,context)=>{
+   active++;maxActive=Math.max(maxActive,active);seenLimits.push(context.limit);
+   await new Promise(resolve=>setTimeout(resolve,delay));
+   active--;
+   if(fail)throw Error('adapter unavailable');
+   return [{id:'same-id',title:'Pump request',summary:'Hydraulic pump'}];
+  },
+  getId:r=>r.id,getTitle:r=>r.title,getSubtitle:()=>'',getExcerpt:r=>r.summary,
+  getHref:()=> '#/boards/'+activeBoard.id+'/items'
+ });
+ const registry=createNativeSearchRegistry([
+  make('one',10),make('two',10),make('broken',0,true)
+ ],{limit:30});
+ const response=await registry.search('pump',{workspaceId:'workspace'});
+ assert.ok(maxActive>1,'independent adapters should execute concurrently');
+ assert.deepEqual(seenLimits,[20,20,20]);
+ assert.equal(response.results.length,1,'same application record should be deduplicated');
+ assert.equal(response.errors.length,1);
+ assert.equal(response.errors[0].adapterId,'broken');
+ assert.deepEqual(await registry.search('x'),{results:[],errors:[]});
+});
+
+test('rejects unsafe native adapter contracts and invalid navigation destinations',()=>{
+ assert.throws(()=>createNativeSearchAdapter({id:'bad id'}),/Invalid native search adapter/);
+ const adapter=createNativeSearchAdapter({
+  id:'sample',name:'Sample',recordType:'Record',read:async()=>[],
+  getId:r=>r.id,getTitle:r=>r.title,getHref:()=> 'https://example.com'
+ });
+ assert.equal(normalizeNativeSearchResult(adapter,{id:'1',title:'Pump'},'pump'),null);
 });
 
 test('responsive palette and exact-commit Pages asset manifests include new assets',()=>{
