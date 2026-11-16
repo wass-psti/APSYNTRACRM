@@ -24102,3 +24102,722 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
  .board-activity-actor-avatar{width:32px;height:32px;font-size:10px}
  .board-activity-event-body .board-history-entry-head time{white-space:normal}
 }
+
+/* frontend/time-tracker-application.css */
+/* TimeTracker CRM-native application shell, aligned with FM1 foundation. */
+#app .aps-board-shell.aps-time-tracker-shell .tt-native {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  color: var(--fm1-ink, #182a36);
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-app-header.fm1-app-header {
+  align-items: center;
+  min-height: 0;
+  gap: 20px;
+  justify-content: space-between;
+  padding: clamp(20px, 3vw, 30px);
+  background: linear-gradient(125deg, #f0f8f8, #f8fbfc 65%, #eef4f7);
+  border: 1px solid var(--fm1-line, #dce5e9);
+  border-radius: 22px;
+  color: var(--fm1-ink, #182a36);
+  box-shadow: none;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-app-header::before {
+  display: none;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-pixi-backdrop {
+  display: none;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-app-brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-brand-icon {
+  display: grid;
+  place-items: center;
+  width: 51px;
+  height: 51px;
+  flex: 0 0 51px;
+  border: 1px solid #dce5e9;
+  border-radius: 14px;
+  background: #edf6f6;
+  color: #087e83;
+  box-shadow: none;
+  font-size: 25px;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-app-brand
+  h1 {
+  margin: 0;
+  color: var(--fm1-ink, #182a36);
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-app-brand
+  h1
+  span {
+  color: var(--fm1-accent, #087e83);
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-app-brand
+  p {
+  margin: 9px 0 0;
+  color: var(--fm1-muted, #4f626d);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-role-pill {
+  background: #e8f4f4;
+  border: 1px solid #d4e7e6;
+  border-radius: 999px;
+  color: #08666b;
+  font-size: 11px;
+  font-weight: 750;
+  padding: 8px 12px;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-navigation.fm1-tabs {
+  margin: 0;
+  padding: 0 2px 9px;
+  border-bottom: 1px solid var(--fm1-line, #dce5e9);
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-navigation-scroll {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 0 2px 1px;
+  scrollbar-width: thin;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-nav-tab.fm1-tab {
+  flex: 0 0 auto;
+  min-height: 39px;
+  margin: 0;
+  padding: 10px 13px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #60717c;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-nav-tab.fm1-tab:hover {
+  background: #f4f8f9;
+  color: #182a36;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-nav-tab.fm1-tab.is-current {
+  background: #e8f4f4;
+  color: #08666b;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-application-heading {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  min-width: 0;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-application-heading
+  h2 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  color: var(--fm1-ink, #182a36);
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-application-heading
+  p {
+  margin: 6px 0 0;
+  color: var(--fm1-muted, #4f626d);
+  font-size: 12px;
+  line-height: 1.5;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-refresh-button {
+  flex: 0 0 auto;
+  min-height: 39px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-notices {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-notice {
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 10px;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-app-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 13px 2px 2px;
+  border-top: 1px solid var(--fm1-line, #dce5e9);
+  color: var(--fm1-muted, #4f626d);
+  font-size: 10px;
+}
+#app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app .tt-feedback {
+  border-radius: 10px;
+  margin: 0;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid #69b9bc;
+  outline-offset: 2px;
+}
+@media (max-width: 720px) {
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app {
+    gap: 14px;
+  }
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-app-header.fm1-app-header {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 0;
+    padding: 18px 16px;
+  }
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-brand-icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    font-size: 21px;
+    border-radius: 12px;
+  }
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-app-brand
+    h1 {
+    font-size: 24px;
+  }
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-app-brand
+    p {
+    font-size: 11px;
+  }
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-application-heading {
+    align-items: flex-start;
+  }
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-application-heading
+    .tt-refresh-button {
+    min-height: 36px;
+  }
+}
+@media (max-width: 440px) {
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-app-header.fm1-app-header {
+    gap: 12px;
+  }
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-app-brand {
+    gap: 11px;
+  }
+  #app
+    .aps-board-shell.aps-time-tracker-shell
+    .tt-native
+    .fm1-app
+    .tt-role-pill {
+    padding: 6px 10px;
+  }
+}
+/* Shared unavailable/empty states retain readable contrast on neutral panels. */
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-unavailable {
+  color: #566477;
+}
+
+/* GPS evidence filters, secondary tabs and empty-state copy meet AA contrast. */
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-gps-command
+  .tt-gps-tab:not([aria-selected="true"]),
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-gps-command
+  .tt-gps-controls
+  label,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-gps-command
+  .tt-gps-panel-head
+  > div
+  > p,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-gps-command
+  .tt-gps-empty-list,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-gps-command
+  .tt-gps-note {
+  color: #566477;
+}
+
+/* Team Directory filter labels, summary captions and empty states meet AA contrast. */
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-team-command
+  .tt-team-toolbar
+  label,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-team-command
+  .tt-team-count
+  > span,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-team-command
+  .tt-team-stats
+  span,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-team-command
+  .tt-team-section-title,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-team-command
+  .tt-team-empty,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-team-command
+  .tt-team-footnote {
+  color: #566477;
+}
+
+/* Monitor empty and section descriptions retain readable contrast. */
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-monitor-command
+  .tt-monitor-empty
+  > p,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-monitor-command
+  .tt-monitor-subheading,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-monitor-command
+  .tt-monitor-section {
+  color: #566477;
+}
+
+/* Overtime filters, summaries and empty states use readable neutral text. */
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-overtime-command
+  .tt-ot-week
+  > small,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-overtime-command
+  .tt-ot-metrics
+  span,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-overtime-command
+  .tt-ot-search
+  label,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-overtime-command
+  .tt-ot-empty,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-overtime-command
+  .tt-ot-empty
+  > strong,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-overtime-command
+  .tt-ot-empty
+  > p,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-overtime-command
+  .tt-ot-note {
+  color: #566477;
+}
+
+/* Attendance Calendar labels and holiday markers meet AA contrast on light cards. */
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-navigate
+  > div
+  > small,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-navigate
+  strong
+  > span,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-navigate
+  > p,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-legend
+  > span:nth-child(n + 3),
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-upcoming
+  > div
+  > span {
+  color: #566477;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-legend
+  > span:nth-child(2) {
+  color: #8b4d0b;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-upcoming
+  > div
+  > small {
+  color: #76513a;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-upcoming
+  > b {
+  background: #8a3c18;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-holiday-label,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-calendar-command
+  .tt-cal-type-special.tt-cal-holiday-type {
+  background: #7a470a;
+  color: #ffffff;
+}
+
+/* Attendance Reports muted text remains readable on light table and filter surfaces. */
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-reports-command
+  .tt-reports-range
+  > label,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-reports-command
+  .tt-reports-range
+  > p,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-reports-command
+  .tt-reports-record-head
+  > label,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-reports-command
+  .tt-report-table
+  th,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-reports-command
+  .tt-report-empty,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-reports-command
+  .tt-report-footnote,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-reports-command
+  .tt-report-match,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-reports-command
+  .tt-report-dept
+  small {
+  color: #566477;
+}
+
+/* Attendance Log muted text meets WCAG 2.2 AA on its existing surfaces. */
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-controls
+  label,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-section-heading
+  > span,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-panel-top
+  > div
+  > p,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-no-location,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-shift-cards
+  > div
+  > span,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-progress
+  > span,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-empty,
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-footnote {
+  color: #566477;
+}
+#app
+  .aps-board-shell.aps-time-tracker-shell
+  .tt-native
+  .fm1-app
+  .tt-log-command
+  .tt-log-panel-top
+  > .tt-log-readonly {
+  color: #3d684d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app *,
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app *::before,
+  #app .aps-board-shell.aps-time-tracker-shell .tt-native .fm1-app *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

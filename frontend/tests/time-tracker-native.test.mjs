@@ -143,12 +143,16 @@ test('browser GPS captured with no fake or cached location fallback',async()=>{
  await assert.rejects(captureAttendanceGeo(null),/unavailable/);
 });
 
-test('native UI mounts within board and escapes untrusted record metadata',()=>{
+test('native TimeTracker application shell preserves attendance rendering and escapes untrusted metadata',()=>{
  const html=renderTimeTrackerNative({result:{status:'VERIFIED_READ',
  access:{moduleRole:'Employee',platformRole:'hr',name:'<script>bad</script>'},
  records:[{...projectOwnAttendance({version:1,records:[example()]},user)[0],
   location:'<img src=x onerror=evil()>',department:'HR'}],
  active:null}});
+ assert.match(html,/class="tt-native"/);
+ assert.match(html,/class="fm1-app tt-application"/);
+ assert.match(html,/class="tt-app-header fm1-app-header"/);
+ assert.match(html,/class="tt-navigation fm1-tabs"/);
  assert.match(html,/tt-clock-form/);
  assert.match(html,/tt-clock-face/);
  assert.match(html,/tt-session-summary/);
@@ -312,11 +316,16 @@ test('TimeTracker reference navigation exposes only already implemented views',(
  assert.match(app,/stopTimeTrackerClock\(\)/);
 });
 
-test('opening TimeTracker board lands on Clock but generic board items stay reachable',()=>{
+test('opening a TimeTracker board canonicalizes to the dedicated app and bypasses generic board UI',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/const defaultClock=!parts\[2\]/);
  assert.match(app,/defaultClock\?'attendance':'items'/);
- assert.match(app,/moduleKey==='timetracker'\?'\/items':''/);
+ assert.match(app,/const timeTrackerBoard=state\.boards\.find/);
+ assert.match(app,/TIMETRACKER_APPLICATION_ROUTE/);
+ const boardPage=app.slice(app.indexOf('function boardPage(){'),app.indexOf('async function onRoute(){'));
+ const appRoute=boardPage.indexOf("if(moduleByBoardName(b.name)?.key==='timetracker')return renderTimeTrackerApplication();");
+ const boardControls=boardPage.indexOf('const items=');
+ assert.ok(appRoute>=0&&boardControls>appRoute,'TimeTracker application must return before generic board rendering');
  assert.match(readFileSync('frontend/time-tracker-ui.js','utf8'),/data-action="tt-tab"/);
 });
 

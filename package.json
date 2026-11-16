@@ -19,7 +19,8 @@
     "lint": "eslint frontend/fm1 frontend/tests/fm1-*.test.mjs scripts/fm1-browser-acceptance.mjs vite.config.js",
     "format:check": "prettier --check frontend/fm1 frontend/fm1-application.css frontend/tests/fm1-*.test.mjs frontend/tests/fixtures/fm1-component.html scripts/fm1-browser-acceptance.mjs vite.config.js eslint.config.js docs/FM1-FOUNDATION-01.md",
     "format": "prettier --write frontend/fm1 frontend/fm1-application.css frontend/tests/fm1-*.test.mjs frontend/tests/fixtures/fm1-component.html scripts/fm1-browser-acceptance.mjs vite.config.js eslint.config.js docs/FM1-FOUNDATION-01.md",
-    "test:fm1": "node --test frontend/tests/fm1-*.test.mjs"
+    "test:fm1": "node --test frontend/tests/fm1-*.test.mjs",
+    "test:time-tracker:e2e": "node scripts/time-tracker-browser-acceptance.mjs"
   },
   "type": "module",
   "name": "apsyntra-crm",
