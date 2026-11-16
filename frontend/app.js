@@ -199,6 +199,7 @@ import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-r
 const BOARD_BASE_COLUMNS=[{key:'record',title:'Item name'},{key:'status',title:'Status'},
  {key:'owner',title:'Owner'},{key:'due',title:'Due date'},{key:'actions',title:'Actions'}];
 const root=document.getElementById('app');
+let fm1Module=null;
 const auth=new AuthClient();
 const db=new DomainApi(auth);
 const boardCacheChannel=new BoardCacheChannel({auth,onInvalidate:({boardId,revision,userId,workspaceId})=>{
@@ -1149,7 +1150,8 @@ function render(){
   state.boardItemSearch='';state.boardItemSearchBoard=null;
   boardItemFilterScope=filterScope;
  }
- if(!state.context){closeTradeLinkSavedDocumentOutput();renderLogin();return;}
+ if(!state.context){fm1Module?.unmountFm1Application();closeTradeLinkSavedDocumentOutput();renderLogin();return;}
+ if(state.view!=='fm1')fm1Module?.unmountFm1Application();
  preserveTimeTrackerLogExpansion();
  captureTradeLinkTabMotion(root);
  if(state.view==='board')shell(boardPage());
@@ -1168,7 +1170,7 @@ function render(){
   busy:invitationAcceptanceBusy,status:invitationAcceptanceStatus
  }));
  else if(state.view==='boards')shell(boardsPage());
- else if(state.view==='fm1')shell('<fm1-application data-user-id="'+e(state.context?.user_id||'')+'" data-workspace-id="'+e(state.context?.workspace_id||'')+'"></fm1-application>');
+ else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id});}
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
  mountTradeLinkTabMotion(root);
@@ -3490,11 +3492,12 @@ async function onRoute(){
  sidebarMobileOpen=false;
  const hash=location.hash||routeHome;
  const parts=hash.replace(/^#\/?/,'').split('/');
+ if(parts[0]!=='fm1')fm1Module?.unmountFm1Application();
  if(parts[0]==='invitations'&&parts[1]==='accept'){
   state.view='invitation';render();return;
  }
  if(pendingInvitation){pendingInvitation=null;invitationAcceptanceStatus='';}
- if(parts[0]==='fm1')await import('./fm1/index.js');
+ if(parts[0]==='fm1')fm1Module=await import('./fm1/index.js');
  if(parts[0]==='boards'&&validUuid(parts[1])){
   const defaultClock=!parts[2]&&state.boards.some(b=>
     b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');

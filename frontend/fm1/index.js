@@ -1,4 +1,4 @@
-import "./components.js";
+export { mountFm1Application, unmountFm1Application } from "./components.js";
 
 export { FM1_CONTRACT, FM1_SLA_TARGETS, FM1_NAVIGATION } from "./constants.js";
 export {

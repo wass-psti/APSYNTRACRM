@@ -49,46 +49,46 @@ const targetLabel = (target) => {
   return target.seconds / 3600 + " support hr";
 };
 
-class Fm1MetricCard extends HTMLElement {
-  connectedCallback() {
-    const label = escapeHtml(this.getAttribute("label"));
-    const value = escapeHtml(this.getAttribute("value"));
-    const detail = escapeHtml(this.getAttribute("detail"));
-    const symbol = escapeHtml(this.getAttribute("symbol") || "•");
-    this.innerHTML = `<article class="fm1-metric-card">
-      <div class="fm1-metric-top"><span>${label}</span><span class="fm1-metric-symbol" aria-hidden="true">${symbol}</span></div>
-      <strong>${value}</strong><p>${detail}</p>
-    </article>`;
-  }
-}
+const metricCard = ({ label, value, detail, symbol = "•" }) =>
+  '<article class="fm1-metric-card">' +
+  '<div class="fm1-metric-top"><span>' +
+  escapeHtml(label) +
+  '</span><span class="fm1-metric-symbol" aria-hidden="true">' +
+  escapeHtml(symbol) +
+  "</span></div><strong>" +
+  escapeHtml(value) +
+  "</strong><p>" +
+  escapeHtml(detail) +
+  "</p></article>";
 
-class Fm1StatusBadge extends HTMLElement {
-  connectedCallback() {
-    const label = escapeHtml(this.getAttribute("label") || "Status");
-    const tone = ["neutral", "warning", "success", "danger"].includes(
-      this.getAttribute("tone"),
-    )
-      ? this.getAttribute("tone")
-      : "neutral";
-    this.innerHTML = `<span class="fm1-badge fm1-badge-${tone}">${label}</span>`;
-  }
-}
+const statusBadge = (label = "Status", tone = "neutral") => {
+  const safeTone = ["neutral", "warning", "success", "danger"].includes(tone)
+    ? tone
+    : "neutral";
+  return (
+    '<span class="fm1-badge fm1-badge-' +
+    safeTone +
+    '">' +
+    escapeHtml(label) +
+    "</span>"
+  );
+};
 
-class Fm1Application extends HTMLElement {
+class Fm1Application {
   get scopeKey() {
-    const userId = this.getAttribute("data-user-id") || "unscoped";
-    const workspaceId = this.getAttribute("data-workspace-id") || "unscoped";
-    return userId + "::" + workspaceId;
+    return this.userId + "::" + this.workspaceId;
   }
 
-  constructor() {
-    super();
+  constructor(root, { userId, workspaceId } = {}) {
+    this.root = root;
+    this.userId = userId || "unscoped";
+    this.workspaceId = workspaceId || "unscoped";
     this.handleClick = this.handleClick.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.unsubscribe = null;
   }
 
-  connectedCallback() {
+  connect() {
     const scopeKey = this.scopeKey;
     if (fm1Store.get().scopeKey !== scopeKey) {
       fm1Store.set({
@@ -102,15 +102,15 @@ class Fm1Application extends HTMLElement {
         error: "",
       });
     }
-    this.addEventListener("click", this.handleClick);
-    this.addEventListener("submit", this.handleSubmit);
+    this.root.addEventListener("click", this.handleClick);
+    this.root.addEventListener("submit", this.handleSubmit);
     this.unsubscribe = fm1Store.subscribe(() => this.render());
-    void this.hydrateDrafts();
+    if (!fm1Store.get().draftsLoaded) void this.hydrateDrafts();
   }
 
-  disconnectedCallback() {
-    this.removeEventListener("click", this.handleClick);
-    this.removeEventListener("submit", this.handleSubmit);
+  disconnect() {
+    this.root?.removeEventListener("click", this.handleClick);
+    this.root?.removeEventListener("submit", this.handleSubmit);
     this.unsubscribe?.();
     this.unsubscribe = null;
   }
@@ -118,7 +118,7 @@ class Fm1Application extends HTMLElement {
   async hydrateDrafts() {
     const scopeKey = this.scopeKey;
     const isCurrentScope = () =>
-      this.isConnected &&
+      this.root?.isConnected === true &&
       this.scopeKey === scopeKey &&
       fm1Store.get().scopeKey === scopeKey;
     try {
@@ -160,7 +160,7 @@ class Fm1Application extends HTMLElement {
     if (!id) return;
     const scopeKey = this.scopeKey;
     const isCurrentScope = () =>
-      this.isConnected &&
+      this.root?.isConnected === true &&
       this.scopeKey === scopeKey &&
       fm1Store.get().scopeKey === scopeKey;
     fm1Store.setKey("busy", true);
@@ -213,7 +213,7 @@ class Fm1Application extends HTMLElement {
 
     const scopeKey = this.scopeKey;
     const isCurrentScope = () =>
-      this.isConnected &&
+      this.root?.isConnected === true &&
       this.scopeKey === scopeKey &&
       fm1Store.get().scopeKey === scopeKey;
     fm1Store.setKey("busy", true);
@@ -259,17 +259,17 @@ class Fm1Application extends HTMLElement {
     const p4 = FM1_SLA_TARGETS.P4;
     return `<section class="fm1-overview" aria-label="FM1 service overview">
       <div class="fm1-metric-grid">
-        <fm1-metric-card label="Live tickets" value="—" detail="Live ticket service is not connected" symbol="▤"></fm1-metric-card>
-        <fm1-metric-card label="P1 / P2 incidents" value="—" detail="No server-backed incident feed" symbol="!" ></fm1-metric-card>
-        <fm1-metric-card label="SLA obligations" value="—" detail="Authoritative clock worker pending" symbol="◷"></fm1-metric-card>
-        <fm1-metric-card label="Local drafts" value="${state.drafts.length}" detail="Saved in this browser only" symbol="✎"></fm1-metric-card>
+        ${metricCard({ label: "Live tickets", value: "—", detail: "Live ticket service is not connected", symbol: "▤" })}
+        ${metricCard({ label: "P1 / P2 incidents", value: "—", detail: "No server-backed incident feed", symbol: "!" })}
+        ${metricCard({ label: "SLA obligations", value: "—", detail: "Authoritative clock worker pending", symbol: "◷" })}
+        ${metricCard({ label: "Local drafts", value: state.drafts.length, detail: "Saved in this browser only", symbol: "✎" })}
       </div>
 
       <section class="fm1-contract-panel">
         <div class="fm1-panel-heading">
           <div><span class="fm1-eyebrow">CONTRACT CONFIGURATION</span><h2>BIOTECH Farms · FM1</h2>
             <p>${escapeHtml(FM1_CONTRACT.location)} · 2027 remote-support term</p></div>
-          <fm1-status-badge label="Awaiting acceptance" tone="warning"></fm1-status-badge>
+          ${statusBadge("Awaiting acceptance", "warning")}
         </div>
         <div class="fm1-contract-grid">
           <div><span>Provider</span><strong>${escapeHtml(FM1_CONTRACT.provider)}</strong></div>
@@ -329,7 +329,7 @@ class Fm1Application extends HTMLElement {
       .map(
         (draft) => `<article class="fm1-draft-row">
       <div class="fm1-draft-main"><div class="fm1-draft-top"><strong>${escapeHtml(draft.subject)}</strong>
-        <fm1-status-badge label="Local draft · Not submitted" tone="neutral"></fm1-status-badge></div>
+        ${statusBadge("Local draft · Not submitted", "neutral")}</div>
         <span>${escapeHtml(draft.reference)} · ${escapeHtml(draft.priority)} · ${escapeHtml(draft.requesterName)}</span>
         <small>Saved ${escapeHtml(formatDate(draft.createdAt))} · ${escapeHtml(draft.channel)}</small></div>
       <button type="button" class="fm1-quiet-button fm1-danger-button" data-fm1-action="delete-draft"
@@ -438,12 +438,12 @@ class Fm1Application extends HTMLElement {
         ? "New ticket intake"
         : FM1_NAVIGATION.find((item) => item.key === view)?.label ||
           "FM1 Ticketing";
-    this.innerHTML = `<section class="fm1-app" aria-label="FM1 SLA Ticketing application">
+    this.root.innerHTML = `<section class="fm1-app" aria-label="FM1 SLA Ticketing application">
       <header class="fm1-app-header">
         <div><span class="fm1-eyebrow">WATCHDOG AUTOMATION · BIOTECH FARMS</span>
           <h1>FM1 <span>SLA Ticketing</span></h1>
           <p>Remote-support service workspace · ${escapeHtml(FM1_CONTRACT.location)}</p></div>
-        <div class="fm1-header-status"><fm1-status-badge label="Awaiting acceptance" tone="warning"></fm1-status-badge>
+        <div class="fm1-header-status">${statusBadge("Awaiting acceptance", "warning")}
           <span>2027 contract configuration</span></div>
       </header>
       <nav class="fm1-tabs" aria-label="FM1 application sections">
@@ -469,9 +469,25 @@ class Fm1Application extends HTMLElement {
   }
 }
 
-if (!customElements.get("fm1-metric-card"))
-  customElements.define("fm1-metric-card", Fm1MetricCard);
-if (!customElements.get("fm1-status-badge"))
-  customElements.define("fm1-status-badge", Fm1StatusBadge);
-if (!customElements.get("fm1-application"))
-  customElements.define("fm1-application", Fm1Application);
+let mountedApplication = null;
+
+export function mountFm1Application(root, scope = {}) {
+  if (!root) return null;
+  const scopeKey =
+    (scope.userId || "unscoped") + "::" + (scope.workspaceId || "unscoped");
+  if (
+    mountedApplication?.root === root &&
+    mountedApplication.scopeKey === scopeKey
+  ) {
+    return mountedApplication;
+  }
+  mountedApplication?.disconnect();
+  mountedApplication = new Fm1Application(root, scope);
+  mountedApplication.connect();
+  return mountedApplication;
+}
+
+export function unmountFm1Application() {
+  mountedApplication?.disconnect();
+  mountedApplication = null;
+}

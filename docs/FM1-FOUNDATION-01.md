@@ -6,17 +6,19 @@ Repository: `wass-psti/APSYNTRACRM`
 
 Branch: `feat/fm1-crm-foundation-01`
 
+Native DOM compatibility follow-up: `fix/fm1-native-dom-mount-05`
+
 ## Delivered
 
 - Added the FM1 Ticketing route to the existing APSYNTRA CRM sidebar and hash router.
 - Added a lazily loaded native ES Module feature under `frontend/fm1/`.
-- Added reusable native Web Components: `fm1-application`, `fm1-metric-card`, and `fm1-status-badge`.
+- Added a reusable native DOM-rendered FM1 workspace controller with delegated click/submit handling and explicit mount/unmount lifecycle.
 - Added a responsive, mobile-first FM1 workspace with Overview, Tickets, Duty, Approvals, Assets & I/O, Preventive, Engineering, Commercial, Reports and Administration sections.
 - Added an FM1 intake form with HTML5 Constraint Validation and dependency-free JavaScript schema validation.
 - Added IndexedDB persistence for explicitly local intake drafts, scoped to the current CRM user and workspace.
 - Added pure SLA calendar/deadline preview functions for P1–P4, including continuous P1/P2 elapsed time, Asia/Manila P3/P4 weekday support windows, synthetic holiday fixtures, permitted hold unions and preview-only result labeling.
 - Added optional Vite development/build scripts without changing the GitHub Pages production entry point; CSS bundle generation is included in the production build hook.
-- Added Playwright browser acceptance and axe-core WCAG 2.2 AA checks for desktop, mobile, form validation, same-document workspace switching and IndexedDB draft lifecycle.
+- Added Playwright acceptance through both Vite and an unbundled static HTTP server, plus axe-core WCAG 2.2 AA checks for desktop, mobile, form validation, same-document workspace switching and IndexedDB draft lifecycle.
 - Added scoped ESLint and Prettier tooling for the FM1 feature and its test files.
 - Added the FM1 stylesheet to the existing generated 47-source CSS bundle, preserving the single blocking stylesheet request.
 
@@ -56,7 +58,7 @@ The FDS's Release A, B and C scope is not complete in this foundation milestone.
 
 - FM1 unit and contract tests: 28 passing.
 - Existing repository test suite: 2,350 passing.
-- Playwright + axe-core browser acceptance: passed with both Vite and an unbundled static HTTP server, including native ES module imports, 360px viewport, local draft save/read/delete, user/workspace scope switching and WCAG 2.2 AA checks.
+- Playwright + axe-core browser acceptance: passed with both Vite and an unbundled static HTTP server, including native ES module imports with Custom Elements unavailable, 360px viewport, local draft save/read/delete, user/workspace scope switching and WCAG 2.2 AA checks.
 - Vite production-mode build: passed. FM1 is emitted as a separate lazy-loaded chunk (28.11 KB before gzip (9.70 KB gzip) with no FM1 runtime dependencies. The build still reports the existing large CRM entry chunk and non-module startup-guard script; those are existing shell characteristics, not FM1 chunk output.
 - Generated CSS bundle verification: 47 ordered sources.
 - ESLint: passed. Prettier format check: passed.
@@ -73,7 +75,7 @@ The FDS's Release A, B and C scope is not complete in this foundation milestone.
 
 ## Release status
 
-The FM1 foundation was merged to main in PR #413; the FDS navigation update was merged in PR #415. The follow-up removes the external Zod and Nano Stores imports, restores the dependency-free validation and state store, and adds static-HTTP browser coverage for the GitHub Pages native ES module graph. Genuine signed-session runtime acceptance and server-backed ticketing remain pending.
+The FM1 foundation was merged to main in PR #413; the FDS navigation update was merged in PR #415. PR #417 removed the external Zod and Nano Stores imports. This follow-up removes the Custom Elements API dependency after live Chromium runtime verification showed that API unavailable in the active browser context; FM1 now mounts through ordinary DOM nodes and native event delegation. Static-HTTP browser acceptance covers the same unbundled module graph used by GitHub Pages and explicitly runs with window.customElements set to null. Genuine signed-session runtime acceptance and server-backed ticketing remain pending.
 
 ## Not included in this milestone
 
