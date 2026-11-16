@@ -40,6 +40,7 @@ on:
       - 'supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql'
       - 'supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql'
       - 'sql/tests/cp-tl08e02-retry-safe-updates-disposable.sql'
+      - 'sql/tests/cp-tl10a-six-module-signed-save-disposable.sql'
       - 'sql/tests/cp-tl08h-virtual-review-acceptance.sql'
 
 permissions:
@@ -189,6 +190,10 @@ jobs:
         env:
           PGDATABASE: tradelink_retry_disposable
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl08e02-retry-safe-updates-disposable.sql
+      - name: Verify CP-TL-10A genuine signed six-module save and All Documents synchronization
+        env:
+          PGDATABASE: tradelink_retry_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl10a-six-module-signed-save-disposable.sql
       - name: Create isolated CP-TL-08H dual-review database
         run: createdb --maintenance-db=postgres --username=postgres tradelink_review_disposable
       - name: Install signed dual-review migration in isolated PostgreSQL
