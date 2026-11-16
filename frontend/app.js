@@ -165,6 +165,8 @@ import {loadFRTBankExecution,recordFRTBankExecution} from './frt-bank-execution.
 import {loadFRTComments,addFRTComment,loadFRTAuditPage,frtAuditCsv,projectFRTNotifications,loadFRTDeadlineSnapshots,loadFRTAgingSummary} from './frt-collaboration.js';
 import {renderFRTComments,renderFRTActivityEvents,renderFRTActivityFilters,renderFRTNotifications,renderFRTNotificationSummary} from './frt-collaboration-ui.js';
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
+import {loadFRTArchive,restoreFRTRequest} from './frt-archive.js';
+import {renderFRTArchive} from './frt-archive-ui.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
@@ -7996,8 +7998,15 @@ async function action(name,button){
      '<p class="muted">The current safe FRT endpoint does not provide auditable activity records. No events are fabricated or retrieved through a broad privileged API.</p>';
    }else if(section==='archive'){
     title='Archive Storage';
-    body='<p class="note">Archived requests are kept separate from active Fund Requests.</p>'+
-     '<p class="muted">The current signed FRT read endpoint does not list archived requests. Recovery and permanent deletion are unavailable until verified server contracts exist.</p>';
+    try{
+     const archive=await loadFRTArchive({auth,api:db,
+      workspaceId:state.context?.workspace_id,companyCode,
+      expectedRole:state.frtFinance.role});
+     body=renderFRTArchive({...archive,
+      canRestore:state.frtFinance.role==='GENERAL_MANAGER'});
+    }catch(error){
+     body=renderFRTArchive({companyCode,error:error?.message||'Archive history unavailable.'});
+    }
    }else if(section==='discussion'){
     title='Discussion';
     body='<p class="note">'+e(selected.title)+'</p>'+
@@ -8057,8 +8066,36 @@ async function action(name,button){
      companyCode:modal?.querySelector('[name=companyCode]')?.value||'',
      role:state.frtFinance?.role
     })});
-   }else openModal(title,body,async()=>{},
+   }else if(section==='archive')openModal(title,body,async()=>{},
+     {submitLabel:'Close'});
+   else openModal(title,body,async()=>{},
      {submitLabel:'Not connected',submitDisabled:true});
+   break;
+ }
+ case 'frt-archive-restore':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||!auth.isSignedIn||
+      state.frtFinance?.status!=='PASS')return;
+   const requestId=String(button?.dataset?.requestId||'');
+   const workspaceId=state.context?.workspace_id,companyCode=state.frtFinance.companyCode;
+   const role=state.frtFinance.role,boardId=state.boardId,actor=auth.userId,seq=routeSerial;
+   if(role!=='GENERAL_MANAGER'){toast('Archive recovery uses the existing General Manager action.');break;}
+   let archive;
+   try{archive=await loadFRTArchive({auth,api:db,workspaceId,companyCode,expectedRole:role});}
+   catch(error){notice(error);break;}
+   const archived=archive.requests.find(row=>row.requestId===requestId);
+   if(!archived){toast('This request is no longer in the active company archive.');break;}
+   openModal('Restore archived request',
+    '<p class="note">'+e(archived.title)+' · '+e(archived.voucher)+'</p>'+
+    '<p>Restore this request to the active Fund Release Tracker? Its voucher, liquidation and audit history will be retained.</p>',
+    async()=>{
+     if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+        auth.userId!==actor||state.context?.workspace_id!==workspaceId||
+        state.frtFinance?.companyCode!==companyCode||state.frtFinance?.role!==role)
+      throw new ApiError('FRT company or signed session changed. Reopen archive recovery.',409);
+     await restoreFRTRequest({auth,api:db,workspaceId,companyCode,requestId,expectedRole:role});
+     await loadFRTFinance(companyCode);
+    },{submitLabel:'Restore request',
+       successMessage:'Archived request restored and active tracker refreshed.'});
    break;
  }
  case 'frt-bank-record':{
