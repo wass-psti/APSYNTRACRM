@@ -3,6 +3,10 @@
 -- No new tables, roles, RLS policies, approval stages or financial records.
 BEGIN;
 
+CREATE INDEX IF NOT EXISTS frt_requests_archived_company_idx
+ ON public.frt_requests(workspace_id,company_id,archived_at DESC,id DESC)
+ WHERE archived_at IS NOT NULL;
+
 CREATE OR REPLACE FUNCTION public.frt_archive_list(
  p_workspace_id uuid,p_company text,p_search text DEFAULT '',p_limit integer DEFAULT 500
 ) RETURNS jsonb
