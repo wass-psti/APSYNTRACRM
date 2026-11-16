@@ -10,11 +10,11 @@ import {normalizeTradeLinkAnalyticsSummary} from './tradelink-analytics.js';
 export const TL03_DOMAIN_READS_ENABLED=true;
 // Stage B authenticated EXECUTE grants are live; server enforces session and workspace permissions.
 export const TL03_DOMAIN_WRITES_ENABLED=true;
-// The signed aggregate RPC is prepared in the CP-TL legacy integration candidate.
-// Keep UI reads off until that additive function is installed in the existing project.
-export const TL03_ANALYTICS_ENABLED=false;
-// Automatic numbering requires the additive CP-TL-LEGACY-02 database migration.
-// Keep the existing manual-number create path until that migration is installed.
+// CP-TL-LEGACY-WORKFLOW-04: the existing production aggregate RPC is installed
+// and verified. Activate only its signed, read-only analytics UI path.
+export const TL03_ANALYTICS_ENABLED=true;
+// Production automatic-number creation remains disabled pending separate
+// operational activation. Existing manual-number creation is unchanged.
 export const TL03_AUTOMATIC_NUMBERING_ENABLED=false;
 // The workflow backend adds an authenticated RPC and changes an audit CHECK.
 // Keep the Submit button disabled until that exact production candidate is

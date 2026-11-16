@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {TRADELINK_BOARD_ID} from '../tradelink-board-items.js';
 import {
- TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED,TL03_AUTOMATIC_NUMBERING_ENABLED,TradeLinkDomainClient,
+ TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED,TL03_AUTOMATIC_NUMBERING_ENABLED,TL03_ANALYTICS_ENABLED,TradeLinkDomainClient,
  validateTradeLinkDraftEnvelope,normalizeTradeLinkDomainReceipt,
  normalizeTradeLinkDomainRow
 } from '../tradelink-domain-client.js';
@@ -61,6 +61,34 @@ test('read and write operations require a complete signed authorization client',
  await assert.rejects(()=>client.commit({documentId:id,expectedRevision:0,
   operation:'create',draft}),/Signed TradeLink domain API unavailable/);
  assert.equal(invoked,0);
+});
+
+test('signed analytics RPC is enabled as a read-only path while automatic numbering remains disabled',async()=>{
+ assert.equal(TL03_ANALYTICS_ENABLED,true);
+ assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
+ const calls=[];
+ const summary={generatedAt:'2026-11-16T08:00:00.000Z',
+  documentCounts:[{documentType:'quotation',workflowState:'draft',count:3}],
+  quotationPerformance:[{workflowState:'draft',currency:'PHP',count:3,total:1000}],
+  quotationCommercialStatus:[{quoteStatus:'unspecified',currency:'PHP',count:3,total:1000}],
+  taxSummary:[],
+  aging:{available:true,reason:'Approved ESI invoices with due dates only.',
+   buckets:[],unallocatedReceipts:[],excessPayments:[],pendingChequeReceipts:[],excludedWithoutDueDate:0}};
+ const auth={userId:id,getVerifiedUser:async()=>({id})};
+ const api={
+  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
+  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
+   name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  allowed:async()=>true,
+  rpc:async(name,args)=>{calls.push({name,args});return summary;}
+ };
+ const client=new TradeLinkDomainClient({auth,api});
+ const result=await client.analyticsSummary();
+ assert.deepEqual(result.documentCounts,summary.documentCounts);
+ assert.deepEqual(calls,[{name:'tl03_analytics_summary',args:{
+  p_board_id:TRADELINK_BOARD_ID,p_from:null,p_to:null}}]);
+ await assert.rejects(()=>client.analyticsSummary({from:'invalid'}),/Invalid TradeLink analytics reporting period/);
+ assert.equal(calls.length,1,'invalid period must not issue an RPC');
 });
 
 test('automatic numbering stays off until migration activation and existing create API remains available',async()=>{
