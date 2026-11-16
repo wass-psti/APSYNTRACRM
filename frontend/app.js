@@ -267,7 +267,7 @@ const tradeLinkNativeSearchAdapter=createNativeSearchAdapter({
  getSubtitle:row=>[row.documentType,row.workflowState].filter(Boolean).join(' · '),
  getExcerpt:row=>[row.documentType,row.workflowState].filter(Boolean).join(' · '),
  getSearchFields:row=>[row.documentNumber,row.documentType,row.workflowState],
- getHref:()=> '#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents'
+ getHref:row=>'#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents/record/'+encodeURIComponent(row.documentId)
 });
 
 const frtNativeSearchAdapter=createNativeSearchAdapter({
@@ -278,7 +278,7 @@ const frtNativeSearchAdapter=createNativeSearchAdapter({
  getExcerpt:row=>row.dateNeeded,
  getSearchFields:row=>[row.voucher,row.status,row.dateNeeded,row.companyCode],
  getNavigationScope:row=>row.companyCode,
- getHref:()=> '#/boards/'+FRT_BOARD_ID+'/finance'
+ getHref:row=>'#/boards/'+FRT_BOARD_ID+'/finance/record/'+encodeURIComponent(row.companyCode)+'/'+encodeURIComponent(row.requestId)
 });
 
 
@@ -302,7 +302,7 @@ const timeTrackerAttendanceSearchAdapter=createNativeSearchAdapter({
  getSubtitle:row=>[row.status,row.classification].filter(Boolean).join(' · '),
  getExcerpt:row=>String(row.clockIn||'').slice(0,16),
  getSearchFields:row=>[row.id,row.clockIn,row.clockOut,row.status,row.classification],
- getHref:()=>{const board=findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName);return board?.id?'#/boards/'+board.id+'/attendance':'#/boards';}
+ getHref:row=>'#/time-tracker/attendance/'+encodeURIComponent(row.id)
 });
 const timeTrackerOvertimeSearchAdapter=createNativeSearchAdapter({
  id:'timetracker-overtime',applicationId:'timetracker',name:'TimeTracker Attendance',
@@ -322,7 +322,7 @@ const timeTrackerOvertimeSearchAdapter=createNativeSearchAdapter({
  getSubtitle:row=>[row.status,row.start&&row.end?row.start+'–'+row.end:''].filter(Boolean).join(' · '),
  getExcerpt:row=>row.status,
  getSearchFields:row=>[row.id,row.date,row.status,row.start,row.end],
- getHref:()=>{const board=findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName);return board?.id?'#/boards/'+board.id+'/attendance':'#/boards';}
+ getHref:row=>'#/time-tracker/overtime/'+encodeURIComponent(row.id)
 });
 
 
@@ -349,7 +349,7 @@ const fuelTrackNativeSearchAdapter=createNativeSearchAdapter({
  getSubtitle:row=>[row.state,row.receipt_number?'Receipt '+row.receipt_number:''].filter(Boolean).join(' · '),
  getExcerpt:row=>String(row.created_at||'').slice(0,10),
  getSearchFields:row=>[row.id,row.kind,row.state,row.created_at,row.receipt_number],
- getHref:()=>fuelTrackHref('requests')
+ getHref:row=>fuelTrackHref('requests')+'/record/'+encodeURIComponent(row.id)
 });
 
 
@@ -630,7 +630,7 @@ function shell(body){
   }else{
    for(const link of existing.querySelectorAll('.aps-sidebar a.nav-link')){
     const path=link.getAttribute('href')||'';
-    const active=state.ttStandalone?path===TIMETRACKER_APPLICATION_ROUTE:
+    const active=state.ttStandalone?(path===TIMETRACKER_APPLICATION_ROUTE||location.hash.startsWith(TIMETRACKER_APPLICATION_ROUTE+'/')):
      state.view==='board'?path==='#/boards/'+state.boardId:
      path==='#/'+state.view;
     link.classList.toggle('active',active);
@@ -3802,7 +3802,7 @@ function navigateGlobalSearchResult(item){
  if(item.native===true&&item.applicationId==='fueltrack'&&item.recordId){
   pendingNativeSearchSelection={applicationId:'fueltrack',recordId:item.recordId,
    boardId:FUELTRACK_V3_ID,userId:auth.userId,workspaceId:state.context?.workspace_id};
-  const target=fuelTrackHref('requests');
+  const target=item.href||fuelTrackHref('requests')+'/record/'+encodeURIComponent(item.recordId);
   if(location.hash===target)void onRoute().catch(error=>notice(error));
   else location.hash=target;
   return;
@@ -3814,7 +3814,7 @@ function navigateGlobalSearchResult(item){
   pendingNativeSearchSelection={applicationId:'timetracker',recordId:item.recordId,
    recordType:item.recordType,boardId:board.id,userId:auth.userId,
    workspaceId:state.context?.workspace_id};
-  const target='#/boards/'+board.id+'/attendance';
+  const target=item.href||('#/time-tracker/attendance/'+encodeURIComponent(item.recordId));
   if(location.hash===target)void onRoute().catch(error=>notice(error));
   else location.hash=target;
   return;
@@ -3824,7 +3824,8 @@ function navigateGlobalSearchResult(item){
   pendingNativeSearchSelection={applicationId:'frt',recordId:item.recordId,
    navigationScope:item.navigationScope,query:item.query,boardId:FRT_BOARD_ID,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
-  const target='#/boards/'+FRT_BOARD_ID+'/finance';
+  const base=item.href||('#/boards/'+FRT_BOARD_ID+'/finance/record/'+encodeURIComponent(item.navigationScope)+'/'+encodeURIComponent(item.recordId));
+  const target=base+'?q='+encodeURIComponent(item.query||'');
   if(location.hash===target)void onRoute().catch(error=>notice(error));
   else location.hash=target;
   return;
@@ -3855,7 +3856,7 @@ function navigateGlobalSearchResult(item){
    item.recordId&&typeof item.recordId==='string'){
   pendingNativeSearchSelection={applicationId:'tradelink',recordId:item.recordId,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
-  const target='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
+  const target=item.href||('#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents/record/'+encodeURIComponent(item.recordId));
   if(location.hash===target)void onRoute().catch(error=>notice(error));
   else location.hash=target;
   return;
@@ -3948,7 +3949,9 @@ async function onRoute(){
  if(!state.context)return;
  sidebarMobileOpen=false;
  const hash=location.hash||routeHome;
- const parts=hash.replace(/^#\/?/,'').split('/');
+ const routePath=hash.split('?')[0];
+ const routeQuery=new URLSearchParams(hash.split('?')[1]||'').get('q')||'';
+ const parts=routePath.replace(/^#\/?/,'').split('/');
  state.ttStandalone=false;
  if(parts[0]!=='fm1')fm1Module?.unmountFm1Application();
  if(parts[0]==='invitations'&&parts[1]==='accept'){
@@ -3964,6 +3967,13 @@ async function onRoute(){
  if(parts[0]==='time-tracker'){
   state.ttStandalone=true;
   const attendanceBoard=findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName);
+  const attendanceRecordId=parts[1]==='attendance'&&validUuid(parts[2])?parts[2]:null;
+  const overtimeRecordId=parts[1]==='overtime'&&validUuid(parts[2])?parts[2]:null;
+  if(attendanceBoard?.id&&(attendanceRecordId||overtimeRecordId)){
+   pendingNativeSearchSelection={applicationId:'timetracker',recordId:attendanceRecordId||overtimeRecordId,
+    recordType:attendanceRecordId?'Attendance session':'Overtime request',boardId:attendanceBoard.id,
+    userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }else if(pendingNativeSearchSelection?.applicationId==='timetracker')pendingNativeSearchSelection=null;
   if(!attendanceBoard){
    routeSerial++;state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;
    state.ttError='The existing TimeTracker Attendance board was not found in this workspace.';
@@ -4021,6 +4031,18 @@ async function onRoute(){
    // Leaving Analytics invalidates its snapshot; returning to the tab performs
    // one fresh signed read, while background board refreshes reuse the result.
    state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';
+  }
+  if(requested==='finance'&&moduleByBoardName(state.boards.find(b=>b.id===parts[1])?.name)?.key==='frt'&&
+     parts[3]==='record'&&parts[4]&&validUuid(parts[5])){
+   pendingNativeSearchSelection={applicationId:'frt',recordId:parts[5],navigationScope:parts[4],
+    query:routeQuery,boardId:parts[1],userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }else if(requested==='fueltrack'&&parts[3]==='requests'&&parts[4]==='record'&&validUuid(parts[5])){
+   pendingNativeSearchSelection={applicationId:'fueltrack',recordId:parts[5],boardId:parts[1],
+    userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }else if(requested==='tradelink'&&state.tradeLinkSection==='documents'&&
+     parts[4]==='record'&&validUuid(parts[5])){
+   pendingNativeSearchSelection={applicationId:'tradelink',recordId:parts[5],boardId:parts[1],
+    userId:auth.userId,workspaceId:state.context?.workspace_id};
   }
   const signedDraftRoute=requested==='tradelink'&&state.tradeLinkSection==='drafts';
   const editId=signedDraftRoute&&parts[4]==='edit'&&validUuid(parts[5])?

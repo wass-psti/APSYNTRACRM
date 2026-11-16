@@ -308,3 +308,16 @@ test('responsive palette and exact-commit Pages asset manifests include new asse
  assert.match(smoke,/frontend\/global-search\.js/);
  assert.match(smoke,/frontend\/global-search\.css/);
 });
+
+
+test('specialized native search results retain exact record identity in refreshable deep links',()=>{
+ assert.ok(app.includes("getHref:row=>'#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents/record/'+encodeURIComponent(row.documentId)"));
+ assert.ok(app.includes("getHref:row=>'#/boards/'+FRT_BOARD_ID+'/finance/record/'+encodeURIComponent(row.companyCode)+'/'+encodeURIComponent(row.requestId)"));
+ assert.ok(app.includes("getHref:row=>'#/time-tracker/attendance/'+encodeURIComponent(row.id)"));
+ assert.ok(app.includes("getHref:row=>'#/time-tracker/overtime/'+encodeURIComponent(row.id)"));
+ assert.ok(app.includes("getHref:row=>fuelTrackHref('requests')+'/record/'+encodeURIComponent(row.id)"));
+ assert.ok(app.includes("const routePath=hash.split('?')[0]"));
+ assert.ok(app.includes("query:routeQuery"));
+ assert.ok(app.includes("parts[1]==='attendance'&&validUuid(parts[2])"));
+ assert.ok(app.includes("parts[3]==='record'&&parts[4]&&validUuid(parts[5])"));
+});
