@@ -48,7 +48,9 @@ permissions:
 jobs:
   frontend-and-browser:
     name: Full regression, build and browser acceptance
-    runs-on: ubuntu-latest
+    # Pin to the newest Playwright 1.56-supported hosted image; ubuntu-latest
+    # currently resolves to Ubuntu 26.04, which this locked browser version rejects.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
