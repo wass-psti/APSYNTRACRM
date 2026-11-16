@@ -61,7 +61,7 @@ test('PDF printing requires a freshly verified Approved revision; no official te
  const app=await source('frontend/app.js');
  const ui=await source('frontend/tradelink-draft-workspace.js');
  const print=app.slice(app.indexOf('async function printTradeLinkDocument'),app.indexOf('async function commitTradeLinkDraft'));
- assert.match(print,/listed\.workflowState!=='approved'/);
+ assert.match(print,/targetRevision===listed\.revision&&listed\.workflowState!=='approved'/);
  assert.match(print,/record\.workflow_state!=='approved'/);
  assert.match(ui,/status==='approved'&&validUuid\(documentId\)/);
  assert.match(ui,/row\.workflowState!=='approved'\?' disabled/);

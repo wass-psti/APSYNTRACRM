@@ -2746,7 +2746,8 @@ async function printTradeLinkDocument(documentId,revision=null){
   const revisionMeta=bundle?.revisions?.find(row=>row.revision===targetRevision);
   if(!bundle||bundle.currentRevision!==listed.revision||!record||
    record.revision!==targetRevision||record.board_item_id!==listed.boardItemId||
-   record.document_type!==listed.documentType||revisionMeta?.approved!==true||
+   record.document_type!==listed.documentType||
+   (targetRevision===listed.revision&&listed.workflowState!=='approved')||revisionMeta?.approved!==true||
    record.approved!==true||record.workflow_state!=='approved'||
    (targetRevision===listed.revision&&record.document_number!==listed.documentNumber)||
    board?.board?.id!==TRADELINK_BOARD_ID||board.board.workspace_id!==ws||

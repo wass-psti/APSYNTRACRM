@@ -69,7 +69,7 @@ test('revision bundle rejects invalid document and revision identifiers before n
 });
 test('All Documents loads exact revision bundles and reprints only a verified approved historical revision',async()=>{
  const app=await readFile(new URL('../app.js',import.meta.url),'utf8');
- assert.match(app,/tradeLinkDraftWorkspace\.revisionBundle\(documentId\)/);
+ assert.match(app,/tradeLinkDraftWorkspace\.revisionBundle\(documentId,revision\)/);
  assert.match(app,/async function openTradeLinkDocumentRevision\(documentId,revision\)/);
  assert.match(app,/tradeLinkDraftWorkspace\.revisionBundle\(documentId,revision\)/);
  assert.match(app,/revisionMeta\?\.approved!==true/);
