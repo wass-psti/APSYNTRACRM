@@ -153,6 +153,7 @@ import {createFRTICObligation,recordFRTICSettlement} from './frt-intercompany-cl
 import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
 import {createSignedFRTRequest,updateSignedFRTFiling} from './frt-filing-workflow.js';
 import {renderFRTRequestWizard,enhanceFRTRequestWizard,collectFRTWizardRequest} from './frt-request-wizard.js';
+import {getFRTBrowserStorage,createFRTRequestDraftStore,createFRTDuplicateGuard,mountFRTRequestDraft} from './frt-request-draft.js';
 import {FRTRecipientClient} from './frt-recipient-client.js';
 import {mountFRTRecipientUI} from './frt-recipient-ui.js';
 import {renderFRTBoardSignedSnapshot} from './frt-board-signed-snapshot.js';
@@ -7786,6 +7787,10 @@ async function action(name,button){
    if(section==='new'){
     const workspaceId=state.context?.workspace_id,boardId=state.boardId;
     const actor=auth.userId,role=state.frtFinance.role,seq=routeSerial;
+    const draftStorage=getFRTBrowserStorage();
+    const draftStore=createFRTRequestDraftStore({storage:draftStorage,workspaceId,userId:actor});
+    const duplicateGuard=createFRTDuplicateGuard({storage:draftStorage,workspaceId,userId:actor});
+    let duplicateConfirmed=false,draftController=null;
     openModal(title,body,async form=>{
      if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
        auth.userId!==actor||state.context?.workspace_id!==workspaceId||
@@ -7794,12 +7799,37 @@ async function action(name,button){
      const payload=collectFRTWizardRequest(form);
      if(!state.frtFinance.companies.some(c=>c.code===payload.companyCode))
       throw new ApiError('Choose an authorized FRT company.',403);
+     if(!duplicateConfirmed&&duplicateGuard.isRecentDuplicate(payload)){
+      duplicateConfirmed=true;
+      const formElement=modal.querySelector('#modal-form');
+      let warning=formElement?.querySelector('[data-frt-duplicate-warning]');
+      if(!warning){
+       warning=document.createElement('p');
+       warning.className='note';
+       warning.setAttribute('role','alert');
+       warning.dataset.frtDuplicateWarning='true';
+       formElement?.insertBefore(warning,formElement.querySelector('.modal-actions'));
+      }
+      if(warning)warning.textContent='Potential duplicate: the same company, payee and total were submitted in this browser within the last 10 minutes. Review the request, then submit again to continue.';
+      throw new Error('Potential duplicate detected. Review the warning and submit again to continue.');
+     }
      await createSignedFRTRequest({auth,api:db,workspaceId,
       companyCode:payload.companyCode,role,data:payload});
+     duplicateGuard.record(payload);
+     draftController?.clear();
      await loadFRTFinance(payload.companyCode);
     },{submitLabel:'Submit Fund Request',
      successMessage:'Fund request saved with Not Filed status.'});
-    enhanceFRTRequestWizard(modal);
+    const wizard=enhanceFRTRequestWizard(modal);
+    draftController=mountFRTRequestDraft(modal,{store:draftStore,
+     companies:state.frtFinance.companies,wizard});
+    const wizardForm=modal.querySelector('#modal-form');
+    const resetDuplicateConfirmation=()=>{
+     duplicateConfirmed=false;
+     wizardForm?.querySelector('[data-frt-duplicate-warning]')?.remove();
+    };
+    wizardForm?.addEventListener('input',resetDuplicateConfirmation);
+    wizardForm?.addEventListener('change',resetDuplicateConfirmation);
     const recipientClient=new FRTRecipientClient({auth,api:db});
     void mountFRTRecipientUI(modal,{client:recipientClient,scope:()=>({
      workspaceId:state.context?.workspace_id,
