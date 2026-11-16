@@ -78,6 +78,7 @@ test('UI provides single and selected permanent-delete actions with explicit typ
  assert.match(app,/case 'board-card-permanent-delete'/);
  assert.match(app,/case 'trash-board-bulk-permanent-delete'/);
  assert.match(app,/fd\.get\('confirmDelete'\)/);
+ assert.match(app,/snapshot\.map\(board=>'<li>'\+e\(board\.name\)/);
  assert.match(app,/DELETE '\+snapshot\.length\+' BOARDS/);
  assert.match(app,/await trashPermanentDelete\.delete\(board\)/);
  assert.match(app,/await trashPermanentDelete\.deleteMany\(snapshot/);
@@ -91,6 +92,9 @@ test('SQL requires trashed state and existing signed manage access; preserves st
  assert.match(sql,/private\.wm_board_is_protected\(b\.id\)/);
  assert.match(sql,/work_board_item_files/);
  assert.match(sql,/storage\.objects/);
+ assert.match(sql,/public\.timetracker_attendance_mutation_audit/);
+ assert.match(sql,/public\.tradelink_document_events/);
+ assert.match(sql,/private\.mrh_material_create_requests/);
  assert.match(sql,/DELETE FROM public\.work_boards WHERE id = b\.id/);
  assert.doesNotMatch(sql,/DELETE FROM (?:auth\.users|public\.profiles|public\.workspaces|storage\.objects)/i);
 });

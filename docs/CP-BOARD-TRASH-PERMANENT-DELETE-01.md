@@ -22,7 +22,7 @@ The pending migration under supabase/migration-candidates/ replaces that body wi
 - Existing database and Storage-file guards.
 - EXECUTE only for the existing authenticated role; PUBLIC and anon remain denied.
 
-No roles are created or modified. No Storage objects are deleted. Boards with attachments remain blocked until the existing file workflow resolves them. Child rows are removed only through existing board foreign-key cascade relationships.
+No roles are created or modified. No Storage objects are deleted. Boards with attachments remain blocked until the existing file workflow resolves them. Boards with TradeLink, Huly, Material Sourcing, TimeTracker audit/projection, or recoverable-QA references are also blocked; these existing RESTRICT/NO ACTION foreign keys protect module-owned records and operational audit history. Ordinary child rows are removed only through existing board foreign-key cascade relationships.
 
 ## Approval boundary
 

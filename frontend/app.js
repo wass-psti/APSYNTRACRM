@@ -7741,7 +7741,7 @@ async function action(name,button){
   openModal('Permanently delete board',
    '<div class="note security-note" role="note"><p><strong>'+e(board.name)+'</strong></p>'+
    '<p>All board records and related history will be permanently removed. This cannot be undone.</p>'+
-   '<p>Boards with attached or pending Storage files cannot be deleted until those files are resolved.</p></div>'+
+   '<p>Boards with attached files or retained module/audit records cannot be deleted until their owning workflows resolve them.</p></div>'+
    input('Type DELETE to confirm','confirmDelete','','text'),
    async fd=>{
     if(String(fd.get('confirmDelete')||'').trim()!=='DELETE')
@@ -7783,7 +7783,8 @@ async function action(name,button){
   openModal('Permanently delete '+snapshot.length+' boards',
    '<div class="note security-note" role="note"><p><strong>This permanently deletes '+snapshot.length+
    ' selected boards and their records.</strong></p><p>There is no undo. Individual deletions may succeed before a later board fails; remaining boards will not be retried automatically.</p>'+
-   '<p>Boards with Storage files cannot be deleted until those files are resolved.</p></div>'+
+   '<p>Boards with attached files or retained module/audit records cannot be deleted until their owning workflows resolve them.</p>'+
+   '<ul class="trash-delete-board-list">'+snapshot.map(board=>'<li>'+e(board.name)+'</li>').join('')+'</ul></div>'+
    '<div class="field"><label for="modal-confirm-bulk-delete">Type DELETE '+snapshot.length+' BOARDS to confirm</label>'+
    '<input id="modal-confirm-bulk-delete" name="confirmDelete" required autocomplete="off"/></div>',
    async fd=>{

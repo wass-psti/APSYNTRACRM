@@ -12,7 +12,16 @@ BEGIN
      OR to_regprocedure('private.wm_board_config_session_active()') IS NULL
      OR to_regprocedure('private.wm_board_is_protected(uuid)') IS NULL
      OR to_regprocedure('public.wm_delete_board_permanently(uuid)') IS NULL
-     OR to_regclass('storage.objects') IS NULL THEN
+     OR to_regclass('storage.objects') IS NULL
+     OR to_regclass('huly_rewrite.documents') IS NULL
+     OR to_regclass('private.mrh_board_item_tasks') IS NULL
+     OR to_regclass('private.mrh_material_create_requests') IS NULL
+     OR to_regclass('private.mrh_sourcing_sensitive_cells') IS NULL
+     OR to_regclass('public.timetracker_attendance_mutation_audit') IS NULL
+     OR to_regclass('public.tradelink_document_events') IS NULL
+     OR to_regclass('public.tradelink_documents') IS NULL
+     OR to_regclass('private.tt_attendance_board_projection') IS NULL
+     OR to_regclass('private.wm_recoverable_column_qa_scope') IS NULL THEN
     RAISE EXCEPTION 'CP-BOARD-TRASH-PERMANENT-DELETE-01 prerequisites are not installed'
       USING ERRCODE='55000';
   END IF;
@@ -62,7 +71,23 @@ BEGIN
       USING ERRCODE='55000';
   END IF;
 
-  -- Child board records use the established ON DELETE CASCADE relationships.
+  -- Preserve module-owned records and immutable operational audit references.
+  -- These tables deliberately use RESTRICT/NO ACTION foreign keys. Check them
+  -- explicitly so users receive a safe explanation instead of a raw FK error.
+  IF EXISTS (SELECT 1 FROM huly_rewrite.documents WHERE board_id = b.id)
+     OR EXISTS (SELECT 1 FROM private.mrh_board_item_tasks WHERE board_id = b.id)
+     OR EXISTS (SELECT 1 FROM private.mrh_material_create_requests WHERE board_id = b.id)
+     OR EXISTS (SELECT 1 FROM private.mrh_sourcing_sensitive_cells WHERE board_id = b.id)
+     OR EXISTS (SELECT 1 FROM public.timetracker_attendance_mutation_audit WHERE board_id = b.id)
+     OR EXISTS (SELECT 1 FROM public.tradelink_document_events WHERE board_id = b.id)
+     OR EXISTS (SELECT 1 FROM public.tradelink_documents WHERE board_id = b.id)
+     OR EXISTS (SELECT 1 FROM private.tt_attendance_board_projection WHERE board_id = b.id)
+     OR EXISTS (SELECT 1 FROM private.wm_recoverable_column_qa_scope WHERE board_id = b.id) THEN
+    RAISE EXCEPTION 'Board has retained module records or operational audit references; resolve them through the owning module before permanent deletion'
+      USING ERRCODE='55000';
+  END IF;
+
+  -- Ordinary child board records use established ON DELETE CASCADE relationships.
   -- No user/profile/workspace records or Storage objects are deleted here.
   DELETE FROM public.work_boards WHERE id = b.id;
 END

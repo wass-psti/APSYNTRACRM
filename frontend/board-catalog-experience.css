@@ -404,7 +404,7 @@
  font-variant-numeric:tabular-nums;
 }
 #app .aps-boards .board-trash-select{
- display:inline-flex;align-items:center;gap:6px;min-height:32px;
+ display:inline-flex;pointer-events:auto;position:relative;z-index:3;align-items:center;gap:6px;min-height:32px;
  padding:5px 8px;border:1px solid #dce3f0;border-radius:8px;
  background:#f7f9fd;color:#66738d;font-size:10px;font-weight:750;
  cursor:pointer;user-select:none;
@@ -427,3 +427,9 @@
  color:#fff;border-radius:9px;padding:10px 14px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 #app .aps-boards .boards-trash-bulk .board-modal-danger:hover:not(:disabled){background:#a93749}
 #app .aps-boards .boards-trash-bulk .board-modal-danger:focus-visible{outline:3px solid #bd6373;outline-offset:2px}
+
+#app .aps-boards .trash-delete-board-list{
+ margin:10px 0 0;padding:10px 12px 10px 30px;max-height:180px;overflow:auto;
+ border:1px solid #e8dce0;border-radius:9px;background:#fff9fa;
+ color:#5d3540;font-size:12px;line-height:1.65;
+}

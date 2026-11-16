@@ -25,7 +25,7 @@ export class BoardTrashPermanentDeleteClient{
    if(!await this.api.allowed(board.id,'manage'))
     throw new ApiError('Board management permission required.',403);
    const current=(await this.api.board(board.id,{complete:false,includeItems:false}))?.board;
-   if(!eligibleTrashBoard(current)||current.workspace_id!==ctx.workspace_id||
+   if(!eligibleTrashBoard(current)||current.id!==board.id||current.workspace_id!==ctx.workspace_id||
       current.name!==board.name||current.status!==board.status||
       (board.updated_at&&current.updated_at!==board.updated_at))
     throw conflict('Board changed or is no longer in this workspace. Refresh Trash before deleting.');
@@ -56,7 +56,7 @@ export class BoardTrashPermanentDeleteClient{
      deleted.length+' of '+boards.length+' boards deleted before deletion stopped at "'+
       board.name+'": '+(error?.message||'Unknown result')+
       '. Refresh Trash and review remaining boards before retrying.',
-     error?.status||409);
+     409,'BOARD_DELETE_PARTIAL_OR_UNCERTAIN');
     failure.deletedIds=deleted;
     failure.cause=error;
     throw failure;

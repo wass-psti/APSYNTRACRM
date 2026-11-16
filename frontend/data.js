@@ -143,7 +143,7 @@ const BOARD_READ_RPC=new Set([
 const BOARD_MUTATION_RPC=new Set([
  // Core board structure, item and import writes.
  'wm_add_board_group','wm_add_board_item','wm_create_board','wm_create_board_configured',
- 'wm_delete_board_item','wm_import_board_wizard_atomic','wm_managed_board_delete_empty_group',
+ 'wm_delete_board_item','wm_delete_board_permanently','wm_import_board_wizard_atomic','wm_managed_board_delete_empty_group',
  'wm_set_board_cell_if_current','wm_set_board_status_labels',
  'wm_update_board_group','wm_update_board_item','wm_board_bulk_mutate',
  'wm_board_card_mutate','wm_board_group_cas','wm_board_schema_mutate','wm_board_ui_save',

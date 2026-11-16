@@ -116,7 +116,7 @@ test('successful mutating RPC publishes one scoped hint, failed RPC publishes no
 test('all reviewed board and module write RPCs publish cross-window invalidations after success',async()=>{
  const writes=[
   'wm_add_board_group','wm_add_board_item','wm_create_board','wm_create_board_configured',
-  'wm_delete_board_item','wm_import_board_wizard_atomic','wm_managed_board_delete_empty_group',
+  'wm_delete_board_item','wm_delete_board_permanently','wm_import_board_wizard_atomic','wm_managed_board_delete_empty_group',
   'wm_set_board_cell_if_current','wm_set_board_status_labels','wm_update_board_group',
   'wm_update_board_item','wm_board_bulk_mutate','wm_board_card_mutate','wm_board_group_cas',
   'wm_board_schema_mutate','wm_board_ui_save','wm_ws01_config_update','wm_ws01_create',
@@ -190,7 +190,7 @@ test('reviewed mutation and read RPC contracts remain disjoint',()=>{
  };
  const reads=new Set(names('BOARD_READ_RPC'));
  const writes=names('BOARD_MUTATION_RPC');
- assert.equal(writes.length,59);
+ assert.equal(writes.length,60);
  assert.equal(new Set(writes).size,writes.length);
  assert.deepEqual(writes.filter(name=>reads.has(name)),[]);
 });
