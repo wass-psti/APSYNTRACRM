@@ -82,6 +82,7 @@ function renderCommercial(data,type,currency){
  const rows=[];
  const reference=data.poNumber||data.referenceNumber;
  if(reference)rows.push(['Reference',reference]);
+ if(type==='quotation'&&data.quoteStatus)rows.push(['Commercial status',data.quoteStatus]);
  if(data.paymentTerms)rows.push(['Payment terms',data.paymentTerms]);
  if(type==='quotation'||type==='po'){
   if(data.validity)rows.push(['Validity',data.validity]);

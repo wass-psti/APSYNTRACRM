@@ -12,7 +12,7 @@ import {TRADELINK_DEFAULT_COMPANY_PROFILE_ID,TRADELINK_COMPANY_PROFILE_OPTIONS,
  tradeLinkCompanyTemplateSnapshot,tradeLinkCompanyProfileIdFromTemplateId}
  from './tradelink-official-templates.js';
 import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
- TL03_DOMAIN_WRITES_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
+ TL03_DOMAIN_WRITES_ENABLED,TL03_AUTOMATIC_NUMBERING_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
  validateTradeLinkDraftEnvelope,
@@ -122,8 +122,12 @@ export function parseTradeLinkDraftForm(fields,{
    throw new ApiError('Invalid or missing TradeLink '+key+'.',400);
   if(text)draft[key]=text;
  };
- for(const key of ['customerName','referenceNumber','remarks',
+ for(const key of ['date','dueDate','customerName','referenceNumber','remarks',
   'verifiedBy','verifiedByEmail','approvedBy','approvedByEmail'])addText(key);
+ const validDocumentDate=value=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value)&&
+  Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
+ if(!validDocumentDate(draft.date)||!validDocumentDate(draft.dueDate))
+  throw new ApiError('Enter valid document and due dates.',400);
  for(const emailKey of ['verifiedByEmail','approvedByEmail']){
   const email=draft[emailKey];
   if(email&&(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))
@@ -275,7 +279,16 @@ export function parseTradeLinkDraftForm(fields,{
     throw new ApiError('Invalid supplier PO delivery date.',400);
   }
  }
- return validateTradeLinkDraftEnvelope(validateTradeLinkModuleAccountAssignments(draft));
+ if(type==='quotation'){
+  const quoteStatus=value('quoteStatus');
+  if(quoteStatus){
+   if(!['Working on it','Sent','Client Review','Accepted','Declined','On Hold','Closed'].includes(quoteStatus))
+    throw new ApiError('Select a valid Quotation commercial status.',400);
+   draft.quoteStatus=quoteStatus;
+  }
+ }
+ return validateTradeLinkDraftEnvelope(validateTradeLinkModuleAccountAssignments(draft),
+  {allowUnassignedNumber:true});
 }
 /**
  * Keep the exact payload (including line ID) for ambiguous create retries.
@@ -367,7 +380,11 @@ export function reconcileTradeLinkSavedListing(list,record,receipt){
 }
 
 export class TradeLinkDraftWorkspace{
- constructor({auth,api}={}){this.client=new TradeLinkDomainClient({auth,api});}
+ constructor({auth,api,automaticNumberingEnabled=TL03_AUTOMATIC_NUMBERING_ENABLED}={}){
+  this.automaticNumberingEnabled=automaticNumberingEnabled===true;
+  this.client=new TradeLinkDomainClient({auth,api,
+   automaticNumberingEnabled:this.automaticNumberingEnabled});
+ }
  async analyticsSummary(period={}){
   return this.client.analyticsSummary(period);
  }
@@ -435,9 +452,10 @@ export class TradeLinkDraftWorkspace{
  }
  async save({documentId,expectedRevision=0,draft,initialState='for-approval'}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
-  const payload=validateTradeLinkDraftEnvelope(applyQuotationApprovalHierarchy(draft));
-  const id=documentId||globalThis.crypto?.randomUUID?.();
   const operation=expectedRevision===0?'create':'update';
+  const payload=validateTradeLinkDraftEnvelope(applyQuotationApprovalHierarchy(draft),
+   {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
+  const id=documentId||globalThis.crypto?.randomUUID?.();
   return this.client.commit({documentId:id,expectedRevision,operation,
    draft:payload,initialState});
  }
@@ -956,9 +974,6 @@ const referenceTitles=Object.freeze({
  payment:'Electronic Payment Acknowledgement Receipt',
  quotation:'Quotation',po:'Purchase Order to Suppliers'
 });
-const referencePrefixes=Object.freeze({
- esi:'ESI-',packing:'PL-',delivery:'DR-',payment:'AR-',quotation:'Q-',po:'PO-'
-});
 /** Screenshot-derived suggestions, not server-managed records or workflow states.
  * Native datalists permit the user's custom text without changing the domain schema. */
 export const TRADELINK_COMMERCIAL_SUGGESTIONS=Object.freeze({
@@ -1133,8 +1148,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const commonPartyLabel=type==='packing'?'Consignee':type==='delivery'?'Recipient / consignee':
   payment?'Payor':type==='po'?'Supplier':type==='esi'?'Invoice client':
   type==='quotation'?'Prospective client':'Customer / supplier';
- const localDate=new Date().toLocaleDateString('en-US',{
-  year:'numeric',month:'2-digit',day:'2-digit'});
+ const now=new Date();
+ const localDateInput=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),
+  String(now.getDate()).padStart(2,'0')].join('-');
  return '<section class="tl-draft-panel tl-reference-editor" aria-labelledby="tl-draft-editor-title">'+
   referenceDocumentHeader(type,editing,live,workflowState,documentId)+
   (error?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
@@ -1169,14 +1185,15 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        return '<option value="'+escape(id)+'"'+(id===selectedStatus?' selected':'')+
         (disabled?' disabled':'')+'>'+escape(label)+'</option>';
       }).join('')+'</select><small id="tl-reference-status-help">Save defaults to For Approval. Select Draft explicitly to save as Draft. Approved is assigned automatically after both reviewers validate.</small></label>'+
-     '<label class="tl-draft-field"><span>Number</span>'+
-      '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+
-       '" required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" '+
-       'placeholder="'+escape(referencePrefixes[type]||'DOC-')+'Enter a reference" '+
+     '<label class="tl-draft-field"><span>Document number</span>'+
+      '<input name="documentNumber" value="'+escape(fieldValue('documentNumber',data.documentNumber||''))+'" '+
+       (editing||TL03_AUTOMATIC_NUMBERING_ENABLED?'readonly ':'required maxlength="120" pattern="[A-Za-z0-9][A-Za-z0-9._ /-]*" ')+
        'aria-describedby="tl-reference-number-help">'+
-      '<small id="tl-reference-number-help">Enter a Draft number for local validation; no number is assigned or saved automatically.</small></label>'+
-     '<div class="tl-reference-static-field"><span>Date · local only</span>'+
-      '<output>'+escape(localDate)+'</output></div>'+
+      '<small id="tl-reference-number-help">'+(editing?'Assigned number is permanent and remains unchanged across revisions.':
+       TL03_AUTOMATIC_NUMBERING_ENABLED?'Automatically assigned by the database when this document is first saved.':
+       'Enter the existing source document number. Automatic numbering is staged until its additive database migration is activated.')+'</small></label>'+
+     '<label class="tl-draft-field"><span>Document date</span>'+
+      '<input name="date" type="date" value="'+escape(fieldValue('date',data.date||(!editing?localDateInput:'')))+'"></label>'+
      '<div class="tl-reference-static-field tl-reference-revision"><span>Revision No.</span>'+
       '<output>'+(editing?escape(row?.revision??'—'):'0 · Local preview')+'</output></div>'+
      '<label class="tl-draft-field tl-reference-company-profile"><span>Company / legal entity</span>'+
@@ -1194,9 +1211,14 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
      field(physical?'Source reference':'Reference information','referenceNumber',
       fieldValue('referenceNumber',data.referenceNumber||''),
       'maxlength="5000"'+(physical?' required':''))+
+     field('Due date (optional)','dueDate',fieldValue('dueDate',data.dueDate||''),'type="date"')+
      (type==='esi'?field('Client tax identity / TIN','customerTin',
       fieldValue('customerTin',data.customerTin||''),'maxlength="5000" required'):'')+
      (type==='quotation'?
+      '<label class="tl-draft-field"><span>Quotation commercial status</span><select name="quoteStatus">'+
+       options([['','Not recorded'],['Working on it','Working on it'],['Sent','Sent'],['Client Review','Client Review'],
+        ['Accepted','Accepted'],['Declined','Declined'],['On Hold','On Hold'],['Closed','Closed']],
+        fieldValue('quoteStatus',data.quoteStatus||(editing?'':'Working on it')))+'</select><small>Commercial status is separate from the signed approval and document workflow state. Older records without a value remain Not recorded until selected.</small></label>'+
       field('Client email (or phone)','customerEmail',fieldValue('customerEmail',data.customerEmail||''),
        'type="email" maxlength="5000"')+
       field('Client phone (or email)','customerPhone',fieldValue('customerPhone',data.customerPhone||''),

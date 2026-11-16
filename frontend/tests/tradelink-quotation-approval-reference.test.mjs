@@ -88,5 +88,5 @@ test('fixed quotation hierarchy is applied to all Draft saves, including malicio
  assert.throws(()=>applyQuotationApprovalHierarchy({...temporary,documentNumber:'Q-UNRELATED-01'}),/authorized Quotation management approver/);
  assert.equal(applyQuotationApprovalHierarchy({documentType:'esi',verifiedBy:'Finance'}).verifiedBy,'Finance');
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(source,/validateTradeLinkDraftEnvelope\(applyQuotationApprovalHierarchy\(draft\)\)/);
+ assert.match(source,/validateTradeLinkDraftEnvelope\(applyQuotationApprovalHierarchy\(draft\),\s*\{allowUnassignedNumber:operation==='create'&&this\.automaticNumberingEnabled\}\)/);
 });

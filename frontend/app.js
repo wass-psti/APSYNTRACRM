@@ -186,7 +186,7 @@ import {timeTrackerGpsWindow,summarizeGps} from './time-tracker-gps.js';
 import {TT_BOARD_GPS_PROJECTION_ENABLED,loadTimeTrackerBoardGps,renderTimeTrackerBoardGps} from './time-tracker-board-projection.js';
 import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
-import {clockOutSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
+import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
 import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
@@ -1048,7 +1048,7 @@ function issuesPage(){
 
 function renderTimeTrackerApplication(){
  return renderTimeTrackerNative({
-  result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,
+  result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,clockPendingAction:state.ttClockPending?.action||'clock-out',
   error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,
   view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,
   reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,
@@ -1175,7 +1175,7 @@ function boardPage(){
   '>'+t.label+'</a></div>').join('')}</div>
 
 <div data-board-live-content>
-${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId,statusFilter:state.frtStatusFilter,view:state.frtFinanceView}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otExpandedRequestIds:state.ttOtExpandedRequestIds,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
+${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId,statusFilter:state.frtStatusFilter,view:state.frtFinanceView}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
  ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
@@ -2787,16 +2787,17 @@ async function commitTradeLinkDraft(form){
    db.board(TRADELINK_BOARD_ID)
   ]);
   if(!same())return;
+  const savedDraft={...draft,documentNumber:receipt.documentNumber||draft.documentNumber};
   if(!record||record.revision!==receipt.revision||
    record.board_item_id!==receipt.boardItemId||
-   record.document_number!==draft.documentNumber||
-   record.content?.documentNumber!==draft.documentNumber||
+   record.document_number!==savedDraft.documentNumber||
+   record.content?.documentNumber!==savedDraft.documentNumber||
    record.content?.documentType!==draft.documentType||
-   !tradeLinkSavedDraftMatches(record,draft)||
+   !tradeLinkSavedDraftMatches(record,savedDraft)||
    record.workflow_state!==workflowState||
    board?.board?.workspace_id!==ws||
    !board.items?.some(item=>item.id===receipt.boardItemId&&
-    item.title===draft.documentNumber))
+    item.title===savedDraft.documentNumber))
    throw new ApiError('Saved document/Board projection verification incomplete.',409);
   // The original signed list is bounded to 50. Its absence is not proof
   // that an exactly read and Board-verified saved document was not committed.
@@ -2805,7 +2806,7 @@ async function commitTradeLinkDraft(form){
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
    status:'AUTHORIZED_READ',rows:verifiedList.rows,
    message:'Saved '+(workflowState==='draft'?'Draft':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
-  toast('Document saved. Board item and All Documents verified.');
+  toast('Document '+savedDraft.documentNumber+' saved. Board item and All Documents verified.');
   location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
  }catch(err){
   if(same()){
@@ -3601,21 +3602,27 @@ async function loadTimeTrackerTeam(seq=routeSerial){
 function reconcileTimeTrackerClock(snapshot,{allowRetry=false}={}){
  const pending=state.ttClockPending;
  if(!pending)return null;
- const outcome=clockOutSnapshotOutcome(snapshot,pending);
+ const action=pending.action||'clock-out';
+ const outcome=attendanceSnapshotOutcome(snapshot,pending);
  if(outcome==='CONFIRMED'){
   state.ttClockPending=null;
-  state.ttSuccess='Clock Out confirmed in your signed PostgreSQL attendance record.';
+  state.ttSuccess=(action==='clock-in'?'Clock In':'Clock Out')+
+   ' confirmed in your signed PostgreSQL attendance record.';
   state.ttError='';
- }else if(outcome==='STILL_ACTIVE'&&allowRetry&&!pending.receiptVerified){
+ }else if(allowRetry&&!pending.receiptVerified&&
+   ((action==='clock-out'&&outcome==='STILL_ACTIVE')||
+    (action==='clock-in'&&outcome==='NOT_COMMITTED'))){
   // Only a distinct, user-triggered signed reconciliation may unlock another
   // submission. The database's per-actor transaction lock still rejects races.
   state.ttClockPending=null;
   state.ttSuccess='';
-  state.ttError='Your signed attendance record is still active. Clock Out was not completed; you may try again.';
+  state.ttError=action==='clock-in'?
+   'Clock In was not committed. Your signed attendance state is unchanged; you may try again.':
+   'Your signed attendance record is still active. Clock Out was not completed; you may try again.';
  }
  return outcome;
 }
-async function verifyTimeTrackerClockOut(){
+async function verifyTimeTrackerAttendance(){
  const pending=state.ttClockPending;
  if(!pending||state.ttBusy||!auth.isSignedIn||
     state.view!=='board'||state.tab!=='attendance'||state.boardId!==pending.boardId||
@@ -3630,12 +3637,12 @@ async function verifyTimeTrackerClockOut(){
      state.context?.workspace_id!==pending.workspaceId)return;
   state.ttAttendance=snapshot;
   if(reconcileTimeTrackerClock(snapshot,{allowRetry:true})==='UNVERIFIED')
-   state.ttError='The server has not confirmed this attendance record yet. Refresh your signed session before attempting another Clock Out.';
+   state.ttError='The server has not confirmed this attendance action yet. Refresh your signed session before trying again.';
  }catch(err){
   if(seq===routeSerial&&run===state.ttRunId)
    state.ttError=attendanceAuthFailure(err)?
     attendanceClockError(err):
-    'Attendance status could not be verified. The End Session action remains locked to prevent duplicate requests.';
+    'Attendance status could not be verified. The attendance action remains locked to prevent duplicate requests.';
  }finally{
   if(seq===routeSerial&&run===state.ttRunId){state.ttBusy=false;render();}
  }
@@ -3657,7 +3664,9 @@ async function submitTimeTrackerAction(form,actionName){
  const workNote=String(form.querySelector('#tt-note')?.value||'');
  const seq=routeSerial,run=++state.ttRunId,identity=state.context.user_id,
   ws=state.context.workspace_id,boardId=state.boardId;
- const context={recordId:active?.id,userId:identity,workspaceId:ws,boardId};
+ const context={action:actionName,recordId:active?.id||null,userId:identity,workspaceId:ws,boardId,
+  baselineRevision:Number(state.ttAttendance.revision)||0,
+  previousRecordIds:state.ttAttendance.records.map(row=>row.id),location,department};
  const sameSession=()=>seq===routeSerial&&run===state.ttRunId&&auth.isSignedIn&&
   state.boardId===boardId&&state.context?.user_id===identity&&
   state.context?.workspace_id===ws;
@@ -3674,21 +3683,21 @@ async function submitTimeTrackerAction(form,actionName){
   state.ttSuccess=(receipt.action==='clock-in'?'Clock In':'Clock Out')+
    ' confirmed by PostgreSQL · revision '+receipt.revision;
   // The commit receipt is authoritative; a failed refresh is not a failed write.
-  if(actionName==='clock-out')state.ttClockPending={...context,receiptVerified:true};
+  state.ttClockPending={...context,recordId:receipt.recordId,receiptVerified:true};
   try{
    const snapshot=await timeTracker.snapshot(boardId);
    if(!sameSession())return;
    state.ttAttendance=snapshot;
-   if(actionName==='clock-out'&&reconcileTimeTrackerClock(snapshot)!=='CONFIRMED')
-    state.ttError='Clock Out was committed, but the current session view is not reconciled. Select Verify session status.';
+   if(reconcileTimeTrackerClock(snapshot)!=='CONFIRMED')
+    state.ttError=(actionName==='clock-in'?'Clock In':'Clock Out')+
+     ' was committed, but the current session view is not reconciled. Select Verify session status.';
   }catch{
-   if(sameSession())state.ttError=actionName==='clock-out'?
-    'Clock Out was committed, but the refreshed session is unavailable. Select Verify session status.':
-    'Clock In was committed, but the refreshed session is unavailable. Refresh the board before further attendance actions.';
+   if(sameSession())state.ttError=(actionName==='clock-out'?'Clock Out':'Clock In')+
+    ' was committed, but the refreshed session is unavailable. Select Verify session status.';
   }
  }catch(err){
   if(!sameSession())return;
-  if(actionName==='clock-out'&&commitAttempted){
+  if(commitAttempted){
    state.ttClockPending=context;
    if(!attendanceAuthFailure(err)){
     try{
@@ -3700,7 +3709,7 @@ async function submitTimeTrackerAction(form,actionName){
     }catch{/* Uncertain outcome: never retry the write automatically. */}
    }
   }
-  state.ttError=attendanceClockError(err,{commitAttempted});
+  state.ttError=attendanceClockError(err,{commitAttempted,action:actionName});
  }finally{
   if(sameSession()){state.ttBusy=false;render();}
  }
@@ -6903,7 +6912,7 @@ async function action(name,button){
   }
   case 'board-load-more':{await loadMoreBoardItems();break;}
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
- case 'tt-clock-verify':{await verifyTimeTrackerClockOut();break;}
+ case 'tt-clock-verify':{await verifyTimeTrackerAttendance();break;}
  case 'tt-refresh':{if(!state.ttBusy){const team=state.ttView==='team',gps=state.ttView==='gps',log=state.ttView==='log';await loadTimeTracker();if(team&&state.roleVerified===true&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerTeam();if(gps&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerGps();if(log&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerLogGps();}break;}
  case 'tt-tab':{
   if(state.ttBusy||state.view!=='board'||state.tab!=='attendance'||
