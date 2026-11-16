@@ -250,7 +250,7 @@ const tradeLinkNativeSearchAdapter=createNativeSearchAdapter({
    });
    return page.rows;
   }catch(error){
-   if(error?.status!==403&&error?.status!==401)throw error;
+   if(error?.status!==403)throw error;
   }
   const rows=await tradeLinkDraftWorkspace.assignedDocuments(bounded);
   const terms=String(query||'').toLocaleLowerCase().split(/\s+/).filter(Boolean);
