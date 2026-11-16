@@ -127,7 +127,7 @@ test('all reviewed board and module write RPCs publish cross-window invalidation
   'tl03_document_commit','tl03_document_decide','tl03_document_operate','tl03_document_review',
   'tl03_document_submit','tl03_document_save','tl03_document_status_update',
   'tl03_record_review_stage','tl03_attachment_finish','tl03_attachment_prepare',
-  'tl03_attachment_remove','tl03_record_pdf_approval_stage','frt_assign_request_person',
+  'tl03_attachment_remove','tl03_record_pdf_approval_stage','frt_add_comment','frt_assign_request_person',
   'frt_create_request','frt_ic_create_obligation','frt_ic_record_settlement',
   'frt_record_bank_execution','frt_request_action','frt_request_assignment','frt_restore_request','frt_save_recipient',
   'frt_set_recipient_qr','frt_set_request_filing_status','frt_submit_liquidation_v2',
@@ -185,7 +185,7 @@ test('overview board item totals use the refreshed signed board-list snapshot',a
 test('all native global-search read RPCs preserve cached Board snapshots',async()=>{
  const names=[
   'tl03_documents_page','tl03_document_read','tl03_document_history','frt_bootstrap','frt_board_list_safe',
-  'frt_board_dashboard_safe','frt_liquidation_aging_company','frt_archive_list',
+  'frt_board_dashboard_safe','frt_liquidation_aging_company','frt_archive_list','frt_archive_list',
   'frt_restricted_request_detail','frt_ic_snapshot',
   'list_module_state','timetracker_ot_snapshot','timetracker_attendance_capabilities',
   'timetracker_board_private_snapshot','timetracker_team_directory_snapshot',
