@@ -66,10 +66,26 @@ test("critical production impact and the independent production-stopped flag are
   assert.equal(result.data.safetyConcern, true);
 });
 
-test("the exported intake contract is a Zod schema with the expected constraints", () => {
+test("the exported intake schema exposes safeParse with the expected constraints", () => {
   assert.equal(fm1IntakeSchema.safeParse(valid).success, true);
   assert.equal(
     fm1IntakeSchema.safeParse({ ...valid, priority: "P5" }).success,
     false,
   );
+});
+
+test("the intake schema supplies documented optional defaults and strips unknown fields", () => {
+  const required = { ...valid };
+  delete required.productionStopped;
+  delete required.safetyConcern;
+  delete required.assetReference;
+  const result = fm1IntakeSchema.safeParse({
+    ...required,
+    unexpected: "ignored",
+  });
+  assert.equal(result.success, true);
+  assert.equal(result.data.productionStopped, false);
+  assert.equal(result.data.safetyConcern, false);
+  assert.equal(result.data.assetReference, "");
+  assert.equal("unexpected" in result.data, false);
 });

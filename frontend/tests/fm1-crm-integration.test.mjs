@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const index = readFileSync(
@@ -70,4 +72,37 @@ test("FM1 browser UI does not introduce a new role or permission gate", () => {
     app,
     /if\(\['role-configuration','user-role-management','foundation','acceptance'\]\.includes\(state\.view\)\)/,
   );
+});
+
+test("FM1 browser module graph uses only relative imports for GitHub Pages native ESM", () => {
+  const root = fileURLToPath(new URL("../fm1/", import.meta.url));
+  const modules = [];
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) visit(path);
+      else if (entry.isFile() && path.endsWith(".js")) {
+        modules.push({ path, source: readFileSync(path, "utf8") });
+      }
+    }
+  };
+  visit(root);
+
+  const unresolved = [];
+  for (const module of modules) {
+    const imports = [
+      ...module.source.matchAll(/\b(?:from\s*|import\s*)["']([^"']+)["']/g),
+      ...module.source.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g),
+    ];
+    for (const match of imports) {
+      if (!match[1].startsWith("./") && !match[1].startsWith("../")) {
+        unresolved.push({
+          module: module.path.replace(root, ""),
+          specifier: match[1],
+        });
+      }
+    }
+  }
+  assert.deepEqual(unresolved, []);
+  assert.ok(modules.length >= 5, "all FM1 browser modules should be inspected");
 });

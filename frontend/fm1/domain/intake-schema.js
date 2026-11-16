@@ -1,32 +1,104 @@
-import { z } from "zod";
+const PRIORITIES = new Set(["P1", "P2", "P3", "P4"]);
+const IMPACTS = new Set(["critical", "degraded", "no-impact"]);
+const CHANNELS = new Set(["portal", "email", "telephone"]);
 
-export const fm1IntakeSchema = z.object({
-  requesterName: z
-    .string()
-    .trim()
-    .min(2, "Requester name must contain at least 2 characters.")
-    .max(120, "Requester name must not exceed 120 characters."),
-  callbackNumber: z
-    .string()
-    .trim()
-    .min(7, "Callback number must contain at least 7 characters.")
-    .max(32, "Callback number must not exceed 32 characters."),
-  subject: z
-    .string()
-    .trim()
-    .min(4, "Subject must contain at least 4 characters.")
-    .max(160, "Subject must not exceed 160 characters."),
-  description: z
-    .string()
-    .trim()
-    .min(10, "Description must contain at least 10 characters.")
-    .max(4000, "Description must not exceed 4000 characters."),
-  priority: z.enum(["P1", "P2", "P3", "P4"]),
-  productionImpact: z.enum(["critical", "degraded", "no-impact"]),
-  productionStopped: z.boolean().default(false),
-  safetyConcern: z.boolean().default(false),
-  channel: z.enum(["portal", "email", "telephone"]),
-  assetReference: z.string().trim().max(160).default(""),
+function issue(path, message) {
+  return { path, message };
+}
+
+function expectedType(value) {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+
+function validateFm1Intake(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return {
+      success: false,
+      error: {
+        issues: [issue([], "Intake payload must be an object.")],
+      },
+    };
+  }
+
+  const issues = [];
+  const data = {};
+
+  const stringField = (field, { min = 0, max, defaultValue } = {}) => {
+    let value = input[field];
+    if (value === undefined && defaultValue !== undefined) {
+      value = defaultValue;
+    }
+    if (typeof value !== "string") {
+      issues.push(
+        issue(
+          [field],
+          "Expected string, received " + expectedType(value) + ".",
+        ),
+      );
+      return;
+    }
+    value = value.trim();
+    if (value.length < min) {
+      issues.push(
+        issue(
+          [field],
+          field + " must contain at least " + min + " characters.",
+        ),
+      );
+    }
+    if (max !== undefined && value.length > max) {
+      issues.push(
+        issue([field], field + " must not exceed " + max + " characters."),
+      );
+    }
+    data[field] = value;
+  };
+
+  const enumField = (field, allowed) => {
+    const value = input[field];
+    if (typeof value !== "string" || !allowed.has(value)) {
+      issues.push(issue([field], "Select a valid " + field + "."));
+      return;
+    }
+    data[field] = value;
+  };
+
+  const booleanField = (field) => {
+    const value = input[field] === undefined ? false : input[field];
+    if (typeof value !== "boolean") {
+      issues.push(
+        issue(
+          [field],
+          "Expected boolean, received " + expectedType(value) + ".",
+        ),
+      );
+      return;
+    }
+    data[field] = value;
+  };
+
+  stringField("requesterName", { min: 2, max: 120 });
+  stringField("callbackNumber", { min: 7, max: 32 });
+  stringField("subject", { min: 4, max: 160 });
+  stringField("description", { min: 10, max: 4000 });
+  enumField("priority", PRIORITIES);
+  enumField("productionImpact", IMPACTS);
+  booleanField("productionStopped");
+  booleanField("safetyConcern");
+  enumField("channel", CHANNELS);
+  stringField("assetReference", { max: 160, defaultValue: "" });
+
+  return issues.length
+    ? { success: false, error: { issues } }
+    : { success: true, data };
+}
+
+// Keep the small safeParse contract available to tests and future form consumers
+// without adding a runtime dependency to the CRM's Node-only CI path.
+export const fm1IntakeSchema = Object.freeze({
+  safeParse: validateFm1Intake,
 });
 
 export function parseFm1Intake(values = {}) {
@@ -35,9 +107,9 @@ export function parseFm1Intake(values = {}) {
   return {
     ok: false,
     data: null,
-    errors: result.error.issues.map((issue) => ({
-      field: issue.path.join("."),
-      message: issue.message,
+    errors: result.error.issues.map((item) => ({
+      field: item.path.join("."),
+      message: item.message,
     })),
   };
 }
