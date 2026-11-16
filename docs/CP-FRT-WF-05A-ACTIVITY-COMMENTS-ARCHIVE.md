@@ -28,6 +28,8 @@ Activate the existing FRT Activity Log, request discussion and Archive Storage i
 ## Verification
 
 - Frontend unit coverage: signed context, comment readback, archive restoration, role reuse, activity projection and CSV safety.
-- Disposable PostgreSQL acceptance script: `sql/tests/cp-frt-wf05a-operations-disposable.sql`.
+- Disposable PostgreSQL 17 acceptance script: `scripts/cp-frt-wf05a-disposable-acceptance.sh`.
+- Isolated fixture setup: `sql/tests/cp-frt-wf05a-disposable-setup.sql`.
+- Dedicated GitHub Actions workflow: `.github/workflows/cp-frt-wf05a.yml` runs the full frontend test suite, production build and disposable database acceptance.
 - Full repository CI and production build are required before merge.
 - Production migration activation is separate from disposable acceptance.
