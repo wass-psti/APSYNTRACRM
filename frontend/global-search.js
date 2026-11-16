@@ -282,6 +282,7 @@ export function startGlobalSearch({root=globalThis.document?.body,
   currentScopeKey='';boards=[];records=[];navigation=[];results=[];list.replaceChildren();
   const focus=previousFocus;previousFocus=null;
   if(restoreFocus&&focus?.isConnected)focus.focus({preventScroll:true});
+  else if(!restoreFocus)doc.activeElement?.blur?.();
  }
  async function open(){
   if(disposed||!currentScope())return false;
