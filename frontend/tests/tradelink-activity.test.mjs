@@ -67,5 +67,5 @@ test('existing signed server RPC and session-bound route checks are required bef
  assert.match(app,/state\.context\?\.workspace_id===workspaceId/);
  assert.match(app,/seq===routeSerial&&auth\.isSignedIn/);
  assert.match(app,/case 'tradelink-activity-refresh'/);
- assert.match(app,/state\.tradeLinkActivity=null;state\.tradeLinkActivityError='';state\.tradeLinkActivityBusy=false;state\.tradeLinkAnalytics=null;state\.tradeLinkAnalyticsError='';state\.tradeLinkAnalyticsBusy=false;state\.tl03ReadRunId\+\+;state\.tl03ReadBusy=false;state\.tl03ReadResult=null;state\.context=null;/);
+ assert.match(app,/state\.tradeLinkActivity=null;state\.tradeLinkActivityError='';state\.tradeLinkActivityBusy=false;state\.tradeLinkAnalytics=null;state\.tradeLinkAnalyticsError='';state\.tradeLinkAnalyticsRunId\+\+;state\.tradeLinkAnalyticsBusy=false;state\.tl03ReadRunId\+\+;state\.tl03ReadBusy=false;state\.tl03ReadResult=null;state\.context=null;/);
 });
