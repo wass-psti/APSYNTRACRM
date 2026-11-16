@@ -49,10 +49,10 @@ test('foreign/conflicting summary, missing signed list and forged receipts remai
 test('app verifies full saved envelope and Board projection before reconciling bounded list',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const commit=app.indexOf('const receipt=await tradeLinkDraftWorkspace.save(');
- const parity=app.indexOf('!tradeLinkSavedDraftMatches(record,draft)',commit);
+ const parity=app.indexOf('!tradeLinkSavedDraftMatches(record,savedDraft)',commit);
  const board=app.indexOf('!board.items?.some(item=>item.id===receipt.boardItemId',parity);
  const reconcile=app.indexOf('const verifiedList=reconcileTradeLinkSavedListing(list,record,receipt)',board);
- const toast=app.indexOf("toast('Document saved. Board item and All Documents verified.')",reconcile);
+ const toast=app.indexOf("toast('Document '+savedDraft.documentNumber+' saved. Board item and All Documents verified.')",reconcile);
  assert.ok(commit>=0&&parity>commit&&board>parity&&reconcile>board&&toast>reconcile);
 });
 

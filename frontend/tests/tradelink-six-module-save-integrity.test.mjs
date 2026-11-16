@@ -81,9 +81,9 @@ test('array order is exact, object order is not, and malformed responses fail cl
 });
 test('signed post-commit success requires persisted content parity before showing success toast',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- const guard=source.indexOf('!tradeLinkSavedDraftMatches(record,draft)');
+ const guard=source.indexOf('!tradeLinkSavedDraftMatches(record,savedDraft)');
  const receipt=source.indexOf('const receipt=await tradeLinkDraftWorkspace.save(');
- const success=source.indexOf("toast('Document saved. Board item and All Documents verified.')");
+ const success=source.indexOf("toast('Document '+savedDraft.documentNumber+' saved. Board item and All Documents verified.')");
  assert.ok(receipt>0&&guard>receipt&&success>guard);
  assert.match(source,/tradeLinkDraftSaveFailureMessage\(err,\{committed\}\)/);
  assert.doesNotMatch(source,/JSON\.stringify\(record\.content\)===JSON\.stringify\(draft\)/);
@@ -105,27 +105,31 @@ test('six modules use the genuine signed manager save RPC and return revision-on
   allowed:async(boardId,permission)=>boardId===TRADELINK_BOARD_ID&&permission==='manage',
   rpc:async(name,args)=>{
    writes.push({name,args});
-   assert.equal(name,'tl03_document_save');
+   assert.equal(name,'tl03_document_create');
+   const prefix={esi:'ESI-',quotation:'Q-',packing:'PL-',delivery:'DR-',payment:'AR-',po:'PO-'}[args.p_data.documentType];
    return {documentId:args.p_document_id,boardItemId:boardItems[args.p_data.documentType],
-    revision:1,state:args.p_initial_state,operation:args.p_operation,idempotent:false};
+    documentNumber:prefix+'011130',revision:1,state:args.p_initial_state,
+    operation:'create',idempotent:false};
   }
  };
  const service=new TradeLinkDraftWorkspace({auth,api});
  for(const [type,input] of Object.entries(moduleInputs)){
   const draft=parseTradeLinkDraftForm(fields({documentType:type,
-   documentNumber:'CP-TL-10A-'+type.toUpperCase(),...input}),
+   documentNumber:'',...input}),
    {lineId:()=>type+'-line',purpose:'save'});
   const documentId='cccccccc-cccc-4ccc-8ccc-'+
    String(Object.keys(moduleInputs).indexOf(type)+1).padStart(12,'0');
   const receipt=await service.save({documentId,expectedRevision:0,draft});
+  const prefix={esi:'ESI-',quotation:'Q-',packing:'PL-',delivery:'DR-',payment:'AR-',po:'PO-'}[type];
   assert.deepEqual(receipt,{documentId,boardItemId:boardItems[type],
-   revision:1,state:'for-approval',operation:'create',idempotent:false},type);
+   documentNumber:prefix+'011130',revision:1,state:'for-approval',operation:'create',idempotent:false},type);
   const write=writes.at(-1);
-  assert.equal(write.name,'tl03_document_save',type);
+  assert.equal(write.name,'tl03_document_create',type);
   assert.equal(write.args.p_board_id,TRADELINK_BOARD_ID,type);
   assert.equal(write.args.p_document_id,documentId,type);
-  assert.equal(write.args.p_expected_revision,0,type);
-  assert.equal(write.args.p_operation,'create',type);
+  assert.equal(write.args.p_expected_revision,undefined,type);
+  assert.equal(write.args.p_operation,undefined,type);
+  assert.equal(write.args.p_data.documentNumber,'',type);
   assert.equal(write.args.p_initial_state,'for-approval',type);
   const expected=type==='quotation'?{
    ...draft,verifiedBy:'Sales Supervisor',

@@ -132,6 +132,33 @@ test('form parser accepts only bounded source Draft fields and never asserts per
 });
 
 
+
+test('new Drafts leave numbering to the server and persist real document and due dates',()=>{
+ const draft=parseTradeLinkDraftForm(fields({documentType:'quotation',documentNumber:'',
+  date:'2026-11-16',dueDate:'2026-12-16',quoteStatus:'Sent',currency:'PHP'}),
+  {purpose:'save'});
+ assert.equal(draft.documentNumber,'');
+ assert.equal(draft.date,'2026-11-16');
+ assert.equal(draft.dueDate,'2026-12-16');
+ assert.equal(draft.quoteStatus,'Sent');
+ assert.throws(()=>parseTradeLinkDraftForm(fields({documentType:'quotation',documentNumber:'',
+  date:'2026-02-30',quoteStatus:'Sent'}),{purpose:'save'}),/valid document and due dates/i);
+ assert.throws(()=>parseTradeLinkDraftForm(fields({documentType:'quotation',documentNumber:'',
+  date:'2026-11-16',dueDate:'2026-11-16',quoteStatus:'Won'}),{purpose:'save'}),/commercial status/i);
+});
+
+test('Draft form exposes automatic numbering, saved dates and separate quotation commercial status',()=>{
+ const view=initialTradeLinkDraftView('quotation');
+ const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
+ assert.match(html,/name="documentNumber"[^>]*readonly/);
+ assert.match(html,/Automatically assigned by the database when this document is first saved/);
+ assert.match(html,/name="date" type="date"/);
+ assert.match(html,/name="dueDate"/);
+ assert.match(html,/name="quoteStatus"/);
+ assert.match(html,/Commercial status is separate from the signed approval/);
+ assert.match(html,/Not recorded/);
+});
+
 test('Packing List local readiness uses source reference, consignee and nonpriced physical item',()=>{
  const view=initialTradeLinkDraftView('packing');
  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
