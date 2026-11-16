@@ -21,7 +21,7 @@ The draft is schema-versioned and expires 24 hours after the most recent success
 
 ## Duplicate-warning contract
 
-The browser stores only bounded, non-reversible fingerprints and submission timestamps; it does not retain raw payee names or account information in the duplicate history. The fingerprint is a local deduplication key, not a cryptographic security control.
+The browser stores only bounded opaque fingerprints and submission timestamps; it does not retain raw payee names or account information in the duplicate history. The fingerprint is a local deduplication key, not a cryptographic security control or a defense against guessing.
 
 The warning compares company, normalized payee name, and exact decimal total. It covers the current browser profile and signed user/workspace only. It is not a global or cross-device duplicate check. A confirmed operator submission continues through the existing one-shot \`frt_create_request\` workflow and its authoritative readback.
 
