@@ -408,6 +408,10 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
   return this.client.read(documentId);
  }
+ async revisionBundle(documentId,revision=null){
+  if(!TL03_DOMAIN_READS_ENABLED)disabled();
+  return this.client.revisionBundle(documentId,revision);
+ }
  async assignedDocuments(limit=50){
   if(!TL03_DUAL_REVIEW_ENABLED)disabled();
   return this.client.assignedDocuments(limit);
