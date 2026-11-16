@@ -1,0 +1,64 @@
+name: CP-FRT-WF-05A — Activity, discussion and archive acceptance
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/cp-frt-wf05a.yml"
+      - "frontend/app.js"
+      - "frontend/data.js"
+      - "frontend/frt-board-domain-actions.js"
+      - "frontend/frt-operations-*.js"
+      - "frontend/tests/board-cache-channel.test.mjs"
+      - "frontend/tests/frt-operations.test.mjs"
+      - "scripts/cp-frt-wf05a-disposable-acceptance.sh"
+      - "sql/tests/cp-frt-wf05a-*"
+      - "supabase/migrations/20261116101100_frt_wf05a_activity_comments_archive.sql"
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches: [feat/cp-frt-wf05a-main-sync-20261116]
+    paths:
+      - ".github/workflows/cp-frt-wf05a.yml"
+      - "frontend/app.js"
+      - "frontend/data.js"
+      - "frontend/frt-board-domain-actions.js"
+      - "frontend/frt-operations-*.js"
+      - "frontend/tests/board-cache-channel.test.mjs"
+      - "frontend/tests/frt-operations.test.mjs"
+      - "scripts/cp-frt-wf05a-disposable-acceptance.sh"
+      - "sql/tests/cp-frt-wf05a-*"
+      - "supabase/migrations/20261116101100_frt_wf05a_activity_comments_archive.sql"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frt-wf05a:
+    name: FRT frontend, build and disposable PostgreSQL acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run complete frontend regression suite
+        run: npm test
+      - name: Verify FRT module syntax
+        run: |
+          node --check frontend/frt-operations-client.js
+          node --check frontend/frt-operations-ui.js
+          node --check frontend/frt-board-domain-actions.js
+          node --check frontend/app.js
+      - name: Run disposable PostgreSQL 17 acceptance
+        run: bash scripts/cp-frt-wf05a-disposable-acceptance.sh
+      - name: Build production frontend
+        run: npm run build
