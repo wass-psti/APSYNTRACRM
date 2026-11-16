@@ -29,7 +29,7 @@ COMMENT ON COLUMN public.frt_voucher_counters.voucher_month IS
 
 CREATE INDEX IF NOT EXISTS frt_requests_duplicate_guard_idx
  ON public.frt_requests(
-  workspace_id,company_id,(lower(btrim(recipient_name))),total_amount,created_at DESC
+  workspace_id,company_id,(lower(regexp_replace(btrim(recipient_name),'\\s+',' ','g'))),total_amount,created_at DESC
  )
  WHERE archived_at IS NULL AND recipient_name IS NOT NULL;
 
