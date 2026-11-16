@@ -182,6 +182,28 @@ test('overview board item totals use the refreshed signed board-list snapshot',a
  assert.match(app,/const changedBoards=JSON\.stringify\(state\.boards\)!==JSON\.stringify\(boards\)/);
  assert.match(app,/if\(changedBoards\|\|roleChanged\|\|reason!=='broadcast'\)render\(\)/);
 });
+test('all native global-search read RPCs preserve cached Board snapshots',async()=>{
+ const names=[
+  'tl03_documents_page','frt_bootstrap','frt_board_list_safe',
+  'frt_board_dashboard_safe','frt_liquidation_aging_company',
+  'frt_restricted_request_detail','frt_ic_snapshot',
+  'list_module_state','timetracker_ot_snapshot','timetracker_attendance_capabilities',
+  'has_module_access','list_module_directory','fueltrack_v3_read',
+  'tool_traceability_list_tools','tool_traceability_list_requests',
+  'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',
+  'material_request_hub_list_requests','material_request_hub_get_request',
+  'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot',
+  'charter_dispatch','fm1_list_tickets_v1','fm1_ticket_detail_v1'
+ ];
+ const auth={userId:user,accessToken:'token',authorized:async()=>({ok:true})};
+ const api=new DomainApi(auth);
+ api.boardReadCache.set(boardId,{value:{board:{id:boardId,updated_at:'2026-11-16T00:00:00Z'}}});
+ const generation=api.boardReadGeneration;
+ for(const name of names)await api.rpc(name,{});
+ assert.equal(api.boardReadCache.has(boardId),true);
+ assert.equal(api.boardReadGeneration,generation);
+});
+
 test('reviewed mutation and read RPC contracts remain disjoint',()=>{
  const source=readFileSync(new URL('../data.js',import.meta.url),'utf8');
  const names=key=>{
