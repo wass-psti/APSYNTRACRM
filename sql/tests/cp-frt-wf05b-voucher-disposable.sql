@@ -47,6 +47,10 @@ BEGIN
  IF (v_wass->>'total_amount')::numeric<>150.50 THEN
   RAISE EXCEPTION 'Expense total mismatch: %',v_wass->>'total_amount';
  END IF;
+ IF v_wass->>'request_date'<>'2026-11-17'
+    OR v_wass->>'date_needed'<>'2026-11-30' THEN
+  RAISE EXCEPTION 'Request date and date-needed fields were not persisted independently.';
+ END IF;
 
  BEGIN
   PERFORM public.frt_create_request(v_workspace,v_payload);
