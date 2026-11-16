@@ -170,6 +170,7 @@ import {startSelectExperience} from './select-experience.js';
 import {startActionMenuExperience,enhanceActionContextMenu} from './action-menu-experience.js';
 import {startSearchExperience} from './search-experience.js';
 import {startGlobalSearch} from './global-search.js';
+import {createNativeSearchAdapter,createNativeSearchRegistry} from './global-search-adapters.js';
 import {startInputExperience} from './input-experience.js';
 import {startMetricsExperience} from './metrics-experience.js';
 import {applyTimeTrackerOverviewFilters,filterTimeTrackerOverviewRows,syncTimeTrackerOverviewClock,timeTrackerOverviewCsv} from './time-tracker-overview.js';
@@ -238,6 +239,31 @@ const boardPreferences=new BoardPreferenceStore();
 const boardBulkClient=new BoardBulkClient(db);
 const nativeIssues=new NativeIssueClient(db);
 const tradeLinkDraftWorkspace=new TradeLinkDraftWorkspace({auth,api:db});
+const tradeLinkNativeSearchAdapter=createNativeSearchAdapter({
+ id:'tradelink',name:'TradeLink',recordType:'Commercial document',
+ read:async(query,{limit=20}={})=>{
+  const bounded=Math.max(1,Math.min(20,Number.isInteger(limit)?limit:20));
+  if(state.boardManage){
+   const page=await tradeLinkDraftWorkspace.searchPage({
+    filters:{query,documentType:'all',workflowState:'all',archiveMode:'all',
+     sortBy:'updatedAt',sortDirection:'desc'},limit:bounded
+   });
+   return page.rows;
+  }
+  const rows=await tradeLinkDraftWorkspace.assignedDocuments(bounded);
+  const terms=String(query||'').toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  return rows.filter(row=>terms.every(term=>
+   [row.documentNumber,row.documentType,row.workflowState].some(value=>
+    String(value||'').toLocaleLowerCase().includes(term)))).slice(0,bounded);
+ },
+ getId:row=>row.documentId,
+ getTitle:row=>row.documentNumber,
+ getSubtitle:row=>[row.documentType,row.workflowState].filter(Boolean).join(' · '),
+ getExcerpt:row=>[row.documentType,row.workflowState].filter(Boolean).join(' · '),
+ getSearchFields:row=>[row.documentNumber,row.documentType,row.workflowState],
+ getHref:()=> '#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents'
+});
+const nativeSearchRegistry=createNativeSearchRegistry([tradeLinkNativeSearchAdapter]);
 const tradeLinkAttachments=new TradeLinkAttachmentClient({auth,api:db});
 const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
