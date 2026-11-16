@@ -167,6 +167,8 @@ import {renderFRTComments,renderFRTActivityEvents,renderFRTActivityFilters,rende
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
 import {loadFRTArchive,restoreFRTRequest} from './frt-archive.js';
 import {renderFRTArchive} from './frt-archive-ui.js';
+import {loadFRTVoucher} from './frt-voucher.js';
+import {renderFRTVoucherDocument} from './frt-voucher-document.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
@@ -4384,6 +4386,89 @@ async function openFRTDiscussionDialog(requestId,request){
   }
  });
 }
+async function openFRTVoucherDialog(requestId,request){
+ const workspaceId=state.context?.workspace_id,boardId=state.boardId;
+ const userId=auth.userId,seq=routeSerial,companyCode=state.frtFinance?.companyCode;
+ const expectedRole=state.frtFinance?.role;
+ const allowedRequestIds=(state.frtFinance?.requests||[]).map(row=>row.requestId);
+ if(!workspaceId||!userId||!companyCode||!allowedRequestIds.includes(requestId))return;
+ const view=openFRTCollabPanel('Disbursement Voucher',
+  '<div class="frt-voucher-status" role="status">Retrieving persisted voucher and expense details…</div>');
+ const host=view.querySelector('[data-frt-panel-body]');
+ let previewUrl='',busy=false;
+ const current=()=>frtPanelIsCurrent(view,{seq,workspaceId,boardId,userId});
+ const revokePreview=()=>{
+  if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}
+ };
+ view.addEventListener('click',event=>{
+  if(event.target===view||event.target.closest('[data-frt-collab-close]'))revokePreview();
+ });
+ view.addEventListener('keydown',event=>{if(event.key==='Escape')revokePreview();});
+ const setStatus=message=>{
+  const status=host?.querySelector('[data-frt-voucher-status]');
+  if(status)status.textContent=message;
+ };
+ try{
+  const result=await loadFRTVoucher({auth,api:db,workspaceId,requestId,companyCode,
+   expectedRole,expectedVoucher:request.voucher,expectedTitle:request.title,allowedRequestIds});
+  if(!current())return;
+  const voucher=result.voucher;
+  host.innerHTML=renderFRTVoucherDocument(voucher);
+  const controls=()=>[...host.querySelectorAll('[data-frt-voucher-preview],[data-frt-voucher-download],[data-frt-voucher-print],[data-frt-voucher-reprint]')];
+  const setBusy=value=>{busy=value;controls().forEach(control=>{control.disabled=value;});};
+  const pdfModule=()=>import('./frt-voucher-pdf.js');
+  const preview=async()=>{
+   const pdf=await pdfModule();
+   const blob=await pdf.createFRTVoucherPdfBlob(voucher);
+   if(!current())return;
+   revokePreview();
+   previewUrl=URL.createObjectURL(blob);
+   const frameHost=host.querySelector('[data-frt-voucher-pdf-preview]');
+   frameHost.innerHTML='<iframe data-frt-voucher-pdf-frame title="PDF preview of '+e(voucher.voucherNumber)+
+    '" src="'+e(previewUrl)+'"></iframe>';
+   setStatus('PDF preview generated from persisted request data. Voucher number unchanged.');
+  };
+  const printCurrent=async(reprint)=>{
+   // Open synchronously inside the real click handler to avoid popup blocking.
+   const printWindow=window.open('about:blank','_blank');
+   if(!printWindow)throw new ApiError('Allow pop-ups to print the voucher.',400);
+   try{
+    let documentVoucher=voucher;
+    if(reprint){
+     const fresh=await loadFRTVoucher({auth,api:db,workspaceId,requestId,companyCode,
+      expectedRole,expectedVoucher:request.voucher,expectedTitle:request.title,
+      allowedRequestIds:(state.frtFinance?.requests||[]).map(row=>row.requestId)});
+     if(!current()){printWindow.close();return;}
+     documentVoucher=fresh.voucher;
+     if(documentVoucher.voucherNumber!==voucher.voucherNumber)
+      throw new ApiError('The persisted voucher number changed unexpectedly. Reopen the request.',409);
+    }
+    const pdf=await pdfModule();
+    await pdf.printFRTVoucherPdf(documentVoucher,printWindow);
+    if(current())setStatus(reprint?
+     'Reprint generated from a fresh signed read of the persisted voucher. Voucher number preserved.':
+     'Print document opened. No approval or payment action was performed.');
+   }catch(error){if(!printWindow.closed)printWindow.close();throw error;}
+  };
+  host.addEventListener('click',async event=>{
+   const button=event.target.closest('[data-frt-voucher-preview],[data-frt-voucher-download],[data-frt-voucher-print],[data-frt-voucher-reprint]');
+   if(!button||busy||!current())return;
+   setBusy(true);
+   try{
+    if(button.matches('[data-frt-voucher-preview]'))await preview();
+    else if(button.matches('[data-frt-voucher-download]')){
+     const pdf=await pdfModule();await pdf.downloadFRTVoucherPdf(voucher);
+     if(current())setStatus('PDF downloaded. Reprinting will reuse '+voucher.voucherNumber+'.');
+    }else if(button.matches('[data-frt-voucher-print]'))await printCurrent(false);
+    else if(button.matches('[data-frt-voucher-reprint]'))await printCurrent(true);
+   }catch(error){if(current())setStatus(error?.message||'Voucher output could not be generated.');}
+   finally{if(current())setBusy(false);}
+  });
+ }catch(error){
+  if(current())host.innerHTML='<div class="frt-collab-empty" role="alert">Voucher could not be loaded: '+
+   e(error?.message||'Refresh the request and try again.')+'</div>';
+ }
+}
 function downloadFRTActivityCsv(events,requests){
  const requestMap=new Map(requests.map(request=>[request.requestId,request]));
  const blob=new Blob([frtAuditCsv(events,requestMap)],{type:'text/csv;charset=utf-8'});
@@ -8206,6 +8291,15 @@ async function action(name,button){
     await loadFRTFinance(companyCode);
    },{submitLabel:'Confirm '+spec.label,destructive:true,
      successMessage:'FRT action acknowledged by the server. Request list refreshed.'});
+   break;
+ }
+ case 'frt-voucher-open':{
+   if(state.frtFinanceBusy||state.tab!=='finance'||!auth.isSignedIn||
+      state.frtFinance?.status!=='PASS')return;
+   const requestId=String(button?.dataset?.requestId||'');
+   const request=state.frtFinance.requests.find(row=>row.requestId===requestId);
+   if(!request)return;
+   await openFRTVoucherDialog(requestId,request);
    break;
  }
  case 'frt-finance-detail':{
