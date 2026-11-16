@@ -33,8 +33,9 @@ test('archive retrieval reads only the selected signed company and projects boun
  const f=fixture(),result=await loadFRTArchive({...f,...scope});
  assert.equal(result.status,'PASS');assert.equal(result.requests.length,1);
  assert.equal(result.requests[0].voucher,'DV-WASS-202611-001');
- assert.match(renderFRTArchive({...result,canRestore:true}),/Restore/);
- assert.match(renderFRTArchive(result),/No archived requests/===false?'':'/'); // static render contract
+ const html=renderFRTArchive({...result,canRestore:true});
+ assert.match(html,/Office supplies/);assert.match(html,/Restore/);
+ assert.doesNotMatch(renderFRTArchive({requests:[]}),/Office supplies/);
 });
 test('General Manager restores an archived request and verifies it disappears from archive',async()=>{
  const f=fixture();
