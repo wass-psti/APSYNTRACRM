@@ -11,6 +11,10 @@ const MODULES=Object.freeze({
 });
 const clean=value=>String(value??'').replace(/\s+/g,' ').trim().slice(0,120);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FM1_STATUSES=new Set(['New','Triaged','Assigned','In Progress','Waiting','Restored','Resolution Review','Closed','Reopened','Duplicate','Cancelled']);
+const validFm1Ticket=(ticket,workspaceId)=>Boolean(ticket&&UUID.test(ticket.id||'')&&
+ /^FM1-\d{4}-\d{6}$/.test(ticket.ticket_number||'')&&ticket.workspace_id===workspaceId&&
+ Number.isSafeInteger(ticket.revision)&&Number.isFinite(Date.parse(ticket.received_at||''))&&FM1_STATUSES.has(ticket.status));
 const words=query=>clean(query).toLocaleLowerCase().split(/\s+/).filter(Boolean);
 const firstTerm=query=>words(query)[0]||'';
 const matches=(query,fields)=>{
@@ -228,8 +232,7 @@ export function createRemainingNativeSearchAdapters({auth,api,getBoards}={}){
    const result=await api.rpc('fm1_list_tickets_v1',{p_workspace_id:s.workspaceId,
     p_limit:Math.min(20,context.limit||20),p_offset:0,p_search:term,p_status:null,p_priority:null});
    const rows=safeRows(result);
-   return rows.filter(row=>UUID.test(row?.id||'')&&row.workspace_id===s.workspaceId&&
-    /^FM1-\d{4}-\d{6}$/.test(row.ticket_number||'')&&
+   return rows.filter(row=>validFm1Ticket(row,s.workspaceId)&&
     matches(query,[row.ticket_number,row.subject,row.requester_name,row.status,row.priority_effective]))
     .map(row=>({...row,nativeKind:'fm1'}));
   },
@@ -258,9 +261,14 @@ export async function readNativeSearchRecordDetail({applicationId,recordId,navig
     context?.workspace_id!==workspaceId)
   throw new Error('Signed native record context changed.');
  switch(applicationId){
-  case 'fm1':
+  case 'fm1':{
    if(!UUID.test(recordId))throw new TypeError('Invalid FM1 ticket identifier.');
-   return api.rpc('fm1_ticket_detail_v1',{p_workspace_id:workspaceId,p_ticket_id:recordId});
+   const detail=await api.rpc('fm1_ticket_detail_v1',{p_workspace_id:workspaceId,p_ticket_id:recordId});
+   if(!detail||!validFm1Ticket(detail.ticket,workspaceId)||
+      !['obligations','events','milestones','holds','audit'].every(key=>Array.isArray(detail[key])))
+    throw new Error('FM1 ticket detail response could not be verified.');
+   return detail;
+  }
   case 'tools':
    return api.rpc('tool_traceability_get_item',{p_workspace_id:workspaceId,
     p_board:navigationScope==='requests'?'requests':'tools',p_item_id:recordId});

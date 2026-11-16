@@ -30,8 +30,8 @@ function makeClients(){
  const api={async context(){return {user_id:user,workspace_id:workspace,profile:{status:'active'}};},async rpc(name,args){
   calls.push(['rpc',name,args]);
   switch(name){
-   case 'fm1_list_tickets_v1':return {items:[{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',requester_name:'Pump Operator',priority_effective:'P1',status:'New',received_at:'2026-11-16T08:00:00Z'}],total:1,limit:20,offset:0};
-   case 'fm1_ticket_detail_v1':return {ticket:{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',status:'New'},obligations:[],events:[],milestones:[],holds:[],audit:[]};
+   case 'fm1_list_tickets_v1':return {items:[{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',requester_name:'Pump Operator',priority_effective:'P1',status:'New',revision:1,received_at:'2026-11-16T08:00:00Z'}],total:1,limit:20,offset:0};
+   case 'fm1_ticket_detail_v1':return {ticket:{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',status:'New',revision:1,received_at:'2026-11-16T08:00:00Z'},obligations:[],events:[],milestones:[],holds:[],audit:[]};
    case 'tool_traceability_list_tools':return {items:[{id:ids.tool,name:'Pump wrench',category:'Pump tools',itemType:'Tool',availability:'Available'}]};
    case 'tool_traceability_list_requests':return {items:[{id:ids.request,name:'Pump service',reference:'TRC-PUMP-01',requestStatus:'Borrowed',extensionState:'None'}]};
    case 'toolbox_issues_list_issues':return {items:[{id:ids.issue,name:'Pump vibration issue',status:'Open',date:'2026-11-16',person:[]}]};
