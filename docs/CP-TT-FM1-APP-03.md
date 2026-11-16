@@ -1,8 +1,9 @@
 # CP-TT-FM1-APP-03 — Controlled Clock-In/Clock-Out Operational Acceptance, Duplicate-Session Verification, and Attendance Lifecycle Closure
 
-**Status:** IMPLEMENTED-UNVERIFIED — disposable lifecycle/concurrency acceptance passed; real production attendance write requires separate approval
+**Status:** DEPLOYED-VERIFIED — disposable lifecycle/concurrency and genuine signed read-only acceptance passed; production attendance write pending separate approval
 **Base:** `main` at `c463beaa88dff35327dcbb332751f5a2aa71ed69`
-**Branch:** `feat/cp-tt-fm1-app-03`
+**Merged PR:** [#428](https://github.com/wass-psti/APSYNTRACRM/pull/428)
+**Production commit:** `87b994759c50f37c8deb3206ded079674d7987ab`
 
 ## Scope and boundaries
 
@@ -17,7 +18,7 @@
 - `timetracker_attendance_capabilities`, `timetracker_attendance_commit_v2`, `timetracker_commit_attendance_raw_gps03`, and the atomic attendance projection/audit objects are installed.
 - The deployed raw attendance writer uses a transaction-scoped advisory lock keyed by workspace and actor. It rejects an additional Clock-In while an active session exists and rejects Clock-Out when no matching active record remains.
 - Existing production audit aggregate: five Clock-In and five Clock-Out events across five completed sessions. Three sessions created after the November 3 projection deployment have board projections; two sessions dated November 2 predate that deployment and are expected not to have projection rows.
-- The currently signed Chromium session was read-only verified. Its Clock capability was active, the attendance state was idle, and Clock In was enabled. No production attendance record, GPS coordinate, or employee history was changed or copied.
+- The currently signed Chromium session was read-only verified after deployment. The dedicated `#/time-tracker` route and FM1 shell remained mounted across all ten sections; Clock was restored at the end. The Clock capability was active, the attendance state was idle, and Clock In was enabled. The browser was a secure context with the geolocation permission granted. No production attendance record, GPS coordinate, or employee history was changed or copied.
 
 ## Implementation changes
 
@@ -51,6 +52,10 @@
 - FM1 Playwright/axe acceptance: `FM1_BROWSER_ACCEPTANCE_PASS`.
 - TimeTracker Playwright/axe acceptance: `TIMETRACKER_BROWSER_ACCEPTANCE_PASS` across desktop, tablet, mobile, and existing views.
 - Disposable PostgreSQL 17 acceptance: PASS. Existing atomic GPS projection tests, simultaneous duplicate Clock-In/Clock-Out races, lifecycle readback, audit cardinality, one-item projection, independent GPS fixes, and fail-closed rollback all passed.
+- GitHub Pages deployment: PASS for production commit `87b994759c50f37c8deb3206ded079674d7987ab`.
+- Live Pages smoke: PASS for the exact production source SHA, including TimeTracker JavaScript and CSS assets.
+- Genuine signed Chromium read-only acceptance: `READ_ONLY_SIGNED_RUNTIME_ACCEPTANCE_PASS`; all ten sections selected successfully, the FM1 shell remained mounted, generic board controls were absent, and Clock was restored.
+- Live Clock readback: signed workspace verified, signed Clock writes active, attendance idle, and Start Session enabled. Geolocation permission status was granted; no GPS coordinates were requested or captured.
 - The disposable PostgreSQL container was stopped and removed after the tests. No production database writes were used for this acceptance.
 
 ## Remaining production operational gate
@@ -60,4 +65,4 @@
 - Verify independent live GPS fixes for both actions and the resulting credited duration.
 - Do not manufacture a production employee record or substitute synthetic coordinates for a genuine device fix.
 
-No production Clock-In/Clock-Out write is claimed by this implementation. Code-level and disposable operational acceptance are complete; the real production attendance write remains explicitly pending.
+The application and code-level lifecycle are deployed and verified. Only one real production Clock-In/Clock-Out lifecycle remains pending separate approval for the attendance data change and confirmation of the location and department to record.
