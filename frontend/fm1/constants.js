@@ -74,6 +74,7 @@ export const FM1_NAVIGATION = Object.freeze([
   { key: "engineering", label: "Engineering" },
   { key: "commercial", label: "Commercial" },
   { key: "reports", label: "Reports" },
+  { key: "notifications", label: "Notifications" },
   { key: "administration", label: "Administration" },
 ]);
 

@@ -6,6 +6,8 @@ test("FM1 store provides immutable snapshots and immediate subscriptions", () =>
   const initial = fm1Store.get();
   assert.equal(initial.view, "overview");
   assert.equal(initial.busy, false);
+  assert.deepEqual(initial.notifications, []);
+  assert.equal(initial.notificationUnreadTotal, 0);
   assert.equal(Object.isFrozen(initial), true);
 
   const received = [];
