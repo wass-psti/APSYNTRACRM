@@ -7,9 +7,10 @@ import {createNativeSearchAdapter} from './global-search-adapters.js';
 
 const MODULES=Object.freeze({
  tools:'Tool Traceability',toolbox:'Toolbox Issues',materials:'Material Request Hub',
- evaluation:'Employee Evaluation',charter:'Charter Navigator',orders:'Order Intake',aims:'APS AIMS'
+ evaluation:'Employee Evaluation',charter:'Charter Navigator',orders:'Order Intake',aims:'APS AIMS',fm1:'Feedmill Ticketing Portal'
 });
 const clean=value=>String(value??'').replace(/\s+/g,' ').trim().slice(0,120);
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const words=query=>clean(query).toLocaleLowerCase().split(/\s+/).filter(Boolean);
 const firstTerm=query=>words(query)[0]||'';
 const matches=(query,fields)=>{
@@ -29,6 +30,7 @@ async function signedScope({auth,api,getBoards,applicationId,userId,workspaceId}
  if(!user?.id||user.id!==userId||auth.userId!==userId||context?.user_id!==userId||
     context?.workspace_id!==workspaceId)
   throw new Error('Signed native-search workspace context changed.');
+ if(applicationId==='fm1')return {userId,workspaceId,boardId:null};
  const moduleName=MODULES[applicationId];
  const board=array(getBoards()).find(item=>item?.name===moduleName&&item?.status!=='trashed');
  if(!board?.id)throw new Error('The application board is not available in this workspace.');
@@ -218,10 +220,31 @@ export function createRemainingNativeSearchAdapters({auth,api,getBoards}={}){
   getSearchFields:row=>[row.entityType,row.payload?.name,row.payload?.assetTag,row.payload?.serialNumber,row.payload?.status],
   getHref:row=>nativeHref(getBoards(),'aims',row.id)
  });
- return Object.freeze([tools,requests,toolbox,materials,evaluation,charter,orders,aims]);
+ const fm1=createNativeSearchAdapter({
+  id:'fm1-incidents',applicationId:'fm1',name:'Feedmill Ticketing Portal',recordType:'Incident ticket',
+  read:async(query,context={})=>{
+   const s=await scope('fm1',context),term=firstTerm(query).slice(0,160);
+   if(term.length<2)return [];
+   const result=await api.rpc('fm1_list_tickets_v1',{p_workspace_id:s.workspaceId,
+    p_limit:Math.min(20,context.limit||20),p_offset:0,p_search:term,p_status:null,p_priority:null});
+   const rows=safeRows(result);
+   return rows.filter(row=>UUID.test(row?.id||'')&&row.workspace_id===s.workspaceId&&
+    /^FM1-\d{4}-\d{6}$/.test(row.ticket_number||'')&&
+    matches(query,[row.ticket_number,row.subject,row.requester_name,row.status,row.priority_effective]))
+    .map(row=>({...row,nativeKind:'fm1'}));
+  },
+  getId:row=>row.id,getTitle:row=>row.ticket_number,
+  getSubtitle:row=>[row.subject,row.status].filter(Boolean).join(' · '),
+  getExcerpt:row=>[row.priority_effective,row.requester_name].filter(Boolean).join(' · '),
+  getSearchFields:row=>[row.ticket_number,row.subject,row.requester_name,row.status,row.priority_effective],
+  getHref:row=>nativeHref(getBoards(),'fm1',row.id)
+ });
+
+ return Object.freeze([tools,requests,toolbox,materials,evaluation,charter,orders,aims,fm1]);
 }
 
 function nativeHref(boards,moduleKey,recordId,scopeValue=''){
+ if(moduleKey==='fm1')return '#/fm1/ticket/'+encodeURIComponent(String(recordId));
  const name=MODULES[moduleKey],board=array(boards).find(item=>item?.name===name&&item?.status!=='trashed');
  return board?.id?'#/boards/'+board.id+'/native/'+moduleKey+'/'+encodeURIComponent(String(recordId))+
   (scopeValue?'/'+scopeValue:''):'#/boards';
@@ -235,6 +258,9 @@ export async function readNativeSearchRecordDetail({applicationId,recordId,navig
     context?.workspace_id!==workspaceId)
   throw new Error('Signed native record context changed.');
  switch(applicationId){
+  case 'fm1':
+   if(!UUID.test(recordId))throw new TypeError('Invalid FM1 ticket identifier.');
+   return api.rpc('fm1_ticket_detail_v1',{p_workspace_id:workspaceId,p_ticket_id:recordId});
   case 'tools':
    return api.rpc('tool_traceability_get_item',{p_workspace_id:workspaceId,
     p_board:navigationScope==='requests'?'requests':'tools',p_item_id:recordId});

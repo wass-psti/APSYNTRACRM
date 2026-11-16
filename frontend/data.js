@@ -141,7 +141,8 @@ const BOARD_READ_RPC=new Set([
  'tool_traceability_list_tools','tool_traceability_list_requests','tool_traceability_list_items',
  'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',
  'material_request_hub_list_requests','material_request_hub_get_request',
- 'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot'
+ 'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot',
+ 'fm1_list_tickets_v1','fm1_ticket_detail_v1'
 ]);
 // Exact, reviewed write contracts only. Partial-prefix regular expressions
 // can silently miss full RPC names, preventing successful writes from

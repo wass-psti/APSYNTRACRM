@@ -3805,6 +3805,14 @@ function navigateGlobalSearchResult(item){
   else location.hash=target;
   return;
  }
+ if(item.native===true&&item.applicationId==='fm1'&&item.recordId){
+  pendingNativeSearchSelection={applicationId:'fm1',recordId:item.recordId,boardId:null,
+   userId:auth.userId,workspaceId:state.context?.workspace_id};
+  const target='#/fm1/ticket/'+encodeURIComponent(item.recordId);
+  if(location.hash===target)void onRoute().catch(error=>notice(error));
+  else location.hash=target;
+  return;
+ }
  if(item.native===true&&['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(item.applicationId)&&
    item.recordId){
   const module=BOARD_MODULES.find(entry=>entry.key===item.applicationId);
@@ -3872,23 +3880,26 @@ async function openPendingGlobalSearchItem(boardId){
 
 async function openPendingNativeSearchRecord(boardId){
  const pending=pendingNativeSearchSelection;
- if(!pending||!['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(pending.applicationId)||
-    pending.boardId!==boardId)return;
+ const fm1=pending?.applicationId==='fm1';
+ if(!pending||(!fm1&&!['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(pending.applicationId))||
+    (fm1?boardId!==null:pending.boardId!==boardId))return;
  const serial=routeSerial,userId=pending.userId,workspaceId=pending.workspaceId;
- const module=BOARD_MODULES.find(item=>item.key===pending.applicationId);
+ const module=fm1?{name:'Feedmill Ticketing Portal'}:BOARD_MODULES.find(item=>item.key===pending.applicationId);
  const current=()=>pendingNativeSearchSelection===pending&&serial===routeSerial&&auth.isSignedIn&&auth.userId===userId&&
   state.context?.user_id===userId&&state.context?.workspace_id===workspaceId&&
-  state.view==='board'&&state.boardId===boardId&&state.board?.board?.id===boardId&&
-  state.board?.board?.name===module?.name;
+  (fm1?state.view==='fm1'&&state.boardId===null:
+   state.view==='board'&&state.boardId===boardId&&state.board?.board?.id===boardId&&state.board?.board?.name===module?.name);
  if(!current()){if(pendingNativeSearchSelection===pending)pendingNativeSearchSelection=null;return;}
  try{
   const record=await readNativeSearchRecordDetail({applicationId:pending.applicationId,
    recordId:pending.recordId,navigationScope:pending.navigationScope,auth,api:db,workspaceId});
   if(!current()){if(pendingNativeSearchSelection===pending)pendingNativeSearchSelection=null;return;}
   if(!record||typeof record!=='object'||Array.isArray(record))throw new Error('The native record is unavailable.');
-  const title=record.name||record.reference||record.po_number||record.payload?.name||
-   record.payload?.assetTag||record.employeeName||record.entity_type||record.period||'Application record';
-  const subtitle=record.status||record.requestStatus||record.approvalStatus||record.bookingStatus||'';
+  const title=record.ticket?.ticket_number||record.ticket?.subject||record.name||record.reference||
+   record.po_number||record.payload?.name||record.payload?.assetTag||record.employeeName||
+   record.entity_type||record.period||'Application record';
+  const subtitle=record.ticket?.status||record.status||record.requestStatus||
+   record.approvalStatus||record.bookingStatus||'';
   hideModal();modal=document.createElement('div');
   modal.className='modal-backdrop native-search-detail-backdrop';
   modal.innerHTML='<aside class="native-search-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="native-search-detail-title">'+
@@ -3921,6 +3932,11 @@ async function onRoute(){
  }
  if(pendingInvitation){pendingInvitation=null;invitationAcceptanceStatus='';}
  if(parts[0]==='fm1')fm1Module=await import('./fm1/index.js');
+ if(parts[0]==='fm1'&&parts[1]==='ticket'&&parts[2]){
+  let recordId='';try{recordId=decodeURIComponent(parts[2]);}catch{}
+  if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:'fm1',recordId,boardId:null,
+   userId:auth.userId,workspaceId:state.context?.workspace_id};
+ }else if(parts[0]==='fm1'&&pendingNativeSearchSelection?.applicationId==='fm1')pendingNativeSearchSelection=null;
  if(parts[0]==='time-tracker'){
   state.ttStandalone=true;
   const attendanceBoard=findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName);
@@ -4026,6 +4042,7 @@ async function onRoute(){
    finally{state.foundationBusy=false;}
  }
  render();
+ if(state.view==='fm1')await openPendingNativeSearchRecord(null);
 }
 function validateAndSubmitAccessRequest(form,event){
  const recipient=form.getAttribute('action')||'';

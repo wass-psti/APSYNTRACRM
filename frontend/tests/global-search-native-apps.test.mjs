@@ -10,7 +10,7 @@ const boards=[
  ['evaluation','Employee Evaluation'],['charter','Charter Navigator'],['orders','Order Intake'],['aims','APS AIMS']
 ].map(([key,name],index)=>({id:`${String(index+1).padStart(8,'0')}-0000-4000-8000-000000000001`,name,status:'active',key}));
 const byKey=key=>boards.find(board=>board.key===key);
-const ids={tool:'tool-01',request:'request-01',issue:'42',material:'mrh-01',evaluation:'eval-01',charter:'charter-01',order:'order-01',aims:'aims-01'};
+const ids={tool:'tool-01',request:'request-01',issue:'42',material:'mrh-01',evaluation:'eval-01',charter:'charter-01',order:'order-01',aims:'aims-01',fm1:'44444444-4444-4444-8444-444444444444'};
 function makeClients(){
  const calls=[];
  const auth={userId:user,async getVerifiedUser(){return {id:user};},async authorized(path,options={}){
@@ -30,6 +30,8 @@ function makeClients(){
  const api={async context(){return {user_id:user,workspace_id:workspace,profile:{status:'active'}};},async rpc(name,args){
   calls.push(['rpc',name,args]);
   switch(name){
+   case 'fm1_list_tickets_v1':return {items:[{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',requester_name:'Pump Operator',priority_effective:'P1',status:'New',received_at:'2026-11-16T08:00:00Z'}],total:1,limit:20,offset:0};
+   case 'fm1_ticket_detail_v1':return {ticket:{id:ids.fm1,workspace_id:workspace,ticket_number:'FM1-2026-000001',subject:'Pump motor failure',status:'New'},obligations:[],events:[],milestones:[],holds:[],audit:[]};
    case 'tool_traceability_list_tools':return {items:[{id:ids.tool,name:'Pump wrench',category:'Pump tools',itemType:'Tool',availability:'Available'}]};
    case 'tool_traceability_list_requests':return {items:[{id:ids.request,name:'Pump service',reference:'TRC-PUMP-01',requestStatus:'Borrowed',extensionState:'None'}]};
    case 'toolbox_issues_list_issues':return {items:[{id:ids.issue,name:'Pump vibration issue',status:'Open',date:'2026-11-16',person:[]}]};
@@ -50,21 +52,22 @@ test('registry capacity includes all existing and newly integrated application a
  const {auth,api}=makeClients();
  const remaining=createRemainingNativeSearchAdapters({auth,api,getBoards:()=>boards});
  const registry=createNativeSearchRegistry([...remaining,...remaining]);
- assert.equal(registry.adapters.length,16);
+ assert.equal(registry.adapters.length,18);
 });
 
 test('all remaining native application adapters search existing records and emit exact native record routes',async()=>{
  const {auth,api,calls}=makeClients();
  const adapters=createRemainingNativeSearchAdapters({auth,api,getBoards:()=>boards});
- assert.equal(adapters.length,8);
+ assert.equal(adapters.length,9);
  const registry=createNativeSearchRegistry(adapters,{limit:20});
  const result=await registry.search('pump',{userId:user,workspaceId:workspace});
  assert.equal(result.errors.length,0,JSON.stringify(result.errors));
- assert.equal(result.results.length,8);
+ assert.equal(result.results.length,9);
  const idsSeen=new Set(result.results.map(row=>row.recordId));
  for(const id of Object.values(ids))assert.ok(idsSeen.has(id),'missing '+id);
  for(const row of result.results){
-  assert.match(row.href,new RegExp('^#/boards/'+row.href.split('/')[2]+'/native/'));
+  if(row.applicationId==='fm1')assert.match(row.href,/^#\/fm1\/ticket\//);
+  else assert.match(row.href,new RegExp('^#/boards/'+row.href.split('/')[2]+'/native/'));
   assert.ok(row.href.includes(encodeURIComponent(row.recordId)));
  }
  assert.ok(calls.some(call=>call[1]==='tool_traceability_list_tools'));
@@ -72,6 +75,9 @@ test('all remaining native application adapters search existing records and emit
  assert.ok(calls.some(call=>call[1]==='toolbox_issues_list_issues'));
  assert.ok(calls.some(call=>call[1]==='material_request_hub_list_requests'));
  assert.ok(calls.some(call=>call[1]==='employee_evaluation_management_snapshot'));
+ assert.ok(calls.some(call=>call[1]==='fm1_list_tickets_v1'));
+ const fm1Result=result.results.find(row=>row.recordId===ids.fm1);
+ assert.equal(fm1Result.href,'#/fm1/ticket/'+ids.fm1);
  assert.ok(calls.some(call=>call[0]==='authorized'&&call[1].includes('/rpc/charter_dispatch')));
  assert.ok(calls.some(call=>call[0]==='authorized'&&call[1].includes('/order_intake_orders')));
  assert.ok(calls.some(call=>call[0]==='authorized'&&call[1].includes('/aps_aims_entities')));
@@ -104,7 +110,8 @@ test('native detail readers use the matching existing application detail contrac
   ['evaluation',ids.evaluation,'','employee_evaluation_management_snapshot'],
   ['charter',ids.charter,'','charter_dispatch'],
   ['orders',ids.order,'','order_intake_orders'],
-  ['aims',ids.aims,'','aps_aims_entities']
+  ['aims',ids.aims,'','aps_aims_entities'],
+  ['fm1',ids.fm1,'','fm1_ticket_detail_v1']
  ];
  for(const [applicationId,recordId,navigationScope] of cases){
   const detail=await readNativeSearchRecordDetail({applicationId,recordId,navigationScope,auth,api,workspaceId:workspace});
@@ -116,6 +123,7 @@ test('native detail readers use the matching existing application detail contrac
  const requestCalls=calls.filter(call=>call[1]==='tool_traceability_get_item');
  assert.equal(requestCalls[1][2].p_board,'requests');
  assert.ok(calls.some(call=>call[0]==='authorized'&&call[1].includes('/rpc/charter_dispatch')&&call[2].body.p_method==='GET'));
+ assert.ok(calls.some(call=>call[1]==='fm1_ticket_detail_v1'&&call[2].p_ticket_id===ids.fm1));
 });
 
 test('native detail rendering escapes all values and keeps bounded field output',()=>{

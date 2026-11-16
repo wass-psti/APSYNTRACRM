@@ -279,7 +279,7 @@ test('binds FRT, FuelTrack+ and TimeTracker through existing signed native clien
 test('binds remaining native applications to their existing signed read APIs and exact record routes',()=>{
  const native=readFileSync('frontend/global-search-native-apps.js','utf8');
  for(const rpc of ['tool_traceability_list_tools','tool_traceability_list_requests','toolbox_issues_list_issues',
-  'material_request_hub_list_requests','employee_evaluation_management_snapshot','employee_evaluation_my_snapshot'])
+  'material_request_hub_list_requests','employee_evaluation_management_snapshot','employee_evaluation_my_snapshot','fm1_list_tickets_v1','fm1_ticket_detail_v1'])
   assert.ok(native.includes(rpc),'missing native read contract '+rpc);
  for(const table of ['order_intake_orders','aps_aims_entities'])assert.ok(native.includes(table));
  assert.match(native,/p_path:'\/items\/query'/);
@@ -287,8 +287,13 @@ test('binds remaining native applications to their existing signed read APIs and
  assert.match(app,/openPendingNativeSearchRecord\(parts\[1\]\)/);
  assert.match(app,/applicationId:item\.applicationId,recordId:item\.recordId/);
  assert.match(app,/native-search-detail-drawer/);
+ assert.match(app,/applicationId==='fm1'/);
+ assert.match(app,/openPendingNativeSearchRecord\(null\)/);
+ assert.match(native,/fm1_list_tickets_v1/);
+ assert.match(native,/fm1_ticket_detail_v1/);
  assert.match(data,/'tool_traceability_list_tools'.*'tool_traceability_list_requests'/s);
  assert.match(data,/'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot'/);
+ assert.match(data,/'fm1_list_tickets_v1','fm1_ticket_detail_v1'/);
  assert.match(css,/native-search-detail-fields/);
 });
 
