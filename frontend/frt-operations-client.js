@@ -31,7 +31,7 @@ async function signedScope({auth,api,workspaceId,companyCode}={}){
     membership?.enabled!==true||membership?.status!=='active'||
     !readRoles.has(membership?.role)||!Array.isArray(bootstrap?.companies)||
     !bootstrap.companies.some(company=>company?.code===companyCode))
-  fail('The selected FRT company is unavailable in this signed workspace.');
+  fail('The signed FRT membership or selected company is unavailable.');
  return {userId:user.id,role:membership.role};
 }
 async function verifyUnchanged({auth,api,workspaceId,userId}){
@@ -100,9 +100,10 @@ export async function addFRTComment({
  auth,api,workspaceId,companyCode,requestId,allowedRequestIds,body
 }={}){
  if(!uuid.test(requestId||'')||!Array.isArray(allowedRequestIds)||
-    !allowedRequestIds.includes(requestId)||typeof body!=='string'||
-    body.trim().length<1||body.length>4000)
-  fail('Enter a comment of 1–4,000 characters for a listed request.');
+    !allowedRequestIds.includes(requestId))
+  fail('The request is not in the current signed FRT list.');
+ if(typeof body!=='string'||body.trim().length<1||body.length>4000)
+  fail('Enter a comment of 1–4,000 characters.');
  const scope=await signedScope({auth,api,workspaceId,companyCode});
  const receipt=await api.rpc('frt_add_comment',{
   p_workspace_id:workspaceId,p_request_id:requestId,p_body:body.trim()
