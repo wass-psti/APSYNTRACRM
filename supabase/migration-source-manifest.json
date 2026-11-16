@@ -1636,8 +1636,8 @@
       "version": "20261117020000",
       "name": "tradelink_immutable_revision_snapshots",
       "file": "20261117020000_tradelink_immutable_revision_snapshots.sql",
-      "bytes": 11755,
-      "sha256": "216bcec7ea05714d66ea6cc51980589c107b32fb7828e165486543308a67c667"
+      "bytes": 11962,
+      "sha256": "780f1093f28e4ca6958008595f079caa5945fcd20a685291d7410631426a09ed"
     }
   ]
 }

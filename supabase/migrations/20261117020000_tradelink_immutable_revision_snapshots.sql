@@ -118,7 +118,7 @@ CREATE FUNCTION public.tl03_document_revision_bundle(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $bundle$
 DECLARE
  d public.tradelink_documents%rowtype;
- s private.tradelink_document_revision_snapshots%rowtype;
+ v_snapshot private.tradelink_document_revision_snapshots%rowtype;
  v_revisions jsonb;
  v_selected jsonb;
  v_target_revision bigint;
@@ -165,33 +165,33 @@ BEGIN
  WHERE s.document_id=d.id;
 
  v_target_revision:=coalesce(p_revision,d.revision);
- SELECT * INTO s FROM private.tradelink_document_revision_snapshots
+ SELECT * INTO v_snapshot FROM private.tradelink_document_revision_snapshots
  WHERE document_id=d.id AND revision=v_target_revision;
- IF s.document_id IS NOT NULL THEN
+ IF v_snapshot.document_id IS NOT NULL THEN
   SELECT
    (count(*) FILTER(WHERE r.stage='primary')=1
     AND count(*) FILTER(WHERE r.stage='secondary')=1
     AND count(DISTINCT r.actor_id)=2
     AND coalesce(pg_catalog.bool_and(
      pg_catalog.lower(r.assigned_email)=pg_catalog.lower(u.email)
-     AND r.assigned_email=private.tl03_review_assignee(s.document_type,s.content,r.stage)
+     AND r.assigned_email=private.tl03_review_assignee(v_snapshot.document_type,v_snapshot.content,r.stage)
     ),FALSE)),
    min(r.recorded_at) FILTER(WHERE r.stage='primary'),
    min(r.recorded_at) FILTER(WHERE r.stage='secondary')
   INTO v_approved,v_primary_at,v_secondary_at
   FROM private.tradelink_document_reviews r
   LEFT JOIN auth.users u ON u.id=r.actor_id
-  WHERE r.document_id=s.document_id AND r.document_revision=s.revision;
+  WHERE r.document_id=v_snapshot.document_id AND r.document_revision=v_snapshot.revision;
 
   v_selected:=pg_catalog.jsonb_build_object(
-   'id',s.document_id,'board_id',s.board_id,'workspace_id',s.workspace_id,
-   'board_item_id',s.board_item_id,'document_type',s.document_type,
-   'document_number',s.document_number,
-   'workflow_state',CASE WHEN v_approved THEN 'approved' ELSE s.workflow_state END,
-   'revision',s.revision,'content',s.content,'created_by',s.created_by,
-   'updated_by',s.updated_by,'created_at',s.created_at,'updated_at',s.updated_at,
-   'archived_at',s.archived_at,'snapshot_source',s.snapshot_source,
-   'revision_at',s.revision_at,'approved',v_approved,
+   'id',v_snapshot.document_id,'board_id',v_snapshot.board_id,'workspace_id',v_snapshot.workspace_id,
+   'board_item_id',v_snapshot.board_item_id,'document_type',v_snapshot.document_type,
+   'document_number',v_snapshot.document_number,
+   'workflow_state',CASE WHEN v_approved THEN 'approved' ELSE v_snapshot.workflow_state END,
+   'revision',v_snapshot.revision,'content',v_snapshot.content,'created_by',v_snapshot.created_by,
+   'updated_by',v_snapshot.updated_by,'created_at',v_snapshot.created_at,'updated_at',v_snapshot.updated_at,
+   'archived_at',v_snapshot.archived_at,'snapshot_source',v_snapshot.snapshot_source,
+   'revision_at',v_snapshot.revision_at,'approved',v_approved,
    'primary_reviewed_at',v_primary_at,'secondary_reviewed_at',v_secondary_at
   );
  END IF;
