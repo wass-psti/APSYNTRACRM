@@ -1,8 +1,9 @@
-/** Native signed TimeTracker Log. Read-only: never increases server-side record scope. */
+/** Native signed TimeTracker Log. System Admin mutations use the dedicated signed RPC; other roles remain read-only. */
 import {TT_LOCATIONS} from './time-tracker-policy.js';
 import {filterMyAttendancePeriod} from './time-tracker-native.js';
 import {manilaDay} from './time-tracker-overview.js';
 import {mapFrame} from './time-tracker-map.js';
+import {renderTimeTrackerAdminEditor,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -164,7 +165,7 @@ function shiftProgress(rows,now){
    '" aria-label="Completed sessions among today clock-ins"></progress>'+
    '<strong>'+complete+' / '+todays.length+'</strong></div></div>';
 }
-function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',mapEnabled=false,mapTheme='map'}={}){
+function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',mapEnabled=false,mapTheme='map',adminEligible=false,adminBusy=false}={}){
  const start=Date.parse(row.clockIn),end=Date.parse(row.clockOut||now);
  const elapsed=Math.max(0,end-start);
  const active=row.status==='Active';
@@ -251,6 +252,9 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
      '<div class="tt-map-empty">Precise GPS maps require a privileged signed session.</div>')+
     (available?'<p class="tt-map-note">Green: Clock In · Orange: Clock Out. Connecting lines show straight-line distance, not a tracked route.</p>':'')+
    '</div></div>'+
+  (adminEligible?'<div class="tt-log-admin-row-actions"><span>System Admin record management</span>'+
+   '<button type="button" data-action="tt-log-admin-edit" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Edit record</button>'+
+   '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-delete" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Delete record</button></div>':'')+
   '</div>';
 }
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
@@ -259,8 +263,9 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const state=r.classification==='Administrative closure'?
   'Administrative closure':done?'Completed':r.status==='Active'?'Active':'Unknown';
  return '<tr class="tt-log-filterable" data-log-search="'+esc(searchText(r))+'"'+
-  (hidden?' hidden':'')+'><td colspan="9">'+
-  '<details class="tt-log-detail" data-record-id="'+esc(r.id)+'"'+
+  (hidden?' hidden':'')+'>'+(gpsOptions.adminEligible?'<td class="tt-log-select-cell"><input type="checkbox" id="tt-log-select-'+esc(r.id)+'" data-tt-log-select value="'+esc(r.id)+'"'+
+   (gpsOptions.selectedIds?.includes(r.id)?' checked':'')+(gpsOptions.adminBusy?' disabled':'')+' aria-label="Select attendance record for '+esc(r.name||'employee')+'"></td>':'')+
+  '<td colspan="9"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'"'+
    (gpsOptions.expandedRecordIds?.includes(r.id)?' open':'')+
    '><summary class="tt-log-row-summary">'+
    '<span class="tt-log-row-person"><strong>'+esc(r.name||'Signed member')+
@@ -279,7 +284,9 @@ const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
 export function renderTimeTrackerLog({
  records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false,
  gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',
- expandedRecordIds=[],mapEnabled=false,mapTheme='map'
+ expandedRecordIds=[],mapEnabled=false,mapTheme='map',
+ adminEligible=false,adminDirectory=[],selectedIds=[],adminEditor=null,
+ adminBusy=false,adminError='',adminSuccess=''
 }={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
  const rows=filterTimeTrackerLogRows(records,{...options,search:''},now);
@@ -301,8 +308,8 @@ export function renderTimeTrackerLog({
      'APSYNTRA / ATTENDANCE INTELLIGENCE</div>'+
     '<h3>Attendance Log</h3>'+
     '<p>'+esc(phtDate(now))+'</p>'+
-    '<div class="tt-log-hero-scope">Read-only · '+
-     (team?'Authorized team history':'Your attendance history')+
+    '<div class="tt-log-hero-scope">'+
+     (adminEligible?'System Admin management · Authorized team history':'Read-only · '+(team?'Authorized team history':'Your attendance history'))+
      ' · Today and earlier sessions</div>'+
    '</div>'+
    '<div class="tt-log-hero-telemetry" aria-label="Signed attendance history snapshot">'+
@@ -314,7 +321,7 @@ export function renderTimeTrackerLog({
      '<div><strong>'+summary.completed+'</strong><span>Completed</span></div>'+
      '<div><strong>'+summary.active+'</strong><span>Active</span></div>'+
     '</div>'+
-    '<span class="tt-log-readonly">Signed account · Read-only</span>'+
+    '<span class="tt-log-readonly">'+(adminEligible?'System Admin · Record management':'Signed account · Read-only')+'</span>'+
    '</div>'+
   '</header>'+
   '<section class="tt-log-controls" aria-label="Attendance Log filters">'+
@@ -339,21 +346,30 @@ export function renderTimeTrackerLog({
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
     ' earlier · '+summary.today+' today</span></div>'+
+   (adminEligible?'<div class="tt-log-admin-toolbar"><div><strong>Attendance record management</strong><span>System Admin controls · Select up to '+TT_ADMIN_RECORD_LIMIT+' records</span></div>'+
+    '<div><span class="tt-log-admin-selected">'+selectedIds.length+' selected</span>'+
+    '<button type="button" data-action="tt-log-admin-bulk-edit"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Edit selected</button>'+
+    '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Delete selected</button>'+
+    '<button type="button" class="tt-log-admin-clear" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear</button></div></div>':'')+
+   (adminError&&!adminEditor?'<p class="tt-log-admin-feedback is-error" role="alert">'+esc(adminError)+'</p>':'')+
+   (adminSuccess?'<p class="tt-log-admin-feedback is-success" role="status">'+esc(adminSuccess)+'</p>':'')+
    (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
      '<table class="board-table tt-log-table"><thead><tr>'+
+     (adminEligible?'<th class="tt-log-select-column"><input type="checkbox" id="tt-log-select-all" data-tt-log-select-all aria-label="Select all visible attendance records"'+
+      (visible.length&&visible.every(r=>selectedIds.includes(r.id))?' checked':'')+(adminBusy?' disabled':'')+'></th>':'')+
      '<th>Employee</th><th>Clock In</th><th>Clock Out</th>'+
      '<th>Location</th><th>Department</th><th>Arrival</th>'+
      '<th>Status</th><th>Hours</th><th>Details</th></tr></thead>'+
      '<tbody>'+rows.map(r=>sessionRow(r,query,now,{
       gpsEligible,gpsData,gpsBusy,gpsError,gpsErrorRecordId,
-      expandedRecordIds,mapEnabled,mapTheme})).join('')+
+      expandedRecordIds,mapEnabled,mapTheme,adminEligible,adminBusy,selectedIds})).join('')+
      '</tbody></table></div></div>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
    '<p id="tt-log-empty-search" class="tt-log-empty"'+
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>'+
    '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
    '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
-  '</section></section>';
+  '</section>'+renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:''})+'</section>';
 }
 
 const logCsvCell=value=>{

@@ -5,6 +5,9 @@ on:
       - "sql/cp-tt-gps01-*.sql"
       - "sql/tests/cp-tt-gps01-*.sql"
       - "scripts/cp-tt-attendance-concurrency.sh"
+      - "supabase/migrations/20261116084228_cp_tt_attendance_admin_record_management_01.sql"
+      - "sql/tests/cp-tt-admin-record-management-disposable-setup.sql"
+      - "sql/tests/cp-tt-admin-record-management-disposable-acceptance.sql"
       - ".github/workflows/apsyntra-tt-gps01.yml"
   push:
     branches: [main]
@@ -12,6 +15,9 @@ on:
       - "sql/cp-tt-gps01-*.sql"
       - "sql/tests/cp-tt-gps01-*.sql"
       - "scripts/cp-tt-attendance-concurrency.sh"
+      - "supabase/migrations/20261116084228_cp_tt_attendance_admin_record_management_01.sql"
+      - "sql/tests/cp-tt-admin-record-management-disposable-setup.sql"
+      - "sql/tests/cp-tt-admin-record-management-disposable-acceptance.sql"
       - ".github/workflows/apsyntra-tt-gps01.yml"
   workflow_dispatch:
 permissions:
@@ -56,3 +62,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 \
             -f sql/cp-tt-gps01-fail-closed-rollback.sql \
             -f sql/tests/cp-tt-gps01-disposable-rollback.sql
+          psql -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tt-admin-record-management-disposable-setup.sql \
+            -f supabase/migrations/20261116084228_cp_tt_attendance_admin_record_management_01.sql \
+            -f sql/tests/cp-tt-admin-record-management-disposable-acceptance.sql
