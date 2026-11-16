@@ -429,6 +429,10 @@ jobs:
         env:
           PGDATABASE: cp_crm_global_search_disposable
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-global-search-benchmark.sql
+      - name: Verify two-character prefix queries use B-tree indexes
+        env:
+          PGDATABASE: cp_crm_global_search_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-crm-global-search-prefix-index-usage.sql
 
   live-pages:
     needs: [frontend, disposable-ot-postgres, disposable-collaboration-postgres, disposable-toolbox-postgres, disposable-board-import-sync-postgres, global-search-postgres]
