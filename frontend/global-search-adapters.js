@@ -11,8 +11,8 @@ export const NATIVE_SEARCH_QUERY_LIMIT=120;
 export const NATIVE_SEARCH_ADAPTER_LIMIT=12;
 export const NATIVE_SEARCH_RESULT_LIMIT=GLOBAL_SEARCH_MAX_RESULTS;
 
-const clean=(value,max=180)=>String(value??'').replace(/\\s+/g,' ').trim().slice(0,max);
-const tokens=query=>query.split(/\\s+/).filter(Boolean);
+const clean=(value,max=180)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
+const tokens=query=>query.split(/\s+/).filter(Boolean);
 
 export function scoreNativeSearchResult(query,fields=[]){
  const q=normalizeGlobalSearchQuery(query);
@@ -77,7 +77,7 @@ export function createNativeSearchRegistry(adapters=[],{limit=NATIVE_SEARCH_RESU
     const item=settled[i],adapter=registered[i];
     if(item.status==='rejected'){errors.push({adapterId:adapter.id,error:item.reason});continue;}
     for(const row of item.value){
-     const key=row.applicationId+'|'+row.recordId;
+     const key=row.href+'|'+row.recordId;
      if(seen.has(key))continue;
      seen.add(key);results.push(row);
     }
