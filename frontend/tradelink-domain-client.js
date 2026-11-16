@@ -223,21 +223,26 @@ export class TradeLinkDomainClient{
   this.automaticNumberingEnabled=automaticNumberingEnabled===true;
  }
  async session(){
-  if(!this.api?.context||!this.api?.board||!this.api?.allowed||!this.api?.rpc||
-    !this.auth?.getVerifiedUser)deny('Signed TradeLink domain API unavailable.');
-  // Each request uses the existing signed transport and independently enforces
-  // server-side access. Overlap reads rather than serializing four round trips.
+  if(!this.api?.context||(!this.api?.board&&!this.api?.boardCached)||
+    !this.api?.allowed||!this.api?.rpc||!this.auth?.getVerifiedUser)
+   deny('Signed TradeLink domain API unavailable.');
+  // Resolve the signed actor, workspace and manager decision concurrently.
+  // The manager preflight needs only the board shell, not its item pages; reuse
+  // the existing signed board cache's bounded invalidation retry when present.
   // No document operation runs until every identity, workspace and permission
   // check below succeeds; the mutation RPC remains authoritative as before.
-  const [actor,context,detail,canManage]=await Promise.all([
+  const [actor,context,canManage]=await Promise.all([
    this.auth.getVerifiedUser(),this.api.context(),
-   this.api.board(TRADELINK_BOARD_ID),
    this.api.allowed(TRADELINK_BOARD_ID,'manage')
   ]);
   if(!validUuid(actor?.id)||actor.id!==this.auth.userId||
     context?.user_id!==actor.id||context?.profile?.status!=='active'||
     !validUuid(context.workspace_id))
    deny('TradeLink signed identity or workspace changed.');
+  const detail=typeof this.api.boardCached==='function'?
+   await this.api.boardCached(TRADELINK_BOARD_ID,{
+    userId:actor.id,workspaceId:context.workspace_id,includeItems:false
+   }):await this.api.board(TRADELINK_BOARD_ID);
   if(!isTradeLinkBoard(detail?.board)||
      detail.board.workspace_id!==context.workspace_id||canManage!==true)
    deny('TradeLink board manager scope required.');
@@ -273,9 +278,9 @@ export class TradeLinkDomainClient{
   try{
    await this.session();
   }catch(error){
-   // A concurrent authoritative workspace refresh invalidates an overlapping
-   // context read. Retry that one transient 409 once for the same signed user;
-   // identity changes and all other failures remain unchanged.
+   // A concurrent authoritative refresh can invalidate an overlapping
+   // context or board read. Retry only those known transient 409s once for the
+   // same signed user; identity changes and unrelated failures remain unchanged.
    const invalidatedContext=error?.status===409&&
     error?.message==='Signed workspace context changed during loading.';
    const invalidatedBoard=error?.status===409&&error?.code==='BOARD_READ_INVALIDATED';
