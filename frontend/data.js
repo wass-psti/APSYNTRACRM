@@ -137,6 +137,12 @@ const BOARD_READ_RPC=new Set([
  'tl03_documents_page',
  'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
  'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read',
+ // Existing application read contracts used by concurrent native search.
+ 'frt_bootstrap','frt_board_list_safe','frt_board_dashboard_safe',
+ 'frt_liquidation_aging_company','frt_restricted_request_detail','frt_ic_snapshot',
+ 'charter_dispatch',
+ 'has_module_access','list_module_directory','list_module_state',
+ 'timetracker_ot_snapshot','timetracker_attendance_capabilities',
  // Existing read-only native application search and detail contracts.
  'tool_traceability_list_tools','tool_traceability_list_requests','tool_traceability_list_items',
  'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',
