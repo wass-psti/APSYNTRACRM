@@ -1624,6 +1624,13 @@
       "file": "20261116092055_cp_fm1_core_04_operational_ui_reporting_warnings.sql",
       "bytes": 33587,
       "sha256": "0c96df198566b6047ce181e6ec56a4eb29b204e0b2405c2937a4ca7abf362161"
+    },
+    {
+      "version": "20261116104500",
+      "name": "frt_wf05a_archive_recovery",
+      "file": "20261116104500_frt_wf05a_archive_recovery.sql",
+      "bytes": 3441,
+      "sha256": "f88078fe08250b7b04c8198d7be16a378bc622c3b5d4b6aaf3df5a0501732d6c"
     }
   ]
 }
