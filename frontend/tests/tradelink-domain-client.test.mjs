@@ -66,7 +66,7 @@ test('read and write operations require a complete signed authorization client',
 test('signed analytics RPC is enabled as a read-only path while automatic numbering remains disabled',async()=>{
  assert.equal(TL03_ANALYTICS_ENABLED,true);
  assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
- const calls=[];
+ const calls=[];let boardCalls=0,managerChecks=0;
  const summary={generatedAt:'2026-11-16T08:00:00.000Z',
   documentCounts:[{documentType:'quotation',workflowState:'draft',count:3}],
   quotationPerformance:[{workflowState:'draft',currency:'PHP',count:3,total:1000}],
@@ -77,14 +77,15 @@ test('signed analytics RPC is enabled as a read-only path while automatic number
  const auth={userId:id,getVerifiedUser:async()=>({id})};
  const api={
   context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
-  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
-   name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
-  allowed:async()=>true,
+  board:async()=>{boardCalls++;throw new Error('Analytics must not load full board pages');},
+  allowed:async(boardId,permission)=>{managerChecks++;assert.equal(boardId,TRADELINK_BOARD_ID);assert.equal(permission,'manage');return true;},
   rpc:async(name,args)=>{calls.push({name,args});return summary;}
  };
  const client=new TradeLinkDomainClient({auth,api});
  const result=await client.analyticsSummary();
  assert.deepEqual(result.documentCounts,summary.documentCounts);
+ assert.equal(managerChecks,1,'the existing signed manager check remains active');
+ assert.equal(boardCalls,0,'the aggregate RPC performs authoritative board/workspace validation');
  assert.deepEqual(calls,[{name:'tl03_analytics_summary',args:{
   p_board_id:TRADELINK_BOARD_ID,p_from:null,p_to:null}}]);
  await assert.rejects(()=>client.analyticsSummary({from:'invalid'}),/Invalid TradeLink analytics reporting period/);
@@ -92,7 +93,7 @@ test('signed analytics RPC is enabled as a read-only path while automatic number
 });
 
 test('analytics retries one transient invalidated context read for the same signed user',async()=>{
- let contextCalls=0;
+ let contextCalls=0,boardCalls=0;
  const rpcCalls=[];
  const summary={generatedAt:'2026-11-16T08:00:00.000Z',documentCounts:[],
   quotationPerformance:[],quotationCommercialStatus:[],taxSummary:[],
@@ -108,8 +109,7 @@ test('analytics retries one transient invalidated context read for the same sign
    }
    return {user_id:id,workspace_id:workspace,profile:{status:'active'}};
   },
-  board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
-   name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
+  board:async()=>{boardCalls++;throw new Error('Analytics must not load full board pages');},
   allowed:async()=>true,
   rpc:async(name,args)=>{rpcCalls.push({name,args});return summary;}
  };
@@ -117,36 +117,9 @@ test('analytics retries one transient invalidated context read for the same sign
  const result=await client.analyticsSummary();
  assert.deepEqual(result.documentCounts,[]);
  assert.equal(contextCalls,2,'only the invalidated context read is retried');
+ assert.equal(boardCalls,0,'the retry remains shell-free for Analytics');
  assert.equal(rpcCalls.length,1,'the aggregate RPC is called once after session validation');
  assert.equal(rpcCalls[0].name,'tl03_analytics_summary');
-});
-
-test('analytics retries one invalidated board snapshot for the same signed user',async()=>{
- let boardCalls=0,rpcCalls=0;
- const summary={generatedAt:'2026-11-16T08:00:00.000Z',documentCounts:[],
-  quotationPerformance:[],quotationCommercialStatus:[],taxSummary:[],
-  aging:{available:true,reason:'No qualifying invoices.',buckets:[],
-   unallocatedReceipts:[],excessPayments:[],pendingChequeReceipts:[],excludedWithoutDueDate:0}};
- const auth={userId:id,getVerifiedUser:async()=>({id})};
- const api={
-  context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
-  board:async()=>{
-   boardCalls++;
-   if(boardCalls===1){
-    const error=new Error('Board changed while its pages were loading. Refresh and retry.');
-    error.status=409;error.code='BOARD_READ_INVALIDATED';throw error;
-   }
-   return {board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
-    name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}};
-  },
-  allowed:async()=>true,
-  rpc:async(name)=>{rpcCalls++;assert.equal(name,'tl03_analytics_summary');return summary;}
- };
- const client=new TradeLinkDomainClient({auth,api});
- const result=await client.analyticsSummary();
- assert.deepEqual(result.documentCounts,[]);
- assert.equal(boardCalls,2,'only the invalidated board snapshot is retried');
- assert.equal(rpcCalls,1,'aggregate RPC is issued once after signed manager preflight');
 });
 
 test('analytics does not retry an invalidated context read after signed identity changes',async()=>{

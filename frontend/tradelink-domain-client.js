@@ -222,13 +222,14 @@ export class TradeLinkDomainClient{
   this.api=api;this.auth=auth;
   this.automaticNumberingEnabled=automaticNumberingEnabled===true;
  }
- async session(){
-  if(!this.api?.context||(!this.api?.board&&!this.api?.boardCached)||
+ async session({verifyBoard=true}={}){
+  if(!this.api?.context||(verifyBoard&&!this.api?.board&&!this.api?.boardCached)||
     !this.api?.allowed||!this.api?.rpc||!this.auth?.getVerifiedUser)
    deny('Signed TradeLink domain API unavailable.');
   // Resolve the signed actor, workspace and manager decision concurrently.
-  // The manager preflight needs only the board shell, not its item pages; reuse
+  // Document operations need only the board shell, not its item pages; reuse
   // the existing signed board cache's bounded invalidation retry when present.
+  // Analytics delegates board/workspace validation to its authoritative RPC.
   // No document operation runs until every identity, workspace and permission
   // check below succeeds; the mutation RPC remains authoritative as before.
   const [actor,context,canManage]=await Promise.all([
@@ -239,13 +240,20 @@ export class TradeLinkDomainClient{
     context?.user_id!==actor.id||context?.profile?.status!=='active'||
     !validUuid(context.workspace_id))
    deny('TradeLink signed identity or workspace changed.');
-  const detail=typeof this.api.boardCached==='function'?
-   await this.api.boardCached(TRADELINK_BOARD_ID,{
-    userId:actor.id,workspaceId:context.workspace_id,includeItems:false
-   }):await this.api.board(TRADELINK_BOARD_ID);
-  if(!isTradeLinkBoard(detail?.board)||
-     detail.board.workspace_id!==context.workspace_id||canManage!==true)
+  if(verifyBoard){
+   const detail=typeof this.api.boardCached==='function'?
+    await this.api.boardCached(TRADELINK_BOARD_ID,{
+     userId:actor.id,workspaceId:context.workspace_id,includeItems:false
+    }):await this.api.board(TRADELINK_BOARD_ID);
+   if(!isTradeLinkBoard(detail?.board)||
+      detail.board.workspace_id!==context.workspace_id||canManage!==true)
+    deny('TradeLink board manager scope required.');
+  }else if(canManage!==true){
+   // The read-only analytics RPC independently verifies its board and
+   // workspace context. Retain the signed manager preflight without loading
+   // an unrelated full board snapshot before that authoritative read.
    deny('TradeLink board manager scope required.');
+  }
   // Server additionally requires a live auth.sessions row and an effective
   // General Manager module role beneath the centralized platform ceiling.
   return {actorId:actor.id,workspaceId:context.workspace_id};
@@ -276,17 +284,15 @@ export class TradeLinkDomainClient{
    deny('Invalid TradeLink analytics reporting period.',400);
   const signedActorId=this.auth?.userId;
   try{
-   await this.session();
+   await this.session({verifyBoard:false});
   }catch(error){
-   // A concurrent authoritative refresh can invalidate an overlapping
-   // context or board read. Retry only those known transient 409s once for the
+   // A concurrent authoritative workspace refresh can invalidate an
+   // overlapping context read. Retry that exact transient 409 once for the
    // same signed user; identity changes and unrelated failures remain unchanged.
-   const invalidatedContext=error?.status===409&&
-    error?.message==='Signed workspace context changed during loading.';
-   const invalidatedBoard=error?.status===409&&error?.code==='BOARD_READ_INVALIDATED';
-   if((!invalidatedContext&&!invalidatedBoard)||
+   if(error?.status!==409||
+      error?.message!=='Signed workspace context changed during loading.'||
       this.auth?.userId!==signedActorId)throw error;
-   await this.session();
+   await this.session({verifyBoard:false});
   }
   const result=await this.api.rpc('tl03_analytics_summary',{
    p_board_id:TRADELINK_BOARD_ID,p_from:from,p_to:to});
