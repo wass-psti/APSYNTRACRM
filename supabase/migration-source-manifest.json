@@ -1580,8 +1580,8 @@
       "version": "20261116044201",
       "name": "cp_crm_global_search",
       "file": "20261116044201_cp_crm_global_search.sql",
-      "bytes": 6984,
-      "sha256": "6fbbe6fe2c113136b920cb9fcc95aeef5d061010cdfeef7a1ee2d758f3f57b04"
+      "bytes": 8982,
+      "sha256": "ae9a034c9782b7959fd8486b1dcde30cd3e4a43f204123788ecc4d05a7f758e6"
     }
   ]
 }

@@ -132,6 +132,8 @@ test('uses the existing read-only API contract and does not invalidate board cac
 
 test('server search reuses existing workspace and board-view checks without changing roles or RLS',()=>{
  assert.match(sql,/SECURITY DEFINER/);
+ assert.match(sql,/SECURITY INVOKER/);
+ assert.match(sql,/private\.wm_search_workspace_content_impl/);
  assert.match(sql,/SET search_path TO ''/);
  assert.match(sql,/auth\.uid\(\)/);
  assert.match(sql,/public\.current_workspace_id\(v_actor\)/);
@@ -139,7 +141,11 @@ test('server search reuses existing workspace and board-view checks without chan
  assert.match(sql,/b\.status IN \('active', 'archived'\)/);
  assert.match(sql,/regexp_replace\(lower\(btrim\(coalesce\(p_query, ''\)\)\), '\\s\+', ' ', 'g'\)/);
  assert.match(sql,/string_to_array\(v_query, ' '\)/);
- assert.match(sql,/WHERE NOT EXISTS \(\n      SELECT 1/);
+ assert.match(sql,/candidate_matches AS/);
+ assert.match(sql,/HAVING count\(\*\) = \(SELECT count\(\*\) FROM tokens\)/);
+ assert.match(sql,/extensions\.gin_trgm_ops/);
+ assert.match(sql,/work_board_items_search_prefix_idx/);
+ assert.match(sql,/work_board_item_values_search_prefix_idx/);
  assert.match(sql,/p_limit integer DEFAULT 40/);
  assert.match(sql,/p_limit > 50/);
  assert.match(sql,/REVOKE ALL ON FUNCTION public\.wm_search_workspace_content\(text, integer\) FROM PUBLIC, anon/);

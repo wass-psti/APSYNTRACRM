@@ -16,9 +16,9 @@ Introduce a single command palette across APSYNTRA CRM while preserving the exis
 
 ## Data and backend contract
 
-`wm_search_workspace_content(text, integer)` is a bounded, read-only RPC. It searches active and archived boards in the caller's current workspace and reuses the existing `work_board_access(board_id, 'view')` contract. Results are limited to 50 rows and search text is limited to 2–160 characters. No board data, role, membership, RLS policy or existing permission is modified.
+`public.wm_search_workspace_content(text, integer)` is a bounded, read-only invoker wrapper over a private scoped implementation. `pg_trgm` GIN indexes accelerate substring matching on item text and cell values; B-tree pattern indexes support two-character prefix matching. Date-only matches are checked as a separate bounded item-field candidate path. It searches active and archived boards in the caller's current workspace and reuses the existing `work_board_access(board_id, 'view')` contract. Results are limited to 50 rows and search text is limited to 2–160 characters. No board data, role, membership, RLS policy or existing permission is modified.
 
-The RPC is registered as a read-only `DomainApi` call so it does not invalidate board caches. The frontend discards stale responses when a newer query or workspace change occurs.
+The RPC is registered as a read-only `DomainApi` call so it does not invalidate board caches. The public PostgREST wrapper is invoker-security; the scoped implementation remains in the existing non-exposed `private` schema with a fixed empty search path. The frontend discards stale responses when a newer query or workspace change occurs.
 
 ## UX and compatibility
 
@@ -33,6 +33,7 @@ The stylesheet is added to the ordered CSS bundle. The new JavaScript and CSS as
 - Syntax: `node --check` on frontend JavaScript files
 - CSS bundle: `node scripts/build-priority5-styles.mjs --check`
 - Source guard: `node scripts/verify-pages-source.mjs`
+- Disposable PostgreSQL 17 production-scale benchmark (32,001 items / 224,002 cells): `psql -f sql/tests/cp-crm-global-search-setup.sql -f sql/tests/cp-crm-global-search-acceptance.sql -f sql/tests/cp-crm-global-search-benchmark.sql`
 - Disposable PostgreSQL 17 integration: `psql -f sql/tests/cp-crm-global-search-setup.sql -f sql/tests/cp-crm-global-search-acceptance.sql`
 - Migration source manifest: `node scripts/verify-migration-source-manifest.mjs`
 - Production runtime acceptance: confirm shortcut and visible Search button, module/board results, remote record result, arrow navigation, Enter navigation, Escape close, and mobile layout in the deployed signed workspace.

@@ -1,6 +1,9 @@
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE SCHEMA auth;
+CREATE SCHEMA private;
+CREATE SCHEMA extensions;
+GRANT USAGE ON SCHEMA private TO authenticated;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
  SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
@@ -47,6 +50,8 @@ INSERT INTO public.work_board_items(id,board_id,group_id,title,notes,status,due_
  ('21000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','Archived old asset','legacy serial record','done',null),
  ('21000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000003',null,'Trash secret','must not appear','todo',null),
  ('21000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000004',null,'Foreign secret','must not appear','todo',null);
+INSERT INTO public.work_board_items(id,board_id,group_id,title,notes,status,due_date) VALUES
+ ('21000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','Special 100% Asset','Literal wildcard fixture','todo','2026-12-02');
 INSERT INTO public.work_board_columns VALUES
  ('22000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002','Serial Number',1,true),
  ('22000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','Asset Tag',1,true);

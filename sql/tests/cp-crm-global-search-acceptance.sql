@@ -23,6 +23,14 @@ BEGIN
  IF n<>1 THEN RAISE EXCEPTION 'multi-token search across title and cell values expected 1 row, received %',n; END IF;
  SELECT count(*) INTO n FROM public.wm_search_workspace_content('widget',40);
  IF n<>1 THEN RAISE EXCEPTION 'active-board title search expected 1 row, received %',n; END IF;
+ SELECT count(*) INTO n FROM public.wm_search_workspace_content('wi',40);
+ IF n<>1 THEN RAISE EXCEPTION 'two-character prefix search expected 1 row, received %',n; END IF;
+ SELECT count(*) INTO n FROM public.wm_search_workspace_content('dg',40);
+ IF n<>0 THEN RAISE EXCEPTION 'two-character search must use prefix matching, not unindexed substring matching'; END IF;
+ SELECT count(*) INTO n FROM public.wm_search_workspace_content('100%',40);
+ IF n<>1 THEN RAISE EXCEPTION 'literal percent search expected 1 row, received %',n; END IF;
+ SELECT count(*) INTO n FROM public.wm_search_workspace_content('100_',40);
+ IF n<>0 THEN RAISE EXCEPTION 'underscore must be treated as a literal search character'; END IF;
  SELECT count(*) INTO n FROM public.wm_search_workspace_content('blue widget',40);
  IF n<>1 THEN RAISE EXCEPTION 'notes search expected 1 row, received %',n; END IF;
  SELECT count(*) INTO n FROM public.wm_search_workspace_content('working',40);
@@ -53,14 +61,30 @@ BEGIN
  IF NOT has_function_privilege('authenticated','public.wm_search_workspace_content(text,integer)','EXECUTE') THEN
   RAISE EXCEPTION 'authenticated role must execute the search RPC';
  END IF;
- IF NOT (SELECT prosecdef FROM pg_proc WHERE oid='public.wm_search_workspace_content(text,integer)'::regprocedure) THEN
-  RAISE EXCEPTION 'search RPC must preserve its signed workspace execution context';
+ IF (SELECT prosecdef FROM pg_proc WHERE oid='public.wm_search_workspace_content(text,integer)'::regprocedure) THEN
+  RAISE EXCEPTION 'public PostgREST wrapper must remain invoker-security';
+ END IF;
+ IF NOT (SELECT prosecdef FROM pg_proc WHERE oid='private.wm_search_workspace_content_impl(text,integer)'::regprocedure) THEN
+  RAISE EXCEPTION 'private search implementation must retain scoped definer execution';
  END IF;
  IF NOT EXISTS(
+  SELECT 1 FROM pg_proc p WHERE p.oid='private.wm_search_workspace_content_impl(text,integer)'::regprocedure
+   AND p.proconfig @> ARRAY['search_path=""']
+ ) OR NOT EXISTS(
   SELECT 1 FROM pg_proc p WHERE p.oid='public.wm_search_workspace_content(text,integer)'::regprocedure
    AND p.proconfig @> ARRAY['search_path=""']
  ) THEN
-  RAISE EXCEPTION 'search RPC must use an empty fixed search_path';
+  RAISE EXCEPTION 'search functions must use an empty fixed search_path';
+ END IF;
+ IF has_function_privilege('anon','private.wm_search_workspace_content_impl(text,integer)','EXECUTE') THEN
+  RAISE EXCEPTION 'anon must not execute the private search implementation';
+ END IF;
+ IF NOT has_function_privilege('authenticated','private.wm_search_workspace_content_impl(text,integer)','EXECUTE') THEN
+  RAISE EXCEPTION 'authenticated must execute the private implementation through the public wrapper';
+ END IF;
+ IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='work_board_items_search_trgm_idx')
+    OR NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='work_board_item_values_search_trgm_idx') THEN
+  RAISE EXCEPTION 'search trigram indexes are missing';
  END IF;
 END $$;
 
