@@ -2619,16 +2619,17 @@ async function commitTradeLinkDraft(form){
    db.board(TRADELINK_BOARD_ID)
   ]);
   if(!same())return;
+  const savedDraft={...draft,documentNumber:receipt.documentNumber||draft.documentNumber};
   if(!record||record.revision!==receipt.revision||
    record.board_item_id!==receipt.boardItemId||
-   record.document_number!==draft.documentNumber||
-   record.content?.documentNumber!==draft.documentNumber||
+   record.document_number!==savedDraft.documentNumber||
+   record.content?.documentNumber!==savedDraft.documentNumber||
    record.content?.documentType!==draft.documentType||
-   !tradeLinkSavedDraftMatches(record,draft)||
+   !tradeLinkSavedDraftMatches(record,savedDraft)||
    record.workflow_state!==workflowState||
    board?.board?.workspace_id!==ws||
    !board.items?.some(item=>item.id===receipt.boardItemId&&
-    item.title===draft.documentNumber))
+    item.title===savedDraft.documentNumber))
    throw new ApiError('Saved document/Board projection verification incomplete.',409);
   // The original signed list is bounded to 50. Its absence is not proof
   // that an exactly read and Board-verified saved document was not committed.
@@ -2637,7 +2638,7 @@ async function commitTradeLinkDraft(form){
   state.tradeLinkDraft={...initialTradeLinkDraftView(),
    status:'AUTHORIZED_READ',rows:verifiedList.rows,
    message:'Saved '+(workflowState==='draft'?'Draft':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
-  toast('Document saved. Board item and All Documents verified.');
+  toast('Document '+savedDraft.documentNumber+' saved. Board item and All Documents verified.');
   location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
  }catch(err){
   if(same()){

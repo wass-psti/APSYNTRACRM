@@ -18,6 +18,10 @@ const summary={
   {workflowState:'won',currency:'PHP',count:2,total:25000},
   {workflowState:'lost',currency:'USD',count:1,total:500}
  ],
+ quotationCommercialStatus:[
+  {quoteStatus:'Accepted',currency:'PHP',count:1,total:12000},
+  {quoteStatus:'Declined',currency:'USD',count:1,total:500}
+ ],
  taxSummary:[{currency:'PHP',vatType:'12',invoiceCount:3,
   taxable:10000,vat:1200,total:11200}],
  aging:{available:false,reason:'Aging requires invoice due dates and payment allocations.'}
@@ -34,7 +38,8 @@ test('analytics aggregate normalizer validates bounded aggregate-only rows',()=>
  const normalized=normalizeTradeLinkAnalyticsSummary(summary);
  assert.deepEqual(normalized.documentCounts,summary.documentCounts);
  assert.deepEqual(summarizeTradeLinkAnalytics(normalized),{
-  documents:6,quoteCount:3,won:2,lost:1,winRate:2/3,taxInvoices:3
+  documents:6,quoteCount:3,won:2,lost:1,winRate:2/3,taxInvoices:3,
+  agingAvailable:false
  });
 });
 
@@ -51,12 +56,67 @@ test('analytics normalizer rejects invalid types, currencies, amounts and timest
 test('analytics UI shows signed quotation and tax summaries without customer-level data',()=>{
  const html=renderTradeLinkAnalytics({summary,enabled:true});
  assert.match(html,/Analytics &amp; Dashboards/);
- assert.match(html,/Quotation outcomes/);
+ assert.match(html,/Quotation workflow outcomes/);
+ assert.match(html,/Quotation commercial status/);
  assert.match(html,/Tax summary/);
  assert.match(html,/Win rate/);
  assert.match(html,/11,200\.00 PHP/);
+ assert.match(html,/Accepted/);
  assert.match(html,/Aging requires invoice due dates and payment allocations/);
  assert.doesNotMatch(html,/customerName|customerEmail|Synthetic buyer/);
+});
+
+
+test('new analytics schema separates quotation commercial status and exposes bounded aging aggregates',()=>{
+ const current={...summary,quotationCommercialStatus:[
+  {quoteStatus:'Sent',currency:'PHP',count:1,total:1200}],
+  aging:{available:true,reason:'Cash receipts only; exact reference and currency.',
+   buckets:[{currency:'PHP',bucket:'1-30 days',invoiceCount:1,outstanding:808}],
+   unallocatedReceipts:[{currency:'USD',count:1,amount:50}],
+   excessPayments:[{currency:'PHP',count:1,amount:20}],
+   pendingChequeReceipts:[{currency:'PHP',count:1,amount:300}],
+   excludedWithoutDueDate:2}};
+ const normalized=normalizeTradeLinkAnalyticsSummary(current);
+ assert.equal(normalized.aging.available,true);
+ assert.equal(normalized.aging.buckets[0].outstanding,808);
+ assert.equal(normalized.aging.pendingChequeReceipts[0].amount,300);
+ assert.equal(normalized.aging.excessPayments[0].amount,20);
+ assert.equal(normalized.aging.excludedWithoutDueDate,2);
+ const html=renderTradeLinkAnalytics({summary:current,enabled:true});
+ assert.match(html,/Accounts Receivable Aging/);
+ assert.match(html,/1-30 days/);
+ assert.match(html,/Cheque receipts pending bank clearance/);
+ assert.match(html,/Excess cash payments/);
+ assert.match(html,/exact reference and currency/);
+ assert.throws(()=>normalizeTradeLinkAnalyticsSummary({...current,aging:{...current.aging,
+  buckets:[{currency:'PHP',bucket:'31-90 days',invoiceCount:1,outstanding:1}]}}));
+});
+
+test('automatic numbering and extended analytics remain source-only until controlled activation',()=>{
+ const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
+ assert.match(client,/export const TL03_ANALYTICS_ENABLED=false/);
+ assert.match(client,/tl03_document_create/);
+ assert.match(client,/TL03_AUTOMATIC_NUMBERING_ENABLED=false/);
+ const migration=readFileSync('supabase/migrations/20261116070000_cp_tl_legacy_numbering_dates_aging.sql','utf8');
+ for(const pattern of [
+  /CREATE TABLE private\.tradelink_document_sequences/,
+  /FOR UPDATE/,
+  /pg_advisory_xact_lock/,
+  /candidate numeric/,
+  /tradelink_document_number_immutable/,
+  /cannot be changed after creation/,
+  /private\.tl03_save\(p_board_id,p_document_id,0,'create'/,
+  /GRANT EXECUTE[\s\S]*TO authenticated/,
+  /CREATE OR REPLACE FUNCTION public\.tl03_analytics_summary/,
+  /'quotationCommercialStatus'/,
+  /'pendingChequeReceipts'/,
+  /'excessPayments'/,
+  /'excludedWithoutDueDate'/,
+  /d\.workspace_id=public\.current_workspace_id\(auth\.uid\(\)\)/,
+  /SECURITY INVOKER/,
+  /SET search_path=''/
+ ])assert.match(migration,pattern);
+ assert.doesNotMatch(migration,/DROP TABLE|DROP POLICY|CREATE ROLE|ALTER ROLE|service_role/);
 });
 
 test('analytics UI does not fabricate metrics while the aggregate RPC is inactive',()=>{

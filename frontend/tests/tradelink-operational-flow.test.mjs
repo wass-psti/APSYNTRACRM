@@ -238,28 +238,37 @@ test('Stage B signed create/retry/update invoke only guarded RPC with authoritat
   allowed:async()=>true,
   rpc:async(name,args)=>{
    calls.push({name,args});
-   assert.equal(name,'tl03_document_save');
    assert.equal(args.p_board_id,TRADELINK_BOARD_ID);
    assert.equal(args.p_document_id,docId);
+   if(name==='tl03_document_create'){
+    assert.equal(args.p_data.documentNumber,'');
+    return {documentId:docId,boardItemId:itemId,documentNumber:'Q-011130',
+     revision:1,state:args.p_initial_state,operation:'create',idempotent:false};
+   }
+   assert.equal(name,'tl03_document_save');
    return {documentId:docId,boardItemId:itemId,revision:args.p_expected_revision+1,
     state:args.p_initial_state,operation:args.p_operation,idempotent:false};
   }
  };
- const client=new TradeLinkDomainClient({api,auth});
- const create=await client.commit({documentId:docId,expectedRevision:0,operation:'create',draft});
+ const client=new TradeLinkDomainClient({api,auth,automaticNumberingEnabled:true});
+ const create=await client.commit({documentId:docId,expectedRevision:0,operation:'create',
+  draft:{...draft,documentNumber:''}});
  assert.equal(create.revision,1);
- const updated=await client.commit({documentId:docId,expectedRevision:1,operation:'update',draft});
+ assert.equal(create.documentNumber,'Q-011130');
+ const updated=await client.commit({documentId:docId,expectedRevision:1,operation:'update',draft:{...draft,documentNumber:'Q-011130'}});
  assert.equal(updated.revision,2);
  assert.equal(calls.length,2);
- assert.deepEqual(calls.map(c=>c.args.p_expected_revision),[0,1]);
- assert.deepEqual(calls.map(c=>c.args.p_operation),['create','update']);
- assert.deepEqual(calls[0].args.p_data,draft);
+ assert.deepEqual(calls.map(c=>c.name),['tl03_document_create','tl03_document_save']);
+ assert.equal(calls[0].args.p_expected_revision,undefined);
+ assert.equal(calls[1].args.p_expected_revision,1);
+ assert.deepEqual(calls[0].args.p_data,{...draft,documentNumber:''});
+ assert.equal(calls[1].args.p_operation,'update');
  assert.deepEqual(calls.map(c=>c.args.p_initial_state),['for-approval','for-approval']);
  let deniedCalls=0;
- const noAccess=new TradeLinkDomainClient({auth,api:{...api,
+ const noAccess=new TradeLinkDomainClient({auth,automaticNumberingEnabled:true,api:{...api,
   allowed:async()=>false,rpc:async()=>{deniedCalls++;throw Error('Write must be denied');}}});
  await assert.rejects(()=>noAccess.commit({
-  documentId:docId,expectedRevision:0,operation:'create',draft
+  documentId:docId,expectedRevision:0,operation:'create',draft:{...draft,documentNumber:''}
  }),/manager scope required/);
  assert.equal(deniedCalls,0);
 });
