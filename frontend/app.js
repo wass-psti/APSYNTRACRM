@@ -7720,7 +7720,7 @@ async function action(name,button){
    '<p><strong>Move '+e(board.name)+' to Trash?</strong></p>'+
    '<p>This board will disappear from Active and Archived. '+
    'Its '+(Number(board.item_count)||0)+' active items, columns, groups, files, members and audit history remain stored.</p>'+
-   '<p>You can restore the board from Trash. Permanent deletion is not offered.</p></div>',
+   '<p>You can restore this board from Trash or permanently delete it there if eligible. Permanent deletion cannot be undone.</p></div>',
    async()=>{
     state.boardLifecycleBusy=true;
     try{
