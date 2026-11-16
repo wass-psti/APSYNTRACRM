@@ -28,7 +28,8 @@ BEGIN
   'title','CP-FRT-WF-05B disposable request',
   'department','Operations',
   'fundSource','WASS Operating Account',
-  'dateNeeded','2026-11-17',
+  'requestDate','2026-11-17',
+  'dateNeeded','2026-11-30',
   'description','Disposable monthly voucher acceptance',
   'recipientName','Supplier A',
   'recipientBank','BPI',
@@ -65,7 +66,7 @@ BEGIN
 
  v_december:=public.frt_create_request(
   v_workspace,v_payload||jsonb_build_object(
-   'dateNeeded','2026-12-01','recipientName','Supplier B'
+   'requestDate','2026-12-01','recipientName','Supplier B'
   )
  );
  IF v_december->>'voucher_no'<>'DV-WASS-202612-001' THEN
