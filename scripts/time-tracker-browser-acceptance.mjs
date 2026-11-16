@@ -11,9 +11,10 @@ const executablePath =
   (process.platform === "darwin"
     ? "/Applications/Chromium.app/Contents/MacOS/Chromium"
     : chromium.executablePath());
+const testPort = process.env.TT_TEST_PORT || "5189";
 const baseUrl =
   process.env.TT_TEST_URL ||
-  "http://127.0.0.1:5173/frontend/tests/fixtures/time-tracker-component.html";
+  `http://127.0.0.1:${testPort}/frontend/tests/fixtures/time-tracker-component.html`;
 const verifiedResult = {
   status: "VERIFIED_READ",
   access: { moduleRole: "Employee", attendanceWritesAccepted: false },
@@ -28,7 +29,13 @@ let browser = null;
 async function ensureViteServer() {
   try {
     const response = await fetch(baseUrl);
-    if (response.ok) return;
+    if (
+      response.ok &&
+      (await response.text()).includes(
+        "<title>TimeTracker Application Fixture</title>",
+      )
+    )
+      return;
   } catch {
     // Start Vite when no local server is already available.
   }
@@ -44,7 +51,7 @@ async function ensureViteServer() {
       "--host",
       "127.0.0.1",
       "--port",
-      "5173",
+      testPort,
       "--strictPort",
     ],
     { stdio: "ignore" },
@@ -55,7 +62,13 @@ async function ensureViteServer() {
     }
     try {
       const response = await fetch(baseUrl);
-      if (response.ok) return;
+      if (
+        response.ok &&
+        (await response.text()).includes(
+          "<title>TimeTracker Application Fixture</title>",
+        )
+      )
+        return;
     } catch {
       // Wait for Vite to become ready.
     }
@@ -156,9 +169,19 @@ try {
     assert.equal(
       result.violations.length,
       0,
-      label + " accessibility violations: " + JSON.stringify(
-        result.violations.map((item) => ({ id: item.id, impact: item.impact, nodes: item.nodes.map((node) => ({ target: node.target, html: node.html, summary: node.failureSummary })) })),
-      ),
+      label +
+        " accessibility violations: " +
+        JSON.stringify(
+          result.violations.map((item) => ({
+            id: item.id,
+            impact: item.impact,
+            nodes: item.nodes.map((node) => ({
+              target: node.target,
+              html: node.html,
+              summary: node.failureSummary,
+            })),
+          })),
+        ),
     );
   };
 
@@ -204,7 +227,8 @@ try {
     { id: "20000000-0000-4000-8000-000000000001", displayName: "Test Admin" },
   ];
   await page.evaluate(
-    (result) => window.__timeTrackerRender({ view: "log", result, adminEligible: false }),
+    (result) =>
+      window.__timeTrackerRender({ view: "log", result, adminEligible: false }),
     adminResult,
   );
   assert.equal(await page.locator("[data-tt-log-select]").count(), 0);
@@ -219,7 +243,9 @@ try {
       }),
     { result: adminResult, directory: adminDirectory },
   );
-  await page.getByText("Attendance record management", { exact: true }).waitFor();
+  await page
+    .getByText("Attendance record management", { exact: true })
+    .waitFor();
   await page.locator("#tt-log-select-all").waitFor();
   await page.locator("#tt-log-select-" + adminRecordId).waitFor();
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
@@ -227,8 +253,14 @@ try {
   await page.locator(".tt-log-row-summary").click();
   await page.getByRole("button", { name: "Edit record" }).waitFor();
   await page.getByRole("button", { name: "Delete record" }).waitFor();
-  await checkAccessibilityWithin(".tt-log-admin-toolbar", "System Admin attendance toolbar");
-  await checkAccessibilityWithin(".tt-log-admin-row-actions", "System Admin row actions");
+  await checkAccessibilityWithin(
+    ".tt-log-admin-toolbar",
+    "System Admin attendance toolbar",
+  );
+  await checkAccessibilityWithin(
+    ".tt-log-admin-row-actions",
+    "System Admin row actions",
+  );
 
   await page.evaluate(
     ({ result, directory, record }) =>
@@ -265,8 +297,16 @@ try {
   ]) {
     await page.locator(selector).waitFor();
   }
-  assert.equal(await page.locator('#tt-attendance-admin-form select[name="employeeId"] option').count(), 2);
-  await checkAccessibilityWithin(".tt-admin-editor", "System Admin individual attendance editor");
+  assert.equal(
+    await page
+      .locator('#tt-attendance-admin-form select[name="employeeId"] option')
+      .count(),
+    2,
+  );
+  await checkAccessibilityWithin(
+    ".tt-admin-editor",
+    "System Admin individual attendance editor",
+  );
 
   await page.evaluate(
     ({ result, directory, record }) =>
@@ -290,8 +330,18 @@ try {
     { result: adminResult, directory: adminDirectory, record: adminRawRecord },
   );
   await page.getByRole("dialog", { name: "Bulk edit attendance" }).waitFor();
-  assert.equal(await page.locator('#tt-attendance-admin-form select[name="employeeId"] option[value=""]').count(), 1);
-  await checkAccessibilityWithin(".tt-admin-editor", "System Admin bulk attendance editor");
+  assert.equal(
+    await page
+      .locator(
+        '#tt-attendance-admin-form select[name="employeeId"] option[value=""]',
+      )
+      .count(),
+    1,
+  );
+  await checkAccessibilityWithin(
+    ".tt-admin-editor",
+    "System Admin bulk attendance editor",
+  );
 
   for (const [view, title] of [
     ["overview", "Overview"],
