@@ -40,6 +40,19 @@ test("FM1 service status uses the active workspace and validates server readines
         readiness_state: "pending",
       },
       decisions: [],
+      assignees: [],
+      metrics: {
+        total_tickets: 0,
+        open_tickets: 0,
+        p1p2_tickets: 0,
+        unassigned_p1p2: 0,
+        sla_active_tickets: 0,
+        breached_obligations: 0,
+        approaching_deadlines: null,
+        approaching_deadline_policy: "NOT_CONFIGURED",
+      },
+      unassigned_urgent: [],
+      notification_delivery: { queued: 0, failed: 0, delivered: 0 },
       contract_active: false,
       external_notifications_enabled: false,
     },
@@ -144,6 +157,7 @@ test("FM1 ticket detail requires obligations, events, milestones, holds and audi
       milestones: [],
       holds: [],
       audit: [],
+      conversations: [],
     },
   });
   const client = new Fm1ApiClient(fake.api);
@@ -221,4 +235,97 @@ test("FM1 hold operations use explicit hold evidence and do not add role-specifi
     fake.calls.map((call) => call.name),
     ["fm1_request_hold_v1", "fm1_validate_hold_v1", "fm1_end_hold_v1"],
   );
+});
+
+test("FM1 assignment RPC carries ticket revision, workspace member and idempotency key", async () => {
+  const fake = fakeApi({
+    fm1_assign_ticket_v1: {
+      ticket: ticket({ assigned_to: KEY, revision: 2 }),
+      changed: true,
+      idempotent_replay: false,
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  const result = await client.assignTicket(
+    WORKSPACE,
+    ticket(),
+    KEY,
+    "10000000-0000-4000-8000-000000000011",
+  );
+  assert.equal(result.ticket.assigned_to, KEY);
+  assert.deepEqual(fake.calls[0].args, {
+    p_workspace_id: WORKSPACE,
+    p_ticket_id: TICKET_ID,
+    p_expected_revision: 1,
+    p_assignee_id: KEY,
+    p_idempotency_key: "10000000-0000-4000-8000-000000000011",
+  });
+});
+
+test("FM1 conversation RPC validates message type and preserves the caller idempotency key", async () => {
+  const fake = fakeApi({
+    fm1_add_conversation_v1: {
+      conversation: { id: KEY },
+      idempotent_replay: false,
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  await client.addConversation(
+    WORKSPACE,
+    ticket(),
+    "customer_update",
+    "A verified customer update.",
+    KEY,
+  );
+  assert.equal(fake.calls[0].args.p_visibility, "customer_update");
+  assert.equal(fake.calls[0].args.p_body, "A verified customer update.");
+  assert.equal(fake.calls[0].args.p_idempotency_key, KEY);
+  await assert.rejects(
+    client.addConversation(
+      WORKSPACE,
+      ticket(),
+      "external_email",
+      "Invalid type",
+      KEY,
+    ),
+    /conversation type/,
+  );
+  await assert.rejects(
+    client.addConversation(WORKSPACE, ticket(), "internal", " ", KEY),
+    /1–4,000/,
+  );
+});
+
+test("FM1 notification inbox and mark-read RPCs validate persisted delivery receipts", async () => {
+  const notification = {
+    id: KEY,
+    ticket_id: TICKET_ID,
+    ticket_number: "FM1-2026-000001",
+    subject: "PLC alarm",
+    event_type: "TicketReceived",
+    title: "New FM1 incident",
+    message: "A new incident was received.",
+    created_at: "2026-11-16T06:00:00Z",
+    read_at: null,
+  };
+  const fake = fakeApi({
+    fm1_notification_inbox_v1: {
+      items: [notification],
+      unread_total: 1,
+      limit: 50,
+      offset: 0,
+    },
+    fm1_notification_mark_read_v1: {
+      notification: { id: KEY, read_at: "2026-11-16T06:01:00Z" },
+      idempotent_replay: false,
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  const inbox = await client.notificationInbox(WORKSPACE);
+  const read = await client.markNotificationRead(WORKSPACE, KEY);
+  assert.equal(inbox.unread_total, 1);
+  assert.equal(inbox.items[0].event_type, "TicketReceived");
+  assert.equal(read.notification.id, KEY);
+  assert.equal(fake.calls[0].args.p_workspace_id, WORKSPACE);
+  assert.equal(fake.calls[1].args.p_notification_id, KEY);
 });

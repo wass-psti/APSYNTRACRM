@@ -69,6 +69,10 @@ test("FM1 UI mounts through native DOM and submits authoritative server-backed i
   assert.match(components, /Remote and guided diagnosis are blocked/);
   assert.match(components, /data-fm1-inline-error/);
   assert.match(components, /data-fm1-hold-end-form/);
+  assert.match(components, /data-fm1-assignment-form/);
+  assert.match(components, /data-fm1-conversation-form/);
+  assert.match(components, /renderNotifications\(state\)/);
+  assert.match(components, /renderDuty\(state\)/);
   assert.match(components, /renderPriorityAndHolds\(ticket, detail, state\)/);
   assert.match(components, /idempotencyFingerprint/);
   assert.match(components, /idempotencyKey/);
@@ -78,6 +82,9 @@ test("FM1 UI mounts through native DOM and submits authoritative server-backed i
   assert.match(apiClient, /fm1_ticket_detail_v1/);
   assert.match(apiClient, /fm1_transition_ticket_v1/);
   assert.match(apiClient, /fm1_record_milestone_v1/);
+  assert.match(apiClient, /fm1_assign_ticket_v1/);
+  assert.match(apiClient, /fm1_add_conversation_v1/);
+  assert.match(apiClient, /fm1_notification_inbox_v1/);
   assert.match(dataLayer, /NON_BOARD_DOMAIN_RPC/);
   assert.match(dataLayer, /fm1_create_ticket_v1/);
   assert.match(schema, /serverTicketId: null/);

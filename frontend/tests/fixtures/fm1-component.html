@@ -35,7 +35,8 @@
         requester_name: "FM1 Browser Operator",
         callback_number: "+639171234567",
         subject: "Browser acceptance incident",
-        description: "A synthetic incident used only by the isolated browser fixture.",
+        description:
+          "A synthetic incident used only by the isolated browser fixture.",
         priority_requested: "P2",
         priority_effective: "P2",
         production_impact: "degraded",
@@ -47,7 +48,22 @@
         status: "In Progress",
         revision: 1,
         sla_activation_state: "NOT_ACTIVE",
+        assigned_to: null,
       };
+      const conversations = [];
+      const notifications = [
+        {
+          id: "00000000-0000-4000-8000-000000000008",
+          ticket_id: ticket.id,
+          ticket_number: ticket.ticket_number,
+          subject: ticket.subject,
+          event_type: "TicketReceived",
+          title: "New FM1 incident",
+          message: "A new incident was received: Browser acceptance incident",
+          created_at: "2026-11-16T08:00:00Z",
+          read_at: null,
+        },
+      ];
       const holds = [
         {
           id: "00000000-0000-4000-8000-000000000004",
@@ -56,7 +72,8 @@
           requested_at: "2026-11-16T08:10:00Z",
           external_owner: "Synthetic client IT",
           required_action: "Provide temporary diagnostic access",
-          evidence: "Remote access request is pending with the client IT contact.",
+          evidence:
+            "Remote access request is pending with the client IT contact.",
           expected_review_at: "2026-11-16T10:00:00Z",
           validation_state: "pending",
           resumed_at: null,
@@ -81,23 +98,134 @@
             window.__fm1Calls.push({ name, args });
             if (name === "fm1_service_status_v1") {
               return {
-                service: { service_key: "BIOTECH-FM1-2027", execution_state: "awaiting_acceptance", readiness_state: "pending" },
+                service: {
+                  service_key: "BIOTECH-FM1-2027",
+                  execution_state: "awaiting_acceptance",
+                  readiness_state: "pending",
+                },
                 decisions: [],
+                assignees: [
+                  {
+                    id: "00000000-0000-4000-8000-000000000004",
+                    display_name: "Fixture Assignee",
+                    email: "assignee@example.invalid",
+                  },
+                ],
+                metrics: {
+                  total_tickets: 1,
+                  open_tickets: 1,
+                  p1p2_tickets: 1,
+                  unassigned_p1p2: 0,
+                  sla_active_tickets: 0,
+                  breached_obligations: 0,
+                  approaching_deadlines: null,
+                  approaching_deadline_policy: "NOT_CONFIGURED",
+                },
+                unassigned_urgent: [],
+                notification_delivery: { queued: 0, failed: 0, delivered: 0 },
                 sla_activation_state: "PENDING_ACCEPTANCE_AND_READINESS",
+                internal_notifications_enabled: true,
               };
             }
-            if (name === "fm1_list_tickets_v1") return { items: [ticket], total: 1 };
+            if (name === "fm1_list_tickets_v1")
+              return { items: [ticket], total: 1 };
+            if (name === "fm1_notification_inbox_v1")
+              return {
+                items: notifications.map((item) => ({ ...item })),
+                unread_total: notifications.filter((item) => !item.read_at)
+                  .length,
+                limit: args.p_limit,
+                offset: args.p_offset,
+              };
+            if (name === "fm1_notification_mark_read_v1") {
+              const notification = notifications.find(
+                (item) => item.id === args.p_notification_id,
+              );
+              if (!notification)
+                throw new Error("Unknown fixture notification");
+              notification.read_at =
+                notification.read_at || new Date().toISOString();
+              return {
+                notification: {
+                  id: notification.id,
+                  read_at: notification.read_at,
+                },
+                idempotent_replay: false,
+              };
+            }
             if (name === "fm1_ticket_detail_v1") {
-              return { ticket: { ...ticket }, obligations: [], events: [], milestones: [], holds: holds.map((item) => ({ ...item })), audit: [] };
+              return {
+                ticket: { ...ticket },
+                obligations: [],
+                events: [],
+                milestones: [],
+                holds: holds.map((item) => ({ ...item })),
+                audit: [],
+                conversations: conversations.map((item) => ({ ...item })),
+              };
+            }
+            if (name === "fm1_assign_ticket_v1") {
+              ticket = {
+                ...ticket,
+                assigned_to: args.p_assignee_id,
+                revision: ticket.revision + 1,
+              };
+              return {
+                ticket: { ...ticket },
+                changed: true,
+                idempotent_replay: false,
+              };
+            }
+            if (name === "fm1_add_conversation_v1") {
+              const conversation = {
+                id: "00000000-0000-4000-8000-000000000007",
+                ticket_id: ticket.id,
+                actor_id: userId,
+                actor_display_name: "Fixture Operator",
+                visibility: args.p_visibility,
+                body: args.p_body,
+                created_at: new Date().toISOString(),
+              };
+              conversations.push(conversation);
+              ticket = { ...ticket, revision: ticket.revision + 1 };
+              return {
+                conversation,
+                ticket_revision: ticket.revision,
+                idempotent_replay: false,
+                external_delivery: "NOT_CONFIGURED",
+              };
             }
             if (name === "fm1_record_priority_v1") {
-              ticket = { ...ticket, priority_requested: args.p_requested_priority, priority_effective: args.p_effective_priority, revision: ticket.revision + 1 };
-              return { ticket, priority_event: { decision_state: "pending_d03" }, sla_recalculation: "NEEDS_REVIEW_PENDING_D03" };
+              ticket = {
+                ...ticket,
+                priority_requested: args.p_requested_priority,
+                priority_effective: args.p_effective_priority,
+                revision: ticket.revision + 1,
+              };
+              return {
+                ticket,
+                priority_event: { decision_state: "pending_d03" },
+                sla_recalculation: "NEEDS_REVIEW_PENDING_D03",
+              };
             }
             if (name === "fm1_request_hold_v1") {
-              holds.push({ id: "00000000-0000-4000-8000-000000000006", metric: args.p_metric, reason: args.p_reason, requested_at: new Date().toISOString(), external_owner: args.p_external_owner, required_action: args.p_required_action, evidence: args.p_evidence, expected_review_at: args.p_expected_review_at, validation_state: "pending", resumed_at: null });
+              holds.push({
+                id: "00000000-0000-4000-8000-000000000006",
+                metric: args.p_metric,
+                reason: args.p_reason,
+                requested_at: new Date().toISOString(),
+                external_owner: args.p_external_owner,
+                required_action: args.p_required_action,
+                evidence: args.p_evidence,
+                expected_review_at: args.p_expected_review_at,
+                validation_state: "pending",
+                resumed_at: null,
+              });
               ticket = { ...ticket, revision: ticket.revision + 1 };
-              return { hold: holds[holds.length - 1], clock_effect: "NONE_PENDING_VALIDATION" };
+              return {
+                hold: holds[holds.length - 1],
+                clock_effect: "NONE_PENDING_VALIDATION",
+              };
             }
             if (name === "fm1_validate_hold_v1") {
               const hold = holds.find((item) => item.id === args.p_hold_id);

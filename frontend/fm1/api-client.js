@@ -70,7 +70,14 @@ export class Fm1ApiClient {
       p_workspace_id: requireUuid(workspaceId),
     });
     assertObject(result, "FM1 service status is unavailable.");
-    if (!result.service || !Array.isArray(result.decisions)) {
+    if (
+      !result.service ||
+      !Array.isArray(result.decisions) ||
+      !Array.isArray(result.assignees) ||
+      !result.metrics ||
+      !Array.isArray(result.unassigned_urgent) ||
+      !result.notification_delivery
+    ) {
       throw new ApiError(
         "FM1 service status response is incomplete.",
         409,
@@ -120,6 +127,7 @@ export class Fm1ApiClient {
       "milestones",
       "holds",
       "audit",
+      "conversations",
     ]) {
       if (!Array.isArray(result[key])) {
         throw new ApiError(
@@ -246,6 +254,83 @@ export class Fm1ApiClient {
       p_reason: reason,
       p_idempotency_key: key,
     });
+  }
+
+  async assignTicket(workspaceId, ticket, assigneeId, key = idempotencyKey()) {
+    assertTicket(ticket);
+    return this.api.rpc("fm1_assign_ticket_v1", {
+      p_workspace_id: requireUuid(workspaceId),
+      p_ticket_id: ticket.id,
+      p_expected_revision: ticket.revision,
+      p_assignee_id: assigneeId ? requireUuid(assigneeId) : null,
+      p_idempotency_key: key,
+    });
+  }
+
+  async addConversation(
+    workspaceId,
+    ticket,
+    visibility,
+    body,
+    key = idempotencyKey(),
+  ) {
+    assertTicket(ticket);
+    if (!["internal", "customer_update"].includes(visibility)) {
+      throw new ApiError("Select a valid FM1 conversation type.");
+    }
+    const message = String(body || "").trim();
+    if (message.length < 1 || message.length > 4000) {
+      throw new ApiError(
+        "Conversation messages must contain 1–4,000 characters.",
+      );
+    }
+    return this.api.rpc("fm1_add_conversation_v1", {
+      p_workspace_id: requireUuid(workspaceId),
+      p_ticket_id: ticket.id,
+      p_expected_revision: ticket.revision,
+      p_visibility: visibility,
+      p_body: message,
+      p_idempotency_key: key,
+    });
+  }
+
+  async notificationInbox(workspaceId, { limit = 50, offset = 0 } = {}) {
+    const result = await this.api.rpc("fm1_notification_inbox_v1", {
+      p_workspace_id: requireUuid(workspaceId),
+      p_limit: limit,
+      p_offset: offset,
+    });
+    assertObject(result, "FM1 notification inbox is unavailable.");
+    if (
+      !Array.isArray(result.items) ||
+      !Number.isSafeInteger(result.unread_total)
+    ) {
+      throw new ApiError(
+        "FM1 notification inbox response is invalid.",
+        409,
+        "INVALID_FM1_NOTIFICATIONS",
+      );
+    }
+    return result;
+  }
+
+  async markNotificationRead(workspaceId, notificationId) {
+    const result = await this.api.rpc("fm1_notification_mark_read_v1", {
+      p_workspace_id: requireUuid(workspaceId),
+      p_notification_id: requireUuid(notificationId),
+    });
+    assertObject(result, "FM1 notification receipt is unavailable.");
+    if (
+      !UUID.test(result.notification?.id || "") ||
+      !result.notification.read_at
+    ) {
+      throw new ApiError(
+        "FM1 notification read receipt is invalid.",
+        409,
+        "INVALID_FM1_NOTIFICATION",
+      );
+    }
+    return result;
   }
 
   async requestHold(workspaceId, ticketId, hold, key = idempotencyKey()) {

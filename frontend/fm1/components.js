@@ -144,6 +144,9 @@ class Fm1Application {
         serviceStatus: null,
         serverTickets: [],
         serverTotal: 0,
+        notifications: [],
+        notificationUnreadTotal: 0,
+        notificationLoading: false,
         serverLoading: false,
         serverBusy: false,
         serverError: "",
@@ -196,27 +199,36 @@ class Fm1Application {
       this.root?.isConnected === true &&
       this.scopeKey === scopeKey &&
       fm1Store.get().scopeKey === scopeKey;
-    updateStore({ serverLoading: true, serverError: "" });
+    updateStore({
+      serverLoading: true,
+      notificationLoading: true,
+      serverError: "",
+    });
     try {
-      const [serviceStatus, queue] = await Promise.all([
+      const [serviceStatus, queue, inbox] = await Promise.all([
         this.api.serviceStatus(this.workspaceId),
         this.api.listTickets({
           workspaceId: this.workspaceId,
           limit: 50,
           offset: 0,
         }),
+        this.api.notificationInbox(this.workspaceId, { limit: 50, offset: 0 }),
       ]);
       if (!isCurrentScope()) return;
       updateStore({
         serviceStatus,
         serverTickets: queue.items,
         serverTotal: queue.total,
+        notifications: inbox.items,
+        notificationUnreadTotal: inbox.unread_total,
+        notificationLoading: false,
         serverLoading: false,
         serverError: "",
       });
     } catch (error) {
       if (!isCurrentScope()) return;
       updateStore({
+        notificationLoading: false,
         serverLoading: false,
         serverError:
           error?.message || "Unable to load the FM1 incident service.",
@@ -296,8 +308,36 @@ class Fm1Application {
       void this.loadServerData();
     } else if (kind === "view-ticket") {
       void this.loadTicket(action.dataset.id);
+    } else if (kind === "open-notification-ticket") {
+      void this.loadTicket(action.dataset.ticketId);
+    } else if (kind === "mark-notification-read") {
+      void this.markNotificationRead(action.dataset.id);
     } else if (kind === "delete-draft") {
       void this.removeDraft(action.dataset.id);
+    }
+  }
+
+  async markNotificationRead(notificationId) {
+    if (!this.api || !notificationId) return;
+    const scopeKey = this.scopeKey;
+    const isCurrentScope = () =>
+      this.root?.isConnected === true &&
+      this.scopeKey === scopeKey &&
+      fm1Store.get().scopeKey === scopeKey;
+    updateStore({ notificationLoading: true, serverError: "" });
+    try {
+      await this.api.markNotificationRead(this.workspaceId, notificationId);
+      if (!isCurrentScope()) return;
+      await this.loadServerData();
+      if (isCurrentScope())
+        updateStore({ notice: "Notification marked as read." });
+    } catch (error) {
+      if (!isCurrentScope()) return;
+      updateStore({
+        notificationLoading: false,
+        serverError:
+          error?.message || "Unable to update this FM1 notification.",
+      });
     }
   }
 
@@ -384,7 +424,7 @@ class Fm1Application {
 
   async handleSubmit(event) {
     const form = event.target.closest(
-      "[data-fm1-intake-form], [data-fm1-transition-form], [data-fm1-milestone-form], [data-fm1-priority-form], [data-fm1-hold-form], [data-fm1-hold-review-form], [data-fm1-hold-end-form]",
+      "[data-fm1-intake-form], [data-fm1-transition-form], [data-fm1-milestone-form], [data-fm1-priority-form], [data-fm1-hold-form], [data-fm1-hold-review-form], [data-fm1-hold-end-form], [data-fm1-assignment-form], [data-fm1-conversation-form]",
     );
     if (!form) return;
     event.preventDefault();
@@ -486,7 +526,11 @@ class Fm1Application {
             ? "hold-request"
             : form.matches("[data-fm1-hold-review-form]")
               ? "hold-review"
-              : "hold-end";
+              : form.matches("[data-fm1-assignment-form]")
+                ? "assignment"
+                : form.matches("[data-fm1-conversation-form]")
+                  ? "conversation"
+                  : "hold-end";
     const payload = Object.fromEntries(data.entries());
     const fingerprint = JSON.stringify({
       operation,
@@ -585,6 +629,33 @@ class Fm1Application {
             "Dependency hold request recorded. No SLA clock was paused pending validation.",
           serverBusy: false,
         });
+      } else if (operation === "assignment") {
+        const assigneeId = String(data.get("assigneeId") || "").trim() || null;
+        await this.api.assignTicket(this.workspaceId, ticket, assigneeId, key);
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice: assigneeId
+            ? "Ticket assignment updated."
+            : "Ticket unassigned.",
+          serverBusy: false,
+        });
+      } else if (operation === "conversation") {
+        const visibility = String(data.get("visibility") || "internal");
+        await this.api.addConversation(
+          this.workspaceId,
+          ticket,
+          visibility,
+          String(data.get("body") || "").trim(),
+          key,
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice:
+            visibility === "customer_update"
+              ? "Customer update recorded. External delivery is not configured."
+              : "Internal conversation recorded.",
+          serverBusy: false,
+        });
       } else if (operation === "hold-review") {
         await this.api.validateHold(
           this.workspaceId,
@@ -647,19 +718,35 @@ class Fm1Application {
     const p2 = FM1_SLA_TARGETS.P2;
     const p3 = FM1_SLA_TARGETS.P3;
     const p4 = FM1_SLA_TARGETS.P4;
+    const metrics = state.serviceStatus?.metrics || {};
+    const p1p2 =
+      metrics.p1p2_tickets ??
+      state.serverTickets.filter((ticket) =>
+        ["P1", "P2"].includes(ticket.priority_effective),
+      ).length;
+    const slaActive =
+      metrics.sla_active_tickets ??
+      state.serverTickets.filter(
+        (ticket) => ticket.sla_activation_state === "ACTIVE",
+      ).length;
     return `<section class="fm1-overview" aria-label="FM1 service overview">
       <div class="fm1-metric-grid">
-        ${metricCard({ label: "Live tickets", value: "—", detail: "Live ticket service is not connected", symbol: "▤" })}
-        ${metricCard({ label: "P1 / P2 incidents", value: "—", detail: "No server-backed incident feed", symbol: "!" })}
-        ${metricCard({ label: "SLA obligations", value: "—", detail: "Authoritative clock worker pending", symbol: "◷" })}
-        ${metricCard({ label: "Local drafts", value: state.drafts.length, detail: "Saved in this browser only", symbol: "✎" })}
+        ${metricCard({ label: "Live tickets", value: state.serverLoading ? "…" : (metrics.total_tickets ?? state.serverTotal), detail: "Authoritative server ticket count", symbol: "▤" })}
+        ${metricCard({ label: "P1 / P2 incidents", value: p1p2, detail: "High-priority open incidents", symbol: "!" })}
+        ${metricCard({ label: "SLA-active tickets", value: slaActive, detail: state.serviceStatus?.contract_active ? "Server-authoritative SLA service active" : "Contract/readiness activation pending", symbol: "◷" })}
+        ${metricCard({ label: "Unread notifications", value: state.notificationUnreadTotal, detail: "Signed-user FM1 inbox", symbol: "♧" })}
       </div>
 
       <section class="fm1-contract-panel">
         <div class="fm1-panel-heading">
           <div><span class="fm1-eyebrow">CONTRACT CONFIGURATION</span><h2>BIOTECH Farms · FM1</h2>
             <p>${escapeHtml(FM1_CONTRACT.location)} · 2027 remote-support term</p></div>
-          ${statusBadge("Awaiting acceptance", "warning")}
+          ${statusBadge(
+            state.serviceStatus?.contract_active
+              ? "SLA service active"
+              : "Awaiting acceptance",
+            state.serviceStatus?.contract_active ? "success" : "warning",
+          )}
         </div>
         <div class="fm1-contract-grid">
           <div><span>Provider</span><strong>${escapeHtml(FM1_CONTRACT.provider)}</strong></div>
@@ -730,18 +817,23 @@ class Fm1Application {
   }
 
   renderTickets(state) {
+    const assignees = state.serviceStatus?.assignees || [];
     const rows = state.serverTickets
-      .map(
-        (ticket) => `<tr>
+      .map((ticket) => {
+        const assignee = assignees.find(
+          (member) => member.id === ticket.assigned_to,
+        );
+        return `<tr>
       <td><button type="button" class="fm1-link-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">${escapeHtml(ticket.ticket_number)}</button></td>
       <td><strong>${escapeHtml(ticket.subject)}</strong><small>${escapeHtml(ticket.requester_name)}</small></td>
       <td>${statusBadge(ticket.priority_effective, ticket.priority_effective === "P1" ? "danger" : ticket.priority_effective === "P2" ? "warning" : "neutral")}</td>
       <td>${statusBadge(ticket.status, statusTone(ticket.status))}</td>
+      <td>${escapeHtml(assignee?.display_name || (ticket.assigned_to ? "Former workspace member" : "Unassigned"))}</td>
       <td>${escapeHtml(formatDate(ticket.received_at))}</td>
       <td>${statusBadge(ticket.sla_activation_state || "NOT_ACTIVE", ticket.sla_activation_state === "ACTIVE" ? "success" : "warning")}</td>
       <td><button type="button" class="fm1-quiet-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">Open</button></td>
-    </tr>`,
-      )
+    </tr>`;
+      })
       .join("");
     return `<section class="fm1-page-section">
       <div class="fm1-section-heading"><div><span class="fm1-eyebrow">SERVICE DESK</span><h2>Authoritative ticket queue</h2>
@@ -761,7 +853,7 @@ class Fm1Application {
       ${
         state.serverTickets.length
           ? `<div class="fm1-table-wrap"><table class="fm1-table fm1-ticket-table">
-        <thead><tr><th>Ticket</th><th>Incident</th><th>Priority</th><th>Status</th><th>Received</th><th>SLA</th><th></th></tr></thead>
+        <thead><tr><th>Ticket</th><th>Incident</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Received</th><th>SLA</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>`
           : ""
       }
@@ -782,6 +874,21 @@ class Fm1Application {
         ${state.serverError ? `<p class="fm1-error" role="alert">${escapeHtml(state.serverError)}</p>` : ""}</section>`;
     }
     const ticket = detail.ticket;
+    const assignees = state.serviceStatus?.assignees || [];
+    const currentAssignee = assignees.find(
+      (member) => member.id === ticket.assigned_to,
+    );
+    const conversations = (detail.conversations || [])
+      .map((message) => {
+        const customer = message.visibility === "customer_update";
+        return `<article class="fm1-hold-card">
+        <div class="fm1-panel-heading"><strong>${escapeHtml(message.actor_display_name || "CRM member")}</strong>
+          ${statusBadge(customer ? "Customer update · not delivered" : "Internal note", customer ? "warning" : "neutral")}</div>
+        <p>${escapeHtml(message.body)}</p>
+        <small>${escapeHtml(formatDate(message.created_at))}</small>
+      </article>`;
+      })
+      .join("");
     const obligations = detail.obligations
       .map(
         (item) => `<tr>
@@ -834,6 +941,29 @@ class Fm1Application {
           <div><span>Revision</span><strong>${escapeHtml(ticket.revision)}</strong></div>
         </div>
         <p class="fm1-muted">${escapeHtml(ticket.description)}</p>
+      </section>
+      <section class="fm1-panel">
+        <span class="fm1-eyebrow">ASSIGNMENT & RESPONSIBILITY</span><h2>Current owner</h2>
+        <p class="fm1-muted">${escapeHtml(currentAssignee?.display_name || (ticket.assigned_to ? "Assigned profile is no longer an active workspace member" : "Unassigned"))}</p>
+        <form class="fm1-form" data-fm1-assignment-form>
+          <div class="fm1-form-grid"><label class="fm1-field-wide">Assign to workspace member
+            <select name="assigneeId"><option value="">Unassigned</option>${assignees.map((member) => `<option value="${escapeHtml(member.id)}" ${ticket.assigned_to === member.id ? "selected" : ""}>${escapeHtml(member.display_name)}${member.email ? " · " + escapeHtml(member.email) : ""}</option>`).join("")}</select>
+          </label></div>
+          <div class="fm1-form-footer"><p>Assignment changes are revision-checked and recorded in immutable ticket history.</p>
+            <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>Save assignment</button></div>
+        </form>
+      </section>
+      <section class="fm1-panel">
+        <span class="fm1-eyebrow">INCIDENT CONVERSATION</span><h2>Updates and notes</h2>
+        ${conversations || '<p class="fm1-muted">No conversation messages recorded.</p>'}
+        <form class="fm1-form" data-fm1-conversation-form>
+          <div class="fm1-form-grid">
+            <label>Message type<select name="visibility"><option value="internal">Internal note</option><option value="customer_update">Customer update</option></select></label>
+            <label class="fm1-field-wide">Message<textarea name="body" required minlength="1" maxlength="4000" rows="4" placeholder="Record an incident update or response"></textarea></label>
+          </div>
+          <div class="fm1-form-footer"><p>Customer updates are stored as records. External email or messaging delivery is not configured.</p>
+            <button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>Post update</button></div>
+        </form>
       </section>
       <section class="fm1-panel"><div class="fm1-panel-heading"><div><span class="fm1-eyebrow">SLA OBLIGATIONS</span><h2>Server-calculated deadlines</h2></div></div>
         <div class="fm1-table-wrap"><table class="fm1-table"><thead><tr><th>Metric</th><th>Priority</th><th>Due</th><th>State</th><th>Calculation</th></tr></thead>
@@ -1007,6 +1137,67 @@ class Fm1Application {
     </section>`;
   }
 
+  renderNotifications(state) {
+    const rows = (state.notifications || [])
+      .map(
+        (notification) => `
+      <article class="fm1-hold-card">
+        <div class="fm1-panel-heading"><strong>${escapeHtml(notification.title)}</strong>
+          ${statusBadge(notification.read_at ? "Read" : "Unread", notification.read_at ? "neutral" : "warning")}</div>
+        <p>${escapeHtml(notification.message)}</p>
+        <small>${escapeHtml(notification.ticket_number)} · ${escapeHtml(notification.subject)} · ${escapeHtml(formatDate(notification.created_at))}</small>
+        <div class="fm1-inline-actions">
+          <button type="button" class="fm1-quiet-button" data-fm1-action="open-notification-ticket" data-ticket-id="${escapeHtml(notification.ticket_id)}">Open incident</button>
+          ${notification.read_at ? "" : `<button type="button" class="fm1-quiet-button" data-fm1-action="mark-notification-read" data-id="${escapeHtml(notification.id)}" ${state.notificationLoading ? "disabled" : ""}>Mark read</button>`}
+        </div>
+      </article>`,
+      )
+      .join("");
+    return `<section class="fm1-page-section">
+      <div class="fm1-section-heading"><div><span class="fm1-eyebrow">IN-APP DELIVERY</span><h2>Notification inbox</h2>
+        <p>${state.notificationUnreadTotal} unread notification(s) · latest 50 loaded</p></div>
+        <button type="button" class="fm1-quiet-button" data-fm1-action="refresh-server" ${state.notificationLoading ? "disabled" : ""}>↻ Refresh</button></div>
+      ${state.notificationLoading && !state.notifications?.length ? '<div class="fm1-empty-state">Loading notifications…</div>' : ""}
+      ${rows || '<div class="fm1-empty-state"><h3>No notifications yet</h3><p>Incident assignments, updates and SLA breach escalations will appear here after outbox delivery.</p></div>'}
+      <p class="fm1-muted">This inbox records internal APSYNTRA CRM delivery. Email, SMS and external customer delivery remain unconfigured.</p>
+    </section>`;
+  }
+
+  renderDuty(state) {
+    const metrics = state.serviceStatus?.metrics || {};
+    const urgentUnassigned = state.serviceStatus?.unassigned_urgent || [];
+    const delivery = state.serviceStatus?.notification_delivery || {};
+    const escalations = (state.notifications || []).filter(
+      (item) => item.event_type === "SlaObligationBreached",
+    );
+    const roster = state.serviceStatus?.assignees || [];
+    return `<section class="fm1-page-section">
+      <div class="fm1-metric-grid">
+        ${metricCard({ label: "Unassigned P1 / P2", value: metrics.unassigned_p1p2 ?? urgentUnassigned.length, detail: "High-priority open incidents", symbol: "!" })}
+        ${metricCard({ label: "Workspace coverage", value: roster.length, detail: "Active CRM workspace members", symbol: "♙" })}
+        ${metricCard({ label: "Unread alerts", value: state.notificationUnreadTotal, detail: "In-app notifications", symbol: "♧" })}
+        ${metricCard({ label: "Breach escalations", value: metrics.breached_obligations ?? escalations.length, detail: "Server-recorded breached obligations", symbol: "◷" })}
+      </div>
+      <section class="fm1-panel"><span class="fm1-eyebrow">PRIORITY COVERAGE</span><h2>Unassigned P1 / P2 incidents</h2>
+        ${urgentUnassigned.length ? `<div class="fm1-draft-list">${urgentUnassigned.map((ticket) => `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(ticket.ticket_number)} · ${escapeHtml(ticket.subject)}</strong><span>${escapeHtml(ticket.priority_effective)} · ${escapeHtml(ticket.status)} · ${escapeHtml(formatDate(ticket.received_at))}</span></div><button type="button" class="fm1-quiet-button" data-fm1-action="view-ticket" data-id="${escapeHtml(ticket.id)}">Assign / open</button></article>`).join("")}</div>` : '<p class="fm1-muted">No unassigned P1 / P2 incidents in the loaded queue.</p>'}
+      </section>
+      <section class="fm1-panel"><span class="fm1-eyebrow">WORKSPACE COVERAGE</span><h2>Assignable CRM members</h2>
+        ${roster.map((member) => `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(member.display_name)}</strong><span>${escapeHtml(member.email || "")}</span></div></article>`).join("") || '<p class="fm1-muted">No active workspace members were returned.</p>'}
+      </section>
+      <section class="fm1-panel"><span class="fm1-eyebrow">SLA ESCALATIONS</span><h2>Recent breach notifications</h2>
+        ${escalations.map((item) => `<article class="fm1-draft-row"><div class="fm1-draft-main"><strong>${escapeHtml(item.ticket_number)} · ${escapeHtml(item.title)}</strong><span>${escapeHtml(item.message)} · ${escapeHtml(formatDate(item.created_at))}</span></div><button type="button" class="fm1-quiet-button" data-fm1-action="open-notification-ticket" data-ticket-id="${escapeHtml(item.ticket_id)}">Open</button></article>`).join("") || '<p class="fm1-muted">No breach escalation notifications in the latest inbox page.</p>'}
+      </section>
+      <section class="fm1-panel"><span class="fm1-eyebrow">NOTIFICATION DELIVERY</span><h2>Internal outbox status</h2>
+        <div class="fm1-contract-grid">
+          <div><span>Queued</span><strong>${escapeHtml(delivery.queued ?? 0)}</strong></div>
+          <div><span>Failed / retrying</span><strong>${escapeHtml(delivery.failed ?? 0)}</strong></div>
+          <div><span>Delivered</span><strong>${escapeHtml(delivery.delivered ?? 0)}</strong></div>
+        </div>
+      </section>
+      <p class="fm1-muted">Approaching-deadline alert thresholds and duty escalation rosters require the service calendar and operational policy to be configured. Contractual SLA clocks remain inactive until acceptance and readiness are recorded.</p>
+    </section>`;
+  }
+
   renderModule(view) {
     const modules = {
       duty: [
@@ -1091,7 +1282,11 @@ class Fm1Application {
               ? this.renderTicketDetail(state)
               : view === "new-ticket"
                 ? this.renderIntake(state)
-                : this.renderModule(view)
+                : view === "duty"
+                  ? this.renderDuty(state)
+                  : view === "notifications"
+                    ? this.renderNotifications(state)
+                    : this.renderModule(view)
       }
       <footer class="fm1-app-footer"><span>APSYNTRA CRM · FM1 foundation</span>
         <span>Asia/Manila (UTC+8) · Server-backed incident records</span></footer>

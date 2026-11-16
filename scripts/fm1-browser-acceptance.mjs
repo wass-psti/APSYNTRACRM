@@ -269,6 +269,28 @@ try {
     .waitFor();
 
   await workflowPage
+    .locator('[data-fm1-assignment-form] select[name="assigneeId"]')
+    .selectOption("00000000-0000-4000-8000-000000000004");
+  await workflowPage
+    .locator('[data-fm1-assignment-form] button[type="submit"]')
+    .click();
+  await workflowPage.getByText("Ticket assignment updated.").first().waitFor();
+
+  await workflowPage
+    .locator('[data-fm1-conversation-form] select[name="visibility"]')
+    .selectOption("internal");
+  await workflowPage
+    .locator('[data-fm1-conversation-form] textarea[name="body"]')
+    .fill("Browser acceptance note: technician acknowledged the incident.");
+  await workflowPage
+    .locator('[data-fm1-conversation-form] button[type="submit"]')
+    .click();
+  await workflowPage
+    .getByText("Internal conversation recorded.")
+    .first()
+    .waitFor();
+
+  await workflowPage
     .locator('select[name="requestedPriority"]')
     .selectOption("P1");
   await workflowPage
@@ -336,10 +358,26 @@ try {
     .first()
     .waitFor();
 
+  await workflowPage.getByRole("button", { name: "Notifications" }).click();
+  await workflowPage
+    .getByRole("heading", { name: "Notification inbox" })
+    .waitFor();
+  await workflowPage.getByText("New FM1 incident").waitFor();
+  await workflowPage.getByRole("button", { name: "Mark read" }).click();
+  await workflowPage.getByText("Read", { exact: true }).waitFor();
+  await workflowPage.getByRole("button", { name: "Open incident" }).click();
+  await workflowPage
+    .getByRole("heading", { name: "Browser acceptance incident" })
+    .waitFor();
+
   const calls = await workflowPage.evaluate(() =>
     window.__fm1Calls.map((call) => call.name),
   );
   for (const name of [
+    "fm1_assign_ticket_v1",
+    "fm1_add_conversation_v1",
+    "fm1_notification_inbox_v1",
+    "fm1_notification_mark_read_v1",
     "fm1_record_priority_v1",
     "fm1_request_hold_v1",
     "fm1_validate_hold_v1",
@@ -383,7 +421,7 @@ try {
 
   console.log("FM1_BROWSER_ACCEPTANCE_PASS");
   console.log(
-    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), desktop/mobile layout, intake validation, priority changes, dependency hold request/review/resumption, scoped IndexedDB lifecycle, cross-user/workspace isolation and WCAG 2.2 AA axe checks passed.",
+    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), desktop/mobile layout, intake validation, assignment, internal/customer-update conversation capture, priority changes, dependency hold request/review/resumption, notification inbox navigation, scoped IndexedDB lifecycle, cross-user/workspace isolation and WCAG 2.2 AA axe checks passed.",
   );
 } finally {
   if (browser) await browser.close();
