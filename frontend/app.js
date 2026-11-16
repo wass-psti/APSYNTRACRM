@@ -42,6 +42,7 @@ import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
+import {boardGroupArchiveSuffix} from './board-group-counts.js';
 import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-application.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
@@ -831,8 +832,7 @@ function groupHeading(group,count){
  const persistedCount=Number.isSafeInteger(group.total_item_count)?group.total_item_count:null;
  const activeCount=Number.isSafeInteger(group.active_item_count)?group.active_item_count:null;
  const archivedCount=Number.isSafeInteger(group.archived_item_count)?group.archived_item_count:null;
- const archiveSuffix=archivedCount>0?
-  ' · '+activeCount.toLocaleString('en-US')+' active · '+archivedCount.toLocaleString('en-US')+' archived':'';
+ const archiveSuffix=boardGroupArchiveSuffix(activeCount,archivedCount);
  const groupCountLabel=persistedCount===null?
   count+(state.board?.pagination?.has_more===true?' loaded':' items'):
   count===persistedCount?persistedCount+' items'+archiveSuffix:
