@@ -7,7 +7,7 @@ concurrency:
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, feat/cp-tl-legacy-workflow-05-revision-history-01]
     paths:
       - '.github/workflows/cp-tl03b-disposable-postgres.yml'
       - 'sql/cp-tl03-staged-domain.sql'
@@ -42,6 +42,9 @@ on:
       - 'sql/tests/cp-tl08e02-retry-safe-updates-disposable.sql'
       - 'sql/tests/cp-tl10a-six-module-signed-save-disposable.sql'
       - 'sql/tests/cp-tl08h-virtual-review-acceptance.sql'
+      - 'supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql'
+      - 'sql/tests/cp-tl-revision-history-fixture.sql'
+      - 'sql/tests/cp-tl-revision-history-acceptance.sql'
 
 permissions:
   contents: read
@@ -208,3 +211,28 @@ jobs:
         env:
           PGDATABASE: tradelink_review_disposable
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl08h-virtual-review-acceptance.sql
+
+      - name: Create isolated CP-TL-REVISION-HISTORY database
+        run: createdb --maintenance-db=postgres --username=postgres tradelink_revision_history_disposable
+      - name: Install the existing TradeLink save and two-reviewer baseline
+        env:
+          PGDATABASE: tradelink_revision_history_disposable
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-tl03-disposable-setup.sql \
+            -f sql/cp-tl03-staged-domain.sql \
+            -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql \
+            -f supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql \
+            -f supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql
+      - name: Seed one pre-existing current revision before snapshot activation
+        env:
+          PGDATABASE: tradelink_revision_history_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-revision-history-fixture.sql
+      - name: Apply immutable revision snapshots in disposable PostgreSQL only
+        env:
+          PGDATABASE: tradelink_revision_history_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql
+      - name: Verify immutable revisions, two-review approval evidence and exact historical reads
+        env:
+          PGDATABASE: tradelink_revision_history_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-revision-history-acceptance.sql
