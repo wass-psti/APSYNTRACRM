@@ -73,6 +73,43 @@ test('multi-expense and recipient fields reach original RPC once and verify Not 
  assert.equal(payload.recipientAccount,'AC123');
  assert.equal(payload.checkNo,'C001');
  assert.equal(payload.orderIntakeNo,'OI002');
+ assert.equal(payload.allowPotentialDuplicate,false);
+});
+test('server-side duplicate detection returns a warning and requires explicit resubmission',async()=>{
+ const calls=[];
+ const auth={userId:user,async getVerifiedUser(){return {id:user};}};
+ const api={async context(){return {user_id:user,workspace_id:ws,profile:{status:'active'}};},
+  async rpc(name,args){
+   calls.push({name,args});
+   if(name==='frt_bootstrap')return {membership:{workspace_id:ws,user_id:user,
+    role:'GENERAL_MANAGER',enabled:true,status:'active'},companies};
+   if(name==='frt_create_request')throw Object.assign(
+    new Error('Potential duplicate fund request: same company, payee and amount were submitted within the last 10 minutes'),
+    {status:409,code:'23505'});
+   throw Error(name);
+  }};
+ const data={title:'Project expense',department:'Operations',fundSource:'Cash fund',
+  description:'Two project categories',dateNeeded:'2026-11-30',recipientName:'Supplier A',
+  recipientAccount:'AC123',items:[{category:'Materials',amount:'120.50'}]};
+ const warning=await createSignedFRTRequest({auth,api,workspaceId:ws,
+  companyCode:'WASS',role:'GENERAL_MANAGER',data});
+ assert.deepEqual(warning,{status:'DUPLICATE_WARNING'});
+ assert.equal(calls.filter(x=>x.name==='frt_create_request').length,1);
+ assert.equal(calls[1].args.p_payload.allowPotentialDuplicate,false);
+});
+test('beneficiary and destination account are required before any RPC',async()=>{
+ let calls=0;
+ const auth={userId:user,async getVerifiedUser(){return {id:user};}};
+ const api={async context(){calls++;return {};},async rpc(){calls++;}};
+ const base={title:'Project expense',department:'Operations',fundSource:'Cash fund',
+  description:'Two project categories',dateNeeded:'2026-11-30',
+  items:[{category:'Materials',amount:'120.50'}]};
+ for(const patch of [{recipientName:'',recipientAccount:'AC123'},
+  {recipientName:'Supplier A',recipientAccount:''}]){
+  await assert.rejects(()=>createSignedFRTRequest({auth,api,workspaceId:ws,
+   companyCode:'WASS',role:'GENERAL_MANAGER',data:{...base,...patch}}));
+ }
+ assert.equal(calls,0);
 });
 test('invalid or excessive expense rows are denied before touching RPC',async()=>{
  let called=0;
