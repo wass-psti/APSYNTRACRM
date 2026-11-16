@@ -1,7 +1,6 @@
 {
   "dependencies": {
-    "nanostores": "^1.5.5",
-    "zod": "^4.6.7"
+    "nanostores": "^1.5.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
