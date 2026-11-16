@@ -27,6 +27,9 @@ ALTER TABLE public.frt_voucher_counters
 COMMENT ON COLUMN public.frt_voucher_counters.voucher_month IS
  'Calendar month used by the company-specific atomic DV sequence.';
 
+ALTER TABLE public.frt_requests
+ ADD COLUMN request_date date NOT NULL DEFAULT CURRENT_DATE;
+
 CREATE INDEX IF NOT EXISTS frt_requests_duplicate_guard_idx
  ON public.frt_requests(
   workspace_id,company_id,(lower(regexp_replace(btrim(recipient_name),'\s+',' ','g'))),total_amount,created_at DESC
@@ -47,6 +50,7 @@ DECLARE
  v_item_amount numeric;
  v_total numeric(14,2):=0;
  v_request_date date;
+ v_date_needed date;
  v_year integer;
  v_month integer;
  v_sequence integer;
@@ -72,7 +76,8 @@ BEGIN
   RAISE EXCEPTION 'Invalid request data' USING ERRCODE='22023';
  END IF;
 
- v_request_date:=(p_payload->>'dateNeeded')::date;
+ v_request_date:=(p_payload->>'requestDate')::date;
+ v_date_needed:=(p_payload->>'dateNeeded')::date;
  v_year:=extract(year FROM v_request_date)::integer;
  v_month:=extract(month FROM v_request_date)::integer;
 
@@ -150,7 +155,7 @@ BEGIN
 
  INSERT INTO public.frt_requests(
   workspace_id,company_id,requestor_id,voucher_no,title,department,fund_source,
-  recipient_name,recipient_bank,recipient_account,date_needed,description,
+  recipient_name,recipient_bank,recipient_account,request_date,date_needed,description,
   order_intake_no,check_no,total_amount
  ) VALUES(
   p_workspace_id,v_company.id,auth.uid(),
@@ -159,7 +164,7 @@ BEGIN
   trim(p_payload->>'title'),trim(p_payload->>'department'),
   trim(p_payload->>'fundSource'),v_payee,
   nullif(trim(p_payload->>'recipientBank'),''),
-  v_account,v_request_date,trim(p_payload->>'description'),
+  v_account,v_request_date,v_date_needed,trim(p_payload->>'description'),
   nullif(trim(p_payload->>'orderIntakeNo'),''),
   nullif(trim(p_payload->>'checkNo'),''),v_total
  ) RETURNING * INTO v_request;
