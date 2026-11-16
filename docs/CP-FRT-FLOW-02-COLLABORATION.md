@@ -9,7 +9,7 @@
 - Activity supports action filtering, text search across action and common audit detail fields, newest-first ordering, server-side 50-row pagination, and CSV export of the current filtered page.
 - Activity detail rendering uses an explicit allowlist of useful workflow detail fields.
 - Added a Notification Center derived from persisted request audit events and the existing \`frt_bank_execution_snapshot\` RPC.
-- Deadline reminders are generated only when the authoritative snapshot reports staff-recorded bank execution. Due-soon is within 24 hours of the existing 72-hour deadline; overdue is after that deadline.
+- The notification panel displays the authoritative company aging counters from `frt_liquidation_aging_company` and generates per-request reminders only when the authoritative snapshot reports staff-recorded bank execution. Due-soon is within 24 hours of the existing 72-hour deadline; overdue is after that deadline.
 - Notification buttons navigate to the corresponding request detail.
 - Deadline reads are bounded to six concurrent requests and only run for finance-approved requests with liquidation not already approved.
 - Added the existing read-only bank snapshot RPC to the board-cache read allowlist and the existing comment write RPC to the mutation allowlist so cache invalidation occurs after successful writes.
