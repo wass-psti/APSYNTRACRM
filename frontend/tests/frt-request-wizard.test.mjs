@@ -83,9 +83,14 @@ test('server-side duplicate detection returns a warning and requires explicit re
    calls.push({name,args});
    if(name==='frt_bootstrap')return {membership:{workspace_id:ws,user_id:user,
     role:'GENERAL_MANAGER',enabled:true,status:'active'},companies};
-   if(name==='frt_create_request')throw Object.assign(
-    new Error('Potential duplicate fund request: same company, payee and amount were submitted within the last 10 minutes'),
-    {status:409,code:'23505'});
+   if(name==='frt_create_request'){
+    if(args.p_payload.allowPotentialDuplicate)return {id,workspace_id:ws,requestor_id:user,
+     title:args.p_payload.title,filing_status:'NOT_FILED'};
+    throw Object.assign(
+     new Error('Potential duplicate fund request: same company, payee and amount were submitted within the last 10 minutes'),
+     {status:409,code:'23505'});
+   }
+   if(name==='frt_board_list_safe')return [{id,filing_status:'NOT_FILED'}];
    throw Error(name);
   }};
  const data={title:'Project expense',department:'Operations',fundSource:'Cash fund',
@@ -96,6 +101,11 @@ test('server-side duplicate detection returns a warning and requires explicit re
  assert.deepEqual(warning,{status:'DUPLICATE_WARNING'});
  assert.equal(calls.filter(x=>x.name==='frt_create_request').length,1);
  assert.equal(calls[1].args.p_payload.allowPotentialDuplicate,false);
+ const saved=await createSignedFRTRequest({auth,api,workspaceId:ws,
+  companyCode:'WASS',role:'GENERAL_MANAGER',data,allowPotentialDuplicate:true});
+ assert.equal(saved.status,'SAVED');
+ assert.equal(calls.filter(x=>x.name==='frt_create_request').length,2);
+ assert.equal(calls.find(x=>x.name==='frt_create_request'&&x.args.p_payload.allowPotentialDuplicate).args.p_payload.allowPotentialDuplicate,true);
 });
 test('beneficiary and destination account are required before any RPC',async()=>{
  let calls=0;
