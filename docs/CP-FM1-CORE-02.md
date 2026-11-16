@@ -51,3 +51,7 @@ The runtime test creates a ticket under a simulated authenticated CRM session, v
 - Real operational-user workflow acceptance.
 
 The native ESM Chromium acceptance also verifies the local-draft path remains separate from server incident submission. No production deployment or external notification was performed by the disposable verification.
+
+## Operational CRM workflows added during CP-FM1-CORE-03 preparation
+
+The ticket detail screen now exposes the existing server RPCs for priority changes and dependency holds. Operators can record requested/effective/confirmed priority with a reason; request a hold with metric, dependency reason, external owner, required action, evidence and expected review time; record a hold validation/rejection with evidence; and end a validated hold with a resume reason. Pending requests explicitly do not pause SLA clocks. Engineering-start validation exposes the required remote/guided-diagnosis blocked evidence flag. Mutation forms retain their idempotency key across an uncertain retry without clearing entered values.

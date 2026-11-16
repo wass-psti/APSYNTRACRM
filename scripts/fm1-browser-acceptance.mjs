@@ -242,6 +242,118 @@ try {
     "browser console/page errors: " + pageErrors.join(" | "),
   );
 
+  const workflowPage = await browser.newPage({
+    viewport: { width: 1280, height: 900 },
+  });
+  const workflowErrors = [];
+  workflowPage.on("pageerror", (error) => workflowErrors.push(error.message));
+  workflowPage.on("console", (message) => {
+    if (message.type() === "error") workflowErrors.push(message.text());
+  });
+  await workflowPage.goto(baseUrl + "?mockServer=true", {
+    waitUntil: "networkidle",
+  });
+  await workflowPage.getByRole("button", { name: "Tickets" }).click();
+  await workflowPage
+    .getByRole("heading", { name: "Authoritative ticket queue" })
+    .waitFor();
+  await workflowPage.locator('[data-fm1-action="view-ticket"]').first().click();
+  await workflowPage
+    .getByRole("heading", { name: "Browser acceptance incident" })
+    .waitFor();
+  await workflowPage
+    .getByRole("heading", { name: "Record priority decision" })
+    .waitFor();
+  await workflowPage
+    .getByRole("heading", { name: "Hold requests and review history" })
+    .waitFor();
+
+  await workflowPage
+    .locator('select[name="requestedPriority"]')
+    .selectOption("P1");
+  await workflowPage
+    .locator('select[name="effectivePriority"]')
+    .selectOption("P1");
+  await workflowPage
+    .locator('[data-fm1-priority-form] input[name="reason"]')
+    .fill("Synthetic priority escalation test");
+  await workflowPage
+    .locator('[data-fm1-priority-form] button[type="submit"]')
+    .click();
+  await workflowPage
+    .getByText(/Priority event recorded/)
+    .first()
+    .waitFor();
+
+  await workflowPage
+    .locator('[data-fm1-hold-form] input[name="externalOwner"]')
+    .fill("Synthetic OEM");
+  await workflowPage
+    .locator('[data-fm1-hold-form] input[name="requiredAction"]')
+    .fill("Confirm replacement sensor dispatch");
+  await workflowPage
+    .locator('[data-fm1-hold-form] textarea[name="evidence"]')
+    .fill("OEM case reference SYNTH-001 confirms pending shipment.");
+  await workflowPage
+    .locator('[data-fm1-hold-form] button[type="submit"]')
+    .click();
+  await workflowPage
+    .getByText(/Dependency hold request recorded/)
+    .first()
+    .waitFor();
+
+  await workflowPage
+    .locator('[data-fm1-hold-review-form] select[name="decision"]')
+    .first()
+    .selectOption("validated");
+  await workflowPage
+    .locator('[data-fm1-hold-review-form] textarea[name="evidence"]')
+    .first()
+    .fill("Synthetic review confirms access dependency is valid.");
+  await workflowPage
+    .locator('[data-fm1-hold-review-form] input[name="diagnosisBlocked"]')
+    .first()
+    .check();
+  await workflowPage
+    .locator('[data-fm1-hold-review-form] button[type="submit"]')
+    .first()
+    .click();
+  await workflowPage
+    .getByText("Dependency hold review recorded.")
+    .first()
+    .waitFor();
+
+  await workflowPage
+    .locator('[data-fm1-hold-end-form] input[name="reason"]')
+    .first()
+    .fill("Synthetic dependency resolved");
+  await workflowPage
+    .locator('[data-fm1-hold-end-form] button[type="submit"]')
+    .first()
+    .click();
+  await workflowPage
+    .getByText(/Dependency hold ended/)
+    .first()
+    .waitFor();
+
+  const calls = await workflowPage.evaluate(() =>
+    window.__fm1Calls.map((call) => call.name),
+  );
+  for (const name of [
+    "fm1_record_priority_v1",
+    "fm1_request_hold_v1",
+    "fm1_validate_hold_v1",
+    "fm1_end_hold_v1",
+  ]) {
+    assert.ok(calls.includes(name), "missing synthetic UI RPC call: " + name);
+  }
+  assert.deepEqual(
+    workflowErrors,
+    [],
+    "FM1 operational workflow browser errors: " + workflowErrors.join(" | "),
+  );
+  await workflowPage.close();
+
   const staticPage = await browser.newPage({
     viewport: { width: 1280, height: 900 },
   });
@@ -271,7 +383,7 @@ try {
 
   console.log("FM1_BROWSER_ACCEPTANCE_PASS");
   console.log(
-    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), desktop/mobile layout, intake validation, scoped IndexedDB lifecycle, cross-user/workspace isolation and WCAG 2.2 AA axe checks passed.",
+    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), desktop/mobile layout, intake validation, priority changes, dependency hold request/review/resumption, scoped IndexedDB lifecycle, cross-user/workspace isolation and WCAG 2.2 AA axe checks passed.",
   );
 } finally {
   if (browser) await browser.close();

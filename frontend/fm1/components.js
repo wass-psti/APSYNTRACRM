@@ -384,7 +384,7 @@ class Fm1Application {
 
   async handleSubmit(event) {
     const form = event.target.closest(
-      "[data-fm1-intake-form], [data-fm1-transition-form], [data-fm1-milestone-form]",
+      "[data-fm1-intake-form], [data-fm1-transition-form], [data-fm1-milestone-form], [data-fm1-priority-form], [data-fm1-hold-form], [data-fm1-hold-review-form], [data-fm1-hold-end-form]",
     );
     if (!form) return;
     event.preventDefault();
@@ -475,10 +475,40 @@ class Fm1Application {
       return;
     }
 
-    updateStore({ serverBusy: true, serverError: "", notice: "" });
+    const data = new FormData(form);
+    const operation = form.matches("[data-fm1-transition-form]")
+      ? "transition"
+      : form.matches("[data-fm1-milestone-form]")
+        ? "milestone"
+        : form.matches("[data-fm1-priority-form]")
+          ? "priority"
+          : form.matches("[data-fm1-hold-form]")
+            ? "hold-request"
+            : form.matches("[data-fm1-hold-review-form]")
+              ? "hold-review"
+              : "hold-end";
+    const payload = Object.fromEntries(data.entries());
+    const fingerprint = JSON.stringify({
+      operation,
+      ticketId: ticket.id,
+      payload,
+    });
+    const key =
+      form.dataset.idempotencyFingerprint === fingerprint &&
+      form.dataset.idempotencyKey
+        ? form.dataset.idempotencyKey
+        : createFm1IdempotencyKey();
+    form.dataset.idempotencyFingerprint = fingerprint;
+    form.dataset.idempotencyKey = key;
+    const submitButton =
+      event.submitter || form.querySelector('button[type="submit"]');
+    const originalSubmitLabel = submitButton?.textContent || "";
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Saving…";
+    }
     try {
-      if (form.matches("[data-fm1-transition-form]")) {
-        const data = new FormData(form);
+      if (operation === "transition") {
         const nextStatus = String(data.get("nextStatus") || "");
         const reason = String(data.get("reason") || "").trim();
         const evidence =
@@ -489,38 +519,117 @@ class Fm1Application {
           nextStatus,
           reason,
           nextStatus === "Closed" ? evidence : null,
+          key,
         );
         if (!isCurrentScope()) return;
         updateStore({
           notice: "Ticket status updated to " + nextStatus + ".",
           serverBusy: false,
         });
-      } else {
-        const data = new FormData(form);
+      } else if (operation === "milestone") {
         const metric = String(data.get("metric") || "");
-        const evidence = String(data.get("evidence") || "").trim();
-        const clientOperator = String(data.get("clientOperator") || "").trim();
-        const humanConfirmed = data.get("humanConfirmed") === "on";
-        await this.api.recordMilestone(this.workspaceId, ticket, {
-          metric,
-          channel: String(data.get("channel") || "portal"),
-          evidence,
-          humanConfirmed,
-          clientOperator,
-        });
+        await this.api.recordMilestone(
+          this.workspaceId,
+          ticket,
+          {
+            metric,
+            channel: String(data.get("channel") || "portal"),
+            evidence: String(data.get("evidence") || "").trim(),
+            humanConfirmed: data.get("humanConfirmed") === "on",
+            clientOperator: String(data.get("clientOperator") || "").trim(),
+          },
+          key,
+        );
         if (!isCurrentScope()) return;
         updateStore({
           notice: metricLabel(metric) + " milestone recorded.",
+          serverBusy: false,
+        });
+      } else if (operation === "priority") {
+        await this.api.recordPriority(
+          this.workspaceId,
+          ticket,
+          {
+            requested: String(data.get("requestedPriority") || ""),
+            effective: String(data.get("effectivePriority") || ""),
+            confirmed: String(data.get("confirmedPriority") || "") || null,
+          },
+          String(data.get("reason") || "").trim(),
+          key,
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice:
+            "Priority event recorded. SLA recalculation follows the current D03 decision state.",
+          serverBusy: false,
+        });
+      } else if (operation === "hold-request") {
+        await this.api.requestHold(
+          this.workspaceId,
+          ticket.id,
+          {
+            metric: String(data.get("metric") || ""),
+            reason: String(data.get("reason") || ""),
+            externalOwner: String(data.get("externalOwner") || "").trim(),
+            requiredAction: String(data.get("requiredAction") || "").trim(),
+            evidence: String(data.get("evidence") || "").trim(),
+            expectedReviewAt: data.get("expectedReviewAt")
+              ? new Date(String(data.get("expectedReviewAt"))).toISOString()
+              : null,
+          },
+          key,
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice:
+            "Dependency hold request recorded. No SLA clock was paused pending validation.",
+          serverBusy: false,
+        });
+      } else if (operation === "hold-review") {
+        await this.api.validateHold(
+          this.workspaceId,
+          String(form.dataset.holdId || ""),
+          String(data.get("decision") || ""),
+          String(data.get("evidence") || "").trim(),
+          data.get("diagnosisBlocked") === "on",
+          key,
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice: "Dependency hold review recorded.",
+          serverBusy: false,
+        });
+      } else {
+        await this.api.endHold(
+          this.workspaceId,
+          String(form.dataset.holdId || ""),
+          String(data.get("reason") || "").trim(),
+          key,
+        );
+        if (!isCurrentScope()) return;
+        updateStore({
+          notice:
+            "Dependency hold ended and the eligible SLA clock was recalculated.",
           serverBusy: false,
         });
       }
       await this.refreshTicketAndQueue(ticket.id);
     } catch (error) {
       if (!isCurrentScope()) return;
-      updateStore({
-        serverBusy: false,
-        serverError: error?.message || "The FM1 change could not be confirmed.",
-      });
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalSubmitLabel;
+      }
+      form.querySelector("[data-fm1-inline-error]")?.remove();
+      form.insertAdjacentHTML(
+        "afterbegin",
+        '<p class="fm1-error" role="alert" data-fm1-inline-error>' +
+          escapeHtml(
+            error?.message ||
+              "The FM1 change could not be confirmed. Retry without changing the form to reuse the same request key.",
+          ) +
+          "</p>",
+      );
     }
   }
 
@@ -730,6 +839,7 @@ class Fm1Application {
         <div class="fm1-table-wrap"><table class="fm1-table"><thead><tr><th>Metric</th><th>Priority</th><th>Due</th><th>State</th><th>Calculation</th></tr></thead>
           <tbody>${obligations || '<tr><td colspan="5">No obligations recorded.</td></tr>'}</tbody></table></div>
       </section>
+      ${this.renderPriorityAndHolds(ticket, detail, state)}
       ${
         nextStatuses.length
           ? `<section class="fm1-panel"><span class="fm1-eyebrow">LIFECYCLE ACTION</span><h2>Update ticket status</h2>
@@ -769,6 +879,90 @@ class Fm1Application {
         <div class="fm1-table-wrap"><table class="fm1-table"><thead><tr><th>Sequence</th><th>Event</th><th>SHA-256</th><th>Previous hash</th></tr></thead>
           <tbody>${audit || '<tr><td colspan="4">No audit events recorded.</td></tr>'}</tbody></table></div>
       </section>
+    </section>`;
+  }
+
+  renderPriorityAndHolds(ticket, detail, state) {
+    const terminal = ["Closed", "Cancelled", "Duplicate"].includes(
+      ticket.status,
+    );
+    const priorities = ["P1", "P2", "P3", "P4"];
+    const options = (selected) =>
+      priorities
+        .map(
+          (value) =>
+            `<option value="${value}" ${selected === value ? "selected" : ""}>${value}</option>`,
+        )
+        .join("");
+    const holds = (detail.holds || [])
+      .map((hold) => {
+        const tone =
+          hold.validation_state === "validated"
+            ? "success"
+            : hold.validation_state === "rejected"
+              ? "danger"
+              : "warning";
+        const review =
+          hold.validation_state === "pending"
+            ? `<form class="fm1-form" data-fm1-hold-review-form data-hold-id="${escapeHtml(hold.id)}">
+            <div class="fm1-form-grid">
+              <label>Review decision<select name="decision"><option value="validated">Validate hold</option><option value="rejected">Reject hold</option></select></label>
+              <label class="fm1-field-wide">Review evidence<textarea name="evidence" required minlength="8" maxlength="4000" rows="2" placeholder="Document the review decision"></textarea></label>
+            </div>
+            ${hold.metric === "engineering_start" ? '<div class="fm1-checkbox-row"><label><input type="checkbox" name="diagnosisBlocked" /> Remote and guided diagnosis are blocked</label></div>' : ""}
+            <div class="fm1-form-footer"><p>Pending requests do not pause SLA clocks. Engineering-start holds require evidence that remote and guided diagnosis are blocked.</p><button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>Save hold review</button></div>
+          </form>`
+            : "";
+        const end =
+          hold.validation_state === "validated"
+            ? `<form class="fm1-form" data-fm1-hold-end-form data-hold-id="${escapeHtml(hold.id)}">
+            <label class="fm1-field-wide">Resume reason<input name="reason" required minlength="3" maxlength="500" placeholder="Explain why the dependency is resolved" /></label>
+            <div class="fm1-form-footer"><p>Ending a validated hold resumes the eligible clock and recalculates its due time.</p><button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>End hold and resume clock</button></div>
+          </form>`
+            : "";
+        return `<article class="fm1-hold-card">
+        <div class="fm1-panel-heading"><strong>${escapeHtml(metricLabel(hold.metric))} · ${escapeHtml(hold.reason.replaceAll("_", " "))}</strong>${statusBadge(hold.validation_state, tone)}</div>
+        <p><strong>External owner:</strong> ${escapeHtml(hold.external_owner)} · <strong>Requested:</strong> ${escapeHtml(formatDate(hold.requested_at))}</p>
+        <p><strong>Required action:</strong> ${escapeHtml(hold.required_action)}</p>
+        <p><strong>Evidence:</strong> ${escapeHtml(hold.evidence)}</p>
+        <p><strong>Review due:</strong> ${hold.expected_review_at ? escapeHtml(formatDate(hold.expected_review_at)) : "Not specified"} · <strong>Resumed:</strong> ${hold.resumed_at ? escapeHtml(formatDate(hold.resumed_at)) : "—"}</p>
+        ${review}${end}
+      </article>`;
+      })
+      .join("");
+    const priorityForm = !terminal
+      ? `<form class="fm1-form" data-fm1-priority-form>
+          <div class="fm1-form-grid">
+            <label>Requested priority<select name="requestedPriority">${options(ticket.priority_requested)}</select></label>
+            <label>Effective priority<select name="effectivePriority">${options(ticket.priority_effective)}</select></label>
+            <label>Confirmed priority <span class="fm1-optional">Optional</span><select name="confirmedPriority"><option value="">Not confirmed</option>${priorities.map((v) => `<option value="${v}">${v}</option>`).join("")}</select></label>
+            <label class="fm1-field-wide">Reason<input name="reason" required minlength="3" maxlength="1000" placeholder="Explain the priority decision" /></label>
+          </div>
+          <div class="fm1-form-footer"><p>Records a new priority revision and preserves the previous priority in history.</p><button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>Record priority</button></div>
+        </form>`
+      : '<p class="fm1-muted">Priority changes are unavailable for terminal tickets.</p>';
+    const holdForm = !terminal
+      ? `<form class="fm1-form" data-fm1-hold-form>
+          <div class="fm1-form-grid">
+            <label>Obligation<select name="metric"><option value="engineering_start">Engineering start</option><option value="restoration">Restoration</option></select></label>
+            <label>Dependency reason<select name="reason"><option value="missing_access">Missing access</option><option value="client_authorization">Client authorization</option><option value="essential_evidence">Essential evidence</option><option value="site_action">Site action</option><option value="spares">Spare parts</option><option value="oem_response">OEM response</option><option value="agreed_shutdown">Agreed shutdown</option></select></label>
+            <label>External owner<input name="externalOwner" required minlength="2" maxlength="160" placeholder="Person or organization" /></label>
+            <label>Expected review time <span class="fm1-optional">Optional</span><input type="datetime-local" name="expectedReviewAt" /></label>
+            <label class="fm1-field-wide">Required action<input name="requiredAction" required minlength="3" maxlength="1000" placeholder="Specific dependency action" /></label>
+            <label class="fm1-field-wide">Supporting evidence<textarea name="evidence" required minlength="8" maxlength="4000" rows="3" placeholder="Explain why this dependency blocks the obligation"></textarea></label>
+          </div>
+          <div class="fm1-form-footer"><p>A request is pending until reviewed and does not pause any SLA clock.</p><button type="submit" class="fm1-primary-button" ${state.serverBusy ? "disabled" : ""}>Request dependency hold</button></div>
+        </form>`
+      : "";
+    return `<section class="fm1-panel">
+      <span class="fm1-eyebrow">PRIORITY MANAGEMENT</span><h2>Record priority decision</h2>
+      <p class="fm1-muted">Priority changes are recorded with their reason. SLA recalculation remains subject to the configured D03 decision.</p>
+      ${priorityForm}
+    </section>
+    <section class="fm1-panel">
+      <span class="fm1-eyebrow">DEPENDENCY HOLDS</span><h2>Hold requests and review history</h2>
+      ${holds || '<p class="fm1-muted">No dependency holds recorded.</p>'}
+      ${holdForm}
     </section>`;
   }
 

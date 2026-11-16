@@ -21,10 +21,111 @@
       }
       const { mountFm1Application } = await import("../../fm1/index.js");
       window.__fm1Mount = mountFm1Application;
-      mountFm1Application(document.querySelector("#fm1-application-root"), {
-        userId: params.get("user") || "fixture-user",
-        workspaceId: params.get("workspace") || "fixture-workspace",
-      });
+      const mockServer = params.get("mockServer") === "true";
+      const workspaceId = mockServer
+        ? "00000000-0000-4000-8000-000000000001"
+        : params.get("workspace") || "fixture-workspace";
+      const userId = mockServer
+        ? "00000000-0000-4000-8000-000000000002"
+        : params.get("user") || "fixture-user";
+      let ticket = {
+        id: "00000000-0000-4000-8000-000000000003",
+        ticket_number: "FM1-2026-000001",
+        workspace_id: workspaceId,
+        requester_name: "FM1 Browser Operator",
+        callback_number: "+639171234567",
+        subject: "Browser acceptance incident",
+        description: "A synthetic incident used only by the isolated browser fixture.",
+        priority_requested: "P2",
+        priority_effective: "P2",
+        production_impact: "degraded",
+        production_stopped: false,
+        safety_concern: false,
+        reporting_channel: "portal",
+        asset_reference: "FM1-TEST-01",
+        received_at: "2026-11-16T08:00:00Z",
+        status: "In Progress",
+        revision: 1,
+        sla_activation_state: "NOT_ACTIVE",
+      };
+      const holds = [
+        {
+          id: "00000000-0000-4000-8000-000000000004",
+          metric: "engineering_start",
+          reason: "missing_access",
+          requested_at: "2026-11-16T08:10:00Z",
+          external_owner: "Synthetic client IT",
+          required_action: "Provide temporary diagnostic access",
+          evidence: "Remote access request is pending with the client IT contact.",
+          expected_review_at: "2026-11-16T10:00:00Z",
+          validation_state: "pending",
+          resumed_at: null,
+        },
+        {
+          id: "00000000-0000-4000-8000-000000000005",
+          metric: "restoration",
+          reason: "spares",
+          requested_at: "2026-11-16T08:15:00Z",
+          external_owner: "Synthetic warehouse",
+          required_action: "Deliver replacement sensor",
+          evidence: "Warehouse confirmed the sensor is awaiting dispatch.",
+          expected_review_at: "2026-11-16T12:00:00Z",
+          validation_state: "validated",
+          resumed_at: null,
+        },
+      ];
+      if (mockServer) {
+        window.__fm1Calls = [];
+        const api = {
+          rpc: async (name, args) => {
+            window.__fm1Calls.push({ name, args });
+            if (name === "fm1_service_status_v1") {
+              return {
+                service: { service_key: "BIOTECH-FM1-2027", execution_state: "awaiting_acceptance", readiness_state: "pending" },
+                decisions: [],
+                sla_activation_state: "PENDING_ACCEPTANCE_AND_READINESS",
+              };
+            }
+            if (name === "fm1_list_tickets_v1") return { items: [ticket], total: 1 };
+            if (name === "fm1_ticket_detail_v1") {
+              return { ticket: { ...ticket }, obligations: [], events: [], milestones: [], holds: holds.map((item) => ({ ...item })), audit: [] };
+            }
+            if (name === "fm1_record_priority_v1") {
+              ticket = { ...ticket, priority_requested: args.p_requested_priority, priority_effective: args.p_effective_priority, revision: ticket.revision + 1 };
+              return { ticket, priority_event: { decision_state: "pending_d03" }, sla_recalculation: "NEEDS_REVIEW_PENDING_D03" };
+            }
+            if (name === "fm1_request_hold_v1") {
+              holds.push({ id: "00000000-0000-4000-8000-000000000006", metric: args.p_metric, reason: args.p_reason, requested_at: new Date().toISOString(), external_owner: args.p_external_owner, required_action: args.p_required_action, evidence: args.p_evidence, expected_review_at: args.p_expected_review_at, validation_state: "pending", resumed_at: null });
+              ticket = { ...ticket, revision: ticket.revision + 1 };
+              return { hold: holds[holds.length - 1], clock_effect: "NONE_PENDING_VALIDATION" };
+            }
+            if (name === "fm1_validate_hold_v1") {
+              const hold = holds.find((item) => item.id === args.p_hold_id);
+              hold.validation_state = args.p_decision;
+              ticket = { ...ticket, revision: ticket.revision + 1 };
+              return { hold };
+            }
+            if (name === "fm1_end_hold_v1") {
+              const hold = holds.find((item) => item.id === args.p_hold_id);
+              hold.validation_state = "ended";
+              hold.resumed_at = new Date().toISOString();
+              ticket = { ...ticket, revision: ticket.revision + 1 };
+              return { hold };
+            }
+            throw new Error("Unexpected fixture RPC: " + name);
+          },
+        };
+        mountFm1Application(document.querySelector("#fm1-application-root"), {
+          userId,
+          workspaceId,
+          api,
+        });
+      } else {
+        mountFm1Application(document.querySelector("#fm1-application-root"), {
+          userId,
+          workspaceId,
+        });
+      }
     </script>
   </body>
 </html>

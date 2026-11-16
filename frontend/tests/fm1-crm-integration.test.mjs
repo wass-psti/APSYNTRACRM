@@ -61,6 +61,18 @@ test("FM1 UI mounts through native DOM and submits authoritative server-backed i
   assert.match(components, /data-fm1-action="save-draft"/);
   assert.match(components, /data-fm1-transition-form/);
   assert.match(components, /data-fm1-milestone-form/);
+  assert.match(components, /data-fm1-priority-form/);
+  assert.match(components, /data-fm1-hold-form/);
+  assert.match(components, /data-fm1-hold-review-form/);
+  assert.match(components, /data-fm1-hold-end-form/);
+  assert.match(components, /Pending requests do not pause SLA clocks/);
+  assert.match(components, /Remote and guided diagnosis are blocked/);
+  assert.match(components, /data-fm1-inline-error/);
+  assert.match(components, /data-fm1-hold-end-form/);
+  assert.match(components, /renderPriorityAndHolds\(ticket, detail, state\)/);
+  assert.match(components, /idempotencyFingerprint/);
+  assert.match(components, /idempotencyKey/);
+  assert.match(components, /fm1_validate_hold_v1|validateHold\(/);
   assert.match(components, /Append-only audit chain/);
   assert.match(apiClient, /fm1_create_ticket_v1/);
   assert.match(apiClient, /fm1_ticket_detail_v1/);
