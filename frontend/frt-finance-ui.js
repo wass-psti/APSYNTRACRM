@@ -428,12 +428,12 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
    (typeof r.requestId==='string'?'<button type="button" data-action="frt-finance-detail" data-request-id="'+requestId+'">View Details</button>':'')+
    '<button type="button" disabled title="Requires a verified repeat-request contract">Repeat This Request</button>'+
    '<button type="button" disabled title="Requires a verified edit-request contract">Edit Request</button>'+
-   '<button type="button" disabled title="Requires verified archive retrieval and lifecycle controls">Archive Request</button>'+
+   (result.role==='GENERAL_MANAGER'?'<button type="button" data-action="frt-finance-detail" data-request-id="'+requestId+'">Review Archive Action</button>':'')+
    '<button type="button" disabled title="Financial records cannot be deleted using an unverified contract">Delete Request</button></div></details></div></td></tr>';
  }).join('')||'<tr><td colspan="9" class="frt-ref-empty">No requests found for this company.</td></tr>';
  html+='</tbody></table></div><footer class="frt-ref-table-footer">'+
   'Showing authorized recent requests. New requests begin with Not Filed. '+
-  'No approval, archive, comment or upload operation is simulated.</footer></section>';
+  'Request actions, comments and audit history use existing signed backend contracts. File attachment upload remains a separate workflow.</footer></section>';
  if(detailBusy){
   html+='<div class="panel"><div class="panel-body">Retrieving signed FRT request details…</div></div>';
  }else if(detailResult?.status==='PASS'&&detailResult.detail){
