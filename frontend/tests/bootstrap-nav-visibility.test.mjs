@@ -14,9 +14,9 @@ const renderSidebar=new Function('state','TRADELINK_BOARD_ID','location','showEn
  sidebarSource+'\nreturn sidebar();');
 const nav=(href,label)=>`<a href="${href}">${label}</a>`;
 const render=({roleVerified,platform_role='employee',search=''})=>renderSidebar(
- {roleVerified,boards:[],view:'overview',boardId:null},'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',
+ {roleVerified,boards:[],view:'overview',boardId:null,
   context:{user_id:'test-user',workspace_id:'test-workspace',profile:{platform_role}}},
- {search},showEngineeringDiagnostics,nav,()=>'',()=>'',()=> 'Test workspace',()=> 'Test user',()=> 'TU',String,()=>'',signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel
+ '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',{search},showEngineeringDiagnostics,nav,()=>'',()=>'',()=> 'Test workspace',()=> 'Test user',()=> 'TU',String,()=>'',signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel
 );
 
 test('Foundation and Pages Acceptance links require server-verified bootstrap status',()=>{
