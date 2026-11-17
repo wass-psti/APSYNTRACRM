@@ -1,0 +1,98 @@
+name: CP-FRT-FLOW-03C Accounting and Company Profile Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "index.html"
+      - "frontend/tests/csp-styles.test.mjs"
+      - "frontend/app.js"
+      - "frontend/frt-accounting.js"
+      - "frontend/frt-company-profile.js"
+      - "frontend/frt-voucher.js"
+      - "frontend/frt-voucher-document.js"
+      - "frontend/frt-voucher-pdf.js"
+      - "frontend/frt-voucher.css"
+      - "frontend/frt-finance-ui.js"
+      - "frontend/tests/frt-accounting.test.mjs"
+      - "frontend/tests/frt-company-profile.test.mjs"
+      - "frontend/tests/frt-voucher.test.mjs"
+      - "supabase/migrations/20261117031500_frt_company_profile_metadata.sql"
+      - "supabase/migrations/20261117034526_frt_flow03c_request_accounting_lines.sql"
+      - "sql/tests/cp-frt-flow03c-disposable.sql"
+      - "sql/tests/cp-frt-flow03c-disposable-setup.sql"
+      - "supabase/migration-source-manifest.json"
+      - "scripts/verify-migration-source-manifest.mjs"
+      - "scripts/cp-frt-flow03c-disposable-acceptance.sh"
+      - "scripts/frt-voucher-browser-acceptance.mjs"
+      - "docs/CP-FRT-FLOW-03C-ACCOUNTING-COMPANY-PROFILE.md"
+      - ".github/workflows/cp-frt-flow03c-accounting-company-profile.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "index.html"
+      - "frontend/tests/csp-styles.test.mjs"
+      - "frontend/app.js"
+      - "frontend/frt-accounting.js"
+      - "frontend/frt-company-profile.js"
+      - "frontend/frt-voucher.js"
+      - "frontend/frt-voucher-document.js"
+      - "frontend/frt-voucher-pdf.js"
+      - "frontend/frt-voucher.css"
+      - "frontend/frt-finance-ui.js"
+      - "frontend/tests/frt-accounting.test.mjs"
+      - "frontend/tests/frt-company-profile.test.mjs"
+      - "frontend/tests/frt-voucher.test.mjs"
+      - "supabase/migrations/20261117031500_frt_company_profile_metadata.sql"
+      - "supabase/migrations/20261117034526_frt_flow03c_request_accounting_lines.sql"
+      - "sql/tests/cp-frt-flow03c-disposable.sql"
+      - "sql/tests/cp-frt-flow03c-disposable-setup.sql"
+      - "supabase/migration-source-manifest.json"
+      - "scripts/verify-migration-source-manifest.mjs"
+      - "scripts/cp-frt-flow03c-disposable-acceptance.sh"
+      - "scripts/frt-voucher-browser-acceptance.mjs"
+      - "docs/CP-FRT-FLOW-03C-ACCOUNTING-COMPANY-PROFILE.md"
+      - ".github/workflows/cp-frt-flow03c-accounting-company-profile.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cp-frt-flow03c-accounting-company-profile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  accounting-company-profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Verify recovered and forward migration sources
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Full frontend regression
+        run: npm test
+      - name: CP-FRT-FLOW-03C PostgreSQL 17 accounting and profile acceptance
+        run: bash scripts/cp-frt-flow03c-disposable-acceptance.sh
+      - name: Install Chromium for PDF browser acceptance
+        run: npx playwright install --with-deps chromium
+      - name: Accounting editor, PDF, download, print and reprint browser acceptance
+        run: |
+          npm run dev -- --host 127.0.0.1 > /tmp/frt-flow03c-vite.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:5173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"           FRT_BROWSER_BASE_URL=http://127.0.0.1:5173/           node scripts/frt-voucher-browser-acceptance.mjs
+      - name: Production frontend build
+        run: npm run build

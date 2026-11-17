@@ -1,14 +1,12 @@
-/** Temporary Annotate compatibility CSP regression.
- * Permit inline stylesheet rules only; continue blocking inline script execution,
- * inline style attributes, and application CSSOM style injection.
- * Remove the temporary exception once the desktop annotation overlay is fixed.
+/** CSP regression for the existing style compatibility exception and blob-only PDF preview.
+ * Inline script execution, style attributes, external frame origins and application CSSOM injection remain blocked.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 const css=readFileSync('frontend/styles.css','utf8');
 const html=readFileSync('index.html','utf8');
-test('temporary annotation-only CSS exception preserves other CSP protections',()=>{
+test('blob-only PDF preview frames preserve the remaining CSP protections',()=>{
  const meta=html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"\/>/);
  assert.ok(meta,'CSP must remain present in the main HTML document');
  const directives=Object.fromEntries(meta[1].split(';').map(d=>d.trim()).filter(Boolean)
@@ -21,7 +19,8 @@ test('temporary annotation-only CSS exception preserves other CSP protections',(
  assert.deepEqual(directives['img-src'],["'self'",'data:','blob:','https://tile.openstreetmap.org','https://jtlusodorfnyzgyuewkz.supabase.co']);
  assert.deepEqual(directives['font-src'],["'self'"]);
  assert.deepEqual(directives['worker-src'],["'self'"]);
- assert.deepEqual(directives['frame-src'],["'none'"]);
+ assert.deepEqual(directives['frame-src'],['blob:']);
+ assert.doesNotMatch(meta[1],/frame-src[^;]*(?:https?:|data:|\*)/,'PDF previews must not enable external frame origins');
  assert.deepEqual(directives['base-uri'],["'self'"]);
  assert.deepEqual(directives['form-action'],["'self'",'https://formsubmit.co']);
  assert.deepEqual(directives['connect-src'],["'self'",'https://jtlusodorfnyzgyuewkz.supabase.co',
