@@ -1198,7 +1198,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        'aria-describedby="tl-reference-number-help">'+
       '<small id="tl-reference-number-help">'+(editing?'Assigned number is permanent and remains unchanged across revisions.':
        TL03_AUTOMATIC_NUMBERING_ENABLED?'Automatically assigned by the database when this document is first saved.':
-       'Enter the existing source document number. Automatic numbering is staged until its additive database migration is activated.')+'</small></label>'+
+       'Enter the document number manually. The automatic-numbering database capability is installed but is not enabled for production document creation.')+'</small></label>'+
      '<label class="tl-draft-field"><span>Document date</span>'+
       '<input name="date" type="date" value="'+escape(fieldValue('date',data.date||(!editing?localDateInput:'')))+'"></label>'+
      '<div class="tl-reference-static-field tl-reference-revision"><span>Revision No.</span>'+
