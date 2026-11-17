@@ -20,10 +20,14 @@ export const MODULE_ROLE_OPTIONS=Object.freeze({
  'employee-eval':['admin','supervisor','employee'],
  'charter-navigator':['Admin','Supervisor','Employee','Viewer']
 });
+export const FUELTRANS_WORKSPACE_ROLES=Object.freeze([
+ 'admin','fueltrans','watchdog_employee','global_l1_support',
+ 'local_l2_support','call_center_specialist','viewer'
+]);
 const delegatedModules=new Set(['time-tracker','fueltrack-plus','tradelink','fund-released-tracker','tool-traceability','material-request-hub','toolbox-issues']);
 export class UserRoleManagementClient {
  constructor(api){this.api=api;}
- async snapshot(workspaceId){
+ async snapshot(workspaceId,{includeFuelTrans=false}={}){
   if(!UUID.test(workspaceId||''))throw Error('Invalid workspace');
   // Always verify the existing server-authorized workspace snapshot first. New optional
   // RPC availability must never bypass the central CRM Administrator scope guard.
@@ -52,7 +56,31 @@ export class UserRoleManagementClient {
       APSYNTRA_CRM_PLATFORM_ROLES.includes(r.effectiveRole)&&
       (r.assignedRole===null||APSYNTRA_CRM_PLATFORM_ROLES.includes(r.assignedRole))))
     throw Error('Invalid server-authorized CRM platform-role snapshot');
-  return {...d,...scopeMetadata,crmPlatformRoles:crm.roles,crmPlatformUnavailable:false};
+  let fueltransWorkspace=null;
+  if(includeFuelTrans){
+   try{
+    fueltransWorkspace=await this.api.rpc('apsyntra_role_fueltrans_workspace_snapshot',{
+     p_workspace_id:workspaceId});
+   }catch(error){
+    if(!(error?.status===404&&error?.code==='PGRST202'))throw error;
+   }
+  }
+  if(fueltransWorkspace!==null&&(
+   fueltransWorkspace?.contract!=='cp-urm-fueltrans-workspace-v1'||
+   fueltransWorkspace?.workspaceId!==workspaceId||
+   !Array.isArray(fueltransWorkspace.assignments)||
+   !fueltransWorkspace.assignments.every(a=>UUID.test(a.userId||'')&&
+    a.moduleId==='fueltrans'&&typeof a.role==='string'&&
+    typeof a.enabled==='boolean'&&typeof a.clientManaged==='boolean'&&
+    (a.updatedAt===null||Number.isFinite(Date.parse(a.updatedAt))))))
+   throw Error('Invalid authoritative FuelTrans workspace membership response');
+  const fueltransWorkspaceAvailable=fueltransWorkspace!==null;
+  const scoped=fueltransWorkspace?.assignments||[];
+  const moduleAssignments=fueltransWorkspaceAvailable?
+   [...d.moduleAssignments.filter(a=>a.moduleId!=='fueltrans'),...scoped]:
+   d.moduleAssignments;
+  return {...d,...scopeMetadata,moduleAssignments,crmPlatformRoles:crm.roles,
+   crmPlatformUnavailable:false,fueltransWorkspaceAvailable};
  }
  async mutate({workspaceId,userId,scope,resourceId,role,enabled,expectedUpdatedAt=null}){
   if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
@@ -67,6 +95,21 @@ export class UserRoleManagementClient {
     p_expected_updated_at:expectedUpdatedAt});
   if(r?.effective!==true||r.workspaceId!==workspaceId||r.targetUserId!==userId||
     r.scope!==scope||r.resourceId!==resourceId)throw Error('Backend role change acknowledgement invalid');
+  return r;
+ }
+ async setFueltransWorkspaceRole({workspaceId,userId,role,enabled,expectedUpdatedAt=null}){
+  if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
+    !FUELTRANS_WORKSPACE_ROLES.includes(role)||typeof enabled!=='boolean'||
+    (expectedUpdatedAt!==null&&
+     (typeof expectedUpdatedAt!=='string'||!Number.isFinite(Date.parse(expectedUpdatedAt)))))
+   throw Error('Invalid FuelTrans workspace role request');
+  const r=await this.api.rpc('apsyntra_role_fueltrans_workspace_set',{
+   p_workspace_id:workspaceId,p_target_user_id:userId,p_role:role,
+   p_enabled:enabled,p_expected_updated_at:expectedUpdatedAt});
+  if(r?.effective!==true||r.workspaceId!==workspaceId||r.targetUserId!==userId||
+     r.scope!=='module'||r.resourceId!=='fueltrans'||
+     r.after?.role!==role||r.after?.enabled!==enabled)
+   throw Error('FuelTrans workspace role acknowledgement invalid');
   return r;
  }
  async setCrmPlatformRole({workspaceId,userId,role,expectedUpdatedAt=null}){
@@ -138,7 +181,9 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const allowed=data.users.filter(member=>!member.protected&&member.id!==actorUserId);
   const resourceEntries=batchScope==='module'?ROLE_MODULE_OPTIONS:data.boards.map(board=>[board.id,board.name]);
   const resource=resourceEntries.some(([id])=>id===batchResource)?batchResource:resourceEntries[0]?.[0]||'';
-  const roles=batchScope==='module'?MODULE_ROLE_OPTIONS[resource]||[]:['viewer','editor'];
+  const roles=batchScope==='module'?
+   (resource==='fueltrans'?(data.fueltransWorkspaceAvailable?FUELTRANS_WORKSPACE_ROLES:[]):
+    MODULE_ROLE_OPTIONS[resource]||[]):['viewer','editor'];
   const currentRole=roles.includes(batchRole)?batchRole:roles[0]||'';
   const memberQuery=String(batchMemberSearch||'').trim().toLocaleLowerCase().slice(0,120);
   const visibleMemberCount=allowed.filter(member=>
@@ -201,7 +246,8 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  '<div class="note security-note user-role-self">The signed-in administrator cannot assign or modify roles on their own account. Select another active workspace member.</div>':
  '<div class="note user-role-helper">Select an application or board below to update this user’s actual role. Changes require explicit confirmation.</div>')+
  (!otherAssignableMembers.length?'<div class="note security-note user-role-no-targets">There are no other eligible active members in this workspace. Self-assignment and protected administrator changes are not permitted. Add another member to this workspace before assigning application or board access.</div>':'')+
- (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Toolbox Issues and Material Request Hub use separate workspace-scoped role records; board access is also workspace-scoped.</div>':'')+
+ (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Toolbox Issues and Material Request Hub have workspace-scoped records. FuelTrans uses its own workspace-scoped membership when that signed backend contract is available; board access is also workspace-scoped.</div>':'')+
+ (!data.fueltransWorkspaceAvailable?'<div class="note user-role-fueltrans-scope-unavailable">FuelTrans role changes require its authoritative workspace membership integration. The legacy global role action is disabled to prevent assigning a role in another workspace.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
  const section=accessSection==='boards'?'boards':'applications';
@@ -213,11 +259,11 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  const crm=data.crmPlatformRoles?.find(r=>r.userId===u.id)||null;
  html+='<div class="section-header user-role-section-header user-role-entrance"><strong>APSYNTRA CRM Platform Role</strong></div>'+
  '<div class="note security-note user-role-ceiling-note">This is the CRM-wide authorization ceiling. CRM tier assignments are workspace-specific, not changes to the inherited WatchdogWorkspace account role. Admin grants CRM administrative authority for the active workspace, not unrelated module assignments or board ownership. Explicit Viewer blocks module write-level roles and board edit/manage; existing legacy behavior is preserved until an override is assigned.</div>'+
- '<div class="panel user-role-platform-panel"><div class="panel-body"><div class="settings-detail"><label>Inherited WatchdogWorkspace role</label><strong>'+
- esc(u.platformRole)+'</strong></div><div class="settings-detail"><label>CRM platform role</label><strong>'+
+ '<div class="panel user-role-platform-panel"><div class="panel-body"><div class="settings-detail"><label>Assigned workspace role</label><strong>'+
  esc(data.crmPlatformUnavailable?'Unavailable — backend migration pending':crm?.effectiveRole||'Unverified')+
  (data.crmPlatformUnavailable||!crm?'':' ('+crmRoleSourceLabel(crm)+')')+
- '</strong></div>'+
+ '</strong></div><div class="settings-detail"><label>WatchdogWorkspace identity (not an assignment)</label><strong>'+
+ esc(u.platformRole)+'</strong></div>'+
  '<button class="secondary" data-action="user-role-edit-crm-platform" data-user-id="'+esc(u.id)+'" '+
  (locked||data.crmPlatformUnavailable||!crm?'disabled':'')+'>Assign / change CRM role</button> '+
  (crm?.assignedRole?'<button class="secondary" data-action="user-role-revert-crm-platform" data-user-id="'+esc(u.id)+'" '+
@@ -227,21 +273,26 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  '<div class="panel user-role-table-panel"><div class="table-scroll user-role-table-scroll" role="region" aria-label="Application assignments, scroll horizontally for more columns" tabindex="0"><table class="board-table user-role-table" aria-label="Application-specific assignments"><thead><tr><th scope="col">Application</th><th scope="col">Effective stored role</th><th scope="col">Enforcement</th><th scope="col">Action</th></tr></thead><tbody>';
  for(const [id,name] of ROLE_MODULE_OPTIONS){
   const a=data.moduleAssignments.find(x=>x.userId===u.id&&x.moduleId===id);
-  const opt=MODULE_ROLE_OPTIONS[id]||[];
+  const fueltransScoped=id==='fueltrans'&&data.fueltransWorkspaceAvailable===true;
+  const opt=fueltransScoped?FUELTRANS_WORKSPACE_ROLES:(MODULE_ROLE_OPTIONS[id]||[]);
   const status=a?.enabled?'Active: '+a.role:a?'Disabled: '+a.role:'Unassigned';
-  const note=delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
-  const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues';
-  const editBlocked=locked||!opt.length||activeWorkspaceCount===null||
+  const note=fueltransScoped?'Workspace FuelTrans membership':delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
+  const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues'||fueltransScoped;
+  const editBlocked=locked||!opt.length||(id==='fueltrans'&&!fueltransScoped)||
+   (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
   const editReason=busy?'Another role change is in progress.':
+   id==='fueltrans'&&!fueltransScoped?'FuelTrans workspace membership backend is not activated.':
+   fueltransScoped&&a?.clientManaged===true?'Client-specific FuelTrans membership requires its domain assignment editor.':
    u.protected?'Protected administrator accounts cannot be modified.':
    isSelf?'Self-assignment is not permitted.':
    !opt.length?'No supported role options are configured for this application.':
    activeWorkspaceCount===null?'The backend has not verified this account’s active workspace scope.':
    globalModuleRoleBlocked&&!workspaceScopedModule?'This legacy application role is global and this member belongs to multiple workspaces.':
    id==='material-request-hub'&&!data.workspaceScopedMrhAvailable?'Workspace-scoped Material Request Hub role management is not verified.':'';
-  const revokeBlocked=locked||activeWorkspaceCount===null||
+  const revokeBlocked=locked||(id==='fueltrans'&&!fueltransScoped)||
+   (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
   html+='<tr><td><strong>'+esc(name)+'</strong></td><td>'+esc(status)+'</td><td>'+esc(note)+'</td><td>'+

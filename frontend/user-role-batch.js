@@ -1,7 +1,7 @@
 /** Batch role planning. Pure, non-mutating and based solely on an authorized snapshot.
  * The backend remains the final authorization authority for each individual write.
  */
-import {MODULE_ROLE_OPTIONS} from './user-role-management.js';
+import {MODULE_ROLE_OPTIONS,FUELTRANS_WORKSPACE_ROLES} from './user-role-management.js';
 
 export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resourceId,role,enabled=true}={}){
  if(!data||!Array.isArray(data.users)||!Array.isArray(data.boards)||
@@ -11,8 +11,10 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
  const users=[...new Set(userIds)];
  if(!users.length)throw Error('Select at least one workspace member');
  if(scope==='module'){
-  if(!Object.hasOwn(MODULE_ROLE_OPTIONS,resourceId)||
-     !MODULE_ROLE_OPTIONS[resourceId].includes(role))throw Error('Unsupported application role');
+  const valid=resourceId==='fueltrans'?
+    data.fueltransWorkspaceAvailable===true&&FUELTRANS_WORKSPACE_ROLES.includes(role):
+    Object.hasOwn(MODULE_ROLE_OPTIONS,resourceId)&&MODULE_ROLE_OPTIONS[resourceId].includes(role);
+  if(!valid)throw Error('Unsupported application role');
  }else if(!data.boards.some(b=>b.id===resourceId)||!['viewer','editor'].includes(role))
   throw Error('Unsupported board role');
  const operations=[],unchanged=[];
@@ -23,10 +25,13 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
   if(scope==='module'){
    if(!Number.isInteger(user.activeWorkspaceCount)||user.activeWorkspaceCount<1)
     throw Error('Unverified workspace membership for '+user.email);
-   if(resourceId!=='material-request-hub'&&user.activeWorkspaceCount!==1)
+   if(!['material-request-hub','fueltrans'].includes(resourceId)&&user.activeWorkspaceCount!==1)
     throw Error('Global application role is not workspace-isolated for '+user.email);
    if(resourceId==='material-request-hub'&&data.workspaceScopedMrhAvailable!==true)
     throw Error('Workspace-scoped Material Request Hub role management is unavailable');
+   if(resourceId==='fueltrans'&&(data.fueltransWorkspaceAvailable!==true||
+       data.moduleAssignments.some(a=>a.moduleId==='fueltrans'&&a.userId===userId&&a.clientManaged)))
+    throw Error('FuelTrans workspace membership contract unavailable or client-managed');
   }
   const record=(scope==='module'?data.moduleAssignments:data.boardAssignments).find(a=>
    a.userId===userId&&(scope==='module'?a.moduleId:a.boardId)===resourceId);
