@@ -502,7 +502,7 @@ function syncSidebarLayout(){
 function sidebar(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  const currentBoard=state.boardId;
- const recent=state.boards.slice(0,6);
+ const recent=state.boards.filter(board=>moduleByBoardName(board.name)?.key!=='tradelink').slice(0,6);
  const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
   sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
   sidebarNav('#/fm1','FM1 Ticketing','ticket',state.view==='fm1')+

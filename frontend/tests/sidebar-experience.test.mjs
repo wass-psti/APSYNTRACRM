@@ -28,7 +28,7 @@ test('signed sidebar preserves the required route vocabulary and active semantic
 });
 test('workspace and recent board lists use existing authorized state only',()=>{
  assert.match(sidebar,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
- assert.match(sidebar,/state\.boards\.slice\(0,6\)/);
+ assert.match(sidebar,/state\.boards\.filter\(board=>moduleByBoardName\(board\.name\)\?\.key!=='tradelink'\)\.slice\(0,6\)/);
  assert.match(sidebar,/const currentBoard=state\.boardId/);
  assert.match(sidebar,/href="#\/boards\/'\+e\(b\.id\)/);
  assert.match(sidebar,/e\(title\)/);
@@ -47,7 +47,7 @@ test('brand uses approved image and retains the signed shell controls',()=>{
  assert.match(app,/state\.context\?\.profile\?\.platform_role/);
 });
 test('constant SVG icon set excludes user-controlled markup and interactive handlers',()=>{
- for(const name of ['overview','boards','foundation','security','roles',
+ for(const name of ['overview','boards','tradelink','foundation','security','roles',
   'users','settings','acceptance','recent','logout']){
   const icon=sidebarIcon(name);
   assert.match(icon,/^<svg class="sidebar-svg-icon"/);
