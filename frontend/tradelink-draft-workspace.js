@@ -11,12 +11,12 @@ import {TRADELINK_DEFAULT_COMPANY_PROFILE_ID,TRADELINK_COMPANY_PROFILE_OPTIONS,
  TRADELINK_DEFAULT_TERMS,isTradeLinkCompanyProfileId,
  tradeLinkCompanyTemplateSnapshot,tradeLinkCompanyProfileIdFromTemplateId}
  from './tradelink-official-templates.js';
-import {TradeLinkDomainClient,TL03_DOMAIN_READS_ENABLED,
+import {TradeLinkNativeClient,TL03_DOMAIN_READS_ENABLED,
  TL03_DOMAIN_WRITES_ENABLED,TL03_AUTOMATIC_NUMBERING_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
  validateTradeLinkDraftEnvelope,
- normalizeTradeLinkDomainRow} from './tradelink-domain-client.js';
+ normalizeTradeLinkDomainRow} from './tradelink-native.js';
 
 export const TL03_DRAFT_INTERFACE_ENABLED=true; // presentation only
 const typeLabels=Object.freeze([
@@ -382,7 +382,7 @@ export function reconcileTradeLinkSavedListing(list,record,receipt){
 export class TradeLinkDraftWorkspace{
  constructor({auth,api,automaticNumberingEnabled=TL03_AUTOMATIC_NUMBERING_ENABLED}={}){
   this.automaticNumberingEnabled=automaticNumberingEnabled===true;
-  this.client=new TradeLinkDomainClient({auth,api,
+  this.client=new TradeLinkNativeClient({auth,api,
    automaticNumberingEnabled:this.automaticNumberingEnabled});
  }
  async analyticsSummary(period={}){
