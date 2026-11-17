@@ -127,6 +127,7 @@ class Fm1Application {
     this.handleClick = this.handleClick.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.unsubscribe = null;
+    this.ticketMutationPending = false;
   }
 
   connect() {
@@ -339,7 +340,7 @@ class Fm1Application {
   }
 
   async loadTicket(ticketId) {
-    if (!this.api || !ticketId) return;
+    if (!this.api || !ticketId) return false;
     const scopeKey = this.scopeKey;
     const isCurrentScope = () =>
       this.root?.isConnected === true &&
@@ -355,14 +356,16 @@ class Fm1Application {
     try {
       const detail = await this.api.ticketDetail(this.workspaceId, ticketId);
       if (!isCurrentScope() || fm1Store.get().selectedTicketId !== ticketId)
-        return;
+        return false;
       updateStore({ selectedTicketDetail: detail, serverLoading: false });
+      return true;
     } catch (error) {
-      if (!isCurrentScope()) return;
+      if (!isCurrentScope()) return false;
       updateStore({
         serverLoading: false,
         serverError: error?.message || "Unable to load this FM1 ticket.",
       });
+      return false;
     }
   }
 
@@ -689,6 +692,7 @@ class Fm1Application {
       });
       return;
     }
+    if (this.ticketMutationPending) return;
 
     const data = new FormData(form);
     const operation = form.matches("[data-fm1-edit-ticket-form]")
@@ -728,6 +732,7 @@ class Fm1Application {
       submitButton.disabled = true;
       submitButton.textContent = "Saving…";
     }
+    this.ticketMutationPending = true;
     try {
       if (operation === "edit") {
         await this.api.updateTicket(
@@ -886,6 +891,35 @@ class Fm1Application {
       await this.refreshTicketAndQueue(ticket.id);
     } catch (error) {
       if (!isCurrentScope()) return;
+      if (error?.code === "40001") {
+        form.dataset.idempotencyFingerprint = "";
+        form.dataset.idempotencyKey = "";
+        const current = fm1Store.get();
+        if (
+          current.view === "ticket-detail" &&
+          current.selectedTicketId === ticket.id
+        ) {
+          const refreshed = await this.loadTicket(ticket.id);
+          if (!isCurrentScope()) return;
+          updateStore({
+            notice: refreshed
+              ? "This ticket changed elsewhere. The latest server revision has been loaded; review the current values before making another change."
+              : "This ticket changed elsewhere, but its latest revision could not be loaded. Refresh the ticket before making another change.",
+            serverBusy: false,
+          });
+        } else {
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalSubmitLabel;
+          }
+          updateStore({
+            notice:
+              "This ticket changed elsewhere. Reopen it to load the latest revision before making another change.",
+            serverBusy: false,
+          });
+        }
+        return;
+      }
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = originalSubmitLabel;
@@ -900,6 +934,8 @@ class Fm1Application {
           ) +
           "</p>",
       );
+    } finally {
+      this.ticketMutationPending = false;
     }
   }
 
