@@ -184,3 +184,13 @@ test('attendance error feedback names Clock In and Clock Out correctly',()=>{
  assert.match(attendanceClockError(new Error('network'),
   {commitAttempted:true,action:'clock-out'}),/Clock-out confirmation is uncertain/);
 });
+
+test('verified signed TimeTracker reload clears stale bootstrap errors without unlocking pending writes',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf('async function loadTimeTracker(seq=routeSerial)');
+ const end=app.indexOf('function timeTrackerAdminLogReady()',start);
+ const load=app.slice(start,end);
+ assert.ok(start>=0&&end>start);
+ assert.match(load,/state\.ttAttendance=snapshot;[\s\S]*if\(snapshot\?\.status==='VERIFIED_READ'&&!state\.ttClockPending\)\s*state\.ttError='';/);
+ assert.match(load,/if\(state\.ttClockPending\)reconcileTimeTrackerClock\(snapshot\)/);
+});

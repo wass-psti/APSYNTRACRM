@@ -3575,6 +3575,10 @@ async function loadTimeTracker(seq=routeSerial){
   if(run===state.ttRunId&&seq===routeSerial&&auth.isSignedIn&&
     state.context?.user_id===identity&&state.context?.workspace_id===ws)
    {state.ttAttendance=snapshot;
+    // An earlier bootstrap/read error must not remain visible after a
+    // verified signed attendance snapshot. Preserve uncertain-write warnings.
+    if(snapshot?.status==='VERIFIED_READ'&&!state.ttClockPending)
+     state.ttError='';
     const pending=pendingNativeSearchSelection?.applicationId==='timetracker'&&
      pendingNativeSearchSelection.userId===identity&&
      pendingNativeSearchSelection.workspaceId===ws&&
