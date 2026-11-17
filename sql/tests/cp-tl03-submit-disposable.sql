@@ -75,6 +75,38 @@ BEGIN
   PERFORM public.tl03_document_submit(board,payment,1);
   RAISE EXCEPTION 'Zero-value payment submission was accepted';
  EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ -- Complete six-module source submit parity with signed writes, immutable
+ -- document identity, single Board projection, and revision-bound event audit.
+ FOR content IN SELECT value FROM pg_catalog.jsonb_array_elements('[
+  {"documentType":"esi","documentNumber":"ESI-SUBMIT-01","customerName":"Client","customerTin":"TIN-123","verifiedBy":"Finance","approvedBy":"Manager","items":[{"id":"a","kind":"item","description":"Product","quantity":1,"unitPrice":100}]},
+  {"documentType":"delivery","documentNumber":"DR-SUBMIT-01","customerName":"Consignee","referenceNumber":"SO-123","checkedBy":"QC","deliveredBy":"Logistics","items":[{"id":"b","kind":"item","description":"Shipped","quantity":1,"unitPrice":0}]},
+  {"documentType":"payment","documentNumber":"AR-SUBMIT-01","customerName":"Payer","paymentParticulars":"Invoice settlement","receivedBy":"Cashier","verifiedBy":"Finance","cashAmount":100},
+  {"documentType":"po","documentNumber":"PO-SUBMIT-01","customerName":"Supplier","targetDeliveryDate":"2026-12-01","paymentTerms":"Net 30","verifiedBy":"Finance","approvedBy":"Manager","items":[{"id":"c","kind":"item","description":"Equipment","quantity":1,"unitPrice":100}]}
+ ]'::jsonb) LOOP
+  DECLARE
+   fixture_id uuid;
+   fixture_receipt jsonb;
+   fixture_doc public.tradelink_documents%rowtype;
+  BEGIN
+   fixture_id:=pg_catalog.gen_random_uuid();
+   PERFORM public.tl03_document_commit(board,fixture_id,0,'create',content);
+   fixture_receipt:=public.tl03_document_submit(board,fixture_id,1);
+   SELECT * INTO fixture_doc FROM public.tradelink_documents WHERE id=fixture_id;
+   IF fixture_receipt->>'state'<>'submitted'
+     OR fixture_receipt->>'operation'<>'submit'
+     OR (fixture_receipt->>'revision')::int<>2
+     OR fixture_doc.workflow_state<>'submitted' OR fixture_doc.revision<>2
+     OR fixture_doc.content IS DISTINCT FROM content
+     OR (SELECT count(*) FROM public.work_board_items
+         WHERE id=fixture_doc.board_item_id AND title=fixture_doc.document_number
+           AND updated_at=fixture_doc.updated_at)<>1
+     OR (SELECT count(*) FROM public.tradelink_document_events
+         WHERE document_id=fixture_id AND operation='submitted' AND revision=2
+           AND metadata->>'from'='draft' AND metadata->>'to'='submitted')=0
+   THEN RAISE EXCEPTION 'Six-module signed submit parity failed for %',content->>'documentType';
+   END IF;
+  END;
+ END LOOP;
 END $submit_signed$;
 -- Employee with Board membership but no General Manager role is always denied.
 SELECT pg_catalog.set_config('request.jwt.claim.sub',
