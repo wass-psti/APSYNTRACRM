@@ -72,8 +72,9 @@ test('blocked detail does not produce a lifecycle or financial action buttons',(
 
 test('manual accurately separates current signed controls from source-only features',()=>{
  const html=renderFRTFinanceReadOnly({result:company,view:'manual'});
- for(const term of ['PENDING_APPROVAL','24-hour autosaved drafts','duplicate checks',
- 'three-day post-disbursement deadline','server-authorized','not proof that BPI'])
+ for(const term of ['PENDING_APPROVAL','24-hour draft recovery','ten-minute duplicate guard',
+ '72-hour liquidation deadline','server-authorized','not proof that BPI',
+ 'General request-file attachments','Purchase Order synchronization'])
   assert.ok(html.includes(term),term);
  assert.doesNotMatch(html,/data-action="frt-finance-action"/);
 });

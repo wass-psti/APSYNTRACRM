@@ -139,9 +139,9 @@ test('FRT collaboration UI wiring uses existing comment RPC and no new notificat
  assert.match(app,/openFRTDiscussionDialog/);
  assert.match(app,/openFRTActivityDialog/);
  assert.match(app,/openFRTNotificationsDialog/);
- assert.match(app,/addFRTComment/);
- assert.match(app,/loadFRTDeadlineSnapshots/);
- assert.match(app,/loadFRTAgingSummary/);
+ assert.match(app,/fundTracker\.addComment\(/);
+ assert.match(app,/fundTracker\.loadDeadlineSnapshots\(/);
+ assert.match(app,/fundTracker\.loadAgingSummary\(/);
  assert.match(app,/renderFRTNotificationSummary/);
  assert.match(data,/frt_add_comment/);
  assert.match(data,/frt_bank_execution_snapshot/);

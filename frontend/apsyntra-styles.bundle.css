@@ -15137,6 +15137,196 @@
 .modal-backdrop [data-frt-accounting-save]:disabled,.modal-backdrop [data-frt-voucher-preview]:disabled,.modal-backdrop [data-frt-voucher-download]:disabled,.modal-backdrop [data-frt-voucher-print]:disabled,.modal-backdrop [data-frt-voucher-reprint]:disabled{opacity:.48;cursor:not-allowed}
 @media(max-width:650px){.modal-backdrop .frt-accounting-template-tools{grid-template-columns:1fr}.modal-backdrop .frt-accounting-editor-heading{flex-direction:column}.modal-backdrop .frt-accounting-state{max-width:100%}}
 
+/* frontend/fund-tracker-application.css */
+/* Fund Tracker native shell. Existing FRT domain panels retain their established styles. */
+#app .aps-board-shell .frt-native {
+  min-width: 0;
+  width: 100%;
+  color: var(--fm1-ink, #182a36);
+}
+
+#app .aps-board-shell .frt-native .frt-application-shell {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+#app .aps-board-shell .frt-native .frt-app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 0;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid var(--fm1-line, #dce5e9);
+  border-radius: 22px;
+  background: linear-gradient(125deg, #f3f7fc 0%, #fbfcfe 60%, #eef4fa 100%);
+  box-shadow: 0 12px 30px rgb(24 42 54 / 7%);
+}
+
+#app .aps-board-shell .frt-native .frt-app-brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+
+#app .aps-board-shell .frt-native .frt-app-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border: 1px solid #d7e3ef;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #e8f1fb, #f5f8fc);
+  color: #245d91;
+  box-shadow: 0 5px 13px rgb(36 93 145 / 12%);
+  font-size: 25px;
+  font-weight: 750;
+}
+
+#app .aps-board-shell .frt-native .frt-app-eyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: #547087;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+#app .aps-board-shell .frt-native .frt-app-brand h1 {
+  margin: 0;
+  color: var(--fm1-ink, #182a36);
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+
+#app .aps-board-shell .frt-native .frt-app-brand h1 span {
+  color: #607789;
+  font-size: 0.56em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+#app .aps-board-shell .frt-native .frt-app-brand p {
+  margin: 8px 0 0;
+  color: var(--fm1-muted, #4f626d);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#app .aps-board-shell .frt-native .frt-app-session {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+#app .aps-board-shell .frt-native .frt-app-role,
+#app .aps-board-shell .frt-native .frt-app-sync {
+  max-width: 100%;
+  border: 1px solid #dce5ed;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 78%);
+  padding: 7px 11px;
+  color: #425d70;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+#app .aps-board-shell .frt-native .frt-app-sync {
+  border-color: #cfe5dc;
+  background: #f1f8f4;
+  color: #28684d;
+}
+
+#app .aps-board-shell .frt-native .frt-app-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 15px;
+  border: 1px solid var(--fm1-line, #dce5e9);
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(24 42 54 / 4%);
+}
+
+#app .aps-board-shell .frt-native .frt-app-context span {
+  color: var(--fm1-muted, #60717b);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+#app .aps-board-shell .frt-native .frt-app-context strong {
+  overflow: hidden;
+  color: var(--fm1-ink, #182a36);
+  font-size: 12px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#app .aps-board-shell .frt-native .frt-app-content {
+  min-width: 0;
+}
+
+#app .aps-board-shell .frt-native .frt-app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 2px 2px;
+  border-top: 1px solid var(--fm1-line, #dce5e9);
+  color: var(--fm1-muted, #60717b);
+  font-size: 10px;
+}
+
+#app .aps-board-shell .frt-native :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid #79a8d4;
+  outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  #app .aps-board-shell .frt-native .frt-app-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px 16px;
+  }
+
+  #app .aps-board-shell .frt-native .frt-app-session {
+    justify-items: start;
+  }
+
+  #app .aps-board-shell .frt-native .frt-app-context {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #app .aps-board-shell .frt-native .frt-app-context strong {
+    text-align: left;
+  }
+
+  #app .aps-board-shell .frt-native .frt-app-footer {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app .aps-board-shell .frt-native *,
+  #app .aps-board-shell .frt-native *::before,
+  #app .aps-board-shell .frt-native *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* frontend/fueltrack-v3-application.css */
 /* CP-FT3-01 — FuelTrack+ v3 native dashboard, scoped to authorized board app. */
 #app .ft3-app{color:#27394a;background:#f6fafb;border:1px solid #d7e4e8;border-radius:17px;overflow:hidden;box-shadow:0 12px 28px #163b4811;margin:16px 0 28px;font-size:13px}
