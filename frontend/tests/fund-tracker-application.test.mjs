@@ -103,6 +103,7 @@ test("native adapter composes the existing signed FRT domain APIs instead of int
   assert.ok(native.includes("class FundTrackerNativeClient"));
   assert.ok(native.includes("snapshot("));
   assert.ok(native.includes("searchRequests("));
+  for (const projection of ["projectFRTAccountingSnapshot","projectFRTCompanyProfile","projectFRTWorkflowProgress","projectFRTVoucherSnapshot","validateFRTReceipts","describeFRTBankExecution"]) assert.ok(native.includes(projection), projection);
   assert.equal(native.includes("createClient"), false);
   assert.equal(native.includes(".rpc("), false);
 });
