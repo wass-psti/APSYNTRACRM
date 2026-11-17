@@ -4,6 +4,7 @@
  * No standalone auth, browser persistence, synthetic documents or writes.
  */
 import {isTradeLinkBoard,tradeLinkSetupStatus,TRADELINK_BOARD_ID} from './tradelink-board-items.js';
+import {TRADELINK_APPLICATION_ROUTE,TRADELINK_LEGACY_BASE} from './tradelink-application-route.js';
 import {renderTradeLinkActivity} from './tradelink-activity.js';
 import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
@@ -100,13 +101,13 @@ function renderModule(m,canManage=true){
 }
 /** Reference-led TradeLink portal is presentation-only.
  * Links preserve the existing signed-board routes and disabled domain gates. */
-export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,analytics=null,analyticsBusy=false,analyticsError='',analyticsEnabled=false,draftView=initialTradeLinkDraftView(),canManage=false,canReview=false,actorName='',actorEmail=''}={}){
+export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,analytics=null,analyticsBusy=false,analyticsError='',analyticsEnabled=false,draftView=initialTradeLinkDraftView(),canManage=false,canReview=false,actorName='',actorEmail='',routeBase=null}={}){
  if(!isTradeLinkBoard(detail?.board)||
      typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
  const current=normalizeTradeLinkSection(section);
  const m=TRADELINK_SOURCE_MODULES.find(x=>x.key===current);
- const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink';
+ const base=routeBase===TRADELINK_APPLICATION_ROUTE?TRADELINK_APPLICATION_ROUTE:TRADELINK_LEGACY_BASE;
  const currentAttr=key=>current===key?' aria-current="page"':'';
  const requestedType=draftView?.formValues?.documentType||
   draftView?.selected?.record?.document_type||
@@ -118,7 +119,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
    '<div class="tl-app-nav-links">'+
     TRADELINK_SOURCE_MODULES.map(module=>moduleLink(module,selectedType)).join('')+
    '</div></nav>':'';
- return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'" data-tl-can-manage="'+(canManage?'true':'false')+'">'+
+ const markup='<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'" data-tl-can-manage="'+(canManage?'true':'false')+'">'+
   '<header class="tl-reference-topbar" aria-label="TradeLink portal">'+
    '<a class="tl-reference-brand" href="'+base+(canManage?'/drafts/quotation':'/documents')+'" aria-label="TradeLink Create New">'+
     '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
@@ -149,6 +150,9 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
    '<main class="tl-app-main">'+
     (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>Document creation requires the existing signed Board manager capability. No additional permission is granted here. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):current==='analytics'?renderTradeLinkAnalytics({summary:analytics,busy:analyticsBusy,error:analyticsError,enabled:analyticsEnabled}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}))+
    '</main></div></div>';
+ // Keep the legacy Board route for existing callers, but all portal links in
+ // the dedicated CRM app remain within its own route without a second client.
+ return base===TRADELINK_LEGACY_BASE?markup:markup.replaceAll(TRADELINK_LEGACY_BASE,base);
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network
  * request, privilege check bypass, cached identity or persistence mutation. */
