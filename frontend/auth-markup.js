@@ -74,7 +74,6 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
    </header>
    <main class="auth-panel">
     <div class="auth-intro auth-reveal">
-     ${view==='login'?'<div class="auth-minimal-logo" aria-hidden="true"><img src="./frontend/apsyntra-logo.webp" alt="" width="34" height="34"/></div>':''}
      <span class="eyebrow">${escapeHtml(copy.eyebrow)}</span>
      ${view==='login'?'<h1>Welcome to<br/><span>APSYNTRA CRM</span></h1>':'<h1>'+escapeHtml(copy.title)+'<span class="auth-heading-stop">.</span></h1>'}
      <p class="muted" id="auth-login-description">${escapeHtml(copy.description)}</p>
