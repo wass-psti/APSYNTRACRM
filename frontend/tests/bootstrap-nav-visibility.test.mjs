@@ -10,13 +10,13 @@ const sidebarSource=app.slice(app.indexOf('function sidebar(){'),
  app.indexOf('/** Signed session-local basemap opt-in.'));
 const renderSidebar=new Function('state','TRADELINK_BOARD_ID','TRADELINK_APPLICATION_ROUTE','FUELTRACK_V3_APPLICATION_ROUTE','location','showEngineeringDiagnostics','sidebarNav','renderWorkspaceSwitcher',
  'renderWorkspaceInviteLaunch','workspaceName','name','initials','e','sidebarIcon',
- 'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel',
+ 'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel','currentSidebarNavigation',
  sidebarSource+'\nreturn sidebar();');
 const nav=(href,label)=>`<a href="${href}">${label}</a>`;
 const render=({roleVerified,platform_role='employee',search=''})=>renderSidebar(
  {roleVerified,boards:[],view:'overview',boardId:null,
   context:{user_id:'test-user',workspace_id:'test-workspace',profile:{platform_role}}},
- '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','#/tradelink','#/fueltrack',{search},showEngineeringDiagnostics,nav,()=>'',()=>'',()=> 'Test workspace',()=> 'Test user',()=> 'TU',String,()=>'',signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel
+ '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','#/tradelink','#/fueltrack',{search},showEngineeringDiagnostics,nav,()=>'',()=>'',()=> 'Test workspace',()=> 'Test user',()=> 'TU',String,()=>'',signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel,()=> 'overview'
 );
 
 test('Foundation and Pages Acceptance links require server-verified bootstrap status',()=>{

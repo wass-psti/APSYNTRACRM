@@ -29,7 +29,7 @@ test('signed sidebar preserves the required route vocabulary and active semantic
 test('workspace and recent board lists use existing authorized state only',()=>{
  assert.match(sidebar,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
  assert.match(sidebar,/state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\)\.slice\(0,6\)/);
- assert.match(sidebar,/const currentBoard=state\.boardId/);
+ assert.match(sidebar,/const active=selectedNav==='recent:'\+b\.id/);
  assert.match(sidebar,/href="#\/boards\/'\+e\(b\.id\)/);
  assert.match(sidebar,/e\(title\)/);
  assert.match(sidebar,/e\(name\(\)\)/);
@@ -42,7 +42,7 @@ test('brand uses approved image and retains the signed shell controls',()=>{
  assert.match(sidebar,/href="#\/overview" class="brand"/);
  assert.match(app,/function shell\(body\)\{/);
  assert.match(app,/class="shell">\$\{sidebar\(\)\}<main class="main"/);
- assert.match(app,/animateSidebarSelection\(root\.querySelector\('\.aps-sidebar'\),state\.view\)/);
+ assert.match(app,/animateSidebarSelection\(root.querySelector\('\.aps-sidebar'\),currentSidebarNavigation\(\)\)/);
  assert.match(app,/stopSidebarSelection\(\)/);
  assert.match(app,/state\.context\?\.profile\?\.platform_role/);
 });
