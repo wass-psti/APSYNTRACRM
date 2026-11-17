@@ -21,7 +21,7 @@ function shared(){
  }};
  return {storage,locks,map};
 }
-function windowClient(shared,{workspaceId=workspace,now=()=>1000000,connected=true}={}){
+function windowClient(shared,{workspaceId=workspace,now=()=>1000000,connected=true,transport=null}={}){
  const calls=[];
  const auth={isSignedIn:true,userId:uid};
  const sync=new PlatformSync({
@@ -32,7 +32,7 @@ function windowClient(shared,{workspaceId=workspace,now=()=>1000000,connected=tr
   setIntervalFn:()=>1,clearIntervalFn:()=>{}
  });
  sync.running=true;sync.scope={userId:uid,workspaceId};sync.pollRecoveryAt=now();
- sync.boardIds=[board];sync.lastTransport=connected?'realtime':'polling';
+ sync.boardIds=[board];sync.lastTransport=transport||(connected?'realtime':'polling');
  return {sync,calls};
 }
 test('two signed realtime tabs perform one shared periodic audit',async()=>{
@@ -134,4 +134,18 @@ test('failed storage writes do not replay a completed authoritative poll',async(
  const one=windowClient({storage,locks:same.locks});
  await one.sync.pollTick(one.sync.generation);
  assert.equal(one.calls.length,1);
+});
+
+test('shared-Realtime followers retain their own bounded recovery audit',async()=>{
+ const clock={value:1000000},same=shared();
+ const leader=windowClient(same,{now:()=>clock.value});
+ const follower=windowClient(same,{now:()=>clock.value,transport:'shared'});
+ await leader.sync.pollTick(leader.sync.generation);
+ await follower.sync.pollTick(follower.sync.generation);
+ assert.equal(leader.calls.length,1);assert.equal(follower.calls.length,0);
+ clock.value+=SYNC_POLL_RECOVERY_MS;
+ await leader.sync.pollTick(leader.sync.generation);
+ await follower.sync.pollTick(follower.sync.generation);
+ assert.equal(leader.calls.length,2);
+ assert.equal(follower.calls.length,1,'follower must re-read authoritatively within its recovery interval');
 });

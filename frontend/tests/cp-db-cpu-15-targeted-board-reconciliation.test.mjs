@@ -21,10 +21,17 @@ test('app reconciliation uses targeted reads and preserves archived-board handli
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const reconcile=app.slice(app.indexOf('async function reconcilePlatformSync('),
   app.indexOf('\nlet workspaceRelationReadGeneration',app.indexOf('async function reconcilePlatformSync(')));
- assert.match(reconcile,/shouldRefreshWorkspaceBoardList\(\{reason,view\}\)/);
+ assert.match(reconcile,/shouldRefreshWorkspaceBoardList\(\{reason,view,boardIds\}\)/);
  assert.match(reconcile,/refreshBoardCatalog\?await db\.boards\('active'\):state\.boards/);
  assert.match(reconcile,/if\(refreshBoardCatalog\)state\.boards=boards/);
  assert.match(reconcile,/!refreshBoardCatalog&&detail\.board\.status!=='active'/);
  assert.match(reconcile,/db\.allowed\(boardId,'view'\)/);
  assert.match(reconcile,/readVisibleBoardSnapshot\(boardId,tab/);
+});
+
+test('targeted cross-tab board invalidations skip catalog reloads while broad invalidations retain them',()=>{
+ const boardIds=['20000000-0000-4000-8000-000000000001'];
+ assert.equal(shouldRefreshWorkspaceBoardList({reason:'cross-tab',view:'board',boardIds}),false);
+ assert.equal(shouldRefreshWorkspaceBoardList({reason:'cross-tab',view:'board',boardIds:[]}),true);
+ assert.equal(shouldRefreshWorkspaceBoardList({reason:'cross-tab',view:'overview',boardIds}),true);
 });

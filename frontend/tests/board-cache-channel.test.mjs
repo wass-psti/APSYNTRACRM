@@ -181,7 +181,7 @@ test('overview board item totals use the refreshed signed board-list snapshot',a
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/let changedBoards=refreshBoardCatalog&&JSON\.stringify\(state\.boards\)!==JSON\.stringify\(boards\)/);
  assert.match(app,/if\(refreshBoardCatalog\)state\.boards=boards/);
- assert.match(app,/if\(changedBoards\|\|roleChanged\|\|reason!=='broadcast'\)render\(\)/);
+ assert.match(app,/if\(changedBoards\|\|roleChanged\|\|!sharedInvalidation\)render\(\)/);
 });
 test('all native global-search read RPCs preserve cached Board snapshots',async()=>{
  const names=[

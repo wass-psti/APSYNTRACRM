@@ -29,7 +29,7 @@ import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
-import {PlatformSync,shouldRefreshWorkspaceBoardList} from './platform-sync.js';
+import {PlatformSync,PlatformSyncLease,shouldRefreshWorkspaceBoardList} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
@@ -213,7 +213,7 @@ const boardCacheChannel=new BoardCacheChannel({auth,onInvalidate:({boardId,revis
  // Reconcile the active CRM view, including the board catalog and overview.
  // A board-specific event for another open board is filtered before follow-up reads.
  void reconcilePlatformSync({boardIds:boardId?[boardId]:[],
-  reason:boardId?'broadcast':'cross-tab',userId,workspaceId}).catch(()=>{});
+  reason:'cross-tab',userId,workspaceId}).catch(()=>{});
 }});
 db.onBoardMutation=({boardId,revision})=>boardCacheChannel.publish(boardId,revision);
 const profileAvatarClient=new ProfileAvatarClient({auth});
@@ -228,9 +228,22 @@ const platformSync=new PlatformSync({
   if(event.reason==='broadcast'&&event.boardIds?.length){
    for(const id of event.boardIds)db.invalidateBoardCache(id);
   }else db.invalidateBoardCache();
-  return reconcilePlatformSync(event);
+  const reconciled=await reconcilePlatformSync(event);
+  // Realtime is owned by one tab; relay only invalidation hints so sibling
+  // tabs perform their own signed reads without opening duplicate sockets.
+  if(reconciled===true&&event.reason==='broadcast'&&event.boardIds?.length)
+   boardCacheChannel.publish(event.boardIds.length===1?event.boardIds[0]:null);
+  return reconciled;
  }
 });
+const platformSyncLease=new PlatformSyncLease({
+ locks:globalThis.navigator?.locks,visible:()=>!document.hidden,
+ onChange:leader=>platformSync.setLeader(leader)
+});
+function stopPlatformSync(){
+ platformSyncLease.stop();
+ platformSync.stop();
+}
 const boardStructureClient=new BoardStructureClient(db);
 const boardColumnRecovery=new BoardColumnRecoveryClient(db);
 const boardColumnOperationalRecovery=new BoardColumnOperationalRecoveryClient(db);
@@ -1437,11 +1450,12 @@ function render(){
   syncBoardSelectionUi();
   mountBoardPaginationUi();
  }
- if(state.context&&auth.isSignedIn)platformSync.start({
-  userId:state.context.user_id,workspaceId:state.context.workspace_id,
-  priorityBoardId:state.view==='board'?state.boardId:null,
-  boardIds:state.boards.map(board=>board.id)
- });
+ if(state.context&&auth.isSignedIn){
+  const syncScope={userId:state.context.user_id,workspaceId:state.context.workspace_id};
+  platformSyncLease.start({...syncScope,enabled:!!boardCacheChannel.channel});
+  platformSync.start({...syncScope,priorityBoardId:state.view==='board'?state.boardId:null,
+   boardIds:state.boards.map(board=>board.id),leader:platformSyncLease.leader});
+ }else stopPlatformSync();
  globalSearchController?.syncScope();
 }
 function findBoardCard(id){
@@ -1718,7 +1732,7 @@ function invalidateSignedSyncView(){
  state.performanceReport=null;state.performanceBusy=false;
  boardPreferences.clearMemory();
  boardCacheChannel.stop();db.invalidateBoardCache();
- platformSync.stop();
+ stopPlatformSync();
  crmRoleReadGeneration++;crmRoleLastReadAt=0;state.crmRoleSnapshot=null;
  workspaceRelationReadGeneration++;state.workspaceRelationSnapshot=null;
  state.board=null;state.boardUi=null;state.boards=[];state.tradeLinkDraft=initialTradeLinkDraftView();
@@ -1735,11 +1749,13 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  const isCurrent=()=>auth.isSignedIn&&state.context?.user_id===userId&&
   state.context?.workspace_id===workspaceId&&serial===routeSerial&&
   state.view===view&&state.tab===tab&&state.boardId===boardId;
- const sensitive=reason!=='broadcast';
+ const sharedInvalidation=reason==='broadcast'||reason==='cross-tab';
+ const sensitive=!sharedInvalidation||boardIds.length===0;
  const boardChanged=boardId&&boardIds.includes(boardId);
- const refreshBoardCatalog=shouldRefreshWorkspaceBoardList({reason,view});
+ const refreshBoardCatalog=shouldRefreshWorkspaceBoardList({reason,view,boardIds});
+ let syncChanged=false,syncChangedBoardId=null;
  // Board broadcasts carry identifiers only; the server remains authoritative.
- if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
+ if(sharedInvalidation&&boardIds.length>0&&!boardChanged&&view==='board')return true;
  let who,current;
  try{
   who=await auth.getVerifiedUser();
@@ -1758,7 +1774,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  // an authoritative signed board-view check, not a client-side visibility rule.
  if(view==='board'&&boardId&&await db.allowed(boardId,'view')!==true){
   if(isCurrent()){
-   platformSync.stop();state.board=null;state.boardUi=null;
+   stopPlatformSync();state.board=null;state.boardUi=null;
    state.ttAttendance=null;state.ttBoardAttendance=null;
    state.edit=false;state.boardManage=false;location.hash='#/boards';
   }
@@ -1770,17 +1786,23 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  const boards=refreshBoardCatalog?await db.boards('active'):state.boards;
  if(!isCurrent())return false;
  if(refreshBoardCatalog&&!boards.some(board=>board.id===boardId)&&view==='board'){
-  platformSync.stop();state.board=null;location.hash='#/boards';return false;
+  stopPlatformSync();state.board=null;location.hash='#/boards';return false;
  }
  if(platformSyncEditInProgress())return false;
  let changedBoards=refreshBoardCatalog&&JSON.stringify(state.boards)!==JSON.stringify(boards);
+ const contextChanged=current.revision!==state.context?.revision||
+  current.profile?.updated_at!==state.context?.profile?.updated_at;
+ syncChanged=changedBoards||roleChanged||contextChanged;
  if(refreshBoardCatalog)state.boards=boards;
  state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
- if(reason!=='broadcast')void refreshSignedCrmRole({force:roleChanged}).catch(()=>{});
+ if(sensitive)void refreshSignedCrmRole({force:roleChanged}).catch(()=>{});
  if(roleChanged||sensitive){
   const verified=await roleConfig.bootstrapVerified().catch(()=>false);
   const admin=await roleConfig.adminVerified().catch(()=>false);
   if(!isCurrent())return false;
+  const roleStateChanged=admin!==state.adminVerified||verified!==state.roleVerified;
+  syncChanged=syncChanged||roleStateChanged;
+  if(roleStateChanged)syncChangedBoardId=null;
   if(admin!==state.adminVerified){state.adminVerified=admin;state.roleData=null;state.userRoleData=null;}
   if(!admin&&['role-configuration','user-role-management'].includes(view)){
    location.hash='#/overview';return false;
@@ -1792,7 +1814,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
    }
    state.roleVerified=verified;state.roleData=null;state.userRoleData=null;
    if(!verified&&['foundation','acceptance'].includes(view)){
-    platformSync.stop();location.hash='#/overview';return false;
+    stopPlatformSync();location.hash='#/overview';return false;
    }
   }
  }
@@ -1808,7 +1830,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   }catch(error){
    if(isCurrent()&&([403,404].includes(Number(error?.status))||
       error?.code==='42501')){
-    platformSync.stop();state.board=null;state.boardUi=null;
+    stopPlatformSync();state.board=null;state.boardUi=null;
     state.ttAttendance=null;state.ttBoardAttendance=null;
     state.edit=false;state.boardManage=false;
     location.hash='#/boards';
@@ -1824,7 +1846,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
    const activeBoards=await db.boards('active');
    if(!isCurrent())return false;
    state.boards=activeBoards;
-   platformSync.stop();state.board=null;state.boardUi=null;
+   stopPlatformSync();state.board=null;state.boardUi=null;
    state.edit=false;state.boardManage=false;location.hash='#/boards';
    return false;
   }
@@ -1835,6 +1857,8 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
    state.boards=nextBoards;
   }
   const changed=JSON.stringify(state.board)!==JSON.stringify(detail);
+  if(changed&&!syncChanged)syncChangedBoardId=boardId;
+  syncChanged=syncChanged||changed;
   state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
   if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
   if(tab==='attendance'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
@@ -1925,7 +1949,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
    }
   }
   if(!isCurrent()||platformSyncEditInProgress())return false;
-  if(changed||changedBoards||reason!=='broadcast'||tab!=='items'){
+  if(changed||changedBoards||!sharedInvalidation||tab!=='items'){
    if(['items','sourcing'].includes(tab))deferVisibleBoardContent();
    else if(tab==='fueltrans'){
     // Refresh the mounted shadow-DOM module in place. Rebuilding the parent
@@ -1935,6 +1959,8 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
      refresh:true,onMutation:()=>boardCacheChannel.publish(boardId,null)});
    }else render();
   }
+  if(syncChanged&&['poll','focus','visible','online','join','leader'].includes(reason))
+   boardCacheChannel.publish(syncChangedBoardId);
   return true;
  }
  if(view==='user-role-management'&&state.adminVerified===true)
@@ -1945,7 +1971,9 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  if(view==='boards'&&state.showArchived)state.archived=await db.boards('archived');
  if(view==='boards'&&state.showTrash)state.trashed=await db.boards('trashed');
  if(!isCurrent()||platformSyncEditInProgress())return false;
- if(changedBoards||roleChanged||reason!=='broadcast')render();
+ if(changedBoards||roleChanged||!sharedInvalidation)render();
+ if(syncChanged&&['poll','focus','visible','online','join','leader'].includes(reason))
+  boardCacheChannel.publish(null);
  return true;
 }
 
@@ -4428,7 +4456,7 @@ let startupBusy=false;
 let startupRecoveryStage='authentication';
 function renderBootstrapFailure(error){
  startupRecoveryActive=true;
- platformSync.stop();
+ stopPlatformSync();
  state.context=null;
  state.boards=[];
  state.board=null;
@@ -6216,7 +6244,7 @@ async function action(name,button){
        !auth.isSignedIn||!state.context))break;
     pendingInvitation=null;invitationAcceptanceStatus='';
     startupRecoveryActive=false;
-    closeWorkspacePanels();clearBulkActivation();platformSync.stop();
+    closeWorkspacePanels();clearBulkActivation();stopPlatformSync();
     let revoked=null;
     if(isB3LocalRevoke){
       try{revoked=await runWs02dB3LocalSessionRevocation({auth});}
@@ -10640,6 +10668,7 @@ root.addEventListener('input',event=>{
  }else if(event.target.id==='search-board-items')syncBoardSelectionUi();
 });
 document.addEventListener('visibilitychange',()=>{
+ platformSyncLease.visibilityChanged();
  platformSync.visibilityChanged();
  setBoardLoadingVisibility(root,document.hidden);
 });
@@ -10726,7 +10755,7 @@ window.addEventListener('keydown',event=>{
   if(state.groupEditId&&!state.groupEditBusy){state.groupEditId=null;render();}
   if(state.ttOtModalOpen){state.ttOtModalOpen=false;render();}
 }});
-auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];platformSync.stop();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
+auth.onExpired=()=>{boardCacheChannel.stop();db.invalidateBoardCache();boardPreferences.clearMemory();globalSearchController?.close({restoreFocus:false});pendingGlobalSearchItem=null;pendingNativeSearchSelection=null;startupCriticalPath.clear();performanceProfileAbort?.abort();performanceProfileAbort=null;state.performanceBusy=false;state.performanceReport=null;pendingInvitation=null;invitationAcceptanceStatus='';startupRecoveryActive=false;clearWs02dB3ForeignRlsFixture();state.ws02dB3RevokeArmed=false;closeWorkspacePanels();state.context=null;state.b4QaRunId++;state.b4QaBusy=false;state.b4QaReport=null;state.phaseBDenialRunId++;state.phaseBDenialBusy=false;state.phaseBDenialReport=null;state.frtSecurityResult=null;state.sec07Result=null;state.ws01B2RunId++;state.ws01B2Busy=false;state.ws01B2Result=null;state.ws02dB3RunId++;state.ws02dB3Busy=false;state.ws02dB3Report=null;state.ws02dB3HttpsRunId++;state.ws02dB3HttpsBusy=false;state.ws02dB3HttpsReport=null;state.ws02dB3RlsRunId++;state.ws02dB3RlsBusy=false;state.ws02dB3RlsReport=null;state.sec09Result=null;state.sec09RunId++;state.sec10Result=null;state.sec10RunId++;state.effectiveAccessResult=null;state.effectiveAccessRunId++;state.effectiveAccessBusy=false;state.ci07Result=null;state.ci07RunId++;state.ci07Busy=false;state.sec14Result=null;state.sec14RunId++;state.sec14Busy=false;state.sec14DenialResult=null;state.sec14DenialRunId++;state.sec14DenialBusy=false;state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;state.frtFinanceDetailRevision++;state.roleVerified=false;state.adminVerified=false;state.roleData=null;state.userRoleData=null;state.boards=[];stopPlatformSync();stopTimeTrackerClock();state.ttRunId++;state.ttAttendance=null;state.ttBusy=false;state.ttError='';state.ttSuccess='';state.ttOverviewFilters={search:'',location:'all',department:'all',status:'all',sort:'newest'};state.ttLogFilters={...TT_LOG_DEFAULT_FILTERS};state.ttReportPeriod='all';state.ttReportFilters={...TT_REPORT_DEFAULT_FILTERS};state.ttCalendarMonth='';state.ttCalendarSelectedDay='';state.ttOtFilters={...TT_OT_DEFAULT_FILTERS};state.ttOtModalOpen=false;state.ttOtDraft={};state.ttHoursWeekOffset=0;state.ttHoursMonth='';state.ttHoursSelectedDay='';state.ttTeamRunId++;state.ttTeam=null;state.ttTeamBusy=false;state.ttTeamError='';state.ttTeamFilters={search:'',role:'All',layout:'list'};state.ttMonitorRunId++;state.ttMonitor=null;state.ttMonitorBusy=false;state.ttMonitorError='';state.ttMonitorHistory=[];state.ttLogGpsRunId++;state.ttLogGpsData=null;state.ttLogGpsBusy=false;state.ttLogGpsError='';state.ttLogGpsErrorRecordId='';state.ttLogExpandedIds=[];state.ttLogSelectedIds=[];state.ttLogAdminEditor=null;state.ttLogAdminDeleteConfirm=null;state.ttLogAdminBusy=false;state.ttLogAdminError='';state.ttLogAdminSuccess='';state.ttOtExpandedRequestIds=[];state.ttGpsRunId++;state.ttGpsData=null;state.ttGpsBusy=false;state.ttGpsError='';state.ttGpsView='map';state.ttGpsFilters={};state.inlineCell=null;state.inlineAddBusy=false;state.inlineCellBusy=false;clearBulkActivation();renderLogin('Session expired. Please sign in again.');};
 async function boot(){
  if(startupBusy)return;
  startupBusy=true;
