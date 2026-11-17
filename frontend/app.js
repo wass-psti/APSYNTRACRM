@@ -2243,9 +2243,26 @@ async function loadMoreBoardItems(){
   }
  }
 }
+async function loadFundTrackerPendingSelection(boardId,seq){
+ const pending=pendingNativeSearchSelection?.applicationId==='frt'&&
+  pendingNativeSearchSelection.userId===auth.userId&&
+  pendingNativeSearchSelection.workspaceId===state.context?.workspace_id&&
+  pendingNativeSearchSelection.boardId===boardId?pendingNativeSearchSelection:null;
+ if(!pending)return false;
+ await loadFRTFinance(pending.navigationScope||null,seq,pending.query||'');
+ if(seq===routeSerial&&pendingNativeSearchSelection===pending&&
+    state.frtFinance?.requests?.some(row=>row.requestId===pending.recordId))
+  await loadFRTFinanceDetail(pending.recordId,seq);
+ if(pendingNativeSearchSelection===pending)pendingNativeSearchSelection=null;
+ return true;
+}
 async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
- if(canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn}))
-  return refreshVisibleBoard(boardId,tab);
+ if(canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn})){
+  const retained=await refreshVisibleBoard(boardId,tab);
+  if(retained&&tab==='finance'&&moduleByBoardName(state.board?.board?.name)?.key==='frt')
+   await loadFundTrackerPendingSelection(boardId,routeSerial);
+  return retained;
+ }
  // Initial load, another board, or another tab still uses the original loader.
  pendingBoardContent=null;
  boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
@@ -2393,15 +2410,9 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
   await loadTradeLinkDrafts(seq);
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')await loadTimeTracker(seq);
  if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt'){
-  const pending=pendingNativeSearchSelection?.applicationId==='frt'&&
-   pendingNativeSearchSelection.userId===auth.userId&&
-   pendingNativeSearchSelection.workspaceId===state.context?.workspace_id&&
-   pendingNativeSearchSelection.boardId===boardId?pendingNativeSearchSelection:null;
-  if(pending)state.frtFinanceView='tracker';
-  await loadFRTFinance(pending?.navigationScope||null,seq,pending?.query||'');
-  if(pending&&state.frtFinance?.requests?.some(row=>row.requestId===pending.recordId))
-   await loadFRTFinanceDetail(pending.recordId,seq);
-  if(pending)pendingNativeSearchSelection=null;
+  if(pendingNativeSearchSelection?.applicationId==='frt'&&
+     pendingNativeSearchSelection.boardId===boardId)state.frtFinanceView='tracker';
+  await loadFundTrackerPendingSelection(boardId,seq);
  }
  if(tab==='items'&&moduleByBoardName(state.board.board?.name)?.key==='frt'){
   const identity=state.context?.user_id,workspace=state.context?.workspace_id;
