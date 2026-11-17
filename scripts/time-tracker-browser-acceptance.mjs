@@ -248,6 +248,44 @@ try {
   await page.locator("#tt-log-select-" + adminRecordId).waitFor();
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
   await page.getByRole("button", { name: "Delete selected" }).waitFor();
+  const managementSurface = await page
+    .locator(".tt-log-admin-toolbar")
+    .evaluate((element) => {
+      const toolbar = getComputedStyle(element);
+      const heading = getComputedStyle(
+        element.querySelector(".tt-log-admin-toolbar-heading"),
+      );
+      const action = getComputedStyle(
+        element.querySelector(".tt-log-admin-toolbar-actions button"),
+      );
+      const selection = getComputedStyle(
+        element.querySelector(".tt-log-admin-selection-status"),
+      );
+      return {
+        display: toolbar.display,
+        borderRadius: toolbar.borderRadius,
+        background: toolbar.backgroundImage,
+        headingDisplay: heading.display,
+        actionsDisplay: getComputedStyle(
+          element.querySelector(".tt-log-admin-toolbar-actions"),
+        ).display,
+        actionBackground: action.backgroundImage,
+        actionBorderRadius: action.borderRadius,
+        selectionBorderRadius: selection.borderRadius,
+      };
+    });
+  assert.equal(
+    managementSurface.display,
+    "grid",
+    "System Admin toolbar stylesheet must be present in the generated bundle",
+  );
+  assert.equal(managementSurface.borderRadius, "16px");
+  assert.ok(managementSurface.background.includes("linear-gradient"));
+  assert.equal(managementSurface.headingDisplay, "flex");
+  assert.equal(managementSurface.actionsDisplay, "flex");
+  assert.ok(managementSurface.actionBackground.includes("linear-gradient"));
+  assert.equal(managementSurface.actionBorderRadius, "9px");
+  assert.equal(managementSurface.selectionBorderRadius, "10px");
   await page.locator(".tt-log-row-summary").click();
   await page.getByRole("button", { name: "Edit record" }).waitFor();
   await page.getByRole("button", { name: "Delete record" }).waitFor();

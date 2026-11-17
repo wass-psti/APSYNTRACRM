@@ -18,6 +18,8 @@ const adminCss=readFileSync('frontend/time-tracker-log-admin.css','utf8');
 const pixi=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
+const styleManifest=readFileSync('scripts/priority5-style-manifest.mjs','utf8');
+const styleBundle=readFileSync('frontend/apsyntra-styles.bundle.css','utf8');
 
 test('Log creates a distinct graphical command hero and one decorative Pixi host',()=>{
  const html=render();
@@ -79,6 +81,18 @@ test('New styling is scoped and adaptive without expensive perpetual effects',()
    x.includes('.aps-board-shell .tt-native .tt-log.tt-log-command')));
 });
 
+test('Attendance Log renders only the applicable empty state',()=>{
+ const noRecords=renderTimeTrackerLog({records:[],now,adminEligible:true});
+ assert.match(noRecords,/No authorized attendance sessions match these filters/);
+ assert.doesNotMatch(noRecords,/No sessions match the current search/);
+ const searchMiss=renderTimeTrackerLog({records,now,filters:{search:'no-such-employee'}});
+ assert.match(searchMiss,/No sessions match the current search/);
+ assert.doesNotMatch(searchMiss,/No authorized attendance sessions match these filters/);
+ const filterMiss=renderTimeTrackerLog({records,now,filters:{period:'today',status:'Completed',search:'no-such-employee'}});
+ assert.match(filterMiss,/No authorized attendance sessions match these filters/);
+ assert.doesNotMatch(filterMiss,/No sessions match the current search/);
+});
+
 test('Single Pixi context prefers Log over header while preserving Clock and Overview',()=>{
  const log=pixi.indexOf("'.tt-native .tt-log-command .tt-pixi-backdrop'");
  const overview=pixi.indexOf("'.tt-native .tt-overview .tt-pixi-backdrop'");
@@ -96,6 +110,11 @@ test('Pages includes new style after Overview without requiring a new build tool
   index.indexOf('frontend/time-tracker-overview-command.css'));
  assert.ok(index.indexOf('frontend/time-tracker-log-admin.css')>
   index.indexOf('frontend/time-tracker-log-command.css'));
+ assert.ok(styleManifest.indexOf('"frontend/time-tracker-log-admin.css"')>
+  styleManifest.indexOf('"frontend/time-tracker-log-command.css"'),
+  'Admin stylesheet must be included in the generated CSS bundle manifest');
+ assert.match(styleBundle,/tt-log-admin-toolbar-copy/);
+ assert.match(styleBundle,/tt-admin-delete-dialog/);
  assert.match(smoke,/'frontend\/time-tracker-log-admin\.css'/);
  assert.match(adminCss,/\.tt-log-admin-toolbar/);
  assert.match(adminCss,/\.tt-admin-delete-dialog/);
