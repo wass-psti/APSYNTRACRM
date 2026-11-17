@@ -138,7 +138,7 @@ test('app makes one write attempt and reconciles ambiguous clock-out without aut
  assert.equal((submit.match(/timeTracker\.commit\(/g)||[]).length,1);
  assert.match(submit,/const geo=await captureAttendanceGeo/);
  assert.match(submit,/if\(commitAttempted\)/);
- assert.match(submit,/state\.ttClockPending=context/);
+ assert.match(submit,/rememberTimeTrackerClockPending\(\{\.\.\.context,receiptVerified:false\}\)/);
  assert.match(submit,/reconcileTimeTrackerClock\(snapshot\)/);
  assert.match(app,/async function verifyTimeTrackerAttendance\(\)/);
  assert.match(app,/case 'tt-clock-verify'/);
@@ -183,4 +183,14 @@ test('attendance error feedback names Clock In and Clock Out correctly',()=>{
   {commitAttempted:true,action:'clock-in'}),/Clock-in confirmation is uncertain/);
  assert.match(attendanceClockError(new Error('network'),
   {commitAttempted:true,action:'clock-out'}),/Clock-out confirmation is uncertain/);
+});
+
+test('verified signed TimeTracker reload clears stale bootstrap errors without unlocking pending writes',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ const start=app.indexOf('async function loadTimeTracker(seq=routeSerial)');
+ const end=app.indexOf('function timeTrackerAdminLogReady()',start);
+ const load=app.slice(start,end);
+ assert.ok(start>=0&&end>start);
+ assert.match(load,/state\.ttAttendance=snapshot;[\s\S]*if\(snapshot\?\.status==='VERIFIED_READ'&&!state\.ttClockPending\)\s*state\.ttError='';/);
+ assert.match(load,/if\(state\.ttClockPending\)reconcileTimeTrackerClock\(snapshot\)/);
 });

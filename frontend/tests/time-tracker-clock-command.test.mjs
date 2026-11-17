@@ -23,6 +23,17 @@ function render({active=null,records=[],busy=false,clockPending=false,clockPendi
  });
 }
 
+test('daily attendance summary uses Philippine dates across UTC midnight',()=>{
+ const instant=new Date('2026-11-16T16:30:00.000Z'); // Nov 17, 00:30 PHT
+ const phtToday={...record,id:'today',clockIn:'2026-11-16T16:02:00.000Z'};
+ const phtYesterday={...record,id:'yesterday',clockIn:'2026-11-16T15:55:00.000Z'};
+ const markup=renderTimeTrackerNative({
+  result:{status:'VERIFIED_READ',access,records:[phtYesterday,phtToday],active:null},
+  view:'clock',now:instant
+ });
+ assert.match(markup,/class="tt-session-summary"[^>]*>[\s\S]*?<strong>1<\/strong><span>Sessions/);
+});
+
 test('Clock is a genuine two-panel layout, not the legacy centered vertical stack',()=>{
  const markup=render();
  const layout=markup.indexOf('class="tt-command-layout"');

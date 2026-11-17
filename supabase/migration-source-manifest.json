@@ -1694,6 +1694,13 @@
       "file": "20261117060100_tradelink_submitted_workflow_activation.sql",
       "bytes": 11254,
       "sha256": "9ec29133aa7cc9f78716643e23ac6c72a75ca23b6216b7a106dbad3e17e36f97"
+    },
+    {
+      "version": "20261117160134",
+      "name": "cp_urm_fueltrans_activate01_workspace_role_rpcs",
+      "file": "20261117160134_cp_urm_fueltrans_activate01_workspace_role_rpcs.sql",
+      "bytes": 5749,
+      "sha256": "608c7d4b7a8a3e78e02d8f5e2fa4ea48dbd673dd796eb3f22c862b9868c96f7d"
     }
   ]
 }

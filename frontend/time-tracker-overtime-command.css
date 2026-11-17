@@ -241,7 +241,10 @@
  min-height:38px;padding:9px 13px;color:#5064b5;font-weight:750;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-row-head{
- color:#778aaa;font-weight:750;
+ color:#536784;font-weight:750;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-submitted{
+ color:#885006;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-request{
  border-top-color:#e3eafa;
@@ -269,6 +272,12 @@
  border:1px solid #dce5f5;border-radius:16px;
  box-shadow:0 25px 65px #081a3545;
 }
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-modal header p{
+ color:#58677d;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-reason small{
+ color:#58677d;
+}
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-modal header h3{
  font:820 22px/1.25 Inter,system-ui,sans-serif;
  color:#253e67;letter-spacing:-.04em;
@@ -284,7 +293,7 @@
  background:#eef3ff;border:1px solid #d2def7;border-radius:9px;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-duration small{
- color:#647bad;
+ color:#465c86;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-gate{
  color:#7c6148;background:#fff5e9;border-color:#f0d6b9;border-radius:9px;

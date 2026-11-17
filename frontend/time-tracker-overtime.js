@@ -1,5 +1,5 @@
-/** TimeTracker OT: signed read-only presentation until dedicated server RPC acceptance. */
-export const TT_OT_WRITES_ACCEPTED=false;
+/** Production RPCs and authenticated EXECUTE contracts verified; per-session OT access is still server signed. */
+export const TT_OT_WRITES_ACCEPTED=true;
 export const TT_OT_DEFAULT_FILTERS=Object.freeze({weekOffset:0,status:'Submitted',search:'',sort:'newest'});
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const msDay=86400000;
@@ -81,7 +81,7 @@ export function timeTrackerOtMetrics(rows=[],filters={},at=new Date()){
   owners:[...owners].sort((a,b)=>b[1]-a[1]).slice(0,5)};
 }
 const metric=(name,value)=>'<div><strong>'+esc(value)+'</strong><span>'+esc(name)+'</span></div>';
-const row=(r,bootstrap=false,query='',expandedRequestIds=[])=>'<details class="tt-ot-request" data-request-id="'+esc(r.id)+'" data-search-text="'+esc(r.searchText||[r.name,r.task,r.date].join(' ').toLowerCase())+'"'+
+const row=(r,bootstrap=false,query='',expandedRequestIds=[],otContractActive=false)=>'<details class="tt-ot-request" data-request-id="'+esc(r.id)+'" data-search-text="'+esc(r.searchText||[r.name,r.task,r.date].join(' ').toLowerCase())+'"'+
  (expandedRequestIds.includes(r.id)?' open':'')+
  (query&&!r.searchText.includes(query)?' hidden':'')+'><summary>'+
  '<span>'+esc(r.name)+'</span><span>'+esc(fmt(r.date))+'</span>'+
@@ -94,13 +94,13 @@ const row=(r,bootstrap=false,query='',expandedRequestIds=[])=>'<details class="t
  '<p>Approval/rejection is restricted to server-verified bootstrap administrators.</p>'+ 
  (bootstrap&&r.status==='Submitted'?'<div class="tt-ot-review-actions">'+
   '<button type="button" data-action="tt-ot-approve" data-id="'+esc(r.id)+'"'+
-   (!TT_OT_WRITES_ACCEPTED?' disabled title="Backend acceptance pending"':'')+'>'+
+   (!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled title="Signed OT contract unavailable"':'')+'>'+
    'Approve</button>'+ 
   '<button type="button" data-action="tt-ot-reject" data-id="'+esc(r.id)+'"'+
-   (!TT_OT_WRITES_ACCEPTED?' disabled title="Backend acceptance pending"':'')+'>'+
+   (!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled title="Signed OT contract unavailable"':'')+'>'+
    'Reject</button>'+ 
   '</div>':'')+'</div></details>';
-function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date()){
+function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(),otContractActive=false){
  const amount=overtimeDurationMinutes(start,end);
  return '<div class="tt-ot-backdrop"><section class="tt-ot-modal" role="dialog" aria-modal="true"'+
  ' aria-labelledby="tt-ot-modal-title"><header><div><h3 id="tt-ot-modal-title">'+
@@ -115,9 +115,9 @@ function requestForm({date,start='18:00',end='20:00',reason=''}={},now=new Date(
  '<label class="tt-ot-reason">REASON<textarea id="tt-ot-reason" maxlength="500" rows="4"'+
  ' required placeholder="Explain why overtime was necessary…">'+esc(reason)+'</textarea>'+
  '<small>'+String(reason).length+'/500</small></label></div>'+
- '<p class="tt-ot-gate">Submission is pending server-side authorization and immutable audit verification.</p>'+
+ '<p class="tt-ot-gate">'+(otContractActive?'Submission uses the signed OT RPC and existing audit workflow.':'Signed OT write contract is currently unavailable.')+'</p>'+
  '<footer><button type="button" data-action="tt-ot-close">Cancel</button>'+
- '<button type="submit"'+(!TT_OT_WRITES_ACCEPTED?' disabled':'')+'>Submit Request</button></footer></form></section></div>';
+ '<button type="submit"'+(!(TT_OT_WRITES_ACCEPTED&&otContractActive)?' disabled':'')+'>Submit Request</button></footer></form></section></div>';
 }
 export function renderTimeTrackerOvertime({
  requests=[],access={},filters={},expandedRequestIds=[],modalOpen=false,form={},now=new Date()
@@ -137,7 +137,7 @@ export function renderTimeTrackerOvertime({
    '<span class="tt-ot-eyebrow"><span class="tt-ot-signal" aria-hidden="true"></span>'+
     'APSYNTRA / OVERTIME INTELLIGENCE</span>'+
    '<h3>Overtime</h3><p>Authorized requests, approvals and weekly outcomes</p>'+
-   '<span class="tt-ot-scope">Read-only · '+
+   '<span class="tt-ot-scope">'+(TT_OT_WRITES_ACCEPTED&&access?.otContractActive===true?'Signed OT workflow · ':'Read-only · ')+
     (access?.bootstrapApprover===true?'Bootstrap review scope':'Signed request scope')+
    '</span><span class="tt-ot-hero-week">'+esc(m.week.label)+'</span></div>'+
   '<div class="tt-ot-hero-telemetry" aria-label="Authorized weekly overtime snapshot">'+
@@ -185,12 +185,12 @@ export function renderTimeTrackerOvertime({
  '<button type="button" data-action="tt-ot-sort">Date '+(opts.sort==='oldest'?'↑':'↓')+'</button></div>'+
  (m.statusRows.length?'<div class="tt-ot-row-head"><span>Employee</span><span>Date</span>'+
  '<span>Duration</span><span>Status</span><span>Details</span></div>'+
- m.statusRows.map(r=>row(r,access?.bootstrapApprover===true,m.search,expandedRequestIds)).join(''):'')+
+ m.statusRows.map(r=>row(r,access?.bootstrapApprover===true,m.search,expandedRequestIds,access?.otContractActive===true)).join(''):'')+
  '<div class="tt-ot-empty" data-tt-ot-empty'+(m.visible.length?' hidden':'')+'><span>◷</span>'+
  '<strong>No matching requests</strong><p>Try a different week, search or status.</p>'+
  '<button type="button" data-action="tt-ot-open">＋ Submit a request</button></div>'+
  '<p class="tt-ot-note">'+(access?.bootstrapApprover===true?
   'Bootstrap administrator identity verified. ':'')+
- 'Only bootstrap administrators may approve or reject. Live writes remain gated until server RPC acceptance.</p>'+
- '</section>'+(modalOpen?requestForm(form,now):'')+'</section>';
+ 'Only bootstrap administrators may approve or reject. '+(TT_OT_WRITES_ACCEPTED&&access?.otContractActive===true?'Actions are verified by the existing signed OT backend.':'Live actions remain disabled without the signed OT backend.')+'</p>'+
+ '</section>'+(modalOpen?requestForm(form,now,access?.otContractActive===true):'')+'</section>';
 }

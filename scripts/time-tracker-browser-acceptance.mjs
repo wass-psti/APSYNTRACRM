@@ -80,9 +80,10 @@ async function ensureViteServer() {
 try {
   await ensureViteServer();
   browser = await chromium.launch({ headless: true, executablePath });
-  const page = await browser.newPage({
+  const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
   });
+  const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
@@ -148,6 +149,192 @@ try {
     );
   };
   await checkAccessibility("TimeTracker clock view");
+
+  // CP-TT-FLOW-01C: Browser-level, isolated two-tab reload acceptance. No live
+  // user account, actual attendance write or production data is involved.
+  const peer = await context.newPage();
+  try {
+    await peer.goto(baseUrl, { waitUntil: "networkidle" });
+    await peer.waitForFunction(() => window.__timeTrackerFixtureReady === true);
+    await peer.evaluate(() => {
+      window.__ttStorageNotifications = [];
+      window.addEventListener("storage", (event) => {
+        if (event.key?.startsWith("apsyntra.tt.clock-pending.v1:")) {
+          window.__ttStorageNotifications.push(event.key);
+        }
+      });
+    });
+    const scope = {
+      userId: "20000000-0000-4000-8000-000000000001",
+      workspaceId: "10000000-0000-4000-8000-000000000001",
+      boardId: "30000000-0000-4000-8000-000000000001",
+    };
+    const pending = {
+      ...scope,
+      action: "clock-in",
+      recordId: null,
+      baselineRevision: 4,
+      previousRecordIds: ["existing-session"],
+      location: "Office-Base Duty",
+      department: "Information Technology",
+      receiptVerified: false,
+      workNote: "private-not-to-persist",
+      geo: { latitude: 10.2, longitude: 123.9 },
+    };
+    await page.evaluate(async (context) => {
+      const { createTimeTrackerPendingRecovery } =
+        await import("/frontend/time-tracker-pending-recovery.js");
+      const repo = createTimeTrackerPendingRecovery(localStorage);
+      if (!repo.save(context))
+        throw new Error("Fixture pending marker save failed");
+    }, pending);
+    await peer.waitForFunction(
+      () => window.__ttStorageNotifications.length === 1,
+    );
+    await peer.reload({ waitUntil: "networkidle" });
+    const reloaded = await peer.evaluate(async (signedScope) => {
+      const { createTimeTrackerPendingRecovery } =
+        await import("/frontend/time-tracker-pending-recovery.js");
+      const { attendanceSnapshotOutcome } =
+        await import("/frontend/time-tracker-clock-recovery.js");
+      const repo = createTimeTrackerPendingRecovery(localStorage);
+      const marker = repo.read(signedScope);
+      const before = localStorage.getItem(
+        Object.keys(localStorage).find((key) =>
+          key.startsWith("apsyntra.tt.clock-pending.v1:"),
+        ),
+      );
+      const foreign = repo.read({
+        ...signedScope,
+        workspaceId: "40000000-0000-4000-8000-000000000001",
+      });
+      const newRecord = {
+        id: "new-session",
+        status: "Active",
+        clockIn: "2026-11-17T07:00:00Z",
+        clockOut: null,
+        location: "Office-Base Duty",
+        department: "Information Technology",
+      };
+      const snapshot = {
+        status: "VERIFIED_READ",
+        access: { ...signedScope },
+        revision: 5,
+        active: newRecord,
+        records: [newRecord],
+      };
+      const outcome = attendanceSnapshotOutcome(snapshot, marker);
+      repo.clear(signedScope);
+      return {
+        marker,
+        markerRaw: before,
+        foreign,
+        outcome,
+        cleared: repo.read(signedScope),
+      };
+    }, scope);
+    assert.equal(reloaded.marker.action, "clock-in");
+    assert.equal(reloaded.foreign, null);
+    assert.equal(reloaded.outcome, "CONFIRMED");
+    assert.equal(reloaded.cleared, null);
+    assert.doesNotMatch(
+      reloaded.markerRaw,
+      /latitude|longitude|private-not-to-persist|accessToken/,
+    );
+  } finally {
+    await peer.close();
+  }
+
+  // Existing signed OT capability controls the actual button state; this
+  // fixture never makes an authenticated write or manufactures a server receipt.
+  const otFixture = {
+    ...verifiedResult,
+    access: {
+      ...verifiedResult.access,
+      otContractActive: true,
+      bootstrapApprover: false,
+    },
+  };
+  await page.evaluate(
+    (result) =>
+      window.__timeTrackerRender({
+        view: "ot",
+        result,
+        otModalOpen: true,
+      }),
+    otFixture,
+  );
+  assert.equal(
+    await page.locator('#tt-ot-form button[type="submit"]').isDisabled(),
+    false,
+  );
+  await checkAccessibility("Signed-contract OT submit fixture");
+
+  await page.evaluate(
+    (result) =>
+      window.__timeTrackerRender({
+        view: "ot",
+        result,
+        otModalOpen: true,
+      }),
+    {
+      ...otFixture,
+      access: { ...otFixture.access, otContractActive: false },
+    },
+  );
+  assert.equal(
+    await page.locator('#tt-ot-form button[type="submit"]').isDisabled(),
+    true,
+  );
+  const submittedOt = {
+    id: "50000000-0000-4000-8000-000000000006",
+    ownerId: "cloud:20000000-0000-4000-8000-000000000002",
+    name: "Test Employee",
+    status: "Submitted",
+    date: "2026-11-17",
+    start: "18:00",
+    end: "20:00",
+    durationMinutes: 120,
+    task: "System acceptance test overtime request",
+  };
+  await page.evaluate(
+    (result) =>
+      window.__timeTrackerRender({
+        view: "ot",
+        result,
+        now: new Date("2026-11-17T12:00:00Z"),
+        otFilters: { status: "Submitted" },
+      }),
+    {
+      ...otFixture,
+      access: { ...otFixture.access, bootstrapApprover: true },
+      otRequests: [submittedOt],
+    },
+  );
+  assert.equal(
+    await page.locator('[data-action="tt-ot-approve"]').isDisabled(),
+    false,
+  );
+  assert.equal(
+    await page.locator('[data-action="tt-ot-reject"]').isDisabled(),
+    false,
+  );
+  await checkAccessibility("Bootstrap signed OT review fixture");
+  await page.evaluate(
+    (result) =>
+      window.__timeTrackerRender({
+        view: "ot",
+        result,
+        now: new Date("2026-11-17T12:00:00Z"),
+        otFilters: { status: "Submitted" },
+      }),
+    {
+      ...otFixture,
+      access: { ...otFixture.access, bootstrapApprover: false },
+      otRequests: [submittedOt],
+    },
+  );
+  assert.equal(await page.locator(".tt-ot-review-actions").count(), 0);
 
   await page.evaluate(() => window.__timeTrackerRender({ view: "log" }));
   await page

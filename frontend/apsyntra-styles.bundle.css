@@ -13221,7 +13221,10 @@
  min-height:38px;padding:9px 13px;color:#5064b5;font-weight:750;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-row-head{
- color:#778aaa;font-weight:750;
+ color:#536784;font-weight:750;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-submitted{
+ color:#885006;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-request{
  border-top-color:#e3eafa;
@@ -13249,6 +13252,12 @@
  border:1px solid #dce5f5;border-radius:16px;
  box-shadow:0 25px 65px #081a3545;
 }
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-modal header p{
+ color:#58677d;
+}
+#app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-reason small{
+ color:#58677d;
+}
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-modal header h3{
  font:820 22px/1.25 Inter,system-ui,sans-serif;
  color:#253e67;letter-spacing:-.04em;
@@ -13264,7 +13273,7 @@
  background:#eef3ff;border:1px solid #d2def7;border-radius:9px;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-duration small{
- color:#647bad;
+ color:#465c86;
 }
 #app .aps-board-shell .tt-native .tt-overtime-command .tt-ot-gate{
  color:#7c6148;background:#fff5e9;border-color:#f0d6b9;border-radius:9px;
@@ -24253,6 +24262,26 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
  .ws01-overlay :is(.ws01-entry,.ws01-create-intro,.ws01-create-card,.ws01-browser-card,.ws01-menu-card,.ws02-invite-card){
   border-color:#6c7891
  }
+}
+
+/* Canonical route selection: only the aria-current link receives active treatment.
+   Keep normal links quiet; pointer hover and keyboard focus remain independent. */
+#app .aps-sidebar .nav-list > .nav-link:not([aria-current="page"]):not(:hover):not(:focus-visible){
+ background:transparent;
+ border-color:transparent;
+ box-shadow:none;
+ color:var(--sm-sub);
+ font-weight:620;
+}
+#app .aps-sidebar .nav-list > .nav-link:not([aria-current="page"])::before{
+ opacity:0;transform:translateY(-50%) scaleY(.55);
+}
+#app .aps-sidebar .nav-list > .nav-link.active[aria-current="page"]{
+ color:var(--sm-accent-hover);
+ background:var(--sm-accent-soft);
+ border-color:#c8cef4;
+ box-shadow:inset 3px 0 0 var(--sm-accent),0 2px 8px #4f54bf1a;
+ font-weight:750;
 }
 
 /* frontend/fm1-application.css */

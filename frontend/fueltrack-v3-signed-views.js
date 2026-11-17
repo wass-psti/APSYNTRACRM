@@ -121,7 +121,11 @@ export function renderFuelTrackSignedAnalyticsRich(snapshot,analytics,{view='fue
  const chosen=analyticsViews.some(x=>x[0]===view)?view:'fuel-price';
  const selected=['all','six-months','month','week'].includes(range)?range:'all';
  const trendMetric=['spend','volume','both'].includes(metric)?metric:'both';
- const days=selected==='week'?7:selected==='month'?31:selected==='six-months'?183:analytics.days;
+ // A signed response may omit the period metadata; default to the supported
+ // 365-day maximum rather than passing NaN into Date arithmetic.
+ const reportedDays=Number(analytics.days);
+ const availableDays=Number.isSafeInteger(reportedDays)&&reportedDays>=1&&reportedDays<=365?reportedDays:365;
+ const days=selected==='week'?7:selected==='month'?31:selected==='six-months'?183:availableDays;
  const cutoff=new Date();cutoff.setUTCDate(cutoff.getUTCDate()-days+1);
  const dparts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',
   year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(cutoff)

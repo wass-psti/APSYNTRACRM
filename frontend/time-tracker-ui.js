@@ -5,6 +5,7 @@ import {
  TT_LOCATIONS,TT_DEPARTMENTS,creditedAttendanceMs,filterMyAttendancePeriod,
  TT_LIVE_ATTENDANCE_WRITES_ACCEPTED
 } from './time-tracker-native.js';
+import {timeTrackerManilaDay} from './time-tracker-policy.js';
 import {renderTimeTrackerOverview} from './time-tracker-overview.js';
 import {renderTimeTrackerLog} from './time-tracker-log.js';
 import {renderTimeTrackerReports} from './time-tracker-reports.js';
@@ -141,8 +142,8 @@ function clockPage(result,busy,now,clockPending=false,clockPendingAction='clock-
  const {access,records,active}=result;
  const writeReady=TT_LIVE_ATTENDANCE_WRITES_ACCEPTED&&access?.attendanceWritesAccepted===true;
  const t=timeTrackerClockParts(now);
- const today=now.toDateString();
- const todayRows=records.filter(r=>new Date(r.clockIn).toDateString()===today);
+ const today=timeTrackerManilaDay(now);
+ const todayRows=records.filter(r=>timeTrackerManilaDay(r.clockIn)===today);
  const credited=todayRows.reduce((sum,r)=>sum+(r.creditedMs===null?
   creditedAttendanceMs(r.clockIn,now):r.creditedMs||0),0);
  const status=active?'Active':'Idle';
@@ -292,7 +293,8 @@ export function renderTimeTrackerNative({
  if(selected==='reports')html+=renderTimeTrackerReports({
   rows:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
-  period,filters:reportFilters,now,busy
+  period,filters:reportFilters,now,busy,
+  otRequests:result.otRequests||[],otContractActive:result.access?.otContractActive===true
  });
  if(selected==='calendar')html+=renderTimeTrackerCalendar({
   records:result.log?.rows||result.records,
