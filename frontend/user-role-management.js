@@ -6,6 +6,10 @@ import {roleConfigurationIcon} from './role-configuration-visuals.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const APSYNTRA_CRM_PLATFORM_ROLES=Object.freeze(['admin','supervisor','employee','viewer']);
+/** Only a changed explicit workspace override is a role mutation. */
+export function crmPlatformRoleChangeNeeded(assignedRole,requestedRole){
+ return assignedRole!==requestedRole;
+}
 export const MODULE_ROLE_OPTIONS=Object.freeze({
  'time-tracker':['Employee','OJT','Supervisor','HR','Finance','System Admin','IT Administrator'],
  'fueltrack-plus':['User','Pump Attendant','Admin'],

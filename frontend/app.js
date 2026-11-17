@@ -199,7 +199,7 @@ import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-
 import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
-import {FUELTRANS_WORKSPACE_ROLES,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
+import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 import {planUserRoleBatch} from './user-role-batch.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
@@ -2128,8 +2128,25 @@ async function applyCrmPlatformRole({userId,role,expectedUpdatedAt}){
  if(identity?.id!==ctx.user_id||ctx.user_id!==state.context?.user_id||
     ctx.workspace_id!==state.context?.workspace_id)
    throw new ApiError('Signed identity or workspace changed.',403);
- await userRoleManager.setCrmPlatformRole({
+ try{
+  await userRoleManager.setCrmPlatformRole({
    workspaceId:ctx.workspace_id,userId,role,expectedUpdatedAt});
+ }catch(err){
+  // Another administrator may have completed the same assignment since this
+  // dialog opened. A fresh signed read can verify a no-op without creating an
+  // inaccurate error toast or claiming an audit event was written.
+  if(err?.code==='PT409'&&
+     String(err?.message||'').includes('CRM platform role assignment unchanged')){
+   await loadUserRoleManagement();
+   const current=state.userRoleData.crmPlatformRoles?.find(r=>r.userId===userId);
+   if(current?.assignedRole===role){
+    toast('This workspace already has the selected CRM role. No changes were made.');
+    render();
+    return;
+   }
+  }
+  throw err;
+ }
  await loadUserRoleManagement();
  const persisted=state.userRoleData.crmPlatformRoles?.find(r=>r.userId===userId);
  if(!persisted||persisted.assignedRole!==role||
@@ -8240,21 +8257,49 @@ async function action(name,button){
    if(!record)throw new ApiError('Authoritative CRM role snapshot missing.',403);
    const reverting=name==='user-role-revert-crm-platform';
    if(reverting&&!record.assignedRole)throw new ApiError('No CRM override to revoke.',409);
+   const initialRole=record.assignedRole||record.effectiveRole;
+   const roleAlreadyAssigned=!reverting&&
+     !crmPlatformRoleChangeNeeded(record.assignedRole,initialRole);
    const fields='<div class="note">APSYNTRA CRM platform role for '+e(user.name||user.email)+
     '. CRM tiers cap module and board permissions without changing WatchdogWorkspace identity. '+
     'Changes are audited and enforced by the central backend.</div>'+
     (reverting?'':select('CRM platform role','role',
       APSYNTRA_CRM_PLATFORM_ROLES.map(x=>[x,x[0].toUpperCase()+x.slice(1)]),
-      record.assignedRole||record.effectiveRole));
+      initialRole)+
+      '<p class="note" data-crm-role-change-hint aria-live="polite">'+
+      (roleAlreadyAssigned?
+       'This role is already assigned in the selected workspace. Choose a different role to apply a change.':
+       'Applying this role creates a workspace-specific assignment.')+'</p>');
    openModal(reverting?'Revert CRM platform role':'Assign APSYNTRA CRM platform role',fields,async fd=>{
      const role=reverting?null:String(fd.get('role'));
      if(role!==null&&!APSYNTRA_CRM_PLATFORM_ROLES.includes(role))
        throw new ApiError('Invalid CRM platform role.',400);
+     if(!crmPlatformRoleChangeNeeded(record.assignedRole,role)){
+      await loadUserRoleManagement();
+      toast('This workspace already has the selected CRM role. No changes were made.');
+      render();
+      return;
+     }
      state.userRoleBusy=true;
      try{await applyCrmPlatformRole({userId,role,
        expectedUpdatedAt:record.updatedAt||null});}
      finally{state.userRoleBusy=false;render();}
-   },{submitLabel:reverting?'Confirm CRM role revert':'Apply CRM role'});
+   },{submitLabel:reverting?'Confirm CRM role revert':'Apply CRM role',
+     submitDisabled:roleAlreadyAssigned,successMessage:''});
+   if(!reverting){
+    const dialog=modal;
+    const picker=dialog?.querySelector('#modal-role');
+    const submitButton=dialog?.querySelector('#modal-form button[type=submit]');
+    const hint=dialog?.querySelector('[data-crm-role-change-hint]');
+    picker?.addEventListener('change',()=>{
+     if(modal!==dialog||!submitButton||!hint)return;
+     const changed=crmPlatformRoleChangeNeeded(record.assignedRole,picker.value);
+     submitButton.disabled=!changed;
+     hint.textContent=changed?
+      'This change will update only the selected workspace CRM role.':
+      'This role is already assigned in the selected workspace. Choose a different role to apply a change.';
+    });
+   }
    break;
  }
  case 'user-role-edit-module':
