@@ -241,7 +241,7 @@ test('wires TradeLink to its existing bounded signed document search and native 
  assert.match(app,/openTradeLinkDocument\(selectedDocument\)/);
  assert.match(app,/openTradeLinkAssignedDocument\(selectedDocument\)/);
  assert.match(app,/pendingNativeSearchSelection/);
- assert.match(app,/searchFRTRequestsReadOnly/);
+ assert.ok(app.includes("fundTracker.searchRequests(query,{limit})"));
  assert.match(app,/timeTrackerSearchSnapshot/);
  assert.match(app,/timeTrackerAttendanceSearchAdapter/);
  assert.match(app,/timeTrackerOvertimeSearchAdapter/);
@@ -260,7 +260,7 @@ test('binds FRT, FuelTrack+ and TimeTracker through existing signed native clien
  const overtime=readFileSync('frontend/time-tracker-overtime.js','utf8');
  const fuelTrack=readFileSync('frontend/fueltrack-v3-domain-client.js','utf8');
  const frt=readFileSync('frontend/frt-finance-readonly.js','utf8');
- assert.match(app,/searchFRTRequestsReadOnly\(\{auth,api:db,query,limit\}\)/);
+ assert.ok(app.includes("fundTracker.searchRequests(query,{limit})"));
  assert.match(frt,/api\.rpc\('frt_board_list_safe'/);
  assert.match(app,/loadFRTFinanceDetail\(pending\.recordId,seq\)/);
  assert.match(app,/fuelTrackSearchSnapshot=createSnapshotReader/);
@@ -312,7 +312,7 @@ test('responsive palette and exact-commit Pages asset manifests include new asse
 
 test('specialized native search results retain exact record identity in refreshable deep links',()=>{
  assert.ok(app.includes("getHref:row=>'#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents/record/'+encodeURIComponent(row.documentId)"));
- assert.ok(app.includes("getHref:row=>'#/boards/'+FRT_BOARD_ID+'/finance/record/'+encodeURIComponent(row.companyCode)+'/'+encodeURIComponent(row.requestId)"));
+ assert.ok(app.includes("getHref:row=>fundTrackerRecordHref(row.companyCode,row.requestId)"));
  assert.ok(app.includes("getHref:row=>'#/time-tracker/attendance/'+encodeURIComponent(row.id)"));
  assert.ok(app.includes("getHref:row=>'#/time-tracker/overtime/'+encodeURIComponent(row.id)"));
  assert.ok(app.includes("getHref:row=>fuelTrackHref('requests')+'/record/'+encodeURIComponent(row.id)"));
