@@ -1,8 +1,8 @@
 # CP-TL-LEGACY-WORKFLOW-05 and CP-TL-REVISION-HISTORY-01
 
-**Application:** APSYNTRA CRM — TradeLink
-**Repository:** wass-psti/APSYNTRACRM
-**Base:** main at 75ae2877d28092303d9f0895513f3bd48ad8483a
+**Application:** APSYNTRA CRM — TradeLink  
+**Repository:** wass-psti/APSYNTRACRM  
+**Base:** main at 75ae2877d28092303d9f0895513f3bd48ad8483a  
 **Scope:** Signed Analytics deployment reconciliation and immutable document revision retrieval/reprinting.
 
 ## Analytics reconciliation
