@@ -53,6 +53,13 @@ export function buildFRTVoucherDefinition(voucher){
   cents(voucher.totalAmount)!==voucher.items.reduce((sum,item)=>sum+cents(item.amount),0n))
   throw new TypeError('Voucher expense totals are not reconciled');
  const company=voucher.company||{};
+ const accounting=voucher.accounting;
+ if(!accounting||accounting.balanced!==true||!Array.isArray(accounting.lines)||accounting.lines.length<2)
+  throw new TypeError('Voucher accounting entries must be balanced before PDF generation');
+ const accountingDebit=accounting.lines.reduce((sum,line)=>sum+cents(line.debit),0n);
+ const accountingCredit=accounting.lines.reduce((sum,line)=>sum+cents(line.credit),0n);
+ if(accountingDebit!==accountingCredit||accountingDebit!==cents(voucher.totalAmount))
+  throw new TypeError('Voucher debit, credit and request totals do not reconcile');
  let lineNumber=0;
  const itemRows=categoryGroups(voucher.items).flatMap(group=>[
   ...group.items.map(item=>[
@@ -66,6 +73,16 @@ export function buildFRTVoucherDefinition(voucher){
    {},{},
    {...cell(moneyCents(group.total),'subtotalCell'),alignment:'right'}
   ]
+ ]);
+ const accountingRows=accounting.lines.map((line,index)=>[
+  cell(String(index+1),'tableCellCenter'),cell(line.accountCode),cell(line.accountName),
+  cell(line.description||'—'),{...cell(money(line.debit)),alignment:'right'},
+  {...cell(money(line.credit)),alignment:'right'}
+ ]);
+ accountingRows.push([
+  {text:'TOTAL',colSpan:4,style:'subtotalCell',alignment:'right',margin:[5,5,5,5]},
+  {},{}, {},{...cell(moneyCents(accountingDebit),'subtotalCell'),alignment:'right'},
+  {...cell(moneyCents(accountingCredit),'subtotalCell'),alignment:'right'}
  ]);
  const header=(currentPage,pageCount)=>({
   margin:[40,18,40,0],
@@ -87,9 +104,14 @@ export function buildFRTVoucherDefinition(voucher){
  const content=[
   {text:'DISBURSEMENT VOUCHER',style:'documentTitle',margin:[0,8,0,4]},
   {columns:[
+   ...(typeof company.logoDataUrl==='string'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(company.logoDataUrl)?
+    [{image:company.logoDataUrl,width:54,height:54,fit:[54,54]}]:[]),
    {width:'*',stack:[
     {text:company.name||'Company name unavailable',style:'companyName'},
-    {text:'Company code: '+(company.code||'—'),style:'muted'}
+    {text:'Company code: '+(company.code||'—'),style:'muted'},
+    ...(company.address?[{text:'Registered address: '+company.address,style:'muted'}]:[]),
+    ...(company.phone?[{text:'Telephone: '+company.phone,style:'muted'}]:[]),
+    ...(company.email?[{text:'Email: '+company.email,style:'muted'}]:[])
    ]},
    {width:190,stack:[
     {text:'VOUCHER NUMBER',style:'metaLabel',alignment:'right'},
@@ -97,9 +119,7 @@ export function buildFRTVoucherDefinition(voucher){
     {text:'Voucher date: '+date(voucher.voucherDate),style:'metaValue',alignment:'right'}
    ]}
   ],columnGap:12,margin:[0,0,0,14]},
-  ...(company.address||company.phone||company.email?[
-   {text:[company.address,company.phone,company.email].filter(Boolean).join(' · '),style:'muted',margin:[0,0,12,0]}
-  ]:[
+  ...(company.address||company.phone||company.email||company.logoDataUrl?[]:[
    {text:'Company address, logo and contact details are not configured in Fund Release Tracker.',style:'unconfigured',margin:[0,0,12,0]}
   ]),
   sectionTitle('REQUEST AND PAYMENT DETAILS'),
@@ -131,7 +151,22 @@ export function buildFRTVoucherDefinition(voucher){
   ],margin:[0,9,0,0]},
   {text:'Expense line total: '+money(voucher.reconciliation.itemsTotal)+' · Reconciled to request total.',
    style:'muted',margin:[0,5,0,2]},
-  {text:'Chart-of-accounts mappings are not configured in FRT. Expense categories are shown as persisted; no account codes or debit/credit classifications are inferred.',
+  sectionTitle('MANUAL DOUBLE-ENTRY ACCOUNTING'),
+  {table:{headerRows:1,keepWithHeaderRows:1,dontBreakRows:true,
+   widths:[22,68,92,'*',70,70],body:[
+    [{text:'#',style:'tableHeader'}, {text:'Account code',style:'tableHeader'},
+     {text:'Account name',style:'tableHeader'}, {text:'Description',style:'tableHeader'},
+     {text:'Debit (PHP)',style:'tableHeader',alignment:'right'},
+     {text:'Credit (PHP)',style:'tableHeader',alignment:'right'}],
+    ...accountingRows
+   ]},layout:{
+    hLineWidth:(index,node)=>index===0||index===node.table.body.length?0.8:0.4,
+    vLineWidth:()=>0.4,hLineColor:()=>'#CBD5E1',vLineColor:()=>'#CBD5E1',
+    paddingLeft:()=>4,paddingRight:()=>4,paddingTop:()=>5,paddingBottom:()=>5
+   }},
+  {text:'Debit total: '+moneyCents(accountingDebit)+' · Credit total: '+moneyCents(accountingCredit)+' · Both totals equal the approved request amount.',
+   style:'muted',margin:[0,5,0,2]},
+  {text:'Account codes and names are manually entered for this request. No chart-of-accounts mapping is inferred.',
    style:'unconfigured',margin:[0,0,0,6]},
   sectionTitle('PREPARATION AND WORKFLOW RECORDS'),
   {columns:[

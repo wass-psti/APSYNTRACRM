@@ -4,6 +4,10 @@ CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE SCHEMA auth;
 CREATE SCHEMA private;
+CREATE SCHEMA storage;
+CREATE TABLE storage.buckets(id text PRIMARY KEY,name text NOT NULL,public boolean NOT NULL DEFAULT false);
+CREATE TABLE storage.objects(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket_id text NOT NULL REFERENCES storage.buckets(id),name text NOT NULL,owner_id text,metadata jsonb NOT NULL DEFAULT '{}'::jsonb,UNIQUE(bucket_id,name));
+INSERT INTO storage.buckets(id,name,public) VALUES('frt-attachments','frt-attachments',false);
 CREATE TABLE public.workspaces(id uuid PRIMARY KEY);
 CREATE TABLE auth.users(id uuid PRIMARY KEY);
 CREATE OR REPLACE FUNCTION auth.uid()
