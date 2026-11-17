@@ -28,7 +28,8 @@ export function projectFRTVoucherSnapshot(raw,{workspaceId,requestId,companyCode
   raw.workspaceId!==workspaceId||raw.requestId!==requestId||
   !uuid.test(workspaceId||'')||!uuid.test(requestId||'')||
   !raw.company||raw.company.code!==companyCode||
-  !text(raw.company.name,180)||!text(raw.voucherNumber,100)||
+  !text(raw.company.name,180)||!optionalText(raw.company.taxIdNumber,32)||
+  !text(raw.voucherNumber,100)||
   (expectedVoucher&&raw.voucherNumber!==expectedVoucher)||
   !text(raw.title,250)||(expectedTitle&&raw.title!==expectedTitle)||
   !validTimestamp(raw.voucherDate)||!validDate(raw.dateNeeded)||
@@ -69,6 +70,7 @@ export function projectFRTVoucherSnapshot(raw,{workspaceId,requestId,companyCode
    address:optionalText(raw.company.address,500)?raw.company.address||null:null,
    phone:optionalText(raw.company.phone,120)?raw.company.phone||null:null,
    email:optionalText(raw.company.email,180)?raw.company.email||null:null,
+   taxIdNumber:optionalText(raw.company.taxIdNumber,32)?raw.company.taxIdNumber||null:null,
    logoPath:optionalText(raw.company.logoPath,500)?raw.company.logoPath||null:null},
   voucherNumber:raw.voucherNumber,voucherDate:raw.voucherDate,
   requestReference:{orderIntakeNo:raw.requestReference.orderIntakeNo||'',
@@ -118,7 +120,11 @@ export async function loadFRTVoucher({auth,api,workspaceId,requestId,companyCode
  if(raw?.id!==requestId||raw?.workspace_id!==workspaceId||
   raw?.company_code!==companyCode)
   throw fail('Signed request detail no longer matches the selected request.',409,'FRT_VOUCHER_DETAIL_MISMATCH');
- let voucher=projectFRTVoucherSnapshot(raw?.voucher,{workspaceId,requestId,companyCode,
+ const companyProfile=bootstrap.companies.find(company=>company?.code===companyCode);
+ const voucherSource=raw?.voucher&&typeof raw.voucher==='object'?
+  {...raw.voucher,company:{...raw.voucher.company,
+   taxIdNumber:companyProfile?.tax_id_number||null}}:raw?.voucher;
+ let voucher=projectFRTVoucherSnapshot(voucherSource,{workspaceId,requestId,companyCode,
   expectedVoucher,expectedTitle});
  if(!voucher)throw fail('Persisted voucher details or expense totals failed validation.',409,'FRT_VOUCHER_SNAPSHOT_INVALID');
  if(voucher.company.logoPath){

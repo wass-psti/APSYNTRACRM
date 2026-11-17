@@ -12,6 +12,7 @@ DECLARE
  v_snapshot jsonb;
  v_logo_path text;
  v_result jsonb;
+ v_profile_result jsonb;
  v_company_count integer;
 BEGIN
  SELECT id INTO STRICT v_workspace FROM public.workspaces ORDER BY id LIMIT 1;
@@ -26,18 +27,29 @@ BEGIN
  INSERT INTO storage.objects(bucket_id,name,owner_id,metadata)
  VALUES('frt-attachments',v_logo_path,v_actor::text,jsonb_build_object('mimetype','image/png'));
 
- PERFORM public.frt_update_company_profile(v_workspace,'WAO',
-  'Watchdog Automation OPC','WAO Registered Address','+63 32 111 0101','wao@example.test',NULL);
+ v_profile_result:=public.frt_update_company_profile(v_workspace,'WAO',
+  'Watchdog Automation OPC','WAO Company Address','+63 32 111 0101','wao@example.test',NULL,'010-737-641-000');
  PERFORM public.frt_update_company_profile(v_workspace,'WASS',
-  'Watchdog Automation Sales & Services','WASS Registered Address','+63 32 222 0202','wass@example.test',v_logo_path);
+  'Watchdog Automation Sales & Services','WASS Company Address','+63 32 222 0202','wass@example.test',v_logo_path,'211-258-356-00000');
  PERFORM public.frt_update_company_profile(v_workspace,'PSTI',
-  'Process Solutions Technology Inc.','PSTI Registered Address','+63 32 333 0303','psti@example.test',NULL);
+  'Process Solutions Technology Inc.','PSTI Company Address','+63 32 333 0303','psti@example.test',NULL,'463-678-854-000');
+ -- Existing seven-argument clients remain compatible and preserve the TIN.
+ PERFORM public.frt_update_company_profile(v_workspace,'WAO',
+  'Watchdog Automation OPC','WAO Company Address','+63 32 111 0101','wao@example.test',NULL);
+ IF v_profile_result->'company'->>'taxIdNumber'<>'010-737-641-000' THEN
+  RAISE EXCEPTION 'Eight-argument company profile RPC omitted the saved TIN: %',v_profile_result;
+ END IF;
 
  SELECT count(*) INTO v_company_count FROM public.frt_companies
  WHERE workspace_id=v_workspace AND registered_address IS NOT NULL
-  AND contact_phone IS NOT NULL AND contact_email IS NOT NULL;
+  AND contact_phone IS NOT NULL AND contact_email IS NOT NULL
+  AND tax_id_number IS NOT NULL;
  IF v_company_count<>3 THEN
-  RAISE EXCEPTION 'Company profiles did not persist independently for all three FRT companies: %',v_company_count;
+  RAISE EXCEPTION 'Company profiles and TINs did not persist independently for all three FRT companies: %',v_company_count;
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.frt_companies WHERE workspace_id=v_workspace
+  AND code='WASS' AND tax_id_number='211-258-356-00000') THEN
+  RAISE EXCEPTION 'WASS TIN did not persist';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM public.frt_companies WHERE workspace_id=v_workspace AND code='WASS'
   AND logo_path=v_logo_path) OR
@@ -77,7 +89,7 @@ BEGIN
  v_detail:=public.frt_restricted_request_detail(v_workspace,v_request_id);
  v_voucher:=v_detail->'voucher';
  IF v_voucher->>'voucherNumber'<>'DV-WASS-202611-001' OR
-    v_voucher->'company'->>'address'<>'WASS Registered Address' OR
+    v_voucher->'company'->>'address'<>'WASS Company Address' OR
     v_voucher->'company'->>'phone'<>'+63 32 222 0202' OR
     v_voucher->'company'->>'email'<>'wass@example.test' OR
     v_voucher->'company'->>'logoPath'<>v_logo_path OR
@@ -131,7 +143,7 @@ BEGIN
   RAISE EXCEPTION 'Failed accounting write partially replaced the persisted revision: %',v_snapshot;
  END IF;
 
- RAISE NOTICE 'CP-FRT-FLOW-03C PASS: WAO/WASS/PSTI company metadata, private logo reference, preserved existing DV number, exact-cent double-entry persistence, canonical projection, stale-write conflict and atomic unbalanced-write rejection';
+ RAISE NOTICE 'CP-FRT-FLOW-03C/03E PASS: WAO/WASS/PSTI company metadata and TINs, backward-compatible profile RPC, private logo reference, preserved existing DV number, exact-cent double-entry persistence, canonical projection, stale-write conflict and atomic unbalanced-write rejection';
 END
 $test$;
 ROLLBACK;

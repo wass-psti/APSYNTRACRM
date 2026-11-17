@@ -4612,6 +4612,7 @@ async function openFRTCompanyProfileDialog(companyCode){
       registeredAddress:String(formData.get('registeredAddress')||''),
       contactPhone:String(formData.get('contactPhone')||''),
       contactEmail:String(formData.get('contactEmail')||''),
+      taxIdNumber:String(formData.get('taxIdNumber')||''),
       logoPath:profile.logoPath
      }});
     if(!current())return;

@@ -37,6 +37,7 @@ export function projectFRTCompanyProfile(
     !optionalText(raw.registered_address, 500) ||
     !optionalText(raw.contact_phone, 120) ||
     !optionalText(raw.contact_email, 180) ||
+    !optionalText(raw.tax_id_number, 32) ||
     !optionalText(raw.logo_path, 500)
   )
     return null;
@@ -50,6 +51,7 @@ export function projectFRTCompanyProfile(
     registeredAddress: raw.registered_address || "",
     contactPhone: raw.contact_phone || "",
     contactEmail: email || "",
+    taxIdNumber: raw.tax_id_number || "",
     logoPath: raw.logo_path || null,
   };
 }
@@ -156,6 +158,7 @@ function normalizeProfile(profile) {
   const registeredAddress = String(profile.registeredAddress ?? "").trim();
   const contactPhone = String(profile.contactPhone ?? "").trim();
   const contactEmail = String(profile.contactEmail ?? "").trim();
+  const taxIdNumber = String(profile.taxIdNumber ?? "").trim();
   const logoPath =
     profile.logoPath === null ||
     profile.logoPath === undefined ||
@@ -174,9 +177,11 @@ function normalizeProfile(profile) {
       !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(contactEmail))
   )
     fail("Enter a valid contact email address.");
+  if (taxIdNumber.length > 32)
+    fail("Tax identification number must not exceed 32 characters.");
   if (logoPath !== null && logoPath.length > 500)
     fail("Company logo reference is invalid.");
-  return { legalName, registeredAddress, contactPhone, contactEmail, logoPath };
+  return { legalName, registeredAddress, contactPhone, contactEmail, taxIdNumber, logoPath };
 }
 
 export async function saveFRTCompanyProfile({
@@ -196,6 +201,7 @@ export async function saveFRTCompanyProfile({
     p_contact_phone: values.contactPhone,
     p_contact_email: values.contactEmail,
     p_logo_path: values.logoPath,
+    p_tax_id_number: values.taxIdNumber,
   });
   if (result?.saved !== true || result?.company?.code !== companyCode)
     fail(
@@ -214,6 +220,7 @@ export async function saveFRTCompanyProfile({
     saved.registeredAddress !== values.registeredAddress ||
     saved.contactPhone !== values.contactPhone ||
     saved.contactEmail !== values.contactEmail ||
+    saved.taxIdNumber !== values.taxIdNumber ||
     saved.logoPath !== values.logoPath
   )
     fail(
@@ -364,9 +371,9 @@ export async function deleteFRTCompanyLogo({
     auth,
     fetchImpl,
     baseUrl,
-    path: "/storage/v1/object/" + bucket + "/" + encodePath(logoPath),
+    path: "/storage/v1/object/" + bucket,
     method: "DELETE",
-    contentType: null,
+    body: JSON.stringify({ prefixes: [logoPath] }),
   });
   return true;
 }
@@ -551,6 +558,7 @@ export function hydrateFRTCompanyProfileForm(form, profile) {
     registeredAddress: profile.registeredAddress,
     contactPhone: profile.contactPhone,
     contactEmail: profile.contactEmail,
+    taxIdNumber: profile.taxIdNumber,
   })) {
     const control = form.elements?.namedItem?.(field);
     if (control) control.value = value || "";
@@ -588,6 +596,10 @@ export function renderFRTCompanyProfileEditor(profile) {
     '<label class="frt-company-profile-field">Official contact email' +
     '<input id="frt-company-contact-email" name="contactEmail" autocomplete="off" maxlength="180" type="email" value="' +
     escapeHtml(profile.contactEmail) +
+    '"></label>' +
+    '<label class="frt-company-profile-field">Tax Identification Number (TIN)' +
+    '<input id="frt-company-tax-id" name="taxIdNumber" autocomplete="off" maxlength="32" value="' +
+    escapeHtml(profile.taxIdNumber) +
     '"></label>' +
     "</div>" +
     '<section class="frt-company-logo-editor"><div class="frt-company-logo-preview" data-frt-company-logo-preview>' +

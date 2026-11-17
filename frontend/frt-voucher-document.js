@@ -88,6 +88,7 @@ export function renderFRTVoucherDocument(voucher,{previewUrl=''}={}){
   (company.address?'<p>Company address: '+e(company.address)+'</p>':'')+
   (company.phone?'<p>Telephone: '+e(company.phone)+'</p>':'')+
   (company.email?'<p>Email: '+e(company.email)+'</p>':'')+
+  (company.taxIdNumber?'<p>TIN: '+e(company.taxIdNumber)+'</p>':'')+
   (!profileConfigured?'<p class="frt-voucher-unconfigured">Company address, logo and contact details are not configured in Fund Release Tracker.</p>':'')+
   '</div><div class="frt-voucher-title"><h1>DISBURSEMENT VOUCHER</h1>'+
   '<strong>'+e(voucher.voucherNumber)+'</strong><span>Voucher date: '+date(voucher.voucherDate)+'</span></div></header>'+

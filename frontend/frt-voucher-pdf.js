@@ -111,7 +111,8 @@ export function buildFRTVoucherDefinition(voucher){
     {text:'Company code: '+(company.code||'—'),style:'muted'},
     ...(company.address?[{text:'Company address: '+company.address,style:'muted'}]:[]),
     ...(company.phone?[{text:'Telephone: '+company.phone,style:'muted'}]:[]),
-    ...(company.email?[{text:'Email: '+company.email,style:'muted'}]:[])
+    ...(company.email?[{text:'Email: '+company.email,style:'muted'}]:[]),
+    ...(company.taxIdNumber?[{text:'TIN: '+company.taxIdNumber,style:'muted'}]:[])
    ]},
    {width:190,stack:[
     {text:'VOUCHER NUMBER',style:'metaLabel',alignment:'right'},
