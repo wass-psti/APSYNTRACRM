@@ -166,6 +166,7 @@ The adapter and renderer do not introduce a second event bus or independent appl
 - Ordered stylesheet bundle verification: PASS.
 - Production Vite build: PASS.
 - Chromium module-entry acceptance: PASS.
+- Fund Tracker native renderer Chromium acceptance: PASS.
 - Public static-cache browser acceptance: PASS.
 - Existing FRT workflow regression and accounting/company-profile disposable acceptance: PASS.
 - GitHub Pages deployment verification: pending merge and deployment.
