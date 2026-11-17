@@ -27,7 +27,7 @@ test('reference portal is scoped to the genuine signed TradeLink board and uses 
  assert.match(html,/aria-label="TradeLink actions"/);
  assert.match(html,/Create New/);
  assert.match(html,/All Documents/);
- assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/documents"/);
+ assert.match(html,/href="#\/tradelink\/documents"/);
  assert.match(html,/class="tl-reference-manual"/);
  assert.doesNotMatch(html,/Disaster Recovery|tl-reference-unavailable/);
  assert.doesNotMatch(html,/Signed workspace<\/div>|tl-reference-workspace/);
@@ -52,7 +52,7 @@ test('all six modules use screenshot-led document cards, accessible tabs and no 
   assert.ok(html.includes('<option value="'+module.key+'" selected>'),module.key);
   assert.match(html,/class="tl-reference-document-topcard"/);
   assert.match(html,/class="tl-reference-document-tabs"/);
-  assert.equal((html.match(/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts\//g)||[]).length,6);
+  assert.equal((html.match(/href="#\/tradelink\/drafts\//g)||[]).length,6);
   assert.match(html,/aria-current="page"/);
   assert.match(html,/<select name="documentType" tabindex="-1" aria-hidden="true"/);
   assert.match(html,/Document Information/);
@@ -159,6 +159,7 @@ test('reference split workspace omits duplicate board table and technical draft 
  assert.match(draft,/data-action="tradelink-draft-submit"/);
  assert.doesNotMatch(draft,/Validate locally|Save enabled/);
  const source=readFileSync('frontend/app.js','utf8');
- assert.match(source,/const directModule=requested==='tradelink'/);
- assert.match(source,/state\.tradeLinkSection=directModule\?'drafts'/);
+ assert.match(source,/if\(parts\[0\]==='tradelink'\)/);
+ assert.match(source,/state\.tradeLinkSection=tradeLinkRoute\.section/);
+ assert.match(source,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId\)/);
 });
