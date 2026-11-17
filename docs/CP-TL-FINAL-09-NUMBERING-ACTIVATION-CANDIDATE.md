@@ -26,3 +26,7 @@
 4. Other genuinely untested production source transitions remain PENDING: ESI, Delivery Receipt, Packing List, Payment AR and Purchase Order. All five have zero active production business records. Archived QA fixtures are preserved and not silently restored or submitted.
 
 **Status:** code candidate IMPLEMENTED-UNVERIFIED for real signed create, local and CI checks required; production automatic numbering NOT ACTIVATED, genuine six-module business acceptance remains **1/6**. Other legacy parity gaps (electronic QR issuance, disaster recovery, customer/vendor directory, bank instruction contracts, operational workflow state toggles) remain separate and unverified.
+
+## Activation update — November 17, 2026
+
+The source-only draft status above was the pre-activation checkpoint. The user separately approved the production create-path change. PR #483 merged as `f0743cf3b57613595748a559d7aff07fd9df3d70`; the exact GitHub Pages deployment and signed blank read-only number field were verified. **Automatic numbering is now ENABLED in production for new creates.** No actual production auto-numbered document has been created as part of activation or CP-TL-FINAL-09B. See `docs/CP-TL-FINAL-09B-FIRST-GENUINE-NUMBERED-CREATE-READINESS.md` for the current acceptance boundary.
