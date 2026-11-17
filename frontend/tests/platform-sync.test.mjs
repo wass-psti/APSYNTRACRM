@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_RECONCILE_INTERVAL_MS,SYNC_FULL_RECONCILE_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS}
+import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_RECONCILE_INTERVAL_MS,SYNC_FULL_BOARD_SNAPSHOT_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS}
  from '../platform-sync.js';
 
 const uid='20000000-0000-4000-8000-000000000001';
@@ -111,23 +111,23 @@ test('unavailable socket uses only bounded visible authorized polling',async()=>
  assert.equal(x.invalidations.length,2);
  x.ctl.stop();assert.equal(x.intervals.size,0);
 });
-test('healthy Realtime uses lightweight signed heartbeats and a bounded full snapshot sweep',async()=>{
+test('healthy Realtime uses lightweight signed heartbeats and a bounded full board snapshot sweep',async()=>{
  const x=fake();
  x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
  await x.wait();await x.join(x.sockets[0]);
- const fullAt=x.ctl.lastFullSyncAt;
+ const fullAt=x.ctl.lastFullBoardSnapshotAt;
  assert.equal(x.invalidations.at(-1).reason,'join');
- assert.equal(SYNC_FULL_RECONCILE_INTERVAL_MS,300000);
+ assert.equal(SYNC_FULL_BOARD_SNAPSHOT_INTERVAL_MS,300000);
  for(let n=0;n<3;n++){
   x.advance(SYNC_RECONCILE_INTERVAL_MS);
   await x.ctl.pollTick(x.ctl.generation);
   assert.equal(x.invalidations.at(-1).reason,'heartbeat-check');
-  assert.equal(x.ctl.lastFullSyncAt,fullAt,'heartbeat checks must not reset the full-snapshot deadline');
+  assert.equal(x.ctl.lastFullBoardSnapshotAt,fullAt,'heartbeat checks must not reset the full-snapshot deadline');
  }
  x.advance(SYNC_RECONCILE_INTERVAL_MS);
  await x.ctl.pollTick(x.ctl.generation);
  assert.equal(x.invalidations.at(-1).reason,'poll');
- assert.ok(x.ctl.lastFullSyncAt-fullAt>=SYNC_FULL_RECONCILE_INTERVAL_MS);
+ assert.ok(x.ctl.lastFullBoardSnapshotAt-fullAt>=SYNC_FULL_BOARD_SNAPSHOT_INTERVAL_MS);
  x.ctl.stop();
 });
 test('visibility pause closes socket and returns with fresh signed join',async()=>{
