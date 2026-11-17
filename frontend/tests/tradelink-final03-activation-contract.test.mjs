@@ -21,7 +21,7 @@ test('staged production migration uses the tested Submit function and exact cand
  assert.match(migration,/REVOKE ALL ON FUNCTION public\.tl03_document_submit/);
 });
 
-test('production Submit flag remains disabled and current two-reviewer workflow remains enabled',()=>{
- assert.equal(TL03_WORKFLOW_SUBMIT_ENABLED,false);
+test('installed backend has a separately activated Submit frontend while two-reviewer flow remains enabled',()=>{
+ assert.equal(TL03_WORKFLOW_SUBMIT_ENABLED,true);
  assert.equal(TL03_DUAL_REVIEW_ENABLED,true);
 });
