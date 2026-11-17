@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'frontend/app.js'
+      - 'frontend/startup-guard.js'
+      - 'frontend/tests/startup-recovery.test.mjs'
       - 'frontend/fueltrans-lazy.js'
       - 'frontend/tests/fueltrans-lazy.test.mjs'
       - 'frontend/tests/priority5f-entry.test.mjs'
@@ -18,6 +20,8 @@ on:
     branches: [main]
     paths:
       - 'frontend/app.js'
+      - 'frontend/startup-guard.js'
+      - 'frontend/tests/startup-recovery.test.mjs'
       - 'frontend/fueltrans-lazy.js'
       - 'frontend/tests/fueltrans-lazy.test.mjs'
       - 'frontend/tests/priority5f-entry.test.mjs'
