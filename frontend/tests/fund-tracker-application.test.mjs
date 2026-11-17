@@ -103,6 +103,7 @@ test("native adapter composes the existing signed FRT domain APIs instead of int
   assert.ok(native.includes("class FundTrackerNativeClient"));
   assert.ok(native.includes("snapshot("));
   assert.ok(native.includes("searchRequests("));
+  assert.ok(native.includes("this.recipients = new FRTRecipientClient({ auth, api })"));
   for (const method of [
     "createRequest(", "updateFiling(", "updateRequestDate(",
     "loadPersonAssignment(", "savePersonAssignment(", "executeAction(",
@@ -190,7 +191,7 @@ test("Fund Tracker route reuses the existing board host, adapter, renderer and d
     "return renderFundTrackerApplication()",
   ]) assert.ok(app.includes(fragment), fragment);
   assert.equal(app.includes("loadFRTFinanceReadOnly("), false);
-  assert.equal(/import .* from '\\.\/frt-(?:filing-workflow|board-date-edit|board-person-assignment|board-domain-actions|liquidation|bank-execution|collaboration|archive|voucher|finance-workflow|recipient-client|intercompany-client)\\.js'/.test(app), false);
+  assert.equal(/import .* from '\\.\/frt-(?:filing-workflow|board-date-edit|board-person-assignment|board-domain-actions|liquidation|bank-execution|collaboration|archive|voucher|accounting|finance-workflow|recipient-client|intercompany-client)\\.js'/.test(app), false);
 
 });
 
