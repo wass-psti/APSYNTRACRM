@@ -731,16 +731,29 @@ function empty(title,description,action=''){
 }
 function overviewBoardPreview(boards,limit=6){
  const source=Array.isArray(boards)?boards:[];
- const recent=source.slice(0,Math.max(0,Number.isSafeInteger(limit)?limit:6));
+ const size=Math.max(0,Number.isSafeInteger(limit)?limit:6);
+ if(!size)return [];
+ const recent=source.slice(0,size);
  const canonical=source.find(board=>board?.id===TRADELINK_BOARD_ID);
- if(!canonical||recent.some(board=>board?.id===TRADELINK_BOARD_ID))return recent;
- // A separately created empty board can share the TradeLink name. Keep that
- // board in My Boards, but use the canonical application Board in the limited
- // Overview preview so the module card reflects its real persisted records.
- const duplicateIndex=recent.findIndex(board=>board?.id!==TRADELINK_BOARD_ID&&
-  typeof board?.name==='string'&&board.name.trim().toLowerCase()==='tradelink');
- if(duplicateIndex>=0)recent[duplicateIndex]=canonical;
- return recent;
+ if(!canonical)return recent;
+ const isDuplicate=board=>board?.id!==canonical.id&&
+  typeof board?.name==='string'&&
+  board.name.trim().toLowerCase()===String(canonical.name||'TradeLink').trim().toLowerCase();
+ // If a newer same-name Board occupies the preview, substitute the canonical
+ // application Board. If both are already in the window, omit only the duplicate
+ // from this limited preview and backfill from the signed catalog. The complete
+ // My Boards catalog and its aggregate counts remain untouched.
+ if(!recent.some(board=>board?.id===canonical.id)){
+  const duplicateIndex=recent.findIndex(isDuplicate);
+  if(duplicateIndex>=0)recent[duplicateIndex]=canonical;
+ }
+ const preview=recent.filter(board=>!isDuplicate(board));
+ for(const board of source){
+  if(preview.length>=size)break;
+  if(isDuplicate(board)||preview.some(item=>item?.id===board?.id))continue;
+  preview.push(board);
+ }
+ return preview;
 }
 function overview(){
  const total=state.boards.reduce((a,b)=>a+(Number(b.item_count)||0),0);

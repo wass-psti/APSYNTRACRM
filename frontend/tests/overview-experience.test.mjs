@@ -61,23 +61,55 @@ test('overview retains exact page navigation, refresh, new-board and board-card 
  assert.match(app,/case 'new-board':/);
 });
 
-test('Overview preview prefers the canonical TradeLink application Board over a newer same-name duplicate',()=>{
+test('Overview preview substitutes the canonical TradeLink Board when the duplicate occupies the six-card window',()=>{
  const start=app.indexOf('function overviewBoardPreview(');
  const end=app.indexOf('function overview(){',start);
  assert.ok(start>=0&&end>start);
- const select=new Function('boards','TRADELINK_BOARD_ID',
-  app.slice(start,end)+'\nreturn overviewBoardPreview(boards);');
- const canonical={id:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',name:'TradeLink',item_count:3};
+ const select=new Function('boards','TRADELINK_BOARD_ID','limit',
+  app.slice(start,end)+'\nreturn overviewBoardPreview(boards,limit);');
+ const canonical={id:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',name:'TradeLink',item_count:4};
  const duplicate={id:'d8aeffbf-afea-42ba-bb88-a84cbedf86bf',name:'TradeLink',item_count:0};
  const boards=[duplicate,...Array.from({length:5},(_,i)=>({id:'other-'+i,name:'Other '+i,item_count:i})),canonical];
- const preview=select(boards,canonical.id);
+ const preview=select(boards,canonical.id,6);
  assert.equal(preview.length,6);
  assert.equal(preview[0],canonical);
+ assert.equal(preview.filter(board=>board.name==='TradeLink').length,1);
  assert.equal(boards[0],duplicate,'the full board catalog is not mutated');
  assert.ok(boards.includes(duplicate),'the additional board remains in My Boards data');
- assert.equal(preview.reduce((sum,board)=>sum+board.item_count,0),13);
- assert.deepEqual(select([duplicate,...boards.slice(1,5)],canonical.id),
-  [duplicate,...boards.slice(1,5)],'without the canonical Board, the preview remains unchanged');
+ assert.equal(preview.reduce((sum,board)=>sum+board.item_count,0),14);
+});
+
+test('Overview preview removes a visible same-name duplicate when the canonical Board is already in the window and backfills the next board',()=>{
+ const start=app.indexOf('function overviewBoardPreview(');
+ const end=app.indexOf('function overview(){',start);
+ const select=new Function('boards','TRADELINK_BOARD_ID','limit',
+  app.slice(start,end)+'\nreturn overviewBoardPreview(boards,limit);');
+ const files={id:'files',name:'Files',item_count:205};
+ const canonical={id:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',name:'TradeLink',item_count:4};
+ const pwri={id:'pwri',name:'PWRI Project Completion Documents',item_count:5};
+ const duplicate={id:'d8aeffbf-afea-42ba-bb88-a84cbedf86bf',name:'TradeLink',item_count:0};
+ const cross={id:'cross',name:'Cross-Company Event Planning',item_count:11};
+ const fund={id:'fund',name:'Fund-Released Tracker',item_count:676};
+ const next={id:'next',name:'Next Recent Board',item_count:9};
+ const boards=[files,canonical,pwri,duplicate,cross,fund,next];
+ const before=[...boards];
+ const preview=select(boards,canonical.id,6);
+ assert.deepEqual(preview,[files,canonical,pwri,cross,fund,next]);
+ assert.equal(preview.length,6);
+ assert.equal(preview.filter(board=>board.name==='TradeLink').length,1);
+ assert.deepEqual(boards,before,'the authoritative full catalog remains unchanged');
+ assert.ok(boards.includes(duplicate),'the duplicate remains available to My Boards');
+});
+
+test('Overview preview does not invent the canonical Board when the signed catalog omits it',()=>{
+ const start=app.indexOf('function overviewBoardPreview(');
+ const end=app.indexOf('function overview(){',start);
+ const select=new Function('boards','TRADELINK_BOARD_ID','limit',
+  app.slice(start,end)+'\nreturn overviewBoardPreview(boards,limit);');
+ const duplicate={id:'d8aeffbf-afea-42ba-bb88-a84cbedf86bf',name:'TradeLink',item_count:0};
+ const boards=[duplicate,{id:'other',name:'Other',item_count:1}];
+ assert.deepEqual(select(boards,'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',6),boards);
+ assert.deepEqual(select(boards,'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',0),[]);
 });
 
 test('overview uses escaped identity and board descriptions, no mock operational data',()=>{
