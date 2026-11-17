@@ -29,7 +29,7 @@ test('signed sidebar preserves the required route vocabulary and active semantic
 test('workspace and recent board lists use existing authorized state only',()=>{
  assert.match(sidebar,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
  assert.match(sidebar,/state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\)\.slice\(0,6\)/);
- assert.match(sidebar,/const currentBoard=state\.boardId/);
+ assert.match(sidebar,/const active=selectedNav==='recent:'\+b\.id/);
  assert.match(sidebar,/href="#\/boards\/'\+e\(b\.id\)/);
  assert.match(sidebar,/e\(title\)/);
  assert.match(sidebar,/e\(name\(\)\)/);
