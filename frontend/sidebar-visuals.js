@@ -1,7 +1,7 @@
 /**
  * APSYNTRA signed-workspace sidebar visual primitives.
  * SVG icons are constant, presentation-only markup. No untrusted SVG input.
- * @typedef {'overview'|'boards'|'ticket'|'clock'|'finance'|'foundation'|'security'|'roles'|'users'|'settings'|'acceptance'|'recent'|'logout'|'chevron'} SidebarIcon
+ * @typedef {'overview'|'boards'|'ticket'|'clock'|'finance'|'tradelink'|'foundation'|'security'|'roles'|'users'|'settings'|'acceptance'|'recent'|'logout'|'chevron'} SidebarIcon
  */
 const icons=Object.freeze({
  overview:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
@@ -9,6 +9,7 @@ const icons=Object.freeze({
  ticket:'<path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4V7Z"/><path d="M9 7v10" stroke-dasharray="2 2"/>',
  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  finance:'<path d="M3 7h18v12H3z"/><path d="M3 10h18M7 15h3M16 15h1"/><path d="M7 4h10"/>',
+ tradelink:'<path d="m10 13 4-4"/><path d="M15 7.5 17.5 5a4 4 0 0 1 5.5 5.8l-3.2 3.2a4 4 0 0 1-5.7 0"/><path d="M9 16.5 6.5 19A4 4 0 0 1 1 13.2l3.2-3.2a4 4 0 0 1 5.7 0"/>',
  foundation:'<path d="m12 2 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 17l9 5 9-5"/>',
  security:'<path d="M12 22s8-4.2 8-10V5l-8-3-8 3v7c0 5.8 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
  roles:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="9" r="2.5"/><path d="M7.5 17c.5-3 2-4.5 4.5-4.5s4 1.5 4.5 4.5"/>',
