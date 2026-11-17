@@ -1,0 +1,224 @@
+/** System Admin attendance record editor. All mutations are delegated to the signed PostgreSQL RPC. */
+import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
+
+export const TT_ADMIN_RECORD_LIMIT=100;
+export const TT_ADMIN_DEPARTMENTS=Object.freeze([
+  'HR','Materials and Logistics','Engineering','Finance and Accounting',
+  'Sales and Marketing','Information Technology'
+]);
+
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+const finite=value=>Number.isFinite(Number(value));
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function timeTrackerAdminDateTimeLocal(value){
+  if(typeof value!=='string'||!Number.isFinite(Date.parse(value)))return '';
+  const parts=new Intl.DateTimeFormat('en-CA',{
+    timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+  }).formatToParts(new Date(value)).reduce((result,part)=>{
+    result[part.type]=part.value;return result;
+  },{});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+export function parseTimeTrackerAdminDateTime(value){
+  const raw=String(value??'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(raw))
+    throw Error('Enter a valid Philippine date and time.');
+  const parsed=new Date(`${raw}:00+08:00`);
+  if(!Number.isFinite(parsed.getTime())||timeTrackerAdminDateTimeLocal(parsed.toISOString())!==raw)
+    throw Error('Enter a valid Philippine date and time.');
+  return parsed.toISOString();
+}
+
+const geoValue=(record,kind)=>kind==='in'?record?.clockIn?.geo:record?.clockOut?.geo;
+const timeValue=(record,kind)=>kind==='in'?record?.clockIn?.timestamp:record?.clockOut?.timestamp;
+const hasClockOut=record=>record?.clockOut&&typeof record.clockOut==='object'&&
+  typeof record.clockOut.timestamp==='string'&&Number.isFinite(Date.parse(record.clockOut.timestamp));
+const employeeId=record=>String(record?.ownerId||'').replace(/^cloud:/,'');
+const sameNumber=(a,b)=>finite(a)&&finite(b)&&Number(a)===Number(b);
+
+function readGeo(formData,prefix,current,{bulk}){
+  const values=['latitude','longitude','accuracy'].map(key=>String(formData.get(`${prefix}${key}`)||'').trim());
+  if(values.every(value=>value===''))return null;
+  if(values.some(value=>value===''))throw Error(`${prefix==='clockInGeo'?'Clock-In':'Clock-Out'} GPS requires latitude, longitude and accuracy.`);
+  const [latitude,longitude,accuracy]=values.map(Number);
+  if(!values.every((value,index)=>value!==''&&Number.isFinite([latitude,longitude,accuracy][index]))||
+    latitude < -90||latitude>90||longitude < -180||longitude>180||accuracy<0||accuracy>100000)
+    throw Error('GPS coordinates or accuracy are outside the supported range.');
+  if(!bulk&&current&&sameNumber(latitude,current.latitude)&&
+    sameNumber(longitude,current.longitude)&&sameNumber(accuracy,current.accuracy))return null;
+  return {latitude,longitude,accuracy};
+}
+
+/** Build a sparse patch. Blank fields in bulk mode always mean leave unchanged. */
+export function buildTimeTrackerAdminPatch(formData,{mode='single',record=null,records=[]}={}){
+  const bulk=mode==='bulk',patch={};
+  const read=key=>String(formData.get(key)??'').trim();
+  const assign=(key,value)=>{if(value!==undefined)patch[key]=value;};
+
+  const selectedEmployee=read('employeeId');
+  if(selectedEmployee){
+    if(!uuid.test(selectedEmployee))throw Error('Select a valid active employee.');
+    if(bulk||selectedEmployee!==employeeId(record))assign('employeeId',selectedEmployee);
+  }
+
+  const location=read('location');
+  if(location){
+    if(!TT_LOCATIONS.includes(location))throw Error('Select a valid work location.');
+    if(bulk||location!==record?.clockIn?.location||
+      location!==(hasClockOut(record)?record.clockOut.location:record?.clockIn?.location))assign('location',location);
+  }
+  const department=read('department');
+  if(department){
+    if(!TT_ADMIN_DEPARTMENTS.includes(department))throw Error('Select a valid department.');
+    if(bulk||department!==record?.clockIn?.department||
+      department!==(hasClockOut(record)?record.clockOut.department:record?.clockIn?.department))assign('department',department);
+  }
+
+  const status=read('status');
+  if(status){
+    if(!['Active','Completed'].includes(status))throw Error('Select Active or Completed attendance status.');
+    const current=hasClockOut(record)?'Completed':'Active';
+    if(bulk||status!==current)assign('status',status);
+  }
+  const effectiveStatus=status||(bulk?null:
+    hasClockOut(record)?'Completed':'Active'
+  );
+  const needsClockOut=bulk?records.some(item=>!hasClockOut(item)):!hasClockOut(record);
+
+  const clockInAt=read('clockInAt');
+  if(clockInAt){
+    const iso=parseTimeTrackerAdminDateTime(clockInAt);
+    if(bulk||clockInAt!==timeTrackerAdminDateTimeLocal(timeValue(record,'in')))assign('clockInAt',iso);
+  }
+  const clockInGeo=readGeo(formData,'clockInGeo',geoValue(record,'in'),{bulk});
+  if(clockInGeo)assign('clockInGeo',clockInGeo);
+
+  if(effectiveStatus!=='Active'){
+    const clockOutAt=read('clockOutAt');
+    if(clockOutAt){
+      const iso=parseTimeTrackerAdminDateTime(clockOutAt);
+      if(bulk||clockOutAt!==timeTrackerAdminDateTimeLocal(timeValue(record,'out')))assign('clockOutAt',iso);
+    }
+    const clockOutGeo=readGeo(formData,'clockOutGeo',geoValue(record,'out'),{bulk});
+    if(clockOutGeo)assign('clockOutGeo',clockOutGeo);
+    if(effectiveStatus==='Completed'&&needsClockOut&&
+      (!read('clockOutAt')||!clockOutGeo&&!geoValue(record,'out')))
+      throw Error('Completing an active session requires a Clock-Out timestamp and GPS fix.');
+    if(bulk&&needsClockOut&&(read('clockOutAt')||clockOutGeo)&&
+      (!read('clockOutAt')||!clockOutGeo))
+      throw Error('Bulk completion of active sessions requires a Clock-Out timestamp and GPS fix.');
+  }
+
+  const validateTimeOrder=item=>{
+    const start=patch.clockInAt||timeValue(item,'in');
+    const end=effectiveStatus==='Active'?null:patch.clockOutAt||timeValue(item,'out');
+    if(end&&(!Number.isFinite(Date.parse(start||''))||!Number.isFinite(Date.parse(end))||
+      Date.parse(end)<Date.parse(start)))
+      throw Error('Clock-Out must be at or after Clock-In.');
+  };
+  if(bulk)records.forEach(validateTimeOrder);
+  else validateTimeOrder(record);
+
+  const durationMode=read('durationMode');
+  if(durationMode){
+    if(!['auto','manual'].includes(durationMode))throw Error('Select automatic or manual working duration.');
+    if(durationMode==='auto'){
+      if(bulk||Number.isSafeInteger(record?.creditedMsOverride))assign('creditedMsOverride',null);
+    }else{
+      const hoursText=read('durationHours');
+      if(!hoursText)throw Error('Enter the corrected working duration in hours.');
+      const hours=Number(hoursText);
+      if(!Number.isFinite(hours)||hours<0||hours>744)throw Error('Working duration must be between 0 and 744 hours.');
+      const milliseconds=Math.round(hours*3600000);
+      if(effectiveStatus!=='Completed'&&(!bulk||needsClockOut))
+        throw Error('Manual working duration requires completed attendance records.');
+      if(bulk||milliseconds!==record?.creditedMsOverride||patch.clockInAt||patch.clockOutAt)
+        assign('creditedMsOverride',milliseconds);
+    }
+  }
+
+  if(!Object.keys(patch).length)throw Error('No attendance fields have changed.');
+  return Object.freeze({patch:Object.freeze(patch),reason:read('reason').slice(0,500)});
+}
+
+const option=(value,label,selected)=>`<option value="${esc(value)}"${selected===value?' selected':''}>${esc(label)}</option>`;
+const selectField=(label,name,items,value,{bulk=false}={})=>
+  `<label class="tt-admin-field"><span>${esc(label)}</span><select name="${name}"${bulk?'':' required'}>`+
+  (bulk?option('','No change',value):'')+
+  items.map(item=>option(item.value,item.label,value)).join('')+
+  '</select></label>';
+const inputField=(label,name,value,{type='text',step=null,min=null,max=null,placeholder='',required=false}={})=>
+  `<label class="tt-admin-field"><span>${esc(label)}</span><input name="${name}" type="${type}" value="${esc(value)}"`+
+  (step!==null?` step="${step}"`:'')+(min!==null?` min="${min}"`:'')+
+  (max!==null?` max="${max}"`:'')+(placeholder?` placeholder="${esc(placeholder)}"`:'')+
+  (required?' required':'')+'></label>';
+
+function gpsFields(record,kind,{bulk=false}={}){
+  const geo=geoValue(record,kind)||{};
+  const prefix=kind==='in'?'clockInGeo':'clockOutGeo';
+  const placeholder=bulk?'Leave unchanged':'';
+  return `<fieldset class="tt-admin-gps"><legend>${kind==='in'?'Clock-In GPS':'Clock-Out GPS'}</legend><div class="tt-admin-grid tt-admin-grid-three">`+
+    inputField('Latitude',`${prefix}latitude`,bulk?'':geo.latitude??'',{type:'number',step:'any',min:-90,max:90,placeholder})+
+    inputField('Longitude',`${prefix}longitude`,bulk?'':geo.longitude??'',{type:'number',step:'any',min:-180,max:180,placeholder})+
+    inputField('Accuracy (m)',`${prefix}accuracy`,bulk?'':geo.accuracy??'',{type:'number',step:'any',min:0,max:100000,placeholder})+
+    '</div><p>Changed coordinates are stored as administrative corrections, not browser-captured GPS.</p></fieldset>';
+}
+
+export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,error=''}={}){
+  if(!editor)return '';
+  const bulk=editor.mode==='bulk';
+  const record=bulk?null:editor.records?.[0]||null;
+  const currentEmployee=employeeId(record);
+  const employeeItems=[...directory.map(member=>({
+    value:member.id,label:member.displayName||member.display_name||'Workforce member'
+  }))];
+  if(record&&currentEmployee&&!employeeItems.some(item=>item.value===currentEmployee))
+    employeeItems.push({value:currentEmployee,label:record.ownerName||record.name||'Current employee'});
+  const employeeOptions=employeeItems.map(item=>option(item.value,item.label,bulk?'':currentEmployee)).join('');
+  const locationItems=TT_LOCATIONS.map(value=>({value,label:value}));
+  const departmentItems=TT_ADMIN_DEPARTMENTS.map(value=>({value,label:value}));
+  const status=hasClockOut(record)?'Completed':'Active';
+  const durationMode=Number.isSafeInteger(record?.creditedMsOverride)?'manual':'auto';
+  const durationMs=Number.isSafeInteger(record?.creditedMsOverride)?record.creditedMsOverride:
+    record?.clockOut?.timestamp?creditedAttendanceMs(record.clockIn?.timestamp,record.clockOut.timestamp):null;
+  const hours=durationMs===null?'':(durationMs/3600000).toFixed(2);
+  const reasonLabel=bulk?'Reason for bulk correction':'Reason for correction';
+  return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
+    `<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="${bulk?'bulk':'single'}">`+
+    '<header class="tt-admin-editor-head"><div><span class="tt-admin-eyebrow">SYSTEM ADMIN · ATTENDANCE MANAGEMENT</span>'+
+    `<h3 id="tt-admin-editor-title">${bulk?'Bulk edit attendance':'Edit attendance record'}</h3>`+
+    `<p>${bulk?`${editor.recordIds?.length||0} selected records · Blank fields remain unchanged`:'Correct the selected employee attendance record'}</p></div>`+
+    '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+' aria-label="Close editor">×</button></header>'+
+    (error?`<p class="tt-admin-error" role="alert">${esc(error)}</p>`:'')+
+    `<fieldset class="tt-admin-editor-fields"${busy?' disabled':''}><div class="tt-admin-editor-body">`+
+    '<section class="tt-admin-field-section"><h4>Employee and attendance</h4><div class="tt-admin-grid tt-admin-grid-two">'+
+    `<label class="tt-admin-field"><span>Employee</span><select name="employeeId">${bulk?option('','No change','') :''}${employeeOptions}</select></label>`+
+    selectField('Work location','location',locationItems,bulk?'':record?.clockIn?.location||'',{bulk})+
+    selectField('Department','department',departmentItems,bulk?'':record?.clockIn?.department||'',{bulk})+
+    selectField('Attendance status','status',[
+      {value:'Active',label:'Active'},{value:'Completed',label:'Completed'}
+    ],bulk?'':status,{bulk})+
+    '</div></section>'+
+    '<section class="tt-admin-field-section"><h4>Clock-In correction</h4><div class="tt-admin-grid tt-admin-grid-two">'+
+    inputField('Clock-In date and time','clockInAt',bulk?'':timeTrackerAdminDateTimeLocal(record?.clockIn?.timestamp),{type:'datetime-local',placeholder:bulk?'Leave unchanged':''})+
+    '</div>'+gpsFields(record,'in',{bulk})+'</section>'+
+    '<section class="tt-admin-field-section"><h4>Clock-Out correction</h4><div class="tt-admin-grid tt-admin-grid-two">'+
+    inputField('Clock-Out date and time','clockOutAt',bulk?'':timeTrackerAdminDateTimeLocal(record?.clockOut?.timestamp),{type:'datetime-local',placeholder:bulk?'Leave unchanged':''})+
+    '</div>'+gpsFields(record,'out',{bulk})+'</section>'+
+    '<section class="tt-admin-field-section"><h4>Working duration</h4><div class="tt-admin-grid tt-admin-grid-two">'+
+    selectField('Duration calculation','durationMode',[
+      {value:'auto',label:'Calculate from corrected timestamps'},
+      {value:'manual',label:'Set manual credited duration'}
+    ],bulk?'':durationMode,{bulk})+
+    inputField('Working duration (hours)','durationHours',bulk?'':hours,{type:'number',step:'0.01',min:0,max:744,placeholder:bulk?'Leave unchanged':'0.00'})+
+    '</div><p>Automatic duration applies the existing Philippine Time unpaid-break policy. Manual duration is stored as an explicit administrative override.</p></section>'+
+    '<section class="tt-admin-field-section"><h4>Correction note</h4><label class="tt-admin-field"><span>'+reasonLabel+'</span><textarea name="reason" maxlength="500" rows="2" placeholder="Optional explanation for the audit record"></textarea></label></section>'+
+    '</div></fieldset><footer class="tt-admin-editor-actions"><button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
+    `<button type="submit" class="primary"${busy?' disabled':''}>${busy?'Saving changes…':'Save changes'}</button></footer>`+
+    '</form></div>';
+}

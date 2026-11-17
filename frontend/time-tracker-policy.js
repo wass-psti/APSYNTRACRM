@@ -30,3 +30,12 @@ export function creditedAttendanceMs(start,end){
  }
  return Math.max(0,b-a-deducted);
 }
+
+/** Use an explicit System Admin duration override when present; otherwise preserve the existing PHT break policy. */
+export function creditedAttendanceRecordMs(record,start,end){
+ const override=record?.creditedMsOverride;
+ if(!record?.clockOut)return null;
+ if(Number.isSafeInteger(override)&&override>=0&&override<=2678400000)
+  return override;
+ return creditedAttendanceMs(start,end);
+}

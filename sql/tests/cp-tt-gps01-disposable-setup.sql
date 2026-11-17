@@ -46,7 +46,7 @@ CREATE TABLE public.work_board_columns(
  config jsonb NOT NULL DEFAULT '{}'::jsonb,
  position integer NOT NULL DEFAULT 0);
 CREATE TABLE public.work_board_item_values(
- item_id uuid NOT NULL REFERENCES public.work_board_items(id),
+ item_id uuid NOT NULL REFERENCES public.work_board_items(id) ON DELETE CASCADE,
  column_id uuid NOT NULL REFERENCES public.work_board_columns(id),
  value jsonb,updated_by uuid NOT NULL REFERENCES public.profiles(id),
  updated_at timestamptz NOT NULL DEFAULT now(),
