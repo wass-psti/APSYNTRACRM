@@ -13,6 +13,17 @@ import {
 } from "./frt-finance-readonly.js";
 
 export { projectFRTAging };
+export {
+  parseFRTAccountingCents,
+  formatFRTAccountingCents,
+  projectFRTAccountingSnapshot,
+  validateFRTAccountingLines,
+} from "./frt-accounting.js";
+export { projectFRTCompanyProfile } from "./frt-company-profile.js";
+export { projectFRTWorkflowProgress } from "./frt-workflow-progress.js";
+export { projectFRTVoucherSnapshot } from "./frt-voucher.js";
+export { validateFRTReceipts } from "./frt-liquidation.js";
+export { describeFRTBankExecution } from "./frt-bank-execution.js";
 
 export class FundTrackerNativeClient {
   constructor({ auth, api } = {}) {
