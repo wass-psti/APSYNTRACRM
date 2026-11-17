@@ -5,8 +5,8 @@ import {TL03_ANALYTICS_ENABLED,TL03_AUTOMATIC_NUMBERING_ENABLED,TradeLinkDomainC
  from '../tradelink-domain-client.js';
 const root=new URL('../../',import.meta.url);
 const source=path=>readFile(new URL(path,root),'utf8');
-test('Analytics remains enabled only for the existing signed aggregate RPC; automatic numbering remains off',()=>{
- assert.equal(TL03_ANALYTICS_ENABLED,true);assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
+test('Analytics remains enabled only for the existing signed aggregate RPC; automatic numbering candidate is active only in staged branch',()=>{
+ assert.equal(TL03_ANALYTICS_ENABLED,true);assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,true);
 });
 test('signed analytics client calls the existing aggregate RPC without creating a new reporting endpoint',async()=>{
  const calls=[];

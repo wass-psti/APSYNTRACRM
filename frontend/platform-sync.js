@@ -10,6 +10,9 @@ export const SYNC_MAX_BOARD_CHANNELS=24;
 export const SYNC_POLL_INTERVAL_MS=30000;
 export const SYNC_RECONCILE_INTERVAL_MS=90000;
 export const SYNC_FOCUS_COOLDOWN_MS=3000;
+export function shouldRefreshWorkspaceBoardList({reason,view}={}){
+ return reason!=='broadcast'||view!=='board';
+}
 const noop=()=>{};
 export class PlatformSync {
  constructor({auth,api,url,publishableKey,WebSocketImpl=globalThis.WebSocket,

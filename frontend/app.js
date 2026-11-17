@@ -29,7 +29,7 @@ import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
-import {PlatformSync} from './platform-sync.js';
+import {PlatformSync,shouldRefreshWorkspaceBoardList} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
@@ -67,6 +67,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
  normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
+import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_ANALYTICS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
@@ -1710,6 +1711,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   state.view===view&&state.tab===tab&&state.boardId===boardId;
  const sensitive=reason!=='broadcast';
  const boardChanged=boardId&&boardIds.includes(boardId);
+ const refreshBoardCatalog=shouldRefreshWorkspaceBoardList({reason,view});
  // Board broadcasts carry identifiers only; the server remains authoritative.
  if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
  let who,current;
@@ -1739,14 +1741,15 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  // Authorization reads must occur even while an unsaved editor is open.
  if(platformSyncEditInProgress())return false;
  const roleChanged=current.profile?.platform_role!==state.context.profile?.platform_role;
- const boards=await db.boards('active');
+ const boards=refreshBoardCatalog?await db.boards('active'):state.boards;
  if(!isCurrent())return false;
- if(!boards.some(board=>board.id===boardId)&&view==='board'){
+ if(refreshBoardCatalog&&!boards.some(board=>board.id===boardId)&&view==='board'){
   platformSync.stop();state.board=null;location.hash='#/boards';return false;
  }
  if(platformSyncEditInProgress())return false;
- const changedBoards=JSON.stringify(state.boards)!==JSON.stringify(boards);
- state.boards=boards;state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
+ let changedBoards=refreshBoardCatalog&&JSON.stringify(state.boards)!==JSON.stringify(boards);
+ if(refreshBoardCatalog)state.boards=boards;
+ state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
  if(reason!=='broadcast')void refreshSignedCrmRole({force:roleChanged}).catch(()=>{});
  if(roleChanged||sensitive){
   const verified=await roleConfig.bootstrapVerified().catch(()=>false);
@@ -1791,6 +1794,20 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
      quietReadAtStart!==visibleBoardRefreshSerial)return false;
   if(detail?.board?.id!==boardId||detail.board.workspace_id!==workspaceId)
    return false;
+  if(!refreshBoardCatalog&&detail.board.status!=='active'){
+   const activeBoards=await db.boards('active');
+   if(!isCurrent())return false;
+   state.boards=activeBoards;
+   platformSync.stop();state.board=null;state.boardUi=null;
+   state.edit=false;state.boardManage=false;location.hash='#/boards';
+   return false;
+  }
+  if(!refreshBoardCatalog){
+   const nextBoards=state.boards.map(board=>
+    board.id===boardId?{...board,...detail.board}:board);
+   changedBoards=JSON.stringify(state.boards)!==JSON.stringify(nextBoards);
+   state.boards=nextBoards;
+  }
   const changed=JSON.stringify(state.board)!==JSON.stringify(detail);
   state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
   if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
@@ -2855,6 +2872,36 @@ async function commitTradeLinkDraft(form){
    state.tradeLinkDraft.error=tradeLinkDraftSaveFailureMessage(err,{committed});
    state.tradeLinkDraft.message='';
   }
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+/** Advisory readiness preview; existing signed read, no mutation or new gate. */
+async function checkTradeLinkDocumentReadiness(documentId){
+ if(!TL03_WORKFLOW_SUBMIT_ENABLED||!tradeLinkAuthorizedListRoute()||
+  state.tradeLinkSection!=='documents'||state.tradeLinkDraft.busy||
+  state.tradeLinkDraft.status!=='AUTHORIZED_READ'||!state.boardManage)return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed||listed.archived||
+  !['draft','revision-required'].includes(listed.workflowState))return;
+ const seq=routeSerial,actor=auth.userId,workspace=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&auth.userId===actor&&
+  state.context?.workspace_id===workspace;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ try{
+  const record=await tradeLinkDraftWorkspace.read(documentId);
+  if(!same())return;
+  if(!record||record.id!==listed.documentId||
+    record.revision!==listed.revision||record.workflow_state!==listed.workflowState||
+    record.document_number!==listed.documentNumber||
+    record.document_type!==listed.documentType||
+    record.board_item_id!==listed.boardItemId||record.archived_at!==null)
+   throw new ApiError('The signed document changed; refresh All Documents.',409);
+  state.tradeLinkDraft.message=summarizeTradeLinkSubmitReadiness(record);
+ }catch(err){
+  if(same())state.tradeLinkDraft.error=
+   'Submit readiness could not be verified. Refresh the signed document before trying again.';
  }finally{
   if(same()){state.tradeLinkDraft.busy=false;render();}
  }
@@ -6880,6 +6927,9 @@ async function action(name,button){
    if(same()){state.tradeLinkDraft.busy=false;render();}
   }
   break;
+ }
+ case 'tradelink-document-check-readiness':{
+  await checkTradeLinkDocumentReadiness(button.dataset.id);break;
  }
  case 'tradelink-document-submit':{
   await submitTradeLinkDocument(button.dataset.id);break;
