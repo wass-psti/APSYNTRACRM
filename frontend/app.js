@@ -149,28 +149,27 @@ import {runFRTCI07SignedRoleProbe,sanitizeFRTCI07Report} from './frt-sec10-ci07-
 import {runSEC14SignedRead,sanitizeSEC14SignedRead} from './frt-sec14-signed-acceptance.js';
 import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-signed-denials.js';
 
-import {createFRTICObligation,recordFRTICSettlement} from './frt-intercompany-client.js';
-import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
-import {createSignedFRTRequest,updateSignedFRTFiling} from './frt-filing-workflow.js';
+
+
+
 import {renderFRTRequestWizard,enhanceFRTRequestWizard,collectFRTWizardRequest} from './frt-request-wizard.js';
 import {getFRTBrowserStorage,createFRTRequestDraftStore,createFRTDuplicateGuard,mountFRTRequestDraft} from './frt-request-draft.js';
-import {FRTRecipientClient} from './frt-recipient-client.js';
+
 import {mountFRTRecipientUI} from './frt-recipient-ui.js';
 import {renderFRTBoardSignedSnapshot} from './frt-board-signed-snapshot.js';
-import {updateFRTRequestDate} from './frt-board-date-edit.js';
-import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
-import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
-import {loadFRTLiquidation,submitFRTLiquidation} from './frt-liquidation.js';
-import {loadFRTBankExecution,recordFRTBankExecution} from './frt-bank-execution.js';
-import {loadFRTComments,addFRTComment,loadFRTAuditPage,frtAuditCsv,projectFRTNotifications,loadFRTDeadlineSnapshots,loadFRTAgingSummary} from './frt-collaboration.js';
+
+
+
+
+
+
 import {renderFRTComments,renderFRTActivityEvents,renderFRTActivityFilters,renderFRTNotifications,renderFRTNotificationSummary} from './frt-collaboration-ui.js';
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
-import {loadFRTArchive,restoreFRTRequest} from './frt-archive.js';
+
 import {renderFRTArchive} from './frt-archive-ui.js';
-import {loadFRTVoucher} from './frt-voucher.js';
+
 import {renderFRTVoucherDocument} from './frt-voucher-document.js';
-import {loadFRTCompanyProfile,saveFRTCompanyProfileWithLogo,
- loadFRTCompanyLogoDataUrl,renderFRTCompanyProfileEditor} from './frt-company-profile.js';
+import {renderFRTCompanyProfileEditor} from './frt-company-profile.js';
 import {mountFRTAccountingEditor} from './frt-accounting.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
@@ -202,7 +201,7 @@ import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
-import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
+
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
@@ -3965,12 +3964,12 @@ async function loadFRTFinanceDetail(requestId,seq=routeSerial){
  state.frtFinanceDetail=null;state.frtFinanceDetailId=requestId;
  state.frtFinanceDetailBusy=true;render();
  try{
-  const response=await loadFRTRequestDetailReadOnly({
-   auth,api:db,requestId,companyCode,allowedRequestIds:ids,workspaceId:workspace,
+  const response=await fundTracker.loadRequestDetail({
+   requestId,companyCode,allowedRequestIds:ids,workspaceId:workspace,
    expectedRole:state.frtFinance.role
   });
   if(response.status==='PASS'){
-   try{response.bankRelease=await loadFRTBankExecution({auth,api:db,workspaceId:workspace,
+   try{response.bankRelease=await fundTracker.loadBankExecution({workspaceId:workspace,
     requestId,allowedRequestIds:ids});}
    catch{response.bankReleaseError='Bank execution readback unavailable';}
   }
@@ -4569,7 +4568,7 @@ async function openFRTDiscussionDialog(requestId,request){
  let busy=false;
  const current=()=>frtPanelIsCurrent(view,{seq,workspaceId,boardId,userId});
  const refresh=async()=>{
-  const comments=await loadFRTComments({auth,workspaceId,requestId});
+  const comments=await fundTracker.loadComments({workspaceId,requestId});
   if(!current())return false;
   thread.innerHTML=renderFRTComments(comments,{currentUserId:userId,currentUserName:name()});
   return true;
@@ -4582,7 +4581,7 @@ async function openFRTDiscussionDialog(requestId,request){
   if(!body){status.textContent='Enter a comment before posting.';status.setAttribute('role','alert');return;}
   busy=true;submit.disabled=true;submit.textContent='Posting…';status.textContent='Saving comment…';status.setAttribute('role','status');
   try{
-   await addFRTComment({api:db,workspaceId,requestId,body});
+   await fundTracker.addComment({workspaceId,requestId,body});
    textarea.value='';
    try{
     await refresh();
@@ -4613,9 +4612,9 @@ async function openFRTCompanyProfileDialog(companyCode){
   if(event.target===view||event.target.closest('[data-frt-collab-close]'))revokePreview();
  });
  try{
-  profile=await loadFRTCompanyProfile({auth,api:db,workspaceId,companyCode});
-  if(profile.logoPath)profile.logoDataUrl=await loadFRTCompanyLogoDataUrl({
-   auth,api:db,workspaceId,companyCode,logoPath:profile.logoPath
+  profile=await fundTracker.loadCompanyProfile({workspaceId,companyCode});
+  if(profile.logoPath)profile.logoDataUrl=await fundTracker.loadCompanyLogoDataUrl({
+   workspaceId,companyCode,logoPath:profile.logoPath
   });
   if(!current())return;
   host.innerHTML=renderFRTCompanyProfileEditor(profile);
@@ -4655,7 +4654,7 @@ async function openFRTCompanyProfileDialog(companyCode){
    busy=true;submit.disabled=true;setStatus('Saving company profile…');
    try{
     const formData=new FormData(form);
-    const saved=await saveFRTCompanyProfileWithLogo({auth,api:db,workspaceId,companyCode,
+    const saved=await fundTracker.saveCompanyProfileWithLogo({workspaceId,companyCode,
      file:pendingLogoFile,removeLogo,profile:{
       legalName:String(formData.get('legalName')||''),
       registeredAddress:String(formData.get('registeredAddress')||''),
@@ -4710,13 +4709,13 @@ async function openFRTVoucherDialog(requestId,request){
   if(status)status.textContent=message;
  };
  try{
-  const result=await loadFRTVoucher({auth,api:db,workspaceId,requestId,companyCode,
+  const result=await fundTracker.loadVoucher({workspaceId,requestId,companyCode,
    expectedRole,expectedVoucher:request.voucher,expectedTitle:request.title,allowedRequestIds});
   if(!current())return;
   let voucher=result.voucher;
   host.innerHTML=renderFRTVoucherDocument(voucher);
-  mountFRTAccountingEditor({host,api:db,workspaceId,requestId,getVoucher:()=>voucher,onSaved:async()=>{
-   const fresh=await loadFRTVoucher({auth,api:db,workspaceId,requestId,companyCode,expectedRole,
+  fundTracker.mountAccountingEditor({host,workspaceId,requestId,getVoucher:()=>voucher,onSaved:async()=>{
+   const fresh=await fundTracker.loadVoucher({workspaceId,requestId,companyCode,expectedRole,
     expectedVoucher:request.voucher,expectedTitle:request.title,
     allowedRequestIds:(state.frtFinance?.requests||[]).map(row=>row.requestId)});
    if(!current())return null;
@@ -4744,7 +4743,7 @@ async function openFRTVoucherDialog(requestId,request){
    try{
     let documentVoucher=voucher;
     if(reprint){
-     const fresh=await loadFRTVoucher({auth,api:db,workspaceId,requestId,companyCode,
+     const fresh=await fundTracker.loadVoucher({workspaceId,requestId,companyCode,
       expectedRole,expectedVoucher:request.voucher,expectedTitle:request.title,
       allowedRequestIds:(state.frtFinance?.requests||[]).map(row=>row.requestId)});
      if(!current()){printWindow.close();return;}
@@ -4780,7 +4779,7 @@ async function openFRTVoucherDialog(requestId,request){
 }
 function downloadFRTActivityCsv(events,requests){
  const requestMap=new Map(requests.map(request=>[request.requestId,request]));
- const blob=new Blob([frtAuditCsv(events,requestMap)],{type:'text/csv;charset=utf-8'});
+ const blob=new Blob([fundTracker.auditCsv(events,requestMap)],{type:'text/csv;charset=utf-8'});
  const url=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=url;link.download='frt-activity-'+new Date().toISOString().slice(0,10)+'.csv';
  document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
@@ -4828,7 +4827,7 @@ async function openFRTActivityDialog(){
   if(busy||!current())return;
   busy=true;error='';render();
   try{
-   page=await loadFRTAuditPage({auth,api:db,workspaceId,companyCode:filters.companyCode,
+   page=await fundTracker.loadAuditPage({workspaceId,companyCode:filters.companyCode,
     requestId:filters.requestId,action:filters.action,search:filters.search,offset,limit:50});
    if(!current())return;
   }catch(err){if(current())error=err?.message||'Activity could not be loaded.';}
@@ -4852,12 +4851,12 @@ async function openFRTNotificationsDialog(){
   busy=true;host.innerHTML='<div class="frt-collab-empty" role="status">Loading persisted events and liquidation deadlines…</div>';
   try{
    const [page,agingResult]=await Promise.all([
-    loadFRTAuditPage({auth,api:db,workspaceId,companyCode,limit:100,offset:0}),
-    loadFRTAgingSummary({api:db,workspaceId,companyCode}).then(aging=>({aging})).catch(error=>({error}))
+    fundTracker.loadAuditPage({workspaceId,companyCode,limit:100,offset:0}),
+    fundTracker.loadAgingSummary({workspaceId,companyCode}).then(aging=>({aging})).catch(error=>({error}))
    ]);
-   const snapshots=await loadFRTDeadlineSnapshots({api:db,workspaceId,requests:page.requests,concurrency:6});
+   const snapshots=await fundTracker.loadDeadlineSnapshots({workspaceId,requests:page.requests,concurrency:6});
    if(!current())return;
-   const notifications=projectFRTNotifications({events:page.events,requests:page.requests,
+   const notifications=fundTracker.projectNotifications({events:page.events,requests:page.requests,
     bankSnapshots:snapshots.filter(item=>item.snapshot).map(item=>({requestId:item.requestId,snapshot:item.snapshot}))});
    const failed=snapshots.filter(item=>item.error).length;
    host.innerHTML=(agingResult.aging?renderFRTNotificationSummary(agingResult.aging):
@@ -8329,7 +8328,7 @@ async function action(name,button){
    const userId=auth.userId,seq=routeSerial;
    const listedRequestIds=state.frtFinance.requests.map(r=>r.requestId);
    try{
-    const snapshot=await loadFRTPersonAssignment({auth,api:db,requestId,workspaceId,
+    const snapshot=await fundTracker.loadPersonAssignment({requestId,workspaceId,
      companyCode,role,listedRequestIds});
     if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
        auth.userId!==userId||state.context?.workspace_id!==workspaceId)return;
@@ -8345,7 +8344,7 @@ async function action(name,button){
          state.frtFinance?.companyCode!==companyCode)
        throw new ApiError('FRT view changed. Reopen person assignment.',409);
       const raw=String(fd.get('assignee')||'');
-      await saveFRTPersonAssignment({auth,api:db,snapshot,
+      await fundTracker.savePersonAssignment({snapshot,
        nextAssigneeId:raw||null,listedRequestIds:
         state.frtFinance.requests.map(r=>r.requestId)});
       await loadFRTFinance(companyCode);
@@ -8369,7 +8368,7 @@ async function action(name,button){
         auth.userId!==actorId||state.context?.workspace_id!==workspaceId||
         state.frtFinance?.companyCode!==companyCode)
       throw new ApiError('FRT view changed. Reopen this request.',409);
-     await updateFRTRequestDate({auth,api:db,requestId,workspaceId,companyCode,
+     await fundTracker.updateRequestDate({requestId,workspaceId,companyCode,
       expectedRole,expectedDate,nextDate:String(fd.get('dateNeeded')||''),
       listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
      await loadFRTFinance(companyCode);
@@ -8394,7 +8393,7 @@ async function action(name,button){
        auth.userId!==actor||state.context?.workspace_id!==workspaceId||
        state.frtFinance?.companyCode!==companyCode||state.frtFinance.role!==role)
       throw new ApiError('FRT view changed. Reopen filing status.',409);
-     await updateSignedFRTFiling({auth,api:db,workspaceId,companyCode,role,
+     await fundTracker.updateFiling({workspaceId,companyCode,role,
       requestId,expectedStatus,nextStatus,
       listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
      await loadFRTFinance(companyCode);
@@ -8435,7 +8434,7 @@ async function action(name,button){
    }else if(section==='archive'){
     title='Archive Storage';
     try{
-     const archive=await loadFRTArchive({auth,api:db,
+     const archive=await fundTracker.loadArchive({
       workspaceId:state.context?.workspace_id,companyCode,
       expectedRole:state.frtFinance.role});
      body=renderFRTArchive({...archive,
@@ -8479,7 +8478,7 @@ async function action(name,button){
       if(warning)warning.textContent='Potential duplicate: the same company, payee and total were submitted in this browser within the last 10 minutes. Review the request, then submit again to continue.';
       throw new Error('Potential duplicate detected. Review the warning and submit again to continue.');
      }
-     const creation=await createSignedFRTRequest({auth,api:db,workspaceId,
+     const creation=await fundTracker.createRequest({workspaceId,
       companyCode:payload.companyCode,role,data:payload,
       allowPotentialDuplicate:duplicateConfirmed});
      if(creation?.status==='DUPLICATE_WARNING'){
@@ -8511,7 +8510,7 @@ async function action(name,button){
     };
     wizardForm?.addEventListener('input',resetDuplicateConfirmation);
     wizardForm?.addEventListener('change',resetDuplicateConfirmation);
-    const recipientClient=new FRTRecipientClient({auth,api:db});
+    const recipientClient=fundTracker.recipients;
     void mountFRTRecipientUI(modal,{client:recipientClient,scope:()=>({
      workspaceId:state.context?.workspace_id,
      companyCode:modal?.querySelector('[name=companyCode]')?.value||'',
@@ -8531,7 +8530,7 @@ async function action(name,button){
    const role=state.frtFinance.role,boardId=state.boardId,actor=auth.userId,seq=routeSerial;
    if(role!=='GENERAL_MANAGER'){toast('Archive recovery uses the existing General Manager action.');break;}
    let archive;
-   try{archive=await loadFRTArchive({auth,api:db,workspaceId,companyCode,expectedRole:role});}
+   try{archive=await fundTracker.loadArchive({workspaceId,companyCode,expectedRole:role});}
    catch(error){notice(error);break;}
    const archived=archive.requests.find(row=>row.requestId===requestId);
    if(!archived){toast('This request is no longer in the active company archive.');break;}
@@ -8543,7 +8542,7 @@ async function action(name,button){
         auth.userId!==actor||state.context?.workspace_id!==workspaceId||
         state.frtFinance?.companyCode!==companyCode||state.frtFinance?.role!==role)
       throw new ApiError('FRT company or signed session changed. Reopen archive recovery.',409);
-     await restoreFRTRequest({auth,api:db,workspaceId,companyCode,requestId,expectedRole:role});
+     await fundTracker.restoreRequest({workspaceId,companyCode,requestId,expectedRole:role});
      await loadFRTFinance(companyCode);
     },{submitLabel:'Restore request',
        successMessage:'Archived request restored and active tracker refreshed.'});
@@ -8559,7 +8558,7 @@ async function action(name,button){
    const boardId=state.boardId,actor=auth.userId,seq=routeSerial;
    const ids=state.frtFinance.requests.map(r=>r.requestId);
    let snapshot;
-   try{snapshot=await loadFRTBankExecution({auth,api:db,workspaceId:ws,requestId,allowedRequestIds:ids});}
+   try{snapshot=await fundTracker.loadBankExecution({workspaceId:ws,requestId,allowedRequestIds:ids});}
    catch(error){notice(error);break;}
    if(!snapshot.eligible||snapshot.recorded){toast('Bank execution is not eligible or was already recorded.');break;}
    const fields='<p class="note">Record evidence of an actual bank-executed disbursement. This does not initiate a transfer or verify it with the bank. The liquidation deadline is 72 hours after the execution timestamp.</p>'+
@@ -8570,7 +8569,7 @@ async function action(name,button){
        auth.userId!==actor||state.context?.workspace_id!==ws||
        state.frtFinance?.companyCode!==company)
      throw new ApiError('Financial session changed; reopen bank recording.',409);
-    await recordFRTBankExecution({auth,api:db,workspaceId:ws,requestId,allowedRequestIds:ids,
+    await fundTracker.recordBankExecution({workspaceId:ws,requestId,allowedRequestIds:ids,
      snapshot,bankName:String(form.get('bankName')||''),
      transactionReference:String(form.get('transactionReference')||''),
      executedAt:String(form.get('executedAt')||'')});
@@ -8590,7 +8589,7 @@ async function action(name,button){
    const allowedRequestIds=state.frtFinance.requests.map(r=>r.requestId);
    let snapshot;
    try{
-    snapshot=await loadFRTLiquidation({auth,api:db,workspaceId,requestId,allowedRequestIds});
+    snapshot=await fundTracker.loadLiquidation({workspaceId,requestId,allowedRequestIds});
    }catch(error){notice(error);break;}
    if(seq!==routeSerial||state.boardId!==boardId||auth.userId!==actor||
       state.context?.workspace_id!==workspaceId)return;
@@ -8602,7 +8601,7 @@ async function action(name,button){
        state.frtFinance?.companyCode!==companyCode)
      throw new ApiError('FRT session or company changed. Reopen liquidation.',409);
     const fields=collectFRTLiquidationForm(modal);
-    await submitFRTLiquidation({auth,api:db,workspaceId,requestId,allowedRequestIds,
+    await fundTracker.submitLiquidation({workspaceId,requestId,allowedRequestIds,
      snapshot,submissionKey,...fields});
     await loadFRTFinance(companyCode);
    },{submitLabel:'Submit liquidation',successMessage:'Liquidation saved and verified by signed readback.'});
@@ -8614,7 +8613,7 @@ async function action(name,button){
       state.frtFinance?.status!=='PASS'||state.frtFinanceDetail?.status!=='PASS'||
       !auth.isSignedIn)return;
    const requestId=String(button?.dataset?.requestId||'');
-   const code=String(button?.dataset?.frtAction||''),spec=frtActionSpec(code);
+   const code=String(button?.dataset?.frtAction||''),spec=fundTracker.actionSpec(code);
    const existing=state.frtFinanceDetail;
    if(!spec||requestId!==state.frtFinanceDetailId||
       !state.frtFinance.requests.some(r=>r.requestId===requestId)||
@@ -8632,7 +8631,7 @@ async function action(name,button){
        auth.userId!==userId||state.context?.workspace_id!==workspaceId||
        state.frtFinanceDetailId!==requestId||state.frtFinanceDetail!==existing)
      throw new ApiError('Request view changed. Reopen action confirmation.',409);
-    await executeFRTDomainAction({auth,api:db,requestId,workspaceId,
+    await fundTracker.executeAction({requestId,workspaceId,
      companyCode,role,existingDetail:existing,action:code,
      reason:String(form.get('reason')||''),reference:String(form.get('reference')||''),
      allowedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
@@ -8739,7 +8738,7 @@ async function action(name,button){
      creditorCode:String(form.get('creditorCode')||''),debtorCode:String(form.get('debtorCode')||''),
      amount:String(form.get('amount')||''),issuedOn:String(form.get('issuedOn')||''),
      dueOn:String(form.get('dueOn')||''),description:String(form.get('description')||'')};
-    await createFRTICObligation({auth,api:db,workspaceId,payload});
+    await fundTracker.createIntercompanyObligation({workspaceId,payload});
     await loadFRTFinance(companyCode);
    },{submitLabel:'Save intercompany entry',
       successMessage:'Intercompany obligation saved and dashboard refreshed.'});
@@ -8776,7 +8775,7 @@ async function action(name,button){
      throw new ApiError('The finance view or signed session changed. Reopen settlement entry.',409);
     const payload={amount:String(form.get('amount')||''),settledOn:String(form.get('settledOn')||''),
      reference:String(form.get('reference')||''),notes:String(form.get('notes')||'')};
-    await recordFRTICSettlement({auth,api:db,workspaceId,obligationId,payload});
+    await fundTracker.recordIntercompanySettlement({workspaceId,obligationId,payload});
     await loadFRTFinance(companyCode);
    },{submitLabel:'Record settlement',
       successMessage:'Intercompany settlement saved and both matrix sides refreshed.'});
