@@ -117,7 +117,7 @@ test('All Documents no longer duplicates Board projection and stays signed',()=>
  assert.doesNotMatch(denied,/data-tradelink-domain-record|data-tradelink-document-edit/);
 });
 
-test('denied manager, foreign workspace, and non-Draft statuses offer no Edit',()=>{
+test('denied manager and foreign workspace cannot edit; Approved offers explicit revision',()=>{
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:authorizedView,canManage:false});
  assert.doesNotMatch(denied,/data-tradelink-document-edit|tradelink-draft-archive/);
@@ -128,7 +128,9 @@ test('denied manager, foreign workspace, and non-Draft statuses offer no Edit',(
  assert.match(foreign,/workspace unavailable/);
  const final=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:{...authorizedView,rows:[{...listed,workflowState:'approved'}]},canManage:true});
- assert.doesNotMatch(final,/data-tradelink-document-edit|tradelink-draft-archive/);
+ assert.match(final,/data-tradelink-document-edit/);
+ assert.match(final,/Revise Approved/);
+ assert.doesNotMatch(final,/data-action="tradelink-draft-archive"/);
 });
 
 test('direct edit reload cannot expose an unrelated blank Draft form',()=>{
