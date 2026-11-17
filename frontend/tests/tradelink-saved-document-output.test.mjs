@@ -228,6 +228,8 @@ test('print action reloads signed record and matching Board before mounting the 
  assert.match(markup,/data-tradelink-print-action="print"/);
  assert.match(markup,/data-tradelink-legacy-company-default/);
  assert.match(markup,/Print \/ Save as PDF/);
+ assert.match(markup,/disable browser Headers and footers/);
+ assert.match(markup,/Enable Background graphics/);
  assert.match(markup,/Legacy company profile defaulted|legacyNotice/);
  assert.match(markup,/windowRef\.print\(\)/);
  assert.doesNotMatch(markup,/localStorage|sessionStorage|window[.]open|new Blob|createObjectURL/);
