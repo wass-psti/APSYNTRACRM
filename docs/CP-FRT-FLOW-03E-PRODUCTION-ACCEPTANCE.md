@@ -46,7 +46,7 @@ The production FRT company row currently says Process Solutions Technology Inc. 
 ## Verification baseline before production profile updates
 
 - Migration source manifest: PASS — 222 recovered baseline files and 16 forward migration files match SHA-256.
-- Full frontend regression after CP03E and TIN changes: **2,558/2,558 PASS**.
+- Full frontend regression after CP03E and TIN changes: **2,563/2,563 PASS**.
 - Focused company-profile and voucher regression: **23/23 PASS** after the TIN projection, PDF display, signed readback, and logo cleanup API corrections.
 - CP-FRT-FLOW-03C/03E disposable PostgreSQL 17 acceptance: **PASS**, including all three company TIN writes, backward-compatible seven-argument RPC behavior, private logo reference, exact-cent accounting, canonical voucher projection, stale revision conflict, atomic rejection, and concurrent revision serialization.
 - Chromium voucher acceptance: **PASS** — genuine seven-page PDF, two persisted accounting rows in the disposable browser fixture, exact-cent balance, PDF preview Blob, download, print and reprint controls; zero page errors.
