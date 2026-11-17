@@ -134,7 +134,7 @@ const BOARD_READ_RPC=new Set([
  'wm_import_extended_refs_read',
  'apsyntra_crm_my_effective_access',
  'apsyntra_role_is_admin','apsyntra_role_is_bootstrap',
- 'tl03_documents_page','tl03_document_read','tl03_document_history',
+ 'tl03_documents_page','tl03_document_read','tl03_document_history','tl03_document_revision_bundle',
  'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
  'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read',
  // Existing application read contracts used by concurrent native search.
