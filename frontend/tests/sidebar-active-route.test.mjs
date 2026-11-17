@@ -47,10 +47,12 @@ test('legacy Board routes select only their matching standalone application',()=
 
 test('sidebar uses one route-selected key for primary and recent links, with matching ARIA',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const sidebar=app.slice(app.indexOf('function sidebarNav('),app.indexOf('function topbar('));
- assert.match(sidebar,/const selectedNav=sidebarActiveRoute\(location\.hash/);
+ const sidebar=app.slice(app.indexOf('function sidebarNav('),app.indexOf('function shell('));
+ assert.match(sidebar,/const selectedNav=currentSidebarNavigation\(\)/);
  assert.match(sidebar,/const active=key=>selectedNav===key/);
  assert.match(sidebar,/const active=selectedNav==='recent:'\+b\.id/);
+ assert.match(sidebar,/const active=!!activeHref&&path===activeHref/);
+ assert.doesNotMatch(sidebar,/location\.hash\.startsWith\(TRADELINK_APPLICATION_ROUTE\+'\/'\)/);
  assert.match(sidebar,/active\('tradelink'\)/);
  assert.match(sidebar,/const selected=active\?' aria-current="page"':''/);
  assert.doesNotMatch(sidebar,/sidebarNav\([^\n]*,state\.tlStandalone===true\)/);
