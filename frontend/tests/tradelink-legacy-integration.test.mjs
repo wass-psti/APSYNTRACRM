@@ -158,6 +158,22 @@ test('selected-document CSV is bounded, quoted and contains metadata only',()=>{
  assert.throws(()=>serializeTradeLinkDocumentCsv([{...record,revision:0}]),/invalid/i);
 });
 
+test('selected-document CSV covers every source document type with stable metadata columns',()=>{
+ const types=['esi','quotation','delivery','packing','payment','po'];
+ const records=types.map((documentType,index)=>({...record,
+  documentNumber:'TL-CSV-'+documentType.toUpperCase(),documentType,
+  workflowState:'draft',revision:index+1,
+  updatedAt:'2026-11-17T06:00:00.000Z',archived:false}));
+ const csv=serializeTradeLinkDocumentCsv(records);
+ const lines=csv.trimEnd().split('\r\n');
+ assert.equal(lines.length,types.length+1);
+ assert.equal(lines[0],'"Document Number","Document Type","Workflow Status","Revision","Last Updated","Archived"');
+ for(const type of types){
+  assert.ok(lines.some(line=>line.includes('"'+type+'"')),type);
+ }
+ assert.doesNotMatch(csv,/customerName|customerEmail|content|workspace_id|lineItems/);
+});
+
 test('All Documents wires export only to the current selected authorized rows',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.match(app,/case 'tradelink-documents-export-selection'/);

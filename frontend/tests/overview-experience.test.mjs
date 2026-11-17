@@ -9,9 +9,10 @@ const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/overview-experience.css','utf8');
 const html=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
+const previewStart=app.indexOf('function overviewBoardPreview(');
 const start=app.indexOf('function overview(){');
 const end=app.indexOf('function boardsPage(){',start);
-const view=app.slice(start,end);
+const view=app.slice(previewStart,end);
 const card=app.slice(app.indexOf('function boardCard(board,index){'),app.indexOf('function empty(',app.indexOf('function boardCard(board,index){')));
 
 test('overview is isolated from signed sidebar and other board views',()=>{
@@ -43,7 +44,8 @@ test('overview retains exact page navigation, refresh, new-board and board-card 
  assert.match(view,/data-action="new-board"/);
  assert.match(view,/href="#\/boards"/);
  assert.match(view,/recent\.map\(boardCard\)/);
- assert.match(view,/state\.boards\.slice\(0,6\)/);
+ assert.match(view,/overviewBoardPreview\(state\.boards\)/);
+ assert.doesNotMatch(view,/state\.boards\.slice\(0,6\)/);
  assert.match(card,/return '<article class="board-card"/);
  assert.match(card,/class="board-card-actions"/);
  assert.match(card,/class="board-card-main"/);
@@ -58,6 +60,26 @@ test('overview retains exact page navigation, refresh, new-board and board-card 
  assert.match(app,/case 'refresh':/);
  assert.match(app,/case 'new-board':/);
 });
+
+test('Overview preview prefers the canonical TradeLink application Board over a newer same-name duplicate',()=>{
+ const start=app.indexOf('function overviewBoardPreview(');
+ const end=app.indexOf('function overview(){',start);
+ assert.ok(start>=0&&end>start);
+ const select=new Function('boards','TRADELINK_BOARD_ID',
+  app.slice(start,end)+'\nreturn overviewBoardPreview(boards);');
+ const canonical={id:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',name:'TradeLink',item_count:3};
+ const duplicate={id:'d8aeffbf-afea-42ba-bb88-a84cbedf86bf',name:'TradeLink',item_count:0};
+ const boards=[duplicate,...Array.from({length:5},(_,i)=>({id:'other-'+i,name:'Other '+i,item_count:i})),canonical];
+ const preview=select(boards,canonical.id);
+ assert.equal(preview.length,6);
+ assert.equal(preview[0],canonical);
+ assert.equal(boards[0],duplicate,'the full board catalog is not mutated');
+ assert.ok(boards.includes(duplicate),'the additional board remains in My Boards data');
+ assert.equal(preview.reduce((sum,board)=>sum+board.item_count,0),13);
+ assert.deepEqual(select([duplicate,...boards.slice(1,5)],canonical.id),
+  [duplicate,...boards.slice(1,5)],'without the canonical Board, the preview remains unchanged');
+});
+
 test('overview uses escaped identity and board descriptions, no mock operational data',()=>{
  assert.match(view,/e\(name\(\)\.split\(' '\)\[0\]\)/);
  assert.match(card,/e\(board\.name\)/);
@@ -71,12 +93,13 @@ test('overview uses escaped identity and board descriptions, no mock operational
 });
 test('overview board summary clarifies limited preview, formats signed counts and keeps paths',()=>{
  const render=new Function('state','name','e','overviewIcon','boardCard','empty',
-  'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel',
+  'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel','TRADELINK_BOARD_ID',
   view+'\nreturn overview();');
  const boards=Array.from({length:175},(_,i)=>({id:String(i),name:'Board '+i,item_count:i===0?6212:0}));
  const state={boards,roleVerified:false,context:{profile:{platform_role:'employee'}}};
  const html=render(state,()=> 'Example User',String,()=>'',b=>'<article data-id="'+b.id+'"></article>',
-  ()=>'<div>Empty board</div>',signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel);
+  ()=>'<div>Empty board</div>',signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel,
+  '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88');
  assert.match(html,/role="group" aria-label="Active boards: 175"/);
  assert.match(html,/role="group" aria-label="Board items: 6,212"/);
  assert.match(html,/Showing 6 of 175 available boards/);
@@ -132,20 +155,22 @@ test('Workspace essentials is rendered only after verified bootstrap authority',
  // Execute only the pure Overview renderer with inert view dependencies.
  // Profile roles must never substitute for the verified bootstrap RPC gate.
  const render=new Function('state','name','e','overviewIcon','boardCard','empty',
-  'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel',
+  'signedCrmRoleLabel','signedCrmIdentityLabel','workspaceRelationLabel','TRADELINK_BOARD_ID',
   view+'\nreturn overview();');
  const makeState=roleVerified=>({
   roleVerified,boards:[],context:{profile:{platform_role:'admin_general_manager'}}
  });
  const deps=[()=> 'Example User',String,v=>`<i>${v}</i>`,()=>'',()=>'<div>Empty board</div>'];
  for(const flag of [false,undefined,null,0]){
-  const markup=render(makeState(flag),...deps,signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel);
+  const markup=render(makeState(flag),...deps,signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel,
+   '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88');
   assert.doesNotMatch(markup,/Workspace essentials|overview-essentials|Supabase Auth connected|Native issue transactions/);
   assert.match(markup,/Your boards/);
   assert.match(markup,/Active boards/);
   assert.match(markup,/New board/);
  }
- const verified=render(makeState(true),...deps,signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel);
+ const verified=render(makeState(true),...deps,signedCrmRoleLabel,signedCrmIdentityLabel,workspaceRelationLabel,
+  '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88');
  assert.match(verified,/Workspace essentials/);
  assert.match(verified,/Supabase Auth connected/);
  assert.match(verified,/Board permissions are centralized/);
