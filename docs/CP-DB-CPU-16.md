@@ -32,7 +32,7 @@ The cumulative table-scan and `pg_stat_statements` counters cover a longer inter
 ## 3. Implementation
 
 1. Keep the 90-second signed heartbeat while Realtime is healthy.
-2. Introduce a five-minute maximum interval between full reconciliations for healthy Realtime sessions.
+2. Introduce a five-minute maximum interval between full board snapshots for eligible generic board item views while Realtime is healthy; other views retain their existing refresh cadence.
 3. Use a lightweight `heartbeat-check` reason between full sweeps.
 4. Preserve the active-board list read and signed view/edit/manage capability checks during the heartbeat.
 5. For generic board `items` views, skip board-shell, paginated-item, and board-structure reads during an unchanged Realtime heartbeat.
@@ -60,6 +60,6 @@ After merge and Pages deployment, compare equivalent windows and comparable acti
 - Database query execution/buffer deltas.
 - Supabase host CPU utilization from the Supabase Metrics API or Dashboard.
 
-The expected functional result is immediate board updates from Realtime broadcasts, 90-second signed capability/session checks, and a full consistency sweep within five minutes when Realtime remains connected. When Realtime is unavailable, the existing 30-second full polling fallback remains.
+The expected functional result is immediate board updates from Realtime broadcasts, 90-second signed capability/session checks, and a full generic-board snapshot within five minutes when Realtime remains connected. When Realtime is unavailable, the existing 30-second full polling fallback remains.
 
 A lower RPC count alone does not establish a CPU reduction. Keep CPU acceptance pending until comparable host CPU metrics are available.
