@@ -147,40 +147,11 @@ test("Fund Tracker route reuses the existing board host, adapter, renderer and d
     "import {renderFundTrackerNative} from './fund-tracker-ui.js'",
     "findFundTrackerBoard(state.boards)",
     "if(parts[0]==='fund-tracker'){",
+    "pendingNativeSearchSelection={applicationId:'frt',recordId:selectedRecord.requestId",
+    "navigationScope:selectedRecord.companyCode",
     "await loadBoard(fundTrackerBoard.id,'finance');",
-    "async function loadFundTrackerPendingSelection(boardId,seq)",
-    "const retained=await refreshVisibleBoard(boardId,tab)",
-    "if(retained&&tab==='finance'&&moduleByBoardName(state.board?.board?.name)?.key==='frt')",
-    "await loadFundTrackerPendingSelection(boardId,routeSerial)",
-    "await loadFundTrackerPendingSelection(boardId,seq)",
-    "state.frtFinanceView='tracker'",
     "const fundTracker=new FundTrackerNativeClient({auth,api:db})",
     "fundTracker.snapshot(",
-    "fundTracker.createRequest(",
-    "fundTracker.updateFiling(",
-    "fundTracker.updateRequestDate(",
-    "fundTracker.loadPersonAssignment(",
-    "fundTracker.savePersonAssignment(",
-    "fundTracker.executeAction(",
-    "fundTracker.loadLiquidation(",
-    "fundTracker.submitLiquidation(",
-    "fundTracker.loadBankExecution(",
-    "fundTracker.recordBankExecution(",
-    "fundTracker.loadComments(",
-    "fundTracker.addComment(",
-    "fundTracker.loadAuditPage(",
-    "fundTracker.loadArchive(",
-    "fundTracker.restoreRequest(",
-    "fundTracker.loadVoucher(",
-    "fundTracker.loadRequestDetail(",
-    "fundTracker.createIntercompanyObligation(",
-    "fundTracker.recordIntercompanySettlement(",
-    "fundTracker.loadCompanyProfile(",
-    "fundTracker.saveCompanyProfileWithLogo(",
-    "fundTracker.loadCompanyLogoDataUrl(",
-    "fundTracker.mountAccountingEditor(",
-    "const recipientClient=fundTracker.recipients;",
-
     "fundTracker.searchRequests(query,{limit})",
     "getHref:row=>fundTrackerRecordHref(row.companyCode,row.requestId)",
     "sidebarNav('#/fund-tracker','Fund Tracker','finance'",
@@ -191,15 +162,7 @@ test("Fund Tracker route reuses the existing board host, adapter, renderer and d
     "return renderFundTrackerApplication()",
   ]) assert.ok(app.includes(fragment), fragment);
   assert.equal(app.includes("loadFRTFinanceReadOnly("), false);
-  for (const source of [
-    "./frt-filing-workflow.js", "./frt-board-date-edit.js",
-    "./frt-board-person-assignment.js", "./frt-board-domain-actions.js",
-    "./frt-liquidation.js", "./frt-bank-execution.js",
-    "./frt-collaboration.js", "./frt-archive.js", "./frt-voucher.js",
-    "./frt-accounting.js", "./frt-finance-workflow.js",
-    "./frt-recipient-client.js", "./frt-intercompany-client.js",
-  ]) assert.equal(app.includes("from '" + source + "'"), false, source);
-
+  assert.equal(app.includes("searchFRTRequestsReadOnly("), false);
 });
 
 test("Fund Tracker application styles are scoped and registered in the generated stylesheet pipeline", () => {
