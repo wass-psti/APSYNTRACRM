@@ -167,6 +167,8 @@ import {renderFRTComments,renderFRTActivityEvents,renderFRTActivityFilters,rende
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
 import {loadFRTVoucher} from './frt-voucher.js';
 import {renderFRTVoucherDocument} from './frt-voucher-document.js';
+import {loadFRTCompanyProfile,saveFRTCompanyProfile,uploadFRTCompanyLogo,
+ loadFRTCompanyLogoDataUrl,renderFRTCompanyProfileEditor} from './frt-company-profile.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
@@ -4520,6 +4522,106 @@ async function openFRTDiscussionDialog(requestId,request){
   }
  });
 }
+async function openFRTCompanyProfileDialog(companyCode){
+ const workspaceId=state.context?.workspace_id,boardId=state.boardId;
+ const userId=auth.userId,seq=routeSerial;
+ if(!workspaceId||!userId||state.frtFinance?.status!=='PASS'||
+  !state.frtFinance?.companies?.some(company=>company.code===companyCode))return;
+ const view=openFRTCollabPanel('Company Profile · '+companyCode,
+  '<div class="frt-collab-empty" role="status">Loading persisted company profile…</div>');
+ const host=view.querySelector('[data-frt-panel-body]');
+ const current=()=>frtPanelIsCurrent(view,{seq,workspaceId,boardId,userId});
+ let profile=null,pendingLogoFile=null,previewUrl='',removeLogo=false,busy=false;
+ const revokePreview=()=>{if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}};
+ view.addEventListener('click',event=>{
+  if(event.target===view||event.target.closest('[data-frt-collab-close]'))revokePreview();
+ });
+ try{
+  profile=await loadFRTCompanyProfile({auth,api:db,workspaceId,companyCode});
+  if(profile.logoPath)profile.logoDataUrl=await loadFRTCompanyLogoDataUrl({
+   auth,api:db,workspaceId,companyCode,logoPath:profile.logoPath
+  });
+  if(!current())return;
+  host.innerHTML=renderFRTCompanyProfileEditor(profile);
+  const form=host.querySelector('[data-frt-company-profile-form]');
+  const status=host.querySelector('[data-frt-company-profile-status]');
+  const submit=host.querySelector('[data-frt-company-profile-save]');
+  const logoInput=form.querySelector('[name="companyLogo"]');
+  const logoPreview=host.querySelector('[data-frt-company-logo-preview]');
+  const removeButton=host.querySelector('[data-frt-company-logo-remove]');
+  const setStatus=(message,isError=false)=>{
+   if(!status)return;
+   status.textContent=message;
+   status.setAttribute('role',isError?'alert':'status');
+  };
+  logoInput.addEventListener('change',()=>{
+   pendingLogoFile=logoInput.files?.[0]||null;
+   removeLogo=false;revokePreview();
+   if(pendingLogoFile){
+    previewUrl=URL.createObjectURL(pendingLogoFile);
+    logoPreview.innerHTML='<img src="'+e(previewUrl)+'" alt="Selected company logo preview">';
+    setStatus('Logo selected. It will be uploaded when the profile is saved.');
+   }else{
+    logoPreview.innerHTML=profile.logoDataUrl?
+     '<img src="'+e(profile.logoDataUrl)+'" alt="'+e(profile.legalName)+' logo">':
+     '<span>No company logo configured</span>';
+    setStatus('');
+   }
+  });
+  removeButton.addEventListener('click',()=>{
+   pendingLogoFile=null;removeLogo=true;logoInput.value='';revokePreview();
+   logoPreview.innerHTML='<span>Company logo will be removed when saved</span>';
+   setStatus('Logo removal selected. Save the profile to apply it.');
+  });
+  form.addEventListener('submit',async event=>{
+   event.preventDefault();
+   if(busy||!current())return;
+   busy=true;submit.disabled=true;setStatus('Saving company profile…');
+   try{
+    let logoPath=removeLogo?null:profile.logoPath;
+    if(pendingLogoFile){
+     logoPath=await uploadFRTCompanyLogo({auth,api:db,workspaceId,companyCode,file:pendingLogoFile});
+     profile.logoPath=logoPath;
+     pendingLogoFile=null;removeLogo=false;logoInput.value='';
+     revokePreview();
+     profile.logoDataUrl=await loadFRTCompanyLogoDataUrl({auth,api:db,workspaceId,companyCode,logoPath});
+     logoPreview.innerHTML=profile.logoDataUrl?
+      '<img src="'+e(profile.logoDataUrl)+'" alt="'+e(profile.legalName)+' logo">':
+      '<span>Logo uploaded; preview unavailable</span>';
+    }
+    const formData=new FormData(form);
+    const saved=await saveFRTCompanyProfile({auth,api:db,workspaceId,companyCode,profile:{
+     legalName:String(formData.get('legalName')||''),
+     registeredAddress:String(formData.get('registeredAddress')||''),
+     contactPhone:String(formData.get('contactPhone')||''),
+     contactEmail:String(formData.get('contactEmail')||''),
+     logoPath
+    }});
+    if(!current())return;
+    profile={...saved,logoDataUrl:saved.logoPath?(profile.logoDataUrl||null):null};
+    removeLogo=false;
+    if(profile.logoPath&&!profile.logoDataUrl){
+     profile.logoDataUrl=await loadFRTCompanyLogoDataUrl({auth,api:db,workspaceId,companyCode,logoPath:profile.logoPath});
+    }
+    state.frtFinance.companies=state.frtFinance.companies.map(company=>
+     company.code===companyCode?{...company,name:profile.legalName}:company);
+    render();
+    setStatus('Company profile saved and read back successfully. Voucher previews and PDFs will use the saved information.');
+    logoPreview.innerHTML=profile.logoDataUrl?
+     '<img src="'+e(profile.logoDataUrl)+'" alt="'+e(profile.legalName)+' logo">':
+     '<span>No company logo configured</span>';
+   }catch(error){
+    if(current())setStatus(error?.message||'Company profile could not be saved.',true);
+   }finally{
+    busy=false;
+    if(current())submit.disabled=false;
+   }
+  });
+ }catch(error){
+  if(current())host.innerHTML='<div class="frt-collab-empty" role="alert">Company profile could not be loaded: '+
+   e(error?.message||'Refresh the company and try again.')+'</div>';
+ }
+}
 async function openFRTVoucherDialog(requestId,request){
  const workspaceId=state.context?.workspace_id,boardId=state.boardId;
  const userId=auth.userId,seq=routeSerial,companyCode=state.frtFinance?.companyCode;
@@ -4547,6 +4649,11 @@ async function openFRTVoucherDialog(requestId,request){
    expectedRole,expectedVoucher:request.voucher,expectedTitle:request.title,allowedRequestIds});
   if(!current())return;
   const voucher=result.voucher;
+  if(voucher.company.logoPath){
+   voucher.company.logoDataUrl=await loadFRTCompanyLogoDataUrl({auth,api:db,workspaceId,
+    companyCode,logoPath:voucher.company.logoPath});
+   if(!current())return;
+  }
   host.innerHTML=renderFRTVoucherDocument(voucher);
   const controls=()=>[...host.querySelectorAll('[data-frt-voucher-preview],[data-frt-voucher-download],[data-frt-voucher-print],[data-frt-voucher-reprint]')];
   const setBusy=value=>{busy=value;controls().forEach(control=>{control.disabled=value;});};
@@ -4574,6 +4681,11 @@ async function openFRTVoucherDialog(requestId,request){
       allowedRequestIds:(state.frtFinance?.requests||[]).map(row=>row.requestId)});
      if(!current()){printWindow.close();return;}
      documentVoucher=fresh.voucher;
+     if(documentVoucher.company.logoPath){
+      documentVoucher.company.logoDataUrl=await loadFRTCompanyLogoDataUrl({auth,api:db,workspaceId,
+       companyCode,logoPath:documentVoucher.company.logoPath});
+      if(!current()){printWindow.close();return;}
+     }
      if(documentVoucher.voucherNumber!==voucher.voucherNumber)
       throw new ApiError('The persisted voucher number changed unexpectedly. Reopen the request.',409);
     }
@@ -8405,6 +8517,14 @@ async function action(name,button){
     await loadFRTFinance(companyCode);
    },{submitLabel:'Confirm '+spec.label,destructive:true,
      successMessage:'FRT action acknowledged by the server. Request list refreshed.'});
+   break;
+ }
+ case 'frt-company-profile-open':{
+   if(state.frtFinanceBusy||state.tab!=='finance'||!auth.isSignedIn||
+      state.frtFinance?.status!=='PASS')return;
+   const companyCode=String(button?.dataset?.code||'');
+   if(!state.frtFinance.companies?.some(company=>company.code===companyCode))return;
+   await openFRTCompanyProfileDialog(companyCode);
    break;
  }
  case 'frt-voucher-open':{

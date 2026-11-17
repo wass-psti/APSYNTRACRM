@@ -1,0 +1,87 @@
+name: CP-FRT-FLOW-03A — Company profile and voucher integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - "supabase/migrations/20261117031500_frt_company_profile_metadata.sql"
+      - "supabase/migration-source-manifest.json"
+      - "sql/tests/cp-frt-flow-03a-company-profile-disposable.sql"
+      - "scripts/verify-migration-source-manifest.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/cp-frt-flow-03a-company-profile.yml"
+  push:
+    branches: [feat/cp-frt-flow-03a-company-profile-20261117]
+    paths:
+      - "frontend/**"
+      - "supabase/migrations/20261117031500_frt_company_profile_metadata.sql"
+      - "supabase/migration-source-manifest.json"
+      - "sql/tests/cp-frt-flow-03a-company-profile-disposable.sql"
+      - "scripts/verify-migration-source-manifest.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/cp-frt-flow-03a-company-profile.yml"
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check FRT module syntax
+        run: |
+          node --check frontend/app.js
+          node --check frontend/frt-company-profile.js
+          node --check frontend/frt-voucher.js
+          node --check frontend/frt-voucher-document.js
+          node --check frontend/frt-voucher-pdf.js
+      - name: Verify migration source manifest
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Run complete frontend regression
+        run: npm test
+      - name: Build production frontend and PDF engine
+        run: npm run build
+  disposable-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: disposable_only
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Apply migration and verify three-company profile isolation
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-frt-flow-03a-company-profile-disposable.sql

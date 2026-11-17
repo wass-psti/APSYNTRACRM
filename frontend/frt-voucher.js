@@ -1,6 +1,7 @@
 /** CP-FRT-FLOW-03 — signed, narrow projection of persisted voucher source records. */
 import {ApiError} from './session.js';
 import {loadFRTBankExecution} from './frt-bank-execution.js';
+import {loadFRTCompanyLogoDataUrl} from './frt-company-profile.js';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const date=/^\d{4}-\d{2}-\d{2}$/;
@@ -67,7 +68,7 @@ export function projectFRTVoucherSnapshot(raw,{workspaceId,requestId,companyCode
    address:optionalText(raw.company.address,500)?raw.company.address||null:null,
    phone:optionalText(raw.company.phone,120)?raw.company.phone||null:null,
    email:optionalText(raw.company.email,180)?raw.company.email||null:null,
-   logoUrl:optionalText(raw.company.logoUrl,1000)?raw.company.logoUrl||null:null},
+   logoPath:optionalText(raw.company.logoPath,500)?raw.company.logoPath||null:null},
   voucherNumber:raw.voucherNumber,voucherDate:raw.voucherDate,
   requestReference:{orderIntakeNo:raw.requestReference.orderIntakeNo||'',
    checkNo:raw.requestReference.checkNo||''},
@@ -112,9 +113,13 @@ export async function loadFRTVoucher({auth,api,workspaceId,requestId,companyCode
  if(raw?.id!==requestId||raw?.workspace_id!==workspaceId||
   raw?.company_code!==companyCode)
   throw fail('Signed request detail no longer matches the selected request.',409,'FRT_VOUCHER_DETAIL_MISMATCH');
- const voucher=projectFRTVoucherSnapshot(raw?.voucher,{workspaceId,requestId,companyCode,
+ let voucher=projectFRTVoucherSnapshot(raw?.voucher,{workspaceId,requestId,companyCode,
   expectedVoucher,expectedTitle});
  if(!voucher)throw fail('Persisted voucher details or expense totals failed validation.',409,'FRT_VOUCHER_SNAPSHOT_INVALID');
+ if(voucher.company.logoPath){
+  const logoDataUrl=await loadFRTCompanyLogoDataUrl({auth,api,workspaceId,companyCode,logoPath:voucher.company.logoPath});
+  voucher={...voucher,company:{...voucher.company,logoDataUrl}};
+ }
 
  let bankExecution=null,bankExecutionError='';
  try{

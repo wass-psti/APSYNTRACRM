@@ -87,9 +87,14 @@ export function buildFRTVoucherDefinition(voucher){
  const content=[
   {text:'DISBURSEMENT VOUCHER',style:'documentTitle',margin:[0,8,0,4]},
   {columns:[
+   ...(typeof company.logoDataUrl==='string'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(company.logoDataUrl)?
+    [{image:company.logoDataUrl,width:54,height:54,fit:[54,54]}]:[]),
    {width:'*',stack:[
     {text:company.name||'Company name unavailable',style:'companyName'},
-    {text:'Company code: '+(company.code||'—'),style:'muted'}
+    {text:'Company code: '+(company.code||'—'),style:'muted'},
+    ...(company.address?[{text:'Registered address: '+company.address,style:'muted'}]:[]),
+    ...(company.phone?[{text:'Telephone: '+company.phone,style:'muted'}]:[]),
+    ...(company.email?[{text:'Email: '+company.email,style:'muted'}]:[])
    ]},
    {width:190,stack:[
     {text:'VOUCHER NUMBER',style:'metaLabel',alignment:'right'},
@@ -97,9 +102,7 @@ export function buildFRTVoucherDefinition(voucher){
     {text:'Voucher date: '+date(voucher.voucherDate),style:'metaValue',alignment:'right'}
    ]}
   ],columnGap:12,margin:[0,0,0,14]},
-  ...(company.address||company.phone||company.email?[
-   {text:[company.address,company.phone,company.email].filter(Boolean).join(' · '),style:'muted',margin:[0,0,12,0]}
-  ]:[
+  ...(company.address||company.phone||company.email||company.logoDataUrl?[]:[
    {text:'Company address, logo and contact details are not configured in Fund Release Tracker.',style:'unconfigured',margin:[0,0,12,0]}
   ]),
   sectionTitle('REQUEST AND PAYMENT DETAILS'),

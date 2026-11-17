@@ -192,7 +192,8 @@ const NON_BOARD_DOMAIN_RPC=new Set([
  'fm1_create_ticket_v1','fm1_transition_ticket_v1','fm1_record_milestone_v1',
  'fm1_record_priority_v1','fm1_request_hold_v1','fm1_validate_hold_v1',
  'fm1_end_hold_v1','fm1_assign_ticket_v1','fm1_add_conversation_v1',
- 'fm1_notification_inbox_v1','fm1_notification_mark_read_v1'
+ 'fm1_notification_inbox_v1','fm1_notification_mark_read_v1',
+ 'frt_update_company_profile'
 ]);
 
 export class DomainApi {

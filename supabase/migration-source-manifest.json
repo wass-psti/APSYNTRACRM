@@ -1645,6 +1645,13 @@
       "file": "20261117020000_tradelink_immutable_revision_snapshots.sql",
       "bytes": 11962,
       "sha256": "2aa1381dd3d55a9a2e60100e4e04f76c5b2a0bedf8d865c26fb4b6daca48ba27"
+    },
+    {
+      "version": "20261117031500",
+      "name": "frt_company_profile_metadata",
+      "file": "20261117031500_frt_company_profile_metadata.sql",
+      "bytes": 10310,
+      "sha256": "0bd143bcfb1abebf3d8f7fa37393bb40fde4975a0e1927a4a86986af916e7989"
     }
   ]
 }

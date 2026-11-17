@@ -355,6 +355,10 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
     escape(c.code)+'" title="'+escape(c.name)+'" '+(busy?'disabled':'')+'>'+escape(c.code)+
     (c.code===result.companyCode?' <span aria-hidden="true">✓</span>':'')+'</button>').join('')+'</div>';
  }
+ if(result?.status==='PASS'&&result.companyCode){
+  html+='<button type="button" class="secondary" data-action="frt-company-profile-open" data-code="'+
+   escape(result.companyCode)+'">Company Profile</button>';
+ }
  html+='</header><nav class="frt-ref-nav" aria-label="Fund Tracker sections">'+
   [['tracker','▤ &nbsp; Fund Tracker'],['executive','▦ &nbsp; Executive Dashboard'],
    ['opex','◫ &nbsp; OPEX Analytics'],['manual','▤ &nbsp; User Manual']].map(([key,label])=>
