@@ -9,6 +9,7 @@ const PHASES=new Set(['connecting','synchronized','synchronizing','reconnecting'
 export const SYNC_MAX_BOARD_CHANNELS=24;
 export const SYNC_POLL_INTERVAL_MS=30000;
 export const SYNC_RECONCILE_INTERVAL_MS=90000;
+export const SYNC_FULL_RECONCILE_INTERVAL_MS=300000;
 export const SYNC_FOCUS_COOLDOWN_MS=3000;
 const noop=()=>{};
 export class PlatformSync {
@@ -28,7 +29,7 @@ export class PlatformSync {
   this.heartbeat=null;this.reconnectTimer=null;this.socket=null;
   this.ref=0;this.attempt=0;this.pending=new Set();this.joins=new Map();
   this.joined=new Map();this.inFlight=false;this.heartbeatsPending=0;this.lastSyncAt=null;
-  this.lastCheckAt=null;this.lastTransport='none';
+  this.lastCheckAt=null;this.lastFullSyncAt=null;this.lastTransport='none';
   this.scope=null;this.lastStatus=null;this.boardIds=[];
   this.lastFocusSyncAt=null;this.queuedSync=null;
  }
@@ -71,7 +72,7 @@ export class PlatformSync {
   this.timer=null;this.reconnectTimer=null;this.flushTimer=null;
   this.pending.clear();this.boardIds=[];this.scope=null;
   this.closeSocket();this.inFlight=false;this.lastTransport='none';
-  this.lastSyncAt=null;this.lastCheckAt=null;this.attempt=0;
+  this.lastSyncAt=null;this.lastCheckAt=null;this.lastFullSyncAt=null;this.attempt=0;
   this.lastFocusSyncAt=null;this.queuedSync=null;
   this.status('offline','Not connected');
  }
@@ -211,9 +212,12 @@ export class PlatformSync {
  }
  async pollTick(gen){
   if(gen!==this.generation||!this.running||!this.visible()||!this.online())return;
-  const interval=this.lastTransport==='realtime'?SYNC_RECONCILE_INTERVAL_MS:SYNC_POLL_INTERVAL_MS;
+  const realtime=this.lastTransport==='realtime';
+  const interval=realtime?SYNC_RECONCILE_INTERVAL_MS:SYNC_POLL_INTERVAL_MS;
   if(this.lastCheckAt!==null&&this.now()-this.lastCheckAt<interval)return;
-  await this.syncNow('poll',[]);
+  const fullReconcileDue=!realtime||this.lastFullSyncAt===null||
+   this.now()-this.lastFullSyncAt>=SYNC_FULL_RECONCILE_INTERVAL_MS;
+  await this.syncNow(realtime&&!fullReconcileDue?'heartbeat-check':'poll',[]);
  }
  queueSync(reason,boardIds=[]){
   const full=reason!=='broadcast';
@@ -238,6 +242,7 @@ export class PlatformSync {
    if(gen!==this.generation||!this.sameScope(scope.userId,scope.workspaceId))return false;
    if(ok===true){
     this.lastSyncAt=this.now();
+    if(reason!=='heartbeat-check'&&reason!=='broadcast')this.lastFullSyncAt=this.lastSyncAt;
     this.status('synchronized',this.lastTransport==='realtime'?
      'Authorized Realtime connected':'Authorized polling fallback');
     return true;
