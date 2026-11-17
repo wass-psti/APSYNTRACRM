@@ -15986,6 +15986,9 @@
 #app .ft3-signed-bar-height-19{height:95%}
 #app .ft3-signed-bar-height-20{height:100%}
 
+/* Standalone host route keeps the existing FuelTrack surface without Board chrome. */
+#app .aps-board-shell.aps-fueltrack-shell .ft3-app{margin-top:0}
+
 /* frontend/tradelink-application.css */
 /* TradeLink source-aligned application shell. Scoped to avoid board/TimeTracker regressions. */
 .aps-tradelink-app{--tl-ink:var(--ink,#20263b);--tl-line:var(--line,#e8ebf2);--tl-accent:var(--purple,#5d61e8);color:var(--tl-ink);display:grid;gap:19px;min-width:0}

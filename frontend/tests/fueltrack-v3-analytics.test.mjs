@@ -41,9 +41,9 @@ test('deep links normalize invalid view, range and metric without arbitrary oper
  assert.equal(normalizeFuelTrackAnalyticsRange('random'),'all');
  assert.equal(normalizeFuelTrackAnalyticsMetric('cost-per-vehicle'),'both');
  assert.equal(fuelTrackAnalyticsHref('efficiency','week','volume'),
-  '#/boards/'+BOARD+'/fueltrack/analytics/efficiency/week/volume');
+  '#/fueltrack/analytics/efficiency/week/volume');
  assert.equal(fuelTrackAnalyticsHref('service','unknown','arbitrary'),
-  '#/boards/'+BOARD+'/fueltrack/analytics/fuel-price/all/both');
+  '#/fueltrack/analytics/fuel-price/all/both');
 });
 test('empty signed dataset never copies screenshot amounts, rankings or mileage',()=>{
  const model=fuelTrackAnalyticsModel(fixture());

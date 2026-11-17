@@ -655,3 +655,6 @@
 #app .ft3-signed-bar-height-18{height:90%}
 #app .ft3-signed-bar-height-19{height:95%}
 #app .ft3-signed-bar-height-20{height:100%}
+
+/* Standalone host route keeps the existing FuelTrack surface without Board chrome. */
+#app .aps-board-shell.aps-fueltrack-shell .ft3-app{margin-top:0}

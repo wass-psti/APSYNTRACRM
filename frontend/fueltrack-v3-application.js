@@ -3,6 +3,8 @@
  * Never substitute the Monday.com reference screenshot's 271 transactions.
  */
 import {renderFuelTrackNewRequest} from './fueltrack-v3-new-request.js';
+import {FUELTRACK_V3_APPLICATION_ROUTE,fuelTrackApplicationHref} from './fueltrack-v3-application-route.js';
+export {FUELTRACK_V3_APPLICATION_ROUTE} from './fueltrack-v3-application-route.js';
 import {renderFuelTrackApprovals} from './fueltrack-v3-approvals.js';
 import {renderFuelTrackLightFuels,renderFuelTrackRefuelingDialog} from './fueltrack-v3-lightfuels.js';
 import {renderFuelTrackActivity} from './fueltrack-v3-activity.js';
@@ -27,11 +29,17 @@ export function isFuelTrackV3ApplicationBoard(board){
   typeof board?.workspace_id==='string'&&
   String(board.description||'').startsWith(MARKER)&&board.status==='active';
 }
+export function findFuelTrackV3Board(boards){
+ return Array.isArray(boards)?boards.find(board=>board?.id===FUELTRACK_V3_ID&&
+  board?.name==='FuelTrack+ v3'&&board.status!=='trashed')||null:null;
+}
 export function normalizeFuelTrackSection(section){
  return FUELTRACK_TABS.some(x=>x.key===section)?section:'dashboard';
 }
 export function fuelTrackHref(section='dashboard'){
- return '#/boards/'+FUELTRACK_V3_ID+'/fueltrack/'+normalizeFuelTrackSection(section);
+ const normalized=normalizeFuelTrackSection(section);
+ return normalized==='dashboard'?FUELTRACK_V3_APPLICATION_ROUTE:
+  fuelTrackApplicationHref(normalized);
 }
 function numericValue(value){
  const raw=value&&typeof value==='object'&&!Array.isArray(value)?

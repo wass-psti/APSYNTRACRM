@@ -38,8 +38,8 @@ test('exact seven tabs and canonical application deep links',()=>{
   'Dashboard','Analytics','All Requests','New Fuel Request','Approvals','LightFuels','Activity'
  ]);
  assert.equal(normalizeFuelTrackSection('untrusted'),'dashboard');
- assert.equal(fuelTrackHref('dashboard'),'#/boards/'+BOARD+'/fueltrack/dashboard');
- assert.equal(fuelTrackHref('new-request'),'#/boards/'+BOARD+'/fueltrack/new-request');
+ assert.equal(fuelTrackHref('dashboard'),'#/fueltrack');
+ assert.equal(fuelTrackHref('new-request'),'#/fueltrack/new-request');
  const markup=renderFuelTrackV3Application({detail:fixture(),section:'dashboard'});
  assert.equal((markup.match(/class="ft3-app-tab(?: is-active)?"/g)||[]).length,7);
  assert.equal((markup.match(/aria-current="page"/g)||[]).length,1);
@@ -124,13 +124,15 @@ test('unfinished tabs are navigation-ready without offering unauthorized writes'
   assert.match(html,/Return to Dashboard/);
  }
 });
-test('APSYNTRA board routes preserve existing Board items while adding FuelTrack app',()=>{
+test('FuelTrack opens from its standalone route while preserving its existing Board and data source',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const index=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
- assert.match(app,/key:'fueltrack',href:fuelTrackHref\('dashboard'\)/);
+ assert.match(app,/sidebarNav\(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack\+'/);
+ assert.match(app,/if\(parts\[0\]==='fueltrack'\)/);
+ assert.match(app,/loadBoard\(FUELTRACK_V3_ID,'fueltrack'\)/);
  assert.match(app,/renderFuelTrackV3Application\(\{detail:state\.board/);
- assert.match(app,/parts\[2\]==='fueltrack'/);
- assert.match(app,/state\.fuelTrackSection=requested==='fueltrack'/);
+ assert.match(app,/if\(parts\[1\]===FUELTRACK_V3_ID\)/);
+ assert.doesNotMatch(app,/key:'fueltrack',href:/);
  assert.match(app,/boardGrid\(state\.board/);
  assert.match(index,/fueltrack-v3-application\.css/);
 });

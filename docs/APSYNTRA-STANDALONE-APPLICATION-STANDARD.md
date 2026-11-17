@@ -81,7 +81,53 @@ The adapter continues to use the existing signed RPCs; this migration does not r
 - Deep links use `#/tradelink/drafts/...`, `#/tradelink/documents/...`, `#/tradelink/activity`, and `#/tradelink/analytics`.
 - The host resolves the existing TradeLink board internally and invokes the existing `loadBoard()` lifecycle with the native TradeLink renderer. The generic board-detail renderer is not used as the application UI.
 - Legacy `#/boards/<TradeLink-board-id>/...` routes are canonicalized to the matching native route.
-- The TradeLink board shortcut is omitted from active My Boards, Overview board previews, Recent boards, global-search board suggestions, and generic board-detail tab navigation. The same board-visibility rule is applied to the already-standalone TimeTracker and Fund Tracker applications; their existing board records remain intact. The underlying board and all records remain unchanged.
+- The TradeLink and FuelTrack board shortcuts are omitted from active My Boards, Overview board previews, Recent boards, global-search board suggestions, and generic board-detail tab navigation. The same board-visibility rule is applied to the already-standalone TimeTracker and Fund Tracker applications; their existing board records remain intact. The underlying board and all records remain unchanged.
+
+### FuelTrack+ v3 mapping and migration
+
+#### Identity and authoritative sources
+
+| Field | Existing contract |
+|---|---|
+| Module key / module ID | `fueltrack` |
+| Existing board ID | `7af78b3f-67bf-4600-9aa1-9006d19d486e` |
+| Canonical application route | `#/fueltrack` |
+| Board marker | `[APSYNTRA:MODULE:fueltrack:v1]` |
+| Request records | Existing backend-owned relations exposed through signed FuelTrack RPCs; no direct frontend table queries |
+| Audit records | Existing immutable audit relation exposed through `fueltrack_v3_audit_read` |
+| Receipt metadata | Existing receipt relation exposed through `fueltrack_v3_receipt_*` RPCs |
+| Receipt storage bucket | Existing `work-board-files` bucket and linked Board-item paths |
+| Database boundary | Existing signed RPC contract; underlying relation names remain backend-owned and are not duplicated in the browser adapter |
+| Board projection | Existing FuelTrack+ v3 Board items, columns and values; no second board or data store |
+
+#### Existing application inventory
+
+- Dashboard — verified signed FuelTrack summary and existing Board-only fallback.
+- Analytics — Fuel Price, Efficiency, Frequency, Requestors and Odometer views, with existing date-range and metric filters.
+- All Requests — search, status/date filters, sorting, pagination and expandable request history.
+- New Fuel Request — Vehicle Fuel and Container Refill forms using the existing reference options and submission contract.
+- Approvals — signed request queue and existing approve/reject lifecycle.
+- LightFuels — refueling queue, two-step refueling details, receipt upload and completion workflow.
+- Activity — signed audit timeline, filtering and CSV export.
+- Existing exports — All Requests CSV and Activity CSV; spreadsheet-formula neutralization remains in the current exporters.
+
+#### Adapter, renderer and host integration
+
+- Adapter entrypoint: `frontend/fueltrack-v3-native.js`, re-exporting `FuelTrackV3DomainClient` from the existing `frontend/fueltrack-v3-domain-client.js`.
+- Renderer entrypoint: `frontend/fueltrack-v3-ui.js`, re-exporting the existing semantic renderer and board projection from `frontend/fueltrack-v3-application.js`.
+- Route parser: `frontend/fueltrack-v3-application-route.js`.
+- Scoped styles: `frontend/fueltrack-v3-application.css`, included in the shared stylesheet build.
+- Host state and event handlers remain in `frontend/app.js`; existing `ft3-*` actions continue through centralized delegated handlers.
+- Existing authoritative RPCs remain unchanged: `fueltrack_v3_read`, `fueltrack_v3_analytics`, `fueltrack_v3_audit_read`, `fueltrack_v3_submit`, `fueltrack_v3_decide`, `fueltrack_v3_mark_refueled`, `fueltrack_v3_receipt_prepare`, `fueltrack_v3_receipt_read`, `fueltrack_v3_attach_receipt`, and `fueltrack_v3_complete`.
+- Existing idempotency keys, revision checks, signed readbacks, audit records, Board-item linkage, receipt storage and export behavior are preserved.
+
+#### Standalone route behavior
+
+- `#/fueltrack` opens the existing FuelTrack native application renderer through the CRM host lifecycle.
+- Section and deep links use `#/fueltrack/analytics/...`, `#/fueltrack/requests`, `#/fueltrack/requests/record/<uuid>`, and the other existing section names.
+- Legacy `#/boards/<FuelTrack-board-id>/...` URLs canonicalize to the matching standalone route, including analytics filters and request record IDs.
+- The FuelTrack board is hidden from ordinary My Boards, Overview previews, Recent boards, global-search board suggestions and generic board-detail tabs. The existing board and records remain intact and continue to serve as authoritative sources.
+- No new role, permission, approval or database layer is introduced by the route migration.
 
 ## 4. Twelve-application migration registry
 
@@ -91,8 +137,8 @@ The module keys below are from the existing `BOARD_MODULES` registry. A board-ba
 |---|---|---|---|
 | TimeTracker Attendance | `timetracker` | Native adapter, UI, scoped CSS, and `#/time-tracker` route | Reference pattern; standalone route and board-shortcut suppression implemented |
 | Fund Released Tracker | `frt` | Native adapter, UI, scoped CSS, and `#/fund-tracker` route | Existing standalone route; legacy board URLs now canonicalize to the native route and board shortcuts are suppressed |
-| TradeLink | `tradelink` | Native adapter, renderer, scoped CSS, delegated events, new `#/tradelink` route | Initial standalone route migration in progress |
-| FuelTrack+ v3 | `fueltrack` | Native renderer, domain adapter, scoped CSS; current links still use a board subroute | Standalone route migration pending |
+| TradeLink | `tradelink` | Native adapter, renderer, scoped CSS, delegated events, canonical `#/tradelink` route | Standalone route migration complete; PR #511 merged |
+| FuelTrack+ v3 | `fueltrack` | Native adapter/UI entrypoints, renderer, scoped CSS, canonical `#/fueltrack` route | Standalone route implemented; verification and merge pending |
 | FuelTrans Standalone | `fueltrans` | Native host adapter and separate FuelTrans app/client; current host route is board-scoped | Standalone route migration pending |
 | Material Request Hub | `materials` | Existing material-sourcing application/schema modules; current entry is board-scoped | Standalone route and full inventory pending |
 | Tool Traceability | `tools` | Module manifest entry; no dedicated native adapter/renderer/CSS triplet identified in this inventory | Inventory and mapping pending |
