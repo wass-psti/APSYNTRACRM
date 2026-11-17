@@ -108,7 +108,7 @@ BEGIN
    IF to_regclass('private.tradelink_document_revision_snapshots') IS NOT NULL THEN
     IF NOT EXISTS(SELECT 1 FROM private.tradelink_document_revision_snapshots snap
       WHERE snap.document_id=fixture_id AND snap.revision=2
-       AND snap.content=content AND snap.workflow_state='submitted'
+       AND snap.content=fixture_doc.content AND snap.workflow_state='submitted'
        AND snap.document_number=fixture_doc.document_number
        AND snap.board_item_id=fixture_doc.board_item_id) THEN
       RAISE EXCEPTION 'Immutable submitted revision snapshot missing for %',content->>'documentType';
