@@ -75,7 +75,7 @@ test('Signed API sends explicit operation and accepts only revision-bound 3 resp
  assert.equal(commands,1);
 });
 test('Migration uses the existing signed save contract, with no new permission hierarchy',()=>{
- const sql=readFileSync(new URL('../../supabase/migrations/20261117044055_tradelink_approved_revision_flow.sql',import.meta.url),'utf8');
+ const sql=readFileSync(new URL('../../supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql',import.meta.url),'utf8');
  assert.match(sql,/p_operation NOT IN \('create','update','revise-approved'\)/);
  assert.match(sql,/Approved historical revision audit is incomplete/);
  assert.match(sql,/Approved revision must preserve number, company and reviewers/);

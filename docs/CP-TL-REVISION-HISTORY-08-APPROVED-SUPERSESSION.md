@@ -38,7 +38,7 @@ This was an actual functional blocker, not a missing acceptance record.
 ## Production activation
 
 **Pending explicit production database change approval.** Migration
-`20261117044055_tradelink_approved_revision_flow.sql` changes the existing
+`20261117045417_tradelink_approved_revision_flow.sql` changes the existing
 `private.tl03_save` function in production; it must not be applied or
 deployed as active UI without that approval. No new role, table, policy or
 authentication system is required.

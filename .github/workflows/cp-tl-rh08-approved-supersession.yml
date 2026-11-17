@@ -68,7 +68,7 @@ jobs:
       - name: Install reviewed migration and verify exact approved supersession
         run: |
           set -euo pipefail
-          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261117044055_tradelink_approved_revision_flow.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql
           psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-rh08-approved-revision-disposable.sql
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
