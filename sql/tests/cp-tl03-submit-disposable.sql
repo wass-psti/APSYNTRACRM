@@ -105,15 +105,6 @@ BEGIN
            AND metadata->>'from'='draft' AND metadata->>'to'='submitted')=0
    THEN RAISE EXCEPTION 'Six-module signed submit parity failed for %',content->>'documentType';
    END IF;
-   IF to_regclass('private.tradelink_document_revision_snapshots') IS NOT NULL THEN
-    IF NOT EXISTS(SELECT 1 FROM private.tradelink_document_revision_snapshots snap
-      WHERE snap.document_id=fixture_id AND snap.revision=2
-       AND snap.content=fixture_doc.content AND snap.workflow_state='submitted'
-       AND snap.document_number=fixture_doc.document_number
-       AND snap.board_item_id=fixture_doc.board_item_id) THEN
-      RAISE EXCEPTION 'Immutable submitted revision snapshot missing for %',content->>'documentType';
-    END IF;
-   END IF;
   END;
  END LOOP;
 END $submit_signed$;
@@ -145,4 +136,23 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $foreign_denial$;
 RESET ROLE;
+-- Snapshot table remains private to the signed user. Check exact persisted
+-- capture only after switching back to the privileged disposable verifier.
+DO $verify_private_snapshots$
+DECLARE matched integer;
+BEGIN
+ IF to_regclass('private.tradelink_document_revision_snapshots') IS NULL THEN RETURN; END IF;
+ SELECT count(*) INTO matched
+ FROM private.tradelink_document_revision_snapshots snap
+ JOIN public.tradelink_documents d ON d.id=snap.document_id
+ WHERE d.document_number IN ('ESI-SUBMIT-01','DR-SUBMIT-01','AR-SUBMIT-01',
+    'PO-SUBMIT-01','Q-SUBMIT-01','PACK-SUBMIT-01')
+   AND snap.revision=2 AND d.revision=2
+   AND snap.content=d.content AND snap.board_item_id=d.board_item_id
+   AND snap.workflow_state=d.workflow_state
+   AND snap.document_number=d.document_number;
+ IF matched<>6 THEN
+  RAISE EXCEPTION 'Six-module immutable revision snapshot mismatch: %/6',matched;
+ END IF;
+END $verify_private_snapshots$;
 ROLLBACK;
