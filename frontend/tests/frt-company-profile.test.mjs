@@ -8,6 +8,7 @@ import {
   saveFRTCompanyProfileWithLogo,
   loadFRTCompanyLogoDataUrl,
   renderFRTCompanyProfileEditor,
+  hydrateFRTCompanyProfileForm,
 } from "../frt-company-profile.js";
 import { projectFRTVoucherSnapshot } from "../frt-voucher.js";
 import { renderFRTVoucherDocument } from "../frt-voucher-document.js";
@@ -24,6 +25,7 @@ const company = (overrides = {}) => ({
   registered_address: null,
   contact_phone: null,
   contact_email: null,
+  tax_id_number: null,
   logo_path: null,
   ...overrides,
 });
@@ -58,6 +60,7 @@ const apiFor = (companies) => ({
         registered_address: args.p_registered_address || null,
         contact_phone: args.p_contact_phone || null,
         contact_email: args.p_contact_email || null,
+        tax_id_number: args.p_tax_id_number || null,
         logo_path: args.p_logo_path,
       });
       return { saved: true, company: { code: row.code } };
@@ -107,11 +110,13 @@ test("company profile save persists and verifies exact readback without a new ro
       registeredAddress: "Cebu, Philippines",
       contactPhone: "+63 32 555 0100",
       contactEmail: "finance@example.com",
+      taxIdNumber: "211-258-356-00000",
       logoPath: null,
     },
   });
   assert.equal(result.legalName, "WASS Legal Entity");
   assert.equal(result.contactEmail, "finance@example.com");
+  assert.equal(result.taxIdNumber, "211-258-356-00000");
 });
 
 test("company profile projection and save validation reject invalid email and oversized address", async () => {
@@ -137,6 +142,23 @@ test("company profile projection and save validation reject invalid email and ov
       },
     }),
     /Registered address must not exceed 500/,
+  );
+  await assert.rejects(
+    saveFRTCompanyProfile({
+      auth,
+      api: apiFor([company()]),
+      workspaceId,
+      companyCode,
+      profile: {
+        legalName: "Valid Name",
+        registeredAddress: "Cebu, Philippines",
+        contactPhone: "",
+        contactEmail: "",
+        taxIdNumber: "x".repeat(33),
+        logoPath: null,
+      },
+    }),
+    /Tax identification number must not exceed 32/,
   );
 });
 
@@ -227,6 +249,40 @@ test("private logo retrieval creates a short-lived signed URL and returns a vali
   assert.equal(calls[1].options.credentials, "omit");
 });
 
+test("company profile form hydration overwrites browser-restored values with persisted company data", () => {
+  const values = new Map(
+    ["legalName", "registeredAddress", "contactPhone", "contactEmail", "taxIdNumber"].map(
+      (name) => [name, { value: "browser-restored-value" }],
+    ),
+  );
+  const attributes = new Map();
+  const form = {
+    setAttribute: (name, value) => attributes.set(name, value),
+    elements: { namedItem: (name) => values.get(name) },
+  };
+  assert.equal(
+    hydrateFRTCompanyProfileForm(form, {
+      legalName: "Watchdog Automation OPC",
+      registeredAddress: "",
+      contactPhone: "+63 917 888 3003",
+      contactEmail: "info@plcsystems.com.ph",
+      taxIdNumber: "010-737-641-000",
+    }),
+    true,
+  );
+  assert.equal(attributes.get("autocomplete"), "off");
+  assert.deepEqual(
+    Object.fromEntries([...values].map(([name, field]) => [name, field.value])),
+    {
+      legalName: "Watchdog Automation OPC",
+      registeredAddress: "",
+      contactPhone: "+63 917 888 3003",
+      contactEmail: "info@plcsystems.com.ph",
+      taxIdNumber: "010-737-641-000",
+    },
+  );
+});
+
 test("company profile editor escapes persisted values and exposes all required fields", () => {
   const html = renderFRTCompanyProfileEditor({
     companyCode: "WASS",
@@ -234,14 +290,20 @@ test("company profile editor escapes persisted values and exposes all required f
     registeredAddress: "Cebu & Mandaue",
     contactPhone: "",
     contactEmail: "",
+    taxIdNumber: "211-258-356-00000",
     logoPath: null,
     logoDataUrl: null,
   });
   assert.doesNotMatch(html, /<script>/);
   assert.match(html, /WASS &lt;script&gt;/);
-  assert.match(html, /Registered company address/);
+  assert.match(html, /Company address/);
+  assert.match(html, /data-frt-company-profile-form autocomplete="off"/);
+  for (const field of ["legalName", "registeredAddress", "contactPhone", "contactEmail"])
+    assert.match(html, new RegExp('name="' + field + '" autocomplete="off"'));
   assert.match(html, /Official contact telephone/);
   assert.match(html, /Official contact email/);
+  assert.match(html, /Tax Identification Number \(TIN\)/);
+  assert.match(html, /name="taxIdNumber" autocomplete="off"/);
   assert.match(html, /companyLogo/);
   assert.match(html, /Save Company Profile/);
 });
@@ -256,6 +318,7 @@ test("voucher projection maps the persisted company profile fields without chang
       address: "Registered address",
       phone: "+63 32 555 0100",
       email: "finance@example.com",
+      taxIdNumber: "211-258-356-00000",
       logoPath: workspaceId + "/company-profiles/WASS/logo.webp",
     },
     voucherNumber: "DV-WASS-202611-001",
@@ -328,6 +391,7 @@ test("voucher HTML and A4 PDF embed persisted company profile and logo data", ()
       address: "Registered address",
       phone: "+63 32 555 0100",
       email: "finance@example.com",
+      taxIdNumber: "211-258-356-00000",
       logoPath: null,
     },
     voucherNumber: "DV-WASS-202611-001",
@@ -391,7 +455,7 @@ test("voucher HTML and A4 PDF embed persisted company profile and logo data", ()
     },
   };
   const html = renderFRTVoucherDocument(voucher);
-  assert.match(html, /Registered address/);
+  assert.match(html, /Company address/);
   assert.match(html, /Telephone:/);
   assert.match(html, /Email:/);
   assert.match(html, /data:image\/png;base64/);
@@ -401,7 +465,8 @@ test("voucher HTML and A4 PDF embed persisted company profile and logo data", ()
     definition.content[1].columns[0].image,
     "data:image/png;base64,iVBORw0KGgo=",
   );
-  assert.match(JSON.stringify(definition.content[1]), /Registered address/);
+  assert.match(JSON.stringify(definition.content[1]), /Company address/);
+  assert.match(JSON.stringify(definition.content[1]), /TIN: 211-258-356-00000/);
 });
 
 
@@ -508,7 +573,8 @@ test("company profile save failure removes only the newly uploaded unlinked logo
     }
     if (options.method === "DELETE") {
       events.push("cleanup");
-      assert.match(url, new RegExp("/object/frt-attachments/" + workspaceId));
+      assert.match(url, /\/storage\/v1\/object\/frt-attachments$/);
+      assert.deepEqual(JSON.parse(options.body), { prefixes: [uploadedPath] });
       assert.equal(row.logo_path, null);
       return { ok: true, status: 200, json: async () => ({}) };
     }

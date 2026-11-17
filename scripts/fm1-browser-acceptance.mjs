@@ -339,6 +339,9 @@ try {
     .waitFor();
   await checkAccessibility("FM1 incident detail and edit form");
 
+  await workflowPage.evaluate(() => {
+    window.__fm1ForceNextTicketConflict = true;
+  });
   await workflowPage
     .locator('[data-fm1-edit-ticket-form] input[name="requesterName"]')
     .fill("Edited Browser Operator");
@@ -351,13 +354,55 @@ try {
     .locator('[data-fm1-edit-ticket-form] button[type="submit"]')
     .click();
   await workflowPage
+    .getByText(
+      /This ticket changed elsewhere\. The latest server revision has been loaded/,
+    )
+    .first()
+    .waitFor();
+  await workflowPage.getByText("Revision 2").waitFor();
+  assert.equal(
+    await workflowPage
+      .locator('[data-fm1-edit-ticket-form] input[name="requesterName"]')
+      .inputValue(),
+    "Concurrent Server Operator",
+  );
+  const conflictCalls = await workflowPage.evaluate(() =>
+    window.__fm1Calls.filter((call) => call.name === "fm1_update_ticket_v1"),
+  );
+  assert.equal(
+    conflictCalls.length,
+    1,
+    "a stale revision must not be retried automatically",
+  );
+
+  await workflowPage
+    .locator('[data-fm1-edit-ticket-form] input[name="requesterName"]')
+    .fill("Edited Browser Operator");
+  await workflowPage
+    .locator('[data-fm1-edit-ticket-form] textarea[name="description"]')
+    .fill(
+      "Updated synthetic incident description for revision-safe editing acceptance.",
+    );
+  await workflowPage.locator("[data-fm1-edit-ticket-form]").evaluate((form) => {
+    form.requestSubmit();
+    form.requestSubmit();
+  });
+  await workflowPage
     .getByText(/Incident details updated/)
     .first()
     .waitFor();
+  const updateCallsAfterRecovery = await workflowPage.evaluate(() =>
+    window.__fm1Calls.filter((call) => call.name === "fm1_update_ticket_v1"),
+  );
+  assert.equal(
+    updateCallsAfterRecovery.length,
+    2,
+    "two submit events during one in-flight write must produce one RPC",
+  );
   const editCall = await workflowPage.evaluate(() =>
     window.__fm1Calls.findLast((call) => call.name === "fm1_update_ticket_v1"),
   );
-  assert.equal(editCall.args.p_expected_revision, 1);
+  assert.equal(editCall.args.p_expected_revision, 2);
   assert.equal(editCall.args.p_requester_name, "Edited Browser Operator");
   assert.equal(
     editCall.args.p_description,
@@ -601,7 +646,7 @@ try {
 
   console.log("FM1_BROWSER_ACCEPTANCE_PASS");
   console.log(
-    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), server-side ticket filters and pagination, revision-safe incident editing, server-backed reports, configurable warning policy, assignment, conversations, priority changes, dependency holds, notification inbox, scoped IndexedDB lifecycle, cross-user/workspace isolation, desktop/mobile layout and WCAG 2.2 AA axe checks passed.",
+    "Vite and unbundled static-HTTP native ESM acceptance (including window.customElements=null), server-side ticket filters and pagination, stale-revision conflict refresh without retry, duplicate-submit suppression, revision-safe incident editing, server-backed reports, configurable warning policy, assignment, conversations, priority changes, dependency holds, notification inbox, scoped IndexedDB lifecycle, cross-user/workspace isolation, desktop/mobile layout and WCAG 2.2 AA axe checks passed.",
   );
 } finally {
   if (browser) await browser.close();
