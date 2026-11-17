@@ -26,7 +26,7 @@ const dataLayer = readFileSync(new URL("../data.js", import.meta.url), "utf8");
 test("FM1 is integrated into the existing CRM sidebar and hash router", () => {
   assert.match(
     app,
-    /sidebarNav\('#\/fm1','FM1 Ticketing','ticket',state\.view==='fm1'\)/,
+    /sidebarNav\('#\/fm1','FM1 Ticketing','ticket',active\('fm1'\)\)/,
   );
   assert.match(
     app,
