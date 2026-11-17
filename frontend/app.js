@@ -169,7 +169,7 @@ import {loadFRTArchive,restoreFRTRequest} from './frt-archive.js';
 import {renderFRTArchive} from './frt-archive-ui.js';
 import {loadFRTVoucher} from './frt-voucher.js';
 import {renderFRTVoucherDocument} from './frt-voucher-document.js';
-import {loadFRTCompanyProfile,saveFRTCompanyProfile,uploadFRTCompanyLogo,
+import {loadFRTCompanyProfile,saveFRTCompanyProfileWithLogo,
  loadFRTCompanyLogoDataUrl,renderFRTCompanyProfileEditor} from './frt-company-profile.js';
 import {mountFRTAccountingEditor} from './frt-accounting.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
@@ -4603,35 +4603,24 @@ async function openFRTCompanyProfileDialog(companyCode){
    if(busy||!current())return;
    busy=true;submit.disabled=true;setStatus('Saving company profile…');
    try{
-    let logoPath=removeLogo?null:profile.logoPath;
-    if(pendingLogoFile){
-     logoPath=await uploadFRTCompanyLogo({auth,api:db,workspaceId,companyCode,file:pendingLogoFile});
-     profile.logoPath=logoPath;
-     pendingLogoFile=null;removeLogo=false;logoInput.value='';
-     revokePreview();
-     profile.logoDataUrl=await loadFRTCompanyLogoDataUrl({auth,api:db,workspaceId,companyCode,logoPath});
-     logoPreview.innerHTML=profile.logoDataUrl?
-      '<img src="'+e(profile.logoDataUrl)+'" alt="'+e(profile.legalName)+' logo">':
-      '<span>Logo uploaded; preview unavailable</span>';
-    }
     const formData=new FormData(form);
-    const saved=await saveFRTCompanyProfile({auth,api:db,workspaceId,companyCode,profile:{
-     legalName:String(formData.get('legalName')||''),
-     registeredAddress:String(formData.get('registeredAddress')||''),
-     contactPhone:String(formData.get('contactPhone')||''),
-     contactEmail:String(formData.get('contactEmail')||''),
-     logoPath
-    }});
+    const saved=await saveFRTCompanyProfileWithLogo({auth,api:db,workspaceId,companyCode,
+     file:pendingLogoFile,removeLogo,profile:{
+      legalName:String(formData.get('legalName')||''),
+      registeredAddress:String(formData.get('registeredAddress')||''),
+      contactPhone:String(formData.get('contactPhone')||''),
+      contactEmail:String(formData.get('contactEmail')||''),
+      logoPath:profile.logoPath
+     }});
     if(!current())return;
-    profile={...saved,logoDataUrl:saved.logoPath?(profile.logoDataUrl||null):null};
-    removeLogo=false;
-    if(profile.logoPath&&!profile.logoDataUrl){
-     profile.logoDataUrl=await loadFRTCompanyLogoDataUrl({auth,api:db,workspaceId,companyCode,logoPath:profile.logoPath});
-    }
+    pendingLogoFile=null;removeLogo=false;logoInput.value='';revokePreview();
+    profile=saved;
     state.frtFinance.companies=state.frtFinance.companies.map(company=>
      company.code===companyCode?{...company,name:profile.legalName}:company);
     render();
-    setStatus('Company profile saved and read back successfully. Voucher previews and PDFs will use the saved information.');
+    setStatus(saved.logoLoadError?
+     'Company profile saved and read back. The saved logo preview is unavailable: '+saved.logoLoadError:
+     'Company profile saved and read back successfully. Voucher previews and PDFs will use the saved information.');
     logoPreview.innerHTML=profile.logoDataUrl?
      '<img src="'+e(profile.logoDataUrl)+'" alt="'+e(profile.legalName)+' logo">':
      '<span>No company logo configured</span>';

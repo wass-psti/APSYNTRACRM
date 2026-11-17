@@ -54,6 +54,23 @@ export function projectFRTCompanyProfile(
   };
 }
 
+async function readStableWorkspaceContext({ auth, api, userId } = {}) {
+  try {
+    return await api.context();
+  } catch (error) {
+    if (
+      error?.message !== "Signed workspace context changed during loading." ||
+      auth.userId !== userId ||
+      !auth.isSignedIn
+    )
+      throw error;
+    // A session/token refresh can invalidate an overlapping context read even
+    // when the signed user is unchanged. Retry once; the exact workspace and
+    // user are still checked by signedCompanyScope below.
+    return api.context();
+  }
+}
+
 async function signedCompanyScope({
   auth,
   api,
@@ -68,7 +85,7 @@ async function signedCompanyScope({
   )
     fail("Invalid FRT workspace or company.");
   const user = await auth.getVerifiedUser(),
-    context = await api.context();
+    context = await readStableWorkspaceContext({ auth, api, userId: user?.id });
   if (
     !uuid.test(user?.id || "") ||
     auth.userId !== user.id ||
@@ -213,6 +230,7 @@ async function storageRequest({
   baseUrl,
   path,
   body,
+  method = "POST",
   contentType = "application/json",
 } = {}) {
   const actor = auth.userId,
@@ -221,7 +239,7 @@ async function storageRequest({
     timer = setTimeout(() => controller.abort(), 25000);
   try {
     const response = await fetchImpl(baseUrl.replace(/\/$/, "") + path, {
-      method: "POST",
+      method,
       mode: "cors",
       redirect: "error",
       cache: "no-store",
@@ -230,7 +248,9 @@ async function storageRequest({
         apikey: SUPABASE_PUBLISHABLE_KEY,
         Authorization: "Bearer " + token,
         ...(contentType ? { "Content-Type": contentType } : {}),
-        ...(contentType !== "application/json" ? { "x-upsert": "false" } : {}),
+        ...(method === "POST" && contentType !== "application/json"
+          ? { "x-upsert": "false" }
+          : {}),
       },
       ...(body === undefined ? {} : { body }),
       signal: controller.signal,
@@ -312,6 +332,117 @@ export async function uploadFRTCompanyLogo({
     contentType: file.type,
   });
   return path;
+}
+
+export async function deleteFRTCompanyLogo({
+  auth,
+  api,
+  workspaceId,
+  companyCode,
+  logoPath,
+  fetchImpl = globalThis.fetch?.bind(globalThis),
+  baseUrl = SUPABASE_URL,
+} = {}) {
+  const { company } = await signedCompanyScope({
+    auth,
+    api,
+    workspaceId,
+    companyCode,
+  });
+  const prefix = workspaceId + "/company-profiles/" + companyCode + "/";
+  if (
+    typeof logoPath !== "string" ||
+    !logoPath.startsWith(prefix) ||
+    !/\.(png|jpg|webp)$/i.test(logoPath)
+  )
+    fail("Company logo cleanup path is invalid.", 403, "FRT_COMPANY_LOGO_SCOPE_INVALID");
+  if (company.logo_path === logoPath)
+    fail("A linked company logo cannot be removed during upload cleanup.", 409);
+  if (typeof fetchImpl !== "function")
+    fail("Company logo cleanup is unavailable.", 503);
+  await storageRequest({
+    auth,
+    fetchImpl,
+    baseUrl,
+    path: "/storage/v1/object/" + bucket + "/" + encodePath(logoPath),
+    method: "DELETE",
+    contentType: null,
+  });
+  return true;
+}
+
+export async function saveFRTCompanyProfileWithLogo({
+  auth,
+  api,
+  workspaceId,
+  companyCode,
+  profile,
+  file = null,
+  removeLogo = false,
+  fetchImpl = globalThis.fetch?.bind(globalThis),
+  baseUrl = SUPABASE_URL,
+} = {}) {
+  let logoPath = removeLogo ? null : profile?.logoPath ?? null;
+  let uploadedLogoPath = null;
+  let saved;
+  try {
+    if (file) {
+      uploadedLogoPath = await uploadFRTCompanyLogo({
+        auth,
+        api,
+        workspaceId,
+        companyCode,
+        file,
+        fetchImpl,
+        baseUrl,
+      });
+      logoPath = uploadedLogoPath;
+    }
+    saved = await saveFRTCompanyProfile({
+      auth,
+      api,
+      workspaceId,
+      companyCode,
+      profile: { ...profile, logoPath },
+    });
+  } catch (error) {
+    if (uploadedLogoPath) {
+      try {
+        await deleteFRTCompanyLogo({
+          auth,
+          api,
+          workspaceId,
+          companyCode,
+          logoPath: uploadedLogoPath,
+          fetchImpl,
+          baseUrl,
+        });
+      } catch {
+        // Preserve the original save error; cleanup is best-effort and scoped
+        // to the newly uploaded, still-unlinked object.
+      }
+    }
+    throw error;
+  }
+
+  let logoDataUrl = null;
+  let logoLoadError = "";
+  if (saved.logoPath) {
+    try {
+      logoDataUrl = await loadFRTCompanyLogoDataUrl({
+        auth,
+        api,
+        workspaceId,
+        companyCode,
+        logoPath: saved.logoPath,
+        fetchImpl,
+        baseUrl,
+      });
+    } catch (error) {
+      logoLoadError = error?.message || "Saved company logo preview is unavailable.";
+    }
+  }
+  return { ...saved, logoDataUrl, logoLoadError };
 }
 
 export async function loadFRTCompanyLogoDataUrl({

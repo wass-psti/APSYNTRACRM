@@ -5,6 +5,7 @@ import {
   loadFRTCompanyProfile,
   saveFRTCompanyProfile,
   uploadFRTCompanyLogo,
+  saveFRTCompanyProfileWithLogo,
   loadFRTCompanyLogoDataUrl,
   renderFRTCompanyProfileEditor,
 } from "../frt-company-profile.js";
@@ -401,4 +402,171 @@ test("voucher HTML and A4 PDF embed persisted company profile and logo data", ()
     "data:image/png;base64,iVBORw0KGgo=",
   );
   assert.match(JSON.stringify(definition.content[1]), /Registered address/);
+});
+
+
+test("company profile logo is linked before signed readback and voucher reuse", async () => {
+  const events = [];
+  const row = company();
+  const api = apiFor([row]);
+  const originalRpc = api.rpc;
+  api.rpc = async (name, args) => {
+    if (name === "frt_update_company_profile") events.push("profile-save");
+    return originalRpc(name, args);
+  };
+  const png = Object.assign(
+    new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1])], {
+      type: "image/png",
+    }),
+    { name: "watchdog-logo.png" },
+  );
+  let uploadedPath = "";
+  const fetchImpl = async (url, options) => {
+    if (options.method === "POST" && url.includes("/object/frt-attachments/")) {
+      events.push("upload");
+      uploadedPath = decodeURIComponent(url.split("/object/frt-attachments/")[1]);
+      return { ok: true, status: 200, json: async () => ({ Key: uploadedPath }) };
+    }
+    if (options.method === "POST" && url.includes("/object/sign/frt-attachments/")) {
+      assert.equal(row.logo_path, uploadedPath);
+      events.push("signed-read");
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          signedURL:
+            "/object/sign/frt-attachments/" +
+            encodeURIComponent(uploadedPath) +
+            "?token=short",
+        }),
+      };
+    }
+    if (options.method === "GET") {
+      events.push("download");
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => "image/png" },
+        blob: async () =>
+          new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1])], {
+            type: "image/png",
+          }),
+      };
+    }
+    throw new Error("Unexpected storage request " + options.method + " " + url);
+  };
+  const saved = await saveFRTCompanyProfileWithLogo({
+    auth,
+    api,
+    workspaceId,
+    companyCode,
+    file: png,
+    profile: {
+      legalName: row.name,
+      registeredAddress: "",
+      contactPhone: "+63 917 888 3003",
+      contactEmail: "info@example.com",
+      logoPath: null,
+    },
+    fetchImpl,
+    baseUrl: "https://supabase.example.test",
+  });
+  assert.deepEqual(events, ["upload", "profile-save", "signed-read", "download"]);
+  assert.equal(saved.logoPath, uploadedPath);
+  assert.match(saved.logoDataUrl, /^data:image\/png;base64,/);
+  assert.equal(saved.logoLoadError, "");
+});
+
+test("company profile save failure removes only the newly uploaded unlinked logo", async () => {
+  const events = [];
+  const row = company();
+  const api = apiFor([row]);
+  api.rpc = async (name) => {
+    if (name === "frt_bootstrap")
+      return {
+        membership: { user_id: userId, workspace_id: workspaceId, enabled: true, status: "active", role: "REQUESTOR" },
+        companies: [row],
+      };
+    if (name === "frt_update_company_profile") {
+      events.push("profile-save");
+      throw new Error("profile save failed");
+    }
+    throw new Error("Unexpected RPC " + name);
+  };
+  const png = Object.assign(
+    new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1])], {
+      type: "image/png",
+    }),
+    { name: "watchdog-logo.png" },
+  );
+  let uploadedPath = "";
+  const fetchImpl = async (url, options) => {
+    if (options.method === "POST") {
+      events.push("upload");
+      uploadedPath = decodeURIComponent(url.split("/object/frt-attachments/")[1]);
+      return { ok: true, status: 200, json: async () => ({ Key: uploadedPath }) };
+    }
+    if (options.method === "DELETE") {
+      events.push("cleanup");
+      assert.match(url, new RegExp("/object/frt-attachments/" + workspaceId));
+      assert.equal(row.logo_path, null);
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
+    throw new Error("Unexpected storage request " + options.method + " " + url);
+  };
+  await assert.rejects(
+    saveFRTCompanyProfileWithLogo({
+      auth,
+      api,
+      workspaceId,
+      companyCode,
+      file: png,
+      profile: {
+        legalName: row.name,
+        registeredAddress: "",
+        contactPhone: "",
+        contactEmail: "",
+        logoPath: null,
+      },
+      fetchImpl,
+      baseUrl: "https://supabase.example.test",
+    }),
+    /profile save failed/,
+  );
+  assert.deepEqual(events, ["upload", "profile-save", "cleanup"]);
+  assert.equal(uploadedPath.startsWith(workspaceId + "/company-profiles/WASS/"), true);
+  assert.equal(row.logo_path, null);
+});
+
+
+test("company profile readback retries one transient signed-context generation change", async () => {
+  const row = company();
+  const api = apiFor([row]);
+  let contextCalls = 0;
+  api.context = async () => {
+    contextCalls += 1;
+    if (contextCalls === 2)
+      throw new Error("Signed workspace context changed during loading.");
+    return {
+      user_id: userId,
+      workspace_id: workspaceId,
+      profile: { status: "active" },
+    };
+  };
+  const saved = await saveFRTCompanyProfile({
+    auth,
+    api,
+    workspaceId,
+    companyCode,
+    profile: {
+      legalName: row.name,
+      registeredAddress: "",
+      contactPhone: "+63 917 888 3003",
+      contactEmail: "info@example.com",
+      logoPath: null,
+    },
+  });
+  assert.equal(saved.contactPhone, "+63 917 888 3003");
+  assert.equal(saved.contactEmail, "info@example.com");
+  assert.equal(contextCalls, 3);
 });
