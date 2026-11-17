@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Platform Sync Lease Fixture</title>
+  </head>
+  <body>
+    <output id="leader-state">initializing</output>
+    <script type="module">
+      import { PlatformSyncLease } from "../../platform-sync.js";
+      const params = new URLSearchParams(location.search);
+      const userId =
+        params.get("user") || "20000000-0000-4000-8000-000000000001";
+      const workspaceId =
+        params.get("workspace") || "10000000-0000-4000-8000-000000000001";
+      window.__leaseEvents = [];
+      window.__leader = false;
+      window.__lease = new PlatformSyncLease({
+        onChange(value) {
+          window.__leader = value;
+          window.__leaseEvents.push(value);
+          document.querySelector("#leader-state").textContent = value
+            ? "leader"
+            : "follower";
+        },
+      });
+      window.__lease.start({ userId, workspaceId });
+      document.addEventListener("visibilitychange", () =>
+        window.__lease.visibilityChanged(),
+      );
+      window.addEventListener("pagehide", () => window.__lease.stop(), {
+        once: true,
+      });
+    </script>
+  </body>
+</html>

@@ -222,18 +222,24 @@ test('frontend integration preserves signed state, edits and background-independ
  const index=readFileSync('index.html','utf8');
  const css=readFileSync('frontend/platform-sync.css','utf8');
  assert.match(app,/const platformSync=new PlatformSync/);
+ assert.match(app,/const platformSyncLease=new PlatformSyncLease/);
+ assert.match(app,/platformSyncLease\.start\(\{\.\.\.syncScope/);
+ assert.match(app,/platformSyncLease\.visibilityChanged\(\)/);
+ assert.match(app,/reason:'cross-tab'/);
+ assert.match(app,/boardCacheChannel\.publish\(syncChangedBoardId\)/);
  assert.match(app,/function reconcilePlatformSync\(/);
  assert.match(app,/function platformSyncEditInProgress\(/);
  assert.match(app,/root\.querySelector\('\.aps-sync'\)/);
  assert.match(app,/if\(platformSyncEditInProgress\(\)\)return false/);
- assert.match(app,/if\(state\.context&&auth\.isSignedIn\)platformSync\.start/);
+ assert.match(app,/if\(state\.context&&auth\.isSignedIn\)\{/);
+ assert.match(app,/platformSync\.start\(\{\.\.\.syncScope/);
  const logout=app.split("case 'logout':{")[1];
  assert.ok(logout,'Logout handler must exist');
- assert.match(logout,/closeWorkspacePanels\(\);clearBulkActivation\(\);platformSync\.stop\(\)/);
+ assert.match(logout,/closeWorkspacePanels\(\);clearBulkActivation\(\);stopPlatformSync\(\)/);
  const expired=app.split('auth.onExpired=()=>{')[1];
  assert.ok(expired,'Session-expiration cleanup must exist');
  assert.match(expired,/closeWorkspacePanels\(\);state\.context=null/);
- assert.match(app,/state\.userRoleData=null;state\.boards=\[\];platformSync\.stop\(\)/);
+ assert.match(app,/state\.userRoleData=null;state\.boards=\[\];stopPlatformSync\(\)/);
  assert.match(index,/wss:\/\/jtlusodorfnyzgyuewkz.supabase.co/);
  assert.match(index,/frontend\/platform-sync.css/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
@@ -258,4 +264,49 @@ test('bulk import summary broadcast invalidates the authorized board once',async
  assert.deepEqual(x.invalidations.at(-1).boardIds,[b1]);
  assert.equal(x.invalidations.at(-1).reason,'broadcast');
  x.ctl.stop();
+});
+
+
+test('follower windows do not open sockets but retain a bounded recovery timer and signed focus refresh',async()=>{
+ const x=fake();x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1],leader:false});
+ await x.wait();assert.equal(x.sockets.length,0);assert.equal(x.intervals.size,1);
+ assert.equal(x.ctl.focusChanged(),true);await x.wait();
+ assert.equal(x.invalidations.length,1);assert.equal(x.invalidations[0].reason,'focus');x.ctl.stop();
+});
+
+test('leadership transfer moves the Realtime socket while follower recovery timers remain active',async()=>{
+ const x=fake();x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1],leader:false});
+ await x.wait();assert.equal(x.sockets.length,0);x.ctl.setLeader(true);await x.wait();
+ assert.equal(x.sockets.length,1);
+ assert.equal([...x.intervals.values()].filter(v=>v.ms===SYNC_POLL_INTERVAL_MS).length,1);
+ await x.join(x.sockets[0]);x.ctl.setLeader(false);
+ assert.equal(x.sockets[0].readyState,3);
+ assert.equal([...x.intervals.values()].filter(v=>v.ms===SYNC_POLL_INTERVAL_MS).length,1);
+ assert.equal(x.ctl.focusChanged(),true);await x.wait();
+ assert.equal(x.invalidations.at(-1).reason,'focus');x.ctl.stop();
+});
+
+test('concurrent connect attempts share one pending signed authentication',async()=>{
+ const x=fake();let release;const gate=new Promise(resolve=>{release=resolve;});let calls=0;
+ x.ctl.auth.getVerifiedUser=async()=>{calls++;await gate;return {id:uid};};
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await Promise.resolve();void x.ctl.connect();
+ assert.equal(calls,1);release();await x.wait();assert.equal(x.sockets.length,1);x.ctl.stop();
+});
+
+test('losing the tab lease during authentication prevents a stale socket from opening',async()=>{
+ const x=fake();let release;const gate=new Promise(resolve=>{release=resolve;});
+ x.ctl.auth.getVerifiedUser=async()=>{await gate;return {id:uid};};
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await Promise.resolve();x.ctl.setLeader(false);release();await x.wait();
+ assert.equal(x.sockets.length,0);assert.equal(x.ctl.running,true);x.ctl.stop();
+});
+
+test('Realtime polling fallback can recover when the socket implementation becomes available',async()=>{
+ const x=fake();x.ctl.WebSocketImpl=null;
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});await x.wait();
+ assert.equal(x.ctl.connectingGeneration,null);assert.equal(x.ctl.lastTransport,'polling');
+ class RecoveredSocket {constructor(url){this.url=url;this.readyState=0;this.sent=[];x.sockets.push(this);}open(){this.readyState=1;this.onopen?.();}send(value){this.sent.push(JSON.parse(value));}close(){this.readyState=3;}}
+ x.ctl.WebSocketImpl=RecoveredSocket;await x.ctl.connect();await x.wait();
+ assert.equal(x.sockets.length,1);assert.match(x.sockets[0].url,/^wss:/);x.ctl.stop();
 });

@@ -11,8 +11,9 @@ export const SYNC_POLL_INTERVAL_MS=30000;
 export const SYNC_RECONCILE_INTERVAL_MS=90000;
 export const SYNC_POLL_RECOVERY_MS=SYNC_RECONCILE_INTERVAL_MS*3;
 export const SYNC_FOCUS_COOLDOWN_MS=3000;
-export function shouldRefreshWorkspaceBoardList({reason,view}={}){
- return reason!=='broadcast'||view!=='board';
+export function shouldRefreshWorkspaceBoardList({reason,view,boardIds=[]}={}){
+ const targeted=reason==='broadcast'||(reason==='cross-tab'&&boardIds.length>0);
+ return !targeted||view!=='board';
 }
 const noop=()=>{};
 export class PlatformSync {
@@ -31,10 +32,11 @@ export class PlatformSync {
    now,random,locks,visible,online,onStatus,onInvalidate});
   try{this.storage=storage===undefined?globalThis.localStorage:storage;}
   catch{this.storage=null;}
-  this.running=false;this.generation=0;this.timer=null;this.flushTimer=null;
+  this.running=false;this.generation=0;this.timer=null;this.flushTimer=null;this.connectingGeneration=null;
   this.heartbeat=null;this.reconnectTimer=null;this.socket=null;
   this.ref=0;this.attempt=0;this.pending=new Set();this.joins=new Map();
   this.joined=new Map();this.inFlight=false;this.heartbeatsPending=0;this.lastSyncAt=null;
+  this.leader=false;
   this.lastCheckAt=null;this.lastTransport='none';
   this.scope=null;this.lastStatus=null;this.boardIds=[];
   this.lastFocusSyncAt=null;this.queuedSync=null;
@@ -52,7 +54,7 @@ export class PlatformSync {
    this.scope?.workspaceId===workspaceId&&this.auth?.isSignedIn&&
    this.auth?.userId===userId;
  }
- start({userId,workspaceId,boardIds=[],priorityBoardId=null}={}){
+ start({userId,workspaceId,boardIds=[],priorityBoardId=null,leader=true}={}){
   if(!UUID.test(userId||'')||!UUID.test(workspaceId||'')||
    !this.auth?.isSignedIn||this.auth.userId!==userId){
    this.stop();return;
@@ -66,13 +68,33 @@ export class PlatformSync {
   this.boardIds=ids;this.pollRecoveryAt=this.now();
   const gen=this.generation;
   this.timer=this.setIntervalFn?.(()=>this.pollTick(gen),SYNC_POLL_INTERVAL_MS);
-  if(!this.online()){this.status('offline','Network connection unavailable');return;}
-  if(!this.visible()){this.status('connecting','Suspended in background');return;}
-  this.status('connecting','Authorizing board subscriptions');
-  void this.connect(gen);
+  this.setLeader(leader);
+ }
+ setLeader(isLeader){
+  const next=isLeader===true;
+  if(!this.running)return false;
+  if(this.leader===next){
+   if(!next){this.lastTransport='shared';this.status('synchronized','Shared updates are coordinated by another active window');}
+   return false;
+  }
+  this.leader=next;
+  if(!next){
+   if(this.reconnectTimer!==null)this.clearTimeoutFn?.(this.reconnectTimer);
+   this.reconnectTimer=null;this.closeSocket();
+   this.lastTransport='shared';
+   this.status('synchronized','Shared updates are coordinated by another active window');
+   return true;
+  }
+  this.lastTransport='none';
+  if(this.timer===null){const gen=this.generation;this.timer=this.setIntervalFn?.(()=>this.pollTick(gen),SYNC_POLL_INTERVAL_MS);}
+  if(!this.online()){this.status('offline','Network connection unavailable');return true;}
+  if(!this.visible()){this.status('connecting','Suspended in background');return true;}
+  this.status('connecting','Authorizing shared board subscriptions');
+  void this.connect(this.generation);
+  return true;
  }
  stop(){
-  this.running=false;this.generation++;
+  this.running=false;this.leader=false;this.generation++;this.connectingGeneration=null;
   if(this.timer!==null)this.clearIntervalFn?.(this.timer);
   if(this.reconnectTimer!==null)this.clearTimeoutFn?.(this.reconnectTimer);
   if(this.flushTimer!==null)this.clearTimeoutFn?.(this.flushTimer);
@@ -92,27 +114,31 @@ export class PlatformSync {
   if(ws){ws.onopen=ws.onclose=ws.onmessage=ws.onerror=null;try{ws.close();}catch{}}
  }
  async authenticate(gen){
-  if(gen!==this.generation||!this.running||!this.auth?.isSignedIn)
+  if(gen!==this.generation||!this.running||!this.leader||!this.auth?.isSignedIn)
    throw new Error('Inactive signed scope');
   const who=await this.auth.getVerifiedUser();
+  if(gen!==this.generation||!this.running||!this.leader)throw new Error('Leader lease changed');
   const context=await this.api.context();
-  if(gen!==this.generation||!this.sameScope(who?.id,context?.workspace_id)||
+  if(gen!==this.generation||!this.running||!this.leader||!this.sameScope(who?.id,context?.workspace_id)||
    context.user_id!==this.scope.userId||context.workspace_id!==this.scope.workspaceId)
    throw new Error('Signed workspace scope changed');
   const token=await this.auth.token();
-  if(gen!==this.generation||!this.sameScope(who.id,context.workspace_id)||!token)
+  if(gen!==this.generation||!this.running||!this.leader||!this.sameScope(who.id,context.workspace_id)||!token)
    throw new Error('Signed session changed during connection');
   return token;
  }
  async connect(gen=this.generation){
-  if(!this.running||gen!==this.generation||!this.visible()||!this.online())return;
+  if(!this.running||!this.leader||gen!==this.generation||!this.visible()||!this.online())return;
+  if(this.socket&&(this.socket.readyState===0||this.socket.readyState===1))return;
   if(!this.WebSocketImpl||!this.url||!this.publishableKey){
    this.lastTransport='polling';this.status('reconnecting','Secure Realtime unavailable; polling fallback');
    return;
   }
+  if(this.connectingGeneration===gen)return;
+  this.connectingGeneration=gen;
   try{
    const token=await this.authenticate(gen);
-   if(gen!==this.generation||!this.running||!this.visible()||!this.online())return;
+   if(gen!==this.generation||!this.running||!this.leader||!this.visible()||!this.online())return;
    this.closeSocket();
    this.token=token;
    const base=new URL(this.url);
@@ -127,11 +153,13 @@ export class PlatformSync {
    ws.onclose=()=>{if(gen===this.generation&&this.running&&this.socket===ws)
     this.reconnect(gen);};
   }catch(error){
-   if(gen!==this.generation||!this.running)return;
+   if(gen!==this.generation||!this.running||!this.leader)return;
    if(/scope changed|Inactive signed scope|session changed/i.test(String(error.message))){
     this.stop();this.status('error','Signed workspace requires reauthentication');return;
    }
    this.reconnect(gen);
+  }finally{
+   if(this.connectingGeneration===gen)this.connectingGeneration=null;
   }
  }
  send(ws,joinRef,topic,event,payload={}){
@@ -207,7 +235,7 @@ export class PlatformSync {
   },250);
  }
  reconnect(gen){
-  if(gen!==this.generation||!this.running)return;
+  if(gen!==this.generation||!this.running||!this.leader)return;
   this.closeSocket();
   if(!this.online()){this.status('offline','Network disconnected');return;}
   this.lastTransport='polling';this.status('reconnecting','Reconnecting secure board updates');
@@ -220,14 +248,15 @@ export class PlatformSync {
  }
  async pollTick(gen){
   if(gen!==this.generation||!this.running||!this.visible()||!this.online())return;
-  const interval=this.lastTransport==='realtime'?SYNC_RECONCILE_INTERVAL_MS:SYNC_POLL_INTERVAL_MS;
+  const sharedTransport=this.lastTransport==='realtime'||this.lastTransport==='shared';
+  const interval=sharedTransport?SYNC_RECONCILE_INTERVAL_MS:SYNC_POLL_INTERVAL_MS;
   const now=this.now();
-  const localDue=this.lastTransport==='realtime'&&this.pollRecoveryAt!==null&&
+  const localDue=sharedTransport&&this.pollRecoveryAt!==null&&
    now-(this.lastLocalAuditAt??this.pollRecoveryAt)>=SYNC_POLL_RECOVERY_MS;
   if(!localDue&&this.lastCheckAt!==null&&now-this.lastCheckAt<interval)return;
-  // Only healthy Realtime windows share their periodic audit. Offline sockets,
-  // missed messages and focus/reconnect checks retain independent signed reads.
-  if(this.lastTransport!=='realtime'||!this.locks?.request||!this.storage){
+  // Healthy leader and follower tabs share periodic audits, but each signed
+  // window retains its own bounded recovery audit if it missed invalidations.
+  if(!sharedTransport||!this.locks?.request||!this.storage){
    await this.syncNow('poll',[]);return;
   }
   if(this.pollRecoveryAt===null)this.pollRecoveryAt=now;
@@ -244,8 +273,6 @@ export class PlatformSync {
       current-saved<SYNC_RECONCILE_INTERVAL_MS;
     const localDueNow=current-(this.lastLocalAuditAt??this.pollRecoveryAt)>=SYNC_POLL_RECOVERY_MS;
     if(peerRecent&&!localDueNow)return;
-    // A lock is held until this authoritative read ends; a crashed tab
-    // releases the lock automatically. Failed reads do not publish success.
     const verified=await this.syncNow('poll',[]);
     if(verified&&gen===this.generation&&this.sameScope(scope.userId,scope.workspaceId)){
      this.lastLocalAuditAt=this.now();
@@ -254,8 +281,6 @@ export class PlatformSync {
     }
    });
   }catch{
-   // Private browsing, disabled storage, or Web Locks errors must never
-   // prevent a tab from its ordinary signed authoritative reconciliation.
    if(gen===this.generation&&this.sameScope(scope.userId,scope.workspaceId))
     await this.syncNow('poll',[]);
   }
@@ -284,7 +309,8 @@ export class PlatformSync {
    if(ok===true){
     this.lastSyncAt=this.now();
     this.status('synchronized',this.lastTransport==='realtime'?
-     'Authorized Realtime connected':'Authorized polling fallback');
+     'Authorized Realtime connected':this.lastTransport==='shared'?
+     'Authorized updates shared across windows':'Authorized polling fallback');
     return true;
    }
    this.status('reconnecting','Pending authoritative reconciliation');
@@ -313,25 +339,86 @@ export class PlatformSync {
  visibilityChanged(){
   if(!this.running)return;
   if(!this.visible()){
-   this.closeSocket();this.status('connecting','Paused while tab is hidden');
+   if(this.leader)this.closeSocket();
+   this.status('connecting',this.leader?'Paused while tab is hidden':'Waiting for a visible sync leader');
   }else if(this.online()){
    if(this.reconnectTimer!==null){this.clearTimeoutFn?.(this.reconnectTimer);this.reconnectTimer=null;}
-   this.status('connecting','Restoring authorized updates');
-   void this.connect(this.generation);
+   if(this.leader){this.status('connecting','Restoring authorized updates');void this.connect(this.generation);}
    void this.syncNow('visible',[]);
   }
  }
  network(isOnline){
   if(!this.running)return;
   if(!isOnline){
-   this.closeSocket();this.status('offline','Network disconnected');
+   if(this.leader)this.closeSocket();
+   this.status('offline','Network disconnected');
   }else if(this.visible()){
    if(this.reconnectTimer!==null){
     this.clearTimeoutFn?.(this.reconnectTimer);this.reconnectTimer=null;
    }
-   this.status('reconnecting','Reconnecting authenticated updates');
-   void this.connect(this.generation);
+   if(this.leader){this.status('reconnecting','Reconnecting authenticated updates');void this.connect(this.generation);}
    void this.syncNow('online',[]);
   }
+ }
+}
+
+
+/** Elect one visible tab to own the private Realtime socket for a signed scope. */
+export const SYNC_LEADER_RETRY_MS=5000;
+export class PlatformSyncLease {
+ constructor({locks=globalThis.navigator?.locks,setTimeoutFn=globalThis.setTimeout?.bind(globalThis),
+  clearTimeoutFn=globalThis.clearTimeout?.bind(globalThis),visible=()=>!globalThis.document?.hidden,
+  onChange=noop}={}){
+  Object.assign(this,{locks,setTimeoutFn,clearTimeoutFn,visible,onChange});
+  this.running=false;this.scope=null;this.leader=false;this.fallback=false;
+  this.retryTimer=null;this.releaseLock=null;this.enabled=false;this.generation=0;
+ }
+ setLeader(value){
+  const next=value===true;if(this.leader===next)return;this.leader=next;
+  try{this.onChange(next);}catch{}
+ }
+ start({userId,workspaceId,enabled=true}={}){
+  if(!UUID.test(userId||'')||!UUID.test(workspaceId||'')){this.stop();return false;}
+  if(this.running&&this.scope?.userId===userId&&this.scope?.workspaceId===workspaceId&&this.enabled===enabled)return true;
+  this.stop();this.running=true;this.scope={userId,workspaceId};this.enabled=enabled;
+  if(!enabled||typeof this.locks?.request!=='function'){this.fallback=true;this.setLeader(true);return true;}
+  this.fallback=false;this.tryAcquire();return true;
+ }
+ tryAcquire(){
+  if(!this.running||this.fallback||this.leader||!this.visible()||this.retryTimer!==null)return;
+  const scope=this.scope;if(!scope)return;
+  const generation=this.generation;
+  const name='apsyntra-platform-sync:'+scope.userId+':'+scope.workspaceId;
+  let release;const hold=new Promise(resolve=>{release=resolve;});
+  let request;
+  try{
+   request=this.locks.request(name,{mode:'exclusive',ifAvailable:true},async lock=>{
+    if(!lock||!this.running||this.generation!==generation||this.scope!==scope||!this.visible())return;
+    this.releaseLock=release;this.setLeader(true);
+    await hold;
+    if(this.generation===generation){this.releaseLock=null;this.setLeader(false);}
+   });
+  }catch{this.fallback=true;this.setLeader(true);return;}
+  Promise.resolve(request).then(()=>{
+   if(!this.running||this.generation!==generation||this.fallback||this.leader)return;
+   this.scheduleRetry();
+  },()=>{if(this.running&&this.generation===generation){this.fallback=true;this.setLeader(true);}});
+ }
+ scheduleRetry(){
+  if(!this.running||this.fallback||this.leader||!this.visible()||this.retryTimer!==null)return;
+  this.retryTimer=this.setTimeoutFn?.(()=>{this.retryTimer=null;this.tryAcquire();},SYNC_LEADER_RETRY_MS)??null;
+ }
+ visibilityChanged(){
+  if(!this.running||this.fallback)return;
+  if(!this.visible()){
+   if(this.retryTimer!==null)this.clearTimeoutFn?.(this.retryTimer);
+   this.retryTimer=null;this.releaseLock?.();
+  }else if(!this.leader)this.tryAcquire();
+ }
+ stop(){
+  this.running=false;this.generation++;
+  if(this.retryTimer!==null)this.clearTimeoutFn?.(this.retryTimer);
+  this.retryTimer=null;this.releaseLock?.();this.releaseLock=null;
+  this.scope=null;this.fallback=false;this.enabled=false;this.setLeader(false);
  }
 }
