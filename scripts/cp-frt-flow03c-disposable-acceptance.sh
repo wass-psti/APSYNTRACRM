@@ -19,6 +19,7 @@ psql_in -q < sql/tests/cp-frt-flow03c-disposable-setup.sql
 psql_in -q < supabase/migrations/20261116172414_frt_restricted_voucher_projection.sql
 psql_in -q < supabase/migrations/20261117051021_frt_company_profile_metadata.sql
 psql_in -q < supabase/migrations/20261117051040_frt_flow03c_request_accounting_lines.sql
+psql_in -q < supabase/migrations/20261117060000_frt_company_profile_tax_id.sql
 psql_in < sql/tests/cp-frt-flow03c-disposable.sql
 
 # Prepare one disposable request, then race two saves against the same revision.
