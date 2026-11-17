@@ -15,6 +15,7 @@ on:
       - "scripts/priority5-style-manifest.mjs"
       - "scripts/build-priority5-styles.mjs"
       - "scripts/pages-smoke.mjs"
+      - "scripts/fund-tracker-native-browser-acceptance.mjs"
       - "docs/CP-FRT-NATIVE-01-FUND-TRACKER-INTEGRATION.md"
       - ".github/workflows/cp-frt-native-01.yml"
   workflow_dispatch:
@@ -40,9 +41,14 @@ jobs:
           node --check frontend/app.js
           for source in frontend/fund-tracker-*.js; do node --check "$source"; done
           node --check frontend/sidebar-visuals.js
+          node --check scripts/fund-tracker-native-browser-acceptance.mjs
       - name: Verify generated stylesheet matches the ordered manifest
         run: node scripts/build-priority5-styles.mjs --check
       - name: Run complete frontend unit and contract regression suite
         run: npm test
+      - name: Install Chromium for native renderer browser acceptance
+        run: npx playwright install --with-deps chromium
+      - name: Verify Fund Tracker native renderer and responsive layout in Chromium
+        run: node scripts/fund-tracker-native-browser-acceptance.mjs
       - name: Build GitHub Pages production assets
         run: npm run build
