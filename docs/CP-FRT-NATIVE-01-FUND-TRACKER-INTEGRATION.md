@@ -96,14 +96,19 @@ The existing FRT renderer and domain modules expose the following application su
 
 ### Existing RPC contracts found in the FRT migrations and clients
 
-- Bootstrap and safe reads: `frt_bootstrap`, `frt_board_dashboard_safe`, `frt_board_list_safe`, `frt_restricted_request_detail`.
-- Request and filing: `frt_create_request`, `frt_request_action`, `frt_set_request_filing_status`, `frt_update_request_date_cas`.
+Current signed application contracts:
+
+- Bootstrap and safe reads: `frt_bootstrap`, `frt_board_list_safe`, `frt_board_dashboard_safe`, `frt_restricted_request_detail`.
+- Request lifecycle and assignment: `frt_create_request`, `frt_request_action`, `frt_set_request_filing_status`, `frt_update_request_date_cas`, `frt_assignable_people`, `frt_request_assignment`, `frt_assign_request_person`.
 - Company profile: `frt_update_company_profile`.
 - Recipients: `frt_list_saved_recipients`, `frt_save_recipient`, `frt_set_recipient_qr`.
 - Accounting: `frt_request_accounting_snapshot`, `frt_save_request_accounting_lines`.
 - Bank and liquidation: `frt_bank_execution_snapshot`, `frt_record_bank_execution`, `frt_liquidation_snapshot`, `frt_submit_liquidation_v2`, `frt_liquidation_aging_company`.
 - Intercompany: `frt_ic_snapshot`, `frt_ic_create_obligation`, `frt_ic_record_settlement`.
 - Archive: `frt_archive_list`, `frt_restore_request`.
+
+Legacy/core routines retained in the migration history include `frt_list_requests`, `frt_get_request`, `frt_update_request`, `frt_add_comment`, `frt_register_attachment`, `frt_submit_liquidation`, `frt_dashboard`, `frt_companies`, `frt_admin_users`, and `frt_admin_set_role`. They are not the native adapter's safe-read or current workflow entrypoints; the role-management legacy RPC has an explicit revoke/retirement migration. The Discussion placeholder is not wired to the legacy comment/attachment routines.
+
 
 This integration does not add or modify a database object.
 
