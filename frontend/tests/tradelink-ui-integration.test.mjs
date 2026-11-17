@@ -62,4 +62,7 @@ test('existing scoped TradeLink CSS remains in the generated shared stylesheet b
  assert.match(html,/frontend\/apsyntra-styles\.bundle\.css/);
  const css=readFileSync('frontend/tradelink-application.css','utf8');
  assert.match(css,/\.aps-tradelink-app/);
+ const pagesSmoke=readFileSync('scripts/pages-smoke.mjs','utf8');
+ for(const asset of ['frontend/tradelink-native.js','frontend/tradelink-ui.js',
+  'frontend/tradelink-domain-client.js'])assert.ok(pagesSmoke.includes("'"+asset+"'"));
 });

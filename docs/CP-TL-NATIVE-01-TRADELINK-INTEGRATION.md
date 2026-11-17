@@ -38,6 +38,12 @@ No new framework, application host, authentication client, SDK, backend, databas
 | `quotation` | Quotation | Commercial offer, price, validity, delivery and payment terms |
 | `po` | PO to Suppliers | Supplier purchase order, commercial value and review routing |
 
+### Existing exports
+
+- **Selected CSV export:** available in the read-only authorized All Documents view. It exports only selected, visible records from the current signed response (maximum 50), with Document Number, Document Type, Workflow Status, Revision, Last Updated and Archived fields. It does not export full document contents or unbounded history.
+- **Approved document print:** a freshly verified Approved revision can be opened in the existing official print preview and sent to the browser's Print / Save as PDF function. The selected revision must match the signed revision bundle and Board item. This is a browser print copy, not electronic PDF issuance.
+- No full TradeLink XLSX export or batch historical-PDF export is part of the current application contract.
+
 The quotation commercial status is separate from the document approval workflow. The original quotation stages are Working on it, Sent, Client Review, Accepted, Declined, On Hold and Closed; these must not be mapped automatically to the Board Quote Status choices.
 
 ## 3. Business lifecycle and important edge cases
@@ -168,7 +174,7 @@ The existing `Revise Approved` path is handled by the already merged and activat
 - Route: existing sidebar module, canonical route and signed edit route.
 - Events: central delegated event handlers and host-owned state.
 - Styles: scoped CSS and generated bundle manifest.
-- Build/deployment: GitHub Actions frontend validation, Vite production build and GitHub Pages deployment at the exact merge commit.
+- Build/deployment: GitHub Actions frontend validation, Vite production build and GitHub Pages deployment at the exact merge commit; the live Pages smoke fetches the TradeLink native adapter, UI entrypoint and their canonical domain-client dependency.
 - Signed runtime: preserve the existing live session; verify portal navigation, All Documents readback, exact document detail, reviewer stage readback and existing Approved revision behavior without fabricating business records.
 
 **Production changes:** none in CP-TL-NATIVE-01. No migration, production RPC, permission, document, review, revision, counter, attachment or company profile is changed by the adapter/UI entrypoint integration.
