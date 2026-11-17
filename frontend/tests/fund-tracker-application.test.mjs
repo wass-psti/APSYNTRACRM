@@ -134,7 +134,7 @@ test("native renderer keeps semantic application structure and existing FRT dele
 test("Fund Tracker route reuses the existing board host, adapter, renderer and delegated event state", () => {
   assert.match(app, /import \{FundTrackerNativeClient\} from '\.\/fund-tracker-native\.js'/);
   assert.match(app, /import \{renderFundTrackerNative\} from '\.\/fund-tracker-ui\.js'/);
-  assert.match(app, /findFundTrackerBoard\\(state\\.boards\\)/);
+  assert.ok(app.includes("findFundTrackerBoard(state.boards)"));
   assert.match(app, /if\(parts\[0\]==='fund-tracker'\)/);
   assert.match(app, /await loadBoard\(fundTrackerBoard\.id,'finance'\)/);
   assert.match(app, /const fundTracker=new FundTrackerNativeClient\(\{auth,api:db\}\)/);
