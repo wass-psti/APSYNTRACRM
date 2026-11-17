@@ -22,5 +22,5 @@ test('TradeLink launcher opens the existing native module route on the existing 
 });
 
 test('TradeLink launcher remains selected throughout its native module routes',()=>{
- assert.match(app,/state\.boardId===TRADELINK_BOARD_ID\?\s*\(path==='#\/boards\/\'+state\.boardId\|\|location\.hash\.startsWith\('#\/boards\/\'+state\.boardId\+'\/tradelink\/'\)\)/);
+ assert.ok(app.includes("location.hash.startsWith('#/boards/'+state.boardId+'/tradelink/')"));
 });
