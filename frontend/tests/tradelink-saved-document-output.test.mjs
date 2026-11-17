@@ -212,9 +212,9 @@ test('print action reloads signed record and matching Board before mounting the 
  assert.ok(start>0&&end>start);
  const flow=source.slice(start,end);
  for(const pattern of [
-  /tradeLinkDraftWorkspace\.read\(documentId\)/,/db\.board\(TRADELINK_BOARD_ID\)/,
-  /record\.revision!==listed\.revision/,
-  /record\.workflow_state!==listed\.workflowState/,
+  /tradeLinkDraftWorkspace\.revisionBundle\(documentId,targetRevision\)/,/db\.board\(TRADELINK_BOARD_ID\)/,
+  /record\.revision!==targetRevision/,
+  /record\.workflow_state!=='approved'/,
   /record\.board_item_id!==listed\.boardItemId/,
   /board\.board\.workspace_id!==ws/,
   /item\.title===listed\.documentNumber/,
@@ -228,12 +228,40 @@ test('print action reloads signed record and matching Board before mounting the 
  assert.match(markup,/data-tradelink-print-action="print"/);
  assert.match(markup,/data-tradelink-legacy-company-default/);
  assert.match(markup,/Print \/ Save as PDF/);
+ assert.match(markup,/disable browser Headers and footers/);
+ assert.match(markup,/Enable Background graphics/);
  assert.match(markup,/Legacy company profile defaulted|legacyNotice/);
  assert.match(markup,/windowRef\.print\(\)/);
  assert.doesNotMatch(markup,/localStorage|sessionStorage|window[.]open|new Blob|createObjectURL/);
  const css=readFileSync('frontend/tradelink-application.css','utf8');
  assert.match(css,/@media print/);
  assert.match(css,/body>\*:not\(#tradelink-saved-print\)/);
- assert.match(css,/@page\{size:Letter/);
+ assert.match(css,/@page\{size:A4/);
  assert.match(css,/tl-official-terms-page/);
+});
+
+test('All Documents displays immutable revisions and only offers reprint for approved snapshots',()=>{
+ const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',
+  status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'},groups:[],columns:[],items:[]};
+ const latest={...base,revision:5,workflow_state:'for-approval'};
+ const historical={...base,revision:4,workflow_state:'approved'};
+ const revisions=[
+  {revision:5,workflowState:'for-approval',approved:false,current:true,
+   snapshotSource:'captured',revisionAt:stamp,capturedAt:stamp,primaryAt:null,secondaryAt:null},
+  {revision:4,workflowState:'approved',approved:true,current:false,
+   snapshotSource:'captured',revisionAt:stamp,capturedAt:stamp,primaryAt:stamp,secondaryAt:stamp}
+ ];
+ const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
+  rows:[{documentId:id,boardItemId:item,documentType:'quotation',
+   documentNumber:base.document_number,revision:5,workflowState:'for-approval',archived:false}],
+  documentPreview:{documentId:id,record:historical,
+   latestRecord:{board_item_id:item,document_number:base.document_number,revision:5},
+   revisions,events:null,attachments:[]}};
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
+ assert.match(html,/Revision history/);
+ assert.match(html,/data-action="tradelink-document-revision-open"[^>]*data-revision="5"/);
+ assert.match(html,/data-action="tradelink-document-revision-print"[^>]*data-revision="4"/);
+ assert.doesNotMatch(html,/data-action="tradelink-document-revision-print"[^>]*data-revision="5"/);
+ const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:false,canReview:true});
+ assert.doesNotMatch(denied,/data-action="tradelink-document-revision-print"/);
 });

@@ -1,4 +1,4 @@
-import {TT_LOCATIONS,creditedAttendanceMs,manilaClockMinutes,TT_PHT_OFFSET_MS} from './time-tracker-policy.js';
+import {TT_LOCATIONS,creditedAttendanceMs,creditedAttendanceRecordMs,manilaClockMinutes,TT_PHT_OFFSET_MS} from './time-tracker-policy.js';
 export {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
 import {projectTimeTrackerOverview,TT_TEAM_OVERVIEW_ROLES} from './time-tracker-overview.js';
 import {projectTimeTrackerLog} from './time-tracker-history.js';
@@ -55,7 +55,7 @@ export function projectOwnAttendance(value,userId){
    location:String(x.clockIn.location||'—').slice(0,100),
    department:String(x.clockIn.department||'—').slice(0,100),
    status:label,classification:attendanceClassification(x),
-   creditedMs:out?creditedAttendanceMs(x.clockIn.timestamp,out.timestamp):null,
+   creditedMs:out?creditedAttendanceRecordMs(x,x.clockIn.timestamp,out.timestamp):null,
    automatic:out?.automatic===true
   });
  });
@@ -260,6 +260,71 @@ export class TimeTrackerNativeClient{
      await this.api.rpc('apsyntra_role_is_bootstrap')!==true)
    deny('GPS authorization was revoked during the request');
   return data;
+ }
+ /** Read selected full attendance records for the System Admin editor only. */
+ async attendanceAdminRecords(boardId,recordIds=[]){
+  const access=await this.access(boardId);
+  if(access.moduleRole!=='System Admin')deny('System Admin attendance management required');
+  if(!Array.isArray(recordIds)||recordIds.length<1||recordIds.length>100||
+     recordIds.some(id=>!uuid.test(id))||new Set(recordIds).size!==recordIds.length)
+   deny('Attendance record selection is invalid');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const result=await this.api.rpc('timetracker_attendance_admin_snapshot',{
+   p_board_id:boardId,p_record_ids:recordIds
+  });
+  if(!isRecord(result)||result.mode!=='ACTIVE'||result.contract!=='tt-attendance-admin-1'||
+     result.actorId!==access.userId||result.workspaceId!==access.workspaceId||
+     result.boardId!==boardId||!Number.isSafeInteger(Number(result.revision))||
+     Number(result.revision)<1||!Array.isArray(result.records)||
+     result.records.length!==recordIds.length||!Array.isArray(result.directory))
+   deny('System Admin attendance snapshot is unverified');
+  const returned=new Set(result.records.map(record=>record?.id));
+  if(recordIds.some(id=>!returned.has(id)))deny('Attendance snapshot did not return every selected record');
+  const directory=result.directory.map(member=>{
+   if(!isRecord(member)||!uuid.test(member.id||'')||
+      typeof member.displayName!=='string'||member.displayName.length>120)
+    deny('System Admin employee directory is invalid');
+   return Object.freeze({id:member.id,displayName:member.displayName});
+  });
+  const records=result.records.map(record=>{
+   if(!isRecord(record)||!uuid.test(record.id||'')||
+      typeof record.ownerId!=='string'||!record.ownerId.startsWith('cloud:')||
+      !isRecord(record.clockIn)||!safeTime(record.clockIn.timestamp))
+    deny('System Admin attendance record is invalid');
+   return record;
+  });
+  await checkIdentity(this.auth,this.api,access,boardId);
+  return Object.freeze({revision:Number(result.revision),records:Object.freeze(records),
+   directory:Object.freeze(directory),actorId:access.userId,workspaceId:access.workspaceId,boardId});
+ }
+ /** Atomic compare-and-swap edit/delete. A lost response must be reconciled by a fresh read. */
+ async mutateAttendanceRecords(boardId,{action,recordIds,patch={},reason='',expectedRevision}={}){
+  const access=await this.access(boardId);
+  if(access.moduleRole!=='System Admin')deny('System Admin attendance management required');
+  if(!['edit','bulk-edit','delete','bulk-delete'].includes(action)||
+     !Array.isArray(recordIds)||recordIds.length<1||recordIds.length>100||
+     recordIds.some(id=>!uuid.test(id))||new Set(recordIds).size!==recordIds.length||
+     !Number.isSafeInteger(expectedRevision)||expectedRevision<1||
+     !isRecord(patch)||typeof reason!=='string'||reason.length>500)
+   deny('Attendance management request is invalid');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  const result=await this.api.rpc('timetracker_attendance_admin_mutate',{
+   p_board_id:boardId,p_action:action,p_record_ids:recordIds,
+   p_patch:patch,p_reason:reason,p_expected_revision:expectedRevision
+  },{retryUnauthorized:false});
+  if(!isRecord(result)||result.mode!=='COMMITTED'||
+     result.contract!=='tt-attendance-admin-1'||result.actorId!==access.userId||
+     result.workspaceId!==access.workspaceId||result.boardId!==boardId||
+     result.action!==action||!Number.isSafeInteger(Number(result.revision))||
+     Number(result.revision)<=expectedRevision||!Array.isArray(result.recordIds)||
+     result.recordIds.length!==recordIds.length||recordIds.some(id=>!result.recordIds.includes(id))||
+     (action.includes('delete')?Number(result.deletedCount)!==recordIds.length:
+       Number(result.changedCount)!==recordIds.length))
+   deny('Attendance management receipt is unverified; refresh before retrying');
+  await checkIdentity(this.auth,this.api,access,boardId);
+  return Object.freeze({action,recordIds:Object.freeze([...recordIds]),
+   revision:Number(result.revision),changedCount:Number(result.changedCount||0),
+   deletedCount:Number(result.deletedCount||0),committedAt:result.committedAt});
  }
  async submitOvertime(boardId,draft){
   if(!TT_OT_WRITES_ACCEPTED)deny('Overtime writes require signed backend acceptance');

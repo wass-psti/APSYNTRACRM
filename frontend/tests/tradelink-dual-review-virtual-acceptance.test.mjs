@@ -28,7 +28,7 @@ test('virtual second review verifies automatic approval, actor separation, idemp
 test('approved-only browser print remains separate from electronic PDF issuance',async()=>{
  const app=await source('frontend/app.js');
  const print=app.slice(app.indexOf('async function printTradeLinkDocument'),app.indexOf('async function commitTradeLinkDraft'));
- assert.match(print,/listed\.workflowState!=='approved'/);
+ assert.match(print,/targetRevision===listed\.revision&&listed\.workflowState!=='approved'/);
  assert.match(print,/record\.workflow_state!=='approved'/);
  const contract=await source('frontend/tradelink-pdf-approval-contract.js');
  assert.match(contract,/TRADELINK_ELECTRONIC_PDF_ISSUANCE_ENABLED=false/);

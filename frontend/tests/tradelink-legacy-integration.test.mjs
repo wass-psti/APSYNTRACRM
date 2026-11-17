@@ -201,10 +201,10 @@ test('analytics RPC remains on the existing signed manager path with no new role
  assert.doesNotMatch(migration,/CREATE ROLE|ALTER ROLE|ENABLE ROW LEVEL SECURITY|CREATE POLICY|DROP POLICY/i);
 });
 
-test('TradeLink printable output uses Letter pages rather than A4',()=>{
+test('TradeLink printable output follows the official A4 template page size',()=>{
  const css=readFileSync('frontend/tradelink-application.css','utf8');
- assert.match(css,/@page\{size:Letter/);
- assert.doesNotMatch(css,/@page\{size:A4/);
+ assert.match(css,/@page\{size:A4/);
+ assert.doesNotMatch(css,/@page\{size:Letter/);
  const output=readFileSync('frontend/tradelink-saved-document-output.js','utf8');
  assert.match(output,/Print \/ Save as PDF/);
 });

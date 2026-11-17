@@ -51,7 +51,7 @@ Apply in order only after deployment readiness review:
 1. 20261117031500_frt_company_profile_metadata.sql
 2. 20261117034526_frt_flow03c_request_accounting_lines.sql
 
-The already-applied 20261116172414 voucher projection is not reapplied. WF-05A and WF-05B remain their own pending migrations on production. Production version 20261117020000 is already applied for TradeLink immutable revision snapshots; it is unrelated to FRT and is preserved unchanged. That remote migration version is absent from this branch’s local migration directory, so reconcile its TradeLink migration artifact before any production migration push. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
+The already-applied 20261116172414 voucher projection is not reapplied. WF-05A and WF-05B remain their own pending migrations on production. Production version 20261117020000 is already applied for TradeLink immutable revision snapshots; it is unrelated to FRT and is preserved unchanged. Its exact migration file is carried into the WF-05A feature branch from origin/main, and the source manifest now preserves its original hash. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
 
 The new accounting table has RLS enabled and no direct table grants. Existing authenticated FRT members use the two narrowly scoped signed RPCs:
 
@@ -92,12 +92,12 @@ Read-only inspection on 2026-11-17 found:
 - zero voucher counter rows;
 - existing private frt-attachments bucket and membership-based storage policies.
 
-No production migration, company profile or financial record is modified by CP-FRT-FLOW-03C development. Production migration activation is blocked pending reconciliation of the pre-existing remote-only TradeLink migration version 20261117020000 and the already-pending WF-05A/WF-05B migrations. Genuine production request-level acceptance remains pending until a real request exists and migrations are deployed.
+No production migration, company profile or financial record is modified by CP-FRT-FLOW-03C development. The pre-existing TradeLink migration source and migration manifest are reconciled. Production migration activation remains pending because WF-05A, WF-05B and the two new FRT migrations are not yet applied. Genuine production request-level acceptance remains pending until a real request exists and migrations are deployed.
 
 ## Acceptance classification
 
 - IMPLEMENTED: Company profile editor, upload/readback integration, manual accounting editor, exact-cent calculations, reusable manual templates, revisioned persistence RPC, canonical voucher projection, PDF accounting section.
 - VERIFIED: Disposable PostgreSQL migrations and business rules; frontend unit tests; Chromium editor/PDF acceptance; production build and CI after completion.
-- BLOCKED: Production migration push until remote-only TradeLink migration 20261117020000 is reconciled with repository history.
+- VERIFIED: Migration source manifest contains the 222-file recovered baseline and all 15 forward migrations with matching SHA-256 values.
 - PENDING: Production migration deployment and live signed profile/accounting transaction acceptance.
 - NOT APPLICABLE: New voucher document table, new DV counter, new storage bucket or new approval hierarchy.

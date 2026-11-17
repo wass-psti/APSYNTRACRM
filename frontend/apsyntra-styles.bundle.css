@@ -15441,6 +15441,7 @@
  gap:12px;padding:16px 22px;background:#edf1f9;border-bottom:1px solid #d6deec;
 }
 .tl-print-controls span{font-size:12px;color:#4e5972;font-weight:650;margin-inline-end:auto}
+.tl-print-controls .tl-print-guidance{display:block;margin-top:3px;font-size:11px;line-height:1.35;font-weight:500;color:#52637b}
 .tl-print-controls button{
  border:1px solid #c1cce1;border-radius:9px;background:#fff;color:#263953;
  font:inherit;font-size:12px;font-weight:750;padding:9px 13px;min-height:42px;
@@ -15487,7 +15488,7 @@
  .tl-print-header{flex-wrap:wrap}
 }
 @media print{
- @page{size:Letter;margin:13mm 12mm}
+ @page{size:A4;margin:13mm 12mm}
  html,body{height:auto!important;overflow:visible!important;margin:0!important;
   background:white!important;color:black!important}
  body>*:not(#tradelink-saved-print){display:none!important}
@@ -15649,7 +15650,7 @@
  .tl-official-approval-note{grid-column:auto}
 }
 @media print{
- @page{size:Letter;margin:13mm 12mm 13mm}
+ @page{size:A4;margin:13mm 12mm 13mm}
  #tradelink-saved-print .tl-official-paper{padding:0!important;font-size:10pt;box-shadow:none!important}
  #tradelink-saved-print .tl-official-header{break-after:avoid}
  #tradelink-saved-print .tl-official-items thead{display:table-header-group}
@@ -15721,6 +15722,23 @@
  .aps-tradelink-app .tl-analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
  .aps-tradelink-app .tl-analytics-bar-row{grid-template-columns:minmax(80px,105px) minmax(45px,1fr) auto;gap:7px}
 }
+
+/* CP-TL-REVISION-HISTORY-01 — compact, readable revision selection in All Documents. */
+.tl-document-revision-history{margin:0 0 1rem;padding:.9rem;border:1px solid var(--border,#d8dee8);border-radius:12px;background:var(--surface-soft,#f7f9fc)}
+.tl-revision-history-heading{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.65rem}
+.tl-revision-history-heading h3{margin:0;font-size:.95rem}
+.tl-revision-history-heading>span,.tl-revision-history-meta small{color:var(--muted,#667085);font-size:.78rem}
+.tl-document-revision-history ol{display:grid;gap:.5rem;margin:0;padding:0;list-style:none}
+.tl-revision-history-item{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.55rem;padding:.65rem;border:1px solid var(--border,#d8dee8);border-radius:9px;background:var(--surface,#fff)}
+.tl-revision-history-item.is-selected{border-color:var(--accent,#64748b);box-shadow:inset 3px 0 0 var(--accent,#64748b)}
+.tl-revision-history-meta{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem}
+.tl-revision-state,.tl-revision-current{padding:.12rem .4rem;border-radius:999px;background:var(--surface-soft,#f1f4f8);font-size:.72rem;text-transform:capitalize}
+.tl-revision-state.is-approved{color:var(--success,#18794e);background:var(--success-soft,#eaf7ef)}
+.tl-revision-history-meta small{flex-basis:100%}
+.tl-revision-history-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.35rem}
+.tl-revision-history-actions button{padding:.38rem .58rem;font-size:.78rem}
+.tl-revision-history-warning{grid-column:1/-1;margin:0;color:var(--muted,#667085);font-size:.76rem}
+@media(max-width:560px){.tl-revision-history-item{grid-template-columns:1fr}.tl-revision-history-actions{justify-content:flex-start}}
 
 /* frontend/tradelink-reference-ui.css */
 /* CP-TL-03D — Reference-led TradeLink surface, scoped to its portal only.

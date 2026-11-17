@@ -254,7 +254,9 @@ export function mountTradeLinkSavedDocumentOutput(markup,{doc=document}={}){
  const legacyDefault=markup.includes('data-tradelink-legacy-company-default="true"');
  const legacyNotice=legacyDefault?'<p class="tl-print-legacy-notice" role="status">This older saved record has no company profile assignment. The historical TradeLink default, Watchdog Automation Sales &amp; Services, is shown. Confirm the legal entity before printing.</p>':'';
  node.innerHTML='<div class="tl-print-shell"><nav class="tl-print-controls" aria-label="Print preview actions">'+
-  '<span>Official TradeLink template · Browser print / Save as PDF</span>'+
+  '<span>Official TradeLink template · Browser print / Save as PDF'+
+   '<small class="tl-print-guidance">For a clean PDF, disable browser Headers and footers. '+
+    'Enable Background graphics to preserve template styling.</small></span>'+
   '<button type="button" data-tradelink-print-action="print">Print / Save as PDF</button>'+
   '<button type="button" data-tradelink-print-action="close">Close preview</button></nav>'+legacyNotice+markup+'</div>';
  const previous=doc.activeElement;

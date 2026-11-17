@@ -11,9 +11,10 @@ const executablePath =
   (process.platform === "darwin"
     ? "/Applications/Chromium.app/Contents/MacOS/Chromium"
     : chromium.executablePath());
+const testPort = process.env.TT_TEST_PORT || "5189";
 const baseUrl =
   process.env.TT_TEST_URL ||
-  "http://127.0.0.1:5173/frontend/tests/fixtures/time-tracker-component.html";
+  `http://127.0.0.1:${testPort}/frontend/tests/fixtures/time-tracker-component.html`;
 const verifiedResult = {
   status: "VERIFIED_READ",
   access: { moduleRole: "Employee", attendanceWritesAccepted: false },
@@ -28,7 +29,13 @@ let browser = null;
 async function ensureViteServer() {
   try {
     const response = await fetch(baseUrl);
-    if (response.ok) return;
+    if (
+      response.ok &&
+      (await response.text()).includes(
+        "<title>TimeTracker Application Fixture</title>",
+      )
+    )
+      return;
   } catch {
     // Start Vite when no local server is already available.
   }
@@ -44,7 +51,7 @@ async function ensureViteServer() {
       "--host",
       "127.0.0.1",
       "--port",
-      "5173",
+      testPort,
       "--strictPort",
     ],
     { stdio: "ignore" },
@@ -55,7 +62,13 @@ async function ensureViteServer() {
     }
     try {
       const response = await fetch(baseUrl);
-      if (response.ok) return;
+      if (
+        response.ok &&
+        (await response.text()).includes(
+          "<title>TimeTracker Application Fixture</title>",
+        )
+      )
+        return;
     } catch {
       // Wait for Vite to become ready.
     }
@@ -142,6 +155,260 @@ try {
     .first()
     .waitFor();
   await checkAccessibility("TimeTracker attendance log");
+  const checkAccessibilityWithin = async (selector, label) => {
+    const result = await page.evaluate(
+      async (target) =>
+        window.axe.run(document.querySelector(target), {
+          runOnly: {
+            type: "tag",
+            values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
+          },
+        }),
+      selector,
+    );
+    assert.equal(
+      result.violations.length,
+      0,
+      label +
+        " accessibility violations: " +
+        JSON.stringify(
+          result.violations.map((item) => ({
+            id: item.id,
+            impact: item.impact,
+            nodes: item.nodes.map((node) => ({
+              target: node.target,
+              html: node.html,
+              summary: node.failureSummary,
+            })),
+          })),
+        ),
+    );
+  };
+
+  const adminRecordId = "50000000-0000-4000-8000-000000000001";
+  const adminEmployeeId = "20000000-0000-4000-8000-000000000002";
+  const adminRawRecord = {
+    id: adminRecordId,
+    ownerId: "cloud:" + adminEmployeeId,
+    ownerName: "Test Employee",
+    clockIn: {
+      timestamp: "2026-11-14T00:00:00Z",
+      location: "Office-Base Duty",
+      department: "Information Technology",
+      geo: { latitude: 10.3, longitude: 123.9, accuracy: 15 },
+    },
+    clockOut: {
+      timestamp: "2026-11-14T09:00:00Z",
+      location: "Office-Base Duty",
+      department: "Information Technology",
+      geo: { latitude: 10.31, longitude: 123.91, accuracy: 16 },
+    },
+  };
+  const adminProjectedRecord = {
+    id: adminRecordId,
+    ownerId: adminRawRecord.ownerId,
+    name: "Test Employee",
+    clockIn: adminRawRecord.clockIn.timestamp,
+    clockOut: adminRawRecord.clockOut.timestamp,
+    location: "Office-Base Duty",
+    department: "Information Technology",
+    classification: "On time",
+    status: "Completed",
+    creditedMs: 32400000,
+  };
+  const adminResult = {
+    ...verifiedResult,
+    access: { ...verifiedResult.access, moduleRole: "System Admin" },
+    records: [adminProjectedRecord],
+    log: { scope: "AUTHORIZED_WORKSPACE_TEAM", rows: [adminProjectedRecord] },
+  };
+  const adminDirectory = [
+    { id: adminEmployeeId, displayName: "Test Employee" },
+    { id: "20000000-0000-4000-8000-000000000001", displayName: "Test Admin" },
+  ];
+  await page.evaluate(
+    (result) =>
+      window.__timeTrackerRender({ view: "log", result, adminEligible: false }),
+    adminResult,
+  );
+  assert.equal(await page.locator("[data-tt-log-select]").count(), 0);
+  assert.equal(await page.locator("[data-action^='tt-log-admin-']").count(), 0);
+  await page.evaluate(
+    ({ result, directory }) =>
+      window.__timeTrackerRender({
+        view: "log",
+        result,
+        adminEligible: true,
+        adminDirectory: directory,
+      }),
+    { result: adminResult, directory: adminDirectory },
+  );
+  await page.getByText("Manage attendance records", { exact: true }).waitFor();
+  await page.locator("#tt-log-select-all").waitFor();
+  await page.locator("#tt-log-select-" + adminRecordId).waitFor();
+  await page.getByRole("button", { name: "Edit selected" }).waitFor();
+  await page.getByRole("button", { name: "Delete selected" }).waitFor();
+  await page.locator(".tt-log-row-summary").click();
+  await page.getByRole("button", { name: "Edit record" }).waitFor();
+  await page.getByRole("button", { name: "Delete record" }).waitFor();
+  await checkAccessibilityWithin(
+    ".tt-log-admin-toolbar",
+    "System Admin attendance toolbar",
+  );
+  await checkAccessibilityWithin(
+    ".tt-log-admin-row-actions",
+    "System Admin row actions",
+  );
+
+  await page.evaluate(
+    ({ result, directory, record }) =>
+      window.__timeTrackerRender({
+        view: "log",
+        result,
+        adminEligible: true,
+        adminDirectory: directory,
+        adminEditor: {
+          mode: "single",
+          recordIds: [record.id],
+          records: [record],
+          directory,
+          revision: 1,
+          actorId: "20000000-0000-4000-8000-000000000001",
+          workspaceId: "10000000-0000-4000-8000-000000000001",
+          boardId: "30000000-0000-4000-8000-000000000001",
+        },
+      }),
+    { result: adminResult, directory: adminDirectory, record: adminRawRecord },
+  );
+  await page.getByRole("dialog", { name: "Edit attendance record" }).waitFor();
+  for (const selector of [
+    '#tt-attendance-admin-form select[name="employeeId"]',
+    '#tt-attendance-admin-form select[name="location"]',
+    '#tt-attendance-admin-form select[name="department"]',
+    '#tt-attendance-admin-form select[name="status"]',
+    '#tt-attendance-admin-form input[name="clockInAt"]',
+    '#tt-attendance-admin-form input[name="clockOutAt"]',
+    '#tt-attendance-admin-form input[name="clockInGeolatitude"]',
+    '#tt-attendance-admin-form input[name="clockInGeolongitude"]',
+    '#tt-attendance-admin-form input[name="clockInGeoaccuracy"]',
+    '#tt-attendance-admin-form input[name="durationHours"]',
+  ]) {
+    await page.locator(selector).waitFor();
+  }
+  assert.equal(
+    await page
+      .locator('#tt-attendance-admin-form select[name="employeeId"] option')
+      .count(),
+    2,
+  );
+  await checkAccessibilityWithin(
+    ".tt-admin-editor",
+    "System Admin individual attendance editor",
+  );
+
+  await page.evaluate(
+    ({ result, directory, record }) =>
+      window.__timeTrackerRender({
+        view: "log",
+        result,
+        adminEligible: true,
+        adminDirectory: directory,
+        adminSelectedIds: [record.id],
+        adminEditor: {
+          mode: "bulk",
+          recordIds: [record.id, "50000000-0000-4000-8000-000000000002"],
+          records: [record, record],
+          directory,
+          revision: 1,
+          actorId: "20000000-0000-4000-8000-000000000001",
+          workspaceId: "10000000-0000-4000-8000-000000000001",
+          boardId: "30000000-0000-4000-8000-000000000001",
+        },
+      }),
+    { result: adminResult, directory: adminDirectory, record: adminRawRecord },
+  );
+  await page.getByRole("dialog", { name: "Bulk edit attendance" }).waitFor();
+  assert.equal(
+    await page
+      .locator(
+        '#tt-attendance-admin-form select[name="employeeId"] option[value=""]',
+      )
+      .count(),
+    1,
+  );
+  await checkAccessibilityWithin(
+    ".tt-admin-editor",
+    "System Admin bulk attendance editor",
+  );
+
+  await page.evaluate(
+    ({ result, record }) =>
+      window.__timeTrackerRender({
+        view: "log",
+        result,
+        adminEligible: true,
+        adminDeleteConfirm: {
+          recordIds: [record.id],
+          records: [{ id: record.id, name: record.ownerName }],
+        },
+      }),
+    { result: adminResult, record: adminRawRecord },
+  );
+  await page
+    .getByRole("alertdialog", { name: "Delete attendance record" })
+    .waitFor();
+  await page.getByRole("button", { name: "Delete record" }).waitFor();
+  await checkAccessibilityWithin(
+    ".tt-admin-delete-dialog",
+    "System Admin individual deletion confirmation",
+  );
+
+  await page.evaluate(
+    ({ result, record }) =>
+      window.__timeTrackerRender({
+        view: "log",
+        result,
+        adminEligible: true,
+        adminDeleteConfirm: {
+          recordIds: [record.id, "50000000-0000-4000-8000-000000000002"],
+          records: [
+            { id: record.id, name: record.ownerName },
+            {
+              id: "50000000-0000-4000-8000-000000000002",
+              name: "Second Employee",
+            },
+          ],
+        },
+      }),
+    { result: adminResult, record: adminRawRecord },
+  );
+  await page
+    .getByRole("alertdialog", { name: "Delete selected attendance records" })
+    .waitFor();
+  await page.getByRole("button", { name: "Delete 2 records" }).waitFor();
+  await checkAccessibilityWithin(
+    ".tt-admin-delete-dialog",
+    "System Admin bulk deletion confirmation",
+  );
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  const mobileDeleteDialog = await page.evaluate(() => {
+    const dialog = document.querySelector(".tt-admin-delete-dialog");
+    const bounds = dialog.getBoundingClientRect();
+    return {
+      width: bounds.width,
+      viewport: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+  assert.ok(mobileDeleteDialog.width <= mobileDeleteDialog.viewport);
+  assert.ok(mobileDeleteDialog.scrollWidth <= mobileDeleteDialog.viewport);
+  await checkAccessibilityWithin(
+    ".tt-admin-delete-dialog",
+    "System Admin mobile bulk deletion confirmation",
+  );
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   for (const [view, title] of [
     ["overview", "Overview"],
@@ -247,7 +514,7 @@ try {
   );
   console.log("TIMETRACKER_BROWSER_ACCEPTANCE_PASS");
   console.log(
-    "FM1-aligned application shell, native DOM, existing attendance views, responsive desktop/tablet/mobile layout, existing Team/GPS eligibility display, and WCAG 2.2 AA axe checks passed.",
+    "FM1-aligned shell, existing attendance views, System Admin-only Log controls, individual/bulk editor fields, desktop/tablet/mobile layout, and WCAG 2.2 AA axe checks passed.",
   );
 } finally {
   if (browser) await browser.close();

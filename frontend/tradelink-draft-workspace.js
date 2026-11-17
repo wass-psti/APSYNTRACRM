@@ -408,6 +408,10 @@ export class TradeLinkDraftWorkspace{
   if(!TL03_DOMAIN_READS_ENABLED)disabled();
   return this.client.read(documentId);
  }
+ async revisionBundle(documentId,revision=null){
+  if(!TL03_DOMAIN_READS_ENABLED)disabled();
+  return this.client.revisionBundle(documentId,revision);
+ }
  async assignedDocuments(limit=50){
   if(!TL03_DUAL_REVIEW_ENABLED)disabled();
   return this.client.assignedDocuments(limit);
@@ -1805,6 +1809,35 @@ export function renderTradeLinkDocumentAttachments(attachments,{
    '</div>':'')+
   '</section>';
 }
+function renderTradeLinkRevisionHistory(revisions,{
+ documentId,selectedRevision,canManage=false,busy=false
+}={}){
+ if(!Array.isArray(revisions)||!revisions.length)return '';
+ return '<section class="tl-document-revision-history" aria-labelledby="tl-revision-history-title">'+
+  '<div class="tl-revision-history-heading"><h3 id="tl-revision-history-title">Revision history</h3>'+
+   '<span>'+escape(revisions.length)+' saved '+(revisions.length===1?'revision':'revisions')+'</span></div>'+
+  '<ol>'+revisions.map(row=>{
+   const current=row.current===true;
+   const state=row.approved===true?'Approved':row.workflowState.replaceAll('-',' ');
+   const stamp=new Date(row.revisionAt).toLocaleString('en-PH');
+   const warning=row.snapshotSource==='baseline'&&row.revision>1?
+    '<p class="tl-revision-history-warning">Earlier revisions were not retained before revision history activation.</p>':'';
+   return '<li class="tl-revision-history-item'+(row.revision===selectedRevision?' is-selected':'')+'">'+
+    '<div class="tl-revision-history-meta"><strong>Revision '+escape(row.revision)+'</strong>'+
+     '<span class="tl-revision-state'+(row.approved?' is-approved':'')+'">'+escape(state)+'</span>'+
+     (current?'<span class="tl-revision-current">Current</span>':'')+
+     '<small>'+escape(stamp)+'</small></div>'+
+    '<div class="tl-revision-history-actions">'+
+     '<button type="button" class="secondary" data-action="tradelink-document-revision-open"'+
+      ' data-id="'+escape(documentId)+'" data-revision="'+escape(row.revision)+'"'+
+      (busy||row.revision===selectedRevision?' disabled':'')+'>View</button>'+
+     (canManage&&row.approved?
+      '<button type="button" class="secondary" data-action="tradelink-document-revision-print"'+
+       ' data-id="'+escape(documentId)+'" data-revision="'+escape(row.revision)+'"'+
+       (busy?' disabled':'')+'>Print PDF</button>':'')+
+    '</div>'+warning+'</li>';
+  }).join('')+'</ol></section>';
+}
 export function renderTradeLinkDocumentRepository({detail,workspaceId,
  view=initialTradeLinkDraftView(),canManage=false,canReview=false,actorEmail=''}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||
@@ -1813,14 +1846,14 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
  const rows=TL03_DOMAIN_READS_ENABLED&&(canManage||canReview)&&
   view.status==='AUTHORIZED_READ'&&Array.isArray(view.rows)?view.rows:[];
  const selection=view.documentPreview;
+ const latestRecord=selection?.latestRecord||selection?.record;
+ const selectedRecord=selection?.record;
  const linked=rows.find(item=>item.documentId===selection?.documentId&&
-  item.boardItemId===selection?.record?.board_item_id&&
-  item.revision===selection?.record?.revision&&
-  item.documentNumber===selection?.record?.document_number);
+  item.boardItemId===latestRecord?.board_item_id&&item.revision===latestRecord?.revision&&
+  item.documentNumber===latestRecord?.document_number);
  let selectedPreview='';
- if(linked){
-  try{selectedPreview=renderTradeLinkSavedDocumentPreview(
-   selection.record,workspaceId,selection.documentId);}
+ if(linked&&selectedRecord){
+  try{selectedPreview=renderTradeLinkSavedDocumentPreview(selectedRecord,workspaceId,selection.documentId);}
   catch{selectedPreview='';}
  }
  return '<section class="tl-content-panel tl-document-repository" aria-labelledby="tl-domain-repository-title">'+
@@ -1831,42 +1864,38 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
    (canManage&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="#/boards/'+TRADELINK_BOARD_ID+
     '/tradelink/drafts/quotation">Create New Document</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
-   (!TL03_DOMAIN_READS_ENABLED||(!canManage&&!canReview)||view.busy?' disabled':'')+
-   '>Refresh</button>'+
+   (!TL03_DOMAIN_READS_ENABLED||(!canManage&&!canReview)||view.busy?' disabled':'')+'>Refresh</button>'+
    '</div></div>'+
   (view.error?'<p role="alert">'+escape(view.error)+'</p>':'')+
   (view.message?'<p role="status">'+escape(view.message)+'</p>':'')+
   '<div class="tl-document-split-view" data-tradelink-document-split>'+
-   '<div class="tl-document-list-pane">'+
-    renderTradeLinkDraftList(rows,view,canManage,{readOnly:true,canReview,actorEmail})+
-   '</div>'+
+   '<div class="tl-document-list-pane">'+renderTradeLinkDraftList(rows,view,canManage,{readOnly:true,canReview,actorEmail})+'</div>'+
    '<aside class="tl-document-preview-pane" aria-label="Selected document preview">'+
     (selectedPreview?
-     (linked&&canManage&&TL03_DOMAIN_WRITES_ENABLED&&
+     (linked&&canManage&&selectedRecord.revision===linked.revision&&TL03_DOMAIN_WRITES_ENABLED&&
       ['draft','for-approval','revision-required'].includes(linked.workflowState)&&!linked.archived&&
       tradeLinkDraftEditHref(linked.documentId)?
-      '<p class="tl-document-edit-action"><a class="secondary" '+
-      'data-tradelink-document-edit href="'+
-       escape(tradeLinkDraftEditHref(linked.documentId))+
-      '">Edit this Draft</a></p>':'')+
+      '<p class="tl-document-edit-action"><a class="secondary" data-tradelink-document-edit href="'+
+       escape(tradeLinkDraftEditHref(linked.documentId))+'">Edit this Draft</a></p>':'')+
      '<div class="tl-document-preview-close"><button type="button" class="secondary" data-action="tradelink-document-preview-close">Close document preview</button></div>'+
-     selectedPreview+
-     (linked&&canManage&&TL03_ATTACHMENTS_ENABLED?
+     renderTradeLinkRevisionHistory(selection.revisions,{
+      documentId:selection.documentId,selectedRevision:selectedRecord.revision,canManage,busy:view.busy
+     })+selectedPreview+
+     (linked&&canManage&&selectedRecord.revision===linked.revision&&TL03_ATTACHMENTS_ENABLED?
       renderTradeLinkDocumentAttachments(selection?.attachments,{
        documentId:linked.documentId,workspaceId,
        editable:!linked.archived&&['draft','revision-required'].includes(linked.workflowState),
        busy:view.busy
       }):'')+
-     (linked&&canManage?renderTradeLinkSavedWorkflowHistory(selection?.events):''):
+     (linked&&canManage&&selectedRecord.revision===latestRecord.revision?
+      renderTradeLinkSavedWorkflowHistory(selection?.events):''):
      '<div class="tl-document-preview-empty" role="status">'+
       '<span class="tl-document-preview-empty-icon" aria-hidden="true">▤</span>'+
       '<h3>'+(view.busy?'Loading document preview':'Select a document')+'</h3>'+
-      '<p>'+(view.busy?'Retrieving the latest signed document revision.':
+      '<p>'+(view.busy?'Retrieving the selected signed document revision.':
        'Choose Preview or View document from the list to inspect its verified contents here.')+'</p>'+
      '</div>')+
-   '</aside>'+
-  '</div>'+
-  '</section>';
+   '</aside></div></section>';
 }
 export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTradeLinkDraftView(),canManage=false,actorName='',actorEmail='',showModuleTabs=true}={}){
  if(!isTradeLinkBoard(detail?.board)||detail.board.id!==TRADELINK_BOARD_ID||

@@ -14,6 +14,7 @@ const records=[
 ];
 const render=(extra={})=>renderTimeTrackerLog({records,now,...extra});
 const css=readFileSync('frontend/time-tracker-log-command.css','utf8');
+const adminCss=readFileSync('frontend/time-tracker-log-admin.css','utf8');
 const pixi=readFileSync('frontend/time-tracker-pixi-scene.js','utf8');
 const index=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
@@ -93,6 +94,15 @@ test('Single Pixi context prefers Log over header while preserving Clock and Ove
 test('Pages includes new style after Overview without requiring a new build tool',()=>{
  assert.ok(index.indexOf('frontend/time-tracker-log-command.css')>
   index.indexOf('frontend/time-tracker-overview-command.css'));
+ assert.ok(index.indexOf('frontend/time-tracker-log-admin.css')>
+  index.indexOf('frontend/time-tracker-log-command.css'));
+ assert.match(smoke,/'frontend\/time-tracker-log-admin\.css'/);
+ assert.match(adminCss,/\.tt-log-admin-toolbar/);
+ assert.match(adminCss,/\.tt-admin-delete-dialog/);
+ assert.match(adminCss,/\.tt-admin-bulk-guidance/);
+ assert.match(adminCss,/\.tt-admin-record-context/);
+ assert.match(adminCss,/\.tt-admin-editor-backdrop/);
+ assert.match(adminCss,/@media\(max-width:650px\)/);
  assert.match(smoke,/'frontend\/time-tracker-log-command\.css'/);
  assert.match(index,/script type="module" src="\.\/frontend\/app\.js"/);
 });
