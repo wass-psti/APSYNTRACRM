@@ -50,7 +50,7 @@ test('no module execution: entry deadline exposes actionable fatal state, no inf
  const g=guardFixture();
  assert.equal(g.window.__APSYNTRA_STARTUP.state,'INITIALIZING');
  assert.equal(g.timers.size,1);
- g.fire(12000);
+ g.fire(30000);
  assert.equal(g.window.__APSYNTRA_STARTUP.state,'FATAL_ERROR');
  assert.equal(g.label.textContent,'Startup could not finish');
  assert.equal(g.overlay.dataset.phase,'fatal');
@@ -63,13 +63,34 @@ test('no module execution: entry deadline exposes actionable fatal state, no inf
  assert.equal(g.reloads,1);
  assert.equal(g.timers.size,0);
 });
-test('module import failure reports immediately without exposing errors or auth tokens',()=>{
+test('unrelated window errors and rejected noncritical promises never poison entry startup',()=>{
  const g=guardFixture();
- g.listeners.get('error')({message:'bad/module.js?access_token=private'});
+ g.listeners.get('error')({message:'third-party missing asset /?access_token=private'});
+ assert.equal(g.listeners.has('unhandledrejection'),false);
+ assert.equal(g.window.__APSYNTRA_STARTUP.state,'INITIALIZING');
+ assert.equal(g.content.children.length,0);
+ assert.equal(g.timers.size,1);
+ assert.equal(g.window.__APSYNTRA_STARTUP.begin(),true);
+ assert.equal(g.window.__APSYNTRA_STARTUP.resolve('AUTHENTICATED'),true);
+ assert.equal(g.overlay.dataset.phase,'startup');
+});
+test('only the actual entry module element error fails promptly and never reveals secrets',()=>{
+ const g=guardFixture();
+ g.listeners.get('error')({target:{tagName:'SCRIPT',src:'https://wass-psti.github.io/APSYNTRACRM/frontend/app.js'}});
  assert.equal(g.window.__APSYNTRA_STARTUP.state,'FATAL_ERROR');
- const text=g.content.children[0].children.map(c=>c.textContent).join(' ');
- assert.doesNotMatch(text,/bad\/module|access_token=private/);
- assert.match(text,/existing account session has not been cleared/);
+ const content=g.content.children[0].children.map(c=>c.textContent).join(' ');
+ assert.doesNotMatch(content,/access_token|Bearer|module URL/);
+ assert.match(content,/existing account session has not been cleared/);
+});
+test('other script and image load errors are nonfatal before the entry deadline',()=>{
+ const g=guardFixture();
+ for(const target of [{tagName:'SCRIPT',src:'https://cdn.example.test/widget.js'},
+  {tagName:'IMG',src:'https://example.test/missing.webp'},
+  {tagName:'LINK',href:'https://example.test/optional.css'}])
+  g.listeners.get('error')({target});
+ assert.equal(g.window.__APSYNTRA_STARTUP.state,'INITIALIZING');
+ g.fire(30000);
+ assert.equal(g.window.__APSYNTRA_STARTUP.state,'FATAL_ERROR');
 });
 test('authenticated/unauthenticated state completion clears watchdog, and errors remain recoverable',()=>{
  const g=guardFixture(),guard=g.window.__APSYNTRA_STARTUP;
@@ -79,7 +100,7 @@ test('authenticated/unauthenticated state completion clears watchdog, and errors
  assert.equal(guard.resolve('AUTHENTICATED'),true);
  assert.equal(guard.state,'AUTHENTICATED');
  assert.equal(g.timers.size,0);
- g.listeners.get('unhandledrejection')();
+ g.listeners.get('error')({target:{tagName:'IMG',src:'missing.webp'}});
  assert.equal(guard.state,'AUTHENTICATED');
  assert.equal(guard.begin(),false); // no duplicate settled-start transaction
  const other=guardFixture(),next=other.window.__APSYNTRA_STARTUP;

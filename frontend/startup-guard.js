@@ -16,7 +16,7 @@
   RECOVERABLE_ERROR:'RECOVERABLE_ERROR',
   FATAL_ERROR:'FATAL_ERROR'
  });
- const ENTRY_LIMIT_MS=12000;
+ const ENTRY_LIMIT_MS=30000;
  const BOOT_LIMIT_MS=75000;
  let state=STATES.INITIALIZING,started=false,deadline=null,settled=false;
  const overlay=()=>document.getElementById('apsyntra-init');
@@ -74,10 +74,15 @@
  Object.defineProperty(window,'__APSYNTRA_STARTUP',{
   value:guard,writable:false,configurable:false,enumerable:false
  });
- // ESM dependency failures happen *before* the bootstrap's try/finally.
- // Report only while the entry graph has not executed; later optional
- // graphics/modules should never be mistaken for a failed application boot.
- window.addEventListener('error',()=>{if(!started&&!settled)showFailure();});
- window.addEventListener('unhandledrejection',()=>{if(!started&&!settled)showFailure();});
+ // Only a failed entry script resource is conclusive at this stage.
+ // Other errors may originate from nonessential resources; retain the deadline.
+ window.addEventListener('error',event=>{
+  if(started||settled)return;
+  const element=event?.target;
+  if(element?.tagName!=='SCRIPT')return;
+  const source=element.getAttribute?.('src')||element.src||'';
+  if(typeof source==='string'&&
+   /(?:^|\/)frontend\/app\.js(?:[?#]|$)/.test(source))showFailure();
+ },true);
  arm(ENTRY_LIMIT_MS);
 })();
