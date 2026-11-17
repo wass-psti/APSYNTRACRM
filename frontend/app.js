@@ -523,13 +523,23 @@ function sidebar(){
  const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board));
  const selectedNav=currentSidebarNavigation();
  const active=key=>selectedNav===key;
+ // Every link comes from a registered host route or a board returned by the
+ // signed, workspace-scoped board catalog. Do not invent module access.
+ const boardApplications=BOARD_MODULES.filter(module=>
+  !STANDALONE_APPLICATION_MODULE_KEYS.has(module.key)).map(module=>{
+   const board=state.boards.find(row=>moduleByBoardName(row.name)?.key===module.key);
+   return board?sidebarNav('#/boards/'+board.id,module.name,'boards',
+    active('recent:'+board.id)):'';
+  }).join('');
  const nav=sidebarNav('#/overview','Overview','overview',active('overview'))+
   sidebarNav('#/boards','My boards','boards',active('boards'),{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
+  '<div class="side-section sidebar-nav-section">Applications</div>'+
   sidebarNav('#/fm1','FM1 Ticketing','ticket',active('fm1'))+
   sidebarNav('#/time-tracker','TimeTracker','clock',active('time-tracker'))+
   sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
   sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
   sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
+  boardApplications+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',active('security')):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
@@ -1802,7 +1812,15 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  let changedBoards=refreshBoardCatalog&&JSON.stringify(state.boards)!==JSON.stringify(boards);
  if(refreshBoardCatalog)state.boards=boards;
  state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
- if(reason!=='broadcast')void refreshSignedCrmRole({force:roleChanged}).catch(()=>{});
+ if(reason!=='broadcast'){
+  // Workspace role reassignment does not alter the inherited profile role.
+  // Bounded focus/visibility/cross-tab revalidation detects that change
+  // without turning ordinary board polling into a high-frequency role query.
+  const roleRecheck=roleChanged||
+   (['focus','visible','cross-tab'].includes(reason)&&
+    Date.now()-crmRoleLastReadAt>=10000);
+  void refreshSignedCrmRole({force:roleRecheck}).catch(()=>{});
+ }
  if(roleChanged||sensitive){
   const verified=await roleConfig.bootstrapVerified().catch(()=>false);
   const admin=await roleConfig.adminVerified().catch(()=>false);
@@ -2004,6 +2022,7 @@ async function refreshSignedCrmRole({force=false}={}){
  if(!force&&Date.now()-crmRoleLastReadAt<60000)return;
  crmRoleLastReadAt=Date.now();
  const token=auth.accessToken,generation=++crmRoleReadGeneration;
+ const previousRole=currentSignedCrmRole(state.crmRoleSnapshot,ctx)?.effectiveRole;
  state.crmRoleSnapshot=null;
  try{
   const raw=await db.effectiveAccess();
@@ -2013,6 +2032,21 @@ async function refreshSignedCrmRole({force=false}={}){
      auth.userId!==actor||auth.accessToken!==token||
      state.context?.user_id!==actor||state.context?.workspace_id!==workspace)return;
   state.crmRoleSnapshot=role;
+  // A workspace CRM Admin assignment does not alter profiles.platform_role.
+  // Re-check the existing signed admin RPC when the authoritative CRM tier
+  // changes; keep route and sidebar eligibility synchronized after reassignment.
+  if(previousRole!==undefined&&previousRole!==role.effectiveRole){
+   const admin=await roleConfig.adminVerified().catch(()=>false);
+   if(generation!==crmRoleReadGeneration||!auth.isSignedIn||
+      auth.userId!==actor||auth.accessToken!==token||
+      state.context?.user_id!==actor||state.context?.workspace_id!==workspace)return;
+   if(admin!==state.adminVerified){
+    state.adminVerified=admin;state.roleData=null;state.userRoleData=null;
+    if(!admin&&['role-configuration','user-role-management'].includes(state.view)){
+     location.hash='#/overview';
+    }
+   }
+  }
  }catch{
   // Never present an unverified effective tier or reinterpret it as an identity role.
   if(generation!==crmRoleReadGeneration)return;
