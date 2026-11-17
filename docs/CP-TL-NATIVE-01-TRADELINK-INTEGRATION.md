@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-17 Asia/Manila  
 **Repository:** `wass-psti/APSYNTRACRM`  
-**Base:** `main` at `d00b5a38137ddb1606f45696abe2d116ad949bf6`  
+**Base:** `main` at `e8ab5debaa81fdfed38a1946d6e06315bd385904`  
 **Supabase:** existing project `jtlusodorfnyzgyuewkz` (PostgreSQL 17.6)  
 **Board:** `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`  
 **Module key:** `tradelink`
