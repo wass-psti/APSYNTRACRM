@@ -47,3 +47,47 @@
  .modal-backdrop .frt-voucher-toolbar,.modal-backdrop .frt-voucher-status,.modal-backdrop .frt-voucher-pdf-preview{display:none!important}
  .modal-backdrop .frt-voucher-paper{border:0;box-shadow:none;border-radius:0;padding:0}
 }
+
+/* CP-FRT-FLOW-03A — company profile editor and voucher branding. */
+.frt-ref-company-profile{border:1px solid #dce3ec;background:#fff;border-radius:9px;padding:8px 12px;color:#334155;font-size:12px;font-weight:700}
+.frt-ref-company-profile:hover{background:#f7f9fc;border-color:#b9c8da}
+.modal-backdrop .frt-company-profile-form{display:grid;gap:15px}
+.modal-backdrop .frt-company-profile-intro{margin:0;color:#64748b;font-size:12px;line-height:1.55}
+.modal-backdrop .frt-company-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.modal-backdrop .frt-company-profile-field{display:flex;flex-direction:column;gap:7px;min-width:0;color:#34445e;font-size:12px;font-weight:700}
+.modal-backdrop .frt-company-profile-field input,.modal-backdrop .frt-company-profile-field textarea{width:100%;min-width:0;border:1px solid #dce3ec;border-radius:8px;padding:10px 11px;background:#fff;color:#172033;font:inherit;font-weight:450}
+.modal-backdrop .frt-company-profile-field textarea{resize:vertical;min-height:78px}
+.modal-backdrop .frt-company-logo-editor{display:flex;align-items:center;gap:14px;padding:13px;border:1px solid #e2e8f0;border-radius:10px}
+.modal-backdrop .frt-company-logo-preview{display:grid;place-items:center;flex:none;width:88px;height:88px;overflow:hidden;border:1px dashed #cbd5e1;border-radius:9px;background:#f8fafc;color:#64748b;text-align:center;font-size:10px;padding:6px}
+.modal-backdrop .frt-company-logo-preview img{width:100%;height:100%;object-fit:contain}
+.modal-backdrop .frt-company-logo-editor>div:last-child{display:grid;gap:9px;min-width:0;flex:1}
+.modal-backdrop .frt-company-profile-status{min-height:18px;margin:0;color:#64748b;font-size:12px}
+.modal-backdrop .frt-voucher-logo{width:68px;height:68px;object-fit:contain;object-position:left center;float:left;margin:0 14px 8px 0}
+@media(max-width:650px){.modal-backdrop .frt-company-profile-grid{grid-template-columns:1fr}.modal-backdrop .frt-company-logo-editor{align-items:flex-start;flex-direction:column}}
+
+/* CP-FRT-FLOW-03C — request-scoped manual double-entry editor. */
+.modal-backdrop .frt-accounting-editor{display:grid;gap:13px;padding:15px;border:1px solid #dce3ec;border-radius:11px;background:#f8fafc}
+.modal-backdrop .frt-accounting-editor-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.modal-backdrop .frt-accounting-editor-heading h3{margin:0 0 5px;color:#1e3a5f;font-size:13px}
+.modal-backdrop .frt-accounting-editor-heading p{margin:0;color:#64748b;font-size:11px;line-height:1.5}
+.modal-backdrop .frt-accounting-state{display:inline-flex;flex:none;max-width:42%;padding:6px 9px;border-radius:7px;background:#fff0d8;color:#87530a;font-size:10px;font-weight:700}
+.modal-backdrop .frt-accounting-state.is-balanced{background:#dcfce7;color:#166534}
+.modal-backdrop .frt-accounting-template-tools{display:grid;grid-template-columns:minmax(140px,1fr) minmax(140px,1fr) auto;gap:9px;align-items:end}
+.modal-backdrop .frt-accounting-template-tools label{display:grid;gap:5px;color:#475569;font-size:10px;font-weight:700}
+.modal-backdrop .frt-accounting-template-tools input,.modal-backdrop .frt-accounting-template-tools select{min-width:0;width:100%;border:1px solid #cbd5e1;border-radius:7px;padding:8px;background:#fff;color:#172033;font:inherit;font-weight:450}
+.modal-backdrop .frt-accounting-table-wrap{max-width:100%;overflow-x:auto;border:1px solid #dce3ec;border-radius:8px;background:#fff}
+.modal-backdrop .frt-accounting-table{width:100%;min-width:880px;border-collapse:collapse;font-size:10px}
+.modal-backdrop .frt-accounting-table th,.modal-backdrop .frt-accounting-table td{padding:7px 6px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:middle}
+.modal-backdrop .frt-accounting-table thead th{background:#243b5a;color:#fff;font-size:9px;white-space:nowrap}
+.modal-backdrop .frt-accounting-table tfoot th{background:#f1f5f9;color:#1e3a5f;font-variant-numeric:tabular-nums}
+.modal-backdrop .frt-accounting-table input{width:100%;min-width:0;border:1px solid #d8e0ea;border-radius:6px;padding:7px 6px;color:#172033;background:#fff;font:inherit;font-size:10px}
+.modal-backdrop .frt-accounting-table input[data-accounting-field="debit"],.modal-backdrop .frt-accounting-table input[data-accounting-field="credit"]{min-width:78px;text-align:right;font-variant-numeric:tabular-nums}
+.modal-backdrop .frt-accounting-line-number{width:24px;color:#64748b;text-align:center!important}
+.modal-backdrop .frt-accounting-editor-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.modal-backdrop .frt-accounting-editor-footer>div{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:11px;color:#475569}
+.modal-backdrop .frt-accounting-editor-footer strong{color:#1e3a5f;font-variant-numeric:tabular-nums}
+.modal-backdrop .frt-accounting-status{margin:0;color:#64748b;font-size:10px;line-height:1.5}
+.modal-backdrop .frt-voucher-accounting{min-width:760px}
+.modal-backdrop .frt-voucher-accounting td:nth-last-child(-n+2),.modal-backdrop .frt-voucher-accounting tfoot th:nth-last-child(-n+2){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.modal-backdrop [data-frt-accounting-save]:disabled,.modal-backdrop [data-frt-voucher-preview]:disabled,.modal-backdrop [data-frt-voucher-download]:disabled,.modal-backdrop [data-frt-voucher-print]:disabled,.modal-backdrop [data-frt-voucher-reprint]:disabled{opacity:.48;cursor:not-allowed}
+@media(max-width:650px){.modal-backdrop .frt-accounting-template-tools{grid-template-columns:1fr}.modal-backdrop .frt-accounting-editor-heading{flex-direction:column}.modal-backdrop .frt-accounting-state{max-width:100%}}

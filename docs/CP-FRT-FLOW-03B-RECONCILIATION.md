@@ -11,7 +11,7 @@ The canonical production voucher architecture is the implementation merged by PR
 - Expense categories, descriptions, amounts, subtotals and grand total are rendered only from persisted `frt_request_items`; exact-cent reconciliation is required before PDF output.
 - Company legal identity remains the existing `frt_companies` code/name. Missing address, logo, contact and chart-of-accounts information is shown as unconfigured; no details are copied from TradeLink or inferred.
 
-Do not merge the separate `20261117020000_frt_flow03_persisted_voucher_accounting_and_pdf.sql` prototype into this architecture. It adds competing voucher/profile tables and RPCs, a second persisted-PDF source of truth, and seeded company identity values that are not authoritative FRT company-profile records. It is not required by the canonical PR #455 implementation and is not included in this acceptance path.
+A separate experimental FRT persisted-voucher prototype was retained outside this branch and is not part of the canonical architecture. Do not import it. Production migration version `20261117020000` is already applied as `tradelink_immutable_revision_snapshots`; it is an existing TradeLink migration, not an FRT voucher migration. Its migration file is not present in this branch’s local migration directory. Preserve the remote version and reconcile the missing TradeLink migration artifact before any production migration push; do not recreate it under an FRT name.
 
 No new roles, approval stages, authority restrictions, storage buckets, or authorization mechanisms are introduced by CP-FLOW-03B. Existing signed request and bank-evidence contracts remain unchanged.
 
@@ -19,12 +19,12 @@ No new roles, approval stages, authority restrictions, storage buckets, or autho
 
 Production project `jtlusodorfnyzgyuewkz` was inspected read-only on 2026-11-17:
 
-| Migration                                                        | Production state        | Notes                                                     |
-| ---------------------------------------------------------------- | ----------------------- | --------------------------------------------------------- |
-| `20261116104500_frt_wf05a_archive_recovery`                      | PENDING                 | Included in open PR #454; disposable acceptance passes    |
-| `20261116172414_frt_restricted_voucher_projection`               | APPLIED                 | Canonical voucher projection already exists in production |
-| `20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard`   | PENDING                 | Included in open PR #454; disposable acceptance passes    |
-| `20261117020000_frt_flow03_persisted_voucher_accounting_and_pdf` | NOT REQUIRED / EXCLUDED | Competing persistence architecture; do not apply          |
+| Migration                                                      | Production state | Notes                                                                                                                    |
+| -------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `20261116104500_frt_wf05a_archive_recovery`                    | PENDING          | Included in open PR #454; disposable acceptance passes                                                                   |
+| `20261116172414_frt_restricted_voucher_projection`             | APPLIED          | Canonical voucher projection already exists in production                                                                |
+| `20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard` | PENDING          | Included in open PR #454; disposable acceptance passes                                                                   |
+| `20261117020000_tradelink_immutable_revision_snapshots`        | APPLIED          | Existing TradeLink migration; remote-only in this branch; reconcile its source artifact before production migration push |
 
 Production is PostgreSQL 17.6.1.165 and `ACTIVE_HEALTHY`. Read-only preflight found:
 
