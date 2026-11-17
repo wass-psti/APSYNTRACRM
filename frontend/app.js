@@ -43,12 +43,13 @@ import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {boardGroupArchiveSuffix} from './board-group-counts.js';
-import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-application.js';
+import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
+import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
 import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,fuelTrackRequestsCsv,fuelTrackRequestQuickDates,FUELTRACK_REQUEST_FILTER_DEFAULTS} from './fueltrack-v3-requests.js';
 import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js';
-import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-domain-client.js';
+import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-native.js';
 import {runFuelTrackSignedPreflight} from './fueltrack-v3-signed-preflight.js';
 import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js';
 import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile} from './fueltrack-v3-receipt-storage.js';
@@ -383,7 +384,7 @@ const userRoleManager=new UserRoleManagementClient(db);
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
 const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -392,7 +393,7 @@ const initials=value=>String(value||'U').trim().split(/\s+/).slice(0,2).map(w=>w
 const iconColor=index=>['','green','orange','pink','blue'][Math.abs(index)%5];
 const name=()=>state.context?.profile?.display_name||state.context?.profile?.email?.split('@')[0]||'Member';
 const workspaceName=()=>state.context?.workspace_id==='00000000-0000-4000-8000-000000000001'?'Work Management':'Current workspace';
-const STANDALONE_APPLICATION_MODULE_KEYS=new Set(['timetracker','frt','tradelink']);
+const STANDALONE_APPLICATION_MODULE_KEYS=new Set(['timetracker','frt','tradelink','fueltrack']);
 const isStandaloneApplicationBoard=board=>STANDALONE_APPLICATION_MODULE_KEYS.has(
  moduleByBoardName(board?.name)?.key);
 const cards=()=>state.showTrash?state.trashed:state.showArchived?state.archived:
@@ -514,6 +515,7 @@ function sidebar(){
   sidebarNav('#/time-tracker','TimeTracker','clock',state.ttStandalone===true)+
    sidebarNav('#/fund-tracker','Fund Tracker','finance',state.frtStandalone===true||
     (state.view==='board'&&state.boardId===FRT_BOARD_ID&&state.tab==='finance'))+
+  sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',state.fuelTrackStandalone===true)+
   sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',state.tlStandalone===true)+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',state.view==='security'):'')+
@@ -546,7 +548,7 @@ function sidebar(){
    <nav class="nav-list sidebar-recent-list" aria-label="Recent boards">`+
     (recent.map((b,i)=>{
      const title=String(b.name||'Untitled board');
-     const active=currentBoard===b.id&&!state.ttStandalone&&!state.frtStandalone&&!state.tlStandalone;
+     const active=currentBoard===b.id&&!state.ttStandalone&&!state.frtStandalone&&!state.tlStandalone&&!state.fuelTrackStandalone;
      const tone=['violet','teal','amber','rose','blue','indigo'][i%6];
      return '<a class="nav-link sidebar-recent-link '+(active?'active':'')+
       '" href="#/boards/'+e(b.id)+'" title="'+e(title)+'" aria-label="'+e(title)+'"'+
@@ -609,14 +611,14 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
+ const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
- const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.roleVerified,state.adminVerified,name(),
+ const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.roleVerified,state.adminVerified,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
   state.workspaceRelationSnapshot?.relation,workspaceName(),
   state.boards.slice(0,6).map(board=>[board.id,board.name]),
   state.boards.length]);
- const route=[state.view,state.boardId,state.tab,state.ttStandalone,state.frtStandalone,state.tlStandalone].join('|');
+ const route=[state.view,state.boardId,state.tab,state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone].join('|');
  // Preserve each group's horizontal position only across same-signed-view renders.
  const scrollPositions=state.view==='board'&&shellIdentity===identity&&shellRoute===route?
   captureBoardGroupScroll(root.querySelector(':scope > .shell .main-content')):null;
@@ -638,6 +640,7 @@ function shell(body){
     const path=link.getAttribute('href')||'';
     const active=state.ttStandalone?(path===TIMETRACKER_APPLICATION_ROUTE||location.hash.startsWith(TIMETRACKER_APPLICATION_ROUTE+'/')):
      state.frtStandalone?(path===FUND_TRACKER_APPLICATION_ROUTE||location.hash.startsWith(FUND_TRACKER_APPLICATION_ROUTE+'/')):
+     state.fuelTrackStandalone?(path===FUELTRACK_V3_APPLICATION_ROUTE||location.hash.startsWith(FUELTRACK_V3_APPLICATION_ROUTE+'/')):
      state.tlStandalone?(path===TRADELINK_APPLICATION_ROUTE||location.hash.startsWith(TRADELINK_APPLICATION_ROUTE+'/')):
      state.view==='board'?path==='#/boards/'+state.boardId:
      path==='#/'+state.view;
@@ -671,6 +674,7 @@ function shell(body){
   root.querySelector('.main')?.classList.toggle('aps-fund-tracker-shell',state.frtStandalone===true||
    (state.view==='board'&&state.boardId===FRT_BOARD_ID&&state.tab==='finance'));
  root.querySelector('.main')?.classList.toggle('aps-tradelink-shell',state.tlStandalone===true);
+ root.querySelector('.main')?.classList.toggle('aps-fueltrack-shell',state.fuelTrackStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-fm1-shell',state.view==='fm1');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
@@ -743,8 +747,9 @@ function overviewBoardPreview(boards,limit=6){
  return size?source.slice(0,size):[];
 }
 function overview(){
- const total=state.boards.reduce((a,b)=>a+(Number(b.item_count)||0),0);
- const recent=overviewBoardPreview(state.boards);
+ const visibleBoards=state.boards.filter(board=>!isStandaloneApplicationBoard(board));
+ const total=visibleBoards.reduce((a,b)=>a+(Number(b.item_count)||0),0);
+ const recent=overviewBoardPreview(visibleBoards);
  const countLabel=value=>Number(value).toLocaleString('en-US');
  return `<div class="aps-overview">
  <section class="page-head overview-hero overview-entrance" aria-labelledby="overview-title">
@@ -766,10 +771,10 @@ function overview(){
   </svg>
  </section>
  <section class="stat-grid overview-stat-grid overview-entrance" aria-label="Workspace statistics">
-  <div class="stat-card" role="group" aria-label="Active boards: `+countLabel(state.boards.length)+`">
+  <div class="stat-card" role="group" aria-label="Active boards: `+countLabel(visibleBoards.length)+`">
    <span class="stat-icon">`+overviewIcon('grid')+`</span>
    <div class="stat-label">Active boards</div>
-   <div class="stat-value">`+countLabel(state.boards.length)+`</div>
+   <div class="stat-value">`+countLabel(visibleBoards.length)+`</div>
    <div class="stat-footer">Available to your account</div>
   </div>
   <div class="stat-card" role="group" aria-label="Board items: `+countLabel(total)+`">
@@ -793,7 +798,7 @@ function overview(){
  </section>
  <section class="overview-board-section" aria-labelledby="overview-boards-title">
  <div class="section-header overview-section-heading overview-entrance">
-  <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 id="overview-boards-title" class="section-title">Your boards</h2><p class="overview-board-count">Showing `+recent.length+` of `+countLabel(state.boards.length)+` available boards</p></div>
+  <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 id="overview-boards-title" class="section-title">Your boards</h2><p class="overview-board-count">Showing `+recent.length+` of `+countLabel(visibleBoards.length)+` available boards</p></div>
   <a class="inline-link" href="#/boards"><span>View all boards</span>`+overviewIcon('arrow')+`</a>
  </div>
  `+(recent.length?
@@ -1104,7 +1109,29 @@ function renderFundTrackerApplication(){
    view:state.frtFinanceView
   });
  }
- function renderTradeLinkRouteUnavailable(message='The existing TradeLink board was not found in this workspace.') {
+ function renderFuelTrackApplication(){
+ return renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,
+  actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,
+  analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,
+  analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,
+  requestsFilters:state.fuelTrackRequestFilters,
+  activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,
+   workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,
+   busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},
+  backend:{snapshot:state.fuelTrackBackend?.snapshot||null,
+   analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,
+   message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,
+   receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,
+   preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}});
+}
+function renderFuelTrackRouteUnavailable(message='The existing FuelTrack+ v3 board was not found in this workspace.') {
+ return '<section class="ft3-placeholder" role="alert" aria-label="FuelTrack+ application unavailable">'+
+  '<h2>FuelTrack+</h2><p>'+e(message||'FuelTrack+ is unavailable.')+'</p>'+
+  '<p>The existing application board and records were not changed or recreated.</p>'+
+  '<a href="#/boards" class="ft3-soft-action">Return to My Boards</a></section>';
+}
+
+function renderTradeLinkRouteUnavailable(message='The existing TradeLink board was not found in this workspace.') {
  return '<section class="tl-content-panel" role="alert" aria-label="TradeLink application unavailable">'+
   '<p class="tl-eyebrow">APSYNTRA CRM · TRADELINK</p><h1>TradeLink</h1>'+
   '<p>'+e(message||'TradeLink is unavailable.')+'</p>'+
@@ -1127,13 +1154,15 @@ function boardPage(){
   hidden:document.hidden,
   lowPower:navigator.connection?.saveData===true||
    (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4),
-  application:state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':'Board'
+  application:state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':'Board'
  });
  if(state.ttStandalone&&!state.board)return renderBoardLoadingError(state.error,{application:'TimeTracker'});
   if(state.frtStandalone&&!state.board)return renderBoardLoadingError(state.error,{application:'Fund Tracker'});
  if(state.tlStandalone&&!state.board)return renderTradeLinkRouteUnavailable(state.error);
+ if(state.fuelTrackStandalone&&!state.board)return renderFuelTrackRouteUnavailable(state.error);
  if(!state.board)return renderBoardLoadingError(state.error);
  const b=state.board.board;
+ if(state.fuelTrackStandalone&&isFuelTrackV3ApplicationBoard(b))return renderFuelTrackApplication();
  if(state.tlStandalone&&isTradeLinkBoard(b))return renderTradeLinkApplication({
   detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,
   activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},
@@ -1188,7 +1217,6 @@ function boardPage(){
     label:'▤ Board items'+(state.board.pagination?.loaded===true?' <span class="csp-u060">('+boardItemCountLabel+')</span>':'')},
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
-  ...(isFuelTrackV3ApplicationBoard(b)?[{key:'fueltrack',href:fuelTrackHref('dashboard'),label:'◈ FuelTrack+ v3 app'}]:[]),
   ...(moduleKey==='fueltrans'?[{key:'fueltrans',href:'#/boards/'+b.id+'/fueltrans',label:'FuelTrans application'}]:[]),
  ];
  const columns=moduleKey?boardGridColumns(state.board,{primaryTitle,columnLabels,allowCustom}):
@@ -4194,7 +4222,7 @@ async function onRoute(){
  const routePath=hash.split('?')[0];
  const routeQuery=new URLSearchParams(hash.split('?')[1]||'').get('q')||'';
  const parts=routePath.replace(/^#\/?/,'').split('/');
- state.ttStandalone=false;state.frtStandalone=false;state.tlStandalone=false;
+ state.ttStandalone=false;state.frtStandalone=false;state.tlStandalone=false;state.fuelTrackStandalone=false;
  if(parts[0]!=='tradelink'){
   if(state.tradeLinkAnalyticsBusy){state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;}
   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkSection='overview';
@@ -4235,6 +4263,32 @@ async function onRoute(){
   await loadBoard(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute.draftType,tradeLinkRoute.editId);
   await openPendingGlobalSearchItem(TRADELINK_BOARD_ID);
   await openPendingNativeSearchRecord(TRADELINK_BOARD_ID);
+  return;
+ }
+ if(parts[0]==='fueltrack'){
+  state.fuelTrackStandalone=true;
+  const fuelTrackRoute=parseFuelTrackApplicationRoute(parts);
+  if(!fuelTrackRoute){state.error='Invalid FuelTrack application route.';state.view='board';render();return;}
+  if(fuelTrackRoute.canonicalHash!==routePath)
+   history.replaceState(null,'',location.pathname+location.search+fuelTrackRoute.canonicalHash);
+  const fuelTrackBoard=findFuelTrackV3Board(state.boards);
+  state.fuelTrackSection=fuelTrackRoute.section;
+  state.fuelTrackAnalyticsView=fuelTrackRoute.analyticsView;
+  state.fuelTrackAnalyticsRange=fuelTrackRoute.analyticsRange;
+  state.fuelTrackAnalyticsMetric=fuelTrackRoute.analyticsMetric;
+  if(state.fuelTrackSection!=='lightfuels')state.fuelTrackRefuelingDialog=null;
+  if(fuelTrackRoute.recordId){
+   pendingNativeSearchSelection={applicationId:'fueltrack',recordId:fuelTrackRoute.recordId,
+    boardId:FUELTRACK_V3_ID,userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }else if(pendingNativeSearchSelection?.applicationId==='fueltrack')pendingNativeSearchSelection=null;
+  if(!fuelTrackBoard){
+   routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.boardManage=false;state.edit=false;state.error='The existing FuelTrack+ v3 board was not found in this workspace.';
+   state.view='board';render();return;
+  }
+  await loadBoard(FUELTRACK_V3_ID,'fueltrack');
+  await openPendingGlobalSearchItem(FUELTRACK_V3_ID);
+  await openPendingNativeSearchRecord(FUELTRACK_V3_ID);
   return;
  }
  if(parts[0]==='fund-tracker'){
@@ -4291,6 +4345,13 @@ async function onRoute(){
    history.replaceState(null,'',location.pathname+location.search+canonical);
    return onRoute();
   }
+  if(parts[1]===FUELTRACK_V3_ID){
+   const legacy=parts[2]==='fueltrack'?parts.slice(3):[];
+   const canonical=parseFuelTrackApplicationRoute(['fueltrack',...legacy])?.canonicalHash||
+    FUELTRACK_V3_APPLICATION_ROUTE;
+   history.replaceState(null,'',location.pathname+location.search+canonical);
+   return onRoute();
+  }
   const defaultClock=!parts[2]&&state.boards.some(b=>
     b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
   const defaultFuelTrans=!parts[2]&&state.boards.some(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='fueltrans');
@@ -4299,8 +4360,6 @@ async function onRoute(){
     parts[2]==='issues'?'issues':
     parts[2]==='native'?'items':
     parts[2]==='fueltrans'&&state.boards.some(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='fueltrans')?'fueltrans':
-    parts[2]==='fueltrack'&&parts[1]===FUELTRACK_V3_ID&&
-      state.boards.some(b=>b.id===FUELTRACK_V3_ID&&b.name==='FuelTrack+ v3')?'fueltrack':
     parts[2]==='finance'?'finance':
     parts[2]==='attendance'?'attendance':
     defaultFuelTrans?'fueltrans':defaultClock?'attendance':'items';
@@ -4320,9 +4379,6 @@ async function onRoute(){
      parts[3]==='record'&&parts[4]&&validUuid(parts[5])){
    pendingNativeSearchSelection={applicationId:'frt',recordId:parts[5],navigationScope:parts[4],
     query:routeQuery,boardId:parts[1],userId:auth.userId,workspaceId:state.context?.workspace_id};
-  }else if(requested==='fueltrack'&&parts[3]==='requests'&&parts[4]==='record'&&validUuid(parts[5])){
-   pendingNativeSearchSelection={applicationId:'fueltrack',recordId:parts[5],boardId:parts[1],
-    userId:auth.userId,workspaceId:state.context?.workspace_id};
   }
   const nativeApp=['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(parts[3])?parts[3]:null;
   if(parts[2]==='native'&&nativeApp&&parts[4]){

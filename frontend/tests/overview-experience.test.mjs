@@ -28,8 +28,8 @@ test('overview is isolated from signed sidebar and other board views',()=>{
  assert.match(smoke,/'frontend\/overview-visuals\.js'/);
 });
 test('all four metrics remain based on authoritative signed board and role state',()=>{
- assert.match(view,/state\.boards\.reduce\(\(a,b\)=>a\+\(Number\(b\.item_count\)\|\|0\),0\)/);
- assert.match(view,/state\.boards\.length/);
+ assert.match(view,/visibleBoards\.reduce\(\(a,b\)=>a\+\(Number\(b\.item_count\)\|\|0\),0\)/);
+ assert.match(view,/visibleBoards\.length/);
  assert.match(view,/signedCrmRoleLabel\(state\.crmRoleSnapshot,state\.context\)/);
  for(const label of ['Active boards','Board items','Workspace status','Your access']){
   assert.ok(view.includes(label),label);
@@ -44,7 +44,7 @@ test('overview retains exact page navigation, refresh, new-board and board-card 
  assert.match(view,/data-action="new-board"/);
  assert.match(view,/href="#\/boards"/);
  assert.match(view,/recent\.map\(boardCard\)/);
- assert.match(view,/overviewBoardPreview\(state\.boards\)/);
+ assert.match(view,/overviewBoardPreview\(visibleBoards\)/);
  assert.doesNotMatch(view,/state\.boards\.slice\(0,6\)/);
  assert.match(card,/return '<article class="board-card"/);
  assert.match(card,/class="board-card-actions"/);
@@ -61,7 +61,7 @@ test('overview retains exact page navigation, refresh, new-board and board-card 
  assert.match(app,/case 'new-board':/);
 });
 
-test('Overview preview excludes TradeLink application boards without mutating the signed board catalog',()=>{
+test('Overview preview excludes standalone application boards without mutating the signed board catalog',()=>{
  const start=app.indexOf('function overviewBoardPreview(');
  const end=app.indexOf('function overview(){',start);
  assert.ok(start>=0&&end>start);
@@ -69,10 +69,11 @@ test('Overview preview excludes TradeLink application boards without mutating th
   app.slice(start,end)+'\nreturn overviewBoardPreview(boards,limit);');
  const canonical={id:'264ca40d-6e4a-4e4f-97e6-3bd77c97cd88',name:'TradeLink',item_count:4};
  const duplicate={id:'d8aeffbf-afea-42ba-bb88-a84cbedf86bf',name:'TradeLink',item_count:0};
+ const fuelTrack={id:'fueltrack',name:'FuelTrack+ v3',item_count:8};
  const other={id:'other',name:'Other',item_count:1};
- const boards=[canonical,duplicate,other];
+ const boards=[canonical,duplicate,fuelTrack,other];
  const before=[...boards];
- const preview=select(boards,board=>board?.name==='TradeLink',6);
+ const preview=select(boards,board=>['TradeLink','FuelTrack+ v3'].includes(board?.name),6);
  assert.deepEqual(preview,[other]);
  assert.deepEqual(boards,before,'the authoritative board catalog remains unchanged');
 });
