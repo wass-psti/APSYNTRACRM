@@ -509,6 +509,8 @@ function sidebar(){
   sidebarNav('#/time-tracker','TimeTracker','clock',state.ttStandalone===true)+
    sidebarNav('#/fund-tracker','Fund Tracker','finance',state.frtStandalone===true||
     (state.view==='board'&&state.boardId===FRT_BOARD_ID&&state.tab==='finance'))+
+  sidebarNav('#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/quotation','TradeLink','tradelink',
+    state.view==='board'&&state.boardId===TRADELINK_BOARD_ID&&state.tab==='tradelink')+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',state.view==='security'):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
@@ -633,6 +635,8 @@ function shell(body){
     const path=link.getAttribute('href')||'';
     const active=state.ttStandalone?(path===TIMETRACKER_APPLICATION_ROUTE||location.hash.startsWith(TIMETRACKER_APPLICATION_ROUTE+'/')):
      state.frtStandalone?(path===FUND_TRACKER_APPLICATION_ROUTE||location.hash.startsWith(FUND_TRACKER_APPLICATION_ROUTE+'/')):
+     state.view==='board'&&state.boardId===TRADELINK_BOARD_ID?
+      (path==='#/boards/'+state.boardId||location.hash.startsWith(path+'/')):
      state.view==='board'?path==='#/boards/'+state.boardId:
      path==='#/'+state.view;
     link.classList.toggle('active',active);
