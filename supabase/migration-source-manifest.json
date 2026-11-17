@@ -1619,6 +1619,13 @@
       "sha256": "974db2bed05576f47a52a63d7690bff283825aabec8e9bc986018f346f4d81da"
     },
     {
+      "version": "20261116084228",
+      "name": "cp_tt_attendance_admin_record_management_01",
+      "file": "20261116084228_cp_tt_attendance_admin_record_management_01.sql",
+      "bytes": 31458,
+      "sha256": "dc6c9585947e0f35dfe135f293d0ee7c66d48d3749a1b08810cffed803748dbf"
+    },
+    {
       "version": "20261116092055",
       "name": "cp_fm1_core_04_operational_ui_reporting_warnings",
       "file": "20261116092055_cp_fm1_core_04_operational_ui_reporting_warnings.sql",

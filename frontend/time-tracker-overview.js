@@ -1,7 +1,7 @@
 /** Native TimeTracker Overview — strictly scoped to current signed workspace/module.
  * No GPS, email, company-wide user registry, or standalone backend is used.
  */
-import {TT_LOCATIONS,creditedAttendanceMs} from './time-tracker-policy.js';
+import {TT_LOCATIONS,creditedAttendanceMs,creditedAttendanceRecordMs} from './time-tracker-policy.js';
 const timeTrackerClockParts=value=>{
  const t=new Date(value);
  const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',hour:'2-digit',hourCycle:'h23'}).format(t));
@@ -46,7 +46,7 @@ const arrivalMinutes=v=>{
  return Number(p.hour)*60+Number(p.minute);
 };
 const clockMs=(row,now)=>row.clockOut?
- creditedAttendanceMs(row.clockIn,row.clockOut):
+ creditedAttendanceRecordMs(row,row.clockIn,row.clockOut):
  creditedAttendanceMs(row.clockIn,now);
 const hours=ms=>(Math.max(0,ms)/3600000).toFixed(1);
 const safeText=(v,n=120)=>String(v??'').slice(0,n);
@@ -99,7 +99,8 @@ export function projectTimeTrackerOverview({
    location,clockIn:record.clockIn.timestamp,clockOut:out,
    status:out?'Completed':'Active',lateMinutes,
    creditedMs:clockMs({
-    clockIn:record.clockIn.timestamp,clockOut:out
+    clockIn:record.clockIn.timestamp,clockOut:out,
+    creditedMsOverride:record.creditedMsOverride
    },now)
   }));
  }
