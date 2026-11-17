@@ -52,6 +52,22 @@ test('signed All Documents shows inert Submit affordance only for active authori
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:ws,view,canManage:false});
  assert.doesNotMatch(denied,/data-action="tradelink-document-submit"|Q-QA-20261108-01/);
 });
+test('source Submit affordance is limited to Draft and Revision Required for all six types',()=>{
+ const types=['esi','packing','delivery','payment','quotation','po'];
+ const states=['draft','revision-required','for-approval','approved','submitted',
+  'under-review','completed','cancelled','rejected'];
+ for(const documentType of types){
+  for(const workflowState of states){
+   const row={documentId,boardItemId:item,documentType,
+    documentNumber:`SRC-${documentType}`,revision:4,workflowState,archived:false};
+   const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',rows:[row]};
+   const html=renderTradeLinkDocumentRepository({detail,workspaceId:ws,view,canManage:true});
+   const count=(html.match(/data-action="tradelink-document-submit"/g)||[]).length;
+   assert.equal(count,['draft','revision-required'].includes(workflowState)?1:0,
+    `${documentType}: ${workflowState}`);
+  }
+ }
+});
 test('source SQL candidate enforces CAS, workspace, session, Board lock, append-only event and no approvals',()=>{
  const sql=readFileSync('sql/tradelink-document-submit-candidate.sql','utf8');
  for(const match of [/private\.tl03_can_manage\(p_board_id\)/,
