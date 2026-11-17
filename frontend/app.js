@@ -199,7 +199,7 @@ import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-
 import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
-import {UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
+import {FUELTRANS_WORKSPACE_ROLES,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 import {planUserRoleBatch} from './user-role-batch.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
@@ -2082,7 +2082,7 @@ async function loadUserRoleManagement(){
  if(state.adminVerified!==true || !(await roleConfig.adminVerified()))throw new ApiError('CRM administrator role management access denied.',403);
  const ctx=await db.context();
  if(ctx.user_id!==state.context?.user_id||ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Authoritative workspace changed.',403);
- state.userRoleData=await userRoleManager.snapshot(ctx.workspace_id);
+ state.userRoleData=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true});
  const batchIdentity=ctx.workspace_id+':'+ctx.user_id;
  if(state.userRoleBatchIdentity!==batchIdentity){
   state.userRoleBatchSelected=[];
@@ -2103,8 +2103,21 @@ async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expecte
  const identity=await auth.getVerifiedUser(),ctx=await db.context();
  if(identity?.id!==ctx.user_id||ctx.user_id!==state.context?.user_id||
     ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Signed identity or workspace changed.',403);
- await userRoleManager.mutate({workspaceId:ctx.workspace_id,userId,scope,resourceId,role,enabled,expectedUpdatedAt});
+ if(scope==='module'&&resourceId==='fueltrans'){
+  if(state.userRoleData?.fueltransWorkspaceAvailable!==true)
+   throw new ApiError('FuelTrans workspace role contract is unavailable.',409);
+  await userRoleManager.setFueltransWorkspaceRole({
+   workspaceId:ctx.workspace_id,userId,role,enabled,expectedUpdatedAt});
+ }else{
+  await userRoleManager.mutate({workspaceId:ctx.workspace_id,userId,scope,resourceId,role,enabled,expectedUpdatedAt});
+ }
  await loadUserRoleManagement();
+ const actual=scope==='module'?
+   state.userRoleData?.moduleAssignments.find(r=>r.userId===userId&&r.moduleId===resourceId):
+   state.userRoleData?.boardAssignments.find(r=>r.userId===userId&&r.boardId===resourceId);
+ if((enabled&&(!actual||actual.role!==role||(scope==='module'&&!actual.enabled)))||
+    (!enabled&&actual&&(scope==='board'||actual.enabled)))
+   throw new ApiError('The role write was acknowledged, but the refreshed workspace assignment could not be verified. Refresh before trying again.',409);
  toast('Authoritative user role updated and audited.');
  render();
 }
@@ -8114,7 +8127,7 @@ async function action(name,button){
    const choices=scope==='module'?ROLE_MODULE_OPTIONS:data.boards.map(b=>[b.id,b.name]);
    const resourceId=choices.some(([id])=>id===state.userRoleBatchResource)?
      state.userRoleBatchResource:choices[0]?.[0];
-   const roles=scope==='module'?MODULE_ROLE_OPTIONS[resourceId]||[]:['viewer','editor'];
+   const roles=scope==='module'?(resourceId==='fueltrans'?(data.fueltransWorkspaceAvailable===true?FUELTRANS_WORKSPACE_ROLES:[]):MODULE_ROLE_OPTIONS[resourceId]||[]):['viewer','editor'];
    const role=roles.includes(state.userRoleBatchRole)?state.userRoleBatchRole:roles[0];
    const selected=[];
    for(const user of data.users){
@@ -8137,7 +8150,7 @@ async function action(name,button){
      snapshot.boards.map(board=>[board.id,board.name]);
    const resourceId=choices.some(([id])=>id===state.userRoleBatchResource)?
      state.userRoleBatchResource:choices[0]?.[0];
-   const roles=scope==='module'?MODULE_ROLE_OPTIONS[resourceId]||[]:['viewer','editor'];
+   const roles=scope==='module'?(resourceId==='fueltrans'?(snapshot.fueltransWorkspaceAvailable===true?FUELTRANS_WORKSPACE_ROLES:[]):MODULE_ROLE_OPTIONS[resourceId]||[]):['viewer','editor'];
    const role=roles.includes(state.userRoleBatchRole)?state.userRoleBatchRole:roles[0];
    const enabled=state.userRoleBatchAction!=='revoke';
    const selectedIds=[...state.userRoleBatchSelected];
@@ -8166,7 +8179,7 @@ async function action(name,button){
     state.userRoleBusy=true;
     let completed=0,failed=null;
     try{
-     const current=await userRoleManager.snapshot(ctx.workspace_id);
+     const current=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:resourceId==='fueltrans'});
      const refreshed=planUserRoleBatch(current,{userIds:selectedIds,
        actorUserId:ctx.user_id,scope,resourceId,role,enabled});
      if(refreshed.operations.length!==plan.operations.length||
@@ -8177,7 +8190,10 @@ async function action(name,button){
       throw new ApiError('Assignments changed since review. Refresh and review the batch again.',409);
      for(const op of plan.operations){
       try{
-       await userRoleManager.mutate({workspaceId:ctx.workspace_id,...op});
+       if(scope==='module'&&resourceId==='fueltrans')
+        await userRoleManager.setFueltransWorkspaceRole({workspaceId:ctx.workspace_id,
+         ...op});
+       else await userRoleManager.mutate({workspaceId:ctx.workspace_id,...op});
        completed++;
       }catch(err){failed=err;break;}
      }
@@ -8259,7 +8275,14 @@ async function action(name,button){
      if(resourceId==='material-request-hub'&&
         state.userRoleData.workspaceScopedMrhAvailable!==true)
        throw new ApiError('Workspace-scoped Material Request Hub role management is not installed yet. No role was changed.',409);
-     if(!['material-request-hub','toolbox-issues'].includes(resourceId)&&workspaceCount>1)
+     if(resourceId==='fueltrans'&&
+        (state.userRoleData.fueltransWorkspaceAvailable!==true||
+         state.userRoleData.moduleAssignments.some(a=>a.moduleId==='fueltrans'&&
+          a.userId===userId&&a.clientManaged===true)))
+       throw new ApiError('FuelTrans requires an active non-client workspace membership contract.',409);
+     const globalScopeBlocked=!['material-request-hub','toolbox-issues'].includes(resourceId)&&workspaceCount>1;
+     if(globalScopeBlocked&&
+         !(resourceId==='fueltrans'&&state.userRoleData.fueltransWorkspaceAvailable===true))
        throw new ApiError('This application role is shared across the user’s active workspaces. It cannot be changed from a single-workspace screen.',409);
    }
    const record=scope==='module'?
@@ -8267,7 +8290,7 @@ async function action(name,button){
       state.userRoleData.boardAssignments.find(r=>r.userId===userId&&r.boardId===resourceId);
    if(record?.role==='owner')throw new ApiError('Board owner is protected.',403);
    const enabled=!name.includes('revoke');
-   const options=scope==='module'?MODULE_ROLE_OPTIONS[resourceId]:['viewer','editor'];
+   const options=scope==='module'?(resourceId==='fueltrans'&&state.userRoleData.fueltransWorkspaceAvailable===true?FUELTRANS_WORKSPACE_ROLES:MODULE_ROLE_OPTIONS[resourceId]):['viewer','editor'];
    if(!options?.length)throw new ApiError('Unsupported role resource.');
    const current=record?.role&&options.includes(record.role)?record.role:options[0];
    const label=scope==='module'?ROLE_MODULE_OPTIONS.find(m=>m[0]===resourceId)?.[1]:

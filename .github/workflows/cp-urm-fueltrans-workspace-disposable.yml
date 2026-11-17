@@ -1,0 +1,40 @@
+name: CP-URM FuelTrans Workspace Role Disposable Acceptance
+on:
+  pull_request:
+    paths:
+      - "sql/cp-urm-fueltrans-workspace-role-candidate.sql"
+      - "sql/tests/cp-urm-fueltrans-workspace-disposable.sql"
+      - "sql/tests/cp-urm-app-toolbox-01-disposable-setup.sql"
+      - ".github/workflows/cp-urm-fueltrans-workspace-disposable.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  workspace-role-contract:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check isolated source role persistence, revisions and audit
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-urm-app-toolbox-01-disposable-setup.sql \
+            -f sql/tests/cp-urm-fueltrans-workspace-disposable.sql

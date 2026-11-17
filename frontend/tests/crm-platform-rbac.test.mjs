@@ -41,6 +41,7 @@ test('single central signed client queries authoritative platform and existing r
  const rpc=[];
  const client=new UserRoleManagementClient({rpc:async(name)=>{
   rpc.push(name);
+  if(name==='apsyntra_role_fueltrans_workspace_snapshot')throw Object.assign(Error('Missing'),{status:404,code:'PGRST202'});
   if(name==='apsyntra_crm_platform_role_snapshot')return {
    workspaceId:workspace,adminVerified:true,bootstrapVerified:false,roles:result().crmPlatformRoles};
   return {workspaceId:workspace,adminVerified:true,bootstrapVerified:false,users:result().users,modules:[],
@@ -138,7 +139,8 @@ test('CP-URM-ROLE-FIX: saved CRM admin is visible while inherited employee ident
  assert.match(html,/<option value="11111111-1111-4111-8111-111111111111" selected>member@example\.org<\/option>/);
  assert.doesNotMatch(html,/<option[^>]*>Existing Account/);
  assert.match(html,/Current CRM role \/ identity/);
- assert.match(html,/Inherited WatchdogWorkspace role/);
+ assert.match(html,/Assigned workspace role/);
+ assert.match(html,/WatchdogWorkspace identity \(not an assignment\)/);
  assert.match(html,/Admin grants CRM administrative authority for the active workspace/);
 });
 
