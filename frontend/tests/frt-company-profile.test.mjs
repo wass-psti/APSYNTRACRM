@@ -302,6 +302,8 @@ test("company profile editor escapes persisted values and exposes all required f
     assert.match(html, new RegExp('name="' + field + '" autocomplete="off"'));
   assert.match(html, /Official contact telephone/);
   assert.match(html, /Official contact email/);
+  assert.match(html, /Company address/);
+  assert.doesNotMatch(html, /Registered company address/);
   assert.match(html, /Tax Identification Number \(TIN\)/);
   assert.match(html, /name="taxIdNumber" autocomplete="off"/);
   assert.match(html, /companyLogo/);
