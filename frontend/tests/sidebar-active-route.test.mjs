@@ -51,7 +51,7 @@ test('sidebar uses one route-selected key for primary and recent links, with mat
  assert.match(sidebar,/const selectedNav=currentSidebarNavigation\(\)/);
  assert.match(sidebar,/const active=key=>selectedNav===key/);
  assert.match(sidebar,/const active=selectedNav==='recent:'\+b\.id/);
- assert.match(sidebar,/const active=!!activeHref&&path===activeHref/);
+ assert.match(app,/const active=!!activeHref&&path===activeHref/);
  assert.doesNotMatch(sidebar,/location\.hash\.startsWith\(TRADELINK_APPLICATION_ROUTE\+'\/'\)/);
  assert.match(sidebar,/active\('tradelink'\)/);
  assert.match(sidebar,/const selected=active\?' aria-current="page"':''/);
