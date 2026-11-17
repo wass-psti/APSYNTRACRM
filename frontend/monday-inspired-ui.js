@@ -255,29 +255,17 @@ if (app) {
       switcher.append(add);
     }
 
-    // Dashboard is the only primary navigation item
-    const nav = sidebar.querySelector('nav[aria-label="Primary"]');
-    if (nav) {
-      for (const link of nav.querySelectorAll('a.nav-link')) {
-        if (link.getAttribute('href') === '#/overview') {
-          const label = link.querySelector('.nav-label');
-          if (label) label.textContent = 'Dashboard';
-          link.setAttribute('aria-label', 'Dashboard');
-          link.title = 'Dashboard';
-        } else {
-          link.remove();
-        }
-      }
+    // The signed host owns navigation and capabilities. Rename only the
+    // Overview label; never prune native applications or CRM Admin actions.
+    const overview = sidebar.querySelector('nav[aria-label="Primary"] a[href="#/overview"]');
+    if (overview) {
+      const label = overview.querySelector('.nav-label');
+      if (label) label.textContent = 'Dashboard';
+      overview.setAttribute('aria-label', 'Dashboard');
+      overview.title = 'Dashboard';
     }
 
-    // Remove unnecessary section headings
-    for (const heading of sidebar.querySelectorAll('.sidebar-nav-section')) {
-      if (heading.textContent.trim().toLowerCase() === 'account') {
-        heading.remove();
-      }
-    }
-
-    // Show only the requested sidebar content
+    // Keep existing host navigation and board catalog intact
     sidebar.querySelector('.ws02-sidebar-action')?.remove();
     sidebar.querySelector('.side-bottom')?.remove();
 
