@@ -24255,6 +24255,26 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
  }
 }
 
+/* Canonical route selection: only the aria-current link receives active treatment.
+   Keep normal links quiet; pointer hover and keyboard focus remain independent. */
+#app .aps-sidebar .nav-list > .nav-link:not([aria-current="page"]):not(:hover):not(:focus-visible){
+ background:transparent;
+ border-color:transparent;
+ box-shadow:none;
+ color:var(--sm-sub);
+ font-weight:620;
+}
+#app .aps-sidebar .nav-list > .nav-link:not([aria-current="page"])::before{
+ opacity:0;transform:translateY(-50%) scaleY(.55);
+}
+#app .aps-sidebar .nav-list > .nav-link.active[aria-current="page"]{
+ color:var(--sm-accent-hover);
+ background:var(--sm-accent-soft);
+ border-color:#c8cef4;
+ box-shadow:inset 3px 0 0 var(--sm-accent),0 2px 8px #4f54bf1a;
+ font-weight:750;
+}
+
 /* frontend/fm1-application.css */
 :root {
   --fm1-ink: #182a36;
