@@ -168,7 +168,7 @@ The existing `Revise Approved` path is handled by the already merged and activat
 - Route: existing sidebar module, canonical route and signed edit route.
 - Events: central delegated event handlers and host-owned state.
 - Styles: scoped CSS and generated bundle manifest.
-- Build/deployment: GitHub Actions frontend validation, Vite production build and GitHub Pages deployment at the exact merge commit.
+- Build/deployment: GitHub Actions frontend validation, Vite production build and GitHub Pages deployment at the exact merge commit; the live Pages smoke fetches the TradeLink native adapter, UI entrypoint and their canonical domain-client dependency.
 - Signed runtime: preserve the existing live session; verify portal navigation, All Documents readback, exact document detail, reviewer stage readback and existing Approved revision behavior without fabricating business records.
 
 **Production changes:** none in CP-TL-NATIVE-01. No migration, production RPC, permission, document, review, revision, counter, attachment or company profile is changed by the adapter/UI entrypoint integration.
