@@ -24,3 +24,7 @@ test('TradeLink launcher opens the existing native module route on the existing 
 test('TradeLink launcher remains selected throughout its native module routes',()=>{
  assert.ok(app.includes("location.hash.startsWith('#/boards/'+state.boardId+'/tradelink/')"));
 });
+
+test('TradeLink is exposed once in the native sidebar, not duplicated in recent board links',()=>{
+ assert.ok(app.includes("const recent=state.boards.filter(board=>moduleByBoardName(board.name)?.key!=='tradelink').slice(0,6);"));
+});
