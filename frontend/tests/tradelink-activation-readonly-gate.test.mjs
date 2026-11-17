@@ -37,9 +37,10 @@ test('TradeLink activation preserves signed security gates without retired recov
  assert.equal(currentPolicy.recovery.mandatoryRpoHours,null);
  assert.equal(currentPolicy.recovery.mandatoryRtoHours,null);
  const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
- for(const gate of ['TL03_WORKFLOW_SUBMIT_ENABLED','TL03_WORKFLOW_REVIEW_ENABLED',
+ for(const gate of ['TL03_WORKFLOW_REVIEW_ENABLED',
   'TL03_WORKFLOW_DECISION_ENABLED','TL03_WORKFLOW_OPERATIONAL_ENABLED'])
   assert.ok(client.includes('export const '+gate+'=false;'));
+ assert.ok(client.includes('export const TL03_WORKFLOW_SUBMIT_ENABLED=true;'));
  const attachments=readFileSync('frontend/tradelink-attachments.js','utf8');
  assert.match(attachments,/export const TL03_ATTACHMENTS_ENABLED=false;/);
 });

@@ -121,7 +121,8 @@ test('All Documents actions remain authorization-gated for signed submitted/revi
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:true});
  assert.doesNotMatch(html,/data-action="tradelink-document-review"|data-action="tradelink-document-request-revision"/);
  assert.match(html,/Preview\/Edit/);
- assert.match(html,/Submit \(pending activation\)/);
+ assert.match(html,/Submit Draft/);
+ assert.doesNotMatch(html,/Submit \(pending activation\)/);
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,canManage:false});
  assert.doesNotMatch(denied,/Q-REVIEW-99|Preview\/Edit|data-action="tradelink-document-review"/);
 });

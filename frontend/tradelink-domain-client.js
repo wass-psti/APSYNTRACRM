@@ -16,10 +16,10 @@ export const TL03_ANALYTICS_ENABLED=true;
 // Production automatic-number creation remains disabled pending separate
 // operational activation. Existing manual-number creation is unchanged.
 export const TL03_AUTOMATIC_NUMBERING_ENABLED=false;
-// The workflow backend adds an authenticated RPC and changes an audit CHECK.
-// Keep the Submit button disabled until that exact production candidate is
-// approved, installed, and separately verified. Existing Draft writes remain on.
-export const TL03_WORKFLOW_SUBMIT_ENABLED=false;
+// CP-TL-FINAL-04: production migration 20261117060100 is installed and
+// verified. Enable only the signed Submit Draft RPC; retain the separate
+// For Approval / dual-review path and other legacy workflow gates unchanged.
+export const TL03_WORKFLOW_SUBMIT_ENABLED=true;
 // Requires the separately approved review/revision RPC, signed event history,
 // and guarded revision-required Draft update. Never enable from frontend alone.
 export const TL03_WORKFLOW_REVIEW_ENABLED=false;
