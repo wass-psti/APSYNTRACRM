@@ -36,3 +36,7 @@ When legitimate business records are ready, have the signed current manager exec
 - **NOT REQUIRED**: new role restrictions, a second document engine, another database project or a new production migration.
 
 Do not classify CP-TL-FINAL-05 as full production business acceptance until the six independent real outcomes exist and can be audited. If a genuine business transaction later fails, open a narrow defect based on its precise signed RPC response and authoritative document/Board state.
+
+## Evidence update — 2026-11-17, 14:33 Philippine time
+
+The initial 0/6 result above is the historical pre-submission baseline, not the current status. With explicit document-specific approval, `Q-QA-20261108-01` was genuinely submitted as revision 6 using the authenticated browser session's exact existing Submit RPC. Independent server event, immutable snapshot, Board and refreshed signed All Documents readbacks passed. **Current business acceptance: 1/6 (Quotation verified, five other types pending).** See `docs/CP-TL-FINAL-06A-GENUINE-PRODUCTION-SUBMISSION-ACCEPTANCE.md` for precise evidence and the separate native UI confirmation limitation.
