@@ -41,8 +41,10 @@ CREATE TABLE public.frt_requests(
  total_amount numeric(14,2) NOT NULL CHECK(total_amount>=0),
  status text NOT NULL DEFAULT 'PENDING_APPROVAL',liquidation_status text NOT NULL DEFAULT 'NOT_SUBMITTED',
  filing_status text NOT NULL DEFAULT 'NOT_FILED',
- archived_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),
- updated_at timestamptz NOT NULL DEFAULT now(),
+ finance_approved_by uuid,finance_approved_at timestamptz,
+ transfer_confirmed_by uuid,transfer_confirmed_at timestamptz,transfer_reference text,
+ closed_by uuid,closed_at timestamptz,archived_at timestamptz,
+ created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
  UNIQUE(workspace_id,company_id,voucher_no)
 );
 CREATE TABLE public.frt_request_items(
@@ -102,6 +104,6 @@ INSERT INTO public.workspaces(id) VALUES('00000000-0000-4000-8000-000000000001')
 INSERT INTO auth.users(id) VALUES('00000000-0000-4000-8000-000000000002');
 INSERT INTO public.frt_companies(workspace_id,code,name,display_order)
 VALUES
- ('00000000-0000-4000-8000-000000000001','WASS','WASS',1),
- ('00000000-0000-4000-8000-000000000001','WAO','WAO',2),
- ('00000000-0000-4000-8000-000000000001','PSTI','PSTI',3);
+ ('00000000-0000-4000-8000-000000000001','WASS','Watchdog Automation Sales & Services',1),
+ ('00000000-0000-4000-8000-000000000001','WAO','Watchdog Automation OPC',2),
+ ('00000000-0000-4000-8000-000000000001','PSTI','Process Solutions Technology Inc.',3);
