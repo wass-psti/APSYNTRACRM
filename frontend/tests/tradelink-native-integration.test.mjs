@@ -33,7 +33,7 @@ test('native adapter preserves existing TradeLink capability gates without silen
  assert.equal(TL03_ANALYTICS_ENABLED,true);
  assert.equal(TL03_DUAL_REVIEW_ENABLED,true);
  assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
- assert.equal(TL03_WORKFLOW_SUBMIT_ENABLED,false);
+ assert.equal(TL03_WORKFLOW_SUBMIT_ENABLED,true);
  assert.equal(TL03_WORKFLOW_REVIEW_ENABLED,false);
  assert.equal(TL03_WORKFLOW_DECISION_ENABLED,false);
  assert.equal(TL03_WORKFLOW_OPERATIONAL_ENABLED,false);

@@ -28,16 +28,48 @@ test('source submission receipt increments revision and enforces the module-spec
  assert.throws(()=>normalizeTradeLinkSubmitReceipt(receipt,documentId,'packing',5),/mismatch/);
  assert.throws(()=>normalizeTradeLinkSubmitReceipt(receipt,documentId,'invalid',5),/mismatch/);
 });
-test('until exact SQL activation, client cannot submit or trigger an unexpected network action',async()=>{
- assert.equal(TL03_WORKFLOW_SUBMIT_ENABLED,false);
+test('activated Submit requires a signed manager session and calls the exact installed RPC',async()=>{
+ assert.equal(TL03_WORKFLOW_SUBMIT_ENABLED,true);
+ const actor='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+ const calls=[];
  const client=new TradeLinkDomainClient({
-  auth:{getVerifiedUser:async()=>{throw Error('Never call auth when feature disabled');}},
-  api:{rpc:async()=>{throw Error('Unexpected RPC');}}
+  auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
+  api:{
+   context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+   allowed:async(id,capability)=>{assert.equal(id,board);assert.equal(capability,'manage');return true;},
+   boardCached:async()=>({board:detail.board}),
+   rpc:async(name,args)=>{calls.push({name,args});return receipt;}
+  }
+ });
+ assert.deepEqual(await client.submit({
+  documentId,expectedRevision:5,documentType:'quotation',fromState:'draft'}),receipt);
+ assert.deepEqual(calls,[{name:'tl03_document_submit',args:{
+  p_board_id:board,p_document_id:documentId,p_expected_revision:5}}]);
+ for(const invalid of [
+  {documentId:'invalid',expectedRevision:5,documentType:'quotation'},
+  {documentId,expectedRevision:5,documentType:'quotation',fromState:'for-approval'},
+  {documentId,expectedRevision:5,documentType:'unknown'},
+  {documentId,expectedRevision:0,documentType:'quotation'}
+ ])await assert.rejects(()=>client.submit(invalid),/Invalid TradeLink submission request/);
+ assert.equal(calls.length,1);
+});
+test('Submit refuses unsigned or unmanageable sessions without invoking the mutation RPC',async()=>{
+ const actor='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+ let writes=0;
+ const client=new TradeLinkDomainClient({
+  auth:{userId:actor,getVerifiedUser:async()=>({id:actor})},
+  api:{
+   context:async()=>({user_id:actor,workspace_id:ws,profile:{status:'active'}}),
+   allowed:async()=>false,
+   boardCached:async()=>({board:detail.board}),
+   rpc:async()=>{writes++;return receipt;}
+  }
  });
  await assert.rejects(()=>client.submit({
-  documentId,expectedRevision:5,documentType:'quotation'}),/not been activated/);
+  documentId,expectedRevision:5,documentType:'quotation',fromState:'draft'}),/board manager scope required/);
+ assert.equal(writes,0);
 });
-test('signed All Documents shows inert Submit affordance only for active authorized Drafts',()=>{
+test('signed All Documents offers enabled Submit only for active authorized Drafts',()=>{
  const draft={documentId,boardItemId:item,documentType:'quotation',
   documentNumber:'Q-QA-20261108-01',revision:5,
   workflowState:'draft',archived:false};
@@ -47,10 +79,18 @@ test('signed All Documents shows inert Submit affordance only for active authori
    {...draft,documentId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',archived:true}]};
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:ws,view,canManage:true});
  assert.equal((html.match(/data-action="tradelink-document-submit"/g)||[]).length,1);
- assert.match(html,/data-action="tradelink-document-submit"[^>]+disabled title="Submission backend not activated"/);
- assert.match(html,/Submit \(pending activation\)/);
+ assert.match(html,/data-action="tradelink-document-submit"/);
+ assert.match(html,/Submit Draft/);
+ assert.doesNotMatch(html,/Submission backend not activated|Submit \(pending activation\)/);
  const denied=renderTradeLinkDocumentRepository({detail,workspaceId:ws,view,canManage:false});
  assert.doesNotMatch(denied,/data-action="tradelink-document-submit"|Q-QA-20261108-01/);
+});
+test('user manual explains the activated legacy Submit lifecycle without replacing dual review',()=>{
+ const manual=readFileSync('frontend/tradelink-application.js','utf8');
+ assert.match(manual,/separate legacy Submit Draft action is available in All Documents/);
+ assert.match(manual,/Packing List transitions directly to Completed/);
+ assert.match(manual,/does not replace the For Approval two-reviewer route/);
+ assert.doesNotMatch(manual,/legacy Submitted intermediate stage is documented but is not active/);
 });
 test('source Submit affordance is limited to Draft and Revision Required for all six types',()=>{
  const types=['esi','packing','delivery','payment','quotation','po'];

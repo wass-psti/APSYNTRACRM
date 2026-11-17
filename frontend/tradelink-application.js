@@ -137,7 +137,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
      '<span aria-hidden="true">▥</span> Analytics</a>'+
     '<details class="tl-reference-manual"><summary data-tl-tab="manual">User Manual</summary>'+
      '<div class="tl-reference-manual-panel" role="note"><strong>TradeLink document guide</strong>'+
-      '<p>Save defaults to For Approval. Select Draft explicitly when you want a Draft. The legacy Submitted intermediate stage is documented but is not active in the current backend yet. '+
+      '<p>Save defaults to For Approval. Select Draft explicitly when you want a Draft. The separate legacy Submit Draft action is available in All Documents for saved Draft or Revision Required records; ESI, Quotation, Purchase Order, Delivery Receipt and Payment AR transition to Submitted, while Packing List transitions directly to Completed. This does not replace the For Approval two-reviewer route. '+
       'Each document has two assigned reviewers; each uses Use Time Now to record an independent signed validation. '+
       'The first validation leaves the document For Approval; the second automatically changes it to Approved. '+
       'Only Approved documents can be printed. Other status options become available after approval, while cancellation remains available before approval. '+
