@@ -46,12 +46,12 @@ The profile editor uses the existing active FRT membership and company context. 
 
 ## Migrations
 
-Apply in order only after deployment readiness review:
+Applied to the existing production Supabase project after explicit user approval:
 
 1. 20261117051021_frt_company_profile_metadata.sql
 2. 20261117051040_frt_flow03c_request_accounting_lines.sql
 
-The already-applied 20261116172414 voucher projection is not reapplied. WF-05A and WF-05B remain their own pending migrations on production. Production version 20261117020000 is already applied for TradeLink immutable revision snapshots; it is unrelated to FRT and is preserved unchanged. That remote migration version is absent from this branch’s local migration directory, so reconcile its TradeLink migration artifact before any production migration push. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
+These filenames and SHA-256 entries match the exact versions recorded in production migration history. The already-applied 20261116172414 voucher projection is not reapplied. Existing TradeLink versions 20261117020000 and 20261117045417 are preserved and recorded in the branch migration manifest; neither was reapplied. WF-05A and WF-05B remain separate pending migrations and are not prerequisites for CP-FRT-FLOW-03C. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
 
 The new accounting table has RLS enabled and no direct table grants. Existing authenticated FRT members use the two narrowly scoped signed RPCs:
 
@@ -79,7 +79,7 @@ The SQL fixtures use an existing FRT REQUESTOR membership, not a new administrat
 
 The Chromium acceptance script exercises the actual accounting editor, save/readback, exact-cent balance, A4 PDF, download, print and reprint.
 
-## Production status at implementation start
+## Production status after approved migration activation
 
 Read-only inspection on 2026-11-17 found:
 
@@ -87,17 +87,17 @@ Read-only inspection on 2026-11-17 found:
 - existing voucher projection migration 20261116172414 already applied;
 - WF-05A archive and WF-05B monthly voucher migrations pending;
 - migration 20261117020000 applied as TradeLink immutable revision snapshots (not an FRT migration);
-- new FRT company profile and accounting migrations 20261117051021 and 20261117051040 not applied;
+- company profile migration 20261117051021 and accounting migration 20261117051040 applied and verified;
 - zero production FRT requests and expense lines;
 - zero voucher counter rows;
 - existing private frt-attachments bucket and membership-based storage policies.
 
-No production migration, company profile or financial record is modified by CP-FRT-FLOW-03C development. Production migration activation is blocked pending reconciliation of the pre-existing remote-only TradeLink migration version 20261117020000 and the already-pending WF-05A/WF-05B migrations. Genuine production request-level acceptance remains pending until a real request exists and migrations are deployed.
+Only the two approved additive CP-FRT-FLOW-03C migrations were applied. Existing WAO/WASS/PSTI names, company profile values, logos, fund requests, voucher numbers and financial records remain unchanged. The previously remote-only TradeLink migration versions were reconciled into the branch manifest without modifying or reapplying their SQL. WF-05A/WF-05B remain separate pending work. Genuine production request-level acceptance remains pending because the signed production view and database currently contain zero FRT requests.
 
 ## Acceptance classification
 
 - IMPLEMENTED: Company profile editor, upload/readback integration, manual accounting editor, exact-cent calculations, reusable manual templates, revisioned persistence RPC, canonical voucher projection, PDF accounting section.
 - VERIFIED: Disposable PostgreSQL migrations and business rules; frontend unit tests; Chromium editor/PDF acceptance; production build and CI after completion.
-- BLOCKED: Production migration push until remote-only TradeLink migration 20261117020000 is reconciled with repository history.
-- PENDING: Production migration deployment and live signed profile/accounting transaction acceptance.
+- VERIFIED: Both additive CP-FRT-FLOW-03C migrations are installed in production; exact migration versions, RPC grants, RLS state, and unchanged business-record counts were read back.
+- PENDING: Main merge/Pages deployment and live signed profile/accounting transaction acceptance when a genuine FRT request and company profile details are available.
 - NOT APPLICABLE: New voucher document table, new DV counter, new storage bucket or new approval hierarchy.
