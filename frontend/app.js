@@ -18,6 +18,7 @@ import {captureAuthReturn,
  inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword} from './auth-account-flows.js';
 import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
+import {sidebarActiveRoute} from './sidebar-active-route.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
@@ -507,24 +508,29 @@ function syncSidebarLayout(){
 }
 function sidebar(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
- const currentBoard=state.boardId;
  const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board)).slice(0,6);
- const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
-  sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
-  sidebarNav('#/fm1','FM1 Ticketing','ticket',state.view==='fm1')+
-  sidebarNav('#/time-tracker','TimeTracker','clock',state.ttStandalone===true)+
-   sidebarNav('#/fund-tracker','Fund Tracker','finance',state.frtStandalone===true||
-    (state.view==='board'&&state.boardId===FRT_BOARD_ID&&state.tab==='finance'))+
-  sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',state.fuelTrackStandalone===true)+
-  sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',state.tlStandalone===true)+
-  (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
-  (engineeringUi?sidebarNav('#/security','Access acceptance','security',state.view==='security'):'')+
+ const selectedNav=sidebarActiveRoute(location.hash,{
+  tradelinkBoardId:TRADELINK_BOARD_ID,fundTrackerBoardId:FRT_BOARD_ID,
+  fueltrackBoardId:FUELTRACK_V3_ID,
+  timeTrackerBoardId:findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName)?.id,
+  recentBoardIds:recent.map(board=>board.id)
+ });
+ const active=key=>selectedNav===key;
+ const nav=sidebarNav('#/overview','Overview','overview',active('overview'))+
+  sidebarNav('#/boards','My boards','boards',active('boards'),{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
+  sidebarNav('#/fm1','FM1 Ticketing','ticket',active('fm1'))+
+  sidebarNav('#/time-tracker','TimeTracker','clock',active('time-tracker'))+
+  sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
+  sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
+  sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
+  (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
+  (engineeringUi?sidebarNav('#/security','Access acceptance','security',active('security')):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
-   sidebarNav('#/role-configuration','Role Configuration','roles',state.view==='role-configuration')+
-   sidebarNav('#/user-role-management','User Role Management','users',state.view==='user-role-management'):'')+
+   sidebarNav('#/role-configuration','Role Configuration','roles',active('role-configuration'))+
+   sidebarNav('#/user-role-management','User Role Management','users',active('user-role-management')):'')+
   '<div class="side-section sidebar-nav-section">Account</div>'+
-  sidebarNav('#/settings','Settings','settings',state.view==='settings')+
-  (engineeringUi?sidebarNav('#/acceptance','Pages acceptance','acceptance',state.view==='acceptance'):'');
+  sidebarNav('#/settings','Settings','settings',active('settings'))+
+  (engineeringUi?sidebarNav('#/acceptance','Pages acceptance','acceptance',active('acceptance')):'');
  return `<aside class="sidebar aps-sidebar" aria-label="Workspace sidebar">
   <div class="sidebar-brand-wrap">
    <a href="#/overview" class="brand" aria-label="APSYNTRA CRM — Go to overview" title="Go to overview">
@@ -548,7 +554,7 @@ function sidebar(){
    <nav class="nav-list sidebar-recent-list" aria-label="Recent boards">`+
     (recent.map((b,i)=>{
      const title=String(b.name||'Untitled board');
-     const active=currentBoard===b.id&&!state.ttStandalone&&!state.frtStandalone&&!state.tlStandalone&&!state.fuelTrackStandalone;
+     const active=selectedNav==='recent:'+b.id;
      const tone=['violet','teal','amber','rose','blue','indigo'][i%6];
      return '<a class="nav-link sidebar-recent-link '+(active?'active':'')+
       '" href="#/boards/'+e(b.id)+'" title="'+e(title)+'" aria-label="'+e(title)+'"'+
