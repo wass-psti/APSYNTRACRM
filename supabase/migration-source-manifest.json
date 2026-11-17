@@ -1680,6 +1680,13 @@
       "file": "20261117051040_frt_flow03c_request_accounting_lines.sql",
       "bytes": 14009,
       "sha256": "e5fd260501cc1ad5f1c177041a54444a409c55d215569dcd1112e17b40a42eef"
+    },
+    {
+      "version": "20261117060100",
+      "name": "tradelink_submitted_workflow_activation",
+      "file": "20261117060100_tradelink_submitted_workflow_activation.sql",
+      "bytes": 11254,
+      "sha256": "9ec29133aa7cc9f78716643e23ac6c72a75ca23b6216b7a106dbad3e17e36f97"
     }
   ]
 }
