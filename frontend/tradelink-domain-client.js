@@ -13,9 +13,9 @@ export const TL03_DOMAIN_WRITES_ENABLED=true;
 // CP-TL-LEGACY-WORKFLOW-04: the existing production aggregate RPC is installed
 // and verified. Activate only its signed, read-only analytics UI path.
 export const TL03_ANALYTICS_ENABLED=true;
-// Production automatic-number creation remains disabled pending separate
-// operational activation. Existing manual-number creation is unchanged.
-export const TL03_AUTOMATIC_NUMBERING_ENABLED=false;
+// CP-TL-FINAL-09 SOURCE-ONLY CANDIDATE: not authorized for production merge.
+// Activates the already installed atomic signed create/numbering RPC upon merge.
+export const TL03_AUTOMATIC_NUMBERING_ENABLED=true;
 // CP-TL-FINAL-04: production migration 20261117060100 is installed and
 // verified. Enable only the signed Submit Draft RPC; retain the separate
 // For Approval / dual-review path and other legacy workflow gates unchanged.
