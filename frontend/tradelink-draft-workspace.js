@@ -1659,7 +1659,7 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
         '</select></label><button type="button" class="secondary" '+
          'data-action="tradelink-document-status-update" data-id="'+escape(row.documentId)+'" '+
          'data-current-state="'+escape(row.workflowState)+'">Save status</button> ':'')+
-       (canManage&&['draft','for-approval','revision-required'].includes(row.workflowState)&&!row.archived?
+       (canManage&&['draft','revision-required'].includes(row.workflowState)&&!row.archived?
         '<button type="button" class="secondary" data-action="tradelink-document-submit" '+
          'data-id="'+escape(row.documentId)+'"'+
          (TL03_WORKFLOW_SUBMIT_ENABLED?'':' disabled title="Submission backend not activated"')+
