@@ -65,6 +65,7 @@ const app = readFileSync("frontend/app.js", "utf8");
 const sidebarIcons = readFileSync("frontend/sidebar-visuals.js", "utf8");
 const css = readFileSync("frontend/fund-tracker-application.css", "utf8");
 const manifest = readFileSync("scripts/priority5-style-manifest.mjs", "utf8");
+const bundle = readFileSync("frontend/apsyntra-styles.bundle.css", "utf8");
 const htmlEntry = readFileSync("index.html", "utf8");
 const pagesSmoke = readFileSync("scripts/pages-smoke.mjs", "utf8");
 const native = readFileSync("frontend/fund-tracker-native.js", "utf8");
@@ -157,6 +158,8 @@ test("Fund Tracker application styles are scoped and registered in the generated
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /focus-visible/);
   assert.match(manifest, /frontend\/fund-tracker-application\.css/);
+  assert.match(bundle, /fund-tracker-application\\.css/);
+  assert.match(bundle, /frt-app-header/);
   assert.match(htmlEntry, /frontend\/fund-tracker-application\.css/);
   assert.match(pagesSmoke, /frontend\/fund-tracker-application\.js/);
   assert.match(pagesSmoke, /frontend\/fund-tracker-native\.js/);
