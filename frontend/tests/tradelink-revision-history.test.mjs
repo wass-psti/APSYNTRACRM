@@ -72,8 +72,43 @@ test('All Documents loads exact revision bundles and reprints only a verified ap
  assert.match(app,/tradeLinkDraftWorkspace\.revisionBundle\(documentId,revision\)/);
  assert.match(app,/async function openTradeLinkDocumentRevision\(documentId,revision\)/);
  assert.match(app,/tradeLinkDraftWorkspace\.revisionBundle\(documentId,revision\)/);
- assert.match(app,/revisionMeta\?\.approved!==true/);
- assert.match(app,/record\.approved!==true/);
+ assert.match(app,/revisionMeta\?\.approved===true/);
+ assert.match(app,/record\?\.approved===true/);
  assert.match(app,/case 'tradelink-document-revision-open'/);
  assert.match(app,/case 'tradelink-document-revision-print'/);
+});
+
+test('missing revision RPC retains signed latest preview without inventing history',async()=>{
+ const calls=[];
+ const current=record(2,true,'current');
+ const client=new TradeLinkDomainClient({auth:{userId:manager},api:{rpc:async(name)=>{
+  calls.push(name);
+  if(name==='tl03_document_revision_bundle')throw Object.assign(Error('not installed'),{code:'PGRST202',status:404});
+  assert.equal(name,'tl03_document_read');return current;
+ }}});
+ client.session=async()=>({workspaceId:workspace,actorId:manager});
+ const result=await client.revisionBundle(documentId,2);
+ assert.equal(result.historyAvailable,false);
+ assert.equal(result.selected.revision,2);
+ assert.deepEqual(result.revisions,[]);
+ assert.deepEqual(calls,['tl03_document_revision_bundle','tl03_document_read']);
+});
+test('missing revision RPC cannot fabricate a prior revision',async()=>{
+ const client=new TradeLinkDomainClient({auth:{userId:manager},api:{rpc:async(name)=>{
+  if(name==='tl03_document_revision_bundle')throw Object.assign(Error('not installed'),{code:'PGRST202',status:404});
+  return record(2,true,'current');
+ }}});
+ client.session=async()=>({workspaceId:workspace,actorId:manager});
+ await assert.rejects(()=>client.revisionBundle(documentId,1),error=>error.code==='PGRST202');
+});
+test('authorization denial and unrelated missing-RPC errors never fall back to current read',async()=>{
+ for(const code of ['42501','PGRST301','42883']){
+  const calls=[];
+  const client=new TradeLinkDomainClient({auth:{userId:manager},api:{rpc:async(name)=>{
+   calls.push(name);throw Object.assign(Error('denied'),{code,status:403});
+  }}});
+  client.session=async()=>({workspaceId:workspace,actorId:manager});
+  await assert.rejects(()=>client.revisionBundle(documentId),error=>error.code===code);
+  assert.deepEqual(calls,['tl03_document_revision_bundle']);
+ }
 });

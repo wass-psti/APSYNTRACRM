@@ -44,3 +44,21 @@ All Documents adds a revision history view. Every revision is selectable; only a
 - Frontend tests: signed revision-bundle normalization, exact revision RPC arguments, revision history UI, historical print gating, analytics flag/manual consistency and truthful empty analytics states.
 - CI and Pages deployment must be rechecked against the resulting commit.
 - Production migration application and live signed-browser acceptance are separate runtime gates; no production business record is created or altered by the migration backfill.
+
+## CP-TL-REVISION-HISTORY-02 — deployment-order compatibility
+
+A frontend deployment may precede production activation of the new immutable
+revision-bundle RPC. The signed TradeLink client now handles **only** the exact
+PostgREST `PGRST202` (missing function) response by retrieving the current
+signed document via the pre-existing `tl03_document_read` RPC. This temporary
+path does not fabricate historical snapshots, revisions, or approval evidence;
+revision history is shown as unavailable and an attempted historical revision
+remains unavailable. Current approved-document printing retains the existing
+signed workflow-state, current-revision, current Board linkage and workspace
+checks. Other errors, including authorization denials, never use the fallback.
+
+After migration activation, the revision-bundle RPC remains authoritative and
+all historical print eligibility uses two independent saved reviewer events.
+The compatibility path adds no role, policy, privilege, database write or
+credential requirement. Migration approval, live signed historical reprint and
+PDF visual acceptance remain independent pending steps.

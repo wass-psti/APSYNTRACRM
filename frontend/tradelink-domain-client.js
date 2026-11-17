@@ -618,10 +618,25 @@ export class TradeLinkDomainClient{
    (!Number.isSafeInteger(revision)||revision<1)))
    deny('Invalid TradeLink revision history request.',400);
   const {workspaceId}=await this.session();
-  const result=await this.api.rpc('tl03_document_revision_bundle',{
-   p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,p_revision:revision});
+  let result;
+  try{
+   result=await this.api.rpc('tl03_document_revision_bundle',{
+    p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,p_revision:revision});
+  }catch(error){
+   // The new revision ledger may deploy after the frontend. Only the exact
+   // missing-function code permits falling back to the already signed current
+   // document read. Never infer historical snapshots or bypass access denial.
+   if(error?.code!=='PGRST202')throw error;
+   const record=await this.read(documentId);
+   if(record!==null&&revision!==null&&revision!==record.revision)throw error;
+   return record===null?null:Object.freeze({
+    documentId,boardItemId:record.board_item_id,currentRevision:record.revision,
+    selected:record,revisions:Object.freeze([]),historyAvailable:false
+   });
+  }
   return result===null?null:
-   normalizeTradeLinkRevisionBundle(result,workspaceId,documentId,revision);
+   Object.freeze({...normalizeTradeLinkRevisionBundle(result,workspaceId,documentId,revision),
+    historyAvailable:true});
  }
  async commit({documentId,expectedRevision,operation,draft=null,
   expectedState='draft',initialState='for-approval'}={}){

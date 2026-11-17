@@ -2557,7 +2557,9 @@ async function openTradeLinkDocument(documentId,revision=null){
    revisions:bundle.revisions,events,attachments
   };
   state.tradeLinkDraft.error='';
-  state.tradeLinkDraft.message='Showing immutable revision '+record.revision+
+  state.tradeLinkDraft.message=bundle.historyAvailable===false?
+   'Showing the current signed document. Historical revision history is not yet deployed.':
+   'Showing immutable revision '+record.revision+
    (bundle.revisions.find(row=>row.revision===record.revision)?.approved?
     ' · approved and eligible for reprinting.':' · not approved for printing.');
  }catch{
@@ -2744,11 +2746,14 @@ async function printTradeLinkDocument(documentId,revision=null){
   if(!same())return;
   const record=bundle?.selected;
   const revisionMeta=bundle?.revisions?.find(row=>row.revision===targetRevision);
+  const verifiedApproval=bundle?.historyAvailable===false?
+   targetRevision===listed.revision&&record?.workflow_state==='approved':
+   revisionMeta?.approved===true&&record?.approved===true&&record.workflow_state==='approved';
   if(!bundle||bundle.currentRevision!==listed.revision||!record||
    record.revision!==targetRevision||record.board_item_id!==listed.boardItemId||
    record.document_type!==listed.documentType||
-   (targetRevision===listed.revision&&listed.workflowState!=='approved')||revisionMeta?.approved!==true||
-   record.approved!==true||record.workflow_state!=='approved'||
+   (targetRevision===listed.revision&&listed.workflowState!=='approved')||
+   record.workflow_state!=='approved'||!verifiedApproval||
    (targetRevision===listed.revision&&record.document_number!==listed.documentNumber)||
    board?.board?.id!==TRADELINK_BOARD_ID||board.board.workspace_id!==ws||
    !board.items?.some(item=>item.id===listed.boardItemId&&item.title===listed.documentNumber))
