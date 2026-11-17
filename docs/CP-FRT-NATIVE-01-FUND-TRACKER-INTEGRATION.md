@@ -188,12 +188,12 @@ The adapter and renderer do not introduce a second event bus or independent appl
 - Native adapter composition tests: PASS.
 - Renderer/delegated-action contract tests: PASS.
 - Sidebar, CSS manifest, HTML entry, generated bundle, and Pages smoke asset tests: PASS.
-- Full frontend regression after syncing latest main: 2,570 PASS, 0 FAIL (pre-facade-refactor baseline; final post-refactor run recorded below).
+- Full frontend regression after latest-main sync and adapter facade cutover: 2,580 PASS, 0 FAIL.
 - Ordered stylesheet bundle verification: PASS.
-- Production Vite build: PASS.
+- Production Vite build: PASS (existing non-blocking startup-guard script-tag and large-chunk advisories).
 - Fund Tracker native renderer Chromium acceptance: PASS.
 - Focused FRT adapter/host-contract regression after facade cutover: 92 PASS, 0 FAIL.
-- GitHub Actions PR-head CI: PASS before latest-main sync; rerun required after branch push.
+- GitHub Actions latest-head workflow: QUEUED after latest-main sync; final CI result pending.
 - GitHub Pages deployment verification: pending merge and deployment.
 - Genuine signed production runtime acceptance: pending.
 
