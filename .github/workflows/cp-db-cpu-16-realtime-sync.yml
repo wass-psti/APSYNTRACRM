@@ -1,0 +1,37 @@
+name: CP-DB-CPU-16 Realtime Sync Regression
+on:
+  pull_request:
+    paths:
+      - 'frontend/platform-sync.js'
+      - 'frontend/app.js'
+      - 'frontend/tests/platform-sync.test.mjs'
+      - 'docs/CP-DB-CPU-16.md'
+      - '.github/workflows/cp-db-cpu-16-realtime-sync.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  realtime-sync-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check changed JavaScript syntax
+        run: |
+          node --check frontend/platform-sync.js
+          node --check frontend/app.js
+          node --check frontend/tests/platform-sync.test.mjs
+      - name: Run focused Realtime synchronization regression
+        run: node --test frontend/tests/platform-sync.test.mjs
+      - name: Run complete frontend regression suite
+        run: npm test
+      - name: Verify production build
+        run: npm run build
