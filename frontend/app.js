@@ -694,7 +694,7 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-user-roles-shell',state.view==='user-role-management');
  root.querySelector('.main')?.classList.toggle('aps-settings-shell',state.view==='settings');
  root.querySelector('.main')?.classList.toggle('aps-pages-shell',state.view==='acceptance');
- animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
+ animateSidebarSelection(root.querySelector('.aps-sidebar'),currentSidebarNavigation());
  mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
  mountBoardCatalogMotion(root.querySelector('.aps-boards'),state.view);
  mountFoundationMotion(root.querySelector('.aps-foundation'),state.view);
