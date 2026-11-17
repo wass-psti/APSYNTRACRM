@@ -78,10 +78,10 @@ BEGIN
  -- Complete six-module source submit parity with signed writes, immutable
  -- document identity, single Board projection, and revision-bound event audit.
  FOR content IN SELECT value FROM pg_catalog.jsonb_array_elements('[
-  {"documentType":"esi","documentNumber":"ESI-SUBMIT-01","customerName":"Client","customerTin":"TIN-123","verifiedBy":"Finance","approvedBy":"Manager","items":[{"id":"a","description":"Product","quantity":1,"unitPrice":100}]},
-  {"documentType":"delivery","documentNumber":"DR-SUBMIT-01","customerName":"Consignee","referenceNumber":"SO-123","checkedBy":"QC","deliveredBy":"Logistics","items":[{"id":"b","description":"Shipped","quantity":1,"unitPrice":0}]},
+  {"documentType":"esi","documentNumber":"ESI-SUBMIT-01","customerName":"Client","customerTin":"TIN-123","verifiedBy":"Finance","approvedBy":"Manager","items":[{"id":"a","kind":"item","description":"Product","quantity":1,"unitPrice":100}]},
+  {"documentType":"delivery","documentNumber":"DR-SUBMIT-01","customerName":"Consignee","referenceNumber":"SO-123","checkedBy":"QC","deliveredBy":"Logistics","items":[{"id":"b","kind":"item","description":"Shipped","quantity":1,"unitPrice":0}]},
   {"documentType":"payment","documentNumber":"AR-SUBMIT-01","customerName":"Payer","paymentParticulars":"Invoice settlement","receivedBy":"Cashier","verifiedBy":"Finance","cashAmount":100},
-  {"documentType":"po","documentNumber":"PO-SUBMIT-01","customerName":"Supplier","targetDeliveryDate":"2026-12-01","paymentTerms":"Net 30","verifiedBy":"Finance","approvedBy":"Manager","items":[{"id":"c","description":"Equipment","quantity":1,"unitPrice":100}]}
+  {"documentType":"po","documentNumber":"PO-SUBMIT-01","customerName":"Supplier","targetDeliveryDate":"2026-12-01","paymentTerms":"Net 30","verifiedBy":"Finance","approvedBy":"Manager","items":[{"id":"c","kind":"item","description":"Equipment","quantity":1,"unitPrice":100}]}
  ]'::jsonb) LOOP
   DECLARE
    fixture_id uuid;
