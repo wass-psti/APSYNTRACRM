@@ -238,7 +238,7 @@ const platformSync=new PlatformSync({
  onStatus:updatePlatformSyncIndicator,onInvalidate:async event=>{
   if(event.reason==='broadcast'&&event.boardIds?.length){
    for(const id of event.boardIds)db.invalidateBoardCache(id);
-  }else db.invalidateBoardCache();
+  }else if(event.reason!=='heartbeat-check')db.invalidateBoardCache();
   return reconcilePlatformSync(event);
  }
 });
@@ -1762,6 +1762,40 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
    }
   }
  }
+ // A healthy private Realtime channel already delivers board-change hints.
+ // Keep the 90-second signed heartbeat for session/workspace and capability
+ // revocation checks, but avoid re-reading an unchanged generic board snapshot.
+ // A full signed snapshot still runs every five minutes, on focus/reconnect,
+ // and immediately after a board broadcast. Module-owned tabs retain their
+ // existing full-refresh cadence because their records are not all board rows.
+ if(reason==='heartbeat-check'&&view==='board'&&boardId&&tab==='items'&&
+    state.board?.board?.id===boardId){
+  const moduleKey=moduleByBoardName(state.board.board.name)?.key;
+  if(!['timetracker','frt','fueltrack','tradelink'].includes(moduleKey)){
+   let edit,manage;
+   try{
+    [edit,manage]=await Promise.all([
+     db.allowed(boardId,'edit'),db.allowed(boardId,'manage')
+    ]);
+   }catch(error){
+    if(isCurrent()&&([403,404].includes(Number(error?.status))||
+       error?.code==='42501')){
+     platformSync.stop();state.board=null;state.boardUi=null;
+     state.ttAttendance=null;state.ttBoardAttendance=null;
+     state.edit=false;state.boardManage=false;
+     location.hash='#/boards';
+     return false;
+    }
+    throw error;
+   }
+   if(!isCurrent()||platformSyncEditInProgress()||
+      quietReadAtStart!==visibleBoardRefreshSerial)return false;
+   state.edit=edit;state.boardManage=manage;
+   render();
+   return true;
+  }
+ }
+
  if(view==='board'&&boardId){
   let detail,edit,manage,boardUi;
   try{
