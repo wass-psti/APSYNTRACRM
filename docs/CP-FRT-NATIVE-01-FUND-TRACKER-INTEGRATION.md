@@ -156,7 +156,7 @@ The adapter and renderer do not introduce a second event bus or independent appl
 - Native adapter composition tests: PASS.
 - Renderer/delegated-action contract tests: PASS.
 - Sidebar, CSS manifest, HTML entry, generated bundle, and Pages smoke asset tests: PASS.
-- Full frontend regression: 2,562 PASS, 0 FAIL.
+- Full frontend regression: 2,563 PASS, 0 FAIL.
 - Ordered stylesheet bundle verification: PASS.
 - Production Vite build: PASS.
 - Chromium module-entry acceptance: PASS.
