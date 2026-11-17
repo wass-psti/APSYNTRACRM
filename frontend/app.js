@@ -506,15 +506,21 @@ function syncSidebarLayout(){
   toggle.setAttribute('title',expanded?'Collapse navigation':'Expand navigation');
  }
 }
-function sidebar(){
- const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
- const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board)).slice(0,6);
- const selectedNav=sidebarActiveRoute(location.hash,{
+/** Canonical navigation selection shared by initial render and cached-shell updates. */
+function currentSidebarNavigation(){
+ const recentBoardIds=state.boards.filter(board=>!isStandaloneApplicationBoard(board))
+  .slice(0,6).map(board=>board.id);
+ return sidebarActiveRoute(location.hash,{
   tradelinkBoardId:TRADELINK_BOARD_ID,fundTrackerBoardId:FRT_BOARD_ID,
   fueltrackBoardId:FUELTRACK_V3_ID,
   timeTrackerBoardId:findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName)?.id,
-  recentBoardIds:recent.map(board=>board.id)
+  recentBoardIds
  });
+}
+function sidebar(){
+ const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
+ const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board)).slice(0,6);
+ const selectedNav=currentSidebarNavigation();
  const active=key=>selectedNav===key;
  const nav=sidebarNav('#/overview','Overview','overview',active('overview'))+
   sidebarNav('#/boards','My boards','boards',active('boards'),{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
@@ -642,14 +648,12 @@ function shell(body){
    const navScroll=existing.querySelector('.sidebar-nav-scroll');
    if(navScroll)navScroll.scrollTop=scroll;
   }else{
+   const selected=currentSidebarNavigation();
+   const activeHref=selected.startsWith('recent:')?'#/boards/'+selected.slice(7):
+    selected?'#/'+selected:'';
    for(const link of existing.querySelectorAll('.aps-sidebar a.nav-link')){
     const path=link.getAttribute('href')||'';
-    const active=state.ttStandalone?(path===TIMETRACKER_APPLICATION_ROUTE||location.hash.startsWith(TIMETRACKER_APPLICATION_ROUTE+'/')):
-     state.frtStandalone?(path===FUND_TRACKER_APPLICATION_ROUTE||location.hash.startsWith(FUND_TRACKER_APPLICATION_ROUTE+'/')):
-     state.fuelTrackStandalone?(path===FUELTRACK_V3_APPLICATION_ROUTE||location.hash.startsWith(FUELTRACK_V3_APPLICATION_ROUTE+'/')):
-     state.tlStandalone?(path===TRADELINK_APPLICATION_ROUTE||location.hash.startsWith(TRADELINK_APPLICATION_ROUTE+'/')):
-     state.view==='board'?path==='#/boards/'+state.boardId:
-     path==='#/'+state.view;
+    const active=!!activeHref&&path===activeHref;
     link.classList.toggle('active',active);
     if(active)link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
