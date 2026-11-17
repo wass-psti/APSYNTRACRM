@@ -15397,6 +15397,7 @@
  gap:12px;padding:16px 22px;background:#edf1f9;border-bottom:1px solid #d6deec;
 }
 .tl-print-controls span{font-size:12px;color:#4e5972;font-weight:650;margin-inline-end:auto}
+.tl-print-controls .tl-print-guidance{display:block;margin-top:3px;font-size:11px;line-height:1.35;font-weight:500;color:#52637b}
 .tl-print-controls button{
  border:1px solid #c1cce1;border-radius:9px;background:#fff;color:#263953;
  font:inherit;font-size:12px;font-weight:750;padding:9px 13px;min-height:42px;
