@@ -1638,6 +1638,13 @@
       "file": "20261116172414_frt_restricted_voucher_projection.sql",
       "bytes": 5612,
       "sha256": "3429782eb63e42c9539557486737c868b5d35e1c0779592babdedc09610e3a5e"
+    },
+    {
+      "version": "20261117020000",
+      "name": "tradelink_immutable_revision_snapshots",
+      "file": "20261117020000_tradelink_immutable_revision_snapshots.sql",
+      "bytes": 11962,
+      "sha256": "2aa1381dd3d55a9a2e60100e4e04f76c5b2a0bedf8d865c26fb4b6daca48ba27"
     }
   ]
 }
