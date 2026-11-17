@@ -18,6 +18,7 @@ import {captureAuthReturn,
  inspectRecoveryToken,requestPasswordRecovery,applyRecoveredPassword} from './auth-account-flows.js';
 import {mountAuthExperience} from './auth-experience.js';
 import {sidebarIcon,animateSidebarSelection,stopSidebarSelection} from './sidebar-visuals.js';
+import {resolveSidebarActiveHref} from './sidebar-navigation-state.js';
 import {overviewIcon,mountOverviewMotion,stopOverviewMotion} from './overview-visuals.js';
 import {mountBoardCatalogMotion,stopBoardCatalogMotion} from './board-catalog-visuals.js';
 import {BOARD_ITEM_PAGE_SIZE,DomainApi,validUuid} from './data.js';
@@ -480,7 +481,8 @@ function renderLogin(message='',{mode=authViewFromHash(),notice='',emailValue=''
 }
 
 /** Visual-only route links. Permission-aware inclusion stays server-derived. */
-function sidebarNav(href,label,icon,active,{count=null}={}){
+function sidebarNav(href,label,icon,activeHref,{count=null}={}){
+ const active=href===activeHref;
  const selected=active?' aria-current="page"':'';
  const badge=count!==null?'<span class="nav-count">'+e(count)+'</span>':'';
  return '<a class="nav-link '+(active?'active':'')+'" href="'+e(href)+'" '+
@@ -505,26 +507,24 @@ function syncSidebarLayout(){
   toggle.setAttribute('title',expanded?'Collapse navigation':'Expand navigation');
  }
 }
-function sidebar(){
+function sidebar(activeHref){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
- const currentBoard=state.boardId;
  const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board)).slice(0,6);
- const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
-  sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
-  sidebarNav('#/fm1','FM1 Ticketing','ticket',state.view==='fm1')+
-  sidebarNav('#/time-tracker','TimeTracker','clock',state.ttStandalone===true)+
-   sidebarNav('#/fund-tracker','Fund Tracker','finance',state.frtStandalone===true||
-    (state.view==='board'&&state.boardId===FRT_BOARD_ID&&state.tab==='finance'))+
-  sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',state.fuelTrackStandalone===true)+
-  sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',state.tlStandalone===true)+
-  (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
-  (engineeringUi?sidebarNav('#/security','Access acceptance','security',state.view==='security'):'')+
+ const nav=sidebarNav('#/overview','Overview','overview',activeHref)+
+  sidebarNav('#/boards','My boards','boards',activeHref,{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
+  sidebarNav('#/fm1','FM1 Ticketing','ticket',activeHref)+
+  sidebarNav('#/time-tracker','TimeTracker','clock',activeHref)+
+   sidebarNav('#/fund-tracker','Fund Tracker','finance',activeHref)+
+  sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',activeHref)+
+  sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',activeHref)+
+  (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',activeHref):'')+
+  (engineeringUi?sidebarNav('#/security','Access acceptance','security',activeHref):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
-   sidebarNav('#/role-configuration','Role Configuration','roles',state.view==='role-configuration')+
-   sidebarNav('#/user-role-management','User Role Management','users',state.view==='user-role-management'):'')+
+   sidebarNav('#/role-configuration','Role Configuration','roles',activeHref)+
+   sidebarNav('#/user-role-management','User Role Management','users',activeHref):'')+
   '<div class="side-section sidebar-nav-section">Account</div>'+
-  sidebarNav('#/settings','Settings','settings',state.view==='settings')+
-  (engineeringUi?sidebarNav('#/acceptance','Pages acceptance','acceptance',state.view==='acceptance'):'');
+  sidebarNav('#/settings','Settings','settings',activeHref)+
+  (engineeringUi?sidebarNav('#/acceptance','Pages acceptance','acceptance',activeHref):'');
  return `<aside class="sidebar aps-sidebar" aria-label="Workspace sidebar">
   <div class="sidebar-brand-wrap">
    <a href="#/overview" class="brand" aria-label="APSYNTRA CRM — Go to overview" title="Go to overview">
@@ -548,7 +548,7 @@ function sidebar(){
    <nav class="nav-list sidebar-recent-list" aria-label="Recent boards">`+
     (recent.map((b,i)=>{
      const title=String(b.name||'Untitled board');
-     const active=currentBoard===b.id&&!state.ttStandalone&&!state.frtStandalone&&!state.tlStandalone&&!state.fuelTrackStandalone;
+     const active=activeHref==='#/boards/'+b.id;
      const tone=['violet','teal','amber','rose','blue','indigo'][i%6];
      return '<a class="nav-link sidebar-recent-link '+(active?'active':'')+
       '" href="#/boards/'+e(b.id)+'" title="'+e(title)+'" aria-label="'+e(title)+'"'+
@@ -611,6 +611,8 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
+ const recentBoardIds=state.boards.filter(board=>!isStandaloneApplicationBoard(board)).slice(0,6).map(board=>board.id);
+ const activeHref=resolveSidebarActiveHref(location.hash,recentBoardIds);
  const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
  const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.roleVerified,state.adminVerified,name(),
@@ -631,19 +633,14 @@ function shell(body){
   if(shellSidebarSignature!==sidebarSignature){
    const scroll=oldSidebar?.querySelector('.sidebar-nav-scroll')?.scrollTop||0;
    const template=document.createElement('template');
-   template.innerHTML=sidebar();
+   template.innerHTML=sidebar(activeHref);
    oldSidebar?.replaceWith(template.content.firstElementChild);
    const navScroll=existing.querySelector('.sidebar-nav-scroll');
    if(navScroll)navScroll.scrollTop=scroll;
   }else{
    for(const link of existing.querySelectorAll('.aps-sidebar a.nav-link')){
     const path=link.getAttribute('href')||'';
-    const active=state.ttStandalone?(path===TIMETRACKER_APPLICATION_ROUTE||location.hash.startsWith(TIMETRACKER_APPLICATION_ROUTE+'/')):
-     state.frtStandalone?(path===FUND_TRACKER_APPLICATION_ROUTE||location.hash.startsWith(FUND_TRACKER_APPLICATION_ROUTE+'/')):
-     state.fuelTrackStandalone?(path===FUELTRACK_V3_APPLICATION_ROUTE||location.hash.startsWith(FUELTRACK_V3_APPLICATION_ROUTE+'/')):
-     state.tlStandalone?(path===TRADELINK_APPLICATION_ROUTE||location.hash.startsWith(TRADELINK_APPLICATION_ROUTE+'/')):
-     state.view==='board'?path==='#/boards/'+state.boardId:
-     path==='#/'+state.view;
+    const active=path===activeHref;
     link.classList.toggle('active',active);
     if(active)link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
@@ -654,7 +651,7 @@ function shell(body){
   existing.querySelector('.main-content').innerHTML=body;
   if(scrollPositions)restoreBoardGroupScroll(existing.querySelector('.main-content'),scrollPositions);
  }else{
-  root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
+  root.innerHTML=`<div class="shell">${sidebar(activeHref)}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div><button type="button" class="ws01-topbar-launch" data-action="ws01-open" aria-label="Browse authorized workspaces">Workspaces ▾</button>
  <div class="top-actions"><button type="button" class="aps-global-search-trigger" data-global-search-open aria-haspopup="dialog" aria-expanded="false" aria-label="Search APSYNTRA CRM"><span class="aps-global-search-trigger-icon" aria-hidden="true">⌕</span><span class="aps-global-search-trigger-label">Search</span><kbd data-global-search-key>⌘ K</kbd></button>${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings"><span data-avatar-initials aria-hidden="true">${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></a></div></header>
  <div class="main-content">${body}</div></main></div>`;
@@ -684,7 +681,7 @@ function shell(body){
  root.querySelector('.main')?.classList.toggle('aps-user-roles-shell',state.view==='user-role-management');
  root.querySelector('.main')?.classList.toggle('aps-settings-shell',state.view==='settings');
  root.querySelector('.main')?.classList.toggle('aps-pages-shell',state.view==='acceptance');
- animateSidebarSelection(root.querySelector('.aps-sidebar'),state.view);
+ animateSidebarSelection(root.querySelector('.aps-sidebar'),activeHref);
  mountOverviewMotion(root.querySelector('.aps-overview'),state.view);
  mountBoardCatalogMotion(root.querySelector('.aps-boards'),state.view);
  mountFoundationMotion(root.querySelector('.aps-foundation'),state.view);
