@@ -28,7 +28,11 @@ const snapshot=()=>({
   {category:'Office supplies',description:'Paper, pens and folders',amount:'1000.50'},
   {category:'Printing',description:'Forms and labels',amount:'250.00'}
  ],
- itemsTotal:'1250.50',reconciled:true
+ itemsTotal:'1250.50',reconciled:true,
+ accounting:{revision:1,lines:[
+  {id:'33333333-3333-4333-8333-333333333333',lineNumber:1,accountCode:'1010',accountName:'Cash / Bank',description:'Debit entry',debit:'1250.50',credit:'0.00'},
+  {id:'44444444-4444-4444-8444-444444444444',lineNumber:2,accountCode:'2010',accountName:'Accounts Payable',description:'Credit entry',debit:'0.00',credit:'1250.50'}
+ ],debitTotal:'1250.50',creditTotal:'1250.50',debitCents:125050,creditCents:125050,requestTotalCents:125050,balanced:true}
 });
 const request={requestId,voucher:voucherNo,title:'Office supplies'};
 const signedAuth={userId,isSignedIn:true,getVerifiedUser:async()=>({id:userId})};
@@ -59,6 +63,7 @@ test('voucher projection preserves the existing voucher number and reconciles pe
 test('voucher projection preserves database-valid zero lines and missing optional payee or descriptive values',()=>{
  const raw=snapshot();raw.items[0].amount='0.00';raw.items[1].amount='0.00';
  raw.itemsTotal='0.00';raw.totalAmount='0.00';raw.reconciled=true;
+ raw.accounting={revision:0,lines:[],debitTotal:'0.00',creditTotal:'0.00',debitCents:0,creditCents:0,requestTotalCents:0,balanced:false};
  raw.items[0].category='';raw.items[0].description=null;
  raw.department='';raw.fundSource='';raw.description='';
  raw.payee=null;raw.payeeBank=null;
@@ -111,7 +116,7 @@ test('voucher HTML escapes persisted text and shows all output controls and trut
  assert.match(html,/View Voucher|DISBURSEMENT VOUCHER/);
  for(const action of ['preview','download','print','reprint'])assert.match(html,new RegExp('data-frt-voucher-'+action));
  assert.match(html,/Company address, logo and contact details are not configured/);
- assert.match(html,/Chart-of-accounts mappings are not configured/);
+ assert.match(html,/Account codes and names are manually entered/);
  assert.match(html,/Finance User/);
  assert.match(html,/Subtotal · Office supplies/);
  assert.match(html,/Subtotal · Printing/);
@@ -148,6 +153,10 @@ test('PDF generation returns a genuine multi-page PDF with embedded Roboto and p
  }));
  const total='9000.00';
  const voucher={...base,items,totalAmount:total,reconciliation:{itemsTotal:total,totalAmount:total,balanced:true},
+  accounting:{revision:1,lines:[
+   {lineNumber:1,accountCode:'1010',accountName:'Cash / Bank',description:'Debit total',debit:'9000.00',credit:'0.00'},
+   {lineNumber:2,accountCode:'2010',accountName:'Accounts Payable',description:'Credit total',debit:'0.00',credit:'9000.00'}
+  ],debitTotal:'9000.00',creditTotal:'9000.00',debitCents:900000,creditCents:900000,requestTotalCents:900000,balanced:true},
   bankExecution:null,bankExecutionError:'No bank execution has been recorded.'};
  const buffer=await createFRTVoucherPdfBuffer(voucher);
  assert.equal(buffer.subarray(0,8).toString(),'%PDF-1.3');
@@ -156,13 +165,14 @@ test('PDF generation returns a genuine multi-page PDF with embedded Roboto and p
  assert.ok(pages>=2,'expected a multi-page voucher PDF');
 });
 
-test('voucher feature uses the narrow RPC and does not introduce a new counter or persisted document table',()=>{
+test('voucher accounting extends the existing signed projection without a competing voucher document or counter',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const data=readFileSync(new URL('../data.js',import.meta.url),'utf8');
  const ui=readFileSync(new URL('../frt-finance-ui.js',import.meta.url),'utf8');
  const pdfModule=readFileSync(new URL('../frt-voucher-pdf.js',import.meta.url),'utf8');
  const pdfVendor=readFileSync(new URL('../vendor/frt-pdf-engine.js',import.meta.url),'utf8');
  const migration=readFileSync(new URL('../../supabase/migrations/20261116172414_frt_restricted_voucher_projection.sql',import.meta.url),'utf8');
+ const accountingMigration=readFileSync(new URL('../../supabase/migrations/20261117051040_frt_flow03c_request_accounting_lines.sql',import.meta.url),'utf8');
  assert.match(app,/loadFRTVoucher/);
  assert.match(app,/data-frt-voucher-reprint/);
  assert.match(ui,/data-action="frt-voucher-open"/);

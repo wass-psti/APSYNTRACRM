@@ -1645,6 +1645,27 @@
       "file": "20261117020000_tradelink_immutable_revision_snapshots.sql",
       "bytes": 11962,
       "sha256": "2aa1381dd3d55a9a2e60100e4e04f76c5b2a0bedf8d865c26fb4b6daca48ba27"
+    },
+    {
+      "version": "20261117045417",
+      "name": "tradelink_approved_revision_flow",
+      "file": "20261117045417_tradelink_approved_revision_flow.sql",
+      "bytes": 13251,
+      "sha256": "422af0979e3978f6f8cbadebcc71dc7a5f6488f1070070cd9b1df5eb25958f3b"
+    },
+    {
+      "version": "20261117051021",
+      "name": "frt_company_profile_metadata",
+      "file": "20261117051021_frt_company_profile_metadata.sql",
+      "bytes": 10367,
+      "sha256": "ae6791220dceeb7d29dee372776f986b062e174954dcf4448fa85319a715393a"
+    },
+    {
+      "version": "20261117051040",
+      "name": "frt_flow03c_request_accounting_lines",
+      "file": "20261117051040_frt_flow03c_request_accounting_lines.sql",
+      "bytes": 14009,
+      "sha256": "e5fd260501cc1ad5f1c177041a54444a409c55d215569dcd1112e17b40a42eef"
     }
   ]
 }
