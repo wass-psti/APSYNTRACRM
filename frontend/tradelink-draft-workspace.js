@@ -1659,6 +1659,10 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
         '</select></label><button type="button" class="secondary" '+
          'data-action="tradelink-document-status-update" data-id="'+escape(row.documentId)+'" '+
          'data-current-state="'+escape(row.workflowState)+'">Save status</button> ':'')+
+       (canManage&&TL03_WORKFLOW_SUBMIT_ENABLED&&
+        ['draft','revision-required'].includes(row.workflowState)&&!row.archived?
+        '<button type="button" class="secondary" data-action="tradelink-document-check-readiness" '+
+         'data-id="'+escape(row.documentId)+'">Check readiness</button> ':'')+
        (canManage&&['draft','revision-required'].includes(row.workflowState)&&!row.archived?
         '<button type="button" class="secondary" data-action="tradelink-document-submit" '+
          'data-id="'+escape(row.documentId)+'"'+

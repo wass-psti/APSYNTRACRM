@@ -67,6 +67,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
  normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
+import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_ANALYTICS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
@@ -2850,6 +2851,36 @@ async function commitTradeLinkDraft(form){
    state.tradeLinkDraft.error=tradeLinkDraftSaveFailureMessage(err,{committed});
    state.tradeLinkDraft.message='';
   }
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+/** Advisory readiness preview; existing signed read, no mutation or new gate. */
+async function checkTradeLinkDocumentReadiness(documentId){
+ if(!TL03_WORKFLOW_SUBMIT_ENABLED||!tradeLinkAuthorizedListRoute()||
+  state.tradeLinkSection!=='documents'||state.tradeLinkDraft.busy||
+  state.tradeLinkDraft.status!=='AUTHORIZED_READ'||!state.boardManage)return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed||listed.archived||
+  !['draft','revision-required'].includes(listed.workflowState))return;
+ const seq=routeSerial,actor=auth.userId,workspace=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&auth.userId===actor&&
+  state.context?.workspace_id===workspace;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ try{
+  const record=await tradeLinkDraftWorkspace.read(documentId);
+  if(!same())return;
+  if(!record||record.id!==listed.documentId||
+    record.revision!==listed.revision||record.workflow_state!==listed.workflowState||
+    record.document_number!==listed.documentNumber||
+    record.document_type!==listed.documentType||
+    record.board_item_id!==listed.boardItemId||record.archived_at!==null)
+   throw new ApiError('The signed document changed; refresh All Documents.',409);
+  state.tradeLinkDraft.message=summarizeTradeLinkSubmitReadiness(record);
+ }catch(err){
+  if(same())state.tradeLinkDraft.error=
+   'Submit readiness could not be verified. Refresh the signed document before trying again.';
  }finally{
   if(same()){state.tradeLinkDraft.busy=false;render();}
  }
@@ -6853,6 +6884,9 @@ async function action(name,button){
    if(same()){state.tradeLinkDraft.busy=false;render();}
   }
   break;
+ }
+ case 'tradelink-document-check-readiness':{
+  await checkTradeLinkDocumentReadiness(button.dataset.id);break;
  }
  case 'tradelink-document-submit':{
   await submitTradeLinkDocument(button.dataset.id);break;
