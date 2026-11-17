@@ -46,6 +46,13 @@ test('signed analytics keeps tabs, date filters, metric filters, chart and daily
  assert.match(html,/href="#\/boards\/7af78b3f-67bf-4600-9aa1-9006d19d486e\/fueltrack\/analytics\/efficiency\/all\/both"/);
  assert.doesNotMatch(html,/271 transactions|258 processed/);
 });
+test('signed analytics tolerates absent or malformed optional period metadata without crashing',()=>{
+ for(const days of [undefined,null,'invalid',0,-1,999999]){
+  const html=renderFuelTrackSignedAnalyticsRich(snapshot,{...analytics,days});
+  assert.match(html,/Consumption Trend/);
+  assert.doesNotMatch(html,/NaN-NaN|Invalid Date/);
+ }
+});
 test('unverified and mismatched analytics fail closed and never reconstruct data from the Board',()=>{
  assert.match(renderFuelTrackSignedAnalyticsRich(snapshot,null),/unavailable/);
  assert.match(renderFuelTrackSignedAnalyticsRich(snapshot,{...analytics,workspaceId:'foreign'}),/unavailable/);
