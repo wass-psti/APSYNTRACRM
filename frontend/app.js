@@ -2249,6 +2249,7 @@ async function loadFundTrackerPendingSelection(boardId,seq){
   pendingNativeSearchSelection.workspaceId===state.context?.workspace_id&&
   pendingNativeSearchSelection.boardId===boardId?pendingNativeSearchSelection:null;
  if(!pending)return false;
+ state.frtFinanceView='tracker';
  await loadFRTFinance(pending.navigationScope||null,seq,pending.query||'');
  if(seq===routeSerial&&pendingNativeSearchSelection===pending&&
     state.frtFinance?.requests?.some(row=>row.requestId===pending.recordId))
@@ -2409,11 +2410,8 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
     TL03_DOMAIN_READS_ENABLED&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkDrafts(seq);
  if(tab==='attendance'&&moduleByBoardName(state.board.board?.name)?.key==='timetracker')await loadTimeTracker(seq);
- if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt'){
-  if(pendingNativeSearchSelection?.applicationId==='frt'&&
-     pendingNativeSearchSelection.boardId===boardId)state.frtFinanceView='tracker';
+ if(tab==='finance'&&moduleByBoardName(state.board.board?.name)?.key==='frt')
   await loadFundTrackerPendingSelection(boardId,seq);
- }
  if(tab==='items'&&moduleByBoardName(state.board.board?.name)?.key==='frt'){
   const identity=state.context?.user_id,workspace=state.context?.workspace_id;
   state.frtFinanceBusy=true;render();
