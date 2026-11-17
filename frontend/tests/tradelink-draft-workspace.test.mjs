@@ -151,7 +151,9 @@ test('Draft form preserves current manual numbering until activation and exposes
  const view=initialTradeLinkDraftView('quotation');
  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
  assert.match(html,/name="documentNumber"[^>]*required maxlength="120" pattern=/);
- assert.match(html,/Enter the existing source document number/);
+ assert.match(html,/Enter the document number manually/);
+ assert.match(html,/automatic-numbering database capability is installed but is not enabled/);
+ assert.doesNotMatch(html,/migration is activated/);
  assert.match(html,/name="date" type="date"/);
  assert.match(html,/name="dueDate"/);
  assert.match(html,/name="quoteStatus"/);
