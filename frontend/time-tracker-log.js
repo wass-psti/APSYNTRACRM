@@ -368,8 +368,8 @@ export function renderTimeTrackerLog({
       expandedRecordIds,mapEnabled,mapTheme,adminEligible,adminBusy,selectedIds})).join('')+
      '</tbody></table></div></div>':
      '<p class="tt-log-empty">No authorized attendance sessions match these filters.</p>')+
-   '<p id="tt-log-empty-search" class="tt-log-empty"'+
-    (visible.length?' hidden':'')+'>No sessions match the current search.</p>'+
+   (rows.length?'<p id="tt-log-empty-search" class="tt-log-empty"'+
+    (visible.length?' hidden':'')+'>No sessions match the current search.</p>':'')+
    '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
    '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
   '</section>'+renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:''})+renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
