@@ -98,7 +98,7 @@ test("existing Team and GPS navigation eligibility is preserved without adding n
 test("all legacy TimeTracker board URLs resolve to the dedicated application route", () => {
   assert.match(
     app,
-    /sidebarNav\('#\/time-tracker','TimeTracker','clock',state\.ttStandalone===true\)/,
+    /sidebarNav\('#\/time-tracker','TimeTracker','clock',active\('time-tracker'\)\)/,
   );
   assert.match(app, /if\(parts\[0\]==='time-tracker'\)/);
   assert.match(
