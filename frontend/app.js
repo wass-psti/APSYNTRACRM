@@ -636,7 +636,7 @@ function shell(body){
     const active=state.ttStandalone?(path===TIMETRACKER_APPLICATION_ROUTE||location.hash.startsWith(TIMETRACKER_APPLICATION_ROUTE+'/')):
      state.frtStandalone?(path===FUND_TRACKER_APPLICATION_ROUTE||location.hash.startsWith(FUND_TRACKER_APPLICATION_ROUTE+'/')):
      state.view==='board'&&state.boardId===TRADELINK_BOARD_ID?
-      (path==='#/boards/'+state.boardId||location.hash.startsWith(path+'/')):
+      (path==='#/boards/'+state.boardId||location.hash.startsWith('#/boards/'+state.boardId+'/tradelink/')):
      state.view==='board'?path==='#/boards/'+state.boardId:
      path==='#/'+state.view;
     link.classList.toggle('active',active);
