@@ -89,6 +89,8 @@ A fresh shallow clone of the current `main` branch was used. No stale local chec
 
 The production build retains existing non-blocking warnings: the legacy `startup-guard.js` script is not a Vite module entry, and large application/PDF chunks exceed the default 500 kB advisory threshold. Neither warning caused the build to fail.
 
+The clean verification checkout was based on `f305ca8`. Before this documentation PR was opened, `main` advanced to `fd5557a` by four commits. A GitHub compare of those commits shows that the intervening changes were confined to CP-DB-CPU-17 and CP-FRT-FLOW-03G documentation/tests/scripts; no TradeLink source, tests, migrations, or assets changed. The PR is documentation-only.
+
 ## 7. Production evidence — separate from code-level acceptance
 
 The latest recorded read-only production baseline in CP-TL-NATIVE-02A was:
