@@ -40,7 +40,7 @@ const signedApi={
  context:async()=>({user_id:userId,workspace_id:workspaceId,profile:{status:'active'}}),
  rpc:async(name)=>{
   if(name==='frt_bootstrap')return {membership:{user_id:userId,workspace_id:workspaceId,
-   enabled:true,status:'active',role:'FINANCE_MANAGER'},companies:[{code:'WASS',name:'WASS'}]};
+   enabled:true,status:'active',role:'FINANCE_MANAGER'},companies:[{code:'WASS',name:'WASS',tax_id_number:'211-258-356-00000'}]};
   if(name==='frt_restricted_request_detail')return {id:requestId,workspace_id:workspaceId,company_code:'WASS',voucher:snapshot()};
   if(name==='frt_bank_execution_snapshot')return {workspaceId,requestId,recorded:false,
    eligible:true,executedAt:null,deadlineAt:null,recordedAt:null,bankName:null,
@@ -97,6 +97,7 @@ test('signed voucher loader uses the narrow snapshot and existing bank execution
  assert.equal(result.status,'PASS');
  assert.equal(result.voucher.voucherNumber,voucherNo);
  assert.equal(result.voucher.bankExecution.recorded,false);
+ assert.equal(result.voucher.company.taxIdNumber,'211-258-356-00000');
  assert.deepEqual(calls,['frt_bootstrap','frt_restricted_request_detail','frt_bootstrap','frt_bank_execution_snapshot']);
  assert.equal(calls.includes('frt_get_request'),false);
 });
@@ -173,7 +174,7 @@ test('voucher accounting extends the existing signed projection without a compet
  const pdfVendor=readFileSync(new URL('../vendor/frt-pdf-engine.js',import.meta.url),'utf8');
  const migration=readFileSync(new URL('../../supabase/migrations/20261116172414_frt_restricted_voucher_projection.sql',import.meta.url),'utf8');
  const accountingMigration=readFileSync(new URL('../../supabase/migrations/20261117051040_frt_flow03c_request_accounting_lines.sql',import.meta.url),'utf8');
- assert.match(app,/loadFRTVoucher/);
+ assert.match(app,/fundTracker\.loadVoucher\(/);
  assert.match(app,/data-frt-voucher-reprint/);
  assert.match(ui,/data-action="frt-voucher-open"/);
  assert.match(data,/frt_restricted_request_detail/);

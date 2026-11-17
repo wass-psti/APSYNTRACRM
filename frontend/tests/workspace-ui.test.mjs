@@ -383,7 +383,7 @@ test('invitation panel remains preview-only in production, with staged explicit-
   assert.ok(module.includes(part),part);
  assert.doesNotMatch(module,/\.rpc\(['"](?:wm_ws02_invite|wm_invite_workspace|wm_ws01_invite)/);
  assert.doesNotMatch(module,/fetch\(['"]\/auth\/v1\/invite|fetch\(['"]\/rest\/v1\/rpc/);
- assert.match(app,/renderWorkspaceInviteLaunch\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
+ assert.match(app,/renderWorkspaceInviteLaunch\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\},\{placement:'topbar'\}\)/);
  assert.match(module,/data-action="ws02-open-invites"/);
  assert.doesNotMatch(module,/name=\"emails\" rows=/);
  assert.match(module,/validateDirectEmailInvitation/);

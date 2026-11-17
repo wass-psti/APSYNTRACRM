@@ -63,9 +63,9 @@ test('read and write operations require a complete signed authorization client',
  assert.equal(invoked,0);
 });
 
-test('signed analytics RPC is enabled as a read-only path while automatic numbering remains disabled',async()=>{
+test('signed analytics RPC is enabled as a read-only path while automatic numbering is enabled in this candidate',async()=>{
  assert.equal(TL03_ANALYTICS_ENABLED,true);
- assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
+ assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,true);
  const calls=[];let boardCalls=0,managerChecks=0;
  const summary={generatedAt:'2026-11-16T08:00:00.000Z',
   documentCounts:[{documentType:'quotation',workflowState:'draft',count:3}],
@@ -144,15 +144,15 @@ test('analytics does not retry an invalidated context read after signed identity
  assert.equal(rpcCalls,0,'no aggregate read occurs after identity changes');
 });
 
-test('automatic numbering stays off until migration activation and existing create API remains available',async()=>{
- assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,false);
+test('legacy manually numbered create remains compatible when numbering explicitly disabled',async()=>{
+ assert.equal(TL03_AUTOMATIC_NUMBERING_ENABLED,true);
  const calls=[];
  const auth={userId:id,getVerifiedUser:async()=>({id})};
  const api={context:async()=>({user_id:id,workspace_id:workspace,profile:{status:'active'}}),
   board:async()=>({board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'}}),
   allowed:async()=>true,rpc:async(name,args)=>{calls.push({name,args});return {
    documentId:id,boardItemId:item,revision:1,state:'draft',operation:'create',idempotent:false};}};
- const client=new TradeLinkDomainClient({auth,api});
+ const client=new TradeLinkDomainClient({auth,api,automaticNumberingEnabled:false});
  const receipt=await client.commit({documentId:id,expectedRevision:0,operation:'create',
   draft:{...draft,documentNumber:'Q-011129'},initialState:'draft'});
  assert.equal(receipt.documentNumber,'Q-011129');

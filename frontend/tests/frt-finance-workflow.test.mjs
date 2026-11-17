@@ -190,7 +190,7 @@ test('SEC13 inaccessible detail cannot leak raw request fields or actions',()=>{
 });
 test('SEC13 app binds only the existing finance tab and drops stale details on session changes',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(app,/loadFRTRequestDetailReadOnly\(/);
+ assert.match(app,/fundTracker\.loadRequestDetail\(/);
  assert.match(app,/case 'frt-finance-detail'/);
  assert.match(app,/state\.frtFinanceDetailRevision\+\+/);
  assert.match(app,/state\.frtFinanceDetail=null/);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const sql=readFileSync(new URL('../../supabase/migrations/20261114025451_cp_db_cpu_04_batch_import_realtime_broadcasts.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/migrations/20261114025451_cp_db_cpu_04_batch_import_realtime_broadcasts.sql',import.meta.url),'utf8').replace(/\r\n?/g,'\n');
 const sync=readFileSync(new URL('../platform-sync.js',import.meta.url),'utf8');
 
 test('Realtime row trigger exits before actor lookup and JSON serialization during an import',()=>{

@@ -191,7 +191,7 @@ test('app wiring keeps server receipt -> exact Board item -> All Documents and l
  assert.match(source,/tradeLinkDraftWorkspace\.read\(documentId\)/);
  assert.match(source,/tradeLinkDraftWorkspace\.list\(\)/);
  assert.match(source,/item\.id===receipt\.boardItemId/);
- assert.match(source,/location\.hash='#\/boards\/'\+TRADELINK_BOARD_ID\+'\/tradelink\/documents'/);
+ assert.match(source,/location\.hash=tradeLinkApplicationHref\('documents'\)/);
  assert.match(source,/case 'tradelink-draft-add-line'/);
  assert.match(source,/case 'tradelink-draft-remove-line'/);
  assert.doesNotMatch(source,/localStorage\.setItem\('tradelink|service_role.*tradelink/i);

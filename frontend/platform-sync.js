@@ -9,7 +9,11 @@ const PHASES=new Set(['connecting','synchronized','synchronizing','reconnecting'
 export const SYNC_MAX_BOARD_CHANNELS=24;
 export const SYNC_POLL_INTERVAL_MS=30000;
 export const SYNC_RECONCILE_INTERVAL_MS=90000;
+export const SYNC_POLL_RECOVERY_MS=SYNC_RECONCILE_INTERVAL_MS*3;
 export const SYNC_FOCUS_COOLDOWN_MS=3000;
+export function shouldRefreshWorkspaceBoardList({reason,view}={}){
+ return reason!=='broadcast'||view!=='board';
+}
 const noop=()=>{};
 export class PlatformSync {
  constructor({auth,api,url,publishableKey,WebSocketImpl=globalThis.WebSocket,
@@ -18,12 +22,15 @@ export class PlatformSync {
   setIntervalFn=globalThis.setInterval?.bind(globalThis),
   clearIntervalFn=globalThis.clearInterval?.bind(globalThis),
   now=()=>Date.now(),random=Math.random,
+  locks=globalThis.navigator?.locks,storage=undefined,
   visible=()=>!globalThis.document?.hidden,
   online=()=>globalThis.navigator?.onLine!==false,
   onStatus=noop,onInvalidate=async()=>false}={}){
   Object.assign(this,{auth,api,url,publishableKey,WebSocketImpl,
    setTimeoutFn,clearTimeoutFn,setIntervalFn,clearIntervalFn,
-   now,random,visible,online,onStatus,onInvalidate});
+   now,random,locks,visible,online,onStatus,onInvalidate});
+  try{this.storage=storage===undefined?globalThis.localStorage:storage;}
+  catch{this.storage=null;}
   this.running=false;this.generation=0;this.timer=null;this.flushTimer=null;
   this.heartbeat=null;this.reconnectTimer=null;this.socket=null;
   this.ref=0;this.attempt=0;this.pending=new Set();this.joins=new Map();
@@ -31,6 +38,7 @@ export class PlatformSync {
   this.lastCheckAt=null;this.lastTransport='none';
   this.scope=null;this.lastStatus=null;this.boardIds=[];
   this.lastFocusSyncAt=null;this.queuedSync=null;
+  this.pollRecoveryAt=null;this.lastLocalAuditAt=null;
  }
  status(phase,detail=''){
   if(!PHASES.has(phase))throw new Error('Invalid sync state');
@@ -55,7 +63,7 @@ export class PlatformSync {
   if(unchanged)return;
   this.stop();
   this.running=true;this.scope={userId,workspaceId};
-  this.boardIds=ids;
+  this.boardIds=ids;this.pollRecoveryAt=this.now();
   const gen=this.generation;
   this.timer=this.setIntervalFn?.(()=>this.pollTick(gen),SYNC_POLL_INTERVAL_MS);
   if(!this.online()){this.status('offline','Network connection unavailable');return;}
@@ -73,6 +81,7 @@ export class PlatformSync {
   this.closeSocket();this.inFlight=false;this.lastTransport='none';
   this.lastSyncAt=null;this.lastCheckAt=null;this.attempt=0;
   this.lastFocusSyncAt=null;this.queuedSync=null;
+  this.pollRecoveryAt=null;this.lastLocalAuditAt=null;
   this.status('offline','Not connected');
  }
  closeSocket(){
@@ -212,8 +221,44 @@ export class PlatformSync {
  async pollTick(gen){
   if(gen!==this.generation||!this.running||!this.visible()||!this.online())return;
   const interval=this.lastTransport==='realtime'?SYNC_RECONCILE_INTERVAL_MS:SYNC_POLL_INTERVAL_MS;
-  if(this.lastCheckAt!==null&&this.now()-this.lastCheckAt<interval)return;
-  await this.syncNow('poll',[]);
+  const now=this.now();
+  const localDue=this.lastTransport==='realtime'&&this.pollRecoveryAt!==null&&
+   now-(this.lastLocalAuditAt??this.pollRecoveryAt)>=SYNC_POLL_RECOVERY_MS;
+  if(!localDue&&this.lastCheckAt!==null&&now-this.lastCheckAt<interval)return;
+  // Only healthy Realtime windows share their periodic audit. Offline sockets,
+  // missed messages and focus/reconnect checks retain independent signed reads.
+  if(this.lastTransport!=='realtime'||!this.locks?.request||!this.storage){
+   await this.syncNow('poll',[]);return;
+  }
+  if(this.pollRecoveryAt===null)this.pollRecoveryAt=now;
+  const scope=this.scope;
+  if(!scope||!this.sameScope(scope.userId,scope.workspaceId))return;
+  const name='apsyntra:poll:v1:'+scope.userId+':'+scope.workspaceId;
+  try{
+   await this.locks.request(name,{mode:'exclusive',ifAvailable:true},async lock=>{
+    if(!lock||gen!==this.generation||!this.sameScope(scope.userId,scope.workspaceId)
+       ||!this.visible()||!this.online())return;
+    const current=this.now();
+    const saved=Number(this.storage.getItem(name));
+    const peerRecent=Number.isFinite(saved)&&saved>0&&saved<=current&&
+      current-saved<SYNC_RECONCILE_INTERVAL_MS;
+    const localDueNow=current-(this.lastLocalAuditAt??this.pollRecoveryAt)>=SYNC_POLL_RECOVERY_MS;
+    if(peerRecent&&!localDueNow)return;
+    // A lock is held until this authoritative read ends; a crashed tab
+    // releases the lock automatically. Failed reads do not publish success.
+    const verified=await this.syncNow('poll',[]);
+    if(verified&&gen===this.generation&&this.sameScope(scope.userId,scope.workspaceId)){
+     this.lastLocalAuditAt=this.now();
+     try{this.storage.setItem(name,String(this.lastLocalAuditAt));}
+     catch{/* No shared optimization if storage becomes unavailable. */}
+    }
+   });
+  }catch{
+   // Private browsing, disabled storage, or Web Locks errors must never
+   // prevent a tab from its ordinary signed authoritative reconciliation.
+   if(gen===this.generation&&this.sameScope(scope.userId,scope.workspaceId))
+    await this.syncNow('poll',[]);
+  }
  }
  queueSync(reason,boardIds=[]){
   const full=reason!=='broadcast';

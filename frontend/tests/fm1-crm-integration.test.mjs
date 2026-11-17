@@ -158,3 +158,18 @@ test("FM1 API client uses idempotent server RPC contracts and validates authorit
   assert.match(apiClient, /p_expected_revision: ticket.revision/);
   assert.match(apiClient, /INVALID_FM1_RECEIPT/);
 });
+
+test("FM1 stale-revision conflicts refresh the authoritative ticket and suppress concurrent writes", () => {
+  assert.match(components, /this\.ticketMutationPending = false/);
+  assert.match(components, /if \(this\.ticketMutationPending\) return/);
+  assert.match(components, /error\?\.code === ["']40001["']/);
+  assert.match(components, /await this\.loadTicket\(ticket\.id\)/);
+  assert.match(
+    components,
+    /review the current values before making another change/,
+  );
+  assert.match(
+    components,
+    /finally\s*\{\s*this\.ticketMutationPending = false;/,
+  );
+});

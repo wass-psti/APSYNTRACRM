@@ -21,8 +21,8 @@ test('sidebar exposes accessible reversible icon rail and no navigation routes r
  assert.match(nav,/state\.roleVerified===true/);
  assert.match(nav,/Account<\/div>/);
  assert.match(nav,/renderWorkspaceSwitcher\(/);
- assert.match(nav,/renderWorkspaceInviteLaunch\(/);
- assert.match(nav,/data-action="logout"/);
+ assert.match(app,/renderWorkspaceInviteLaunch\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\},\{placement:'topbar'\}\)/);
+ assert.match(app,/case 'logout':/);
 });
 test('presentation controls change only session-local layout, not authorization or persisted access',()=>{
  const start=app.indexOf("case 'sidebar-toggle':{");

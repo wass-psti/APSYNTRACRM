@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const read=name=>readFileSync(new URL(name,import.meta.url),'utf8');
+const read=name=>readFileSync(new URL(name,import.meta.url),'utf8').replace(/\r\n?/g,'\n');
 const candidate=read('../../sql/cp-tl03e-legacy-session-hardening-candidate.sql');
 const baseline=read('../../sql/tests/cp-tl03e-legacy-unguarded-disposable.sql');
 const checks=read('../../sql/tests/cp-tl03e-legacy-disposable-acceptance.sql');

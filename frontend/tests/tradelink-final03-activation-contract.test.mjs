@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+const readNormalized=(path)=>readFileSync(path,'utf8').replace(/\r\n?/g,'\n');
 import {TL03_WORKFLOW_SUBMIT_ENABLED,TL03_DUAL_REVIEW_ENABLED} from '../tradelink-domain-client.js';
 
-const candidate=readFileSync('sql/tradelink-document-submit-candidate.sql','utf8');
-const migration=readFileSync('supabase/migrations/20261117060100_tradelink_submitted_workflow_activation.sql','utf8');
+const candidate=readNormalized('sql/tradelink-document-submit-candidate.sql','utf8');
+const migration=readNormalized('supabase/migrations/20261117060100_tradelink_submitted_workflow_activation.sql','utf8');
 
 test('staged production migration uses the tested Submit function and exact candidate',()=>{
  const section=migration.indexOf('-- TradeLink document workflow:');

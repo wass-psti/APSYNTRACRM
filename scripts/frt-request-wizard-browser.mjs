@@ -15,7 +15,7 @@ const pageHtml=`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <form id="modal-form"><div id="fields"></div><div class="modal-actions"><button type="button" class="secondary">Cancel</button><button type="submit" class="primary">Submit Fund Request</button></div></form>
 </section></div><script type="module">
 import {renderFRTRequestWizard,enhanceFRTRequestWizard,collectFRTWizardRequest} from '/frontend/frt-request-wizard.js';
-document.querySelector('#fields').outerHTML=renderFRTRequestWizard({companies:[{code:'WASS',name:'Watchdog Sales & Services'},{code:'WAO',name:'Watchdog OPC'}],selectedCompany:'WASS'});
+document.querySelector('#fields').outerHTML=renderFRTRequestWizard({companies:[{code:'WASS',name:'Watchdog Sales & Services'},{code:'WAO',name:'Watchdog OPC'}],selectedCompany:'WASS',requestDate:'2026-11-17'});
 const modal=document.querySelector('.frt-wizard-backdrop');enhanceFRTRequestWizard(modal);
 document.querySelector('#modal-form').addEventListener('submit',event=>{event.preventDefault();
  window.__submitted=collectFRTWizardRequest(new FormData(event.currentTarget));});

@@ -98,6 +98,6 @@ test('finance status filter is functional for signed rows; date edit appears onl
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/Open signed FRT requests and date editing/);
  assert.match(app,/case 'frt-date-edit'/);
- assert.match(app,/await updateFRTRequestDate\(/);
+ assert.match(app,/await fundTracker\.updateRequestDate\(/);
  assert.match(app,/await loadFRTFinance\(companyCode\)/);
 });

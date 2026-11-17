@@ -7,11 +7,13 @@ const ws='00000000-0000-4000-8000-000000000001';
 const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:ws,name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'},items:[],groups:[],columns:[]};
 test('TradeLink root and legacy overview canonicalize to Create New, preserving explicit signed document/edit routes',()=>{
  const source=readFileSync('frontend/app.js','utf8');
- assert.match(source,/if\(requested==='tradelink'&&\(!parts\[3\]\|\|parts\[3\]==='overview'\)\)/);
+ assert.match(source,/if\(parts\[0\]==='tradelink'\)/);
  assert.match(source,/history\.replaceState\(null,'',location\.pathname\+location\.search\+canonical\)/);
- assert.match(source,/parts\.splice\(3,parts\.length-3,'drafts','quotation'\)/);
- assert.match(source,/signedDraftRoute&&parts\[4\]!=='edit'\?\(directModule\?parts\[3\]:parts\[4\]\):null,editId/);
- assert.match(source,/href:'#\/boards\/'\+b\.id\+'\/tradelink\/drafts\/quotation'/);
+ assert.match(source,/parseTradeLinkApplicationRoute\(parts\)/);
+ assert.match(source,/if\(parts\[1\]===TRADELINK_BOARD_ID\)/);
+ assert.match(source,/tradeLinkApplicationHref\(legacy\.join\('\/'\)\)/);
+ assert.match(source,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId\)/);
+ assert.match(source,/sidebarNav\(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink'/);
 });
 test('obsolete landing widgets are removed but signed form, documents, and activity remain available',()=>{
  for(const section of [undefined,'overview','unexpected']){
@@ -32,7 +34,7 @@ test('obsolete landing widgets are removed but signed form, documents, and activ
 test('TradeLink brand targets Create New and denied workspace never renders a form',()=>{
  const html=renderTradeLinkApplication({detail,workspaceId:ws,canManage:true});
  assert.match(html,/aria-label="TradeLink Create New"/);
- assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts\/quotation"/);
+ assert.match(html,/href="#\/tradelink\/drafts\/quotation"/);
  const denied=renderTradeLinkApplication({detail,workspaceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'});
  assert.match(denied,/signed workspace access is unavailable/);
  assert.doesNotMatch(denied,/data-tradelink-draft-form/);

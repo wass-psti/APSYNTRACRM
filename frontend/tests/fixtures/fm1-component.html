@@ -103,6 +103,7 @@
       ];
       if (mockServer) {
         window.__fm1Calls = [];
+        window.__fm1ForceNextTicketConflict = false;
         const api = {
           rpc: async (name, args) => {
             window.__fm1Calls.push({ name, args });
@@ -251,10 +252,26 @@
               return { ...warningPolicy };
             }
             if (name === "fm1_update_ticket_v1") {
-              if (args.p_expected_revision !== ticket.revision)
-                throw new Error(
+              if (window.__fm1ForceNextTicketConflict) {
+                window.__fm1ForceNextTicketConflict = false;
+                ticket = {
+                  ...ticket,
+                  requester_name: "Concurrent Server Operator",
+                  revision: ticket.revision + 1,
+                };
+                const conflict = new Error(
                   "FM1 ticket revision changed; refresh before retrying",
                 );
+                conflict.code = "40001";
+                throw conflict;
+              }
+              if (args.p_expected_revision !== ticket.revision) {
+                const conflict = new Error(
+                  "FM1 ticket revision changed; refresh before retrying",
+                );
+                conflict.code = "40001";
+                throw conflict;
+              }
               ticket = {
                 ...ticket,
                 requester_name: args.p_requester_name,

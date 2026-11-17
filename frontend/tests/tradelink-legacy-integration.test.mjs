@@ -96,7 +96,7 @@ test('read-only analytics is activated while automatic production numbering rema
  const client=readFileSync('frontend/tradelink-domain-client.js','utf8');
  assert.match(client,/export const TL03_ANALYTICS_ENABLED=true/);
  assert.match(client,/tl03_document_create/);
- assert.match(client,/TL03_AUTOMATIC_NUMBERING_ENABLED=false/);
+ assert.match(client,/TL03_AUTOMATIC_NUMBERING_ENABLED=true/);
  const migration=readFileSync('supabase/migrations/20261116070000_cp_tl_legacy_numbering_dates_aging.sql','utf8');
  for(const pattern of [
   /CREATE TABLE private\.tradelink_document_sequences/,
@@ -156,6 +156,22 @@ test('selected-document CSV is bounded, quoted and contains metadata only',()=>{
  assert.match(escaped,/"Q,""11131"/);
  assert.throws(()=>serializeTradeLinkDocumentCsv(Array.from({length:51},()=>record)),/50/);
  assert.throws(()=>serializeTradeLinkDocumentCsv([{...record,revision:0}]),/invalid/i);
+});
+
+test('selected-document CSV covers every source document type with stable metadata columns',()=>{
+ const types=['esi','quotation','delivery','packing','payment','po'];
+ const records=types.map((documentType,index)=>({...record,
+  documentNumber:'TL-CSV-'+documentType.toUpperCase(),documentType,
+  workflowState:'draft',revision:index+1,
+  updatedAt:'2026-11-17T06:00:00.000Z',archived:false}));
+ const csv=serializeTradeLinkDocumentCsv(records);
+ const lines=csv.trimEnd().split('\r\n');
+ assert.equal(lines.length,types.length+1);
+ assert.equal(lines[0],'"Document Number","Document Type","Workflow Status","Revision","Last Updated","Archived"');
+ for(const type of types){
+  assert.ok(lines.some(line=>line.includes('"'+type+'"')),type);
+ }
+ assert.doesNotMatch(csv,/customerName|customerEmail|content|workspace_id|lineItems/);
 });
 
 test('All Documents wires export only to the current selected authorized rows',()=>{

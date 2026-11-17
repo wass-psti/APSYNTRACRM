@@ -443,3 +443,112 @@ test("FM1 warning policy cannot be enabled without an explicit threshold", async
     /at least one deadline threshold/,
   );
 });
+
+test("FM1 incident edit suppresses repeated submissions of a proven stale revision", async () => {
+  let attempts = 0;
+  const fake = fakeApi({
+    fm1_update_ticket_v1: () => {
+      attempts++;
+      if (attempts === 1) {
+        throw new ApiError(
+          "FM1 ticket revision changed; refresh before retrying",
+          409,
+          "40001",
+        );
+      }
+      return { ticket: ticket({ revision: 3 }), idempotent_replay: false };
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  const fields = {
+    requesterName: "Operator",
+    callbackNumber: "09171234567",
+    subject: "PLC alarm",
+    description: "Production line has intermittent PLC alarms.",
+    productionImpact: "degraded",
+    productionStopped: false,
+    safetyConcern: false,
+    assetReference: "",
+  };
+  const stale = ticket();
+  await assert.rejects(
+    client.updateTicket(WORKSPACE, stale, fields, KEY),
+    (error) => error.code === "40001",
+  );
+  await assert.rejects(
+    client.updateTicket(
+      WORKSPACE,
+      stale,
+      fields,
+      "00000000-0000-4000-8000-000000000004",
+    ),
+    (error) => error.code === "40001",
+  );
+  assert.equal(attempts, 1, "stale revision must not be posted to SQL twice");
+  const updated = await client.updateTicket(
+    WORKSPACE,
+    ticket({ revision: 2 }),
+    fields,
+    KEY,
+  );
+  assert.equal(updated.ticket.revision, 3);
+  assert.equal(
+    attempts,
+    2,
+    "fresh authoritative revision can still be submitted",
+  );
+});
+
+test("FM1 transient failures remain retriable and do not trigger revision suppression", async () => {
+  let attempts = 0;
+  const fake = fakeApi({
+    fm1_update_ticket_v1: () => {
+      attempts++;
+      if (attempts === 1)
+        throw new ApiError("Network unavailable", 0, "NETWORK_UNAVAILABLE");
+      return { ticket: ticket({ revision: 2 }), idempotent_replay: false };
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  const fields = {
+    requesterName: "Operator",
+    callbackNumber: "09171234567",
+    subject: "PLC alarm",
+    description: "Production line has intermittent PLC alarms.",
+    productionImpact: "degraded",
+    productionStopped: false,
+    safetyConcern: false,
+  };
+  await assert.rejects(client.updateTicket(WORKSPACE, ticket(), fields, KEY));
+  await client.updateTicket(WORKSPACE, ticket(), fields, KEY);
+  assert.equal(attempts, 2);
+});
+
+test("FM1 unrelated SQLSTATE 40001 remains retryable without blocking a revision", async () => {
+  let attempts = 0;
+  const fake = fakeApi({
+    fm1_update_ticket_v1: () => {
+      attempts++;
+      if (attempts === 1)
+        throw new ApiError(
+          "could not serialize access due to concurrent update",
+          409,
+          "40001",
+        );
+      return { ticket: ticket({ revision: 2 }), idempotent_replay: false };
+    },
+  });
+  const client = new Fm1ApiClient(fake.api);
+  const fields = {
+    requesterName: "Operator",
+    callbackNumber: "09171234567",
+    subject: "PLC alarm",
+    description: "Production line has intermittent PLC alarms.",
+    productionImpact: "degraded",
+    productionStopped: false,
+    safetyConcern: false,
+  };
+  await assert.rejects(client.updateTicket(WORKSPACE, ticket(), fields, KEY));
+  await client.updateTicket(WORKSPACE, ticket(), fields, KEY);
+  assert.equal(attempts, 2);
+});

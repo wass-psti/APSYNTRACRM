@@ -231,7 +231,7 @@ if (app) {
         'fill="none" stroke="currentColor" stroke-width="2" ' +
         'aria-hidden="true"><circle cx="11" cy="11" r="7"/>' +
         '<path d="m16 16 5 5"/></svg>' +
-        '<input type="search" placeholder="Search boards..." ' +
+        '<input type="search" id="aps-sidebar-board-search" placeholder="Search boards..." ' +
         'aria-label="Search boards in sidebar" data-aps-search-native="true" autocomplete="off">' +
         '</label>';
 

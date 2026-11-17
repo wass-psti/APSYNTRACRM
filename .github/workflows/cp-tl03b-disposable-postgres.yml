@@ -14,6 +14,10 @@ on:
       - 'sql/tests/cp-tl03-submit-disposable.sql'
       - 'supabase/migrations/20261117060100_tradelink_submitted_workflow_activation.sql'
       - 'frontend/tests/tradelink-final03-activation-contract.test.mjs'
+      - 'frontend/tests/tradelink-final05-production-readonly-audit.test.mjs'
+      - 'sql/tests/cp-tl-final05-production-readonly.sql'
+      - 'sql/tests/cp-tl-final07-module-readiness-readonly.sql'
+      - 'frontend/tests/tradelink-final07-module-readiness.test.mjs'
   push:
     branches: [main, feat/cp-tl-legacy-workflow-05-revision-history-01]
     paths:
@@ -261,5 +265,9 @@ jobs:
         env:
           PGDATABASE: tradelink_revision_history_disposable
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-submit-disposable.sql
-      - name: Verify staged migration is source-identical and production frontend flag remains off
-        run: node --test frontend/tests/tradelink-final03-activation-contract.test.mjs
+      - name: Verify FINAL-07 six-module production readiness SQL in isolated PostgreSQL
+        env:
+          PGDATABASE: tradelink_revision_history_disposable
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-final07-module-readiness-readonly.sql
+      - name: Verify staged migration and read-only readiness audit safety
+        run: node --test frontend/tests/tradelink-final03-activation-contract.test.mjs frontend/tests/tradelink-final05-production-readonly-audit.test.mjs frontend/tests/tradelink-final07-module-readiness.test.mjs

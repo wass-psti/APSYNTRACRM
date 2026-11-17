@@ -85,9 +85,10 @@ export function renderFRTVoucherDocument(voucher,{previewUrl=''}={}){
   (previewUrl?'<iframe data-frt-voucher-pdf-frame title="PDF preview of '+e(voucher.voucherNumber)+'" src="'+e(previewUrl)+'"></iframe>':'')+
   '</div><article class="frt-voucher-paper">'+
   '<header class="frt-voucher-header">'+logo+'<div><h2>'+e(company.name)+'</h2><p>Company code: '+e(company.code)+'</p>'+
-  (company.address?'<p>Registered address: '+e(company.address)+'</p>':'')+
+  (company.address?'<p>Company address: '+e(company.address)+'</p>':'')+
   (company.phone?'<p>Telephone: '+e(company.phone)+'</p>':'')+
   (company.email?'<p>Email: '+e(company.email)+'</p>':'')+
+  (company.taxIdNumber?'<p>TIN: '+e(company.taxIdNumber)+'</p>':'')+
   (!profileConfigured?'<p class="frt-voucher-unconfigured">Company address, logo and contact details are not configured in Fund Release Tracker.</p>':'')+
   '</div><div class="frt-voucher-title"><h1>DISBURSEMENT VOUCHER</h1>'+
   '<strong>'+e(voucher.voucherNumber)+'</strong><span>Voucher date: '+date(voucher.voucherDate)+'</span></div></header>'+

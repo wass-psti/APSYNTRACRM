@@ -25,7 +25,7 @@ test('TradeLink renders an accessible split workspace with document navigation a
  assert.match(html,/Payment AR/);
  assert.match(html,/Quotation/);
  assert.match(html,/PO to Suppliers/);
- assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/quotation"/);
+ assert.match(html,/href="#\/tradelink\/drafts\/quotation"/);
  assert.match(html,/aria-current="page"/);
  assert.doesNotMatch(html,/class="tl-reference-document-tabs"/);
 });
@@ -33,11 +33,11 @@ test('TradeLink renders an accessible split workspace with document navigation a
 test('split navigation follows the active module, All Documents, and Activity routes',()=>{
  const draft=renderTradeLinkApplication({...base,section:'drafts',
   draftView:{formValues:{documentType:'packing'},mode:'create'}});
- assert.match(draft,/<a data-tl-module-nav="packing" class="tl-module-link active" href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/packing" aria-current="page"/);
+ assert.match(draft,/<a data-tl-module-nav="packing" class="tl-module-link active" href="#\/tradelink\/drafts\/packing" aria-current="page"/);
  const documents=renderTradeLinkApplication({...base,section:'documents'});
- assert.match(documents,/<a data-tl-tab="documents" href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/documents" aria-current="page"/);
+ assert.match(documents,/<a data-tl-tab="documents" href="#\/tradelink\/documents" aria-current="page"/);
  const activity=renderTradeLinkApplication({...base,section:'activity'});
- assert.match(activity,/<a data-tl-tab="activity" href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/activity" aria-current="page"/);
+ assert.match(activity,/<a data-tl-tab="activity" href="#\/tradelink\/activity" aria-current="page"/);
 });
 
 test('split navigation preserves existing signed routes and refuses a foreign workspace',()=>{

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const sql=readFileSync('sql/cp-tl03-staged-domain.sql','utf8');
+const readNormalized=(path)=>readFileSync(path,'utf8').replace(/\r\n?/g,'\n');
+const sql=readNormalized('sql/cp-tl03-staged-domain.sql','utf8');
 const board='264ca40d-6e4a-4e4f-97e6-3bd77c97cd88';
 
 test('schema is staged only with exact existing TradeLink board and all six types',()=>{
@@ -83,7 +84,7 @@ test('missing module-role assignment is strictly denied, never NULL-approved by 
  assert.match(sql,/IF actor IS NULL OR private\.tl03_can_manage\(p_board_id\) IS DISTINCT FROM TRUE THEN/);
  assert.match(sql,/IF private\.tl03_can_manage\(p_board_id\) IS DISTINCT FROM TRUE THEN/);
  assert.doesNotMatch(sql,/IF (?:actor IS NULL OR )?NOT private\.tl03_can_manage\(/);
- const fixture=readFileSync('sql/tests/cp-tl03-disposable-acceptance.sql','utf8');
+ const fixture=readNormalized('sql/tests/cp-tl03-disposable-acceptance.sql','utf8');
  assert.match(fixture,/DO \$unassigned\$/);
  assert.match(fixture,/('ffffffff-ffff-4fff-8fff-ffffffffffff','owner'|WITHOUT a module-role assignment)/i);
  assert.match(fixture,/Missing module assignment should yield definite FALSE/);
@@ -110,7 +111,7 @@ test('staged SQL is one complete migration with intact regex and no duplicated t
 
 
 test('disposable SQL fixture uses real statement separators, not escaped newline text',()=>{
- const setup=readFileSync('sql/tests/cp-tl03-disposable-setup.sql','utf8');
+ const setup=readNormalized('sql/tests/cp-tl03-disposable-setup.sql','utf8');
  assert.doesNotMatch(setup,/\\n(?:GRANT|CREATE|ALTER|INSERT|REVOKE|DO|SELECT)/);
  assert.match(setup,/-- Synthetic assertions[^\n]*\nGRANT USAGE ON SCHEMA auth TO authenticated;\nGRANT SELECT ON public\.work_board_items,public\.work_board_events TO authenticated;\nCREATE FUNCTION public\.current_workspace_id/);
 });
@@ -121,13 +122,13 @@ test('TradeLink revision update synchronizes the locked Board item timestamp and
  assert.match(sql,/UPDATE public\.work_board_items\s+SET updated_by=actor,updated_at=modified_at/);
  assert.match(sql,/WHERE id=d\.board_item_id AND board_id=p_board_id\s+AND title=payload->>'documentNumber' AND archived_at IS NULL/);
  assert.match(sql,/Board projection changed during document update/);
- const acceptance=readFileSync('sql/tests/cp-tl03-disposable-acceptance.sql','utf8');
+ const acceptance=readNormalized('sql/tests/cp-tl03-disposable-acceptance.sql','utf8');
  assert.match(acceptance,/i\.updated_at=d\.updated_at AND i\.updated_by=d\.updated_by/);
  assert.match(acceptance,/Same-title Draft update failed Board time synchronization/);
 });
 
 test('function-only migration candidate preserves existing signed write boundaries and matches staged function',()=>{
- const candidate=readFileSync('sql/tradelink-document-conflict-response-candidate.sql','utf8');
+ const candidate=readNormalized('sql/tradelink-document-conflict-response-candidate.sql','utf8');
  const stageStart=sql.indexOf('CREATE FUNCTION private.tl03_commit(');
  const stageEnd=sql.indexOf('REVOKE ALL ON FUNCTION private.tl03_commit(',stageStart);
  const staged=sql.slice(stageStart,stageEnd)
@@ -137,7 +138,7 @@ test('function-only migration candidate preserves existing signed write boundari
  assert.ok(stageStart>0&&stageEnd>stageStart&&begin>0&&end>begin);
  // The earlier migration remains immutable. The new review/revision
  // candidate must be the exact updated staged commit body.
- const reviewCandidate=readFileSync('sql/tradelink-document-review-revision-candidate.sql','utf8');
+ const reviewCandidate=readNormalized('sql/tradelink-document-review-revision-candidate.sql','utf8');
  const reviewStart=reviewCandidate.indexOf('CREATE OR REPLACE FUNCTION private.tl03_commit(');
  const reviewEnd=reviewCandidate.indexOf('END $commit$;',reviewStart)+'END $commit$;'.length;
  assert.ok(reviewStart>0&&reviewEnd>reviewStart);

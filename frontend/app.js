@@ -29,7 +29,7 @@ import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
-import {PlatformSync} from './platform-sync.js';
+import {PlatformSync,shouldRefreshWorkspaceBoardList} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
@@ -43,17 +43,19 @@ import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board-grid.js';
 import {boardGroupArchiveSuffix} from './board-group-counts.js';
-import {FUELTRACK_V3_ID,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-application.js';
+import {FUELTRACK_V3_ID,findFuelTrackV3Board,isFuelTrackV3ApplicationBoard,normalizeFuelTrackSection,fuelTrackHref,renderFuelTrackV3Application} from './fueltrack-v3-ui.js';
+import {FUELTRACK_V3_APPLICATION_ROUTE,parseFuelTrackApplicationRoute} from './fueltrack-v3-application-route.js';
 import {verifyFuelTrackBackendSnapshot} from './fueltrack-v3-backend-projections.js';
 import {renderFuelTrackAnalytics,normalizeFuelTrackAnalyticsView,normalizeFuelTrackAnalyticsRange,normalizeFuelTrackAnalyticsMetric} from './fueltrack-v3-analytics.js';
 import {renderFuelTrackRequests,fuelTrackRequestsModel,fuelTrackRequestsSummary,fuelTrackRequestsCsv,fuelTrackRequestQuickDates,FUELTRACK_REQUEST_FILTER_DEFAULTS} from './fueltrack-v3-requests.js';
 import {FUELTRACK_ACTIVITY_FILTER_DEFAULTS,fuelTrackActivityModel,fuelTrackActivityCsv} from './fueltrack-v3-activity.js';
-import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-domain-client.js';
+import {FuelTrackV3DomainClient,verifyFuelTrackSubmission} from './fueltrack-v3-native.js';
 import {runFuelTrackSignedPreflight} from './fueltrack-v3-signed-preflight.js';
 import {fuelTrackNewRequestPayload} from './fueltrack-v3-new-request.js';
 import {FuelTrackV3ReceiptStorageClient,validFuelTrackReceiptFile} from './fueltrack-v3-receipt-storage.js';
 import {TRADELINK_BOARD_ID,tradeLinkSetupStatus,configureTradeLinkColumns,
  isTradeLinkBoard} from './tradelink-board-items.js';
+import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref,parseTradeLinkApplicationRoute} from './tradelink-application-route.js';
 import {normalizeTradeLinkSection,renderTradeLinkApplication,filterTradeLinkRenderedRows,
  searchTradeLinkBoardItems,captureTradeLinkTabMotion,mountTradeLinkTabMotion} from './tradelink-ui.js';
 import {renderTradeLinkSavedDocumentOutput,mountTradeLinkSavedDocumentOutput,
@@ -67,6 +69,7 @@ import {TradeLinkDraftWorkspace,initialTradeLinkDraftView,resetTradeLinkDraftFor
  renderTradeLinkDraftLineItem,snapshotTradeLinkDraftLineItems,updateTradeLinkDraftLocalAmounts,
  updateTradeLinkLineRowTotals,updateTradeLinkDraftInputCurrencyLabels,updateTradeLinkDraftLocalSummary,
  normalizeTradeLinkDraftListFilters,updateTradeLinkDraftListUI} from './tradelink-draft-workspace.js';
+import {summarizeTradeLinkSubmitReadiness} from './tradelink-submit-readiness.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_ANALYTICS_ENABLED,TL03_WORKFLOW_SUBMIT_ENABLED,
  TL03_WORKFLOW_REVIEW_ENABLED,TL03_WORKFLOW_DECISION_ENABLED,
  TL03_WORKFLOW_OPERATIONAL_ENABLED,TL03_DUAL_REVIEW_ENABLED,
@@ -148,32 +151,21 @@ import {runFRTSec10SignedCeilingProbe,sanitizeFRTSec10Report} from './frt-sec10-
 import {runFRTCI07SignedRoleProbe,sanitizeFRTCI07Report} from './frt-sec10-ci07-signed-runtime.js';
 import {runSEC14SignedRead,sanitizeSEC14SignedRead} from './frt-sec14-signed-acceptance.js';
 import {runSEC14SignedDenials,sanitizeSEC14SignedDenials} from './frt-sec14-signed-denials.js';
-import {loadFRTFinanceReadOnly,searchFRTRequestsReadOnly} from './frt-finance-readonly.js';
-import {createFRTICObligation,recordFRTICSettlement} from './frt-intercompany-client.js';
-import {renderFRTFinanceReadOnly} from './frt-finance-ui.js';
-import {createSignedFRTRequest,updateSignedFRTFiling} from './frt-filing-workflow.js';
+
 import {renderFRTRequestWizard,enhanceFRTRequestWizard,collectFRTWizardRequest} from './frt-request-wizard.js';
 import {getFRTBrowserStorage,createFRTRequestDraftStore,createFRTDuplicateGuard,mountFRTRequestDraft} from './frt-request-draft.js';
-import {FRTRecipientClient} from './frt-recipient-client.js';
 import {mountFRTRecipientUI} from './frt-recipient-ui.js';
 import {renderFRTBoardSignedSnapshot} from './frt-board-signed-snapshot.js';
-import {updateFRTRequestDate} from './frt-board-date-edit.js';
-import {loadFRTPersonAssignment,saveFRTPersonAssignment} from './frt-board-person-assignment.js';
-import {executeFRTDomainAction,frtActionSpec} from './frt-board-domain-actions.js';
-import {loadFRTLiquidation,submitFRTLiquidation} from './frt-liquidation.js';
-import {loadFRTBankExecution,recordFRTBankExecution} from './frt-bank-execution.js';
-import {loadFRTComments,addFRTComment,loadFRTAuditPage,frtAuditCsv,projectFRTNotifications,loadFRTDeadlineSnapshots,loadFRTAgingSummary} from './frt-collaboration.js';
 import {renderFRTComments,renderFRTActivityEvents,renderFRTActivityFilters,renderFRTNotifications,renderFRTNotificationSummary} from './frt-collaboration-ui.js';
 import {renderFRTLiquidationForm,enhanceFRTLiquidationForm,collectFRTLiquidationForm} from './frt-liquidation-ui.js';
-import {loadFRTArchive,restoreFRTRequest} from './frt-archive.js';
 import {renderFRTArchive} from './frt-archive-ui.js';
-import {loadFRTVoucher} from './frt-voucher.js';
 import {renderFRTVoucherDocument} from './frt-voucher-document.js';
-import {loadFRTCompanyProfile,saveFRTCompanyProfileWithLogo,
- loadFRTCompanyLogoDataUrl,renderFRTCompanyProfileEditor} from './frt-company-profile.js';
-import {mountFRTAccountingEditor} from './frt-accounting.js';
+import {renderFRTCompanyProfileEditor,hydrateFRTCompanyProfileForm} from './frt-company-profile.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
+import {FundTrackerNativeClient} from './fund-tracker-native.js';
+import {renderFundTrackerNative} from './fund-tracker-ui.js';
+import {findFundTrackerBoard,FUND_TRACKER_APPLICATION_ROUTE,parseFundTrackerRecordRoute,fundTrackerRecordHref} from './fund-tracker-application.js';
 import {renderTimeTrackerNative,ownAttendanceCsv,syncTimeTrackerClock} from './time-tracker-ui.js';
 import {mountTimeTrackerPixi,stopTimeTrackerPixi} from './time-tracker-pixi-scene.js';
 import {startSelectExperience} from './select-experience.js';
@@ -199,7 +191,6 @@ import {renderTimeTrackerMainGroup} from './time-tracker-main-group.js';
 import {findTimeTrackerAttendanceBoard,TIMETRACKER_APPLICATION_ROUTE} from './time-tracker-application.js';
 import {attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError} from './time-tracker-clock-recovery.js';
 import {signedMapPoints,mountTimeTrackerMaps,disposeTimeTrackerMaps,setTimeTrackerMapTheme,retryTimeTrackerMaps,toggleTimeTrackerMapFullscreen} from './time-tracker-map.js';
-import {loadFRTRequestDetailReadOnly} from './frt-finance-workflow.js';
 import {inspectMySignedEffectiveAccess,sanitizeEffectiveAccessReport} from './signed-effective-access.js';
 import {RoleConfigurationClient} from './role-configuration-client.js';
 import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-ui.js';
@@ -275,18 +266,18 @@ const tradeLinkNativeSearchAdapter=createNativeSearchAdapter({
  getSubtitle:row=>[row.documentType,row.workflowState].filter(Boolean).join(' · '),
  getExcerpt:row=>[row.documentType,row.workflowState].filter(Boolean).join(' · '),
  getSearchFields:row=>[row.documentNumber,row.documentType,row.workflowState],
- getHref:row=>'#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents/record/'+encodeURIComponent(row.documentId)
+ getHref:row=>tradeLinkApplicationHref('documents/record/'+encodeURIComponent(row.documentId))
 });
 
 const frtNativeSearchAdapter=createNativeSearchAdapter({
  id:'frt-requests',applicationId:'frt',name:'Fund Release Tracker',recordType:'Funding request',
- read:(query,{limit=20}={})=>searchFRTRequestsReadOnly({auth,api:db,query,limit}),
+ read:(query,{limit=20}={})=>fundTracker.searchRequests(query,{limit}),
  getId:row=>row.requestId,getTitle:row=>row.title,
  getSubtitle:row=>[row.voucher,row.status].filter(Boolean).join(' · '),
  getExcerpt:row=>row.dateNeeded,
  getSearchFields:row=>[row.voucher,row.status,row.dateNeeded,row.companyCode],
  getNavigationScope:row=>row.companyCode,
- getHref:row=>'#/boards/'+FRT_BOARD_ID+'/finance/record/'+encodeURIComponent(row.companyCode)+'/'+encodeURIComponent(row.requestId)
+ getHref:row=>fundTrackerRecordHref(row.companyCode,row.requestId)
 });
 
 
@@ -387,12 +378,13 @@ const nativeSearchRegistry=createNativeSearchRegistry([tradeLinkNativeSearchAdap
 const tradeLinkAttachments=new TradeLinkAttachmentClient({auth,api:db});
 const row01BootId=crypto.randomUUID();
 const timeTracker=new TimeTrackerNativeClient({auth,api:db});
+const fundTracker=new FundTrackerNativeClient({auth,api:db});
 const roleConfig=new RoleConfigurationClient(db);
 const userRoleManager=new UserRoleManagementClient(db);
 let performanceProfileAbort=null;
 const startupCriticalPath=createStartupCriticalPath();
 const state={performanceBusy:false,performanceReport:null,context:null,crmRoleSnapshot:null,workspaceRelationSnapshot:null,avatarMutationBusy:false,user:null,boards:[],archived:[],trashed:[],showArchived:false,showTrash:false,boardSearch:'',boardItemSearch:'',mrhTrackerFilters:{...MATERIAL_TRACKER_DEFAULT_FILTERS},mrhTrackerScope:'',mrhAddView:false,mrhAddBusy:false,groupEditId:null,groupEditBusy:false,inlineCell:null,inlineCellBusy:false,inlineAddBusy:false,row01Busy:false,row01Result:null,bulk02Busy:false,bulk02Result:null,bulk02Access:null,boardLifecycleBusy:false,columnOrderBusy:false,board:null,boardUi:null,boardPageBusy:false,boardPageError:'',issues:[],edit:false,boardManage:false,
-  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
+  view:'overview',boardId:null,tab:'items',fuelTrackSection:'dashboard',fuelTrackAnalyticsView:'fuel-price',fuelTrackAnalyticsRange:'all',fuelTrackAnalyticsMetric:'both',fuelTrackRequestFilters:{...FUELTRACK_REQUEST_FILTER_DEFAULTS},fuelTrackRequestScope:'',fuelTrackBackend:null,fuelTrackBackendBusy:false,fuelTrackBackendError:'',fuelTrackPreflight:null,fuelTrackPreflightBusy:false,fuelTrackPendingSubmission:null,fuelTrackReceiptLink:null,fuelTrackRefuelingDialog:null,fuelTrackActivity:null,fuelTrackActivityBusy:false,fuelTrackActivityError:'',fuelTrackActivityFilters:{...FUELTRACK_ACTIVITY_FILTER_DEFAULTS},loading:false,loadingIssues:false,frtFinance:null,frtFinanceBusy:false,frtFinanceView:'tracker',frtStatusFilter:'all',ttStandalone:false,frtStandalone:false,tlStandalone:false,fuelTrackStandalone:false,ttBoardGpsEligible:false,ttBoardAttendance:null,ttAttendance:null,ttClockPending:null,ttBusy:false,ttError:'',ttSuccess:'',ttRunId:0,ttReportPeriod:'all',ttReportFilters:{...TT_REPORT_DEFAULT_FILTERS},ttCalendarMonth:'',ttCalendarSelectedDay:'',ttOtFilters:{...TT_OT_DEFAULT_FILTERS},ttOtExpandedRequestIds:[],ttOtModalOpen:false,ttOtDraft:{},ttHoursWeekOffset:0,ttHoursMonth:'',ttHoursSelectedDay:'',ttTeam:null,ttTeamBusy:false,ttTeamError:'',ttTeamRunId:0,ttTeamFilters:{search:'',role:'All',layout:'list'},ttMonitor:null,ttMonitorHistory:[],ttMonitorBusy:false,ttMonitorError:'',ttMonitorRunId:0,ttLogGpsData:null,ttLogGpsBusy:false,ttLogGpsError:'',ttLogGpsErrorRecordId:'',ttLogGpsRunId:0,ttLogGpsCacheAt:0,ttLogExpandedIds:[],ttLogSelectedIds:[],ttLogAdminEditor:null,ttLogAdminDeleteConfirm:null,ttLogAdminBusy:false,ttLogAdminError:'',ttLogAdminSuccess:'',ttGpsData:null,ttGpsBusy:false,ttGpsError:'',ttGpsRunId:0,ttGpsCacheAt:0,ttGpsView:'map',ttGpsFilters:{},ttMapConsent:true,ttMapConsentIdentity:'',ttView:'clock',ttOverviewFilters:{search:'',location:'all',department:'all',status:'all',sort:'newest'},ttLogFilters:{...TT_LOG_DEFAULT_FILTERS},frtFinanceDetail:null,frtFinanceDetailBusy:false,frtFinanceDetailId:null,frtFinanceDetailRevision:0,filter:'',error:null,authBusy:false,acceptance:null,acceptanceBusy:false,boardTtSignedResult:null,boardTtSignedBusy:false,pagesAcceptance:null,pagesBusy:false,nativeAcceptance:null,nativeBusy:false,foundationRows:[],foundationBusy:false,provisionBusy:false,foundationLog:[],foundationError:'',foundationTesting:false,foundationTestResult:null,securityBusy:false,securityResult:null,securityProgress:[],securityWriteBusy:false,securityWriteResult:null,frtSecurityBusy:false,frtSecurityResult:null,ci07Busy:false,ci07Result:null,ci07RunId:0,sec14Busy:false,sec14Result:null,sec14RunId:0,sec14DenialBusy:false,sec14DenialResult:null,sec14DenialRunId:0,sec07Busy:false,sec07Result:null,sec09Busy:false,sec09Result:null,sec09RunId:0,sec10Busy:false,sec10Result:null,sec10RunId:0,effectiveAccessBusy:false,effectiveAccessResult:null,effectiveAccessRunId:0,securityBoardsError:'',tradeLinkSetupBusy:false,tl03ReadBusy:false,tl03ReadResult:null,tl03ReadRunId:0,tl03RevokeArmed:false,tl03RevokedReport:null,ws01B2Busy:false,ws01B2Result:null,ws01B2RunId:0,ws02dB3Busy:false,ws02dB3Report:null,ws02dB3RunId:0,ws02dB3HttpsBusy:false,ws02dB3HttpsReport:null,ws02dB3HttpsRunId:0,ws02dB3RlsBusy:false,ws02dB3RlsReport:null,ws02dB3RlsRunId:0,ws02dB3HandoffPending:false,ws02dB3RevokeArmed:false,ws02dB3RevokedReport:null,b2QaBusy:false,b2QaReport:null,b2QaRunId:0,b4QaBusy:false,b4QaReport:null,b4QaRunId:0,phaseBDenialBusy:false,phaseBDenialReport:null,phaseBDenialRunId:0,tradeLinkSection:'overview',tradeLinkActivity:null,tradeLinkActivityBusy:false,tradeLinkActivityError:'',tradeLinkAnalytics:null,tradeLinkAnalyticsBusy:false,tradeLinkAnalyticsRunId:0,tradeLinkAnalyticsError:'',tradeLinkDraft:initialTradeLinkDraftView(),roleVerified:false,adminVerified:false,roleData:null,roleTab:'roles',roleBusy:false,roleError:'',userRoleData:null,userRoleSelected:null,userRoleSection:'applications',userRoleBoardSearch:'',userRoleBatchMode:false,userRoleBatchSelected:[],userRoleBatchMemberSearch:'',userRoleBatchIdentity:'',userRoleBatchScope:'module',userRoleBatchResource:'',userRoleBatchRole:'',userRoleBatchAction:'assign',userRoleBusy:false,userRoleError:''};
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusClass=value=>({'done':'done','completed':'completed','working':'working','in progress':'in-progress',
 'stuck':'stuck','blocked':'blocked','todo':'todo','planned':'planned'}[String(value??'').toLowerCase()]||'todo');
@@ -401,7 +393,11 @@ const initials=value=>String(value||'U').trim().split(/\s+/).slice(0,2).map(w=>w
 const iconColor=index=>['','green','orange','pink','blue'][Math.abs(index)%5];
 const name=()=>state.context?.profile?.display_name||state.context?.profile?.email?.split('@')[0]||'Member';
 const workspaceName=()=>state.context?.workspace_id==='00000000-0000-4000-8000-000000000001'?'Work Management':'Current workspace';
-const cards=()=>state.showTrash?state.trashed:state.showArchived?state.archived:state.boards;
+const STANDALONE_APPLICATION_MODULE_KEYS=new Set(['timetracker','frt','tradelink','fueltrack']);
+const isStandaloneApplicationBoard=board=>STANDALONE_APPLICATION_MODULE_KEYS.has(
+ moduleByBoardName(board?.name)?.key);
+const cards=()=>state.showTrash?state.trashed:state.showArchived?state.archived:
+ state.boards.filter(board=>!isStandaloneApplicationBoard(board));
 const routeHome='#/overview';
 const unsavedTradeLinkWarning='You have unsaved TradeLink Draft changes. Leave this page and discard them?';
 let approvedRouteHash=location.hash||routeHome;
@@ -512,11 +508,15 @@ function syncSidebarLayout(){
 function sidebar(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  const currentBoard=state.boardId;
- const recent=state.boards;
+ const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board));
  const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
-  sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
+  sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
   sidebarNav('#/fm1','FM1 Ticketing','ticket',state.view==='fm1')+
   sidebarNav('#/time-tracker','TimeTracker','clock',state.ttStandalone===true)+
+   sidebarNav('#/fund-tracker','Fund Tracker','finance',state.frtStandalone===true||
+    (state.view==='board'&&state.boardId===FRT_BOARD_ID&&state.tab==='finance'))+
+  sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',state.fuelTrackStandalone===true)+
+  sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',state.tlStandalone===true)+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',state.view==='foundation'):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',state.view==='security'):'')+
   (state.adminVerified===true?'<div class="side-section sidebar-nav-section">Administration</div>'+
@@ -536,9 +536,9 @@ function sidebar(){
     aria-label="Expand navigation" title="Expand navigation" aria-expanded="false"
     aria-controls="sidebar-navigation-content"><span aria-hidden="true" class="sidebar-layout-toggle-glyph">${sidebarIcon('chevron')}</span></button>
   </div>
-   <div class="sidebar-search-slot"><button type="button" class="aps-global-search-trigger" data-global-search-open aria-haspopup="dialog" aria-expanded="false" aria-label="Search APSYNTRA CRM"><span class="aps-global-search-trigger-icon" aria-hidden="true">⌕</span><span class="aps-global-search-trigger-label">Search</span><kbd data-global-search-key>⌘ K</kbd></button></div>
   `+renderWorkspaceSwitcher({id:state.context?.workspace_id,name:workspaceName()})+`
   <div class="ws01-context-relation" role="status">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+`</div>
+
   <div class="sidebar-nav-scroll" id="sidebar-navigation-content">
    <div class="side-section sidebar-nav-section">Workspace</div>
    <nav class="nav-list" aria-label="Primary">`+nav+`</nav>
@@ -548,7 +548,7 @@ function sidebar(){
    <nav class="nav-list sidebar-recent-list" aria-label="Boards">`+
     (recent.map((b,i)=>{
      const title=String(b.name||'Untitled board');
-     const active=currentBoard===b.id&&!state.ttStandalone;
+     const active=currentBoard===b.id&&!state.ttStandalone&&!state.frtStandalone&&!state.tlStandalone&&!state.fuelTrackStandalone;
      const tone=['violet','teal','amber','rose','blue','indigo'][i%6];
      return '<a class="nav-link sidebar-recent-link '+(active?'active':'')+
       '" href="#/boards/'+e(b.id)+'" title="'+e(title)+'" aria-label="'+e(title)+'"'+
@@ -599,14 +599,14 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.ttStandalone?'TimeTracker':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
+ const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
- const sidebarSignature=JSON.stringify([state.ttStandalone,state.roleVerified,state.adminVerified,name(),
+ const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.roleVerified,state.adminVerified,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
   state.workspaceRelationSnapshot?.relation,workspaceName(),
-  state.boards.map(board=>[board.id,board.name]),
+  state.boards.filter(board=>!isStandaloneApplicationBoard(board)).map(board=>[board.id,board.name]),
   state.boards.length]);
- const route=[state.view,state.boardId,state.tab,state.ttStandalone].join('|');
+ const route=[state.view,state.boardId,state.tab,state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone].join('|');
  // Preserve each group's horizontal position only across same-signed-view renders.
  const scrollPositions=state.view==='board'&&shellIdentity===identity&&shellRoute===route?
   captureBoardGroupScroll(root.querySelector(':scope > .shell .main-content')):null;
@@ -627,6 +627,9 @@ function shell(body){
    for(const link of existing.querySelectorAll('.aps-sidebar a.nav-link')){
     const path=link.getAttribute('href')||'';
     const active=state.ttStandalone?(path===TIMETRACKER_APPLICATION_ROUTE||location.hash.startsWith(TIMETRACKER_APPLICATION_ROUTE+'/')):
+     state.frtStandalone?(path===FUND_TRACKER_APPLICATION_ROUTE||location.hash.startsWith(FUND_TRACKER_APPLICATION_ROUTE+'/')):
+     state.fuelTrackStandalone?(path===FUELTRACK_V3_APPLICATION_ROUTE||location.hash.startsWith(FUELTRACK_V3_APPLICATION_ROUTE+'/')):
+     state.tlStandalone?(path===TRADELINK_APPLICATION_ROUTE||location.hash.startsWith(TRADELINK_APPLICATION_ROUTE+'/')):
      state.view==='board'?path==='#/boards/'+state.boardId:
      path==='#/'+state.view;
     link.classList.toggle('active',active);
@@ -641,7 +644,7 @@ function shell(body){
  }else{
   root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div><button type="button" class="ws01-topbar-launch" data-action="ws01-open" aria-label="Browse authorized workspaces">Workspaces ▾</button>
- <div class="top-actions">${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings"><span data-avatar-initials aria-hidden="true">${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></a></div></header>
+ <div class="top-actions"><button type="button" class="aps-global-search-trigger" data-global-search-open aria-haspopup="dialog" aria-expanded="false" aria-label="Search APSYNTRA CRM"><span class="aps-global-search-trigger-icon" aria-hidden="true">⌕</span><span class="aps-global-search-trigger-label">Search</span><kbd data-global-search-key>⌘ K</kbd></button>${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings"><span data-avatar-initials aria-hidden="true">${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  }
  syncSidebarLayout();
@@ -656,6 +659,10 @@ function shell(body){
   animateTabContent('.main-content');
  root.querySelector('.main')?.classList.toggle('aps-board-shell',state.view==='board');
  root.querySelector('.main')?.classList.toggle('aps-time-tracker-shell',state.ttStandalone===true);
+  root.querySelector('.main')?.classList.toggle('aps-fund-tracker-shell',state.frtStandalone===true||
+   (state.view==='board'&&state.boardId===FRT_BOARD_ID&&state.tab==='finance'));
+ root.querySelector('.main')?.classList.toggle('aps-tradelink-shell',state.tlStandalone===true);
+ root.querySelector('.main')?.classList.toggle('aps-fueltrack-shell',state.fuelTrackStandalone===true);
  root.querySelector('.main')?.classList.toggle('aps-overview-shell',state.view==='overview');
  root.querySelector('.main')?.classList.toggle('aps-fm1-shell',state.view==='fm1');
  root.querySelector('.main')?.classList.toggle('aps-boards-shell',state.view==='boards');
@@ -721,9 +728,16 @@ function boardCard(board,index){
 function empty(title,description,action=''){
  return `<div class="empty"><span class="empty-icon">▦</span><h3>${e(title)}</h3><p>${e(description)}</p>${action}</div>`;
 }
+function overviewBoardPreview(boards,limit=6){
+ const source=(Array.isArray(boards)?boards:[])
+  .filter(board=>!isStandaloneApplicationBoard(board));
+ const size=Math.max(0,Number.isSafeInteger(limit)?limit:6);
+ return size?source.slice(0,size):[];
+}
 function overview(){
- const total=state.boards.reduce((a,b)=>a+(Number(b.item_count)||0),0);
- const recent=state.boards;
+ const visibleBoards=state.boards.filter(board=>!isStandaloneApplicationBoard(board));
+ const total=visibleBoards.reduce((a,b)=>a+(Number(b.item_count)||0),0);
+ const recent=overviewBoardPreview(visibleBoards);
  const countLabel=value=>Number(value).toLocaleString('en-US');
  return `<div class="aps-overview">
  <section class="page-head overview-hero overview-entrance" aria-labelledby="overview-title">
@@ -745,10 +759,10 @@ function overview(){
   </svg>
  </section>
  <section class="stat-grid overview-stat-grid overview-entrance" aria-label="Workspace statistics">
-  <div class="stat-card" role="group" aria-label="Active boards: `+countLabel(state.boards.length)+`">
+  <div class="stat-card" role="group" aria-label="Active boards: `+countLabel(visibleBoards.length)+`">
    <span class="stat-icon">`+overviewIcon('grid')+`</span>
    <div class="stat-label">Active boards</div>
-   <div class="stat-value">`+countLabel(state.boards.length)+`</div>
+   <div class="stat-value">`+countLabel(visibleBoards.length)+`</div>
    <div class="stat-footer">Available to your account</div>
   </div>
   <div class="stat-card" role="group" aria-label="Board items: `+countLabel(total)+`">
@@ -772,7 +786,7 @@ function overview(){
  </section>
  <section class="overview-board-section" aria-labelledby="overview-boards-title">
  <div class="section-header overview-section-heading overview-entrance">
-  <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 id="overview-boards-title" class="section-title">Your boards</h2><p class="overview-board-count">Showing `+recent.length+` of `+countLabel(state.boards.length)+` available boards</p></div>
+  <div class="overview-heading-copy"><span class="overview-section-eyebrow">YOUR WORKSPACE</span><h2 id="overview-boards-title" class="section-title">Your boards</h2><p class="overview-board-count">Showing `+recent.length+` of `+countLabel(visibleBoards.length)+` available boards</p></div>
   <a class="inline-link" href="#/boards"><span>View all boards</span>`+overviewIcon('arrow')+`</a>
  </div>
  `+(recent.length?
@@ -1075,6 +1089,44 @@ function renderTimeTrackerApplication(){
   gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError
  });
 }
+function renderFundTrackerApplication(){
+  return renderFundTrackerNative({
+   result:state.frtFinance,busy:state.frtFinanceBusy,
+   detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,
+   selectedRequestId:state.frtFinanceDetailId,statusFilter:state.frtStatusFilter,
+   view:state.frtFinanceView
+  });
+ }
+ function renderFuelTrackApplication(){
+ return renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,
+  actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,
+  analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,
+  analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,
+  requestsFilters:state.fuelTrackRequestFilters,
+  activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,
+   workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,
+   busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},
+  backend:{snapshot:state.fuelTrackBackend?.snapshot||null,
+   analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,
+   message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,
+   receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,
+   preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}});
+}
+function renderFuelTrackRouteUnavailable(message='The existing FuelTrack+ v3 board was not found in this workspace.') {
+ return '<section class="ft3-placeholder" role="alert" aria-label="FuelTrack+ application unavailable">'+
+  '<h2>FuelTrack+</h2><p>'+e(message||'FuelTrack+ is unavailable.')+'</p>'+
+  '<p>The existing application board and records were not changed or recreated.</p>'+
+  '<a href="#/boards" class="ft3-soft-action">Return to My Boards</a></section>';
+}
+
+function renderTradeLinkRouteUnavailable(message='The existing TradeLink board was not found in this workspace.') {
+ return '<section class="tl-content-panel" role="alert" aria-label="TradeLink application unavailable">'+
+  '<p class="tl-eyebrow">APSYNTRA CRM · TRADELINK</p><h1>TradeLink</h1>'+
+  '<p>'+e(message||'TradeLink is unavailable.')+'</p>'+
+  '<p>The existing application board and records were not changed or recreated.</p>'+
+  '<a class="secondary" href="#/boards">Return to My Boards</a></section>';
+}
+
 function renderTimeTrackerRouteUnavailable(){
  return '<section class="fm1-app tt-application-unavailable" aria-label="TimeTracker application">'+
   '<header class="fm1-app-header"><div><span class="fm1-eyebrow">APSYNTRA CRM · ATTENDANCE OPERATIONS</span>'+
@@ -1090,12 +1142,25 @@ function boardPage(){
   hidden:document.hidden,
   lowPower:navigator.connection?.saveData===true||
    (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4),
-  application:state.ttStandalone?'TimeTracker':'Board'
+  application:state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':'Board'
  });
  if(state.ttStandalone&&!state.board)return renderBoardLoadingError(state.error,{application:'TimeTracker'});
+  if(state.frtStandalone&&!state.board)return renderBoardLoadingError(state.error,{application:'Fund Tracker'});
+ if(state.tlStandalone&&!state.board)return renderTradeLinkRouteUnavailable(state.error);
+ if(state.fuelTrackStandalone&&!state.board)return renderFuelTrackRouteUnavailable(state.error);
  if(!state.board)return renderBoardLoadingError(state.error);
  const b=state.board.board;
+ if(state.fuelTrackStandalone&&isFuelTrackV3ApplicationBoard(b))return renderFuelTrackApplication();
+ if(state.tlStandalone&&isTradeLinkBoard(b))return renderTradeLinkApplication({
+  detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,
+  activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},
+  analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,
+  analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,
+  draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,
+  actorName:name(),actorEmail:state.context?.profile?.email||''
+ });
  if(moduleByBoardName(b.name)?.key==='timetracker')return renderTimeTrackerApplication();
+  if(state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt')return renderFundTrackerApplication();
  if(state.boardItemSearchBoard!==b.id){state.boardItemSearch='';state.boardItemSearchBoard=b.id;}
  // TradeLink Draft archives retain signed Board/audit records, but are not
  // active Board items. Other boards keep their established archive presentation.
@@ -1140,14 +1205,7 @@ function boardPage(){
     label:'▤ Board items'+(state.board.pagination?.loaded===true?' <span class="csp-u060">('+boardItemCountLabel+')</span>':'')},
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
-  ...(isFuelTrackV3ApplicationBoard(b)?[{key:'fueltrack',href:fuelTrackHref('dashboard'),label:'◈ FuelTrack+ v3 app'}]:[]),
-  ...(moduleKey==='tradelink'?[{key:'tradelink',href:'#/boards/'+b.id+'/tradelink/drafts/quotation',
-    label:'▤ TradeLink application'}]:[]),
   ...(moduleKey==='fueltrans'?[{key:'fueltrans',href:'#/boards/'+b.id+'/fueltrans',label:'FuelTrans application'}]:[]),
-  ...(moduleKey==='frt'?[{key:'finance',href:'#/boards/'+b.id+'/finance',
-    label:'▣ Fund Tracker'}]:[]),
-  ...(moduleKey==='timetracker'?[{key:'attendance',href:'#/boards/'+b.id+'/attendance',
-    label:'◷ TimeTracker attendance'}]:[])
  ];
  const columns=moduleKey?boardGridColumns(state.board,{primaryTitle,columnLabels,allowCustom}):
   genericBoardColumns(state.board,{primaryTitle,columnLabels,minimal,
@@ -1178,7 +1236,7 @@ function boardPage(){
   '>'+t.label+'</a></div>').join('')}</div>
 
 <div data-board-live-content>
-${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFRTFinanceReadOnly({result:state.frtFinance,busy:state.frtFinanceBusy,detailResult:state.frtFinanceDetail,detailBusy:state.frtFinanceDetailBusy,selectedRequestId:state.frtFinanceDetailId,statusFilter:state.frtStatusFilter,view:state.frtFinanceView}):state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
+${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
  gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
  ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
@@ -1357,6 +1415,7 @@ function render(){
  else if(state.view==='boards')shell(boardsPage());
  else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id,api:db});}
  else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
+ else if(state.view==='tradelink')shell(renderTradeLinkRouteUnavailable(state.error));
  else if(state.view==='settings')shell(settingsPage());
  else shell(overview());
  mountTradeLinkTabMotion(root);
@@ -1693,6 +1752,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   state.view===view&&state.tab===tab&&state.boardId===boardId;
  const sensitive=reason!=='broadcast';
  const boardChanged=boardId&&boardIds.includes(boardId);
+ const refreshBoardCatalog=shouldRefreshWorkspaceBoardList({reason,view});
  // Board broadcasts carry identifiers only; the server remains authoritative.
  if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
  let who,current;
@@ -1722,14 +1782,15 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  // Authorization reads must occur even while an unsaved editor is open.
  if(platformSyncEditInProgress())return false;
  const roleChanged=current.profile?.platform_role!==state.context.profile?.platform_role;
- const boards=await db.boards('active');
+ const boards=refreshBoardCatalog?await db.boards('active'):state.boards;
  if(!isCurrent())return false;
- if(!boards.some(board=>board.id===boardId)&&view==='board'){
+ if(refreshBoardCatalog&&!boards.some(board=>board.id===boardId)&&view==='board'){
   platformSync.stop();state.board=null;location.hash='#/boards';return false;
  }
  if(platformSyncEditInProgress())return false;
- const changedBoards=JSON.stringify(state.boards)!==JSON.stringify(boards);
- state.boards=boards;state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
+ let changedBoards=refreshBoardCatalog&&JSON.stringify(state.boards)!==JSON.stringify(boards);
+ if(refreshBoardCatalog)state.boards=boards;
+ state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
  if(reason!=='broadcast')void refreshSignedCrmRole({force:roleChanged}).catch(()=>{});
  if(roleChanged||sensitive){
   const verified=await roleConfig.bootstrapVerified().catch(()=>false);
@@ -1774,6 +1835,20 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
      quietReadAtStart!==visibleBoardRefreshSerial)return false;
   if(detail?.board?.id!==boardId||detail.board.workspace_id!==workspaceId)
    return false;
+  if(!refreshBoardCatalog&&detail.board.status!=='active'){
+   const activeBoards=await db.boards('active');
+   if(!isCurrent())return false;
+   state.boards=activeBoards;
+   platformSync.stop();state.board=null;state.boardUi=null;
+   state.edit=false;state.boardManage=false;location.hash='#/boards';
+   return false;
+  }
+  if(!refreshBoardCatalog){
+   const nextBoards=state.boards.map(board=>
+    board.id===boardId?{...board,...detail.board}:board);
+   changedBoards=JSON.stringify(state.boards)!==JSON.stringify(nextBoards);
+   state.boards=nextBoards;
+  }
   const changed=JSON.stringify(state.board)!==JSON.stringify(detail);
   state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
   if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
@@ -1803,7 +1878,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   }
   if(['items','finance'].includes(tab)&&moduleByBoardName(detail.board.name)?.key==='frt'){
    const selected=state.frtFinance?.status==='PASS'?state.frtFinance.companyCode:null;
-   const signed=await loadFRTFinanceReadOnly({auth,api:db,companyCode:selected});
+   const signed=await fundTracker.snapshot({companyCode:selected});
    if(isCurrent())state.frtFinance=signed;
   }
   // Module-owned records are not all part of the board snapshot. Refresh their
@@ -2375,7 +2450,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
   const identity=state.context?.user_id,workspace=state.context?.workspace_id;
   state.frtFinanceBusy=true;render();
   try{
-   const signed=await loadFRTFinanceReadOnly({auth,api:db,companyCode:null});
+   const signed=await fundTracker.snapshot({companyCode:null});
    if(seq===routeSerial&&state.tab==='items'&&auth.isSignedIn&&
       state.context?.user_id===identity&&state.context?.workspace_id===workspace)
     state.frtFinance=signed;
@@ -2832,12 +2907,42 @@ async function commitTradeLinkDraft(form){
    status:'AUTHORIZED_READ',rows:verifiedList.rows,
    message:'Saved '+(workflowState==='draft'?'Draft':'For Approval document')+' revision '+receipt.revision+'; TradeLink, Board items and All Documents are synchronized.'};
   toast('Document '+savedDraft.documentNumber+' saved. Board item and All Documents verified.');
-  location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
+  location.hash=tradeLinkApplicationHref('documents');
  }catch(err){
   if(same()){
    state.tradeLinkDraft.error=tradeLinkDraftSaveFailureMessage(err,{committed});
    state.tradeLinkDraft.message='';
   }
+ }finally{
+  if(same()){state.tradeLinkDraft.busy=false;render();}
+ }
+}
+/** Advisory readiness preview; existing signed read, no mutation or new gate. */
+async function checkTradeLinkDocumentReadiness(documentId){
+ if(!TL03_WORKFLOW_SUBMIT_ENABLED||!tradeLinkAuthorizedListRoute()||
+  state.tradeLinkSection!=='documents'||state.tradeLinkDraft.busy||
+  state.tradeLinkDraft.status!=='AUTHORIZED_READ'||!state.boardManage)return;
+ const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
+ if(!listed||listed.archived||
+  !['draft','revision-required'].includes(listed.workflowState))return;
+ const seq=routeSerial,actor=auth.userId,workspace=state.context.workspace_id;
+ const same=()=>seq===routeSerial&&tradeLinkAuthorizedListRoute()&&
+  state.tradeLinkSection==='documents'&&auth.userId===actor&&
+  state.context?.workspace_id===workspace;
+ state.tradeLinkDraft.busy=true;state.tradeLinkDraft.error='';render();
+ try{
+  const record=await tradeLinkDraftWorkspace.read(documentId);
+  if(!same())return;
+  if(!record||record.id!==listed.documentId||
+    record.revision!==listed.revision||record.workflow_state!==listed.workflowState||
+    record.document_number!==listed.documentNumber||
+    record.document_type!==listed.documentType||
+    record.board_item_id!==listed.boardItemId||record.archived_at!==null)
+   throw new ApiError('The signed document changed; refresh All Documents.',409);
+  state.tradeLinkDraft.message=summarizeTradeLinkSubmitReadiness(record);
+ }catch(err){
+  if(same())state.tradeLinkDraft.error=
+   'Submit readiness could not be verified. Refresh the signed document before trying again.';
  }finally{
   if(same()){state.tradeLinkDraft.busy=false;render();}
  }
@@ -3184,7 +3289,7 @@ async function changeTradeLinkDraftState(documentId,operation){
    message:'Signed Draft '+operation+' confirmed at revision '+receipt.revision+'.'};
   toast('TradeLink Draft '+operation+' confirmed.');
   if(state.tradeLinkSection==='drafts')
-   location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
+   location.hash=tradeLinkApplicationHref('documents');
  }catch(err){
   if(same()){
    state.tradeLinkDraft.error=committed?
@@ -3906,7 +4011,7 @@ async function loadFRTFinance(companyCode=null,seq=routeSerial,searchQuery=''){
  const workspace=state.context?.workspace_id;
  state.frtFinanceBusy=true;state.frtFinance=null;state.frtFinanceDetail=null;state.frtFinanceDetailId=null;state.frtFinanceDetailBusy=false;state.frtFinanceDetailRevision++;render();
  try{
-  const result=await loadFRTFinanceReadOnly({auth,api:db,companyCode,includeIntercompany:state.frtFinanceView==='opex',searchQuery});
+  const result=await fundTracker.snapshot({companyCode,includeIntercompany:state.frtFinanceView==='opex',searchQuery});
   if(seq===routeSerial&&auth.isSignedIn&&state.context?.user_id===identity&&
      state.context?.workspace_id===workspace)state.frtFinance=result;
  }finally{if(seq===routeSerial){state.frtFinanceBusy=false;render();}}
@@ -3924,12 +4029,12 @@ async function loadFRTFinanceDetail(requestId,seq=routeSerial){
  state.frtFinanceDetail=null;state.frtFinanceDetailId=requestId;
  state.frtFinanceDetailBusy=true;render();
  try{
-  const response=await loadFRTRequestDetailReadOnly({
+  const response=await fundTracker.loadRequestDetail({
    auth,api:db,requestId,companyCode,allowedRequestIds:ids,workspaceId:workspace,
    expectedRole:state.frtFinance.role
   });
   if(response.status==='PASS'){
-   try{response.bankRelease=await loadFRTBankExecution({auth,api:db,workspaceId:workspace,
+   try{response.bankRelease=await fundTracker.loadBankExecution({auth,api:db,workspaceId:workspace,
     requestId,allowedRequestIds:ids});}
    catch{response.bankReleaseError='Bank execution readback unavailable';}
   }
@@ -4009,7 +4114,7 @@ function navigateGlobalSearchResult(item){
    item.recordId&&typeof item.recordId==='string'){
   pendingNativeSearchSelection={applicationId:'tradelink',recordId:item.recordId,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
-  const target=item.href||('#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents/record/'+encodeURIComponent(item.recordId));
+  const target=item.href||tradeLinkApplicationHref('documents/record/'+encodeURIComponent(item.recordId));
   if(location.hash===target)void onRoute().catch(error=>notice(error));
   else location.hash=target;
   return;
@@ -4105,7 +4210,11 @@ async function onRoute(){
  const routePath=hash.split('?')[0];
  const routeQuery=new URLSearchParams(hash.split('?')[1]||'').get('q')||'';
  const parts=routePath.replace(/^#\/?/,'').split('/');
- state.ttStandalone=false;
+ state.ttStandalone=false;state.frtStandalone=false;state.tlStandalone=false;state.fuelTrackStandalone=false;
+ if(parts[0]!=='tradelink'){
+  if(state.tradeLinkAnalyticsBusy){state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;}
+  state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkSection='overview';
+ }
  if(parts[0]!=='fm1')fm1Module?.unmountFm1Application();
  if(parts[0]==='invitations'&&parts[1]==='accept'){
   state.view='invitation';render();return;
@@ -4117,6 +4226,81 @@ async function onRoute(){
   if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:'fm1',recordId,boardId:null,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
  }else if(parts[0]==='fm1'&&pendingNativeSearchSelection?.applicationId==='fm1')pendingNativeSearchSelection=null;
+ if(parts[0]==='tradelink'){
+  state.tlStandalone=true;
+  const tradeLinkRoute=parseTradeLinkApplicationRoute(parts);
+  if(!tradeLinkRoute){state.view='tradelink';state.error='Invalid TradeLink application route.';render();return;}
+  if(tradeLinkRoute.canonicalHash!==routePath)
+   history.replaceState(null,'',location.pathname+location.search+tradeLinkRoute.canonicalHash);
+  const tradeLinkBoard=state.boards.find(board=>board?.id===TRADELINK_BOARD_ID&&
+   moduleByBoardName(board?.name)?.key==='tradelink');
+  state.tradeLinkSection=tradeLinkRoute.section;
+  if(state.tradeLinkSection!=='analytics'){
+   state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;
+   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';
+  }
+  if(tradeLinkRoute.recordId){
+   pendingNativeSearchSelection={applicationId:'tradelink',recordId:tradeLinkRoute.recordId,
+    boardId:TRADELINK_BOARD_ID,userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }else if(pendingNativeSearchSelection?.applicationId==='tradelink')pendingNativeSearchSelection=null;
+  if(!tradeLinkBoard){
+   routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.boardManage=false;state.edit=false;state.error='The existing TradeLink board was not found in this workspace.';
+   state.view='tradelink';render();return;
+  }
+  await loadBoard(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute.draftType,tradeLinkRoute.editId);
+  await openPendingGlobalSearchItem(TRADELINK_BOARD_ID);
+  await openPendingNativeSearchRecord(TRADELINK_BOARD_ID);
+  return;
+ }
+ if(parts[0]==='fueltrack'){
+  state.fuelTrackStandalone=true;
+  const fuelTrackRoute=parseFuelTrackApplicationRoute(parts);
+  if(!fuelTrackRoute){state.error='Invalid FuelTrack application route.';state.view='board';render();return;}
+  if(fuelTrackRoute.canonicalHash!==routePath)
+   history.replaceState(null,'',location.pathname+location.search+fuelTrackRoute.canonicalHash);
+  const fuelTrackBoard=findFuelTrackV3Board(state.boards);
+  state.fuelTrackSection=fuelTrackRoute.section;
+  state.fuelTrackAnalyticsView=fuelTrackRoute.analyticsView;
+  state.fuelTrackAnalyticsRange=fuelTrackRoute.analyticsRange;
+  state.fuelTrackAnalyticsMetric=fuelTrackRoute.analyticsMetric;
+  if(state.fuelTrackSection!=='lightfuels')state.fuelTrackRefuelingDialog=null;
+  if(fuelTrackRoute.recordId){
+   pendingNativeSearchSelection={applicationId:'fueltrack',recordId:fuelTrackRoute.recordId,
+    boardId:FUELTRACK_V3_ID,userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }else if(pendingNativeSearchSelection?.applicationId==='fueltrack')pendingNativeSearchSelection=null;
+  if(!fuelTrackBoard){
+   routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.boardManage=false;state.edit=false;state.error='The existing FuelTrack+ v3 board was not found in this workspace.';
+   state.view='board';render();return;
+  }
+  await loadBoard(FUELTRACK_V3_ID,'fueltrack');
+  await openPendingGlobalSearchItem(FUELTRACK_V3_ID);
+  await openPendingNativeSearchRecord(FUELTRACK_V3_ID);
+  return;
+ }
+ if(parts[0]==='fund-tracker'){
+  state.frtStandalone=true;
+  const fundTrackerBoard=findFundTrackerBoard(state.boards);
+  const selectedRecord=parseFundTrackerRecordRoute(parts);
+  if(fundTrackerBoard&&selectedRecord){
+   pendingNativeSearchSelection={applicationId:'frt',recordId:selectedRecord.requestId,
+    navigationScope:selectedRecord.companyCode,query:routeQuery,boardId:fundTrackerBoard.id,
+    userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }else if(pendingNativeSearchSelection?.applicationId==='frt'){
+   pendingNativeSearchSelection=null;
+  }
+  if(!fundTrackerBoard){
+   routeSerial++;
+   state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;
+   state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;
+   state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.error='The existing Fund Released Tracker board was not found in this workspace.';
+   state.view='board';render();return;
+  }
+  await loadBoard(fundTrackerBoard.id,'finance');
+  return;
+ }
  if(parts[0]==='time-tracker'){
   state.ttStandalone=true;
   const attendanceBoard=findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName);
@@ -4136,6 +4320,26 @@ async function onRoute(){
   return;
  }
  if(parts[0]==='boards'&&validUuid(parts[1])){
+  if(parts[1]===TRADELINK_BOARD_ID){
+   const legacy=parts[2]==='tradelink'?parts.slice(3):[];
+   const canonical=legacy.length?tradeLinkApplicationHref(legacy.join('/')):
+    tradeLinkApplicationHref('drafts/quotation');
+   history.replaceState(null,'',location.pathname+location.search+canonical);
+   return onRoute();
+  }
+  if(parts[1]===FRT_BOARD_ID){
+   const canonical=parts[2]==='finance'&&parts[3]==='record'&&parts[4]&&parts[5]?
+    fundTrackerRecordHref(parts[4],parts[5]):FUND_TRACKER_APPLICATION_ROUTE;
+   history.replaceState(null,'',location.pathname+location.search+canonical);
+   return onRoute();
+  }
+  if(parts[1]===FUELTRACK_V3_ID){
+   const legacy=parts[2]==='fueltrack'?parts.slice(3):[];
+   const canonical=parseFuelTrackApplicationRoute(['fueltrack',...legacy])?.canonicalHash||
+    FUELTRACK_V3_APPLICATION_ROUTE;
+   history.replaceState(null,'',location.pathname+location.search+canonical);
+   return onRoute();
+  }
   const defaultClock=!parts[2]&&state.boards.some(b=>
     b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
   const defaultFuelTrans=!parts[2]&&state.boards.some(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='fueltrans');
@@ -4144,12 +4348,8 @@ async function onRoute(){
     parts[2]==='issues'?'issues':
     parts[2]==='native'?'items':
     parts[2]==='fueltrans'&&state.boards.some(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='fueltrans')?'fueltrans':
-    parts[2]==='fueltrack'&&parts[1]===FUELTRACK_V3_ID&&
-      state.boards.some(b=>b.id===FUELTRACK_V3_ID&&b.name==='FuelTrack+ v3')?'fueltrack':
     parts[2]==='finance'?'finance':
     parts[2]==='attendance'?'attendance':
-    parts[2]==='tradelink'&&state.boards.some(b=>b.id===parts[1]&&
-      moduleByBoardName(b.name)?.key==='tradelink')?'tradelink':
     defaultFuelTrans?'fueltrans':defaultClock?'attendance':'items';
   const timeTrackerBoard=state.boards.find(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='timetracker');
   if(timeTrackerBoard){
@@ -4163,51 +4363,18 @@ async function onRoute(){
   state.fuelTrackAnalyticsView=normalizeFuelTrackAnalyticsView(parts[4]);
   state.fuelTrackAnalyticsRange=normalizeFuelTrackAnalyticsRange(parts[5]);
   state.fuelTrackAnalyticsMetric=normalizeFuelTrackAnalyticsMetric(parts[6]);
-  // TradeLink has no overview landing page. Canonicalize legacy entry URLs
-  // without adding a history entry or changing authentication/board scope.
-  // Keep explicit documents, activity, draft and edit deep links unchanged.
-  if(requested==='tradelink'&&(!parts[3]||parts[3]==='overview')){
-   const canonical='#/boards/'+parts[1]+'/tradelink/drafts/quotation';
-   history.replaceState(null,'',location.pathname+location.search+canonical);
-   parts.splice(3,parts.length-3,'drafts','quotation');
-  }
-  // Legacy direct module URLs resolve to the same functional editor, never
-  // the historical reference/instruction page.
-  const directModule=requested==='tradelink'&&
-   ['esi','packing','delivery','payment','quotation','po'].includes(parts[3]);
-  state.tradeLinkSection=directModule?'drafts':
-   requested==='tradelink'?normalizeTradeLinkSection(parts[3]):'overview';
-  if(state.tradeLinkSection!=='analytics'){
-   if(state.tradeLinkAnalyticsBusy){
-    state.tradeLinkAnalyticsRunId++;state.tradeLinkAnalyticsBusy=false;
-   }
-   // Leaving Analytics invalidates its snapshot; returning to the tab performs
-   // one fresh signed read, while background board refreshes reuse the result.
-   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';
-  }
   if(requested==='finance'&&moduleByBoardName(state.boards.find(b=>b.id===parts[1])?.name)?.key==='frt'&&
      parts[3]==='record'&&parts[4]&&validUuid(parts[5])){
    pendingNativeSearchSelection={applicationId:'frt',recordId:parts[5],navigationScope:parts[4],
     query:routeQuery,boardId:parts[1],userId:auth.userId,workspaceId:state.context?.workspace_id};
-  }else if(requested==='fueltrack'&&parts[3]==='requests'&&parts[4]==='record'&&validUuid(parts[5])){
-   pendingNativeSearchSelection={applicationId:'fueltrack',recordId:parts[5],boardId:parts[1],
-    userId:auth.userId,workspaceId:state.context?.workspace_id};
-  }else if(requested==='tradelink'&&state.tradeLinkSection==='documents'&&
-     parts[4]==='record'&&validUuid(parts[5])){
-   pendingNativeSearchSelection={applicationId:'tradelink',recordId:parts[5],boardId:parts[1],
-    userId:auth.userId,workspaceId:state.context?.workspace_id};
   }
-  const signedDraftRoute=requested==='tradelink'&&state.tradeLinkSection==='drafts';
-  const editId=signedDraftRoute&&parts[4]==='edit'&&validUuid(parts[5])?
-   parts[5]:null;
   const nativeApp=['tools','toolbox','materials','evaluation','charter','orders','aims'].includes(parts[3])?parts[3]:null;
   if(parts[2]==='native'&&nativeApp&&parts[4]){
    let recordId='';try{recordId=decodeURIComponent(parts[4]);}catch{}
    if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:nativeApp,recordId,
     navigationScope:parts[5]||'',boardId:parts[1],userId:auth.userId,workspaceId:state.context?.workspace_id};
   }
-  await loadBoard(parts[1],requested,
-   signedDraftRoute&&parts[4]!=='edit'?(directModule?parts[3]:parts[4]):null,editId);
+  await loadBoard(parts[1],requested);
   await openPendingGlobalSearchItem(parts[1]);
   await openPendingNativeSearchRecord(parts[1]);
   return;
@@ -4506,7 +4673,7 @@ async function openFRTDiscussionDialog(requestId,request){
  let busy=false;
  const current=()=>frtPanelIsCurrent(view,{seq,workspaceId,boardId,userId});
  const refresh=async()=>{
-  const comments=await loadFRTComments({auth,workspaceId,requestId});
+  const comments=await fundTracker.loadComments({auth,workspaceId,requestId});
   if(!current())return false;
   thread.innerHTML=renderFRTComments(comments,{currentUserId:userId,currentUserName:name()});
   return true;
@@ -4519,7 +4686,7 @@ async function openFRTDiscussionDialog(requestId,request){
   if(!body){status.textContent='Enter a comment before posting.';status.setAttribute('role','alert');return;}
   busy=true;submit.disabled=true;submit.textContent='Posting…';status.textContent='Saving comment…';status.setAttribute('role','status');
   try{
-   await addFRTComment({api:db,workspaceId,requestId,body});
+   await fundTracker.addComment({api:db,workspaceId,requestId,body});
    textarea.value='';
    try{
     await refresh();
@@ -4550,13 +4717,15 @@ async function openFRTCompanyProfileDialog(companyCode){
   if(event.target===view||event.target.closest('[data-frt-collab-close]'))revokePreview();
  });
  try{
-  profile=await loadFRTCompanyProfile({auth,api:db,workspaceId,companyCode});
-  if(profile.logoPath)profile.logoDataUrl=await loadFRTCompanyLogoDataUrl({
+  profile=await fundTracker.loadCompanyProfile({auth,api:db,workspaceId,companyCode});
+  if(profile.logoPath)profile.logoDataUrl=await fundTracker.loadCompanyLogoDataUrl({
    auth,api:db,workspaceId,companyCode,logoPath:profile.logoPath
   });
   if(!current())return;
   host.innerHTML=renderFRTCompanyProfileEditor(profile);
   const form=host.querySelector('[data-frt-company-profile-form]');
+  // Persisted company data is authoritative; never retain browser-restored values.
+  hydrateFRTCompanyProfileForm(form,profile);
   const status=host.querySelector('[data-frt-company-profile-status]');
   const submit=host.querySelector('[data-frt-company-profile-save]');
   const logoInput=form.querySelector('[name="companyLogo"]');
@@ -4592,12 +4761,13 @@ async function openFRTCompanyProfileDialog(companyCode){
    busy=true;submit.disabled=true;setStatus('Saving company profile…');
    try{
     const formData=new FormData(form);
-    const saved=await saveFRTCompanyProfileWithLogo({auth,api:db,workspaceId,companyCode,
+    const saved=await fundTracker.saveCompanyProfileWithLogo({auth,api:db,workspaceId,companyCode,
      file:pendingLogoFile,removeLogo,profile:{
       legalName:String(formData.get('legalName')||''),
       registeredAddress:String(formData.get('registeredAddress')||''),
       contactPhone:String(formData.get('contactPhone')||''),
       contactEmail:String(formData.get('contactEmail')||''),
+      taxIdNumber:String(formData.get('taxIdNumber')||''),
       logoPath:profile.logoPath
      }});
     if(!current())return;
@@ -4647,13 +4817,13 @@ async function openFRTVoucherDialog(requestId,request){
   if(status)status.textContent=message;
  };
  try{
-  const result=await loadFRTVoucher({auth,api:db,workspaceId,requestId,companyCode,
+  const result=await fundTracker.loadVoucher({auth,api:db,workspaceId,requestId,companyCode,
    expectedRole,expectedVoucher:request.voucher,expectedTitle:request.title,allowedRequestIds});
   if(!current())return;
   let voucher=result.voucher;
   host.innerHTML=renderFRTVoucherDocument(voucher);
-  mountFRTAccountingEditor({host,api:db,workspaceId,requestId,getVoucher:()=>voucher,onSaved:async()=>{
-   const fresh=await loadFRTVoucher({auth,api:db,workspaceId,requestId,companyCode,expectedRole,
+  fundTracker.mountAccountingEditor({host,api:db,workspaceId,requestId,getVoucher:()=>voucher,onSaved:async()=>{
+   const fresh=await fundTracker.loadVoucher({auth,api:db,workspaceId,requestId,companyCode,expectedRole,
     expectedVoucher:request.voucher,expectedTitle:request.title,
     allowedRequestIds:(state.frtFinance?.requests||[]).map(row=>row.requestId)});
    if(!current())return null;
@@ -4681,7 +4851,7 @@ async function openFRTVoucherDialog(requestId,request){
    try{
     let documentVoucher=voucher;
     if(reprint){
-     const fresh=await loadFRTVoucher({auth,api:db,workspaceId,requestId,companyCode,
+     const fresh=await fundTracker.loadVoucher({auth,api:db,workspaceId,requestId,companyCode,
       expectedRole,expectedVoucher:request.voucher,expectedTitle:request.title,
       allowedRequestIds:(state.frtFinance?.requests||[]).map(row=>row.requestId)});
      if(!current()){printWindow.close();return;}
@@ -4717,7 +4887,7 @@ async function openFRTVoucherDialog(requestId,request){
 }
 function downloadFRTActivityCsv(events,requests){
  const requestMap=new Map(requests.map(request=>[request.requestId,request]));
- const blob=new Blob([frtAuditCsv(events,requestMap)],{type:'text/csv;charset=utf-8'});
+ const blob=new Blob([fundTracker.auditCsv(events,requestMap)],{type:'text/csv;charset=utf-8'});
  const url=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=url;link.download='frt-activity-'+new Date().toISOString().slice(0,10)+'.csv';
  document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
@@ -4765,7 +4935,7 @@ async function openFRTActivityDialog(){
   if(busy||!current())return;
   busy=true;error='';render();
   try{
-   page=await loadFRTAuditPage({auth,api:db,workspaceId,companyCode:filters.companyCode,
+   page=await fundTracker.loadAuditPage({auth,api:db,workspaceId,companyCode:filters.companyCode,
     requestId:filters.requestId,action:filters.action,search:filters.search,offset,limit:50});
    if(!current())return;
   }catch(err){if(current())error=err?.message||'Activity could not be loaded.';}
@@ -4789,12 +4959,12 @@ async function openFRTNotificationsDialog(){
   busy=true;host.innerHTML='<div class="frt-collab-empty" role="status">Loading persisted events and liquidation deadlines…</div>';
   try{
    const [page,agingResult]=await Promise.all([
-    loadFRTAuditPage({auth,api:db,workspaceId,companyCode,limit:100,offset:0}),
-    loadFRTAgingSummary({api:db,workspaceId,companyCode}).then(aging=>({aging})).catch(error=>({error}))
+    fundTracker.loadAuditPage({auth,api:db,workspaceId,companyCode,limit:100,offset:0}),
+    fundTracker.loadAgingSummary({api:db,workspaceId,companyCode}).then(aging=>({aging})).catch(error=>({error}))
    ]);
-   const snapshots=await loadFRTDeadlineSnapshots({api:db,workspaceId,requests:page.requests,concurrency:6});
+   const snapshots=await fundTracker.loadDeadlineSnapshots({api:db,workspaceId,requests:page.requests,concurrency:6});
    if(!current())return;
-   const notifications=projectFRTNotifications({events:page.events,requests:page.requests,
+   const notifications=fundTracker.projectNotifications({events:page.events,requests:page.requests,
     bankSnapshots:snapshots.filter(item=>item.snapshot).map(item=>({requestId:item.requestId,snapshot:item.snapshot}))});
    const failed=snapshots.filter(item=>item.error).length;
    host.innerHTML=(agingResult.aging?renderFRTNotificationSummary(agingResult.aging):
@@ -4848,8 +5018,8 @@ function activeBoardLayout(){
     state.board?.board?.id!==state.boardId||
     state.board?.board?.workspace_id!==state.context?.workspace_id)return null;
  const moduleKey=moduleByBoardName(state.board.board.name)?.key;
- const tabs=['items','issues',...(isMaterialTrackerBoard(state.board)?['sourcing']:[]),...(moduleKey==='frt'?['finance']:[]),
-  ...(moduleKey==='fueltrans'?['fueltrans']:[]),...(moduleKey==='timetracker'?['attendance']:[])];
+ const tabs=['items','issues',...(isMaterialTrackerBoard(state.board)?['sourcing']:[]),
+  ...(moduleKey==='fueltrans'?['fueltrans']:[])];
  const minimal=isItemOnlyBoard(state.board,state.boardUi);
  const columns=(moduleKey?boardGridColumns(state.board,{allowCustom:BOARD_STRUCTURE_ADMIN_ENABLED&&state.boardUi?.status==='VERIFIED_READ'}):genericBoardColumns(state.board,{minimal,hiddenVirtual:state.boardUi?.hiddenVirtual})).map(c=>c.key);
  const pref=loadBoardLayout(state.context,state.boardId,tabs,columns,boardPreferences);
@@ -6625,7 +6795,7 @@ async function action(name,button){
   state.tradeLinkDraft.unsavedChanges=false;
   if(state.tradeLinkDraft.editRequestId){
    const type=state.tradeLinkDraft.selected?.record?.document_type||'quotation';
-   location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+type;
+   location.hash=tradeLinkApplicationHref('drafts/'+type);
    break;
   }
   state.tradeLinkDraft=resetTradeLinkDraftForm(state.tradeLinkDraft);
@@ -6643,8 +6813,8 @@ async function action(name,button){
      !confirm(unsavedTradeLinkWarning))break;
    state.tradeLinkDraft.unsavedChanges=false;
    if(state.tradeLinkDraft.editRequestId){
-    location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+
-     (state.tradeLinkDraft.selected?.record?.document_type||'quotation');
+    location.hash=tradeLinkApplicationHref('drafts/'+
+     (state.tradeLinkDraft.selected?.record?.document_type||'quotation'));
     break;
    }
    state.tradeLinkDraft={...state.tradeLinkDraft,mode:'create',selected:null,pendingCreateId:null,pendingCreateDraft:null,lineDrafts:null,formValues:null,error:'',message:''};
@@ -6809,7 +6979,7 @@ async function action(name,button){
       'Your signed validation time was recorded. The document remains For Approval until the second reviewer validates.'};
     if(receipt.state==='approved'){
      toast('Both validations complete. Document Approved.');
-     location.hash='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents';
+     location.hash=tradeLinkApplicationHref('documents');
     }else toast('Validation recorded. Awaiting the second reviewer.');
    }else{
     const [board,rows]=await Promise.all([
@@ -6838,6 +7008,9 @@ async function action(name,button){
    if(same()){state.tradeLinkDraft.busy=false;render();}
   }
   break;
+ }
+ case 'tradelink-document-check-readiness':{
+  await checkTradeLinkDocumentReadiness(button.dataset.id);break;
  }
  case 'tradelink-document-submit':{
   await submitTradeLinkDocument(button.dataset.id);break;
@@ -8266,7 +8439,7 @@ async function action(name,button){
    const userId=auth.userId,seq=routeSerial;
    const listedRequestIds=state.frtFinance.requests.map(r=>r.requestId);
    try{
-    const snapshot=await loadFRTPersonAssignment({auth,api:db,requestId,workspaceId,
+    const snapshot=await fundTracker.loadPersonAssignment({auth,api:db,requestId,workspaceId,
      companyCode,role,listedRequestIds});
     if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
        auth.userId!==userId||state.context?.workspace_id!==workspaceId)return;
@@ -8282,7 +8455,7 @@ async function action(name,button){
          state.frtFinance?.companyCode!==companyCode)
        throw new ApiError('FRT view changed. Reopen person assignment.',409);
       const raw=String(fd.get('assignee')||'');
-      await saveFRTPersonAssignment({auth,api:db,snapshot,
+      await fundTracker.savePersonAssignment({auth,api:db,snapshot,
        nextAssigneeId:raw||null,listedRequestIds:
         state.frtFinance.requests.map(r=>r.requestId)});
       await loadFRTFinance(companyCode);
@@ -8306,7 +8479,7 @@ async function action(name,button){
         auth.userId!==actorId||state.context?.workspace_id!==workspaceId||
         state.frtFinance?.companyCode!==companyCode)
       throw new ApiError('FRT view changed. Reopen this request.',409);
-     await updateFRTRequestDate({auth,api:db,requestId,workspaceId,companyCode,
+     await fundTracker.updateRequestDate({auth,api:db,requestId,workspaceId,companyCode,
       expectedRole,expectedDate,nextDate:String(fd.get('dateNeeded')||''),
       listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
      await loadFRTFinance(companyCode);
@@ -8331,7 +8504,7 @@ async function action(name,button){
        auth.userId!==actor||state.context?.workspace_id!==workspaceId||
        state.frtFinance?.companyCode!==companyCode||state.frtFinance.role!==role)
       throw new ApiError('FRT view changed. Reopen filing status.',409);
-     await updateSignedFRTFiling({auth,api:db,workspaceId,companyCode,role,
+     await fundTracker.updateFiling({auth,api:db,workspaceId,companyCode,role,
       requestId,expectedStatus,nextStatus,
       listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
      await loadFRTFinance(companyCode);
@@ -8372,7 +8545,7 @@ async function action(name,button){
    }else if(section==='archive'){
     title='Archive Storage';
     try{
-     const archive=await loadFRTArchive({auth,api:db,
+     const archive=await fundTracker.loadArchive({auth,api:db,
       workspaceId:state.context?.workspace_id,companyCode,
       expectedRole:state.frtFinance.role});
      body=renderFRTArchive({...archive,
@@ -8416,7 +8589,7 @@ async function action(name,button){
       if(warning)warning.textContent='Potential duplicate: the same company, payee and total were submitted in this browser within the last 10 minutes. Review the request, then submit again to continue.';
       throw new Error('Potential duplicate detected. Review the warning and submit again to continue.');
      }
-     const creation=await createSignedFRTRequest({auth,api:db,workspaceId,
+     const creation=await fundTracker.createRequest({auth,api:db,workspaceId,
       companyCode:payload.companyCode,role,data:payload,
       allowPotentialDuplicate:duplicateConfirmed});
      if(creation?.status==='DUPLICATE_WARNING'){
@@ -8448,7 +8621,7 @@ async function action(name,button){
     };
     wizardForm?.addEventListener('input',resetDuplicateConfirmation);
     wizardForm?.addEventListener('change',resetDuplicateConfirmation);
-    const recipientClient=new FRTRecipientClient({auth,api:db});
+    const recipientClient=fundTracker.recipients;
     void mountFRTRecipientUI(modal,{client:recipientClient,scope:()=>({
      workspaceId:state.context?.workspace_id,
      companyCode:modal?.querySelector('[name=companyCode]')?.value||'',
@@ -8468,7 +8641,7 @@ async function action(name,button){
    const role=state.frtFinance.role,boardId=state.boardId,actor=auth.userId,seq=routeSerial;
    if(role!=='GENERAL_MANAGER'){toast('Archive recovery uses the existing General Manager action.');break;}
    let archive;
-   try{archive=await loadFRTArchive({auth,api:db,workspaceId,companyCode,expectedRole:role});}
+   try{archive=await fundTracker.loadArchive({auth,api:db,workspaceId,companyCode,expectedRole:role});}
    catch(error){notice(error);break;}
    const archived=archive.requests.find(row=>row.requestId===requestId);
    if(!archived){toast('This request is no longer in the active company archive.');break;}
@@ -8480,7 +8653,7 @@ async function action(name,button){
         auth.userId!==actor||state.context?.workspace_id!==workspaceId||
         state.frtFinance?.companyCode!==companyCode||state.frtFinance?.role!==role)
       throw new ApiError('FRT company or signed session changed. Reopen archive recovery.',409);
-     await restoreFRTRequest({auth,api:db,workspaceId,companyCode,requestId,expectedRole:role});
+     await fundTracker.restoreRequest({auth,api:db,workspaceId,companyCode,requestId,expectedRole:role});
      await loadFRTFinance(companyCode);
     },{submitLabel:'Restore request',
        successMessage:'Archived request restored and active tracker refreshed.'});
@@ -8496,7 +8669,7 @@ async function action(name,button){
    const boardId=state.boardId,actor=auth.userId,seq=routeSerial;
    const ids=state.frtFinance.requests.map(r=>r.requestId);
    let snapshot;
-   try{snapshot=await loadFRTBankExecution({auth,api:db,workspaceId:ws,requestId,allowedRequestIds:ids});}
+   try{snapshot=await fundTracker.loadBankExecution({auth,api:db,workspaceId:ws,requestId,allowedRequestIds:ids});}
    catch(error){notice(error);break;}
    if(!snapshot.eligible||snapshot.recorded){toast('Bank execution is not eligible or was already recorded.');break;}
    const fields='<p class="note">Record evidence of an actual bank-executed disbursement. This does not initiate a transfer or verify it with the bank. The liquidation deadline is 72 hours after the execution timestamp.</p>'+
@@ -8507,7 +8680,7 @@ async function action(name,button){
        auth.userId!==actor||state.context?.workspace_id!==ws||
        state.frtFinance?.companyCode!==company)
      throw new ApiError('Financial session changed; reopen bank recording.',409);
-    await recordFRTBankExecution({auth,api:db,workspaceId:ws,requestId,allowedRequestIds:ids,
+    await fundTracker.recordBankExecution({auth,api:db,workspaceId:ws,requestId,allowedRequestIds:ids,
      snapshot,bankName:String(form.get('bankName')||''),
      transactionReference:String(form.get('transactionReference')||''),
      executedAt:String(form.get('executedAt')||'')});
@@ -8527,7 +8700,7 @@ async function action(name,button){
    const allowedRequestIds=state.frtFinance.requests.map(r=>r.requestId);
    let snapshot;
    try{
-    snapshot=await loadFRTLiquidation({auth,api:db,workspaceId,requestId,allowedRequestIds});
+    snapshot=await fundTracker.loadLiquidation({auth,api:db,workspaceId,requestId,allowedRequestIds});
    }catch(error){notice(error);break;}
    if(seq!==routeSerial||state.boardId!==boardId||auth.userId!==actor||
       state.context?.workspace_id!==workspaceId)return;
@@ -8539,7 +8712,7 @@ async function action(name,button){
        state.frtFinance?.companyCode!==companyCode)
      throw new ApiError('FRT session or company changed. Reopen liquidation.',409);
     const fields=collectFRTLiquidationForm(modal);
-    await submitFRTLiquidation({auth,api:db,workspaceId,requestId,allowedRequestIds,
+    await fundTracker.submitLiquidation({auth,api:db,workspaceId,requestId,allowedRequestIds,
      snapshot,submissionKey,...fields});
     await loadFRTFinance(companyCode);
    },{submitLabel:'Submit liquidation',successMessage:'Liquidation saved and verified by signed readback.'});
@@ -8551,7 +8724,7 @@ async function action(name,button){
       state.frtFinance?.status!=='PASS'||state.frtFinanceDetail?.status!=='PASS'||
       !auth.isSignedIn)return;
    const requestId=String(button?.dataset?.requestId||'');
-   const code=String(button?.dataset?.frtAction||''),spec=frtActionSpec(code);
+   const code=String(button?.dataset?.frtAction||''),spec=fundTracker.actionSpec(code);
    const existing=state.frtFinanceDetail;
    if(!spec||requestId!==state.frtFinanceDetailId||
       !state.frtFinance.requests.some(r=>r.requestId===requestId)||
@@ -8569,7 +8742,7 @@ async function action(name,button){
        auth.userId!==userId||state.context?.workspace_id!==workspaceId||
        state.frtFinanceDetailId!==requestId||state.frtFinanceDetail!==existing)
      throw new ApiError('Request view changed. Reopen action confirmation.',409);
-    await executeFRTDomainAction({auth,api:db,requestId,workspaceId,
+    await fundTracker.executeAction({auth,api:db,requestId,workspaceId,
      companyCode,role,existingDetail:existing,action:code,
      reason:String(form.get('reason')||''),reference:String(form.get('reference')||''),
      allowedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
@@ -8676,7 +8849,7 @@ async function action(name,button){
      creditorCode:String(form.get('creditorCode')||''),debtorCode:String(form.get('debtorCode')||''),
      amount:String(form.get('amount')||''),issuedOn:String(form.get('issuedOn')||''),
      dueOn:String(form.get('dueOn')||''),description:String(form.get('description')||'')};
-    await createFRTICObligation({auth,api:db,workspaceId,payload});
+    await fundTracker.createIntercompanyObligation({auth,api:db,workspaceId,payload});
     await loadFRTFinance(companyCode);
    },{submitLabel:'Save intercompany entry',
       successMessage:'Intercompany obligation saved and dashboard refreshed.'});
@@ -8713,7 +8886,7 @@ async function action(name,button){
      throw new ApiError('The finance view or signed session changed. Reopen settlement entry.',409);
     const payload={amount:String(form.get('amount')||''),settledOn:String(form.get('settledOn')||''),
      reference:String(form.get('reference')||''),notes:String(form.get('notes')||'')};
-    await recordFRTICSettlement({auth,api:db,workspaceId,obligationId,payload});
+    await fundTracker.recordIntercompanySettlement({auth,api:db,workspaceId,obligationId,payload});
     await loadFRTFinance(companyCode);
    },{submitLabel:'Record settlement',
       successMessage:'Intercompany settlement saved and both matrix sides refreshed.'});
@@ -10705,7 +10878,7 @@ globalSearchController=startGlobalSearch({
  }:null,
  getBoards:async()=>{
   const archived=await db.boards('archived').catch(()=>[]);
-  return [...state.boards,...archived];
+  return [...state.boards,...archived].filter(board=>!isStandaloneApplicationBoard(board));
  },
  searchRecords:async(query)=>{
   const [workspace,native]=await Promise.allSettled([

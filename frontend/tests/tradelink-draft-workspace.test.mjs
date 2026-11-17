@@ -28,7 +28,7 @@ test('dark-launch UI is routed inside the existing signed TradeLink app',()=>{
  assert.equal(normalizeTradeLinkSection('drafts'),'drafts');
  const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:'drafts',
   draftView:initialTradeLinkDraftView(),canManage:true});
- assert.match(html,/href="#\/boards\/264ca40d-6e4a-4e4f-97e6-3bd77c97cd88\/tradelink\/drafts\/quotation"/);
+ assert.match(html,/href="#\/tradelink\/drafts\/quotation"/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
  assert.match(html,/data-tradelink-draft-form/);
  assert.match(html,/data-action="tradelink-draft-submit"/);
@@ -45,7 +45,7 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
  assert.equal(TRADELINK_SOURCE_MODULES.length,6);
  for(const module of TRADELINK_SOURCE_MODULES){
   const html=renderTradeLinkApplication({detail,workspaceId:workspace,section:module.key,canManage:true});
-  const href='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+module.key;
+  const href='#/tradelink/drafts/'+module.key;
   assert.ok(html.includes('href="'+href+'"'),module.label);
   assert.match(html,/Prepare a /);
   const view=initialTradeLinkDraftView(module.key);
@@ -83,7 +83,7 @@ test('six source modules deep-link to their selected, unsaved Draft forms',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  assert.ok(app.includes('async function loadBoard(boardId,tab,draftType=null,draftEditId=null)'));
  assert.ok(app.includes("state.tradeLinkDraft=initialTradeLinkDraftView(tab==='tradelink'&&state.tradeLinkSection==='drafts'?draftType:null)"));
- assert.ok(app.includes("signedDraftRoute&&parts[4]!=='edit'?(directModule?parts[3]:parts[4]):null,editId"));
+ assert.ok(app.includes("loadBoard(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute.draftType,tradeLinkRoute.editId)"));
 });
 
 test('foreign workspace or an unrelated board renders no usable editor',()=>{
@@ -147,12 +147,12 @@ test('new Drafts leave numbering to the server and persist real document and due
   date:'2026-11-16',dueDate:'2026-11-16',quoteStatus:'Won'}),{purpose:'save'}),/commercial status/i);
 });
 
-test('Draft form preserves current manual numbering until activation and exposes saved dates and quotation commercial status',()=>{
+test('activated numbering candidate leaves new number read-only and retains dates and quotation commercial status',()=>{
  const view=initialTradeLinkDraftView('quotation');
  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,view,canManage:true});
- assert.match(html,/name="documentNumber"[^>]*required maxlength="120" pattern=/);
- assert.match(html,/Enter the document number manually/);
- assert.match(html,/automatic-numbering database capability is installed but is not enabled/);
+ assert.match(html,/name="documentNumber"[^>]*readonly/);
+ assert.match(html,/Automatically assigned by the database when this document is first saved/);
+ assert.doesNotMatch(html,/Enter the document number manually/);
  assert.doesNotMatch(html,/migration is activated/);
  assert.match(html,/name="date" type="date"/);
  assert.match(html,/name="dueDate"/);
@@ -1023,7 +1023,7 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  assert.match(app,/tradeLinkDraftWorkspace\.revisionBundle\(documentId,revision\)/);
  assert.match(app,/tradeLinkDraftWorkspace\.list\(\)/);
  assert.match(app,/board\.items\?\.some\(item=>item\.id===receipt\.boardItemId/);
- assert.match(app,/location\.hash='#\/boards\/'\+TRADELINK_BOARD_ID\+'\/tradelink\/documents'/);
+ assert.match(app,/location\.hash=tradeLinkApplicationHref\('documents'\)/);
  assert.match(app,/root\.querySelector\('\[data-tradelink-draft-form\]'\)\?\.requestSubmit\(\)/);
  assert.match(ui,/return renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail\}\)/);
  assert.match(draft,/data-action="tradelink-document-open"/);

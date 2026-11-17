@@ -45,8 +45,8 @@ test('TradeLink route, sidebar module, host state and delegated data-action even
  const manifest=readFileSync('frontend/board-manifest.js','utf8');
  assert.match(app,/from '\.\/tradelink-ui\.js'/);
  assert.match(app,/from '\.\/tradelink-native\.js'/);
- assert.match(app,/requested==='tradelink'/);
- assert.match(app,/parts\.splice\(3,parts\.length-3,'drafts','quotation'\)/);
+ assert.match(app,/if\(parts\[0\]==='tradelink'\)/);
+ assert.match(app,/parseTradeLinkApplicationRoute\(parts\)/);
  assert.match(app,/tradeLinkDraft:initialTradeLinkDraftView\(\)/);
  assert.match(app,/root\.addEventListener\('click',event=>/);
  assert.match(app,/root\.addEventListener\('submit',event=>/);

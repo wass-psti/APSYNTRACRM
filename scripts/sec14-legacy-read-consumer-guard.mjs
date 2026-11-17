@@ -26,7 +26,7 @@ function runtimeFiles(root){
   for(const ent of readdirSync(resolve(root,p),{withFileTypes:true})){
    const path=join(p,ent.name);
    if(ent.isDirectory()){
-    if(path==='frontend/tests')continue;
+    if(path.replaceAll('\\','/')==='frontend/tests')continue;
     walk(path);
    }else if(ent.isFile()&&extensions.has(extname(path))&&
     path!=='scripts/sec14-legacy-read-consumer-guard.mjs')found.push(path);

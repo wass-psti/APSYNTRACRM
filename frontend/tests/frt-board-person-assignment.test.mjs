@@ -87,6 +87,6 @@ test('FRT person button is limited to existing finance correction roles',()=>{
   /data-action="frt-person-edit"/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/case 'frt-person-edit'/);
- assert.match(app,/saveFRTPersonAssignment/);
- assert.match(app,/loadFRTPersonAssignment/);
+ assert.match(app,/fundTracker\.savePersonAssignment\(/);
+ assert.match(app,/fundTracker\.loadPersonAssignment\(/);
 });
