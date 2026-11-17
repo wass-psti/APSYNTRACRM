@@ -243,9 +243,7 @@ try {
       }),
     { result: adminResult, directory: adminDirectory },
   );
-  await page
-    .getByText("Attendance record management", { exact: true })
-    .waitFor();
+  await page.getByText("Manage attendance records", { exact: true }).waitFor();
   await page.locator("#tt-log-select-all").waitFor();
   await page.locator("#tt-log-select-" + adminRecordId).waitFor();
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
@@ -342,6 +340,75 @@ try {
     ".tt-admin-editor",
     "System Admin bulk attendance editor",
   );
+
+  await page.evaluate(
+    ({ result, record }) =>
+      window.__timeTrackerRender({
+        view: "log",
+        result,
+        adminEligible: true,
+        adminDeleteConfirm: {
+          recordIds: [record.id],
+          records: [{ id: record.id, name: record.ownerName }],
+        },
+      }),
+    { result: adminResult, record: adminRawRecord },
+  );
+  await page
+    .getByRole("alertdialog", { name: "Delete attendance record" })
+    .waitFor();
+  await page.getByRole("button", { name: "Delete record" }).waitFor();
+  await checkAccessibilityWithin(
+    ".tt-admin-delete-dialog",
+    "System Admin individual deletion confirmation",
+  );
+
+  await page.evaluate(
+    ({ result, record }) =>
+      window.__timeTrackerRender({
+        view: "log",
+        result,
+        adminEligible: true,
+        adminDeleteConfirm: {
+          recordIds: [record.id, "50000000-0000-4000-8000-000000000002"],
+          records: [
+            { id: record.id, name: record.ownerName },
+            {
+              id: "50000000-0000-4000-8000-000000000002",
+              name: "Second Employee",
+            },
+          ],
+        },
+      }),
+    { result: adminResult, record: adminRawRecord },
+  );
+  await page
+    .getByRole("alertdialog", { name: "Delete selected attendance records" })
+    .waitFor();
+  await page.getByRole("button", { name: "Delete 2 records" }).waitFor();
+  await checkAccessibilityWithin(
+    ".tt-admin-delete-dialog",
+    "System Admin bulk deletion confirmation",
+  );
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  const mobileDeleteDialog = await page.evaluate(() => {
+    const dialog = document.querySelector(".tt-admin-delete-dialog");
+    const bounds = dialog.getBoundingClientRect();
+    return {
+      width: bounds.width,
+      viewport: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+  assert.ok(mobileDeleteDialog.width <= mobileDeleteDialog.viewport);
+  assert.ok(mobileDeleteDialog.scrollWidth <= mobileDeleteDialog.viewport);
+  await checkAccessibilityWithin(
+    ".tt-admin-delete-dialog",
+    "System Admin mobile bulk deletion confirmation",
+  );
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   for (const [view, title] of [
     ["overview", "Overview"],

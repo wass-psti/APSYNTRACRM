@@ -188,14 +188,21 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
     record?.clockOut?.timestamp?creditedAttendanceMs(record.clockIn?.timestamp,record.clockOut.timestamp):null;
   const hours=durationMs===null?'':(durationMs/3600000).toFixed(2);
   const reasonLabel=bulk?'Reason for bulk correction':'Reason for correction';
+  const recordName=record?.ownerName||record?.name||'Selected employee';
+  const recordMeta=[record?.department||'Unassigned department',record?.clockIn?.location||'Unspecified location',
+    record?.clockIn?.timestamp?timeTrackerAdminDateTimeLocal(record.clockIn.timestamp).replace('T',' '):'Time unavailable']
+    .join(' · ');
   return '<div class="tt-admin-editor-backdrop" data-tt-admin-backdrop>'+
-    `<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="${bulk?'bulk':'single'}">`+
-    '<header class="tt-admin-editor-head"><div><span class="tt-admin-eyebrow">SYSTEM ADMIN · ATTENDANCE MANAGEMENT</span>'+
-    `<h3 id="tt-admin-editor-title">${bulk?'Bulk edit attendance':'Edit attendance record'}</h3>`+
-    `<p>${bulk?`${editor.recordIds?.length||0} selected records · Blank fields remain unchanged`:'Correct the selected employee attendance record'}</p></div>`+
+    '<form id="tt-attendance-admin-form" class="tt-admin-editor" role="dialog" aria-modal="true" aria-labelledby="tt-admin-editor-title" data-mode="'+(bulk?'bulk':'single')+'" data-tt-admin-dialog>'+
+    '<header class="tt-admin-editor-head"><div class="tt-admin-editor-title-group"><span class="tt-admin-eyebrow">SYSTEM ADMIN · ATTENDANCE MANAGEMENT</span>'+
+    '<span class="tt-admin-mode-pill">'+(bulk?'BULK CORRECTION':'INDIVIDUAL CORRECTION')+'</span>'+
+    '<h3 id="tt-admin-editor-title">'+(bulk?'Bulk edit attendance':'Edit attendance record')+'</h3>'+
+    '<p>'+(bulk?(editor.recordIds?.length||0)+' selected records · Blank fields remain unchanged':'Review and correct the selected employee attendance record')+'</p></div>'+
     '<button type="button" class="tt-admin-close" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+' aria-label="Close editor">×</button></header>'+
-    (error?`<p class="tt-admin-error" role="alert">${esc(error)}</p>`:'')+
-    `<fieldset class="tt-admin-editor-fields"${busy?' disabled':''}><div class="tt-admin-editor-body">`+
+    (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
+    '<fieldset class="tt-admin-editor-fields"'+(busy?' disabled':'')+'><div class="tt-admin-editor-body">'+
+    (bulk?'<aside class="tt-admin-bulk-guidance"><span aria-hidden="true">✦</span><div><strong>'+(editor.recordIds?.length||0)+' records selected</strong><p>Only fields you change will be applied. Leave every other field set to “No change” or blank.</p></div></aside>':
+      '<div class="tt-admin-record-context"><span class="tt-admin-record-avatar" aria-hidden="true">'+esc(recordName.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'U')+'</span><div><strong>'+esc(recordName)+'</strong><small>'+esc(recordMeta)+'</small></div><span class="tt-admin-record-status">'+(status==='Completed'?'Completed':'Active')+'</span></div>')+
     '<section class="tt-admin-field-section"><h4>Employee and attendance</h4><div class="tt-admin-grid tt-admin-grid-two">'+
     `<label class="tt-admin-field"><span>Employee</span><select name="employeeId">${bulk?option('','No change','') :''}${employeeOptions}</select></label>`+
     selectField('Work location','location',locationItems,bulk?'':record?.clockIn?.location||'',{bulk})+
@@ -218,7 +225,36 @@ export function renderTimeTrackerAdminEditor({editor,directory=[],busy=false,err
     inputField('Working duration (hours)','durationHours',bulk?'':hours,{type:'number',step:'0.01',min:0,max:744,placeholder:bulk?'Leave unchanged':'0.00'})+
     '</div><p>Automatic duration applies the existing Philippine Time unpaid-break policy. Manual duration is stored as an explicit administrative override.</p></section>'+
     '<section class="tt-admin-field-section"><h4>Correction note</h4><label class="tt-admin-field"><span>'+reasonLabel+'</span><textarea name="reason" maxlength="500" rows="2" placeholder="Optional explanation for the audit record"></textarea></label></section>'+
-    '</div></fieldset><footer class="tt-admin-editor-actions"><button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
-    `<button type="submit" class="primary"${busy?' disabled':''}>${busy?'Saving changes…':'Save changes'}</button></footer>`+
+    '</div></fieldset><footer class="tt-admin-editor-actions"><span class="tt-admin-editor-footnote">'+
+    (bulk?'Changes apply to all selected records. Blank fields are preserved.':'Changes are saved to the existing attendance record.')+
+    '</span><div><button type="button" class="secondary" data-action="tt-log-admin-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
+    '<button type="submit" class="primary"'+(busy?' disabled':'')+'>'+(busy?'Saving changes…':'Save changes')+'</button></div></footer>'+
     '</form></div>';
+
+}
+
+
+/** Custom, accessible confirmation surface for individual and bulk deletion. */
+export function renderTimeTrackerAdminDeleteDialog({confirmation=null,busy=false,error=''}={}){
+  if(!confirmation)return '';
+  const ids=Array.isArray(confirmation.recordIds)?confirmation.recordIds:[];
+  if(!ids.length)return '';
+  const records=Array.isArray(confirmation.records)?confirmation.records:[];
+  const bulk=ids.length>1;
+  const title=bulk?'Delete selected attendance records':'Delete attendance record';
+  const names=records.slice(0,4).map(record=>record?.name||record?.ownerName||'Attendance record');
+  const extra=Math.max(0,ids.length-names.length);
+  return '<div class="tt-admin-delete-backdrop" data-tt-admin-delete-backdrop>'+
+    '<section class="tt-admin-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="tt-admin-delete-title" aria-describedby="tt-admin-delete-description" tabindex="-1" data-tt-admin-dialog>'+
+    '<div class="tt-admin-delete-icon" aria-hidden="true">!</div>'+
+    '<span class="tt-admin-eyebrow">SYSTEM ADMIN · RECORD REMOVAL</span>'+
+    '<h3 id="tt-admin-delete-title">'+title+'</h3>'+
+    '<p id="tt-admin-delete-description">'+(bulk?'You are about to remove '+ids.length+' attendance records.':'You are about to remove this attendance record.')+' The records will disappear from the TimeTracker Log and their linked attendance-board projection. This action cannot be undone from the Log.</p>'+
+    (names.length?'<div class="tt-admin-delete-records"><span>Selected records</span><ul>'+names.map(name=>'<li>'+esc(name)+'</li>').join('')+
+      (extra?'<li>and '+extra+' more</li>':'')+'</ul></div>':'')+
+    '<div class="tt-admin-delete-audit-note"><strong>Audit evidence is retained</strong><span>The private administrative before/after audit history is not deleted.</span></div>'+
+    (error?'<p class="tt-admin-error" role="alert">'+esc(error)+'</p>':'')+
+    '<footer class="tt-admin-delete-actions"><button type="button" data-action="tt-log-admin-delete-cancel"'+(busy?' disabled':'')+'>Cancel</button>'+
+    '<button type="button" class="tt-admin-delete-confirm" data-action="tt-log-admin-delete-confirm"'+(busy?' disabled':'')+'>'+(busy?'Deleting…':bulk?'Delete '+ids.length+' records':'Delete record')+'</button></footer>'+
+    '</section></div>';
 }

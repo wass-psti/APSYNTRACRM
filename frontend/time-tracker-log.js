@@ -3,7 +3,7 @@ import {TT_LOCATIONS} from './time-tracker-policy.js';
 import {filterMyAttendancePeriod} from './time-tracker-native.js';
 import {manilaDay} from './time-tracker-overview.js';
 import {mapFrame} from './time-tracker-map.js';
-import {renderTimeTrackerAdminEditor,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
+import {renderTimeTrackerAdminEditor,renderTimeTrackerAdminDeleteDialog,TT_ADMIN_RECORD_LIMIT} from './time-tracker-record-management.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -253,16 +253,17 @@ function safeSessionDetails(row,now,{gpsEligible=false,gpsData=null,gpsBusy=fals
     (available?'<p class="tt-map-note">Green: Clock In · Orange: Clock Out. Connecting lines show straight-line distance, not a tracked route.</p>':'')+
    '</div></div>'+
   (adminEligible?'<div class="tt-log-admin-row-actions"><span>System Admin record management</span>'+
-   '<button type="button" data-action="tt-log-admin-edit" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Edit record</button>'+
-   '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-delete" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'>Delete record</button></div>':'')+
+   '<button type="button" data-action="tt-log-admin-edit" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">✎</span> Edit record</button>'+
+   '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-delete" data-record-id="'+esc(row.id)+'"'+(adminBusy?' disabled':'')+'><span aria-hidden="true">⌫</span> Delete record</button></div>':'')+
   '</div>';
 }
 const sessionRow=(r,query='',now=new Date(),gpsOptions={})=>{
  const hidden=query&&!searchText(r).includes(query.toLocaleLowerCase().trim());
+ const selected=gpsOptions.selectedIds?.includes(r.id)===true;
  const done=r.status==='Completed';
  const state=r.classification==='Administrative closure'?
   'Administrative closure':done?'Completed':r.status==='Active'?'Active':'Unknown';
- return '<tr class="tt-log-filterable" data-log-search="'+esc(searchText(r))+'"'+
+ return '<tr class="tt-log-filterable'+(selected?' is-selected':'')+'" aria-selected="'+selected+'" data-log-search="'+esc(searchText(r))+'"'+
   (hidden?' hidden':'')+'>'+(gpsOptions.adminEligible?'<td class="tt-log-select-cell"><input type="checkbox" id="tt-log-select-'+esc(r.id)+'" data-tt-log-select value="'+esc(r.id)+'"'+
    (gpsOptions.selectedIds?.includes(r.id)?' checked':'')+(gpsOptions.adminBusy?' disabled':'')+' aria-label="Select attendance record for '+esc(r.name||'employee')+'"></td>':'')+
   '<td colspan="9"><details class="tt-log-detail" data-record-id="'+esc(r.id)+'"'+
@@ -285,7 +286,7 @@ export function renderTimeTrackerLog({
  records=[],scope='OWN_ATTENDANCE_ONLY',filters={},now=new Date(),busy=false,
  gpsEligible=false,gpsData=null,gpsBusy=false,gpsError='',gpsErrorRecordId='',
  expandedRecordIds=[],mapEnabled=false,mapTheme='map',
- adminEligible=false,adminDirectory=[],selectedIds=[],adminEditor=null,
+ adminEligible=false,adminDirectory=[],selectedIds=[],adminEditor=null,adminDeleteConfirm=null,
  adminBusy=false,adminError='',adminSuccess=''
 }={}){
  const options={...TT_LOG_DEFAULT_FILTERS,...filters};
@@ -346,11 +347,13 @@ export function renderTimeTrackerLog({
     ' authorized employee'+(summary.people===1?'':'s')+'</p></div>'+
     '<span class="tt-log-readonly">'+summary.historical+
     ' earlier · '+summary.today+' today</span></div>'+
-   (adminEligible?'<div class="tt-log-admin-toolbar"><div><strong>Attendance record management</strong><span>System Admin controls · Select up to '+TT_ADMIN_RECORD_LIMIT+' records</span></div>'+
-    '<div><span class="tt-log-admin-selected">'+selectedIds.length+' selected</span>'+
-    '<button type="button" data-action="tt-log-admin-bulk-edit"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Edit selected</button>'+
-    '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Delete selected</button>'+
-    '<button type="button" class="tt-log-admin-clear" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear</button></div></div>':'')+
+   (adminEligible?'<div class="tt-log-admin-toolbar" role="region" aria-label="System Admin attendance record management">'+
+    '<div class="tt-log-admin-toolbar-copy"><div class="tt-log-admin-toolbar-heading"><span class="tt-log-admin-toolbar-icon" aria-hidden="true">✦</span><div><strong>Manage attendance records</strong><span>Select one or more rows to edit or remove records</span></div></div>'+
+    '<div class="tt-log-admin-selection-status"><strong class="tt-log-admin-selected">'+selectedIds.length+'</strong><span>selected <i>·</i> up to '+TT_ADMIN_RECORD_LIMIT+'</span></div></div>'+
+    '<div class="tt-log-admin-toolbar-actions">'+
+    '<button type="button" data-action="tt-log-admin-bulk-edit"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">✎</span> Edit selected</button>'+
+    '<button type="button" class="tt-log-admin-delete" data-action="tt-log-admin-bulk-delete"'+(selectedIds.length&&!adminBusy?'':' disabled')+'><span aria-hidden="true">⌫</span> Delete selected</button>'+
+    '<button type="button" class="tt-log-admin-clear" data-action="tt-log-admin-clear-selection"'+(selectedIds.length&&!adminBusy?'':' disabled')+'>Clear selection</button></div></div>':'')+
    (adminError&&!adminEditor?'<p class="tt-log-admin-feedback is-error" role="alert">'+esc(adminError)+'</p>':'')+
    (adminSuccess?'<p class="tt-log-admin-feedback is-success" role="status">'+esc(adminSuccess)+'</p>':'')+
    (rows.length?'<div class="tt-log-day"><div class="tt-log-table-scroll">'+
@@ -369,7 +372,7 @@ export function renderTimeTrackerLog({
     (visible.length?' hidden':'')+'>No sessions match the current search.</p>'+
    '<p class="tt-log-footnote">Daily operations are based on the current Philippine date. Location and shift summaries reflect the selected date, status and location. Search narrows records and CSV only.</p>'+
    '<p class="tt-log-footnote">Exact GPS positions are shown only after a bootstrap administrator or assigned Supervisor receives a valid signed server GPS snapshot. Audit scores, satellite imagery, device fingerprints and manual-edit evidence are not inferred.</p>'+
-  '</section>'+renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:''})+'</section>';
+  '</section>'+renderTimeTrackerAdminEditor({editor:adminEditor,directory:adminDirectory,busy:adminBusy,error:adminEditor?adminError:''})+renderTimeTrackerAdminDeleteDialog({confirmation:adminDeleteConfirm,busy:adminBusy})+'</section>';
 }
 
 const logCsvCell=value=>{

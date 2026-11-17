@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  buildTimeTrackerAdminPatch,parseTimeTrackerAdminDateTime,
- renderTimeTrackerAdminEditor,timeTrackerAdminDateTimeLocal,
+ renderTimeTrackerAdminEditor,renderTimeTrackerAdminDeleteDialog,timeTrackerAdminDateTimeLocal,
  TT_ADMIN_RECORD_LIMIT
 } from '../time-tracker-record-management.js';
 import {creditedAttendanceRecordMs} from '../time-tracker-policy.js';
@@ -179,6 +179,44 @@ test('rendered System Admin editor exposes correction fields and escapes employe
  assert.match(html,/aria-modal="true"/);
  assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
  assert.doesNotMatch(html,/<img src=x/);
+});
+
+test('individual and bulk editors expose consistent redesigned context and guidance',()=>{
+ const single=renderTimeTrackerAdminEditor({
+  editor:{mode:'single',recordIds:[recordId],records:[completedRecord()]}
+ });
+ assert.match(single,/tt-admin-record-context/);
+ assert.match(single,/INDIVIDUAL CORRECTION/);
+ assert.match(single,/data-tt-admin-dialog/);
+ assert.match(single,/Changes are saved to the existing attendance record/);
+ const bulk=renderTimeTrackerAdminEditor({
+  editor:{mode:'bulk',recordIds:[recordId,'00000000-0000-4000-8000-000000000023'],records:[completedRecord(),activeRecord()]}
+ });
+ assert.match(bulk,/tt-admin-bulk-guidance/);
+ assert.match(bulk,/2 records selected/);
+ assert.match(bulk,/BULK CORRECTION/);
+ assert.match(bulk,/Blank fields are preserved/);
+});
+
+test('individual and bulk deletion use a custom accessible confirmation dialog',()=>{
+ const single=renderTimeTrackerAdminDeleteDialog({
+  confirmation:{recordIds:[recordId],records:[{name:'Test Employee'}]}
+ });
+ assert.match(single,/role="alertdialog"/);
+ assert.match(single,/aria-modal="true"/);
+ assert.match(single,/Delete attendance record/);
+ assert.match(single,/Test Employee/);
+ assert.match(single,/tt-log-admin-delete-confirm/);
+ assert.match(single,/Audit evidence is retained/);
+ const bulk=renderTimeTrackerAdminDeleteDialog({
+  confirmation:{recordIds:[recordId,'00000000-0000-4000-8000-000000000023'],
+   records:[{name:'Test Employee'},{name:'Second Employee'}]}
+ });
+ assert.match(bulk,/Delete selected attendance records/);
+ assert.match(bulk,/2 attendance records/);
+ assert.match(bulk,/Second Employee/);
+ assert.match(bulk,/Delete 2 records/);
+ assert.equal(renderTimeTrackerAdminDeleteDialog({confirmation:null}),'');
 });
 
 test('bulk editor leaves fields unchanged unless explicitly populated',()=>{

@@ -259,7 +259,7 @@ function historyPage(result,period,busy,view){
 export function renderTimeTrackerNative({
  result=null,busy=false,clockPending=false,clockPendingAction='clock-out',error='',success='',period='all',view='clock',now=new Date(),overviewFilters={},logFilters={},reportFilters={},calendarMonth='',calendarSelectedDay='',otFilters={},otExpandedRequestIds=[],otModalOpen=false,otDraft={},hoursWeekOffset=0,hoursMonth='',hoursSelectedDay='',teamEligible=false,teamDirectory=null,teamFilters={},teamBusy=false,teamError='',monitorResult=null,monitorHistory=[],monitorBusy=false,monitorError='',
  logGpsEligible=false,logGpsData=null,logGpsBusy=false,logGpsError='',logGpsErrorRecordId='',logExpandedRecordIds=[],mapEnabled=false,mapTheme='map',gpsEligible=false,gpsData=null,gpsView='map',gpsFilters={},gpsBusy=false,gpsError='',
- adminEligible=false,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminBusy=false,adminError='',adminSuccess=''
+ adminEligible=false,adminDirectory=[],adminSelectedIds=[],adminEditor=null,adminDeleteConfirm=null,adminBusy=false,adminError='',adminSuccess=''
 }={}){
  const verified=result?.status==='VERIFIED_READ';
  const selected=((view==='team'&&teamEligible!==true)||
@@ -287,7 +287,7 @@ export function renderTimeTrackerNative({
   filters:logFilters,now,busy,
   gpsEligible:logGpsEligible,gpsData:logGpsData,gpsBusy:logGpsBusy,gpsError:logGpsError,
   gpsErrorRecordId:logGpsErrorRecordId,expandedRecordIds:logExpandedRecordIds,mapEnabled,mapTheme,
-  adminEligible,adminDirectory,selectedIds:adminSelectedIds,adminEditor,adminBusy,adminError,adminSuccess
+  adminEligible,adminDirectory,selectedIds:adminSelectedIds,adminEditor,adminDeleteConfirm,adminBusy,adminError,adminSuccess
  });
  if(selected==='reports')html+=renderTimeTrackerReports({
   rows:result.log?.rows||result.records,
