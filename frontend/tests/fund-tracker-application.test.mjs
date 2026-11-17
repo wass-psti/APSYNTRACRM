@@ -191,7 +191,14 @@ test("Fund Tracker route reuses the existing board host, adapter, renderer and d
     "return renderFundTrackerApplication()",
   ]) assert.ok(app.includes(fragment), fragment);
   assert.equal(app.includes("loadFRTFinanceReadOnly("), false);
-  assert.equal(/import .* from '\\.\/frt-(?:filing-workflow|board-date-edit|board-person-assignment|board-domain-actions|liquidation|bank-execution|collaboration|archive|voucher|accounting|finance-workflow|recipient-client|intercompany-client)\\.js'/.test(app), false);
+  for (const source of [
+    "./frt-filing-workflow.js", "./frt-board-date-edit.js",
+    "./frt-board-person-assignment.js", "./frt-board-domain-actions.js",
+    "./frt-liquidation.js", "./frt-bank-execution.js",
+    "./frt-collaboration.js", "./frt-archive.js", "./frt-voucher.js",
+    "./frt-accounting.js", "./frt-finance-workflow.js",
+    "./frt-recipient-client.js", "./frt-intercompany-client.js",
+  ]) assert.equal(app.includes("from '" + source + "'"), false, source);
 
 });
 
