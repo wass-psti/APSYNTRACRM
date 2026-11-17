@@ -23,7 +23,8 @@ The existing FRT renderer and domain modules expose the following application su
 - Executive Dashboard and OPEX Analytics.
 - User Manual and operational lifecycle guidance.
 - New Fund Request wizard, draft restoration, duplicate guard, filing state, and request submission.
-- Request detail, lifecycle timeline, finance action review, comments/discussion, activity, and audit history.
+- Request detail, lifecycle timeline, finance action review, activity, and audit history.
+- The current Discussion panel is a placeholder: the signed comment/attachment discussion API is not exposed by the current FRT integration, so no messages or attachments are fabricated.
 - Company profile metadata and company logo handling.
 - Saved recipients, recipient bank details, and private QR file handling.
 - Disbursement Voucher preview/document projection and PDF generation/reprint.
@@ -151,14 +152,17 @@ The adapter and renderer do not introduce a second event bus or independent appl
 
 ## 8. Verification status
 
-- Route and board resolver unit tests: added.
-- Native adapter composition tests: added.
-- Renderer/delegated-action contract tests: added.
-- Sidebar, CSS manifest, HTML entry, and Pages smoke asset tests: added.
-- Full test suite: pending execution.
-- CSS bundle regeneration: pending.
-- Build and CI: pending.
-- GitHub Pages deployment verification: pending.
-- Signed production runtime acceptance: pending.
+- Route and board resolver unit tests: PASS.
+- Native adapter composition tests: PASS.
+- Renderer/delegated-action contract tests: PASS.
+- Sidebar, CSS manifest, HTML entry, generated bundle, and Pages smoke asset tests: PASS.
+- Full frontend regression: 2,562 PASS, 0 FAIL.
+- Ordered stylesheet bundle verification: PASS.
+- Production Vite build: PASS.
+- Chromium module-entry acceptance: PASS.
+- Public static-cache browser acceptance: PASS.
+- Existing FRT workflow regression and accounting/company-profile disposable acceptance: PASS.
+- GitHub Pages deployment verification: pending merge and deployment.
+- Genuine signed production runtime acceptance: pending.
 
 No production financial record, accounting entry, company profile, recipient, voucher, liquidation, bank execution, or archive record is created or modified by this integration milestone.
