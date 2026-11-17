@@ -1842,7 +1842,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
     if(!isCurrent()||platformSyncEditInProgress())return false;
     if(selectedDraft&&state.boardManage){
      const latest=state.tradeLinkDraft.rows.find(row=>row.documentId===selectedDraft);
-     if(!latest||latest.archived||!['draft','for-approval','revision-required'].includes(latest.workflowState)){
+     if(!latest||latest.archived||!['draft','for-approval','revision-required','approved'].includes(latest.workflowState)){
       state.tradeLinkDraft={...state.tradeLinkDraft,mode:'list',selected:null,
        documentPreview:null,error:'The selected document is no longer an editable Draft. The signed list has been refreshed.'};
       render();
@@ -2457,7 +2457,7 @@ async function loadTradeLinkDrafts(seq=routeSerial,pageRequest=null){
       const record=await tradeLinkDraftWorkspace.read(target);
       if(!same())return;
       if(!record||record.archived_at!==null||
-       !['draft','for-approval','revision-required'].includes(record.workflow_state)||
+       !['draft','for-approval','revision-required','approved'].includes(record.workflow_state)||
        record.document_number!==record.content?.documentNumber||
        record.document_type!==record.content?.documentType)
        throw new ApiError('Saved Draft not editable.',409);
@@ -2487,7 +2487,7 @@ async function openTradeLinkDraft(documentId){
    state.tradeLinkDraft.busy||state.tradeLinkDraft.status!=='AUTHORIZED_READ')return;
  const listed=state.tradeLinkDraft.rows.find(row=>row.documentId===documentId);
  if(!listed)return;
- if(listed.archived||!['draft','for-approval','revision-required'].includes(listed.workflowState)){
+ if(listed.archived||!['draft','for-approval','revision-required','approved'].includes(listed.workflowState)){
   if(state.tradeLinkDraft.editRequestId===documentId){
    state.tradeLinkDraft.error='This document is no longer an editable Draft. Return to All Documents.';
    render();
@@ -2503,7 +2503,7 @@ async function openTradeLinkDraft(documentId){
   ]);
   if(seq!==routeSerial||!tradeLinkDraftRoute()||auth.userId!==actor||
    state.context.workspace_id!==ws)return;
-  if(!record||!['draft','for-approval','revision-required'].includes(record.workflow_state)||
+  if(!record||!['draft','for-approval','revision-required','approved'].includes(record.workflow_state)||
    record.archived_at!==null||
    record.content?.documentType!==record.document_type||
    record.content?.documentNumber!==record.document_number||
@@ -2810,7 +2810,8 @@ async function commitTradeLinkDraft(form){
   // The existing server transaction atomically writes the document, Board item
   // and audit event; no second Board-item creation is permitted in the client.
   const receipt=await tradeLinkDraftWorkspace.save({
-   documentId,expectedRevision,draft,initialState});
+   documentId,expectedRevision,draft,initialState,
+   reviseApproved:state.tradeLinkDraft.selected?.record?.workflow_state==='approved'});
   committed=true;
   if(!same())return;
   const [record,list,board]=await Promise.all([

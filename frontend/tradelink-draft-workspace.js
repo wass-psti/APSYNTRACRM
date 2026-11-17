@@ -454,9 +454,9 @@ export class TradeLinkDraftWorkspace{
   return this.client.operate({
    documentId,expectedRevision,documentType,action,fromState,reason});
  }
- async save({documentId,expectedRevision=0,draft,initialState='for-approval'}={}){
+ async save({documentId,expectedRevision=0,draft,initialState='for-approval',reviseApproved=false}={}){
   if(!TL03_DOMAIN_WRITES_ENABLED)disabled();
-  const operation=expectedRevision===0?'create':'update';
+  const operation=expectedRevision===0?'create':reviseApproved?'revise-approved':'update';
   const payload=validateTradeLinkDraftEnvelope(applyQuotationApprovalHierarchy(draft),
    {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
   const id=documentId||globalThis.crypto?.randomUUID?.();
@@ -1023,7 +1023,7 @@ function referenceDraftTabs(type){
   '<a href="'+base+escape(key)+'"'+(key===type?' class="active" aria-current="page"':'')+
   '>'+escape(key==='quotation'?'Quotations':label)+'</a>').join('')+'</nav>';
 }
-function referenceDocumentHeader(type,editing,canSave=false,status='for-approval',documentId=''){
+function referenceDocumentHeader(type,editing,canSave=false,status='for-approval',documentId='',revisingApproved=false){
  const title=referenceTitles[type]||'TradeLink Document';
  const approved=status==='approved'&&validUuid(documentId);
  return '<div class="tl-reference-document-topcard"><header class="tl-reference-document-heading">'+
@@ -1042,7 +1042,7 @@ function referenceDocumentHeader(type,editing,canSave=false,status='for-approval
      ' title="'+(approved?'Print the verified Approved document':'PDF printing is available only after both reviewers approve')+'">Print PDF</button>'+
     '<button type="button" class="tl-reference-save" data-action="tradelink-draft-submit"'+
      (canSave?'':' disabled title="Signed document saving is unavailable"')+
-     '>'+(editing?'Save Changes':'Save')+'</button>'+
+     '>'+(revisingApproved?'Save New Revision':editing?'Save Changes':'Save')+'</button>'+
    '</div></header></div>';
 }
 /** Compact source-matched Items editor; notes have no quantity or financial value. */
@@ -1120,7 +1120,7 @@ export function snapshotTradeLinkDraftLineItems(form){
 }
 function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error='',message='',lineDrafts=null,actorName='',actorEmail='',reviewStages=null,showModuleTabs=true){
  const editing=mode==='edit'&&
-  ['draft','for-approval','revision-required'].includes(row?.workflow_state)&&
+  ['draft','for-approval','revision-required','approved'].includes(row?.workflow_state)&&
   row.content&&typeof row.content==='object'&&
   (!Array.isArray(row.content.items)||row.content.items.length<=100);
  const data=editing?row.content:{};
@@ -1128,7 +1128,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const line=Array.isArray(data.items)?data.items[0]||{}:{};
  const writeEnabled=editing||mode==='create';
  const live=TL03_DOMAIN_WRITES_ENABLED&&canManage&&writeEnabled;
- const workflowState=editing?row.workflow_state:'for-approval';
+ const workflowState=editing&&row.workflow_state!=='approved'?row.workflow_state:'for-approval';
  const documentId=editing?row.id:'';
  const selectedStatus=fieldValue('documentStatus',workflowState);
 
@@ -1156,7 +1156,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
  const localDateInput=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),
   String(now.getDate()).padStart(2,'0')].join('-');
  return '<section class="tl-draft-panel tl-reference-editor" aria-labelledby="tl-draft-editor-title">'+
-  referenceDocumentHeader(type,editing,live,workflowState,documentId)+
+  referenceDocumentHeader(type,editing,live,workflowState,documentId,editing&&row.workflow_state==='approved')+
   (error?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
   (message?'<p class="tl-draft-feedback" role="status">'+escape(message)+'</p>':'')+
   (editing?'<div class="tl-draft-editor-navigation">'+
@@ -1166,7 +1166,9 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
    '</div>':'')+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
   (draftNotice?'<p class="tl-draft-feedback" role="status">'+escape(draftNotice)+'</p>':'')+
-  '<div class="tl-reference-editor-content">'+(showModuleTabs?referenceDraftTabs(type):'')+
+  '<div class="tl-reference-editor-content">'+
+   (editing&&row.workflow_state==='approved'?'<p role="status" class="tl-draft-feedback">Revise Approved: the existing approved revision remains printable. Saving creates a new For Approval revision requiring both assigned reviewers again.</p>':'')+
+   (showModuleTabs?referenceDraftTabs(type):'')+
   renderModuleGuidance(type)+
   '<form data-tradelink-draft-form'+(type==='quotation'?' novalidate':'')+'>'+
    // Retain the source documentType control for existing form contracts.
@@ -1184,7 +1186,8 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
        ...(workflowState&&!TRADELINK_DOCUMENT_STATUS_OPTIONS.some(([id])=>id===workflowState)?
         [[workflowState,tradeLinkWorkflowLabel(workflowState)]]:[])] .map(([id,label])=>{
        const selectable=['draft','for-approval'].includes(id)&&
-        ['draft','for-approval'].includes(workflowState);
+        ['draft','for-approval'].includes(workflowState)&&
+        !(editing&&row.workflow_state==='approved'&&id==='draft');
        const disabled=!selectable;
        return '<option value="'+escape(id)+'"'+(id===selectedStatus?' selected':'')+
         (disabled?' disabled':'')+'>'+escape(label)+'</option>';
@@ -1636,12 +1639,12 @@ function renderTradeLinkDraftList(rows,view,canManage,{readOnly=false,canReview=
        '<button type="button" class="tl-ref-row-action-trigger" popovertarget="tl-doc-menu-'+escape(row.documentId)+'" aria-label="Actions for '+escape(row.documentNumber)+'" title="Document actions">⋯</button>'+
        '<div popover="auto" data-tradelink-action-menu id="tl-doc-menu-'+escape(row.documentId)+'" class="tl-ref-actions-menu">'+
        (canManage&&TL03_DOMAIN_WRITES_ENABLED&&!row.archived&&
-        ['draft','for-approval','revision-required'].includes(row.workflowState)&&
+        ['draft','for-approval','revision-required','approved'].includes(row.workflowState)&&
         tradeLinkDraftEditHref(row.documentId)?
         '<button type="button" class="secondary" data-action="tradelink-document-open" '+
          'data-id="'+escape(row.documentId)+'">Preview</button> '+
         '<a class="secondary" data-tradelink-document-edit href="'+
-         escape(tradeLinkDraftEditHref(row.documentId))+'">Preview/Edit</a> ':
+         escape(tradeLinkDraftEditHref(row.documentId))+'">'+(row.workflowState==='approved'?'Revise Approved':'Preview/Edit')+'</a> ':
         '<button type="button" class="secondary" '+
          'data-action="tradelink-document-open" data-id="'+escape(row.documentId)+
          '">Preview</button> ')+
@@ -1873,10 +1876,10 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
    '<aside class="tl-document-preview-pane" aria-label="Selected document preview">'+
     (selectedPreview?
      (linked&&canManage&&selectedRecord.revision===linked.revision&&TL03_DOMAIN_WRITES_ENABLED&&
-      ['draft','for-approval','revision-required'].includes(linked.workflowState)&&!linked.archived&&
+      ['draft','for-approval','revision-required','approved'].includes(linked.workflowState)&&!linked.archived&&
       tradeLinkDraftEditHref(linked.documentId)?
       '<p class="tl-document-edit-action"><a class="secondary" data-tradelink-document-edit href="'+
-       escape(tradeLinkDraftEditHref(linked.documentId))+'">Edit this Draft</a></p>':'')+
+       escape(tradeLinkDraftEditHref(linked.documentId))+'">'+(linked.workflowState==='approved'?'Revise Approved':'Edit this Draft')+'</a></p>':'')+
      '<div class="tl-document-preview-close"><button type="button" class="secondary" data-action="tradelink-document-preview-close">Close document preview</button></div>'+
      renderTradeLinkRevisionHistory(selection.revisions,{
       documentId:selection.documentId,selectedRevision:selectedRecord.revision,canManage,busy:view.busy
