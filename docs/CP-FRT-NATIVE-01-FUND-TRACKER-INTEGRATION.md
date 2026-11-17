@@ -150,6 +150,8 @@ Added the dedicated route `#/fund-tracker` and validated request deep links:
 
 The route resolves only the existing FRT board and calls the existing `loadBoard(boardId, 'finance')` lifecycle. It does not create a board or bypass the signed host context.
 
+Same-board navigation is handled explicitly: if the host can retain the already-loaded FRT board, pending native request deep links still reload the company-scoped request list and resolve the requested detail instead of being dropped by the retained-board fast path.
+
 The existing `#/boards/[boardId]/finance` route and its request deep links remain supported.
 
 ## 7. Events and state
