@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-17 (Asia/Manila)
 **Repository:** `wass-psti/APSYNTRACRM`
-**Base `main`:** `a111c8790e3d4d098af7e76d289f364331a16851`
+**Base `main`:** `601d191cf96093446c6e9fdce8b79ce5f966533a`
 **Existing Supabase project:** `jtlusodorfnyzgyuewkz`
 **Canonical TradeLink Board:** `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`
 
