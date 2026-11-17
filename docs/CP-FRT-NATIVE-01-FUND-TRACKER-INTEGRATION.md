@@ -118,8 +118,10 @@ Added `frontend/fund-tracker-native.js`.
 
 - `FundTrackerNativeClient.snapshot()` delegates to the existing `loadFRTFinanceReadOnly` domain read.
 - `FundTrackerNativeClient.searchRequests()` delegates to the existing `searchFRTRequestsReadOnly` safe search.
-- The adapter re-exports the existing accounting, company-profile, workflow-progress, voucher, receipt, and bank-execution projections/validators so native UI code has one focused domain entrypoint.
-- Existing FRT workflow clients remain the owners of signed reads, mutations, and lifecycle rules.
+- The adapter provides the application-facing facade for request creation/filing, request date edits, assignment, domain actions, company profile/logo, recipients, accounting editor mounting, voucher detail, bank execution, liquidation, comments, audit, aging/deadline snapshots, archive/restore, and intercompany ledger operations.
+- The facade injects the existing signed `AuthClient` and `DomainApi` into the established domain modules. Those modules remain authoritative for validation, RPC contracts, mutations, readback, and lifecycle rules.
+- Pure accounting, company-profile, workflow, voucher, receipt, bank-execution, and request-detail projections are exported from the adapter.
+- The CRM host no longer imports FRT domain API modules directly for these workflows; UI renderers remain in their existing presentation modules.
 - No second Supabase client, browser-local financial store, duplicate RPC implementation, or new schema is introduced.
 
 ## 4. Renderer
