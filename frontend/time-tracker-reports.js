@@ -2,6 +2,7 @@
  * No other personnel directory or GPS/audit state is accessed by this module.
  */
 import {manilaDay} from './time-tracker-overview.js';
+import {reconcileTimeTrackerAccounting} from './time-tracker-accounting-reconciliation.js';
 
 export const TT_REPORT_DEFAULT_FILTERS=Object.freeze({
  search:'',status:'all',start:'',end:''
@@ -171,12 +172,14 @@ const option=(value,label,selected)=>'<option value="'+value+'"'+
  (value===selected?' selected':'')+'>'+label+'</option>';
 
 export function renderTimeTrackerReports({
- rows=[],scope='OWN_ATTENDANCE_ONLY',period='all',filters={},now=new Date(),busy=false
+ rows=[],scope='OWN_ATTENDANCE_ONLY',period='all',filters={},now=new Date(),busy=false,
+ otRequests=[],otContractActive=false
 }={}){
  const settings={...TT_REPORT_DEFAULT_FILTERS,...filters};
  const filtered=filterTimeTrackerReportRows(rows,{period,filters:{...settings,search:''},now});
  const visible=filterTimeTrackerReportRows(rows,{period,filters:settings,now});
  const summary=summarizeTimeTrackerReports(filtered);
+ const otAccounting=reconcileTimeTrackerAccounting({records:filtered,otRequests,otContractActive});
  const dates=filtered.map(r=>manilaDay(r.clockIn)).sort();
  const current=manilaDay(now);
  const range=period==='all'?'All available authorized dates':period==='custom'?
@@ -279,8 +282,15 @@ export function renderTimeTrackerReports({
     'Search additionally narrows visible rows and CSV. '+
     'Only existing centrally authorized attendance data is shown; exact GPS and private audit metadata are not exposed.</p>'+
   '</section><div class="tt-reports-section-title">TIME CORRECTIONS</div>'+
-  '<section class="tt-report-panel"><p class="tt-report-footnote">'+
-   'Manual time corrections and overtime calculations require separate verified server authorization and audit workflows. No changes can be submitted here.</p></section>'+
+  '<section class="tt-report-panel"><h4>Signed overtime reconciliation</h4>'+
+   '<p class="tt-report-footnote">'+(otAccounting.status==='SIGNED_READ_ONLY'?
+    'Read-only comparison · '+otAccounting.matchedSessions+
+    ' completed attendance session(s) overlap approved OT intervals · '+
+    otAccounting.approvedOverlapMinutes+
+    ' minutes of clocked approved OT overlap. These minutes are not added to credited hours.':
+    'Authoritative OT approval contract is not active. Attendance hours remain unchanged.')+
+   '</p><p class="tt-report-footnote">Credited time remains the persisted PostgreSQL attendance value. '+
+   'Lunch policy, shift caps and payroll eligibility are not recalculated or overridden in Reports.</p></section>'+
   '</section>';
 }
 /** Search only sanitized records already rendered for the permitted date/status scope. */

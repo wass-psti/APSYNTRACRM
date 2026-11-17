@@ -60,7 +60,7 @@ test('staged modal is visible but submission and ordinary approvals fail closed'
  assert.match(bootstrap,/tt-ot-review-actions/);
  assert.match(bootstrap,/Approve<\/button>/);
  assert.match(bootstrap,/data-action="tt-ot-approve"[^>]* disabled/);
- assert.equal(TT_OT_WRITES_ACCEPTED,false);
+ assert.equal(TT_OT_WRITES_ACCEPTED,true);
 });
 function setup({role='System Admin',snapshot=null}={}){
  const auth={userId:admin,getVerifiedUser:async()=>({id:admin})};
@@ -84,6 +84,22 @@ function setup({role='System Admin',snapshot=null}={}){
  };
  return new TimeTrackerNativeClient({auth,api});
 }
+test('production-accepted OT controls activate only with signed OT contract',()=>{
+ const user=renderTimeTrackerOvertime({requests:rows,
+  access:{bootstrapApprover:false,otContractActive:true},modalOpen:true,now});
+ assert.doesNotMatch(user,/type="submit" disabled/);
+ assert.doesNotMatch(user,/tt-ot-review-actions/);
+ const bootstrap=renderTimeTrackerOvertime({requests:rows,
+  access:{bootstrapApprover:true,otContractActive:true},modalOpen:true,now});
+ assert.match(bootstrap,/tt-ot-review-actions/);
+ assert.doesNotMatch(bootstrap,/data-action="tt-ot-approve"[^>]* disabled/);
+ assert.doesNotMatch(bootstrap,/type="submit" disabled/);
+ const absent=renderTimeTrackerOvertime({requests:rows,
+  access:{bootstrapApprover:true,otContractActive:false},modalOpen:true,now});
+ assert.match(absent,/type="submit" disabled/);
+ assert.match(absent,/data-action="tt-ot-approve"[^>]* disabled/);
+});
+
 test('dedicated server OT snapshot accepts only matching signed workspace and bootstrap scope',async()=>{
  const valid={mode:'ACTIVE',actorId:admin,workspaceId:workspace,
   scope:'AUTHORIZED_WORKSPACE_TEAM',bootstrapApprover:true,rows};

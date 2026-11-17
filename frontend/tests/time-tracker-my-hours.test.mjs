@@ -123,5 +123,5 @@ test('My Hours state/actions are wired and old write gates preserved',()=>{
  assert.match(readFileSync('frontend/time-tracker-native.js','utf8'),
   /cap\.mode==='ACTIVE'&&cap\.contract==='tt-attendance-1'/);
  assert.match(readFileSync('frontend/time-tracker-overtime.js','utf8'),
-  /TT_OT_WRITES_ACCEPTED=false/);
+  /TT_OT_WRITES_ACCEPTED=true/);
 });
