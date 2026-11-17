@@ -244,6 +244,15 @@ jobs:
         env:
           PGDATABASE: tradelink_revision_history_disposable
         run: psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-revision-history-acceptance.sql
+      - name: Match the existing production Draft Commit EXECUTE baseline in isolated fixture
+        env:
+          PGDATABASE: tradelink_revision_history_disposable
+        run: |
+          # Stage A source deliberately starts without authenticated write grants.
+          # The production baseline already grants authenticated Commit EXECUTE;
+          # supply it only in this synthetic isolated fixture, not production.
+          psql -X -v ON_ERROR_STOP=1 -c "GRANT EXECUTE ON FUNCTION private.tl03_commit(uuid,uuid,bigint,text,jsonb) TO authenticated"
+          psql -X -v ON_ERROR_STOP=1 -c "GRANT EXECUTE ON FUNCTION public.tl03_document_commit(uuid,uuid,bigint,text,jsonb) TO authenticated"
       - name: Apply exact FINAL-03 staged migration with snapshot preflight in disposable PostgreSQL
         env:
           PGDATABASE: tradelink_revision_history_disposable
