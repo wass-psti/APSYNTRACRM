@@ -51,6 +51,8 @@ export const STYLE_SOURCES=Object.freeze([
  "frontend/board-share-clean.css",
  "frontend/workspace-board-groups.css",
  "frontend/board-activity-avatars.css",
- "frontend/time-tracker-application.css"
+ "frontend/time-tracker-application.css",
+ "frontend/monday-inspired-ui.css",
+ "frontend/login-minimal.css"
 ]);
 export const STYLE_BUNDLE="frontend/apsyntra-styles.bundle.css";
