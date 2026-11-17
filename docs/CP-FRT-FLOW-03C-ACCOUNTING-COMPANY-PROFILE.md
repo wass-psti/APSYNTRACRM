@@ -48,8 +48,8 @@ The profile editor uses the existing active FRT membership and company context. 
 
 Apply in order only after deployment readiness review:
 
-1. 20261117031500_frt_company_profile_metadata.sql
-2. 20261117034526_frt_flow03c_request_accounting_lines.sql
+1. 20261117051021_frt_company_profile_metadata.sql
+2. 20261117051040_frt_flow03c_request_accounting_lines.sql
 
 The already-applied 20261116172414 voucher projection is not reapplied. WF-05A and WF-05B remain their own pending migrations on production. Production version 20261117020000 is already applied for TradeLink immutable revision snapshots; it is unrelated to FRT and is preserved unchanged. That remote migration version is absent from this branch’s local migration directory, so reconcile its TradeLink migration artifact before any production migration push. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
 
@@ -87,7 +87,7 @@ Read-only inspection on 2026-11-17 found:
 - existing voucher projection migration 20261116172414 already applied;
 - WF-05A archive and WF-05B monthly voucher migrations pending;
 - migration 20261117020000 applied as TradeLink immutable revision snapshots (not an FRT migration);
-- new FRT company profile and accounting migrations 20261117031500 and 20261117034526 not applied;
+- new FRT company profile and accounting migrations 20261117051021 and 20261117051040 not applied;
 - zero production FRT requests and expense lines;
 - zero voucher counter rows;
 - existing private frt-attachments bucket and membership-based storage policies.

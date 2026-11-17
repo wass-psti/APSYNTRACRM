@@ -172,7 +172,7 @@ test('voucher accounting extends the existing signed projection without a compet
  const pdfModule=readFileSync(new URL('../frt-voucher-pdf.js',import.meta.url),'utf8');
  const pdfVendor=readFileSync(new URL('../vendor/frt-pdf-engine.js',import.meta.url),'utf8');
  const migration=readFileSync(new URL('../../supabase/migrations/20261116172414_frt_restricted_voucher_projection.sql',import.meta.url),'utf8');
- const accountingMigration=readFileSync(new URL('../../supabase/migrations/20261117034526_frt_flow03c_request_accounting_lines.sql',import.meta.url),'utf8');
+ const accountingMigration=readFileSync(new URL('../../supabase/migrations/20261117051040_frt_flow03c_request_accounting_lines.sql',import.meta.url),'utf8');
  assert.match(app,/loadFRTVoucher/);
  assert.match(app,/data-frt-voucher-reprint/);
  assert.match(ui,/data-action="frt-voucher-open"/);
