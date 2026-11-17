@@ -188,12 +188,12 @@ The adapter and renderer do not introduce a second event bus or independent appl
 - Native adapter composition tests: PASS.
 - Renderer/delegated-action contract tests: PASS.
 - Sidebar, CSS manifest, HTML entry, generated bundle, and Pages smoke asset tests: PASS.
-- Full frontend regression after latest-main sync and adapter facade cutover: 2,580 PASS, 0 FAIL.
+- Full frontend regression after latest-main sync and adapter facade cutover: 2,583 PASS, 0 FAIL.
 - Ordered stylesheet bundle verification: PASS.
 - Production Vite build: PASS (existing non-blocking startup-guard script-tag and large-chunk advisories).
 - Fund Tracker native renderer Chromium acceptance: PASS.
 - Focused FRT adapter/host-contract regression after facade cutover: 92 PASS, 0 FAIL.
-- GitHub Actions latest-head workflow: QUEUED after latest-main sync; final CI result pending.
+- GitHub Actions workflow on the prior head: PASS; latest merged-head workflow is pending rerun.
 - GitHub Pages deployment verification: pending merge and deployment.
 - Genuine signed production runtime acceptance: pending.
 
@@ -257,5 +257,4 @@ The host no longer imports the underlying FRT domain API clients directly for th
 - Complete frontend regression: 2,570 PASS, 0 FAIL.
 - Ordered CSS bundle integrity: PASS (53 source stylesheets).
 - Fund Tracker native Chromium acceptance: PASS.
-- Production Vite build: PASS. Existing non-blocking warnings remain for the startup guard script tag and the large bundled entry/PDF chunks.
 - Production deployment and signed production runtime: not yet verified for this branch.
