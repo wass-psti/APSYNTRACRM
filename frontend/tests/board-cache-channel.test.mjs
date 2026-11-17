@@ -185,7 +185,7 @@ test('overview board item totals use the refreshed signed board-list snapshot',a
 });
 test('all native global-search read RPCs preserve cached Board snapshots',async()=>{
  const names=[
-  'tl03_documents_page','tl03_document_read','tl03_document_history','frt_bootstrap','frt_board_list_safe',
+  'tl03_documents_page','tl03_document_read','tl03_document_history','tl03_document_revision_bundle','frt_bootstrap','frt_board_list_safe',
   'frt_board_dashboard_safe','frt_liquidation_aging_company','frt_archive_list','frt_archive_list',
   'frt_restricted_request_detail','frt_ic_snapshot',
   'list_module_state','timetracker_ot_snapshot','timetracker_attendance_capabilities',
