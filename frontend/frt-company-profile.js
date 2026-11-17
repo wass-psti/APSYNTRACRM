@@ -543,6 +543,21 @@ const escapeHtml = (value) =>
         "'": "&#39;",
       })[char],
   );
+export function hydrateFRTCompanyProfileForm(form, profile) {
+  if (!form || !profile || typeof form.setAttribute !== "function") return false;
+  form.setAttribute("autocomplete", "off");
+  for (const [field, value] of Object.entries({
+    legalName: profile.legalName,
+    registeredAddress: profile.registeredAddress,
+    contactPhone: profile.contactPhone,
+    contactEmail: profile.contactEmail,
+  })) {
+    const control = form.elements?.namedItem?.(field);
+    if (control) control.value = value || "";
+  }
+  return true;
+}
+
 export function renderFRTCompanyProfileEditor(profile) {
   if (!profile) return '<p role="alert">Company profile is unavailable.</p>';
   const logo = profile.logoDataUrl
@@ -553,25 +568,25 @@ export function renderFRTCompanyProfileEditor(profile) {
       ' logo">'
     : "<span>No company logo configured</span>";
   return (
-    '<form id="frt-company-profile-form" class="frt-company-profile-form" data-frt-company-profile-form>' +
+    '<form id="frt-company-profile-form" class="frt-company-profile-form" data-frt-company-profile-form autocomplete="off">' +
     '<p class="frt-company-profile-intro">Company information is saved on the existing ' +
     escapeHtml(profile.companyCode) +
     " FRT company record and reused by Disbursement Voucher previews and PDFs.</p>" +
     '<div class="frt-company-profile-grid">' +
     '<label class="frt-company-profile-field">Legal company name' +
-    '<input id="frt-company-legal-name" name="legalName" maxlength="180" minlength="2" required value="' +
+    '<input id="frt-company-legal-name" name="legalName" autocomplete="off" maxlength="180" minlength="2" required value="' +
     escapeHtml(profile.legalName) +
     '"></label>' +
-    '<label class="frt-company-profile-field">Registered company address' +
-    '<textarea id="frt-company-registered-address" name="registeredAddress" maxlength="500" rows="3">' +
+    '<label class="frt-company-profile-field">Company address' +
+    '<textarea id="frt-company-registered-address" name="registeredAddress" autocomplete="off" maxlength="500" rows="3">' +
     escapeHtml(profile.registeredAddress) +
     "</textarea></label>" +
     '<label class="frt-company-profile-field">Official contact telephone' +
-    '<input id="frt-company-contact-phone" name="contactPhone" maxlength="120" type="tel" value="' +
+    '<input id="frt-company-contact-phone" name="contactPhone" autocomplete="off" maxlength="120" type="tel" value="' +
     escapeHtml(profile.contactPhone) +
     '"></label>' +
     '<label class="frt-company-profile-field">Official contact email' +
-    '<input id="frt-company-contact-email" name="contactEmail" maxlength="180" type="email" value="' +
+    '<input id="frt-company-contact-email" name="contactEmail" autocomplete="off" maxlength="180" type="email" value="' +
     escapeHtml(profile.contactEmail) +
     '"></label>' +
     "</div>" +

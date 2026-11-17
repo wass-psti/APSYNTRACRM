@@ -170,7 +170,7 @@ import {renderFRTArchive} from './frt-archive-ui.js';
 import {loadFRTVoucher} from './frt-voucher.js';
 import {renderFRTVoucherDocument} from './frt-voucher-document.js';
 import {loadFRTCompanyProfile,saveFRTCompanyProfileWithLogo,
- loadFRTCompanyLogoDataUrl,renderFRTCompanyProfileEditor} from './frt-company-profile.js';
+ loadFRTCompanyLogoDataUrl,renderFRTCompanyProfileEditor,hydrateFRTCompanyProfileForm} from './frt-company-profile.js';
 import {mountFRTAccountingEditor} from './frt-accounting.js';
 import {FRT_BOARD_ID,isFRTBoardReference,frtReferenceColumns,FRT_REFERENCE_STATUS_LABELS,FRT_UNMAPPED_FIELDS} from './frt-board-reference.js';
 import {TimeTrackerNativeClient,captureAttendanceGeo,filterMyAttendancePeriod,TT_LIVE_ATTENDANCE_WRITES_ACCEPTED} from './time-tracker-native.js';
@@ -4569,6 +4569,8 @@ async function openFRTCompanyProfileDialog(companyCode){
   if(!current())return;
   host.innerHTML=renderFRTCompanyProfileEditor(profile);
   const form=host.querySelector('[data-frt-company-profile-form]');
+  // Persisted company data is authoritative; never retain browser-restored values.
+  hydrateFRTCompanyProfileForm(form,profile);
   const status=host.querySelector('[data-frt-company-profile-status]');
   const submit=host.querySelector('[data-frt-company-profile-save]');
   const logoInput=form.querySelector('[name="companyLogo"]');

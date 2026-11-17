@@ -8,6 +8,7 @@ import {
   saveFRTCompanyProfileWithLogo,
   loadFRTCompanyLogoDataUrl,
   renderFRTCompanyProfileEditor,
+  hydrateFRTCompanyProfileForm,
 } from "../frt-company-profile.js";
 import { projectFRTVoucherSnapshot } from "../frt-voucher.js";
 import { renderFRTVoucherDocument } from "../frt-voucher-document.js";
@@ -227,6 +228,38 @@ test("private logo retrieval creates a short-lived signed URL and returns a vali
   assert.equal(calls[1].options.credentials, "omit");
 });
 
+test("company profile form hydration overwrites browser-restored values with persisted company data", () => {
+  const values = new Map(
+    ["legalName", "registeredAddress", "contactPhone", "contactEmail"].map(
+      (name) => [name, { value: "browser-restored-value" }],
+    ),
+  );
+  const attributes = new Map();
+  const form = {
+    setAttribute: (name, value) => attributes.set(name, value),
+    elements: { namedItem: (name) => values.get(name) },
+  };
+  assert.equal(
+    hydrateFRTCompanyProfileForm(form, {
+      legalName: "Watchdog Automation OPC",
+      registeredAddress: "",
+      contactPhone: "+63 917 888 3003",
+      contactEmail: "info@plcsystems.com.ph",
+    }),
+    true,
+  );
+  assert.equal(attributes.get("autocomplete"), "off");
+  assert.deepEqual(
+    Object.fromEntries([...values].map(([name, field]) => [name, field.value])),
+    {
+      legalName: "Watchdog Automation OPC",
+      registeredAddress: "",
+      contactPhone: "+63 917 888 3003",
+      contactEmail: "info@plcsystems.com.ph",
+    },
+  );
+});
+
 test("company profile editor escapes persisted values and exposes all required fields", () => {
   const html = renderFRTCompanyProfileEditor({
     companyCode: "WASS",
@@ -239,7 +272,10 @@ test("company profile editor escapes persisted values and exposes all required f
   });
   assert.doesNotMatch(html, /<script>/);
   assert.match(html, /WASS &lt;script&gt;/);
-  assert.match(html, /Registered company address/);
+  assert.match(html, /Company address/);
+  assert.match(html, /data-frt-company-profile-form autocomplete="off"/);
+  for (const field of ["legalName", "registeredAddress", "contactPhone", "contactEmail"])
+    assert.match(html, new RegExp('name="' + field + '" autocomplete="off"'));
   assert.match(html, /Official contact telephone/);
   assert.match(html, /Official contact email/);
   assert.match(html, /companyLogo/);
@@ -391,7 +427,7 @@ test("voucher HTML and A4 PDF embed persisted company profile and logo data", ()
     },
   };
   const html = renderFRTVoucherDocument(voucher);
-  assert.match(html, /Registered address/);
+  assert.match(html, /Company address/);
   assert.match(html, /Telephone:/);
   assert.match(html, /Email:/);
   assert.match(html, /data:image\/png;base64/);
@@ -401,7 +437,7 @@ test("voucher HTML and A4 PDF embed persisted company profile and logo data", ()
     definition.content[1].columns[0].image,
     "data:image/png;base64,iVBORw0KGgo=",
   );
-  assert.match(JSON.stringify(definition.content[1]), /Registered address/);
+  assert.match(JSON.stringify(definition.content[1]), /Company address/);
 });
 
 
