@@ -26333,4 +26333,3 @@ html[data-aps-monday-theme="dark"] .aps-monday-notification-empty p { color: #b6
 @media (prefers-reduced-motion: reduce) {
  #app .aps-auth-v2[data-auth-layout-mode="login"] .auth-submit { transition:none; }
 }
-
