@@ -59,10 +59,13 @@ test('Log management UI is gated to System Admin and keeps mutations on signed R
  assert.match(dedicatedRender,/adminSelectedIds:state\.ttLogSelectedIds/);
  assert.match(app,/timeTrackerAdminLogReady\(\)/);
  assert.match(app,/deleteTimeTrackerAdminRecords/);
- assert.match(app,/window\.confirm\(message\)/);
+ assert.match(app,/confirmTimeTrackerAdminDeletion/);
+ assert.match(app,/tt-log-admin-delete-confirm/);
+ assert.doesNotMatch(app,/window\.confirm\(message\)/);
  assert.match(native,/timetracker_attendance_admin_snapshot/);
  assert.match(native,/timetracker_attendance_admin_mutate/);
  assert.match(native,/retryUnauthorized:false/);
  assert.match(log,/System Admin record management/);
  assert.match(log,/data-action=\"tt-log-admin-edit\"/);
+ assert.match(log,/renderTimeTrackerAdminDeleteDialog/);
 });

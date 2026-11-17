@@ -98,6 +98,9 @@ test('Pages includes new style after Overview without requiring a new build tool
   index.indexOf('frontend/time-tracker-log-command.css'));
  assert.match(smoke,/'frontend\/time-tracker-log-admin\.css'/);
  assert.match(adminCss,/\.tt-log-admin-toolbar/);
+ assert.match(adminCss,/\.tt-admin-delete-dialog/);
+ assert.match(adminCss,/\.tt-admin-bulk-guidance/);
+ assert.match(adminCss,/\.tt-admin-record-context/);
  assert.match(adminCss,/\.tt-admin-editor-backdrop/);
  assert.match(adminCss,/@media\(max-width:650px\)/);
  assert.match(smoke,/'frontend\/time-tracker-log-command\.css'/);
