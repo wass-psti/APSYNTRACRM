@@ -36,16 +36,21 @@ The following source documents and official websites were inspected during the o
 | WASS | Full office address; corporate profile contacts +63 917-888-3003 / +63 917-111-8818; info@watchdogautomation.com.ph; quotation TIN 211-258-356-00000 | Populate address, corporate-profile phone numbers, email and TIN. The older quotation also lists +63 917 707 3079; retain as source evidence, but prefer the July 2026 corporate profile contacts. Existing logo remains linked. |
 | PSTI | Official PLC Systems Technik office/contact details and historical TIN 463-678-854-000 | BLOCKED for profile write: production row name is Process Solutions Technology Inc.; the July 2026 group profile and official website identify PLC Systems Technik, Incorporated; an earlier CRM description used Premier Safety Technologies Inc. Do not change PSTI legal name, address, contacts, TIN, or logo until the intended legal entity is confirmed. |
 
-## Production readback — no business transaction writes
+## Production readback — company profiles updated, no financial transaction writes
 
-The live company records were inspected read-only:
+The WAO and WASS profile records were updated through the signed production Company Profile editor using the source documents listed above. Each save returned “Company profile saved and read back successfully,” and a subsequent read-only Supabase query confirmed the persisted values.
 
-- WAO: phone +63 917 888 3003 and email info@plcsystems.com.ph already persisted; address and TIN blank; PNG logo linked.
-- WASS: address, phone, email and TIN blank; PNG logo linked.
-- PSTI: address, phone, email and TIN blank; PNG logo linked; legal-entity discrepancy remains unresolved.
-- The three linked PNG objects have verified storage metadata and sizes: WAO 84,942 bytes, WASS 96,109 bytes, PSTI 56,727 bytes. The signed WAO editor previously loaded its private logo as a 566 × 548 image.
-- Production FRT requests: 0. Production expense items: 0. Production accounting lines: 0.
-- No production request, voucher, approval, signature, bank reference, accounting line, or other synthetic financial record was created.
+| Company | Persisted address | Telephone | Email | TIN | Existing logo |
+|---|---|---|---|---|---|
+| WAO | Bldg. 2, Paseo de Amores, Sergio Osmeña St., Gun-ob, Lapu-Lapu City 6015, Philippines | +63 917 888 3003 | sales@watchdogautomation.com.ph | 010-737-641-000 | Signed image loaded, 566 × 548 |
+| WASS | Bldg. 2, Paseo de Amores, Sergio Osmeña St., Gun-ob, Lapu-Lapu City 6015, Philippines | +63 917-888-3003 / +63 917-111-8818 | info@watchdogautomation.com.ph | 211-258-356-00000 | Signed image loaded, 580 px wide |
+| PSTI | Unchanged | Unchanged | Unchanged | Unchanged | Existing signed image loaded, 473 × 263 |
+
+PSTI remains unchanged because the production row says Process Solutions Technology Inc., while the official current website and historical company documents identify PLC Systems Technik, Incorporated; earlier CRM material also used Premier Safety Technologies Inc. Do not change the PSTI legal name or any associated company details until the intended legal entity is confirmed.
+
+The three existing PNG logo references remain linked to the existing company rows. No replacement or placeholder logos were uploaded.
+
+Production FRT requests: 0. Production expense items: 0. Production accounting lines: 0. No production request, voucher, approval, signature, bank reference, accounting line, or other synthetic financial record was created. Only WAO and WASS company-profile metadata was updated from authoritative company sources.
 
 ## Verification evidence
 
@@ -55,13 +60,15 @@ The live company records were inspected read-only:
 - Production Vite build: PASS. Existing non-blocking startup-guard classic-script and large-chunk warnings remain.
 - PR #484 accounting-company-profile CI: PASS, including full regression, disposable PostgreSQL acceptance, Chromium voucher PDF/download/print/reprint acceptance, and production build.
 - Existing Supabase project confirms migration 20261117060000 is applied.
-- PR #470 implementation was merged; the Pages deployment for the subsequent main commit f0743cf3b57613595748a559d7aff07fd9df3d70 completed successfully. A fresh signed UI check is still required before any company-profile update is treated as accepted.
+- WAO and WASS profile saves both returned successful signed readback; the read-only database query confirmed the exact address, contact and TIN values above.
+- The signed profile editor successfully loaded the existing private logos for all three companies. No logo replacement or storage cleanup was performed.
+- The production Pages deployment for the latest main commit completed successfully.
 
 ## Acceptance classification
 
-- VERIFIED: Existing company schema/RPC extension and migration; focused/full frontend tests; disposable PostgreSQL accounting/concurrency acceptance; authoritative source documents; production company/logo/request readback; PR #484 CI.
-- IMPLEMENTED-UNVERIFIED: Current signed production browser profile-editor refresh and exact WAO/WASS profile save/readback.
-- PENDING: Populate WAO and WASS profile fields from the cited authoritative sources; verify signed readback and voucher preview/PDF rendering; resolve PSTI legal-entity identity with the user before any PSTI profile mutation.
-- BLOCKED: Genuine production voucher and full finance/GM/bank/liquidation/PDF acceptance because the live FRT database currently has zero requests, expense items and accounting lines. Do not create synthetic production financial data without explicit approval.
+- VERIFIED: Existing company schema/RPC extension and migration; focused/full frontend tests; disposable PostgreSQL accounting/concurrency acceptance; authoritative WAO/WASS source documents; WAO and WASS production profile saves with signed readback; all three existing private logo images loaded; production request/item/accounting readback.
+- IMPLEMENTED-UNVERIFIED: Actual production voucher preview/PDF/print/reprint carrying the saved WAO/WASS details. The code path passes disposable Chromium/PDF acceptance, but production has no genuine voucher to render.
+- PENDING: Resolve PSTI legal-entity identity with the user before any PSTI profile mutation; accept a genuine production request through voucher creation, accounting persistence, finance approval, GM verification, bank execution, liquidation, and PDF/print/reprint.
+- BLOCKED: Genuine production voucher and full finance/GM/bank/liquidation acceptance because the live FRT database currently has zero requests, expense items and accounting lines. Do not create synthetic production financial data without explicit approval.
 
-Production business records were not created or modified during this acceptance pass.
+No production fund request, voucher, expense item, accounting line, approval, signature, or bank reference was created or modified during this acceptance pass.
