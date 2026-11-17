@@ -63,6 +63,10 @@ export class Fm1ApiClient {
       throw new TypeError("FM1 requires the existing APSYNTRA DomainApi.");
     }
     this.api = api;
+    // Session-local, bounded guard: a revision already rejected by the server
+    // cannot become current until an authoritative ticket reload supplies
+    // a newer revision. Never persist revisions or cache permission decisions.
+    this.staleTicketEdits = new Set();
   }
 
   async serviceStatus(workspaceId) {
@@ -296,6 +300,14 @@ export class Fm1ApiClient {
 
   async updateTicket(workspaceId, ticket, input, key = idempotencyKey()) {
     assertTicket(ticket);
+    const revisionKey = workspaceId + ":" + ticket.id + ":" + ticket.revision;
+    if (this.staleTicketEdits.has(revisionKey)) {
+      throw new ApiError(
+        "FM1 ticket revision changed; refresh before retrying",
+        409,
+        "40001",
+      );
+    }
     if (ticket.workspace_id !== workspaceId) {
       throw new ApiError(
         "FM1 incident does not belong to the active workspace.",
@@ -329,20 +341,39 @@ export class Fm1ApiClient {
     ) {
       throw new ApiError("Check the incident details and field lengths.");
     }
-    const result = await this.api.rpc("fm1_update_ticket_v1", {
-      p_workspace_id: requireUuid(workspaceId),
-      p_ticket_id: ticket.id,
-      p_expected_revision: ticket.revision,
-      p_requester_name: fields.requesterName,
-      p_callback_number: fields.callbackNumber,
-      p_subject: fields.subject,
-      p_description: fields.description,
-      p_production_impact: fields.productionImpact,
-      p_production_stopped: fields.productionStopped,
-      p_safety_concern: fields.safetyConcern,
-      p_asset_reference: fields.assetReference,
-      p_idempotency_key: key,
-    });
+    let result;
+    try {
+      result = await this.api.rpc("fm1_update_ticket_v1", {
+        p_workspace_id: requireUuid(workspaceId),
+        p_ticket_id: ticket.id,
+        p_expected_revision: ticket.revision,
+        p_requester_name: fields.requesterName,
+        p_callback_number: fields.callbackNumber,
+        p_subject: fields.subject,
+        p_description: fields.description,
+        p_production_impact: fields.productionImpact,
+        p_production_stopped: fields.productionStopped,
+        p_safety_concern: fields.safetyConcern,
+        p_asset_reference: fields.assetReference,
+        p_idempotency_key: key,
+      });
+    } catch (error) {
+      // A confirmed optimistic-concurrency mismatch is deterministic for
+      // this revision. Do not create another rollback by resubmitting it.
+      // Network timeouts, serialization failures with other causes and
+      // unknown outcomes must remain retriable with the same request key.
+      if (
+        error?.code === "40001" &&
+        error.message?.includes("FM1 ticket revision changed")
+      ) {
+        if (this.staleTicketEdits.size >= 128)
+          this.staleTicketEdits.delete(
+            this.staleTicketEdits.values().next().value,
+          );
+        this.staleTicketEdits.add(revisionKey);
+      }
+      throw error;
+    }
     assertObject(result, "FM1 incident update receipt is unavailable.");
     result.ticket = assertTicket(result.ticket);
     if (
