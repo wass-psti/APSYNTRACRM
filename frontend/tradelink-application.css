@@ -502,3 +502,20 @@
 .tl-revision-history-actions button{padding:.38rem .58rem;font-size:.78rem}
 .tl-revision-history-warning{grid-column:1/-1;margin:0;color:var(--muted,#667085);font-size:.76rem}
 @media(max-width:560px){.tl-revision-history-item{grid-template-columns:1fr}.tl-revision-history-actions{justify-content:flex-start}}
+
+
+/* CP-TL-APP02 — FM1-style dedicated CRM application surface; preserve TradeLink UI. */
+.aps-tradelink-standalone-shell .main-content{padding:0;min-width:0}
+.aps-tradelink-standalone-shell .tl-fm1-application{min-height:calc(100vh - 72px);padding:clamp(12px,2.2vw,30px);background:#f3f6fb}
+.tl-fm1-application .aps-tradelink-app{min-width:0;max-width:1600px;margin:0 auto}
+.tl-fm1-application .tl-reference-topbar{border-radius:15px 15px 0 0}
+.tl-fm1-application .tl-app-layout{min-width:0}
+.tl-fm1-application .tl-app-main{min-width:0}
+.tl-fm1-application :is(a,button,input,select,textarea,summary):focus-visible{outline:3px solid #2775c7;outline-offset:2px}
+@media(max-width:810px){
+ .aps-tradelink-standalone-shell .tl-fm1-application{padding:10px}
+ .tl-fm1-application .tl-reference-topbar{border-radius:12px 12px 0 0}
+}
+@media(prefers-reduced-motion:reduce){
+ .tl-fm1-application :is(*,*::before,*::after){scroll-behavior:auto!important}
+}
