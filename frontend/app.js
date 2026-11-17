@@ -1765,9 +1765,9 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  // A healthy private Realtime channel already delivers board-change hints.
  // Keep the 90-second signed heartbeat for session/workspace and capability
  // revocation checks, but avoid re-reading an unchanged generic board snapshot.
- // A full signed snapshot still runs every five minutes, on focus/reconnect,
- // and immediately after a board broadcast. Module-owned tabs retain their
- // existing full-refresh cadence because their records are not all board rows.
+ // Eligible generic board views receive a full signed board snapshot at least
+ // every five minutes. Broadcasts and focus/reconnect still trigger full reads;
+ // module-owned tabs retain their existing refresh cadence.
  if(reason==='heartbeat-check'&&view==='board'&&boardId&&tab==='items'&&
     state.board?.board?.id===boardId){
   const moduleKey=moduleByBoardName(state.board.board.name)?.key;
