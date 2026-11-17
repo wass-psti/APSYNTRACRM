@@ -15,14 +15,16 @@ test('TradeLink has a dedicated sidebar icon rather than the generic board fallb
 });
 
 test('TradeLink launcher opens the canonical standalone application route',()=>{
- assert.ok(app.includes("sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',state.tlStandalone===true)"));
+ assert.ok(app.includes("sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))"));
  assert.match(app,/if\(parts\[0\]==='tradelink'\)/);
  assert.match(app,/loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId\)/);
  assert.match(app,/state\.tlStandalone&&isTradeLinkBoard\(b\)/);
 });
 
 test('TradeLink launcher remains selected throughout its native module routes',()=>{
- assert.ok(app.includes("location.hash.startsWith(TRADELINK_APPLICATION_ROUTE+'/')"));
+ assert.ok(app.includes("const selected=currentSidebarNavigation();"));
+ assert.ok(app.includes("const active=!!activeHref&&path===activeHref;"));
+ assert.ok(!app.includes("location.hash.startsWith(TRADELINK_APPLICATION_ROUTE+'/')"));
 });
 
 test('TradeLink is exposed once in the native sidebar, not duplicated in recent board links',()=>{
