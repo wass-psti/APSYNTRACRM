@@ -6,7 +6,7 @@
 const app = document.getElementById('app');
 const THEME_KEY = 'apsyntra.monday-ui-theme';
 const allowedThemes = new Set(['dark', 'light']);
-let theme = 'dark';
+let theme = 'light';
 try {
   const stored = localStorage.getItem(THEME_KEY);
   if (allowedThemes.has(stored)) theme = stored;
@@ -30,7 +30,7 @@ const links = [
   {href:'#/time-tracker', label:'TimeTracker', icon:'clock'},
   {href:'#/settings', label:'Settings', icon:'settings'}
 ];
-const railMarkup = '<div class="aps-monday-rail-logo" aria-hidden="true"><span></span><span></span><span></span></div>' +
+const railMarkup =
   '<nav class="aps-monday-rail-nav" aria-label="Quick navigation">' +
   links.map(link => '<a class="aps-monday-rail-link" href="' + link.href +
     '" data-aps-monday-link title="' + link.label + '" aria-label="' + link.label +
@@ -92,13 +92,8 @@ function mountShell() {
     closeNotifications(false);
     return;
   }
-  if (!shell.querySelector(':scope > .aps-monday-rail')) {
-    const rail = document.createElement('div');
-    rail.className = 'aps-monday-rail';
-    rail.innerHTML = railMarkup;
-    const sidebar = shell.querySelector(':scope > .aps-sidebar');
-    if (sidebar) shell.insertBefore(rail, sidebar);
-  }
+  shell.querySelector('.aps-sidebar .ws02-sidebar-action')?.remove();
+  shell.querySelector('.aps-sidebar .side-bottom')?.remove();
   const actions = shell.querySelector('.topbar .top-actions');
   if (actions && !actions.querySelector('.aps-monday-top-tools')) {
     const tools = document.createElement('div');
@@ -185,3 +180,132 @@ if (app) {
   observer.observe(app, {childList:true});
   mountShell();
 }
+
+/* APSYNTRA_SIDEBAR_V3 */
+(() => {
+  const host = document.getElementById('app');
+  let lastSidebar = null;
+  let keyword = '';
+
+  function filterBoards(sidebar) {
+    const list = sidebar.querySelector('.sidebar-recent-list');
+    if (!list) return;
+
+    let count = 0;
+    const term = keyword.trim().toLocaleLowerCase();
+
+    for (const link of list.querySelectorAll('.sidebar-recent-link')) {
+      const match = link.textContent.toLocaleLowerCase().includes(term);
+      link.hidden = !match;
+      if (match) count++;
+    }
+
+    let empty = list.querySelector('[data-board-filter-empty]');
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.dataset.boardFilterEmpty = '';
+      empty.textContent = 'No matching boards';
+      list.append(empty);
+    }
+    empty.hidden = !term || count > 0;
+  }
+
+  function mount() {
+    const sidebar = host?.querySelector('.aps-sidebar');
+    if (!sidebar || sidebar === lastSidebar) return;
+    lastSidebar = sidebar;
+
+    // Remove previously added popup-search controls
+    sidebar.querySelectorAll(
+      '.sidebar-search-slot, .aps-inline-board-search, [data-global-search-open]'
+    ).forEach(el => el.remove());
+
+    // Native search field above Current workspace
+    const switcher = sidebar.querySelector('.workspace-switcher');
+    if (switcher) {
+      const slot = document.createElement('div');
+      slot.className = 'aps-board-search-v3';
+      slot.innerHTML =
+        '<label class="aps-board-search-field">' +
+        '<svg viewBox="0 0 24 24" width="17" height="17" ' +
+        'fill="none" stroke="currentColor" stroke-width="2" ' +
+        'aria-hidden="true"><circle cx="11" cy="11" r="7"/>' +
+        '<path d="m16 16 5 5"/></svg>' +
+        '<input type="search" placeholder="Search boards..." ' +
+        'aria-label="Search boards in sidebar" data-aps-search-native="true" autocomplete="off">' +
+        '</label>';
+
+      switcher.before(slot);
+
+      const input = slot.querySelector('input');
+      input.value = keyword;
+      input.addEventListener('input', () => {
+        keyword = input.value;
+        filterBoards(sidebar);
+      });
+
+      // Reuse APSYNTRA's existing new-board action
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'aps-workspace-add-board';
+      add.dataset.action = 'new-board';
+      add.textContent = '+';
+      add.title = 'Create board in current workspace';
+      add.setAttribute('aria-label', add.title);
+      switcher.append(add);
+    }
+
+    // Dashboard is the only primary navigation item
+    const nav = sidebar.querySelector('nav[aria-label="Primary"]');
+    if (nav) {
+      for (const link of nav.querySelectorAll('a.nav-link')) {
+        if (link.getAttribute('href') === '#/overview') {
+          const label = link.querySelector('.nav-label');
+          if (label) label.textContent = 'Dashboard';
+          link.setAttribute('aria-label', 'Dashboard');
+          link.title = 'Dashboard';
+        } else {
+          link.remove();
+        }
+      }
+    }
+
+    // Remove unnecessary section headings
+    for (const heading of sidebar.querySelectorAll('.sidebar-nav-section')) {
+      if (heading.textContent.trim().toLowerCase() === 'account') {
+        heading.remove();
+      }
+    }
+
+    // Show only the requested sidebar content
+    sidebar.querySelector('.ws02-sidebar-action')?.remove();
+    sidebar.querySelector('.side-bottom')?.remove();
+
+    const heading = sidebar.querySelector('.sidebar-recent-heading');
+    if (heading?.firstChild) heading.firstChild.textContent = 'Boards';
+
+    filterBoards(sidebar);
+  }
+
+  // Preserve standard sidebar filtering and Ctrl+K focus
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) &&
+        !event.altKey && event.key.toLowerCase() === 'k') {
+      const input = host?.querySelector('.aps-board-search-v3 input');
+      if (!input) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      input.focus();
+    }
+  }, true);
+
+  if (!host) return;
+
+  const observer = new MutationObserver(() => {
+    const current = host.querySelector('.aps-sidebar');
+    if (current !== lastSidebar) mount();
+  });
+
+  observer.observe(host, {childList: true, subtree: true});
+  mount();
+})();

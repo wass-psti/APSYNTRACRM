@@ -512,7 +512,7 @@ function syncSidebarLayout(){
 function sidebar(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
  const currentBoard=state.boardId;
- const recent=state.boards.slice(0,6);
+ const recent=state.boards;
  const nav=sidebarNav('#/overview','Overview','overview',state.view==='overview')+
   sidebarNav('#/boards','My boards','boards',state.view==='boards',{count:state.boards.length})+
   sidebarNav('#/fm1','FM1 Ticketing','ticket',state.view==='fm1')+
@@ -536,16 +536,16 @@ function sidebar(){
     aria-label="Expand navigation" title="Expand navigation" aria-expanded="false"
     aria-controls="sidebar-navigation-content"><span aria-hidden="true" class="sidebar-layout-toggle-glyph">${sidebarIcon('chevron')}</span></button>
   </div>
+   <div class="sidebar-search-slot"><button type="button" class="aps-global-search-trigger" data-global-search-open aria-haspopup="dialog" aria-expanded="false" aria-label="Search APSYNTRA CRM"><span class="aps-global-search-trigger-icon" aria-hidden="true">⌕</span><span class="aps-global-search-trigger-label">Search</span><kbd data-global-search-key>⌘ K</kbd></button></div>
   `+renderWorkspaceSwitcher({id:state.context?.workspace_id,name:workspaceName()})+`
   <div class="ws01-context-relation" role="status">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+`</div>
-  <div class="ws02-sidebar-action">`+renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()})+`</div>
   <div class="sidebar-nav-scroll" id="sidebar-navigation-content">
    <div class="side-section sidebar-nav-section">Workspace</div>
    <nav class="nav-list" aria-label="Primary">`+nav+`</nav>
-   <div class="side-section sidebar-recent-heading">Recent boards
+   <div class="side-section sidebar-recent-heading">Boards
     <span class="sidebar-recent-count" aria-hidden="true">`+recent.length+`</span>
    </div>
-   <nav class="nav-list sidebar-recent-list" aria-label="Recent boards">`+
+   <nav class="nav-list sidebar-recent-list" aria-label="Boards">`+
     (recent.map((b,i)=>{
      const title=String(b.name||'Untitled board');
      const active=currentBoard===b.id&&!state.ttStandalone;
@@ -557,18 +557,6 @@ function sidebar(){
       e(title.slice(0,1).toUpperCase())+'</span>'+
       '<span class="nav-label">'+e(title)+'</span></a>';
     }).join('')||'<div class="sidebar-empty-recent">No boards yet</div>')+`</nav>
-  </div>
-  <div class="side-bottom">
-   <div class="profile">
-    <span class="avatar sidebar-profile-avatar" aria-hidden="true"><span data-avatar-initials aria-hidden="true">`+e(initials(name()))+`</span><img data-avatar-current alt="" hidden /></span>
-    <div class="sidebar-profile-text"><div class="name">`+e(name())+`</div>
-     <div class="role" title="`+e(signedCrmIdentityLabel(state.context))+`">`+e(signedCrmRoleLabel(state.crmRoleSnapshot,state.context))+`</div>
-    </div>
-   </div>
-   <button type="button" class="sign-out" data-action="logout" aria-label="Sign out of workspace" title="Sign out of workspace">
-    <span class="sidebar-signout-icon">`+sidebarIcon('logout')+`</span>
-    <span>Sign out</span>
-   </button>
   </div>
  </aside>`;
 }
@@ -616,7 +604,7 @@ function shell(body){
  const sidebarSignature=JSON.stringify([state.ttStandalone,state.roleVerified,state.adminVerified,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
   state.workspaceRelationSnapshot?.relation,workspaceName(),
-  state.boards.slice(0,6).map(board=>[board.id,board.name]),
+  state.boards.map(board=>[board.id,board.name]),
   state.boards.length]);
  const route=[state.view,state.boardId,state.tab,state.ttStandalone].join('|');
  // Preserve each group's horizontal position only across same-signed-view renders.
@@ -653,7 +641,7 @@ function shell(body){
  }else{
   root.innerHTML=`<div class="shell">${sidebar()}<main class="main">
  <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span>›</span><strong>${e(crumb)}</strong></div><button type="button" class="ws01-topbar-launch" data-action="ws01-open" aria-label="Browse authorized workspaces">Workspaces ▾</button>
- <div class="top-actions"><button type="button" class="aps-global-search-trigger" data-global-search-open aria-haspopup="dialog" aria-expanded="false" aria-label="Search APSYNTRA CRM"><span class="aps-global-search-trigger-icon" aria-hidden="true">⌕</span><span class="aps-global-search-trigger-label">Search</span><kbd data-global-search-key>⌘ K</kbd></button>${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings"><span data-avatar-initials aria-hidden="true">${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></a></div></header>
+ <div class="top-actions">${renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()},{placement:'topbar'})}<span class="top-pill"><span class="online-dot"></span> Secure session</span><button type="button" class="aps-sync" data-action="platform-sync-verify" data-sync-state="connecting" aria-label="Checking synchronization status" title="Checking signed workspace updates"><span class="aps-sync-orbit" aria-hidden="true"></span><span class="aps-sync-caption">Connecting</span></button><a href="#/settings" class="avatar top-avatar" title="Account settings"><span data-avatar-initials aria-hidden="true">${e(initials(name()))}</span><img data-avatar-current alt="" hidden /></a></div></header>
  <div class="main-content">${body}</div></main></div>`;
  }
  syncSidebarLayout();
@@ -735,7 +723,7 @@ function empty(title,description,action=''){
 }
 function overview(){
  const total=state.boards.reduce((a,b)=>a+(Number(b.item_count)||0),0);
- const recent=state.boards.slice(0,6);
+ const recent=state.boards;
  const countLabel=value=>Number(value).toLocaleString('en-US');
  return `<div class="aps-overview">
  <section class="page-head overview-hero overview-entrance" aria-labelledby="overview-title">
