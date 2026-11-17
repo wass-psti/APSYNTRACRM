@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS}
+import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_RECONCILE_INTERVAL_MS,SYNC_FULL_RECONCILE_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS}
  from '../platform-sync.js';
 
 const uid='20000000-0000-4000-8000-000000000001';
@@ -110,6 +110,25 @@ test('unavailable socket uses only bounded visible authorized polling',async()=>
  await x.ctl.pollTick(x.ctl.generation);
  assert.equal(x.invalidations.length,2);
  x.ctl.stop();assert.equal(x.intervals.size,0);
+});
+test('healthy Realtime uses lightweight signed heartbeats and a bounded full snapshot sweep',async()=>{
+ const x=fake();
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await x.wait();await x.join(x.sockets[0]);
+ const fullAt=x.ctl.lastFullSyncAt;
+ assert.equal(x.invalidations.at(-1).reason,'join');
+ assert.equal(SYNC_FULL_RECONCILE_INTERVAL_MS,300000);
+ for(let n=0;n<3;n++){
+  x.advance(SYNC_RECONCILE_INTERVAL_MS);
+  await x.ctl.pollTick(x.ctl.generation);
+  assert.equal(x.invalidations.at(-1).reason,'heartbeat-check');
+  assert.equal(x.ctl.lastFullSyncAt,fullAt,'heartbeat checks must not reset the full-snapshot deadline');
+ }
+ x.advance(SYNC_RECONCILE_INTERVAL_MS);
+ await x.ctl.pollTick(x.ctl.generation);
+ assert.equal(x.invalidations.at(-1).reason,'poll');
+ assert.ok(x.ctl.lastFullSyncAt-fullAt>=SYNC_FULL_RECONCILE_INTERVAL_MS);
+ x.ctl.stop();
 });
 test('visibility pause closes socket and returns with fresh signed join',async()=>{
  const x=fake();x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
@@ -226,6 +245,13 @@ test('frontend integration preserves signed state, edits and background-independ
  assert.match(app,/function platformSyncEditInProgress\(/);
  assert.match(app,/root\.querySelector\('\.aps-sync'\)/);
  assert.match(app,/if\(platformSyncEditInProgress\(\)\)return false/);
+ assert.match(app,/event\.reason!=='heartbeat-check'\)db\.invalidateBoardCache\(\)/);
+ assert.match(app,/reason==='heartbeat-check'&&view==='board'&&boardId&&tab==='items'/);
+ const heartbeat=app.split("if(reason==='heartbeat-check'")[1]?.split("if(view==='board'&&boardId)")[0]||'';
+ assert.ok(heartbeat,'Healthy Realtime heartbeat path must be explicit');
+ assert.match(heartbeat,/db\.allowed\(boardId,'edit'\)/);
+ assert.match(heartbeat,/db\.allowed\(boardId,'manage'\)/);
+ assert.doesNotMatch(heartbeat,/readVisibleBoardSnapshot|boardStructureClient\.read/);
  assert.match(app,/if\(state\.context&&auth\.isSignedIn\)platformSync\.start/);
  const logout=app.split("case 'logout':{")[1];
  assert.ok(logout,'Logout handler must exist');
