@@ -4129,6 +4129,28 @@ async function onRoute(){
   if(recordId&&recordId.length<=180)pendingNativeSearchSelection={applicationId:'fm1',recordId,boardId:null,
    userId:auth.userId,workspaceId:state.context?.workspace_id};
  }else if(parts[0]==='fm1'&&pendingNativeSearchSelection?.applicationId==='fm1')pendingNativeSearchSelection=null;
+ if(parts[0]==='fund-tracker'){
+  state.frtStandalone=true;
+  const fundTrackerBoard=findFundTrackerBoard(state.boards);
+  const selectedRecord=parseFundTrackerRecordRoute(parts);
+  if(fundTrackerBoard&&selectedRecord){
+   pendingNativeSearchSelection={applicationId:'frt',recordId:selectedRecord.requestId,
+    navigationScope:selectedRecord.companyCode,query:routeQuery,boardId:fundTrackerBoard.id,
+    userId:auth.userId,workspaceId:state.context?.workspace_id};
+  }else if(pendingNativeSearchSelection?.applicationId==='frt'){
+   pendingNativeSearchSelection=null;
+  }
+  if(!fundTrackerBoard){
+   routeSerial++;
+   state.frtFinance=null;state.frtFinanceBusy=false;state.frtFinanceDetail=null;
+   state.frtFinanceDetailBusy=false;state.frtFinanceDetailId=null;
+   state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+   state.error='The existing Fund Released Tracker board was not found in this workspace.';
+   state.view='board';render();return;
+  }
+  await loadBoard(fundTrackerBoard.id,'finance');
+  return;
+ }
  if(parts[0]==='time-tracker'){
   state.ttStandalone=true;
   const attendanceBoard=findTimeTrackerAttendanceBoard(state.boards,moduleByBoardName);
