@@ -25675,6 +25675,7 @@ body{background:var(--sm-bg);color:var(--sm-ink)}
     scroll-behavior: auto !important;
   }
 }
+
 /* frontend/monday-inspired-ui.css */
 /* APSYNTRA CRM / Monday-inspired UI — isolated presentation pass.
  * Boards and the workspace chrome only. No domain, auth, or RPC overrides.
