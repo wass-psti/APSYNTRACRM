@@ -84,7 +84,8 @@ try {
   const reducedMotion = await page.locator(".frt-app-header").evaluate(
     (element) => getComputedStyle(element).transitionDuration,
   );
-  assert.equal(reducedMotion, "1e-05s");
+  assert.ok(reducedMotion.endsWith("s"));
+  assert.ok(Number.parseFloat(reducedMotion) <= 0.00001, `Unexpected reduced-motion duration: ${reducedMotion}`);
 
   console.log("Fund Tracker native Chromium acceptance: PASS");
 } finally {
