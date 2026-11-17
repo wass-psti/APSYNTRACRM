@@ -47,7 +47,7 @@ test('credential errors remain escaped and announced to assistive technology',()
 });
 test('marketing art is inert and explicitly illustrative, with accessible headings',()=>{
  assert.match(markup,/<main class="auth-panel"/);
- assert.match(markup,/<h1>Welcome back/);
+ assert.match(markup,/<h1>Welcome to<br\/><span>APSYNTRA CRM<\/span><\/h1>/);
  assert.match(markup,/aria-labelledby="auth-pitch-title"/);
  assert.match(markup,/id="auth-pitch-title"/);
  assert.match(markup,/aria-hidden="true"/);
