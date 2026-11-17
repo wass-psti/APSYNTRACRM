@@ -140,6 +140,7 @@ const BOARD_READ_RPC=new Set([
  // Existing application read contracts used by concurrent native search.
  'frt_bootstrap','frt_board_list_safe','frt_board_dashboard_safe',
  'frt_liquidation_aging_company','frt_restricted_request_detail','frt_ic_snapshot','frt_bank_execution_snapshot',
+ 'frt_archive_list',
  'charter_dispatch',
  'has_module_access','list_module_directory','list_module_state',
  'timetracker_ot_snapshot','timetracker_attendance_capabilities',
@@ -179,7 +180,7 @@ const BOARD_MUTATION_RPC=new Set([
  // Fund Release Tracker, role and profile writes.
  'frt_add_comment','frt_assign_request_person','frt_create_request','frt_ic_create_obligation',
  'frt_ic_record_settlement','frt_record_bank_execution','frt_request_action',
- 'frt_request_assignment','frt_save_recipient','frt_set_recipient_qr',
+ 'frt_request_assignment','frt_restore_request','frt_save_recipient','frt_set_recipient_qr',
  'frt_set_request_filing_status','frt_submit_liquidation_v2','frt_update_request_date_cas',
  'apsyntra_crm_platform_role_set','apsyntra_role_manage_user_access',
  'apsyntra_role_configuration_propose','update_own_profile'

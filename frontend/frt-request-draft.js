@@ -9,6 +9,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const companyCode = /^[A-Za-z0-9_-]{1,32}$/;
 const safeFields = Object.freeze({
   companyCode: 32,
+  requestDate: 10,
   dateNeeded: 10,
   fundSource: 180,
   checkNo: 180,
@@ -207,6 +208,7 @@ function formDraft(form, step) {
   const data = new FormData(form);
   return {
     companyCode: String(data.get('companyCode') || ''),
+    requestDate: String(data.get('requestDate') || ''),
     dateNeeded: String(data.get('dateNeeded') || ''),
     fundSource: String(data.get('fundSource') || ''),
     checkNo: String(data.get('checkNo') || ''),

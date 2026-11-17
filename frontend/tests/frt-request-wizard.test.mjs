@@ -9,15 +9,16 @@ const ws='22222222-2222-4222-8222-222222222222',
 const companies=[{code:'WASS',name:'Watchdog Automation Sales & Services'},
  {code:'WAO',name:'Watchdog Automation OPC'}];
 test('reference wizard exposes 3 semantic stages and only authorized escaped company choices',()=>{
- const html=renderFRTRequestWizard({companies:[...companies,{code:'INVALID<script>',name:'Unsafe'}],selectedCompany:'WASS'});
+ const html=renderFRTRequestWizard({companies:[...companies,{code:'INVALID<script>',name:'Unsafe'}],selectedCompany:'WASS',requestDate:'2026-11-17'});
  for(const text of ['New Fund Request','Basic Info','Recipient','Details','Company Account',
-  'Fund Source Account','Date Needed','Expense Categories','Add Category','Check #',
+  'Fund Source Account','Request Date','Date Needed','Expense Categories','Add Category','Check #',
   'Payee / Supplier','Select Saved Account','Account Name','Bank','Account Number',
   'QR Code','Expense Description','Order / Project No.','On Behalf Of','Not Filed'])
   if(text!=='New Fund Request')assert.ok(html.includes(text),text);
  assert.match(html,/value="WASS" selected/);
  assert.match(html,/data-frt-step="2"[^>]*hidden/);
  assert.match(html,/data-frt-step="3"[^>]*hidden/);
+ assert.match(html,/name="requestDate" type="date" required value="2026-11-17"/);
  assert.match(html,/name="expenseCategory" required/);
  assert.match(html,/name="expenseAmount" required/);
  assert.doesNotMatch(html,/INVALID<script>|<script>/);
@@ -32,13 +33,14 @@ test('no false saved-account or QR upload persistence is advertised',()=>{
 test('form payload maps every category and supported optional field, excluding unsupported controls',()=>{
  const fd=new FormData();
  for(const [key,value] of Object.entries({companyCode:'WASS',requestName:'November supplies',
-  department:'Operations',fundSource:'Company funds',dateNeeded:'2026-11-30',
+  department:'Operations',fundSource:'Company funds',requestDate:'2026-11-17',dateNeeded:'2026-11-30',
   description:'Project materials purchase',recipientName:'ABC Supplier',
   recipientBank:'Example Bank',recipientAccount:'123456789',
   checkNo:'CHK-101',orderIntakeNo:'OI-101'}))fd.set(key,value);
  fd.append('expenseCategory','Office supplies');fd.append('expenseAmount','180.50');
  fd.append('expenseCategory','Fuel');fd.append('expenseAmount','250');
  const data=collectFRTWizardRequest(fd);
+ assert.equal(data.requestDate,'2026-11-17');
  assert.deepEqual(data.items,[{category:'Office supplies',amount:'180.50'},
   {category:'Fuel',amount:'250'}]);
  assert.equal(data.recipientAccount,'123456789');
@@ -61,7 +63,7 @@ test('multi-expense and recipient fields reach original RPC once and verify Not 
    throw Error(name);
   }};
  const data={title:'Project expense',department:'Operations',fundSource:'Cash fund',
-  description:'Two project categories',dateNeeded:'2026-11-30',recipientName:'Supplier A',
+  description:'Two project categories',requestDate:'2026-11-17',dateNeeded:'2026-11-30',recipientName:'Supplier A',
   recipientBank:'Bank A',recipientAccount:'AC123',checkNo:'C001',orderIntakeNo:'OI002',
   items:[{category:'Materials',amount:'120.50'}, {category:'Freight',amount:'180.25'}]};
  const result=await createSignedFRTRequest({auth,api,workspaceId:ws,companyCode:'WASS',
@@ -73,13 +75,60 @@ test('multi-expense and recipient fields reach original RPC once and verify Not 
  assert.equal(payload.recipientAccount,'AC123');
  assert.equal(payload.checkNo,'C001');
  assert.equal(payload.orderIntakeNo,'OI002');
+ assert.equal(payload.allowPotentialDuplicate,false);
+});
+test('server-side duplicate detection returns a warning and requires explicit resubmission',async()=>{
+ const calls=[];
+ const auth={userId:user,async getVerifiedUser(){return {id:user};}};
+ const api={async context(){return {user_id:user,workspace_id:ws,profile:{status:'active'}};},
+  async rpc(name,args){
+   calls.push({name,args});
+   if(name==='frt_bootstrap')return {membership:{workspace_id:ws,user_id:user,
+    role:'GENERAL_MANAGER',enabled:true,status:'active'},companies};
+   if(name==='frt_create_request'){
+    if(args.p_payload.allowPotentialDuplicate)return {id,workspace_id:ws,requestor_id:user,
+     title:args.p_payload.title,filing_status:'NOT_FILED'};
+    throw Object.assign(
+     new Error('Potential duplicate fund request: same company, payee and amount were submitted within the last 10 minutes'),
+     {status:409,code:'23505'});
+   }
+   if(name==='frt_board_list_safe')return [{id,filing_status:'NOT_FILED'}];
+   throw Error(name);
+  }};
+ const data={title:'Project expense',department:'Operations',fundSource:'Cash fund',
+  description:'Two project categories',requestDate:'2026-11-17',dateNeeded:'2026-11-30',recipientName:'Supplier A',
+  recipientAccount:'AC123',items:[{category:'Materials',amount:'120.50'}]};
+ const warning=await createSignedFRTRequest({auth,api,workspaceId:ws,
+  companyCode:'WASS',role:'GENERAL_MANAGER',data});
+ assert.deepEqual(warning,{status:'DUPLICATE_WARNING'});
+ assert.equal(calls.filter(x=>x.name==='frt_create_request').length,1);
+ assert.equal(calls[1].args.p_payload.allowPotentialDuplicate,false);
+ const saved=await createSignedFRTRequest({auth,api,workspaceId:ws,
+  companyCode:'WASS',role:'GENERAL_MANAGER',data,allowPotentialDuplicate:true});
+ assert.equal(saved.status,'SAVED');
+ assert.equal(calls.filter(x=>x.name==='frt_create_request').length,2);
+ assert.equal(calls.find(x=>x.name==='frt_create_request'&&x.args.p_payload.allowPotentialDuplicate).args.p_payload.allowPotentialDuplicate,true);
+});
+test('beneficiary and destination account are required before any RPC',async()=>{
+ let calls=0;
+ const auth={userId:user,async getVerifiedUser(){return {id:user};}};
+ const api={async context(){calls++;return {};},async rpc(){calls++;}};
+ const base={title:'Project expense',department:'Operations',fundSource:'Cash fund',
+  description:'Two project categories',requestDate:'2026-11-17',dateNeeded:'2026-11-30',
+  items:[{category:'Materials',amount:'120.50'}]};
+ for(const patch of [{recipientName:'',recipientAccount:'AC123'},
+  {recipientName:'Supplier A',recipientAccount:''}]){
+  await assert.rejects(()=>createSignedFRTRequest({auth,api,workspaceId:ws,
+   companyCode:'WASS',role:'GENERAL_MANAGER',data:{...base,...patch}}));
+ }
+ assert.equal(calls,0);
 });
 test('invalid or excessive expense rows are denied before touching RPC',async()=>{
  let called=0;
  const api={async context(){return{};},async rpc(){called++;}};
  const auth={userId:user,async getVerifiedUser(){return{id:user};}};
  const base={title:'Request',department:'Finance',fundSource:'Cash',
-  description:'Office purchase',dateNeeded:'2026-11-30'};
+  description:'Office purchase',requestDate:'2026-11-17',dateNeeded:'2026-11-30'};
  for(const items of [[],[{category:'',amount:'2'}],
   [{category:'A',amount:'-2'}],[{category:'A',amount:'1.001'}],
   Array.from({length:101},()=>({category:'A',amount:'1'}))]){

@@ -51,7 +51,7 @@ Applied to the existing production Supabase project after explicit user approval
 1. 20261117051021_frt_company_profile_metadata.sql
 2. 20261117051040_frt_flow03c_request_accounting_lines.sql
 
-These filenames and SHA-256 entries match the exact versions recorded in production migration history. The already-applied 20261116172414 voucher projection is not reapplied. Existing TradeLink versions 20261117020000 and 20261117045417 are preserved and recorded in the branch migration manifest; neither was reapplied. WF-05A and WF-05B remain separate pending migrations and are not prerequisites for CP-FRT-FLOW-03C. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
+These filenames and SHA-256 entries match the exact versions recorded in production migration history. The already-applied 20261116172414 voucher projection is not reapplied. Existing TradeLink versions 20261117020000 and 20261117045417 are preserved and recorded in the branch migration manifest; neither was reapplied. WF-05A and WF-05B remain separate migrations and were subsequently applied under their recorded production versions 20261116104500 and 20261117010000. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
 
 The new accounting table has RLS enabled and no direct table grants. Existing authenticated FRT members use the two narrowly scoped signed RPCs:
 
@@ -62,7 +62,7 @@ Both use the existing FRT membership context; neither introduces a new role tier
 
 ## Acceptance
 
-scripts/cp-frt-flow03c-disposable-acceptance.sh creates disposable PostgreSQL 17 from an isolated FRT schema fixture, applies the already-established voucher projection and the two CP-FRT-FLOW-03C migrations only. It does not apply the separate pending WF-05A or WF-05B migrations.
+scripts/cp-frt-flow03c-disposable-acceptance.sh creates disposable PostgreSQL 17 from an isolated FRT schema fixture, applies the already-established voucher projection and the two CP-FRT-FLOW-03C migrations only. It does not apply the separate WF-05A or WF-05B migrations; those have their own disposable acceptance workflow.
 
 It verifies:
 
@@ -85,14 +85,14 @@ Read-only inspection on 2026-11-17 found:
 
 - production Supabase project jtlusodorfnyzgyuewkz ACTIVE_HEALTHY;
 - existing voucher projection migration 20261116172414 already applied;
-- WF-05A archive and WF-05B monthly voucher migrations pending;
+- WF-05A archive and WF-05B monthly voucher migrations applied and verified during CP-FRT-FLOW-03D;
 - migration 20261117020000 applied as TradeLink immutable revision snapshots (not an FRT migration);
 - company profile migration 20261117051021 and accounting migration 20261117051040 applied and verified;
 - zero production FRT requests and expense lines;
 - zero voucher counter rows;
 - existing private frt-attachments bucket and membership-based storage policies.
 
-Only the two approved additive CP-FRT-FLOW-03C migrations were applied. Existing WAO/WASS/PSTI names, company profile values, logos, fund requests, voucher numbers and financial records remain unchanged. The previously remote-only TradeLink migration versions were reconciled into the branch manifest without modifying or reapplying their SQL. WF-05A/WF-05B remain separate pending work. Genuine production request-level acceptance remains pending because the signed production view and database currently contain zero FRT requests.
+All four FRT migrations are now represented in production history and were readback-verified. Company-profile and accounting schema were already installed under their recorded versions 20261117051021 and 20261117051040; archive recovery and monthly voucher/duplicate protection were applied as 20261116104500 and 20261117010000 during CP-FRT-FLOW-03D. Existing WAO/WASS/PSTI names, company profile values, logos, fund requests, voucher numbers and financial records remain unchanged. The previously remote-only TradeLink migration versions were reconciled into the branch manifest without modifying or reapplying their SQL. Genuine production request-level acceptance remains pending because the signed production view and database currently contain zero FRT requests.
 
 ## Acceptance classification
 

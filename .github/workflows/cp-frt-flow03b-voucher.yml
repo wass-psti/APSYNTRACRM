@@ -1,0 +1,79 @@
+name: CP-FRT-FLOW-03B Voucher Architecture Reconciliation
+
+on:
+  pull_request:
+    branches:
+      - feat/cp-frt-wf05a-archive-recovery-main-20261116
+      - main
+    paths:
+      - "frontend/frt-voucher.js"
+      - "frontend/frt-voucher-document.js"
+      - "frontend/frt-voucher-pdf.js"
+      - "frontend/tests/frt-voucher.test.mjs"
+      - "frontend/tests/frt-finance-workflow.test.mjs"
+      - "supabase/migrations/20261116172414_frt_restricted_voucher_projection.sql"
+      - "supabase/migrations/20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard.sql"
+      - "sql/tests/cp-frt-wf05a-disposable-setup.sql"
+      - "sql/tests/cp-frt-flow03b-voucher-projection-disposable.sql"
+      - "scripts/cp-frt-flow03b-disposable-acceptance.sh"
+      - "scripts/frt-voucher-browser-acceptance.mjs"
+      - "docs/CP-FRT-FLOW-03B-RECONCILIATION.md"
+      - ".github/workflows/cp-frt-flow03b-voucher.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/frt-voucher.js"
+      - "frontend/frt-voucher-document.js"
+      - "frontend/frt-voucher-pdf.js"
+      - "frontend/tests/frt-voucher.test.mjs"
+      - "frontend/tests/frt-finance-workflow.test.mjs"
+      - "supabase/migrations/20261116172414_frt_restricted_voucher_projection.sql"
+      - "supabase/migrations/20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard.sql"
+      - "sql/tests/cp-frt-wf05a-disposable-setup.sql"
+      - "sql/tests/cp-frt-flow03b-voucher-projection-disposable.sql"
+      - "scripts/cp-frt-flow03b-disposable-acceptance.sh"
+      - "scripts/frt-voucher-browser-acceptance.mjs"
+      - "docs/CP-FRT-FLOW-03B-RECONCILIATION.md"
+      - ".github/workflows/cp-frt-flow03b-voucher.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cp-frt-flow03b-voucher-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  voucher-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Voucher and finance workflow tests
+        run: node --test frontend/tests/frt-voucher.test.mjs frontend/tests/frt-finance-workflow.test.mjs
+      - name: Disposable PostgreSQL 17 acceptance
+        run: bash scripts/cp-frt-flow03b-disposable-acceptance.sh
+      - name: Install Chromium for real PDF browser acceptance
+        run: npx playwright install --with-deps chromium
+      - name: Run real Chromium voucher PDF preview, download, print and reprint acceptance
+        run: |
+          npm run dev -- --host 127.0.0.1 > /tmp/frt-flow03b-vite.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:5173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")" \
+          FRT_BROWSER_BASE_URL=http://127.0.0.1:5173/ \
+          node scripts/frt-voucher-browser-acceptance.mjs
+      - name: Production frontend build
+        run: npm run build

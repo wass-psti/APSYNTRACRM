@@ -35,11 +35,11 @@ function normalizeRequest(data){
  const trim=(v,max=250)=>typeof v==='string'&&v.trim().length<=max?v.trim():'';
  const title=trim(data?.title),department=trim(data?.department),
   fundSource=trim(data?.fundSource),description=trim(data?.description,2500),
-  dateNeeded=data?.dateNeeded;
+  requestDate=data?.requestDate,dateNeeded=data?.dateNeeded;
  const rawItems=Array.isArray(data?.items)?data.items:
   [{category:data?.category,amount:data?.amount}];
  if(title.length<3||department.length<2||fundSource.length<2||
-   description.length<3||!validFRTDate(dateNeeded)||
+   description.length<3||!validFRTDate(requestDate)||!validFRTDate(dateNeeded)||
    rawItems.length<1||rawItems.length>100)
   fail('Complete the fund request, date, and expense lines.');
  let total=0;
@@ -55,18 +55,22 @@ function normalizeRequest(data){
  });
  if(!Number.isFinite(total)||total>999999999999.99)
   fail('The total expense amount exceeds the supported limit.');
- const optional={recipientName:trim(data?.recipientName),recipientBank:trim(data?.recipientBank),
-  recipientAccount:trim(data?.recipientAccount),orderIntakeNo:trim(data?.orderIntakeNo),
+ const recipientName=trim(data?.recipientName),recipientAccount=trim(data?.recipientAccount);
+ if(recipientName.length<2||recipientName.length>180||
+    recipientAccount.length<3||recipientAccount.length>180)
+  fail('Enter the beneficiary name and destination bank or GCash account.');
+ const optional={recipientBank:trim(data?.recipientBank),orderIntakeNo:trim(data?.orderIntakeNo),
   checkNo:trim(data?.checkNo)};
  for(const [key,value] of Object.entries(optional)){
   if(data?.[key]!==undefined&&String(data[key]??'').trim().length>180)
    fail('Optional request details exceed the supported length.');
  }
- return {title,department,fundSource,description,dateNeeded,items,
+ return {title,department,fundSource,description,requestDate,dateNeeded,items,
+  recipientName,recipientAccount,
   ...Object.fromEntries(Object.entries(optional).filter(([,v])=>v!==''))};
 }
 export async function createSignedFRTRequest({auth,api,workspaceId,companyCode,role,
- data}={}){
+ data,allowPotentialDuplicate=false}={}){
  const payload=normalizeRequest(data);
  const actor=await context({auth,api,workspaceId,companyCode,role});
  await ensureSameActor({auth,api,workspaceId,actorId:actor});
@@ -74,8 +78,11 @@ export async function createSignedFRTRequest({auth,api,workspaceId,companyCode,r
  let row;
  try{
   row=await api.rpc('frt_create_request',{p_workspace_id:workspaceId,
-   p_payload:{...payload,company:companyCode}});
+   p_payload:{...payload,company:companyCode,allowPotentialDuplicate:allowPotentialDuplicate===true}});
  }catch(error){
+  if(error?.code==='23505'&&/Potential duplicate fund request/i.test(error?.message||'')){
+   return {status:'DUPLICATE_WARNING'};
+  }
   if([400,401,403,404,409,422].includes(Number(error?.status)))throw error;
   throw uncertain('Request creation may have succeeded. Refresh before submitting again.');
  }

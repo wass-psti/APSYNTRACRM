@@ -41,12 +41,12 @@ test('only explicit domain RPC action after signed fresh detail and verified can
  assert.deepEqual(f.calls.at(-1).args,{p_workspace_id:ws,p_request_id:id,
   p_action:'approve',p_payload:{}});
 });
-test('no decorative status writes, archive or unfamiliar actions',async()=>{
- for(const code of ['Done','Working on it','archive','status:update','unknown']){
+test('no decorative status writes or unfamiliar actions; archive remains an explicit workflow action',async()=>{
+ for(const code of ['Done','Working on it','status:update','unknown']){
   const f=fixture();await assert.rejects(()=>run(f,{action:code}));
   assert.equal(f.calls.some(x=>x.name==='frt_request_action'),false);
  }
- assert.equal(frtActionSpec('archive'),null);
+ assert.deepEqual(frtActionSpec('archive'),{label:'Archive request',payload:'none'});
 });
 test('unlisted request, missing candidate and changed lifecycle are rejected before mutation',async()=>{
  for(const patch of [{allowedRequestIds:[]},
