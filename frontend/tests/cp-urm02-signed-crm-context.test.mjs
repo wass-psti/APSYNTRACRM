@@ -38,10 +38,11 @@ test('CP-URM-02 inherited CRM role displays correctly without changing identity'
  assert.equal(signedCrmRoleLabel(inherited,context),'CRM employee');
  assert.equal(signedCrmIdentityLabel(context),'Identity: employee');
 });
-test('CP-URM-02 app displays CRM role on all three surfaces without modifying permission guards',()=>{
+test('CP-URM-02 displays verified CRM roles in Overview and Settings without modifying permission guards',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const data=readFileSync('frontend/data.js','utf8');
- assert.match(app,/sidebar-profile-text[\s\S]*?signedCrmRoleLabel\(state.crmRoleSnapshot,state.context\)/);
+ assert.match(app,/stat-value csp-u041[\s\S]*?signedCrmRoleLabel\(state.crmRoleSnapshot,state.context\)/);
+ assert.doesNotMatch(app,/sidebar-profile-text/);
  assert.match(app,/Verified CRM tier in the active workspace/);
  assert.match(app,/settings-profile-copy[\s\S]*?signedCrmRoleLabel\(state.crmRoleSnapshot,state.context\)/);
  assert.match(app,/Inherited identity role/);

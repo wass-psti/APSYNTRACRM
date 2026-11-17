@@ -7,7 +7,7 @@ const app=readFileSync('frontend/app.js','utf8');
 test('standalone application boards are hidden from ordinary board navigation without deleting data',()=>{
  assert.ok(app.includes("new Set(['timetracker','frt','tradelink','fueltrack'])"));
  assert.match(app,/const cards=\(\)=>state\.showTrash\?state\.trashed:state\.showArchived\?state\.archived:\s*state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\)/);
- assert.match(app,/const recent=state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\)\.slice\(0,6\)/);
+ assert.match(app,/const recent=state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\);/);
  assert.match(app,/getBoards:async\(\)=>\{[\s\S]*?return \[\.\.\.state\.boards,\.\.\.archived\]\.filter\(board=>!isStandaloneApplicationBoard\(board\)\)/);
  assert.ok(app.includes("sidebarNav('#/time-tracker','TimeTracker'"));
  assert.ok(app.includes("sidebarNav('#/fund-tracker','Fund Tracker'"));

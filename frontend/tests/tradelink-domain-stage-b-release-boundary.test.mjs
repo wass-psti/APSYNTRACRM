@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const load=path=>readFileSync(path,'utf8');
+const load=path=>readFileSync(path,'utf8').replace(/\r\n?/g,'\n');
 const activation=load('sql/cp-tl03c-write-permission-candidate.sql');
 const rollback=load('sql/cp-tl03c-stage-b-write-revoke-candidate.sql');
 const emergency=load('sql/cp-tl03c-emergency-disable-candidate.sql');

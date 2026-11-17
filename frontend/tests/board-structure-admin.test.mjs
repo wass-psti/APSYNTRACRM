@@ -313,7 +313,7 @@ test('board settings action opens a visible dialog before asynchronous signed re
  assert.match(section,/event\.key==='Escape'/);
 });
 test('settings loading and errors cannot activate unauthorized mutations',()=>{
- const app=readFileSync('frontend/app.js','utf8');
+ const app=readFileSync('frontend/app.js','utf8').replace(/\r\n?/g,'\n');
  const start=app.indexOf('async function openBoardStructure(){');
  const end=app.indexOf('\nasync function action(',start);
  const section=app.slice(start,end);

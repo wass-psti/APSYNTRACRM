@@ -510,7 +510,7 @@ function syncSidebarLayout(){
 /** Canonical navigation selection shared by initial render and cached-shell updates. */
 function currentSidebarNavigation(){
  const recentBoardIds=state.boards.filter(board=>!isStandaloneApplicationBoard(board))
-  .slice(0,6).map(board=>board.id);
+  .map(board=>board.id);
  return sidebarActiveRoute(location.hash,{
   tradelinkBoardId:TRADELINK_BOARD_ID,fundTrackerBoardId:FRT_BOARD_ID,
   fueltrackBoardId:FUELTRACK_V3_ID,
@@ -520,7 +520,7 @@ function currentSidebarNavigation(){
 }
 function sidebar(){
  const engineeringUi=showEngineeringDiagnostics(location.search,state.roleVerified===true);
- const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board)).slice(0,6);
+ const recent=state.boards.filter(board=>!isStandaloneApplicationBoard(board));
  const selectedNav=currentSidebarNavigation();
  const active=key=>selectedNav===key;
  const nav=sidebarNav('#/overview','Overview','overview',active('overview'))+
@@ -551,14 +551,14 @@ function sidebar(){
   </div>
   `+renderWorkspaceSwitcher({id:state.context?.workspace_id,name:workspaceName()})+`
   <div class="ws01-context-relation" role="status">`+e(workspaceRelationLabel(state.workspaceRelationSnapshot,state.context))+`</div>
-  <div class="ws02-sidebar-action">`+renderWorkspaceInviteLaunch({id:state.context?.workspace_id,name:workspaceName()})+`</div>
+
   <div class="sidebar-nav-scroll" id="sidebar-navigation-content">
    <div class="side-section sidebar-nav-section">Workspace</div>
    <nav class="nav-list" aria-label="Primary">`+nav+`</nav>
-   <div class="side-section sidebar-recent-heading">Recent boards
+   <div class="side-section sidebar-recent-heading">Boards
     <span class="sidebar-recent-count" aria-hidden="true">`+recent.length+`</span>
    </div>
-   <nav class="nav-list sidebar-recent-list" aria-label="Recent boards">`+
+   <nav class="nav-list sidebar-recent-list" aria-label="Boards">`+
     (recent.map((b,i)=>{
      const title=String(b.name||'Untitled board');
      const active=selectedNav==='recent:'+b.id;
@@ -570,18 +570,6 @@ function sidebar(){
       e(title.slice(0,1).toUpperCase())+'</span>'+
       '<span class="nav-label">'+e(title)+'</span></a>';
     }).join('')||'<div class="sidebar-empty-recent">No boards yet</div>')+`</nav>
-  </div>
-  <div class="side-bottom">
-   <div class="profile">
-    <span class="avatar sidebar-profile-avatar" aria-hidden="true"><span data-avatar-initials aria-hidden="true">`+e(initials(name()))+`</span><img data-avatar-current alt="" hidden /></span>
-    <div class="sidebar-profile-text"><div class="name">`+e(name())+`</div>
-     <div class="role" title="`+e(signedCrmIdentityLabel(state.context))+`">`+e(signedCrmRoleLabel(state.crmRoleSnapshot,state.context))+`</div>
-    </div>
-   </div>
-   <button type="button" class="sign-out" data-action="logout" aria-label="Sign out of workspace" title="Sign out of workspace">
-    <span class="sidebar-signout-icon">`+sidebarIcon('logout')+`</span>
-    <span>Sign out</span>
-   </button>
   </div>
  </aside>`;
 }
@@ -629,7 +617,7 @@ function shell(body){
  const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.roleVerified,state.adminVerified,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
   state.workspaceRelationSnapshot?.relation,workspaceName(),
-  state.boards.slice(0,6).map(board=>[board.id,board.name]),
+  state.boards.filter(board=>!isStandaloneApplicationBoard(board)).map(board=>[board.id,board.name]),
   state.boards.length]);
  const route=[state.view,state.boardId,state.tab,state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone].join('|');
  // Preserve each group's horizontal position only across same-signed-view renders.

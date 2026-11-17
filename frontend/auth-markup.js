@@ -55,7 +55,7 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
      </form>`;
  const view=['login','register','forgot','reset'].includes(mode)?mode:'login';
  const copy={
- login:{eyebrow:'Your connected workspace',title:'Welcome back',description:'One secure sign-in to your projects, boards, and team. Continue with your existing WatchdogWorkspace account.',label:'WORKSPACE ACCESS',note:'Access is managed by your organization. No new account is created on sign in.'},
+ login:{eyebrow:'Welcome',title:'Welcome to APSYNTRA CRM',description:'Your projects, teams, and work — all in one place. Sign in with your existing work account.',label:'WORKSPACE ACCESS',note:'Access is managed by your organization. No new account is created on sign in.'},
  register:{eyebrow:'Administrator-managed onboarding',title:'Request account access',description:'Send your contact details for manual review. An administrator alone can create APSYNTRA CRM accounts.',label:'ACCOUNT ACCESS REQUEST',note:'Submission is not account approval, activation, or role assignment.'},
  forgot:{eyebrow:'Secure account recovery',title:'Forgot password',description:'Request a time-limited recovery link for your existing APSYNTRA CRM account.',label:'PASSWORD RECOVERY',note:'Recovery never modifies roles, memberships, or board permissions.'},
  reset:{eyebrow:'Protected password update',title:'Reset password',description:'Verify your recovery link and choose a new password.',label:'PASSWORD RESET',note:'Sign in again after changing your password.'}
@@ -63,7 +63,7 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
  const form=view==='register'?registerForm:view==='forgot'?forgotForm:view==='reset'?resetForm:loginForm;
  const links=[['login','Sign in','#/login'],['register','Request account access','#/register'],['forgot','Forgot password?','#/forgot-password']]
   .map(([key,label,url])=>'<a href="'+url+'"'+(view===key?' aria-current="page"':'')+'>'+label+'</a>').join('');
- return `<div class="auth-layout aps-auth-v2">
+ return `<div class="auth-layout aps-auth-v2" data-auth-layout-mode="${view}">
   <div class="auth-left">
    <header class="auth-brandbar auth-reveal">
     <a href="#/login" class="brand" aria-label="APSYNTRA CRM login">
@@ -75,7 +75,7 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
    <main class="auth-panel">
     <div class="auth-intro auth-reveal">
      <span class="eyebrow">${escapeHtml(copy.eyebrow)}</span>
-     <h1>${escapeHtml(copy.title)}<span class="auth-heading-stop">.</span></h1>
+     ${view==='login'?'<h1>Welcome to<br/><span>APSYNTRA CRM</span></h1>':'<h1>'+escapeHtml(copy.title)+'<span class="auth-heading-stop">.</span></h1>'}
      <p class="muted" id="auth-login-description">${escapeHtml(copy.description)}</p>
     </div>
     <div class="auth-form-card auth-reveal">
@@ -100,6 +100,7 @@ export function renderAuthMarkup({message='',notice='',year=new Date().getFullYe
    <footer class="auth-bottom">© ${escapeHtml(year)} APSYNTRA CRM <span aria-hidden="true">·</span> Secured by Supabase Authentication</footer>
   </div>
   <div class="auth-right">
+   ${view==='login'?'<div class="auth-minimal-illustration" aria-hidden="true"><div class="auth-minimal-board"><div class="auth-minimal-board-top"><span class="auth-minimal-dots">● ● ●</span><span>APSYNTRA / WORKSPACE</span><span class="auth-minimal-board-tab">BOARD VIEW</span></div><div class="auth-minimal-board-body"><div class="auth-minimal-board-heading"><span>Project plan</span><small>Team workspace</small></div><div class="auth-minimal-group-label">Project activities</div><div class="auth-minimal-board-table"><div class="auth-minimal-board-row auth-minimal-board-row-head"><span>Task</span><span>Owner</span><span>Status</span></div><div class="auth-minimal-board-row"><span>Plan project kickoff</span><span class="auth-minimal-avatar">JD</span><span class="auth-minimal-chip is-done">Done</span></div><div class="auth-minimal-board-row"><span>Review requirements</span><span class="auth-minimal-avatar is-violet">AM</span><span class="auth-minimal-chip is-progress">Working on it</span></div><div class="auth-minimal-board-row"><span>Team coordination</span><span class="auth-minimal-avatar is-teal">KL</span><span class="auth-minimal-chip is-review">In review</span></div><div class="auth-minimal-board-row"><span>Prepare handover</span><span class="auth-minimal-avatar">JD</span><span class="auth-minimal-chip is-planned">Planned</span></div></div><div class="auth-minimal-board-foot">A clearer way to work together.</div></div></div><div class="auth-minimal-floating auth-minimal-floating-top"><span class="auth-minimal-float-symbol">✦</span><span><strong>Team collaboration</strong><small>Stay connected to progress</small></span></div><div class="auth-minimal-floating auth-minimal-floating-bottom"><span class="auth-minimal-progress-dot"></span><span><strong>One workspace</strong><small>Everything in one place</small></span></div><div class="auth-minimal-illustration-caption">ILLUSTRATIVE PREVIEW</div></div>':''}
    <div class="auth-ambient-fallback" aria-hidden="true"></div>
    <div class="auth-ambient-scene" data-auth-scene aria-hidden="true"></div>
    <svg class="auth-orbit-art" viewBox="0 0 760 760" fill="none" aria-hidden="true" focusable="false">

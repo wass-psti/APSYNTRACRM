@@ -24,17 +24,18 @@ test('signed sidebar preserves the required route vocabulary and active semantic
  assert.match(sidebar,/state\.roleVerified===true/);
  assert.match(sidebar,/\(state\.adminVerified===true\?'/);
  assert.match(sidebar,/aria-label="Primary"/);
- assert.match(sidebar,/aria-label="Recent boards"/);
+ assert.match(sidebar,/aria-label="Boards"/);
 });
 test('workspace and recent board lists use existing authorized state only',()=>{
  assert.match(sidebar,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
- assert.match(sidebar,/state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\)\.slice\(0,6\)/);
+ assert.match(sidebar,/const recent=state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\);/);
  assert.match(sidebar,/const active=selectedNav==='recent:'\+b\.id/);
+
  assert.match(sidebar,/href="#\/boards\/'\+e\(b\.id\)/);
  assert.match(sidebar,/e\(title\)/);
- assert.match(sidebar,/e\(name\(\)\)/);
- assert.match(sidebar,/e\(signedCrmRoleLabel\(state\.crmRoleSnapshot,state\.context\)\)/);
- assert.match(sidebar,/data-action="logout"/);
+ assert.match(app,/href="#\/settings" class="avatar top-avatar"/);
+ assert.doesNotMatch(sidebar,/class="side-bottom"/);
+ assert.match(app,/case 'logout':/);
  assert.doesNotMatch(sidebar,/(?:fetch|XMLHttpRequest|setItem|localStorage)\s*\(/);
 });
 test('brand uses approved image and retains the signed shell controls',()=>{
