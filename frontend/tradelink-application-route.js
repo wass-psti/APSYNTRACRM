@@ -14,7 +14,7 @@ export function findTradeLinkApplicationBoard(boards){
 }
 
 export function tradeLinkApplicationHref(path='drafts/quotation'){
- return TRADELINK_APPLICATION_ROUTE+'/'+String(path).replace(/^\\/+/, '');
+ return TRADELINK_APPLICATION_ROUTE+'/'+String(path).replace(/^[/]+/, '');
 }
 
 /** Translate only the dedicated hash route to the existing signed Board host contract. */
