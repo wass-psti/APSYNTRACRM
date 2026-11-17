@@ -283,7 +283,7 @@ const tradeLinkNativeSearchAdapter=createNativeSearchAdapter({
 
 const frtNativeSearchAdapter=createNativeSearchAdapter({
  id:'frt-requests',applicationId:'frt',name:'Fund Release Tracker',recordType:'Funding request',
- read:(query,{limit=20}={})=>searchFRTRequestsReadOnly({auth,api:db,query,limit}),
+ read:(query,{limit=20}={})=>fundTracker.searchRequests(query,{limit}),
  getId:row=>row.requestId,getTitle:row=>row.title,
  getSubtitle:row=>[row.voucher,row.status].filter(Boolean).join(' · '),
  getExcerpt:row=>row.dateNeeded,
