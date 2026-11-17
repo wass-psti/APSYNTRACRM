@@ -311,7 +311,7 @@ test('responsive palette and exact-commit Pages asset manifests include new asse
 
 
 test('specialized native search results retain exact record identity in refreshable deep links',()=>{
- assert.ok(app.includes("getHref:row=>'#/boards/'+TRADELINK_BOARD_ID+'/tradelink/documents/record/'+encodeURIComponent(row.documentId)"));
+ assert.ok(app.includes("getHref:row=>tradeLinkApplicationHref('documents/record/'+encodeURIComponent(row.documentId))"));
  assert.ok(app.includes("getHref:row=>fundTrackerRecordHref(row.companyCode,row.requestId)"));
  assert.ok(app.includes("getHref:row=>'#/time-tracker/attendance/'+encodeURIComponent(row.id)"));
  assert.ok(app.includes("getHref:row=>'#/time-tracker/overtime/'+encodeURIComponent(row.id)"));

@@ -75,7 +75,7 @@ test('authorized listing shows server update time and preview shows creation tim
 });
 
 test('All Documents exposes signed edit, archive and restore for the matching Draft',()=>{
- assert.equal(editPath,'#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/edit/'+id);
+ assert.equal(editPath,'#/tradelink/drafts/edit/'+id);
  assert.equal(tradeLinkDraftEditHref('"><script>alert(1)</script>'),'');
  const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,
   view:authorizedView,canManage:true});
@@ -155,7 +155,10 @@ test('direct edit reload cannot expose an unrelated blank Draft form',()=>{
 
 test('signed deep-link loading uses real revision and Board checks and no local fallback',()=>{
  const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(source,/parts\[4\]==='edit'&&validUuid\(parts\[5\]\)/);
+ assert.match(source,/parseTradeLinkApplicationRoute\(parts\)/);
+ assert.match(source,/tradeLinkRoute\.editId/);
+ const route=readFileSync(new URL('../tradelink-application-route.js',import.meta.url),'utf8');
+ assert.ok(route.includes("if (raw[1] === 'edit' && validUuid(raw[2] || ''))"));
  assert.match(source,/state\.tradeLinkDraft\.editRequestId=draftEditId/);
  assert.match(source,/await openTradeLinkDraft\(target\)/);
  assert.match(source,/record\.revision!==listed\.revision/);

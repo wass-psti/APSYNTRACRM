@@ -3,7 +3,7 @@
  * src/domain/types.ts, src/domain/workflow.ts and src/domain/constants.ts.
  * No standalone auth, browser persistence, synthetic documents or writes.
  */
-import {isTradeLinkBoard,tradeLinkSetupStatus,TRADELINK_BOARD_ID} from './tradelink-board-items.js';
+import {isTradeLinkBoard,tradeLinkSetupStatus} from './tradelink-board-items.js';
 import {renderTradeLinkActivity} from './tradelink-activity.js';
 import {renderTradeLinkFinancePreview} from './tradelink-finance.js';
 import {renderTradeLinkWorkflowReference} from './tradelink-workflow-reference.js';
@@ -11,6 +11,7 @@ import {renderTradeLinkAnalytics} from './tradelink-analytics.js';
 import {renderTradeLinkDraftWorkspace,renderTradeLinkDocumentRepository,
  initialTradeLinkDraftView,tradeLinkDraftEditHref} from './tradelink-draft-workspace.js';
 import {TL03_DOMAIN_READS_ENABLED,TL03_DOMAIN_WRITES_ENABLED} from './tradelink-domain-client.js';
+import {TRADELINK_APPLICATION_ROUTE,tradeLinkApplicationHref} from './tradelink-application-route.js';
 
 export const TRADELINK_SOURCE_MODULES=Object.freeze([
  Object.freeze({key:'esi',label:'Electronic SI',short:'ESI',
@@ -70,7 +71,7 @@ function summaryCard(label,value,help){
   '<span class="tl-stat-foot">'+esc(help)+'</span></div>';
 }
 function moduleLink(m,activeType){
- const href='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/'+m.key;
+ const href=tradeLinkApplicationHref('drafts/'+m.key);
  const active=activeType===m.key;
  return '<a data-tl-module-nav="'+esc(m.key)+'" class="tl-module-link'+(active?' active':'')+'" href="'+href+'"'+
   (active?' aria-current="page"':'')+'><span class="tl-module-short" aria-hidden="true">'+esc(m.short)+'</span>'+
@@ -93,7 +94,7 @@ function renderModule(m,canManage=true){
    '<div class="tl-states">'+TRADELINK_SOURCE_QUOTE_STATUSES.map(s=>'<span class="tl-state">'+esc(s)+'</span>').join('')+'</div>'+
    '<p class="muted">These stages differ from the APSYNTRA board Quote Status choices. No automatic mapping is enabled.</p>':'')+
   (['esi','quotation','po'].includes(m.key)?renderTradeLinkFinancePreview():'')+
-  (canManage?'<p><a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/'+esc(m.key)+'">Prepare a '+esc(m.label)+' document</a></p>':'')+
+  (canManage?'<p><a class="secondary" href="'+tradeLinkApplicationHref('drafts/'+m.key)+'">Prepare a '+esc(m.label)+' document</a></p>':'')+
   (canManage?'<p class="muted">Opens the signed document editor. Save defaults to For Approval; choose Draft explicitly when needed. Assigned reviewers validate independently with Use Time Now. The second validation automatically sets Approved.</p>':'<p class="muted">Assigned reviewers can open their documents from All Documents, inspect the saved content and record their own validation time.</p>')+
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
   '<p>Signed document creation and editing are enabled through the existing authorized domain API. For Approval is the default saved status; the two assigned reviewers independently validate the current revision. Print PDF is available only after both validations set Approved. The recovered official company templates are available for all six modules. Browser Print / Save as PDF uses the saved document revision; electronic PDF issuance is separate. Unsaved previews are never presented as persisted documents.</p></div></section>';
@@ -106,7 +107,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
  const current=normalizeTradeLinkSection(section);
  const m=TRADELINK_SOURCE_MODULES.find(x=>x.key===current);
- const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink';
+ const base=TRADELINK_APPLICATION_ROUTE;
  const currentAttr=key=>current===key?' aria-current="page"':'';
  const requestedType=draftView?.formValues?.documentType||
   draftView?.selected?.record?.document_type||

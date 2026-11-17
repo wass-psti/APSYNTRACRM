@@ -5,6 +5,7 @@ import {ApiError} from './session.js';
 import {validUuid} from './data.js';
 import {calculateTradeLinkAmounts,formatTradeLinkAmount,TRADELINK_CURRENCIES,TRADELINK_VAT_CODES} from './tradelink-finance.js';
 import {TRADELINK_BOARD_ID,isTradeLinkBoard} from './tradelink-board-items.js';
+import {tradeLinkApplicationHref} from './tradelink-application-route.js';
 import {TL03_ATTACHMENTS_ENABLED,normalizeTradeLinkAttachmentList}
  from './tradelink-attachments.js';
 import {TRADELINK_DEFAULT_COMPANY_PROFILE_ID,TRADELINK_COMPANY_PROFILE_OPTIONS,
@@ -43,8 +44,7 @@ export const tradeLinkDraftReady=()=>TL03_DOMAIN_READS_ENABLED&&TL03_DOMAIN_WRIT
 // A deep link carries an identifier only. The editor ALWAYS re-fetches the
 // signed list and exact record before enabling a revisioned write.
 export function tradeLinkDraftEditHref(documentId){
- return validUuid(documentId)?'#/boards/'+TRADELINK_BOARD_ID+
-  '/tradelink/drafts/edit/'+documentId:'';
+ return validUuid(documentId)?tradeLinkApplicationHref('drafts/edit/'+documentId):'';
 }
 
 export function initialTradeLinkDraftView(documentType=null){
@@ -1017,7 +1017,7 @@ function renderModuleGuidance(type){
   escape(guide.boundary)+'</small></aside>':'';
 }
 function referenceDraftTabs(type){
- const base='#/boards/'+TRADELINK_BOARD_ID+'/tradelink/drafts/';
+ const base=tradeLinkApplicationHref('drafts')+'/';
  return '<nav class="tl-reference-document-tabs" aria-label="TradeLink document modules">'+
  typeLabels.map(([key,label])=>
   '<a href="'+base+escape(key)+'"'+(key===type?' class="active" aria-current="page"':'')+
@@ -1160,8 +1160,7 @@ function renderEditor(row,mode,canManage,formValues=null,draftNotice='',error=''
   (error?'<p class="tl-draft-feedback" role="alert">'+escape(error)+'</p>':'')+
   (message?'<p class="tl-draft-feedback" role="status">'+escape(message)+'</p>':'')+
   (editing?'<div class="tl-draft-editor-navigation">'+
-   '<a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
-   '/tradelink/documents">Back to All Documents</a> '+
+   '<a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Back to All Documents</a> '+
    '<button type="button" class="secondary tl-reference-new-draft" data-action="tradelink-draft-new">New Draft</button>'+
    '</div>':'')+
   (mode==='edit'&&!editing?'<p role="alert">This record cannot be edited with the bounded Phase 1 editor.</p>':'')+
@@ -1868,8 +1867,7 @@ export function renderTradeLinkDocumentRepository({detail,workspaceId,
    '<h2 id="tl-domain-repository-title">'+(canReview?'My Assigned Documents':'All Documents')+' <span class="tl-ref-count-badge">'+
     escape(rows.length)+'</span></h2>'+
    '<div class="tl-reference-repository-buttons">'+
-   (canManage&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="#/boards/'+TRADELINK_BOARD_ID+
-    '/tradelink/drafts/quotation">Create New Document</a>':'')+
+   (canManage&&TL03_DOMAIN_WRITES_ENABLED?'<a class="primary" href="'+tradeLinkApplicationHref('drafts/quotation')+'">Create New Document</a>':'')+
    '<button type="button" class="secondary" data-action="tradelink-documents-refresh"'+
    (!TL03_DOMAIN_READS_ENABLED||(!canManage&&!canReview)||view.busy?' disabled':'')+'>Refresh</button>'+
    '</div></div>'+
@@ -1917,8 +1915,7 @@ export function renderTradeLinkDraftWorkspace({detail,workspaceId,view=initialTr
     'role="'+(view.error?'alert':'status')+'">'+
     '<h2>Open saved Draft</h2><p>'+
     escape(view.error||'Verifying the signed document and its latest revision…')+
-    '</p><a class="secondary" href="#/boards/'+TRADELINK_BOARD_ID+
-    '/tradelink/documents">Back to All Documents</a></section>':
+    '</p><a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Back to All Documents</a></section>':
    renderEditor(selected?.record,view.mode,canManage,
    view.mode==='edit'&&!selected?null:view.formValues,view.draftNotice||'',
    view.error||'',view.message||'',view.lineDrafts,actorName,actorEmail,view.reviewStages||null,showModuleTabs))+
