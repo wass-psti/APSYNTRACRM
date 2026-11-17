@@ -293,7 +293,8 @@ export function renderTimeTrackerNative({
  if(selected==='reports')html+=renderTimeTrackerReports({
   rows:result.log?.rows||result.records,
   scope:result.log?.scope||'OWN_ATTENDANCE_ONLY',
-  period,filters:reportFilters,now,busy
+  period,filters:reportFilters,now,busy,
+  otRequests:result.otRequests||[],otContractActive:result.access?.otContractActive===true
  });
  if(selected==='calendar')html+=renderTimeTrackerCalendar({
   records:result.log?.rows||result.records,

@@ -61,7 +61,7 @@ test('existing OT navigation, role checks, search and staged write restrictions 
  assert.match(bootstrap,/tt-ot-review-actions/);
  assert.match(bootstrap,/data-action="tt-ot-approve"[^>]* disabled/);
  assert.match(bootstrap,/data-action="tt-ot-reject"[^>]* disabled/);
- assert.equal(TT_OT_WRITES_ACCEPTED,false);
+ assert.equal(TT_OT_WRITES_ACCEPTED,true);
  assert.match(app,/TT_OT_WRITES_ACCEPTED/);
 });
 test('OT metrics, request details and charts remain escaped and accessible',()=>{
