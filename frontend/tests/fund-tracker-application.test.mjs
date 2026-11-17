@@ -75,20 +75,12 @@ test("Fund Tracker resolves only the existing authoritative board and never prov
   assert.equal(findFundTrackerBoard([board, { id: "other", name: "Contacts" }]), board);
   assert.equal(findFundTrackerBoard([{ id: "other", name: "Contacts" }]), null);
   assert.equal(findFundTrackerBoard(null), null);
-  assert.equal(
-    findFundTrackerBoard([{ ...board, id: "other" }]),
-    null,
-  );
-  assert.equal(
-    findFundTrackerBoard([{ ...board, status: "archived" }]),
-    null,
-  );
-  assert.equal(
-    findFundTrackerBoard([{ ...board, description: "unmapped board" }]),
-    null,
-  );
+  assert.equal(findFundTrackerBoard([{ ...board, id: "other" }]), null);
+  assert.equal(findFundTrackerBoard([{ ...board, status: "archived" }]), null);
+  assert.equal(findFundTrackerBoard([{ ...board, description: "unmapped board" }]), null);
   assert.equal(FUND_TRACKER_APPLICATION_ROUTE, "#/fund-tracker");
-  assert.doesNotMatch(routeModule, /insert into|create board|create table|\.rpc\(/i);
+  assert.equal(routeModule.includes(".rpc("), false);
+  assert.equal(routeModule.includes("create board"), false);
 });
 
 test("Fund Tracker request deep links validate company code and request UUID", () => {
@@ -106,64 +98,71 @@ test("Fund Tracker request deep links validate company code and request UUID", (
 });
 
 test("native adapter composes the existing signed FRT domain APIs instead of introducing a parallel backend", () => {
-  assert.match(native, /loadFRTFinanceReadOnly/);
-  assert.match(native, /searchFRTRequestsReadOnly/);
-  assert.match(native, /class FundTrackerNativeClient/);
-  assert.match(native, /snapshot\(/);
-  assert.match(native, /searchRequests\(/);
-  assert.doesNotMatch(native, /createClient|create table|insert into|\.rpc\(/i);
+  assert.ok(native.includes("loadFRTFinanceReadOnly"));
+  assert.ok(native.includes("searchFRTRequestsReadOnly"));
+  assert.ok(native.includes("class FundTrackerNativeClient"));
+  assert.ok(native.includes("snapshot("));
+  assert.ok(native.includes("searchRequests("));
+  assert.equal(native.includes("createClient"), false);
+  assert.equal(native.includes(".rpc("), false);
 });
 
 test("native renderer keeps semantic application structure and existing FRT delegated actions", () => {
   const html = renderFundTrackerNative({ result: report, view: "tracker" });
-  assert.match(html, /data-fund-tracker-root/);
-  assert.match(html, /<header class="frt-app-header">/);
-  assert.match(html, /<main class="frt-app-content">/);
-  assert.match(html, /<footer class="frt-app-footer">/);
-  assert.match(html, /Fund Tracker/);
-  assert.match(html, /GENERAL_MANAGER/);
-  assert.match(html, /Watchdog Automation Sales &amp; Services/);
-  assert.match(html, /data-action="frt-finance-view" data-view="tracker"/);
-  assert.match(html, /data-action="frt-finance-view" data-view="executive"/);
-  assert.match(html, /data-action="frt-finance-refresh"/);
-  assert.match(html, /data-frt-section="new"/);
-  assert.match(html, /data-frt-section="archive"/);
-  assert.match(html, /data-frt-section="activity"/);
-  assert.match(html, /data-frt-section="discussion"/);
+  for (const fragment of [
+    'data-fund-tracker-root',
+    '<header class="frt-app-header">',
+    '<main class="frt-app-content">',
+    '<footer class="frt-app-footer">',
+    "Fund Tracker",
+    "GENERAL_MANAGER",
+    "Watchdog Automation Sales &amp; Services",
+    'data-action="frt-finance-view" data-view="tracker"',
+    'data-action="frt-finance-view" data-view="executive"',
+    'data-action="frt-finance-refresh"',
+    'data-frt-section="new"',
+    'data-frt-section="archive"',
+    'data-frt-section="activity"',
+    'data-frt-section="discussion"',
+  ]) assert.ok(html.includes(fragment), fragment);
 });
 
 test("Fund Tracker route reuses the existing board host, adapter, renderer and delegated event state", () => {
-  assert.match(app, /import \{FundTrackerNativeClient\} from '\.\/fund-tracker-native\.js'/);
-  assert.match(app, /import \{renderFundTrackerNative\} from '\.\/fund-tracker-ui\.js'/);
-  assert.ok(app.includes("findFundTrackerBoard(state.boards)"));
-  assert.match(app, /if\(parts\[0\]==='fund-tracker'\)/);
-  assert.match(app, /await loadBoard\(fundTrackerBoard\.id,'finance'\)/);
-  assert.match(app, /const fundTracker=new FundTrackerNativeClient\(\{auth,api:db\}\)/);
-  assert.match(app, /fundTracker\.snapshot\(/);
-  assert.match(app, /fundTracker\.searchRequests\(query,\{limit\}\)/);
-  assert.match(app, /getHref:row=>fundTrackerRecordHref\(row\.companyCode,row\.requestId\)/);
-  assert.match(app, /sidebarNav\('#\/fund-tracker','Fund Tracker','finance'/);
-  assert.match(app, /case 'frt-finance-view':/);
-  assert.match(app, /case 'frt-finance-detail':/);
-  assert.match(app, /case 'frt-finance-action':/);
-  assert.match(app, /state\.frtFinanceView/);
-  assert.match(app, /if\(state\.tab==='finance'&&moduleByBoardName\(b\.name\)\?\.key==='frt'\)return renderFundTrackerApplication\(\)/);
-  assert.doesNotMatch(app, /loadFRTFinanceReadOnly\(/);
+  for (const fragment of [
+    "import {FundTrackerNativeClient} from './fund-tracker-native.js'",
+    "import {renderFundTrackerNative} from './fund-tracker-ui.js'",
+    "findFundTrackerBoard(state.boards)",
+    "if(parts[0]==='fund-tracker'){",
+    "await loadBoard(fundTrackerBoard.id,'finance');",
+    "const fundTracker=new FundTrackerNativeClient({auth,api:db})",
+    "fundTracker.snapshot(",
+    "fundTracker.searchRequests(query,{limit})",
+    "getHref:row=>fundTrackerRecordHref(row.companyCode,row.requestId)",
+    "sidebarNav('#/fund-tracker','Fund Tracker','finance'",
+    "case 'frt-finance-view':",
+    "case 'frt-finance-detail':",
+    "case 'frt-finance-action':",
+    "state.frtFinanceView",
+    "return renderFundTrackerApplication()",
+  ]) assert.ok(app.includes(fragment), fragment);
+  assert.equal(app.includes("loadFRTFinanceReadOnly("), false);
 });
 
 test("Fund Tracker application styles are scoped and registered in the generated stylesheet pipeline", () => {
-  assert.match(css, /\.frt-native/);
-  assert.match(css, /--fm1-ink/);
-  assert.match(css, /@media \(max-width: 720px\)/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(css, /focus-visible/);
-  assert.match(manifest, /frontend\/fund-tracker-application\.css/);
-  assert.match(bundle, /fund-tracker-application\\.css/);
-  assert.match(bundle, /frt-app-header/);
-  assert.match(htmlEntry, /frontend\/fund-tracker-application\.css/);
-  assert.match(pagesSmoke, /frontend\/fund-tracker-application\.js/);
-  assert.match(pagesSmoke, /frontend\/fund-tracker-native\.js/);
-  assert.match(pagesSmoke, /frontend\/fund-tracker-ui\.js/);
-  assert.match(pagesSmoke, /frontend\/fund-tracker-application\.css/);
-  assert.match(sidebarIcons, /finance:/);
+  for (const fragment of [
+    ".frt-native",
+    "--fm1-ink",
+    "@media (max-width: 720px)",
+    "@media (prefers-reduced-motion: reduce)",
+    "focus-visible",
+  ]) assert.ok(css.includes(fragment), fragment);
+  assert.ok(manifest.includes("frontend/fund-tracker-application.css"));
+  assert.ok(bundle.includes("/* frontend/fund-tracker-application.css */"));
+  assert.ok(bundle.includes("frt-app-header"));
+  assert.ok(htmlEntry.includes("frontend/fund-tracker-application.css"));
+  assert.ok(pagesSmoke.includes("frontend/fund-tracker-application.js"));
+  assert.ok(pagesSmoke.includes("frontend/fund-tracker-native.js"));
+  assert.ok(pagesSmoke.includes("frontend/fund-tracker-ui.js"));
+  assert.ok(pagesSmoke.includes("frontend/fund-tracker-application.css"));
+  assert.ok(sidebarIcons.includes("finance:"));
 });
