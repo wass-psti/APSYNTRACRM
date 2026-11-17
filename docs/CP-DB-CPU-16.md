@@ -48,7 +48,7 @@ No production database migration or RPC change is included.
 - Added platform-sync tests for the 90-second heartbeat and five-minute full-reconciliation bound.
 - Added integration assertions that lightweight heartbeats retain signed edit/manage checks and do not hydrate the board snapshot or board structure.
 - Existing Realtime broadcast, focus, visibility, reconnect, and polling-fallback tests remain in the suite.
-- GitHub CI, full regression suite, and Pages build are pending PR checks.
+- Added a dedicated PR workflow that checks changed JavaScript syntax, runs the focused synchronization test, runs the complete frontend regression suite, and builds the production frontend.
 
 ## 5. Production acceptance
 
