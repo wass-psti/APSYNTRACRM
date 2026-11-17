@@ -243,9 +243,7 @@ try {
       }),
     { result: adminResult, directory: adminDirectory },
   );
-  await page
-    .getByText("Manage attendance records", { exact: true })
-    .waitFor();
+  await page.getByText("Manage attendance records", { exact: true }).waitFor();
   await page.locator("#tt-log-select-all").waitFor();
   await page.locator("#tt-log-select-" + adminRecordId).waitFor();
   await page.getByRole("button", { name: "Edit selected" }).waitFor();
@@ -372,13 +370,13 @@ try {
         result,
         adminEligible: true,
         adminDeleteConfirm: {
-          recordIds: [
-            record.id,
-            "50000000-0000-4000-8000-000000000002",
-          ],
+          recordIds: [record.id, "50000000-0000-4000-8000-000000000002"],
           records: [
             { id: record.id, name: record.ownerName },
-            { id: "50000000-0000-4000-8000-000000000002", name: "Second Employee" },
+            {
+              id: "50000000-0000-4000-8000-000000000002",
+              name: "Second Employee",
+            },
           ],
         },
       }),
