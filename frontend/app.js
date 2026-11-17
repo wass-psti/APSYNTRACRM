@@ -29,7 +29,7 @@ import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
-import {PlatformSync} from './platform-sync.js';
+import {PlatformSync,shouldRefreshWorkspaceBoardList} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
@@ -1706,6 +1706,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   state.view===view&&state.tab===tab&&state.boardId===boardId;
  const sensitive=reason!=='broadcast';
  const boardChanged=boardId&&boardIds.includes(boardId);
+ const refreshBoardCatalog=shouldRefreshWorkspaceBoardList({reason,view});
  // Board broadcasts carry identifiers only; the server remains authoritative.
  if(reason==='broadcast'&&!boardChanged&&view==='board')return true;
  let who,current;
@@ -1735,14 +1736,15 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  // Authorization reads must occur even while an unsaved editor is open.
  if(platformSyncEditInProgress())return false;
  const roleChanged=current.profile?.platform_role!==state.context.profile?.platform_role;
- const boards=await db.boards('active');
+ const boards=refreshBoardCatalog?await db.boards('active'):state.boards;
  if(!isCurrent())return false;
- if(!boards.some(board=>board.id===boardId)&&view==='board'){
+ if(refreshBoardCatalog&&!boards.some(board=>board.id===boardId)&&view==='board'){
   platformSync.stop();state.board=null;location.hash='#/boards';return false;
  }
  if(platformSyncEditInProgress())return false;
- const changedBoards=JSON.stringify(state.boards)!==JSON.stringify(boards);
- state.boards=boards;state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
+ let changedBoards=refreshBoardCatalog&&JSON.stringify(state.boards)!==JSON.stringify(boards);
+ if(refreshBoardCatalog)state.boards=boards;
+ state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
  if(reason!=='broadcast')void refreshSignedCrmRole({force:roleChanged}).catch(()=>{});
  if(roleChanged||sensitive){
   const verified=await roleConfig.bootstrapVerified().catch(()=>false);
@@ -1787,6 +1789,20 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
      quietReadAtStart!==visibleBoardRefreshSerial)return false;
   if(detail?.board?.id!==boardId||detail.board.workspace_id!==workspaceId)
    return false;
+  if(!refreshBoardCatalog&&detail.board.status!=='active'){
+   const activeBoards=await db.boards('active');
+   if(!isCurrent())return false;
+   state.boards=activeBoards;
+   platformSync.stop();state.board=null;state.boardUi=null;
+   state.edit=false;state.boardManage=false;location.hash='#/boards';
+   return false;
+  }
+  if(!refreshBoardCatalog){
+   const nextBoards=state.boards.map(board=>
+    board.id===boardId?{...board,...detail.board}:board);
+   changedBoards=JSON.stringify(state.boards)!==JSON.stringify(nextBoards);
+   state.boards=nextBoards;
+  }
   const changed=JSON.stringify(state.board)!==JSON.stringify(detail);
   state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
   if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
