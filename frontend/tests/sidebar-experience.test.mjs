@@ -26,6 +26,29 @@ test('signed sidebar preserves the required route vocabulary and active semantic
  assert.match(sidebar,/aria-label="Primary"/);
  assert.match(sidebar,/aria-label="Recent boards"/);
 });
+test('one canonical hash-derived href controls initial sidebar markup and rerender state',()=>{
+ assert.match(app,/import \{resolveSidebarActiveHref\} from '\.\/sidebar-navigation-state\.js';/);
+ assert.match(app,/function sidebarNav\(href,label,icon,activeHref/);
+ assert.match(app,/function sidebar\(activeHref\)/);
+ assert.match(app,/const activeHref=resolveSidebarActiveHref\(location\.hash,recentBoardIds\)/);
+ assert.match(app,/sidebarNav\('#\/overview','Overview','overview',activeHref\)/);
+ assert.match(app,/sidebarNav\(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',activeHref\)/);
+ assert.match(app,/const active=activeHref==='#\/boards '\+b\.id/);
+ assert.match(app,/const active=path===activeHref/);
+ assert.match(app,/template\.innerHTML=sidebar\(activeHref\)/);
+ assert.match(app,/\$\{sidebar\(activeHref\)\}/);
+ assert.match(app,/animateSidebarSelection\(root\.querySelector\('\.aps-sidebar'\),activeHref\)/);
+ assert.doesNotMatch(sidebar,/state\.view===|state\.ttStandalone|state\.tlStandalone|state\.fuelTrackStandalone/);
+ assert.match(app,/if\(active\)link\.setAttribute\('aria-current','page'\);\s*else link\.removeAttribute\('aria-current'\)/);
+});
+
+test('hash navigation including browser back and forward re-runs the authoritative route resolver',()=>{
+ const hashHandler=app.slice(app.indexOf("window.addEventListener('hashchange'"),app.indexOf("window.addEventListener('pagehide'"));
+ assert.match(hashHandler,/onRoute\(\)\.catch\(notice\)/);
+ assert.match(app,/resolveSidebarActiveHref\(location\.hash,recentBoardIds\)/);
+ assert.doesNotMatch(app,/addEventListener\(['"]popstate['"]/);
+});
+
 test('workspace and recent board lists use existing authorized state only',()=>{
  assert.match(sidebar,/renderWorkspaceSwitcher\(\{id:state\.context\?\.workspace_id,name:workspaceName\(\)\}\)/);
  assert.match(sidebar,/state\.boards\.filter\(board=>!isStandaloneApplicationBoard\(board\)\)\.slice\(0,6\)/);
