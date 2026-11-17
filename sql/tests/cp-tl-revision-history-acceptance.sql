@@ -7,6 +7,34 @@ BEGIN
    AND revision=1 AND snapshot_source='baseline')<>1
  THEN RAISE EXCEPTION 'Existing current revision was not backfilled as baseline'; END IF;
 END $baseline$;
+-- A document created after activation must receive its first immutable snapshot.
+INSERT INTO public.work_board_items(id,board_id,group_id,title,created_by,updated_by,updated_at)
+VALUES('99999999-9999-4999-8999-999999999993',
+ '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','867aeecd-ea67-4e2f-aec7-1207e2ebe20f',
+ 'Q-REV-HISTORY-NEW-001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','2026-11-17T08:00:00Z');
+INSERT INTO public.tradelink_documents(
+ id,board_id,workspace_id,board_item_id,document_type,document_number,workflow_state,
+ revision,content,created_by,updated_by,created_at,updated_at
+) VALUES(
+ '99999999-9999-4999-8999-999999999994',
+ '264ca40d-6e4a-4e4f-97e6-3bd77c97cd88','00000000-0000-4000-8000-000000000001',
+ '99999999-9999-4999-8999-999999999993','quotation','Q-REV-HISTORY-NEW-001','draft',1,
+ jsonb_build_object('documentType','quotation','documentNumber','Q-REV-HISTORY-NEW-001',
+  'verifiedByEmail','revision-primary@example.test','approvedByEmail','revision-secondary@example.test',
+  'vendorId','watchdog-sales','templateId','watchdog-sales-v1','currency','PHP',
+  'customerName','New document snapshot QA','items',jsonb_build_array(
+   jsonb_build_object('kind','item','description','New document','quantity',1,'unitPrice',100))),
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ '2026-11-17T08:00:00Z','2026-11-17T08:00:00Z');
+DO $new_document_snapshot$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM private.tradelink_document_revision_snapshots
+  WHERE document_id='99999999-9999-4999-8999-999999999994'
+   AND revision=1 AND snapshot_source='captured'
+   AND content->>'documentNumber'='Q-REV-HISTORY-NEW-001')
+ THEN RAISE EXCEPTION 'Newly inserted document did not receive revision 1 snapshot'; END IF;
+END $new_document_snapshot$;
 INSERT INTO private.tradelink_document_reviews(
  document_id,board_id,workspace_id,document_revision,stage,assigned_email,actor_id,recorded_at
 ) VALUES
