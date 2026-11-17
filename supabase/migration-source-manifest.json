@@ -1633,11 +1633,25 @@
       "sha256": "0c96df198566b6047ce181e6ec56a4eb29b204e0b2405c2937a4ca7abf362161"
     },
     {
+      "version": "20261116104500",
+      "name": "frt_wf05a_archive_recovery",
+      "file": "20261116104500_frt_wf05a_archive_recovery.sql",
+      "bytes": 3449,
+      "sha256": "2a4c8ee392d55b5717c9f566e99f5da261b0cb2a897acf143caa546ae81de9b7"
+    },
+    {
       "version": "20261116172414",
       "name": "frt_restricted_voucher_projection",
       "file": "20261116172414_frt_restricted_voucher_projection.sql",
       "bytes": 5612,
       "sha256": "3429782eb63e42c9539557486737c868b5d35e1c0779592babdedc09610e3a5e"
+    },
+    {
+      "version": "20261117010000",
+      "name": "frt_wf05b_monthly_voucher_and_duplicate_guard",
+      "file": "20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard.sql",
+      "bytes": 7481,
+      "sha256": "4348dc5d935fc1080cb1dfa1d43fe1e4339c98590a308e999758ed6a07cd0187"
     },
     {
       "version": "20261117020000",

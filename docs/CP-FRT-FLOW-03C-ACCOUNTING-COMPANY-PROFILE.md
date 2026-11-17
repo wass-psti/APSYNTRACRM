@@ -51,7 +51,7 @@ Applied to the existing production Supabase project after explicit user approval
 1. 20261117051021_frt_company_profile_metadata.sql
 2. 20261117051040_frt_flow03c_request_accounting_lines.sql
 
-These filenames and SHA-256 entries match the exact versions recorded in production migration history. The already-applied 20261116172414 voucher projection is not reapplied. Existing TradeLink versions 20261117020000 and 20261117045417 are preserved and recorded in the branch migration manifest; neither was reapplied. WF-05A and WF-05B remain separate pending migrations and are not prerequisites for CP-FRT-FLOW-03C. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
+These filenames and SHA-256 entries match the exact versions recorded in production migration history. The already-applied 20261116172414 voucher projection is not reapplied. Existing TradeLink versions 20261117020000 and 20261117045417 are preserved and recorded in the branch migration manifest; neither was reapplied. The already-installed WF-05A version 20261116104500 and WF-05B version 20261117010000 migration sources were restored byte-for-byte from their original feature branch to reconcile Supabase migration history; neither was reapplied. They are not part of the isolated CP-FRT-FLOW-03C acceptance harness. The experimental FRT persisted-voucher prototype from a local stash is not used or imported.
 
 The new accounting table has RLS enabled and no direct table grants. Existing authenticated FRT members use the two narrowly scoped signed RPCs:
 
@@ -62,7 +62,7 @@ Both use the existing FRT membership context; neither introduces a new role tier
 
 ## Acceptance
 
-scripts/cp-frt-flow03c-disposable-acceptance.sh creates disposable PostgreSQL 17 from an isolated FRT schema fixture, applies the already-established voucher projection and the two CP-FRT-FLOW-03C migrations only. It does not apply the separate pending WF-05A or WF-05B migrations.
+scripts/cp-frt-flow03c-disposable-acceptance.sh creates disposable PostgreSQL 17 from an isolated FRT schema fixture, applies the already-established voucher projection and the two CP-FRT-FLOW-03C migrations only. It does not reapply the already-installed WF-05A or WF-05B migrations.
 
 It verifies:
 
@@ -85,14 +85,14 @@ Read-only inspection on 2026-11-17 found:
 
 - production Supabase project jtlusodorfnyzgyuewkz ACTIVE_HEALTHY;
 - existing voucher projection migration 20261116172414 already applied;
-- WF-05A archive and WF-05B monthly voucher migrations pending;
+- WF-05A archive and WF-05B monthly voucher migrations already applied; their exact source files are now restored to this repository;
 - migration 20261117020000 applied as TradeLink immutable revision snapshots (not an FRT migration);
 - company profile migration 20261117051021 and accounting migration 20261117051040 applied and verified;
 - zero production FRT requests and expense lines;
 - zero voucher counter rows;
 - existing private frt-attachments bucket and membership-based storage policies.
 
-Only the two approved additive CP-FRT-FLOW-03C migrations were applied. Existing WAO/WASS/PSTI names, company profile values, logos, fund requests, voucher numbers and financial records remain unchanged. The previously remote-only TradeLink migration versions were reconciled into the branch manifest without modifying or reapplying their SQL. WF-05A/WF-05B remain separate pending work. Genuine production request-level acceptance remains pending because the signed production view and database currently contain zero FRT requests.
+Only the two approved additive CP-FRT-FLOW-03C migrations were applied. Existing WAO/WASS/PSTI names, company profile values, logos, fund requests, voucher numbers and financial records remain unchanged. The previously remote-only TradeLink and FRT WF-05A/WF-05B migration sources were restored byte-for-byte and reconciled into the branch manifest without modifying or reapplying their SQL. Genuine production request-level acceptance remains pending because the signed production view and database currently contain zero FRT requests.
 
 ## Acceptance classification
 
