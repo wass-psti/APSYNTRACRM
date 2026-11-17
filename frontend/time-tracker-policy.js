@@ -17,6 +17,12 @@ export function manilaClockMinutes(value){
  const shifted=new Date(timestamp+TT_PHT_OFFSET_MS);
  return shifted.getUTCHours()*60+shifted.getUTCMinutes();
 }
+/** ISO calendar day for Philippine attendance, independent of device timezone. */
+export function timeTrackerManilaDay(value){
+ const ms=new Date(value).getTime();
+ if(!Number.isFinite(ms))return null;
+ return new Date(ms+TT_PHT_OFFSET_MS).toISOString().slice(0,10);
+}
 export function creditedAttendanceMs(start,end){
  const a=new Date(start).getTime(),b=new Date(end).getTime();
  if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a)return 0;

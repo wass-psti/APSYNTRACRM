@@ -138,7 +138,7 @@ test('app makes one write attempt and reconciles ambiguous clock-out without aut
  assert.equal((submit.match(/timeTracker\.commit\(/g)||[]).length,1);
  assert.match(submit,/const geo=await captureAttendanceGeo/);
  assert.match(submit,/if\(commitAttempted\)/);
- assert.match(submit,/state\.ttClockPending=context/);
+ assert.match(submit,/rememberTimeTrackerClockPending\(\{\.\.\.context,receiptVerified:false\}\)/);
  assert.match(submit,/reconcileTimeTrackerClock\(snapshot\)/);
  assert.match(app,/async function verifyTimeTrackerAttendance\(\)/);
  assert.match(app,/case 'tt-clock-verify'/);
