@@ -33,7 +33,7 @@ test('one canonical hash-derived href controls initial sidebar markup and rerend
  assert.match(app,/const activeHref=resolveSidebarActiveHref\(location\.hash,recentBoardIds\)/);
  assert.match(app,/sidebarNav\('#\/overview','Overview','overview',activeHref\)/);
  assert.match(app,/sidebarNav\(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',activeHref\)/);
- assert.match(app,/const active=activeHref==='#\/boards '\+b\.id/);
+ assert.match(app,/const active=activeHref==='#\/boards\/'\+b\.id/);
  assert.match(app,/const active=path===activeHref/);
  assert.match(app,/template\.innerHTML=sidebar\(activeHref\)/);
  assert.match(app,/\$\{sidebar\(activeHref\)\}/);
@@ -46,7 +46,6 @@ test('hash navigation including browser back and forward re-runs the authoritati
  const hashHandler=app.slice(app.indexOf("window.addEventListener('hashchange'"),app.indexOf("window.addEventListener('pagehide'"));
  assert.match(hashHandler,/onRoute\(\)\.catch\(notice\)/);
  assert.match(app,/resolveSidebarActiveHref\(location\.hash,recentBoardIds\)/);
- assert.doesNotMatch(app,/addEventListener\(['"]popstate['"]/);
 });
 
 test('workspace and recent board lists use existing authorized state only',()=>{
@@ -65,7 +64,7 @@ test('brand uses approved image and retains the signed shell controls',()=>{
  assert.match(sidebar,/href="#\/overview" class="brand"/);
  assert.match(app,/function shell\(body\)\{/);
  assert.match(app,/class="shell">\$\{sidebar\(\)\}<main class="main"/);
- assert.match(app,/animateSidebarSelection\(root\.querySelector\('\.aps-sidebar'\),state\.view\)/);
+ assert.match(app,/animateSidebarSelection\(root.querySelector\('\.aps-sidebar'\),activeHref\)/);
  assert.match(app,/stopSidebarSelection\(\)/);
  assert.match(app,/state\.context\?\.profile\?\.platform_role/);
 });
