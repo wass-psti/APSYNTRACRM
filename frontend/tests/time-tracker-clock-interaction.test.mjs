@@ -43,12 +43,17 @@ function harness({commit=async()=>({action:'clock-out',revision:2,recordId}),
  const functions=new Function('state','render','auth','moduleByBoardName',
   'TT_LIVE_ATTENDANCE_WRITES_ACCEPTED','FormData','captureAttendanceGeo',
   'timeTracker','routeSerial','navigator','attendanceSnapshotOutcome',
-  'attendanceAuthFailure','attendanceClockError',clockSource+
+  'attendanceAuthFailure','attendanceClockError',
+  'rememberTimeTrackerClockPending','clearTimeTrackerClockPending',
+  'restoreTimeTrackerClockPending',clockSource+
   ';return {submitTimeTrackerAction,verifyTimeTrackerAttendance};')(
   state,()=>{updates++;},{isSignedIn:true},
   ()=>({key:'timetracker'}),true,
   class{get(key){return key==='tt-location'?'Office-Base Duty':key==='tt-department'?'HR':null;}},capture,timeTracker,1,{geolocation:{}},
-  attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError
+  attendanceSnapshotOutcome,attendanceAuthFailure,attendanceClockError,
+  context=>{state.ttClockPending=context;},
+  ()=>{state.ttClockPending=null;},
+  ()=>{}
  );
  const form={querySelector:()=>({value:''})};
  return {state,form,...functions,counts:()=>({writes,reads,updates})};
