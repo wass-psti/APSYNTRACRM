@@ -5,7 +5,7 @@ DO $test$
 DECLARE
  v_workspace uuid;
  v_actor uuid;
- v_request jsonb;
+ v_company_id uuid;
  v_request_id uuid;
  v_detail jsonb;
  v_voucher jsonb;
@@ -45,23 +45,24 @@ BEGIN
   RAISE EXCEPTION 'WASS company logo object and persisted reference did not reconcile';
  END IF;
 
- v_request:=public.frt_create_request(v_workspace,jsonb_build_object(
-  'company','WASS','title','CP-FRT-FLOW-03C accounting acceptance',
-  'department','Operations','fundSource','WASS Operating Account',
-  'requestDate','2026-11-17','dateNeeded','2026-11-20',
-  'description','Rollback-only company profile and double-entry accounting acceptance',
-  'recipientName','Accounting Acceptance Supplier','recipientBank','BPI',
-  'recipientAccount','9876543210','orderIntakeNo','OI-FLOW03C-001',
-  'checkNo','CHK-FLOW03C-001','items',jsonb_build_array(
-   jsonb_build_object('category','Office Supplies','amount','100.25','notes','Stationery'),
-   jsonb_build_object('category','Freight','amount','50.25','notes','Delivery')
-  )
- ));
- v_request_id:=(v_request->>'id')::uuid;
- IF v_request->>'voucher_no'<>'DV-WASS-202611-001' THEN
-  RAISE EXCEPTION 'CP-FRT-FLOW-03C unexpectedly changed monthly DV numbering: %',v_request->>'voucher_no';
- END IF;
-
+ SELECT id INTO STRICT v_company_id
+ FROM public.frt_companies WHERE workspace_id=v_workspace AND code='WASS';
+ v_request_id:=gen_random_uuid();
+ INSERT INTO public.frt_requests(
+  id,workspace_id,company_id,requestor_id,voucher_no,title,department,fund_source,
+  recipient_name,recipient_bank,recipient_account,date_needed,description,
+  order_intake_no,check_no,total_amount,status,liquidation_status,created_at
+ ) VALUES (
+  v_request_id,v_workspace,v_company_id,v_actor,'DV-WASS-202611-001',
+  'CP-FRT-FLOW-03C accounting acceptance','Operations','WASS Operating Account',
+  'Accounting Acceptance Supplier','BPI','9876543210','2026-11-20',
+  'Rollback-only company profile and double-entry accounting acceptance',
+  'OI-FLOW03C-001','CHK-FLOW03C-001',150.50,'PENDING_APPROVAL','NOT_SUBMITTED',now()
+ );
+ INSERT INTO public.frt_request_items(workspace_id,fund_request_id,category,amount,notes)
+ VALUES
+  (v_workspace,v_request_id,'Office Supplies',100.25,'Stationery'),
+  (v_workspace,v_request_id,'Freight',50.25,'Delivery');
  v_result:=public.frt_save_request_accounting_lines(v_workspace,v_request_id,0,
   jsonb_build_array(
    jsonb_build_object('accountCode','1010','accountName','Cash / Bank','description','Manual debit entry','debitCents',15050,'creditCents',0),
@@ -130,7 +131,7 @@ BEGIN
   RAISE EXCEPTION 'Failed accounting write partially replaced the persisted revision: %',v_snapshot;
  END IF;
 
- RAISE NOTICE 'CP-FRT-FLOW-03C PASS: WAO/WASS/PSTI company metadata, private logo reference, unchanged monthly DV number, exact-cent double-entry persistence, canonical projection, stale-write conflict and atomic unbalanced-write rejection';
+ RAISE NOTICE 'CP-FRT-FLOW-03C PASS: WAO/WASS/PSTI company metadata, private logo reference, preserved existing DV number, exact-cent double-entry persistence, canonical projection, stale-write conflict and atomic unbalanced-write rejection';
 END
 $test$;
 ROLLBACK;

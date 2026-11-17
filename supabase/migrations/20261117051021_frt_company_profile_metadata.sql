@@ -132,7 +132,7 @@ GRANT EXECUTE ON FUNCTION public.frt_update_company_profile(
 
 -- CP-FRT-FLOW-03: additive voucher projection on the existing signed request-detail RPC.
 -- Keeps the existing signature, membership check, workflow payload, and EXECUTE grants.
--- No new voucher snapshot RPC, table, voucher counter, role, or permission grant is introduced by FLOW-03.
+-- This migration adds only the company-profile RPC grant; it introduces no voucher snapshot RPC, voucher/accounting table, voucher counter, role, or approval tier.
 CREATE OR REPLACE FUNCTION public.frt_restricted_request_detail(
  p_workspace_id uuid,p_request_id uuid
 ) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER

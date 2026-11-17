@@ -38,7 +38,7 @@ const TYPES=new Set(['esi','packing','delivery','payment','quotation','po']);
 const STATES=new Set(['draft','for-approval','submitted','under-review','revision-required',
  'approved','rejected','completed','cancelled','under-negotiation','expired',
  'on-hold','won','lost','delivered','closed']);
-const OPS=new Set(['create','update','archive','restore']);
+const OPS=new Set(['create','update','revise-approved','archive','restore']);
 const deny=(message,status=403)=>{throw new ApiError(message,status);};
 export function validateTradeLinkDraftEnvelope(value,{allowUnassignedNumber=false}={}){
  const unassigned=allowUnassignedNumber===true&&value?.documentNumber==='';
@@ -647,19 +647,20 @@ export class TradeLinkDomainClient{
     (operation==='create'&&expectedRevision!==0)||
     (operation!=='create'&&expectedRevision<1)||
     (['archive','restore'].includes(operation)&&draft!==null)||
-    (['create','update'].includes(operation)&&
+    (['create','update','revise-approved'].includes(operation)&&
      !['draft','for-approval'].includes(initialState))||
     (['archive','restore'].includes(operation)&&
-     !['draft','revision-required'].includes(expectedState)))
+     !['draft','revision-required'].includes(expectedState))||
+    (operation==='revise-approved'&&initialState!=='for-approval'))
    deny('Invalid TradeLink revision, operation or payload.',400);
-  if(operation==='create'||operation==='update')validateTradeLinkDraftEnvelope(draft,
+  if(['create','update','revise-approved'].includes(operation))validateTradeLinkDraftEnvelope(draft,
    {allowUnassignedNumber:operation==='create'&&this.automaticNumberingEnabled});
   await this.session();
   const receipt=operation==='create'&&this.automaticNumberingEnabled?
    await this.api.rpc('tl03_document_create',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
     p_data:draft,p_initial_state:initialState
-   }):['create','update'].includes(operation)?
+   }):['create','update','revise-approved'].includes(operation)?
    await this.api.rpc('tl03_document_save',{
     p_board_id:TRADELINK_BOARD_ID,p_document_id:documentId,
     p_expected_revision:expectedRevision,p_operation:operation,
@@ -670,8 +671,8 @@ export class TradeLinkDomainClient{
   const normalized=normalizeTradeLinkDomainReceipt(
    operation==='create'&&!this.automaticNumberingEnabled&&receipt&&typeof receipt==='object'?
     {...receipt,documentNumber:draft.documentNumber}:receipt,
-   documentId,operation,expectedRevision,
-   operation==='create'||operation==='update'?initialState:expectedState);
+   documentId,operation==='revise-approved'?'update':operation,expectedRevision,
+   ['create','update','revise-approved'].includes(operation)?initialState:expectedState);
   const numberPrefix={esi:'ESI-',packing:'PL-',delivery:'DR-',
    payment:'AR-',quotation:'Q-',po:'PO-'}[draft?.documentType];
   if(operation==='create'&&this.automaticNumberingEnabled&&

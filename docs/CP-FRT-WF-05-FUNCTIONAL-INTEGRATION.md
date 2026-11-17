@@ -26,7 +26,7 @@
 - Existing request creation RPC privileges are preserved by `CREATE OR REPLACE FUNCTION`.
 - No production fund requests, voucher counters, bank executions, liquidations or other financial records are created by acceptance.
 - The monthly-counter migration fails safely if legacy annual counter rows exist; the production counter table was observed empty during read-only inspection.
-- Production migrations have not been applied.
+- Production migrations are applied and readback-verified: archive recovery 20261116104500, monthly voucher/duplicate guard 20261117010000, company profiles 20261117051021, and accounting entries 20261117051040. The latter two were already present under their recorded production versions and were not reapplied.
 
 ## Automated acceptance
 

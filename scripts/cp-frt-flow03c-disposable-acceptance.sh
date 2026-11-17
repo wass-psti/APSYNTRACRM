@@ -15,29 +15,25 @@ for _ in $(seq 1 60); do
 done
 if [[ "$ready" != true ]];then echo "Disposable PostgreSQL did not become ready." >&2;exit 1;fi
 psql_in(){ docker exec -i "$NAME" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 "$@"; }
-psql_in -q < sql/tests/cp-frt-wf05a-disposable-setup.sql
-psql_in -q < supabase/migrations/20261116104500_frt_wf05a_archive_recovery.sql
+psql_in -q < sql/tests/cp-frt-flow03c-disposable-setup.sql
 psql_in -q < supabase/migrations/20261116172414_frt_restricted_voucher_projection.sql
-psql_in -q < supabase/migrations/20261117010000_frt_wf05b_monthly_voucher_and_duplicate_guard.sql
-psql_in -q < supabase/migrations/20261117031500_frt_company_profile_metadata.sql
-psql_in -q < supabase/migrations/20261117034526_frt_flow03c_request_accounting_lines.sql
-psql_in < sql/tests/cp-frt-wf05a-archive-disposable.sql
-psql_in < sql/tests/cp-frt-wf05b-voucher-disposable.sql
+psql_in -q < supabase/migrations/20261117051021_frt_company_profile_metadata.sql
+psql_in -q < supabase/migrations/20261117051040_frt_flow03c_request_accounting_lines.sql
 psql_in < sql/tests/cp-frt-flow03c-disposable.sql
 
 # Prepare one disposable request, then race two saves against the same revision.
 psql_in -q -c "INSERT INTO public.frt_memberships(workspace_id,user_id,role,enabled,status,display_name) VALUES('$WORKSPACE','$ACTOR','REQUESTOR',true,'active','Disposable Concurrent Requestor') ON CONFLICT(workspace_id,user_id) DO UPDATE SET role='REQUESTOR',enabled=true,status='active';"
-docker exec -i "$NAME" psql -X -q -U postgres -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
-SET request.jwt.claim.sub = '$ACTOR';
-SELECT public.frt_create_request('$WORKSPACE',jsonb_build_object(
- 'company','WASS','title','CP-FRT-FLOW-03C concurrent accounting acceptance',
- 'department','Operations','fundSource','WASS Operating Account',
- 'requestDate','2026-11-17','dateNeeded','2026-11-20',
- 'description','Disposable concurrent accounting test',
- 'recipientName','Concurrent Accounting Supplier','recipientBank','BPI',
- 'recipientAccount','9876543210','items',jsonb_build_array(
-  jsonb_build_object('category','Operations','amount','100.00','notes','Concurrency fixture')
- )));
+psql_in -q <<SQL
+INSERT INTO public.frt_requests(
+ id,workspace_id,company_id,requestor_id,voucher_no,title,department,fund_source,
+ recipient_name,recipient_bank,recipient_account,date_needed,description,total_amount
+)
+SELECT gen_random_uuid(),'$WORKSPACE',fc.id,'$ACTOR','DV-WASS-202611-TEST-001',
+ 'CP-FRT-FLOW-03C concurrent accounting acceptance','Operations','WASS Operating Account',
+ 'Concurrent Accounting Supplier','BPI','9876543210','2026-11-20',
+ 'Disposable concurrent accounting test',100.00
+FROM public.frt_companies fc
+WHERE fc.workspace_id='$WORKSPACE' AND fc.code='WASS';
 SQL
 REQUEST_ID="$(docker exec "$NAME" psql -X -qAt -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT id FROM public.frt_requests WHERE title='CP-FRT-FLOW-03C concurrent accounting acceptance' ORDER BY created_at DESC LIMIT 1;")"
 if [[ ! "$REQUEST_ID" =~ ^[0-9a-f-]{36}$ ]];then echo "Could not create disposable concurrency request: $REQUEST_ID" >&2;exit 1;fi

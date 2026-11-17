@@ -29,3 +29,11 @@ Complete the existing Fund Release Tracker Archive Storage interface using the e
 - Disposable PostgreSQL 17 acceptance for archive, list and restore lifecycle.
 - GitHub Actions workflow runs the complete frontend test suite and production build.
 - Migration source checksum is registered in `supabase/migration-source-manifest.json`.
+
+
+## Production activation (CP-FRT-FLOW-03D)
+
+- Migration 20261116104500_frt_wf05a_archive_recovery.sql is applied to the existing production project.
+- frt_archive_list and frt_restore_request were verified in the production schema.
+- The archive index is present; authenticated RPC execution is retained and anonymous execution is denied.
+- No production request or financial record was created, restored, or otherwise modified during migration activation.

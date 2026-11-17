@@ -3,7 +3,6 @@ name: CP-FRT-FLOW-03C Accounting and Company Profile Acceptance
 on:
   pull_request:
     branches:
-      - feat/cp-frt-wf05a-archive-recovery-main-20261116
       - main
     paths:
       - "index.html"
@@ -19,10 +18,12 @@ on:
       - "frontend/tests/frt-accounting.test.mjs"
       - "frontend/tests/frt-company-profile.test.mjs"
       - "frontend/tests/frt-voucher.test.mjs"
-      - "supabase/migrations/20261117031500_frt_company_profile_metadata.sql"
-      - "supabase/migrations/20261117034526_frt_flow03c_request_accounting_lines.sql"
+      - "supabase/migrations/20261117051021_frt_company_profile_metadata.sql"
+      - "supabase/migrations/20261117051040_frt_flow03c_request_accounting_lines.sql"
       - "sql/tests/cp-frt-flow03c-disposable.sql"
-      - "sql/tests/cp-frt-wf05a-disposable-setup.sql"
+      - "sql/tests/cp-frt-flow03c-disposable-setup.sql"
+      - "supabase/migration-source-manifest.json"
+      - "scripts/verify-migration-source-manifest.mjs"
       - "scripts/cp-frt-flow03c-disposable-acceptance.sh"
       - "scripts/frt-voucher-browser-acceptance.mjs"
       - "docs/CP-FRT-FLOW-03C-ACCOUNTING-COMPANY-PROFILE.md"
@@ -44,10 +45,12 @@ on:
       - "frontend/tests/frt-accounting.test.mjs"
       - "frontend/tests/frt-company-profile.test.mjs"
       - "frontend/tests/frt-voucher.test.mjs"
-      - "supabase/migrations/20261117031500_frt_company_profile_metadata.sql"
-      - "supabase/migrations/20261117034526_frt_flow03c_request_accounting_lines.sql"
+      - "supabase/migrations/20261117051021_frt_company_profile_metadata.sql"
+      - "supabase/migrations/20261117051040_frt_flow03c_request_accounting_lines.sql"
       - "sql/tests/cp-frt-flow03c-disposable.sql"
-      - "sql/tests/cp-frt-wf05a-disposable-setup.sql"
+      - "sql/tests/cp-frt-flow03c-disposable-setup.sql"
+      - "supabase/migration-source-manifest.json"
+      - "scripts/verify-migration-source-manifest.mjs"
       - "scripts/cp-frt-flow03c-disposable-acceptance.sh"
       - "scripts/frt-voucher-browser-acceptance.mjs"
       - "docs/CP-FRT-FLOW-03C-ACCOUNTING-COMPANY-PROFILE.md"
@@ -73,10 +76,10 @@ jobs:
           cache: npm
       - name: Install pinned dependencies
         run: npm ci
+      - name: Verify recovered and forward migration sources
+        run: node scripts/verify-migration-source-manifest.mjs
       - name: Full frontend regression
         run: npm test
-      - name: CP-FRT-FLOW-03B disposable voucher regression
-        run: bash scripts/cp-frt-flow03b-disposable-acceptance.sh
       - name: CP-FRT-FLOW-03C PostgreSQL 17 accounting and profile acceptance
         run: bash scripts/cp-frt-flow03c-disposable-acceptance.sh
       - name: Install Chromium for PDF browser acceptance

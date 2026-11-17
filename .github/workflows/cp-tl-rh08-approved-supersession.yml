@@ -1,0 +1,79 @@
+name: CP-TL-RH08 Approved Supersession Disposable Acceptance
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-tl-rh08-approved-supersession.yml'
+      - 'supabase/migrations/*tradelink_approved_revision_flow.sql'
+      - 'sql/tests/cp-tl-rh08-*.sql'
+      - 'frontend/tradelink-domain-client.js'
+      - 'frontend/tradelink-draft-workspace.js'
+      - 'frontend/app.js'
+      - 'frontend/tests/tradelink-approved-supersession.test.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  disposable-supersession:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable_ci_only
+          POSTGRES_DB: tradelink_rh08_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tradelink_rh08_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: tradelink_rh08_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable_ci_only
+      PGCONNECT_TIMEOUT: '5'
+      PGOPTIONS: '-c statement_timeout=30000'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install disposable PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Assert disposable runner identity
+        run: |
+          set -euo pipefail
+          test "$PGDATABASE" = tradelink_rh08_disposable
+          psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_database(), current_setting('server_version_num')::integer >= 170000" | grep -Fx 'tradelink_rh08_disposable|t'
+      - name: Recreate isolated TradeLink existing schema and signed fixtures
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl03-disposable-setup.sql
+          psql -X -v ON_ERROR_STOP=1 -f sql/cp-tl03-staged-domain.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261112091535_tradelink_for_approval_dual_review.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261112093727_tradelink_revision_required_edit_compat.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261113065300_tradelink_retry_safe_revision_bound_updates.sql
+          psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-revision-history-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-rh08-legacy-approved-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261117020000_tradelink_immutable_revision_snapshots.sql
+      - name: Install reviewed migration and verify exact approved supersession
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql
+          psql -X -v ON_ERROR_STOP=1 -f sql/tests/cp-tl-rh08-approved-revision-disposable.sql
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify Approved revision UI and existing API contract
+        run: node --test frontend/tests/tradelink-approved-supersession.test.mjs frontend/tests/tradelink-revision-history.test.mjs
