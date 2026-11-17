@@ -145,5 +145,5 @@ test('wizard styling and modal integration remain scoped to FRT',()=>{
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(app,/enhanceFRTRequestWizard\(modal\)/);
  assert.match(app,/collectFRTWizardRequest\(form\)/);
- assert.match(app,/createSignedFRTRequest/);
+ assert.match(app,/fundTracker\.createRequest\(/);
 });

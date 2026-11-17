@@ -49,3 +49,23 @@ Acceptance: unit tests for projection truthfulness and invalid data, FRT detail 
 ## Next solid implementation
 
 **CP-FRT-WF-02 — Signed Liquidation Breakdown, Source Documents, and Operational Deadline Contract.** Begin by verifying authoritative release/disbursement evidence. Build a bounded, signed liquidation submission/readback with receipt breakdown and server-side guards using existing FRT tables/RPCs; never invent a bank release time. Next follow-on slices can add duplicate detection/draft recovery, signed DV output, archive/audit retrieval, and Order Intake synchronization once their contracts are verified.
+
+
+## 2026-11-17 Native integration reconciliation
+
+This addendum supersedes earlier Pending dispositions where later CRM-native milestones implemented the existing contracts. The original Monday.com labels remain reference-only and do not establish APSYNTRA acceptance.
+
+| Earlier disposition | Current CRM-native evidence | Updated status |
+| --- | --- | --- |
+| Multi-receipt liquidation / three-day deadline | frt-liquidation.js, frt-bank-execution.js, frt_liquidation_aging_company, and CP-FRT-WF-02 workflow | Implemented; live transaction readback still requires genuine records |
+| Balanced editable DV / PDF output | frt-voucher.js, frt-accounting.js, frt-voucher-pdf.js, company profile integration, CP-FRT-FLOW-03C/03D | Implemented; live saved voucher acceptance requires a genuine request |
+| Comments and Activity Log | frt-collaboration.js, frt-collaboration-ui.js, frt_comments, frt_audit_logs | Implemented with scoped signed reads/writes and CSV projection |
+| Archive list and restore | frt-archive.js, frt_archive_list, frt_restore_request | Implemented; live restoration requires a genuine archived record |
+| Duplicate detection and draft recovery | frt-request-draft.js, frt-filing-workflow.js | Implemented with the existing 10-minute duplicate window and 24-hour draft TTL / 10-second save delay |
+| Intercompany ledger | frt-intercompany-client.js, frt_ic_snapshot, frt_ic_create_obligation, frt_ic_record_settlement | Implemented as a separate persisted ledger; live settlement acceptance requires genuine obligations |
+| Generic request-file attachments | Existing frt_attachments / Storage history, but no current CRM-native request attachment UI or adapter operation | Pending |
+| Purchase Order synchronization | No verified native FRT-to-Order Intake contract found in this inventory | Pending |
+
+The recovered standalone v0.5.0 source contains the five navigation screens and request/modal workflows described in CP-FRT-NATIVE-01-FUND-TRACKER-INTEGRATION.md. Its legacy Admin and API compatibility routes are not reintroduced as a second CRM role system. The original Monday.com Board ID 18397563989 and @api/monday-storage are reference provenance only; the current CRM board is the UUID declared by frontend/frt-board-reference.js.
+
+Live production acceptance remains distinct from implementation: the current FRT request, accounting-line, liquidation, and bank-execution tables have no production rows at this inspection. Do not create synthetic financial transactions to satisfy acceptance.

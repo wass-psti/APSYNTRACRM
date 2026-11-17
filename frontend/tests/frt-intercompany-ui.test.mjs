@@ -85,7 +85,7 @@ test('CP-FRT-IC-01 app binds actionable settlement controls and the existing fin
  assert.match(app,/case 'frt-ic-new-obligation'/);
  assert.match(app,/case 'frt-ic-settle'/);
  assert.match(app,/!\/\^\\d\+\(\?:\\.\\d\{1,2\}\)\?\$\//);
- assert.match(app,/recordFRTICSettlement\(\{auth,api:db,workspaceId,obligationId,payload\}\)/);
+ assert.match(app,/fundTracker\.recordIntercompanySettlement\(\{auth,api:db,workspaceId,obligationId,payload\}\)/);
 });
 
 test('CP-FRT-IC-01C transient service failures expose safe signed read recovery',()=>{

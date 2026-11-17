@@ -24,7 +24,9 @@ The existing FRT renderer and domain modules expose the following application su
 - User Manual and operational lifecycle guidance.
 - New Fund Request wizard, draft restoration, duplicate guard, filing state, and request submission.
 - Request detail, lifecycle timeline, finance action review, activity, and audit history.
-- The current Discussion panel is a placeholder: the signed comment/attachment discussion API is not exposed by the current FRT integration, so no messages or attachments are fabricated.
+- Discussion comments are integrated through the existing frt_comments read contract and frt_add_comment write RPC; the host refreshes the persisted thread after posting.
+- Activity Log and CSV export are integrated through bounded frt_audit_logs reads, the authoritative company request list, and the existing audit CSV projection.
+- General request-file attachment upload/download is not yet integrated into the CRM-native request detail UI. The existing frt_attachments/Storage history is not copied into Board cells; receipt-level liquidation records are a separate supported workflow.
 - Company profile metadata and company logo handling.
 - Saved recipients, recipient bank details, and private QR file handling.
 - Disbursement Voucher preview/document projection and PDF generation/reprint.
@@ -33,6 +35,25 @@ The existing FRT renderer and domain modules expose the following application su
 - Receipt-level liquidation submission and readback.
 - Archive listing and request restoration.
 - Intercompany obligations, settlements, and company matrix.
+
+### Recovered standalone source baseline and screen inventory
+
+The preserved Fund Tracker v0.5.0 WatchdogWorkspace integration source was inspected locally. Its source entry points are under Fund-Released-Tracker-main/apps/web/src/:
+
+- App.tsx and FundReleasedTrackerApp.tsx: application shell, company selector, host bootstrap, and navigation.
+- pages/FundTracker.tsx: request register, search, status/liquidation filters, sorting, pagination, KPI strip, and request selection.
+- pages/Executive.tsx: request-status pipeline, financial KPIs, and top expense categories.
+- pages/Opex.tsx: requested-versus-released monthly trend, category breakdown, liquidation exposure, and the original static intercompany placeholder.
+- pages/Manual.tsx: user guidance and the original FRT role/workflow explanation.
+- pages/Admin.tsx: standalone FRT member/role administration through the old API compatibility layer; it is not reintroduced as a second CRM role-management system.
+- components/NewRequest.tsx: department, fund source, recipient, destination bank/account, needed date, purpose, multiple expense categories, and calculated request total.
+- components/RequestModal.tsx: request detail, correction, finance approval/rejection, optional GM verification, revocation, closure/archive actions, supporting-file upload/download, liquidation breakdown, comments, and audit CSV.
+- components/InAppNotifications.tsx: in-app attention notices refreshed from existing request data; no email delivery.
+- lib/api.ts and platform/integration/*: compatibility API mapping to the existing Supabase project and host-provided workspace session.
+
+The standalone v0.5.0 source does not contain the later CRM-native voucher PDF/accounting editor, company-profile/logo editor, saved-recipient/QR service, bank-execution evidence, receipt-level liquidation, or persisted intercompany ledger. Those are existing APSYNTRA CRM enhancements and remain authoritative; they are not replaced by the older standalone components.
+
+The supplied Monday.com Board ID 18397563989 and @api/monday-storage references are not executable integrations in the recovered v0.5.0 source or current CRM repository. The Monday board identifier is retained as reference provenance only. The current CRM application resolves its own board UUID f36da8fe-8d9d-4629-9938-12533cb3ca39 through the frt module marker. No Monday SDK, storage namespace, or external Board ID is used as an APSYNTRA persistence key.
 
 ### Existing lifecycle and business rules
 
@@ -107,7 +128,8 @@ Current signed application contracts:
 - Intercompany: `frt_ic_snapshot`, `frt_ic_create_obligation`, `frt_ic_record_settlement`.
 - Archive: `frt_archive_list`, `frt_restore_request`.
 
-Legacy/core routines retained in the migration history include `frt_list_requests`, `frt_get_request`, `frt_update_request`, `frt_add_comment`, `frt_register_attachment`, `frt_submit_liquidation`, `frt_dashboard`, `frt_companies`, `frt_admin_users`, and `frt_admin_set_role`. They are not the native adapter's safe-read or current workflow entrypoints; the role-management legacy RPC has an explicit revoke/retirement migration. The Discussion placeholder is not wired to the legacy comment/attachment routines.
+Compatibility/legacy routines retained in migration history include frt_list_requests, frt_get_request, frt_update_request, frt_register_attachment, frt_submit_liquidation, frt_dashboard, frt_companies, frt_admin_users, and frt_admin_set_role. They are not substituted for the current signed request, voucher, accounting, liquidation, or company-profile contracts. The current comments adapter intentionally uses frt_add_comment; audit history reads the existing frt_audit_logs table with company/request scoping. The standalone Admin page's legacy frt_admin_* compatibility routes are not reintroduced into CRM role management. General request-file attachment UI remains pending.
+
 
 
 This integration does not add or modify a database object.
@@ -116,12 +138,12 @@ This integration does not add or modify a database object.
 
 Added `frontend/fund-tracker-native.js`.
 
-- `FundTrackerNativeClient.snapshot()` delegates to the existing `loadFRTFinanceReadOnly` domain read.
-- `FundTrackerNativeClient.searchRequests()` delegates to the existing `searchFRTRequestsReadOnly` safe search.
-- The adapter provides the application-facing facade for request creation/filing, request date edits, assignment, domain actions, company profile/logo, recipients, accounting editor mounting, voucher detail, bank execution, liquidation, comments, audit, aging/deadline snapshots, archive/restore, and intercompany ledger operations.
-- The facade injects the existing signed `AuthClient` and `DomainApi` into the established domain modules. Those modules remain authoritative for validation, RPC contracts, mutations, readback, and lifecycle rules.
+- FundTrackerNativeClient.snapshot() delegates to the existing loadFRTFinanceReadOnly domain read.
+- FundTrackerNativeClient.searchRequests() delegates to the existing searchFRTRequestsReadOnly safe search.
+- The adapter is the host controller's single FRT domain API facade for request creation/filing, date edits, assignment, domain actions, company profile/logo, saved recipients, accounting editor mounting, voucher detail, bank execution, liquidation, comments, audit, aging/deadline snapshots, archive/restore, and intercompany operations.
+- frontend/app.js calls the facade for those operations instead of importing the underlying FRT API clients directly. UI renderers and pure presentation helpers remain in their existing modules.
+- The facade injects the existing signed AuthClient and DomainApi into the established domain modules. Those modules remain authoritative for validation, RPC contracts, mutations, readback, and lifecycle rules.
 - Pure accounting, company-profile, workflow, voucher, receipt, bank-execution, and request-detail projections are exported from the adapter.
-- The CRM host no longer imports FRT domain API modules directly for these workflows; UI renderers remain in their existing presentation modules.
 - No second Supabase client, browser-local financial store, duplicate RPC implementation, or new schema is introduced.
 
 ## 4. Renderer
@@ -166,14 +188,74 @@ The adapter and renderer do not introduce a second event bus or independent appl
 - Native adapter composition tests: PASS.
 - Renderer/delegated-action contract tests: PASS.
 - Sidebar, CSS manifest, HTML entry, generated bundle, and Pages smoke asset tests: PASS.
-- Full frontend regression: 2,563 PASS, 0 FAIL.
+- Full frontend regression after syncing latest main: 2,570 PASS, 0 FAIL (pre-facade-refactor baseline; final post-refactor run recorded below).
 - Ordered stylesheet bundle verification: PASS.
 - Production Vite build: PASS.
-- Chromium module-entry acceptance: PASS.
 - Fund Tracker native renderer Chromium acceptance: PASS.
-- Public static-cache browser acceptance: PASS.
-- Existing FRT workflow regression and accounting/company-profile disposable acceptance: PASS.
+- Focused FRT adapter/host-contract regression after facade cutover: 92 PASS, 0 FAIL.
+- GitHub Actions PR-head CI: PASS before latest-main sync; rerun required after branch push.
 - GitHub Pages deployment verification: pending merge and deployment.
 - Genuine signed production runtime acceptance: pending.
 
 No production financial record, accounting entry, company profile, recipient, voucher, liquidation, bank execution, or archive record is created or modified by this integration milestone.
+
+### Current parity gaps carried forward
+
+- General request-file attachments: PENDING. The recovered standalone RequestModal supports file upload/download, while the current CRM renderer explicitly keeps generic attachment upload separate. Receipt-level liquidation items are implemented independently.
+- Purchase Order synchronization: PENDING / UNVERIFIED. No current native FRT-to-Order Intake write contract was established in this inventory.
+- Genuine production request, voucher, accounting, bank-execution, and liquidation readback: PENDING because the live FRT request/accounting/liquidation/bank-execution tables currently contain no production rows. No synthetic financial records are permitted.
+- FRT-specific Admin screen: NOT REINTRODUCED. The old standalone Admin page uses retired compatibility RPCs; existing CRM workspace/role behavior is preserved without a second role system.
+
+
+## 2026-11-17 Source Recovery and Native Adapter Cutover
+
+### Recovered standalone source inventory
+
+The preserved Fund Tracker v0.5.0 WatchdogWorkspace integration source was inspected locally under Fund-Released-Tracker-main/apps/web/src/:
+
+- App.tsx and FundReleasedTrackerApp.tsx: application shell, company selector, host bootstrap, and navigation.
+- pages/FundTracker.tsx: request register, search, status/liquidation filters, sorting, pagination, KPI strip, and request selection.
+- pages/Executive.tsx: request-status pipeline, financial KPIs, and top expense categories.
+- pages/Opex.tsx: requested-versus-released monthly trend, category breakdown, liquidation exposure, and the original static intercompany placeholder.
+- pages/Manual.tsx: user guidance and original FRT role/workflow explanation.
+- pages/Admin.tsx: standalone FRT member/role administration through old API compatibility routes. This screen is not reintroduced as a second CRM role-management system.
+- components/NewRequest.tsx: department, fund source, recipient, destination bank/account, needed date, purpose, multiple expense categories, and calculated request total.
+- components/RequestModal.tsx: request detail, correction, finance approval/rejection, optional GM verification, revocation, closure/archive actions, supporting-file upload/download, liquidation breakdown, comments, and audit CSV.
+- components/InAppNotifications.tsx: in-app attention notices refreshed from existing request data; no email delivery.
+- lib/api.ts and platform/integration/: compatibility API mapping to the existing Supabase project and host-provided workspace session.
+
+The standalone v0.5.0 source does not contain the later CRM-native voucher PDF/accounting editor, company-profile/logo editor, saved-recipient/QR service, bank-execution evidence, receipt-level liquidation, or persisted intercompany ledger. Those later APSYNTRA CRM enhancements remain authoritative and are not replaced by the older standalone components.
+
+The supplied Monday.com Board ID 18397563989 and @api/monday-storage references are not executable integrations in the recovered v0.5.0 source or current CRM repository. The identifier is retained as reference provenance only. The current CRM application resolves its own board UUID f36da8fe-8d9d-4629-9938-12533cb3ca39 through the existing frt module marker. No Monday SDK, storage namespace, or external Board ID is used as an APSYNTRA persistence key.
+
+### Native adapter cutover
+
+The host controller now uses FundTrackerNativeClient as the single FRT domain API facade for:
+
+- Request creation and filing changes.
+- Request date and person-assignment operations.
+- Existing request lifecycle actions.
+- Liquidation reads and submissions.
+- Bank-execution reads and recording.
+- Comments, audit pages, notifications, aging/deadline snapshots, and CSV projection.
+- Archive reads and restoration.
+- Voucher reads and intercompany operations.
+- Company profile/logo operations, saved recipients, and accounting editor mounting.
+
+The host no longer imports the underlying FRT domain API clients directly for these operations. Existing domain modules still own validation, server RPC contracts, persistence, and readback; the adapter only composes them with the existing AuthClient and DomainApi. Existing UI renderers and delegated host event handling remain in place.
+
+### Current parity gaps
+
+- General request-file attachment upload/download: PENDING. The recovered standalone RequestModal supports file upload/download, while the CRM-native request detail UI keeps general attachments separate. Receipt-level liquidation records remain a separate supported workflow.
+- Purchase Order synchronization: PENDING. No verified native FRT-to-Order Intake write contract was established in this inventory.
+- Genuine production request, voucher, accounting, bank-execution, and liquidation readback: PENDING because the live request, accounting-line, liquidation, and bank-execution tables contained no production rows at inspection. No synthetic financial records are permitted.
+- Standalone FRT Admin screen: NOT REINTRODUCED. Existing CRM workspace/role behavior is preserved without a second role system.
+
+### Post-cutover verification
+
+- Focused FRT adapter and host-contract tests: 92 PASS, 0 FAIL.
+- Complete frontend regression: 2,570 PASS, 0 FAIL.
+- Ordered CSS bundle integrity: PASS (53 source stylesheets).
+- Fund Tracker native Chromium acceptance: PASS.
+- Production Vite build: PASS. Existing non-blocking warnings remain for the startup guard script tag and the large bundled entry/PDF chunks.
+- Production deployment and signed production runtime: not yet verified for this branch.

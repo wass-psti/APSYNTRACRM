@@ -163,6 +163,30 @@ test("Fund Tracker route reuses the existing board host, adapter, renderer and d
   ]) assert.ok(app.includes(fragment), fragment);
   assert.equal(app.includes("loadFRTFinanceReadOnly("), false);
   assert.equal(app.includes("searchFRTRequestsReadOnly("), false);
+  for (const call of [
+    "fundTracker.createRequest(", "fundTracker.updateFiling(",
+    "fundTracker.updateRequestDate(", "fundTracker.loadPersonAssignment(",
+    "fundTracker.savePersonAssignment(", "fundTracker.executeAction(",
+    "fundTracker.loadLiquidation(", "fundTracker.submitLiquidation(",
+    "fundTracker.loadBankExecution(", "fundTracker.recordBankExecution(",
+    "fundTracker.loadComments(", "fundTracker.addComment(",
+    "fundTracker.loadAuditPage(", "fundTracker.loadDeadlineSnapshots(",
+    "fundTracker.loadAgingSummary(", "fundTracker.loadArchive(",
+    "fundTracker.restoreRequest(", "fundTracker.loadVoucher(",
+    "fundTracker.loadRequestDetail(", "fundTracker.createIntercompanyObligation(",
+    "fundTracker.recordIntercompanySettlement(", "fundTracker.loadCompanyProfile(",
+    "fundTracker.saveCompanyProfileWithLogo(", "fundTracker.loadCompanyLogoDataUrl(",
+    "fundTracker.mountAccountingEditor(", "fundTracker.recipients",
+  ]) assert.ok(app.includes(call), call);
+  for (const directImport of [
+    "from './frt-filing-workflow.js'", "from './frt-board-date-edit.js'",
+    "from './frt-board-person-assignment.js'", "from './frt-board-domain-actions.js'",
+    "from './frt-liquidation.js'", "from './frt-bank-execution.js'",
+    "from './frt-collaboration.js'", "from './frt-archive.js'",
+    "from './frt-voucher.js'", "from './frt-intercompany-client.js'",
+    "from './frt-recipient-client.js'", "from './frt-finance-workflow.js'",
+    "from './frt-accounting.js'",
+  ]) assert.equal(app.includes(directImport), false, directImport);
 });
 
 test("Fund Tracker application styles are scoped and registered in the generated stylesheet pipeline", () => {

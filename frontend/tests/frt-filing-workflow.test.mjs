@@ -113,8 +113,8 @@ test('existing Finance UI wires New Request and clickable Filed, never privilege
  assert.match(ui,/data-action="frt-filing-toggle"/);
  assert.match(ui,/Not Filed/);
  assert.match(app,/case 'frt-filing-toggle':/);
- assert.match(app,/createSignedFRTRequest/);
- assert.match(app,/updateSignedFRTFiling/);
+ assert.match(app,/fundTracker\.createRequest\(/);
+ assert.match(app,/fundTracker\.updateFiling\(/);
  assert.match(app,/submitLabel:'Submit Fund Request'/);
  assert.doesNotMatch(ui+app,/SUPABASE_SERVICE_ROLE_KEY|supabaseAdminClient/);
 });
