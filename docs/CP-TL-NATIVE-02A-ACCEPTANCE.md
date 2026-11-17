@@ -1,9 +1,9 @@
 # CP-TL-NATIVE-02A — Domain Acceptance, Export Integrity, Board Preview Reconciliation
 
-**Date:** 2026-11-17 (Asia/Manila)  
-**Repository:** `wass-psti/APSYNTRACRM`  
-**Base `main`:** `a111c8790e3d4d098af7e76d289f364331a16851`  
-**Existing Supabase project:** `jtlusodorfnyzgyuewkz`  
+**Date:** 2026-11-17 (Asia/Manila)
+**Repository:** `wass-psti/APSYNTRACRM`
+**Base `main`:** `a111c8790e3d4d098af7e76d289f364331a16851`
+**Existing Supabase project:** `jtlusodorfnyzgyuewkz`
 **Canonical TradeLink Board:** `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88`
 
 ## 1. Board preview discrepancy — root cause and correction
