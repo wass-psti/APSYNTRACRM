@@ -120,7 +120,9 @@ test('SEC14 app clears reports on workspace transitions, signout and stale sessi
  assert.match(app,/case 'security-sec14-readonly'/);
  assert.match(app,/case 'security-sec14-copy'/);
  assert.match(app,/state\.sec14Result=null;state\.sec14RunId\+\+;state\.sec14Busy=false;/);
- assert.match(app,/loadFRTFinanceReadOnly\(\{auth,api:db,companyCode,includeIntercompany/);
+ assert.ok(app.includes("fundTracker.snapshot({companyCode,includeIntercompany:state.frtFinanceView==='opex',searchQuery}"));
+ const adapter=readFileSync(new URL('../fund-tracker-native.js',import.meta.url),'utf8');
+ assert.ok(adapter.includes('return loadFRTFinanceReadOnly({'));
 });
 
 test('SEC14 signed acceptance inspects all authorized companies before marking request detail absent',async()=>{
