@@ -48,6 +48,7 @@ test('legacy Board routes select only their matching standalone application',()=
 test('sidebar uses one route-selected key for primary and recent links, with matching ARIA',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const sidebar=app.slice(app.indexOf('function sidebarNav('),app.indexOf('function shell('));
+ const shell=app.slice(app.indexOf('function shell('),app.indexOf('function animateTabContent('));
  assert.match(sidebar,/const selectedNav=currentSidebarNavigation\(\)/);
  assert.match(sidebar,/const active=key=>selectedNav===key/);
  assert.match(sidebar,/const active=selectedNav==='recent:'\+b\.id/);
@@ -55,6 +56,7 @@ test('sidebar uses one route-selected key for primary and recent links, with mat
  assert.doesNotMatch(sidebar,/location\.hash\.startsWith\(TRADELINK_APPLICATION_ROUTE\+'\/'\)/);
  assert.match(sidebar,/active\('tradelink'\)/);
  assert.match(sidebar,/const selected=active\?' aria-current="page"':''/);
+ assert.match(shell,/if\(active\)link\.setAttribute\('aria-current','page'\);\s*else link\.removeAttribute\('aria-current'\)/);
  assert.doesNotMatch(sidebar,/sidebarNav\([^\n]*,state\.tlStandalone===true\)/);
  const routeHandler=app.slice(app.indexOf('async function onRoute()'),app.indexOf('async function submitRecoveryRequest('));
  assert.match(routeHandler,/state\.ttStandalone=false;state\.frtStandalone=false;state\.tlStandalone=false;state\.fuelTrackStandalone=false/);
