@@ -38,8 +38,11 @@ test('live refresh keeps the board and editing context while signed server reads
  assert.match(refresh,/if\(changed\)deferVisibleBoardContent\(\)/);
  const loader=app.slice(app.indexOf('async function loadBoard('),app.indexOf('/** CP-TL-03D:'));
  assert.match(loader,/if\(canRetainVisibleBoard\(state,/);
- assert.match(loader,/return refreshVisibleBoard\(boardId,tab\)/);
- assert.ok(loader.indexOf('return refreshVisibleBoard(boardId,tab)')<loader.indexOf("state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true"));
+ assert.match(loader,/const retained=await refreshVisibleBoard\(boardId,tab\)/);
+ assert.match(loader,/if\(retained&&tab==='finance'&&moduleByBoardName\(state\.board\?\.board\?\.name\)\?\.key==='frt'\)/);
+ assert.match(loader,/await loadFundTrackerPendingSelection\(boardId,routeSerial\)/);
+ assert.match(loader,/return retained;/);
+ assert.ok(loader.indexOf('return retained;')<loader.indexOf("state.view='board';state.boardId=boardId;state.tab=tab;state.loading=true"));
 });
 test('board patch defers during unsaved editors and keeps the shell, sidebar and search mounted',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
