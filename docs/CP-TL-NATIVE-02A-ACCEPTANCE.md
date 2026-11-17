@@ -8,16 +8,11 @@
 
 ## 1. Board preview discrepancy — root cause and correction
 
-A fresh signed Overview reload continued to show a zero-item TradeLink card. A signed My Boards inspection exposed two active Board rows with the same name in the same workspace:
+The post-deployment signed Overview still resolves the visible TradeLink card to the newer empty Board. Its actual link is `#/boards/d8aeffbf-afea-42ba-bb88-a84cbedf86bf` and it reports zero items. The canonical Board and duplicate are both in the same `Work Management` workspace.
 
-| Board | Status | Created (UTC) | Active items | Member rows | Purpose |
-|---|---|---:|---:|---:|---|
-| `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88` | Active | 2026-10-30 05:40 | 3 | 3 | Canonical TradeLink application Board |
-| `d8aeffbf-afea-42ba-bb88-a84cbedf86bf` | Active | 2026-11-17 03:47 | 0 | 1 | Additional same-name Board |
+A read-only signed-RPC reproduction using the matching CRM profile and its latest active session claim called `public.wm_list_boards` with active status and returned **both** rows: canonical Board `264ca40d-6e4a-4e4f-97e6-3bd77c97cd88` with `member_role=owner` and `item_count=4`, and duplicate Board `d8aeffbf-afea-42ba-bb88-a84cbedf86bf` with `member_role=owner` and `item_count=0`. This establishes that the existing signed Board-list RPC can return the canonical Board for the matching user/session context. It does not establish why the refreshed browser Overview still renders the duplicate.
 
-The post-deployment signed Overview still resolves the visible TradeLink card to the newer empty Board. Its actual link is `#/boards/d8aeffbf-afea-42ba-bb88-a84cbedf86bf` and it reports zero items. The canonical Board has three active items in the same `Work Management` workspace, but it is not present in this browser session's signed Board catalog. The database membership inventory shows three member rows on the canonical Board and one owner row on the newer duplicate; this checkpoint did not independently extract the signed session's user ID to prove the exact membership mismatch.
-
-`frontend/app.js` prefers the canonical TradeLink Board in the six-card Overview preview **only when that Board is already present in the signed Board catalog**. It deliberately does not inject a Board absent from the current signed catalog. The selector is deployed and its selection behavior is unit-tested, but it does **not** resolve this browser session's zero-item card. The signed runtime discrepancy remains **PENDING** until the canonical Board is returned by the existing native Board-list flow or the application's authoritative Board mapping is reconciled without bypassing existing access behavior. No Board membership, workspace scope, role, grant, RLS policy, or authorization behavior was changed.
+`frontend/app.js` contains the deployed `overviewBoardPreview` selector and prefers the canonical Board when it is present in the supplied Board array. The browser's post-deployment DOM still links to the duplicate. The mismatch is therefore **not accepted as fixed**: the remaining root cause is between the signed Board-list response and the browser's actual startup state/render path (for example, the browser's loaded module/runtime or the state passed to Overview). CP-TL-NATIVE-02B must trace the exact response through `db.boards`, `readWorkspaceStartup`, `state.boards`, and the rendered card. Do not inject data outside the signed response, change Board memberships, or alter roles, grants, workspace scope, RLS, or authorization behavior.
 
 ## 2. Domain module and repository taxonomy
 
@@ -35,12 +30,13 @@ No new export backend, PDF issuance endpoint, attachment activation or document 
 
 The existing project was inspected using read-only SQL only. Latest readback:
 
-- 3 active TradeLink documents, all Quotation.
+- 4 active TradeLink documents, all Quotation.
 - Quotation has 1 matching genuine Submit event; the other five document types have no active production documents or matching Submit/Completed event.
-- 16 immutable revision snapshots.
+- 17 immutable revision snapshots.
 - 0 current snapshot mismatches.
 - 0 current document-to-Board mismatches.
-- Production business transition acceptance remains **1/6**. The approved Quotation submission in CP-TL-FINAL-06A is retained; no repeat submission or synthetic production transaction was created.
+- 4 active Board items (16 total rows including 12 archived items).
+- Production business transition acceptance remains **1/6** (one genuine Submit event). The approved Quotation submission in CP-TL-FINAL-06A is retained; no repeat submission or synthetic production transaction was created.
 
 ## 5. Implementation changes
 
