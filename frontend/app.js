@@ -8396,7 +8396,9 @@ async function action(name,button){
      if(resourceId==='tool-traceability'&&
        state.userRoleData.toolTraceabilityWorkspaceAvailable!==true)
        throw new ApiError('Tool Traceability workspace membership is not installed yet.',409);
-     const globalScopeBlocked=!['material-request-hub','toolbox-issues','tool-traceability','fund-released-tracker',...SCOPED_SIX_MODULE_IDS].includes(resourceId)&&workspaceCount>1;
+     const scopedAllowed=['material-request-hub','toolbox-issues','tool-traceability','fund-released-tracker'].includes(resourceId)||
+       (SCOPED_SIX_MODULE_IDS.includes(resourceId)&&state.userRoleData.scopedSixAvailable===true);
+     const globalScopeBlocked=!scopedAllowed&&workspaceCount>1;
      if(globalScopeBlocked&&
          !(resourceId==='fueltrans'&&state.userRoleData.fueltransWorkspaceAvailable===true))
        throw new ApiError('This application role is shared across the user’s active workspaces. It cannot be changed from a single-workspace screen.',409);
