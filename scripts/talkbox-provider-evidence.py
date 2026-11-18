@@ -18,6 +18,7 @@ from urllib.request import Request, urlopen
 BOARD = "18370784140"
 SOURCE_HASH = "fcd0893d2f3e9a4f631a0a160f638b7641c39ab82a1b379e6f8379e3d86b667a"
 MANIFEST_HASH = "ffd63a92a83c2284f7f75d454bcd55eb0fe00c061c482853ade1dc4f825decbf"
+INVENTORY_HASH = "82e4d064ce924d1f6e004104b21a7099cb25e93fb35572f445d4e870f289477e"
 ID_PATTERN = re.compile(r"[1-9][0-9]{0,19}\Z")
 REPOSITORY = Path(__file__).resolve().parents[1]
 
@@ -212,7 +213,10 @@ def run(args):
     if hashlib.sha256(original).hexdigest() != MANIFEST_HASH:
         raise ValueError("Pinned private manifest hash mismatch")
     manifest = json.loads(original)
-    inventory = json.loads(args.inventory.read_text())
+    raw_inventory = args.inventory.read_bytes()
+    if hashlib.sha256(raw_inventory).hexdigest() != INVENTORY_HASH:
+        raise ValueError("Pinned private media inventory hash mismatch")
+    inventory = json.loads(raw_inventory)
     parent_ids, asset_ids = source_ids(manifest, inventory)
     token = os.environ.get("MONDAY_API_TOKEN")
     if not token:
