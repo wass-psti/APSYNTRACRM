@@ -1696,6 +1696,13 @@
       "sha256": "9ec29133aa7cc9f78716643e23ac6c72a75ca23b6216b7a106dbad3e17e36f97"
     },
     {
+      "version": "20261117063614",
+      "name": "frt_company_profile_tax_id",
+      "file": "20261117063614_frt_company_profile_tax_id.sql",
+      "bytes": 4304,
+      "sha256": "170792387a3367a8370370edd200d592f1b93c27ce051b5aa7dbcec08e24a5c6"
+    },
+    {
       "version": "20261117160134",
       "name": "cp_urm_fueltrans_activate01_workspace_role_rpcs",
       "file": "20261117160134_cp_urm_fueltrans_activate01_workspace_role_rpcs.sql",
