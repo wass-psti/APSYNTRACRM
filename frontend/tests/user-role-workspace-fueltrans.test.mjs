@@ -102,3 +102,26 @@ test('candidate backend is workspace-keyed, audited and never mirrors to global 
  assert.match(sql,/apsyntra_role_change_audit/);
  assert.doesNotMatch(sql,/INSERT INTO public\.module_role_assignments|UPDATE public\.module_role_assignments/);
 });
+
+test('FuelTrans role denial explains actual backend contract instead of a generic 403 toast',async()=>{
+ const errors=[
+  ['Invalid or protected FuelTrans role target',/target is protected/],
+  ['User not active in selected workspace',/no longer active/],
+  ['Client-scoped FuelTrans membership requires domain-specific management',/client-managed/],
+  ['CRM administrator access denied for current workspace',/administrator scope/]
+ ];
+ for(const [message,expected] of errors){
+  const client=new UserRoleManagementClient({rpc:async()=>{
+   throw Object.assign(Error(message),{status:403,code:'42501'});
+  }});
+  await assert.rejects(()=>client.setFueltransWorkspaceRole({
+   workspaceId:workspace,userId:target,role:'viewer',enabled:true
+  }),expected);
+ }
+ const denied=new UserRoleManagementClient({rpc:async()=>{
+  throw Object.assign(Error('Arbitrary backend text'),{status:403,code:'42501'});
+ }});
+ await assert.rejects(()=>denied.setFueltransWorkspaceRole({
+  workspaceId:workspace,userId:target,role:'viewer',enabled:true
+ }),/Arbitrary backend text/);
+});

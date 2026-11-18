@@ -1722,6 +1722,13 @@
       "file": "20261118032000_cp_urm_tooltrace_workspace_role_sync.sql",
       "bytes": 5128,
       "sha256": "36b6ffb3f074bf3b68b516a924bcde994f67c2f8d6a31889c4385971a9f92d83"
+    },
+    {
+      "version": "20261118040000",
+      "name": "cp_urm_fueltrans_nonbootstrap_admin_target",
+      "file": "20261118040000_cp_urm_fueltrans_nonbootstrap_admin_target.sql",
+      "bytes": 1367,
+      "sha256": "b5b80660b7b0854388fffdc911979e5052d35f987711d6931fcd75da29b48254"
     }
   ]
 }

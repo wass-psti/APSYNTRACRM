@@ -148,9 +148,28 @@ export class UserRoleManagementClient {
     (expectedUpdatedAt!==null&&
      (typeof expectedUpdatedAt!=='string'||!Number.isFinite(Date.parse(expectedUpdatedAt)))))
    throw Error('Invalid FuelTrans workspace role request');
-  const r=await this.api.rpc('apsyntra_role_fueltrans_workspace_set',{
-   p_workspace_id:workspaceId,p_target_user_id:userId,p_role:role,
-   p_enabled:enabled,p_expected_updated_at:expectedUpdatedAt});
+  let r;
+  try{
+   r=await this.api.rpc('apsyntra_role_fueltrans_workspace_set',{
+    p_workspace_id:workspaceId,p_target_user_id:userId,p_role:role,
+    p_enabled:enabled,p_expected_updated_at:expectedUpdatedAt});
+  }catch(error){
+   // The generic HTTP 403 banner hides the domain's actionable denial.
+   // Surface only the exact known server contracts; never trust arbitrary
+   // response text or relax server-side authority.
+   if(error?.status===403){
+    const reason=String(error.message||'');
+    if(reason==='Invalid or protected FuelTrans role target')
+     throw Error('This FuelTrans role target is protected, is your own account, or is not eligible. Choose another active, non-bootstrap workspace member.',{cause:error});
+    if(reason==='User not active in selected workspace')
+     throw Error('The selected user is no longer active in this workspace. Refresh assignments and select an active member.',{cause:error});
+    if(reason==='Client-scoped FuelTrans membership requires domain-specific management')
+     throw Error('This FuelTrans membership is client-managed. Use its specialized domain role editor.',{cause:error});
+    if(reason==='CRM administrator access denied for current workspace')
+     throw Error('Your CRM administrator scope is no longer active in this workspace. Refresh the workspace and your role.',{cause:error});
+   }
+   throw error;
+  }
   if(r?.effective!==true||r.workspaceId!==workspaceId||r.targetUserId!==userId||
      r.scope!=='module'||r.resourceId!=='fueltrans'||
      r.after?.role!==role||r.after?.enabled!==enabled)
