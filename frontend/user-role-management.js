@@ -115,7 +115,7 @@ export class UserRoleManagementClient {
      (a.updatedAt===null||Number.isFinite(Date.parse(a.updatedAt))))))
    throw Error('Invalid workspace Fund Tracker role snapshot');
   const frtWorkspaceAvailable=frtWorkspace!==null;
-  const scopedFrt=frtWorkspace?.assignments||[];
+  const scopedFrt=(frtWorkspace?.assignments||[]).map(a=>({...a,scopedSource:true}));
   const frtOverriddenUsers=new Set(scopedFrt.map(a=>a.userId));
   const toolTraceabilityWorkspaceAvailable=tooltraceWorkspace!==null;
   const fueltransWorkspaceAvailable=fueltransWorkspace!==null;
