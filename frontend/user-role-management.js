@@ -31,7 +31,7 @@ export const FUELTRANS_WORKSPACE_ROLES=Object.freeze([
 const delegatedModules=new Set(['time-tracker','fueltrack-plus','tradelink','fund-released-tracker','tool-traceability','material-request-hub','toolbox-issues']);
 export class UserRoleManagementClient {
  constructor(api){this.api=api;}
- async snapshot(workspaceId,{includeFuelTrans=false}={}){
+ async snapshot(workspaceId,{includeFuelTrans=false,includeFundTracker=false}={}){
   if(!UUID.test(workspaceId||''))throw Error('Invalid workspace');
   // Always verify the existing server-authorized workspace snapshot first. New optional
   // RPC availability must never bypass the central CRM Administrator scope guard.
@@ -97,19 +97,43 @@ export class UserRoleManagementClient {
     typeof a.enabled==='boolean'&&
     (a.updatedAt===null||Number.isFinite(Date.parse(a.updatedAt))))))
    throw Error('Invalid authoritative Tool Traceability workspace membership response');
+  let frtWorkspace=null;
+  if(includeFundTracker){
+   try{
+    frtWorkspace=await this.api.rpc('apsyntra_role_frt_workspace_snapshot',{
+     p_workspace_id:workspaceId});
+   }catch(error){
+    if(!(error?.status===404&&error?.code==='PGRST202'))throw error;
+   }
+  }
+  if(frtWorkspace!==null&&(
+    frtWorkspace.contract!=='cp-urm-frt-workspace-v1'||
+    frtWorkspace.workspaceId!==workspaceId||
+    !Array.isArray(frtWorkspace.assignments)||
+    !frtWorkspace.assignments.every(a=>UUID.test(a.userId||'')&&
+     a.moduleId==='fund-released-tracker'&&
+     MODULE_ROLE_OPTIONS['fund-released-tracker'].includes(a.role)&&
+     typeof a.enabled==='boolean'&&
+     (a.updatedAt===null||Number.isFinite(Date.parse(a.updatedAt))))))
+   throw Error('Invalid workspace Fund Tracker role snapshot');
+  const frtWorkspaceAvailable=frtWorkspace!==null;
+  const scopedFrt=(frtWorkspace?.assignments||[]).map(a=>({...a,scopedSource:true}));
+  const frtOverriddenUsers=new Set(scopedFrt.map(a=>a.userId));
   const toolTraceabilityWorkspaceAvailable=tooltraceWorkspace!==null;
   const fueltransWorkspaceAvailable=fueltransWorkspace!==null;
   const scoped=fueltransWorkspace?.assignments||[];
   const moduleAssignments=[
    ...d.moduleAssignments.filter(a=>
     !(fueltransWorkspaceAvailable&&a.moduleId==='fueltrans')&&
-    !(toolTraceabilityWorkspaceAvailable&&a.moduleId==='tool-traceability')),
+    !(toolTraceabilityWorkspaceAvailable&&a.moduleId==='tool-traceability')&&
+    !(frtWorkspaceAvailable&&a.moduleId==='fund-released-tracker'&&frtOverriddenUsers.has(a.userId))),
    ...(fueltransWorkspaceAvailable?scoped:[]),
-   ...(toolTraceabilityWorkspaceAvailable?tooltraceWorkspace.assignments:[])
+   ...(toolTraceabilityWorkspaceAvailable?tooltraceWorkspace.assignments:[]),
+   ...scopedFrt
   ];
   return {...d,...scopeMetadata,moduleAssignments,crmPlatformRoles:crm.roles,
    crmPlatformUnavailable:false,fueltransWorkspaceAvailable,
-   toolTraceabilityWorkspaceAvailable};
+   toolTraceabilityWorkspaceAvailable,frtWorkspaceAvailable};
  }
  async mutate({workspaceId,userId,scope,resourceId,role,enabled,expectedUpdatedAt=null}){
   if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
@@ -125,6 +149,22 @@ export class UserRoleManagementClient {
   if(r?.effective!==true||r.workspaceId!==workspaceId||r.targetUserId!==userId||
     r.scope!==scope||r.resourceId!==resourceId)throw Error('Backend role change acknowledgement invalid');
   return r;
+ }
+ async setFrtWorkspaceRole({workspaceId,userId,role,enabled,expectedUpdatedAt=null}){
+  if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
+    !MODULE_ROLE_OPTIONS['fund-released-tracker'].includes(role)||
+    typeof enabled!=='boolean'||
+    (expectedUpdatedAt!==null&&
+     (typeof expectedUpdatedAt!=='string'||!Number.isFinite(Date.parse(expectedUpdatedAt)))))
+   throw Error('Invalid Fund Tracker workspace role request');
+  const result=await this.api.rpc('apsyntra_role_frt_workspace_set',{
+   p_workspace_id:workspaceId,p_target_user_id:userId,p_role:role,
+   p_enabled:enabled,p_expected_updated_at:expectedUpdatedAt});
+  if(result?.effective!==true||result.workspaceId!==workspaceId||
+     result.targetUserId!==userId||result.moduleId!=='fund-released-tracker'||
+     result.role!==role||result.enabled!==enabled)
+   throw Error('Invalid Fund Tracker role acknowledgement');
+  return result;
  }
  async setToolTraceabilityWorkspaceRole({workspaceId,userId,role,enabled,expectedUpdatedAt=null}){
   if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
@@ -339,20 +379,24 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const a=data.moduleAssignments.find(x=>x.userId===u.id&&x.moduleId===id);
   const fueltransScoped=id==='fueltrans'&&data.fueltransWorkspaceAvailable===true;
   const opt=fueltransScoped?FUELTRANS_WORKSPACE_ROLES:(MODULE_ROLE_OPTIONS[id]||[]);
+  const frtScoped=id==='fund-released-tracker'&&data.frtWorkspaceAvailable===true;
   const status=a?.enabled?'Active: '+a.role:a?'Disabled: '+a.role:'Unassigned';
   const note=fueltransScoped?'Workspace FuelTrans membership':
    id==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable?'Workspace Tool Traceability membership':
+   frtScoped?'Workspace Fund Tracker membership':
    delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
   const tooltraceScoped=id==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable===true;
-  const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues'||fueltransScoped||tooltraceScoped;
+  const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues'||fueltransScoped||tooltraceScoped||frtScoped;
   const editBlocked=locked||!opt.length||(id==='fueltrans'&&!fueltransScoped)||
    (id==='tool-traceability'&&!tooltraceScoped)||
+   (id==='fund-released-tracker'&&!frtScoped)||
    (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
   const editReason=busy?'Another role change is in progress.':
    id==='fueltrans'&&!fueltransScoped?'FuelTrans workspace membership backend is not activated.':
    id==='tool-traceability'&&!tooltraceScoped?'Tool Traceability workspace membership backend is not activated.':
+   id==='fund-released-tracker'&&!frtScoped?'Fund Tracker workspace membership backend is not activated.':
    fueltransScoped&&a?.clientManaged===true?'Client-specific FuelTrans membership requires its domain assignment editor.':
    u.protected?'Protected administrator accounts cannot be modified.':
    isSelf?'Self-assignment is not permitted.':
@@ -362,6 +406,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    id==='material-request-hub'&&!data.workspaceScopedMrhAvailable?'Workspace-scoped Material Request Hub role management is not verified.':'';
   const revokeBlocked=locked||(id==='fueltrans'&&!fueltransScoped)||
    (id==='tool-traceability'&&!tooltraceScoped)||
+   (id==='fund-released-tracker'&&!frtScoped)||
    (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);

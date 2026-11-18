@@ -70,7 +70,7 @@ test('batch writes are directed through existing checked RPC; no new privileges 
  assert.match(block,/planUserRoleBatch\(snapshot/);
  assert.match(block,/auth\.getVerifiedUser\(\)/);
  assert.match(block,/roleConfig\.adminVerified\(\)/);
- assert.match(block,/userRoleManager\.snapshot\(ctx\.workspace_id,\{includeFuelTrans:resourceId==='fueltrans'\}\)/);
+ assert.match(block,/userRoleManager\.snapshot\(ctx\.workspace_id,\{includeFuelTrans:resourceId==='fueltrans',includeFundTracker:resourceId==='fund-released-tracker'\}\)/);
  assert.match(block,/userRoleManager\.mutate\(\{workspaceId:ctx\.workspace_id,\.\.\.op\}\)/);
  assert.match(block,/expectedUpdatedAt/);
  assert.match(block,/if\(failed\)/);

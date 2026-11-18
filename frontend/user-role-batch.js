@@ -25,8 +25,10 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
   if(scope==='module'){
    if(!Number.isInteger(user.activeWorkspaceCount)||user.activeWorkspaceCount<1)
     throw Error('Unverified workspace membership for '+user.email);
-   if(!['material-request-hub','fueltrans','toolbox-issues','tool-traceability'].includes(resourceId)&&user.activeWorkspaceCount!==1)
+   if(!['material-request-hub','fueltrans','toolbox-issues','tool-traceability','fund-released-tracker'].includes(resourceId)&&user.activeWorkspaceCount!==1)
     throw Error('Global application role is not workspace-isolated for '+user.email);
+   if(resourceId==='fund-released-tracker'&&data.frtWorkspaceAvailable!==true)
+    throw Error('Workspace-scoped Fund Tracker role management is unavailable');
    if(resourceId==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable!==true)
     throw Error('Workspace-scoped Tool Traceability role management is unavailable');
    if(resourceId==='material-request-hub'&&data.workspaceScopedMrhAvailable!==true)
