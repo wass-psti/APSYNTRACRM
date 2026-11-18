@@ -200,7 +200,7 @@ import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-c
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
-import {planUserRoleBatch} from './user-role-batch.js';
+import {planUserRoleBatch,unverifiedBatchRoleAssignments} from './user-role-batch.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
@@ -8216,7 +8216,7 @@ async function action(name,button){
       !(await roleConfig.adminVerified()))
      throw new ApiError('Verified CRM Administrator and workspace are required.',403);
     state.userRoleBusy=true;
-    let completed=0,failed=null;
+    let completed=0,failed=null,verifiedReadback=false;
     try{
      const current=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:resourceId==='fueltrans'});
      const refreshed=planUserRoleBatch(current,{userIds:selectedIds,
@@ -8237,8 +8237,14 @@ async function action(name,button){
       }catch(err){failed=err;break;}
      }
     }finally{
-     try{await loadUserRoleManagement();}catch(err){state.userRoleError=errorMessage(err);}
+     try{await loadUserRoleManagement();verifiedReadback=true;}
+     catch(err){state.userRoleError=errorMessage(err);}
      state.userRoleBusy=false;render();
+    }
+    if(!failed&&(!verifiedReadback||
+       unverifiedBatchRoleAssignments(state.userRoleData,plan.operations).length>0)){
+     hideModal();
+     throw new ApiError('The role writes returned success, but refreshed assignment readback could not confirm every target. Review current assignments before retrying.',409);
     }
     if(failed){
      // Prevent a second click from accidentally reissuing successful writes.

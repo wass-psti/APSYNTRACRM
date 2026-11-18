@@ -25,7 +25,7 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
   if(scope==='module'){
    if(!Number.isInteger(user.activeWorkspaceCount)||user.activeWorkspaceCount<1)
     throw Error('Unverified workspace membership for '+user.email);
-   if(!['material-request-hub','fueltrans'].includes(resourceId)&&user.activeWorkspaceCount!==1)
+   if(!['material-request-hub','fueltrans','toolbox-issues'].includes(resourceId)&&user.activeWorkspaceCount!==1)
     throw Error('Global application role is not workspace-isolated for '+user.email);
    if(resourceId==='material-request-hub'&&data.workspaceScopedMrhAvailable!==true)
     throw Error('Workspace-scoped Material Request Hub role management is unavailable');
@@ -37,8 +37,6 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
    a.userId===userId&&(scope==='module'?a.moduleId:a.boardId)===resourceId);
   if(scope==='board'&&record?.role==='owner')
    throw Error('Protected board owner cannot be modified: '+user.email);
-  if(scope==='module'&&resourceId==='toolbox-issues'&&enabled&&!record?.enabled)
-   throw Error('Existing Toolbox Issues source membership required: '+user.email);
   const isActive=scope==='board'?Boolean(record):Boolean(record?.enabled);
   if(!enabled&&!isActive){unchanged.push(userId);continue;}
   if(enabled&&isActive&&record.role===role){unchanged.push(userId);continue;}
@@ -47,4 +45,22 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
  }
  return Object.freeze({operations:Object.freeze(operations),unchanged:Object.freeze(unchanged),
   selectedCount:users.length});
+}
+
+/** Post-write receipt reconciliation; checks only authoritative snapshot records.
+ * It does not infer effective permissions from a successful RPC acknowledgement.
+ */
+export function unverifiedBatchRoleAssignments(snapshot,operations){
+ if(!snapshot||!Array.isArray(snapshot.moduleAssignments)||
+   !Array.isArray(snapshot.boardAssignments)||!Array.isArray(operations))
+  throw Error('Authoritative role readback unavailable');
+ return operations.filter(op=>{
+  const assignment=(op.scope==='module'?snapshot.moduleAssignments:snapshot.boardAssignments)
+   .find(row=>row.userId===op.userId&&
+     (op.scope==='module'?row.moduleId:row.boardId)===op.resourceId);
+  return op.enabled?
+   (!assignment||assignment.role!==op.role||
+    (op.scope==='module'&&assignment.enabled!==true)):
+   (op.scope==='board'?Boolean(assignment):Boolean(assignment?.enabled));
+ }).map(op=>op.userId);
 }
