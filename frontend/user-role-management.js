@@ -438,7 +438,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const editBlocked=locked||!opt.length||(id==='fueltrans'&&!fueltransScoped)||
    (id==='tool-traceability'&&!tooltraceScoped)||
    (id==='fund-released-tracker'&&!frtScoped)||
-   (SCOPED_SIX_MODULE_IDS.includes(id)&&!sixScoped)||
+
    (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
@@ -446,7 +446,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    id==='fueltrans'&&!fueltransScoped?'FuelTrans workspace membership backend is not activated.':
    id==='tool-traceability'&&!tooltraceScoped?'Tool Traceability workspace membership backend is not activated.':
    id==='fund-released-tracker'&&!frtScoped?'Fund Tracker workspace membership backend is not activated.':
-   SCOPED_SIX_MODULE_IDS.includes(id)&&!sixScoped?'Workspace application-role backend is not activated.':
+
    fueltransScoped&&a?.clientManaged===true?'Client-specific FuelTrans membership requires its domain assignment editor.':
    u.protected?'Protected administrator accounts cannot be modified.':
    isSelf?'Self-assignment is not permitted.':
