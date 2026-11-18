@@ -4498,7 +4498,14 @@ async function onRoute(){
   return;
  }
  if(parts[0]==='boards'&&validUuid(parts[1])){
-  if(parts[1]===TRADELINK_BOARD_ID){
+  const legacyTalkBox=state.boards.find(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='toolbox');
+  if(legacyTalkBox){
+   const target=parts[2]==='talkbox'&&parts[3]&&/^[1-9][0-9]{0,18}$/.test(parts[3])?
+    TALKBOX_APPLICATION_ROUTE+'/issue/'+parts[3]:TALKBOX_APPLICATION_ROUTE;
+   history.replaceState(null,'',location.pathname+location.search+target);
+   return onRoute();
+  }
+ if(parts[1]===TRADELINK_BOARD_ID){
    const legacy=parts[2]==='tradelink'?parts.slice(3):[];
    const canonical=legacy.length?tradeLinkApplicationHref(legacy.join('/')):
     tradeLinkApplicationHref('drafts/quotation');
