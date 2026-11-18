@@ -616,3 +616,54 @@ test('CP-BIMP column-capacity: 31-entry atomic import persists all 30 destinatio
  assert.equal(refreshed.values.length,30);
  assert.equal(refreshed.values.at(-1).value,'complete-value-30');
 });
+
+
+test('CP-BIMP-SOURCE-CELL-CHAR-LIMIT-03 m143-v2 persists and reads back all 65,536 Subitems characters',async()=>{
+ const subitemsColumn='77777777-7777-4777-8777-777777777777';
+ const prefix='[Qty: 1] - SIMATIC S7 Memory Card, 12 MB SIMATIC S7, memory cards for S7-1x00 CPU/SINAMICS, 3, 3';
+ const source=prefix+'x'.repeat(65536-prefix.length);
+ assert.equal(source.length,65536);
+ const detail={board:{id:boardId,name:'TradeLink Source Cell QA',workspace_id:workspace,
+  status:'active',updated_at:'2026-11-18T00:00:00.000Z'},
+  groups:[{id:groupId,title:'QA'}],columns:[{id:subitemsColumn,name:'Subitems',
+   data_type:'long_text',column_key:'custom:subitems',system_key:null,config:{}}],
+  items:[],values:[]};
+ const sheet={name:'tradelink',worksheet:'tradelink',headers:['Item','Subitems'],
+  rows:[['Part 28',source]],rowNumbers:[28]};
+ const mappings=initialImportMappings(sheet,detail,{extendedReferences:true});
+ const group={action:'existing',groupId},matches={behavior:'add-new',matchColumnId:'item'};
+ const approvedPlan=buildImportPlan({sheet,detail,mappings,group,matches,extendedReferences:true});
+ assert.equal(approvedPlan.payload.contract,'m143-v2');
+ assert.equal(approvedPlan.payload.mappings.length,2);
+ assert.equal(approvedPlan.payload.rows[0].values.Subitems.__aps_extended_ref_v1,source);
+ assert.equal(approvedPlan.readback.rows[0].values.Subitems,source);
+ let current=structuredClone(detail),writes=0;
+ const api={
+  context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async()=>true,
+  board:async()=>structuredClone(current),
+  rpc:async(name,args)=>{
+   if(name==='wm_board_ui_read')return {board_id:boardId};
+   assert.equal(name,'wm_import_board_wizard_extended_atomic');
+   writes++;
+   assert.equal(args.p_payload.contract,'m143-v2');
+   assert.equal(args.p_payload.rows[0].values.Subitems.__aps_extended_ref_v1,source);
+   const itemId='88888888-8888-4888-8888-888888888888';
+   current.items.push({id:itemId,board_id:boardId,group_id:groupId,title:'Part 28',
+    archived_at:null,updated_at:current.board.updated_at});
+   current.values.push({item_id:itemId,column_id:subitemsColumn,value:source});
+   current.board.updated_at='2026-11-18T00:00:01.000Z';
+   return {created:1,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};
+  }
+ };
+ const receipt=await executeBoardImportBatched({api,auth,detail,sheet,mappings,group,
+  matches,extendedReferences:true,approvedPlan});
+ assert.equal(writes,1);
+ assert.equal(receipt.created,1);
+ assert.equal(receipt.rowsProcessed,1);
+ assert.equal(current.values[0].value.length,65536);
+ assert.equal(current.values[0].value,source);
+ const refreshed=await api.board(boardId);
+ assert.equal(refreshed.values[0].value.length,65536);
+ assert.equal(refreshed.values[0].value,source);
+});

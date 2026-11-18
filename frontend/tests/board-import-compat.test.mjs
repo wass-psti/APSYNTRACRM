@@ -80,10 +80,11 @@ function workbookEntries(){
  ];
 }
 
-function tradeLinkRichTextEntries({sharedStrings=false}={}){
+function tradeLinkRichTextEntries({sharedStrings=false,displayLength=0}={}){
  const entries=workbookEntries();
- const base='[Qty: 1] - SIMATIC S7 Memory Card, 12 MB SIMATIC S7, memory cards for S7-1x00 CPU/SINAMICS, 3, 3'+
-  ' specification'.repeat(400);
+ const prefix='[Qty: 1] - SIMATIC S7 Memory Card, 12 MB SIMATIC S7, memory cards for S7-1x00 CPU/SINAMICS, 3, 3';
+ const base=displayLength?prefix+'x'.repeat(displayLength-prefix.length):
+  prefix+' specification'.repeat(400);
  const richRuns=base.match(/.{1,80}/g).map(value=>
   '<r><t xml:space="preserve">'+value+'</t></r>').join('');
  // Phonetic runs are presentation hints, not part of the cell's displayed
@@ -625,4 +626,19 @@ test('CP-BIMP column-capacity: XLSX with 40 source columns maps Item plus 30 des
  assert.equal(Object.keys(plan.payload.rows[0].values).length,30);
  assert.equal(plan.payload.rows[0].values['Destination 30'],'xlsx-value-30');
  assert.equal(Object.keys(plan.payload.rows[0].values).some(key=>excluded.includes(key)),false);
+});
+
+
+test('CP-BIMP-SOURCE-CELL-CHAR-LIMIT-03 XLSX TradeLink B28 accepts exactly 65,536 displayed characters while excluding larger phonetic annotations',async()=>{
+ const {entries,base}=tradeLinkRichTextEntries({displayLength:65536});
+ assert.equal(base.length,65536);
+ for(const sharedStrings of [false,true]){
+  const fixture=tradeLinkRichTextEntries({sharedStrings,displayLength:65536});
+  const parsed=await parseWithFixtureDom(makeZip(fixture.entries));
+  const sheet=parsed.sheets[0];
+  assert.equal(sheet.name,'tradelink');
+  assert.deepEqual(sheet.rowNumbers,[28]);
+  assert.equal(sheet.rows[0][1].length,65536);
+  assert.equal(sheet.rows[0][1],base);
+ }
 });
