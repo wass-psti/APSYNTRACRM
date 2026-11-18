@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {MODULE_ROLE_OPTIONS,UserRoleManagementClient,renderUserRoleManagement} from '../user-role-management.js';
+import {MODULE_ROLE_OPTIONS,UserRoleManagementClient,renderUserRoleManagement,effectiveModuleRoleLabel,defaultModuleRoleForAssignment} from '../user-role-management.js';
 import {planUserRoleBatch} from '../user-role-batch.js';
 
 const workspace='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -77,4 +77,23 @@ test('migration preserves domain and bootstrap checks, and syncs TimeTracker dir
  assert.match(source,/apsyntra_crm_my_effective_access/);
  assert.match(source,/wm_auth_access_context/);
  assert.doesNotMatch(source,/DISABLE ROW LEVEL SECURITY|TRUNCATE|DROP POLICY/i);
+});
+
+test('unsupported legacy Charter role is shown as ineffective and never offered for revoke',()=>{
+ const legacy={userId:member,moduleId:'charter-navigator',role:'Employee',enabled:true,updatedAt};
+ const html=renderUserRoleManagement({verified:true,
+  data:{...base,charterWorkspaceAvailable:true,moduleAssignments:[legacy]},
+  selectedUserId:member,actorUserId:actor});
+ const row=html.match(/<tr><td><strong>Charter Navigator<\/strong><\/td>[\s\S]*?<\/tr>/)?.[0]||'';
+ assert.match(row,/Unsupported legacy role: Employee \(not effective\)/);
+ assert.match(row,/data-action="user-role-edit-module"[^>]*data-resource="charter-navigator"/);
+ assert.doesNotMatch(row,/data-action="user-role-revoke-module"/);
+ assert.equal(effectiveModuleRoleLabel(legacy,MODULE_ROLE_OPTIONS['charter-navigator']),
+  'Unsupported legacy role: Employee (not effective)');
+ assert.equal(defaultModuleRoleForAssignment('charter-navigator',legacy,
+  MODULE_ROLE_OPTIONS['charter-navigator']),'user');
+ assert.equal(defaultModuleRoleForAssignment('charter-navigator',
+  {...legacy,role:'admin'},MODULE_ROLE_OPTIONS['charter-navigator']),'admin');
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/defaultModuleRoleForAssignment\(resourceId,record,options\)/);
 });
