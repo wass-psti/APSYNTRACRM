@@ -34,6 +34,11 @@
 .aps-import-proposed{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .aps-import-proposed label{font-size:11px}
 .aps-import-permission{margin:22px 0;padding:17px;border:1px solid #4571ad;background:#142033;border-radius:9px}
+.aps-import-capacity{margin:16px 0;padding:14px;border:1px solid #4571ad;background:#142033;border-radius:9px}
+.aps-import-capacity h3{margin:0 0 6px;font-size:15px}
+.aps-import-capacity p{font-size:12px;color:#b9c6d5;line-height:1.5;overflow-wrap:anywhere;margin:6px 0}
+.aps-import-capacity-warning{padding:10px 12px;border:1px solid #d4a347;border-radius:7px;background:#302619;color:#f2dbb7}
+.aps-import-capacity button{margin-top:8px}
 .aps-import-permission h3,.aps-import-summary h3{margin:0 0 6px;font-size:16px}
 .aps-import-permission p,.aps-import-summary p{font-size:13px;color:#b9c6d5;overflow-wrap:anywhere}
 .aps-import-choice{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}

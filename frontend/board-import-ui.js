@@ -8,7 +8,7 @@ import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
 import {importMappingReadiness,skipPendingImportChoice,
  matchConfiguredImportChoice,reassignImportItemMapping} from './board-import-readiness.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
- buildImportPlan,reviewImportSourceRows} from './board-import-core.js';
+ buildImportPlan,reviewImportSourceRows,importMappingCapacity} from './board-import-core.js';
 import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize} from './board-import-batches.js';
 import {readImportRecovery,clearImportRecovery,sealImportRecovery,
  importDigest,verifyImportRecovery} from './board-import-durable.js';
@@ -45,6 +45,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
  const sheet=()=>state.file?.sheets[state.sheet];
  const missing=()=>state.mappings.filter(m=>m.action==='create');
  const readiness=()=>importMappingReadiness(state.mappings,state.allowColumns);
+ const mappingCapacity=()=>importMappingCapacity({detail,mappings:state.mappings,
+  extendedReferences:state.extendedReferences});
  const group=()=>state.group==='create'?
   {action:'create',name:state.groupName}:
   {action:'existing',groupId:state.group};
@@ -198,10 +200,23 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
     detectMondayCheckboxMarkers(s,m.source);
   });
   const gate=readiness(),choicePending=gate.pendingChoices,pendingSkips=gate.pendingSkips;
+  const capacity=mappingCapacity();
+  const capacityInfo='<div class="aps-import-capacity" role="status" aria-live="polite">'+
+   '<h3>Import column capacity</h3><p>Active source mappings: '+capacity.activeMappings+' / '+
+   capacity.maxActiveMappings+' (including Item). Board columns: '+capacity.physicalColumns+' / '+
+   capacity.maxPhysicalColumns+'. New columns selected: '+capacity.proposedNewColumns+
+   '; available slots: '+capacity.availableNewColumns+'.</p>'+
+   (capacity.overflowCount?'<p class="aps-import-capacity-warning">'+capacity.overflowCount+
+    ' mapping'+(capacity.overflowCount===1?' exceeds':'s exceed')+
+    ' the atomic import or remaining Board-column capacity. Map compatible source fields to existing destinations, or explicitly exclude fields that should not be imported. Import is blocked until the mapping fits.</p>'+    (capacity.canBulkExclude?'<p>Excess new columns: '+capacity.overflowCandidates.map(entry=>esc(entry.source)).join(', ')+
+     '</p><button type="button" class="secondary" data-imp-capacity-exclude>Confirm exclude these '+
+     capacity.overflowCount+' excess source columns</button>':''):
+    '<p>'+capacity.remainingNewColumns+' additional Board column slot'+
+    (capacity.remainingNewColumns===1?'':'s')+' remain.</p>')+'</div>';
   const skippedChoices=state.mappings.filter(m=>m.action==='skip'&&
    (m.type==='status'||m.type==='dropdown'));
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
-   '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+
+   '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+capacityInfo+
    sourceInfo+formulaWarningInfo+formulaAcknowledgement+omittedRowsAcknowledgement+
    '<div class="aps-import-controls">'+(state.file.sheets.length>1?'<label>Worksheet<select name="imp-sheet" data-imp-sheet>'+state.file.sheets.map((x,i)=>choice(i,x.name,i===state.sheet)).join('')+'</select></label>':'')+'<label>Add items to<select name="imp-group" data-imp-group>'+groupChoices+
    '</select></label>'+(state.group==='create'?'<label>New group name<input name="imp-group-name" maxlength="120" data-imp-group-name value="'+esc(state.groupName)+'"></label>':'')+
@@ -316,6 +331,7 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    '<p>Refresh and audit verification are available on your board.</p></section>';
  }
  function render(){
+  const capacityBlocked=state.step===2&&mappingCapacity().overflowCount>0;
   const active=overlay.contains(document.activeElement)?document.activeElement:null;
   const focusId=active?.id,focusName=active?.getAttribute('name'),focusValue=active?.value;
   const previousScroll=overlay.querySelector('.aps-import-body')?.scrollTop||0;
@@ -341,8 +357,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      '<button class="primary" data-imp="review-choice"'+(state.busy?' disabled':'')+
      '>Review '+readiness().pendingChoices.length+' Status/Dropdown setup'+
      (readiness().pendingChoices.length===1?'':'s')+'</button>':
-     '<button class="primary" data-imp="next"'+(state.busy?' disabled':'')+
-     (readiness().pendingSkips.length?'>Resolve '+readiness().pendingSkips.length+' unmapped columns':'>Next: Handle matches')+'</button>'):'')+
+     '<button class="primary" data-imp="next"'+(state.busy||capacityBlocked?' disabled':'')+
+     (capacityBlocked?'>Resolve column capacity':readiness().pendingSkips.length?'>Resolve '+readiness().pendingSkips.length+' unmapped columns':'>Next: Handle matches')+'</button>'):'')+
    (state.step===3?(state.uncertain?
     '<button class="secondary" data-imp="close">Close and verify the board</button>':
     (state.resumeCheckpoint?
@@ -606,6 +622,17 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   }
   if(button.dataset.impConfirmFormulas!=null){state.formulaWarningsConfirmed=true;state.confirmed=false;state.error='';state.notice='Confirmed: uncached formula cells will import as blank.';render();return;}
   if(button.dataset.impConfirmOmitted!=null){state.omittedRowsConfirmed=true;state.confirmed=false;state.error='';state.notice='Confirmed: summary/footer rows will be excluded.';render();return;}
+  if(button.dataset.impCapacityExclude!=null){
+   const capacity=mappingCapacity();
+   if(!capacity.canBulkExclude)return;
+   const indexes=new Set(capacity.overflowCandidates.map(entry=>entry.index));
+   const excluded=capacity.overflowCandidates.map(entry=>entry.source);
+   state.mappings=state.mappings.map((mapping,index)=>indexes.has(index)?
+    {...mapping,action:'skip',requiresDecision:false}:mapping);
+   state.confirmed=false;state.error='';
+   state.notice='Confirmed exclusion of excess source columns: '+excluded.join(', ')+'. You can restore any mapping before importing.';
+   render();return;
+  }
   if(button.dataset.impConfirmSkip!=null){
    const index=Number(button.dataset.impConfirmSkip),mapping=state.mappings[index];
    if(mapping?.action==='skip'&&mapping.requiresDecision===true){

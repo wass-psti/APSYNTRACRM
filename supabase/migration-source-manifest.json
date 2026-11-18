@@ -1750,6 +1750,13 @@
       "file": "20261118063000_cp_urm_scoped02c_charter_timetracker.sql",
       "bytes": 16556,
       "sha256": "f8fc48c6c3eacb6c8f0d29026fc10b7494c699fcc234c91ac101978c0a72a031"
+    },
+    {
+      "version": "20261118182000",
+      "name": "cp_bimp21_mapped_column_capacity",
+      "file": "20261118182000_cp_bimp21_mapped_column_capacity.sql",
+      "bytes": 18433,
+      "sha256": "56273a639a86222c9c7a865bdfb53ee081f95c1f25fae60763ea2c38f6e96d6f"
     }
   ]
 }

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildImportPlan,initialImportMappings} from '../board-import-core.js';
+import {readFileSync} from 'node:fs';
+import {buildImportPlan,initialImportMappings,importMappingCapacity,IMPORT_MAX_ACTIVE_SOURCE_MAPPINGS,IMPORT_EXTENDED_MAX_ACTIVE_SOURCE_MAPPINGS} from '../board-import-core.js';
 import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize,EXTENDED_IMPORT_CELL_BUDGET,EXTENDED_IMPORT_PAYLOAD_BUDGET,STANDARD_IMPORT_CELL_BUDGET} from '../board-import-batches.js';
 import {parseDelimited} from '../board-import-parse.js';
 const boardId='11111111-1111-4111-8111-111111111111';
@@ -113,14 +114,105 @@ test('CP-BIMP-13 extended file-reference source remains intact and is never trun
   /explicitly confirm exclusion/);
 });
 
-test('CP-BIMP-13 31 active source mappings are rejected before mutation',()=>{
+test('CP-BIMP-21 supports 31 active mappings: primary Item plus all 30 physical Board columns',()=>{
  const f=fixture({count:1});
- const headers=['Name',...Array.from({length:30},(_,i)=>'Column '+i)];
- const mappings=headers.map((source,i)=>i===0?{source,action:'item'}:
-  {source,action:'existing',columnId:columnId});
- const sheet={headers,rows:[['A',...Array.from({length:30},()=> 'X')]]};
- assert.throws(()=>buildImportPlan({sheet,detail:f.detail,mappings,group:f.group}),
-  /Two sources cannot map to one existing column/);
+ const columns=Array.from({length:30},(_,i)=>({
+  id:'55555555-5555-4555-8555-'+String(i+1).padStart(12,'0'),
+  name:'Column '+(i+1),data_type:'text',column_key:'col_'+(i+1),
+  system_key:null,config:{}}));
+ const detail={...f.detail,columns};
+ const headers=['Name',...columns.map(column=>column.name)];
+ const mappings=[{source:'Name',action:'item'},...columns.map((column,i)=>({
+  source:headers[i+1],action:'existing',columnId:column.id}))];
+ const sheet={headers,rows:[['A',...columns.map((_,i)=>'Value '+i)]]};
+ assert.equal(IMPORT_MAX_ACTIVE_SOURCE_MAPPINGS,31);
+ const plan=buildImportPlan({sheet,detail,mappings,group:f.group});
+ assert.equal(plan.payload.mappings.length,31);
+ assert.equal(Object.keys(plan.payload.rows[0].values).length,30);
+ assert.equal(plan.payload.rows[0].title,'A');
+ assert.equal(plan.payload.rows[0].values['Column 30'],'Value 29');
+ assert.equal(plan.payload.newColumns.length,0);
+});
+
+test('CP-BIMP-21 capacity assistant preserves compatible mappings and explicitly excludes only excess new columns',()=>{
+ const f=fixture({count:1});
+ const columns=Array.from({length:26},(_,i)=>({
+  id:'55555555-5555-4555-8555-'+String(i+1).padStart(12,'0'),
+  name:'Existing '+(i+1),data_type:'text',column_key:'col_'+(i+1),
+  system_key:null,config:{}}));
+ const detail={...f.detail,columns};
+ const existing=columns.map((column,i)=>({source:column.name,action:'existing',columnId:column.id}));
+ const proposed=Array.from({length:5},(_,i)=>({source:'New '+(i+1),action:'create',
+  name:'New '+(i+1),type:'text',columnType:'text'}));
+ const mappings=[{source:'Name',action:'item'},...existing,...proposed];
+ const capacity=importMappingCapacity({detail,mappings});
+ assert.equal(capacity.activeMappings,32);
+ assert.equal(capacity.maxActiveMappings,31);
+ assert.equal(capacity.physicalColumns,26);
+ assert.equal(capacity.availableNewColumns,4);
+ assert.equal(capacity.overflowCount,1);
+ assert.equal(capacity.canBulkExclude,true);
+ assert.deepEqual(capacity.overflowCandidates.map(entry=>entry.source),['New 5']);
+ const excluded=new Set(capacity.overflowCandidates.map(entry=>entry.index));
+ const reviewed=mappings.map((mapping,index)=>excluded.has(index)?
+  {...mapping,action:'skip',requiresDecision:false}:mapping);
+ const sheet={headers:mappings.map(mapping=>mapping.source),rows:[
+  ['Alpha',...columns.map((_,i)=>'Existing value '+i),...proposed.map((_,i)=>'New value '+i)]]};
+ const plan=buildImportPlan({sheet,detail,mappings:reviewed,group:f.group,allowColumns:true});
+ assert.equal(plan.payload.mappings.length,31);
+ assert.equal(plan.payload.newColumns.length,4);
+ assert.equal(detail.columns.length+plan.payload.newColumns.length,30);
+ assert.equal(plan.payload.rows[0].values['New 5'],undefined);
+});
+
+test('CP-BIMP-21 keeps the separately staged extended-reference RPC at its verified 30-mapping ceiling',()=>{
+ const f=fixture({count:1});
+ const columns=Array.from({length:30},(_,i)=>({
+  id:'55555555-5555-4555-8555-'+String(i+1).padStart(12,'0'),
+  name:'Column '+(i+1),data_type:'text',column_key:'col_'+(i+1),
+  system_key:null,config:{}}));
+ const detail={...f.detail,columns};
+ const headers=['Name',...columns.map(column=>column.name)];
+ const mappings=[{source:'Name',action:'item'},...columns.map((column,i)=>({
+  source:headers[i+1],action:'existing',columnId:column.id}))];
+ const sheet={headers,rows:[['A',...columns.map((_,i)=>'Value '+i)]]};
+ assert.equal(IMPORT_EXTENDED_MAX_ACTIVE_SOURCE_MAPPINGS,30);
+ assert.throws(()=>buildImportPlan({sheet,detail,mappings,group:f.group,extendedReferences:true}),
+  /supports at most 30 active source mappings/);
+});
+
+test('CP-BIMP-21 explicitly excluded source columns remain outside the 31 active mapping contract',()=>{
+ const f=fixture({count:1});
+ const columns=Array.from({length:30},(_,i)=>({
+  id:'55555555-5555-4555-8555-'+String(i+1).padStart(12,'0'),
+  name:'Column '+(i+1),data_type:'text',column_key:'col_'+(i+1),
+  system_key:null,config:{}}));
+ const detail={...f.detail,columns};
+ const active=['Name',...columns.map(column=>column.name)];
+ const excluded='Source-only metadata';
+ const headers=[...active,excluded];
+ const mappings=[{source:'Name',action:'item'},...columns.map((column,i)=>({
+  source:active[i+1],action:'existing',columnId:column.id})),
+  {source:excluded,action:'skip',requiresDecision:false}];
+ const sheet={headers,rows:[['A',...columns.map((_,i)=>'Value '+i),'preserve in source workbook']]};
+ const plan=buildImportPlan({sheet,detail,mappings,group:f.group});
+ assert.equal(plan.payload.mappings.length,31);
+ assert.equal(plan.payload.mappings.some(mapping=>mapping.source===excluded),false);
+ assert.equal(plan.payload.rows[0].values[excluded],undefined);
+});
+
+test('CP-BIMP-21 migration raises the atomic mapping bound without raising physical Board capacity',()=>{
+ const sql=readFileSync(new URL('../../supabase/migrations/20261118182000_cp_bimp21_mapped_column_capacity.sql',import.meta.url),'utf8');
+ assert.match(sql,/jsonb_array_length\(p_payload->'mappings'\) not between 1 and 31/);
+ assert.match(sql,/one primary Item plus up to 30 Board columns/);
+ assert.match(sql,/md5\(p\.prosrc\)/);
+ assert.match(sql,/8fe2d1ecb7859b97a17c790cda7d1bdc/);
+ assert.match(sql,/current_security_definer IS DISTINCT FROM true/);
+ assert.match(sql,/current_config IS DISTINCT FROM ARRAY\['search_path=pg_catalog, public'\]::text\[\]/);
+ assert.match(sql,/column_count \+ jsonb_array_length\(p_payload->'newColumns'\) > 30/);
+ assert.match(sql,/CREATE OR REPLACE FUNCTION public\.wm_import_board_wizard_atomic/);
+ assert.match(sql,/NOTIFY pgrst, 'reload schema'/);
+ assert.doesNotMatch(sql,/^\s*(GRANT|REVOKE)\b/im);
 });
 
 test('CP-BIMP-13 newly created group and column are reused on subsequent batches',async()=>{
