@@ -1,0 +1,96 @@
+name: CP-WS-02D/B3 Live Activated HTTPS and Anonymous Denial Smoke
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-ws02d-b3-deployed-https-smoke.yml'
+      - 'supabase/functions/apsyntra-ws02d-b3-read/index.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-host-anonymous-denial:
+    name: Public CA TLS and unauthenticated Edge denial (no user tokens)
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Verify pinned HTTPS endpoint and TLS certificate validation
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          case "$ENDPOINT" in
+            'https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read') ;;
+            *) echo 'BLOCKED_UNEXPECTED_HOST'; exit 1 ;;
+          esac
+          # No JWT, publishable key, environment secrets or cookies are used.
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -H 'Accept: application/json' \
+            -H 'Origin: https://wass-psti.github.io' \
+            --output "$RUNNER_TEMP/b3-anon.json" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          test "$status" = '401'
+          test "$(wc -c < "$RUNNER_TEMP/b3-anon.json")" -lt 4096
+          echo 'WS02D_B3_PUBLIC_TLS_AND_ANON_DENIAL_PASS status=401 no_session_token=true'
+      - name: Verify malformed-bearer denial on the same public HTTPS endpoint
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -H 'Authorization: Bearer malformed-not-a-jwt' \
+            -H 'Origin: https://wass-psti.github.io' \
+            --output "$RUNNER_TEMP/b3-invalid.json" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          test "$status" = '401'
+          test "$(wc -c < "$RUNNER_TEMP/b3-invalid.json")" -lt 4096
+          echo 'WS02D_B3_PUBLIC_INVALID_TOKEN_DENIAL_PASS status=401'
+      - name: Require activated exact-origin unsigned browser CORS preflight
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -X OPTIONS \
+            -H 'Origin: https://wass-psti.github.io' \
+            -H 'Access-Control-Request-Method: GET' \
+            -H 'Access-Control-Request-Headers: authorization,apikey' \
+            --dump-header "$RUNNER_TEMP/b3-preflight.headers" \
+            --output "$RUNNER_TEMP/b3-preflight.body" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          test "$status" = '200'
+          grep -Eqi '^access-control-allow-origin:[[:space:]]*https://wass-psti.github.io[[:space:]]*$' "$RUNNER_TEMP/b3-preflight.headers"
+          grep -Eqi '^access-control-allow-methods:.*GET' "$RUNNER_TEMP/b3-preflight.headers"
+          grep -Eqi '^access-control-allow-headers:.*authorization' "$RUNNER_TEMP/b3-preflight.headers"
+          grep -Eqi '^access-control-allow-headers:.*apikey' "$RUNNER_TEMP/b3-preflight.headers"
+          echo 'WS02D_B3_ACTIVATED_PREFLIGHT_PASS status=200 origin=exact methods=GET,OPTIONS headers=authorization,apikey'
+          echo 'PREFLIGHT_IS_ACTIVATION_EVIDENCE_ONLY_NOT_SIGNED_USER_ACCEPTANCE'
+      - name: Verify foreign Origin is not admitted in actual deployed CORS preflight
+        env:
+          ENDPOINT: https://jtlusodorfnyzgyuewkz.supabase.co/functions/v1/apsyntra-ws02d-b3-read
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --connect-timeout 8 --max-time 15 \
+            --proto '=https' --tlsv1.2 --max-redirs 0 \
+            -X OPTIONS \
+            -H 'Origin: https://untrusted.example.invalid' \
+            -H 'Access-Control-Request-Method: GET' \
+            -H 'Access-Control-Request-Headers: authorization,apikey' \
+            --dump-header "$RUNNER_TEMP/b3-foreign-preflight.headers" \
+            --output "$RUNNER_TEMP/b3-foreign-preflight.body" \
+            --write-out '%{http_code}' "$ENDPOINT")"
+          test "$status" = '403'
+          if grep -qi '^access-control-allow-origin:' "$RUNNER_TEMP/b3-foreign-preflight.headers"; then
+            echo 'BLOCKED_FOREIGN_ORIGIN_CORS_ALLOWED'
+            exit 1
+          fi
+          echo 'WS02D_B3_PUBLIC_FOREIGN_ORIGIN_CORS_DENIAL_PASS status=403 app_gate=enabled'
+      - name: State precise scope of verified evidence
+        run: |
+          echo 'WS02D_B3_ACTIVATED_PUBLIC_HTTPS_SMOKE_PASS'
+          echo 'SIGNED_USER_READ_NOT_TESTED bearer_tokens_supplied=0 production_mutations=0'
