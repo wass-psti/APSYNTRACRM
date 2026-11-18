@@ -33,11 +33,49 @@ def rows(archive, sheet, shared):
         yield int(row.attrib['r']), cells
 
 
+def verify_thread_lineage(posts):
+    """Validate parent-post identity, same-issue scope and acyclic reply graph."""
+    by_id = {str(r.get('J', '')).strip(): r for r in posts}
+    parent_of = {}
+    errors = set()
+    for row in posts:
+        post_id = str(row.get('J', '')).strip()
+        parent_id = str(row.get('K', '')).strip()
+        if not parent_id:
+            continue
+        if not ID.fullmatch(parent_id):
+            errors.add('invalid_reply_parent_id')
+        if parent_id not in by_id:
+            errors.add('orphan_reply_parent_id')
+        else:
+            if by_id[parent_id].get('A') != row.get('A'):
+                errors.add('cross_issue_reply_parent')
+        if parent_id == post_id:
+            errors.add('self_parent_reply')
+        parent_of[post_id] = parent_id
+    visited = set()
+    for post_id in parent_of:
+        current = post_id
+        chain = set()
+        while current in parent_of and current not in visited:
+            if current in chain:
+                errors.add('cyclic_reply_graph')
+                break
+            chain.add(current)
+            current = parent_of[current]
+        visited.update(chain)
+    return {'reply_count': len(parent_of),
+            'distinct_parent_posts': len(set(parent_of.values())),
+            'reply_lineage_errors': sorted(errors)}
+
+
 def audit(path, expected_count=None):
     path = Path(path)
     if path.stat().st_size > MAX_SIZE:
         raise ValueError('Source workbook exceeds 8 MB audit limit')
     with ZipFile(path) as z:
+        if sum(entry.file_size for entry in z.infolist()) > 48 * 1024 * 1024:
+            raise ValueError('Workbook uncompressed entries exceed audit limit')
         if z.testzip() is not None:
             raise ValueError('Damaged workbook ZIP entry')
         allowed = {'xl/worksheets/sheet1.xml', 'xl/worksheets/sheet2.xml'}
@@ -68,6 +106,8 @@ def audit(path, expected_count=None):
     if set(parent_ids) - set(issue_ids): errors.append('orphan_post_parent_id')
     if expected_count is not None and len(issue_ids) != expected_count:
         errors.append('source_count_mismatch')
+    lineage = verify_thread_lineage(posts)
+    errors.extend(lineage['reply_lineage_errors'])
     statuses = dict(collections.Counter(str(r.get('C', '')) for r in issues))
     result = {
         'source_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
@@ -75,6 +115,11 @@ def audit(path, expected_count=None):
         'updates': len(post_ids), 'unique_posts': len(set(post_ids)),
         'updates_with_known_parent': sum(p in set(issue_ids) for p in parent_ids),
         'issues_with_updates': len(set(parent_ids)),
+        'reply_count': lineage['reply_count'],
+        'distinct_parent_posts': lineage['distinct_parent_posts'],
+        'reply_relationships_verified': not bool(lineage['reply_lineage_errors']),
+        'posts_with_asset_references': sum(bool(r.get('I', '').strip()) for r in posts),
+        'posts_exceeding_existing_rpc_limit': sum(len(r.get('G', '')) > 20000 for r in posts),
         'status_counts': statuses,
         'subitem_identity_evidence': 'NOT_ESTABLISHED',
         'migration_authorized': False,

@@ -1,0 +1,26 @@
+name: CP-TB-NATIVE-01J Historical Source Preflight
+on:
+  pull_request:
+    paths:
+      - "scripts/talkbox-source-audit.py"
+      - "scripts/talkbox-migration-manifest.py"
+      - "scripts/tests/test_talkbox_*.py"
+      - ".github/workflows/cp-tb-native-01j.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/talkbox-source-audit.py"
+      - "scripts/talkbox-migration-manifest.py"
+      - "scripts/tests/test_talkbox_*.py"
+      - ".github/workflows/cp-tb-native-01j.yml"
+permissions:
+  contents: read
+jobs:
+  verify-read-only-migration-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax check private-source tooling
+        run: python3 -m py_compile scripts/talkbox-source-audit.py scripts/talkbox-migration-manifest.py
+      - name: Verify source reply lineage, privacy and fail-closed manifest behavior
+        run: python3 -m unittest discover -s scripts/tests -p 'test_talkbox_*.py' -v
