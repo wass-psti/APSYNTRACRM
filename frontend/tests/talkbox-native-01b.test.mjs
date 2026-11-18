@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {reconcileTalkBoxIssueIdentities,TALKBOX_SOURCE_BOARD_ID,TALKBOX_SOURCE_SUBITEM_BOARD_ID} from '../talkbox-reconciliation.js';
+import {reconcileTalkBoxIssueIdentities,reconcileTalkBoxSubitemIdentities,TALKBOX_SOURCE_BOARD_ID,TALKBOX_SOURCE_SUBITEM_BOARD_ID} from '../talkbox-reconciliation.js';
 import {TalkBoxNativeClient} from '../talkbox-native.js';
 import {renderTalkBoxApplication} from '../talkbox-ui.js';
 
@@ -87,4 +87,17 @@ test('subtask controls use delegated actions and never expose unescaped task tit
  assert.match(app,/createVerified/);
  assert.match(app,/updateVerified/);
  assert.match(app,/postVerified/);
+});
+
+test('subitem reconciliation rejects incorrect board provenance despite matching titles',()=>{
+ const source={id:'88',boardId:TALKBOX_SOURCE_SUBITEM_BOARD_ID,parentId:'65764141',name:'Check installation'};
+ const mismatched=reconcileTalkBoxSubitemIdentities({sourceSubitems:[{...source,boardId:'18370784141'}],crmSubitems:[],sourceComplete:true,crmComplete:true});
+ assert.equal(mismatched.status,'BLOCKED');
+ assert.match(mismatched.violations.join(' '),/board identity mismatch/);
+ const matching=reconcileTalkBoxSubitemIdentities({
+  sourceSubitems:[source],crmSubitems:[{id:'20',mondayItemId:'88',name:'Different title'}],
+  sourceComplete:true,crmComplete:true});
+ assert.equal(matching.status,'MATCHED');
+ assert.equal(matching.counts.matched,1);
+ assert.equal(matching.writesAuthorized,false);
 });
