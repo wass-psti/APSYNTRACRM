@@ -12,6 +12,8 @@ import {normalizeTextDate} from './excel-date-normalization.js?v=cp-bimp-06-utc-
 export const IMPORT_CONTRACT='m143-v1';
 export const IMPORT_EXTENDED_CONTRACT='m143-v2';
 export const EXTENDED_REF_KEY='__aps_extended_ref_v1';
+export const MAX_MAPPED_SOURCE_COLUMNS=30;
+export const MAX_EXTENDED_REFERENCE_LENGTH=65536;
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
 ]);
@@ -383,7 +385,7 @@ function valueAsType(raw,type,config={},extendedReferences=false){
  const limit=type==='long_text'?5000:type==='email'?320:type==='url'?2000:1000;
  if(text.length>limit){
   if(extendedReferences&&['text','long_text','url'].includes(type)&&
-     text.length<=65536&&(!['url'].includes(type)||/^https?:\/\/[^\s]+$/i.test(text)))
+     text.length<=MAX_EXTENDED_REFERENCE_LENGTH&&(!['url'].includes(type)||/^https?:\/\/[^\s]+$/i.test(text)))
    return {[EXTENDED_REF_KEY]:text};
   deny('A '+type+' cell exceeds '+limit+' characters.');
  }
@@ -501,7 +503,7 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,
   }
  }
  if(!primary)deny('Map exactly one title column.');
- if(normalized.filter(mapping=>mapping.action!=='skip').length>30)
+ if(normalized.filter(mapping=>mapping.action!=='skip').length>MAX_MAPPED_SOURCE_COLUMNS)
   deny('The atomic import contract supports at most 30 mapped source columns. Map compatible sources into the available destinations or explicitly exclude the others.');
  if((detail.columns||[]).length+proposed.length>30)deny('Board maximum is 30 physical columns.');
  const destination=group?.action==='existing'&&validUuid(group.groupId)&&

@@ -8,7 +8,8 @@ import {detectMondayCheckboxMarkers} from './monday-import-compat.js';
 import {importMappingReadiness,skipPendingImportChoice,
  matchConfiguredImportChoice,reassignImportItemMapping} from './board-import-readiness.js';
 import {availableImportColumns,initialImportMappings,CREATABLE_IMPORT_TYPES,
- buildImportPlan,reviewImportSourceRows} from './board-import-core.js';
+ buildImportPlan,reviewImportSourceRows,MAX_MAPPED_SOURCE_COLUMNS,
+ MAX_EXTENDED_REFERENCE_LENGTH} from './board-import-core.js';
 import {executeBoardImportBatched,IMPORT_BATCH_SIZE,importBatchSize} from './board-import-batches.js';
 import {readImportRecovery,clearImportRecovery,sealImportRecovery,
  importDigest,verifyImportRecovery} from './board-import-durable.js';
@@ -171,8 +172,10 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
       '<p class="aps-import-error" role="alert">'+esc(error)+'</p>')+
      '</div>';
    }
+   const oversizedCount=s.rows.reduce((count,row)=>count+(String(row[i]??'').length>MAX_EXTENDED_REFERENCE_LENGTH?1:0),0);
    return '<div class="aps-import-map-grid aps-import-map-row" data-imp-map-row="'+i+'"><div><b>'+
-    esc(m.source)+'</b><small>Detected: '+esc(suggest)+'</small><small>Example: '+
+    esc(m.source)+'</b><small>Detected: '+esc(suggest)+'</small>'+
+    (oversizedCount?'<small class="aps-import-notice">'+oversizedCount+' source row(s) exceed the '+MAX_EXTENDED_REFERENCE_LENGTH.toLocaleString()+'-character storage limit. Map to a supported destination and review rejected rows, or explicitly exclude this column.</small>':'')+'<small>Example: '+
     (m.action==='skip'&&m.conflict?'Value omitted for incompatible source':
      esc(s.rows.find(r=>String(r[i]??'').trim())?.[i]??'—').slice(0,100))+
     '</small></div>'+
@@ -192,6 +195,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      '</select></label></div>':'')+choiceSetup+'</div></div>';
   }).join('');
   const newCols=missing();
+  const mappedCount=state.mappings.filter(m=>m.action!=='skip').length;
+  const overMappingLimit=mappedCount>MAX_MAPPED_SOURCE_COLUMNS;
   const mondayCheckboxSources=state.mappings.filter(m=>{
    const column=m.action==='existing'?columns.find(c=>c.id===m.columnId):null;
    return (m.action==='create'?m.columnType:column?.type)==='checkbox'&&
@@ -202,6 +207,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
    (m.type==='status'||m.type==='dropdown'));
   return '<section class="aps-import-config"><h2>Map your file columns to this board</h2>'+
    '<p>Existing compatible columns are reused. Item is required and cannot be duplicated.</p>'+
+   '<p class="aps-import-mapping-count" role="status">Mapped source columns: '+mappedCount+' / '+MAX_MAPPED_SOURCE_COLUMNS+'</p>'+
+   (overMappingLimit?'<p class="aps-import-error" role="alert">'+(mappedCount-MAX_MAPPED_SOURCE_COLUMNS)+' source column(s) must be mapped to an available destination or explicitly excluded before continuing. The atomic import limit is '+MAX_MAPPED_SOURCE_COLUMNS+'.</p>':'')+
    sourceInfo+formulaWarningInfo+formulaAcknowledgement+omittedRowsAcknowledgement+
    '<div class="aps-import-controls">'+(state.file.sheets.length>1?'<label>Worksheet<select name="imp-sheet" data-imp-sheet>'+state.file.sheets.map((x,i)=>choice(i,x.name,i===state.sheet)).join('')+'</select></label>':'')+'<label>Add items to<select name="imp-group" data-imp-group>'+groupChoices+
    '</select></label>'+(state.group==='create'?'<label>New group name<input name="imp-group-name" maxlength="120" data-imp-group-name value="'+esc(state.groupName)+'"></label>':'')+
@@ -341,8 +348,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
      '<button class="primary" data-imp="review-choice"'+(state.busy?' disabled':'')+
      '>Review '+readiness().pendingChoices.length+' Status/Dropdown setup'+
      (readiness().pendingChoices.length===1?'':'s')+'</button>':
-     '<button class="primary" data-imp="next"'+(state.busy?' disabled':'')+
-     (readiness().pendingSkips.length?'>Resolve '+readiness().pendingSkips.length+' unmapped columns':'>Next: Handle matches')+'</button>'):'')+
+     '<button class="primary" data-imp="next"'+(state.busy||state.mappings.filter(m=>m.action!=='skip').length>MAX_MAPPED_SOURCE_COLUMNS?' disabled':'')+
+     (state.mappings.filter(m=>m.action!=='skip').length>MAX_MAPPED_SOURCE_COLUMNS?'>Reduce mapped columns to '+MAX_MAPPED_SOURCE_COLUMNS:readiness().pendingSkips.length?'>Resolve '+readiness().pendingSkips.length+' unmapped columns':'>Next: Handle matches')+'</button>'):'')+
    (state.step===3?(state.uncertain?
     '<button class="secondary" data-imp="close">Close and verify the board</button>':
     (state.resumeCheckpoint?
@@ -556,6 +563,8 @@ export async function openBoardImportWizard({api,auth,boardId,onComplete=async()
   }
   if(action==='next'){
    state.error='';
+   const mappedCount=state.mappings.filter(m=>m.action!=='skip').length;
+   if(mappedCount>MAX_MAPPED_SOURCE_COLUMNS){state.error='The atomic import contract supports at most '+MAX_MAPPED_SOURCE_COLUMNS+' mapped source columns. Map compatible sources into available destinations or explicitly exclude the others.';render();return;}
    const gate=readiness();
    if(gate.pendingSkips.length){state.error='Map or explicitly confirm exclusion for every unmapped source column.';render();overlay.querySelector('[data-imp-confirm-skip]')?.focus();return;}
    if((sheet().omittedRows||[]).length&&!state.omittedRowsConfirmed){state.error='Confirm exclusion of worksheet summary/footer rows before continuing.';render();overlay.querySelector('[data-imp-confirm-omitted]')?.focus();return;}
