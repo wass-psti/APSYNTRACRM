@@ -377,17 +377,16 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const a=data.moduleAssignments.find(x=>x.userId===u.id&&x.moduleId===id);
   const fueltransScoped=id==='fueltrans'&&data.fueltransWorkspaceAvailable===true;
   const opt=fueltransScoped?FUELTRANS_WORKSPACE_ROLES:(MODULE_ROLE_OPTIONS[id]||[]);
+  const frtScoped=id==='fund-released-tracker'&&data.frtWorkspaceAvailable===true;
   const status=a?.enabled?'Active: '+a.role:a?'Disabled: '+a.role:'Unassigned';
   const note=fueltransScoped?'Workspace FuelTrans membership':
    id==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable?'Workspace Tool Traceability membership':
    frtScoped?'Workspace Fund Tracker membership':
    delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
   const tooltraceScoped=id==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable===true;
-  const frtScoped=id==='fund-released-tracker'&&data.frtWorkspaceAvailable===true;
   const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues'||fueltransScoped||tooltraceScoped||frtScoped;
   const editBlocked=locked||!opt.length||(id==='fueltrans'&&!fueltransScoped)||
    (id==='tool-traceability'&&!tooltraceScoped)||
-   (id==='fund-released-tracker'&&!frtScoped)||
    (id==='fund-released-tracker'&&!frtScoped)||
    (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
