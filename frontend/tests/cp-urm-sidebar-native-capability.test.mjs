@@ -25,7 +25,7 @@ test('native application section preserves standalone routes and authorized modu
  assert.equal(BOARD_MODULES.length,12);
  assert.match(sidebar,/const boardApplications=BOARD_MODULES\.filter/);
  assert.match(sidebar,/state\.boards\.find\(row=>moduleByBoardName\(row\.name\)\?\.key===module\.key\)/);
- assert.match(sidebar,/board\?sidebarNav\('#\/boards\/'\+board\.id,module\.name/);
+ assert.match(sidebar,/board\?sidebarNav\(nativePlaceholderHref\(module\.key\),module\.name/);
  assert.match(sidebar,/Applications<\/div>/);
  assert.match(sidebar,/boardApplications\+/);
  assert.match(sidebar,/sidebar-recent-list/);

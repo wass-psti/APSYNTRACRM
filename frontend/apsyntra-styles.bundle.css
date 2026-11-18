@@ -3526,6 +3526,32 @@
  #app .aps-sidebar .sidebar-layout-toggle .sidebar-svg-icon{transition:none}
 }
 
+/* frontend/native-coming-soon.css */
+.native-soon{--soon-ink:#202c48;position:relative;isolation:isolate;display:grid;place-items:center;min-height:min(780px,calc(100dvh - 115px));overflow:hidden;border:1px solid #e6eaf3;border-radius:24px;background:linear-gradient(145deg,#fdfdff 10%,#f5f7ff 58%,#f7f9fc);padding:clamp(22px,5vw,64px);color:var(--soon-ink)}
+.native-soon-aura{position:absolute;inset:-30%;z-index:-1;background:radial-gradient(circle at 72% 38%,rgba(100,106,214,.14),transparent 32%),radial-gradient(circle at 22% 70%,rgba(93,177,200,.1),transparent 30%);pointer-events:none}
+.native-soon-inner{width:min(100%,780px)}
+.native-soon-top{display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:clamp(50px,9vh,95px)}
+.native-soon-crumb{font-size:10px;font-weight:800;letter-spacing:.16em;color:#687596}
+.native-soon-crumb span{padding:0 8px;color:#b7bfce}
+.native-soon-state{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #dde3f2;border-radius:999px;background:#fff;font-size:11px;font-weight:750;color:#566489}
+.native-soon-pulse,.native-soon-foot-dot{width:7px;height:7px;flex:none;border-radius:50%;background:#6e70c4}
+.native-soon-symbol{display:grid;place-items:center;width:76px;height:76px;margin-bottom:26px;border:1px solid #e3e5fa;border-radius:22px;background:linear-gradient(145deg,#f0f1ff,#fff);box-shadow:0 16px 40px rgba(71,80,152,.09);color:#5f62b4;font-size:35px}
+.native-soon-blue{color:#4272bf}.native-soon-orange{color:#c78242}.native-soon-green{color:#328f73}.native-soon-pink{color:#bf6297}.native-soon-teal{color:#318e9b}.native-soon-purple{color:#8c5bb7}.native-soon-amber{color:#b48b35}
+.native-soon-kicker{font-size:10px;letter-spacing:.2em;font-weight:800;color:#767fb0;margin-bottom:12px}
+.native-soon h1{font-size:clamp(27px,4vw,45px);line-height:1.15;letter-spacing:-.045em;margin:0 0 10px;font-weight:800}
+.native-soon-coming{font-size:clamp(38px,6.8vw,78px);font-weight:850;letter-spacing:-.07em;line-height:1.05;margin-bottom:23px}
+.native-soon-coming span{color:#676bb5}
+.native-soon-description{max-width:570px;font-size:clamp(14px,1.55vw,17px);line-height:1.85;color:#66728b;margin:0}
+.native-soon-divider{height:1px;background:#dfe4ef;margin:clamp(34px,6vw,70px) 0 23px}
+.native-soon-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;font-size:12px;color:#7c879c}
+.native-soon-foot>span{display:inline-flex;align-items:center;gap:9px}
+.native-soon-foot a{display:inline-flex;gap:12px;align-items:center;color:#51579f;font-weight:750;text-decoration:none;padding:8px 0}
+.native-soon-foot a:hover,.native-soon-foot a:focus-visible{text-decoration:underline}
+@media(max-width:600px){.native-soon{min-height:calc(100dvh - 125px);border-radius:16px}.native-soon-top{margin-bottom:54px}.native-soon-symbol{width:64px;height:64px;font-size:29px}.native-soon-foot{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:no-preference){.native-soon-symbol{animation:native-soon-arrive .55s both}.native-soon-pulse{animation:native-soon-breathe 2.8s ease-in-out infinite}}
+@keyframes native-soon-arrive{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@keyframes native-soon-breathe{50%{opacity:.35}}
+
 /* frontend/workspace-ui.css */
 /* APSYNTRA workspace controls. Signed backend authorization, not styling,
    determines workspace visibility and lifecycle operation availability. */

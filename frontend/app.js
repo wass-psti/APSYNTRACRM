@@ -43,6 +43,7 @@ import {TalkBoxNativeClient} from './talkbox-native.js';
 import {renderTalkBoxApplication} from './talkbox-ui.js';
 import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE,talkBoxIssueHref} from './talkbox-application.js';
 import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
+import {NATIVE_PLACEHOLDER_KEYS,nativePlaceholderHref,renderNativePlaceholder} from './native-coming-soon.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
@@ -556,10 +557,10 @@ function sidebar(){
  // Every link comes from a registered host route or a board returned by the
  // signed, workspace-scoped board catalog. Do not invent module access.
  const boardApplications=BOARD_MODULES.filter(module=>
-  !STANDALONE_APPLICATION_MODULE_KEYS.has(module.key)).map(module=>{
+  NATIVE_PLACEHOLDER_KEYS.has(module.key)).map(module=>{
    const board=state.boards.find(row=>moduleByBoardName(row.name)?.key===module.key);
-   return board?sidebarNav('#/boards/'+board.id,module.name,'boards',
-    active('recent:'+board.id)):'';
+   return board?sidebarNav(nativePlaceholderHref(module.key),module.name,'boards',
+    active('native:'+module.key)):'';
   }).join('');
  const nav=sidebarNav('#/overview','Overview','overview',active('overview'))+
   sidebarNav('#/boards','My boards','boards',active('boards'),{count:state.boards.filter(board=>!isStandaloneApplicationBoard(board)).length})+
@@ -653,7 +654,7 @@ let shellSidebarSignature=null;
 let shellRoute=null;
 function shell(body){
  stopAuthVisuals();
- const crumb=state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
+ const crumb=state.view==='native-coming-soon'?BOARD_MODULES.find(module=>module.key===state.nativePlaceholderKey)?.name||'Coming Soon':state.ttStandalone?'TimeTracker':state.frtStandalone?'Fund Tracker':state.tlStandalone?'TradeLink':state.fuelTrackStandalone?'FuelTrack+':state.view==='board'?state.board?.board?.name||'Board':state.view==='overview'?'Overview':state.view==='boards'?'My boards':state.view==='fm1'?'FM1 Ticketing':state.view==='acceptance'?'Pages acceptance':state.view==='foundation'?'12-board foundation':state.view==='security'?'Access acceptance':state.view==='role-configuration'?'Role Configuration':state.view==='user-role-management'?'User Role Management':state.view==='invitation'?'Workspace invitation':'Settings';
  const identity=[state.context?.user_id,state.context?.workspace_id].join('|');
  const sidebarSignature=JSON.stringify([state.ttStandalone,state.frtStandalone,state.tlStandalone,state.fuelTrackStandalone,state.roleVerified,state.adminVerified,name(),
   state.context?.profile?.platform_role,state.crmRoleSnapshot?.effectiveRole,
@@ -680,6 +681,7 @@ function shell(body){
   }else{
    const selected=currentSidebarNavigation();
    const activeHref=selected.startsWith('recent:')?'#/boards/'+selected.slice(7):
+    selected.startsWith('native:')?nativePlaceholderHref(selected.slice(7)):
     selected?'#/'+selected:'';
    for(const link of existing.querySelectorAll('.aps-sidebar a.nav-link')){
     const path=link.getAttribute('href')||'';
@@ -1466,6 +1468,7 @@ function render(){
   busy:invitationAcceptanceBusy,status:invitationAcceptanceStatus
  }));
  else if(state.view==='boards')shell(boardsPage());
+ else if(state.view==='native-coming-soon')shell(renderNativePlaceholder(state.nativePlaceholderKey));
  else if(state.view==='fm1'){shell('<div id="fm1-application-root"></div>');fm1Module?.mountFm1Application(root.querySelector('#fm1-application-root'),{userId:state.context?.user_id,workspaceId:state.context?.workspace_id,api:db});}
  else if(state.view==='time-tracker')shell(renderTimeTrackerRouteUnavailable());
  else if(state.view==='tradelink')shell(renderTradeLinkRouteUnavailable(state.error));
@@ -4393,6 +4396,10 @@ async function onRoute(){
   state.tradeLinkAnalytics=null;state.tradeLinkAnalyticsError='';state.tradeLinkSection='overview';
  }
  if(parts[0]!=='fm1')fm1Module?.unmountFm1Application();
+ if(parts[0]==='native'&&parts.length===2&&NATIVE_PLACEHOLDER_KEYS.has(parts[1])){
+  routeSerial++;state.boardId=null;state.board=null;state.boardUi=null;state.loading=false;
+  state.nativePlaceholderKey=parts[1];state.view='native-coming-soon';render();return;
+ }
  if(parts[0]==='invitations'&&parts[1]==='accept'){
   state.view='invitation';render();return;
  }
