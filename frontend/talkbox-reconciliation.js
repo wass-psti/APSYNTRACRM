@@ -63,7 +63,8 @@ export function reconcileTalkBoxIssueIdentities({
   status:violations.length?'BLOCKED':unmapped.length?'RECONCILIATION_REQUIRED':'MATCHED',
   sourceBoardId:TALKBOX_SOURCE_BOARD_ID,subitemBoardId:TALKBOX_SOURCE_SUBITEM_BOARD_ID,
   counts:{source:sourceById.size,crm:crmById.size,matched:matched.length,
-   unmapped:unmapped.length,orphanReferences:orphanReferences.length},
+   unmapped:unmapped.length,unlinkedCRM:crmById.size-crmBySource.size,
+   orphanReferences:orphanReferences.length},
   matched,unmapped,orphanReferences,violations,
   writesAuthorized:false
  });

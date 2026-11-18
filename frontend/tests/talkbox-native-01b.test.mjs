@@ -134,3 +134,16 @@ test('authoritative board count prevents a truncated snapshot from passing as co
  assert.equal(plan.status,'BLOCKED');
  assert.match(plan.violations.join(' '),/source count mismatch/);
 });
+
+test('reconciliation explicitly reports CRM records without authoritative source identities',()=>{
+ const plan=reconcileTalkBoxIssueIdentities({
+  sourceIssues:[{id:'65764141',boardId:TALKBOX_SOURCE_BOARD_ID}],
+  crmIssues:[{id:'1'},{id:'2'}],
+  sourceComplete:true,crmComplete:false,expectedSourceCount:1
+ });
+ assert.equal(plan.status,'BLOCKED');
+ assert.equal(plan.counts.matched,0);
+ assert.equal(plan.counts.unmapped,1);
+ assert.equal(plan.counts.unlinkedCRM,2);
+ assert.equal(plan.writesAuthorized,false);
+});
