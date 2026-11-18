@@ -1736,6 +1736,13 @@
       "file": "20261118052000_cp_urm_scoped02a_frt_roles.sql",
       "bytes": 8631,
       "sha256": "cf2333fda4537d281c8358bcb803f5fdc57dbedb1b1ddd286e14fd5ad849981b"
+    },
+    {
+      "version": "20261118062000",
+      "name": "cp_urm_scoped02b_six_modules",
+      "file": "20261118062000_cp_urm_scoped02b_six_modules.sql",
+      "bytes": 10369,
+      "sha256": "0839181669e61cd911da96ec2925cb5f2360ee77c2f24686e0f9f6e58191b6b1"
     }
   ]
 }
