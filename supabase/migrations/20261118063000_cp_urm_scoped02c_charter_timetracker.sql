@@ -118,14 +118,16 @@ BEGIN
  t:=pg_catalog.replace(s,
  'SELECT p.display_name,p.email,m.role INTO v_name,v_email,role_name',
  'SELECT p.display_name,p.email,public.apsyntra_charter_current_role(p.id,p_workspace_id) INTO v_name,v_email,role_name');
+ -- Remove the longer subscriber JOIN first; removing only its common
+ -- prefix would leave a dangling AND m.role filter.
+ t:=pg_catalog.replace(t,
+ ' JOIN public.module_role_assignments m ON m.user_id=p.id AND m.module_id=''charter-navigator'' AND m.enabled AND m.role IN (''admin'',''user'')',
+ '');
  t:=pg_catalog.replace(t,
  ' JOIN public.module_role_assignments m ON m.user_id=p.id AND m.module_id=''charter-navigator'' AND m.enabled',
  '');
  t:=pg_catalog.replace(t,'WHERE p.id=uid AND p.status=''active'' AND m.role IN (''admin'',''user'')',
  'WHERE p.id=uid AND p.status=''active''');
- t:=pg_catalog.replace(t,
- ' JOIN public.module_role_assignments m ON m.user_id=p.id AND m.module_id=''charter-navigator'' AND m.enabled AND m.role IN (''admin'',''user'')',
- '');
  -- Subscriber list is an independently executed query, not covered by actor role lookup.
  t:=pg_catalog.replace(t,
  'WHERE p.status=''active''),''[]''::jsonb)',
