@@ -7,10 +7,11 @@
 - Live APSYNTRA Supabase project `jtlusodorfnyzgyuewkz` contains **2** `public.toolbox_issues` rows at inspection time, both without the inspected monday source-ID keys.
 - Existing live RPC definitions: `toolbox_issues_list_issues`, `get_issue`, `create_issue`, `update_issue`, `add_update`, `create_subitem`, `update_subitem`. All are in the original backend and use its existing authentication and workspace checks. No new grants, roles, schemas, or policy migrations are introduced here.
 - The monday.com browser tab cannot be queried by the current ChatGPT session; a real source export or authorized signed browser access is required to prove the complete source record set.
+- Live private projection `private.toolbox_issue_subitem_json` emits `boardId=18370784141`, conflicting with the provided source subitem board ID `18371220520`. This is a provenance mismatch, **not** proof of an incorrect underlying subtask. The migration path must not silently equate these identifiers.
 
 ## Implemented on feature branch
 
-1. `talkbox-reconciliation.js`: read-only deterministic source-ID reconciliation. It rejects duplicate IDs, wrong source boards, and incomplete evidence; it never matches records using title, and never writes.
+1. `talkbox-reconciliation.js`: read-only deterministic source issue-ID and subitem-ID reconciliation, with distinct authoritative board identities. It rejects duplicate IDs, wrong source boards, and incomplete evidence; it never matches records using title, and never writes.
 2. `talkbox-native.js`: readback-verified issue creation, versioned updates, comment posts, and subtask create/status updates. Response receipts alone are not treated as persistence evidence.
 3. `talkbox-ui.js` and `app.js`: delegated subtask controls in the existing TalkBox drawer; creation, edits, and posts now await independent signed readback before displaying success.
 4. `data.js`: existing post-commit cache invalidation registry includes the two subtask write RPCs.
