@@ -182,6 +182,40 @@ BEGIN
 END;
 $patch$;
 
+
+-- Workspace bootstrap must present scoped assignments consistently with
+-- module authorization. Preserve Material Tracker's separate projection.
+DO $session$
+DECLARE s text;t text;
+BEGIN
+ s:=pg_catalog.pg_get_functiondef('public.wm_auth_access_context()'::regprocedure);
+ IF position('from public.module_role_assignments m' IN s)=0 OR
+    position('from public.material_tracker_memberships mt' IN s)=0 THEN
+  RAISE EXCEPTION 'Signed workspace source drift' USING ERRCODE='55000';
+ END IF;
+ t:=pg_catalog.replace(s,
+  E'    where m.user_id = v_actor\n    union all',
+  E'    where m.user_id = v_actor'||
+  E'\n      and not exists (select 1 from public.apsyntra_workspace_module_roles scoped'||
+  E'\n        where scoped.user_id = v_actor and scoped.module_id = m.module_id'||
+  E'\n          and scoped.workspace_id = public.current_workspace_id(v_actor))'||
+  E'\n    union all'||
+  E'\n    select scoped.user_id,scoped.module_id,scoped.role,scoped.enabled,scoped.updated_at'||
+  E'\n    from public.apsyntra_workspace_module_roles scoped'||
+  E'\n    join public.workspace_members wm on wm.user_id=scoped.user_id'||
+  E'\n      and wm.workspace_id=scoped.workspace_id and wm.active is true'||
+  E'\n    where scoped.user_id=v_actor'||
+  E'\n      and scoped.workspace_id=public.current_workspace_id(v_actor)'||
+  E'\n    union all');
+ IF t=s OR position('and not exists (select 1 from public.apsyntra_workspace_module_roles scoped' IN t)=0 THEN
+  RAISE EXCEPTION 'Signed workspace projection patch incomplete' USING ERRCODE='55000';
+ END IF;
+ EXECUTE t;
+END;
+$session$;
+
+REVOKE ALL ON FUNCTION public.apsyntra_scoped_module_role(text,uuid,uuid)
+ FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.apsyntra_role_scoped_six_snapshot(uuid) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION public.apsyntra_role_scoped_six_set(uuid,uuid,text,text,boolean,timestamptz) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.apsyntra_role_scoped_six_snapshot(uuid) TO authenticated;
