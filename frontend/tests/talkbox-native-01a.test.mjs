@@ -60,5 +60,5 @@ test('host integrates route, signed read and delegated actions without new autho
  assert.match(app,/case 'tb-new':/);
  assert.match(app,/case 'tb-edit':/);
  assert.match(app,/case 'tb-post':/);
- assert.match(entry,/frontend\/talkbox-application\.css/);
+ assert.match(readFileSync('frontend/talkbox-application.css','utf8'),/\.tb-app/);
 });
