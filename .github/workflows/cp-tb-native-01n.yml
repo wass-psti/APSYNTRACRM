@@ -1,0 +1,32 @@
+name: CP-TB-NATIVE-01N Provider Asset Byte Recovery
+on:
+  pull_request:
+    paths:
+      - "scripts/talkbox-provider-evidence.py"
+      - "scripts/talkbox-provider-byte-recovery.py"
+      - "scripts/talkbox-recovery-readiness.py"
+      - "scripts/tests/test_talkbox_provider_byte_recovery.py"
+      - "scripts/tests/test_talkbox_recovery_readiness.py"
+      - ".github/workflows/cp-tb-native-01n.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/talkbox-provider-evidence.py"
+      - "scripts/talkbox-provider-byte-recovery.py"
+      - "scripts/talkbox-recovery-readiness.py"
+      - "scripts/tests/test_talkbox_provider_byte_recovery.py"
+      - "scripts/tests/test_talkbox_recovery_readiness.py"
+      - ".github/workflows/cp-tb-native-01n.yml"
+permissions:
+  contents: read
+jobs:
+  source-byte-recovery-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check read-only provider source and byte tools syntax
+        run: |
+          python3 -m py_compile scripts/talkbox-provider-evidence.py scripts/talkbox-provider-byte-recovery.py scripts/talkbox-recovery-readiness.py
+      - name: Run all synthetic TalkBox source recovery tests
+        run: python3 -m unittest discover -s scripts/tests -p 'test_talkbox_*.py' -v

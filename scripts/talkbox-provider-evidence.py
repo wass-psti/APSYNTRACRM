@@ -5,6 +5,7 @@ Requires MONDAY_API_TOKEN supplied to the process, never reads browser
 cookies, and does not store transient asset public_url values.
 """
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -39,7 +40,7 @@ NEXT_PAGE = """query($cursor:String!) {
 }"""
 ASSET_PAGE = """query($ids:[ID!]!) {
  assets(ids:$ids) {
-  id name file_extension file_size created_at
+  id name file_extension file_size created_at public_url
   uploaded_by {id name}
  }
 }"""
@@ -95,6 +96,7 @@ def reconcile_parents(expected, pages):
     if len(subitem_boards) > 1:
         raise ValueError("Multiple subitem boards require separate reconciliation")
     return {"verified_source_parent_count": len(observed),
+            "source_parent_ids": sorted(observed,key=int),
             "source_subitem_count": len(children),
             "source_subitem_board_ids": sorted(subitem_boards, key=int),
             "source_subitems": [children[k] for k in sorted(children, key=int)]}
@@ -228,6 +230,7 @@ def run(args):
     parents = reconcile_parents(parent_ids, provider.board_pages())
     assets = reconcile_assets(asset_ids, provider.asset_batches(asset_ids))
     evidence = {"source_board_id": BOARD, "workbook_sha256": SOURCE_HASH,
+                "provider_readback_at_utc": datetime.now(timezone.utc).isoformat(),
                 "parent_lineage": parents, "media": assets,
                 "provider_metadata_reconciled": True,
                 "attachment_bytes_verified": False,
