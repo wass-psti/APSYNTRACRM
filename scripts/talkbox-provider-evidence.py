@@ -107,7 +107,9 @@ def reconcile_assets(expected, batches):
         for asset in batch:
             aid = str(asset.get("id", ""))
             size = asset.get("file_size")
-            if (aid in found or not ID_PATTERN.fullmatch(aid) or
+            if aid in found:
+                raise ValueError("Duplicate provider asset ID")
+            if (not ID_PATTERN.fullmatch(aid) or
                 type(size) is not int or size <= 0 or
                 not isinstance(asset.get("name"), str) or not asset["name"].strip()):
                 raise ValueError("Invalid provider asset")
