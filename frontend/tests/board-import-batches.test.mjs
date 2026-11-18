@@ -618,11 +618,11 @@ test('CP-BIMP column-capacity: 31-entry atomic import persists all 30 destinatio
 });
 
 
-test('CP-BIMP-SOURCE-CELL-CHAR-LIMIT-03 m143-v2 persists and reads back all 65,536 Subitems characters',async()=>{
+test('CP-BIMP-SOURCE-CELL-CHAR-LIMIT-03 m143-v2 persists and reads back all 69,668 original TradeLink Subitems characters',async()=>{
  const subitemsColumn='77777777-7777-4777-8777-777777777777';
  const prefix='[Qty: 1] - SIMATIC S7 Memory Card, 12 MB SIMATIC S7, memory cards for S7-1x00 CPU/SINAMICS, 3, 3';
- const source=prefix+'x'.repeat(65536-prefix.length);
- assert.equal(source.length,65536);
+ const source=prefix+'x'.repeat(69668-prefix.length);
+ assert.equal(source.length,69668);
  const detail={board:{id:boardId,name:'TradeLink Source Cell QA',workspace_id:workspace,
   status:'active',updated_at:'2026-11-18T00:00:00.000Z'},
   groups:[{id:groupId,title:'QA'}],columns:[{id:subitemsColumn,name:'Subitems',
@@ -661,9 +661,9 @@ test('CP-BIMP-SOURCE-CELL-CHAR-LIMIT-03 m143-v2 persists and reads back all 65,5
  assert.equal(writes,1);
  assert.equal(receipt.created,1);
  assert.equal(receipt.rowsProcessed,1);
- assert.equal(current.values[0].value.length,65536);
+ assert.equal(current.values[0].value.length,69668);
  assert.equal(current.values[0].value,source);
  const refreshed=await api.board(boardId);
- assert.equal(refreshed.values[0].value.length,65536);
+ assert.equal(refreshed.values[0].value.length,69668);
  assert.equal(refreshed.values[0].value,source);
 });

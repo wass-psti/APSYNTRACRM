@@ -1757,6 +1757,13 @@
       "file": "20261118102219_cp_bimp_atomic_mapping_capacity_31.sql",
       "bytes": 2844,
       "sha256": "3eedae4bbd5ca88a7a225a8ed8438e1a559ca121ced8943891c35b34d636cb29"
+    },
+    {
+      "version": "20261118105649",
+      "name": "cp_bimp_source_cell_capacity_131072",
+      "file": "20261118105649_cp_bimp_source_cell_capacity_131072.sql",
+      "bytes": 3047,
+      "sha256": "1e5d460fc0187240aefb2c12121433a17b4f614fab0462b8b97983081490ed72"
     }
   ]
 }

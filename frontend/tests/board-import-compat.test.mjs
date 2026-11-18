@@ -5,6 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {deflateRawSync} from 'node:zlib';
+import {readFileSync} from 'node:fs';
 import {parseDelimited,parseImportFile} from '../board-import-parse.js';
 import {buildImportPlan,initialImportMappings,EXTENDED_REF_KEY} from '../board-import-core.js';
 
@@ -552,13 +553,13 @@ test('XLSX TradeLink B28 excludes phonetic annotations for inline and shared ric
 });
 
 test('CSV source-cell boundary is exact and never silently truncates',()=>{
- const accepted='Name,Subitems\nPart 28,"'+'x'.repeat(65536)+'"';
- assert.equal(parseDelimited(accepted).rows[0][1].length,65536);
- const rejected='Name,Subitems\nPart 28,"'+'x'.repeat(65537)+'"';
- assert.throws(()=>parseDelimited(rejected),/A source cell exceeds 65,536 characters/);
+ const accepted='Name,Subitems\nPart 28,"'+'x'.repeat(131072)+'"';
+ assert.equal(parseDelimited(accepted).rows[0][1].length,131072);
+ const rejected='Name,Subitems\nPart 28,"'+'x'.repeat(131073)+'"';
+ assert.throws(()=>parseDelimited(rejected),/A source cell exceeds 131,072 characters/);
 });
 
-test('XLSX source-cell boundary accepts 65,536 and reports exact coordinates above the parser limit',async()=>{
+test('XLSX source-cell boundary accepts 131,072 and reports exact coordinates above the parser limit',async()=>{
  const makeEntries=value=>{
   const entries=workbookEntries();
   entries[3].xml='<worksheet><sheetData>'+
@@ -569,15 +570,16 @@ test('XLSX source-cell boundary accepts 65,536 and reports exact coordinates abo
    '</sheetData></worksheet>';
   return entries;
  };
- const accepted='x'.repeat(65536);
+ const accepted='x'.repeat(131072);
  const parsed=await parseWithFixtureDom(makeZip(makeEntries(accepted)));
  assert.equal(parsed.sheets[0].rows[0][1],accepted);
- const rejected='x'.repeat(65537);
+ assert.equal(parsed.sheets[0].rows[0][1].length,131072);
+ const rejected='x'.repeat(131073);
  await assert.rejects(()=>parseWithFixtureDom(makeZip(makeEntries(rejected))),
   error=>/Worksheet "Contacts"/.test(error.message)&&/row 28/.test(error.message)&&
    /cell B28/.test(error.message)&&/column "Subitems"/.test(error.message)&&
-   /A source cell exceeds 65,536 characters/.test(error.message)&&
-   /65,537 characters/.test(error.message));
+   /A source cell exceeds 131,072 characters/.test(error.message)&&
+   /131,073 characters/.test(error.message));
 });
 
 
@@ -629,16 +631,26 @@ test('CP-BIMP column-capacity: XLSX with 40 source columns maps Item plus 30 des
 });
 
 
-test('CP-BIMP-SOURCE-CELL-CHAR-LIMIT-03 XLSX TradeLink B28 accepts exactly 65,536 displayed characters while excluding larger phonetic annotations',async()=>{
- const {entries,base}=tradeLinkRichTextEntries({displayLength:65536});
- assert.equal(base.length,65536);
+test('CP-BIMP-SOURCE-CELL-CHAR-LIMIT-03 XLSX TradeLink B28 accepts the original 69,668 displayed characters while excluding larger phonetic annotations',async()=>{
+ const {entries,base}=tradeLinkRichTextEntries({displayLength:69668});
+ assert.equal(base.length,69668);
  for(const sharedStrings of [false,true]){
-  const fixture=tradeLinkRichTextEntries({sharedStrings,displayLength:65536});
+  const fixture=tradeLinkRichTextEntries({sharedStrings,displayLength:69668});
   const parsed=await parseWithFixtureDom(makeZip(fixture.entries));
   const sheet=parsed.sheets[0];
   assert.equal(sheet.name,'tradelink');
   assert.deepEqual(sheet.rowNumbers,[28]);
-  assert.equal(sheet.rows[0][1].length,65536);
+  assert.equal(sheet.rows[0][1].length,69668);
   assert.equal(sheet.rows[0][1],base);
  }
+});
+
+
+test('CP-BIMP-SOURCE-CELL-CHAR-LIMIT-03 migration expands the extended-reference table and atomic writer to 131,072 characters',()=>{
+ const sql=readFileSync(new URL('../../supabase/migrations/20261118105649_cp_bimp_source_cell_capacity_131072.sql',import.meta.url),'utf8');
+ assert.match(sql,/work_board_import_extended_refs_content_check/);
+ assert.match(sql,/BETWEEN 1 AND 131072/);
+ assert.match(sql,/char_length\(extended_text\)>131072/);
+ assert.match(sql,/wm_import_board_wizard_extended_atomic/);
+ assert.doesNotMatch(sql,/DROP TABLE|TRUNCATE|DELETE FROM public\.work_board_import_extended_refs/);
 });

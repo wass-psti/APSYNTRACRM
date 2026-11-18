@@ -1,3 +1,4 @@
+import {MAX_IMPORT_CELL_CHARACTERS} from './board-import-limits.js';
 /** BIMP-02: client-side import preview and the existing atomic RPC contract.
  * Never emulates an import with multiple individual mutations.
  */
@@ -388,7 +389,7 @@ function valueAsType(raw,type,config={},extendedReferences=false){
  const limit=type==='long_text'?5000:type==='email'?320:type==='url'?2000:1000;
  if(text.length>limit){
   if(extendedReferences&&['text','long_text','url'].includes(type)&&
-     text.length<=65536&&(!['url'].includes(type)||/^https?:\/\/[^\s]+$/i.test(text)))
+     text.length<=MAX_IMPORT_CELL_CHARACTERS&&(!['url'].includes(type)||/^https?:\/\/[^\s]+$/i.test(text)))
    return {[EXTENDED_REF_KEY]:text};
   deny('A '+type+' cell exceeds '+limit+' characters.');
  }
