@@ -123,3 +123,14 @@ test('subitem reconciliation refuses duplicate destination record identities',()
  assert.equal(plan.status,'BLOCKED');
  assert.match(plan.violations.join(' '),/duplicate CRM subitem ID/);
 });
+
+test('authoritative board count prevents a truncated snapshot from passing as complete',()=>{
+ const plan=reconcileTalkBoxIssueIdentities({
+  sourceIssues:[{id:'65764141',boardId:TALKBOX_SOURCE_BOARD_ID}],
+  crmIssues:[{id:'101',mondayItemId:'65764141'}],
+  sourceComplete:true,crmComplete:true,expectedSourceCount:87
+ });
+ assert.equal(plan.counts.source,1);
+ assert.equal(plan.status,'BLOCKED');
+ assert.match(plan.violations.join(' '),/source count mismatch/);
+});
