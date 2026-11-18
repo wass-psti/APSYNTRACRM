@@ -134,12 +134,16 @@ function stableRequestValue(value){
 const BOARD_READ_RPC=new Set([
  'wm_get_board_shell','wm_get_board_items_page',
  'wm_auth_access_context','work_board_access','wm_list_boards',
+ // Signed workspace discovery is a read-only lifecycle contract.
+ 'wm_ws01_list',
  'wm_search_workspace_content',
  'wm_board_ui_read','wm_list_board_events','wm_list_board_events_page',
  'wm_import_extended_refs_read',
  'apsyntra_crm_my_effective_access',
  'apsyntra_role_is_admin','apsyntra_role_is_bootstrap',
  'tl03_documents_page','tl03_document_read','tl03_document_history','tl03_document_revision_bundle',
+ // Assigned reviewer projection is read-only despite its VOLATILE PL/pgSQL wrapper.
+ 'tl03_assigned_documents',
  'fueltrack_v3_read','fueltrack_v3_analytics','fueltrack_v3_audit_read',
  'fueltrack_v3_receipt_prepare','fueltrack_v3_receipt_read',
  // Existing application read contracts used by concurrent native search.

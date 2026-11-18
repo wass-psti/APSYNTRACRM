@@ -185,7 +185,8 @@ test('overview board item totals use the refreshed signed board-list snapshot',a
 });
 test('all native global-search read RPCs preserve cached Board snapshots',async()=>{
  const names=[
-  'tl03_documents_page','tl03_document_read','tl03_document_history','tl03_document_revision_bundle','frt_bootstrap','frt_board_list_safe',
+  'tl03_documents_page','tl03_document_read','tl03_document_history','tl03_document_revision_bundle',
+  'tl03_assigned_documents','wm_ws01_list','frt_bootstrap','frt_board_list_safe',
   'frt_board_dashboard_safe','frt_liquidation_aging_company','frt_archive_list','frt_archive_list',
   'frt_restricted_request_detail','frt_ic_snapshot',
   'list_module_state','timetracker_ot_snapshot','timetracker_attendance_capabilities',
@@ -204,6 +205,31 @@ test('all native global-search read RPCs preserve cached Board snapshots',async(
  const generation=api.boardReadGeneration;
  for(const name of names)await api.rpc(name,{});
  assert.equal(api.boardReadCache.has(boardId),true);
+ assert.equal(api.boardReadGeneration,generation);
+});
+
+test('workspace and TradeLink read RPCs cannot invalidate an in-flight board hydration',async()=>{
+ let releaseShell;
+ const shellPending=new Promise(resolve=>{releaseShell=resolve;});
+ const auth={userId:user,accessToken:'token',authorized:async(path)=>{
+  if(path.endsWith('/wm_get_board_shell'))return shellPending;
+  if(path.endsWith('/wm_get_board_items_page'))
+   return {items:[],values:[],has_more:false,next_cursor:null};
+  if(path.endsWith('/wm_ws01_list'))
+   return {schemaVersion:1,userId:user,activeWorkspaceId:workspace,rows:[]};
+  if(path.endsWith('/tl03_assigned_documents'))return [];
+  throw Error('Unexpected RPC: '+path);
+ }};
+ const api=new DomainApi(auth);
+ const hydration=api.board(boardId);
+ await Promise.resolve();
+ const generation=api.boardReadGeneration;
+ await api.rpc('wm_ws01_list',{});
+ await api.rpc('tl03_assigned_documents',{p_board_id:boardId,p_limit:50});
+ assert.equal(api.boardReadGeneration,generation);
+ releaseShell({board:{id:boardId,workspace_id:workspace},groups:[],members:[],columns:[]});
+ const board=await hydration;
+ assert.equal(board.board.id,boardId);
  assert.equal(api.boardReadGeneration,generation);
 });
 
