@@ -47,4 +47,61 @@ export class TalkBoxNativeClient{
   const text=String(message||'').trim();if(!text||text.length>20000)throw new TypeError('Update must be 1–20,000 characters');
   return this.rpc('add_update',{p_issue_id:id(issueId),p_text:text});
  }
+ /**
+  * First write the existing signed domain object, then read it independently.
+  * Never use the mutation response as proof of durable persistence.
+  */
+ async createVerified(name){
+  const receipt=await this.create(name);
+  const record=await this.get(receipt.id);
+  if(record.name!==receipt.name)throw new Error('Created issue readback did not match');
+  return record;
+ }
+ async updateVerified(issueId,fields,version){
+  const receipt=await this.update(issueId,fields,version);
+  const record=await this.get(issueId);
+  if(record.version!==receipt.version||
+     Object.entries(fields).some(([key,value])=>record[key]!==value))
+   throw new Error('Updated issue readback did not match');
+  return record;
+ }
+ async postVerified(issueId,message){
+  const receipt=await this.post(issueId,message);
+  const record=await this.get(issueId);
+  const posted=record.updates.find(update=>String(update.id)===String(receipt?.id));
+  if(!posted||posted.text_body!==String(message).trim())
+   throw new Error('Issue update was submitted but readback is unconfirmed');
+  return {record,receipt};
+ }
+ async createSubitem(issueId,name){
+  const title=String(name||'').trim();
+  if(!title||title.length>500)throw new TypeError('Subtask name must be 1–500 characters');
+  const receipt=await this.rpc('create_subitem',{p_issue_id:id(issueId),p_fields:{name:title,status:'Working on it'}});
+  const record=await this.get(issueId);
+  if(!record.subitems.some(item=>String(item.id)===String(receipt?.id)&&item.name===title))
+   throw new Error('Subtask creation could not be verified by signed readback');
+  return record;
+ }
+ async updateSubitem(issueId,subitemId,status){
+  if(!statuses.includes(status))throw new TypeError('Invalid subtask status');
+  const receipt=await this.rpc('update_subitem',{p_subitem_id:id(subitemId),p_updates:{status}});
+  const record=await this.get(issueId);
+  if(!record.subitems.some(item=>String(item.id)===String(receipt?.id)&&item.status===status))
+   throw new Error('Subtask update could not be verified by signed readback');
+  return record;
+ }
+ async saveAssignees(issueId,people,version){
+  if(!Array.isArray(people)||people.length>100||
+    people.some(p=>!p||typeof p!=='object'||typeof p.id!=='string'||
+      !/^[1-9][0-9]{0,19}$/.test(p.id)))
+   throw new TypeError('An existing monday-compatible people identity array is required');
+  const receipt=await this.rpc('update_issue',{
+   p_issue_id:id(issueId),p_updates:{person:people},p_expected_version:version});
+  const record=await this.get(issueId);
+  if(record.version!==Number(receipt.version)||
+   JSON.stringify(record.person)!==JSON.stringify(people))
+   throw new Error('Assignee change could not be verified by signed readback');
+  return record;
+ }
+
 }
