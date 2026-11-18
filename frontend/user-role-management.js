@@ -31,7 +31,7 @@ export const FUELTRANS_WORKSPACE_ROLES=Object.freeze([
 const delegatedModules=new Set(['time-tracker','fueltrack-plus','tradelink','fund-released-tracker','tool-traceability','material-request-hub','toolbox-issues']);
 export class UserRoleManagementClient {
  constructor(api){this.api=api;}
- async snapshot(workspaceId,{includeFuelTrans=false}={}){
+ async snapshot(workspaceId,{includeFuelTrans=false,includeFundTracker=false}={}){
   if(!UUID.test(workspaceId||''))throw Error('Invalid workspace');
   // Always verify the existing server-authorized workspace snapshot first. New optional
   // RPC availability must never bypass the central CRM Administrator scope guard.
@@ -98,11 +98,13 @@ export class UserRoleManagementClient {
     (a.updatedAt===null||Number.isFinite(Date.parse(a.updatedAt))))))
    throw Error('Invalid authoritative Tool Traceability workspace membership response');
   let frtWorkspace=null;
-  try{
-   frtWorkspace=await this.api.rpc('apsyntra_role_frt_workspace_snapshot',{
-    p_workspace_id:workspaceId});
-  }catch(error){
-   if(!(error?.status===404&&error?.code==='PGRST202'))throw error;
+  if(includeFundTracker){
+   try{
+    frtWorkspace=await this.api.rpc('apsyntra_role_frt_workspace_snapshot',{
+     p_workspace_id:workspaceId});
+   }catch(error){
+    if(!(error?.status===404&&error?.code==='PGRST202'))throw error;
+   }
   }
   if(frtWorkspace!==null&&(
     frtWorkspace.contract!=='cp-urm-frt-workspace-v1'||
