@@ -84,6 +84,27 @@ function xmlDocument(text){
 const nodes=(parent,name)=>Array.from(parent.getElementsByTagNameNS('*',name));
 const first=(parent,name)=>nodes(parent,name)[0]||null;
 const textNode=(parent,name)=>first(parent,name)?.textContent||'';
+const localName=node=>String(node?.localName||node?.tagName||node?.nodeName||node?.tag||'')
+ .split(':').at(-1);
+/**
+ * SpreadsheetML rich strings contain display text in direct <t> children and
+ * in <r>/<t> formatting runs. <rPh>/<t> descendants are phonetic hints, not
+ * cell-value characters; including them can inflate a short cell past the
+ * source-cell limit and reject an otherwise valid worksheet row.
+ */
+function richTextValue(container){
+ if(!container)return '';
+ let value='';
+ for(const child of Array.from(container.children||[])){
+  const name=localName(child);
+  if(name==='t')value+=child.textContent||'';
+  else if(name==='r'){
+   for(const part of Array.from(child.children||[]))
+    if(localName(part)==='t')value+=part.textContent||'';
+  }
+ }
+ return value;
+}
 const le=(view,pos,n)=>n===2?view.getUint16(pos,true):view.getUint32(pos,true);
 const ZIP32_MAX=0xffffffff,ZIP16_MAX=0xffff;
 function zip64UInt64(view,position,end){
@@ -290,10 +311,11 @@ function cellColumn(address){
  return col;
 }
 function contextualError(sheet,row,address,column,raw,reason){
- const excerpt=String(raw??'').slice(0,96);
+ const text=String(raw??''),excerpt=text.slice(0,96)+(text.length>96?'…':'');
+ const length=text.length>96?' ('+text.length.toLocaleString('en-US')+' characters)':'';
  const name=column?' · column "'+column+'"':'';
  return new Error('Worksheet "'+sheet+'" · row '+row+
-  ' · cell '+address+name+' · value "'+excerpt+'": '+reason);
+  ' · cell '+address+name+' · value "'+excerpt+'"'+length+': '+reason);
 }
 function headerCandidate(values){
  if(!values?.[0]||values.length>MAX_COLUMNS)return null;
@@ -419,7 +441,7 @@ function sheetRows(xml,shared,dates,date1904,sheetName){
     formulaWarnings.push({row:excelRow,cell:address,column:label});
     raw='';
    }else if(type==='inlineStr')
-    raw=nodes(first(cell,'is')||cell,'t').map(x=>x.textContent||'').join('');
+    raw=richTextValue(first(cell,'is'));
    else if(type==='s'){
     const idx=Number(raw);
     if(!Number.isSafeInteger(idx)||idx<0||idx>=shared.length)
@@ -463,8 +485,7 @@ async function parseWorkbook(buffer){
  const styles=zip.entries.has('xl/styles.xml')?
   styleDates(xmlDocument(await unzipEntry(zip,'xl/styles.xml'))):[];
  const shared=zip.entries.has('xl/sharedStrings.xml')?
-  nodes(xmlDocument(await unzipEntry(zip,'xl/sharedStrings.xml')),'si').map(n=>
-   nodes(n,'t').map(x=>x.textContent||'').join('')):[];
+  nodes(xmlDocument(await unzipEntry(zip,'xl/sharedStrings.xml')),'si').map(richTextValue):[];
  if(shared.length>100000)invalid('Workbook shared strings exceed limits.');
  const relationships=new Map(nodes(rel,'Relationship').map(r=>[
   r.getAttribute('Id'),{target:r.getAttribute('Target'),
