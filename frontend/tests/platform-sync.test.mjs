@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS,SYNC_CONNECT_TIMEOUT_MS,SYNC_JOIN_TIMEOUT_MS}
+import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS,SYNC_CONNECT_TIMEOUT_MS,SYNC_JOIN_TIMEOUT_MS,shouldResumeDeferredReconciliation}
  from '../platform-sync.js';
 
 const uid='20000000-0000-4000-8000-000000000001';
@@ -246,6 +246,33 @@ test('subscription counts stay bounded and stop disposes socket/timers',async()=
  x.ctl.stop();assert.equal(x.intervals.size,0);
  assert.equal(x.sockets[0].readyState,3);
 });
+test('TimeTracker deferred startup reconciliation recovers immediately when its read completes',async()=>{
+ const x=fake();let readBusy=true;
+ x.ctl.onInvalidate=async event=>{
+  x.invalidations.push(event);
+  return !readBusy;
+ };
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await x.wait();await x.join(x.sockets[0]);
+ assert.equal(x.statuses.at(-1).phase,'reconnecting');
+ assert.equal(x.statuses.at(-1).detail,'Pending authoritative reconciliation');
+ readBusy=false;
+ if(shouldResumeDeferredReconciliation(x.ctl.lastStatus,{blocked:readBusy}))
+  await x.ctl.syncNow('manual',[]);
+ await x.wait();
+ assert.equal(x.statuses.at(-1).phase,'synchronized');
+ assert.equal(x.invalidations.at(-1).reason,'manual');
+ x.ctl.stop();
+});
+
+test('deferred initial reconciliation resumes only after the blocking read is clear',()=>{
+ const deferred={phase:'reconnecting',detail:'Pending authoritative reconciliation'};
+ assert.equal(shouldResumeDeferredReconciliation(deferred),true);
+ assert.equal(shouldResumeDeferredReconciliation(deferred,{blocked:true}),false);
+ assert.equal(shouldResumeDeferredReconciliation({...deferred,detail:'Realtime connection attempt timed out'}),false);
+ assert.equal(shouldResumeDeferredReconciliation({...deferred,phase:'synchronized'}),false);
+});
+
 test('frontend integration preserves signed state, edits and background-independent status',()=>{
  const app=readFileSync('frontend/app.js','utf8');
  const index=readFileSync('index.html','utf8');
@@ -255,6 +282,8 @@ test('frontend integration preserves signed state, edits and background-independ
  assert.match(app,/function platformSyncEditInProgress\(/);
  assert.match(app,/root\.querySelector\('\.aps-sync'\)/);
  assert.match(app,/if\(platformSyncEditInProgress\(\)\)return false/);
+ assert.match(app,/shouldResumeDeferredReconciliation\(platformSync\.lastStatus/);
+ assert.match(app,/void platformSync\.syncNow\('manual',\[\]\)/);
  assert.match(app,/if\(state\.context&&auth\.isSignedIn\)platformSync\.start/);
  const logout=app.split("case 'logout':{")[1];
  assert.ok(logout,'Logout handler must exist');
