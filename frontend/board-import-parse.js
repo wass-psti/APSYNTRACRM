@@ -1,10 +1,11 @@
 import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
+import {MAX_IMPORT_CELL_CHARACTERS} from './board-import-limits.js';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
 // Source workbook width is independent of the 30 physical-column ceiling
 // enforced when a destination board creates columns. Allow wide exports to
 // map or explicitly exclude their excess source columns.
 const MAX_BYTES=8*1024*1024,MAX_ROWS=20000,MAX_COLUMNS=256,
- MAX_SOURCE_CELL_LENGTH=65536,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
+ MAX_SOURCE_CELL_LENGTH=MAX_IMPORT_CELL_CHARACTERS,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
 const invalid=message=>{throw new Error(message);};
 export function validateImportSheet(headers,rows){
  if(!Array.isArray(headers)||headers.length<1||headers.length>MAX_COLUMNS)
@@ -16,7 +17,7 @@ export function validateImportSheet(headers,rows){
   invalid('Import requires 1–20,000 data rows.');
  for(const row of rows){
   if(!Array.isArray(row)||row.length>MAX_COLUMNS)invalid('Invalid spreadsheet row width.');
-  if(row.some(x=>String(x??'').length>MAX_SOURCE_CELL_LENGTH))invalid('A source cell exceeds 65,536 characters.');
+  if(row.some(x=>String(x??'').length>MAX_SOURCE_CELL_LENGTH))invalid('A source cell exceeds '+MAX_SOURCE_CELL_LENGTH.toLocaleString('en-US')+' characters.');
  }
  return {headers:names,rows};
 }
@@ -49,7 +50,7 @@ export function parseDelimited(text,delimiter){
    if(closed&&c!==' '&&c!=='\t')invalid('Unexpected content after quoted CSV field.');
    if(!closed)value+=c;
   }
-  if(value.length>MAX_SOURCE_CELL_LENGTH)invalid('A source cell exceeds 65,536 characters.');
+  if(value.length>MAX_SOURCE_CELL_LENGTH)invalid('A source cell exceeds '+MAX_SOURCE_CELL_LENGTH.toLocaleString('en-US')+' characters.');
   if(row.length>MAX_COLUMNS)invalid('CSV exceeds 256 source columns.');
  }
  if(quoted)invalid('CSV has an unterminated quoted field.');
@@ -461,7 +462,7 @@ function sheetRows(xml,shared,dates,date1904,sheetName){
       date1904,format,cellType:type||'n'
      });
     }
-    if(String(value).length>MAX_SOURCE_CELL_LENGTH)throw Error('A source cell exceeds 65,536 characters.');
+    if(String(value).length>MAX_SOURCE_CELL_LENGTH)throw Error('A source cell exceeds '+MAX_SOURCE_CELL_LENGTH.toLocaleString('en-US')+' characters.');
     values[col-1]=String(value??'');
    }catch(error){
     throw contextualError(sheetName,excelRow,address,label,raw,error.message);
