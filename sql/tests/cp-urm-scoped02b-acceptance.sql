@@ -7,7 +7,7 @@ DECLARE
  target_id uuid:='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
  bootstrap_id uuid:='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
  module_name text;selected_role text;prior_role text;
- revision timestamptz;result jsonb;source jsonb;effective jsonb;
+ revision timestamptz;result jsonb;source jsonb;effective jsonb;signed_context jsonb;
 BEGIN
  PERFORM set_config('test.workspace',w::text,true);
  PERFORM set_config('test.actor',admin_id::text,true);
@@ -43,7 +43,21 @@ BEGIN
     AND a->>'allowed'='true') THEN
    RAISE EXCEPTION 'CRM role projection mismatch for %',module_name;
   END IF;
+  signed_context:=public.wm_auth_access_context();
+  IF (SELECT count(*) FROM jsonb_array_elements(signed_context->'assignments') a
+     WHERE a->>'module_id'=module_name)<>1 OR
+    NOT EXISTS(SELECT 1 FROM jsonb_array_elements(signed_context->'assignments') a
+     WHERE a->>'module_id'=module_name AND a->>'role'=selected_role
+       AND a->>'enabled'='true') THEN
+   RAISE EXCEPTION 'Signed workspace module projection failed for %',module_name;
+  END IF;
   PERFORM set_config('test.workspace',other_w::text,true);
+  signed_context:=public.wm_auth_access_context();
+  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(signed_context->'assignments') a
+    WHERE a->>'module_id'=module_name AND a->>'role'=prior_role
+      AND a->>'enabled'='true') THEN
+   RAISE EXCEPTION 'Other workspace signed role changed for %',module_name;
+  END IF;
   IF public.module_role_for(module_name) IS DISTINCT FROM prior_role THEN
    RAISE EXCEPTION 'Foreign workspace role changed for %',module_name;
   END IF;
