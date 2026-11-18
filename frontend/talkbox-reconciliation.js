@@ -76,10 +76,13 @@ export function reconcileTalkBoxIssueIdentities({
  * must not be silently equated to monday source board 18371220520.
  */
 export function reconcileTalkBoxSubitemIdentities({
- sourceSubitems,crmSubitems,sourceComplete=false,crmComplete=false
+ sourceSubitems,crmSubitems,sourceIssueIds=null,sourceComplete=false,crmComplete=false
 }={}){
  if(!Array.isArray(sourceSubitems)||!Array.isArray(crmSubitems))
   throw new TypeError('Both subitem arrays are required');
+ if(sourceIssueIds!==null&&!Array.isArray(sourceIssueIds))
+  throw new TypeError('Source parent issue identities must be an array');
+ const parents=sourceIssueIds===null?null:new Set(sourceIssueIds.map(normalizeId));
  const violations=[],crmRefs=new Map(),crmIds=new Set(),sourceIds=new Set(),matched=[];
  for(const source of sourceSubitems){
   const subId=normalizeId(source?.id);
@@ -87,8 +90,10 @@ export function reconcileTalkBoxSubitemIdentities({
   sourceIds.add(subId);
   if(normalizeId(source?.boardId)!==TALKBOX_SOURCE_SUBITEM_BOARD_ID)
    violations.push('Subitem source board identity mismatch: '+subId);
-  if(!nonemptyId(normalizeId(source?.parentId)))
-   violations.push('Subitem parent source ID is required: '+subId);
+  const parentId=normalizeId(source?.parentId);
+  if(!nonemptyId(parentId))violations.push('Subitem parent source ID is required: '+subId);
+  else if(parents&&!parents.has(parentId))
+   violations.push('Subitem parent source issue not in source snapshot: '+subId);
  }
  for(const crm of crmSubitems){
   const id=normalizeId(crm?.id),external=mappedSourceId(crm);

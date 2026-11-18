@@ -147,3 +147,20 @@ test('reconciliation explicitly reports CRM records without authoritative source
  assert.equal(plan.counts.unlinkedCRM,2);
  assert.equal(plan.writesAuthorized,false);
 });
+
+test('subitem reconciliation validates parent identities against complete exported source issues',()=>{
+ const source={id:'88',boardId:TALKBOX_SOURCE_SUBITEM_BOARD_ID,parentId:'999'};
+ const plan=reconcileTalkBoxSubitemIdentities({
+  sourceSubitems:[source],
+  crmSubitems:[{id:'20',mondayItemId:'88'}],
+  sourceIssueIds:['65764141'],sourceComplete:true,crmComplete:true
+ });
+ assert.equal(plan.status,'BLOCKED');
+ assert.match(plan.violations.join(' '),/parent source issue not in source snapshot/);
+ const valid=reconcileTalkBoxSubitemIdentities({
+  sourceSubitems:[{...source,parentId:'65764141'}],
+  crmSubitems:[{id:'20',mondayItemId:'88'}],
+  sourceIssueIds:['65764141'],sourceComplete:true,crmComplete:true
+ });
+ assert.equal(valid.status,'MATCHED');
+});
