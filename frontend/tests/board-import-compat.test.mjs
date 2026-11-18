@@ -286,6 +286,23 @@ test('XLSX: Monday-style ZIP64 per-entry size metadata is accepted',async()=>{
  assert.deepEqual(parsed.sheets[0].rows,[['Alice','12.5'],['Bob','8']]);
 });
 
+
+test('XLSX: source cells above the storage limit remain available for explicit column or row review',async()=>{
+ const large='x'.repeat(70000);
+ const xml='<worksheet><sheetData>'+  '<row r="1"><c r="A1" t="inlineStr"><is><t>Name</t></is></c>'+  '<c r="B1" t="inlineStr"><is><t>Subitems</t></is></c></row>'+  '<row r="2"><c r="A2" t="inlineStr"><is><t>TradeLink item</t></is></c>'+  '<c r="B2" t="inlineStr"><is><t>'+large+'</t></is></c></row>'+  '</sheetData></worksheet>';
+ const workbook='<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+  '<sheets><sheet name="tradelink" r:id="rId1"/></sheets></workbook>';
+ const relationships='<Relationships><Relationship Id="rId1" '+  'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '+  'Target="worksheets/sheet1.xml"/></Relationships>';
+ const bytes=makeZip([
+  {name:'xl/workbook.xml',xml:workbook},
+  {name:'xl/_rels/workbook.xml.rels',xml:relationships},
+  {name:'xl/worksheets/sheet1.xml',xml}
+ ]);
+ const parsed=await parseWithFixtureDom(bytes);
+ assert.equal(parsed.sheets.length,1);
+ assert.equal(parsed.sheets[0].worksheet,'tradelink');
+ assert.equal(parsed.sheets[0].rows[0][1].length,70000);
+});
+
 test('XLSX: sanitized Monday.com export ZIP64 package imports its 10-column activity sheet',async()=>{
  const parsed=await parseWithFixtureDom(makeZip(mondayExportEntries()));
  assert.equal(parsed.sheets.length,1);

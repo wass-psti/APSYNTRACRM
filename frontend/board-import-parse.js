@@ -1,10 +1,11 @@
 import {normalizeExcelCellDate,normalizeTextDate,excelDateFormat} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 /** BIMP-01: bounded, dependency-free CSV/XLSX data reader. No workbook formula evaluation. */
-// Source workbook width is independent of the 30 physical-column ceiling
-// enforced when a destination board creates columns. Allow wide exports to
-// map or explicitly exclude their excess source columns.
+// Source workbook width is independent of the atomic writer's 30 mapped-column
+// ceiling. Source cells are retained up to the bounded XLSX expansion budget so
+// the mapping/review steps can explicitly exclude values the storage contract
+// cannot persist; parsing must not abort the entire workbook before that choice.
 const MAX_BYTES=8*1024*1024,MAX_ROWS=20000,MAX_COLUMNS=256,
- MAX_SOURCE_CELL_LENGTH=65536,MAX_UNCOMPRESSED_BYTES=24*1024*1024;
+ MAX_UNCOMPRESSED_BYTES=24*1024*1024,MAX_SOURCE_CELL_LENGTH=MAX_UNCOMPRESSED_BYTES;
 const invalid=message=>{throw new Error(message);};
 export function validateImportSheet(headers,rows){
  if(!Array.isArray(headers)||headers.length<1||headers.length>MAX_COLUMNS)

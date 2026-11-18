@@ -110,6 +110,35 @@ test('UI requires explicit rejection acknowledgement and preserves durable sourc
  assert.match(durable,/importDigest\(originalSource\|\|fullSheet,crypt\)/);
 });
 
+
+test('oversized source cells survive parsing and can be explicitly excluded without losing the record',()=>{
+ const oversized='x'.repeat(70000);
+ const parsed=parseDelimited('Name,Subitems\nTradeLink item,"'+oversized+'"');
+ assert.equal(parsed.rows[0][1].length,70000);
+ const withSubitems={...detail,columns:[...detail.columns,col(9,'Subitems','long_text')]};
+ const mapped=[{source:'Name',action:'item'},
+  {source:'Subitems',action:'existing',columnId:withSubitems.columns.at(-1).id}];
+ const rejected=reviewImportSourceRows({sheet:parsed,detail:withSubitems,mappings:mapped,
+  matches,extendedReferences:true});
+ assert.equal(rejected.acceptedRows,0);
+ assert.equal(rejected.rejected[0].row,2);
+ assert.equal(rejected.rejected[0].column,'Subitems');
+ const excluded=[mapped[0],{source:'Subitems',action:'skip',requiresDecision:false}];
+ const retained=reviewImportSourceRows({sheet:parsed,detail:withSubitems,mappings:excluded,
+  matches,extendedReferences:true});
+ assert.equal(retained.acceptedRows,1);
+ assert.equal(retained.rejected.length,0);
+ assert.equal(retained.sheet.rows[0][0],'TradeLink item');
+});
+
+test('mapping UI reports the 30-column contract before Next and exposes oversized cells for deliberate handling',()=>{
+ const ui=readFileSync('frontend/board-import-ui.js','utf8');
+ assert.match(ui,/Mapped source columns:/);
+ assert.match(ui,/MAX_MAPPED_SOURCE_COLUMNS/);
+ assert.match(ui,/state\.mappings\.filter\(m=>m\.action!=='skip'\)\.length>MAX_MAPPED_SOURCE_COLUMNS/);
+ assert.match(ui,/source row\(s\) exceed the .*character storage limit/);
+});
+
 test('a worksheet containing only invalid rows remains an explicit zero-write review',()=>{
  const sheet={headers,rowNumbers:[5],rows:[['Bad','Item ID (auto generated)',
   'invalid email','not a number','Invalid status']]};
