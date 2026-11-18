@@ -137,11 +137,11 @@ DECLARE before_sql text; after_sql text;
 BEGIN
  before_sql:=pg_catalog.pg_get_functiondef(
   'public.apsyntra_crm_my_effective_access()'::regprocedure);
- IF pg_catalog.position(
+ IF position(
   'WHEN ''tool-traceability'' THEN traceability.role' IN before_sql)=0
- OR pg_catalog.position(
+ OR position(
   'LEFT JOIN public.tool_traceability_memberships traceability' IN before_sql)=0
- OR pg_catalog.position(
+ OR position(
   'public.apsyntra_crm_module_role_rank' IN before_sql)=0 THEN
   RAISE EXCEPTION 'CRM effective access projection changed: manual review required' USING ERRCODE='55000';
  END IF;
@@ -158,7 +158,7 @@ BEGIN
   E'\n     AND frt.workspace_id = v_workspace'||
   E'\n     AND frt.user_id = v_actor'||
   E'\n    LEFT JOIN public.tool_traceability_memberships traceability');
- IF after_sql=before_sql OR pg_catalog.position(
+ IF after_sql=before_sql OR position(
   'LEFT JOIN public.frt_memberships frt' IN after_sql)=0 THEN
   RAISE EXCEPTION 'CRM effective role patch invariant failed' USING ERRCODE='55000';
  END IF;
