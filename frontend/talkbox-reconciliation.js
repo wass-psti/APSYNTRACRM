@@ -64,3 +64,44 @@ export function reconcileTalkBoxIssueIdentities({
   writesAuthorized:false
  });
 }
+
+/**
+ * Subitems must be reconciled separately from parent issues.
+ * The legacy CRM projection currently reports boardId 18370784141, which
+ * must not be silently equated to monday source board 18371220520.
+ */
+export function reconcileTalkBoxSubitemIdentities({
+ sourceSubitems,crmSubitems,sourceComplete=false,crmComplete=false
+}={}){
+ if(!Array.isArray(sourceSubitems)||!Array.isArray(crmSubitems))
+  throw new TypeError('Both subitem arrays are required');
+ const violations=[],crmRefs=new Map(),sourceIds=new Set(),matched=[];
+ for(const source of sourceSubitems){
+  const subId=normalizeId(source?.id);
+  if(!nonemptyId(subId)||sourceIds.has(subId)){violations.push('Invalid or duplicate source subitem ID: '+subId);continue;}
+  sourceIds.add(subId);
+  if(normalizeId(source?.boardId)!==TALKBOX_SOURCE_SUBITEM_BOARD_ID)
+   violations.push('Subitem source board identity mismatch: '+subId);
+  if(!nonemptyId(normalizeId(source?.parentId)))
+   violations.push('Subitem parent source ID is required: '+subId);
+ }
+ for(const crm of crmSubitems){
+  const id=normalizeId(crm?.id),external=mappedSourceId(crm);
+  if(!nonemptyId(id)){violations.push('Invalid CRM subitem ID: '+id);continue;}
+  if(external!==null){
+   if(!nonemptyId(external)||crmRefs.has(external))
+    violations.push('Invalid or duplicate CRM subitem source reference: '+external);
+   else crmRefs.set(external,crm);
+  }
+ }
+ for(const sourceId of sourceIds)if(crmRefs.has(sourceId))
+  matched.push({sourceId,crmId:normalizeId(crmRefs.get(sourceId).id)});
+ if(!sourceComplete||!crmComplete)
+  violations.push('A complete signed source and CRM subitem snapshot is required');
+ return Object.freeze({
+  status:violations.length?'BLOCKED':matched.length===sourceIds.size?'MATCHED':'RECONCILIATION_REQUIRED',
+  sourceBoardId:TALKBOX_SOURCE_SUBITEM_BOARD_ID,
+  counts:{source:sourceIds.size,crm:crmSubitems.length,matched:matched.length},
+  matched,violations,writesAuthorized:false
+ });
+}
