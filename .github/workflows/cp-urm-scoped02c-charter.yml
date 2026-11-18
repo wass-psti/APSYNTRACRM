@@ -48,6 +48,7 @@ jobs:
             -f supabase/migrations/20261118062000_cp_urm_scoped02b_six_modules.sql \
             -f sql/tests/cp-urm-scoped02c-setup.sql \
             -f sql/tests/cp-urm-scoped02c-live-charter-timetracker.sql \
+            -f sql/tests/cp-urm-scoped02c-live-ranks.sql \
             -f supabase/migrations/20261118063000_cp_urm_scoped02c_charter_timetracker.sql \
             -f sql/tests/cp-urm-scoped02c-acceptance.sql
       - uses: actions/setup-node@v4
