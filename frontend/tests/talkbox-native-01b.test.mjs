@@ -101,3 +101,11 @@ test('subitem reconciliation rejects incorrect board provenance despite matching
  assert.equal(matching.counts.matched,1);
  assert.equal(matching.writesAuthorized,false);
 });
+
+test('issue drawer follows canonical browser navigation and cached board refresh',()=>{
+ const app=readFileSync('frontend/app.js','utf8');
+ assert.match(app,/case 'tb-open':\{location\.hash=talkBoxIssueHref\(button\.dataset\.id\)/);
+ assert.match(app,/case 'tb-close':\{talkBoxState\.selected=null;location\.hash=TALKBOX_APPLICATION_ROUTE/);
+ assert.match(app,/if\(tab==='talkbox'&&state\.boardId===boardId\)await loadTalkBox\(\)/);
+ assert.match(app,/if\(!issueId\)talkBoxState\.selected=null/);
+});
