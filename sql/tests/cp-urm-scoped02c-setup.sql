@@ -29,6 +29,8 @@ END$$;
 INSERT INTO public.module_role_assignments(user_id,module_id,role,enabled)
 VALUES('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','charter-navigator','user',true),
 ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','charter-navigator','Employee',true);
+-- Supervisor ceiling (rank 3) permits a Charter admin operational role (rank 3).
+UPDATE public.profiles SET platform_role='supervisor' WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 UPDATE public.profiles SET display_name='Member',email='member@example.invalid'
 WHERE id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 UPDATE public.profiles SET display_name='Protected',email='bootstrap@example.invalid'
