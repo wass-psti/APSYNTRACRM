@@ -52,8 +52,10 @@ test('focus, visibility and cross-tab reconciliation detect workspace role reass
  const end=app.indexOf('async function refreshSignedWorkspaceRelation()',start);
  const scope=app.slice(start,end);
  assert.ok(start>0&&end>start);
- assert.match(scope,/\['focus','visible','cross-tab'\]\.includes\(reason\)/);
- assert.match(scope,/Date\.now\(\)-crmRoleLastReadAt>=10000/);
+ assert.match(scope,/shouldRecheckWorkspaceRoles\(\{reason,roleChanged,/);
+ assert.match(scope,/lastReadAt:crmRoleLastReadAt/);
+ assert.match(scope,/if\(roleRecheck\)\{/);
  assert.match(scope,/refreshSignedCrmRole\(\{force:roleRecheck\}\)/);
+ assert.doesNotMatch(scope,/if\(roleChanged\|\|sensitive\)/);
  assert.doesNotMatch(scope,/role_set|\.mutate\(/);
 });

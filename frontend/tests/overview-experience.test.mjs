@@ -184,5 +184,6 @@ test('Workspace essentials is rendered only after verified bootstrap authority',
  assert.match(verified,/Board permissions are centralized/);
  assert.match(verified,/Native issue transactions/);
  assert.match(app,/roleConfig\.bootstrapVerified\(\)/);
- assert.match(app,/if\(roleChanged\|\|sensitive\)/);
+ assert.match(app,/if\(roleRecheck\)\{/);
+ assert.doesNotMatch(app,/if\(roleChanged\|\|sensitive\)/);
 });

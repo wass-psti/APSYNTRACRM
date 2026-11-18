@@ -122,9 +122,14 @@ function validateBoardItemPage(page,{boardId,columnIds,groupIds,afterCursor=null
  return {items:page.items,values:page.values,hasMore:page.has_more,nextCursor,counts};
 }
 function encodeQuery(input){return new URLSearchParams(input).toString();}
-// Board-affecting writes only. Read RPCs must never broadcast invalidations:
-// doing so could trigger infinite cross-tab read / broadcast cycles.
-// Only verified read-only RPCs may preserve cached board snapshots.
+function stableRequestValue(value){
+ if(Array.isArray(value))return value.map(stableRequestValue);
+ if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,stableRequestValue(value[key])]));
+ return value;
+}
+// Exact allowlist of verified read-only RPCs (board and domain). These may
+// share overlapping requests and receive one bounded transport retry. They
+// never broadcast invalidations or cache completed permission decisions.
 // Unknown RPCs remain conservative: invalidate locally before execution.
 const BOARD_READ_RPC=new Set([
  'wm_get_board_shell','wm_get_board_items_page',
@@ -151,7 +156,8 @@ const BOARD_READ_RPC=new Set([
  'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',
  'material_request_hub_list_requests','material_request_hub_get_request',
  'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot',
- 'fm1_list_tickets_v1','fm1_ticket_detail_v1'
+ 'fm1_service_status_v1','fm1_list_tickets_v1','fm1_ticket_detail_v1',
+ 'fm1_notification_inbox_v1','fm1_deadline_warning_policy_v1','fm1_operational_report_v1'
 ]);
 // Exact, reviewed write contracts only. Partial-prefix regular expressions
 // can silently miss full RPC names, preventing successful writes from
@@ -205,6 +211,7 @@ export class DomainApi {
   this.boardReadGeneration=0;
   this.contextReadGeneration=0;
   this.boardListRequests=new Map();
+  this.readRequests=new Map();
   this.effectiveAccessPending=new Map();
   this.contextPending=new Map();
   this.onBoardMutation=null;
@@ -223,6 +230,7 @@ export class DomainApi {
   }
   this.boardReadGeneration++;
   this.boardListRequests.clear();
+  this.readRequests.clear();
   this.effectiveAccessPending.clear();
   if(boardId===null){
    this.contextReadGeneration++;
@@ -373,7 +381,25 @@ export class DomainApi {
    const knownRead=BOARD_READ_RPC.has(name);
    // Unknown calls may mutate: preserve the original fail-closed behavior.
    if(!mutates&&!knownRead&&!NON_BOARD_DOMAIN_RPC.has(name))this.invalidateBoardCache();
-   const request=this.auth.authorized('/rest/v1/rpc/'+name,{method:'POST',body:args,...options});
+   const requestPath='/rest/v1/rpc/'+name;
+   const requestOptions={method:'POST',body:args,...options,
+    requestKind:mutates?'mutation':knownRead?'read':(options.requestKind||'unknown'),
+    retryableRead:knownRead};
+   const token=this.auth?.accessToken,userId=this.auth?.userId;
+   const shareRead=knownRead&&typeof token==='string'&&token.length>0&&!options.signal;
+   const readKey=shareRead?JSON.stringify([userId,token,this.boardReadGeneration,name,
+    stableRequestValue(args),options.readTimeoutMs??null,options.retryUnauthorized??true]):null;
+   let request=readKey?this.readRequests.get(readKey):null;
+   if(!request){
+    request=this.auth.authorized(requestPath,requestOptions);
+    if(readKey){
+     const pending=Promise.resolve(request);
+     this.readRequests.set(readKey,pending);
+     const cleanup=()=>{if(this.readRequests.get(readKey)===pending)this.readRequests.delete(readKey);};
+     pending.then(cleanup,cleanup);
+     request=pending;
+    }
+   }
    if(!mutates)return request;
    return Promise.resolve(request).then(result=>{
     // Commit-time invalidation avoids evicting valid snapshots on denied writes.
