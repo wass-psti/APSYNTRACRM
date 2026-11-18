@@ -297,3 +297,93 @@ BEGIN
 END;
 $function$
 ;
+
+-- Production signed workspace source, captured for migration compatibility.
+CREATE OR REPLACE FUNCTION public.wm_auth_access_context()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_actor uuid := auth.uid();
+  v_workspace uuid;
+  v_profile jsonb;
+  v_assignments jsonb;
+  v_revision timestamptz;
+begin
+  if v_actor is null then
+    raise exception 'Authentication is required' using errcode = '42501';
+  end if;
+
+  select jsonb_build_object(
+    'id', p.id,
+    'email', p.email,
+    'display_name', p.display_name,
+    'avatar_path', p.avatar_path,
+    'platform_role', p.platform_role,
+    'status', p.status,
+    'created_at', p.created_at,
+    'updated_at', p.updated_at
+  ), p.updated_at
+  into v_profile, v_revision
+  from public.profiles p
+  where p.id = v_actor;
+
+  if v_profile is null then
+    raise exception 'Authenticated profile is missing' using errcode = 'P0002';
+  end if;
+
+  -- Preserve the authoritative Material Tracker assignment projection.
+  with assignments as (
+    select m.user_id, m.module_id, m.role, m.enabled, m.updated_at
+    from public.module_role_assignments m
+    where m.user_id = v_actor
+    union all
+    select mt.user_id, 'material-tracker'::text, mt.role,
+      (mt.enabled = true and mt.status = 'active') as enabled, mt.updated_at
+    from public.material_tracker_memberships mt
+    join public.workspace_members wm
+      on wm.workspace_id = mt.workspace_id
+     and wm.user_id = mt.user_id
+     and wm.active = true
+    where mt.user_id = v_actor
+  )
+  select coalesce(
+    jsonb_agg(jsonb_build_object(
+      'user_id', a.user_id,
+      'module_id', a.module_id,
+      'role', a.role,
+      'enabled', a.enabled,
+      'updated_at', a.updated_at
+    ) order by a.module_id),
+    '[]'::jsonb
+  ), greatest(v_revision, max(a.updated_at))
+  into v_assignments, v_revision
+  from assignments a;
+
+  -- Preserve host-authoritative active workspace resolution.
+  if v_profile->>'status' = 'active' then
+    v_workspace := public.current_workspace_id(v_actor);
+    if v_workspace is not null and not exists (
+      select 1
+      from public.workspace_members wm
+      where wm.workspace_id = v_workspace
+        and wm.user_id = v_actor
+        and wm.active
+    ) then
+      v_workspace := null;
+    end if;
+  end if;
+
+  return jsonb_build_object(
+    'schema_version', '1.43.3-profile-avatar',
+    'user_id', v_actor,
+    'workspace_id', v_workspace,
+    'profile', v_profile,
+    'assignments', v_assignments,
+    'revision', coalesce(v_revision, now())
+  );
+end;
+$function$
+;
