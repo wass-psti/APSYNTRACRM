@@ -578,3 +578,51 @@ test('XLSX source-cell boundary accepts 65,536 and reports exact coordinates abo
    /A source cell exceeds 65,536 characters/.test(error.message)&&
    /65,537 characters/.test(error.message));
 });
+
+
+test('CP-BIMP column-capacity: XLSX with 40 source columns maps Item plus 30 destinations and explicitly excludes nine extras',async()=>{
+ const toColumn=index=>{
+  let value=index,result='';
+  while(value>0){const remainder=(value-1)%26;result=String.fromCharCode(65+remainder)+result;value=Math.floor((value-1)/26);}
+  return result;
+ };
+ const destinations=Array.from({length:30},(_,i)=>'Destination '+String(i+1).padStart(2,'0'));
+ const excluded=Array.from({length:9},(_,i)=>'Export '+(i+1));
+ const headers=['Name',...destinations,...excluded];
+ const values=['Wide XLSX row',...destinations.map((_,i)=>'xlsx-value-'+(i+1)),
+  ...excluded.map((_,i)=>'ignored-'+(i+1))];
+ const cells=(row,entries)=>entries.map((value,index)=>{
+  const address=toColumn(index+1)+row;
+  return '<c r="'+address+'" t="inlineStr"><is><t>'+value+'</t></is></c>';
+ }).join('');
+ const entries=workbookEntries();
+ entries[3].xml='<worksheet><sheetData><row r="1">'+cells(1,headers)+'</row>'+
+  '<row r="2">'+cells(2,values)+'</row></sheetData></worksheet>';
+ const parsed=await parseWithFixtureDom(makeZip(entries));
+ assert.equal(parsed.sheets.length,1);
+ const sheet=parsed.sheets[0];
+ assert.equal(sheet.headers.length,40);
+ assert.equal(sheet.rows[0].length,40);
+ assert.deepEqual(sheet.headers,headers);
+ const columns=destinations.map((name,i)=>({
+  id:'e0000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),
+  name,data_type:'text',column_key:'custom:wide-'+(i+1),system_key:null,config:{}}));
+ const boardId='11111111-1111-4111-8111-111111111111';
+ const workspaceId='22222222-2222-4222-8222-222222222222';
+ const groupId='44444444-4444-4444-8444-444444444444';
+ const detail={board:{id:boardId,workspace_id:workspaceId,updated_at:'2026-11-18T00:00:00.000Z',
+  status:'active',name:'Wide XLSX QA'},groups:[{id:groupId,title:'Current'}],
+  columns,items:[],values:[]};
+ const initial=initialImportMappings(sheet,detail);
+ assert.equal(initial.filter(mapping=>mapping.action==='item').length,1);
+ assert.equal(initial.filter(mapping=>mapping.action==='existing').length,30);
+ assert.equal(initial.filter(mapping=>mapping.action==='skip').length,9);
+ const mappings=initial.map(mapping=>mapping.action==='skip'?
+  {...mapping,requiresDecision:false}:mapping);
+ const plan=buildImportPlan({sheet,detail,mappings,
+  group:{action:'existing',groupId},matches:{behavior:'add-new',matchColumnId:'item'}});
+ assert.equal(plan.payload.mappings.length,31);
+ assert.equal(Object.keys(plan.payload.rows[0].values).length,30);
+ assert.equal(plan.payload.rows[0].values['Destination 30'],'xlsx-value-30');
+ assert.equal(Object.keys(plan.payload.rows[0].values).some(key=>excluded.includes(key)),false);
+});

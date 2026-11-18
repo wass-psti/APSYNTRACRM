@@ -610,3 +610,72 @@ test('CP-BIMP-16 import wizard stays tied to the active browser board route duri
  assert.match(app,/state\.boardId!==selected\|\|routeBoard\(\)!==selected/);
  assert.match(app,/Board navigation is still updating/);
 });
+
+test('CP-BIMP column-capacity: 40 source columns allow Item plus 30 destinations while nine explicit exclusions stay out of the atomic payload',()=>{
+ const columns=Array.from({length:30},(_,i)=>({
+  id:'a0000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),
+  name:'Destination '+String(i+1).padStart(2,'0'),data_type:'text',
+  column_key:'custom:destination-'+(i+1),system_key:null,config:{}}));
+ const board={...detail,columns};
+ const destinations=columns.map(column=>column.name);
+ const excluded=Array.from({length:9},(_,i)=>'Export '+(i+1));
+ const headers=['Name',...destinations,...excluded];
+ const values=['Wide row',...destinations.map((_,i)=>'value-'+(i+1)),
+  ...excluded.map((_,i)=>'excluded-'+(i+1))];
+ const parsed=parseDelimited(headers.join(',')+'\n'+values.join(','));
+ assert.equal(parsed.headers.length,40);
+ const initial=initialImportMappings(parsed,board);
+ assert.equal(initial.filter(mapping=>mapping.action==='item').length,1);
+ assert.equal(initial.filter(mapping=>mapping.action==='existing').length,30);
+ assert.equal(initial.filter(mapping=>mapping.action==='skip').length,9);
+ assert.ok(initial.filter(mapping=>mapping.action==='skip').every(mapping=>mapping.requiresDecision===true));
+ const mappings=initial.map(mapping=>mapping.action==='skip'?
+  {...mapping,requiresDecision:false}:mapping);
+ const plan=buildImportPlan({sheet:parsed,detail:board,mappings,group});
+ assert.equal(plan.payload.mappings.length,31);
+ assert.equal(plan.payload.mappings.filter(mapping=>mapping.action==='item').length,1);
+ assert.equal(plan.payload.mappings.filter(mapping=>mapping.action==='existing').length,30);
+ assert.equal(plan.payload.newColumns.length,0);
+ assert.equal(Object.keys(plan.payload.rows[0].values).length,30);
+ assert.equal(plan.payload.rows[0].values['Destination 01'],'value-1');
+ assert.equal(plan.payload.rows[0].values['Destination 30'],'value-30');
+ assert.equal(excluded.some(source=>Object.hasOwn(plan.payload.rows[0].values,source)),false);
+});
+
+test('CP-BIMP column-capacity: 32 active source mappings exceed the corrected 31-entry contract',()=>{
+ const columns=Array.from({length:31},(_,i)=>({
+  id:'b0000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),
+  name:'Destination '+String(i+1).padStart(2,'0'),data_type:'text',
+  column_key:'custom:destination-'+(i+1),system_key:null,config:{}}));
+ const board={...detail,columns};
+ const headers=['Name',...columns.map(column=>column.name)];
+ const mappings=[{source:'Name',action:'item'},
+  ...columns.map(column=>({source:column.name,action:'existing',columnId:column.id}))];
+ assert.throws(()=>buildImportPlan({sheet:{headers,rows:[headers.map((_,i)=>i?'value-'+i:'Wide row')]},
+  detail:board,mappings,group}),/one Item title mapping plus up to 30 destination columns/);
+});
+
+test('CP-BIMP column-capacity: the physical 30-destination-column ceiling remains separate from the 31-entry mapping contract',()=>{
+ const columns=Array.from({length:31},(_,i)=>({
+  id:'b0000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),
+  name:'Destination '+String(i+1).padStart(2,'0'),data_type:'text',
+  column_key:'custom:destination-'+(i+1),system_key:null,config:{}}));
+ const board={...detail,columns};
+ const headers=['Name',...columns.map(column=>column.name)];
+ const mappings=[{source:'Name',action:'item'},
+  ...columns.slice(0,30).map(column=>({source:column.name,action:'existing',columnId:column.id})),
+  {source:columns[30].name,action:'skip',requiresDecision:false}];
+ assert.throws(()=>buildImportPlan({sheet:{headers,rows:[headers.map((_,i)=>i?'value-'+i:'Wide row')]},
+  detail:board,mappings,group}),/Board maximum is 30 physical columns/);
+});
+
+
+test('CP-BIMP column-capacity: migration widens both atomic mapping guards but retains the 30 physical-column cap',()=>{
+ const migration=readFileSync(new URL('../../supabase/migrations/20261118110000_cp_bimp_atomic_mapping_capacity_31.sql',import.meta.url),'utf8');
+ assert.match(migration,/wm_import_board_wizard_atomic/);
+ assert.match(migration,/wm_import_board_wizard_extended_atomic/);
+ assert.match(migration,/not between 1 and 31/);
+ assert.match(migration,/Wizard mapping count must be 1-31/);
+ assert.match(migration,/Keep the separate physical-column cap at 30/);
+ assert.doesNotMatch(migration,/DROP FUNCTION|REVOKE|GRANT|ALTER TABLE.*DROP/);
+});
