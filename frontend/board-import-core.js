@@ -11,7 +11,34 @@ import {cmp02Validate} from './board-typed-cmp02.js';
 import {normalizeTextDate} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 export const IMPORT_CONTRACT='m143-v1';
 export const IMPORT_EXTENDED_CONTRACT='m143-v2';
+// One primary Item mapping plus the Board's 30 physical custom columns.
+export const IMPORT_MAX_ACTIVE_SOURCE_MAPPINGS=31;
+// The opt-in extended-reference RPC remains a separately staged m143-v2 contract.
+export const IMPORT_EXTENDED_MAX_ACTIVE_SOURCE_MAPPINGS=30;
 export const EXTENDED_REF_KEY='__aps_extended_ref_v1';
+
+/** Summarize the source-mapping and physical-column capacity before import. */
+export function importMappingCapacity({detail,mappings,extendedReferences=false}={}){
+ const maxActiveMappings=extendedReferences?
+  IMPORT_EXTENDED_MAX_ACTIVE_SOURCE_MAPPINGS:IMPORT_MAX_ACTIVE_SOURCE_MAPPINGS;
+ const sourceMappings=Array.isArray(mappings)?mappings:[];
+ const physicalColumns=Array.isArray(detail?.columns)?detail.columns.length:0;
+ const activeMappings=sourceMappings.filter(m=>m?.action!=='skip').length;
+ const proposed=sourceMappings.map((mapping,index)=>({mapping,index}))
+  .filter(entry=>entry.mapping?.action==='create');
+ const availableNewColumns=Math.max(0,30-physicalColumns);
+ const mappingOverflow=Math.max(0,activeMappings-maxActiveMappings);
+ const physicalOverflow=Math.max(0,proposed.length-availableNewColumns);
+ const overflowCount=Math.max(mappingOverflow,physicalOverflow);
+ const overflowCandidates=proposed.slice(availableNewColumns).map(({mapping,index})=>({
+  index,source:String(mapping.source||'')
+ }));
+ return {maxActiveMappings,activeMappings,physicalColumns,maxPhysicalColumns:30,
+  proposedNewColumns:proposed.length,availableNewColumns,
+  remainingNewColumns:Math.max(0,availableNewColumns-proposed.length),
+  overflowCount,overflowCandidates,
+  canBulkExclude:overflowCount>0&&overflowCandidates.length===overflowCount};
+}
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
 ]);
@@ -501,8 +528,9 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,
   }
  }
  if(!primary)deny('Map exactly one title column.');
- if(normalized.filter(mapping=>mapping.action!=='skip').length>30)
-  deny('The atomic import contract supports at most 30 mapped source columns. Map compatible sources into the available destinations or explicitly exclude the others.');
+ const activeMappingLimit=extendedReferences?IMPORT_EXTENDED_MAX_ACTIVE_SOURCE_MAPPINGS:IMPORT_MAX_ACTIVE_SOURCE_MAPPINGS;
+ if(normalized.filter(mapping=>mapping.action!=='skip').length>activeMappingLimit)
+  deny(`The selected atomic import contract supports at most ${activeMappingLimit} active source mappings. The standard contract allows one primary Item plus up to 30 Board columns. Map compatible sources into available destinations or explicitly exclude the others.`);
  if((detail.columns||[]).length+proposed.length>30)deny('Board maximum is 30 physical columns.');
  const destination=group?.action==='existing'&&validUuid(group.groupId)&&
   (detail.groups||[]).some(g=>g.id===group.groupId)?
@@ -601,9 +629,9 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,
  if(rows.length<1||rows.length>20000)deny('Import requires 1–20,000 data rows.');
  return {boardId:board.id,workspaceId:board.workspace_id,boardRevision:board.updated_at,
   payload:{contract:extendedReferences?IMPORT_EXTENDED_CONTRACT:IMPORT_CONTRACT,group:destination,
-   // The atomic writer accepts 30 *active* source mappings. Excluded source
-   // columns never need to be transmitted; they remain visible in the wizard
-   // and cannot be excluded without an explicit user decision.
+   // The standard atomic writer accepts one primary Item plus up to 30 physical
+   // Board columns. Excluded source columns remain visible in the wizard and
+   // cannot be omitted from the request without an explicit user decision.
    mappings:normalized.filter(mapping=>mapping.action!=='skip'),
    newColumns:proposed,rows,matches:{behavior,matchColumnId:matchId}},
   readback:{group:destination,baselineGroupIds:(detail.groups||[]).map(group=>group.id),

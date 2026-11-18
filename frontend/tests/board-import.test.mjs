@@ -505,6 +505,10 @@ test('UI and entrypoint are wired without bypassing the domain restriction',()=>
   'the atomic import RPC invalidates the in-memory board snapshot');
  assert.match(ui,/will be created together with the imported records/);
  assert.match(ui,/Confirm exclude/);
+ assert.match(ui,/Import column capacity/);
+ assert.match(ui,/data-imp-capacity-exclude/);
+ assert.match(ui,/Confirm exclude these/);
+ assert.match(ui,/mappingCapacity\(\)\.overflowCount>0/);
  assert.match(ui,/reassignImportItemMapping\(state\.mappings,index\)/);
  assert.doesNotMatch(ui,/aps-import-choice-consent/);
  assert.match(ui,/Import Now/);
