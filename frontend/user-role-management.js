@@ -454,7 +454,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    activeWorkspaceCount===null?'The backend has not verified this account’s active workspace scope.':
    globalModuleRoleBlocked&&!workspaceScopedModule?'This legacy application role is global and this member belongs to multiple workspaces.':
    id==='material-request-hub'&&!data.workspaceScopedMrhAvailable?'Workspace-scoped Material Request Hub role management is not verified.':'';
-  const revokeBlocked=locked||(SCOPED_SIX_MODULE_IDS.includes(id)&&!sixScoped)||
+  const revokeBlocked=locked||
    (id==='fueltrans'&&!fueltransScoped)||
    (id==='tool-traceability'&&!tooltraceScoped)||
    (id==='fund-released-tracker'&&!frtScoped)||
