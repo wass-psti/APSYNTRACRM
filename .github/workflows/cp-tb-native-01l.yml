@@ -1,0 +1,58 @@
+name: CP-TB-NATIVE-01L Source Media and Shadow Activation
+on:
+  pull_request:
+    paths:
+      - "supabase/migration-candidates/cp_tb_native_01k_stage_contract.sql"
+      - "supabase/migration-candidates/cp_tb_native_01l_shadow_activation.sql"
+      - "scripts/talkbox-media-inventory.py"
+      - "scripts/tests/test_talkbox_media_inventory.py"
+      - "scripts/tests/talkbox_stage_acceptance.py"
+      - "scripts/tests/talkbox_shadow_activation_acceptance.py"
+      - ".github/workflows/cp-tb-native-01l.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migration-candidates/cp_tb_native_01k_stage_contract.sql"
+      - "supabase/migration-candidates/cp_tb_native_01l_shadow_activation.sql"
+      - "scripts/talkbox-media-inventory.py"
+      - "scripts/tests/test_talkbox_media_inventory.py"
+      - "scripts/tests/talkbox_stage_acceptance.py"
+      - "scripts/tests/talkbox_shadow_activation_acceptance.py"
+      - ".github/workflows/cp-tb-native-01l.yml"
+permissions:
+  contents: read
+jobs:
+  source-inventory-and-isolated-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python tests with synthetic-only source data
+        run: |
+          python3 -m py_compile scripts/talkbox-media-inventory.py scripts/tests/talkbox_shadow_activation_acceptance.py
+          python3 -m unittest discover -s scripts/tests -p 'test_talkbox_*.py' -v
+      - name: Launch disposable PostgreSQL 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -d --name cp-tb-native-01l-staging \
+            -e POSTGRES_PASSWORD=synthetic-test-only postgres:17
+          for i in $(seq 1 60); do
+            if docker exec cp-tb-native-01l-staging pg_isready -U postgres >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Apply only local staging candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'create role anon; create role authenticated;\n' | docker exec -i cp-tb-native-01l-staging psql -U postgres -v ON_ERROR_STOP=1 -q
+          docker exec -i cp-tb-native-01l-staging psql -U postgres -v ON_ERROR_STOP=1 < supabase/migration-candidates/cp_tb_native_01k_stage_contract.sql
+          docker exec -i cp-tb-native-01l-staging psql -U postgres -v ON_ERROR_STOP=1 < supabase/migration-candidates/cp_tb_native_01l_shadow_activation.sql
+      - name: Verify atomic original-history staging
+        run: python3 scripts/tests/talkbox_stage_acceptance.py --container cp-tb-native-01l-staging
+      - name: Verify shadow activation and fail-closed evidence
+        run: python3 scripts/tests/talkbox_shadow_activation_acceptance.py --container cp-tb-native-01l-staging
+      - name: Destroy isolated test container
+        if: always()
+        run: docker rm -f cp-tb-native-01l-staging 2>/dev/null || true
