@@ -671,7 +671,7 @@ test('CP-BIMP column-capacity: the physical 30-destination-column ceiling remain
 
 
 test('CP-BIMP column-capacity: migration widens both atomic mapping guards but retains the 30 physical-column cap',()=>{
- const migration=readFileSync(new URL('../../supabase/migrations/20261118110000_cp_bimp_atomic_mapping_capacity_31.sql',import.meta.url),'utf8');
+ const migration=readFileSync(new URL('../../supabase/migrations/20261118102219_cp_bimp_atomic_mapping_capacity_31.sql',import.meta.url),'utf8');
  assert.match(migration,/wm_import_board_wizard_atomic/);
  assert.match(migration,/wm_import_board_wizard_extended_atomic/);
  assert.match(migration,/not between 1 and 31/);
