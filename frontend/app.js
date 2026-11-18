@@ -398,9 +398,9 @@ const initials=value=>String(value||'U').trim().split(/\s+/).slice(0,2).map(w=>w
 const iconColor=index=>['','green','orange','pink','blue'][Math.abs(index)%5];
 const name=()=>state.context?.profile?.display_name||state.context?.profile?.email?.split('@')[0]||'Member';
 const workspaceName=()=>state.context?.workspace_id==='00000000-0000-4000-8000-000000000001'?'Work Management':'Current workspace';
-const STANDALONE_APPLICATION_MODULE_KEYS=new Set(['timetracker','frt','tradelink','fueltrack','toolbox']);
+const STANDALONE_APPLICATION_MODULE_KEYS=new Set(['timetracker','frt','tradelink','fueltrack']);
 const isStandaloneApplicationBoard=board=>STANDALONE_APPLICATION_MODULE_KEYS.has(
- moduleByBoardName(board?.name)?.key);
+ moduleByBoardName(board?.name)?.key)||moduleByBoardName(board?.name)?.key==='toolbox';
 const cards=()=>state.showTrash?state.trashed:state.showArchived?state.archived:
  state.boards.filter(board=>!isStandaloneApplicationBoard(board));
 const routeHome='#/overview';
@@ -569,7 +569,7 @@ function sidebar(){
   sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
   sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
   sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
-  (findTalkBoxBoard(state.boards,moduleByBoardName)?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','boards',active('talkbox')):'')+
+  (state.boards.some(b=>moduleByBoardName(b.name)?.key==='toolbox')?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','boards',active('talkbox')):'')+
   boardApplications+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',active('security')):'')+
