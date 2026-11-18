@@ -404,6 +404,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    id==='material-request-hub'&&!data.workspaceScopedMrhAvailable?'Workspace-scoped Material Request Hub role management is not verified.':'';
   const revokeBlocked=locked||(id==='fueltrans'&&!fueltransScoped)||
    (id==='tool-traceability'&&!tooltraceScoped)||
+   (id==='fund-released-tracker'&&!frtScoped)||
    (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
