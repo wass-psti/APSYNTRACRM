@@ -20,11 +20,13 @@ const mappedSourceId=row=>{
  */
 export function reconcileTalkBoxIssueIdentities({
  sourceIssues,crmIssues,sourceComplete=false,crmComplete=false,
- sourceBoardId=TALKBOX_SOURCE_BOARD_ID
+ sourceBoardId=TALKBOX_SOURCE_BOARD_ID,expectedSourceCount=null
 }={}){
  if(sourceBoardId!==TALKBOX_SOURCE_BOARD_ID)throw new TypeError('Unexpected monday.com board');
  if(!Array.isArray(sourceIssues)||!Array.isArray(crmIssues))
   throw new TypeError('Both authoritative issue arrays are required');
+ if(expectedSourceCount!==null&&(!Number.isSafeInteger(expectedSourceCount)||expectedSourceCount<0))
+  throw new TypeError('Expected monday source count must be a nonnegative safe integer');
  const violations=[],sourceById=new Map(),crmById=new Map(),crmBySource=new Map();
  for(const source of sourceIssues){
   const id=normalizeId(source?.id);
@@ -53,6 +55,8 @@ export function reconcileTalkBoxIssueIdentities({
   orphanReferences.push({sourceId,crmId:normalizeId(crm.id)});
  if(orphanReferences.length&&sourceComplete)
   violations.push('CRM records reference absent source issue IDs');
+ if(expectedSourceCount!==null&&sourceById.size!==expectedSourceCount)
+  violations.push('monday source count mismatch: expected '+expectedSourceCount+', observed '+sourceById.size);
  const complete=sourceComplete===true&&crmComplete===true;
  if(!complete)violations.push('Full monday export and complete signed CRM pagination are required');
  return Object.freeze({
