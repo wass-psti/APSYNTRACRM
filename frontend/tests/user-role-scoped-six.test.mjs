@@ -81,7 +81,7 @@ test('batch role planner accepts six verified scoped applications without relaxi
     role:MODULE_ROLE_OPTIONS[id][0],enabled:true}),/unavailable/);
  }
  assert.throws(()=>planUserRoleBatch(scoped,{userIds:[target],actorUserId:actor,
-  scope:'module',resourceId:'charter-navigator',role:'Employee',enabled:true}),/Global application role/);
+  scope:'module',resourceId:'charter-navigator',role:'user',enabled:true}),/unavailable/);
 });
 test('server scope contract retains cross-workspace, bootstrap, role whitelist, and stale-write checks',()=>{
  const sql=readFileSync('supabase/migrations/20261118062000_cp_urm_scoped02b_six_modules.sql','utf8');
