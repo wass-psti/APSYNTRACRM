@@ -1743,6 +1743,13 @@
       "file": "20261118062000_cp_urm_scoped02b_six_modules.sql",
       "bytes": 12055,
       "sha256": "8907ab405175da47cb02d26bd0897ab315c6588a30dc8bcd4c0b3cc023c61aa7"
+    },
+    {
+      "version": "20261118063000",
+      "name": "cp_urm_scoped02c_charter_timetracker",
+      "file": "20261118063000_cp_urm_scoped02c_charter_timetracker.sql",
+      "bytes": 16556,
+      "sha256": "f8fc48c6c3eacb6c8f0d29026fc10b7494c699fcc234c91ac101978c0a72a031"
     }
   ]
 }

@@ -1,0 +1,63 @@
+name: CP-URM-SCOPED-02C Charter and TimeTracker
+on:
+  pull_request:
+    paths:
+      - 'frontend/user-role-management.js'
+      - 'frontend/user-role-batch.js'
+      - 'frontend/app.js'
+      - 'frontend/tests/user-role-charter-scoped.test.mjs'
+      - 'supabase/migrations/20261118063000_cp_urm_scoped02c_charter_timetracker.sql'
+      - 'supabase/migration-source-manifest.json'
+      - 'sql/tests/cp-urm-scoped02c-*.sql'
+      - '.github/workflows/cp-urm-scoped02c-charter.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  charter-time-tracker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source manifest
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Verify live-source compatibility in isolated PostgreSQL 17
+        env:
+          PGPASSWORD: disposable_only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f sql/tests/cp-urm-scoped02b-setup.sql \
+            -f sql/tests/cp-urm-scoped02b-live-role-baseline.sql \
+            -f supabase/migrations/20261118062000_cp_urm_scoped02b_six_modules.sql \
+            -f sql/tests/cp-urm-scoped02c-setup.sql \
+            -f sql/tests/cp-urm-scoped02c-live-charter-timetracker.sql \
+            -f sql/tests/cp-urm-scoped02c-live-ranks.sql \
+            -f supabase/migrations/20261118063000_cp_urm_scoped02c_charter_timetracker.sql \
+            -f sql/tests/cp-urm-scoped02c-acceptance.sql
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Charter role UI regression
+        run: node --test frontend/tests/user-role-charter-scoped.test.mjs
+      - name: Complete frontend regression and production build
+        run: |
+          npm ci
+          node --test frontend/tests/*.test.mjs
+          npm run build
