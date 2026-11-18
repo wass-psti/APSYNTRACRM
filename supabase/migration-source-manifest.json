@@ -1729,6 +1729,13 @@
       "file": "20261118040000_cp_urm_fueltrans_nonbootstrap_admin_target.sql",
       "bytes": 1367,
       "sha256": "b5b80660b7b0854388fffdc911979e5052d35f987711d6931fcd75da29b48254"
+    },
+    {
+      "version": "20261118052000",
+      "name": "cp_urm_scoped02a_frt_roles",
+      "file": "20261118052000_cp_urm_scoped02a_frt_roles.sql",
+      "bytes": 8631,
+      "sha256": "cf2333fda4537d281c8358bcb803f5fdc57dbedb1b1ddd286e14fd5ad849981b"
     }
   ]
 }
