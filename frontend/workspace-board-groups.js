@@ -175,11 +175,12 @@ export function renderBoardAccessChoices({
        escape(row.boardRole||'Not on this board'):
        row.memberCount+' workspace member'+(row.memberCount===1?'':'s'))+'</small>'+
      '<button type="button" '+
-      ((enabled&&((which==='people'&&!row.boardRole)||
-       (which==='groups'&&!row.assignedToBoard)))?'':'disabled ')+
-      'data-bs09-assign="'+row.id+'">'+
-      (which==='groups'&&row.assignedToBoard||which==='people'&&row.boardRole?
-       'Assigned':'Add viewer')+'</button></div>').join(''):
+      ((enabled&&which==='people'&&(!row.boardRole||row.boardRole==='viewer'))?'':'disabled ')+
+      (which==='people'&&row.boardRole==='viewer'?
+        'data-bs09-revoke="':'data-bs09-assign="')+row.id+'">'+
+       (which==='people'&&row.boardRole==='viewer'?'Remove access':
+        (which==='groups'&&row.assignedToBoard||which==='people'&&row.boardRole?
+         'Assigned':'Add viewer'))+'</button></div>').join(''):
      '<p>No matching workspace '+(which==='people'?'members':'groups')+'.</p>'):
     '<p>'+message+'</p>')+
   '</div>'+

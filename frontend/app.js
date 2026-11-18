@@ -7573,6 +7573,23 @@ async function action(name,button){
    board,moduleKey:moduleByBoardName(board.name)?.key||null,
    workspaceId,manage,peopleDirectory,
    accessEnabled:BOARD_GROUP_ACCESS_ENABLED&&manage,
+   onRemoveBoard:async memberId=>{
+     if(!BOARD_GROUP_ACCESS_ENABLED||!manage||!auth.isSignedIn||
+        auth.userId!==userId||state.boardId!==boardId||
+        state.context?.workspace_id!==workspaceId||state.view!=='board')
+       throw new ApiError('Board scope changed.',403);
+     if(await db.allowed(boardId,'manage')!==true)
+       throw new ApiError('Board management permission changed.',403);
+     const fresh=await loadBoardInvitableDirectory(db,boardId);
+     if(fresh.status!=='VERIFIED_READ'||
+        !fresh.users.some(p=>p.id===memberId&&p.boardRole==='viewer'))
+       throw new ApiError('Viewer assignment not verified.',409);
+     return boardGroupAccessClient.changeBoardAccess({
+       workspaceId,boardId,subjectType:"member",subjectId:memberId,
+       requestId:globalThis.crypto.randomUUID(),
+       action:"revoke",role:"viewer"
+     });
+   },
    onAssignBoard:async memberId=>{
     if(!BOARD_GROUP_ACCESS_ENABLED||!manage||!auth.isSignedIn||
        auth.userId!==userId||state.boardId!==boardId||

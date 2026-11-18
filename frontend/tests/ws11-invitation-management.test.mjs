@@ -79,7 +79,13 @@ test('board invite picker exposes viewer grants only behind verified signed gate
  assert.match(off,/disabled data-bs09-assign/);
  const on=renderBoardAccessChoices({people,enabled:true});
  assert.match(on,/data-bs09-assign="11111111-1111-4111-8111-111111111111"/);
- assert.match(on,/disabled data-bs09-assign="44444444-4444-4444-8444-444444444444"/);
+
+  // Revoke is unavailable while the feature is disabled.
+  assert.match(off,/disabled data-bs09-revoke="44444444-4444-4444-8444-444444444444"/);
+
+  // Verified viewers can be removed when board management is enabled.
+  assert.match(on,/data-bs09-revoke="44444444-4444-4444-8444-444444444444">Remove access/);
+  assert.doesNotMatch(on,/disabled data-bs09-revoke=/);
  const calls=[];
  const client=new BoardGroupAccessClient({enabled:true,
   auth:{userId:actor,getVerifiedUser:async()=>({id:actor}),
