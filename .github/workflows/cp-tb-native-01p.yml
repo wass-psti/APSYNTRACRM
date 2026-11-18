@@ -1,0 +1,25 @@
+name: CP-TB-NATIVE-01P Read-Only Provider Session
+on:
+  pull_request:
+    paths:
+      - "scripts/talkbox-provider-session.py"
+      - "scripts/tests/test_talkbox_provider_session.py"
+      - ".github/workflows/cp-tb-native-01p.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/talkbox-provider-session.py"
+      - "scripts/tests/test_talkbox_provider_session.py"
+      - ".github/workflows/cp-tb-native-01p.yml"
+permissions:
+  contents: read
+jobs:
+  one-session-connection-synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile read-only recovery session
+        run: python3 -m py_compile scripts/talkbox-provider-session.py
+      - name: Run isolated source and credential-handling tests
+        run: python3 -m unittest discover -s scripts/tests -p 'test_talkbox_*.py' -v
