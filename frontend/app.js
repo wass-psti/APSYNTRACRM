@@ -7876,7 +7876,8 @@ async function action(name,button){
  case 'tb-new':{
   if(!state.edit||!talkBoxCurrent(talkBoxState.scope))break;
   openModal('Create TalkBox issue',input('Issue name','name'),async fd=>{
-   await talkBoxClient().create(fd.get('name'));talkBoxState.selected=null;await loadTalkBox();
+   const saved=await talkBoxClient().createVerified(fd.get('name'));
+   talkBoxState.selected=saved;await loadTalkBox({selectedId:saved.id});
   });break;
  }
  case 'tb-edit':{
@@ -7884,7 +7885,7 @@ async function action(name,button){
   const current=talkBoxState.selected;
   openModal('Edit TalkBox issue',input('Issue name','name',current.name)+
    select('Status','status',[['Working on it','Working on it'],['Stuck','Stuck'],['Done','Done']],current.status),async fd=>{
-    const updated=await talkBoxClient().update(current.id,{name:fd.get('name'),status:fd.get('status')},current.version);
+    const updated=await talkBoxClient().updateVerified(current.id,{name:fd.get('name'),status:fd.get('status')},current.version);
     talkBoxState.selected=updated;await loadTalkBox({selectedId:current.id});
   });break;
  }
@@ -7892,8 +7893,28 @@ async function action(name,button){
   if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
   const message=root.querySelector('#tb-message')?.value||'';
   const issueId=talkBoxState.selected.id;
-  await talkBoxClient().post(issueId,message);
-  await openTalkBoxIssue(issueId);break;
+  const result=await talkBoxClient().postVerified(issueId,message);
+  if(talkBoxCurrent(talkBoxState.scope)){talkBoxState.selected=result.record;render();}
+  break;
+ }
+ case 'tb-subtask-new':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const issueId=talkBoxState.selected.id;
+  openModal('Add TalkBox subtask',input('Subtask name','name'),async fd=>{
+   const record=await talkBoxClient().createSubitem(issueId,fd.get('name'));
+   if(talkBoxCurrent(talkBoxState.scope)){talkBoxState.selected=record;render();}
+  });break;
+ }
+ case 'tb-subtask-status':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const issueId=talkBoxState.selected.id,subId=button.dataset.id;
+  const sub=talkBoxState.selected.subitems.find(row=>String(row.id)===subId);
+  if(!sub)break;
+  openModal('Update subtask status',select('Status','status',[
+   ['Working on it','Working on it'],['Stuck','Stuck'],['Done','Done']],sub.status),async fd=>{
+    const record=await talkBoxClient().updateSubitem(issueId,subId,String(fd.get('status')));
+    if(talkBoxCurrent(talkBoxState.scope)){talkBoxState.selected=record;render();}
+  });break;
  }
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'tt-clock-verify':{await verifyTimeTrackerAttendance();break;}
