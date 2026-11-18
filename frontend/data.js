@@ -168,6 +168,7 @@ const BOARD_MUTATION_RPC=new Set([
  // Collaboration and module writes rendered inside CRM board workspaces.
  'huly_sb06_transact',
  'toolbox_issues_create_issue','toolbox_issues_update_issue','toolbox_issues_add_update',
+ 'toolbox_issues_create_subitem','toolbox_issues_update_subitem',
  'mrh_board_item_tasks_write','mrh_create_material_atomic','mrh_sourcing_sensitive_write',
  'fueltrack_v3_submit','fueltrack_v3_decide',
  'fueltrack_v3_mark_refueled','fueltrack_v3_complete','fueltrack_v3_attach_receipt',
