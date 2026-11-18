@@ -41,6 +41,38 @@ class ByteRecoveryTests(unittest.TestCase):
         other=recover.capture_asset(self.asset,self.out,opener=loader)
         self.assertEqual(other['status'],'ALREADY_VERIFIED')
         self.assertEqual(loader.calls,1)
+    def test_changed_provider_filename_rejected_for_verified_existing_asset(self):
+        loader=FakeOpener(b'hello')
+        recover.capture_asset(self.asset,self.out,opener=loader)
+        changed=dict(self.asset,name='different.txt')
+        with self.assertRaisesRegex(ValueError,'identity/filename'):
+            recover.capture_asset(changed,self.out,opener=loader)
+        self.assertEqual(loader.calls,1)
+
+    def test_forged_receipt_without_verified_flag_is_rejected(self):
+        import json
+        recover.capture_asset(self.asset,self.out,opener=FakeOpener(b'hello'))
+        receipt=self.out/'asset-90001.json'
+        row=json.loads(receipt.read_text())
+        row['bytes_verified']=False
+        receipt.write_text(json.dumps(row))
+        with self.assertRaisesRegex(ValueError,'inconsistent'):
+            recover.capture_asset(self.asset,self.out,opener=FakeOpener(b'hello'))
+
+    def test_world_readable_asset_directory_is_rejected(self):
+        self.out.mkdir(mode=0o755)
+        self.out.chmod(0o755)
+        with self.assertRaisesRegex(ValueError,'group/other access'):
+            recover.capture_asset(self.asset,self.out,opener=FakeOpener(b'hello'))
+
+    def test_symlinked_output_directory_is_rejected(self):
+        target=Path(self.temp.name)/'actual'
+        target.mkdir()
+        alias=Path(self.temp.name)/'alias'
+        alias.symlink_to(target,target_is_directory=True)
+        with self.assertRaisesRegex(ValueError,'symlink'):
+            recover.capture_asset(self.asset,alias,opener=FakeOpener(b'hello'))
+
     def test_truncated_source_is_rejected_and_not_committed(self):
         with self.assertRaisesRegex(ValueError,'truncated'):
             recover.capture_asset(self.asset,self.out,opener=FakeOpener(b'hey'))
