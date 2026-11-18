@@ -41,7 +41,7 @@ import {runNativeQa} from './native-qa.js';
 import {NativeIssueClient} from './native-client.js';
 import {TalkBoxNativeClient} from './talkbox-native.js';
 import {renderTalkBoxApplication} from './talkbox-ui.js';
-import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE} from './talkbox-application.js';
+import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE,talkBoxIssueHref} from './talkbox-application.js';
 import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
@@ -2422,8 +2422,11 @@ async function loadMoreBoardItems(){
  }
 }
 async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
- if(canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn}))
-  return refreshVisibleBoard(boardId,tab);
+ if(canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn})){
+  const refreshed=await refreshVisibleBoard(boardId,tab);
+  if(tab==='talkbox'&&state.boardId===boardId)await loadTalkBox();
+  return refreshed;
+ }
  // Initial load, another board, or another tab still uses the original loader.
  pendingBoardContent=null;
  boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
@@ -4453,6 +4456,7 @@ async function onRoute(){
    state.view='board';render();return;}
   const issueId=parts[1]==='issue'&&/^[1-9][0-9]{0,18}$/.test(parts[2]||'')?parts[2]:null;
   if(state.boardId!==board.id||state.tab!=='talkbox')talkBoxState={page:null,selected:null,busy:false,error:'',scope:''};
+  if(!issueId)talkBoxState.selected=null;
   await loadBoard(board.id,'talkbox');
   if(issueId)await openTalkBoxIssue(issueId);
   return;
@@ -7871,8 +7875,8 @@ async function action(name,button){
   case 'board-load-more':{await loadMoreBoardItems();break;}
  case 'tb-refresh':{await loadTalkBox();break;}
  case 'tb-more':{if(talkBoxState.page?.cursor)await loadTalkBox({more:true});break;}
- case 'tb-open':{await openTalkBoxIssue(button.dataset.id);break;}
- case 'tb-close':{talkBoxState.selected=null;render();break;}
+ case 'tb-open':{location.hash=talkBoxIssueHref(button.dataset.id);break;}
+ case 'tb-close':{talkBoxState.selected=null;location.hash=TALKBOX_APPLICATION_ROUTE;render();break;}
  case 'tb-new':{
   if(!state.edit||!talkBoxCurrent(talkBoxState.scope))break;
   openModal('Create TalkBox issue',input('Issue name','name'),async fd=>{
