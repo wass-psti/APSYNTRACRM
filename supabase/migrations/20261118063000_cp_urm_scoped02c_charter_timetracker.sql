@@ -107,6 +107,25 @@ BEGIN
  'enabled',new_row.enabled,'updatedAt',new_row.updated_at,'changeId',v_change);
 END;$rpc$;
 
+-- Recognize the domain's canonical role vocabulary in the existing CRM ceiling.
+-- Keep all historic Charter CRM role names and ranks unchanged.
+DO $rank$
+DECLARE s text;t text;
+BEGIN
+ s:=pg_catalog.pg_get_functiondef(
+ 'public.apsyntra_crm_module_role_rank(text,text)'::regprocedure);
+ IF position('WHEN p_module=''charter-navigator'' AND p_role=''Employee'' THEN 1' IN s)=0 OR
+ position('WHEN p_module IN (''fueltrans'',''order-intake'',''charter-navigator'') AND p_role=''Admin'' THEN 3' IN s)=0 THEN
+ RAISE EXCEPTION 'Charter CRM role rank contract changed' USING ERRCODE='55000'; END IF;
+ t:=pg_catalog.replace(s,
+ 'WHEN p_module=''charter-navigator'' AND p_role=''Employee'' THEN 1',
+ 'WHEN p_module=''charter-navigator'' AND p_role=''user'' THEN 1'||
+ E'\n WHEN p_module=''charter-navigator'' AND p_role=''admin'' THEN 3'||
+ E'\n WHEN p_module=''charter-navigator'' AND p_role=''Employee'' THEN 1');
+ IF t=s THEN RAISE EXCEPTION 'Canonical Charter CRM ranks not applied' USING ERRCODE='55000';END IF;
+ EXECUTE t;
+END;$rank$;
+
 -- Route genuine Charter operational permission resolution through the same role.
 DO $patch$
 DECLARE s text;t text;
