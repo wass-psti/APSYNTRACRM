@@ -75,14 +75,14 @@ BEGIN
   WHERE b.user_id=p_target_user_id) THEN
   RAISE EXCEPTION 'Invalid, self or protected role target' USING ERRCODE='42501';
  END IF;
- IF NOT CASE p_module_id
+ IF NOT (CASE p_module_id
  WHEN 'time-tracker' THEN p_role=ANY(ARRAY['Employee','OJT','Supervisor','HR','Finance','System Admin','IT Administrator'])
  WHEN 'fueltrack-plus' THEN p_role=ANY(ARRAY['User','Pump Attendant','Admin'])
  WHEN 'tradelink' THEN p_role=ANY(ARRAY['User','Sales Supervisor','General Manager'])
  WHEN 'order-intake' THEN p_role=ANY(ARRAY['Admin','User','Viewer'])
  WHEN 'employee-eval' THEN p_role=ANY(ARRAY['admin','supervisor','employee'])
  WHEN 'aps-aims' THEN p_role=ANY(ARRAY['Administrator','AssetManager','Custodian','Viewer'])
- ELSE FALSE END THEN
+ ELSE FALSE END) THEN
   RAISE EXCEPTION 'Unsupported application role' USING ERRCODE='22023';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM public.workspace_members wm
