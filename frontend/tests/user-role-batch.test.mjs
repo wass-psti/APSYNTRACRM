@@ -35,7 +35,7 @@ test('rejects protected, self, unknown, owner and unsafe workspace targets befor
   assert.throws(()=>planUserRoleBatch(data,{...args,userIds:[a,userId]}),/protected, self, or unavailable/);
  assert.throws(()=>planUserRoleBatch(data,{...args,userIds:[a],actorUserId:a}),/protected, self/);
  assert.throws(()=>planUserRoleBatch({...data,users:data.users.map(u=>u.id===b?{...u,activeWorkspaceCount:2}:u)},
-  {...args,userIds:[b]}),/not workspace-isolated/);
+  {...args,userIds:[b]}),/not workspace-isolated|workspace-scoped application role management is unavailable/i);
  assert.throws(()=>planUserRoleBatch({...data,boardAssignments:[...data.boardAssignments,
   {userId:b,boardId:board,role:'owner'}]},{scope:'board',userIds:[b],resourceId:board,role:'editor'}),
   /Protected board owner/);
@@ -70,7 +70,7 @@ test('batch writes are directed through existing checked RPC; no new privileges 
  assert.match(block,/planUserRoleBatch\(snapshot/);
  assert.match(block,/auth\.getVerifiedUser\(\)/);
  assert.match(block,/roleConfig\.adminVerified\(\)/);
- assert.match(block,/userRoleManager\.snapshot\(ctx\.workspace_id,\{includeFuelTrans:resourceId==='fueltrans',includeFundTracker:resourceId==='fund-released-tracker'\}\)/);
+ assert.match(block,/userRoleManager\.snapshot\(ctx\.workspace_id,\{includeFuelTrans:resourceId==='fueltrans',includeFundTracker:resourceId==='fund-released-tracker',includeScopedSix:SCOPED_SIX_MODULE_IDS\.includes\(resourceId\)\}\)/);
  assert.match(block,/userRoleManager\.mutate\(\{workspaceId:ctx\.workspace_id,\.\.\.op\}\)/);
  assert.match(block,/expectedUpdatedAt/);
  assert.match(block,/if\(failed\)/);

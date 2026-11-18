@@ -57,7 +57,9 @@ test('UI fails closed for unknown workspace scope and permits only verified scop
  assert.match(client,/activeWorkspaceCount===null/);
  assert.match(client,/id==='material-request-hub'\|\|id==='toolbox-issues'/);
  assert.match(client,/id==='material-request-hub'&&!data\.workspaceScopedMrhAvailable/);
- assert.match(app,/!\['material-request-hub','toolbox-issues','tool-traceability','fund-released-tracker'\]\.includes\(resourceId\)&&workspaceCount>1/);
+ assert.match(app,/const scopedAllowed=/);
+ assert.match(app,/SCOPED_SIX_MODULE_IDS\.includes\(resourceId\)&&state\.userRoleData\.scopedSixAvailable===true/);
+ assert.match(app,/const globalScopeBlocked=!scopedAllowed&&workspaceCount>1/);
  assert.match(app,/workspaceScopedMrhAvailable!==true/);
  assert.match(app,/cannot be changed from a single-workspace screen/);
 });

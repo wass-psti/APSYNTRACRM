@@ -1,7 +1,7 @@
 /** Batch role planning. Pure, non-mutating and based solely on an authorized snapshot.
  * The backend remains the final authorization authority for each individual write.
  */
-import {MODULE_ROLE_OPTIONS,FUELTRANS_WORKSPACE_ROLES} from './user-role-management.js';
+import {MODULE_ROLE_OPTIONS,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS} from './user-role-management.js';
 
 export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resourceId,role,enabled=true}={}){
  if(!data||!Array.isArray(data.users)||!Array.isArray(data.boards)||
@@ -25,7 +25,13 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
   if(scope==='module'){
    if(!Number.isInteger(user.activeWorkspaceCount)||user.activeWorkspaceCount<1)
     throw Error('Unverified workspace membership for '+user.email);
-   if(!['material-request-hub','fueltrans','toolbox-issues','tool-traceability','fund-released-tracker'].includes(resourceId)&&user.activeWorkspaceCount!==1)
+   if(SCOPED_SIX_MODULE_IDS.includes(resourceId)&&
+     data.scopedSixAvailable!==true&&user.activeWorkspaceCount!==1)
+    throw Error('Workspace-scoped application role management is unavailable');
+   const isWorkspaceScoped=['material-request-hub','fueltrans','toolbox-issues',
+     'tool-traceability','fund-released-tracker'].includes(resourceId)||
+     (SCOPED_SIX_MODULE_IDS.includes(resourceId)&&data.scopedSixAvailable===true);
+   if(!isWorkspaceScoped&&user.activeWorkspaceCount!==1)
     throw Error('Global application role is not workspace-isolated for '+user.email);
    if(resourceId==='fund-released-tracker'&&data.frtWorkspaceAvailable!==true)
     throw Error('Workspace-scoped Fund Tracker role management is unavailable');
