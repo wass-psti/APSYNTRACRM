@@ -25,11 +25,14 @@ export function planUserRoleBatch(data,{userIds=[],actorUserId=null,scope,resour
   if(scope==='module'){
    if(!Number.isInteger(user.activeWorkspaceCount)||user.activeWorkspaceCount<1)
     throw Error('Unverified workspace membership for '+user.email);
+   if(resourceId==='charter-navigator'&&data.charterWorkspaceAvailable!==true)
+    throw Error('Workspace-scoped Charter role management is unavailable');
    if(SCOPED_SIX_MODULE_IDS.includes(resourceId)&&
      data.scopedSixAvailable!==true&&user.activeWorkspaceCount!==1)
     throw Error('Workspace-scoped application role management is unavailable');
    const isWorkspaceScoped=['material-request-hub','fueltrans','toolbox-issues',
      'tool-traceability','fund-released-tracker'].includes(resourceId)||
+     (resourceId==='charter-navigator'&&data.charterWorkspaceAvailable===true)||
      (SCOPED_SIX_MODULE_IDS.includes(resourceId)&&data.scopedSixAvailable===true);
    if(!isWorkspaceScoped&&user.activeWorkspaceCount!==1)
     throw Error('Global application role is not workspace-isolated for '+user.email);
