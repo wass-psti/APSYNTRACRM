@@ -27,6 +27,20 @@ BEGIN
  r:=public.apsyntra_crm_my_effective_access();
  SELECT x INTO m FROM jsonb_array_elements(r->'modules') x WHERE x->>'moduleId'='toolbox-issues';
  IF m->>'allowed'<>'false' THEN RAISE EXCEPTION 'role ceiling bypassed: %',m; END IF;
+ -- CRM Admin effective role must grant the same module and board projection
+ -- as an inherited admin, but only inside the active workspace.
+ UPDATE public.apsyntra_crm_platform_roles SET role='admin' WHERE user_id=auth.uid();
+ r:=public.apsyntra_crm_my_effective_access();
+ SELECT x INTO m FROM jsonb_array_elements(r->'modules') x WHERE x->>'moduleId'='toolbox-issues';
+ IF m->>'role'<>'admin' OR m->>'allowed'<>'true' THEN
+  RAISE EXCEPTION 'Explicit CRM Admin did not receive admin module projection: %',m; END IF;
+ SELECT x INTO m FROM jsonb_array_elements(r->'boards') x
+   WHERE x->>'id'='77777777-7777-4777-8777-777777777777';
+ IF m->>'view'<>'true' OR m->>'edit'<>'true' OR m->>'manage'<>'true' THEN
+  RAISE EXCEPTION 'Explicit CRM Admin did not receive board parity: %',m; END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(r->'boards') x
+  WHERE x->>'id'='88888888-8888-4888-8888-888888888888') THEN
+  RAISE EXCEPTION 'Admin role crossed workspace boundary'; END IF;
  DELETE FROM public.apsyntra_crm_platform_roles WHERE user_id=auth.uid();
 END $$;
 DO $$

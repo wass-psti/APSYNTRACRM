@@ -44,3 +44,8 @@ INSERT INTO public.toolbox_issues_memberships VALUES
 INSERT INTO public.fueltrans_memberships VALUES
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','watchdog_employee',true,'active',NULL),
  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','admin',true,'active','client-scoped');
+
+-- A board not directly assigned to the CRM Admin tests workspace admin parity.
+INSERT INTO public.work_boards VALUES
+ ('77777777-7777-4777-8777-777777777777','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','A shared board','active'),
+ ('88888888-8888-4888-8888-888888888888','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Other workspace board','active');

@@ -22,6 +22,8 @@ test('signed effective access derives workspace-managed role assignments from do
  assert.match(sql,/fueltrans\.client_code IS NULL/);
  assert.match(sql,/requested\.id NOT IN \('material-request-hub','toolbox-issues','fueltrans'\)/);
  assert.match(sql,/v_explicit_role IS NOT NULL/);
+ assert.match(sql,/v_is_admin := v_effective_role = 'admin'/);
+ assert.doesNotMatch(sql,/v_is_admin := v_host_role = 'admin_general_manager'/);
  assert.match(sql,/public\.apsyntra_crm_module_role_rank/);
  assert.match(sql,/public\.current_workspace_id\(v_actor\)/);
  assert.doesNotMatch(sql,/GRANT |CREATE POLICY|ALTER TABLE|UPDATE public\.|DELETE FROM public\./i);

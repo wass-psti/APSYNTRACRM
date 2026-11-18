@@ -76,7 +76,9 @@ BEGIN
     RAISE EXCEPTION 'Active workspace membership required' USING ERRCODE = '42501';
   END IF;
 
-  v_is_admin := v_host_role = 'admin_general_manager';
+  -- Match apsyntra_role_is_admin(): the workspace-effective CRM Admin
+  -- grants admin parity; an inherited profile label alone is not authority.
+  v_is_admin := v_effective_role = 'admin';
   v_bootstrap := public.apsyntra_role_is_bootstrap();
 
   IF v_bootstrap IS NULL
