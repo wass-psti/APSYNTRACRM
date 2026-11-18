@@ -27131,6 +27131,7 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .overview-essentials .acti
 @media (prefers-reduced-motion: reduce) {
  #app .aps-auth-v2[data-auth-layout-mode="login"] .auth-submit { transition:none; }
 }
+
 /* frontend/talkbox-application.css */
 .tb-app{display:grid;gap:18px;padding:clamp(12px,2vw,26px);min-width:0;color:var(--text,#172337)}
 .tb-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.tb-header h2{font-size:1.8rem;margin:4px 0}.tb-header p{margin:0}
