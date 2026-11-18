@@ -6,6 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {deflateRawSync} from 'node:zlib';
 import {parseDelimited,parseImportFile} from '../board-import-parse.js';
+import {buildImportPlan,initialImportMappings,EXTENDED_REF_KEY} from '../board-import-core.js';
 
 const u16=n=>{const b=Buffer.alloc(2);b.writeUInt16LE(n);return b;};
 const u32=n=>{const b=Buffer.alloc(4);b.writeUInt32LE(n>>>0);return b;};
@@ -77,6 +78,36 @@ function workbookEntries(){
   {name:'xl/worksheets/sheet1.xml',xml:emptySheet},
   {name:'xl/worksheets/sheet2.xml',xml:contactsSheet}
  ];
+}
+
+function tradeLinkRichTextEntries({sharedStrings=false}={}){
+ const entries=workbookEntries();
+ const base='[Qty: 1] - SIMATIC S7 Memory Card, 12 MB SIMATIC S7, memory cards for S7-1x00 CPU/SINAMICS, 3, 3'+
+  ' specification'.repeat(400);
+ const richRuns=base.match(/.{1,80}/g).map(value=>
+  '<r><t xml:space="preserve">'+value+'</t></r>').join('');
+ // Phonetic runs are presentation hints, not part of the cell's displayed
+ // string. Many valid hints can otherwise inflate the imported text length.
+ const phoneticRuns=Array.from({length:34},(_,i)=>
+  '<rPh sb="'+i+'" eb="'+(i+1)+'"><t>'+'x'.repeat(2000)+'</t></rPh>').join('');
+ entries[0].xml=workbookXml.replace('name="Empty"','name="tradelink"')
+  .replace('name="Contacts"','name="secondary"');
+ const valueCell=sharedStrings?'<c r="B28" t="s"><v>0</v></c>':
+  '<c r="B28" t="inlineStr"><is>'+richRuns+phoneticRuns+'</is></c>';
+ entries[2].xml='<worksheet><sheetData>'+
+  '<row r="1"><c r="A1" t="inlineStr"><is><t>Item</t></is></c>'+
+  '<c r="B1" t="inlineStr"><is><t>Subitems</t></is></c></row>'+
+  '<row r="28"><c r="A28" t="inlineStr"><is><t>Part 28</t></is></c>'+
+  valueCell+'</row></sheetData></worksheet>';
+ entries[3].xml='<worksheet><sheetData><row r="1">'+
+  '<c r="A1" t="inlineStr"><is><t>Item</t></is></c>'+
+  '<c r="B1" t="inlineStr"><is><t>Reference</t></is></c></row>'+
+  '<row r="2"><c r="A2" t="inlineStr"><is><t>Secondary row</t></is></c>'+
+  '<c r="B2" t="inlineStr"><is><t>R-2</t></is></c></row>'+
+  '</sheetData></worksheet>';
+ if(sharedStrings)entries.push({name:'xl/sharedStrings.xml',
+  xml:'<sst><si>'+richRuns+phoneticRuns+'</si></sst>'});
+ return {entries,base};
 }
 function mondayExportEntries(){
  const inline=(address,value,style=0)=>
@@ -483,4 +514,67 @@ test('BIMP-LARGE XLSX reader preserves every imported Excel row at 6,324 and 7,6
   assert.equal(parsed.sheets[0].rowNumbers.at(-1),count+1);
   assert.deepEqual(parsed.sheets[0].rows.at(-1),['Item '+count,'REF-'+count]);
  }
+});
+
+
+test('XLSX TradeLink B28 excludes phonetic annotations for inline and shared rich text and maps the full Subitems value',async()=>{
+ const boardId='11111111-1111-4111-8111-111111111111';
+ const workspaceId='22222222-2222-4222-8222-222222222222';
+ const groupId='44444444-4444-4444-8444-444444444444';
+ const columnId='55555555-5555-4555-8555-555555555555';
+ const detail={board:{id:boardId,workspace_id:workspaceId,updated_at:'2026-11-18T00:00:00.000Z',
+   status:'active',name:'Contacts'},groups:[{id:groupId,title:'Current'}],
+  columns:[{id:columnId,name:'Subitems',data_type:'long_text',column_key:'custom:subitems',
+   system_key:null,config:{}}],items:[],values:[]};
+ for(const sharedStrings of [false,true]){
+  const {entries,base}=tradeLinkRichTextEntries({sharedStrings});
+  const parsed=await parseWithFixtureDom(makeZip(entries));
+  assert.equal(parsed.sheets.length,2);
+  const sheet=parsed.sheets[0];
+  assert.equal(sheet.name,'tradelink');
+  assert.equal(sheet.worksheet,'tradelink');
+  assert.deepEqual(sheet.headers,['Item','Subitems']);
+  assert.deepEqual(sheet.rowNumbers,[28]);
+  assert.equal(sheet.rows[0][1],base);
+  assert.equal(sheet.rows[0][1].length,base.length);
+  const mappings=initialImportMappings(sheet,detail,{extendedReferences:true});
+  assert.equal(mappings[1].action,'existing');
+  assert.equal(mappings[1].columnId,columnId);
+  const plan=buildImportPlan({sheet,detail,mappings,
+   group:{action:'existing',groupId},extendedReferences:true});
+  assert.equal(plan.payload.rows[0].title,'Part 28');
+  assert.equal(plan.payload.rows[0].values.Subitems[EXTENDED_REF_KEY],base);
+  assert.equal(plan.readback.rows[0].values.Subitems,base);
+  assert.equal(parsed.sheets[1].name,'secondary');
+  assert.deepEqual(parsed.sheets[1].rows,[['Secondary row','R-2']]);
+ }
+});
+
+test('CSV source-cell boundary is exact and never silently truncates',()=>{
+ const accepted='Name,Subitems\nPart 28,"'+'x'.repeat(65536)+'"';
+ assert.equal(parseDelimited(accepted).rows[0][1].length,65536);
+ const rejected='Name,Subitems\nPart 28,"'+'x'.repeat(65537)+'"';
+ assert.throws(()=>parseDelimited(rejected),/A source cell exceeds 65,536 characters/);
+});
+
+test('XLSX source-cell boundary accepts 65,536 and reports exact coordinates above the parser limit',async()=>{
+ const makeEntries=value=>{
+  const entries=workbookEntries();
+  entries[3].xml='<worksheet><sheetData>'+
+   '<row r="1"><c r="A1" t="inlineStr"><is><t>Name</t></is></c>'+
+   '<c r="B1" t="inlineStr"><is><t>Subitems</t></is></c></row>'+
+   '<row r="28"><c r="A28" t="inlineStr"><is><t>Part 28</t></is></c>'+
+   '<c r="B28" t="inlineStr"><is><t>'+value+'</t></is></c></row>'+
+   '</sheetData></worksheet>';
+  return entries;
+ };
+ const accepted='x'.repeat(65536);
+ const parsed=await parseWithFixtureDom(makeZip(makeEntries(accepted)));
+ assert.equal(parsed.sheets[0].rows[0][1],accepted);
+ const rejected='x'.repeat(65537);
+ await assert.rejects(()=>parseWithFixtureDom(makeZip(makeEntries(rejected))),
+  error=>/Worksheet "Contacts"/.test(error.message)&&/row 28/.test(error.message)&&
+   /cell B28/.test(error.message)&&/column "Subitems"/.test(error.message)&&
+   /A source cell exceeds 65,536 characters/.test(error.message)&&
+   /65,537 characters/.test(error.message));
 });
