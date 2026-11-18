@@ -29,6 +29,6 @@ export function renderTalkBoxApplication({page,selected,busy=false,error='',canE
  '</b><p>'+e(u.text_body)+'</p></article>').join(''):'<p>No updates yet.</p>')+
  (canEdit?'<label for="tb-message">Add update</label><textarea id="tb-message" rows="3" maxlength="20000"></textarea>'+
  '<button class="primary" data-action="tb-post">Post update</button>':'')+
- '<h4>Subtasks</h4>'+(selected.subitems.length?'<ul>'+selected.subitems.map(x=>'<li>'+e(x.name)+' — '+e(x.status)+'</li>').join('')+'</ul>':'<p>No subtasks yet.</p>')+
+ '<h4>Subtasks</h4>'+(canEdit?'<button class="secondary" data-action="tb-subtask-new">＋ Add subtask</button>':'')+(selected.subitems.length?'<ul>'+selected.subitems.map(x=>'<li>'+e(x.name)+' — '+e(x.status)+(canEdit? ' <button type="button" class="secondary" data-action="tb-subtask-status" data-id="'+e(x.id)+'">Change status</button>':'')+'</li>').join('')+'</ul>':'<p>No subtasks yet.</p>')+
  '</div></aside></div>':'')+'</section>';
 }
