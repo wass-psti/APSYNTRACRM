@@ -193,14 +193,6 @@ BEGIN
  IF position('public.apsyntra_role_require_bootstrap_scope(p_workspace_id)' IN s)=0 OR
  position('FROM public.module_role_assignments a JOIN public.workspace_members wm' IN s)=0 THEN
  RAISE EXCEPTION 'TimeTracker directory source drift' USING ERRCODE='55000';END IF;
- t:=pg_catalog.replace(s,
- 'FROM public.module_role_assignments a JOIN public.workspace_members wm',
- 'FROM public.module_role_assignments a JOIN public.workspace_members wm');
- t:=pg_catalog.replace(t,
- 'WHERE a.module_id=''time-tracker''',
- 'WHERE a.module_id=''time-tracker'' AND NOT EXISTS ('||
- 'SELECT 1 FROM public.apsyntra_workspace_module_roles scoped WHERE scoped.workspace_id=p_workspace_id'||
- ' AND scoped.user_id=a.user_id AND scoped.module_id=''time-tracker'')');
  t:=pg_catalog.replace(t,
  'FROM public.module_role_assignments a JOIN public.workspace_members wm',
  'FROM (SELECT legacy.user_id,legacy.module_id,legacy.role,legacy.enabled,legacy.updated_at'||
