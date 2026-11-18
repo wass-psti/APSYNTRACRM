@@ -107,7 +107,12 @@ async function run(){
   const target=await (await fetch(base+'/json/new?'+encodeURIComponent(fixture),{method:'PUT'})).json();
   page=new Page(target.webSocketDebuggerUrl);await page.ready;
   await page.call('Runtime.enable');
-  await until(()=>page.evaluate('document.readyState=== "complete"'));
+  // A freshly opened CDP target can initially report about:blank as complete.
+  // Wait for the actual localhost fixture and service-worker-capable context
+  // before testing registration; never skip the SW security assertions.
+  await until(()=>page.evaluate(
+   'location.href==='+JSON.stringify(fixture)+'&&document.readyState==="complete"&&!!navigator.serviceWorker'
+  ));
   const registered=await page.evaluate(`(async()=>{
    const registration=await navigator.serviceWorker.register('/service-worker.js',{scope:'/',updateViaCache:'none'});
    await navigator.serviceWorker.ready;
