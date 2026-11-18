@@ -24,6 +24,19 @@ export const MODULE_ROLE_OPTIONS=Object.freeze({
  'employee-eval':['admin','supervisor','employee'],
  'charter-navigator':['admin','user']
 });
+export function effectiveModuleRoleLabel(assignment,options=[]){
+ if(!assignment)return 'Unassigned';
+ if(!options.includes(assignment.role))
+  return assignment.enabled?
+   'Unsupported legacy role: '+String(assignment.role??'')+' (not effective)':
+   'Disabled legacy role: '+String(assignment.role??'');
+ return (assignment.enabled?'Active: ':'Disabled: ')+assignment.role;
+}
+export function defaultModuleRoleForAssignment(resourceId,assignment,options=[]){
+ if(assignment?.role&&options.includes(assignment.role))return assignment.role;
+ if(resourceId==='charter-navigator'&&options.includes('user'))return 'user';
+ return options[0]||'';
+}
 export const SCOPED_SIX_MODULE_IDS=Object.freeze([
  'time-tracker','fueltrack-plus','tradelink',
  'order-intake','employee-eval','aps-aims'
@@ -469,7 +482,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const frtScoped=id==='fund-released-tracker'&&data.frtWorkspaceAvailable===true;
   const sixScoped=SCOPED_SIX_MODULE_IDS.includes(id)&&data.scopedSixAvailable===true;
   const charterScoped=id==='charter-navigator'&&data.charterWorkspaceAvailable===true;
-  const status=a?.enabled?'Active: '+a.role:a?'Disabled: '+a.role:'Unassigned';
+  const status=effectiveModuleRoleLabel(a,opt);
   const note=fueltransScoped?'Workspace FuelTrans membership':
    id==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable?'Workspace Tool Traceability membership':
    frtScoped?'Workspace Fund Tracker membership':
@@ -509,7 +522,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   html+='<tr><td><strong>'+esc(name)+'</strong></td><td>'+esc(status)+'</td><td>'+esc(note)+'</td><td>'+
    '<button class="secondary" aria-label="Assign or change '+esc(name)+' application role" data-action="user-role-edit-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
    (editBlocked?'disabled title="'+esc(editReason)+'"':'')+'>Assign / change</button> '+
-   (a?.enabled?'<button class="secondary" aria-label="Revoke '+esc(name)+' application role" data-action="user-role-revoke-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
+   (a?.enabled&&opt.includes(a.role)?'<button class="secondary" aria-label="Revoke '+esc(name)+' application role" data-action="user-role-revoke-module" data-user-id="'+esc(u.id)+'" data-resource="'+esc(id)+'" '+
     (revokeBlocked?'disabled title="'+esc(editReason||'This application role cannot be changed for the selected member.')+'"':'')+'>Revoke</button>':'')+
   '</td></tr>';
  }

@@ -199,7 +199,7 @@ import {renderRoleConfiguration,ROLE_MODULE_OPTIONS} from './role-configuration-
 import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-configuration-visuals.js';
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
-import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
+import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,SCOPED_SIX_MODULE_IDS,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,defaultModuleRoleForAssignment,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
 import {planUserRoleBatch,unverifiedBatchRoleAssignments} from './user-role-batch.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
@@ -8427,7 +8427,8 @@ async function action(name,button){
    const enabled=!name.includes('revoke');
    const options=scope==='module'?(resourceId==='fueltrans'&&state.userRoleData.fueltransWorkspaceAvailable===true?FUELTRANS_WORKSPACE_ROLES:MODULE_ROLE_OPTIONS[resourceId]):['viewer','editor'];
    if(!options?.length)throw new ApiError('Unsupported role resource.');
-   const current=record?.role&&options.includes(record.role)?record.role:options[0];
+   const current=scope==='module'?defaultModuleRoleForAssignment(resourceId,record,options):
+      (record?.role&&options.includes(record.role)?record.role:options[0]);
    const label=scope==='module'?ROLE_MODULE_OPTIONS.find(m=>m[0]===resourceId)?.[1]:
       state.userRoleData.boards.find(b=>b.id===resourceId)?.name;
    if(!label)throw new ApiError('Unknown board or application.');
