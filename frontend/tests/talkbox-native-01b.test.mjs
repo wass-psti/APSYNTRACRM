@@ -110,3 +110,16 @@ test('issue drawer follows canonical browser navigation and cached board refresh
  assert.match(app,/return refreshVisibleBoard\(boardId,tab\)/);
  assert.match(app,/if\(!issueId\)talkBoxState\.selected=null/);
 });
+
+test('subitem reconciliation refuses duplicate destination record identities',()=>{
+ const plan=reconcileTalkBoxSubitemIdentities({
+  sourceSubitems:[{id:'88',boardId:TALKBOX_SOURCE_SUBITEM_BOARD_ID,parentId:'65764141'}],
+  crmSubitems:[
+   {id:'20',mondayItemId:'88'},
+   {id:'20',mondayItemId:'89'}
+  ],
+  sourceComplete:true,crmComplete:true
+ });
+ assert.equal(plan.status,'BLOCKED');
+ assert.match(plan.violations.join(' '),/duplicate CRM subitem ID/);
+});

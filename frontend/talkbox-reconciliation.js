@@ -75,7 +75,7 @@ export function reconcileTalkBoxSubitemIdentities({
 }={}){
  if(!Array.isArray(sourceSubitems)||!Array.isArray(crmSubitems))
   throw new TypeError('Both subitem arrays are required');
- const violations=[],crmRefs=new Map(),sourceIds=new Set(),matched=[];
+ const violations=[],crmRefs=new Map(),crmIds=new Set(),sourceIds=new Set(),matched=[];
  for(const source of sourceSubitems){
   const subId=normalizeId(source?.id);
   if(!nonemptyId(subId)||sourceIds.has(subId)){violations.push('Invalid or duplicate source subitem ID: '+subId);continue;}
@@ -87,7 +87,8 @@ export function reconcileTalkBoxSubitemIdentities({
  }
  for(const crm of crmSubitems){
   const id=normalizeId(crm?.id),external=mappedSourceId(crm);
-  if(!nonemptyId(id)){violations.push('Invalid CRM subitem ID: '+id);continue;}
+  if(!nonemptyId(id)||crmIds.has(id)){violations.push('Invalid or duplicate CRM subitem ID: '+id);continue;}
+  crmIds.add(id);
   if(external!==null){
    if(!nonemptyId(external)||crmRefs.has(external))
     violations.push('Invalid or duplicate CRM subitem source reference: '+external);
