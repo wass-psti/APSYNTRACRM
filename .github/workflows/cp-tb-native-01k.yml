@@ -1,0 +1,47 @@
+name: CP-TB-NATIVE-01K Isolated Historical Migration Staging
+on:
+  pull_request:
+    paths:
+      - "supabase/migration-candidates/cp_tb_native_01k_stage_contract.sql"
+      - "scripts/tests/talkbox_stage_acceptance.py"
+      - ".github/workflows/cp-tb-native-01k.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migration-candidates/cp_tb_native_01k_stage_contract.sql"
+      - "scripts/tests/talkbox_stage_acceptance.py"
+      - ".github/workflows/cp-tb-native-01k.yml"
+permissions:
+  contents: read
+jobs:
+  isolated-postgres17-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Launch isolated synthetic PostgreSQL 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -d --name cp-tb-native-01k-staging \
+            -e POSTGRES_PASSWORD=local-synthetic-only postgres:17
+          for i in $(seq 1 60); do
+            if docker exec cp-tb-native-01k-staging pg_isready -U postgres >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - name: Apply candidate ONLY to disposable local PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'create role anon; create role authenticated;\n' | \
+            docker exec -i cp-tb-native-01k-staging psql -U postgres -v ON_ERROR_STOP=1 -q
+          docker exec -i cp-tb-native-01k-staging psql -U postgres -v ON_ERROR_STOP=1 \
+            < supabase/migration-candidates/cp_tb_native_01k_stage_contract.sql
+      - name: Verify immutable staging and denied operations
+        run: python3 scripts/tests/talkbox_stage_acceptance.py --container cp-tb-native-01k-staging
+      - name: Destroy synthetic staging database
+        if: always()
+        run: docker rm -f cp-tb-native-01k-staging 2>/dev/null || true
