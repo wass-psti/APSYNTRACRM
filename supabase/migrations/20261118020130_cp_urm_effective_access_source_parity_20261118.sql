@@ -114,6 +114,7 @@ BEGIN
       ELSE CASE requested.id
         WHEN 'material-request-hub' THEN mrh.role
         WHEN 'toolbox-issues' THEN toolbox.role
+        WHEN 'tool-traceability' THEN traceability.role
         WHEN 'fueltrans' THEN CASE
           WHEN fueltrans.role = 'admin' THEN 'Admin'
           WHEN fueltrans.role = 'viewer' THEN 'Viewer'
@@ -127,7 +128,7 @@ BEGIN
       ON assignment.user_id = v_actor
      AND assignment.module_id = requested.id
      AND assignment.enabled
-     AND requested.id NOT IN ('material-request-hub','toolbox-issues','fueltrans')
+     AND requested.id NOT IN ('material-request-hub','toolbox-issues','fueltrans','tool-traceability')
     LEFT JOIN public.material_request_hub_memberships mrh
       ON requested.id = 'material-request-hub'
      AND mrh.workspace_id = v_workspace
@@ -139,6 +140,12 @@ BEGIN
      AND toolbox.workspace_id = v_workspace
      AND toolbox.user_id = v_actor
      AND toolbox.enabled IS TRUE
+    LEFT JOIN public.tool_traceability_memberships traceability
+      ON requested.id = 'tool-traceability'
+     AND traceability.workspace_id = v_workspace
+     AND traceability.user_id = v_actor
+     AND traceability.enabled IS TRUE
+     AND traceability.status = 'active'
     LEFT JOIN public.fueltrans_memberships fueltrans
       ON requested.id = 'fueltrans'
      AND fueltrans.workspace_id = v_workspace

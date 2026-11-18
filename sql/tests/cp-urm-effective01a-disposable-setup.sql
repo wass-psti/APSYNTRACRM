@@ -49,3 +49,20 @@ INSERT INTO public.fueltrans_memberships VALUES
 INSERT INTO public.work_boards VALUES
  ('77777777-7777-4777-8777-777777777777','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','A shared board','active'),
  ('88888888-8888-4888-8888-888888888888','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Other workspace board','active');
+
+CREATE ROLE authenticated NOLOGIN;
+CREATE ROLE anon NOLOGIN;
+CREATE TABLE public.apsyntra_role_bootstrap_identities(user_id uuid PRIMARY KEY);
+CREATE TABLE public.tool_traceability_memberships(
+ workspace_id uuid NOT NULL,user_id uuid NOT NULL,role text NOT NULL
+ CHECK(role IN ('ADMIN','LOGISTICS','USER','VIEWER')),enabled boolean NOT NULL,
+ status text NOT NULL,assigned_by uuid,updated_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY(workspace_id,user_id));
+CREATE TABLE public.tool_traceability_activity(
+ workspace_id uuid,entity_type text,entity_id text,actor_user_id uuid,event_type text,detail jsonb);
+CREATE FUNCTION public.apsyntra_role_require_scope(p_workspace_id uuid) RETURNS void
+ LANGUAGE plpgsql AS $$BEGIN
+ IF auth.uid() IS NULL OR auth.uid()<>'11111111-1111-4111-8111-111111111111'::uuid
+ OR p_workspace_id<>'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid THEN
+  RAISE EXCEPTION 'denied' USING ERRCODE='42501';END IF;
+ END$$;

@@ -60,6 +60,7 @@ test('non-missing backend failure is not reported as a disabled CRM feature',asy
 
 test('valid signed CRM data remains strict, no phantom role or privilege assignment',async()=>{
  const c=new UserRoleManagementClient({rpc:async(name)=>{
+  if(name==='apsyntra_role_tooltrace_workspace_snapshot')throw error(404,'PGRST202');
   if(name==='apsyntra_role_fueltrans_workspace_snapshot')throw error(404,'PGRST202');
   if(name==='apsyntra_role_user_management_snapshot')return legacy();
   return {workspaceId:W,adminVerified:true,bootstrapVerified:true,roles:[{

@@ -30,4 +30,6 @@ apply(){ psql -X -q -h /tmp -U postgres -d postgres -v ON_ERROR_STOP=1 -f "$1"; 
 apply /sql-tests/cp-urm-effective01a-disposable-setup.sql
 psql -X -q -1 -h /tmp -U postgres -d postgres -v ON_ERROR_STOP=1 -f /source-migrations/20261118020130_cp_urm_effective_access_source_parity_20261118.sql
 apply /sql-tests/cp-urm-effective01a-disposable-acceptance.sql
+psql -X -q -h /tmp -U postgres -d postgres -v ON_ERROR_STOP=1 -f /source-migrations/20261118032000_cp_urm_tooltrace_workspace_role_sync.sql
+apply /sql-tests/cp-urm-tooltrace-disposable-acceptance.sql
 '

@@ -27,6 +27,7 @@ function client({missing=false,overrides={}}={}){
    return {contract:'cp-urm-fueltrans-workspace-v1',workspaceId:workspace,
     assignments:[{...membership,...overrides}]};
   }
+  if(name==='apsyntra_role_tooltrace_workspace_snapshot')throw Object.assign(Error('Missing'),{status:404,code:'PGRST202'});
   throw Error('Unexpected RPC '+name);
  }});
 }

@@ -30,6 +30,10 @@ function fixture(bootstrap,{leakLegacy=false}={}){
     return {adminVerified:true,bootstrapVerified:true,workspaceId:WORKSPACE,
      users:[],modules:[],moduleAssignments:[],boards:[],boardAssignments:[]};
    }
+   if(name==='apsyntra_role_tooltrace_workspace_snapshot'){
+    if(!bootstrap)throw denied();
+    throw Object.assign(Error('Missing'),{status:404,code:'PGRST202'});
+   }
    if(name==='apsyntra_crm_platform_role_snapshot'){
     if(!bootstrap||args.p_workspace_id!==WORKSPACE)throw denied();
     return {adminVerified:true,bootstrapVerified:true,workspaceId:WORKSPACE,roles:[]};
