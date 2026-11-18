@@ -24,6 +24,11 @@ export function shouldRecheckWorkspaceRoles({reason,roleChanged=false,lastReadAt
 export function shouldRefreshWorkspaceBoardList({reason,view}={}){
  return reason!=='broadcast'||view!=='board';
 }
+/** Retry a deferred reconciliation after a blocking local read/edit has cleared. */
+export function shouldResumeDeferredReconciliation(status,{blocked=false}={}){
+ return !blocked&&status?.phase==='reconnecting'&&
+  status?.detail==='Pending authoritative reconciliation';
+}
 const noop=()=>{};
 export class PlatformSync {
  constructor({auth,api,url,publishableKey,WebSocketImpl=globalThis.WebSocket,

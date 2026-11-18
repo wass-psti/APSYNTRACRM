@@ -31,7 +31,7 @@ import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
-import {PlatformSync,shouldRefreshWorkspaceBoardList,shouldRecheckWorkspaceRoles} from './platform-sync.js';
+import {PlatformSync,shouldRefreshWorkspaceBoardList,shouldRecheckWorkspaceRoles,shouldResumeDeferredReconciliation} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
@@ -3722,7 +3722,15 @@ async function loadTimeTracker(seq=routeSerial){
    state.ttAttendance=null;state.ttError=errorMessage(err);
   }
  }finally{
-  if(run===state.ttRunId&&seq===routeSerial){state.ttBusy=false;render();}
+  if(run===state.ttRunId&&seq===routeSerial){
+   state.ttBusy=false;render();
+   // The first platform reconciliation can be deferred while this signed
+   // attendance snapshot protects the visible TimeTracker controls. Resume it
+   // immediately after the read, unless another local edit is still active.
+   if(shouldResumeDeferredReconciliation(platformSync.lastStatus,{
+    blocked:platformSyncEditInProgress()
+   }))void platformSync.syncNow('manual',[]);
+  }
  }
 }
 /** The UI guard is presentation only; both RPCs independently enforce System Admin. */
