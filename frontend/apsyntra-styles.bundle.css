@@ -27131,3 +27131,14 @@ html[data-aps-monday-theme="dark"] #app .aps-overview .overview-essentials .acti
 @media (prefers-reduced-motion: reduce) {
  #app .aps-auth-v2[data-auth-layout-mode="login"] .auth-submit { transition:none; }
 }
+/* frontend/talkbox-application.css */
+.tb-app{display:grid;gap:18px;padding:clamp(12px,2vw,26px);min-width:0;color:var(--text,#172337)}
+.tb-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.tb-header h2{font-size:1.8rem;margin:4px 0}.tb-header p{margin:0}
+.tb-eyebrow{font-size:.75rem;letter-spacing:.1em;font-weight:700;color:#2563eb}.tb-note{padding:12px;background:var(--surface-2,#edf4fc);border-radius:12px}.tb-error{color:#991b1b;background:#fee2e2;padding:12px;border-radius:10px}
+.tb-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.tb-metrics article,.tb-panel{background:var(--panel,#fff);border:1px solid var(--border,#e2e8f0);border-radius:14px;padding:18px}
+.tb-metrics strong{display:block;font-size:1.6rem}.tb-metrics span{font-size:.8rem;color:var(--muted,#64748b)}
+.tb-scroll{overflow:auto}.tb-panel table{width:100%;min-width:540px;border-collapse:collapse;text-align:left}.tb-panel th,.tb-panel td{padding:12px;border-bottom:1px solid var(--border,#e2e8f0)}
+.tb-overlay{position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end}.tb-shade{position:absolute;inset:0;background:#11182788;border:0}
+.tb-drawer{position:relative;width:min(560px,100%);height:100%;overflow-y:auto;background:var(--panel,#fff);box-shadow:-10px 0 40px #0002}
+.tb-drawer header{display:flex;justify-content:space-between;gap:12px;align-items:start;border-bottom:1px solid var(--border,#e2e8f0);padding:22px}.tb-drawer h3{margin:0}.tb-body{padding:22px;display:grid;gap:12px}.tb-body textarea{width:100%;box-sizing:border-box}.tb-update{border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:12px}.tb-update p{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:640px){.tb-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
