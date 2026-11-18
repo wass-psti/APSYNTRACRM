@@ -215,7 +215,9 @@ test('reviewed mutation and read RPC contracts remain disjoint',()=>{
  };
  const reads=new Set(names('BOARD_READ_RPC'));
  const writes=names('BOARD_MUTATION_RPC');
- assert.equal(writes.length,62);
+ assert.equal(writes.length,67);
+ for(const name of ['toolbox_issues_create_issue','toolbox_issues_update_issue','toolbox_issues_add_update','toolbox_issues_create_subitem','toolbox_issues_update_subitem'])
+  assert.ok(writes.includes(name),'TalkBox writes must invalidate only after commit');
  assert.equal(new Set(writes).size,writes.length);
  assert.deepEqual(writes.filter(name=>reads.has(name)),[]);
  assert.ok(writes.includes('frt_add_comment'));
