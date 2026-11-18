@@ -37,6 +37,10 @@ function fixture(bootstrap,{missingCRM=false,leak=false,switchIdentity=false,rol
      users:[{id:USER,platformRole:'employee'}],modules:[],moduleAssignments:[],
      boards:[],boardAssignments:[]};
    }
+   if(name==='apsyntra_role_tooltrace_workspace_snapshot'){
+    if(!bootstrap)throw error(403);
+    throw Object.assign(Error('Missing'),{status:404,code:'PGRST202'});
+   }
    if(name==='apsyntra_crm_platform_role_snapshot'){
     if(missingCRM)throw error(404,'PGRST202');
     if(!bootstrap&&leak)return {adminVerified:true,bootstrapVerified:true,workspaceId:WS,roles:[]};

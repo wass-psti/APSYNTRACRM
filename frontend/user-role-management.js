@@ -78,13 +78,38 @@ export class UserRoleManagementClient {
     typeof a.enabled==='boolean'&&typeof a.clientManaged==='boolean'&&
     (a.updatedAt===null||Number.isFinite(Date.parse(a.updatedAt))))))
    throw Error('Invalid authoritative FuelTrans workspace membership response');
+  // The domain's workspace membership, not the global legacy role, controls
+  // Tool Traceability operational access and must be the role readback source.
+  let tooltraceWorkspace=null;
+  try {
+   tooltraceWorkspace=await this.api.rpc('apsyntra_role_tooltrace_workspace_snapshot',{
+    p_workspace_id:workspaceId});
+  } catch(error) {
+   if(!(error?.status===404&&error?.code==='PGRST202'))throw error;
+  }
+  if(tooltraceWorkspace!==null&&(
+   tooltraceWorkspace?.contract!=='cp-urm-tooltrace-workspace-v1'||
+   tooltraceWorkspace.workspaceId!==workspaceId||
+   !Array.isArray(tooltraceWorkspace.assignments)||
+   !tooltraceWorkspace.assignments.every(a=>UUID.test(a.userId||'')&&
+    a.moduleId==='tool-traceability'&&
+    MODULE_ROLE_OPTIONS['tool-traceability'].includes(a.role)&&
+    typeof a.enabled==='boolean'&&
+    (a.updatedAt===null||Number.isFinite(Date.parse(a.updatedAt))))))
+   throw Error('Invalid authoritative Tool Traceability workspace membership response');
+  const toolTraceabilityWorkspaceAvailable=tooltraceWorkspace!==null;
   const fueltransWorkspaceAvailable=fueltransWorkspace!==null;
   const scoped=fueltransWorkspace?.assignments||[];
-  const moduleAssignments=fueltransWorkspaceAvailable?
-   [...d.moduleAssignments.filter(a=>a.moduleId!=='fueltrans'),...scoped]:
-   d.moduleAssignments;
+  const moduleAssignments=[
+   ...d.moduleAssignments.filter(a=>
+    !(fueltransWorkspaceAvailable&&a.moduleId==='fueltrans')&&
+    !(toolTraceabilityWorkspaceAvailable&&a.moduleId==='tool-traceability')),
+   ...(fueltransWorkspaceAvailable?scoped:[]),
+   ...(toolTraceabilityWorkspaceAvailable?tooltraceWorkspace.assignments:[])
+  ];
   return {...d,...scopeMetadata,moduleAssignments,crmPlatformRoles:crm.roles,
-   crmPlatformUnavailable:false,fueltransWorkspaceAvailable};
+   crmPlatformUnavailable:false,fueltransWorkspaceAvailable,
+   toolTraceabilityWorkspaceAvailable};
  }
  async mutate({workspaceId,userId,scope,resourceId,role,enabled,expectedUpdatedAt=null}){
   if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
@@ -100,6 +125,22 @@ export class UserRoleManagementClient {
   if(r?.effective!==true||r.workspaceId!==workspaceId||r.targetUserId!==userId||
     r.scope!==scope||r.resourceId!==resourceId)throw Error('Backend role change acknowledgement invalid');
   return r;
+ }
+ async setToolTraceabilityWorkspaceRole({workspaceId,userId,role,enabled,expectedUpdatedAt=null}){
+  if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
+    !MODULE_ROLE_OPTIONS['tool-traceability'].includes(role)||
+    typeof enabled!=='boolean'||
+    (expectedUpdatedAt!==null&&
+     (typeof expectedUpdatedAt!=='string'||!Number.isFinite(Date.parse(expectedUpdatedAt)))))
+   throw Error('Invalid Tool Traceability role request');
+  const result=await this.api.rpc('apsyntra_role_tooltrace_workspace_set',{
+   p_workspace_id:workspaceId,p_target_user_id:userId,p_role:role,
+   p_enabled:enabled,p_expected_updated_at:expectedUpdatedAt});
+  if(result?.effective!==true||result.workspaceId!==workspaceId||
+     result.targetUserId!==userId||result.moduleId!=='tool-traceability'||
+     result.role!==role||result.enabled!==enabled)
+   throw Error('Invalid Tool Traceability role acknowledgement');
+  return result;
  }
  async setFueltransWorkspaceRole({workspaceId,userId,role,enabled,expectedUpdatedAt=null}){
   if(!UUID.test(workspaceId||'')||!UUID.test(userId||'')||
@@ -250,7 +291,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
  '<div class="note security-note user-role-self">The signed-in administrator cannot assign or modify roles on their own account. Select another active workspace member.</div>':
  '<div class="note user-role-helper">Select an application or board below to update this user’s actual role. Changes require explicit confirmation.</div>')+
  (!otherAssignableMembers.length?'<div class="note security-note user-role-no-targets">There are no other eligible active members in this workspace. Self-assignment and protected administrator changes are not permitted. Add another member to this workspace before assigning application or board access.</div>':'')+
- (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Toolbox Issues and Material Request Hub have workspace-scoped records. FuelTrans uses its own workspace-scoped membership when that signed backend contract is available; board access is also workspace-scoped.</div>':'')+
+ (globalModuleRoleBlocked?'<div class="note security-note user-role-workspace-scope">This account has '+(activeWorkspaceCount===null?'an unverified number of ':activeWorkspaceCount)+' active workspace memberships. Legacy application roles are global across workspaces, so changes to those roles are blocked to prevent cross-workspace permission changes. Toolbox Issues, Tool Traceability, and Material Request Hub have workspace-scoped records. FuelTrans uses its own workspace-scoped membership when that signed backend contract is available; board access is also workspace-scoped.</div>':'')+
  (!data.fueltransWorkspaceAvailable?'<div class="note user-role-fueltrans-scope-unavailable">FuelTrans role changes require its authoritative workspace membership integration. The legacy global role action is disabled to prevent assigning a role in another workspace.</div>':'')+
  (!data.workspaceScopedMrhAvailable?'<div class="note security-note user-role-mrh-scope-unavailable">Workspace-scoped Material Request Hub role management is not yet confirmed by the backend. Its role changes remain disabled until the CP-RC03 migration is installed.</div>':'')+
  '</div></section>';
@@ -280,14 +321,19 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
   const fueltransScoped=id==='fueltrans'&&data.fueltransWorkspaceAvailable===true;
   const opt=fueltransScoped?FUELTRANS_WORKSPACE_ROLES:(MODULE_ROLE_OPTIONS[id]||[]);
   const status=a?.enabled?'Active: '+a.role:a?'Disabled: '+a.role:'Unassigned';
-  const note=fueltransScoped?'Workspace FuelTrans membership':delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
-  const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues'||fueltransScoped;
+  const note=fueltransScoped?'Workspace FuelTrans membership':
+   id==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable?'Workspace Tool Traceability membership':
+   delegatedModules.has(id)?'Existing domain role handler':'Central role contract';
+  const tooltraceScoped=id==='tool-traceability'&&data.toolTraceabilityWorkspaceAvailable===true;
+  const workspaceScopedModule=id==='material-request-hub'||id==='toolbox-issues'||fueltransScoped||tooltraceScoped;
   const editBlocked=locked||!opt.length||(id==='fueltrans'&&!fueltransScoped)||
+   (id==='tool-traceability'&&!tooltraceScoped)||
    (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);
   const editReason=busy?'Another role change is in progress.':
    id==='fueltrans'&&!fueltransScoped?'FuelTrans workspace membership backend is not activated.':
+   id==='tool-traceability'&&!tooltraceScoped?'Tool Traceability workspace membership backend is not activated.':
    fueltransScoped&&a?.clientManaged===true?'Client-specific FuelTrans membership requires its domain assignment editor.':
    u.protected?'Protected administrator accounts cannot be modified.':
    isSelf?'Self-assignment is not permitted.':
@@ -296,6 +342,7 @@ export function renderUserRoleManagement({verified=false,data=null,selectedUserI
    globalModuleRoleBlocked&&!workspaceScopedModule?'This legacy application role is global and this member belongs to multiple workspaces.':
    id==='material-request-hub'&&!data.workspaceScopedMrhAvailable?'Workspace-scoped Material Request Hub role management is not verified.':'';
   const revokeBlocked=locked||(id==='fueltrans'&&!fueltransScoped)||
+   (id==='tool-traceability'&&!tooltraceScoped)||
    (fueltransScoped&&a?.clientManaged===true)||activeWorkspaceCount===null||
    (globalModuleRoleBlocked&&!workspaceScopedModule)||
    (id==='material-request-hub'&&!data.workspaceScopedMrhAvailable);

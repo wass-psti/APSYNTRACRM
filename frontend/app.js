@@ -200,7 +200,7 @@ import {mountRoleConfigurationMotion,stopRoleConfigurationMotion} from './role-c
 import {mountUserRoleMotion,stopUserRoleMotion} from './user-role-visuals.js';
 import {settingsIcon,mountSettingsMotion,stopSettingsMotion} from './settings-visuals.js';
 import {crmPlatformRoleChangeNeeded,FUELTRANS_WORKSPACE_ROLES,UserRoleManagementClient,renderUserRoleManagement,selectDefaultUserRoleTarget,MODULE_ROLE_OPTIONS,APSYNTRA_CRM_PLATFORM_ROLES} from './user-role-management.js';
-import {planUserRoleBatch} from './user-role-batch.js';
+import {planUserRoleBatch,unverifiedBatchRoleAssignments} from './user-role-batch.js';
 import {parseSignedCrmRole,signedCrmRoleLabel,signedCrmIdentityLabel,currentSignedCrmRole} from './crm-role-context.js';
 import {workspaceRelationFromCatalog,workspaceRelationLabel} from './workspace-relation-context.js';
 
@@ -2129,6 +2129,11 @@ async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expecte
   if(state.userRoleData?.fueltransWorkspaceAvailable!==true)
    throw new ApiError('FuelTrans workspace role contract is unavailable.',409);
   await userRoleManager.setFueltransWorkspaceRole({
+   workspaceId:ctx.workspace_id,userId,role,enabled,expectedUpdatedAt});
+ }else if(scope==='module'&&resourceId==='tool-traceability'){
+  if(state.userRoleData?.toolTraceabilityWorkspaceAvailable!==true)
+   throw new ApiError('Tool Traceability workspace role contract is unavailable.',409);
+  await userRoleManager.setToolTraceabilityWorkspaceRole({
    workspaceId:ctx.workspace_id,userId,role,enabled,expectedUpdatedAt});
  }else{
   await userRoleManager.mutate({workspaceId:ctx.workspace_id,userId,scope,resourceId,role,enabled,expectedUpdatedAt});
@@ -8216,7 +8221,7 @@ async function action(name,button){
       !(await roleConfig.adminVerified()))
      throw new ApiError('Verified CRM Administrator and workspace are required.',403);
     state.userRoleBusy=true;
-    let completed=0,failed=null;
+    let completed=0,failed=null,verifiedReadback=false;
     try{
      const current=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:resourceId==='fueltrans'});
      const refreshed=planUserRoleBatch(current,{userIds:selectedIds,
@@ -8232,13 +8237,22 @@ async function action(name,button){
        if(scope==='module'&&resourceId==='fueltrans')
         await userRoleManager.setFueltransWorkspaceRole({workspaceId:ctx.workspace_id,
          ...op});
+       else if(scope==='module'&&resourceId==='tool-traceability')
+        await userRoleManager.setToolTraceabilityWorkspaceRole({
+         workspaceId:ctx.workspace_id,...op});
        else await userRoleManager.mutate({workspaceId:ctx.workspace_id,...op});
        completed++;
       }catch(err){failed=err;break;}
      }
     }finally{
-     try{await loadUserRoleManagement();}catch(err){state.userRoleError=errorMessage(err);}
+     try{await loadUserRoleManagement();verifiedReadback=true;}
+     catch(err){state.userRoleError=errorMessage(err);}
      state.userRoleBusy=false;render();
+    }
+    if(!failed&&(!verifiedReadback||
+       unverifiedBatchRoleAssignments(state.userRoleData,plan.operations).length>0)){
+     hideModal();
+     throw new ApiError('The role writes returned success, but refreshed assignment readback could not confirm every target. Review current assignments before retrying.',409);
     }
     if(failed){
      // Prevent a second click from accidentally reissuing successful writes.
@@ -8347,7 +8361,10 @@ async function action(name,button){
          state.userRoleData.moduleAssignments.some(a=>a.moduleId==='fueltrans'&&
           a.userId===userId&&a.clientManaged===true)))
        throw new ApiError('FuelTrans requires an active non-client workspace membership contract.',409);
-     const globalScopeBlocked=!['material-request-hub','toolbox-issues'].includes(resourceId)&&workspaceCount>1;
+     if(resourceId==='tool-traceability'&&
+       state.userRoleData.toolTraceabilityWorkspaceAvailable!==true)
+       throw new ApiError('Tool Traceability workspace membership is not installed yet.',409);
+     const globalScopeBlocked=!['material-request-hub','toolbox-issues','tool-traceability'].includes(resourceId)&&workspaceCount>1;
      if(globalScopeBlocked&&
          !(resourceId==='fueltrans'&&state.userRoleData.fueltransWorkspaceAvailable===true))
        throw new ApiError('This application role is shared across the user’s active workspaces. It cannot be changed from a single-workspace screen.',409);

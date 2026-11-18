@@ -54,12 +54,13 @@ test('User Role Management requests and validates one exact workspace snapshot',
     {userId:owner,effectiveRole:'admin',assignedRole:null,inheritedRole:'employee'}
    ]
   };
+  if(name==='apsyntra_role_tooltrace_workspace_snapshot')throw Object.assign(Error('Missing'),{status:404,code:'PGRST202'});
   throw Error('Unexpected RPC '+name);
  }};
  const snapshot=await new UserRoleManagementClient(api).snapshot(main);
  assert.equal(snapshot.workspaceId,main);
  assert.deepEqual(snapshot.users.map(u=>u.email),['owner-main@example.invalid','invited-main@example.invalid']);
- assert.deepEqual(calls.map(c=>c[0]),['apsyntra_role_user_management_snapshot','apsyntra_crm_platform_role_snapshot']);
+ assert.deepEqual(calls.map(c=>c[0]),['apsyntra_role_user_management_snapshot','apsyntra_crm_platform_role_snapshot','apsyntra_role_tooltrace_workspace_snapshot']);
  assert.equal(calls[0][1].p_workspace_id,main);
  const html=renderUserRoleManagement({verified:true,data:snapshot,selectedUserId:owner});
  assert.match(html,/owner-main@example\.invalid/);

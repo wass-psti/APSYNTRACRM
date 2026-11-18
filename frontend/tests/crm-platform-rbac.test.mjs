@@ -41,6 +41,7 @@ test('single central signed client queries authoritative platform and existing r
  const rpc=[];
  const client=new UserRoleManagementClient({rpc:async(name)=>{
   rpc.push(name);
+  if(name==='apsyntra_role_tooltrace_workspace_snapshot')throw Object.assign(Error('Missing'),{status:404,code:'PGRST202'});
   if(name==='apsyntra_role_fueltrans_workspace_snapshot')throw Object.assign(Error('Missing'),{status:404,code:'PGRST202'});
   if(name==='apsyntra_crm_platform_role_snapshot')return {
    workspaceId:workspace,adminVerified:true,bootstrapVerified:false,roles:result().crmPlatformRoles};
@@ -50,7 +51,7 @@ test('single central signed client queries authoritative platform and existing r
  const snapshot=await client.snapshot(workspace);
  assert.equal(snapshot.crmPlatformRoles[0].assignedRole,'viewer');
  assert.deepEqual(rpc.sort(),['apsyntra_crm_platform_role_snapshot',
-  'apsyntra_role_user_management_snapshot']);
+  'apsyntra_role_tooltrace_workspace_snapshot','apsyntra_role_user_management_snapshot']);
 });
 
 test('invalid or untrusted CRM role snapshots reject before use',async()=>{

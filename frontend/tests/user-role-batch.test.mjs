@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {planUserRoleBatch} from '../user-role-batch.js';
+import {planUserRoleBatch,unverifiedBatchRoleAssignments} from '../user-role-batch.js';
 import {renderUserRoleManagement} from '../user-role-management.js';
 const a='11111111-1111-4111-8111-111111111111';
 const b='22222222-2222-4222-8222-222222222222';
@@ -36,8 +36,6 @@ test('rejects protected, self, unknown, owner and unsafe workspace targets befor
  assert.throws(()=>planUserRoleBatch(data,{...args,userIds:[a],actorUserId:a}),/protected, self/);
  assert.throws(()=>planUserRoleBatch({...data,users:data.users.map(u=>u.id===b?{...u,activeWorkspaceCount:2}:u)},
   {...args,userIds:[b]}),/not workspace-isolated/);
- assert.throws(()=>planUserRoleBatch(data,{...args,userIds:[a],resourceId:'toolbox-issues',role:'employee'}),
-  /Toolbox Issues source membership/);
  assert.throws(()=>planUserRoleBatch({...data,boardAssignments:[...data.boardAssignments,
   {userId:b,boardId:board,role:'owner'}]},{scope:'board',userIds:[b],resourceId:board,role:'editor'}),
   /Protected board owner/);
@@ -81,4 +79,30 @@ test('batch writes are directed through existing checked RPC; no new privileges 
  const css=readFileSync('frontend/user-role-experience.css','utf8');
  assert.match(css,/CP-URM-BATCH-01/);
  assert.match(css,/\.user-role-batch-user-list/);
+});
+
+test('Toolbox Issues first-time role assignment is valid for workspace-scoped multi-workspace member',()=>{
+ const multi={...data,users:data.users.map(u=>u.id===b?{...u,activeWorkspaceCount:2}:u)};
+ const plan=planUserRoleBatch(multi,{userIds:[b],scope:'module',
+  resourceId:'toolbox-issues',role:'employee',enabled:true});
+ assert.equal(plan.operations.length,1);
+ assert.equal(plan.operations[0].expectedUpdatedAt,null);
+});
+test('batch must verify refreshed assignments before announcing success',()=>{
+ const ops=[
+  {userId:a,scope:'module',resourceId:'tradelink',role:'User',enabled:true},
+  {userId:b,scope:'board',resourceId:board,role:'viewer',enabled:true}
+ ];
+ assert.deepEqual(unverifiedBatchRoleAssignments(data,ops),[b]);
+ const confirmed={...data,boardAssignments:[...data.boardAssignments,
+  {userId:b,boardId:board,role:'viewer'}]};
+ assert.deepEqual(unverifiedBatchRoleAssignments(confirmed,ops),[]);
+ assert.deepEqual(unverifiedBatchRoleAssignments(confirmed,[
+  {userId:a,scope:'board',resourceId:board,role:'viewer',enabled:false}
+ ]),[a]);
+ assert.throws(()=>unverifiedBatchRoleAssignments(null,ops),/unavailable/);
+ const app=readFileSync('frontend/app.js','utf8');
+ const block=app.slice(app.indexOf("case 'user-role-batch-review':"),app.indexOf("case 'user-role-section':"));
+ assert.match(block,/unverifiedBatchRoleAssignments\(state\.userRoleData,plan\.operations\)/);
+ assert.match(block,/verifiedReadback=true/);
 });

@@ -1,0 +1,28 @@
+name: CP-URM-EFFECTIVE-01A Disposable Role Projection
+on:
+  pull_request:
+    paths:
+      - 'frontend/app.js'
+      - 'frontend/user-role-batch.js'
+      - 'frontend/tests/user-role-batch.test.mjs'
+      - 'frontend/tests/role-effective-source-parity.test.mjs'
+      - 'supabase/migrations/20261118020130_cp_urm_effective_access_source_parity_20261118.sql'
+      - 'supabase/migration-source-manifest.json'
+      - 'scripts/cp-urm-effective01a-disposable.sh'
+      - 'sql/tests/cp-urm-effective01a-disposable-*.sql'
+      - '.github/workflows/cp-urm-effective01a-disposable.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-effective-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify recovered and forward migration integrity
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Run disposable PostgreSQL 17 role projection acceptance
+        run: bash scripts/cp-urm-effective01a-disposable.sh
+      - name: Run focused user role and source projection tests
+        run: node --test frontend/tests/user-role-batch.test.mjs frontend/tests/role-effective-source-parity.test.mjs

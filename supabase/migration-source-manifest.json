@@ -1696,11 +1696,32 @@
       "sha256": "9ec29133aa7cc9f78716643e23ac6c72a75ca23b6216b7a106dbad3e17e36f97"
     },
     {
+      "version": "20261117063614",
+      "name": "frt_company_profile_tax_id",
+      "file": "20261117063614_frt_company_profile_tax_id.sql",
+      "bytes": 4304,
+      "sha256": "170792387a3367a8370370edd200d592f1b93c27ce051b5aa7dbcec08e24a5c6"
+    },
+    {
       "version": "20261117160134",
       "name": "cp_urm_fueltrans_activate01_workspace_role_rpcs",
       "file": "20261117160134_cp_urm_fueltrans_activate01_workspace_role_rpcs.sql",
       "bytes": 5749,
       "sha256": "608c7d4b7a8a3e78e02d8f5e2fa4ea48dbd673dd796eb3f22c862b9868c96f7d"
+    },
+    {
+      "version": "20261118020130",
+      "name": "cp_urm_effective_access_source_parity_20261118",
+      "file": "20261118020130_cp_urm_effective_access_source_parity_20261118.sql",
+      "bytes": 8152,
+      "sha256": "91350dd8354c05422e906e1d5f81bce8b1e538e1c2433f5e83e42b9c30d549e6"
+    },
+    {
+      "version": "20261118032000",
+      "name": "cp_urm_tooltrace_workspace_role_sync",
+      "file": "20261118032000_cp_urm_tooltrace_workspace_role_sync.sql",
+      "bytes": 5128,
+      "sha256": "36b6ffb3f074bf3b68b516a924bcde994f67c2f8d6a31889c4385971a9f92d83"
     }
   ]
 }
