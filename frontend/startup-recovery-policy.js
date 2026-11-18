@@ -6,6 +6,8 @@
 const TRANSIENT_STATUSES=new Set([408,429,500,502,503,504]);
 const TRANSIENT_CODES=new Set(['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT']);
 export function transientStartupFailure(error){
+ // Do not stack the startup retry on top of a request-layer retry.
+ if(Number(error?.retryAttempts)>0)return false;
  return TRANSIENT_CODES.has(error?.code)||
   TRANSIENT_STATUSES.has(error?.status)||
   (Number.isInteger(error?.status)&&error.status>=500&&error.status<=599);

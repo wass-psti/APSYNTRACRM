@@ -11,6 +11,16 @@ export const SYNC_POLL_INTERVAL_MS=30000;
 export const SYNC_RECONCILE_INTERVAL_MS=90000;
 export const SYNC_POLL_RECOVERY_MS=SYNC_RECONCILE_INTERVAL_MS*3;
 export const SYNC_FOCUS_COOLDOWN_MS=3000;
+export const SYNC_ROLE_RECHECK_COOLDOWN_MS=10000;
+export const SYNC_CONNECT_TIMEOUT_MS=12000;
+export const SYNC_JOIN_TIMEOUT_MS=12000;
+const ROLE_RECHECK_REASONS=new Set(['focus','visible','cross-tab','online']);
+export function shouldRecheckWorkspaceRoles({reason,roleChanged=false,lastReadAt=0,now=Date.now(),
+ cooldownMs=SYNC_ROLE_RECHECK_COOLDOWN_MS}={}){
+ if(roleChanged)return true;
+ if(!ROLE_RECHECK_REASONS.has(reason))return false;
+ return !Number.isFinite(lastReadAt)||lastReadAt<=0||now-lastReadAt>=cooldownMs;
+}
 export function shouldRefreshWorkspaceBoardList({reason,view}={}){
  return reason!=='broadcast'||view!=='board';
 }
@@ -32,7 +42,7 @@ export class PlatformSync {
   try{this.storage=storage===undefined?globalThis.localStorage:storage;}
   catch{this.storage=null;}
   this.running=false;this.generation=0;this.timer=null;this.flushTimer=null;
-  this.heartbeat=null;this.reconnectTimer=null;this.socket=null;
+  this.heartbeat=null;this.reconnectTimer=null;this.connectTimeout=null;this.joinTimeout=null;this.socket=null;this.connectPending=null;
   this.ref=0;this.attempt=0;this.pending=new Set();this.joins=new Map();
   this.joined=new Map();this.inFlight=false;this.heartbeatsPending=0;this.lastSyncAt=null;
   this.lastCheckAt=null;this.lastTransport='none';
@@ -76,7 +86,7 @@ export class PlatformSync {
   if(this.timer!==null)this.clearIntervalFn?.(this.timer);
   if(this.reconnectTimer!==null)this.clearTimeoutFn?.(this.reconnectTimer);
   if(this.flushTimer!==null)this.clearTimeoutFn?.(this.flushTimer);
-  this.timer=null;this.reconnectTimer=null;this.flushTimer=null;
+  this.timer=null;this.reconnectTimer=null;this.flushTimer=null;this.connectPending=null;
   this.pending.clear();this.boardIds=[];this.scope=null;
   this.closeSocket();this.inFlight=false;this.lastTransport='none';
   this.lastSyncAt=null;this.lastCheckAt=null;this.attempt=0;
@@ -86,7 +96,9 @@ export class PlatformSync {
  }
  closeSocket(){
   if(this.heartbeat!==null)this.clearIntervalFn?.(this.heartbeat);
-  this.heartbeat=null;
+  if(this.connectTimeout!==null)this.clearTimeoutFn?.(this.connectTimeout);
+  if(this.joinTimeout!==null)this.clearTimeoutFn?.(this.joinTimeout);
+  this.heartbeat=null;this.connectTimeout=null;this.joinTimeout=null;
   const ws=this.socket;this.socket=null;
   this.joins.clear();this.joined.clear();this.heartbeatsPending=0;
   if(ws){ws.onopen=ws.onclose=ws.onmessage=ws.onerror=null;try{ws.close();}catch{}}
@@ -106,6 +118,15 @@ export class PlatformSync {
  }
  async connect(gen=this.generation){
   if(!this.running||gen!==this.generation||!this.visible()||!this.online())return;
+  if(this.socket&&[0,1].includes(this.socket.readyState))return;
+  if(this.connectPending?.generation===gen)return this.connectPending.promise;
+  const entry={generation:gen,promise:null};
+  entry.promise=this.connectOnce(gen);
+  this.connectPending=entry;
+  try{return await entry.promise;}
+  finally{if(this.connectPending===entry)this.connectPending=null;}
+ }
+ async connectOnce(gen=this.generation){
   if(!this.WebSocketImpl||!this.url||!this.publishableKey){
    this.lastTransport='polling';this.status('reconnecting','Secure Realtime unavailable; polling fallback');
    return;
@@ -113,6 +134,7 @@ export class PlatformSync {
   try{
    const token=await this.authenticate(gen);
    if(gen!==this.generation||!this.running||!this.visible()||!this.online())return;
+   if(this.socket&&[0,1].includes(this.socket.readyState))return;
    this.closeSocket();
    this.token=token;
    const base=new URL(this.url);
@@ -121,11 +143,25 @@ export class PlatformSync {
     encodeURIComponent(this.publishableKey)+'&vsn=2.0.0';
    const ws=new this.WebSocketImpl(endpoint);
    this.socket=ws;
-   ws.onopen=()=>this.joinChannels(ws,gen);
+   this.connectTimeout=this.setTimeoutFn?.(()=>{
+    this.connectTimeout=null;
+    if(gen!==this.generation||this.socket!==ws||ws.readyState!==0)return;
+    this.closeSocket();
+    this.status('reconnecting','Realtime connection attempt timed out');
+    this.reconnect(gen);
+   },SYNC_CONNECT_TIMEOUT_MS)??null;
+   ws.onopen=()=>{
+    if(this.connectTimeout!==null)this.clearTimeoutFn?.(this.connectTimeout);
+    this.connectTimeout=null;
+    this.joinChannels(ws,gen);
+   };
    ws.onmessage=event=>this.receive(ws,gen,event.data);
-   ws.onerror=()=>{}; // onclose controls backoff; do not log network details
-   ws.onclose=()=>{if(gen===this.generation&&this.running&&this.socket===ws)
-    this.reconnect(gen);};
+   ws.onerror=()=>{}; // onclose or the bounded connect deadline controls backoff
+   ws.onclose=()=>{
+    if(this.connectTimeout!==null)this.clearTimeoutFn?.(this.connectTimeout);
+    this.connectTimeout=null;
+    if(gen===this.generation&&this.running&&this.socket===ws)this.reconnect(gen);
+   };
   }catch(error){
    if(gen!==this.generation||!this.running)return;
    if(/scope changed|Inactive signed scope|session changed/i.test(String(error.message))){
@@ -151,6 +187,12 @@ export class PlatformSync {
    });
    if(!requestRef)return this.reconnect(gen);
    this.joins.set(requestRef,{boardId:id,joinRef});
+  }
+  if(this.joins.size){
+   this.joinTimeout=this.setTimeoutFn?.(()=>{
+    this.joinTimeout=null;
+    if(ws===this.socket&&gen===this.generation&&this.joins.size>0)this.reconnect(gen);
+   },SYNC_JOIN_TIMEOUT_MS)??null;
   }
   this.heartbeat=this.setIntervalFn?.(()=>this.tickHeartbeat(ws,gen),20000);
   if(boardIds.length===0){this.lastTransport='polling';void this.syncNow('join',[]);}
@@ -186,6 +228,8 @@ export class PlatformSync {
    if(payload?.status!=='ok'){this.reconnect(gen);return;}
    this.joined.set(requested.boardId,requested.joinRef);
    if(this.joins.size===0){
+    if(this.joinTimeout!==null)this.clearTimeoutFn?.(this.joinTimeout);
+    this.joinTimeout=null;
     this.attempt=0;this.lastTransport='realtime';
     void this.syncNow('join',[]);
    }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS}
+import {PlatformSync,SYNC_MAX_BOARD_CHANNELS,SYNC_POLL_INTERVAL_MS,SYNC_FOCUS_COOLDOWN_MS,SYNC_CONNECT_TIMEOUT_MS,SYNC_JOIN_TIMEOUT_MS}
  from '../platform-sync.js';
 
 const uid='20000000-0000-4000-8000-000000000001';
@@ -48,7 +48,7 @@ function fake(){
    sock.emit([frame[0],frame[1],frame[2],'phx_reply',{status:'ok',response:{}}]);
   await wait();
  };
- return {ctl,sockets,statuses,invalidations,wait,flush,join,intervals,
+ return {ctl,sockets,statuses,invalidations,wait,flush,join,intervals,timeouts,
   setVisible:v=>{visible=v;},setOnline:v=>{online=v;},setToken:v=>{token=v;},
   advance:ms=>{time+=ms;}};
 }
@@ -111,6 +111,35 @@ test('unavailable socket uses only bounded visible authorized polling',async()=>
  assert.equal(x.invalidations.length,2);
  x.ctl.stop();assert.equal(x.intervals.size,0);
 });
+test('a WebSocket stuck in CONNECTING is closed at the deadline and reconnects with backoff',async()=>{
+ const x=fake();
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await x.wait();
+ const socket=x.sockets[0];
+ assert.equal(socket.readyState,0);
+ assert.ok([...x.timeouts.values()].some(item=>item.ms===SYNC_CONNECT_TIMEOUT_MS));
+ await x.flush(SYNC_CONNECT_TIMEOUT_MS);
+ assert.equal(socket.readyState,3);
+ assert.equal(x.ctl.socket,null);
+ assert.equal(x.statuses.at(-1).phase,'reconnecting');
+ assert.ok([...x.timeouts.values()].some(item=>item.ms>0&&item.ms<SYNC_CONNECT_TIMEOUT_MS));
+ x.ctl.stop();
+});
+
+test('a WebSocket that never acknowledges channel joins is closed at the join deadline',async()=>{
+ const x=fake();
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await x.wait();
+ const socket=x.sockets[0];socket.open();
+ assert.equal(x.ctl.joins.size,1);
+ assert.ok([...x.timeouts.values()].some(item=>item.ms===SYNC_JOIN_TIMEOUT_MS));
+ await x.flush(SYNC_JOIN_TIMEOUT_MS);
+ assert.equal(socket.readyState,3);
+ assert.equal(x.ctl.socket,null);
+ assert.equal(x.statuses.at(-1).phase,'reconnecting');
+ x.ctl.stop();
+});
+
 test('visibility pause closes socket and returns with fresh signed join',async()=>{
  const x=fake();x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
  await x.wait();await x.join(x.sockets[0]);
