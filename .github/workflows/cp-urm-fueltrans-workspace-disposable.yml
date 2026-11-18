@@ -4,6 +4,9 @@ on:
     paths:
       - "sql/cp-urm-fueltrans-workspace-role-candidate.sql"
       - "sql/tests/cp-urm-fueltrans-workspace-disposable.sql"
+      - "sql/tests/cp-urm-fueltrans-nonbootstrap-admin-403.sql"
+      - "supabase/migrations/20261118040000_cp_urm_fueltrans_nonbootstrap_admin_target.sql"
+      - "supabase/migration-source-manifest.json"
       - "sql/tests/cp-urm-app-toolbox-01-disposable-setup.sql"
       - ".github/workflows/cp-urm-fueltrans-workspace-disposable.yml"
   workflow_dispatch:
@@ -37,4 +40,5 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 \
             -f sql/tests/cp-urm-app-toolbox-01-disposable-setup.sql \
-            -f sql/tests/cp-urm-fueltrans-workspace-disposable.sql
+            -f sql/tests/cp-urm-fueltrans-workspace-disposable.sql \
+            -f sql/tests/cp-urm-fueltrans-nonbootstrap-admin-403.sql
