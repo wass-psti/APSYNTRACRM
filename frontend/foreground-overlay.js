@@ -60,6 +60,40 @@ export function calculateActionMenuPlacement(anchor,menu,viewport,{
   top:Math.round(y*100)/100,maxHeight:Math.round(available*100)/100,
   placement:aboveFirst?'top-end':'bottom-end'});
 }
+/** Place a select listbox in viewport coordinates with a scrollable height.
+ * Prefer the side with more room when neither side fits the full list.
+ */
+export function calculateSelectMenuPlacement(anchor,menu,viewport,{
+ gap=7,padding=9,maxHeight=360
+}={}){
+ if(!anchor||!menu||!viewport)return null;
+ const values=[anchor.left,anchor.top,anchor.right,anchor.bottom,
+  menu.width,menu.height,viewport.width,viewport.height];
+ if(!values.every(Number.isFinite)||anchor.right<=anchor.left||
+    anchor.bottom<=anchor.top||menu.width<=0||menu.height<=0||
+    viewport.width<=2*padding||viewport.height<=2*padding)return null;
+ const left=(Number(viewport.left)||0)+padding;
+ const top=(Number(viewport.top)||0)+padding;
+ const right=(Number(viewport.left)||0)+viewport.width-padding;
+ const bottom=(Number(viewport.top)||0)+viewport.height-padding;
+ if(anchor.right<=left||anchor.left>=right||anchor.bottom<=top||
+    anchor.top>=bottom)return null;
+ const width=Math.min(menu.width,right-left);
+ const below=Math.max(0,bottom-anchor.bottom-gap);
+ const above=Math.max(0,anchor.top-top-gap);
+ const onTop=below<Math.min(menu.height,maxHeight)&&above>below;
+ const available=onTop?above:below;
+ if(available<40)return null;
+ const height=Math.min(menu.height,available,maxHeight);
+ const x=Math.max(left,Math.min(anchor.left,right-width));
+ const y=onTop?anchor.top-gap-height:anchor.bottom+gap;
+ return Object.freeze({
+  left:Math.round(x*100)/100,top:Math.round(y*100)/100,
+  width:Math.round(width*100)/100,
+  maxHeight:Math.round(available*100)/100,
+  placement:onTop?'top-start':'bottom-start'
+ });
+}
 function currentViewport(win){
  const visual=win?.visualViewport;
  const left=visual?.offsetLeft??0,top=visual?.offsetTop??0;
@@ -93,16 +127,17 @@ function actionRuleId(menu){
  const id=String(menu?.id||'');
  return /^[A-Za-z][A-Za-z0-9_-]{0,120}$/.test(id)?id:null;
 }
-function createActionRule(doc,menu){
+function createPlacementRule(doc,menu,kind){
  const sheet=getPlacementSheet(doc),id=actionRuleId(menu);
  if(!sheet||!id||!menu.closest?.('#app'))return null;
  // Two concrete ID selectors outrank all original board/Overview top-layer
  // and legacy anchor declarations, without increasing any global z-index.
  const selector='#app #'+id+':popover-open';
+ const limit=kind==='select'?360:370;
  const ruleText=selector+'{position:fixed!important;position-anchor:none!important;'+
   'inset:auto!important;left:-10000px!important;top:-10000px!important;'+
   'right:auto!important;bottom:auto!important;margin:0!important;'+
-  'overflow-y:auto!important;max-height:370px!important;}';
+  'overflow-y:auto!important;max-height:'+limit+'px!important;}';
  let rule;
  try{
   const idx=sheet.insertRule(ruleText,sheet.cssRules.length);
@@ -123,7 +158,8 @@ function createActionRule(doc,menu){
     rule.style.setProperty('top',position.top+'px','important');
     rule.style.setProperty('left',position.left+'px','important');
     rule.style.setProperty('max-height',
-     Math.min(position.maxHeight,370)+'px','important');
+     Math.min(position.maxHeight,limit)+'px','important');
+    if(kind==='select')rule.style.setProperty('width',position.width+'px','important');
     return true;
    }catch{return false;}
   },
@@ -158,8 +194,8 @@ export function showForegroundPopover(menu,trigger,{
  if(!menu?.isConnected||!trigger?.isConnected||!KINDS.has(kind)||
     typeof menu.showPopover!=='function')return null;
  if(kind!=='action'&&!supportsForegroundPopover(doc))return null;
- const actionRule=kind==='action'?createActionRule(doc,menu):null;
- if(kind==='action'&&!actionRule)return null;
+ const placementRule=kind==='action'||kind==='select'?createPlacementRule(doc,menu,kind):null;
+ if(kind==='action'&&!placementRule)return null;
  const existing=openByDocument.get(doc);
  if(existing&&existing.menu!==menu)existing.dismiss();
  const anchorClass='aps-foreground-anchor-'+kind;
@@ -171,7 +207,7 @@ export function showForegroundPopover(menu,trigger,{
   typeof menu.getBoundingClientRect==='function';
  // Action menus require real geometry. Never show an unmeasured top layer.
  if(kind==='action'&&!canValidate){
-  actionRule?.dispose();return null;
+  placementRule?.dispose();return null;
  }
  const placementFailed=()=>{
   cleanup();
@@ -188,9 +224,11 @@ export function showForegroundPopover(menu,trigger,{
    const anchor=trigger.getBoundingClientRect();
    const before=menu.getBoundingClientRect();
    const viewport=currentViewport(win);
-   if(actionRule){
-    const placement=calculateActionMenuPlacement(anchor,before,viewport);
-    if(!placement||!actionRule.place(placement)){placementFailed();return;}
+   if(placementRule){
+    const placement=kind==='select'?
+     calculateSelectMenuPlacement(anchor,before,viewport):
+     calculateActionMenuPlacement(anchor,before,viewport);
+    if(!placement||!placementRule.place(placement)){placementFailed();return;}
    }
    const after=menu.getBoundingClientRect();
    if(isForegroundPositionValid(anchor,after,viewport)){
@@ -213,7 +251,7 @@ export function showForegroundPopover(menu,trigger,{
   win?.visualViewport?.removeEventListener?.('scroll',schedule);
   try{if(menu.matches?.(':popover-open'))menu.hidePopover();}
   catch{/* The menu may have been removed during a route change. */}
-  actionRule?.dispose();
+  placementRule?.dispose();
   menu.classList.remove('aps-foreground-surface',surfaceClass,
    'aps-foreground-pending');
   trigger.classList.remove(anchorClass);
