@@ -62,6 +62,16 @@ def main():
     ws=uuid.uuid4()
     assert stage(container,ws,base)['status']=='STAGED'
     assert stage(container,ws,base)['status']=='ALREADY_STAGED'
+    missing_flag=copy.deepcopy(base)
+    del missing_flag['ready_for_migration']
+    try:stage(container,uuid.uuid4(),missing_flag)
+    except RuntimeError:pass
+    else:raise AssertionError('Missing readiness flag accepted')
+    missing_ledger=copy.deepcopy(base)
+    del missing_ledger['time_tracking_rows_raw']
+    try:stage(container,uuid.uuid4(),missing_ledger)
+    except RuntimeError:pass
+    else:raise AssertionError('Incomplete source ledger accepted')
     altered=copy.deepcopy(base)
     altered['posts_parent_first'][0]['content']='Different'
     try:stage(container,ws,altered)

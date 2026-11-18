@@ -68,13 +68,14 @@ begin
     source_hash is null or source_hash !~ '^[0-9a-f]{64}$' then
   raise exception 'invalid source identity' using errcode='22023';
  end if;
- if jsonb_typeof(issues)<>'array' or jsonb_typeof(posts)<>'array' or
-    jsonb_typeof(p_manifest->'time_tracking_rows_raw')<>'array' then
+ if jsonb_typeof(issues) is distinct from 'array' or
+    jsonb_typeof(posts) is distinct from 'array' or
+    jsonb_typeof(p_manifest->'time_tracking_rows_raw') is distinct from 'array' then
   raise exception 'full structured source snapshot required' using errcode='22023';
  end if;
- if p_manifest->>'ready_for_migration' <> 'false' or
-    p_manifest->>'production_writes_authorized'<>'false' or
-    p_manifest->>'source_subitem_provenance'<>'NOT_ESTABLISHED' then
+ if p_manifest->>'ready_for_migration' is distinct from 'false' or
+    p_manifest->>'production_writes_authorized' is distinct from 'false' or
+    p_manifest->>'source_subitem_provenance' is distinct from 'NOT_ESTABLISHED' then
   raise exception 'unexpected source migration readiness state' using errcode='22023';
  end if;
  issue_count:=jsonb_array_length(issues);
