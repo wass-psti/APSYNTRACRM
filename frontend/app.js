@@ -2104,7 +2104,7 @@ async function loadUserRoleManagement(){
  if(state.adminVerified!==true || !(await roleConfig.adminVerified()))throw new ApiError('CRM administrator role management access denied.',403);
  const ctx=await db.context();
  if(ctx.user_id!==state.context?.user_id||ctx.workspace_id!==state.context?.workspace_id)throw new ApiError('Authoritative workspace changed.',403);
- state.userRoleData=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true});
+ state.userRoleData=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:true,includeFundTracker:true});
  const batchIdentity=ctx.workspace_id+':'+ctx.user_id;
  if(state.userRoleBatchIdentity!==batchIdentity){
   state.userRoleBatchSelected=[];
@@ -8231,7 +8231,7 @@ async function action(name,button){
     state.userRoleBusy=true;
     let completed=0,failed=null,verifiedReadback=false;
     try{
-     const current=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:resourceId==='fueltrans'});
+     const current=await userRoleManager.snapshot(ctx.workspace_id,{includeFuelTrans:resourceId==='fueltrans',includeFundTracker:resourceId==='fund-released-tracker'});
      const refreshed=planUserRoleBatch(current,{userIds:selectedIds,
        actorUserId:ctx.user_id,scope,resourceId,role,enabled});
      if(refreshed.operations.length!==plan.operations.length||
