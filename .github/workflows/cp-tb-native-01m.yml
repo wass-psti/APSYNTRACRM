@@ -1,0 +1,25 @@
+name: CP-TB-NATIVE-01M Provider Evidence Preflight
+on:
+  pull_request:
+    paths:
+      - "scripts/talkbox-provider-evidence.py"
+      - "scripts/tests/test_talkbox_provider_evidence.py"
+      - ".github/workflows/cp-tb-native-01m.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/talkbox-provider-evidence.py"
+      - "scripts/tests/test_talkbox_provider_evidence.py"
+      - ".github/workflows/cp-tb-native-01m.yml"
+permissions:
+  contents: read
+jobs:
+  provider-evidence-negative-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile read-only provider recovery utility
+        run: python3 -m py_compile scripts/talkbox-provider-evidence.py
+      - name: Validate pagination, identifiers, media metadata, and fail-closed behavior
+        run: python3 -m unittest discover -s scripts/tests -p 'test_talkbox_provider_evidence.py' -v
