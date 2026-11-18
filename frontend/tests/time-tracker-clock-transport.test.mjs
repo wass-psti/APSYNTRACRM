@@ -56,11 +56,12 @@ test('abort is distinguished from ordinary network loss',async()=>{
  const auth=signedAuth(async()=>{throw new Error('AbortError');});
  await assert.rejects(()=>auth.call('/rest/v1/rpc/timetracker_attendance_commit_v2',
   {method:'POST',signal:signal.signal}),err=>
-  err instanceof ApiError&&err.code==='REQUEST_TIMEOUT');
+  err instanceof ApiError&&err.code==='REQUEST_ABORTED');
  await assert.rejects(()=>auth.call('/rest/v1/rpc/timetracker_attendance_commit_v2',
   {method:'POST'}),err=>
   err instanceof ApiError&&err.code!== 'REQUEST_TIMEOUT'&&
-  /Network unavailable/.test(err.message));
+  err.code==='NETWORK_UNAVAILABLE'&&err.mayHaveCommitted===true&&
+  /Verify any change before retrying/.test(err.message));
 });
 
 test('attendance commit is the sole non-replayed bounded write RPC',()=>{
@@ -70,5 +71,7 @@ test('attendance commit is the sole non-replayed bounded write RPC',()=>{
  assert.match(native,/AbortSignal\?\.timeout\?\.\(25000\)/);
  assert.match(native,/retryUnauthorized:false/);
  assert.match(api,/rpc\(name,args=\{\},options=\{\}\)/);
- assert.match(auth,/if\(err\.status!==401\|\|!retryUnauthorized\)throw err/);
+ assert.match(auth,/if\(error\?\.status===401&&retryUnauthorized&&!unauthorizedRetried\)/);
+ assert.match(auth,/if\(!retryableRead\|\|!transient/);
+ assert.match(auth,/requestOptions\.signal\?\.aborted/);
 });

@@ -31,7 +31,7 @@ import {normalizeSignedBoardCandidates,BoardGroupAccessClient,
  BOARD_GROUP_ACCESS_ENABLED} from './workspace-board-groups.js';
 import {CreatorAccessClient,WS10_CREATOR_POLICY_ACTIVE} from './ws10-ownership.js';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
-import {PlatformSync,shouldRefreshWorkspaceBoardList} from './platform-sync.js';
+import {PlatformSync,shouldRefreshWorkspaceBoardList,shouldRecheckWorkspaceRoles} from './platform-sync.js';
 import {APP_NAME} from './config.js';
 import {runReadOnlyAcceptance,summarizeAcceptance} from './acceptance.js';
 import {runPagesPersistenceAcceptance,QA_BOARD_NAME} from './pages-persistence.js';
@@ -1812,18 +1812,19 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
  let changedBoards=refreshBoardCatalog&&JSON.stringify(state.boards)!==JSON.stringify(boards);
  if(refreshBoardCatalog)state.boards=boards;
  state.context=mergeProfileAvatarContext(state.context,current);state.user=auth.session?.user;
+ const roleRecheck=shouldRecheckWorkspaceRoles({reason,roleChanged,
+  lastReadAt:crmRoleLastReadAt,now:Date.now()});
  if(reason!=='broadcast'){
-  // Workspace role reassignment does not alter the inherited profile role.
-  // Bounded focus/visibility/cross-tab revalidation detects that change
-  // without turning ordinary board polling into a high-frequency role query.
-  const roleRecheck=roleChanged||
-   (['focus','visible','cross-tab'].includes(reason)&&
-    Date.now()-crmRoleLastReadAt>=10000);
+  // Effective role refresh remains bounded. Bootstrap/admin identity checks
+  // run only after a real role change or a cooled-down focus/reconnect event,
+  // never on ordinary periodic board polling.
   void refreshSignedCrmRole({force:roleRecheck}).catch(()=>{});
  }
- if(roleChanged||sensitive){
-  const verified=await roleConfig.bootstrapVerified().catch(()=>false);
-  const admin=await roleConfig.adminVerified().catch(()=>false);
+ if(roleRecheck){
+  const [verified,admin]=await Promise.all([
+   roleConfig.bootstrapVerified().catch(()=>false),
+   roleConfig.adminVerified().catch(()=>false)
+  ]);
   if(!isCurrent())return false;
   if(admin!==state.adminVerified){state.adminVerified=admin;state.roleData=null;state.userRoleData=null;}
   if(!admin&&['role-configuration','user-role-management'].includes(view)){

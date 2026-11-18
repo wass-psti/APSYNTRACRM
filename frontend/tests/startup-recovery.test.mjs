@@ -128,7 +128,7 @@ test('persistent session on transient network failure supports same-page retry w
  online=true;
  assert.equal(await auth.restore(),true);
  assert.equal(auth.userId,UID);
- assert.equal(calls,2);
+ assert.equal(calls,2,'startup recovery owns the single retry for Auth user verification');
 });
 test('500 and 429 from provider preserve saved signed session until verification',async()=>{
  for(const status of [429,500,503]){

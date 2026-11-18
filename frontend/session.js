@@ -7,8 +7,13 @@ export class ApiError extends Error {
 }
 export class AuthClient {
   constructor({fetchImpl=globalThis.fetch?.bind(globalThis),storage=globalThis.sessionStorage,
-    clock=()=>Date.now(),requestTimeoutMs=12000}={}){
-    this.fetchImpl=fetchImpl;this.storage=storage;this.clock=clock;this.session=null;this.refreshing=null;this.onExpired=()=>{};
+    clock=()=>Date.now(),requestTimeoutMs=12000,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
+    random=Math.random,maxReadRetries=1,retryBaseDelayMs=250}={}){
+    this.fetchImpl=fetchImpl;this.storage=storage;this.clock=clock;this.session=null;
+    this.refreshing=null;this.verifiedUserPending=null;this.onExpired=()=>{};
+    this.wait=wait;this.random=random;
+    this.maxReadRetries=Number.isInteger(maxReadRetries)&&maxReadRetries>=0&&maxReadRetries<=2?maxReadRetries:1;
+    this.retryBaseDelayMs=Number.isInteger(retryBaseDelayMs)&&retryBaseDelayMs>=0&&retryBaseDelayMs<=2000?retryBaseDelayMs:250;
     this.requestTimeoutMs=Number.isInteger(requestTimeoutMs)&&requestTimeoutMs>=10&&requestTimeoutMs<=30000?
       requestTimeoutMs:12000;
   }
@@ -22,23 +27,29 @@ export class AuthClient {
       expires_at:this.clock()+(Number(session.expires_in)||3600)*1000,user:session.user};
     this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));
   }
-  clear(){this.session=null;this.storage?.removeItem(STORE_KEY);}
-  async call(path,{method='GET',body,accessToken,signal,readTimeoutMs}={}){
-    if(signal?.aborted)throw new ApiError('Request timed out before confirmation.',0,'REQUEST_TIMEOUT');
+  clear(){this.session=null;this.verifiedUserPending=null;this.storage?.removeItem(STORE_KEY);}
+  async call(path,{method='GET',body,accessToken,signal,readTimeoutMs,requestKind='unknown'}={}){
+    if(signal?.aborted)throw new ApiError('Request was cancelled.',0,'REQUEST_ABORTED');
     const controller=new AbortController();
     const abort=()=>controller.abort();
     signal?.addEventListener('abort',abort,{once:true});
-    let deadlineId,timedOut=false;
-    // Bound both network and body parsing. A hung provider or non-abortable
-    // response cannot leave the startup auth/workspace gate unresolved forever.
+    let deadlineId,timedOut=false,timeoutError=null,phase='request';
+    const timeoutMs=method==='POST'&&
+      /^\/rest\/v1\/rpc\/(?:wm_get_board_shell|wm_get_board_items_page|wm_import_extended_refs_read)$/.test(path)&&
+      Number.isInteger(readTimeoutMs)&&readTimeoutMs>=this.requestTimeoutMs&&readTimeoutMs<=30000?
+      readTimeoutMs:this.requestTimeoutMs;
     const deadline=new Promise((_,reject)=>{
       deadlineId=setTimeout(()=>{
-        timedOut=true;controller.abort();
-        reject(new ApiError('The service did not respond. Check your connection and retry.',0,'REQUEST_TIMEOUT'));
-      },method==='POST'&&
-        /^\/rest\/v1\/rpc\/(?:wm_get_board_shell|wm_get_board_items_page|wm_import_extended_refs_read)$/.test(path)&&
-        Number.isInteger(readTimeoutMs)&&readTimeoutMs>=this.requestTimeoutMs&&readTimeoutMs<=30000?
-        readTimeoutMs:this.requestTimeoutMs);
+        timedOut=true;
+        const message=requestKind==='read'?
+          'The service read exceeded its response deadline.':
+          'The service did not confirm this request before its response deadline. Verify any change before retrying.';
+        timeoutError=new ApiError(message,0,'REQUEST_TIMEOUT');
+        timeoutError.phase=phase;
+        timeoutError.mayHaveCommitted=method!=='GET'&&requestKind!=='read';
+        controller.abort();
+        reject(timeoutError);
+      },timeoutMs);
     });
     try{
       const response=await Promise.race([this.fetchImpl(SUPABASE_URL+path,{
@@ -48,50 +59,65 @@ export class AuthClient {
         ...(body===undefined?{}:{body:JSON.stringify(body)}),
         signal:controller.signal
       }),deadline]);
-      let data=null;
+      if(signal?.aborted)throw new ApiError('Request was cancelled.',0,'REQUEST_ABORTED');
+      let data=null,raw='';
       try{
-        // Read the body once as text so a malformed successful response is
-        // distinguishable from an empty/204 response. Previously response.json()
-        // failures were silently converted to null, hiding the original token
-        // error from atomic import receipt handling.
+        phase='response-body';
         const bodyPromise=typeof response.text==='function'?
           response.text():Promise.resolve(response.json()).then(value=>JSON.stringify(value));
-        const raw=await Promise.race([bodyPromise,deadline]);
-        if(typeof raw==='string'&&raw.trim()){
-          try{data=JSON.parse(raw);}
-          catch(cause){
-            if(response.ok){
-              const error=new ApiError(
-                'The service returned an invalid JSON response.',
-                response.status,'INVALID_JSON_RESPONSE');
-              error.cause=cause;
-              throw error;
-            }
+        raw=await Promise.race([bodyPromise,deadline]);
+      }catch(error){
+        if(error?.code==='REQUEST_TIMEOUT'||timedOut||error?.code==='REQUEST_ABORTED'||error instanceof ApiError)throw error;
+        if(response.ok){
+          const interrupted=new ApiError(
+            requestKind==='read'?
+              'The network connection was interrupted while receiving the service response.':
+              'The connection was interrupted before the service confirmed the result. Verify any change before retrying.',
+            0,'NETWORK_UNAVAILABLE');
+          interrupted.phase='response-body';
+          interrupted.mayHaveCommitted=method!=='GET'&&requestKind!=='read';
+          interrupted.cause=error;
+          throw interrupted;
+        }
+        raw='';
+      }
+      if(signal?.aborted)throw new ApiError('Request was cancelled.',0,'REQUEST_ABORTED');
+      if(typeof raw==='string'&&raw.trim()){
+        try{data=JSON.parse(raw);}
+        catch(cause){
+          if(response.ok){
+            const invalid=new ApiError(
+              'The service returned an invalid JSON response.',
+              response.status,'INVALID_JSON_RESPONSE');
+            invalid.cause=cause;
+            throw invalid;
           }
         }
-      }catch(error){
-        if(error?.code==='REQUEST_TIMEOUT'||timedOut)throw error;
-        if(error instanceof ApiError)throw error;
-        if(response.ok){
-          const invalid=new ApiError(
-            'The service returned an invalid JSON response.',
-            response.status,'INVALID_JSON_RESPONSE');
-          invalid.cause=error;
-          throw invalid;
-        }
-        data=null;
       }
       if(!response.ok){
         const errorMessage=isObject(data)?(data.msg||data.message||data.error_description||data.error):null;
-        throw new ApiError(typeof errorMessage==='string'?errorMessage:'Request failed ('+response.status+')',
+        const error=new ApiError(typeof errorMessage==='string'?errorMessage:'Request failed ('+response.status+')',
           response.status,isObject(data)?String(data.code||data.error_code||''):'');
+        const retryAfter=response.headers?.get?.('Retry-After');
+        if(retryAfter){
+          const seconds=Number(retryAfter);
+          const dateMs=Number.isFinite(seconds)?seconds*1000:Date.parse(retryAfter)-this.clock();
+          if(Number.isFinite(dateMs)&&dateMs>=0)error.retryAfterMs=Math.min(5000,dateMs);
+        }
+        throw error;
       }
       return data;
     }catch(error){
       if(error instanceof ApiError)throw error;
-      if(timedOut)throw new ApiError('The service did not respond. Check your connection and retry.',0,'REQUEST_TIMEOUT');
+      if(timedOut)throw timeoutError||new ApiError('The service did not respond before its response deadline.',0,'REQUEST_TIMEOUT');
       if(signal?.aborted)throw new ApiError('Request was cancelled.',0,'REQUEST_ABORTED');
-      throw new ApiError('Network unavailable. Verify your internet connection and retry.',0,'NETWORK_UNAVAILABLE');
+      const unavailable=new ApiError(requestKind==='read'?
+        'Network unavailable. Verify your internet connection and retry.':
+        'The connection was interrupted before the service confirmed the result. Verify any change before retrying.',
+        0,'NETWORK_UNAVAILABLE');
+      unavailable.phase=phase;
+      unavailable.mayHaveCommitted=method!=='GET'&&requestKind!=='read';
+      throw unavailable;
     }finally{
       clearTimeout(deadlineId);
       signal?.removeEventListener('abort',abort);
@@ -114,18 +140,30 @@ export class AuthClient {
   }
   async getVerifiedUser(){
     if(!this.session)throw new ApiError('You are not signed in.',401);
-    const data=await this.call('/auth/v1/user',{accessToken:await this.token()});
-    if(!isObject(data)||typeof data.id!=='string'||data.id!==this.session.user.id){
-      this.clear();throw new ApiError('Session verification failed.',401);
-    }
-    // Server-side identity has already been verified. Persisting updated
-    // profile metadata is a best-effort cache update, not a new auth gate.
-    // Quota/privacy storage failures must not turn a valid signed response
-    // into a full-screen "Connection interrupted" error.
-    this.session.user=data;
-    try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
-    catch{/* In-memory identity remains verified for the current tab. */}
-    return data;
+    const token=await this.token();
+    const expectedUserId=this.session?.user?.id;
+    if(!this.session||typeof expectedUserId!=='string')
+      throw new ApiError('Session changed during verification.',401,'SESSION_CHANGED');
+    const key=expectedUserId+':'+token;
+    if(this.verifiedUserPending?.key===key)return this.verifiedUserPending.promise;
+    const pending=(async()=>{
+      const data=await this.call('/auth/v1/user',{accessToken:token,requestKind:'read'});
+      if(!this.session||this.session.user?.id!==expectedUserId)
+        throw new ApiError('Session changed during verification.',401,'SESSION_CHANGED');
+      if(!isObject(data)||typeof data.id!=='string'||data.id!==expectedUserId){
+        this.clear();throw new ApiError('Session verification failed.',401);
+      }
+      // Server-side identity has already been verified. Persisting updated
+      // profile metadata is a best-effort cache update, not a new auth gate.
+      this.session.user=data;
+      try{this.storage?.setItem(STORE_KEY,JSON.stringify(this.session));}
+      catch{/* In-memory identity remains verified for the current tab. */}
+      return data;
+    })();
+    const entry={key,promise:pending};
+    this.verifiedUserPending=entry;
+    try{return await pending;}
+    finally{if(this.verifiedUserPending===entry)this.verifiedUserPending=null;}
   }
   async restore(){
     const raw=this.storage?.getItem(STORE_KEY);
@@ -175,13 +213,36 @@ export class AuthClient {
     return this.session.access_token;
   }
   async authorized(path,options={}){
-    const {retryUnauthorized=true,...requestOptions}=options;
-    const token=await this.token();
-    try{return await this.call(path,{...requestOptions,accessToken:token});}
-    catch(err){
-      if(err.status!==401||!retryUnauthorized)throw err;
-      const renewed=await this.refresh();
-      return this.call(path,{...requestOptions,accessToken:renewed});
+    const {retryUnauthorized=true,retryableRead=false,...requestOptions}=options;
+    let token=await this.token(),unauthorizedRetried=false,readRetries=0;
+    while(true){
+      try{
+        return await this.call(path,{...requestOptions,accessToken:token,
+          requestKind:requestOptions.requestKind||(retryableRead?'read':'unknown')});
+      }catch(error){
+        if(error?.status===401&&retryUnauthorized&&!unauthorizedRetried){
+          token=await this.refresh();
+          unauthorizedRetried=true;
+          continue;
+        }
+        const transient=error?.code==='NETWORK_UNAVAILABLE'||error?.code==='REQUEST_TIMEOUT'||
+          [408,429,502,503,504,520].includes(error?.status);
+        if(!retryableRead||!transient||readRetries>=this.maxReadRetries||
+           requestOptions.signal?.aborted){
+          if(readRetries>0)error.retryAttempts=readRetries;
+          throw error;
+        }
+        readRetries++;
+        const base=Math.min(1500,this.retryBaseDelayMs*2**(readRetries-1));
+        const randomValue=Number(this.random());
+        const jitter=Math.round(base*0.5*(Number.isFinite(randomValue)?Math.max(0,Math.min(1,randomValue)):0));
+        const retryAfterMs=Number(error?.retryAfterMs);
+        const delay=Number.isFinite(retryAfterMs)&&retryAfterMs>0?
+          Math.max(base+jitter,retryAfterMs):error?.status===429?Math.max(1000,base+jitter):base+jitter;
+        await this.wait(delay);
+        if(requestOptions.signal?.aborted)
+          throw new ApiError('Request was cancelled.',0,'REQUEST_ABORTED');
+      }
     }
   }
   async signOut({scope='global'}={}){
