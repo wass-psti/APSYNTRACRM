@@ -38,7 +38,7 @@ test('FRT workspace source overrides legacy global role and preserves other modu
   throw Object.assign(Error('missing RPC'),{status:404,code:'PGRST202'});
  }});
  for(const expected of ['REQUESTOR','FINANCE_APPROVER']){
-  const snapshot=await client.snapshot(workspace);
+  const snapshot=await client.snapshot(workspace,{includeFundTracker:true});
   assert.equal(snapshot.frtWorkspaceAvailable,true);
   const frt=snapshot.moduleAssignments.filter(a=>a.moduleId==='fund-released-tracker');
   assert.equal(frt.length,1);
