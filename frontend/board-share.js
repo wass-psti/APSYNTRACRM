@@ -179,20 +179,22 @@ export function openBoardSharePreview(options={}){
  });
  let assigning=false;
  const click=async event=>{
-  const assign=event.target.closest?.('[data-bs09-assign]');
+  const assign=event.target.closest?.('[data-bs09-assign],[data-bs09-revoke]');
   if(assign){
+      const removing=assign.hasAttribute('data-bs09-revoke');
    if(assigning||options.accessEnabled!==true||
-      typeof options.onAssignBoard!=='function'||!options.manage||
+      typeof (removing?options.onRemoveBoard:options.onAssignBoard)!=='function'||!options.manage||
       options.moduleKey||!options.peopleDirectory||
       options.peopleDirectory.status!=='VERIFIED_SIGNED_CANDIDATES')return;
-   const person=options.peopleDirectory.members.find(row=>row.id===assign.dataset.bs09Assign);
+   const person=options.peopleDirectory.members.find(row=>row.id===(removing?assign.dataset.bs09Revoke:assign.dataset.bs09Assign));
    // Direct board grants are restricted to verified, existing workspace members.
-   if(!person||person.boardRole)return;
+   if(!person||(removing?person.boardRole!=='viewer':!!person.boardRole))return;
+    if(removing&&!window.confirm('Remove '+person.name+' from this board?'))return;
    assigning=true;assign.disabled=true;
    const status=overlay.querySelector('.bs09-access-note');
    if(status)status.textContent='Submitting signed board access transaction…';
    try{
-    await options.onAssignBoard(person.id);
+    await (removing?options.onRemoveBoard:options.onAssignBoard)(person.id);
     if(!overlay.isConnected)return;
     if(typeof options.onRefreshDirectory==='function'){
      const updated=await options.onRefreshDirectory();
