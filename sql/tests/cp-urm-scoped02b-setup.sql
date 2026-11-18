@@ -6,6 +6,9 @@ CREATE ROLE anon NOLOGIN;
 CREATE TABLE auth.users(id uuid PRIMARY KEY);
 CREATE TABLE public.workspaces(id uuid PRIMARY KEY);
 CREATE TABLE public.profiles(id uuid PRIMARY KEY,platform_role text NOT NULL,status text NOT NULL);
+ALTER TABLE public.profiles ADD COLUMN email text,ADD COLUMN display_name text,ADD COLUMN avatar_path text,
+ ADD COLUMN created_at timestamptz DEFAULT now(),ADD COLUMN updated_at timestamptz DEFAULT now();
+CREATE TABLE public.material_tracker_memberships(workspace_id uuid,user_id uuid,role text,enabled boolean,status text,updated_at timestamptz);
 CREATE TABLE public.workspace_members(
  workspace_id uuid NOT NULL,user_id uuid NOT NULL,active boolean NOT NULL,
  PRIMARY KEY(workspace_id,user_id));
