@@ -1913,6 +1913,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   const changed=JSON.stringify(state.board)!==JSON.stringify(detail);
   state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
   if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
+  if(tab==='talkbox')await loadTalkBox();
   if(tab==='attendance'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
    const fresh=await timeTracker.snapshot(boardId);
    if(!isCurrent()||platformSyncEditInProgress())return false;
@@ -2422,11 +2423,8 @@ async function loadMoreBoardItems(){
  }
 }
 async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
- if(canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn})){
-  const refreshed=await refreshVisibleBoard(boardId,tab);
-  if(tab==='talkbox'&&state.boardId===boardId)await loadTalkBox();
-  return refreshed;
- }
+ if(canRetainVisibleBoard(state,{boardId,tab,userId:auth.userId,signed:auth.isSignedIn}))
+  return refreshVisibleBoard(boardId,tab);
  // Initial load, another board, or another tab still uses the original loader.
  pendingBoardContent=null;
  boardCacheChannel.start({userId:state.context?.user_id,workspaceId:state.context?.workspace_id});
