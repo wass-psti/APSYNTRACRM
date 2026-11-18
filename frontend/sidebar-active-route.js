@@ -1,3 +1,4 @@
+import {NATIVE_PLACEHOLDER_KEYS} from './native-coming-soon.js';
 /** Canonical sidebar selection from the current route, not stale view flags.
  * This is presentation-only; route resolution and authorization remain in the host.
  */
@@ -11,6 +12,7 @@ export function sidebarActiveRoute(hash,{
 }={}){
  const path=String(hash||'#/overview').split('?')[0];
  const [section,boardId,tab]=path.replace(/^#\/?/,'').split('/');
+ if(section==='native'&&NATIVE_PLACEHOLDER_KEYS.has(boardId)&&!tab)return 'native:'+boardId;
  if(section==='boards'&&boardId){
   if(boardId===tradelinkBoardId)return 'tradelink';
   if(boardId===fundTrackerBoardId&&tab==='finance')return 'fund-tracker';
