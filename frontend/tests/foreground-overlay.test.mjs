@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- supportsForegroundPopover,showForegroundPopover,isForegroundPositionValid,calculateActionMenuPlacement
+ supportsForegroundPopover,showForegroundPopover,isForegroundPositionValid,calculateActionMenuPlacement,
+ calculateSelectMenuPlacement
 } from '../foreground-overlay.js';
 
 const implementation=readFileSync('frontend/foreground-overlay.js','utf8');
@@ -374,4 +375,58 @@ test('Priority 5 bundled CSS restores top-layer action menus without weakening s
   assert.equal(showForegroundPopover(excluded.menu,excluded.trigger,{kind:'action'}),null);
   assert.equal(excluded.rules.length,0);
  }
+});
+
+test('select placement chooses fit, flips vertically, clamps both horizontal edges and limits height',()=>{
+ const viewport={width:1100,height:820};
+ const corners=[
+  {left:10,right:310,top:10,bottom:52},
+  {left:790,right:1090,top:10,bottom:52},
+  {left:10,right:310,top:758,bottom:800},
+  {left:790,right:1090,top:758,bottom:800}
+ ];
+ for(const anchor of corners){
+  const placement=calculateSelectMenuPlacement(anchor,{width:300,height:360},viewport);
+  assert.ok(placement);
+  const drawn={left:placement.left,top:placement.top,
+   right:placement.left+placement.width,
+   bottom:placement.top+Math.min(placement.maxHeight,360),
+   width:placement.width,height:Math.min(placement.maxHeight,360)};
+  assert.ok(drawn.left>=9&&drawn.right<=1091);
+  assert.ok(drawn.top>=9&&drawn.bottom<=811);
+  assert.equal(isForegroundPositionValid(anchor,drawn,viewport),true);
+  assert.equal(placement.placement.startsWith(anchor.top>400?'top':'bottom'),true);
+ }
+ const tight=calculateSelectMenuPlacement(
+  {left:470,right:720,top:450,bottom:490},
+  {width:250,height:360},viewport);
+ assert.equal(tight.placement,'top-start','top is the larger available region');
+ assert.equal(calculateSelectMenuPlacement(
+  {left:100,right:300,top:100,bottom:140},
+  {width:220,height:220},{width:0,height:820}),null);
+ const zoom=calculateSelectMenuPlacement(
+  {left:165,right:315,top:480,bottom:520},{width:150,height:260},
+  {left:100,top:200,width:240,height:420});
+ assert.ok(zoom.left>=109&&zoom.left+zoom.width<=331);
+ assert.ok(zoom.top>=209&&zoom.top+Math.min(zoom.maxHeight,260)<=611);
+});
+
+test('select overlay uses viewport CSSOM coordinates and recalculates after scrolling',()=>{
+ const f=fixture();
+ const stop=showForegroundPopover(f.menu,f.trigger,{kind:'select'});
+ assert.equal(typeof stop,'function');
+ assert.equal(f.rules.length,1);
+ f.flush();
+ assert.equal(f.menu.classList.contains('aps-foreground-pending'),false);
+ assert.equal(f.rules[0].style.getPropertyValue('left'),'700px');
+ assert.equal(f.rules[0].style.getPropertyValue('top'),'355px');
+ assert.equal(f.rules[0].style.getPropertyValue('width'),'210px');
+ f.trigger.getBoundingClientRect=()=>({left:910,right:948,top:735,bottom:775});
+ f.listeners.get('document:scroll')();
+ f.flush();
+ assert.equal(f.rules[0].style.getPropertyValue('left'),'881px');
+ assert.equal(f.rules[0].style.getPropertyValue('top'),'608px');
+ stop();
+ assert.equal(f.rules.length,0);
+ assert.equal(f.listeners.size,0);
 });
