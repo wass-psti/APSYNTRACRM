@@ -55,7 +55,11 @@ def verify_existing(path, receipt_path, expected_size):
     if not path.is_file() or not receipt_path.is_file() or path.is_symlink() or receipt_path.is_symlink():
         raise ValueError('Incomplete or unsafe pre-existing asset receipt')
     receipt=json.loads(receipt_path.read_text())
-    if receipt.get('byte_count')!=expected_size or not re.fullmatch(r'[a-f0-9]{64}',str(receipt.get('sha256',''))):
+    if (receipt.get('byte_count')!=expected_size or
+        receipt.get('source_file_size')!=expected_size or
+        receipt.get('bytes_verified') is not True or
+        receipt.get('status') != 'VERIFIED_LOCAL_BYTES' or
+        not re.fullmatch(r'[a-f0-9]{64}',str(receipt.get('sha256','')))):
         raise ValueError('Pre-existing receipt is inconsistent')
     digest=hashlib.sha256()
     size=0
@@ -79,18 +83,22 @@ def capture_asset(asset, output, opener=None, max_bytes=LIMIT):
     if not ASSET_ID.fullmatch(aid) or type(size) is not int or size<=0 or size>max_bytes:
         raise ValueError('Invalid or unsupported source asset size/ID')
     url=validate_url(asset.get('public_url'))
-    output=output.expanduser().resolve()
+    requested_output=output.expanduser().absolute()
+    if requested_output.is_symlink():
+        raise ValueError('Asset folder may not be a symlink')
+    output=requested_output.resolve()
     if output.is_relative_to(provider.REPOSITORY):
         raise ValueError('Private asset recovery cannot write to repository')
     output.mkdir(parents=True,exist_ok=True,mode=0o700)
-    if output.is_symlink():
-        raise ValueError('Asset folder may not be a symlink')
+    if output.stat().st_mode & 0o077:
+        raise ValueError('Private asset folder permits group/other access')
     binary=output/('asset-'+aid+'.bin')
     receipt_path=output/('asset-'+aid+'.json')
     previous=verify_existing(binary,receipt_path,size)
     if previous is not None:
-        if previous.get('source_asset_id')!=aid:
-            raise ValueError('Previous asset identity mismatch')
+        if (previous.get('source_asset_id')!=aid or
+            previous.get('original_filename')!=asset.get('name')):
+            raise ValueError('Previous asset identity/filename mismatch')
         return dict(previous, status='ALREADY_VERIFIED')
     if opener is None:
         opener=build_opener(ValidatedRedirect,HTTPSHandler())

@@ -35,7 +35,7 @@ class RecoveryReadinessTests(unittest.TestCase):
         for aid in self.assets:
             (self.root/('asset-'+aid+'.bin')).write_bytes(b'x')
             (self.root/('asset-'+aid+'.json')).write_text(json.dumps({
-                'source_asset_id':aid,'byte_count':1,
+                'source_asset_id':aid,'byte_count':1,'source_file_size':1,'status':'VERIFIED_LOCAL_BYTES',
                 'sha256':hashlib.sha256(b'x').hexdigest(),
                 'original_filename':'file.bin','bytes_verified':True}))
 
