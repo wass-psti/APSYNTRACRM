@@ -246,6 +246,25 @@ test('subscription counts stay bounded and stop disposes socket/timers',async()=
  x.ctl.stop();assert.equal(x.intervals.size,0);
  assert.equal(x.sockets[0].readyState,3);
 });
+test('TimeTracker deferred startup reconciliation recovers immediately when its read completes',async()=>{
+ const x=fake();let readBusy=true;
+ x.ctl.onInvalidate=async event=>{
+  x.invalidations.push(event);
+  return !readBusy;
+ };
+ x.ctl.start({userId:uid,workspaceId:wid,boardIds:[b1]});
+ await x.wait();await x.join(x.sockets[0]);
+ assert.equal(x.statuses.at(-1).phase,'reconnecting');
+ assert.equal(x.statuses.at(-1).detail,'Pending authoritative reconciliation');
+ readBusy=false;
+ if(shouldResumeDeferredReconciliation(x.ctl.lastStatus,{blocked:readBusy}))
+  await x.ctl.syncNow('manual',[]);
+ await x.wait();
+ assert.equal(x.statuses.at(-1).phase,'synchronized');
+ assert.equal(x.invalidations.at(-1).reason,'manual');
+ x.ctl.stop();
+});
+
 test('deferred initial reconciliation resumes only after the blocking read is clear',()=>{
  const deferred={phase:'reconnecting',detail:'Pending authoritative reconciliation'};
  assert.equal(shouldResumeDeferredReconciliation(deferred),true);
