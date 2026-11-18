@@ -55,7 +55,7 @@ test('FRT assignment and revision guard flow through workspace RPC',async()=>{
   return {effective:true,workspaceId:workspace,targetUserId:target,
    moduleId:'fund-released-tracker',role:'REQUESTOR',enabled:true};
  }});
- await client.setFrtWorkspaceRole({workspaceId:workspace,userId:target,role:'REQUESTOR',enabled:true,expectedUpdatedAt});
+ await client.setFrtWorkspaceRole({workspaceId:workspace,userId:target,role:'REQUESTOR',enabled:true,expectedUpdatedAt:updatedAt});
  assert.equal(calls.length,1);
  assert.equal(calls[0].name,'apsyntra_role_frt_workspace_set');
  assert.equal(calls[0].args.p_expected_updated_at,updatedAt);
