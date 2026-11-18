@@ -39,6 +39,9 @@ import {renderPagesAcceptance} from './pages-acceptance-ui.js';
 import {mountPagesAcceptanceMotion,stopPagesAcceptanceMotion} from './pages-acceptance-visuals.js';
 import {runNativeQa} from './native-qa.js';
 import {NativeIssueClient} from './native-client.js';
+import {TalkBoxNativeClient} from './talkbox-native.js';
+import {renderTalkBoxApplication} from './talkbox-ui.js';
+import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE,talkBoxIssueHref} from './talkbox-application.js';
 import {BOARD_MODULES,moduleByBoardName} from './board-manifest.js';
 import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
 import {renderFoundation} from './board-foundation-ui.js';
@@ -397,7 +400,7 @@ const name=()=>state.context?.profile?.display_name||state.context?.profile?.ema
 const workspaceName=()=>state.context?.workspace_id==='00000000-0000-4000-8000-000000000001'?'Work Management':'Current workspace';
 const STANDALONE_APPLICATION_MODULE_KEYS=new Set(['timetracker','frt','tradelink','fueltrack']);
 const isStandaloneApplicationBoard=board=>STANDALONE_APPLICATION_MODULE_KEYS.has(
- moduleByBoardName(board?.name)?.key);
+ moduleByBoardName(board?.name)?.key)||moduleByBoardName(board?.name)?.key==='toolbox';
 const cards=()=>state.showTrash?state.trashed:state.showArchived?state.archived:
  state.boards.filter(board=>!isStandaloneApplicationBoard(board));
 const routeHome='#/overview';
@@ -411,6 +414,33 @@ let modal=null;
 let globalSearchController=null;
 let pendingGlobalSearchItem=null;
 let pendingNativeSearchSelection=null;
+let talkBoxState={page:null,selected:null,busy:false,error:'',scope:''};
+const talkBoxClient=()=>new TalkBoxNativeClient({api:db,workspaceId:state.context.workspace_id});
+function talkBoxCurrent(scope){return auth.isSignedIn&&state.view==='board'&&state.tab==='talkbox'&&state.context?.user_id===auth.userId&&
+ [auth.userId,state.context.workspace_id,state.boardId].join('|')===scope;}
+async function loadTalkBox({more=false,selectedId=null}={}){
+ const scope=[auth.userId,state.context?.workspace_id,state.boardId].join('|');
+ if(!talkBoxCurrent(scope)||talkBoxState.busy)return;
+ talkBoxState={...talkBoxState,busy:true,error:'',scope};render();
+ try{
+  const client=talkBoxClient();const page=await client.list(more?talkBoxState.page?.cursor:null);
+  if(!talkBoxCurrent(scope))return;
+  const items=more?[...(talkBoxState.page?.items||[]),...page.items]:page.items;
+  const selected=selectedId?await client.get(selectedId):talkBoxState.selected;
+  if(!talkBoxCurrent(scope))return;
+  talkBoxState={page:{...page,items},selected,busy:false,error:'',scope};
+ }catch(err){if(talkBoxCurrent(scope))talkBoxState={...talkBoxState,busy:false,error:errorMessage(err)};}
+ finally{if(talkBoxCurrent(scope)){talkBoxState.busy=false;render();}}
+}
+async function openTalkBoxIssue(issueId){
+ const scope=[auth.userId,state.context?.workspace_id,state.boardId].join('|');
+ if(!talkBoxCurrent(scope)||talkBoxState.busy)return;
+ talkBoxState.busy=true;render();
+ try{const selected=await talkBoxClient().get(issueId);
+  if(talkBoxCurrent(scope))talkBoxState={...talkBoxState,selected,error:''};
+ }catch(err){if(talkBoxCurrent(scope))talkBoxState.error=errorMessage(err);}
+ finally{if(talkBoxCurrent(scope)){talkBoxState.busy=false;render();}}
+}
 const trashPermanentDelete=new BoardTrashPermanentDeleteClient(db);
 const trashBoardSelection=new Set();
 let routeSerial=0;
@@ -539,6 +569,7 @@ function sidebar(){
   sidebarNav('#/fund-tracker','Fund Tracker','finance',active('fund-tracker'))+
   sidebarNav(FUELTRACK_V3_APPLICATION_ROUTE,'FuelTrack+','fueltrack',active('fueltrack'))+
   sidebarNav(TRADELINK_APPLICATION_ROUTE,'TradeLink','tradelink',active('tradelink'))+
+  (state.boards.some(b=>moduleByBoardName(b.name)?.key==='toolbox')?sidebarNav(TALKBOX_APPLICATION_ROUTE,'TalkBox','boards',active('talkbox')):'')+
   boardApplications+
   (engineeringUi?sidebarNav('#/foundation','12-board foundation','foundation',active('foundation')):'')+
   (engineeringUi?sidebarNav('#/security','Access acceptance','security',active('security')):'')+
@@ -1224,6 +1255,7 @@ function boardPage(){
   ...(isMaterialTrackerBoard(state.board)?[{key:'sourcing',href:'#/boards/'+b.id+'/sourcing',label:'◇ Material Tracker'}]:[]),
   {key:'items',href:'#/boards/'+b.id+(moduleKey==='fueltrans'?'/items':moduleKey==='timetracker'?'/items':''),
     label:'▤ Board items'+(state.board.pagination?.loaded===true?' <span class="csp-u060">('+boardItemCountLabel+')</span>':'')},
+  ...(moduleKey==='toolbox'?[{key:'talkbox',href:TALKBOX_APPLICATION_ROUTE,label:'TalkBox application'}]:[]),
   {key:'issues',href:'#/boards/'+b.id+'/issues',
     label:'◇ APSYNTRA Issues <span class="csp-u060">('+state.issues.length+')</span>'},
   ...(moduleKey==='fueltrans'?[{key:'fueltrans',href:'#/boards/'+b.id+'/fueltrans',label:'FuelTrans application'}]:[]),
@@ -1258,7 +1290,7 @@ function boardPage(){
 
 <div data-board-live-content>
 ${state.tab==='sourcing'&&isMaterialTrackerBoard(state.board)?renderMaterialSourcingTracker(state.board,state.mrhTrackerFilters,new Date(),{canCreate:state.edit===true,view:state.mrhAddView?'add':'list'}):state.tab==='fueltrack'&&isFuelTrackV3ApplicationBoard(b)?renderFuelTrackV3Application({detail:state.board,section:state.fuelTrackSection,actorName:name(),analyticsRenderer:renderFuelTrackAnalytics,analyticsView:state.fuelTrackAnalyticsView,analyticsRange:state.fuelTrackAnalyticsRange,analyticsMetric:state.fuelTrackAnalyticsMetric,requestsRenderer:renderFuelTrackRequests,requestsFilters:state.fuelTrackRequestFilters,activity:{snapshot:state.fuelTrackActivity,boardId:state.boardId,workspaceId:state.context?.workspace_id,filters:state.fuelTrackActivityFilters,busy:state.fuelTrackActivityBusy,error:state.fuelTrackActivityError},backend:{snapshot:state.fuelTrackBackend?.snapshot||null,analytics:state.fuelTrackBackend?.analytics||null,busy:state.fuelTrackBackendBusy,message:state.fuelTrackBackendError,error:state.fuelTrackBackendError,receiptLink:state.fuelTrackReceiptLink,refuelingDialog:state.fuelTrackRefuelingDialog,preflight:state.fuelTrackPreflight,preflightBusy:state.fuelTrackPreflightBusy}}):state.tab==='fueltrans'&&moduleKey==='fueltrans'?'<div id="fueltrans-native-host"></div>':state.tab==='finance'&&moduleByBoardName(b.name)?.key==='frt'?renderFundTrackerApplication():state.tab==='attendance'&&moduleByBoardName(b.name)?.key==='timetracker'?renderTimeTrackerNative({result:state.ttAttendance,busy:state.ttBusy,clockPending:!!state.ttClockPending,otExpandedRequestIds:state.ttOtExpandedRequestIds,clockPendingAction:state.ttClockPending?.action||'clock-out',error:state.ttError,success:state.ttSuccess,period:state.ttReportPeriod,view:state.ttView,overviewFilters:state.ttOverviewFilters,logFilters:state.ttLogFilters,reportFilters:state.ttReportFilters,calendarMonth:state.ttCalendarMonth,calendarSelectedDay:state.ttCalendarSelectedDay,otFilters:state.ttOtFilters,otModalOpen:state.ttOtModalOpen,otDraft:state.ttOtDraft,hoursWeekOffset:state.ttHoursWeekOffset,hoursMonth:state.ttHoursMonth,hoursSelectedDay:state.ttHoursSelectedDay,teamEligible:state.roleVerified===true,teamDirectory:state.ttTeam,teamFilters:state.ttTeamFilters,teamBusy:state.ttTeamBusy,teamError:state.ttTeamError,monitorResult:state.ttMonitor,monitorHistory:state.ttMonitorHistory,monitorBusy:state.ttMonitorBusy,monitorError:state.ttMonitorError,logGpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',logGpsData:state.ttLogGpsData,logGpsBusy:state.ttLogGpsBusy,logGpsError:state.ttLogGpsError,logGpsErrorRecordId:state.ttLogGpsErrorRecordId,logExpandedRecordIds:state.ttLogExpandedIds,adminEligible:state.ttAttendance?.access?.moduleRole==='System Admin',adminDirectory:state.ttLogAdminEditor?.directory||state.ttAttendance?.access?.overviewDirectory||[],adminSelectedIds:state.ttLogSelectedIds,adminEditor:state.ttLogAdminEditor,adminBusy:state.ttLogAdminBusy,adminError:state.ttLogAdminError,adminSuccess:state.ttLogAdminSuccess,mapEnabled:auth.isSignedIn&&state.ttAttendance?.status==='VERIFIED_READ'&&(state.roleVerified===true||state.ttAttendance.access?.moduleRole==='Supervisor'),mapTheme:state.ttGpsFilters.theme==='dark'?'dark':'map',
- gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='issues'?issuesPage():`
+ gpsEligible:state.roleVerified===true||state.ttAttendance?.access?.moduleRole==='Supervisor',gpsData:state.ttGpsData,gpsView:state.ttGpsView,gpsFilters:state.ttGpsFilters,gpsBusy:state.ttGpsBusy,gpsError:state.ttGpsError}):state.tab==='tradelink'&&moduleKey==='tradelink'?renderTradeLinkApplication({detail:state.board,section:state.tradeLinkSection,workspaceId:state.context?.workspace_id,activity:{events:state.tradeLinkActivity,busy:state.tradeLinkActivityBusy,error:state.tradeLinkActivityError},analytics:state.tradeLinkAnalytics,analyticsBusy:state.tradeLinkAnalyticsBusy,analyticsError:state.tradeLinkAnalyticsError,analyticsEnabled:TL03_ANALYTICS_ENABLED,draftView:state.tradeLinkDraft,canManage:state.boardManage,canReview:!state.boardManage,actorName:name(),actorEmail:state.context?.profile?.email||''}):state.tab==='talkbox'&&moduleKey==='toolbox'?renderTalkBoxApplication({page:talkBoxState.page,selected:talkBoxState.selected,busy:talkBoxState.busy,error:talkBoxState.error,canEdit:state.edit}):state.tab==='issues'?issuesPage():`
  <div class="toolbar board-customize-toolbar"><div class="search-wrap"><input id="search-board-items" class="search-input" aria-label="Search items" placeholder="Filter loaded items…" value="${e(state.boardItemSearch)}" /></div>
  ${boardColumnMenu(columns,layout)}${state.boardManage&&canManuallyEditBoard(b,true)?'<button type="button" class="secondary" data-action="board-add-column">＋ Add column</button>':''}
  ${moduleKey==='tradelink'&&state.boardManage&&!tradeLinkSetupStatus(state.board).ready?'<button type="button" class="secondary" data-action="tradelink-configure" '+(state.tradeLinkSetupBusy?'disabled':'')+'>'+(state.tradeLinkSetupBusy?'Configuring TradeLink…':'Configure TradeLink columns')+'</button>':''}
@@ -1882,6 +1914,7 @@ async function reconcilePlatformSync({boardIds=[],reason,userId,workspaceId}){
   const changed=JSON.stringify(state.board)!==JSON.stringify(detail);
   state.board=detail;state.edit=edit;state.boardManage=manage;state.boardUi=boardUi;
   if(tab==='issues')state.issues=await db.issues(boardId,workspaceId);
+  if(tab==='talkbox')await loadTalkBox();
   if(tab==='attendance'&&moduleByBoardName(detail.board.name)?.key==='timetracker'){
    const fresh=await timeTracker.snapshot(boardId);
    if(!isCurrent()||platformSyncEditInProgress())return false;
@@ -2243,7 +2276,7 @@ let disposeBoardPagination=null;
 // other module tabs need only the signed board shell and must not fetch item rows.
 async function readVisibleBoardSnapshot(boardId,tab,{itemCount=BOARD_ITEM_PAGE_SIZE}={}){
  const scope={userId:state.context?.user_id,workspaceId:state.context?.workspace_id};
- if(['attendance','finance','fueltrans','issues'].includes(tab))
+ if(['attendance','finance','fueltrans','issues','talkbox'].includes(tab))
   return db.boardCached(boardId,{...scope,includeItems:false});
  return db.boardCachedThrough(boardId,scope,{
   itemCount:['sourcing','fueltrack','tradelink'].includes(tab)?
@@ -2529,6 +2562,7 @@ async function loadBoard(boardId,tab,draftType=null,draftEditId=null){
   if(state.fuelTrackSection==='activity')await loadFuelTrackActivity(seq);
  }
  if(tab==='issues')await loadIssues(seq);
+ if(tab==='talkbox'&&moduleByBoardName(state.board?.board?.name)?.key==='toolbox')await loadTalkBox();
  if(tab==='tradelink'&&state.tradeLinkSection==='activity'&&state.board?.board?.id===TRADELINK_BOARD_ID)
   await loadTradeLinkActivity(seq);
  if(tab==='tradelink'&&state.tradeLinkSection==='analytics'&&
@@ -4414,6 +4448,18 @@ async function onRoute(){
   await openPendingNativeSearchRecord(FUELTRACK_V3_ID);
   return;
  }
+ if(parts[0]==='talkbox'){
+  const board=findTalkBoxBoard(state.boards,moduleByBoardName);
+  if(!board){routeSerial++;state.boardId=null;state.board=null;state.loading=false;
+   state.error='The existing Toolbox Issues board was not found in this workspace.';
+   state.view='board';render();return;}
+  const issueId=parts[1]==='issue'&&/^[1-9][0-9]{0,18}$/.test(parts[2]||'')?parts[2]:null;
+  if(state.boardId!==board.id||state.tab!=='talkbox')talkBoxState={page:null,selected:null,busy:false,error:'',scope:''};
+  if(!issueId)talkBoxState.selected=null;
+  await loadBoard(board.id,'talkbox');
+  if(issueId)await openTalkBoxIssue(issueId);
+  return;
+ }
  if(parts[0]==='fund-tracker'){
   state.frtStandalone=true;
   const fundTrackerBoard=findFundTrackerBoard(state.boards);
@@ -4455,7 +4501,14 @@ async function onRoute(){
   return;
  }
  if(parts[0]==='boards'&&validUuid(parts[1])){
-  if(parts[1]===TRADELINK_BOARD_ID){
+  const legacyTalkBox=state.boards.find(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='toolbox');
+  if(legacyTalkBox){
+   const target=parts[2]==='talkbox'&&parts[3]&&/^[1-9][0-9]{0,18}$/.test(parts[3])?
+    TALKBOX_APPLICATION_ROUTE+'/issue/'+parts[3]:TALKBOX_APPLICATION_ROUTE;
+   history.replaceState(null,'',location.pathname+location.search+target);
+   return onRoute();
+  }
+ if(parts[1]===TRADELINK_BOARD_ID){
    const legacy=parts[2]==='tradelink'?parts.slice(3):[];
    const canonical=legacy.length?tradeLinkApplicationHref(legacy.join('/')):
     tradeLinkApplicationHref('drafts/quotation');
@@ -4481,6 +4534,7 @@ async function onRoute(){
   if(defaultFuelTrans)history.replaceState(null,'','#/boards/'+parts[1]+'/fueltrans');
   const requested=parts[2]==='sourcing'&&parts[1]===MATERIAL_SOURCING_BOARD_ID?'sourcing':
     parts[2]==='issues'?'issues':
+    parts[2]==='talkbox'&&moduleByBoardName(state.boards.find(b=>b.id===parts[1])?.name)?.key==='toolbox'?'talkbox':
     parts[2]==='native'?'items':
     parts[2]==='fueltrans'&&state.boards.some(b=>b.id===parts[1]&&moduleByBoardName(b.name)?.key==='fueltrans')?'fueltrans':
     parts[2]==='finance'?'finance':
@@ -7818,6 +7872,53 @@ async function action(name,button){
    break;
   }
   case 'board-load-more':{await loadMoreBoardItems();break;}
+ case 'tb-refresh':{await loadTalkBox();break;}
+ case 'tb-more':{if(talkBoxState.page?.cursor)await loadTalkBox({more:true});break;}
+ case 'tb-open':{location.hash=talkBoxIssueHref(button.dataset.id);break;}
+ case 'tb-close':{talkBoxState.selected=null;location.hash=TALKBOX_APPLICATION_ROUTE;render();break;}
+ case 'tb-new':{
+  if(!state.edit||!talkBoxCurrent(talkBoxState.scope))break;
+  openModal('Create TalkBox issue',input('Issue name','name'),async fd=>{
+   const saved=await talkBoxClient().createVerified(fd.get('name'));
+   talkBoxState.selected=saved;await loadTalkBox({selectedId:saved.id});
+  });break;
+ }
+ case 'tb-edit':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const current=talkBoxState.selected;
+  openModal('Edit TalkBox issue',input('Issue name','name',current.name)+
+   select('Status','status',[['Working on it','Working on it'],['Stuck','Stuck'],['Done','Done']],current.status),async fd=>{
+    const updated=await talkBoxClient().updateVerified(current.id,{name:fd.get('name'),status:fd.get('status')},current.version);
+    talkBoxState.selected=updated;await loadTalkBox({selectedId:current.id});
+  });break;
+ }
+ case 'tb-post':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const message=root.querySelector('#tb-message')?.value||'';
+  const issueId=talkBoxState.selected.id;
+  const result=await talkBoxClient().postVerified(issueId,message);
+  if(talkBoxCurrent(talkBoxState.scope)){talkBoxState.selected=result.record;render();}
+  break;
+ }
+ case 'tb-subtask-new':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const issueId=talkBoxState.selected.id;
+  openModal('Add TalkBox subtask',input('Subtask name','name'),async fd=>{
+   const record=await talkBoxClient().createSubitem(issueId,fd.get('name'));
+   if(talkBoxCurrent(talkBoxState.scope)){talkBoxState.selected=record;render();}
+  });break;
+ }
+ case 'tb-subtask-status':{
+  if(!state.edit||!talkBoxState.selected||!talkBoxCurrent(talkBoxState.scope))break;
+  const issueId=talkBoxState.selected.id,subId=button.dataset.id;
+  const sub=talkBoxState.selected.subitems.find(row=>String(row.id)===subId);
+  if(!sub)break;
+  openModal('Update subtask status',select('Status','status',[
+   ['Working on it','Working on it'],['Stuck','Stuck'],['Done','Done']],sub.status),async fd=>{
+    const record=await talkBoxClient().updateSubitem(issueId,subId,String(fd.get('status')));
+    if(talkBoxCurrent(talkBoxState.scope)){talkBoxState.selected=record;render();}
+  });break;
+ }
  case 'refresh-board':{await loadBoard(state.boardId,state.tab);break;}
  case 'tt-clock-verify':{await verifyTimeTrackerAttendance();break;}
  case 'tt-refresh':{if(!state.ttBusy&&!state.ttLogAdminBusy){const team=state.ttView==='team',gps=state.ttView==='gps',log=state.ttView==='log';await loadTimeTracker();if(team&&state.roleVerified===true&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerTeam();if(gps&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerGps();if(log&&state.ttAttendance?.status==='VERIFIED_READ')await loadTimeTrackerLogGps();}break;}
