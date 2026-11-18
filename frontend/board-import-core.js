@@ -11,6 +11,11 @@ import {cmp02Validate} from './board-typed-cmp02.js';
 import {normalizeTextDate} from './excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 export const IMPORT_CONTRACT='m143-v1';
 export const IMPORT_EXTENDED_CONTRACT='m143-v2';
+// The primary Item title is stored on work_board_items, outside the 30
+// physical work_board_columns. The atomic mapping therefore carries one
+// title mapping plus at most 30 destination-column mappings.
+export const MAX_IMPORT_DESTINATION_COLUMNS=30;
+export const MAX_IMPORT_SOURCE_MAPPINGS=MAX_IMPORT_DESTINATION_COLUMNS+1;
 export const EXTENDED_REF_KEY='__aps_extended_ref_v1';
 export const CREATABLE_IMPORT_TYPES=Object.freeze([
  'text','long_text','number','date','people','checkbox','timeline','email','url'
@@ -501,9 +506,11 @@ export function buildImportPlan({sheet,detail,mappings,group,matches,
   }
  }
  if(!primary)deny('Map exactly one title column.');
- if(normalized.filter(mapping=>mapping.action!=='skip').length>30)
-  deny('The atomic import contract supports at most 30 mapped source columns. Map compatible sources into the available destinations or explicitly exclude the others.');
- if((detail.columns||[]).length+proposed.length>30)deny('Board maximum is 30 physical columns.');
+ if(normalized.filter(mapping=>mapping.action!=='skip').length>MAX_IMPORT_SOURCE_MAPPINGS)
+  deny('The atomic import contract supports one Item title mapping plus up to '+
+   MAX_IMPORT_DESTINATION_COLUMNS+' destination columns. Explicitly exclude any additional source columns.');
+ if((detail.columns||[]).length+proposed.length>MAX_IMPORT_DESTINATION_COLUMNS)
+  deny('Board maximum is '+MAX_IMPORT_DESTINATION_COLUMNS+' physical columns.');
  const destination=group?.action==='existing'&&validUuid(group.groupId)&&
   (detail.groups||[]).some(g=>g.id===group.groupId)?
   {action:'existing',groupId:group.groupId}:

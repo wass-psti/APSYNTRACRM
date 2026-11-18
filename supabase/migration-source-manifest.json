@@ -1750,6 +1750,13 @@
       "file": "20261118063000_cp_urm_scoped02c_charter_timetracker.sql",
       "bytes": 16556,
       "sha256": "f8fc48c6c3eacb6c8f0d29026fc10b7494c699fcc234c91ac101978c0a72a031"
+    },
+    {
+      "version": "20261118110000",
+      "name": "cp_bimp_atomic_mapping_capacity_31",
+      "file": "20261118110000_cp_bimp_atomic_mapping_capacity_31.sql",
+      "bytes": 2844,
+      "sha256": "3eedae4bbd5ca88a7a225a8ed8438e1a559ca121ced8943891c35b34d636cb29"
     }
   ]
 }

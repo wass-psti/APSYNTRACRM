@@ -567,3 +567,52 @@ test('BIMP-READBACK 13 mapped columns across 750 rows preserve final values with
  assert.equal(f.current.values.at(-1).value,'CELL-749-11');
  assert.equal(progress.at(-1),750);
 });
+
+test('CP-BIMP column-capacity: 31-entry atomic import persists all 30 destination values and verifies readback',async()=>{
+ const columns=Array.from({length:30},(_,i)=>({
+  id:'c0000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),
+  name:'Destination '+String(i+1).padStart(2,'0'),data_type:'text',
+  system_key:null,column_key:'custom:destination-'+(i+1),config:{}}));
+ const detail={board:{id:boardId,name:'Wide Import QA',workspace_id:workspace,
+  status:'active',updated_at:'2026-11-18T00:00:00.000Z'},
+  groups:[{id:groupId,title:'Imported'}],columns,items:[],values:[]};
+ const headers=['Name',...columns.map(column=>column.name)];
+ const sourceRow=['Wide row',...columns.map((_,i)=>'complete-value-'+(i+1))];
+ const sheet={headers,rows:[sourceRow]};
+ const mappings=[{source:'Name',action:'item'},
+  ...columns.map(column=>({source:column.name,action:'existing',columnId:column.id}))];
+ const group={action:'existing',groupId},matches={behavior:'add-new',matchColumnId:'item'};
+ const approvedPlan=buildImportPlan({sheet,detail,mappings,group,matches});
+ let current=structuredClone(detail),writes=0;
+ const api={
+  context:async()=>({user_id:actor,workspace_id:workspace,profile:{status:'active'}}),
+  allowed:async()=>true,
+  board:async()=>structuredClone(current),
+  rpc:async(name,args)=>{
+   if(name==='wm_board_ui_read')return {board_id:boardId};
+   assert.equal(name,'wm_import_board_wizard_atomic');
+   writes++;
+   assert.equal(args.p_payload.mappings.length,31);
+   assert.equal(args.p_payload.mappings.filter(mapping=>mapping.action==='item').length,1);
+   assert.equal(args.p_payload.mappings.filter(mapping=>mapping.action==='existing').length,30);
+   const row=args.p_payload.rows[0];
+   const itemId='dddddddd-dddd-4ddd-8ddd-000000000001';
+   current.items.push({id:itemId,board_id:boardId,group_id:groupId,title:row.title,
+    status:null,archived_at:null,updated_at:current.board.updated_at});
+   for(const column of columns)current.values.push({item_id:itemId,column_id:column.id,
+    value:row.values[column.name]});
+   current.board.updated_at='2026-11-18T00:00:01.000Z';
+   return {created:1,updated:0,skipped:0,columnsCreated:0,groupsCreated:0};
+  }
+ };
+ const result=await executeBoardImportBatched({api,auth,detail,sheet,mappings,group,matches,approvedPlan});
+ assert.equal(writes,1);
+ assert.equal(result.created,1);
+ assert.equal(current.items.length,1);
+ assert.equal(current.values.length,30);
+ for(let i=0;i<columns.length;i++)assert.equal(
+  current.values.find(value=>value.column_id===columns[i].id)?.value,'complete-value-'+(i+1));
+ const refreshed=await api.board(boardId);
+ assert.equal(refreshed.values.length,30);
+ assert.equal(refreshed.values.at(-1).value,'complete-value-30');
+});
