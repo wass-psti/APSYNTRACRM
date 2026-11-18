@@ -2130,9 +2130,8 @@ async function applyUserRoleChange({userId,scope,resourceId,role,enabled,expecte
    throw new ApiError('FuelTrans workspace role contract is unavailable.',409);
   await userRoleManager.setFueltransWorkspaceRole({
    workspaceId:ctx.workspace_id,userId,role,enabled,expectedUpdatedAt});
- }else if(scope==='module'&&SCOPED_SIX_MODULE_IDS.includes(resourceId)){
-  if(state.userRoleData?.scopedSixAvailable!==true)
-   throw new ApiError('Workspace application-role contract is unavailable.',409);
+ }else if(scope==='module'&&SCOPED_SIX_MODULE_IDS.includes(resourceId)&&
+   state.userRoleData?.scopedSixAvailable===true){
   const stored=state.userRoleData.moduleAssignments.find(a=>
     a.userId===userId&&a.moduleId===resourceId);
   await userRoleManager.setScopedSixRole({
@@ -8253,7 +8252,8 @@ async function action(name,button){
        if(scope==='module'&&resourceId==='fueltrans')
         await userRoleManager.setFueltransWorkspaceRole({workspaceId:ctx.workspace_id,
          ...op});
-       else if(scope==='module'&&SCOPED_SIX_MODULE_IDS.includes(resourceId))
+       else if(scope==='module'&&SCOPED_SIX_MODULE_IDS.includes(resourceId)&&
+         current.scopedSixAvailable===true)
         await userRoleManager.setScopedSixRole({
          workspaceId:ctx.workspace_id,userId:op.userId,moduleId:resourceId,
          role:op.role,enabled:op.enabled,
@@ -8390,9 +8390,6 @@ async function action(name,button){
          state.userRoleData.moduleAssignments.some(a=>a.moduleId==='fueltrans'&&
           a.userId===userId&&a.clientManaged===true)))
        throw new ApiError('FuelTrans requires an active non-client workspace membership contract.',409);
-     if(SCOPED_SIX_MODULE_IDS.includes(resourceId)&&
-       state.userRoleData.scopedSixAvailable!==true)
-       throw new ApiError('Workspace application-role backend is not installed yet.',409);
      if(resourceId==='fund-released-tracker'&&
        state.userRoleData.frtWorkspaceAvailable!==true)
        throw new ApiError('Fund Tracker workspace membership is not installed yet.',409);
