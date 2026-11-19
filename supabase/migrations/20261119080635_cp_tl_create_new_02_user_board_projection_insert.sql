@@ -71,9 +71,12 @@ BEGIN
   'private.tl03_save(uuid,uuid,bigint,text,jsonb,text)'::regprocedure
  ) INTO definition;
 
- old_call := $old$item_id:=public.wm_add_board_item(p_board_id,group_id,payload->>'documentNumber');$old$;
+ old_call := $old$
+  item_id:=public.wm_add_board_item(p_board_id,group_id,payload->>'documentNumber');
+$old$;
 
- new_call := $new$IF private.tl03_can_manage(p_board_id) IS TRUE THEN
+ new_call := $new$
+  IF private.tl03_can_manage(p_board_id) IS TRUE THEN
    -- Preserve the existing manager path exactly.
    item_id:=public.wm_add_board_item(p_board_id,group_id,payload->>'documentNumber');
   ELSE

@@ -4,6 +4,13 @@ import { readFileSync } from "node:fs";
 
 const migration = readFileSync(
   new URL(
+    "../../supabase/migrations/20261119085430_cp_tl_create_new_02_user_board_projection_insert.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const historicalMigration = readFileSync(
+  new URL(
     "../../supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql",
     import.meta.url,
   ),
@@ -71,6 +78,25 @@ test("TradeLink User Board projection is created inside the existing signed doma
   assert.doesNotMatch(
     migration,
     /GRANT .*work_board_access|INSERT INTO public\.work_board_members|UPDATE public\.work_board_members/,
+  );
+});
+
+test("migration ledger source preserves the failed attempt and effective follow-up separately", () => {
+  assert.match(
+    historicalMigration,
+    /old_call := \$old\$\n  item_id:=public\.wm_add_board_item/,
+  );
+  assert.match(
+    migration,
+    /old_call := \$old\$item_id:=public\.wm_add_board_item/,
+  );
+  assert.match(
+    runner,
+    /20261119085430_cp_tl_create_new_02_user_board_projection_insert\.sql/,
+  );
+  assert.doesNotMatch(
+    runner,
+    /20261119080635_cp_tl_create_new_02_user_board_projection_insert\.sql/,
   );
 });
 
@@ -153,7 +179,7 @@ test("runner uses isolated PostgreSQL 17 with no network or production credentia
   );
   assert.match(
     runner,
-    /20261119080635_cp_tl_create_new_02_user_board_projection_insert\.sql/,
+    /20261119085430_cp_tl_create_new_02_user_board_projection_insert\.sql/,
   );
   assert.ok(
     runner.indexOf("20261116062500_cp_tl_legacy_analytics_summary.sql") <

@@ -1811,6 +1811,13 @@
       "version": "20261119080635",
       "name": "cp_tl_create_new_02_user_board_projection_insert",
       "file": "20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql",
+      "bytes": 8369,
+      "sha256": "503155e3a5c0377d451b436575933e4973c79d1a521a9deb4a6b4c97f2fee0ec"
+    },
+    {
+      "version": "20261119085430",
+      "name": "cp_tl_create_new_02_user_board_projection_insert",
+      "file": "20261119085430_cp_tl_create_new_02_user_board_projection_insert.sql",
       "bytes": 8362,
       "sha256": "8240869b806ed92de374fad0f2855335378e00fdd7d7f6cc91de2da65ae1517b"
     }

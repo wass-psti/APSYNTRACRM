@@ -48,7 +48,7 @@ apply supabase/migrations/20261117045417_tradelink_approved_revision_flow.sql
 apply sql/tests/cp-tl-create-new-02-user-rpc-grants.sql
 apply supabase/migrations/20261119073346_tradelink_user_draft_creation.sql
 apply supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql
-apply supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql
+apply supabase/migrations/20261119085430_cp_tl_create_new_02_user_board_projection_insert.sql
 apply sql/tests/cp-tl-create-new-02-user-six-module-disposable.sql
 
 echo "CP_TL_CREATE_NEW_02_USER_SIX_MODULE_DISPOSABLE_PASS"
