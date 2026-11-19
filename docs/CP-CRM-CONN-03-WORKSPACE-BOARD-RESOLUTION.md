@@ -84,7 +84,7 @@ A read-only aggregate of active profiles, active Work Management memberships, en
 | FuelTrack+   |                    39 |                       35 |                         2 |
 | TradeLink    |                    39 |                       34 |                         3 |
 
-There are **35 distinct non-platform-admin users** with at least one missing corresponding native-board membership. This is a population-level issue, not isolated to the one employee used for the initial reproduction.
+A second distinct-user reconciliation found **36 non-platform-admin users** with at least one enabled assignment among the four modules; all 36 have exactly one active workspace membership. Across 144 user/application assignment pairs, **138 corresponding board memberships are missing** and 6 already exist. Those 138 missing memberships affect **35 distinct users** (the remaining assigned user already has all corresponding memberships). This is a population-level issue, not isolated to the one employee used for the initial reproduction.
 
 ## 6. Functional code assessment
 
@@ -112,7 +112,7 @@ Proposed behavior, subject to explicit approval for the permission change:
 7. Add disposable tests for assignment, re-assignment, revocation, manual owner/editor preservation, multiple workspaces, missing/trashed board, and idempotency.
 8. Verify all four native routes with an actual signed employee session after the permission model is explicitly approved and deployed.
 
-The current assignment population indicates up to 35 distinct users and 138 per-application missing memberships across the four modules (overlap between users is expected). No backfill was executed.
+The current assignment population comprises 36 distinct non-platform-admin users with one active workspace each, 144 user/application assignment pairs, and 138 missing board memberships across 35 users. No backfill was executed.
 
 ## 8. Changes and verification performed in this investigation
 
