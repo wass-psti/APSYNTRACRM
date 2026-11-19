@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
-import {genericBoardColumns} from '../board-inline-items.js';
+import {genericBoardColumns} from '../board/inline/inline-items.js';
 import {
  BoardStructureClient,normalizeBoardUi,ORDINARY_VIRTUAL_COLUMNS,
  canConfigureVirtualBoardColumns,normalizeHiddenVirtualColumns,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runTwelveBoardQa} from '../board-operational-qa.js';
+import {runTwelveBoardQa} from '../board/acceptance/operational-qa.js';
 import {BOARD_MODULES,boardDescription,boardColumns} from '../board/services/manifest.js';
 const U='11111111-1111-4111-8111-111111111111',W='22222222-2222-4222-8222-222222222222';
 const ctx={user_id:U,workspace_id:W,profile:{status:'active',platform_role:'admin_general_manager'}};

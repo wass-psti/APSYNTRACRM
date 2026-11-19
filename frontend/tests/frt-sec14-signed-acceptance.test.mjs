@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runSEC14SignedRead,sanitizeSEC14SignedRead}
  from '../frt-sec14-signed-acceptance.js';
-import {renderSecurityAcceptance} from '../board-security-ui.js';
+import {renderSecurityAcceptance} from '../board/acceptance/security-ui.js';
 const uid='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const id='33333333-3333-4333-8333-333333333333';

@@ -2,7 +2,7 @@
  * No privileged SQL, fabricated GoTrue identities, or recovery activation.
  * A partial/uncertain outcome is preserved for inspection, never retried.
  */
-import {validUuid} from './data.js';
+import {validUuid} from '../../data.js';
 export const B2_QA_FIXTURE_BOARD_NAME='CP-BOARD-COL-DELETE QA Signed Fixture';
 export const B2_QA_FIXTURE_COLUMN_NAME='Recovery Status';
 const TITLES=Object.freeze(['B2 QA item 1','B2 QA item 2','B2 QA item 3','B2 QA item 4']);

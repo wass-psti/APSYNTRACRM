@@ -5,7 +5,7 @@ import {
  B2_QA_FIXTURE_BOARD_NAME,B2_QA_FIXTURE_COLUMN_NAME,
  createB2SignedQaFixture,inspectB2SignedQaFixture,
  sanitizeB2QaFixtureReport,renderB2SignedQaFixture
-} from '../board-col-delete-b2-signed-fixture.js';
+} from '../board/acceptance/col-delete-b2-signed-fixture.js';
 
 const actor='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';

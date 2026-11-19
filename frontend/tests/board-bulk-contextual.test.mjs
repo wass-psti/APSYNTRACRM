@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BoardBulkClient,canBulkEditBoard} from '../board-bulk02-client.js';
+import {BoardBulkClient,canBulkEditBoard} from '../board/bulk/bulk02-client.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspaceId='22222222-2222-4222-8222-222222222222';
 const recordId='33333333-3333-4333-8333-333333333333';

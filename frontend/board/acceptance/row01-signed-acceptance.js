@@ -2,9 +2,9 @@
  * Never use domain-managed, APSYNTRA QA, or ordinary operational boards.
  * This is NOT a substitute for independent revoked/expired-session testing.
  */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
-import {canManuallyEditBoard} from './board-inline-items.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
+import {canManuallyEditBoard} from '../inline/inline-items.js';
 
 export const ROW01_FIXTURE_NAME='APSYNTRA ROW01 QA';
 export const ROW01_FIXTURE_MARKER='[APSYNTRA:ROW01:FIXTURE:v1]';

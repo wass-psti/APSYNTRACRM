@@ -4,7 +4,7 @@
  */
 import {ApiError} from '../../session.js';
 import {validUuid} from '../../data.js';
-import {canManuallyEditBoard} from '../../board-inline-items.js';
+import {canManuallyEditBoard} from '../inline/inline-items.js';
 
 function deny(message,status=403){throw new ApiError(message,status);}
 /** Resolve a selection to authoritative, active ordinary-board rows.

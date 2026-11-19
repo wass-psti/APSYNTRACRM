@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderSecurityAcceptance} from '../board-security-ui.js';
-import {TARGET_WORKSPACE_ID} from '../board-security-targets.js';
+import {renderSecurityAcceptance} from '../board/acceptance/security-ui.js';
+import {TARGET_WORKSPACE_ID} from '../board/acceptance/security-targets.js';
 import {mountSecurityMotion,stopSecurityMotion} from '../security-experience.js';
 const app=readFileSync('frontend/app.js','utf8');
 const css=readFileSync('frontend/security-experience.css','utf8');
-const ui=readFileSync('frontend/board-security-ui.js','utf8');
+const ui=readFileSync('frontend/board/acceptance/security-ui.js','utf8');
 const html=readFileSync('index.html','utf8');
 const smoke=readFileSync('scripts/pages-smoke.mjs','utf8');
 const context={

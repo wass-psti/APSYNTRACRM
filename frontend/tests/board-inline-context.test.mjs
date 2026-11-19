@@ -6,7 +6,7 @@ import {BoardStructureClient} from '../board/crud/structure-admin.js';
 import {
  resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  confirmInlineColumnDelete,projectConfirmedColumnRename
-} from '../board-inline-context.js';
+} from '../board/inline/inline-context.js';
 
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspaceId='22222222-2222-4222-8222-222222222222';

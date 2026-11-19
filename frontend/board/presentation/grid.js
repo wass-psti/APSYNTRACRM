@@ -4,7 +4,7 @@ import {isMaterialSourcingRestrictedColumn,isApprovedPublicMaterialSourcingColum
 import {isTradeLinkBoard,tradeLinkGridColumns,tradeLinkDisplayValue,TRADELINK_FILES_KEY} from '../../tradelink-board-items.js';
 import {boardTable} from './presentation.js';
 import {isFRTBoardReference,frtReferenceColumns,frtReferenceStatusLabel} from '../../frt-board-reference.js';
-import {configuredStatus} from '../../board-inline-items.js';
+import {configuredStatus} from '../inline/inline-items.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function boardItemsComplete(detail){
  const paging=detail?.pagination||detail?.page||{};

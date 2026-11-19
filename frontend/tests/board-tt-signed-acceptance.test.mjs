@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
-import {runBoardTtSignedReadOnly} from '../board-tt-signed-acceptance.js';
+import {runBoardTtSignedReadOnly} from '../board/acceptance/tt-signed-acceptance.js';
 
 const user='20000000-0000-4000-8000-000000000001';
 const ws='10000000-0000-4000-8000-000000000001';
@@ -88,7 +88,7 @@ test('non-authorization network error is BLOCKED, not a successful GPS denial',a
 });
 test('Settings exposes nonsecret current-session integration acceptance with no write invocations',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const runner=readFileSync('frontend/board-tt-signed-acceptance.js','utf8');
+ const runner=readFileSync('frontend/board/acceptance/tt-signed-acceptance.js','utf8');
  assert.match(app,/data-action="board-tt-signed-verify"/);
  assert.match(app,/case 'board-tt-signed-verify'/);
  assert.match(app,/await runBoardTtSignedReadOnly\(\{/);

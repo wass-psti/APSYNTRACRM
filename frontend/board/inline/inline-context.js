@@ -2,10 +2,10 @@
  * These helpers never grant permission; the authoritative manager RPC checks
  * signed identity, workspace, CAS revision, and data-loss protections.
  */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
-import {describeBoardColumns,BOARD_STRUCTURE_TYPES} from './board/crud/structure-admin.js';
-import {canManuallyEditBoard} from './board-inline-items.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
+import {describeBoardColumns,BOARD_STRUCTURE_TYPES} from '../crud/structure-admin.js';
+import {canManuallyEditBoard} from './inline-items.js';
 const fail=(message,status=403)=>{throw new ApiError(message,status);};
 export function resolveInlineColumn(detail,key,{canManage=false}={}){
  if(!canManage||!canManuallyEditBoard(detail?.board,true))

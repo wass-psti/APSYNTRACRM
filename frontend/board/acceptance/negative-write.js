@@ -1,7 +1,7 @@
 /** CP-A12.2 optional real denial challenge, isolated APSYNTRA QA board only.
  * Never uses domain/production boards. Explicit user confirmation required by UI.
  */
-import {runSignedNegativeBoardAcceptance} from './board-negative-acceptance.js';
+import {runSignedNegativeBoardAcceptance} from './negative-acceptance.js';
 const QA_BOARD='098b6797-0bf7-407b-8802-bd8a00c606f6';
 const QA_GROUP='6eaf3d6e-f9a1-4f32-85cd-d05b383fe27f';
 export async function runDeniedQaWrite(auth,api,{verifiedReadOnlyResult}={}){

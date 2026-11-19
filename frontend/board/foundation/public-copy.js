@@ -1,5 +1,5 @@
 /** Display-only copy. Never changes board contracts, descriptions or permissions. */
-import {moduleByBoardName} from './board/services/manifest.js';
+import {moduleByBoardName} from '../services/manifest.js';
 export function publicBoardDescription(board){
  const name=String(board?.name||'');
  const source=String(board?.description||'');

@@ -2,8 +2,8 @@
  * B5 flags are already off. This probe NEVER enables recovery or changes auth.
  * Results certify only the case directly exercised with the current signed user.
  */
-import {validUuid} from './data.js';
-import {B4_QA_BOARD_ID} from './board/columns/column-recovery.js';
+import {validUuid} from '../../data.js';
+import {B4_QA_BOARD_ID} from '../columns/column-recovery.js';
 
 const QA_WORKSPACE_ID='00000000-0000-4000-8000-000000000001';
 const CASE_TYPES=new Set(['NONE','SIGNED_MANAGER','SIGNED_NONMANAGER',

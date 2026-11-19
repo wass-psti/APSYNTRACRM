@@ -139,7 +139,7 @@ test('SQLSTATE errors are translated without leaking raw server details',()=>{
 });
 test('populated column dialog provides a reversible action, not a dead-end blocker',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const inline=readFileSync('frontend/board-inline-context.js','utf8');
+ const inline=readFileSync('frontend/board/inline/inline-context.js','utf8');
  assert.match(app,/planBoardColumnRemoval\(\{storedCount,/);
  assert.match(app,/const capability=await boardColumnOperationalRecovery\.available\(snapshot\.boardId\)/);
  assert.doesNotMatch(app,/Deletion unavailable|submitDisabled:blocked/);

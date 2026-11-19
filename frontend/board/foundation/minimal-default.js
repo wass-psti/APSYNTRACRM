@@ -2,10 +2,10 @@
  * The marker is persisted in the already authorized board UI settings' items tab.
  * It is display metadata, never an authorization decision.
  */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
-import {canManuallyEditBoard} from './board-inline-items.js';
-import {moduleByBoardName} from './board/services/manifest.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
+import {canManuallyEditBoard} from '../inline/inline-items.js';
+import {moduleByBoardName} from '../services/manifest.js';
 export const ITEM_ONLY_MODE='item_only_v1';
 export const newOrdinaryTabs=()=>[
  {key:'items',label:'Board items',visible:true},

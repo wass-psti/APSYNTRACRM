@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
-import {probeBulk02SignedSession} from '../board-bulk02-signed-acceptance.js';
+import {probeBulk02SignedSession} from '../board/acceptance/bulk02-signed-acceptance.js';
 
 const boardId='30000000-0000-4000-8000-000000000001';
 const protectedId='30000000-0000-4000-8000-000000000003';
@@ -118,8 +118,8 @@ test('uncertain role capability blocks readiness before any mutation RPC probe',
 });
 test('browser acceptance remains token-free with a scoped, session-only runtime activation guard',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const source=readFileSync('frontend/board-bulk02-signed-acceptance.js','utf8');
- const client=readFileSync('frontend/board-bulk02-client.js','utf8');
+ const source=readFileSync('frontend/board/acceptance/bulk02-signed-acceptance.js','utf8');
+ const client=readFileSync('frontend/board/bulk/bulk02-client.js','utf8');
  assert.match(client,/BOARD_BULK02_ENABLED=false/);
  assert.match(app,/function bulkReadyFor\(board\)/);
  assert.match(app,/case 'bulk02-verify'/);

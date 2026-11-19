@@ -2,9 +2,9 @@
  * Deliberately invalid payloads exercise actual deployed HTTP RPC authorization
  * without inserting/updating/deleting any work_board data. No JWTs exported.
  */
-import {validUuid} from './data.js';
-import {canBulkEditBoard} from './board-bulk02-client.js';
-import {isProtectedBoard} from './board/services/card-lifecycle.js';
+import {validUuid} from '../../data.js';
+import {canBulkEditBoard} from '../bulk/bulk02-client.js';
+import {isProtectedBoard} from '../services/card-lifecycle.js';
 
 const check=(id,status,detail)=>Object.freeze({id,status,detail});
 const codeOf=error=>String(error?.code||'');

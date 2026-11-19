@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {ApiError} from '../session.js';
 import {ROW01_FIXTURE_MARKER,ROW01_FIXTURE_NAME,isRow01Fixture,readRow01Pending,
  prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report}
- from '../board-row01-signed-acceptance.js';
+ from '../board/acceptance/row01-signed-acceptance.js';
 
 const boardId='11111111-1111-4111-8111-111111111111';
 const workspaceId='22222222-2222-4222-8222-222222222222';

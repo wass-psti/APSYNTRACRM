@@ -2,9 +2,9 @@
  * Uses the caller's current GoTrue bearer. No mutation RPC, credential export,
  * employee GPS disclosure or synthetic JWT impersonation.
  */
-import {isProtectedBoard} from './board/services/card-lifecycle.js';
-import {loadTimeTrackerBoardGps} from './time-tracker-board-projection.js';
-import {validUuid} from './data.js';
+import {isProtectedBoard} from '../services/card-lifecycle.js';
+import {loadTimeTrackerBoardGps} from '../../time-tracker-board-projection.js';
+import {validUuid} from '../../data.js';
 
 const entry=(id,status,detail)=>Object.freeze({id,status,detail});
 const finish=checks=>Object.freeze({

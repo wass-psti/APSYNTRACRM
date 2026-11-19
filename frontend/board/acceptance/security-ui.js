@@ -1,6 +1,6 @@
 /** CP-A12.2 no-write read-only security acceptance. */
-import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './board-security-targets.js';
-import {identifySecurityScenario} from './board-negative-acceptance.js';
+import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from './security-targets.js';
+import {identifySecurityScenario} from './negative-acceptance.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 export function renderSecurityAcceptance({context,report,busy=false,progress=[],writeResult=null,writeBusy=false,frtResult=null,frtBusy=false,ci07Result=null,ci07Busy=false,sec14Result=null,sec14Busy=false,sec14DenialResult=null,sec14DenialBusy=false,sec07Result=null,sec07Busy=false,sec09Result=null,sec09Busy=false,sec10Result=null,sec10Busy=false,sec10Boards=[],sec10IsBootstrap=false,effectiveAccessResult=null,effectiveAccessBusy=false,sec10BoardsError=''}={}){
  const eligible=identifySecurityScenario(context);

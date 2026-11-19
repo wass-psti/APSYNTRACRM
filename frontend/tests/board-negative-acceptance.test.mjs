@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runSignedNegativeBoardAcceptance,identifySecurityScenario,sanitizeNegativeReport} from '../board-negative-acceptance.js';
-import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from '../board-security-targets.js';
+import {runSignedNegativeBoardAcceptance,identifySecurityScenario,sanitizeNegativeReport} from '../board/acceptance/negative-acceptance.js';
+import {TARGET_BOARDS,TARGET_WORKSPACE_ID} from '../board/acceptance/security-targets.js';
 const A='11111111-1111-4111-8111-111111111111';
 const B='22222222-2222-4222-8222-222222222222';
 const auth={userId:A,async getVerifiedUser(){return{id:A}}};

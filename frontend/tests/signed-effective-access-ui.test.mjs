@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderSecurityAcceptance} from '../board-security-ui.js';
+import {renderSecurityAcceptance} from '../board/acceptance/security-ui.js';
 const context={workspace_id:'22222222-2222-4222-8222-222222222222',profile:{platform_role:'hr',status:'active'}};
 test('general signed inspector works for HR even when there are no authorized boards',()=>{
  const html=renderSecurityAcceptance({context,sec10Boards:[],sec10IsBootstrap:false});
