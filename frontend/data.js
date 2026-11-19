@@ -196,6 +196,7 @@ const BOARD_MUTATION_RPC=new Set([
  'frt_ic_record_settlement','frt_record_bank_execution','frt_request_action',
  'frt_request_assignment','frt_restore_request','frt_save_recipient','frt_set_recipient_qr',
  'frt_set_request_filing_status','frt_submit_liquidation_v2','frt_update_request_date_cas',
+ 'frt_correct_request_payee_cas',
  'apsyntra_crm_platform_role_set','apsyntra_role_manage_user_access',
  'apsyntra_role_configuration_propose','update_own_profile'
 ]);

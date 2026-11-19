@@ -427,6 +427,8 @@ export function renderFRTFinanceReadOnly({result=null,busy=false,detailResult=nu
    (typeof r.requestId==='string'?'<button type="button" title="View request details" aria-label="View '+escape(r.title)+
     ' details" data-action="frt-finance-detail" data-request-id="'+requestId+'" '+(detailBusy?'disabled':'')+'>▤</button>':'')+
    (canEdit?'<button type="button" title="Edit date" data-action="frt-date-edit" data-request-id="'+requestId+'">◷</button>'+
+    '<button type="button" title="Correct payee before approval" data-action="frt-payee-correct" data-request-id="'+requestId+'" '+
+     (r.status==='PENDING_APPROVAL'?'':'disabled')+'>✎</button>'+
     '<button type="button" title="Assign person" data-action="frt-person-edit" data-request-id="'+requestId+'">♙</button>':'')+
    '<details class="frt-ref-more"><summary aria-label="Request actions">⋮</summary><div class="frt-ref-more-menu">'+
    (typeof r.requestId==='string'?'<button type="button" data-action="frt-finance-detail" data-request-id="'+requestId+'">View Details</button>':'')+

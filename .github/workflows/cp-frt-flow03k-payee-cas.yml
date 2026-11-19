@@ -1,0 +1,45 @@
+name: CP-FRT-FLOW-03K — Signed payee correction and disposable database acceptance
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cp-frt-flow03k-payee-cas.yml'
+      - 'frontend/app.js'
+      - 'frontend/data.js'
+      - 'frontend/frt-finance-ui.js'
+      - 'frontend/fund-tracker-native.js'
+      - 'frontend/frt-payee-correction.js'
+      - 'frontend/tests/frt-payee-correction.test.mjs'
+      - 'frontend/tests/board-cache-channel.test.mjs'
+      - 'scripts/cp-frt-flow03k-disposable-acceptance.sh'
+      - 'sql/tests/cp-frt-flow03k-disposable.sql'
+      - 'supabase/migrations/20261119085100_cp_frt_flow03k_payee_correction_cas.sql'
+      - 'supabase/migration-source-manifest.json'
+      - 'docs/CP-FRT-FLOW-03K-PAYEE-CORRECTION-READINESS.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cp-frt-flow03k-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  frt-payee-cas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify migration ledger and byte-for-byte source manifest
+        run: node scripts/verify-migration-source-manifest.mjs
+      - name: Run FRT payee, voucher and caching regression suite
+        run: node --test frontend/tests/frt-payee-correction.test.mjs frontend/tests/frt-voucher.test.mjs frontend/tests/frt-accounting.test.mjs frontend/tests/board-cache-channel.test.mjs
+      - name: Verify payee correction against disposable PostgreSQL 17
+        run: bash scripts/cp-frt-flow03k-disposable-acceptance.sh
+      - name: Verify production frontend build
+        run: npm run build
