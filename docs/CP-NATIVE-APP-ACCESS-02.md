@@ -52,6 +52,12 @@ When the generic catalog is unavailable:
 - Refresh feedback distinguishes successful native startup from a still-unavailable generic catalog.
 - A successful later catalog read clears the warning and restores the normal board list.
 
+## Adjacent CI test-harness correction
+
+The current-main CP-CRM-NATIVE-04B read-only preflight script previously imported Playwright before validating its required loopback CDP argument. CI workflows that run only the no-argument contract without browser dependencies therefore exited with a module-load error instead of the expected argument-validation status.
+
+The script now loads Playwright dynamically only after a valid loopback CDP endpoint is supplied. Its no-argument contract was verified from an isolated temporary directory without access to the repository's node_modules, and the source test guards against reintroducing the eager import.
+
 ## Explicitly unchanged
 
 - No Supabase migration or production database mutation.

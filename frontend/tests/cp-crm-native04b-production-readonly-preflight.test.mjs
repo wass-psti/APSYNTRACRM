@@ -12,6 +12,8 @@ const source = readFileSync(file, "utf8");
 test("production preflight requires an explicitly supplied loopback Chromium endpoint", () => {
   assert.match(source, /127\\\.0\\\.0\\\.1/);
   assert.match(source, /connectOverCDP\(cdp\)/);
+  assert.doesNotMatch(source, /^import .*playwright/m);
+  assert.match(source, /await import\("playwright"\)/);
   const outcome = spawnSync(process.execPath, [file.pathname], {
     encoding: "utf8",
     timeout: 8000,
