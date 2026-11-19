@@ -519,19 +519,35 @@ export class DomainApi {
    if(!Array.isArray(data))throw new ApiError('Unexpected board list response.');
    return structuredClone(data);
  }
- async nativeApplicationBoardContext(moduleId){
+ async nativeApplicationBoardContext(moduleId,{retryInvalidated=true}={}){
    const userId=this.auth?.userId;
    const token=this.auth?.accessToken;
    const generation=this.contextReadGeneration;
    if(!validUuid(userId)||typeof token!=='string'||!token)
     throw new ApiError('Signed native application context is unavailable.',403);
-   const [context,payload]=await Promise.all([
-    this.context(),
-    this.rpc('native_application_board_context',{p_module_id:moduleId})
-   ]);
-   if(this.auth?.userId!==userId||this.auth?.accessToken!==token||
-      this.contextReadGeneration!==generation||
-      context?.user_id!==userId||context?.profile?.status!=='active')
+   const sameSession=()=>this.auth?.userId===userId&&this.auth?.accessToken===token;
+   // A cross-tab refresh may invalidate only the context generation while
+   // these read-only requests are in flight. Re-read once in that case; never
+   // reuse a response from a changed signed user or access token.
+   const retryFresh=()=>this.nativeApplicationBoardContext(moduleId,{retryInvalidated:false});
+   let context,payload;
+   try{
+    [context,payload]=await Promise.all([
+     this.context(),
+     this.rpc('native_application_board_context',{p_module_id:moduleId})
+    ]);
+   }catch(error){
+    if(retryInvalidated&&sameSession()&&this.contextReadGeneration!==generation)
+     return retryFresh();
+    throw error;
+   }
+   if(!sameSession())
+    throw new ApiError('Signed native application context changed during resolution.',409);
+   if(this.contextReadGeneration!==generation){
+    if(retryInvalidated)return retryFresh();
+    throw new ApiError('Signed native application context changed during resolution.',409);
+   }
+   if(context?.user_id!==userId||context?.profile?.status!=='active')
     throw new ApiError('Signed native application context changed during resolution.',409);
    let resolved;
    try{
