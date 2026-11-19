@@ -43,7 +43,7 @@ class Controller{
   if(changed){
    this.section=route.section;this.requestId=route.requestId;
    this.rejectId=null;this.editing=false;this.search='';
-   this.items=[];this.summary=null;this.cursor=null;
+   this.items=[];this.summary=null;this.cursor=null;this.selected=null;this.access=null;
    this.loaded=false;this.notice='';this.error='';this.loading=false;this.busy=false;this.uncertainCreate=false;
    this.run++;
   }
