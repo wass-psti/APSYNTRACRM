@@ -4,7 +4,7 @@
 **Repository:** `wass-psti/APSYNTRACRM`
 **Base commit:** `3143799161bdfc327569621c4b80929287e4946d`
 **Supabase project:** `jtlusodorfnyzgyuewkz`
-**Status:** Application preflight and genuine signed-session runtime acceptance PASS; provider-internal attribution of the historical edge tail remains PENDING.
+**Status:** Initial administrator-session and CORS acceptance PASS; follow-up production logs show the historical edge tail was not reproduced; employee native-application acceptance FAILS because its signed workspace returns an empty board catalog; provider-internal root-cause attribution remains PENDING.
 
 ## Objective
 
@@ -109,7 +109,7 @@ The response-side `response.headers.cf_ray` was also absent on these OPTIONS row
 
 ## Genuine signed-user production acceptance
 
-The selected production APSYNTRA CRM tab displayed an active secure session, verified workspace context, live synchronization, and the existing workspace overview with its board list rendered.
+The separate administrator production session displayed an active secure session, verified workspace context, live synchronization, and the existing workspace overview with its board list rendered. The administrator view is distinct from the employee session tested in the follow-up below.
 
 The corresponding recent production gateway window (2026-11-19 01:52–02:09:59 UTC) independently showed successful authenticated traffic from the application origin:
 
@@ -154,11 +154,57 @@ The sample count is bounded to 1–10 per endpoint. The script reports each Ray 
 - [x] New CP-02D unit tests: 3/3 PASS; full frontend regression: 2,755/2,755 PASS; module check, ESLint, Prettier, and production build PASS.
 - [x] Historical CEB/HKG edge tail identified in production logs, with representative trace/request/Ray evidence.
 - [x] Thirteen representative slow trace IDs correlated; no matching Auth, PostgREST, or PostgreSQL records.
-- [x] Genuine active signed-user production session, workspace context, board list, board shell, and board item reads observed.
+- [x] Administrator signed-session production runtime, workspace context, board list, board shell, and board item reads observed.
+- [ ] Employee signed-session acceptance for TimeTracker, Fund Tracker, FuelTrack+, and TradeLink; follow-up testing below found an empty workspace board catalog.
 - [x] No application authentication, authorization, role, permission, workspace policy, database schema, migration, credential, or business-data changes.
 - [ ] Provider-internal Cloudflare/Supabase trace identifies the precise edge queue/worker/connection/root cause.
 - [ ] Provider classifies the historical OPTIONS HTTP 400 events using raw request-header metadata.
 - [ ] Provider confirms remediation or documents an upstream incident/workaround.
+
+## Follow-up verification — 2026-11-19 02:00–02:20 UTC
+
+### Edge-tail regression comparison
+
+A follow-up aggregate of production `edge_logs` compared OPTIONS traffic before and after the CP02B deployment boundary recorded in the deployment timeline. The historical 64.9-second CEB and 28.4-second HKG outliers occurred in the pre-deployment portion. They were not reproduced in the post-deployment samples:
+
+| Window / Cloudflare POP | OPTIONS requests |  P50 |    P95 |      P99 |   Maximum | Over 1 s | Over 10 s |
+| ----------------------- | ---------------: | ---: | -----: | -------: | --------: | -------: | --------: |
+| Before CP02B — CEB      |           28,631 | 0 ms |   7 ms | 1,692 ms | 64,894 ms |      334 |        33 |
+| Before CP02B — HKG      |           30,275 | 0 ms |   6 ms |   203 ms | 28,436 ms |        3 |         3 |
+| After CP02B — CEB       |            1,864 | 0 ms |   7 ms |   149 ms |    357 ms |        0 |         0 |
+| After CP02B — HKG       |            3,967 | 0 ms |   4 ms |    20 ms |    314 ms |        0 |         0 |
+| After CP02B — MNL       |               68 | 2 ms | 210 ms |   301 ms |    452 ms |        0 |         0 |
+
+The additional 20-minute window from 2026-11-19 02:00–02:20 UTC contained 1,644 HKG OPTIONS (P95 5 ms, P99 17 ms, max 41 ms), 19 MNL OPTIONS (P95 223 ms, max 226 ms), and 17 CEB OPTIONS (P95 238 ms, max 247 ms). No request in those three POP groups exceeded one second. This is an observed recovery signal for the sampled periods, not a provider-confirmed permanent remediation.
+
+The direct client route selected HKG; it did not force CEB. CEB results above come from production gateway logs. The exact provider-internal cause remains unproven because the connected log export does not expose Cloudflare/Supabase edge queue or worker traces.
+
+### Additional bounded live OPTIONS trace
+
+The committed script `scripts/cp-crm-conn02d-edge-trace-acceptance.mjs` was executed with four samples for each of three probes (12 requests total): `wm_list_boards` POST preflight, `wm_auth_access_context` POST preflight, and `/auth/v1/user` GET preflight. It sent no API key, bearer token, user payload, RPC body, or mutation.
+
+- 12/12 HTTP 200; all 12 returned CF-RAY values with HKG suffix.
+- `Access-Control-Allow-Origin: *`; requested methods and headers were present.
+- `Access-Control-Max-Age: 3600` on all 12.
+- TTFB P50 169 ms, P95 251 ms, maximum 251 ms; maximum total request time 252 ms.
+- The sample confirms the HKG route only; it does not claim direct CEB acceptance.
+
+### Employee signed-session native-application acceptance
+
+A separate already-signed-in employee browser session on the authorized MacBook was navigated through the deployed CRM without signing out, changing credentials, creating boards, or modifying records. The UI showed **Jerome / CRM Employee / employee**, workspace **Work Management**, and a verified secure session. Its Overview and My Boards screens both showed **0 active boards, 0 items, and 0 available boards**.
+
+| Native application | Observed result                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- |
+| TimeTracker        | **FAIL** — “The existing TimeTracker Attendance board was not found in this workspace. No board was created.” |
+| Fund Tracker       | **FAIL** — route falls back to My Boards; no board is returned in the workspace catalog                       |
+| FuelTrack+         | **FAIL** — “The existing FuelTrack+ v3 board was not found in this workspace.”                                |
+| TradeLink          | **FAIL** — “The existing TradeLink board was not found in this workspace.”                                    |
+
+A separate administrator browser session showed 257 active boards and 23,194 board items. These are distinct sessions; the administrator's catalog does not prove the employee's board visibility.
+
+In the 2026-11-19 02:15–02:20 UTC production edge-log window, the relevant Auth and workspace/application RPCs returned HTTP 200. For HKG, `wm_list_boards` had 43 requests (P95 335 ms, max 341 ms), `wm_auth_access_context` 68 (P95 200 ms, max 482 ms), `work_board_access` 73 (P95 468 ms, max 489 ms), `wm_get_board_shell` 51 (P95 484 ms, max 502 ms), and `wm_get_board_items_page` 43 (P95 486 ms, max 507 ms). These observations do not show the historical 64.9-second edge tail. The employee UI nevertheless received an empty board catalog.
+
+**Follow-up acceptance:** The sampled provider-edge latency regression check PASSes. The employee's live native-application acceptance FAILs for all four applications because the signed employee workspace currently returns no boards. This is a distinct workspace/board-catalog resolution blocker and must not be hidden by changing roles, grants, RLS, workspace membership, or application authorization within CP02D.
 
 ## Provider escalation handoff
 
