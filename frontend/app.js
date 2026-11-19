@@ -8912,6 +8912,35 @@ async function action(name,button){
    }catch(error){notice(error);}
    break;
  }
+ case 'frt-payee-correct':{
+   if(state.tab!=='finance'||state.frtFinanceBusy||state.frtFinance?.status!=='PASS'||!auth.isSignedIn)return;
+   const requestId=String(button?.dataset?.requestId||'');
+   const row=state.frtFinance.requests.find(r=>r.requestId===requestId);
+   if(!row||row.status!=='PENDING_APPROVAL'||
+      !['FINANCE_MANAGER','FINANCE_APPROVER','GENERAL_MANAGER'].includes(state.frtFinance.role))return;
+   const workspaceId=state.context?.workspace_id,companyCode=state.frtFinance.companyCode,
+    role=state.frtFinance.role,boardId=state.boardId,actorId=auth.userId,seq=routeSerial;
+   try{
+    const snapshot=await fundTracker.loadPayeeCorrection({requestId,workspaceId,companyCode,
+     role,expectedVoucher:row.voucher,listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
+    if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+      auth.userId!==actorId||state.context?.workspace_id!==workspaceId)return;
+    openModal('Correct actual payee',
+     '<p class="note">'+e(row.voucher)+' — '+e(row.title)+'</p>'+
+     '<p class="note">Use the verified supplier/payee from the original business document. The voucher number and amount will not change.</p>'+
+     '<div class="field"><label for="frt-payee-correction">Payee / Supplier</label>'+
+     '<input id="frt-payee-correction" name="payee" maxlength="180" required value="'+e(snapshot.expectedPayee)+'" autocomplete="off"></div>',async fd=>{
+      if(seq!==routeSerial||state.boardId!==boardId||state.tab!=='finance'||
+        auth.userId!==actorId||state.context?.workspace_id!==workspaceId||
+        state.frtFinance?.companyCode!==companyCode)
+       throw new ApiError('FRT view changed. Reopen payee correction.',409);
+      await fundTracker.savePayeeCorrection({snapshot,nextPayee:String(fd.get('payee')||''),
+       listedRequestIds:state.frtFinance.requests.map(r=>r.requestId)});
+      await loadFRTFinance(companyCode);
+     },{submitLabel:'Save corrected payee',successMessage:'Payee saved and verified against the original voucher.'});
+   }catch(error){notice(error);}
+   break;
+ }
  case 'frt-date-edit':{
    if(state.tab!=='finance'||state.frtFinanceBusy||state.frtFinance?.status!=='PASS'||
       !auth.isSignedIn)return;
