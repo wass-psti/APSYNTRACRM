@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {DomainApi} from '../data.js';
 import {
  NATIVE_APPLICATIONS,normalizeNativeApplicationBoardContext,
- nativeApplicationModuleForBoardRoute,nativeApplicationModuleForRoute,
- workspaceRouteAllowsBoardCatalogFallback
+ nativeApplicationModuleForBoardId,nativeApplicationModuleForBoardRoute,
+ nativeApplicationModuleForRoute,workspaceRouteAllowsBoardCatalogFallback
 } from '../native-application-access.js';
 
 const userId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -150,4 +150,11 @@ test('DomainApi resolves a native context through fresh signed context and nativ
  assert.deepEqual(calls.map(call=>call.rpc).sort(),
   ['native_application_board_context','wm_auth_access_context']);
  assert.ok(calls.every(call=>call.requestKind==='read'));
+});
+
+
+test('canonical native board identity is stable across transient route-tab transitions',()=>{
+ for(const [moduleId,application] of Object.entries(NATIVE_APPLICATIONS))
+  assert.equal(nativeApplicationModuleForBoardId(application.boardId),moduleId);
+ assert.equal(nativeApplicationModuleForBoardId('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),null);
 });

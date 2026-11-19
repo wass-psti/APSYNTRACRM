@@ -18,7 +18,6 @@ const BASE='https://wass-psti.github.io/APSYNTRACRM/';
 const cdpUrl=process.argv.find(value=>value.startsWith('--cdp-url='))?.slice('--cdp-url='.length);
 const simulateGenericDenials=process.argv.includes('--simulate-generic-denials');
 const deniedGenericRpcs=new Set([
-  'wm_list_boards',
   'work_board_access',
   'wm_get_board_shell',
   'wm_get_board_items_page',
@@ -59,6 +58,7 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
   let page;
   let originalUrl;
   const rpcEvents=[];
+  const rpcRequests=[];
   const pageErrors=[];
   const failedRequests=[];
   const unexpectedHttpErrors=[];
@@ -68,22 +68,28 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
   try{
     const candidates=browser.contexts().flatMap(context=>context.pages());
     for(const candidate of candidates){
-      if(!candidate.url().startsWith(BASE)||!candidate.url().endsWith('#/boards'))continue;
+      if(!candidate.url().startsWith(BASE))continue;
       const visible=await candidate.locator('body').innerText().catch(()=> '');
-      if(visible.includes('Secure session')&&visible.includes('Sign out')){page=candidate;break;}
+      if(visible.includes('Secure session')&&visible.includes('Sign out')&&
+         visible.includes('Workspace member')){page=candidate;break;}
     }
-    assert.ok(page,'An existing signed employee Boards tab must be open; login is never automated.');
+    assert.ok(page,'An existing signed employee application tab must be open; login is never automated.');
     originalUrl=page.url();
     await page.goto(`${BASE}#/overview`,{waitUntil:'domcontentloaded',timeout:45000});
     await page.waitForFunction(()=>{
       const text=document.body.innerText;
-      return text.includes('Secure session')&&/Identity:\s*employee/i.test(text)&&text.includes('Workspace member');
+      return text.includes('Secure session')&&text.includes('Workspace member');
     },null,{timeout:20000});
 
     page.on('pageerror',error=>pageErrors.push(error.message));
     page.on('requestfailed',request=>{
       const url=new URL(request.url());
       if(url.pathname.includes('/rest/v1/'))failedRequests.push({path:url.pathname,reason:request.failure()?.errorText});
+    });
+    page.on('request',request=>{
+      const url=new URL(request.url());
+      if(url.pathname.includes('/rest/v1/rpc/'))
+        rpcRequests.push({rpc:url.pathname.split('/').pop(),body:request.postData()||''});
     });
     page.on('response',response=>{
       const url=new URL(response.url());
@@ -109,13 +115,18 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
     for(const scenario of scenarios){
       console.log(`Checking ${scenario.label}...`);
       const eventStart=rpcEvents.length;
+      const requestStart=rpcRequests.length;
       const nativeResolverPromise=page.waitForResponse(response=>{
         const url=new URL(response.url());
         return url.pathname.endsWith('/rpc/native_application_board_context')&&
           (response.request().postData()||'').includes(scenario.moduleId);
       },{timeout:30000});
+      const domainPromises=scenario.domainRpcs.map(rpc=>page.waitForResponse(response=>{
+        const url=new URL(response.url());
+        return url.pathname.endsWith('/rpc/'+rpc)&&response.status()===200;
+      },{timeout:30000}));
       await page.goto(`${BASE}${scenario.route}`,{waitUntil:'domcontentloaded',timeout:45000});
-      const nativeResponse=await nativeResolverPromise;
+      const [nativeResponse]=await Promise.all([nativeResolverPromise,...domainPromises]);
       const payload=await nativeResponse.json();
       const context=Array.isArray(payload)?payload[0]:payload;
       await page.waitForFunction(labels=>labels.every(label=>document.body.innerText.toLowerCase().includes(label.toLowerCase())),scenario.visible,{timeout:35000});
@@ -124,6 +135,8 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
       const observed=rpcEvents.slice(eventStart);
       const domain=observed.filter(event=>scenario.domainRpcs.includes(event.rpc));
       const genericDenials=observed.filter(event=>deniedGenericRpcs.has(event.rpc)&&event.status===403);
+      const genericViewRequests=rpcRequests.slice(requestStart).filter(request=>
+        request.rpc==='work_board_access'&&/\"p_required\"\s*:\s*\"view\"/.test(request.body));
       const result={
         application:scenario.label,
         resolverStatus:nativeResponse.status(),
@@ -134,6 +147,7 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
         domainRpc:domain,
         visibleUi:scenario.visible,
         simulatedGenericDenials:genericDenials,
+        genericViewPermissionRequests:genericViewRequests.length,
       };
       report.applications.push(result);
       console.log(`PASS ${scenario.label}: resolver and domain reads verified`);
@@ -142,8 +156,11 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
       assert.equal(context?.moduleId,scenario.moduleId,`${scenario.label} module identity`);
       assert.equal(context?.board?.id,scenario.boardId,`${scenario.label} canonical board`);
       assert.ok(context?.workspaceId,`${scenario.label} workspace context`);
+      if(scenario.moduleId==='time-tracker')
+        assert.equal(context?.role,'Employee','TimeTracker module role confirms employee acceptance');
       for(const rpc of scenario.domainRpcs)
         assert.ok(domain.some(event=>event.rpc===rpc&&event.status===200),`${scenario.label} ${rpc} read`);
+      assert.equal(genericViewRequests.length,0,`${scenario.label} must not request generic board view permission`);
       if(simulateGenericDenials)
         assert.ok(genericDenials.some(event=>event.rpc==='work_board_access'),`${scenario.label} generic board-access denial was not exercised`);
     }
@@ -159,6 +176,8 @@ if(!cdpUrl||!/^http:\/\/127\.0\.0\.1:\d+$/.test(cdpUrl)){
     assert.deepEqual(failedRequests,[],'No failed network requests');
     assert.deepEqual(unexpectedHttpErrors,[],'No unexpected HTTP errors');
     report.optionalActivityDenials=optionalActivityDenials;
+    report.genericViewPermissionRequests=rpcRequests.filter(request=>
+      request.rpc==='work_board_access'&&/\"p_required\"\s*:\s*\"view\"/.test(request.body)).length;
     report.outcome='PASS';
     report.pageErrors=pageErrors.length;
     report.failedRequests=failedRequests.length;

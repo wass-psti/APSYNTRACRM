@@ -81,3 +81,16 @@ test('legacy adapters without an access token retain uncached authoritative read
  assert.equal(calls,2);
  assert.equal(api.contextPending.size,0);
 });
+
+
+test('routine full board refresh can preserve an in-flight signed workspace context read',async()=>{
+ const {api}=apiWith(),gate=deferred();let calls=0;
+ api.rpc=()=>{calls++;return gate.promise;};
+ const pending=api.context();
+ await Promise.resolve();
+ api.invalidateBoardCache(null,{invalidateContext:false});
+ assert.equal(api.contextPending.size,1);
+ gate.resolve(context());
+ assert.deepEqual(await pending,context());
+ assert.equal(calls,1);
+});
