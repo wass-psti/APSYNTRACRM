@@ -80,6 +80,10 @@ test("disposable fixture proves the existing TradeLink User has Viewer membershi
   assert.match(fixture, /SET role='viewer'/);
   assert.match(fixture, /'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'/);
   assert.match(fixture, /CREATE OR REPLACE FUNCTION public\.has_module_access/);
+  assert.match(
+    fixture,
+    /CREATE OR REPLACE FUNCTION private\.tl03_board_projection/,
+  );
   assert.match(fixture, /asenagan@watchdogautomation\.com\.ph/);
   assert.match(fixture, /dsenagan@watchdogautomation\.com\.ph/);
 });
