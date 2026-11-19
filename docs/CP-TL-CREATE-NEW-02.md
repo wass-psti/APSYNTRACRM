@@ -40,7 +40,7 @@ For each module it verifies server-assigned numbering, revision-one creation, cr
 
 ## Files
 
-- `supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql`
+- `supabase/migrations/20261119085430_cp_tl_create_new_02_user_board_projection_insert.sql`
 - `sql/tests/cp-tl-create-new-02-user-fixture.sql`
 - `sql/tests/cp-tl-create-new-02-user-six-module-disposable.sql`
 - `scripts/cp-tl-create-new-02-user-draft-disposable.sh`

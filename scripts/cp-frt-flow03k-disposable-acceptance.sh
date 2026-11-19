@@ -51,6 +51,6 @@ CREATE TABLE public.frt_bank_executions(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),workspace_id uuid NOT NULL,
  fund_request_id uuid NOT NULL);
 SQL
-psql_in -q < supabase/migrations/20261119085100_cp_frt_flow03k_payee_correction_cas.sql
+psql_in -q < supabase/migrations/20261119090447_cp_frt_flow03l_payee_correction_activation.sql
 psql_in -1 < sql/tests/cp-frt-flow03k-disposable.sql
 echo "CP-FRT-FLOW-03K disposable PostgreSQL 17 payee CAS acceptance PASS."

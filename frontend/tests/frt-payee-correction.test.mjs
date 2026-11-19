@@ -74,7 +74,7 @@ test('UI exposes payee-only correction for finance roles and pending request',()
  assert.match(app,/fundTracker\.savePayeeCorrection/);
 });
 test('migration isolates single payee field with CAS, audit and existing finance roles only',()=>{
- const sql=readFileSync(new URL('../../supabase/migrations/20261119085100_cp_frt_flow03k_payee_correction_cas.sql',import.meta.url),'utf8');
+ const sql=readFileSync(new URL('../../supabase/migrations/20261119090447_cp_frt_flow03l_payee_correction_activation.sql',import.meta.url),'utf8');
  assert.match(sql,/r\.recipient_name IS NOT DISTINCT FROM p_expected_payee/);
  assert.match(sql,/status='PENDING_APPROVAL'/);
  assert.match(sql,/REQUEST_PAYEE_CORRECTED/);
