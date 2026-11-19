@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {DomainApi} from '../data.js';
 import {
  NATIVE_APPLICATIONS,normalizeNativeApplicationBoardContext,
- nativeApplicationModuleForBoardRoute
+ nativeApplicationModuleForBoardRoute,nativeApplicationModuleForRoute,
+ workspaceRouteAllowsBoardCatalogFallback
 } from '../native-application-access.js';
 
 const userId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -83,6 +84,33 @@ test('TradeLink receives only its column/group schema and never a generic item c
  assert.deepEqual(context.detail.groups,[group]);
  assert.deepEqual(context.detail.items,[]);
  assert.deepEqual(context.detail.values,[]);
+});
+
+test('standalone native routes are recognized without requiring a generic board catalog',()=>{
+ const cases=[
+  ['#/time-tracker','time-tracker'],
+  ['#/fund-tracker','fund-released-tracker'],
+  ['#/fueltrack/dashboard','fueltrack-plus'],
+  ['#/tradelink/documents','tradelink'],
+  ['#/tradelink/activity?from=sidebar','tradelink']
+ ];
+ for(const [route,moduleId] of cases)
+  assert.equal(nativeApplicationModuleForRoute(route),moduleId);
+ for(const route of ['#/overview','#/boards','#/boards/46bf4ee7-368a-4c35-842c-8593ea1f6ac3/attendance',
+  '#/settings','#/fm1','#/time-tracker-extra','']){
+  assert.equal(nativeApplicationModuleForRoute(route),null);
+ }
+});
+
+test('board catalog fallback is limited to overview and the four native application routes',()=>{
+ for(const route of ['', '#/','#/overview','#/time-tracker','#/fund-tracker',
+  '#/fueltrack/dashboard','#/tradelink/documents']){
+  assert.equal(workspaceRouteAllowsBoardCatalogFallback(route),true);
+ }
+ for(const route of ['#/boards','#/boards/46bf4ee7-368a-4c35-842c-8593ea1f6ac3/attendance',
+  '#/settings','#/fm1','#/security','#/foundation']){
+  assert.equal(workspaceRouteAllowsBoardCatalogFallback(route),false);
+ }
 });
 
 test('route-to-module mapping is exact and cannot redirect arbitrary boards',()=>{
