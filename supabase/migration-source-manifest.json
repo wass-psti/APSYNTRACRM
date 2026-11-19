@@ -1778,6 +1778,20 @@
       "file": "20261119025306_cp_crm_conn03a_native_board_membership_provision.sql",
       "bytes": 9406,
       "sha256": "abc5fc555d2a9bc7ded52b7e0167a6ad583db8cc1337c21dcd261211079a66ed"
+    },
+    {
+      "version": "20261119030243",
+      "name": "cp_crm_conn02f_native_application_contract",
+      "file": "20261119030243_cp_crm_conn02f_native_application_contract.sql",
+      "bytes": 11980,
+      "sha256": "037dbe6c08b9f41a7be3293ceb6c3825d9c0dda89a3c36a64db9730e2b3b65c3"
+    },
+    {
+      "version": "20261119033532",
+      "name": "cp_crm_conn02f_native_context_compatibility",
+      "file": "20261119033532_cp_crm_conn02f_native_context_compatibility.sql",
+      "bytes": 6501,
+      "sha256": "bc17a920a07724ab1220bc0b2fb4f1be6d49a6f25bb6ff0ed5e9565ae4c30b1c"
     }
   ]
 }
