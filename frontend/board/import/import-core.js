@@ -4,11 +4,11 @@ import {MAX_IMPORT_CELL_CHARACTERS} from './import-limits.js';
  */
 import {ApiError} from '../../session.js';
 import {validUuid} from '../../data.js';
-import {canManuallyEditBoard} from '../../board-inline-items.js';
+import {canManuallyEditBoard} from '../inline/inline-items.js';
 import {isProtectedBoard} from '../services/card-lifecycle.js';
 import {moduleByBoardName} from '../services/manifest.js';
 import {detectMondayCheckboxMarkers,mondayCheckboxCell} from '../../monday-import-compat.js';
-import {cmp02Validate} from '../../board-typed-cmp02.js';
+import {cmp02Validate} from '../inline/typed-cmp02.js';
 import {normalizeTextDate} from '../../excel-date-normalization.js?v=cp-bimp-06-utc-20261111';
 export const IMPORT_CONTRACT='m143-v1';
 export const IMPORT_EXTENDED_CONTRACT='m143-v2';

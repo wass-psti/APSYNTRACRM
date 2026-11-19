@@ -5,7 +5,7 @@
  */
 import {ApiError} from '../../session.js';
 import {validUuid} from '../../data.js';
-import {canManuallyEditBoard} from '../../board-inline-items.js';
+import {canManuallyEditBoard} from '../inline/inline-items.js';
 const fail=(message,status=400)=>{throw new ApiError(message,status);};
 const clean=value=>String(value??'').trim();
 const norm=value=>clean(value).toLocaleLowerCase();

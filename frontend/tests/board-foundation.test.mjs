@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {BOARD_MODULES,boardColumns,boardDescription,validateModuleBlueprint} from '../board/services/manifest.js';
-import {inspectFoundation,provisionMissingBoards,summarizeFoundation} from '../board-foundation.js';
+import {inspectFoundation,provisionMissingBoards,summarizeFoundation} from '../board/foundation/foundation.js';
 const U='11111111-1111-4111-8111-111111111111';
 const W='22222222-2222-4222-8222-222222222222';
 const context={user_id:U,workspace_id:W,profile:{status:'active',platform_role:'admin_general_manager'}};

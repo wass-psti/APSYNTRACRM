@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {
  runB4SignedRecoveryPreflight,renderB4SignedRecoveryPreflight,
  sanitizeB4SignedRecoveryReport
-} from '../board-col-delete-b4-signed-preflight.js';
+} from '../board/acceptance/col-delete-b4-signed-preflight.js';
 import {B4_QA_BOARD_ID,B4_QA_BOARD_NAME,B4_QA_EXPIRES_AT}
  from '../board/columns/column-recovery.js';
 

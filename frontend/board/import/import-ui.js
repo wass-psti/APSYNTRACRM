@@ -1,6 +1,6 @@
 /** BIMP-03: reusable, signed board-import wizard for ordinary APSYNTRA boards. */
 import {ApiError} from '../../session.js';
-import {canManuallyEditBoard} from '../../board-inline-items.js';
+import {canManuallyEditBoard} from '../inline/inline-items.js';
 import {parseImportFile} from './import-parse.js';
 import {normalizeImportFailure} from './import-errors.js';
 import {choiceCreationPreview,provisionImportChoiceColumn} from './import-choice-setup.js';

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialReport
-} from '../board-col-delete-phase-b-signed-denial.js';
+} from '../board/acceptance/col-delete-phase-b-signed-denial.js';
 import {B4_QA_BOARD_ID} from '../board/columns/column-recovery.js';
 
 const signedActor='11111111-1111-4111-8111-111111111111';

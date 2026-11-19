@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BOARD_BULK02_ENABLED,canBulkEditBoard,BoardBulkClient} from '../board-bulk02-client.js';
+import {BOARD_BULK02_ENABLED,canBulkEditBoard,BoardBulkClient} from '../board/bulk/bulk02-client.js';
 
 const boardId='30000000-0000-4000-8000-000000000001';
 const foreignBoard='30000000-0000-4000-8000-000000000002';
@@ -98,7 +98,7 @@ test('malformed RPC receipts and unsupported actions fail without success claims
 });
 test('staged candidate maintains no direct production write paths and closed defaults',()=>{
  const app=readFileSync('frontend/app.js','utf8');
- const client=readFileSync('frontend/board-bulk02-client.js','utf8');
+ const client=readFileSync('frontend/board/bulk/bulk02-client.js','utf8');
  assert.match(client,/BOARD_BULK02_ENABLED=false/);
  assert.doesNotMatch(client,/wm_delete_board_group|wm_delete_board_item/);
  assert.match(client,/wm_board_bulk_mutate/);

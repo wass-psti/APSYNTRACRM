@@ -2,7 +2,7 @@
  * Inventory is intentionally narrower than monday.com; no AI, Marketplace,
  * proprietary monday, file-storage or unimplemented relationship columns.
  */
-import {CMP02_SCHEMA_ACTIVATED} from '../../board-typed-cmp02.js';
+import {CMP02_SCHEMA_ACTIVATED} from '../inline/typed-cmp02.js';
 /** Staged contracts are not selectable until database activation is accepted. */
 export const CMP02_STAGED_CATALOG=Object.freeze([
  {type:'phone',label:'Phone',group:'Super useful',

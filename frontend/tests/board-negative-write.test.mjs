@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runDeniedQaWrite} from '../board-negative-write.js';
+import {runDeniedQaWrite} from '../board/acceptance/negative-write.js';
 const U='11111111-1111-4111-8111-111111111111';
 const WS='00000000-0000-4000-8000-000000000001';
 const a={userId:U,getVerifiedUser:async()=>({id:U})};

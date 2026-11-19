@@ -43,7 +43,7 @@ import {TalkBoxNativeClient} from './talkbox-native.js';
 import {renderTalkBoxApplication} from './talkbox-ui.js';
 import {findTalkBoxBoard,TALKBOX_APPLICATION_ROUTE,talkBoxIssueHref} from './talkbox-application.js';
 import {BOARD_MODULES,moduleByBoardName} from './board/services/manifest.js';
-import {inspectFoundation,provisionMissingBoards} from './board-foundation.js';
+import {inspectFoundation,provisionMissingBoards} from './board/foundation/foundation.js';
 import {renderFoundation} from './board/presentation/foundation-ui.js';
 import {mountFoundationMotion,stopFoundationMotion} from './foundation-visuals.js';
 import {boardGrid,boardGridColumns,prepareBoardGrid} from './board/presentation/grid.js';
@@ -86,9 +86,9 @@ import {runWs02dB3SignedReadPreflight,renderWs02dB3SignedPreflight,sanitizeWs02d
 import {runWs02dB3DeployedHttpsAcceptance,renderWs02dB3DeployedHttpsAcceptance,sanitizeWs02dB3DeployedHttpsReport} from './workspace-b3-deployed-https-acceptance.js';
 import {captureWs02dB3OwnerRlsFixture,verifyWs02dB3ForeignRlsDenial,clearWs02dB3ForeignRlsFixture,hasWs02dB3ForeignRlsFixture,renderWs02dB3ForeignRlsDenial,sanitizeWs02dB3ForeignRlsReport} from './workspace-b3-foreign-rls-denial.js';
 import {runWs02dB3LocalSessionRevocation,renderWs02dB3LocalRevocation,sanitizeWs02dB3LocalRevocationReport} from './workspace-b3-revoked-session-denial.js';
-import {createB2SignedQaFixture,inspectB2SignedQaFixture,renderB2SignedQaFixture,sanitizeB2QaFixtureReport} from './board-col-delete-b2-signed-fixture.js';
-import {runB4SignedRecoveryPreflight,renderB4SignedRecoveryPreflight,sanitizeB4SignedRecoveryReport} from './board-col-delete-b4-signed-preflight.js';
-import {runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialReport} from './board-col-delete-phase-b-signed-denial.js';
+import {createB2SignedQaFixture,inspectB2SignedQaFixture,renderB2SignedQaFixture,sanitizeB2QaFixtureReport} from './board/acceptance/col-delete-b2-signed-fixture.js';
+import {runB4SignedRecoveryPreflight,renderB4SignedRecoveryPreflight,sanitizeB4SignedRecoveryReport} from './board/acceptance/col-delete-b4-signed-preflight.js';
+import {runPhaseBSignedDenial,renderPhaseBSignedDenial,sanitizePhaseBDenialReport} from './board/acceptance/col-delete-phase-b-signed-denial.js';
 import {updateTradeLinkFinancePreview} from './tradelink-finance.js';
 import {captureBoardGroupScroll,restoreBoardGroupScroll} from './board/scroll-state.js';
 import {canRetainVisibleBoard,replaceVisibleBoardContent} from './board/services/background-update.js';
@@ -112,25 +112,25 @@ import {boardCatalogResultLabel} from './board/presentation/catalog-results.js';
 import {resolveColumnTypeSelection,renderColumnTypeOptions} from './board/columns/column-catalog.js';
 import {resolveInlineColumn,columnStoredValueCount,prepareInlineColumnUpdate,
  projectConfirmedColumnRename,
- confirmInlineColumnDelete} from './board-inline-context.js';
+ confirmInlineColumnDelete} from './board/inline/inline-context.js';
 import {isQaBoardRecoveryInterfaceAllowed,canStartB4QaRecoveryDeletion,BoardColumnRecoveryClient,BoardColumnOperationalRecoveryClient,renderBoardColumnRecoveryList,explainColumnDeleteError} from './board/columns/column-recovery.js';
 import {planBoardColumnRemoval} from './board/columns/column-removal-plan.js';
-import {cmp02CreationConfig} from './board-typed-cmp02.js';
+import {cmp02CreationConfig} from './board/inline/typed-cmp02.js';
 import {resetBoardWindows,mountBoardWindows,filterBoardWindows,visibleBoardWindowIds} from './board/presentation/window.js';
 import {mountBoardPagination,renderBoardPagination} from './board/presentation/pagination-ui.js?v=cp-board-import-sync-01-20261115';
-import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board-inline-items.js';
-import {canBulkEditBoard,BoardBulkClient} from './board-bulk02-client.js';
-import {probeBulk02SignedSession} from './board-bulk02-signed-acceptance.js';
-import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board-minimal-default.js';
+import {canManuallyEditBoard,genericBoardColumns,cellColumn,expectedCellValue,visibleValue,editableCellButton,renderInlineCellEditor,renderGroupAddRow,groupColumnSummaries,parseCellForm,configuredStatus,statusColorClass} from './board/inline/inline-items.js';
+import {canBulkEditBoard,BoardBulkClient} from './board/bulk/bulk02-client.js';
+import {probeBulk02SignedSession} from './board/acceptance/bulk02-signed-acceptance.js';
+import {createItemOnlyBoard,enableItemOnlyBoard,isItemOnlyBoard,itemOnlyColumnKeys} from './board/foundation/minimal-default.js';
 import {deleteOneAuthorizedItem,selectedDeleteCandidates} from './board/crud/single-delete.js';
 import {moveTabInOrder,reorderManagedTimeTrackerTabs} from './board/services/tab-order.js';
-import {publicBoardDescription} from './board-public-copy.js';
+import {publicBoardDescription} from './board/foundation/public-copy.js';
 import {MANAGED_TT_GROUP_DELETE_ENABLED,isManagedTimeTrackerBoard,
  canSafelyHideEmptyTimeTrackerGroup,isRedundantEmptyTimeTrackerGroup,
  readHiddenEmptyGroups,hideEmptyTimeTrackerGroup,
  restoreHiddenTimeTrackerGroups,deleteEmptyManagedTimeTrackerGroup} from './managed-time-tracker-groups.js';
-import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board-row01-signed-acceptance.js';
-import {runBoardTtSignedReadOnly} from './board-tt-signed-acceptance.js';
+import {isRow01Fixture,readRow01Pending,prepareRow01Acceptance,finalizeRow01Acceptance,sanitizeRow01Report} from './board/acceptance/row01-signed-acceptance.js';
+import {runBoardTtSignedReadOnly} from './board/acceptance/tt-signed-acceptance.js';
 import {normalizeBoardActivity,renderBoardActivityResults,boardItemSummary} from './board/presentation/activity-ui.js';
 import {BOARD_COL01_AUDIT_CURSOR_ENABLED,BOARD_COL01_AUDIT_MAX_PAGES,
  loadBoardInvitableDirectory,renderBoardInvitableDirectory,
@@ -145,10 +145,10 @@ import {readWorkspaceStartup} from './workspace-startup-read.js';
 import {startupVerifiedRead,startupFailureDescription} from './startup-recovery-policy.js';
 import {boardTable,boardColumnMenu,loadBoardLayout,saveBoardLayout,resetBoardLayout,reorderVisible,
  normalizeLayout,BOARD_REQUIRED_COLUMNS,BOARD_COLUMN_MIN,BOARD_COLUMN_MAX,columnWidth} from './board/presentation/presentation.js';
-import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board-negative-acceptance.js';
-import {renderSecurityAcceptance} from './board-security-ui.js';
+import {runSignedNegativeBoardAcceptance,sanitizeNegativeReport} from './board/acceptance/negative-acceptance.js';
+import {renderSecurityAcceptance} from './board/acceptance/security-ui.js';
 import {mountSecurityMotion,stopSecurityMotion} from './security-experience.js';
-import {runDeniedQaWrite} from './board-negative-write.js';
+import {runDeniedQaWrite} from './board/acceptance/negative-write.js';
 import {runFRTSec03SignedAcceptance} from './frt-sec03-signed-acceptance.js';
 import {runFRTSec07ActivationGate} from './frt-sec07-signed-activation.js';
 import {runFRTSec09SignedAcceptance,sanitizeFRTSec09Report} from './frt-sec09-signed-acceptance.js';
@@ -9414,7 +9414,7 @@ async function action(name,button){
          throw new ApiError('Type RUN 12 BOARD CHECKS exactly.');
        state.foundationTesting=true;state.foundationTestResult=null;state.foundationLog=[];render();
        try{
-         const {runTwelveBoardQa}=await import('./board-operational-qa.js');
+         const {runTwelveBoardQa}=await import('./board/acceptance/operational-qa.js');
          state.foundationTestResult=await runTwelveBoardQa(db,{
           context:state.context,onProgress:entry=>{
            state.foundationLog.push(entry.boardName+': '+entry.status);render();

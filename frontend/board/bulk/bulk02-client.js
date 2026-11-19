@@ -1,10 +1,10 @@
 /** CP-BOARD-BULK02: default-disabled typed client for pending atomic SQL.
  * No legacy mutation loops or optimistic "best effort" bulk writes.
  */
-import {ApiError} from './session.js';
-import {validUuid} from './data.js';
-import {isProtectedBoard} from './board/services/card-lifecycle.js';
-import {moduleByBoardName} from './board/services/manifest.js';
+import {ApiError} from '../../session.js';
+import {validUuid} from '../../data.js';
+import {isProtectedBoard} from '../services/card-lifecycle.js';
+import {moduleByBoardName} from '../services/manifest.js';
 
 export const BOARD_BULK02_ENABLED=false; // Requires new production migration and real signed acceptance.
 const reject=(reason,status=403)=>{throw new ApiError(reason,status);};

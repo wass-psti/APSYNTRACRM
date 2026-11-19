@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BoardStructureClient,normalizeBoardUi,parseChoiceConfig,columnOptionLines} from '../board/crud/structure-admin.js';
-import {genericBoardColumns} from '../board-inline-items.js';
+import {genericBoardColumns} from '../board/inline/inline-items.js';
 import {boardTable} from '../board/presentation/presentation.js';
 import {
  ITEM_ONLY_MODE,isItemOnlyBoard,enableItemOnlyBoard,createItemOnlyBoard,itemOnlyColumnKeys
-} from '../board-minimal-default.js';
+} from '../board/foundation/minimal-default.js';
 const boardId='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
 const actor='33333333-3333-4333-8333-333333333333';

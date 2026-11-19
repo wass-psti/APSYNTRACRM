@@ -39,7 +39,7 @@ export function originalImportBaseline(source=readFileSync(appFile,'utf8')){
  return source.replace("import {syncFuelTrans} from './fueltrans-lazy.js';",
   "import {syncFuelTrans} from './fueltrans-native.js';")+
   "\nimport {openBoardImportWizard} from './board/import/import-ui.js';"+
-  "\nimport {runTwelveBoardQa} from './board-operational-qa.js';\n";
+  "\nimport {runTwelveBoardQa} from './board/acceptance/operational-qa.js';\n";
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const optimized=inspectStaticModuleGraph();
@@ -51,5 +51,5 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    sample:removed.filter(path=>/fueltrans|board-import|operational-qa/.test(path)).slice(0,25)}}));
  if(optimized.modules.includes('frontend/fueltrans-native.js')||
   optimized.modules.includes('frontend/board/import/import-ui.js')||
-  optimized.modules.includes('frontend/board-operational-qa.js'))process.exitCode=1;
+  optimized.modules.includes('frontend/board/acceptance/operational-qa.js'))process.exitCode=1;
 }
