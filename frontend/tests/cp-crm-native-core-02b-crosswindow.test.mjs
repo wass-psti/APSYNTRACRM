@@ -70,6 +70,20 @@ test("signed native responses must match exact user, workspace, Board and module
     false,
   );
   assert.equal(verifyNativeReply({ ...response, workspaceId: id }), false);
+  assert.equal(
+    verifyNativeReply({
+      ...response,
+      payload: { ...response.payload, userId: "aaaaaaaa-bbbb-cdef" },
+    }),
+    false,
+  );
+  assert.equal(
+    verifyNativeReply({
+      ...response,
+      payload: { ...response.payload, workspaceId: "not-a-uuid" },
+    }),
+    false,
+  );
 });
 test("nonpersistent invalidation sends scope and identifiers only, never application content", () => {
   const signal = signedInvalidation(id, workspace, app.boardId);
@@ -97,7 +111,6 @@ test("nonpersistent invalidation sends scope and identifiers only, never applica
 test("two-window test performs read-only signed app navigation and observes real server reconciliation", () => {
   for (const contract of [
     "connectOverCDP",
-    "context().newPage()",
     "native_application_board_context",
     "waitForResponse",
     "page.reload(",
@@ -107,6 +120,13 @@ test("two-window test performs read-only signed app navigation and observes real
   ])
     assert.ok(source.includes(contract), contract);
   assert.match(source, /businessWrites:\s*0,\s*permissionWrites:\s*0/);
+  assert.doesNotMatch(source, /context\(\)\.newPage\(\)/);
+  assert.match(source, /waitForEvent\("popup"/);
+  assert.match(source, /window\.open\(url, "_blank"\)/);
+  assert.match(source, /second tab requires its own genuine signed session/);
+  assert.match(source, /candidate === page/);
+  assert.match(source, /peerCreated/);
+  assert.match(source, /peerOriginal/);
   for (const text of [
     "localStorage",
     "sessionStorage",

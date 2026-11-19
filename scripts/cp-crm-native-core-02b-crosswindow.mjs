@@ -11,7 +11,8 @@ import {
   isSignedText,
 } from "./cp-crm-native-access-final02-signed-matrix.mjs";
 const base = "https://wass-psti.github.io/APSYNTRACRM/";
-const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
+const uuid =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const keyFor = (id) =>
   createHash("sha256").update(id).digest("hex").slice(0, 16);
 export const eligibleSignedPage = (body, url) =>
@@ -76,7 +77,12 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
     );
     process.exitCode = 2;
   } else {
-    let browser, page, peer, original;
+    let browser,
+      page,
+      peer,
+      original,
+      peerOriginal,
+      peerCreated = false;
     try {
       const { chromium } = await import("playwright");
       browser = await chromium.connectOverCDP(cdp);
@@ -153,14 +159,45 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
         () => page.reload({ waitUntil: "domcontentloaded", timeout: 45000 }),
         "refresh",
       );
-      peer = await page.context().newPage();
+      // Prefer a separately, genuinely signed CRM tab already present in the
+      // same authorized QA browser profile. No tab credentials are copied.
+      for (const candidate of page.context().pages()) {
+        if (candidate === page || !candidate.url().startsWith(base)) continue;
+        const candidateBody = await candidate
+          .locator("body")
+          .innerText({ timeout: 5000 })
+          .catch(() => "");
+        if (eligibleSignedPage(candidateBody, candidate.url())) {
+          peer = candidate;
+          peerOriginal = candidate.url();
+          break;
+        }
+      }
+      if (!peer) {
+        // A normal opener-created tab may or may not inherit a browser session.
+        // This is not a guarantee or a substitute for independent sign-in.
+        const popup = page.waitForEvent("popup", { timeout: 10000 });
+        void popup.catch(() => {});
+        await page.evaluate(
+          (url) => window.open(url, "_blank"),
+          base + app.route,
+        );
+        peer = await popup;
+        peerCreated = true;
+      }
+      await peer.goto(base + app.route, {
+        waitUntil: "domcontentloaded",
+        timeout: 45000,
+      });
+      const peerBody = await peer.locator("body").innerText({ timeout: 15000 });
+      if (!eligibleSignedPage(peerBody, peer.url()))
+        throw Error(
+          "BLOCKED: second tab requires its own genuine signed session",
+        );
+      // Observe the signed resolver from the beginning of a fresh reload.
       await validatePhase(
         peer,
-        () =>
-          peer.goto(base + app.route, {
-            waitUntil: "domcontentloaded",
-            timeout: 45000,
-          }),
+        () => peer.reload({ waitUntil: "domcontentloaded", timeout: 45000 }),
         "reopen",
       );
       const crossRead = peer.waitForResponse(
@@ -212,7 +249,11 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "/dev/null").href) {
       report.blocker = error.message.slice(0, 230);
       process.exitCode = 1;
     } finally {
-      await peer?.close().catch(() => {});
+      if (peerCreated) await peer?.close().catch(() => {});
+      else if (peer && peerOriginal)
+        await peer
+          .goto(peerOriginal, { waitUntil: "domcontentloaded", timeout: 30000 })
+          .catch(() => {});
       if (page && original)
         await page
           .goto(original, { waitUntil: "domcontentloaded", timeout: 30000 })
