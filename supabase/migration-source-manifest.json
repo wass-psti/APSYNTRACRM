@@ -1806,6 +1806,13 @@
       "file": "20261119073608_tradelink_document_read_policy_consolidation.sql",
       "bytes": 2865,
       "sha256": "c615e1e51ac9f568b9e9859692a1a5409e0a6204da56cb23f715df7217473003"
+    },
+    {
+      "version": "20261119080635",
+      "name": "cp_tl_create_new_02_user_board_projection_insert",
+      "file": "20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql",
+      "bytes": 8369,
+      "sha256": "503155e3a5c0377d451b436575933e4973c79d1a521a9deb4a6b4c97f2fee0ec"
     }
   ]
 }

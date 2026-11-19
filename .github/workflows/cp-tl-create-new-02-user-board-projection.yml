@@ -1,0 +1,40 @@
+name: APSYNTRA CP-TL-CREATE-NEW-02 — User Draft Board Projection
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql"
+      - "sql/tests/cp-tl-create-new-02-user-*"
+      - "scripts/cp-tl-create-new-02-user-draft-disposable.sh"
+      - "frontend/tests/tradelink-user-board-projection-create.test.mjs"
+      - "supabase/migrations/20261119073346_tradelink_user_draft_creation.sql"
+      - "supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql"
+      - "sql/cp-tl03-staged-domain.sql"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261119080635_cp_tl_create_new_02_user_board_projection_insert.sql"
+      - "sql/tests/cp-tl-create-new-02-user-*"
+      - "scripts/cp-tl-create-new-02-user-draft-disposable.sh"
+      - "frontend/tests/tradelink-user-board-projection-create.test.mjs"
+      - "supabase/migrations/20261119073346_tradelink_user_draft_creation.sql"
+      - "supabase/migrations/20261119073608_tradelink_document_read_policy_consolidation.sql"
+      - "sql/cp-tl03-staged-domain.sql"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  user-draft-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Disposable PostgreSQL 17 signed User acceptance
+        run: bash scripts/cp-tl-create-new-02-user-draft-disposable.sh
+      - name: TradeLink User Board projection contract
+        run: node --test frontend/tests/tradelink-user-board-projection-create.test.mjs
+      - name: Migration source manifest
+        run: node scripts/verify-migration-source-manifest.mjs
