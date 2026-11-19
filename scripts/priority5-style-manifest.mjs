@@ -1,7 +1,7 @@
 // Ordered CSS entry manifest. Preserve cascade and source paths.
 export const STYLE_SOURCES=Object.freeze([
  "frontend/styles.css",
- "frontend/auth-experience.css",
+ "frontend/auth/experience.css",
  "frontend/sidebar-experience.css",
  "frontend/workspace-ui.css",
  "frontend/overview-experience.css",

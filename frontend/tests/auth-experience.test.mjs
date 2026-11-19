@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {renderAuthMarkup} from '../auth-markup.js';
-import {mountAuthExperience} from '../auth-experience.js';
+import {renderAuthMarkup} from '../auth/markup.js';
+import {mountAuthExperience} from '../auth/experience.js';
 
 const markup=renderAuthMarkup({year:2026});
 test('new login has stable credential field, submit and visibility hooks',()=>{
@@ -29,7 +29,7 @@ test('failed sign-in can preserve only the escaped email, never the password',()
  assert.match(app,/renderLogin\(errorMessage\(err\),\{mode:'login',emailValue:email\}\)/);
 });
 test('login keyboard focus, tap targets and compact layout are present',()=>{
- const css=readFileSync('frontend/auth-experience.css','utf8');
+ const css=readFileSync('frontend/auth/experience.css','utf8');
  assert.match(css,/#login-form \.eye-btn\{[^}]*min-height:44px/);
  assert.match(css,/#login-form \.auth-submit:focus-visible/);
  assert.match(css,/#login-form \.field input:focus-visible/);
@@ -59,8 +59,8 @@ test('marketing art is inert and explicitly illustrative, with accessible headin
 });
 test('redesign is scoped to login, and authentication flow and expired session remain unchanged',()=>{
  const source=readFileSync('frontend/app.js','utf8');
- assert.match(source,/import \{renderAuthMarkup\} from '\.\/auth-markup\.js'/);
- assert.match(source,/import \{mountAuthExperience\} from '\.\/auth-experience\.js'/);
+ assert.match(source,/import \{renderAuthMarkup\} from '\.\/auth\/markup\.js'/);
+ assert.match(source,/import \{mountAuthExperience\} from '\.\/auth\/experience\.js'/);
  assert.match(source,/root\.innerHTML=renderAuthMarkup\(\{message,emailValue,notice:notice\|\|\(formsubmitReturn\?/);
  assert.match(source,/authVisualController=mountAuthExperience\(root\.querySelector\('\.aps-auth-v2'\)\)/);
  assert.match(source,/function shell\(body\)\{\s*stopAuthVisuals\(\)/);
@@ -72,9 +72,9 @@ test('redesign is scoped to login, and authentication flow and expired session r
  assert.match(source,/button\.setAttribute\('aria-pressed',String\(f\.type==='text'\)\)/);
 });
 test('auth styles are scoped, responsive, high-contrast and reduced-motion aware',()=>{
- const css=readFileSync('frontend/auth-experience.css','utf8');
+ const css=readFileSync('frontend/auth/experience.css','utf8');
  const html=readFileSync('index.html','utf8');
- assert.match(html,/frontend\/auth-experience\.css/);
+ assert.match(html,/frontend\/auth\/experience\.css/);
  assert.match(css,/#app \.aps-auth-v2/);
  assert.match(css,/@media\(max-width:1020px\)/);
  assert.match(css,/@media\(max-width:540px\)/);
@@ -124,7 +124,7 @@ test('low-power login mounts immediately without entrance movement or GPU startu
   assert.equal(queried,0,'login widgets must not be traversed for entrance effects');
   assert.equal(animated,0,'login widgets must appear in their final positions');
   handle.destroy();handle.destroy();
-  const source=readFileSync('frontend/auth-experience.js','utf8');
+  const source=readFileSync('frontend/auth/experience.js','utf8');
   assert.doesNotMatch(source,/\.animate\s*\(|translate3d\(|auth-reveal/);
  }finally{globalThis.window=oldWindow;globalThis.document=oldDocument;}
 });
@@ -157,7 +157,7 @@ test('scene loader is cancellable and never gates authentication',async()=>{
  }finally{globalThis.window=oldWindow;globalThis.document=oldDocument;}
 });
 test('Three shader renders only on resize/visibility and releases GPU resources',()=>{
- const source=readFileSync('frontend/auth-scene.js','utf8');
+ const source=readFileSync('frontend/auth/scene.js','utf8');
  assert.match(source,/three@0\.170\.0/);
  assert.match(source,/getContext\('webgl2'/);
  assert.match(source,/new THREE\.ShaderMaterial/);

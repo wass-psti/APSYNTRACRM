@@ -90,7 +90,7 @@ test('integration preserves existing Work Management backend, auth and invite fl
  assert.match(source,/case 'ws02-open-invites':/);
  assert.match(readFileSync(new URL('../workspace-invitation-client.js',import.meta.url),'utf8'),
   /WS02D_INVITE_CLIENT_ENABLED=false/);
- assert.match(readFileSync(new URL('../auth-account-flows.js',import.meta.url),'utf8'),
+ assert.match(readFileSync(new URL('../auth/account-flows.js',import.meta.url),'utf8'),
   /REGISTRATION_ADMISSION_ENABLED=false/);
 });
 
