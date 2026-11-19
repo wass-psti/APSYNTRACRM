@@ -161,6 +161,7 @@ const BOARD_READ_RPC=new Set([
  'tool_traceability_list_tools','tool_traceability_list_requests','tool_traceability_list_items',
  'tool_traceability_get_item','toolbox_issues_list_issues','toolbox_issues_get_issue',
  'material_request_hub_list_requests','material_request_hub_get_request',
+  'material_request_hub_bootstrap','material_request_hub_directory','material_request_hub_aggregates',
  'employee_evaluation_management_snapshot','employee_evaluation_my_snapshot',
  'fm1_service_status_v1','fm1_list_tickets_v1','fm1_ticket_detail_v1',
  'fm1_notification_inbox_v1','fm1_deadline_warning_policy_v1','fm1_operational_report_v1'
@@ -208,7 +209,11 @@ const NON_BOARD_DOMAIN_RPC=new Set([
  'fm1_create_ticket_v1','fm1_transition_ticket_v1','fm1_record_milestone_v1',
  'fm1_record_priority_v1','fm1_request_hold_v1','fm1_validate_hold_v1',
  'fm1_end_hold_v1','fm1_assign_ticket_v1','fm1_add_conversation_v1',
- 'fm1_notification_inbox_v1','fm1_notification_mark_read_v1'
+ 'fm1_notification_inbox_v1','fm1_notification_mark_read_v1',
+  // Material Request Hub writes modify the request domain, not Board state.
+  'material_request_hub_create_request','material_request_hub_update_request',
+  'material_request_hub_approve_request','material_request_hub_reject_request',
+  'material_request_hub_release_request','material_request_hub_add_update'
 ]);
 
 export class DomainApi {
