@@ -37,7 +37,7 @@ Read-only production catalog verification confirms the manager RPC remains prese
 ## Production verification
 
 - 36 active TradeLink `User` assignments exist in the main workspace; all 36 have Board Viewer membership and none has Board Editor/Owner membership.
-- A real existing User session probe returns `tl03_can_create_draft = true`, while generic Board edit and manage access both remain false.
+- A read-only database capability probe using an existing User identity claim under the `authenticated` role returns `tl03_can_create_draft = true`, while generic Board edit and manage access both remain false. This is not counted as a live browser JWT/session acceptance.
 - The shared `public.wm_add_board_item` function and manager creation path remain unchanged.
 - The effective migration is recorded in the existing Supabase project's migration ledger.
 
