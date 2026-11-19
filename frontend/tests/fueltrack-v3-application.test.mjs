@@ -271,9 +271,10 @@ test('Activity route renders signed audit reference and no fabricated Monday eve
  assert.doesNotMatch(html,/30 events tracked|5 approved|25 completed|3 events today/);
  assert.match(html,/data-action="ft3-activity-export" disabled/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(app,/db\.rpc\('list_module_activity'/);
- assert.match(app,/p_module_id:'fueltrack-plus'/);
- assert.match(app,/p_limit:250/);
+ assert.match(app,/if\(native\.role!=='Admin'\)/);
+ assert.match(app,/fuelTrackActivityError='';/);
+ assert.match(app,/\.audit\(\{limit:200\}\)/);
+ assert.doesNotMatch(app,/db\.rpc\('list_module_activity'/);
  assert.match(app,/case 'ft3-activity-export'/);
 });
 
