@@ -165,7 +165,7 @@ The sample count is bounded to 1–10 per endpoint. The script reports each Ray 
 
 ### Edge-tail regression comparison
 
-A follow-up aggregate of production `edge_logs` compared OPTIONS traffic before and after the CP02B deployment boundary recorded in the deployment timeline. The historical 64.9-second CEB and 28.4-second HKG outliers occurred in the pre-deployment portion. They were not reproduced in the post-deployment samples:
+A follow-up aggregate of production `edge_logs` compared OPTIONS traffic before and after the CP02B Pages deployment, which completed at **2026-11-19 00:17:27 UTC** (workflow run `44427721726`). The after-deployment rows below cover 103 minutes through 02:00 UTC. The historical 64.9-second CEB and 28.4-second HKG outliers occurred in the pre-deployment portion. They were not reproduced in the post-deployment samples:
 
 | Window / Cloudflare POP | OPTIONS requests |  P50 |    P95 |      P99 |   Maximum | Over 1 s | Over 10 s |
 | ----------------------- | ---------------: | ---: | -----: | -------: | --------: | -------: | --------: |
