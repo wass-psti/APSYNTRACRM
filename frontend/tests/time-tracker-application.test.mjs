@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   findTimeTrackerAttendanceBoard,
   TIMETRACKER_APPLICATION_ROUTE,
+  TIMETRACKER_ATTENDANCE_BOARD_ID,
 } from "../time-tracker-application.js";
 import { renderTimeTrackerNative } from "../time-tracker-ui.js";
 import {
@@ -34,7 +35,11 @@ const verifiedResult = {
 };
 
 test("TimeTracker route resolves only the existing attendance board and never provisions one", () => {
-  const existing = { id: "tt-board", name: "TimeTracker Attendance" };
+  const existing = {
+    id: TIMETRACKER_ATTENDANCE_BOARD_ID,
+    name: "TimeTracker Attendance",
+    status: "active",
+  };
   assert.equal(
     findTimeTrackerAttendanceBoard(
       [existing, { id: "other", name: "Contacts" }],
@@ -51,6 +56,27 @@ test("TimeTracker route resolves only the existing attendance board and never pr
   );
   assert.equal(findTimeTrackerAttendanceBoard(null, moduleResolver), null);
   assert.equal(findTimeTrackerAttendanceBoard([existing], null), null);
+  assert.equal(
+    findTimeTrackerAttendanceBoard(
+      [
+        { id: "legacy-board", name: "TimeTracker", status: "active" },
+        { ...existing, id: "wrong-board" },
+        existing,
+      ],
+      (name) =>
+        ["TimeTracker", "TimeTracker Attendance"].includes(name)
+          ? { key: "timetracker" }
+          : null,
+    ),
+    existing,
+  );
+  assert.equal(
+    findTimeTrackerAttendanceBoard(
+      [{ ...existing, status: "trashed" }],
+      moduleResolver,
+    ),
+    null,
+  );
   assert.equal(TIMETRACKER_APPLICATION_ROUTE, "#/time-tracker");
 });
 
