@@ -10,7 +10,7 @@ test('rebuilt TradeLink shell is scoped, flat, and does not alter security contr
  assert.match(css,/CP-TL-REBUILD-01: front-end-first enterprise shell/);
  assert.match(css,/\.aps-tradelink-app\.tl-reference-portal\{/);
  assert.match(css,/CP-TL-SPLIT-01/);
- assert.match(css,/data-tl-section="drafts"\]\[data-tl-can-manage="true"\] \.tl-app-layout/);
+ assert.match(css,/data-tl-section="drafts"\]\[data-tl-can-create="true"\] \.tl-app-layout/);
  assert.match(css,/grid-template-columns:minmax\(220px,260px\) minmax\(0,1fr\)/);
  assert.match(app,/class=\"tl-app-nav\" aria-label=\"TradeLink document modules\"/);
  assert.match(css,/\.tl-reference-portal \.tl-app-nav\{[\s\S]*?border-radius:0;background:transparent;box-shadow:none/);
