@@ -165,7 +165,7 @@ test('signed manager denial prevents every six-module save RPC before any produc
    documentId:'dddddddd-dddd-4ddd-8ddd-'+
     String(Object.keys(moduleInputs).indexOf(type)+1).padStart(12,'0'),
    expectedRevision:0,draft
-  }),/board manager scope required/,type);
+  }),/manager scope required/,type);
  }
  assert.equal(writes,0);
 });

@@ -35,7 +35,7 @@ test('TradeLink opens the native renderer inside the existing host and uses the 
  assert.match(app,/await loadBoard\(TRADELINK_BOARD_ID,'tradelink',tradeLinkRoute\.draftType,tradeLinkRoute\.editId,tradeLinkContext\)/);
  assert.match(app,/if\(state\.tlStandalone&&isTradeLinkBoard\(b\)\)return renderTradeLinkApplication/);
  assert.match(app,/if\(parts\[1\]===TRADELINK_BOARD_ID\)/);
- assert.match(app,/if\(parts\[0\]!=='tradelink'\)\{\s*if\(state\.tradeLinkAnalyticsBusy\)/);
+ assert.match(app,/if\(parts\[0\]!=='tradelink'\)\{\s*state\.tradeLinkModuleRole=''\s*;\s*if\(state\.tradeLinkAnalyticsBusy\)/);
  assert.match(app,/tradeLinkApplicationHref\('drafts\/quotation'\)/);
  assert.match(app,/return \[\.\.\.state\.boards,\.\.\.archived\]\.filter\(board=>/);
  assert.match(app,/STANDALONE_APPLICATION_MODULE_KEYS=new Set\(\['timetracker','frt','tradelink','fueltrack'\]\)/);

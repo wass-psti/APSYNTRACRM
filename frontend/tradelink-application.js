@@ -78,12 +78,12 @@ function moduleLink(m,activeType){
   '<span class="tl-module-link-copy"><strong>'+esc(m.label)+'</strong><small>Document module</small></span>'+
   '<span class="tl-module-chevron" aria-hidden="true">›</span></a>';
 }
-function renderDocuments(detail,workspaceId,draftView,canManage,canReview=false,actorEmail=''){
+function renderDocuments(detail,workspaceId,draftView,canManage,canReview=false,actorEmail='',canCreate=false,actorId=''){
  // One authoritative document surface; linked Board items remain accessible
  // in the main APSYNTRA Board, not duplicated as a second TradeLink table.
- return renderTradeLinkDocumentRepository({detail,workspaceId,view:draftView,canManage,canReview,actorEmail});
+ return renderTradeLinkDocumentRepository({detail,workspaceId,view:draftView,canManage,canReview,actorEmail,canCreate,actorId});
 }
-function renderModule(m,canManage=true){
+function renderModule(m,canCreate=true){
  return '<section class="tl-content-panel" aria-labelledby="tl-module-title">'+
   '<p class="tl-eyebrow">Source-defined document module</p><h2 id="tl-module-title">'+esc(m.label)+'</h2>'+
   '<p class="tl-module-purpose">'+esc(m.purpose)+'</p>'+
@@ -94,14 +94,14 @@ function renderModule(m,canManage=true){
    '<div class="tl-states">'+TRADELINK_SOURCE_QUOTE_STATUSES.map(s=>'<span class="tl-state">'+esc(s)+'</span>').join('')+'</div>'+
    '<p class="muted">These stages differ from the APSYNTRA board Quote Status choices. No automatic mapping is enabled.</p>':'')+
   (['esi','quotation','po'].includes(m.key)?renderTradeLinkFinancePreview():'')+
-  (canManage?'<p><a class="secondary" href="'+tradeLinkApplicationHref('drafts/'+m.key)+'">Prepare a '+esc(m.label)+' document</a></p>':'')+
-  (canManage?'<p class="muted">Opens the signed document editor. Save defaults to For Approval; choose Draft explicitly when needed. Assigned reviewers validate independently with Use Time Now. The second validation automatically sets Approved.</p>':'<p class="muted">Assigned reviewers can open their documents from All Documents, inspect the saved content and record their own validation time.</p>')+
+  (canCreate?'<p><a class="secondary" href="'+tradeLinkApplicationHref('drafts/'+m.key)+'">Prepare a '+esc(m.label)+' document</a></p>':'')+
+  (canCreate?'<p class="muted">Opens the existing signed document editor. Save defaults to For Approval; choose Draft explicitly when needed. Saved Drafts remain editable by their creator. Assigned reviewers validate independently with Use Time Now. The second validation automatically sets Approved.</p>':'<p class="muted">Assigned reviewers can open their documents from All Documents, inspect the saved content and record their own validation time.</p>')+
   '<div class="tl-module-boundary" role="status"><strong>Integration boundary</strong>'+
   '<p>Signed document creation and editing are enabled through the existing authorized domain API. For Approval is the default saved status; the two assigned reviewers independently validate the current revision. Print PDF is available only after both validations set Approved. The recovered official company templates are available for all six modules. Browser Print / Save as PDF uses the saved document revision; electronic PDF issuance is separate. Unsaved previews are never presented as persisted documents.</p></div></section>';
 }
 /** Reference-led TradeLink portal is presentation-only.
  * Links preserve the existing signed-board routes and disabled domain gates. */
-export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,analytics=null,analyticsBusy=false,analyticsError='',analyticsEnabled=false,draftView=initialTradeLinkDraftView(),canManage=false,canReview=false,actorName='',actorEmail=''}={}){
+export function renderTradeLinkApplication({detail,section='drafts',workspaceId=null,activity=null,analytics=null,analyticsBusy=false,analyticsError='',analyticsEnabled=false,draftView=initialTradeLinkDraftView(),canManage=false,canReview=false,canCreate=canManage,actorId='',actorName='',actorEmail=''}={}){
  if(!isTradeLinkBoard(detail?.board)||
      typeof workspaceId!=='string'||detail.board.workspace_id!==workspaceId)
   return '<section role="alert" class="error-banner">TradeLink signed workspace access is unavailable.</section>';
@@ -113,22 +113,22 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
   draftView?.selected?.record?.document_type||
   draftView?.selected?.record?.content?.documentType||'quotation';
  const selectedType=modules.has(requestedType)?requestedType:'quotation';
- const workspaceNavigation=current==='drafts'&&canManage?
+ const workspaceNavigation=current==='drafts'&&canCreate?
   '<nav class="tl-app-nav" aria-label="TradeLink document modules">'+
    '<div class="tl-app-nav-heading"><span>TRADELINK WORKSPACE</span><strong>Document types</strong><small>Choose a document to prepare</small></div>'+
    '<div class="tl-app-nav-links">'+
     TRADELINK_SOURCE_MODULES.map(module=>moduleLink(module,selectedType)).join('')+
    '</div></nav>':'';
- return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'" data-tl-can-manage="'+(canManage?'true':'false')+'">'+
+ return '<div class="aps-tradelink-app tl-reference-portal" data-tl-section="'+esc(current)+'" data-tl-can-manage="'+(canManage?'true':'false')+'" data-tl-can-create="'+(canCreate?'true':'false')+'">'+
   '<header class="tl-reference-topbar" aria-label="TradeLink portal">'+
-   '<a class="tl-reference-brand" href="'+base+(canManage?'/drafts/quotation':'/documents')+'" aria-label="'+(canManage?'TradeLink Create New':'TradeLink All Documents')+'">'+
+   '<a class="tl-reference-brand" href="'+base+(canCreate?'/drafts/quotation':'/documents')+'" aria-label="'+(canCreate?'TradeLink Create New':'TradeLink All Documents')+'">'+
     '<span class="tl-reference-logo" aria-hidden="true">▦</span>'+
     '<span><strong>TradeLink</strong><small>PORTAL</small></span></a>'+
    '<nav class="tl-reference-portal-links" aria-label="TradeLink actions">'+
     '<span class="tl-reference-active-indicator" aria-hidden="true" hidden></span>'+
-    (canManage?'<a data-tl-tab="create" class="tl-reference-create'+(current==='drafts'?' active':'')+'"'+currentAttr('drafts')+' href="'+base+'/drafts/quotation">'+
+    (canCreate?'<a data-tl-tab="create" class="tl-reference-create'+(current==='drafts'?' active':'')+'"'+currentAttr('drafts')+' href="'+base+'/drafts/quotation">'+
      '<span aria-hidden="true">＋</span> Create New</a>':
-     '<span data-tl-tab="create" class="tl-reference-create" aria-disabled="true" title="Document creation requires the existing signed Board manager capability. Use All Documents to inspect records assigned to this account.">'+
+     '<span data-tl-tab="create" class="tl-reference-create" aria-disabled="true" title="Create New is available to the existing TradeLink User module role. Board management and approval controls remain separate.">'+
      '<span aria-hidden="true">＋</span> Create New</span>')+
     '<a data-tl-tab="documents" href="'+base+'/documents"'+currentAttr('documents')+'>'+
      '<span aria-hidden="true">☷</span> All Documents</a>'+
@@ -148,7 +148,7 @@ export function renderTradeLinkApplication({detail,section='drafts',workspaceId=
   '</header>'+
   '<div class="tl-app-layout">'+workspaceNavigation+
    '<main class="tl-app-main">'+
-    (m?renderModule(m,canManage):current==='drafts'&&!canManage?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>Document creation requires the existing signed Board manager capability. No additional permission is granted here. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p><p><a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Open All Documents</a></p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail):current==='activity'?renderTradeLinkActivity(activity||{}):current==='analytics'?renderTradeLinkAnalytics({summary:analytics,busy:analyticsBusy,error:analyticsError,enabled:analyticsEnabled}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}))+
+    (m?renderModule(m,canCreate):current==='drafts'&&!canCreate?'<section class="tl-content-panel" aria-labelledby="tl-reviewer-access-title"><h2 id="tl-reviewer-access-title">Create New is unavailable for this signed account</h2><p>This signed TradeLink account does not have the existing document-creation capability. Open All Documents to inspect documents assigned to your account and use the available reviewer actions.</p><p><a class="secondary" href="'+tradeLinkApplicationHref('documents')+'">Open All Documents</a></p></section>':current==='drafts'?renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,canCreate,actorId,actorName,actorEmail,showModuleTabs:false}):current==='documents'?renderDocuments(detail,workspaceId,draftView,canManage,canReview,actorEmail,canCreate,actorId):current==='activity'?renderTradeLinkActivity(activity||{}):current==='analytics'?renderTradeLinkAnalytics({summary:analytics,busy:analyticsBusy,error:analyticsError,enabled:analyticsEnabled}):renderTradeLinkDraftWorkspace({detail,workspaceId,view:draftView,canManage,actorName,actorEmail,showModuleTabs:false}))+
    '</main></div></div>';
 }
 /** Pure DOM filtering of already-authorized board rows; no additional network

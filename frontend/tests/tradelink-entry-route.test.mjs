@@ -54,12 +54,14 @@ test('original Create New portal entry remains visible to reviewer accounts with
 });
 
 
-test('Create New explains the existing manager boundary without adding employee document authority',()=>{
- const reviewer=renderTradeLinkApplication({detail,workspaceId:ws,section:'drafts',canManage:false,canReview:true});
- assert.match(reviewer,/data-tl-tab="create"[^>]*aria-disabled="true"/);
- assert.match(reviewer,/Document creation requires the existing signed Board manager capability/);
- assert.match(reviewer,/No additional permission is granted here/);
- assert.doesNotMatch(reviewer,/data-tradelink-draft-form/);
+test('existing TradeLink User module role opens Create New without Board manage or manager-only actions',()=>{
+ const user=renderTradeLinkApplication({detail,workspaceId:ws,section:'drafts',
+  canManage:false,canReview:true,canCreate:true,actorId:'00000000-0000-4000-8000-000000000002'});
+ assert.match(user,/data-tl-can-manage="false"/);
+ assert.match(user,/data-tl-can-create="true"/);
+ assert.match(user,/data-tradelink-draft-form/);
+ assert.match(user,/data-action="tradelink-draft-submit"/);
+ assert.doesNotMatch(user,/data-action="tradelink-document-(approve|reject|status-update)|data-action="tradelink-draft-(archive|restore)/);
  const manager=renderTradeLinkApplication({detail,workspaceId:ws,section:'drafts',canManage:true});
  assert.match(manager,/data-tradelink-draft-form/);
  assert.match(manager,/data-action="tradelink-draft-submit"/);

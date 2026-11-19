@@ -13,6 +13,7 @@ import {
  updateTradeLinkDraftLocalSummary,
  initialTradeLinkDraftListFilters,normalizeTradeLinkDraftListFilters,
  filterTradeLinkDraftAuthorizedRows,updateTradeLinkDraftListUI,
+ mergeTradeLinkCreatedAndAssignedRows,
  renderTradeLinkDocumentRepository,renderTradeLinkSavedDocumentPreview,
  renderTradeLinkDraftWorkspace,
  TradeLinkDraftWorkspace,tradeLinkDraftReady
@@ -22,6 +23,28 @@ const detail={board:{id:TRADELINK_BOARD_ID,workspace_id:workspace,
  name:'TradeLink',status:'active',description:'[APSYNTRA:MODULE:tradelink:v1]'},
  groups:[],items:[],columns:[]};
 const fields=data=>({get:key=>data[key]??null});
+
+
+test('creator documents and reviewer assignments merge by immutable document ID',()=>{
+ const own={documentId:'11111111-1111-4111-8111-111111111111',
+  documentNumber:'Q-OWN',createdByActor:true,updatedAt:'2026-11-19T10:00:00Z'};
+ const assignedSame={documentId:own.documentId,documentNumber:'Q-OWN',
+  assignedStage:'primary',primaryEmail:'reviewer@example.test',
+  updatedAt:'2026-11-19T10:00:00Z'};
+ const assignedOther={documentId:'22222222-2222-4222-8222-222222222222',
+  documentNumber:'Q-REVIEW',assignedStage:'secondary',
+  updatedAt:'2026-11-19T09:00:00Z'};
+ const rows=mergeTradeLinkCreatedAndAssignedRows([own],[assignedSame,assignedOther]);
+ assert.equal(rows.length,2);
+ assert.equal(rows[0].documentId,own.documentId);
+ assert.equal(rows[0].createdByActor,true);
+ assert.equal(rows[0].assignedStage,'primary');
+ assert.equal(rows[1].assignedStage,'secondary');
+ assert.throws(()=>mergeTradeLinkCreatedAndAssignedRows(
+  [{...own,createdByActor:false}],[]),/creator-owned/);
+ assert.throws(()=>mergeTradeLinkCreatedAndAssignedRows([],
+  [{...assignedOther,assignedStage:'manager'}]),/assigned TradeLink/);
+});
 
 test('dark-launch UI is routed inside the existing signed TradeLink app',()=>{
  assert.equal(TL03_DRAFT_INTERFACE_ENABLED,true);
@@ -794,6 +817,50 @@ test('local priced summary names financial components and never fabricates forei
  }
 });
 
+
+
+test('TradeLink User module role receives all six existing document editors and save controls',()=>{
+ const types=[
+  ['esi','Electronic SI'],['quotation','Quotation'],['packing','Packing List'],
+  ['delivery','Delivery Receipt'],['payment','Payment AR'],['po','PO to Suppliers']
+ ];
+ for(const [type,label] of types){
+  const html=renderTradeLinkDraftWorkspace({detail,workspaceId:workspace,
+   view:initialTradeLinkDraftView(type),canManage:false,canCreate:true,
+   actorId:'55555555-5555-4555-8555-555555555555'});
+  assert.match(html,/data-tradelink-draft-form/,type);
+  assert.match(html,/data-action="tradelink-draft-submit"/,type);
+  assert.ok(html.includes(label),type);
+  assert.doesNotMatch(html,/Create New is unavailable/);
+ }
+});
+
+test('TradeLink User All Documents shows own Draft edit and assigned reviewer actions without manager controls',()=>{
+ const own={documentId:'11111111-1111-4111-8111-111111111111',
+  boardItemId:'22222222-2222-4222-8222-222222222222',documentType:'quotation',
+  documentNumber:'Q-OWN-001',workflowState:'draft',revision:1,archived:false,
+  updatedAt:'2026-11-19T10:00:00Z',createdByActor:true};
+ const assigned={documentId:'33333333-3333-4333-8333-333333333333',
+  boardItemId:'44444444-4444-4444-8444-444444444444',documentType:'quotation',
+  documentNumber:'Q-REVIEW-001',workflowState:'for-approval',revision:2,
+  archived:false,updatedAt:'2026-11-19T09:00:00Z',createdByActor:false,
+  assignedStage:'primary',primaryEmail:'reviewer@example.test',
+  secondaryEmail:'second@example.test',primaryAt:null,secondaryAt:null};
+ const view={...initialTradeLinkDraftView(),status:'AUTHORIZED_READ',
+  rows:[own,assigned],listFilters:initialTradeLinkDraftListFilters()};
+ const html=renderTradeLinkDocumentRepository({detail,workspaceId:workspace,view,
+  canManage:false,canReview:true,canCreate:true,
+  actorId:'55555555-5555-4555-8555-555555555555'});
+ assert.match(html,/All Documents <span/);
+ assert.match(html,/Create New Document/);
+ assert.match(html,/Q-OWN-001/);
+ assert.match(html,/Edit Draft/);
+ assert.match(html,/Q-REVIEW-001/);
+ assert.match(html,/Use Time Now/);
+ assert.doesNotMatch(html,/data-tl-select-document|data-tl-select-all/);
+ assert.doesNotMatch(html,/data-action="tradelink-document-(status-update|approve|reject)"|data-action="tradelink-draft-(archive|restore)"/);
+});
+
 test('read-only listing presents filters but never reveals rows or enables RPC under dark launch',async()=>{
  const seed={...initialTradeLinkDraftView('quotation'),status:'AUTHORIZED_READ',
   rows:[{documentId:'11111111-1111-4111-8111-111111111111',documentNumber:'SECRET-Q',
@@ -1025,7 +1092,7 @@ test('operational save and read handlers retain signed linkage, backend receipt 
  assert.match(app,/board\.items\?\.some\(item=>item\.id===receipt\.boardItemId/);
  assert.match(app,/location\.hash=tradeLinkApplicationHref\('documents'\)/);
  assert.match(app,/root\.querySelector\('\[data-tradelink-draft-form\]'\)\?\.requestSubmit\(\)/);
- assert.match(ui,/return renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail\}\)/);
+ assert.match(ui,/return renderTradeLinkDocumentRepository\(\{detail,workspaceId,view:draftView,canManage,canReview,actorEmail,canCreate,actorId\}\)/);
  assert.match(draft,/data-action="tradelink-document-open"/);
  assert.match(draft,/renderTradeLinkSavedDocumentPreview/);
  assert.equal(TL03_DOMAIN_READS_ENABLED,true);

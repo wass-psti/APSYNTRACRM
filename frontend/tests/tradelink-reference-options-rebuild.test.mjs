@@ -45,7 +45,7 @@ test('All Documents retains scrollable authorized results and responsive filters
  assert.match(css,/\.tl-reference-portal \.tl-document-repository \.tl-draft-list-filters\{/);
  assert.match(css,/@media\(max-width:460px\)/);
  const source=readFileSync('frontend/tradelink-draft-workspace.js','utf8');
- assert.match(source,/renderTradeLinkDraftList\(rows,view,canManage,\{readOnly:true,canReview,actorEmail\}\)/);
+ assert.match(source,/renderTradeLinkDraftList\(rows,view,canManage,\{readOnly:true,canReview,canCreate,actorEmail\}\)/);
  assert.match(source,/data-action="tradelink-documents-refresh"/);
  assert.match(source,/data-action="tradelink-document-open"/);
 });

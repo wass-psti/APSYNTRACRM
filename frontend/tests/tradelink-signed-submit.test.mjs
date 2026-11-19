@@ -66,7 +66,7 @@ test('Submit refuses unsigned or unmanageable sessions without invoking the muta
   }
  });
  await assert.rejects(()=>client.submit({
-  documentId,expectedRevision:5,documentType:'quotation',fromState:'draft'}),/board manager scope required/);
+  documentId,expectedRevision:5,documentType:'quotation',fromState:'draft'}),/manager scope required/);
  assert.equal(writes,0);
 });
 test('signed All Documents offers enabled Submit only for active authorized Drafts',()=>{
